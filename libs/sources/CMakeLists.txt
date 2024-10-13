@@ -3,12 +3,15 @@ add_library(${CMAKE_PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
 target_sources(${PROJECT_NAME}
   PUBLIC
-    src/pludux.cpp  
+    src/quote.cpp
+    src/asset.cpp
   INTERFACE
     FILE_SET HEADERS
       BASE_DIRS include/
       FILES
-        include/pludux/pludux.hpp
+        include/pludux/asset.hpp
+        include/pludux/quote.hpp
+        include/pludux/ta.hpp
 )
 
 target_compile_features(${PROJECT_NAME}

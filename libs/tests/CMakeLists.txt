@@ -1,5 +1,7 @@
 set(PLUDUX_TEST_SOURCES
-  src/hello_world_test.cpp
+  src/test_quote.cpp
+  src/test_asset.cpp
+  src/test_ta.cpp
 )
 
 foreach(PLUDUX_TEST_SOURCE ${PLUDUX_TEST_SOURCES})
