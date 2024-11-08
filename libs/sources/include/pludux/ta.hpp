@@ -2,10 +2,12 @@
 #define PLUDUX_PLUDUX_TA_HPP
 
 #include <algorithm>
+#include <cmath>
 #include <tuple>
 #include <vector>
 
 #include "quote.hpp"
+#include "series.hpp"
 
 namespace pludux::ta {
 
@@ -23,6 +25,8 @@ auto changes(const auto& series) -> std::vector<double>
 
   return result;
 }
+
+auto changes(const Series& series) -> Series;
 
 auto sma(const auto& series, std::size_t period) -> std::vector<double>
 {
@@ -45,6 +49,8 @@ auto sma(const auto& series, std::size_t period) -> std::vector<double>
 
   return result;
 }
+
+auto sma(const Series& series, std::size_t period) -> Series;
 
 auto ema(const auto& series, std::size_t period) -> std::vector<double>
 {
@@ -78,6 +84,8 @@ auto ema(const auto& series, std::size_t period) -> std::vector<double>
   return result;
 }
 
+auto ema(const Series& series, std::size_t period) -> Series;
+
 auto rma(const auto& series, std::size_t period) -> std::vector<double>
 {
   const auto alpha = 1.0 / period;
@@ -110,6 +118,8 @@ auto rma(const auto& series, std::size_t period) -> std::vector<double>
   return result;
 }
 
+auto rma(const Series& series, std::size_t period) -> Series;
+
 auto wma(const auto& series, std::size_t period) -> std::vector<double>
 {
   auto result = std::vector<double>{};
@@ -135,6 +145,8 @@ auto wma(const auto& series, std::size_t period) -> std::vector<double>
   return result;
 }
 
+auto wma(const Series& series, std::size_t period) -> Series;
+
 auto hma(const auto& series, std::size_t period) -> std::vector<double>
 {
   auto wma1 = ta::wma(series, period / 2);
@@ -156,6 +168,8 @@ auto hma(const auto& series, std::size_t period) -> std::vector<double>
 
   return hma;
 }
+
+auto hma(const Series& series, std::size_t period) -> Series;
 
 auto rsi(const auto& series, std::size_t period) -> std::vector<double>
 {
@@ -201,6 +215,8 @@ auto rsi(const auto& series, std::size_t period) -> std::vector<double>
   return result;
 }
 
+auto rsi(const Series& series, std::size_t period) -> Series;
+
 auto tr(const auto& quotes) -> std::vector<double>
 {
   auto result = std::vector<double>{};
@@ -225,6 +241,34 @@ auto tr(const auto& quotes) -> std::vector<double>
   return result;
 }
 
+auto tr(const auto& highs,
+        const auto& lows,
+        const auto& closes) -> std::vector<double>
+{
+  auto result = std::vector<double>{};
+  result.reserve(highs.size());
+
+  for(std::size_t i = 0; i < highs.size(); ++i) {
+    const auto high = static_cast<double>(highs[i]);
+    const auto low = static_cast<double>(lows[i]);
+    const auto prev_close =
+     static_cast<double>(i == 0 ? closes[i] : closes[i - 1]);
+
+    const auto hl = std::abs(high - low);
+    const auto hc = std::abs(high - prev_close);
+    const auto lc = std::abs(low - prev_close);
+
+    const auto true_range = std::max(std::max(hl, hc), lc);
+    result.push_back(true_range);
+  }
+
+  return result;
+}
+
+auto tr(const Series& highs,
+        const Series& lows,
+        const Series& closes) -> Series;
+
 auto atr(const auto& quotes, std::size_t period) -> std::vector<double>
 {
   const auto trs = ta::tr(quotes);
@@ -232,6 +276,22 @@ auto atr(const auto& quotes, std::size_t period) -> std::vector<double>
 
   return atr;
 }
+
+auto atr(const auto& highs,
+         const auto& lows,
+         const auto& closes,
+         std::size_t period) -> std::vector<double>
+{
+  const auto trs = ta::tr(highs, lows, closes);
+  const auto atr = ta::rma(trs, period);
+
+  return atr;
+}
+
+auto atr(const Series& highs,
+         const Series& lows,
+         const Series& closes,
+         std::size_t period) -> Series;
 
 auto macd(const auto& series,
           std::size_t short_period,
@@ -262,6 +322,11 @@ auto macd(const auto& series,
 
   return {macd_line, signal_line, histogram};
 }
+
+auto macd(const Series& series,
+          std::size_t short_period,
+          std::size_t long_period,
+          std::size_t signal_period) -> std::tuple<Series, Series, Series>;
 
 auto stoch(const auto& quotes,
            std::size_t k_period,
@@ -303,6 +368,54 @@ auto stoch(const auto& quotes,
   return {k, d};
 }
 
+auto stoch(const auto& highs,
+           const auto& lows,
+           const auto& closes,
+           std::size_t k_period,
+           std::size_t k_smooth,
+           std::size_t d_period)
+ -> std::pair<std::vector<double>, std::vector<double>>
+{
+  auto stochastic = std::vector<double>{};
+  stochastic.reserve(highs.size());
+  for(std::size_t i = 0; i < highs.size(); ++i) {
+    if(i < k_period - 1) {
+      stochastic.push_back(std::numeric_limits<double>::quiet_NaN());
+    } else {
+      const auto high = static_cast<double>(highs[i]);
+      const auto low = static_cast<double>(lows[i]);
+      const auto close = static_cast<double>(closes[i]);
+
+      auto highest_high = std::numeric_limits<double>::min();
+      auto lowest_low = std::numeric_limits<double>::max();
+
+      for(std::size_t j = i - k_period + 1; j <= i; ++j) {
+        const auto quote_high = static_cast<double>(highs[j]);
+        const auto quote_low = static_cast<double>(lows[j]);
+
+        highest_high = std::max(highest_high, quote_high);
+        lowest_low = std::min(lowest_low, quote_low);
+      }
+
+      const auto stoch =
+       100 * (close - lowest_low) / (highest_high - lowest_low);
+      stochastic.push_back(stoch);
+    }
+  }
+
+  const auto k = ta::sma(stochastic, k_smooth);
+  const auto d = ta::sma(k, d_period);
+
+  return {k, d};
+}
+
+auto stoch(const Series& highs,
+           const Series& lows,
+           const Series& closes,
+           std::size_t k_period,
+           std::size_t k_smooth,
+           std::size_t d_period) -> std::pair<Series, Series>;
+
 auto stoch_rsi(const auto& series,
                std::size_t rsi_period,
                std::size_t k_period,
@@ -342,6 +455,12 @@ auto stoch_rsi(const auto& series,
 
   return {k, d};
 }
+
+auto stoch_rsi(const Series& series,
+               std::size_t rsi_period,
+               std::size_t k_period,
+               std::size_t k_smooth,
+               std::size_t d_period) -> std::pair<Series, Series>;
 
 auto bb(const auto& series, std::size_t period, double stddev)
  -> std::tuple<std::vector<double>, std::vector<double>, std::vector<double>>
@@ -384,6 +503,10 @@ auto bb(const auto& series, std::size_t period, double stddev)
 
   return {sma, upper_band, lower_band};
 }
+
+auto bb(const Series& series,
+        std::size_t period,
+        double stddev) -> std::tuple<Series, Series, Series>;
 
 } // namespace pludux::ta
 

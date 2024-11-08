@@ -1,6 +1,7 @@
 set(PLUDUX_TEST_SOURCES
   src/test_quote.cpp
   src/test_asset.cpp
+  src/test_series.cpp
   src/test_ta.cpp
 )
 
