@@ -1,4 +1,6 @@
-project(pludux LANGUAGES CXX)
+project(pludux-lib LANGUAGES CXX)
+
+find_package(GTest REQUIRED)
 
 add_subdirectory(sources)
 

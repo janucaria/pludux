@@ -7,6 +7,16 @@ target_sources(${PROJECT_NAME}
     src/quote.cpp
     src/asset.cpp
     src/ta.cpp
+
+    src/screener/screener_method.cpp
+    src/screener/field_method.cpp
+    src/screener/sma_method.cpp
+    src/screener/value_method.cpp
+
+    src/screener/all_of_filter.cpp
+    src/screener/any_of_filter.cpp
+    src/screener/greater_than_filter.cpp
+    src/screener/less_than_filter.cpp
   INTERFACE
     FILE_SET HEADERS
       BASE_DIRS include/
@@ -15,6 +25,18 @@ target_sources(${PROJECT_NAME}
         include/pludux/quote.hpp
         include/pludux/series.hpp
         include/pludux/ta.hpp
+
+        include/pludux/screener/screener_method.hpp 
+        include/pludux/screener/field_method.hpp 
+        include/pludux/screener/sma_method.hpp 
+        include/pludux/screener/value_method.hpp 
+        
+        include/pludux/screener/screener_filter.hpp 
+        include/pludux/screener/all_of_filter.hpp
+        include/pludux/screener/any_of_filter.hpp
+        include/pludux/screener/greater_than_filter.hpp
+        include/pludux/screener/less_than_filter.hpp
+
 )
 
 target_compile_features(${PROJECT_NAME}

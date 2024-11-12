@@ -3,6 +3,15 @@ set(PLUDUX_TEST_SOURCES
   src/test_asset.cpp
   src/test_series.cpp
   src/test_ta.cpp
+
+  src/test_field_method.cpp
+  src/test_value_method.cpp
+  src/test_sma_method.cpp
+
+  src/test_all_of_filter.cpp
+  src/test_any_of_filter.cpp
+  src/test_greater_than_filter.cpp
+  src/test_less_than_filter.cpp
 )
 
 foreach(PLUDUX_TEST_SOURCE ${PLUDUX_TEST_SOURCES})

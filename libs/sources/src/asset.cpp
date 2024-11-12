@@ -12,6 +12,12 @@ Asset::Asset(std::string symbol)
 {
 }
 
+Asset::Asset(std::string symbol, std::vector<Quote> quotes)
+: symbol_{std::move(symbol)}
+, quotes_{std::move(quotes)}
+{
+}
+
 auto Asset::symbol() const noexcept -> const std::string&
 {
   return symbol_;

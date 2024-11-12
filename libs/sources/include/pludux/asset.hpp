@@ -12,6 +12,8 @@ class Asset {
 public:
   Asset(std::string symbol);
 
+  Asset(std::string symbol, std::vector<Quote> quotes);
+
   auto symbol() const noexcept -> const std::string&;
 
   auto quotes() const noexcept -> const std::vector<Quote>&;
