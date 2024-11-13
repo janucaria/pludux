@@ -11,6 +11,7 @@
 #include "screener/all_of_filter.hpp"
 #include "screener/any_of_filter.hpp"
 #include "screener/greater_than_filter.hpp"
+#include "screener/greater_equal_filter.hpp"
 #include "screener/less_than_filter.hpp"
 
 #endif

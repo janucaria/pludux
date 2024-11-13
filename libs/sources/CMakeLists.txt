@@ -16,6 +16,7 @@ target_sources(${PROJECT_NAME}
     src/screener/all_of_filter.cpp
     src/screener/any_of_filter.cpp
     src/screener/greater_than_filter.cpp
+    src/screener/greater_equal_filter.cpp
     src/screener/less_than_filter.cpp
   INTERFACE
     FILE_SET HEADERS
@@ -35,6 +36,7 @@ target_sources(${PROJECT_NAME}
         include/pludux/screener/all_of_filter.hpp
         include/pludux/screener/any_of_filter.hpp
         include/pludux/screener/greater_than_filter.hpp
+        include/pludux/screener/greater_equal_filter.hpp
         include/pludux/screener/less_than_filter.hpp
 
 )
