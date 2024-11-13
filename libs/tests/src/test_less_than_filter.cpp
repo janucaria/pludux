@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 #include <pludux/asset.hpp>
-#include <pludux/screener/less_than_filter.hpp>
-#include <pludux/screener/value_method.hpp>
+#include <pludux/screener.hpp>
 #include <pludux/series.hpp>
 
 using namespace pludux::screener;

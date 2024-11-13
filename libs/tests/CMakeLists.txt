@@ -10,9 +10,12 @@ set(PLUDUX_TEST_SOURCES
 
   src/test_all_of_filter.cpp
   src/test_any_of_filter.cpp
+  src/test_equal_filter.cpp
+  src/test_not_equal_filter.cpp
   src/test_greater_than_filter.cpp
   src/test_greater_equal_filter.cpp
   src/test_less_than_filter.cpp
+  src/test_less_equal_filter.cpp
 )
 
 foreach(PLUDUX_TEST_SOURCE ${PLUDUX_TEST_SOURCES})
