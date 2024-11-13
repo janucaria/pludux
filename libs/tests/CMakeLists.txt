@@ -7,6 +7,10 @@ set(PLUDUX_TEST_SOURCES
   src/test_field_method.cpp
   src/test_value_method.cpp
   src/test_sma_method.cpp
+  src/test_ema_method.cpp
+  src/test_rma_method.cpp
+  src/test_wma_method.cpp
+  src/test_hma_method.cpp
 
   src/test_all_of_filter.cpp
   src/test_any_of_filter.cpp

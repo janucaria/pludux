@@ -5,12 +5,12 @@
 
 using namespace pludux::screener;
 
-TEST(SmaMethodTest, RunOneMethod)
+TEST(HmaMethodTest, RunOneMethod)
 {
   const auto field = "close";
   const auto field_method = FieldMethod{field, 0};
   const auto period = 5;
-  const auto sma_method = SmaMethod{period, field_method, 0};
+  const auto hma_method = HmaMethod{period, field_method, 0};
   const auto asset = pludux::Asset("",
                                    {pludux::Quote(0, 0, 0, 0, 875, 0),
                                     pludux::Quote(0, 0, 0, 0, 830, 0),
@@ -23,17 +23,17 @@ TEST(SmaMethodTest, RunOneMethod)
                                     pludux::Quote(0, 0, 0, 0, 860, 0),
                                     pludux::Quote(0, 0, 0, 0, 855, 0)});
 
-  const auto result = sma_method.run_one(asset);
-  EXPECT_DOUBLE_EQ(result, 862);
+  const auto result = hma_method.run_one(asset);
+  EXPECT_DOUBLE_EQ(result, 855.11111111111097);
 }
 
-TEST(SmaMethodTest, RunAllMethod)
+TEST(HmaMethodTest, RunAllMethod)
 {
   const auto field = "close";
   const auto field_method = FieldMethod{field, 0};
   const auto offset = 0;
   const auto period = 5;
-  const auto sma_method = SmaMethod{period, field_method, 0};
+  const auto hma_method = HmaMethod{period, field_method, 0};
   const auto asset = pludux::Asset("",
                                    {pludux::Quote(0, 0, 0, 0, 875, 0),
                                     pludux::Quote(0, 0, 0, 0, 830, 0),
@@ -46,28 +46,28 @@ TEST(SmaMethodTest, RunAllMethod)
                                     pludux::Quote(0, 0, 0, 0, 860, 0),
                                     pludux::Quote(0, 0, 0, 0, 855, 0)});
 
-  const auto result = sma_method.run_all(asset);
+  const auto result = hma_method.run_all(asset);
 
   ASSERT_EQ(result.size(), asset.quotes().size());
-  EXPECT_DOUBLE_EQ(result[0], 862);
-  EXPECT_DOUBLE_EQ(result[1], 865);
-  EXPECT_DOUBLE_EQ(result[2], 860);
-  EXPECT_DOUBLE_EQ(result[3], 848);
-  EXPECT_DOUBLE_EQ(result[4], 842);
-  EXPECT_DOUBLE_EQ(result[5], 842);
+  EXPECT_DOUBLE_EQ(result[0], 855.11111111111097);
+  EXPECT_DOUBLE_EQ(result[1], 857.33333333333337);
+  EXPECT_DOUBLE_EQ(result[2], 862);
+  EXPECT_DOUBLE_EQ(result[3], 878.88888888888903);
+  EXPECT_DOUBLE_EQ(result[4], 887.66666666666686);
+  EXPECT_TRUE(std::isnan(result[5]));
   EXPECT_TRUE(std::isnan(result[6]));
   EXPECT_TRUE(std::isnan(result[7]));
   EXPECT_TRUE(std::isnan(result[8]));
   EXPECT_TRUE(std::isnan(result[9]));
 }
 
-TEST(SmaMethodTest, RunOneMethodWithOffset)
+TEST(HmaMethodTest, RunOneMethodWithOffset)
 {
   const auto field = "close";
   const auto field_method = FieldMethod{field, 0};
   const auto offset = 1;
   const auto period = 5;
-  const auto sma_method = SmaMethod{period, field_method, offset};
+  const auto hma_method = HmaMethod{period, field_method, offset};
   const auto asset = pludux::Asset("",
                                    {pludux::Quote(0, 0, 0, 0, 875, 0),
                                     pludux::Quote(0, 0, 0, 0, 830, 0),
@@ -80,17 +80,17 @@ TEST(SmaMethodTest, RunOneMethodWithOffset)
                                     pludux::Quote(0, 0, 0, 0, 860, 0),
                                     pludux::Quote(0, 0, 0, 0, 855, 0)});
 
-  const auto result = sma_method.run_one(asset);
-  EXPECT_DOUBLE_EQ(result, 865);
+  const auto result = hma_method.run_one(asset);
+  EXPECT_DOUBLE_EQ(result, 857.33333333333337);
 }
 
-TEST(SmaMethodTest, RunAllMethodWithOffset)
+TEST(HmaMethodTest, RunAllMethodWithOffset)
 {
   const auto field = "close";
   const auto field_method = FieldMethod{field, 0};
   const auto offset = 2;
   const auto period = 5;
-  const auto sma_method = SmaMethod{period, field_method, offset};
+  const auto hma_method = HmaMethod{period, field_method, offset};
   const auto asset = pludux::Asset("",
                                    {pludux::Quote(0, 0, 0, 0, 875, 0),
                                     pludux::Quote(0, 0, 0, 0, 830, 0),
@@ -103,13 +103,13 @@ TEST(SmaMethodTest, RunAllMethodWithOffset)
                                     pludux::Quote(0, 0, 0, 0, 860, 0),
                                     pludux::Quote(0, 0, 0, 0, 855, 0)});
 
-  const auto result = sma_method.run_all(asset);
+  const auto result = hma_method.run_all(asset);
 
   ASSERT_EQ(result.size(), asset.quotes().size() - offset);
-  EXPECT_DOUBLE_EQ(result[0], 860);
-  EXPECT_DOUBLE_EQ(result[1], 848);
-  EXPECT_DOUBLE_EQ(result[2], 842);
-  EXPECT_DOUBLE_EQ(result[3], 842);
+  EXPECT_DOUBLE_EQ(result[0], 862);
+  EXPECT_DOUBLE_EQ(result[1], 878.88888888888903);
+  EXPECT_DOUBLE_EQ(result[2], 887.66666666666686);
+  EXPECT_TRUE(std::isnan(result[3]));
   EXPECT_TRUE(std::isnan(result[4]));
   EXPECT_TRUE(std::isnan(result[5]));
   EXPECT_TRUE(std::isnan(result[6]));
