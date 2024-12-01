@@ -24,4 +24,9 @@ auto ValueMethod::run_one(const Asset& asset) const -> double
   return value_;
 }
 
+auto ValueMethod::value() const -> double
+{
+  return value_;
+}
+
 } // namespace pludux::screener

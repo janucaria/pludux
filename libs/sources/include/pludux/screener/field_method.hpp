@@ -17,6 +17,10 @@ public:
 
   auto run_all(const Asset& asset) const -> Series;
 
+  auto field() const -> const std::string&;
+
+  auto offset() const -> int;
+
 private:
   std::string field_{};
   int offset_{};

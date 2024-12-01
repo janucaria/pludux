@@ -21,6 +21,13 @@ public:
 
   auto run_all(const Asset& asset) const -> Series;
 
+  template<typename T>
+  friend auto screener_method_cast(const ScreenerMethod* method) noexcept -> const T*
+  {
+    auto model = std::dynamic_pointer_cast<const ImplModel<T>>(method->impl_);
+    return model ? &model->impl : nullptr;
+  }
+
 private:
   struct ImplConcept {
     virtual ~ImplConcept() = default;

@@ -36,6 +36,21 @@ public:
     return series.subseries(offset_);
   }
 
+  auto period() const noexcept -> int
+  {
+    return period_;
+  }
+
+  auto offset() const noexcept -> int
+  {
+    return offset_;
+  }
+
+  auto target() const noexcept -> const ScreenerMethod&
+  {
+    return target_;
+  }
+
 private:
   int period_{};
   int offset_{};

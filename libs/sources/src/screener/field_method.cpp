@@ -76,4 +76,14 @@ auto FieldMethod::run_one(const Asset& asset) const -> double
   return series[0];
 }
 
+auto FieldMethod::field() const -> const std::string&
+{
+  return field_;
+}
+
+auto FieldMethod::offset() const -> int
+{
+  return offset_;
+}
+
 } // namespace pludux::screener

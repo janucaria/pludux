@@ -8,8 +8,14 @@
 
 namespace pludux::screener {
 
-using ScreenerFilter = std::function<auto(const Asset&) ->bool>;
+using ScreenerFilter = std::function<auto(const Asset&)->bool>;
 
+template<typename T>
+auto screener_filter_cast(const ScreenerFilter& filter) noexcept -> const T*
+{
+  return filter.target<T>();
 }
 
-#endif // PLUDUX_PLUDUX_SCREENER_SCREENER_FILTER_HPP
+} // namespace pludux::screener
+
+#endif

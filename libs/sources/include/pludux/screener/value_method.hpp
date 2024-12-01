@@ -16,6 +16,8 @@ public:
 
   auto run_all(const Asset& asset) const -> Series;
 
+  auto value() const -> double;
+
 private:
   double value_;
 };

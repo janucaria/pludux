@@ -16,6 +16,8 @@ public:
 
   auto operator()(const Asset& asset) const -> bool;
 
+  auto filters() const -> const std::vector<ScreenerFilter>&;
+
 private:
   std::vector<ScreenerFilter> filters_;
 };

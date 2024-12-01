@@ -27,6 +27,16 @@ public:
     return compare_(target_result, threshold_result);
   }
 
+  auto target() const -> const ScreenerMethod&
+  {
+    return target_;
+  }
+
+  auto threshold() const -> const ScreenerMethod&
+  {
+    return threshold_;
+  }
+
 private:
   T compare_;
   ScreenerMethod target_;

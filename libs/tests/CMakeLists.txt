@@ -20,6 +20,8 @@ set(PLUDUX_TEST_SOURCES
   src/test_greater_equal_filter.cpp
   src/test_less_than_filter.cpp
   src/test_less_equal_filter.cpp
+
+  src/test_config_parser.cpp
 )
 
 foreach(PLUDUX_TEST_SOURCE ${PLUDUX_TEST_SOURCES})

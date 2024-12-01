@@ -26,4 +26,9 @@ auto AllOfFilter::operator()(const Asset& asset) const -> bool
   return true;
 }
 
+auto AllOfFilter::filters() const -> const std::vector<ScreenerFilter>&
+{
+  return filters_;
+}
+
 } // namespace pludux::screener
