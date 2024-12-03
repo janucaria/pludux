@@ -12,4 +12,6 @@
 #include "screener/any_of_filter.hpp"
 #include "screener/comparison_filter.hpp"
 
+#include "screener/asset_data_provider.hpp"
+
 #endif

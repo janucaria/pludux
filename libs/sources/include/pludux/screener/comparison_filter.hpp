@@ -19,10 +19,10 @@ public:
   {
   }
 
-  auto operator()(const Asset& asset) const -> bool
+  auto operator()(const AssetDataProvider& asset_data) const -> bool
   {
-    const auto target_result = target_.run_one(asset);
-    const auto threshold_result = threshold_.run_one(asset);
+    const auto target_result = target_.run_one(asset_data);
+    const auto threshold_result = threshold_.run_one(asset_data);
 
     return compare_(target_result, threshold_result);
   }

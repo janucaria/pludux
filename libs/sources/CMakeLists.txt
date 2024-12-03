@@ -16,6 +16,8 @@ target_sources(${PROJECT_NAME}
     src/screener/all_of_filter.cpp
     src/screener/any_of_filter.cpp
 
+    src/screener/asset_data_provider.cpp
+
   INTERFACE
     FILE_SET HEADERS
       BASE_DIRS include/
@@ -25,6 +27,7 @@ target_sources(${PROJECT_NAME}
         include/pludux/series.hpp
         include/pludux/ta.hpp
         include/pludux/config_parser.hpp
+        include/pludux/screener.hpp
 
         include/pludux/screener/screener_method.hpp 
         include/pludux/screener/field_method.hpp 
@@ -35,6 +38,8 @@ target_sources(${PROJECT_NAME}
         include/pludux/screener/all_of_filter.hpp
         include/pludux/screener/any_of_filter.hpp
         include/pludux/screener/comparison_filter.hpp
+
+        include/pludux/screener/asset_data_provider.hpp
 )
 
 target_compile_features(${PROJECT_NAME}

@@ -14,7 +14,7 @@ public:
 
   explicit AnyOfFilter(std::vector<ScreenerFilter> filters);
 
-  auto operator()(const Asset& asset) const -> bool;
+  auto operator()(const AssetDataProvider& asset_data) const -> bool;
 
   auto filters() const -> const std::vector<ScreenerFilter>&;
 

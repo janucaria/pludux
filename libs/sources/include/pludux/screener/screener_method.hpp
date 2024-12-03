@@ -6,6 +6,7 @@
 
 #include <pludux/asset.hpp>
 #include <pludux/series.hpp>
+#include <pludux/screener/asset_data_provider.hpp>
 
 namespace pludux::screener {
 
@@ -17,9 +18,9 @@ public:
   {
   }
 
-  auto run_one(const Asset& asset) const -> double;
+  auto run_one(const AssetDataProvider& asset_data) const -> double;
 
-  auto run_all(const Asset& asset) const -> Series;
+  auto run_all(const AssetDataProvider& asset_data) const -> Series;
 
   template<typename T>
   friend auto screener_method_cast(const ScreenerMethod* method) noexcept -> const T*
@@ -31,10 +32,10 @@ public:
 private:
   struct ImplConcept {
     virtual ~ImplConcept() = default;
-    
-    virtual auto run_one(const Asset& asset) const -> double = 0;
 
-    virtual auto run_all(const Asset& asset) const -> Series = 0;
+    virtual auto run_one(const AssetDataProvider& asset_data) const -> double = 0;
+    
+    virtual auto run_all(const AssetDataProvider& asset_data) const -> Series = 0;
   };
 
   template<typename T>
@@ -46,14 +47,14 @@ private:
     {
     }
 
-    auto run_one(const Asset& asset) const -> double final
+    auto run_one(const AssetDataProvider& asset_data) const -> double final
     {
-      return impl.run_one(asset);
+      return impl.run_one(asset_data);
     }
 
-    auto run_all(const Asset& asset) const -> Series final
+    auto run_all(const AssetDataProvider& asset_data) const -> Series final
     {
-      return impl.run_all(asset);
+      return impl.run_all(asset_data);
     }
   };
 

@@ -22,8 +22,9 @@ TEST(WmaMethodTest, RunOneMethod)
                                     pludux::Quote(0, 0, 0, 0, 860, 0),
                                     pludux::Quote(0, 0, 0, 0, 860, 0),
                                     pludux::Quote(0, 0, 0, 0, 855, 0)});
-
-  const auto result = wma_method.run_one(asset);
+  const auto asset_data = AssetDataProvider{asset};
+  
+  const auto result = wma_method.run_one(asset_data);
   EXPECT_DOUBLE_EQ(result, 859.33333333333337);
 }
 
@@ -45,8 +46,9 @@ TEST(WmaMethodTest, RunAllMethod)
                                     pludux::Quote(0, 0, 0, 0, 860, 0),
                                     pludux::Quote(0, 0, 0, 0, 860, 0),
                                     pludux::Quote(0, 0, 0, 0, 855, 0)});
-
-  const auto result = wma_method.run_all(asset);
+  const auto asset_data = AssetDataProvider{asset};
+  
+  const auto result = wma_method.run_all(asset_data);
 
   ASSERT_EQ(result.size(), asset.quotes().size());
   EXPECT_DOUBLE_EQ(result[0], 859.33333333333337);
@@ -79,8 +81,9 @@ TEST(WmaMethodTest, RunOneMethodWithOffset)
                                     pludux::Quote(0, 0, 0, 0, 860, 0),
                                     pludux::Quote(0, 0, 0, 0, 860, 0),
                                     pludux::Quote(0, 0, 0, 0, 855, 0)});
-
-  const auto result = wma_method.run_one(asset);
+  const auto asset_data = AssetDataProvider{asset};
+  
+  const auto result = wma_method.run_one(asset_data);
   EXPECT_DOUBLE_EQ(result, 862.66666666666663);
 }
 
@@ -102,8 +105,9 @@ TEST(WmaMethodTest, RunAllMethodWithOffset)
                                     pludux::Quote(0, 0, 0, 0, 860, 0),
                                     pludux::Quote(0, 0, 0, 0, 860, 0),
                                     pludux::Quote(0, 0, 0, 0, 855, 0)});
-
-  const auto result = wma_method.run_all(asset);
+  const auto asset_data = AssetDataProvider{asset};
+  
+  const auto result = wma_method.run_all(asset_data);
 
   ASSERT_EQ(result.size(), asset.quotes().size() - offset);
   EXPECT_DOUBLE_EQ(result[0], 862.66666666666663);

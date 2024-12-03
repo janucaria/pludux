@@ -6,6 +6,7 @@
 #include <pludux/asset.hpp>
 
 #include <pludux/screener/any_of_filter.hpp>
+#include <pludux/screener/asset_data_provider.hpp>
 
 namespace pludux::screener {
 
@@ -16,10 +17,10 @@ AnyOfFilter::AnyOfFilter(std::vector<ScreenerFilter> filters)
 {
 }
 
-auto AnyOfFilter::operator()(const Asset& asset) const -> bool
+auto AnyOfFilter::operator()(const AssetDataProvider& asset_data) const -> bool
 {
   for(const auto& filter : filters_) {
-    if(filter(asset)) {
+    if(filter(asset_data)) {
       return true;
     }
   }

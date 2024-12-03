@@ -5,10 +5,11 @@
 #include <vector>
 
 #include <pludux/asset.hpp>
+#include <pludux/screener/asset_data_provider.hpp>
 
 namespace pludux::screener {
 
-using ScreenerFilter = std::function<auto(const Asset&)->bool>;
+using ScreenerFilter = std::function<auto(const AssetDataProvider&)->bool>;
 
 template<typename T>
 auto screener_filter_cast(const ScreenerFilter& filter) noexcept -> const T*

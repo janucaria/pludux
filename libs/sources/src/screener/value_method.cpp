@@ -13,13 +13,13 @@ ValueMethod::ValueMethod(double value)
 {
 }
 
-auto ValueMethod::run_all(const Asset& asset) const -> Series
+auto ValueMethod::run_all(const AssetDataProvider& asset_data) const -> Series
 {
-  auto values = std::vector<double>(asset.quotes().size(), value_);
+  auto values = std::vector<double>(asset_data.price().size(), value_);
   return Series{std::move(values)};
 }
 
-auto ValueMethod::run_one(const Asset& asset) const -> double
+auto ValueMethod::run_one(const AssetDataProvider& asset_data) const -> double
 {
   return value_;
 }

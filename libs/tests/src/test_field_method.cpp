@@ -14,8 +14,9 @@ TEST(FieldMethodTest, RunAllMethodClose)
                                    {pludux::Quote(0, 1.0, 2.0, 3.0, 4.0, 5.0),
                                     pludux::Quote(0, 1.1, 2.1, 3.1, 4.1, 5.1),
                                     pludux::Quote(0, 1.2, 2.2, 3.2, 4.2, 5.2)});
-
-  auto series = field_method.run_all(asset);
+  const auto asset_data = AssetDataProvider{asset};
+  
+  auto series = field_method.run_all(asset_data);
   ASSERT_EQ(series.size(), asset.quotes().size() - offset);
   EXPECT_EQ(series[0], asset.quotes()[1].close());
   EXPECT_EQ(series[1], asset.quotes()[0].close());
@@ -30,8 +31,9 @@ TEST(FieldMethodTest, RunAllMethodOpen)
                                    {pludux::Quote(0, 1.0, 2.0, 3.0, 4.0, 5.0),
                                     pludux::Quote(0, 1.1, 2.1, 3.1, 4.1, 5.1),
                                     pludux::Quote(0, 1.2, 2.2, 3.2, 4.2, 5.2)});
-
-  auto series = field_method.run_all(asset);
+  const auto asset_data = AssetDataProvider{asset};
+  
+  auto series = field_method.run_all(asset_data);
   ASSERT_EQ(series.size(), asset.quotes().size() - offset);
   EXPECT_EQ(series[0], asset.quotes()[1].open());
   EXPECT_EQ(series[1], asset.quotes()[0].open());
@@ -46,8 +48,9 @@ TEST(FieldMethodTest, RunAllMethodHigh)
                                    {pludux::Quote(0, 1.0, 2.0, 3.0, 4.0, 5.0),
                                     pludux::Quote(0, 1.1, 2.1, 3.1, 4.1, 5.1),
                                     pludux::Quote(0, 1.2, 2.2, 3.2, 4.2, 5.2)});
-
-  auto series = field_method.run_all(asset);
+  const auto asset_data = AssetDataProvider{asset};
+  
+  auto series = field_method.run_all(asset_data);
   ASSERT_EQ(series.size(), asset.quotes().size() - offset);
   EXPECT_EQ(series[0], asset.quotes()[1].high());
   EXPECT_EQ(series[1], asset.quotes()[0].high());
@@ -62,8 +65,9 @@ TEST(FieldMethodTest, RunAllMethodLow)
                                    {pludux::Quote(0, 1.0, 2.0, 3.0, 4.0, 5.0),
                                     pludux::Quote(0, 1.1, 2.1, 3.1, 4.1, 5.1),
                                     pludux::Quote(0, 1.2, 2.2, 3.2, 4.2, 5.2)});
-
-  auto series = field_method.run_all(asset);
+  const auto asset_data = AssetDataProvider{asset};
+  
+  auto series = field_method.run_all(asset_data);
   ASSERT_EQ(series.size(), asset.quotes().size() - offset);
   EXPECT_EQ(series[0], asset.quotes()[1].low());
   EXPECT_EQ(series[1], asset.quotes()[0].low());
@@ -78,8 +82,9 @@ TEST(FieldMethodTest, RunAllMethodVolume)
                                    {pludux::Quote(0, 1.0, 2.0, 3.0, 4.0, 5.0),
                                     pludux::Quote(0, 1.1, 2.1, 3.1, 4.1, 5.1),
                                     pludux::Quote(0, 1.2, 2.2, 3.2, 4.2, 5.2)});
-
-  auto series = field_method.run_all(asset);
+  const auto asset_data = AssetDataProvider{asset};
+  
+  auto series = field_method.run_all(asset_data);
   ASSERT_EQ(series.size(), asset.quotes().size() - offset);
   EXPECT_EQ(series[0], asset.quotes()[1].volume());
   EXPECT_EQ(series[1], asset.quotes()[0].volume());
@@ -94,6 +99,7 @@ TEST(FieldMethodTest, InvalidField)
                                    {pludux::Quote(0, 1.0, 2.0, 3.0, 4.0, 5.0),
                                     pludux::Quote(0, 1.1, 2.1, 3.1, 4.1, 5.1),
                                     pludux::Quote(0, 1.2, 2.2, 3.2, 4.2, 5.2)});
-
-  EXPECT_THROW(field_method.run_all(asset), std::runtime_error);
+  const auto asset_data = AssetDataProvider{asset};
+  
+  EXPECT_THROW(field_method.run_all(asset_data), std::runtime_error);
 }

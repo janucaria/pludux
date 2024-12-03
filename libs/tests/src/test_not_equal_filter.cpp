@@ -12,9 +12,10 @@ TEST(NotEqualFilterTest, TargetEqualThreshold)
   auto target_method = ValueMethod{target_value};
   auto threshold_method = ValueMethod{threshold_value};
   const auto filter = NotEqualFilter{std::move(target_method), std::move(threshold_method)};
-  const auto asset = pludux::Asset("");
+  const auto asset = pludux::Asset{""};
+  const auto asset_data = AssetDataProvider{asset};
 
-  EXPECT_TRUE(filter(asset));
+  EXPECT_TRUE(filter(asset_data));
 }
 
 TEST(NotEqualFilterTest, TargetEqualToThreshold)
@@ -24,9 +25,10 @@ TEST(NotEqualFilterTest, TargetEqualToThreshold)
   auto target_method = ValueMethod{target_value};
   auto threshold_method = ValueMethod{threshold_value};
   const auto filter = NotEqualFilter{std::move(target_method), std::move(threshold_method)};
-  const auto asset = pludux::Asset("");
+  const auto asset = pludux::Asset{""};
+  const auto asset_data = AssetDataProvider{asset};
 
-  EXPECT_FALSE(filter(asset));
+  EXPECT_FALSE(filter(asset_data));
 }
 
 TEST(NotEqualFilterTest, TargetGreaterThanThreshold)
@@ -36,8 +38,9 @@ TEST(NotEqualFilterTest, TargetGreaterThanThreshold)
   auto target_method = ValueMethod{target_value};
   auto threshold_method = ValueMethod{threshold_value};
   const auto filter = NotEqualFilter{std::move(target_method), std::move(threshold_method)};
-  const auto asset = pludux::Asset("");
+  const auto asset = pludux::Asset{""};
+  const auto asset_data = AssetDataProvider{asset};
 
-  EXPECT_TRUE(filter(asset));
+  EXPECT_TRUE(filter(asset_data));
 }
 

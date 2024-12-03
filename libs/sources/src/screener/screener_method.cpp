@@ -5,14 +5,14 @@
 
 namespace pludux::screener {
 
-auto ScreenerMethod::run_one(const Asset& asset) const -> double
+auto ScreenerMethod::run_one(const AssetDataProvider& asset_data) const -> double
 {
-  return impl_->run_one(asset);
+  return impl_->run_one(asset_data);
 }
 
-auto ScreenerMethod::run_all(const Asset& asset) const -> Series
+auto ScreenerMethod::run_all(const AssetDataProvider& asset_data) const -> Series
 {
-  return impl_->run_all(asset);
+  return impl_->run_all(asset_data);
 }
 
 } // namespace pludux::screener

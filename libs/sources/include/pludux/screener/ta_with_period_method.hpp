@@ -8,6 +8,7 @@
 #include <pludux/screener/screener_method.hpp>
 #include <pludux/series.hpp>
 #include <pludux/ta.hpp>
+#include <pludux/screener/asset_data_provider.hpp>
 
 namespace pludux::screener {
 
@@ -23,15 +24,15 @@ public:
   {
   }
 
-  auto run_one(const Asset& asset) const -> double
+  auto run_one(const AssetDataProvider& asset_data) const -> double
   {
-    const auto series = run_all(asset);
+    const auto series = run_all(asset_data);
     return series[0];
   }
 
-  auto run_all(const Asset& asset) const -> Series
+  auto run_all(const AssetDataProvider& asset_data) const -> Series
   {
-    const auto sources = target_.run_all(asset);
+    const auto sources = target_.run_all(asset_data);
     const auto series = T{}(sources, period_);
     return series.subseries(offset_);
   }
