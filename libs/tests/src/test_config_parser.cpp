@@ -464,6 +464,80 @@ TEST(ConfigParserTest, ParseScreenerLessEqualFilter)
   EXPECT_EQ(target->offset(), 0);
 }
 
+TEST(ConfigParserTest, ParseScreenerCrossunderFilter)
+{
+  const auto config = json::parse(R"(
+    {
+      "filter": "CROSSUNDER",
+      "signal": {
+        "method": "DATA",
+        "field": "close",
+        "offset": 0
+      },
+      "reference": {
+        "method": "VALUE",
+        "value": 100
+      }
+    }
+  )");
+
+  const auto filter = parse_screener_filter(config);
+
+  const auto crossunder_filter =
+   screener_filter_cast<CrossunderFilter>(filter);
+  ASSERT_NE(crossunder_filter, nullptr);
+
+  const auto signal =
+   screener_method_cast<DataMethod>(&crossunder_filter->signal());
+  ASSERT_NE(signal, nullptr);
+
+  EXPECT_EQ(signal->field(), "close");
+  EXPECT_EQ(signal->offset(), 0);
+
+  const auto reference =
+   screener_method_cast<ValueMethod>(&crossunder_filter->reference());
+  ASSERT_NE(reference, nullptr);
+
+  EXPECT_EQ(reference->value(), 100);
+}
+
+TEST(ConfigParserTest, ParseScreenerCrossoverFilter)
+{
+  const auto config = json::parse(R"(
+    {
+      "filter": "CROSSOVER",
+      "signal": {
+        "method": "DATA",
+        "field": "close",
+        "offset": 0
+      },
+      "reference": {
+        "method": "VALUE",
+        "value": 100
+      }
+    }
+  )");
+
+  const auto filter = parse_screener_filter(config);
+
+  const auto crossover_filter =
+   screener_filter_cast<CrossoverFilter>(filter);
+  ASSERT_NE(crossover_filter, nullptr);
+
+  const auto signal =
+   screener_method_cast<DataMethod>(&crossover_filter->signal());
+  ASSERT_NE(signal, nullptr);
+
+  EXPECT_EQ(signal->field(), "close");
+  EXPECT_EQ(signal->offset(), 0);
+
+  const auto reference =
+   screener_method_cast<ValueMethod>(&crossover_filter->reference());
+  ASSERT_NE(reference, nullptr);
+
+  EXPECT_EQ(reference->value(), 100);
+}
+
 TEST(ConfigParserTest, ParseScreenerInvalidFilter)
 {
   const auto config = json::parse(R"(

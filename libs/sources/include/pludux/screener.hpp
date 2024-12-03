@@ -11,6 +11,8 @@
 #include "screener/all_of_filter.hpp"
 #include "screener/any_of_filter.hpp"
 #include "screener/comparison_filter.hpp"
+#include "screener/crossover_filter.hpp"
+#include "screener/crossunder_filter.hpp"
 
 #include "screener/asset_data_provider.hpp"
 

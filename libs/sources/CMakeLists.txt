@@ -16,6 +16,9 @@ target_sources(${PROJECT_NAME}
     src/screener/all_of_filter.cpp
     src/screener/any_of_filter.cpp
 
+    src/screener/crossover_filter.cpp
+    src/screener/crossunder_filter.cpp
+
     src/screener/asset_data_provider.cpp
 
   INTERFACE
@@ -38,6 +41,8 @@ target_sources(${PROJECT_NAME}
         include/pludux/screener/all_of_filter.hpp
         include/pludux/screener/any_of_filter.hpp
         include/pludux/screener/comparison_filter.hpp
+        include/pludux/screener/crossover_filter.hpp
+        include/pludux/screener/crossunder_filter.hpp
 
         include/pludux/screener/asset_data_provider.hpp
 )

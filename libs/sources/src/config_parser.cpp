@@ -123,6 +123,22 @@ static auto parse_any_of_filter(const nlohmann::json& parameters)
   return screener::AnyOfFilter{filters};
 }
 
+static auto parse_crossunder_filter(const nlohmann::json& parameters)
+ -> screener::ScreenerFilter
+{
+  auto signal = parse_screener_method(parameters["signal"]);
+  auto reference = parse_screener_method(parameters["reference"]);
+  return screener::CrossunderFilter{signal, reference};
+}
+
+static auto parse_crossover_filter(const nlohmann::json& parameters)
+ -> screener::ScreenerFilter
+{
+  auto signal = parse_screener_method(parameters["signal"]);
+  auto reference = parse_screener_method(parameters["reference"]);
+  return screener::CrossoverFilter{signal, reference};
+}
+
 auto parse_screener_filter(const nlohmann::json& config)
  -> screener::ScreenerFilter
 {
@@ -158,6 +174,14 @@ auto parse_screener_filter(const nlohmann::json& config)
 
   if(filter == "NOT_EQUAL") {
     return parse_comparison_filter<screener::NotEqualFilter>(config);
+  }
+
+  if(filter == "CROSSUNDER") {
+    return parse_crossunder_filter(config);
+  }
+
+  if(filter == "CROSSOVER") {
+    return parse_crossover_filter(config);
   }
 
   const auto error_message = std::format("Unknown filter: {}", filter);
