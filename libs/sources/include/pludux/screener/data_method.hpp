@@ -1,5 +1,5 @@
-#ifndef PLUDUX_PLUDUX_SCREENER_FIELD_METHOD_HPP
-#define PLUDUX_PLUDUX_SCREENER_FIELD_METHOD_HPP
+#ifndef PLUDUX_PLUDUX_SCREENER_DATA_METHOD_HPP
+#define PLUDUX_PLUDUX_SCREENER_DATA_METHOD_HPP
 
 #include <string>
 #include <vector>
@@ -10,9 +10,9 @@
 
 namespace pludux::screener {
 
-class FieldMethod {
+class DataMethod {
 public:
-  FieldMethod(std::string field, int offset);
+  DataMethod(std::string field, int offset);
   
   auto run_one(const AssetDataProvider& asset_data) const -> double;
 

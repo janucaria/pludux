@@ -5,17 +5,17 @@
 
 #include <pludux/asset.hpp>
 
-#include <pludux/screener/field_method.hpp>
+#include <pludux/screener/data_method.hpp>
 
 namespace pludux::screener {
 
-FieldMethod::FieldMethod(std::string field, int offset)
+DataMethod::DataMethod(std::string field, int offset)
   : field_{std::move(field)}
   , offset_{offset}
 {
 }
 
-auto FieldMethod::run_all(const AssetDataProvider& asset_data) const -> Series
+auto DataMethod::run_all(const AssetDataProvider& asset_data) const -> Series
 {
   if(field_ == "close") {
     return asset_data.price().subseries(offset_);
@@ -40,18 +40,18 @@ auto FieldMethod::run_all(const AssetDataProvider& asset_data) const -> Series
   throw std::runtime_error("Field not found");
 }
 
-auto FieldMethod::run_one(const AssetDataProvider& asset_data) const -> double
+auto DataMethod::run_one(const AssetDataProvider& asset_data) const -> double
 {
   const auto series = run_all(asset_data);
   return series[0];
 }
 
-auto FieldMethod::field() const -> const std::string&
+auto DataMethod::field() const -> const std::string&
 {
   return field_;
 }
 
-auto FieldMethod::offset() const -> int
+auto DataMethod::offset() const -> int
 {
   return offset_;
 }

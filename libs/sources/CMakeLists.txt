@@ -10,7 +10,7 @@ target_sources(${PROJECT_NAME}
     src/config_parser.cpp
 
     src/screener/screener_method.cpp
-    src/screener/field_method.cpp
+    src/screener/data_method.cpp
     src/screener/value_method.cpp
 
     src/screener/all_of_filter.cpp
@@ -30,7 +30,7 @@ target_sources(${PROJECT_NAME}
         include/pludux/screener.hpp
 
         include/pludux/screener/screener_method.hpp 
-        include/pludux/screener/field_method.hpp 
+        include/pludux/screener/data_method.hpp 
         include/pludux/screener/ta_with_period_method.hpp 
         include/pludux/screener/value_method.hpp 
         

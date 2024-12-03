@@ -8,7 +8,7 @@ using namespace pludux::screener;
 TEST(RmaMethodTest, RunOneMethod)
 {
   const auto field = "close";
-  const auto field_method = FieldMethod{field, 0};
+  const auto field_method = DataMethod{field, 0};
   const auto period = 5;
   const auto rma_method = RmaMethod{period, field_method, 0};
   const auto asset = pludux::Asset("",
@@ -31,7 +31,7 @@ TEST(RmaMethodTest, RunOneMethod)
 TEST(RmaMethodTest, RunAllMethod)
 {
   const auto field = "close";
-  const auto field_method = FieldMethod{field, 0};
+  const auto field_method = DataMethod{field, 0};
   const auto offset = 0;
   const auto period = 5;
   const auto rma_method = RmaMethod{period, field_method, 0};
@@ -66,7 +66,7 @@ TEST(RmaMethodTest, RunAllMethod)
 TEST(RmaMethodTest, RunOneMethodWithOffset)
 {
   const auto field = "close";
-  const auto field_method = FieldMethod{field, 0};
+  const auto field_method = DataMethod{field, 0};
   const auto offset = 1;
   const auto period = 5;
   const auto rma_method = RmaMethod{period, field_method, offset};
@@ -90,7 +90,7 @@ TEST(RmaMethodTest, RunOneMethodWithOffset)
 TEST(RmaMethodTest, RunAllMethodWithOffset)
 {
   const auto field = "close";
-  const auto field_method = FieldMethod{field, 0};
+  const auto field_method = DataMethod{field, 0};
   const auto offset = 2;
   const auto period = 5;
   const auto rma_method = RmaMethod{period, field_method, offset};

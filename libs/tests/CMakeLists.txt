@@ -4,7 +4,7 @@ set(PLUDUX_TEST_SOURCES
   src/test_series.cpp
   src/test_ta.cpp
 
-  src/test_field_method.cpp
+  src/test_data_method.cpp
   src/test_value_method.cpp
   src/test_sma_method.cpp
   src/test_ema_method.cpp

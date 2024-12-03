@@ -8,7 +8,7 @@ using namespace pludux::screener;
 TEST(EmaMethodTest, RunOneMethod)
 {
   const auto field = "close";
-  const auto field_method = FieldMethod{field, 0};
+  const auto field_method = DataMethod{field, 0};
   const auto period = 5;
   const auto ema_method = EmaMethod{period, field_method, 0};
   const auto asset = pludux::Asset("",
@@ -31,7 +31,7 @@ TEST(EmaMethodTest, RunOneMethod)
 TEST(EmaMethodTest, RunAllMethod)
 {
   const auto field = "close";
-  const auto field_method = FieldMethod{field, 0};
+  const auto field_method = DataMethod{field, 0};
   const auto offset = 0;
   const auto period = 5;
   const auto ema_method = EmaMethod{period, field_method, 0};
@@ -66,7 +66,7 @@ TEST(EmaMethodTest, RunAllMethod)
 TEST(EmaMethodTest, RunOneMethodWithOffset)
 {
   const auto field = "close";
-  const auto field_method = FieldMethod{field, 0};
+  const auto field_method = DataMethod{field, 0};
   const auto offset = 1;
   const auto period = 5;
   const auto ema_method = EmaMethod{period, field_method, offset};
@@ -90,7 +90,7 @@ TEST(EmaMethodTest, RunOneMethodWithOffset)
 TEST(EmaMethodTest, RunAllMethodWithOffset)
 {
   const auto field = "close";
-  const auto field_method = FieldMethod{field, 0};
+  const auto field_method = DataMethod{field, 0};
   const auto offset = 2;
   const auto period = 5;
   const auto ema_method = EmaMethod{period, field_method, offset};

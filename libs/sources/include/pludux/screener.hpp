@@ -3,7 +3,7 @@
 
 #include "screener/screener_method.hpp"
 
-#include "screener/field_method.hpp"
+#include "screener/data_method.hpp"
 #include "screener/ta_with_period_method.hpp"
 #include "screener/value_method.hpp"
 

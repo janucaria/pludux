@@ -25,7 +25,7 @@ static auto parse_ta_with_period_method(const nlohmann::json& parameters)
   const auto is_target_exists = parameters.contains("target");
   const auto target_method = is_target_exists
                               ? parse_screener_method(parameters["target"])
-                              : screener::FieldMethod{"close", 0};
+                              : screener::DataMethod{"close", 0};
 
   const auto ta_method = T{period, target_method, offset};
   return ta_method;
@@ -39,7 +39,7 @@ parse_value_method(const nlohmann::json& parameters) -> screener::ScreenerMethod
 }
 
 static auto
-parse_field_method(const nlohmann::json& parameters) -> screener::ScreenerMethod
+parse_data_method(const nlohmann::json& parameters) -> screener::ScreenerMethod
 {
   const auto field = parameters["field"].get<std::string>();
 
@@ -48,7 +48,7 @@ parse_field_method(const nlohmann::json& parameters) -> screener::ScreenerMethod
     offset = parameters["offset"].get<int>();
   }
 
-  const auto field_method = screener::FieldMethod{field, offset};
+  const auto field_method = screener::DataMethod{field, offset};
 
   return field_method;
 }
@@ -62,8 +62,8 @@ auto parse_screener_method(const nlohmann::json& config)
     return parse_value_method(config);
   }
 
-  if(method == "FIELD") {
-    return parse_field_method(config);
+  if(method == "DATA") {
+    return parse_data_method(config);
   }
 
   if(method == "SMA") {
