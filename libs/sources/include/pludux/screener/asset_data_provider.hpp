@@ -22,6 +22,18 @@ public:
   
   auto volume() const -> Series;
 
+  auto sma5() const -> Series;
+
+  auto sma10() const -> Series;
+
+  auto sma20() const -> Series;
+
+  auto sma50() const -> Series;
+
+  auto sma100() const -> Series;
+
+  auto sma200() const -> Series;
+
 private:
   const Asset& asset_;
 };

@@ -37,6 +37,30 @@ auto DataMethod::run_all(const AssetDataProvider& asset_data) const -> Series
     return asset_data.volume().subseries(offset_);
   }
 
+  if(field_ == "sma5") {
+    return asset_data.sma5().subseries(offset_);
+  }
+
+  if(field_ == "sma10") {
+    return asset_data.sma10().subseries(offset_);
+  }
+
+  if(field_ == "sma20") {
+    return asset_data.sma20().subseries(offset_);
+  }
+
+  if(field_ == "sma50") {
+    return asset_data.sma50().subseries(offset_);
+  }
+
+  if(field_ == "sma100") {
+    return asset_data.sma100().subseries(offset_);
+  }
+
+  if(field_ == "sma200") {
+    return asset_data.sma200().subseries(offset_);
+  }
+
   throw std::runtime_error("Field not found");
 }
 
