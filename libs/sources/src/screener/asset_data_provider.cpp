@@ -104,4 +104,31 @@ auto AssetDataProvider::sma200() const -> Series
   return ta::sma(price(), 200);
 }
 
+auto AssetDataProvider::rsi14() const -> Series
+{
+  return ta::rsi(price(), 14);
+}
+
+auto AssetDataProvider::rsi14_sma14() const -> Series
+{
+  return ta::sma(rsi14(), 14);
+}
+
+auto AssetDataProvider::rsi14_bb14l2sd_upper() const -> Series
+{
+  const auto rsi14_sma14 = rsi14();
+  const auto[ bb_middle, bb_upper, bb_lower ] = ta::bb(rsi14_sma14, 14, 2);
+
+  return bb_upper;
+}
+
+auto AssetDataProvider::rsi14_bb14l2sd_lower() const -> Series
+{
+  const auto rsi14_sma14 = rsi14();
+  const auto[ bb_middle, bb_upper, bb_lower ] = ta::bb(rsi14_sma14, 14, 2);
+
+  return bb_lower;
+}
+
+
 } // namespace pludux::screener

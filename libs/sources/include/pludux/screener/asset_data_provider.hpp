@@ -34,6 +34,14 @@ public:
 
   auto sma200() const -> Series;
 
+  auto rsi14() const -> Series;
+
+  auto rsi14_sma14() const -> Series;
+
+  auto rsi14_bb14l2sd_upper() const -> Series;
+
+  auto rsi14_bb14l2sd_lower() const -> Series;
+
 private:
   const Asset& asset_;
 };

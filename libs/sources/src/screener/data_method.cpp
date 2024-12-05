@@ -61,6 +61,22 @@ auto DataMethod::run_all(const AssetDataProvider& asset_data) const -> Series
     return asset_data.sma200().subseries(offset_);
   }
 
+  if(field_ == "rsi14") {
+    return asset_data.rsi14().subseries(offset_);
+  }
+
+  if(field_ == "rsi14_sma14") {
+    return asset_data.rsi14_sma14().subseries(offset_);
+  }
+
+  if(field_ == "rsi14_bb14l2sd_upper") {
+    return asset_data.rsi14_bb14l2sd_upper().subseries(offset_);
+  }
+
+  if(field_ == "rsi14_bb14l2sd_lower") {
+    return asset_data.rsi14_bb14l2sd_lower().subseries(offset_);
+  }
+
   throw std::runtime_error("Field not found");
 }
 
