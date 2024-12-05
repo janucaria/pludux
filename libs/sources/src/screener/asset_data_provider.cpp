@@ -104,6 +104,21 @@ auto AssetDataProvider::sma200() const -> Series
   return ta::sma(price(), 200);
 }
 
+auto AssetDataProvider::hma30() const -> Series
+{
+  return ta::hma(price(), 30);
+}
+
+auto AssetDataProvider::hma35() const -> Series
+{
+  return ta::hma(price(), 35);
+}
+
+auto AssetDataProvider::hma50() const -> Series
+{
+  return ta::hma(price(), 50);
+}
+
 auto AssetDataProvider::rsi14() const -> Series
 {
   return ta::rsi(price(), 14);

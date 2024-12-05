@@ -34,6 +34,12 @@ public:
 
   auto sma200() const -> Series;
 
+  auto hma30() const -> Series;
+
+  auto hma35() const -> Series;
+
+  auto hma50() const -> Series;
+
   auto rsi14() const -> Series;
 
   auto rsi14_sma14() const -> Series;
