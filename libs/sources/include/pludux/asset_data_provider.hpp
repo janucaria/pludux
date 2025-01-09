@@ -12,6 +12,8 @@ class AssetDataProvider {
 public:
   explicit AssetDataProvider(const Asset& asset);
 
+  auto timestamp() const -> Series;
+
   auto open() const -> Series;
 
   auto high() const -> Series;

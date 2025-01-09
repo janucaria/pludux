@@ -14,6 +14,19 @@ AssetDataProvider::AssetDataProvider(const Asset& asset)
 {
 }
 
+auto AssetDataProvider::timestamp() const -> Series
+{
+  auto values = std::vector<double>{};
+  values.reserve(asset_.quotes().size());
+  std::transform(
+   asset_.quotes().cbegin(),
+   asset_.quotes().cend(),
+   std::back_inserter(values),
+   [](const auto& quote) { return static_cast<double>(quote.timestamp()); });
+
+  return Series{values};
+}
+
 auto AssetDataProvider::open() const -> Series
 {
   auto values = std::vector<double>{};
@@ -132,7 +145,7 @@ auto AssetDataProvider::rsi14_sma14() const -> Series
 auto AssetDataProvider::rsi14_bb14l2sd_upper() const -> Series
 {
   const auto rsi14_sma14 = rsi14();
-  const auto[ bb_middle, bb_upper, bb_lower ] = ta::bb(rsi14_sma14, 14, 2);
+  const auto [bb_middle, bb_upper, bb_lower] = ta::bb(rsi14_sma14, 14, 2);
 
   return bb_upper;
 }
@@ -140,10 +153,9 @@ auto AssetDataProvider::rsi14_bb14l2sd_upper() const -> Series
 auto AssetDataProvider::rsi14_bb14l2sd_lower() const -> Series
 {
   const auto rsi14_sma14 = rsi14();
-  const auto[ bb_middle, bb_upper, bb_lower ] = ta::bb(rsi14_sma14, 14, 2);
+  const auto [bb_middle, bb_upper, bb_lower] = ta::bb(rsi14_sma14, 14, 2);
 
   return bb_lower;
 }
 
-
-} // namespace pludux::screener
+} // namespace pludux
