@@ -1,12 +1,12 @@
-#ifndef PLUDUX_PLUDUX_SCREENER_ASSET_DATA_PROVIDER_HPP
-#define PLUDUX_PLUDUX_SCREENER_ASSET_DATA_PROVIDER_HPP
+#ifndef PLUDUX_PLUDUX_ASSET_DATA_PROVIDER_HPP
+#define PLUDUX_PLUDUX_ASSET_DATA_PROVIDER_HPP
 
 #include <vector>
 
 #include <pludux/asset.hpp>
 #include <pludux/series.hpp>
 
-namespace pludux::screener {
+namespace pludux {
 
 class AssetDataProvider {
 public:

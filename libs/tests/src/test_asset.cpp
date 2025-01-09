@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <pludux/asset.hpp>
+#include <pludux/asset_data_provider.hpp>
 #include <pludux/quote.hpp>
 
 namespace pludux {

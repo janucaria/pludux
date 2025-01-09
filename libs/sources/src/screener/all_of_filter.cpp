@@ -6,7 +6,7 @@
 #include <pludux/asset.hpp>
 
 #include <pludux/screener/all_of_filter.hpp>
-#include <pludux/screener/asset_data_provider.hpp>
+#include <pludux/asset_data_provider.hpp>
 
 namespace pludux::screener {
 

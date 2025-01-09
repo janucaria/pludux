@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <pludux/asset.hpp>
+#include <pludux/asset_data_provider.hpp>
 #include <pludux/screener/data_method.hpp>
 #include <pludux/series.hpp>
 
@@ -14,7 +14,7 @@ TEST(DataMethodTest, RunAllMethodClose)
                                    {pludux::Quote(0, 1.0, 2.0, 3.0, 4.0, 5.0),
                                     pludux::Quote(0, 1.1, 2.1, 3.1, 4.1, 5.1),
                                     pludux::Quote(0, 1.2, 2.2, 3.2, 4.2, 5.2)});
-  const auto asset_data = AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetDataProvider{asset};
   
   auto series = data_method.run_all(asset_data);
   ASSERT_EQ(series.size(), asset.quotes().size() - offset);
@@ -31,7 +31,7 @@ TEST(DataMethodTest, RunAllMethodOpen)
                                    {pludux::Quote(0, 1.0, 2.0, 3.0, 4.0, 5.0),
                                     pludux::Quote(0, 1.1, 2.1, 3.1, 4.1, 5.1),
                                     pludux::Quote(0, 1.2, 2.2, 3.2, 4.2, 5.2)});
-  const auto asset_data = AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetDataProvider{asset};
   
   auto series = data_method.run_all(asset_data);
   ASSERT_EQ(series.size(), asset.quotes().size() - offset);
@@ -48,7 +48,7 @@ TEST(DataMethodTest, RunAllMethodHigh)
                                    {pludux::Quote(0, 1.0, 2.0, 3.0, 4.0, 5.0),
                                     pludux::Quote(0, 1.1, 2.1, 3.1, 4.1, 5.1),
                                     pludux::Quote(0, 1.2, 2.2, 3.2, 4.2, 5.2)});
-  const auto asset_data = AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetDataProvider{asset};
   
   auto series = data_method.run_all(asset_data);
   ASSERT_EQ(series.size(), asset.quotes().size() - offset);
@@ -65,7 +65,7 @@ TEST(DataMethodTest, RunAllMethodLow)
                                    {pludux::Quote(0, 1.0, 2.0, 3.0, 4.0, 5.0),
                                     pludux::Quote(0, 1.1, 2.1, 3.1, 4.1, 5.1),
                                     pludux::Quote(0, 1.2, 2.2, 3.2, 4.2, 5.2)});
-  const auto asset_data = AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetDataProvider{asset};
   
   auto series = data_method.run_all(asset_data);
   ASSERT_EQ(series.size(), asset.quotes().size() - offset);
@@ -82,7 +82,7 @@ TEST(DataMethodTest, RunAllMethodVolume)
                                    {pludux::Quote(0, 1.0, 2.0, 3.0, 4.0, 5.0),
                                     pludux::Quote(0, 1.1, 2.1, 3.1, 4.1, 5.1),
                                     pludux::Quote(0, 1.2, 2.2, 3.2, 4.2, 5.2)});
-  const auto asset_data = AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetDataProvider{asset};
   
   auto series = data_method.run_all(asset_data);
   ASSERT_EQ(series.size(), asset.quotes().size() - offset);
@@ -99,7 +99,7 @@ TEST(DataMethodTest, InvalidField)
                                    {pludux::Quote(0, 1.0, 2.0, 3.0, 4.0, 5.0),
                                     pludux::Quote(0, 1.1, 2.1, 3.1, 4.1, 5.1),
                                     pludux::Quote(0, 1.2, 2.2, 3.2, 4.2, 5.2)});
-  const auto asset_data = AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetDataProvider{asset};
   
   EXPECT_THROW(data_method.run_all(asset_data), std::runtime_error);
 }

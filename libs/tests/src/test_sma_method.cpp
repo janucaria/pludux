@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <pludux/asset.hpp>
+#include <pludux/asset_data_provider.hpp>
 #include <pludux/screener.hpp>
 #include <pludux/series.hpp>
 
@@ -22,7 +22,7 @@ TEST(SmaMethodTest, RunOneMethod)
                                     pludux::Quote(0, 0, 0, 0, 860, 0),
                                     pludux::Quote(0, 0, 0, 0, 860, 0),
                                     pludux::Quote(0, 0, 0, 0, 855, 0)});
-  const auto asset_data = AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetDataProvider{asset};
 
   const auto result = sma_method.run_one(asset_data);
   EXPECT_DOUBLE_EQ(result, 862);
@@ -46,7 +46,7 @@ TEST(SmaMethodTest, RunAllMethod)
                                     pludux::Quote(0, 0, 0, 0, 860, 0),
                                     pludux::Quote(0, 0, 0, 0, 860, 0),
                                     pludux::Quote(0, 0, 0, 0, 855, 0)});
-  const auto asset_data = AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetDataProvider{asset};
 
   const auto result = sma_method.run_all(asset_data);
 
@@ -81,7 +81,7 @@ TEST(SmaMethodTest, RunOneMethodWithOffset)
                                     pludux::Quote(0, 0, 0, 0, 860, 0),
                                     pludux::Quote(0, 0, 0, 0, 860, 0),
                                     pludux::Quote(0, 0, 0, 0, 855, 0)});
-  const auto asset_data = AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetDataProvider{asset};
 
   const auto result = sma_method.run_one(asset_data);
   EXPECT_DOUBLE_EQ(result, 865);
@@ -105,7 +105,7 @@ TEST(SmaMethodTest, RunAllMethodWithOffset)
                                     pludux::Quote(0, 0, 0, 0, 860, 0),
                                     pludux::Quote(0, 0, 0, 0, 860, 0),
                                     pludux::Quote(0, 0, 0, 0, 855, 0)});
-  const auto asset_data = AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetDataProvider{asset};
 
   const auto result = sma_method.run_all(asset_data);
 

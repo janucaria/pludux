@@ -7,6 +7,7 @@ target_sources(${PROJECT_NAME}
     src/quote.cpp
     src/asset.cpp
     src/ta.cpp
+    src/asset_data_provider.cpp
     src/config_parser.cpp
 
     src/screener/screener_method.cpp
@@ -19,7 +20,6 @@ target_sources(${PROJECT_NAME}
     src/screener/crossover_filter.cpp
     src/screener/crossunder_filter.cpp
 
-    src/screener/asset_data_provider.cpp
 
   INTERFACE
     FILE_SET HEADERS
@@ -29,6 +29,7 @@ target_sources(${PROJECT_NAME}
         include/pludux/quote.hpp
         include/pludux/series.hpp
         include/pludux/ta.hpp
+        include/pludux/asset_data_provider.hpp
         include/pludux/config_parser.hpp
         include/pludux/screener.hpp
 
@@ -44,7 +45,6 @@ target_sources(${PROJECT_NAME}
         include/pludux/screener/crossover_filter.hpp
         include/pludux/screener/crossunder_filter.hpp
 
-        include/pludux/screener/asset_data_provider.hpp
 )
 
 target_compile_features(${PROJECT_NAME}

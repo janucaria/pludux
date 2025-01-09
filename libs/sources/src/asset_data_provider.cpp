@@ -5,9 +5,9 @@
 #include <pludux/series.hpp>
 #include <pludux/ta.hpp>
 
-#include <pludux/screener/asset_data_provider.hpp>
+#include <pludux/asset_data_provider.hpp>
 
-namespace pludux::screener {
+namespace pludux {
 
 AssetDataProvider::AssetDataProvider(const Asset& asset)
 : asset_{asset}

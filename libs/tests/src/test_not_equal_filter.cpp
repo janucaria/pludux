@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <pludux/asset.hpp>
+#include <pludux/asset_data_provider.hpp>
 #include <pludux/screener.hpp>
 #include <pludux/series.hpp>
 
@@ -13,7 +13,7 @@ TEST(NotEqualFilterTest, TargetEqualThreshold)
   auto threshold_method = ValueMethod{threshold_value};
   const auto filter = NotEqualFilter{std::move(target_method), std::move(threshold_method)};
   const auto asset = pludux::Asset{""};
-  const auto asset_data = AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetDataProvider{asset};
 
   EXPECT_TRUE(filter(asset_data));
 }
@@ -26,7 +26,7 @@ TEST(NotEqualFilterTest, TargetEqualToThreshold)
   auto threshold_method = ValueMethod{threshold_value};
   const auto filter = NotEqualFilter{std::move(target_method), std::move(threshold_method)};
   const auto asset = pludux::Asset{""};
-  const auto asset_data = AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetDataProvider{asset};
 
   EXPECT_FALSE(filter(asset_data));
 }
@@ -39,7 +39,7 @@ TEST(NotEqualFilterTest, TargetGreaterThanThreshold)
   auto threshold_method = ValueMethod{threshold_value};
   const auto filter = NotEqualFilter{std::move(target_method), std::move(threshold_method)};
   const auto asset = pludux::Asset{""};
-  const auto asset_data = AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetDataProvider{asset};
 
   EXPECT_TRUE(filter(asset_data));
 }

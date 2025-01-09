@@ -14,6 +14,4 @@
 #include "screener/crossover_filter.hpp"
 #include "screener/crossunder_filter.hpp"
 
-#include "screener/asset_data_provider.hpp"
-
 #endif
