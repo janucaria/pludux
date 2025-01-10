@@ -9,6 +9,7 @@ target_sources(${PROJECT_NAME}
     src/ta.cpp
     src/asset_data_provider.cpp
     src/config_parser.cpp
+    src/quote_series.cpp
 
     src/screener/screener_method.cpp
     src/screener/data_method.cpp
@@ -32,6 +33,7 @@ target_sources(${PROJECT_NAME}
         include/pludux/asset_data_provider.hpp
         include/pludux/config_parser.hpp
         include/pludux/screener.hpp
+        include/pludux/quote_series.cpp
 
         include/pludux/screener/screener_method.hpp 
         include/pludux/screener/data_method.hpp 

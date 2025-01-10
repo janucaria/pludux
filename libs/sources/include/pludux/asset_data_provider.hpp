@@ -12,17 +12,17 @@ class AssetDataProvider {
 public:
   explicit AssetDataProvider(const Asset& asset);
 
-  auto timestamp() const -> Series;
+  auto timestamp() const noexcept -> const Series&;
 
-  auto open() const -> Series;
+  auto open() const noexcept -> const Series&;
 
-  auto high() const -> Series;
+  auto high() const noexcept -> const Series&;
 
-  auto low() const -> Series;
+  auto low() const noexcept -> const Series&;
 
-  auto price() const -> Series;
+  auto price() const noexcept -> const Series&;
   
-  auto volume() const -> Series;
+  auto volume() const noexcept -> const Series&;
 
   auto sma5() const -> Series;
 

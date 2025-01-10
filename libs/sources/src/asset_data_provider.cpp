@@ -14,77 +14,34 @@ AssetDataProvider::AssetDataProvider(const Asset& asset)
 {
 }
 
-auto AssetDataProvider::timestamp() const -> Series
+auto AssetDataProvider::timestamp() const noexcept -> const Series&
 {
-  auto values = std::vector<double>{};
-  values.reserve(asset_.quotes().size());
-  std::transform(
-   asset_.quotes().cbegin(),
-   asset_.quotes().cend(),
-   std::back_inserter(values),
-   [](const auto& quote) { return static_cast<double>(quote.timestamp()); });
-
-  return Series{values};
+  return asset_.quotes().timestamps();
 }
 
-auto AssetDataProvider::open() const -> Series
+auto AssetDataProvider::open() const noexcept -> const Series&
 {
-  auto values = std::vector<double>{};
-  values.reserve(asset_.quotes().size());
-  std::transform(asset_.quotes().begin(),
-                 asset_.quotes().end(),
-                 std::back_inserter(values),
-                 [](const auto& quote) { return quote.open(); });
-
-  return Series{values};
+  return asset_.quotes().opens();
 }
 
-auto AssetDataProvider::high() const -> Series
+auto AssetDataProvider::high() const noexcept -> const Series&
 {
-  auto values = std::vector<double>{};
-  values.reserve(asset_.quotes().size());
-  std::transform(asset_.quotes().begin(),
-                 asset_.quotes().end(),
-                 std::back_inserter(values),
-                 [](const auto& quote) { return quote.high(); });
-
-  return Series{values};
+  return asset_.quotes().highs();
 }
 
-auto AssetDataProvider::low() const -> Series
+auto AssetDataProvider::low() const noexcept -> const Series&
 {
-  auto values = std::vector<double>{};
-  values.reserve(asset_.quotes().size());
-  std::transform(asset_.quotes().begin(),
-                 asset_.quotes().end(),
-                 std::back_inserter(values),
-                 [](const auto& quote) { return quote.low(); });
-
-  return Series{values};
+  return asset_.quotes().lows();
 }
 
-auto AssetDataProvider::price() const -> Series
+auto AssetDataProvider::price() const noexcept -> const Series&
 {
-  auto values = std::vector<double>{};
-  values.reserve(asset_.quotes().size());
-  std::transform(asset_.quotes().begin(),
-                 asset_.quotes().end(),
-                 std::back_inserter(values),
-                 [](const auto& quote) { return quote.close(); });
-
-  return Series{values};
+  return asset_.quotes().closes();
 }
 
-auto AssetDataProvider::volume() const -> Series
+auto AssetDataProvider::volume() const noexcept -> const Series&
 {
-  auto values = std::vector<double>{};
-  values.reserve(asset_.quotes().size());
-  std::transform(asset_.quotes().begin(),
-                 asset_.quotes().end(),
-                 std::back_inserter(values),
-                 [](const auto& quote) { return quote.volume(); });
-
-  return Series{values};
+  return asset_.quotes().volumes();
 }
 
 auto AssetDataProvider::sma5() const -> Series

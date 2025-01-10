@@ -35,12 +35,12 @@ TEST(AssetTest, AddQuote)
 
   const auto& quotes = asset.quotes();
   ASSERT_EQ(quotes.size(), 1);
-  EXPECT_EQ(quotes[0].timestamp(), timestamp);
-  EXPECT_EQ(quotes[0].open(), open);
-  EXPECT_EQ(quotes[0].high(), high);
-  EXPECT_EQ(quotes[0].low(), low);
-  EXPECT_EQ(quotes[0].close(), close);
-  EXPECT_EQ(quotes[0].volume(), volume);
+  EXPECT_EQ(quotes.timestamps()[0], timestamp);
+  EXPECT_EQ(quotes.opens()[0], open);
+  EXPECT_EQ(quotes.highs()[0], high);
+  EXPECT_EQ(quotes.lows()[0], low);
+  EXPECT_EQ(quotes.closes()[0], close);
+  EXPECT_EQ(quotes.volumes()[0], volume);
 }
 
 TEST(AssetTest, QuotesGetter)
@@ -70,19 +70,19 @@ TEST(AssetTest, QuotesGetter)
 
   const auto& quotes = asset.quotes();
   ASSERT_EQ(quotes.size(), 2);
-  EXPECT_EQ(quotes[0].timestamp(), timestamp1);
-  EXPECT_EQ(quotes[0].open(), open1);
-  EXPECT_EQ(quotes[0].high(), high1);
-  EXPECT_EQ(quotes[0].low(), low1);
-  EXPECT_EQ(quotes[0].close(), close1);
-  EXPECT_EQ(quotes[0].volume(), volume1);
+  EXPECT_EQ(quotes.timestamps()[0], timestamp2);
+  EXPECT_EQ(quotes.opens()[0], open2);
+  EXPECT_EQ(quotes.highs()[0], high2);
+  EXPECT_EQ(quotes.lows()[0], low2);
+  EXPECT_EQ(quotes.closes()[0], close2);
+  EXPECT_EQ(quotes.volumes()[0], volume2);
 
-  EXPECT_EQ(quotes[1].timestamp(), timestamp2);
-  EXPECT_EQ(quotes[1].open(), open2);
-  EXPECT_EQ(quotes[1].high(), high2);
-  EXPECT_EQ(quotes[1].low(), low2);
-  EXPECT_EQ(quotes[1].close(), close2);
-  EXPECT_EQ(quotes[1].volume(), volume2);
+  EXPECT_EQ(quotes.timestamps()[1], timestamp1);
+  EXPECT_EQ(quotes.opens()[1], open1);
+  EXPECT_EQ(quotes.highs()[1], high1);
+  EXPECT_EQ(quotes.lows()[1], low1);
+  EXPECT_EQ(quotes.closes()[1], close1);
+  EXPECT_EQ(quotes.volumes()[1], volume1);
 }
 
 } // namespace pludux

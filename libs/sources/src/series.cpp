@@ -25,9 +25,14 @@ auto Series::size() const -> std::size_t
   return data_.size();
 }
 
-auto Series::data() const -> const std::vector<double>&
+auto Series::data() const noexcept -> const std::vector<double>&
 {
   return data_;
+}
+
+void Series::append(double value)
+{
+  data_.push_back(value);
 }
 
 auto Series::subseries(std::size_t offset) const -> Series

@@ -4,7 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "quote.hpp"
+#include <pludux/quote.hpp>
+#include <pludux/quote_series.hpp>
 
 namespace pludux {
 
@@ -12,17 +13,17 @@ class Asset {
 public:
   Asset(std::string symbol);
 
-  Asset(std::string symbol, std::vector<Quote> quotes);
+  Asset(std::string symbol, const std::vector<Quote>& quotes);
 
   auto symbol() const noexcept -> const std::string&;
 
-  auto quotes() const noexcept -> const std::vector<Quote>&;
+  auto quotes() const noexcept -> const QuoteSeries&;
 
   void add_quote(Quote quote);
 
 private:
   std::string symbol_;
-  std::vector<Quote> quotes_;
+  QuoteSeries quote_series_;
 };
 
 } // namespace pludux

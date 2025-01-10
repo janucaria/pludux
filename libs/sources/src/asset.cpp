@@ -2,8 +2,8 @@
 #include <utility>
 #include <vector>
 
-#include <pludux/quote.hpp>
 #include <pludux/asset.hpp>
+#include <pludux/quote.hpp>
 
 namespace pludux {
 
@@ -12,10 +12,12 @@ Asset::Asset(std::string symbol)
 {
 }
 
-Asset::Asset(std::string symbol, std::vector<Quote> quotes)
-: symbol_{std::move(symbol)}
-, quotes_{std::move(quotes)}
+Asset::Asset(std::string symbol, const std::vector<Quote>& quotes)
+: Asset{std::move(symbol)}
 {
+  for (const auto& quote : quotes) {
+    add_quote(quote);
+  }
 }
 
 auto Asset::symbol() const noexcept -> const std::string&
@@ -23,14 +25,14 @@ auto Asset::symbol() const noexcept -> const std::string&
   return symbol_;
 }
 
-auto Asset::quotes() const noexcept -> const std::vector<Quote>&
+auto Asset::quotes() const noexcept -> const QuoteSeries&
 {
-  return quotes_;
+  return quote_series_;
 }
 
 void Asset::add_quote(Quote quote)
 {
-  quotes_.push_back(std::move(quote));
+  quote_series_.add_quote(quote);
 }
 
 } // namespace pludux

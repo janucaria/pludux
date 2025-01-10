@@ -34,7 +34,9 @@ public:
 
   auto size() const -> std::size_t;
 
-  auto data() const -> const std::vector<double>&;
+  auto data() const noexcept -> const std::vector<double>&;
+  
+  void append(double value);
 
   auto subseries(std::size_t offset) const -> Series;
 
