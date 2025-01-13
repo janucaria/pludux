@@ -15,7 +15,7 @@ Asset::Asset(std::string symbol)
 Asset::Asset(std::string symbol, const std::vector<Quote>& quotes)
 : Asset{std::move(symbol)}
 {
-  for (const auto& quote : quotes) {
+  for(const auto& quote : quotes) {
     add_quote(quote);
   }
 }

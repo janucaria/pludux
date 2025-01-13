@@ -14,6 +14,9 @@ target_sources(${PROJECT_NAME}
     src/screener/screener_method.cpp
     src/screener/data_method.cpp
     src/screener/value_method.cpp
+    src/screener/abs_diff_method.cpp
+    src/screener/atr_method.cpp
+    src/screener/changes_method.cpp
 
     src/screener/all_of_filter.cpp
     src/screener/any_of_filter.cpp
@@ -39,6 +42,10 @@ target_sources(${PROJECT_NAME}
         include/pludux/screener/data_method.hpp 
         include/pludux/screener/ta_with_period_method.hpp 
         include/pludux/screener/value_method.hpp 
+        include/pludux/screener/abs_diff_method.hpp 
+        include/pludux/screener/atr_method.hpp 
+        include/pludux/screener/arithmetic_method.hpp 
+        include/pludux/screener/changes_method.hpp 
         
         include/pludux/screener/screener_filter.hpp 
         include/pludux/screener/all_of_filter.hpp

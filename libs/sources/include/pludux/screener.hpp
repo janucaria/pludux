@@ -6,6 +6,10 @@
 #include "screener/data_method.hpp"
 #include "screener/ta_with_period_method.hpp"
 #include "screener/value_method.hpp"
+#include "screener/abs_diff_method.hpp"
+#include "screener/atr_method.hpp"
+#include "screener/arithmetic_method.hpp"
+#include "screener/changes_method.hpp"
 
 #include "screener/screener_filter.hpp"
 #include "screener/all_of_filter.hpp"

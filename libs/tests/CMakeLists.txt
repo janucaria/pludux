@@ -11,6 +11,9 @@ set(PLUDUX_TEST_SOURCES
   src/test_rma_method.cpp
   src/test_wma_method.cpp
   src/test_hma_method.cpp
+  src/test_atr_method.cpp
+  src/test_abs_diff_method.cpp
+  src/test_arithmetic_method.cpp
 
   src/test_all_of_filter.cpp
   src/test_any_of_filter.cpp

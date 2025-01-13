@@ -20,9 +20,13 @@ public:
 
   auto low() const noexcept -> const Series&;
 
+  auto close() const noexcept -> const Series&;
+
   auto price() const noexcept -> const Series&;
   
   auto volume() const noexcept -> const Series&;
+
+  auto changes() const -> Series;
 
   auto sma5() const -> Series;
 
@@ -41,6 +45,8 @@ public:
   auto hma35() const -> Series;
 
   auto hma50() const -> Series;
+
+  auto atr14() const -> Series;
 
   auto rsi14() const -> Series;
 

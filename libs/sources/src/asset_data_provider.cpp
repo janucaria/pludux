@@ -34,14 +34,24 @@ auto AssetDataProvider::low() const noexcept -> const Series&
   return asset_.quotes().lows();
 }
 
-auto AssetDataProvider::price() const noexcept -> const Series&
+auto AssetDataProvider::close() const noexcept -> const Series&
 {
   return asset_.quotes().closes();
+}
+
+auto AssetDataProvider::price() const noexcept -> const Series&
+{
+  return close();
 }
 
 auto AssetDataProvider::volume() const noexcept -> const Series&
 {
   return asset_.quotes().volumes();
+}
+
+auto AssetDataProvider::changes() const -> Series
+{
+  return ta::changes(price());
 }
 
 auto AssetDataProvider::sma5() const -> Series
@@ -87,6 +97,11 @@ auto AssetDataProvider::hma35() const -> Series
 auto AssetDataProvider::hma50() const -> Series
 {
   return ta::hma(price(), 50);
+}
+
+auto AssetDataProvider::atr14() const -> Series
+{
+  return ta::atr(high(), low(), close(), 14);
 }
 
 auto AssetDataProvider::rsi14() const -> Series

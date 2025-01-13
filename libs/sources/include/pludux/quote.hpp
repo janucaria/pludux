@@ -8,6 +8,8 @@ namespace pludux {
 
 class Quote {
 public:
+  Quote();
+
   Quote(std::time_t timestamp,
         double open,
         double high,

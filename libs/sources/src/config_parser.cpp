@@ -53,6 +53,49 @@ parse_data_method(const nlohmann::json& parameters) -> screener::ScreenerMethod
   return field_method;
 }
 
+static auto
+parse_atr_method(const nlohmann::json& parameters) -> screener::ScreenerMethod
+{
+  const auto period = parameters["period"].get<int>();
+  const auto atr_method = screener::AtrMethod{period};
+  return atr_method;
+}
+
+static auto parse_abs_diff_method(const nlohmann::json& parameters)
+ -> screener::ScreenerMethod
+{
+  const auto operand1 = parse_screener_method(parameters["operand1"]);
+  const auto operand2 = parse_screener_method(parameters["operand2"]);
+
+  const auto abs_diff_method = screener::AbsDiffMethod{operand1, operand2};
+  return abs_diff_method;
+}
+
+template<typename T>
+static auto parse_binary_function_method(const nlohmann::json& parameters,
+                                         const std::string& first_operand_key,
+                                         const std::string& second_operand_key)
+ -> screener::ScreenerMethod
+{
+  const auto first_operand =
+   parse_screener_method(parameters[first_operand_key]);
+  const auto second_operand =
+   parse_screener_method(parameters[second_operand_key]);
+
+  const auto binary_function_method = T{first_operand, second_operand};
+  return binary_function_method;
+}
+
+template<typename T>
+static auto parse_unary_function_method(const nlohmann::json& parameters,
+                                        const std::string& operand_key)
+ -> screener::ScreenerMethod
+{
+  const auto operand = parse_screener_method(parameters[operand_key]);
+  const auto unary_function_method = T{operand};
+  return unary_function_method;
+}
+
 auto parse_screener_method(const nlohmann::json& config)
  -> screener::ScreenerMethod
 {
@@ -64,6 +107,11 @@ auto parse_screener_method(const nlohmann::json& config)
 
   if(method == "DATA") {
     return parse_data_method(config);
+  }
+
+  if(method == "CHANGES") {
+    return parse_unary_function_method<screener::ChangesMethod>(config,
+                                                                "operand");
   }
 
   if(method == "SMA") {
@@ -88,6 +136,39 @@ auto parse_screener_method(const nlohmann::json& config)
 
   if(method == "RSI") {
     return parse_ta_with_period_method<screener::RsiMethod>(config);
+  }
+
+  if(method == "ATR") {
+    return parse_atr_method(config);
+  }
+
+  if(method == "ABS_DIFF") {
+    return parse_abs_diff_method(config);
+  }
+
+  if(method == "ADD") {
+    return parse_binary_function_method<screener::AddMethod>(
+     config, "augend", "addend");
+  }
+
+  if(method == "SUBTRACT") {
+    return parse_binary_function_method<screener::SubtractMethod>(
+     config, "minuend", "subtrahend");
+  }
+
+  if(method == "MULTIPLY") {
+    return parse_binary_function_method<screener::MultiplyMethod>(
+     config, "multiplicand", "multiplier");
+  }
+
+  if(method == "DIVIDE") {
+    return parse_binary_function_method<screener::DivideMethod>(
+     config, "dividend", "divisor");
+  }
+
+  if(method == "NEGATE") {
+    return parse_unary_function_method<screener::NegateMethod>(config,
+                                                               "operand");
   }
 
   const auto error_message = std::format("Unknown method: {}", method);

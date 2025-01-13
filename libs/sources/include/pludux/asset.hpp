@@ -11,7 +11,7 @@ namespace pludux {
 
 class Asset {
 public:
-  Asset(std::string symbol);
+  explicit Asset(std::string symbol);
 
   Asset(std::string symbol, const std::vector<Quote>& quotes);
 

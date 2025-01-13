@@ -73,6 +73,10 @@ auto DataMethod::run_all(const AssetDataProvider& asset_data) const -> Series
     return asset_data.hma50().subseries(offset_);
   }
 
+  if(field_ == "atr14") {
+    return asset_data.atr14().subseries(offset_);
+  }
+
   if(field_ == "rsi14") {
     return asset_data.rsi14().subseries(offset_);
   }

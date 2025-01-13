@@ -2,6 +2,11 @@
 
 namespace pludux {
 
+Quote::Quote()
+: Quote{0, 0, 0, 0, 0, 0}
+{
+}
+
 Quote::Quote(std::time_t timestamp,
              double open,
              double high,
@@ -16,7 +21,6 @@ Quote::Quote(std::time_t timestamp,
 , volume_{volume}
 {
 }
-
 
 auto Quote::timestamp() const noexcept -> std::time_t
 {
