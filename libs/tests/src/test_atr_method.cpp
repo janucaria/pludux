@@ -24,7 +24,7 @@ TEST(AtrMethodTest, RunOneMethod)
 
   const auto asset_data = pludux::AssetDataProvider{asset};
 
-  const auto result = atr_method.run_one(asset_data);
+  const auto result = atr_method(asset_data)[0];
   EXPECT_DOUBLE_EQ(result, 32.187840000000008);
 }
 
@@ -45,7 +45,7 @@ TEST(AtrMethodTest, RunAllMethod)
                                     Quote{0, 860, 865, 850, 855, 100}});
   const auto asset_data = pludux::AssetDataProvider{asset};
 
-  const auto result = atr_method.run_all(asset_data);
+  const auto result = atr_method(asset_data);
 
   ASSERT_EQ(result.size(), asset.quotes().size());
   EXPECT_DOUBLE_EQ(result[0], 32.187840000000008);

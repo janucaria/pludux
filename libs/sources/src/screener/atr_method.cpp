@@ -13,7 +13,7 @@ AtrMethod::AtrMethod(int period)
 {
 }
 
-auto AtrMethod::run_all(const AssetDataProvider& asset_data) const -> PolySeries<double>
+auto AtrMethod::operator()(const AssetDataProvider& asset_data) const -> PolySeries<double>
 {
   const auto high_series = asset_data.high();
   const auto low_series = asset_data.low();
@@ -21,12 +21,6 @@ auto AtrMethod::run_all(const AssetDataProvider& asset_data) const -> PolySeries
 
   const auto atr = ta::atr(high_series, low_series, close_series, period_);
   return atr;
-}
-
-auto AtrMethod::run_one(const AssetDataProvider& asset_data) const -> double
-{
-  const auto series = run_all(asset_data);
-  return series[0];
 }
 
 } // namespace pludux::screener

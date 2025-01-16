@@ -12,7 +12,7 @@ TEST(GreaterEqualFilterTest, TargetGreaterEqualThreshold)
   auto target_method = ValueMethod{target_value};
   auto threshold_method = ValueMethod{threshold_value};
   const auto filter = GreaterEqualFilter{std::move(target_method), std::move(threshold_method)};
-  const auto asset = pludux::Asset{""};
+  const auto asset = pludux::Asset{"", std::vector<pludux::Quote>(1)};
   const auto asset_data = pludux::AssetDataProvider{asset};
 
   EXPECT_TRUE(filter(asset_data));
@@ -25,7 +25,7 @@ TEST(GreaterEqualFilterTest, TargetEqualToThreshold)
   auto target_method = ValueMethod{target_value};
   auto threshold_method = ValueMethod{threshold_value};
   const auto filter = GreaterEqualFilter{std::move(target_method), std::move(threshold_method)};
-  const auto asset = pludux::Asset{""};
+  const auto asset = pludux::Asset{"", std::vector<pludux::Quote>(1)};
   const auto asset_data = pludux::AssetDataProvider{asset};
 
   EXPECT_TRUE(filter(asset_data));
@@ -38,7 +38,7 @@ TEST(GreaterEqualFilterTest, TargetLessThanThreshold)
   auto target_method = ValueMethod{target_value};
   auto threshold_method = ValueMethod{threshold_value};
   const auto filter = GreaterEqualFilter{std::move(target_method), std::move(threshold_method)};
-  const auto asset = pludux::Asset{""};
+  const auto asset = pludux::Asset{"", std::vector<pludux::Quote>(1)};
   const auto asset_data = pludux::AssetDataProvider{asset};
 
   EXPECT_FALSE(filter(asset_data));

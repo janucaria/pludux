@@ -24,7 +24,7 @@ TEST(SmaMethodTest, RunOneMethod)
                                     pludux::Quote(0, 0, 0, 0, 855, 0)});
   const auto asset_data = pludux::AssetDataProvider{asset};
 
-  const auto result = sma_method.run_one(asset_data);
+  const auto result = sma_method(asset_data)[0];
   EXPECT_DOUBLE_EQ(result, 862);
 }
 
@@ -48,7 +48,7 @@ TEST(SmaMethodTest, RunAllMethod)
                                     pludux::Quote(0, 0, 0, 0, 855, 0)});
   const auto asset_data = pludux::AssetDataProvider{asset};
 
-  const auto result = sma_method.run_all(asset_data);
+  const auto result = sma_method(asset_data);
 
   ASSERT_EQ(result.size(), asset.quotes().size());
   EXPECT_DOUBLE_EQ(result[0], 862);
@@ -83,7 +83,7 @@ TEST(SmaMethodTest, RunOneMethodWithOffset)
                                     pludux::Quote(0, 0, 0, 0, 855, 0)});
   const auto asset_data = pludux::AssetDataProvider{asset};
 
-  const auto result = sma_method.run_one(asset_data);
+  const auto result = sma_method(asset_data)[0];
   EXPECT_DOUBLE_EQ(result, 865);
 }
 
@@ -107,7 +107,7 @@ TEST(SmaMethodTest, RunAllMethodWithOffset)
                                     pludux::Quote(0, 0, 0, 0, 855, 0)});
   const auto asset_data = pludux::AssetDataProvider{asset};
 
-  const auto result = sma_method.run_all(asset_data);
+  const auto result = sma_method(asset_data);
 
   ASSERT_EQ(result.size(), asset.quotes().size() - offset);
   EXPECT_DOUBLE_EQ(result[0], 860);

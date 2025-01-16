@@ -18,8 +18,8 @@ CrossunderFilter::CrossunderFilter(ScreenerMethod signal,
 auto CrossunderFilter::operator()(const AssetDataProvider& asset_data) const
  -> bool
 {
-  const auto signal_result = signal_.run_all(asset_data);
-  const auto reference_result = reference_.run_all(asset_data);
+  const auto signal_result = signal_(asset_data);
+  const auto reference_result = reference_(asset_data);
 
   return signal_result[0] < reference_result[0] &&
          signal_result[1] >= reference_result[1];

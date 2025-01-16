@@ -19,16 +19,10 @@ public:
   {
   }
 
-  auto run_one(const AssetDataProvider& asset_data) const -> double
+  auto operator()(const AssetDataProvider& asset_data) const -> PolySeries<double>
   {
-    const auto series = run_all(asset_data);
-    return series[0];
-  }
-
-  auto run_all(const AssetDataProvider& asset_data) const -> PolySeries<double>
-  {
-    const auto operand1_series = operand1_.run_all(asset_data);
-    const auto operand2_series = operand2_.run_all(asset_data);
+    const auto operand1_series = operand1_(asset_data);
+    const auto operand2_series = operand2_(asset_data);
 
     auto result = BinaryFnSeries<T,
                                  std::decay_t<decltype(operand1_series)>,
@@ -51,15 +45,9 @@ public:
   {
   }
 
-  auto run_one(const AssetDataProvider& asset_data) const -> double
+  auto operator()(const AssetDataProvider& asset_data) const -> PolySeries<double>
   {
-    const auto series = run_all(asset_data);
-    return series[0];
-  }
-
-  auto run_all(const AssetDataProvider& asset_data) const -> PolySeries<double>
-  {
-    const auto operand_series = operand_.run_all(asset_data);
+    const auto operand_series = operand_(asset_data);
 
     auto result =
      UnaryFnSeries<T, std::decay_t<decltype(operand_series)>>{operand_series};

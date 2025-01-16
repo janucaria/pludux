@@ -13,10 +13,10 @@ TEST(CrossoverFilterTest, ReferenceMethod)
   auto reference_method = ValueMethod{reference_value};
   const auto filter =
    CrossoverFilter{std::move(signal_method), std::move(reference_method)};
-  const auto asset = pludux::Asset{""};
+  const auto asset = pludux::Asset{"", std::vector<pludux::Quote>(1)};
   const auto asset_data = pludux::AssetDataProvider{asset};
 
-  EXPECT_EQ(filter.reference().run_one(asset_data), reference_value);
+  EXPECT_EQ(filter.reference()(asset_data)[0], reference_value);
 }
 
 TEST(CrossoverFilterTest, SignalMethod)
@@ -27,10 +27,10 @@ TEST(CrossoverFilterTest, SignalMethod)
   auto reference_method = ValueMethod{reference_value};
   const auto filter =
    CrossoverFilter{std::move(signal_method), std::move(reference_method)};
-  const auto asset = pludux::Asset{""};
+  const auto asset = pludux::Asset{"", std::vector<pludux::Quote>(1)};
   const auto asset_data = pludux::AssetDataProvider{asset};
 
-  EXPECT_EQ(filter.signal().run_one(asset_data), signal_value);
+  EXPECT_EQ(filter.signal()(asset_data)[0], signal_value);
 }
 
 TEST(CrossoverFilterTest, CrossoverConditionMet)

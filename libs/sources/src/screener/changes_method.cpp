@@ -14,17 +14,12 @@ ChangesMethod::ChangesMethod(ScreenerMethod operand)
 {
 }
 
-auto ChangesMethod::run_all(const AssetDataProvider& asset_data) const -> PolySeries<double>
+auto ChangesMethod::operator()(const AssetDataProvider& asset_data) const -> PolySeries<double>
 {
-  const auto operand_series = operand_.run_all(asset_data);
+  const auto operand_series = operand_(asset_data);
   const auto result = ta::changes(operand_series);
   return result;
 }
 
-auto ChangesMethod::run_one(const AssetDataProvider& asset_data) const -> double
-{
-  const auto series = run_all(asset_data);
-  return series[0];
-}
 
 } // namespace pludux::screener

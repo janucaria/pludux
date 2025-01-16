@@ -11,9 +11,7 @@ class ChangesMethod {
 public:
   explicit ChangesMethod(ScreenerMethod operand);
 
-  auto run_one(const AssetDataProvider& asset_data) const -> double;
-
-  auto run_all(const AssetDataProvider& asset_data) const -> PolySeries<double>;
+  auto operator()(const AssetDataProvider& asset_data) const -> PolySeries<double>;
 
 private:
   ScreenerMethod operand_;

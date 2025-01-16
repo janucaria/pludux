@@ -25,14 +25,14 @@ TEST(ConfigParserTest, ParseScreenerSmaMethod)
   )");
 
   const auto method = parse_screener_method(config);
-  const auto sma_method = screener_method_cast<SmaMethod>(&method);
+  const auto sma_method = screener_method_cast<SmaMethod>(method);
 
   ASSERT_NE(sma_method, nullptr);
 
   EXPECT_EQ(sma_method->period(), 14);
   EXPECT_EQ(sma_method->offset(), 0);
 
-  const auto target = screener_method_cast<DataMethod>(&sma_method->target());
+  const auto target = screener_method_cast<DataMethod>(sma_method->target());
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "close");
@@ -55,14 +55,14 @@ TEST(ConfigParserTest, ParseScreenerEmaMethod)
   )");
 
   const auto method = parse_screener_method(config);
-  const auto ema_method = screener_method_cast<EmaMethod>(&method);
+  const auto ema_method = screener_method_cast<EmaMethod>(method);
 
   ASSERT_NE(ema_method, nullptr);
 
   EXPECT_EQ(ema_method->period(), 10);
   EXPECT_EQ(ema_method->offset(), 1);
 
-  const auto target = screener_method_cast<DataMethod>(&ema_method->target());
+  const auto target = screener_method_cast<DataMethod>(ema_method->target());
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "open");
@@ -85,14 +85,14 @@ TEST(ConfigParserTest, ParseScreenerWmaMethod)
     )");
 
   const auto method = parse_screener_method(config);
-  const auto wma_method = screener_method_cast<WmaMethod>(&method);
+  const auto wma_method = screener_method_cast<WmaMethod>(method);
 
   ASSERT_NE(wma_method, nullptr);
 
   EXPECT_EQ(wma_method->period(), 20);
   EXPECT_EQ(wma_method->offset(), 2);
 
-  const auto target = screener_method_cast<DataMethod>(&wma_method->target());
+  const auto target = screener_method_cast<DataMethod>(wma_method->target());
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "high");
@@ -115,14 +115,14 @@ TEST(ConfigParserTest, ParseScreenerRmaMethod)
     )");
 
   const auto method = parse_screener_method(config);
-  const auto rma_method = screener_method_cast<RmaMethod>(&method);
+  const auto rma_method = screener_method_cast<RmaMethod>(method);
 
   ASSERT_NE(rma_method, nullptr);
 
   EXPECT_EQ(rma_method->period(), 15);
   EXPECT_EQ(rma_method->offset(), 3);
 
-  const auto target = screener_method_cast<DataMethod>(&rma_method->target());
+  const auto target = screener_method_cast<DataMethod>(rma_method->target());
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "low");
@@ -145,14 +145,14 @@ TEST(ConfigParserTest, ParseScreenerHmaMethod)
     )");
 
   const auto method = parse_screener_method(config);
-  const auto hma_method = screener_method_cast<HmaMethod>(&method);
+  const auto hma_method = screener_method_cast<HmaMethod>(method);
 
   ASSERT_NE(hma_method, nullptr);
 
   EXPECT_EQ(hma_method->period(), 25);
   EXPECT_EQ(hma_method->offset(), 4);
 
-  const auto target = screener_method_cast<DataMethod>(&hma_method->target());
+  const auto target = screener_method_cast<DataMethod>(hma_method->target());
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "volume");
@@ -176,13 +176,13 @@ TEST(ConfigParserTest, ParseScreenerRsiMethod)
 
   const auto method = parse_screener_method(config);
 
-  const auto rsi_method = screener_method_cast<RsiMethod>(&method);
+  const auto rsi_method = screener_method_cast<RsiMethod>(method);
   ASSERT_NE(rsi_method, nullptr);
 
   EXPECT_EQ(rsi_method->period(), 14);
   EXPECT_EQ(rsi_method->offset(), 0);
 
-  const auto target = screener_method_cast<DataMethod>(&rsi_method->target());
+  const auto target = screener_method_cast<DataMethod>(rsi_method->target());
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "close");
@@ -199,7 +199,7 @@ TEST(ConfigParserTest, ParseScreenerValueMethod)
   )");
 
   const auto method = parse_screener_method(config);
-  const auto value_method = screener_method_cast<ValueMethod>(&method);
+  const auto value_method = screener_method_cast<ValueMethod>(method);
 
   ASSERT_NE(value_method, nullptr);
   EXPECT_EQ(value_method->value(), 100);
@@ -216,7 +216,7 @@ TEST(ConfigParserTest, ParseScreenerDataMethod)
   )");
 
   const auto method = parse_screener_method(config);
-  const auto field_method = screener_method_cast<DataMethod>(&method);
+  const auto field_method = screener_method_cast<DataMethod>(method);
 
   ASSERT_NE(field_method, nullptr);
   EXPECT_EQ(field_method->field(), "open");
@@ -360,14 +360,14 @@ TEST(ConfigParserTest, ParseScreenerGreaterThanFilter)
   ASSERT_NE(greater_than_filter, nullptr);
 
   const auto target =
-   screener_method_cast<DataMethod>(&greater_than_filter->target());
+   screener_method_cast<DataMethod>(greater_than_filter->target());
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "close");
   EXPECT_EQ(target->offset(), 0);
 
   const auto threshold =
-   screener_method_cast<ValueMethod>(&greater_than_filter->threshold());
+   screener_method_cast<ValueMethod>(greater_than_filter->threshold());
   ASSERT_NE(threshold, nullptr);
 
   EXPECT_EQ(threshold->value(), 100);
@@ -397,7 +397,7 @@ TEST(ConfigParserTest, ParseScreenerGreaterEqualFilter)
   ASSERT_NE(greater_equal_filter, nullptr);
 
   const auto target =
-   screener_method_cast<DataMethod>(&greater_equal_filter->target());
+   screener_method_cast<DataMethod>(greater_equal_filter->target());
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "close");
@@ -427,7 +427,7 @@ TEST(ConfigParserTest, ParseScreenerLessThanFilter)
   ASSERT_NE(less_than_filter, nullptr);
 
   const auto target =
-   screener_method_cast<DataMethod>(&less_than_filter->target());
+   screener_method_cast<DataMethod>(less_than_filter->target());
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "close");
@@ -457,7 +457,7 @@ TEST(ConfigParserTest, ParseScreenerLessEqualFilter)
   ASSERT_NE(less_equal_filter, nullptr);
 
   const auto target =
-   screener_method_cast<DataMethod>(&less_equal_filter->target());
+   screener_method_cast<DataMethod>(less_equal_filter->target());
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "close");
@@ -488,14 +488,14 @@ TEST(ConfigParserTest, ParseScreenerCrossunderFilter)
   ASSERT_NE(crossunder_filter, nullptr);
 
   const auto signal =
-   screener_method_cast<DataMethod>(&crossunder_filter->signal());
+   screener_method_cast<DataMethod>(crossunder_filter->signal());
   ASSERT_NE(signal, nullptr);
 
   EXPECT_EQ(signal->field(), "close");
   EXPECT_EQ(signal->offset(), 0);
 
   const auto reference =
-   screener_method_cast<ValueMethod>(&crossunder_filter->reference());
+   screener_method_cast<ValueMethod>(crossunder_filter->reference());
   ASSERT_NE(reference, nullptr);
 
   EXPECT_EQ(reference->value(), 100);
@@ -525,14 +525,14 @@ TEST(ConfigParserTest, ParseScreenerCrossoverFilter)
   ASSERT_NE(crossover_filter, nullptr);
 
   const auto signal =
-   screener_method_cast<DataMethod>(&crossover_filter->signal());
+   screener_method_cast<DataMethod>(crossover_filter->signal());
   ASSERT_NE(signal, nullptr);
 
   EXPECT_EQ(signal->field(), "close");
   EXPECT_EQ(signal->offset(), 0);
 
   const auto reference =
-   screener_method_cast<ValueMethod>(&crossover_filter->reference());
+   screener_method_cast<ValueMethod>(crossover_filter->reference());
   ASSERT_NE(reference, nullptr);
 
   EXPECT_EQ(reference->value(), 100);

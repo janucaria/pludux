@@ -13,7 +13,7 @@ TEST(AllOfFilterTest, AllFiltersPass)
    LessThanFilter{ValueMethod{30}, ValueMethod{50}};
   const auto all_of_filter =
    AllOfFilter{{greater_than_filter, less_than_filter}};
-  const auto asset = pludux::Asset{""};
+  const auto asset = pludux::Asset{"", std::vector<pludux::Quote>(1)};
   const auto asset_data = pludux::AssetDataProvider{asset};
 
   EXPECT_TRUE(all_of_filter(asset_data));
@@ -27,7 +27,7 @@ TEST(AllOfFilterTest, OneFilterFails)
    LessThanFilter{ValueMethod{30}, ValueMethod{50}};
   const auto all_of_filter =
    AllOfFilter{{greater_than_filter, less_than_filter}};
-  const auto asset = pludux::Asset{""};
+  const auto asset = pludux::Asset{"", std::vector<pludux::Quote>(1)};
   const auto asset_data = pludux::AssetDataProvider{asset};
 
   EXPECT_FALSE(all_of_filter(asset_data));
@@ -36,7 +36,7 @@ TEST(AllOfFilterTest, OneFilterFails)
 TEST(AllOfFilterTest, NoFilters)
 {
   const auto all_of_filter = AllOfFilter{};
-  const auto asset = pludux::Asset{""};
+  const auto asset = pludux::Asset{"", std::vector<pludux::Quote>(1)};
   const auto asset_data = pludux::AssetDataProvider{asset};
 
   EXPECT_TRUE(all_of_filter(asset_data));

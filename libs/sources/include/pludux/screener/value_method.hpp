@@ -13,9 +13,7 @@ class ValueMethod {
 public:
   explicit ValueMethod(double value);
 
-  auto run_one(const AssetDataProvider& asset_data) const -> double;
-
-  auto run_all(const AssetDataProvider& asset_data) const -> PolySeries<double>;
+  auto operator()(const AssetDataProvider& asset_data) const -> PolySeries<double>;
 
   auto value() const -> double;
 

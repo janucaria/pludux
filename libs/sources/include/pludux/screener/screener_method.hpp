@@ -1,65 +1,24 @@
 #ifndef PLUDUX_PLUDUX_SCREENER_SCREENER_METHOD_HPP
 #define PLUDUX_PLUDUX_SCREENER_SCREENER_METHOD_HPP
 
+#include <functional>
 #include <memory>
 #include <vector>
 
 #include <pludux/asset.hpp>
-#include <pludux/series.hpp>
 #include <pludux/asset_data_provider.hpp>
+#include <pludux/series.hpp>
 
 namespace pludux::screener {
 
-class ScreenerMethod {
-public:
-  template<typename T>
-  ScreenerMethod(T impl)
-  : impl_{std::make_shared<ImplModel<T>>(std::move(impl))}
-  {
-  }
+using ScreenerMethod =
+ std::function<auto(const AssetDataProvider&)->PolySeries<double>>;
 
-  auto run_one(const AssetDataProvider& asset_data) const -> double;
-
-  auto run_all(const AssetDataProvider& asset_data) const -> PolySeries<double>;
-
-  template<typename T>
-  friend auto screener_method_cast(const ScreenerMethod* method) noexcept -> const T*
-  {
-    auto model = std::dynamic_pointer_cast<const ImplModel<T>>(method->impl_);
-    return model ? &model->impl : nullptr;
-  }
-
-private:
-  struct ImplConcept {
-    virtual ~ImplConcept() = default;
-
-    virtual auto run_one(const AssetDataProvider& asset_data) const -> double = 0;
-    
-    virtual auto run_all(const AssetDataProvider& asset_data) const -> PolySeries<double> = 0;
-  };
-
-  template<typename T>
-  struct ImplModel final : ImplConcept {
-    T impl;
-
-    explicit ImplModel(T impl)
-    : impl{std::move(impl)}
-    {
-    }
-
-    auto run_one(const AssetDataProvider& asset_data) const -> double final
-    {
-      return impl.run_one(asset_data);
-    }
-
-    auto run_all(const AssetDataProvider& asset_data) const -> PolySeries<double> final
-    {
-      return impl.run_all(asset_data);
-    }
-  };
-
-  std::shared_ptr<const ImplConcept> impl_;
-};
+template<typename T>
+auto screener_method_cast(const ScreenerMethod& method) noexcept -> const T*
+{
+  return method.target<T>();
+}
 
 } // namespace pludux::screener
 

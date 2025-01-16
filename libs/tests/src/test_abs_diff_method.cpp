@@ -15,7 +15,7 @@ TEST(AbsDiffMethodTest, RunAllMethod)
   const auto asset = pludux::Asset{"", std::vector<Quote>(5)};
   const auto asset_data = pludux::AssetDataProvider{asset};
 
-  const auto result = abs_diff_method.run_all(asset_data);
+  const auto result = abs_diff_method(asset_data);
 
   ASSERT_EQ(result.size(), asset.quotes().size());
   EXPECT_DOUBLE_EQ(result[0], 5.0);
@@ -33,7 +33,7 @@ TEST(AbsDiffMethodTest, RunAllMethodWithDifferentValues)
   const auto asset = pludux::Asset{"", std::vector<Quote>(5)};
   const auto asset_data = pludux::AssetDataProvider{asset};
 
-  const auto result = abs_diff_method.run_all(asset_data);
+  const auto result = abs_diff_method(asset_data);
 
   ASSERT_EQ(result.size(), asset.quotes().size());
   EXPECT_DOUBLE_EQ(result[0], 5.0);
@@ -51,7 +51,7 @@ TEST(AbsDiffMethodTest, RunAllMethodWithZeroDifference)
   const auto asset = pludux::Asset{"", std::vector<Quote>(5)};
   const auto asset_data = pludux::AssetDataProvider{asset};
 
-  const auto result = abs_diff_method.run_all(asset_data);
+  const auto result = abs_diff_method(asset_data);
 
   ASSERT_EQ(result.size(), asset.quotes().size());
   EXPECT_DOUBLE_EQ(result[0], 0.0);

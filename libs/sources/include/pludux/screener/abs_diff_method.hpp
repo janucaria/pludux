@@ -11,9 +11,7 @@ class AbsDiffMethod {
 public:
   explicit AbsDiffMethod(ScreenerMethod operand1, ScreenerMethod operand2);
 
-  auto run_one(const AssetDataProvider& asset_data) const -> double;
-
-  auto run_all(const AssetDataProvider& asset_data) const -> PolySeries<double>;
+  auto operator()(const AssetDataProvider& asset_data) const -> PolySeries<double>;
 
 private:
   ScreenerMethod operand1_;

@@ -15,7 +15,7 @@ DataMethod::DataMethod(std::string field, std::size_t offset)
 {
 }
 
-auto DataMethod::run_all(const AssetDataProvider& asset_data) const -> PolySeries<double>
+auto DataMethod::operator()(const AssetDataProvider& asset_data) const -> PolySeries<double>
 {
   if(field_ == "close") {
     return SubSeries{asset_data.price(), offset_};
@@ -94,12 +94,6 @@ auto DataMethod::run_all(const AssetDataProvider& asset_data) const -> PolySerie
   }
 
   throw std::runtime_error("Field not found");
-}
-
-auto DataMethod::run_one(const AssetDataProvider& asset_data) const -> double
-{
-  const auto series = run_all(asset_data);
-  return series[0];
 }
 
 auto DataMethod::field() const -> const std::string&

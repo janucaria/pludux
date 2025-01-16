@@ -24,15 +24,10 @@ public:
   {
   }
 
-  auto run_one(const AssetDataProvider& asset_data) const -> double
+  auto
+  operator()(const AssetDataProvider& asset_data) const -> PolySeries<double>
   {
-    const auto series = run_all(asset_data);
-    return series[0];
-  }
-
-  auto run_all(const AssetDataProvider& asset_data) const -> PolySeries<double>
-  {
-    const auto sources = target_.run_all(asset_data);
+    const auto sources = target_(asset_data);
     const auto series = T{}(sources, period_);
     return SubSeries{series, offset_};
   }

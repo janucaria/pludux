@@ -15,7 +15,7 @@ TEST(ArithmeticMethodTest, MultiplyMethod)
   const auto asset = pludux::Asset{"", std::vector<Quote>(5)};
   const auto asset_data = pludux::AssetDataProvider{asset};
 
-  const auto result = multiply_method.run_all(asset_data);
+  const auto result = multiply_method(asset_data);
 
   ASSERT_EQ(result.size(), asset.quotes().size());
   EXPECT_DOUBLE_EQ(result[0], 6.0);
@@ -33,7 +33,7 @@ TEST(ArithmeticMethodTest, DivideMethod)
   const auto asset = pludux::Asset{"", std::vector<Quote>(5)};
   const auto asset_data = pludux::AssetDataProvider{asset};
 
-  const auto result = divide_method.run_all(asset_data);
+  const auto result = divide_method(asset_data);
 
   ASSERT_EQ(result.size(), asset.quotes().size());
   EXPECT_DOUBLE_EQ(result[0], 2.0);
@@ -51,7 +51,7 @@ TEST(ArithmeticMethodTest, AddMethod)
   const auto asset = pludux::Asset{"", std::vector<Quote>(5)};
   const auto asset_data = pludux::AssetDataProvider{asset};
 
-  const auto result = add_method.run_all(asset_data);
+  const auto result = add_method(asset_data);
 
   ASSERT_EQ(result.size(), asset.quotes().size());
   EXPECT_DOUBLE_EQ(result[0], 5.0);
@@ -69,7 +69,7 @@ TEST(ArithmeticMethodTest, SubtractMethod)
   const auto asset = pludux::Asset{"", std::vector<Quote>(5)};
   const auto asset_data = pludux::AssetDataProvider{asset};
 
-  const auto result = subtract_method.run_all(asset_data);
+  const auto result = subtract_method(asset_data);
 
   ASSERT_EQ(result.size(), asset.quotes().size());
   EXPECT_DOUBLE_EQ(result[0], 2.0);
@@ -86,7 +86,7 @@ TEST(ArithmeticMethodTest, NegateMethod)
   const auto asset = pludux::Asset{"", std::vector<Quote>(5)};
   const auto asset_data = pludux::AssetDataProvider{asset};
 
-  const auto result = negate_method.run_all(asset_data);
+  const auto result = negate_method(asset_data);
 
   ASSERT_EQ(result.size(), asset.quotes().size());
   EXPECT_DOUBLE_EQ(result[0], -5.0);

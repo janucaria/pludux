@@ -21,8 +21,8 @@ public:
 
   auto operator()(const AssetDataProvider& asset_data) const -> bool
   {
-    const auto target_result = target_.run_one(asset_data);
-    const auto threshold_result = threshold_.run_one(asset_data);
+    const auto target_result = target_(asset_data)[0];
+    const auto threshold_result = threshold_(asset_data)[0];
 
     return compare_(target_result, threshold_result);
   }
