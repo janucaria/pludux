@@ -14,21 +14,22 @@ AbsDiffMethod::AbsDiffMethod(ScreenerMethod operand1, ScreenerMethod operand2)
 {
 }
 
-auto AbsDiffMethod::run_all(const AssetDataProvider& asset_data) const -> Series
+auto AbsDiffMethod::run_all(const AssetDataProvider& asset_data) const -> PolySeries<double>
 {
   const auto operand1_series = operand1_.run_all(asset_data);
   const auto operand2_series = operand2_.run_all(asset_data);
 
-  auto result = std::vector<double>{};
-  std::transform(operand1_series.data().begin(),
-                 operand1_series.data().end(),
-                 operand2_series.data().begin(),
-                 std::back_inserter(result),
-                 [](double operand1, double operand2) {
-                   return std::abs(operand1 - operand2);
-                 });
+  using AbsDiffFn =
+   std::remove_cvref_t<decltype([](double operand1, double operand2) {
+     return std::abs(operand1 - operand2);
+   })>;
 
-  return Series{std::move(result)};
+  auto result = BinaryFnSeries<AbsDiffFn,
+                               std::decay_t<decltype(operand1_series)>,
+                               std::decay_t<decltype(operand2_series)>>{
+   operand1_series, operand2_series};
+
+  return result;
 }
 
 auto AbsDiffMethod::run_one(const AssetDataProvider& asset_data) const -> double

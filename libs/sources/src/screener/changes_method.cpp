@@ -14,7 +14,7 @@ ChangesMethod::ChangesMethod(ScreenerMethod operand)
 {
 }
 
-auto ChangesMethod::run_all(const AssetDataProvider& asset_data) const -> Series
+auto ChangesMethod::run_all(const AssetDataProvider& asset_data) const -> PolySeries<double>
 {
   const auto operand_series = operand_.run_all(asset_data);
   const auto result = ta::changes(operand_series);

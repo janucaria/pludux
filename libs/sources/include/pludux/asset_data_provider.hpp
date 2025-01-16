@@ -5,6 +5,7 @@
 
 #include <pludux/asset.hpp>
 #include <pludux/series.hpp>
+#include <pludux/ta.hpp>
 
 namespace pludux {
 
@@ -12,54 +13,121 @@ class AssetDataProvider {
 public:
   explicit AssetDataProvider(const Asset& asset);
 
-  auto timestamp() const noexcept -> const Series&;
+  auto timestamp() const noexcept
+  {
+    return asset_.quotes().timestamps();
+  }
 
-  auto open() const noexcept -> const Series&;
+  auto open() const noexcept
+  {
+    return asset_.quotes().opens();
+  }
 
-  auto high() const noexcept -> const Series&;
+  auto high() const noexcept
+  {
+    return asset_.quotes().highs();
+  }
 
-  auto low() const noexcept -> const Series&;
+  auto low() const noexcept
+  {
+    return asset_.quotes().lows();
+  }
 
-  auto close() const noexcept -> const Series&;
+  auto close() const noexcept
+  {
+    return asset_.quotes().closes();
+  }
 
-  auto price() const noexcept -> const Series&;
-  
-  auto volume() const noexcept -> const Series&;
+  auto price() const noexcept
+  {
+    return close();
+  }
 
-  auto changes() const -> Series;
+  auto volume() const noexcept
 
-  auto sma5() const -> Series;
+  {
+    return asset_.quotes().volumes();
+  }
 
-  auto sma10() const -> Series;
+  auto changes() const
+  {
+    return ta::changes(price());
+  }
 
-  auto sma20() const -> Series;
+  auto sma5() const
+  {
+    return ta::sma(price(), 5);
+  }
 
-  auto sma50() const -> Series;
+  auto sma10() const
+  {
+    return ta::sma(price(), 10);
+  }
 
-  auto sma100() const -> Series;
+  auto sma20() const
+  {
+    return ta::sma(price(), 20);
+  }
 
-  auto sma200() const -> Series;
+  auto sma50() const
+  {
+    return ta::sma(price(), 50);
+  }
 
-  auto hma30() const -> Series;
+  auto sma100() const
+  {
+    return ta::sma(price(), 100);
+  }
 
-  auto hma35() const -> Series;
+  auto sma200() const
+  {
+    return ta::sma(price(), 200);
+  }
 
-  auto hma50() const -> Series;
+  auto hma30() const
+  {
+    return ta::hma(price(), 30);
+  }
 
-  auto atr14() const -> Series;
+  auto hma35() const
+  {
+    return ta::hma(price(), 35);
+  }
 
-  auto rsi14() const -> Series;
+  auto hma50() const
+  {
+    return ta::hma(price(), 50);
+  }
 
-  auto rsi14_sma14() const -> Series;
+  auto atr14() const
+  {
+    return ta::atr(high(), low(), close(), 14);
+  }
 
-  auto rsi14_bb14l2sd_upper() const -> Series;
+  auto rsi14() const
+  {
+    return ta::rsi(price(), 14);
+  }
 
-  auto rsi14_bb14l2sd_lower() const -> Series;
+  auto rsi14_sma14() const
+  {
+    return ta::sma(rsi14(), 14);
+  }
+
+  auto rsi14_bb14l2sd_upper() const
+  {
+    return ta::bb(rsi14_sma14(), 14, 2).upper_band();
+  }
+
+  auto rsi14_bb14l2sd_lower() const
+  {
+    return ta::bb(rsi14_sma14(), 14, 2).lower_band();
+  }
 
 private:
   const Asset& asset_;
 };
 
-} // namespace pludux::screener
+} // namespace pludux
 
 #endif

@@ -5,10 +5,10 @@
 #include <utility>
 
 #include <pludux/asset.hpp>
+#include <pludux/asset_data_provider.hpp>
 #include <pludux/screener/screener_method.hpp>
 #include <pludux/series.hpp>
 #include <pludux/ta.hpp>
-#include <pludux/asset_data_provider.hpp>
 
 namespace pludux::screener {
 
@@ -30,19 +30,19 @@ public:
     return series[0];
   }
 
-  auto run_all(const AssetDataProvider& asset_data) const -> Series
+  auto run_all(const AssetDataProvider& asset_data) const -> PolySeries<double>
   {
     const auto sources = target_.run_all(asset_data);
     const auto series = T{}(sources, period_);
-    return series.subseries(offset_);
+    return SubSeries{series, offset_};
   }
 
-  auto period() const noexcept -> int
+  auto period() const noexcept -> std::size_t
   {
     return period_;
   }
 
-  auto offset() const noexcept -> int
+  auto offset() const noexcept -> std::size_t
   {
     return offset_;
   }
@@ -53,38 +53,38 @@ public:
   }
 
 private:
-  int period_{};
-  int offset_{};
+  std::size_t period_{};
+  std::size_t offset_{};
   ScreenerMethod target_;
 };
 
-inline constexpr auto sma_wrapper = [](const Series& series,
-                                       std::size_t period) {
+inline constexpr auto sma_wrapper = []<typename TSeries>(TSeries series,
+                                                         std::size_t period) {
   return ta::sma(series, period);
 };
 
-inline constexpr auto ema_wrapper = [](const Series& series,
-                                       std::size_t period) {
+inline constexpr auto ema_wrapper = []<typename TSeries>(TSeries series,
+                                                         std::size_t period) {
   return ta::ema(series, period);
 };
 
-inline constexpr auto wma_wrapper = [](const Series& series,
-                                       std::size_t period) {
+inline constexpr auto wma_wrapper = []<typename TSeries>(TSeries series,
+                                                         std::size_t period) {
   return ta::wma(series, period);
 };
 
-inline constexpr auto rma_wrapper = [](const Series& series,
-                                       std::size_t period) {
+inline constexpr auto rma_wrapper = []<typename TSeries>(TSeries series,
+                                                         std::size_t period) {
   return ta::rma(series, period);
 };
 
-inline constexpr auto hma_wrapper = [](const Series& series,
-                                       std::size_t period) {
+inline constexpr auto hma_wrapper = []<typename TSeries>(TSeries series,
+                                                         std::size_t period) {
   return ta::hma(series, period);
 };
 
-inline constexpr auto rsi_wrapper = [](const Series& series,
-                                       std::size_t period) {
+inline constexpr auto rsi_wrapper = []<typename TSeries>(TSeries series,
+                                                         std::size_t period) {
   return ta::rsi(series, period);
 };
 

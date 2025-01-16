@@ -1,49 +1,25 @@
 #ifndef PLUDUX_PLUDUX_SERIES_HPP
 #define PLUDUX_PLUDUX_SERIES_HPP
 
-#include <algorithm>
-#include <iterator>
-#include <utility>
-#include <vector>
-
-namespace pludux {
-
-class Series {
-public:
-  Series();
-
-  explicit Series(std::vector<double> data);
-
-  template<std::convertible_to<double> T>
-  explicit Series(const std::vector<T>& data)
-  : data_{}
-  {
-    data_.reserve(data.size());
-    std::transform(
-     data.cbegin(),
-     data.cend(),
-     std::back_inserter(data_),
-     [](const auto& value) { return static_cast<double>(value); });
-  }
-
-  /**
-   * The 0 index is the latest value.
-   * If the index is out of bounds, return NaN.
-   */
-  auto operator[](std::size_t index) const -> double;
-
-  auto size() const -> std::size_t;
-
-  auto data() const noexcept -> const std::vector<double>&;
-  
-  void append(double value);
-
-  auto subseries(std::size_t offset) const -> Series;
-
-private:
-  std::vector<double> data_;
-};
-
-} // namespace pludux
+#include <pludux/series/atr_series.hpp>
+#include <pludux/series/bb_series.hpp>
+#include <pludux/series/binary_fn_series.hpp>
+#include <pludux/series/change_series.hpp>
+#include <pludux/series/ema_series.hpp>
+#include <pludux/series/hma_series.hpp>
+#include <pludux/series/macd_series.hpp>
+#include <pludux/series/poly_series.hpp>
+#include <pludux/series/ref_series.hpp>
+#include <pludux/series/repeat_series.hpp>
+#include <pludux/series/rma_series.hpp>
+#include <pludux/series/rsi_series.hpp>
+#include <pludux/series/sma_series.hpp>
+#include <pludux/series/stoch_rsi_series.hpp>
+#include <pludux/series/stoch_series.hpp>
+#include <pludux/series/sub_series.hpp>
+#include <pludux/series/tr_series.hpp>
+#include <pludux/series/unary_fn_series.hpp>
+#include <pludux/series/data_series.hpp>
+#include <pludux/series/wma_series.hpp>
 
 #endif

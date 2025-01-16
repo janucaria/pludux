@@ -13,7 +13,7 @@ AtrMethod::AtrMethod(int period)
 {
 }
 
-auto AtrMethod::run_all(const AssetDataProvider& asset_data) const -> Series
+auto AtrMethod::run_all(const AssetDataProvider& asset_data) const -> PolySeries<double>
 {
   const auto high_series = asset_data.high();
   const auto low_series = asset_data.low();

@@ -43,7 +43,7 @@ parse_data_method(const nlohmann::json& parameters) -> screener::ScreenerMethod
 {
   const auto field = parameters["field"].get<std::string>();
 
-  auto offset = 0;
+  auto offset = std::size_t{0};
   if(parameters.contains("offset")) {
     offset = parameters["offset"].get<int>();
   }

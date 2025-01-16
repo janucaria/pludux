@@ -25,19 +25,17 @@ public:
     return series[0];
   }
 
-  auto run_all(const AssetDataProvider& asset_data) const -> Series
+  auto run_all(const AssetDataProvider& asset_data) const -> PolySeries<double>
   {
-    const auto series1 = operand1_.run_all(asset_data);
-    const auto series2 = operand2_.run_all(asset_data);
+    const auto operand1_series = operand1_.run_all(asset_data);
+    const auto operand2_series = operand2_.run_all(asset_data);
 
-    auto result = std::vector<double>{};
-    std::transform(series1.data().cbegin(),
-                   series1.data().cend(),
-                   series2.data().cbegin(),
-                   std::back_inserter(result),
-                   T{}); // T is a functor
+    auto result = BinaryFnSeries<T,
+                                 std::decay_t<decltype(operand1_series)>,
+                                 std::decay_t<decltype(operand2_series)>>{
+     operand1_series, operand2_series};
 
-    return Series{std::move(result)};
+    return result;
   }
 
 private:
@@ -59,17 +57,14 @@ public:
     return series[0];
   }
 
-  auto run_all(const AssetDataProvider& asset_data) const -> Series
+  auto run_all(const AssetDataProvider& asset_data) const -> PolySeries<double>
   {
-    const auto series = operand_.run_all(asset_data);
+    const auto operand_series = operand_.run_all(asset_data);
 
-    auto result = std::vector<double>{};
-    std::transform(series.data().begin(),
-                   series.data().end(),
-                   std::back_inserter(result),
-                   T{}); // T is a functor
+    auto result =
+     UnaryFnSeries<T, std::decay_t<decltype(operand_series)>>{operand_series};
 
-    return Series{std::move(result)};
+    return result;
   }
 
 private:

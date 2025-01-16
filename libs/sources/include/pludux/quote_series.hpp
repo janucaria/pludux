@@ -2,9 +2,9 @@
 #define PLUDUX_PLUDUX_QUOTE_HISTOTY_HPP
 
 #include <ctime>
+#include <iterator>
 #include <string>
 #include <vector>
-#include <iterator>
 
 #include <pludux/quote.hpp>
 #include <pludux/series.hpp>
@@ -49,26 +49,26 @@ public:
   QuoteSeries();
 
   QuoteSeries(std::size_t size,
-               std::vector<std::time_t> timestamps,
-               std::vector<double> opens,
-               std::vector<double> highs,
-               std::vector<double> lows,
-               std::vector<double> closes,
-               std::vector<std::uint32_t> volumes);
-  
+              std::vector<std::time_t> timestamps,
+              std::vector<double> opens,
+              std::vector<double> highs,
+              std::vector<double> lows,
+              std::vector<double> closes,
+              std::vector<std::uint32_t> volumes);
+
   auto operator[](std::size_t index) const -> Quote;
 
-  auto timestamps() const noexcept -> const Series&;
+  auto timestamps() const noexcept -> RefSeries<const DataSeries<std::time_t>>;
 
-  auto opens() const noexcept -> const Series&;
+  auto opens() const noexcept -> RefSeries<const DataSeries<double>>;
 
-  auto highs() const noexcept -> const Series&;
+  auto highs() const noexcept -> RefSeries<const DataSeries<double>>;
 
-  auto lows() const noexcept -> const Series&;
+  auto lows() const noexcept -> RefSeries<const DataSeries<double>>;
 
-  auto closes() const noexcept -> const Series&;
+  auto closes() const noexcept -> RefSeries<const DataSeries<double>>;
 
-  auto volumes() const noexcept -> const Series&;
+  auto volumes() const noexcept -> RefSeries<const DataSeries<double>>;
 
   void add_quote(const Quote& quote);
 
@@ -92,12 +92,12 @@ public:
 
 private:
   std::size_t size_;
-  Series timestamps_;
-  Series opens_;
-  Series highs_;
-  Series lows_;
-  Series closes_;
-  Series volumes_;
+  DataSeries<std::time_t> timestamps_;
+  DataSeries<double> opens_;
+  DataSeries<double> highs_;
+  DataSeries<double> lows_;
+  DataSeries<double> closes_;
+  DataSeries<double> volumes_;
 };
 
 } // namespace pludux

@@ -47,45 +47,48 @@ auto QuoteSeries::operator[](std::size_t index) const -> Quote
                static_cast<std::uint32_t>(volumes_[index])};
 }
 
-auto QuoteSeries::timestamps() const noexcept -> const Series&
+auto QuoteSeries::timestamps() const noexcept
+ -> RefSeries<const DataSeries<std::time_t>>
 {
-  return timestamps_;
+  return RefSeries{timestamps_};
 }
 
-auto QuoteSeries::opens() const noexcept -> const Series&
+auto QuoteSeries::opens() const noexcept -> RefSeries<const DataSeries<double>>
 {
-  return opens_;
+  return RefSeries{opens_};
 }
 
-auto QuoteSeries::highs() const noexcept -> const Series&
+auto QuoteSeries::highs() const noexcept -> RefSeries<const DataSeries<double>>
 {
-  return highs_;
+  return RefSeries{highs_};
 }
 
-auto QuoteSeries::lows() const noexcept -> const Series&
+auto QuoteSeries::lows() const noexcept -> RefSeries<const DataSeries<double>>
 {
-  return lows_;
+  return RefSeries{lows_};
 }
 
-auto QuoteSeries::closes() const noexcept -> const Series&
+auto QuoteSeries::closes() const noexcept
+ -> RefSeries<const DataSeries<double>>
 {
-  return closes_;
+  return RefSeries{closes_};
 }
 
-auto QuoteSeries::volumes() const noexcept -> const Series&
+auto QuoteSeries::volumes() const noexcept
+ -> RefSeries<const DataSeries<double>>
 {
-  return volumes_;
+  return RefSeries{volumes_};
 }
 
 void QuoteSeries::add_quote(const Quote& quote)
 {
   ++size_;
-  timestamps_.append(quote.timestamp());
-  opens_.append(quote.open());
-  highs_.append(quote.high());
-  lows_.append(quote.low());
-  closes_.append(quote.close());
-  volumes_.append(quote.volume());
+  timestamps_.data().emplace_back(quote.timestamp());
+  opens_.data().emplace_back(quote.open());
+  highs_.data().emplace_back(quote.high());
+  lows_.data().emplace_back(quote.low());
+  closes_.data().emplace_back(quote.close());
+  volumes_.data().emplace_back(quote.volume());
 }
 
 auto QuoteSeries::size() const noexcept -> std::size_t

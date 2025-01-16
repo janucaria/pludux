@@ -13,10 +13,9 @@ ValueMethod::ValueMethod(double value)
 {
 }
 
-auto ValueMethod::run_all(const AssetDataProvider& asset_data) const -> Series
+auto ValueMethod::run_all(const AssetDataProvider& asset_data) const -> PolySeries<double>
 {
-  auto values = std::vector<double>(asset_data.price().size(), value_);
-  return Series{std::move(values)};
+  return RepeatSeries{value_, asset_data.price().size()};
 }
 
 auto ValueMethod::run_one(const AssetDataProvider& asset_data) const -> double

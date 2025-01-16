@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <iterator>
-#include <vector>
 #include <stdexcept>
+#include <vector>
 
 #include <pludux/asset.hpp>
 
@@ -9,88 +9,88 @@
 
 namespace pludux::screener {
 
-DataMethod::DataMethod(std::string field, int offset)
-  : field_{std::move(field)}
-  , offset_{offset}
+DataMethod::DataMethod(std::string field, std::size_t offset)
+: field_{std::move(field)}
+, offset_{offset}
 {
 }
 
-auto DataMethod::run_all(const AssetDataProvider& asset_data) const -> Series
+auto DataMethod::run_all(const AssetDataProvider& asset_data) const -> PolySeries<double>
 {
   if(field_ == "close") {
-    return asset_data.price().subseries(offset_);
+    return SubSeries{asset_data.price(), offset_};
   }
 
   if(field_ == "open") {
-    return asset_data.open().subseries(offset_);
+    return SubSeries{asset_data.open(), offset_};
   }
 
   if(field_ == "high") {
-    return asset_data.high().subseries(offset_);
+    return SubSeries{asset_data.high(), offset_};
   }
 
   if(field_ == "low") {
-    return asset_data.low().subseries(offset_);
+    return SubSeries{asset_data.low(), offset_};
   }
 
   if(field_ == "volume") {
-    return asset_data.volume().subseries(offset_);
+    return SubSeries{asset_data.volume(), offset_};
   }
 
   if(field_ == "sma5") {
-    return asset_data.sma5().subseries(offset_);
+    return SubSeries{asset_data.sma5(), offset_};
   }
 
   if(field_ == "sma10") {
-    return asset_data.sma10().subseries(offset_);
+    return SubSeries{asset_data.sma10(), offset_};
   }
 
   if(field_ == "sma20") {
-    return asset_data.sma20().subseries(offset_);
+    return SubSeries{asset_data.sma20(), offset_};
   }
 
   if(field_ == "sma50") {
-    return asset_data.sma50().subseries(offset_);
+    return SubSeries{asset_data.sma50(), offset_};
   }
 
   if(field_ == "sma100") {
-    return asset_data.sma100().subseries(offset_);
+    return SubSeries{asset_data.sma100(), offset_};
   }
 
   if(field_ == "sma200") {
-    return asset_data.sma200().subseries(offset_);
+    return SubSeries{asset_data.sma200(), offset_};
   }
 
   if(field_ == "hma30") {
-    return asset_data.hma30().subseries(offset_);
+    return SubSeries{asset_data.hma30(), offset_};
   }
 
   if(field_ == "hma35") {
-    return asset_data.hma35().subseries(offset_);
+    return SubSeries{asset_data.hma35(), offset_};
   }
 
   if(field_ == "hma50") {
-    return asset_data.hma50().subseries(offset_);
+    return SubSeries{asset_data.hma50(), offset_};
   }
 
   if(field_ == "atr14") {
-    return asset_data.atr14().subseries(offset_);
+    return SubSeries{asset_data.atr14(), offset_};
   }
 
   if(field_ == "rsi14") {
-    return asset_data.rsi14().subseries(offset_);
+    return SubSeries{asset_data.rsi14(), offset_};
   }
 
   if(field_ == "rsi14_sma14") {
-    return asset_data.rsi14_sma14().subseries(offset_);
+    return SubSeries{asset_data.rsi14_sma14(), offset_};
   }
 
   if(field_ == "rsi14_bb14l2sd_upper") {
-    return asset_data.rsi14_bb14l2sd_upper().subseries(offset_);
+    return SubSeries{asset_data.rsi14_bb14l2sd_upper(), offset_};
   }
 
   if(field_ == "rsi14_bb14l2sd_lower") {
-    return asset_data.rsi14_bb14l2sd_lower().subseries(offset_);
+    return SubSeries{asset_data.rsi14_bb14l2sd_lower(), offset_};
   }
 
   throw std::runtime_error("Field not found");

@@ -1,22 +1,23 @@
 #ifndef PLUDUX_PLUDUX_SCREENER_DATA_METHOD_HPP
 #define PLUDUX_PLUDUX_SCREENER_DATA_METHOD_HPP
 
+#include <cmath>
 #include <string>
 #include <vector>
 
 #include <pludux/asset.hpp>
-#include <pludux/series.hpp>
 #include <pludux/asset_data_provider.hpp>
+#include <pludux/series.hpp>
 
 namespace pludux::screener {
 
 class DataMethod {
 public:
-  DataMethod(std::string field, int offset);
-  
+  DataMethod(std::string field, std::size_t offset);
+
   auto run_one(const AssetDataProvider& asset_data) const -> double;
 
-  auto run_all(const AssetDataProvider& asset_data) const -> Series;
+  auto run_all(const AssetDataProvider& asset_data) const -> PolySeries<double>;
 
   auto field() const -> const std::string&;
 
@@ -24,7 +25,7 @@ public:
 
 private:
   std::string field_{};
-  int offset_{};
+  std::size_t offset_{};
 };
 
 } // namespace pludux::screener

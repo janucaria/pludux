@@ -3,10 +3,8 @@ add_library(${CMAKE_PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
 target_sources(${PROJECT_NAME}
   PUBLIC
-    src/series.cpp
     src/quote.cpp
     src/asset.cpp
-    src/ta.cpp
     src/asset_data_provider.cpp
     src/config_parser.cpp
     src/quote_series.cpp
@@ -47,12 +45,33 @@ target_sources(${PROJECT_NAME}
         include/pludux/screener/arithmetic_method.hpp 
         include/pludux/screener/changes_method.hpp 
         
-        include/pludux/screener/screener_filter.hpp 
         include/pludux/screener/all_of_filter.hpp
         include/pludux/screener/any_of_filter.hpp
         include/pludux/screener/comparison_filter.hpp
         include/pludux/screener/crossover_filter.hpp
         include/pludux/screener/crossunder_filter.hpp
+        include/pludux/screener/screener_filter.hpp 
+
+        include/pludux/screener/atr_series.hpp
+        include/pludux/screener/bb_series.hpp
+        include/pludux/screener/binary_fn_series.hpp
+        include/pludux/screener/change_series.hpp
+        include/pludux/screener/data_series.hpp
+        include/pludux/screener/ema_series.hpp
+        include/pludux/screener/hma_series.hpp
+        include/pludux/screener/macd_series.hpp
+        include/pludux/screener/poly_series.hpp
+        include/pludux/screener/ref_series.hpp
+        include/pludux/screener/repeat_series.hpp
+        include/pludux/screener/rma_series.hpp
+        include/pludux/screener/rsi_series.hpp
+        include/pludux/screener/sma_series.hpp
+        include/pludux/screener/stoch_rsi_series.hpp
+        include/pludux/screener/stoch_series.hpp
+        include/pludux/screener/sub_series.hpp
+        include/pludux/screener/tr_series.hpp
+        include/pludux/screener/unary_fn_series.hpp
+        include/pludux/screener/wma_series.hpp
 
 )
 

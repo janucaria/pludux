@@ -20,7 +20,7 @@ public:
 
   auto run_one(const AssetDataProvider& asset_data) const -> double;
 
-  auto run_all(const AssetDataProvider& asset_data) const -> Series;
+  auto run_all(const AssetDataProvider& asset_data) const -> PolySeries<double>;
 
   template<typename T>
   friend auto screener_method_cast(const ScreenerMethod* method) noexcept -> const T*
@@ -35,7 +35,7 @@ private:
 
     virtual auto run_one(const AssetDataProvider& asset_data) const -> double = 0;
     
-    virtual auto run_all(const AssetDataProvider& asset_data) const -> Series = 0;
+    virtual auto run_all(const AssetDataProvider& asset_data) const -> PolySeries<double> = 0;
   };
 
   template<typename T>
@@ -52,7 +52,7 @@ private:
       return impl.run_one(asset_data);
     }
 
-    auto run_all(const AssetDataProvider& asset_data) const -> Series final
+    auto run_all(const AssetDataProvider& asset_data) const -> PolySeries<double> final
     {
       return impl.run_all(asset_data);
     }

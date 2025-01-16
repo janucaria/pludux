@@ -12,7 +12,7 @@ public:
 
   auto run_one(const AssetDataProvider& asset_data) const -> double;
 
-  auto run_all(const AssetDataProvider& asset_data) const -> Series;
+  auto run_all(const AssetDataProvider& asset_data) const -> PolySeries<double>;
 
 private:
   int period_;
