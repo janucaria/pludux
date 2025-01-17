@@ -3,7 +3,6 @@
 
 #include <utility>
 
-#include "quote.hpp"
 #include "series.hpp"
 
 namespace pludux::ta {

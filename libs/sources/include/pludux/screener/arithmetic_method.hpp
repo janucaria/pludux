@@ -3,7 +3,7 @@
 
 #include <functional>
 
-#include <pludux/asset_data_provider.hpp>
+#include <pludux/asset_snapshot.hpp>
 #include <pludux/screener/screener_method.hpp>
 
 namespace pludux::screener {
@@ -19,7 +19,7 @@ public:
   {
   }
 
-  auto operator()(const AssetDataProvider& asset_data) const -> PolySeries<double>
+  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>
   {
     const auto operand1_series = operand1_(asset_data);
     const auto operand2_series = operand2_(asset_data);
@@ -45,7 +45,7 @@ public:
   {
   }
 
-  auto operator()(const AssetDataProvider& asset_data) const -> PolySeries<double>
+  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>
   {
     const auto operand_series = operand_(asset_data);
 

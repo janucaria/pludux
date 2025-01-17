@@ -4,8 +4,7 @@
 #include <type_traits>
 #include <utility>
 
-#include <pludux/asset.hpp>
-#include <pludux/asset_data_provider.hpp>
+#include <pludux/asset_snapshot.hpp>
 #include <pludux/screener/screener_method.hpp>
 #include <pludux/series.hpp>
 #include <pludux/ta.hpp>
@@ -25,7 +24,7 @@ public:
   }
 
   auto
-  operator()(const AssetDataProvider& asset_data) const -> PolySeries<double>
+  operator()(AssetSnapshot asset_data) const -> PolySeries<double>
   {
     const auto sources = target_(asset_data);
     const auto series = T{}(sources, period_);

@@ -15,7 +15,12 @@ class DataSeries {
 public:
   using ValueType = T;
 
-  explicit DataSeries(std::vector<T> data)
+  DataSeries()
+  : DataSeries{std::vector<ValueType>{}}
+  {
+  }
+
+  explicit DataSeries(std::vector<ValueType> data)
   : data_{std::move(data)}
   {
   }

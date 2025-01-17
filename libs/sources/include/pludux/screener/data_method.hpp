@@ -5,17 +5,16 @@
 #include <string>
 #include <vector>
 
-#include <pludux/asset.hpp>
-#include <pludux/asset_data_provider.hpp>
+#include <pludux/asset_snapshot.hpp>
 #include <pludux/series.hpp>
 
 namespace pludux::screener {
 
 class DataMethod {
 public:
-  DataMethod(std::string field, std::size_t offset);
+  DataMethod(std::string field, std::size_t offset = 0);
 
-  auto operator()(const AssetDataProvider& asset_data) const -> PolySeries<double>;
+  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>;
 
   auto field() const -> const std::string&;
 

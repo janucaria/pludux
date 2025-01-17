@@ -2,7 +2,7 @@
 #include <iterator>
 #include <vector>
 
-#include <pludux/asset.hpp>
+#include <pludux/asset_snapshot.hpp>
 #include <pludux/ta.hpp>
 
 #include <pludux/screener/changes_method.hpp>
@@ -14,7 +14,7 @@ ChangesMethod::ChangesMethod(ScreenerMethod operand)
 {
 }
 
-auto ChangesMethod::operator()(const AssetDataProvider& asset_data) const -> PolySeries<double>
+auto ChangesMethod::operator()(AssetSnapshot asset_data) const -> PolySeries<double>
 {
   const auto operand_series = operand_(asset_data);
   const auto result = ta::changes(operand_series);

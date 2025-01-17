@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <pludux/asset_data_provider.hpp>
+#include <pludux/asset_history.hpp>
 #include <pludux/screener.hpp>
 #include <pludux/series.hpp>
 
@@ -13,8 +13,7 @@ TEST(AnyOfFilterTest, AllFiltersPass)
    LessThanFilter{ValueMethod{30}, ValueMethod{50}};
   const auto any_of_filter =
    AnyOfFilter{{greater_than_filter, less_than_filter}};
-  const auto asset = pludux::Asset{"", std::vector<pludux::Quote>(1)};
-  const auto asset_data = pludux::AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetHistory{{"close", {0}}};
 
   EXPECT_TRUE(any_of_filter(asset_data));
 }
@@ -27,8 +26,7 @@ TEST(AnyOfFilterTest, OneFilterFails)
    LessThanFilter{ValueMethod{30}, ValueMethod{50}};
   const auto any_of_filter =
    AnyOfFilter{{greater_than_filter, less_than_filter}};
-  const auto asset = pludux::Asset{"", std::vector<pludux::Quote>(1)};
-  const auto asset_data = pludux::AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetHistory{{"close", {0}}};
 
   EXPECT_TRUE(any_of_filter(asset_data));
 }
@@ -41,8 +39,7 @@ TEST(AnyOfFilterTest, AllFiltersFails)
    LessThanFilter{ValueMethod{80}, ValueMethod{50}};
   const auto any_of_filter =
    AnyOfFilter{{greater_than_filter, less_than_filter}};
-  const auto asset = pludux::Asset{"", std::vector<pludux::Quote>(1)};
-  const auto asset_data = pludux::AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetHistory{{"close", {0}}};
 
   EXPECT_FALSE(any_of_filter(asset_data));
 }
@@ -50,8 +47,7 @@ TEST(AnyOfFilterTest, AllFiltersFails)
 TEST(AnyOfFilterTest, NoFilters)
 {
   const auto any_of_filter = AnyOfFilter{};
-  const auto asset = pludux::Asset{"", std::vector<pludux::Quote>(1)};
-  const auto asset_data = pludux::AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetHistory{{"close", {0}}};
 
   EXPECT_FALSE(any_of_filter(asset_data));
 }

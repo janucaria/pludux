@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <pludux/asset_data_provider.hpp>
+#include <pludux/asset_history.hpp>
 #include <pludux/screener.hpp>
 #include <pludux/series.hpp>
 
@@ -11,18 +11,8 @@ TEST(SmaMethodTest, RunOneMethod)
   const auto field_method = DataMethod{field, 0};
   const auto period = 5;
   const auto sma_method = SmaMethod{period, field_method, 0};
-  const auto asset = pludux::Asset("",
-                                   {pludux::Quote(0, 0, 0, 0, 875, 0),
-                                    pludux::Quote(0, 0, 0, 0, 830, 0),
-                                    pludux::Quote(0, 0, 0, 0, 800, 0),
-                                    pludux::Quote(0, 0, 0, 0, 835, 0),
-                                    pludux::Quote(0, 0, 0, 0, 870, 0),
-                                    pludux::Quote(0, 0, 0, 0, 875, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 855, 0)});
-  const auto asset_data = pludux::AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetHistory{
+   {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
   const auto result = sma_method(asset_data)[0];
   EXPECT_DOUBLE_EQ(result, 862);
@@ -35,22 +25,12 @@ TEST(SmaMethodTest, RunAllMethod)
   const auto offset = 0;
   const auto period = 5;
   const auto sma_method = SmaMethod{period, field_method, 0};
-  const auto asset = pludux::Asset("",
-                                   {pludux::Quote(0, 0, 0, 0, 875, 0),
-                                    pludux::Quote(0, 0, 0, 0, 830, 0),
-                                    pludux::Quote(0, 0, 0, 0, 800, 0),
-                                    pludux::Quote(0, 0, 0, 0, 835, 0),
-                                    pludux::Quote(0, 0, 0, 0, 870, 0),
-                                    pludux::Quote(0, 0, 0, 0, 875, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 855, 0)});
-  const auto asset_data = pludux::AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetHistory{
+   {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
   const auto result = sma_method(asset_data);
 
-  ASSERT_EQ(result.size(), asset.quotes().size());
+  ASSERT_EQ(result.size(), asset_data.size());
   EXPECT_DOUBLE_EQ(result[0], 862);
   EXPECT_DOUBLE_EQ(result[1], 865);
   EXPECT_DOUBLE_EQ(result[2], 860);
@@ -70,18 +50,8 @@ TEST(SmaMethodTest, RunOneMethodWithOffset)
   const auto offset = 1;
   const auto period = 5;
   const auto sma_method = SmaMethod{period, field_method, offset};
-  const auto asset = pludux::Asset("",
-                                   {pludux::Quote(0, 0, 0, 0, 875, 0),
-                                    pludux::Quote(0, 0, 0, 0, 830, 0),
-                                    pludux::Quote(0, 0, 0, 0, 800, 0),
-                                    pludux::Quote(0, 0, 0, 0, 835, 0),
-                                    pludux::Quote(0, 0, 0, 0, 870, 0),
-                                    pludux::Quote(0, 0, 0, 0, 875, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 855, 0)});
-  const auto asset_data = pludux::AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetHistory{
+   {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
   const auto result = sma_method(asset_data)[0];
   EXPECT_DOUBLE_EQ(result, 865);
@@ -94,22 +64,12 @@ TEST(SmaMethodTest, RunAllMethodWithOffset)
   const auto offset = 2;
   const auto period = 5;
   const auto sma_method = SmaMethod{period, field_method, offset};
-  const auto asset = pludux::Asset("",
-                                   {pludux::Quote(0, 0, 0, 0, 875, 0),
-                                    pludux::Quote(0, 0, 0, 0, 830, 0),
-                                    pludux::Quote(0, 0, 0, 0, 800, 0),
-                                    pludux::Quote(0, 0, 0, 0, 835, 0),
-                                    pludux::Quote(0, 0, 0, 0, 870, 0),
-                                    pludux::Quote(0, 0, 0, 0, 875, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 855, 0)});
-  const auto asset_data = pludux::AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetHistory{
+   {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
   const auto result = sma_method(asset_data);
 
-  ASSERT_EQ(result.size(), asset.quotes().size() - offset);
+  ASSERT_EQ(result.size(), asset_data.size() - offset);
   EXPECT_DOUBLE_EQ(result[0], 860);
   EXPECT_DOUBLE_EQ(result[1], 848);
   EXPECT_DOUBLE_EQ(result[2], 842);

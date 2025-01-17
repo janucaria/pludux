@@ -1,6 +1,6 @@
 #include <vector>
 
-#include <pludux/asset.hpp>
+#include <pludux/asset_snapshot.hpp>
 #include <pludux/screener/screener_filter.hpp>
 #include <pludux/screener/screener_method.hpp>
 
@@ -15,7 +15,7 @@ CrossoverFilter::CrossoverFilter(ScreenerMethod signal,
 {
 }
 
-auto CrossoverFilter::operator()(const AssetDataProvider& asset_data) const
+auto CrossoverFilter::operator()(AssetSnapshot asset_data) const
  -> bool
 {
   const auto signal_result = signal_(asset_data);

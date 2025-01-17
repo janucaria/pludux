@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <pludux/asset_data_provider.hpp>
+#include <pludux/asset_history.hpp>
 #include <pludux/screener.hpp>
 #include <pludux/series.hpp>
 
@@ -11,20 +11,11 @@ TEST(EmaMethodTest, RunOneMethod)
   const auto field_method = DataMethod{field, 0};
   const auto period = 5;
   const auto ema_method = EmaMethod{period, field_method, 0};
-  const auto asset = pludux::Asset("",
-                                   {pludux::Quote(0, 0, 0, 0, 875, 0),
-                                    pludux::Quote(0, 0, 0, 0, 830, 0),
-                                    pludux::Quote(0, 0, 0, 0, 800, 0),
-                                    pludux::Quote(0, 0, 0, 0, 835, 0),
-                                    pludux::Quote(0, 0, 0, 0, 870, 0),
-                                    pludux::Quote(0, 0, 0, 0, 875, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 855, 0)});
-  const auto asset_data = pludux::AssetDataProvider{asset};
-  
+  const auto asset_data = pludux::AssetHistory{
+   {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+
   const auto result = ema_method(asset_data)[0];
+
   EXPECT_DOUBLE_EQ(result, 856.95061728395069);
 }
 
@@ -35,22 +26,12 @@ TEST(EmaMethodTest, RunAllMethod)
   const auto offset = 0;
   const auto period = 5;
   const auto ema_method = EmaMethod{period, field_method, 0};
-  const auto asset = pludux::Asset("",
-                                   {pludux::Quote(0, 0, 0, 0, 875, 0),
-                                    pludux::Quote(0, 0, 0, 0, 830, 0),
-                                    pludux::Quote(0, 0, 0, 0, 800, 0),
-                                    pludux::Quote(0, 0, 0, 0, 835, 0),
-                                    pludux::Quote(0, 0, 0, 0, 870, 0),
-                                    pludux::Quote(0, 0, 0, 0, 875, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 855, 0)});
-  const auto asset_data = pludux::AssetDataProvider{asset};
-  
+  const auto asset_data = pludux::AssetHistory{
+   {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+
   const auto series = ema_method(asset_data);
 
-  ASSERT_EQ(series.size(), asset.quotes().size());
+  ASSERT_EQ(series.size(), asset_data.size());
   EXPECT_DOUBLE_EQ(series[0], 856.95061728395069);
   EXPECT_DOUBLE_EQ(series[1], 857.92592592592598);
   EXPECT_DOUBLE_EQ(series[2], 856.88888888888891);
@@ -70,19 +51,9 @@ TEST(EmaMethodTest, RunOneMethodWithOffset)
   const auto offset = 1;
   const auto period = 5;
   const auto ema_method = EmaMethod{period, field_method, offset};
-  const auto asset = pludux::Asset("",
-                                   {pludux::Quote(0, 0, 0, 0, 875, 0),
-                                    pludux::Quote(0, 0, 0, 0, 830, 0),
-                                    pludux::Quote(0, 0, 0, 0, 800, 0),
-                                    pludux::Quote(0, 0, 0, 0, 835, 0),
-                                    pludux::Quote(0, 0, 0, 0, 870, 0),
-                                    pludux::Quote(0, 0, 0, 0, 875, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 855, 0)});
-  const auto asset_data = pludux::AssetDataProvider{asset};
-  
+  const auto asset_data = pludux::AssetHistory{
+   {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+
   const auto result = ema_method(asset_data)[0];
   EXPECT_DOUBLE_EQ(result, 857.92592592592598);
 }
@@ -94,22 +65,12 @@ TEST(EmaMethodTest, RunAllMethodWithOffset)
   const auto offset = 2;
   const auto period = 5;
   const auto ema_method = EmaMethod{period, field_method, offset};
-  const auto asset = pludux::Asset("",
-                                   {pludux::Quote(0, 0, 0, 0, 875, 0),
-                                    pludux::Quote(0, 0, 0, 0, 830, 0),
-                                    pludux::Quote(0, 0, 0, 0, 800, 0),
-                                    pludux::Quote(0, 0, 0, 0, 835, 0),
-                                    pludux::Quote(0, 0, 0, 0, 870, 0),
-                                    pludux::Quote(0, 0, 0, 0, 875, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 860, 0),
-                                    pludux::Quote(0, 0, 0, 0, 855, 0)});
-  const auto asset_data = pludux::AssetDataProvider{asset};
-  
+  const auto asset_data = pludux::AssetHistory{
+   {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+
   const auto series = ema_method(asset_data);
 
-  ASSERT_EQ(series.size(), asset.quotes().size() - offset);
+  ASSERT_EQ(series.size(), asset_data.size() - offset);
   EXPECT_DOUBLE_EQ(series[0], 856.88888888888891);
   EXPECT_DOUBLE_EQ(series[1], 855.33333333333337);
   EXPECT_DOUBLE_EQ(series[2], 853);

@@ -2,7 +2,7 @@
 #include <iterator>
 #include <vector>
 
-#include <pludux/asset.hpp>
+#include <pludux/asset_snapshot.hpp>
 
 #include <pludux/screener/value_method.hpp>
 
@@ -13,9 +13,10 @@ ValueMethod::ValueMethod(double value)
 {
 }
 
-auto ValueMethod::operator()(const AssetDataProvider& asset_data) const -> PolySeries<double>
+auto ValueMethod::operator()(AssetSnapshot asset_data) const
+ -> PolySeries<double>
 {
-  return RepeatSeries{value_, asset_data.price().size()};
+  return RepeatSeries{value_, asset_data.size()};
 }
 
 auto ValueMethod::value() const -> double

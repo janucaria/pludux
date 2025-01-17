@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include <pludux/asset.hpp>
+#include <pludux/asset_snapshot.hpp>
 #include <pludux/screener/screener_filter.hpp>
 #include <pludux/screener/screener_method.hpp>
 
@@ -19,7 +19,7 @@ public:
   {
   }
 
-  auto operator()(const AssetDataProvider& asset_data) const -> bool
+  auto operator()(AssetSnapshot asset_data) const -> bool
   {
     const auto target_result = target_(asset_data)[0];
     const auto threshold_result = threshold_(asset_data)[0];

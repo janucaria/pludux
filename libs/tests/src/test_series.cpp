@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <limits>
-#include <vector>
 #include <pludux/series.hpp>
+#include <vector>
 
 using namespace pludux;
 
@@ -11,7 +11,7 @@ TEST(SeriesTest, ConstructorInitialization)
   const auto series = DataSeries{data};
 
   ASSERT_EQ(series.size(), data.size());
-  for (std::size_t i = 0; i < data.size(); ++i) {
+  for(std::size_t i = 0; i < data.size(); ++i) {
     EXPECT_EQ(series[i], data[data.size() - 1 - i]);
   }
 }

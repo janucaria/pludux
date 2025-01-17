@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <pludux/asset_data_provider.hpp>
+#include <pludux/asset_history.hpp>
 #include <pludux/screener.hpp>
 #include <pludux/series.hpp>
 
@@ -13,8 +13,7 @@ TEST(CrossunderFilterTest, ReferenceMethod)
   auto reference_method = ValueMethod{reference_value};
   const auto filter =
    CrossunderFilter{std::move(signal_method), std::move(reference_method)};
-  const auto asset = pludux::Asset{"", std::vector<pludux::Quote>(1)};
-  const auto asset_data = pludux::AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetHistory{{"close", {0}}};
 
   EXPECT_EQ(filter.reference()(asset_data)[0], reference_value);
 }
@@ -27,8 +26,7 @@ TEST(CrossunderFilterTest, SignalMethod)
   auto reference_method = ValueMethod{reference_value};
   const auto filter =
    CrossunderFilter{std::move(signal_method), std::move(reference_method)};
-  const auto asset = pludux::Asset{"", std::vector<pludux::Quote>(1)};
-  const auto asset_data = pludux::AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetHistory{{"close", {0}}};
 
   EXPECT_EQ(filter.signal()(asset_data)[0], signal_value);
 }
@@ -37,24 +35,20 @@ TEST(CrossunderFilterTest, CrossunderConditionMet)
 {
   auto signal_method = DataMethod{"close", 0};
   auto reference_method = ValueMethod{50.0};
-  const auto filter =
+  const auto crossunder_filter =
    CrossunderFilter{std::move(signal_method), std::move(reference_method)};
-  const auto asset = pludux::Asset{
-   "", std::vector<pludux::Quote>{{0, 0, 0, 0, 60, 0}, {0, 0, 0, 0, 40, 0}}};
-  const auto asset_data = pludux::AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetHistory{{"close", {40, 60}}};
 
-  EXPECT_TRUE(filter(asset_data));
+  EXPECT_TRUE(crossunder_filter(asset_data));
 }
 
 TEST(CrossunderFilterTest, CrossunderConditionNotMet)
 {
   auto signal_method = DataMethod{"close", 0};
   auto reference_method = ValueMethod{50.0};
-  const auto filter =
+  const auto crossunder_filter =
    CrossunderFilter{std::move(signal_method), std::move(reference_method)};
-  const auto asset = pludux::Asset{
-   "", std::vector<pludux::Quote>{{0, 0, 0, 0, 40, 0}, {0, 0, 0, 0, 50, 0}}};
-  const auto asset_data = pludux::AssetDataProvider{asset};
+  const auto asset_data = pludux::AssetHistory{{"close", {50, 40}}};
 
-  EXPECT_FALSE(filter(asset_data));
+  EXPECT_FALSE(crossunder_filter(asset_data));
 }

@@ -3,10 +3,8 @@
 #include <vector>
 #include <stdexcept>
 
-#include <pludux/asset.hpp>
-
+#include <pludux/asset_snapshot.hpp>
 #include <pludux/screener/all_of_filter.hpp>
-#include <pludux/asset_data_provider.hpp>
 
 namespace pludux::screener {
 
@@ -17,7 +15,7 @@ AllOfFilter::AllOfFilter(std::vector<ScreenerFilter> filters)
 {
 }
 
-auto AllOfFilter::operator()(const AssetDataProvider& asset_data) const -> bool
+auto AllOfFilter::operator()(AssetSnapshot asset_data) const -> bool
 {
   for(const auto& filter : filters_) {
     if(!filter(asset_data)) {

@@ -2,7 +2,7 @@
 #include <iterator>
 #include <vector>
 
-#include <pludux/asset.hpp>
+#include <pludux/asset_snapshot.hpp>
 
 #include <pludux/screener/abs_diff_method.hpp>
 
@@ -14,7 +14,7 @@ AbsDiffMethod::AbsDiffMethod(ScreenerMethod operand1, ScreenerMethod operand2)
 {
 }
 
-auto AbsDiffMethod::operator()(const AssetDataProvider& asset_data) const -> PolySeries<double>
+auto AbsDiffMethod::operator()(AssetSnapshot asset_data) const -> PolySeries<double>
 {
   const auto operand1_series = operand1_(asset_data);
   const auto operand2_series = operand2_(asset_data);

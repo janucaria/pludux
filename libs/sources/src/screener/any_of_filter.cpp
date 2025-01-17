@@ -3,8 +3,7 @@
 #include <stdexcept>
 #include <vector>
 
-#include <pludux/asset.hpp>
-#include <pludux/asset_data_provider.hpp>
+#include <pludux/asset_snapshot.hpp>
 
 #include <pludux/screener/any_of_filter.hpp>
 
@@ -17,7 +16,7 @@ AnyOfFilter::AnyOfFilter(std::vector<ScreenerFilter> filters)
 {
 }
 
-auto AnyOfFilter::operator()(const AssetDataProvider& asset_data) const -> bool
+auto AnyOfFilter::operator()(AssetSnapshot asset_data) const -> bool
 {
   for(const auto& filter : filters_) {
     if(filter(asset_data)) {

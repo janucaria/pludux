@@ -483,8 +483,7 @@ TEST(ConfigParserTest, ParseScreenerCrossunderFilter)
 
   const auto filter = parse_screener_filter(config);
 
-  const auto crossunder_filter =
-   screener_filter_cast<CrossunderFilter>(filter);
+  const auto crossunder_filter = screener_filter_cast<CrossunderFilter>(filter);
   ASSERT_NE(crossunder_filter, nullptr);
 
   const auto signal =
@@ -520,8 +519,7 @@ TEST(ConfigParserTest, ParseScreenerCrossoverFilter)
 
   const auto filter = parse_screener_filter(config);
 
-  const auto crossover_filter =
-   screener_filter_cast<CrossoverFilter>(filter);
+  const auto crossover_filter = screener_filter_cast<CrossoverFilter>(filter);
   ASSERT_NE(crossover_filter, nullptr);
 
   const auto signal =

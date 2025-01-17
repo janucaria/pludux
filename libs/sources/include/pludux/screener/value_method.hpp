@@ -3,9 +3,8 @@
 
 #include <vector>
 
-#include <pludux/asset.hpp>
+#include <pludux/asset_snapshot.hpp>
 #include <pludux/series.hpp>
-#include <pludux/asset_data_provider.hpp>
 
 namespace pludux::screener {
 
@@ -13,7 +12,7 @@ class ValueMethod {
 public:
   explicit ValueMethod(double value);
 
-  auto operator()(const AssetDataProvider& asset_data) const -> PolySeries<double>;
+  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>;
 
   auto value() const -> double;
 

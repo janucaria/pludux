@@ -1,32 +1,31 @@
 set(PLUDUX_TEST_SOURCES
-  src/test_quote.cpp
-  src/test_asset.cpp
+  src/test_asset_history.cpp
+  src/test_config_parser.cpp
   src/test_series.cpp
   src/test_ta.cpp
 
-  src/test_data_method.cpp
-  src/test_value_method.cpp
-  src/test_sma_method.cpp
-  src/test_ema_method.cpp
-  src/test_rma_method.cpp
-  src/test_wma_method.cpp
-  src/test_hma_method.cpp
-  src/test_atr_method.cpp
   src/test_abs_diff_method.cpp
   src/test_arithmetic_method.cpp
+  src/test_atr_method.cpp
+  src/test_data_method.cpp
+  src/test_ema_method.cpp
+  src/test_hma_method.cpp
+  src/test_rma_method.cpp
+  src/test_sma_method.cpp
+  src/test_value_method.cpp
+  src/test_wma_method.cpp
 
   src/test_all_of_filter.cpp
   src/test_any_of_filter.cpp
-  src/test_equal_filter.cpp
-  src/test_not_equal_filter.cpp
-  src/test_greater_than_filter.cpp
-  src/test_greater_equal_filter.cpp
-  src/test_less_than_filter.cpp
-  src/test_less_equal_filter.cpp
   src/test_crossover_filter.cpp
   src/test_crossunder_filter.cpp
+  src/test_equal_filter.cpp
+  src/test_greater_equal_filter.cpp
+  src/test_greater_than_filter.cpp
+  src/test_less_equal_filter.cpp
+  src/test_less_than_filter.cpp
+  src/test_not_equal_filter.cpp
 
-  src/test_config_parser.cpp
 )
 
 foreach(PLUDUX_TEST_SOURCE ${PLUDUX_TEST_SOURCES})

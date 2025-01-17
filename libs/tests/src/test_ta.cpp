@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 #include <limits>
-#include <pludux/quote.hpp>
 #include <pludux/series.hpp>
 #include <pludux/ta.hpp>
 #include <vector>

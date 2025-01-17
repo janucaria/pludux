@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include <pludux/asset.hpp>
+#include <pludux/asset_snapshot.hpp>
 #include <pludux/screener/screener_filter.hpp>
 #include <pludux/screener/screener_method.hpp>
 
@@ -13,7 +13,7 @@ class CrossunderFilter {
 public:
   explicit CrossunderFilter(ScreenerMethod signal, ScreenerMethod reference);
 
-  auto operator()(const AssetDataProvider& asset_data) const -> bool;
+  auto operator()(AssetSnapshot asset_data) const -> bool;
 
   auto signal() const noexcept -> const ScreenerMethod&;
 
