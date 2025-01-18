@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <initializer_list>
 #include <iterator>
 #include <limits>
 #include <utility>
@@ -15,26 +16,15 @@ class DataSeries {
 public:
   using ValueType = T;
 
-  DataSeries()
-  : DataSeries{std::vector<ValueType>{}}
+  explicit DataSeries(std::initializer_list<ValueType> data)
+  : DataSeries(data.begin(), data.end())
   {
   }
 
-  explicit DataSeries(std::vector<ValueType> data)
-  : data_{std::move(data)}
+  template<typename TBidirectIt>
+  DataSeries(TBidirectIt first, TBidirectIt last)
+  : data_{std::make_reverse_iterator(last), std::make_reverse_iterator(first)}
   {
-  }
-
-  template<std::convertible_to<ValueType> U>
-  explicit DataSeries(const std::vector<U>& data)
-  : DataSeries{std::vector<ValueType>{}}
-  {
-    data_.reserve(data.size());
-    std::transform(
-     data.cbegin(),
-     data.cend(),
-     std::back_inserter(data_),
-     [](const auto& value) { return static_cast<double>(value); });
   }
 
   /**
@@ -56,19 +46,13 @@ public:
     return data_.size();
   }
 
-  auto data() const noexcept -> const std::vector<T>&
-  {
-    return data_;
-  }
-
-  auto data() noexcept -> std::vector<T>&
-  {
-    return data_;
-  }
-
 private:
   std::vector<ValueType> data_;
 };
+
+template<typename TBidirectIt>
+DataSeries(TBidirectIt, TBidirectIt)
+ -> DataSeries<typename std::iterator_traits<TBidirectIt>::value_type>;
 
 } // namespace pludux
 

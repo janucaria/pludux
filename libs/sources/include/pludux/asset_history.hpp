@@ -64,9 +64,8 @@ public:
     for(auto it = begin_it; it != end_it; ++it) {
       auto data = it->second;
       data.resize(size_, std::numeric_limits<double>::quiet_NaN());
-      std::reverse(data.begin(), data.end());
-
-      history_data_.emplace(it->first, DataSeries<double>{std::move(data)});
+      history_data_.emplace(it->first,
+                            DataSeries<double>(data.begin(), data.end()));
     }
   }
 

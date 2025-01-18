@@ -8,14 +8,12 @@ using namespace pludux;
 
 TEST(TATest, SmaSeriesCalculation)
 {
-  const auto sources =
-   std::vector<double>{875, 830, 800, 835, 870, 875, 860, 860, 860, 855};
-
-  const auto series = DataSeries{sources};
+  const auto series =
+   DataSeries<double>{855, 860, 860, 860, 875, 870, 835, 800, 830, 875};
   const auto period = 5;
   const auto result = ta::sma(series, period);
 
-  EXPECT_EQ(result.size(), sources.size());
+  EXPECT_EQ(result.size(), series.size());
   EXPECT_DOUBLE_EQ(result[0], 862);
   EXPECT_DOUBLE_EQ(result[1], 865);
   EXPECT_DOUBLE_EQ(result[2], 860);
@@ -30,14 +28,12 @@ TEST(TATest, SmaSeriesCalculation)
 
 TEST(TATest, EmaSeriesCalculation)
 {
-  const auto sources =
-   std::vector<double>{875, 830, 800, 835, 870, 875, 860, 860, 860, 855};
-
-  const auto series = DataSeries{sources};
+  const auto series =
+   DataSeries<double>{855, 860, 860, 860, 875, 870, 835, 800, 830, 875};
   const auto period = 5;
   const auto result = ta::ema(series, period);
 
-  EXPECT_EQ(result.size(), sources.size());
+  EXPECT_EQ(result.size(), series.size());
   EXPECT_DOUBLE_EQ(result[0], 856.95061728395069);
   EXPECT_DOUBLE_EQ(result[1], 857.92592592592598);
   EXPECT_DOUBLE_EQ(result[2], 856.88888888888891);
@@ -52,14 +48,12 @@ TEST(TATest, EmaSeriesCalculation)
 
 TEST(TATest, RmaSeriesCalculation)
 {
-  auto sources =
-   std::vector<double>{875, 830, 800, 835, 870, 875, 860, 860, 860, 855};
-
-  const auto series = DataSeries{sources};
+  const auto series =
+   DataSeries<double>{855, 860, 860, 860, 875, 870, 835, 800, 830, 875};
   const auto period = 5;
   const auto result = ta::rma(series, period);
 
-  EXPECT_EQ(result.size(), sources.size());
+  EXPECT_EQ(result.size(), series.size());
   EXPECT_DOUBLE_EQ(result[0], 854.33056000000022);
   EXPECT_DOUBLE_EQ(result[1], 854.16320000000019);
   EXPECT_DOUBLE_EQ(result[2], 852.70400000000018);
@@ -74,14 +68,12 @@ TEST(TATest, RmaSeriesCalculation)
 
 TEST(TATest, WMASeriesCalculation)
 {
-  auto sources =
-   std::vector<double>{875, 830, 800, 835, 870, 875, 860, 860, 860, 855};
-
-  const auto series = DataSeries{sources};
+  const auto series =
+   DataSeries<double>{855, 860, 860, 860, 875, 870, 835, 800, 830, 875};
   const auto period = 5;
   const auto result = ta::wma(series, period);
 
-  EXPECT_EQ(result.size(), sources.size());
+  EXPECT_EQ(result.size(), series.size());
   EXPECT_DOUBLE_EQ(result[0], 859.33333333333337);
   EXPECT_DOUBLE_EQ(result[1], 862.66666666666663);
   EXPECT_DOUBLE_EQ(result[2], 862.66666666666663);
@@ -96,14 +88,12 @@ TEST(TATest, WMASeriesCalculation)
 
 TEST(TATest, HmaSeriesCalculation)
 {
-  auto sources =
-   std::vector<double>{875, 830, 800, 835, 870, 875, 860, 860, 860, 855};
-
-  const auto series = DataSeries{sources};
+  const auto series =
+   DataSeries<double>{855, 860, 860, 860, 875, 870, 835, 800, 830, 875};
   const auto period = 5;
   const auto result = ta::hma(series, period);
 
-  EXPECT_EQ(result.size(), sources.size());
+  EXPECT_EQ(result.size(), series.size());
   EXPECT_DOUBLE_EQ(result[0], 855.11111111111097);
   EXPECT_DOUBLE_EQ(result[1], 857.33333333333337);
   EXPECT_DOUBLE_EQ(result[2], 862);
@@ -118,13 +108,11 @@ TEST(TATest, HmaSeriesCalculation)
 
 TEST(TATest, ChangeSeriesCalculation)
 {
-  const auto sources =
-   std::vector<double>{875, 830, 800, 835, 870, 875, 860, 860, 860, 855};
-
-  const auto series = DataSeries{sources};
+  const auto series =
+   DataSeries<double>{855, 860, 860, 860, 875, 870, 835, 800, 830, 875};
   const auto result = ta::changes(series);
 
-  EXPECT_EQ(result.size(), sources.size());
+  EXPECT_EQ(result.size(), series.size());
   EXPECT_DOUBLE_EQ(result[0], -5);
   EXPECT_DOUBLE_EQ(result[1], 0);
   EXPECT_DOUBLE_EQ(result[2], 0);
@@ -139,13 +127,12 @@ TEST(TATest, ChangeSeriesCalculation)
 
 TEST(TATest, RsiSeriesCalculation)
 {
-  auto sources =
-   std::vector<double>{875, 830, 800, 835, 870, 875, 860, 860, 860, 855};
-
-  const auto series = DataSeries{sources};
+  const auto series =
+   DataSeries<double>{855, 860, 860, 860, 875, 870, 835, 800, 830, 875};
   const auto period = 5;
   const auto result = ta::rsi(series, period);
 
+  EXPECT_EQ(result.size(), series.size());
   EXPECT_DOUBLE_EQ(result[0], 41.446303291958991);
   EXPECT_DOUBLE_EQ(result[1], 44.444444444444443);
   EXPECT_DOUBLE_EQ(result[2], 44.44444444444445);
@@ -160,22 +147,18 @@ TEST(TATest, RsiSeriesCalculation)
 
 TEST(TATest, TrSeriesCalculation)
 {
-  const auto highs =
-   std::vector<double>{925, 875, 840, 840, 875, 875, 880, 875, 865, 865};
-  const auto lows =
-   std::vector<double>{815, 830, 800, 800, 820, 855, 845, 855, 850, 850};
-  const auto closes =
-   std::vector<double>{875, 830, 800, 835, 870, 875, 860, 860, 860, 855};
-
-  const auto highs_series = DataSeries{highs};
-  const auto lows_series = DataSeries{lows};
-  const auto closes_series = DataSeries{closes};
+  const auto highs_series =
+   DataSeries<double>{865, 865, 875, 880, 875, 875, 840, 840, 875, 925};
+  const auto lows_series =
+   DataSeries<double>{850, 850, 855, 845, 855, 820, 800, 800, 830, 815};
+  const auto closes_series =
+   DataSeries<double>{855, 860, 860, 860, 875, 870, 835, 800, 830, 875};
 
   const auto result = ta::tr(highs_series, lows_series, closes_series);
 
-  EXPECT_EQ(result.size(), highs.size());
-  EXPECT_EQ(result.size(), lows.size());
-  EXPECT_EQ(result.size(), closes.size());
+  EXPECT_EQ(result.size(), highs_series.size());
+  EXPECT_EQ(result.size(), lows_series.size());
+  EXPECT_EQ(result.size(), closes_series.size());
   EXPECT_DOUBLE_EQ(result[0], 15);
   EXPECT_DOUBLE_EQ(result[1], 15);
   EXPECT_DOUBLE_EQ(result[2], 20);
@@ -190,23 +173,19 @@ TEST(TATest, TrSeriesCalculation)
 
 TEST(TATest, AtrSeriesCalculation)
 {
-  const auto highs =
-   std::vector<double>{925, 875, 840, 840, 875, 875, 880, 875, 865, 865};
-  const auto lows =
-   std::vector<double>{815, 830, 800, 800, 820, 855, 845, 855, 850, 850};
-  const auto closes =
-   std::vector<double>{875, 830, 800, 835, 870, 875, 860, 860, 860, 855};
-
-  const auto highs_series = DataSeries{highs};
-  const auto lows_series = DataSeries{lows};
-  const auto closes_series = DataSeries{closes};
+  const auto highs_series =
+   DataSeries<double>{865, 865, 875, 880, 875, 875, 840, 840, 875, 925};
+  const auto lows_series =
+   DataSeries<double>{850, 850, 855, 845, 855, 820, 800, 800, 830, 815};
+  const auto closes_series =
+   DataSeries<double>{855, 860, 860, 860, 875, 870, 835, 800, 830, 875};
 
   const auto period = 5;
   const auto result = ta::atr(highs_series, lows_series, closes_series, period);
 
-  ASSERT_EQ(result.size(), highs.size());
-  ASSERT_EQ(result.size(), lows.size());
-  ASSERT_EQ(result.size(), closes.size());
+  ASSERT_EQ(result.size(), highs_series.size());
+  ASSERT_EQ(result.size(), lows_series.size());
+  ASSERT_EQ(result.size(), closes_series.size());
   EXPECT_DOUBLE_EQ(result[0], 32.187840000000008);
   EXPECT_DOUBLE_EQ(result[1], 36.484800000000007);
   EXPECT_DOUBLE_EQ(result[2], 41.856000000000009);
@@ -221,10 +200,8 @@ TEST(TATest, AtrSeriesCalculation)
 
 TEST(TATest, MacdSeriesCalculation)
 {
-  const auto sources = std::vector<double>{
-   875, 830, 800, 835, 870, 875, 860, 860, 860, 855, 860, 840, 825, 810, 790};
-
-  const auto series = DataSeries{sources};
+  const auto series = DataSeries<double>{
+   790, 810, 825, 840, 860, 855, 860, 860, 860, 875, 870, 835, 800, 830, 875};
   const auto short_period = 5;
   const auto long_period = 10;
   const auto signal_period = 3;
@@ -232,9 +209,9 @@ TEST(TATest, MacdSeriesCalculation)
   const auto signal_lines = macd_lines.signal(signal_period);
   const auto histograms = macd_lines.histogram(signal_period);
 
-  ASSERT_EQ(macd_lines.size(), sources.size());
-  ASSERT_EQ(signal_lines.size(), sources.size());
-  ASSERT_EQ(histograms.size(), sources.size());
+  ASSERT_EQ(macd_lines.size(), series.size());
+  ASSERT_EQ(signal_lines.size(), series.size());
+  ASSERT_EQ(histograms.size(), series.size());
   EXPECT_DOUBLE_EQ(macd_lines[0], -12.656409004137572);
   EXPECT_DOUBLE_EQ(macd_lines[1], -7.6929729699789959);
   EXPECT_DOUBLE_EQ(macd_lines[2], -3.2941210218015158);
@@ -286,16 +263,12 @@ TEST(TATest, MacdSeriesCalculation)
 
 TEST(TATest, StochSeriesCalculation)
 {
-  const auto highs =
-   std::vector<double>{925, 875, 840, 840, 875, 875, 880, 875, 865, 865};
-  const auto lows =
-   std::vector<double>{815, 830, 800, 800, 820, 855, 845, 855, 850, 850};
-  const auto closes =
-   std::vector<double>{875, 830, 800, 835, 870, 875, 860, 860, 860, 855};
-
-  const auto highs_series = DataSeries{highs};
-  const auto lows_series = DataSeries{lows};
-  const auto closes_series = DataSeries{closes};
+  const auto highs_series =
+   DataSeries<double>{865, 865, 875, 880, 875, 875, 840, 840, 875, 925};
+  const auto lows_series =
+   DataSeries<double>{850, 850, 855, 845, 855, 820, 800, 800, 830, 815};
+  const auto closes_series =
+   DataSeries<double>{855, 860, 860, 860, 875, 870, 835, 800, 830, 875};
 
   const auto k_period = 5;
   const auto k_smooth = 3;
@@ -305,8 +278,8 @@ TEST(TATest, StochSeriesCalculation)
   const auto k = stochastic.k(k_smooth);
   const auto d = stochastic.d(k, d_period);
 
-  ASSERT_EQ(k.size(), highs.size());
-  ASSERT_EQ(d.size(), highs.size());
+  ASSERT_EQ(k.size(), highs_series.size());
+  ASSERT_EQ(d.size(), highs_series.size());
 
   EXPECT_DOUBLE_EQ(k[0], 56.746031746031754);
   EXPECT_DOUBLE_EQ(k[1], 72.222222222222229);
@@ -333,10 +306,8 @@ TEST(TATest, StochSeriesCalculation)
 
 TEST(TATest, StochRSISeriesCalculation)
 {
-  const auto sources = std::vector<double>{
-   875, 830, 800, 835, 870, 875, 860, 860, 860, 855, 860, 840, 825, 810, 790};
-
-  const auto series = DataSeries{sources};
+  const auto series = DataSeries<double>{
+   790, 810, 825, 840, 860, 855, 860, 860, 860, 875, 870, 835, 800, 830, 875};
   const auto rsi_period = 5;
   const auto k_period = 5;
   const auto k_smooth = 3;
@@ -345,8 +316,8 @@ TEST(TATest, StochRSISeriesCalculation)
   const auto k = result.k(k_smooth);
   const auto d = result.d(k, d_period);
 
-  ASSERT_EQ(k.size(), sources.size());
-  ASSERT_EQ(d.size(), sources.size());
+  ASSERT_EQ(k.size(), series.size());
+  ASSERT_EQ(d.size(), series.size());
 
   EXPECT_DOUBLE_EQ(k[0], 0);
   EXPECT_DOUBLE_EQ(k[1], 0);
@@ -383,18 +354,16 @@ TEST(TATest, StochRSISeriesCalculation)
 
 TEST(TATest, BbSeriesCalculation)
 {
-  const auto sources =
-   std::vector<double>{875, 830, 800, 835, 870, 875, 860, 860, 860, 855};
-
-  const auto series = DataSeries{sources};
+  const auto series =
+   DataSeries<double>{855, 860, 860, 860, 875, 870, 835, 800, 830, 875};
   const auto period = 5;
   const auto stddev = 2;
   const auto result = ta::bb(series, period, stddev);
   const auto [middle_band, upper_band, lower_band] = result();
 
-  ASSERT_EQ(middle_band.size(), sources.size());
-  ASSERT_EQ(upper_band.size(), sources.size());
-  ASSERT_EQ(lower_band.size(), sources.size());
+  ASSERT_EQ(middle_band.size(), series.size());
+  ASSERT_EQ(upper_band.size(), series.size());
+  ASSERT_EQ(lower_band.size(), series.size());
 
   EXPECT_DOUBLE_EQ(middle_band[0], 862);
   EXPECT_DOUBLE_EQ(middle_band[1], 865);
