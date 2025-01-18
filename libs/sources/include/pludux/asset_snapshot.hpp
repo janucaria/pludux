@@ -12,12 +12,11 @@ namespace pludux {
 
 class AssetSnapshot {
 public:
-  using HistoryData = std::unordered_map<std::string, DataSeries<double>>;
+  using HistoryData = std::unordered_map<std::string, PolySeries<double>>;
 
   AssetSnapshot(std::size_t offset, const HistoryData& history_data);
 
-  auto operator[](std::string key) const
-   -> SubSeries<RefSeries<const DataSeries<double>>>;
+  auto operator[](std::string key) const -> PolySeries<double>;
 
   auto offset() const noexcept -> std::size_t;
 

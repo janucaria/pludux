@@ -2,8 +2,11 @@
 #define PLUDUX_PLUDUX_SERIES_POLY_SERIES_HPP
 
 #include <cstddef>
+#include <initializer_list>
 #include <memory>
 #include <utility>
+
+#include "data_series.hpp"
 
 namespace pludux {
 
@@ -12,9 +15,14 @@ class PolySeries {
 public:
   using ValueType = T;
 
-  template<typename T>
-  PolySeries(T impl)
-  : impl_{std::make_shared<ImplModel<T>>(std::move(impl))}
+  template<typename USeries>
+  PolySeries(USeries impl)
+  : impl_{std::make_shared<ImplModel<USeries>>(std::move(impl))}
+  {
+  }
+
+  PolySeries(std::initializer_list<ValueType> data)
+  : PolySeries(DataSeries<ValueType>(data))
   {
   }
 
@@ -29,8 +37,7 @@ public:
   }
 
   template<typename T>
-  friend auto
-  screener_cast(const PolySeries* method) noexcept -> const T*
+  friend auto screener_cast(const PolySeries* method) noexcept -> const T*
   {
     auto model = std::dynamic_pointer_cast<const ImplModel<T>>(method->impl_);
     return model ? &model->impl : nullptr;

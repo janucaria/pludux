@@ -49,23 +49,15 @@ public:
   using ConstReverseIterator = std::reverse_iterator<ConstIterator>;
 
   AssetHistory(
-   std::initializer_list<std::pair<std::string, std::vector<double>>> data);
+   std::initializer_list<std::pair<std::string, PolySeries<double>>> data);
 
-  template<typename TBegin, typename TEnd>
-  AssetHistory(TBegin begin_it, TEnd end_it)
+  template<typename TInputIt>
+  AssetHistory(TInputIt begin_it, TInputIt end_it)
   : size_{}
-  , history_data_{}
+  , history_data_(begin_it, end_it)
   {
-    if(begin_it == end_it) {
-      return;
-    }
-
-    size_ = begin_it->second.size();
-    for(auto it = begin_it; it != end_it; ++it) {
-      auto data = it->second;
-      data.resize(size_, std::numeric_limits<double>::quiet_NaN());
-      history_data_.emplace(it->first,
-                            DataSeries<double>(data.begin(), data.end()));
+    if(!history_data_.empty()) {
+      size_ = history_data_.begin()->second.size();
     }
   }
 
@@ -73,12 +65,13 @@ public:
 
   auto operator[](std::size_t index) const noexcept -> AssetSnapshot;
 
-  auto operator[](const std::string& key) const
-   -> RefSeries<const DataSeries<double>>;
+  auto operator[](const std::string& key) const -> PolySeries<double>;
 
   auto size() const noexcept -> std::size_t;
 
   auto contains(const std::string& key) const noexcept -> bool;
+
+  auto insert(std::string key, PolySeries<double> series) -> void;
 
   auto begin() const -> Iterator;
 

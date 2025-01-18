@@ -12,7 +12,7 @@
 namespace pludux {
 
 AssetHistory::AssetHistory(
- std::initializer_list<std::pair<std::string, std::vector<double>>> data)
+ std::initializer_list<std::pair<std::string, PolySeries<double>>> data)
 : AssetHistory(data.begin(), data.end())
 {
 }
@@ -28,7 +28,7 @@ auto AssetHistory::operator[](std::size_t index) const noexcept -> AssetSnapshot
 }
 
 auto AssetHistory::operator[](const std::string& key) const
- -> RefSeries<const DataSeries<double>>
+ -> PolySeries<double>
 {
   return RefSeries{history_data_.at(key)};
 }
@@ -41,6 +41,11 @@ auto AssetHistory::size() const noexcept -> std::size_t
 auto AssetHistory::contains(const std::string& key) const noexcept -> bool
 {
   return history_data_.contains(key);
+}
+
+auto AssetHistory::insert(std::string key, PolySeries<double> series) -> void
+{
+  history_data_.emplace(std::move(key), std::move(series));
 }
 
 auto AssetHistory::begin() const -> Iterator
