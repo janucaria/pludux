@@ -21,7 +21,7 @@ auto DataMethod::operator()(AssetSnapshot asset_data) const
   if(!asset_data.contains(field_)) {
     throw std::runtime_error{"Field not found"};
   }
-  return SubSeries{asset_data[field_], offset_};
+  return SubSeries{asset_data[field_], static_cast<std::ptrdiff_t>(offset_)};
 }
 
 auto DataMethod::field() const -> const std::string&

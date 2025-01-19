@@ -11,31 +11,51 @@ class SubSeries {
 public:
   using ValueType = typename TSeries::ValueType;
 
-  SubSeries(TSeries series, std::size_t offset)
+  SubSeries(TSeries series, std::ptrdiff_t shifted_offset)
   : series_{std::move(series)}
-  , offset_{offset}
+  , shifted_offset_{shifted_offset}
+  {
+  }
+
+  SubSeries(SubSeries<TSeries> series, std::ptrdiff_t shifted_offset)
+  : SubSeries{series.series_, series.shifted_offset_ + shifted_offset}
+  {
+  }
+
+  template<typename USeries>
+  SubSeries(SubSeries<USeries> other_series, std::ptrdiff_t shifted_offset)
+  : SubSeries{other_series.series(),
+              other_series.shifted_offset() + shifted_offset}
   {
   }
 
   auto operator[](std::size_t index) const -> TSeries::ValueType
   {
-    return series_[index + offset_];
+    if(index >= series_.size()) {
+      return std::numeric_limits<ValueType>::quiet_NaN();
+    }
+
+    return series_[index + shifted_offset_];
   }
 
-  auto
-  subseries(std::size_t offset) const noexcept -> SubSeries<const TSeries>
+  auto shifted_offset() const noexcept -> std::ptrdiff_t
   {
-    return SubSeries{series_, offset_ + offset};
+    return shifted_offset_;
   }
 
   auto size() const noexcept -> std::size_t
   {
-    return series_.size() - offset_;
+    return series_.size();
+  }
+
+  auto series() const noexcept -> const TSeries&
+  {
+    return series_;
   }
 
 private:
   TSeries series_;
-  std::size_t offset_;
+  std::ptrdiff_t shifted_offset_;
 };
 
 } // namespace pludux

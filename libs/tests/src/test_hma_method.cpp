@@ -69,7 +69,7 @@ TEST(HmaMethodTest, RunAllMethodWithOffset)
 
   const auto result = hma_method(asset_data);
 
-  ASSERT_EQ(result.size(), asset_data.size() - offset);
+  ASSERT_EQ(result.size(), asset_data.size());
   EXPECT_DOUBLE_EQ(result[0], 862);
   EXPECT_DOUBLE_EQ(result[1], 878.88888888888903);
   EXPECT_DOUBLE_EQ(result[2], 887.66666666666686);

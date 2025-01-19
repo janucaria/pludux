@@ -28,7 +28,7 @@ public:
   {
     const auto sources = target_(asset_data);
     const auto series = T{}(sources, period_);
-    return SubSeries{series, offset_};
+    return SubSeries{series, static_cast<std::ptrdiff_t>(offset_)};
   }
 
   auto period() const noexcept -> std::size_t

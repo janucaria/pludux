@@ -11,7 +11,8 @@ AssetSnapshot::AssetSnapshot(std::size_t offset,
 
 auto AssetSnapshot::operator[](std::string key) const -> PolySeries<double>
 {
-  return SubSeries{RefSeries{history_data_.at(key)}, offset_};
+  return SubSeries{RefSeries{history_data_.at(key)},
+                   static_cast<std::ptrdiff_t>(offset_)};
 }
 
 auto AssetSnapshot::offset() const noexcept -> std::size_t
