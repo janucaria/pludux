@@ -14,9 +14,10 @@ ValueMethod::ValueMethod(double value)
 }
 
 auto ValueMethod::operator()(AssetSnapshot asset_data) const
- -> PolySeries<double>
+ -> SubSeries<PolySeries<double>>
 {
-  return RepeatSeries{value_, asset_data.size()};
+  return SubSeries{PolySeries<double>{RepeatSeries{value_, asset_data.size()}},
+                   0};
 }
 
 auto ValueMethod::value() const -> double

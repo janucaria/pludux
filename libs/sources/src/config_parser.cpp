@@ -56,7 +56,7 @@ parse_data_method(const nlohmann::json& parameters) -> screener::ScreenerMethod
 static auto
 parse_atr_method(const nlohmann::json& parameters) -> screener::ScreenerMethod
 {
-  const auto period = parameters["period"].get<int>();
+  const auto period = parameters["period"].get<std::size_t>();
   const auto atr_method = screener::AtrMethod{period};
   return atr_method;
 }

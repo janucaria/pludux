@@ -24,11 +24,12 @@ public:
   }
 
   auto
-  operator()(AssetSnapshot asset_data) const -> PolySeries<double>
+  operator()(AssetSnapshot asset_data) const -> SubSeries<PolySeries<double>>
   {
     const auto sources = target_(asset_data);
     const auto series = T{}(sources, period_);
-    return SubSeries{series, static_cast<std::ptrdiff_t>(offset_)};
+    return SubSeries{PolySeries<double>{series},
+                     static_cast<std::ptrdiff_t>(offset_)};
   }
 
   auto period() const noexcept -> std::size_t

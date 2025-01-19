@@ -10,7 +10,8 @@
 
 namespace pludux::screener {
 
-using ScreenerMethod = std::function<auto(AssetSnapshot)->PolySeries<double>>;
+using ScreenerMethod =
+ std::function<auto(AssetSnapshot)->SubSeries<PolySeries<double>>>;
 
 template<typename T>
 auto screener_method_cast(const ScreenerMethod& method) noexcept -> const T*

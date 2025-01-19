@@ -12,9 +12,10 @@ namespace pludux::screener {
 
 class DataMethod {
 public:
-  DataMethod(std::string field, std::size_t offset = 0);
+  explicit DataMethod(std::string field, std::size_t offset = 0);
 
-  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>;
+  auto
+  operator()(AssetSnapshot asset_data) const -> SubSeries<PolySeries<double>>;
 
   auto field() const -> const std::string&;
 
