@@ -53,6 +53,7 @@ target_sources(${PROJECT_NAME}
         include/pludux/screener/ema_series.hpp
         include/pludux/screener/hma_series.hpp
         include/pludux/screener/macd_series.hpp
+        include/pludux/screener/pivot_lows_series.hpp
         include/pludux/screener/poly_series.hpp
         include/pludux/screener/ref_series.hpp
         include/pludux/screener/repeat_series.hpp

@@ -398,3 +398,23 @@ TEST(TATest, BbSeriesCalculation)
   EXPECT_TRUE(std::isnan(lower_band[8]));
   EXPECT_TRUE(std::isnan(lower_band[9]));
 }
+
+TEST(TATest, PivotLowsSeriesCalculation)
+{
+  const auto series =
+   DataSeries<double>{855, 860, 860, 860, 875, 870, 835, 800, 830, 875};
+  const auto range = 2;
+  const auto result = ta::pivot_lows(series, range);
+
+  ASSERT_EQ(result.size(), series.size());
+  EXPECT_TRUE(std::isnan(result[0]));
+  EXPECT_TRUE(std::isnan(result[1]));
+  EXPECT_TRUE(std::isnan(result[2]));
+  EXPECT_TRUE(std::isnan(result[3]));
+  EXPECT_TRUE(std::isnan(result[4]));
+  EXPECT_TRUE(std::isnan(result[5]));
+  EXPECT_TRUE(std::isnan(result[6]));
+  EXPECT_DOUBLE_EQ(result[7], 800);
+  EXPECT_TRUE(std::isnan(result[8]));
+  EXPECT_TRUE(std::isnan(result[9]));
+}

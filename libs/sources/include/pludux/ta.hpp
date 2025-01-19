@@ -95,6 +95,12 @@ auto bb(TSeries series, std::size_t period, double stddev) -> BbSeries<TSeries>
   return BbSeries{std::move(series), period, stddev};
 }
 
+template<typename TSeries>
+auto pivot_lows(TSeries series, std::size_t range) -> PivotLowsSeries<TSeries>
+{
+  return PivotLowsSeries{std::move(series), range};
+}
+
 } // namespace pludux::ta
 
 #endif
