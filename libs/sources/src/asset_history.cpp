@@ -28,7 +28,7 @@ auto AssetHistory::operator[](std::size_t index) const noexcept -> AssetSnapshot
 }
 
 auto AssetHistory::operator[](const std::string& key) const
- -> PolySeries<double>
+ -> RefSeries<const PolySeries<double>>
 {
   return RefSeries{history_data_.at(key)};
 }

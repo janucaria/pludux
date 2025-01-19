@@ -65,7 +65,7 @@ public:
 
   auto operator[](std::size_t index) const noexcept -> AssetSnapshot;
 
-  auto operator[](const std::string& key) const -> PolySeries<double>;
+  auto operator[](const std::string& key) const -> RefSeries<const PolySeries<double>>;
 
   auto size() const noexcept -> std::size_t;
 

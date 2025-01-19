@@ -16,7 +16,7 @@ public:
 
   AssetSnapshot(std::size_t offset, const HistoryData& history_data);
 
-  auto operator[](std::string key) const -> PolySeries<double>;
+  auto operator[](std::string key) const -> SubSeries<RefSeries<const PolySeries<double>>>;
 
   auto offset() const noexcept -> std::size_t;
 
