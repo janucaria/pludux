@@ -47,28 +47,28 @@ target_sources(${PROJECT_NAME}
         include/pludux/screener/crossunder_filter.hpp
         include/pludux/screener/screener_filter.hpp 
 
-        include/pludux/screener/atr_series.hpp
-        include/pludux/screener/bb_series.hpp
-        include/pludux/screener/binary_fn_series.hpp
-        include/pludux/screener/bullish_divergence_series.hpp
-        include/pludux/screener/change_series.hpp
-        include/pludux/screener/data_series.hpp
-        include/pludux/screener/ema_series.hpp
-        include/pludux/screener/hma_series.hpp
-        include/pludux/screener/macd_series.hpp
-        include/pludux/screener/pivot_lows_series.hpp
-        include/pludux/screener/poly_series.hpp
-        include/pludux/screener/ref_series.hpp
-        include/pludux/screener/repeat_series.hpp
-        include/pludux/screener/rma_series.hpp
-        include/pludux/screener/rsi_series.hpp
-        include/pludux/screener/sma_series.hpp
-        include/pludux/screener/stoch_rsi_series.hpp
-        include/pludux/screener/stoch_series.hpp
-        include/pludux/screener/sub_series.hpp
-        include/pludux/screener/tr_series.hpp
-        include/pludux/screener/unary_fn_series.hpp
-        include/pludux/screener/wma_series.hpp
+        include/pludux/series/atr_series.hpp
+        include/pludux/series/bb_series.hpp
+        include/pludux/series/binary_fn_series.hpp
+        include/pludux/series/bullish_divergence_series.hpp
+        include/pludux/series/change_series.hpp
+        include/pludux/series/data_series.hpp
+        include/pludux/series/ema_series.hpp
+        include/pludux/series/hma_series.hpp
+        include/pludux/series/macd_series.hpp
+        include/pludux/series/pivot_lows_series.hpp
+        include/pludux/series/poly_series.hpp
+        include/pludux/series/ref_series.hpp
+        include/pludux/series/repeat_series.hpp
+        include/pludux/series/rma_series.hpp
+        include/pludux/series/rsi_series.hpp
+        include/pludux/series/sma_series.hpp
+        include/pludux/series/stoch_rsi_series.hpp
+        include/pludux/series/stoch_series.hpp
+        include/pludux/series/sub_series.hpp
+        include/pludux/series/tr_series.hpp
+        include/pludux/series/unary_fn_series.hpp
+        include/pludux/series/wma_series.hpp
 )
 
 target_compile_features(${PROJECT_NAME}
