@@ -24,29 +24,21 @@ public:
       return std::numeric_limits<ValueType>::quiet_NaN();
     }
 
-    auto low_index = index;
     auto value = series_[index];
-    auto low = value;
 
     for(std::size_t i = 1; i <= range_; ++i) {
-      if(series_[index - i] <= low) {
-        low = series_[index - i];
-        low_index = index - i;
+      if(series_[index - i] <= value) {
+        return std::numeric_limits<ValueType>::quiet_NaN();
       }
     }
 
     for(std::size_t i = 1; i <= range_; ++i) {
-      if(series_[index + i] <= low) {
-        low = series_[index + i];
-        low_index = index + i;
+      if(series_[index + i] <= value) {
+        return std::numeric_limits<ValueType>::quiet_NaN();
       }
     }
 
-    if(low_index == index) {
-      return low;
-    }
-
-    return std::numeric_limits<ValueType>::quiet_NaN();
+    return value;
   }
 
   auto size() const noexcept -> std::size_t
