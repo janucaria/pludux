@@ -9,6 +9,7 @@ target_sources(${PROJECT_NAME}
 
     src/screener/abs_diff_method.cpp
     src/screener/atr_method.cpp
+    src/screener/bullish_divergence_method.cpp
     src/screener/changes_method.cpp
     src/screener/data_method.cpp
     src/screener/value_method.cpp
@@ -32,6 +33,7 @@ target_sources(${PROJECT_NAME}
         include/pludux/screener/abs_diff_method.hpp 
         include/pludux/screener/arithmetic_method.hpp 
         include/pludux/screener/atr_method.hpp 
+        include/pludux/screener/bullish_divergence_method.hpp
         include/pludux/screener/changes_method.hpp 
         include/pludux/screener/data_method.hpp 
         include/pludux/screener/screener_method.hpp 
@@ -48,6 +50,7 @@ target_sources(${PROJECT_NAME}
         include/pludux/screener/atr_series.hpp
         include/pludux/screener/bb_series.hpp
         include/pludux/screener/binary_fn_series.hpp
+        include/pludux/screener/bullish_divergence_series.hpp
         include/pludux/screener/change_series.hpp
         include/pludux/screener/data_series.hpp
         include/pludux/screener/ema_series.hpp

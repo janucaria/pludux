@@ -54,8 +54,6 @@ private:
 
   template<typename TSeries>
   struct ImplModel final : ImplConcept {
-    using ValueType = typename TSeries::ValueType;
-
     TSeries impl;
 
     explicit ImplModel(TSeries impl)
@@ -65,7 +63,7 @@ private:
 
     auto operator[](std::size_t index) const noexcept -> ValueType override
     {
-      return impl[index];
+      return static_cast<ValueType>(impl[index]);
     }
 
     virtual auto size() const noexcept -> std::size_t override

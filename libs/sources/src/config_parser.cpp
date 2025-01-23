@@ -14,6 +14,14 @@
 namespace pludux {
 
 template<typename T>
+static auto get_param_or(const nlohmann::json& parameters,
+                         const std::string& key,
+                         const T& default_value) -> T
+{
+  return parameters.contains(key) ? parameters[key].get<T>() : default_value;
+}
+
+template<typename T>
 static auto parse_ta_with_period_method(const nlohmann::json& parameters)
  -> screener::ScreenerMethod
 {
@@ -96,6 +104,24 @@ static auto parse_unary_function_method(const nlohmann::json& parameters,
   return unary_function_method;
 }
 
+template<typename T>
+static auto parse_divergence_method(const nlohmann::json& parameters)
+ -> screener::ScreenerMethod
+{
+  const auto signal = parse_screener_method(parameters["signal"]);
+  const auto reference = parse_screener_method(parameters["reference"]);
+
+  const auto pivot_range =
+   get_param_or(parameters, "pivotRange", std::size_t{5});
+  const auto lookback_range =
+   get_param_or(parameters, "lookbackRange", std::size_t{60});
+  const auto offset = get_param_or(parameters, "offset", std::size_t{0});
+
+  const auto divergence_method =
+   T{signal, reference, pivot_range, lookback_range, offset};
+  return divergence_method;
+}
+
 auto parse_screener_method(const nlohmann::json& config)
  -> screener::ScreenerMethod
 {
@@ -169,6 +195,10 @@ auto parse_screener_method(const nlohmann::json& config)
   if(method == "NEGATE") {
     return parse_unary_function_method<screener::NegateMethod>(config,
                                                                "operand");
+  }
+
+  if(method == "BULLISH_DIVERGENCE") {
+    return parse_divergence_method<screener::BullishDivergenceMethod>(config);
   }
 
   const auto error_message = std::format("Unknown method: {}", method);
