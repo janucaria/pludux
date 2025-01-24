@@ -1,10 +1,12 @@
 #ifndef PLUDUX_PLUDUX_SERIES_BULLISH_DIVERGENCE_SERIES_HPP
 #define PLUDUX_PLUDUX_SERIES_BULLISH_DIVERGENCE_SERIES_HPP
 
+#include <algorithm>
 #include <cstddef>
 #include <limits>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include <pludux/series/pivot_lows_series.hpp>
 
@@ -31,24 +33,20 @@ public:
     const auto& signal = signal_series_;
     const auto& reference = reference_series_;
 
-    const auto signal_pivot_lows = get_lows(signal, index);
-
-    auto signal_low_index = index;
-    auto signal_low = get_lows(signal, signal_low_index);
+    const auto signal_low_index = index;
+    const auto signal_low = get_lows(signal, signal_low_index);
 
     if(std::isnan(signal_low)) {
       return -1;
     }
 
     auto signal_prev_low_index = signal_low_index;
-    for(auto i = 1; i < lookback_range_; ++i) {
-      const auto low_index = signal_low_index + i;
-      if(low_index >= signal.size()) {
-        break;
-      }
-
-      if(!std::isnan(get_lows(signal, low_index))) {
-        signal_prev_low_index = low_index;
+    const auto lookback_range = std::min(lookback_range_, signal.size());
+    for(auto i = 1; i < lookback_range; ++i) {
+      const auto signal_index = index + i;
+      const auto signal_pivot_low = get_lows(signal, signal_index);
+      if(!std::isnan(signal_pivot_low)) {
+        signal_prev_low_index = signal_index;
         break;
       }
     }
