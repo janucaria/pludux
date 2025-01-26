@@ -201,6 +201,11 @@ auto parse_screener_method(const nlohmann::json& config)
     return parse_divergence_method<screener::BullishDivergenceMethod>(config);
   }
 
+  if(method == "HIDDEN_BULLISH_DIVERGENCE") {
+    return parse_divergence_method<screener::HiddenBullishDivergenceMethod>(
+     config);
+  }
+
   const auto error_message = std::format("Unknown method: {}", method);
   throw std::invalid_argument(error_message);
 }

@@ -5,6 +5,7 @@ set(PLUDUX_TEST_SOURCES
   src/test_ta.cpp
 
   src/test_bullish_divergence_series.cpp
+  src/test_hidden_bullish_divergence_series.cpp
 
   src/test_abs_diff_method.cpp
   src/test_arithmetic_method.cpp
