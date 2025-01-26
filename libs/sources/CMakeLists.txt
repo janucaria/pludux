@@ -64,6 +64,7 @@ target_sources(${PROJECT_NAME}
         include/pludux/series/ref_series.hpp
         include/pludux/series/repeat_series.hpp
         include/pludux/series/rma_series.hpp
+        include/pludux/series/roc_series.hpp
         include/pludux/series/rsi_series.hpp
         include/pludux/series/sma_series.hpp
         include/pludux/series/stoch_rsi_series.hpp

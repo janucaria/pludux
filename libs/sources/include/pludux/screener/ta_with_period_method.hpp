@@ -83,6 +83,11 @@ inline constexpr auto rsi_wrapper = []<typename TSeries>(TSeries series,
   return ta::rsi(series, period);
 };
 
+inline constexpr auto roc_wrapper = []<typename TSeries>(TSeries series,
+                                                         std::size_t period) {
+  return RocSeries{series, period};
+};
+
 } // namespace details
 
 class SmaMethod
@@ -131,6 +136,14 @@ class RsiMethod
   using details::TaWithPeroidMethod<
    RsiMethod,
    std::decay_t<decltype(details::rsi_wrapper)>>::TaWithPeroidMethod;
+};
+
+class RocMethod
+: public details::
+   TaWithPeroidMethod<RocMethod, std::decay_t<decltype(details::roc_wrapper)>> {
+  using details::TaWithPeroidMethod<
+   RocMethod,
+   std::decay_t<decltype(details::roc_wrapper)>>::TaWithPeroidMethod;
 };
 
 } // namespace pludux::screener
