@@ -117,10 +117,11 @@ public:
       return value;
     }
 
-    if(index >= series.size() - pivot_range_) {
+    const auto series_size = series.size();
+    if(index >= series_size - pivot_range_) {
       auto value = series[index];
 
-      for(std::size_t i = 1; i <= index; ++i) {
+      for(std::size_t i = 1; i <= pivot_range_; ++i) {
         const auto neighbor_index = index - i;
         const auto& neighbor_value = series[neighbor_index];
         if(neighbor_value <= value) {
@@ -128,7 +129,7 @@ public:
         }
       }
 
-      for(int i = 1, ii = series.size() - index; i <= ii; ++i) {
+      for(int i = 1, ii = series_size - index; i < ii; ++i) {
         const auto neighbor_index = index + i;
         const auto& neighbor_value = series[neighbor_index];
         if(neighbor_value <= value) {
