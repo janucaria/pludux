@@ -38,6 +38,7 @@ TEST(AssetHistoryTest, OperatorSquareBracketsWithIndex)
   const auto snapshot = asset_history[1];
 
   EXPECT_EQ(snapshot.offset(), 1);
+  EXPECT_EQ(snapshot.size(), 4);
   EXPECT_EQ(snapshot["close"][1], 800);
 }
 

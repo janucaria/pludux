@@ -28,7 +28,7 @@ auto AssetSnapshot::size() const noexcept -> std::size_t
     return 0;
   }
 
-  return it->second.size();
+  return it->second.size() - offset_;
 }
 
 auto AssetSnapshot::contains(const std::string& key) const noexcept -> bool
