@@ -168,6 +168,10 @@ auto parse_screener_method(const nlohmann::json& config)
     return parse_ta_with_period_method<screener::RocMethod>(config);
   }
 
+  if(method == "RVOL") {
+    return parse_ta_with_period_method<screener::RvolMethod>(config);
+  }
+
   if(method == "ATR") {
     return parse_atr_method(config);
   }
