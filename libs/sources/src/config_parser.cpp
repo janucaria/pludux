@@ -22,7 +22,7 @@ static auto get_param_or(const nlohmann::json& parameters,
 }
 
 template<typename T>
-static auto parse_ta_with_period_method(const ConfigParser& config_parser,
+static auto parse_ta_with_period_method(ConfigParser::Parser config_parser,
                                         const nlohmann::json& parameters)
  -> screener::ScreenerMethod
 {
@@ -40,7 +40,7 @@ static auto parse_ta_with_period_method(const ConfigParser& config_parser,
   return ta_method;
 }
 
-static auto parse_value_method(const ConfigParser& config_parser,
+static auto parse_value_method(ConfigParser::Parser config_parser,
                                const nlohmann::json& parameters)
  -> screener::ScreenerMethod
 {
@@ -48,7 +48,7 @@ static auto parse_value_method(const ConfigParser& config_parser,
   return screener::ValueMethod{value};
 }
 
-static auto parse_data_method(const ConfigParser& config_parser,
+static auto parse_data_method(ConfigParser::Parser config_parser,
                               const nlohmann::json& parameters)
  -> screener::ScreenerMethod
 {
@@ -64,7 +64,7 @@ static auto parse_data_method(const ConfigParser& config_parser,
   return field_method;
 }
 
-static auto parse_atr_method(const ConfigParser& config_parser,
+static auto parse_atr_method(ConfigParser::Parser config_parser,
                              const nlohmann::json& parameters)
  -> screener::ScreenerMethod
 {
@@ -73,7 +73,7 @@ static auto parse_atr_method(const ConfigParser& config_parser,
   return atr_method;
 }
 
-static auto parse_abs_diff_method(const ConfigParser& config_parser,
+static auto parse_abs_diff_method(ConfigParser::Parser config_parser,
                                   const nlohmann::json& parameters)
  -> screener::ScreenerMethod
 {
@@ -84,7 +84,7 @@ static auto parse_abs_diff_method(const ConfigParser& config_parser,
   return abs_diff_method;
 }
 
-static auto parse_kc_method(const ConfigParser& config_parser,
+static auto parse_kc_method(ConfigParser::Parser config_parser,
                             const nlohmann::json& parameters)
  -> screener::ScreenerMethod
 {
@@ -114,7 +114,7 @@ static auto parse_kc_method(const ConfigParser& config_parser,
 }
 
 template<typename T>
-static auto parse_binary_function_method(const ConfigParser& config_parser,
+static auto parse_binary_function_method(ConfigParser::Parser config_parser,
                                          const nlohmann::json& parameters,
                                          const std::string& first_operand_key,
                                          const std::string& second_operand_key)
@@ -130,7 +130,7 @@ static auto parse_binary_function_method(const ConfigParser& config_parser,
 }
 
 template<typename T>
-static auto parse_unary_function_method(const ConfigParser& config_parser,
+static auto parse_unary_function_method(ConfigParser::Parser config_parser,
                                         const nlohmann::json& parameters,
                                         const std::string& operand_key)
  -> screener::ScreenerMethod
@@ -141,7 +141,7 @@ static auto parse_unary_function_method(const ConfigParser& config_parser,
 }
 
 template<typename T>
-static auto parse_divergence_method(const ConfigParser& config_parser,
+static auto parse_divergence_method(ConfigParser::Parser config_parser,
                                     const nlohmann::json& parameters)
  -> screener::ScreenerMethod
 {
@@ -160,7 +160,7 @@ static auto parse_divergence_method(const ConfigParser& config_parser,
 }
 
 template<typename T>
-static auto parse_comparison_filter(const ConfigParser& config_parser,
+static auto parse_comparison_filter(ConfigParser::Parser config_parser,
                                     const nlohmann::json& parameters)
  -> screener::ScreenerFilter
 {
@@ -169,7 +169,7 @@ static auto parse_comparison_filter(const ConfigParser& config_parser,
   return T{target, threshold};
 }
 
-static auto parse_all_of_filter(const ConfigParser& config_parser,
+static auto parse_all_of_filter(ConfigParser::Parser config_parser,
                                 const nlohmann::json& parameters)
  -> screener::ScreenerFilter
 {
@@ -180,7 +180,7 @@ static auto parse_all_of_filter(const ConfigParser& config_parser,
   return screener::AllOfFilter{filters};
 }
 
-static auto parse_any_of_filter(const ConfigParser& config_parser,
+static auto parse_any_of_filter(ConfigParser::Parser config_parser,
                                 const nlohmann::json& parameters)
  -> screener::ScreenerFilter
 {
@@ -191,7 +191,7 @@ static auto parse_any_of_filter(const ConfigParser& config_parser,
   return screener::AnyOfFilter{filters};
 }
 
-static auto parse_crossunder_filter(const ConfigParser& config_parser,
+static auto parse_crossunder_filter(ConfigParser::Parser config_parser,
                                     const nlohmann::json& parameters)
  -> screener::ScreenerFilter
 {
@@ -200,7 +200,7 @@ static auto parse_crossunder_filter(const ConfigParser& config_parser,
   return screener::CrossunderFilter{signal, reference};
 }
 
-static auto parse_crossover_filter(const ConfigParser& config_parser,
+static auto parse_crossover_filter(ConfigParser::Parser config_parser,
                                    const nlohmann::json& parameters)
  -> screener::ScreenerFilter
 {
@@ -217,7 +217,7 @@ void ConfigParser::register_default_parsers()
   register_method_parser("DATA", parse_data_method);
   register_method_parser(
    "CHANGES",
-   [](const ConfigParser& config_parser, const nlohmann::json& parameters) {
+   [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {
      return parse_unary_function_method<screener::ChangesMethod>(
       config_parser, parameters, "operand");
    });
@@ -251,31 +251,31 @@ void ConfigParser::register_default_parsers()
   register_method_parser("ABS_DIFF", parse_abs_diff_method);
   register_method_parser(
    "ADD",
-   [](const ConfigParser& config_parser, const nlohmann::json& parameters) {
+   [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {
      return parse_binary_function_method<screener::AddMethod>(
       config_parser, parameters, "augend", "addend");
    });
   register_method_parser(
    "SUBTRACT",
-   [](const ConfigParser& config_parser, const nlohmann::json& parameters) {
+   [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {
      return parse_binary_function_method<screener::SubtractMethod>(
       config_parser, parameters, "minuend", "subtrahend");
    });
   register_method_parser(
    "MULTIPLY",
-   [](const ConfigParser& config_parser, const nlohmann::json& parameters) {
+   [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {
      return parse_binary_function_method<screener::MultiplyMethod>(
       config_parser, parameters, "multiplicand", "multiplier");
    });
   register_method_parser(
    "DIVIDE",
-   [](const ConfigParser& config_parser, const nlohmann::json& parameters) {
+   [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {
      return parse_binary_function_method<screener::DivideMethod>(
       config_parser, parameters, "dividend", "divisor");
    });
   register_method_parser(
    "NEGATE",
-   [](const ConfigParser& config_parser, const nlohmann::json& parameters) {
+   [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {
      return parse_unary_function_method<screener::NegateMethod>(
       config_parser, parameters, "operand");
    });
@@ -312,29 +312,89 @@ void ConfigParser::register_method_parser(const std::string& method_name,
   method_parsers_.emplace(method_name, method_parser);
 }
 
-auto ConfigParser::parse_filter(const nlohmann::json& config) const
+auto ConfigParser::parser() -> Parser
+{
+  return Parser{*this};
+}
+
+auto ConfigParser::parse_filter(const nlohmann::json& config)
  -> screener::ScreenerFilter
 {
+  return parser().parse_filter(config);
+}
+
+auto ConfigParser::parse_method(const nlohmann::json& config)
+ -> screener::ScreenerMethod
+{
+  return parser().parse_method(config);
+}
+
+ConfigParser::Parser::Parser(ConfigParser& config_parser)
+: config_parser_{config_parser}
+{
+}
+
+auto ConfigParser::Parser::parse_method(const nlohmann::json& config)
+ -> screener::ScreenerMethod
+{
+  auto& method_parsers = config_parser_.method_parsers_;
+  auto& named_config_methods = config_parser_.named_config_methods_;
+
+  auto config_method = config;
+  const auto method = config_method["method"].get<std::string>();
+
+  if(config_method.contains("extends")) {
+    const auto extends = config_method["extends"].get<std::string>();
+    if(!named_config_methods.contains(extends)) {
+      const auto error_message =
+       std::format("Unknown base method: {}", extends);
+      throw std::invalid_argument{error_message};
+    }
+    const auto base_config = named_config_methods.at(extends);
+    const auto base_method = base_config["method"].get<std::string>();
+
+    if(base_method != method) {
+      const auto error_message = std::format(
+       "Base method {} is not the same as method {}", base_method, method);
+      throw std::invalid_argument{error_message};
+    }
+
+    config_method.erase("extends");
+    for(const auto& [key, value] : base_config.items()) {
+      if(!config_method.contains(key)) {
+        config_method[key] = value;
+      }
+    }
+  }
+
+  if(!method_parsers.contains(method)) {
+    const auto error_message = std::format("Unknown method: {}", method);
+    throw std::invalid_argument{error_message};
+  }
+
+  const auto method_parser = method_parsers.at(method);
+  const auto method_result = method_parser(*this, config_method);
+
+  if(config_method.contains("name")) {
+    const auto name = config_method["name"].get<std::string>();
+    config_method.erase("name");
+    named_config_methods.emplace(name, config_method);
+  }
+
+  return method_result;
+}
+
+auto ConfigParser::Parser::parse_filter(const nlohmann::json& config)
+ -> screener::ScreenerFilter
+{
+  const auto& filter_parsers = config_parser_.filter_parsers_;
   const auto filter = config["filter"].get<std::string>();
 
-  if(filter_parsers_.contains(filter)) {
-    return filter_parsers_.at(filter)(*this, config);
+  if(filter_parsers.contains(filter)) {
+    return filter_parsers.at(filter)(*this, config);
   }
 
   const auto error_message = std::format("Unknown filter: {}", filter);
-  throw std::invalid_argument{error_message};
-}
-
-auto ConfigParser::parse_method(const nlohmann::json& config) const
- -> screener::ScreenerMethod
-{
-  const auto method = config["method"].get<std::string>();
-
-  if(method_parsers_.contains(method)) {
-    return method_parsers_.at(method)(*this, config);
-  }
-
-  const auto error_message = std::format("Unknown method: {}", method);
   throw std::invalid_argument{error_message};
 }
 

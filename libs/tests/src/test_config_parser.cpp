@@ -271,6 +271,43 @@ TEST_F(ConfigParserTest, ParseScreenerKcMethod)
   EXPECT_EQ(kc_method->multiplier(), 1.0);
 }
 
+TEST_F(ConfigParserTest, ParseScreenMethodWithExtends)
+{
+  const auto base_config = json::parse(R"(
+    {
+      "method": "SMA",
+      "name": "base",
+      "period": 14,
+      "offset": 1,
+      "target": {
+        "method": "DATA",
+        "field": "close",
+        "offset": 0
+      }
+    }
+  )");
+
+  const auto config = json::parse(R"(
+    {
+      "method": "SMA",
+      "extends": "base",
+      "period": 20
+    }
+  )");
+
+  auto config_parser = ConfigParser{};
+  config_parser.register_default_parsers();
+
+  const auto base_method = config_parser.parse_method(base_config);
+  const auto method = config_parser.parse_method(config);
+
+  const auto sma_method = screener_method_cast<SmaMethod>(method);
+  ASSERT_NE(sma_method, nullptr);
+
+  EXPECT_EQ(sma_method->offset(), 1);
+  EXPECT_EQ(sma_method->period(), 20);
+}
+
 TEST_F(ConfigParserTest, ParseScreenerInvalidMethod)
 {
   const auto config = json::parse(R"(
