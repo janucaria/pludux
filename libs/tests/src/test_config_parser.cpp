@@ -223,6 +223,45 @@ TEST(ConfigParserTest, ParseScreenerDataMethod)
   EXPECT_EQ(field_method->offset(), 0);
 }
 
+TEST(ConfigParserTest, ParseScreenerKcMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "KC",
+      "output": "middle",
+      "ma": {
+        "method": "SMA",
+        "period": 5,
+        "offset": 0,
+        "target": {
+          "method": "DATA",
+          "field": "close",
+          "offset": 0
+        }
+      },
+      "range": {
+        "method": "ATR",
+        "period": 14
+      },
+      "multiplier": 1.0
+    }
+  )");
+
+  const auto method = parse_screener_method(config);
+  const auto kc_method = screener_method_cast<KcMethod>(method);
+
+  ASSERT_NE(kc_method, nullptr);
+
+  const auto ma_method = screener_method_cast<SmaMethod>(kc_method->ma());
+  const auto range_method = screener_method_cast<AtrMethod>(kc_method->range());
+
+  EXPECT_NE(ma_method, nullptr);
+  EXPECT_NE(range_method, nullptr);
+  EXPECT_EQ(kc_method->offset(), 0);
+  EXPECT_EQ(kc_method->output(), KcOutput::middle);
+  EXPECT_EQ(kc_method->multiplier(), 1.0);
+}
+
 TEST(ConfigParserTest, ParseScreenerInvalidMethod)
 {
   const auto config = json::parse(R"(

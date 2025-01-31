@@ -10,6 +10,7 @@
 #include <pludux/series/ema_series.hpp>
 #include <pludux/series/hidden_bullish_divergence_series.hpp>
 #include <pludux/series/hma_series.hpp>
+#include <pludux/series/kc_series.hpp>
 #include <pludux/series/macd_series.hpp>
 #include <pludux/series/pivot_lows_series.hpp>
 #include <pludux/series/poly_series.hpp>

@@ -39,15 +39,15 @@ static auto parse_ta_with_period_method(const nlohmann::json& parameters)
   return ta_method;
 }
 
-static auto
-parse_value_method(const nlohmann::json& parameters) -> screener::ScreenerMethod
+static auto parse_value_method(const nlohmann::json& parameters)
+ -> screener::ScreenerMethod
 {
   const auto value = parameters["value"].get<double>();
   return screener::ValueMethod{value};
 }
 
-static auto
-parse_data_method(const nlohmann::json& parameters) -> screener::ScreenerMethod
+static auto parse_data_method(const nlohmann::json& parameters)
+ -> screener::ScreenerMethod
 {
   const auto field = parameters["field"].get<std::string>();
 
@@ -61,8 +61,8 @@ parse_data_method(const nlohmann::json& parameters) -> screener::ScreenerMethod
   return field_method;
 }
 
-static auto
-parse_atr_method(const nlohmann::json& parameters) -> screener::ScreenerMethod
+static auto parse_atr_method(const nlohmann::json& parameters)
+ -> screener::ScreenerMethod
 {
   const auto period = parameters["period"].get<std::size_t>();
   const auto atr_method = screener::AtrMethod{period};
@@ -77,6 +77,34 @@ static auto parse_abs_diff_method(const nlohmann::json& parameters)
 
   const auto abs_diff_method = screener::AbsDiffMethod{operand1, operand2};
   return abs_diff_method;
+}
+
+static auto parse_kc_method(const nlohmann::json& parameters)
+ -> screener::ScreenerMethod
+{
+  auto output = KcOutput::middle;
+  if(parameters.contains("output")) {
+    const auto output_str = parameters["output"].get<std::string>();
+    if(output_str == "middle") {
+      output = KcOutput::middle;
+    } else if(output_str == "upper") {
+      output = KcOutput::upper;
+    } else if(output_str == "lower") {
+      output = KcOutput::lower;
+    } else {
+      const auto error_message = std::format("Unknown output: {}", output_str);
+      throw std::invalid_argument{error_message};
+    }
+  }
+
+  const auto ma_method = parse_screener_method(parameters["ma"]);
+  const auto range_method = parse_screener_method(parameters["range"]);
+  const auto multiplier = parameters["multiplier"].get<double>();
+  const auto offset = get_param_or(parameters, "offset", std::size_t{0});
+
+  const auto kc_method =
+   screener::KcMethod{output, ma_method, range_method, multiplier, offset};
+  return kc_method;
 }
 
 template<typename T>
@@ -174,6 +202,10 @@ auto parse_screener_method(const nlohmann::json& config)
 
   if(method == "ATR") {
     return parse_atr_method(config);
+  }
+
+  if(method == "KC") {
+    return parse_kc_method(config);
   }
 
   if(method == "ABS_DIFF") {

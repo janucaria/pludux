@@ -13,6 +13,7 @@ target_sources(${PROJECT_NAME}
     src/screener/changes_method.cpp
     src/screener/data_method.cpp
     src/screener/hidden_bullish_divergence_method.cpp
+    src/screener/kc_method.cpp
     src/screener/value_method.cpp
 
     src/screener/all_of_filter.cpp
@@ -38,6 +39,7 @@ target_sources(${PROJECT_NAME}
         include/pludux/screener/changes_method.hpp 
         include/pludux/screener/data_method.hpp 
         include/pludux/screener/hidden_bullish_divergence_method.hpp
+        include/pludux/screener/kc_method.hpp
         include/pludux/screener/screener_method.hpp 
         include/pludux/screener/ta_with_period_method.hpp 
         include/pludux/screener/value_method.hpp 
@@ -58,6 +60,7 @@ target_sources(${PROJECT_NAME}
         include/pludux/series/ema_series.hpp
         include/pludux/series/hidden_bullish_divergence_series.hpp
         include/pludux/series/hma_series.hpp
+        include/pludux/series/kc_series.hpp
         include/pludux/series/macd_series.hpp
         include/pludux/series/pivot_lows_series.hpp
         include/pludux/series/poly_series.hpp
