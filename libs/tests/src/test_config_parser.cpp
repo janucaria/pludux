@@ -9,7 +9,16 @@ using namespace pludux;
 using namespace pludux::screener;
 using json = nlohmann::json;
 
-TEST(ConfigParserTest, ParseScreenerSmaMethod)
+class ConfigParserTest : public ::testing::Test {
+protected:
+  ConfigParser config_parser;
+  void SetUp() override
+  {
+    config_parser.register_default_parsers();
+  }
+};
+
+TEST_F(ConfigParserTest, ParseScreenerSmaMethod)
 {
   const auto config = json::parse(R"(
     {
@@ -24,7 +33,7 @@ TEST(ConfigParserTest, ParseScreenerSmaMethod)
     }
   )");
 
-  const auto method = parse_screener_method(config);
+  const auto method = config_parser.parse_method(config);
   const auto sma_method = screener_method_cast<SmaMethod>(method);
 
   ASSERT_NE(sma_method, nullptr);
@@ -39,7 +48,7 @@ TEST(ConfigParserTest, ParseScreenerSmaMethod)
   EXPECT_EQ(target->offset(), 0);
 }
 
-TEST(ConfigParserTest, ParseScreenerEmaMethod)
+TEST_F(ConfigParserTest, ParseScreenerEmaMethod)
 {
   const auto config = json::parse(R"(
     {
@@ -54,7 +63,7 @@ TEST(ConfigParserTest, ParseScreenerEmaMethod)
     }
   )");
 
-  const auto method = parse_screener_method(config);
+  const auto method = config_parser.parse_method(config);
   const auto ema_method = screener_method_cast<EmaMethod>(method);
 
   ASSERT_NE(ema_method, nullptr);
@@ -69,7 +78,7 @@ TEST(ConfigParserTest, ParseScreenerEmaMethod)
   EXPECT_EQ(target->offset(), 1);
 }
 
-TEST(ConfigParserTest, ParseScreenerWmaMethod)
+TEST_F(ConfigParserTest, ParseScreenerWmaMethod)
 {
   const auto config = json::parse(R"(
       {
@@ -84,7 +93,7 @@ TEST(ConfigParserTest, ParseScreenerWmaMethod)
       }
     )");
 
-  const auto method = parse_screener_method(config);
+  const auto method = config_parser.parse_method(config);
   const auto wma_method = screener_method_cast<WmaMethod>(method);
 
   ASSERT_NE(wma_method, nullptr);
@@ -99,7 +108,7 @@ TEST(ConfigParserTest, ParseScreenerWmaMethod)
   EXPECT_EQ(target->offset(), 2);
 }
 
-TEST(ConfigParserTest, ParseScreenerRmaMethod)
+TEST_F(ConfigParserTest, ParseScreenerRmaMethod)
 {
   const auto config = json::parse(R"(
       {
@@ -114,7 +123,7 @@ TEST(ConfigParserTest, ParseScreenerRmaMethod)
       }
     )");
 
-  const auto method = parse_screener_method(config);
+  const auto method = config_parser.parse_method(config);
   const auto rma_method = screener_method_cast<RmaMethod>(method);
 
   ASSERT_NE(rma_method, nullptr);
@@ -129,7 +138,7 @@ TEST(ConfigParserTest, ParseScreenerRmaMethod)
   EXPECT_EQ(target->offset(), 3);
 }
 
-TEST(ConfigParserTest, ParseScreenerHmaMethod)
+TEST_F(ConfigParserTest, ParseScreenerHmaMethod)
 {
   const auto config = json::parse(R"(
       {
@@ -144,7 +153,7 @@ TEST(ConfigParserTest, ParseScreenerHmaMethod)
       }
     )");
 
-  const auto method = parse_screener_method(config);
+  const auto method = config_parser.parse_method(config);
   const auto hma_method = screener_method_cast<HmaMethod>(method);
 
   ASSERT_NE(hma_method, nullptr);
@@ -159,7 +168,7 @@ TEST(ConfigParserTest, ParseScreenerHmaMethod)
   EXPECT_EQ(target->offset(), 4);
 }
 
-TEST(ConfigParserTest, ParseScreenerRsiMethod)
+TEST_F(ConfigParserTest, ParseScreenerRsiMethod)
 {
   const auto config = json::parse(R"(
     {
@@ -174,7 +183,7 @@ TEST(ConfigParserTest, ParseScreenerRsiMethod)
     }
   )");
 
-  const auto method = parse_screener_method(config);
+  const auto method = config_parser.parse_method(config);
 
   const auto rsi_method = screener_method_cast<RsiMethod>(method);
   ASSERT_NE(rsi_method, nullptr);
@@ -189,7 +198,7 @@ TEST(ConfigParserTest, ParseScreenerRsiMethod)
   EXPECT_EQ(target->offset(), 0);
 }
 
-TEST(ConfigParserTest, ParseScreenerValueMethod)
+TEST_F(ConfigParserTest, ParseScreenerValueMethod)
 {
   const auto config = json::parse(R"(
     {
@@ -198,14 +207,14 @@ TEST(ConfigParserTest, ParseScreenerValueMethod)
     }
   )");
 
-  const auto method = parse_screener_method(config);
+  const auto method = config_parser.parse_method(config);
   const auto value_method = screener_method_cast<ValueMethod>(method);
 
   ASSERT_NE(value_method, nullptr);
   EXPECT_EQ(value_method->value(), 100);
 }
 
-TEST(ConfigParserTest, ParseScreenerDataMethod)
+TEST_F(ConfigParserTest, ParseScreenerDataMethod)
 {
   const auto config = json::parse(R"(
     {
@@ -215,7 +224,7 @@ TEST(ConfigParserTest, ParseScreenerDataMethod)
     }
   )");
 
-  const auto method = parse_screener_method(config);
+  const auto method = config_parser.parse_method(config);
   const auto field_method = screener_method_cast<DataMethod>(method);
 
   ASSERT_NE(field_method, nullptr);
@@ -223,7 +232,7 @@ TEST(ConfigParserTest, ParseScreenerDataMethod)
   EXPECT_EQ(field_method->offset(), 0);
 }
 
-TEST(ConfigParserTest, ParseScreenerKcMethod)
+TEST_F(ConfigParserTest, ParseScreenerKcMethod)
 {
   const auto config = json::parse(R"(
     {
@@ -247,7 +256,7 @@ TEST(ConfigParserTest, ParseScreenerKcMethod)
     }
   )");
 
-  const auto method = parse_screener_method(config);
+  const auto method = config_parser.parse_method(config);
   const auto kc_method = screener_method_cast<KcMethod>(method);
 
   ASSERT_NE(kc_method, nullptr);
@@ -262,7 +271,7 @@ TEST(ConfigParserTest, ParseScreenerKcMethod)
   EXPECT_EQ(kc_method->multiplier(), 1.0);
 }
 
-TEST(ConfigParserTest, ParseScreenerInvalidMethod)
+TEST_F(ConfigParserTest, ParseScreenerInvalidMethod)
 {
   const auto config = json::parse(R"(
     {
@@ -270,10 +279,10 @@ TEST(ConfigParserTest, ParseScreenerInvalidMethod)
     }
   )");
 
-  EXPECT_THROW(parse_screener_method(config), std::invalid_argument);
+  EXPECT_THROW(config_parser.parse_method(config), std::invalid_argument);
 }
 
-TEST(ConfigParserTest, ParseScreenerAllOfFilter)
+TEST_F(ConfigParserTest, ParseScreenerAllOfFilter)
 {
   const auto config = json::parse(R"(
     {
@@ -307,7 +316,7 @@ TEST(ConfigParserTest, ParseScreenerAllOfFilter)
     }
   )");
 
-  const auto filter = parse_screener_filter(config);
+  const auto filter = config_parser.parse_filter(config);
 
   const auto all_of_filter = screener_filter_cast<AllOfFilter>(filter);
   ASSERT_NE(all_of_filter, nullptr);
@@ -324,7 +333,7 @@ TEST(ConfigParserTest, ParseScreenerAllOfFilter)
   EXPECT_NE(less_than_filter, nullptr);
 }
 
-TEST(ConfigParserTest, ParseScreenerAnyOfFilter)
+TEST_F(ConfigParserTest, ParseScreenerAnyOfFilter)
 {
   const auto config = json::parse(R"(
     {
@@ -358,7 +367,7 @@ TEST(ConfigParserTest, ParseScreenerAnyOfFilter)
     }
   )");
 
-  const auto filter = parse_screener_filter(config);
+  const auto filter = config_parser.parse_filter(config);
 
   const auto any_of_filter = screener_filter_cast<AnyOfFilter>(filter);
   ASSERT_NE(any_of_filter, nullptr);
@@ -375,7 +384,7 @@ TEST(ConfigParserTest, ParseScreenerAnyOfFilter)
   EXPECT_NE(less_than_filter, nullptr);
 }
 
-TEST(ConfigParserTest, ParseScreenerGreaterThanFilter)
+TEST_F(ConfigParserTest, ParseScreenerGreaterThanFilter)
 {
   const auto config = json::parse(R"(
     {
@@ -392,7 +401,7 @@ TEST(ConfigParserTest, ParseScreenerGreaterThanFilter)
     }
   )");
 
-  const auto filter = parse_screener_filter(config);
+  const auto filter = config_parser.parse_filter(config);
 
   const auto greater_than_filter =
    screener_filter_cast<GreaterThanFilter>(filter);
@@ -412,7 +421,7 @@ TEST(ConfigParserTest, ParseScreenerGreaterThanFilter)
   EXPECT_EQ(threshold->value(), 100);
 }
 
-TEST(ConfigParserTest, ParseScreenerGreaterEqualFilter)
+TEST_F(ConfigParserTest, ParseScreenerGreaterEqualFilter)
 {
   const auto config = json::parse(R"(
     {
@@ -429,7 +438,7 @@ TEST(ConfigParserTest, ParseScreenerGreaterEqualFilter)
     }
   )");
 
-  const auto filter = parse_screener_filter(config);
+  const auto filter = config_parser.parse_filter(config);
 
   const auto greater_equal_filter =
    screener_filter_cast<GreaterEqualFilter>(filter);
@@ -443,7 +452,7 @@ TEST(ConfigParserTest, ParseScreenerGreaterEqualFilter)
   EXPECT_EQ(target->offset(), 0);
 }
 
-TEST(ConfigParserTest, ParseScreenerLessThanFilter)
+TEST_F(ConfigParserTest, ParseScreenerLessThanFilter)
 {
   const auto config = json::parse(R"(
     {
@@ -460,7 +469,7 @@ TEST(ConfigParserTest, ParseScreenerLessThanFilter)
     }
   )");
 
-  const auto filter = parse_screener_filter(config);
+  const auto filter = config_parser.parse_filter(config);
 
   const auto less_than_filter = screener_filter_cast<LessThanFilter>(filter);
   ASSERT_NE(less_than_filter, nullptr);
@@ -473,7 +482,7 @@ TEST(ConfigParserTest, ParseScreenerLessThanFilter)
   EXPECT_EQ(target->offset(), 0);
 }
 
-TEST(ConfigParserTest, ParseScreenerLessEqualFilter)
+TEST_F(ConfigParserTest, ParseScreenerLessEqualFilter)
 {
   const auto config = json::parse(R"(
     {
@@ -490,7 +499,7 @@ TEST(ConfigParserTest, ParseScreenerLessEqualFilter)
     }
   )");
 
-  const auto filter = parse_screener_filter(config);
+  const auto filter = config_parser.parse_filter(config);
 
   const auto less_equal_filter = screener_filter_cast<LessEqualFilter>(filter);
   ASSERT_NE(less_equal_filter, nullptr);
@@ -503,7 +512,7 @@ TEST(ConfigParserTest, ParseScreenerLessEqualFilter)
   EXPECT_EQ(target->offset(), 0);
 }
 
-TEST(ConfigParserTest, ParseScreenerCrossunderFilter)
+TEST_F(ConfigParserTest, ParseScreenerCrossunderFilter)
 {
   const auto config = json::parse(R"(
     {
@@ -520,7 +529,7 @@ TEST(ConfigParserTest, ParseScreenerCrossunderFilter)
     }
   )");
 
-  const auto filter = parse_screener_filter(config);
+  const auto filter = config_parser.parse_filter(config);
 
   const auto crossunder_filter = screener_filter_cast<CrossunderFilter>(filter);
   ASSERT_NE(crossunder_filter, nullptr);
@@ -539,7 +548,7 @@ TEST(ConfigParserTest, ParseScreenerCrossunderFilter)
   EXPECT_EQ(reference->value(), 100);
 }
 
-TEST(ConfigParserTest, ParseScreenerCrossoverFilter)
+TEST_F(ConfigParserTest, ParseScreenerCrossoverFilter)
 {
   const auto config = json::parse(R"(
     {
@@ -556,7 +565,7 @@ TEST(ConfigParserTest, ParseScreenerCrossoverFilter)
     }
   )");
 
-  const auto filter = parse_screener_filter(config);
+  const auto filter = config_parser.parse_filter(config);
 
   const auto crossover_filter = screener_filter_cast<CrossoverFilter>(filter);
   ASSERT_NE(crossover_filter, nullptr);
@@ -575,7 +584,7 @@ TEST(ConfigParserTest, ParseScreenerCrossoverFilter)
   EXPECT_EQ(reference->value(), 100);
 }
 
-TEST(ConfigParserTest, ParseScreenerInvalidFilter)
+TEST_F(ConfigParserTest, ParseScreenerInvalidFilter)
 {
   const auto config = json::parse(R"(
     {
@@ -583,5 +592,5 @@ TEST(ConfigParserTest, ParseScreenerInvalidFilter)
     }
   )");
 
-  EXPECT_THROW(parse_screener_filter(config), std::invalid_argument);
+  EXPECT_THROW(config_parser.parse_filter(config), std::invalid_argument);
 }
