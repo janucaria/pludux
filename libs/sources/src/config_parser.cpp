@@ -337,6 +337,10 @@ ConfigParser::Parser::Parser(ConfigParser& config_parser)
 auto ConfigParser::Parser::parse_method(const nlohmann::json& config)
  -> screener::ScreenerMethod
 {
+  if(config.is_number()) {
+    return screener::ValueMethod{config.get<double>()};
+  }
+
   auto& named_config_methods = config_parser_.named_config_methods_;
 
   if(config.is_string()) {

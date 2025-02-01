@@ -460,10 +460,7 @@ TEST_F(ConfigParserTest, ParseScreenerGreaterThanFilter)
   const auto config = json::parse(R"(
     {
       "filter": "GREATER_THAN",
-      "threshold": {
-        "method": "VALUE",
-        "value": 100
-      },
+      "threshold": 100,
       "target": {
         "method": "DATA",
         "field": "close",
@@ -593,10 +590,7 @@ TEST_F(ConfigParserTest, ParseScreenerCrossunderFilter)
         "field": "close",
         "offset": 0
       },
-      "reference": {
-        "method": "VALUE",
-        "value": 100
-      }
+      "reference": 100
     }
   )");
 
