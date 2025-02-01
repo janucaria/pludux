@@ -308,6 +308,40 @@ TEST_F(ConfigParserTest, ParseScreenMethodWithExtends)
   EXPECT_EQ(sma_method->period(), 20);
 }
 
+TEST_F(ConfigParserTest, ParseScreenMethodNamedMethod)
+{
+  const auto named_method_config = json::parse(R"(
+    {
+      "method": "DATA",
+      "name": "foo",
+      "field": "close"
+    }
+  )");
+
+  const auto config = json::parse(R"(
+    {
+      "method": "RSI",
+      "period": 14,
+      "target": "foo"
+    }
+  )");
+
+  auto config_parser = ConfigParser{};
+  config_parser.register_default_parsers();
+
+  const auto named_method = config_parser.parse_method(named_method_config);
+  const auto method = config_parser.parse_method(config);
+
+  const auto rsi_method = screener_method_cast<RsiMethod>(method);
+  ASSERT_NE(rsi_method, nullptr);
+
+  const auto target = rsi_method->target();
+  const auto data_method = screener_method_cast<DataMethod>(target);
+  ASSERT_NE(data_method, nullptr);
+
+  EXPECT_EQ(data_method->field(), "close");
+}
+
 TEST_F(ConfigParserTest, ParseScreenerInvalidMethod)
 {
   const auto config = json::parse(R"(
