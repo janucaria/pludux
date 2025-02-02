@@ -1,7 +1,7 @@
 #ifndef PLUDUX_PLUDUX_ASSET_SNAPSHOT_HPP
 #define PLUDUX_PLUDUX_ASSET_SNAPSHOT_HPP
 
-#include <cstdint>
+#include <cstddef>
 #include <ctime>
 #include <string>
 #include <unordered_map>

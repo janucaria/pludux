@@ -1,10 +1,7 @@
 project(pludux-lib LANGUAGES CXX)
 
-find_package(GTest REQUIRED)
-find_package(nlohmann_json REQUIRED)
-
 add_subdirectory(sources)
 
-if(BUILD_TESTING)
+if(NOT EMSCRIPTEN AND BUILD_TESTING)
     add_subdirectory(tests)
 endif()

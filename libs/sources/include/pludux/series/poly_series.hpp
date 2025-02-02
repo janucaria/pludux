@@ -36,10 +36,11 @@ public:
     return impl_->size();
   }
 
-  template<typename T>
-  friend auto screener_cast(const PolySeries* method) noexcept -> const T*
+  template<typename USeries>
+  friend auto screener_cast(const PolySeries* method) noexcept -> const USeries*
   {
-    auto model = std::dynamic_pointer_cast<const ImplModel<T>>(method->impl_);
+    auto model =
+     std::dynamic_pointer_cast<const ImplModel<USeries>>(method->impl_);
     return model ? &model->impl : nullptr;
   }
 

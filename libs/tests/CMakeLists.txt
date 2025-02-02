@@ -1,3 +1,5 @@
+find_package(GTest REQUIRED)
+
 set(PLUDUX_TEST_SOURCES
   src/test_asset_history.cpp
   src/test_config_parser.cpp

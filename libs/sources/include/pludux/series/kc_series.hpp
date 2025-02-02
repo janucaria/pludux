@@ -41,9 +41,10 @@ public:
       return middle + range;
     case KcOutput::lower:
       return middle - range;
+    case KcOutput::middle:
+    default:
+      return middle;
     }
-
-    return middle;
   }
 
   auto size() const noexcept -> std::size_t

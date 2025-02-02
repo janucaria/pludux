@@ -1,3 +1,14 @@
+FetchContent_Declare(
+  nlohmann_json
+  GIT_REPOSITORY https://github.com/nlohmann/json.git
+  GIT_TAG        v3.11.3
+  GIT_SHALLOW    TRUE
+  GIT_PROGRESS   TRUE
+  OVERRIDE_FIND_PACKAGE
+) 
+
+find_package(nlohmann_json REQUIRED)
+
 add_library(${PROJECT_NAME})
 add_library(${CMAKE_PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 

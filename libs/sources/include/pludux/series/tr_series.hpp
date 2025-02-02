@@ -1,6 +1,7 @@
 #ifndef PLUDUX_PLUDUX_SERIES_TR_SERIES_HPP
 #define PLUDUX_PLUDUX_SERIES_TR_SERIES_HPP
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <limits>
