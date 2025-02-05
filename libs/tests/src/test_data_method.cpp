@@ -15,7 +15,7 @@ TEST(DataMethodTest, RunAllMethodClose)
 
   const auto series = data_method(asset_data);
   const auto closes = asset_data["close"];
-  ASSERT_EQ(series.size(), closes.size());
+  ASSERT_EQ(series.size(), closes.size() - offset);
   EXPECT_EQ(series[0], closes[1]);
   EXPECT_EQ(series[1], closes[2]);
 }

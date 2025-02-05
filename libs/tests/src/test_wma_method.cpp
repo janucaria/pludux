@@ -69,7 +69,7 @@ TEST(WmaMethodTest, RunAllMethodWithOffset)
 
   const auto result = wma_method(asset_data);
 
-  ASSERT_EQ(result.size(), asset_data.size());
+  ASSERT_EQ(result.size(), asset_data.size() - offset);
   EXPECT_DOUBLE_EQ(result[0], 862.66666666666663);
   EXPECT_DOUBLE_EQ(result[1], 858.66666666666663);
   EXPECT_DOUBLE_EQ(result[2], 852.66666666666663);

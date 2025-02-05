@@ -65,7 +65,7 @@ TEST(RocMethodTest, RunAllMethodWithOffset)
 
   const auto result = roc_method(asset_data);
 
-  ASSERT_EQ(result.size(), asset_data.size());
+  ASSERT_EQ(result.size(), asset_data.size() - offset);
   EXPECT_DOUBLE_EQ(result[0], 7.50);
   EXPECT_DOUBLE_EQ(result[1], 3.6144578313253013);
   EXPECT_DOUBLE_EQ(result[2], 0.00);

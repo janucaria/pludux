@@ -143,7 +143,7 @@ TEST(KcMethodTest, middle_EMA_range_ATR_with_offset)
 
   const auto kc_middle = kc_method(asset_data);
   const auto expected_middle = ma_method(asset_data);
-  ASSERT_EQ(kc_middle.size(), asset_data.size());
+  ASSERT_EQ(kc_middle.size(), asset_data.size() - offset);
   EXPECT_DOUBLE_EQ(kc_middle[0], expected_middle[1]);
   EXPECT_DOUBLE_EQ(kc_middle[1], expected_middle[2]);
   EXPECT_DOUBLE_EQ(kc_middle[2], expected_middle[3]);
@@ -157,7 +157,7 @@ TEST(KcMethodTest, middle_EMA_range_ATR_with_offset)
 
   kc_method.output(KcOutput::upper);
   const auto kc_upper = kc_method(asset_data);
-  ASSERT_EQ(kc_upper.size(), asset_data.size());
+  ASSERT_EQ(kc_upper.size(), asset_data.size() - offset);
   EXPECT_DOUBLE_EQ(kc_upper[0], 923.57289858217598);
   EXPECT_DOUBLE_EQ(kc_upper[1], 934.41818576388891);
   EXPECT_DOUBLE_EQ(kc_upper[2], 945.37239583333337);
@@ -172,7 +172,7 @@ TEST(KcMethodTest, middle_EMA_range_ATR_with_offset)
   kc_method.output(KcOutput::lower);
   kc_method.offset(2);
   const auto kc_lower = kc_method(asset_data);
-  ASSERT_EQ(kc_lower.size(), asset_data.size());
+  ASSERT_EQ(kc_lower.size(), asset_data.size() - 2);
   EXPECT_DOUBLE_EQ(kc_lower[0], 779.35959201388891);
   EXPECT_DOUBLE_EQ(kc_lower[1], 765.29427083333337);
   EXPECT_DOUBLE_EQ(kc_lower[2], 756.28125);

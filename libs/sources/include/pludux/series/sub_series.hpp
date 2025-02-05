@@ -45,7 +45,7 @@ public:
 
   auto size() const noexcept -> std::size_t
   {
-    return series_.size();
+    return series_.size() - shifted_offset_;
   }
 
   auto series() const noexcept -> const TSeries&

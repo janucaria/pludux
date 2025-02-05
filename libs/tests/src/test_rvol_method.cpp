@@ -69,7 +69,7 @@ TEST(RvolMethodTest, RunAllMethodWithOffset)
 
   const auto result = sma_method(asset_data);
 
-  ASSERT_EQ(result.size(), asset_data.size());
+  ASSERT_EQ(result.size(), asset_data.size() - offset);
   EXPECT_DOUBLE_EQ(result[0], 0.39740698985343859);
   EXPECT_DOUBLE_EQ(result[1], 0.66727884909703095);
   EXPECT_DOUBLE_EQ(result[2], 0.59106315279795263);

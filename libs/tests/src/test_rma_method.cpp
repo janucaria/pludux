@@ -69,7 +69,7 @@ TEST(RmaMethodTest, RunAllMethodWithOffset)
 
   const auto result = rma_method(asset_data);
 
-  ASSERT_EQ(result.size(), asset_data.size());
+  ASSERT_EQ(result.size(), asset_data.size() - offset);
   EXPECT_DOUBLE_EQ(result[0], 852.70400000000018);
   EXPECT_DOUBLE_EQ(result[1], 850.88000000000011);
   EXPECT_DOUBLE_EQ(result[2], 848.60000000000002);

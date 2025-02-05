@@ -70,7 +70,7 @@ TEST(EmaMethodTest, RunAllMethodWithOffset)
 
   const auto series = ema_method(asset_data);
 
-  ASSERT_EQ(series.size(), asset_data.size());
+  ASSERT_EQ(series.size(), asset_data.size() - offset);
   EXPECT_DOUBLE_EQ(series[0], 856.88888888888891);
   EXPECT_DOUBLE_EQ(series[1], 855.33333333333337);
   EXPECT_DOUBLE_EQ(series[2], 853);

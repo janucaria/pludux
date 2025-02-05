@@ -69,7 +69,7 @@ TEST(SmaMethodTest, RunAllMethodWithOffset)
 
   const auto result = sma_method(asset_data);
 
-  ASSERT_EQ(result.size(), asset_data.size());
+  ASSERT_EQ(result.size(), asset_data.size() - offset);
   EXPECT_DOUBLE_EQ(result[0], 860);
   EXPECT_DOUBLE_EQ(result[1], 848);
   EXPECT_DOUBLE_EQ(result[2], 842);
