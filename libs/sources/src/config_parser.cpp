@@ -1,8 +1,10 @@
 #ifndef PLUDUX_FILTER_PARSER_HPP
 #define PLUDUX_FILTER_PARSER_HPP
 
+#include <optional>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <nlohmann/json.hpp>
@@ -19,6 +21,25 @@ static auto get_param_or(const nlohmann::json& parameters,
                          const T& default_value) -> T
 {
   return parameters.contains(key) ? parameters[key].get<T>() : default_value;
+}
+
+static auto get_param_or_named_method(ConfigParser::Parser& config_parser,
+                                      const nlohmann::json& parameters,
+                                      const std::string& key,
+                                      const std::string& named_method_key)
+ -> std::optional<screener::ScreenerMethod>
+{
+  const auto is_param_exists = parameters.contains(key);
+
+  if(parameters.contains(key)) {
+    return config_parser.parse_method(parameters[key]);
+  }
+
+  if(config_parser.contains_named_method(named_method_key)) {
+    return config_parser.parse_method(named_method_key);
+  }
+
+  return std::nullopt;
 }
 
 template<typename T>
@@ -69,7 +90,27 @@ static auto parse_atr_method(ConfigParser::Parser config_parser,
  -> screener::ScreenerMethod
 {
   const auto period = parameters["period"].get<std::size_t>();
-  const auto atr_method = screener::AtrMethod{period};
+
+  auto high_result =
+   get_param_or_named_method(config_parser, parameters, "high", "high");
+  if(!high_result.has_value()) {
+    throw std::invalid_argument{"High method is not found"};
+  }
+
+  auto low_result =
+   get_param_or_named_method(config_parser, parameters, "low", "low");
+  if(!low_result.has_value()) {
+    throw std::invalid_argument{"Low method is not found"};
+  }
+
+  auto close_result =
+   get_param_or_named_method(config_parser, parameters, "close", "close");
+  if(!close_result.has_value()) {
+    throw std::invalid_argument{"Close method is not found"};
+  }
+
+  const auto atr_method = screener::AtrMethod{
+   high_result.value(), low_result.value(), close_result.value(), period};
   return atr_method;
 }
 
@@ -412,6 +453,12 @@ auto ConfigParser::Parser::parse_filter(const nlohmann::json& config)
 
   const auto error_message = std::format("Unknown filter: {}", filter);
   throw std::invalid_argument{error_message};
+}
+
+auto ConfigParser::Parser::contains_named_method(
+ const std::string& name) const noexcept -> bool
+{
+  return config_parser_.named_config_methods_.contains(name);
 }
 
 } // namespace pludux

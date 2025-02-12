@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <pludux/asset_history.hpp>
 #include <pludux/screener/atr_method.hpp>
+#include <pludux/screener/data_method.hpp>
 #include <pludux/series.hpp>
 
 using namespace pludux::screener;
@@ -9,7 +10,8 @@ using pludux::AssetSnapshot;
 TEST(AtrMethodTest, RunOneMethod)
 {
   const auto period = 5;
-  const auto atr_method = AtrMethod{period};
+  const auto atr_method = AtrMethod{
+   DataMethod{"high"}, DataMethod{"low"}, DataMethod{"close"}, period};
   const auto asset_data = pludux::AssetHistory{
    {"high", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
    {"low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},
@@ -22,7 +24,8 @@ TEST(AtrMethodTest, RunOneMethod)
 TEST(AtrMethodTest, RunAllMethod)
 {
   const auto period = 5;
-  const auto atr_method = AtrMethod{period};
+  const auto atr_method = AtrMethod{
+   DataMethod{"high"}, DataMethod{"low"}, DataMethod{"close"}, period};
   const auto asset_data = pludux::AssetHistory{
    {"high", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
    {"low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},

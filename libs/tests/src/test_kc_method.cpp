@@ -14,7 +14,8 @@ TEST(KcMethodTest, middle_EMA_range_ATR)
 {
   const auto data_method = DataMethod{"close"};
   const auto ma_method = EmaMethod{5, data_method, 0};
-  const auto range_method = AtrMethod{4};
+  const auto range_method =
+   AtrMethod{DataMethod{"high"}, DataMethod{"low"}, DataMethod{"close"}, 4};
   const auto multiplier = 2.0;
   const auto asset_data = pludux::AssetHistory{
    {"high", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
@@ -130,7 +131,8 @@ TEST(KcMethodTest, middle_EMA_range_ATR_with_offset)
 {
   const auto data_method = DataMethod{"close"};
   const auto ma_method = EmaMethod{5, data_method, 0};
-  const auto range_method = AtrMethod{4};
+  const auto range_method =
+   AtrMethod{DataMethod{"high"}, DataMethod{"low"}, DataMethod{"close"}, 4};
   const auto multiplier = 2.0;
   const auto offset = 1;
   auto kc_method =

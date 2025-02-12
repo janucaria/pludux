@@ -22,6 +22,8 @@ public:
 
     auto parse_filter(const nlohmann::json& config) -> screener::ScreenerFilter;
 
+    auto contains_named_method(const std::string& name) const noexcept -> bool;
+
   private:
     ConfigParser& config_parser_;
   };

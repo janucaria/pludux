@@ -15,6 +15,38 @@ protected:
   void SetUp() override
   {
     config_parser.register_default_parsers();
+
+    config_parser.parse_method(json::parse(R"(
+      {
+        "method": "DATA",
+        "name": "high",
+        "field": "high"
+      }
+    )"));
+
+    config_parser.parse_method(json::parse(R"(
+      {
+        "method": "DATA",
+        "name": "low",
+        "field": "low"
+      }
+    )"));
+
+    config_parser.parse_method(json::parse(R"(
+      {
+        "method": "DATA",
+        "name": "close",
+        "field": "close"
+      }
+    )"));
+
+    config_parser.parse_method(json::parse(R"(
+      {
+        "method": "DATA",
+        "name": "volume",
+        "field": "volume"
+      }
+    )"));
   }
 };
 

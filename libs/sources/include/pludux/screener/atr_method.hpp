@@ -4,20 +4,28 @@
 #include <cstddef>
 
 #include <pludux/asset_snapshot.hpp>
-#include <pludux/series.hpp>
+#include <pludux/screener/screener_method.hpp>
 
 namespace pludux::screener {
 
 class AtrMethod {
 public:
-  explicit AtrMethod(std::size_t period, std::size_t offset = 0);
+  explicit AtrMethod(ScreenerMethod high,
+                     ScreenerMethod low,
+                     ScreenerMethod close,
+                     std::size_t period,
+                     std::size_t offset = 0);
 
-  auto
-  operator()(AssetSnapshot asset_data) const -> SubSeries<PolySeries<double>>;
+  auto operator()(AssetSnapshot asset_data) const
+   -> SubSeries<PolySeries<double>>;
 
 private:
   std::size_t period_;
   std::size_t offset_;
+
+  ScreenerMethod high_;
+  ScreenerMethod low_;
+  ScreenerMethod close_;
 };
 
 } // namespace pludux::screener
