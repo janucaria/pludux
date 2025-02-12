@@ -372,6 +372,17 @@ auto ConfigParser::parse_method(const nlohmann::json& config)
   return parser().parse_method(config);
 }
 
+auto ConfigParser::parse_named_method(const std::string& name)
+ -> screener::ScreenerMethod
+{
+  if(!named_config_methods_.contains(name)) {
+    const auto error_message = std::format("Unknown named method: {}", name);
+    throw std::invalid_argument{error_message};
+  }
+
+  return parser().parse_method(named_config_methods_.at(name));
+}
+
 ConfigParser::Parser::Parser(ConfigParser& config_parser)
 : config_parser_{config_parser}
 {
