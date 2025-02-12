@@ -14,6 +14,7 @@ public:
                      ScreenerMethod low,
                      ScreenerMethod close,
                      std::size_t period,
+                     double multiplier = 1.0,
                      std::size_t offset = 0);
 
   auto operator()(AssetSnapshot asset_data) const
@@ -21,6 +22,7 @@ public:
 
 private:
   std::size_t period_;
+  double multiplier_;
   std::size_t offset_;
 
   ScreenerMethod high_;

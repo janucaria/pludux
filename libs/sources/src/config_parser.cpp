@@ -92,6 +92,8 @@ static auto parse_atr_method(ConfigParser::Parser config_parser,
  -> screener::ScreenerMethod
 {
   const auto period = parameters["period"].get<std::size_t>();
+  const auto multiplier = get_param_or(parameters, "multiplier", 1.0);
+  const auto offset = get_param_or(parameters, "offset", std::size_t{0});
 
   auto high_result =
    get_param_or_named_method(config_parser, parameters, "high", "high");
@@ -111,8 +113,12 @@ static auto parse_atr_method(ConfigParser::Parser config_parser,
     throw std::invalid_argument{"Close method is not found"};
   }
 
-  const auto atr_method = screener::AtrMethod{
-   high_result.value(), low_result.value(), close_result.value(), period};
+  const auto atr_method = screener::AtrMethod{high_result.value(),
+                                              low_result.value(),
+                                              close_result.value(),
+                                              period,
+                                              multiplier,
+                                              offset};
   return atr_method;
 }
 

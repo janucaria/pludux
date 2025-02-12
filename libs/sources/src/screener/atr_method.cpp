@@ -4,7 +4,7 @@
 
 #include <pludux/asset_snapshot.hpp>
 #include <pludux/screener/atr_method.hpp>
-#include <pludux/ta.hpp>
+#include <pludux/series/atr_series.hpp>
 
 namespace pludux::screener {
 
@@ -12,8 +12,10 @@ AtrMethod::AtrMethod(ScreenerMethod high,
                      ScreenerMethod low,
                      ScreenerMethod close,
                      std::size_t period,
+                     double multiplier,
                      std::size_t offset)
 : period_{period}
+, multiplier_{multiplier}
 , offset_{offset}
 , high_{std::move(high)}
 , low_{std::move(low)}
@@ -28,7 +30,9 @@ auto AtrMethod::operator()(AssetSnapshot asset_data) const
   const auto low_series = low_(asset_data);
   const auto close_series = close_(asset_data);
 
-  const auto atr = ta::atr(high_series, low_series, close_series, period_);
+  const auto atr =
+   AtrSeries{high_series, low_series, close_series, period_, multiplier_};
+
   return SubSeries{PolySeries<double>{atr},
                    static_cast<std::ptrdiff_t>(offset_)};
 }
