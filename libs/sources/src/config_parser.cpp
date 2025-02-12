@@ -52,12 +52,14 @@ static auto parse_ta_with_period_method(ConfigParser::Parser config_parser,
   const auto offset =
    parameters.contains("offset") ? parameters["offset"].get<int>() : 0;
 
-  const auto is_target_exists = parameters.contains("target");
-  const auto target_method = is_target_exists
-                              ? config_parser.parse_method(parameters["target"])
-                              : screener::DataMethod{"close", 0};
+  const auto target_method =
+   get_param_or_named_method(config_parser, parameters, "target", "close");
 
-  const auto ta_method = T{period, target_method, offset};
+  if(!target_method.has_value()) {
+    throw std::invalid_argument{"Target method is not found"};
+  }
+
+  const auto ta_method = T{period, target_method.value(), offset};
   return ta_method;
 }
 
