@@ -54,6 +54,9 @@ public:
 
   auto parse_named_method(const std::string& name) -> screener::ScreenerMethod;
 
+  auto get_named_methods()
+   -> std::unordered_map<std::string, screener::ScreenerMethod>;
+
 private:
   std::unordered_map<std::string, FilterParser> filter_parsers_;
   std::unordered_map<std::string, MethodParser> method_parsers_;

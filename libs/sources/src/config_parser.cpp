@@ -389,6 +389,17 @@ auto ConfigParser::parse_named_method(const std::string& name)
   return parser().parse_method(named_config_methods_.at(name));
 }
 
+auto ConfigParser::get_named_methods()
+ -> std::unordered_map<std::string, screener::ScreenerMethod>
+{
+  auto named_methods =
+   std::unordered_map<std::string, screener::ScreenerMethod>{};
+  for(const auto& [name, config] : named_config_methods_) {
+    named_methods.emplace(name, parser().parse_method(config));
+  }
+  return named_methods;
+}
+
 ConfigParser::Parser::Parser(ConfigParser& config_parser)
 : config_parser_{config_parser}
 {
