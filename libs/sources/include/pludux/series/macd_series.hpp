@@ -11,49 +11,75 @@
 
 namespace pludux {
 
+enum class MacdOutput { macd, signal, histogram };
+
 template<typename TSeries>
 class MacdSeries {
 public:
   using ValueType = typename TSeries::ValueType;
 
-  MacdSeries(TSeries series,
-                      std::size_t short_period,
-                      std::size_t long_period)
-  : series_{std::move(series)}
+  MacdSeries(TSeries input,
+             MacdOutput output,
+             std::size_t short_period,
+             std::size_t long_period,
+             std::size_t signal_period)
+  : input_{std::move(input)}
+  , output_{output}
   , short_period_{short_period}
   , long_period_{long_period}
+  , signal_period_{signal_period}
   {
   }
 
   auto operator[](std::size_t index) const noexcept -> ValueType
   {
-    const auto series = RefSeries{series_};
-    const auto short_ema = EmaSeries{series, short_period_}[index];
-    const auto long_ema = EmaSeries{series, long_period_}[index];
+    const auto input_series = RefSeries{input_};
+    const auto short_ema_series = EmaSeries{input_series, short_period_};
+    const auto long_ema_series = EmaSeries{input_series, long_period_};
+    const auto macd_series = SubtractSeries{short_ema_series, long_ema_series};
 
-    return short_ema - long_ema;
+    const auto macd = macd_series[index];
+
+    const auto signal_series = EmaSeries{macd_series, signal_period_};
+    const auto signal = signal_series[index];
+
+    switch(output_) {
+    case MacdOutput::signal:
+      return signal;
+    case MacdOutput::histogram:
+      return macd - signal;
+    case MacdOutput::macd:
+    default:
+      return macd;
+    }
   }
 
   auto size() const noexcept -> std::size_t
   {
-    return series_.size();
+    return input_.size();
   }
 
-  auto signal(std::size_t signal_period) const noexcept -> EmaSeries<MacdSeries>
+  auto input() const noexcept
   {
-    return EmaSeries{*this, signal_period};
+    return input_;
   }
 
-  auto histogram(std::size_t signal_period) const noexcept
-   -> SubtractSeries<MacdSeries, EmaSeries<MacdSeries>>
+  auto output() const noexcept -> MacdOutput
   {
-    return SubtractSeries{*this, signal(signal_period)};
+    return output_;
+  }
+
+  void output(MacdOutput output) noexcept
+  {
+    output_ = output;
   }
 
 private:
-  TSeries series_;
+  TSeries input_;
+  MacdOutput output_;
   std::size_t short_period_;
   std::size_t long_period_;
+  std::size_t signal_period_;
 };
 
 } // namespace pludux

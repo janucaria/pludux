@@ -205,13 +205,11 @@ TEST(TATest, MacdSeriesCalculation)
   const auto short_period = 5;
   const auto long_period = 10;
   const auto signal_period = 3;
-  const auto macd_lines = ta::macd(series, short_period, long_period);
-  const auto signal_lines = macd_lines.signal(signal_period);
-  const auto histograms = macd_lines.histogram(signal_period);
+  auto macd_series = ta::macd(series, short_period, long_period, signal_period);
 
-  ASSERT_EQ(macd_lines.size(), series.size());
-  ASSERT_EQ(signal_lines.size(), series.size());
-  ASSERT_EQ(histograms.size(), series.size());
+  ASSERT_EQ(macd_series.size(), series.size());
+
+  const auto& macd_lines = macd_series;
   EXPECT_DOUBLE_EQ(macd_lines[0], -12.656409004137572);
   EXPECT_DOUBLE_EQ(macd_lines[1], -7.6929729699789959);
   EXPECT_DOUBLE_EQ(macd_lines[2], -3.2941210218015158);
@@ -228,6 +226,8 @@ TEST(TATest, MacdSeriesCalculation)
   EXPECT_TRUE(std::isnan(macd_lines[8]));
   EXPECT_TRUE(std::isnan(macd_lines[9]));
 
+  macd_series.output(MacdOutput::signal);
+  const auto& signal_lines = macd_series;
   EXPECT_DOUBLE_EQ(signal_lines[0], -8.2285071355347075);
   EXPECT_DOUBLE_EQ(signal_lines[1], -3.8006052669318442);
   EXPECT_DOUBLE_EQ(signal_lines[2], 0.091762436115307766);
@@ -244,6 +244,8 @@ TEST(TATest, MacdSeriesCalculation)
   EXPECT_TRUE(std::isnan(signal_lines[8]));
   EXPECT_TRUE(std::isnan(signal_lines[9]));
 
+  macd_series.output(MacdOutput::histogram);
+  const auto& histograms = macd_series;
   EXPECT_DOUBLE_EQ(histograms[0], -4.4279018686028646);
   EXPECT_DOUBLE_EQ(histograms[1], -3.8923677030471517);
   EXPECT_DOUBLE_EQ(histograms[2], -3.3858834579168233);
@@ -359,9 +361,9 @@ TEST(TATest, BbSeriesCalculation)
   const auto period = 5;
   const auto stddev = 2;
   auto result = ta::bb(series, period, stddev);
-  
+
   ASSERT_EQ(result.size(), series.size());
-  
+
   const auto& middle_band = result;
   EXPECT_DOUBLE_EQ(middle_band[0], 862);
   EXPECT_DOUBLE_EQ(middle_band[1], 865);

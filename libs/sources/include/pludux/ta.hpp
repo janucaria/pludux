@@ -65,10 +65,16 @@ auto atr(TSeries highs, TSeries lows, TSeries closes, std::size_t period)
 }
 
 template<typename TSeries>
-auto macd(TSeries series, std::size_t short_period, std::size_t long_period)
- -> MacdSeries<TSeries>
+auto macd(TSeries series,
+          std::size_t short_period,
+          std::size_t long_period,
+          std::size_t signal_period) -> MacdSeries<TSeries>
 {
-  return MacdSeries{std::move(series), short_period, long_period};
+  return MacdSeries{std::move(series),
+                    MacdOutput::macd,
+                    short_period,
+                    long_period,
+                    signal_period};
 }
 
 template<typename TSeries>

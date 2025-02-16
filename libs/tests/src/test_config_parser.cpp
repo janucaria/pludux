@@ -297,6 +297,39 @@ TEST_F(ConfigParserTest, ParseScreenerBbMethod)
   EXPECT_EQ(bb_method->offset(), 0);
 }
 
+TEST_F(ConfigParserTest, ParseScreenerMacdMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "MACD",
+      "output": "macd",
+      "fast": 12,
+      "slow": 26,
+      "signal": 9,
+      "offset": 0,
+      "input": {
+        "method": "DATA",
+        "field": "close",
+        "offset": 0
+      }
+    }
+  )");
+
+  const auto method = config_parser.parse_method(config);
+  const auto macd_method = screener_method_cast<MacdMethod>(method);
+
+  ASSERT_NE(macd_method, nullptr);
+
+  const auto input = screener_method_cast<DataMethod>(macd_method->input());
+
+  EXPECT_NE(input, nullptr);
+  EXPECT_EQ(macd_method->output(), MacdOutput::macd);
+  EXPECT_EQ(macd_method->fast_period(), 12);
+  EXPECT_EQ(macd_method->slow_period(), 26);
+  EXPECT_EQ(macd_method->signal_period(), 9);
+  EXPECT_EQ(macd_method->offset(), 0);
+}
+
 TEST_F(ConfigParserTest, ParseScreenerKcMethod)
 {
   const auto config = json::parse(R"(

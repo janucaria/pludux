@@ -7,6 +7,7 @@
 #include "screener/bullish_divergence_method.hpp"
 #include "screener/data_method.hpp"
 #include "screener/hidden_bullish_divergence_method.hpp"
+#include "screener/macd_method.hpp"
 #include "screener/ta_with_period_method.hpp"
 #include "screener/value_method.hpp"
 #include "screener/abs_diff_method.hpp"

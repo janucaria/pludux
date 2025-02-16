@@ -358,6 +358,42 @@ void ConfigParser::register_default_parsers()
    });
 
   register_method_parser(
+   "MACD",
+   [](ConfigParser::Parser config_parser,
+      const nlohmann::json& parameters) -> screener::ScreenerMethod {
+     const auto output_param =
+      get_param_or<std::string>(parameters, "output", "macd");
+
+     auto output = MacdOutput::macd;
+     if(output_param == "macd") {
+       output = MacdOutput::macd;
+     } else if(output_param == "signal") {
+       output = MacdOutput::signal;
+     } else if(output_param == "histogram") {
+       output = MacdOutput::histogram;
+     } else {
+       const auto error_message =
+        std::format("Error MACD.output: Unknown output {}", output_param);
+       throw std::invalid_argument{error_message};
+     }
+
+     const auto fast = get_param_or<std::size_t>(parameters, "fast", 12);
+     const auto slow = get_param_or<std::size_t>(parameters, "slow", 26);
+     const auto signal = get_param_or<std::size_t>(parameters, "signal", 9);
+     const auto offset = get_param_or<std::size_t>(parameters, "offset", 0);
+     const auto input =
+      get_param_or_named_method(config_parser, parameters, "input", "close");
+
+     if(!input.has_value()) {
+       throw std::invalid_argument{"MACD.input method is not found"};
+     }
+
+     const auto macd_method =
+      screener::MacdMethod{input.value(), output, fast, slow, signal, offset};
+     return macd_method;
+   });
+
+  register_method_parser(
    "ADD",
    [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {
      return parse_binary_function_method<screener::AddMethod>(
