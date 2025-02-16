@@ -275,10 +275,12 @@ TEST(TATest, StochSeriesCalculation)
   const auto k_period = 5;
   const auto k_smooth = 3;
   const auto d_period = 3;
-  const auto stochastic =
-   ta::stoch(highs_series, lows_series, closes_series, k_period);
-  const auto k = stochastic.k(k_smooth);
-  const auto d = stochastic.d(k, d_period);
+  auto stochastic = ta::stoch(
+   highs_series, lows_series, closes_series, k_period, k_smooth, d_period);
+  const auto k = stochastic;
+
+  stochastic.output(StochOutput::d);
+  const auto d = stochastic;
 
   ASSERT_EQ(k.size(), highs_series.size());
   ASSERT_EQ(d.size(), highs_series.size());

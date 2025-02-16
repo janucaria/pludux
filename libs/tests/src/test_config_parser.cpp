@@ -330,6 +330,53 @@ TEST_F(ConfigParserTest, ParseScreenerMacdMethod)
   EXPECT_EQ(macd_method->offset(), 0);
 }
 
+TEST_F(ConfigParserTest, ParseScreenerStochMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "STOCH",
+      "output": "k",
+      "kPeriod": 5,
+      "kSmooth": 3,
+      "dPeriod": 3,
+      "offset": 0,
+      "high": {
+        "method": "DATA",
+        "field": "high",
+        "offset": 0
+      },
+      "low": {
+        "method": "DATA",
+        "field": "low",
+        "offset": 0
+      },
+      "close": {
+        "method": "DATA",
+        "field": "close",
+        "offset": 0
+      }
+    }
+  )");
+
+  const auto method = config_parser.parse_method(config);
+  const auto stoch_method = screener_method_cast<StochMethod>(method);
+
+  ASSERT_NE(stoch_method, nullptr);
+
+  const auto high = screener_method_cast<DataMethod>(stoch_method->high());
+  const auto low = screener_method_cast<DataMethod>(stoch_method->low());
+  const auto close = screener_method_cast<DataMethod>(stoch_method->close());
+
+  EXPECT_NE(high, nullptr);
+  EXPECT_NE(low, nullptr);
+  EXPECT_NE(close, nullptr);
+  EXPECT_EQ(stoch_method->output(), StochOutput::k);
+  EXPECT_EQ(stoch_method->k_period(), 5);
+  EXPECT_EQ(stoch_method->k_smooth(), 3);
+  EXPECT_EQ(stoch_method->d_period(), 3);
+  EXPECT_EQ(stoch_method->offset(), 0);
+}
+
 TEST_F(ConfigParserTest, ParseScreenerKcMethod)
 {
   const auto config = json::parse(R"(

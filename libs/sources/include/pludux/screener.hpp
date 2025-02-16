@@ -15,6 +15,7 @@
 #include "screener/arithmetic_method.hpp"
 #include "screener/changes_method.hpp"
 #include "screener/kc_method.hpp"
+#include "screener/stoch_method.hpp"
 
 #include "screener/screener_filter.hpp"
 #include "screener/all_of_filter.hpp"

@@ -394,6 +394,56 @@ void ConfigParser::register_default_parsers()
    });
 
   register_method_parser(
+   "STOCH",
+   [](ConfigParser::Parser config_parser,
+      const nlohmann::json& parameters) -> screener::ScreenerMethod {
+     const auto high =
+      get_param_or_named_method(config_parser, parameters, "high", "high");
+     if(!high.has_value()) {
+       throw std::invalid_argument{"STOCH.high method is not found"};
+     }
+
+     const auto low =
+      get_param_or_named_method(config_parser, parameters, "low", "low");
+     if(!low.has_value()) {
+       throw std::invalid_argument{"STOCH.low method is not found"};
+     }
+
+     const auto close =
+      get_param_or_named_method(config_parser, parameters, "close", "close");
+     if(!close.has_value()) {
+       throw std::invalid_argument{"STOCH.close method is not found"};
+     }
+
+     const auto output_param =
+      get_param_or<std::string>(parameters, "output", "k");
+
+     auto output = StochOutput::k;
+     if(output_param == "k") {
+       output = StochOutput::k;
+     } else if(output_param == "d") {
+       output = StochOutput::d;
+     } else {
+       const auto error_message =
+        std::format("STOCH.output: Unknown output {}", output_param);
+       throw std::invalid_argument{error_message};
+     }
+
+     const auto k_period = get_param_or<std::size_t>(parameters, "kPeriod", 5);
+     const auto k_smooth = get_param_or<std::size_t>(parameters, "kSmooth", 3);
+     const auto d_period = get_param_or<std::size_t>(parameters, "dPeriod", 3);
+
+     const auto stoch_method = screener::StochMethod{high.value(),
+                                                     low.value(),
+                                                     close.value(),
+                                                     output,
+                                                     k_period,
+                                                     k_smooth,
+                                                     d_period};
+     return stoch_method;
+   });
+
+  register_method_parser(
    "ADD",
    [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {
      return parse_binary_function_method<screener::AddMethod>(

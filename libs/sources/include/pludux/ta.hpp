@@ -78,11 +78,20 @@ auto macd(TSeries series,
 }
 
 template<typename TSeries>
-auto stoch(TSeries highs, TSeries lows, TSeries closes, std::size_t k_period)
- -> StochSeries<TSeries, TSeries, TSeries>
+auto stoch(TSeries highs,
+           TSeries lows,
+           TSeries closes,
+           std::size_t k_period,
+           std::size_t k_smooth,
+           std::size_t d_period) -> StochSeries<TSeries, TSeries, TSeries>
 {
-  return StochSeries{
-   std::move(highs), std::move(lows), std::move(closes), k_period};
+  return StochSeries{std::move(highs),
+                     std::move(lows),
+                     std::move(closes),
+                     StochOutput::k,
+                     k_period,
+                     k_smooth,
+                     d_period};
 }
 
 template<typename TSeries>
