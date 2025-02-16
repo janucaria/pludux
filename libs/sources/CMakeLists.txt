@@ -5,7 +5,7 @@ FetchContent_Declare(
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
   OVERRIDE_FIND_PACKAGE
-) 
+)
 
 find_package(nlohmann_json REQUIRED)
 
@@ -20,6 +20,7 @@ target_sources(${PROJECT_NAME}
 
     src/screener/abs_diff_method.cpp
     src/screener/atr_method.cpp
+    src/screener/bb_method.cpp
     src/screener/bullish_divergence_method.cpp
     src/screener/changes_method.cpp
     src/screener/data_method.cpp
@@ -46,6 +47,7 @@ target_sources(${PROJECT_NAME}
         include/pludux/screener/abs_diff_method.hpp 
         include/pludux/screener/arithmetic_method.hpp 
         include/pludux/screener/atr_method.hpp 
+        include/pludux/screener/bb_method.hpp 
         include/pludux/screener/bullish_divergence_method.hpp
         include/pludux/screener/changes_method.hpp 
         include/pludux/screener/data_method.hpp 

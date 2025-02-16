@@ -3,6 +3,7 @@
 
 #include "screener/screener_method.hpp"
 
+#include "screener/bb_method.hpp"
 #include "screener/bullish_divergence_method.hpp"
 #include "screener/data_method.hpp"
 #include "screener/hidden_bullish_divergence_method.hpp"

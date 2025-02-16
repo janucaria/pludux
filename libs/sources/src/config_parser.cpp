@@ -296,8 +296,67 @@ void ConfigParser::register_default_parsers()
                          parse_ta_with_period_method<screener::RvolMethod>);
 
   register_method_parser("ATR", parse_atr_method);
+
   register_method_parser("KC", parse_kc_method);
+
   register_method_parser("ABS_DIFF", parse_abs_diff_method);
+
+  register_method_parser(
+   "BB",
+   [](ConfigParser::Parser config_parser,
+      const nlohmann::json& parameters) -> screener::ScreenerMethod {
+     auto output = BbOutput::middle;
+     const auto param_output =
+      get_param_or<std::string>(parameters, "output", "middle");
+
+     if(param_output == "middle") {
+       output = BbOutput::middle;
+     } else if(param_output == "upper") {
+       output = BbOutput::upper;
+     } else if(param_output == "lower") {
+       output = BbOutput::lower;
+     } else {
+       const auto error_message =
+        std::format("Error BB.output: Unknown output {}", param_output);
+       throw std::invalid_argument{error_message};
+     }
+
+     auto ma_type = screener::BbMethod::MaType::sma;
+     const auto param_ma_type =
+      get_param_or<std::string>(parameters, "maType", "SMA");
+
+     if(param_ma_type == "SMA") {
+       ma_type = screener::BbMethod::MaType::sma;
+     } else if(param_ma_type == "EMA") {
+       ma_type = screener::BbMethod::MaType::ema;
+     } else if(param_ma_type == "WMA") {
+       ma_type = screener::BbMethod::MaType::wma;
+     } else if(param_ma_type == "RMA") {
+       ma_type = screener::BbMethod::MaType::rma;
+     } else if(param_ma_type == "HMA") {
+       ma_type = screener::BbMethod::MaType::hma;
+     } else {
+       const auto error_message =
+        std::format("Error BB.maType: Unknown maType {}", param_ma_type);
+       throw std::invalid_argument{error_message};
+     }
+
+     const auto input =
+      get_param_or_named_method(config_parser, parameters, "input", "close");
+
+     if(!input.has_value()) {
+       throw std::invalid_argument{"Input method is not found"};
+     }
+
+     const auto period = get_param_or(parameters, "period", std::size_t{20});
+     const auto stddev = get_param_or(parameters, "stddev", 2.0);
+
+     const auto bb_method =
+      screener::BbMethod{output, ma_type, input.value(), period, stddev};
+
+     return bb_method;
+   });
+
   register_method_parser(
    "ADD",
    [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {

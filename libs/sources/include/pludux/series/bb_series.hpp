@@ -13,77 +13,85 @@
 
 namespace pludux {
 
-template<typename TSeries, typename TMaSeries = SmaSeries<TSeries>>
+enum class BbOutput { middle, upper, lower };
+
+template<typename TMaSeries>
+  requires requires(TMaSeries ma) {
+    { ma.input() };
+    { ma.period() } -> std::same_as<std::size_t>;
+  }
 class BbSeries {
 public:
-  using ValueType = std::common_type_t<typename TSeries::ValueType,
-                                       typename TMaSeries::ValueType>;
+  using ValueType = std::common_type_t<double, typename TMaSeries::ValueType>;
 
-  BbSeries(TSeries series, std::size_t period, double stddev)
-  : series_{std::move(series)}
-  , period_{period}
+  BbSeries(BbOutput output, TMaSeries ma, double stddev)
+  : output_{output}
+  , ma_{std::move(ma)}
   , stddev_{stddev}
+  {
+  }
+
+  template<typename TSeries>
+  BbSeries(BbOutput output, TSeries input, std::size_t period, double stddev)
+  : BbSeries{output, SmaSeries{std::move(input), period}, stddev}
   {
   }
 
   auto operator[](std::size_t index) const noexcept -> ValueType
   {
-    const auto series_size = size();
-    const auto nan_index = series_size - period_;
-    if(index > nan_index) {
-      return std::numeric_limits<ValueType>::quiet_NaN();
-    }
-
-    const auto series = RefSeries{series_};
-    const auto ma_series = middle_band();
+    const auto period = ma_.period();
+    const auto& input = ma_.input();
 
     const auto begin = index;
-    const auto end = index + period_;
+    const auto end = index + period;
 
     auto sum_squared_diff = 0.0;
     for(auto i = begin; i < end; ++i) {
-      const auto diff = series[i] - ma_series[index];
+      const auto diff = input[i] - ma_[index];
       sum_squared_diff += diff * diff;
     }
 
-    const auto std_dev = sqrt(sum_squared_diff / period_);
+    const auto std_dev = sqrt(sum_squared_diff / period);
+    const auto std_dev_scaled = std_dev * stddev_;
 
-    return std_dev * stddev_;
-  }
-
-  auto
-  operator()() const noexcept -> std::tuple<TMaSeries,
-                                            AddSeries<TMaSeries, BbSeries>,
-                                            SubtractSeries<TMaSeries, BbSeries>>
-  {
-    return {middle_band(), upper_band(), lower_band()};
+    switch(output_) {
+    case BbOutput::upper:
+      return ma_[index] + std_dev_scaled;
+    case BbOutput::lower:
+      return ma_[index] - std_dev_scaled;
+    case BbOutput::middle:
+    default:
+      return ma_[index];
+    }
   }
 
   auto size() const noexcept -> std::size_t
   {
-    return series_.size();
+    return ma_.size();
   }
 
-  auto middle_band() const noexcept -> TMaSeries
+  auto output() const noexcept -> BbOutput
   {
-    return TMaSeries{series_, period_};
+    return output_;
   }
 
-  auto upper_band() const noexcept -> AddSeries<TMaSeries, BbSeries>
+  void output(BbOutput output) noexcept
   {
-    return AddSeries{middle_band(), *this};
-  }
-
-  auto lower_band() const noexcept -> SubtractSeries<TMaSeries, BbSeries>
-  {
-    return SubtractSeries{middle_band(), *this};
+    output_ = output;
   }
 
 private:
-  TSeries series_;
-  std::size_t period_;
+  BbOutput output_;
+  TMaSeries ma_;
   double stddev_;
 };
+
+template<typename TMaSeries>
+BbSeries(BbOutput, TMaSeries, double) -> BbSeries<TMaSeries>;
+
+template<typename TSeries>
+BbSeries(BbOutput, TSeries, std::size_t, double)
+ -> BbSeries<SmaSeries<TSeries>>;
 
 } // namespace pludux
 

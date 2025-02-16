@@ -48,6 +48,16 @@ public:
     return series_.size();
   }
 
+  auto input() const noexcept -> const TSeries&
+  {
+    return series_;
+  }
+
+  auto period() const noexcept -> std::size_t
+  {
+    return period_;
+  }
+
 private:
   TSeries series_;
   std::size_t period_;

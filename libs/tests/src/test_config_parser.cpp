@@ -264,6 +264,39 @@ TEST_F(ConfigParserTest, ParseScreenerDataMethod)
   EXPECT_EQ(field_method->offset(), 0);
 }
 
+TEST_F(ConfigParserTest, ParseScreenerBbMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "BB",
+      "output": "upper",
+      "maType": "SMA",
+      "period": 20,
+      "stddev": 2.0,
+      "offset": 0,
+      "input": {
+        "method": "DATA",
+        "field": "close",
+        "offset": 0
+      }
+    }
+  )");
+
+  const auto method = config_parser.parse_method(config);
+  const auto bb_method = screener_method_cast<BbMethod>(method);
+
+  ASSERT_NE(bb_method, nullptr);
+
+  const auto input = screener_method_cast<DataMethod>(bb_method->input());
+
+  EXPECT_NE(input, nullptr);
+  EXPECT_EQ(bb_method->output(), BbOutput::upper);
+  EXPECT_EQ(bb_method->ma_type(), BbMethod::MaType::sma);
+  EXPECT_EQ(bb_method->period(), 20);
+  EXPECT_EQ(bb_method->stddev(), 2.0);
+  EXPECT_EQ(bb_method->offset(), 0);
+}
+
 TEST_F(ConfigParserTest, ParseScreenerKcMethod)
 {
   const auto config = json::parse(R"(

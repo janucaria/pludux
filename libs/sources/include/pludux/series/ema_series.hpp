@@ -38,8 +38,7 @@ public:
 
     const auto alpha = 2.0 / (period_ + 1);
     const auto sma_index = series_size - period_;
-    auto ema_value =
-     std::numeric_limits<ValueType>::quiet_NaN();
+    auto ema_value = std::numeric_limits<ValueType>::quiet_NaN();
     for(auto ii = series_size; ii > index; --ii) {
       const auto i = ii - 1;
       if(i > sma_index) {
@@ -64,6 +63,16 @@ public:
   auto size() const noexcept -> std::size_t
   {
     return series_.size();
+  }
+
+  auto input() const noexcept -> const TSeries&
+  {
+    return series_;
+  }
+
+  auto period() const noexcept -> std::size_t
+  {
+    return period_;
   }
 
 private:

@@ -358,13 +358,11 @@ TEST(TATest, BbSeriesCalculation)
    DataSeries<double>{855, 860, 860, 860, 875, 870, 835, 800, 830, 875};
   const auto period = 5;
   const auto stddev = 2;
-  const auto result = ta::bb(series, period, stddev);
-  const auto [middle_band, upper_band, lower_band] = result();
-
-  ASSERT_EQ(middle_band.size(), series.size());
-  ASSERT_EQ(upper_band.size(), series.size());
-  ASSERT_EQ(lower_band.size(), series.size());
-
+  auto result = ta::bb(series, period, stddev);
+  
+  ASSERT_EQ(result.size(), series.size());
+  
+  const auto& middle_band = result;
   EXPECT_DOUBLE_EQ(middle_band[0], 862);
   EXPECT_DOUBLE_EQ(middle_band[1], 865);
   EXPECT_DOUBLE_EQ(middle_band[2], 860);
@@ -376,6 +374,8 @@ TEST(TATest, BbSeriesCalculation)
   EXPECT_TRUE(std::isnan(middle_band[8]));
   EXPECT_TRUE(std::isnan(middle_band[9]));
 
+  result.output(BbOutput::upper);
+  const auto& upper_band = result;
   EXPECT_DOUBLE_EQ(upper_band[0], 875.56465996625059);
   EXPECT_DOUBLE_EQ(upper_band[1], 877.64911064067348);
   EXPECT_DOUBLE_EQ(upper_band[2], 887.5680975041804);
@@ -387,6 +387,8 @@ TEST(TATest, BbSeriesCalculation)
   EXPECT_TRUE(std::isnan(upper_band[8]));
   EXPECT_TRUE(std::isnan(upper_band[9]));
 
+  result.output(BbOutput::lower);
+  const auto& lower_band = result;
   EXPECT_DOUBLE_EQ(lower_band[0], 848.43534003374941);
   EXPECT_DOUBLE_EQ(lower_band[1], 852.35088935932652);
   EXPECT_DOUBLE_EQ(lower_band[2], 832.4319024958196);
