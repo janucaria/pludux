@@ -57,7 +57,7 @@ TEST_F(ConfigParserTest, ParseScreenerSmaMethod)
       "method": "SMA",
       "period": 14,
       "offset": 0,
-      "target": {
+      "input": {
         "method": "DATA",
         "field": "close",
         "offset": 0
@@ -73,11 +73,11 @@ TEST_F(ConfigParserTest, ParseScreenerSmaMethod)
   EXPECT_EQ(sma_method->period(), 14);
   EXPECT_EQ(sma_method->offset(), 0);
 
-  const auto target = screener_method_cast<DataMethod>(sma_method->target());
-  ASSERT_NE(target, nullptr);
+  const auto input = screener_method_cast<DataMethod>(sma_method->input());
+  ASSERT_NE(input, nullptr);
 
-  EXPECT_EQ(target->field(), "close");
-  EXPECT_EQ(target->offset(), 0);
+  EXPECT_EQ(input->field(), "close");
+  EXPECT_EQ(input->offset(), 0);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerEmaMethod)
@@ -87,7 +87,7 @@ TEST_F(ConfigParserTest, ParseScreenerEmaMethod)
       "method": "EMA",
       "period": 10,
       "offset": 1,
-      "target": {
+      "input": {
         "method": "DATA",
         "field": "open",
         "offset": 1
@@ -103,11 +103,11 @@ TEST_F(ConfigParserTest, ParseScreenerEmaMethod)
   EXPECT_EQ(ema_method->period(), 10);
   EXPECT_EQ(ema_method->offset(), 1);
 
-  const auto target = screener_method_cast<DataMethod>(ema_method->target());
-  ASSERT_NE(target, nullptr);
+  const auto input = screener_method_cast<DataMethod>(ema_method->input());
+  ASSERT_NE(input, nullptr);
 
-  EXPECT_EQ(target->field(), "open");
-  EXPECT_EQ(target->offset(), 1);
+  EXPECT_EQ(input->field(), "open");
+  EXPECT_EQ(input->offset(), 1);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerWmaMethod)
@@ -117,7 +117,7 @@ TEST_F(ConfigParserTest, ParseScreenerWmaMethod)
         "method": "WMA",
         "period": 20,
         "offset": 2,
-        "target": {
+        "input": {
           "method": "DATA",
           "field": "high",
           "offset": 2
@@ -133,11 +133,11 @@ TEST_F(ConfigParserTest, ParseScreenerWmaMethod)
   EXPECT_EQ(wma_method->period(), 20);
   EXPECT_EQ(wma_method->offset(), 2);
 
-  const auto target = screener_method_cast<DataMethod>(wma_method->target());
-  ASSERT_NE(target, nullptr);
+  const auto input = screener_method_cast<DataMethod>(wma_method->input());
+  ASSERT_NE(input, nullptr);
 
-  EXPECT_EQ(target->field(), "high");
-  EXPECT_EQ(target->offset(), 2);
+  EXPECT_EQ(input->field(), "high");
+  EXPECT_EQ(input->offset(), 2);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerRmaMethod)
@@ -147,7 +147,7 @@ TEST_F(ConfigParserTest, ParseScreenerRmaMethod)
         "method": "RMA",
         "period": 15,
         "offset": 3,
-        "target": {
+        "input": {
           "method": "DATA",
           "field": "low",
           "offset": 3
@@ -163,11 +163,11 @@ TEST_F(ConfigParserTest, ParseScreenerRmaMethod)
   EXPECT_EQ(rma_method->period(), 15);
   EXPECT_EQ(rma_method->offset(), 3);
 
-  const auto target = screener_method_cast<DataMethod>(rma_method->target());
-  ASSERT_NE(target, nullptr);
+  const auto input = screener_method_cast<DataMethod>(rma_method->input());
+  ASSERT_NE(input, nullptr);
 
-  EXPECT_EQ(target->field(), "low");
-  EXPECT_EQ(target->offset(), 3);
+  EXPECT_EQ(input->field(), "low");
+  EXPECT_EQ(input->offset(), 3);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerHmaMethod)
@@ -177,7 +177,7 @@ TEST_F(ConfigParserTest, ParseScreenerHmaMethod)
         "method": "HMA",
         "period": 25,
         "offset": 4,
-        "target": {
+        "input": {
           "method": "DATA",
           "field": "volume",
           "offset": 4
@@ -193,11 +193,11 @@ TEST_F(ConfigParserTest, ParseScreenerHmaMethod)
   EXPECT_EQ(hma_method->period(), 25);
   EXPECT_EQ(hma_method->offset(), 4);
 
-  const auto target = screener_method_cast<DataMethod>(hma_method->target());
-  ASSERT_NE(target, nullptr);
+  const auto input = screener_method_cast<DataMethod>(hma_method->input());
+  ASSERT_NE(input, nullptr);
 
-  EXPECT_EQ(target->field(), "volume");
-  EXPECT_EQ(target->offset(), 4);
+  EXPECT_EQ(input->field(), "volume");
+  EXPECT_EQ(input->offset(), 4);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerRsiMethod)
@@ -207,7 +207,7 @@ TEST_F(ConfigParserTest, ParseScreenerRsiMethod)
       "method": "RSI",
       "period": 14,
       "offset": 0,
-      "target": {
+      "input": {
         "method": "DATA",
         "field": "close",
         "offset": 0
@@ -223,11 +223,11 @@ TEST_F(ConfigParserTest, ParseScreenerRsiMethod)
   EXPECT_EQ(rsi_method->period(), 14);
   EXPECT_EQ(rsi_method->offset(), 0);
 
-  const auto target = screener_method_cast<DataMethod>(rsi_method->target());
-  ASSERT_NE(target, nullptr);
+  const auto input = screener_method_cast<DataMethod>(rsi_method->input());
+  ASSERT_NE(input, nullptr);
 
-  EXPECT_EQ(target->field(), "close");
-  EXPECT_EQ(target->offset(), 0);
+  EXPECT_EQ(input->field(), "close");
+  EXPECT_EQ(input->offset(), 0);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerValueMethod)
@@ -307,7 +307,7 @@ TEST_F(ConfigParserTest, ParseScreenerKcMethod)
         "method": "SMA",
         "period": 5,
         "offset": 0,
-        "target": {
+        "input": {
           "method": "DATA",
           "field": "close",
           "offset": 0
@@ -344,7 +344,7 @@ TEST_F(ConfigParserTest, ParseScreenMethodWithExtends)
       "name": "base",
       "period": 14,
       "offset": 1,
-      "target": {
+      "input": {
         "method": "DATA",
         "field": "close",
         "offset": 0
@@ -387,7 +387,7 @@ TEST_F(ConfigParserTest, ParseScreenMethodNamedMethod)
     {
       "method": "RSI",
       "period": 14,
-      "target": "foo"
+      "input": "foo"
     }
   )");
 
@@ -400,8 +400,8 @@ TEST_F(ConfigParserTest, ParseScreenMethodNamedMethod)
   const auto rsi_method = screener_method_cast<RsiMethod>(method);
   ASSERT_NE(rsi_method, nullptr);
 
-  const auto target = rsi_method->target();
-  const auto data_method = screener_method_cast<DataMethod>(target);
+  const auto input = rsi_method->input();
+  const auto data_method = screener_method_cast<DataMethod>(input);
   ASSERT_NE(data_method, nullptr);
 
   EXPECT_EQ(data_method->field(), "close");

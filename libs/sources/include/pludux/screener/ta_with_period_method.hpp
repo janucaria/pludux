@@ -16,17 +16,17 @@ namespace details {
 template<typename, typename T>
 class TaWithPeroidMethod {
 public:
-  TaWithPeroidMethod(int period, ScreenerMethod target, int offset)
+  TaWithPeroidMethod(int period, ScreenerMethod input, int offset)
   : period_(period)
   , offset_(offset)
-  , target_(std::move(target))
+  , input_(std::move(input))
   {
   }
 
   auto
   operator()(AssetSnapshot asset_data) const -> SubSeries<PolySeries<double>>
   {
-    const auto sources = target_(asset_data);
+    const auto sources = input_(asset_data);
     const auto series = T{}(sources, period_);
     return SubSeries{PolySeries<double>{series},
                      static_cast<std::ptrdiff_t>(offset_)};
@@ -42,15 +42,15 @@ public:
     return offset_;
   }
 
-  auto target() const noexcept -> const ScreenerMethod&
+  auto input() const noexcept -> const ScreenerMethod&
   {
-    return target_;
+    return input_;
   }
 
 private:
   std::size_t period_{};
   std::size_t offset_{};
-  ScreenerMethod target_;
+  ScreenerMethod input_;
 };
 
 inline constexpr auto sma_wrapper = []<typename TSeries>(TSeries series,
