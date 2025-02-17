@@ -24,5 +24,6 @@
 #include "screener/comparison_filter.hpp"
 #include "screener/crossover_filter.hpp"
 #include "screener/crossunder_filter.hpp"
+#include "screener/boolean_filter.hpp"
 
 #endif

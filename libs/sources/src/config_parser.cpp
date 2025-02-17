@@ -544,6 +544,18 @@ void ConfigParser::register_default_parsers()
                          parse_comparison_filter<screener::EqualFilter>);
   register_filter_parser("NOT_EQUAL",
                          parse_comparison_filter<screener::NotEqualFilter>);
+
+  register_filter_parser(
+   "TRUE",
+   [](ConfigParser::Parser, const nlohmann::json&) -> screener::ScreenerFilter {
+     return screener::TrueFilter{};
+   });
+
+  register_filter_parser(
+   "FALSE",
+   [](ConfigParser::Parser, const nlohmann::json&) -> screener::ScreenerFilter {
+     return screener::FalseFilter{};
+   });
 }
 
 void ConfigParser::register_filter_parser(const std::string& filter_name,
@@ -671,6 +683,14 @@ auto ConfigParser::Parser::parse_method(const nlohmann::json& config)
 auto ConfigParser::Parser::parse_filter(const nlohmann::json& config)
  -> screener::ScreenerFilter
 {
+  if(config.is_boolean()) {
+    if(config.get<bool>()) {
+      return screener::TrueFilter{};
+    }
+
+    return screener::FalseFilter{};
+  }
+
   const auto& filter_parsers = config_parser_.filter_parsers_;
   const auto filter = config["filter"].get<std::string>();
 

@@ -901,6 +901,34 @@ TEST_F(ConfigParserTest, ParseScreenerCrossoverFilter)
   EXPECT_EQ(reference->value(), 100);
 }
 
+TEST_F(ConfigParserTest, ParseScreenerTrueFilter)
+{
+  const auto config = json::parse(R"(
+    {
+      "filter": "TRUE"
+    }
+  )");
+
+  const auto filter = config_parser.parse_filter(config);
+
+  const auto true_filter = screener_filter_cast<TrueFilter>(filter);
+  ASSERT_NE(true_filter, nullptr);
+}
+
+TEST_F(ConfigParserTest, ParseScreenerFalseFilter)
+{
+  const auto config = json::parse(R"(
+    {
+      "filter": "FALSE"
+    }
+  )");
+
+  const auto filter = config_parser.parse_filter(config);
+
+  const auto false_filter = screener_filter_cast<FalseFilter>(filter);
+  ASSERT_NE(false_filter, nullptr);
+}
+
 TEST_F(ConfigParserTest, ParseScreenerInvalidFilter)
 {
   const auto config = json::parse(R"(
