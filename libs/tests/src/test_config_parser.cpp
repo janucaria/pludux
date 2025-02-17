@@ -1045,13 +1045,24 @@ TEST_F(ConfigParserTest, ParseScreenerXorFilter)
   ASSERT_NE(false_filter, nullptr);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerInvalidFilter)
+TEST_F(ConfigParserTest, ParseScreenerFilterIsInvalid)
 {
   const auto config = json::parse(R"(
     {
-      "filter": "invalid"
+      "filter": "invalid not existed filter should throw exception"
     }
   )");
 
-  EXPECT_THROW(config_parser.parse_filter(config), std::invalid_argument);
+  EXPECT_THROW(config_parser.parse_filter(config), std::exception);
+}
+
+TEST_F(ConfigParserTest, ParseScreenerFilterWithInvalidRequiredFields)
+{
+  const auto config = json::parse(R"(
+    {
+      "filter": "AND"
+    }
+  )");
+
+  EXPECT_THROW(config_parser.parse_filter(config), std::exception);
 }
