@@ -11,10 +11,10 @@ namespace pludux::screener {
 
 class StochMethod {
 public:
-  StochMethod(ScreenerMethod high,
+  StochMethod(StochOutput output,
+              ScreenerMethod high,
               ScreenerMethod low,
               ScreenerMethod close,
-              StochOutput output,
               std::size_t k_period,
               std::size_t k_smooth,
               std::size_t d_period,

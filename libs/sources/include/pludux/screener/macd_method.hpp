@@ -11,8 +11,8 @@ namespace pludux::screener {
 
 class MacdMethod {
 public:
-  MacdMethod(ScreenerMethod input,
-             MacdOutput output,
+  MacdMethod(MacdOutput output,
+             ScreenerMethod input,
              std::size_t fast_period,
              std::size_t slow_period,
              std::size_t signal_period,

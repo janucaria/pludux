@@ -70,8 +70,8 @@ auto macd(TSeries series,
           std::size_t long_period,
           std::size_t signal_period) -> MacdSeries<TSeries>
 {
-  return MacdSeries{std::move(series),
-                    MacdOutput::macd,
+  return MacdSeries{MacdOutput::macd,
+                    std::move(series),
                     short_period,
                     long_period,
                     signal_period};
@@ -85,10 +85,10 @@ auto stoch(TSeries highs,
            std::size_t k_smooth,
            std::size_t d_period) -> StochSeries<TSeries, TSeries, TSeries>
 {
-  return StochSeries{std::move(highs),
+  return StochSeries{StochOutput::k,
+                     std::move(highs),
                      std::move(lows),
                      std::move(closes),
-                     StochOutput::k,
                      k_period,
                      k_smooth,
                      d_period};

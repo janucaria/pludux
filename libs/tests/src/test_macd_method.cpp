@@ -31,9 +31,9 @@ TEST(MacdMethodTest, RunAllMethod)
                                                  875}}};
 
   auto macd_method = MacdMethod{
-   data_method, MacdOutput::macd, fast_period, slow_period, signal_period};
-  auto macd_series = MacdSeries{data_method(asset_data),
-                                MacdOutput::macd,
+   MacdOutput::macd, data_method, fast_period, slow_period, signal_period};
+  auto macd_series = MacdSeries{macd_method.output(),
+                                data_method(asset_data),
                                 fast_period,
                                 slow_period,
                                 signal_period};

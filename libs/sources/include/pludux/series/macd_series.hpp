@@ -18,8 +18,8 @@ class MacdSeries {
 public:
   using ValueType = typename TSeries::ValueType;
 
-  MacdSeries(TSeries input,
-             MacdOutput output,
+  MacdSeries(MacdOutput output,
+             TSeries input,
              std::size_t short_period,
              std::size_t long_period,
              std::size_t signal_period)

@@ -4,10 +4,10 @@
 
 namespace pludux::screener {
 
-StochMethod::StochMethod(ScreenerMethod high,
+StochMethod::StochMethod(StochOutput output,
+                         ScreenerMethod high,
                          ScreenerMethod low,
                          ScreenerMethod close,
-                         StochOutput output,
                          std::size_t k_period,
                          std::size_t k_smooth,
                          std::size_t d_period,
@@ -30,10 +30,10 @@ auto StochMethod::operator()(AssetSnapshot asset_data) const
   const auto low_series = low_(asset_data);
   const auto close_series = close_(asset_data);
 
-  const auto stoch = StochSeries{high_series,
+  const auto stoch = StochSeries{output_,
+                                 high_series,
                                  low_series,
                                  close_series,
-                                 output_,
                                  k_period_,
                                  k_smooth_,
                                  d_period_};

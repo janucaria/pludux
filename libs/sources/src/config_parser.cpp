@@ -373,7 +373,7 @@ void ConfigParser::register_default_parsers()
        output = MacdOutput::histogram;
      } else {
        const auto error_message =
-        std::format("Error MACD.output: Unknown output {}", output_param);
+        std::format("MACD.output: Unknown output {}", output_param);
        throw std::invalid_argument{error_message};
      }
 
@@ -389,7 +389,7 @@ void ConfigParser::register_default_parsers()
      }
 
      const auto macd_method =
-      screener::MacdMethod{input.value(), output, fast, slow, signal, offset};
+      screener::MacdMethod{output, input.value(), fast, slow, signal, offset};
      return macd_method;
    });
 
@@ -433,10 +433,10 @@ void ConfigParser::register_default_parsers()
      const auto k_smooth = get_param_or<std::size_t>(parameters, "kSmooth", 3);
      const auto d_period = get_param_or<std::size_t>(parameters, "dPeriod", 3);
 
-     const auto stoch_method = screener::StochMethod{high.value(),
+     const auto stoch_method = screener::StochMethod{output,
+                                                     high.value(),
                                                      low.value(),
                                                      close.value(),
-                                                     output,
                                                      k_period,
                                                      k_smooth,
                                                      d_period};

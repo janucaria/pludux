@@ -4,9 +4,8 @@
 
 namespace pludux::screener {
 
-MacdMethod::MacdMethod(ScreenerMethod input,
-                       MacdOutput output,
-
+MacdMethod::MacdMethod(MacdOutput output,
+                       ScreenerMethod input,
                        std::size_t fast_period,
                        std::size_t slow_period,
                        std::size_t signal_period,
@@ -26,7 +25,7 @@ auto MacdMethod::operator()(AssetSnapshot asset_data) const
   const auto input_series = input_(asset_data);
 
   const auto macd_series = MacdSeries{
-   input_series, output_, fast_period_, slow_period_, signal_period_};
+   output_, input_series, fast_period_, slow_period_, signal_period_};
 
   return SubSeries{PolySeries<double>{macd_series},
                    static_cast<std::ptrdiff_t>(offset_)};

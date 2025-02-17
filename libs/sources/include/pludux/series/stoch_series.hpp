@@ -20,10 +20,10 @@ public:
                                        typename TLowSeries::ValueType,
                                        typename TCloseSeries::ValueType>;
 
-  StochSeries(THighSeries highs,
+  StochSeries(StochOutput output,
+              THighSeries highs,
               TLowSeries lows,
               TCloseSeries closes,
-              StochOutput output,
               std::size_t k_period,
               std::size_t k_smooth,
               std::size_t d_period)

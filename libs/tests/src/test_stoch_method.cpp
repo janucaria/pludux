@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <pludux/asset_history.hpp>
-#include <pludux/screener/stoch_method.hpp>
 #include <pludux/screener/data_method.hpp>
+#include <pludux/screener/stoch_method.hpp>
 #include <pludux/series.hpp>
 
 using namespace pludux;
@@ -20,17 +20,17 @@ TEST(StochMethodTest, RunAllMethod)
    {"low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},
    {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
-  auto stoch_method = StochMethod{high_method,
+  auto stoch_method = StochMethod{StochOutput::k,
+                                  high_method,
                                   low_method,
                                   close_method,
-                                  StochOutput::k,
                                   k_period,
                                   k_smooth,
                                   d_period};
-  auto stoch_series = StochSeries{high_method(asset_data),
+  auto stoch_series = StochSeries{stoch_method.output(),
+                                  high_method(asset_data),
                                   low_method(asset_data),
                                   close_method(asset_data),
-                                  stoch_method.output(),
                                   k_period,
                                   k_smooth,
                                   d_period};
