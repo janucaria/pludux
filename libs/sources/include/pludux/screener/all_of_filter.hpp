@@ -19,7 +19,7 @@ public:
   auto filters() const -> const std::vector<ScreenerFilter>&;
 
 private:
-  std::vector<ScreenerFilter> filters_;
+  std::vector<ScreenerFilter> conditions_;
 };
 
 } // namespace pludux::screener

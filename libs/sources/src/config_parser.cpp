@@ -222,9 +222,13 @@ static auto parse_all_of_filter(ConfigParser::Parser config_parser,
                                 const nlohmann::json& parameters)
  -> screener::ScreenerFilter
 {
+  if(!parameters.contains("conditions")) {
+    throw std::invalid_argument{"ALL_OF: 'conditions' is not found"};
+  }
+
   auto filters = std::vector<screener::ScreenerFilter>{};
-  for(const auto& subFilter : parameters["filters"]) {
-    filters.push_back(config_parser.parse_filter(subFilter));
+  for(const auto& filter : parameters["conditions"]) {
+    filters.push_back(config_parser.parse_filter(filter));
   }
   return screener::AllOfFilter{filters};
 }
@@ -233,9 +237,12 @@ static auto parse_any_of_filter(ConfigParser::Parser config_parser,
                                 const nlohmann::json& parameters)
  -> screener::ScreenerFilter
 {
+  if(!parameters.contains("conditions")) {
+    throw std::invalid_argument{"ANY_OF: 'conditions' is not found"};
+  }
   auto filters = std::vector<screener::ScreenerFilter>{};
-  for(const auto& subFilter : parameters["filters"]) {
-    filters.push_back(config_parser.parse_filter(subFilter));
+  for(const auto& filter : parameters["conditions"]) {
+    filters.push_back(config_parser.parse_filter(filter));
   }
   return screener::AnyOfFilter{filters};
 }

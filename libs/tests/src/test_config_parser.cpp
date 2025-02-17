@@ -539,7 +539,7 @@ TEST_F(ConfigParserTest, ParseScreenerAllOfFilter)
   const auto config = json::parse(R"(
     {
       "filter": "ALL_OF",
-      "filters": [
+      "conditions": [
         {
           "filter": "GREATER_THAN",
           "threshold": {
@@ -590,7 +590,7 @@ TEST_F(ConfigParserTest, ParseScreenerAnyOfFilter)
   const auto config = json::parse(R"(
     {
       "filter": "ANY_OF",
-      "filters": [
+      "conditions": [
         {
           "filter": "GREATER_THAN",
           "threshold": {
