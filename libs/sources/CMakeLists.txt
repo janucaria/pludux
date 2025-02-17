@@ -28,6 +28,7 @@ target_sources(${PROJECT_NAME}
     src/screener/kc_method.cpp
     src/screener/macd_method.cpp
     src/screener/stoch_method.cpp
+    src/screener/stoch_rsi_method.cpp
     src/screener/value_method.cpp
 
     src/screener/all_of_filter.cpp
@@ -58,6 +59,7 @@ target_sources(${PROJECT_NAME}
         include/pludux/screener/macd_method.hpp
         include/pludux/screener/screener_method.hpp 
         include/pludux/screener/stoch_method.hpp 
+        include/pludux/screener/stoch_rsi_method.hpp 
         include/pludux/screener/ta_with_period_method.hpp 
         include/pludux/screener/value_method.hpp 
         

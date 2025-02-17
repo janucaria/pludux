@@ -310,18 +310,22 @@ TEST(TATest, StochSeriesCalculation)
 
 TEST(TATest, StochRSISeriesCalculation)
 {
-  const auto series = DataSeries<double>{
+  const auto rsi_input = DataSeries<double>{
    790, 810, 825, 840, 860, 855, 860, 860, 860, 875, 870, 835, 800, 830, 875};
   const auto rsi_period = 5;
   const auto k_period = 5;
   const auto k_smooth = 3;
   const auto d_period = 3;
-  const auto result = ta::stoch_rsi(series, rsi_period, k_period);
-  const auto k = result.k(k_smooth);
-  const auto d = result.d(k, d_period);
+  auto result =
+   ta::stoch_rsi(rsi_input, rsi_period, k_period, k_smooth, d_period);
 
-  ASSERT_EQ(k.size(), series.size());
-  ASSERT_EQ(d.size(), series.size());
+  const auto k = result;
+
+  result.output(StochOutput::d);
+  const auto d = result;
+
+  ASSERT_EQ(k.size(), rsi_input.size());
+  ASSERT_EQ(d.size(), rsi_input.size());
 
   EXPECT_DOUBLE_EQ(k[0], 0);
   EXPECT_DOUBLE_EQ(k[1], 0);

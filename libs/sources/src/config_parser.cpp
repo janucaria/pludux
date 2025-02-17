@@ -444,6 +444,47 @@ void ConfigParser::register_default_parsers()
    });
 
   register_method_parser(
+   "STOCH_RSI",
+   [](ConfigParser::Parser config_parser,
+      const nlohmann::json& parameters) -> screener::ScreenerMethod {
+     const auto rsi_input =
+      get_param_or_named_method(config_parser, parameters, "rsiInput", "close");
+     if(!rsi_input.has_value()) {
+       throw std::invalid_argument{"STOCH_RSI.rsiInput method is not found"};
+     }
+
+     const auto rsi_period =
+      get_param_or<std::size_t>(parameters, "rsiPeriod", 14);
+     const auto k_period = get_param_or<std::size_t>(parameters, "kPeriod", 5);
+     const auto k_smooth = get_param_or<std::size_t>(parameters, "kSmooth", 3);
+     const auto d_period = get_param_or<std::size_t>(parameters, "dPeriod", 3);
+     const auto offset = get_param_or<std::size_t>(parameters, "offset", 0);
+
+     const auto output_param =
+      get_param_or<std::string>(parameters, "output", "k");
+
+     auto output = StochOutput::k;
+     if(output_param == "k") {
+       output = StochOutput::k;
+     } else if(output_param == "d") {
+       output = StochOutput::d;
+     } else {
+       const auto error_message =
+        std::format("STOCH_RSI.output: Unknown output {}", output_param);
+       throw std::invalid_argument{error_message};
+     }
+
+     const auto stoch_rsi_method = screener::StochRsiMethod{output,
+                                                            rsi_input.value(),
+                                                            rsi_period,
+                                                            k_period,
+                                                            k_smooth,
+                                                            d_period,
+                                                            offset};
+     return stoch_rsi_method;
+   });
+
+  register_method_parser(
    "ADD",
    [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {
      return parse_binary_function_method<screener::AddMethod>(

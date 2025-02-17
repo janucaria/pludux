@@ -377,6 +377,41 @@ TEST_F(ConfigParserTest, ParseScreenerStochMethod)
   EXPECT_EQ(stoch_method->offset(), 0);
 }
 
+TEST_F(ConfigParserTest, ParseScreenerStochRsiMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "STOCH_RSI",
+      "output": "k",
+      "rsiPeriod": 14,
+      "kPeriod": 5,
+      "kSmooth": 3,
+      "dPeriod": 3,
+      "offset": 0,
+      "rsiInput": {
+        "method": "DATA",
+        "field": "close",
+        "offset": 0
+      }
+    }
+  )");
+
+  const auto method = config_parser.parse_method(config);
+  const auto stoch_rsi_method = screener_method_cast<StochRsiMethod>(method);
+
+  ASSERT_NE(stoch_rsi_method, nullptr);
+
+  const auto rsi_input = screener_method_cast<DataMethod>(stoch_rsi_method->rsi_input());
+
+  EXPECT_NE(rsi_input, nullptr);
+  EXPECT_EQ(stoch_rsi_method->output(), StochOutput::k);
+  EXPECT_EQ(stoch_rsi_method->rsi_period(), 14);
+  EXPECT_EQ(stoch_rsi_method->k_period(), 5);
+  EXPECT_EQ(stoch_rsi_method->k_smooth(), 3);
+  EXPECT_EQ(stoch_rsi_method->d_period(), 3);
+  EXPECT_EQ(stoch_rsi_method->offset(), 0);
+}
+
 TEST_F(ConfigParserTest, ParseScreenerKcMethod)
 {
   const auto config = json::parse(R"(

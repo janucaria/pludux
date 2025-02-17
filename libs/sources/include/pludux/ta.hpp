@@ -95,10 +95,14 @@ auto stoch(TSeries highs,
 }
 
 template<typename TSeries>
-auto stoch_rsi(TSeries series, std::size_t rsi_period, std::size_t k_period)
- -> StochRsiSeries<TSeries>
+auto stoch_rsi(TSeries series,
+               std::size_t rsi_period,
+               std::size_t k_period,
+               std::size_t k_smooth,
+               std::size_t d_period) -> StochRsiSeries<TSeries>
 {
-  return StochRsiSeries{std::move(series), rsi_period, k_period};
+  return StochRsiSeries{
+   StochOutput::k, std::move(series), rsi_period, k_period, k_smooth, d_period};
 }
 
 template<typename TSeries>
