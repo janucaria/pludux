@@ -929,6 +929,122 @@ TEST_F(ConfigParserTest, ParseScreenerFalseFilter)
   ASSERT_NE(false_filter, nullptr);
 }
 
+TEST_F(ConfigParserTest, ParseScreenerAndFilter)
+{
+  const auto config = json::parse(R"(
+    {
+      "filter": "AND",
+      "firstCondition":
+        {
+          "filter": "TRUE"
+        },
+
+      "secondCondition":
+        {
+          "filter": "FALSE"
+        }
+    }
+  )");
+
+  const auto filter = config_parser.parse_filter(config);
+
+  const auto and_filter = screener_filter_cast<AndFilter>(filter);
+  ASSERT_NE(and_filter, nullptr);
+
+  const auto first_condition = and_filter->first_condition();
+  const auto second_condition = and_filter->second_condition();
+
+  const auto true_filter = screener_filter_cast<TrueFilter>(first_condition);
+  const auto false_filter = screener_filter_cast<FalseFilter>(second_condition);
+
+  ASSERT_NE(true_filter, nullptr);
+  ASSERT_NE(false_filter, nullptr);
+}
+
+TEST_F(ConfigParserTest, ParseScreenerOrFilter)
+{
+  const auto config = json::parse(R"(
+    {
+      "filter": "OR",
+      "firstCondition":
+        {
+          "filter": "TRUE"
+        },
+
+      "secondCondition":
+        {
+          "filter": "FALSE"
+        }
+    }
+  )");
+
+  const auto filter = config_parser.parse_filter(config);
+
+  const auto or_filter = screener_filter_cast<OrFilter>(filter);
+  ASSERT_NE(or_filter, nullptr);
+
+  const auto first_condition = or_filter->first_condition();
+  const auto second_condition = or_filter->second_condition();
+
+  const auto true_filter = screener_filter_cast<TrueFilter>(first_condition);
+  const auto false_filter = screener_filter_cast<FalseFilter>(second_condition);
+
+  ASSERT_NE(true_filter, nullptr);
+  ASSERT_NE(false_filter, nullptr);
+}
+
+TEST_F(ConfigParserTest, ParseScreenerNotFilter)
+{
+  const auto config = json::parse(R"(
+    {
+      "filter": "NOT",
+      "condition": true
+    }
+  )");
+
+  const auto filter = config_parser.parse_filter(config);
+
+  const auto not_filter = screener_filter_cast<NotFilter>(filter);
+  ASSERT_NE(not_filter, nullptr);
+
+  const auto condition = not_filter->condition();
+  const auto true_filter = screener_filter_cast<TrueFilter>(condition);
+
+  ASSERT_NE(true_filter, nullptr);
+}
+
+TEST_F(ConfigParserTest, ParseScreenerXorFilter)
+{
+  const auto config = json::parse(R"(
+    {
+      "filter": "XOR",
+      "firstCondition":
+        {
+          "filter": "TRUE"
+        },
+
+      "secondCondition":
+        {
+          "filter": "FALSE"
+        }
+    }
+  )");
+
+  const auto filter = config_parser.parse_filter(config);
+
+  const auto xor_filter = screener_filter_cast<XorFilter>(filter);
+  ASSERT_NE(xor_filter, nullptr);
+
+  const auto first_condition = xor_filter->first_condition();
+  const auto second_condition = xor_filter->second_condition();
+
+  const auto true_filter = screener_filter_cast<TrueFilter>(first_condition);
+  const auto false_filter = screener_filter_cast<FalseFilter>(second_condition);
+
+  ASSERT_NE(true_filter, nullptr);
+  ASSERT_NE(false_filter, nullptr);
+}
+
 TEST_F(ConfigParserTest, ParseScreenerInvalidFilter)
 {
   const auto config = json::parse(R"(

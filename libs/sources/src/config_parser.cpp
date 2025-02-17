@@ -209,6 +209,33 @@ static auto parse_divergence_method(ConfigParser::Parser config_parser,
 }
 
 template<typename T>
+static auto parse_binary_function_filter(ConfigParser::Parser config_parser,
+                                         const nlohmann::json& parameters,
+                                         const std::string& first_operand_key,
+                                         const std::string& second_operand_key)
+ -> screener::ScreenerFilter
+{
+  const auto first_operand =
+   config_parser.parse_filter(parameters[first_operand_key]);
+  const auto second_operand =
+   config_parser.parse_filter(parameters[second_operand_key]);
+
+  const auto binary_function_filter = T{first_operand, second_operand};
+  return binary_function_filter;
+}
+
+template<typename T>
+static auto parse_unary_function_filter(ConfigParser::Parser config_parser,
+                                        const nlohmann::json& parameters,
+                                        const std::string& operand_key)
+ -> screener::ScreenerFilter
+{
+  const auto operand = config_parser.parse_filter(parameters[operand_key]);
+  const auto unary_function_filter = T{operand};
+  return unary_function_filter;
+}
+
+template<typename T>
 static auto parse_comparison_filter(ConfigParser::Parser config_parser,
                                     const nlohmann::json& parameters)
  -> screener::ScreenerFilter
@@ -555,6 +582,34 @@ void ConfigParser::register_default_parsers()
    "FALSE",
    [](ConfigParser::Parser, const nlohmann::json&) -> screener::ScreenerFilter {
      return screener::FalseFilter{};
+   });
+
+  register_filter_parser(
+   "AND",
+   [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {
+     return parse_binary_function_filter<screener::AndFilter>(
+      config_parser, parameters, "firstCondition", "secondCondition");
+   });
+
+  register_filter_parser(
+   "OR",
+   [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {
+     return parse_binary_function_filter<screener::OrFilter>(
+      config_parser, parameters, "firstCondition", "secondCondition");
+   });
+
+  register_filter_parser(
+   "NOT",
+   [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {
+     return parse_unary_function_filter<screener::NotFilter>(
+      config_parser, parameters, "condition");
+   });
+
+  register_filter_parser(
+   "XOR",
+   [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {
+     return parse_binary_function_filter<screener::XorFilter>(
+      config_parser, parameters, "firstCondition", "secondCondition");
    });
 }
 
