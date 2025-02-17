@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <format>
 #include <iterator>
 #include <stdexcept>
 #include <vector>
@@ -19,7 +20,8 @@ auto DataMethod::operator()(AssetSnapshot asset_data) const
  -> SubSeries<PolySeries<double>>
 {
   if(!asset_data.contains(field_)) {
-    throw std::runtime_error{"Field not found"};
+    const auto error_message = std::format("Data field '{}' not found", field_);
+    throw std::runtime_error{error_message};
   }
   return SubSeries<PolySeries<double>>{asset_data[field_],
                                        static_cast<std::ptrdiff_t>(offset_)};
