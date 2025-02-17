@@ -452,6 +452,22 @@ TEST_F(ConfigParserTest, ParseScreenerKcMethod)
   EXPECT_EQ(kc_method->multiplier(), 1.0);
 }
 
+TEST_F(ConfigParserTest, ParseScreenerPercentageMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "PERCENTAGE",
+      "total": 100,
+      "percent": 20
+    }
+  )");
+
+  const auto method = config_parser.parse_method(config);
+  const auto percentage_method = screener_method_cast<PercentageMethod>(method);
+
+  ASSERT_NE(percentage_method, nullptr);
+}
+
 TEST_F(ConfigParserTest, ParseScreenMethodWithExtends)
 {
   const auto base_config = json::parse(R"(

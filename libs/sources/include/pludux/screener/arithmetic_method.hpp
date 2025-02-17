@@ -22,8 +22,8 @@ public:
   {
   }
 
-  auto
-  operator()(AssetSnapshot asset_data) const -> SubSeries<PolySeries<double>>
+  auto operator()(AssetSnapshot asset_data) const
+   -> SubSeries<PolySeries<double>>
   {
     const auto operand1_series = operand1_(asset_data);
     const auto operand2_series = operand2_(asset_data);
@@ -51,8 +51,8 @@ public:
   {
   }
 
-  auto
-  operator()(AssetSnapshot asset_data) const -> SubSeries<PolySeries<double>>
+  auto operator()(AssetSnapshot asset_data) const
+   -> SubSeries<PolySeries<double>>
   {
     const auto operand_series = operand_(asset_data);
 
@@ -65,6 +65,22 @@ public:
 private:
   ScreenerMethod operand_;
   std::size_t offset_;
+};
+
+template<typename T = void>
+struct Percentages {
+  auto operator()(T a, T b) const -> T
+  {
+    return a / b * 100.0;
+  }
+};
+
+template<>
+struct Percentages<void> {
+  auto operator()(auto a, auto b) const
+  {
+    return a * (b / 100.0);
+  }
 };
 
 } // namespace details
@@ -95,6 +111,14 @@ class SubtractMethod
 
 class NegateMethod : public details::UnaryArithmeticMethod<std::negate<>> {
   using details::UnaryArithmeticMethod<std::negate<>>::UnaryArithmeticMethod;
+};
+
+class PercentageMethod
+: public details::BinaryArithmeticMethod<PercentageMethod,
+                                         details::Percentages<>> {
+  using details::BinaryArithmeticMethod<
+   PercentageMethod,
+   details::Percentages<>>::BinaryArithmeticMethod;
 };
 
 } // namespace pludux::screener

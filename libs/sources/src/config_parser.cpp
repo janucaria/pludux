@@ -549,6 +549,12 @@ void ConfigParser::register_default_parsers()
       config_parser, parameters, "operand");
    });
   register_method_parser(
+   "PERCENTAGE",
+   [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {
+     return parse_binary_function_method<screener::PercentageMethod>(
+      config_parser, parameters, "total", "percent");
+   });
+  register_method_parser(
    "BULLISH_DIVERGENCE",
    parse_divergence_method<screener::BullishDivergenceMethod>);
   register_method_parser(
