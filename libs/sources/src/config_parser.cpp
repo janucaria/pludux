@@ -533,6 +533,10 @@ void ConfigParser::register_default_parsers()
                          parse_comparison_filter<screener::GreaterEqualFilter>);
   register_filter_parser("LESS_EQUAL",
                          parse_comparison_filter<screener::LessEqualFilter>);
+  register_filter_parser("EQUAL",
+                         parse_comparison_filter<screener::EqualFilter>);
+  register_filter_parser("NOT_EQUAL",
+                         parse_comparison_filter<screener::NotEqualFilter>);
 }
 
 void ConfigParser::register_filter_parser(const std::string& filter_name,

@@ -401,7 +401,8 @@ TEST_F(ConfigParserTest, ParseScreenerStochRsiMethod)
 
   ASSERT_NE(stoch_rsi_method, nullptr);
 
-  const auto rsi_input = screener_method_cast<DataMethod>(stoch_rsi_method->rsi_input());
+  const auto rsi_input =
+   screener_method_cast<DataMethod>(stoch_rsi_method->rsi_input());
 
   EXPECT_NE(rsi_input, nullptr);
   EXPECT_EQ(stoch_rsi_method->output(), StochOutput::k);
@@ -758,6 +759,77 @@ TEST_F(ConfigParserTest, ParseScreenerLessEqualFilter)
 
   EXPECT_EQ(target->field(), "close");
   EXPECT_EQ(target->offset(), 0);
+}
+
+TEST_F(ConfigParserTest, ParseScreenerEqualFilter)
+{
+  const auto config = json::parse(R"(
+    {
+      "filter": "EQUAL",
+      "threshold": {
+        "method": "VALUE",
+        "value": 100
+      },
+      "target": {
+        "method": "DATA",
+        "field": "close",
+        "offset": 0
+      }
+    }
+  )");
+
+  const auto filter = config_parser.parse_filter(config);
+
+  const auto equal_filter = screener_filter_cast<EqualFilter>(filter);
+  ASSERT_NE(equal_filter, nullptr);
+
+  const auto target = screener_method_cast<DataMethod>(equal_filter->target());
+  ASSERT_NE(target, nullptr);
+
+  EXPECT_EQ(target->field(), "close");
+  EXPECT_EQ(target->offset(), 0);
+
+  const auto threshold =
+   screener_method_cast<ValueMethod>(equal_filter->threshold());
+  ASSERT_NE(threshold, nullptr);
+
+  EXPECT_EQ(threshold->value(), 100);
+}
+
+TEST_F(ConfigParserTest, ParseScreenerNotEqualFilter)
+{
+  const auto config = json::parse(R"(
+    {
+      "filter": "NOT_EQUAL",
+      "threshold": {
+        "method": "VALUE",
+        "value": 100
+      },
+      "target": {
+        "method": "DATA",
+        "field": "close",
+        "offset": 0
+      }
+    }
+  )");
+
+  const auto filter = config_parser.parse_filter(config);
+
+  const auto not_equal_filter = screener_filter_cast<NotEqualFilter>(filter);
+  ASSERT_NE(not_equal_filter, nullptr);
+
+  const auto target =
+   screener_method_cast<DataMethod>(not_equal_filter->target());
+  ASSERT_NE(target, nullptr);
+
+  EXPECT_EQ(target->field(), "close");
+  EXPECT_EQ(target->offset(), 0);
+
+  const auto threshold =
+   screener_method_cast<ValueMethod>(not_equal_filter->threshold());
+  ASSERT_NE(threshold, nullptr);
+
+  EXPECT_EQ(threshold->value(), 100);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerCrossunderFilter)
