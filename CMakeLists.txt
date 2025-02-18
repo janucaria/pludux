@@ -1,7 +1,12 @@
-cmake_minimum_required(VERSION 3.23)
-project(pludux LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.25)
+project(pludux
+  VERSION 0.0.1
+  HOMEPAGE_URL "https://github.com/janucaria/pludux"
+  LANGUAGES CXX
+)
 
 include(CTest)
 include(FetchContent)
 
 add_subdirectory(libs)
+add_subdirectory(apps)
