@@ -1,0 +1,97 @@
+{
+  "capitalRisk": 100000,
+  "methods": [
+    {
+      "method": "DATA",
+      "name": "time",
+      "field": "Date"
+    },
+    {
+      "method": "DATA",
+      "name": "open",
+      "field": "Open"
+    },
+    {
+      "method": "DATA",
+      "name": "high",
+      "field": "High"
+    },
+    {
+      "method": "DATA",
+      "name": "low",
+      "field": "Low"
+    },
+    {
+      "method": "DATA",
+      "name": "close",
+      "field": "Close"
+    },
+    {
+      "method": "DATA",
+      "name": "volume",
+      "field": "Volume"
+    },
+    {
+      "method": "STOCH",
+      "name": "stoch-k",
+      "kPeriod": 14,
+      "kSmooth": 3,
+      "dSmooth": 3,
+      "output": "k"
+    },
+    {
+      "method": "STOCH",
+      "name": "stoch-d",
+      "extends": "stoch-k",
+      "output": "d"
+    },
+    {
+      "method": "VALUE",
+      "name": "overbought",
+      "value": 80
+    },
+    {
+      "method": "VALUE",
+      "name": "oversold",
+      "value": 20
+    }
+  ],
+  "entrySignal": {
+    "filter": "ALL_OF",
+    "conditions": [
+      {
+        "filter": "CROSSOVER",
+        "signal": "stoch-k",
+        "reference": "stoch-d"
+      },
+      {
+        "filter": "LESS_THAN",
+        "target": "stoch-k",
+        "threshold": "oversold"
+      }
+    ]
+  },
+  "exitSignal": {
+    "filter": "ALL_OF",
+    "conditions": [
+      {
+        "filter": "CROSSUNDER",
+        "signal": "stoch-k",
+        "reference": "stoch-d"
+      },
+      {
+        "filter": "GREATER_THAN",
+        "target": "stoch-k",
+        "threshold": "overbought"
+      }
+    ]
+  },
+  "stopLoss": {
+    "method": "PERCENTAGE",
+    "percent": 10
+  },
+  "takeProfit": {
+    "method": "PERCENTAGE",
+    "percent": 20
+  }
+}

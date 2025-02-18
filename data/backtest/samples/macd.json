@@ -1,0 +1,75 @@
+{
+  "capitalRisk": 100000,
+  "methods": [
+    {
+      "method": "DATA",
+      "name": "time",
+      "field": "Date"
+    },
+    {
+      "method": "DATA",
+      "name": "open",
+      "field": "Open"
+    },
+    {
+      "method": "DATA",
+      "name": "high",
+      "field": "High"
+    },
+    {
+      "method": "DATA",
+      "name": "low",
+      "field": "Low"
+    },
+    {
+      "method": "DATA",
+      "name": "close",
+      "field": "Close"
+    },
+    {
+      "method": "DATA",
+      "name": "volume",
+      "field": "Volume"
+    },
+    {
+      "method": "SMA",
+      "name": "ma-fast",
+      "period": 9,
+      "field": "close"
+    },
+    {
+      "method": "MACD",
+      "name": "macd-histogram",
+      "fast": 12,
+      "slow": 26,
+      "signal": 9,
+      "output": "histogram"
+    }
+  ],
+  "entrySignal": {
+    "filter": "CROSSOVER",
+    "signal": "macd-histogram",
+    "reference": {
+      "method": "VALUE",
+      "value": 0
+    }
+  },
+  "exitSignal": {
+    "filter": "CROSSUNDER",
+    "signal": "macd-histogram",
+    "reference": {
+      "method": "VALUE",
+      "value": 0
+    }
+  },
+  "stopLoss": {
+    "method": "ATR",
+    "period": 14,
+    "multiplier": 2
+  },
+  "takeProfit": {
+    "method": "ATR",
+    "period": 14,
+    "multiplier": 6
+  }
+}
