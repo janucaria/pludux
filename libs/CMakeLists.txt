@@ -1,7 +1,7 @@
-project(pludux LANGUAGES CXX)
+project(pludux-lib LANGUAGES CXX)
 
 add_subdirectory(sources)
 
-if(BUILD_TESTING)
+if(NOT EMSCRIPTEN AND BUILD_TESTING)
     add_subdirectory(tests)
 endif()

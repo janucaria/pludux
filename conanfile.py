@@ -15,7 +15,7 @@ class PluduxConan(ConanFile):
     default_options = {"shared": False, "fPIC": True}
 
     requires = [
-        "gtest/1.14.0"
+        "gtest/1.15.0"
     ]
 
     def config_options(self):
