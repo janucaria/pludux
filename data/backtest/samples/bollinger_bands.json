@@ -1,0 +1,68 @@
+{
+  "capitalRisk": 100000,
+  "methods": [
+    {
+      "method": "DATA",
+      "name": "time",
+      "field": "Date"
+    },
+    {
+      "method": "DATA",
+      "name": "open",
+      "field": "Open"
+    },
+    {
+      "method": "DATA",
+      "name": "high",
+      "field": "High"
+    },
+    {
+      "method": "DATA",
+      "name": "low",
+      "field": "Low"
+    },
+    {
+      "method": "DATA",
+      "name": "close",
+      "field": "Close"
+    },
+    {
+      "method": "DATA",
+      "name": "volume",
+      "field": "Volume"
+    },
+    {
+      "method": "BB",
+      "name": "bb-upper",
+      "period": 20,
+      "stddev": 2,
+      "output": "upper"
+    },
+    {
+      "method": "BB",
+      "name": "bb-lower",
+      "extends": "bb-upper",
+      "output": "lower"
+    }
+  ],
+  "entrySignal": {
+    "filter": "CROSSOVER",
+    "signal": "close",
+    "reference": "bb-lower"
+  },
+  "exitSignal": {
+    "filter": "CROSSUNDER",
+    "signal": "close",
+    "reference": "bb-upper"
+  },
+  "stopLoss": {
+    "method": "ATR",
+    "period": 14,
+    "multiplier": 2
+  },
+  "takeProfit": {
+    "method": "ATR",
+    "period": 14,
+    "multiplier": 6
+  }
+}

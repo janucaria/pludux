@@ -1,0 +1,101 @@
+{
+  "capitalRisk": 100000,
+  "methods": [
+    {
+      "method": "DATA",
+      "name": "time",
+      "field": "Date"
+    },
+    {
+      "method": "DATA",
+      "name": "open",
+      "field": "Open"
+    },
+    {
+      "method": "DATA",
+      "name": "high",
+      "field": "High"
+    },
+    {
+      "method": "DATA",
+      "name": "low",
+      "field": "Low"
+    },
+    {
+      "method": "DATA",
+      "name": "close",
+      "field": "Close"
+    },
+    {
+      "method": "DATA",
+      "name": "volume",
+      "field": "Volume"
+    },
+    {
+      "method": "STOCH_RSI",
+      "name": "stoch_rsi-k",
+      "kPeriod": 14,
+      "kSmooth": 3,
+      "dSmooth": 3,
+      "output": "k",
+      "rsiInput": "close",
+      "rsiPeriod": 14
+    },
+    {
+      "method": "STOCH_RSI",
+      "name": "stoch_rsi-d",
+      "extends": "stoch_rsi-k",
+      "output": "d"
+    },
+    {
+      "method": "VALUE",
+      "name": "overbought",
+      "value": 80
+    },
+    {
+      "method": "VALUE",
+      "name": "oversold",
+      "value": 20
+    }
+  ],
+  "entrySignal": {
+    "filter": "ALL_OF",
+    "conditions": [
+      {
+        "filter": "CROSSOVER",
+        "signal": "stoch_rsi-k",
+        "reference": "stoch_rsi-d"
+      },
+      {
+        "filter": "LESS_THAN",
+        "target": "stoch_rsi-k",
+        "threshold": "oversold"
+      }
+    ]
+  },
+  "exitSignal": {
+    "filter": "ALL_OF",
+    "conditions": [
+      {
+        "filter": "CROSSUNDER",
+        "signal": "stoch_rsi-k",
+        "reference": "stoch_rsi-d"
+      },
+      {
+        "filter": "GREATER_THAN",
+        "target": "stoch_rsi-k",
+        "threshold": "overbought"
+      }
+    ]
+  },
+  "stopLoss": {
+    "method": "ATR",
+    "period": 14,
+    "multiplier": 2
+  },
+  "takeProfit": {
+    "method": "ATR",
+    "period": 14,
+    "multiplier": 6
+  }
+}

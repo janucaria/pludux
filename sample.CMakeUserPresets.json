@@ -1,0 +1,43 @@
+{
+    "version": 6,
+    "configurePresets": [
+        {
+            "name": "msvc-debug",
+            "binaryDir": "${sourceDir}/.out/build/${presetName}",
+            "toolchainFile": "${sourceDir}/.out/conan/generators/conan_toolchain.cmake",
+            "generator": "Visual Studio 17 2022"
+        },
+        {
+            "name": "emscripten-debug",
+            "binaryDir": "${sourceDir}/.out/build/${presetName}",
+            "installDir": "${sourceDir}/.out/webroot",
+            "generator": "Ninja",
+            "toolchainFile": "$penv{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+            "cacheVariables": {
+                "CMAKE_CROSSCOMPILING_EMULATOR": {
+                    "type": "PATH",
+                    "value": "$penv{EMSDK_NODE}"
+                },
+                "CMAKE_BUILD_TYPE": {
+                    "type": "STRING",
+                    "value": "Debug"
+                }
+            },
+            "environment": {
+                "CC": "emcc",
+                "CXX": "em++"
+            }
+        },
+        {
+            "name": "emscripten-release",
+            "inherits": "emscripten-debug",
+            "binaryDir": "${sourceDir}/.out/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": {
+                    "type": "STRING",
+                    "value": "Release"
+                }
+            }
+        }
+    ]
+}
