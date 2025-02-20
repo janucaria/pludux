@@ -256,27 +256,44 @@ auto parse_backtest_strategy_json(std::istream& json_strategy_stream)
                                                 named_methods.at("close"),
                                                 named_methods.at("volume")};
 
-  auto risk_reward_parser = risk_reward_config_parser(quote_access);
-
   const auto capital_risk = strategy["capitalRisk"].get<double>();
   const auto entry_filter =
    config_parser.parse_filter(strategy.at("entrySignal"));
   const auto exit_filter =
    config_parser.parse_filter(strategy.at("exitSignal"));
+  const auto price_method = quote_access.close();
+
+  auto reward_parser = risk_reward_config_parser(quote_access);
   const auto reward_method =
-   risk_reward_parser.parse_method(strategy.at("takeProfit"));
+   reward_parser.parse_method(strategy.at("takeProfit"));
   const auto trading_take_profit_method = quote_access.high();
+  const auto take_profit =
+   pludux::backtest::TakeProfit{reward_method, trading_take_profit_method};
+
+  auto risk_parser = risk_reward_config_parser(quote_access);
+  risk_parser.register_method_parser(
+   "POSITION_SIZE",
+   [&](ConfigParser::Parser config_parser,
+       const nlohmann::json& parameters) -> screener::ScreenerMethod {
+     const auto position_size = parameters.at("positionSize").get<double>();
+
+     const auto position_size_method = screener::ValueMethod{position_size};
+     const auto capital_risk_method = screener::ValueMethod{capital_risk};
+     const auto entry_price_method = price_method;
+
+     return screener::DivideMethod{
+      screener::MultiplyMethod{capital_risk_method, price_method},
+      position_size_method};
+   });
 
   const auto stop_loss_config = strategy.at("stopLoss");
   const auto is_trailing_stop_loss =
    stop_loss_config.contains("isTrailing")
     ? stop_loss_config.at("isTrailing").get<bool>()
     : false;
-  const auto risk_method = risk_reward_parser.parse_method(stop_loss_config);
+  const auto risk_method = risk_parser.parse_method(stop_loss_config);
   const auto stop_loss =
    pludux::backtest::StopLoss{risk_method, is_trailing_stop_loss};
-  const auto take_profit =
-   pludux::backtest::TakeProfit{reward_method, trading_take_profit_method};
 
   return pludux::Backtest{capital_risk,
                           quote_access,

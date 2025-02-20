@@ -32,7 +32,7 @@ void Application::on_before_main_loop()
   ImPlot::GetStyle().Use24HourClock = true;
 
 // run in debug mode and not in emscripten
-#if !defined(__EMSCRIPTEN__) && !defined(NDEBUG) && 0
+#if !defined(__EMSCRIPTEN__) && !defined(NDEBUG) && 1
 
   const auto json_strategy_path =
    get_env_var("PLUDUX_BACKTEST_STRATEGY_JSON_PATH").value_or("");
