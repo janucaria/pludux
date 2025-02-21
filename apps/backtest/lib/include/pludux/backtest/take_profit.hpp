@@ -6,20 +6,21 @@
 
 #include <pludux/backtest/trading_take_profit.hpp>
 
+
+#include "./running_state.hpp"
+
 namespace pludux::backtest {
 
 class TakeProfit {
 public:
   TakeProfit();
 
-  TakeProfit(screener::ScreenerMethod entry_price_method,
-             screener::ScreenerMethod reward_method,
+  TakeProfit(screener::ScreenerMethod reward_method,
              screener::ScreenerMethod trading_price_method);
 
-  auto operator()(const AssetSnapshot& asset) const -> TradingTakeProfit;
+  auto operator()(const RunningState& running_state) const -> TradingTakeProfit;
 
 private:
-  screener::ScreenerMethod entry_price_method_;
   screener::ScreenerMethod reward_method_;
   screener::ScreenerMethod trading_price_method_;
 };

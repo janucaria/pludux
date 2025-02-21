@@ -9,7 +9,7 @@ namespace pludux::backtest {
 class TradingStopLoss {
 public:
   TradingStopLoss(double stop_price,
-                  screener::ScreenerMethod asset_price_method);
+                  screener::ScreenerMethod signal_price_method);
 
   auto exit_price() const noexcept -> double;
 
@@ -17,7 +17,7 @@ public:
 
 private:
   double stop_price_;
-  screener::ScreenerMethod asset_price_method_;
+  screener::ScreenerMethod signal_price_method_;
 };
 
 } // namespace pludux::backtest

@@ -44,7 +44,12 @@ auto AssetQuote::volume() const noexcept -> SubSeries<PolySeries<double>>
 
 auto AssetQuote::get_asset_size() const noexcept -> std::size_t
 {
-  return asset_snapshot_.size();
+  return asset_snapshot().size();
+}
+
+auto AssetQuote::asset_snapshot() const noexcept -> const AssetSnapshot&
+{
+  return asset_snapshot_;
 }
 
 } // namespace pludux

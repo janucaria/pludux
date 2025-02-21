@@ -6,8 +6,6 @@ TradingSession::TradingSession(double order_size,
                                std::size_t entry_index,
                                double entry_price,
                                std::time_t entry_timestamp,
-                               screener::ScreenerMethod timestamp_method,
-                               screener::ScreenerMethod price_method,
                                screener::ScreenerFilter exit_filter,
                                TradingTakeProfit trading_take_profit,
                                TradingStopLoss trading_stop_loss)
@@ -15,17 +13,16 @@ TradingSession::TradingSession(double order_size,
 , entry_price_{entry_price}
 , entry_index_{entry_index}
 , entry_timestamp_{entry_timestamp}
-, timestamp_method_{std::move(timestamp_method)}
-, price_method_{std::move(price_method)}
 , exit_filter_{std::move(exit_filter)}
 , trading_take_profit_{std::move(trading_take_profit)}
 , trading_stop_loss_{std::move(trading_stop_loss)}
 {
 }
 
-auto TradingSession::done_trade(const AssetSnapshot& asset)
+auto TradingSession::done_trade(const RunningState& running_state)
  -> std::optional<TradeRecord>
 {
+  const auto& asset = running_state.asset_snapshot();
   const auto exit_trade_status_opt =
    [&]() -> std::optional<TradeRecord::Status> {
     if(trading_stop_loss_(asset)) {
@@ -60,13 +57,13 @@ auto TradingSession::done_trade(const AssetSnapshot& asset)
     case TradeRecord::Status::closed_exit_signal:
     case TradeRecord::Status::open:
     default:
-      return price_method_(asset)[0];
+      return running_state.price();
     }
   }();
 
   const auto exit_timestamp =
-   static_cast<std::time_t>(timestamp_method_(asset)[0]);
-  const auto exit_index = asset.offset();
+   static_cast<std::time_t>(running_state.timestamp());
+  const auto exit_index = running_state.aset_index();
 
   return TradeRecord{exit_trade_status,
                      order_size_,
@@ -80,15 +77,15 @@ auto TradingSession::done_trade(const AssetSnapshot& asset)
                      exit_timestamp};
 }
 
-auto TradingSession::ongoing_trade(const AssetSnapshot& asset) const
+auto TradingSession::ongoing_trade(const RunningState& running_state) const
  -> TradeRecord
 {
   const auto exit_timestamp =
-   static_cast<std::time_t>(timestamp_method_(asset)[0]);
-  const auto exit_index = asset.offset();
+   static_cast<std::time_t>(running_state.timestamp());
+  const auto exit_index = running_state.aset_index();
   const auto stop_loss_price = trading_stop_loss_.exit_price();
   const auto take_profit_price = trading_take_profit_.exit_price();
-  const auto exit_price = price_method_(asset)[0];
+  const auto exit_price = running_state.price();
 
   return TradeRecord{TradeRecord::Status::open,
                      order_size_,
