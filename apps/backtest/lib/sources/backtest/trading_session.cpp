@@ -19,12 +19,12 @@ TradingSession::TradingSession(double order_size,
 {
 }
 
-auto TradingSession::done_trade(const RunningState& running_state)
- -> std::optional<TradeRecord>
+auto TradingSession::get_trading_state(const RunningState& running_state)
+ -> TradeRecord
 {
   const auto& asset = running_state.asset_snapshot();
-  const auto exit_trade_status_opt =
-   [&]() -> std::optional<TradeRecord::Status> {
+
+  const auto trade_status = [&]() {
     if(trading_stop_loss_(asset)) {
       return TradeRecord::Status::closed_stop_loss;
     }
@@ -37,66 +37,40 @@ auto TradingSession::done_trade(const RunningState& running_state)
       return TradeRecord::Status::closed_exit_signal;
     }
 
-    return std::nullopt;
+    return TradeRecord::Status::open;
   }();
 
-  if(!exit_trade_status_opt.has_value()) {
-    return std::nullopt;
-  }
-
-  const auto exit_trade_status = exit_trade_status_opt.value();
   const auto stop_loss_price = trading_stop_loss_.exit_price();
   const auto take_profit_price = trading_take_profit_.exit_price();
 
   const auto exit_price = [&]() -> double {
-    switch(exit_trade_status) {
+    switch(trade_status) {
     case TradeRecord::Status::closed_take_profit:
       return take_profit_price;
     case TradeRecord::Status::closed_stop_loss:
       return stop_loss_price;
     case TradeRecord::Status::closed_exit_signal:
     case TradeRecord::Status::open:
-    default:
       return running_state.price();
+    default:
+      return 0;
     }
   }();
 
   const auto exit_timestamp =
    static_cast<std::time_t>(running_state.timestamp());
-  const auto exit_index = running_state.aset_index();
+  const auto exit_index = running_state.asset_index();
 
-  return TradeRecord{exit_trade_status,
+  return TradeRecord{trade_status,
                      order_size_,
                      entry_index_,
                      exit_index,
+                     entry_timestamp_,
+                     exit_timestamp,
                      entry_price_,
                      exit_price,
                      stop_loss_price,
-                     take_profit_price,
-                     entry_timestamp_,
-                     exit_timestamp};
-}
-
-auto TradingSession::ongoing_trade(const RunningState& running_state) const
- -> TradeRecord
-{
-  const auto exit_timestamp =
-   static_cast<std::time_t>(running_state.timestamp());
-  const auto exit_index = running_state.aset_index();
-  const auto stop_loss_price = trading_stop_loss_.exit_price();
-  const auto take_profit_price = trading_take_profit_.exit_price();
-  const auto exit_price = running_state.price();
-
-  return TradeRecord{TradeRecord::Status::open,
-                     order_size_,
-                     entry_index_,
-                     exit_index,
-                     entry_price_,
-                     exit_price,
-                     stop_loss_price,
-                     take_profit_price,
-                     entry_timestamp_,
-                     exit_timestamp};
+                     take_profit_price};
 }
 
 } // namespace pludux::backtest

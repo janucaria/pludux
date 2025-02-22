@@ -1,6 +1,7 @@
 #ifndef PLUDUX_PLUDUX_BACKTEST_TRADE_RECORD_HPP
 #define PLUDUX_PLUDUX_BACKTEST_TRADE_RECORD_HPP
 
+#include <cstddef>
 #include <ctime>
 
 namespace pludux::backtest {
@@ -18,30 +19,48 @@ public:
               double order_size,
               std::size_t entry_index,
               std::size_t exit_index,
+              std::time_t entry_timestamp,
+              std::time_t exit_timestamp,
               double entry_price,
               double exit_price,
               double stop_loss_price,
-              double take_profit_price,
-              std::time_t entry_timestamp,
-              std::time_t exit_timestamp);
+              double take_profit_price);
 
   auto order_size() const noexcept -> double;
 
+  void order_size(double size) noexcept;
+
   auto entry_index() const noexcept -> std::size_t;
+
+  void entry_index(std::size_t index) noexcept;
 
   auto exit_index() const noexcept -> std::size_t;
 
+  void exit_index(std::size_t index) noexcept;
+
   auto entry_price() const noexcept -> double;
+
+  void entry_price(double price) noexcept;
 
   auto exit_price() const noexcept -> double;
 
+  void exit_price(double price) noexcept;
+
   auto stop_loss_price() const noexcept -> double;
+
+  void stop_loss_price(double price) noexcept;
 
   auto take_profit_price() const noexcept -> double;
 
+  void take_profit_price(double price) noexcept;
+
   auto entry_timestamp() const noexcept -> std::time_t;
 
+  void entry_timestamp(std::time_t timestamp) noexcept;
+
   auto exit_timestamp() const noexcept -> std::time_t;
+
+  void exit_timestamp(std::time_t timestamp) noexcept;
 
   auto position_size() const noexcept -> double;
 
@@ -50,6 +69,8 @@ public:
   auto duration() const noexcept -> std::time_t;
 
   auto status() const noexcept -> Status;
+
+  void status(Status status) noexcept;
 
   auto is_open() const noexcept -> bool;
 

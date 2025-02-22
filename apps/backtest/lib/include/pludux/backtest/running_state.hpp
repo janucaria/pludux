@@ -11,9 +11,7 @@ public:
 
   auto asset_quote() const noexcept -> const AssetQuote&;
 
-  auto aset_index() const noexcept -> std::size_t;
-
-  void index(std::size_t index) noexcept;
+  auto asset_index() const noexcept -> std::size_t;
 
   auto capital_risk() const noexcept -> double;
 

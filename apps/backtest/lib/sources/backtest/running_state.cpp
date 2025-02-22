@@ -14,14 +14,9 @@ auto RunningState::asset_quote() const noexcept -> const AssetQuote&
   return asset_quote_;
 }
 
-auto RunningState::aset_index() const noexcept -> std::size_t
+auto RunningState::asset_index() const noexcept -> std::size_t
 {
   return asset_index_;
-}
-
-void RunningState::index(std::size_t index) noexcept
-{
-  asset_index_ = index;
 }
 
 auto RunningState::capital_risk() const noexcept -> double

@@ -32,7 +32,7 @@ void Application::on_before_main_loop()
   ImPlot::GetStyle().Use24HourClock = true;
 
 // run in debug mode and not in emscripten
-#if !defined(__EMSCRIPTEN__) && !defined(NDEBUG) && 1
+#if !defined(__EMSCRIPTEN__) && !defined(NDEBUG) && 0
 
   const auto json_strategy_path =
    get_env_var("PLUDUX_BACKTEST_STRATEGY_JSON_PATH").value_or("");
@@ -78,9 +78,11 @@ void Application::on_update()
 
     try {
       do {
-        if(!state_data_.backtest->run(asset_data)) {
+        if(!state_data_.backtest->should_run(asset_data)) {
           break;
         }
+
+        state_data_.backtest->run(asset_data);
 
         current_time = std::chrono::high_resolution_clock::now();
         time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -93,7 +95,6 @@ void Application::on_update()
       state_data_.backtest.reset();
       state_data_.asset_data.reset();
       state_data_.asset_name.clear();
-      state_data_.resource_changed = false;
 
       const auto error_message = std::format("Error: {}", e.what());
       state_data_.alert_messages.push(error_message);
@@ -123,9 +124,7 @@ void Application::on_update()
 
   try {
     dockspace_window_.render(app_state);
-
-    auto plot_data_window = PlotDataWindow{};
-    plot_data_window.render(app_state);
+    plot_data_window_.render(app_state);
     auto backtesting_summary = BacktestSummaryWindow{};
     backtesting_summary.render(app_state);
     auto trade_journal = TradeJournalWindow{};

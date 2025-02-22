@@ -22,7 +22,6 @@ void ChangeStrategyJsonFileAction::operator()(AppStateData& state) const
 
   state.strategy_name = get_strategy_name();
   state.backtest = backtest;
-  state.resource_changed = true;
 }
 
 auto ChangeStrategyJsonFileAction::get_strategy_name() const noexcept

@@ -13,6 +13,7 @@
 #include <nlohmann/json.hpp>
 
 #include <pludux/backtest.hpp>
+#include <pludux/backtest/backtesting_summary.hpp>
 
 auto main(int, const char**) -> int
 {
@@ -41,62 +42,111 @@ auto main(int, const char**) -> int
   auto open_trade = std::optional<pludux::backtest::TradeRecord>{};
   auto closed_trades = std::vector<pludux::backtest::TradeRecord>{};
 
-  while(backtest.run(asset)) {
-    // Nothing to do here
+  while(backtest.should_run(asset)) {
+    backtest.run(asset);
   }
 
-  auto result = backtest.backtesting_summary();
+  auto& ostream = std::cout;
 
-  std::cout << "Asset: " << asset_file << std::endl;
-  std::cout << "Total profit: " << result.total_profit() << std::endl;
-  std::cout << "Total trades: " << result.closed_trades().size() << std::endl;
-  std::cout << "Average profit: " << result.average_win() << std::endl;
-  std::cout << "Average loss: " << result.average_loss() << std::endl;
+  auto summary = pludux::backtest::BacktestingSummary{};
+  const auto& history = backtest.history();
+  for(int i = 0, ii = history.size(); i < ii; ++i) {
+    const auto& trade = history[i].trade_record();
+    const auto is_last_trade = i == ii - 1;
 
-  std::cout << std::endl;
-  std::cout << "exit signal rate: " << result.exit_signal_rate() << std::endl;
-  std::cout << "Average exit signal: " << result.average_exit_signal()
-            << std::endl;
-  std::cout << "exit signal ev: " << result.exit_signal_expected_value()
-            << std::endl;
+    if(trade.has_value() &&
+       (trade->is_closed() || is_last_trade && trade->is_open())) {
+      summary.add_trade(*trade);
+    }
+  }
 
-  std::cout << "take profit rate: " << result.take_profit_rate() << std::endl;
-  std::cout << "Average take profit: " << result.average_take_profit()
-            << std::endl;
-  std::cout << "take profit ev: " << result.take_profit_expected_value()
-            << std::endl;
+  ostream << std::format("Risk per trade: {:.2f}\n", backtest.capital_risk());
+  ostream << std::format("Total profit: {:.2f}\n", summary.total_profit());
+  auto total_duration_days = std::chrono::duration_cast<std::chrono::days>(
+                              std::chrono::seconds(summary.total_duration()))
+                              .count();
+  ostream << std::format("Total duration: {} days\n", total_duration_days);
+  ostream << std::format("Total trades: {}\n", summary.total_trades());
 
-  std::cout << "stop loss rate: " << result.stop_loss_rate() << std::endl;
-  std::cout << "Average stop loss: " << result.average_stop_loss() << std::endl;
-  std::cout << "stop loss ev: " << result.stop_loss_expected_value()
-            << std::endl;
-  std::cout << std::endl;
+  ostream << std::format("Average profit: {:.2f}\n", summary.average_win());
+  ostream << std::format("Average loss: {:.2f}\n", -summary.average_loss());
 
-  std::cout << "Expected value: " << result.expected_value() << std::endl;
+  auto average_duration_days =
+   std::chrono::duration_cast<std::chrono::days>(
+    std::chrono::seconds(summary.average_duration()))
+    .count();
+  ostream << std::format("Average duration: {} days\n", average_duration_days);
 
-  // get the duration in days
-  std::cout << "Total duration: " << result.total_duration() / (60 * 60 * 24)
-            << " days" << std::endl;
-  std::cout << "Average duration: "
-            << result.average_duration() / (60 * 60 * 24) << " days"
-            << std::endl;
+  ostream << "\n\n";
+  ostream << "OPEN TRADE\n";
+  ostream << "----------\n";
+  ostream << std::format("Unrealized profit: {:.2f}\n",
+                         summary.unrealized_profit());
 
-  std::cout << "Win rate: " << result.win_rate() << std::endl;
-  std::cout << "Loss Rate: " << result.loss_rate() << std::endl;
-  std::cout << "BE Rate: " << result.break_even_rate() << std::endl;
-  std::cout << std::endl;
-  std::cout << std::endl;
+  auto ongoing_trade_duration_days =
+   std::chrono::duration_cast<std::chrono::days>(
+    std::chrono::seconds(summary.ongoing_trade_duration()))
+    .count();
+  ostream << std::format("Ongoing duration: {} days\n",
+                         ongoing_trade_duration_days);
+
+  ostream << "\n\n";
+  ostream << "CLOSED TRADES\n";
+  ostream << "-------------\n";
+  ostream << std::format("Exit signal rate: {:.2f}%\n",
+                         summary.exit_signal_rate() * 100);
+  ostream << std::format("Average exit signal: {:.2f}\n",
+                         summary.average_exit_signal());
+  ostream << std::format("Exit signal EV: {:.2f}\n",
+                         summary.exit_signal_expected_value());
+
+  ostream << std::format("Take profit rate: {:.2f}%\n",
+                         summary.take_profit_rate() * 100);
+  ostream << std::format("Average take profit: {:.2f}\n",
+                         summary.average_take_profit());
+  ostream << std::format("Take profit EV: {:.2f}\n",
+                         summary.take_profit_expected_value());
+
+  ostream << std::format("Stop loss rate: {:.2f}%\n",
+                         summary.stop_loss_rate() * 100);
+  ostream << std::format("Average stop loss: {:.2f}\n",
+                         -summary.average_stop_loss());
+  ostream << std::format("Stop loss EV: {:.2f}\n",
+                         summary.stop_loss_expected_value());
+  ostream << "\n";
+
+  ostream << std::format("Expected value (EV): {:.2f}\n",
+                         summary.expected_value());
+  ostream << std::format("EV to risk rate: {:.2f}%\n",
+                         summary.expected_value() / backtest.capital_risk() *
+                          100);
+
+  ostream << std::format("Total closed trades: {}\n",
+                         summary.closed_trades().size());
+  ostream << std::format("Win rate: {:.2f}%\n", summary.win_rate() * 100);
+  ostream << std::format("Loss rate: {:.2f}%\n", summary.loss_rate() * 100);
+  ostream << std::format("Break even rate: {:.2f}%\n",
+                         summary.break_even_rate() * 100);
+  ostream << "\n\n";
 
   // iterate through the trades
-  std::cout << "Trade: " << std::endl;
-  for(const pludux::backtest::TradeRecord& trade : result.closed_trades()) {
-    const auto entry_timestamp = trade.entry_timestamp();
-    const auto exit_timestamp = trade.exit_timestamp();
-    std::cout << "Entry date: " << std::ctime(&entry_timestamp) // NOLINT
-              << "Exit date: " << std::ctime(&exit_timestamp)   // NOLINT
-              << "Reason: " << static_cast<int>(trade.status()) << std::endl
-              << "Profit: " << trade.profit() << std::endl
-              << std::endl;
+  std::cout << "Trades: " << std::endl;
+  const auto& backtest_history = backtest.history();
+  // auto is_in_trade = false;
+  for(int i = 0, ii = backtest_history.size(); i < ii; ++i) {
+    const auto& trade = backtest_history[i].trade_record();
+    const auto is_last_trade = i == ii - 1;
+
+    if(trade && trade->is_closed() || is_last_trade) {
+      const auto entry_timestamp = trade->entry_timestamp();
+      const auto exit_timestamp = trade->exit_timestamp();
+      std::cout << "Entry date: " << std::ctime(&entry_timestamp) // NOLINT
+                << "Exit date: " << std::ctime(&exit_timestamp)   // NOLINT
+                << "Position size: " << trade->position_size() << std::endl
+                << "Reason: " << static_cast<int>(trade->status()) << std::endl
+                << "Profit: " << trade->profit() << std::endl
+                << std::endl;
+    }
   }
 
   return 0;

@@ -35,6 +35,7 @@ private:
   ImVec2 window_size_;
 
   DockspaceWindow dockspace_window_;
+  PlotDataWindow plot_data_window_;
 
   AppStateData state_data_;
   std::queue<AppPolyAction> actions_;

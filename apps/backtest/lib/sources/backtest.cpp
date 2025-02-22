@@ -32,7 +32,7 @@ Backtest::Backtest(double capital_risk,
 , take_profit_{take_profit}
 , trading_session_{std::nullopt}
 , current_index_{0}
-, asset_size_{0}
+, history_{}
 {
 }
 
@@ -46,51 +46,53 @@ auto Backtest::quote_access() const noexcept -> const QuoteAccess&
   return quote_access_;
 }
 
-auto Backtest::backtesting_summary() const noexcept
- -> const backtest::BacktestingSummary&
+auto Backtest::history() const noexcept -> const backtest::History&
 {
-  return backtesting_summary_;
+  return history_;
 }
 
 void Backtest::reset()
 {
   trading_session_.reset();
   current_index_ = 0;
-  asset_size_ = 0;
-  backtesting_summary_ = backtest::BacktestingSummary{};
+  history_ = backtest::History{};
 }
 
-auto Backtest::run(const AssetHistory& asset) -> bool
+auto Backtest::should_run(const AssetHistory& asset) const noexcept -> bool
 {
-  if(asset_size_ != asset.size()) {
-    reset();
-    asset_size_ = asset.size();
+  const auto asset_size = asset.size();
+  return current_index_ < asset_size;
+}
+
+void Backtest::run(const AssetHistory& asset)
+{
+  if(!should_run(asset)) {
+    return;
   }
 
-  if(current_index_ >= asset_size_) {
-    return false;
-  }
+  const auto asset_size = asset.size();
+  const auto current_index = current_index_++;
+  const auto last_index = asset_size - 1;
 
   auto& trading_session = trading_session_;
-  const auto asset_index = asset_size_ - current_index_ - 1;
-  const auto snapshot = asset[asset_index];
-  ++current_index_;
-
-  auto running_state =
-   backtest::RunningState{AssetQuote{snapshot, quote_access_}, asset_index};
+  const auto asset_index = last_index - current_index;
+  const auto asset_snapshot = asset[asset_index];
+  const auto asset_quote = AssetQuote{asset_snapshot, quote_access_};
+  auto running_state = backtest::RunningState{asset_quote, current_index};
   running_state.capital_risk(capital_risk_);
 
   if(!trading_session.has_value()) {
-    if(entry_filter_(snapshot)) {
+    if(entry_filter_(asset_snapshot)) {
       const auto trading_take_profit = take_profit_(running_state);
       const auto trading_stop_loss = stop_loss_(running_state);
       const auto order_size = stop_loss_.get_order_size(running_state);
 
       if(std::isnan(order_size)) {
-        return false;
+        push_history_data(running_state);
+        return;
       }
 
-      const auto entry_index = running_state.aset_index();
+      const auto entry_index = running_state.asset_index();
       const auto entry_price = running_state.price();
       const auto entry_timestamp =
        static_cast<std::time_t>(running_state.timestamp());
@@ -101,28 +103,35 @@ auto Backtest::run(const AssetHistory& asset) -> bool
                               exit_filter_,
                               trading_take_profit,
                               trading_stop_loss);
-
-      const auto open_trade = trading_session->ongoing_trade(running_state);
-      backtesting_summary_.add_trade(open_trade);
     }
 
-    return true;
+    push_history_data(running_state);
+    return;
   }
 
-  auto closed_trade = trading_session->done_trade(running_state);
-  if(closed_trade.has_value()) {
-    const auto& closed_trade_val = closed_trade.value();
-    backtesting_summary_.add_trade(closed_trade_val);
+  push_history_data(running_state);
+  return;
+}
 
-    trading_session.reset();
+void Backtest::push_history_data(const backtest::RunningState& running_state)
+{
+  const auto timestamp = running_state.timestamp();
+  const auto open = running_state.open();
+  const auto high = running_state.high();
+  const auto low = running_state.low();
+  const auto close = running_state.close();
+  const auto volume = running_state.volume();
+
+  auto trade_record = std::optional<backtest::TradeRecord>{};
+  if(trading_session_) {
+    trade_record = trading_session_->get_trading_state(running_state);
+    if(trade_record->is_closed()) {
+      trading_session_.reset();
+    }
   }
 
-  if(current_index_ == asset_size_) {
-    const auto open_trade = trading_session->ongoing_trade(running_state);
-    backtesting_summary_.add_trade(open_trade);
-  }
-
-  return true;
+  history_.add_data(backtest::Snapshot{
+   timestamp, open, high, low, close, volume, std::move(trade_record)});
 }
 
 auto get_env_var(std::string_view var_name) -> std::optional<std::string>

@@ -25,9 +25,7 @@ public:
                  TradingTakeProfit trading_take_profit,
                  TradingStopLoss trading_stop_loss);
 
-  auto done_trade(const RunningState& running_state) -> std::optional<TradeRecord>;
-
-  auto ongoing_trade(const RunningState& running_state) const -> TradeRecord;
+  auto get_trading_state(const RunningState& running_state) -> TradeRecord;
 
 private:
   double order_size_;
