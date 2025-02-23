@@ -6,8 +6,11 @@
 
 namespace pludux::backtest {
 
-StopLoss::StopLoss(screener::ScreenerMethod risk_method, bool is_trailing)
-: is_trailing_{is_trailing}
+StopLoss::StopLoss(screener::ScreenerMethod risk_method,
+                   bool is_disabled,
+                   bool is_trailing)
+: is_disabled_{is_disabled}
+, is_trailing_{is_trailing}
 , risk_method_{std::move(risk_method)}
 {
 }
@@ -20,7 +23,8 @@ auto StopLoss::operator()(const RunningState& running_state) const
   const auto stop_loss_risk = risk_method_(asset)[0];
   const auto stop_loss_price = entry_price - stop_loss_risk;
 
-  return TradingStopLoss{is_trailing_, stop_loss_risk, stop_loss_price};
+  return TradingStopLoss{
+   is_disabled_, is_trailing_, stop_loss_risk, stop_loss_price};
 }
 
 auto StopLoss::get_order_size(const RunningState& running_state) const -> double

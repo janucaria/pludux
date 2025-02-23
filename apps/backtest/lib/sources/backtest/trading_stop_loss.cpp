@@ -4,10 +4,12 @@
 
 namespace pludux::backtest {
 
-TradingStopLoss::TradingStopLoss(bool is_trailing,
+TradingStopLoss::TradingStopLoss(bool is_disabled,
+                                 bool is_trailing,
                                  double risk,
                                  double stop_price)
-: is_trailing_{is_trailing}
+: is_disabled_{is_disabled}
+, is_trailing_{is_trailing}
 , risk_{risk}
 , stop_price_{stop_price}
 {
@@ -15,7 +17,7 @@ TradingStopLoss::TradingStopLoss(bool is_trailing,
 
 auto TradingStopLoss::exit_price() const noexcept -> double
 {
-  return stop_price_;
+  return !is_disabled_ ? stop_price_ : std::numeric_limits<double>::quiet_NaN();
 }
 
 auto TradingStopLoss::operator()(const RunningState& running_state) -> bool
@@ -29,7 +31,7 @@ auto TradingStopLoss::operator()(const RunningState& running_state) -> bool
   }
 
   const auto signal_price = running_state.low();
-  const auto reference_price = stop_price_;
+  const auto reference_price = exit_price();
   return signal_price <= reference_price;
 }
 

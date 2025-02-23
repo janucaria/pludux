@@ -12,13 +12,16 @@ namespace pludux::backtest {
 
 class StopLoss {
 public:
-  StopLoss(screener::ScreenerMethod risk_method, bool is_trailing = false);
+  StopLoss(screener::ScreenerMethod risk_method,
+           bool is_disabled,
+           bool is_trailing = false);
 
   auto operator()(const RunningState& running_state) const -> TradingStopLoss;
 
   auto get_order_size(const RunningState& running_state) const -> double;
 
 private:
+  bool is_disabled_;
   bool is_trailing_;
   screener::ScreenerMethod risk_method_;
 };

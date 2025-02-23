@@ -10,13 +10,17 @@ namespace pludux::backtest {
 
 class TradingStopLoss {
 public:
-  TradingStopLoss(bool is_trailing, double risk, double stop_price);
+  TradingStopLoss(bool is_disabled,
+                  bool is_trailing,
+                  double risk,
+                  double stop_price);
 
   auto exit_price() const noexcept -> double;
 
   auto operator()(const RunningState& running_state) -> bool;
 
 private:
+  bool is_disabled_;
   bool is_trailing_;
   double risk_;
   double stop_price_;

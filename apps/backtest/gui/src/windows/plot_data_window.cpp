@@ -275,7 +275,7 @@ void PlotDataWindow::DrawTrades(const char* label_id,
   constexpr double half_width = 0.5;
   if(ImPlot::BeginItem(label_id)) {
     for(int i = 0, ii = backtest_history.size(); i < ii; ++i) {
-      const auto snapshot = backtest_history[i];
+      const auto& snapshot = backtest_history[i];
       const auto& trade = snapshot.trade_record();
       const auto is_last_trade = i == ii - 1;
 
@@ -292,7 +292,9 @@ void PlotDataWindow::DrawTrades(const char* label_id,
 
       const auto top_price = take_profit_price;
       const auto middle_price = std::max(entry_price, stop_loss_price);
-      const auto bottom_price = stop_loss_price;
+      const auto bottom_price = !std::isnan(stop_loss_price)
+                                 ? stop_loss_price
+                                 : std::min(middle_price, exit_price);
 
       const auto left_half_width =
        trade->is_open() && i == entry_idx ? 0.0 : half_width;

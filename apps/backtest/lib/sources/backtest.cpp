@@ -291,9 +291,13 @@ auto parse_backtest_strategy_json(std::istream& json_strategy_stream)
    stop_loss_config.contains("isTrailing")
     ? stop_loss_config.at("isTrailing").get<bool>()
     : false;
+  const auto is_stop_loss_disabled =
+   stop_loss_config.contains("disabled")
+    ? stop_loss_config.at("disabled").get<bool>()
+    : false;
   const auto risk_method = risk_parser.parse_method(stop_loss_config);
-  const auto stop_loss =
-   pludux::backtest::StopLoss{risk_method, is_trailing_stop_loss};
+  const auto stop_loss = pludux::backtest::StopLoss{
+   risk_method, is_stop_loss_disabled, is_trailing_stop_loss};
 
   return pludux::Backtest{capital_risk,
                           quote_access,
