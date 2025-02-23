@@ -290,7 +290,9 @@ void PlotDataWindow::DrawTrades(const char* label_id,
       const auto take_profit_price = trade->take_profit_price();
       const auto stop_loss_price = trade->stop_loss_price();
 
-      const auto top_price = take_profit_price;
+      const auto top_price = !std::isnan(take_profit_price)
+                              ? take_profit_price
+                              : std::max(entry_price, exit_price);
       const auto middle_price = std::max(entry_price, stop_loss_price);
       const auto bottom_price = !std::isnan(stop_loss_price)
                                  ? stop_loss_price

@@ -264,11 +264,16 @@ auto parse_backtest_strategy_json(std::istream& json_strategy_stream)
   const auto price_method = quote_access.close();
 
   auto reward_parser = risk_reward_config_parser(quote_access);
+  const auto take_profit_config = strategy.at("takeProfit");
+  const auto is_take_profit_disabled =
+   take_profit_config.contains("disabled")
+    ? take_profit_config.at("disabled").get<bool>()
+    : false;
   const auto reward_method =
    reward_parser.parse_method(strategy.at("takeProfit"));
   const auto trading_take_profit_method = quote_access.high();
-  const auto take_profit =
-   pludux::backtest::TakeProfit{reward_method, trading_take_profit_method};
+  const auto take_profit = pludux::backtest::TakeProfit{
+   reward_method, is_take_profit_disabled, trading_take_profit_method};
 
   auto risk_parser = risk_reward_config_parser(quote_access);
   risk_parser.register_method_parser(

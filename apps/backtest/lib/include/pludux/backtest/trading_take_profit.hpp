@@ -8,7 +8,8 @@ namespace pludux::backtest {
 
 class TradingTakeProfit {
 public:
-  TradingTakeProfit(double profit_price,
+  TradingTakeProfit(bool is_disabled,
+                    double profit_price,
                     screener::ScreenerMethod signal_price_method);
 
   auto exit_price() const noexcept -> double;
@@ -16,6 +17,7 @@ public:
   auto operator()(const AssetSnapshot& asset) -> bool;
 
 private:
+  bool is_disabled_;
   double profit_price_;
   screener::ScreenerMethod signal_price_method_;
 };
