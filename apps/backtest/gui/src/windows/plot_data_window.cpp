@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <array>
 
 #include <imgui.h>
@@ -286,8 +287,12 @@ void PlotDataWindow::DrawTrades(const char* label_id,
       const auto exit_price = trade->exit_price();
       const auto entry_idx = trade->entry_index();
       const auto exit_idx = trade->exit_index();
-      const auto stop_loss_price = trade->stop_loss_price();
       const auto take_profit_price = trade->take_profit_price();
+      const auto stop_loss_price = trade->stop_loss_price();
+
+      const auto top_price = take_profit_price;
+      const auto middle_price = std::max(entry_price, stop_loss_price);
+      const auto bottom_price = stop_loss_price;
 
       const auto left_half_width =
        trade->is_open() && i == entry_idx ? 0.0 : half_width;
@@ -296,9 +301,9 @@ void PlotDataWindow::DrawTrades(const char* label_id,
 
       {
         const auto risk_left_top_pos =
-         ImPlot::PlotToPixels(i - left_half_width, entry_price);
+         ImPlot::PlotToPixels(i - left_half_width, middle_price);
         const auto risk_right_bottom_pos =
-         ImPlot::PlotToPixels(i + right_half_width, stop_loss_price);
+         ImPlot::PlotToPixels(i + right_half_width, bottom_price);
 
         draw_list->AddRectFilled(risk_left_top_pos,
                                  risk_right_bottom_pos,
@@ -306,9 +311,9 @@ void PlotDataWindow::DrawTrades(const char* label_id,
       }
       {
         const auto reward_left_top_pos =
-         ImPlot::PlotToPixels(i - left_half_width, take_profit_price);
+         ImPlot::PlotToPixels(i - left_half_width, top_price);
         const auto reward_right_bottom_pos =
-         ImPlot::PlotToPixels(i + right_half_width, entry_price);
+         ImPlot::PlotToPixels(i + right_half_width, middle_price);
 
         draw_list->AddRectFilled(reward_left_top_pos,
                                  reward_right_bottom_pos,
@@ -320,14 +325,14 @@ void PlotDataWindow::DrawTrades(const char* label_id,
           constexpr auto left_shift_width = -half_width;
           constexpr auto right_shift_width = 10.;
           const auto risk_left_top_pos =
-           ImPlot::PlotToPixels(i - left_shift_width, entry_price);
+           ImPlot::PlotToPixels(i - left_shift_width, middle_price);
           const auto risk_right_bottom_pos =
-           ImPlot::PlotToPixels(i + right_shift_width, stop_loss_price);
+           ImPlot::PlotToPixels(i + right_shift_width, bottom_price);
 
           const auto reward_left_top_pos =
-           ImPlot::PlotToPixels(i - left_shift_width, take_profit_price);
+           ImPlot::PlotToPixels(i - left_shift_width, top_price);
           const auto reward_right_bottom_pos =
-           ImPlot::PlotToPixels(i + right_shift_width, entry_price);
+           ImPlot::PlotToPixels(i + right_shift_width, middle_price);
 
           draw_list->AddRectFilled(risk_left_top_pos,
                                    risk_right_bottom_pos,
@@ -336,39 +341,6 @@ void PlotDataWindow::DrawTrades(const char* label_id,
                                    reward_right_bottom_pos,
                                    ImGui::GetColorU32(reward_color_));
         }
-      } else if(trade->is_closed()) {
-        const auto entry_idx_stop_loss_price =
-         ImPlot::PlotToPixels(entry_idx, stop_loss_price);
-        const auto entry_idx_entry_price =
-         ImPlot::PlotToPixels(entry_idx, entry_price);
-        const auto entry_idx_take_profit_price =
-         ImPlot::PlotToPixels(entry_idx, take_profit_price);
-        const auto exit_idx_take_profit_price =
-         ImPlot::PlotToPixels(exit_idx, take_profit_price);
-        const auto exit_idx_entry_price =
-         ImPlot::PlotToPixels(exit_idx, entry_price);
-        const auto exit_idx_stop_loss_price =
-         ImPlot::PlotToPixels(exit_idx, stop_loss_price);
-
-        const auto risk_points = std::array{exit_idx_entry_price,
-                                            exit_idx_stop_loss_price,
-                                            entry_idx_stop_loss_price,
-                                            entry_idx_entry_price};
-        draw_list->AddPolyline(risk_points.data(),
-                               risk_points.size(),
-                               ImGui::GetColorU32(risk_color_),
-                               ImDrawFlags_None,
-                               1.0f);
-
-        const auto reward_points = std::array{entry_idx_entry_price,
-                                              entry_idx_take_profit_price,
-                                              exit_idx_take_profit_price,
-                                              exit_idx_entry_price};
-        draw_list->AddPolyline(reward_points.data(),
-                               reward_points.size(),
-                               ImGui::GetColorU32(reward_color_),
-                               ImDrawFlags_None,
-                               1.0f);
       }
     }
     ImPlot::EndItem();

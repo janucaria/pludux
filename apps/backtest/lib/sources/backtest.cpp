@@ -263,15 +263,18 @@ auto parse_backtest_strategy_json(std::istream& json_strategy_stream)
    config_parser.parse_filter(strategy.at("entrySignal"));
   const auto exit_filter =
    config_parser.parse_filter(strategy.at("exitSignal"));
-  const auto risk_method =
-   risk_reward_parser.parse_method(strategy.at("stopLoss"));
   const auto reward_method =
    risk_reward_parser.parse_method(strategy.at("takeProfit"));
-  const auto trading_stop_loss_method = quote_access.low();
   const auto trading_take_profit_method = quote_access.high();
 
+  const auto stop_loss_config = strategy.at("stopLoss");
+  const auto is_trailing_stop_loss =
+   stop_loss_config.contains("isTrailing")
+    ? stop_loss_config.at("isTrailing").get<bool>()
+    : false;
+  const auto risk_method = risk_reward_parser.parse_method(stop_loss_config);
   const auto stop_loss =
-   pludux::backtest::StopLoss{risk_method, trading_stop_loss_method};
+   pludux::backtest::StopLoss{risk_method, is_trailing_stop_loss};
   const auto take_profit =
    pludux::backtest::TakeProfit{reward_method, trading_take_profit_method};
 

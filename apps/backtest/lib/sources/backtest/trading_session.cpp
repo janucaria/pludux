@@ -25,7 +25,7 @@ auto TradingSession::get_trading_state(const RunningState& running_state)
   const auto& asset = running_state.asset_snapshot();
 
   const auto trade_status = [&]() {
-    if(trading_stop_loss_(asset)) {
+    if(trading_stop_loss_(running_state)) {
       return TradeRecord::Status::closed_stop_loss;
     }
 
