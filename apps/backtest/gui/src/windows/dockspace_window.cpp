@@ -222,8 +222,25 @@ void DockspaceWindow::render(AppState& app_state)
       ImGui::Text("%s", "Pludux Backtest");
       ImGui::Separator();
       ImGui::Text("%s", std::format("Version: {}", PLUDUX_VERSION).c_str());
-      ImGui::Text(
-       "%s", std::format("Source Code: {}", PLUDUX_SOURCE_CODE_URL).c_str());
+      ImGui::Text("%s", "Source Code: ");
+      ImGui::SameLine();
+      ImGui::TextColored(ImVec4(0, 1, 1, 1), "%s", PLUDUX_SOURCE_CODE_URL);
+
+#ifdef __EMSCRIPTEN__
+      EM_ASM(
+       { document.body.style.cursor = $0 ? 'pointer' : 'default'; },
+       ImGui::IsItemHovered());
+      if(ImGui::IsItemClicked()) {
+        ImGui::CloseCurrentPopup();
+        EM_ASM(
+         {
+           var url = Module.UTF8ToString($0);
+           window.open(url, '_blank');
+         },
+         PLUDUX_SOURCE_CODE_URL);
+      }
+#endif
+
       ImGui::Separator();
       ImGui::Text("%s", "This software is licensed under the MIT License.");
       ImGui::Text("%s", "Copyright (c) 2025 Januar Andaria");
