@@ -6,25 +6,24 @@
 
 #include <pludux/backtest/trading_stop_loss.hpp>
 
+#include "./running_state.hpp"
+
 namespace pludux::backtest {
 
 class StopLoss {
 public:
-  StopLoss();
+  StopLoss(screener::ScreenerMethod risk_method,
+           bool is_disabled,
+           bool is_trailing = false);
 
-  StopLoss(screener::ScreenerMethod entry_price_method,
-           screener::ScreenerMethod risk_method,
-           screener::ScreenerMethod trading_price_method);
+  auto operator()(const RunningState& running_state) const -> TradingStopLoss;
 
-  auto operator()(const AssetSnapshot& asset) const -> TradingStopLoss;
-
-  auto get_order_size(double capital_risk, const AssetSnapshot& asset) const
-   -> double;
+  auto get_order_size(const RunningState& running_state) const -> double;
 
 private:
-  screener::ScreenerMethod entry_price_method_;
+  bool is_disabled_;
+  bool is_trailing_;
   screener::ScreenerMethod risk_method_;
-  screener::ScreenerMethod trading_price_method_;
 };
 
 } // namespace pludux::backtest

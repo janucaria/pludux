@@ -11,6 +11,8 @@
 #include <pludux/backtest/trading_stop_loss.hpp>
 #include <pludux/backtest/trading_take_profit.hpp>
 
+#include "./running_state.hpp"
+
 namespace pludux::backtest {
 
 class TradingSession {
@@ -19,23 +21,17 @@ public:
                  std::size_t entry_index,
                  double entry_price,
                  std::time_t entry_timestamp,
-                 screener::ScreenerMethod timestamp_method,
-                 screener::ScreenerMethod price_method,
                  screener::ScreenerFilter exit_filter,
                  TradingTakeProfit trading_take_profit,
                  TradingStopLoss trading_stop_loss);
 
-  auto done_trade(const AssetSnapshot& asset) -> std::optional<TradeRecord>;
-
-  auto ongoing_trade(const AssetSnapshot& asset) const -> TradeRecord;
+  auto get_trading_state(const RunningState& running_state) -> TradeRecord;
 
 private:
   double order_size_;
   double entry_price_;
   std::size_t entry_index_;
   std::time_t entry_timestamp_;
-  screener::ScreenerMethod timestamp_method_;
-  screener::ScreenerMethod price_method_;
   screener::ScreenerFilter exit_filter_;
   TradingTakeProfit trading_take_profit_;
   TradingStopLoss trading_stop_loss_;

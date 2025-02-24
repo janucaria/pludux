@@ -25,6 +25,8 @@ public:
 
   auto get_asset_size() const noexcept -> std::size_t;
 
+  auto asset_snapshot() const noexcept -> const AssetSnapshot&;
+
 private:
   AssetSnapshot asset_snapshot_;
   const QuoteAccess& quote_access_;

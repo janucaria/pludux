@@ -4,6 +4,8 @@
 #include <vector>
 
 #include <imgui.h>
+#include <implot.h>
+#include <implot_internal.h>
 
 #include <pludux/asset_quote.hpp>
 
@@ -24,18 +26,21 @@ private:
   ImVec4 risk_color_;
   ImVec4 reward_color_;
 
+  ImPlotRange plot_range_{0, 1};
+
   static int VolumeFormatter(double value, char* buff, int size, void*);
 
-  static void TickerTooltip(AssetQuote asset_quote, bool span_subplots = false);
+  static void TickerTooltip(const backtest::History& backtest_history,
+                            bool span_subplots = false);
 
-  void PlotOHLC(const char* label_id, AssetQuote asset_quote);
+  void PlotOHLC(const char* label_id,
+                const backtest::History& backtest_history);
 
-  void DrawClosedTrades(const char* label_id,
-                          const std::vector<backtest::TradeRecord>& trades);
+  void PlotVolume(const char* label_id,
+                  const backtest::History& backtest_history);
 
-  void DrawOpenTrade(const char* label_id, const backtest::TradeRecord& trade);
-
-  void PlotVolume(const char* label_id, AssetQuote asset_quote);
+  void DrawTrades(const char* label_id,
+                  const backtest::History& backtest_history);
 };
 
 } // namespace pludux::apps

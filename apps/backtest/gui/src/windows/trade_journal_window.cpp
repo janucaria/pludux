@@ -48,16 +48,15 @@ void TradeJournalWindow::render(AppState& app_state)
 
       ImGui::TableHeadersRow();
 
-      const auto& open_trade = backtest->backtesting_summary().open_trade();
-      if(open_trade.has_value()) {
-        const auto& trade = open_trade.value();
-        draw_trade_row(trade);
-      }
+      const auto& backtest_history = backtest->history();
+      const auto total_trades = backtest_history.size();
+      for(int i = total_trades - 1; i >= 0; --i) {
+        const auto& trade = backtest_history[i].trade_record();
+        const auto is_last_trade = i == total_trades - 1;
 
-      const auto& closed_trades =
-       backtest->backtesting_summary().closed_trades();
-      for(const auto& trade : closed_trades | std::views::reverse) {
-        draw_trade_row(trade);
+        if(trade && (trade->is_closed() || is_last_trade && trade->is_open())) {
+          draw_trade_row(*trade);
+        }
       }
 
       ImGui::EndTable();

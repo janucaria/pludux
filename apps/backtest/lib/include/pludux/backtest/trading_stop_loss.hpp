@@ -4,20 +4,26 @@
 #include <pludux/asset_snapshot.hpp>
 #include <pludux/screener.hpp>
 
+#include <pludux/backtest/running_state.hpp>
+
 namespace pludux::backtest {
 
 class TradingStopLoss {
 public:
-  TradingStopLoss(double stop_price,
-                  screener::ScreenerMethod asset_price_method);
+  TradingStopLoss(bool is_disabled,
+                  bool is_trailing,
+                  double risk,
+                  double stop_price);
 
   auto exit_price() const noexcept -> double;
 
-  auto operator()(const AssetSnapshot& asset) -> bool;
+  auto operator()(const RunningState& running_state) -> bool;
 
 private:
+  bool is_disabled_;
+  bool is_trailing_;
+  double risk_;
   double stop_price_;
-  screener::ScreenerMethod asset_price_method_;
 };
 
 } // namespace pludux::backtest

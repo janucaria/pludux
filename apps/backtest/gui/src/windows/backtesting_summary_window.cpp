@@ -5,6 +5,8 @@
 
 #include <imgui.h>
 
+#include <pludux/backtest/backtesting_summary.hpp>
+
 #include "../app_state.hpp"
 
 #include "./backtesting_summary_window.hpp"
@@ -28,9 +30,19 @@ void BacktestSummaryWindow::render(AppState& app_state)
   ostream << "Asset: " << state.asset_name << std::endl;
   ostream << std::endl;
 
-  if(backtest.has_value() &&
-     backtest->backtesting_summary().total_trades() > 0) {
-    const auto& summary = backtest->backtesting_summary();
+  if(backtest.has_value() && backtest->history().size() > 0) {
+    auto summary = backtest::BacktestingSummary{};
+
+    const auto& history = backtest->history();
+    for(int i = 0, ii = history.size(); i < ii; ++i) {
+      const auto& trade = history[i].trade_record();
+      const auto is_last_trade = i == ii - 1;
+
+      if(trade.has_value() && (trade->is_closed() || is_last_trade && trade->is_open())) {
+        summary.add_trade(*trade);
+      }
+    }
+
     ostream << std::format("Risk per trade: {:.2f}\n",
                            backtest->capital_risk());
     ostream << std::format("Total profit: {:.2f}\n", summary.total_profit());

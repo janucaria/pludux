@@ -23,7 +23,6 @@ void ChangeStrategyJsonStrAction::operator()(AppStateData& state) const
 
   state.strategy_name = get_strategy_name();
   state.backtest = std::move(backtest);
-  state.resource_changed = true;
 }
 
 auto ChangeStrategyJsonStrAction::get_strategy_name() const noexcept

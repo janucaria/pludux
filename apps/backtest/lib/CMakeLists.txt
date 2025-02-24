@@ -40,12 +40,15 @@ target_sources(${PROJECT_NAME}
     sources/backtest/trading_stop_loss.cpp
     sources/backtest/trading_take_profit.cpp
 
+    sources/backtest/history.cpp
+    sources/backtest/snapshot.cpp
     sources/backtest/trade_record.cpp
 
     sources/backtest/stop_loss.cpp
     sources/backtest/take_profit.cpp
 
     sources/backtest/backtesting_summary.cpp
+    sources/backtest/running_state.cpp
 )
 
 target_include_directories(${PROJECT_NAME}

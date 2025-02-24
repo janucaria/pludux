@@ -28,7 +28,10 @@ void LoadAssetCsvFileAction::operator()(AppStateData& state) const
 
   state.asset_data.emplace(quotes.begin(), quotes.end());
   state.asset_name = get_asset_name();
-  state.resource_changed = true;
+
+  if(state.backtest.has_value()) {
+    state.backtest->reset();
+  }
 }
 
 auto LoadAssetCsvFileAction::get_asset_name() const noexcept -> std::string

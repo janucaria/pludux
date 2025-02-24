@@ -8,7 +8,7 @@
 #include <vector>
 
 #include <pludux/asset_history.hpp>
-#include <pludux/backtest/backtesting_summary.hpp>
+#include <pludux/backtest/history.hpp>
 #include <pludux/backtest/stop_loss.hpp>
 #include <pludux/backtest/take_profit.hpp>
 #include <pludux/backtest/trade_record.hpp>
@@ -34,12 +34,13 @@ public:
 
   auto quote_access() const noexcept -> const QuoteAccess&;
 
-  auto backtesting_summary() const noexcept
-   -> const backtest::BacktestingSummary&;
+  auto history() const noexcept -> const backtest::History&;
 
   void reset();
 
-  auto run(const AssetHistory& asset) -> bool;
+  auto should_run(const AssetHistory& asset) const noexcept -> bool;
+
+  void run(const AssetHistory& asset);
 
 private:
   double capital_risk_;
@@ -51,8 +52,9 @@ private:
 
   std::optional<backtest::TradingSession> trading_session_;
   std::size_t current_index_;
-  std::size_t asset_size_;
-  backtest::BacktestingSummary backtesting_summary_;
+  backtest::History history_;
+
+  void push_history_data(const backtest::RunningState& running_state);
 };
 
 auto get_env_var(std::string_view var_name) -> std::optional<std::string>;

@@ -17,8 +17,6 @@ struct AppStateData {
 
   std::string asset_name{};
 
-  bool resource_changed{false};
-
   std::queue<std::string> alert_messages{};
 
   std::optional<Backtest> backtest{};

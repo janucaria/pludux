@@ -3,21 +3,26 @@
 namespace pludux::backtest {
 
 TradingTakeProfit::TradingTakeProfit(
- double profit_price, screener::ScreenerMethod asset_price_method)
-: profit_price_{profit_price}
-, asset_price_method_{std::move(asset_price_method)}
+ bool is_disabled,
+ double profit_price,
+ screener::ScreenerMethod signal_price_method)
+: is_disabled_{is_disabled}
+, profit_price_{profit_price}
+, signal_price_method_{std::move(signal_price_method)}
 {
 }
 
 auto TradingTakeProfit::exit_price() const noexcept -> double
 {
-  return profit_price_;
+  return !is_disabled_ ? profit_price_
+                       : std::numeric_limits<double>::quiet_NaN();
 }
 
 auto TradingTakeProfit::operator()(const AssetSnapshot& asset) -> bool
 {
-  const auto price = asset_price_method_(asset)[0];
-  return price >= profit_price_;
+  const auto signal_price = signal_price_method_(asset)[0];
+  const auto reference_price = exit_price();
+  return signal_price >= reference_price;
 }
 
 } // namespace pludux::backtest
