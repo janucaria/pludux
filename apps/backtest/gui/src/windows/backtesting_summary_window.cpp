@@ -20,31 +20,37 @@ BacktestSummaryWindow::BacktestSummaryWindow()
 void BacktestSummaryWindow::render(AppState& app_state)
 {
   auto& state = app_state.state();
-  auto& backtest = state.backtest;
+  auto& backtests = state.backtests;
 
   ImGui::Begin("Summary", nullptr);
+
+  auto asset_name = std::string{};
+  if(state.selected_backtest_index >= 0) {
+    asset_name = backtests[state.selected_backtest_index].asset().name();
+  }
 
   auto ostream = std::stringstream{};
 
   ostream << "Strategy: " << state.strategy_name << std::endl;
-  ostream << "Asset: " << state.asset_name << std::endl;
+  ostream << "Asset: " << asset_name << std::endl;
   ostream << std::endl;
 
-  if(backtest.has_value() && backtest->history().size() > 0) {
+  if(state.selected_backtest_index >= 0) {
+    const auto& backtest = backtests[state.selected_backtest_index];
     auto summary = backtest::BacktestingSummary{};
 
-    const auto& history = backtest->history();
+    const auto& history = backtest.history();
     for(int i = 0, ii = history.size(); i < ii; ++i) {
       const auto& trade = history[i].trade_record();
       const auto is_last_trade = i == ii - 1;
 
-      if(trade.has_value() && (trade->is_closed() || is_last_trade && trade->is_open())) {
+      if(trade.has_value() &&
+         (trade->is_closed() || is_last_trade && trade->is_open())) {
         summary.add_trade(*trade);
       }
     }
 
-    ostream << std::format("Risk per trade: {:.2f}\n",
-                           backtest->capital_risk());
+    ostream << std::format("Risk per trade: {:.2f}\n", backtest.capital_risk());
     ostream << std::format("Total profit: {:.2f}\n", summary.total_profit());
     auto total_duration_days = std::chrono::duration_cast<std::chrono::days>(
                                 std::chrono::seconds(summary.total_duration()))
@@ -103,7 +109,7 @@ void BacktestSummaryWindow::render(AppState& app_state)
     ostream << std::format("Expected value (EV): {:.2f}\n",
                            summary.expected_value());
     ostream << std::format("EV to risk rate: {:.2f}%\n",
-                           summary.expected_value() / backtest->capital_risk() *
+                           summary.expected_value() / backtest.capital_risk() *
                             100);
 
     ostream << std::format("Total closed trades: {}\n",

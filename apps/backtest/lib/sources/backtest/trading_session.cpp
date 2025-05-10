@@ -57,8 +57,7 @@ auto TradingSession::get_trading_state(const RunningState& running_state)
     }
   }();
 
-  const auto exit_timestamp =
-   static_cast<std::time_t>(running_state.timestamp());
+  const auto exit_timestamp = running_state.timeframe_timestamp();
   const auto exit_index = running_state.asset_index();
 
   return TradeRecord{trade_status,

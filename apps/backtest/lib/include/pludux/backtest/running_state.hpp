@@ -1,13 +1,18 @@
 #ifndef PLUDUX_PLUDUX_BACKTEST_RUNNING_STATE_HPP
 #define PLUDUX_PLUDUX_BACKTEST_RUNNING_STATE_HPP
 
+#include <cstddef>
+#include <ctime>
+
 #include <pludux/asset_quote.hpp>
 
 namespace pludux::backtest {
 
 class RunningState {
 public:
-  RunningState(AssetQuote asset_quote, std::size_t current_index);
+  RunningState(std::time_t timestamp,
+               AssetQuote asset_quote,
+               std::size_t current_index);
 
   auto asset_quote() const noexcept -> const AssetQuote&;
 
@@ -18,6 +23,10 @@ public:
   void capital_risk(double capital_risk) noexcept;
 
   auto asset_snapshot() const noexcept -> const AssetSnapshot&;
+
+  auto timeframe_timestamp() const noexcept -> std::time_t;
+
+  auto is_timeframe_match() const noexcept -> bool;
 
   auto price() const noexcept -> double;
 
@@ -35,6 +44,7 @@ public:
 
 private:
   std::size_t asset_index_;
+  std::time_t timeframe_timestamp_;
   double capital_risk_;
   AssetQuote asset_quote_;
 };

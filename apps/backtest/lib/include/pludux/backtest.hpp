@@ -8,8 +8,10 @@
 #include <vector>
 
 #include <pludux/asset_history.hpp>
+#include <pludux/backtest/asset.hpp>
 #include <pludux/backtest/history.hpp>
 #include <pludux/backtest/stop_loss.hpp>
+#include <pludux/backtest/strategy.hpp>
 #include <pludux/backtest/take_profit.hpp>
 #include <pludux/backtest/trade_record.hpp>
 #include <pludux/backtest/trading_session.hpp>
@@ -23,44 +25,42 @@ namespace pludux {
 
 class Backtest {
 public:
-  Backtest(double capital_risk_,
-           QuoteAccess quote_access,
-           screener::ScreenerFilter entry_filter,
-           screener::ScreenerFilter exit_filter,
-           backtest::StopLoss stop_loss,
-           backtest::TakeProfit take_profit);
+  Backtest(const backtest::Strategy& strategy, const backtest::Asset& asset);
+
+  auto strategy() const noexcept -> const backtest::Strategy&;
+
+  auto asset() const noexcept -> const backtest::Asset&;
 
   auto capital_risk() const noexcept -> double;
 
-  auto quote_access() const noexcept -> const QuoteAccess&;
-
   auto history() const noexcept -> const backtest::History&;
+
+  auto get_current_asset_timestamp() const noexcept
+   -> std::optional<std::time_t>;
 
   void reset();
 
-  auto should_run(const AssetHistory& asset) const noexcept -> bool;
+  auto should_run() const noexcept -> bool;
 
-  void run(const AssetHistory& asset);
+  void run(std::time_t timeframe_timestamp);
 
 private:
-  double capital_risk_;
-  QuoteAccess quote_access_;
-  screener::ScreenerFilter entry_filter_;
-  screener::ScreenerFilter exit_filter_;
-  backtest::StopLoss stop_loss_;
-  backtest::TakeProfit take_profit_;
+  const backtest::Strategy& strategy_;
+  const backtest::Asset& asset_;
 
   std::optional<backtest::TradingSession> trading_session_;
   std::size_t current_index_;
   backtest::History history_;
 
   void push_history_data(const backtest::RunningState& running_state);
+
+  void push_nan_data(const backtest::RunningState& running_state);
 };
 
 auto get_env_var(std::string_view var_name) -> std::optional<std::string>;
 
 auto parse_backtest_strategy_json(std::istream& json_strategy_stream)
- -> Backtest;
+ -> backtest::Strategy;
 
 auto csv_daily_stock_data(std::istream& csv_stream)
  -> std::vector<std::pair<std::string, pludux::DataSeries<double>>>;

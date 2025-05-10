@@ -13,7 +13,8 @@
 namespace pludux::apps {
 
 PlotDataWindow::PlotDataWindow()
-: bullish_color_{0.5, 1, 0, 1}
+: last_selected_backtest_index_{-1}
+, bullish_color_{0.5, 1, 0, 1}
 , bearish_color_{1, 0, 0.5, 1}
 , risk_color_{1, 0, 0, 0.25}
 , reward_color_{0, 1, 0, 0.25}
@@ -26,13 +27,12 @@ void PlotDataWindow::render(AppState& app_state)
 
   ImGui::Begin("Charts", nullptr);
 
-  if(!state.backtest.has_value() || !state.asset_data.has_value()) {
+  if(state.selected_backtest_index < 0) {
     ImGui::End();
     return;
   }
 
-  const auto& asset_data = state.asset_data.value();
-  const auto& backtest = state.backtest.value();
+  const auto& backtest = state.backtests[state.selected_backtest_index];
   const auto& backtest_history = backtest.history();
 
   // get the avaliable space
@@ -47,9 +47,13 @@ void PlotDataWindow::render(AppState& app_state)
                       ImPlotAxisFlags_Foreground | ImPlotAxisFlags_NoLabel |
                       ImPlotAxisFlags_NoHighlight;
 
-  if(backtest.should_run(asset_data)) {
+  const auto reset_chart_view =
+   last_selected_backtest_index_ != state.selected_backtest_index;
+  if(backtest.should_run() || reset_chart_view) {
     axis_x_flags |= ImPlotAxisFlags_AutoFit;
     axis_y_flags |= ImPlotAxisFlags_AutoFit;
+
+    last_selected_backtest_index_ = state.selected_backtest_index;
   }
 
   if(ImPlot::BeginPlot("##OHLCPlot",
@@ -58,7 +62,7 @@ void PlotDataWindow::render(AppState& app_state)
                         ImPlotFlags_NoBoxSelect)) {
     ImPlot::SetupAxisLinks(ImAxis_X1, &plot_range_.Min, &plot_range_.Max);
     ImPlot::SetupAxis(ImAxis_X1, nullptr, axis_x_flags);
-    ImPlot::SetupAxisLimits(ImAxis_X1, 0, asset_data.size() + 100);
+    ImPlot::SetupAxisLimits(ImAxis_X1, 0, backtest_history.size() + 100);
 
     ImPlot::SetupAxis(ImAxis_Y1, nullptr, axis_y_flags);
     ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");

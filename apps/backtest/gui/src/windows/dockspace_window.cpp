@@ -68,15 +68,18 @@ void DockspaceWindow::render(AppState& app_state)
                               dockspace_flags | ImGuiDockNodeFlags_DockSpace);
     ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->Size);
 
-    auto dock_main_id = dockspace_id;
+    auto dock_left_id = dockspace_id;
     auto dock_right_id = ImGui::DockBuilderSplitNode(
-     dock_main_id, ImGuiDir_Right, 0.3f, nullptr, &dock_main_id);
-    auto dock_down_id = ImGui::DockBuilderSplitNode(
-     dock_main_id, ImGuiDir_Down, 0.3f, nullptr, &dock_main_id);
+     dock_left_id, ImGuiDir_Right, 0.3f, nullptr, &dock_left_id);
+    auto dock_left_down_id = ImGui::DockBuilderSplitNode(
+     dock_left_id, ImGuiDir_Down, 0.3f, nullptr, &dock_left_id);
+    auto dock_right_down_id = ImGui::DockBuilderSplitNode(
+     dock_right_id, ImGuiDir_Down, 0.3f, nullptr, &dock_right_id);
 
-    ImGui::DockBuilderDockWindow("Charts", dock_main_id);
+    ImGui::DockBuilderDockWindow("Charts", dock_left_id);
+    ImGui::DockBuilderDockWindow("Trades", dock_left_down_id);
     ImGui::DockBuilderDockWindow("Summary", dock_right_id);
-    ImGui::DockBuilderDockWindow("Trades", dock_down_id);
+    ImGui::DockBuilderDockWindow("Assets", dock_right_down_id);
 
     ImGui::DockBuilderFinish(dockspace_id);
   }
@@ -140,9 +143,9 @@ void DockspaceWindow::render(AppState& app_state)
 #endif
       }
 
-      constexpr auto menu_item_open_csv = "Open Data (CSV)";
+      constexpr auto menu_item_open_csv = "Add Data (CSV)";
       if(ImGui::MenuItem(
-          menu_item_open_csv, nullptr, false, state.backtest.has_value())) {
+          menu_item_open_csv, nullptr, false, state.strategy.has_value())) {
 #ifdef __EMSCRIPTEN__
 
         auto new_app_state_ptr =

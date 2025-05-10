@@ -17,11 +17,16 @@ ChangeStrategyJsonFileAction::ChangeStrategyJsonFileAction(std::string path)
 
 void ChangeStrategyJsonFileAction::operator()(AppStateData& state) const
 {
-  auto json_strategy_file = std::ifstream{path_};
-  auto backtest = parse_backtest_strategy_json(json_strategy_file);
+  auto json_strategy_stream = std::ifstream{path_};
+  auto strategy = parse_backtest_strategy_json(json_strategy_stream);
 
   state.strategy_name = get_strategy_name();
-  state.backtest = backtest;
+  state.strategy = strategy;
+
+  state.backtests.clear();
+  for(const auto& asset : state.assets) {
+    state.backtests.emplace_back(state.strategy.value(), asset);
+  }
 }
 
 auto ChangeStrategyJsonFileAction::get_strategy_name() const noexcept

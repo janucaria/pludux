@@ -1,9 +1,14 @@
+#include <chrono>
+
 #include <pludux/backtest/running_state.hpp>
 
 namespace pludux::backtest {
 
-RunningState::RunningState(AssetQuote asset_quote, std::size_t current_index)
+RunningState::RunningState(std::time_t timestamp,
+                           AssetQuote asset_quote,
+                           std::size_t current_index)
 : asset_index_{current_index}
+, timeframe_timestamp_{timestamp}
 , capital_risk_{0}
 , asset_quote_{std::move(asset_quote)}
 {
@@ -27,6 +32,11 @@ auto RunningState::capital_risk() const noexcept -> double
 void RunningState::capital_risk(double capital_risk) noexcept
 {
   capital_risk_ = capital_risk;
+}
+
+auto RunningState::timeframe_timestamp() const noexcept -> std::time_t
+{
+  return timeframe_timestamp_;
 }
 
 auto RunningState::price() const noexcept -> double
@@ -67,6 +77,13 @@ auto RunningState::close() const noexcept -> double
 auto RunningState::volume() const noexcept -> double
 {
   return asset_quote_.volume()[0];
+}
+
+auto RunningState::is_timeframe_match() const noexcept -> bool
+{
+  const auto asset_days = asset_quote_.time()[0];
+  const auto running_days = timeframe_timestamp_;
+  return asset_days == running_days;
 }
 
 } // namespace pludux::backtest
