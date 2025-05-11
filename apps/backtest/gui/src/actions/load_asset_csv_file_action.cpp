@@ -25,13 +25,10 @@ void LoadAssetCsvFileAction::operator()(AppStateData& state) const
   }
 
   const auto quotes = csv_daily_stock_data(csv_stream);
-
-  state.asset_data.emplace(quotes.begin(), quotes.end());
-  state.asset_name = get_asset_name();
-
-  if(state.backtest.has_value()) {
-    state.backtest->reset();
-  }
+  auto asset_history = AssetHistory(quotes.begin(), quotes.end());
+  state.assets.emplace_back(get_asset_name(), std::move(asset_history));
+  state.backtests.emplace_back(state.strategy.value(), state.assets.back());
+  state.selected_backtest_index = state.backtests.size() - 1;
 }
 
 auto LoadAssetCsvFileAction::get_asset_name() const noexcept -> std::string

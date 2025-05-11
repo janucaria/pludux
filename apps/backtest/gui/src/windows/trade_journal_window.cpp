@@ -20,11 +20,13 @@ TradeJournalWindow::TradeJournalWindow()
 void TradeJournalWindow::render(AppState& app_state)
 {
   const auto& state = app_state.state();
-  const auto& backtest = state.backtest;
+  const auto& backtests = state.backtests;
 
   ImGui::Begin("Trades", nullptr);
 
-  if(backtest.has_value()) {
+  if(!backtests.empty()) {
+    const auto backtest = backtests[state.selected_backtest_index];
+
     const auto table_flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
                              ImGuiTableFlags_Resizable |
                              ImGuiTableFlags_Reorderable |
@@ -48,7 +50,7 @@ void TradeJournalWindow::render(AppState& app_state)
 
       ImGui::TableHeadersRow();
 
-      const auto& backtest_history = backtest->history();
+      const auto& backtest_history = backtest.history();
       const auto total_trades = backtest_history.size();
       for(int i = total_trades - 1; i >= 0; --i) {
         const auto& trade = backtest_history[i].trade_record();

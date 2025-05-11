@@ -20,6 +20,8 @@ public:
   void render(AppState& app_state);
 
 private:
+  std::ptrdiff_t last_selected_backtest_index_;
+
   ImVec4 bullish_color_;
   ImVec4 bearish_color_;
 

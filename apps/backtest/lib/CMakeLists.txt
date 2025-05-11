@@ -49,6 +49,8 @@ target_sources(${PROJECT_NAME}
 
     sources/backtest/backtesting_summary.cpp
     sources/backtest/running_state.cpp
+    sources/backtest/asset.cpp
+    sources/backtest/strategy.cpp
 )
 
 target_include_directories(${PROJECT_NAME}

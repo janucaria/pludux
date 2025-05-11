@@ -27,7 +27,7 @@ auto main(int, const char**) -> int
   const auto quote_access = pludux::QuoteAccess{};
 
   auto json_strategy_file = std::ifstream{json_strategy_path};
-  auto backtest = pludux::parse_backtest_strategy_json(json_strategy_file);
+  auto strategy = pludux::parse_backtest_strategy_json(json_strategy_file);
 
   auto csv_stream = std::ifstream{asset_file};
 
@@ -38,12 +38,12 @@ auto main(int, const char**) -> int
 
   const auto quotes = pludux::csv_daily_stock_data(csv_stream);
 
-  auto asset = pludux::AssetHistory(quotes.begin(), quotes.end());
-  auto open_trade = std::optional<pludux::backtest::TradeRecord>{};
-  auto closed_trades = std::vector<pludux::backtest::TradeRecord>{};
+  auto asset_history = pludux::AssetHistory(quotes.begin(), quotes.end());
+  auto asset = pludux::backtest::Asset{asset_file, std::move(asset_history)};
 
-  while(backtest.should_run(asset)) {
-    backtest.run(asset);
+  auto backtest = pludux::Backtest{strategy, asset};
+  while(backtest.should_run()) {
+    backtest.run();
   }
 
   auto& ostream = std::cout;

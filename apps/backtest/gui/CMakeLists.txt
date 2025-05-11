@@ -84,6 +84,7 @@ FetchContent_MakeAvailable(glfw3webgpu imgui implot)
 
 add_executable(${PROJECT_NAME}
 
+  src/windows/assets_window.cpp
   src/windows/backtesting_summary_window.cpp
   src/windows/dockspace_window.cpp
   src/windows/plot_data_window.cpp
