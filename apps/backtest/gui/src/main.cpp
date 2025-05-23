@@ -40,10 +40,9 @@ pludux_apps_backtest_load_csv_asset(char* name, char* data, void* app_state_ptr)
   const auto data_str = std::string(data);
   std::free(data);
 
-  auto app_state_unique =
-   std::unique_ptr<AppState>(reinterpret_cast<AppState*>(app_state_ptr));
+  auto app_state = *reinterpret_cast<AppState*>(app_state_ptr);
 
-  app_state_unique->emplace_action<LoadAssetCsvStrAction>(name_str, data_str);
+  app_state.emplace_action<LoadAssetCsvStrAction>(name_str, data_str);
 }
 
 EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_change_strategy_json_str(

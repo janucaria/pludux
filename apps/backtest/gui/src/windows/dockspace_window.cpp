@@ -147,40 +147,42 @@ void DockspaceWindow::render(AppState& app_state)
       if(ImGui::MenuItem(menu_item_open_csv)) {
 #ifdef __EMSCRIPTEN__
 
-        auto new_app_state_ptr =
-         std::make_unique<AppState>(app_state).release();
-
         EM_ASM(
          {
-           var file_selector = document.createElement('input');
-           file_selector.type = 'file';
-           file_selector.onchange = function(event)
+           var fileSelector = document.createElement('input');
+           fileSelector.type = 'file';
+           fileSelector.multiple = true;
+           fileSelector.onchange = function(event)
            {
-             var file = event.target.files[0];
+             for(var i = 0; i < event.target.files.length; i++) {
+               var file = event.target.files[i];
 
-             var reader = new FileReader();
-             reader.onload = function(event)
-             {
-               var file_name = file.name;
-               var data = event.target.result;
-               var decoder = new TextDecoder('utf-8');
-               var decoded_data = decoder.decode(data);
+               var reader = new FileReader();
+               reader.onload = function(event)
+               {
+                 var reader = event.target;
+                 var fileName = reader.onload.prototype.fileName;
+                 var data = reader.result;
+                 var decoder = new TextDecoder('utf-8');
+                 var decodedData = decoder.decode(data);
 
-               // transfer the data to the C++ side
-               var name_ptr = Module.stringToNewUTF8(file_name);
-               var data_ptr = Module.stringToNewUTF8(decoded_data);
+                 // transfer the data to the C++ side
+                 var name_ptr = Module.stringToNewUTF8(fileName);
+                 var data_ptr = Module.stringToNewUTF8(decodedData);
 
-               // call the C++ function
-               Module._pludux_apps_backtest_load_csv_asset(
-                name_ptr, data_ptr, $0);
-             };
+                 // call the C++ function
+                 Module._pludux_apps_backtest_load_csv_asset(
+                  name_ptr, data_ptr, $0);
+               };
+               reader.onload.prototype.fileName = file.name;
 
-             reader.readAsArrayBuffer(file);
+               reader.readAsArrayBuffer(file);
+             }
            };
-           file_selector.accept = '.csv';
-           file_selector.click();
+           fileSelector.accept = '.csv';
+           fileSelector.click();
          },
-         new_app_state_ptr);
+         &app_state);
 
 #else
         NFD::Guard nfdGuard;
