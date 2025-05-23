@@ -25,7 +25,7 @@ void TradeJournalWindow::render(AppState& app_state)
   ImGui::Begin("Trades", nullptr);
 
   if(!backtests.empty()) {
-    const auto backtest = backtests[state.selected_backtest_index];
+    const auto backtest = backtests[state.selected_asset_index];
 
     const auto table_flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
                              ImGuiTableFlags_Resizable |
@@ -50,15 +50,11 @@ void TradeJournalWindow::render(AppState& app_state)
 
       ImGui::TableHeadersRow();
 
-      const auto& backtest_history = backtest.history();
-      const auto total_trades = backtest_history.size();
+      const auto& trade_records = backtest.trade_records();
+      const auto total_trades = trade_records.size();
       for(int i = total_trades - 1; i >= 0; --i) {
-        const auto& trade = backtest_history[i].trade_record();
-        const auto is_last_trade = i == total_trades - 1;
-
-        if(trade && (trade->is_closed() || is_last_trade && trade->is_open())) {
-          draw_trade_row(*trade);
-        }
+        const auto& trade = trade_records[i];
+        draw_trade_row(trade);
       }
 
       ImGui::EndTable();

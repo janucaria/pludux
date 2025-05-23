@@ -19,14 +19,16 @@ ChangeStrategyJsonStrAction::ChangeStrategyJsonStrAction(
 void ChangeStrategyJsonStrAction::operator()(AppStateData& state) const
 {
   auto json_strategy_stream = std::stringstream{content_};
-  auto strategy = parse_backtest_strategy_json(json_strategy_stream);
+  auto strategy =
+   parse_backtest_strategy_json(json_strategy_stream, state.quote_access);
 
   state.strategy_name = get_strategy_name();
   state.strategy = strategy;
 
   state.backtests.clear();
   for(const auto& asset : state.assets) {
-    state.backtests.emplace_back(state.strategy.value(), asset);
+    state.backtests.emplace_back(
+     state.strategy.value(), asset, state.quote_access);
   }
 }
 

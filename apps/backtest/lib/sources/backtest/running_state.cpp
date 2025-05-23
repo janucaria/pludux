@@ -41,32 +41,32 @@ auto RunningState::asset_snapshot() const noexcept -> const AssetSnapshot&
 
 auto RunningState::timestamp() const noexcept -> double
 {
-  return asset_quote_.time()[0];
+  return asset_quote_.time();
 }
 
 auto RunningState::open() const noexcept -> double
 {
-  return asset_quote_.open()[0];
+  return asset_quote_.open();
 }
 
 auto RunningState::high() const noexcept -> double
 {
-  return asset_quote_.high()[0];
+  return asset_quote_.high();
 }
 
 auto RunningState::low() const noexcept -> double
 {
-  return asset_quote_.low()[0];
+  return asset_quote_.low();
 }
 
 auto RunningState::close() const noexcept -> double
 {
-  return asset_quote_.close()[0];
+  return asset_quote_.close();
 }
 
 auto RunningState::volume() const noexcept -> double
 {
-  return asset_quote_.volume()[0];
+  return asset_quote_.volume();
 }
 
 } // namespace pludux::backtest

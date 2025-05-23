@@ -23,8 +23,13 @@ auto TradingSession::get_trading_state(const RunningState& running_state)
  -> TradeRecord
 {
   const auto& asset = running_state.asset_snapshot();
+  const auto current_index = running_state.asset_index();
 
   const auto trade_status = [&]() {
+    if(current_index == entry_index_) {
+      return TradeRecord::Status::open;
+    }
+
     if(trading_stop_loss_(running_state)) {
       return TradeRecord::Status::closed_stop_loss;
     }
@@ -59,7 +64,7 @@ auto TradingSession::get_trading_state(const RunningState& running_state)
 
   const auto exit_timestamp =
    static_cast<std::time_t>(running_state.timestamp());
-  const auto exit_index = running_state.asset_index();
+  const auto exit_index = current_index;
 
   return TradeRecord{trade_status,
                      order_size_,

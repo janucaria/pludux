@@ -19,12 +19,14 @@
 namespace pludux {
 
 Backtest::Backtest(const backtest::Strategy& strategy,
-                   const backtest::Asset& asset)
+                   const backtest::Asset& asset,
+                   const QuoteAccess& quote_access)
 : strategy_{strategy}
 , asset_{asset}
+, quote_access_{quote_access}
 , trading_session_{std::nullopt}
 , current_index_{0}
-, history_{}
+, trade_records_{}
 {
 }
 
@@ -43,16 +45,17 @@ auto Backtest::capital_risk() const noexcept -> double
   return strategy_.capital_risk();
 }
 
-auto Backtest::history() const noexcept -> const backtest::History&
+auto Backtest::trade_records() const noexcept
+ -> const std::vector<backtest::TradeRecord>&
 {
-  return history_;
+  return trade_records_;
 }
 
 void Backtest::reset()
 {
   trading_session_.reset();
   current_index_ = 0;
-  history_ = backtest::History{};
+  trade_records_.clear();
 }
 
 auto Backtest::should_run() const noexcept -> bool
@@ -69,30 +72,23 @@ void Backtest::run()
   const auto last_index = asset_size - 1;
   const auto current_index = std::min(current_index_, last_index);
 
-  const auto quote_access = strategy_.quote_access();
-
   auto& trading_session = trading_session_;
   const auto asset_index = last_index - current_index;
   const auto asset_snapshot = asset[asset_index];
-  const auto asset_quote = AssetQuote{asset_snapshot, quote_access};
+  const auto asset_quote = AssetQuote{asset_snapshot, quote_access_};
   auto running_state = backtest::RunningState{asset_quote, asset_index};
   running_state.capital_risk(capital_risk());
 
   ++current_index_;
 
-  if(!trading_session.has_value()) {
-    if(strategy_.entry_filter()(asset_snapshot)) {
-      const auto& take_profit = strategy_.take_profit();
-      const auto& stop_loss = strategy_.stop_loss();
-      const auto trading_take_profit = take_profit(running_state);
-      const auto trading_stop_loss = stop_loss(running_state);
-      const auto order_size = stop_loss.get_order_size(running_state);
+  if(!trading_session.has_value() && strategy_.entry_filter()(asset_snapshot)) {
+    const auto& take_profit = strategy_.take_profit();
+    const auto& stop_loss = strategy_.stop_loss();
+    const auto trading_take_profit = take_profit(running_state);
+    const auto trading_stop_loss = stop_loss(running_state);
+    const auto order_size = stop_loss.get_order_size(running_state);
 
-      if(std::isnan(order_size)) {
-        push_history_data(running_state);
-        return;
-      }
-
+    if(!std::isnan(order_size)) {
       const auto entry_index = running_state.asset_index();
       const auto entry_price = running_state.price();
       const auto entry_timestamp =
@@ -106,39 +102,16 @@ void Backtest::run()
                               trading_take_profit,
                               trading_stop_loss);
     }
-
-    push_history_data(running_state);
-    return;
   }
 
-  push_history_data(running_state);
-  return;
-}
-
-void Backtest::push_history_data(const backtest::RunningState& running_state)
-{
-  const auto timestamp = running_state.timestamp();
-  const auto open = running_state.open();
-  const auto high = running_state.high();
-  const auto low = running_state.low();
-  const auto close = running_state.close();
-  const auto volume = running_state.volume();
-
-  auto trade_record = std::optional<backtest::TradeRecord>{};
   if(trading_session_) {
-    trade_record = trading_session_->get_trading_state(running_state);
-    if(trade_record->is_closed()) {
+    const auto asset_index = running_state.asset_index();
+    auto trade_record = trading_session_->get_trading_state(running_state);
+    if(trade_record.is_closed() || asset_index == 0) {
+      trade_records_.emplace_back(trade_record);
       trading_session_.reset();
     }
   }
-
-  history_.add_data(backtest::Snapshot{static_cast<double>(timestamp),
-                                       open,
-                                       high,
-                                       low,
-                                       close,
-                                       volume,
-                                       std::move(trade_record)});
 }
 
 auto get_env_var(std::string_view var_name) -> std::optional<std::string>
@@ -232,7 +205,8 @@ auto csv_daily_stock_data(std::istream& csv_stream)
   return result;
 }
 
-auto parse_backtest_strategy_json(std::istream& json_strategy_stream)
+auto parse_backtest_strategy_json(std::istream& json_strategy_stream,
+                                  const QuoteAccess& quote_access)
  -> backtest::Strategy
 {
   auto config_parser = pludux::ConfigParser{};
@@ -255,13 +229,6 @@ auto parse_backtest_strategy_json(std::istream& json_strategy_stream)
        std::format("Missing required method: {}", required_method)};
     }
   }
-
-  const auto quote_access = pludux::QuoteAccess{named_methods.at("time"),
-                                                named_methods.at("open"),
-                                                named_methods.at("high"),
-                                                named_methods.at("low"),
-                                                named_methods.at("close"),
-                                                named_methods.at("volume")};
 
   const auto capital_risk = strategy_json["capitalRisk"].get<double>();
   const auto entry_filter =
@@ -311,12 +278,8 @@ auto parse_backtest_strategy_json(std::istream& json_strategy_stream)
   const auto stop_loss = pludux::backtest::StopLoss{
    risk_method, is_stop_loss_disabled, is_trailing_stop_loss};
 
-  return pludux::backtest::Strategy{capital_risk,
-                                    quote_access,
-                                    entry_filter,
-                                    exit_filter,
-                                    stop_loss,
-                                    take_profit};
+  return pludux::backtest::Strategy{
+   capital_risk, entry_filter, exit_filter, stop_loss, take_profit};
 }
 
 auto risk_reward_config_parser(QuoteAccess quote_access) -> ConfigParser

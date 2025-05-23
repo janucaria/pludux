@@ -9,7 +9,6 @@
 
 #include <pludux/asset_history.hpp>
 #include <pludux/backtest/asset.hpp>
-#include <pludux/backtest/history.hpp>
 #include <pludux/backtest/stop_loss.hpp>
 #include <pludux/backtest/strategy.hpp>
 #include <pludux/backtest/take_profit.hpp>
@@ -25,7 +24,9 @@ namespace pludux {
 
 class Backtest {
 public:
-  Backtest(const backtest::Strategy& strategy, const backtest::Asset& asset);
+  Backtest(const backtest::Strategy& strategy,
+           const backtest::Asset& asset,
+           const QuoteAccess& quote_access);
 
   auto strategy() const noexcept -> const backtest::Strategy&;
 
@@ -33,7 +34,8 @@ public:
 
   auto capital_risk() const noexcept -> double;
 
-  auto history() const noexcept -> const backtest::History&;
+  auto trade_records() const noexcept
+   -> const std::vector<backtest::TradeRecord>&;
 
   void reset();
 
@@ -44,17 +46,17 @@ public:
 private:
   const backtest::Strategy& strategy_;
   const backtest::Asset& asset_;
+  const QuoteAccess& quote_access_;
 
   std::optional<backtest::TradingSession> trading_session_;
   std::size_t current_index_;
-  backtest::History history_;
-
-  void push_history_data(const backtest::RunningState& running_state);
+  std::vector<backtest::TradeRecord> trade_records_;
 };
 
 auto get_env_var(std::string_view var_name) -> std::optional<std::string>;
 
-auto parse_backtest_strategy_json(std::istream& json_strategy_stream)
+auto parse_backtest_strategy_json(std::istream& json_strategy_stream,
+                                  const QuoteAccess& quote_access)
  -> backtest::Strategy;
 
 auto csv_daily_stock_data(std::istream& csv_stream)

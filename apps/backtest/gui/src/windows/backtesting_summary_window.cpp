@@ -25,8 +25,8 @@ void BacktestSummaryWindow::render(AppState& app_state)
   ImGui::Begin("Summary", nullptr);
 
   auto asset_name = std::string{};
-  if(state.selected_backtest_index >= 0) {
-    asset_name = backtests[state.selected_backtest_index].asset().name();
+  if(state.selected_asset_index >= 0) {
+    asset_name = state.assets[state.selected_asset_index].name();
   }
 
   auto ostream = std::stringstream{};
@@ -35,19 +35,14 @@ void BacktestSummaryWindow::render(AppState& app_state)
   ostream << "Asset: " << asset_name << std::endl;
   ostream << std::endl;
 
-  if(state.selected_backtest_index >= 0) {
-    const auto& backtest = backtests[state.selected_backtest_index];
+  if(!state.backtests.empty() && state.selected_asset_index >= 0) {
+    const auto& backtest = backtests[state.selected_asset_index];
     auto summary = backtest::BacktestingSummary{};
 
-    const auto& history = backtest.history();
-    for(int i = 0, ii = history.size(); i < ii; ++i) {
-      const auto& trade = history[i].trade_record();
-      const auto is_last_trade = i == ii - 1;
-
-      if(trade.has_value() &&
-         (trade->is_closed() || is_last_trade && trade->is_open())) {
-        summary.add_trade(*trade);
-      }
+    const auto& trade_records = backtest.trade_records();
+    for(int i = 0, ii = trade_records.size(); i < ii; ++i) {
+      const auto& trade = trade_records[i];
+      summary.add_trade(trade);
     }
 
     ostream << std::format("Risk per trade: {:.2f}\n", backtest.capital_risk());

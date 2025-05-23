@@ -5,7 +5,6 @@
 #include <queue>
 #include <string>
 #include <vector>
-#include <list>
 
 #include <pludux/asset_history.hpp>
 #include <pludux/backtest.hpp>
@@ -23,9 +22,11 @@ struct AppStateData {
 
   std::optional<backtest::Strategy> strategy{};
 
-  std::ptrdiff_t selected_backtest_index{-1};
+  std::vector<backtest::Asset> assets{};
 
-  std::list<backtest::Asset> assets{};
+  std::ptrdiff_t selected_asset_index{-1};
+
+  QuoteAccess quote_access{};
 };
 
 } // namespace pludux::apps

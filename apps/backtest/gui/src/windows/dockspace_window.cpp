@@ -144,8 +144,7 @@ void DockspaceWindow::render(AppState& app_state)
       }
 
       constexpr auto menu_item_open_csv = "Add Data (CSV)";
-      if(ImGui::MenuItem(
-          menu_item_open_csv, nullptr, false, state.strategy.has_value())) {
+      if(ImGui::MenuItem(menu_item_open_csv)) {
 #ifdef __EMSCRIPTEN__
 
         auto new_app_state_ptr =
@@ -159,24 +158,24 @@ void DockspaceWindow::render(AppState& app_state)
            {
              var file = event.target.files[0];
 
-               var reader = new FileReader();
-               reader.onload = function(event)
-               {
-                 var file_name = file.name;
-                 var data = event.target.result;
-                 var decoder = new TextDecoder('utf-8');
-                 var decoded_data = decoder.decode(data);
+             var reader = new FileReader();
+             reader.onload = function(event)
+             {
+               var file_name = file.name;
+               var data = event.target.result;
+               var decoder = new TextDecoder('utf-8');
+               var decoded_data = decoder.decode(data);
 
-                 // transfer the data to the C++ side
-                 var name_ptr = Module.stringToNewUTF8(file_name);
-                 var data_ptr = Module.stringToNewUTF8(decoded_data);
+               // transfer the data to the C++ side
+               var name_ptr = Module.stringToNewUTF8(file_name);
+               var data_ptr = Module.stringToNewUTF8(decoded_data);
 
-                 // call the C++ function
-                 Module._pludux_apps_backtest_load_csv_asset(
-                  name_ptr, data_ptr, $0);
-               };
+               // call the C++ function
+               Module._pludux_apps_backtest_load_csv_asset(
+                name_ptr, data_ptr, $0);
+             };
 
-               reader.readAsArrayBuffer(file);
+             reader.readAsArrayBuffer(file);
            };
            file_selector.accept = '.csv';
            file_selector.click();

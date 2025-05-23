@@ -4,15 +4,12 @@
 
 namespace pludux::backtest {
 
-Strategy::Strategy(double capital_risk_,
-                   QuoteAccess quote_access,
+Strategy::Strategy(double capital_risk,
                    screener::ScreenerFilter entry_filter,
                    screener::ScreenerFilter exit_filter,
                    backtest::StopLoss stop_loss,
                    backtest::TakeProfit take_profit)
-
-: capital_risk_{capital_risk_}
-, quote_access_{std::move(quote_access)}
+: capital_risk_{capital_risk}
 , entry_filter_{std::move(entry_filter)}
 , exit_filter_{std::move(exit_filter)}
 , stop_loss_{std::move(stop_loss)}
@@ -23,11 +20,6 @@ Strategy::Strategy(double capital_risk_,
 auto Strategy::capital_risk() const noexcept -> double
 {
   return capital_risk_;
-}
-
-auto Strategy::quote_access() const noexcept -> const QuoteAccess&
-{
-  return quote_access_;
 }
 
 auto Strategy::entry_filter() const noexcept -> const screener::ScreenerFilter&

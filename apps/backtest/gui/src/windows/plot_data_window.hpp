@@ -8,6 +8,7 @@
 #include <implot_internal.h>
 
 #include <pludux/asset_quote.hpp>
+#include <pludux/backtest.hpp>
 
 #include "../app_state.hpp"
 
@@ -32,17 +33,22 @@ private:
 
   static int VolumeFormatter(double value, char* buff, int size, void*);
 
-  static void TickerTooltip(const backtest::History& backtest_history,
+  static void TickerTooltip(const AssetHistory& asset_history,
+                            const QuoteAccess& quote_access,
                             bool span_subplots = false);
 
   void PlotOHLC(const char* label_id,
-                const backtest::History& backtest_history);
+                const AssetHistory& asset_history,
+                const QuoteAccess& quote_access);
 
   void PlotVolume(const char* label_id,
-                  const backtest::History& backtest_history);
+                  const AssetHistory& asset_history,
+                  const QuoteAccess& quote_access);
 
   void DrawTrades(const char* label_id,
-                  const backtest::History& backtest_history);
+                  const std::vector<backtest::TradeRecord>& trade_records,
+                  const AssetHistory& asset_history,
+                  const QuoteAccess& quote_access);
 };
 
 } // namespace pludux::apps

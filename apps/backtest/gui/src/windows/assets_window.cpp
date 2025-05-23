@@ -23,14 +23,14 @@ void AssetsWindow::render(AppState& app_state)
     for(auto count = 0; const auto& asset : assets) {
       const auto i = count++;
       const auto& asset_name = asset.name();
-      auto is_selected = state.selected_backtest_index == i;
+      auto is_selected = state.selected_asset_index == i;
 
       ImGui::PushID(i);
 
       ImGui::SetNextItemAllowOverlap();
       if(ImGui::Selectable(asset_name.c_str(), &is_selected)) {
         app_state.push_action([i](AppStateData& state) {
-          state.selected_backtest_index = i;
+          state.selected_asset_index = i;
         });
       }
       ImGui::SameLine();
@@ -47,7 +47,7 @@ void AssetsWindow::render(AppState& app_state)
               state.backtests.push_back(std::move(old_backtests[j]));
             }
           }
-          --state.selected_backtest_index;
+          --state.selected_asset_index;
         });
       }
 
