@@ -26,7 +26,8 @@ void BacktestSummaryWindow::render(AppState& app_state)
 
   auto asset_name = std::string{};
   if(state.selected_asset_index >= 0) {
-    asset_name = state.assets[state.selected_asset_index].name();
+    const auto& asset = *state.assets[state.selected_asset_index];
+    asset_name = asset.name();
   }
 
   auto ostream = std::stringstream{};

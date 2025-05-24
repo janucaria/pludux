@@ -20,8 +20,8 @@ void AssetsWindow::render(AppState& app_state)
   ImGui::Begin("Assets", nullptr);
 
   if(!assets.empty()) {
-    for(auto count = 0; const auto& asset : assets) {
-      const auto i = count++;
+    for(auto i = 0; i < assets.size(); ++i) {
+      const auto& asset = *assets[i];
       const auto& asset_name = asset.name();
       auto is_selected = state.selected_asset_index == i;
 
@@ -29,17 +29,14 @@ void AssetsWindow::render(AppState& app_state)
 
       ImGui::SetNextItemAllowOverlap();
       if(ImGui::Selectable(asset_name.c_str(), &is_selected)) {
-        app_state.push_action([i](AppStateData& state) {
-          state.selected_asset_index = i;
-        });
+        app_state.push_action(
+         [i](AppStateData& state) { state.selected_asset_index = i; });
       }
       ImGui::SameLine();
 
       ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 50);
       if(ImGui::Button("Delete")) {
         app_state.push_action([i](AppStateData& state) {
-          state.assets.erase(std::next(state.assets.begin(), i));
-
           auto old_backtests = std::move(state.backtests);
           state.backtests.clear();
           for(auto j = 0; j < old_backtests.size(); ++j) {
@@ -47,7 +44,10 @@ void AssetsWindow::render(AppState& app_state)
               state.backtests.push_back(std::move(old_backtests[j]));
             }
           }
-          --state.selected_asset_index;
+          state.assets.erase(std::next(state.assets.begin(), i));
+          if(state.selected_asset_index >= i) {
+            state.selected_asset_index--;
+          }
         });
       }
 

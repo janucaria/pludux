@@ -33,7 +33,7 @@ void PlotDataWindow::render(AppState& app_state)
   }
 
   const auto& quote_access = state.quote_access;
-  const auto& asset = state.assets[state.selected_asset_index];
+  const auto& asset = *state.assets[state.selected_asset_index];
   const auto& asset_history = asset.history();
 
   auto trade_records = std::vector<backtest::TradeRecord>{};

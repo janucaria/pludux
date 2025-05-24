@@ -1,6 +1,7 @@
 #ifndef PLUDUX_APPS_BACKTEST_APP_STATE_DATA_HPP
 #define PLUDUX_APPS_BACKTEST_APP_STATE_DATA_HPP
 
+#include <memory>
 #include <optional>
 #include <queue>
 #include <string>
@@ -22,7 +23,7 @@ struct AppStateData {
 
   std::optional<backtest::Strategy> strategy{};
 
-  std::vector<backtest::Asset> assets{};
+  std::vector<std::unique_ptr<backtest::Asset>> assets{};
 
   std::ptrdiff_t selected_asset_index{-1};
 

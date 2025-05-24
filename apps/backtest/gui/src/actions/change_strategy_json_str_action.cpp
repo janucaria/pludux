@@ -26,7 +26,8 @@ void ChangeStrategyJsonStrAction::operator()(AppStateData& state) const
   state.strategy = strategy;
 
   state.backtests.clear();
-  for(const auto& asset : state.assets) {
+  for(const auto& asset_ptr : state.assets) {
+    const auto& asset = *asset_ptr;
     state.backtests.emplace_back(
      state.strategy.value(), asset, state.quote_access);
   }

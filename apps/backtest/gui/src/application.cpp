@@ -59,22 +59,18 @@ void Application::on_before_main_loop()
     const auto csv_path =
      get_env_var("PLUDUX_BACKTEST_CSV_DATA_PATH_1").value_or("");
 
-    if(csv_path.empty()) {
-      return;
+    if(!csv_path.empty()) {
+      LoadAssetCsvFileAction{csv_path}(state_data_);
     }
-
-    LoadAssetCsvFileAction{csv_path}(state_data_);
   }
 
   {
     const auto csv_path =
      get_env_var("PLUDUX_BACKTEST_CSV_DATA_PATH_2").value_or("");
 
-    if(csv_path.empty()) {
-      return;
+    if(!csv_path.empty()) {
+      LoadAssetCsvFileAction{csv_path}(state_data_);
     }
-
-    LoadAssetCsvFileAction{csv_path}(state_data_);
   }
 
 #endif
