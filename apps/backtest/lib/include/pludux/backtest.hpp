@@ -55,7 +55,8 @@ private:
 
 auto get_env_var(std::string_view var_name) -> std::optional<std::string>;
 
-auto parse_backtest_strategy_json(std::istream& json_strategy_stream,
+auto parse_backtest_strategy_json(const std::string& strategy_name,
+                                  std::istream& json_strategy_stream,
                                   const QuoteAccess& quote_access)
  -> backtest::Strategy;
 

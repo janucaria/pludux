@@ -26,15 +26,17 @@ void LoadAssetCsvFileAction::operator()(AppStateData& state) const
 
   const auto quotes = csv_daily_stock_data(csv_stream);
   auto asset_history = AssetHistory(quotes.begin(), quotes.end());
-  auto asset_ptr = std::make_unique<backtest::Asset>(get_asset_name(),
-                                                     std::move(asset_history));
-  state.assets.emplace_back(std::move(asset_ptr));
-  if(state.strategy.has_value()) {
-    const auto& asset = *state.assets.back();
-    state.backtests.emplace_back(
-     state.strategy.value(), asset, state.quote_access);
-  }
+  const auto asset_name = get_asset_name();
+  auto asset_ptr =
+   std::make_unique<backtest::Asset>(asset_name, std::move(asset_history));
+
+  const auto& asset = *(state.assets.emplace_back(std::move(asset_ptr)).get());
   state.selected_asset_index = state.assets.size() - 1;
+
+  if(state.selected_strategy_index >= 0 && state.strategies.size() > 0) {
+    const auto& strategy = *state.strategies[state.selected_strategy_index];
+    state.backtests.emplace_back(strategy, asset, state.quote_access);
+  }
 }
 
 auto LoadAssetCsvFileAction::get_asset_name() const noexcept -> std::string

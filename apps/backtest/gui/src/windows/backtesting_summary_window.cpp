@@ -30,9 +30,14 @@ void BacktestSummaryWindow::render(AppState& app_state)
     asset_name = asset.name();
   }
 
+  const auto strategy_name =
+   state.selected_strategy_index >= 0
+    ? state.strategies[state.selected_strategy_index]->name()
+    : "";
+
   auto ostream = std::stringstream{};
 
-  ostream << "Strategy: " << state.strategy_name << std::endl;
+  ostream << "Strategy: " << strategy_name << std::endl;
   ostream << "Asset: " << asset_name << std::endl;
   ostream << std::endl;
 

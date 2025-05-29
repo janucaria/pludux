@@ -205,7 +205,8 @@ auto csv_daily_stock_data(std::istream& csv_stream)
   return result;
 }
 
-auto parse_backtest_strategy_json(std::istream& json_strategy_stream,
+auto parse_backtest_strategy_json(const std::string& strategy_name,
+                                  std::istream& json_strategy_stream,
                                   const QuoteAccess& quote_access)
  -> backtest::Strategy
 {
@@ -278,8 +279,12 @@ auto parse_backtest_strategy_json(std::istream& json_strategy_stream,
   const auto stop_loss = pludux::backtest::StopLoss{
    risk_method, is_stop_loss_disabled, is_trailing_stop_loss};
 
-  return pludux::backtest::Strategy{
-   capital_risk, entry_filter, exit_filter, stop_loss, take_profit};
+  return pludux::backtest::Strategy{strategy_name,
+                                    capital_risk,
+                                    entry_filter,
+                                    exit_filter,
+                                    stop_loss,
+                                    take_profit};
 }
 
 auto risk_reward_config_parser(QuoteAccess quote_access) -> ConfigParser

@@ -5,6 +5,7 @@
 #include "./windows/dockspace_window.hpp"
 #include "./windows/backtesting_summary_window.hpp"
 #include "./windows/plot_data_window.hpp"
+#include "./windows/strategies_window.hpp"
 #include "./windows/trade_journal_window.hpp"
 
 #endif

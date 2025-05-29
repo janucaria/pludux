@@ -5,6 +5,7 @@
 #include <optional>
 #include <queue>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include <pludux/asset_history.hpp>
@@ -15,13 +16,13 @@
 namespace pludux::apps {
 
 struct AppStateData {
-  std::string strategy_name{};
-
   std::queue<std::string> alert_messages{};
 
   std::vector<Backtest> backtests{};
 
-  std::optional<backtest::Strategy> strategy{};
+  std::vector<std::unique_ptr<backtest::Strategy>> strategies{};
+
+  std::ptrdiff_t selected_strategy_index{-1};
 
   std::vector<std::unique_ptr<backtest::Asset>> assets{};
 

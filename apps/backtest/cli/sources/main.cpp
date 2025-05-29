@@ -39,8 +39,8 @@ auto main(int, const char**) -> int
                                                 std::move(volume_method)};
 
   auto json_strategy_file = std::ifstream{json_strategy_path};
-  auto strategy =
-   pludux::parse_backtest_strategy_json(json_strategy_file, quote_access);
+  auto strategy = pludux::parse_backtest_strategy_json(
+   "Strategy", json_strategy_file, quote_access);
 
   auto csv_stream = std::ifstream{asset_file};
 

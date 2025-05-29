@@ -114,7 +114,6 @@ void Application::on_update()
 
     } catch(const std::exception& e) {
       state_data_.backtests.clear();
-      state_data_.strategy.reset();
 
       const auto error_message = std::format("Error: {}", e.what());
       state_data_.alert_messages.push(error_message);
@@ -151,6 +150,9 @@ void Application::on_update()
 
     auto assets_window = AssetsWindow{};
     assets_window.render(app_state);
+
+    auto strategies_window = StrategiesWindow{};
+    strategies_window.render(app_state);
 
     auto trade_journal = TradeJournalWindow{};
     trade_journal.render(app_state);
