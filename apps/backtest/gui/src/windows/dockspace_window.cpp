@@ -212,15 +212,38 @@ void DockspaceWindow::render(AppState& app_state)
          &app_state);
 
 #else
-        NFD::Guard nfdGuard;
-        NFD::UniquePath outPath;
-        nfdfilteritem_t filterItem[1] = {{"CSV Files", "csv"}};
-        nfdresult_t result = NFD::OpenDialog(outPath, filterItem, 1);
+        auto nfd_guard = NFD::Guard{};
+        auto out_paths = NFD::UniquePathSet{};
+
+        constexpr auto filter_item =
+         std::array<nfdfilteritem_t, 1>{{"CSV Files", "csv"}};
+
+        auto result = NFD::OpenDialogMultiple(
+         out_paths, filter_item.data(), filter_item.size());
 
         if(result == NFD_OKAY) {
-          const auto selected_path = std::string(outPath.get());
+          auto paths_count = nfdpathsetsize_t{};
 
-          app_state.emplace_action<LoadAssetCsvFileAction>(selected_path);
+          result = NFD::PathSet::Count(out_paths, paths_count);
+          if(result == NFD_ERROR) {
+            const auto error_message =
+             std::format("Error '{}': {}", menu_item_open_csv, NFD::GetError());
+            throw std::runtime_error(error_message);
+          }
+
+          for(nfdpathsetsize_t i = 0; i < paths_count; ++i) {
+            auto out_path = NFD::UniquePathSetPath{};
+            result = NFD::PathSet::GetPath(out_paths, i, out_path);
+
+            if(result == NFD_ERROR) {
+              const auto error_message = std::format(
+               "Error '{}': {}", menu_item_open_csv, NFD::GetError());
+              throw std::runtime_error(error_message);
+            }
+
+            const auto selected_path = std::string(out_path.get());
+            app_state.emplace_action<LoadAssetCsvFileAction>(selected_path);
+          }
 
         } else if(result == NFD_CANCEL) {
         } else {
@@ -228,6 +251,7 @@ void DockspaceWindow::render(AppState& app_state)
            std::format("Error '{}': {}", menu_item_open_csv, NFD::GetError());
           throw std::runtime_error(error_message);
         }
+
 #endif
       }
       ImGui::EndMenu();
