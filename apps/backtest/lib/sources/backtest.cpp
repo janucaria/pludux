@@ -4,6 +4,7 @@
 #include <ctime>
 #include <format>
 #include <iostream>
+#include <limits>
 #include <optional>
 #include <vector>
 
@@ -72,7 +73,6 @@ void Backtest::run()
   const auto last_index = asset_size - 1;
   const auto current_index = std::min(current_index_, last_index);
 
-  auto& trading_session = trading_session_;
   const auto asset_index = last_index - current_index;
   const auto asset_snapshot = asset[asset_index];
   const auto asset_quote = AssetQuote{asset_snapshot, quote_access_};
@@ -81,7 +81,8 @@ void Backtest::run()
 
   ++current_index_;
 
-  if(!trading_session.has_value() && strategy_.entry_filter()(asset_snapshot)) {
+  if(!trading_session_.has_value() &&
+     strategy_.entry_filter()(asset_snapshot)) {
     const auto& take_profit = strategy_.take_profit();
     const auto& stop_loss = strategy_.stop_loss();
     const auto trading_take_profit = take_profit(running_state);
@@ -94,23 +95,39 @@ void Backtest::run()
       const auto entry_timestamp =
        static_cast<std::time_t>(running_state.timestamp());
       const auto exit_filter = strategy_.exit_filter();
-      trading_session.emplace(order_size,
-                              entry_index,
-                              entry_price,
-                              entry_timestamp,
-                              exit_filter,
-                              trading_take_profit,
-                              trading_stop_loss);
+      trading_session_.emplace(order_size,
+                               entry_index,
+                               entry_price,
+                               entry_timestamp,
+                               exit_filter,
+                               trading_take_profit,
+                               trading_stop_loss);
     }
   }
 
   if(trading_session_) {
     const auto asset_index = running_state.asset_index();
     auto trade_record = trading_session_->get_trading_state(running_state);
+
+    trade_records_.emplace_back(trade_record);
+
     if(trade_record.is_closed() || asset_index == 0) {
-      trade_records_.emplace_back(trade_record);
       trading_session_.reset();
     }
+  } else {
+    auto trade_record =
+     backtest::TradeRecord{backtest::TradeRecord::Status::flat,
+                           std::numeric_limits<double>::quiet_NaN(),
+                           running_state.asset_index(),
+                           running_state.asset_index(),
+                           static_cast<std::time_t>(running_state.timestamp()),
+                           static_cast<std::time_t>(running_state.timestamp()),
+                           running_state.price(),
+                           running_state.price(),
+                           std::numeric_limits<double>::quiet_NaN(),
+                           std::numeric_limits<double>::quiet_NaN(),
+                           std::numeric_limits<double>::quiet_NaN()};
+    trade_records_.emplace_back(trade_record);
   }
 }
 

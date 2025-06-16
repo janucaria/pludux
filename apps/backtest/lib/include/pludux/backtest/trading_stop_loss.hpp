@@ -15,6 +15,10 @@ public:
                   double risk,
                   double stop_price);
 
+  auto is_trailing() const noexcept -> bool;
+
+  auto initial_exit_price() const noexcept -> double;
+
   auto exit_price() const noexcept -> double;
 
   auto operator()(const RunningState& running_state) -> bool;
@@ -24,6 +28,7 @@ private:
   bool is_trailing_;
   double risk_;
   double stop_price_;
+  double initial_stop_price_;
 };
 
 } // namespace pludux::backtest

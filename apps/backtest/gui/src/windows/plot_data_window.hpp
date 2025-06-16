@@ -29,6 +29,8 @@ private:
   ImVec4 risk_color_;
   ImVec4 reward_color_;
 
+  ImVec4 trailing_stop_color_;
+
   ImPlotRange plot_range_{0, 1};
 
   static int VolumeFormatter(double value, char* buff, int size, void*);

@@ -48,7 +48,10 @@ void BacktestSummaryWindow::render(AppState& app_state)
     const auto& trade_records = backtest.trade_records();
     for(int i = 0, ii = trade_records.size(); i < ii; ++i) {
       const auto& trade = trade_records[i];
-      summary.add_trade(trade);
+
+      if(trade.is_summary_session()) {
+        summary.add_trade(trade);
+      }
     }
 
     ostream << std::format("Risk per trade: {:.2f}\n", backtest.capital_risk());

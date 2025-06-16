@@ -65,7 +65,10 @@ auto main(int, const char**) -> int
   const auto& trade_records = backtest.trade_records();
   for(int i = 0, ii = trade_records.size(); i < ii; ++i) {
     const auto& trade = trade_records[i];
-    summary.add_trade(trade);
+
+    if(trade.is_summary_session()) {
+      summary.add_trade(trade);
+    }
   }
 
   ostream << std::format("Risk per trade: {:.2f}\n", backtest.capital_risk());
@@ -142,9 +145,8 @@ auto main(int, const char**) -> int
   // auto is_in_trade = false;
   for(int i = 0, ii = trade_records.size(); i < ii; ++i) {
     const auto& trade = trade_records[i];
-    const auto is_last_trade = i == ii - 1;
 
-    if(trade.is_closed() || is_last_trade) {
+    if(trade.is_summary_session()) {
       const auto entry_timestamp = trade.entry_timestamp();
       const auto exit_timestamp = trade.exit_timestamp();
       std::cout << "Entry date: " << std::ctime(&entry_timestamp) // NOLINT

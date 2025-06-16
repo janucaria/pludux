@@ -9,6 +9,7 @@ namespace pludux::backtest {
 class TradeRecord {
 public:
   enum class Status {
+    flat,
     open,
     closed_exit_signal,
     closed_take_profit,
@@ -18,12 +19,13 @@ public:
   TradeRecord(Status status,
               double order_size,
               std::size_t entry_index,
-              std::size_t exit_index,
+              std::size_t at_index,
               std::time_t entry_timestamp,
               std::time_t exit_timestamp,
               double entry_price,
               double exit_price,
               double stop_loss_price,
+              double trailing_stop_price,
               double take_profit_price);
 
   auto order_size() const noexcept -> double;
@@ -34,9 +36,9 @@ public:
 
   void entry_index(std::size_t index) noexcept;
 
-  auto exit_index() const noexcept -> std::size_t;
+  auto at_index() const noexcept -> std::size_t;
 
-  void exit_index(std::size_t index) noexcept;
+  void at_index(std::size_t index) noexcept;
 
   auto entry_price() const noexcept -> double;
 
@@ -49,6 +51,10 @@ public:
   auto stop_loss_price() const noexcept -> double;
 
   void stop_loss_price(double price) noexcept;
+
+  auto trailing_stop_price() const noexcept -> double;
+
+  void trailing_stop_price(double price) noexcept;
 
   auto take_profit_price() const noexcept -> double;
 
@@ -72,6 +78,8 @@ public:
 
   void status(Status status) noexcept;
 
+  auto is_flat() const noexcept -> bool;
+
   auto is_open() const noexcept -> bool;
 
   auto is_closed() const noexcept -> bool;
@@ -82,6 +90,8 @@ public:
 
   auto is_closed_stop_loss() const noexcept -> bool;
 
+  auto is_summary_session(std::size_t last_index = 0) const noexcept -> bool;
+
 private:
   double order_size_;
 
@@ -89,10 +99,11 @@ private:
   double exit_price_;
 
   double stop_loss_price_;
+  double trailing_stop_price_;
   double take_profit_price_;
 
   std::size_t entry_index_;
-  std::size_t exit_index_;
+  std::size_t at_index_;
 
   std::time_t entry_timestamp_;
   std::time_t exit_timestamp_;

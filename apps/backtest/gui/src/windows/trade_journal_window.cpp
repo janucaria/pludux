@@ -54,7 +54,10 @@ void TradeJournalWindow::render(AppState& app_state)
       const auto total_trades = trade_records.size();
       for(int i = total_trades - 1; i >= 0; --i) {
         const auto& trade = trade_records[i];
-        draw_trade_row(trade);
+
+        if(trade.is_summary_session()) {
+          draw_trade_row(trade);
+        }
       }
 
       ImGui::EndTable();
@@ -116,6 +119,8 @@ auto TradeJournalWindow::format_trade_status(
  backtest::TradeRecord::Status status) noexcept -> std::string
 {
   switch(status) {
+  case backtest::TradeRecord::Status::flat:
+    return "Flat";
   case backtest::TradeRecord::Status::open:
     return "Open";
   case backtest::TradeRecord::Status::closed_exit_signal:

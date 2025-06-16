@@ -18,6 +18,7 @@ PlotDataWindow::PlotDataWindow()
 , bearish_color_{1, 0, 0.5, 1}
 , risk_color_{1, 0, 0, 0.25}
 , reward_color_{0, 1, 0, 0.25}
+, trailing_stop_color_{1, 0., 0., 0.9}
 {
 }
 
@@ -309,56 +310,95 @@ void PlotDataWindow::DrawTrades(
  const QuoteAccess& quote_access)
 {
   auto* draw_list = ImPlot::GetPlotDrawList();
+
   constexpr double half_width = 0.5;
   if(ImPlot::BeginItem(label_id)) {
+    auto trailing_stop_lines = std::vector<ImVec2>{};
+    trailing_stop_lines.reserve(trade_records.size());
+
     for(int i = 0, ii = trade_records.size(); i < ii; ++i) {
       const auto& trade = trade_records[i];
 
       const auto take_profit_price = trade.take_profit_price();
       const auto stop_loss_price = trade.stop_loss_price();
+      const auto trailing_stop_price = trade.trailing_stop_price();
       const auto entry_idx = trade.entry_index();
-      const auto exit_idx = trade.exit_index();
+      const auto asset_idx = trade.at_index();
       const auto entry_price = trade.entry_price();
+      const auto current_price = trade.exit_price();
 
-      for(int j = exit_idx; j <= entry_idx; ++j) {
-        const auto current_snapshot = asset_history[j];
-        const auto current_quote = AssetQuote{current_snapshot, quote_access};
-        const auto current_price = current_quote.close();
+      const auto top_price = !std::isnan(take_profit_price)
+                              ? take_profit_price
+                              : std::max(entry_price, current_price);
+      const auto middle_price = std::max(entry_price, stop_loss_price);
+      const auto bottom_price = !std::isnan(stop_loss_price)
+                                 ? stop_loss_price
+                                 : std::min(middle_price, current_price);
 
-        const auto top_price = !std::isnan(take_profit_price)
-                                ? take_profit_price
-                                : std::max(entry_price, current_price);
-        const auto middle_price = std::max(entry_price, stop_loss_price);
-        const auto bottom_price = !std::isnan(stop_loss_price)
-                                   ? stop_loss_price
-                                   : std::min(middle_price, current_price);
+      const auto left_half_width = asset_idx == entry_idx ? 0.0 : half_width;
+      const auto right_half_width =
+       trade.is_open() ? (asset_idx == 0 ? 10.0 : half_width) : 0.0;
 
-        const auto left_half_width = j == entry_idx ? 0.0 : half_width;
-        const auto right_half_width =
-         j == exit_idx ? (trade.is_open() ? 10.0 : 0.0) : half_width;
+      {
+        const auto risk_left_top_pos =
+         ImPlot::PlotToPixels(asset_idx + left_half_width, middle_price);
+        const auto risk_right_bottom_pos =
+         ImPlot::PlotToPixels(asset_idx - right_half_width, bottom_price);
 
-        {
-          const auto risk_left_top_pos =
-           ImPlot::PlotToPixels(j + left_half_width, middle_price);
-          const auto risk_right_bottom_pos =
-           ImPlot::PlotToPixels(j - right_half_width, bottom_price);
+        draw_list->AddRectFilled(risk_left_top_pos,
+                                 risk_right_bottom_pos,
+                                 ImGui::GetColorU32(risk_color_));
+      }
+      {
+        const auto reward_left_top_pos =
+         ImPlot::PlotToPixels(asset_idx + left_half_width, top_price);
+        const auto reward_right_bottom_pos =
+         ImPlot::PlotToPixels(asset_idx - right_half_width, middle_price);
 
-          draw_list->AddRectFilled(risk_left_top_pos,
-                                   risk_right_bottom_pos,
-                                   ImGui::GetColorU32(risk_color_));
-        }
-        {
-          const auto reward_left_top_pos =
-           ImPlot::PlotToPixels(j + left_half_width, top_price);
-          const auto reward_right_bottom_pos =
-           ImPlot::PlotToPixels(j - right_half_width, middle_price);
+        draw_list->AddRectFilled(reward_left_top_pos,
+                                 reward_right_bottom_pos,
+                                 ImGui::GetColorU32(reward_color_));
+      }
 
-          draw_list->AddRectFilled(reward_left_top_pos,
-                                   reward_right_bottom_pos,
-                                   ImGui::GetColorU32(reward_color_));
+      {
+        if(!trade.is_flat()) {
+          const auto left_pos =
+           ImPlot::PlotToPixels(asset_idx + half_width, trailing_stop_price);
+          const auto center_pos =
+           ImPlot::PlotToPixels(asset_idx, trailing_stop_price);
+          const auto right_pos =
+           ImPlot::PlotToPixels(asset_idx - half_width, trailing_stop_price);
+
+          trailing_stop_lines.push_back(left_pos);
+          trailing_stop_lines.push_back(center_pos);
+          trailing_stop_lines.push_back(right_pos);
+
+          if(trade.is_closed()) {
+            const auto nan_pos = ImVec2{NAN, NAN};
+            trailing_stop_lines.push_back(nan_pos);
+          }
         }
       }
     }
+
+    {
+      // remove duplicates of consecutive points
+      auto it = std::unique(trailing_stop_lines.begin(),
+                            trailing_stop_lines.end(),
+                            [](const ImVec2& a, const ImVec2& b) {
+                              return a.x == b.x && a.y == b.y;
+                            });
+
+      trailing_stop_lines.erase(it, trailing_stop_lines.end());
+      if(!trailing_stop_lines.empty()) {
+        draw_list->AddPolyline(trailing_stop_lines.data(),
+                               trailing_stop_lines.size(),
+                               ImGui::GetColorU32(trailing_stop_color_),
+                               ImDrawFlags_None,
+                               1.2f);
+      }
+    }
+
     ImPlot::EndItem();
   }
 }
