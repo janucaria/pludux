@@ -20,14 +20,14 @@ LoadAssetCsvStrAction::LoadAssetCsvStrAction(std::string asset_name,
 void LoadAssetCsvStrAction::operator()(AppStateData& state) const
 {
   auto csv_stream = std::stringstream{content_};
-  const auto quotes = csv_daily_stock_data(csv_stream);
 
-  state.asset_data.emplace(quotes.begin(), quotes.end());
-  state.asset_name = get_asset_name();
-  
-  if(state.backtest.has_value()) {
-    state.backtest->reset();
-  }
+  const auto quotes = csv_daily_stock_data(csv_stream);
+  auto asset_history = AssetHistory(quotes.begin(), quotes.end());
+  const auto asset_name = get_asset_name();
+  auto asset_ptr = std::make_shared<backtest::Asset>(
+   asset_name, std::move(asset_history), state.quote_access);
+
+  state.assets.emplace_back(std::move(asset_ptr));
 }
 
 auto LoadAssetCsvStrAction::get_asset_name() const noexcept
@@ -37,4 +37,3 @@ auto LoadAssetCsvStrAction::get_asset_name() const noexcept
 }
 
 } // namespace pludux::apps
-

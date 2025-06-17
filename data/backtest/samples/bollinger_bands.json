@@ -58,7 +58,8 @@
   "stopLoss": {
     "method": "ATR",
     "period": 14,
-    "multiplier": 2
+    "multiplier": 2,
+    "isTrailing": true
   },
   "takeProfit": {
     "method": "ATR",

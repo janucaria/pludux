@@ -24,10 +24,24 @@ auto main(int, const char**) -> int
   const auto asset_file =
    pludux::get_env_var("PLUDUX_BACKTEST_CSV_DATA_PATH").value_or("");
 
-  const auto quote_access = pludux::QuoteAccess{};
+  auto date_method = pludux::screener::DataMethod{"Date"};
+  auto open_method = pludux::screener::DataMethod{"Open"};
+  auto high_method = pludux::screener::DataMethod{"High"};
+  auto low_method = pludux::screener::DataMethod{"Low"};
+  auto close_method = pludux::screener::DataMethod{"Close"};
+  auto volume_method = pludux::screener::DataMethod{"Volume"};
+
+  const auto quote_access = pludux::QuoteAccess{std::move(date_method),
+                                                std::move(open_method),
+                                                std::move(high_method),
+                                                std::move(low_method),
+                                                std::move(close_method),
+                                                std::move(volume_method)};
 
   auto json_strategy_file = std::ifstream{json_strategy_path};
-  auto backtest = pludux::parse_backtest_strategy_json(json_strategy_file);
+  auto strategy = pludux::parse_backtest_strategy_json(
+   "Strategy", json_strategy_file, quote_access);
+  auto strategy_ptr = std::make_shared<pludux::backtest::Strategy>(strategy);
 
   auto csv_stream = std::ifstream{asset_file};
 
@@ -38,25 +52,24 @@ auto main(int, const char**) -> int
 
   const auto quotes = pludux::csv_daily_stock_data(csv_stream);
 
-  auto asset = pludux::AssetHistory(quotes.begin(), quotes.end());
-  auto open_trade = std::optional<pludux::backtest::TradeRecord>{};
-  auto closed_trades = std::vector<pludux::backtest::TradeRecord>{};
+  auto asset_history = pludux::AssetHistory(quotes.begin(), quotes.end());
+  auto asset_ptr = std::make_shared<pludux::backtest::Asset>(
+   asset_file, std::move(asset_history), quote_access);
 
-  while(backtest.should_run(asset)) {
-    backtest.run(asset);
+  auto backtest = pludux::Backtest{"no name", strategy_ptr, asset_ptr};
+  while(backtest.should_run()) {
+    backtest.run();
   }
 
   auto& ostream = std::cout;
 
   auto summary = pludux::backtest::BacktestingSummary{};
-  const auto& history = backtest.history();
-  for(int i = 0, ii = history.size(); i < ii; ++i) {
-    const auto& trade = history[i].trade_record();
-    const auto is_last_trade = i == ii - 1;
+  const auto& trade_records = backtest.trade_records();
+  for(int i = 0, ii = trade_records.size(); i < ii; ++i) {
+    const auto& trade = trade_records[i];
 
-    if(trade.has_value() &&
-       (trade->is_closed() || is_last_trade && trade->is_open())) {
-      summary.add_trade(*trade);
+    if(trade.is_summary_session()) {
+      summary.add_trade(trade);
     }
   }
 
@@ -131,20 +144,18 @@ auto main(int, const char**) -> int
 
   // iterate through the trades
   std::cout << "Trades: " << std::endl;
-  const auto& backtest_history = backtest.history();
   // auto is_in_trade = false;
-  for(int i = 0, ii = backtest_history.size(); i < ii; ++i) {
-    const auto& trade = backtest_history[i].trade_record();
-    const auto is_last_trade = i == ii - 1;
+  for(int i = 0, ii = trade_records.size(); i < ii; ++i) {
+    const auto& trade = trade_records[i];
 
-    if(trade && trade->is_closed() || is_last_trade) {
-      const auto entry_timestamp = trade->entry_timestamp();
-      const auto exit_timestamp = trade->exit_timestamp();
+    if(trade.is_summary_session()) {
+      const auto entry_timestamp = trade.entry_timestamp();
+      const auto exit_timestamp = trade.exit_timestamp();
       std::cout << "Entry date: " << std::ctime(&entry_timestamp) // NOLINT
                 << "Exit date: " << std::ctime(&exit_timestamp)   // NOLINT
-                << "Position size: " << trade->position_size() << std::endl
-                << "Reason: " << static_cast<int>(trade->status()) << std::endl
-                << "Profit: " << trade->profit() << std::endl
+                << "Position size: " << trade.position_size() << std::endl
+                << "Reason: " << static_cast<int>(trade.status()) << std::endl
+                << "Profit: " << trade.profit() << std::endl
                 << std::endl;
     }
   }

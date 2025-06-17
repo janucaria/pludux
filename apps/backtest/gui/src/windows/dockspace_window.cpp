@@ -1,3 +1,4 @@
+#include <array>
 #include <ctime>
 #include <format>
 #include <memory>
@@ -68,15 +69,20 @@ void DockspaceWindow::render(AppState& app_state)
                               dockspace_flags | ImGuiDockNodeFlags_DockSpace);
     ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->Size);
 
-    auto dock_main_id = dockspace_id;
+    auto dock_left_id = dockspace_id;
     auto dock_right_id = ImGui::DockBuilderSplitNode(
-     dock_main_id, ImGuiDir_Right, 0.3f, nullptr, &dock_main_id);
-    auto dock_down_id = ImGui::DockBuilderSplitNode(
-     dock_main_id, ImGuiDir_Down, 0.3f, nullptr, &dock_main_id);
+     dock_left_id, ImGuiDir_Right, 0.3f, nullptr, &dock_left_id);
+    auto dock_left_down_id = ImGui::DockBuilderSplitNode(
+     dock_left_id, ImGuiDir_Down, 0.3f, nullptr, &dock_left_id);
+    auto dock_right_down_id = ImGui::DockBuilderSplitNode(
+     dock_right_id, ImGuiDir_Down, 0.3f, nullptr, &dock_right_id);
 
-    ImGui::DockBuilderDockWindow("Charts", dock_main_id);
+    ImGui::DockBuilderDockWindow("Charts", dock_left_id);
+    ImGui::DockBuilderDockWindow("Trades", dock_left_down_id);
     ImGui::DockBuilderDockWindow("Summary", dock_right_id);
-    ImGui::DockBuilderDockWindow("Trades", dock_down_id);
+    ImGui::DockBuilderDockWindow("Backtests", dock_right_down_id);
+    ImGui::DockBuilderDockWindow("Assets", dock_right_down_id);
+    ImGui::DockBuilderDockWindow("Strategies", dock_right_down_id);
 
     ImGui::DockBuilderFinish(dockspace_id);
   }
@@ -86,50 +92,75 @@ void DockspaceWindow::render(AppState& app_state)
       constexpr auto menu_item_open_config = "Open Strategy (JSON)";
       if(ImGui::MenuItem(menu_item_open_config)) {
 #ifdef __EMSCRIPTEN__
-
-        auto new_app_state_ptr =
-         std::make_unique<AppState>(app_state).release();
-
         EM_ASM(
          {
-           var file_selector = document.createElement('input');
-           file_selector.type = 'file';
-           file_selector.onchange = function(event)
+           var fileSelector = document.createElement('input');
+           fileSelector.type = 'file';
+           fileSelector.multiple = true;
+           fileSelector.onchange = function(event)
            {
-             var file = event.target.files[0];
+             for(var i = 0; i < event.target.files.length; i++) {
+               var file = event.target.files[i];
 
-             var reader = new FileReader();
-             reader.onload = function(event)
-             {
-               var file_name = file.name;
-               var data = event.target.result;
-               var decoder = new TextDecoder('utf-8');
-               var decoded_data = decoder.decode(data);
+               var reader = new FileReader();
+               reader.onload = function(event)
+               {
+                 var reader = event.target;
+                 var fileName = reader.onload.prototype.fileName;
+                 var data = reader.result;
+                 var decoder = new TextDecoder('utf-8');
+                 var decodedData = decoder.decode(data);
 
-               var name_ptr = Module.stringToNewUTF8(file_name);
-               var data_ptr = Module.stringToNewUTF8(decoded_data);
+                 // transfer the data to the C++ side
+                 var name_ptr = Module.stringToNewUTF8(fileName);
+                 var data_ptr = Module.stringToNewUTF8(decodedData);
 
-               // call the C++ function
-               Module._pludux_apps_backtest_change_strategy_json_str(
-                name_ptr, data_ptr, $0);
-             };
+                 // call the C++ function
+                 Module._pludux_apps_backtest_change_strategy_json_str(
+                  name_ptr, data_ptr, $0);
+               };
+               reader.onload.prototype.fileName = file.name;
 
-             reader.readAsArrayBuffer(file);
+               reader.readAsArrayBuffer(file);
+             }
            };
-           file_selector.accept = '.json';
-           file_selector.click();
+           fileSelector.accept = '.json';
+           fileSelector.click();
          },
-         new_app_state_ptr);
+         &app_state);
 #else
-        NFD::Guard nfdGuard;
-        NFD::UniquePath outPath;
-        nfdfilteritem_t filterItem[1] = {{"JSON Files", "json"}};
-        nfdresult_t result = NFD::OpenDialog(outPath, filterItem, 1);
+        auto nfd_guard = NFD::Guard{};
+        auto out_paths = NFD::UniquePathSet{};
+
+        const auto filter_item =
+         std::array<nfdfilteritem_t, 1>{{"JSON Files", "json"}};
+        auto result = NFD::OpenDialogMultiple(
+         out_paths, filter_item.data(), filter_item.size());
 
         if(result == NFD_OKAY) {
-          const auto selected_path = std::string(outPath.get());
+          auto paths_count = nfdpathsetsize_t{};
 
-          app_state.emplace_action<ChangeStrategyJsonFileAction>(selected_path);
+          result = NFD::PathSet::Count(out_paths, paths_count);
+          if(result == NFD_ERROR) {
+            const auto error_message = std::format(
+             "Error '{}': {}", menu_item_open_config, NFD::GetError());
+            throw std::runtime_error(error_message);
+          }
+
+          for(nfdpathsetsize_t i = 0; i < paths_count; ++i) {
+            auto out_path = NFD::UniquePathSetPath{};
+            result = NFD::PathSet::GetPath(out_paths, i, out_path);
+
+            if(result == NFD_ERROR) {
+              const auto error_message = std::format(
+               "Error '{}': {}", menu_item_open_config, NFD::GetError());
+              throw std::runtime_error(error_message);
+            }
+
+            const auto selected_path = std::string(out_path.get());
+            app_state.emplace_action<ChangeStrategyJsonFileAction>(
+             selected_path);
+          }
 
         } else if(result == NFD_CANCEL) {
         } else {
@@ -140,56 +171,80 @@ void DockspaceWindow::render(AppState& app_state)
 #endif
       }
 
-      constexpr auto menu_item_open_csv = "Open Data (CSV)";
-      if(ImGui::MenuItem(
-          menu_item_open_csv, nullptr, false, state.backtest.has_value())) {
+      constexpr auto menu_item_open_csv = "Add Data (CSV)";
+      if(ImGui::MenuItem(menu_item_open_csv)) {
 #ifdef __EMSCRIPTEN__
-
-        auto new_app_state_ptr =
-         std::make_unique<AppState>(app_state).release();
 
         EM_ASM(
          {
-           var file_selector = document.createElement('input');
-           file_selector.type = 'file';
-           file_selector.onchange = function(event)
+           var fileSelector = document.createElement('input');
+           fileSelector.type = 'file';
+           fileSelector.multiple = true;
+           fileSelector.onchange = function(event)
            {
-             var file = event.target.files[0];
+             for(var i = 0; i < event.target.files.length; i++) {
+               var file = event.target.files[i];
 
-             var reader = new FileReader();
-             reader.onload = function(event)
-             {
-               var file_name = file.name;
-               var data = event.target.result;
-               var decoder = new TextDecoder('utf-8');
-               var decoded_data = decoder.decode(data);
+               var reader = new FileReader();
+               reader.onload = function(event)
+               {
+                 var reader = event.target;
+                 var fileName = reader.onload.prototype.fileName;
+                 var data = reader.result;
+                 var decoder = new TextDecoder('utf-8');
+                 var decodedData = decoder.decode(data);
 
-               // transfer the data to the C++ side
-               var name_ptr = Module.stringToNewUTF8(file_name);
-               var data_ptr = Module.stringToNewUTF8(decoded_data);
+                 // transfer the data to the C++ side
+                 var name_ptr = Module.stringToNewUTF8(fileName);
+                 var data_ptr = Module.stringToNewUTF8(decodedData);
 
-               // call the C++ function
-               Module._pludux_apps_backtest_load_csv_asset(
-                name_ptr, data_ptr, $0);
-             };
+                 // call the C++ function
+                 Module._pludux_apps_backtest_load_csv_asset(
+                  name_ptr, data_ptr, $0);
+               };
+               reader.onload.prototype.fileName = file.name;
 
-             reader.readAsArrayBuffer(file);
+               reader.readAsArrayBuffer(file);
+             }
            };
-           file_selector.accept = '.csv';
-           file_selector.click();
+           fileSelector.accept = '.csv';
+           fileSelector.click();
          },
-         new_app_state_ptr);
+         &app_state);
 
 #else
-        NFD::Guard nfdGuard;
-        NFD::UniquePath outPath;
-        nfdfilteritem_t filterItem[1] = {{"CSV Files", "csv"}};
-        nfdresult_t result = NFD::OpenDialog(outPath, filterItem, 1);
+        auto nfd_guard = NFD::Guard{};
+        auto out_paths = NFD::UniquePathSet{};
+
+        constexpr auto filter_item =
+         std::array<nfdfilteritem_t, 1>{{"CSV Files", "csv"}};
+
+        auto result = NFD::OpenDialogMultiple(
+         out_paths, filter_item.data(), filter_item.size());
 
         if(result == NFD_OKAY) {
-          const auto selected_path = std::string(outPath.get());
+          auto paths_count = nfdpathsetsize_t{};
 
-          app_state.emplace_action<LoadAssetCsvFileAction>(selected_path);
+          result = NFD::PathSet::Count(out_paths, paths_count);
+          if(result == NFD_ERROR) {
+            const auto error_message =
+             std::format("Error '{}': {}", menu_item_open_csv, NFD::GetError());
+            throw std::runtime_error(error_message);
+          }
+
+          for(nfdpathsetsize_t i = 0; i < paths_count; ++i) {
+            auto out_path = NFD::UniquePathSetPath{};
+            result = NFD::PathSet::GetPath(out_paths, i, out_path);
+
+            if(result == NFD_ERROR) {
+              const auto error_message = std::format(
+               "Error '{}': {}", menu_item_open_csv, NFD::GetError());
+              throw std::runtime_error(error_message);
+            }
+
+            const auto selected_path = std::string(out_path.get());
+            app_state.emplace_action<LoadAssetCsvFileAction>(selected_path);
+          }
 
         } else if(result == NFD_CANCEL) {
         } else {
@@ -197,6 +252,7 @@ void DockspaceWindow::render(AppState& app_state)
            std::format("Error '{}': {}", menu_item_open_csv, NFD::GetError());
           throw std::runtime_error(error_message);
         }
+
 #endif
       }
       ImGui::EndMenu();

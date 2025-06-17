@@ -12,34 +12,34 @@ AssetQuote::AssetQuote(AssetSnapshot asset_snapshot,
 {
 }
 
-auto AssetQuote::time() const noexcept -> SubSeries<PolySeries<double>>
+auto AssetQuote::time(std::ptrdiff_t offset) const noexcept -> double
 {
-  return quote_access_.time(asset_snapshot_);
+  return quote_access_.time(asset_snapshot_)[offset];
 }
 
-auto AssetQuote::open() const noexcept -> SubSeries<PolySeries<double>>
+auto AssetQuote::open(std::ptrdiff_t offset) const noexcept -> double
 {
-  return quote_access_.open(asset_snapshot_);
+  return quote_access_.open(asset_snapshot_)[offset];
 }
 
-auto AssetQuote::high() const noexcept -> SubSeries<PolySeries<double>>
+auto AssetQuote::high(std::ptrdiff_t offset) const noexcept -> double
 {
-  return quote_access_.high(asset_snapshot_);
+  return quote_access_.high(asset_snapshot_)[offset];
 }
 
-auto AssetQuote::low() const noexcept -> SubSeries<PolySeries<double>>
+auto AssetQuote::low(std::ptrdiff_t offset) const noexcept -> double
 {
-  return quote_access_.low(asset_snapshot_);
+  return quote_access_.low(asset_snapshot_)[offset];
 }
 
-auto AssetQuote::close() const noexcept -> SubSeries<PolySeries<double>>
+auto AssetQuote::close(std::ptrdiff_t offset) const noexcept -> double
 {
-  return quote_access_.close(asset_snapshot_);
+  return quote_access_.close(asset_snapshot_)[offset];
 }
 
-auto AssetQuote::volume() const noexcept -> SubSeries<PolySeries<double>>
+auto AssetQuote::volume(std::ptrdiff_t offset) const noexcept -> double
 {
-  return quote_access_.volume(asset_snapshot_);
+  return quote_access_.volume(asset_snapshot_)[offset];
 }
 
 auto AssetQuote::get_asset_size() const noexcept -> std::size_t

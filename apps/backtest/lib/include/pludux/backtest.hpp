@@ -2,14 +2,16 @@
 #define PLUDUX_PLUDUX_BACKTEST_HPP
 
 #include <istream>
+#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include <pludux/asset_history.hpp>
-#include <pludux/backtest/history.hpp>
+#include <pludux/backtest/asset.hpp>
 #include <pludux/backtest/stop_loss.hpp>
+#include <pludux/backtest/strategy.hpp>
 #include <pludux/backtest/take_profit.hpp>
 #include <pludux/backtest/trade_record.hpp>
 #include <pludux/backtest/trading_session.hpp>
@@ -23,44 +25,49 @@ namespace pludux {
 
 class Backtest {
 public:
-  Backtest(double capital_risk_,
-           QuoteAccess quote_access,
-           screener::ScreenerFilter entry_filter,
-           screener::ScreenerFilter exit_filter,
-           backtest::StopLoss stop_loss,
-           backtest::TakeProfit take_profit);
+  Backtest(std::string name,
+           std::shared_ptr<backtest::Strategy> strategy_ptr,
+           std::shared_ptr<backtest::Asset> asset_ptr);
+
+  auto name() const noexcept -> const std::string&;
+
+  auto strategy_ptr() const noexcept
+   -> const std::shared_ptr<backtest::Strategy>;
+
+  auto asset_ptr() const noexcept -> const std::shared_ptr<backtest::Asset>;
+
+  auto strategy() const noexcept -> const backtest::Strategy&;
+
+  auto asset() const noexcept -> const backtest::Asset&;
 
   auto capital_risk() const noexcept -> double;
 
-  auto quote_access() const noexcept -> const QuoteAccess&;
-
-  auto history() const noexcept -> const backtest::History&;
+  auto trade_records() const noexcept
+   -> const std::vector<backtest::TradeRecord>&;
 
   void reset();
 
-  auto should_run(const AssetHistory& asset) const noexcept -> bool;
+  auto should_run() const noexcept -> bool;
 
-  void run(const AssetHistory& asset);
+  void run();
 
 private:
-  double capital_risk_;
-  QuoteAccess quote_access_;
-  screener::ScreenerFilter entry_filter_;
-  screener::ScreenerFilter exit_filter_;
-  backtest::StopLoss stop_loss_;
-  backtest::TakeProfit take_profit_;
+  std::string name_;
+
+  std::shared_ptr<backtest::Strategy> strategy_ptr_;
+  std::shared_ptr<backtest::Asset> asset_ptr_;
 
   std::optional<backtest::TradingSession> trading_session_;
   std::size_t current_index_;
-  backtest::History history_;
-
-  void push_history_data(const backtest::RunningState& running_state);
+  std::vector<backtest::TradeRecord> trade_records_;
 };
 
 auto get_env_var(std::string_view var_name) -> std::optional<std::string>;
 
-auto parse_backtest_strategy_json(std::istream& json_strategy_stream)
- -> Backtest;
+auto parse_backtest_strategy_json(const std::string& strategy_name,
+                                  std::istream& json_strategy_stream,
+                                  const QuoteAccess& quote_access)
+ -> backtest::Strategy;
 
 auto csv_daily_stock_data(std::istream& csv_stream)
  -> std::vector<std::pair<std::string, pludux::DataSeries<double>>>;

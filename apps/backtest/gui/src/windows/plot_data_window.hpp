@@ -8,6 +8,7 @@
 #include <implot_internal.h>
 
 #include <pludux/asset_quote.hpp>
+#include <pludux/backtest.hpp>
 
 #include "../app_state.hpp"
 
@@ -20,27 +21,36 @@ public:
   void render(AppState& app_state);
 
 private:
+  std::ptrdiff_t last_selected_backtest_index_;
+
   ImVec4 bullish_color_;
   ImVec4 bearish_color_;
 
   ImVec4 risk_color_;
   ImVec4 reward_color_;
 
+  ImVec4 trailing_stop_color_;
+
   ImPlotRange plot_range_{0, 1};
 
   static int VolumeFormatter(double value, char* buff, int size, void*);
 
-  static void TickerTooltip(const backtest::History& backtest_history,
+  static void TickerTooltip(const AssetHistory& asset_history,
+                            const QuoteAccess& quote_access,
                             bool span_subplots = false);
 
   void PlotOHLC(const char* label_id,
-                const backtest::History& backtest_history);
+                const AssetHistory& asset_history,
+                const QuoteAccess& quote_access);
 
   void PlotVolume(const char* label_id,
-                  const backtest::History& backtest_history);
+                  const AssetHistory& asset_history,
+                  const QuoteAccess& quote_access);
 
   void DrawTrades(const char* label_id,
-                  const backtest::History& backtest_history);
+                  const std::vector<backtest::TradeRecord>& trade_records,
+                  const AssetHistory& asset_history,
+                  const QuoteAccess& quote_access);
 };
 
 } // namespace pludux::apps

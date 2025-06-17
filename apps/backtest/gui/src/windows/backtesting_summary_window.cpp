@@ -20,31 +20,35 @@ BacktestSummaryWindow::BacktestSummaryWindow()
 void BacktestSummaryWindow::render(AppState& app_state)
 {
   auto& state = app_state.state();
-  auto& backtest = state.backtest;
+  auto& backtests = state.backtests;
 
   ImGui::Begin("Summary", nullptr);
 
   auto ostream = std::stringstream{};
+  if(!state.backtests.empty() && state.selected_backtest_index >= 0) {
+    const auto& backtest = backtests[state.selected_backtest_index];
 
-  ostream << "Strategy: " << state.strategy_name << std::endl;
-  ostream << "Asset: " << state.asset_name << std::endl;
-  ostream << std::endl;
+    const auto& backtest_name = backtest.name();
+    const auto& asset_name = backtest.asset().name();
+    const auto& strategy_name = backtest.strategy().name();
 
-  if(backtest.has_value() && backtest->history().size() > 0) {
+    ostream << "Backtest: " << backtest_name << std::endl;
+    ostream << "Asset: " << asset_name << std::endl;
+    ostream << "Strategy: " << strategy_name << std::endl;
+    ostream << std::endl;
+
     auto summary = backtest::BacktestingSummary{};
 
-    const auto& history = backtest->history();
-    for(int i = 0, ii = history.size(); i < ii; ++i) {
-      const auto& trade = history[i].trade_record();
-      const auto is_last_trade = i == ii - 1;
+    const auto& trade_records = backtest.trade_records();
+    for(int i = 0, ii = trade_records.size(); i < ii; ++i) {
+      const auto& trade = trade_records[i];
 
-      if(trade.has_value() && (trade->is_closed() || is_last_trade && trade->is_open())) {
-        summary.add_trade(*trade);
+      if(trade.is_summary_session()) {
+        summary.add_trade(trade);
       }
     }
 
-    ostream << std::format("Risk per trade: {:.2f}\n",
-                           backtest->capital_risk());
+    ostream << std::format("Risk per trade: {:.2f}\n", backtest.capital_risk());
     ostream << std::format("Total profit: {:.2f}\n", summary.total_profit());
     auto total_duration_days = std::chrono::duration_cast<std::chrono::days>(
                                 std::chrono::seconds(summary.total_duration()))
@@ -103,7 +107,7 @@ void BacktestSummaryWindow::render(AppState& app_state)
     ostream << std::format("Expected value (EV): {:.2f}\n",
                            summary.expected_value());
     ostream << std::format("EV to risk rate: {:.2f}%\n",
-                           summary.expected_value() / backtest->capital_risk() *
+                           summary.expected_value() / backtest.capital_risk() *
                             100);
 
     ostream << std::format("Total closed trades: {}\n",
