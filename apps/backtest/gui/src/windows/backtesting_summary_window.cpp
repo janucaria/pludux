@@ -24,25 +24,19 @@ void BacktestSummaryWindow::render(AppState& app_state)
 
   ImGui::Begin("Summary", nullptr);
 
-  auto asset_name = std::string{};
-  if(state.selected_asset_index >= 0) {
-    const auto& asset = *state.assets[state.selected_asset_index];
-    asset_name = asset.name();
-  }
-
-  const auto strategy_name =
-   state.selected_strategy_index >= 0
-    ? state.strategies[state.selected_strategy_index]->name()
-    : "";
-
   auto ostream = std::stringstream{};
+  if(!state.backtests.empty() && state.selected_backtest_index >= 0) {
+    const auto& backtest = backtests[state.selected_backtest_index];
 
-  ostream << "Strategy: " << strategy_name << std::endl;
-  ostream << "Asset: " << asset_name << std::endl;
-  ostream << std::endl;
+    const auto& backtest_name = backtest.name();
+    const auto& asset_name = backtest.asset().name();
+    const auto& strategy_name = backtest.strategy().name();
 
-  if(!state.backtests.empty() && state.selected_asset_index >= 0) {
-    const auto& backtest = backtests[state.selected_asset_index];
+    ostream << "Backtest: " << backtest_name << std::endl;
+    ostream << "Asset: " << asset_name << std::endl;
+    ostream << "Strategy: " << strategy_name << std::endl;
+    ostream << std::endl;
+
     auto summary = backtest::BacktestingSummary{};
 
     const auto& trade_records = backtest.trade_records();

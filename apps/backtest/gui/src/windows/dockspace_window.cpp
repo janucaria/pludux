@@ -80,6 +80,7 @@ void DockspaceWindow::render(AppState& app_state)
     ImGui::DockBuilderDockWindow("Charts", dock_left_id);
     ImGui::DockBuilderDockWindow("Trades", dock_left_down_id);
     ImGui::DockBuilderDockWindow("Summary", dock_right_id);
+    ImGui::DockBuilderDockWindow("Backtests", dock_right_down_id);
     ImGui::DockBuilderDockWindow("Assets", dock_right_down_id);
     ImGui::DockBuilderDockWindow("Strategies", dock_right_down_id);
 

@@ -25,22 +25,23 @@ PlotDataWindow::PlotDataWindow()
 void PlotDataWindow::render(AppState& app_state)
 {
   const auto& state = app_state.state();
+  const auto& backtests = state.backtests;
 
   ImGui::Begin("Charts", nullptr);
 
-  if(state.selected_asset_index < 0) {
+  if(backtests.empty()) {
     ImGui::End();
     return;
   }
 
   const auto& quote_access = state.quote_access;
-  const auto& asset = *state.assets[state.selected_asset_index];
+  const auto& asset = backtests[state.selected_backtest_index].asset();
   const auto& asset_history = asset.history();
 
   auto trade_records = std::vector<backtest::TradeRecord>{};
   auto is_backtest_should_run = false;
   if(!state.backtests.empty()) {
-    const auto& backtest = state.backtests[state.selected_asset_index];
+    const auto& backtest = state.backtests[state.selected_backtest_index];
     is_backtest_should_run = backtest.should_run();
     trade_records = backtest.trade_records();
   }
@@ -57,12 +58,12 @@ void PlotDataWindow::render(AppState& app_state)
                       ImPlotAxisFlags_NoHighlight;
 
   const auto reset_chart_view =
-   last_selected_backtest_index_ != state.selected_asset_index;
+   last_selected_backtest_index_ != state.selected_backtest_index;
   if(is_backtest_should_run || reset_chart_view) {
     axis_x_flags |= ImPlotAxisFlags_AutoFit;
     axis_y_flags |= ImPlotAxisFlags_AutoFit;
 
-    last_selected_backtest_index_ = state.selected_asset_index;
+    last_selected_backtest_index_ = state.selected_backtest_index;
   }
 
   if(ImPlot::BeginPlot("##OHLCPlot",

@@ -23,31 +23,33 @@ void AssetsWindow::render(AppState& app_state)
     for(auto i = 0; i < assets.size(); ++i) {
       const auto& asset = *assets[i];
       const auto& asset_name = asset.name();
-      auto is_selected = state.selected_asset_index == i;
 
       ImGui::PushID(i);
 
       ImGui::SetNextItemAllowOverlap();
-      if(ImGui::Selectable(asset_name.c_str(), &is_selected)) {
-        app_state.push_action(
-         [i](AppStateData& state) { state.selected_asset_index = i; });
-      }
+
+      ImGui::Text("%s", asset_name.c_str());
+
       ImGui::SameLine();
 
       ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 50);
       if(ImGui::Button("Delete")) {
         app_state.push_action([i](AppStateData& state) {
-          auto old_backtests = std::move(state.backtests);
-          state.backtests.clear();
-          for(auto j = 0; j < old_backtests.size(); ++j) {
-            if(j != i) {
-              state.backtests.push_back(std::move(old_backtests[j]));
-            }
-          }
-          state.assets.erase(std::next(state.assets.begin(), i));
-          if(state.selected_asset_index >= i) {
-            state.selected_asset_index--;
-          }
+          const auto& assets = state.assets;
+
+          const auto it = std::next(assets.begin(), i);
+          const auto& asset_ptr = *it;
+
+          state.backtests.erase(std::remove_if(state.backtests.begin(),
+                                               state.backtests.end(),
+                                               [&asset_ptr](const auto& bt) {
+                                                 return bt.asset_ptr() ==
+                                                        asset_ptr;
+                                               }),
+                                state.backtests.end());
+
+          // Remove the asset from the vector
+          state.assets.erase(it);
         });
       }
 

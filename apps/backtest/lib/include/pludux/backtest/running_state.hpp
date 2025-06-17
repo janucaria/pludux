@@ -7,7 +7,7 @@ namespace pludux::backtest {
 
 class RunningState {
 public:
-  RunningState(AssetQuote asset_quote, std::size_t current_index);
+  RunningState(AssetQuote asset_quote);
 
   auto asset_quote() const noexcept -> const AssetQuote&;
 

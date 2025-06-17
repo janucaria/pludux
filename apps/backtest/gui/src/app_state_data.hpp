@@ -20,13 +20,11 @@ struct AppStateData {
 
   std::vector<Backtest> backtests{};
 
-  std::vector<std::unique_ptr<backtest::Strategy>> strategies{};
+  std::ptrdiff_t selected_backtest_index{-1};
 
-  std::ptrdiff_t selected_strategy_index{-1};
+  std::vector<std::shared_ptr<backtest::Strategy>> strategies{};
 
-  std::vector<std::unique_ptr<backtest::Asset>> assets{};
-
-  std::ptrdiff_t selected_asset_index{-1};
+  std::vector<std::shared_ptr<backtest::Asset>> assets{};
 
   QuoteAccess quote_access{};
 };

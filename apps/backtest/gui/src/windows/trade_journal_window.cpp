@@ -25,7 +25,7 @@ void TradeJournalWindow::render(AppState& app_state)
   ImGui::Begin("Trades", nullptr);
 
   if(!backtests.empty()) {
-    const auto backtest = backtests[state.selected_asset_index];
+    const auto backtest = backtests[state.selected_backtest_index];
 
     const auto table_flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
                              ImGuiTableFlags_Resizable |

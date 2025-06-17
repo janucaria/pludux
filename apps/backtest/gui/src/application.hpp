@@ -36,6 +36,7 @@ private:
 
   DockspaceWindow dockspace_window_;
   PlotDataWindow plot_data_window_;
+  BacktestsWindow backtests_window_;
 
   AppStateData state_data_;
   std::queue<AppPolyAction> actions_;

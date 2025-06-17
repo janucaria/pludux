@@ -2,6 +2,7 @@
 #define PLUDUX_PLUDUX_BACKTEST_HPP
 
 #include <istream>
+#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
@@ -24,9 +25,16 @@ namespace pludux {
 
 class Backtest {
 public:
-  Backtest(const backtest::Strategy& strategy,
-           const backtest::Asset& asset,
-           const QuoteAccess& quote_access);
+  Backtest(std::string name,
+           std::shared_ptr<backtest::Strategy> strategy_ptr,
+           std::shared_ptr<backtest::Asset> asset_ptr);
+
+  auto name() const noexcept -> const std::string&;
+
+  auto strategy_ptr() const noexcept
+   -> const std::shared_ptr<backtest::Strategy>;
+
+  auto asset_ptr() const noexcept -> const std::shared_ptr<backtest::Asset>;
 
   auto strategy() const noexcept -> const backtest::Strategy&;
 
@@ -44,9 +52,10 @@ public:
   void run();
 
 private:
-  const backtest::Strategy& strategy_;
-  const backtest::Asset& asset_;
-  const QuoteAccess& quote_access_;
+  std::string name_;
+
+  std::shared_ptr<backtest::Strategy> strategy_ptr_;
+  std::shared_ptr<backtest::Asset> asset_ptr_;
 
   std::optional<backtest::TradingSession> trading_session_;
   std::size_t current_index_;

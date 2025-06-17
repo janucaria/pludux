@@ -148,6 +148,8 @@ void Application::on_update()
     auto backtesting_summary = BacktestSummaryWindow{};
     backtesting_summary.render(app_state);
 
+    backtests_window_.render(app_state);
+
     auto assets_window = AssetsWindow{};
     assets_window.render(app_state);
 

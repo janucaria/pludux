@@ -19,31 +19,48 @@
 
 namespace pludux {
 
-Backtest::Backtest(const backtest::Strategy& strategy,
-                   const backtest::Asset& asset,
-                   const QuoteAccess& quote_access)
-: strategy_{strategy}
-, asset_{asset}
-, quote_access_{quote_access}
+Backtest::Backtest(std::string name,
+                   std::shared_ptr<backtest::Strategy> strategy_ptr,
+                   std::shared_ptr<backtest::Asset> asset_ptr)
+: name_{std::move(name)}
+, strategy_ptr_{strategy_ptr}
+, asset_ptr_{asset_ptr}
 , trading_session_{std::nullopt}
 , current_index_{0}
 , trade_records_{}
 {
 }
 
+auto Backtest::name() const noexcept -> const std::string&
+{
+  return name_;
+}
+
+auto Backtest::strategy_ptr() const noexcept
+ -> const std::shared_ptr<backtest::Strategy>
+{
+  return strategy_ptr_;
+}
+
+auto Backtest::asset_ptr() const noexcept
+ -> const std::shared_ptr<backtest::Asset>
+{
+  return asset_ptr_;
+}
+
 auto Backtest::strategy() const noexcept -> const backtest::Strategy&
 {
-  return strategy_;
+  return *strategy_ptr();
 }
 
 auto Backtest::asset() const noexcept -> const backtest::Asset&
 {
-  return asset_;
+  return *asset_ptr();
 }
 
 auto Backtest::capital_risk() const noexcept -> double
 {
-  return strategy_.capital_risk();
+  return strategy().capital_risk();
 }
 
 auto Backtest::trade_records() const noexcept
@@ -61,30 +78,29 @@ void Backtest::reset()
 
 auto Backtest::should_run() const noexcept -> bool
 {
-  const auto& asset_history = asset_.history();
+  const auto& asset_history = asset().history();
   const auto asset_size = asset_history.size();
   return current_index_ < asset_size;
 }
 
 void Backtest::run()
 {
-  const auto& asset = asset_.history();
-  const auto asset_size = asset.size();
+  const auto& asset_history = asset().history();
+  const auto asset_size = asset_history.size();
   const auto last_index = asset_size - 1;
   const auto current_index = std::min(current_index_, last_index);
 
   const auto asset_index = last_index - current_index;
-  const auto asset_snapshot = asset[asset_index];
-  const auto asset_quote = AssetQuote{asset_snapshot, quote_access_};
-  auto running_state = backtest::RunningState{asset_quote, asset_index};
+  const auto asset_quote = asset().get_quote(asset_index);
+  auto running_state = backtest::RunningState{asset_quote};
   running_state.capital_risk(capital_risk());
 
   ++current_index_;
 
   if(!trading_session_.has_value() &&
-     strategy_.entry_filter()(asset_snapshot)) {
-    const auto& take_profit = strategy_.take_profit();
-    const auto& stop_loss = strategy_.stop_loss();
+     strategy().entry_filter()(running_state.asset_snapshot())) {
+    const auto& take_profit = strategy().take_profit();
+    const auto& stop_loss = strategy().stop_loss();
     const auto trading_take_profit = take_profit(running_state);
     const auto trading_stop_loss = stop_loss(running_state);
     const auto order_size = stop_loss.get_order_size(running_state);
@@ -94,7 +110,7 @@ void Backtest::run()
       const auto entry_price = running_state.price();
       const auto entry_timestamp =
        static_cast<std::time_t>(running_state.timestamp());
-      const auto exit_filter = strategy_.exit_filter();
+      const auto exit_filter = strategy().exit_filter();
       trading_session_.emplace(order_size,
                                entry_index,
                                entry_price,

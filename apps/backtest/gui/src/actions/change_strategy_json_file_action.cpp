@@ -22,17 +22,9 @@ void ChangeStrategyJsonFileAction::operator()(AppStateData& state) const
   auto parsed_strategy = parse_backtest_strategy_json(
    strategy_name, json_strategy_stream, state.quote_access);
   auto strategy_ptr =
-   std::make_unique<backtest::Strategy>(std::move(parsed_strategy));
+   std::make_shared<backtest::Strategy>(std::move(parsed_strategy));
   const auto& strategy =
    *state.strategies.emplace_back(std::move(strategy_ptr));
-
-  state.selected_strategy_index = state.strategies.size() - 1;
-
-  state.backtests.clear();
-  for(const auto& asset_ptr : state.assets) {
-    const auto& asset = *asset_ptr;
-    state.backtests.emplace_back(strategy, asset, state.quote_access);
-  }
 }
 
 auto ChangeStrategyJsonFileAction::get_strategy_name() const noexcept

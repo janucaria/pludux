@@ -23,7 +23,6 @@ void StrategiesWindow::render(AppState& app_state)
     for(auto i = 0; i < strategies.size(); ++i) {
       const auto& strategy = *strategies[i];
       const auto& strategy_name = strategy.name();
-      auto is_selected = state.selected_strategy_index == i;
 
       ImGui::PushID(i);
 
@@ -35,50 +34,22 @@ void StrategiesWindow::render(AppState& app_state)
 
       ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 50);
 
-      if(!is_selected) {
-        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 88);
-
-        if(ImGui::Button("Use")) {
-          app_state.push_action([i](AppStateData& state) {
-            const auto& strategy = *state.strategies[i];
-            state.selected_strategy_index = i;
-
-            state.backtests.clear();
-            for(const auto& asset_ptr : state.assets) {
-              const auto& asset = *asset_ptr;
-              state.backtests.emplace_back(strategy, asset, state.quote_access);
-            }
-          });
-        }
-
-        ImGui::SameLine();
-      }
-
       if(ImGui::Button("Delete")) {
         app_state.push_action([i](AppStateData& state) {
-          const auto old_selected_strategy_index =
-           state.selected_strategy_index;
+          const auto& strategies = state.strategies;
+          const auto it = std::next(strategies.begin(), i);
+          const auto& strategy_ptr = *it;
 
-          state.strategies.erase(std::next(state.strategies.begin(), i));
-          if(state.selected_strategy_index >= i) {
-            state.selected_strategy_index--;
-          }
+          auto& backtests = state.backtests;
+          backtests.erase(std::remove_if(backtests.begin(),
+                                         backtests.end(),
+                                         [&strategy_ptr](const auto& bt) {
+                                           return bt.strategy_ptr() ==
+                                                  strategy_ptr;
+                                         }),
+                          backtests.end());
 
-          if(old_selected_strategy_index == i) {
-            state.backtests.clear();
-
-            if(!state.strategies.empty()) {
-              const auto& strategy =
-               *state.strategies[state.selected_strategy_index];
-              for(const auto& asset_ptr : state.assets) {
-                const auto& asset = *asset_ptr;
-                state.backtests.emplace_back(
-                 strategy, asset, state.quote_access);
-              }
-            } else {
-              state.selected_strategy_index = -1;
-            }
-          }
+          state.strategies.erase(it);
         });
       }
 
