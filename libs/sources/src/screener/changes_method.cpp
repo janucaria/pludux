@@ -24,4 +24,7 @@ auto ChangesMethod::operator()(AssetSnapshot asset_data) const
                    static_cast<std::ptrdiff_t>(offset_)};
 }
 
+auto ChangesMethod::operator==(const ChangesMethod& other) const noexcept
+ -> bool = default;
+
 } // namespace pludux::screener

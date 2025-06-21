@@ -37,4 +37,7 @@ auto AbsDiffMethod::operator()(AssetSnapshot asset_data) const
                    static_cast<std::ptrdiff_t>(offset_)};
 }
 
+auto AbsDiffMethod::operator==(const AbsDiffMethod& other) const noexcept
+ -> bool = default;
+
 } // namespace pludux::screener

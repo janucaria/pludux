@@ -23,6 +23,8 @@ public:
   auto operator()(AssetSnapshot asset_data) const
    -> SubSeries<PolySeries<double>>;
 
+  auto operator==(const StochMethod& other) const noexcept -> bool;
+
   auto high() const noexcept -> ScreenerMethod;
 
   auto low() const noexcept -> ScreenerMethod;

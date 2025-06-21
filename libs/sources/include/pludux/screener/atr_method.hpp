@@ -20,6 +20,8 @@ public:
   auto operator()(AssetSnapshot asset_data) const
    -> SubSeries<PolySeries<double>>;
 
+  auto operator==(const AtrMethod& other) const noexcept -> bool;
+
 private:
   std::size_t period_;
   double multiplier_;

@@ -42,6 +42,9 @@ auto BbMethod::operator()(AssetSnapshot asset_data) const
                    static_cast<std::ptrdiff_t>(offset_)};
 }
 
+auto BbMethod::operator==(const BbMethod& other) const noexcept -> bool = default;
+
+
 auto BbMethod::offset() const noexcept -> std::size_t
 {
   return offset_;

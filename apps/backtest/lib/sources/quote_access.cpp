@@ -3,12 +3,12 @@
 namespace pludux {
 
 QuoteAccess::QuoteAccess()
-: QuoteAccess{screener::ScreenerMethod{},
-              screener::ScreenerMethod{},
-              screener::ScreenerMethod{},
-              screener::ScreenerMethod{},
-              screener::ScreenerMethod{},
-              screener::ScreenerMethod{}}
+: QuoteAccess{screener::DataMethod{"Date"},
+              screener::DataMethod{"Open"},
+              screener::DataMethod{"High"},
+              screener::DataMethod{"Low"},
+              screener::DataMethod{"Close"},
+              screener::DataMethod{"Volume"}}
 {
 }
 

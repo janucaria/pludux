@@ -16,6 +16,8 @@ public:
   auto
   operator()(AssetSnapshot asset_data) const -> SubSeries<PolySeries<double>>;
 
+  auto operator==(const ChangesMethod& other) const noexcept -> bool;
+
 private:
   ScreenerMethod operand_;
   std::size_t offset_;

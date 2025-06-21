@@ -36,6 +36,9 @@ public:
     return SubSeries{PolySeries<double>{result}, 0};
   }
 
+  auto operator==(const BinaryArithmeticMethod& other) const noexcept
+   -> bool = default;
+
 private:
   ScreenerMethod operand1_;
   ScreenerMethod operand2_;
@@ -61,6 +64,9 @@ public:
 
     return SubSeries{PolySeries<double>{result}, 0};
   }
+
+  auto operator==(const UnaryArithmeticMethod& other) const noexcept
+   -> bool = default;
 
 private:
   ScreenerMethod operand_;

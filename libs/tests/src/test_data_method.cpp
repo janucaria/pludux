@@ -29,3 +29,33 @@ TEST(DataMethodTest, InvalidField)
 
   EXPECT_THROW(data_method(asset_data), std::runtime_error);
 }
+
+TEST(DataMethodTest, EqualityOperator)
+{
+  const auto field1 = "close";
+  const auto offset1 = 0;
+  const auto data_method1 = DataMethod{field1, offset1};
+
+  const auto field2 = "close";
+  const auto offset2 = 0;
+  const auto data_method2 = DataMethod{field2, offset2};
+
+  EXPECT_TRUE(data_method1 == data_method2);
+  EXPECT_FALSE(data_method1 != data_method2);
+  EXPECT_EQ(data_method1, data_method2);
+}
+
+TEST(DataMethodTest, NotEqualOperator)
+{
+  const auto field1 = "close";
+  const auto offset1 = 0;
+  const auto data_method1 = DataMethod{field1, offset1};
+
+  const auto field2 = "open";
+  const auto offset2 = 0;
+  const auto data_method2 = DataMethod{field2, offset2};
+
+  EXPECT_TRUE(data_method1 != data_method2);
+  EXPECT_FALSE(data_method1 == data_method2);
+  EXPECT_NE(data_method1, data_method2);
+}

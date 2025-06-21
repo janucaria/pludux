@@ -79,3 +79,28 @@ TEST(RvolMethodTest, RunAllMethodWithOffset)
   EXPECT_TRUE(std::isnan(result[6]));
   EXPECT_TRUE(std::isnan(result[7]));
 }
+
+TEST(RvolMethodTest, EqualityOperator)
+{
+  const auto data_method1 = DataMethod{"close", 0};
+  const auto rvol_method1 = RvolMethod{5, data_method1, 0};
+
+  const auto data_method2 = DataMethod{"close", 0};
+  const auto rvol_method2 = RvolMethod{5, data_method2, 0};
+
+  EXPECT_TRUE(rvol_method1 == rvol_method2);
+  EXPECT_FALSE(rvol_method1 != rvol_method2);
+  EXPECT_EQ(rvol_method1, rvol_method2);
+}
+
+TEST(RvolMethodTest, NotEqualOperator)
+{
+  const auto data_method1 = DataMethod{"close", 0};
+  const auto rvol_method1 = RvolMethod{5, data_method1, 0};
+
+  const auto data_method2 = DataMethod{"open", 0};
+  const auto rvol_method2 = RvolMethod{5, data_method2, 0};
+
+  EXPECT_FALSE(rvol_method1 == rvol_method2);
+  EXPECT_TRUE(rvol_method1 != rvol_method2);
+}

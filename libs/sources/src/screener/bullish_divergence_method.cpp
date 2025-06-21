@@ -39,4 +39,7 @@ auto BullishDivergenceMethod::operator()(AssetSnapshot asset_data) const
                    static_cast<std::ptrdiff_t>(offset_)};
 }
 
+auto BullishDivergenceMethod::operator==(
+ const BullishDivergenceMethod& other) const noexcept -> bool = default;
+
 } // namespace pludux::screener

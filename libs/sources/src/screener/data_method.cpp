@@ -27,6 +27,8 @@ auto DataMethod::operator()(AssetSnapshot asset_data) const
                                        static_cast<std::ptrdiff_t>(offset_)};
 }
 
+auto DataMethod::operator==(const DataMethod& other) const noexcept -> bool = default;
+
 auto DataMethod::field() const -> const std::string&
 {
   return field_;

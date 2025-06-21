@@ -20,6 +20,8 @@ public:
   auto
   operator()(AssetSnapshot asset_data) const -> SubSeries<PolySeries<double>>;
 
+  auto operator==(const BullishDivergenceMethod& other) const noexcept -> bool;
+
 private:
   std::size_t offset_;
   std::size_t pivot_range_;

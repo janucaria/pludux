@@ -23,6 +23,7 @@ set(PLUDUX_TEST_SOURCES
   src/test_roc_method.cpp
   src/test_rvol_method.cpp
   src/test_sma_method.cpp
+  src/test_screener_method.cpp
   src/test_stoch_method.cpp
   src/test_stoch_rsi_method.cpp
   src/test_value_method.cpp

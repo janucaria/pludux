@@ -18,6 +18,8 @@ public:
   auto
   operator()(AssetSnapshot asset_data) const -> SubSeries<PolySeries<double>>;
 
+  auto operator==(const AbsDiffMethod& other) const noexcept -> bool;
+
 private:
   ScreenerMethod operand1_;
   ScreenerMethod operand2_;
