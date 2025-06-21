@@ -25,6 +25,29 @@ TEST(BooleanFilterTest, AndFilter)
   EXPECT_FALSE(false_and_false(asset_data));
 }
 
+TEST(BooleanFilterTest, EqualityAndFilter)
+{
+  const auto true_filter = TrueFilter{};
+  const auto filter1 = AndFilter{true_filter, true_filter};
+  const auto filter2 = AndFilter{true_filter, true_filter};
+
+  EXPECT_TRUE(filter1 == filter2);
+  EXPECT_FALSE(filter1 != filter2);
+  EXPECT_EQ(filter1, filter2);
+}
+
+TEST(BooleanFilterTest, NotEqualAndFilter)
+{
+  const auto true_filter = TrueFilter{};
+  const auto false_filter = FalseFilter{};
+  const auto filter1 = AndFilter{true_filter, false_filter};
+  const auto filter2 = AndFilter{false_filter, true_filter};
+
+  EXPECT_TRUE(filter1 != filter2);
+  EXPECT_FALSE(filter1 == filter2);
+  EXPECT_NE(filter1, filter2);
+}
+
 TEST(BooleanFilterTest, OrFilter)
 {
   const auto true_filter = TrueFilter{};
@@ -44,6 +67,29 @@ TEST(BooleanFilterTest, OrFilter)
   EXPECT_FALSE(false_or_false(asset_data));
 }
 
+TEST(BooleanFilterTest, EqualityOrFilter)
+{
+  const auto true_filter = TrueFilter{};
+  const auto filter1 = OrFilter{true_filter, true_filter};
+  const auto filter2 = OrFilter{true_filter, true_filter};
+
+  EXPECT_TRUE(filter1 == filter2);
+  EXPECT_FALSE(filter1 != filter2);
+  EXPECT_EQ(filter1, filter2);
+}
+
+TEST(BooleanFilterTest, NotEqualOrFilter)
+{
+  const auto true_filter = TrueFilter{};
+  const auto false_filter = FalseFilter{};
+  const auto filter1 = OrFilter{true_filter, false_filter};
+  const auto filter2 = OrFilter{false_filter, true_filter};
+
+  EXPECT_TRUE(filter1 != filter2);
+  EXPECT_FALSE(filter1 == filter2);
+  EXPECT_NE(filter1, filter2);
+}
+
 TEST(BooleanFilterTest, NotFilter)
 {
   const auto true_filter = TrueFilter{};
@@ -55,6 +101,29 @@ TEST(BooleanFilterTest, NotFilter)
 
   const auto not_false = NotFilter{false_filter};
   EXPECT_TRUE(not_false(asset_data));
+}
+
+TEST(BooleanFilterTest, EqualityNotFilter)
+{
+  const auto true_filter = TrueFilter{};
+  const auto not_filter1 = NotFilter{true_filter};
+  const auto not_filter2 = NotFilter{true_filter};
+
+  EXPECT_TRUE(not_filter1 == not_filter2);
+  EXPECT_FALSE(not_filter1 != not_filter2);
+  EXPECT_EQ(not_filter1, not_filter2);
+}
+
+TEST(BooleanFilterTest, NotEqualNotFilter)
+{
+  const auto true_filter = TrueFilter{};
+  const auto false_filter = FalseFilter{};
+  const auto not_filter1 = NotFilter{true_filter};
+  const auto not_filter2 = NotFilter{false_filter};
+
+  EXPECT_TRUE(not_filter1 != not_filter2);
+  EXPECT_FALSE(not_filter1 == not_filter2);
+  EXPECT_NE(not_filter1, not_filter2);
 }
 
 TEST(BooleanFilterTest, XorFilter)
@@ -74,4 +143,27 @@ TEST(BooleanFilterTest, XorFilter)
 
   const auto false_xor_false = XorFilter{false_filter, false_filter};
   EXPECT_FALSE(false_xor_false(asset_data));
+}
+
+TEST(BooleanFilterTest, EqualityXorFilter)
+{
+  const auto true_filter = TrueFilter{};
+  const auto filter1 = XorFilter{true_filter, true_filter};
+  const auto filter2 = XorFilter{true_filter, true_filter};
+
+  EXPECT_TRUE(filter1 == filter2);
+  EXPECT_FALSE(filter1 != filter2);
+  EXPECT_EQ(filter1, filter2);
+}
+
+TEST(BooleanFilterTest, NotEqualXorFilter)
+{
+  const auto true_filter = TrueFilter{};
+  const auto false_filter = FalseFilter{};
+  const auto filter1 = XorFilter{true_filter, false_filter};
+  const auto filter2 = XorFilter{false_filter, true_filter};
+
+  EXPECT_TRUE(filter1 != filter2);
+  EXPECT_FALSE(filter1 == filter2);
+  EXPECT_NE(filter1, filter2);
 }

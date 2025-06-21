@@ -24,6 +24,8 @@ auto AnyOfFilter::operator()(AssetSnapshot asset_data) const -> bool
    [&asset_data](const auto& filter) { return filter(asset_data); });
 }
 
+auto AnyOfFilter::operator==(const AnyOfFilter& other) const noexcept -> bool = default;
+
 auto AnyOfFilter::filters() const -> const std::vector<ScreenerFilter>&
 {
   return conditions_;

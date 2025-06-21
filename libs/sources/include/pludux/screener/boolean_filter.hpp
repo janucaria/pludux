@@ -13,6 +13,8 @@ struct BooleanFilter {
   {
     return boolean_value;
   }
+
+  auto operator==(const BooleanFilter&) const noexcept -> bool = default;
 };
 
 } // namespace detail

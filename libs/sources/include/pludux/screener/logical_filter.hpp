@@ -31,6 +31,8 @@ public:
     return TBinaryLogicalOperator{}(first_condition, second_condition);
   }
 
+  auto operator==(const BinaryLogicalFilter& other) const noexcept -> bool = default;
+
   auto first_condition() const -> const ScreenerFilter&
   {
     return first_condition_;
@@ -60,6 +62,8 @@ public:
     const auto condition = condition_(asset_data);
     return TUnaryLogicalOperator{}(condition);
   }
+
+  auto operator==(const UnaryLogicalFilter& other) const noexcept -> bool = default;
 
   auto condition() const -> const ScreenerFilter&
   {

@@ -43,3 +43,46 @@ TEST(GreaterEqualFilterTest, TargetLessThanThreshold)
 
   EXPECT_FALSE(filter(asset_data));
 }
+
+TEST(GreaterEqualFilterTest, EqualityOperator)
+{
+  const auto target_value1 = 50.0;
+  const auto threshold_value1 = 50.0;
+  auto target_method1 = ValueMethod{target_value1};
+  auto threshold_method1 = ValueMethod{threshold_value1};
+  const auto greater_equal_filter1 =
+   GreaterEqualFilter{std::move(target_method1), std::move(threshold_method1)};
+
+  const auto target_value2 = 50.0;
+  const auto threshold_value2 = 50.0;
+  auto target_method2 = ValueMethod{target_value2};
+  auto threshold_method2 = ValueMethod{threshold_value2};
+  const auto greater_equal_filter2 =
+   GreaterEqualFilter{std::move(target_method2), std::move(threshold_method2)};
+
+  EXPECT_TRUE(greater_equal_filter1 == greater_equal_filter2);
+  EXPECT_FALSE(greater_equal_filter1 != greater_equal_filter2);
+  EXPECT_EQ(greater_equal_filter1, greater_equal_filter2);
+}
+
+TEST(GreaterEqualFilterTest, NotEqualOperator)
+{
+  const auto target_value1 = 50.0;
+  const auto threshold_value1 = 50.0;
+  auto target_method1 = ValueMethod{target_value1};
+  auto threshold_method1 = ValueMethod{threshold_value1};
+  const auto greater_equal_filter1 =
+   GreaterEqualFilter{std::move(target_method1), std::move(threshold_method1)};
+
+  const auto target_value2 = 30.0;
+  const auto threshold_value2 = 50.0;
+  auto target_method2 = ValueMethod{target_value2};
+  auto threshold_method2 = ValueMethod{threshold_value2};
+  const auto greater_equal_filter2 =
+   GreaterEqualFilter{std::move(target_method2), std::move(threshold_method2)};
+
+  EXPECT_TRUE(greater_equal_filter1 != greater_equal_filter2);
+  EXPECT_FALSE(greater_equal_filter1 == greater_equal_filter2);
+  EXPECT_NE(greater_equal_filter1, greater_equal_filter2);
+}
+

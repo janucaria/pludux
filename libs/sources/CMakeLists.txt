@@ -36,6 +36,7 @@ target_sources(${PROJECT_NAME}
     src/screener/any_of_filter.cpp
     src/screener/crossover_filter.cpp
     src/screener/crossunder_filter.cpp
+    src/screener/screener_filter.cpp
 
   INTERFACE
     FILE_SET HEADERS

@@ -39,6 +39,7 @@ set(PLUDUX_TEST_SOURCES
   src/test_less_equal_filter.cpp
   src/test_less_than_filter.cpp
   src/test_not_equal_filter.cpp
+  src/test_screener_filter.cpp
 
 )
 

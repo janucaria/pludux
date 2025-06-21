@@ -16,6 +16,8 @@ public:
 
   auto operator()(AssetSnapshot asset_data) const -> bool;
 
+  auto operator==(const AllOfFilter& other) const noexcept-> bool;
+
   auto filters() const -> const std::vector<ScreenerFilter>&;
 
 private:
