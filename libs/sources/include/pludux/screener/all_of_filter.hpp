@@ -18,7 +18,7 @@ public:
 
   auto operator==(const AllOfFilter& other) const noexcept-> bool;
 
-  auto filters() const -> const std::vector<ScreenerFilter>&;
+  auto conditions() const -> const std::vector<ScreenerFilter>&;
 
 private:
   std::vector<ScreenerFilter> conditions_;

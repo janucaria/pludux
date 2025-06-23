@@ -30,8 +30,11 @@ public:
 
   friend Parser;
 
-  using FilterParser = std::function<screener::ScreenerFilter(
-   ConfigParser::Parser, const nlohmann::json&)>;
+  using FilterSerialize = std::function<
+   auto(const ConfigParser&, const screener::ScreenerFilter&)->nlohmann::json>;
+
+  using FilterDeserialize = std::function<
+   auto(ConfigParser::Parser, const nlohmann::json&)->screener::ScreenerFilter>;
 
   using MethodSerialize = std::function<
    auto(const ConfigParser&, const screener::ScreenerMethod&)->nlohmann::json>;
@@ -44,7 +47,11 @@ public:
   void register_default_parsers();
 
   void register_filter_parser(const std::string& filter_name,
-                              const FilterParser& filter_parser);
+                              const FilterDeserialize& filter_deserialize);
+
+  void register_filter_parser(const std::string& filter_name,
+                              const FilterSerialize& filter_serialize,
+                              const FilterDeserialize& filter_deserialize);
 
   void register_method_parser(const std::string& method_name,
                               const MethodDeserialize& method_deserialize);
@@ -57,6 +64,9 @@ public:
 
   auto parse_filter(const nlohmann::json& config) -> screener::ScreenerFilter;
 
+  auto serialize_filter(const screener::ScreenerFilter& filter) const
+   -> nlohmann::json;
+
   auto parse_method(const nlohmann::json& config) -> screener::ScreenerMethod;
 
   auto serialize_method(const screener::ScreenerMethod& method) const
@@ -68,7 +78,8 @@ public:
    -> std::unordered_map<std::string, screener::ScreenerMethod>;
 
 private:
-  std::unordered_map<std::string, FilterParser> filter_parsers_;
+  std::unordered_map<std::string, std::pair<FilterSerialize, FilterDeserialize>>
+   filter_parsers_;
   std::unordered_map<std::string, std::pair<MethodSerialize, MethodDeserialize>>
    method_parsers_;
 

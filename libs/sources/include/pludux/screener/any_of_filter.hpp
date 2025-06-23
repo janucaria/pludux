@@ -12,13 +12,13 @@ class AnyOfFilter {
 public:
   AnyOfFilter();
 
-  explicit AnyOfFilter(std::vector<ScreenerFilter> filters);
+  explicit AnyOfFilter(std::vector<ScreenerFilter> conditions);
 
   auto operator()(AssetSnapshot asset_data) const -> bool;
 
   auto operator==(const AnyOfFilter& other) const noexcept-> bool;
 
-  auto filters() const -> const std::vector<ScreenerFilter>&;
+  auto conditions() const -> const std::vector<ScreenerFilter>&;
 
 private:
   std::vector<ScreenerFilter> conditions_;

@@ -378,6 +378,27 @@ static auto parse_binary_function_filter(ConfigParser::Parser config_parser,
 }
 
 template<typename T>
+static auto
+serialize_binary_function_filter(const ConfigParser& config_parser,
+                                 const screener::ScreenerFilter& filter,
+                                 const std::string& first_operand_key,
+                                 const std::string& second_operand_key)
+ -> nlohmann::json
+{
+  auto serialized_filter = nlohmann::json{};
+
+  auto binary_function_filter = screener_filter_cast<T>(filter);
+  if(binary_function_filter) {
+    serialized_filter[first_operand_key] =
+     config_parser.serialize_filter(binary_function_filter->first_condition());
+    serialized_filter[second_operand_key] =
+     config_parser.serialize_filter(binary_function_filter->second_condition());
+  }
+
+  return serialized_filter;
+}
+
+template<typename T>
 static auto parse_unary_function_filter(ConfigParser::Parser config_parser,
                                         const nlohmann::json& parameters,
                                         const std::string& operand_key)
@@ -386,6 +407,24 @@ static auto parse_unary_function_filter(ConfigParser::Parser config_parser,
   const auto operand = config_parser.parse_filter(parameters.at(operand_key));
   const auto unary_function_filter = T{operand};
   return unary_function_filter;
+}
+
+template<typename T>
+static auto
+serialize_unary_function_filter(const ConfigParser& config_parser,
+                                const screener::ScreenerFilter& filter,
+                                const std::string& operand_key)
+ -> nlohmann::json
+{
+  auto serialized_filter = nlohmann::json{};
+
+  auto unary_function_filter = screener_filter_cast<T>(filter);
+  if(unary_function_filter) {
+    serialized_filter[operand_key] =
+     config_parser.serialize_filter(unary_function_filter->condition());
+  }
+
+  return serialized_filter;
 }
 
 template<typename T>
@@ -398,6 +437,24 @@ static auto parse_comparison_filter(ConfigParser::Parser config_parser,
   return T{target, threshold};
 }
 
+template<typename T>
+static auto serialize_comparison_filter(const ConfigParser& config_parser,
+                                        const screener::ScreenerFilter& filter)
+ -> nlohmann::json
+{
+  auto serialized_filter = nlohmann::json{};
+
+  auto comparison_filter = screener_filter_cast<T>(filter);
+  if(comparison_filter) {
+    serialized_filter["target"] =
+     config_parser.serialize_method(comparison_filter->target());
+    serialized_filter["threshold"] =
+     config_parser.serialize_method(comparison_filter->threshold());
+  }
+
+  return serialized_filter;
+}
+
 static auto parse_all_of_filter(ConfigParser::Parser config_parser,
                                 const nlohmann::json& parameters)
  -> screener::ScreenerFilter
@@ -406,11 +463,29 @@ static auto parse_all_of_filter(ConfigParser::Parser config_parser,
     throw std::invalid_argument{"ALL_OF: 'conditions' is not found"};
   }
 
-  auto filters = std::vector<screener::ScreenerFilter>{};
+  auto conditions = std::vector<screener::ScreenerFilter>{};
   for(const auto& filter : parameters.at("conditions")) {
-    filters.push_back(config_parser.parse_filter(filter));
+    conditions.push_back(config_parser.parse_filter(filter));
   }
-  return screener::AllOfFilter{filters};
+  return screener::AllOfFilter{conditions};
+}
+
+static auto serialize_all_of_filter(const ConfigParser& config_parser,
+                                    const screener::ScreenerFilter& filter)
+ -> nlohmann::json
+{
+  auto serialized_filter = nlohmann::json{};
+
+  auto all_of_filter = screener_filter_cast<screener::AllOfFilter>(filter);
+  if(all_of_filter) {
+    auto conditions = nlohmann::json::array();
+    for(const auto& condition : all_of_filter->conditions()) {
+      conditions.push_back(config_parser.serialize_filter(condition));
+    }
+    serialized_filter["conditions"] = conditions;
+  }
+
+  return serialized_filter;
 }
 
 static auto parse_any_of_filter(ConfigParser::Parser config_parser,
@@ -420,11 +495,29 @@ static auto parse_any_of_filter(ConfigParser::Parser config_parser,
   if(!parameters.contains("conditions")) {
     throw std::invalid_argument{"ANY_OF: 'conditions' is not found"};
   }
-  auto filters = std::vector<screener::ScreenerFilter>{};
+  auto conditions = std::vector<screener::ScreenerFilter>{};
   for(const auto& filter : parameters.at("conditions")) {
-    filters.push_back(config_parser.parse_filter(filter));
+    conditions.push_back(config_parser.parse_filter(filter));
   }
-  return screener::AnyOfFilter{filters};
+  return screener::AnyOfFilter{conditions};
+}
+
+static auto serialize_any_of_filter(const ConfigParser& config_parser,
+                                    const screener::ScreenerFilter& filter)
+ -> nlohmann::json
+{
+  auto serialized_filter = nlohmann::json{};
+
+  auto any_of_filter = screener_filter_cast<screener::AnyOfFilter>(filter);
+  if(any_of_filter) {
+    auto conditions = nlohmann::json::array();
+    for(const auto& condition : any_of_filter->conditions()) {
+      conditions.push_back(config_parser.serialize_filter(condition));
+    }
+    serialized_filter["conditions"] = conditions;
+  }
+
+  return serialized_filter;
 }
 
 static auto parse_crossunder_filter(ConfigParser::Parser config_parser,
@@ -436,6 +529,24 @@ static auto parse_crossunder_filter(ConfigParser::Parser config_parser,
   return screener::CrossunderFilter{signal, reference};
 }
 
+static auto serialize_crossunder_filter(const ConfigParser& config_parser,
+                                        const screener::ScreenerFilter& filter)
+ -> nlohmann::json
+{
+  auto serialized_filter = nlohmann::json{};
+
+  auto crossunder_filter =
+   screener_filter_cast<screener::CrossunderFilter>(filter);
+  if(crossunder_filter) {
+    serialized_filter["signal"] =
+     config_parser.serialize_method(crossunder_filter->signal());
+    serialized_filter["reference"] =
+     config_parser.serialize_method(crossunder_filter->reference());
+  }
+
+  return serialized_filter;
+}
+
 static auto parse_crossover_filter(ConfigParser::Parser config_parser,
                                    const nlohmann::json& parameters)
  -> screener::ScreenerFilter
@@ -443,6 +554,24 @@ static auto parse_crossover_filter(ConfigParser::Parser config_parser,
   auto signal = config_parser.parse_method(parameters.at("signal"));
   auto reference = config_parser.parse_method(parameters.at("reference"));
   return screener::CrossoverFilter{signal, reference};
+}
+
+static auto serialize_crossover_filter(const ConfigParser& config_parser,
+                                       const screener::ScreenerFilter& filter)
+ -> nlohmann::json
+{
+  auto serialized_filter = nlohmann::json{};
+
+  auto crossover_filter =
+   screener_filter_cast<screener::CrossoverFilter>(filter);
+  if(crossover_filter) {
+    serialized_filter["signal"] =
+     config_parser.serialize_method(crossover_filter->signal());
+    serialized_filter["reference"] =
+     config_parser.serialize_method(crossover_filter->reference());
+  }
+
+  return serialized_filter;
 }
 
 ConfigParser::ConfigParser() = default;
@@ -908,37 +1037,78 @@ void ConfigParser::register_default_parsers()
    serialize_divergence_method<screener::HiddenBullishDivergenceMethod>,
    parse_divergence_method<screener::HiddenBullishDivergenceMethod>);
 
-  register_filter_parser("ALL_OF", parse_all_of_filter);
-  register_filter_parser("ANY_OF", parse_any_of_filter);
-  register_filter_parser("CROSSUNDER", parse_crossunder_filter);
-  register_filter_parser("CROSSOVER", parse_crossover_filter);
-  register_filter_parser("GREATER_THAN",
-                         parse_comparison_filter<screener::GreaterThanFilter>);
+  register_filter_parser(
+   "ALL_OF", serialize_all_of_filter, parse_all_of_filter);
+  register_filter_parser(
+   "ANY_OF", serialize_any_of_filter, parse_any_of_filter);
+  register_filter_parser(
+   "CROSSUNDER", serialize_crossunder_filter, parse_crossunder_filter);
+  register_filter_parser(
+   "CROSSOVER", serialize_crossover_filter, parse_crossover_filter);
+  register_filter_parser(
+   "GREATER_THAN",
+   serialize_comparison_filter<screener::GreaterThanFilter>,
+   parse_comparison_filter<screener::GreaterThanFilter>);
   register_filter_parser("LESS_THAN",
+                         serialize_comparison_filter<screener::LessThanFilter>,
                          parse_comparison_filter<screener::LessThanFilter>);
-  register_filter_parser("GREATER_EQUAL",
-                         parse_comparison_filter<screener::GreaterEqualFilter>);
+  register_filter_parser(
+   "GREATER_EQUAL",
+   serialize_comparison_filter<screener::GreaterEqualFilter>,
+   parse_comparison_filter<screener::GreaterEqualFilter>);
   register_filter_parser("LESS_EQUAL",
+                         serialize_comparison_filter<screener::LessEqualFilter>,
                          parse_comparison_filter<screener::LessEqualFilter>);
   register_filter_parser("EQUAL",
+                         serialize_comparison_filter<screener::EqualFilter>,
                          parse_comparison_filter<screener::EqualFilter>);
   register_filter_parser("NOT_EQUAL",
+                         serialize_comparison_filter<screener::NotEqualFilter>,
                          parse_comparison_filter<screener::NotEqualFilter>);
 
   register_filter_parser(
    "TRUE",
+   [](const ConfigParser& config_parser,
+      const screener::ScreenerFilter& screener_filter) -> nlohmann::json {
+     auto serialized_filter = nlohmann::json{};
+
+     const auto true_filter =
+      screener_filter_cast<screener::TrueFilter>(screener_filter);
+
+     if(true_filter) {
+       serialized_filter["filter"] = "TRUE";
+     }
+
+     return serialized_filter;
+   },
    [](ConfigParser::Parser, const nlohmann::json&) -> screener::ScreenerFilter {
      return screener::TrueFilter{};
    });
 
   register_filter_parser(
    "FALSE",
+   [](const ConfigParser& config_parser,
+      const screener::ScreenerFilter& screener_filter) -> nlohmann::json {
+     auto serialized_filter = nlohmann::json{};
+
+     const auto false_filter =
+      screener_filter_cast<screener::FalseFilter>(screener_filter);
+     if(false_filter) {
+       serialized_filter["filter"] = "FALSE";
+     }
+     return serialized_filter;
+   },
    [](ConfigParser::Parser, const nlohmann::json&) -> screener::ScreenerFilter {
      return screener::FalseFilter{};
    });
 
   register_filter_parser(
    "AND",
+   [](const ConfigParser& config_parser,
+      const screener::ScreenerFilter& screener_filter) -> nlohmann::json {
+     return serialize_binary_function_filter<screener::AndFilter>(
+      config_parser, screener_filter, "firstCondition", "secondCondition");
+   },
    [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {
      return parse_binary_function_filter<screener::AndFilter>(
       config_parser, parameters, "firstCondition", "secondCondition");
@@ -946,6 +1116,11 @@ void ConfigParser::register_default_parsers()
 
   register_filter_parser(
    "OR",
+   [](const ConfigParser& config_parser,
+      const screener::ScreenerFilter& screener_filter) -> nlohmann::json {
+     return serialize_binary_function_filter<screener::OrFilter>(
+      config_parser, screener_filter, "firstCondition", "secondCondition");
+   },
    [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {
      return parse_binary_function_filter<screener::OrFilter>(
       config_parser, parameters, "firstCondition", "secondCondition");
@@ -953,6 +1128,11 @@ void ConfigParser::register_default_parsers()
 
   register_filter_parser(
    "NOT",
+   [](const ConfigParser& config_parser,
+      const screener::ScreenerFilter& screener_filter) -> nlohmann::json {
+     return serialize_unary_function_filter<screener::NotFilter>(
+      config_parser, screener_filter, "condition");
+   },
    [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {
      return parse_unary_function_filter<screener::NotFilter>(
       config_parser, parameters, "condition");
@@ -960,16 +1140,36 @@ void ConfigParser::register_default_parsers()
 
   register_filter_parser(
    "XOR",
+   [](const ConfigParser& config_parser,
+      const screener::ScreenerFilter& screener_filter) -> nlohmann::json {
+     return serialize_binary_function_filter<screener::XorFilter>(
+      config_parser, screener_filter, "firstCondition", "secondCondition");
+   },
    [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {
      return parse_binary_function_filter<screener::XorFilter>(
       config_parser, parameters, "firstCondition", "secondCondition");
    });
 }
 
-void ConfigParser::register_filter_parser(const std::string& filter_name,
-                                          const FilterParser& filter_parser)
+void ConfigParser::register_filter_parser(
+ const std::string& filter_name, const FilterDeserialize& filter_deserialize)
 {
-  filter_parsers_.emplace(filter_name, filter_parser);
+  register_filter_parser(
+   filter_name,
+   [](const ConfigParser& config_parser,
+      const screener::ScreenerFilter& screener_filter) -> nlohmann::json {
+     return nlohmann::json{};
+   },
+   filter_deserialize);
+}
+
+void ConfigParser::register_filter_parser(
+ const std::string& filter_name,
+ const FilterSerialize& filter_serialize,
+ const FilterDeserialize& filter_deserialize)
+{
+  filter_parsers_.emplace(filter_name,
+                          std::make_pair(filter_serialize, filter_deserialize));
 }
 
 void ConfigParser::register_method_parser(
@@ -999,7 +1199,56 @@ auto ConfigParser::parser() -> Parser
 auto ConfigParser::parse_filter(const nlohmann::json& config)
  -> screener::ScreenerFilter
 {
-  return parser().parse_filter(config);
+  if(config.is_boolean()) {
+    if(config.get<bool>()) {
+      return screener::TrueFilter{};
+    }
+
+    return screener::FalseFilter{};
+  }
+
+  const auto& filter_parsers = filter_parsers_;
+  const auto filter = config.at("filter").get<std::string>();
+
+  if(filter_parsers.contains(filter)) {
+    const auto& [_, filter_deserialize] = filter_parsers.at(filter);
+    return filter_deserialize(*this, config);
+  }
+
+  const auto error_message = std::format("Unknown filter: {}", filter);
+  throw std::invalid_argument{error_message};
+}
+
+auto ConfigParser::serialize_filter(
+ const screener::ScreenerFilter& filter) const -> nlohmann::json
+{
+  auto serialized_filter = nlohmann::json{};
+
+  for(const auto& [filter_name, filter_parser] : filter_parsers_) {
+    const auto& [filter_serialize, _] = filter_parser;
+    serialized_filter = filter_serialize(*this, filter);
+    if(!serialized_filter.empty()) {
+      if(!serialized_filter.is_object()) {
+        const auto error_message = std::format(
+         "Filter {} serialization must return an object", filter_name);
+        throw std::invalid_argument{error_message};
+      }
+
+      if(!serialized_filter.contains("filter")) {
+        serialized_filter["filter"] = filter_name;
+      } else if(serialized_filter.at("filter").get<std::string>() !=
+                filter_name) {
+        const auto error_message = std::format(
+         "Filter {} serialization must return 'filter' key with value {}",
+         filter_name,
+         filter_name);
+        throw std::invalid_argument{error_message};
+      }
+      break;
+    }
+  }
+
+  return serialized_filter;
 }
 
 auto ConfigParser::parse_method(const nlohmann::json& config)
@@ -1121,23 +1370,7 @@ auto ConfigParser::Parser::parse_method(const nlohmann::json& config)
 auto ConfigParser::Parser::parse_filter(const nlohmann::json& config)
  -> screener::ScreenerFilter
 {
-  if(config.is_boolean()) {
-    if(config.get<bool>()) {
-      return screener::TrueFilter{};
-    }
-
-    return screener::FalseFilter{};
-  }
-
-  const auto& filter_parsers = config_parser_.filter_parsers_;
-  const auto filter = config.at("filter").get<std::string>();
-
-  if(filter_parsers.contains(filter)) {
-    return filter_parsers.at(filter)(*this, config);
-  }
-
-  const auto error_message = std::format("Unknown filter: {}", filter);
-  throw std::invalid_argument{error_message};
+  return config_parser_.parse_filter(config);
 }
 
 auto ConfigParser::Parser::contains_named_method(

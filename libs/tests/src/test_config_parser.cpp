@@ -1042,7 +1042,7 @@ TEST_F(ConfigParserTest, ParseScreenerAllOfFilter)
   const auto all_of_filter = screener_filter_cast<AllOfFilter>(filter);
   ASSERT_NE(all_of_filter, nullptr);
 
-  const auto filters = all_of_filter->filters();
+  const auto filters = all_of_filter->conditions();
   ASSERT_EQ(filters.size(), 2);
 
   const auto greater_than_filter =
@@ -1052,6 +1052,11 @@ TEST_F(ConfigParserTest, ParseScreenerAllOfFilter)
 
   EXPECT_NE(greater_than_filter, nullptr);
   EXPECT_NE(less_than_filter, nullptr);
+
+  const auto serialized_config = config_parser.serialize_filter(filter);
+  const auto deserialized_filter =
+   config_parser.parse_filter(serialized_config);
+  EXPECT_EQ(filter, deserialized_filter);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerAnyOfFilter)
@@ -1093,16 +1098,21 @@ TEST_F(ConfigParserTest, ParseScreenerAnyOfFilter)
   const auto any_of_filter = screener_filter_cast<AnyOfFilter>(filter);
   ASSERT_NE(any_of_filter, nullptr);
 
-  const auto filters = any_of_filter->filters();
-  ASSERT_EQ(filters.size(), 2);
+  const auto conditions = any_of_filter->conditions();
+  ASSERT_EQ(conditions.size(), 2);
 
   const auto greater_than_filter =
-   screener_filter_cast<GreaterThanFilter>(filters[0]);
+   screener_filter_cast<GreaterThanFilter>(conditions[0]);
   const auto less_than_filter =
-   screener_filter_cast<LessThanFilter>(filters[1]);
+   screener_filter_cast<LessThanFilter>(conditions[1]);
 
   EXPECT_NE(greater_than_filter, nullptr);
   EXPECT_NE(less_than_filter, nullptr);
+
+  const auto serialized_config = config_parser.serialize_filter(filter);
+  const auto deserialized_filter =
+   config_parser.parse_filter(serialized_config);
+  EXPECT_EQ(filter, deserialized_filter);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerGreaterThanFilter)
@@ -1137,6 +1147,11 @@ TEST_F(ConfigParserTest, ParseScreenerGreaterThanFilter)
   ASSERT_NE(threshold, nullptr);
 
   EXPECT_EQ(threshold->value(), 100);
+
+  const auto serialized_config = config_parser.serialize_filter(filter);
+  const auto deserialized_filter =
+   config_parser.parse_filter(serialized_config);
+  EXPECT_EQ(filter, deserialized_filter);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerGreaterEqualFilter)
@@ -1168,6 +1183,11 @@ TEST_F(ConfigParserTest, ParseScreenerGreaterEqualFilter)
 
   EXPECT_EQ(target->field(), "close");
   EXPECT_EQ(target->offset(), 0);
+
+  const auto serialized_config = config_parser.serialize_filter(filter);
+  const auto deserialized_filter =
+   config_parser.parse_filter(serialized_config);
+  EXPECT_EQ(filter, deserialized_filter);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerLessThanFilter)
@@ -1198,6 +1218,11 @@ TEST_F(ConfigParserTest, ParseScreenerLessThanFilter)
 
   EXPECT_EQ(target->field(), "close");
   EXPECT_EQ(target->offset(), 0);
+
+  const auto serialized_config = config_parser.serialize_filter(filter);
+  const auto deserialized_filter =
+   config_parser.parse_filter(serialized_config);
+  EXPECT_EQ(filter, deserialized_filter);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerLessEqualFilter)
@@ -1228,6 +1253,11 @@ TEST_F(ConfigParserTest, ParseScreenerLessEqualFilter)
 
   EXPECT_EQ(target->field(), "close");
   EXPECT_EQ(target->offset(), 0);
+
+  const auto serialized_config = config_parser.serialize_filter(filter);
+  const auto deserialized_filter =
+   config_parser.parse_filter(serialized_config);
+  EXPECT_EQ(filter, deserialized_filter);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerEqualFilter)
@@ -1263,6 +1293,11 @@ TEST_F(ConfigParserTest, ParseScreenerEqualFilter)
   ASSERT_NE(threshold, nullptr);
 
   EXPECT_EQ(threshold->value(), 100);
+
+  const auto serialized_config = config_parser.serialize_filter(filter);
+  const auto deserialized_filter =
+   config_parser.parse_filter(serialized_config);
+  EXPECT_EQ(filter, deserialized_filter);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerNotEqualFilter)
@@ -1299,6 +1334,11 @@ TEST_F(ConfigParserTest, ParseScreenerNotEqualFilter)
   ASSERT_NE(threshold, nullptr);
 
   EXPECT_EQ(threshold->value(), 100);
+
+  const auto serialized_config = config_parser.serialize_filter(filter);
+  const auto deserialized_filter =
+   config_parser.parse_filter(serialized_config);
+  EXPECT_EQ(filter, deserialized_filter);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerCrossunderFilter)
@@ -1332,6 +1372,11 @@ TEST_F(ConfigParserTest, ParseScreenerCrossunderFilter)
   ASSERT_NE(reference, nullptr);
 
   EXPECT_EQ(reference->value(), 100);
+
+  const auto serialized_config = config_parser.serialize_filter(filter);
+  const auto deserialized_filter =
+   config_parser.parse_filter(serialized_config);
+  EXPECT_EQ(filter, deserialized_filter);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerCrossoverFilter)
@@ -1368,6 +1413,11 @@ TEST_F(ConfigParserTest, ParseScreenerCrossoverFilter)
   ASSERT_NE(reference, nullptr);
 
   EXPECT_EQ(reference->value(), 100);
+
+  const auto serialized_config = config_parser.serialize_filter(filter);
+  const auto deserialized_filter =
+   config_parser.parse_filter(serialized_config);
+  EXPECT_EQ(filter, deserialized_filter);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerTrueFilter)
@@ -1382,6 +1432,11 @@ TEST_F(ConfigParserTest, ParseScreenerTrueFilter)
 
   const auto true_filter = screener_filter_cast<TrueFilter>(filter);
   ASSERT_NE(true_filter, nullptr);
+
+  const auto serialized_config = config_parser.serialize_filter(filter);
+  const auto deserialized_filter =
+   config_parser.parse_filter(serialized_config);
+  EXPECT_EQ(filter, deserialized_filter);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerFalseFilter)
@@ -1396,6 +1451,11 @@ TEST_F(ConfigParserTest, ParseScreenerFalseFilter)
 
   const auto false_filter = screener_filter_cast<FalseFilter>(filter);
   ASSERT_NE(false_filter, nullptr);
+
+  const auto serialized_config = config_parser.serialize_filter(filter);
+  const auto deserialized_filter =
+   config_parser.parse_filter(serialized_config);
+  EXPECT_EQ(filter, deserialized_filter);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerAndFilter)
@@ -1428,6 +1488,11 @@ TEST_F(ConfigParserTest, ParseScreenerAndFilter)
 
   ASSERT_NE(true_filter, nullptr);
   ASSERT_NE(false_filter, nullptr);
+
+  const auto serialized_config = config_parser.serialize_filter(filter);
+  const auto deserialized_filter =
+   config_parser.parse_filter(serialized_config);
+  EXPECT_EQ(filter, deserialized_filter);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerOrFilter)
@@ -1460,6 +1525,11 @@ TEST_F(ConfigParserTest, ParseScreenerOrFilter)
 
   ASSERT_NE(true_filter, nullptr);
   ASSERT_NE(false_filter, nullptr);
+
+  const auto serialized_config = config_parser.serialize_filter(filter);
+  const auto deserialized_filter =
+   config_parser.parse_filter(serialized_config);
+  EXPECT_EQ(filter, deserialized_filter);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerNotFilter)
@@ -1480,6 +1550,11 @@ TEST_F(ConfigParserTest, ParseScreenerNotFilter)
   const auto true_filter = screener_filter_cast<TrueFilter>(condition);
 
   ASSERT_NE(true_filter, nullptr);
+
+  const auto serialized_config = config_parser.serialize_filter(filter);
+  const auto deserialized_filter =
+   config_parser.parse_filter(serialized_config);
+  EXPECT_EQ(filter, deserialized_filter);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerXorFilter)
@@ -1512,6 +1587,11 @@ TEST_F(ConfigParserTest, ParseScreenerXorFilter)
 
   ASSERT_NE(true_filter, nullptr);
   ASSERT_NE(false_filter, nullptr);
+
+  const auto serialized_config = config_parser.serialize_filter(filter);
+  const auto deserialized_filter =
+   config_parser.parse_filter(serialized_config);
+  EXPECT_EQ(filter, deserialized_filter);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerFilterIsInvalid)
