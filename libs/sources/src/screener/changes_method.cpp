@@ -27,4 +27,14 @@ auto ChangesMethod::operator()(AssetSnapshot asset_data) const
 auto ChangesMethod::operator==(const ChangesMethod& other) const noexcept
  -> bool = default;
 
+auto ChangesMethod::offset() const noexcept -> std::size_t
+{
+  return offset_;
+}
+
+auto ChangesMethod::operand() const noexcept -> const ScreenerMethod&
+{
+  return operand_;
+}
+
 } // namespace pludux::screener

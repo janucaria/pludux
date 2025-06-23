@@ -19,6 +19,7 @@ target_sources(${PROJECT_NAME}
     src/config_parser.cpp
 
     src/screener/abs_diff_method.cpp
+    src/screener/arithmetic_method.cpp
     src/screener/atr_method.cpp
     src/screener/bb_method.cpp
     src/screener/bullish_divergence_method.cpp

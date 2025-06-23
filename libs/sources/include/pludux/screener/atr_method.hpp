@@ -22,6 +22,14 @@ public:
 
   auto operator==(const AtrMethod& other) const noexcept -> bool;
 
+  auto period() const noexcept -> std::size_t;
+  auto multiplier() const noexcept -> double;
+  auto offset() const noexcept -> std::size_t;
+
+  auto high() const noexcept -> const ScreenerMethod&;
+  auto low() const noexcept -> const ScreenerMethod&;
+  auto close() const noexcept -> const ScreenerMethod&;
+
 private:
   std::size_t period_;
   double multiplier_;

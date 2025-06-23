@@ -39,6 +39,21 @@ public:
   auto operator==(const BinaryArithmeticMethod& other) const noexcept
    -> bool = default;
 
+  auto offset() const noexcept -> std::size_t
+  {
+    return offset_;
+  }
+
+  auto operand1() const noexcept -> const ScreenerMethod&
+  {
+    return operand1_;
+  }
+
+  auto operand2() const noexcept -> const ScreenerMethod&
+  {
+    return operand2_;
+  }
+
 private:
   ScreenerMethod operand1_;
   ScreenerMethod operand2_;
@@ -68,63 +83,101 @@ public:
   auto operator==(const UnaryArithmeticMethod& other) const noexcept
    -> bool = default;
 
+  auto operand() const noexcept -> const ScreenerMethod&
+  {
+    return operand_;
+  }
+
+  auto offset() const noexcept -> std::size_t
+  {
+    return offset_;
+  }
+
 private:
   ScreenerMethod operand_;
   std::size_t offset_;
-};
-
-template<typename T = void>
-struct Percentages {
-  auto operator()(T a, T b) const -> T
-  {
-    return a / b * 100.0;
-  }
-};
-
-template<>
-struct Percentages<void> {
-  auto operator()(auto a, auto b) const
-  {
-    return a * (b / 100.0);
-  }
 };
 
 } // namespace details
 
 class MultiplyMethod
 : public details::BinaryArithmeticMethod<MultiplyMethod, std::multiplies<>> {
+public:
   using details::BinaryArithmeticMethod<MultiplyMethod, std::multiplies<>>::
    BinaryArithmeticMethod;
+
+  auto multiplicand() const noexcept -> const ScreenerMethod&;
+
+  auto multiplier() const noexcept -> const ScreenerMethod&;
 };
 
 class DivideMethod
 : public details::BinaryArithmeticMethod<DivideMethod, std::divides<>> {
+public:
   using details::BinaryArithmeticMethod<DivideMethod,
                                         std::divides<>>::BinaryArithmeticMethod;
+
+  auto dividend() const noexcept -> const ScreenerMethod&;
+
+  auto divisor() const noexcept -> const ScreenerMethod&;
 };
 
 class AddMethod
 : public details::BinaryArithmeticMethod<AddMethod, std::plus<>> {
+public:
   using details::BinaryArithmeticMethod<AddMethod,
                                         std::plus<>>::BinaryArithmeticMethod;
+
+  auto augend() const noexcept -> const ScreenerMethod&;
+
+  auto addend() const noexcept -> const ScreenerMethod&;
 };
 
 class SubtractMethod
 : public details::BinaryArithmeticMethod<SubtractMethod, std::minus<>> {
+public:
   using details::BinaryArithmeticMethod<SubtractMethod,
                                         std::minus<>>::BinaryArithmeticMethod;
+
+  auto minuend() const noexcept -> const ScreenerMethod&;
+
+  auto subtrahend() const noexcept -> const ScreenerMethod&;
 };
 
 class NegateMethod : public details::UnaryArithmeticMethod<std::negate<>> {
+public:
   using details::UnaryArithmeticMethod<std::negate<>>::UnaryArithmeticMethod;
 };
+
+namespace details {
+template<typename T = void>
+struct Percentages {
+  auto operator()(T total, T percent) const -> T
+  {
+    return total * (percent / 100.0);
+  }
+};
+
+template<>
+struct Percentages<void> {
+  auto operator()(auto total, auto percent) const
+  {
+    return total * (percent / 100.0);
+  }
+};
+} // namespace details
 
 class PercentageMethod
 : public details::BinaryArithmeticMethod<PercentageMethod,
                                          details::Percentages<>> {
+public:
   using details::BinaryArithmeticMethod<
    PercentageMethod,
    details::Percentages<>>::BinaryArithmeticMethod;
+
+  auto total() const noexcept -> const ScreenerMethod&;
+
+  auto percent() const noexcept -> const ScreenerMethod&;
 };
 
 } // namespace pludux::screener

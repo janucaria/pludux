@@ -37,6 +37,37 @@ auto AtrMethod::operator()(AssetSnapshot asset_data) const
                    static_cast<std::ptrdiff_t>(offset_)};
 }
 
-auto AtrMethod::operator==(const AtrMethod& other) const noexcept -> bool = default;
+auto AtrMethod::operator==(const AtrMethod& other) const noexcept
+ -> bool = default;
+
+auto AtrMethod::period() const noexcept -> std::size_t
+{
+  return period_;
+}
+
+auto AtrMethod::multiplier() const noexcept -> double
+{
+  return multiplier_;
+}
+
+auto AtrMethod::offset() const noexcept -> std::size_t
+{
+  return offset_;
+}
+
+auto AtrMethod::high() const noexcept -> const ScreenerMethod&
+{
+  return high_;
+}
+
+auto AtrMethod::low() const noexcept -> const ScreenerMethod&
+{
+  return low_;
+}
+
+auto AtrMethod::close() const noexcept -> const ScreenerMethod&
+{
+  return close_;
+}
 
 } // namespace pludux::screener

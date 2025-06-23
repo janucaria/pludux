@@ -4,26 +4,40 @@
 #include <cstddef>
 
 #include <pludux/asset_snapshot.hpp>
-#include <pludux/screener/screener_method.hpp>
+#include <pludux/screener/arithmetic_method.hpp>
 #include <pludux/series.hpp>
 
 namespace pludux::screener {
 
-class AbsDiffMethod {
+namespace details {
+template<typename T = void>
+struct AbsoluteDifference {
+  auto operator()(T left, T right) const -> T
+  {
+    return std::abs(left - right);
+  }
+};
+
+template<>
+struct AbsoluteDifference<void> {
+  auto operator()(auto left, auto right) const
+  {
+    return std::abs(left - right);
+  }
+};
+} // namespace details
+
+class AbsDiffMethod
+: public details::BinaryArithmeticMethod<AbsDiffMethod,
+                                         details::AbsoluteDifference<>> {
 public:
-  explicit AbsDiffMethod(ScreenerMethod operand1,
-                         ScreenerMethod operand2,
-                         std::size_t offset = 0);
+  using details::BinaryArithmeticMethod<
+   AbsDiffMethod,
+   details::AbsoluteDifference<>>::BinaryArithmeticMethod;
 
-  auto
-  operator()(AssetSnapshot asset_data) const -> SubSeries<PolySeries<double>>;
+  auto minuend() const noexcept -> const ScreenerMethod&;
 
-  auto operator==(const AbsDiffMethod& other) const noexcept -> bool;
-
-private:
-  ScreenerMethod operand1_;
-  ScreenerMethod operand2_;
-  std::size_t offset_;
+  auto subtrahend() const noexcept -> const ScreenerMethod&;
 };
 
 } // namespace pludux::screener
