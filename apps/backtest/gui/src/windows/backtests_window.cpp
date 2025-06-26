@@ -120,6 +120,8 @@ void BacktestsWindow::render_add_new_backtest(AppState& app_state)
         const auto& strategy_name = strategy.name();
         const auto is_selected = new_backtest_strategy_index_ == i;
 
+        ImGui::PushID(i);
+
         if(ImGui::Selectable(strategy_name.c_str(), is_selected)) {
           new_backtest_strategy_index_ = i;
         }
@@ -127,6 +129,8 @@ void BacktestsWindow::render_add_new_backtest(AppState& app_state)
         if(is_selected) {
           ImGui::SetItemDefaultFocus();
         }
+
+        ImGui::PopID();
       }
       ImGui::EndCombo();
     }
@@ -149,6 +153,8 @@ void BacktestsWindow::render_add_new_backtest(AppState& app_state)
         const auto& asset_name = asset.name();
         const auto is_selected = new_backtest_asset_index_ == i;
 
+        ImGui::PushID(i);
+
         if(ImGui::Selectable(asset_name.c_str(), is_selected)) {
           new_backtest_asset_index_ = i;
         }
@@ -156,6 +162,8 @@ void BacktestsWindow::render_add_new_backtest(AppState& app_state)
         if(is_selected) {
           ImGui::SetItemDefaultFocus();
         }
+
+        ImGui::PopID();
       }
       ImGui::EndCombo();
     }
