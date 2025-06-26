@@ -83,27 +83,26 @@ void Application::on_update()
                       current_time - last_update_time)
                       .count();
 
-    try {
-      do {
-        for(auto& backtest : backtests) {
+    do {
+      for(auto& backtest : backtests) {
+        try {
           if(backtest.should_run()) {
             backtest.run();
           }
+        } catch(const std::exception& e) {
+          backtest.mark_as_failed();
+          const auto error_message =
+           std::format("Backtest '{}' failed: {}", backtest.name(), e.what());
+          state_data_.alert_messages.push(error_message);
         }
+      }
 
-        current_time = std::chrono::high_resolution_clock::now();
-        time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(
-                     current_time - last_update_time)
-                     .count();
+      current_time = std::chrono::high_resolution_clock::now();
+      time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(
+                   current_time - last_update_time)
+                   .count();
 
-      } while(time_diff < 1000 / 60);
-
-    } catch(const std::exception& e) {
-      state_data_.backtests.clear();
-
-      const auto error_message = std::format("Error: {}", e.what());
-      state_data_.alert_messages.push(error_message);
-    }
+    } while(time_diff < 1000 / 60);
   }
 
   auto app_state = AppState{state_data_, actions_};

@@ -33,37 +33,37 @@ void RunningState::capital_risk(double capital_risk) noexcept
   capital_risk_ = capital_risk;
 }
 
-auto RunningState::price() const noexcept -> double
+auto RunningState::price() const -> double
 {
   return close();
 }
 
-auto RunningState::timestamp() const noexcept -> double
+auto RunningState::timestamp() const -> double
 {
   return asset_quote_.time();
 }
 
-auto RunningState::open() const noexcept -> double
+auto RunningState::open() const -> double
 {
   return asset_quote_.open();
 }
 
-auto RunningState::high() const noexcept -> double
+auto RunningState::high() const -> double
 {
   return asset_quote_.high();
 }
 
-auto RunningState::low() const noexcept -> double
+auto RunningState::low() const -> double
 {
   return asset_quote_.low();
 }
 
-auto RunningState::close() const noexcept -> double
+auto RunningState::close() const -> double
 {
   return asset_quote_.close();
 }
 
-auto RunningState::volume() const noexcept -> double
+auto RunningState::volume() const -> double
 {
   return asset_quote_.volume();
 }

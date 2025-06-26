@@ -21,7 +21,7 @@ public:
   {
   }
 
-  auto operator()(AssetSnapshot asset_snapshot) const noexcept
+  auto operator()(AssetSnapshot asset_snapshot) const
    -> SubSeries<PolySeries<double>>;
 
   auto operator==(const ScreenerMethod& other) const noexcept -> bool;
@@ -41,7 +41,7 @@ private:
   struct ImplConcept {
     virtual ~ImplConcept() = default;
 
-    virtual auto operator()(AssetSnapshot asset_snapshot) const noexcept
+    virtual auto operator()(AssetSnapshot asset_snapshot) const
      -> SubSeries<PolySeries<double>> = 0;
 
     virtual auto operator==(const ScreenerMethod& other) const noexcept
@@ -60,7 +60,7 @@ private:
     {
     }
 
-    auto operator()(AssetSnapshot asset_snapshot) const noexcept
+    auto operator()(AssetSnapshot asset_snapshot) const
      -> SubSeries<PolySeries<double>> override
     {
       return impl(std::move(asset_snapshot));
