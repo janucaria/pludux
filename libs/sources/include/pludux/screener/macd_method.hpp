@@ -21,6 +21,8 @@ public:
   auto operator()(AssetSnapshot asset_data) const
    -> SubSeries<PolySeries<double>>;
 
+  auto operator==(const MacdMethod& other) const noexcept -> bool;
+
   auto offset() const noexcept -> std::size_t;
 
   void offset(std::size_t offset) noexcept;

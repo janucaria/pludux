@@ -13,9 +13,9 @@ template<typename T>
 class ComparisonFilter {
 public:
   ComparisonFilter(ScreenerMethod target, ScreenerMethod threshold)
-    : compare_{}
-    , target_{std::move(target)}
-    , threshold_{std::move(threshold)}
+  : compare_{}
+  , target_{std::move(target)}
+  , threshold_{std::move(threshold)}
   {
   }
 
@@ -26,6 +26,14 @@ public:
 
     return compare_(target_result, threshold_result);
   }
+
+  auto operator==(const ComparisonFilter& other) const noexcept -> bool
+  {
+    return target_ == other.target_ && threshold_ == other.threshold_;
+  }
+
+  auto operator!=(const ComparisonFilter& other) const noexcept
+   -> bool = default;
 
   auto target() const -> const ScreenerMethod&
   {
@@ -42,7 +50,6 @@ private:
   ScreenerMethod target_;
   ScreenerMethod threshold_;
 };
-
 
 using GreaterEqualFilter = ComparisonFilter<std::greater_equal<>>;
 using GreaterThanFilter = ComparisonFilter<std::greater<>>;

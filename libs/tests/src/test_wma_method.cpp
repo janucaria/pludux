@@ -79,3 +79,33 @@ TEST(WmaMethodTest, RunAllMethodWithOffset)
   EXPECT_TRUE(std::isnan(result[6]));
   EXPECT_TRUE(std::isnan(result[7]));
 }
+
+TEST(WmaMethodTest, EqualityOperator)
+{
+  const auto field = "close";
+  const auto field_method = DataMethod{field, 0};
+  const auto period = 5;
+  const auto wma_method1 = WmaMethod{period, field_method, 0};
+  const auto wma_method2 = WmaMethod{period, field_method, 0};
+
+  EXPECT_TRUE(wma_method1 == wma_method2);
+  EXPECT_FALSE(wma_method1 != wma_method2);
+  EXPECT_EQ(wma_method1, wma_method2);
+}
+
+TEST(WmaMethodTest, NotEqualOperator)
+{
+  const auto field1 = "close";
+  const auto field_method1 = DataMethod{field1, 0};
+  const auto period1 = 5;
+  const auto wma_method1 = WmaMethod{period1, field_method1, 0};
+
+  const auto field2 = "open";
+  const auto field_method2 = DataMethod{field2, 0};
+  const auto period2 = 10;
+  const auto wma_method2 = WmaMethod{period2, field_method2, 0};
+
+  EXPECT_TRUE(wma_method1 != wma_method2);
+  EXPECT_FALSE(wma_method1 == wma_method2);
+  EXPECT_NE(wma_method1, wma_method2);
+}

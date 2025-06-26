@@ -31,6 +31,8 @@ auto MacdMethod::operator()(AssetSnapshot asset_data) const
                    static_cast<std::ptrdiff_t>(offset_)};
 }
 
+auto MacdMethod::operator==(const MacdMethod& other) const noexcept -> bool = default;
+
 auto MacdMethod::offset() const noexcept -> std::size_t
 {
   return offset_;

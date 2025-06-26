@@ -30,27 +30,47 @@ public:
 
   friend Parser;
 
-  using FilterParser = std::function<screener::ScreenerFilter(
-   ConfigParser::Parser, const nlohmann::json&)>;
+  using FilterSerialize = std::function<
+   auto(const ConfigParser&, const screener::ScreenerFilter&)->nlohmann::json>;
 
-  using MethodParser = std::function<screener::ScreenerMethod(
-   ConfigParser::Parser, const nlohmann::json&)>;
+  using FilterDeserialize = std::function<
+   auto(ConfigParser::Parser, const nlohmann::json&)->screener::ScreenerFilter>;
+
+  using MethodSerialize = std::function<
+   auto(const ConfigParser&, const screener::ScreenerMethod&)->nlohmann::json>;
+
+  using MethodDeserialize = std::function<
+   auto(ConfigParser::Parser, const nlohmann::json&)->screener::ScreenerMethod>;
 
   ConfigParser();
 
   void register_default_parsers();
 
   void register_filter_parser(const std::string& filter_name,
-                              const FilterParser& filter_parser);
+                              const FilterDeserialize& filter_deserialize);
+
+  void register_filter_parser(const std::string& filter_name,
+                              const FilterSerialize& filter_serialize,
+                              const FilterDeserialize& filter_deserialize);
 
   void register_method_parser(const std::string& method_name,
-                              const MethodParser& method_parser);
+                              const MethodDeserialize& method_deserialize);
+
+  void register_method_parser(const std::string& method_name,
+                              const MethodSerialize& method_serialize,
+                              const MethodDeserialize& method_deserialize);
 
   auto parser() -> Parser;
 
   auto parse_filter(const nlohmann::json& config) -> screener::ScreenerFilter;
 
+  auto serialize_filter(const screener::ScreenerFilter& filter) const
+   -> nlohmann::json;
+
   auto parse_method(const nlohmann::json& config) -> screener::ScreenerMethod;
+
+  auto serialize_method(const screener::ScreenerMethod& method) const
+   -> nlohmann::json;
 
   auto parse_named_method(const std::string& name) -> screener::ScreenerMethod;
 
@@ -58,8 +78,10 @@ public:
    -> std::unordered_map<std::string, screener::ScreenerMethod>;
 
 private:
-  std::unordered_map<std::string, FilterParser> filter_parsers_;
-  std::unordered_map<std::string, MethodParser> method_parsers_;
+  std::unordered_map<std::string, std::pair<FilterSerialize, FilterDeserialize>>
+   filter_parsers_;
+  std::unordered_map<std::string, std::pair<MethodSerialize, MethodDeserialize>>
+   method_parsers_;
 
   std::unordered_map<std::string, nlohmann::json> named_config_methods_;
 };

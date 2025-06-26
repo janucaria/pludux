@@ -46,6 +46,16 @@ public:
     return data_.size();
   }
 
+  auto data() const noexcept -> const std::vector<ValueType>&
+  {
+    return data_;
+  }
+
+  void data(std::vector<ValueType> new_data)
+  {
+    data_ = std::move(new_data);
+  }
+
 private:
   std::vector<ValueType> data_;
 };

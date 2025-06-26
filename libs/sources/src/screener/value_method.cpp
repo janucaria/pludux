@@ -20,6 +20,9 @@ auto ValueMethod::operator()(AssetSnapshot asset_data) const
                    0};
 }
 
+auto ValueMethod::operator==(const ValueMethod& other) const noexcept
+ -> bool = default;
+
 auto ValueMethod::value() const -> double
 {
   return value_;

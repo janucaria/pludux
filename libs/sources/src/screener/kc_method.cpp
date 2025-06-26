@@ -27,6 +27,8 @@ auto KcMethod::operator()(AssetSnapshot asset_data) const
                    static_cast<std::ptrdiff_t>(offset_)};
 }
 
+auto KcMethod::operator==(const KcMethod& other) const noexcept -> bool = default;
+
 auto KcMethod::offset() const noexcept -> std::size_t
 {
   return offset_;

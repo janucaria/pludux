@@ -24,3 +24,33 @@ TEST(AbsDiffMethodTest, RunMethod)
   EXPECT_DOUBLE_EQ(result[3], 5);
   EXPECT_DOUBLE_EQ(result[4], 10);
 }
+
+TEST(AbsDiffMethodTest, EqualityOperator)
+{
+  const auto operand1_method1 = ValueMethod{10};
+  const auto operand2_method1 = DataMethod{"open"};
+  const auto abs_diff_method1 = AbsDiffMethod{operand1_method1, operand2_method1};
+
+  const auto operand1_method2 = ValueMethod{10};
+  const auto operand2_method2 = DataMethod{"open"};
+  const auto abs_diff_method2 = AbsDiffMethod{operand1_method2, operand2_method2};
+
+  EXPECT_TRUE(abs_diff_method1 == abs_diff_method2);
+  EXPECT_FALSE(abs_diff_method1 != abs_diff_method2);
+  EXPECT_EQ(abs_diff_method1, abs_diff_method2);
+}
+
+TEST(AbsDiffMethodTest, NotEqualOperator)
+{
+  const auto operand1_method1 = ValueMethod{10};
+  const auto operand2_method1 = DataMethod{"open"};
+  const auto abs_diff_method1 = AbsDiffMethod{operand1_method1, operand2_method1};
+
+  const auto operand1_method2 = ValueMethod{20};
+  const auto operand2_method2 = DataMethod{"close"};
+  const auto abs_diff_method2 = AbsDiffMethod{operand1_method2, operand2_method2};
+
+  EXPECT_TRUE(abs_diff_method1 != abs_diff_method2);
+  EXPECT_FALSE(abs_diff_method1 == abs_diff_method2);
+  EXPECT_NE(abs_diff_method1, abs_diff_method2);
+}

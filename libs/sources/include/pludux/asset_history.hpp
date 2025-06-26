@@ -65,13 +65,17 @@ public:
 
   auto operator[](std::size_t index) const noexcept -> AssetSnapshot;
 
-  auto operator[](const std::string& key) const -> RefSeries<const PolySeries<double>>;
+  auto operator[](const std::string& key) const
+   -> RefSeries<const PolySeries<double>>;
 
   auto size() const noexcept -> std::size_t;
 
+  auto history_data() const noexcept
+   -> const std::unordered_map<std::string, PolySeries<double>>&;
+
   auto contains(const std::string& key) const noexcept -> bool;
 
-  auto insert(std::string key, PolySeries<double> series) -> void;
+  void insert(std::string key, PolySeries<double> series);
 
   auto begin() const -> Iterator;
 

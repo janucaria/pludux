@@ -13,8 +13,14 @@ class ChangesMethod {
 public:
   explicit ChangesMethod(ScreenerMethod operand, std::size_t offset = 0);
 
-  auto
-  operator()(AssetSnapshot asset_data) const -> SubSeries<PolySeries<double>>;
+  auto operator()(AssetSnapshot asset_data) const
+   -> SubSeries<PolySeries<double>>;
+
+  auto operator==(const ChangesMethod& other) const noexcept -> bool;
+
+  auto offset() const noexcept -> std::size_t;
+
+  auto operand() const noexcept -> const ScreenerMethod&;
 
 private:
   ScreenerMethod operand_;

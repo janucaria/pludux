@@ -82,6 +82,22 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(glfw3webgpu imgui implot)
 
+FetchContent_Declare(
+  cereal
+  GIT_REPOSITORY "https://github.com/USCiLab/cereal.git"
+  GIT_TAG        "v1.3.2"
+  GIT_SHALLOW    TRUE
+  GIT_PROGRESS   TRUE
+)
+set(BUILD_DOC OFF)
+set(BUILD_SANDBOX OFF)
+set(SKIP_PERFORMANCE_COMPARISON ON)
+set(THREAD_SAFE OFF)
+set(JUST_INSTALL_CEREAL ON)
+
+FetchContent_MakeAvailable(cereal)
+
+
 add_executable(${PROJECT_NAME}
 
   src/windows/assets_window.cpp
@@ -133,6 +149,7 @@ target_link_libraries(${PROJECT_NAME}
     pludux::backtest-lib
     glfw
     glfw3webgpu
+    cereal::cereal
 )
 
 if(NOT EMSCRIPTEN)

@@ -22,6 +22,8 @@ public:
   auto operator()(AssetSnapshot asset_data) const
    -> SubSeries<PolySeries<double>>;
 
+  auto operator==(const StochRsiMethod& other) const noexcept -> bool;
+
   auto rsi_input() const noexcept -> ScreenerMethod;
 
   auto rsi_period() const noexcept -> std::size_t;

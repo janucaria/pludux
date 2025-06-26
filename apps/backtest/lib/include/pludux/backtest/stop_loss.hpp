@@ -18,6 +18,12 @@ public:
 
   auto operator()(const RunningState& running_state) const -> TradingStopLoss;
 
+  auto is_disabled() const noexcept -> bool;
+
+  auto is_trailing() const noexcept -> bool;
+
+  auto risk_method() const noexcept -> const screener::ScreenerMethod&;
+
   auto get_order_size(const RunningState& running_state) const -> double;
 
 private:

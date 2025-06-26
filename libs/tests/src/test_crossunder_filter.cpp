@@ -52,3 +52,37 @@ TEST(CrossunderFilterTest, CrossunderConditionNotMet)
 
   EXPECT_FALSE(crossunder_filter(asset_data));
 }
+
+TEST(CrossunderFilterTest, EqualityOperator)
+{
+  auto signal_method1 = DataMethod{"close", 0};
+  auto reference_method1 = ValueMethod{50.0};
+  const auto crossunder_filter1 =
+   CrossunderFilter{std::move(signal_method1), std::move(reference_method1)};
+
+  auto signal_method2 = DataMethod{"close", 0};
+  auto reference_method2 = ValueMethod{50.0};
+  const auto crossunder_filter2 =
+   CrossunderFilter{std::move(signal_method2), std::move(reference_method2)};
+
+  EXPECT_TRUE(crossunder_filter1 == crossunder_filter2);
+  EXPECT_FALSE(crossunder_filter1 != crossunder_filter2);
+  EXPECT_EQ(crossunder_filter1, crossunder_filter2);
+}
+
+TEST(CrossunderFilterTest, NotEqualOperator)
+{
+  auto signal_method1 = DataMethod{"close", 0};
+  auto reference_method1 = ValueMethod{50.0};
+  const auto crossunder_filter1 =
+   CrossunderFilter{std::move(signal_method1), std::move(reference_method1)};
+
+  auto signal_method2 = DataMethod{"close", 0};
+  auto reference_method2 = ValueMethod{60.0};
+  const auto crossunder_filter2 =
+   CrossunderFilter{std::move(signal_method2), std::move(reference_method2)};
+
+  EXPECT_TRUE(crossunder_filter1 != crossunder_filter2);
+  EXPECT_FALSE(crossunder_filter1 == crossunder_filter2);
+  EXPECT_NE(crossunder_filter1, crossunder_filter2);
+}

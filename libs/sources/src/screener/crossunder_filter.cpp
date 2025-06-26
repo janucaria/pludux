@@ -15,8 +15,7 @@ CrossunderFilter::CrossunderFilter(ScreenerMethod signal,
 {
 }
 
-auto CrossunderFilter::operator()(AssetSnapshot asset_data) const
- -> bool
+auto CrossunderFilter::operator()(AssetSnapshot asset_data) const -> bool
 {
   const auto signal_result = signal_(asset_data);
   const auto reference_result = reference_(asset_data);
@@ -24,6 +23,9 @@ auto CrossunderFilter::operator()(AssetSnapshot asset_data) const
   return signal_result[0] < reference_result[0] &&
          signal_result[1] >= reference_result[1];
 }
+
+auto CrossunderFilter::operator==(const CrossunderFilter& other) const noexcept
+ -> bool = default;
 
 auto CrossunderFilter::signal() const noexcept -> const ScreenerMethod&
 {

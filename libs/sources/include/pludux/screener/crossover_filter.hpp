@@ -15,6 +15,8 @@ public:
 
   auto operator()(AssetSnapshot asset_data) const -> bool;
 
+  auto operator==(const CrossoverFilter& other) const noexcept -> bool;
+
   auto signal() const noexcept -> const ScreenerMethod&;
 
   auto reference() const noexcept -> const ScreenerMethod&;

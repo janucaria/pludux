@@ -75,3 +75,32 @@ TEST(RocMethodTest, RunAllMethodWithOffset)
   EXPECT_TRUE(std::isnan(result[6]));
   EXPECT_TRUE(std::isnan(result[7]));
 }
+
+TEST(RocMethodTest, EqualityOperator)
+{
+  const auto field_method1 = DataMethod{"close", 0};
+  const auto period1 = 5;
+  const auto roc_method1 = RocMethod{period1, field_method1, 0};
+
+  const auto field_method2 = DataMethod{"close", 0};
+  const auto period2 = 5;
+  const auto roc_method2 = RocMethod{period2, field_method2, 0};
+
+  EXPECT_TRUE(roc_method1 == roc_method2);
+  EXPECT_FALSE(roc_method1 != roc_method2);
+  EXPECT_EQ(roc_method1, roc_method2);
+}
+
+TEST(RocMethodTest, NotEqualOperator)
+{
+  const auto field_method1 = DataMethod{"close", 0};
+  const auto period1 = 5;
+  const auto roc_method1 = RocMethod{period1, field_method1, 0};
+
+  const auto field_method2 = DataMethod{"open", 0};
+  const auto period2 = 10;
+  const auto roc_method2 = RocMethod{period2, field_method2, 0};
+
+  EXPECT_TRUE(roc_method1 != roc_method2);
+  EXPECT_FALSE(roc_method1 == roc_method2);
+}

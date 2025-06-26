@@ -186,3 +186,49 @@ TEST(KcMethodTest, middle_EMA_range_ATR_with_offset)
   EXPECT_TRUE(std::isnan(kc_lower[8]));
   EXPECT_TRUE(std::isnan(kc_lower[9]));
 }
+
+TEST(KcMethodTest, EqualityOperator)
+{
+  const auto operand1_method1 = DataMethod{"high"};
+  const auto operand2_method1 = DataMethod{"low"};
+  const auto operand3_method1 = DataMethod{"close"};
+  const auto kc_method1 =
+   KcMethod{KcOutput::middle, EmaMethod{5, operand3_method1, 0},
+            AtrMethod{operand1_method1, operand2_method1, operand3_method1, 14},
+            2.0};
+
+  const auto operand1_method2 = DataMethod{"high"};
+  const auto operand2_method2 = DataMethod{"low"};
+  const auto operand3_method2 = DataMethod{"close"};
+  const auto kc_method2 =
+   KcMethod{KcOutput::middle, EmaMethod{5, operand3_method2, 0},
+            AtrMethod{operand1_method2, operand2_method2, operand3_method2, 14},
+            2.0};
+
+  EXPECT_TRUE(kc_method1 == kc_method2);
+  EXPECT_FALSE(kc_method1 != kc_method2);
+  EXPECT_EQ(kc_method1, kc_method2);
+}
+
+TEST(KcMethodTest, NotEqualOperator)
+{
+  const auto operand1_method1 = DataMethod{"high"};
+  const auto operand2_method1 = DataMethod{"low"};
+  const auto operand3_method1 = DataMethod{"close"};
+  const auto kc_method1 =
+   KcMethod{KcOutput::middle, EmaMethod{5, operand3_method1, 0},
+            AtrMethod{operand1_method1, operand2_method1, operand3_method1, 14},
+            2.0};
+
+  const auto operand1_method2 = DataMethod{"open"};
+  const auto operand2_method2 = DataMethod{"low"};
+  const auto operand3_method2 = DataMethod{"close"};
+  const auto kc_method2 =
+   KcMethod{KcOutput::middle, EmaMethod{5, operand3_method2, 0},
+            AtrMethod{operand1_method2, operand2_method2, operand3_method2, 14},
+            2.0};
+
+  EXPECT_TRUE(kc_method1 != kc_method2);
+  EXPECT_FALSE(kc_method1 == kc_method2);
+  EXPECT_NE(kc_method1, kc_method2);
+}

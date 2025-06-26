@@ -29,20 +29,6 @@ void Application::on_before_main_loop()
   ImPlot::GetStyle().UseLocalTime = true;
   ImPlot::GetStyle().Use24HourClock = true;
 
-  auto date_method = screener::DataMethod{"Date"};
-  auto open_method = screener::DataMethod{"Open"};
-  auto high_method = screener::DataMethod{"High"};
-  auto low_method = screener::DataMethod{"Low"};
-  auto close_method = screener::DataMethod{"Close"};
-  auto volume_method = screener::DataMethod{"Volume"};
-
-  state_data_.quote_access = QuoteAccess{std::move(date_method),
-                                         std::move(open_method),
-                                         std::move(high_method),
-                                         std::move(low_method),
-                                         std::move(close_method),
-                                         std::move(volume_method)};
-
 // run in debug mode and not in emscripten
 #if !defined(__EMSCRIPTEN__) && !defined(NDEBUG) && 1
 

@@ -1,8 +1,10 @@
 #include <array>
 #include <ctime>
 #include <format>
+#include <fstream>
 #include <memory>
 #include <ranges>
+#include <sstream>
 #include <string>
 
 #ifdef __EMSCRIPTEN__
@@ -18,6 +20,7 @@
 #include <imgui_internal.h>
 
 #include "../app_state.hpp"
+#include "../serialization.hpp"
 
 #include "./dockspace_window.hpp"
 
@@ -89,6 +92,142 @@ void DockspaceWindow::render(AppState& app_state)
 
   if(ImGui::BeginMenuBar()) {
     if(ImGui::BeginMenu("File")) {
+      {
+        constexpr auto menu_item_open = "Open";
+        if(ImGui::MenuItem(menu_item_open)) {
+#ifdef __EMSCRIPTEN__
+
+          EM_ASM(
+           {
+             var fileSelector = document.createElement('input');
+             fileSelector.type = 'file';
+             fileSelector.accept = '.pludux-json';
+             fileSelector.onchange = function(event)
+             {
+               var file = event.target.files[0];
+               if(!file) {
+                 return;
+               }
+
+               var reader = new FileReader();
+               reader.onload = function(event)
+               {
+                 var data = event.target.result;
+                 var decoder = new TextDecoder('utf-8');
+                 var decodedData = decoder.decode(data);
+
+                 // transfer the data to the C++ side
+                 var data_ptr = Module.stringToNewUTF8(decodedData);
+
+                 // call the C++ function
+                 Module._pludux_apps_backtest_open_file(data_ptr, $0);
+               };
+
+               reader.readAsArrayBuffer(file);
+             };
+             fileSelector.click();
+           },
+           &app_state);
+
+#else
+          auto nfd_guard = NFD::Guard{};
+          auto in_path = NFD::UniquePath{};
+          const auto filter_item =
+           std::array<nfdfilteritem_t, 1>{{"Pludux JSON Files", "pludux-json"}};
+          auto result =
+           NFD::OpenDialog(in_path, filter_item.data(), filter_item.size());
+          if(result == NFD_OKAY) {
+            const auto selected_path = std::string(in_path.get());
+            app_state.push_action([selected_path](AppStateData& state) {
+              auto in_stream = std::ifstream{selected_path};
+
+              if(!in_stream.is_open()) {
+                const auto error_message =
+                 std::format("Failed to open '{}' for reading.", selected_path);
+                throw std::runtime_error(error_message);
+              }
+
+              auto in_archive = cereal::JSONInputArchive(in_stream);
+
+              in_archive(cereal::make_nvp("pludux", state));
+            });
+          } else if(result == NFD_CANCEL) {
+            // User cancelled the open dialog
+          } else {
+            const auto error_message =
+             std::format("Error '{}': {}", menu_item_open, NFD::GetError());
+            throw std::runtime_error(error_message);
+          }
+#endif
+        }
+      }
+
+      {
+#ifdef __EMSCRIPTEN__
+        constexpr auto menu_item_save_as = "Save";
+        if(ImGui::MenuItem(menu_item_save_as)) {
+          auto out_stream = std::ostringstream{};
+          auto out_archive = cereal::JSONOutputArchive(out_stream);
+          out_archive(cereal::make_nvp("pludux", app_state.state()));
+
+          // TODO: bug in Cereal not adding the close object at the end when
+          // using stringstream
+          out_stream << "}\n";
+
+          const auto out_str = out_stream.str();
+          EM_ASM(
+           {
+             var fileSave = document.createElement('a');
+             fileSave.download = 'saved.pludux-json';
+             fileSave.style.display = 'none';
+             var data = new Blob([Module.UTF8ToString($0)], {
+               type:
+                 'application/json'
+             });
+             fileSave.href = URL.createObjectURL(data);
+             fileSave.click();
+             URL.revokeObjectURL(fileSave.href);
+           },
+           out_str.c_str());
+        }
+#else
+        constexpr auto menu_item_save_as = "Save As...";
+        if(ImGui::MenuItem(menu_item_save_as)) {
+          auto nfd_guard = NFD::Guard{};
+          auto out_path = NFD::UniquePath{};
+
+          const auto filter_item =
+           std::array<nfdfilteritem_t, 1>{{"Pludux JSON Files", "pludux-json"}};
+
+          auto result =
+           NFD::SaveDialog(out_path, filter_item.data(), filter_item.size());
+
+          if(result == NFD_OKAY) {
+            const auto saved_path = std::string(out_path.get());
+            app_state.push_action([saved_path](AppStateData& state) {
+              auto out_stream = std::ofstream{saved_path};
+
+              if(!out_stream.is_open()) {
+                const auto error_message =
+                 std::format("Failed to open '{}' for writing.", saved_path);
+                throw std::runtime_error(error_message);
+              }
+
+              auto out_archive = cereal::JSONOutputArchive(out_stream);
+
+              out_archive(cereal::make_nvp("pludux", state));
+            });
+          } else if(result == NFD_CANCEL) {
+            // User cancelled the save dialog
+          } else {
+            const auto error_message =
+             std::format("Error '{}': {}", menu_item_save_as, NFD::GetError());
+            throw std::runtime_error(error_message);
+          }
+        }
+#endif
+      }
+
       constexpr auto menu_item_open_config = "Open Strategy (JSON)";
       if(ImGui::MenuItem(menu_item_open_config)) {
 #ifdef __EMSCRIPTEN__

@@ -45,3 +45,41 @@ TEST(AtrMethodTest, RunAllMethod)
   EXPECT_TRUE(std::isnan(result[8]));
   EXPECT_TRUE(std::isnan(result[9]));
 }
+
+TEST(AtrMethodTest, EqualityOperator)
+{
+  const auto operand1_method1 = DataMethod{"high"};
+  const auto operand2_method1 = DataMethod{"low"};
+  const auto operand3_method1 = DataMethod{"close"};
+  const auto atr_method1 =
+   AtrMethod{operand1_method1, operand2_method1, operand3_method1, 14};
+
+  const auto operand1_method2 = DataMethod{"high"};
+  const auto operand2_method2 = DataMethod{"low"};
+  const auto operand3_method2 = DataMethod{"close"};
+  const auto atr_method2 =
+   AtrMethod{operand1_method2, operand2_method2, operand3_method2, 14};
+
+  EXPECT_TRUE(atr_method1 == atr_method2);
+  EXPECT_FALSE(atr_method1 != atr_method2);
+  EXPECT_EQ(atr_method1, atr_method2);
+}
+
+TEST(AtrMethodTest, NotEqualOperator)
+{
+  const auto operand1_method1 = DataMethod{"high"};
+  const auto operand2_method1 = DataMethod{"low"};
+  const auto operand3_method1 = DataMethod{"close"};
+  const auto atr_method1 =
+   AtrMethod{operand1_method1, operand2_method1, operand3_method1, 14};
+
+  const auto operand1_method2 = DataMethod{"high"};
+  const auto operand2_method2 = DataMethod{"low"};
+  const auto operand3_method2 = DataMethod{"close"};
+  const auto atr_method2 =
+   AtrMethod{operand1_method2, operand2_method2, operand3_method2, 20};
+
+  EXPECT_TRUE(atr_method1 != atr_method2);
+  EXPECT_FALSE(atr_method1 == atr_method2);
+  EXPECT_NE(atr_method1, atr_method2);
+}

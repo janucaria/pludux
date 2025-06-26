@@ -20,3 +20,13 @@ TEST(BooleanFilterTest, FalseFilter)
 
   EXPECT_FALSE(filter(asset_data));
 }
+
+TEST(BooleanFilterTest, TrueFilterEquality)
+{
+  const auto filter1 = TrueFilter{};
+  const auto filter2 = TrueFilter{};
+
+  EXPECT_TRUE(filter1 == filter2);
+  EXPECT_FALSE(filter1 != filter2);
+  EXPECT_EQ(filter1, filter2);
+}

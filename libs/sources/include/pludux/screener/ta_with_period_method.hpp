@@ -32,6 +32,8 @@ public:
                      static_cast<std::ptrdiff_t>(offset_)};
   }
 
+  auto operator==(const TaWithPeroidMethod& other) const noexcept -> bool = default;
+
   auto period() const noexcept -> std::size_t
   {
     return period_;
