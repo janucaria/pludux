@@ -58,10 +58,8 @@ void BacktestsWindow::render_backtests_list(AppState& app_state)
 
           backtests.erase(std::next(backtests.begin(), i));
 
-          if(state.selected_backtest_index >= i) {
-            state.selected_backtest_index =
-             std::max(state.selected_backtest_index - 1,
-                      static_cast<std::ptrdiff_t>(-1));
+          if(state.selected_backtest_index > i || i == backtests.size()) {
+            --state.selected_backtest_index;
           }
         });
       }
