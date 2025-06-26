@@ -18,6 +18,12 @@ public:
 
   auto operator()(const RunningState& running_state) const -> TradingTakeProfit;
 
+  auto is_disabled() const noexcept -> bool;
+
+  auto reward_method() const noexcept -> const screener::ScreenerMethod&;
+
+  auto trading_price_method() const noexcept -> const screener::ScreenerMethod&;
+
 private:
   bool is_disabled_;
   screener::ScreenerMethod reward_method_;

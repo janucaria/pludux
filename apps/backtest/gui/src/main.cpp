@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <iostream>
+#include <sstream>
 #include <string>
 
 #include <GLFW/glfw3.h>
@@ -26,7 +27,34 @@
 
 #ifdef __EMSCRIPTEN__
 
+#include "./serialization.hpp"
+
 extern "C" {
+
+EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_open_file(char* data,
+                                                         void* app_state_ptr)
+{
+  using pludux::apps::AppState;
+
+  const auto data_str = std::string(data);
+  std::free(data);
+
+  auto app_state = *reinterpret_cast<AppState*>(app_state_ptr);
+
+  app_state.push_action([data_str](pludux::apps::AppStateData& state) {
+    auto in_stream = std::istringstream{data_str};
+
+    if(!in_stream.good()) {
+      const auto error_message =
+       std::format("Failed to open data stream for reading.");
+      throw std::runtime_error(error_message);
+    }
+
+    auto in_archive = cereal::JSONInputArchive(in_stream);
+
+    in_archive(cereal::make_nvp("pludux", state));
+  });
+}
 
 EMSCRIPTEN_KEEPALIVE void
 pludux_apps_backtest_load_csv_asset(char* name, char* data, void* app_state_ptr)

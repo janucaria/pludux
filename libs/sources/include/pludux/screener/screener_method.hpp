@@ -14,7 +14,9 @@ namespace pludux::screener {
 class ScreenerMethod {
 public:
   template<typename UMethod>
-  ScreenerMethod(UMethod impl)
+    requires std::
+     is_invocable_r_v<SubSeries<PolySeries<double>>, UMethod, AssetSnapshot>
+   ScreenerMethod(UMethod impl)
   : impl_{std::make_shared<ImplModel<UMethod>>(std::move(impl))}
   {
   }
