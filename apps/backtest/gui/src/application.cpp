@@ -91,8 +91,18 @@ void Application::on_update()
           }
         } catch(const std::exception& e) {
           backtest.mark_as_failed();
+
+          // TODO: this line is buggy in emscripten release build.
+          // The bug is failed to load/open the strategy, asset, or pludux file.
+          // No error message is shown in the GUI nor in the console.
+          // No crash, just no error message.
+          /*
           const auto error_message =
            std::format("Backtest '{}' failed: {}", backtest.name(), e.what());
+          */
+
+          const auto error_message =
+           "Backtest '" + backtest.name() + "' failed: " + e.what();
           state_data_.alert_messages.push(error_message);
         }
       }
