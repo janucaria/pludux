@@ -25,6 +25,7 @@ Backtest::Backtest(std::string name,
 : name_{std::move(name)}
 , strategy_ptr_{strategy_ptr}
 , asset_ptr_{asset_ptr}
+, is_failed_{false}
 , trading_session_{std::nullopt}
 , current_index_{0}
 , trade_records_{}
@@ -58,6 +59,16 @@ auto Backtest::asset() const noexcept -> const backtest::Asset&
   return *asset_ptr();
 }
 
+void Backtest::mark_as_failed() noexcept
+{
+  is_failed_ = true;
+}
+
+auto Backtest::is_failed() const noexcept -> bool
+{
+  return is_failed_;
+}
+
 auto Backtest::capital_risk() const noexcept -> double
 {
   return strategy().capital_risk();
@@ -80,7 +91,7 @@ auto Backtest::should_run() const noexcept -> bool
 {
   const auto& asset_history = asset().history();
   const auto asset_size = asset_history.size();
-  return current_index_ < asset_size;
+  return current_index_ < asset_size && !is_failed();
 }
 
 void Backtest::run()

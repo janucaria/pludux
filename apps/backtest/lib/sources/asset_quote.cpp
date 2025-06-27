@@ -12,32 +12,32 @@ AssetQuote::AssetQuote(AssetSnapshot asset_snapshot,
 {
 }
 
-auto AssetQuote::time(std::ptrdiff_t offset) const noexcept -> double
+auto AssetQuote::time(std::ptrdiff_t offset) const -> double
 {
   return quote_access_.time(asset_snapshot_)[offset];
 }
 
-auto AssetQuote::open(std::ptrdiff_t offset) const noexcept -> double
+auto AssetQuote::open(std::ptrdiff_t offset) const -> double
 {
   return quote_access_.open(asset_snapshot_)[offset];
 }
 
-auto AssetQuote::high(std::ptrdiff_t offset) const noexcept -> double
+auto AssetQuote::high(std::ptrdiff_t offset) const -> double
 {
   return quote_access_.high(asset_snapshot_)[offset];
 }
 
-auto AssetQuote::low(std::ptrdiff_t offset) const noexcept -> double
+auto AssetQuote::low(std::ptrdiff_t offset) const -> double
 {
   return quote_access_.low(asset_snapshot_)[offset];
 }
 
-auto AssetQuote::close(std::ptrdiff_t offset) const noexcept -> double
+auto AssetQuote::close(std::ptrdiff_t offset) const -> double
 {
   return quote_access_.close(asset_snapshot_)[offset];
 }
 
-auto AssetQuote::volume(std::ptrdiff_t offset) const noexcept -> double
+auto AssetQuote::volume(std::ptrdiff_t offset) const -> double
 {
   return quote_access_.volume(asset_snapshot_)[offset];
 }

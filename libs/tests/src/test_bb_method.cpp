@@ -69,3 +69,33 @@ TEST(BbMethodTest, RunAllMethod)
   EXPECT_TRUE(std::isnan(bb_lower[8]) && std::isnan(expected_lower[8]));
   EXPECT_TRUE(std::isnan(bb_lower[9]) && std::isnan(expected_lower[9]));
 }
+
+TEST(BbMethodTest, EqualityOperator)
+{
+  const auto input_method1 = DataMethod{"close"};
+  const auto bb_method1 = BbMethod{
+   BbOutput::middle, BbMethod::MaType::sma, input_method1, 20, 2.0};
+
+  const auto input_method2 = DataMethod{"close"};
+  const auto bb_method2 = BbMethod{
+   BbOutput::middle, BbMethod::MaType::sma, input_method2, 20, 2.0};
+
+  EXPECT_TRUE(bb_method1 == bb_method2);
+  EXPECT_FALSE(bb_method1 != bb_method2);
+  EXPECT_EQ(bb_method1, bb_method2);
+}
+
+TEST(BbMethodTest, NotEqualOperator)
+{
+  const auto input_method1 = DataMethod{"close"};
+  const auto bb_method1 = BbMethod{
+   BbOutput::middle, BbMethod::MaType::sma, input_method1, 20, 2.0};
+
+  const auto input_method2 = DataMethod{"open"};
+  const auto bb_method2 = BbMethod{
+   BbOutput::upper, BbMethod::MaType::ema, input_method2, 20, 2.0};
+
+  EXPECT_TRUE(bb_method1 != bb_method2);
+  EXPECT_FALSE(bb_method1 == bb_method2);
+  EXPECT_NE(bb_method1, bb_method2);
+}

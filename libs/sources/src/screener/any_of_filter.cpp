@@ -11,8 +11,8 @@ namespace pludux::screener {
 
 AnyOfFilter::AnyOfFilter() = default;
 
-AnyOfFilter::AnyOfFilter(std::vector<ScreenerFilter> filters)
-: conditions_{std::move(filters)}
+AnyOfFilter::AnyOfFilter(std::vector<ScreenerFilter> conditions)
+: conditions_{std::move(conditions)}
 {
 }
 
@@ -24,7 +24,9 @@ auto AnyOfFilter::operator()(AssetSnapshot asset_data) const -> bool
    [&asset_data](const auto& filter) { return filter(asset_data); });
 }
 
-auto AnyOfFilter::filters() const -> const std::vector<ScreenerFilter>&
+auto AnyOfFilter::operator==(const AnyOfFilter& other) const noexcept -> bool = default;
+
+auto AnyOfFilter::conditions() const -> const std::vector<ScreenerFilter>&
 {
   return conditions_;
 }

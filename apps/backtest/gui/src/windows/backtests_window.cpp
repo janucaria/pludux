@@ -58,10 +58,8 @@ void BacktestsWindow::render_backtests_list(AppState& app_state)
 
           backtests.erase(std::next(backtests.begin(), i));
 
-          if(state.selected_backtest_index >= i) {
-            state.selected_backtest_index =
-             std::max(state.selected_backtest_index - 1,
-                      static_cast<std::ptrdiff_t>(-1));
+          if(state.selected_backtest_index > i || i == backtests.size()) {
+            --state.selected_backtest_index;
           }
         });
       }
@@ -122,6 +120,8 @@ void BacktestsWindow::render_add_new_backtest(AppState& app_state)
         const auto& strategy_name = strategy.name();
         const auto is_selected = new_backtest_strategy_index_ == i;
 
+        ImGui::PushID(i);
+
         if(ImGui::Selectable(strategy_name.c_str(), is_selected)) {
           new_backtest_strategy_index_ = i;
         }
@@ -129,6 +129,8 @@ void BacktestsWindow::render_add_new_backtest(AppState& app_state)
         if(is_selected) {
           ImGui::SetItemDefaultFocus();
         }
+
+        ImGui::PopID();
       }
       ImGui::EndCombo();
     }
@@ -151,6 +153,8 @@ void BacktestsWindow::render_add_new_backtest(AppState& app_state)
         const auto& asset_name = asset.name();
         const auto is_selected = new_backtest_asset_index_ == i;
 
+        ImGui::PushID(i);
+
         if(ImGui::Selectable(asset_name.c_str(), is_selected)) {
           new_backtest_asset_index_ = i;
         }
@@ -158,6 +162,8 @@ void BacktestsWindow::render_add_new_backtest(AppState& app_state)
         if(is_selected) {
           ImGui::SetItemDefaultFocus();
         }
+
+        ImGui::PopID();
       }
       ImGui::EndCombo();
     }

@@ -20,6 +20,19 @@ public:
   auto
   operator()(AssetSnapshot asset_data) const -> SubSeries<PolySeries<double>>;
 
+  auto operator==(const HiddenBullishDivergenceMethod& other) const noexcept
+   -> bool;
+
+  auto offset() const noexcept -> std::size_t;
+
+  auto pivot_range() const noexcept -> std::size_t;
+
+  auto lookback_range() const noexcept -> std::size_t;
+
+  auto signal() const noexcept -> const ScreenerMethod&;
+
+  auto reference() const noexcept -> const ScreenerMethod&;
+
 private:
   std::size_t offset_;
   std::size_t pivot_range_;

@@ -69,3 +69,61 @@ TEST(StochMethodTest, RunAllMethod)
   EXPECT_TRUE(std::isnan(result_d[8]) && std::isnan(expected_d[8]));
   EXPECT_TRUE(std::isnan(result_d[9]) && std::isnan(expected_d[9]));
 }
+
+TEST(StochMethodTest, EqualityOperator)
+{
+  const auto high_method = DataMethod{"high"};
+  const auto low_method = DataMethod{"low"};
+  const auto close_method = DataMethod{"close"};
+  const auto k_period = 5;
+  const auto k_smooth = 3;
+  const auto d_period = 3;
+
+  StochMethod stoch_method1{StochOutput::k,
+                            high_method,
+                            low_method,
+                            close_method,
+                            k_period,
+                            k_smooth,
+                            d_period};
+  StochMethod stoch_method2{StochOutput::k,
+                            high_method,
+                            low_method,
+                            close_method,
+                            k_period,
+                            k_smooth,
+                            d_period};
+
+  EXPECT_TRUE(stoch_method1 == stoch_method2);
+  EXPECT_FALSE(stoch_method1 != stoch_method2);
+  EXPECT_EQ(stoch_method1, stoch_method2);
+}
+
+TEST(StochMethodTest, NotEqualOperator)
+{
+  const auto high_method = DataMethod{"high"};
+  const auto low_method = DataMethod{"low"};
+  const auto close_method = DataMethod{"close"};
+  const auto k_period = 5;
+  const auto k_smooth = 3;
+  const auto d_period = 3;
+
+  StochMethod stoch_method1{StochOutput::k,
+                            high_method,
+                            low_method,
+                            close_method,
+                            k_period,
+                            k_smooth,
+                            d_period};
+  StochMethod stoch_method2{StochOutput::d,
+                            high_method,
+                            low_method,
+                            close_method,
+                            k_period,
+                            k_smooth,
+                            d_period};
+
+  EXPECT_TRUE(stoch_method1 != stoch_method2);
+  EXPECT_FALSE(stoch_method1 == stoch_method2);
+  EXPECT_NE(stoch_method1, stoch_method2);
+}

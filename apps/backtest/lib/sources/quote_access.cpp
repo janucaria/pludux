@@ -3,12 +3,12 @@
 namespace pludux {
 
 QuoteAccess::QuoteAccess()
-: QuoteAccess{screener::ScreenerMethod{},
-              screener::ScreenerMethod{},
-              screener::ScreenerMethod{},
-              screener::ScreenerMethod{},
-              screener::ScreenerMethod{},
-              screener::ScreenerMethod{}}
+: QuoteAccess{screener::DataMethod{"Date"},
+              screener::DataMethod{"Open"},
+              screener::DataMethod{"High"},
+              screener::DataMethod{"Low"},
+              screener::DataMethod{"Close"},
+              screener::DataMethod{"Volume"}}
 {
 }
 
@@ -27,7 +27,7 @@ QuoteAccess::QuoteAccess(screener::ScreenerMethod time,
 {
 }
 
-auto QuoteAccess::time(AssetSnapshot asset_data) const noexcept
+auto QuoteAccess::time(AssetSnapshot asset_data) const
  -> SubSeries<PolySeries<double>>
 {
   return time_(asset_data);
@@ -43,7 +43,7 @@ void QuoteAccess::time(screener::ScreenerMethod time) noexcept
   time_ = time;
 }
 
-auto QuoteAccess::open(AssetSnapshot asset_data) const noexcept
+auto QuoteAccess::open(AssetSnapshot asset_data) const
  -> SubSeries<PolySeries<double>>
 {
   return open_(asset_data);
@@ -59,7 +59,7 @@ void QuoteAccess::open(screener::ScreenerMethod open) noexcept
   open_ = open;
 }
 
-auto QuoteAccess::high(AssetSnapshot asset_data) const noexcept
+auto QuoteAccess::high(AssetSnapshot asset_data) const
  -> SubSeries<PolySeries<double>>
 {
   return high_(asset_data);
@@ -75,7 +75,7 @@ void QuoteAccess::high(screener::ScreenerMethod high) noexcept
   high_ = high;
 }
 
-auto QuoteAccess::low(AssetSnapshot asset_data) const noexcept
+auto QuoteAccess::low(AssetSnapshot asset_data) const
  -> SubSeries<PolySeries<double>>
 {
   return low_(asset_data);
@@ -91,7 +91,7 @@ void QuoteAccess::low(screener::ScreenerMethod low) noexcept
   low_ = low;
 }
 
-auto QuoteAccess::close(AssetSnapshot asset_data) const noexcept
+auto QuoteAccess::close(AssetSnapshot asset_data) const
  -> SubSeries<PolySeries<double>>
 {
   return close_(asset_data);
@@ -107,7 +107,7 @@ void QuoteAccess::close(screener::ScreenerMethod close) noexcept
   close_ = close;
 }
 
-auto QuoteAccess::volume(AssetSnapshot asset_data) const noexcept
+auto QuoteAccess::volume(AssetSnapshot asset_data) const
  -> SubSeries<PolySeries<double>>
 {
   return volume_(asset_data);

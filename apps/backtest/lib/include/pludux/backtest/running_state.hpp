@@ -19,19 +19,19 @@ public:
 
   auto asset_snapshot() const noexcept -> const AssetSnapshot&;
 
-  auto price() const noexcept -> double;
+  auto price() const -> double;
 
-  auto timestamp() const noexcept -> double;
+  auto timestamp() const -> double;
 
-  auto open() const noexcept -> double;
+  auto open() const -> double;
 
-  auto high() const noexcept -> double;
+  auto high() const -> double;
 
-  auto low() const noexcept -> double;
+  auto low() const -> double;
 
-  auto close() const noexcept -> double;
+  auto close() const -> double;
 
-  auto volume() const noexcept -> double;
+  auto volume() const -> double;
 
 private:
   std::size_t asset_index_;

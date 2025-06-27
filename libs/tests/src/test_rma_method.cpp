@@ -79,3 +79,29 @@ TEST(RmaMethodTest, RunAllMethodWithOffset)
   EXPECT_TRUE(std::isnan(result[6]));
   EXPECT_TRUE(std::isnan(result[7]));
 }
+
+TEST(RmaMethodTest, EqualityOperator)
+{
+  const auto operand1_method1 = DataMethod{"close"};
+  const auto rma_method1 = RmaMethod{5, operand1_method1, 0};
+
+  const auto operand1_method2 = DataMethod{"close"};
+  const auto rma_method2 = RmaMethod{5, operand1_method2, 0};
+
+  EXPECT_TRUE(rma_method1 == rma_method2);
+  EXPECT_FALSE(rma_method1 != rma_method2);
+  EXPECT_EQ(rma_method1, rma_method2);
+}
+
+TEST(RmaMethodTest, NotEqualOperator)
+{
+  const auto operand1_method1 = DataMethod{"close"};
+  const auto rma_method1 = RmaMethod{5, operand1_method1, 0};
+
+  const auto operand1_method2 = DataMethod{"close"};
+  const auto rma_method2 = RmaMethod{10, operand1_method2, 0};
+
+  EXPECT_FALSE(rma_method1 == rma_method2);
+  EXPECT_TRUE(rma_method1 != rma_method2);
+  EXPECT_NE(rma_method1, rma_method2);
+}

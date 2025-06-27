@@ -40,4 +40,35 @@ auto HiddenBullishDivergenceMethod::operator()(AssetSnapshot asset_data) const
                    static_cast<std::ptrdiff_t>(offset_)};
 }
 
+auto HiddenBullishDivergenceMethod::operator==(
+ const HiddenBullishDivergenceMethod& other) const noexcept -> bool = default;
+
+auto HiddenBullishDivergenceMethod::offset() const noexcept -> std::size_t
+{
+  return offset_;
+}
+
+auto HiddenBullishDivergenceMethod::pivot_range() const noexcept -> std::size_t
+{
+  return pivot_range_;
+}
+
+auto HiddenBullishDivergenceMethod::lookback_range() const noexcept
+ -> std::size_t
+{
+  return lookback_range_;
+}
+
+auto HiddenBullishDivergenceMethod::signal() const noexcept
+ -> const ScreenerMethod&
+{
+  return signal_;
+}
+
+auto HiddenBullishDivergenceMethod::reference() const noexcept
+ -> const ScreenerMethod&
+{
+  return reference_;
+}
+
 } // namespace pludux::screener

@@ -27,6 +27,21 @@ auto StopLoss::operator()(const RunningState& running_state) const
    is_disabled_, is_trailing_, stop_loss_risk, stop_loss_price};
 }
 
+auto StopLoss::is_disabled() const noexcept -> bool
+{
+  return is_disabled_;
+}
+
+auto StopLoss::is_trailing() const noexcept -> bool
+{
+  return is_trailing_;
+}
+
+auto StopLoss::risk_method() const noexcept -> const screener::ScreenerMethod&
+{
+  return risk_method_;
+}
+
 auto StopLoss::get_order_size(const RunningState& running_state) const -> double
 {
   const auto capital_risk = running_state.capital_risk();

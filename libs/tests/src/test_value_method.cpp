@@ -35,3 +35,33 @@ TEST(ValueMethodTest, RunOneMethod)
 
   EXPECT_EQ(value_method(asset_data)[0], value);
 }
+
+TEST(ValueMethodTest, EqualityOperator)
+{
+  const auto value1 = 42.0;
+  const auto value2 = 42.0;
+  const auto value3 = 24.0;
+
+  const auto value_method1 = ValueMethod{value1};
+  const auto value_method2 = ValueMethod{value2};
+  const auto value_method3 = ValueMethod{value3};
+
+  EXPECT_TRUE(value_method1 == value_method2);
+  EXPECT_FALSE(value_method1 == value_method3);
+  EXPECT_EQ(value_method1, value_method2);
+}
+
+TEST(ValueMethodTest, NotEqualOperator)
+{
+  const auto value1 = 42.0;
+  const auto value2 = 42.0;
+  const auto value3 = 24.0;
+
+  const auto value_method1 = ValueMethod{value1};
+  const auto value_method2 = ValueMethod{value2};
+  const auto value_method3 = ValueMethod{value3};
+
+  EXPECT_FALSE(value_method1 != value_method2);
+  EXPECT_TRUE(value_method1 != value_method3);
+  EXPECT_NE(value_method1, value_method3);
+}

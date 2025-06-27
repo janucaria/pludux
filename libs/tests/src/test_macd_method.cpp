@@ -94,3 +94,43 @@ TEST(MacdMethodTest, RunAllMethod)
   EXPECT_TRUE(std::isnan(histograms[8]) && macd_series[8]);
   EXPECT_TRUE(std::isnan(histograms[9]) && macd_series[9]);
 }
+
+TEST(MacdMethodTest, EqualityOperator)
+{
+  const auto data_method1 = DataMethod{"close"};
+  const auto fast_period1 = 5;
+  const auto slow_period1 = 10;
+  const auto signal_period1 = 3;
+  const auto macd_method1 = MacdMethod{
+   MacdOutput::macd, data_method1, fast_period1, slow_period1, signal_period1};
+
+  const auto data_method2 = DataMethod{"close"};
+  const auto fast_period2 = 5;
+  const auto slow_period2 = 10;
+  const auto signal_period2 = 3;
+  const auto macd_method2 = MacdMethod{
+   MacdOutput::macd, data_method2, fast_period2, slow_period2, signal_period2};
+
+  EXPECT_TRUE(macd_method1 == macd_method2);
+  EXPECT_FALSE(macd_method1 != macd_method2);
+}
+
+TEST(MacdMethodTest, NotEqualOperator)
+{
+  const auto data_method1 = DataMethod{"close"};
+  const auto fast_period1 = 5;
+  const auto slow_period1 = 10;
+  const auto signal_period1 = 3;
+  const auto macd_method1 = MacdMethod{
+   MacdOutput::macd, data_method1, fast_period1, slow_period1, signal_period1};
+
+  const auto data_method2 = DataMethod{"open"};
+  const auto fast_period2 = 5;
+  const auto slow_period2 = 10;
+  const auto signal_period2 = 3;
+  const auto macd_method2 = MacdMethod{
+   MacdOutput::macd, data_method2, fast_period2, slow_period2, signal_period2};
+
+  EXPECT_TRUE(macd_method1 != macd_method2);
+  EXPECT_FALSE(macd_method1 == macd_method2);
+}

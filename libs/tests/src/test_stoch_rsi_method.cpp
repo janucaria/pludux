@@ -84,3 +84,39 @@ TEST(StochRsiMethodTest, RunAllMethod)
   EXPECT_TRUE(std::isnan(result_d[13]) && std::isnan(expected_d[13]));
   EXPECT_TRUE(std::isnan(result_d[14]) && std::isnan(expected_d[14]));
 }
+
+TEST(StochRsiMethodTest, EqualityOperator)
+{
+  const auto rsi_input_method = DataMethod{"close"};
+  const auto rsi_period = 5;
+  const auto k_period = 5;
+  const auto k_smooth = 3;
+  const auto d_period = 3;
+
+  StochRsiMethod method1{
+   StochOutput::k, rsi_input_method, rsi_period, k_period, k_smooth, d_period};
+  StochRsiMethod method2{
+   StochOutput::k, rsi_input_method, rsi_period, k_period, k_smooth, d_period};
+
+  EXPECT_TRUE(method1 == method2);
+  EXPECT_FALSE(method1 != method2);
+  EXPECT_EQ(method1, method2);
+}
+
+TEST(StochRsiMethodTest, NotEqualOperator)
+{
+  const auto rsi_input_method = DataMethod{"close"};
+  const auto rsi_period = 5;
+  const auto k_period = 5;
+  const auto k_smooth = 3;
+  const auto d_period = 3;
+
+  StochRsiMethod method1{
+   StochOutput::k, rsi_input_method, rsi_period, k_period, k_smooth, d_period};
+  StochRsiMethod method2{
+   StochOutput::d, rsi_input_method, rsi_period, k_period, k_smooth, d_period};
+
+  EXPECT_FALSE(method1 == method2);
+  EXPECT_TRUE(method1 != method2);
+  EXPECT_NE(method1, method2);
+}

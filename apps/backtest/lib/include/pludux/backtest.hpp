@@ -40,6 +40,10 @@ public:
 
   auto asset() const noexcept -> const backtest::Asset&;
 
+  void mark_as_failed() noexcept;
+
+  auto is_failed() const noexcept -> bool;
+
   auto capital_risk() const noexcept -> double;
 
   auto trade_records() const noexcept
@@ -57,6 +61,7 @@ private:
   std::shared_ptr<backtest::Strategy> strategy_ptr_;
   std::shared_ptr<backtest::Asset> asset_ptr_;
 
+  bool is_failed_;
   std::optional<backtest::TradingSession> trading_session_;
   std::size_t current_index_;
   std::vector<backtest::TradeRecord> trade_records_;

@@ -39,4 +39,32 @@ auto BullishDivergenceMethod::operator()(AssetSnapshot asset_data) const
                    static_cast<std::ptrdiff_t>(offset_)};
 }
 
+auto BullishDivergenceMethod::operator==(
+ const BullishDivergenceMethod& other) const noexcept -> bool = default;
+
+auto BullishDivergenceMethod::offset() const noexcept -> std::size_t
+{
+  return offset_;
+}
+
+auto BullishDivergenceMethod::pivot_range() const noexcept -> std::size_t
+{
+  return pivot_range_;
+}
+
+auto BullishDivergenceMethod::lookback_range() const noexcept -> std::size_t
+{
+  return lookback_range_;
+}
+
+auto BullishDivergenceMethod::signal() const noexcept -> const ScreenerMethod&
+{
+  return signal_;
+}
+
+auto BullishDivergenceMethod::reference() const noexcept -> const ScreenerMethod&
+{
+  return reference_;
+}
+
 } // namespace pludux::screener

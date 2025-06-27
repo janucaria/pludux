@@ -29,20 +29,6 @@ void Application::on_before_main_loop()
   ImPlot::GetStyle().UseLocalTime = true;
   ImPlot::GetStyle().Use24HourClock = true;
 
-  auto date_method = screener::DataMethod{"Date"};
-  auto open_method = screener::DataMethod{"Open"};
-  auto high_method = screener::DataMethod{"High"};
-  auto low_method = screener::DataMethod{"Low"};
-  auto close_method = screener::DataMethod{"Close"};
-  auto volume_method = screener::DataMethod{"Volume"};
-
-  state_data_.quote_access = QuoteAccess{std::move(date_method),
-                                         std::move(open_method),
-                                         std::move(high_method),
-                                         std::move(low_method),
-                                         std::move(close_method),
-                                         std::move(volume_method)};
-
 // run in debug mode and not in emscripten
 #if !defined(__EMSCRIPTEN__) && !defined(NDEBUG) && 1
 
@@ -97,27 +83,36 @@ void Application::on_update()
                       current_time - last_update_time)
                       .count();
 
-    try {
-      do {
-        for(auto& backtest : backtests) {
+    do {
+      for(auto& backtest : backtests) {
+        try {
           if(backtest.should_run()) {
             backtest.run();
           }
+        } catch(const std::exception& e) {
+          backtest.mark_as_failed();
+
+          // TODO: this line is buggy in emscripten release build.
+          // The bug is failed to load/open the strategy, asset, or pludux file.
+          // No error message is shown in the GUI nor in the console.
+          // No crash, just no error message.
+          /*
+          const auto error_message =
+           std::format("Backtest '{}' failed: {}", backtest.name(), e.what());
+          */
+
+          const auto error_message =
+           "Backtest '" + backtest.name() + "' failed: " + e.what();
+          state_data_.alert_messages.push(error_message);
         }
+      }
 
-        current_time = std::chrono::high_resolution_clock::now();
-        time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(
-                     current_time - last_update_time)
-                     .count();
+      current_time = std::chrono::high_resolution_clock::now();
+      time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(
+                   current_time - last_update_time)
+                   .count();
 
-      } while(time_diff < 1000 / 60);
-
-    } catch(const std::exception& e) {
-      state_data_.backtests.clear();
-
-      const auto error_message = std::format("Error: {}", e.what());
-      state_data_.alert_messages.push(error_message);
-    }
+    } while(time_diff < 1000 / 60);
   }
 
   auto app_state = AppState{state_data_, actions_};

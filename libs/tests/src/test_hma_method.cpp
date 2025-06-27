@@ -79,3 +79,32 @@ TEST(HmaMethodTest, RunAllMethodWithOffset)
   EXPECT_TRUE(std::isnan(result[6]));
   EXPECT_TRUE(std::isnan(result[7]));
 }
+
+TEST(HmaMethodTest, EqualityOperator)
+{
+  const auto field = "close";
+  const auto field_method1 = DataMethod{field, 0};
+  const auto field_method2 = DataMethod{field, 0};
+  const auto period = 5;
+  const auto hma_method1 = HmaMethod{period, field_method1, 0};
+  const auto hma_method2 = HmaMethod{period, field_method2, 0};
+
+  EXPECT_TRUE(hma_method1 == hma_method2);
+  EXPECT_FALSE(hma_method1 != hma_method2);
+  EXPECT_EQ(hma_method1, hma_method2);
+}
+
+TEST(HmaMethodTest, NotEqualOperator)
+{
+  const auto field1 = "close";
+  const auto field2 = "open";
+  const auto field_method1 = DataMethod{field1, 0};
+  const auto field_method2 = DataMethod{field2, 0};
+  const auto period = 5;
+  const auto hma_method1 = HmaMethod{period, field_method1, 0};
+  const auto hma_method2 = HmaMethod{period, field_method2, 0};
+
+  EXPECT_TRUE(hma_method1 != hma_method2);
+  EXPECT_FALSE(hma_method1 == hma_method2);
+  EXPECT_NE(hma_method1, hma_method2);
+}

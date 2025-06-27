@@ -38,14 +38,22 @@ auto AssetHistory::size() const noexcept -> std::size_t
   return size_;
 }
 
+auto AssetHistory::history_data() const noexcept
+ -> const std::unordered_map<std::string, PolySeries<double>>&
+{
+  return history_data_;
+}
+
 auto AssetHistory::contains(const std::string& key) const noexcept -> bool
 {
   return history_data_.contains(key);
 }
 
-auto AssetHistory::insert(std::string key, PolySeries<double> series) -> void
+void AssetHistory::insert(std::string key, PolySeries<double> series)
 {
   history_data_.emplace(std::move(key), std::move(series));
+
+  size_ = history_data_.begin()->second.size();
 }
 
 auto AssetHistory::begin() const -> Iterator

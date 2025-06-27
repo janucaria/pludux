@@ -79,3 +79,39 @@ TEST(SmaMethodTest, RunAllMethodWithOffset)
   EXPECT_TRUE(std::isnan(result[6]));
   EXPECT_TRUE(std::isnan(result[7]));
 }
+
+TEST(SmaMethodTest, EqualityOperator)
+{
+  const auto field = "close";
+  const auto field_method = DataMethod{field, 0};
+  const auto period = 5;
+  const auto sma_method1 = SmaMethod{period, field_method, 0};
+  const auto sma_method2 = SmaMethod{period, field_method, 0};
+
+  EXPECT_TRUE(sma_method1 == sma_method2);
+  
+  const auto offset = 1;
+  const auto sma_method3 = SmaMethod{period, field_method, offset};
+
+  EXPECT_FALSE(sma_method1 == sma_method3);
+  EXPECT_EQ(sma_method1, sma_method2);
+  EXPECT_NE(sma_method1, sma_method3);
+}
+
+TEST(SmaMethodTest, NotEqualOperator)
+{
+  const auto field = "close";
+  const auto field_method = DataMethod{field, 0};
+  const auto period = 5;
+  const auto sma_method1 = SmaMethod{period, field_method, 0};
+  const auto sma_method2 = SmaMethod{period, field_method, 0};
+
+  EXPECT_FALSE(sma_method1 != sma_method2);
+  
+  const auto offset = 1;
+  const auto sma_method3 = SmaMethod{period, field_method, offset};
+
+  EXPECT_TRUE(sma_method1 != sma_method3);
+  EXPECT_NE(sma_method1, sma_method3);
+  EXPECT_EQ(sma_method1, sma_method2);
+}

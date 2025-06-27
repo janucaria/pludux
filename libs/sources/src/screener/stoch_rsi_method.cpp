@@ -35,6 +35,9 @@ auto StochRsiMethod::operator()(AssetSnapshot asset_data) const
                    static_cast<std::ptrdiff_t>(offset_)};
 }
 
+auto StochRsiMethod::operator==(const StochRsiMethod& other) const noexcept
+ -> bool = default;
+
 auto StochRsiMethod::rsi_input() const noexcept -> ScreenerMethod
 {
   return rsi_input_;

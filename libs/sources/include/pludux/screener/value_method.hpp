@@ -15,6 +15,8 @@ public:
   auto
   operator()(AssetSnapshot asset_data) const -> SubSeries<PolySeries<double>>;
 
+  auto operator==(const ValueMethod& other) const noexcept -> bool;
+
   auto value() const -> double;
 
 private:

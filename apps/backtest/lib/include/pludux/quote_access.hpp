@@ -16,43 +16,37 @@ public:
               screener::ScreenerMethod close,
               screener::ScreenerMethod volume);
 
-  auto time(AssetSnapshot asset_data) const noexcept
-   -> SubSeries<PolySeries<double>>;
+  auto time(AssetSnapshot asset_data) const -> SubSeries<PolySeries<double>>;
 
   auto time() const noexcept -> const screener::ScreenerMethod&;
 
   void time(screener::ScreenerMethod time) noexcept;
 
-  auto open(AssetSnapshot asset_data) const noexcept
-   -> SubSeries<PolySeries<double>>;
+  auto open(AssetSnapshot asset_data) const -> SubSeries<PolySeries<double>>;
 
   auto open() const noexcept -> const screener::ScreenerMethod&;
 
   void open(screener::ScreenerMethod open) noexcept;
 
-  auto high(AssetSnapshot asset_data) const noexcept
-   -> SubSeries<PolySeries<double>>;
+  auto high(AssetSnapshot asset_data) const -> SubSeries<PolySeries<double>>;
 
   auto high() const noexcept -> const screener::ScreenerMethod&;
 
   void high(screener::ScreenerMethod high) noexcept;
 
-  auto low(AssetSnapshot asset_data) const noexcept
-   -> SubSeries<PolySeries<double>>;
+  auto low(AssetSnapshot asset_data) const -> SubSeries<PolySeries<double>>;
 
   auto low() const noexcept -> const screener::ScreenerMethod&;
 
   void low(screener::ScreenerMethod low) noexcept;
 
-  auto close(AssetSnapshot asset_data) const noexcept
-   -> SubSeries<PolySeries<double>>;
+  auto close(AssetSnapshot asset_data) const -> SubSeries<PolySeries<double>>;
 
   auto close() const noexcept -> const screener::ScreenerMethod&;
 
   void close(screener::ScreenerMethod close) noexcept;
 
-  auto volume(AssetSnapshot asset_data) const noexcept
-   -> SubSeries<PolySeries<double>>;
+  auto volume(AssetSnapshot asset_data) const -> SubSeries<PolySeries<double>>;
 
   auto volume() const noexcept -> const screener::ScreenerMethod&;
 

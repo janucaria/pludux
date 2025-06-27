@@ -19,6 +19,7 @@ target_sources(${PROJECT_NAME}
     src/config_parser.cpp
 
     src/screener/abs_diff_method.cpp
+    src/screener/arithmetic_method.cpp
     src/screener/atr_method.cpp
     src/screener/bb_method.cpp
     src/screener/bullish_divergence_method.cpp
@@ -27,6 +28,7 @@ target_sources(${PROJECT_NAME}
     src/screener/hidden_bullish_divergence_method.cpp
     src/screener/kc_method.cpp
     src/screener/macd_method.cpp
+    src/screener/screener_method.cpp
     src/screener/stoch_method.cpp
     src/screener/stoch_rsi_method.cpp
     src/screener/value_method.cpp
@@ -35,6 +37,7 @@ target_sources(${PROJECT_NAME}
     src/screener/any_of_filter.cpp
     src/screener/crossover_filter.cpp
     src/screener/crossunder_filter.cpp
+    src/screener/screener_filter.cpp
 
   INTERFACE
     FILE_SET HEADERS

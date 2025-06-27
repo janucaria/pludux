@@ -42,6 +42,8 @@ auto StochMethod::operator()(AssetSnapshot asset_data) const
                    static_cast<std::ptrdiff_t>(offset_)};
 }
 
+auto StochMethod::operator==(const StochMethod& other) const noexcept -> bool = default;
+
 auto StochMethod::high() const noexcept -> ScreenerMethod
 {
   return high_;

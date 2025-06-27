@@ -25,4 +25,21 @@ auto TakeProfit::operator()(const RunningState& running_state) const
    is_disabled_, take_profit_price, trading_price_method_};
 }
 
+auto TakeProfit::is_disabled() const noexcept -> bool
+{
+  return is_disabled_;
+}
+
+auto TakeProfit::reward_method() const noexcept
+ -> const screener::ScreenerMethod&
+{
+  return reward_method_;
+}
+
+auto TakeProfit::trading_price_method() const noexcept
+ -> const screener::ScreenerMethod&
+{
+  return trading_price_method_;
+}
+
 } // namespace pludux::backtest

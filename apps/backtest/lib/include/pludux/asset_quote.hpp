@@ -11,17 +11,17 @@ class AssetQuote {
 public:
   AssetQuote(AssetSnapshot asset_data, const QuoteAccess& quote_access);
 
-  auto time(std::ptrdiff_t offset = 0) const noexcept -> double;
+  auto time(std::ptrdiff_t offset = 0) const -> double;
 
-  auto open(std::ptrdiff_t offset = 0) const noexcept -> double;
+  auto open(std::ptrdiff_t offset = 0) const -> double;
 
-  auto high(std::ptrdiff_t offset = 0) const noexcept -> double;
+  auto high(std::ptrdiff_t offset = 0) const -> double;
 
-  auto low(std::ptrdiff_t offset = 0) const noexcept -> double;
+  auto low(std::ptrdiff_t offset = 0) const -> double;
 
-  auto close(std::ptrdiff_t offset = 0) const noexcept -> double;
+  auto close(std::ptrdiff_t offset = 0) const -> double;
 
-  auto volume(std::ptrdiff_t offset = 0) const noexcept -> double;
+  auto volume(std::ptrdiff_t offset = 0) const -> double;
 
   auto get_asset_size() const noexcept -> std::size_t;
 
