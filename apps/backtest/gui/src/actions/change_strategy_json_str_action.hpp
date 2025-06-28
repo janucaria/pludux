@@ -4,16 +4,18 @@
 #include <string>
 
 #include "../app_state_data.hpp"
+#include "./change_strategy_json_action.hpp"
 
 namespace pludux::apps {
 
-class ChangeStrategyJsonStrAction {
+class ChangeStrategyJsonStrAction
+: public ChangeStrategyJsonAction<ChangeStrategyJsonStrAction> {
 public:
   ChangeStrategyJsonStrAction(std::string config_name, std::string content);
 
   void operator()(AppStateData& state) const;
 
-  auto get_strategy_name() const noexcept -> const std::string&;
+  auto get_strategy_name() const noexcept -> std::string;
 
 private:
   std::string config_name_;

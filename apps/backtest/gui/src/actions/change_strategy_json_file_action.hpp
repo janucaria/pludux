@@ -4,10 +4,12 @@
 #include <string>
 
 #include "../app_state_data.hpp"
+#include "./change_strategy_json_action.hpp"
 
 namespace pludux::apps {
 
-class ChangeStrategyJsonFileAction {
+class ChangeStrategyJsonFileAction
+: public ChangeStrategyJsonAction<ChangeStrategyJsonFileAction> {
 public:
   ChangeStrategyJsonFileAction(std::string path);
 

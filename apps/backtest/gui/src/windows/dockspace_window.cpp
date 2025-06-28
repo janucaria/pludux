@@ -228,7 +228,7 @@ void DockspaceWindow::render(AppState& app_state)
 #endif
       }
 
-      constexpr auto menu_item_open_config = "Open Strategy (JSON)";
+      constexpr auto menu_item_open_config = "Add or Replace Strategies (JSON)";
       if(ImGui::MenuItem(menu_item_open_config)) {
 #ifdef __EMSCRIPTEN__
         EM_ASM(

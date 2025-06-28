@@ -79,15 +79,16 @@ EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_change_strategy_json_str(
   using pludux::apps::AppState;
   using pludux::apps::ChangeStrategyJsonStrAction;
 
-  const auto name_str = std::string(name);
+  auto name_str = std::string(name);
   std::free(name);
 
-  const auto data_str = std::string(data);
+  auto data_str = std::string(data);
   std::free(data);
 
   auto app_state = *reinterpret_cast<AppState*>(app_state_ptr);
 
-  app_state.emplace_action<ChangeStrategyJsonStrAction>(name_str, data_str);
+  app_state.emplace_action<ChangeStrategyJsonStrAction>(std::move(name_str),
+                                                        std::move(data_str));
 }
 }
 
