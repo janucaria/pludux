@@ -3,7 +3,7 @@ project(pludux-backtest-lib LANGUAGES CXX)
 FetchContent_Declare(
   rapidcsv
   GIT_REPOSITORY https://github.com/d99kris/rapidcsv.git
-  GIT_TAG        v8.84
+  GIT_TAG        v8.87
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
   OVERRIDE_FIND_PACKAGE
@@ -12,7 +12,7 @@ FetchContent_Declare(
 FetchContent_Declare(
   ctre
   GIT_REPOSITORY https://github.com/hanickadot/compile-time-regular-expressions.git
-  GIT_TAG        a9418a5d8bd60afa0b71565ab95c16b1eab168e7
+  GIT_TAG        v3.10.0
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
   OVERRIDE_FIND_PACKAGE
