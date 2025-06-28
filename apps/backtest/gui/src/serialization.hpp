@@ -388,8 +388,14 @@ void save(Archive& archive, const pludux::apps::AppStateData& app_state_data)
   archive(
    make_nvp("selectedBacktestIndex", app_state_data.selected_backtest_index));
   archive(make_nvp("strategies", app_state_data.strategies));
-  archive(make_nvp("assets", app_state_data.assets));
   archive(make_nvp("quoteAccess", app_state_data.quote_access));
+
+  auto assets_ptrs = std::vector<std::shared_ptr<pludux::backtest::Asset>>{};
+  for(const auto& asset_ptr : assets) {
+    assets_ptrs.emplace_back(
+     std::make_shared<pludux::backtest::Asset>(*asset_ptr));
+  }
+  archive(make_nvp("assets", assets_ptrs));
 
   auto backtest_ptrs = std::vector<std::unique_ptr<pludux::Backtest>>{};
   for(const auto& backtest : backtests) {
@@ -409,8 +415,16 @@ void load(Archive& archive, pludux::apps::AppStateData& app_state_data)
   archive(
    make_nvp("selectedBacktestIndex", app_state_data.selected_backtest_index));
   archive(make_nvp("strategies", app_state_data.strategies));
-  archive(make_nvp("assets", app_state_data.assets));
   archive(make_nvp("quoteAccess", app_state_data.quote_access));
+
+  auto assets_ptrs = std::vector<std::shared_ptr<pludux::backtest::Asset>>{};
+  archive(make_nvp("assets", assets_ptrs));
+  app_state_data.assets.clear();
+  for(const auto& asset_ptr : assets_ptrs) {
+    if(asset_ptr) {
+      app_state_data.assets.emplace(asset_ptr);
+    }
+  }
 
   auto backtest_ptrs = std::vector<std::unique_ptr<pludux::Backtest>>{};
   archive(make_nvp("backtests", backtest_ptrs));

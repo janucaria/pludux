@@ -20,11 +20,10 @@ void AssetsWindow::render(AppState& app_state)
   ImGui::Begin("Assets", nullptr);
 
   if(!assets.empty()) {
-    for(auto i = 0; i < assets.size(); ++i) {
-      const auto& asset = *assets[i];
-      const auto& asset_name = asset.name();
+    for(const auto& asset_ptr : assets) {
+      const auto& asset_name = asset_ptr->name();
 
-      ImGui::PushID(i);
+      ImGui::PushID(asset_name.c_str());
 
       ImGui::SetNextItemAllowOverlap();
 
@@ -34,22 +33,26 @@ void AssetsWindow::render(AppState& app_state)
 
       ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 50);
       if(ImGui::Button("Delete")) {
-        app_state.push_action([i](AppStateData& state) {
+        app_state.push_action([asset_ptr](AppStateData& state) {
           const auto& assets = state.assets;
+          auto& backtests = state.backtests;
 
-          const auto it = std::next(assets.begin(), i);
-          const auto& asset_ptr = *it;
+          for(auto i = 0; i < backtests.size(); ++i) {
+            auto& backtest = backtests[i];
+            if(backtest.asset_ptr() == asset_ptr) {
+              backtests.erase(std::next(backtests.begin(), i));
 
-          state.backtests.erase(std::remove_if(state.backtests.begin(),
-                                               state.backtests.end(),
-                                               [&asset_ptr](const auto& bt) {
-                                                 return bt.asset_ptr() ==
-                                                        asset_ptr;
-                                               }),
-                                state.backtests.end());
+              if(state.selected_backtest_index > i || i == backtests.size()) {
+                --state.selected_backtest_index;
+              }
+
+              // Adjust the index since we removed an element
+              --i;
+            }
+          }
 
           // Remove the asset from the vector
-          state.assets.erase(it);
+          state.assets.erase(asset_ptr);
         });
       }
 

@@ -83,6 +83,7 @@ void BacktestsWindow::render_add_new_backtest(AppState& app_state)
   const auto& state = app_state.state();
   const auto& strategies = state.strategies;
   const auto& assets = state.assets;
+  const auto& backtests = state.backtests;
 
   ImGui::BeginGroup();
   ImGui::BeginChild("item view",
@@ -137,26 +138,21 @@ void BacktestsWindow::render_add_new_backtest(AppState& app_state)
   }
 
   {
-    new_backtest_asset_index_ = std::min(
-     new_backtest_asset_index_, static_cast<std::ptrdiff_t>(assets.size() - 1));
-
-    auto asset_preview = std::string{""};
-    if(new_backtest_asset_index_ >= 0 &&
-       new_backtest_asset_index_ < assets.size()) {
-      asset_preview = assets[new_backtest_asset_index_]->name();
+    if(!assets.contains(new_backtest_asset_name_)) {
+      new_backtest_asset_name_ =
+       assets.empty() ? "" : assets.cbegin()->get()->name();
     }
 
     ImGui::Text("Asset:");
-    if(ImGui::BeginCombo("##AssetCombo", asset_preview.c_str())) {
-      for(auto i = 0; i < assets.size(); ++i) {
-        const auto& asset = *assets[i];
-        const auto& asset_name = asset.name();
-        const auto is_selected = new_backtest_asset_index_ == i;
+    if(ImGui::BeginCombo("##AssetCombo", new_backtest_asset_name_.c_str())) {
+      for(const auto& asset : assets) {
+        const auto& asset_name = asset->name();
+        const auto is_selected = asset_name == new_backtest_asset_name_;
 
-        ImGui::PushID(i);
+        ImGui::PushID(asset_name.c_str());
 
         if(ImGui::Selectable(asset_name.c_str(), is_selected)) {
-          new_backtest_asset_index_ = i;
+          new_backtest_asset_name_ = asset_name;
         }
 
         if(is_selected) {
@@ -172,13 +168,13 @@ void BacktestsWindow::render_add_new_backtest(AppState& app_state)
   ImGui::EndChild();
 
   if(ImGui::Button("Create Backtest")) {
-    if(new_backtest_strategy_index_ >= 0 && new_backtest_asset_index_ >= 0) {
+    if(new_backtest_strategy_index_ >= 0 && !new_backtest_asset_name_.empty()) {
       app_state.push_action(
        [backtest_name = new_backtest_name_,
         strategy_index = new_backtest_strategy_index_,
-        asset_index = new_backtest_asset_index_](AppStateData& state) {
+        asset_name = new_backtest_asset_name_](AppStateData& state) {
          const auto& strategy = state.strategies[strategy_index];
-         const auto& asset = state.assets[asset_index];
+         const auto& asset = *state.assets.find(asset_name);
 
          state.backtests.emplace_back(backtest_name, strategy, asset);
          state.selected_backtest_index = state.backtests.size() - 1;

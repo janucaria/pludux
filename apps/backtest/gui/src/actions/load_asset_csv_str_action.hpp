@@ -1,19 +1,20 @@
-#ifndef PLUDUX_APPS_BACKTEST_ACTIONS_LOAD_CSV_STR_ASSET_ACTION_HPP
-#define PLUDUX_APPS_BACKTEST_ACTIONS_LOAD_CSV_STR_ASSET_ACTION_HPP
+#ifndef PLUDUX_APPS_BACKTEST_ACTIONS_LOAD_ASSET_CSV_STR_ACTION_HPP
+#define PLUDUX_APPS_BACKTEST_ACTIONS_LOAD_ASSET_CSV_STR_ACTION_HPP
 
 #include <string>
 
 #include "../app_state_data.hpp"
+#include "load_asset_csv_action.hpp"
 
 namespace pludux::apps {
 
-class LoadAssetCsvStrAction {
+class LoadAssetCsvStrAction : public LoadAssetCsvAction<LoadAssetCsvStrAction> {
 public:
   LoadAssetCsvStrAction(std::string asset_name, std::string content);
 
   void operator()(AppStateData& state) const;
 
-  auto get_asset_name() const noexcept -> const std::string&;
+  auto get_asset_name() const noexcept -> std::string;
 
 private:
   std::string asset_name_;
