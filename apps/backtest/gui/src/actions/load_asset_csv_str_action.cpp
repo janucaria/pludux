@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -21,19 +22,12 @@ void LoadAssetCsvStrAction::operator()(AppStateData& state) const
 {
   auto csv_stream = std::stringstream{content_};
 
-  const auto quotes = csv_daily_stock_data(csv_stream);
-  auto asset_history = AssetHistory(quotes.begin(), quotes.end());
-  const auto asset_name = get_asset_name();
-  auto asset_ptr =
-   std::make_shared<backtest::Asset>(asset_name, std::move(asset_history));
-
-  state.assets.emplace_back(std::move(asset_ptr));
+  LoadAssetCsvAction<LoadAssetCsvStrAction>::operator()(csv_stream, state);
 }
 
-auto LoadAssetCsvStrAction::get_asset_name() const noexcept
- -> const std::string&
+auto LoadAssetCsvStrAction::get_asset_name() const noexcept -> std::string
 {
-  return asset_name_;
+  return std::filesystem::path{asset_name_}.stem().string();
 }
 
 } // namespace pludux::apps

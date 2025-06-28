@@ -310,7 +310,7 @@ void DockspaceWindow::render(AppState& app_state)
 #endif
       }
 
-      constexpr auto menu_item_open_csv = "Add Data (CSV)";
+      constexpr auto menu_item_open_csv = "Add or Replace Assets (CSV)";
       if(ImGui::MenuItem(menu_item_open_csv)) {
 #ifdef __EMSCRIPTEN__
 
