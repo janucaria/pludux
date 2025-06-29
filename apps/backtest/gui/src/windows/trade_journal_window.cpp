@@ -85,8 +85,6 @@ void TradeJournalWindow::draw_trade_row(const backtest::TradeRecord& trade)
                      ImPlotDateFmt_DayMoYr,
                      ImPlot::GetStyle().UseISO8601);
 
-  const auto duration = trade.duration();
-
   ImGui::TableNextRow();
   ImGui::TableNextColumn();
   ImGui::Text("%s", entry_date);
@@ -132,30 +130,6 @@ auto TradeJournalWindow::format_trade_status(
   }
 
   return "Unknown";
-}
-
-auto TradeJournalWindow::format_duration(std::time_t time_duration) noexcept
- -> std::string
-{
-  // get the duration in days
-  const auto days = time_duration / (60 * 60 * 24);
-
-  // if the duration is greater than 1 month then return the duration in
-  // months and days. if the duration is greater than 1 year then return the
-  // duration in years, months and days.
-  if(days > 30) {
-    const auto months = days / 30;
-    const auto remaining_days = days % 30;
-    if(months > 12) {
-      const auto years = months / 12;
-      const auto remaining_months = months % 12;
-      return std::format(
-       "{} years, {} months, {} days", years, remaining_months, remaining_days);
-    }
-    return std::format("{} months, {} days", months, remaining_days);
-  }
-
-  return std::format("{} days", days);
 }
 
 } // namespace pludux::apps

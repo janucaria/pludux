@@ -50,21 +50,16 @@ void BacktestSummaryWindow::render(AppState& app_state)
 
     ostream << std::format("Risk per trade: {:.2f}\n", backtest.capital_risk());
     ostream << std::format("Total profit: {:.2f}\n", summary.total_profit());
-    auto total_duration_days = std::chrono::duration_cast<std::chrono::days>(
-                                std::chrono::seconds(summary.total_duration()))
-                                .count();
-    ostream << std::format("Total duration: {} days\n", total_duration_days);
+
+    const auto total_duration = format_duration(summary.total_duration());
+    ostream << std::format("Total duration: {}\n", total_duration);
     ostream << std::format("Total trades: {}\n", summary.total_trades());
 
     ostream << std::format("Average profit: {:.2f}\n", summary.average_win());
     ostream << std::format("Average loss: {:.2f}\n", -summary.average_loss());
 
-    auto average_duration_days =
-     std::chrono::duration_cast<std::chrono::days>(
-      std::chrono::seconds(summary.average_duration()))
-      .count();
-    ostream << std::format("Average duration: {} days\n",
-                           average_duration_days);
+    const auto average_duration = format_duration(summary.average_duration());
+    ostream << std::format("Average duration: {}\n", average_duration);
 
     ostream << "\n\n";
     ostream << "OPEN TRADE\n";
@@ -72,12 +67,9 @@ void BacktestSummaryWindow::render(AppState& app_state)
     ostream << std::format("Unrealized profit: {:.2f}\n",
                            summary.unrealized_profit());
 
-    auto ongoing_trade_duration_days =
-     std::chrono::duration_cast<std::chrono::days>(
-      std::chrono::seconds(summary.ongoing_trade_duration()))
-      .count();
-    ostream << std::format("Ongoing duration: {} days\n",
-                           ongoing_trade_duration_days);
+    const auto ongoing_trade_duration =
+     format_duration(summary.ongoing_trade_duration());
+    ostream << std::format("Ongoing duration: {}\n", ongoing_trade_duration);
 
     ostream << "\n\n";
     ostream << "CLOSED TRADES\n";

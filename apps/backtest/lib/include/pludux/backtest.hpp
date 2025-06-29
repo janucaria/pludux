@@ -79,6 +79,8 @@ auto csv_daily_stock_data(std::istream& csv_stream)
 
 auto risk_reward_config_parser(QuoteAccess QuoteAccess) -> ConfigParser;
 
+auto format_duration(std::size_t duration_in_seconds) -> std::string;
+
 } // namespace pludux
 
 #endif
