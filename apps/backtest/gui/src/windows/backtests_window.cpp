@@ -1,3 +1,4 @@
+#include <format>
 #include <iterator>
 
 #include <imgui.h>
@@ -174,11 +175,16 @@ void BacktestsWindow::render_add_new_backtest(AppState& app_state)
   if(ImGui::Button("Create Backtest")) {
     if(new_backtest_strategy_index_ >= 0 && new_backtest_asset_index_ >= 0) {
       app_state.push_action(
-       [backtest_name = new_backtest_name_,
+       [new_backtest_name = new_backtest_name_,
         strategy_index = new_backtest_strategy_index_,
         asset_index = new_backtest_asset_index_](AppStateData& state) {
          const auto& strategy = state.strategies[strategy_index];
          const auto& asset = state.assets[asset_index];
+
+         const auto backtest_name =
+          new_backtest_name.empty()
+           ? std::format("{} / {}", asset->name(), strategy->name())
+           : new_backtest_name;
 
          state.backtests.emplace_back(backtest_name, strategy, asset);
          state.selected_backtest_index = state.backtests.size() - 1;
