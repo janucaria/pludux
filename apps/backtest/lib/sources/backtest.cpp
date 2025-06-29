@@ -440,4 +440,22 @@ auto format_duration(std::size_t duration_in_seconds) -> std::string
   return result;
 }
 
+auto format_datetime(std::time_t timestamp) -> std::string
+{
+  using namespace std::chrono;
+
+  const auto tm_ptr = std::localtime(&timestamp);
+  const auto& tm = *tm_ptr;
+
+  // Example: "2025-06-29 14:30:00"
+  auto formated_datetime = std::format(
+   "{:04}-{:02}-{:02}", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
+
+  if(tm.tm_hour != 0 || tm.tm_min != 0) {
+    formated_datetime += std::format(" {:02}:{:02}", tm.tm_hour, tm.tm_min);
+  }
+
+  return formated_datetime;
+}
+
 } // namespace pludux

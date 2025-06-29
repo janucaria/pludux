@@ -145,8 +145,10 @@ auto main(int, const char**) -> int
     if(trade.is_summary_session()) {
       const auto entry_timestamp = trade.entry_timestamp();
       const auto exit_timestamp = trade.exit_timestamp();
-      std::cout << "Entry date: " << std::ctime(&entry_timestamp) // NOLINT
-                << "Exit date: " << std::ctime(&exit_timestamp)   // NOLINT
+      std::cout << "Entry date: " << pludux::format_datetime(entry_timestamp)
+                << "Exit date: "
+                << (trade.is_open() ? "N/A"
+                                    : pludux::format_datetime(exit_timestamp))
                 << "Position size: " << trade.position_size() << std::endl
                 << "Reason: " << static_cast<int>(trade.status()) << std::endl
                 << "Profit: " << trade.profit() << std::endl

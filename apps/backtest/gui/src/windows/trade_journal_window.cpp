@@ -69,27 +69,13 @@ void TradeJournalWindow::render(AppState& app_state)
 
 void TradeJournalWindow::draw_trade_row(const backtest::TradeRecord& trade)
 {
-  const auto entry_timestamp = trade.entry_timestamp();
-  char entry_date[32];
-  ImPlot::FormatDate(ImPlotTime::FromDouble(entry_timestamp),
-                     entry_date,
-                     32,
-                     ImPlotDateFmt_DayMoYr,
-                     ImPlot::GetStyle().UseISO8601);
-
-  const auto exit_timestamp = trade.exit_timestamp();
-  char exit_date[32];
-  ImPlot::FormatDate(ImPlotTime::FromDouble(exit_timestamp),
-                     exit_date,
-                     32,
-                     ImPlotDateFmt_DayMoYr,
-                     ImPlot::GetStyle().UseISO8601);
-
   ImGui::TableNextRow();
   ImGui::TableNextColumn();
-  ImGui::Text("%s", entry_date);
+  ImGui::Text("%s", format_datetime(trade.entry_timestamp()).c_str());
   ImGui::TableNextColumn();
-  ImGui::Text("%s", exit_date);
+  ImGui::Text(
+   "%s",
+   trade.is_open() ? "N/A" : format_datetime(trade.exit_timestamp()).c_str());
   ImGui::TableNextColumn();
   ImGui::Text("%.0f", trade.position_size());
   ImGui::TableNextColumn();
