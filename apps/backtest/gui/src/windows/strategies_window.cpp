@@ -41,13 +41,19 @@ void StrategiesWindow::render(AppState& app_state)
           const auto& strategy_ptr = *it;
 
           auto& backtests = state.backtests;
-          backtests.erase(std::remove_if(backtests.begin(),
-                                         backtests.end(),
-                                         [&strategy_ptr](const auto& bt) {
-                                           return bt.strategy_ptr() ==
-                                                  strategy_ptr;
-                                         }),
-                          backtests.end());
+          for(auto j = 0; j < backtests.size(); ++j) {
+            auto& backtest = backtests[j];
+            if(backtest.strategy_ptr()->name() == strategy_ptr->name()) {
+              backtests.erase(std::next(backtests.begin(), j));
+
+              if(state.selected_backtest_index > j || j == backtests.size()) {
+                --state.selected_backtest_index;
+              }
+
+              // Adjust the index since we removed an element
+              --j;
+            }
+          }
 
           state.strategies.erase(it);
         });

@@ -40,14 +40,20 @@ void AssetsWindow::render(AppState& app_state)
           const auto it = std::next(assets.begin(), i);
           const auto& asset_ptr = *it;
 
-          state.backtests.erase(std::remove_if(state.backtests.begin(),
-                                               state.backtests.end(),
-                                               [&asset_ptr](const auto& bt) {
-                                                 return bt.asset_ptr() ==
-                                                        asset_ptr;
-                                               }),
-                                state.backtests.end());
+          auto& backtests = state.backtests;
+          for(auto j = 0; j < backtests.size(); ++j) {
+            auto& backtest = backtests[j];
+            if(backtest.asset_ptr()->name() == asset_ptr->name()) {
+              backtests.erase(std::next(backtests.begin(), j));
 
+              if(state.selected_backtest_index > j || j == backtests.size()) {
+                --state.selected_backtest_index;
+              }
+
+              // Adjust the index since we removed an element
+              --j;
+            }
+          }
           // Remove the asset from the vector
           state.assets.erase(it);
         });
