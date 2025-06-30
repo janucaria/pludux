@@ -8,6 +8,40 @@
             "generator": "Visual Studio 17 2022"
         },
         {
+            "name": "msvc-release",
+            "inherits": "msvc-debug",
+            "binaryDir": "${sourceDir}/.out/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": {
+                    "type": "STRING",
+                    "value": "Release"
+                }
+            }
+        },
+        {
+            "name": "clang-debug",
+            "binaryDir": "${sourceDir}/.out/build/${presetName}",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": {
+                    "type": "STRING",
+                    "value": "clang++"
+                },
+                "CMAKE_C_COMPILER": {
+                    "type": "STRING",
+                    "value": "clang"
+                },
+                "CMAKE_BUILD_TYPE": {
+                    "type": "STRING",
+                    "value": "Debug"
+                },
+                "BUILD_TESTING": {
+                    "type": "BOOL",
+                    "value": "OFF"
+                }
+            }
+        },
+        {
             "name": "emscripten-debug",
             "binaryDir": "${sourceDir}/.out/build/${presetName}",
             "installDir": "${sourceDir}/.out/webroot",
@@ -38,6 +72,18 @@
                     "value": "Release"
                 }
             }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "msvc-build-release",
+            "configurePreset": "msvc-release",
+            "configuration": "Release"
+        },
+        {
+            "name": "emscripten-build-release",
+            "inherits": "msvc-build-release",
+            "configurePreset": "emscripten-release"
         }
     ]
 }
