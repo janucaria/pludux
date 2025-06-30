@@ -21,9 +21,6 @@ private:
 
   static auto format_trade_status(backtest::TradeRecord::Status status) noexcept
    -> std::string;
-
-  static auto format_duration(std::time_t time_duration) noexcept
-   -> std::string;
 };
 
 } // namespace pludux::apps

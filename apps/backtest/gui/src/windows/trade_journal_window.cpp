@@ -69,29 +69,13 @@ void TradeJournalWindow::render(AppState& app_state)
 
 void TradeJournalWindow::draw_trade_row(const backtest::TradeRecord& trade)
 {
-  const auto entry_timestamp = trade.entry_timestamp();
-  char entry_date[32];
-  ImPlot::FormatDate(ImPlotTime::FromDouble(entry_timestamp),
-                     entry_date,
-                     32,
-                     ImPlotDateFmt_DayMoYr,
-                     ImPlot::GetStyle().UseISO8601);
-
-  const auto exit_timestamp = trade.exit_timestamp();
-  char exit_date[32];
-  ImPlot::FormatDate(ImPlotTime::FromDouble(exit_timestamp),
-                     exit_date,
-                     32,
-                     ImPlotDateFmt_DayMoYr,
-                     ImPlot::GetStyle().UseISO8601);
-
-  const auto duration = trade.duration();
-
   ImGui::TableNextRow();
   ImGui::TableNextColumn();
-  ImGui::Text("%s", entry_date);
+  ImGui::Text("%s", format_datetime(trade.entry_timestamp()).c_str());
   ImGui::TableNextColumn();
-  ImGui::Text("%s", exit_date);
+  ImGui::Text(
+   "%s",
+   trade.is_open() ? "N/A" : format_datetime(trade.exit_timestamp()).c_str());
   ImGui::TableNextColumn();
   ImGui::Text("%.0f", trade.position_size());
   ImGui::TableNextColumn();
@@ -132,30 +116,6 @@ auto TradeJournalWindow::format_trade_status(
   }
 
   return "Unknown";
-}
-
-auto TradeJournalWindow::format_duration(std::time_t time_duration) noexcept
- -> std::string
-{
-  // get the duration in days
-  const auto days = time_duration / (60 * 60 * 24);
-
-  // if the duration is greater than 1 month then return the duration in
-  // months and days. if the duration is greater than 1 year then return the
-  // duration in years, months and days.
-  if(days > 30) {
-    const auto months = days / 30;
-    const auto remaining_days = days % 30;
-    if(months > 12) {
-      const auto years = months / 12;
-      const auto remaining_months = months % 12;
-      return std::format(
-       "{} years, {} months, {} days", years, remaining_months, remaining_days);
-    }
-    return std::format("{} months, {} days", months, remaining_days);
-  }
-
-  return std::format("{} days", days);
 }
 
 } // namespace pludux::apps

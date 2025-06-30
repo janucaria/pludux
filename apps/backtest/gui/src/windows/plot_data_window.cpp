@@ -147,15 +147,9 @@ void PlotDataWindow::TickerTooltip(const AssetHistory& asset_history,
       const auto& quote = AssetQuote{snapshot, quote_access};
 
       ImGui::BeginTooltip();
-      char buff[32];
-      ImPlot::FormatDate(ImPlotTime::FromDouble(quote.time()),
-                         buff,
-                         32,
-                         ImPlotDateFmt_DayMoYr,
-                         ImPlot::GetStyle().UseISO8601);
       ImGui::Text("Date:");
       ImGui::SameLine(60);
-      ImGui::Text("%s", buff);
+      ImGui::Text("%s", format_datetime(quote.time()).c_str());
       ImGui::Text("Open:");
       ImGui::SameLine(60);
       ImGui::Text("%.2f", quote.open());

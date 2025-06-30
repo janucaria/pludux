@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -19,19 +20,14 @@ ChangeStrategyJsonStrAction::ChangeStrategyJsonStrAction(
 void ChangeStrategyJsonStrAction::operator()(AppStateData& state) const
 {
   auto json_strategy_stream = std::stringstream{content_};
-  const auto strategy_name = get_strategy_name();
-  auto parsed_strategy = parse_backtest_strategy_json(
-   strategy_name, json_strategy_stream, state.quote_access);
-  auto strategy_ptr =
-   std::make_shared<backtest::Strategy>(std::move(parsed_strategy));
-  const auto& strategy =
-   *state.strategies.emplace_back(std::move(strategy_ptr));
+  ChangeStrategyJsonAction<ChangeStrategyJsonStrAction>::operator()(
+   json_strategy_stream, state);
 }
 
 auto ChangeStrategyJsonStrAction::get_strategy_name() const noexcept
- -> const std::string&
+ -> std::string
 {
-  return config_name_;
+  return std::filesystem::path{config_name_}.stem().string();
 }
 
 } // namespace pludux::apps

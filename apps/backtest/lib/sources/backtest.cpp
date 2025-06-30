@@ -382,4 +382,80 @@ auto risk_reward_config_parser(QuoteAccess quote_access) -> ConfigParser
   return config_parser;
 }
 
+auto format_duration(std::size_t duration_in_seconds) -> std::string
+{
+  using namespace std::chrono;
+
+  auto secs = seconds(duration_in_seconds);
+  auto result = std::string{};
+
+  if(secs.count() <= 0) {
+    result = "0";
+    return result;
+  }
+
+  auto years = duration_cast<days>(secs) / 365;
+  if(years.count() > 0) {
+    result +=
+     std::to_string(years.count()) + (years.count() == 1 ? " year" : " years");
+    secs -= days(years.count() * 365);
+  }
+  auto months = duration_cast<days>(secs) / 30;
+  if(months.count() > 0) {
+    if(!result.empty())
+      result += ", ";
+    result += std::to_string(months.count()) +
+              (months.count() == 1 ? " month" : " months");
+    secs -= days(months.count() * 30);
+  }
+  auto d = duration_cast<days>(secs);
+  if(d.count() > 0) {
+    if(!result.empty())
+      result += ", ";
+    result += std::to_string(d.count()) + (d.count() == 1 ? " day" : " days");
+    secs -= d;
+  }
+  auto h = duration_cast<hours>(secs);
+  if(h.count() > 0) {
+    if(!result.empty())
+      result += ", ";
+    result += std::to_string(h.count()) + (h.count() == 1 ? " hour" : " hours");
+    secs -= h;
+  }
+  auto m = duration_cast<minutes>(secs);
+  if(m.count() > 0) {
+    if(!result.empty())
+      result += ", ";
+    result +=
+     std::to_string(m.count()) + (m.count() == 1 ? " minute" : " minutes");
+    secs -= m;
+  }
+  auto s = duration_cast<seconds>(secs);
+  if(s.count() > 0 || result.empty()) {
+    if(!result.empty())
+      result += ", ";
+    result +=
+     std::to_string(s.count()) + (s.count() == 1 ? " second" : " seconds");
+  }
+  return result;
+}
+
+auto format_datetime(std::time_t timestamp) -> std::string
+{
+  using namespace std::chrono;
+
+  const auto tm_ptr = std::localtime(&timestamp);
+  const auto& tm = *tm_ptr;
+
+  // Example: "2025-06-29 14:30:00"
+  auto formated_datetime = std::format(
+   "{:04}-{:02}-{:02}", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
+
+  if(tm.tm_hour != 0 || tm.tm_min != 0) {
+    formated_datetime += std::format(" {:02}:{:02}", tm.tm_hour, tm.tm_min);
+  }
+
+  return formated_datetime;
+}
+
 } // namespace pludux

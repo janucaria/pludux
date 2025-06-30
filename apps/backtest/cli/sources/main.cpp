@@ -75,20 +75,17 @@ auto main(int, const char**) -> int
 
   ostream << std::format("Risk per trade: {:.2f}\n", backtest.capital_risk());
   ostream << std::format("Total profit: {:.2f}\n", summary.total_profit());
-  auto total_duration_days = std::chrono::duration_cast<std::chrono::days>(
-                              std::chrono::seconds(summary.total_duration()))
-                              .count();
-  ostream << std::format("Total duration: {} days\n", total_duration_days);
+
+  const auto total_duration = pludux::format_duration(summary.total_duration());
+  ostream << std::format("Total duration: {}\n", total_duration);
   ostream << std::format("Total trades: {}\n", summary.total_trades());
 
   ostream << std::format("Average profit: {:.2f}\n", summary.average_win());
   ostream << std::format("Average loss: {:.2f}\n", -summary.average_loss());
 
-  auto average_duration_days =
-   std::chrono::duration_cast<std::chrono::days>(
-    std::chrono::seconds(summary.average_duration()))
-    .count();
-  ostream << std::format("Average duration: {} days\n", average_duration_days);
+  const auto average_duration =
+   pludux::format_duration(summary.average_duration());
+  ostream << std::format("Average duration: {}\n", average_duration);
 
   ostream << "\n\n";
   ostream << "OPEN TRADE\n";
@@ -96,12 +93,9 @@ auto main(int, const char**) -> int
   ostream << std::format("Unrealized profit: {:.2f}\n",
                          summary.unrealized_profit());
 
-  auto ongoing_trade_duration_days =
-   std::chrono::duration_cast<std::chrono::days>(
-    std::chrono::seconds(summary.ongoing_trade_duration()))
-    .count();
-  ostream << std::format("Ongoing duration: {} days\n",
-                         ongoing_trade_duration_days);
+  const auto ongoing_trade_duration =
+   pludux::format_duration(summary.ongoing_trade_duration());
+  ostream << std::format("Ongoing duration: {}\n", ongoing_trade_duration);
 
   ostream << "\n\n";
   ostream << "CLOSED TRADES\n";
@@ -151,8 +145,10 @@ auto main(int, const char**) -> int
     if(trade.is_summary_session()) {
       const auto entry_timestamp = trade.entry_timestamp();
       const auto exit_timestamp = trade.exit_timestamp();
-      std::cout << "Entry date: " << std::ctime(&entry_timestamp) // NOLINT
-                << "Exit date: " << std::ctime(&exit_timestamp)   // NOLINT
+      std::cout << "Entry date: " << pludux::format_datetime(entry_timestamp)
+                << "Exit date: "
+                << (trade.is_open() ? "N/A"
+                                    : pludux::format_datetime(exit_timestamp))
                 << "Position size: " << trade.position_size() << std::endl
                 << "Reason: " << static_cast<int>(trade.status()) << std::endl
                 << "Profit: " << trade.profit() << std::endl
