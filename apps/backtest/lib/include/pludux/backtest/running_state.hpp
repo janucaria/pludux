@@ -1,15 +1,13 @@
 #ifndef PLUDUX_PLUDUX_BACKTEST_RUNNING_STATE_HPP
 #define PLUDUX_PLUDUX_BACKTEST_RUNNING_STATE_HPP
 
-#include <pludux/asset_quote.hpp>
+#include <pludux/asset_snapshot.hpp>
 
 namespace pludux::backtest {
 
 class RunningState {
 public:
-  RunningState(AssetQuote asset_quote);
-
-  auto asset_quote() const noexcept -> const AssetQuote&;
+  RunningState(AssetSnapshot asset_snapshot);
 
   auto asset_index() const noexcept -> std::size_t;
 
@@ -36,7 +34,7 @@ public:
 private:
   std::size_t asset_index_;
   double capital_risk_;
-  AssetQuote asset_quote_;
+  AssetSnapshot asset_snapshot_;
 };
 
 } // namespace pludux::backtest

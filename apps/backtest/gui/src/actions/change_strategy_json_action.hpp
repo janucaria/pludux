@@ -18,8 +18,8 @@ protected:
   {
     const auto strategy_name =
      static_cast<const TImpl*>(this)->get_strategy_name();
-    auto parsed_strategy = parse_backtest_strategy_json(
-     strategy_name, json_stream, state.quote_access);
+    auto parsed_strategy =
+     parse_backtest_strategy_json(strategy_name, json_stream);
     auto strategy_ptr =
      std::make_shared<backtest::Strategy>(std::move(parsed_strategy));
 

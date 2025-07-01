@@ -2,20 +2,15 @@
 
 namespace pludux::backtest {
 
-RunningState::RunningState(AssetQuote asset_quote)
+RunningState::RunningState(AssetSnapshot asset_snapshot)
 : capital_risk_{0}
-, asset_quote_{std::move(asset_quote)}
+, asset_snapshot_{std::move(asset_snapshot)}
 {
-}
-
-auto RunningState::asset_quote() const noexcept -> const AssetQuote&
-{
-  return asset_quote_;
 }
 
 auto RunningState::asset_snapshot() const noexcept -> const AssetSnapshot&
 {
-  return asset_quote().asset_snapshot();
+  return asset_snapshot_;
 }
 
 auto RunningState::asset_index() const noexcept -> std::size_t
@@ -40,32 +35,32 @@ auto RunningState::price() const -> double
 
 auto RunningState::timestamp() const -> double
 {
-  return asset_quote_.time();
+  return asset_snapshot_.get_datetime();
 }
 
 auto RunningState::open() const -> double
 {
-  return asset_quote_.open();
+  return asset_snapshot_.get_open();
 }
 
 auto RunningState::high() const -> double
 {
-  return asset_quote_.high();
+  return asset_snapshot_.get_high();
 }
 
 auto RunningState::low() const -> double
 {
-  return asset_quote_.low();
+  return asset_snapshot_.get_low();
 }
 
 auto RunningState::close() const -> double
 {
-  return asset_quote_.close();
+  return asset_snapshot_.get_close();
 }
 
 auto RunningState::volume() const -> double
 {
-  return asset_quote_.volume();
+  return asset_snapshot_.get_volume();
 }
 
 } // namespace pludux::backtest

@@ -102,8 +102,8 @@ void Backtest::run()
   const auto current_index = std::min(current_index_, last_index);
 
   const auto asset_index = last_index - current_index;
-  const auto asset_quote = asset().get_quote(asset_index);
-  auto running_state = backtest::RunningState{asset_quote};
+  const auto asset_snapshot = AssetSnapshot(asset_index, asset_history);
+  auto running_state = backtest::RunningState{asset_snapshot};
   running_state.capital_risk(capital_risk());
 
   ++current_index_;
@@ -250,8 +250,7 @@ auto csv_daily_stock_data(std::istream& csv_stream)
 }
 
 auto parse_backtest_strategy_json(const std::string& strategy_name,
-                                  std::istream& json_strategy_stream,
-                                  const QuoteAccess& quote_access)
+                                  std::istream& json_strategy_stream)
  -> backtest::Strategy
 {
   auto config_parser = pludux::ConfigParser{};
@@ -280,9 +279,9 @@ auto parse_backtest_strategy_json(const std::string& strategy_name,
    config_parser.parse_filter(strategy_json.at("entrySignal"));
   const auto exit_filter =
    config_parser.parse_filter(strategy_json.at("exitSignal"));
-  const auto price_method = quote_access.close();
+  const auto price_method = screener::CloseMethod{};
 
-  auto reward_parser = risk_reward_config_parser(quote_access);
+  auto reward_parser = risk_reward_config_parser();
   const auto take_profit_config = strategy_json.at("takeProfit");
   const auto is_take_profit_disabled =
    take_profit_config.contains("disabled")
@@ -290,11 +289,11 @@ auto parse_backtest_strategy_json(const std::string& strategy_name,
     : false;
   const auto reward_method =
    reward_parser.parse_method(strategy_json.at("takeProfit"));
-  const auto trading_take_profit_method = quote_access.high();
+  const auto trading_take_profit_method = screener::HighMethod{};
   const auto take_profit = pludux::backtest::TakeProfit{
    reward_method, is_take_profit_disabled, trading_take_profit_method};
 
-  auto risk_parser = risk_reward_config_parser(quote_access);
+  auto risk_parser = risk_reward_config_parser();
   risk_parser.register_method_parser(
    "POSITION_SIZE",
    [&](ConfigParser::Parser config_parser,
@@ -331,15 +330,14 @@ auto parse_backtest_strategy_json(const std::string& strategy_name,
                                     take_profit};
 }
 
-auto risk_reward_config_parser(QuoteAccess quote_access) -> ConfigParser
+auto risk_reward_config_parser() -> ConfigParser
 {
   auto config_parser = ConfigParser{};
 
   config_parser.register_method_parser(
    "ATR",
-   [quote_access](
-    ConfigParser::Parser config_parser,
-    const nlohmann::json& parameters) -> screener::ScreenerMethod {
+   [](ConfigParser::Parser config_parser,
+      const nlohmann::json& parameters) -> screener::ScreenerMethod {
      const auto period = parameters.contains("period")
                           ? parameters.at("period").get<std::size_t>()
                           : 14;
@@ -347,9 +345,9 @@ auto risk_reward_config_parser(QuoteAccess quote_access) -> ConfigParser
                               ? parameters.at("multiplier").get<double>()
                               : 1;
 
-     const auto atr_method = screener::AtrMethod{quote_access.high(),
-                                                 quote_access.low(),
-                                                 quote_access.close(),
+     const auto atr_method = screener::AtrMethod{screener::HighMethod{},
+                                                 screener::LowMethod{},
+                                                 screener::CloseMethod{},
                                                  period,
                                                  multiplier};
      return atr_method;
@@ -357,10 +355,9 @@ auto risk_reward_config_parser(QuoteAccess quote_access) -> ConfigParser
 
   config_parser.register_method_parser(
    "PERCENTAGE",
-   [quote_access](
-    ConfigParser::Parser config_parser,
-    const nlohmann::json& parameters) -> screener::ScreenerMethod {
-     const auto total_method = quote_access.close();
+   [](ConfigParser::Parser config_parser,
+      const nlohmann::json& parameters) -> screener::ScreenerMethod {
+     const auto total_method = screener::CloseMethod{};
 
      const auto percent = parameters.at("percent").get<double>();
      const auto percent_method = screener::ValueMethod{percent};

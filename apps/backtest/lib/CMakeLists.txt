@@ -31,9 +31,6 @@ add_library(pludux::backtest-lib ALIAS ${PROJECT_NAME})
 
 target_sources(${PROJECT_NAME}
   PUBLIC
-    sources/quote_access.cpp
-    sources/asset_quote.cpp
-
     sources/backtest.cpp
 
     sources/backtest/trading_session.cpp

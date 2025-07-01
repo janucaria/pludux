@@ -18,7 +18,6 @@
 #include <pludux/backtest/trading_stop_loss.hpp>
 #include <pludux/backtest/trading_take_profit.hpp>
 #include <pludux/config_parser.hpp>
-#include <pludux/quote_access.hpp>
 #include <pludux/screener.hpp>
 
 namespace pludux {
@@ -70,14 +69,13 @@ private:
 auto get_env_var(std::string_view var_name) -> std::optional<std::string>;
 
 auto parse_backtest_strategy_json(const std::string& strategy_name,
-                                  std::istream& json_strategy_stream,
-                                  const QuoteAccess& quote_access)
+                                  std::istream& json_strategy_stream)
  -> backtest::Strategy;
 
 auto csv_daily_stock_data(std::istream& csv_stream)
  -> std::vector<std::pair<std::string, pludux::DataSeries<double>>>;
 
-auto risk_reward_config_parser(QuoteAccess QuoteAccess) -> ConfigParser;
+auto risk_reward_config_parser() -> ConfigParser;
 
 auto format_duration(std::size_t duration_in_seconds) -> std::string;
 

@@ -25,8 +25,6 @@ struct AppStateData {
   std::vector<std::shared_ptr<backtest::Strategy>> strategies{};
 
   std::vector<std::shared_ptr<backtest::Asset>> assets{};
-
-  QuoteAccess quote_access{};
 };
 
 } // namespace pludux::apps

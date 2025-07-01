@@ -285,73 +285,9 @@ void load(Archive& archive, pludux::AssetHistory& asset_history)
 /*--------------------------------------------------------------------------------------*/
 
 template<class Archive>
-void serialize(Archive& archive, pludux::QuoteAccess& quote_access)
-{
-  auto config_parser = pludux::ConfigParser{};
-  config_parser.register_default_parsers();
-
-  auto datetime_method = config_parser.serialize_method(quote_access.time());
-  auto open_method = config_parser.serialize_method(quote_access.open());
-  auto high_method = config_parser.serialize_method(quote_access.high());
-  auto low_method = config_parser.serialize_method(quote_access.low());
-  auto close_method = config_parser.serialize_method(quote_access.close());
-  auto volume_method = config_parser.serialize_method(quote_access.volume());
-
-  archive(make_nvp("datetime", datetime_method),
-          make_nvp("open", open_method),
-          make_nvp("high", high_method),
-          make_nvp("low", low_method),
-          make_nvp("close", close_method),
-          make_nvp("volume", volume_method));
-}
-
-template<>
-struct LoadAndConstruct<pludux::QuoteAccess> {
-  template<class Archive>
-  static void load_and_construct(Archive& archive,
-                                 construct<pludux::QuoteAccess>& constructor)
-  {
-    auto config_parser = pludux::ConfigParser{};
-    config_parser.register_default_parsers();
-
-    auto datetime_method_json = nlohmann::json{};
-    auto open_method_json = nlohmann::json{};
-    auto high_method_json = nlohmann::json{};
-    auto low_method_json = nlohmann::json{};
-    auto close_method_json = nlohmann::json{};
-    auto volume_method_json = nlohmann::json{};
-
-    archive(make_nvp("datetime", datetime_method_json),
-            make_nvp("open", open_method_json),
-            make_nvp("high", high_method_json),
-            make_nvp("low", low_method_json),
-            make_nvp("close", close_method_json),
-            make_nvp("volume", volume_method_json));
-
-    auto datetime_method = config_parser.parse_method(datetime_method_json);
-    auto open_method = config_parser.parse_method(open_method_json);
-    auto high_method = config_parser.parse_method(high_method_json);
-    auto low_method = config_parser.parse_method(low_method_json);
-    auto close_method = config_parser.parse_method(close_method_json);
-    auto volume_method = config_parser.parse_method(volume_method_json);
-
-    constructor(std::move(datetime_method),
-                std::move(open_method),
-                std::move(high_method),
-                std::move(low_method),
-                std::move(close_method),
-                std::move(volume_method));
-  }
-};
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
 void serialize(Archive& archive, const pludux::backtest::Asset& asset)
 {
-  archive(make_nvp("name", asset.name()),
-          make_nvp("history", asset.history()),
-          make_nvp("quoteAccess", asset.quote_access()));
+  archive(make_nvp("name", asset.name()), make_nvp("history", asset.history()));
 }
 
 template<>
@@ -363,13 +299,10 @@ struct LoadAndConstruct<pludux::backtest::Asset> {
   {
     auto name = std::string{};
     auto history = pludux::AssetHistory{};
-    auto quote_access = pludux::QuoteAccess{};
 
-    archive(make_nvp("name", name),
-            make_nvp("history", history),
-            make_nvp("quoteAccess", quote_access));
+    archive(make_nvp("name", name), make_nvp("history", history));
 
-    constructor(std::move(name), history, quote_access);
+    constructor(std::move(name), history);
   }
 };
 
@@ -415,7 +348,6 @@ void save(Archive& archive, const pludux::apps::AppStateData& app_state_data)
    make_nvp("selectedBacktestIndex", app_state_data.selected_backtest_index));
   archive(make_nvp("strategies", app_state_data.strategies));
   archive(make_nvp("assets", app_state_data.assets));
-  archive(make_nvp("quoteAccess", app_state_data.quote_access));
 
   auto backtest_ptrs = std::vector<std::unique_ptr<pludux::Backtest>>{};
   for(const auto& backtest : backtests) {
@@ -436,7 +368,6 @@ void load(Archive& archive, pludux::apps::AppStateData& app_state_data)
    make_nvp("selectedBacktestIndex", app_state_data.selected_backtest_index));
   archive(make_nvp("strategies", app_state_data.strategies));
   archive(make_nvp("assets", app_state_data.assets));
-  archive(make_nvp("quoteAccess", app_state_data.quote_access));
 
   auto backtest_ptrs = std::vector<std::unique_ptr<pludux::Backtest>>{};
   archive(make_nvp("backtests", backtest_ptrs));

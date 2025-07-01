@@ -28,7 +28,7 @@ void LoadAssetCsvFileAction::operator()(AppStateData& state) const
   auto asset_history = AssetHistory(quotes.begin(), quotes.end());
   const auto asset_name = get_asset_name();
   auto asset_ptr = std::make_shared<backtest::Asset>(
-   asset_name, std::move(asset_history), state.quote_access);
+   asset_name, std::move(asset_history));
 
   state.assets.emplace_back(std::move(asset_ptr));
 }

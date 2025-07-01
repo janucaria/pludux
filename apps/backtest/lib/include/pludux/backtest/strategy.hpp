@@ -7,7 +7,6 @@
 #include <pludux/backtest/stop_loss.hpp>
 #include <pludux/backtest/take_profit.hpp>
 #include <pludux/backtest/trade_record.hpp>
-#include <pludux/quote_access.hpp>
 #include <pludux/screener.hpp>
 
 namespace pludux::backtest {

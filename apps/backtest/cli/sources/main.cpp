@@ -7,7 +7,6 @@
 #include <unordered_map>
 
 #include <pludux/asset_history.hpp>
-#include <pludux/asset_quote.hpp>
 #include <pludux/screener.hpp>
 
 #include <nlohmann/json.hpp>
@@ -24,23 +23,9 @@ auto main(int, const char**) -> int
   const auto asset_file =
    pludux::get_env_var("PLUDUX_BACKTEST_CSV_DATA_PATH").value_or("");
 
-  auto date_method = pludux::screener::DataMethod{"Date"};
-  auto open_method = pludux::screener::DataMethod{"Open"};
-  auto high_method = pludux::screener::DataMethod{"High"};
-  auto low_method = pludux::screener::DataMethod{"Low"};
-  auto close_method = pludux::screener::DataMethod{"Close"};
-  auto volume_method = pludux::screener::DataMethod{"Volume"};
-
-  const auto quote_access = pludux::QuoteAccess{std::move(date_method),
-                                                std::move(open_method),
-                                                std::move(high_method),
-                                                std::move(low_method),
-                                                std::move(close_method),
-                                                std::move(volume_method)};
-
   auto json_strategy_file = std::ifstream{json_strategy_path};
-  auto strategy = pludux::parse_backtest_strategy_json(
-   "Strategy", json_strategy_file, quote_access);
+  auto strategy =
+   pludux::parse_backtest_strategy_json("Strategy", json_strategy_file);
   auto strategy_ptr = std::make_shared<pludux::backtest::Strategy>(strategy);
 
   auto csv_stream = std::ifstream{asset_file};
@@ -54,7 +39,7 @@ auto main(int, const char**) -> int
 
   auto asset_history = pludux::AssetHistory(quotes.begin(), quotes.end());
   auto asset_ptr = std::make_shared<pludux::backtest::Asset>(
-   asset_file, std::move(asset_history), quote_access);
+   asset_file, std::move(asset_history));
 
   auto backtest = pludux::Backtest{"no name", strategy_ptr, asset_ptr};
   while(backtest.should_run()) {
