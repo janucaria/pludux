@@ -13,6 +13,7 @@
 #include "screener/hidden_bullish_divergence_method.hpp"
 #include "screener/kc_method.hpp"
 #include "screener/macd_method.hpp"
+#include "screener/ohlcv_method.hpp"
 #include "screener/stoch_method.hpp"
 #include "screener/stoch_rsi_method.hpp"
 #include "screener/ta_with_period_method.hpp"

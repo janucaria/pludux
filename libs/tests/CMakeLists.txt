@@ -17,6 +17,7 @@ set(PLUDUX_TEST_SOURCES
   src/test_boolean_filters.cpp
   src/test_data_method.cpp
   src/test_ema_method.cpp
+  src/test_ohlcv_method.cpp
   src/test_hma_method.cpp
   src/test_kc_method.cpp
   src/test_macd_method.cpp
