@@ -30,7 +30,7 @@ auto Asset::quote_access() const noexcept -> const QuoteAccess&
 
 auto Asset::get_quote(std::size_t asset_index) const noexcept -> AssetQuote
 {
-  return AssetQuote{asset_history_[asset_index], quote_access_};
+  return AssetQuote{AssetSnapshot{asset_index, asset_history_}, quote_access_};
 }
 
 } // namespace pludux::backtest

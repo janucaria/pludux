@@ -4,29 +4,65 @@
 #include <cstddef>
 #include <ctime>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
+#include "asset_history.hpp"
 #include "series.hpp"
 
 namespace pludux {
 
 class AssetSnapshot {
 public:
-  using HistoryData = std::unordered_map<std::string, PolySeries<double>>;
+  AssetSnapshot(const AssetHistory& asset_history);
 
-  AssetSnapshot(std::size_t offset, const HistoryData& history_data);
+  AssetSnapshot(std::size_t offset, const AssetHistory& asset_history);
 
-  auto operator[](std::string key) const -> SubSeries<RefSeries<const PolySeries<double>>>;
+  auto operator[](std::string_view key) const -> double;
+
+  auto operator[](std::size_t index) const -> AssetSnapshot;
 
   auto offset() const noexcept -> std::size_t;
 
   auto size() const noexcept -> std::size_t;
 
-  auto contains(const std::string& key) const noexcept -> bool;
+  auto contains(std::string_view key) const noexcept -> bool;
+
+  auto get_values(std::string_view key) const
+   -> SubSeries<RefSeries<const PolySeries<double>>>;
+
+  auto get_datetime_values() const
+   -> SubSeries<RefSeries<const PolySeries<double>>>;
+
+  auto get_open_values() const
+   -> SubSeries<RefSeries<const PolySeries<double>>>;
+
+  auto get_high_values() const
+   -> SubSeries<RefSeries<const PolySeries<double>>>;
+
+  auto get_low_values() const -> SubSeries<RefSeries<const PolySeries<double>>>;
+
+  auto get_close_values() const
+   -> SubSeries<RefSeries<const PolySeries<double>>>;
+
+  auto get_volume_values() const
+   -> SubSeries<RefSeries<const PolySeries<double>>>;
+
+  auto get_datetime() const -> double;
+
+  auto get_open() const -> double;
+
+  auto get_high() const -> double;
+
+  auto get_low() const -> double;
+
+  auto get_close() const -> double;
+
+  auto get_volume() const -> double;
 
 private:
   std::size_t offset_;
-  const HistoryData& history_data_;
+  const AssetHistory& asset_history_;
 };
 
 } // namespace pludux

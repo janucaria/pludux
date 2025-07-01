@@ -143,7 +143,7 @@ void PlotDataWindow::TickerTooltip(const AssetHistory& asset_history,
 
     const auto idx = static_cast<int>(mouse.x);
     if(ImPlot::IsPlotHovered() && idx > -1 && idx < asset_history.size()) {
-      const auto& snapshot = asset_history[idx];
+      const auto snapshot = AssetSnapshot(idx, asset_history);
       const auto& quote = AssetQuote{snapshot, quote_access};
 
       ImGui::BeginTooltip();
@@ -200,7 +200,7 @@ void PlotDataWindow::PlotOHLC(const char* label_id,
 
     if(ImPlot::FitThisFrame()) {
       for(int i = 0; i < asset_history.size(); ++i) {
-        const auto& snapshot = asset_history[i];
+        const auto snapshot = AssetSnapshot(i, asset_history);
         const auto& quote = AssetQuote{snapshot, quote_access};
 
         ImPlot::FitPoint(ImPlotPoint(i, quote.low()));
@@ -209,7 +209,7 @@ void PlotDataWindow::PlotOHLC(const char* label_id,
     }
 
     for(int i = 0, ii = asset_history.size(); i < ii; ++i) {
-      const auto& snapshot = asset_history[i];
+      const auto snapshot = AssetSnapshot(i, asset_history);
       const auto& quote = AssetQuote{snapshot, quote_access};
 
       const auto open = quote.open();
@@ -262,7 +262,7 @@ void PlotDataWindow::PlotVolume(const char* label_id,
     // fit data if requested
     if(ImPlot::FitThisFrame()) {
       for(int i = 0; i < asset_history.size(); ++i) {
-        const auto& snapshot = asset_history[i];
+        const auto snapshot = AssetSnapshot(i, asset_history);
         const auto& quote = AssetQuote{snapshot, quote_access};
 
         ImPlot::FitPoint(ImPlotPoint(i, 0));
@@ -271,7 +271,7 @@ void PlotDataWindow::PlotVolume(const char* label_id,
     }
     // render data
     for(int i = 0, ii = asset_history.size(); i < ii; ++i) {
-      const auto& snapshot = asset_history[i];
+      const auto snapshot = AssetSnapshot(i, asset_history);
       const auto& quote = AssetQuote{snapshot, quote_access};
 
       const auto open = quote.open();

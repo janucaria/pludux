@@ -16,6 +16,10 @@ public:
   using ValueType = T;
 
   template<typename USeries>
+    requires requires(USeries impl) {
+      { impl.size() } -> std::convertible_to<std::size_t>;
+      { impl[std::declval<std::size_t>()] } -> std::convertible_to<ValueType>;
+    }
   PolySeries(USeries impl)
   : impl_{std::make_shared<ImplModel<USeries>>(std::move(impl))}
   {

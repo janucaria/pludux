@@ -240,6 +240,12 @@ void save(Archive& archive, const pludux::AssetHistory& asset_history)
   }
 
   archive(make_nvp("historyData", history_data_map));
+  archive(make_nvp("datetimeKey", asset_history.datetime_key()));
+  archive(make_nvp("openKey", asset_history.open_key()));
+  archive(make_nvp("highKey", asset_history.high_key()));
+  archive(make_nvp("lowKey", asset_history.low_key()));
+  archive(make_nvp("closeKey", asset_history.close_key()));
+  archive(make_nvp("volumeKey", asset_history.volume_key()));
 }
 
 template<class Archive>
@@ -254,6 +260,26 @@ void load(Archive& archive, pludux::AssetHistory& asset_history)
   for(auto& [key, series] : history_data_map) {
     asset_history.insert(key, std::move(*series));
   }
+
+  auto datetime_key = std::string{};
+  auto open_key = std::string{};
+  auto high_key = std::string{};
+  auto low_key = std::string{};
+  auto close_key = std::string{};
+  auto volume_key = std::string{};
+  archive(make_nvp("datetimeKey", datetime_key),
+          make_nvp("openKey", open_key),
+          make_nvp("highKey", high_key),
+          make_nvp("lowKey", low_key),
+          make_nvp("closeKey", close_key),
+          make_nvp("volumeKey", volume_key));
+
+  asset_history.datetime_key(std::move(datetime_key));
+  asset_history.open_key(std::move(open_key));
+  asset_history.high_key(std::move(high_key));
+  asset_history.low_key(std::move(low_key));
+  asset_history.close_key(std::move(close_key));
+  asset_history.volume_key(std::move(volume_key));
 }
 
 /*--------------------------------------------------------------------------------------*/
