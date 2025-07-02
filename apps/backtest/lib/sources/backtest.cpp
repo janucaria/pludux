@@ -264,16 +264,6 @@ auto parse_backtest_strategy_json(const std::string& strategy_name,
     }
   }
 
-  auto named_methods = config_parser.get_named_methods();
-  const std::vector<std::string>& required_methods = {
-   "time", "open", "high", "low", "close", "volume"};
-  for(const auto& required_method : required_methods) {
-    if(!named_methods.contains(required_method)) {
-      throw std::runtime_error{
-       std::format("Missing required method: {}", required_method)};
-    }
-  }
-
   const auto capital_risk = strategy_json["capitalRisk"].get<double>();
   const auto entry_filter =
    config_parser.parse_filter(strategy_json.at("entrySignal"));
