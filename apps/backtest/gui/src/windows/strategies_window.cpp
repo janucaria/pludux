@@ -46,7 +46,8 @@ void StrategiesWindow::render(AppState& app_state)
             if(backtest.strategy_ptr()->name() == strategy_ptr->name()) {
               backtests.erase(std::next(backtests.begin(), j));
 
-              if(state.selected_backtest_index > j || j == backtests.size()) {
+              if(state.selected_backtest_index > j ||
+                 state.selected_backtest_index >= backtests.size()) {
                 --state.selected_backtest_index;
               }
 

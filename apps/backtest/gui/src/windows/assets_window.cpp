@@ -46,7 +46,8 @@ void AssetsWindow::render(AppState& app_state)
             if(backtest.asset_ptr()->name() == asset_ptr->name()) {
               backtests.erase(std::next(backtests.begin(), j));
 
-              if(state.selected_backtest_index > j || j == backtests.size()) {
+              if(state.selected_backtest_index > i ||
+                 state.selected_backtest_index >= backtests.size()) {
                 --state.selected_backtest_index;
               }
 
