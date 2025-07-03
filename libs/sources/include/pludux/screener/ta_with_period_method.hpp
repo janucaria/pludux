@@ -5,6 +5,7 @@
 #include <utility>
 
 #include <pludux/asset_snapshot.hpp>
+#include <pludux/screener/ohlcv_method.hpp>
 #include <pludux/screener/screener_method.hpp>
 #include <pludux/series.hpp>
 #include <pludux/ta.hpp>
@@ -13,9 +14,14 @@ namespace pludux::screener {
 
 namespace details {
 
-template<typename, typename T>
+template<typename, typename T, std::size_t default_period = 20>
 class TaWithPeroidMethod {
 public:
+  TaWithPeroidMethod()
+  : TaWithPeroidMethod{default_period, CloseMethod{}, 0}
+  {
+  }
+
   TaWithPeroidMethod(int period, ScreenerMethod input, int offset)
   : period_(period)
   , offset_(offset)
@@ -23,8 +29,8 @@ public:
   {
   }
 
-  auto
-  operator()(AssetSnapshot asset_data) const -> SubSeries<PolySeries<double>>
+  auto operator()(AssetSnapshot asset_data) const
+   -> SubSeries<PolySeries<double>>
   {
     const auto sources = input_(asset_data);
     const auto series = T{}(sources, period_);
@@ -32,11 +38,17 @@ public:
                      static_cast<std::ptrdiff_t>(offset_)};
   }
 
-  auto operator==(const TaWithPeroidMethod& other) const noexcept -> bool = default;
+  auto operator==(const TaWithPeroidMethod& other) const noexcept
+   -> bool = default;
 
   auto period() const noexcept -> std::size_t
   {
     return period_;
+  }
+
+  void period(std::size_t period) noexcept
+  {
+    period_ = period;
   }
 
   auto offset() const noexcept -> std::size_t
@@ -44,9 +56,19 @@ public:
     return offset_;
   }
 
+  void offset(std::size_t offset) noexcept
+  {
+    offset_ = offset;
+  }
+
   auto input() const noexcept -> const ScreenerMethod&
   {
     return input_;
+  }
+
+  void input(ScreenerMethod input) noexcept
+  {
+    input_ = std::move(input);
   }
 
 private:
@@ -138,11 +160,14 @@ class HmaMethod
 };
 
 class RsiMethod
-: public details::
-   TaWithPeroidMethod<RsiMethod, std::decay_t<decltype(details::rsi_wrapper)>> {
+: public details::TaWithPeroidMethod<
+   RsiMethod,
+   std::decay_t<decltype(details::rsi_wrapper)>,
+   14> {
   using details::TaWithPeroidMethod<
    RsiMethod,
-   std::decay_t<decltype(details::rsi_wrapper)>>::TaWithPeroidMethod;
+   std::decay_t<decltype(details::rsi_wrapper)>,
+   14>::TaWithPeroidMethod;
 };
 
 class RocMethod

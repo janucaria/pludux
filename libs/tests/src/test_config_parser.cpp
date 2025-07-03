@@ -844,7 +844,7 @@ TEST_F(ConfigParserTest, ParseScreenerChangesMethod)
   const auto config = json::parse(R"(
     {
       "method": "CHANGES",
-      "operand": {
+      "input": {
         "method": "DATA",
         "field": "close",
         "offset": 0
@@ -858,11 +858,10 @@ TEST_F(ConfigParserTest, ParseScreenerChangesMethod)
   ASSERT_NE(changes_method, nullptr);
   EXPECT_EQ(changes_method->offset(), 0);
 
-  const auto operand =
-   screener_method_cast<DataMethod>(changes_method->operand());
-  ASSERT_NE(operand, nullptr);
-  EXPECT_EQ(operand->field(), "close");
-  EXPECT_EQ(operand->offset(), 0);
+  const auto input = screener_method_cast<DataMethod>(changes_method->input());
+  ASSERT_NE(input, nullptr);
+  EXPECT_EQ(input->field(), "close");
+  EXPECT_EQ(input->offset(), 0);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
