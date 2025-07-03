@@ -90,6 +90,19 @@ EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_change_strategy_json_str(
   app_state.emplace_action<ChangeStrategyJsonStrAction>(std::move(name_str),
                                                         std::move(data_str));
 }
+
+EMSCRIPTEN_KEEPALIVE void
+pludux_apps_backtest_load_backtests_setup(char* data, void* app_state_ptr)
+{
+  using pludux::apps::AppState;
+  using pludux::apps::LoadBacktestsSetupStingAction;
+
+  auto data_str = std::string(data);
+  std::free(data);
+
+  auto app_state = *reinterpret_cast<AppState*>(app_state_ptr);
+  app_state.emplace_action<LoadBacktestsSetupStingAction>(std::move(data_str));
+}
 }
 
 #endif

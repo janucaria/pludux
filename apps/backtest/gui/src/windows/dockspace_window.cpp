@@ -394,6 +394,92 @@ void DockspaceWindow::render(AppState& app_state)
 
 #endif
       }
+
+      constexpr auto menu_item_setup_backtest = "Load Backtests Setup (CSV)";
+      if(ImGui::MenuItem(menu_item_setup_backtest)) {
+#ifdef __EMSCRIPTEN__
+
+        EM_ASM(
+         {
+           var fileSelector = document.createElement('input');
+           fileSelector.type = 'file';
+           fileSelector.multiple = false;
+           fileSelector.onchange = function(event)
+           {
+             for(var i = 0; i < event.target.files.length; i++) {
+               var file = event.target.files[i];
+
+               var reader = new FileReader();
+               reader.onload = function(event)
+               {
+                 var reader = event.target;
+                 var fileName = reader.onload.prototype.fileName;
+                 var data = reader.result;
+                 var decoder = new TextDecoder('utf-8');
+                 var decodedData = decoder.decode(data);
+
+                 // transfer the data to the C++ side
+                 var data_ptr = Module.stringToNewUTF8(decodedData);
+
+                 // call the C++ function
+                 Module._pludux_apps_backtest_load_backtests_setup(data_ptr, $0);
+               };
+               reader.onload.prototype.fileName = file.name;
+
+               reader.readAsArrayBuffer(file);
+             }
+           };
+           fileSelector.accept = '.txt,.csv';
+           fileSelector.click();
+         },
+         &app_state);
+
+#else
+        auto nfd_guard = NFD::Guard{};
+        auto out_paths = NFD::UniquePathSet{};
+
+        constexpr auto filter_item =
+         std::array{nfdfilteritem_t{"Text Files", "txt"},
+                    nfdfilteritem_t{"CSV Files", "csv"}};
+
+        auto result = NFD::OpenDialogMultiple(
+         out_paths, filter_item.data(), filter_item.size());
+
+        if(result == NFD_OKAY) {
+          auto paths_count = nfdpathsetsize_t{};
+
+          result = NFD::PathSet::Count(out_paths, paths_count);
+          if(result == NFD_ERROR) {
+            const auto error_message = std::format(
+             "Error '{}': {}", menu_item_setup_backtest, NFD::GetError());
+            throw std::runtime_error(error_message);
+          }
+
+          for(nfdpathsetsize_t i = 0; i < paths_count; ++i) {
+            auto out_path = NFD::UniquePathSetPath{};
+            result = NFD::PathSet::GetPath(out_paths, i, out_path);
+
+            if(result == NFD_ERROR) {
+              const auto error_message = std::format(
+               "Error '{}': {}", menu_item_setup_backtest, NFD::GetError());
+              throw std::runtime_error(error_message);
+            }
+
+            const auto selected_path = std::string(out_path.get());
+            app_state.emplace_action<LoadBacktestsSetupFileAction>(
+             selected_path);
+          }
+
+        } else if(result == NFD_CANCEL) {
+        } else {
+          const auto error_message = std::format(
+           "Error '{}': {}", menu_item_setup_backtest, NFD::GetError());
+          throw std::runtime_error(error_message);
+        }
+
+#endif
+      }
+
       ImGui::EndMenu();
     }
 

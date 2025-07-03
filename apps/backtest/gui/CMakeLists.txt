@@ -120,6 +120,8 @@ add_executable(${PROJECT_NAME}
   src/actions/change_strategy_json_str_action.cpp
   src/actions/load_asset_csv_file_action.cpp
   src/actions/load_asset_csv_str_action.cpp
+  src/actions/load_backtests_setup_file_action.cpp
+  src/actions/load_backtests_setup_string_action.cpp
 
   src/application.cpp
   src/app_state.cpp
