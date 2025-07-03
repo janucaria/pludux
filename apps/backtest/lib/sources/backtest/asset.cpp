@@ -21,4 +21,14 @@ auto Asset::history() const noexcept -> const AssetHistory&
   return asset_history_;
 }
 
+auto Asset::get_snapshot(std::size_t index) const noexcept -> AssetSnapshot
+{
+  return AssetSnapshot{index, asset_history_};
+}
+
+auto Asset::size() const noexcept -> std::size_t
+{
+  return asset_history_.size();
+}
+
 } // namespace pludux::backtest

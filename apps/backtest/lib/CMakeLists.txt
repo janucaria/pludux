@@ -33,7 +33,6 @@ target_sources(${PROJECT_NAME}
   PUBLIC
     sources/backtest.cpp
 
-    sources/backtest/trading_session.cpp
     sources/backtest/trading_stop_loss.cpp
     sources/backtest/trading_take_profit.cpp
 
@@ -43,7 +42,6 @@ target_sources(${PROJECT_NAME}
     sources/backtest/take_profit.cpp
 
     sources/backtest/backtesting_summary.cpp
-    sources/backtest/running_state.cpp
     sources/backtest/asset.cpp
     sources/backtest/strategy.cpp
 )

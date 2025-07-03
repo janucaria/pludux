@@ -1,3 +1,4 @@
+#include <limits>
 #include <numeric>
 
 #include <pludux/backtest/trading_stop_loss.hpp>
@@ -32,23 +33,23 @@ auto TradingStopLoss::exit_price() const noexcept -> double
   return !is_disabled_ ? stop_price_ : std::numeric_limits<double>::quiet_NaN();
 }
 
-auto TradingStopLoss::operator()(const RunningState& running_state) -> bool
+auto TradingStopLoss::operator()(const AssetSnapshot& asset_snapshot) -> bool
 {
   const auto stop_price = exit_price();
-  const auto signal_price = running_state.low();
+  const auto signal_price = asset_snapshot.get_low();
   const auto stop = signal_price <= stop_price;
 
   if(stop || !is_trailing_) {
     return stop;
   }
 
-  const auto high = running_state.high();
+  const auto high = asset_snapshot.get_high();
   const auto new_stop_price = high - risk_;
   if(new_stop_price > stop_price_) {
     stop_price_ = new_stop_price;
   }
 
-  return running_state.price() <= stop_price_;
+  return asset_snapshot.get_close() <= stop_price_;
 }
 
 } // namespace pludux::backtest

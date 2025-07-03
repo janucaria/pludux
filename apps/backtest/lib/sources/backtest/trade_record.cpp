@@ -1,6 +1,25 @@
+#include <cstddef>
+#include <ctime>
+#include <limits>
+
 #include <pludux/backtest/trade_record.hpp>
 
 namespace pludux::backtest {
+
+TradeRecord::TradeRecord()
+: TradeRecord{Status::flat,
+              std::numeric_limits<double>::quiet_NaN(),
+              {},
+              {},
+              {},
+              {},
+              std::numeric_limits<double>::quiet_NaN(),
+              std::numeric_limits<double>::quiet_NaN(),
+              std::numeric_limits<double>::quiet_NaN(),
+              std::numeric_limits<double>::quiet_NaN(),
+              std::numeric_limits<double>::quiet_NaN()}
+{
+}
 
 TradeRecord::TradeRecord(Status status,
                          double order_size,

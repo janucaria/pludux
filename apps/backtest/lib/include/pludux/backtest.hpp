@@ -14,7 +14,6 @@
 #include <pludux/backtest/strategy.hpp>
 #include <pludux/backtest/take_profit.hpp>
 #include <pludux/backtest/trade_record.hpp>
-#include <pludux/backtest/trading_session.hpp>
 #include <pludux/backtest/trading_stop_loss.hpp>
 #include <pludux/backtest/trading_take_profit.hpp>
 #include <pludux/config_parser.hpp>
@@ -27,6 +26,11 @@ public:
   Backtest(std::string name,
            std::shared_ptr<backtest::Strategy> strategy_ptr,
            std::shared_ptr<backtest::Asset> asset_ptr);
+
+  Backtest(std::string name,
+           std::shared_ptr<backtest::Strategy> strategy_ptr,
+           std::shared_ptr<backtest::Asset> asset_ptr,
+           std::vector<backtest::TradeRecord> trade_records);
 
   auto name() const noexcept -> const std::string&;
 
@@ -61,8 +65,6 @@ private:
   std::shared_ptr<backtest::Asset> asset_ptr_;
 
   bool is_failed_;
-  std::optional<backtest::TradingSession> trading_session_;
-  std::size_t current_index_;
   std::vector<backtest::TradeRecord> trade_records_;
 };
 

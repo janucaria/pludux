@@ -16,6 +16,8 @@ public:
     closed_stop_loss
   };
 
+  TradeRecord();
+
   TradeRecord(Status status,
               double order_size,
               std::size_t entry_index,

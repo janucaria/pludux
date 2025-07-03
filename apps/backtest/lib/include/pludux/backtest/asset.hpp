@@ -4,6 +4,7 @@
 #include <string>
 
 #include <pludux/asset_history.hpp>
+#include <pludux/asset_snapshot.hpp>
 
 namespace pludux::backtest {
 
@@ -14,6 +15,10 @@ public:
   auto name() const noexcept -> const std::string&;
 
   auto history() const noexcept -> const AssetHistory&;
+
+  auto get_snapshot(std::size_t index = 0) const noexcept -> AssetSnapshot;
+
+  auto size() const noexcept -> std::size_t;
 
 private:
   std::string name_;

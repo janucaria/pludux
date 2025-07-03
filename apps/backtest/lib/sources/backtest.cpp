@@ -15,20 +15,27 @@
 #include <pludux/backtest.hpp>
 #include <pludux/config_parser.hpp>
 
-#include <pludux/backtest/running_state.hpp>
-
 namespace pludux {
 
 Backtest::Backtest(std::string name,
                    std::shared_ptr<backtest::Strategy> strategy_ptr,
                    std::shared_ptr<backtest::Asset> asset_ptr)
+: Backtest{std::move(name),
+           std::move(strategy_ptr),
+           std::move(asset_ptr),
+           std::vector<backtest::TradeRecord>{}}
+{
+}
+
+Backtest::Backtest(std::string name,
+                   std::shared_ptr<backtest::Strategy> strategy_ptr,
+                   std::shared_ptr<backtest::Asset> asset_ptr,
+                   std::vector<backtest::TradeRecord> trade_records)
 : name_{std::move(name)}
 , strategy_ptr_{strategy_ptr}
 , asset_ptr_{asset_ptr}
 , is_failed_{false}
-, trading_session_{std::nullopt}
-, current_index_{0}
-, trade_records_{}
+, trade_records_{std::move(trade_records)}
 {
 }
 
@@ -82,80 +89,138 @@ auto Backtest::trade_records() const noexcept
 
 void Backtest::reset()
 {
-  trading_session_.reset();
-  current_index_ = 0;
+  is_failed_ = false;
   trade_records_.clear();
 }
 
 auto Backtest::should_run() const noexcept -> bool
 {
-  const auto& asset_history = asset().history();
-  const auto asset_size = asset_history.size();
-  return current_index_ < asset_size && !is_failed();
+  const auto trade_records_size = trade_records_.size();
+  const auto asset_size = asset().size();
+
+  return trade_records_size < asset_size && !is_failed();
 }
 
 void Backtest::run()
 {
-  const auto& asset_history = asset().history();
-  const auto asset_size = asset_history.size();
-  const auto last_index = asset_size - 1;
-  const auto current_index = std::min(current_index_, last_index);
+  using backtest::TradeRecord;
 
-  const auto asset_index = last_index - current_index;
-  const auto asset_snapshot = AssetSnapshot(asset_index, asset_history);
-  auto running_state = backtest::RunningState{asset_snapshot};
-  running_state.capital_risk(capital_risk());
-
-  ++current_index_;
-
-  if(!trading_session_.has_value() &&
-     strategy().entry_filter()(running_state.asset_snapshot())) {
-    const auto& take_profit = strategy().take_profit();
-    const auto& stop_loss = strategy().stop_loss();
-    const auto trading_take_profit = take_profit(running_state);
-    const auto trading_stop_loss = stop_loss(running_state);
-    const auto order_size = stop_loss.get_order_size(running_state);
-
-    if(!std::isnan(order_size)) {
-      const auto entry_index = running_state.asset_index();
-      const auto entry_price = running_state.price();
-      const auto entry_timestamp =
-       static_cast<std::time_t>(running_state.timestamp());
-      const auto exit_filter = strategy().exit_filter();
-      trading_session_.emplace(order_size,
-                               entry_index,
-                               entry_price,
-                               entry_timestamp,
-                               exit_filter,
-                               trading_take_profit,
-                               trading_stop_loss);
-    }
+  if(!should_run()) {
+    return;
   }
 
-  if(trading_session_) {
-    const auto asset_index = running_state.asset_index();
-    auto trade_record = trading_session_->get_trading_state(running_state);
+  const auto trade_records_size = trade_records_.size();
+  const auto asset_size = asset().size();
+  const auto last_index = asset_size - 1;
+  const auto asset_index =
+   last_index - std::min(trade_records_size, last_index);
+  const auto asset_snapshot = asset().get_snapshot(asset_index);
+  const auto& strategy = *strategy_ptr();
 
-    trade_records_.emplace_back(trade_record);
+  const auto& take_profit = strategy.take_profit();
+  const auto& stop_loss = strategy.stop_loss();
+  const auto exit_timestamp =
+   static_cast<std::time_t>(asset_snapshot.get_datetime());
 
-    if(trade_record.is_closed() || asset_index == 0) {
-      trading_session_.reset();
+  auto trade_status = TradeRecord::Status::flat;
+  auto order_size = std::numeric_limits<double>::quiet_NaN();
+  auto entry_index = std::size_t{};
+  auto entry_timestamp = std::time_t{};
+  auto entry_price = std::numeric_limits<double>::quiet_NaN();
+  auto exit_price = asset_snapshot.get_close();
+  auto initial_stop_loss_price = std::numeric_limits<double>::quiet_NaN();
+  auto trailing_stop_price = std::numeric_limits<double>::quiet_NaN();
+  auto take_profit_price = std::numeric_limits<double>::quiet_NaN();
+
+  if(trade_records_.empty() || !trade_records_.back().is_open()) {
+    const auto& entry_filter = strategy.entry_filter();
+    if(entry_filter(asset_snapshot)) {
+      const auto risk_size = stop_loss.get_risk_size(asset_snapshot);
+      const auto entry_order_size = strategy.capital_risk() / risk_size;
+
+      if(!std::isnan(entry_order_size)) {
+        auto trading_take_profit = take_profit(asset_snapshot);
+        auto trading_stop_loss = stop_loss(asset_snapshot);
+
+        trade_status = TradeRecord::Status::open;
+        order_size = entry_order_size;
+        entry_index = asset_index;
+        entry_price = exit_price;
+        entry_timestamp = exit_timestamp;
+        initial_stop_loss_price = trading_stop_loss.initial_exit_price();
+        trailing_stop_price = trading_stop_loss.is_trailing()
+                               ? trading_stop_loss.exit_price()
+                               : std::numeric_limits<double>::quiet_NaN();
+        take_profit_price = trading_take_profit.exit_price();
+      }
     }
   } else {
-    auto trade_record =
-     backtest::TradeRecord{backtest::TradeRecord::Status::flat,
-                           std::numeric_limits<double>::quiet_NaN(),
-                           running_state.asset_index(),
-                           running_state.asset_index(),
-                           static_cast<std::time_t>(running_state.timestamp()),
-                           static_cast<std::time_t>(running_state.timestamp()),
-                           running_state.price(),
-                           running_state.price(),
-                           std::numeric_limits<double>::quiet_NaN(),
-                           std::numeric_limits<double>::quiet_NaN(),
-                           std::numeric_limits<double>::quiet_NaN()};
-    trade_records_.emplace_back(trade_record);
+    const auto& last_trade_record = trade_records_.back();
+
+    entry_index = last_trade_record.entry_index();
+    entry_price = last_trade_record.entry_price();
+    entry_timestamp = last_trade_record.entry_timestamp();
+    order_size = last_trade_record.order_size();
+
+    const auto& entry_snapshot = asset().get_snapshot(entry_index);
+    auto trading_take_profit = take_profit(entry_snapshot);
+    auto trading_stop_loss = stop_loss(entry_snapshot);
+
+    const auto exit_filter = strategy.exit_filter();
+    trade_status = [&]() {
+      if(asset_index == entry_index) {
+        return TradeRecord::Status::open;
+      }
+
+      if(trading_stop_loss(asset_snapshot)) {
+        return TradeRecord::Status::closed_stop_loss;
+      }
+
+      if(trading_take_profit(asset_snapshot)) {
+        return TradeRecord::Status::closed_take_profit;
+      }
+
+      if(exit_filter(asset_snapshot)) {
+        return TradeRecord::Status::closed_exit_signal;
+      }
+
+      return TradeRecord::Status::open;
+    }();
+
+    const auto stop_loss_price = trading_stop_loss.exit_price();
+    take_profit_price = trading_take_profit.exit_price();
+
+    exit_price = [&]() -> double {
+      switch(trade_status) {
+      case TradeRecord::Status::closed_take_profit:
+        return take_profit_price;
+      case TradeRecord::Status::closed_stop_loss:
+        return stop_loss_price;
+      case TradeRecord::Status::closed_exit_signal:
+      case TradeRecord::Status::open:
+        return asset_snapshot.get_close();
+      default:
+        return 0;
+      }
+    }();
+
+    initial_stop_loss_price = trading_stop_loss.initial_exit_price();
+    trailing_stop_price = trading_stop_loss.is_trailing()
+                           ? stop_loss_price
+                           : std::numeric_limits<double>::quiet_NaN();
   }
+
+  trade_records_.emplace_back(trade_status,
+                              order_size,
+                              entry_index,
+                              asset_index,
+                              entry_timestamp,
+                              exit_timestamp,
+                              entry_price,
+                              exit_price,
+                              initial_stop_loss_price,
+                              trailing_stop_price,
+                              take_profit_price);
 }
 
 auto get_env_var(std::string_view var_name) -> std::optional<std::string>
