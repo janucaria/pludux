@@ -17,6 +17,16 @@ TradingStopLoss::TradingStopLoss(bool is_disabled,
 {
 }
 
+auto TradingStopLoss::stop_price() const noexcept -> double
+{
+  return stop_price_;
+}
+
+void TradingStopLoss::stop_price(double new_stop_price) noexcept
+{
+  stop_price_ = new_stop_price;
+}
+
 auto TradingStopLoss::is_trailing() const noexcept -> bool
 {
   return is_trailing_;
@@ -30,7 +40,7 @@ auto TradingStopLoss::initial_exit_price() const noexcept -> double
 
 auto TradingStopLoss::exit_price() const noexcept -> double
 {
-  return !is_disabled_ ? stop_price_ : std::numeric_limits<double>::quiet_NaN();
+  return !is_disabled_ ? stop_price() : std::numeric_limits<double>::quiet_NaN();
 }
 
 auto TradingStopLoss::operator()(const AssetSnapshot& asset_snapshot) -> bool

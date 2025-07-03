@@ -21,6 +21,10 @@ public:
 
   auto operator()(const AssetSnapshot& asset_snapshot) -> bool;
 
+  auto stop_price() const noexcept -> double;
+
+  void stop_price(double new_stop_price) noexcept;
+
 private:
   bool is_disabled_;
   bool is_trailing_;

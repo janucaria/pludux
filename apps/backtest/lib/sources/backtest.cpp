@@ -166,6 +166,10 @@ void Backtest::run()
     auto trading_take_profit = take_profit(entry_snapshot);
     auto trading_stop_loss = stop_loss(entry_snapshot);
 
+    if(trading_stop_loss.is_trailing()) {
+      trading_stop_loss.stop_price(last_trade_record.trailing_stop_price());
+    }
+
     const auto exit_filter = strategy.exit_filter();
     trade_status = [&]() {
       if(asset_index == entry_index) {
