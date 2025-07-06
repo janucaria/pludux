@@ -1,13 +1,15 @@
-#ifndef PLUDUX_APPS_BACKTEST_ACTIONS_LOAD_CSV_ASSET_ACTION_HPP
-#define PLUDUX_APPS_BACKTEST_ACTIONS_LOAD_CSV_ASSET_ACTION_HPP
+#ifndef PLUDUX_APPS_BACKTEST_ACTIONS_LOAD_ASSET_CSV_FILE_ACTION_HPP
+#define PLUDUX_APPS_BACKTEST_ACTIONS_LOAD_ASSET_CSV_FILE_ACTION_HPP
 
 #include <string>
 
 #include "../app_state_data.hpp"
+#include "./load_asset_csv_action.hpp"
 
 namespace pludux::apps {
 
-class LoadAssetCsvFileAction {
+class LoadAssetCsvFileAction
+: public LoadAssetCsvAction<LoadAssetCsvFileAction> {
 public:
   LoadAssetCsvFileAction(std::string path);
 

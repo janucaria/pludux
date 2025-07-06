@@ -23,47 +23,43 @@ static auto get_param_or(const nlohmann::json& parameters,
   return parameters.contains(key) ? parameters.at(key).get<T>() : default_value;
 }
 
-static auto get_param_or_named_method(ConfigParser::Parser& config_parser,
-                                      const nlohmann::json& parameters,
-                                      const std::string& key,
-                                      const std::string& named_method_key)
- -> std::optional<screener::ScreenerMethod>
+static auto
+parse_method_from_param_or(ConfigParser::Parser config_parser,
+                           const nlohmann::json& parameters,
+                           const std::string& key,
+                           const screener::ScreenerMethod& default_value)
+ -> screener::ScreenerMethod
 {
-  const auto is_param_exists = parameters.contains(key);
-
-  if(parameters.contains(key)) {
-    return config_parser.parse_method(parameters.at(key));
+  if(!parameters.contains(key)) {
+    return default_value;
   }
 
-  if(config_parser.contains_named_method(named_method_key)) {
-    return config_parser.parse_method(named_method_key);
-  }
-
-  return std::nullopt;
+  return config_parser.parse_method(parameters.at(key));
 }
 
-template<typename T>
+template<typename TMethod>
 static auto parse_ta_with_period_method(ConfigParser::Parser config_parser,
                                         const nlohmann::json& parameters)
  -> screener::ScreenerMethod
 {
-  const auto period = parameters.at("period").get<int>();
+  auto ta_method = TMethod{};
 
-  const auto offset =
-   parameters.contains("offset") ? parameters.at("offset").get<int>() : 0;
-
-  const auto input_method =
-   get_param_or_named_method(config_parser, parameters, "input", "close");
-
-  if(!input_method.has_value()) {
-    throw std::invalid_argument{"Target method is not found"};
+  if(parameters.contains("period")) {
+    ta_method.period(parameters.at("period").get<std::size_t>());
   }
 
-  const auto ta_method = T{period, input_method.value(), offset};
+  if(parameters.contains("input")) {
+    ta_method.input(config_parser.parse_method(parameters.at("input")));
+  }
+
+  if(parameters.contains("offset")) {
+    ta_method.offset(parameters.at("offset").get<std::size_t>());
+  }
+
   return ta_method;
 }
 
-template<typename T>
+template<typename TMethod>
 static auto
 serialize_ta_with_period_method(const ConfigParser& config_parser,
                                 const screener::ScreenerMethod& method)
@@ -71,7 +67,7 @@ serialize_ta_with_period_method(const ConfigParser& config_parser,
 {
   auto serialized_method = nlohmann::json{};
 
-  auto ta_method = screener_method_cast<T>(method);
+  auto ta_method = screener_method_cast<TMethod>(method);
 
   if(ta_method) {
     serialized_method["period"] = ta_method->period();
@@ -81,6 +77,35 @@ serialize_ta_with_period_method(const ConfigParser& config_parser,
   }
 
   return serialized_method;
+}
+
+template<typename T>
+static auto serialize_ohlcv_method(const ConfigParser& config_parser,
+                                   const screener::ScreenerMethod& method)
+ -> nlohmann::json
+{
+  auto serialized_method = nlohmann::json{};
+  auto ohlcv_method = screener_method_cast<T>(method);
+  if(ohlcv_method) {
+    serialized_method["offset"] = ohlcv_method->offset();
+  }
+
+  return serialized_method;
+};
+
+template<typename T>
+static auto parse_ohlcv_method(ConfigParser::Parser config_parser,
+                               const nlohmann::json& parameters)
+ -> screener::ScreenerMethod
+{
+  auto offset = std::size_t{0};
+  if(parameters.contains("offset")) {
+    offset = parameters.at("offset").get<std::size_t>();
+  }
+
+  auto ohlcv_method = T{offset};
+
+  return ohlcv_method;
 }
 
 static auto serialize_value_method(const ConfigParser& config_parser,
@@ -142,34 +167,32 @@ static auto parse_atr_method(ConfigParser::Parser config_parser,
                              const nlohmann::json& parameters)
  -> screener::ScreenerMethod
 {
-  const auto period = parameters.at("period").get<std::size_t>();
-  const auto multiplier = get_param_or(parameters, "multiplier", 1.0);
-  const auto offset = get_param_or(parameters, "offset", std::size_t{0});
+  auto atr_method = screener::AtrMethod{};
 
-  auto high_result =
-   get_param_or_named_method(config_parser, parameters, "high", "high");
-  if(!high_result.has_value()) {
-    throw std::invalid_argument{"High method is not found"};
+  if(parameters.contains("period")) {
+    atr_method.period(parameters.at("period").get<std::size_t>());
   }
 
-  auto low_result =
-   get_param_or_named_method(config_parser, parameters, "low", "low");
-  if(!low_result.has_value()) {
-    throw std::invalid_argument{"Low method is not found"};
+  if(parameters.contains("multiplier")) {
+    atr_method.multiplier(parameters.at("multiplier").get<double>());
   }
 
-  auto close_result =
-   get_param_or_named_method(config_parser, parameters, "close", "close");
-  if(!close_result.has_value()) {
-    throw std::invalid_argument{"Close method is not found"};
+  if(parameters.contains("offset")) {
+    atr_method.offset(parameters.at("offset").get<std::size_t>());
   }
 
-  const auto atr_method = screener::AtrMethod{high_result.value(),
-                                              low_result.value(),
-                                              close_result.value(),
-                                              period,
-                                              multiplier,
-                                              offset};
+  if(parameters.contains("high")) {
+    atr_method.high(config_parser.parse_method(parameters.at("high")));
+  }
+
+  if(parameters.contains("low")) {
+    atr_method.low(config_parser.parse_method(parameters.at("low")));
+  }
+
+  if(parameters.contains("close")) {
+    atr_method.close(config_parser.parse_method(parameters.at("close")));
+  }
+
   return atr_method;
 }
 
@@ -212,7 +235,9 @@ static auto serialize_kc_method(const ConfigParser& config_parser,
       case KcOutput::lower:
         return "lower";
       default:
-        throw std::invalid_argument{"Unknown KC output"};
+        const auto error_message =
+         std::format("Unknown KC output: {}", static_cast<int>(output));
+        throw std::invalid_argument{error_message};
       }
     }(kc_method->output());
 
@@ -240,7 +265,8 @@ static auto parse_kc_method(ConfigParser::Parser config_parser,
     } else if(output_str == "lower") {
       output = KcOutput::lower;
     } else {
-      const auto error_message = std::format("Unknown output: {}", output_str);
+      const auto error_message =
+       std::format("Unknown KC.output: {}", output_str);
       throw std::invalid_argument{error_message};
     }
   }
@@ -326,17 +352,32 @@ static auto parse_divergence_method(ConfigParser::Parser config_parser,
                                     const nlohmann::json& parameters)
  -> screener::ScreenerMethod
 {
-  const auto signal = config_parser.parse_method(parameters.at("signal"));
-  const auto reference = config_parser.parse_method(parameters.at("reference"));
+  auto divergence_method = T{};
 
-  const auto pivot_range =
-   get_param_or(parameters, "pivotRange", std::size_t{5});
-  const auto lookback_range =
-   get_param_or(parameters, "lookbackRange", std::size_t{60});
-  const auto offset = get_param_or(parameters, "offset", std::size_t{0});
+  if(parameters.contains("pivotRange")) {
+    divergence_method.pivot_range(
+     parameters.at("pivotRange").get<std::size_t>());
+  }
 
-  const auto divergence_method =
-   T{signal, reference, pivot_range, lookback_range, offset};
+  if(parameters.contains("lookbackRange")) {
+    divergence_method.lookback_range(
+     parameters.at("lookbackRange").get<std::size_t>());
+  }
+
+  if(parameters.contains("offset")) {
+    divergence_method.offset(parameters.at("offset").get<std::size_t>());
+  }
+
+  if(parameters.contains("signal")) {
+    divergence_method.signal(
+     config_parser.parse_method(parameters.at("signal")));
+  }
+
+  if(parameters.contains("reference")) {
+    divergence_method.reference(
+     config_parser.parse_method(parameters.at("reference")));
+  }
+
   return divergence_method;
 }
 
@@ -582,16 +623,54 @@ void ConfigParser::register_default_parsers()
    "VALUE", serialize_value_method, deserialize_value_method);
 
   register_method_parser("DATA", serialize_data_method, parse_data_method);
+
+  register_method_parser("OPEN",
+                         serialize_ohlcv_method<screener::OpenMethod>,
+                         parse_ohlcv_method<screener::OpenMethod>);
+
+  register_method_parser("HIGH",
+                         serialize_ohlcv_method<screener::HighMethod>,
+                         parse_ohlcv_method<screener::HighMethod>);
+
+  register_method_parser("LOW",
+                         serialize_ohlcv_method<screener::LowMethod>,
+                         parse_ohlcv_method<screener::LowMethod>);
+
+  register_method_parser("CLOSE",
+                         serialize_ohlcv_method<screener::CloseMethod>,
+                         parse_ohlcv_method<screener::CloseMethod>);
+
+  register_method_parser("VOLUME",
+                         serialize_ohlcv_method<screener::VolumeMethod>,
+                         parse_ohlcv_method<screener::VolumeMethod>);
+
   register_method_parser(
    "CHANGES",
    [](const ConfigParser& config_parser,
       const screener::ScreenerMethod screener_method) -> nlohmann::json {
-     return serialize_unary_function_method<screener::ChangesMethod>(
-      config_parser, screener_method, "operand");
+     auto serialized_method = nlohmann::json{};
+
+     auto changes_method =
+      screener_method_cast<screener::ChangesMethod>(screener_method);
+     if(changes_method) {
+       serialized_method["input"] =
+        config_parser.serialize_method(changes_method->input());
+     }
+
+     return serialized_method;
    },
    [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {
-     return parse_unary_function_method<screener::ChangesMethod>(
-      config_parser, parameters, "operand");
+     auto changes_method = screener::ChangesMethod{};
+
+     if(parameters.contains("input")) {
+       changes_method.input(config_parser.parse_method(parameters.at("input")));
+     }
+
+     if(parameters.contains("offset")) {
+       changes_method.offset(parameters.at("offset").get<std::size_t>());
+     }
+
+     return changes_method;
    });
 
   register_method_parser("SMA",
@@ -659,7 +738,9 @@ void ConfigParser::register_default_parsers()
          case BbOutput::lower:
            return "lower";
          default:
-           throw std::invalid_argument{"Unknown BB output"};
+           const auto error_message =
+            std::format("Unknown BB.output: {}", static_cast<int>(output));
+           throw std::invalid_argument{error_message};
          }
        }(bb_method->output());
 
@@ -677,7 +758,9 @@ void ConfigParser::register_default_parsers()
          case screener::BbMethod::MaType::hma:
            return "HMA";
          default:
-           throw std::invalid_argument{"Unknown BB maType"};
+           const auto error_message =
+            std::format("Unknown BB.maType: {}", static_cast<int>(ma_type));
+           throw std::invalid_argument{error_message};
          }
        }(bb_method->ma_type());
 
@@ -729,18 +812,13 @@ void ConfigParser::register_default_parsers()
        throw std::invalid_argument{error_message};
      }
 
-     const auto input =
-      get_param_or_named_method(config_parser, parameters, "input", "close");
-
-     if(!input.has_value()) {
-       throw std::invalid_argument{"Input method is not found"};
-     }
-
+     const auto input_method = parse_method_from_param_or(
+      config_parser, parameters, "input", screener::CloseMethod{});
      const auto period = get_param_or(parameters, "period", std::size_t{20});
      const auto stddev = get_param_or(parameters, "stddev", 2.0);
 
      const auto bb_method =
-      screener::BbMethod{output, ma_type, input.value(), period, stddev};
+      screener::BbMethod{output, ma_type, input_method, period, stddev};
 
      return bb_method;
    });
@@ -763,7 +841,9 @@ void ConfigParser::register_default_parsers()
          case MacdOutput::histogram:
            return "histogram";
          default:
-           throw std::invalid_argument{"Unknown MACD output"};
+           const auto error_message =
+            std::format("Unknown MACD.output: {}", static_cast<int>(output));
+           throw std::invalid_argument{error_message};
          }
        }(macd_method->output());
 
@@ -799,15 +879,11 @@ void ConfigParser::register_default_parsers()
      const auto slow = get_param_or<std::size_t>(parameters, "slow", 26);
      const auto signal = get_param_or<std::size_t>(parameters, "signal", 9);
      const auto offset = get_param_or<std::size_t>(parameters, "offset", 0);
-     const auto input =
-      get_param_or_named_method(config_parser, parameters, "input", "close");
-
-     if(!input.has_value()) {
-       throw std::invalid_argument{"MACD.input method is not found"};
-     }
+     const auto input_method = parse_method_from_param_or(
+      config_parser, parameters, "input", screener::CloseMethod{});
 
      const auto macd_method =
-      screener::MacdMethod{output, input.value(), fast, slow, signal, offset};
+      screener::MacdMethod{output, input_method, fast, slow, signal, offset};
      return macd_method;
    });
 
@@ -827,7 +903,9 @@ void ConfigParser::register_default_parsers()
          case StochOutput::d:
            return "d";
          default:
-           throw std::invalid_argument{"Unknown STOCH output"};
+           const auto error_message =
+            std::format("Unknown STOCH.output: {}", static_cast<int>(output));
+           throw std::invalid_argument{error_message};
          }
        }(stoch_method->output());
 
@@ -846,23 +924,14 @@ void ConfigParser::register_default_parsers()
    },
    [](ConfigParser::Parser config_parser,
       const nlohmann::json& parameters) -> screener::ScreenerMethod {
-     const auto high =
-      get_param_or_named_method(config_parser, parameters, "high", "high");
-     if(!high.has_value()) {
-       throw std::invalid_argument{"STOCH.high method is not found"};
-     }
+     const auto high_method = parse_method_from_param_or(
+      config_parser, parameters, "high", screener::HighMethod{});
 
-     const auto low =
-      get_param_or_named_method(config_parser, parameters, "low", "low");
-     if(!low.has_value()) {
-       throw std::invalid_argument{"STOCH.low method is not found"};
-     }
+     const auto low_method = parse_method_from_param_or(
+      config_parser, parameters, "low", screener::LowMethod{});
 
-     const auto close =
-      get_param_or_named_method(config_parser, parameters, "close", "close");
-     if(!close.has_value()) {
-       throw std::invalid_argument{"STOCH.close method is not found"};
-     }
+     const auto close_method = parse_method_from_param_or(
+      config_parser, parameters, "close", screener::CloseMethod{});
 
      const auto output_param =
       get_param_or<std::string>(parameters, "output", "k");
@@ -883,9 +952,9 @@ void ConfigParser::register_default_parsers()
      const auto d_period = get_param_or<std::size_t>(parameters, "dPeriod", 3);
 
      const auto stoch_method = screener::StochMethod{output,
-                                                     high.value(),
-                                                     low.value(),
-                                                     close.value(),
+                                                     high_method,
+                                                     low_method,
+                                                     close_method,
                                                      k_period,
                                                      k_smooth,
                                                      d_period};
@@ -908,7 +977,9 @@ void ConfigParser::register_default_parsers()
          case StochOutput::d:
            return "d";
          default:
-           throw std::invalid_argument{"Unknown STOCH_RSI output"};
+           const auto error_message = std::format(
+            "Unknown STOCH_RSI.output: {}", static_cast<int>(output));
+           throw std::invalid_argument{error_message};
          }
        }(stoch_rsi_method->output());
 
@@ -925,12 +996,8 @@ void ConfigParser::register_default_parsers()
    },
    [](ConfigParser::Parser config_parser,
       const nlohmann::json& parameters) -> screener::ScreenerMethod {
-     const auto rsi_input =
-      get_param_or_named_method(config_parser, parameters, "rsiInput", "close");
-     if(!rsi_input.has_value()) {
-       throw std::invalid_argument{"STOCH_RSI.rsiInput method is not found"};
-     }
-
+     const auto rsi_input_method = parse_method_from_param_or(
+      config_parser, parameters, "rsiInput", screener::CloseMethod{});
      const auto rsi_period =
       get_param_or<std::size_t>(parameters, "rsiPeriod", 14);
      const auto k_period = get_param_or<std::size_t>(parameters, "kPeriod", 5);
@@ -953,7 +1020,7 @@ void ConfigParser::register_default_parsers()
      }
 
      const auto stoch_rsi_method = screener::StochRsiMethod{output,
-                                                            rsi_input.value(),
+                                                            rsi_input_method,
                                                             rsi_period,
                                                             k_period,
                                                             k_smooth,
@@ -1206,17 +1273,26 @@ auto ConfigParser::parse_filter(const nlohmann::json& config)
 
     return screener::FalseFilter{};
   }
-
   const auto& filter_parsers = filter_parsers_;
   const auto filter = config.at("filter").get<std::string>();
 
-  if(filter_parsers.contains(filter)) {
-    const auto& [_, filter_deserialize] = filter_parsers.at(filter);
-    return filter_deserialize(*this, config);
-  }
+  try {
+    if(filter_parsers.contains(filter)) {
+      const auto& [_, filter_deserialize] = filter_parsers.at(filter);
+      return filter_deserialize(*this, config);
+    }
 
-  const auto error_message = std::format("Unknown filter: {}", filter);
-  throw std::invalid_argument{error_message};
+    const auto error_message = std::format("Unknown filter: {}", filter);
+    throw std::invalid_argument{error_message};
+  } catch(const std::exception& e) {
+    const auto error_message =
+     std::format("Error parsing filter {}:\n{}", filter, e.what());
+    throw std::invalid_argument{error_message};
+  } catch(...) {
+    const auto error_message =
+     std::format("Unknown error parsing filter {}", filter);
+    throw std::invalid_argument{error_message};
+  }
 }
 
 auto ConfigParser::serialize_filter(
@@ -1262,24 +1338,24 @@ auto ConfigParser::parse_method(const nlohmann::json& config)
 
   if(config.is_string()) {
     const auto named_method = config.get<std::string>();
-    if(!named_config_methods.contains(named_method)) {
-      const auto error_message =
-       std::format("Unknown named method: {}", named_method);
-      throw std::invalid_argument{error_message};
+    if(named_config_methods.contains(named_method)) {
+      const auto named_config_method = named_config_methods.at(named_method);
+      return parse_method(named_config_method);
     }
 
-    const auto named_config_method = named_config_methods.at(named_method);
-    return parse_method(named_config_method);
+    const auto expanded_method = nlohmann::json{{"method", named_method}};
+
+    return parse_method(expanded_method);
   }
 
   auto config_method = config;
-  const auto method = config_method.at("method").get<std::string>();
+  const auto method = config.at("method").get<std::string>();
 
   if(config_method.contains("extends")) {
     const auto extends = config_method.at("extends").get<std::string>();
     if(!named_config_methods.contains(extends)) {
       const auto error_message =
-       std::format("Unknown base method: {}", extends);
+       std::format("Unknown {} extends: {}", method, extends);
       throw std::invalid_argument{error_message};
     }
     const auto base_config = named_config_methods.at(extends);
@@ -1305,16 +1381,26 @@ auto ConfigParser::parse_method(const nlohmann::json& config)
     throw std::invalid_argument{error_message};
   }
 
-  const auto method_deserialize = method_parsers.at(method).second;
-  const auto method_result = method_deserialize(*this, config_method);
+  try {
+    const auto method_deserialize = method_parsers.at(method).second;
+    const auto method_result = method_deserialize(*this, config_method);
 
-  if(config_method.contains("name")) {
-    const auto name = config_method.at("name").get<std::string>();
-    config_method.erase("name");
-    named_config_methods.emplace(name, config_method);
+    if(config_method.contains("name")) {
+      const auto name = config_method.at("name").get<std::string>();
+      config_method.erase("name");
+      named_config_methods.emplace(name, config_method);
+    }
+
+    return method_result;
+  } catch(const std::exception& e) {
+    const auto error_message =
+     std::format("Error parsing method {}:\n{}", method, e.what());
+    throw std::invalid_argument{error_message};
+  } catch(...) {
+    const auto error_message =
+     std::format("Unknown error parsing method {}", method);
+    throw std::invalid_argument{error_message};
   }
-
-  return method_result;
 }
 
 auto ConfigParser::serialize_method(

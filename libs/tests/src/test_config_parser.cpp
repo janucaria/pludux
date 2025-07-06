@@ -50,6 +50,115 @@ protected:
   }
 };
 
+TEST_F(ConfigParserTest, ParseScreenerOpenMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "OPEN"
+    }
+  )");
+
+  const auto method = config_parser.parse_method(config);
+
+  const auto open_method = screener_method_cast<OpenMethod>(method);
+  ASSERT_NE(open_method, nullptr);
+
+  EXPECT_EQ(open_method->offset(), 0);
+
+  const auto serialized_config = config_parser.serialize_method(method);
+  const auto deserialized_config =
+   config_parser.parse_method(serialized_config);
+  EXPECT_EQ(method, deserialized_config);
+}
+
+TEST_F(ConfigParserTest, ParseScreenerHighMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "HIGH",
+      "offset": 1
+  }
+  )");
+
+  const auto method = config_parser.parse_method(config);
+
+  const auto high_method = screener_method_cast<HighMethod>(method);
+  ASSERT_NE(high_method, nullptr);
+
+  EXPECT_EQ(high_method->offset(), 1);
+
+  const auto serialized_config = config_parser.serialize_method(method);
+  const auto deserialized_config =
+   config_parser.parse_method(serialized_config);
+  EXPECT_EQ(method, deserialized_config);
+}
+
+TEST_F(ConfigParserTest, ParseScreenerLowMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "LOW",
+      "offset": 2
+    }
+  )");
+
+  const auto method = config_parser.parse_method(config);
+
+  const auto low_method = screener_method_cast<LowMethod>(method);
+  ASSERT_NE(low_method, nullptr);
+
+  EXPECT_EQ(low_method->offset(), 2);
+
+  const auto serialized_config = config_parser.serialize_method(method);
+  const auto deserialized_config =
+   config_parser.parse_method(serialized_config);
+  EXPECT_EQ(method, deserialized_config);
+}
+
+TEST_F(ConfigParserTest, ParseScreenerCloseMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "CLOSE",
+      "offset": 3
+    }
+  )");
+
+  const auto method = config_parser.parse_method(config);
+
+  const auto close_method = screener_method_cast<CloseMethod>(method);
+  ASSERT_NE(close_method, nullptr);
+
+  EXPECT_EQ(close_method->offset(), 3);
+
+  const auto serialized_config = config_parser.serialize_method(method);
+  const auto deserialized_config =
+   config_parser.parse_method(serialized_config);
+  EXPECT_EQ(method, deserialized_config);
+}
+
+TEST_F(ConfigParserTest, ParseScreenerVolumeMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "VOLUME",
+      "offset": 4
+    }
+  )");
+
+  const auto method = config_parser.parse_method(config);
+
+  const auto volume_method = screener_method_cast<VolumeMethod>(method);
+  ASSERT_NE(volume_method, nullptr);
+
+  EXPECT_EQ(volume_method->offset(), 4);
+
+  const auto serialized_config = config_parser.serialize_method(method);
+  const auto deserialized_config =
+   config_parser.parse_method(serialized_config);
+  EXPECT_EQ(method, deserialized_config);
+}
+
 TEST_F(ConfigParserTest, ParseScreenerSmaMethod)
 {
   const auto config = json::parse(R"(
@@ -735,7 +844,7 @@ TEST_F(ConfigParserTest, ParseScreenerChangesMethod)
   const auto config = json::parse(R"(
     {
       "method": "CHANGES",
-      "operand": {
+      "input": {
         "method": "DATA",
         "field": "close",
         "offset": 0
@@ -749,11 +858,10 @@ TEST_F(ConfigParserTest, ParseScreenerChangesMethod)
   ASSERT_NE(changes_method, nullptr);
   EXPECT_EQ(changes_method->offset(), 0);
 
-  const auto operand =
-   screener_method_cast<DataMethod>(changes_method->operand());
-  ASSERT_NE(operand, nullptr);
-  EXPECT_EQ(operand->field(), "close");
-  EXPECT_EQ(operand->offset(), 0);
+  const auto input = screener_method_cast<DataMethod>(changes_method->input());
+  ASSERT_NE(input, nullptr);
+  EXPECT_EQ(input->field(), "close");
+  EXPECT_EQ(input->offset(), 0);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =

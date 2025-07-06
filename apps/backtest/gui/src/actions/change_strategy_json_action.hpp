@@ -18,8 +18,17 @@ protected:
   {
     const auto strategy_name =
      static_cast<const TImpl*>(this)->get_strategy_name();
-    auto parsed_strategy = parse_backtest_strategy_json(
-     strategy_name, json_stream, state.quote_access);
+
+    auto parsed_strategy = [&]() {
+      try {
+        return parse_backtest_strategy_json(strategy_name, json_stream);
+      } catch(const std::exception& e) {
+        const auto error_message = std::format(
+         "Failed to parse strategy '{}':\n{}", strategy_name, e.what());
+        throw std::invalid_argument{error_message};
+      }
+    }();
+
     auto strategy_ptr =
      std::make_shared<backtest::Strategy>(std::move(parsed_strategy));
 

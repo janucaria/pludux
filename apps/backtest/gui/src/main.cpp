@@ -18,7 +18,7 @@
 #include <emscripten/html5.h>
 #include <emscripten/html5_webgpu.h>
 #else
-#include <wgpu/wgpu.h>
+#include <webgpu/wgpu.h>
 #endif
 
 #include <glfw3webgpu.h>
@@ -62,15 +62,16 @@ pludux_apps_backtest_load_csv_asset(char* name, char* data, void* app_state_ptr)
   using pludux::apps::AppState;
   using pludux::apps::LoadAssetCsvStrAction;
 
-  const auto name_str = std::string(name);
+  auto name_str = std::string(name);
   std::free(name);
 
-  const auto data_str = std::string(data);
+  auto data_str = std::string(data);
   std::free(data);
 
   auto app_state = *reinterpret_cast<AppState*>(app_state_ptr);
 
-  app_state.emplace_action<LoadAssetCsvStrAction>(name_str, data_str);
+  app_state.emplace_action<LoadAssetCsvStrAction>(std::move(name_str),
+                                                  std::move(data_str));
 }
 
 EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_change_strategy_json_str(
@@ -89,6 +90,19 @@ EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_change_strategy_json_str(
 
   app_state.emplace_action<ChangeStrategyJsonStrAction>(std::move(name_str),
                                                         std::move(data_str));
+}
+
+EMSCRIPTEN_KEEPALIVE void
+pludux_apps_backtest_load_backtests_setup(char* data, void* app_state_ptr)
+{
+  using pludux::apps::AppState;
+  using pludux::apps::LoadBacktestsSetupStingAction;
+
+  auto data_str = std::string(data);
+  std::free(data);
+
+  auto app_state = *reinterpret_cast<AppState*>(app_state_ptr);
+  app_state.emplace_action<LoadBacktestsSetupStingAction>(std::move(data_str));
 }
 }
 
@@ -122,7 +136,7 @@ public:
 
     auto instance = wgpuCreateInstance(nullptr);
 
-    wgpu_surface_ = glfwGetWGPUSurface(instance, window_);
+    wgpu_surface_ = glfwCreateWindowWGPUSurface(instance, window_);
     if(!wgpu_surface_) {
       wgpuInstanceRelease(instance);
       return;
@@ -134,25 +148,30 @@ public:
 #else
     wgpu_preferred_fmt_ = WGPUTextureFormat_BGRA8Unorm;
 
+    auto adapter = WGPUAdapter{};
+
     auto options = WGPURequestAdapterOptions{};
     options.compatibleSurface = wgpu_surface_;
 
-    auto adapter = WGPUAdapter{};
-    wgpuInstanceRequestAdapter(
-     instance,
-     &options,
-     [](WGPURequestAdapterStatus status,
-        WGPUAdapter adapter,
-        char const* message,
-        void* pUserData) {
-       if(status == WGPURequestAdapterStatus_Success) {
-         *reinterpret_cast<WGPUAdapter*>(pUserData) = adapter;
-       } else {
-         std::cerr << "Could not get WebGPU adapter: " << std::string(message)
-                   << std::endl;
-       }
-     },
-     reinterpret_cast<void*>(&adapter));
+    auto adapter_callback_info = WGPURequestAdapterCallbackInfo{};
+    adapter_callback_info.mode = WGPUCallbackMode_WaitAnyOnly;
+    adapter_callback_info.callback = [](WGPURequestAdapterStatus status,
+                                        WGPUAdapter adapter,
+                                        WGPUStringView message,
+                                        void* userdata1,
+                                        void* userdata2) {
+      if(status == WGPURequestAdapterStatus_Success) {
+        *reinterpret_cast<WGPUAdapter*>(userdata1) = adapter;
+      } else {
+        std::cerr << "Could not get WebGPU adapter: "
+                  << std::string(message.data, message.length) << std::endl;
+      }
+    };
+    adapter_callback_info.userdata1 = reinterpret_cast<void*>(&adapter);
+    adapter_callback_info.userdata2 = nullptr;
+
+    auto request_adapter_future =
+     wgpuInstanceRequestAdapter(instance, &options, adapter_callback_info);
 
     if(!adapter) {
       wgpuInstanceRelease(instance);
@@ -160,9 +179,13 @@ public:
     }
 
     auto device_desc = WGPUDeviceDescriptor{};
-    device_desc.label = "Default Device";
+    device_desc.label = {"Pludux Device", WGPU_STRLEN};
     device_desc.uncapturedErrorCallbackInfo.callback =
-     [](WGPUErrorType error_type, char const* message, void* userdata) {
+     [](WGPUDevice const* device,
+        WGPUErrorType error_type,
+        WGPUStringView message,
+        void* userdata1,
+        void* userdata2) {
        auto error_type_lbl = std::string{};
        switch(error_type) {
        case WGPUErrorType_Validation:
@@ -177,9 +200,6 @@ public:
        case WGPUErrorType_Unknown:
          error_type_lbl = "Unknown";
          break;
-       case WGPUErrorType_DeviceLost:
-         error_type_lbl = "Device lost";
-         break;
        case WGPUErrorType_Force32:
          error_type_lbl = "Force32";
          break;
@@ -188,13 +208,17 @@ public:
          break;
        }
 
-       const auto error_message = std::string(message);
+       const auto error_message = std::string(message.data, message.length);
        std::cerr << "WebGPU error: " << error_type_lbl << " - " << error_message
                  << std::endl;
      };
 
-    device_desc.deviceLostCallback =
-     [](WGPUDeviceLostReason reason, char const* message, void* userdata) {
+    device_desc.deviceLostCallbackInfo.callback =
+     [](WGPUDevice const* device,
+        WGPUDeviceLostReason reason,
+        WGPUStringView message,
+        void* userdata1,
+        void* userdata2) {
        auto reason_label = std::string{};
        switch(reason) {
        case WGPUDeviceLostReason_Unknown:
@@ -210,26 +234,29 @@ public:
          reason_label = "Not detected";
        }
 
-       const auto message_str = std::string(message);
+       const auto message_str = std::string(message.data, message.length);
        std::cerr << "WebGPU device lost: " << reason_label << " - "
                  << message_str << std::endl;
      };
 
-    wgpuAdapterRequestDevice(
-     adapter,
-     &device_desc,
-     [](WGPURequestDeviceStatus status,
-        WGPUDevice device,
-        char const* message,
-        void* pUserData) {
-       if(status == WGPURequestDeviceStatus_Success) {
-         *reinterpret_cast<WGPUDevice*>(pUserData) = device;
-       } else {
-         std::cerr << "Could not get WebGPU device: " << std::string(message)
-                   << std::endl;
-       }
-     },
-     reinterpret_cast<void*>(&wgpu_device_));
+    auto device_callback_info = WGPURequestDeviceCallbackInfo{};
+    device_callback_info.mode = WGPUCallbackMode_WaitAnyOnly;
+    device_callback_info.callback = [](WGPURequestDeviceStatus status,
+                                       WGPUDevice device,
+                                       WGPUStringView message,
+                                       void* userdata1,
+                                       void* userdata2) {
+      if(status == WGPURequestDeviceStatus_Success) {
+        *reinterpret_cast<WGPUDevice*>(userdata1) = device;
+      } else {
+        std::cerr << "Could not get WebGPU device: "
+                  << std::string(message.data, message.length) << std::endl;
+      }
+    };
+    device_callback_info.userdata1 = reinterpret_cast<void*>(&wgpu_device_);
+
+    auto request_device_future =
+     wgpuAdapterRequestDevice(adapter, &device_desc, device_callback_info);
 
     wgpuAdapterRelease(adapter);
 
@@ -373,12 +400,23 @@ private:
     auto surface_texture = WGPUSurfaceTexture{};
     wgpuSurfaceGetCurrentTexture(wgpu_surface_, &surface_texture);
 
+#ifdef __EMSCRIPTEN__
     if(surface_texture.status != WGPUSurfaceGetCurrentTextureStatus_Success) {
       return;
     }
+#else
+    if(surface_texture.status !=
+       WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal) {
+      return;
+    }
+#endif
 
     auto tex_view_descriptor = WGPUTextureViewDescriptor{};
+#ifdef __EMSCRIPTEN__
     tex_view_descriptor.label = "ImGui Surface Texture View";
+#else
+    tex_view_descriptor.label = {"ImGui Surface Texture View", WGPU_STRLEN};
+#endif
     tex_view_descriptor.format = wgpuTextureGetFormat(surface_texture.texture);
     tex_view_descriptor.dimension = WGPUTextureViewDimension_2D;
     tex_view_descriptor.baseMipLevel = 0;
@@ -402,7 +440,11 @@ private:
     render_pass_desc.depthStencilAttachment = nullptr;
 
     auto enc_desc = WGPUCommandEncoderDescriptor{};
+#ifdef __EMSCRIPTEN__
     enc_desc.label = "ImGui Command Encoder";
+#else
+    enc_desc.label = {"ImGui Command Encoder", WGPU_STRLEN};
+#endif
     WGPUCommandEncoder encoder =
      wgpuDeviceCreateCommandEncoder(wgpu_device_, &enc_desc);
 
@@ -413,7 +455,13 @@ private:
     wgpuRenderPassEncoderRelease(pass);
 
     auto cmd_buffer_desc = WGPUCommandBufferDescriptor{};
+
+#ifdef __EMSCRIPTEN__
     cmd_buffer_desc.label = "ImGui Command Buffer";
+#else
+    cmd_buffer_desc.label = {"ImGui Command Buffer", WGPU_STRLEN};
+#endif
+
     WGPUCommandBuffer cmd_buffer =
      wgpuCommandEncoderFinish(encoder, &cmd_buffer_desc);
     wgpuCommandEncoderRelease(encoder);

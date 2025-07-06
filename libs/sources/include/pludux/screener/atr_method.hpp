@@ -10,6 +10,8 @@ namespace pludux::screener {
 
 class AtrMethod {
 public:
+  AtrMethod();
+
   explicit AtrMethod(ScreenerMethod high,
                      ScreenerMethod low,
                      ScreenerMethod close,
@@ -23,12 +25,28 @@ public:
   auto operator==(const AtrMethod& other) const noexcept -> bool;
 
   auto period() const noexcept -> std::size_t;
+
+  void period(std::size_t period) noexcept;
+
   auto multiplier() const noexcept -> double;
+
+  void multiplier(double multiplier) noexcept;
+
   auto offset() const noexcept -> std::size_t;
 
+  void offset(std::size_t offset) noexcept;
+
   auto high() const noexcept -> const ScreenerMethod&;
+
+  void high(ScreenerMethod high) noexcept;
+
   auto low() const noexcept -> const ScreenerMethod&;
+
+  void low(ScreenerMethod low) noexcept;
+
   auto close() const noexcept -> const ScreenerMethod&;
+
+  void close(ScreenerMethod close) noexcept;
 
 private:
   std::size_t period_;

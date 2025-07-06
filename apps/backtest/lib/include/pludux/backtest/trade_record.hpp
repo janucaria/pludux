@@ -16,8 +16,10 @@ public:
     closed_stop_loss
   };
 
+  TradeRecord();
+
   TradeRecord(Status status,
-              double order_size,
+              double position_size,
               std::size_t entry_index,
               std::size_t at_index,
               std::time_t entry_timestamp,
@@ -28,9 +30,9 @@ public:
               double trailing_stop_price,
               double take_profit_price);
 
-  auto order_size() const noexcept -> double;
+  auto position_size() const noexcept -> double;
 
-  void order_size(double size) noexcept;
+  void position_size(double size) noexcept;
 
   auto entry_index() const noexcept -> std::size_t;
 
@@ -68,9 +70,11 @@ public:
 
   void exit_timestamp(std::time_t timestamp) noexcept;
 
-  auto position_size() const noexcept -> double;
+  auto position_value() const noexcept -> double;
 
-  auto profit() const noexcept -> double;
+  auto profit_and_loss() const noexcept -> double;
+
+  auto pnl() const noexcept -> double;
 
   auto duration() const noexcept -> std::time_t;
 
@@ -93,7 +97,7 @@ public:
   auto is_summary_session(std::size_t last_index = 0) const noexcept -> bool;
 
 private:
-  double order_size_;
+  double position_size_;
 
   double entry_price_;
   double exit_price_;

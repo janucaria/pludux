@@ -2,18 +2,26 @@
 
 namespace pludux {
 
-AssetSnapshot::AssetSnapshot(std::size_t offset,
-                             const HistoryData& history_data)
-: offset_{offset}
-, history_data_{history_data}
+AssetSnapshot::AssetSnapshot(const AssetHistory& asset_history)
+: AssetSnapshot{0, asset_history}
 {
 }
 
-auto AssetSnapshot::operator[](std::string key) const
- -> SubSeries<RefSeries<const PolySeries<double>>>
+AssetSnapshot::AssetSnapshot(std::size_t offset,
+                             const AssetHistory& asset_history)
+: offset_{offset}
+, asset_history_{asset_history}
 {
-  return SubSeries{RefSeries{history_data_.at(key)},
-                   static_cast<std::ptrdiff_t>(offset_)};
+}
+
+auto AssetSnapshot::operator[](std::string_view key) const -> double
+{
+  return get_values(std::move(key))[0];
+}
+
+auto AssetSnapshot::operator[](std::size_t index) const -> AssetSnapshot
+{
+  return AssetSnapshot{offset_ + index, asset_history_};
 }
 
 auto AssetSnapshot::offset() const noexcept -> std::size_t
@@ -23,17 +31,88 @@ auto AssetSnapshot::offset() const noexcept -> std::size_t
 
 auto AssetSnapshot::size() const noexcept -> std::size_t
 {
-  auto it = history_data_.begin();
-  if(it == history_data_.end()) {
+  if(offset_ >= asset_history_.size()) {
     return 0;
   }
 
-  return it->second.size() - offset_;
+  return asset_history_.size() - offset_;
 }
 
-auto AssetSnapshot::contains(const std::string& key) const noexcept -> bool
+auto AssetSnapshot::contains(std::string_view key) const noexcept -> bool
 {
-  return history_data_.contains(key);
+  return asset_history_.contains(std::string(key));
+}
+
+auto AssetSnapshot::get_values(std::string_view key) const
+ -> SubSeries<RefSeries<const PolySeries<double>>>
+{
+  return SubSeries{asset_history_[key], static_cast<std::ptrdiff_t>(offset_)};
+}
+
+auto AssetSnapshot::get_datetime_values() const
+ -> SubSeries<RefSeries<const PolySeries<double>>>
+{
+  return get_values(asset_history_.datetime_key());
+}
+
+auto AssetSnapshot::get_open_values() const
+ -> SubSeries<RefSeries<const PolySeries<double>>>
+{
+  return get_values(asset_history_.open_key());
+}
+
+auto AssetSnapshot::get_high_values() const
+ -> SubSeries<RefSeries<const PolySeries<double>>>
+{
+  return get_values(asset_history_.high_key());
+}
+
+auto AssetSnapshot::get_low_values() const
+ -> SubSeries<RefSeries<const PolySeries<double>>>
+{
+  return get_values(asset_history_.low_key());
+}
+
+auto AssetSnapshot::get_close_values() const
+ -> SubSeries<RefSeries<const PolySeries<double>>>
+{
+  return get_values(asset_history_.close_key());
+}
+
+auto AssetSnapshot::get_volume_values() const
+ -> SubSeries<RefSeries<const PolySeries<double>>>
+{
+  return get_values(asset_history_.volume_key());
+}
+
+auto AssetSnapshot::get_datetime() const -> double
+{
+  return get_datetime_values()[0];
+}
+
+auto AssetSnapshot::get_open() const -> double
+{
+  return get_open_values()[0];
+}
+
+auto AssetSnapshot::get_high() const -> double
+{
+  return get_high_values()[0];
+}
+
+auto AssetSnapshot::get_low() const -> double
+{
+  return get_low_values()[0];
+}
+
+auto AssetSnapshot::get_close() const -> double
+{
+  return get_close_values()[0];
+}
+
+auto AssetSnapshot::get_volume() const -> double
+{
+  return get_volume_values()[0];
 }
 
 } // namespace pludux

@@ -4,13 +4,11 @@
 
 namespace pludux::backtest {
 
-Asset::Asset(std::string name,
-             AssetHistory asset_history,
-             QuoteAccess quote_access)
+Asset::Asset(std::string name, AssetHistory asset_history)
 : name_{std::move(name)}
 , asset_history_{std::move(asset_history)}
-, quote_access_{std::move(quote_access)}
 {
+  asset_history_.datetime_key("Date");
 }
 
 auto Asset::name() const noexcept -> const std::string&
@@ -23,14 +21,14 @@ auto Asset::history() const noexcept -> const AssetHistory&
   return asset_history_;
 }
 
-auto Asset::quote_access() const noexcept -> const QuoteAccess&
+auto Asset::get_snapshot(std::size_t index) const noexcept -> AssetSnapshot
 {
-  return quote_access_;
+  return AssetSnapshot{index, asset_history_};
 }
 
-auto Asset::get_quote(std::size_t asset_index) const noexcept -> AssetQuote
+auto Asset::size() const noexcept -> std::size_t
 {
-  return AssetQuote{asset_history_[asset_index], quote_access_};
+  return asset_history_.size();
 }
 
 } // namespace pludux::backtest

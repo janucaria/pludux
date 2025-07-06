@@ -5,8 +5,6 @@
 #include <implot.h>
 #include <implot_internal.h>
 
-#include <pludux/asset_quote.hpp>
-
 #include "../app_state.hpp"
 #include "./plot_data_window.hpp"
 
@@ -34,16 +32,15 @@ void PlotDataWindow::render(AppState& app_state)
     return;
   }
 
-  const auto& quote_access = state.quote_access;
   const auto& asset = backtests[state.selected_backtest_index].asset();
   const auto& asset_history = asset.history();
 
-  auto trade_records = std::vector<backtest::TradeRecord>{};
+  auto backtest_summaries = std::vector<backtest::BacktestingSummary>{};
   auto is_backtest_should_run = false;
   if(!state.backtests.empty()) {
     const auto& backtest = state.backtests[state.selected_backtest_index];
     is_backtest_should_run = backtest.should_run();
-    trade_records = backtest.trade_records();
+    backtest_summaries = backtest.summaries();
   }
 
   // get the avaliable space
@@ -80,9 +77,9 @@ void PlotDataWindow::render(AppState& app_state)
     ImPlot::SetupAxis(ImAxis_Y1, nullptr, axis_y_flags);
     ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
 
-    DrawTrades("Trades", trade_records, asset_history, quote_access);
-    TickerTooltip(asset_history, quote_access, false);
-    PlotOHLC("OHLC", asset_history, quote_access);
+    DrawTrades("Trades", backtest_summaries, asset_history);
+    TickerTooltip(asset_history, false);
+    PlotOHLC("OHLC", asset_history);
 
     ImPlot::EndPlot();
   }
@@ -105,8 +102,8 @@ void PlotDataWindow::render(AppState& app_state)
            ImAxis_Y1, nullptr, axis_y_flags | ImPlotAxisFlags_LockMin);
           ImPlot::SetupAxisFormat(ImAxis_Y1, VolumeFormatter);
 
-          TickerTooltip(asset_history, quote_access, false);
-          PlotVolume("Volume", asset_history, quote_access);
+          TickerTooltip(asset_history, false);
+          PlotVolume("Volume", asset_history);
 
           ImPlot::EndPlot();
         }
@@ -121,7 +118,6 @@ void PlotDataWindow::render(AppState& app_state)
 }
 
 void PlotDataWindow::TickerTooltip(const AssetHistory& asset_history,
-                                   const QuoteAccess& quote_access,
                                    bool span_subplots)
 {
   ImDrawList* draw_list = ImPlot::GetPlotDrawList();
@@ -143,31 +139,31 @@ void PlotDataWindow::TickerTooltip(const AssetHistory& asset_history,
 
     const auto idx = static_cast<int>(mouse.x);
     if(ImPlot::IsPlotHovered() && idx > -1 && idx < asset_history.size()) {
-      const auto& snapshot = asset_history[idx];
-      const auto& quote = AssetQuote{snapshot, quote_access};
+      const auto snapshot = AssetSnapshot(idx, asset_history);
 
       ImGui::BeginTooltip();
       ImGui::Text("Date:");
       ImGui::SameLine(60);
-      ImGui::Text("%s", format_datetime(quote.time()).c_str());
+      ImGui::Text("%s", format_datetime(snapshot.get_datetime()).c_str());
       ImGui::Text("Open:");
       ImGui::SameLine(60);
-      ImGui::Text("%.2f", quote.open());
+      ImGui::Text("%.2f", snapshot.get_open());
       ImGui::Text("Close:");
       ImGui::SameLine(60);
-      ImGui::Text("%.2f", quote.close());
+      ImGui::Text("%.2f", snapshot.get_close());
       ImGui::Text("High:");
       ImGui::SameLine(60);
-      ImGui::Text("%.2f", quote.high());
+      ImGui::Text("%.2f", snapshot.get_high());
       ImGui::Text("Low:");
       ImGui::SameLine(60);
-      ImGui::Text("%.2f", quote.low());
+      ImGui::Text("%.2f", snapshot.get_low());
       ImGui::Text("Volume:");
       ImGui::SameLine(60);
-      ImGui::Text(
-       "%s",
-       std::format(std::locale("en_US.UTF-8"), "{:L}", (int)(quote.volume()))
-        .c_str());
+      ImGui::Text("%s",
+                  std::format(std::locale("en_US.UTF-8"),
+                              "{:L}",
+                              (int)(snapshot.get_volume()))
+                   .c_str());
       ImGui::EndTooltip();
     }
   }
@@ -189,8 +185,7 @@ int PlotDataWindow::VolumeFormatter(double value, char* buff, int size, void*)
 }
 
 void PlotDataWindow::PlotOHLC(const char* label_id,
-                              const AssetHistory& asset_history,
-                              const QuoteAccess& quote_access)
+                              const AssetHistory& asset_history)
 {
   auto* draw_list = ImPlot::GetPlotDrawList();
   constexpr double half_width = 0.3;
@@ -200,22 +195,20 @@ void PlotDataWindow::PlotOHLC(const char* label_id,
 
     if(ImPlot::FitThisFrame()) {
       for(int i = 0; i < asset_history.size(); ++i) {
-        const auto& snapshot = asset_history[i];
-        const auto& quote = AssetQuote{snapshot, quote_access};
+        const auto snapshot = AssetSnapshot(i, asset_history);
 
-        ImPlot::FitPoint(ImPlotPoint(i, quote.low()));
-        ImPlot::FitPoint(ImPlotPoint(i, quote.high()));
+        ImPlot::FitPoint(ImPlotPoint(i, snapshot.get_low()));
+        ImPlot::FitPoint(ImPlotPoint(i, snapshot.get_high()));
       }
     }
 
     for(int i = 0, ii = asset_history.size(); i < ii; ++i) {
-      const auto& snapshot = asset_history[i];
-      const auto& quote = AssetQuote{snapshot, quote_access};
+      const auto snapshot = AssetSnapshot(i, asset_history);
 
-      const auto open = quote.open();
-      const auto high = quote.high();
-      const auto low = quote.low();
-      const auto close = quote.close();
+      const auto open = snapshot.get_open();
+      const auto high = snapshot.get_high();
+      const auto low = snapshot.get_low();
+      const auto close = snapshot.get_close();
 
       const auto open_left_pos = ImPlot::PlotToPixels(i - half_width, open);
       const auto open_right_pos = ImPlot::PlotToPixels(i + half_width, open);
@@ -248,8 +241,7 @@ void PlotDataWindow::PlotOHLC(const char* label_id,
 }
 
 void PlotDataWindow::PlotVolume(const char* label_id,
-                                const AssetHistory& asset_history,
-                                const QuoteAccess& quote_access)
+                                const AssetHistory& asset_history)
 {
   // get ImGui window DrawList
   ImDrawList* draw_list = ImPlot::GetPlotDrawList();
@@ -262,21 +254,19 @@ void PlotDataWindow::PlotVolume(const char* label_id,
     // fit data if requested
     if(ImPlot::FitThisFrame()) {
       for(int i = 0; i < asset_history.size(); ++i) {
-        const auto& snapshot = asset_history[i];
-        const auto& quote = AssetQuote{snapshot, quote_access};
+        const auto snapshot = AssetSnapshot(i, asset_history);
 
         ImPlot::FitPoint(ImPlotPoint(i, 0));
-        ImPlot::FitPoint(ImPlotPoint(i, quote.volume()));
+        ImPlot::FitPoint(ImPlotPoint(i, snapshot.get_volume()));
       }
     }
     // render data
     for(int i = 0, ii = asset_history.size(); i < ii; ++i) {
-      const auto& snapshot = asset_history[i];
-      const auto& quote = AssetQuote{snapshot, quote_access};
+      const auto snapshot = AssetSnapshot(i, asset_history);
 
-      const auto open = quote.open();
-      const auto close = quote.close();
-      const auto volume = quote.volume();
+      const auto open = snapshot.get_open();
+      const auto close = snapshot.get_close();
+      const auto volume = snapshot.get_volume();
 
       ImU32 color =
        ImGui::GetColorU32(open > close ? bearish_color_ : bullish_color_);
@@ -300,19 +290,18 @@ void PlotDataWindow::PlotVolume(const char* label_id,
 
 void PlotDataWindow::DrawTrades(
  const char* label_id,
- const std::vector<backtest::TradeRecord>& trade_records,
- const AssetHistory& asset_history,
- const QuoteAccess& quote_access)
+ const std::vector<backtest::BacktestingSummary>& backtest_summaries,
+ const AssetHistory& asset_history)
 {
   auto* draw_list = ImPlot::GetPlotDrawList();
 
   constexpr double half_width = 0.5;
   if(ImPlot::BeginItem(label_id)) {
     auto trailing_stop_lines = std::vector<ImVec2>{};
-    trailing_stop_lines.reserve(trade_records.size());
+    trailing_stop_lines.reserve(backtest_summaries.size());
 
-    for(int i = 0, ii = trade_records.size(); i < ii; ++i) {
-      const auto& trade = trade_records[i];
+    for(int i = 0, ii = backtest_summaries.size(); i < ii; ++i) {
+      const auto& trade = backtest_summaries[i].trade_record();
 
       const auto take_profit_price = trade.take_profit_price();
       const auto stop_loss_price = trade.stop_loss_price();

@@ -11,59 +11,142 @@ namespace pludux::backtest {
 
 class BacktestingSummary {
 public:
-  BacktestingSummary();
+  auto get_next_summary(TradeRecord trade_record) const noexcept
+   -> BacktestingSummary;
 
-  auto open_trade() const -> const std::optional<TradeRecord>&;
+  auto trade_record() const noexcept -> const TradeRecord&;
 
-  auto closed_trades() const -> const std::vector<TradeRecord>&;
+  void trade_record(TradeRecord trade_record) noexcept;
 
-  void add_trade(TradeRecord trade);
+  auto sum_of_investments() const noexcept -> double;
 
-  auto total_profit() const -> double;
+  void sum_of_investments(double investment) noexcept;
 
-  auto total_duration() const -> std::time_t;
+  auto sum_of_take_profits() const noexcept -> double;
 
-  auto total_trades() const -> std::size_t;
+  void sum_of_take_profits(double take_profit) noexcept;
 
-  auto average_duration() const -> std::time_t;
+  auto sum_of_stop_losses() const noexcept -> double;
 
-  auto unrealized_profit() const -> double;
+  void sum_of_stop_losses(double stop_loss) noexcept;
 
-  auto ongoing_trade_duration() const -> std::time_t;
+  auto sum_of_exit_wins() const noexcept -> double;
 
-  auto take_profit_rate() const -> double;
+  void sum_of_exit_wins(double exit_win) noexcept;
 
-  auto average_take_profit() const -> double;
+  auto sum_of_exit_losses() const noexcept -> double;
 
-  auto take_profit_expected_value() const -> double;
+  void sum_of_exit_losses(double exit_loss) noexcept;
 
-  auto stop_loss_rate() const -> double;
+  auto average_investment() const noexcept -> double;
 
-  auto average_stop_loss() const -> double;
+  auto trade_count() const noexcept -> std::size_t;
 
-  auto stop_loss_expected_value() const -> double;
+  auto open_trade_count() const noexcept -> std::size_t;
 
-  auto exit_signal_rate() const -> double;
+  auto sum_of_pnls() const noexcept -> double;
 
-  auto average_exit_signal() const -> double;
+  auto sum_of_durations() const noexcept -> std::time_t;
 
-  auto exit_signal_expected_value() const -> double;
+  void sum_of_durations(std::time_t duration) noexcept;
 
-  auto expected_value() const -> double;
+  auto average_duration() const noexcept -> std::time_t;
 
-  auto win_rate() const -> double;
+  auto average_pnl() const noexcept -> double;
 
-  auto loss_rate() const -> double;
+  auto take_profit_count() const noexcept -> std::size_t;
 
-  auto break_even_rate() const -> double;
+  void take_profit_count(std::size_t count) noexcept;
 
-  auto average_win() const -> double;
+  auto take_profit_rate() const noexcept -> double;
 
-  auto average_loss() const -> double;
+  auto average_take_profit() const noexcept -> double;
+
+  auto take_profit_expected_value() const noexcept -> double;
+
+  auto stop_loss_count() const noexcept -> std::size_t;
+
+  void stop_loss_count(std::size_t count) noexcept;
+
+  auto stop_loss_rate() const noexcept -> double;
+
+  auto average_stop_loss() const noexcept -> double;
+
+  auto stop_loss_expected_value() const noexcept -> double;
+
+  auto exit_win_count() const noexcept -> std::size_t;
+
+  void exit_win_count(std::size_t count) noexcept;
+
+  auto exit_loss_count() const noexcept -> std::size_t;
+
+  void exit_loss_count(std::size_t count) noexcept;
+
+  auto break_even_count() const noexcept -> std::size_t;
+
+  void break_even_count(std::size_t count) noexcept;
+
+  auto exit_signal_count() const noexcept -> std::size_t;
+
+  auto exit_signal_rate() const noexcept -> double;
+
+  auto sum_of_exit_signals() const noexcept -> double;
+
+  auto average_exit_signal() const noexcept -> double;
+
+  auto exit_signal_expected_value() const noexcept -> double;
+
+  auto expected_value() const noexcept -> double;
+
+  auto expected_return() const noexcept -> double;
+
+  auto win_count() const noexcept -> std::size_t;
+
+  auto win_rate() const noexcept -> double;
+
+  auto total_profits() const noexcept -> double;
+
+  auto total_profit_percent() const noexcept -> double;
+
+  auto average_win() const noexcept -> double;
+
+  auto loss_count() const noexcept -> std::size_t;
+
+  auto loss_rate() const noexcept -> double;
+
+  auto total_losses() const noexcept -> double;
+
+  auto total_loss_percent() const noexcept -> double;
+
+  auto average_loss() const noexcept -> double;
+
+  auto break_even_rate() const noexcept -> double;
+
+  auto profit_factor() const noexcept -> double;
+
+  auto unrealized_pnl() const noexcept -> double;
+
+  auto ongoing_trade_duration() const noexcept -> std::time_t;
 
 private:
-  std::optional<TradeRecord> open_trade_;
-  std::vector<TradeRecord> closed_trades_;
+  TradeRecord trade_record_{};
+
+  std::time_t sum_of_durations_{};
+  double sum_of_investments_{};
+
+  std::size_t take_profit_count_{};
+  double sum_of_take_profits_{};
+
+  std::size_t stop_loss_count_{};
+  double sum_of_stop_losses_{};
+
+  std::size_t exit_win_count_{};
+  double sum_of_exit_wins_{};
+
+  std::size_t exit_loss_count_{};
+  double sum_of_exit_losses_{};
+
+  std::size_t break_even_count_{};
 };
 
 } // namespace pludux::backtest

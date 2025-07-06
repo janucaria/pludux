@@ -5,257 +5,337 @@
 
 namespace pludux::backtest {
 
-BacktestingSummary::BacktestingSummary()
-: open_trade_{}
-, closed_trades_{}
+auto BacktestingSummary::get_next_summary(
+ TradeRecord trade_record) const noexcept -> BacktestingSummary
 {
-}
+  auto summary = *this;
 
-void BacktestingSummary::add_trade(TradeRecord trade)
-{
-  if(trade.is_open()) {
-    open_trade_ = trade;
-  } else {
-    closed_trades_.push_back(trade);
-    open_trade_.reset();
-  }
-}
+  if(trade_record.is_closed()) {
+    const auto pnl = trade_record.pnl();
 
-auto BacktestingSummary::open_trade() const -> const std::optional<TradeRecord>&
-{
-  return open_trade_;
-}
+    summary.sum_of_durations_ += trade_record.duration();
+    summary.sum_of_investments_ += trade_record.position_value();
 
-auto BacktestingSummary::closed_trades() const
- -> const std::vector<TradeRecord>&
-{
-  return closed_trades_;
-}
-
-auto BacktestingSummary::total_profit() const -> double
-{
-  const auto intial_profit = unrealized_profit();
-
-  return std::reduce(closed_trades_.begin(),
-                     closed_trades_.end(),
-                     intial_profit,
-                     [](const auto& total, const auto& trade) {
-                       const auto profit = trade.profit();
-                       return total + profit;
-                     });
-}
-
-auto BacktestingSummary::total_duration() const -> std::time_t
-{
-  auto total = ongoing_trade_duration();
-  return std::reduce(closed_trades_.begin(),
-                     closed_trades_.end(),
-                     total,
-                     [](const auto& total, const auto& trade) {
-                       const auto duration = trade.duration();
-                       return total + duration;
-                     });
-}
-
-auto BacktestingSummary::total_trades() const -> std::size_t
-{
-  return closed_trades_.size() + (open_trade_.has_value() ? 1 : 0);
-}
-
-auto BacktestingSummary::average_duration() const -> std::time_t
-{
-  if(closed_trades_.empty()) {
-    return 0;
-  }
-
-  return total_duration() / closed_trades_.size();
-}
-
-auto BacktestingSummary::unrealized_profit() const -> double
-{
-  return open_trade_.has_value() ? open_trade_->profit() : 0.0;
-}
-
-auto BacktestingSummary::ongoing_trade_duration() const -> std::time_t
-{
-  return open_trade_.has_value() ? open_trade_->duration() : 0;
-}
-
-auto BacktestingSummary::take_profit_rate() const -> double
-{
-  if(closed_trades_.empty()) {
-    return 0;
-  }
-
-  auto take_profit = 0;
-  for(const auto& trade : closed_trades_) {
-    if(trade.is_closed_take_profit()) {
-      take_profit++;
+    if(trade_record.is_closed_take_profit()) {
+      summary.take_profit_count_++;
+      summary.sum_of_take_profits_ += pnl;
+    } else if(trade_record.is_closed_stop_loss()) {
+      summary.stop_loss_count_++;
+      summary.sum_of_stop_losses_ += pnl;
+    } else if(trade_record.is_closed_exit_signal()) {
+      if(pnl > 0) {
+        summary.exit_win_count_++;
+        summary.sum_of_exit_wins_ += pnl;
+      } else if(pnl < 0) {
+        summary.exit_loss_count_++;
+        summary.sum_of_exit_losses_ += pnl;
+      } else {
+        summary.break_even_count_++;
+      }
     }
   }
-  return static_cast<double>(take_profit) / closed_trades_.size();
+
+  summary.trade_record_ = std::move(trade_record);
+  return summary;
 }
 
-auto BacktestingSummary::average_take_profit() const -> double
+auto BacktestingSummary::trade_record() const noexcept -> const TradeRecord&
 {
-  auto total = 0.0;
-  auto take_profit = 0;
-  for(const auto& trade : closed_trades_) {
-    if(trade.is_closed_take_profit()) {
-      total += trade.profit();
-      take_profit++;
-    }
-  }
-  return take_profit ? total / take_profit : 0.0;
+  return trade_record_;
 }
 
-auto BacktestingSummary::take_profit_expected_value() const -> double
+void BacktestingSummary::trade_record(TradeRecord trade_record) noexcept
 {
-  return average_take_profit() * take_profit_rate();
+  trade_record_ = std::move(trade_record);
 }
 
-auto BacktestingSummary::stop_loss_rate() const -> double
+auto BacktestingSummary::sum_of_investments() const noexcept -> double
 {
-  if(closed_trades_.empty()) {
-    return 0;
-  }
-
-  auto stop_loss = 0;
-  for(const auto& trade : closed_trades_) {
-    if(trade.is_closed_stop_loss()) {
-      stop_loss++;
-    }
-  }
-  return static_cast<double>(stop_loss) / closed_trades_.size();
+  return sum_of_investments_;
 }
 
-auto BacktestingSummary::average_stop_loss() const -> double
+void BacktestingSummary::sum_of_investments(double investment) noexcept
 {
-  auto total = 0.0;
-  auto stop_loss = 0;
-  for(const auto& trade : closed_trades_) {
-    if(trade.is_closed_stop_loss()) {
-      total += trade.profit();
-      stop_loss++;
-    }
-  }
-  return stop_loss ? total / stop_loss : 0.0;
+  sum_of_investments_ = investment;
 }
 
-auto BacktestingSummary::stop_loss_expected_value() const -> double
+auto BacktestingSummary::sum_of_take_profits() const noexcept -> double
 {
-  return average_stop_loss() * stop_loss_rate();
+  return sum_of_take_profits_;
 }
 
-auto BacktestingSummary::exit_signal_rate() const -> double
+void BacktestingSummary::sum_of_take_profits(double take_profit) noexcept
 {
-  if(closed_trades_.empty()) {
-    return 0;
-  }
-
-  auto exit_signal = 0;
-  for(const auto& trade : closed_trades_) {
-    if(trade.is_closed_exit_signal()) {
-      exit_signal++;
-    }
-  }
-  return static_cast<double>(exit_signal) / closed_trades_.size();
+  sum_of_take_profits_ = take_profit;
 }
 
-auto BacktestingSummary::average_exit_signal() const -> double
+auto BacktestingSummary::sum_of_stop_losses() const noexcept -> double
 {
-  auto total = 0.0;
-  auto exit_signal = 0;
-  for(const auto& trade : closed_trades_) {
-    if(trade.is_closed_exit_signal()) {
-      total += trade.profit();
-      exit_signal++;
-    }
-  }
-  return exit_signal ? total / exit_signal : 0.0;
+  return sum_of_stop_losses_;
 }
 
-auto BacktestingSummary::exit_signal_expected_value() const -> double
+void BacktestingSummary::sum_of_stop_losses(double stop_loss) noexcept
 {
-  return average_exit_signal() * exit_signal_rate();
+  sum_of_stop_losses_ = stop_loss;
 }
 
-auto BacktestingSummary::expected_value() const -> double
+auto BacktestingSummary::sum_of_exit_wins() const noexcept -> double
+{
+  return sum_of_exit_wins_;
+}
+
+void BacktestingSummary::sum_of_exit_wins(double exit_win) noexcept
+{
+  sum_of_exit_wins_ = exit_win;
+}
+
+auto BacktestingSummary::sum_of_exit_losses() const noexcept -> double
+{
+  return sum_of_exit_losses_;
+}
+
+void BacktestingSummary::sum_of_exit_losses(double exit_loss) noexcept
+{
+  sum_of_exit_losses_ = exit_loss;
+}
+
+auto BacktestingSummary::average_investment() const noexcept -> double
+{
+  return trade_count() ? sum_of_investments() / trade_count() : 0.0;
+}
+
+auto BacktestingSummary::trade_count() const noexcept -> std::size_t
+{
+  return win_count() + loss_count() + break_even_count_;
+}
+
+auto BacktestingSummary::open_trade_count() const noexcept -> std::size_t
+{
+  return trade_record_.is_open() ? 1 : 0;
+}
+
+auto BacktestingSummary::sum_of_pnls() const noexcept -> double
+{
+  return sum_of_take_profits() + sum_of_stop_losses() + sum_of_exit_signals();
+}
+
+auto BacktestingSummary::sum_of_durations() const noexcept -> std::time_t
+{
+  return sum_of_durations_;
+}
+
+void BacktestingSummary::sum_of_durations(std::time_t duration) noexcept
+{
+  sum_of_durations_ = duration;
+}
+
+auto BacktestingSummary::average_duration() const noexcept -> std::time_t
+{
+  return trade_count() ? sum_of_durations() / trade_count() : 0;
+}
+
+auto BacktestingSummary::average_pnl() const noexcept -> double
+{
+  return trade_count() ? sum_of_pnls() / trade_count() : 0.0;
+}
+
+auto BacktestingSummary::take_profit_count() const noexcept -> std::size_t
+{
+  return take_profit_count_;
+}
+
+void BacktestingSummary::take_profit_count(std::size_t count) noexcept
+{
+  take_profit_count_ = count;
+}
+
+auto BacktestingSummary::take_profit_rate() const noexcept -> double
+{
+  return trade_count()
+          ? static_cast<double>(take_profit_count()) / trade_count()
+          : 0.0;
+}
+
+auto BacktestingSummary::average_take_profit() const noexcept -> double
+{
+  return take_profit_count() ? sum_of_take_profits() / take_profit_count()
+                             : 0.0;
+}
+
+auto BacktestingSummary::take_profit_expected_value() const noexcept -> double
+{
+  return take_profit_rate() * average_take_profit();
+}
+
+auto BacktestingSummary::stop_loss_count() const noexcept -> std::size_t
+{
+  return stop_loss_count_;
+}
+
+void BacktestingSummary::stop_loss_count(std::size_t count) noexcept
+{
+  stop_loss_count_ = count;
+}
+
+auto BacktestingSummary::stop_loss_rate() const noexcept -> double
+{
+  return trade_count() ? static_cast<double>(stop_loss_count()) / trade_count()
+                       : 0.0;
+}
+
+auto BacktestingSummary::average_stop_loss() const noexcept -> double
+{
+  return stop_loss_count() ? sum_of_stop_losses() / stop_loss_count() : 0.0;
+}
+
+auto BacktestingSummary::stop_loss_expected_value() const noexcept -> double
+{
+  return stop_loss_rate() * average_stop_loss();
+}
+
+auto BacktestingSummary::exit_win_count() const noexcept -> std::size_t
+{
+  return exit_win_count_;
+}
+
+void BacktestingSummary::exit_win_count(std::size_t count) noexcept
+{
+  exit_win_count_ = count;
+}
+
+auto BacktestingSummary::exit_loss_count() const noexcept -> std::size_t
+{
+  return exit_loss_count_;
+}
+
+void BacktestingSummary::exit_loss_count(std::size_t count) noexcept
+{
+  exit_loss_count_ = count;
+}
+
+auto BacktestingSummary::exit_signal_count() const noexcept -> std::size_t
+{
+  return exit_win_count() + exit_loss_count() + break_even_count();
+}
+
+auto BacktestingSummary::exit_signal_rate() const noexcept -> double
+{
+  return trade_count()
+          ? static_cast<double>(exit_signal_count()) / trade_count()
+          : 0.0;
+}
+
+auto BacktestingSummary::sum_of_exit_signals() const noexcept -> double
+{
+  return sum_of_exit_wins() + sum_of_exit_losses();
+}
+
+auto BacktestingSummary::average_exit_signal() const noexcept -> double
+{
+  return exit_signal_count() ? sum_of_exit_signals() / exit_signal_count()
+                             : 0.0;
+}
+
+auto BacktestingSummary::exit_signal_expected_value() const noexcept -> double
+{
+  return exit_signal_rate() * average_exit_signal();
+}
+
+auto BacktestingSummary::expected_value() const noexcept -> double
 {
   return take_profit_expected_value() + stop_loss_expected_value() +
          exit_signal_expected_value();
 }
 
-auto BacktestingSummary::win_rate() const -> double
+auto BacktestingSummary::expected_return() const noexcept -> double
 {
-  if(closed_trades_.empty()) {
-    return 0;
-  }
-
-  auto win = 0;
-  for(const auto& trade : closed_trades_) {
-    if(trade.profit() > 0) {
-      win++;
-    }
-  }
-  return static_cast<double>(win) / closed_trades_.size();
+  return average_investment() ? expected_value() / average_investment() * 100
+                              : 0.0;
 }
 
-auto BacktestingSummary::loss_rate() const -> double
+auto BacktestingSummary::win_count() const noexcept -> std::size_t
 {
-  if(closed_trades_.empty()) {
-    return 0;
-  }
-
-  auto loss = 0;
-  for(const auto& trade : closed_trades_) {
-    if(trade.profit() < 0) {
-      loss++;
-    }
-  }
-
-  return static_cast<double>(loss) / closed_trades_.size();
+  return take_profit_count() + exit_win_count();
 }
 
-auto BacktestingSummary::break_even_rate() const -> double
+auto BacktestingSummary::win_rate() const noexcept -> double
 {
-  if(closed_trades_.empty()) {
-    return 0;
-  }
-
-  auto break_even = 0;
-  for(const auto& trade : closed_trades_) {
-    if(trade.profit() == 0) {
-      break_even++;
-    }
-  }
-  return static_cast<double>(break_even) / closed_trades_.size();
+  return trade_count() ? static_cast<double>(win_count()) / trade_count() : 0.0;
 }
 
-auto BacktestingSummary::average_win() const -> double
+auto BacktestingSummary::total_profits() const noexcept -> double
 {
-  auto total = 0.0;
-  auto win = 0;
-  for(const auto& trade : closed_trades_) {
-    if(trade.profit() > 0) {
-      total += trade.profit();
-      win++;
-    }
-  }
-  return win ? total / win : 0.0;
+  return sum_of_take_profits() + sum_of_exit_wins();
 }
 
-auto BacktestingSummary::average_loss() const -> double
+auto BacktestingSummary::total_profit_percent() const noexcept -> double
 {
-  auto total = 0.0;
-  auto loss = 0;
-  for(const auto& trade : closed_trades_) {
-    if(trade.profit() < 0) {
-      total += trade.profit();
-      loss++;
-    }
+  return sum_of_investments() ? total_profits() / sum_of_investments() : 0.0;
+}
+
+auto BacktestingSummary::average_win() const noexcept -> double
+{
+  return win_count() ? total_profits() / win_count() : 0.0;
+}
+
+auto BacktestingSummary::loss_count() const noexcept -> std::size_t
+{
+  return stop_loss_count() + exit_loss_count();
+}
+
+auto BacktestingSummary::loss_rate() const noexcept -> double
+{
+  return trade_count() ? static_cast<double>(loss_count()) / trade_count()
+                       : 0.0;
+}
+
+auto BacktestingSummary::total_losses() const noexcept -> double
+{
+  return sum_of_stop_losses() + sum_of_exit_losses();
+}
+
+auto BacktestingSummary::total_loss_percent() const noexcept -> double
+{
+  return sum_of_investments() ? total_losses() / sum_of_investments() : 0.0;
+}
+
+auto BacktestingSummary::average_loss() const noexcept -> double
+{
+  return loss_count() ? total_losses() / loss_count() : 0.0;
+}
+
+auto BacktestingSummary::break_even_count() const noexcept -> std::size_t
+{
+  return break_even_count_;
+}
+
+void BacktestingSummary::break_even_count(std::size_t count) noexcept
+{
+  break_even_count_ = count;
+}
+
+auto BacktestingSummary::break_even_rate() const noexcept -> double
+{
+  return trade_count() ? static_cast<double>(break_even_count()) / trade_count()
+                       : 0.0;
+}
+
+auto BacktestingSummary::profit_factor() const noexcept -> double
+{
+  if(total_losses() == 0.0) {
+    return std::numeric_limits<double>::infinity();
   }
-  return loss ? total / loss : 0.0;
+  return total_profits() / -total_losses();
+}
+
+auto BacktestingSummary::unrealized_pnl() const noexcept -> double
+{
+  return trade_record_.is_open() ? trade_record_.pnl() : 0.0;
+}
+
+auto BacktestingSummary::ongoing_trade_duration() const noexcept -> std::time_t
+{
+  return trade_record_.is_open() ? trade_record_.duration() : 0;
 }
 
 } // namespace pludux::backtest

@@ -166,6 +166,14 @@ void Application::on_update()
     try {
       action(state_data_);
     } catch(const std::exception& e) {
+      // some error like failed in deserialization can cause addition of nullptr
+      // assets, so we need to remove them from the assets vector
+      state_data_.assets.erase(
+       std::remove_if(state_data_.assets.begin(),
+                      state_data_.assets.end(),
+                      [](const auto& asset) { return !asset; }),
+       state_data_.assets.end());
+
       const auto error_message = std::format("Error: {}", e.what());
       state_data_.alert_messages.push(error_message);
     }

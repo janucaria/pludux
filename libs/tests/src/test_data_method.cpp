@@ -27,7 +27,8 @@ TEST(DataMethodTest, InvalidField)
   const auto data_method = DataMethod{field, offset};
   const auto asset_data = pludux::AssetHistory{{"close", {4.0, 4.1, 4.2}}};
 
-  EXPECT_THROW(data_method(asset_data), std::runtime_error);
+  EXPECT_TRUE(std::isnan(data_method(asset_data)[0]));
+  EXPECT_TRUE(std::isnan(data_method(asset_data)[1]));
 }
 
 TEST(DataMethodTest, EqualityOperator)

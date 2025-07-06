@@ -15,8 +15,8 @@ if(NOT EMSCRIPTEN)
 
   FetchContent_Declare(
     wgpu_native
-    DOWNLOAD_EXTRACT_TIMESTAMP
-    URL "https://github.com/gfx-rs/wgpu-native/releases/download/v22.1.0.5/wgpu-windows-x86_64-msvc-${PLUDUX_WEBGPU_DOWNLOAD_BUILD}.zip"
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    URL "https://github.com/gfx-rs/wgpu-native/releases/download/v25.0.2.1/wgpu-windows-x86_64-msvc-${PLUDUX_WEBGPU_DOWNLOAD_BUILD}.zip"
   )
   
   FetchContent_MakeAvailable(wgpu_native)
@@ -62,12 +62,16 @@ FetchContent_Declare(
   GIT_TAG        "v1.2.0"
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
+  PATCH_COMMAND 
+    ${CMAKE_COMMAND} -E copy_directory
+      ${CMAKE_CURRENT_SOURCE_DIR}/patch/glfw3webgpu/
+      <SOURCE_DIR>/
 )
 
 FetchContent_Declare(
   imgui
   GIT_REPOSITORY "https://github.com/ocornut/imgui.git"
-  GIT_TAG        "v1.91.8-docking"
+  GIT_TAG        "v1.92.0-docking"
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
 )
@@ -78,6 +82,10 @@ FetchContent_Declare(
   GIT_TAG        "v0.16"
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
+  PATCH_COMMAND 
+    ${CMAKE_COMMAND} -E copy_directory
+      ${CMAKE_CURRENT_SOURCE_DIR}/patch/implot/
+      <SOURCE_DIR>/
 )
 
 FetchContent_MakeAvailable(glfw3webgpu imgui implot)
@@ -112,6 +120,8 @@ add_executable(${PROJECT_NAME}
   src/actions/change_strategy_json_str_action.cpp
   src/actions/load_asset_csv_file_action.cpp
   src/actions/load_asset_csv_str_action.cpp
+  src/actions/load_backtests_setup_file_action.cpp
+  src/actions/load_backtests_setup_string_action.cpp
 
   src/application.cpp
   src/app_state.cpp
@@ -122,7 +132,6 @@ add_executable(${PROJECT_NAME}
   # Dear ImGui files
   ${imgui_SOURCE_DIR}/imgui.cpp
   ${imgui_SOURCE_DIR}/imgui_draw.cpp
-  ${imgui_SOURCE_DIR}/imgui_demo.cpp
   ${imgui_SOURCE_DIR}/imgui_tables.cpp
   ${imgui_SOURCE_DIR}/imgui_widgets.cpp
   # ImPlot files
@@ -135,7 +144,6 @@ target_compile_definitions(${PROJECT_NAME} PUBLIC
   
   PLUDUX_VERSION="${CMAKE_PROJECT_VERSION}"
   PLUDUX_SOURCE_CODE_URL="${CMAKE_PROJECT_HOMEPAGE_URL}"
-  
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -159,6 +167,9 @@ if(NOT EMSCRIPTEN)
 
   target_link_libraries(${PROJECT_NAME}
     PUBLIC
+      runtimeobject
+      propsys
+      ole32
       webgpu
       opengl32
       userenv

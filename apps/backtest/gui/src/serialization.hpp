@@ -40,6 +40,127 @@ void load(Archive& archive, nlohmann::json& json_data)
 /*--------------------------------------------------------------------------------------*/
 
 template<class Archive>
+void save(Archive& archive, const pludux::backtest::TradeRecord& trade_record)
+{
+  const auto status = static_cast<std::size_t>(trade_record.status());
+  archive(make_nvp("status", status),
+          make_nvp("positionSize", trade_record.position_size()),
+          make_nvp("entryIndex", trade_record.entry_index()),
+          make_nvp("atIndex", trade_record.at_index()),
+          make_nvp("entryTimestamp", trade_record.entry_timestamp()),
+          make_nvp("exitTimestamp", trade_record.exit_timestamp()),
+          make_nvp("entryPrice", trade_record.entry_price()),
+          make_nvp("exitPrice", trade_record.exit_price()),
+          make_nvp("stopLossPrice", trade_record.stop_loss_price()),
+          make_nvp("trailingStopPrice", trade_record.trailing_stop_price()),
+          make_nvp("takeProfitPrice", trade_record.take_profit_price()));
+}
+
+template<class Archive>
+void load(Archive& archive, pludux::backtest::TradeRecord& trade_record)
+{
+  auto status = std::size_t{};
+  auto position_size = double{};
+  auto entry_index = std::size_t{};
+  auto at_index = std::size_t{};
+  auto entry_timestamp = std::time_t{};
+  auto exit_timestamp = std::time_t{};
+  auto entry_price = double{};
+  auto exit_price = double{};
+  auto stop_loss_price = double{};
+  auto trailing_stop_price = double{};
+  auto take_profit_price = double{};
+
+  archive(make_nvp("status", status),
+          make_nvp("positionSize", position_size),
+          make_nvp("entryIndex", entry_index),
+          make_nvp("atIndex", at_index),
+          make_nvp("entryTimestamp", entry_timestamp),
+          make_nvp("exitTimestamp", exit_timestamp),
+          make_nvp("entryPrice", entry_price),
+          make_nvp("exitPrice", exit_price),
+          make_nvp("stopLossPrice", stop_loss_price),
+          make_nvp("trailingStopPrice", trailing_stop_price),
+          make_nvp("takeProfitPrice", take_profit_price));
+
+  trade_record = pludux::backtest::TradeRecord{
+   static_cast<pludux::backtest::TradeRecord::Status>(status),
+   position_size,
+   entry_index,
+   at_index,
+   entry_timestamp,
+   exit_timestamp,
+   entry_price,
+   exit_price,
+   stop_loss_price,
+   trailing_stop_price,
+   take_profit_price};
+}
+/*--------------------------------------------------------------------------------------*/
+
+template<class Archive>
+void save(Archive& archive, const pludux::backtest::BacktestingSummary& summary)
+{
+  archive(make_nvp("tradeRecord", summary.trade_record()),
+          make_nvp("sumOfInvestments", summary.sum_of_investments()),
+          make_nvp("sumOfTakeProfits", summary.sum_of_take_profits()),
+          make_nvp("sumOfStopLosses", summary.sum_of_stop_losses()),
+          make_nvp("sumOfExitWins", summary.sum_of_exit_wins()),
+          make_nvp("sumOfExitLosses", summary.sum_of_exit_losses()),
+          make_nvp("sumOfDurations", summary.sum_of_durations()),
+          make_nvp("takeProfitCount", summary.take_profit_count()),
+          make_nvp("stopLossCount", summary.stop_loss_count()),
+          make_nvp("exitWinCount", summary.exit_win_count()),
+          make_nvp("exitLossCount", summary.exit_loss_count()),
+          make_nvp("breakEvenCount", summary.break_even_count()));
+}
+
+template<class Archive>
+void load(Archive& archive, pludux::backtest::BacktestingSummary& summary)
+{
+  auto trade_record = pludux::backtest::TradeRecord{};
+  auto sum_of_investments = double{};
+  auto sum_of_take_profits = double{};
+  auto sum_of_stop_losses = double{};
+  auto sum_of_exit_wins = double{};
+  auto sum_of_exit_losses = double{};
+  auto sum_of_durations = std::time_t{};
+  auto take_profit_count = std::size_t{};
+  auto stop_loss_count = std::size_t{};
+  auto exit_win_count = std::size_t{};
+  auto exit_loss_count = std::size_t{};
+  auto break_even_count = std::size_t{};
+
+  archive(make_nvp("tradeRecord", trade_record),
+          make_nvp("sumOfInvestments", sum_of_investments),
+          make_nvp("sumOfTakeProfits", sum_of_take_profits),
+          make_nvp("sumOfStopLosses", sum_of_stop_losses),
+          make_nvp("sumOfExitWins", sum_of_exit_wins),
+          make_nvp("sumOfExitLosses", sum_of_exit_losses),
+          make_nvp("sumOfDurations", sum_of_durations),
+          make_nvp("takeProfitCount", take_profit_count),
+          make_nvp("stopLossCount", stop_loss_count),
+          make_nvp("exitWinCount", exit_win_count),
+          make_nvp("exitLossCount", exit_loss_count),
+          make_nvp("breakEvenCount", break_even_count));
+
+  summary.trade_record(trade_record);
+  summary.sum_of_investments(sum_of_investments);
+  summary.sum_of_take_profits(sum_of_take_profits);
+  summary.sum_of_stop_losses(sum_of_stop_losses);
+  summary.sum_of_exit_wins(sum_of_exit_wins);
+  summary.sum_of_exit_losses(sum_of_exit_losses);
+  summary.sum_of_durations(sum_of_durations);
+  summary.take_profit_count(take_profit_count);
+  summary.stop_loss_count(stop_loss_count);
+  summary.exit_win_count(exit_win_count);
+  summary.exit_loss_count(exit_loss_count);
+  summary.break_even_count(break_even_count);
+}
+
+/*--------------------------------------------------------------------------------------*/
+
+template<class Archive>
 void serialize(Archive& archive, pludux::backtest::TakeProfit& take_profit)
 {
   auto config_parser = pludux::ConfigParser{};
@@ -240,6 +361,12 @@ void save(Archive& archive, const pludux::AssetHistory& asset_history)
   }
 
   archive(make_nvp("historyData", history_data_map));
+  archive(make_nvp("datetimeKey", asset_history.datetime_key()));
+  archive(make_nvp("openKey", asset_history.open_key()));
+  archive(make_nvp("highKey", asset_history.high_key()));
+  archive(make_nvp("lowKey", asset_history.low_key()));
+  archive(make_nvp("closeKey", asset_history.close_key()));
+  archive(make_nvp("volumeKey", asset_history.volume_key()));
 }
 
 template<class Archive>
@@ -254,78 +381,34 @@ void load(Archive& archive, pludux::AssetHistory& asset_history)
   for(auto& [key, series] : history_data_map) {
     asset_history.insert(key, std::move(*series));
   }
+
+  auto datetime_key = std::string{};
+  auto open_key = std::string{};
+  auto high_key = std::string{};
+  auto low_key = std::string{};
+  auto close_key = std::string{};
+  auto volume_key = std::string{};
+  archive(make_nvp("datetimeKey", datetime_key),
+          make_nvp("openKey", open_key),
+          make_nvp("highKey", high_key),
+          make_nvp("lowKey", low_key),
+          make_nvp("closeKey", close_key),
+          make_nvp("volumeKey", volume_key));
+
+  asset_history.datetime_key(std::move(datetime_key));
+  asset_history.open_key(std::move(open_key));
+  asset_history.high_key(std::move(high_key));
+  asset_history.low_key(std::move(low_key));
+  asset_history.close_key(std::move(close_key));
+  asset_history.volume_key(std::move(volume_key));
 }
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void serialize(Archive& archive, pludux::QuoteAccess& quote_access)
-{
-  auto config_parser = pludux::ConfigParser{};
-  config_parser.register_default_parsers();
-
-  auto datetime_method = config_parser.serialize_method(quote_access.time());
-  auto open_method = config_parser.serialize_method(quote_access.open());
-  auto high_method = config_parser.serialize_method(quote_access.high());
-  auto low_method = config_parser.serialize_method(quote_access.low());
-  auto close_method = config_parser.serialize_method(quote_access.close());
-  auto volume_method = config_parser.serialize_method(quote_access.volume());
-
-  archive(make_nvp("datetime", datetime_method),
-          make_nvp("open", open_method),
-          make_nvp("high", high_method),
-          make_nvp("low", low_method),
-          make_nvp("close", close_method),
-          make_nvp("volume", volume_method));
-}
-
-template<>
-struct LoadAndConstruct<pludux::QuoteAccess> {
-  template<class Archive>
-  static void load_and_construct(Archive& archive,
-                                 construct<pludux::QuoteAccess>& constructor)
-  {
-    auto config_parser = pludux::ConfigParser{};
-    config_parser.register_default_parsers();
-
-    auto datetime_method_json = nlohmann::json{};
-    auto open_method_json = nlohmann::json{};
-    auto high_method_json = nlohmann::json{};
-    auto low_method_json = nlohmann::json{};
-    auto close_method_json = nlohmann::json{};
-    auto volume_method_json = nlohmann::json{};
-
-    archive(make_nvp("datetime", datetime_method_json),
-            make_nvp("open", open_method_json),
-            make_nvp("high", high_method_json),
-            make_nvp("low", low_method_json),
-            make_nvp("close", close_method_json),
-            make_nvp("volume", volume_method_json));
-
-    auto datetime_method = config_parser.parse_method(datetime_method_json);
-    auto open_method = config_parser.parse_method(open_method_json);
-    auto high_method = config_parser.parse_method(high_method_json);
-    auto low_method = config_parser.parse_method(low_method_json);
-    auto close_method = config_parser.parse_method(close_method_json);
-    auto volume_method = config_parser.parse_method(volume_method_json);
-
-    constructor(std::move(datetime_method),
-                std::move(open_method),
-                std::move(high_method),
-                std::move(low_method),
-                std::move(close_method),
-                std::move(volume_method));
-  }
-};
 
 /*--------------------------------------------------------------------------------------*/
 
 template<class Archive>
 void serialize(Archive& archive, const pludux::backtest::Asset& asset)
 {
-  archive(make_nvp("name", asset.name()),
-          make_nvp("history", asset.history()),
-          make_nvp("quoteAccess", asset.quote_access()));
+  archive(make_nvp("name", asset.name()), make_nvp("history", asset.history()));
 }
 
 template<>
@@ -337,13 +420,10 @@ struct LoadAndConstruct<pludux::backtest::Asset> {
   {
     auto name = std::string{};
     auto history = pludux::AssetHistory{};
-    auto quote_access = pludux::QuoteAccess{};
 
-    archive(make_nvp("name", name),
-            make_nvp("history", history),
-            make_nvp("quoteAccess", quote_access));
+    archive(make_nvp("name", name), make_nvp("history", history));
 
-    constructor(std::move(name), history, quote_access);
+    constructor(std::move(name), history);
   }
 };
 
@@ -354,7 +434,9 @@ void serialize(Archive& archive, pludux::Backtest& backtest)
 {
   archive(make_nvp("name", backtest.name()),
           make_nvp("strategy", backtest.strategy_ptr()),
-          make_nvp("asset", backtest.asset_ptr()));
+          make_nvp("asset", backtest.asset_ptr()),
+          make_nvp("summaries", backtest.summaries()),
+          make_nvp("isFailed", backtest.is_failed()));
 }
 
 template<>
@@ -366,12 +448,23 @@ struct LoadAndConstruct<pludux::Backtest> {
     auto name = std::string{};
     auto strategy_ptr = std::shared_ptr<pludux::backtest::Strategy>{};
     auto asset_ptr = std::shared_ptr<pludux::backtest::Asset>{};
+    auto summaries = std::vector<pludux::backtest::BacktestingSummary>{};
+    auto is_failed = bool{};
 
     archive(make_nvp("name", name),
             make_nvp("strategy", strategy_ptr),
-            make_nvp("asset", asset_ptr));
+            make_nvp("asset", asset_ptr),
+            make_nvp("summaries", summaries),
+            make_nvp("isFailed", is_failed));
 
-    constructor(std::move(name), strategy_ptr, asset_ptr);
+    auto backtest = pludux::Backtest{
+     std::move(name), strategy_ptr, asset_ptr, std::move(summaries)};
+
+    if(is_failed) {
+      backtest.mark_as_failed();
+    }
+
+    constructor(std::move(backtest));
   }
 };
 
@@ -389,15 +482,11 @@ void save(Archive& archive, const pludux::apps::AppStateData& app_state_data)
    make_nvp("selectedBacktestIndex", app_state_data.selected_backtest_index));
   archive(make_nvp("strategies", app_state_data.strategies));
   archive(make_nvp("assets", app_state_data.assets));
-  archive(make_nvp("quoteAccess", app_state_data.quote_access));
 
-  auto backtest_ptrs = std::vector<std::unique_ptr<pludux::Backtest>>{};
+  auto backtest_ptrs = std::vector<
+   std::unique_ptr<const pludux::Backtest, decltype([](auto*) {})>>{};
   for(const auto& backtest : backtests) {
-    const auto asset_ptr = backtest.asset_ptr();
-    const auto strategy_ptr = backtest.strategy_ptr();
-
-    backtest_ptrs.emplace_back(std::make_unique<pludux::Backtest>(
-     backtest.name(), strategy_ptr, asset_ptr));
+    backtest_ptrs.emplace_back(&backtest);
   }
   archive(make_nvp("backtests", backtest_ptrs));
 }
@@ -410,14 +499,13 @@ void load(Archive& archive, pludux::apps::AppStateData& app_state_data)
    make_nvp("selectedBacktestIndex", app_state_data.selected_backtest_index));
   archive(make_nvp("strategies", app_state_data.strategies));
   archive(make_nvp("assets", app_state_data.assets));
-  archive(make_nvp("quoteAccess", app_state_data.quote_access));
 
   auto backtest_ptrs = std::vector<std::unique_ptr<pludux::Backtest>>{};
   archive(make_nvp("backtests", backtest_ptrs));
   app_state_data.backtests.clear();
-  for(const auto& backtest_ptr : backtest_ptrs) {
+  for(auto& backtest_ptr : backtest_ptrs) {
     if(backtest_ptr) {
-      app_state_data.backtests.emplace_back(*backtest_ptr);
+      app_state_data.backtests.emplace_back(std::move(*backtest_ptr));
     }
   }
 }

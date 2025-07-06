@@ -4,8 +4,6 @@
 #include <pludux/asset_snapshot.hpp>
 #include <pludux/screener.hpp>
 
-#include <pludux/backtest/running_state.hpp>
-
 namespace pludux::backtest {
 
 class TradingStopLoss {
@@ -21,7 +19,11 @@ public:
 
   auto exit_price() const noexcept -> double;
 
-  auto operator()(const RunningState& running_state) -> bool;
+  auto operator()(const AssetSnapshot& asset_snapshot) -> bool;
+
+  auto stop_price() const noexcept -> double;
+
+  void stop_price(double new_stop_price) noexcept;
 
 private:
   bool is_disabled_;

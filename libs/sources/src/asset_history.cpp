@@ -17,20 +17,10 @@ AssetHistory::AssetHistory(
 {
 }
 
-AssetHistory::operator AssetSnapshot() const noexcept
-{
-  return this->operator[](0);
-}
-
-auto AssetHistory::operator[](std::size_t index) const noexcept -> AssetSnapshot
-{
-  return AssetSnapshot{index, history_data_};
-}
-
-auto AssetHistory::operator[](const std::string& key) const
+auto AssetHistory::operator[](std::string_view key) const
  -> RefSeries<const PolySeries<double>>
 {
-  return RefSeries{history_data_.at(key)};
+  return RefSeries{history_data_.at(std::string(key))};
 }
 
 auto AssetHistory::size() const noexcept -> std::size_t
@@ -44,88 +34,123 @@ auto AssetHistory::history_data() const noexcept
   return history_data_;
 }
 
-auto AssetHistory::contains(const std::string& key) const noexcept -> bool
+auto AssetHistory::datetime_key() const noexcept -> const std::string&
 {
-  return history_data_.contains(key);
+  return datetime_key_;
+}
+
+void AssetHistory::datetime_key(std::string key) noexcept
+{
+  datetime_key_ = std::move(key);
+}
+
+auto AssetHistory::open_key() const noexcept -> const std::string&
+{
+  return open_key_;
+}
+
+void AssetHistory::open_key(std::string key) noexcept
+{
+  open_key_ = std::move(key);
+}
+
+auto AssetHistory::high_key() const noexcept -> const std::string&
+{
+  return high_key_;
+}
+
+void AssetHistory::high_key(std::string key) noexcept
+{
+  high_key_ = std::move(key);
+}
+
+auto AssetHistory::low_key() const noexcept -> const std::string&
+{
+  return low_key_;
+}
+
+void AssetHistory::low_key(std::string key) noexcept
+{
+  low_key_ = std::move(key);
+}
+
+auto AssetHistory::close_key() const noexcept -> const std::string&
+{
+  return close_key_;
+}
+
+void AssetHistory::close_key(std::string key) noexcept
+{
+  close_key_ = std::move(key);
+}
+
+auto AssetHistory::volume_key() const noexcept -> const std::string&
+{
+  return volume_key_;
+}
+
+void AssetHistory::volume_key(std::string key) noexcept
+{
+  volume_key_ = std::move(key);
+}
+
+auto AssetHistory::contains(std::string_view key) const noexcept -> bool
+{
+  return history_data_.contains(std::string(key));
 }
 
 void AssetHistory::insert(std::string key, PolySeries<double> series)
 {
   history_data_.emplace(std::move(key), std::move(series));
-
-  size_ = history_data_.begin()->second.size();
+  recalculate_size_();
 }
 
-auto AssetHistory::begin() const -> Iterator
+auto AssetHistory::get_datetimes() const noexcept
+ -> RefSeries<const PolySeries<double>>
 {
-  return Iterator{*this, 0};
+  return (*this)[datetime_key_];
 }
 
-auto AssetHistory::end() const -> Iterator
+auto AssetHistory::get_opens() const noexcept
+ -> RefSeries<const PolySeries<double>>
 {
-  return Iterator{*this, size_};
+  return (*this)[open_key_];
 }
 
-auto AssetHistory::rbegin() const -> ReverseIterator
+auto AssetHistory::get_highs() const noexcept
+ -> RefSeries<const PolySeries<double>>
 {
-  return std::make_reverse_iterator(end());
+  return (*this)[high_key_];
 }
 
-auto AssetHistory::rend() const -> ReverseIterator
+auto AssetHistory::get_lows() const noexcept
+ -> RefSeries<const PolySeries<double>>
 {
-  return std::make_reverse_iterator(begin());
+  return (*this)[low_key_];
 }
 
-// -------------------------------------------------------------------------- //
-
-AssetHistory::ConstIterator::ConstIterator(const AssetHistory& asset_history,
-                                           std::size_t index)
-: asset_history_{asset_history}
-, index_{index}
+auto AssetHistory::get_closes() const noexcept
+ -> RefSeries<const PolySeries<double>>
 {
+  return (*this)[close_key_];
 }
 
-auto AssetHistory::ConstIterator::operator++() -> ConstIterator&
+auto AssetHistory::get_volumes() const noexcept
+ -> RefSeries<const PolySeries<double>>
 {
-  ++index_;
-  return *this;
+  return (*this)[volume_key_];
 }
 
-auto AssetHistory::ConstIterator::operator++(int) -> ConstIterator
+void AssetHistory::recalculate_size_() noexcept
 {
-  auto copy = *this;
-  ++index_;
-  return copy;
-}
-
-auto AssetHistory::ConstIterator::operator--() -> ConstIterator&
-{
-  --index_;
-  return *this;
-}
-
-auto AssetHistory::ConstIterator::operator--(int) -> ConstIterator
-{
-  auto copy = *this;
-  --index_;
-  return copy;
-}
-
-auto AssetHistory::ConstIterator::operator*() const -> value_type
-{
-  return asset_history_[index_];
-}
-
-auto AssetHistory::ConstIterator::operator==(const ConstIterator& other) const
- -> bool
-{
-  return index_ == other.index_;
-}
-
-auto AssetHistory::ConstIterator::operator!=(const ConstIterator& other) const
- -> bool
-{
-  return !(*this == other);
+  size_ = history_data_.empty()
+           ? 0
+           : std::max_element(history_data_.begin(),
+                              history_data_.end(),
+                              [](const auto& lhs, const auto& rhs) {
+                                return lhs.second.size() < rhs.second.size();
+                              })
+              ->second.size();
 }
 
 } // namespace pludux

@@ -13,12 +13,11 @@ TakeProfit::TakeProfit(screener::ScreenerMethod reward_method,
 {
 }
 
-auto TakeProfit::operator()(const RunningState& running_state) const
+auto TakeProfit::operator()(AssetSnapshot asset_snapshot) const
  -> TradingTakeProfit
 {
-  const auto asset = running_state.asset_snapshot();
-  const auto entry_price = running_state.price();
-  const auto take_profit = reward_method_(asset)[0];
+  const auto entry_price = asset_snapshot.get_close();
+  const auto take_profit = reward_method_(asset_snapshot)[0];
   const auto take_profit_price = entry_price + take_profit;
 
   return TradingTakeProfit{

@@ -15,12 +15,10 @@ StopLoss::StopLoss(screener::ScreenerMethod risk_method,
 {
 }
 
-auto StopLoss::operator()(const RunningState& running_state) const
- -> TradingStopLoss
+auto StopLoss::operator()(AssetSnapshot asset_snapshot) const -> TradingStopLoss
 {
-  const auto asset = running_state.asset_snapshot();
-  const auto entry_price = running_state.price();
-  const auto stop_loss_risk = risk_method_(asset)[0];
+  const auto entry_price = asset_snapshot.get_close();
+  const auto stop_loss_risk = risk_method_(asset_snapshot)[0];
   const auto stop_loss_price = entry_price - stop_loss_risk;
 
   return TradingStopLoss{
@@ -42,14 +40,9 @@ auto StopLoss::risk_method() const noexcept -> const screener::ScreenerMethod&
   return risk_method_;
 }
 
-auto StopLoss::get_order_size(const RunningState& running_state) const -> double
+auto StopLoss::get_risk_size(AssetSnapshot asset_snapshot) const -> double
 {
-  const auto capital_risk = running_state.capital_risk();
-  const auto& asset = running_state.asset_snapshot();
-  const auto stop_loss = risk_method_(asset)[0];
-  const auto order_size = capital_risk / stop_loss;
-
-  return order_size;
+  return risk_method_(asset_snapshot)[0];
 }
 
 } // namespace pludux::backtest

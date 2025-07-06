@@ -6,8 +6,6 @@
 
 #include <pludux/backtest/trading_take_profit.hpp>
 
-#include "./running_state.hpp"
-
 namespace pludux::backtest {
 
 class TakeProfit {
@@ -16,7 +14,7 @@ public:
              bool is_disabled,
              screener::ScreenerMethod trading_price_method);
 
-  auto operator()(const RunningState& running_state) const -> TradingTakeProfit;
+  auto operator()(AssetSnapshot asset_snapshot) const -> TradingTakeProfit;
 
   auto is_disabled() const noexcept -> bool;
 

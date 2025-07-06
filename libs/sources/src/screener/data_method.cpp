@@ -25,7 +25,7 @@ auto DataMethod::operator()(AssetSnapshot asset_data) const
                                      asset_data.size()}},
      static_cast<std::ptrdiff_t>(offset_)};
   }
-  return SubSeries<PolySeries<double>>{asset_data[field_],
+  return SubSeries<PolySeries<double>>{asset_data.get_values(field_),
                                        static_cast<std::ptrdiff_t>(offset_)};
 }
 

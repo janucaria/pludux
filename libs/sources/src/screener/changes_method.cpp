@@ -3,14 +3,20 @@
 #include <vector>
 
 #include <pludux/asset_snapshot.hpp>
+#include <pludux/screener/ohlcv_method.hpp>
 #include <pludux/ta.hpp>
 
 #include <pludux/screener/changes_method.hpp>
 
 namespace pludux::screener {
 
-ChangesMethod::ChangesMethod(ScreenerMethod operand, std::size_t offset)
-: operand_{operand}
+ChangesMethod::ChangesMethod()
+: ChangesMethod{CloseMethod{}, 0}
+{
+}
+
+ChangesMethod::ChangesMethod(ScreenerMethod input, std::size_t offset)
+: input_{input}
 , offset_{offset}
 {
 }
@@ -18,8 +24,8 @@ ChangesMethod::ChangesMethod(ScreenerMethod operand, std::size_t offset)
 auto ChangesMethod::operator()(AssetSnapshot asset_data) const
  -> SubSeries<PolySeries<double>>
 {
-  const auto operand_series = operand_(asset_data);
-  const auto result = ta::changes(operand_series);
+  const auto input_series = input_(asset_data);
+  const auto result = ta::changes(input_series);
   return SubSeries{PolySeries<double>{result},
                    static_cast<std::ptrdiff_t>(offset_)};
 }
@@ -32,9 +38,19 @@ auto ChangesMethod::offset() const noexcept -> std::size_t
   return offset_;
 }
 
-auto ChangesMethod::operand() const noexcept -> const ScreenerMethod&
+void ChangesMethod::offset(std::size_t offset) noexcept
 {
-  return operand_;
+  offset_ = offset;
+}
+
+auto ChangesMethod::input() const noexcept -> const ScreenerMethod&
+{
+  return input_;
+}
+
+void ChangesMethod::input(ScreenerMethod input) noexcept
+{
+  input_ = std::move(input);
 }
 
 } // namespace pludux::screener
