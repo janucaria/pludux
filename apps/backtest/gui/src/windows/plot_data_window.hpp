@@ -41,9 +41,10 @@ private:
 
   void PlotVolume(const char* label_id, const AssetHistory& asset_history);
 
-  void DrawTrades(const char* label_id,
-                  const std::vector<backtest::TradeRecord>& trade_records,
-                  const AssetHistory& asset_history);
+  void DrawTrades(
+   const char* label_id,
+   const std::vector<backtest::BacktestingSummary>& backtest_summaries,
+   const AssetHistory& asset_history);
 };
 
 } // namespace pludux::apps

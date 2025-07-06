@@ -3,8 +3,10 @@
 #include <cstdlib>
 #include <ctime>
 #include <format>
+#include <iomanip>
 #include <iostream>
 #include <limits>
+#include <locale>
 #include <optional>
 #include <vector>
 
@@ -23,19 +25,19 @@ Backtest::Backtest(std::string name,
 : Backtest{std::move(name),
            std::move(strategy_ptr),
            std::move(asset_ptr),
-           std::vector<backtest::TradeRecord>{}}
+           std::vector<backtest::BacktestingSummary>{}}
 {
 }
 
 Backtest::Backtest(std::string name,
                    std::shared_ptr<backtest::Strategy> strategy_ptr,
                    std::shared_ptr<backtest::Asset> asset_ptr,
-                   std::vector<backtest::TradeRecord> trade_records)
+                   std::vector<backtest::BacktestingSummary> summaries)
 : name_{std::move(name)}
 , strategy_ptr_{strategy_ptr}
 , asset_ptr_{asset_ptr}
 , is_failed_{false}
-, trade_records_{std::move(trade_records)}
+, summaries_{std::move(summaries)}
 {
 }
 
@@ -81,24 +83,24 @@ auto Backtest::capital_risk() const noexcept -> double
   return strategy().capital_risk();
 }
 
-auto Backtest::trade_records() const noexcept
- -> const std::vector<backtest::TradeRecord>&
+auto Backtest::summaries() const noexcept
+ -> const std::vector<backtest::BacktestingSummary>&
 {
-  return trade_records_;
+  return summaries_;
 }
 
 void Backtest::reset()
 {
   is_failed_ = false;
-  trade_records_.clear();
+  summaries_.clear();
 }
 
 auto Backtest::should_run() const noexcept -> bool
 {
-  const auto trade_records_size = trade_records_.size();
+  const auto summaries_size = summaries_.size();
   const auto asset_size = asset().size();
 
-  return trade_records_size < asset_size && !is_failed();
+  return summaries_size < asset_size && !is_failed();
 }
 
 void Backtest::run()
@@ -109,11 +111,10 @@ void Backtest::run()
     return;
   }
 
-  const auto trade_records_size = trade_records_.size();
+  const auto summaries_size = summaries_.size();
   const auto asset_size = asset().size();
   const auto last_index = asset_size - 1;
-  const auto asset_index =
-   last_index - std::min(trade_records_size, last_index);
+  const auto asset_index = last_index - std::min(summaries_size, last_index);
   const auto asset_snapshot = asset().get_snapshot(asset_index);
   const auto& strategy = *strategy_ptr();
 
@@ -123,7 +124,7 @@ void Backtest::run()
    static_cast<std::time_t>(asset_snapshot.get_datetime());
 
   auto trade_status = TradeRecord::Status::flat;
-  auto order_size = std::numeric_limits<double>::quiet_NaN();
+  auto position_size = std::numeric_limits<double>::quiet_NaN();
   auto entry_index = std::size_t{};
   auto entry_timestamp = std::time_t{};
   auto entry_price = std::numeric_limits<double>::quiet_NaN();
@@ -132,18 +133,18 @@ void Backtest::run()
   auto trailing_stop_price = std::numeric_limits<double>::quiet_NaN();
   auto take_profit_price = std::numeric_limits<double>::quiet_NaN();
 
-  if(trade_records_.empty() || !trade_records_.back().is_open()) {
+  if(summaries_.empty() || !summaries_.back().trade_record().is_open()) {
     const auto& entry_filter = strategy.entry_filter();
     if(entry_filter(asset_snapshot)) {
       const auto risk_size = stop_loss.get_risk_size(asset_snapshot);
-      const auto entry_order_size = strategy.capital_risk() / risk_size;
+      const auto order_size = strategy.capital_risk() / risk_size;
 
-      if(!std::isnan(entry_order_size)) {
+      if(!std::isnan(order_size)) {
         auto trading_take_profit = take_profit(asset_snapshot);
         auto trading_stop_loss = stop_loss(asset_snapshot);
 
         trade_status = TradeRecord::Status::open;
-        order_size = entry_order_size;
+        position_size = order_size;
         entry_index = asset_index;
         entry_price = exit_price;
         entry_timestamp = exit_timestamp;
@@ -155,12 +156,12 @@ void Backtest::run()
       }
     }
   } else {
-    const auto& last_trade_record = trade_records_.back();
+    const auto& last_trade_record = summaries_.back().trade_record();
 
     entry_index = last_trade_record.entry_index();
     entry_price = last_trade_record.entry_price();
     entry_timestamp = last_trade_record.entry_timestamp();
-    order_size = last_trade_record.order_size();
+    position_size = last_trade_record.position_size();
 
     const auto& entry_snapshot = asset().get_snapshot(entry_index);
     auto trading_take_profit = take_profit(entry_snapshot);
@@ -214,17 +215,24 @@ void Backtest::run()
                            : std::numeric_limits<double>::quiet_NaN();
   }
 
-  trade_records_.emplace_back(trade_status,
-                              order_size,
-                              entry_index,
-                              asset_index,
-                              entry_timestamp,
-                              exit_timestamp,
-                              entry_price,
-                              exit_price,
-                              initial_stop_loss_price,
-                              trailing_stop_price,
-                              take_profit_price);
+  auto trade_record = TradeRecord{trade_status,
+                                  position_size,
+                                  entry_index,
+                                  asset_index,
+                                  entry_timestamp,
+                                  exit_timestamp,
+                                  entry_price,
+                                  exit_price,
+                                  initial_stop_loss_price,
+                                  trailing_stop_price,
+                                  take_profit_price};
+
+  const auto& last_summary =
+   summaries_.empty() ? backtest::BacktestingSummary{} : summaries_.back();
+
+  auto summary = last_summary.get_next_summary(std::move(trade_record));
+
+  summaries_.emplace_back(std::move(summary));
 }
 
 auto get_env_var(std::string_view var_name) -> std::optional<std::string>
@@ -512,6 +520,14 @@ auto format_datetime(std::time_t timestamp) -> std::string
   }
 
   return formated_datetime;
+}
+
+auto format_currency(double value) -> std::string
+{
+  auto output_stream = std::ostringstream{};
+  output_stream.imbue(std::locale(""));
+  output_stream << std::fixed << std::setprecision(2) << std::showbase << value;
+  return output_stream.str();
 }
 
 } // namespace pludux

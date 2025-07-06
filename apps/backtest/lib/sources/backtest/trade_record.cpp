@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstddef>
 #include <ctime>
 #include <limits>
@@ -22,7 +23,7 @@ TradeRecord::TradeRecord()
 }
 
 TradeRecord::TradeRecord(Status status,
-                         double order_size,
+                         double position_size,
                          std::size_t entry_index,
                          std::size_t at_index,
                          std::time_t entry_timestamp,
@@ -32,7 +33,7 @@ TradeRecord::TradeRecord(Status status,
                          double stop_loss_price,
                          double trailing_stop_price,
                          double take_profit_price)
-: order_size_{order_size}
+: position_size_{position_size}
 , entry_price_{entry_price}
 , exit_price_{exit_price}
 , stop_loss_price_{stop_loss_price}
@@ -46,14 +47,14 @@ TradeRecord::TradeRecord(Status status,
 {
 }
 
-auto TradeRecord::order_size() const noexcept -> double
+auto TradeRecord::position_size() const noexcept -> double
 {
-  return order_size_;
+  return position_size_;
 }
 
-void TradeRecord::order_size(double size) noexcept
+void TradeRecord::position_size(double size) noexcept
 {
-  order_size_ = size;
+  position_size_ = size;
 }
 
 auto TradeRecord::entry_index() const noexcept -> std::size_t
@@ -146,14 +147,19 @@ void TradeRecord::take_profit_price(double price) noexcept
   take_profit_price_ = price;
 }
 
-auto TradeRecord::position_size() const noexcept -> double
+auto TradeRecord::position_value() const noexcept -> double
 {
-  return order_size_ * entry_price_;
+  return position_size_ * entry_price_;
 }
 
-auto TradeRecord::profit() const noexcept -> double
+auto TradeRecord::pnl() const noexcept -> double
 {
-  return (exit_price_ - entry_price_) / entry_price_ * position_size();
+  return (exit_price_ - entry_price_) / entry_price_ * position_value();
+}
+
+auto TradeRecord::profit_and_loss() const noexcept -> double
+{
+  return pnl();
 }
 
 auto TradeRecord::duration() const noexcept -> std::time_t

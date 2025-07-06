@@ -46,24 +46,21 @@ auto main(int, const char**) -> int
     backtest.run();
   }
 
+  const auto& backtest_summaries = backtest.summaries();
+  const auto& summary = !backtest_summaries.empty()
+                         ? backtest_summaries.back()
+                         : pludux::backtest::BacktestingSummary{};
+
   auto& ostream = std::cout;
 
-  auto summary = pludux::backtest::BacktestingSummary{};
-  const auto& trade_records = backtest.trade_records();
-  for(int i = 0, ii = trade_records.size(); i < ii; ++i) {
-    const auto& trade = trade_records[i];
-
-    if(trade.is_summary_session()) {
-      summary.add_trade(trade);
-    }
-  }
-
   ostream << std::format("Risk per trade: {:.2f}\n", backtest.capital_risk());
-  ostream << std::format("Total profit: {:.2f}\n", summary.total_profit());
+  ostream << std::format("Total profit: {:.2f}\n", summary.sum_of_pnls());
 
-  const auto total_duration = pludux::format_duration(summary.total_duration());
+  const auto total_duration =
+   pludux::format_duration(summary.sum_of_durations());
   ostream << std::format("Total duration: {}\n", total_duration);
-  ostream << std::format("Total trades: {}\n", summary.total_trades());
+  ostream << std::format("Total trades: {}\n",
+                         summary.trade_count() + summary.open_trade_count());
 
   ostream << std::format("Average profit: {:.2f}\n", summary.average_win());
   ostream << std::format("Average loss: {:.2f}\n", -summary.average_loss());
@@ -76,7 +73,7 @@ auto main(int, const char**) -> int
   ostream << "OPEN TRADE\n";
   ostream << "----------\n";
   ostream << std::format("Unrealized profit: {:.2f}\n",
-                         summary.unrealized_profit());
+                         summary.unrealized_pnl());
 
   const auto ongoing_trade_duration =
    pludux::format_duration(summary.ongoing_trade_duration());
@@ -113,8 +110,7 @@ auto main(int, const char**) -> int
                          summary.expected_value() / backtest.capital_risk() *
                           100);
 
-  ostream << std::format("Total closed trades: {}\n",
-                         summary.closed_trades().size());
+  ostream << std::format("Total closed trades: {}\n", summary.trade_count());
   ostream << std::format("Win rate: {:.2f}%\n", summary.win_rate() * 100);
   ostream << std::format("Loss rate: {:.2f}%\n", summary.loss_rate() * 100);
   ostream << std::format("Break even rate: {:.2f}%\n",
@@ -124,8 +120,9 @@ auto main(int, const char**) -> int
   // iterate through the trades
   std::cout << "Trades: " << std::endl;
   // auto is_in_trade = false;
-  for(int i = 0, ii = trade_records.size(); i < ii; ++i) {
-    const auto& trade = trade_records[i];
+
+  for(int i = 0, ii = backtest_summaries.size(); i < ii; ++i) {
+    const auto& trade = backtest_summaries[i].trade_record();
 
     if(trade.is_summary_session()) {
       const auto entry_timestamp = trade.entry_timestamp();
@@ -136,7 +133,7 @@ auto main(int, const char**) -> int
                                     : pludux::format_datetime(exit_timestamp))
                 << "Position size: " << trade.position_size() << std::endl
                 << "Reason: " << static_cast<int>(trade.status()) << std::endl
-                << "Profit: " << trade.profit() << std::endl
+                << "Profit: " << trade.pnl() << std::endl
                 << std::endl;
     }
   }

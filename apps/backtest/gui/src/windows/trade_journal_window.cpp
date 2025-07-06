@@ -50,13 +50,14 @@ void TradeJournalWindow::render(AppState& app_state)
 
       ImGui::TableHeadersRow();
 
-      const auto& trade_records = backtest.trade_records();
-      const auto total_trades = trade_records.size();
-      for(int i = total_trades - 1; i >= 0; --i) {
-        const auto& trade = trade_records[i];
+      const auto& backtest_summaries = backtest.summaries();
+      const auto backtest_summaries_size = backtest_summaries.size();
+      for(int i = backtest_summaries_size - 1; i >= 0; --i) {
+        const auto& summary = backtest_summaries[i];
+        const auto& trade_record = summary.trade_record();
 
-        if(trade.is_summary_session()) {
-          draw_trade_row(trade);
+        if(trade_record.is_summary_session()) {
+          draw_trade_row(trade_record);
         }
       }
 
@@ -94,7 +95,7 @@ void TradeJournalWindow::draw_trade_row(const backtest::TradeRecord& trade)
   }
   ImGui::TableNextColumn();
 
-  ImGui::Text("%.2f%s", trade.profit(), trade.is_open() ? " (Floating)" : "");
+  ImGui::Text("%.2f%s", trade.pnl(), trade.is_open() ? " (Floating)" : "");
   ImGui::TableNextColumn();
   ImGui::Text("%s", format_duration(trade.duration()).c_str());
 }

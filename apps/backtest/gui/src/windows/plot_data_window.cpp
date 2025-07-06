@@ -35,12 +35,12 @@ void PlotDataWindow::render(AppState& app_state)
   const auto& asset = backtests[state.selected_backtest_index].asset();
   const auto& asset_history = asset.history();
 
-  auto trade_records = std::vector<backtest::TradeRecord>{};
+  auto backtest_summaries = std::vector<backtest::BacktestingSummary>{};
   auto is_backtest_should_run = false;
   if(!state.backtests.empty()) {
     const auto& backtest = state.backtests[state.selected_backtest_index];
     is_backtest_should_run = backtest.should_run();
-    trade_records = backtest.trade_records();
+    backtest_summaries = backtest.summaries();
   }
 
   // get the avaliable space
@@ -77,7 +77,7 @@ void PlotDataWindow::render(AppState& app_state)
     ImPlot::SetupAxis(ImAxis_Y1, nullptr, axis_y_flags);
     ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
 
-    DrawTrades("Trades", trade_records, asset_history);
+    DrawTrades("Trades", backtest_summaries, asset_history);
     TickerTooltip(asset_history, false);
     PlotOHLC("OHLC", asset_history);
 
@@ -290,7 +290,7 @@ void PlotDataWindow::PlotVolume(const char* label_id,
 
 void PlotDataWindow::DrawTrades(
  const char* label_id,
- const std::vector<backtest::TradeRecord>& trade_records,
+ const std::vector<backtest::BacktestingSummary>& backtest_summaries,
  const AssetHistory& asset_history)
 {
   auto* draw_list = ImPlot::GetPlotDrawList();
@@ -298,10 +298,10 @@ void PlotDataWindow::DrawTrades(
   constexpr double half_width = 0.5;
   if(ImPlot::BeginItem(label_id)) {
     auto trailing_stop_lines = std::vector<ImVec2>{};
-    trailing_stop_lines.reserve(trade_records.size());
+    trailing_stop_lines.reserve(backtest_summaries.size());
 
-    for(int i = 0, ii = trade_records.size(); i < ii; ++i) {
-      const auto& trade = trade_records[i];
+    for(int i = 0, ii = backtest_summaries.size(); i < ii; ++i) {
+      const auto& trade = backtest_summaries[i].trade_record();
 
       const auto take_profit_price = trade.take_profit_price();
       const auto stop_loss_price = trade.stop_loss_price();

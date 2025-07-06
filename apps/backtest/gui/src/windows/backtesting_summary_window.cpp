@@ -24,97 +24,195 @@ void BacktestSummaryWindow::render(AppState& app_state)
 
   ImGui::Begin("Summary", nullptr);
 
-  auto ostream = std::stringstream{};
   if(!state.backtests.empty() && state.selected_backtest_index >= 0) {
     const auto& backtest = backtests[state.selected_backtest_index];
-
     const auto& backtest_name = backtest.name();
-    const auto& asset_name = backtest.asset().name();
-    const auto& strategy_name = backtest.strategy().name();
+    ImGui::Text("%s", backtest_name.c_str());
+    ImGui::Separator();
 
-    ostream << "Backtest: " << backtest_name << std::endl;
-    ostream << "Asset: " << asset_name << std::endl;
-    ostream << "Strategy: " << strategy_name << std::endl;
-    ostream << std::endl;
+    const auto& backtesting_summaries = backtest.summaries();
+    if(!backtesting_summaries.empty() &&
+       ImGui::BeginTable(
+        "TradeSummaryTable", 2, ImGuiTableFlags_BordersInnerH)) {
+      const auto& summary = backtesting_summaries.back();
 
-    auto summary = backtest::BacktestingSummary{};
+      draw_row("Asset", backtest.asset().name());
+      draw_row("Strategy", backtest.strategy().name());
+      draw_count_row("Total trades", summary.trade_count());
+      draw_duration_row("Total duration", summary.sum_of_durations());
 
-    const auto& trade_records = backtest.trade_records();
-    for(int i = 0, ii = trade_records.size(); i < ii; ++i) {
-      const auto& trade = trade_records[i];
+      draw_spacer_row();
 
-      if(trade.is_summary_session()) {
-        summary.add_trade(trade);
-      }
+      draw_currency_with_rate_row("Expected value",
+                                  summary.expected_value(),
+                                  summary.expected_value() /
+                                   summary.average_investment());
+      draw_float_row("Profit factor", summary.profit_factor());
+
+      draw_spacer_row();
+
+      draw_currency_with_rate_row("Avg P&L",
+                                  summary.average_pnl(),
+                                  summary.average_pnl() /
+                                   summary.average_investment());
+      draw_currency_with_rate_row("Avg profit",
+                                  summary.average_win(),
+                                  summary.average_win() /
+                                   summary.average_investment());
+      draw_currency_with_rate_row("Avg loss",
+                                  summary.average_loss(),
+                                  summary.average_loss() /
+                                   summary.average_investment());
+      draw_currency_row("Avg investment", summary.average_investment());
+      draw_duration_row("Avg duration", summary.average_duration());
+
+      draw_spacer_row();
+
+      draw_count_row_with_rate(
+       "Winning trades", summary.win_count(), summary.win_rate());
+      draw_count_row_with_rate(
+       "Losing trades", summary.loss_count(), summary.loss_rate());
+      draw_count_row_with_rate("Break-even trades",
+                               summary.break_even_count(),
+                               summary.break_even_rate());
+
+      draw_spacer_row();
+
+      draw_count_row_with_rate("Take profit hits",
+                               summary.take_profit_count(),
+                               summary.take_profit_rate());
+      draw_currency_with_rate_row("Avg take profit",
+                                  summary.average_take_profit(),
+                                  summary.average_take_profit() /
+                                   summary.average_investment());
+      draw_currency_with_rate_row("Take profit EV",
+                                  summary.take_profit_expected_value(),
+                                  summary.take_profit_expected_value() /
+                                   summary.average_investment());
+
+      draw_empty_row();
+
+      draw_count_row_with_rate(
+       "Stop loss hits", summary.stop_loss_count(), summary.stop_loss_rate());
+      draw_currency_with_rate_row("Avg stop loss",
+                                  summary.average_stop_loss(),
+                                  summary.average_stop_loss() /
+                                   summary.average_investment());
+      draw_currency_with_rate_row("Stop loss EV",
+                                  summary.stop_loss_expected_value(),
+                                  summary.stop_loss_expected_value() /
+                                   summary.average_investment());
+
+      draw_empty_row();
+
+      draw_currency_with_rate_row("Exit signal hits",
+                                  summary.exit_signal_count(),
+                                  summary.exit_signal_rate());
+      draw_currency_with_rate_row("Avg exit signal",
+                                  summary.average_exit_signal(),
+                                  summary.average_exit_signal() /
+                                   summary.average_investment());
+      draw_currency_with_rate_row("Exit signal EV",
+                                  summary.exit_signal_expected_value(),
+                                  summary.exit_signal_expected_value() /
+                                   summary.average_investment());
+
+      draw_spacer_row();
+
+      draw_currency_row("Total investments", summary.sum_of_investments());
+      draw_currency_with_rate_row("Net P&L",
+                                  summary.sum_of_pnls(),
+                                  summary.sum_of_pnls() /
+                                   summary.sum_of_investments());
+
+      draw_spacer_row();
+
+      draw_count_row("Total open trades", summary.open_trade_count());
+      draw_currency_with_rate_row("Unrealized P&L",
+                                  summary.unrealized_pnl(),
+                                  summary.unrealized_pnl() /
+                                   summary.sum_of_investments());
+      draw_duration_row("Ongoing trade duration",
+                        summary.ongoing_trade_duration());
     }
 
-    ostream << std::format("Risk per trade: {:.2f}\n", backtest.capital_risk());
-    ostream << std::format("Total profit: {:.2f}\n", summary.total_profit());
-
-    const auto total_duration = format_duration(summary.total_duration());
-    ostream << std::format("Total duration: {}\n", total_duration);
-    ostream << std::format("Total trades: {}\n", summary.total_trades());
-
-    ostream << std::format("Average profit: {:.2f}\n", summary.average_win());
-    ostream << std::format("Average loss: {:.2f}\n", -summary.average_loss());
-
-    const auto average_duration = format_duration(summary.average_duration());
-    ostream << std::format("Average duration: {}\n", average_duration);
-
-    ostream << "\n\n";
-    ostream << "OPEN TRADE\n";
-    ostream << "----------\n";
-    ostream << std::format("Unrealized profit: {:.2f}\n",
-                           summary.unrealized_profit());
-
-    const auto ongoing_trade_duration =
-     format_duration(summary.ongoing_trade_duration());
-    ostream << std::format("Ongoing duration: {}\n", ongoing_trade_duration);
-
-    ostream << "\n\n";
-    ostream << "CLOSED TRADES\n";
-    ostream << "-------------\n";
-    ostream << std::format("Exit signal rate: {:.2f}%\n",
-                           summary.exit_signal_rate() * 100);
-    ostream << std::format("Average exit signal: {:.2f}\n",
-                           summary.average_exit_signal());
-    ostream << std::format("Exit signal EV: {:.2f}\n",
-                           summary.exit_signal_expected_value());
-
-    ostream << std::format("Take profit rate: {:.2f}%\n",
-                           summary.take_profit_rate() * 100);
-    ostream << std::format("Average take profit: {:.2f}\n",
-                           summary.average_take_profit());
-    ostream << std::format("Take profit EV: {:.2f}\n",
-                           summary.take_profit_expected_value());
-
-    ostream << std::format("Stop loss rate: {:.2f}%\n",
-                           summary.stop_loss_rate() * 100);
-    ostream << std::format("Average stop loss: {:.2f}\n",
-                           -summary.average_stop_loss());
-    ostream << std::format("Stop loss EV: {:.2f}\n",
-                           summary.stop_loss_expected_value());
-    ostream << "\n";
-
-    ostream << std::format("Expected value (EV): {:.2f}\n",
-                           summary.expected_value());
-    ostream << std::format("EV to risk rate: {:.2f}%\n",
-                           summary.expected_value() / backtest.capital_risk() *
-                            100);
-
-    ostream << std::format("Total closed trades: {}\n",
-                           summary.closed_trades().size());
-    ostream << std::format("Win rate: {:.2f}%\n", summary.win_rate() * 100);
-    ostream << std::format("Loss rate: {:.2f}%\n", summary.loss_rate() * 100);
-    ostream << std::format("Break even rate: {:.2f}%\n",
-                           summary.break_even_rate() * 100);
-    ostream << "\n\n";
+    ImGui::EndTable();
   }
 
-  const auto str = ostream.str();
-  ImGui::TextWrapped("%s", str.c_str());
-
   ImGui::End();
+}
+
+void BacktestSummaryWindow::draw_row(std::string_view label,
+                                     std::string_view value) const
+{
+  ImGui::TableNextRow();
+  ImGui::TableNextColumn();
+  ImGui::Text("%s", label.data());
+  ImGui::TableNextColumn();
+  ImGui::Text("%s", value.data());
+}
+
+void BacktestSummaryWindow::draw_empty_row() const
+{
+  ImGui::TableNextRow();
+  ImGui::TableNextColumn();
+  ImGui::TableNextColumn();
+}
+
+void BacktestSummaryWindow::draw_spacer_row() const
+{
+  draw_row("", "");
+}
+
+void BacktestSummaryWindow::draw_float_row(std::string_view label,
+                                           double value) const
+{
+  draw_row(label, std::format("{:.2f}", value));
+}
+
+void BacktestSummaryWindow::draw_count_row(std::string_view label,
+                                           std::size_t value) const
+{
+  draw_row(label, std::to_string(value));
+}
+
+void BacktestSummaryWindow::draw_count_row_with_rate(std::string_view label,
+                                                     std::size_t value,
+                                                     double rate) const
+{
+  draw_row(label, std::format("{} ({:.2f}%)", value, rate * 100.0));
+}
+
+void BacktestSummaryWindow::draw_currency_row(std::string_view label,
+                                              double value) const
+{
+  draw_row(label, format_currency(value));
+}
+
+void BacktestSummaryWindow::draw_currency_with_rate_row(std::string_view label,
+                                                        double value,
+                                                        double rate) const
+{
+  draw_currency_with_percentage_row(label, value, rate * 100.0);
+}
+
+void BacktestSummaryWindow::draw_currency_with_percentage_row(
+ std::string_view label, double value, double percentage) const
+{
+  draw_row(label,
+           std::format("{} ({:.2f}%)", format_currency(value), percentage));
+}
+
+void BacktestSummaryWindow::draw_duration_row(std::string_view label,
+                                              std::size_t duration) const
+{
+  draw_row(label, format_duration(duration));
+}
+
+void BacktestSummaryWindow::draw_datetime_row(std::string_view label,
+                                              std::time_t timestamp) const
+{
+  draw_row(label, format_datetime(timestamp));
 }
 
 } // namespace pludux::apps

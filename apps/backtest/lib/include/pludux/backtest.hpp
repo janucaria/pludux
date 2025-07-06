@@ -3,21 +3,13 @@
 
 #include <istream>
 #include <memory>
-#include <optional>
 #include <string>
-#include <utility>
 #include <vector>
 
-#include <pludux/asset_history.hpp>
 #include <pludux/backtest/asset.hpp>
-#include <pludux/backtest/stop_loss.hpp>
+#include <pludux/backtest/backtesting_summary.hpp>
 #include <pludux/backtest/strategy.hpp>
-#include <pludux/backtest/take_profit.hpp>
-#include <pludux/backtest/trade_record.hpp>
-#include <pludux/backtest/trading_stop_loss.hpp>
-#include <pludux/backtest/trading_take_profit.hpp>
 #include <pludux/config_parser.hpp>
-#include <pludux/screener.hpp>
 
 namespace pludux {
 
@@ -30,7 +22,7 @@ public:
   Backtest(std::string name,
            std::shared_ptr<backtest::Strategy> strategy_ptr,
            std::shared_ptr<backtest::Asset> asset_ptr,
-           std::vector<backtest::TradeRecord> trade_records);
+           std::vector<backtest::BacktestingSummary> summaries);
 
   auto name() const noexcept -> const std::string&;
 
@@ -49,8 +41,8 @@ public:
 
   auto capital_risk() const noexcept -> double;
 
-  auto trade_records() const noexcept
-   -> const std::vector<backtest::TradeRecord>&;
+  auto summaries() const noexcept
+   -> const std::vector<backtest::BacktestingSummary>&;
 
   void reset();
 
@@ -65,7 +57,7 @@ private:
   std::shared_ptr<backtest::Asset> asset_ptr_;
 
   bool is_failed_;
-  std::vector<backtest::TradeRecord> trade_records_;
+  std::vector<backtest::BacktestingSummary> summaries_;
 };
 
 auto get_env_var(std::string_view var_name) -> std::optional<std::string>;
@@ -82,6 +74,8 @@ auto risk_reward_config_parser() -> ConfigParser;
 auto format_duration(std::size_t duration_in_seconds) -> std::string;
 
 auto format_datetime(std::time_t timestamp) -> std::string;
+
+auto format_currency(double value) -> std::string;
 
 } // namespace pludux
 
