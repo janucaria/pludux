@@ -40,7 +40,7 @@ void TradeJournalWindow::render(AppState& app_state)
                                         "Take Profit",
                                         "Status",
                                         "Exit Price",
-                                        "Profit",
+                                        "P&L",
                                         "Duration"};
 
     if(ImGui::BeginTable("TradesTable", headers.size(), table_flags)) {
@@ -80,22 +80,24 @@ void TradeJournalWindow::draw_trade_row(const backtest::TradeRecord& trade)
   ImGui::TableNextColumn();
   ImGui::Text("%.0f", trade.position_size());
   ImGui::TableNextColumn();
-  ImGui::Text("%.0f", trade.entry_price());
+  ImGui::Text("%s", format_currency(trade.entry_price()).c_str());
   ImGui::TableNextColumn();
-  ImGui::Text("%.0f", trade.stop_loss_price());
+  ImGui::Text("%s", format_currency(trade.stop_loss_price()).c_str());
   ImGui::TableNextColumn();
-  ImGui::Text("%.0f", trade.take_profit_price());
+  ImGui::Text("%s", format_currency(trade.take_profit_price()).c_str());
   ImGui::TableNextColumn();
   ImGui::Text("%s", format_trade_status(trade.status()).c_str());
   ImGui::TableNextColumn();
   if(trade.is_open()) {
     ImGui::Text("N/A");
   } else {
-    ImGui::Text("%.0f", trade.exit_price());
+    ImGui::Text("%s", format_currency(trade.exit_price()).c_str());
   }
   ImGui::TableNextColumn();
 
-  ImGui::Text("%.2f%s", trade.pnl(), trade.is_open() ? " (Floating)" : "");
+  ImGui::Text("%s (%.2f%)",
+              format_currency(trade.pnl()).c_str(),
+              trade.pnl() / trade.position_value() * 100.0);
   ImGui::TableNextColumn();
   ImGui::Text("%s", format_duration(trade.duration()).c_str());
 }
