@@ -9,7 +9,7 @@ module;
 
 export module pludux.series.data_series;
 
-namespace pludux2 {
+namespace pludux {
 
 export template<typename T>
 class DataSeries {

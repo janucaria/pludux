@@ -1,13 +1,14 @@
-#ifndef PLUDUX_PLUDUX_SERIES_CHANGE_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_CHANGE_SERIES_HPP
+module;
 
 #include <cstddef>
 #include <limits>
 #include <utility>
 
+export module pludux.series.change_series;
+
 namespace pludux {
 
-template<typename TSeries>
+export template<typename TSeries>
 class ChangeSeries {
 public:
   using ValueType = typename TSeries::ValueType;
@@ -32,5 +33,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif

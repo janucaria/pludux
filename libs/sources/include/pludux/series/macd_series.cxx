@@ -1,19 +1,20 @@
-#ifndef PLUDUX_PLUDUX_SERIES_MACD_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_MACD_SERIES_HPP
+module;
 
 #include <cstddef>
 #include <limits>
 #include <utility>
 
-#include "binary_fn_series.hpp"
-#include "ema_series.hpp"
-#include "ref_series.hpp"
+export module pludux.series.macd_series;
+
+import pludux.series.binary_fn_series;
+import pludux.series.ema_series;
+import pludux.series.ref_series;
 
 namespace pludux {
 
-enum class MacdOutput { macd, signal, histogram };
+export enum class MacdOutput { macd, signal, histogram };
 
-template<typename TSeries>
+export template<typename TSeries>
 class MacdSeries {
 public:
   using ValueType = typename TSeries::ValueType;
@@ -83,5 +84,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif

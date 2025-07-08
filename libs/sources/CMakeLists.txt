@@ -12,10 +12,43 @@ find_package(nlohmann_json REQUIRED)
 add_library(${PROJECT_NAME})
 add_library(${CMAKE_PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
+
 target_sources(${PROJECT_NAME}
   PUBLIC
     FILE_SET CXX_MODULES
       FILES
+
+        include/pludux/series/atr_series.cxx
+        include/pludux/series/bb_series.cxx
+        include/pludux/series/binary_fn_series.cxx
+        include/pludux/series/bullish_divergence_series.cxx
+        include/pludux/series/change_series.cxx
+        include/pludux/series/data_series.cxx
+        include/pludux/series/ema_series.cxx
+        include/pludux/series/hidden_bullish_divergence_series.cxx
+        include/pludux/series/hma_series.cxx
+        include/pludux/series/kc_series.cxx
+        include/pludux/series/macd_series.cxx
+        include/pludux/series/pivot_lows_series.cxx
+        include/pludux/series/poly_series.cxx
+        include/pludux/series/ref_series.cxx
+        include/pludux/series/repeat_series.cxx
+        include/pludux/series/rma_series.cxx
+        include/pludux/series/roc_series.cxx
+        include/pludux/series/rsi_series.cxx
+        include/pludux/series/rvol_series.cxx
+        include/pludux/series/sma_series.cxx
+        include/pludux/series/stoch_rsi_series.cxx
+        include/pludux/series/stoch_series.cxx
+        include/pludux/series/sub_series.cxx
+        include/pludux/series/tr_series.cxx
+        include/pludux/series/unary_fn_series.cxx
+        include/pludux/series/wma_series.cxx          
+        include/pludux/series.cxx          
+)
+
+target_sources(${PROJECT_NAME}
+  PUBLIC
         src/asset_history.cpp
         src/asset_snapshot.cpp
         src/config_parser.cpp
@@ -41,9 +74,6 @@ target_sources(${PROJECT_NAME}
         src/screener/crossunder_filter.cpp
         src/screener/screener_filter.cpp
 
-        include/pludux/series/data_series.cxx
-        include/pludux/series/repeat_series.cxx
-        include/pludux/series.cxx
 
   INTERFACE
     FILE_SET HEADERS
@@ -79,33 +109,9 @@ target_sources(${PROJECT_NAME}
         include/pludux/screener/crossunder_filter.hpp
         include/pludux/screener/screener_filter.hpp 
 
-        include/pludux/series/atr_series.hpp
-        include/pludux/series/bb_series.hpp
-        include/pludux/series/binary_fn_series.hpp
-        include/pludux/series/bullish_divergence_series.hpp
-        include/pludux/series/change_series.hpp
-        include/pludux/series/data_series.hpp
-        include/pludux/series/ema_series.hpp
-        include/pludux/series/hidden_bullish_divergence_series.hpp
-        include/pludux/series/hma_series.hpp
-        include/pludux/series/kc_series.hpp
-        include/pludux/series/macd_series.hpp
-        include/pludux/series/pivot_lows_series.hpp
         include/pludux/series/poly_series.hpp
-        include/pludux/series/ref_series.hpp
-        include/pludux/series/repeat_series.hpp
-        include/pludux/series/rma_series.hpp
-        include/pludux/series/roc_series.hpp
-        include/pludux/series/rsi_series.hpp
-        include/pludux/series/rvol_series.hpp
-        include/pludux/series/sma_series.hpp
-        include/pludux/series/stoch_rsi_series.hpp
-        include/pludux/series/stoch_series.hpp
-        include/pludux/series/sub_series.hpp
-        include/pludux/series/tr_series.hpp
-        include/pludux/series/unary_fn_series.hpp
-        include/pludux/series/wma_series.hpp          
 )
+
 
 target_compile_features(${PROJECT_NAME}
   PUBLIC

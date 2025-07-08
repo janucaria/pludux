@@ -1,5 +1,4 @@
-#ifndef PLUDUX_PLUDUX_SERIES_ATR_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_ATR_SERIES_HPP
+module;
 
 #include <cassert>
 #include <cstddef>
@@ -7,12 +6,14 @@
 #include <type_traits>
 #include <utility>
 
-#include "rma_series.hpp"
-#include "tr_series.hpp"
+export module pludux.series.atr_series;
+
+import pludux.series.rma_series;
+import pludux.series.tr_series;
 
 namespace pludux {
 
-template<typename THighSeries, typename TLowSeries, typename TCloseSeries>
+export template<typename THighSeries, typename TLowSeries, typename TCloseSeries>
 class AtrSeries {
 public:
   using ValueType = std::common_type_t<
@@ -47,5 +48,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef PLUDUX_PLUDUX_SERIES_BINARY_FN_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_BINARY_FN_SERIES_HPP
+module;
 
 #include <cassert>
 #include <cstddef>
@@ -7,9 +6,11 @@
 #include <type_traits>
 #include <utility>
 
+export module pludux.series.binary_fn_series;
+
 namespace pludux {
 
-template<typename TBinaryFn, typename TSeriesOp1, typename TSeriesOp2>
+export template<typename TBinaryFn, typename TSeriesOp1, typename TSeriesOp2>
 class BinaryFnSeries {
 public:
   using ValueType = std::invoke_result_t<TBinaryFn,
@@ -40,19 +41,17 @@ private:
   TSeriesOp2 operand2_;
 };
 
-template<typename TSeriesOp1, typename TSeriesOp2>
+export template<typename TSeriesOp1, typename TSeriesOp2>
 using AddSeries = BinaryFnSeries<std::plus<>, TSeriesOp1, TSeriesOp2>;
 
-template<typename TSeriesOp1, typename TSeriesOp2>
+export template<typename TSeriesOp1, typename TSeriesOp2>
 using SubtractSeries = BinaryFnSeries<std::minus<>, TSeriesOp1, TSeriesOp2>;
 
-template<typename TSeriesOp1, typename TSeriesOp2>
+export template<typename TSeriesOp1, typename TSeriesOp2>
 using MultiplySeries =
  BinaryFnSeries<std::multiplies<>, TSeriesOp1, TSeriesOp2>;
 
-template<typename TSeriesOp1, typename TSeriesOp2>
+export template<typename TSeriesOp1, typename TSeriesOp2>
 using DivideSeries = BinaryFnSeries<std::divides<>, TSeriesOp1, TSeriesOp2>;
 
 } // namespace pludux
-
-#endif

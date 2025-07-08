@@ -1,5 +1,6 @@
 #ifndef PLUDUX_PLUDUX_ASSET_HISTOTY_HPP
 #define PLUDUX_PLUDUX_ASSET_HISTOTY_HPP
+import pludux.series;
 
 #include <ctime>
 #include <initializer_list>
@@ -9,7 +10,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <pludux/series.hpp>
+
 
 namespace pludux {
 

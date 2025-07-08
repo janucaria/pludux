@@ -1,16 +1,20 @@
-#ifndef PLUDUX_PLUDUX_SERIES_TR_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_TR_SERIES_HPP
+module;
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <limits>
 #include <type_traits>
 #include <utility>
 
+export module pludux.series.tr_series;
+
 namespace pludux {
 
-template<typename THighSeries, typename TLowSeries, typename TCloseSeries>
+export template<typename THighSeries,
+                typename TLowSeries,
+                typename TCloseSeries>
 class TrSeries {
 public:
   using ValueType = std::common_type_t<typename THighSeries::ValueType,
@@ -55,5 +59,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif

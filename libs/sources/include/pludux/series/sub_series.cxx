@@ -1,12 +1,14 @@
-#ifndef PLUDUX_PLUDUX_SERIES_SUB_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_SUB_SERIES_HPP
+module;
 
 #include <cstddef>
 #include <utility>
+#include <limits>
+
+export module pludux.series.sub_series;
 
 namespace pludux {
 
-template<typename TSeries>
+export template<typename TSeries>
 class SubSeries {
 public:
   using ValueType = typename TSeries::ValueType;
@@ -59,5 +61,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif

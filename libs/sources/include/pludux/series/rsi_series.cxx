@@ -1,21 +1,23 @@
-#ifndef PLUDUX_PLUDUX_SERIES_RSI_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_RSI_SERIES_HPP
+module;
 
+#include <cmath>
 #include <cstddef>
 #include <limits>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
-#include "change_series.hpp"
-#include "ref_series.hpp"
-#include "rma_series.hpp"
-#include "sma_series.hpp"
-#include "unary_fn_series.hpp"
+export module pludux.series.rsi_series;
+
+import pludux.series.rma_series;
+import pludux.series.change_series;
+import pludux.series.ref_series;
+import pludux.series.sma_series;
+import pludux.series.unary_fn_series;
 
 namespace pludux {
 
-template<typename TSeries>
+export template<typename TSeries>
 class RsiSeries {
 public:
   using ValueType = typename TSeries::ValueType;
@@ -68,5 +70,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif

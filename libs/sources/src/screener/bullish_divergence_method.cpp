@@ -3,11 +3,9 @@
 #include <vector>
 
 #include <pludux/asset_snapshot.hpp>
+#include <pludux/screener/bullish_divergence_method.hpp>
 #include <pludux/screener/ohlcv_method.hpp>
 #include <pludux/screener/ta_with_period_method.hpp>
-#include <pludux/series.hpp>
-
-#include <pludux/screener/bullish_divergence_method.hpp>
 
 namespace pludux::screener {
 
@@ -74,7 +72,8 @@ auto BullishDivergenceMethod::lookback_range() const noexcept -> std::size_t
   return lookback_range_;
 }
 
-void BullishDivergenceMethod::lookback_range(std::size_t lookback_range) noexcept
+void BullishDivergenceMethod::lookback_range(
+ std::size_t lookback_range) noexcept
 {
   lookback_range_ = lookback_range;
 }

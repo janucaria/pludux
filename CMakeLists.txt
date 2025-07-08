@@ -5,6 +5,8 @@ project(pludux
   LANGUAGES CXX
 )
 
+set(CMAKE_CXX_SCAN_FOR_MODULES ON)
+
 include(CTest)
 include(FetchContent)
 

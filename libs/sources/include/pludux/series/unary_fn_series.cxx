@@ -1,5 +1,4 @@
-#ifndef PLUDUX_PLUDUX_SERIES_UNARY_FN_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_UNARY_FN_SERIES_HPP
+module;
 
 #include <cassert>
 #include <cstddef>
@@ -7,10 +6,11 @@
 #include <type_traits>
 #include <utility>
 
+export module pludux.series.unary_fn_series;
 
 namespace pludux {
 
-template<typename TUnaryFn, typename TSeriesOp>
+export template<typename TUnaryFn, typename TSeriesOp>
 class UnaryFnSeries {
 public:
   using ValueType =
@@ -36,9 +36,7 @@ private:
   TSeriesOp operand_;
 };
 
-template<typename TSeriesOp>
+export template<typename TSeriesOp>
 using NegateSeries = UnaryFnSeries<std::negate<>, TSeriesOp>;
 
 } // namespace pludux
-
-#endif

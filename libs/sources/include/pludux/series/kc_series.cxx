@@ -1,5 +1,4 @@
-#ifndef PLUDUX_PLUDUX_SERIES_KC_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_KC_SERIES_HPP
+module;
 
 #include <cassert>
 #include <cstddef>
@@ -8,16 +7,18 @@
 #include <type_traits>
 #include <utility>
 
-#include "atr_series.hpp"
-#include "binary_fn_series.hpp"
-#include "ema_series.hpp"
-#include "ref_series.hpp"
+export module pludux.series.kc_series;
+
+import pludux.series.atr_series;
+import pludux.series.binary_fn_series;
+import pludux.series.ema_series;
+import pludux.series.ref_series;
 
 namespace pludux {
 
-enum class KcOutput { middle, upper, lower };
+export enum class KcOutput { middle, upper, lower };
 
-template<typename TRangeSeries, typename TMaSeries>
+export template<typename TRangeSeries, typename TMaSeries>
 class KcSeries {
 public:
   using ValueType = std::common_type_t<typename TRangeSeries::ValueType,
@@ -70,5 +71,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif

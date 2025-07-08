@@ -3,11 +3,9 @@
 #include <vector>
 
 #include <pludux/asset_snapshot.hpp>
+#include <pludux/screener/hidden_bullish_divergence_method.hpp>
 #include <pludux/screener/ohlcv_method.hpp>
 #include <pludux/screener/ta_with_period_method.hpp>
-#include <pludux/series.hpp>
-
-#include <pludux/screener/hidden_bullish_divergence_method.hpp>
 
 namespace pludux::screener {
 

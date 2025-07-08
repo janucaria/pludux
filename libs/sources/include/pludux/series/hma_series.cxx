@@ -1,18 +1,20 @@
-#ifndef PLUDUX_PLUDUX_SERIES_HMA_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_HMA_SERIES_HPP
+module;
 
+#include <cmath>
 #include <cstddef>
 #include <limits>
 #include <utility>
 
-#include "binary_fn_series.hpp"
-#include "ref_series.hpp"
-#include "repeat_series.hpp"
-#include "wma_series.hpp"
+export module pludux.series.hma_series;
+
+import pludux.series.repeat_series;
+import pludux.series.binary_fn_series;
+import pludux.series.ref_series;
+import pludux.series.wma_series;
 
 namespace pludux {
 
-template<typename TSeries>
+export template<typename TSeries>
 class HmaSeries {
 public:
   using ValueType = typename TSeries::ValueType;
@@ -32,7 +34,8 @@ public:
     const auto wam2 = WmaSeries{RefSeries{series_}, period_};
     const auto diff = SubtractSeries{times_2_wam1, wam2};
 
-    const auto hma = WmaSeries{diff, static_cast<std::size_t>(sqrt(period_))};
+    const auto hma =
+     WmaSeries{diff, static_cast<std::size_t>(std::sqrt(period_))};
 
     return hma[index];
   }
@@ -58,5 +61,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif

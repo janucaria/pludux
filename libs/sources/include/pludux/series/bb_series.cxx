@@ -1,21 +1,23 @@
-#ifndef PLUDUX_PLUDUX_SERIES_BB_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_BB_SERIES_HPP
+module;
 
+#include <cmath>
 #include <cstddef>
 #include <limits>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 
-#include "binary_fn_series.hpp"
-#include "ref_series.hpp"
-#include "sma_series.hpp"
+export module pludux.series.bb_series;
+
+import pludux.series.binary_fn_series;
+import pludux.series.ref_series;
+import pludux.series.sma_series;
 
 namespace pludux {
 
-enum class BbOutput { middle, upper, lower };
+export enum class BbOutput { middle, upper, lower };
 
-template<typename TMaSeries>
+export template<typename TMaSeries>
   requires requires(TMaSeries ma) {
     { ma.input() };
     { ma.period() } -> std::same_as<std::size_t>;
@@ -51,7 +53,7 @@ public:
       sum_squared_diff += diff * diff;
     }
 
-    const auto std_dev = sqrt(sum_squared_diff / period);
+    const auto std_dev = std::sqrt(sum_squared_diff / period);
     const auto std_dev_scaled = std_dev * stddev_;
 
     switch(output_) {
@@ -94,5 +96,3 @@ BbSeries(BbOutput, TSeries, std::size_t, double)
  -> BbSeries<SmaSeries<TSeries>>;
 
 } // namespace pludux
-
-#endif

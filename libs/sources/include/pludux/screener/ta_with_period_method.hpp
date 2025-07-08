@@ -7,7 +7,6 @@
 #include <pludux/asset_snapshot.hpp>
 #include <pludux/screener/ohlcv_method.hpp>
 #include <pludux/screener/screener_method.hpp>
-#include <pludux/series.hpp>
 #include <pludux/ta.hpp>
 
 namespace pludux::screener {

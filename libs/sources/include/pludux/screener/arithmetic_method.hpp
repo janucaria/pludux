@@ -1,7 +1,11 @@
 #ifndef PLUDUX_PLUDUX_SCREENER_Arithmetic_METHOD_HPP
 #define PLUDUX_PLUDUX_SCREENER_Arithmetic_METHOD_HPP
 
+import pludux.series.binary_fn_series;
+
 #include <cstddef>
+#include <utility>
+#include <type_traits>
 
 #include <pludux/asset_snapshot.hpp>
 #include <pludux/screener/screener_method.hpp>

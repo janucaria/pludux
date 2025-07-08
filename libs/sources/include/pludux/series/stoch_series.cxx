@@ -1,19 +1,24 @@
-#ifndef PLUDUX_PLUDUX_SERIES_STOCH_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_STOCH_SERIES_HPP
+module;
 
+#include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <limits>
 #include <utility>
 
-#include "binary_fn_series.hpp"
-#include "repeat_series.hpp"
-#include "sma_series.hpp"
+export module pludux.series.stoch_series;
+
+import pludux.series.repeat_series;
+import pludux.series.binary_fn_series;
+import pludux.series.sma_series;
 
 namespace pludux {
 
-enum class StochOutput { k, d };
+export enum class StochOutput { k, d };
 
-template<typename THighSeries, typename TLowSeries, typename TCloseSeries>
+export template<typename THighSeries,
+                typename TLowSeries,
+                typename TCloseSeries>
 class StochSeries {
 public:
   using ValueType = std::common_type_t<typename THighSeries::ValueType,
@@ -143,5 +148,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif

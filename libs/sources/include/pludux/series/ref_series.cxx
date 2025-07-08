@@ -1,11 +1,12 @@
-#ifndef PLUDUX_PLUDUX_SERIES_REF_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_REF_SERIES_HPP
+module;
 
 #include <cstddef>
 
+export module pludux.series.ref_series;
+
 namespace pludux {
 
-template<typename TSeries>
+export template<typename TSeries>
 class RefSeries {
 public:
   using ValueType = typename TSeries::ValueType;
@@ -30,5 +31,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif

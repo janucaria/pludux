@@ -1,3 +1,5 @@
+import pludux.series.atr_series;
+
 #include <algorithm>
 #include <iterator>
 #include <vector>
@@ -5,7 +7,6 @@
 #include <pludux/asset_snapshot.hpp>
 #include <pludux/screener/atr_method.hpp>
 #include <pludux/screener/ohlcv_method.hpp>
-#include <pludux/series/atr_series.hpp>
 
 namespace pludux::screener {
 

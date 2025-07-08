@@ -5,7 +5,7 @@ module;
 
 export module pludux.series.repeat_series;
 
-namespace pludux2 {
+namespace pludux {
 
 export template<typename T>
   requires std::numeric_limits<T>::has_quiet_NaN
@@ -42,4 +42,4 @@ private:
   std::size_t size_;
 };
 
-} // namespace pludux2
+} // namespace pludux

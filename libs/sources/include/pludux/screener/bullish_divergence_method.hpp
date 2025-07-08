@@ -14,10 +14,10 @@ public:
   BullishDivergenceMethod();
 
   explicit BullishDivergenceMethod(ScreenerMethod signal,
-                                   ScreenerMethod reference,
-                                   std::size_t pivot_range,
-                                   std::size_t lookback_range,
-                                   std::size_t offset = 0);
+                          ScreenerMethod reference,
+                          std::size_t pivot_range,
+                          std::size_t lookback_range,
+                          std::size_t offset = 0);
 
   auto operator()(AssetSnapshot asset_data) const
    -> SubSeries<PolySeries<double>>;

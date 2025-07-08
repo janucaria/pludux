@@ -3,10 +3,8 @@
 #include <vector>
 
 #include <pludux/asset_snapshot.hpp>
-#include <pludux/screener/ohlcv_method.hpp>
-#include <pludux/ta.hpp>
-
 #include <pludux/screener/changes_method.hpp>
+#include <pludux/screener/ohlcv_method.hpp>
 
 namespace pludux::screener {
 
@@ -25,7 +23,7 @@ auto ChangesMethod::operator()(AssetSnapshot asset_data) const
  -> SubSeries<PolySeries<double>>
 {
   const auto input_series = input_(asset_data);
-  const auto result = ta::changes(input_series);
+  const auto result = ChangeSeries{input_series};
   return SubSeries{PolySeries<double>{result},
                    static_cast<std::ptrdiff_t>(offset_)};
 }
