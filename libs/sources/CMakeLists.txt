@@ -14,30 +14,36 @@ add_library(${CMAKE_PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
 target_sources(${PROJECT_NAME}
   PUBLIC
-    src/asset_history.cpp
-    src/asset_snapshot.cpp
-    src/config_parser.cpp
+    FILE_SET CXX_MODULES
+      FILES
+        src/asset_history.cpp
+        src/asset_snapshot.cpp
+        src/config_parser.cpp
 
-    src/screener/abs_diff_method.cpp
-    src/screener/arithmetic_method.cpp
-    src/screener/atr_method.cpp
-    src/screener/bb_method.cpp
-    src/screener/bullish_divergence_method.cpp
-    src/screener/changes_method.cpp
-    src/screener/data_method.cpp
-    src/screener/hidden_bullish_divergence_method.cpp
-    src/screener/kc_method.cpp
-    src/screener/macd_method.cpp
-    src/screener/screener_method.cpp
-    src/screener/stoch_method.cpp
-    src/screener/stoch_rsi_method.cpp
-    src/screener/value_method.cpp
+        src/screener/abs_diff_method.cpp
+        src/screener/arithmetic_method.cpp
+        src/screener/atr_method.cpp
+        src/screener/bb_method.cpp
+        src/screener/bullish_divergence_method.cpp
+        src/screener/changes_method.cpp
+        src/screener/data_method.cpp
+        src/screener/hidden_bullish_divergence_method.cpp
+        src/screener/kc_method.cpp
+        src/screener/macd_method.cpp
+        src/screener/screener_method.cpp
+        src/screener/stoch_method.cpp
+        src/screener/stoch_rsi_method.cpp
+        src/screener/value_method.cpp
 
-    src/screener/all_of_filter.cpp
-    src/screener/any_of_filter.cpp
-    src/screener/crossover_filter.cpp
-    src/screener/crossunder_filter.cpp
-    src/screener/screener_filter.cpp
+        src/screener/all_of_filter.cpp
+        src/screener/any_of_filter.cpp
+        src/screener/crossover_filter.cpp
+        src/screener/crossunder_filter.cpp
+        src/screener/screener_filter.cpp
+
+        include/pludux/series/data_series.cxx
+        include/pludux/series/repeat_series.cxx
+        include/pludux/series.cxx
 
   INTERFACE
     FILE_SET HEADERS
@@ -98,7 +104,7 @@ target_sources(${PROJECT_NAME}
         include/pludux/series/sub_series.hpp
         include/pludux/series/tr_series.hpp
         include/pludux/series/unary_fn_series.hpp
-        include/pludux/series/wma_series.hpp
+        include/pludux/series/wma_series.hpp          
 )
 
 target_compile_features(${PROJECT_NAME}
