@@ -1,10 +1,10 @@
 #ifndef PLUDUX_PLUDUX_SCREENER_VALUE_METHOD_HPP
 #define PLUDUX_PLUDUX_SCREENER_VALUE_METHOD_HPP
 
-#include <vector>
+import pludux.asset_snapshot;
+import pludux.series;
 
-#include <pludux/asset_snapshot.hpp>
-#include <pludux/series.hpp>
+#include <vector>
 
 namespace pludux::screener {
 

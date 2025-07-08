@@ -1,12 +1,14 @@
 #ifndef PLUDUX_APPS_BACKTEST_APPLICATION_HPP
 #define PLUDUX_APPS_BACKTEST_APPLICATION_HPP
 
+import pludux.asset_snapshot;
+import pludux.asset_history;
+import pludux.config_parser;
+
 #include <queue>
 
 #include <imgui.h>
 
-#include <pludux/asset_history.hpp>
-#include <pludux/config_parser.hpp>
 #include <pludux/screener.hpp>
 #include <pludux/ta.hpp>
 

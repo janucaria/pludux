@@ -1,6 +1,8 @@
 #ifndef PLUDUX_PLUDUX_BACKTEST_HPP
 #define PLUDUX_PLUDUX_BACKTEST_HPP
 
+import pludux.config_parser;
+
 #include <istream>
 #include <memory>
 #include <string>
@@ -9,7 +11,6 @@
 #include <pludux/backtest/asset.hpp>
 #include <pludux/backtest/backtesting_summary.hpp>
 #include <pludux/backtest/strategy.hpp>
-#include <pludux/config_parser.hpp>
 
 namespace pludux {
 

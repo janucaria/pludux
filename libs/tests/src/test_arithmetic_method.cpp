@@ -1,9 +1,10 @@
+import pludux.series;
+
 #include <gtest/gtest.h>
 #include <pludux/asset_history.hpp>
 #include <pludux/screener/arithmetic_method.hpp>
 #include <pludux/screener/data_method.hpp>
 #include <pludux/screener/value_method.hpp>
-#include <pludux/series.hpp>
 
 using namespace pludux::screener;
 using pludux::AssetSnapshot;

@@ -4,7 +4,6 @@ import pludux.series.atr_series;
 #include <iterator>
 #include <vector>
 
-#include <pludux/asset_snapshot.hpp>
 #include <pludux/screener/atr_method.hpp>
 #include <pludux/screener/ohlcv_method.hpp>
 

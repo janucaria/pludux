@@ -1,7 +1,8 @@
 #ifndef PLUDUX_PLUDUX_BACKTEST_TRADING_STOP_LOSS_HPP
 #define PLUDUX_PLUDUX_BACKTEST_TRADING_STOP_LOSS_HPP
 
-#include <pludux/asset_snapshot.hpp>
+import pludux.asset_snapshot;
+
 #include <pludux/screener.hpp>
 
 namespace pludux::backtest {

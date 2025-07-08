@@ -1,9 +1,9 @@
 #ifndef PLUDUX_PLUDUX_TA_HPP
 #define PLUDUX_PLUDUX_TA_HPP
 
-#include <utility>
+import pludux.series;
 
-#include "series.hpp"
+#include <utility>
 
 namespace pludux::ta {
 

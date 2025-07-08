@@ -1,6 +1,8 @@
 #ifndef PLUDUX_APPS_BACKTEST_SERIALIZATION_HPP
 #define PLUDUX_APPS_BACKTEST_SERIALIZATION_HPP
 
+import pludux.config_parser;
+
 #include <algorithm>
 #include <tuple>
 #include <utility>
@@ -16,8 +18,6 @@
 #include <cereal/types/string.hpp>
 #include <cereal/types/unordered_map.hpp>
 #include <cereal/types/vector.hpp>
-
-#include <pludux/config_parser.hpp>
 
 #include "./app_state_data.hpp"
 

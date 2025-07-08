@@ -2,8 +2,6 @@
 #include <iterator>
 #include <vector>
 
-#include <pludux/asset_snapshot.hpp>
-
 #include <pludux/screener/abs_diff_method.hpp>
 
 namespace pludux::screener {

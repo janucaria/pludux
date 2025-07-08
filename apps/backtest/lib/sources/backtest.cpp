@@ -1,3 +1,5 @@
+import pludux.config_parser;
+
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
@@ -15,7 +17,6 @@
 #include <rapidcsv.h>
 
 #include <pludux/backtest.hpp>
-#include <pludux/config_parser.hpp>
 
 namespace pludux {
 

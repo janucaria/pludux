@@ -17,7 +17,6 @@ target_sources(${PROJECT_NAME}
   PUBLIC
     FILE_SET CXX_MODULES
       FILES
-
         include/pludux/series/atr_series.cxx
         include/pludux/series/bb_series.cxx
         include/pludux/series/binary_fn_series.cxx
@@ -43,16 +42,19 @@ target_sources(${PROJECT_NAME}
         include/pludux/series/sub_series.cxx
         include/pludux/series/tr_series.cxx
         include/pludux/series/unary_fn_series.cxx
-        include/pludux/series/wma_series.cxx          
-        include/pludux/series.cxx          
+        include/pludux/series/wma_series.cxx
+        include/pludux/series.cxx
+
+               
+        include/pludux/asset_history.cxx
+        include/pludux/asset_snapshot.cxx
+        include/pludux/config_parser.cxx
+
+
 )
 
 target_sources(${PROJECT_NAME}
   PUBLIC
-        src/asset_history.cpp
-        src/asset_snapshot.cpp
-        src/config_parser.cpp
-
         src/screener/abs_diff_method.cpp
         src/screener/arithmetic_method.cpp
         src/screener/atr_method.cpp
@@ -79,9 +81,6 @@ target_sources(${PROJECT_NAME}
     FILE_SET HEADERS
       BASE_DIRS include/
       FILES
-        include/pludux/asset_history.cpp
-        include/pludux/asset_snapshot.hpp
-        include/pludux/config_parser.hpp
         include/pludux/screener.hpp
         include/pludux/series.hpp
         include/pludux/ta.hpp

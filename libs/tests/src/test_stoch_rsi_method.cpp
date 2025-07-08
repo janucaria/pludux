@@ -1,8 +1,9 @@
+import pludux.series;
+
 #include <gtest/gtest.h>
 #include <pludux/asset_history.hpp>
 #include <pludux/screener/data_method.hpp>
 #include <pludux/screener/stoch_rsi_method.hpp>
-#include <pludux/series.hpp>
 
 using namespace pludux;
 using namespace pludux::screener;

@@ -1,7 +1,9 @@
 #ifndef PLUDUX_PLUDUX_BACKTEST_STOP_LOSS_HPP
 #define PLUDUX_PLUDUX_BACKTEST_STOP_LOSS_HPP
 
-#include <pludux/asset_snapshot.hpp>
+import pludux.asset_history;
+import pludux.asset_snapshot;
+
 #include <pludux/screener.hpp>
 
 #include <pludux/backtest/trading_stop_loss.hpp>

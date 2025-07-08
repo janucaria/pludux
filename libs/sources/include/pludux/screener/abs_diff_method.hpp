@@ -1,11 +1,12 @@
 #ifndef PLUDUX_PLUDUX_SCREENER_ABS_DIFF_METHOD_HPP
 #define PLUDUX_PLUDUX_SCREENER_ABS_DIFF_METHOD_HPP
 
+import pludux.series;
+import pludux.asset_snapshot;
+
 #include <cstddef>
 
-#include <pludux/asset_snapshot.hpp>
 #include <pludux/screener/arithmetic_method.hpp>
-#include <pludux/series.hpp>
 
 namespace pludux::screener {
 

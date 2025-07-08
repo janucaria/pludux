@@ -1,7 +1,7 @@
 #ifndef PLUDUX_PLUDUX_SCREENER_BOOLEAN_FILTER_HPP
 #define PLUDUX_PLUDUX_SCREENER_BOOLEAN_FILTER_HPP
 
-#include <pludux/asset_snapshot.hpp>
+import pludux.asset_snapshot;
 
 namespace pludux::screener {
 

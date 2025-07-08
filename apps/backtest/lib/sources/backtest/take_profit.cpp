@@ -1,5 +1,3 @@
-#include <pludux/ta.hpp>
-
 #include <pludux/backtest/take_profit.hpp>
 
 namespace pludux::backtest {

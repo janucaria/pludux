@@ -1,9 +1,11 @@
 #ifndef PLUDUX_PLUDUX_SCREENER_ATR_METHOD_HPP
 #define PLUDUX_PLUDUX_SCREENER_ATR_METHOD_HPP
 
+import pludux.asset_snapshot;
+
+
 #include <cstddef>
 
-#include <pludux/asset_snapshot.hpp>
 #include <pludux/screener/screener_method.hpp>
 
 namespace pludux::screener {

@@ -2,7 +2,6 @@
 #include <iterator>
 #include <vector>
 
-#include <pludux/asset_snapshot.hpp>
 #include <pludux/screener/changes_method.hpp>
 #include <pludux/screener/ohlcv_method.hpp>
 

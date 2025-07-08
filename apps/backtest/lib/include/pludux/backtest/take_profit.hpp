@@ -1,9 +1,9 @@
 #ifndef PLUDUX_PLUDUX_BACKTEST_TAKE_PROFIT_HPP
 #define PLUDUX_PLUDUX_BACKTEST_TAKE_PROFIT_HPP
 
-#include <pludux/asset_snapshot.hpp>
-#include <pludux/screener.hpp>
+import pludux.asset_snapshot;
 
+#include <pludux/screener.hpp>
 #include <pludux/backtest/trading_take_profit.hpp>
 
 namespace pludux::backtest {

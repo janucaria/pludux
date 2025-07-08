@@ -2,8 +2,6 @@
 #include <iterator>
 #include <vector>
 
-#include <pludux/asset_snapshot.hpp>
-
 #include <pludux/screener/value_method.hpp>
 
 namespace pludux::screener {

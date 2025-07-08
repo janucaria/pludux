@@ -1,13 +1,13 @@
 #ifndef PLUDUX_PLUDUX_SCREENER_OHLCV_METHOD_HPP
 #define PLUDUX_PLUDUX_SCREENER_OHLCV_METHOD_HPP
 
+import pludux.asset_snapshot;
+import pludux.series;
+
 #include <cmath>
 #include <functional>
 #include <string>
 #include <vector>
-
-#include <pludux/asset_snapshot.hpp>
-#include <pludux/series.hpp>
 
 namespace pludux::screener {
 

@@ -3,8 +3,6 @@
 #include <stdexcept>
 #include <vector>
 
-#include <pludux/asset_snapshot.hpp>
-
 #include <pludux/screener/any_of_filter.hpp>
 
 namespace pludux::screener {

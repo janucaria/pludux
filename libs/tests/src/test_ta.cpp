@@ -1,6 +1,7 @@
+import pludux.series;
+
 #include <gtest/gtest.h>
 #include <limits>
-#include <pludux/series.hpp>
 #include <pludux/ta.hpp>
 #include <vector>
 

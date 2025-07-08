@@ -1,13 +1,13 @@
 #ifndef PLUDUX_PLUDUX_SCREENER_SCREENER_METHOD_HPP
 #define PLUDUX_PLUDUX_SCREENER_SCREENER_METHOD_HPP
 
+import pludux.asset_snapshot;
+import pludux.series;
+
 #include <functional>
 #include <memory>
 #include <type_traits>
 #include <vector>
-
-#include <pludux/asset_snapshot.hpp>
-#include <pludux/series.hpp>
 
 namespace pludux::screener {
 

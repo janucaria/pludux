@@ -1,9 +1,10 @@
 #ifndef PLUDUX_PLUDUX_SCREENER_HIDDEN_BULLISH_DIVERGENCE_METHOD_HPP
 #define PLUDUX_PLUDUX_SCREENER_HIDDEN_BULLISH_DIVERGENCE_METHOD_HPP
 
+import pludux.asset_snapshot;
+
 #include <cstddef>
 
-#include <pludux/asset_snapshot.hpp>
 #include <pludux/screener/screener_method.hpp>
 
 namespace pludux::screener {

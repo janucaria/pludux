@@ -1,10 +1,10 @@
 #ifndef PLUDUX_PLUDUX_BACKTEST_ASSET_HPP
 #define PLUDUX_PLUDUX_BACKTEST_ASSET_HPP
 
-#include <string>
+import pludux.asset_history;
+import pludux.asset_snapshot;
 
-#include <pludux/asset_history.hpp>
-#include <pludux/asset_snapshot.hpp>
+#include <string>
 
 namespace pludux::backtest {
 

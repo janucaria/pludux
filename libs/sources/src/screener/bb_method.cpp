@@ -1,6 +1,4 @@
-#include <pludux/asset_snapshot.hpp>
 #include <pludux/screener/bb_method.hpp>
-#include <pludux/series.hpp>
 
 namespace pludux::screener {
 
