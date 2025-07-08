@@ -1,7 +1,7 @@
 import pludux.series;
+import pludux.asset_history;
 
 #include <gtest/gtest.h>
-#include <pludux/asset_history.hpp>
 
 using namespace pludux;
 

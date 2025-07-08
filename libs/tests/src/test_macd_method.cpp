@@ -1,9 +1,9 @@
+import pludux.asset_history;
+import pludux.asset_snapshot;
+import pludux.screener;
 import pludux.series;
 
 #include <gtest/gtest.h>
-#include <pludux/asset_history.hpp>
-#include <pludux/screener/data_method.hpp>
-#include <pludux/screener/macd_method.hpp>
 
 using namespace pludux;
 using namespace pludux::screener;

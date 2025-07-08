@@ -1,6 +1,7 @@
+import pludux.asset_history;
+
 #include <gtest/gtest.h>
 #include <limits>
-#include <pludux/asset_history.hpp>
 #include <string>
 #include <vector>
 

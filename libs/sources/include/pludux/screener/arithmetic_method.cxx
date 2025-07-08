@@ -1,14 +1,15 @@
-#ifndef PLUDUX_PLUDUX_SCREENER_Arithmetic_METHOD_HPP
-#define PLUDUX_PLUDUX_SCREENER_Arithmetic_METHOD_HPP
+module;
+
+#include <cstddef>
+#include <type_traits>
+#include <utility>
+
+#include <pludux/screener/screener_method.hpp>
+
+export module pludux.screener.arithmetic_method;
 
 import pludux.asset_snapshot;
 import pludux.series.binary_fn_series;
-
-#include <cstddef>
-#include <utility>
-#include <type_traits>
-
-#include <pludux/screener/screener_method.hpp>
 
 namespace pludux::screener {
 
@@ -104,51 +105,76 @@ private:
 
 } // namespace details
 
-class MultiplyMethod
+export class MultiplyMethod
 : public details::BinaryArithmeticMethod<MultiplyMethod, std::multiplies<>> {
 public:
   using details::BinaryArithmeticMethod<MultiplyMethod, std::multiplies<>>::
    BinaryArithmeticMethod;
 
-  auto multiplicand() const noexcept -> const ScreenerMethod&;
+  auto multiplicand() const noexcept -> const ScreenerMethod&
+  {
+    return operand1();
+  }
 
-  auto multiplier() const noexcept -> const ScreenerMethod&;
+  auto multiplier() const noexcept -> const ScreenerMethod&
+  {
+    return operand2();
+  }
 };
 
-class DivideMethod
+export class DivideMethod
 : public details::BinaryArithmeticMethod<DivideMethod, std::divides<>> {
 public:
   using details::BinaryArithmeticMethod<DivideMethod,
                                         std::divides<>>::BinaryArithmeticMethod;
 
-  auto dividend() const noexcept -> const ScreenerMethod&;
+  auto dividend() const noexcept -> const ScreenerMethod&
+  {
+    return operand1();
+  }
 
-  auto divisor() const noexcept -> const ScreenerMethod&;
+  auto divisor() const noexcept -> const ScreenerMethod&
+  {
+    return operand2();
+  }
 };
 
-class AddMethod
+export class AddMethod
 : public details::BinaryArithmeticMethod<AddMethod, std::plus<>> {
 public:
   using details::BinaryArithmeticMethod<AddMethod,
                                         std::plus<>>::BinaryArithmeticMethod;
 
-  auto augend() const noexcept -> const ScreenerMethod&;
+  auto augend() const noexcept -> const ScreenerMethod&
+  {
+    return operand1();
+  }
 
-  auto addend() const noexcept -> const ScreenerMethod&;
+  auto addend() const noexcept -> const ScreenerMethod&
+  {
+    return operand2();
+  }
 };
 
-class SubtractMethod
+export class SubtractMethod
 : public details::BinaryArithmeticMethod<SubtractMethod, std::minus<>> {
 public:
   using details::BinaryArithmeticMethod<SubtractMethod,
                                         std::minus<>>::BinaryArithmeticMethod;
 
-  auto minuend() const noexcept -> const ScreenerMethod&;
+  auto minuend() const noexcept -> const ScreenerMethod&
+  {
+    return operand1();
+  }
 
-  auto subtrahend() const noexcept -> const ScreenerMethod&;
+  auto subtrahend() const noexcept -> const ScreenerMethod&
+  {
+    return operand2();
+  }
 };
 
-class NegateMethod : public details::UnaryArithmeticMethod<std::negate<>> {
+export class NegateMethod
+: public details::UnaryArithmeticMethod<std::negate<>> {
 public:
   using details::UnaryArithmeticMethod<std::negate<>>::UnaryArithmeticMethod;
 };
@@ -171,7 +197,7 @@ struct Percentages<void> {
 };
 } // namespace details
 
-class PercentageMethod
+export class PercentageMethod
 : public details::BinaryArithmeticMethod<PercentageMethod,
                                          details::Percentages<>> {
 public:
@@ -179,11 +205,52 @@ public:
    PercentageMethod,
    details::Percentages<>>::BinaryArithmeticMethod;
 
-  auto total() const noexcept -> const ScreenerMethod&;
+  auto total() const noexcept -> const ScreenerMethod&
+  {
+    return operand1();
+  }
 
-  auto percent() const noexcept -> const ScreenerMethod&;
+  auto percent() const noexcept -> const ScreenerMethod&
+  {
+    return operand2();
+  }
+};
+
+namespace details {
+template<typename T = void>
+struct AbsoluteDifference {
+  auto operator()(T left, T right) const -> T
+  {
+    return std::abs(left - right);
+  }
+};
+
+template<>
+struct AbsoluteDifference<void> {
+  auto operator()(auto left, auto right) const
+  {
+    return std::abs(left - right);
+  }
+};
+} // namespace details
+
+export class AbsDiffMethod
+: public details::BinaryArithmeticMethod<AbsDiffMethod,
+                                         details::AbsoluteDifference<>> {
+public:
+  using details::BinaryArithmeticMethod<
+   AbsDiffMethod,
+   details::AbsoluteDifference<>>::BinaryArithmeticMethod;
+
+  auto minuend() const noexcept -> const ScreenerMethod&
+  {
+    return operand1();
+  }
+
+  auto subtrahend() const noexcept -> const ScreenerMethod&
+  {
+    return operand2();
+  }
 };
 
 } // namespace pludux::screener
-
-#endif

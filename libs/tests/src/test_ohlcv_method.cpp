@@ -1,10 +1,12 @@
 import pludux.asset_history;
 import pludux.asset_snapshot;
+import pludux.screener;
+import pludux.series;
 
 #include <cmath>
-#include <gtest/gtest.h>
-#include <pludux/screener/ohlcv_method.hpp>
 #include <vector>
+
+#include <gtest/gtest.h>
 
 using namespace pludux;
 using namespace pludux::screener;

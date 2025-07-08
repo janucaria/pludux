@@ -14,6 +14,8 @@ module;
 
 export module pludux.config_parser;
 
+import pludux.screener;
+
 namespace pludux {
 
 export class ConfigParser {

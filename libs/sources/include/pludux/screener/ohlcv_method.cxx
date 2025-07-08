@@ -1,13 +1,14 @@
-#ifndef PLUDUX_PLUDUX_SCREENER_OHLCV_METHOD_HPP
-#define PLUDUX_PLUDUX_SCREENER_OHLCV_METHOD_HPP
-
-import pludux.asset_snapshot;
-import pludux.series;
+module;
 
 #include <cmath>
 #include <functional>
 #include <string>
 #include <vector>
+
+export module pludux.screener.ohlcv_method;
+
+import pludux.asset_snapshot;
+import pludux.series;
 
 namespace pludux::screener {
 
@@ -42,35 +43,35 @@ private:
 
 } // namespace details
 
-class OpenMethod
+export class OpenMethod
 : public details::OhlcvMethod<OpenMethod, &AssetSnapshot::get_open_values> {
 public:
   using details::OhlcvMethod<OpenMethod,
                              &AssetSnapshot::get_open_values>::OhlcvMethod;
 };
 
-class HighMethod
+export class HighMethod
 : public details::OhlcvMethod<HighMethod, &AssetSnapshot::get_high_values> {
 public:
   using details::OhlcvMethod<HighMethod,
                              &AssetSnapshot::get_high_values>::OhlcvMethod;
 };
 
-class LowMethod
+export class LowMethod
 : public details::OhlcvMethod<LowMethod, &AssetSnapshot::get_low_values> {
 public:
   using details::OhlcvMethod<LowMethod,
                              &AssetSnapshot::get_low_values>::OhlcvMethod;
 };
 
-class CloseMethod
+export class CloseMethod
 : public details::OhlcvMethod<CloseMethod, &AssetSnapshot::get_close_values> {
 public:
   using details::OhlcvMethod<CloseMethod,
                              &AssetSnapshot::get_close_values>::OhlcvMethod;
 };
 
-class VolumeMethod
+export class VolumeMethod
 : public details::OhlcvMethod<VolumeMethod, &AssetSnapshot::get_volume_values> {
 public:
   using details::OhlcvMethod<VolumeMethod,
@@ -78,5 +79,3 @@ public:
 };
 
 } // namespace pludux::screener
-
-#endif // PLUDUX_PLUDUX_SCREENER_FIELD_METHOD_HPP

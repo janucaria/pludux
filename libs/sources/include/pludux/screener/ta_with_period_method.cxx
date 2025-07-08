@@ -1,15 +1,16 @@
-#ifndef PLUDUX_PLUDUX_SCREENER_TA_WITH_PERIOD_METHOD_HPP
-#define PLUDUX_PLUDUX_SCREENER_TA_WITH_PERIOD_METHOD_HPP
-
-import pludux.asset_snapshot;
-import pludux.series;
-import pludux.ta;
+module;
 
 #include <type_traits>
 #include <utility>
 
-#include <pludux/screener/ohlcv_method.hpp>
 #include <pludux/screener/screener_method.hpp>
+
+export module pludux.screener.ta_with_period_method;
+
+import pludux.asset_snapshot;
+import pludux.series;
+import pludux.ta;
+import pludux.screener.ohlcv_method;
 
 namespace pludux::screener {
 
@@ -23,7 +24,9 @@ public:
   {
   }
 
-  TaWithPeroidMethod(int period, ScreenerMethod input, int offset)
+  TaWithPeroidMethod(std::size_t period,
+                     ScreenerMethod input,
+                     std::size_t offset = 0)
   : period_(period)
   , offset_(offset)
   , input_(std::move(input))
@@ -120,7 +123,7 @@ inline constexpr auto rvol_wrapper = []<typename TSeries>(TSeries series,
 
 } // namespace details
 
-class SmaMethod
+export class SmaMethod
 : public details::
    TaWithPeroidMethod<SmaMethod, std::decay_t<decltype(details::sma_wrapper)>> {
   using details::TaWithPeroidMethod<
@@ -128,7 +131,7 @@ class SmaMethod
    std::decay_t<decltype(details::sma_wrapper)>>::TaWithPeroidMethod;
 };
 
-class EmaMethod
+export class EmaMethod
 : public details::
    TaWithPeroidMethod<EmaMethod, std::decay_t<decltype(details::ema_wrapper)>> {
   using details::TaWithPeroidMethod<
@@ -136,7 +139,7 @@ class EmaMethod
    std::decay_t<decltype(details::ema_wrapper)>>::TaWithPeroidMethod;
 };
 
-class WmaMethod
+export class WmaMethod
 : public details::
    TaWithPeroidMethod<WmaMethod, std::decay_t<decltype(details::wma_wrapper)>> {
   using details::TaWithPeroidMethod<
@@ -144,7 +147,7 @@ class WmaMethod
    std::decay_t<decltype(details::wma_wrapper)>>::TaWithPeroidMethod;
 };
 
-class RmaMethod
+export class RmaMethod
 : public details::
    TaWithPeroidMethod<RmaMethod, std::decay_t<decltype(details::rma_wrapper)>> {
   using details::TaWithPeroidMethod<
@@ -152,7 +155,7 @@ class RmaMethod
    std::decay_t<decltype(details::rma_wrapper)>>::TaWithPeroidMethod;
 };
 
-class HmaMethod
+export class HmaMethod
 : public details::
    TaWithPeroidMethod<HmaMethod, std::decay_t<decltype(details::hma_wrapper)>> {
   using details::TaWithPeroidMethod<
@@ -160,7 +163,7 @@ class HmaMethod
    std::decay_t<decltype(details::hma_wrapper)>>::TaWithPeroidMethod;
 };
 
-class RsiMethod
+export class RsiMethod
 : public details::TaWithPeroidMethod<
    RsiMethod,
    std::decay_t<decltype(details::rsi_wrapper)>,
@@ -171,7 +174,7 @@ class RsiMethod
    14>::TaWithPeroidMethod;
 };
 
-class RocMethod
+export class RocMethod
 : public details::
    TaWithPeroidMethod<RocMethod, std::decay_t<decltype(details::roc_wrapper)>> {
   using details::TaWithPeroidMethod<
@@ -179,7 +182,7 @@ class RocMethod
    std::decay_t<decltype(details::roc_wrapper)>>::TaWithPeroidMethod;
 };
 
-class RvolMethod
+export class RvolMethod
 : public details::TaWithPeroidMethod<
    RvolMethod,
    std::decay_t<decltype(details::rvol_wrapper)>> {
@@ -189,5 +192,3 @@ class RvolMethod
 };
 
 } // namespace pludux::screener
-
-#endif // PLUDUX_PLUDUX_SCREENER_MA_METHOD_HPP

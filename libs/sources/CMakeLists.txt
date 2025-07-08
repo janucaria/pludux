@@ -48,27 +48,33 @@ target_sources(${PROJECT_NAME}
                
         include/pludux/asset_history.cxx
         include/pludux/asset_snapshot.cxx
-        include/pludux/config_parser.cxx
+        # include/pludux/config_parser.cxx
         include/pludux/ta.cxx
+
+        
+        include/pludux/screener.cxx
+        include/pludux/screener/arithmetic_method.cxx
+        include/pludux/screener/atr_method.cxx
+        include/pludux/screener/bb_method.cxx
+        include/pludux/screener/bullish_divergence_method.cxx
+        include/pludux/screener/changes_method.cxx
+        include/pludux/screener/data_method.cxx
+        include/pludux/screener/data_method.cxx
+        include/pludux/screener/hidden_bullish_divergence_method.cxx
+        include/pludux/screener/kc_method.cxx
+        include/pludux/screener/macd_method.cxx
+        include/pludux/screener/ohlcv_method.cxx
+        include/pludux/screener/screener_method.cxx
+        include/pludux/screener/stoch_method.cxx
+        include/pludux/screener/stoch_rsi_method.cxx
+        include/pludux/screener/ta_with_period_method.cxx
+        include/pludux/screener/value_method.cxx
 
 )
 
 target_sources(${PROJECT_NAME}
   PUBLIC
-        src/screener/abs_diff_method.cpp
-        src/screener/arithmetic_method.cpp
-        src/screener/atr_method.cpp
-        src/screener/bb_method.cpp
-        src/screener/bullish_divergence_method.cpp
-        src/screener/changes_method.cpp
-        src/screener/data_method.cpp
-        src/screener/hidden_bullish_divergence_method.cpp
-        src/screener/kc_method.cpp
-        src/screener/macd_method.cpp
         src/screener/screener_method.cpp
-        src/screener/stoch_method.cpp
-        src/screener/stoch_rsi_method.cpp
-        src/screener/value_method.cpp
 
         src/screener/all_of_filter.cpp
         src/screener/any_of_filter.cpp
@@ -83,13 +89,10 @@ target_sources(${PROJECT_NAME}
       FILES
         include/pludux/screener.hpp
 
-        include/pludux/screener/abs_diff_method.hpp 
-        include/pludux/screener/arithmetic_method.hpp 
         include/pludux/screener/atr_method.hpp 
         include/pludux/screener/bb_method.hpp 
         include/pludux/screener/bullish_divergence_method.hpp
         include/pludux/screener/changes_method.hpp 
-        include/pludux/screener/data_method.hpp 
         include/pludux/screener/hidden_bullish_divergence_method.hpp
         include/pludux/screener/kc_method.hpp
         include/pludux/screener/macd_method.hpp
