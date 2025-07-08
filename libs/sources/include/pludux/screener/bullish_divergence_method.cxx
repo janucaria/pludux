@@ -5,12 +5,11 @@ module;
 #include <iterator>
 #include <vector>
 
-#include <pludux/screener/screener_method.hpp>
-
 export module pludux.screener.bullish_divergence_method;
 
 import pludux.asset_snapshot;
 import pludux.series;
+import pludux.screener.screener_method;
 import pludux.screener.ohlcv_method;
 import pludux.screener.ta_with_period_method;
 

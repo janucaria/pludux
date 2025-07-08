@@ -4,7 +4,6 @@ import pludux.screener;
 import pludux.series;
 
 #include <gtest/gtest.h>
-#include <pludux/screener/boolean_filter.hpp>
 
 using namespace pludux::screener;
 using pludux::AssetHistory;

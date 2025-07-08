@@ -4,7 +4,6 @@ import pludux.screener;
 import pludux.series;
 
 #include <gtest/gtest.h>
-#include <pludux/screener.hpp>
 
 using namespace pludux::screener;
 

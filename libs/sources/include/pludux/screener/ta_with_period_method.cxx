@@ -2,14 +2,14 @@ module;
 
 #include <type_traits>
 #include <utility>
-
-#include <pludux/screener/screener_method.hpp>
+#include <cstddef>
 
 export module pludux.screener.ta_with_period_method;
 
 import pludux.asset_snapshot;
 import pludux.series;
 import pludux.ta;
+import pludux.screener.screener_method;
 import pludux.screener.ohlcv_method;
 
 namespace pludux::screener {

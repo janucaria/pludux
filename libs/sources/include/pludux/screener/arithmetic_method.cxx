@@ -3,13 +3,14 @@ module;
 #include <cstddef>
 #include <type_traits>
 #include <utility>
-
-#include <pludux/screener/screener_method.hpp>
+#include <functional>
+#include <cmath>
 
 export module pludux.screener.arithmetic_method;
 
 import pludux.asset_snapshot;
-import pludux.series.binary_fn_series;
+import pludux.series;
+import pludux.screener.screener_method;
 
 namespace pludux::screener {
 

@@ -3,8 +3,6 @@ import pludux.config_parser;
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
 
-#include <pludux/screener.hpp>
-
 using namespace pludux;
 using namespace pludux::screener;
 using json = nlohmann::json;

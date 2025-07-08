@@ -1,12 +1,13 @@
 module;
 
 #include <cstddef>
-#include <pludux/screener/screener_method.hpp>
+#include <utility>
 
 export module pludux.screener.kc_method;
 
 import pludux.series;
 import pludux.asset_snapshot;
+import pludux.screener.screener_method;
 
 namespace pludux::screener {
 

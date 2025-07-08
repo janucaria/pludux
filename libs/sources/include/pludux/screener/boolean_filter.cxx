@@ -1,5 +1,6 @@
-#ifndef PLUDUX_PLUDUX_SCREENER_BOOLEAN_FILTER_HPP
-#define PLUDUX_PLUDUX_SCREENER_BOOLEAN_FILTER_HPP
+module;
+
+export module pludux.screener.boolean_filter;
 
 import pludux.asset_snapshot;
 
@@ -19,10 +20,8 @@ struct BooleanFilter {
 
 } // namespace detail
 
-struct TrueFilter : detail::BooleanFilter<TrueFilter, true> {};
+export struct TrueFilter : detail::BooleanFilter<TrueFilter, true> {};
 
-struct FalseFilter : detail::BooleanFilter<FalseFilter, false> {};
+export struct FalseFilter : detail::BooleanFilter<FalseFilter, false> {};
 
 } // namespace pludux::screener
-
-#endif

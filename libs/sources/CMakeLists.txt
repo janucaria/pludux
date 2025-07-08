@@ -59,7 +59,6 @@ target_sources(${PROJECT_NAME}
         include/pludux/screener/bullish_divergence_method.cxx
         include/pludux/screener/changes_method.cxx
         include/pludux/screener/data_method.cxx
-        include/pludux/screener/data_method.cxx
         include/pludux/screener/hidden_bullish_divergence_method.cxx
         include/pludux/screener/kc_method.cxx
         include/pludux/screener/macd_method.cxx
@@ -70,47 +69,16 @@ target_sources(${PROJECT_NAME}
         include/pludux/screener/ta_with_period_method.cxx
         include/pludux/screener/value_method.cxx
 
-)
-
-target_sources(${PROJECT_NAME}
-  PUBLIC
-        src/screener/screener_method.cpp
-
-        src/screener/all_of_filter.cpp
-        src/screener/any_of_filter.cpp
-        src/screener/crossover_filter.cpp
-        src/screener/crossunder_filter.cpp
-        src/screener/screener_filter.cpp
-
-
-  INTERFACE
-    FILE_SET HEADERS
-      BASE_DIRS include/
-      FILES
-        include/pludux/screener.hpp
-
-        include/pludux/screener/atr_method.hpp 
-        include/pludux/screener/bb_method.hpp 
-        include/pludux/screener/bullish_divergence_method.hpp
-        include/pludux/screener/changes_method.hpp 
-        include/pludux/screener/hidden_bullish_divergence_method.hpp
-        include/pludux/screener/kc_method.hpp
-        include/pludux/screener/macd_method.hpp
-        include/pludux/screener/screener_method.hpp 
-        include/pludux/screener/stoch_method.hpp 
-        include/pludux/screener/stoch_rsi_method.hpp 
-        include/pludux/screener/ta_with_period_method.hpp 
-        include/pludux/screener/value_method.hpp 
-        
-        include/pludux/screener/all_of_filter.hpp
-        include/pludux/screener/any_of_filter.hpp
-        include/pludux/screener/comparison_filter.hpp
-        include/pludux/screener/crossover_filter.hpp
-        include/pludux/screener/crossunder_filter.hpp
-        include/pludux/screener/screener_filter.hpp 
+        include/pludux/screener/all_of_filter.cxx
+        include/pludux/screener/any_of_filter.cxx
+        include/pludux/screener/boolean_filter.cxx
+        include/pludux/screener/comparison_filter.cxx
+        include/pludux/screener/crossover_filter.cxx
+        include/pludux/screener/crossunder_filter.cxx
+        include/pludux/screener/logical_filter.cxx
+        include/pludux/screener/screener_filter.cxx
 
 )
-
 
 target_compile_features(${PROJECT_NAME}
   PUBLIC

@@ -10,10 +10,9 @@ module;
 
 #include <nlohmann/json.hpp>
 
-#include <pludux/screener.hpp>
-
 export module pludux.config_parser;
 
+import pludux.series;
 import pludux.screener;
 
 namespace pludux {

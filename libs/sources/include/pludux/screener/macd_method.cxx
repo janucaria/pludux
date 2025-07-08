@@ -2,10 +2,9 @@ module;
 
 #include <cstddef>
 
-#include <pludux/screener/screener_method.hpp>
-
 export module pludux.screener.macd_method;
 
+import pludux.screener.screener_method;
 import pludux.asset_snapshot;
 import pludux.series;
 

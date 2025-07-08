@@ -5,12 +5,11 @@ module;
 #include <iterator>
 #include <vector>
 
-#include <pludux/screener/screener_method.hpp>
-
 export module pludux.screener.changes_method;
 
 import pludux.asset_snapshot;
 import pludux.series;
+import pludux.screener.screener_method;
 import pludux.screener.ohlcv_method;
 
 namespace pludux::screener {
