@@ -4,13 +4,13 @@
 import pludux.asset_snapshot;
 import pludux.asset_history;
 import pludux.config_parser;
+import pludux.ta;
 
 #include <queue>
 
 #include <imgui.h>
 
 #include <pludux/screener.hpp>
-#include <pludux/ta.hpp>
 
 #include <pludux/backtest.hpp>
 

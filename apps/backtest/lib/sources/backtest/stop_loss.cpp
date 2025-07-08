@@ -1,7 +1,5 @@
 #include <algorithm>
 
-#include <pludux/ta.hpp>
-
 #include <pludux/backtest/stop_loss.hpp>
 
 namespace pludux::backtest {

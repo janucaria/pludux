@@ -2,14 +2,14 @@
 #define PLUDUX_PLUDUX_SCREENER_TA_WITH_PERIOD_METHOD_HPP
 
 import pludux.asset_snapshot;
-
+import pludux.series;
+import pludux.ta;
 
 #include <type_traits>
 #include <utility>
 
 #include <pludux/screener/ohlcv_method.hpp>
 #include <pludux/screener/screener_method.hpp>
-#include <pludux/ta.hpp>
 
 namespace pludux::screener {
 

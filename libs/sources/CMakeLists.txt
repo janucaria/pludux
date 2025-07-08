@@ -49,7 +49,7 @@ target_sources(${PROJECT_NAME}
         include/pludux/asset_history.cxx
         include/pludux/asset_snapshot.cxx
         include/pludux/config_parser.cxx
-
+        include/pludux/ta.cxx
 
 )
 
@@ -82,8 +82,6 @@ target_sources(${PROJECT_NAME}
       BASE_DIRS include/
       FILES
         include/pludux/screener.hpp
-        include/pludux/series.hpp
-        include/pludux/ta.hpp
 
         include/pludux/screener/abs_diff_method.hpp 
         include/pludux/screener/arithmetic_method.hpp 
@@ -108,7 +106,6 @@ target_sources(${PROJECT_NAME}
         include/pludux/screener/crossunder_filter.hpp
         include/pludux/screener/screener_filter.hpp 
 
-        include/pludux/series/poly_series.hpp
 )
 
 

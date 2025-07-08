@@ -1,8 +1,8 @@
+import pludux.ta;
 import pludux.series;
 
 #include <gtest/gtest.h>
 #include <limits>
-#include <pludux/ta.hpp>
 #include <vector>
 
 using namespace pludux;
