@@ -33,8 +33,6 @@ public:
     ConfigParser& config_parser_;
   };
 
-  friend Parser;
-
   using FilterSerialize = std::function<
    auto(const ConfigParser&, const screener::ScreenerFilter&)->nlohmann::json>;
 
@@ -47,7 +45,7 @@ public:
   using MethodDeserialize = std::function<
    auto(ConfigParser::Parser, const nlohmann::json&)->screener::ScreenerMethod>;
 
-  ConfigParser();
+  ConfigParser() = default;
 
   void register_default_parsers();
 
@@ -90,6 +88,10 @@ private:
 
   std::unordered_map<std::string, nlohmann::json> named_config_methods_;
 };
+
+
+
+
 
 template<typename T>
 static auto get_param_or(const nlohmann::json& parameters,
@@ -690,8 +692,6 @@ static auto serialize_crossover_filter(const ConfigParser& config_parser,
 
   return serialized_filter;
 }
-
-ConfigParser::ConfigParser() = default;
 
 void ConfigParser::register_default_parsers()
 {

@@ -48,7 +48,7 @@ target_sources(${PROJECT_NAME}
                
         include/pludux/asset_history.cxx
         include/pludux/asset_snapshot.cxx
-        # include/pludux/config_parser.cxx
+        include/pludux/config_parser.cxx
         include/pludux/ta.cxx
 
         

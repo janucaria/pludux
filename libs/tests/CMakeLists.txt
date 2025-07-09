@@ -3,7 +3,7 @@ find_package(GTest REQUIRED)
 set(PLUDUX_TEST_SOURCES
   src/test_asset_history.cpp
   src/test_asset_snapshot.cpp
-  # # src/test_config_parser.cpp
+  src/test_config_parser.cpp
   src/test_series.cpp
   src/test_ta.cpp
 

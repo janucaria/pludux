@@ -1,4 +1,5 @@
 import pludux.config_parser;
+import pludux.screener;
 
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>

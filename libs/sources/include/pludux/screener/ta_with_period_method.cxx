@@ -1,8 +1,8 @@
 module;
 
+#include <cstddef>
 #include <type_traits>
 #include <utility>
-#include <cstddef>
 
 export module pludux.screener.ta_with_period_method;
 
@@ -16,7 +16,7 @@ namespace pludux::screener {
 
 namespace details {
 
-template<typename, typename T, std::size_t default_period = 20>
+export template<typename, typename T, std::size_t default_period = 20>
 class TaWithPeroidMethod {
 public:
   TaWithPeroidMethod()
@@ -126,41 +126,106 @@ inline constexpr auto rvol_wrapper = []<typename TSeries>(TSeries series,
 export class SmaMethod
 : public details::
    TaWithPeroidMethod<SmaMethod, std::decay_t<decltype(details::sma_wrapper)>> {
-  using details::TaWithPeroidMethod<
-   SmaMethod,
-   std::decay_t<decltype(details::sma_wrapper)>>::TaWithPeroidMethod;
+public:
+  // using details::TaWithPeroidMethod<
+  //  SmaMethod,
+  //  std::decay_t<decltype(details::sma_wrapper)>>::TaWithPeroidMethod;
+
+  SmaMethod()
+  : TaWithPeroidMethod{}
+  {
+  }
+
+  SmaMethod(std::size_t period,
+            ScreenerMethod input = CloseMethod{},
+            std::size_t offset = 0)
+  : TaWithPeroidMethod{period, std::move(input), offset}
+  {
+  }
 };
 
 export class EmaMethod
 : public details::
    TaWithPeroidMethod<EmaMethod, std::decay_t<decltype(details::ema_wrapper)>> {
-  using details::TaWithPeroidMethod<
-   EmaMethod,
-   std::decay_t<decltype(details::ema_wrapper)>>::TaWithPeroidMethod;
+public:
+  // using details::TaWithPeroidMethod<
+  //  EmaMethod,
+  //  std::decay_t<decltype(details::ema_wrapper)>>::TaWithPeroidMethod;
+
+  EmaMethod()
+  : TaWithPeroidMethod{}
+  {
+  }
+
+  EmaMethod(std::size_t period,
+            ScreenerMethod input = CloseMethod{},
+            std::size_t offset = 0)
+  : TaWithPeroidMethod{period, std::move(input), offset}
+  {
+  }
 };
 
 export class WmaMethod
 : public details::
    TaWithPeroidMethod<WmaMethod, std::decay_t<decltype(details::wma_wrapper)>> {
-  using details::TaWithPeroidMethod<
-   WmaMethod,
-   std::decay_t<decltype(details::wma_wrapper)>>::TaWithPeroidMethod;
+public:
+  // using details::TaWithPeroidMethod<
+  //  WmaMethod,
+  //  std::decay_t<decltype(details::wma_wrapper)>>::TaWithPeroidMethod;
+
+  WmaMethod()
+  : TaWithPeroidMethod{}
+  {
+  }
+
+  WmaMethod(std::size_t period,
+            ScreenerMethod input = CloseMethod{},
+            std::size_t offset = 0)
+  : TaWithPeroidMethod{period, std::move(input), offset}
+  {
+  }
 };
 
 export class RmaMethod
 : public details::
    TaWithPeroidMethod<RmaMethod, std::decay_t<decltype(details::rma_wrapper)>> {
-  using details::TaWithPeroidMethod<
-   RmaMethod,
-   std::decay_t<decltype(details::rma_wrapper)>>::TaWithPeroidMethod;
+public:
+  // using details::TaWithPeroidMethod<
+  //  RmaMethod,
+  //  std::decay_t<decltype(details::rma_wrapper)>>::TaWithPeroidMethod;
+
+  RmaMethod()
+  : TaWithPeroidMethod{}
+  {
+  }
+
+  RmaMethod(std::size_t period,
+            ScreenerMethod input = CloseMethod{},
+            std::size_t offset = 0)
+  : TaWithPeroidMethod{period, std::move(input), offset}
+  {
+  }
 };
 
 export class HmaMethod
 : public details::
    TaWithPeroidMethod<HmaMethod, std::decay_t<decltype(details::hma_wrapper)>> {
-  using details::TaWithPeroidMethod<
-   HmaMethod,
-   std::decay_t<decltype(details::hma_wrapper)>>::TaWithPeroidMethod;
+public:
+  // using details::TaWithPeroidMethod<
+  //  HmaMethod,
+  //  std::decay_t<decltype(details::hma_wrapper)>>::TaWithPeroidMethod;
+
+  HmaMethod()
+  : TaWithPeroidMethod{}
+  {
+  }
+
+  HmaMethod(std::size_t period,
+            ScreenerMethod input = CloseMethod{},
+            std::size_t offset = 0)
+  : TaWithPeroidMethod{period, std::move(input), offset}
+  {
+  }
 };
 
 export class RsiMethod
@@ -168,27 +233,66 @@ export class RsiMethod
    RsiMethod,
    std::decay_t<decltype(details::rsi_wrapper)>,
    14> {
-  using details::TaWithPeroidMethod<
-   RsiMethod,
-   std::decay_t<decltype(details::rsi_wrapper)>,
-   14>::TaWithPeroidMethod;
+public:
+  // using details::TaWithPeroidMethod<
+  //  RsiMethod,
+  //  std::decay_t<decltype(details::rsi_wrapper)>,
+  //  14>::TaWithPeroidMethod;
+
+  RsiMethod()
+  : TaWithPeroidMethod{}
+  {
+  }
+
+  RsiMethod(std::size_t period,
+            ScreenerMethod input = CloseMethod{},
+            std::size_t offset = 0)
+  : TaWithPeroidMethod{period, std::move(input), offset}
+  {
+  }
 };
 
 export class RocMethod
 : public details::
    TaWithPeroidMethod<RocMethod, std::decay_t<decltype(details::roc_wrapper)>> {
-  using details::TaWithPeroidMethod<
-   RocMethod,
-   std::decay_t<decltype(details::roc_wrapper)>>::TaWithPeroidMethod;
+public:
+  // using details::TaWithPeroidMethod<
+  //  RocMethod,
+  //  std::decay_t<decltype(details::roc_wrapper)>>::TaWithPeroidMethod;
+
+  RocMethod()
+  : TaWithPeroidMethod{}
+  {
+  }
+
+  RocMethod(std::size_t period,
+            ScreenerMethod input = CloseMethod{},
+            std::size_t offset = 0)
+  : TaWithPeroidMethod{period, std::move(input), offset}
+  {
+  }
 };
 
 export class RvolMethod
 : public details::TaWithPeroidMethod<
    RvolMethod,
    std::decay_t<decltype(details::rvol_wrapper)>> {
-  using details::TaWithPeroidMethod<
-   RvolMethod,
-   std::decay_t<decltype(details::rvol_wrapper)>>::TaWithPeroidMethod;
+public:
+  // using details::TaWithPeroidMethod<
+  //  RvolMethod,
+  //  std::decay_t<decltype(details::rvol_wrapper)>>::TaWithPeroidMethod;
+
+  RvolMethod()
+  : TaWithPeroidMethod{}
+  {
+  }
+
+  RvolMethod(std::size_t period,
+             ScreenerMethod input = CloseMethod{},
+             std::size_t offset = 0)
+  : TaWithPeroidMethod{period, std::move(input), offset}
+  {
+  }
 };
 
 } // namespace pludux::screener

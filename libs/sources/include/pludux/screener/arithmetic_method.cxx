@@ -1,10 +1,10 @@
 module;
 
+#include <cmath>
 #include <cstddef>
+#include <functional>
 #include <type_traits>
 #include <utility>
-#include <functional>
-#include <cmath>
 
 export module pludux.screener.arithmetic_method;
 
@@ -109,8 +109,16 @@ private:
 export class MultiplyMethod
 : public details::BinaryArithmeticMethod<MultiplyMethod, std::multiplies<>> {
 public:
-  using details::BinaryArithmeticMethod<MultiplyMethod, std::multiplies<>>::
-   BinaryArithmeticMethod;
+  // using details::BinaryArithmeticMethod<MultiplyMethod, std::multiplies<>>::
+  //  BinaryArithmeticMethod;
+
+  MultiplyMethod(ScreenerMethod multiplicand,
+                 ScreenerMethod multiplier,
+                 std::size_t offset = 0)
+  : BinaryArithmeticMethod{
+     std::move(multiplicand), std::move(multiplier), offset}
+  {
+  }
 
   auto multiplicand() const noexcept -> const ScreenerMethod&
   {
@@ -126,8 +134,15 @@ public:
 export class DivideMethod
 : public details::BinaryArithmeticMethod<DivideMethod, std::divides<>> {
 public:
-  using details::BinaryArithmeticMethod<DivideMethod,
-                                        std::divides<>>::BinaryArithmeticMethod;
+  // using details::BinaryArithmeticMethod<DivideMethod,
+  //                                       std::divides<>>::BinaryArithmeticMethod;
+
+  DivideMethod(ScreenerMethod dividend,
+               ScreenerMethod divisor,
+               std::size_t offset = 0)
+  : BinaryArithmeticMethod{std::move(dividend), std::move(divisor), offset}
+  {
+  }
 
   auto dividend() const noexcept -> const ScreenerMethod&
   {
@@ -143,8 +158,15 @@ public:
 export class AddMethod
 : public details::BinaryArithmeticMethod<AddMethod, std::plus<>> {
 public:
-  using details::BinaryArithmeticMethod<AddMethod,
-                                        std::plus<>>::BinaryArithmeticMethod;
+  // using details::BinaryArithmeticMethod<AddMethod,
+  //                                       std::plus<>>::BinaryArithmeticMethod;
+
+  AddMethod(ScreenerMethod augend,
+            ScreenerMethod addend,
+            std::size_t offset = 0)
+  : BinaryArithmeticMethod{std::move(augend), std::move(addend), offset}
+  {
+  }
 
   auto augend() const noexcept -> const ScreenerMethod&
   {
@@ -160,8 +182,15 @@ public:
 export class SubtractMethod
 : public details::BinaryArithmeticMethod<SubtractMethod, std::minus<>> {
 public:
-  using details::BinaryArithmeticMethod<SubtractMethod,
-                                        std::minus<>>::BinaryArithmeticMethod;
+  // using details::BinaryArithmeticMethod<SubtractMethod,
+  //                                       std::minus<>>::BinaryArithmeticMethod;
+
+  SubtractMethod(ScreenerMethod minuend,
+                 ScreenerMethod subtrahend,
+                 std::size_t offset = 0)
+  : BinaryArithmeticMethod{std::move(minuend), std::move(subtrahend), offset}
+  {
+  }
 
   auto minuend() const noexcept -> const ScreenerMethod&
   {
@@ -177,7 +206,12 @@ public:
 export class NegateMethod
 : public details::UnaryArithmeticMethod<std::negate<>> {
 public:
-  using details::UnaryArithmeticMethod<std::negate<>>::UnaryArithmeticMethod;
+  // using details::UnaryArithmeticMethod<std::negate<>>::UnaryArithmeticMethod;
+
+  NegateMethod(ScreenerMethod operand, std::size_t offset = 0)
+  : UnaryArithmeticMethod{std::move(operand), offset}
+  {
+  }
 };
 
 namespace details {
@@ -202,9 +236,16 @@ export class PercentageMethod
 : public details::BinaryArithmeticMethod<PercentageMethod,
                                          details::Percentages<>> {
 public:
-  using details::BinaryArithmeticMethod<
-   PercentageMethod,
-   details::Percentages<>>::BinaryArithmeticMethod;
+  // using details::BinaryArithmeticMethod<
+  //  PercentageMethod,
+  //  details::Percentages<>>::BinaryArithmeticMethod;
+
+  PercentageMethod(ScreenerMethod total,
+                   ScreenerMethod percent,
+                   std::size_t offset = 0)
+  : BinaryArithmeticMethod{std::move(total), std::move(percent), offset}
+  {
+  }
 
   auto total() const noexcept -> const ScreenerMethod&
   {
@@ -239,9 +280,16 @@ export class AbsDiffMethod
 : public details::BinaryArithmeticMethod<AbsDiffMethod,
                                          details::AbsoluteDifference<>> {
 public:
-  using details::BinaryArithmeticMethod<
-   AbsDiffMethod,
-   details::AbsoluteDifference<>>::BinaryArithmeticMethod;
+  // using details::BinaryArithmeticMethod<
+  //  AbsDiffMethod,
+  //  details::AbsoluteDifference<>>::BinaryArithmeticMethod;
+
+  AbsDiffMethod(ScreenerMethod left,
+                ScreenerMethod right,
+                std::size_t offset = 0)
+  : BinaryArithmeticMethod{std::move(left), std::move(right), offset}
+  {
+  }
 
   auto minuend() const noexcept -> const ScreenerMethod&
   {

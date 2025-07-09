@@ -97,27 +97,49 @@ struct LogicalXor<void> {
 
 export struct AndFilter
 : detail::BinaryLogicalFilter<AndFilter, std::logical_and<>> {
-  using detail::BinaryLogicalFilter<AndFilter,
-                                    std::logical_and<>>::BinaryLogicalFilter;
+  // using detail::BinaryLogicalFilter<AndFilter,
+  //                                   std::logical_and<>>::BinaryLogicalFilter;
+
+  AndFilter(ScreenerFilter first_condition, ScreenerFilter second_condition)
+  : BinaryLogicalFilter{std::move(first_condition),
+                                   std::move(second_condition)}
+  {
+  }
 };
 
 export struct OrFilter
 : detail::BinaryLogicalFilter<OrFilter, std::logical_or<>> {
-  using detail::BinaryLogicalFilter<OrFilter,
-                                    std::logical_or<>>::BinaryLogicalFilter;
+  // using detail::BinaryLogicalFilter<OrFilter,
+  //                                   std::logical_or<>>::BinaryLogicalFilter;
+
+  OrFilter(ScreenerFilter first_condition, ScreenerFilter second_condition)
+  : BinaryLogicalFilter{std::move(first_condition),
+                                  std::move(second_condition)}
+  {
+  }
 };
 
 export struct NotFilter
 : detail::UnaryLogicalFilter<NotFilter, std::logical_not<>> {
-  using detail::UnaryLogicalFilter<NotFilter,
-                                   std::logical_not<>>::UnaryLogicalFilter;
+  // using detail::UnaryLogicalFilter<NotFilter,
+  //                                  std::logical_not<>>::UnaryLogicalFilter;
+
+  NotFilter(ScreenerFilter condition)
+  : UnaryLogicalFilter{std::move(condition)}
+  {
+  }
 };
 
 export struct XorFilter
 : detail::BinaryLogicalFilter<XorFilter, detail::LogicalXor<>> {
-  using detail::BinaryLogicalFilter<XorFilter,
-                                    detail::LogicalXor<>>::BinaryLogicalFilter;
+  // using detail::BinaryLogicalFilter<XorFilter,
+  //                                   detail::LogicalXor<>>::BinaryLogicalFilter;
+
+  XorFilter(ScreenerFilter first_condition, ScreenerFilter second_condition)
+  : BinaryLogicalFilter{std::move(first_condition),
+                                   std::move(second_condition)}
+  {
+  }
 };
 
 } // namespace pludux::screener
-
