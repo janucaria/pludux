@@ -3,10 +3,8 @@
 #include <cstdlib>
 #include <ctime>
 #include <format>
-#include <iomanip>
 #include <iostream>
 #include <limits>
-#include <locale>
 #include <optional>
 #include <vector>
 
@@ -526,10 +524,16 @@ auto format_datetime(std::time_t timestamp) -> std::string
 
 auto format_currency(double value) -> std::string
 {
-  auto output_stream = std::ostringstream{};
-  output_stream.imbue(std::locale(""));
-  output_stream << std::fixed << std::setprecision(2) << std::showbase << value;
-  return output_stream.str();
+  auto num = std::format("{:.2f}", std::abs(value));
+  auto pos = static_cast<int>(num.find('.')) - 3;
+  while(pos > 0) {
+    num.insert(pos, ",");
+    pos -= 3;
+  }
+  if(value < 0) {
+    num = "-" + num;
+  }
+  return num;
 }
 
 } // namespace pludux
