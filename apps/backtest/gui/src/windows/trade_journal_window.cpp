@@ -95,7 +95,7 @@ void TradeJournalWindow::draw_trade_row(const backtest::TradeRecord& trade)
   }
   ImGui::TableNextColumn();
 
-  ImGui::Text("%s (%.2f%)",
+  ImGui::Text("%s (%.2f%%)",
               format_currency(trade.pnl()).c_str(),
               trade.pnl() / trade.position_value() * 100.0);
   ImGui::TableNextColumn();
