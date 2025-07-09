@@ -18,25 +18,25 @@ public:
 
   void trade_record(TradeRecord trade_record) noexcept;
 
-  auto sum_of_investments() const noexcept -> double;
+  auto cumulative_investments() const noexcept -> double;
 
-  void sum_of_investments(double investment) noexcept;
+  void cumulative_investments(double investment) noexcept;
 
-  auto sum_of_take_profits() const noexcept -> double;
+  auto cumulative_take_profits() const noexcept -> double;
 
-  void sum_of_take_profits(double take_profit) noexcept;
+  void cumulative_take_profits(double take_profit) noexcept;
 
-  auto sum_of_stop_losses() const noexcept -> double;
+  auto cumulative_stop_losses() const noexcept -> double;
 
-  void sum_of_stop_losses(double stop_loss) noexcept;
+  void cumulative_stop_losses(double stop_loss) noexcept;
 
-  auto sum_of_exit_wins() const noexcept -> double;
+  auto cumulative_exit_wins() const noexcept -> double;
 
-  void sum_of_exit_wins(double exit_win) noexcept;
+  void cumulative_exit_wins(double exit_win) noexcept;
 
-  auto sum_of_exit_losses() const noexcept -> double;
+  auto cumulative_exit_losses() const noexcept -> double;
 
-  void sum_of_exit_losses(double exit_loss) noexcept;
+  void cumulative_exit_losses(double exit_loss) noexcept;
 
   auto average_investment() const noexcept -> double;
 
@@ -44,11 +44,11 @@ public:
 
   auto open_trade_count() const noexcept -> std::size_t;
 
-  auto sum_of_pnls() const noexcept -> double;
+  auto cumulative_pnls() const noexcept -> double;
 
-  auto sum_of_durations() const noexcept -> std::time_t;
+  auto cumulative_durations() const noexcept -> std::time_t;
 
-  void sum_of_durations(std::time_t duration) noexcept;
+  void cumulative_durations(std::time_t duration) noexcept;
 
   auto average_duration() const noexcept -> std::time_t;
 
@@ -132,19 +132,19 @@ private:
   TradeRecord trade_record_{};
 
   std::time_t sum_of_durations_{};
-  double sum_of_investments_{};
+  double cumulative_investments_{};
 
   std::size_t take_profit_count_{};
-  double sum_of_take_profits_{};
+  double cumulative_take_profits_{};
 
   std::size_t stop_loss_count_{};
-  double sum_of_stop_losses_{};
+  double cumulative_stop_losses_{};
 
   std::size_t exit_win_count_{};
-  double sum_of_exit_wins_{};
+  double cumulative_exit_wins_{};
 
   std::size_t exit_loss_count_{};
-  double sum_of_exit_losses_{};
+  double cumulative_exit_losses_{};
 
   std::size_t break_even_count_{};
 };

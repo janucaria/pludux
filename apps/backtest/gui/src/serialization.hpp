@@ -102,12 +102,12 @@ template<class Archive>
 void save(Archive& archive, const pludux::backtest::BacktestingSummary& summary)
 {
   archive(make_nvp("tradeRecord", summary.trade_record()),
-          make_nvp("sumOfInvestments", summary.sum_of_investments()),
-          make_nvp("sumOfTakeProfits", summary.sum_of_take_profits()),
-          make_nvp("sumOfStopLosses", summary.sum_of_stop_losses()),
-          make_nvp("sumOfExitWins", summary.sum_of_exit_wins()),
-          make_nvp("sumOfExitLosses", summary.sum_of_exit_losses()),
-          make_nvp("sumOfDurations", summary.sum_of_durations()),
+          make_nvp("cumulativeInvestments", summary.cumulative_investments()),
+          make_nvp("cumulativeTakeProfits", summary.cumulative_take_profits()),
+          make_nvp("cumulativeStopLosses", summary.cumulative_stop_losses()),
+          make_nvp("cumulativeExitWins", summary.cumulative_exit_wins()),
+          make_nvp("cumulativeExitLosses", summary.cumulative_exit_losses()),
+          make_nvp("cumulativeDurations", summary.cumulative_durations()),
           make_nvp("takeProfitCount", summary.take_profit_count()),
           make_nvp("stopLossCount", summary.stop_loss_count()),
           make_nvp("exitWinCount", summary.exit_win_count()),
@@ -119,12 +119,12 @@ template<class Archive>
 void load(Archive& archive, pludux::backtest::BacktestingSummary& summary)
 {
   auto trade_record = pludux::backtest::TradeRecord{};
-  auto sum_of_investments = double{};
-  auto sum_of_take_profits = double{};
-  auto sum_of_stop_losses = double{};
-  auto sum_of_exit_wins = double{};
-  auto sum_of_exit_losses = double{};
-  auto sum_of_durations = std::time_t{};
+  auto cumulative_investments = double{};
+  auto cumulative_take_profits = double{};
+  auto cumulative_stop_losses = double{};
+  auto cumulative_exit_wins = double{};
+  auto cumulative_exit_losses = double{};
+  auto cumulative_durations = std::time_t{};
   auto take_profit_count = std::size_t{};
   auto stop_loss_count = std::size_t{};
   auto exit_win_count = std::size_t{};
@@ -132,12 +132,12 @@ void load(Archive& archive, pludux::backtest::BacktestingSummary& summary)
   auto break_even_count = std::size_t{};
 
   archive(make_nvp("tradeRecord", trade_record),
-          make_nvp("sumOfInvestments", sum_of_investments),
-          make_nvp("sumOfTakeProfits", sum_of_take_profits),
-          make_nvp("sumOfStopLosses", sum_of_stop_losses),
-          make_nvp("sumOfExitWins", sum_of_exit_wins),
-          make_nvp("sumOfExitLosses", sum_of_exit_losses),
-          make_nvp("sumOfDurations", sum_of_durations),
+          make_nvp("cumulativeInvestments", cumulative_investments),
+          make_nvp("cumulativeTakeProfits", cumulative_take_profits),
+          make_nvp("cumulativeStopLosses", cumulative_stop_losses),
+          make_nvp("cumulativeExitWins", cumulative_exit_wins),
+          make_nvp("cumulativeExitLosses", cumulative_exit_losses),
+          make_nvp("cumulativeDurations", cumulative_durations),
           make_nvp("takeProfitCount", take_profit_count),
           make_nvp("stopLossCount", stop_loss_count),
           make_nvp("exitWinCount", exit_win_count),
@@ -145,12 +145,12 @@ void load(Archive& archive, pludux::backtest::BacktestingSummary& summary)
           make_nvp("breakEvenCount", break_even_count));
 
   summary.trade_record(trade_record);
-  summary.sum_of_investments(sum_of_investments);
-  summary.sum_of_take_profits(sum_of_take_profits);
-  summary.sum_of_stop_losses(sum_of_stop_losses);
-  summary.sum_of_exit_wins(sum_of_exit_wins);
-  summary.sum_of_exit_losses(sum_of_exit_losses);
-  summary.sum_of_durations(sum_of_durations);
+  summary.cumulative_investments(cumulative_investments);
+  summary.cumulative_take_profits(cumulative_take_profits);
+  summary.cumulative_stop_losses(cumulative_stop_losses);
+  summary.cumulative_exit_wins(cumulative_exit_wins);
+  summary.cumulative_exit_losses(cumulative_exit_losses);
+  summary.cumulative_durations(cumulative_durations);
   summary.take_profit_count(take_profit_count);
   summary.stop_loss_count(stop_loss_count);
   summary.exit_win_count(exit_win_count);

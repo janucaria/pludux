@@ -54,10 +54,10 @@ auto main(int, const char**) -> int
   auto& ostream = std::cout;
 
   ostream << std::format("Risk per trade: {:.2f}\n", backtest.capital_risk());
-  ostream << std::format("Total profit: {:.2f}\n", summary.sum_of_pnls());
+  ostream << std::format("Total profit: {:.2f}\n", summary.cumulative_pnls());
 
   const auto total_duration =
-   pludux::format_duration(summary.sum_of_durations());
+   pludux::format_duration(summary.cumulative_durations());
   ostream << std::format("Total duration: {}\n", total_duration);
   ostream << std::format("Total trades: {}\n",
                          summary.trade_count() + summary.open_trade_count());

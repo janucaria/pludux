@@ -39,7 +39,7 @@ void BacktestSummaryWindow::render(AppState& app_state)
       draw_row("Asset", backtest.asset().name());
       draw_row("Strategy", backtest.strategy().name());
       draw_count_row("Total trades", summary.trade_count());
-      draw_duration_row("Total duration", summary.sum_of_durations());
+      draw_duration_row("Total duration", summary.cumulative_durations());
 
       draw_spacer_row();
 
@@ -119,11 +119,11 @@ void BacktestSummaryWindow::render(AppState& app_state)
 
       draw_spacer_row();
 
-      draw_currency_row("Total investments", summary.sum_of_investments());
+      draw_currency_row("Total investments", summary.cumulative_investments());
       draw_currency_with_rate_row("Net P&L",
-                                  summary.sum_of_pnls(),
-                                  summary.sum_of_pnls() /
-                                   summary.sum_of_investments());
+                                  summary.cumulative_pnls(),
+                                  summary.cumulative_pnls() /
+                                   summary.cumulative_investments());
 
       draw_spacer_row();
 
@@ -131,7 +131,7 @@ void BacktestSummaryWindow::render(AppState& app_state)
       draw_currency_with_rate_row("Unrealized P&L",
                                   summary.unrealized_pnl(),
                                   summary.unrealized_pnl() /
-                                   summary.sum_of_investments());
+                                   summary.cumulative_investments());
       draw_duration_row("Ongoing trade duration",
                         summary.ongoing_trade_duration());
     }
