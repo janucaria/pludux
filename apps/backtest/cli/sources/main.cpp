@@ -35,9 +35,7 @@ auto main(int, const char**) -> int
     return 1;
   }
 
-  const auto quotes = pludux::csv_daily_stock_data(csv_stream);
-
-  auto asset_history = pludux::AssetHistory(quotes.begin(), quotes.end());
+  auto asset_history = pludux::csv_daily_stock_data(csv_stream);
   auto asset_ptr = std::make_shared<pludux::backtest::Asset>(
    asset_file, std::move(asset_history));
 
@@ -54,15 +52,15 @@ auto main(int, const char**) -> int
   auto& ostream = std::cout;
 
   ostream << std::format("Risk per trade: {:.2f}\n", backtest.capital_risk());
-  ostream << std::format("Total profit: {:.2f}\n", summary.sum_of_pnls());
+  ostream << std::format("Total profit: {:.2f}\n", summary.cumulative_pnls());
 
   const auto total_duration =
-   pludux::format_duration(summary.sum_of_durations());
+   pludux::format_duration(summary.cumulative_durations());
   ostream << std::format("Total duration: {}\n", total_duration);
   ostream << std::format("Total trades: {}\n",
                          summary.trade_count() + summary.open_trade_count());
 
-  ostream << std::format("Average profit: {:.2f}\n", summary.average_win());
+  ostream << std::format("Average profit: {:.2f}\n", summary.average_profit());
   ostream << std::format("Average loss: {:.2f}\n", -summary.average_loss());
 
   const auto average_duration =
@@ -111,7 +109,7 @@ auto main(int, const char**) -> int
                           100);
 
   ostream << std::format("Total closed trades: {}\n", summary.trade_count());
-  ostream << std::format("Win rate: {:.2f}%\n", summary.win_rate() * 100);
+  ostream << std::format("Win rate: {:.2f}%\n", summary.profit_rate() * 100);
   ostream << std::format("Loss rate: {:.2f}%\n", summary.loss_rate() * 100);
   ostream << std::format("Break even rate: {:.2f}%\n",
                          summary.break_even_rate() * 100);

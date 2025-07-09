@@ -19,8 +19,7 @@ class LoadAssetCsvAction {
 protected:
   void operator()(std::istream& csv_stream, AppStateData& state) const
   {
-    const auto quotes = csv_daily_stock_data(csv_stream);
-    auto asset_history = AssetHistory(quotes.begin(), quotes.end());
+    auto asset_history = csv_daily_stock_data(csv_stream);
     const auto asset_name = static_cast<const TImpl*>(this)->get_asset_name();
     auto asset_ptr =
      std::make_shared<backtest::Asset>(asset_name, std::move(asset_history));

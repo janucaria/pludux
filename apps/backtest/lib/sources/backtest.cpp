@@ -3,10 +3,8 @@
 #include <cstdlib>
 #include <ctime>
 #include <format>
-#include <iomanip>
 #include <iostream>
 #include <limits>
-#include <locale>
 #include <optional>
 #include <vector>
 
@@ -243,17 +241,13 @@ auto get_env_var(std::string_view var_name) -> std::optional<std::string>
   return std::nullopt;
 }
 
-auto csv_daily_stock_data(std::istream& csv_stream)
- -> std::vector<std::pair<std::string, pludux::DataSeries<double>>>
+auto csv_daily_stock_data(std::istream& csv_stream) -> AssetHistory
 {
-  auto result =
-   std::vector<std::pair<std::string, pludux::DataSeries<double>>>{};
-
   auto csv_doc = rapidcsv::Document(csv_stream);
   const auto column_count = csv_doc.GetColumnCount();
 
   if(column_count == 0) {
-    return result;
+    return AssetHistory{};
   }
 
   constexpr auto date_record_index = 0;
@@ -307,8 +301,11 @@ auto csv_daily_stock_data(std::istream& csv_stream)
     std::reverse(date_records.begin(), date_records.end());
   }
 
+  auto history_data =
+   std::vector<std::pair<std::string, pludux::DataSeries<double>>>{};
+
   const auto date_record_header = csv_doc.GetColumnName(date_record_index);
-  result.emplace_back(
+  history_data.emplace_back(
    date_record_header,
    pludux::DataSeries<double>(date_records.begin(), date_records.end()));
 
@@ -319,9 +316,12 @@ auto csv_daily_stock_data(std::istream& csv_stream)
     }
 
     const auto column_header = csv_doc.GetColumnName(i);
-    result.emplace_back(
+    history_data.emplace_back(
      column_header, pludux::DataSeries<double>(column.begin(), column.end()));
   }
+
+  auto result = AssetHistory{history_data.begin(), history_data.end()};
+  result.datetime_key(date_record_header);
 
   return result;
 }
@@ -524,10 +524,16 @@ auto format_datetime(std::time_t timestamp) -> std::string
 
 auto format_currency(double value) -> std::string
 {
-  auto output_stream = std::ostringstream{};
-  output_stream.imbue(std::locale(""));
-  output_stream << std::fixed << std::setprecision(2) << std::showbase << value;
-  return output_stream.str();
+  auto num = std::format("{:.2f}", std::abs(value));
+  auto pos = static_cast<int>(num.find('.')) - 3;
+  while(pos > 0) {
+    num.insert(pos, ",");
+    pos -= 3;
+  }
+  if(value < 0) {
+    num = "-" + num;
+  }
+  return num;
 }
 
 } // namespace pludux

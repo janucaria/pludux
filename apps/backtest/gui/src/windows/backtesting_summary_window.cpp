@@ -39,7 +39,7 @@ void BacktestSummaryWindow::render(AppState& app_state)
       draw_row("Asset", backtest.asset().name());
       draw_row("Strategy", backtest.strategy().name());
       draw_count_row("Total trades", summary.trade_count());
-      draw_duration_row("Total duration", summary.sum_of_durations());
+      draw_duration_row("Total duration", summary.cumulative_durations());
 
       draw_spacer_row();
 
@@ -56,8 +56,8 @@ void BacktestSummaryWindow::render(AppState& app_state)
                                   summary.average_pnl() /
                                    summary.average_investment());
       draw_currency_with_rate_row("Avg profit",
-                                  summary.average_win(),
-                                  summary.average_win() /
+                                  summary.average_profit(),
+                                  summary.average_profit() /
                                    summary.average_investment());
       draw_currency_with_rate_row("Avg loss",
                                   summary.average_loss(),
@@ -69,7 +69,7 @@ void BacktestSummaryWindow::render(AppState& app_state)
       draw_spacer_row();
 
       draw_count_row_with_rate(
-       "Winning trades", summary.win_count(), summary.win_rate());
+       "Winning trades", summary.profit_count(), summary.profit_rate());
       draw_count_row_with_rate(
        "Losing trades", summary.loss_count(), summary.loss_rate());
       draw_count_row_with_rate("Break-even trades",
@@ -119,11 +119,11 @@ void BacktestSummaryWindow::render(AppState& app_state)
 
       draw_spacer_row();
 
-      draw_currency_row("Total investments", summary.sum_of_investments());
+      draw_currency_row("Total investments", summary.cumulative_investments());
       draw_currency_with_rate_row("Net P&L",
-                                  summary.sum_of_pnls(),
-                                  summary.sum_of_pnls() /
-                                   summary.sum_of_investments());
+                                  summary.cumulative_pnls(),
+                                  summary.cumulative_pnls() /
+                                   summary.cumulative_investments());
 
       draw_spacer_row();
 
@@ -131,7 +131,7 @@ void BacktestSummaryWindow::render(AppState& app_state)
       draw_currency_with_rate_row("Unrealized P&L",
                                   summary.unrealized_pnl(),
                                   summary.unrealized_pnl() /
-                                   summary.sum_of_investments());
+                                   summary.cumulative_investments());
       draw_duration_row("Ongoing trade duration",
                         summary.ongoing_trade_duration());
     }
