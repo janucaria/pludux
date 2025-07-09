@@ -62,7 +62,7 @@ auto main(int, const char**) -> int
   ostream << std::format("Total trades: {}\n",
                          summary.trade_count() + summary.open_trade_count());
 
-  ostream << std::format("Average profit: {:.2f}\n", summary.average_win());
+  ostream << std::format("Average profit: {:.2f}\n", summary.average_profit());
   ostream << std::format("Average loss: {:.2f}\n", -summary.average_loss());
 
   const auto average_duration =
@@ -111,7 +111,7 @@ auto main(int, const char**) -> int
                           100);
 
   ostream << std::format("Total closed trades: {}\n", summary.trade_count());
-  ostream << std::format("Win rate: {:.2f}%\n", summary.win_rate() * 100);
+  ostream << std::format("Win rate: {:.2f}%\n", summary.profit_rate() * 100);
   ostream << std::format("Loss rate: {:.2f}%\n", summary.loss_rate() * 100);
   ostream << std::format("Break even rate: {:.2f}%\n",
                          summary.break_even_rate() * 100);

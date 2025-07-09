@@ -56,8 +56,8 @@ void BacktestSummaryWindow::render(AppState& app_state)
                                   summary.average_pnl() /
                                    summary.average_investment());
       draw_currency_with_rate_row("Avg profit",
-                                  summary.average_win(),
-                                  summary.average_win() /
+                                  summary.average_profit(),
+                                  summary.average_profit() /
                                    summary.average_investment());
       draw_currency_with_rate_row("Avg loss",
                                   summary.average_loss(),
@@ -69,7 +69,7 @@ void BacktestSummaryWindow::render(AppState& app_state)
       draw_spacer_row();
 
       draw_count_row_with_rate(
-       "Winning trades", summary.win_count(), summary.win_rate());
+       "Winning trades", summary.profit_count(), summary.profit_rate());
       draw_count_row_with_rate(
        "Losing trades", summary.loss_count(), summary.loss_rate());
       draw_count_row_with_rate("Break-even trades",

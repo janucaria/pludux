@@ -30,13 +30,13 @@ public:
 
   void cumulative_stop_losses(double stop_loss) noexcept;
 
-  auto cumulative_exit_wins() const noexcept -> double;
+  auto cumulative_exit_signal_profits() const noexcept -> double;
 
-  void cumulative_exit_wins(double exit_win) noexcept;
+  void cumulative_exit_signal_profits(double exit_profit) noexcept;
 
-  auto cumulative_exit_losses() const noexcept -> double;
+  auto cumulative_exit_signal_losses() const noexcept -> double;
 
-  void cumulative_exit_losses(double exit_loss) noexcept;
+  void cumulative_exit_signal_losses(double exit_loss) noexcept;
 
   auto stop_loss_profit_count() const noexcept -> std::size_t;
 
@@ -88,13 +88,13 @@ public:
 
   auto stop_loss_expected_value() const noexcept -> double;
 
-  auto exit_win_count() const noexcept -> std::size_t;
+  auto exit_signal_profit_count() const noexcept -> std::size_t;
 
-  void exit_win_count(std::size_t count) noexcept;
+  void exit_signal_profit_count(std::size_t count) noexcept;
 
-  auto exit_loss_count() const noexcept -> std::size_t;
+  auto exit_signal_loss_count() const noexcept -> std::size_t;
 
-  void exit_loss_count(std::size_t count) noexcept;
+  void exit_signal_loss_count(std::size_t count) noexcept;
 
   auto break_even_count() const noexcept -> std::size_t;
 
@@ -114,15 +114,15 @@ public:
 
   auto expected_return() const noexcept -> double;
 
-  auto win_count() const noexcept -> std::size_t;
+  auto profit_count() const noexcept -> std::size_t;
 
-  auto win_rate() const noexcept -> double;
+  auto profit_rate() const noexcept -> double;
 
   auto total_profits() const noexcept -> double;
 
   auto total_profit_percent() const noexcept -> double;
 
-  auto average_win() const noexcept -> double;
+  auto average_profit() const noexcept -> double;
 
   auto loss_count() const noexcept -> std::size_t;
 
@@ -157,11 +157,11 @@ private:
   std::size_t stop_loss_loss_count_{};
   double cumulative_stop_loss_losses_{};
 
-  std::size_t exit_win_count_{};
-  double cumulative_exit_wins_{};
+  std::size_t exit_signal_profit_count_{};
+  double cumulative_exit_signal_profits_{};
 
-  std::size_t exit_loss_count_{};
-  double cumulative_exit_losses_{};
+  std::size_t exit_signal_loss_count_{};
+  double cumulative_exit_signal_losses_{};
 
   std::size_t break_even_count_{};
 };

@@ -108,14 +108,16 @@ void save(Archive& archive, const pludux::backtest::BacktestingSummary& summary)
    make_nvp("cumulativeStopLoseProfits",
             summary.cumulative_stop_loss_profits()),
    make_nvp("cumulativeStopLoseLosses", summary.cumulative_stop_loss_losses()),
-   make_nvp("cumulativeExitWins", summary.cumulative_exit_wins()),
-   make_nvp("cumulativeExitLosses", summary.cumulative_exit_losses()),
+   make_nvp("cumulativeExitSignalProfits",
+            summary.cumulative_exit_signal_profits()),
+   make_nvp("cumulativeExitSignalLosses",
+            summary.cumulative_exit_signal_losses()),
    make_nvp("cumulativeDurations", summary.cumulative_durations()),
    make_nvp("takeProfitCount", summary.take_profit_count()),
    make_nvp("stopLossProfitCount", summary.stop_loss_profit_count()),
    make_nvp("stopLossLossCount", summary.stop_loss_loss_count()),
-   make_nvp("exitWinCount", summary.exit_win_count()),
-   make_nvp("exitLossCount", summary.exit_loss_count()),
+   make_nvp("exitSignalProfitCount", summary.exit_signal_profit_count()),
+   make_nvp("exitSignalLossCount", summary.exit_signal_loss_count()),
    make_nvp("breakEvenCount", summary.break_even_count()));
 }
 
@@ -127,30 +129,31 @@ void load(Archive& archive, pludux::backtest::BacktestingSummary& summary)
   auto cumulative_take_profits = double{};
   auto cumulative_stop_loss_profits = double{};
   auto cumulative_stop_loss_losses = double{};
-  auto cumulative_exit_wins = double{};
-  auto cumulative_exit_losses = double{};
+  auto cumulative_exit_signal_profits = double{};
+  auto cumulative_exit_signal_losses = double{};
   auto cumulative_durations = std::time_t{};
   auto take_profit_count = std::size_t{};
   auto stop_loss_profit_count = std::size_t{};
   auto stop_loss_loss_count = std::size_t{};
-  auto exit_win_count = std::size_t{};
-  auto exit_loss_count = std::size_t{};
+  auto exit_signal_profit_count = std::size_t{};
+  auto exit_signal_loss_count = std::size_t{};
   auto break_even_count = std::size_t{};
 
-  archive(make_nvp("tradeRecord", trade_record),
-          make_nvp("cumulativeInvestments", cumulative_investments),
-          make_nvp("cumulativeTakeProfits", cumulative_take_profits),
-          make_nvp("cumulativeStopLoseProfits", cumulative_stop_loss_profits),
-          make_nvp("cumulativeStopLoseLosses", cumulative_stop_loss_losses),
-          make_nvp("cumulativeExitWins", cumulative_exit_wins),
-          make_nvp("cumulativeExitLosses", cumulative_exit_losses),
-          make_nvp("cumulativeDurations", cumulative_durations),
-          make_nvp("takeProfitCount", take_profit_count),
-          make_nvp("stopLossProfitCount", stop_loss_profit_count),
-          make_nvp("stopLossLossCount", stop_loss_loss_count),
-          make_nvp("exitWinCount", exit_win_count),
-          make_nvp("exitLossCount", exit_loss_count),
-          make_nvp("breakEvenCount", break_even_count));
+  archive(
+   make_nvp("tradeRecord", trade_record),
+   make_nvp("cumulativeInvestments", cumulative_investments),
+   make_nvp("cumulativeTakeProfits", cumulative_take_profits),
+   make_nvp("cumulativeStopLoseProfits", cumulative_stop_loss_profits),
+   make_nvp("cumulativeStopLoseLosses", cumulative_stop_loss_losses),
+   make_nvp("cumulativeExitSignalProfits", cumulative_exit_signal_profits),
+   make_nvp("cumulativeExitSignalLosses", cumulative_exit_signal_losses),
+   make_nvp("cumulativeDurations", cumulative_durations),
+   make_nvp("takeProfitCount", take_profit_count),
+   make_nvp("stopLossProfitCount", stop_loss_profit_count),
+   make_nvp("stopLossLossCount", stop_loss_loss_count),
+   make_nvp("exitSignalProfitCount", exit_signal_profit_count),
+   make_nvp("exitSignalLossCount", exit_signal_loss_count),
+   make_nvp("breakEvenCount", break_even_count));
 
   auto new_summary = pludux::backtest::BacktestingSummary{};
   new_summary.trade_record(std::move(trade_record));
@@ -158,14 +161,14 @@ void load(Archive& archive, pludux::backtest::BacktestingSummary& summary)
   new_summary.cumulative_take_profits(cumulative_take_profits);
   new_summary.cumulative_stop_loss_profits(cumulative_stop_loss_profits);
   new_summary.cumulative_stop_loss_losses(cumulative_stop_loss_losses);
-  new_summary.cumulative_exit_wins(cumulative_exit_wins);
-  new_summary.cumulative_exit_losses(cumulative_exit_losses);
+  new_summary.cumulative_exit_signal_profits(cumulative_exit_signal_profits);
+  new_summary.cumulative_exit_signal_losses(cumulative_exit_signal_losses);
   new_summary.cumulative_durations(cumulative_durations);
   new_summary.take_profit_count(take_profit_count);
   new_summary.stop_loss_profit_count(stop_loss_profit_count);
   new_summary.stop_loss_loss_count(stop_loss_loss_count);
-  new_summary.exit_win_count(exit_win_count);
-  new_summary.exit_loss_count(exit_loss_count);
+  new_summary.exit_signal_profit_count(exit_signal_profit_count);
+  new_summary.exit_signal_loss_count(exit_signal_loss_count);
   new_summary.break_even_count(break_even_count);
 
   summary = std::move(new_summary);
