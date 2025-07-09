@@ -38,6 +38,22 @@ public:
 
   void cumulative_exit_losses(double exit_loss) noexcept;
 
+  auto stop_loss_profit_count() const noexcept -> std::size_t;
+
+  void stop_loss_profit_count(std::size_t count) noexcept;
+
+  auto stop_loss_loss_count() const noexcept -> std::size_t;
+
+  void stop_loss_loss_count(std::size_t count) noexcept;
+
+  auto cumulative_stop_loss_profits() const noexcept -> double;
+
+  void cumulative_stop_loss_profits(double stop_loss_profit) noexcept;
+
+  auto cumulative_stop_loss_losses() const noexcept -> double;
+
+  void cumulative_stop_loss_losses(double stop_loss_loss) noexcept;
+
   auto average_investment() const noexcept -> double;
 
   auto trade_count() const noexcept -> std::size_t;
@@ -65,8 +81,6 @@ public:
   auto take_profit_expected_value() const noexcept -> double;
 
   auto stop_loss_count() const noexcept -> std::size_t;
-
-  void stop_loss_count(std::size_t count) noexcept;
 
   auto stop_loss_rate() const noexcept -> double;
 
@@ -137,8 +151,11 @@ private:
   std::size_t take_profit_count_{};
   double cumulative_take_profits_{};
 
-  std::size_t stop_loss_count_{};
-  double cumulative_stop_losses_{};
+  std::size_t stop_loss_profit_count_{};
+  double cumulative_stop_loss_profits_{};
+
+  std::size_t stop_loss_loss_count_{};
+  double cumulative_stop_loss_losses_{};
 
   std::size_t exit_win_count_{};
   double cumulative_exit_wins_{};

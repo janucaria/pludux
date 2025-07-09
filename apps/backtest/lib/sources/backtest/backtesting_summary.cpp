@@ -20,8 +20,15 @@ auto BacktestingSummary::get_next_summary(
       summary.take_profit_count_++;
       summary.cumulative_take_profits_ += pnl;
     } else if(trade_record.is_closed_stop_loss()) {
-      summary.stop_loss_count_++;
-      summary.cumulative_stop_losses_ += pnl;
+      if(pnl > 0) {
+        summary.stop_loss_profit_count_++;
+        summary.cumulative_stop_loss_profits_ += pnl;
+      } else if(pnl < 0) {
+        summary.stop_loss_loss_count_++;
+        summary.cumulative_stop_loss_losses_ += pnl;
+      } else {
+        summary.break_even_count_++;
+      }
     } else if(trade_record.is_closed_exit_signal()) {
       if(pnl > 0) {
         summary.exit_win_count_++;
@@ -69,14 +76,31 @@ void BacktestingSummary::cumulative_take_profits(double take_profit) noexcept
   cumulative_take_profits_ = take_profit;
 }
 
-auto BacktestingSummary::cumulative_stop_losses() const noexcept -> double
+auto BacktestingSummary::cumulative_stop_loss_profits() const noexcept -> double
 {
-  return cumulative_stop_losses_;
+  return cumulative_stop_loss_profits_;
 }
 
-void BacktestingSummary::cumulative_stop_losses(double stop_loss) noexcept
+void BacktestingSummary::cumulative_stop_loss_profits(
+ double stop_loss_profit) noexcept
 {
-  cumulative_stop_losses_ = stop_loss;
+  cumulative_stop_loss_profits_ = stop_loss_profit;
+}
+
+auto BacktestingSummary::cumulative_stop_loss_losses() const noexcept -> double
+{
+  return cumulative_stop_loss_losses_;
+}
+
+void BacktestingSummary::cumulative_stop_loss_losses(
+ double stop_loss_loss) noexcept
+{
+  cumulative_stop_loss_losses_ = stop_loss_loss;
+}
+
+auto BacktestingSummary::cumulative_stop_losses() const noexcept -> double
+{
+  return cumulative_stop_loss_profits() + cumulative_stop_loss_losses();
 }
 
 auto BacktestingSummary::cumulative_exit_wins() const noexcept -> double
@@ -168,14 +192,29 @@ auto BacktestingSummary::take_profit_expected_value() const noexcept -> double
   return take_profit_rate() * average_take_profit();
 }
 
-auto BacktestingSummary::stop_loss_count() const noexcept -> std::size_t
+auto BacktestingSummary::stop_loss_profit_count() const noexcept -> std::size_t
 {
-  return stop_loss_count_;
+  return stop_loss_profit_count_;
 }
 
-void BacktestingSummary::stop_loss_count(std::size_t count) noexcept
+void BacktestingSummary::stop_loss_profit_count(std::size_t count) noexcept
 {
-  stop_loss_count_ = count;
+  stop_loss_profit_count_ = count;
+}
+
+auto BacktestingSummary::stop_loss_loss_count() const noexcept -> std::size_t
+{
+  return stop_loss_loss_count_;
+}
+
+void BacktestingSummary::stop_loss_loss_count(std::size_t count) noexcept
+{
+  stop_loss_loss_count_ = count;
+}
+
+auto BacktestingSummary::stop_loss_count() const noexcept -> std::size_t
+{
+  return stop_loss_profit_count() + stop_loss_loss_count();
 }
 
 auto BacktestingSummary::stop_loss_rate() const noexcept -> double
@@ -256,7 +295,7 @@ auto BacktestingSummary::expected_return() const noexcept -> double
 
 auto BacktestingSummary::win_count() const noexcept -> std::size_t
 {
-  return take_profit_count() + exit_win_count();
+  return take_profit_count() + stop_loss_profit_count() + exit_win_count();
 }
 
 auto BacktestingSummary::win_rate() const noexcept -> double
@@ -266,7 +305,8 @@ auto BacktestingSummary::win_rate() const noexcept -> double
 
 auto BacktestingSummary::total_profits() const noexcept -> double
 {
-  return cumulative_take_profits() + cumulative_exit_wins();
+  return cumulative_take_profits() + cumulative_stop_loss_profits() +
+         cumulative_exit_wins();
 }
 
 auto BacktestingSummary::total_profit_percent() const noexcept -> double
@@ -282,7 +322,7 @@ auto BacktestingSummary::average_win() const noexcept -> double
 
 auto BacktestingSummary::loss_count() const noexcept -> std::size_t
 {
-  return stop_loss_count() + exit_loss_count();
+  return stop_loss_loss_count() + exit_loss_count();
 }
 
 auto BacktestingSummary::loss_rate() const noexcept -> double
@@ -293,7 +333,7 @@ auto BacktestingSummary::loss_rate() const noexcept -> double
 
 auto BacktestingSummary::total_losses() const noexcept -> double
 {
-  return cumulative_stop_losses() + cumulative_exit_losses();
+  return cumulative_stop_loss_losses() + cumulative_exit_losses();
 }
 
 auto BacktestingSummary::total_loss_percent() const noexcept -> double
