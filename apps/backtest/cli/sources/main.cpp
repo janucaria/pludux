@@ -35,9 +35,7 @@ auto main(int, const char**) -> int
     return 1;
   }
 
-  const auto quotes = pludux::csv_daily_stock_data(csv_stream);
-
-  auto asset_history = pludux::AssetHistory(quotes.begin(), quotes.end());
+  auto asset_history = pludux::csv_daily_stock_data(csv_stream);
   auto asset_ptr = std::make_shared<pludux::backtest::Asset>(
    asset_file, std::move(asset_history));
 

@@ -66,8 +66,7 @@ auto parse_backtest_strategy_json(const std::string& strategy_name,
                                   std::istream& json_strategy_stream)
  -> backtest::Strategy;
 
-auto csv_daily_stock_data(std::istream& csv_stream)
- -> std::vector<std::pair<std::string, pludux::DataSeries<double>>>;
+auto csv_daily_stock_data(std::istream& csv_stream) -> AssetHistory;
 
 auto risk_reward_config_parser() -> ConfigParser;
 
