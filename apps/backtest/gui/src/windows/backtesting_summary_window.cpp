@@ -105,9 +105,9 @@ void BacktestSummaryWindow::render(AppState& app_state)
 
       draw_empty_row();
 
-      draw_currency_with_rate_row("Exit signal hits",
-                                  summary.exit_signal_count(),
-                                  summary.exit_signal_rate());
+      draw_count_row_with_rate("Exit signal hits",
+                               summary.exit_signal_count(),
+                               summary.exit_signal_rate());
       draw_currency_with_rate_row("Avg exit signal",
                                   summary.average_exit_signal(),
                                   summary.average_exit_signal() /
@@ -120,6 +120,12 @@ void BacktestSummaryWindow::render(AppState& app_state)
       draw_spacer_row();
 
       draw_currency_row("Total investments", summary.cumulative_investments());
+      draw_currency_with_percentage_row("Total profits",
+                                        summary.cumulative_profits(),
+                                        summary.cumulative_profit_percent());
+      draw_currency_with_percentage_row("Total losses",
+                                        summary.cumulative_losses(),
+                                        summary.cumulative_loss_percent());
       draw_currency_with_rate_row("Net P&L",
                                   summary.cumulative_pnls(),
                                   summary.cumulative_pnls() /

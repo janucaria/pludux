@@ -118,9 +118,9 @@ public:
 
   auto profit_rate() const noexcept -> double;
 
-  auto total_profits() const noexcept -> double;
+  auto cumulative_profits() const noexcept -> double;
 
-  auto total_profit_percent() const noexcept -> double;
+  auto cumulative_profit_percent() const noexcept -> double;
 
   auto average_profit() const noexcept -> double;
 
@@ -128,9 +128,9 @@ public:
 
   auto loss_rate() const noexcept -> double;
 
-  auto total_losses() const noexcept -> double;
+  auto cumulative_losses() const noexcept -> double;
 
-  auto total_loss_percent() const noexcept -> double;
+  auto cumulative_loss_percent() const noexcept -> double;
 
   auto average_loss() const noexcept -> double;
 
