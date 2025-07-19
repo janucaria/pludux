@@ -29,6 +29,16 @@ void Application::on_before_main_loop()
   ImPlot::GetStyle().UseLocalTime = true;
   ImPlot::GetStyle().Use24HourClock = true;
 
+  {
+    auto& profiles = state_data_.profiles;
+    if(profiles.empty()) {
+      auto default_profile = std::make_shared<backtest::Profile>("Default");
+      default_profile->initial_capital(100'000'000.0);
+      default_profile->capital_risk(0.01);
+      profiles.push_back(default_profile);
+    }
+  }
+
 // run in debug mode and not in emscripten
 #if !defined(__EMSCRIPTEN__) && !defined(NDEBUG) && 1
 
@@ -150,6 +160,8 @@ void Application::on_update()
 
     auto strategies_window = StrategiesWindow{};
     strategies_window.render(app_state);
+
+    profiles_window_.render(app_state);
 
     auto trade_journal = TradeJournalWindow{};
     trade_journal.render(app_state);

@@ -19,10 +19,12 @@ namespace pludux {
 
 Backtest::Backtest(std::string name,
                    std::shared_ptr<backtest::Strategy> strategy_ptr,
-                   std::shared_ptr<backtest::Asset> asset_ptr)
+                   std::shared_ptr<backtest::Asset> asset_ptr,
+                   std::shared_ptr<backtest::Profile> profile_ptr)
 : Backtest{std::move(name),
            std::move(strategy_ptr),
            std::move(asset_ptr),
+           std::move(profile_ptr),
            std::vector<backtest::BacktestingSummary>{}}
 {
 }
@@ -30,10 +32,12 @@ Backtest::Backtest(std::string name,
 Backtest::Backtest(std::string name,
                    std::shared_ptr<backtest::Strategy> strategy_ptr,
                    std::shared_ptr<backtest::Asset> asset_ptr,
+                   std::shared_ptr<backtest::Profile> profile_ptr,
                    std::vector<backtest::BacktestingSummary> summaries)
 : name_{std::move(name)}
 , strategy_ptr_{strategy_ptr}
 , asset_ptr_{asset_ptr}
+, profile_ptr_{profile_ptr}
 , is_failed_{false}
 , summaries_{std::move(summaries)}
 {
@@ -56,6 +60,12 @@ auto Backtest::asset_ptr() const noexcept
   return asset_ptr_;
 }
 
+auto Backtest::profile_ptr() const noexcept
+ -> const std::shared_ptr<backtest::Profile>
+{
+  return profile_ptr_;
+}
+
 auto Backtest::strategy() const noexcept -> const backtest::Strategy&
 {
   return *strategy_ptr();
@@ -66,6 +76,11 @@ auto Backtest::asset() const noexcept -> const backtest::Asset&
   return *asset_ptr();
 }
 
+auto Backtest::get_profile() const noexcept -> const backtest::Profile&
+{
+  return *profile_ptr();
+}
+
 void Backtest::mark_as_failed() noexcept
 {
   is_failed_ = true;
@@ -74,11 +89,6 @@ void Backtest::mark_as_failed() noexcept
 auto Backtest::is_failed() const noexcept -> bool
 {
   return is_failed_;
-}
-
-auto Backtest::capital_risk() const noexcept -> double
-{
-  return strategy().capital_risk();
 }
 
 auto Backtest::summaries() const noexcept
@@ -115,6 +125,7 @@ void Backtest::run()
   const auto asset_index = last_index - std::min(summaries_size, last_index);
   const auto asset_snapshot = asset().get_snapshot(asset_index);
   const auto& strategy = *strategy_ptr();
+  const auto& profile = get_profile();
 
   const auto& take_profit = strategy.take_profit();
   const auto& stop_loss = strategy.stop_loss();
@@ -135,7 +146,7 @@ void Backtest::run()
     const auto& entry_filter = strategy.entry_filter();
     if(entry_filter(asset_snapshot)) {
       const auto risk_size = stop_loss.get_risk_size(asset_snapshot);
-      const auto order_size = strategy.capital_risk() / risk_size;
+      const auto order_size = profile.get_risk_value() / risk_size;
 
       if(!std::isnan(order_size)) {
         auto trading_take_profit = take_profit(asset_snapshot);
@@ -341,7 +352,6 @@ auto parse_backtest_strategy_json(const std::string& strategy_name,
     }
   }
 
-  const auto capital_risk = strategy_json["capitalRisk"].get<double>();
   const auto entry_filter =
    config_parser.parse_filter(strategy_json.at("entrySignal"));
   const auto exit_filter =
@@ -361,21 +371,6 @@ auto parse_backtest_strategy_json(const std::string& strategy_name,
    reward_method, is_take_profit_disabled, trading_take_profit_method};
 
   auto risk_parser = risk_reward_config_parser();
-  risk_parser.register_method_parser(
-   "POSITION_SIZE",
-   [&](ConfigParser::Parser config_parser,
-       const nlohmann::json& parameters) -> screener::ScreenerMethod {
-     const auto position_size = parameters.at("positionSize").get<double>();
-
-     const auto position_size_method = screener::ValueMethod{position_size};
-     const auto capital_risk_method = screener::ValueMethod{capital_risk};
-     const auto entry_price_method = price_method;
-
-     return screener::DivideMethod{
-      screener::MultiplyMethod{capital_risk_method, price_method},
-      position_size_method};
-   });
-
   const auto stop_loss_config = strategy_json.at("stopLoss");
   const auto is_trailing_stop_loss =
    stop_loss_config.contains("isTrailing")
@@ -389,12 +384,8 @@ auto parse_backtest_strategy_json(const std::string& strategy_name,
   const auto stop_loss = pludux::backtest::StopLoss{
    risk_method, is_stop_loss_disabled, is_trailing_stop_loss};
 
-  return pludux::backtest::Strategy{strategy_name,
-                                    capital_risk,
-                                    entry_filter,
-                                    exit_filter,
-                                    stop_loss,
-                                    take_profit};
+  return pludux::backtest::Strategy{
+   strategy_name, entry_filter, exit_filter, stop_loss, take_profit};
 }
 
 auto risk_reward_config_parser() -> ConfigParser

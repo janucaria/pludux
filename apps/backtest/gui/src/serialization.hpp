@@ -278,7 +278,6 @@ void serialize(Archive& archive, pludux::backtest::Strategy& strategy)
    std::make_unique<pludux::backtest::TakeProfit>(strategy.take_profit());
 
   archive(make_nvp("name", strategy.name()),
-          make_nvp("capitalRisk", strategy.capital_risk()),
           make_nvp("entryFilter", entry_filter_json),
           make_nvp("exitFilter", exit_filter_json),
           make_nvp("stopLoss", stop_loss_ptr),
@@ -293,14 +292,12 @@ struct LoadAndConstruct<pludux::backtest::Strategy> {
                      construct<pludux::backtest::Strategy>& constructor)
   {
     auto name = std::string{};
-    auto capital_risk = double{};
     auto entry_filter_json = nlohmann::json{};
     auto exit_filter_json = nlohmann::json{};
     auto stop_loss_ptr = std::unique_ptr<pludux::backtest::StopLoss>{};
     auto take_profit_ptr = std::unique_ptr<pludux::backtest::TakeProfit>{};
 
     archive(make_nvp("name", name),
-            make_nvp("capitalRisk", capital_risk),
             make_nvp("entryFilter", entry_filter_json),
             make_nvp("exitFilter", exit_filter_json),
             make_nvp("stopLoss", stop_loss_ptr),
@@ -313,11 +310,43 @@ struct LoadAndConstruct<pludux::backtest::Strategy> {
     auto exit_filter = config_parser.parse_filter(exit_filter_json);
 
     constructor(std::move(name),
-                capital_risk,
                 std::move(entry_filter),
                 std::move(exit_filter),
                 std::move(*stop_loss_ptr),
                 std::move(*take_profit_ptr));
+  }
+};
+
+/*--------------------------------------------------------------------------------------*/
+
+template<class Archive>
+void serialize(Archive& archive, pludux::backtest::Profile& profile)
+{
+  archive(make_nvp("name", profile.name()),
+          make_nvp("initialCapital", profile.initial_capital()),
+          make_nvp("capitalRisk", profile.capital_risk()));
+}
+
+template<>
+struct LoadAndConstruct<pludux::backtest::Profile> {
+  template<class Archive>
+  static void
+  load_and_construct(Archive& archive,
+                     construct<pludux::backtest::Profile>& constructor)
+  {
+    auto name = std::string{};
+    auto initial_capital = double{};
+    auto capital_risk = double{};
+
+    archive(make_nvp("name", name),
+            make_nvp("initialCapital", initial_capital),
+            make_nvp("capitalRisk", capital_risk));
+
+    auto profile = pludux::backtest::Profile{std::move(name)};
+    profile.initial_capital(initial_capital);
+    profile.capital_risk(capital_risk);
+
+    constructor(std::move(profile));
   }
 };
 
@@ -451,6 +480,7 @@ void serialize(Archive& archive, pludux::Backtest& backtest)
   archive(make_nvp("name", backtest.name()),
           make_nvp("strategy", backtest.strategy_ptr()),
           make_nvp("asset", backtest.asset_ptr()),
+          make_nvp("profile", backtest.profile_ptr()),
           make_nvp("summaries", backtest.summaries()),
           make_nvp("isFailed", backtest.is_failed()));
 }
@@ -464,17 +494,22 @@ struct LoadAndConstruct<pludux::Backtest> {
     auto name = std::string{};
     auto strategy_ptr = std::shared_ptr<pludux::backtest::Strategy>{};
     auto asset_ptr = std::shared_ptr<pludux::backtest::Asset>{};
+    auto profile_ptr = std::shared_ptr<pludux::backtest::Profile>{};
     auto summaries = std::vector<pludux::backtest::BacktestingSummary>{};
     auto is_failed = bool{};
 
     archive(make_nvp("name", name),
             make_nvp("strategy", strategy_ptr),
             make_nvp("asset", asset_ptr),
+            make_nvp("profile", profile_ptr),
             make_nvp("summaries", summaries),
             make_nvp("isFailed", is_failed));
 
-    auto backtest = pludux::Backtest{
-     std::move(name), strategy_ptr, asset_ptr, std::move(summaries)};
+    auto backtest = pludux::Backtest{std::move(name),
+                                     strategy_ptr,
+                                     asset_ptr,
+                                     profile_ptr,
+                                     std::move(summaries)};
 
     if(is_failed) {
       backtest.mark_as_failed();
@@ -491,6 +526,7 @@ void save(Archive& archive, const pludux::apps::AppStateData& app_state_data)
 {
   const auto& assets = app_state_data.assets;
   const auto& strategies = app_state_data.strategies;
+  const auto& profiles = app_state_data.profiles;
   const auto& backtests = app_state_data.backtests;
 
   archive(make_nvp("alertMessages", app_state_data.alert_messages));
@@ -498,6 +534,7 @@ void save(Archive& archive, const pludux::apps::AppStateData& app_state_data)
    make_nvp("selectedBacktestIndex", app_state_data.selected_backtest_index));
   archive(make_nvp("strategies", app_state_data.strategies));
   archive(make_nvp("assets", app_state_data.assets));
+  archive(make_nvp("profiles", app_state_data.profiles));
 
   auto backtest_ptrs = std::vector<
    std::unique_ptr<const pludux::Backtest, decltype([](auto*) {})>>{};
@@ -515,6 +552,7 @@ void load(Archive& archive, pludux::apps::AppStateData& app_state_data)
    make_nvp("selectedBacktestIndex", app_state_data.selected_backtest_index));
   archive(make_nvp("strategies", app_state_data.strategies));
   archive(make_nvp("assets", app_state_data.assets));
+  archive(make_nvp("profiles", app_state_data.profiles));
 
   auto backtest_ptrs = std::vector<std::unique_ptr<pludux::Backtest>>{};
   archive(make_nvp("backtests", backtest_ptrs));

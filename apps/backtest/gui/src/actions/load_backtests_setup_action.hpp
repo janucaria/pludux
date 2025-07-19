@@ -2,6 +2,7 @@
 #define PLUDUX_APPS_BACKTEST_ACTIONS_LOAD_BACKTESTS_SETUP_ACTION_HPP
 
 #include <filesystem>
+#include <format>
 #include <string>
 #include <utility>
 
@@ -35,6 +36,8 @@ protected:
        "CSV file must contain 'asset' and 'strategy' columns.");
     }
 
+    const auto profile_column_index = csv_doc.GetColumnIdx("Profile");
+
     const auto& assets = state.assets;
     const auto& strategies = state.strategies;
 
@@ -48,14 +51,20 @@ protected:
         continue;
       }
 
+      const auto profile_name =
+       profile_column_index != -1
+        ? csv_doc.GetCell<std::string>(profile_column_index, i)
+        : std::string{"Default"};
+
       const auto backtest_name_column_index = csv_doc.GetColumnIdx("Name");
 
-      std::string backtest_name;
+      auto backtest_name = std::string{};
       if(backtest_name_column_index != -1) {
         backtest_name =
          csv_doc.GetCell<std::string>(backtest_name_column_index, i);
       } else {
-        backtest_name = asset_name + " / " + strategy_name;
+        backtest_name =
+         std::format("{} / {} / {}", asset_name, strategy_name, profile_name);
       }
 
       auto asset_it = std::find_if(
@@ -81,8 +90,23 @@ protected:
 
       auto strategy_ptr = *strategy_it;
 
-      state.backtests.emplace_back(
-       backtest_name, std::move(strategy_ptr), std::move(asset_ptr));
+      auto profile_it =
+       std::find_if(state.profiles.begin(),
+                    state.profiles.end(),
+                    [&profile_name](const auto& profile_ptr) {
+                      return profile_ptr && profile_ptr->name() == profile_name;
+                    });
+
+      if(profile_it == state.profiles.end()) {
+        continue;
+      }
+
+      auto profile_ptr = *profile_it;
+
+      state.backtests.emplace_back(backtest_name,
+                                   std::move(strategy_ptr),
+                                   std::move(asset_ptr),
+                                   std::move(profile_ptr));
     }
 
     if(state.selected_backtest_index < 0 && !state.backtests.empty()) {

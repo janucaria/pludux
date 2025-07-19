@@ -115,6 +115,7 @@ add_executable(${PROJECT_NAME}
   src/windows/plot_data_window.cpp
   src/windows/trade_journal_window.cpp
   src/windows/strategies_window.cpp
+  src/windows/profiles_window.cpp
 
   src/actions/change_strategy_json_file_action.cpp
   src/actions/change_strategy_json_str_action.cpp
