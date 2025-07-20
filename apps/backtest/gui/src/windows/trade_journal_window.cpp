@@ -32,7 +32,8 @@ void TradeJournalWindow::render(AppState& app_state)
                              ImGuiTableFlags_Reorderable |
                              ImGuiTableFlags_Hideable;
 
-    constexpr auto headers = std::array{"Entry Date",
+    constexpr auto headers = std::array{"Trade #",
+                                        "Entry Date",
                                         "Exit Date",
                                         "Position Value (Size)",
                                         "Entry Price",
@@ -45,7 +46,13 @@ void TradeJournalWindow::render(AppState& app_state)
 
     if(ImGui::BeginTable("TradesTable", headers.size(), table_flags)) {
       for(const auto& header : headers) {
-        ImGui::TableSetupColumn(header);
+        if(header == std::string{"Trade #"}) {
+          const auto text_size = ImGui::CalcTextSize(header);
+          ImGui::TableSetupColumn(
+           header, ImGuiTableColumnFlags_WidthFixed, text_size.x);
+        } else {
+          ImGui::TableSetupColumn(header);
+        }
       }
 
       ImGui::TableHeadersRow();
@@ -57,7 +64,12 @@ void TradeJournalWindow::render(AppState& app_state)
         const auto& trade_record = summary.trade_record();
 
         if(trade_record.is_summary_session()) {
-          draw_trade_row(trade_record);
+          auto trade_count = summary.trade_count();
+          if(trade_record.is_open()) {
+            trade_count++;
+          }
+
+          draw_trade_row(trade_count, trade_record);
         }
       }
 
@@ -68,9 +80,12 @@ void TradeJournalWindow::render(AppState& app_state)
   ImGui::End();
 }
 
-void TradeJournalWindow::draw_trade_row(const backtest::TradeRecord& trade)
+void TradeJournalWindow::draw_trade_row(int trade_count,
+                                        const backtest::TradeRecord& trade)
 {
   ImGui::TableNextRow();
+  ImGui::TableNextColumn();
+  ImGui::Text("%d", trade_count);
   ImGui::TableNextColumn();
   ImGui::Text("%s", format_datetime(trade.entry_timestamp()).c_str());
   ImGui::TableNextColumn();

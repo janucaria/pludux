@@ -17,7 +17,8 @@ public:
   void render(AppState& app_state);
 
 private:
-  static void draw_trade_row(const backtest::TradeRecord& trade);
+  static void draw_trade_row(int trade_count,
+                             const backtest::TradeRecord& trade);
 
   static auto format_trade_status(backtest::TradeRecord::Status status) noexcept
    -> std::string;
