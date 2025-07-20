@@ -39,9 +39,9 @@ private:
                                    double value,
                                    double rate) const;
 
-  void draw_currency_with_percentage_row(std::string_view label,
-                                         double value,
-                                         double percentage) const;
+  void draw_currency_with_percent_row(std::string_view label,
+                                      double value,
+                                      double total) const;
 };
 
 } // namespace pludux::apps

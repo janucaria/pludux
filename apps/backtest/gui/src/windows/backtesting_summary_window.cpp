@@ -26,6 +26,8 @@ void BacktestSummaryWindow::render(AppState& app_state)
 
   if(!state.backtests.empty() && state.selected_backtest_index >= 0) {
     const auto& backtest = backtests[state.selected_backtest_index];
+    const auto& profile = backtest.get_profile();
+
     const auto& backtest_name = backtest.name();
     ImGui::Text("%s", backtest_name.c_str());
     ImGui::Separator();
@@ -38,6 +40,7 @@ void BacktestSummaryWindow::render(AppState& app_state)
 
       draw_row("Asset", backtest.asset().name());
       draw_row("Strategy", backtest.strategy().name());
+      draw_row("Profile", profile.name());
       draw_count_row("Total trades", summary.trade_count());
       draw_duration_row("Total duration", summary.cumulative_durations());
 
@@ -105,9 +108,9 @@ void BacktestSummaryWindow::render(AppState& app_state)
 
       draw_empty_row();
 
-      draw_currency_with_rate_row("Exit signal hits",
-                                  summary.exit_signal_count(),
-                                  summary.exit_signal_rate());
+      draw_count_row_with_rate("Exit signal hits",
+                               summary.exit_signal_count(),
+                               summary.exit_signal_rate());
       draw_currency_with_rate_row("Avg exit signal",
                                   summary.average_exit_signal(),
                                   summary.average_exit_signal() /
@@ -119,11 +122,18 @@ void BacktestSummaryWindow::render(AppState& app_state)
 
       draw_spacer_row();
 
-      draw_currency_row("Total investments", summary.cumulative_investments());
-      draw_currency_with_rate_row("Net P&L",
-                                  summary.cumulative_pnls(),
-                                  summary.cumulative_pnls() /
-                                   summary.cumulative_investments());
+      const auto initial_capital = profile.initial_capital();
+      draw_currency_row("Initial capital", initial_capital);
+      draw_currency_with_percent_row(
+       "Total profits", summary.cumulative_profits(), initial_capital);
+      draw_currency_with_percent_row(
+       "Total losses", summary.cumulative_losses(), initial_capital);
+      draw_currency_with_percent_row(
+       "Net P&L", summary.cumulative_pnls(), initial_capital);
+      draw_currency_with_percent_row("Total capital",
+                                     summary.cumulative_pnls() +
+                                      initial_capital,
+                                     initial_capital);
 
       draw_spacer_row();
 
@@ -193,14 +203,17 @@ void BacktestSummaryWindow::draw_currency_with_rate_row(std::string_view label,
                                                         double value,
                                                         double rate) const
 {
-  draw_currency_with_percentage_row(label, value, rate * 100.0);
+  draw_row(label,
+           std::format("{} ({:.2f}%)", format_currency(value), rate * 100.0));
 }
 
-void BacktestSummaryWindow::draw_currency_with_percentage_row(
- std::string_view label, double value, double percentage) const
+void BacktestSummaryWindow::draw_currency_with_percent_row(
+ std::string_view label, double value, double total) const
 {
-  draw_row(label,
-           std::format("{} ({:.2f}%)", format_currency(value), percentage));
+  const auto percentage = total != 0.0 ? value / total : 0.0;
+  draw_row(
+   label,
+   std::format("{} ({:.2f}%)", format_currency(value), percentage * 100.0));
 }
 
 void BacktestSummaryWindow::draw_duration_row(std::string_view label,

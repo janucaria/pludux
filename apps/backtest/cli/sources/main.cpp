@@ -39,7 +39,12 @@ auto main(int, const char**) -> int
   auto asset_ptr = std::make_shared<pludux::backtest::Asset>(
    asset_file, std::move(asset_history));
 
-  auto backtest = pludux::Backtest{"no name", strategy_ptr, asset_ptr};
+  auto profile_ptr = std::make_shared<pludux::backtest::Profile>("Default");
+  profile_ptr->initial_capital(100'000'000.0);
+  profile_ptr->capital_risk(0.01);
+
+  auto backtest =
+   pludux::Backtest{"no name", strategy_ptr, asset_ptr, profile_ptr};
   while(backtest.should_run()) {
     backtest.run();
   }
@@ -51,7 +56,8 @@ auto main(int, const char**) -> int
 
   auto& ostream = std::cout;
 
-  ostream << std::format("Risk per trade: {:.2f}\n", backtest.capital_risk());
+  ostream << std::format("Risk per trade: {:.2f}\n",
+                         backtest.get_profile().get_risk_value());
   ostream << std::format("Total profit: {:.2f}\n", summary.cumulative_pnls());
 
   const auto total_duration =
@@ -105,8 +111,8 @@ auto main(int, const char**) -> int
   ostream << std::format("Expected value (EV): {:.2f}\n",
                          summary.expected_value());
   ostream << std::format("EV to risk rate: {:.2f}%\n",
-                         summary.expected_value() / backtest.capital_risk() *
-                          100);
+                         summary.expected_value() /
+                          backtest.get_profile().get_risk_value() * 100);
 
   ostream << std::format("Total closed trades: {}\n", summary.trade_count());
   ostream << std::format("Win rate: {:.2f}%\n", summary.profit_rate() * 100);

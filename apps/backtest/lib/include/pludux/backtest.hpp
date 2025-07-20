@@ -8,6 +8,7 @@
 
 #include <pludux/backtest/asset.hpp>
 #include <pludux/backtest/backtesting_summary.hpp>
+#include <pludux/backtest/profile.hpp>
 #include <pludux/backtest/strategy.hpp>
 #include <pludux/config_parser.hpp>
 
@@ -17,11 +18,13 @@ class Backtest {
 public:
   Backtest(std::string name,
            std::shared_ptr<backtest::Strategy> strategy_ptr,
-           std::shared_ptr<backtest::Asset> asset_ptr);
+           std::shared_ptr<backtest::Asset> asset_ptr,
+           std::shared_ptr<backtest::Profile> profile_ptr);
 
   Backtest(std::string name,
            std::shared_ptr<backtest::Strategy> strategy_ptr,
            std::shared_ptr<backtest::Asset> asset_ptr,
+           std::shared_ptr<backtest::Profile> profile_ptr,
            std::vector<backtest::BacktestingSummary> summaries);
 
   auto name() const noexcept -> const std::string&;
@@ -31,15 +34,17 @@ public:
 
   auto asset_ptr() const noexcept -> const std::shared_ptr<backtest::Asset>;
 
+  auto profile_ptr() const noexcept -> const std::shared_ptr<backtest::Profile>;
+
   auto strategy() const noexcept -> const backtest::Strategy&;
 
   auto asset() const noexcept -> const backtest::Asset&;
 
+  auto get_profile() const noexcept -> const backtest::Profile&;
+
   void mark_as_failed() noexcept;
 
   auto is_failed() const noexcept -> bool;
-
-  auto capital_risk() const noexcept -> double;
 
   auto summaries() const noexcept
    -> const std::vector<backtest::BacktestingSummary>&;
@@ -55,6 +60,7 @@ private:
 
   std::shared_ptr<backtest::Strategy> strategy_ptr_;
   std::shared_ptr<backtest::Asset> asset_ptr_;
+  std::shared_ptr<backtest::Profile> profile_ptr_;
 
   bool is_failed_;
   std::vector<backtest::BacktestingSummary> summaries_;

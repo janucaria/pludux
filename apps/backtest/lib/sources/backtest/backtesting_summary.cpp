@@ -311,21 +311,22 @@ auto BacktestingSummary::profit_rate() const noexcept -> double
                        : 0.0;
 }
 
-auto BacktestingSummary::total_profits() const noexcept -> double
+auto BacktestingSummary::cumulative_profits() const noexcept -> double
 {
   return cumulative_take_profits() + cumulative_stop_loss_profits() +
          cumulative_exit_signal_profits();
 }
 
-auto BacktestingSummary::total_profit_percent() const noexcept -> double
+auto BacktestingSummary::cumulative_profit_percent() const noexcept -> double
 {
-  return cumulative_investments() ? total_profits() / cumulative_investments()
-                                  : 0.0;
+  return cumulative_investments()
+          ? cumulative_profits() / cumulative_investments() * 100.0
+          : 0.0;
 }
 
 auto BacktestingSummary::average_profit() const noexcept -> double
 {
-  return profit_count() ? total_profits() / profit_count() : 0.0;
+  return profit_count() ? cumulative_profits() / profit_count() : 0.0;
 }
 
 auto BacktestingSummary::loss_count() const noexcept -> std::size_t
@@ -339,20 +340,21 @@ auto BacktestingSummary::loss_rate() const noexcept -> double
                        : 0.0;
 }
 
-auto BacktestingSummary::total_losses() const noexcept -> double
+auto BacktestingSummary::cumulative_losses() const noexcept -> double
 {
   return cumulative_stop_loss_losses() + cumulative_exit_signal_losses();
 }
 
-auto BacktestingSummary::total_loss_percent() const noexcept -> double
+auto BacktestingSummary::cumulative_loss_percent() const noexcept -> double
 {
-  return cumulative_investments() ? total_losses() / cumulative_investments()
-                                  : 0.0;
+  return cumulative_investments()
+          ? cumulative_losses() / cumulative_investments() * 100.0
+          : 0.0;
 }
 
 auto BacktestingSummary::average_loss() const noexcept -> double
 {
-  return loss_count() ? total_losses() / loss_count() : 0.0;
+  return loss_count() ? cumulative_losses() / loss_count() : 0.0;
 }
 
 auto BacktestingSummary::break_even_count() const noexcept -> std::size_t
@@ -373,10 +375,10 @@ auto BacktestingSummary::break_even_rate() const noexcept -> double
 
 auto BacktestingSummary::profit_factor() const noexcept -> double
 {
-  if(total_losses() == 0.0) {
+  if(cumulative_losses() == 0.0) {
     return std::numeric_limits<double>::infinity();
   }
-  return total_profits() / -total_losses();
+  return cumulative_profits() / -cumulative_losses();
 }
 
 auto BacktestingSummary::unrealized_pnl() const noexcept -> double

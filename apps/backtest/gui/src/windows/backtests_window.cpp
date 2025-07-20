@@ -85,6 +85,7 @@ void BacktestsWindow::render_add_new_backtest(AppState& app_state)
   const auto& state = app_state.state();
   const auto& strategies = state.strategies;
   const auto& assets = state.assets;
+  const auto& profiles = state.profiles;
 
   ImGui::BeginGroup();
   ImGui::BeginChild("item view",
@@ -171,30 +172,69 @@ void BacktestsWindow::render_add_new_backtest(AppState& app_state)
     }
   }
 
+  {
+    new_backtest_profile_index_ =
+     std::min(new_backtest_profile_index_,
+              static_cast<std::ptrdiff_t>(state.profiles.size() - 1));
+
+    auto profile_preview = std::string{""};
+    if(new_backtest_profile_index_ >= 0 &&
+       new_backtest_profile_index_ < profiles.size()) {
+      profile_preview = profiles[new_backtest_profile_index_]->name();
+    }
+
+    ImGui::Text("Profile:");
+    if(ImGui::BeginCombo("##ProfileCombo", profile_preview.c_str())) {
+      for(auto i = 0; i < profiles.size(); ++i) {
+        const auto& profile = *profiles[i];
+        const auto& profile_name = profile.name();
+        const auto is_selected = new_backtest_profile_index_ == i;
+
+        ImGui::PushID(i);
+
+        if(ImGui::Selectable(profile_name.c_str(), is_selected)) {
+          new_backtest_profile_index_ = i;
+        }
+
+        if(is_selected) {
+          ImGui::SetItemDefaultFocus();
+        }
+
+        ImGui::PopID();
+      }
+      ImGui::EndCombo();
+    }
+  }
+
   ImGui::EndChild();
 
   if(ImGui::Button("Create Backtest")) {
-    if(new_backtest_strategy_index_ >= 0 && new_backtest_asset_index_ >= 0) {
+    if(new_backtest_strategy_index_ >= 0 && new_backtest_asset_index_ >= 0 &&
+       new_backtest_profile_index_ >= 0) {
       app_state.push_action(
        [new_backtest_name = new_backtest_name_,
         strategy_index = new_backtest_strategy_index_,
-        asset_index = new_backtest_asset_index_](AppStateData& state) {
+        asset_index = new_backtest_asset_index_,
+        profile_index = new_backtest_profile_index_](AppStateData& state) {
          const auto& strategy = state.strategies[strategy_index];
          const auto& asset = state.assets[asset_index];
+         const auto& profile = state.profiles[profile_index];
 
          const auto backtest_name =
           new_backtest_name.empty()
-           ? std::format("{} / {}", asset->name(), strategy->name())
+           ? std::format(
+              "{} / {} / {}", asset->name(), strategy->name(), profile->name())
            : new_backtest_name;
 
-         state.backtests.emplace_back(backtest_name, strategy, asset);
+         state.backtests.emplace_back(backtest_name, strategy, asset, profile);
          state.selected_backtest_index = state.backtests.size() - 1;
        });
 
       is_adding_new_backtest_ = false;
     } else {
       app_state.push_action([](AppStateData& state) {
-        state.alert_messages.push("Please select a strategy and an asset.");
+        state.alert_messages.push(
+         "Please select a strategy, an asset, and a profile.");
       });
     }
   }

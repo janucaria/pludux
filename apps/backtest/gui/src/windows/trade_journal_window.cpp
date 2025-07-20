@@ -34,7 +34,7 @@ void TradeJournalWindow::render(AppState& app_state)
 
     constexpr auto headers = std::array{"Entry Date",
                                         "Exit Date",
-                                        "Position Size",
+                                        "Position Value (Size)",
                                         "Entry Price",
                                         "Stop Loss",
                                         "Take Profit",
@@ -78,7 +78,9 @@ void TradeJournalWindow::draw_trade_row(const backtest::TradeRecord& trade)
    "%s",
    trade.is_open() ? "N/A" : format_datetime(trade.exit_timestamp()).c_str());
   ImGui::TableNextColumn();
-  ImGui::Text("%.0f", trade.position_size());
+  const auto position_value = trade.position_value();
+  ImGui::Text(
+   "%s (%.0f)", format_currency(position_value).c_str(), trade.position_size());
   ImGui::TableNextColumn();
   ImGui::Text("%s", format_currency(trade.entry_price()).c_str());
   ImGui::TableNextColumn();
