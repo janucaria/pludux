@@ -30,7 +30,7 @@ void TradeJournalWindow::render(AppState& app_state)
     const auto table_flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
                              ImGuiTableFlags_Resizable |
                              ImGuiTableFlags_Reorderable |
-                             ImGuiTableFlags_Hideable;
+                             ImGuiTableFlags_Hideable | ImGuiTableFlags_ScrollY;
 
     constexpr auto headers = std::array{"Trade #",
                                         "Entry Date",
@@ -45,6 +45,7 @@ void TradeJournalWindow::render(AppState& app_state)
                                         "Duration"};
 
     if(ImGui::BeginTable("TradesTable", headers.size(), table_flags)) {
+      ImGui::TableSetupScrollFreeze(0, 1);
       for(const auto& header : headers) {
         if(header == std::string{"Trade #"}) {
           const auto text_size = ImGui::CalcTextSize(header);
@@ -83,9 +84,14 @@ void TradeJournalWindow::render(AppState& app_state)
 void TradeJournalWindow::draw_trade_row(int trade_count,
                                         const backtest::TradeRecord& trade)
 {
+  ImGui::PushID(trade_count);
+
   ImGui::TableNextRow();
   ImGui::TableNextColumn();
-  ImGui::Text("%d", trade_count);
+  ImGui::Selectable(std::to_string(trade_count).c_str(),
+                    false,
+                    ImGuiSelectableFlags_SpanAllColumns |
+                     ImGuiSelectableFlags_AllowOverlap);
   ImGui::TableNextColumn();
   ImGui::Text("%s", format_datetime(trade.entry_timestamp()).c_str());
   ImGui::TableNextColumn();
@@ -117,6 +123,8 @@ void TradeJournalWindow::draw_trade_row(int trade_count,
               trade.pnl() / trade.position_value() * 100.0);
   ImGui::TableNextColumn();
   ImGui::Text("%s", format_duration(trade.duration()).c_str());
+
+  ImGui::PopID();
 }
 
 auto TradeJournalWindow::format_trade_status(
