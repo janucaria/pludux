@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <array>
+#include <format>
 
 #include <imgui.h>
 #include <implot.h>
@@ -293,15 +294,19 @@ void PlotDataWindow::DrawTrades(
  const std::vector<backtest::BacktestingSummary>& backtest_summaries,
  const AssetHistory& asset_history)
 {
+  constexpr auto marker_offset = 50.0f;
+  const auto marker_text_color =
+   ImGui::GetColorU32(ImVec4{1.0f, 1.0f, 1.0f, 1.0f});
   auto* draw_list = ImPlot::GetPlotDrawList();
 
-  constexpr double half_width = 0.5;
+  constexpr float half_width = 0.5f;
   if(ImPlot::BeginItem(label_id)) {
     auto trailing_stop_lines = std::vector<ImVec2>{};
     trailing_stop_lines.reserve(backtest_summaries.size());
 
     for(int i = 0, ii = backtest_summaries.size(); i < ii; ++i) {
-      const auto& trade = backtest_summaries[i].trade_record();
+      const auto& summary = backtest_summaries[i];
+      const auto& trade = summary.trade_record();
 
       const auto take_profit_price = trade.take_profit_price();
       const auto stop_loss_price = trade.stop_loss_price();
@@ -342,6 +347,52 @@ void PlotDataWindow::DrawTrades(
         draw_list->AddRectFilled(reward_left_top_pos,
                                  reward_right_bottom_pos,
                                  ImGui::GetColorU32(reward_color_));
+      }
+
+      {
+        if(trade.is_open() && entry_idx == asset_idx) {
+          const auto entry_low =
+           AssetSnapshot{entry_idx, asset_history}.get_low();
+
+          auto entry_pos = ImPlot::PlotToPixels(entry_idx, entry_low);
+          entry_pos.y += marker_offset;
+
+          draw_list->AddTriangleFilled(ImVec2{entry_pos.x - 5, entry_pos.y},
+                                       ImVec2{entry_pos.x + 5, entry_pos.y},
+                                       ImVec2{entry_pos.x, entry_pos.y - 10},
+                                       ImGui::GetColorU32(bullish_color_));
+
+          const auto trade_count_str =
+           std::format("#{}", summary.trade_count() + 1);
+          const auto text_size = ImGui::CalcTextSize(trade_count_str.c_str());
+          draw_list->AddText(
+           ImVec2{entry_pos.x - text_size.x * 0.5f, entry_pos.y},
+           marker_text_color,
+           trade_count_str.c_str());
+        }
+      }
+
+      {
+        if(trade.is_closed()) {
+          const auto exit_high =
+           AssetSnapshot{asset_idx, asset_history}.get_high();
+
+          auto exit_pos = ImPlot::PlotToPixels(asset_idx, exit_high);
+          exit_pos.y -= marker_offset;
+
+          draw_list->AddTriangleFilled(ImVec2{exit_pos.x - 5, exit_pos.y},
+                                       ImVec2{exit_pos.x + 5, exit_pos.y},
+                                       ImVec2{exit_pos.x, exit_pos.y + 10},
+                                       ImGui::GetColorU32(bearish_color_));
+
+          const auto trade_count_str =
+           std::format("#{}", summary.trade_count());
+          const auto text_size = ImGui::CalcTextSize(trade_count_str.c_str());
+          draw_list->AddText(
+           ImVec2{exit_pos.x - text_size.x * 0.5f, exit_pos.y - 13},
+           marker_text_color,
+           trade_count_str.c_str());
+        }
       }
 
       {
