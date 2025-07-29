@@ -236,10 +236,10 @@ void Backtest::run()
                                   trailing_stop_price,
                                   take_profit_price};
 
-  const auto& last_summary =
-   summaries_.empty() ? backtest::BacktestingSummary{} : summaries_.back();
-
-  auto summary = last_summary.get_next_summary(std::move(trade_record));
+  auto summary = !summaries_.empty()
+                  ? summaries_.back().get_next_summary(std::move(trade_record))
+                  : backtest::BacktestingSummary{profile.initial_capital(),
+                                                 std::move(trade_record)};
 
   summaries_.emplace_back(std::move(summary));
 }

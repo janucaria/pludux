@@ -11,12 +11,21 @@ namespace pludux::backtest {
 
 class BacktestingSummary {
 public:
+  BacktestingSummary();
+
+  explicit BacktestingSummary(double initial_capital,
+                              TradeRecord trade_record = TradeRecord{});
+
   auto get_next_summary(TradeRecord trade_record) const noexcept
    -> BacktestingSummary;
 
   auto trade_record() const noexcept -> const TradeRecord&;
 
   void trade_record(TradeRecord trade_record) noexcept;
+
+  auto capital() const noexcept -> double;
+
+  void capital(double capital) noexcept;
 
   auto cumulative_investments() const noexcept -> double;
 
@@ -142,28 +151,34 @@ public:
 
   auto ongoing_trade_duration() const noexcept -> std::time_t;
 
+  auto equity() const noexcept -> double;
+
+  auto initial_capital() const noexcept -> double;
+
 private:
-  TradeRecord trade_record_{};
+  TradeRecord trade_record_;
 
-  std::time_t sum_of_durations_{};
-  double cumulative_investments_{};
+  double capital_;
 
-  std::size_t take_profit_count_{};
-  double cumulative_take_profits_{};
+  std::time_t sum_of_durations_;
+  double cumulative_investments_;
 
-  std::size_t stop_loss_profit_count_{};
-  double cumulative_stop_loss_profits_{};
+  std::size_t take_profit_count_;
+  double cumulative_take_profits_;
 
-  std::size_t stop_loss_loss_count_{};
-  double cumulative_stop_loss_losses_{};
+  std::size_t stop_loss_profit_count_;
+  double cumulative_stop_loss_profits_;
 
-  std::size_t exit_signal_profit_count_{};
-  double cumulative_exit_signal_profits_{};
+  std::size_t stop_loss_loss_count_;
+  double cumulative_stop_loss_losses_;
 
-  std::size_t exit_signal_loss_count_{};
-  double cumulative_exit_signal_losses_{};
+  std::size_t exit_signal_profit_count_;
+  double cumulative_exit_signal_profits_;
 
-  std::size_t break_even_count_{};
+  std::size_t exit_signal_loss_count_;
+  double cumulative_exit_signal_losses_;
+
+  std::size_t break_even_count_;
 };
 
 } // namespace pludux::backtest

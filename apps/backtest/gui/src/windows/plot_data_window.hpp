@@ -45,6 +45,9 @@ private:
    const char* label_id,
    const std::vector<backtest::BacktestingSummary>& backtest_summaries,
    const AssetHistory& asset_history);
+
+  void plot_equity(
+   const std::vector<backtest::BacktestingSummary>& backtest_summaries);
 };
 
 } // namespace pludux::apps

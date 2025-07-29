@@ -103,6 +103,7 @@ void save(Archive& archive, const pludux::backtest::BacktestingSummary& summary)
 {
   archive(
    make_nvp("tradeRecord", summary.trade_record()),
+   make_nvp("capital", summary.capital()),
    make_nvp("cumulativeInvestments", summary.cumulative_investments()),
    make_nvp("cumulativeTakeProfits", summary.cumulative_take_profits()),
    make_nvp("cumulativeStopLoseProfits",
@@ -125,6 +126,7 @@ template<class Archive>
 void load(Archive& archive, pludux::backtest::BacktestingSummary& summary)
 {
   auto trade_record = pludux::backtest::TradeRecord{};
+  auto capital = double{};
   auto cumulative_investments = double{};
   auto cumulative_take_profits = double{};
   auto cumulative_stop_loss_profits = double{};
@@ -141,6 +143,7 @@ void load(Archive& archive, pludux::backtest::BacktestingSummary& summary)
 
   archive(
    make_nvp("tradeRecord", trade_record),
+   make_nvp("capital", capital),
    make_nvp("cumulativeInvestments", cumulative_investments),
    make_nvp("cumulativeTakeProfits", cumulative_take_profits),
    make_nvp("cumulativeStopLoseProfits", cumulative_stop_loss_profits),
@@ -157,6 +160,7 @@ void load(Archive& archive, pludux::backtest::BacktestingSummary& summary)
 
   auto new_summary = pludux::backtest::BacktestingSummary{};
   new_summary.trade_record(std::move(trade_record));
+  new_summary.capital(capital);
   new_summary.cumulative_investments(cumulative_investments);
   new_summary.cumulative_take_profits(cumulative_take_profits);
   new_summary.cumulative_stop_loss_profits(cumulative_stop_loss_profits);

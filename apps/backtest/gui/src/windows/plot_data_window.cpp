@@ -111,6 +111,27 @@ void PlotDataWindow::render(AppState& app_state)
 
         ImGui::EndTabItem();
       }
+
+      if(ImGui::BeginTabItem("Equity (%)")) {
+        if(ImPlot::BeginPlot("##EquityPlot",
+                             {-1, -1},
+                             ImPlotFlags_NoLegend | ImPlotFlags_NoMouseText |
+                              ImPlotFlags_NoBoxSelect)) {
+          ImPlot::SetupAxisLinks(ImAxis_X1, &plot_range_.Min, &plot_range_.Max);
+
+          ImPlot::SetupAxis(ImAxis_X1, nullptr, axis_x_flags);
+
+          ImPlot::SetupAxis(ImAxis_Y1, nullptr, axis_y_flags);
+          ImPlot::SetupAxisFormat(ImAxis_Y1, VolumeFormatter);
+
+          plot_equity(backtest_summaries);
+
+          ImPlot::EndPlot();
+        }
+
+        ImGui::EndTabItem();
+      }
+
       ImGui::EndTabBar();
     }
   }
@@ -433,6 +454,56 @@ void PlotDataWindow::DrawTrades(
                                1.2f);
       }
     }
+
+    ImPlot::EndItem();
+  }
+}
+
+void PlotDataWindow::plot_equity(
+ const std::vector<backtest::BacktestingSummary>& backtest_summaries)
+{
+  const auto summaries_size = backtest_summaries.size();
+  auto xs = std::vector<double>{};
+  auto ys = std::vector<double>{};
+  for(auto summary_i = 0; summary_i < summaries_size; ++summary_i) {
+    const auto& summary = backtest_summaries[summary_i];
+    const auto equity = summary.equity();
+    const auto equity_percentage = equity / summary.initial_capital() * 100.0;
+    const auto plot_idx = summaries_size - summary_i - 1;
+    xs.push_back(plot_idx);
+    ys.push_back(equity_percentage);
+  }
+
+  if(ImPlot::IsPlotHovered()) {
+    constexpr auto half_width = 0.5;
+    auto* draw_list = ImPlot::GetPlotDrawList();
+    ImPlotPoint mouse = ImPlot::GetPlotMousePos();
+    mouse.x = std::round(mouse.x);
+    float tool_l = ImPlot::PlotToPixels(mouse.x - half_width, mouse.y).x;
+    float tool_r = ImPlot::PlotToPixels(mouse.x + half_width, mouse.y).x;
+    float tool_t = ImPlot::GetPlotPos().y;
+    float tool_b = tool_t + ImPlot::GetPlotSize().y;
+    ImPlot::PushPlotClipRect();
+    draw_list->AddRectFilled(ImVec2(tool_l, tool_t),
+                             ImVec2(tool_r, tool_b),
+                             IM_COL32(128, 128, 128, 64));
+    ImPlot::PopPlotClipRect();
+
+    const auto plot_idx = static_cast<int>(mouse.x);
+    if(ImPlot::IsPlotHovered() && plot_idx > -1 && plot_idx < summaries_size) {
+      const auto summary_i = summaries_size - plot_idx - 1;
+      ImGui::BeginTooltip();
+      ImGui::Text("%s%%", format_currency(ys[summary_i]).c_str());
+      ImGui::EndTooltip();
+    }
+  }
+
+  if(ImPlot::BeginItem("Equity")) {
+    ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.5f);
+    ImPlot::PlotShaded("Equity", xs.data(), ys.data(), xs.size(), 100);
+    ImPlot::PopStyleVar();
+
+    ImPlot::PlotLine("Equity", xs.data(), ys.data(), xs.size());
 
     ImPlot::EndItem();
   }

@@ -122,18 +122,16 @@ void BacktestSummaryWindow::render(AppState& app_state)
 
       draw_spacer_row();
 
-      const auto initial_capital = profile.initial_capital();
-      draw_currency_row("Initial capital", initial_capital);
+      draw_currency_row("Initial capital", summary.initial_capital());
+      draw_currency_with_percent_row("Total profits",
+                                     summary.cumulative_profits(),
+                                     summary.initial_capital());
       draw_currency_with_percent_row(
-       "Total profits", summary.cumulative_profits(), initial_capital);
+       "Total losses", summary.cumulative_losses(), summary.initial_capital());
       draw_currency_with_percent_row(
-       "Total losses", summary.cumulative_losses(), initial_capital);
+       "Net P&L", summary.cumulative_pnls(), summary.initial_capital());
       draw_currency_with_percent_row(
-       "Net P&L", summary.cumulative_pnls(), initial_capital);
-      draw_currency_with_percent_row("Total capital",
-                                     summary.cumulative_pnls() +
-                                      initial_capital,
-                                     initial_capital);
+       "Total Capital", summary.capital(), summary.initial_capital());
 
       draw_spacer_row();
 
@@ -144,6 +142,10 @@ void BacktestSummaryWindow::render(AppState& app_state)
                                    summary.cumulative_investments());
       draw_duration_row("Ongoing trade duration",
                         summary.ongoing_trade_duration());
+
+      draw_spacer_row();
+      draw_currency_with_percent_row(
+       "Equity", summary.equity(), summary.initial_capital());
     }
 
     ImGui::EndTable();

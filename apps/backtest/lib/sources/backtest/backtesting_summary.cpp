@@ -5,6 +5,31 @@
 
 namespace pludux::backtest {
 
+BacktestingSummary::BacktestingSummary()
+: BacktestingSummary{0.0, TradeRecord{}}
+{
+}
+
+BacktestingSummary::BacktestingSummary(double initial_capital,
+                                       TradeRecord trade_record)
+: trade_record_{std::move(trade_record)}
+, capital_{initial_capital}
+, sum_of_durations_{}
+, cumulative_investments_{0.0}
+, take_profit_count_{0}
+, cumulative_take_profits_{0.0}
+, stop_loss_profit_count_{0}
+, cumulative_stop_loss_profits_{0.0}
+, stop_loss_loss_count_{0}
+, cumulative_stop_loss_losses_{0.0}
+, exit_signal_profit_count_{0}
+, cumulative_exit_signal_profits_{0.0}
+, exit_signal_loss_count_{0}
+, cumulative_exit_signal_losses_{0.0}
+, break_even_count_{0}
+{
+}
+
 auto BacktestingSummary::get_next_summary(
  TradeRecord trade_record) const noexcept -> BacktestingSummary
 {
@@ -40,6 +65,8 @@ auto BacktestingSummary::get_next_summary(
         summary.break_even_count_++;
       }
     }
+
+    summary.capital_ += pnl;
   }
 
   summary.trade_record_ = std::move(trade_record);
@@ -54,6 +81,16 @@ auto BacktestingSummary::trade_record() const noexcept -> const TradeRecord&
 void BacktestingSummary::trade_record(TradeRecord trade_record) noexcept
 {
   trade_record_ = std::move(trade_record);
+}
+
+auto BacktestingSummary::capital() const noexcept -> double
+{
+  return capital_;
+}
+
+void BacktestingSummary::capital(double capital) noexcept
+{
+  capital_ = capital;
 }
 
 auto BacktestingSummary::cumulative_investments() const noexcept -> double
@@ -389,6 +426,16 @@ auto BacktestingSummary::unrealized_pnl() const noexcept -> double
 auto BacktestingSummary::ongoing_trade_duration() const noexcept -> std::time_t
 {
   return trade_record_.is_open() ? trade_record_.duration() : 0;
+}
+
+auto BacktestingSummary::equity() const noexcept -> double
+{
+  return capital_ + unrealized_pnl();
+}
+
+auto BacktestingSummary::initial_capital() const noexcept -> double
+{
+  return capital_ - cumulative_pnls();
 }
 
 } // namespace pludux::backtest
