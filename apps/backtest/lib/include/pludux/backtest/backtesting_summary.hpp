@@ -27,6 +27,14 @@ public:
 
   void capital(double capital) noexcept;
 
+  auto peak_equity() const noexcept -> double;
+
+  void peak_equity(double peak_equity) noexcept;
+
+  auto max_drawdown() const noexcept -> double;
+
+  void max_drawdown(double max_drawdown) noexcept;
+
   auto cumulative_investments() const noexcept -> double;
 
   void cumulative_investments(double investment) noexcept;
@@ -155,10 +163,14 @@ public:
 
   auto initial_capital() const noexcept -> double;
 
+  auto drawdown() const noexcept -> double;
+
 private:
   TradeRecord trade_record_;
 
   double capital_;
+  double peak_equity_;
+  double max_drawdown_;
 
   std::time_t sum_of_durations_;
   double cumulative_investments_;

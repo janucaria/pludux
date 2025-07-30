@@ -14,6 +14,8 @@ BacktestingSummary::BacktestingSummary(double initial_capital,
                                        TradeRecord trade_record)
 : trade_record_{std::move(trade_record)}
 , capital_{initial_capital}
+, peak_equity_{initial_capital}
+, max_drawdown_{0.0}
 , sum_of_durations_{}
 , cumulative_investments_{0.0}
 , take_profit_count_{0}
@@ -70,6 +72,9 @@ auto BacktestingSummary::get_next_summary(
   }
 
   summary.trade_record_ = std::move(trade_record);
+  summary.peak_equity_ = std::max(summary.peak_equity_, summary.equity());
+  summary.max_drawdown_ = std::max(summary.max_drawdown_, summary.drawdown());
+
   return summary;
 }
 
@@ -91,6 +96,26 @@ auto BacktestingSummary::capital() const noexcept -> double
 void BacktestingSummary::capital(double capital) noexcept
 {
   capital_ = capital;
+}
+
+auto BacktestingSummary::peak_equity() const noexcept -> double
+{
+  return peak_equity_;
+}
+
+void BacktestingSummary::peak_equity(double peak_equity) noexcept
+{
+  peak_equity_ = peak_equity;
+}
+
+auto BacktestingSummary::max_drawdown() const noexcept -> double
+{
+  return max_drawdown_;
+}
+
+void BacktestingSummary::max_drawdown(double max_drawdown) noexcept
+{
+  max_drawdown_ = max_drawdown;
 }
 
 auto BacktestingSummary::cumulative_investments() const noexcept -> double
@@ -436,6 +461,11 @@ auto BacktestingSummary::equity() const noexcept -> double
 auto BacktestingSummary::initial_capital() const noexcept -> double
 {
   return capital_ - cumulative_pnls();
+}
+
+auto BacktestingSummary::drawdown() const noexcept -> double
+{
+  return peak_equity_ ? (peak_equity_ - equity()) / peak_equity_ * 100.0 : 0.0;
 }
 
 } // namespace pludux::backtest

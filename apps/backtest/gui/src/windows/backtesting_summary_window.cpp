@@ -146,6 +146,10 @@ void BacktestSummaryWindow::render(AppState& app_state)
       draw_spacer_row();
       draw_currency_with_percent_row(
        "Equity", summary.equity(), summary.initial_capital());
+      draw_currency_with_percent_row(
+       "Peak equity", summary.peak_equity(), summary.initial_capital());
+      draw_row("Drawdown", std::format("{:.2f}%", summary.drawdown()));
+      draw_row("Max drawdown", std::format("{:.2f}%", summary.max_drawdown()));
     }
 
     ImGui::EndTable();
