@@ -1,12 +1,14 @@
 #ifndef PLUDUX_PLUDUX_BACKTEST_STRATEGY_HPP
 #define PLUDUX_PLUDUX_BACKTEST_STRATEGY_HPP
 
+#include <istream>
 #include <string>
-#include <unordered_map>
+#include <string_view>
 
 #include <pludux/backtest/stop_loss.hpp>
 #include <pludux/backtest/take_profit.hpp>
 #include <pludux/backtest/trade_record.hpp>
+#include <pludux/config_parser.hpp>
 #include <pludux/screener.hpp>
 
 namespace pludux::backtest {
@@ -36,6 +38,12 @@ private:
   backtest::StopLoss stop_loss_;
   backtest::TakeProfit take_profit_;
 };
+
+auto parse_backtest_strategy_json(std::string_view strategy_name,
+                                  std::istream& json_strategy_stream)
+ -> backtest::Strategy;
+
+auto risk_reward_config_parser() -> ConfigParser;
 
 } // namespace pludux::backtest
 

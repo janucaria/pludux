@@ -9,7 +9,6 @@
 #include <vector>
 
 #include <ctre.hpp>
-#include <nlohmann/json.hpp>
 #include <rapidcsv.h>
 
 #include <pludux/backtest.hpp>
@@ -335,106 +334,6 @@ auto csv_daily_stock_data(std::istream& csv_stream) -> AssetHistory
   result.datetime_key(date_record_header);
 
   return result;
-}
-
-auto parse_backtest_strategy_json(const std::string& strategy_name,
-                                  std::istream& json_strategy_stream)
- -> backtest::Strategy
-{
-  auto config_parser = pludux::ConfigParser{};
-  config_parser.register_default_parsers();
-
-  auto strategy_json =
-   nlohmann::json::parse(json_strategy_stream, nullptr, true, true);
-  if(strategy_json.contains("methods")) {
-    for(const auto& strategy_method : strategy_json["methods"]) {
-      config_parser.parse_method(strategy_method);
-    }
-  }
-
-  const auto entry_filter =
-   config_parser.parse_filter(strategy_json.at("entrySignal"));
-  const auto exit_filter =
-   config_parser.parse_filter(strategy_json.at("exitSignal"));
-  const auto price_method = screener::CloseMethod{};
-
-  auto reward_parser = risk_reward_config_parser();
-  const auto take_profit_config = strategy_json.at("takeProfit");
-  const auto is_take_profit_disabled =
-   take_profit_config.contains("disabled")
-    ? take_profit_config.at("disabled").get<bool>()
-    : false;
-  const auto reward_method =
-   reward_parser.parse_method(strategy_json.at("takeProfit"));
-  const auto trading_take_profit_method = screener::HighMethod{};
-  const auto take_profit = pludux::backtest::TakeProfit{
-   reward_method, is_take_profit_disabled, trading_take_profit_method};
-
-  auto risk_parser = risk_reward_config_parser();
-  const auto stop_loss_config = strategy_json.at("stopLoss");
-  const auto is_trailing_stop_loss =
-   stop_loss_config.contains("isTrailing")
-    ? stop_loss_config.at("isTrailing").get<bool>()
-    : false;
-  const auto is_stop_loss_disabled =
-   stop_loss_config.contains("disabled")
-    ? stop_loss_config.at("disabled").get<bool>()
-    : false;
-  const auto risk_method = risk_parser.parse_method(stop_loss_config);
-  const auto stop_loss = pludux::backtest::StopLoss{
-   risk_method, is_stop_loss_disabled, is_trailing_stop_loss};
-
-  return pludux::backtest::Strategy{
-   strategy_name, entry_filter, exit_filter, stop_loss, take_profit};
-}
-
-auto risk_reward_config_parser() -> ConfigParser
-{
-  auto config_parser = ConfigParser{};
-
-  config_parser.register_method_parser(
-   "ATR",
-   [](ConfigParser::Parser config_parser,
-      const nlohmann::json& parameters) -> screener::ScreenerMethod {
-     const auto period = parameters.contains("period")
-                          ? parameters.at("period").get<std::size_t>()
-                          : 14;
-     const auto multiplier = parameters.contains("multiplier")
-                              ? parameters.at("multiplier").get<double>()
-                              : 1;
-
-     const auto atr_method = screener::AtrMethod{screener::HighMethod{},
-                                                 screener::LowMethod{},
-                                                 screener::CloseMethod{},
-                                                 period,
-                                                 multiplier};
-     return atr_method;
-   });
-
-  config_parser.register_method_parser(
-   "PERCENTAGE",
-   [](ConfigParser::Parser config_parser,
-      const nlohmann::json& parameters) -> screener::ScreenerMethod {
-     const auto total_method = screener::CloseMethod{};
-
-     const auto percent = parameters.at("percent").get<double>();
-     const auto percent_method = screener::ValueMethod{percent};
-
-     const auto percentage_method =
-      screener::PercentageMethod{total_method, percent_method};
-
-     return percentage_method;
-   });
-
-  config_parser.register_method_parser(
-   "VALUE",
-   [](ConfigParser::Parser config_parser,
-      const nlohmann::json& parameters) -> screener::ScreenerMethod {
-     const auto value = parameters.at("value").get<double>();
-     return screener::ValueMethod{value};
-   });
-
-  return config_parser;
 }
 
 auto format_duration(std::size_t duration_in_seconds) -> std::string

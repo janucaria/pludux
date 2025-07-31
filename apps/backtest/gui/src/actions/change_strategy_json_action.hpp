@@ -2,10 +2,11 @@
 #define PLUDUX_APPS_BACKTEST_ACTIONS_CHANGE_CONFIG_JSON_ACTION_HPP
 
 #include <filesystem>
+#include <memory>
 #include <string>
 #include <utility>
 
-#include <pludux/backtest.hpp>
+#include <pludux/backtest/strategy.hpp>
 
 #include "../app_state_data.hpp"
 
@@ -21,7 +22,8 @@ protected:
 
     auto parsed_strategy = [&]() {
       try {
-        return parse_backtest_strategy_json(strategy_name, json_stream);
+        return backtest::parse_backtest_strategy_json(strategy_name,
+                                                      json_stream);
       } catch(const std::exception& e) {
         const auto error_message = std::format(
          "Failed to parse strategy '{}':\n{}", strategy_name, e.what());

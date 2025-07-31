@@ -1,36 +1,5 @@
 {
-  "capitalRisk": 100000,
   "methods": [
-    {
-      "method": "DATA",
-      "name": "time",
-      "field": "Date"
-    },
-    {
-      "method": "DATA",
-      "name": "open",
-      "field": "Open"
-    },
-    {
-      "method": "DATA",
-      "name": "high",
-      "field": "High"
-    },
-    {
-      "method": "DATA",
-      "name": "low",
-      "field": "Low"
-    },
-    {
-      "method": "DATA",
-      "name": "close",
-      "field": "Close"
-    },
-    {
-      "method": "DATA",
-      "name": "volume",
-      "field": "Volume"
-    },
     {
       "method": "DATA",
       "name": "stoch_rsi-k",
@@ -52,44 +21,57 @@
       "value": 20
     }
   ],
-  "entrySignal": {
-    "filter": "ALL_OF",
-    "conditions": [
-      {
-        "filter": "CROSSOVER",
-        "signal": "stoch_rsi-k",
-        "reference": "stoch_rsi-d"
-      },
-      {
-        "filter": "LESS_THAN",
-        "target": "stoch_rsi-k",
-        "threshold": "oversold"
-      }
-    ]
-  },
-  "exitSignal": {
-    "filter": "ALL_OF",
-    "conditions": [
-      {
-        "filter": "CROSSUNDER",
-        "signal": "stoch_rsi-k",
-        "reference": "stoch_rsi-d"
-      },
-      {
-        "filter": "GREATER_THAN",
-        "target": "stoch_rsi-k",
-        "threshold": "overbought"
-      }
-    ]
-  },
-  "stopLoss": {
+  "risk": {
     "method": "ATR",
-    "period": 14,
-    "multiplier": 2
+    "atr": {
+      "period": 14,
+      "multiplier": 2
+    },
+    "percentage": 5,
+    "value": 1000
   },
-  "takeProfit": {
-    "method": "ATR",
-    "period": 14,
-    "multiplier": 6
-  }
+  "positions": [
+    {
+      "direction": "long",
+      "entry": {
+        "repeat": "sequence",
+        "signal": {
+          "filter": "ALL_OF",
+          "conditions": [
+            {
+              "filter": "CROSSOVER",
+              "signal": "stoch_rsi-k",
+              "reference": "stoch_rsi-d"
+            },
+            {
+              "filter": "LESS_THAN",
+              "target": "stoch_rsi-k",
+              "threshold": "oversold"
+            }
+          ]
+        }
+      },
+      "exit": {
+        "signal": {
+          "filter": "ALL_OF",
+          "conditions": [
+            {
+              "filter": "CROSSUNDER",
+              "signal": "stoch_rsi-k",
+              "reference": "stoch_rsi-d"
+            },
+            {
+              "filter": "GREATER_THAN",
+              "target": "stoch_rsi-k",
+              "threshold": "overbought"
+            }
+          ]
+        }
+      },
+      "stopLoss": true,
+      "takeProfit": {
+        "rewardFactor": 3
+      }
+    }
+  ]
 }

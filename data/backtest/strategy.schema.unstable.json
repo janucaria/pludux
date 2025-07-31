@@ -1,0 +1,924 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "Strategy Schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "methods": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/method"
+      }
+    },
+    "risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "enum": [
+            "ATR",
+            "PERCENTAGE",
+            "VALUE"
+          ]
+        },
+        "atr": {
+          "type": "object",
+          "properties": {
+            "period": {
+              "type": "integer"
+            },
+            "multiplier": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "period",
+            "multiplier"
+          ]
+        },
+        "percentage": {
+          "type": "number"
+        },
+        "value": {
+          "type": "number"
+        }
+      }
+    },
+    "positions": {
+      "type": "array",
+      "maxItems": 1,
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "direction": {
+            "enum": [
+              "long"
+            ]
+          },
+          "entry": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "repeat": {
+                "enum": [
+                  "sequence"
+                ]
+              },
+              "signal": {
+                "$ref": "#/definitions/filterAsParameter"
+              }
+            },
+            "required": [
+              "signal"
+            ]
+          },
+          "exit": {
+            "type": "object",
+            "properties": {
+              "signal": {
+                "$ref": "#/definitions/filterAsParameter"
+              }
+            },
+            "required": [
+              "signal"
+            ]
+          },
+          "stopLoss": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "disabled": {
+                    "type": "boolean"
+                  },
+                  "isTrailing": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "takeProfit": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "disabled": {
+                    "type": "boolean"
+                  },
+                  "rewardFactor": {
+                    "type": "number"
+                  }
+                }
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "entry"
+        ]
+      }
+    }
+  },
+  "required": [
+    "risk",
+    "positions"
+  ],
+  "definitions": {
+    "methodAsParameter": {
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "$ref": "#/definitions/method"
+        }
+      ]
+    },
+    "baseMethod": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "number"
+        },
+        "name": {
+          "type": "string"
+        },
+        "extends": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "method"
+      ]
+    },
+    "quoteMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "OPEN",
+                "HIGH",
+                "LOW",
+                "CLOSE",
+                "VOLUME"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "valueMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "VALUE"
+            },
+            "value": {
+              "type": "number"
+            }
+          }
+        }
+      ]
+    },
+    "dataMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "DATA"
+            },
+            "field": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "maMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "SMA",
+                "EMA",
+                "RMA",
+                "WMA",
+                "HMA"
+              ]
+            },
+            "period": {
+              "type": "number"
+            },
+            "input": {
+              "$ref": "#/definitions/methodAsParameter"
+            }
+          }
+        }
+      ]
+    },
+    "rsiMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "RSI"
+            },
+            "period": {
+              "type": "number"
+            },
+            "input": {
+              "$ref": "#/definitions/methodAsParameter"
+            }
+          }
+        }
+      ]
+    },
+    "atrMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "ATR"
+            },
+            "period": {
+              "type": "number"
+            },
+            "multiplier": {
+              "type": "number"
+            },
+            "high": {
+              "$ref": "#/definitions/methodAsParameter"
+            },
+            "low": {
+              "$ref": "#/definitions/methodAsParameter"
+            },
+            "close": {
+              "$ref": "#/definitions/methodAsParameter"
+            }
+          }
+        }
+      ]
+    },
+    "bbMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "BB"
+            },
+            "maType": {
+              "enum": [
+                "SMA",
+                "EMA",
+                "RMA",
+                "WMA",
+                "HMA"
+              ]
+            },
+            "period": {
+              "type": "number"
+            },
+            "stddev": {
+              "type": "number"
+            },
+            "input": {
+              "$ref": "#/definitions/methodAsParameter"
+            },
+            "output": {
+              "enum": [
+                "upper",
+                "lower",
+                "middle"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "kcMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "KC"
+            },
+            "ma": {
+              "$ref": "#/definitions/maMethod"
+            },
+            "range": {
+              "$ref": "#/definitions/atrMethod"
+            },
+            "multiplier": {
+              "type": "number"
+            },
+            "output": {
+              "enum": [
+                "upper",
+                "lower",
+                "middle"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "macdMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "MACD"
+            },
+            "fast": {
+              "type": "number"
+            },
+            "slow": {
+              "type": "number"
+            },
+            "signal": {
+              "type": "number"
+            },
+            "input": {
+              "$ref": "#/definitions/methodAsParameter"
+            },
+            "output": {
+              "enum": [
+                "macd",
+                "signal",
+                "histogram"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "stochMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "STOCH"
+            },
+            "kPeriod": {
+              "type": "number"
+            },
+            "kSmooth": {
+              "type": "number"
+            },
+            "dPeriod": {
+              "type": "number"
+            },
+            "output": {
+              "enum": [
+                "k",
+                "d"
+              ]
+            },
+            "high": {
+              "$ref": "#/definitions/methodAsParameter"
+            },
+            "low": {
+              "$ref": "#/definitions/methodAsParameter"
+            },
+            "close": {
+              "$ref": "#/definitions/methodAsParameter"
+            }
+          }
+        }
+      ]
+    },
+    "stochRsiMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "STOCH_RSI"
+            },
+            "kPeriod": {
+              "type": "number"
+            },
+            "kSmooth": {
+              "type": "number"
+            },
+            "dPeriod": {
+              "type": "number"
+            },
+            "rsiInput": {
+              "$ref": "#/definitions/methodAsParameter"
+            },
+            "rsiPeriod": {
+              "type": "number"
+            },
+            "output": {
+              "enum": [
+                "k",
+                "d"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "addMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "ADD"
+            },
+            "augend": {
+              "$ref": "#/definitions/methodAsParameter"
+            },
+            "addend": {
+              "$ref": "#/definitions/methodAsParameter"
+            }
+          }
+        }
+      ]
+    },
+    "subtractMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "SUBTRACT"
+            },
+            "minuend": {
+              "$ref": "#/definitions/methodAsParameter"
+            },
+            "subtrahend": {
+              "$ref": "#/definitions/methodAsParameter"
+            }
+          }
+        }
+      ]
+    },
+    "mutiplyMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "MULTIPLY"
+            },
+            "multiplicand": {
+              "$ref": "#/definitions/methodAsParameter"
+            },
+            "multiplier": {
+              "$ref": "#/definitions/methodAsParameter"
+            }
+          }
+        }
+      ]
+    },
+    "divideMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "DIVIDE"
+            },
+            "dividend": {
+              "$ref": "#/definitions/methodAsParameter"
+            },
+            "divisor": {
+              "$ref": "#/definitions/methodAsParameter"
+            }
+          }
+        }
+      ]
+    },
+    "negateMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "NEGATE"
+            },
+            "operand": {
+              "$ref": "#/definitions/methodAsParameter"
+            }
+          }
+        }
+      ]
+    },
+    "changesMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "CHANGES"
+            },
+            "input": {
+              "$ref": "#/definitions/methodAsParameter"
+            }
+          }
+        }
+      ]
+    },
+    "absDiffMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "ABS_DIFF"
+            },
+            "minuend": {
+              "$ref": "#/definitions/methodAsParameter"
+            },
+            "subtrahend": {
+              "$ref": "#/definitions/methodAsParameter"
+            }
+          }
+        }
+      ]
+    },
+    "percentageMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "PERCENTAGE"
+            },
+            "total": {
+              "$ref": "#/definitions/methodAsParameter"
+            },
+            "percentage": {
+              "type": "number"
+            }
+          }
+        }
+      ]
+    },
+    "divergenceMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "BULLISH_DIVERGENCE",
+                "HIDDEN_BULLISH_DIVERGENCE"
+              ]
+            },
+            "signal": {
+              "$ref": "#/definitions/methodAsParameter"
+            },
+            "reference": {
+              "$ref": "#/definitions/methodAsParameter"
+            },
+            "pivotRange": {
+              "type": "number"
+            },
+            "lookbackRange": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "signal",
+            "reference",
+            "pivotRange",
+            "lookbackRange"
+          ]
+        }
+      ]
+    },
+    "method": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/quoteMethod"
+        },
+        {
+          "$ref": "#/definitions/valueMethod"
+        },
+        {
+          "$ref": "#/definitions/dataMethod"
+        },
+        {
+          "$ref": "#/definitions/maMethod"
+        },
+        {
+          "$ref": "#/definitions/rsiMethod"
+        },
+        {
+          "$ref": "#/definitions/atrMethod"
+        },
+        {
+          "$ref": "#/definitions/bbMethod"
+        },
+        {
+          "$ref": "#/definitions/kcMethod"
+        },
+        {
+          "$ref": "#/definitions/macdMethod"
+        },
+        {
+          "$ref": "#/definitions/stochMethod"
+        },
+        {
+          "$ref": "#/definitions/stochRsiMethod"
+        },
+        {
+          "$ref": "#/definitions/addMethod"
+        },
+        {
+          "$ref": "#/definitions/subtractMethod"
+        },
+        {
+          "$ref": "#/definitions/mutiplyMethod"
+        },
+        {
+          "$ref": "#/definitions/divideMethod"
+        },
+        {
+          "$ref": "#/definitions/negateMethod"
+        },
+        {
+          "$ref": "#/definitions/changesMethod"
+        },
+        {
+          "$ref": "#/definitions/absDiffMethod"
+        },
+        {
+          "$ref": "#/definitions/percentageMethod"
+        },
+        {
+          "$ref": "#/definitions/divergenceMethod"
+        }
+      ]
+    },
+    "filterAsParameter": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/filter"
+        },
+        {
+          "type": "boolean"
+        }
+      ]
+    },
+    "baseFilter": {
+      "type": "object",
+      "properties": {
+        "filter": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "filter"
+      ]
+    },
+    "compositeConditionFilter": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseFilter"
+        },
+        {
+          "properties": {
+            "filter": {
+              "enum": [
+                "ALL_OF",
+                "ANY_OF"
+              ]
+            },
+            "conditions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/filterAsParameter"
+              }
+            }
+          },
+          "required": [
+            "conditions"
+          ]
+        }
+      ]
+    },
+    "comparisonFilter": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseFilter"
+        },
+        {
+          "properties": {
+            "filter": {
+              "enum": [
+                "LESS_THAN",
+                "LESS_EQUAL",
+                "GREATER_THAN",
+                "GREATER_EQUAL",
+                "EQUAL",
+                "NOT_EQUAL"
+              ]
+            },
+            "target": {
+              "$ref": "#/definitions/methodAsParameter"
+            },
+            "threshold": {
+              "$ref": "#/definitions/methodAsParameter"
+            }
+          },
+          "required": [
+            "target",
+            "threshold"
+          ]
+        }
+      ]
+    },
+    "crossFilter": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseFilter"
+        },
+        {
+          "properties": {
+            "filter": {
+              "enum": [
+                "CROSSOVER",
+                "CROSSUNDER"
+              ]
+            },
+            "signal": {
+              "$ref": "#/definitions/methodAsParameter"
+            },
+            "reference": {
+              "$ref": "#/definitions/methodAsParameter"
+            }
+          },
+          "required": [
+            "signal",
+            "reference"
+          ]
+        }
+      ]
+    },
+    "booleanFilter": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseFilter"
+        },
+        {
+          "properties": {
+            "filter": {
+              "enum": [
+                "TRUE",
+                "FALSE"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "binaryLogicalFilter": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseFilter"
+        },
+        {
+          "properties": {
+            "filter": {
+              "enum": [
+                "AND",
+                "OR",
+                "XOR"
+              ]
+            },
+            "firstCondition": {
+              "$ref": "#/definitions/filterAsParameter"
+            },
+            "secondCondition": {
+              "$ref": "#/definitions/filterAsParameter"
+            }
+          },
+          "required": [
+            "firstCondition",
+            "secondCondition"
+          ]
+        }
+      ]
+    },
+    "unaryLogicalFilter": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseFilter"
+        },
+        {
+          "properties": {
+            "filter": {
+              "enum": [
+                "NOT"
+              ]
+            },
+            "condition": {
+              "$ref": "#/definitions/filterAsParameter"
+            }
+          },
+          "required": [
+            "condition"
+          ]
+        }
+      ]
+    },
+    "filter": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/crossFilter"
+        },
+        {
+          "$ref": "#/definitions/compositeConditionFilter"
+        },
+        {
+          "$ref": "#/definitions/comparisonFilter"
+        },
+        {
+          "$ref": "#/definitions/booleanFilter"
+        },
+        {
+          "$ref": "#/definitions/binaryLogicalFilter"
+        },
+        {
+          "$ref": "#/definitions/unaryLogicalFilter"
+        }
+      ]
+    }
+  }
+}

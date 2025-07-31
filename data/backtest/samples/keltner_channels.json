@@ -1,36 +1,5 @@
 {
-  "capitalRisk": 100000,
   "methods": [
-    {
-      "method": "DATA",
-      "name": "time",
-      "field": "Date"
-    },
-    {
-      "method": "DATA",
-      "name": "open",
-      "field": "Open"
-    },
-    {
-      "method": "DATA",
-      "name": "high",
-      "field": "High"
-    },
-    {
-      "method": "DATA",
-      "name": "low",
-      "field": "Low"
-    },
-    {
-      "method": "DATA",
-      "name": "close",
-      "field": "Close"
-    },
-    {
-      "method": "DATA",
-      "name": "volume",
-      "field": "Volume"
-    },
     {
       "method": "KC",
       "name": "kc_upper",
@@ -52,24 +21,37 @@
       "output": "lower"
     }
   ],
-  "entrySignal": {
-    "filter": "CROSSOVER",
-    "signal": "close",
-    "reference": "kc_lower"
-  },
-  "exitSignal": {
-    "filter": "CROSSUNDER",
-    "signal": "close",
-    "reference": "kc_upper"
-  },
-  "stopLoss": {
+  "risk": {
     "method": "ATR",
-    "period": 14,
-    "multiplier": 2
+    "atr": {
+      "period": 14,
+      "multiplier": 2
+    },
+    "percentage": 5,
+    "value": 1000
   },
-  "takeProfit": {
-    "method": "ATR",
-    "period": 14,
-    "multiplier": 10
-  }
+  "positions": [
+    {
+      "direction": "long",
+      "entry": {
+        "repeat": "sequence",
+        "signal": {
+          "filter": "CROSSOVER",
+          "signal": "CLOSE",
+          "reference": "kc_lower"
+        }
+      },
+      "exit": {
+        "signal": {
+          "filter": "CROSSUNDER",
+          "signal": "CLOSE",
+          "reference": "kc_upper"
+        }
+      },
+      "stopLoss": true,
+      "takeProfit": {
+        "rewardFactor": 5
+      }
+    }
+  ]
 }

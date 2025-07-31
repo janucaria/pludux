@@ -10,7 +10,6 @@
 #include <pludux/backtest/backtesting_summary.hpp>
 #include <pludux/backtest/profile.hpp>
 #include <pludux/backtest/strategy.hpp>
-#include <pludux/config_parser.hpp>
 
 namespace pludux {
 
@@ -68,13 +67,7 @@ private:
 
 auto get_env_var(std::string_view var_name) -> std::optional<std::string>;
 
-auto parse_backtest_strategy_json(const std::string& strategy_name,
-                                  std::istream& json_strategy_stream)
- -> backtest::Strategy;
-
 auto csv_daily_stock_data(std::istream& csv_stream) -> AssetHistory;
-
-auto risk_reward_config_parser() -> ConfigParser;
 
 auto format_duration(std::size_t duration_in_seconds) -> std::string;
 

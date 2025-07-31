@@ -1,67 +1,53 @@
 {
-  "capitalRisk": 100000,
   "methods": [
-    {
-      "method": "DATA",
-      "name": "time",
-      "field": "Date"
-    },
-    {
-      "method": "DATA",
-      "name": "open",
-      "field": "Open"
-    },
-    {
-      "method": "DATA",
-      "name": "high",
-      "field": "High"
-    },
-    {
-      "method": "DATA",
-      "name": "low",
-      "field": "Low"
-    },
-    {
-      "method": "DATA",
-      "name": "close",
-      "field": "Close"
-    },
-    {
-      "method": "DATA",
-      "name": "volume",
-      "field": "Volume"
-    },
     {
       "method": "SMA",
       "name": "ma-fast",
       "period": 9,
-      "input": "close"
+      "input": "CLOSE"
     },
     {
       "method": "SMA",
       "name": "ma-slow",
       "period": 18,
-      "input": "close"
+      "input": "CLOSE"
     }
   ],
-  "entrySignal": {
-    "filter": "CROSSOVER",
-    "signal": "ma-fast",
-    "reference": "ma-slow"
-  },
-  "exitSignal": {
-    "filter": "CROSSUNDER",
-    "signal": "ma-fast",
-    "reference": "ma-slow"
-  },
-  "stopLoss": {
+  "risk": {
     "method": "ATR",
-    "period": 14,
-    "multiplier": 2
+    "atr": {
+      "period": 14,
+      "multiplier": 2
+    },
+    "percentage": 5,
+    "value": 1000
   },
-  "takeProfit": {
-    "method": "ATR",
-    "period": 14,
-    "multiplier": 6
-  }
+  "positions": [
+    {
+      "direction": "long",
+      "entry": {
+        "repeat": "sequence",
+        "signal": {
+          "filter": "CROSSOVER",
+          "signal": "ma-fast",
+          "reference": "ma-slow"
+        }
+      },
+      "exit": {
+        "signal": {
+          "filter": "CROSSUNDER",
+          "signal": "ma-fast",
+          "reference": "ma-slow"
+        }
+      },
+      "stopLoss": {
+        "disabled": false,
+        "isTrailing": false
+      },
+      "takeProfit": {
+        "disabled": false,
+        "rewardFactor": 3
+      }
+    }
+  ]
 }
