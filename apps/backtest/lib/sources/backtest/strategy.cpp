@@ -7,11 +7,13 @@
 namespace pludux::backtest {
 
 Strategy::Strategy(std::string name,
+                   RepeatType entry_repeat,
                    screener::ScreenerFilter entry_filter,
                    screener::ScreenerFilter exit_filter,
                    backtest::StopLoss stop_loss,
                    backtest::TakeProfit take_profit)
 : name_{std::move(name)}
+, entry_repeat_{entry_repeat}
 , entry_filter_{std::move(entry_filter)}
 , exit_filter_{std::move(exit_filter)}
 , stop_loss_{std::move(stop_loss)}
@@ -22,6 +24,16 @@ Strategy::Strategy(std::string name,
 auto Strategy::name() const noexcept -> const std::string&
 {
   return name_;
+}
+
+auto Strategy::entry_repeat() const noexcept -> RepeatType
+{
+  return entry_repeat_;
+}
+
+void Strategy::entry_repeat(RepeatType repeat_type) noexcept
+{
+  entry_repeat_ = repeat_type;
 }
 
 auto Strategy::entry_filter() const noexcept -> const screener::ScreenerFilter&
@@ -42,6 +54,26 @@ auto Strategy::stop_loss() const noexcept -> const backtest::StopLoss&
 auto Strategy::take_profit() const noexcept -> const backtest::TakeProfit&
 {
   return take_profit_;
+}
+
+auto Strategy::is_entry_repeat_sequence() const noexcept -> bool
+{
+  return entry_repeat_ == RepeatType::sequence;
+}
+
+void Strategy::set_entry_repeat_to_sequence() noexcept
+{
+  entry_repeat_ = RepeatType::sequence;
+}
+
+auto Strategy::is_entry_repeat_always() const noexcept -> bool
+{
+  return entry_repeat_ == RepeatType::always;
+}
+
+void Strategy::set_entry_repeat_to_always() noexcept
+{
+  entry_repeat_ = RepeatType::always;
 }
 
 auto parse_backtest_strategy_json(std::string_view strategy_name,
@@ -75,6 +107,13 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
   const auto& position_json = positions_json[0];
 
   const auto entry_json = position_json.at("entry");
+  auto entry_repeat = Strategy::RepeatType::sequence;
+  if(entry_json.contains("repeat")) {
+    const auto repeat_value = entry_json.at("repeat").get<std::string>();
+    if(repeat_value == "always") {
+      entry_repeat = Strategy::RepeatType::always;
+    }
+  }
   const auto entry_filter = config_parser.parse_filter(entry_json.at("signal"));
 
   auto exit_filter = screener::ScreenerFilter{screener::FalseFilter{}};
@@ -130,6 +169,7 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
    risk_method, is_stop_loss_disabled, is_trailing_stop_loss};
 
   return pludux::backtest::Strategy{std::string{strategy_name},
+                                    entry_repeat,
                                     entry_filter,
                                     exit_filter,
                                     stop_loss,

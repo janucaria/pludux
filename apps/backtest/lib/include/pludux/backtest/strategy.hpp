@@ -7,7 +7,6 @@
 
 #include <pludux/backtest/stop_loss.hpp>
 #include <pludux/backtest/take_profit.hpp>
-#include <pludux/backtest/trade_record.hpp>
 #include <pludux/config_parser.hpp>
 #include <pludux/screener.hpp>
 
@@ -15,13 +14,20 @@ namespace pludux::backtest {
 
 class Strategy {
 public:
+  enum class RepeatType { sequence, always };
+
   Strategy(std::string name,
+           RepeatType entry_repeat,
            screener::ScreenerFilter entry_filter,
            screener::ScreenerFilter exit_filter,
            backtest::StopLoss stop_loss,
            backtest::TakeProfit take_profit);
 
   auto name() const noexcept -> const std::string&;
+
+  auto entry_repeat() const noexcept -> RepeatType;
+
+  void entry_repeat(RepeatType repeat_type) noexcept;
 
   auto entry_filter() const noexcept -> const screener::ScreenerFilter&;
 
@@ -31,8 +37,17 @@ public:
 
   auto take_profit() const noexcept -> const backtest::TakeProfit&;
 
+  auto is_entry_repeat_sequence() const noexcept -> bool;
+
+  void set_entry_repeat_to_sequence() noexcept;
+
+  auto is_entry_repeat_always() const noexcept -> bool;
+
+  void set_entry_repeat_to_always() noexcept;
+
 private:
   std::string name_;
+  RepeatType entry_repeat_;
   screener::ScreenerFilter entry_filter_;
   screener::ScreenerFilter exit_filter_;
   backtest::StopLoss stop_loss_;

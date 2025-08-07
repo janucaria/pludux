@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <ctime>
 #include <limits>
@@ -7,40 +8,27 @@
 
 namespace pludux::backtest {
 
-TradeRecord::TradeRecord()
-: TradeRecord{Status::flat,
-              std::numeric_limits<double>::quiet_NaN(),
-              {},
-              {},
-              {},
-              {},
-              std::numeric_limits<double>::quiet_NaN(),
-              std::numeric_limits<double>::quiet_NaN(),
-              std::numeric_limits<double>::quiet_NaN(),
-              std::numeric_limits<double>::quiet_NaN(),
-              std::numeric_limits<double>::quiet_NaN()}
-{
-}
-
 TradeRecord::TradeRecord(Status status,
                          double position_size,
                          std::size_t entry_index,
-                         std::size_t at_index,
+                         std::size_t exit_index,
                          std::time_t entry_timestamp,
                          std::time_t exit_timestamp,
                          double entry_price,
+                         double average_price,
                          double exit_price,
                          double stop_loss_price,
                          double trailing_stop_price,
                          double take_profit_price)
 : position_size_{position_size}
 , entry_price_{entry_price}
+, average_price_{average_price}
 , exit_price_{exit_price}
 , stop_loss_price_{stop_loss_price}
 , trailing_stop_price_{trailing_stop_price}
 , take_profit_price_{take_profit_price}
 , entry_index_{entry_index}
-, at_index_{at_index}
+, exit_index_{exit_index}
 , entry_timestamp_{entry_timestamp}
 , exit_timestamp_{exit_timestamp}
 , status_{status}
@@ -67,14 +55,14 @@ void TradeRecord::entry_index(std::size_t index) noexcept
   entry_index_ = index;
 }
 
-auto TradeRecord::at_index() const noexcept -> std::size_t
+auto TradeRecord::exit_index() const noexcept -> std::size_t
 {
-  return at_index_;
+  return exit_index_;
 }
 
-void TradeRecord::at_index(std::size_t index) noexcept
+void TradeRecord::exit_index(std::size_t index) noexcept
 {
-  at_index_ = index;
+  exit_index_ = index;
 }
 
 auto TradeRecord::entry_price() const noexcept -> double
@@ -85,6 +73,16 @@ auto TradeRecord::entry_price() const noexcept -> double
 void TradeRecord::entry_price(double price) noexcept
 {
   entry_price_ = price;
+}
+
+auto TradeRecord::average_price() const noexcept -> double
+{
+  return average_price_;
+}
+
+void TradeRecord::average_price(double price) noexcept
+{
+  average_price_ = price;
 }
 
 auto TradeRecord::exit_price() const noexcept -> double
@@ -149,17 +147,12 @@ void TradeRecord::take_profit_price(double price) noexcept
 
 auto TradeRecord::position_value() const noexcept -> double
 {
-  return position_size_ * entry_price_;
+  return position_size_ * average_price_;
 }
 
 auto TradeRecord::pnl() const noexcept -> double
 {
-  return (exit_price_ - entry_price_) / entry_price_ * position_value();
-}
-
-auto TradeRecord::profit_and_loss() const noexcept -> double
-{
-  return pnl();
+  return (exit_price_ - average_price_) / average_price_ * position_value();
 }
 
 auto TradeRecord::duration() const noexcept -> std::time_t
@@ -176,11 +169,6 @@ void TradeRecord::status(Status status) noexcept
   status_ = status;
 }
 
-auto TradeRecord::is_flat() const noexcept -> bool
-{
-  return status_ == Status::flat;
-}
-
 auto TradeRecord::is_open() const noexcept -> bool
 {
   return status_ == Status::open;
@@ -188,7 +176,8 @@ auto TradeRecord::is_open() const noexcept -> bool
 
 auto TradeRecord::is_closed() const noexcept -> bool
 {
-  return !is_open() && !is_flat();
+  return is_closed_exit_signal() || is_closed_take_profit() ||
+         is_closed_stop_loss();
 }
 
 auto TradeRecord::is_closed_exit_signal() const noexcept -> bool
@@ -206,10 +195,19 @@ auto TradeRecord::is_closed_stop_loss() const noexcept -> bool
   return status_ == Status::closed_stop_loss;
 }
 
-auto TradeRecord::is_summary_session(std::size_t last_index) const noexcept
- -> bool
+auto TradeRecord::is_scaled() const noexcept -> bool
 {
-  return is_closed() || (is_open() && at_index() == last_index);
+  return is_scaled_in() || is_scaled_out();
+}
+
+auto TradeRecord::is_scaled_in() const noexcept -> bool
+{
+  return status_ == Status::scaled_in;
+}
+
+auto TradeRecord::is_scaled_out() const noexcept -> bool
+{
+  return status_ == Status::scaled_out;
 }
 
 } // namespace pludux::backtest

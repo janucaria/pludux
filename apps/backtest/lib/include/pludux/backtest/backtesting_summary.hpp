@@ -5,7 +5,7 @@
 #include <optional>
 #include <vector>
 
-#include <pludux/backtest/trade_record.hpp>
+#include <pludux/backtest/trade_session.hpp>
 
 namespace pludux::backtest {
 
@@ -14,14 +14,13 @@ public:
   BacktestingSummary();
 
   explicit BacktestingSummary(double initial_capital,
-                              TradeRecord trade_record = TradeRecord{});
+                              TradeSession trade_session = TradeSession{});
 
-  auto get_next_summary(TradeRecord trade_record) const noexcept
-   -> BacktestingSummary;
+  void update_to_next_summary(TradeSession next_trade_session) noexcept;
 
-  auto trade_record() const noexcept -> const TradeRecord&;
+  auto trade_session() const noexcept -> const TradeSession&;
 
-  void trade_record(TradeRecord trade_record) noexcept;
+  void trade_session(TradeSession trade_session) noexcept;
 
   auto capital() const noexcept -> double;
 
@@ -166,7 +165,7 @@ public:
   auto drawdown() const noexcept -> double;
 
 private:
-  TradeRecord trade_record_;
+  TradeSession trade_session_;
 
   double capital_;
   double peak_equity_;

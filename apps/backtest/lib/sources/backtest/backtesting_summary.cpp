@@ -6,13 +6,13 @@
 namespace pludux::backtest {
 
 BacktestingSummary::BacktestingSummary()
-: BacktestingSummary{0.0, TradeRecord{}}
+: BacktestingSummary{0.0, TradeSession{}}
 {
 }
 
 BacktestingSummary::BacktestingSummary(double initial_capital,
-                                       TradeRecord trade_record)
-: trade_record_{std::move(trade_record)}
+                                       TradeSession trade_session)
+: trade_session_{std::move(trade_session)}
 , capital_{initial_capital}
 , peak_equity_{initial_capital}
 , max_drawdown_{0.0}
@@ -32,60 +32,56 @@ BacktestingSummary::BacktestingSummary(double initial_capital,
 {
 }
 
-auto BacktestingSummary::get_next_summary(
- TradeRecord trade_record) const noexcept -> BacktestingSummary
+void BacktestingSummary::update_to_next_summary(
+ TradeSession next_trade_session) noexcept
 {
-  auto summary = *this;
+  if(next_trade_session.is_closed()) {
+    const auto pnl = next_trade_session.pnl();
 
-  if(trade_record.is_closed()) {
-    const auto pnl = trade_record.pnl();
+    sum_of_durations_ += next_trade_session.duration();
+    cumulative_investments_ += next_trade_session.position_value();
 
-    summary.sum_of_durations_ += trade_record.duration();
-    summary.cumulative_investments_ += trade_record.position_value();
-
-    if(trade_record.is_closed_take_profit()) {
-      summary.take_profit_count_++;
-      summary.cumulative_take_profits_ += pnl;
-    } else if(trade_record.is_closed_stop_loss()) {
+    if(next_trade_session.is_closed_take_profit()) {
+      take_profit_count_++;
+      cumulative_take_profits_ += pnl;
+    } else if(next_trade_session.is_closed_stop_loss()) {
       if(pnl > 0) {
-        summary.stop_loss_profit_count_++;
-        summary.cumulative_stop_loss_profits_ += pnl;
+        stop_loss_profit_count_++;
+        cumulative_stop_loss_profits_ += pnl;
       } else if(pnl < 0) {
-        summary.stop_loss_loss_count_++;
-        summary.cumulative_stop_loss_losses_ += pnl;
+        stop_loss_loss_count_++;
+        cumulative_stop_loss_losses_ += pnl;
       } else {
-        summary.break_even_count_++;
+        break_even_count_++;
       }
-    } else if(trade_record.is_closed_exit_signal()) {
+    } else if(next_trade_session.is_closed_exit_signal()) {
       if(pnl > 0) {
-        summary.exit_signal_profit_count_++;
-        summary.cumulative_exit_signal_profits_ += pnl;
+        exit_signal_profit_count_++;
+        cumulative_exit_signal_profits_ += pnl;
       } else if(pnl < 0) {
-        summary.exit_signal_loss_count_++;
-        summary.cumulative_exit_signal_losses_ += pnl;
+        exit_signal_loss_count_++;
+        cumulative_exit_signal_losses_ += pnl;
       } else {
-        summary.break_even_count_++;
+        break_even_count_++;
       }
     }
 
-    summary.capital_ += pnl;
+    capital_ += pnl;
   }
 
-  summary.trade_record_ = std::move(trade_record);
-  summary.peak_equity_ = std::max(summary.peak_equity_, summary.equity());
-  summary.max_drawdown_ = std::max(summary.max_drawdown_, summary.drawdown());
-
-  return summary;
+  trade_session_ = std::move(next_trade_session);
+  peak_equity_ = std::max(peak_equity_, equity());
+  max_drawdown_ = std::max(max_drawdown_, drawdown());
 }
 
-auto BacktestingSummary::trade_record() const noexcept -> const TradeRecord&
+auto BacktestingSummary::trade_session() const noexcept -> const TradeSession&
 {
-  return trade_record_;
+  return trade_session_;
 }
 
-void BacktestingSummary::trade_record(TradeRecord trade_record) noexcept
+void BacktestingSummary::trade_session(TradeSession trade_session) noexcept
 {
-  trade_record_ = std::move(trade_record);
+  trade_session_ = std::move(trade_session);
 }
 
 auto BacktestingSummary::capital() const noexcept -> double
@@ -201,7 +197,7 @@ auto BacktestingSummary::trade_count() const noexcept -> std::size_t
 
 auto BacktestingSummary::open_trade_count() const noexcept -> std::size_t
 {
-  return trade_record_.is_open() ? 1 : 0;
+  return trade_session_.is_open() ? 1 : 0;
 }
 
 auto BacktestingSummary::cumulative_pnls() const noexcept -> double
@@ -445,12 +441,12 @@ auto BacktestingSummary::profit_factor() const noexcept -> double
 
 auto BacktestingSummary::unrealized_pnl() const noexcept -> double
 {
-  return trade_record_.is_open() ? trade_record_.pnl() : 0.0;
+  return trade_session_.is_open() ? trade_session_.pnl() : 0.0;
 }
 
 auto BacktestingSummary::ongoing_trade_duration() const noexcept -> std::time_t
 {
-  return trade_record_.is_open() ? trade_record_.duration() : 0;
+  return trade_session_.is_open() ? trade_session_.duration() : 0;
 }
 
 auto BacktestingSummary::equity() const noexcept -> double

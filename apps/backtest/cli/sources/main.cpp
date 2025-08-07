@@ -24,8 +24,8 @@ auto main(int, const char**) -> int
    pludux::get_env_var("PLUDUX_BACKTEST_CSV_DATA_PATH").value_or("");
 
   auto json_strategy_file = std::ifstream{json_strategy_path};
-  auto strategy =
-   pludux::parse_backtest_strategy_json("Strategy", json_strategy_file);
+  auto strategy = pludux::backtest::parse_backtest_strategy_json(
+   "Strategy", json_strategy_file);
   auto strategy_ptr = std::make_shared<pludux::backtest::Strategy>(strategy);
 
   auto csv_stream = std::ifstream{asset_file};
@@ -126,19 +126,21 @@ auto main(int, const char**) -> int
   // auto is_in_trade = false;
 
   for(int i = 0, ii = backtest_summaries.size(); i < ii; ++i) {
-    const auto& trade = backtest_summaries[i].trade_record();
+    const auto& session = backtest_summaries[i].trade_session();
 
-    if(trade.is_summary_session()) {
-      const auto entry_timestamp = trade.entry_timestamp();
-      const auto exit_timestamp = trade.exit_timestamp();
-      std::cout << "Entry date: " << pludux::format_datetime(entry_timestamp)
-                << "Exit date: "
-                << (trade.is_open() ? "N/A"
-                                    : pludux::format_datetime(exit_timestamp))
-                << "Position size: " << trade.position_size() << std::endl
-                << "Reason: " << static_cast<int>(trade.status()) << std::endl
-                << "Profit: " << trade.pnl() << std::endl
-                << std::endl;
+    if(session.is_summary_session()) {
+      for(const auto& trade : session.trade_records()) {
+        const auto entry_timestamp = trade.entry_timestamp();
+        const auto exit_timestamp = trade.exit_timestamp();
+        std::cout << "Entry date: " << pludux::format_datetime(entry_timestamp)
+                  << "Exit date: "
+                  << (trade.is_open() ? "N/A"
+                                      : pludux::format_datetime(exit_timestamp))
+                  << "Position size: " << trade.position_size() << std::endl
+                  << "Reason: " << static_cast<int>(trade.status()) << std::endl
+                  << "Profit: " << trade.pnl() << std::endl
+                  << std::endl;
+      }
     }
   }
 

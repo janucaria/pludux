@@ -112,7 +112,8 @@ auto Backtest::should_run() const noexcept -> bool
 
 void Backtest::run()
 {
-  using backtest::TradeRecord;
+  using backtest::TradeAction;
+  using backtest::TradeSession;
 
   if(!should_run()) {
     return;
@@ -123,122 +124,123 @@ void Backtest::run()
   const auto last_index = asset_size - 1;
   const auto asset_index = last_index - std::min(summaries_size, last_index);
   const auto asset_snapshot = asset().get_snapshot(asset_index);
+  const auto asset_timestamp =
+   static_cast<std::time_t>(asset_snapshot.get_datetime());
+  const auto asset_price = asset_snapshot.get_close();
   const auto& strategy = *strategy_ptr();
   const auto& profile = get_profile();
 
+  const auto& entry_filter = strategy.entry_filter();
   const auto& take_profit = strategy.take_profit();
   const auto& stop_loss = strategy.stop_loss();
-  const auto exit_timestamp =
-   static_cast<std::time_t>(asset_snapshot.get_datetime());
 
-  auto trade_status = TradeRecord::Status::flat;
-  auto position_size = std::numeric_limits<double>::quiet_NaN();
-  auto entry_index = std::size_t{};
-  auto entry_timestamp = std::time_t{};
-  auto entry_price = std::numeric_limits<double>::quiet_NaN();
-  auto exit_price = asset_snapshot.get_close();
-  auto initial_stop_loss_price = std::numeric_limits<double>::quiet_NaN();
-  auto trailing_stop_price = std::numeric_limits<double>::quiet_NaN();
-  auto take_profit_price = std::numeric_limits<double>::quiet_NaN();
+  auto summary = !summaries_.empty()
+                  ? summaries_.back()
+                  : backtest::BacktestingSummary{profile.initial_capital()};
 
-  if(summaries_.empty() || !summaries_.back().trade_record().is_open()) {
-    const auto& entry_filter = strategy.entry_filter();
-    if(entry_filter(asset_snapshot)) {
-      const auto risk_size = stop_loss.get_risk_size(asset_snapshot);
-      const auto order_size = profile.get_risk_value() / risk_size;
+  auto trade_session = summary.trade_session();
 
-      if(!std::isnan(order_size)) {
-        auto trading_take_profit = take_profit(asset_snapshot);
-        auto trading_stop_loss = stop_loss(asset_snapshot);
+  trade_session.asset_update(asset_timestamp, asset_price, asset_index);
 
-        trade_status = TradeRecord::Status::open;
-        position_size = order_size;
-        entry_index = asset_index;
-        entry_price = exit_price;
-        entry_timestamp = exit_timestamp;
-        initial_stop_loss_price = trading_stop_loss.initial_exit_price();
-        trailing_stop_price = trading_stop_loss.is_trailing()
-                               ? trading_stop_loss.exit_price()
-                               : std::numeric_limits<double>::quiet_NaN();
-        take_profit_price = trading_take_profit.exit_price();
-      }
-    }
-  } else {
-    const auto& last_trade_record = summaries_.back().trade_record();
+  if(trade_session.is_closed()) {
+    trade_session = TradeSession{};
+  }
 
-    entry_index = last_trade_record.entry_index();
-    entry_price = last_trade_record.entry_price();
-    entry_timestamp = last_trade_record.entry_timestamp();
-    position_size = last_trade_record.position_size();
+  if((!trade_session.is_open() || strategy.is_entry_repeat_always()) &&
+     entry_filter(asset_snapshot)) {
+    const auto risk_size = stop_loss.get_risk_size(asset_snapshot);
+    const auto order_size = profile.get_risk_value() / risk_size;
+
+    const auto trading_take_profit = take_profit(asset_snapshot);
+    const auto trading_stop_loss = stop_loss(asset_snapshot);
+
+    const auto position_size = order_size;
+    const auto entry_index = asset_index;
+    const auto entry_price = asset_price;
+    const auto entry_timestamp = asset_timestamp;
+    const auto initial_stop_loss_price = trading_stop_loss.initial_exit_price();
+    const auto trailing_stop_price =
+     trading_stop_loss.is_trailing() ? trading_stop_loss.exit_price()
+                                     : std::numeric_limits<double>::quiet_NaN();
+    const auto take_profit_price = trading_take_profit.exit_price();
+
+    trade_session.emplace_action(TradeAction::ActionType::buy,
+                                 position_size,
+                                 entry_timestamp,
+                                 entry_price,
+                                 entry_index);
+
+    trade_session.take_profit_price(take_profit_price);
+    trade_session.stop_loss_price(initial_stop_loss_price);
+    trade_session.trailing_stop_price(trailing_stop_price);
+
+  } else if(trade_session.is_open()) {
+    const auto entry_index = trade_session.entry_index();
+    const auto position_size = trade_session.position_size();
+    const auto exit_timestamp = asset_timestamp;
 
     const auto& entry_snapshot = asset().get_snapshot(entry_index);
     auto trading_take_profit = take_profit(entry_snapshot);
     auto trading_stop_loss = stop_loss(entry_snapshot);
 
     if(trading_stop_loss.is_trailing()) {
-      trading_stop_loss.stop_price(last_trade_record.trailing_stop_price());
+      trading_stop_loss.stop_price(trade_session.trailing_stop_price());
     }
 
     const auto exit_filter = strategy.exit_filter();
-    trade_status = [&]() {
-      if(asset_index == entry_index) {
-        return TradeRecord::Status::open;
-      }
-
+    const auto trade_action_type_opt =
+     [&]() -> std::optional<TradeAction::ActionType> {
       if(trading_stop_loss(asset_snapshot)) {
-        return TradeRecord::Status::closed_stop_loss;
+        return TradeAction::ActionType::stop_loss;
       }
 
       if(trading_take_profit(asset_snapshot)) {
-        return TradeRecord::Status::closed_take_profit;
+        return TradeAction::ActionType::take_profit;
       }
 
       if(exit_filter(asset_snapshot)) {
-        return TradeRecord::Status::closed_exit_signal;
+        return TradeAction::ActionType::sell;
       }
 
-      return TradeRecord::Status::open;
+      return std::nullopt;
     }();
 
     const auto stop_loss_price = trading_stop_loss.exit_price();
-    take_profit_price = trading_take_profit.exit_price();
+    const auto take_profit_price = trading_take_profit.exit_price();
 
-    exit_price = [&]() -> double {
-      switch(trade_status) {
-      case TradeRecord::Status::closed_take_profit:
-        return take_profit_price;
-      case TradeRecord::Status::closed_stop_loss:
-        return stop_loss_price;
-      case TradeRecord::Status::closed_exit_signal:
-      case TradeRecord::Status::open:
-        return asset_snapshot.get_close();
-      default:
-        return 0;
-      }
-    }();
+    const auto initial_stop_loss_price = trading_stop_loss.initial_exit_price();
+    const auto trailing_stop_price =
+     trading_stop_loss.is_trailing() ? stop_loss_price
+                                     : std::numeric_limits<double>::quiet_NaN();
+    trade_session.trailing_stop_price(trailing_stop_price);
 
-    initial_stop_loss_price = trading_stop_loss.initial_exit_price();
-    trailing_stop_price = trading_stop_loss.is_trailing()
-                           ? stop_loss_price
-                           : std::numeric_limits<double>::quiet_NaN();
+    trade_action_type_opt.and_then(
+     [&](const TradeAction::ActionType& trade_action_type)
+      -> std::optional<TradeAction::ActionType> {
+       const auto exit_price = [&]() -> double {
+         switch(trade_action_type) {
+         case TradeAction::ActionType::take_profit:
+           return take_profit_price;
+         case TradeAction::ActionType::stop_loss:
+           return stop_loss_price;
+         default:
+           return asset_price;
+         }
+       }();
+
+       if(trade_action_type != TradeAction::ActionType::buy) {
+         trade_session.emplace_action(trade_action_type,
+                                      position_size,
+                                      exit_timestamp,
+                                      exit_price,
+                                      asset_index);
+       }
+
+       return std::nullopt;
+     });
   }
 
-  auto trade_record = TradeRecord{trade_status,
-                                  position_size,
-                                  entry_index,
-                                  asset_index,
-                                  entry_timestamp,
-                                  exit_timestamp,
-                                  entry_price,
-                                  exit_price,
-                                  initial_stop_loss_price,
-                                  trailing_stop_price,
-                                  take_profit_price};
-
-  auto summary = !summaries_.empty()
-                  ? summaries_.back().get_next_summary(std::move(trade_record))
-                  : backtest::BacktestingSummary{profile.initial_capital(),
-                                                 std::move(trade_record)};
+  summary.update_to_next_summary(std::move(trade_session));
 
   summaries_.emplace_back(std::move(summary));
 }
