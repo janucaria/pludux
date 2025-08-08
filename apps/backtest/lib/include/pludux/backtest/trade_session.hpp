@@ -72,12 +72,12 @@ public:
 
     if(action.is_buy()) {
       const auto last_position_size = last_record.position_size();
-      const auto last_position_value = last_record.position_value();
+      const auto last_investment = last_record.investment();
 
       const auto new_position_size =
        last_position_size + action.position_size();
       const auto new_average_price =
-       (last_position_value + action.position_size() * action.price()) /
+       (last_investment + action.position_size() * action.price()) /
        new_position_size;
 
       last_record.status(TradeRecord::Status::scaled_in);
@@ -152,7 +152,7 @@ public:
 
   auto average_price() const noexcept -> double;
 
-  auto position_value() const noexcept -> double;
+  auto investment() const noexcept -> double;
 
   auto exit_price() const noexcept -> double;
 

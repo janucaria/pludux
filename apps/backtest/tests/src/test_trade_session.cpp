@@ -13,7 +13,7 @@ TEST(TradeSessionTest, DefaultConstructor)
   EXPECT_TRUE(std::isnan(session.trailing_stop_price()));
 
   EXPECT_TRUE(std::isnan(session.position_size()));
-  EXPECT_TRUE(std::isnan(session.position_value()));
+  EXPECT_TRUE(std::isnan(session.investment()));
   EXPECT_TRUE(std::isnan(session.average_price()));
   EXPECT_TRUE(std::isnan(session.exit_price()));
   EXPECT_EQ(session.entry_index(), std::size_t{0});
@@ -49,7 +49,7 @@ TEST(TradeSessionTest, ConstructorWithParameters)
   session.asset_update(timestamp, price, index);
 
   EXPECT_TRUE(std::isnan(session.position_size()));
-  EXPECT_TRUE(std::isnan(session.position_value()));
+  EXPECT_TRUE(std::isnan(session.investment()));
   EXPECT_TRUE(std::isnan(session.average_price()));
   EXPECT_TRUE(std::isnan(session.exit_price()));
   EXPECT_EQ(session.entry_index(), std::size_t{0});
@@ -73,7 +73,7 @@ TEST(TradeSessionTest, OpenPosition)
    TradeAction::ActionType::buy, 2.0, static_cast<std::time_t>(20), 100.0, 1);
 
   EXPECT_DOUBLE_EQ(session.position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(session.position_value(), 200.0);
+  EXPECT_DOUBLE_EQ(session.investment(), 200.0);
   EXPECT_DOUBLE_EQ(session.average_price(), 100.0);
   EXPECT_DOUBLE_EQ(session.exit_price(), 100.0);
   EXPECT_EQ(session.entry_index(), 1);
@@ -113,7 +113,7 @@ TEST(TradeSessionTest, ClosePositionWithExit)
    TradeAction::ActionType::sell, 2.0, static_cast<std::time_t>(30), 105.0, 3);
 
   EXPECT_DOUBLE_EQ(session.position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(session.position_value(), 200.0);
+  EXPECT_DOUBLE_EQ(session.investment(), 200.0);
   EXPECT_DOUBLE_EQ(session.average_price(), 100.0);
   EXPECT_EQ(session.exit_price(), 105.0);
   EXPECT_EQ(session.entry_index(), 1);
@@ -135,7 +135,7 @@ TEST(TradeSessionTest, ClosePositionWithExit)
   auto& closed_record = trade_records[0];
   EXPECT_EQ(closed_record.status(), TradeRecord::Status::closed_exit_signal);
   EXPECT_DOUBLE_EQ(closed_record.position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(closed_record.position_value(), 200.0);
+  EXPECT_DOUBLE_EQ(closed_record.investment(), 200.0);
   EXPECT_DOUBLE_EQ(closed_record.average_price(), 100.0);
   EXPECT_DOUBLE_EQ(closed_record.entry_price(), 100.0);
   EXPECT_DOUBLE_EQ(closed_record.exit_price(), 105.0);
@@ -165,7 +165,7 @@ TEST(TradeSessionTest, PositionScaleIn)
    TradeAction::ActionType::buy, 1.0, static_cast<std::time_t>(25), 130.0, 5);
 
   EXPECT_DOUBLE_EQ(session.position_size(), 3.0);
-  EXPECT_DOUBLE_EQ(session.position_value(), 330.0);
+  EXPECT_DOUBLE_EQ(session.investment(), 330.0);
   EXPECT_DOUBLE_EQ(session.average_price(), 110.0);
   EXPECT_DOUBLE_EQ(session.exit_price(), 130.0);
   EXPECT_EQ(session.entry_index(), 1);
@@ -187,7 +187,7 @@ TEST(TradeSessionTest, PositionScaleIn)
   auto& scaled_record = trade_records[0];
   EXPECT_EQ(scaled_record.status(), TradeRecord::Status::scaled_in);
   EXPECT_DOUBLE_EQ(scaled_record.position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(scaled_record.position_value(), 200.0);
+  EXPECT_DOUBLE_EQ(scaled_record.investment(), 200.0);
   EXPECT_DOUBLE_EQ(scaled_record.average_price(), 100.0);
   EXPECT_DOUBLE_EQ(scaled_record.entry_price(), 100.0);
   EXPECT_DOUBLE_EQ(scaled_record.exit_price(), scaled_record.average_price());
@@ -209,7 +209,7 @@ TEST(TradeSessionTest, PositionScaleIn)
   auto& open_record = trade_records[1];
   EXPECT_EQ(open_record.status(), TradeRecord::Status::open);
   EXPECT_DOUBLE_EQ(open_record.position_size(), 3.0);
-  EXPECT_DOUBLE_EQ(open_record.position_value(), 330.0);
+  EXPECT_DOUBLE_EQ(open_record.investment(), 330.0);
   EXPECT_DOUBLE_EQ(open_record.average_price(), 110.0);
   EXPECT_DOUBLE_EQ(open_record.entry_price(), 130.0);
   EXPECT_DOUBLE_EQ(open_record.exit_price(), 130.0);
@@ -231,7 +231,7 @@ TEST(TradeSessionTest, PositionScaleIn)
   session.asset_update(static_cast<std::time_t>(30), 105.0, 7);
   EXPECT_EQ(open_record.status(), TradeRecord::Status::open);
   EXPECT_DOUBLE_EQ(open_record.position_size(), 3.0);
-  EXPECT_DOUBLE_EQ(open_record.position_value(), 330.0);
+  EXPECT_DOUBLE_EQ(open_record.investment(), 330.0);
   EXPECT_DOUBLE_EQ(open_record.average_price(), 110.0);
   EXPECT_DOUBLE_EQ(open_record.entry_price(), 130.0);
   EXPECT_DOUBLE_EQ(open_record.exit_price(), 105.0);
@@ -263,7 +263,7 @@ TEST(TradeSessionTest, PositionScaleOut)
   session.asset_update(static_cast<std::time_t>(30), 120.0, 6);
 
   EXPECT_DOUBLE_EQ(session.position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(session.position_value(), 300.0);
+  EXPECT_DOUBLE_EQ(session.investment(), 300.0);
   EXPECT_DOUBLE_EQ(session.average_price(), 100.0);
   EXPECT_DOUBLE_EQ(session.exit_price(), 120.0);
   EXPECT_EQ(session.entry_index(), 1);
@@ -285,7 +285,7 @@ TEST(TradeSessionTest, PositionScaleOut)
   auto& scaled_record = trade_records[0];
   EXPECT_EQ(scaled_record.status(), TradeRecord::Status::scaled_out);
   EXPECT_DOUBLE_EQ(scaled_record.position_size(), 1.0);
-  EXPECT_DOUBLE_EQ(scaled_record.position_value(), 100.0);
+  EXPECT_DOUBLE_EQ(scaled_record.investment(), 100.0);
   EXPECT_DOUBLE_EQ(scaled_record.average_price(), 100.0);
   EXPECT_DOUBLE_EQ(scaled_record.exit_price(), 130.0);
   EXPECT_EQ(scaled_record.entry_index(), 1);
@@ -306,7 +306,7 @@ TEST(TradeSessionTest, PositionScaleOut)
   auto& open_record = trade_records[1];
   EXPECT_EQ(open_record.status(), TradeRecord::Status::open);
   EXPECT_DOUBLE_EQ(open_record.position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(open_record.position_value(), 200.0);
+  EXPECT_DOUBLE_EQ(open_record.investment(), 200.0);
   EXPECT_DOUBLE_EQ(open_record.average_price(), 100.0);
   EXPECT_DOUBLE_EQ(open_record.entry_price(), 100.0);
   EXPECT_DOUBLE_EQ(open_record.exit_price(), 120.0);

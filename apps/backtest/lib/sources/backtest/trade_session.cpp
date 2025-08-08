@@ -95,7 +95,7 @@ auto TradeSession::average_price() const noexcept -> double
   return trade_records_.back().average_price();
 }
 
-auto TradeSession::position_value() const noexcept -> double
+auto TradeSession::investment() const noexcept -> double
 {
   if(is_flat()) {
     return NAN;
@@ -106,7 +106,7 @@ auto TradeSession::position_value() const noexcept -> double
                      0.0,
                      [](double total, const TradeRecord& record) {
                        if(!record.is_scaled_in()) {
-                         return total + record.position_value();
+                         return total + record.investment();
                        }
                        return total;
                      });

@@ -74,7 +74,7 @@ public:
 
   void exit_timestamp(std::time_t timestamp) noexcept;
 
-  auto position_value() const noexcept -> double;
+  auto investment() const noexcept -> double;
 
   auto pnl() const noexcept -> double;
 

@@ -39,7 +39,7 @@ void BacktestingSummary::update_to_next_summary(
     const auto pnl = next_trade_session.pnl();
 
     sum_of_durations_ += next_trade_session.duration();
-    cumulative_investments_ += next_trade_session.position_value();
+    cumulative_investments_ += next_trade_session.investment();
 
     if(next_trade_session.is_closed_take_profit()) {
       take_profit_count_++;

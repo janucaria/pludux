@@ -145,20 +145,21 @@ void TradeRecord::take_profit_price(double price) noexcept
   take_profit_price_ = price;
 }
 
-auto TradeRecord::position_value() const noexcept -> double
+auto TradeRecord::investment() const noexcept -> double
 {
   return position_size_ * average_price_;
 }
 
 auto TradeRecord::pnl() const noexcept -> double
 {
-  return (exit_price_ - average_price_) / average_price_ * position_value();
+  return (exit_price_ - average_price_) / average_price_ * investment();
 }
 
 auto TradeRecord::duration() const noexcept -> std::time_t
 {
   return exit_timestamp_ - entry_timestamp_;
 }
+
 auto TradeRecord::status() const noexcept -> Status
 {
   return status_;

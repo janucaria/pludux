@@ -41,7 +41,7 @@ void TradeJournalWindow::render(AppState& app_state)
                                         "Take Profit",
                                         "Stop Loss",
                                         "Avg Price",
-                                        "Position Value (Size)",
+                                        "Investment (Size)",
                                         "P&L",
                                         "Duration"};
 
@@ -121,14 +121,14 @@ void TradeJournalWindow::draw_trade_row(int trade_count,
   ImGui::TableNextColumn();
   ImGui::Text("%s", format_currency(trade.average_price()).c_str());
   ImGui::TableNextColumn();
-  const auto position_value = trade.position_value();
+  const auto investment = trade.investment();
   ImGui::Text(
-   "%s (%.0f)", format_currency(position_value).c_str(), trade.position_size());
+   "%s (%.0f)", format_currency(investment).c_str(), trade.position_size());
   ImGui::TableNextColumn();
 
   ImGui::Text("%s (%.2f%%)",
               format_currency(trade.pnl()).c_str(),
-              trade.pnl() / trade.position_value() * 100.0);
+              trade.pnl() / trade.investment() * 100.0);
   ImGui::TableNextColumn();
   ImGui::Text("%s", format_duration(trade.duration()).c_str());
 }
