@@ -444,14 +444,22 @@ auto BacktestingSummary::unrealized_pnl() const noexcept -> double
   return trade_session_.is_open() ? trade_session_.pnl() : 0.0;
 }
 
-auto BacktestingSummary::ongoing_trade_duration() const noexcept -> std::time_t
+auto BacktestingSummary::unrealized_investment() const noexcept -> double
+{
+  return trade_session_.is_open() ? trade_session_.investment() : 0.0;
+}
+
+auto BacktestingSummary::unrealized_duration() const noexcept -> std::time_t
 {
   return trade_session_.is_open() ? trade_session_.duration() : 0;
 }
 
 auto BacktestingSummary::equity() const noexcept -> double
 {
-  return capital_ + unrealized_pnl();
+  const auto partial_realized =
+   trade_session_.is_closed() ? 0.0 : trade_session_.realized_pnl();
+
+  return capital() + partial_realized + trade_session_.unrealized_pnl();
 }
 
 auto BacktestingSummary::initial_capital() const noexcept -> double

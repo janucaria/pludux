@@ -7,18 +7,30 @@
 namespace pludux::backtest {
 
 Strategy::Strategy(std::string name,
+                   Direction direction,
                    RepeatType entry_repeat,
                    screener::ScreenerFilter entry_filter,
                    screener::ScreenerFilter exit_filter,
                    backtest::StopLoss stop_loss,
                    backtest::TakeProfit take_profit)
 : name_{std::move(name)}
+, direction_{direction}
 , entry_repeat_{entry_repeat}
 , entry_filter_{std::move(entry_filter)}
 , exit_filter_{std::move(exit_filter)}
 , stop_loss_{std::move(stop_loss)}
 , take_profit_{std::move(take_profit)}
 {
+}
+
+auto Strategy::direction() const noexcept -> Direction
+{
+  return direction_;
+}
+
+void Strategy::direction(Direction dir) noexcept
+{
+  direction_ = dir;
 }
 
 auto Strategy::name() const noexcept -> const std::string&
@@ -76,6 +88,16 @@ void Strategy::set_entry_repeat_to_always() noexcept
   entry_repeat_ = RepeatType::always;
 }
 
+auto Strategy::is_long_direction() const noexcept -> bool
+{
+  return direction_ == Direction::long_direction;
+}
+
+auto Strategy::is_short_direction() const noexcept -> bool
+{
+  return direction_ == Direction::short_direction;
+}
+
 auto parse_backtest_strategy_json(std::string_view strategy_name,
                                   std::istream& json_strategy_stream)
  -> backtest::Strategy
@@ -105,6 +127,19 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
   }
 
   const auto& position_json = positions_json[0];
+
+  const auto direction_str = position_json.value("direction", "long");
+  auto direction = Strategy::Direction::long_direction;
+  if(direction_str == "long") {
+    direction = Strategy::Direction::long_direction;
+  } else if(direction_str == "short") {
+    direction = Strategy::Direction::short_direction;
+  } else {
+    throw std::runtime_error("Invalid direction in strategy JSON");
+  }
+
+  const auto is_short_position =
+   direction == Strategy::Direction::short_direction;
 
   const auto entry_json = position_json.at("entry");
   auto entry_repeat = Strategy::RepeatType::sequence;
@@ -145,9 +180,14 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
 
   const auto reward_method =
    screener::MultiplyMethod{risk_method, screener::ValueMethod{reward_factor}};
-  const auto trading_take_profit_method = screener::HighMethod{};
-  const auto take_profit = pludux::backtest::TakeProfit{
-   reward_method, is_take_profit_disabled, trading_take_profit_method};
+  const auto trading_take_profit_method =
+   is_short_position ? screener::ScreenerMethod{screener::LowMethod{}}
+                     : screener::ScreenerMethod{screener::HighMethod{}};
+  const auto take_profit =
+   pludux::backtest::TakeProfit{reward_method,
+                                is_take_profit_disabled,
+                                is_short_position,
+                                trading_take_profit_method};
 
   auto is_trailing_stop_loss = false;
   auto is_stop_loss_disabled = false;
@@ -165,10 +205,13 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
     }
   }
 
-  const auto stop_loss = pludux::backtest::StopLoss{
-   risk_method, is_stop_loss_disabled, is_trailing_stop_loss};
+  const auto stop_loss = pludux::backtest::StopLoss{risk_method,
+                                                    is_stop_loss_disabled,
+                                                    is_short_position,
+                                                    is_trailing_stop_loss};
 
   return pludux::backtest::Strategy{std::string{strategy_name},
+                                    direction,
                                     entry_repeat,
                                     entry_filter,
                                     exit_filter,

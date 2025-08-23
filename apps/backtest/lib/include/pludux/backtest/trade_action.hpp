@@ -8,17 +8,17 @@ namespace pludux::backtest {
 
 class TradeAction {
 public:
-  enum class ActionType { buy, sell, stop_loss, take_profit };
+  enum class Reason { entry, exit, stop_loss, take_profit };
 
-  TradeAction(ActionType action_type,
-              double position_size,
+  TradeAction(double position_size,
               std::time_t timestamp,
               double price,
-              std::size_t index);
+              std::size_t index,
+              Reason reason);
 
-  auto action_type() const noexcept -> ActionType;
+  auto reason() const noexcept -> Reason;
 
-  void action_type(ActionType action_type) noexcept;
+  void reason(Reason reason) noexcept;
 
   auto price() const noexcept -> double;
 
@@ -40,15 +40,15 @@ public:
 
   auto is_sell() const noexcept -> bool;
 
-  auto is_stop_loss() const noexcept -> bool;
+  auto is_reason_entry() const noexcept -> bool;
 
-  auto is_take_profit() const noexcept -> bool;
+  auto is_reason_exit() const noexcept -> bool;
 
-  auto is_closed() const noexcept -> bool;
+  auto is_reason_stop_loss() const noexcept -> bool;
+
+  auto is_reason_take_profit() const noexcept -> bool;
 
 private:
-  ActionType action_type_;
-
   double position_size_;
 
   std::time_t timestamp_;
@@ -56,6 +56,8 @@ private:
   double price_;
 
   std::size_t index_;
+
+  Reason reason_;
 };
 
 } // namespace pludux::backtest

@@ -6,10 +6,12 @@
 namespace pludux::backtest {
 
 TradingStopLoss::TradingStopLoss(bool is_disabled,
+                                 bool is_short_position,
                                  bool is_trailing,
                                  double risk,
                                  double stop_price)
 : is_disabled_{is_disabled}
+, is_short_position_{is_short_position}
 , is_trailing_{is_trailing}
 , risk_{risk}
 , stop_price_{stop_price}
@@ -40,11 +42,30 @@ auto TradingStopLoss::initial_exit_price() const noexcept -> double
 
 auto TradingStopLoss::exit_price() const noexcept -> double
 {
-  return !is_disabled_ ? stop_price() : std::numeric_limits<double>::quiet_NaN();
+  return !is_disabled_ ? stop_price()
+                       : std::numeric_limits<double>::quiet_NaN();
 }
 
 auto TradingStopLoss::operator()(const AssetSnapshot& asset_snapshot) -> bool
 {
+  if(is_short_position_) {
+    const auto stop_price = exit_price();
+    const auto signal_price = asset_snapshot.get_high();
+    const auto stop = signal_price >= stop_price;
+
+    if(stop || !is_trailing_) {
+      return stop;
+    }
+
+    const auto low = asset_snapshot.get_low();
+    const auto new_stop_price = low + risk_;
+    if(new_stop_price < stop_price_) {
+      stop_price_ = new_stop_price;
+    }
+
+    return asset_snapshot.get_close() >= stop_price_;
+  }
+
   const auto stop_price = exit_price();
   const auto signal_price = asset_snapshot.get_low();
   const auto stop = signal_price <= stop_price;

@@ -42,18 +42,20 @@ public:
   {
     auto action = TradeAction(std::forward<TArgs>(args)...);
 
-    if(trade_records_.empty()) {
-      if(!action.is_buy()) {
-        throw std::runtime_error(
-         "Cannot add non-buy action when no trade records exist.");
-      }
+    const auto is_long_position = trade_records_.empty()
+                                   ? action.is_buy()
+                                   : trade_records_.back().is_long_position();
 
+    const auto action_position_size = action.position_size();
+
+    if(trade_records_.empty()) {
       trade_records_.emplace_back(TradeRecord::Status::open,
                                   action.position_size(),
                                   action.index(),
                                   action.index(),
                                   action.timestamp(),
                                   action.timestamp(),
+                                  action.price(),
                                   action.price(),
                                   action.price(),
                                   action.price(),
@@ -65,92 +67,180 @@ public:
     }
 
     auto& last_record = trade_records_.back();
+    const auto last_position_size = last_record.position_size();
 
     if(last_record.is_closed()) {
       throw std::runtime_error("Cannot add action to a closed trade.");
     }
 
-    if(action.is_buy()) {
-      const auto last_position_size = last_record.position_size();
-      const auto last_investment = last_record.investment();
+    if(is_long_position) {
+      if(action.is_buy()) {
+        const auto last_investment = last_record.investment();
 
-      const auto new_position_size =
-       last_position_size + action.position_size();
-      const auto new_average_price =
-       (last_investment + action.position_size() * action.price()) /
-       new_position_size;
+        const auto new_position_size =
+         last_position_size + action_position_size;
+        const auto new_average_price =
+         (last_investment + action_position_size * action.price()) /
+         new_position_size;
 
-      last_record.status(TradeRecord::Status::scaled_in);
-      last_record.exit_index(action.index());
-      last_record.exit_timestamp(action.timestamp());
-      last_record.exit_price(last_record.average_price());
+        last_record.status(TradeRecord::Status::scaled_in);
+        last_record.market_index(action.index());
+        last_record.market_timestamp(action.timestamp());
+        last_record.exit_price(last_record.average_price());
 
-      const auto position_scale =
-       new_position_size / last_record.position_size();
-
-      trade_records_.emplace_back(
-       TradeRecord::Status::open,
-       new_position_size,
-       action.index(),
-       action.index(),
-       action.timestamp(),
-       action.timestamp(),
-       action.price(),
-       new_average_price,
-       action.price(),
-       last_record.stop_loss_price() * position_scale,
-       last_record.trailing_stop_price() * position_scale,
-       last_record.take_profit_price() * position_scale);
-
-    } else {
-      if(action.position_size() > last_record.position_size()) {
-        throw std::runtime_error(
-         "Cannot reduce position size larger than current position size.");
-      }
-
-      const auto last_entry_price = last_record.entry_price();
-      const auto last_average_price = last_record.average_price();
-
-      const auto remaining_position_size =
-       last_record.position_size() - action.position_size();
-      const auto position_scale =
-       remaining_position_size / last_record.position_size();
-
-      last_record.exit_index(action.index());
-      last_record.exit_timestamp(action.timestamp());
-      last_record.exit_price(action.price());
-      last_record.position_size(action.position_size());
-
-      if(remaining_position_size != 0.0) {
-        last_record.status(TradeRecord::Status::scaled_out);
+        const auto position_scale = new_position_size / last_position_size;
 
         trade_records_.emplace_back(
          TradeRecord::Status::open,
-         remaining_position_size,
+         new_position_size,
          action.index(),
          action.index(),
          action.timestamp(),
          action.timestamp(),
-         last_entry_price,
-         last_average_price,
-         last_average_price,
+         action.price(),
+         new_average_price,
+         action.price(),
+         action.price(),
          last_record.stop_loss_price() * position_scale,
          last_record.trailing_stop_price() * position_scale,
          last_record.take_profit_price() * position_scale);
 
-      } else if(action.is_stop_loss()) {
-        last_record.status(TradeRecord::Status::closed_stop_loss);
-      } else if(action.is_take_profit()) {
-        last_record.status(TradeRecord::Status::closed_take_profit);
-      } else {
-        last_record.status(TradeRecord::Status::closed_exit_signal);
+      } else if(action.is_sell()) {
+        const auto remaining_position_size =
+         last_position_size + action_position_size;
+
+        if(remaining_position_size < 0) {
+          throw std::runtime_error("Cannot reduce position size larger than "
+                                   "current long position size.");
+        }
+
+        const auto last_entry_price = last_record.entry_price();
+        const auto last_average_price = last_record.average_price();
+
+        const auto position_scale =
+         remaining_position_size / last_position_size;
+
+        last_record.market_index(action.index());
+        last_record.market_timestamp(action.timestamp());
+        last_record.exit_price(action.price());
+        last_record.position_size(-action_position_size);
+
+        if(remaining_position_size != 0.0) {
+          last_record.status(TradeRecord::Status::scaled_out);
+
+          trade_records_.emplace_back(
+           TradeRecord::Status::open,
+           remaining_position_size,
+           action.index(),
+           action.index(),
+           action.timestamp(),
+           action.timestamp(),
+           last_entry_price,
+           last_average_price,
+           last_average_price,
+           action.price(),
+           last_record.stop_loss_price() * position_scale,
+           last_record.trailing_stop_price() * position_scale,
+           last_record.take_profit_price() * position_scale);
+
+        } else if(action.is_reason_stop_loss()) {
+          last_record.status(TradeRecord::Status::closed_stop_loss);
+        } else if(action.is_reason_take_profit()) {
+          last_record.status(TradeRecord::Status::closed_take_profit);
+        } else {
+          last_record.status(TradeRecord::Status::closed_exit_signal);
+        }
+      }
+    } else {
+      if(action.is_sell()) {
+        const auto last_investment = last_record.investment();
+
+        const auto new_position_size =
+         last_position_size + action_position_size;
+        const auto new_average_price =
+         (last_investment + action_position_size * action.price()) /
+         new_position_size;
+
+        last_record.status(TradeRecord::Status::scaled_in);
+        last_record.market_index(action.index());
+        last_record.market_timestamp(action.timestamp());
+        last_record.exit_price(last_record.average_price());
+
+        const auto position_scale = new_position_size / last_position_size;
+
+        trade_records_.emplace_back(
+         TradeRecord::Status::open,
+         new_position_size,
+         action.index(),
+         action.index(),
+         action.timestamp(),
+         action.timestamp(),
+         action.price(),
+         new_average_price,
+         action.price(),
+         action.price(),
+         last_record.stop_loss_price() * position_scale,
+         last_record.trailing_stop_price() * position_scale,
+         last_record.take_profit_price() * position_scale);
+
+      } else if(action.is_buy()) {
+        const auto remaining_position_size =
+         last_position_size + action_position_size;
+
+        if(remaining_position_size > 0) {
+          throw std::runtime_error("Cannot reduce position size larger than "
+                                   "current short position size.");
+        }
+
+        const auto last_entry_price = last_record.entry_price();
+        const auto last_average_price = last_record.average_price();
+
+        const auto position_scale =
+         remaining_position_size / last_position_size;
+
+        last_record.market_index(action.index());
+        last_record.market_timestamp(action.timestamp());
+        last_record.exit_price(action.price());
+        last_record.position_size(-action_position_size);
+
+        if(remaining_position_size != 0.0) {
+          last_record.status(TradeRecord::Status::scaled_out);
+
+          trade_records_.emplace_back(
+           TradeRecord::Status::open,
+           remaining_position_size,
+           action.index(),
+           action.index(),
+           action.timestamp(),
+           action.timestamp(),
+           last_entry_price,
+           last_average_price,
+           last_average_price,
+           action.price(),
+           last_record.stop_loss_price() * position_scale,
+           last_record.trailing_stop_price() * position_scale,
+           last_record.take_profit_price() * position_scale);
+
+        } else if(action.is_reason_stop_loss()) {
+          last_record.status(TradeRecord::Status::closed_stop_loss);
+        } else if(action.is_reason_take_profit()) {
+          last_record.status(TradeRecord::Status::closed_take_profit);
+        } else {
+          last_record.status(TradeRecord::Status::closed_exit_signal);
+        }
       }
     }
   }
 
   auto position_size() const noexcept -> double;
 
+  auto position_value() const noexcept -> double;
+
   auto average_price() const noexcept -> double;
+
+  auto unrealized_investment() const noexcept -> double;
+
+  auto realized_investment() const noexcept -> double;
 
   auto investment() const noexcept -> double;
 
@@ -164,12 +254,17 @@ public:
 
   auto exit_timestamp() const noexcept -> std::time_t;
 
+  auto unrealized_pnl() const noexcept -> double;
+
+  auto realized_pnl() const noexcept -> double;
+
   auto pnl() const noexcept -> double;
 
   auto duration() const noexcept -> std::time_t;
 
-  void
-  asset_update(std::time_t timestamp, double price, std::size_t index) noexcept;
+  void market_update(std::size_t index,
+                     std::time_t timestamp,
+                     double price) noexcept;
 
   auto is_flat() const noexcept -> bool;
 
@@ -186,6 +281,10 @@ public:
   auto is_summary_session(std::size_t last_index = 0) const noexcept -> bool;
 
   auto at_entry() const noexcept -> bool;
+
+  auto is_long_position() const noexcept -> bool;
+
+  auto is_short_position() const noexcept -> bool;
 
 private:
   double take_profit_price_;

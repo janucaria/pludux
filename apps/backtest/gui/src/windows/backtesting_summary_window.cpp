@@ -134,22 +134,21 @@ void BacktestSummaryWindow::render(AppState& app_state)
        "Total Capital", summary.capital(), summary.initial_capital());
 
       draw_spacer_row();
-
-      draw_count_row("Total open trades", summary.open_trade_count());
-      draw_currency_with_rate_row("Unrealized P&L",
-                                  summary.unrealized_pnl(),
-                                  summary.unrealized_pnl() /
-                                   summary.cumulative_investments());
-      draw_duration_row("Ongoing trade duration",
-                        summary.ongoing_trade_duration());
-
-      draw_spacer_row();
       draw_currency_with_percent_row(
        "Equity", summary.equity(), summary.initial_capital());
       draw_currency_with_percent_row(
        "Peak equity", summary.peak_equity(), summary.initial_capital());
       draw_row("Drawdown", std::format("{:.2f}%", summary.drawdown()));
       draw_row("Max drawdown", std::format("{:.2f}%", summary.max_drawdown()));
+
+      draw_spacer_row();
+
+      draw_count_row("Total open trades", summary.open_trade_count());
+      draw_currency_with_percent_row("Unrealized P&L",
+                                     summary.unrealized_pnl(),
+                                     summary.unrealized_investment());
+      draw_duration_row("Ongoing trade duration",
+                        summary.unrealized_duration());
     }
 
     ImGui::EndTable();

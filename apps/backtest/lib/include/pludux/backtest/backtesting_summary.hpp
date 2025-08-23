@@ -156,7 +156,9 @@ public:
 
   auto unrealized_pnl() const noexcept -> double;
 
-  auto ongoing_trade_duration() const noexcept -> std::time_t;
+  auto unrealized_investment() const noexcept -> double;
+
+  auto unrealized_duration() const noexcept -> std::time_t;
 
   auto equity() const noexcept -> double;
 

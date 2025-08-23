@@ -45,16 +45,17 @@ void serialize(Archive& archive, pludux::backtest::TradeRecord& trade_record)
   const auto status = static_cast<std::size_t>(trade_record.status());
   archive(make_nvp("status", status),
           make_nvp("positionSize", trade_record.position_size()),
-          make_nvp("entryIndex", trade_record.entry_index()),
-          make_nvp("exitIndex", trade_record.exit_index()),
-          make_nvp("entryTimestamp", trade_record.entry_timestamp()),
-          make_nvp("exitTimestamp", trade_record.exit_timestamp()),
           make_nvp("entryPrice", trade_record.entry_price()),
-          make_nvp("exitPrice", trade_record.exit_price()),
           make_nvp("averagePrice", trade_record.average_price()),
+          make_nvp("exitPrice", trade_record.exit_price()),
+          make_nvp("marketPrice", trade_record.market_price()),
           make_nvp("stopLossPrice", trade_record.stop_loss_price()),
           make_nvp("trailingStopPrice", trade_record.trailing_stop_price()),
-          make_nvp("takeProfitPrice", trade_record.take_profit_price()));
+          make_nvp("takeProfitPrice", trade_record.take_profit_price()),
+          make_nvp("entryIndex", trade_record.entry_index()),
+          make_nvp("marketIndex", trade_record.market_index()),
+          make_nvp("entryTimestamp", trade_record.entry_timestamp()),
+          make_nvp("marketTimestamp", trade_record.market_timestamp()));
 }
 
 template<>
@@ -67,12 +68,13 @@ struct LoadAndConstruct<pludux::backtest::TradeRecord> {
     auto status = std::size_t{};
     auto position_size = double{};
     auto entry_index = std::size_t{};
-    auto exit_index = std::size_t{};
+    auto market_index = std::size_t{};
     auto entry_timestamp = std::time_t{};
-    auto exit_timestamp = std::time_t{};
+    auto market_timestamp = std::time_t{};
     auto entry_price = double{};
     auto average_price = double{};
     auto exit_price = double{};
+    auto market_price = double{};
     auto stop_loss_price = double{};
     auto trailing_stop_price = double{};
     auto take_profit_price = double{};
@@ -80,12 +82,13 @@ struct LoadAndConstruct<pludux::backtest::TradeRecord> {
     archive(make_nvp("status", status),
             make_nvp("positionSize", position_size),
             make_nvp("entryIndex", entry_index),
-            make_nvp("exitIndex", exit_index),
+            make_nvp("marketIndex", market_index),
             make_nvp("entryTimestamp", entry_timestamp),
-            make_nvp("exitTimestamp", exit_timestamp),
+            make_nvp("marketTimestamp", market_timestamp),
             make_nvp("entryPrice", entry_price),
             make_nvp("exitPrice", exit_price),
             make_nvp("averagePrice", average_price),
+            make_nvp("marketPrice", market_price),
             make_nvp("stopLossPrice", stop_loss_price),
             make_nvp("trailingStopPrice", trailing_stop_price),
             make_nvp("takeProfitPrice", take_profit_price));
@@ -93,12 +96,13 @@ struct LoadAndConstruct<pludux::backtest::TradeRecord> {
     constructor(pludux::backtest::TradeRecord::Status(status),
                 position_size,
                 entry_index,
-                exit_index,
+                market_index,
                 entry_timestamp,
-                exit_timestamp,
+                market_timestamp,
                 entry_price,
                 average_price,
                 exit_price,
+                market_price,
                 stop_loss_price,
                 trailing_stop_price,
                 take_profit_price);
@@ -254,7 +258,8 @@ void serialize(Archive& archive, pludux::backtest::TakeProfit& take_profit)
   const auto trading_price_method_json =
    config_parser.serialize_method(take_profit.trading_price_method());
 
-  archive(make_nvp("disabled", take_profit.is_disabled()),
+  archive(make_nvp("isDisabled", take_profit.is_disabled()),
+          make_nvp("isShortPosition", take_profit.is_short_position()),
           make_nvp("rewardMethod", reward_method_json),
           make_nvp("tradingPriceMethod", trading_price_method_json));
 }
@@ -267,10 +272,12 @@ struct LoadAndConstruct<pludux::backtest::TakeProfit> {
                      construct<pludux::backtest::TakeProfit>& constructor)
   {
     auto is_disabled = bool{};
+    auto is_short_position = bool{};
     auto reward_method_json = nlohmann::json{};
     auto trading_price_method_json = nlohmann::json{};
 
-    archive(make_nvp("disabled", is_disabled),
+    archive(make_nvp("isDisabled", is_disabled),
+            make_nvp("isShortPosition", is_short_position),
             make_nvp("rewardMethod", reward_method_json),
             make_nvp("tradingPriceMethod", trading_price_method_json));
 
@@ -281,8 +288,10 @@ struct LoadAndConstruct<pludux::backtest::TakeProfit> {
     auto trading_price_method =
      config_parser.parse_method(trading_price_method_json);
 
-    constructor(
-     std::move(reward_method), is_disabled, std::move(trading_price_method));
+    constructor(std::move(reward_method),
+                is_disabled,
+                is_short_position,
+                std::move(trading_price_method));
   }
 };
 
@@ -334,6 +343,8 @@ void serialize(Archive& archive, pludux::backtest::Strategy& strategy)
   auto config_parser = pludux::ConfigParser{};
   config_parser.register_default_parsers();
 
+  const auto direction = static_cast<std::size_t>(strategy.direction());
+
   const auto entry_repeat = static_cast<std::size_t>(strategy.entry_repeat());
 
   const auto entry_filter_json =
@@ -347,6 +358,7 @@ void serialize(Archive& archive, pludux::backtest::Strategy& strategy)
    std::make_unique<pludux::backtest::TakeProfit>(strategy.take_profit());
 
   archive(make_nvp("name", strategy.name()),
+          make_nvp("direction", direction),
           make_nvp("entryRepeat", entry_repeat),
           make_nvp("entryFilter", entry_filter_json),
           make_nvp("exitFilter", exit_filter_json),
@@ -362,6 +374,7 @@ struct LoadAndConstruct<pludux::backtest::Strategy> {
                      construct<pludux::backtest::Strategy>& constructor)
   {
     auto name = std::string{};
+    auto direction = std::size_t{};
     auto entry_repeat = std::size_t{};
     auto entry_filter_json = nlohmann::json{};
     auto exit_filter_json = nlohmann::json{};
@@ -369,6 +382,7 @@ struct LoadAndConstruct<pludux::backtest::Strategy> {
     auto take_profit_ptr = std::unique_ptr<pludux::backtest::TakeProfit>{};
 
     archive(make_nvp("name", name),
+            make_nvp("direction", direction),
             make_nvp("entryRepeat", entry_repeat),
             make_nvp("entryFilter", entry_filter_json),
             make_nvp("exitFilter", exit_filter_json),
@@ -382,6 +396,7 @@ struct LoadAndConstruct<pludux::backtest::Strategy> {
     auto exit_filter = config_parser.parse_filter(exit_filter_json);
 
     constructor(std::move(name),
+                static_cast<pludux::backtest::Strategy::Direction>(direction),
                 pludux::backtest::Strategy::RepeatType(entry_repeat),
                 std::move(entry_filter),
                 std::move(exit_filter),

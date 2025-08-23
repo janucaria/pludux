@@ -9,6 +9,7 @@ namespace pludux::backtest {
 class TradingStopLoss {
 public:
   TradingStopLoss(bool is_disabled,
+                  bool is_short_position,
                   bool is_trailing,
                   double risk,
                   double stop_price);
@@ -27,6 +28,7 @@ public:
 
 private:
   bool is_disabled_;
+  bool is_short_position_;
   bool is_trailing_;
   double risk_;
   double stop_price_;

@@ -9,6 +9,7 @@ namespace pludux::backtest {
 class TradingTakeProfit {
 public:
   TradingTakeProfit(bool is_disabled,
+                    bool is_short_position,
                     double profit_price,
                     screener::ScreenerMethod signal_price_method);
 
@@ -18,6 +19,7 @@ public:
 
 private:
   bool is_disabled_;
+  bool is_short_position_;
   double profit_price_;
   screener::ScreenerMethod signal_price_method_;
 };

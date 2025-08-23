@@ -33,6 +33,7 @@ void TradeJournalWindow::render(AppState& app_state)
                              ImGuiTableFlags_Hideable | ImGuiTableFlags_ScrollY;
 
     constexpr auto headers = std::array{"Trade #",
+                                        "Type",
                                         "Status",
                                         "Entry Date",
                                         "Exit Date",
@@ -98,6 +99,8 @@ void TradeJournalWindow::draw_trade_row(int trade_count,
                     false,
                     ImGuiSelectableFlags_SpanAllColumns |
                      ImGuiSelectableFlags_AllowOverlap);
+  ImGui::TableNextColumn();
+  ImGui::Text("%s", trade.is_long_position() ? "Long" : "Short");
   ImGui::TableNextColumn();
   ImGui::Text("%s", format_trade_status(trade.status()).c_str());
   ImGui::TableNextColumn();

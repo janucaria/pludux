@@ -12,11 +12,14 @@ class StopLoss {
 public:
   StopLoss(screener::ScreenerMethod risk_method,
            bool is_disabled,
+           bool is_short_position,
            bool is_trailing = false);
 
   auto operator()(AssetSnapshot asset_snapshot) const -> TradingStopLoss;
 
   auto is_disabled() const noexcept -> bool;
+
+  auto is_short_position() const noexcept -> bool;
 
   auto is_trailing() const noexcept -> bool;
 
@@ -26,6 +29,7 @@ public:
 
 private:
   bool is_disabled_;
+  bool is_short_position_;
   bool is_trailing_;
   screener::ScreenerMethod risk_method_;
 };

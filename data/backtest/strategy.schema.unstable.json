@@ -54,7 +54,8 @@
         "properties": {
           "direction": {
             "enum": [
-              "long"
+              "long",
+              "short"
             ]
           },
           "entry": {

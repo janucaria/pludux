@@ -16,7 +16,10 @@ class Strategy {
 public:
   enum class RepeatType { sequence, always };
 
+  enum class Direction { long_direction, short_direction };
+
   Strategy(std::string name,
+           Direction direction,
            RepeatType entry_repeat,
            screener::ScreenerFilter entry_filter,
            screener::ScreenerFilter exit_filter,
@@ -24,6 +27,10 @@ public:
            backtest::TakeProfit take_profit);
 
   auto name() const noexcept -> const std::string&;
+
+  auto direction() const noexcept -> Direction;
+
+  void direction(Direction dir) noexcept;
 
   auto entry_repeat() const noexcept -> RepeatType;
 
@@ -45,8 +52,13 @@ public:
 
   void set_entry_repeat_to_always() noexcept;
 
+  auto is_long_direction() const noexcept -> bool;
+
+  auto is_short_direction() const noexcept -> bool;
+
 private:
   std::string name_;
+  Direction direction_;
   RepeatType entry_repeat_;
   screener::ScreenerFilter entry_filter_;
   screener::ScreenerFilter exit_filter_;

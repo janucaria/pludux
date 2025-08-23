@@ -12,11 +12,14 @@ class TakeProfit {
 public:
   TakeProfit(screener::ScreenerMethod reward_method,
              bool is_disabled,
+             bool is_short_position,
              screener::ScreenerMethod trading_price_method);
 
   auto operator()(AssetSnapshot asset_snapshot) const -> TradingTakeProfit;
 
   auto is_disabled() const noexcept -> bool;
+
+  auto is_short_position() const noexcept -> bool;
 
   auto reward_method() const noexcept -> const screener::ScreenerMethod&;
 
@@ -24,6 +27,7 @@ public:
 
 private:
   bool is_disabled_;
+  bool is_short_position_;
   screener::ScreenerMethod reward_method_;
   screener::ScreenerMethod trading_price_method_;
 };

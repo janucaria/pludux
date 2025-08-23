@@ -2,27 +2,27 @@
 
 namespace pludux::backtest {
 
-TradeAction::TradeAction(ActionType action_type,
-                         double position_size,
+TradeAction::TradeAction(double position_size,
                          std::time_t timestamp,
                          double price,
-                         std::size_t index)
-: action_type_{action_type}
-, position_size_{position_size}
+                         std::size_t index,
+                         Reason reason)
+: position_size_{position_size}
 , timestamp_{timestamp}
 , price_{price}
 , index_{index}
+, reason_{reason}
 {
 }
 
-auto TradeAction::action_type() const noexcept -> ActionType
+auto TradeAction::reason() const noexcept -> Reason
 {
-  return action_type_;
+  return reason_;
 }
 
-void TradeAction::action_type(ActionType action_type) noexcept
+void TradeAction::reason(Reason reason) noexcept
 {
-  action_type_ = action_type;
+  reason_ = reason;
 }
 
 auto TradeAction::price() const noexcept -> double
@@ -67,27 +67,32 @@ void TradeAction::position_size(double size) noexcept
 
 auto TradeAction::is_buy() const noexcept -> bool
 {
-  return action_type_ == ActionType::buy;
+  return position_size() > 0;
 }
 
 auto TradeAction::is_sell() const noexcept -> bool
 {
-  return action_type_ == ActionType::sell;
+  return position_size() < 0;
 }
 
-auto TradeAction::is_stop_loss() const noexcept -> bool
+auto TradeAction::is_reason_entry() const noexcept -> bool
 {
-  return action_type_ == ActionType::stop_loss;
+  return reason_ == Reason::entry;
 }
 
-auto TradeAction::is_take_profit() const noexcept -> bool
+auto TradeAction::is_reason_exit() const noexcept -> bool
 {
-  return action_type_ == ActionType::take_profit;
+  return reason_ == Reason::exit;
 }
 
-auto TradeAction::is_closed() const noexcept -> bool
+auto TradeAction::is_reason_stop_loss() const noexcept -> bool
 {
-  return is_sell() || is_stop_loss() || is_take_profit();
+  return reason_ == Reason::stop_loss;
+}
+
+auto TradeAction::is_reason_take_profit() const noexcept -> bool
+{
+  return reason_ == Reason::take_profit;
 }
 
 } // namespace pludux::backtest

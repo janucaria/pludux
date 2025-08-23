@@ -3,6 +3,7 @@
 #include <ctime>
 #include <limits>
 #include <numeric>
+#include <ranges>
 #include <utility>
 #include <vector>
 
@@ -86,6 +87,11 @@ auto TradeSession::position_size() const noexcept -> double
   return trade_records_.back().position_size();
 }
 
+auto TradeSession::position_value() const noexcept -> double
+{
+  return is_open() ? trade_records_.back().position_value() : 0.0;
+}
+
 auto TradeSession::average_price() const noexcept -> double
 {
   if(is_flat()) {
@@ -95,21 +101,26 @@ auto TradeSession::average_price() const noexcept -> double
   return trade_records_.back().average_price();
 }
 
+auto TradeSession::unrealized_investment() const noexcept -> double
+{
+  return is_open() ? trade_records_.back().investment() : 0.0;
+}
+
+auto TradeSession::realized_investment() const noexcept -> double
+{
+  return std::ranges::fold_left(
+   trade_records_ | std::views::filter([](const TradeRecord& record) {
+     return record.is_closed() || record.is_scaled_out();
+   }) |
+    std::views::transform(
+     [](const TradeRecord& record) { return record.investment(); }),
+   0.0,
+   std::plus<>{});
+}
+
 auto TradeSession::investment() const noexcept -> double
 {
-  if(is_flat()) {
-    return NAN;
-  }
-
-  return std::reduce(trade_records_.cbegin(),
-                     trade_records_.cend(),
-                     0.0,
-                     [](double total, const TradeRecord& record) {
-                       if(!record.is_scaled_in()) {
-                         return total + record.investment();
-                       }
-                       return total;
-                     });
+  return unrealized_investment() + realized_investment();
 }
 
 auto TradeSession::exit_price() const noexcept -> double
@@ -157,18 +168,26 @@ auto TradeSession::exit_timestamp() const noexcept -> std::time_t
   return trade_records_.back().exit_timestamp();
 }
 
+auto TradeSession::unrealized_pnl() const noexcept -> double
+{
+  return is_open() ? trade_records_.back().pnl() : 0.0;
+}
+
+auto TradeSession::realized_pnl() const noexcept -> double
+{
+  return std::ranges::fold_left(
+   trade_records_ | std::views::filter([](const TradeRecord& record) {
+     return record.is_closed() || record.is_scaled_out();
+   }) |
+    std::views::transform(
+     [](const TradeRecord& record) { return record.pnl(); }),
+   0.0,
+   std::plus<>{});
+}
+
 auto TradeSession::pnl() const noexcept -> double
 {
-  if(is_flat()) {
-    return NAN;
-  }
-
-  return std::reduce(trade_records_.cbegin(),
-                     trade_records_.cend(),
-                     0.0,
-                     [](double total, const TradeRecord& record) {
-                       return total + record.pnl();
-                     });
+  return unrealized_pnl() + realized_pnl();
 }
 
 auto TradeSession::duration() const noexcept -> std::time_t
@@ -181,15 +200,21 @@ auto TradeSession::duration() const noexcept -> std::time_t
                      });
 }
 
-void TradeSession::asset_update(std::time_t timestamp,
-                                double price,
-                                std::size_t index) noexcept
+void TradeSession::market_update(std::size_t index,
+                                 std::time_t timestamp,
+                                 double price) noexcept
 {
+  if(is_flat()) {
+    return;
+  }
+
+  auto& last_record = trade_records_.back();
+  last_record.market_timestamp(timestamp);
+  last_record.market_price(price);
+  last_record.market_index(index);
+
   if(is_open()) {
-    auto& last_record = trade_records_.back();
-    last_record.exit_timestamp(timestamp);
     last_record.exit_price(price);
-    last_record.exit_index(index);
   }
 }
 
@@ -240,6 +265,16 @@ auto TradeSession::at_entry() const noexcept -> bool
   const auto& last_record = trade_records_.back();
   return last_record.is_open() &&
          last_record.entry_index() == last_record.exit_index();
+}
+
+auto TradeSession::is_long_position() const noexcept -> bool
+{
+  return !is_flat() && trade_records_.back().is_long_position();
+}
+
+auto TradeSession::is_short_position() const noexcept -> bool
+{
+  return !is_flat() && !trade_records_.back().is_long_position();
 }
 
 } // namespace pludux::backtest

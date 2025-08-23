@@ -140,7 +140,7 @@ void Backtest::run()
 
   auto trade_session = summary.trade_session();
 
-  trade_session.asset_update(asset_timestamp, asset_price, asset_index);
+  trade_session.market_update(asset_index, asset_timestamp, asset_price);
 
   if(trade_session.is_closed()) {
     trade_session = TradeSession{};
@@ -164,11 +164,11 @@ void Backtest::run()
                                      : std::numeric_limits<double>::quiet_NaN();
     const auto take_profit_price = trading_take_profit.exit_price();
 
-    trade_session.emplace_action(TradeAction::ActionType::buy,
-                                 position_size,
+    trade_session.emplace_action(position_size,
                                  entry_timestamp,
                                  entry_price,
-                                 entry_index);
+                                 entry_index,
+                                 TradeAction::Reason::entry);
 
     trade_session.take_profit_price(take_profit_price);
     trade_session.stop_loss_price(initial_stop_loss_price);
@@ -189,17 +189,17 @@ void Backtest::run()
 
     const auto exit_filter = strategy.exit_filter();
     const auto trade_action_type_opt =
-     [&]() -> std::optional<TradeAction::ActionType> {
+     [&]() -> std::optional<TradeAction::Reason> {
       if(trading_stop_loss(asset_snapshot)) {
-        return TradeAction::ActionType::stop_loss;
+        return TradeAction::Reason::stop_loss;
       }
 
       if(trading_take_profit(asset_snapshot)) {
-        return TradeAction::ActionType::take_profit;
+        return TradeAction::Reason::take_profit;
       }
 
       if(exit_filter(asset_snapshot)) {
-        return TradeAction::ActionType::sell;
+        return TradeAction::Reason::exit;
       }
 
       return std::nullopt;
@@ -215,26 +215,24 @@ void Backtest::run()
     trade_session.trailing_stop_price(trailing_stop_price);
 
     trade_action_type_opt.and_then(
-     [&](const TradeAction::ActionType& trade_action_type)
-      -> std::optional<TradeAction::ActionType> {
+     [&](const TradeAction::Reason& trade_action_type)
+      -> std::optional<TradeAction::Reason> {
        const auto exit_price = [&]() -> double {
          switch(trade_action_type) {
-         case TradeAction::ActionType::take_profit:
+         case TradeAction::Reason::take_profit:
            return take_profit_price;
-         case TradeAction::ActionType::stop_loss:
+         case TradeAction::Reason::stop_loss:
            return stop_loss_price;
          default:
            return asset_price;
          }
        }();
 
-       if(trade_action_type != TradeAction::ActionType::buy) {
-         trade_session.emplace_action(trade_action_type,
-                                      position_size,
-                                      exit_timestamp,
-                                      exit_price,
-                                      asset_index);
-       }
+       trade_session.emplace_action(-position_size,
+                                    exit_timestamp,
+                                    exit_price,
+                                    asset_index,
+                                    trade_action_type);
 
        return std::nullopt;
      });

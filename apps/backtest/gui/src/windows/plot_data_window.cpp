@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <array>
 #include <format>
+#include <tuple>
 
 #include <imgui.h>
 #include <implot.h>
@@ -329,6 +330,7 @@ void PlotDataWindow::DrawTrades(
       const auto& summary = backtest_summaries[i];
       const auto& session = summary.trade_session();
 
+      const auto is_long_position = session.is_long_position();
       const auto exit_idx = session.exit_index();
       const auto exit_price = session.exit_price();
       const auto take_profit_price = session.take_profit_price();
@@ -337,13 +339,32 @@ void PlotDataWindow::DrawTrades(
       const auto entry_idx = session.entry_index();
       const auto avg_price = session.average_price();
 
-      const auto top_price = !std::isnan(take_profit_price)
-                              ? take_profit_price
-                              : std::max(avg_price, exit_price);
-      const auto middle_price = std::max(avg_price, stop_loss_price);
-      const auto bottom_price = !std::isnan(stop_loss_price)
-                                 ? stop_loss_price
-                                 : std::min(middle_price, exit_price);
+      const auto top_color = is_long_position ? reward_color_ : risk_color_;
+      const auto bottom_color = is_long_position ? risk_color_ : reward_color_;
+
+      const auto [top_price, middle_price, bottom_price] = [&]() {
+        if(is_long_position) {
+          const auto top_price = !std::isnan(take_profit_price)
+                                  ? take_profit_price
+                                  : std::max(avg_price, exit_price);
+          const auto middle_price = std::max(avg_price, stop_loss_price);
+          const auto bottom_price = !std::isnan(stop_loss_price)
+                                     ? stop_loss_price
+                                     : std::min(middle_price, exit_price);
+
+          return std::tuple{top_price, middle_price, bottom_price};
+        }
+
+        const auto top_price = !std::isnan(stop_loss_price)
+                                ? stop_loss_price
+                                : std::max(avg_price, exit_price);
+        const auto middle_price = std::max(avg_price, take_profit_price);
+        const auto bottom_price = !std::isnan(take_profit_price)
+                                   ? take_profit_price
+                                   : std::min(middle_price, exit_price);
+
+        return std::tuple{top_price, middle_price, bottom_price};
+      }();
 
       const auto left_half_width = exit_idx == entry_idx ? 0.0 : half_width;
       const auto right_half_width =
@@ -357,7 +378,7 @@ void PlotDataWindow::DrawTrades(
 
         draw_list->AddRectFilled(risk_left_top_pos,
                                  risk_right_bottom_pos,
-                                 ImGui::GetColorU32(risk_color_));
+                                 ImGui::GetColorU32(bottom_color));
       }
       {
         const auto reward_left_top_pos =
@@ -367,7 +388,7 @@ void PlotDataWindow::DrawTrades(
 
         draw_list->AddRectFilled(reward_left_top_pos,
                                  reward_right_bottom_pos,
-                                 ImGui::GetColorU32(reward_color_));
+                                 ImGui::GetColorU32(top_color));
       }
 
       {

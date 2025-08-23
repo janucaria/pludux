@@ -79,9 +79,9 @@ auto main(int, const char**) -> int
   ostream << std::format("Unrealized profit: {:.2f}\n",
                          summary.unrealized_pnl());
 
-  const auto ongoing_trade_duration =
-   pludux::format_duration(summary.ongoing_trade_duration());
-  ostream << std::format("Ongoing duration: {}\n", ongoing_trade_duration);
+  const auto unrealized_duration =
+   pludux::format_duration(summary.unrealized_duration());
+  ostream << std::format("Ongoing duration: {}\n", unrealized_duration);
 
   ostream << "\n\n";
   ostream << "CLOSED TRADES\n";
