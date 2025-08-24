@@ -163,29 +163,29 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
     }
   }
 
-  auto is_take_profit_disabled = false;
-  auto reward_factor = 1.0;
+  auto is_take_profit_enabled = false;
+  auto tp_risk_multiplier = 1.0;
   if(position_json.contains("takeProfit")) {
     const auto take_profit_config = position_json.at("takeProfit");
     if(take_profit_config.is_boolean()) {
-      is_take_profit_disabled = !take_profit_config.get<bool>();
+      is_take_profit_enabled = take_profit_config.get<bool>();
     } else if(take_profit_config.is_object()) {
-      is_take_profit_disabled = take_profit_config.value("disabled", false);
-      reward_factor = take_profit_config.value("rewardFactor", 1.0);
+      is_take_profit_enabled = take_profit_config.value("enabled", true);
+      tp_risk_multiplier = take_profit_config.value("riskMultiplier", 1.0);
     } else {
       throw std::runtime_error(
        "Invalid take profit configuration in strategy JSON");
     }
   }
 
-  const auto reward_method =
-   screener::MultiplyMethod{risk_method, screener::ValueMethod{reward_factor}};
+  const auto reward_method = screener::MultiplyMethod{
+   risk_method, screener::ValueMethod{tp_risk_multiplier}};
   const auto trading_take_profit_method =
    is_short_position ? screener::ScreenerMethod{screener::LowMethod{}}
                      : screener::ScreenerMethod{screener::HighMethod{}};
   const auto take_profit =
    pludux::backtest::TakeProfit{reward_method,
-                                is_take_profit_disabled,
+                                !is_take_profit_enabled,
                                 is_short_position,
                                 trading_take_profit_method};
 

@@ -112,10 +112,10 @@
                 "type": "object",
                 "additionalProperties": false,
                 "properties": {
-                  "disabled": {
+                  "enabled": {
                     "type": "boolean"
                   },
-                  "rewardFactor": {
+                  "riskMultiplier": {
                     "type": "number"
                   }
                 }

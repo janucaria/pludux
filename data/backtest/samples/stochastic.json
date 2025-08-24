@@ -69,7 +69,7 @@
       },
       "stopLoss": true,
       "takeProfit": {
-        "rewardFactor": 2
+        "riskMultiplier": 2
       }
     }
   ]

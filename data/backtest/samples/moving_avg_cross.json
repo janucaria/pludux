@@ -37,7 +37,7 @@
         "isTrailing": false
       },
       "takeProfit": {
-        "rewardFactor": 3
+        "riskMultiplier": 3
       }
     }
   ]

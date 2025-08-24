@@ -37,8 +37,8 @@
         "disabled": true
       },
       "takeProfit": {
-        "disabled": false,
-        "rewardFactor": 3
+        "enabled": true,
+        "riskMultiplier": 3
       }
     }
   ]
