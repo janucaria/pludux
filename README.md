@@ -1,6 +1,6 @@
 # PluDux Backtesting Application
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)  
+[![License](https://img.shields.io/badge/license-AGPL-blue.svg)](LICENSE)  
 A web-based backtesting application written in C++ with [Dear ImGui](https://github.com/ocornut/imgui) and [ImPlot](https://github.com/epezent/implot), compiled to WebAssembly via [Emscripten](https://emscripten.org/). This tool allows you to load historical market data and custom trading strategy configurations, then run simulations to evaluate the performance of those strategies over time.
 
 ---
@@ -194,7 +194,7 @@ Please ensure your contributions align with the project’s coding style and inc
 
 ## License
 
-Distributed under the **MIT License**. See [LICENSE.txt](LICENSE.txt) for more information.
+Distributed under the **AGPL License**. See [LICENSE.txt](LICENSE.txt) for more information.
 
 ---
 

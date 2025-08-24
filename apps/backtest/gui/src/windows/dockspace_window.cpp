@@ -524,7 +524,7 @@ void DockspaceWindow::render(AppState& app_state)
 #endif
 
       ImGui::Separator();
-      ImGui::Text("%s", "This software is licensed under the MIT License.");
+      ImGui::Text("%s", "This software is licensed under the AGPL License.");
       ImGui::Text("%s", "Copyright (c) 2025 Januar Andaria");
       ImGui::Text("%s", "Full licence text included in the LICENSE.txt file.");
 
