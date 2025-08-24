@@ -34,7 +34,7 @@
         }
       },
       "stopLoss": {
-        "disabled": true
+        "enabled": false
       },
       "takeProfit": {
         "enabled": true,

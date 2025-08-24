@@ -190,15 +190,15 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
                                 trading_take_profit_method};
 
   auto is_trailing_stop_loss = false;
-  auto is_stop_loss_disabled = false;
+  auto is_stop_loss_enabled = false;
 
   if(position_json.contains("stopLoss")) {
     const auto stop_loss_config = position_json.at("stopLoss");
     if(stop_loss_config.is_boolean()) {
-      is_stop_loss_disabled = !stop_loss_config.get<bool>();
+      is_stop_loss_enabled = stop_loss_config.get<bool>();
     } else if(stop_loss_config.is_object()) {
       is_trailing_stop_loss = stop_loss_config.value("isTrailing", false);
-      is_stop_loss_disabled = stop_loss_config.value("disabled", false);
+      is_stop_loss_enabled = stop_loss_config.value("enabled", true);
     } else {
       throw std::runtime_error(
        "Invalid stop loss configuration in strategy JSON");
@@ -206,7 +206,7 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
   }
 
   const auto stop_loss = pludux::backtest::StopLoss{risk_method,
-                                                    is_stop_loss_disabled,
+                                                    !is_stop_loss_enabled,
                                                     is_short_position,
                                                     is_trailing_stop_loss};
 
