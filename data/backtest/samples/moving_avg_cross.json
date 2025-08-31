@@ -1,61 +1,41 @@
 {
-  "capitalRisk": 100000,
   "methods": [
-    {
-      "method": "DATA",
-      "name": "time",
-      "field": "Date"
-    },
-    {
-      "method": "DATA",
-      "name": "open",
-      "field": "Open"
-    },
-    {
-      "method": "DATA",
-      "name": "high",
-      "field": "High"
-    },
-    {
-      "method": "DATA",
-      "name": "low",
-      "field": "Low"
-    },
-    {
-      "method": "DATA",
-      "name": "close",
-      "field": "Close"
-    },
-    {
-      "method": "DATA",
-      "name": "volume",
-      "field": "Volume"
-    },
     {
       "method": "SMA",
       "name": "ma",
-      "period": 9,
-      "input": "close"
+      "period": 9
     }
   ],
-  "entrySignal": {
-    "filter": "CROSSOVER",
-    "signal": "close",
-    "reference": "ma"
-  },
-  "exitSignal": {
-    "filter": "CROSSUNDER",
-    "signal": "close",
-    "reference": "ma"
+  "risk": {
+    "method": "ATR",
+    "atr": {
+      "period": 14,
+      "multiplier": 1.5
+    },
+    "percentage": 5,
+    "value": 1000
   },
   "stopLoss": {
-    "method": "ATR",
-    "period": 14,
-    "multiplier": 2
+    "isTrailing": false
   },
   "takeProfit": {
-    "method": "ATR",
-    "period": 14,
-    "multiplier": 6
+    "riskMultiplier": 3
+  },
+  "longPosition": {
+    "entry": {
+      "repeat": "sequence",
+      "signal": {
+        "filter": "CROSSOVER",
+        "signal": "CLOSE",
+        "reference": "ma"
+      }
+    },
+    "exit": {
+      "signal": {
+        "filter": "CROSSUNDER",
+        "signal": "CLOSE",
+        "reference": "ma"
+      }
+    }
   }
 }

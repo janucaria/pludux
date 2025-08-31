@@ -9,26 +9,33 @@ namespace pludux::backtest {
 class TradeRecord {
 public:
   enum class Status {
-    flat,
     open,
     closed_exit_signal,
     closed_take_profit,
-    closed_stop_loss
+    closed_stop_loss,
+    scaled_in,
+    scaled_out
   };
-
-  TradeRecord();
 
   TradeRecord(Status status,
               double position_size,
-              std::size_t entry_index,
-              std::size_t at_index,
+              double average_price,
+
               std::time_t entry_timestamp,
-              std::time_t exit_timestamp,
               double entry_price,
+              std::size_t entry_index,
+
+              std::time_t exit_timestamp,
               double exit_price,
+              std::size_t exit_index,
+
               double stop_loss_price,
               double trailing_stop_price,
               double take_profit_price);
+
+  auto status() const noexcept -> Status;
+
+  void status(Status status) noexcept;
 
   auto position_size() const noexcept -> double;
 
@@ -38,13 +45,17 @@ public:
 
   void entry_index(std::size_t index) noexcept;
 
-  auto at_index() const noexcept -> std::size_t;
+  auto exit_index() const noexcept -> std::size_t;
 
-  void at_index(std::size_t index) noexcept;
+  auto exit_index(std::size_t index) noexcept -> void;
 
   auto entry_price() const noexcept -> double;
 
   void entry_price(double price) noexcept;
+
+  auto average_price() const noexcept -> double;
+
+  void average_price(double price) noexcept;
 
   auto exit_price() const noexcept -> double;
 
@@ -70,19 +81,15 @@ public:
 
   void exit_timestamp(std::time_t timestamp) noexcept;
 
-  auto position_value() const noexcept -> double;
+  auto entry_value() const noexcept -> double;
 
-  auto profit_and_loss() const noexcept -> double;
+  auto exit_value() const noexcept -> double;
+
+  auto investment() const noexcept -> double;
 
   auto pnl() const noexcept -> double;
 
   auto duration() const noexcept -> std::time_t;
-
-  auto status() const noexcept -> Status;
-
-  void status(Status status) noexcept;
-
-  auto is_flat() const noexcept -> bool;
 
   auto is_open() const noexcept -> bool;
 
@@ -94,10 +101,20 @@ public:
 
   auto is_closed_stop_loss() const noexcept -> bool;
 
-  auto is_summary_session(std::size_t last_index = 0) const noexcept -> bool;
+  auto is_scaled() const noexcept -> bool;
+
+  auto is_scaled_in() const noexcept -> bool;
+
+  auto is_scaled_out() const noexcept -> bool;
+
+  auto is_long_position() const noexcept -> bool;
+
+  auto is_short_position() const noexcept -> bool;
 
 private:
+  Status status_;
   double position_size_;
+  double average_price_;
 
   double entry_price_;
   double exit_price_;
@@ -107,12 +124,10 @@ private:
   double take_profit_price_;
 
   std::size_t entry_index_;
-  std::size_t at_index_;
+  std::size_t exit_index_;
 
   std::time_t entry_timestamp_;
   std::time_t exit_timestamp_;
-
-  Status status_;
 };
 
 } // namespace pludux::backtest

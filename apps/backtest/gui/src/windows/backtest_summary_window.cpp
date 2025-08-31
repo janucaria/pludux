@@ -5,11 +5,11 @@
 
 #include <imgui.h>
 
-#include <pludux/backtest/backtesting_summary.hpp>
+#include <pludux/backtest/backtest_summary.hpp>
 
 #include "../app_state.hpp"
 
-#include "./backtesting_summary_window.hpp"
+#include "./backtest_summary_window.hpp"
 
 namespace pludux::apps {
 
@@ -81,69 +81,33 @@ void BacktestSummaryWindow::render(AppState& app_state)
 
       draw_spacer_row();
 
-      draw_count_row_with_rate("Take profit hits",
-                               summary.take_profit_count(),
-                               summary.take_profit_rate());
-      draw_currency_with_rate_row("Avg take profit",
-                                  summary.average_take_profit(),
-                                  summary.average_take_profit() /
-                                   summary.average_investment());
-      draw_currency_with_rate_row("Take profit EV",
-                                  summary.take_profit_expected_value(),
-                                  summary.take_profit_expected_value() /
-                                   summary.average_investment());
-
-      draw_empty_row();
-
-      draw_count_row_with_rate(
-       "Stop loss hits", summary.stop_loss_count(), summary.stop_loss_rate());
-      draw_currency_with_rate_row("Avg stop loss",
-                                  summary.average_stop_loss(),
-                                  summary.average_stop_loss() /
-                                   summary.average_investment());
-      draw_currency_with_rate_row("Stop loss EV",
-                                  summary.stop_loss_expected_value(),
-                                  summary.stop_loss_expected_value() /
-                                   summary.average_investment());
-
-      draw_empty_row();
-
-      draw_count_row_with_rate("Exit signal hits",
-                               summary.exit_signal_count(),
-                               summary.exit_signal_rate());
-      draw_currency_with_rate_row("Avg exit signal",
-                                  summary.average_exit_signal(),
-                                  summary.average_exit_signal() /
-                                   summary.average_investment());
-      draw_currency_with_rate_row("Exit signal EV",
-                                  summary.exit_signal_expected_value(),
-                                  summary.exit_signal_expected_value() /
-                                   summary.average_investment());
+      draw_currency_row("Initial capital", summary.initial_capital());
+      draw_currency_with_percent_row("Total profits",
+                                     summary.cumulative_profits(),
+                                     summary.initial_capital());
+      draw_currency_with_percent_row(
+       "Total losses", summary.cumulative_losses(), summary.initial_capital());
+      draw_currency_with_percent_row(
+       "Net P&L", summary.cumulative_pnls(), summary.initial_capital());
+      draw_currency_with_percent_row(
+       "Total Capital", summary.capital(), summary.initial_capital());
 
       draw_spacer_row();
-
-      const auto initial_capital = profile.initial_capital();
-      draw_currency_row("Initial capital", initial_capital);
       draw_currency_with_percent_row(
-       "Total profits", summary.cumulative_profits(), initial_capital);
+       "Equity", summary.equity(), summary.initial_capital());
       draw_currency_with_percent_row(
-       "Total losses", summary.cumulative_losses(), initial_capital);
-      draw_currency_with_percent_row(
-       "Net P&L", summary.cumulative_pnls(), initial_capital);
-      draw_currency_with_percent_row("Total capital",
-                                     summary.cumulative_pnls() +
-                                      initial_capital,
-                                     initial_capital);
+       "Peak equity", summary.peak_equity(), summary.initial_capital());
+      draw_row("Drawdown", std::format("{:.2f}%", summary.drawdown()));
+      draw_row("Max drawdown", std::format("{:.2f}%", summary.max_drawdown()));
 
       draw_spacer_row();
 
       draw_count_row("Total open trades", summary.open_trade_count());
-      draw_currency_with_rate_row("Unrealized P&L",
-                                  summary.unrealized_pnl(),
-                                  summary.unrealized_pnl() /
-                                   summary.cumulative_investments());
+      draw_currency_with_percent_row("Unrealized P&L",
+                                     summary.unrealized_pnl(),
+                                     summary.unrealized_investment());
       draw_duration_row("Ongoing trade duration",
-                        summary.ongoing_trade_duration());
+                        summary.unrealized_duration());
     }
 
     ImGui::EndTable();

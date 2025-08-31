@@ -1,70 +1,42 @@
 {
-  "capitalRisk": 100000,
   "methods": [
-    {
-      "method": "DATA",
-      "name": "time",
-      "field": "Date"
-    },
-    {
-      "method": "DATA",
-      "name": "open",
-      "field": "Open"
-    },
-    {
-      "method": "DATA",
-      "name": "high",
-      "field": "High"
-    },
-    {
-      "method": "DATA",
-      "name": "low",
-      "field": "Low"
-    },
-    {
-      "method": "DATA",
-      "name": "close",
-      "field": "Close"
-    },
-    {
-      "method": "DATA",
-      "name": "volume",
-      "field": "Volume"
-    },
     {
       "method": "RSI",
       "name": "rsi",
       "period": 14
-    },
-    {
-      "method": "VALUE",
-      "name": "overbought",
-      "value": 70
-    },
-    {
-      "method": "VALUE",
-      "name": "oversold",
-      "value": 30
     }
   ],
-  "entrySignal": {
-    "filter": "CROSSOVER",
-    "signal": "rsi",
-    "reference": "oversold"
-  },
-  "exitSignal": {
-    "filter": "CROSSUNDER",
-    "signal": "rsi",
-    "reference": "overbought"
+  "risk": {
+    "method": "ATR",
+    "atr": {
+      "period": 14,
+      "multiplier": 2
+    },
+    "percentage": 5,
+    "value": 1000
   },
   "stopLoss": {
-    "method": "ATR",
-    "period": 14,
-    "multiplier": 2
+    "enabled": false
   },
   "takeProfit": {
-    "method": "ATR",
-    "period": 14,
-    "multiplier": 6
+    "enabled": true,
+    "riskMultiplier": 3
+  },
+  "longPosition": {
+    "entry": {
+      "repeat": "sequence",
+      "signal": {
+        "filter": "CROSSUNDER",
+        "signal": "rsi",
+        "reference": 30
+      }
+    },
+    "exit": {
+      "signal": {
+        "filter": "CROSSOVER",
+        "signal": "rsi",
+        "reference": 70
+      }
+    }
   }
 }

@@ -12,7 +12,7 @@
 #include <nlohmann/json.hpp>
 
 #include <pludux/backtest.hpp>
-#include <pludux/backtest/backtesting_summary.hpp>
+#include <pludux/backtest/backtest_summary.hpp>
 
 auto main(int, const char**) -> int
 {
@@ -24,8 +24,8 @@ auto main(int, const char**) -> int
    pludux::get_env_var("PLUDUX_BACKTEST_CSV_DATA_PATH").value_or("");
 
   auto json_strategy_file = std::ifstream{json_strategy_path};
-  auto strategy =
-   pludux::parse_backtest_strategy_json("Strategy", json_strategy_file);
+  auto strategy = pludux::backtest::parse_backtest_strategy_json(
+   "Strategy", json_strategy_file);
   auto strategy_ptr = std::make_shared<pludux::backtest::Strategy>(strategy);
 
   auto csv_stream = std::ifstream{asset_file};
@@ -52,7 +52,7 @@ auto main(int, const char**) -> int
   const auto& backtest_summaries = backtest.summaries();
   const auto& summary = !backtest_summaries.empty()
                          ? backtest_summaries.back()
-                         : pludux::backtest::BacktestingSummary{};
+                         : pludux::backtest::BacktestSummary{};
 
   auto& ostream = std::cout;
 
@@ -79,35 +79,13 @@ auto main(int, const char**) -> int
   ostream << std::format("Unrealized profit: {:.2f}\n",
                          summary.unrealized_pnl());
 
-  const auto ongoing_trade_duration =
-   pludux::format_duration(summary.ongoing_trade_duration());
-  ostream << std::format("Ongoing duration: {}\n", ongoing_trade_duration);
+  const auto unrealized_duration =
+   pludux::format_duration(summary.unrealized_duration());
+  ostream << std::format("Ongoing duration: {}\n", unrealized_duration);
 
   ostream << "\n\n";
   ostream << "CLOSED TRADES\n";
   ostream << "-------------\n";
-  ostream << std::format("Exit signal rate: {:.2f}%\n",
-                         summary.exit_signal_rate() * 100);
-  ostream << std::format("Average exit signal: {:.2f}\n",
-                         summary.average_exit_signal());
-  ostream << std::format("Exit signal EV: {:.2f}\n",
-                         summary.exit_signal_expected_value());
-
-  ostream << std::format("Take profit rate: {:.2f}%\n",
-                         summary.take_profit_rate() * 100);
-  ostream << std::format("Average take profit: {:.2f}\n",
-                         summary.average_take_profit());
-  ostream << std::format("Take profit EV: {:.2f}\n",
-                         summary.take_profit_expected_value());
-
-  ostream << std::format("Stop loss rate: {:.2f}%\n",
-                         summary.stop_loss_rate() * 100);
-  ostream << std::format("Average stop loss: {:.2f}\n",
-                         -summary.average_stop_loss());
-  ostream << std::format("Stop loss EV: {:.2f}\n",
-                         summary.stop_loss_expected_value());
-  ostream << "\n";
-
   ostream << std::format("Expected value (EV): {:.2f}\n",
                          summary.expected_value());
   ostream << std::format("EV to risk rate: {:.2f}%\n",
@@ -126,19 +104,24 @@ auto main(int, const char**) -> int
   // auto is_in_trade = false;
 
   for(int i = 0, ii = backtest_summaries.size(); i < ii; ++i) {
-    const auto& trade = backtest_summaries[i].trade_record();
-
-    if(trade.is_summary_session()) {
-      const auto entry_timestamp = trade.entry_timestamp();
-      const auto exit_timestamp = trade.exit_timestamp();
-      std::cout << "Entry date: " << pludux::format_datetime(entry_timestamp)
-                << "Exit date: "
-                << (trade.is_open() ? "N/A"
-                                    : pludux::format_datetime(exit_timestamp))
-                << "Position size: " << trade.position_size() << std::endl
-                << "Reason: " << static_cast<int>(trade.status()) << std::endl
-                << "Profit: " << trade.pnl() << std::endl
-                << std::endl;
+    const auto& session = backtest_summaries[i].trade_session();
+    for(const auto& record : session.trade_record_range()) {
+      if(!record.is_open() || record.exit_index() == 0) {
+        const auto entry_timestamp = record.entry_timestamp();
+        const auto exit_timestamp = record.exit_timestamp();
+        std::cout << "Entry date: " << pludux::format_datetime(entry_timestamp)
+                  << std::endl
+                  << "Exit date: "
+                  << (record.is_open()
+                       ? "N/A"
+                       : pludux::format_datetime(exit_timestamp))
+                  << std::endl
+                  << "Position size: " << record.position_size() << std::endl
+                  << "Reason: " << static_cast<int>(record.status())
+                  << std::endl
+                  << "Profit: " << record.pnl() << std::endl
+                  << std::endl;
+      }
     }
   }
 
