@@ -127,18 +127,21 @@ auto main(int, const char**) -> int
 
   for(int i = 0, ii = backtest_summaries.size(); i < ii; ++i) {
     const auto& session = backtest_summaries[i].trade_session();
-
-    if(session.is_summary_session()) {
-      for(const auto& trade : session.trade_records()) {
-        const auto entry_timestamp = trade.entry_timestamp();
-        const auto exit_timestamp = trade.exit_timestamp();
+    for(const auto& record : session.trade_record_range()) {
+      if(!record.is_open() || record.exit_index() == 0) {
+        const auto entry_timestamp = record.entry_timestamp();
+        const auto exit_timestamp = record.exit_timestamp();
         std::cout << "Entry date: " << pludux::format_datetime(entry_timestamp)
+                  << std::endl
                   << "Exit date: "
-                  << (trade.is_open() ? "N/A"
-                                      : pludux::format_datetime(exit_timestamp))
-                  << "Position size: " << trade.position_size() << std::endl
-                  << "Reason: " << static_cast<int>(trade.status()) << std::endl
-                  << "Profit: " << trade.pnl() << std::endl
+                  << (record.is_open()
+                       ? "N/A"
+                       : pludux::format_datetime(exit_timestamp))
+                  << std::endl
+                  << "Position size: " << record.position_size() << std::endl
+                  << "Reason: " << static_cast<int>(record.status())
+                  << std::endl
+                  << "Profit: " << record.pnl() << std::endl
                   << std::endl;
       }
     }

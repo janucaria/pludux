@@ -15,30 +15,27 @@
     "percentage": 5,
     "value": 1000
   },
-  "positions": [
-    {
-      "direction": "long",
-      "entry": {
-        "repeat": "sequence",
-        "signal": {
-          "filter": "CROSSOVER",
-          "signal": "CLOSE",
-          "reference": "ma"
-        }
-      },
-      "exit": {
-        "signal": {
-          "filter": "CROSSUNDER",
-          "signal": "CLOSE",
-          "reference": "ma"
-        }
-      },
-      "stopLoss": {
-        "isTrailing": false
-      },
-      "takeProfit": {
-        "riskMultiplier": 3
+  "stopLoss": {
+    "isTrailing": false
+  },
+  "takeProfit": {
+    "riskMultiplier": 3
+  },
+  "longPosition": {
+    "entry": {
+      "repeat": "sequence",
+      "signal": {
+        "filter": "CROSSOVER",
+        "signal": "CLOSE",
+        "reference": "ma"
+      }
+    },
+    "exit": {
+      "signal": {
+        "filter": "CROSSUNDER",
+        "signal": "CLOSE",
+        "reference": "ma"
       }
     }
-  ]
+  }
 }

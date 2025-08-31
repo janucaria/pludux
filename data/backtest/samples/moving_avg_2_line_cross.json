@@ -22,32 +22,29 @@
     "percentage": 5,
     "value": 1000
   },
-  "positions": [
-    {
-      "direction": "long",
-      "entry": {
-        "repeat": "sequence",
-        "signal": {
-          "filter": "CROSSOVER",
-          "signal": "ma-fast",
-          "reference": "ma-slow"
-        }
-      },
-      "exit": {
-        "signal": {
-          "filter": "CROSSUNDER",
-          "signal": "ma-fast",
-          "reference": "ma-slow"
-        }
-      },
-      "stopLoss": {
-        "enabled": true,
-        "isTrailing": false
-      },
-      "takeProfit": {
-        "enabled": true,
-        "riskMultiplier": 3
+  "stopLoss": {
+    "enabled": true,
+    "isTrailing": false
+  },
+  "takeProfit": {
+    "enabled": true,
+    "riskMultiplier": 3
+  },
+  "longPosition": {
+    "entry": {
+      "repeat": "sequence",
+      "signal": {
+        "filter": "CROSSOVER",
+        "signal": "ma-fast",
+        "reference": "ma-slow"
+      }
+    },
+    "exit": {
+      "signal": {
+        "filter": "CROSSUNDER",
+        "signal": "ma-fast",
+        "reference": "ma-slow"
       }
     }
-  ]
+  }
 }

@@ -1,23 +1,16 @@
 {
   "methods": [
     {
-      "method": "KC",
-      "name": "kc_upper",
-      "ma": {
-        "method": "EMA",
-        "period": 20
-      },
-      "range": {
-        "method": "ATR",
-        "period": 10
-      },
-      "multiplier": 2,
+      "method": "BB",
+      "name": "bb-upper",
+      "period": 20,
+      "stddev": 2,
       "output": "upper"
     },
     {
-      "method": "KC",
-      "name": "kc_lower",
-      "extends": "kc_upper",
+      "method": "BB",
+      "name": "bb-lower",
+      "extends": "bb-upper",
       "output": "lower"
     }
   ],
@@ -30,24 +23,26 @@
     "percentage": 5,
     "value": 1000
   },
-  "stopLoss": true,
-  "takeProfit": {
-    "riskMultiplier": 5
+  "stopLoss": {
+    "isTrailing": true
   },
-  "longPosition": {
+  "takeProfit": {
+    "riskMultiplier": 2
+  },
+  "shortPosition": {
     "entry": {
       "repeat": "sequence",
       "signal": {
         "filter": "CROSSOVER",
         "signal": "CLOSE",
-        "reference": "kc_lower"
+        "reference": "bb-lower"
       }
     },
     "exit": {
       "signal": {
         "filter": "CROSSUNDER",
         "signal": "CLOSE",
-        "reference": "kc_upper"
+        "reference": "bb-upper"
       }
     }
   }

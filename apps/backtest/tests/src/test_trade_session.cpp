@@ -2,603 +2,268 @@
 
 #include <pludux/backtest/trade_session.hpp>
 
+using namespace pludux;
 using namespace pludux::backtest;
 
 TEST(TradeSessionTest, DefaultConstructor)
 {
   auto session = TradeSession{};
 
-  EXPECT_TRUE(std::isnan(session.take_profit_price()));
-  EXPECT_TRUE(std::isnan(session.stop_loss_price()));
-  EXPECT_TRUE(std::isnan(session.trailing_stop_price()));
-  EXPECT_TRUE(session.trade_records().empty());
+  EXPECT_FALSE(session.open_position().has_value());
+  EXPECT_FALSE(session.closed_position().has_value());
+  EXPECT_EQ(session.market_timestamp(), std::time_t{0});
+  EXPECT_TRUE(std::isnan(session.market_price()));
+  EXPECT_EQ(session.market_index(), std::size_t{0});
 
-  EXPECT_TRUE(std::isnan(session.position_size()));
-  EXPECT_DOUBLE_EQ(session.investment(), 0.0);
-  EXPECT_TRUE(std::isnan(session.average_price()));
-  EXPECT_TRUE(std::isnan(session.exit_price()));
-  EXPECT_EQ(session.entry_index(), std::size_t{0});
-  EXPECT_EQ(session.exit_index(), std::size_t{0});
-  EXPECT_DOUBLE_EQ(session.pnl(), 0.0);
-  EXPECT_EQ(session.duration(), std::time_t{0});
+  EXPECT_DOUBLE_EQ(session.unrealized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.partial_realized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.unrealized_investment(), 0.0);
+  EXPECT_EQ(session.unrealized_duration(), 0);
+
   EXPECT_TRUE(session.is_flat());
   EXPECT_FALSE(session.is_open());
   EXPECT_FALSE(session.is_closed());
-  EXPECT_FALSE(session.is_closed_exit_signal());
-  EXPECT_FALSE(session.is_closed_take_profit());
-  EXPECT_FALSE(session.is_closed_stop_loss());
-  EXPECT_FALSE(session.is_long_position());
-  EXPECT_FALSE(session.is_short_position());
+  EXPECT_FALSE(session.is_reopen());
 }
 
-TEST(TradeSessionTest, ConstructorWithParameters)
+TEST(TradeSessionTest, ConstructorWithMarketParameters)
 {
-  auto take_profit_price = 110.0;
-  auto stop_loss_price = 90.0;
-  auto trailing_stop_price = 95.0;
-  auto trade_records = std::vector<TradeRecord>{};
+  auto session = TradeSession{static_cast<std::time_t>(1), 100.0, 0};
 
-  auto session = TradeSession{
-   take_profit_price, stop_loss_price, trailing_stop_price, trade_records};
+  EXPECT_FALSE(session.open_position().has_value());
+  EXPECT_FALSE(session.closed_position().has_value());
+  EXPECT_EQ(session.market_timestamp(), std::time_t{1});
+  EXPECT_DOUBLE_EQ(session.market_price(), 100.0);
+  EXPECT_EQ(session.market_index(), std::size_t{0});
 
-  EXPECT_DOUBLE_EQ(session.take_profit_price(), take_profit_price);
-  EXPECT_DOUBLE_EQ(session.stop_loss_price(), stop_loss_price);
-  EXPECT_DOUBLE_EQ(session.trailing_stop_price(), trailing_stop_price);
-  EXPECT_TRUE(session.trade_records().empty());
+  EXPECT_DOUBLE_EQ(session.unrealized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.partial_realized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.unrealized_investment(), 0.0);
+  EXPECT_EQ(session.unrealized_duration(), 0);
 
-  auto timestamp = std::time(nullptr);
-  auto price = 100.0;
-  auto index = std::size_t{1};
-  session.market_update(index, timestamp, price);
-
-  EXPECT_TRUE(std::isnan(session.position_size()));
-  EXPECT_DOUBLE_EQ(session.investment(), 0.0);
-  EXPECT_TRUE(std::isnan(session.average_price()));
-  EXPECT_TRUE(std::isnan(session.exit_price()));
-  EXPECT_EQ(session.entry_index(), std::size_t{0});
-  EXPECT_EQ(session.exit_index(), std::size_t{0});
-  EXPECT_EQ(session.entry_timestamp(), std::time_t{0});
-  EXPECT_EQ(session.exit_timestamp(), std::time_t{0});
-  EXPECT_DOUBLE_EQ(session.pnl(), 0.0);
-  EXPECT_EQ(session.duration(), std::time_t{0});
   EXPECT_TRUE(session.is_flat());
   EXPECT_FALSE(session.is_open());
   EXPECT_FALSE(session.is_closed());
-  EXPECT_FALSE(session.is_closed_exit_signal());
-  EXPECT_FALSE(session.is_closed_take_profit());
-  EXPECT_FALSE(session.is_closed_stop_loss());
-  EXPECT_FALSE(session.is_long_position());
-  EXPECT_FALSE(session.is_short_position());
+  EXPECT_FALSE(session.is_reopen());
 }
 
 TEST(TradeSessionTest, OpenLongPosition)
 {
-  auto session = TradeSession{};
-  session.emplace_action(
-   2.0, static_cast<std::time_t>(20), 100.0, 1, TradeAction::Reason::entry);
+  auto session = TradeSession{static_cast<std::time_t>(20), 100.0, 1};
 
-  EXPECT_DOUBLE_EQ(session.position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(session.investment(), 200.0);
-  EXPECT_DOUBLE_EQ(session.average_price(), 100.0);
-  EXPECT_DOUBLE_EQ(session.exit_price(), 100.0);
-  EXPECT_EQ(session.entry_index(), 1);
-  EXPECT_EQ(session.exit_index(), 1);
-  EXPECT_EQ(session.entry_timestamp(), static_cast<std::time_t>(20));
-  EXPECT_EQ(session.exit_timestamp(), std::time_t{20});
-  EXPECT_DOUBLE_EQ(session.pnl(), 0.0);
-  EXPECT_EQ(session.duration(), std::time_t{0});
+  auto trade_entry = TradeEntry{2.0, 100.0};
+  session.entry_position(trade_entry);
+
+  EXPECT_TRUE(session.open_position().has_value());
+  EXPECT_FALSE(session.closed_position().has_value());
+
+  EXPECT_DOUBLE_EQ(session.unrealized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.partial_realized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.unrealized_investment(), 200.0);
+  EXPECT_EQ(session.unrealized_duration(), 0);
+
   EXPECT_FALSE(session.is_flat());
   EXPECT_TRUE(session.is_open());
   EXPECT_FALSE(session.is_closed());
-  EXPECT_FALSE(session.is_closed_exit_signal());
-  EXPECT_FALSE(session.is_closed_take_profit());
-  EXPECT_FALSE(session.is_closed_stop_loss());
-  EXPECT_TRUE(session.is_long_position());
-  EXPECT_FALSE(session.is_short_position());
+  EXPECT_FALSE(session.is_reopen());
 
-  session.market_update(2, static_cast<std::time_t>(25), 105.0);
-  EXPECT_DOUBLE_EQ(session.exit_price(), 105.0);
-  EXPECT_EQ(session.exit_index(), 2);
-  EXPECT_EQ(session.exit_timestamp(), static_cast<std::time_t>(25));
-  EXPECT_DOUBLE_EQ(session.pnl(), 10.0);
-  EXPECT_EQ(session.duration(), static_cast<std::time_t>(5));
-  EXPECT_FALSE(session.is_flat());
-  EXPECT_TRUE(session.is_open());
-  EXPECT_FALSE(session.is_closed());
-  EXPECT_FALSE(session.is_closed_exit_signal());
-  EXPECT_FALSE(session.is_closed_take_profit());
-  EXPECT_FALSE(session.is_closed_stop_loss());
+  session.market_update(static_cast<std::time_t>(25), 105.0, 5);
+
+  EXPECT_DOUBLE_EQ(session.unrealized_pnl(), 10.0);
+  EXPECT_DOUBLE_EQ(session.partial_realized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.unrealized_investment(), 200.0);
+  EXPECT_EQ(session.unrealized_duration(), 5);
 }
 
 TEST(TradeSessionTest, CloseLongPositionWithExit)
 {
-  auto session = TradeSession{};
+  auto session = TradeSession{static_cast<std::time_t>(20), 100.0, 1};
 
-  session.emplace_action(
-   2.0, static_cast<std::time_t>(20), 100.0, 1, TradeAction::Reason::entry);
-  session.emplace_action(
-   -2.0, static_cast<std::time_t>(30), 105.0, 3, TradeAction::Reason::exit);
+  auto trade_entry = TradeEntry{2.0, 100.0};
+  auto trade_exit = TradeExit{2.0, 105.0, TradeExit::Reason::signal};
 
-  EXPECT_DOUBLE_EQ(session.position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(session.investment(), 200.0);
-  EXPECT_DOUBLE_EQ(session.average_price(), 100.0);
-  EXPECT_EQ(session.exit_price(), 105.0);
-  EXPECT_EQ(session.entry_index(), 1);
-  EXPECT_EQ(session.exit_index(), 3);
-  EXPECT_EQ(session.entry_timestamp(), static_cast<std::time_t>(20));
-  EXPECT_EQ(session.exit_timestamp(), static_cast<std::time_t>(30));
-  EXPECT_DOUBLE_EQ(session.pnl(), 10.0);
-  EXPECT_EQ(session.duration(), static_cast<std::time_t>(10));
+  session.entry_position(trade_entry);
+  session.exit_position(trade_exit);
+
+  EXPECT_FALSE(session.open_position().has_value());
+  EXPECT_TRUE(session.closed_position().has_value());
+
+  EXPECT_DOUBLE_EQ(session.unrealized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.partial_realized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.unrealized_investment(), 0.0);
+  EXPECT_EQ(session.unrealized_duration(), 0);
+
   EXPECT_FALSE(session.is_flat());
   EXPECT_FALSE(session.is_open());
   EXPECT_TRUE(session.is_closed());
-  EXPECT_TRUE(session.is_closed_exit_signal());
-  EXPECT_FALSE(session.is_closed_take_profit());
-  EXPECT_FALSE(session.is_closed_stop_loss());
-  EXPECT_TRUE(session.is_long_position());
-  EXPECT_FALSE(session.is_short_position());
-
-  const auto& trade_records = session.trade_records();
-  ASSERT_EQ(trade_records.size(), 1);
-
-  auto& closed_record = trade_records[0];
-  EXPECT_EQ(closed_record.status(), TradeRecord::Status::closed_exit_signal);
-  EXPECT_DOUBLE_EQ(closed_record.position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(closed_record.investment(), 200.0);
-  EXPECT_DOUBLE_EQ(closed_record.average_price(), 100.0);
-  EXPECT_DOUBLE_EQ(closed_record.entry_price(), 100.0);
-  EXPECT_DOUBLE_EQ(closed_record.exit_price(), 105.0);
-  EXPECT_EQ(closed_record.entry_index(), 1);
-  EXPECT_EQ(closed_record.exit_index(), 3);
-  EXPECT_EQ(closed_record.entry_timestamp(), static_cast<std::time_t>(20));
-  EXPECT_EQ(closed_record.exit_timestamp(), static_cast<std::time_t>(30));
-  EXPECT_DOUBLE_EQ(closed_record.pnl(), 10.0);
-  EXPECT_EQ(closed_record.duration(), static_cast<std::time_t>(10));
-  EXPECT_FALSE(closed_record.is_open());
-  EXPECT_TRUE(closed_record.is_closed());
-  EXPECT_TRUE(closed_record.is_closed_exit_signal());
-  EXPECT_FALSE(closed_record.is_closed_take_profit());
-  EXPECT_FALSE(closed_record.is_closed_stop_loss());
-  EXPECT_FALSE(closed_record.is_scaled());
-  EXPECT_FALSE(closed_record.is_scaled_in());
-  EXPECT_FALSE(closed_record.is_scaled_out());
+  EXPECT_FALSE(session.is_reopen());
 }
 
 TEST(TradeSessionTest, LongPositionScaleIn)
 {
-  auto session = TradeSession{};
+  auto session = TradeSession{static_cast<std::time_t>(20), 100.0, 1};
 
-  session.emplace_action(
-   2.0, static_cast<std::time_t>(20), 100.0, 1, TradeAction::Reason::entry);
-  session.emplace_action(
-   1.0, static_cast<std::time_t>(25), 130.0, 5, TradeAction::Reason::entry);
+  auto first_entry = TradeEntry{2.0, 100.0};
+  session.entry_position(first_entry);
 
-  EXPECT_DOUBLE_EQ(session.position_size(), 3.0);
-  EXPECT_DOUBLE_EQ(session.investment(), 330.0);
-  EXPECT_DOUBLE_EQ(session.average_price(), 110.0);
-  EXPECT_DOUBLE_EQ(session.exit_price(), 130.0);
-  EXPECT_EQ(session.entry_index(), 1);
-  EXPECT_EQ(session.exit_index(), 5);
-  EXPECT_EQ(session.entry_timestamp(), static_cast<std::time_t>(20));
-  EXPECT_EQ(session.exit_timestamp(), static_cast<std::time_t>(25));
-  EXPECT_DOUBLE_EQ(session.pnl(), 60.0);
-  EXPECT_EQ(session.duration(), static_cast<std::time_t>(5));
+  session.market_update(static_cast<std::time_t>(25), 130.0, 5);
+
+  auto second_entry = TradeEntry{1.0, 130.0};
+  session.entry_position(second_entry);
+
+  EXPECT_TRUE(session.open_position().has_value());
+  EXPECT_FALSE(session.closed_position().has_value());
+
+  EXPECT_DOUBLE_EQ(session.unrealized_pnl(), 60.0);
+  EXPECT_DOUBLE_EQ(session.partial_realized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.unrealized_investment(), 330.0);
+  EXPECT_EQ(session.unrealized_duration(), 5);
+
   EXPECT_FALSE(session.is_flat());
   EXPECT_TRUE(session.is_open());
   EXPECT_FALSE(session.is_closed());
-  EXPECT_FALSE(session.is_closed_exit_signal());
-  EXPECT_FALSE(session.is_closed_take_profit());
-  EXPECT_FALSE(session.is_closed_stop_loss());
-  EXPECT_TRUE(session.is_long_position());
-  EXPECT_FALSE(session.is_short_position());
+  EXPECT_FALSE(session.is_reopen());
 
-  const auto& trade_records = session.trade_records();
-  ASSERT_EQ(trade_records.size(), 2);
-
-  auto& scaled_record = trade_records[0];
-  EXPECT_EQ(scaled_record.status(), TradeRecord::Status::scaled_in);
-  EXPECT_DOUBLE_EQ(scaled_record.position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(scaled_record.investment(), 200.0);
-  EXPECT_DOUBLE_EQ(scaled_record.average_price(), 100.0);
-  EXPECT_DOUBLE_EQ(scaled_record.entry_price(), 100.0);
-  EXPECT_DOUBLE_EQ(scaled_record.exit_price(), scaled_record.average_price());
-  EXPECT_EQ(scaled_record.entry_index(), 1);
-  EXPECT_EQ(scaled_record.exit_index(), 5);
-  EXPECT_EQ(scaled_record.entry_timestamp(), static_cast<std::time_t>(20));
-  EXPECT_EQ(scaled_record.exit_timestamp(), static_cast<std::time_t>(25));
-  EXPECT_DOUBLE_EQ(scaled_record.pnl(), 0.0);
-  EXPECT_EQ(scaled_record.duration(), static_cast<std::time_t>(5));
-  EXPECT_FALSE(scaled_record.is_open());
-  EXPECT_FALSE(scaled_record.is_closed());
-  EXPECT_FALSE(scaled_record.is_closed_exit_signal());
-  EXPECT_FALSE(scaled_record.is_closed_take_profit());
-  EXPECT_FALSE(scaled_record.is_closed_stop_loss());
-  EXPECT_TRUE(scaled_record.is_scaled());
-  EXPECT_TRUE(scaled_record.is_scaled_in());
-  EXPECT_FALSE(scaled_record.is_scaled_out());
-
-  auto& open_record = trade_records[1];
-  EXPECT_EQ(open_record.status(), TradeRecord::Status::open);
-  EXPECT_DOUBLE_EQ(open_record.position_size(), 3.0);
-  EXPECT_DOUBLE_EQ(open_record.investment(), 330.0);
-  EXPECT_DOUBLE_EQ(open_record.average_price(), 110.0);
-  EXPECT_DOUBLE_EQ(open_record.entry_price(), 130.0);
-  EXPECT_DOUBLE_EQ(open_record.exit_price(), 130.0);
-  EXPECT_EQ(open_record.entry_index(), 5);
-  EXPECT_EQ(open_record.exit_index(), 5);
-  EXPECT_EQ(open_record.entry_timestamp(), static_cast<std::time_t>(25));
-  EXPECT_EQ(open_record.exit_timestamp(), static_cast<std::time_t>(25));
-  EXPECT_DOUBLE_EQ(open_record.pnl(), 60.0);
-  EXPECT_EQ(open_record.duration(), static_cast<std::time_t>(0));
-  EXPECT_TRUE(open_record.is_open());
-  EXPECT_FALSE(open_record.is_closed());
-  EXPECT_FALSE(open_record.is_closed_exit_signal());
-  EXPECT_FALSE(open_record.is_closed_take_profit());
-  EXPECT_FALSE(open_record.is_closed_stop_loss());
-  EXPECT_FALSE(open_record.is_scaled());
-  EXPECT_FALSE(open_record.is_scaled_in());
-  EXPECT_FALSE(open_record.is_scaled_out());
-
-  session.market_update(7, static_cast<std::time_t>(30), 105.0);
-  EXPECT_EQ(open_record.status(), TradeRecord::Status::open);
-  EXPECT_DOUBLE_EQ(open_record.position_size(), 3.0);
-  EXPECT_DOUBLE_EQ(open_record.investment(), 330.0);
-  EXPECT_DOUBLE_EQ(open_record.average_price(), 110.0);
-  EXPECT_DOUBLE_EQ(open_record.entry_price(), 130.0);
-  EXPECT_DOUBLE_EQ(open_record.exit_price(), 105.0);
-  EXPECT_EQ(open_record.entry_index(), 5);
-  EXPECT_EQ(open_record.exit_index(), 7);
-  EXPECT_EQ(open_record.entry_timestamp(), static_cast<std::time_t>(25));
-  EXPECT_EQ(open_record.exit_timestamp(), static_cast<std::time_t>(30));
-  EXPECT_DOUBLE_EQ(open_record.pnl(), -15.0);
-  EXPECT_EQ(open_record.duration(), static_cast<std::time_t>(5));
-  EXPECT_TRUE(open_record.is_open());
-  EXPECT_FALSE(open_record.is_closed());
-  EXPECT_FALSE(open_record.is_closed_exit_signal());
-  EXPECT_FALSE(open_record.is_closed_take_profit());
-  EXPECT_FALSE(open_record.is_closed_stop_loss());
-  EXPECT_FALSE(open_record.is_scaled());
-  EXPECT_FALSE(open_record.is_scaled_in());
-  EXPECT_FALSE(open_record.is_scaled_out());
+  session.market_update(static_cast<std::time_t>(30), 105.0, 7);
+  EXPECT_DOUBLE_EQ(session.unrealized_pnl(), -15.0);
+  EXPECT_DOUBLE_EQ(session.partial_realized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.unrealized_investment(), 330.0);
+  EXPECT_EQ(session.unrealized_duration(), 10);
 }
 
 TEST(TradeSessionTest, LongPositionScaleOut)
 {
-  auto session = TradeSession{};
+  auto session = TradeSession{static_cast<std::time_t>(20), 100.0, 1};
 
-  session.emplace_action(
-   3.0, static_cast<std::time_t>(20), 100.0, 1, TradeAction::Reason::entry);
-  session.emplace_action(
-   -1.0, static_cast<std::time_t>(25), 130.0, 5, TradeAction::Reason::exit);
+  auto trade_entry = TradeEntry{3.0, 100.0};
+  session.entry_position(trade_entry);
 
-  session.market_update(6, static_cast<std::time_t>(30), 120.0);
+  session.market_update(static_cast<std::time_t>(25), 120.0, 5);
 
-  EXPECT_DOUBLE_EQ(session.position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(session.investment(), 300.0);
-  EXPECT_DOUBLE_EQ(session.average_price(), 100.0);
-  EXPECT_DOUBLE_EQ(session.exit_price(), 120.0);
-  EXPECT_EQ(session.entry_index(), 1);
-  EXPECT_EQ(session.exit_index(), 6);
-  EXPECT_EQ(session.entry_timestamp(), static_cast<std::time_t>(20));
-  EXPECT_EQ(session.exit_timestamp(), static_cast<std::time_t>(30));
-  EXPECT_DOUBLE_EQ(session.pnl(), 70.0);
-  EXPECT_EQ(session.duration(), static_cast<std::time_t>(10));
+  auto trade_exit = TradeExit{1.0, 130.0, TradeExit::Reason::signal};
+  session.exit_position(trade_exit);
+
+  EXPECT_TRUE(session.open_position().has_value());
+  EXPECT_FALSE(session.closed_position().has_value());
+
+  EXPECT_DOUBLE_EQ(session.unrealized_pnl(), 40.0);
+  EXPECT_DOUBLE_EQ(session.partial_realized_pnl(), 30.0);
+  EXPECT_DOUBLE_EQ(session.unrealized_investment(), 200.0);
+  EXPECT_EQ(session.unrealized_duration(), 5);
+
   EXPECT_FALSE(session.is_flat());
   EXPECT_TRUE(session.is_open());
   EXPECT_FALSE(session.is_closed());
-  EXPECT_FALSE(session.is_closed_exit_signal());
-  EXPECT_FALSE(session.is_closed_take_profit());
-  EXPECT_FALSE(session.is_closed_stop_loss());
-  EXPECT_TRUE(session.is_long_position());
-  EXPECT_FALSE(session.is_short_position());
-
-  const auto& trade_records = session.trade_records();
-  ASSERT_EQ(trade_records.size(), 2);
-
-  auto& scaled_record = trade_records[0];
-  EXPECT_EQ(scaled_record.status(), TradeRecord::Status::scaled_out);
-  EXPECT_DOUBLE_EQ(scaled_record.position_size(), 1.0);
-  EXPECT_DOUBLE_EQ(scaled_record.investment(), 100.0);
-  EXPECT_DOUBLE_EQ(scaled_record.average_price(), 100.0);
-  EXPECT_DOUBLE_EQ(scaled_record.exit_price(), 130.0);
-  EXPECT_EQ(scaled_record.entry_index(), 1);
-  EXPECT_EQ(scaled_record.exit_index(), 5);
-  EXPECT_EQ(scaled_record.entry_timestamp(), static_cast<std::time_t>(20));
-  EXPECT_EQ(scaled_record.exit_timestamp(), static_cast<std::time_t>(25));
-  EXPECT_DOUBLE_EQ(scaled_record.pnl(), 30.0);
-  EXPECT_EQ(scaled_record.duration(), static_cast<std::time_t>(5));
-  EXPECT_FALSE(scaled_record.is_open());
-  EXPECT_FALSE(scaled_record.is_closed());
-  EXPECT_FALSE(scaled_record.is_closed_exit_signal());
-  EXPECT_FALSE(scaled_record.is_closed_take_profit());
-  EXPECT_FALSE(scaled_record.is_closed_stop_loss());
-  EXPECT_TRUE(scaled_record.is_scaled());
-  EXPECT_FALSE(scaled_record.is_scaled_in());
-  EXPECT_TRUE(scaled_record.is_scaled_out());
-
-  auto& open_record = trade_records[1];
-  EXPECT_EQ(open_record.status(), TradeRecord::Status::open);
-  EXPECT_DOUBLE_EQ(open_record.position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(open_record.investment(), 200.0);
-  EXPECT_DOUBLE_EQ(open_record.average_price(), 100.0);
-  EXPECT_DOUBLE_EQ(open_record.entry_price(), 100.0);
-  EXPECT_DOUBLE_EQ(open_record.exit_price(), 120.0);
-  EXPECT_EQ(open_record.entry_index(), 5);
-  EXPECT_EQ(open_record.exit_index(), 6);
-  EXPECT_EQ(open_record.entry_timestamp(), static_cast<std::time_t>(25));
-  EXPECT_EQ(open_record.exit_timestamp(), static_cast<std::time_t>(30));
-  EXPECT_DOUBLE_EQ(open_record.pnl(), 40.0);
-  EXPECT_EQ(open_record.duration(), static_cast<std::time_t>(5));
-  EXPECT_TRUE(open_record.is_open());
-  EXPECT_FALSE(open_record.is_closed());
-  EXPECT_FALSE(open_record.is_closed_exit_signal());
-  EXPECT_FALSE(open_record.is_closed_take_profit());
-  EXPECT_FALSE(open_record.is_closed_stop_loss());
-  EXPECT_FALSE(open_record.is_scaled());
-  EXPECT_FALSE(open_record.is_scaled_in());
-  EXPECT_FALSE(open_record.is_scaled_out());
+  EXPECT_FALSE(session.is_reopen());
 }
 
 TEST(TradeSessionTest, OpenShortPosition)
 {
-  auto session = TradeSession{};
-  session.emplace_action(
-   -2.0, static_cast<std::time_t>(20), 100.0, 1, TradeAction::Reason::entry);
+  auto session = TradeSession{static_cast<std::time_t>(20), 100.0, 1};
 
-  EXPECT_DOUBLE_EQ(session.position_size(), -2.0);
-  EXPECT_DOUBLE_EQ(session.investment(), -200.0);
-  EXPECT_DOUBLE_EQ(session.average_price(), 100.0);
-  EXPECT_DOUBLE_EQ(session.exit_price(), 100.0);
-  EXPECT_EQ(session.entry_index(), 1);
-  EXPECT_EQ(session.exit_index(), 1);
-  EXPECT_EQ(session.entry_timestamp(), static_cast<std::time_t>(20));
-  EXPECT_EQ(session.exit_timestamp(), std::time_t{20});
-  EXPECT_DOUBLE_EQ(session.pnl(), 0.0);
-  EXPECT_EQ(session.duration(), std::time_t{0});
+  auto trade_entry = TradeEntry{-2.0, 100.0};
+  session.entry_position(trade_entry);
+
+  EXPECT_TRUE(session.open_position().has_value());
+  EXPECT_FALSE(session.closed_position().has_value());
+
+  EXPECT_DOUBLE_EQ(session.unrealized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.partial_realized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.unrealized_investment(), -200.0);
+  EXPECT_EQ(session.unrealized_duration(), 0);
+
   EXPECT_FALSE(session.is_flat());
   EXPECT_TRUE(session.is_open());
   EXPECT_FALSE(session.is_closed());
-  EXPECT_FALSE(session.is_closed_exit_signal());
-  EXPECT_FALSE(session.is_closed_take_profit());
-  EXPECT_FALSE(session.is_closed_stop_loss());
-  EXPECT_FALSE(session.is_long_position());
-  EXPECT_TRUE(session.is_short_position());
+  EXPECT_FALSE(session.is_reopen());
 
-  session.market_update(2, static_cast<std::time_t>(25), 95.0);
-  EXPECT_DOUBLE_EQ(session.exit_price(), 95.0);
-  EXPECT_EQ(session.exit_index(), 2);
-  EXPECT_EQ(session.exit_timestamp(), static_cast<std::time_t>(25));
-  EXPECT_DOUBLE_EQ(session.pnl(), 10.0);
-  EXPECT_EQ(session.duration(), static_cast<std::time_t>(5));
+  session.market_update(static_cast<std::time_t>(25), 95.0, 2);
+
+  EXPECT_DOUBLE_EQ(session.unrealized_pnl(), 10.0);
+  EXPECT_DOUBLE_EQ(session.partial_realized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.unrealized_investment(), -200.0);
+  EXPECT_EQ(session.unrealized_duration(), 5);
 }
 
 TEST(TradeSessionTest, CloseShortPositionWithExit)
 {
-  auto session = TradeSession{};
+  auto session = TradeSession{static_cast<std::time_t>(20), 100.0, 1};
 
-  session.emplace_action(
-   -2.0, static_cast<std::time_t>(20), 100.0, 1, TradeAction::Reason::entry);
-  session.emplace_action(
-   2.0, static_cast<std::time_t>(30), 95.0, 3, TradeAction::Reason::exit);
+  auto trade_entry = TradeEntry{-2.0, 100.0};
+  session.entry_position(trade_entry);
 
-  EXPECT_DOUBLE_EQ(session.position_size(), -2.0);
-  EXPECT_DOUBLE_EQ(session.investment(), -200.0);
-  EXPECT_DOUBLE_EQ(session.average_price(), 100.0);
-  EXPECT_EQ(session.exit_price(), 95.0);
-  EXPECT_EQ(session.entry_index(), 1);
-  EXPECT_EQ(session.exit_index(), 3);
-  EXPECT_EQ(session.entry_timestamp(), static_cast<std::time_t>(20));
-  EXPECT_EQ(session.exit_timestamp(), static_cast<std::time_t>(30));
-  EXPECT_DOUBLE_EQ(session.pnl(), 10.0);
-  EXPECT_EQ(session.duration(), static_cast<std::time_t>(10));
+  session.market_update(static_cast<std::time_t>(30), 95.0, 3);
+  auto trade_exit = TradeExit{-2.0, 95.0, TradeExit::Reason::signal};
+  session.exit_position(trade_exit);
+
+  EXPECT_FALSE(session.open_position().has_value());
+  EXPECT_TRUE(session.closed_position().has_value());
+
+  EXPECT_DOUBLE_EQ(session.unrealized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.partial_realized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.unrealized_investment(), 0.0);
+  EXPECT_EQ(session.unrealized_duration(), 0);
+
   EXPECT_FALSE(session.is_flat());
   EXPECT_FALSE(session.is_open());
   EXPECT_TRUE(session.is_closed());
-  EXPECT_TRUE(session.is_closed_exit_signal());
-  EXPECT_FALSE(session.is_closed_take_profit());
-  EXPECT_FALSE(session.is_closed_stop_loss());
-  EXPECT_FALSE(session.is_long_position());
-  EXPECT_TRUE(session.is_short_position());
-
-  const auto& trade_records = session.trade_records();
-  ASSERT_EQ(trade_records.size(), 1);
-
-  auto& closed_record = trade_records[0];
-  EXPECT_EQ(closed_record.status(), TradeRecord::Status::closed_exit_signal);
-  EXPECT_DOUBLE_EQ(closed_record.position_size(), -2.0);
-  EXPECT_DOUBLE_EQ(closed_record.investment(), -200.0);
-  EXPECT_DOUBLE_EQ(closed_record.average_price(), 100.0);
-  EXPECT_DOUBLE_EQ(closed_record.entry_price(), 100.0);
-  EXPECT_DOUBLE_EQ(closed_record.exit_price(), 95.0);
-  EXPECT_EQ(closed_record.entry_index(), 1);
-  EXPECT_EQ(closed_record.exit_index(), 3);
-  EXPECT_EQ(closed_record.entry_timestamp(), static_cast<std::time_t>(20));
-  EXPECT_EQ(closed_record.exit_timestamp(), static_cast<std::time_t>(30));
-  EXPECT_DOUBLE_EQ(closed_record.pnl(), 10.0);
-  EXPECT_EQ(closed_record.duration(), static_cast<std::time_t>(10));
-  EXPECT_FALSE(closed_record.is_open());
-  EXPECT_TRUE(closed_record.is_closed());
-  EXPECT_TRUE(closed_record.is_closed_exit_signal());
-  EXPECT_FALSE(closed_record.is_closed_take_profit());
-  EXPECT_FALSE(closed_record.is_closed_stop_loss());
-  EXPECT_FALSE(closed_record.is_long_position());
-  EXPECT_TRUE(closed_record.is_short_position());
-  EXPECT_FALSE(closed_record.is_scaled());
-  EXPECT_FALSE(closed_record.is_scaled_in());
-  EXPECT_FALSE(closed_record.is_scaled_out());
+  EXPECT_FALSE(session.is_reopen());
 }
 
 TEST(TradeSessionTest, ShortPositionScaleIn)
 {
   auto session = TradeSession{};
 
-  session.emplace_action(
-   -1.0, static_cast<std::time_t>(20), 130.0, 1, TradeAction::Reason::entry);
-  session.emplace_action(
-   -2.0, static_cast<std::time_t>(25), 100.0, 5, TradeAction::Reason::entry);
+  session.market_update(static_cast<std::time_t>(20), 130.0, 1);
+  auto first_entry = TradeEntry{-1.0, 130.0};
+  session.entry_position(first_entry);
 
-  EXPECT_DOUBLE_EQ(session.position_size(), -3.0);
-  EXPECT_DOUBLE_EQ(session.investment(), -330.0);
-  EXPECT_DOUBLE_EQ(session.average_price(), 110.0);
-  EXPECT_DOUBLE_EQ(session.exit_price(), 100.0);
-  EXPECT_EQ(session.entry_index(), 1);
-  EXPECT_EQ(session.exit_index(), 5);
-  EXPECT_EQ(session.entry_timestamp(), static_cast<std::time_t>(20));
-  EXPECT_EQ(session.exit_timestamp(), static_cast<std::time_t>(25));
-  EXPECT_DOUBLE_EQ(session.pnl(), 30.0);
-  EXPECT_EQ(session.duration(), static_cast<std::time_t>(5));
+  session.market_update(static_cast<std::time_t>(25), 100.0, 5);
+  auto second_entry = TradeEntry{-2.0, 100.0};
+  session.entry_position(second_entry);
+
+  EXPECT_TRUE(session.open_position().has_value());
+  EXPECT_FALSE(session.closed_position().has_value());
+
+  EXPECT_DOUBLE_EQ(session.unrealized_pnl(), 30.0);
+  EXPECT_DOUBLE_EQ(session.partial_realized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.unrealized_investment(), -330.0);
+  EXPECT_EQ(session.unrealized_duration(), 5);
+
   EXPECT_FALSE(session.is_flat());
   EXPECT_TRUE(session.is_open());
   EXPECT_FALSE(session.is_closed());
-  EXPECT_FALSE(session.is_closed_exit_signal());
-  EXPECT_FALSE(session.is_closed_take_profit());
-  EXPECT_FALSE(session.is_closed_stop_loss());
-  EXPECT_FALSE(session.is_long_position());
-  EXPECT_TRUE(session.is_short_position());
+  EXPECT_FALSE(session.is_reopen());
 
-  const auto& trade_records = session.trade_records();
-  ASSERT_EQ(trade_records.size(), 2);
-
-  auto& scaled_record = trade_records[0];
-  EXPECT_EQ(scaled_record.status(), TradeRecord::Status::scaled_in);
-  EXPECT_DOUBLE_EQ(scaled_record.position_size(), -1.0);
-  EXPECT_DOUBLE_EQ(scaled_record.investment(), -130.0);
-  EXPECT_DOUBLE_EQ(scaled_record.average_price(), 130.0);
-  EXPECT_DOUBLE_EQ(scaled_record.entry_price(), 130.0);
-  EXPECT_DOUBLE_EQ(scaled_record.exit_price(), scaled_record.average_price());
-  EXPECT_EQ(scaled_record.entry_index(), 1);
-  EXPECT_EQ(scaled_record.exit_index(), 5);
-  EXPECT_EQ(scaled_record.entry_timestamp(), static_cast<std::time_t>(20));
-  EXPECT_EQ(scaled_record.exit_timestamp(), static_cast<std::time_t>(25));
-  EXPECT_DOUBLE_EQ(scaled_record.pnl(), 0.0);
-  EXPECT_EQ(scaled_record.duration(), static_cast<std::time_t>(5));
-  EXPECT_FALSE(scaled_record.is_open());
-  EXPECT_FALSE(scaled_record.is_closed());
-  EXPECT_FALSE(scaled_record.is_closed_exit_signal());
-  EXPECT_FALSE(scaled_record.is_closed_take_profit());
-  EXPECT_FALSE(scaled_record.is_closed_stop_loss());
-  EXPECT_TRUE(scaled_record.is_scaled());
-  EXPECT_TRUE(scaled_record.is_scaled_in());
-  EXPECT_FALSE(scaled_record.is_scaled_out());
-
-  auto& open_record = trade_records[1];
-  EXPECT_EQ(open_record.status(), TradeRecord::Status::open);
-  EXPECT_DOUBLE_EQ(open_record.position_size(), -3.0);
-  EXPECT_DOUBLE_EQ(open_record.investment(), -330.0);
-  EXPECT_DOUBLE_EQ(open_record.average_price(), 110.0);
-  EXPECT_DOUBLE_EQ(open_record.entry_price(), 100.0);
-  EXPECT_DOUBLE_EQ(open_record.exit_price(), 100.0);
-  EXPECT_EQ(open_record.entry_index(), 5);
-  EXPECT_EQ(open_record.exit_index(), 5);
-  EXPECT_EQ(open_record.entry_timestamp(), static_cast<std::time_t>(25));
-  EXPECT_EQ(open_record.exit_timestamp(), static_cast<std::time_t>(25));
-  EXPECT_DOUBLE_EQ(open_record.pnl(), 30.0);
-  EXPECT_EQ(open_record.duration(), static_cast<std::time_t>(0));
-  EXPECT_TRUE(open_record.is_open());
-  EXPECT_FALSE(open_record.is_closed());
-  EXPECT_FALSE(open_record.is_closed_exit_signal());
-  EXPECT_FALSE(open_record.is_closed_take_profit());
-  EXPECT_FALSE(open_record.is_closed_stop_loss());
-  EXPECT_FALSE(open_record.is_scaled());
-  EXPECT_FALSE(open_record.is_scaled_in());
-  EXPECT_FALSE(open_record.is_scaled_out());
-
-  session.market_update(7, static_cast<std::time_t>(30), 105.0);
-  EXPECT_EQ(open_record.status(), TradeRecord::Status::open);
-  EXPECT_DOUBLE_EQ(open_record.position_size(), -3.0);
-  EXPECT_DOUBLE_EQ(open_record.investment(), -330.0);
-  EXPECT_DOUBLE_EQ(open_record.average_price(), 110.0);
-  EXPECT_DOUBLE_EQ(open_record.entry_price(), 100.0);
-  EXPECT_DOUBLE_EQ(open_record.exit_price(), 105.0);
-  EXPECT_EQ(open_record.entry_index(), 5);
-  EXPECT_EQ(open_record.exit_index(), 7);
-  EXPECT_EQ(open_record.entry_timestamp(), static_cast<std::time_t>(25));
-  EXPECT_EQ(open_record.exit_timestamp(), static_cast<std::time_t>(30));
-  EXPECT_DOUBLE_EQ(open_record.pnl(), 15.0);
-  EXPECT_EQ(open_record.duration(), static_cast<std::time_t>(5));
-  EXPECT_TRUE(open_record.is_open());
-  EXPECT_FALSE(open_record.is_closed());
-  EXPECT_FALSE(open_record.is_closed_exit_signal());
-  EXPECT_FALSE(open_record.is_closed_take_profit());
-  EXPECT_FALSE(open_record.is_closed_stop_loss());
-  EXPECT_FALSE(open_record.is_scaled());
-  EXPECT_FALSE(open_record.is_scaled_in());
-  EXPECT_FALSE(open_record.is_scaled_out());
+  session.market_update(static_cast<std::time_t>(30), 105.0, 7);
+  EXPECT_DOUBLE_EQ(session.unrealized_pnl(), 15.0);
+  EXPECT_DOUBLE_EQ(session.partial_realized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.unrealized_investment(), -330.0);
+  EXPECT_EQ(session.unrealized_duration(), 10);
 }
 
 TEST(TradeSessionTest, ShortPositionScaleOut)
 {
   auto session = TradeSession{};
 
-  session.emplace_action(
-   -3.0, static_cast<std::time_t>(20), 100.0, 1, TradeAction::Reason::entry);
-  session.emplace_action(
-   1.0, static_cast<std::time_t>(25), 130.0, 5, TradeAction::Reason::exit);
+  session.market_update(static_cast<std::time_t>(20), 100.0, 1);
+  auto trade_entry = TradeEntry{-3.0, 100.0};
+  session.entry_position(trade_entry);
 
-  session.market_update(6, static_cast<std::time_t>(30), 120.0);
+  session.market_update(static_cast<std::time_t>(25), 120.0, 5);
+  auto trade_exit = TradeExit{-1.0, 130.0, TradeExit::Reason::signal};
+  session.exit_position(trade_exit);
 
-  EXPECT_DOUBLE_EQ(session.position_size(), -2.0);
-  EXPECT_DOUBLE_EQ(session.investment(), -300.0);
-  EXPECT_DOUBLE_EQ(session.average_price(), 100.0);
-  EXPECT_DOUBLE_EQ(session.exit_price(), 120.0);
-  EXPECT_EQ(session.entry_index(), 1);
-  EXPECT_EQ(session.exit_index(), 6);
-  EXPECT_EQ(session.entry_timestamp(), static_cast<std::time_t>(20));
-  EXPECT_EQ(session.exit_timestamp(), static_cast<std::time_t>(30));
-  EXPECT_DOUBLE_EQ(session.pnl(), -70.0);
-  EXPECT_EQ(session.duration(), static_cast<std::time_t>(10));
+  EXPECT_TRUE(session.open_position().has_value());
+  EXPECT_FALSE(session.closed_position().has_value());
+
+  EXPECT_DOUBLE_EQ(session.unrealized_pnl(), -40.0);
+  EXPECT_DOUBLE_EQ(session.partial_realized_pnl(), -30.0);
+  EXPECT_DOUBLE_EQ(session.unrealized_investment(), -200.0);
+  EXPECT_EQ(session.unrealized_duration(), 5);
+
   EXPECT_FALSE(session.is_flat());
   EXPECT_TRUE(session.is_open());
   EXPECT_FALSE(session.is_closed());
-  EXPECT_FALSE(session.is_closed_exit_signal());
-  EXPECT_FALSE(session.is_closed_take_profit());
-  EXPECT_FALSE(session.is_closed_stop_loss());
-  EXPECT_FALSE(session.is_long_position());
-  EXPECT_TRUE(session.is_short_position());
-
-  const auto& trade_records = session.trade_records();
-  ASSERT_EQ(trade_records.size(), 2);
-
-  auto& scaled_record = trade_records[0];
-  EXPECT_EQ(scaled_record.status(), TradeRecord::Status::scaled_out);
-  EXPECT_DOUBLE_EQ(scaled_record.position_size(), -1.0);
-  EXPECT_DOUBLE_EQ(scaled_record.investment(), -100.0);
-  EXPECT_DOUBLE_EQ(scaled_record.average_price(), 100.0);
-  EXPECT_DOUBLE_EQ(scaled_record.exit_price(), 130.0);
-  EXPECT_EQ(scaled_record.entry_index(), 1);
-  EXPECT_EQ(scaled_record.exit_index(), 5);
-  EXPECT_EQ(scaled_record.entry_timestamp(), static_cast<std::time_t>(20));
-  EXPECT_EQ(scaled_record.exit_timestamp(), static_cast<std::time_t>(25));
-  EXPECT_DOUBLE_EQ(scaled_record.pnl(), -30.0);
-  EXPECT_EQ(scaled_record.duration(), static_cast<std::time_t>(5));
-  EXPECT_FALSE(scaled_record.is_open());
-  EXPECT_FALSE(scaled_record.is_closed());
-  EXPECT_FALSE(scaled_record.is_closed_exit_signal());
-  EXPECT_FALSE(scaled_record.is_closed_take_profit());
-  EXPECT_FALSE(scaled_record.is_closed_stop_loss());
-  EXPECT_TRUE(scaled_record.is_scaled());
-  EXPECT_FALSE(scaled_record.is_scaled_in());
-  EXPECT_TRUE(scaled_record.is_scaled_out());
-
-  auto& open_record = trade_records[1];
-  EXPECT_EQ(open_record.status(), TradeRecord::Status::open);
-  EXPECT_DOUBLE_EQ(open_record.position_size(), -2.0);
-  EXPECT_DOUBLE_EQ(open_record.investment(), -200.0);
-  EXPECT_DOUBLE_EQ(open_record.average_price(), 100.0);
-  EXPECT_DOUBLE_EQ(open_record.entry_price(), 100.0);
-  EXPECT_DOUBLE_EQ(open_record.exit_price(), 120.0);
-  EXPECT_EQ(open_record.entry_index(), 5);
-  EXPECT_EQ(open_record.exit_index(), 6);
-  EXPECT_EQ(open_record.entry_timestamp(), static_cast<std::time_t>(25));
-  EXPECT_EQ(open_record.exit_timestamp(), static_cast<std::time_t>(30));
-  EXPECT_DOUBLE_EQ(open_record.pnl(), -40.0);
-  EXPECT_EQ(open_record.duration(), static_cast<std::time_t>(5));
-  EXPECT_TRUE(open_record.is_open());
-  EXPECT_FALSE(open_record.is_closed());
-  EXPECT_FALSE(open_record.is_closed_exit_signal());
-  EXPECT_FALSE(open_record.is_closed_take_profit());
-  EXPECT_FALSE(open_record.is_closed_stop_loss());
-  EXPECT_FALSE(open_record.is_scaled());
-  EXPECT_FALSE(open_record.is_scaled_in());
-  EXPECT_FALSE(open_record.is_scaled_out());
+  EXPECT_FALSE(session.is_reopen());
 }

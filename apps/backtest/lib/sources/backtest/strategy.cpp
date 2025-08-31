@@ -7,30 +7,32 @@
 namespace pludux::backtest {
 
 Strategy::Strategy(std::string name,
-                   Direction direction,
-                   RepeatType entry_repeat,
-                   screener::ScreenerFilter entry_filter,
-                   screener::ScreenerFilter exit_filter,
-                   backtest::StopLoss stop_loss,
-                   backtest::TakeProfit take_profit)
+                   screener::ScreenerMethod risk_method,
+                   EntryRepeat long_entry_repeat,
+                   screener::ScreenerFilter long_entry_filter,
+                   screener::ScreenerFilter long_exit_filter,
+                   EntryRepeat short_entry_repeat,
+                   screener::ScreenerFilter short_entry_filter,
+                   screener::ScreenerFilter short_exit_filter,
+                   bool stop_loss_enabled,
+                   bool stop_loss_trailing_enabled,
+                   double stop_loss_risk_multiplier,
+                   bool take_profit_enabled,
+                   double take_profit_risk_multiplier)
 : name_{std::move(name)}
-, direction_{direction}
-, entry_repeat_{entry_repeat}
-, entry_filter_{std::move(entry_filter)}
-, exit_filter_{std::move(exit_filter)}
-, stop_loss_{std::move(stop_loss)}
-, take_profit_{std::move(take_profit)}
+, risk_method_{risk_method}
+, long_entry_repeat_{long_entry_repeat}
+, long_entry_filter_{std::move(long_entry_filter)}
+, long_exit_filter_{std::move(long_exit_filter)}
+, short_entry_repeat_{short_entry_repeat}
+, short_entry_filter_{std::move(short_entry_filter)}
+, short_exit_filter_{std::move(short_exit_filter)}
+, stop_loss_enabled_{stop_loss_enabled}
+, stop_loss_trailing_enabled_{stop_loss_trailing_enabled}
+, stop_loss_risk_multiplier_{stop_loss_risk_multiplier}
+, take_profit_enabled_{take_profit_enabled}
+, take_profit_risk_multiplier_{take_profit_risk_multiplier}
 {
-}
-
-auto Strategy::direction() const noexcept -> Direction
-{
-  return direction_;
-}
-
-void Strategy::direction(Direction dir) noexcept
-{
-  direction_ = dir;
 }
 
 auto Strategy::name() const noexcept -> const std::string&
@@ -38,64 +40,193 @@ auto Strategy::name() const noexcept -> const std::string&
   return name_;
 }
 
-auto Strategy::entry_repeat() const noexcept -> RepeatType
+auto Strategy::risk_method() const noexcept -> const screener::ScreenerMethod&
 {
-  return entry_repeat_;
+  return risk_method_;
 }
 
-void Strategy::entry_repeat(RepeatType repeat_type) noexcept
+auto Strategy::long_entry_repeat() const noexcept -> EntryRepeat
 {
-  entry_repeat_ = repeat_type;
+  return long_entry_repeat_;
 }
 
-auto Strategy::entry_filter() const noexcept -> const screener::ScreenerFilter&
+void Strategy::long_entry_repeat(EntryRepeat repeat_type) noexcept
 {
-  return entry_filter_;
+  long_entry_repeat_ = repeat_type;
 }
 
-auto Strategy::exit_filter() const noexcept -> const screener::ScreenerFilter&
+auto Strategy::long_entry_filter() const noexcept
+ -> const screener::ScreenerFilter&
 {
-  return exit_filter_;
+  return long_entry_filter_;
 }
 
-auto Strategy::stop_loss() const noexcept -> const backtest::StopLoss&
+auto Strategy::long_exit_filter() const noexcept
+ -> const screener::ScreenerFilter&
 {
-  return stop_loss_;
+  return long_exit_filter_;
 }
 
-auto Strategy::take_profit() const noexcept -> const backtest::TakeProfit&
+auto Strategy::short_entry_repeat() const noexcept -> EntryRepeat
 {
-  return take_profit_;
+  return short_entry_repeat_;
 }
 
-auto Strategy::is_entry_repeat_sequence() const noexcept -> bool
+void Strategy::short_entry_repeat(EntryRepeat repeat_type) noexcept
 {
-  return entry_repeat_ == RepeatType::sequence;
+  short_entry_repeat_ = repeat_type;
 }
 
-void Strategy::set_entry_repeat_to_sequence() noexcept
+auto Strategy::short_entry_filter() const noexcept
+ -> const screener::ScreenerFilter&
 {
-  entry_repeat_ = RepeatType::sequence;
+  return short_entry_filter_;
 }
 
-auto Strategy::is_entry_repeat_always() const noexcept -> bool
+auto Strategy::short_exit_filter() const noexcept
+ -> const screener::ScreenerFilter&
 {
-  return entry_repeat_ == RepeatType::always;
+  return short_exit_filter_;
 }
 
-void Strategy::set_entry_repeat_to_always() noexcept
+auto Strategy::stop_loss_enabled() const noexcept -> bool
 {
-  entry_repeat_ = RepeatType::always;
+  return stop_loss_enabled_;
 }
 
-auto Strategy::is_long_direction() const noexcept -> bool
+auto Strategy::stop_loss_trailing_enabled() const noexcept -> bool
 {
-  return direction_ == Direction::long_direction;
+  return stop_loss_trailing_enabled_;
 }
 
-auto Strategy::is_short_direction() const noexcept -> bool
+auto Strategy::stop_loss_risk_multiplier() const noexcept -> double
 {
-  return direction_ == Direction::short_direction;
+  return stop_loss_risk_multiplier_;
+}
+
+auto Strategy::take_profit_enabled() const noexcept -> bool
+{
+  return take_profit_enabled_;
+}
+
+auto Strategy::take_profit_risk_multiplier() const noexcept -> double
+{
+  return take_profit_risk_multiplier_;
+}
+
+auto Strategy::entry_long_trade(const AssetSnapshot& asset_snapshot,
+                                double risk_value) const noexcept
+ -> std::optional<TradeEntry>
+{
+  auto result = std::optional<TradeEntry>{};
+
+  if(long_entry_filter()(asset_snapshot)) {
+    const auto risk_size = risk_method_(asset_snapshot)[0];
+    const auto position_size = risk_value / risk_size;
+    const auto entry_price = asset_snapshot.get_close();
+
+    const auto stop_loss_price =
+     stop_loss_enabled_ ? entry_price - risk_size * stop_loss_risk_multiplier_
+                        : NAN;
+    const auto is_stop_loss_trailing = stop_loss_trailing_enabled();
+    const auto take_profit_price =
+     take_profit_enabled_
+      ? entry_price + risk_size * take_profit_risk_multiplier_
+      : NAN;
+
+    result = TradeEntry{position_size,
+                        entry_price,
+                        stop_loss_price,
+                        is_stop_loss_trailing,
+                        take_profit_price};
+  }
+
+  return result;
+}
+
+auto Strategy::entry_short_trade(const AssetSnapshot& asset_snapshot,
+                                 double risk_value) const noexcept
+ -> std::optional<TradeEntry>
+{
+  auto result = std::optional<TradeEntry>{};
+
+  if(short_entry_filter()(asset_snapshot)) {
+    const auto risk_size = -risk_method_(asset_snapshot)[0];
+    const auto position_size = risk_value / risk_size;
+    const auto entry_price = asset_snapshot.get_close();
+
+    const auto stop_loss_price =
+     stop_loss_enabled_ ? entry_price - risk_size * stop_loss_risk_multiplier_
+                        : NAN;
+    const auto is_stop_loss_trailing = stop_loss_trailing_enabled();
+    const auto take_profit_price =
+     take_profit_enabled_
+      ? entry_price + risk_size * take_profit_risk_multiplier_
+      : NAN;
+
+    result = TradeEntry{position_size,
+                        entry_price,
+                        stop_loss_price,
+                        is_stop_loss_trailing,
+                        take_profit_price};
+  }
+
+  return result;
+}
+
+auto Strategy::entry_trade(const AssetSnapshot& asset_snapshot,
+                           double risk_value) const noexcept
+ -> std::optional<TradeEntry>
+{
+  return entry_long_trade(asset_snapshot, risk_value).or_else([&] {
+    return entry_short_trade(asset_snapshot, risk_value);
+  });
+}
+
+auto Strategy::reentry_trade(const AssetSnapshot& asset_snapshot,
+                             double position_size) const noexcept
+ -> std::optional<TradeEntry>
+{
+  const auto is_long_direction = position_size > 0;
+  const auto is_short_direction = position_size < 0;
+
+  if(is_long_direction && long_entry_repeat_ == EntryRepeat::always) {
+    if(long_entry_filter()(asset_snapshot)) {
+      const auto risk_size = risk_method_(asset_snapshot)[0];
+      const auto risk_value = std::abs(position_size) * risk_size;
+      return entry_long_trade(asset_snapshot, risk_value);
+    }
+  } else if(is_short_direction && short_entry_repeat_ == EntryRepeat::always) {
+    if(short_entry_filter()(asset_snapshot)) {
+      const auto risk_size = -risk_method_(asset_snapshot)[0];
+      const auto risk_value = std::abs(position_size) * risk_size;
+      return entry_short_trade(asset_snapshot, risk_value);
+    }
+  }
+
+  return std::nullopt;
+}
+
+auto Strategy::exit_trade(const AssetSnapshot& asset_snapshot,
+                          double position_size) const noexcept
+ -> std::optional<TradeExit>
+{
+  const auto is_long_direction = position_size > 0;
+  const auto is_short_direction = position_size < 0;
+  const auto exit_price = asset_snapshot.get_close();
+
+  if(is_long_direction) {
+    if(long_exit_filter()(asset_snapshot)) {
+      return TradeExit{position_size, exit_price, TradeExit::Reason::signal};
+    }
+  } else if(is_short_direction) {
+    if(short_exit_filter()(asset_snapshot)) {
+      const auto exit_price = asset_snapshot.get_close();
+      return TradeExit{position_size, exit_price, TradeExit::Reason::signal};
+    }
+  }
+
+  return std::nullopt;
 }
 
 auto parse_backtest_strategy_json(std::string_view strategy_name,
@@ -117,83 +248,71 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
   const auto risk_config = strategy_json.at("risk");
   const auto risk_method = risk_parser.parse_method(risk_config);
 
-  const auto& positions_json = strategy_json.at("positions");
-  if(!positions_json.is_array() || positions_json.empty()) {
-    throw std::runtime_error("Invalid or empty positions in strategy JSON");
-  }
+  auto long_entry_repeat = Strategy::EntryRepeat::sequence;
+  auto long_entry_filter = screener::ScreenerFilter{screener::FalseFilter{}};
+  auto long_exit_filter = screener::ScreenerFilter{screener::FalseFilter{}};
+  if(strategy_json.contains("longPosition")) {
+    const auto& long_position_json = strategy_json.at("longPosition");
 
-  if(positions_json.size() > 1) {
-    throw std::runtime_error("Multiple positions are not supported yet");
-  }
-
-  const auto& position_json = positions_json[0];
-
-  const auto direction_str = position_json.value("direction", "long");
-  auto direction = Strategy::Direction::long_direction;
-  if(direction_str == "long") {
-    direction = Strategy::Direction::long_direction;
-  } else if(direction_str == "short") {
-    direction = Strategy::Direction::short_direction;
-  } else {
-    throw std::runtime_error("Invalid direction in strategy JSON");
-  }
-
-  const auto is_short_position =
-   direction == Strategy::Direction::short_direction;
-
-  const auto entry_json = position_json.at("entry");
-  auto entry_repeat = Strategy::RepeatType::sequence;
-  if(entry_json.contains("repeat")) {
-    const auto repeat_value = entry_json.at("repeat").get<std::string>();
-    if(repeat_value == "always") {
-      entry_repeat = Strategy::RepeatType::always;
+    if(long_position_json.contains("entry")) {
+      const auto& entry_json = long_position_json.at("entry");
+      if(entry_json.contains("repeat")) {
+        const auto repeat_value = entry_json.at("repeat").get<std::string>();
+        if(repeat_value == "always") {
+          long_entry_repeat = Strategy::EntryRepeat::always;
+        }
+      }
+      long_entry_filter = config_parser.parse_filter(entry_json.at("signal"));
+    }
+    if(long_position_json.contains("exit")) {
+      const auto& exit_json = long_position_json.at("exit");
+      long_exit_filter = config_parser.parse_filter(exit_json.at("signal"));
     }
   }
-  const auto entry_filter = config_parser.parse_filter(entry_json.at("signal"));
 
-  auto exit_filter = screener::ScreenerFilter{screener::FalseFilter{}};
-  if(position_json.contains("exit")) {
-    const auto exit_json = position_json.at("exit");
-    if(!exit_json.is_object()) {
-      throw std::runtime_error("Invalid exit configuration in strategy JSON");
+  auto short_entry_repeat = Strategy::EntryRepeat::sequence;
+  auto short_entry_filter = screener::ScreenerFilter{screener::FalseFilter{}};
+  auto short_exit_filter = screener::ScreenerFilter{screener::FalseFilter{}};
+  if(strategy_json.contains("shortPosition")) {
+    const auto& short_position_json = strategy_json.at("shortPosition");
+
+    if(short_position_json.contains("entry")) {
+      const auto& entry_json = short_position_json.at("entry");
+      if(entry_json.contains("repeat")) {
+        const auto repeat_value = entry_json.at("repeat").get<std::string>();
+        if(repeat_value == "always") {
+          short_entry_repeat = Strategy::EntryRepeat::always;
+        }
+      }
+      short_entry_filter = config_parser.parse_filter(entry_json.at("signal"));
     }
-
-    if(exit_json.contains("signal")) {
-      exit_filter = config_parser.parse_filter(exit_json.at("signal"));
+    if(short_position_json.contains("exit")) {
+      const auto& exit_json = short_position_json.at("exit");
+      short_exit_filter = config_parser.parse_filter(exit_json.at("signal"));
     }
   }
 
   auto is_take_profit_enabled = false;
-  auto tp_risk_multiplier = 1.0;
-  if(position_json.contains("takeProfit")) {
-    const auto take_profit_config = position_json.at("takeProfit");
+  auto take_profit_risk_multiplier = 1.0;
+  if(strategy_json.contains("takeProfit")) {
+    const auto take_profit_config = strategy_json.at("takeProfit");
     if(take_profit_config.is_boolean()) {
       is_take_profit_enabled = take_profit_config.get<bool>();
     } else if(take_profit_config.is_object()) {
       is_take_profit_enabled = take_profit_config.value("enabled", true);
-      tp_risk_multiplier = take_profit_config.value("riskMultiplier", 1.0);
+      take_profit_risk_multiplier =
+       take_profit_config.value("riskMultiplier", 1.0);
     } else {
       throw std::runtime_error(
        "Invalid take profit configuration in strategy JSON");
     }
   }
 
-  const auto reward_method = screener::MultiplyMethod{
-   risk_method, screener::ValueMethod{tp_risk_multiplier}};
-  const auto trading_take_profit_method =
-   is_short_position ? screener::ScreenerMethod{screener::LowMethod{}}
-                     : screener::ScreenerMethod{screener::HighMethod{}};
-  const auto take_profit =
-   pludux::backtest::TakeProfit{reward_method,
-                                !is_take_profit_enabled,
-                                is_short_position,
-                                trading_take_profit_method};
-
   auto is_trailing_stop_loss = false;
   auto is_stop_loss_enabled = false;
-
-  if(position_json.contains("stopLoss")) {
-    const auto stop_loss_config = position_json.at("stopLoss");
+  auto stop_loss_risk_multiplier = 1.0;
+  if(strategy_json.contains("stopLoss")) {
+    const auto stop_loss_config = strategy_json.at("stopLoss");
     if(stop_loss_config.is_boolean()) {
       is_stop_loss_enabled = stop_loss_config.get<bool>();
     } else if(stop_loss_config.is_object()) {
@@ -205,18 +324,19 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
     }
   }
 
-  const auto stop_loss = pludux::backtest::StopLoss{risk_method,
-                                                    !is_stop_loss_enabled,
-                                                    is_short_position,
-                                                    is_trailing_stop_loss};
-
   return pludux::backtest::Strategy{std::string{strategy_name},
-                                    direction,
-                                    entry_repeat,
-                                    entry_filter,
-                                    exit_filter,
-                                    stop_loss,
-                                    take_profit};
+                                    std::move(risk_method),
+                                    long_entry_repeat,
+                                    std::move(long_entry_filter),
+                                    std::move(long_exit_filter),
+                                    short_entry_repeat,
+                                    std::move(short_entry_filter),
+                                    std::move(short_exit_filter),
+                                    is_stop_loss_enabled,
+                                    is_trailing_stop_loss,
+                                    stop_loss_risk_multiplier,
+                                    is_take_profit_enabled,
+                                    take_profit_risk_multiplier};
 }
 
 auto risk_reward_config_parser() -> ConfigParser
@@ -225,6 +345,20 @@ auto risk_reward_config_parser() -> ConfigParser
 
   config_parser.register_method_parser(
    "ATR",
+   [](const ConfigParser& config_parser,
+      const screener::ScreenerMethod& method) -> nlohmann::json {
+     auto serialized_method = nlohmann::json{};
+
+     auto atr_method = screener_method_cast<screener::AtrMethod>(method);
+
+     if(atr_method) {
+       serialized_method["atr"] = nlohmann::json{};
+       serialized_method["atr"]["period"] = atr_method->period();
+       serialized_method["atr"]["multiplier"] = atr_method->multiplier();
+     }
+
+     return serialized_method;
+   },
    [](ConfigParser::Parser config_parser,
       const nlohmann::json& parameters) -> screener::ScreenerMethod {
      auto period = std::size_t{14};
@@ -250,6 +384,24 @@ auto risk_reward_config_parser() -> ConfigParser
 
   config_parser.register_method_parser(
    "PERCENTAGE",
+   [](const ConfigParser& config_parser,
+      const screener::ScreenerMethod& method) -> nlohmann::json {
+     auto serialized_method = nlohmann::json{};
+
+     auto percent_method =
+      screener_method_cast<screener::PercentageMethod>(method);
+
+     if(percent_method) {
+       auto value_method =
+        screener_method_cast<screener::ValueMethod>(percent_method->percent());
+
+       if(value_method) {
+         serialized_method["percentage"] = value_method->value();
+       }
+     }
+
+     return serialized_method;
+   },
    [](ConfigParser::Parser config_parser,
       const nlohmann::json& parameters) -> screener::ScreenerMethod {
      const auto total_method = screener::CloseMethod{};
@@ -265,6 +417,18 @@ auto risk_reward_config_parser() -> ConfigParser
 
   config_parser.register_method_parser(
    "VALUE",
+   [](const ConfigParser& config_parser,
+      const screener::ScreenerMethod& method) -> nlohmann::json {
+     auto serialized_method = nlohmann::json{};
+
+     auto value_method = screener_method_cast<screener::ValueMethod>(method);
+
+     if(value_method) {
+       serialized_method["value"] = value_method->value();
+     }
+
+     return serialized_method;
+   },
    [](ConfigParser::Parser config_parser,
       const nlohmann::json& parameters) -> screener::ScreenerMethod {
      const auto value = parameters.at("value").get<double>();

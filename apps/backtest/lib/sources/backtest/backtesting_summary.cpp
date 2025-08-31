@@ -35,38 +35,43 @@ BacktestingSummary::BacktestingSummary(double initial_capital,
 void BacktestingSummary::update_to_next_summary(
  TradeSession next_trade_session) noexcept
 {
-  if(next_trade_session.is_closed()) {
-    const auto pnl = next_trade_session.pnl();
+  const auto& closed_position = next_trade_session.closed_position();
+  if(closed_position) {
+    const auto& trade_records = closed_position->realized_records();
 
-    sum_of_durations_ += next_trade_session.duration();
-    cumulative_investments_ += next_trade_session.investment();
+    for(const auto& record : trade_records) {
+      const auto pnl = record.pnl();
 
-    if(next_trade_session.is_closed_take_profit()) {
-      take_profit_count_++;
-      cumulative_take_profits_ += pnl;
-    } else if(next_trade_session.is_closed_stop_loss()) {
-      if(pnl > 0) {
-        stop_loss_profit_count_++;
-        cumulative_stop_loss_profits_ += pnl;
-      } else if(pnl < 0) {
-        stop_loss_loss_count_++;
-        cumulative_stop_loss_losses_ += pnl;
-      } else {
-        break_even_count_++;
+      sum_of_durations_ += record.duration();
+      cumulative_investments_ += record.investment();
+
+      if(record.is_closed_take_profit()) {
+        take_profit_count_++;
+        cumulative_take_profits_ += pnl;
+      } else if(record.is_closed_stop_loss()) {
+        if(pnl > 0) {
+          stop_loss_profit_count_++;
+          cumulative_stop_loss_profits_ += pnl;
+        } else if(pnl < 0) {
+          stop_loss_loss_count_++;
+          cumulative_stop_loss_losses_ += pnl;
+        } else {
+          break_even_count_++;
+        }
+      } else if(record.is_closed_exit_signal()) {
+        if(pnl > 0) {
+          exit_signal_profit_count_++;
+          cumulative_exit_signal_profits_ += pnl;
+        } else if(pnl < 0) {
+          exit_signal_loss_count_++;
+          cumulative_exit_signal_losses_ += pnl;
+        } else {
+          break_even_count_++;
+        }
       }
-    } else if(next_trade_session.is_closed_exit_signal()) {
-      if(pnl > 0) {
-        exit_signal_profit_count_++;
-        cumulative_exit_signal_profits_ += pnl;
-      } else if(pnl < 0) {
-        exit_signal_loss_count_++;
-        cumulative_exit_signal_losses_ += pnl;
-      } else {
-        break_even_count_++;
-      }
+
+      capital_ += pnl;
     }
-
-    capital_ += pnl;
   }
 
   trade_session_ = std::move(next_trade_session);
@@ -441,25 +446,23 @@ auto BacktestingSummary::profit_factor() const noexcept -> double
 
 auto BacktestingSummary::unrealized_pnl() const noexcept -> double
 {
-  return trade_session_.is_open() ? trade_session_.pnl() : 0.0;
+  return trade_session_.unrealized_pnl();
 }
 
 auto BacktestingSummary::unrealized_investment() const noexcept -> double
 {
-  return trade_session_.is_open() ? trade_session_.investment() : 0.0;
+  return trade_session_.unrealized_investment();
 }
 
 auto BacktestingSummary::unrealized_duration() const noexcept -> std::time_t
 {
-  return trade_session_.is_open() ? trade_session_.duration() : 0;
+  return trade_session_.unrealized_duration();
 }
 
 auto BacktestingSummary::equity() const noexcept -> double
 {
-  const auto partial_realized =
-   trade_session_.is_closed() ? 0.0 : trade_session_.realized_pnl();
-
-  return capital() + partial_realized + trade_session_.unrealized_pnl();
+  return capital() + trade_session_.partial_realized_pnl() +
+         trade_session_.unrealized_pnl();
 }
 
 auto BacktestingSummary::initial_capital() const noexcept -> double

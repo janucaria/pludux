@@ -29,48 +29,45 @@
     "method": "PERCENTAGE",
     "percentage": 10
   },
-  "positions": [
-    {
-      "direction": "long",
-      "entry": {
-        "repeat": "sequence",
-        "signal": {
-          "filter": "ALL_OF",
-          "conditions": [
-            {
-              "filter": "CROSSOVER",
-              "signal": "stoch-k",
-              "reference": "stoch-d"
-            },
-            {
-              "filter": "LESS_THAN",
-              "target": "stoch-k",
-              "threshold": "oversold"
-            }
-          ]
-        }
-      },
-      "exit": {
-        "signal": {
-          "filter": "ALL_OF",
-          "conditions": [
-            {
-              "filter": "CROSSUNDER",
-              "signal": "stoch-k",
-              "reference": "stoch-d"
-            },
-            {
-              "filter": "GREATER_THAN",
-              "target": "stoch-k",
-              "threshold": "overbought"
-            }
-          ]
-        }
-      },
-      "stopLoss": true,
-      "takeProfit": {
-        "riskMultiplier": 2
+  "stopLoss": true,
+  "takeProfit": {
+    "riskMultiplier": 2
+  },
+  "longPosition": {
+    "entry": {
+      "repeat": "sequence",
+      "signal": {
+        "filter": "ALL_OF",
+        "conditions": [
+          {
+            "filter": "CROSSOVER",
+            "signal": "stoch-k",
+            "reference": "stoch-d"
+          },
+          {
+            "filter": "LESS_THAN",
+            "target": "stoch-k",
+            "threshold": "oversold"
+          }
+        ]
+      }
+    },
+    "exit": {
+      "signal": {
+        "filter": "ALL_OF",
+        "conditions": [
+          {
+            "filter": "CROSSUNDER",
+            "signal": "stoch-k",
+            "reference": "stoch-d"
+          },
+          {
+            "filter": "GREATER_THAN",
+            "target": "stoch-k",
+            "threshold": "overbought"
+          }
+        ]
       }
     }
-  ]
+  }
 }

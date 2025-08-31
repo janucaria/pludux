@@ -330,121 +330,116 @@ void PlotDataWindow::DrawTrades(
       const auto& summary = backtest_summaries[i];
       const auto& session = summary.trade_session();
 
-      const auto is_long_position = session.is_long_position();
-      const auto exit_idx = session.exit_index();
-      const auto exit_price = session.exit_price();
-      const auto take_profit_price = session.take_profit_price();
-      const auto stop_loss_price = session.stop_loss_price();
-      const auto trailing_stop_price = session.trailing_stop_price();
-      const auto entry_idx = session.entry_index();
-      const auto avg_price = session.average_price();
+      for(const auto& record : session.trade_record_range()) {
+        const auto is_long_position = record.is_long_position();
+        const auto exit_idx = record.exit_index();
+        const auto exit_price = record.exit_price();
+        const auto take_profit_price = record.take_profit_price();
+        const auto stop_loss_price = record.stop_loss_price();
+        const auto trailing_stop_price = record.trailing_stop_price();
+        const auto entry_idx = record.entry_index();
+        const auto avg_price = record.average_price();
 
-      const auto top_color = is_long_position ? reward_color_ : risk_color_;
-      const auto bottom_color = is_long_position ? risk_color_ : reward_color_;
+        const auto top_color = is_long_position ? reward_color_ : risk_color_;
+        const auto bottom_color =
+         is_long_position ? risk_color_ : reward_color_;
 
-      const auto [top_price, middle_price, bottom_price] = [&]() {
-        if(is_long_position) {
-          const auto top_price = !std::isnan(take_profit_price)
-                                  ? take_profit_price
+        const auto [top_price, middle_price, bottom_price] = [&]() {
+          if(is_long_position) {
+            const auto top_price = !std::isnan(take_profit_price)
+                                    ? take_profit_price
+                                    : std::max(avg_price, exit_price);
+            const auto middle_price = std::max(avg_price, stop_loss_price);
+            const auto bottom_price = !std::isnan(stop_loss_price)
+                                       ? stop_loss_price
+                                       : std::min(middle_price, exit_price);
+
+            return std::tuple{top_price, middle_price, bottom_price};
+          }
+
+          const auto top_price = !std::isnan(stop_loss_price)
+                                  ? stop_loss_price
                                   : std::max(avg_price, exit_price);
-          const auto middle_price = std::max(avg_price, stop_loss_price);
-          const auto bottom_price = !std::isnan(stop_loss_price)
-                                     ? stop_loss_price
+          const auto middle_price = std::max(avg_price, take_profit_price);
+          const auto bottom_price = !std::isnan(take_profit_price)
+                                     ? take_profit_price
                                      : std::min(middle_price, exit_price);
 
           return std::tuple{top_price, middle_price, bottom_price};
+        }();
+
+        const auto left_half_width = exit_idx == entry_idx ? 0.0 : half_width;
+        const auto right_half_width =
+         !record.is_closed() ? (exit_idx == 0 ? 10.0 : half_width) : 0.0;
+
+        {
+          const auto risk_left_top_pos =
+           ImPlot::PlotToPixels(exit_idx + left_half_width, middle_price);
+          const auto risk_right_bottom_pos =
+           ImPlot::PlotToPixels(exit_idx - right_half_width, bottom_price);
+
+          draw_list->AddRectFilled(risk_left_top_pos,
+                                   risk_right_bottom_pos,
+                                   ImGui::GetColorU32(bottom_color));
+        }
+        {
+          const auto reward_left_top_pos =
+           ImPlot::PlotToPixels(exit_idx + left_half_width, top_price);
+          const auto reward_right_bottom_pos =
+           ImPlot::PlotToPixels(exit_idx - right_half_width, middle_price);
+
+          draw_list->AddRectFilled(reward_left_top_pos,
+                                   reward_right_bottom_pos,
+                                   ImGui::GetColorU32(top_color));
         }
 
-        const auto top_price = !std::isnan(stop_loss_price)
-                                ? stop_loss_price
-                                : std::max(avg_price, exit_price);
-        const auto middle_price = std::max(avg_price, take_profit_price);
-        const auto bottom_price = !std::isnan(take_profit_price)
-                                   ? take_profit_price
-                                   : std::min(middle_price, exit_price);
+        if(record.entry_index() == record.exit_index()) {
+          const auto record_entry_idx = record.entry_index();
 
-        return std::tuple{top_price, middle_price, bottom_price};
-      }();
+          const auto entry_low =
+           AssetSnapshot{record_entry_idx, asset_history}.get_low();
 
-      const auto left_half_width = exit_idx == entry_idx ? 0.0 : half_width;
-      const auto right_half_width =
-       session.is_open() ? (exit_idx == 0 ? 10.0 : half_width) : 0.0;
+          auto entry_pos = ImPlot::PlotToPixels(record_entry_idx, entry_low);
+          entry_pos.y += marker_offset;
 
-      {
-        const auto risk_left_top_pos =
-         ImPlot::PlotToPixels(exit_idx + left_half_width, middle_price);
-        const auto risk_right_bottom_pos =
-         ImPlot::PlotToPixels(exit_idx - right_half_width, bottom_price);
+          draw_list->AddTriangleFilled(ImVec2{entry_pos.x - 5, entry_pos.y},
+                                       ImVec2{entry_pos.x + 5, entry_pos.y},
+                                       ImVec2{entry_pos.x, entry_pos.y - 10},
+                                       ImGui::GetColorU32(bullish_color_));
 
-        draw_list->AddRectFilled(risk_left_top_pos,
-                                 risk_right_bottom_pos,
-                                 ImGui::GetColorU32(bottom_color));
-      }
-      {
-        const auto reward_left_top_pos =
-         ImPlot::PlotToPixels(exit_idx + left_half_width, top_price);
-        const auto reward_right_bottom_pos =
-         ImPlot::PlotToPixels(exit_idx - right_half_width, middle_price);
+          const auto trade_count_str =
+           std::format("#{}", summary.trade_count() + 1);
+          const auto text_size = ImGui::CalcTextSize(trade_count_str.c_str());
+          draw_list->AddText(
+           ImVec2{entry_pos.x - text_size.x * 0.5f, entry_pos.y},
+           marker_text_color,
+           trade_count_str.c_str());
+        }
 
-        draw_list->AddRectFilled(reward_left_top_pos,
-                                 reward_right_bottom_pos,
-                                 ImGui::GetColorU32(top_color));
-      }
+        {
+          if(record.is_closed()) {
+            const auto exit_high =
+             AssetSnapshot{exit_idx, asset_history}.get_high();
 
-      {
-        if(session.at_entry()) {
-          const auto trade_records = session.trade_records();
-          for(int j = trade_records.size() - 1; j >= 0; --j) {
-            const auto& trade_record = trade_records.at(j);
-            const auto record_entry_idx = trade_record.entry_index();
+            auto exit_pos = ImPlot::PlotToPixels(exit_idx, exit_high);
+            exit_pos.y -= marker_offset;
 
-            const auto entry_low =
-             AssetSnapshot{record_entry_idx, asset_history}.get_low();
-
-            auto entry_pos = ImPlot::PlotToPixels(record_entry_idx, entry_low);
-            entry_pos.y += marker_offset;
-
-            draw_list->AddTriangleFilled(ImVec2{entry_pos.x - 5, entry_pos.y},
-                                         ImVec2{entry_pos.x + 5, entry_pos.y},
-                                         ImVec2{entry_pos.x, entry_pos.y - 10},
-                                         ImGui::GetColorU32(bullish_color_));
+            draw_list->AddTriangleFilled(ImVec2{exit_pos.x - 5, exit_pos.y},
+                                         ImVec2{exit_pos.x + 5, exit_pos.y},
+                                         ImVec2{exit_pos.x, exit_pos.y + 10},
+                                         ImGui::GetColorU32(bearish_color_));
 
             const auto trade_count_str =
-             std::format("#{}", summary.trade_count() + 1);
+             std::format("#{}", summary.trade_count());
             const auto text_size = ImGui::CalcTextSize(trade_count_str.c_str());
             draw_list->AddText(
-             ImVec2{entry_pos.x - text_size.x * 0.5f, entry_pos.y},
+             ImVec2{exit_pos.x - text_size.x * 0.5f, exit_pos.y - 13},
              marker_text_color,
              trade_count_str.c_str());
           }
         }
-      }
 
-      {
-        if(session.is_closed()) {
-          const auto exit_high =
-           AssetSnapshot{exit_idx, asset_history}.get_high();
-
-          auto exit_pos = ImPlot::PlotToPixels(exit_idx, exit_high);
-          exit_pos.y -= marker_offset;
-
-          draw_list->AddTriangleFilled(ImVec2{exit_pos.x - 5, exit_pos.y},
-                                       ImVec2{exit_pos.x + 5, exit_pos.y},
-                                       ImVec2{exit_pos.x, exit_pos.y + 10},
-                                       ImGui::GetColorU32(bearish_color_));
-
-          const auto trade_count_str =
-           std::format("#{}", summary.trade_count());
-          const auto text_size = ImGui::CalcTextSize(trade_count_str.c_str());
-          draw_list->AddText(
-           ImVec2{exit_pos.x - text_size.x * 0.5f, exit_pos.y - 13},
-           marker_text_color,
-           trade_count_str.c_str());
-        }
-      }
-
-      {
-        if(!session.is_flat()) {
+        {
           const auto left_pos =
            ImPlot::PlotToPixels(exit_idx + half_width, trailing_stop_price);
           const auto center_pos =
@@ -456,7 +451,7 @@ void PlotDataWindow::DrawTrades(
           trailing_stop_lines.push_back(center_pos);
           trailing_stop_lines.push_back(right_pos);
 
-          if(session.is_closed()) {
+          if(record.is_closed()) {
             const auto nan_pos = ImVec2{NAN, NAN};
             trailing_stop_lines.push_back(nan_pos);
           }

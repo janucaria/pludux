@@ -2,11 +2,13 @@
 #define PLUDUX_PLUDUX_BACKTEST_STRATEGY_HPP
 
 #include <istream>
+#include <optional>
 #include <string>
 #include <string_view>
 
-#include <pludux/backtest/stop_loss.hpp>
-#include <pludux/backtest/take_profit.hpp>
+#include <pludux/asset_snapshot.hpp>
+#include <pludux/backtest/trade_entry.hpp>
+#include <pludux/backtest/trade_exit.hpp>
 #include <pludux/config_parser.hpp>
 #include <pludux/screener.hpp>
 
@@ -14,56 +16,93 @@ namespace pludux::backtest {
 
 class Strategy {
 public:
-  enum class RepeatType { sequence, always };
+  enum class EntryRepeat { sequence, always };
 
   enum class Direction { long_direction, short_direction };
 
   Strategy(std::string name,
-           Direction direction,
-           RepeatType entry_repeat,
-           screener::ScreenerFilter entry_filter,
-           screener::ScreenerFilter exit_filter,
-           backtest::StopLoss stop_loss,
-           backtest::TakeProfit take_profit);
+           screener::ScreenerMethod risk_method,
+           EntryRepeat long_entry_repeat,
+           screener::ScreenerFilter long_entry_filter,
+           screener::ScreenerFilter long_exit_filter,
+           EntryRepeat short_entry_repeat,
+           screener::ScreenerFilter short_entry_filter,
+           screener::ScreenerFilter short_exit_filter,
+           bool stop_loss_enabled,
+           bool stop_loss_trailing_enabled,
+           double stop_loss_risk_multiplier,
+           bool take_profit_enabled,
+           double take_profit_risk_multiplier);
 
   auto name() const noexcept -> const std::string&;
 
-  auto direction() const noexcept -> Direction;
+  auto risk_method() const noexcept -> const screener::ScreenerMethod&;
 
-  void direction(Direction dir) noexcept;
+  auto long_entry_repeat() const noexcept -> EntryRepeat;
 
-  auto entry_repeat() const noexcept -> RepeatType;
+  void long_entry_repeat(EntryRepeat repeat_type) noexcept;
 
-  void entry_repeat(RepeatType repeat_type) noexcept;
+  auto long_entry_filter() const noexcept -> const screener::ScreenerFilter&;
 
-  auto entry_filter() const noexcept -> const screener::ScreenerFilter&;
+  auto long_exit_filter() const noexcept -> const screener::ScreenerFilter&;
 
-  auto exit_filter() const noexcept -> const screener::ScreenerFilter&;
+  auto short_entry_repeat() const noexcept -> EntryRepeat;
 
-  auto stop_loss() const noexcept -> const backtest::StopLoss&;
+  void short_entry_repeat(EntryRepeat repeat_type) noexcept;
 
-  auto take_profit() const noexcept -> const backtest::TakeProfit&;
+  auto short_entry_filter() const noexcept -> const screener::ScreenerFilter&;
 
-  auto is_entry_repeat_sequence() const noexcept -> bool;
+  auto short_exit_filter() const noexcept -> const screener::ScreenerFilter&;
 
-  void set_entry_repeat_to_sequence() noexcept;
+  auto stop_loss_enabled() const noexcept -> bool;
 
-  auto is_entry_repeat_always() const noexcept -> bool;
+  auto stop_loss_trailing_enabled() const noexcept -> bool;
 
-  void set_entry_repeat_to_always() noexcept;
+  auto stop_loss_risk_multiplier() const noexcept -> double;
 
-  auto is_long_direction() const noexcept -> bool;
+  auto take_profit_enabled() const noexcept -> bool;
 
-  auto is_short_direction() const noexcept -> bool;
+  auto take_profit_risk_multiplier() const noexcept -> double;
+
+  auto entry_long_trade(const AssetSnapshot& asset_snapshot,
+                        double risk_value) const noexcept
+   -> std::optional<TradeEntry>;
+
+  auto entry_short_trade(const AssetSnapshot& asset_snapshot,
+                         double risk_value) const noexcept
+   -> std::optional<TradeEntry>;
+
+  auto entry_trade(const AssetSnapshot& asset_snapshot,
+                   double risk_value) const noexcept
+   -> std::optional<TradeEntry>;
+
+  auto reentry_trade(const AssetSnapshot& asset_snapshot,
+                     double position_size) const noexcept
+   -> std::optional<TradeEntry>;
+
+  auto exit_trade(const AssetSnapshot& asset_snapshot,
+                  double position_size) const noexcept
+   -> std::optional<TradeExit>;
 
 private:
   std::string name_;
-  Direction direction_;
-  RepeatType entry_repeat_;
-  screener::ScreenerFilter entry_filter_;
-  screener::ScreenerFilter exit_filter_;
-  backtest::StopLoss stop_loss_;
-  backtest::TakeProfit take_profit_;
+
+  screener::ScreenerMethod risk_method_;
+
+  EntryRepeat long_entry_repeat_{EntryRepeat::sequence};
+  screener::ScreenerFilter long_entry_filter_{screener::FalseFilter{}};
+  screener::ScreenerFilter long_exit_filter_{screener::FalseFilter{}};
+
+  EntryRepeat short_entry_repeat_{EntryRepeat::sequence};
+  screener::ScreenerFilter short_entry_filter_{screener::FalseFilter{}};
+  screener::ScreenerFilter short_exit_filter_{screener::FalseFilter{}};
+
+  bool stop_loss_enabled_{false};
+  bool stop_loss_trailing_enabled_{false};
+  double stop_loss_risk_multiplier_{1.0};
+
+  bool take_profit_enabled_{false};
+  double take_profit_risk_multiplier_{1.0};
 };
 
 auto parse_backtest_strategy_json(std::string_view strategy_name,

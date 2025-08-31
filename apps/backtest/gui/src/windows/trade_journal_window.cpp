@@ -64,20 +64,17 @@ void TradeJournalWindow::render(AppState& app_state)
       const auto backtest_summaries_size = backtest_summaries.size();
       for(int i = backtest_summaries_size - 1; i >= 0; --i) {
         const auto& summary = backtest_summaries.at(i);
-        const auto& trade_sesion = summary.trade_session();
+        const auto& trade_session = summary.trade_session();
         const auto asset_index = backtest_summaries_size - i - 1;
 
-        if(trade_sesion.is_closed() ||
-           (trade_sesion.is_open() && asset_index == 0)) {
-          auto trade_count = summary.trade_count();
-          if(trade_sesion.is_open()) {
-            trade_count++;
-          }
+        auto id_counter = 0;
+        for(const auto& trade_record : trade_session.trade_record_range()) {
+          if(!trade_session.is_open() || trade_record.exit_index() == 0) {
+            const auto trade_count =
+             summary.trade_count() + (trade_session.is_open() ? 1 : 0);
 
-          const auto& trade_records = trade_sesion.trade_records();
-          for(int j = trade_records.size() - 1; j >= 0; --j) {
-            ImGui::PushID(i * backtest_summaries_size + j);
-            draw_trade_row(trade_count, trade_records.at(j));
+            ImGui::PushID(id_counter++);
+            draw_trade_row(trade_count, trade_record);
             ImGui::PopID();
           }
         }

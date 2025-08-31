@@ -10,30 +10,31 @@ namespace pludux::backtest {
 
 TradeRecord::TradeRecord(Status status,
                          double position_size,
-                         std::size_t entry_index,
-                         std::size_t market_index,
-                         std::time_t entry_timestamp,
-                         std::time_t market_timestamp,
-                         double entry_price,
                          double average_price,
+
+                         std::time_t entry_timestamp,
+                         double entry_price,
+                         std::size_t entry_index,
+
+                         std::time_t exit_timestamp,
                          double exit_price,
-                         double market_price,
+                         std::size_t exit_index,
+
                          double stop_loss_price,
                          double trailing_stop_price,
                          double take_profit_price)
 : status_{status}
 , position_size_{position_size}
-, entry_price_{entry_price}
 , average_price_{average_price}
+, entry_price_{entry_price}
 , exit_price_{exit_price}
-, market_price_{market_price}
 , stop_loss_price_{stop_loss_price}
 , trailing_stop_price_{trailing_stop_price}
 , take_profit_price_{take_profit_price}
 , entry_index_{entry_index}
-, market_index_{market_index}
+, exit_index_{exit_index}
 , entry_timestamp_{entry_timestamp}
-, market_timestamp_{market_timestamp}
+, exit_timestamp_{exit_timestamp}
 {
 }
 
@@ -69,17 +70,12 @@ void TradeRecord::entry_index(std::size_t index) noexcept
 
 auto TradeRecord::exit_index() const noexcept -> std::size_t
 {
-  return market_index();
+  return exit_index_;
 }
 
-auto TradeRecord::market_index() const noexcept -> std::size_t
+void TradeRecord::exit_index(std::size_t index) noexcept
 {
-  return market_index_;
-}
-
-void TradeRecord::market_index(std::size_t index) noexcept
-{
-  market_index_ = index;
+  exit_index_ = index;
 }
 
 auto TradeRecord::entry_price() const noexcept -> double
@@ -112,16 +108,6 @@ void TradeRecord::exit_price(double price) noexcept
   exit_price_ = price;
 }
 
-auto TradeRecord::market_price() const noexcept -> double
-{
-  return market_price_;
-}
-
-void TradeRecord::market_price(double price) noexcept
-{
-  market_price_ = price;
-}
-
 auto TradeRecord::entry_timestamp() const noexcept -> std::time_t
 {
   return entry_timestamp_;
@@ -134,17 +120,12 @@ void TradeRecord::entry_timestamp(std::time_t timestamp) noexcept
 
 auto TradeRecord::exit_timestamp() const noexcept -> std::time_t
 {
-  return market_timestamp();
+  return exit_timestamp_;
 }
 
-auto TradeRecord::market_timestamp() const noexcept -> std::time_t
+void TradeRecord::exit_timestamp(std::time_t timestamp) noexcept
 {
-  return market_timestamp_;
-}
-
-void TradeRecord::market_timestamp(std::time_t timestamp) noexcept
-{
-  market_timestamp_ = timestamp;
+  exit_timestamp_ = timestamp;
 }
 
 auto TradeRecord::stop_loss_price() const noexcept -> double
@@ -192,11 +173,6 @@ auto TradeRecord::investment() const noexcept -> double
   return position_size() * average_price();
 }
 
-auto TradeRecord::position_value() const noexcept -> double
-{
-  return position_size() * market_price();
-}
-
 auto TradeRecord::pnl() const noexcept -> double
 {
   return exit_value() - investment();
@@ -204,7 +180,7 @@ auto TradeRecord::pnl() const noexcept -> double
 
 auto TradeRecord::duration() const noexcept -> std::time_t
 {
-  return market_timestamp() - entry_timestamp();
+  return exit_timestamp() - entry_timestamp();
 }
 
 auto TradeRecord::is_open() const noexcept -> bool

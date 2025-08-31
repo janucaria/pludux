@@ -112,8 +112,7 @@ auto Backtest::should_run() const noexcept -> bool
 
 void Backtest::run()
 {
-  using backtest::TradeAction;
-  using backtest::TradeSession;
+  using namespace backtest;
 
   if(!should_run()) {
     return;
@@ -130,112 +129,43 @@ void Backtest::run()
   const auto& strategy = *strategy_ptr();
   const auto& profile = get_profile();
 
-  const auto& entry_filter = strategy.entry_filter();
-  const auto& take_profit = strategy.take_profit();
-  const auto& stop_loss = strategy.stop_loss();
-
   auto summary = !summaries_.empty()
                   ? summaries_.back()
-                  : backtest::BacktestingSummary{profile.initial_capital()};
+                  : BacktestingSummary{profile.initial_capital()};
 
   auto trade_session = summary.trade_session();
 
-  trade_session.market_update(asset_index, asset_timestamp, asset_price);
+  trade_session.market_update(
+   static_cast<std::time_t>(asset_snapshot.get_datetime()),
+   asset_snapshot.get_close(),
+   asset_snapshot.offset());
 
-  if(trade_session.is_closed()) {
-    trade_session = TradeSession{};
-  }
+  trade_session.evaluate_exit_conditions(asset_snapshot[1].get_close(),
+                                         asset_snapshot.get_open(),
+                                         asset_snapshot.get_high(),
+                                         asset_snapshot.get_low());
 
-  if((!trade_session.is_open() || strategy.is_entry_repeat_always()) &&
-     entry_filter(asset_snapshot)) {
-    const auto risk_size = stop_loss.get_risk_size(asset_snapshot);
-    const auto order_size = profile.get_risk_value() / risk_size;
+  const auto& open_position = trade_session.open_position();
+  if(open_position) {
+    const auto position_size = open_position->unrealized_position_size();
+    const auto exit_trade = strategy.exit_trade(asset_snapshot, position_size);
 
-    const auto trading_take_profit = take_profit(asset_snapshot);
-    const auto trading_stop_loss = stop_loss(asset_snapshot);
+    if(exit_trade) {
+      trade_session.exit_position(*exit_trade);
+    } else {
+      const auto reentry_trade =
+       strategy.reentry_trade(asset_snapshot, position_size);
 
-    const auto position_size = order_size;
-    const auto entry_index = asset_index;
-    const auto entry_price = asset_price;
-    const auto entry_timestamp = asset_timestamp;
-    const auto initial_stop_loss_price = trading_stop_loss.initial_exit_price();
-    const auto trailing_stop_price =
-     trading_stop_loss.is_trailing() ? trading_stop_loss.exit_price()
-                                     : std::numeric_limits<double>::quiet_NaN();
-    const auto take_profit_price = trading_take_profit.exit_price();
-
-    trade_session.emplace_action(position_size,
-                                 entry_timestamp,
-                                 entry_price,
-                                 entry_index,
-                                 TradeAction::Reason::entry);
-
-    trade_session.take_profit_price(take_profit_price);
-    trade_session.stop_loss_price(initial_stop_loss_price);
-    trade_session.trailing_stop_price(trailing_stop_price);
-
-  } else if(trade_session.is_open()) {
-    const auto entry_index = trade_session.entry_index();
-    const auto position_size = trade_session.position_size();
-    const auto exit_timestamp = asset_timestamp;
-
-    const auto& entry_snapshot = asset().get_snapshot(entry_index);
-    auto trading_take_profit = take_profit(entry_snapshot);
-    auto trading_stop_loss = stop_loss(entry_snapshot);
-
-    if(trading_stop_loss.is_trailing()) {
-      trading_stop_loss.stop_price(trade_session.trailing_stop_price());
+      if(reentry_trade) {
+        trade_session.entry_position(*reentry_trade);
+      }
     }
-
-    const auto exit_filter = strategy.exit_filter();
-    const auto trade_action_type_opt =
-     [&]() -> std::optional<TradeAction::Reason> {
-      if(trading_stop_loss(asset_snapshot)) {
-        return TradeAction::Reason::stop_loss;
-      }
-
-      if(trading_take_profit(asset_snapshot)) {
-        return TradeAction::Reason::take_profit;
-      }
-
-      if(exit_filter(asset_snapshot)) {
-        return TradeAction::Reason::exit;
-      }
-
-      return std::nullopt;
-    }();
-
-    const auto stop_loss_price = trading_stop_loss.exit_price();
-    const auto take_profit_price = trading_take_profit.exit_price();
-
-    const auto initial_stop_loss_price = trading_stop_loss.initial_exit_price();
-    const auto trailing_stop_price =
-     trading_stop_loss.is_trailing() ? stop_loss_price
-                                     : std::numeric_limits<double>::quiet_NaN();
-    trade_session.trailing_stop_price(trailing_stop_price);
-
-    trade_action_type_opt.and_then(
-     [&](const TradeAction::Reason& trade_action_type)
-      -> std::optional<TradeAction::Reason> {
-       const auto exit_price = [&]() -> double {
-         switch(trade_action_type) {
-         case TradeAction::Reason::take_profit:
-           return take_profit_price;
-         case TradeAction::Reason::stop_loss:
-           return stop_loss_price;
-         default:
-           return asset_price;
-         }
-       }();
-
-       trade_session.emplace_action(-position_size,
-                                    exit_timestamp,
-                                    exit_price,
-                                    asset_index,
-                                    trade_action_type);
-
-       return std::nullopt;
-     });
+  } else {
+    const auto entry_trade =
+     strategy.entry_trade(asset_snapshot, profile.get_risk_value());
+    if(entry_trade) {
+      trade_session.entry_position(*entry_trade);
+    }
   }
 
   summary.update_to_next_summary(std::move(trade_session));

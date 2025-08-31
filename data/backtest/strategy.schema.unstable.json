@@ -44,100 +44,93 @@
         }
       }
     },
-    "positions": {
-      "type": "array",
-      "maxItems": 1,
-      "minItems": 1,
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "direction": {
-            "enum": [
-              "long",
-              "short"
-            ]
-          },
-          "entry": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "repeat": {
-                "enum": [
-                  "sequence",
-                  "always"
-                ]
-              },
-              "signal": {
-                "$ref": "#/definitions/filterAsParameter"
-              }
+    "stopLoss": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
             },
-            "required": [
-              "signal"
-            ]
-          },
-          "exit": {
-            "type": "object",
-            "properties": {
-              "signal": {
-                "$ref": "#/definitions/filterAsParameter"
-              }
-            },
-            "required": [
-              "signal"
-            ]
-          },
-          "stopLoss": {
-            "oneOf": [
-              {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "enabled": {
-                    "type": "boolean"
-                  },
-                  "isTrailing": {
-                    "type": "boolean"
-                  }
-                }
-              },
-              {
-                "type": "boolean"
-              }
-            ]
-          },
-          "takeProfit": {
-            "oneOf": [
-              {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "enabled": {
-                    "type": "boolean"
-                  },
-                  "riskMultiplier": {
-                    "type": "number"
-                  }
-                }
-              },
-              {
-                "type": "boolean"
-              }
-            ]
+            "isTrailing": {
+              "type": "boolean"
+            }
           }
         },
-        "required": [
-          "type",
-          "entry"
-        ]
-      }
+        {
+          "type": "boolean"
+        }
+      ]
+    },
+    "takeProfit": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "riskMultiplier": {
+              "type": "number"
+            }
+          }
+        },
+        {
+          "type": "boolean"
+        }
+      ]
+    },
+    "longPosition": {
+      "$ref": "#/definitions/tradePosition"
+    },
+    "shortPosition": {
+      "$ref": "#/definitions/tradePosition"
     }
   },
   "required": [
-    "risk",
-    "positions"
+    "risk"
   ],
   "definitions": {
+    "tradePosition": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "entry": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "repeat": {
+              "enum": [
+                "sequence",
+                "always"
+              ]
+            },
+            "signal": {
+              "$ref": "#/definitions/filterAsParameter"
+            }
+          },
+          "required": [
+            "signal"
+          ]
+        },
+        "exit": {
+          "type": "object",
+          "properties": {
+            "signal": {
+              "$ref": "#/definitions/filterAsParameter"
+            }
+          },
+          "required": [
+            "signal"
+          ]
+        }
+      },
+      "required": [
+        "entry"
+      ]
+    },
     "methodAsParameter": {
       "oneOf": [
         {
