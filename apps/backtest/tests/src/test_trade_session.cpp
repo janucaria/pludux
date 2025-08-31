@@ -20,6 +20,10 @@ TEST(TradeSessionTest, DefaultConstructor)
   EXPECT_DOUBLE_EQ(session.unrealized_investment(), 0.0);
   EXPECT_EQ(session.unrealized_duration(), 0);
 
+  EXPECT_DOUBLE_EQ(session.realized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.realized_investment(), 0.0);
+  EXPECT_EQ(session.realized_duration(), 0);
+
   EXPECT_TRUE(session.is_flat());
   EXPECT_FALSE(session.is_open());
   EXPECT_FALSE(session.is_closed());
@@ -40,6 +44,10 @@ TEST(TradeSessionTest, ConstructorWithMarketParameters)
   EXPECT_DOUBLE_EQ(session.partial_realized_pnl(), 0.0);
   EXPECT_DOUBLE_EQ(session.unrealized_investment(), 0.0);
   EXPECT_EQ(session.unrealized_duration(), 0);
+
+  EXPECT_DOUBLE_EQ(session.realized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.realized_investment(), 0.0);
+  EXPECT_EQ(session.realized_duration(), 0);
 
   EXPECT_TRUE(session.is_flat());
   EXPECT_FALSE(session.is_open());
@@ -62,6 +70,10 @@ TEST(TradeSessionTest, OpenLongPosition)
   EXPECT_DOUBLE_EQ(session.unrealized_investment(), 200.0);
   EXPECT_EQ(session.unrealized_duration(), 0);
 
+  EXPECT_DOUBLE_EQ(session.realized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.realized_investment(), 0.0);
+  EXPECT_EQ(session.realized_duration(), 0);
+
   EXPECT_FALSE(session.is_flat());
   EXPECT_TRUE(session.is_open());
   EXPECT_FALSE(session.is_closed());
@@ -80,9 +92,11 @@ TEST(TradeSessionTest, CloseLongPositionWithExit)
   auto session = TradeSession{static_cast<std::time_t>(20), 100.0, 1};
 
   auto trade_entry = TradeEntry{2.0, 100.0};
-  auto trade_exit = TradeExit{2.0, 105.0, TradeExit::Reason::signal};
-
   session.entry_position(trade_entry);
+
+  session.market_update(static_cast<std::time_t>(30), 105.0, 3);
+
+  auto trade_exit = TradeExit{2.0, 105.0, TradeExit::Reason::signal};
   session.exit_position(trade_exit);
 
   EXPECT_FALSE(session.open_position().has_value());
@@ -92,6 +106,10 @@ TEST(TradeSessionTest, CloseLongPositionWithExit)
   EXPECT_DOUBLE_EQ(session.partial_realized_pnl(), 0.0);
   EXPECT_DOUBLE_EQ(session.unrealized_investment(), 0.0);
   EXPECT_EQ(session.unrealized_duration(), 0);
+
+  EXPECT_DOUBLE_EQ(session.realized_pnl(), 10.0);
+  EXPECT_DOUBLE_EQ(session.realized_investment(), 200.0);
+  EXPECT_EQ(session.realized_duration(), 10);
 
   EXPECT_FALSE(session.is_flat());
   EXPECT_FALSE(session.is_open());
@@ -118,6 +136,10 @@ TEST(TradeSessionTest, LongPositionScaleIn)
   EXPECT_DOUBLE_EQ(session.partial_realized_pnl(), 0.0);
   EXPECT_DOUBLE_EQ(session.unrealized_investment(), 330.0);
   EXPECT_EQ(session.unrealized_duration(), 5);
+
+  EXPECT_DOUBLE_EQ(session.realized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.realized_investment(), 0.0);
+  EXPECT_EQ(session.realized_duration(), 0);
 
   EXPECT_FALSE(session.is_flat());
   EXPECT_TRUE(session.is_open());
@@ -151,6 +173,10 @@ TEST(TradeSessionTest, LongPositionScaleOut)
   EXPECT_DOUBLE_EQ(session.unrealized_investment(), 200.0);
   EXPECT_EQ(session.unrealized_duration(), 5);
 
+  EXPECT_DOUBLE_EQ(session.realized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.realized_investment(), 0.0);
+  EXPECT_EQ(session.realized_duration(), 0);
+
   EXPECT_FALSE(session.is_flat());
   EXPECT_TRUE(session.is_open());
   EXPECT_FALSE(session.is_closed());
@@ -171,6 +197,10 @@ TEST(TradeSessionTest, OpenShortPosition)
   EXPECT_DOUBLE_EQ(session.partial_realized_pnl(), 0.0);
   EXPECT_DOUBLE_EQ(session.unrealized_investment(), -200.0);
   EXPECT_EQ(session.unrealized_duration(), 0);
+
+  EXPECT_DOUBLE_EQ(session.realized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.realized_investment(), 0.0);
+  EXPECT_EQ(session.realized_duration(), 0);
 
   EXPECT_FALSE(session.is_flat());
   EXPECT_TRUE(session.is_open());
@@ -204,6 +234,10 @@ TEST(TradeSessionTest, CloseShortPositionWithExit)
   EXPECT_DOUBLE_EQ(session.unrealized_investment(), 0.0);
   EXPECT_EQ(session.unrealized_duration(), 0);
 
+  EXPECT_DOUBLE_EQ(session.realized_pnl(), 10.0);
+  EXPECT_DOUBLE_EQ(session.realized_investment(), -200.0);
+  EXPECT_EQ(session.realized_duration(), 10);
+
   EXPECT_FALSE(session.is_flat());
   EXPECT_FALSE(session.is_open());
   EXPECT_TRUE(session.is_closed());
@@ -229,6 +263,10 @@ TEST(TradeSessionTest, ShortPositionScaleIn)
   EXPECT_DOUBLE_EQ(session.partial_realized_pnl(), 0.0);
   EXPECT_DOUBLE_EQ(session.unrealized_investment(), -330.0);
   EXPECT_EQ(session.unrealized_duration(), 5);
+
+  EXPECT_DOUBLE_EQ(session.realized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.realized_investment(), 0.0);
+  EXPECT_EQ(session.realized_duration(), 0);
 
   EXPECT_FALSE(session.is_flat());
   EXPECT_TRUE(session.is_open());
@@ -261,6 +299,10 @@ TEST(TradeSessionTest, ShortPositionScaleOut)
   EXPECT_DOUBLE_EQ(session.partial_realized_pnl(), -30.0);
   EXPECT_DOUBLE_EQ(session.unrealized_investment(), -200.0);
   EXPECT_EQ(session.unrealized_duration(), 5);
+
+  EXPECT_DOUBLE_EQ(session.realized_pnl(), 0.0);
+  EXPECT_DOUBLE_EQ(session.realized_investment(), 0.0);
+  EXPECT_EQ(session.realized_duration(), 0);
 
   EXPECT_FALSE(session.is_flat());
   EXPECT_TRUE(session.is_open());

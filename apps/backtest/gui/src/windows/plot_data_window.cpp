@@ -37,7 +37,7 @@ void PlotDataWindow::render(AppState& app_state)
   const auto& asset = backtests[state.selected_backtest_index].asset();
   const auto& asset_history = asset.history();
 
-  auto backtest_summaries = std::vector<backtest::BacktestingSummary>{};
+  auto backtest_summaries = std::vector<backtest::BacktestSummary>{};
   auto is_backtest_should_run = false;
   if(!state.backtests.empty()) {
     const auto& backtest = state.backtests[state.selected_backtest_index];
@@ -313,7 +313,7 @@ void PlotDataWindow::PlotVolume(const char* label_id,
 
 void PlotDataWindow::DrawTrades(
  const char* label_id,
- const std::vector<backtest::BacktestingSummary>& backtest_summaries,
+ const std::vector<backtest::BacktestSummary>& backtest_summaries,
  const AssetHistory& asset_history)
 {
   constexpr auto marker_offset = 50.0f;
@@ -482,7 +482,7 @@ void PlotDataWindow::DrawTrades(
 }
 
 void PlotDataWindow::plot_equity(
- const std::vector<backtest::BacktestingSummary>& backtest_summaries)
+ const std::vector<backtest::BacktestSummary>& backtest_summaries)
 {
   const auto summaries_size = backtest_summaries.size();
   auto xs = std::vector<double>{};

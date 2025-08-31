@@ -12,7 +12,7 @@
 #include <nlohmann/json.hpp>
 
 #include <pludux/backtest.hpp>
-#include <pludux/backtest/backtesting_summary.hpp>
+#include <pludux/backtest/backtest_summary.hpp>
 
 auto main(int, const char**) -> int
 {
@@ -52,7 +52,7 @@ auto main(int, const char**) -> int
   const auto& backtest_summaries = backtest.summaries();
   const auto& summary = !backtest_summaries.empty()
                          ? backtest_summaries.back()
-                         : pludux::backtest::BacktestingSummary{};
+                         : pludux::backtest::BacktestSummary{};
 
   auto& ostream = std::cout;
 
@@ -86,28 +86,6 @@ auto main(int, const char**) -> int
   ostream << "\n\n";
   ostream << "CLOSED TRADES\n";
   ostream << "-------------\n";
-  ostream << std::format("Exit signal rate: {:.2f}%\n",
-                         summary.exit_signal_rate() * 100);
-  ostream << std::format("Average exit signal: {:.2f}\n",
-                         summary.average_exit_signal());
-  ostream << std::format("Exit signal EV: {:.2f}\n",
-                         summary.exit_signal_expected_value());
-
-  ostream << std::format("Take profit rate: {:.2f}%\n",
-                         summary.take_profit_rate() * 100);
-  ostream << std::format("Average take profit: {:.2f}\n",
-                         summary.average_take_profit());
-  ostream << std::format("Take profit EV: {:.2f}\n",
-                         summary.take_profit_expected_value());
-
-  ostream << std::format("Stop loss rate: {:.2f}%\n",
-                         summary.stop_loss_rate() * 100);
-  ostream << std::format("Average stop loss: {:.2f}\n",
-                         -summary.average_stop_loss());
-  ostream << std::format("Stop loss EV: {:.2f}\n",
-                         summary.stop_loss_expected_value());
-  ostream << "\n";
-
   ostream << std::format("Expected value (EV): {:.2f}\n",
                          summary.expected_value());
   ostream << std::format("EV to risk rate: {:.2f}%\n",

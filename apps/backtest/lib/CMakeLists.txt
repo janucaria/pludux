@@ -39,7 +39,7 @@ target_sources(${PROJECT_NAME}
     sources/backtest/trade_record.cpp
     sources/backtest/trade_session.cpp
 
-    sources/backtest/backtesting_summary.cpp
+    sources/backtest/backtest_summary.cpp
     sources/backtest/asset.cpp
     sources/backtest/strategy.cpp
     sources/backtest/profile.cpp

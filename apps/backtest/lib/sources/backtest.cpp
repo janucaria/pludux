@@ -24,7 +24,7 @@ Backtest::Backtest(std::string name,
            std::move(strategy_ptr),
            std::move(asset_ptr),
            std::move(profile_ptr),
-           std::vector<backtest::BacktestingSummary>{}}
+           std::vector<backtest::BacktestSummary>{}}
 {
 }
 
@@ -32,7 +32,7 @@ Backtest::Backtest(std::string name,
                    std::shared_ptr<backtest::Strategy> strategy_ptr,
                    std::shared_ptr<backtest::Asset> asset_ptr,
                    std::shared_ptr<backtest::Profile> profile_ptr,
-                   std::vector<backtest::BacktestingSummary> summaries)
+                   std::vector<backtest::BacktestSummary> summaries)
 : name_{std::move(name)}
 , strategy_ptr_{strategy_ptr}
 , asset_ptr_{asset_ptr}
@@ -91,7 +91,7 @@ auto Backtest::is_failed() const noexcept -> bool
 }
 
 auto Backtest::summaries() const noexcept
- -> const std::vector<backtest::BacktestingSummary>&
+ -> const std::vector<backtest::BacktestSummary>&
 {
   return summaries_;
 }
@@ -131,7 +131,7 @@ void Backtest::run()
 
   auto summary = !summaries_.empty()
                   ? summaries_.back()
-                  : BacktestingSummary{profile.initial_capital()};
+                  : BacktestSummary{profile.initial_capital()};
 
   auto trade_session = summary.trade_session();
 

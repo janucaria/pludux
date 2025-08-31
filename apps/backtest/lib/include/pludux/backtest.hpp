@@ -7,7 +7,7 @@
 #include <vector>
 
 #include <pludux/backtest/asset.hpp>
-#include <pludux/backtest/backtesting_summary.hpp>
+#include <pludux/backtest/backtest_summary.hpp>
 #include <pludux/backtest/profile.hpp>
 #include <pludux/backtest/strategy.hpp>
 
@@ -24,7 +24,7 @@ public:
            std::shared_ptr<backtest::Strategy> strategy_ptr,
            std::shared_ptr<backtest::Asset> asset_ptr,
            std::shared_ptr<backtest::Profile> profile_ptr,
-           std::vector<backtest::BacktestingSummary> summaries);
+           std::vector<backtest::BacktestSummary> summaries);
 
   auto name() const noexcept -> const std::string&;
 
@@ -46,7 +46,7 @@ public:
   auto is_failed() const noexcept -> bool;
 
   auto summaries() const noexcept
-   -> const std::vector<backtest::BacktestingSummary>&;
+   -> const std::vector<backtest::BacktestSummary>&;
 
   void reset();
 
@@ -62,7 +62,7 @@ private:
   std::shared_ptr<backtest::Profile> profile_ptr_;
 
   bool is_failed_;
-  std::vector<backtest::BacktestingSummary> summaries_;
+  std::vector<backtest::BacktestSummary> summaries_;
 };
 
 auto get_env_var(std::string_view var_name) -> std::optional<std::string>;

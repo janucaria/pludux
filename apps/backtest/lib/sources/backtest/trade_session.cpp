@@ -208,6 +208,21 @@ auto TradeSession::unrealized_duration() const noexcept -> std::time_t
                         : 0;
 }
 
+auto TradeSession::realized_pnl() const noexcept -> double
+{
+  return closed_position_ ? closed_position_->realized_pnl() : 0.0;
+}
+
+auto TradeSession::realized_investment() const noexcept -> double
+{
+  return closed_position_ ? closed_position_->realized_investment() : 0.0;
+}
+
+auto TradeSession::realized_duration() const noexcept -> std::time_t
+{
+  return closed_position_ ? closed_position_->realized_duration() : 0;
+}
+
 auto TradeSession::is_flat() const noexcept -> bool
 {
   return !open_position_ && !closed_position_;

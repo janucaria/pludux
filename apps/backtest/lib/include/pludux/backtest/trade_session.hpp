@@ -112,6 +112,12 @@ public:
 
   auto unrealized_duration() const noexcept -> std::time_t;
 
+  auto realized_pnl() const noexcept -> double;
+
+  auto realized_investment() const noexcept -> double;
+
+  auto realized_duration() const noexcept -> std::time_t;
+
   auto is_flat() const noexcept -> bool;
 
   auto is_open() const noexcept -> bool;

@@ -5,11 +5,11 @@
 
 #include <imgui.h>
 
-#include <pludux/backtest/backtesting_summary.hpp>
+#include <pludux/backtest/backtest_summary.hpp>
 
 #include "../app_state.hpp"
 
-#include "./backtesting_summary_window.hpp"
+#include "./backtest_summary_window.hpp"
 
 namespace pludux::apps {
 
@@ -78,47 +78,6 @@ void BacktestSummaryWindow::render(AppState& app_state)
       draw_count_row_with_rate("Break-even trades",
                                summary.break_even_count(),
                                summary.break_even_rate());
-
-      draw_spacer_row();
-
-      draw_count_row_with_rate("Take profit hits",
-                               summary.take_profit_count(),
-                               summary.take_profit_rate());
-      draw_currency_with_rate_row("Avg take profit",
-                                  summary.average_take_profit(),
-                                  summary.average_take_profit() /
-                                   summary.average_investment());
-      draw_currency_with_rate_row("Take profit EV",
-                                  summary.take_profit_expected_value(),
-                                  summary.take_profit_expected_value() /
-                                   summary.average_investment());
-
-      draw_empty_row();
-
-      draw_count_row_with_rate(
-       "Stop loss hits", summary.stop_loss_count(), summary.stop_loss_rate());
-      draw_currency_with_rate_row("Avg stop loss",
-                                  summary.average_stop_loss(),
-                                  summary.average_stop_loss() /
-                                   summary.average_investment());
-      draw_currency_with_rate_row("Stop loss EV",
-                                  summary.stop_loss_expected_value(),
-                                  summary.stop_loss_expected_value() /
-                                   summary.average_investment());
-
-      draw_empty_row();
-
-      draw_count_row_with_rate("Exit signal hits",
-                               summary.exit_signal_count(),
-                               summary.exit_signal_rate());
-      draw_currency_with_rate_row("Avg exit signal",
-                                  summary.average_exit_signal(),
-                                  summary.average_exit_signal() /
-                                   summary.average_investment());
-      draw_currency_with_rate_row("Exit signal EV",
-                                  summary.exit_signal_expected_value(),
-                                  summary.exit_signal_expected_value() /
-                                   summary.average_investment());
 
       draw_spacer_row();
 
