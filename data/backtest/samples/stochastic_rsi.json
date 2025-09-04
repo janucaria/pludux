@@ -42,7 +42,6 @@
   },
   "longPosition": {
     "entry": {
-      "repeat": "sequence",
       "signal": {
         "filter": "ALL_OF",
         "conditions": [

@@ -32,7 +32,6 @@
   },
   "longPosition": {
     "entry": {
-      "repeat": "sequence",
       "signal": {
         "filter": "CROSSOVER",
         "signal": "CLOSE",

@@ -31,7 +31,6 @@
   },
   "longPosition": {
     "entry": {
-      "repeat": "sequence",
       "signal": {
         "filter": "CROSSUNDER",
         "signal": "CLOSE",
@@ -48,7 +47,6 @@
   },
   "shortPosition": {
     "entry": {
-      "repeat": "sequence",
       "signal": {
         "filter": "CROSSOVER",
         "signal": "CLOSE",

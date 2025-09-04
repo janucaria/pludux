@@ -24,7 +24,6 @@
   },
   "longPosition": {
     "entry": {
-      "repeat": "sequence",
       "signal": {
         "filter": "CROSSUNDER",
         "signal": "rsi",

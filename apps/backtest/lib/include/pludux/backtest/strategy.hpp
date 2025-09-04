@@ -22,10 +22,8 @@ public:
 
   Strategy(std::string name,
            screener::ScreenerMethod risk_method,
-           EntryRepeat long_entry_repeat,
            screener::ScreenerFilter long_entry_filter,
            screener::ScreenerFilter long_exit_filter,
-           EntryRepeat short_entry_repeat,
            screener::ScreenerFilter short_entry_filter,
            screener::ScreenerFilter short_exit_filter,
            bool stop_loss_enabled,
@@ -38,17 +36,9 @@ public:
 
   auto risk_method() const noexcept -> const screener::ScreenerMethod&;
 
-  auto long_entry_repeat() const noexcept -> EntryRepeat;
-
-  void long_entry_repeat(EntryRepeat repeat_type) noexcept;
-
   auto long_entry_filter() const noexcept -> const screener::ScreenerFilter&;
 
   auto long_exit_filter() const noexcept -> const screener::ScreenerFilter&;
-
-  auto short_entry_repeat() const noexcept -> EntryRepeat;
-
-  void short_entry_repeat(EntryRepeat repeat_type) noexcept;
 
   auto short_entry_filter() const noexcept -> const screener::ScreenerFilter&;
 
@@ -76,10 +66,6 @@ public:
                    double risk_value) const noexcept
    -> std::optional<TradeEntry>;
 
-  auto reentry_trade(const AssetSnapshot& asset_snapshot,
-                     double position_size) const noexcept
-   -> std::optional<TradeEntry>;
-
   auto exit_trade(const AssetSnapshot& asset_snapshot,
                   double position_size) const noexcept
    -> std::optional<TradeExit>;
@@ -89,11 +75,9 @@ private:
 
   screener::ScreenerMethod risk_method_;
 
-  EntryRepeat long_entry_repeat_{EntryRepeat::sequence};
   screener::ScreenerFilter long_entry_filter_{screener::FalseFilter{}};
   screener::ScreenerFilter long_exit_filter_{screener::FalseFilter{}};
 
-  EntryRepeat short_entry_repeat_{EntryRepeat::sequence};
   screener::ScreenerFilter short_entry_filter_{screener::FalseFilter{}};
   screener::ScreenerFilter short_exit_filter_{screener::FalseFilter{}};
 

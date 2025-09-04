@@ -152,13 +152,6 @@ void Backtest::run()
 
     if(exit_trade) {
       trade_session.exit_position(*exit_trade);
-    } else {
-      const auto reentry_trade =
-       strategy.reentry_trade(asset_snapshot, position_size);
-
-      if(reentry_trade) {
-        trade_session.entry_position(*reentry_trade);
-      }
     }
   } else {
     const auto entry_trade =

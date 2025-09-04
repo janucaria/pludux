@@ -101,12 +101,6 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "repeat": {
-              "enum": [
-                "sequence",
-                "always"
-              ]
-            },
             "signal": {
               "$ref": "#/definitions/filterAsParameter"
             }

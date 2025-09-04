@@ -295,15 +295,11 @@ void serialize(Archive& archive, pludux::backtest::Strategy& strategy)
   auto config_parser = pludux::ConfigParser{};
   config_parser.register_default_parsers();
 
-  const auto long_entry_repeat =
-   static_cast<std::size_t>(strategy.long_entry_repeat());
   const auto long_entry_filter_json =
    config_parser.serialize_filter(strategy.long_entry_filter());
   const auto long_exit_filter_json =
    config_parser.serialize_filter(strategy.long_exit_filter());
 
-  const auto short_entry_repeat =
-   static_cast<std::size_t>(strategy.short_entry_repeat());
   const auto short_entry_filter_json =
    config_parser.serialize_filter(strategy.short_entry_filter());
   const auto short_exit_filter_json =
@@ -319,10 +315,8 @@ void serialize(Archive& archive, pludux::backtest::Strategy& strategy)
 
   archive(make_nvp("name", strategy.name()),
           make_nvp("riskMethod", risk_method_json),
-          make_nvp("longEntryRepeat", long_entry_repeat),
           make_nvp("longEntryFilter", long_entry_filter_json),
           make_nvp("longExitFilter", long_exit_filter_json),
-          make_nvp("shortEntryRepeat", short_entry_repeat),
           make_nvp("shortEntryFilter", short_entry_filter_json),
           make_nvp("shortExitFilter", short_exit_filter_json),
           make_nvp("stopLossEnabled", stop_loss_enabled),
@@ -341,10 +335,8 @@ struct LoadAndConstruct<pludux::backtest::Strategy> {
   {
     auto name = std::string{};
     auto risk_method_json = nlohmann::json{};
-    auto long_entry_repeat = std::size_t{};
     auto long_entry_filter_json = nlohmann::json{};
     auto long_exit_filter_json = nlohmann::json{};
-    auto short_entry_repeat = std::size_t{};
     auto short_entry_filter_json = nlohmann::json{};
     auto short_exit_filter_json = nlohmann::json{};
     auto stop_loss_enabled = bool{};
@@ -355,10 +347,8 @@ struct LoadAndConstruct<pludux::backtest::Strategy> {
 
     archive(make_nvp("name", name),
             make_nvp("riskMethod", risk_method_json),
-            make_nvp("longEntryRepeat", long_entry_repeat),
             make_nvp("longEntryFilter", long_entry_filter_json),
             make_nvp("longExitFilter", long_exit_filter_json),
-            make_nvp("shortEntryRepeat", short_entry_repeat),
             make_nvp("shortEntryFilter", short_entry_filter_json),
             make_nvp("shortExitFilter", short_exit_filter_json),
             make_nvp("stopLossEnabled", stop_loss_enabled),
@@ -381,10 +371,8 @@ struct LoadAndConstruct<pludux::backtest::Strategy> {
 
     constructor(std::move(name),
                 std::move(risk_method),
-                pludux::backtest::Strategy::EntryRepeat(long_entry_repeat),
                 std::move(long_entry_filter),
                 std::move(long_exit_filter),
-                pludux::backtest::Strategy::EntryRepeat(short_entry_repeat),
                 std::move(short_entry_filter),
                 std::move(short_exit_filter),
                 stop_loss_enabled,
