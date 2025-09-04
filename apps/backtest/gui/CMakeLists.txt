@@ -16,7 +16,7 @@ if(NOT EMSCRIPTEN)
   FetchContent_Declare(
     wgpu_native
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-    URL "https://github.com/gfx-rs/wgpu-native/releases/download/v25.0.2.1/wgpu-windows-x86_64-msvc-${PLUDUX_WEBGPU_DOWNLOAD_BUILD}.zip"
+    URL "https://github.com/gfx-rs/wgpu-native/releases/download/v25.0.2.2/wgpu-windows-x86_64-msvc-${PLUDUX_WEBGPU_DOWNLOAD_BUILD}.zip"
   )
   
   FetchContent_MakeAvailable(wgpu_native)
@@ -71,7 +71,7 @@ FetchContent_Declare(
 FetchContent_Declare(
   imgui
   GIT_REPOSITORY "https://github.com/ocornut/imgui.git"
-  GIT_TAG        "v1.92.0-docking"
+  GIT_TAG        "v1.92.2b-docking"
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
 )
