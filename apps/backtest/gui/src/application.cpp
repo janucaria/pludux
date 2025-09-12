@@ -148,6 +148,9 @@ void Application::on_update()
 
   try {
     dockspace_window_.render(app_state);
+
+    strategies_window_.render(app_state);
+
     plot_data_window_.render(app_state);
 
     auto backtesting_summary = BacktestSummaryWindow{};
@@ -157,9 +160,6 @@ void Application::on_update()
 
     auto assets_window = AssetsWindow{};
     assets_window.render(app_state);
-
-    auto strategies_window = StrategiesWindow{};
-    strategies_window.render(app_state);
 
     profiles_window_.render(app_state);
 

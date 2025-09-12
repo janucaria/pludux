@@ -38,6 +38,7 @@ private:
   PlotDataWindow plot_data_window_;
   BacktestsWindow backtests_window_;
   ProfilesWindow profiles_window_;
+  StrategiesWindow strategies_window_;
 
   AppStateData state_data_;
   std::queue<AppPolyAction> actions_;

@@ -22,8 +22,18 @@ FetchContent_Declare(
       <SOURCE_DIR>/
 )
 
+FetchContent_Declare(
+  jsoncons
+  GIT_REPOSITORY https://github.com/danielaparker/jsoncons.git
+  GIT_TAG        v1.4.0
+  GIT_SHALLOW    TRUE
+  GIT_PROGRESS   TRUE
+  OVERRIDE_FIND_PACKAGE
+)
+
 find_package(rapidcsv REQUIRED)
 find_package(ctre REQUIRED)
+find_package(jsoncons REQUIRED)
 
 
 add_library(${PROJECT_NAME})
@@ -56,4 +66,5 @@ target_link_libraries(${PROJECT_NAME}
     nlohmann_json::nlohmann_json
     rapidcsv
     ctre::ctre
+    jsoncons
 )
