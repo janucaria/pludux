@@ -226,8 +226,8 @@ TEST(TATest, MacdSeriesCalculation)
   EXPECT_TRUE(std::isnan(macd_lines[8]));
   EXPECT_TRUE(std::isnan(macd_lines[9]));
 
-  macd_series.output(MacdOutput::signal);
-  const auto& signal_lines = macd_series;
+  const auto signal_lines =
+   OutputByNameSeries{macd_series, OutputName::SignalLine};
   EXPECT_DOUBLE_EQ(signal_lines[0], -8.2285071355347075);
   EXPECT_DOUBLE_EQ(signal_lines[1], -3.8006052669318442);
   EXPECT_DOUBLE_EQ(signal_lines[2], 0.091762436115307766);
@@ -244,8 +244,8 @@ TEST(TATest, MacdSeriesCalculation)
   EXPECT_TRUE(std::isnan(signal_lines[8]));
   EXPECT_TRUE(std::isnan(signal_lines[9]));
 
-  macd_series.output(MacdOutput::histogram);
-  const auto& histograms = macd_series;
+  const auto histograms =
+   OutputByNameSeries{macd_series, OutputName::MacdHistogram};
   EXPECT_DOUBLE_EQ(histograms[0], -4.4279018686028646);
   EXPECT_DOUBLE_EQ(histograms[1], -3.8923677030471517);
   EXPECT_DOUBLE_EQ(histograms[2], -3.3858834579168233);
@@ -279,8 +279,7 @@ TEST(TATest, StochSeriesCalculation)
    highs_series, lows_series, closes_series, k_period, k_smooth, d_period);
   const auto k = stochastic;
 
-  stochastic.output(StochOutput::d);
-  const auto d = stochastic;
+  const auto d = OutputByNameSeries{stochastic, OutputName::StochasticD};
 
   ASSERT_EQ(k.size(), highs_series.size());
   ASSERT_EQ(d.size(), highs_series.size());
@@ -320,9 +319,7 @@ TEST(TATest, StochRSISeriesCalculation)
    ta::stoch_rsi(rsi_input, rsi_period, k_period, k_smooth, d_period);
 
   const auto k = result;
-
-  result.output(StochOutput::d);
-  const auto d = result;
+  const auto d = OutputByNameSeries{result, OutputName::StochasticD};
 
   ASSERT_EQ(k.size(), rsi_input.size());
   ASSERT_EQ(d.size(), rsi_input.size());
@@ -382,8 +379,7 @@ TEST(TATest, BbSeriesCalculation)
   EXPECT_TRUE(std::isnan(middle_band[8]));
   EXPECT_TRUE(std::isnan(middle_band[9]));
 
-  result.output(BbOutput::upper);
-  const auto& upper_band = result;
+  const auto upper_band = OutputByNameSeries{result, OutputName::UpperBand};
   EXPECT_DOUBLE_EQ(upper_band[0], 875.56465996625059);
   EXPECT_DOUBLE_EQ(upper_band[1], 877.64911064067348);
   EXPECT_DOUBLE_EQ(upper_band[2], 887.5680975041804);
@@ -395,8 +391,7 @@ TEST(TATest, BbSeriesCalculation)
   EXPECT_TRUE(std::isnan(upper_band[8]));
   EXPECT_TRUE(std::isnan(upper_band[9]));
 
-  result.output(BbOutput::lower);
-  const auto& lower_band = result;
+  const auto lower_band = OutputByNameSeries{result, OutputName::LowerBand};
   EXPECT_DOUBLE_EQ(lower_band[0], 848.43534003374941);
   EXPECT_DOUBLE_EQ(lower_band[1], 852.35088935932652);
   EXPECT_DOUBLE_EQ(lower_band[2], 832.4319024958196);

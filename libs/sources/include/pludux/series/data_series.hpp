@@ -9,6 +9,8 @@
 #include <utility>
 #include <vector>
 
+#include <pludux/series/series_output.hpp>
+
 namespace pludux {
 
 template<typename T>
@@ -31,7 +33,7 @@ public:
    * The 0 reverse_index is the latest value.
    * If the reverse_index is out of bounds, return NaN.
    */
-  auto operator[](std::size_t index) const -> ValueType
+  auto operator[](std::size_t index) const -> SeriesOutput<ValueType>
   {
     if(index >= data_.size()) {
       return std::numeric_limits<ValueType>::quiet_NaN();

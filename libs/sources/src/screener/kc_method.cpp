@@ -3,7 +3,7 @@
 
 namespace pludux::screener {
 
-KcMethod::KcMethod(KcOutput output,
+KcMethod::KcMethod(OutputName output,
                    ScreenerMethod ma,
                    ScreenerMethod range,
                    double multiplier,
@@ -22,12 +22,15 @@ auto KcMethod::operator()(AssetSnapshot asset_data) const
   const auto ma_series = ma_(asset_data);
   const auto range_series = range_(asset_data);
 
-  const auto kc = KcSeries{output_, ma_series, range_series, multiplier_};
+  const auto kc =
+   OutputByNameSeries{KcSeries{ma_series, range_series, multiplier_}, output_};
+
   return SubSeries{PolySeries<double>{kc},
                    static_cast<std::ptrdiff_t>(offset_)};
 }
 
-auto KcMethod::operator==(const KcMethod& other) const noexcept -> bool = default;
+auto KcMethod::operator==(const KcMethod& other) const noexcept
+ -> bool = default;
 
 auto KcMethod::offset() const noexcept -> std::size_t
 {
@@ -39,12 +42,12 @@ void KcMethod::offset(std::size_t offset) noexcept
   offset_ = offset;
 }
 
-auto KcMethod::output() const noexcept -> KcOutput
+auto KcMethod::output() const noexcept -> OutputName
 {
   return output_;
 }
 
-void KcMethod::output(KcOutput output) noexcept
+void KcMethod::output(OutputName output) noexcept
 {
   output_ = output;
 }

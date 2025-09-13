@@ -8,6 +8,8 @@
 #include <type_traits>
 #include <utility>
 
+#include <pludux/series/series_output.hpp>
+
 #include "atr_series.hpp"
 #include "binary_fn_series.hpp"
 #include "ema_series.hpp"
@@ -15,36 +17,33 @@
 
 namespace pludux {
 
-enum class KcOutput { middle, upper, lower };
-
 template<typename TRangeSeries, typename TMaSeries>
 class KcSeries {
 public:
   using ValueType = std::common_type_t<typename TRangeSeries::ValueType,
                                        typename TMaSeries::ValueType>;
 
-  KcSeries(KcOutput output, TMaSeries ma, TRangeSeries range, double multiplier)
-  : output_{output}
-  , multiplier_{multiplier}
+  KcSeries(TMaSeries ma, TRangeSeries range, double multiplier)
+  : multiplier_{multiplier}
   , ma_{std::move(ma)}
   , range_{std::move(range)}
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> ValueType
+  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
   {
     const auto range = range_[index] * multiplier_;
     const auto middle = ma_[index];
 
-    switch(output_) {
-    case KcOutput::upper:
-      return middle + range;
-    case KcOutput::lower:
-      return middle - range;
-    case KcOutput::middle:
-    default:
-      return middle;
-    }
+    const auto upper = middle + range;
+    const auto lower = middle - range;
+
+    return {{middle, upper, lower},
+            {
+             {OutputName::MiddleBand, 0},
+             {OutputName::UpperBand, 1},
+             {OutputName::LowerBand, 2},
+            }};
   }
 
   auto size() const noexcept -> std::size_t
@@ -52,18 +51,7 @@ public:
     return ma_.size();
   }
 
-  auto output() const noexcept -> KcOutput
-  {
-    return output_;
-  }
-
-  void output(KcOutput output) noexcept
-  {
-    output_ = output;
-  }
-
 private:
-  KcOutput output_;
   double multiplier_;
   TMaSeries ma_;
   TRangeSeries range_;

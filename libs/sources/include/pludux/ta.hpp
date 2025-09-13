@@ -70,11 +70,8 @@ auto macd(TSeries series,
           std::size_t long_period,
           std::size_t signal_period) -> MacdSeries<TSeries>
 {
-  return MacdSeries{MacdOutput::macd,
-                    std::move(series),
-                    short_period,
-                    long_period,
-                    signal_period};
+  return MacdSeries{
+   std::move(series), short_period, long_period, signal_period};
 }
 
 template<typename TSeries>
@@ -85,8 +82,7 @@ auto stoch(TSeries highs,
            std::size_t k_smooth,
            std::size_t d_period) -> StochSeries<TSeries, TSeries, TSeries>
 {
-  return StochSeries{StochOutput::k,
-                     std::move(highs),
+  return StochSeries{std::move(highs),
                      std::move(lows),
                      std::move(closes),
                      k_period,
@@ -102,14 +98,14 @@ auto stoch_rsi(TSeries series,
                std::size_t d_period) -> StochRsiSeries<TSeries>
 {
   return StochRsiSeries{
-   StochOutput::k, std::move(series), rsi_period, k_period, k_smooth, d_period};
+   std::move(series), rsi_period, k_period, k_smooth, d_period};
 }
 
 template<typename TSeries>
 auto bb(TSeries series, std::size_t period, double stddev)
  -> BbSeries<SmaSeries<TSeries>>
 {
-  return BbSeries{BbOutput::middle, std::move(series), period, stddev};
+  return BbSeries{std::move(series), period, stddev};
 }
 
 template<typename TSeries>

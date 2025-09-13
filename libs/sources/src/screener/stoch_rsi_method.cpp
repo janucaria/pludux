@@ -4,7 +4,7 @@
 
 namespace pludux::screener {
 
-StochRsiMethod::StochRsiMethod(StochOutput output,
+StochRsiMethod::StochRsiMethod(OutputName output,
                                ScreenerMethod rsi_input,
                                std::size_t rsi_period,
                                std::size_t k_period,
@@ -24,14 +24,11 @@ StochRsiMethod::StochRsiMethod(StochOutput output,
 auto StochRsiMethod::operator()(AssetSnapshot asset_data) const
  -> SubSeries<PolySeries<double>>
 {
-  const auto stoch_rsi_series = StochRsiSeries{output_,
-                                               rsi_input_(asset_data),
-                                               rsi_period_,
-                                               k_period_,
-                                               k_smooth_,
-                                               d_period_};
+  const auto stoch_rsi_series = StochRsiSeries{
+   rsi_input_(asset_data), rsi_period_, k_period_, k_smooth_, d_period_};
+  const auto named_index_series = OutputByNameSeries{stoch_rsi_series, output_};
 
-  return SubSeries{PolySeries<double>{stoch_rsi_series},
+  return SubSeries{PolySeries<double>{named_index_series},
                    static_cast<std::ptrdiff_t>(offset_)};
 }
 
@@ -58,12 +55,12 @@ void StochRsiMethod::offset(std::size_t offset) noexcept
   offset_ = offset;
 }
 
-auto StochRsiMethod::output() const noexcept -> StochOutput
+auto StochRsiMethod::output() const noexcept -> OutputName
 {
   return output_;
 }
 
-void StochRsiMethod::output(StochOutput output) noexcept
+void StochRsiMethod::output(OutputName output) noexcept
 {
   output_ = output;
 }

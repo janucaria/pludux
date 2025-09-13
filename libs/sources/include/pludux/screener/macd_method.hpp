@@ -11,7 +11,7 @@ namespace pludux::screener {
 
 class MacdMethod {
 public:
-  MacdMethod(MacdOutput output,
+  MacdMethod(OutputName output,
              ScreenerMethod input,
              std::size_t fast_period,
              std::size_t slow_period,
@@ -27,9 +27,9 @@ public:
 
   void offset(std::size_t offset) noexcept;
 
-  auto output() const noexcept -> MacdOutput;
+  auto output() const noexcept -> OutputName;
 
-  void output(MacdOutput output) noexcept;
+  void output(OutputName output) noexcept;
 
   auto input() const noexcept -> ScreenerMethod;
 
@@ -48,7 +48,7 @@ public:
   void signal_period(std::size_t signal_period) noexcept;
 
 private:
-  MacdOutput output_;
+  OutputName output_;
   ScreenerMethod input_;
   std::size_t offset_;
   std::size_t fast_period_;

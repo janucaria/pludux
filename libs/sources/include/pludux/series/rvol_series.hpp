@@ -5,6 +5,8 @@
 #include <limits>
 #include <utility>
 
+#include <pludux/series/series_output.hpp>
+
 #include <pludux/series/sma_series.hpp>
 
 namespace pludux {
@@ -20,7 +22,7 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> ValueType
+  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
   {
     const auto sma_volume = SmaSeries{volumes_, period_}[index];
     const auto current_volume = volumes_[index];

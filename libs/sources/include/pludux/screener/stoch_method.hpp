@@ -11,7 +11,7 @@ namespace pludux::screener {
 
 class StochMethod {
 public:
-  StochMethod(StochOutput output,
+  StochMethod(OutputName output,
               ScreenerMethod high,
               ScreenerMethod low,
               ScreenerMethod close,
@@ -35,9 +35,9 @@ public:
 
   void offset(std::size_t offset) noexcept;
 
-  auto output() const noexcept -> StochOutput;
+  auto output() const noexcept -> OutputName;
 
-  void output(StochOutput output) noexcept;
+  void output(OutputName output) noexcept;
 
   auto k_period() const noexcept -> std::size_t;
 
@@ -55,7 +55,7 @@ private:
   ScreenerMethod high_;
   ScreenerMethod low_;
   ScreenerMethod close_;
-  StochOutput output_;
+  OutputName output_;
   std::size_t k_period_;
   std::size_t k_smooth_;
   std::size_t d_period_;

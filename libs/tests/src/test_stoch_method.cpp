@@ -14,60 +14,49 @@ TEST(StochMethodTest, RunAllMethod)
   const auto close_method = DataMethod{"close"};
   const auto k_period = 5;
   const auto k_smooth = 3;
-  const auto d_period = 3;
+  const auto d_period = 2;
   const auto asset_data = pludux::AssetHistory{
    {"high", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
    {"low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},
    {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
-  auto stoch_method = StochMethod{StochOutput::k,
+  auto stoch_method = StochMethod{OutputName::StochasticK,
                                   high_method,
                                   low_method,
                                   close_method,
                                   k_period,
                                   k_smooth,
                                   d_period};
-  auto stoch_series = StochSeries{stoch_method.output(),
-                                  high_method(asset_data),
-                                  low_method(asset_data),
-                                  close_method(asset_data),
-                                  k_period,
-                                  k_smooth,
-                                  d_period};
 
   const auto result_k = stoch_method(asset_data);
-  const auto expected_k = stoch_series;
 
-  stoch_method.output(StochOutput::d);
-  stoch_series.output(stoch_method.output());
+  stoch_method.output(OutputName::StochasticD);
 
   const auto result_d = stoch_method(asset_data);
-  const auto expected_d = stoch_series;
 
-  ASSERT_EQ(result_k.size(), expected_k.size());
-  ASSERT_EQ(result_d.size(), expected_d.size());
+  ASSERT_EQ(result_k.size(), 10);
+  EXPECT_DOUBLE_EQ(result_k[0], 56.746031746031747);
+  EXPECT_DOUBLE_EQ(result_k[1], 72.222222222222229);
+  EXPECT_DOUBLE_EQ(result_k[2], 83.333333333333329);
+  EXPECT_DOUBLE_EQ(result_k[3], 77);
+  EXPECT_TRUE(std::isnan(result_k[4]));
+  EXPECT_TRUE(std::isnan(result_k[5]));
+  EXPECT_TRUE(std::isnan(result_k[6]));
+  EXPECT_TRUE(std::isnan(result_k[7]));
+  EXPECT_TRUE(std::isnan(result_k[8]));
+  EXPECT_TRUE(std::isnan(result_k[9]));
 
-  EXPECT_DOUBLE_EQ(result_k[0], expected_k[0]);
-  EXPECT_DOUBLE_EQ(result_k[1], expected_k[1]);
-  EXPECT_DOUBLE_EQ(result_k[2], expected_k[2]);
-  EXPECT_DOUBLE_EQ(result_k[3], expected_k[3]);
-  EXPECT_TRUE(std::isnan(result_k[4]) && std::isnan(expected_k[4]));
-  EXPECT_TRUE(std::isnan(result_k[5]) && std::isnan(expected_k[5]));
-  EXPECT_TRUE(std::isnan(result_k[6]) && std::isnan(expected_k[6]));
-  EXPECT_TRUE(std::isnan(result_k[7]) && std::isnan(expected_k[7]));
-  EXPECT_TRUE(std::isnan(result_k[8]) && std::isnan(expected_k[8]));
-  EXPECT_TRUE(std::isnan(result_k[9]) && std::isnan(expected_k[9]));
-
-  EXPECT_DOUBLE_EQ(result_d[0], expected_d[0]);
-  EXPECT_DOUBLE_EQ(result_d[1], expected_d[1]);
-  EXPECT_TRUE(std::isnan(result_d[2]) && std::isnan(expected_d[2]));
-  EXPECT_TRUE(std::isnan(result_d[3]) && std::isnan(expected_d[3]));
-  EXPECT_TRUE(std::isnan(result_d[4]) && std::isnan(expected_d[4]));
-  EXPECT_TRUE(std::isnan(result_d[5]) && std::isnan(expected_d[5]));
-  EXPECT_TRUE(std::isnan(result_d[6]) && std::isnan(expected_d[6]));
-  EXPECT_TRUE(std::isnan(result_d[7]) && std::isnan(expected_d[7]));
-  EXPECT_TRUE(std::isnan(result_d[8]) && std::isnan(expected_d[8]));
-  EXPECT_TRUE(std::isnan(result_d[9]) && std::isnan(expected_d[9]));
+  ASSERT_EQ(result_d.size(), 10);
+  EXPECT_DOUBLE_EQ(result_d[0], 64.484126984126988);
+  EXPECT_DOUBLE_EQ(result_d[1], 77.777777777777778);
+  EXPECT_DOUBLE_EQ(result_d[2], 80.166666666666667);
+  EXPECT_TRUE(std::isnan(result_d[3]));
+  EXPECT_TRUE(std::isnan(result_d[4]));
+  EXPECT_TRUE(std::isnan(result_d[5]));
+  EXPECT_TRUE(std::isnan(result_d[6]));
+  EXPECT_TRUE(std::isnan(result_d[7]));
+  EXPECT_TRUE(std::isnan(result_d[8]));
+  EXPECT_TRUE(std::isnan(result_d[9]));
 }
 
 TEST(StochMethodTest, EqualityOperator)
@@ -79,14 +68,14 @@ TEST(StochMethodTest, EqualityOperator)
   const auto k_smooth = 3;
   const auto d_period = 3;
 
-  StochMethod stoch_method1{StochOutput::k,
+  StochMethod stoch_method1{OutputName::StochasticK,
                             high_method,
                             low_method,
                             close_method,
                             k_period,
                             k_smooth,
                             d_period};
-  StochMethod stoch_method2{StochOutput::k,
+  StochMethod stoch_method2{OutputName::StochasticK,
                             high_method,
                             low_method,
                             close_method,
@@ -108,14 +97,14 @@ TEST(StochMethodTest, NotEqualOperator)
   const auto k_smooth = 3;
   const auto d_period = 3;
 
-  StochMethod stoch_method1{StochOutput::k,
+  StochMethod stoch_method1{OutputName::StochasticK,
                             high_method,
                             low_method,
                             close_method,
                             k_period,
                             k_smooth,
                             d_period};
-  StochMethod stoch_method2{StochOutput::d,
+  StochMethod stoch_method2{OutputName::StochasticD,
                             high_method,
                             low_method,
                             close_method,

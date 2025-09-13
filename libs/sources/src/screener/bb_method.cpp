@@ -4,7 +4,7 @@
 
 namespace pludux::screener {
 
-BbMethod::BbMethod(BbOutput output,
+BbMethod::BbMethod(OutputName output,
                    MaType ma_type,
                    ScreenerMethod input,
                    std::size_t period,
@@ -25,16 +25,21 @@ auto BbMethod::operator()(AssetSnapshot asset_data) const
   const auto bb = [&]() -> PolySeries<double> {
     switch(ma_type_) {
     case MaType::ema:
-      return BbSeries{output_, EmaSeries{input_(asset_data), period_}, stddev_};
+      return OutputByNameSeries{
+       BbSeries{EmaSeries{input_(asset_data), period_}, stddev_}, output_};
     case MaType::wma:
-      return BbSeries{output_, WmaSeries{input_(asset_data), period_}, stddev_};
+      return OutputByNameSeries{
+       BbSeries{WmaSeries{input_(asset_data), period_}, stddev_}, output_};
     case MaType::rma:
-      return BbSeries{output_, RmaSeries{input_(asset_data), period_}, stddev_};
+      return OutputByNameSeries{
+       BbSeries{RmaSeries{input_(asset_data), period_}, stddev_}, output_};
     case MaType::hma:
-      return BbSeries{output_, HmaSeries{input_(asset_data), period_}, stddev_};
+      return OutputByNameSeries{
+       BbSeries{HmaSeries{input_(asset_data), period_}, stddev_}, output_};
     case MaType::sma:
     default:
-      return BbSeries{output_, SmaSeries{input_(asset_data), period_}, stddev_};
+      return OutputByNameSeries{
+       BbSeries{SmaSeries{input_(asset_data), period_}, stddev_}, output_};
     }
   }();
 
@@ -42,8 +47,8 @@ auto BbMethod::operator()(AssetSnapshot asset_data) const
                    static_cast<std::ptrdiff_t>(offset_)};
 }
 
-auto BbMethod::operator==(const BbMethod& other) const noexcept -> bool = default;
-
+auto BbMethod::operator==(const BbMethod& other) const noexcept
+ -> bool = default;
 
 auto BbMethod::offset() const noexcept -> std::size_t
 {
@@ -55,12 +60,12 @@ void BbMethod::offset(std::size_t offset) noexcept
   offset_ = offset;
 }
 
-auto BbMethod::output() const noexcept -> BbOutput
+auto BbMethod::output() const noexcept -> OutputName
 {
   return output_;
 }
 
-void BbMethod::output(BbOutput output) noexcept
+void BbMethod::output(OutputName output) noexcept
 {
   output_ = output;
 }

@@ -19,9 +19,10 @@ TEST(BbMethodTest, RunAllMethod)
    {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
   auto bb_method = BbMethod{
-   BbOutput::middle, BbMethod::MaType::ema, data_method, period, std_dev};
-  auto bb_series = BbSeries{
-   BbOutput::middle, EmaSeries{data_method(asset_data), period}, std_dev};
+   OutputName::MiddleBand, BbMethod::MaType::ema, data_method, period, std_dev};
+  auto bb_series = OutputByNameSeries{
+   BbSeries{EmaSeries{data_method(asset_data), period}, std_dev},
+   OutputName::MiddleBand};
 
   const auto bb_middle = bb_method(asset_data);
   const auto& expected_middle = bb_series;
@@ -31,14 +32,14 @@ TEST(BbMethodTest, RunAllMethod)
   EXPECT_DOUBLE_EQ(bb_middle[2], expected_middle[2]);
   EXPECT_DOUBLE_EQ(bb_middle[3], expected_middle[3]);
   EXPECT_DOUBLE_EQ(bb_middle[4], expected_middle[4]);
-  EXPECT_DOUBLE_EQ(bb_middle[5], expected_middle[5]);
+  EXPECT_DOUBLE_EQ(bb_middle[5], 842);
   EXPECT_TRUE(std::isnan(bb_middle[6]) && std::isnan(expected_middle[6]));
   EXPECT_TRUE(std::isnan(bb_middle[7]) && std::isnan(expected_middle[7]));
   EXPECT_TRUE(std::isnan(bb_middle[8]) && std::isnan(expected_middle[8]));
   EXPECT_TRUE(std::isnan(bb_middle[9]) && std::isnan(expected_middle[9]));
 
-  bb_method.output(BbOutput::upper);
-  bb_series.output(BbOutput::upper);
+  bb_method.output(OutputName::UpperBand);
+  bb_series.output_name(OutputName::UpperBand);
   const auto bb_upper = bb_method(asset_data);
   const auto& expected_upper = bb_series;
   ASSERT_EQ(bb_upper.size(), expected_upper.size());
@@ -53,8 +54,8 @@ TEST(BbMethodTest, RunAllMethod)
   EXPECT_TRUE(std::isnan(bb_upper[8]) && std::isnan(expected_upper[8]));
   EXPECT_TRUE(std::isnan(bb_upper[9]) && std::isnan(expected_upper[9]));
 
-  bb_method.output(BbOutput::lower);
-  bb_series.output(BbOutput::lower);
+  bb_method.output(OutputName::LowerBand);
+  bb_series.output_name(OutputName::LowerBand);
   const auto bb_lower = bb_method(asset_data);
   const auto& expected_lower = bb_series;
   ASSERT_EQ(bb_lower.size(), expected_lower.size());
@@ -74,11 +75,11 @@ TEST(BbMethodTest, EqualityOperator)
 {
   const auto input_method1 = DataMethod{"close"};
   const auto bb_method1 = BbMethod{
-   BbOutput::middle, BbMethod::MaType::sma, input_method1, 20, 2.0};
+   OutputName::MiddleBand, BbMethod::MaType::sma, input_method1, 20, 2.0};
 
   const auto input_method2 = DataMethod{"close"};
   const auto bb_method2 = BbMethod{
-   BbOutput::middle, BbMethod::MaType::sma, input_method2, 20, 2.0};
+   OutputName::MiddleBand, BbMethod::MaType::sma, input_method2, 20, 2.0};
 
   EXPECT_TRUE(bb_method1 == bb_method2);
   EXPECT_FALSE(bb_method1 != bb_method2);
@@ -89,11 +90,11 @@ TEST(BbMethodTest, NotEqualOperator)
 {
   const auto input_method1 = DataMethod{"close"};
   const auto bb_method1 = BbMethod{
-   BbOutput::middle, BbMethod::MaType::sma, input_method1, 20, 2.0};
+   OutputName::MiddleBand, BbMethod::MaType::sma, input_method1, 20, 2.0};
 
   const auto input_method2 = DataMethod{"open"};
   const auto bb_method2 = BbMethod{
-   BbOutput::upper, BbMethod::MaType::ema, input_method2, 20, 2.0};
+   OutputName::UpperBand, BbMethod::MaType::ema, input_method2, 20, 2.0};
 
   EXPECT_TRUE(bb_method1 != bb_method2);
   EXPECT_FALSE(bb_method1 == bb_method2);

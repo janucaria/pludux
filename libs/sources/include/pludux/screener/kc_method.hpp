@@ -11,7 +11,7 @@ namespace pludux::screener {
 
 class KcMethod {
 public:
-  KcMethod(KcOutput output,
+  KcMethod(OutputName output,
            ScreenerMethod ma,
            ScreenerMethod range,
            double multiplier,
@@ -26,9 +26,9 @@ public:
 
   void offset(std::size_t offset) noexcept;
 
-  auto output() const noexcept -> KcOutput;
+  auto output() const noexcept -> OutputName;
 
-  void output(KcOutput output) noexcept;
+  void output(OutputName output) noexcept;
 
   auto multiplier() const noexcept -> double;
 
@@ -44,7 +44,7 @@ public:
 
 private:
   std::size_t offset_;
-  KcOutput output_;
+  OutputName output_;
   double multiplier_;
   ScreenerMethod ma_;
   ScreenerMethod range_;

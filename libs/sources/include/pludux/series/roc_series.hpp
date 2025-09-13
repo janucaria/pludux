@@ -5,6 +5,8 @@
 #include <limits>
 #include <utility>
 
+#include <pludux/series/series_output.hpp>
+
 namespace pludux {
 
 template<typename TSeries>

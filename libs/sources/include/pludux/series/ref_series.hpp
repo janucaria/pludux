@@ -3,6 +3,8 @@
 
 #include <cstddef>
 
+#include <pludux/series/series_output.hpp>
+
 namespace pludux {
 
 template<typename TSeries>
@@ -15,7 +17,7 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const -> TSeries::ValueType
+  auto operator[](std::size_t index) const -> SeriesOutput<ValueType>
   {
     return series_[index];
   }

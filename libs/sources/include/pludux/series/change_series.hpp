@@ -5,6 +5,8 @@
 #include <limits>
 #include <utility>
 
+#include <pludux/series/series_output.hpp>
+
 namespace pludux {
 
 template<typename TSeries>
@@ -17,7 +19,7 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> ValueType
+  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
   {
     return series_[index] - series_[index + 1];
   }

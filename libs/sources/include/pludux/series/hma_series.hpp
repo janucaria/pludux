@@ -5,6 +5,8 @@
 #include <limits>
 #include <utility>
 
+#include <pludux/series/series_output.hpp>
+
 #include "binary_fn_series.hpp"
 #include "ref_series.hpp"
 #include "repeat_series.hpp"
@@ -23,7 +25,7 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> ValueType
+  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
   {
     const auto wam1 = WmaSeries{RefSeries{series_}, period_ / 2};
     const auto scalar_2_series = RepeatSeries{2.0, wam1.size()};

@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <utility>
 
+#include <pludux/series/series_output.hpp>
+
 namespace pludux {
 
 template<typename TSeries>
@@ -29,7 +31,7 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const -> TSeries::ValueType
+  auto operator[](std::size_t index) const -> SeriesOutput<ValueType>
   {
     if(index >= series_.size()) {
       return std::numeric_limits<ValueType>::quiet_NaN();

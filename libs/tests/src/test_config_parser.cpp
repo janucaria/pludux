@@ -484,7 +484,7 @@ TEST_F(ConfigParserTest, ParseScreenerBbMethod)
 
   const auto input = screener_method_cast<DataMethod>(bb_method->input());
   EXPECT_NE(input, nullptr);
-  EXPECT_EQ(bb_method->output(), BbOutput::upper);
+  EXPECT_EQ(bb_method->output(), OutputName::UpperBand);
   EXPECT_EQ(bb_method->ma_type(), BbMethod::MaType::sma);
   EXPECT_EQ(bb_method->period(), 20);
   EXPECT_EQ(bb_method->stddev(), 2.0);
@@ -521,7 +521,7 @@ TEST_F(ConfigParserTest, ParseScreenerMacdMethod)
 
   const auto input = screener_method_cast<DataMethod>(macd_method->input());
   EXPECT_NE(input, nullptr);
-  EXPECT_EQ(macd_method->output(), MacdOutput::macd);
+  EXPECT_EQ(macd_method->output(), OutputName::MacdLine);
   EXPECT_EQ(macd_method->fast_period(), 12);
   EXPECT_EQ(macd_method->slow_period(), 26);
   EXPECT_EQ(macd_method->signal_period(), 9);
@@ -572,7 +572,7 @@ TEST_F(ConfigParserTest, ParseScreenerStochMethod)
   EXPECT_NE(high, nullptr);
   EXPECT_NE(low, nullptr);
   EXPECT_NE(close, nullptr);
-  EXPECT_EQ(stoch_method->output(), StochOutput::k);
+  EXPECT_EQ(stoch_method->output(), OutputName::StochasticK);
   EXPECT_EQ(stoch_method->k_period(), 5);
   EXPECT_EQ(stoch_method->k_smooth(), 3);
   EXPECT_EQ(stoch_method->d_period(), 3);
@@ -611,7 +611,7 @@ TEST_F(ConfigParserTest, ParseScreenerStochRsiMethod)
   const auto rsi_input =
    screener_method_cast<DataMethod>(stoch_rsi_method->rsi_input());
   EXPECT_NE(rsi_input, nullptr);
-  EXPECT_EQ(stoch_rsi_method->output(), StochOutput::k);
+  EXPECT_EQ(stoch_rsi_method->output(), OutputName::StochasticK);
   EXPECT_EQ(stoch_rsi_method->rsi_period(), 14);
   EXPECT_EQ(stoch_rsi_method->k_period(), 5);
   EXPECT_EQ(stoch_rsi_method->k_smooth(), 3);
@@ -658,7 +658,7 @@ TEST_F(ConfigParserTest, ParseScreenerKcMethod)
   EXPECT_NE(ma_method, nullptr);
   EXPECT_NE(range_method, nullptr);
   EXPECT_EQ(kc_method->offset(), 0);
-  EXPECT_EQ(kc_method->output(), KcOutput::middle);
+  EXPECT_EQ(kc_method->output(), OutputName::MiddleBand);
   EXPECT_EQ(kc_method->multiplier(), 1.0);
 
   const auto serialized_config = config_parser.serialize_method(method);

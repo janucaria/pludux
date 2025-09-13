@@ -13,7 +13,7 @@ class BbMethod {
 public:
   enum class MaType { sma, ema, wma, rma, hma };
 
-  BbMethod(BbOutput output,
+  BbMethod(OutputName output,
            MaType ma_type,
            ScreenerMethod input,
            std::size_t period,
@@ -29,9 +29,9 @@ public:
 
   void offset(std::size_t offset) noexcept;
 
-  auto output() const noexcept -> BbOutput;
+  auto output() const noexcept -> OutputName;
 
-  void output(BbOutput output) noexcept;
+  void output(OutputName output) noexcept;
 
   auto period() const noexcept -> std::size_t;
 
@@ -50,7 +50,7 @@ public:
   void ma_type(MaType ma_type) noexcept;
 
 private:
-  BbOutput output_;
+  OutputName output_;
   MaType ma_type_;
   ScreenerMethod input_;
   std::size_t offset_;

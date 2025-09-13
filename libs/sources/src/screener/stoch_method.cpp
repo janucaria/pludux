@@ -4,7 +4,7 @@
 
 namespace pludux::screener {
 
-StochMethod::StochMethod(StochOutput output,
+StochMethod::StochMethod(OutputName output,
                          ScreenerMethod high,
                          ScreenerMethod low,
                          ScreenerMethod close,
@@ -30,15 +30,16 @@ auto StochMethod::operator()(AssetSnapshot asset_data) const
   const auto low_series = low_(asset_data);
   const auto close_series = close_(asset_data);
 
-  const auto stoch = StochSeries{output_,
-                                 high_series,
+  const auto stoch = StochSeries{high_series,
                                  low_series,
                                  close_series,
                                  k_period_,
                                  k_smooth_,
                                  d_period_};
 
-  return SubSeries{PolySeries<double>{stoch},
+  const auto named_stoch = OutputByNameSeries{stoch, output_};
+
+  return SubSeries{PolySeries<double>{named_stoch},
                    static_cast<std::ptrdiff_t>(offset_)};
 }
 
@@ -69,12 +70,12 @@ void StochMethod::offset(std::size_t offset) noexcept
   offset_ = offset;
 }
 
-auto StochMethod::output() const noexcept -> StochOutput
+auto StochMethod::output() const noexcept -> OutputName
 {
   return output_;
 }
 
-void StochMethod::output(StochOutput output) noexcept
+void StochMethod::output(OutputName output) noexcept
 {
   output_ = output;
 }

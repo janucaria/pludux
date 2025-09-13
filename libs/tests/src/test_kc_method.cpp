@@ -23,7 +23,7 @@ TEST(KcMethodTest, middle_EMA_range_ATR)
    {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
   auto kc_method =
-   KcMethod{KcOutput::middle, ma_method, range_method, multiplier};
+   KcMethod{OutputName::MiddleBand, ma_method, range_method, multiplier};
 
   const auto kc_middle = kc_method(asset_data);
   const auto expected_middle = ma_method(asset_data);
@@ -39,7 +39,7 @@ TEST(KcMethodTest, middle_EMA_range_ATR)
   EXPECT_TRUE(std::isnan(kc_middle[8]) && std::isnan(expected_middle[8]));
   EXPECT_TRUE(std::isnan(kc_middle[9]) && std::isnan(expected_middle[9]));
 
-  kc_method.output(KcOutput::upper);
+  kc_method.output(OutputName::UpperBand);
   const auto kc_upper = kc_method(asset_data);
   ASSERT_EQ(kc_upper.size(), asset_data.size());
   EXPECT_DOUBLE_EQ(kc_upper[0], 913.68584677613819);
@@ -53,7 +53,7 @@ TEST(KcMethodTest, middle_EMA_range_ATR)
   EXPECT_TRUE(std::isnan(kc_upper[8]));
   EXPECT_TRUE(std::isnan(kc_upper[9]));
 
-  kc_method.output(KcOutput::lower);
+  kc_method.output(OutputName::LowerBand);
   const auto kc_lower = kc_method(asset_data);
   ASSERT_EQ(kc_lower.size(), asset_data.size());
   EXPECT_DOUBLE_EQ(kc_lower[0], 800.21538779176319);
@@ -82,7 +82,7 @@ TEST(KcMethodTest, middle_SMA_range_Range)
    {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
   auto kc_method =
-   KcMethod{KcOutput::middle, ma_method, range_method, multiplier};
+   KcMethod{OutputName::MiddleBand, ma_method, range_method, multiplier};
 
   const auto kc_middle = kc_method(asset_data);
   const auto expected_middle = ma_method(asset_data);
@@ -98,7 +98,7 @@ TEST(KcMethodTest, middle_SMA_range_Range)
   EXPECT_TRUE(std::isnan(kc_middle[8]) && std::isnan(expected_middle[8]));
   EXPECT_TRUE(std::isnan(kc_middle[9]) && std::isnan(expected_middle[9]));
 
-  kc_method.output(KcOutput::upper);
+  kc_method.output(OutputName::UpperBand);
   const auto kc_upper = kc_method(asset_data);
   ASSERT_EQ(kc_upper.size(), asset_data.size());
   EXPECT_DOUBLE_EQ(kc_upper[0], 894.18784000000005);
@@ -112,7 +112,7 @@ TEST(KcMethodTest, middle_SMA_range_Range)
   EXPECT_TRUE(std::isnan(kc_upper[8]));
   EXPECT_TRUE(std::isnan(kc_upper[9]));
 
-  kc_method.output(KcOutput::lower);
+  kc_method.output(OutputName::LowerBand);
   const auto kc_lower = kc_method(asset_data);
   ASSERT_EQ(kc_lower.size(), asset_data.size());
   EXPECT_DOUBLE_EQ(kc_lower[0], 829.81215999999995);
@@ -135,8 +135,8 @@ TEST(KcMethodTest, middle_EMA_range_ATR_with_offset)
    AtrMethod{DataMethod{"high"}, DataMethod{"low"}, DataMethod{"close"}, 4};
   const auto multiplier = 2.0;
   const auto offset = 1;
-  auto kc_method =
-   KcMethod{KcOutput::middle, ma_method, range_method, multiplier, offset};
+  auto kc_method = KcMethod{
+   OutputName::MiddleBand, ma_method, range_method, multiplier, offset};
 
   const auto asset_data = pludux::AssetHistory{
    {"high", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
@@ -157,7 +157,7 @@ TEST(KcMethodTest, middle_EMA_range_ATR_with_offset)
   EXPECT_TRUE(std::isnan(kc_middle[8]));
   EXPECT_TRUE(std::isnan(kc_middle[9]));
 
-  kc_method.output(KcOutput::upper);
+  kc_method.output(OutputName::UpperBand);
   const auto kc_upper = kc_method(asset_data);
   ASSERT_EQ(kc_upper.size(), asset_data.size() - offset);
   EXPECT_DOUBLE_EQ(kc_upper[0], 923.57289858217598);
@@ -171,7 +171,7 @@ TEST(KcMethodTest, middle_EMA_range_ATR_with_offset)
   EXPECT_TRUE(std::isnan(kc_upper[8]));
   EXPECT_TRUE(std::isnan(kc_upper[9]));
 
-  kc_method.output(KcOutput::lower);
+  kc_method.output(OutputName::LowerBand);
   kc_method.offset(2);
   const auto kc_lower = kc_method(asset_data);
   ASSERT_EQ(kc_lower.size(), asset_data.size() - 2);
@@ -193,7 +193,8 @@ TEST(KcMethodTest, EqualityOperator)
   const auto operand2_method1 = DataMethod{"low"};
   const auto operand3_method1 = DataMethod{"close"};
   const auto kc_method1 =
-   KcMethod{KcOutput::middle, EmaMethod{5, operand3_method1, 0},
+   KcMethod{OutputName::MiddleBand,
+            EmaMethod{5, operand3_method1, 0},
             AtrMethod{operand1_method1, operand2_method1, operand3_method1, 14},
             2.0};
 
@@ -201,7 +202,8 @@ TEST(KcMethodTest, EqualityOperator)
   const auto operand2_method2 = DataMethod{"low"};
   const auto operand3_method2 = DataMethod{"close"};
   const auto kc_method2 =
-   KcMethod{KcOutput::middle, EmaMethod{5, operand3_method2, 0},
+   KcMethod{OutputName::MiddleBand,
+            EmaMethod{5, operand3_method2, 0},
             AtrMethod{operand1_method2, operand2_method2, operand3_method2, 14},
             2.0};
 
@@ -216,7 +218,8 @@ TEST(KcMethodTest, NotEqualOperator)
   const auto operand2_method1 = DataMethod{"low"};
   const auto operand3_method1 = DataMethod{"close"};
   const auto kc_method1 =
-   KcMethod{KcOutput::middle, EmaMethod{5, operand3_method1, 0},
+   KcMethod{OutputName::MiddleBand,
+            EmaMethod{5, operand3_method1, 0},
             AtrMethod{operand1_method1, operand2_method1, operand3_method1, 14},
             2.0};
 
@@ -224,7 +227,8 @@ TEST(KcMethodTest, NotEqualOperator)
   const auto operand2_method2 = DataMethod{"low"};
   const auto operand3_method2 = DataMethod{"close"};
   const auto kc_method2 =
-   KcMethod{KcOutput::middle, EmaMethod{5, operand3_method2, 0},
+   KcMethod{OutputName::MiddleBand,
+            EmaMethod{5, operand3_method2, 0},
             AtrMethod{operand1_method2, operand2_method2, operand3_method2, 14},
             2.0};
 

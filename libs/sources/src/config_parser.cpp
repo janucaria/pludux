@@ -226,13 +226,13 @@ static auto serialize_kc_method(const ConfigParser& config_parser,
 
   auto kc_method = screener_method_cast<screener::KcMethod>(method);
   if(kc_method) {
-    serialized_method["output"] = [](KcOutput output) -> std::string {
+    serialized_method["output"] = [](OutputName output) -> std::string {
       switch(output) {
-      case KcOutput::middle:
+      case OutputName::MiddleBand:
         return "middle";
-      case KcOutput::upper:
+      case OutputName::UpperBand:
         return "upper";
-      case KcOutput::lower:
+      case OutputName::LowerBand:
         return "lower";
       default:
         const auto error_message =
@@ -255,15 +255,15 @@ static auto parse_kc_method(ConfigParser::Parser config_parser,
                             const nlohmann::json& parameters)
  -> screener::ScreenerMethod
 {
-  auto output = KcOutput::middle;
+  auto output = OutputName::MiddleBand;
   if(parameters.contains("output")) {
     const auto output_str = parameters.at("output").get<std::string>();
     if(output_str == "middle") {
-      output = KcOutput::middle;
+      output = OutputName::MiddleBand;
     } else if(output_str == "upper") {
-      output = KcOutput::upper;
+      output = OutputName::UpperBand;
     } else if(output_str == "lower") {
-      output = KcOutput::lower;
+      output = OutputName::LowerBand;
     } else {
       const auto error_message =
        std::format("Unknown KC.output: {}", output_str);
@@ -729,13 +729,13 @@ void ConfigParser::register_default_parsers()
 
      auto bb_method = screener_method_cast<screener::BbMethod>(screener_method);
      if(bb_method) {
-       serialized_method["output"] = [](BbOutput output) -> std::string {
+       serialized_method["output"] = [](OutputName output) -> std::string {
          switch(output) {
-         case BbOutput::middle:
+         case OutputName::MiddleBand:
            return "middle";
-         case BbOutput::upper:
+         case OutputName::UpperBand:
            return "upper";
-         case BbOutput::lower:
+         case OutputName::LowerBand:
            return "lower";
          default:
            const auto error_message =
@@ -776,16 +776,16 @@ void ConfigParser::register_default_parsers()
 
    [](ConfigParser::Parser config_parser,
       const nlohmann::json& parameters) -> screener::ScreenerMethod {
-     auto output = BbOutput::middle;
+     auto output = OutputName::MiddleBand;
      const auto param_output =
       get_param_or<std::string>(parameters, "output", "middle");
 
      if(param_output == "middle") {
-       output = BbOutput::middle;
+       output = OutputName::MiddleBand;
      } else if(param_output == "upper") {
-       output = BbOutput::upper;
+       output = OutputName::UpperBand;
      } else if(param_output == "lower") {
-       output = BbOutput::lower;
+       output = OutputName::LowerBand;
      } else {
        const auto error_message =
         std::format("Error BB.output: Unknown output {}", param_output);
@@ -832,13 +832,13 @@ void ConfigParser::register_default_parsers()
      auto macd_method =
       screener_method_cast<screener::MacdMethod>(screener_method);
      if(macd_method) {
-       serialized_method["output"] = [](MacdOutput output) -> std::string {
+       serialized_method["output"] = [](OutputName output) -> std::string {
          switch(output) {
-         case MacdOutput::macd:
+         case OutputName::MacdLine:
            return "macd";
-         case MacdOutput::signal:
+         case OutputName::SignalLine:
            return "signal";
-         case MacdOutput::histogram:
+         case OutputName::MacdHistogram:
            return "histogram";
          default:
            const auto error_message =
@@ -862,13 +862,13 @@ void ConfigParser::register_default_parsers()
      const auto output_param =
       get_param_or<std::string>(parameters, "output", "macd");
 
-     auto output = MacdOutput::macd;
+     auto output = OutputName::MacdLine;
      if(output_param == "macd") {
-       output = MacdOutput::macd;
+       output = OutputName::MacdLine;
      } else if(output_param == "signal") {
-       output = MacdOutput::signal;
+       output = OutputName::SignalLine;
      } else if(output_param == "histogram") {
-       output = MacdOutput::histogram;
+       output = OutputName::MacdHistogram;
      } else {
        const auto error_message =
         std::format("MACD.output: Unknown output {}", output_param);
@@ -896,11 +896,11 @@ void ConfigParser::register_default_parsers()
      auto stoch_method =
       screener_method_cast<screener::StochMethod>(screener_method);
      if(stoch_method) {
-       serialized_method["output"] = [](StochOutput output) -> std::string {
+       serialized_method["output"] = [](OutputName output) -> std::string {
          switch(output) {
-         case StochOutput::k:
+         case OutputName::StochasticK:
            return "k";
-         case StochOutput::d:
+         case OutputName::StochasticD:
            return "d";
          default:
            const auto error_message =
@@ -936,11 +936,11 @@ void ConfigParser::register_default_parsers()
      const auto output_param =
       get_param_or<std::string>(parameters, "output", "k");
 
-     auto output = StochOutput::k;
+     auto output = OutputName::StochasticK;
      if(output_param == "k") {
-       output = StochOutput::k;
+       output = OutputName::StochasticK;
      } else if(output_param == "d") {
-       output = StochOutput::d;
+       output = OutputName::StochasticD;
      } else {
        const auto error_message =
         std::format("STOCH.output: Unknown output {}", output_param);
@@ -970,11 +970,11 @@ void ConfigParser::register_default_parsers()
      auto stoch_rsi_method =
       screener_method_cast<screener::StochRsiMethod>(screener_method);
      if(stoch_rsi_method) {
-       serialized_method["output"] = [](StochOutput output) -> std::string {
+       serialized_method["output"] = [](OutputName output) -> std::string {
          switch(output) {
-         case StochOutput::k:
+         case OutputName::StochasticK:
            return "k";
-         case StochOutput::d:
+         case OutputName::StochasticD:
            return "d";
          default:
            const auto error_message = std::format(
@@ -1008,11 +1008,11 @@ void ConfigParser::register_default_parsers()
      const auto output_param =
       get_param_or<std::string>(parameters, "output", "k");
 
-     auto output = StochOutput::k;
+     auto output = OutputName::StochasticK;
      if(output_param == "k") {
-       output = StochOutput::k;
+       output = OutputName::StochasticK;
      } else if(output_param == "d") {
-       output = StochOutput::d;
+       output = OutputName::StochasticD;
      } else {
        const auto error_message =
         std::format("STOCH_RSI.output: Unknown output {}", output_param);

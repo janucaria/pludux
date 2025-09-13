@@ -7,6 +7,8 @@
 #include <type_traits>
 #include <utility>
 
+#include <pludux/series/series_output.hpp>
+
 namespace pludux {
 
 template<typename TBinaryFn, typename TSeriesOp1, typename TSeriesOp2>
@@ -22,7 +24,7 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const -> ValueType
+  auto operator[](std::size_t index) const -> SeriesOutput<ValueType>
   {
     const auto operand1_value = operand1_[index];
     const auto operand2_value = operand2_[index];

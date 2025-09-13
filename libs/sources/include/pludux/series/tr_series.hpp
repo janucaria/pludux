@@ -8,6 +8,8 @@
 #include <type_traits>
 #include <utility>
 
+#include <pludux/series/series_output.hpp>
+
 namespace pludux {
 
 template<typename THighSeries, typename TLowSeries, typename TCloseSeries>
@@ -24,7 +26,7 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> ValueType
+  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
   {
     const auto high = highs_[index];
     const auto low = lows_[index];
