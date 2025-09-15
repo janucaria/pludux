@@ -19,8 +19,7 @@ public:
                                          std::size_t lookback_range,
                                          std::size_t offset = 0);
 
-  auto
-  operator()(AssetSnapshot asset_data) const -> SubSeries<PolySeries<double>>;
+  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>;
 
   auto operator==(const HiddenBullishDivergenceMethod& other) const noexcept
    -> bool;

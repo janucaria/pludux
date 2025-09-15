@@ -15,8 +15,7 @@ public:
 
   explicit ChangesMethod(ScreenerMethod input, std::size_t offset = 0);
 
-  auto operator()(AssetSnapshot asset_data) const
-   -> SubSeries<PolySeries<double>>;
+  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>;
 
   auto operator==(const ChangesMethod& other) const noexcept -> bool;
 

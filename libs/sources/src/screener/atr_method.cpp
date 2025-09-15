@@ -29,8 +29,7 @@ AtrMethod::AtrMethod(ScreenerMethod high,
 {
 }
 
-auto AtrMethod::operator()(AssetSnapshot asset_data) const
- -> SubSeries<PolySeries<double>>
+auto AtrMethod::operator()(AssetSnapshot asset_data) const -> PolySeries<double>
 {
   const auto high_series = high_(asset_data);
   const auto low_series = low_(asset_data);
@@ -39,8 +38,8 @@ auto AtrMethod::operator()(AssetSnapshot asset_data) const
   const auto atr =
    AtrSeries{high_series, low_series, close_series, period_, multiplier_};
 
-  return SubSeries{PolySeries<double>{atr},
-                   static_cast<std::ptrdiff_t>(offset_)};
+  return LookbackSeries{PolySeries<double>{atr},
+                        static_cast<std::ptrdiff_t>(offset_)};
 }
 
 auto AtrMethod::operator==(const AtrMethod& other) const noexcept

@@ -16,8 +16,7 @@ KcMethod::KcMethod(OutputName output,
 {
 }
 
-auto KcMethod::operator()(AssetSnapshot asset_data) const
- -> SubSeries<PolySeries<double>>
+auto KcMethod::operator()(AssetSnapshot asset_data) const -> PolySeries<double>
 {
   const auto ma_series = ma_(asset_data);
   const auto range_series = range_(asset_data);
@@ -25,8 +24,8 @@ auto KcMethod::operator()(AssetSnapshot asset_data) const
   const auto kc =
    OutputByNameSeries{KcSeries{ma_series, range_series, multiplier_}, output_};
 
-  return SubSeries{PolySeries<double>{kc},
-                   static_cast<std::ptrdiff_t>(offset_)};
+  return LookbackSeries{PolySeries<double>{kc},
+                        static_cast<std::ptrdiff_t>(offset_)};
 }
 
 auto KcMethod::operator==(const KcMethod& other) const noexcept

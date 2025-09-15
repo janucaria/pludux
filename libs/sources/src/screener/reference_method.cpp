@@ -16,7 +16,7 @@ ReferenceMethod::ReferenceMethod(std::shared_ptr<const MethodRegistry> registry,
 }
 
 auto ReferenceMethod::operator()(AssetSnapshot asset_data) const
- -> SubSeries<PolySeries<double>>
+ -> PolySeries<double>
 {
   auto series = PolySeries<double>{RepeatSeries<double>{
    std::numeric_limits<double>::quiet_NaN(), asset_data.size()}};
@@ -29,7 +29,7 @@ auto ReferenceMethod::operator()(AssetSnapshot asset_data) const
     }
   }
 
-  return SubSeries{series, static_cast<std::ptrdiff_t>(offset_)};
+  return LookbackSeries{series, static_cast<std::ptrdiff_t>(offset_)};
 }
 
 auto ReferenceMethod::operator==(const ReferenceMethod& other) const noexcept

@@ -22,12 +22,12 @@ ChangesMethod::ChangesMethod(ScreenerMethod input, std::size_t offset)
 }
 
 auto ChangesMethod::operator()(AssetSnapshot asset_data) const
- -> SubSeries<PolySeries<double>>
+ -> PolySeries<double>
 {
   const auto input_series = input_(asset_data);
   const auto result = ta::changes(input_series);
-  return SubSeries{PolySeries<double>{result},
-                   static_cast<std::ptrdiff_t>(offset_)};
+  return LookbackSeries{PolySeries<double>{result},
+                        static_cast<std::ptrdiff_t>(offset_)};
 }
 
 auto ChangesMethod::operator==(const ChangesMethod& other) const noexcept

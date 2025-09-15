@@ -18,8 +18,7 @@ public:
                            std::string name,
                            std::size_t offset = 0);
 
-  auto operator()(AssetSnapshot asset_data) const
-   -> SubSeries<PolySeries<double>>;
+  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>;
 
   auto operator==(const ReferenceMethod& other) const noexcept -> bool;
 

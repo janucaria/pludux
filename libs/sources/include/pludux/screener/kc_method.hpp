@@ -17,8 +17,7 @@ public:
            double multiplier,
            std::size_t offset = 0);
 
-  auto operator()(AssetSnapshot asset_data) const
-   -> SubSeries<PolySeries<double>>;
+  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>;
 
   auto operator==(const KcMethod& other) const noexcept -> bool;
 

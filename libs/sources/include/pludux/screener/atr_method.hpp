@@ -19,8 +19,7 @@ public:
                      double multiplier = 1.0,
                      std::size_t offset = 0);
 
-  auto operator()(AssetSnapshot asset_data) const
-   -> SubSeries<PolySeries<double>>;
+  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>;
 
   auto operator==(const AtrMethod& other) const noexcept -> bool;
 

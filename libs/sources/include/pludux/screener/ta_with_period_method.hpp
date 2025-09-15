@@ -29,13 +29,12 @@ public:
   {
   }
 
-  auto operator()(AssetSnapshot asset_data) const
-   -> SubSeries<PolySeries<double>>
+  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>
   {
     const auto sources = input_(asset_data);
     const auto series = T{}(sources, period_);
-    return SubSeries{PolySeries<double>{series},
-                     static_cast<std::ptrdiff_t>(offset_)};
+    return LookbackSeries{PolySeries<double>{series},
+                          static_cast<std::ptrdiff_t>(offset_)};
   }
 
   auto operator==(const TaWithPeroidMethod& other) const noexcept

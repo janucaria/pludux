@@ -22,14 +22,14 @@ StochRsiMethod::StochRsiMethod(OutputName output,
 }
 
 auto StochRsiMethod::operator()(AssetSnapshot asset_data) const
- -> SubSeries<PolySeries<double>>
+ -> PolySeries<double>
 {
   const auto stoch_rsi_series = StochRsiSeries{
    rsi_input_(asset_data), rsi_period_, k_period_, k_smooth_, d_period_};
   const auto named_index_series = OutputByNameSeries{stoch_rsi_series, output_};
 
-  return SubSeries{PolySeries<double>{named_index_series},
-                   static_cast<std::ptrdiff_t>(offset_)};
+  return LookbackSeries{PolySeries<double>{named_index_series},
+                        static_cast<std::ptrdiff_t>(offset_)};
 }
 
 auto StochRsiMethod::operator==(const StochRsiMethod& other) const noexcept

@@ -18,8 +18,7 @@ public:
              std::size_t signal_period,
              std::size_t offset = 0);
 
-  auto operator()(AssetSnapshot asset_data) const
-   -> SubSeries<PolySeries<double>>;
+  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>;
 
   auto operator==(const MacdMethod& other) const noexcept -> bool;
 

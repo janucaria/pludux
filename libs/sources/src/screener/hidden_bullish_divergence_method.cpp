@@ -31,7 +31,7 @@ HiddenBullishDivergenceMethod::HiddenBullishDivergenceMethod(
 }
 
 auto HiddenBullishDivergenceMethod::operator()(AssetSnapshot asset_data) const
- -> SubSeries<PolySeries<double>>
+ -> PolySeries<double>
 {
   const auto signal_series = signal_(asset_data);
   const auto reference_series = reference_(asset_data);
@@ -43,8 +43,8 @@ auto HiddenBullishDivergenceMethod::operator()(AssetSnapshot asset_data) const
    lookback_range_,
   };
 
-  return SubSeries{PolySeries<double>{hidden_bullish_divergence_series},
-                   static_cast<std::ptrdiff_t>(offset_)};
+  return LookbackSeries{PolySeries<double>{hidden_bullish_divergence_series},
+                        static_cast<std::ptrdiff_t>(offset_)};
 }
 
 auto HiddenBullishDivergenceMethod::operator==(

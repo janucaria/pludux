@@ -20,7 +20,7 @@ MacdMethod::MacdMethod(OutputName output,
 }
 
 auto MacdMethod::operator()(AssetSnapshot asset_data) const
- -> SubSeries<PolySeries<double>>
+ -> PolySeries<double>
 {
   const auto input_series = input_(asset_data);
 
@@ -28,8 +28,8 @@ auto MacdMethod::operator()(AssetSnapshot asset_data) const
    MacdSeries{input_series, fast_period_, slow_period_, signal_period_};
   const auto macd_output_series = OutputByNameSeries{macd_series, output_};
 
-  return SubSeries{PolySeries<double>{macd_output_series},
-                   static_cast<std::ptrdiff_t>(offset_)};
+  return LookbackSeries{PolySeries<double>{macd_output_series},
+                        static_cast<std::ptrdiff_t>(offset_)};
 }
 
 auto MacdMethod::operator==(const MacdMethod& other) const noexcept

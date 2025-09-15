@@ -22,8 +22,7 @@ public:
   {
   }
 
-  auto operator()(AssetSnapshot asset_data) const
-   -> SubSeries<PolySeries<double>>
+  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>
   {
     const auto operand1_series = operand1_(asset_data);
     const auto operand2_series = operand2_(asset_data);
@@ -33,7 +32,8 @@ public:
                                  std::decay_t<decltype(operand2_series)>>{
      operand1_series, operand2_series};
 
-    return SubSeries{PolySeries<double>{result}, 0};
+    return LookbackSeries{PolySeries<double>{result},
+                          static_cast<std::ptrdiff_t>(offset_)};
   }
 
   auto operator==(const BinaryArithmeticMethod& other) const noexcept
@@ -69,15 +69,15 @@ public:
   {
   }
 
-  auto operator()(AssetSnapshot asset_data) const
-   -> SubSeries<PolySeries<double>>
+  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>
   {
     const auto operand_series = operand_(asset_data);
 
     auto result =
      UnaryFnSeries<T, std::decay_t<decltype(operand_series)>>{operand_series};
 
-    return SubSeries{PolySeries<double>{result}, 0};
+    return LookbackSeries{PolySeries<double>{result},
+                          static_cast<std::ptrdiff_t>(offset_)};
   }
 
   auto operator==(const UnaryArithmeticMethod& other) const noexcept

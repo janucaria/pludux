@@ -5,7 +5,7 @@
 namespace pludux::screener {
 
 auto ScreenerMethod::operator()(AssetSnapshot asset_snapshot) const
- -> SubSeries<PolySeries<double>>
+ -> PolySeries<double>
 {
   return impl_->operator()(std::move(asset_snapshot));
 }

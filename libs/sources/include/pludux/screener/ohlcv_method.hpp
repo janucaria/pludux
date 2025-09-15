@@ -21,10 +21,9 @@ public:
   {
   }
 
-  auto operator()(AssetSnapshot asset_data) const
-   -> SubSeries<PolySeries<double>>
+  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>
   {
-    return SubSeries<PolySeries<double>>{
+    return LookbackSeries<PolySeries<double>>{
      std::invoke(asset_snapshot_get_values, asset_data),
      static_cast<std::ptrdiff_t>(offset_)};
   }

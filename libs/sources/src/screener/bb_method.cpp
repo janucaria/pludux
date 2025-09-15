@@ -19,8 +19,7 @@ BbMethod::BbMethod(OutputName output,
 {
 }
 
-auto BbMethod::operator()(AssetSnapshot asset_data) const
- -> SubSeries<PolySeries<double>>
+auto BbMethod::operator()(AssetSnapshot asset_data) const -> PolySeries<double>
 {
   const auto bb = [&]() -> PolySeries<double> {
     switch(ma_type_) {
@@ -43,8 +42,8 @@ auto BbMethod::operator()(AssetSnapshot asset_data) const
     }
   }();
 
-  return SubSeries{PolySeries<double>{bb},
-                   static_cast<std::ptrdiff_t>(offset_)};
+  return LookbackSeries{PolySeries<double>{bb},
+                        static_cast<std::ptrdiff_t>(offset_)};
 }
 
 auto BbMethod::operator==(const BbMethod& other) const noexcept

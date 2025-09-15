@@ -24,26 +24,23 @@ StochMethod::StochMethod(OutputName output,
 }
 
 auto StochMethod::operator()(AssetSnapshot asset_data) const
- -> SubSeries<PolySeries<double>>
+ -> PolySeries<double>
 {
   const auto high_series = high_(asset_data);
   const auto low_series = low_(asset_data);
   const auto close_series = close_(asset_data);
 
-  const auto stoch = StochSeries{high_series,
-                                 low_series,
-                                 close_series,
-                                 k_period_,
-                                 k_smooth_,
-                                 d_period_};
+  const auto stoch = StochSeries{
+   high_series, low_series, close_series, k_period_, k_smooth_, d_period_};
 
   const auto named_stoch = OutputByNameSeries{stoch, output_};
 
-  return SubSeries{PolySeries<double>{named_stoch},
-                   static_cast<std::ptrdiff_t>(offset_)};
+  return LookbackSeries{PolySeries<double>{named_stoch},
+                        static_cast<std::ptrdiff_t>(offset_)};
 }
 
-auto StochMethod::operator==(const StochMethod& other) const noexcept -> bool = default;
+auto StochMethod::operator==(const StochMethod& other) const noexcept
+ -> bool = default;
 
 auto StochMethod::high() const noexcept -> ScreenerMethod
 {

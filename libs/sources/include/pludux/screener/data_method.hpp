@@ -14,8 +14,7 @@ class DataMethod {
 public:
   explicit DataMethod(std::string field, std::size_t offset = 0);
 
-  auto
-  operator()(AssetSnapshot asset_data) const -> SubSeries<PolySeries<double>>;
+  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>;
 
   auto operator==(const DataMethod& other) const noexcept -> bool;
 
