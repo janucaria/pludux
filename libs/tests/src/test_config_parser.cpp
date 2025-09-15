@@ -50,6 +50,31 @@ protected:
   }
 };
 
+TEST_F(ConfigParserTest, ParseScreenerReferenceMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "REFERENCE",
+      "name": "close",
+      "offset": 5
+    }
+  )");
+
+  const auto method = config_parser.parse_method(config);
+
+  const auto reference_method = screener_method_cast<ReferenceMethod>(method);
+  ASSERT_NE(reference_method, nullptr);
+
+  EXPECT_EQ(reference_method->registry(), nullptr);
+  EXPECT_EQ(reference_method->name(), "close");
+  EXPECT_EQ(reference_method->offset(), 5);
+
+  const auto serialized_config = config_parser.serialize_method(method);
+  const auto deserialized_config =
+   config_parser.parse_method(serialized_config);
+  EXPECT_EQ(method, deserialized_config);
+}
+
 TEST_F(ConfigParserTest, ParseScreenerOpenMethod)
 {
   const auto config = json::parse(R"(

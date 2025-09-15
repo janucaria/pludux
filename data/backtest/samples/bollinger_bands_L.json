@@ -35,14 +35,20 @@
       "signal": {
         "filter": "CROSSOVER",
         "signal": "CLOSE",
-        "reference": "bb-lower"
+        "reference": {
+          "method": "REFERENCE",
+          "name": "bb-lower"
+        }
       }
     },
     "exit": {
       "signal": {
         "filter": "CROSSUNDER",
         "signal": "CLOSE",
-        "reference": "bb-upper"
+        "reference": {
+          "method": "REFERENCE",
+          "name": "bb-upper"
+        }
       }
     }
   }

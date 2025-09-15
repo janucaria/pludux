@@ -615,7 +615,19 @@ static auto serialize_crossover_filter(const ConfigParser& config_parser,
   return serialized_filter;
 }
 
-ConfigParser::ConfigParser() = default;
+ConfigParser::ConfigParser()
+: ConfigParser{nullptr}
+{
+}
+
+ConfigParser::ConfigParser(
+ std::shared_ptr<screener::MethodRegistry> method_registry)
+: filter_parsers_{}
+, method_parsers_{}
+, named_config_methods_{}
+, method_registry_{std::move(method_registry)}
+{
+}
 
 void ConfigParser::register_default_parsers()
 {
@@ -708,6 +720,28 @@ void ConfigParser::register_default_parsers()
   register_method_parser("ATR", serialize_atr_method, parse_atr_method);
 
   register_method_parser("KC", serialize_kc_method, parse_kc_method);
+
+  register_method_parser(
+   "REFERENCE",
+   [](const ConfigParser& config_parser,
+      const screener::ScreenerMethod screener_method) -> nlohmann::json {
+     auto serialized_method = nlohmann::json{};
+
+     auto reference_method =
+      screener_method_cast<screener::ReferenceMethod>(screener_method);
+     if(reference_method) {
+       serialized_method["name"] = reference_method->name();
+       serialized_method["offset"] = reference_method->offset();
+     }
+
+     return serialized_method;
+   },
+   [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {
+     const auto name = get_param_or<std::string>(parameters, "name", "");
+     const auto offset = get_param_or<std::size_t>(parameters, "offset", 0);
+     return screener::ReferenceMethod{
+      config_parser.method_registry(), name, offset};
+   });
 
   register_method_parser(
    "ABS_DIFF",
@@ -1463,6 +1497,12 @@ auto ConfigParser::Parser::contains_named_method(
  const std::string& name) const noexcept -> bool
 {
   return config_parser_.named_config_methods_.contains(name);
+}
+
+auto ConfigParser::Parser::method_registry() const noexcept
+ -> std::shared_ptr<const screener::MethodRegistry>
+{
+  return config_parser_.method_registry_;
 }
 
 } // namespace pludux

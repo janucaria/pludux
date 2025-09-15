@@ -178,6 +178,29 @@
         }
       ]
     },
+    "referenceMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "REFERENCE"
+            },
+            "name": {
+              "type": "string"
+            },
+            "offset": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "name"
+          ]
+        }
+      ]
+    },
     "valueMethod": {
       "allOf": [
         {
@@ -653,6 +676,9 @@
     },
     "method": {
       "oneOf": [
+        {
+          "$ref": "#/definitions/referenceMethod"
+        },
         {
           "$ref": "#/definitions/quoteMethod"
         },

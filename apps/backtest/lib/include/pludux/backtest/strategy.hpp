@@ -2,6 +2,7 @@
 #define PLUDUX_PLUDUX_BACKTEST_STRATEGY_HPP
 
 #include <istream>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -21,6 +22,7 @@ public:
   enum class Direction { long_direction, short_direction };
 
   Strategy(std::string name,
+           std::shared_ptr<screener::MethodRegistry> method_registry,
            screener::ScreenerMethod risk_method,
            screener::ScreenerFilter long_entry_filter,
            screener::ScreenerFilter long_exit_filter,
@@ -33,6 +35,9 @@ public:
            double take_profit_risk_multiplier);
 
   auto name() const noexcept -> const std::string&;
+
+  auto method_registry() const noexcept
+   -> std::shared_ptr<screener::MethodRegistry>;
 
   auto risk_method() const noexcept -> const screener::ScreenerMethod&;
 
@@ -72,6 +77,8 @@ public:
 
 private:
   std::string name_;
+
+  std::shared_ptr<screener::MethodRegistry> method_registry_;
 
   screener::ScreenerMethod risk_method_;
 

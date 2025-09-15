@@ -31,7 +31,10 @@ target_sources(${PROJECT_NAME}
     src/screener/screener_method.cpp
     src/screener/stoch_method.cpp
     src/screener/stoch_rsi_method.cpp
+    src/screener/reference_method.cpp
     src/screener/value_method.cpp
+
+    src/screener/method_registry.cpp
 
     src/screener/all_of_filter.cpp
     src/screener/any_of_filter.cpp

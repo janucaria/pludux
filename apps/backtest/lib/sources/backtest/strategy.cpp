@@ -7,6 +7,7 @@
 namespace pludux::backtest {
 
 Strategy::Strategy(std::string name,
+                   std::shared_ptr<screener::MethodRegistry> method_registry,
                    screener::ScreenerMethod risk_method,
                    screener::ScreenerFilter long_entry_filter,
                    screener::ScreenerFilter long_exit_filter,
@@ -18,6 +19,7 @@ Strategy::Strategy(std::string name,
                    bool take_profit_enabled,
                    double take_profit_risk_multiplier)
 : name_{std::move(name)}
+, method_registry_{std::move(method_registry)}
 , risk_method_{risk_method}
 , long_entry_filter_{std::move(long_entry_filter)}
 , long_exit_filter_{std::move(long_exit_filter)}
@@ -34,6 +36,12 @@ Strategy::Strategy(std::string name,
 auto Strategy::name() const noexcept -> const std::string&
 {
   return name_;
+}
+
+auto Strategy::method_registry() const noexcept
+ -> std::shared_ptr<screener::MethodRegistry>
+{
+  return method_registry_;
 }
 
 auto Strategy::risk_method() const noexcept -> const screener::ScreenerMethod&
@@ -185,14 +193,17 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
                                   std::istream& json_strategy_stream)
  -> backtest::Strategy
 {
-  auto config_parser = pludux::ConfigParser{};
-  config_parser.register_default_parsers();
+  auto method_registry = std::make_shared<screener::MethodRegistry>();
+  auto config_parser = pludux::ConfigParser{method_registry};
 
+  config_parser.register_default_parsers();
   auto strategy_json =
    nlohmann::json::parse(json_strategy_stream, nullptr, true, true);
   if(strategy_json.contains("methods")) {
     for(const auto& strategy_method : strategy_json["methods"]) {
-      config_parser.parse_method(strategy_method);
+      const auto method_name = strategy_method.value("name", "");
+      const auto method = config_parser.parse_method(strategy_method);
+      method_registry->set(method_name, method);
     }
   }
 
@@ -263,6 +274,7 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
   }
 
   return pludux::backtest::Strategy{std::string{strategy_name},
+                                    std::move(method_registry),
                                     std::move(risk_method),
                                     std::move(long_entry_filter),
                                     std::move(long_exit_filter),

@@ -24,6 +24,9 @@ public:
 
     auto contains_named_method(const std::string& name) const noexcept -> bool;
 
+    auto method_registry() const noexcept
+     -> std::shared_ptr<const screener::MethodRegistry>;
+
   private:
     ConfigParser& config_parser_;
   };
@@ -43,6 +46,8 @@ public:
    auto(ConfigParser::Parser, const nlohmann::json&)->screener::ScreenerMethod>;
 
   ConfigParser();
+
+  ConfigParser(std::shared_ptr<screener::MethodRegistry> method_registry);
 
   void register_default_parsers();
 
@@ -84,6 +89,8 @@ private:
    method_parsers_;
 
   std::unordered_map<std::string, nlohmann::json> named_config_methods_;
+
+  std::shared_ptr<screener::MethodRegistry> method_registry_;
 };
 
 } // namespace pludux
