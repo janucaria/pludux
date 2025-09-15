@@ -27,6 +27,7 @@ target_sources(${PROJECT_NAME}
     src/screener/data_method.cpp
     src/screener/hidden_bullish_divergence_method.cpp
     src/screener/kc_method.cpp
+    src/screener/lookback_method.cpp
     src/screener/macd_method.cpp
     src/screener/screener_method.cpp
     src/screener/stoch_method.cpp
@@ -62,6 +63,7 @@ target_sources(${PROJECT_NAME}
         include/pludux/screener/data_method.hpp 
         include/pludux/screener/hidden_bullish_divergence_method.hpp
         include/pludux/screener/kc_method.hpp
+        include/pludux/screener/lookback_method.hpp
         include/pludux/screener/macd_method.hpp
         include/pludux/screener/screener_method.hpp 
         include/pludux/screener/stoch_method.hpp 

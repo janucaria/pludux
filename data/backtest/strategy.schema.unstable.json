@@ -201,6 +201,31 @@
         }
       ]
     },
+    "lookbackMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "LOOKBACK"
+            },
+            "source": {
+              "$ref": "#/definitions/methodAsParameter"
+            },
+            "period": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "source",
+            "period"
+          ]
+        }
+      ]
+    },
     "valueMethod": {
       "allOf": [
         {
@@ -678,6 +703,9 @@
       "oneOf": [
         {
           "$ref": "#/definitions/referenceMethod"
+        },
+        {
+          "$ref": "#/definitions/lookbackMethod"
         },
         {
           "$ref": "#/definitions/quoteMethod"

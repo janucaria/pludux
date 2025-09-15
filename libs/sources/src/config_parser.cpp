@@ -744,6 +744,29 @@ void ConfigParser::register_default_parsers()
    });
 
   register_method_parser(
+   "LOOKBACK",
+   [](const ConfigParser& config_parser,
+      const screener::ScreenerMethod screener_method) -> nlohmann::json {
+     auto serialized_method = nlohmann::json{};
+
+     auto lookback_method =
+      screener_method_cast<screener::LookbackMethod>(screener_method);
+     if(lookback_method) {
+       serialized_method["period"] = lookback_method->period();
+       serialized_method["source"] =
+        config_parser.serialize_method(lookback_method->source());
+     }
+
+     return serialized_method;
+   },
+   [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {
+     const auto period = parameters.at("period").get<std::size_t>();
+     const auto source_method = parse_method_from_param_or(
+      config_parser, parameters, "source", screener::CloseMethod{});
+     return screener::LookbackMethod{source_method, period};
+   });
+
+  register_method_parser(
    "ABS_DIFF",
    [](const ConfigParser& config_parser,
       const screener::ScreenerMethod screener_method) -> nlohmann::json {

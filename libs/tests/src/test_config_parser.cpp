@@ -75,6 +75,34 @@ TEST_F(ConfigParserTest, ParseScreenerReferenceMethod)
   EXPECT_EQ(method, deserialized_config);
 }
 
+TEST_F(ConfigParserTest, ParseScrennerLookbackMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "LOOKBACK",
+      "period": 3,
+      "source": {
+        "method": "CLOSE"
+      }
+    }
+  )");
+
+  const auto method = config_parser.parse_method(config);
+
+  const auto lookback_method = screener_method_cast<LookbackMethod>(method);
+  ASSERT_NE(lookback_method, nullptr);
+
+  EXPECT_EQ(lookback_method->period(), 3);
+  const auto source_method =
+   screener_method_cast<CloseMethod>(lookback_method->source());
+  ASSERT_NE(source_method, nullptr);
+
+  const auto serialized_config = config_parser.serialize_method(method);
+  const auto deserialized_config =
+   config_parser.parse_method(serialized_config);
+  EXPECT_EQ(method, deserialized_config);
+}
+
 TEST_F(ConfigParserTest, ParseScreenerOpenMethod)
 {
   const auto config = json::parse(R"(
