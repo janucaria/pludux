@@ -1,11 +1,10 @@
 {
-  "methods": [
-    {
+  "series": {
+    "ma": {
       "method": "SMA",
-      "name": "ma",
       "period": 9
     }
-  ],
+  },
   "risk": {
     "method": "ATR",
     "atr": {
@@ -23,18 +22,23 @@
   },
   "longPosition": {
     "entry": {
-      "repeat": "sequence",
       "signal": {
         "filter": "CROSSOVER",
         "signal": "CLOSE",
-        "reference": "ma"
+        "reference": {
+          "method": "REFERENCE",
+          "name": "ma"
+        }
       }
     },
     "exit": {
       "signal": {
         "filter": "CROSSUNDER",
         "signal": "CLOSE",
-        "reference": "ma"
+        "reference": {
+          "method": "REFERENCE",
+          "name": "ma"
+        }
       }
     }
   }

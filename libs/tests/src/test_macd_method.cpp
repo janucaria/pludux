@@ -2,6 +2,7 @@
 #include <pludux/asset_history.hpp>
 #include <pludux/screener/data_method.hpp>
 #include <pludux/screener/macd_method.hpp>
+#include <pludux/screener/output_by_name_method.hpp>
 #include <pludux/series.hpp>
 
 using namespace pludux;
@@ -30,13 +31,11 @@ TEST(MacdMethodTest, RunAllMethod)
                                                  830,
                                                  875}}};
 
-  auto macd_method = MacdMethod{
-   MacdOutput::macd, data_method, fast_period, slow_period, signal_period};
-  auto macd_series = MacdSeries{macd_method.output(),
-                                data_method(asset_data),
-                                fast_period,
-                                slow_period,
-                                signal_period};
+  auto macd_method =
+   MacdMethod{data_method, fast_period, slow_period, signal_period};
+  auto macd_series = OutputByNameSeries{
+   MacdSeries{data_method(asset_data), fast_period, slow_period, signal_period},
+   OutputName::MacdLine};
 
   const auto macd_lines = macd_method(asset_data);
   ASSERT_EQ(macd_lines.size(), macd_series.size());
@@ -56,9 +55,9 @@ TEST(MacdMethodTest, RunAllMethod)
   EXPECT_TRUE(std::isnan(macd_lines[8]) && macd_series[8]);
   EXPECT_TRUE(std::isnan(macd_lines[9]) && macd_series[9]);
 
-  macd_method.output(MacdOutput::signal);
-  macd_series.output(MacdOutput::signal);
-  const auto signal_lines = macd_method(asset_data);
+  macd_series.output_name(OutputName::SignalLine);
+  const auto signal_lines =
+   OutputByNameMethod{macd_method, OutputName::SignalLine}(asset_data);
   EXPECT_DOUBLE_EQ(signal_lines[0], macd_series[0]);
   EXPECT_DOUBLE_EQ(signal_lines[1], macd_series[1]);
   EXPECT_DOUBLE_EQ(signal_lines[2], macd_series[2]);
@@ -75,9 +74,9 @@ TEST(MacdMethodTest, RunAllMethod)
   EXPECT_TRUE(std::isnan(signal_lines[8]) && macd_series[8]);
   EXPECT_TRUE(std::isnan(signal_lines[9]) && macd_series[9]);
 
-  macd_method.output(MacdOutput::histogram);
-  macd_series.output(MacdOutput::histogram);
-  const auto histograms = macd_method(asset_data);
+  macd_series.output_name(OutputName::MacdHistogram);
+  const auto histograms =
+   OutputByNameMethod{macd_method, OutputName::MacdHistogram}(asset_data);
   EXPECT_DOUBLE_EQ(histograms[0], macd_series[0]);
   EXPECT_DOUBLE_EQ(histograms[1], macd_series[1]);
   EXPECT_DOUBLE_EQ(histograms[2], macd_series[2]);
@@ -101,15 +100,15 @@ TEST(MacdMethodTest, EqualityOperator)
   const auto fast_period1 = 5;
   const auto slow_period1 = 10;
   const auto signal_period1 = 3;
-  const auto macd_method1 = MacdMethod{
-   MacdOutput::macd, data_method1, fast_period1, slow_period1, signal_period1};
+  const auto macd_method1 =
+   MacdMethod{data_method1, fast_period1, slow_period1, signal_period1};
 
   const auto data_method2 = DataMethod{"close"};
   const auto fast_period2 = 5;
   const auto slow_period2 = 10;
   const auto signal_period2 = 3;
-  const auto macd_method2 = MacdMethod{
-   MacdOutput::macd, data_method2, fast_period2, slow_period2, signal_period2};
+  const auto macd_method2 =
+   MacdMethod{data_method2, fast_period2, slow_period2, signal_period2};
 
   EXPECT_TRUE(macd_method1 == macd_method2);
   EXPECT_FALSE(macd_method1 != macd_method2);
@@ -121,15 +120,15 @@ TEST(MacdMethodTest, NotEqualOperator)
   const auto fast_period1 = 5;
   const auto slow_period1 = 10;
   const auto signal_period1 = 3;
-  const auto macd_method1 = MacdMethod{
-   MacdOutput::macd, data_method1, fast_period1, slow_period1, signal_period1};
+  const auto macd_method1 =
+   MacdMethod{data_method1, fast_period1, slow_period1, signal_period1};
 
   const auto data_method2 = DataMethod{"open"};
   const auto fast_period2 = 5;
   const auto slow_period2 = 10;
   const auto signal_period2 = 3;
-  const auto macd_method2 = MacdMethod{
-   MacdOutput::macd, data_method2, fast_period2, slow_period2, signal_period2};
+  const auto macd_method2 =
+   MacdMethod{data_method2, fast_period2, slow_period2, signal_period2};
 
   EXPECT_TRUE(macd_method1 != macd_method2);
   EXPECT_FALSE(macd_method1 == macd_method2);

@@ -7,6 +7,7 @@
 #include <type_traits>
 #include <utility>
 
+#include <pludux/series/series_output.hpp>
 
 namespace pludux {
 
@@ -21,9 +22,9 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> ValueType
+  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
   {
-    const auto operand_value = operand_[index];
+    const auto operand_value = static_cast<ValueType>(operand_[index]);
     return TUnaryFn{}(operand_value);
   }
 

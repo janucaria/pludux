@@ -3,6 +3,8 @@
 
 #include <cstddef>
 
+#include <pludux/series/series_output.hpp>
+
 namespace pludux {
 
 template<typename T>

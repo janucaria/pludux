@@ -26,7 +26,7 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> ValueType
+  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
   {
     const auto series = RefSeries{series_};
     const auto changes = ChangeSeries{series};

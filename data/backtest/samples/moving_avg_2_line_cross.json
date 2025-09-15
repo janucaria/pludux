@@ -1,18 +1,16 @@
 {
-  "methods": [
-    {
+  "series": {
+    "ma_fast": {
       "method": "SMA",
-      "name": "ma-fast",
       "period": 9,
       "input": "CLOSE"
     },
-    {
+    "ma_slow": {
       "method": "SMA",
-      "name": "ma-slow",
       "period": 18,
       "input": "CLOSE"
     }
-  ],
+  },
   "risk": {
     "method": "ATR",
     "atr": {
@@ -32,18 +30,29 @@
   },
   "longPosition": {
     "entry": {
-      "repeat": "sequence",
       "signal": {
         "filter": "CROSSOVER",
-        "signal": "ma-fast",
-        "reference": "ma-slow"
+        "signal": {
+          "method": "REFERENCE",
+          "name": "ma_fast"
+        },
+        "reference": {
+          "method": "REFERENCE",
+          "name": "ma_slow"
+        }
       }
     },
     "exit": {
       "signal": {
         "filter": "CROSSUNDER",
-        "signal": "ma-fast",
-        "reference": "ma-slow"
+        "signal": {
+          "method": "REFERENCE",
+          "name": "ma_fast"
+        },
+        "reference": {
+          "method": "REFERENCE",
+          "name": "ma_slow"
+        }
       }
     }
   }

@@ -4,10 +4,12 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "methods": {
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/method"
+    "series": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z][a-z0-9_]*$": {
+          "$ref": "#/definitions/method"
+        }
       }
     },
     "risk": {
@@ -101,12 +103,6 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "repeat": {
-              "enum": [
-                "sequence",
-                "always"
-              ]
-            },
             "signal": {
               "$ref": "#/definitions/filterAsParameter"
             }
@@ -148,16 +144,8 @@
       "type": "object",
       "properties": {
         "method": {
-          "type": "string"
-        },
-        "offset": {
-          "type": "number"
-        },
-        "name": {
-          "type": "string"
-        },
-        "extends": {
-          "type": "string"
+          "type": "string",
+          "pattern": "^[A-Z_]+$"
         }
       },
       "required": [
@@ -181,6 +169,88 @@
               ]
             }
           }
+        }
+      ]
+    },
+    "referenceMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "REFERENCE"
+            },
+            "name": {
+              "type": "string"
+            },
+            "offset": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "name"
+          ]
+        }
+      ]
+    },
+    "outputByNameMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "OUTPUT_BY_NAME"
+            },
+            "name": {
+              "type": "string",
+              "enum": [
+                "upper-band",
+                "middle-band",
+                "lower-band",
+                "percent-k",
+                "percent-d",
+                "macd-macd",
+                "macd-signal",
+                "macd-histogram"
+              ]
+            },
+            "source": {
+              "$ref": "#/definitions/methodAsParameter"
+            }
+          },
+          "required": [
+            "name",
+            "source"
+          ]
+        }
+      ]
+    },
+    "lookbackMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "LOOKBACK"
+            },
+            "source": {
+              "$ref": "#/definitions/methodAsParameter"
+            },
+            "period": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "source",
+            "period"
+          ]
         }
       ]
     },
@@ -320,13 +390,6 @@
             },
             "input": {
               "$ref": "#/definitions/methodAsParameter"
-            },
-            "output": {
-              "enum": [
-                "upper",
-                "lower",
-                "middle"
-              ]
             }
           }
         }
@@ -350,13 +413,6 @@
             },
             "multiplier": {
               "type": "number"
-            },
-            "output": {
-              "enum": [
-                "upper",
-                "lower",
-                "middle"
-              ]
             }
           }
         }
@@ -383,13 +439,6 @@
             },
             "input": {
               "$ref": "#/definitions/methodAsParameter"
-            },
-            "output": {
-              "enum": [
-                "macd",
-                "signal",
-                "histogram"
-              ]
             }
           }
         }
@@ -413,12 +462,6 @@
             },
             "dPeriod": {
               "type": "number"
-            },
-            "output": {
-              "enum": [
-                "k",
-                "d"
-              ]
             },
             "high": {
               "$ref": "#/definitions/methodAsParameter"
@@ -457,12 +500,6 @@
             },
             "rsiPeriod": {
               "type": "number"
-            },
-            "output": {
-              "enum": [
-                "k",
-                "d"
-              ]
             }
           }
         }
@@ -659,6 +696,15 @@
     },
     "method": {
       "oneOf": [
+        {
+          "$ref": "#/definitions/referenceMethod"
+        },
+        {
+          "$ref": "#/definitions/outputByNameMethod"
+        },
+        {
+          "$ref": "#/definitions/lookbackMethod"
+        },
         {
           "$ref": "#/definitions/quoteMethod"
         },

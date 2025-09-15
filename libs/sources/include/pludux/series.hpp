@@ -12,6 +12,7 @@
 #include <pludux/series/hma_series.hpp>
 #include <pludux/series/kc_series.hpp>
 #include <pludux/series/macd_series.hpp>
+#include <pludux/series/output_by_name_series.hpp>
 #include <pludux/series/pivot_lows_series.hpp>
 #include <pludux/series/poly_series.hpp>
 #include <pludux/series/ref_series.hpp>
@@ -23,7 +24,7 @@
 #include <pludux/series/sma_series.hpp>
 #include <pludux/series/stoch_rsi_series.hpp>
 #include <pludux/series/stoch_series.hpp>
-#include <pludux/series/sub_series.hpp>
+#include <pludux/series/lookback_series.hpp>
 #include <pludux/series/tr_series.hpp>
 #include <pludux/series/unary_fn_series.hpp>
 #include <pludux/series/wma_series.hpp>

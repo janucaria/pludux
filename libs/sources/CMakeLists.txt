@@ -27,11 +27,16 @@ target_sources(${PROJECT_NAME}
     src/screener/data_method.cpp
     src/screener/hidden_bullish_divergence_method.cpp
     src/screener/kc_method.cpp
+    src/screener/lookback_method.cpp
     src/screener/macd_method.cpp
+    src/screener/output_by_name_method.cpp
     src/screener/screener_method.cpp
     src/screener/stoch_method.cpp
     src/screener/stoch_rsi_method.cpp
+    src/screener/reference_method.cpp
     src/screener/value_method.cpp
+
+    src/screener/method_registry.cpp
 
     src/screener/all_of_filter.cpp
     src/screener/any_of_filter.cpp
@@ -59,7 +64,9 @@ target_sources(${PROJECT_NAME}
         include/pludux/screener/data_method.hpp 
         include/pludux/screener/hidden_bullish_divergence_method.hpp
         include/pludux/screener/kc_method.hpp
+        include/pludux/screener/lookback_method.hpp
         include/pludux/screener/macd_method.hpp
+        include/pludux/screener/output_by_name_method.hpp
         include/pludux/screener/screener_method.hpp 
         include/pludux/screener/stoch_method.hpp 
         include/pludux/screener/stoch_rsi_method.hpp 
@@ -95,7 +102,7 @@ target_sources(${PROJECT_NAME}
         include/pludux/series/sma_series.hpp
         include/pludux/series/stoch_rsi_series.hpp
         include/pludux/series/stoch_series.hpp
-        include/pludux/series/sub_series.hpp
+        include/pludux/series/lookback_series.hpp
         include/pludux/series/tr_series.hpp
         include/pludux/series/unary_fn_series.hpp
         include/pludux/series/wma_series.hpp

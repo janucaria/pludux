@@ -7,6 +7,8 @@
 #include <type_traits>
 #include <utility>
 
+#include <pludux/series/series_output.hpp>
+
 #include "rma_series.hpp"
 #include "tr_series.hpp"
 
@@ -31,7 +33,7 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> ValueType
+  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
   {
     return atr_series_[index] * multiplier_;
   }

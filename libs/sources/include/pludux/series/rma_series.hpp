@@ -7,6 +7,8 @@
 #include <utility>
 #include <vector>
 
+#include <pludux/series/series_output.hpp>
+
 #include "sma_series.hpp"
 
 namespace pludux {

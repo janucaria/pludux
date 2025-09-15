@@ -5,33 +5,31 @@
 #include <limits>
 #include <utility>
 
+#include <pludux/series/series_output.hpp>
+
 #include "binary_fn_series.hpp"
 #include "ema_series.hpp"
 #include "ref_series.hpp"
 
 namespace pludux {
 
-enum class MacdOutput { macd, signal, histogram };
-
 template<typename TSeries>
 class MacdSeries {
 public:
   using ValueType = typename TSeries::ValueType;
 
-  MacdSeries(MacdOutput output,
-             TSeries input,
+  MacdSeries(TSeries input,
              std::size_t short_period,
              std::size_t long_period,
              std::size_t signal_period)
   : input_{std::move(input)}
-  , output_{output}
   , short_period_{short_period}
   , long_period_{long_period}
   , signal_period_{signal_period}
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> ValueType
+  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
   {
     const auto input_series = RefSeries{input_};
     const auto short_ema_series = EmaSeries{input_series, short_period_};
@@ -42,16 +40,14 @@ public:
 
     const auto signal_series = EmaSeries{macd_series, signal_period_};
     const auto signal = signal_series[index];
+    const auto histogram = macd - signal;
 
-    switch(output_) {
-    case MacdOutput::signal:
-      return signal;
-    case MacdOutput::histogram:
-      return macd - signal;
-    case MacdOutput::macd:
-    default:
-      return macd;
-    }
+    return {{macd, signal, histogram},
+            {
+             {OutputName::MacdLine, 0},
+             {OutputName::SignalLine, 1},
+             {OutputName::MacdHistogram, 2},
+            }};
   }
 
   auto size() const noexcept -> std::size_t
@@ -64,19 +60,8 @@ public:
     return input_;
   }
 
-  auto output() const noexcept -> MacdOutput
-  {
-    return output_;
-  }
-
-  void output(MacdOutput output) noexcept
-  {
-    output_ = output;
-  }
-
 private:
   TSeries input_;
-  MacdOutput output_;
   std::size_t short_period_;
   std::size_t long_period_;
   std::size_t signal_period_;

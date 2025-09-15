@@ -4,53 +4,29 @@
 
 namespace pludux::screener {
 
-MacdMethod::MacdMethod(MacdOutput output,
-                       ScreenerMethod input,
+MacdMethod::MacdMethod(ScreenerMethod input,
                        std::size_t fast_period,
                        std::size_t slow_period,
-                       std::size_t signal_period,
-                       std::size_t offset)
+                       std::size_t signal_period)
 : input_{input}
-, output_{output}
-, offset_{offset}
 , fast_period_{fast_period}
 , slow_period_{slow_period}
 , signal_period_{signal_period}
 {
 }
 
+auto MacdMethod::operator==(const MacdMethod& other) const noexcept
+ -> bool = default;
+
 auto MacdMethod::operator()(AssetSnapshot asset_data) const
- -> SubSeries<PolySeries<double>>
+ -> PolySeries<double>
 {
   const auto input_series = input_(asset_data);
 
-  const auto macd_series = MacdSeries{
-   output_, input_series, fast_period_, slow_period_, signal_period_};
+  const auto macd_series =
+   MacdSeries{input_series, fast_period_, slow_period_, signal_period_};
 
-  return SubSeries{PolySeries<double>{macd_series},
-                   static_cast<std::ptrdiff_t>(offset_)};
-}
-
-auto MacdMethod::operator==(const MacdMethod& other) const noexcept -> bool = default;
-
-auto MacdMethod::offset() const noexcept -> std::size_t
-{
-  return offset_;
-}
-
-void MacdMethod::offset(std::size_t offset) noexcept
-{
-  offset_ = offset;
-}
-
-auto MacdMethod::output() const noexcept -> MacdOutput
-{
-  return output_;
-}
-
-void MacdMethod::output(MacdOutput output) noexcept
-{
-  output_ = output;
+  return macd_series;
 }
 
 auto MacdMethod::input() const noexcept -> ScreenerMethod

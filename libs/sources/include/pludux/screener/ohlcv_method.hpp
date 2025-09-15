@@ -16,28 +16,13 @@ namespace details {
 template<typename TSelf, auto asset_snapshot_get_values>
 class OhlcvMethod {
 public:
-  explicit OhlcvMethod(std::size_t offset = 0)
-  : offset_{offset}
-  {
-  }
-
-  auto operator()(AssetSnapshot asset_data) const
-   -> SubSeries<PolySeries<double>>
-  {
-    return SubSeries<PolySeries<double>>{
-     std::invoke(asset_snapshot_get_values, asset_data),
-     static_cast<std::ptrdiff_t>(offset_)};
-  }
-
   auto operator==(const OhlcvMethod& other) const noexcept -> bool = default;
 
-  auto offset() const noexcept -> std::size_t
+  auto operator()(this const auto, AssetSnapshot asset_data)
+   -> PolySeries<double>
   {
-    return offset_;
+    return std::invoke(asset_snapshot_get_values, asset_data);
   }
-
-private:
-  std::size_t offset_{};
 };
 
 } // namespace details

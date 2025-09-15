@@ -4,35 +4,25 @@
 
 namespace pludux::screener {
 
-StochRsiMethod::StochRsiMethod(StochOutput output,
-                               ScreenerMethod rsi_input,
+StochRsiMethod::StochRsiMethod(ScreenerMethod rsi_input,
                                std::size_t rsi_period,
                                std::size_t k_period,
                                std::size_t k_smooth,
-                               std::size_t d_period,
-                               std::size_t offset)
+                               std::size_t d_period)
 : rsi_input_{rsi_input}
-, output_{output}
 , rsi_period_{rsi_period}
 , k_period_{k_period}
 , k_smooth_{k_smooth}
 , d_period_{d_period}
-, offset_{offset}
 {
 }
 
 auto StochRsiMethod::operator()(AssetSnapshot asset_data) const
- -> SubSeries<PolySeries<double>>
+ -> PolySeries<double>
 {
-  const auto stoch_rsi_series = StochRsiSeries{output_,
-                                               rsi_input_(asset_data),
-                                               rsi_period_,
-                                               k_period_,
-                                               k_smooth_,
-                                               d_period_};
-
-  return SubSeries{PolySeries<double>{stoch_rsi_series},
-                   static_cast<std::ptrdiff_t>(offset_)};
+  const auto stoch_rsi_series = StochRsiSeries{
+   rsi_input_(asset_data), rsi_period_, k_period_, k_smooth_, d_period_};
+  return stoch_rsi_series;
 }
 
 auto StochRsiMethod::operator==(const StochRsiMethod& other) const noexcept
@@ -46,26 +36,6 @@ auto StochRsiMethod::rsi_input() const noexcept -> ScreenerMethod
 auto StochRsiMethod::rsi_period() const noexcept -> std::size_t
 {
   return rsi_period_;
-}
-
-auto StochRsiMethod::offset() const noexcept -> std::size_t
-{
-  return offset_;
-}
-
-void StochRsiMethod::offset(std::size_t offset) noexcept
-{
-  offset_ = offset;
-}
-
-auto StochRsiMethod::output() const noexcept -> StochOutput
-{
-  return output_;
-}
-
-void StochRsiMethod::output(StochOutput output) noexcept
-{
-  output_ = output;
 }
 
 auto StochRsiMethod::k_period() const noexcept -> std::size_t

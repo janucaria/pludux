@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <pludux/series/pivot_lows_series.hpp>
+#include <pludux/series/series_output.hpp>
 
 namespace pludux {
 
@@ -28,12 +29,12 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> ValueType
+  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
   {
     const auto& signal = signal_series_;
     const auto& reference = reference_series_;
 
-    const auto signal_low_index = index;
+    const auto signal_low_index = static_cast<ValueType>(index);
     const auto signal_low = get_lows(signal, signal_low_index);
 
     if(std::isnan(signal_low)) {

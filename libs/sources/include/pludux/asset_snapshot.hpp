@@ -29,24 +29,24 @@ public:
   auto contains(std::string_view key) const noexcept -> bool;
 
   auto get_values(std::string_view key) const
-   -> SubSeries<RefSeries<const PolySeries<double>>>;
+   -> LookbackSeries<RefSeries<const PolySeries<double>>>;
 
   auto get_datetime_values() const
-   -> SubSeries<RefSeries<const PolySeries<double>>>;
+   -> LookbackSeries<RefSeries<const PolySeries<double>>>;
 
   auto get_open_values() const
-   -> SubSeries<RefSeries<const PolySeries<double>>>;
+   -> LookbackSeries<RefSeries<const PolySeries<double>>>;
 
   auto get_high_values() const
-   -> SubSeries<RefSeries<const PolySeries<double>>>;
+   -> LookbackSeries<RefSeries<const PolySeries<double>>>;
 
-  auto get_low_values() const -> SubSeries<RefSeries<const PolySeries<double>>>;
+  auto get_low_values() const -> LookbackSeries<RefSeries<const PolySeries<double>>>;
 
   auto get_close_values() const
-   -> SubSeries<RefSeries<const PolySeries<double>>>;
+   -> LookbackSeries<RefSeries<const PolySeries<double>>>;
 
   auto get_volume_values() const
-   -> SubSeries<RefSeries<const PolySeries<double>>>;
+   -> LookbackSeries<RefSeries<const PolySeries<double>>>;
 
   auto get_datetime() const -> double;
 

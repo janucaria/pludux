@@ -11,24 +11,11 @@ namespace pludux::screener {
 
 class KcMethod {
 public:
-  KcMethod(KcOutput output,
-           ScreenerMethod ma,
-           ScreenerMethod range,
-           double multiplier,
-           std::size_t offset = 0);
+  KcMethod(ScreenerMethod ma, ScreenerMethod range, double multiplier);
 
-  auto operator()(AssetSnapshot asset_data) const
-   -> SubSeries<PolySeries<double>>;
+  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>;
 
   auto operator==(const KcMethod& other) const noexcept -> bool;
-
-  auto offset() const noexcept -> std::size_t;
-
-  void offset(std::size_t offset) noexcept;
-
-  auto output() const noexcept -> KcOutput;
-
-  void output(KcOutput output) noexcept;
 
   auto multiplier() const noexcept -> double;
 
@@ -43,8 +30,6 @@ public:
   void range(ScreenerMethod range) noexcept;
 
 private:
-  std::size_t offset_;
-  KcOutput output_;
   double multiplier_;
   ScreenerMethod ma_;
   ScreenerMethod range_;

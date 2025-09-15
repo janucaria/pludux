@@ -7,11 +7,10 @@
 namespace pludux::backtest {
 
 Strategy::Strategy(std::string name,
+                   std::shared_ptr<screener::MethodRegistry> method_registry,
                    screener::ScreenerMethod risk_method,
-                   EntryRepeat long_entry_repeat,
                    screener::ScreenerFilter long_entry_filter,
                    screener::ScreenerFilter long_exit_filter,
-                   EntryRepeat short_entry_repeat,
                    screener::ScreenerFilter short_entry_filter,
                    screener::ScreenerFilter short_exit_filter,
                    bool stop_loss_enabled,
@@ -20,11 +19,10 @@ Strategy::Strategy(std::string name,
                    bool take_profit_enabled,
                    double take_profit_risk_multiplier)
 : name_{std::move(name)}
+, method_registry_{std::move(method_registry)}
 , risk_method_{risk_method}
-, long_entry_repeat_{long_entry_repeat}
 , long_entry_filter_{std::move(long_entry_filter)}
 , long_exit_filter_{std::move(long_exit_filter)}
-, short_entry_repeat_{short_entry_repeat}
 , short_entry_filter_{std::move(short_entry_filter)}
 , short_exit_filter_{std::move(short_exit_filter)}
 , stop_loss_enabled_{stop_loss_enabled}
@@ -40,19 +38,15 @@ auto Strategy::name() const noexcept -> const std::string&
   return name_;
 }
 
+auto Strategy::method_registry() const noexcept
+ -> std::shared_ptr<screener::MethodRegistry>
+{
+  return method_registry_;
+}
+
 auto Strategy::risk_method() const noexcept -> const screener::ScreenerMethod&
 {
   return risk_method_;
-}
-
-auto Strategy::long_entry_repeat() const noexcept -> EntryRepeat
-{
-  return long_entry_repeat_;
-}
-
-void Strategy::long_entry_repeat(EntryRepeat repeat_type) noexcept
-{
-  long_entry_repeat_ = repeat_type;
 }
 
 auto Strategy::long_entry_filter() const noexcept
@@ -65,16 +59,6 @@ auto Strategy::long_exit_filter() const noexcept
  -> const screener::ScreenerFilter&
 {
   return long_exit_filter_;
-}
-
-auto Strategy::short_entry_repeat() const noexcept -> EntryRepeat
-{
-  return short_entry_repeat_;
-}
-
-void Strategy::short_entry_repeat(EntryRepeat repeat_type) noexcept
-{
-  short_entry_repeat_ = repeat_type;
 }
 
 auto Strategy::short_entry_filter() const noexcept
@@ -183,30 +167,6 @@ auto Strategy::entry_trade(const AssetSnapshot& asset_snapshot,
   });
 }
 
-auto Strategy::reentry_trade(const AssetSnapshot& asset_snapshot,
-                             double position_size) const noexcept
- -> std::optional<TradeEntry>
-{
-  const auto is_long_direction = position_size > 0;
-  const auto is_short_direction = position_size < 0;
-
-  if(is_long_direction && long_entry_repeat_ == EntryRepeat::always) {
-    if(long_entry_filter()(asset_snapshot)) {
-      const auto risk_size = risk_method_(asset_snapshot)[0];
-      const auto risk_value = std::abs(position_size) * risk_size;
-      return entry_long_trade(asset_snapshot, risk_value);
-    }
-  } else if(is_short_direction && short_entry_repeat_ == EntryRepeat::always) {
-    if(short_entry_filter()(asset_snapshot)) {
-      const auto risk_size = -risk_method_(asset_snapshot)[0];
-      const auto risk_value = std::abs(position_size) * risk_size;
-      return entry_short_trade(asset_snapshot, risk_value);
-    }
-  }
-
-  return std::nullopt;
-}
-
 auto Strategy::exit_trade(const AssetSnapshot& asset_snapshot,
                           double position_size) const noexcept
  -> std::optional<TradeExit>
@@ -233,14 +193,16 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
                                   std::istream& json_strategy_stream)
  -> backtest::Strategy
 {
-  auto config_parser = pludux::ConfigParser{};
-  config_parser.register_default_parsers();
+  auto method_registry = std::make_shared<screener::MethodRegistry>();
+  auto config_parser = pludux::ConfigParser{method_registry};
 
+  config_parser.register_default_parsers();
   auto strategy_json =
    nlohmann::json::parse(json_strategy_stream, nullptr, true, true);
-  if(strategy_json.contains("methods")) {
-    for(const auto& strategy_method : strategy_json["methods"]) {
-      config_parser.parse_method(strategy_method);
+  if(strategy_json.contains("series")) {
+    for(const auto& [name, series_method] : strategy_json["series"].items()) {
+      const auto method = config_parser.parse_method(series_method);
+      method_registry->set(name, method);
     }
   }
 
@@ -248,7 +210,6 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
   const auto risk_config = strategy_json.at("risk");
   const auto risk_method = risk_parser.parse_method(risk_config);
 
-  auto long_entry_repeat = Strategy::EntryRepeat::sequence;
   auto long_entry_filter = screener::ScreenerFilter{screener::FalseFilter{}};
   auto long_exit_filter = screener::ScreenerFilter{screener::FalseFilter{}};
   if(strategy_json.contains("longPosition")) {
@@ -256,12 +217,6 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
 
     if(long_position_json.contains("entry")) {
       const auto& entry_json = long_position_json.at("entry");
-      if(entry_json.contains("repeat")) {
-        const auto repeat_value = entry_json.at("repeat").get<std::string>();
-        if(repeat_value == "always") {
-          long_entry_repeat = Strategy::EntryRepeat::always;
-        }
-      }
       long_entry_filter = config_parser.parse_filter(entry_json.at("signal"));
     }
     if(long_position_json.contains("exit")) {
@@ -270,7 +225,6 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
     }
   }
 
-  auto short_entry_repeat = Strategy::EntryRepeat::sequence;
   auto short_entry_filter = screener::ScreenerFilter{screener::FalseFilter{}};
   auto short_exit_filter = screener::ScreenerFilter{screener::FalseFilter{}};
   if(strategy_json.contains("shortPosition")) {
@@ -278,12 +232,6 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
 
     if(short_position_json.contains("entry")) {
       const auto& entry_json = short_position_json.at("entry");
-      if(entry_json.contains("repeat")) {
-        const auto repeat_value = entry_json.at("repeat").get<std::string>();
-        if(repeat_value == "always") {
-          short_entry_repeat = Strategy::EntryRepeat::always;
-        }
-      }
       short_entry_filter = config_parser.parse_filter(entry_json.at("signal"));
     }
     if(short_position_json.contains("exit")) {
@@ -325,11 +273,10 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
   }
 
   return pludux::backtest::Strategy{std::string{strategy_name},
+                                    std::move(method_registry),
                                     std::move(risk_method),
-                                    long_entry_repeat,
                                     std::move(long_entry_filter),
                                     std::move(long_exit_filter),
-                                    short_entry_repeat,
                                     std::move(short_entry_filter),
                                     std::move(short_exit_filter),
                                     is_stop_loss_enabled,

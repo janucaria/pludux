@@ -7,13 +7,13 @@
 #include <type_traits>
 #include <utility>
 
+#include <pludux/series/series_output.hpp>
+
 #include "binary_fn_series.hpp"
 #include "ref_series.hpp"
 #include "sma_series.hpp"
 
 namespace pludux {
-
-enum class BbOutput { middle, upper, lower };
 
 template<typename TMaSeries>
   requires requires(TMaSeries ma) {
@@ -24,20 +24,19 @@ class BbSeries {
 public:
   using ValueType = std::common_type_t<double, typename TMaSeries::ValueType>;
 
-  BbSeries(BbOutput output, TMaSeries ma, double stddev)
-  : output_{output}
-  , ma_{std::move(ma)}
+  BbSeries(TMaSeries ma, double stddev)
+  : ma_{std::move(ma)}
   , stddev_{stddev}
   {
   }
 
   template<typename TSeries>
-  BbSeries(BbOutput output, TSeries input, std::size_t period, double stddev)
-  : BbSeries{output, SmaSeries{std::move(input), period}, stddev}
+  BbSeries(TSeries input, std::size_t period, double stddev)
+  : BbSeries{SmaSeries{std::move(input), period}, stddev}
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> ValueType
+  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
   {
     const auto period = ma_.period();
     const auto& input = ma_.input();
@@ -54,15 +53,16 @@ public:
     const auto std_dev = sqrt(sum_squared_diff / period);
     const auto std_dev_scaled = std_dev * stddev_;
 
-    switch(output_) {
-    case BbOutput::upper:
-      return ma_[index] + std_dev_scaled;
-    case BbOutput::lower:
-      return ma_[index] - std_dev_scaled;
-    case BbOutput::middle:
-    default:
-      return ma_[index];
-    }
+    const auto middle = ma_[index];
+    const auto upper = middle + std_dev_scaled;
+    const auto lower = middle - std_dev_scaled;
+
+    return {{middle, upper, lower},
+            {
+             {OutputName::MiddleBand, 0},
+             {OutputName::UpperBand, 1},
+             {OutputName::LowerBand, 2},
+            }};
   }
 
   auto size() const noexcept -> std::size_t
@@ -70,28 +70,16 @@ public:
     return ma_.size();
   }
 
-  auto output() const noexcept -> BbOutput
-  {
-    return output_;
-  }
-
-  void output(BbOutput output) noexcept
-  {
-    output_ = output;
-  }
-
 private:
-  BbOutput output_;
   TMaSeries ma_;
   double stddev_;
 };
 
 template<typename TMaSeries>
-BbSeries(BbOutput, TMaSeries, double) -> BbSeries<TMaSeries>;
+BbSeries(TMaSeries, double) -> BbSeries<TMaSeries>;
 
 template<typename TSeries>
-BbSeries(BbOutput, TSeries, std::size_t, double)
- -> BbSeries<SmaSeries<TSeries>>;
+BbSeries(TSeries, std::size_t, double) -> BbSeries<SmaSeries<TSeries>>;
 
 } // namespace pludux
 

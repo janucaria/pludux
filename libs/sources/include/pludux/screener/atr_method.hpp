@@ -16,11 +16,9 @@ public:
                      ScreenerMethod low,
                      ScreenerMethod close,
                      std::size_t period,
-                     double multiplier = 1.0,
-                     std::size_t offset = 0);
+                     double multiplier = 1.0);
 
-  auto operator()(AssetSnapshot asset_data) const
-   -> SubSeries<PolySeries<double>>;
+  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>;
 
   auto operator==(const AtrMethod& other) const noexcept -> bool;
 
@@ -31,10 +29,6 @@ public:
   auto multiplier() const noexcept -> double;
 
   void multiplier(double multiplier) noexcept;
-
-  auto offset() const noexcept -> std::size_t;
-
-  void offset(std::size_t offset) noexcept;
 
   auto high() const noexcept -> const ScreenerMethod&;
 
@@ -51,7 +45,6 @@ public:
 private:
   std::size_t period_;
   double multiplier_;
-  std::size_t offset_;
 
   ScreenerMethod high_;
   ScreenerMethod low_;

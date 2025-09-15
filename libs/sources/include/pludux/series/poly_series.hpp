@@ -6,6 +6,8 @@
 #include <memory>
 #include <utility>
 
+#include <pludux/series/series_output.hpp>
+
 #include "data_series.hpp"
 
 namespace pludux {
@@ -18,7 +20,9 @@ public:
   template<typename USeries>
     requires requires(USeries impl) {
       { impl.size() } -> std::convertible_to<std::size_t>;
-      { impl[std::declval<std::size_t>()] } -> std::convertible_to<ValueType>;
+      {
+        impl[std::declval<std::size_t>()]
+      } -> std::convertible_to<SeriesOutput<ValueType>>;
     }
   PolySeries(USeries impl)
   : impl_{std::make_shared<ImplModel<USeries>>(std::move(impl))}
@@ -30,9 +34,9 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> ValueType
+  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
   {
-    return static_cast<double>(impl_->operator[](index));
+    return impl_->operator[](index);
   }
 
   auto size() const noexcept -> std::size_t
@@ -52,7 +56,8 @@ private:
   struct ImplConcept {
     virtual ~ImplConcept() = default;
 
-    virtual auto operator[](std::size_t index) const noexcept -> ValueType = 0;
+    virtual auto operator[](std::size_t index) const noexcept
+     -> SeriesOutput<ValueType> = 0;
 
     virtual auto size() const noexcept -> std::size_t = 0;
   };
@@ -66,9 +71,10 @@ private:
     {
     }
 
-    auto operator[](std::size_t index) const noexcept -> ValueType override
+    auto operator[](std::size_t index) const noexcept
+     -> SeriesOutput<ValueType> override
     {
-      return static_cast<ValueType>(impl[index]);
+      return SeriesOutput<ValueType>(impl[index]);
     }
 
     virtual auto size() const noexcept -> std::size_t override
