@@ -13,8 +13,7 @@ class BbMethod {
 public:
   enum class MaType { sma, ema, wma, rma, hma };
 
-  BbMethod(OutputName output,
-           MaType ma_type,
+  BbMethod(MaType ma_type,
            ScreenerMethod input,
            std::size_t period,
            double stddev);
@@ -22,10 +21,6 @@ public:
   auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>;
 
   auto operator==(const BbMethod& other) const noexcept -> bool;
-
-  auto output() const noexcept -> OutputName;
-
-  void output(OutputName output) noexcept;
 
   auto period() const noexcept -> std::size_t;
 
@@ -44,7 +39,6 @@ public:
   void ma_type(MaType ma_type) noexcept;
 
 private:
-  OutputName output_;
   MaType ma_type_;
   ScreenerMethod input_;
   std::size_t period_;

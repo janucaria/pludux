@@ -1,11 +1,10 @@
 {
-  "methods": [
-    {
+  "series": {
+    "rsi": {
       "method": "RSI",
-      "name": "rsi",
       "period": 14
     }
-  ],
+  },
   "risk": {
     "method": "ATR",
     "atr": {
@@ -26,14 +25,20 @@
     "entry": {
       "signal": {
         "filter": "CROSSUNDER",
-        "signal": "rsi",
+        "signal": {
+          "method": "REFERENCE",
+          "name": "rsi"
+        },
         "reference": 30
       }
     },
     "exit": {
       "signal": {
         "filter": "CROSSOVER",
-        "signal": "rsi",
+        "signal": {
+          "method": "REFERENCE",
+          "name": "rsi"
+        },
         "reference": 70
       }
     }

@@ -11,8 +11,7 @@ namespace pludux::screener {
 
 class MacdMethod {
 public:
-  MacdMethod(OutputName output,
-             ScreenerMethod input,
+  MacdMethod(ScreenerMethod input,
              std::size_t fast_period,
              std::size_t slow_period,
              std::size_t signal_period);
@@ -20,10 +19,6 @@ public:
   auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>;
 
   auto operator==(const MacdMethod& other) const noexcept -> bool;
-
-  auto output() const noexcept -> OutputName;
-
-  void output(OutputName output) noexcept;
 
   auto input() const noexcept -> ScreenerMethod;
 
@@ -42,7 +37,6 @@ public:
   void signal_period(std::size_t signal_period) noexcept;
 
 private:
-  OutputName output_;
   ScreenerMethod input_;
   std::size_t fast_period_;
   std::size_t slow_period_;

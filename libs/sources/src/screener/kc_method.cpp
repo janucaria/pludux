@@ -3,12 +3,8 @@
 
 namespace pludux::screener {
 
-KcMethod::KcMethod(OutputName output,
-                   ScreenerMethod ma,
-                   ScreenerMethod range,
-                   double multiplier)
-: output_{output}
-, multiplier_{multiplier}
+KcMethod::KcMethod(ScreenerMethod ma, ScreenerMethod range, double multiplier)
+: multiplier_{multiplier}
 , ma_{std::move(ma)}
 , range_{std::move(range)}
 {
@@ -19,24 +15,13 @@ auto KcMethod::operator()(AssetSnapshot asset_data) const -> PolySeries<double>
   const auto ma_series = ma_(asset_data);
   const auto range_series = range_(asset_data);
 
-  const auto kc =
-   OutputByNameSeries{KcSeries{ma_series, range_series, multiplier_}, output_};
+  const auto kc = KcSeries{ma_series, range_series, multiplier_};
 
   return kc;
 }
 
 auto KcMethod::operator==(const KcMethod& other) const noexcept
  -> bool = default;
-
-auto KcMethod::output() const noexcept -> OutputName
-{
-  return output_;
-}
-
-void KcMethod::output(OutputName output) noexcept
-{
-  output_ = output;
-}
 
 auto KcMethod::multiplier() const noexcept -> double
 {

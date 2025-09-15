@@ -4,13 +4,11 @@
 
 namespace pludux::screener {
 
-BbMethod::BbMethod(OutputName output,
-                   MaType ma_type,
+BbMethod::BbMethod(MaType ma_type,
                    ScreenerMethod input,
                    std::size_t period,
                    double stddev)
-: output_{output}
-, ma_type_{ma_type}
+: ma_type_{ma_type}
 , input_{input}
 , period_{period}
 , stddev_{stddev}
@@ -21,36 +19,21 @@ auto BbMethod::operator()(AssetSnapshot asset_data) const -> PolySeries<double>
 {
   switch(ma_type_) {
   case MaType::ema:
-    return OutputByNameSeries{
-     BbSeries{EmaSeries{input_(asset_data), period_}, stddev_}, output_};
+    return BbSeries{EmaSeries{input_(asset_data), period_}, stddev_};
   case MaType::wma:
-    return OutputByNameSeries{
-     BbSeries{WmaSeries{input_(asset_data), period_}, stddev_}, output_};
+    return BbSeries{WmaSeries{input_(asset_data), period_}, stddev_};
   case MaType::rma:
-    return OutputByNameSeries{
-     BbSeries{RmaSeries{input_(asset_data), period_}, stddev_}, output_};
+    return BbSeries{RmaSeries{input_(asset_data), period_}, stddev_};
   case MaType::hma:
-    return OutputByNameSeries{
-     BbSeries{HmaSeries{input_(asset_data), period_}, stddev_}, output_};
+    return BbSeries{HmaSeries{input_(asset_data), period_}, stddev_};
   case MaType::sma:
   default:
-    return OutputByNameSeries{
-     BbSeries{SmaSeries{input_(asset_data), period_}, stddev_}, output_};
+    return BbSeries{SmaSeries{input_(asset_data), period_}, stddev_};
   }
 }
 
 auto BbMethod::operator==(const BbMethod& other) const noexcept
  -> bool = default;
-
-auto BbMethod::output() const noexcept -> OutputName
-{
-  return output_;
-}
-
-void BbMethod::output(OutputName output) noexcept
-{
-  output_ = output;
-}
 
 auto BbMethod::period() const noexcept -> std::size_t
 {

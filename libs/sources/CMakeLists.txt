@@ -29,6 +29,7 @@ target_sources(${PROJECT_NAME}
     src/screener/kc_method.cpp
     src/screener/lookback_method.cpp
     src/screener/macd_method.cpp
+    src/screener/output_by_name_method.cpp
     src/screener/screener_method.cpp
     src/screener/stoch_method.cpp
     src/screener/stoch_rsi_method.cpp
@@ -65,6 +66,7 @@ target_sources(${PROJECT_NAME}
         include/pludux/screener/kc_method.hpp
         include/pludux/screener/lookback_method.hpp
         include/pludux/screener/macd_method.hpp
+        include/pludux/screener/output_by_name_method.hpp
         include/pludux/screener/screener_method.hpp 
         include/pludux/screener/stoch_method.hpp 
         include/pludux/screener/stoch_rsi_method.hpp 

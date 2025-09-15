@@ -203,21 +203,6 @@ static auto serialize_kc_method(const ConfigParser& config_parser,
 
   auto kc_method = screener_method_cast<screener::KcMethod>(method);
   if(kc_method) {
-    serialized_method["output"] = [](OutputName output) -> std::string {
-      switch(output) {
-      case OutputName::MiddleBand:
-        return "middle";
-      case OutputName::UpperBand:
-        return "upper";
-      case OutputName::LowerBand:
-        return "lower";
-      default:
-        const auto error_message =
-         std::format("Unknown KC output: {}", static_cast<int>(output));
-        throw std::invalid_argument{error_message};
-      }
-    }(kc_method->output());
-
     serialized_method["ma"] = config_parser.serialize_method(kc_method->ma());
     serialized_method["range"] =
      config_parser.serialize_method(kc_method->range());
@@ -231,28 +216,12 @@ static auto parse_kc_method(ConfigParser::Parser config_parser,
                             const nlohmann::json& parameters)
  -> screener::ScreenerMethod
 {
-  auto output = OutputName::MiddleBand;
-  if(parameters.contains("output")) {
-    const auto output_str = parameters.at("output").get<std::string>();
-    if(output_str == "middle") {
-      output = OutputName::MiddleBand;
-    } else if(output_str == "upper") {
-      output = OutputName::UpperBand;
-    } else if(output_str == "lower") {
-      output = OutputName::LowerBand;
-    } else {
-      const auto error_message =
-       std::format("Unknown KC.output: {}", output_str);
-      throw std::invalid_argument{error_message};
-    }
-  }
-
   const auto ma_method = config_parser.parse_method(parameters.at("ma"));
   const auto range_method = config_parser.parse_method(parameters.at("range"));
   const auto multiplier = parameters.at("multiplier").get<double>();
 
   const auto kc_method =
-   screener::KcMethod{output, ma_method, range_method, multiplier};
+   screener::KcMethod{ma_method, range_method, multiplier};
   return kc_method;
 }
 
@@ -594,7 +563,6 @@ ConfigParser::ConfigParser(
  std::shared_ptr<screener::MethodRegistry> method_registry)
 : filter_parsers_{}
 , method_parsers_{}
-, named_config_methods_{}
 , method_registry_{std::move(method_registry)}
 {
 }
@@ -730,6 +698,74 @@ void ConfigParser::register_default_parsers()
    });
 
   register_method_parser(
+   "OUTPUT_BY_NAME",
+   [](const ConfigParser& config_parser,
+      const screener::ScreenerMethod screener_method) -> nlohmann::json {
+     auto serialized_method = nlohmann::json{};
+
+     auto output_by_name_method =
+      screener_method_cast<screener::OutputByNameMethod>(screener_method);
+     if(output_by_name_method) {
+       serialized_method["name"] = [&]() -> std::string {
+         switch(output_by_name_method->output()) {
+         case OutputName::MacdLine:
+           return "macd-macd";
+         case OutputName::SignalLine:
+           return "macd-signal";
+         case OutputName::MacdHistogram:
+           return "macd-histogram";
+         case OutputName::StochasticK:
+           return "percent-k";
+         case OutputName::StochasticD:
+           return "percent-d";
+         case OutputName::MiddleBand:
+           return "middle-band";
+         case OutputName::UpperBand:
+           return "upper-band";
+         case OutputName::LowerBand:
+           return "lower-band";
+         default:
+           return "default";
+         }
+       }();
+
+       serialized_method["source"] =
+        config_parser.serialize_method(output_by_name_method->source());
+     }
+
+     return serialized_method;
+   },
+   [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {
+     const auto name = get_param_or<std::string>(parameters, "name", "default");
+     const auto output = [&]() -> OutputName {
+       if(name == "macd-macd") {
+         return OutputName::MacdLine;
+       } else if(name == "macd-signal") {
+         return OutputName::SignalLine;
+       } else if(name == "macd-histogram") {
+         return OutputName::MacdHistogram;
+       } else if(name == "percent-k") {
+         return OutputName::StochasticK;
+       } else if(name == "percent-d") {
+         return OutputName::StochasticD;
+       } else if(name == "middle-band") {
+         return OutputName::MiddleBand;
+       } else if(name == "upper-band") {
+         return OutputName::UpperBand;
+       } else if(name == "lower-band") {
+         return OutputName::LowerBand;
+       } else {
+         return OutputName::Default;
+       }
+     }();
+
+     const auto source_method = parse_method_from_param_or(
+      config_parser, parameters, "source", screener::CloseMethod{});
+
+     return screener::OutputByNameMethod{source_method, output};
+   });
+
+  register_method_parser(
    "ABS_DIFF",
    [](const ConfigParser& config_parser,
       const screener::ScreenerMethod screener_method) -> nlohmann::json {
@@ -749,21 +785,6 @@ void ConfigParser::register_default_parsers()
 
      auto bb_method = screener_method_cast<screener::BbMethod>(screener_method);
      if(bb_method) {
-       serialized_method["output"] = [](OutputName output) -> std::string {
-         switch(output) {
-         case OutputName::MiddleBand:
-           return "middle";
-         case OutputName::UpperBand:
-           return "upper";
-         case OutputName::LowerBand:
-           return "lower";
-         default:
-           const auto error_message =
-            std::format("Unknown BB.output: {}", static_cast<int>(output));
-           throw std::invalid_argument{error_message};
-         }
-       }(bb_method->output());
-
        serialized_method["maType"] =
         [](screener::BbMethod::MaType ma_type) -> std::string {
          switch(ma_type) {
@@ -794,22 +815,6 @@ void ConfigParser::register_default_parsers()
    },
    [](ConfigParser::Parser config_parser,
       const nlohmann::json& parameters) -> screener::ScreenerMethod {
-     auto output = OutputName::MiddleBand;
-     const auto param_output =
-      get_param_or<std::string>(parameters, "output", "middle");
-
-     if(param_output == "middle") {
-       output = OutputName::MiddleBand;
-     } else if(param_output == "upper") {
-       output = OutputName::UpperBand;
-     } else if(param_output == "lower") {
-       output = OutputName::LowerBand;
-     } else {
-       const auto error_message =
-        std::format("Error BB.output: Unknown output {}", param_output);
-       throw std::invalid_argument{error_message};
-     }
-
      auto ma_type = screener::BbMethod::MaType::sma;
      const auto param_ma_type =
       get_param_or<std::string>(parameters, "maType", "SMA");
@@ -836,7 +841,7 @@ void ConfigParser::register_default_parsers()
      const auto stddev = get_param_or(parameters, "stddev", 2.0);
 
      const auto bb_method =
-      screener::BbMethod{output, ma_type, input_method, period, stddev};
+      screener::BbMethod{ma_type, input_method, period, stddev};
 
      return bb_method;
    });
@@ -850,21 +855,6 @@ void ConfigParser::register_default_parsers()
      auto macd_method =
       screener_method_cast<screener::MacdMethod>(screener_method);
      if(macd_method) {
-       serialized_method["output"] = [](OutputName output) -> std::string {
-         switch(output) {
-         case OutputName::MacdLine:
-           return "macd";
-         case OutputName::SignalLine:
-           return "signal";
-         case OutputName::MacdHistogram:
-           return "histogram";
-         default:
-           const auto error_message =
-            std::format("Unknown MACD.output: {}", static_cast<int>(output));
-           throw std::invalid_argument{error_message};
-         }
-       }(macd_method->output());
-
        serialized_method["fast"] = macd_method->fast_period();
        serialized_method["slow"] = macd_method->slow_period();
        serialized_method["signal"] = macd_method->signal_period();
@@ -876,22 +866,6 @@ void ConfigParser::register_default_parsers()
    },
    [](ConfigParser::Parser config_parser,
       const nlohmann::json& parameters) -> screener::ScreenerMethod {
-     const auto output_param =
-      get_param_or<std::string>(parameters, "output", "macd");
-
-     auto output = OutputName::MacdLine;
-     if(output_param == "macd") {
-       output = OutputName::MacdLine;
-     } else if(output_param == "signal") {
-       output = OutputName::SignalLine;
-     } else if(output_param == "histogram") {
-       output = OutputName::MacdHistogram;
-     } else {
-       const auto error_message =
-        std::format("MACD.output: Unknown output {}", output_param);
-       throw std::invalid_argument{error_message};
-     }
-
      const auto fast = get_param_or<std::size_t>(parameters, "fast", 12);
      const auto slow = get_param_or<std::size_t>(parameters, "slow", 26);
      const auto signal = get_param_or<std::size_t>(parameters, "signal", 9);
@@ -899,7 +873,7 @@ void ConfigParser::register_default_parsers()
       config_parser, parameters, "input", screener::CloseMethod{});
 
      const auto macd_method =
-      screener::MacdMethod{output, input_method, fast, slow, signal};
+      screener::MacdMethod{input_method, fast, slow, signal};
      return macd_method;
    });
 
@@ -912,19 +886,6 @@ void ConfigParser::register_default_parsers()
      auto stoch_method =
       screener_method_cast<screener::StochMethod>(screener_method);
      if(stoch_method) {
-       serialized_method["output"] = [](OutputName output) -> std::string {
-         switch(output) {
-         case OutputName::StochasticK:
-           return "k";
-         case OutputName::StochasticD:
-           return "d";
-         default:
-           const auto error_message =
-            std::format("Unknown STOCH.output: {}", static_cast<int>(output));
-           throw std::invalid_argument{error_message};
-         }
-       }(stoch_method->output());
-
        serialized_method["high"] =
         config_parser.serialize_method(stoch_method->high());
        serialized_method["low"] =
@@ -949,31 +910,12 @@ void ConfigParser::register_default_parsers()
      const auto close_method = parse_method_from_param_or(
       config_parser, parameters, "close", screener::CloseMethod{});
 
-     const auto output_param =
-      get_param_or<std::string>(parameters, "output", "k");
-
-     auto output = OutputName::StochasticK;
-     if(output_param == "k") {
-       output = OutputName::StochasticK;
-     } else if(output_param == "d") {
-       output = OutputName::StochasticD;
-     } else {
-       const auto error_message =
-        std::format("STOCH.output: Unknown output {}", output_param);
-       throw std::invalid_argument{error_message};
-     }
-
      const auto k_period = get_param_or<std::size_t>(parameters, "kPeriod", 5);
      const auto k_smooth = get_param_or<std::size_t>(parameters, "kSmooth", 3);
      const auto d_period = get_param_or<std::size_t>(parameters, "dPeriod", 3);
 
-     const auto stoch_method = screener::StochMethod{output,
-                                                     high_method,
-                                                     low_method,
-                                                     close_method,
-                                                     k_period,
-                                                     k_smooth,
-                                                     d_period};
+     const auto stoch_method = screener::StochMethod{
+      high_method, low_method, close_method, k_period, k_smooth, d_period};
      return stoch_method;
    });
 
@@ -986,19 +928,6 @@ void ConfigParser::register_default_parsers()
      auto stoch_rsi_method =
       screener_method_cast<screener::StochRsiMethod>(screener_method);
      if(stoch_rsi_method) {
-       serialized_method["output"] = [](OutputName output) -> std::string {
-         switch(output) {
-         case OutputName::StochasticK:
-           return "k";
-         case OutputName::StochasticD:
-           return "d";
-         default:
-           const auto error_message = std::format(
-            "Unknown STOCH_RSI.output: {}", static_cast<int>(output));
-           throw std::invalid_argument{error_message};
-         }
-       }(stoch_rsi_method->output());
-
        serialized_method["rsiInput"] =
         config_parser.serialize_method(stoch_rsi_method->rsi_input());
        serialized_method["rsiPeriod"] = stoch_rsi_method->rsi_period();
@@ -1019,22 +948,8 @@ void ConfigParser::register_default_parsers()
      const auto k_smooth = get_param_or<std::size_t>(parameters, "kSmooth", 3);
      const auto d_period = get_param_or<std::size_t>(parameters, "dPeriod", 3);
 
-     const auto output_param =
-      get_param_or<std::string>(parameters, "output", "k");
-
-     auto output = OutputName::StochasticK;
-     if(output_param == "k") {
-       output = OutputName::StochasticK;
-     } else if(output_param == "d") {
-       output = OutputName::StochasticD;
-     } else {
-       const auto error_message =
-        std::format("STOCH_RSI.output: Unknown output {}", output_param);
-       throw std::invalid_argument{error_message};
-     }
-
      const auto stoch_rsi_method = screener::StochRsiMethod{
-      output, rsi_input_method, rsi_period, k_period, k_smooth, d_period};
+      rsi_input_method, rsi_period, k_period, k_smooth, d_period};
      return stoch_rsi_method;
    });
 
@@ -1343,15 +1258,8 @@ auto ConfigParser::parse_method(const nlohmann::json& config)
     return screener::ValueMethod{config.get<double>()};
   }
 
-  auto& named_config_methods = named_config_methods_;
-
   if(config.is_string()) {
     const auto named_method = config.get<std::string>();
-    if(named_config_methods.contains(named_method)) {
-      const auto named_config_method = named_config_methods.at(named_method);
-      return parse_method(named_config_method);
-    }
-
     const auto expanded_method = nlohmann::json{{"method", named_method}};
 
     return parse_method(expanded_method);
@@ -1359,30 +1267,6 @@ auto ConfigParser::parse_method(const nlohmann::json& config)
 
   auto config_method = config;
   const auto method = config.at("method").get<std::string>();
-
-  if(config_method.contains("extends")) {
-    const auto extends = config_method.at("extends").get<std::string>();
-    if(!named_config_methods.contains(extends)) {
-      const auto error_message =
-       std::format("Unknown {} extends: {}", method, extends);
-      throw std::invalid_argument{error_message};
-    }
-    const auto base_config = named_config_methods.at(extends);
-    const auto base_method = base_config.at("method").get<std::string>();
-
-    if(base_method != method) {
-      const auto error_message = std::format(
-       "Base method {} is not the same as method {}", base_method, method);
-      throw std::invalid_argument{error_message};
-    }
-
-    config_method.erase("extends");
-    for(const auto& [key, value] : base_config.items()) {
-      if(!config_method.contains(key)) {
-        config_method[key] = value;
-      }
-    }
-  }
 
   auto& method_parsers = method_parsers_;
   if(!method_parsers.contains(method)) {
@@ -1393,12 +1277,6 @@ auto ConfigParser::parse_method(const nlohmann::json& config)
   try {
     const auto method_deserialize = method_parsers.at(method).second;
     const auto method_result = method_deserialize(*this, config_method);
-
-    if(config_method.contains("name")) {
-      const auto name = config_method.at("name").get<std::string>();
-      config_method.erase("name");
-      named_config_methods.emplace(name, config_method);
-    }
 
     return method_result;
   } catch(const std::exception& e) {
@@ -1429,28 +1307,6 @@ auto ConfigParser::serialize_method(
   return serialized_method;
 }
 
-auto ConfigParser::parse_named_method(const std::string& name)
- -> screener::ScreenerMethod
-{
-  if(!named_config_methods_.contains(name)) {
-    const auto error_message = std::format("Unknown named method: {}", name);
-    throw std::invalid_argument{error_message};
-  }
-
-  return parse_method(named_config_methods_.at(name));
-}
-
-auto ConfigParser::get_named_methods()
- -> std::unordered_map<std::string, screener::ScreenerMethod>
-{
-  auto named_methods =
-   std::unordered_map<std::string, screener::ScreenerMethod>{};
-  for(const auto& [name, config] : named_config_methods_) {
-    named_methods.emplace(name, parse_method(config));
-  }
-  return named_methods;
-}
-
 ConfigParser::Parser::Parser(ConfigParser& config_parser)
 : config_parser_{config_parser}
 {
@@ -1466,12 +1322,6 @@ auto ConfigParser::Parser::parse_filter(const nlohmann::json& config)
  -> screener::ScreenerFilter
 {
   return config_parser_.parse_filter(config);
-}
-
-auto ConfigParser::Parser::contains_named_method(
- const std::string& name) const noexcept -> bool
-{
-  return config_parser_.named_config_methods_.contains(name);
 }
 
 auto ConfigParser::Parser::method_registry() const noexcept

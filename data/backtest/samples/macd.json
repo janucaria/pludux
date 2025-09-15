@@ -1,20 +1,16 @@
 {
-  "methods": [
-    {
-      "method": "SMA",
-      "name": "ma-fast",
-      "period": 9,
-      "input": "CLOSE"
-    },
-    {
-      "method": "MACD",
+  "series": {
+    "macd_histogram": {
+      "method": "OUTPUT_BY_NAME",
       "name": "macd-histogram",
-      "fast": 12,
-      "slow": 26,
-      "signal": 9,
-      "output": "histogram"
+      "source": {
+        "method": "MACD",
+        "fast": 12,
+        "slow": 26,
+        "signal": 9
+      }
     }
-  ],
+  },
   "risk": {
     "method": "ATR",
     "atr": {
@@ -32,7 +28,10 @@
     "entry": {
       "signal": {
         "filter": "CROSSOVER",
-        "signal": "macd-histogram",
+        "signal": {
+          "method": "REFERENCE",
+          "name": "macd_histogram"
+        },
         "reference": {
           "method": "VALUE",
           "value": 0
@@ -42,7 +41,10 @@
     "exit": {
       "signal": {
         "filter": "CROSSUNDER",
-        "signal": "macd-histogram",
+        "signal": {
+          "method": "REFERENCE",
+          "name": "macd_histogram"
+        },
         "reference": {
           "method": "VALUE",
           "value": 0

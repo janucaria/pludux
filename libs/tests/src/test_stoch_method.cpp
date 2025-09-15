@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <pludux/asset_history.hpp>
 #include <pludux/screener/data_method.hpp>
+#include <pludux/screener/output_by_name_method.hpp>
 #include <pludux/screener/stoch_method.hpp>
 #include <pludux/series.hpp>
 
@@ -20,19 +21,12 @@ TEST(StochMethodTest, RunAllMethod)
    {"low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},
    {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
-  auto stoch_method = StochMethod{OutputName::StochasticK,
-                                  high_method,
-                                  low_method,
-                                  close_method,
-                                  k_period,
-                                  k_smooth,
-                                  d_period};
+  auto stoch_method = StochMethod{
+   high_method, low_method, close_method, k_period, k_smooth, d_period};
 
   const auto result_k = stoch_method(asset_data);
-
-  stoch_method.output(OutputName::StochasticD);
-
-  const auto result_d = stoch_method(asset_data);
+  const auto result_d =
+   OutputByNameMethod{stoch_method, OutputName::StochasticD}(asset_data);
 
   ASSERT_EQ(result_k.size(), 10);
   EXPECT_DOUBLE_EQ(result_k[0], 56.746031746031747);
@@ -68,20 +62,10 @@ TEST(StochMethodTest, EqualityOperator)
   const auto k_smooth = 3;
   const auto d_period = 3;
 
-  StochMethod stoch_method1{OutputName::StochasticK,
-                            high_method,
-                            low_method,
-                            close_method,
-                            k_period,
-                            k_smooth,
-                            d_period};
-  StochMethod stoch_method2{OutputName::StochasticK,
-                            high_method,
-                            low_method,
-                            close_method,
-                            k_period,
-                            k_smooth,
-                            d_period};
+  StochMethod stoch_method1{
+   high_method, low_method, close_method, k_period, k_smooth, d_period};
+  StochMethod stoch_method2{
+   high_method, low_method, close_method, k_period, k_smooth, d_period};
 
   EXPECT_TRUE(stoch_method1 == stoch_method2);
   EXPECT_FALSE(stoch_method1 != stoch_method2);
@@ -93,24 +77,9 @@ TEST(StochMethodTest, NotEqualOperator)
   const auto high_method = DataMethod{"high"};
   const auto low_method = DataMethod{"low"};
   const auto close_method = DataMethod{"close"};
-  const auto k_period = 5;
-  const auto k_smooth = 3;
-  const auto d_period = 3;
 
-  StochMethod stoch_method1{OutputName::StochasticK,
-                            high_method,
-                            low_method,
-                            close_method,
-                            k_period,
-                            k_smooth,
-                            d_period};
-  StochMethod stoch_method2{OutputName::StochasticD,
-                            high_method,
-                            low_method,
-                            close_method,
-                            k_period,
-                            k_smooth,
-                            d_period};
+  StochMethod stoch_method1{high_method, low_method, close_method, 5, 3, 3};
+  StochMethod stoch_method2{high_method, low_method, close_method, 5, 3, 8};
 
   EXPECT_TRUE(stoch_method1 != stoch_method2);
   EXPECT_FALSE(stoch_method1 == stoch_method2);

@@ -1,19 +1,27 @@
 {
-  "methods": [
-    {
+  "series": {
+    "bbands": {
       "method": "BB",
-      "name": "bb-upper",
       "period": 20,
-      "stddev": 2,
-      "output": "upper"
+      "stddev": 2
     },
-    {
-      "method": "BB",
-      "name": "bb-lower",
-      "extends": "bb-upper",
-      "output": "lower"
+    "bb_upper": {
+      "method": "OUTPUT_BY_NAME",
+      "name": "upper-band",
+      "source": {
+        "method": "REFERENCE",
+        "name": "bbands"
+      }
+    },
+    "bb_lower": {
+      "method": "OUTPUT_BY_NAME",
+      "name": "lower-band",
+      "source": {
+        "method": "REFERENCE",
+        "name": "bbands"
+      }
     }
-  ],
+  },
   "risk": {
     "method": "ATR",
     "atr": {
@@ -37,7 +45,7 @@
         "signal": "CLOSE",
         "reference": {
           "method": "REFERENCE",
-          "name": "bb-lower"
+          "name": "bb_lower"
         }
       }
     },
@@ -47,7 +55,7 @@
         "signal": "CLOSE",
         "reference": {
           "method": "REFERENCE",
-          "name": "bb-upper"
+          "name": "bb_upper"
         }
       }
     }

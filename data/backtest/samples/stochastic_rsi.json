@@ -1,32 +1,38 @@
 {
-  "methods": [
-    {
+  "series": {
+    "stoch_rsi": {
       "method": "STOCH_RSI",
-      "name": "stoch_rsi-k",
       "kPeriod": 14,
       "kSmooth": 3,
       "dSmooth": 3,
-      "output": "k",
       "rsiInput": "CLOSE",
       "rsiPeriod": 14
     },
-    {
-      "method": "STOCH_RSI",
-      "name": "stoch_rsi-d",
-      "extends": "stoch_rsi-k",
-      "output": "d"
+    "stoch_rsi_k": {
+      "method": "OUTPUT_BY_NAME",
+      "name": "percent-k",
+      "source": {
+        "method": "REFERENCE",
+        "name": "stoch_rsi"
+      }
     },
-    {
+    "stoch_rsi_d": {
+      "method": "OUTPUT_BY_NAME",
+      "name": "percent-d",
+      "source": {
+        "method": "REFERENCE",
+        "name": "stoch_rsi"
+      }
+    },
+    "overbought": {
       "method": "VALUE",
-      "name": "overbought",
       "value": 80
     },
-    {
+    "oversold": {
       "method": "VALUE",
-      "name": "oversold",
       "value": 20
     }
-  ],
+  },
   "risk": {
     "method": "ATR",
     "atr": {
@@ -47,13 +53,25 @@
         "conditions": [
           {
             "filter": "CROSSOVER",
-            "signal": "stoch_rsi-k",
-            "reference": "stoch_rsi-d"
+            "signal": {
+              "method": "REFERENCE",
+              "name": "stoch_rsi_k"
+            },
+            "reference": {
+              "method": "REFERENCE",
+              "name": "stoch_rsi_d"
+            }
           },
           {
             "filter": "LESS_THAN",
-            "target": "stoch_rsi-k",
-            "threshold": "oversold"
+            "target": {
+              "method": "REFERENCE",
+              "name": "stoch_rsi_k"
+            },
+            "threshold": {
+              "method": "REFERENCE",
+              "name": "oversold"
+            }
           }
         ]
       }
@@ -64,13 +82,25 @@
         "conditions": [
           {
             "filter": "CROSSUNDER",
-            "signal": "stoch_rsi-k",
-            "reference": "stoch_rsi-d"
+            "signal": {
+              "method": "REFERENCE",
+              "name": "stoch_rsi_k"
+            },
+            "reference": {
+              "method": "REFERENCE",
+              "name": "stoch_rsi_d"
+            }
           },
           {
             "filter": "GREATER_THAN",
-            "target": "stoch_rsi-k",
-            "threshold": "overbought"
+            "target": {
+              "method": "REFERENCE",
+              "name": "stoch_rsi_k"
+            },
+            "threshold": {
+              "method": "REFERENCE",
+              "name": "overbought"
+            }
           }
         ]
       }

@@ -199,11 +199,10 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
   config_parser.register_default_parsers();
   auto strategy_json =
    nlohmann::json::parse(json_strategy_stream, nullptr, true, true);
-  if(strategy_json.contains("methods")) {
-    for(const auto& strategy_method : strategy_json["methods"]) {
-      const auto method_name = strategy_method.value("name", "");
-      const auto method = config_parser.parse_method(strategy_method);
-      method_registry->set(method_name, method);
+  if(strategy_json.contains("series")) {
+    for(const auto& [name, series_method] : strategy_json["series"].items()) {
+      const auto method = config_parser.parse_method(series_method);
+      method_registry->set(name, method);
     }
   }
 

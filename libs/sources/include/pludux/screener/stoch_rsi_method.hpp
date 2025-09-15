@@ -11,8 +11,7 @@ namespace pludux::screener {
 
 class StochRsiMethod {
 public:
-  StochRsiMethod(OutputName output,
-                 ScreenerMethod rsi_input,
+  StochRsiMethod(ScreenerMethod rsi_input,
                  std::size_t rsi_period,
                  std::size_t k_period,
                  std::size_t k_smooth,
@@ -25,10 +24,6 @@ public:
   auto rsi_input() const noexcept -> ScreenerMethod;
 
   auto rsi_period() const noexcept -> std::size_t;
-
-  auto output() const noexcept -> OutputName;
-
-  void output(OutputName output) noexcept;
 
   auto k_period() const noexcept -> std::size_t;
 
@@ -44,7 +39,6 @@ public:
 
 private:
   ScreenerMethod rsi_input_;
-  OutputName output_;
   std::size_t rsi_period_;
   std::size_t k_period_;
   std::size_t k_smooth_;

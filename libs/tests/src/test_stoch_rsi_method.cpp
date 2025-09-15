@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <pludux/asset_history.hpp>
 #include <pludux/screener/data_method.hpp>
+#include <pludux/screener/output_by_name_method.hpp>
 #include <pludux/screener/stoch_rsi_method.hpp>
 #include <pludux/series.hpp>
 
@@ -31,18 +32,12 @@ TEST(StochRsiMethodTest, RunAllMethod)
                                                  830,
                                                  875}}};
 
-  auto stoch_rsi_method = StochRsiMethod{OutputName::StochasticK,
-                                         rsi_input_method,
-                                         rsi_period,
-                                         k_period,
-                                         k_smooth,
-                                         d_period};
+  auto stoch_rsi_method =
+   StochRsiMethod{rsi_input_method, rsi_period, k_period, k_smooth, d_period};
 
   const auto result_k = stoch_rsi_method(asset_data);
-
-  stoch_rsi_method.output(OutputName::StochasticD);
-
-  const auto result_d = stoch_rsi_method(asset_data);
+  const auto result_d =
+   OutputByNameMethod{stoch_rsi_method, OutputName::StochasticD}(asset_data);
 
   ASSERT_EQ(result_k.size(), 15);
   EXPECT_DOUBLE_EQ(result_k[0], 0);
@@ -87,18 +82,10 @@ TEST(StochRsiMethodTest, EqualityOperator)
   const auto k_smooth = 3;
   const auto d_period = 3;
 
-  StochRsiMethod method1{OutputName::StochasticK,
-                         rsi_input_method,
-                         rsi_period,
-                         k_period,
-                         k_smooth,
-                         d_period};
-  StochRsiMethod method2{OutputName::StochasticK,
-                         rsi_input_method,
-                         rsi_period,
-                         k_period,
-                         k_smooth,
-                         d_period};
+  StochRsiMethod method1{
+   rsi_input_method, rsi_period, k_period, k_smooth, d_period};
+  StochRsiMethod method2{
+   rsi_input_method, rsi_period, k_period, k_smooth, d_period};
 
   EXPECT_TRUE(method1 == method2);
   EXPECT_FALSE(method1 != method2);
@@ -108,23 +95,9 @@ TEST(StochRsiMethodTest, EqualityOperator)
 TEST(StochRsiMethodTest, NotEqualOperator)
 {
   const auto rsi_input_method = DataMethod{"close"};
-  const auto rsi_period = 5;
-  const auto k_period = 5;
-  const auto k_smooth = 3;
-  const auto d_period = 3;
 
-  StochRsiMethod method1{OutputName::StochasticK,
-                         rsi_input_method,
-                         rsi_period,
-                         k_period,
-                         k_smooth,
-                         d_period};
-  StochRsiMethod method2{OutputName::StochasticD,
-                         rsi_input_method,
-                         rsi_period,
-                         k_period,
-                         k_smooth,
-                         d_period};
+  StochRsiMethod method1{rsi_input_method, 5, 5, 3, 3};
+  StochRsiMethod method2{rsi_input_method, 5, 6, 2, 3};
 
   EXPECT_FALSE(method1 == method2);
   EXPECT_TRUE(method1 != method2);

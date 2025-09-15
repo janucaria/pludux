@@ -1,8 +1,7 @@
 {
-  "methods": [
-    {
+  "series": {
+    "kchannel": {
       "method": "KC",
-      "name": "kc_upper",
       "ma": {
         "method": "EMA",
         "period": 20
@@ -11,16 +10,25 @@
         "method": "ATR",
         "period": 10
       },
-      "multiplier": 2,
-      "output": "upper"
+      "multiplier": 2
     },
-    {
-      "method": "KC",
-      "name": "kc_lower",
-      "extends": "kc_upper",
-      "output": "lower"
+    "kc_upper": {
+      "method": "OUTPUT_BY_NAME",
+      "name": "upper-band",
+      "source": {
+        "method": "REFERENCE",
+        "name": "kchannel"
+      }
+    },
+    "kc_lower": {
+      "method": "OUTPUT_BY_NAME",
+      "name": "lower-band",
+      "source": {
+        "method": "REFERENCE",
+        "name": "kchannel"
+      }
     }
-  ],
+  },
   "risk": {
     "method": "ATR",
     "atr": {
@@ -39,14 +47,20 @@
       "signal": {
         "filter": "CROSSOVER",
         "signal": "CLOSE",
-        "reference": "kc_lower"
+        "reference": {
+          "method": "REFERENCE",
+          "name": "kc_lower"
+        }
       }
     },
     "exit": {
       "signal": {
         "filter": "CROSSUNDER",
         "signal": "CLOSE",
-        "reference": "kc_upper"
+        "reference": {
+          "method": "REFERENCE",
+          "name": "kc_upper"
+        }
       }
     }
   }
