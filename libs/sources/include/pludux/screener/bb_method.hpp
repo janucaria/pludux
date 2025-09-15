@@ -17,16 +17,11 @@ public:
            MaType ma_type,
            ScreenerMethod input,
            std::size_t period,
-           double stddev,
-           std::size_t offset = 0);
+           double stddev);
 
   auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>;
 
   auto operator==(const BbMethod& other) const noexcept -> bool;
-
-  auto offset() const noexcept -> std::size_t;
-
-  void offset(std::size_t offset) noexcept;
 
   auto output() const noexcept -> OutputName;
 
@@ -52,7 +47,6 @@ private:
   OutputName output_;
   MaType ma_type_;
   ScreenerMethod input_;
-  std::size_t offset_;
   std::size_t period_;
   double stddev_;
 };

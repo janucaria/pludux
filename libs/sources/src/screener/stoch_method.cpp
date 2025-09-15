@@ -10,8 +10,7 @@ StochMethod::StochMethod(OutputName output,
                          ScreenerMethod close,
                          std::size_t k_period,
                          std::size_t k_smooth,
-                         std::size_t d_period,
-                         std::size_t offset)
+                         std::size_t d_period)
 : high_{high}
 , low_{low}
 , close_{close}
@@ -19,7 +18,6 @@ StochMethod::StochMethod(OutputName output,
 , k_period_{k_period}
 , k_smooth_{k_smooth}
 , d_period_{d_period}
-, offset_{offset}
 {
 }
 
@@ -35,8 +33,7 @@ auto StochMethod::operator()(AssetSnapshot asset_data) const
 
   const auto named_stoch = OutputByNameSeries{stoch, output_};
 
-  return LookbackSeries{PolySeries<double>{named_stoch},
-                        static_cast<std::ptrdiff_t>(offset_)};
+  return named_stoch;
 }
 
 auto StochMethod::operator==(const StochMethod& other) const noexcept
@@ -55,16 +52,6 @@ auto StochMethod::low() const noexcept -> ScreenerMethod
 auto StochMethod::close() const noexcept -> ScreenerMethod
 {
   return close_;
-}
-
-auto StochMethod::offset() const noexcept -> std::size_t
-{
-  return offset_;
-}
-
-void StochMethod::offset(std::size_t offset) noexcept
-{
-  offset_ = offset;
 }
 
 auto StochMethod::output() const noexcept -> OutputName

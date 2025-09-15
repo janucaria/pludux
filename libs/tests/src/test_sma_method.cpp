@@ -8,9 +8,9 @@ using namespace pludux::screener;
 TEST(SmaMethodTest, RunOneMethod)
 {
   const auto field = "close";
-  const auto field_method = DataMethod{field, 0};
+  const auto field_method = DataMethod{field};
   const auto period = 5;
-  const auto sma_method = SmaMethod{period, field_method, 0};
+  const auto sma_method = SmaMethod{period, field_method};
   const auto asset_data = pludux::AssetHistory{
    {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
@@ -21,10 +21,9 @@ TEST(SmaMethodTest, RunOneMethod)
 TEST(SmaMethodTest, RunAllMethod)
 {
   const auto field = "close";
-  const auto field_method = DataMethod{field, 0};
-  const auto offset = 0;
+  const auto field_method = DataMethod{field};
   const auto period = 5;
-  const auto sma_method = SmaMethod{period, field_method, 0};
+  const auto sma_method = SmaMethod{period, field_method};
   const auto asset_data = pludux::AssetHistory{
    {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
@@ -43,75 +42,23 @@ TEST(SmaMethodTest, RunAllMethod)
   EXPECT_TRUE(std::isnan(result[9]));
 }
 
-TEST(SmaMethodTest, RunOneMethodWithOffset)
-{
-  const auto field = "close";
-  const auto field_method = DataMethod{field, 0};
-  const auto offset = 1;
-  const auto period = 5;
-  const auto sma_method = SmaMethod{period, field_method, offset};
-  const auto asset_data = pludux::AssetHistory{
-   {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
-
-  const auto result = sma_method(asset_data)[0];
-  EXPECT_DOUBLE_EQ(result, 865);
-}
-
-TEST(SmaMethodTest, RunAllMethodWithOffset)
-{
-  const auto field = "close";
-  const auto field_method = DataMethod{field, 0};
-  const auto offset = 2;
-  const auto period = 5;
-  const auto sma_method = SmaMethod{period, field_method, offset};
-  const auto asset_data = pludux::AssetHistory{
-   {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
-
-  const auto result = sma_method(asset_data);
-
-  ASSERT_EQ(result.size(), asset_data.size() - offset);
-  EXPECT_DOUBLE_EQ(result[0], 860);
-  EXPECT_DOUBLE_EQ(result[1], 848);
-  EXPECT_DOUBLE_EQ(result[2], 842);
-  EXPECT_DOUBLE_EQ(result[3], 842);
-  EXPECT_TRUE(std::isnan(result[4]));
-  EXPECT_TRUE(std::isnan(result[5]));
-  EXPECT_TRUE(std::isnan(result[6]));
-  EXPECT_TRUE(std::isnan(result[7]));
-}
-
 TEST(SmaMethodTest, EqualityOperator)
 {
-  const auto field = "close";
-  const auto field_method = DataMethod{field, 0};
-  const auto period = 5;
-  const auto sma_method1 = SmaMethod{period, field_method, 0};
-  const auto sma_method2 = SmaMethod{period, field_method, 0};
+  const auto field_method = DataMethod{"close"};
+  const auto sma_method1 = SmaMethod{5, field_method};
+  const auto sma_method2 = SmaMethod{5, field_method};
 
   EXPECT_TRUE(sma_method1 == sma_method2);
-  
-  const auto offset = 1;
-  const auto sma_method3 = SmaMethod{period, field_method, offset};
-
-  EXPECT_FALSE(sma_method1 == sma_method3);
   EXPECT_EQ(sma_method1, sma_method2);
-  EXPECT_NE(sma_method1, sma_method3);
 }
 
 TEST(SmaMethodTest, NotEqualOperator)
 {
-  const auto field = "close";
-  const auto field_method = DataMethod{field, 0};
-  const auto period = 5;
-  const auto sma_method1 = SmaMethod{period, field_method, 0};
-  const auto sma_method2 = SmaMethod{period, field_method, 0};
+  const auto sma_method1 = SmaMethod{1, DataMethod{"close"}};
+  const auto sma_method2 = SmaMethod{1, DataMethod{"open"}};
+  const auto sma_method3 = SmaMethod{2, DataMethod{"close"}};
 
-  EXPECT_FALSE(sma_method1 != sma_method2);
-  
-  const auto offset = 1;
-  const auto sma_method3 = SmaMethod{period, field_method, offset};
-
-  EXPECT_TRUE(sma_method1 != sma_method3);
+  EXPECT_NE(sma_method1, sma_method2);
   EXPECT_NE(sma_method1, sma_method3);
-  EXPECT_EQ(sma_method1, sma_method2);
+  EXPECT_NE(sma_method2, sma_method3);
 }

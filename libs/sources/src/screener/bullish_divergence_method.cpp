@@ -12,17 +12,15 @@
 namespace pludux::screener {
 
 BullishDivergenceMethod::BullishDivergenceMethod()
-: BullishDivergenceMethod{RsiMethod{}, CloseMethod{}, 5, 60, 0}
+: BullishDivergenceMethod{RsiMethod{}, CloseMethod{}, 5, 60}
 {
 }
 
 BullishDivergenceMethod::BullishDivergenceMethod(ScreenerMethod signal,
                                                  ScreenerMethod reference,
                                                  std::size_t pivot_range,
-                                                 std::size_t lookback_range,
-                                                 std::size_t offset)
-: offset_{offset}
-, pivot_range_{pivot_range}
+                                                 std::size_t lookback_range)
+: pivot_range_{pivot_range}
 , lookback_range_{lookback_range}
 , signal_{signal}
 , reference_{reference}
@@ -42,22 +40,11 @@ auto BullishDivergenceMethod::operator()(AssetSnapshot asset_data) const
    lookback_range_,
   };
 
-  return LookbackSeries{PolySeries<double>{bullish_divergence_series},
-                        static_cast<std::ptrdiff_t>(offset_)};
+  return bullish_divergence_series;
 }
 
 auto BullishDivergenceMethod::operator==(
  const BullishDivergenceMethod& other) const noexcept -> bool = default;
-
-auto BullishDivergenceMethod::offset() const noexcept -> std::size_t
-{
-  return offset_;
-}
-
-void BullishDivergenceMethod::offset(std::size_t offset) noexcept
-{
-  offset_ = offset;
-}
 
 auto BullishDivergenceMethod::pivot_range() const noexcept -> std::size_t
 {

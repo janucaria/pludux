@@ -7,10 +7,9 @@ using namespace pludux::screener;
 
 TEST(EmaMethodTest, RunOneMethod)
 {
-  const auto field = "close";
-  const auto field_method = DataMethod{field, 0};
+  const auto field_method = DataMethod{"close"};
   const auto period = 5;
-  const auto ema_method = EmaMethod{period, field_method, 0};
+  const auto ema_method = EmaMethod{period, field_method};
   const auto asset_data = pludux::AssetHistory{
    {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
@@ -21,11 +20,9 @@ TEST(EmaMethodTest, RunOneMethod)
 
 TEST(EmaMethodTest, RunAllMethod)
 {
-  const auto field = "close";
-  const auto field_method = DataMethod{field, 0};
-  const auto offset = 0;
+  const auto field_method = DataMethod{"close"};
   const auto period = 5;
-  const auto ema_method = EmaMethod{period, field_method, 0};
+  const auto ema_method = EmaMethod{period, field_method};
   const auto asset_data = pludux::AssetHistory{
    {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
@@ -44,50 +41,12 @@ TEST(EmaMethodTest, RunAllMethod)
   EXPECT_TRUE(std::isnan(series[9]));
 }
 
-TEST(EmaMethodTest, RunOneMethodWithOffset)
-{
-  const auto field = "close";
-  const auto field_method = DataMethod{field, 0};
-  const auto offset = 1;
-  const auto period = 5;
-  const auto ema_method = EmaMethod{period, field_method, offset};
-  const auto asset_data = pludux::AssetHistory{
-   {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
-
-  const auto result = ema_method(asset_data)[0];
-  EXPECT_DOUBLE_EQ(result, 857.92592592592598);
-}
-
-TEST(EmaMethodTest, RunAllMethodWithOffset)
-{
-  const auto field = "close";
-  const auto field_method = DataMethod{field, 0};
-  const auto offset = 2;
-  const auto period = 5;
-  const auto ema_method = EmaMethod{period, field_method, offset};
-  const auto asset_data = pludux::AssetHistory{
-   {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
-
-  const auto series = ema_method(asset_data);
-
-  ASSERT_EQ(series.size(), asset_data.size() - offset);
-  EXPECT_DOUBLE_EQ(series[0], 856.88888888888891);
-  EXPECT_DOUBLE_EQ(series[1], 855.33333333333337);
-  EXPECT_DOUBLE_EQ(series[2], 853);
-  EXPECT_DOUBLE_EQ(series[3], 842);
-  EXPECT_TRUE(std::isnan(series[4]));
-  EXPECT_TRUE(std::isnan(series[5]));
-  EXPECT_TRUE(std::isnan(series[6]));
-  EXPECT_TRUE(std::isnan(series[7]));
-}
-
 TEST(EmaMethodTest, EqualityOperator)
 {
-  const auto field = "close";
-  const auto field_method = DataMethod{field, 0};
+  const auto field_method = DataMethod{"close"};
   const auto period = 5;
-  const auto ema_method1 = EmaMethod{period, field_method, 0};
-  const auto ema_method2 = EmaMethod{period, field_method, 0};
+  const auto ema_method1 = EmaMethod{period, field_method};
+  const auto ema_method2 = EmaMethod{period, field_method};
 
   EXPECT_TRUE(ema_method1 == ema_method2);
   EXPECT_FALSE(ema_method1 != ema_method2);
@@ -96,15 +55,14 @@ TEST(EmaMethodTest, EqualityOperator)
 
 TEST(EmaMethodTest, NotEqualOperator)
 {
-  const auto field1 = "close";
-  const auto field_method1 = DataMethod{field1, 0};
+  const auto field_method1 = DataMethod{"close"};
   const auto period1 = 5;
-  const auto ema_method1 = EmaMethod{period1, field_method1, 0};
+  const auto ema_method1 = EmaMethod{period1, field_method1};
 
   const auto field2 = "open";
-  const auto field_method2 = DataMethod{field2, 0};
+  const auto field_method2 = DataMethod{field2};
   const auto period2 = 10;
-  const auto ema_method2 = EmaMethod{period2, field_method2, 0};
+  const auto ema_method2 = EmaMethod{period2, field_method2};
 
   EXPECT_TRUE(ema_method1 != ema_method2);
   EXPECT_FALSE(ema_method1 == ema_method2);

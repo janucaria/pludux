@@ -13,12 +13,9 @@ namespace details {
 template<typename, typename T>
 class BinaryArithmeticMethod {
 public:
-  BinaryArithmeticMethod(ScreenerMethod operand1,
-                         ScreenerMethod operand2,
-                         std::size_t offset = 0)
+  BinaryArithmeticMethod(ScreenerMethod operand1, ScreenerMethod operand2)
   : operand1_{std::move(operand1)}
   , operand2_{std::move(operand2)}
-  , offset_{offset}
   {
   }
 
@@ -32,17 +29,11 @@ public:
                                  std::decay_t<decltype(operand2_series)>>{
      operand1_series, operand2_series};
 
-    return LookbackSeries{PolySeries<double>{result},
-                          static_cast<std::ptrdiff_t>(offset_)};
+    return result;
   }
 
   auto operator==(const BinaryArithmeticMethod& other) const noexcept
    -> bool = default;
-
-  auto offset() const noexcept -> std::size_t
-  {
-    return offset_;
-  }
 
   auto operand1() const noexcept -> const ScreenerMethod&
   {
@@ -57,15 +48,13 @@ public:
 private:
   ScreenerMethod operand1_;
   ScreenerMethod operand2_;
-  std::size_t offset_;
 };
 
 template<typename T>
 class UnaryArithmeticMethod {
 public:
-  explicit UnaryArithmeticMethod(ScreenerMethod operand, std::size_t offset = 0)
+  explicit UnaryArithmeticMethod(ScreenerMethod operand)
   : operand_{std::move(operand)}
-  , offset_{offset}
   {
   }
 
@@ -76,8 +65,7 @@ public:
     auto result =
      UnaryFnSeries<T, std::decay_t<decltype(operand_series)>>{operand_series};
 
-    return LookbackSeries{PolySeries<double>{result},
-                          static_cast<std::ptrdiff_t>(offset_)};
+    return result;
   }
 
   auto operator==(const UnaryArithmeticMethod& other) const noexcept
@@ -88,14 +76,8 @@ public:
     return operand_;
   }
 
-  auto offset() const noexcept -> std::size_t
-  {
-    return offset_;
-  }
-
 private:
   ScreenerMethod operand_;
-  std::size_t offset_;
 };
 
 } // namespace details

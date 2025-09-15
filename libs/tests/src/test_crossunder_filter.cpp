@@ -33,7 +33,7 @@ TEST(CrossunderFilterTest, SignalMethod)
 
 TEST(CrossunderFilterTest, CrossunderConditionMet)
 {
-  auto signal_method = DataMethod{"close", 0};
+  auto signal_method = DataMethod{"close"};
   auto reference_method = ValueMethod{50.0};
   const auto crossunder_filter =
    CrossunderFilter{std::move(signal_method), std::move(reference_method)};
@@ -44,7 +44,7 @@ TEST(CrossunderFilterTest, CrossunderConditionMet)
 
 TEST(CrossunderFilterTest, CrossunderConditionNotMet)
 {
-  auto signal_method = DataMethod{"close", 0};
+  auto signal_method = DataMethod{"close"};
   auto reference_method = ValueMethod{50.0};
   const auto crossunder_filter =
    CrossunderFilter{std::move(signal_method), std::move(reference_method)};
@@ -55,12 +55,12 @@ TEST(CrossunderFilterTest, CrossunderConditionNotMet)
 
 TEST(CrossunderFilterTest, EqualityOperator)
 {
-  auto signal_method1 = DataMethod{"close", 0};
+  auto signal_method1 = DataMethod{"close"};
   auto reference_method1 = ValueMethod{50.0};
   const auto crossunder_filter1 =
    CrossunderFilter{std::move(signal_method1), std::move(reference_method1)};
 
-  auto signal_method2 = DataMethod{"close", 0};
+  auto signal_method2 = DataMethod{"close"};
   auto reference_method2 = ValueMethod{50.0};
   const auto crossunder_filter2 =
    CrossunderFilter{std::move(signal_method2), std::move(reference_method2)};
@@ -72,12 +72,12 @@ TEST(CrossunderFilterTest, EqualityOperator)
 
 TEST(CrossunderFilterTest, NotEqualOperator)
 {
-  auto signal_method1 = DataMethod{"close", 0};
+  auto signal_method1 = DataMethod{"close"};
   auto reference_method1 = ValueMethod{50.0};
   const auto crossunder_filter1 =
    CrossunderFilter{std::move(signal_method1), std::move(reference_method1)};
 
-  auto signal_method2 = DataMethod{"close", 0};
+  auto signal_method2 = DataMethod{"close"};
   auto reference_method2 = ValueMethod{60.0};
   const auto crossunder_filter2 =
    CrossunderFilter{std::move(signal_method2), std::move(reference_method2)};

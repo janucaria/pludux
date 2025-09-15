@@ -16,17 +16,12 @@ public:
   explicit HiddenBullishDivergenceMethod(ScreenerMethod signal,
                                          ScreenerMethod reference,
                                          std::size_t pivot_range,
-                                         std::size_t lookback_range,
-                                         std::size_t offset = 0);
+                                         std::size_t lookback_range);
 
   auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>;
 
   auto operator==(const HiddenBullishDivergenceMethod& other) const noexcept
    -> bool;
-
-  auto offset() const noexcept -> std::size_t;
-
-  void offset(std::size_t offset) noexcept;
 
   auto pivot_range() const noexcept -> std::size_t;
 
@@ -45,7 +40,6 @@ public:
   void reference(ScreenerMethod reference) noexcept;
 
 private:
-  std::size_t offset_;
   std::size_t pivot_range_;
   std::size_t lookback_range_;
 

@@ -35,7 +35,7 @@ TEST(ScreenerMethodTest, NotEqualOperator)
 {
   const auto value_method1 = ValueMethod{1.0};
   const auto value_method2 = ValueMethod{2.0};
-  const auto data_method = DataMethod{"close", 0};
+  const auto data_method = DataMethod{"close"};
   const auto screener_method1 = ScreenerMethod{value_method1};
   const auto screener_method2 = ScreenerMethod{value_method2};
   const auto screener_method3 = ScreenerMethod{data_method};

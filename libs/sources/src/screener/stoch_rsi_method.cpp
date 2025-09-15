@@ -9,15 +9,13 @@ StochRsiMethod::StochRsiMethod(OutputName output,
                                std::size_t rsi_period,
                                std::size_t k_period,
                                std::size_t k_smooth,
-                               std::size_t d_period,
-                               std::size_t offset)
+                               std::size_t d_period)
 : rsi_input_{rsi_input}
 , output_{output}
 , rsi_period_{rsi_period}
 , k_period_{k_period}
 , k_smooth_{k_smooth}
 , d_period_{d_period}
-, offset_{offset}
 {
 }
 
@@ -28,8 +26,7 @@ auto StochRsiMethod::operator()(AssetSnapshot asset_data) const
    rsi_input_(asset_data), rsi_period_, k_period_, k_smooth_, d_period_};
   const auto named_index_series = OutputByNameSeries{stoch_rsi_series, output_};
 
-  return LookbackSeries{PolySeries<double>{named_index_series},
-                        static_cast<std::ptrdiff_t>(offset_)};
+  return named_index_series;
 }
 
 auto StochRsiMethod::operator==(const StochRsiMethod& other) const noexcept
@@ -43,16 +40,6 @@ auto StochRsiMethod::rsi_input() const noexcept -> ScreenerMethod
 auto StochRsiMethod::rsi_period() const noexcept -> std::size_t
 {
   return rsi_period_;
-}
-
-auto StochRsiMethod::offset() const noexcept -> std::size_t
-{
-  return offset_;
-}
-
-void StochRsiMethod::offset(std::size_t offset) noexcept
-{
-  offset_ = offset;
 }
 
 auto StochRsiMethod::output() const noexcept -> OutputName

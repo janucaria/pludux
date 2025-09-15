@@ -13,15 +13,11 @@ class ChangesMethod {
 public:
   ChangesMethod();
 
-  explicit ChangesMethod(ScreenerMethod input, std::size_t offset = 0);
+  explicit ChangesMethod(ScreenerMethod input);
 
   auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>;
 
   auto operator==(const ChangesMethod& other) const noexcept -> bool;
-
-  auto offset() const noexcept -> std::size_t;
-
-  void offset(std::size_t offset) noexcept;
 
   auto input() const noexcept -> const ScreenerMethod&;
 
@@ -29,7 +25,6 @@ public:
 
 private:
   ScreenerMethod input_;
-  std::size_t offset_;
 };
 
 } // namespace pludux::screener

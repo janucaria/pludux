@@ -12,7 +12,7 @@
 namespace pludux::screener {
 
 HiddenBullishDivergenceMethod::HiddenBullishDivergenceMethod()
-: HiddenBullishDivergenceMethod{RsiMethod{}, CloseMethod{}, 5, 60, 0}
+: HiddenBullishDivergenceMethod{RsiMethod{}, CloseMethod{}, 5, 60}
 {
 }
 
@@ -20,15 +20,16 @@ HiddenBullishDivergenceMethod::HiddenBullishDivergenceMethod(
  ScreenerMethod signal,
  ScreenerMethod reference,
  std::size_t pivot_range,
- std::size_t lookback_range,
- std::size_t offset)
-: offset_{offset}
-, pivot_range_{pivot_range}
+ std::size_t lookback_range)
+: pivot_range_{pivot_range}
 , lookback_range_{lookback_range}
 , signal_{signal}
 , reference_{reference}
 {
 }
+
+auto HiddenBullishDivergenceMethod::operator==(
+ const HiddenBullishDivergenceMethod& other) const noexcept -> bool = default;
 
 auto HiddenBullishDivergenceMethod::operator()(AssetSnapshot asset_data) const
  -> PolySeries<double>
@@ -43,21 +44,7 @@ auto HiddenBullishDivergenceMethod::operator()(AssetSnapshot asset_data) const
    lookback_range_,
   };
 
-  return LookbackSeries{PolySeries<double>{hidden_bullish_divergence_series},
-                        static_cast<std::ptrdiff_t>(offset_)};
-}
-
-auto HiddenBullishDivergenceMethod::operator==(
- const HiddenBullishDivergenceMethod& other) const noexcept -> bool = default;
-
-auto HiddenBullishDivergenceMethod::offset() const noexcept -> std::size_t
-{
-  return offset_;
-}
-
-void HiddenBullishDivergenceMethod::offset(std::size_t offset) noexcept
-{
-  offset_ = offset;
+  return hidden_bullish_divergence_series;
 }
 
 auto HiddenBullishDivergenceMethod::pivot_range() const noexcept -> std::size_t

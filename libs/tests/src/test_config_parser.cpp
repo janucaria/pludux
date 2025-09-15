@@ -55,8 +55,7 @@ TEST_F(ConfigParserTest, ParseScreenerReferenceMethod)
   const auto config = json::parse(R"(
     {
       "method": "REFERENCE",
-      "name": "close",
-      "offset": 5
+      "name": "close"
     }
   )");
 
@@ -67,7 +66,6 @@ TEST_F(ConfigParserTest, ParseScreenerReferenceMethod)
 
   EXPECT_EQ(reference_method->registry(), nullptr);
   EXPECT_EQ(reference_method->name(), "close");
-  EXPECT_EQ(reference_method->offset(), 5);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -116,8 +114,6 @@ TEST_F(ConfigParserTest, ParseScreenerOpenMethod)
   const auto open_method = screener_method_cast<OpenMethod>(method);
   ASSERT_NE(open_method, nullptr);
 
-  EXPECT_EQ(open_method->offset(), 0);
-
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
    config_parser.parse_method(serialized_config);
@@ -128,17 +124,14 @@ TEST_F(ConfigParserTest, ParseScreenerHighMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "HIGH",
-      "offset": 1
-  }
+      "method": "HIGH"
+    }
   )");
 
   const auto method = config_parser.parse_method(config);
 
   const auto high_method = screener_method_cast<HighMethod>(method);
   ASSERT_NE(high_method, nullptr);
-
-  EXPECT_EQ(high_method->offset(), 1);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -150,8 +143,7 @@ TEST_F(ConfigParserTest, ParseScreenerLowMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "LOW",
-      "offset": 2
+      "method": "LOW"
     }
   )");
 
@@ -159,8 +151,6 @@ TEST_F(ConfigParserTest, ParseScreenerLowMethod)
 
   const auto low_method = screener_method_cast<LowMethod>(method);
   ASSERT_NE(low_method, nullptr);
-
-  EXPECT_EQ(low_method->offset(), 2);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -172,8 +162,7 @@ TEST_F(ConfigParserTest, ParseScreenerCloseMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "CLOSE",
-      "offset": 3
+      "method": "CLOSE"
     }
   )");
 
@@ -181,8 +170,6 @@ TEST_F(ConfigParserTest, ParseScreenerCloseMethod)
 
   const auto close_method = screener_method_cast<CloseMethod>(method);
   ASSERT_NE(close_method, nullptr);
-
-  EXPECT_EQ(close_method->offset(), 3);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -194,8 +181,7 @@ TEST_F(ConfigParserTest, ParseScreenerVolumeMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "VOLUME",
-      "offset": 4
+      "method": "VOLUME"
     }
   )");
 
@@ -203,8 +189,6 @@ TEST_F(ConfigParserTest, ParseScreenerVolumeMethod)
 
   const auto volume_method = screener_method_cast<VolumeMethod>(method);
   ASSERT_NE(volume_method, nullptr);
-
-  EXPECT_EQ(volume_method->offset(), 4);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -218,11 +202,9 @@ TEST_F(ConfigParserTest, ParseScreenerSmaMethod)
     {
       "method": "SMA",
       "period": 14,
-      "offset": 0,
       "input": {
         "method": "DATA",
-        "field": "close",
-        "offset": 0
+        "field": "close"
       }
     }
   )");
@@ -233,13 +215,11 @@ TEST_F(ConfigParserTest, ParseScreenerSmaMethod)
   ASSERT_NE(sma_method, nullptr);
 
   EXPECT_EQ(sma_method->period(), 14);
-  EXPECT_EQ(sma_method->offset(), 0);
 
   const auto input = screener_method_cast<DataMethod>(sma_method->input());
   ASSERT_NE(input, nullptr);
 
   EXPECT_EQ(input->field(), "close");
-  EXPECT_EQ(input->offset(), 0);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -253,11 +233,9 @@ TEST_F(ConfigParserTest, ParseScreenerEmaMethod)
     {
       "method": "EMA",
       "period": 10,
-      "offset": 1,
       "input": {
         "method": "DATA",
-        "field": "open",
-        "offset": 1
+        "field": "open"
       }
     }
   )");
@@ -268,13 +246,11 @@ TEST_F(ConfigParserTest, ParseScreenerEmaMethod)
   ASSERT_NE(ema_method, nullptr);
 
   EXPECT_EQ(ema_method->period(), 10);
-  EXPECT_EQ(ema_method->offset(), 1);
 
   const auto input = screener_method_cast<DataMethod>(ema_method->input());
   ASSERT_NE(input, nullptr);
 
   EXPECT_EQ(input->field(), "open");
-  EXPECT_EQ(input->offset(), 1);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -288,11 +264,9 @@ TEST_F(ConfigParserTest, ParseScreenerWmaMethod)
       {
         "method": "WMA",
         "period": 20,
-        "offset": 2,
         "input": {
           "method": "DATA",
-          "field": "high",
-          "offset": 2
+          "field": "high"
         }
       }
     )");
@@ -303,13 +277,11 @@ TEST_F(ConfigParserTest, ParseScreenerWmaMethod)
   ASSERT_NE(wma_method, nullptr);
 
   EXPECT_EQ(wma_method->period(), 20);
-  EXPECT_EQ(wma_method->offset(), 2);
 
   const auto input = screener_method_cast<DataMethod>(wma_method->input());
   ASSERT_NE(input, nullptr);
 
   EXPECT_EQ(input->field(), "high");
-  EXPECT_EQ(input->offset(), 2);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -323,11 +295,9 @@ TEST_F(ConfigParserTest, ParseScreenerRmaMethod)
       {
         "method": "RMA",
         "period": 15,
-        "offset": 3,
         "input": {
           "method": "DATA",
-          "field": "low",
-          "offset": 3
+          "field": "low"
         }
       }
     )");
@@ -338,13 +308,11 @@ TEST_F(ConfigParserTest, ParseScreenerRmaMethod)
   ASSERT_NE(rma_method, nullptr);
 
   EXPECT_EQ(rma_method->period(), 15);
-  EXPECT_EQ(rma_method->offset(), 3);
 
   const auto input = screener_method_cast<DataMethod>(rma_method->input());
   ASSERT_NE(input, nullptr);
 
   EXPECT_EQ(input->field(), "low");
-  EXPECT_EQ(input->offset(), 3);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -358,11 +326,9 @@ TEST_F(ConfigParserTest, ParseScreenerHmaMethod)
       {
         "method": "HMA",
         "period": 25,
-        "offset": 4,
         "input": {
           "method": "DATA",
-          "field": "volume",
-          "offset": 4
+          "field": "volume"
         }
       }
     )");
@@ -373,13 +339,11 @@ TEST_F(ConfigParserTest, ParseScreenerHmaMethod)
   ASSERT_NE(hma_method, nullptr);
 
   EXPECT_EQ(hma_method->period(), 25);
-  EXPECT_EQ(hma_method->offset(), 4);
 
   const auto input = screener_method_cast<DataMethod>(hma_method->input());
   ASSERT_NE(input, nullptr);
 
   EXPECT_EQ(input->field(), "volume");
-  EXPECT_EQ(input->offset(), 4);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -393,11 +357,9 @@ TEST_F(ConfigParserTest, ParseScreenerRsiMethod)
     {
       "method": "RSI",
       "period": 14,
-      "offset": 0,
       "input": {
         "method": "DATA",
-        "field": "close",
-        "offset": 0
+        "field": "close"
       }
     }
   )");
@@ -408,13 +370,11 @@ TEST_F(ConfigParserTest, ParseScreenerRsiMethod)
   ASSERT_NE(rsi_method, nullptr);
 
   EXPECT_EQ(rsi_method->period(), 14);
-  EXPECT_EQ(rsi_method->offset(), 0);
 
   const auto input = screener_method_cast<DataMethod>(rsi_method->input());
   ASSERT_NE(input, nullptr);
 
   EXPECT_EQ(input->field(), "close");
-  EXPECT_EQ(input->offset(), 0);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -449,8 +409,7 @@ TEST_F(ConfigParserTest, ParseScreenerDataMethod)
   const auto config = json::parse(R"(
     {
       "method": "DATA",
-      "field": "open",
-      "offset": 0
+      "field": "open"
     }
   )");
 
@@ -460,7 +419,6 @@ TEST_F(ConfigParserTest, ParseScreenerDataMethod)
   ASSERT_NE(field_method, nullptr);
 
   EXPECT_EQ(field_method->field(), "open");
-  EXPECT_EQ(field_method->offset(), 0);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -475,7 +433,6 @@ TEST_F(ConfigParserTest, ParseScreenerAtrMethod)
       "method": "ATR",
       "period": 14,
       "multiplier": 1.0,
-      "offset": 0,
       "high": {
         "method": "DATA",
         "field": "high"
@@ -504,7 +461,6 @@ TEST_F(ConfigParserTest, ParseScreenerAtrMethod)
   EXPECT_NE(close, nullptr);
   EXPECT_EQ(atr_method->period(), 14);
   EXPECT_EQ(atr_method->multiplier(), 1.0);
-  EXPECT_EQ(atr_method->offset(), 0);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -521,11 +477,9 @@ TEST_F(ConfigParserTest, ParseScreenerBbMethod)
       "maType": "SMA",
       "period": 20,
       "stddev": 2.0,
-      "offset": 0,
       "input": {
         "method": "DATA",
-        "field": "close",
-        "offset": 0
+        "field": "close"
       }
     }
   )");
@@ -541,7 +495,6 @@ TEST_F(ConfigParserTest, ParseScreenerBbMethod)
   EXPECT_EQ(bb_method->ma_type(), BbMethod::MaType::sma);
   EXPECT_EQ(bb_method->period(), 20);
   EXPECT_EQ(bb_method->stddev(), 2.0);
-  EXPECT_EQ(bb_method->offset(), 0);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -558,11 +511,9 @@ TEST_F(ConfigParserTest, ParseScreenerMacdMethod)
       "fast": 12,
       "slow": 26,
       "signal": 9,
-      "offset": 0,
       "input": {
         "method": "DATA",
-        "field": "close",
-        "offset": 0
+        "field": "close"
       }
     }
   )");
@@ -578,7 +529,6 @@ TEST_F(ConfigParserTest, ParseScreenerMacdMethod)
   EXPECT_EQ(macd_method->fast_period(), 12);
   EXPECT_EQ(macd_method->slow_period(), 26);
   EXPECT_EQ(macd_method->signal_period(), 9);
-  EXPECT_EQ(macd_method->offset(), 0);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -595,21 +545,17 @@ TEST_F(ConfigParserTest, ParseScreenerStochMethod)
       "kPeriod": 5,
       "kSmooth": 3,
       "dPeriod": 3,
-      "offset": 0,
       "high": {
         "method": "DATA",
-        "field": "high",
-        "offset": 0
+        "field": "high"
       },
       "low": {
         "method": "DATA",
-        "field": "low",
-        "offset": 0
+        "field": "low"
       },
       "close": {
         "method": "DATA",
-        "field": "close",
-        "offset": 0
+        "field": "close"
       }
     }
   )");
@@ -629,7 +575,6 @@ TEST_F(ConfigParserTest, ParseScreenerStochMethod)
   EXPECT_EQ(stoch_method->k_period(), 5);
   EXPECT_EQ(stoch_method->k_smooth(), 3);
   EXPECT_EQ(stoch_method->d_period(), 3);
-  EXPECT_EQ(stoch_method->offset(), 0);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -647,11 +592,9 @@ TEST_F(ConfigParserTest, ParseScreenerStochRsiMethod)
       "kPeriod": 5,
       "kSmooth": 3,
       "dPeriod": 3,
-      "offset": 0,
       "rsiInput": {
         "method": "DATA",
-        "field": "close",
-        "offset": 0
+        "field": "close"
       }
     }
   )");
@@ -669,7 +612,6 @@ TEST_F(ConfigParserTest, ParseScreenerStochRsiMethod)
   EXPECT_EQ(stoch_rsi_method->k_period(), 5);
   EXPECT_EQ(stoch_rsi_method->k_smooth(), 3);
   EXPECT_EQ(stoch_rsi_method->d_period(), 3);
-  EXPECT_EQ(stoch_rsi_method->offset(), 0);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -686,11 +628,9 @@ TEST_F(ConfigParserTest, ParseScreenerKcMethod)
       "ma": {
         "method": "SMA",
         "period": 5,
-        "offset": 0,
         "input": {
           "method": "DATA",
-          "field": "close",
-          "offset": 0
+          "field": "close"
         }
       },
       "range": {
@@ -710,7 +650,6 @@ TEST_F(ConfigParserTest, ParseScreenerKcMethod)
   const auto range_method = screener_method_cast<AtrMethod>(kc_method->range());
   EXPECT_NE(ma_method, nullptr);
   EXPECT_NE(range_method, nullptr);
-  EXPECT_EQ(kc_method->offset(), 0);
   EXPECT_EQ(kc_method->output(), OutputName::MiddleBand);
   EXPECT_EQ(kc_method->multiplier(), 1.0);
 
@@ -737,7 +676,6 @@ TEST_F(ConfigParserTest, ParseScreenerAddMethod)
 
   const auto add_method = screener_method_cast<AddMethod>(method);
   ASSERT_NE(add_method, nullptr);
-  EXPECT_EQ(add_method->offset(), 0);
 
   const auto augend = screener_method_cast<ValueMethod>(add_method->augend());
   const auto addend = screener_method_cast<ValueMethod>(add_method->addend());
@@ -781,7 +719,6 @@ TEST_F(ConfigParserTest, ParseScreenerSubtractMethod)
   ASSERT_NE(subtrahend, nullptr);
   EXPECT_EQ(minuend->value(), 100);
   EXPECT_EQ(subtrahend->value(), 30);
-  EXPECT_EQ(subtract_method->offset(), 0);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -818,7 +755,6 @@ TEST_F(ConfigParserTest, ParseScreenerMultiplyMethod)
   ASSERT_NE(multiplier, nullptr);
   EXPECT_EQ(multiplicand->value(), 10);
   EXPECT_EQ(multiplier->value(), 5);
-  EXPECT_EQ(multiply_method->offset(), 0);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -855,7 +791,6 @@ TEST_F(ConfigParserTest, ParseScreenerDivideMethod)
   ASSERT_NE(divisor, nullptr);
   EXPECT_EQ(dividend->value(), 100);
   EXPECT_EQ(divisor->value(), 2);
-  EXPECT_EQ(divide_method->offset(), 0);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -884,7 +819,6 @@ TEST_F(ConfigParserTest, ParseScreenerNegateMethod)
    screener_method_cast<ValueMethod>(negate_method->operand());
   ASSERT_NE(operand, nullptr);
   EXPECT_EQ(operand->value(), 42);
-  EXPECT_EQ(negate_method->offset(), 0);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -899,8 +833,7 @@ TEST_F(ConfigParserTest, ParseScreenerChangesMethod)
       "method": "CHANGES",
       "input": {
         "method": "DATA",
-        "field": "close",
-        "offset": 0
+        "field": "close"
       }
     }
   )");
@@ -909,12 +842,10 @@ TEST_F(ConfigParserTest, ParseScreenerChangesMethod)
 
   const auto changes_method = screener_method_cast<ChangesMethod>(method);
   ASSERT_NE(changes_method, nullptr);
-  EXPECT_EQ(changes_method->offset(), 0);
 
   const auto input = screener_method_cast<DataMethod>(changes_method->input());
   ASSERT_NE(input, nullptr);
   EXPECT_EQ(input->field(), "close");
-  EXPECT_EQ(input->offset(), 0);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -929,13 +860,11 @@ TEST_F(ConfigParserTest, ParseScreenerAbsDiffMethod)
       "method": "ABS_DIFF",
       "minuend": {
         "method": "DATA",
-        "field": "high",
-        "offset": 0
+        "field": "high"
       },
       "subtrahend": {
         "method": "DATA",
-        "field": "low",
-        "offset": 0
+        "field": "low"
       }
     }
   )");
@@ -944,7 +873,6 @@ TEST_F(ConfigParserTest, ParseScreenerAbsDiffMethod)
 
   const auto abs_diff_method = screener_method_cast<AbsDiffMethod>(method);
   ASSERT_NE(abs_diff_method, nullptr);
-  EXPECT_EQ(abs_diff_method->offset(), 0);
 
   const auto minuend =
    screener_method_cast<DataMethod>(abs_diff_method->minuend());
@@ -953,9 +881,7 @@ TEST_F(ConfigParserTest, ParseScreenerAbsDiffMethod)
   ASSERT_NE(minuend, nullptr);
   ASSERT_NE(subtrahend, nullptr);
   EXPECT_EQ(minuend->field(), "high");
-  EXPECT_EQ(minuend->offset(), 0);
   EXPECT_EQ(subtrahend->field(), "low");
-  EXPECT_EQ(subtrahend->offset(), 0);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -977,7 +903,6 @@ TEST_F(ConfigParserTest, ParseScreenerPercentageMethod)
 
   const auto percentage_method = screener_method_cast<PercentageMethod>(method);
   ASSERT_NE(percentage_method, nullptr);
-  EXPECT_EQ(percentage_method->offset(), 0);
 
   const auto total =
    screener_method_cast<ValueMethod>(percentage_method->total());
@@ -1002,14 +927,12 @@ TEST_F(ConfigParserTest, ParseScreenerBullishDivergenceMethod)
         "period": 14,
         "input": {
           "method": "DATA",
-          "field": "close",
-          "offset": 0
+          "field": "close"
         }
       },
       "reference": {
         "method": "DATA",
-        "field": "low",
-        "offset": 0
+        "field": "low"
       },
       "pivotRange": 10,
       "lookbackRange": 20
@@ -1047,14 +970,12 @@ TEST_F(ConfigParserTest, ParseScreenerHiddenBullishDivergenceMethod)
         "period": 14,
         "input": {
           "method": "DATA",
-          "field": "close",
-          "offset": 0
+          "field": "close"
         }
       },
       "reference": {
         "method": "DATA",
-        "field": "low",
-        "offset": 0
+        "field": "low"
       },
       "pivotRange": 10,
       "lookbackRange": 20
@@ -1089,11 +1010,9 @@ TEST_F(ConfigParserTest, ParseScreenMethodWithExtends)
       "method": "SMA",
       "name": "base",
       "period": 14,
-      "offset": 1,
       "input": {
         "method": "DATA",
-        "field": "close",
-        "offset": 0
+        "field": "close"
       }
     }
   )");
@@ -1115,7 +1034,6 @@ TEST_F(ConfigParserTest, ParseScreenMethodWithExtends)
   const auto sma_method = screener_method_cast<SmaMethod>(method);
   ASSERT_NE(sma_method, nullptr);
 
-  EXPECT_EQ(sma_method->offset(), 1);
   EXPECT_EQ(sma_method->period(), 20);
 }
 
@@ -1178,8 +1096,7 @@ TEST_F(ConfigParserTest, ParseScreenerAllOfFilter)
           },
           "target": {
             "method": "DATA",
-            "field": "close",
-            "offset": 0
+            "field": "close"
           }
         },
         {
@@ -1190,8 +1107,7 @@ TEST_F(ConfigParserTest, ParseScreenerAllOfFilter)
           },
           "target": {
             "method": "DATA",
-            "field": "close",
-            "offset": 0
+            "field": "close"
           }
         }
       ]
@@ -1234,8 +1150,7 @@ TEST_F(ConfigParserTest, ParseScreenerAnyOfFilter)
           },
           "target": {
             "method": "DATA",
-            "field": "close",
-            "offset": 0
+            "field": "close"
           }
         },
         {
@@ -1246,8 +1161,7 @@ TEST_F(ConfigParserTest, ParseScreenerAnyOfFilter)
           },
           "target": {
             "method": "DATA",
-            "field": "close",
-            "offset": 0
+            "field": "close"
           }
         }
       ]
@@ -1284,8 +1198,7 @@ TEST_F(ConfigParserTest, ParseScreenerGreaterThanFilter)
       "threshold": 100,
       "target": {
         "method": "DATA",
-        "field": "close",
-        "offset": 0
+        "field": "close"
       }
     }
   )");
@@ -1301,7 +1214,6 @@ TEST_F(ConfigParserTest, ParseScreenerGreaterThanFilter)
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "close");
-  EXPECT_EQ(target->offset(), 0);
 
   const auto threshold =
    screener_method_cast<ValueMethod>(greater_than_filter->threshold());
@@ -1326,8 +1238,7 @@ TEST_F(ConfigParserTest, ParseScreenerGreaterEqualFilter)
       },
       "target": {
         "method": "DATA",
-        "field": "close",
-        "offset": 0
+        "field": "close"
       }
     }
   )");
@@ -1343,7 +1254,6 @@ TEST_F(ConfigParserTest, ParseScreenerGreaterEqualFilter)
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "close");
-  EXPECT_EQ(target->offset(), 0);
 
   const auto serialized_config = config_parser.serialize_filter(filter);
   const auto deserialized_filter =
@@ -1362,8 +1272,7 @@ TEST_F(ConfigParserTest, ParseScreenerLessThanFilter)
       },
       "target": {
         "method": "DATA",
-        "field": "close",
-        "offset": 0
+        "field": "close"
       }
     }
   )");
@@ -1378,7 +1287,6 @@ TEST_F(ConfigParserTest, ParseScreenerLessThanFilter)
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "close");
-  EXPECT_EQ(target->offset(), 0);
 
   const auto serialized_config = config_parser.serialize_filter(filter);
   const auto deserialized_filter =
@@ -1397,8 +1305,7 @@ TEST_F(ConfigParserTest, ParseScreenerLessEqualFilter)
       },
       "target": {
         "method": "DATA",
-        "field": "close",
-        "offset": 0
+        "field": "close"
       }
     }
   )");
@@ -1413,7 +1320,6 @@ TEST_F(ConfigParserTest, ParseScreenerLessEqualFilter)
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "close");
-  EXPECT_EQ(target->offset(), 0);
 
   const auto serialized_config = config_parser.serialize_filter(filter);
   const auto deserialized_filter =
@@ -1432,8 +1338,7 @@ TEST_F(ConfigParserTest, ParseScreenerEqualFilter)
       },
       "target": {
         "method": "DATA",
-        "field": "close",
-        "offset": 0
+        "field": "close"
       }
     }
   )");
@@ -1447,7 +1352,6 @@ TEST_F(ConfigParserTest, ParseScreenerEqualFilter)
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "close");
-  EXPECT_EQ(target->offset(), 0);
 
   const auto threshold =
    screener_method_cast<ValueMethod>(equal_filter->threshold());
@@ -1472,8 +1376,7 @@ TEST_F(ConfigParserTest, ParseScreenerNotEqualFilter)
       },
       "target": {
         "method": "DATA",
-        "field": "close",
-        "offset": 0
+        "field": "close"
       }
     }
   )");
@@ -1488,7 +1391,6 @@ TEST_F(ConfigParserTest, ParseScreenerNotEqualFilter)
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "close");
-  EXPECT_EQ(target->offset(), 0);
 
   const auto threshold =
    screener_method_cast<ValueMethod>(not_equal_filter->threshold());
@@ -1509,8 +1411,7 @@ TEST_F(ConfigParserTest, ParseScreenerCrossunderFilter)
       "filter": "CROSSUNDER",
       "signal": {
         "method": "DATA",
-        "field": "close",
-        "offset": 0
+        "field": "close"
       },
       "reference": 100
     }
@@ -1526,7 +1427,6 @@ TEST_F(ConfigParserTest, ParseScreenerCrossunderFilter)
   ASSERT_NE(signal, nullptr);
 
   EXPECT_EQ(signal->field(), "close");
-  EXPECT_EQ(signal->offset(), 0);
 
   const auto reference =
    screener_method_cast<ValueMethod>(crossunder_filter->reference());
@@ -1547,8 +1447,7 @@ TEST_F(ConfigParserTest, ParseScreenerCrossoverFilter)
       "filter": "CROSSOVER",
       "signal": {
         "method": "DATA",
-        "field": "close",
-        "offset": 0
+        "field": "close"
       },
       "reference": {
         "method": "VALUE",
@@ -1567,7 +1466,6 @@ TEST_F(ConfigParserTest, ParseScreenerCrossoverFilter)
   ASSERT_NE(signal, nullptr);
 
   EXPECT_EQ(signal->field(), "close");
-  EXPECT_EQ(signal->offset(), 0);
 
   const auto reference =
    screener_method_cast<ValueMethod>(crossover_filter->reference());

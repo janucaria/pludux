@@ -26,12 +26,12 @@ TEST(ReferenceMethodTest, RunAllMethodClose)
   EXPECT_EQ(open_series[1], 4.1);
   EXPECT_EQ(open_series[2], 4.2);
 
-  const auto close_ref_method = ReferenceMethod{registry, "close", 1};
+  const auto close_ref_method = ReferenceMethod{registry, "close"};
   const auto close_series = close_ref_method(asset_data);
-  ASSERT_EQ(close_series.size(), 2);
-  EXPECT_EQ(close_series[0], 1.1);
-  EXPECT_EQ(close_series[1], 1.2);
-  EXPECT_TRUE(std::isnan(close_series[2]));
+  ASSERT_EQ(close_series.size(), 3);
+  EXPECT_EQ(close_series[0], 1.0);
+  EXPECT_EQ(close_series[1], 1.1);
+  EXPECT_EQ(close_series[2], 1.2);
 }
 
 TEST(ReferenceMethodTest, InvalidField)

@@ -11,36 +11,24 @@
 namespace pludux::screener {
 
 ChangesMethod::ChangesMethod()
-: ChangesMethod{CloseMethod{}, 0}
+: ChangesMethod{CloseMethod{}}
 {
 }
 
-ChangesMethod::ChangesMethod(ScreenerMethod input, std::size_t offset)
+ChangesMethod::ChangesMethod(ScreenerMethod input)
 : input_{input}
-, offset_{offset}
 {
 }
+
+auto ChangesMethod::operator==(const ChangesMethod& other) const noexcept
+ -> bool = default;
 
 auto ChangesMethod::operator()(AssetSnapshot asset_data) const
  -> PolySeries<double>
 {
   const auto input_series = input_(asset_data);
   const auto result = ta::changes(input_series);
-  return LookbackSeries{PolySeries<double>{result},
-                        static_cast<std::ptrdiff_t>(offset_)};
-}
-
-auto ChangesMethod::operator==(const ChangesMethod& other) const noexcept
- -> bool = default;
-
-auto ChangesMethod::offset() const noexcept -> std::size_t
-{
-  return offset_;
-}
-
-void ChangesMethod::offset(std::size_t offset) noexcept
-{
-  offset_ = offset;
+  return result;
 }
 
 auto ChangesMethod::input() const noexcept -> const ScreenerMethod&

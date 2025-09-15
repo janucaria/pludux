@@ -18,13 +18,12 @@ template<typename, typename T, std::size_t default_period = 20>
 class TaWithPeroidMethod {
 public:
   TaWithPeroidMethod()
-  : TaWithPeroidMethod{default_period, CloseMethod{}, 0}
+  : TaWithPeroidMethod{default_period, CloseMethod{}}
   {
   }
 
-  TaWithPeroidMethod(int period, ScreenerMethod input, int offset)
+  TaWithPeroidMethod(int period, ScreenerMethod input)
   : period_(period)
-  , offset_(offset)
   , input_(std::move(input))
   {
   }
@@ -33,8 +32,7 @@ public:
   {
     const auto sources = input_(asset_data);
     const auto series = T{}(sources, period_);
-    return LookbackSeries{PolySeries<double>{series},
-                          static_cast<std::ptrdiff_t>(offset_)};
+    return series;
   }
 
   auto operator==(const TaWithPeroidMethod& other) const noexcept
@@ -50,16 +48,6 @@ public:
     period_ = period;
   }
 
-  auto offset() const noexcept -> std::size_t
-  {
-    return offset_;
-  }
-
-  void offset(std::size_t offset) noexcept
-  {
-    offset_ = offset;
-  }
-
   auto input() const noexcept -> const ScreenerMethod&
   {
     return input_;
@@ -72,7 +60,6 @@ public:
 
 private:
   std::size_t period_{};
-  std::size_t offset_{};
   ScreenerMethod input_;
 };
 

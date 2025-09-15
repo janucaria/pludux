@@ -144,9 +144,6 @@
         "method": {
           "type": "string"
         },
-        "offset": {
-          "type": "number"
-        },
         "name": {
           "type": "string"
         },
