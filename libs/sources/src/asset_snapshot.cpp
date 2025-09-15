@@ -46,7 +46,7 @@ auto AssetSnapshot::contains(std::string_view key) const noexcept -> bool
 auto AssetSnapshot::get_values(std::string_view key) const
  -> LookbackSeries<RefSeries<const PolySeries<double>>>
 {
-  return LookbackSeries{asset_history_[key], static_cast<std::ptrdiff_t>(offset_)};
+  return LookbackSeries{asset_history_[key], offset_};
 }
 
 auto AssetSnapshot::get_datetime_values() const

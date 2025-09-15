@@ -22,8 +22,7 @@ auto LookbackMethod::operator==(const LookbackMethod& other) const noexcept
 auto LookbackMethod::operator()(this const LookbackMethod self,
                                 AssetSnapshot asset_data) -> PolySeries<double>
 {
-  return LookbackSeries{self.source_(asset_data),
-                        static_cast<std::ptrdiff_t>(self.period_)};
+  return LookbackSeries{self.source_(asset_data), self.period_};
 }
 
 auto LookbackMethod::source(this const LookbackMethod self) noexcept

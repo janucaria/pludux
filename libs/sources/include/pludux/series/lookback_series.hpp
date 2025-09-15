@@ -13,20 +13,20 @@ class LookbackSeries {
 public:
   using ValueType = typename TSeries::ValueType;
 
-  LookbackSeries(TSeries series, std::ptrdiff_t periods)
+  LookbackSeries(TSeries series, std::size_t period)
   : series_{std::move(series)}
-  , periods_{periods}
+  , period_{period}
   {
   }
 
-  LookbackSeries(LookbackSeries<TSeries> series, std::ptrdiff_t periods)
-  : LookbackSeries{series.series_, series.periods_ + periods}
+  LookbackSeries(LookbackSeries<TSeries> series, std::size_t period)
+  : LookbackSeries{series.series_, series.period_ + period}
   {
   }
 
   template<typename USeries>
-  LookbackSeries(LookbackSeries<USeries> other_series, std::ptrdiff_t periods)
-  : LookbackSeries{other_series.series(), other_series.periods() + periods}
+  LookbackSeries(LookbackSeries<USeries> other_series, std::size_t period)
+  : LookbackSeries{other_series.series(), other_series.period() + period}
   {
   }
 
@@ -36,17 +36,17 @@ public:
       return std::numeric_limits<ValueType>::quiet_NaN();
     }
 
-    return series_[lookback + periods_];
+    return series_[lookback + period_];
   }
 
-  auto periods() const noexcept -> std::ptrdiff_t
+  auto period() const noexcept -> std::size_t
   {
-    return periods_;
+    return period_;
   }
 
   auto size() const noexcept -> std::size_t
   {
-    return series_.size() - periods_;
+    return series_.size() - period_;
   }
 
   auto series() const noexcept -> const TSeries&
@@ -56,7 +56,7 @@ public:
 
 private:
   TSeries series_;
-  std::ptrdiff_t periods_;
+  std::size_t period_;
 };
 
 } // namespace pludux

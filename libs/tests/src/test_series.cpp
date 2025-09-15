@@ -52,16 +52,6 @@ TEST(SeriesTest, LookbackSeries)
   EXPECT_TRUE(std::isnan(subseries[3]));
   EXPECT_TRUE(std::isnan(subseries[4]));
 
-  const auto subseries2 = LookbackSeries{series, -2};
-  EXPECT_EQ(subseries2.size(), 7);
-  EXPECT_TRUE(std::isnan(subseries2[0]));
-  EXPECT_TRUE(std::isnan(subseries2[1]));
-  EXPECT_EQ(subseries2[2], 1);
-  EXPECT_EQ(subseries2[3], 2);
-  EXPECT_EQ(subseries2[4], 3);
-  EXPECT_TRUE(std::isnan(subseries2[5]));
-  EXPECT_TRUE(std::isnan(subseries2[6]));
-
   const auto subseries3 = LookbackSeries{series, 0};
   EXPECT_EQ(subseries3.size(), 5);
   EXPECT_EQ(subseries3[0], 1);
@@ -85,28 +75,21 @@ TEST(SeriesTest, LookbackSeriesOfLookbackSeries)
   EXPECT_TRUE(std::isnan(subsubseries[3]));
   EXPECT_TRUE(std::isnan(subsubseries[4]));
   EXPECT_TRUE(std::isnan(subsubseries[5]));
-
-  const auto subsubseries2 = LookbackSeries{subsubseries, -3};
-  EXPECT_EQ(subsubseries2.size(), 5);
-  EXPECT_EQ(subsubseries2[0], 1);
-  EXPECT_EQ(subsubseries2[1], 2);
-  EXPECT_EQ(subsubseries2[2], 3);
-  EXPECT_EQ(subsubseries2[3], 4);
-  EXPECT_EQ(subsubseries2[4], 5);
 }
 
 TEST(SeriesTest, LookbackSeriesOfLookbackSeriesWithDifferentTypes)
 {
   const auto series = DataSeries{1., 2., 3., 4., 5.};
 
-  const auto subseries = LookbackSeries{series, 3};
+  const auto subseries = LookbackSeries{series, 2};
 
-  const auto subsubseries = LookbackSeries<PolySeries<double>>{subseries, -3};
+  const auto subsubseries = LookbackSeries<PolySeries<double>>{subseries, 1};
 
-  EXPECT_EQ(subsubseries.size(), 5);
-  EXPECT_EQ(subsubseries[0], 1);
-  EXPECT_EQ(subsubseries[1], 2);
-  EXPECT_EQ(subsubseries[2], 3);
-  EXPECT_EQ(subsubseries[3], 4);
-  EXPECT_EQ(subsubseries[4], 5);
+  EXPECT_EQ(subsubseries.size(), 2);
+  EXPECT_EQ(subsubseries[0], 4);
+  EXPECT_EQ(subsubseries[1], 5);
+  EXPECT_TRUE(std::isnan(subsubseries[2]));
+  EXPECT_TRUE(std::isnan(subsubseries[3]));
+  EXPECT_TRUE(std::isnan(subsubseries[4]));
+  EXPECT_TRUE(std::isnan(subsubseries[5]));
 }
