@@ -26,7 +26,7 @@ auto LookbackMethod::operator()(this const LookbackMethod self,
 }
 
 auto LookbackMethod::source(this const LookbackMethod self) noexcept
- -> const ScreenerMethod&
+ -> ScreenerMethod
 {
   return self.source_;
 }

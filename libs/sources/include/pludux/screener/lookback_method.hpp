@@ -21,7 +21,7 @@ public:
   auto operator()(this const LookbackMethod self, AssetSnapshot asset_data)
    -> PolySeries<double>;
 
-  auto source(this const LookbackMethod self) noexcept -> const ScreenerMethod&;
+  auto source(this const LookbackMethod self) noexcept -> ScreenerMethod;
 
   void source(this LookbackMethod self, ScreenerMethod source) noexcept;
 
