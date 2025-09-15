@@ -17,11 +17,9 @@ public:
               ScreenerMethod close,
               std::size_t k_period,
               std::size_t k_smooth,
-              std::size_t d_period,
-              std::size_t offset = 0);
+              std::size_t d_period);
 
-  auto operator()(AssetSnapshot asset_data) const
-   -> SubSeries<PolySeries<double>>;
+  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>;
 
   auto operator==(const StochMethod& other) const noexcept -> bool;
 
@@ -30,10 +28,6 @@ public:
   auto low() const noexcept -> ScreenerMethod;
 
   auto close() const noexcept -> ScreenerMethod;
-
-  auto offset() const noexcept -> std::size_t;
-
-  void offset(std::size_t offset) noexcept;
 
   auto output() const noexcept -> OutputName;
 
@@ -59,7 +53,6 @@ private:
   std::size_t k_period_;
   std::size_t k_smooth_;
   std::size_t d_period_;
-  std::size_t offset_;
 };
 
 } // namespace pludux::screener

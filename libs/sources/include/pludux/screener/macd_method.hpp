@@ -15,17 +15,11 @@ public:
              ScreenerMethod input,
              std::size_t fast_period,
              std::size_t slow_period,
-             std::size_t signal_period,
-             std::size_t offset = 0);
+             std::size_t signal_period);
 
-  auto operator()(AssetSnapshot asset_data) const
-   -> SubSeries<PolySeries<double>>;
+  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>;
 
   auto operator==(const MacdMethod& other) const noexcept -> bool;
-
-  auto offset() const noexcept -> std::size_t;
-
-  void offset(std::size_t offset) noexcept;
 
   auto output() const noexcept -> OutputName;
 
@@ -50,7 +44,6 @@ public:
 private:
   OutputName output_;
   ScreenerMethod input_;
-  std::size_t offset_;
   std::size_t fast_period_;
   std::size_t slow_period_;
   std::size_t signal_period_;

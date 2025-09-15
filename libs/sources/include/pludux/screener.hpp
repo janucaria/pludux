@@ -12,6 +12,7 @@
 #include "screener/data_method.hpp"
 #include "screener/hidden_bullish_divergence_method.hpp"
 #include "screener/kc_method.hpp"
+#include "screener/lookback_method.hpp"
 #include "screener/macd_method.hpp"
 #include "screener/ohlcv_method.hpp"
 #include "screener/reference_method.hpp"

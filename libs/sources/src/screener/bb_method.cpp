@@ -8,57 +8,39 @@ BbMethod::BbMethod(OutputName output,
                    MaType ma_type,
                    ScreenerMethod input,
                    std::size_t period,
-                   double stddev,
-                   std::size_t offset)
+                   double stddev)
 : output_{output}
 , ma_type_{ma_type}
 , input_{input}
-, offset_{offset}
 , period_{period}
 , stddev_{stddev}
 {
 }
 
-auto BbMethod::operator()(AssetSnapshot asset_data) const
- -> SubSeries<PolySeries<double>>
+auto BbMethod::operator()(AssetSnapshot asset_data) const -> PolySeries<double>
 {
-  const auto bb = [&]() -> PolySeries<double> {
-    switch(ma_type_) {
-    case MaType::ema:
-      return OutputByNameSeries{
-       BbSeries{EmaSeries{input_(asset_data), period_}, stddev_}, output_};
-    case MaType::wma:
-      return OutputByNameSeries{
-       BbSeries{WmaSeries{input_(asset_data), period_}, stddev_}, output_};
-    case MaType::rma:
-      return OutputByNameSeries{
-       BbSeries{RmaSeries{input_(asset_data), period_}, stddev_}, output_};
-    case MaType::hma:
-      return OutputByNameSeries{
-       BbSeries{HmaSeries{input_(asset_data), period_}, stddev_}, output_};
-    case MaType::sma:
-    default:
-      return OutputByNameSeries{
-       BbSeries{SmaSeries{input_(asset_data), period_}, stddev_}, output_};
-    }
-  }();
-
-  return SubSeries{PolySeries<double>{bb},
-                   static_cast<std::ptrdiff_t>(offset_)};
+  switch(ma_type_) {
+  case MaType::ema:
+    return OutputByNameSeries{
+     BbSeries{EmaSeries{input_(asset_data), period_}, stddev_}, output_};
+  case MaType::wma:
+    return OutputByNameSeries{
+     BbSeries{WmaSeries{input_(asset_data), period_}, stddev_}, output_};
+  case MaType::rma:
+    return OutputByNameSeries{
+     BbSeries{RmaSeries{input_(asset_data), period_}, stddev_}, output_};
+  case MaType::hma:
+    return OutputByNameSeries{
+     BbSeries{HmaSeries{input_(asset_data), period_}, stddev_}, output_};
+  case MaType::sma:
+  default:
+    return OutputByNameSeries{
+     BbSeries{SmaSeries{input_(asset_data), period_}, stddev_}, output_};
+  }
 }
 
 auto BbMethod::operator==(const BbMethod& other) const noexcept
  -> bool = default;
-
-auto BbMethod::offset() const noexcept -> std::size_t
-{
-  return offset_;
-}
-
-void BbMethod::offset(std::size_t offset) noexcept
-{
-  offset_ = offset;
-}
 
 auto BbMethod::output() const noexcept -> OutputName
 {

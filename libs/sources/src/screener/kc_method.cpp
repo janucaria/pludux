@@ -6,18 +6,15 @@ namespace pludux::screener {
 KcMethod::KcMethod(OutputName output,
                    ScreenerMethod ma,
                    ScreenerMethod range,
-                   double multiplier,
-                   std::size_t offset)
-: offset_{offset}
-, output_{output}
+                   double multiplier)
+: output_{output}
 , multiplier_{multiplier}
 , ma_{std::move(ma)}
 , range_{std::move(range)}
 {
 }
 
-auto KcMethod::operator()(AssetSnapshot asset_data) const
- -> SubSeries<PolySeries<double>>
+auto KcMethod::operator()(AssetSnapshot asset_data) const -> PolySeries<double>
 {
   const auto ma_series = ma_(asset_data);
   const auto range_series = range_(asset_data);
@@ -25,22 +22,11 @@ auto KcMethod::operator()(AssetSnapshot asset_data) const
   const auto kc =
    OutputByNameSeries{KcSeries{ma_series, range_series, multiplier_}, output_};
 
-  return SubSeries{PolySeries<double>{kc},
-                   static_cast<std::ptrdiff_t>(offset_)};
+  return kc;
 }
 
 auto KcMethod::operator==(const KcMethod& other) const noexcept
  -> bool = default;
-
-auto KcMethod::offset() const noexcept -> std::size_t
-{
-  return offset_;
-}
-
-void KcMethod::offset(std::size_t offset) noexcept
-{
-  offset_ = offset;
-}
 
 auto KcMethod::output() const noexcept -> OutputName
 {

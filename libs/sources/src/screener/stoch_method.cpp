@@ -10,8 +10,7 @@ StochMethod::StochMethod(OutputName output,
                          ScreenerMethod close,
                          std::size_t k_period,
                          std::size_t k_smooth,
-                         std::size_t d_period,
-                         std::size_t offset)
+                         std::size_t d_period)
 : high_{high}
 , low_{low}
 , close_{close}
@@ -19,31 +18,26 @@ StochMethod::StochMethod(OutputName output,
 , k_period_{k_period}
 , k_smooth_{k_smooth}
 , d_period_{d_period}
-, offset_{offset}
 {
 }
 
 auto StochMethod::operator()(AssetSnapshot asset_data) const
- -> SubSeries<PolySeries<double>>
+ -> PolySeries<double>
 {
   const auto high_series = high_(asset_data);
   const auto low_series = low_(asset_data);
   const auto close_series = close_(asset_data);
 
-  const auto stoch = StochSeries{high_series,
-                                 low_series,
-                                 close_series,
-                                 k_period_,
-                                 k_smooth_,
-                                 d_period_};
+  const auto stoch = StochSeries{
+   high_series, low_series, close_series, k_period_, k_smooth_, d_period_};
 
   const auto named_stoch = OutputByNameSeries{stoch, output_};
 
-  return SubSeries{PolySeries<double>{named_stoch},
-                   static_cast<std::ptrdiff_t>(offset_)};
+  return named_stoch;
 }
 
-auto StochMethod::operator==(const StochMethod& other) const noexcept -> bool = default;
+auto StochMethod::operator==(const StochMethod& other) const noexcept
+ -> bool = default;
 
 auto StochMethod::high() const noexcept -> ScreenerMethod
 {
@@ -58,16 +52,6 @@ auto StochMethod::low() const noexcept -> ScreenerMethod
 auto StochMethod::close() const noexcept -> ScreenerMethod
 {
   return close_;
-}
-
-auto StochMethod::offset() const noexcept -> std::size_t
-{
-  return offset_;
-}
-
-void StochMethod::offset(std::size_t offset) noexcept
-{
-  offset_ = offset;
 }
 
 auto StochMethod::output() const noexcept -> OutputName

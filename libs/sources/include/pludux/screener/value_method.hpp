@@ -12,8 +12,7 @@ class ValueMethod {
 public:
   explicit ValueMethod(double value);
 
-  auto
-  operator()(AssetSnapshot asset_data) const -> SubSeries<PolySeries<double>>;
+  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>;
 
   auto operator==(const ValueMethod& other) const noexcept -> bool;
 

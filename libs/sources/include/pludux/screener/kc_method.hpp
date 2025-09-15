@@ -14,17 +14,11 @@ public:
   KcMethod(OutputName output,
            ScreenerMethod ma,
            ScreenerMethod range,
-           double multiplier,
-           std::size_t offset = 0);
+           double multiplier);
 
-  auto operator()(AssetSnapshot asset_data) const
-   -> SubSeries<PolySeries<double>>;
+  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>;
 
   auto operator==(const KcMethod& other) const noexcept -> bool;
-
-  auto offset() const noexcept -> std::size_t;
-
-  void offset(std::size_t offset) noexcept;
 
   auto output() const noexcept -> OutputName;
 
@@ -43,7 +37,6 @@ public:
   void range(ScreenerMethod range) noexcept;
 
 private:
-  std::size_t offset_;
   OutputName output_;
   double multiplier_;
   ScreenerMethod ma_;

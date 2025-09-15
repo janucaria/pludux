@@ -10,7 +10,7 @@
 namespace pludux::screener {
 
 AtrMethod::AtrMethod()
-: AtrMethod{HighMethod{}, LowMethod{}, CloseMethod{}, 14, 1.0, 0}
+: AtrMethod{HighMethod{}, LowMethod{}, CloseMethod{}, 14, 1.0}
 {
 }
 
@@ -18,19 +18,16 @@ AtrMethod::AtrMethod(ScreenerMethod high,
                      ScreenerMethod low,
                      ScreenerMethod close,
                      std::size_t period,
-                     double multiplier,
-                     std::size_t offset)
+                     double multiplier)
 : period_{period}
 , multiplier_{multiplier}
-, offset_{offset}
 , high_{std::move(high)}
 , low_{std::move(low)}
 , close_{std::move(close)}
 {
 }
 
-auto AtrMethod::operator()(AssetSnapshot asset_data) const
- -> SubSeries<PolySeries<double>>
+auto AtrMethod::operator()(AssetSnapshot asset_data) const -> PolySeries<double>
 {
   const auto high_series = high_(asset_data);
   const auto low_series = low_(asset_data);
@@ -39,8 +36,7 @@ auto AtrMethod::operator()(AssetSnapshot asset_data) const
   const auto atr =
    AtrSeries{high_series, low_series, close_series, period_, multiplier_};
 
-  return SubSeries{PolySeries<double>{atr},
-                   static_cast<std::ptrdiff_t>(offset_)};
+  return atr;
 }
 
 auto AtrMethod::operator==(const AtrMethod& other) const noexcept
@@ -64,16 +60,6 @@ auto AtrMethod::multiplier() const noexcept -> double
 void AtrMethod::multiplier(double multiplier) noexcept
 {
   multiplier_ = multiplier;
-}
-
-auto AtrMethod::offset() const noexcept -> std::size_t
-{
-  return offset_;
-}
-
-void AtrMethod::offset(std::size_t offset) noexcept
-{
-  offset_ = offset;
 }
 
 auto AtrMethod::high() const noexcept -> const ScreenerMethod&

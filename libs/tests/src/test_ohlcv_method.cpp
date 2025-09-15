@@ -54,24 +54,12 @@ TEST(OhlcvMethodTest, OpenHighLowCloseVolumeMethods)
   EXPECT_TRUE(std::isnan(volume_vals[3]));
 }
 
-TEST(OhlcvMethodTest, Offset)
-{
-  auto ah = AssetHistory{{"Open", {10, 20, 30}}};
-  auto snap = AssetSnapshot{ah};
-  auto open = OpenMethod{1};
-  auto open_vals = open(snap);
-  EXPECT_EQ(open_vals[0], 20);
-  EXPECT_EQ(open_vals[1], 30);
-  EXPECT_TRUE(std::isnan(open_vals[2]));
-}
-
 TEST(OhlcvMethodTest, Equality)
 {
-  OpenMethod open1(2);
-  OpenMethod open2(2);
-  OpenMethod open3(1);
-  EXPECT_TRUE(open1 == open2);
-  EXPECT_FALSE(open1 == open3);
+  auto open1 = OpenMethod{};
+  auto open2 = OpenMethod{};
+
+  EXPECT_EQ(open1, open2);
 }
 
 TEST(OhlcvMethodTest, EmptySeries)
@@ -106,14 +94,4 @@ TEST(OhlcvMethodTest, ChangeKeyMapping)
   EXPECT_EQ(open_vals[0], 1);
   EXPECT_EQ(open_vals[2], 3);
   EXPECT_TRUE(std::isnan(open_vals[3]));
-}
-
-TEST(OhlcvMethodTest, LargeOffset)
-{
-  auto ah = AssetHistory{{"Open", {10, 20, 30}}};
-  auto snap = AssetSnapshot{ah};
-  auto open = OpenMethod{10};
-  auto open_vals = open(snap);
-  EXPECT_TRUE(std::isnan(open_vals[0]));
-  EXPECT_TRUE(std::isnan(open_vals[5]));
 }

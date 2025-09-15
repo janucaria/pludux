@@ -14,15 +14,13 @@ namespace pludux::screener {
 class ScreenerMethod {
 public:
   template<typename UMethod>
-    requires std::
-     is_invocable_r_v<SubSeries<PolySeries<double>>, UMethod, AssetSnapshot>
-   ScreenerMethod(UMethod impl)
+    requires std::is_invocable_r_v<PolySeries<double>, UMethod, AssetSnapshot>
+  ScreenerMethod(UMethod impl)
   : impl_{std::make_shared<ImplModel<UMethod>>(std::move(impl))}
   {
   }
 
-  auto operator()(AssetSnapshot asset_snapshot) const
-   -> SubSeries<PolySeries<double>>;
+  auto operator()(AssetSnapshot asset_snapshot) const -> PolySeries<double>;
 
   auto operator==(const ScreenerMethod& other) const noexcept -> bool;
 
@@ -42,7 +40,7 @@ private:
     virtual ~ImplConcept() = default;
 
     virtual auto operator()(AssetSnapshot asset_snapshot) const
-     -> SubSeries<PolySeries<double>> = 0;
+     -> PolySeries<double> = 0;
 
     virtual auto operator==(const ScreenerMethod& other) const noexcept
      -> bool = 0;
@@ -61,7 +59,7 @@ private:
     }
 
     auto operator()(AssetSnapshot asset_snapshot) const
-     -> SubSeries<PolySeries<double>> override
+     -> PolySeries<double> override
     {
       return impl(std::move(asset_snapshot));
     }

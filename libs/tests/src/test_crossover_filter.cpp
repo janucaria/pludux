@@ -33,7 +33,7 @@ TEST(CrossoverFilterTest, SignalMethod)
 
 TEST(CrossoverFilterTest, CrossoverConditionMet)
 {
-  auto signal_method = DataMethod{"close", 0};
+  auto signal_method = DataMethod{"close"};
   auto reference_method = ValueMethod{50.0};
   const auto crossover_filter =
    CrossoverFilter{std::move(signal_method), std::move(reference_method)};
@@ -44,7 +44,7 @@ TEST(CrossoverFilterTest, CrossoverConditionMet)
 
 TEST(CrossoverFilterTest, CrossoverConditionNotMet)
 {
-  auto signal_method = DataMethod{"close", 0};
+  auto signal_method = DataMethod{"close"};
   auto reference_method = ValueMethod{50.0};
   const auto crossover_filter =
    CrossoverFilter{std::move(signal_method), std::move(reference_method)};
@@ -55,12 +55,12 @@ TEST(CrossoverFilterTest, CrossoverConditionNotMet)
 
 TEST(CrossoverFilterTest, EqualityOperator)
 {
-  auto signal_method1 = DataMethod{"close", 0};
+  auto signal_method1 = DataMethod{"close"};
   auto reference_method1 = ValueMethod{50.0};
   const auto crossover_filter1 =
    CrossoverFilter{std::move(signal_method1), std::move(reference_method1)};
 
-  auto signal_method2 = DataMethod{"close", 0};
+  auto signal_method2 = DataMethod{"close"};
   auto reference_method2 = ValueMethod{50.0};
   const auto crossover_filter2 =
    CrossoverFilter{std::move(signal_method2), std::move(reference_method2)};
@@ -72,12 +72,12 @@ TEST(CrossoverFilterTest, EqualityOperator)
 
 TEST(CrossoverFilterTest, NotEqualOperator)
 {
-  auto signal_method1 = DataMethod{"close", 0};
+  auto signal_method1 = DataMethod{"close"};
   auto reference_method1 = ValueMethod{50.0};
   const auto crossover_filter1 =
    CrossoverFilter{std::move(signal_method1), std::move(reference_method1)};
 
-  auto signal_method2 = DataMethod{"close", 0};
+  auto signal_method2 = DataMethod{"close"};
   auto reference_method2 = ValueMethod{60.0};
   const auto crossover_filter2 =
    CrossoverFilter{std::move(signal_method2), std::move(reference_method2)};

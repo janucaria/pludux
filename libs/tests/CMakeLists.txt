@@ -20,6 +20,7 @@ set(PLUDUX_TEST_SOURCES
   src/test_ohlcv_method.cpp
   src/test_hma_method.cpp
   src/test_kc_method.cpp
+  src/test_lookback_method.cpp
   src/test_macd_method.cpp
   src/test_reference_method.cpp
   src/test_rma_method.cpp
