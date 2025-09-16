@@ -1,4 +1,4 @@
-project(pludux-backtest-lib LANGUAGES CXX)
+project(pludux-backtest-lib)
 
 FetchContent_Declare(
   rapidcsv

@@ -1,5 +1,4 @@
-cmake_minimum_required(VERSION 3.10.2)
-project(pludux-backtest-gui C CXX)
+project(pludux-backtest-gui)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
@@ -124,7 +123,6 @@ add_executable(${PROJECT_NAME}
   src/actions/load_backtests_setup_file_action.cpp
   src/actions/load_backtests_setup_string_action.cpp
 
-  src/application.cpp
   src/app_state.cpp
   src/main.cpp
   # backend files
@@ -138,6 +136,14 @@ add_executable(${PROJECT_NAME}
   # ImPlot files
   ${implot_SOURCE_DIR}/implot.cpp
   ${implot_SOURCE_DIR}/implot_items.cpp
+)
+
+target_sources(${PROJECT_NAME} PRIVATE
+  FILE_SET
+    CXX_MODULES
+    BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src
+    FILES
+    src/application.cxx
 )
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC

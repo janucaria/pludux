@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.30)
+project(glfw3webgpu LANGUAGES CXX)
 # This is only meant to be included as a subdirectory in another project.
 # It assumes that targets 'glfw' and 'webgpu' exist.
 # Look at examples/CMakeLists.txt to see how to use it in a project.

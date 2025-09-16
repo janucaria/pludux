@@ -23,11 +23,15 @@
 
 #include <glfw3webgpu.h>
 
-#include "./application.hpp"
+#include "./app_state.hpp"
 
 #ifdef __EMSCRIPTEN__
-
 #include "./serialization.hpp"
+#endif
+
+import pludux.apps.backtest.application;
+
+#ifdef __EMSCRIPTEN__
 
 extern "C" {
 
