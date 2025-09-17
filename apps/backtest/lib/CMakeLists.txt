@@ -29,11 +29,9 @@ find_package(ctre REQUIRED)
 add_library(${PROJECT_NAME})
 add_library(pludux::backtest-lib ALIAS ${PROJECT_NAME})
 
-target_sources(${PROJECT_NAME}
-  PUBLIC
-
-    sources/backtest/trade_entry.cpp
-    sources/backtest/trade_exit.cpp
+set_target_properties(${PROJECT_NAME}
+  PROPERTIES
+    CXX_SCAN_FOR_MODULES OFF
 )
 
 target_sources(${PROJECT_NAME}
@@ -42,6 +40,8 @@ target_sources(${PROJECT_NAME}
     BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/sources
     FILES
     
+    sources/backtest/trade_entry.cxx
+    sources/backtest/trade_exit.cxx
     sources/backtest/trade_record.cxx
     sources/backtest/trade_position.cxx
     sources/backtest/trade_session.cxx

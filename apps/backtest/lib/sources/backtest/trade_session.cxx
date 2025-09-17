@@ -14,11 +14,10 @@ module;
 #include <utility>
 #include <vector>
 
-#include <pludux/backtest/trade_entry.hpp>
-#include <pludux/backtest/trade_exit.hpp>
-
 export module pludux.backtest.trade_session;
 
+export import pludux.backtest.trade_entry;
+export import pludux.backtest.trade_exit;
 export import pludux.backtest.trade_position;
 export import pludux.backtest.trade_record;
 

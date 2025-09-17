@@ -12,7 +12,6 @@
 #include <nlohmann/json.hpp>
 
 #include <pludux/backtest.hpp>
-#include <pludux/backtest/backtest_summary.hpp>
 
 import pludux.backtest;
 
