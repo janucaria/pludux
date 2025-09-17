@@ -12,15 +12,15 @@ module;
 
 #include <pludux/backtest.hpp>
 
-#include "../actions.hpp"
+#include "../app_state_data.hpp"
 
 export module pludux.apps.backtest.windows:plot_data_window;
 
 import pludux.apps.backtest.app_state;
 
-namespace pludux::apps {
+export namespace pludux::apps {
 
-export class PlotDataWindow {
+class PlotDataWindow {
 public:
   PlotDataWindow()
   : last_selected_backtest_index_{-1}

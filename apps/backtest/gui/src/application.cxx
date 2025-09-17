@@ -17,18 +17,18 @@ module;
 #include <pludux/screener.hpp>
 #include <pludux/ta.hpp>
 
-#include "./actions.hpp"
+#include "./app_state_data.hpp"
 #include "./serialization.hpp"
-
 
 export module pludux.apps.backtest.application;
 
+import pludux.apps.backtest.actions;
 export import pludux.apps.backtest.app_state;
 import pludux.apps.backtest.windows;
 
-namespace pludux::apps {
+export namespace pludux::apps {
 
-export class Application {
+class Application {
 public:
   Application()
   : window_size_{0, 0}
@@ -64,14 +64,14 @@ public:
       return;
     }
 
-    ChangeStrategyJsonFileAction{json_strategy_path}(state_data);
+    ChangeStrategyJsonAction{json_strategy_path}(state_data);
 
     {
       const auto csv_path =
        get_env_var("PLUDUX_BACKTEST_CSV_DATA_PATH_1").value_or("");
 
       if(!csv_path.empty()) {
-        LoadAssetCsvFileAction{csv_path}(state_data);
+        LoadAssetCsvAction{csv_path}(state_data);
       }
     }
 
@@ -80,7 +80,7 @@ public:
        get_env_var("PLUDUX_BACKTEST_CSV_DATA_PATH_2").value_or("");
 
       if(!csv_path.empty()) {
-        LoadAssetCsvFileAction{csv_path}(state_data);
+        LoadAssetCsvAction{csv_path}(state_data);
       }
     }
 
@@ -191,7 +191,7 @@ public:
     }
 
     while(!actions.empty()) {
-      const auto action = std::move(actions.front());
+      auto action = std::move(actions.front());
       actions.pop();
 
       try {
@@ -220,7 +220,7 @@ private:
   ProfilesWindow profiles_window_;
 
   AppStateData state_data_;
-  std::queue<AppPolyAction> actions_;
+  std::queue<PolyAction> actions_;
 };
 
 } // namespace pludux::apps

@@ -1,10 +1,15 @@
-#ifndef PLUDUX_APPS_BACKTEST_ACTIONS_LOAD_BACKTESTS_SETUP_ACTION_HPP
-#define PLUDUX_APPS_BACKTEST_ACTIONS_LOAD_BACKTESTS_SETUP_ACTION_HPP
+module;
 
+#include <algorithm>
+#include <concepts>
 #include <filesystem>
 #include <format>
+#include <fstream>
+#include <istream>
+#include <sstream>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include <rapidcsv.h>
 
@@ -12,14 +17,40 @@
 
 #include "../app_state_data.hpp"
 
-namespace pludux::apps {
+export module pludux.apps.backtest.actions:load_backtests_setup_action;
 
-namespace details {
+export namespace pludux::apps {
 
-template<class TImpl>
+template<class TSource>
+  requires std::same_as<TSource, std::string> ||
+           std::same_as<TSource, std::filesystem::path>
 class LoadBacktestsSetupAction {
-protected:
-  void operator()(std::istream& csv_stream, AppStateData& state) const
+public:
+  LoadBacktestsSetupAction(TSource source)
+  : source_{std::move(source)}
+  {
+  }
+
+  void operator()(this const auto& self, AppStateData& state)
+  {
+    if constexpr(std::same_as<TSource, std::string>) {
+      auto stream = std::istringstream{self.source_};
+      self.load_backtests_setup(stream, state);
+    } else if constexpr(std::same_as<TSource, std::filesystem::path>) {
+      auto file_stream = std::ifstream{self.source_};
+      if(!file_stream.is_open()) {
+        throw std::runtime_error(
+         std::format("Failed to open file: '{}'", self.source_.string()));
+      }
+      self.load_backtests_setup(file_stream, state);
+    }
+  }
+
+private:
+  TSource source_;
+
+  static void load_backtests_setup(std::istream& csv_stream,
+                                   AppStateData& state)
   {
     auto csv_doc = rapidcsv::Document(csv_stream);
     const auto column_names = csv_doc.GetColumnNames();
@@ -115,8 +146,4 @@ protected:
   }
 };
 
-} // namespace details
-
 } // namespace pludux::apps
-
-#endif

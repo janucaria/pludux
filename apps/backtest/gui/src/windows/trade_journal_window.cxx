@@ -10,15 +10,15 @@ module;
 #include <implot.h>
 #include <implot_internal.h>
 
-#include "../actions.hpp"
+#include "../app_state_data.hpp"
 
 export module pludux.apps.backtest.windows:trade_journal_window;
 
 import pludux.apps.backtest.app_state;
 
-namespace pludux::apps {
+export namespace pludux::apps {
 
-export class TradeJournalWindow {
+class TradeJournalWindow {
 public:
   void render(this const auto, AppState& app_state)
   {

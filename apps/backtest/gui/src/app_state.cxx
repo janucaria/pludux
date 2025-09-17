@@ -3,16 +3,17 @@ module;
 #include <queue>
 #include <vector>
 
-#include "./actions.hpp"
 #include "./app_state_data.hpp"
 
 export module pludux.apps.backtest.app_state;
 
-namespace pludux::apps {
+export import pludux.apps.backtest.actions;
 
-export class AppState {
+export namespace pludux::apps {
+
+class AppState {
 public:
-  AppState(AppStateData& state, std::queue<AppPolyAction>& actions)
+  AppState(AppStateData& state, std::queue<PolyAction>& actions)
   : state_data_{state}
   , actions_{actions}
   {
@@ -37,7 +38,7 @@ public:
 
 private:
   AppStateData& state_data_;
-  std::queue<AppPolyAction>& actions_;
+  std::queue<PolyAction>& actions_;
 };
 
 } // namespace pludux::apps

@@ -9,15 +9,15 @@ module;
 
 #include <pludux/backtest/backtest_summary.hpp>
 
-#include "../actions.hpp"
+#include "../app_state_data.hpp"
 
 export module pludux.apps.backtest.windows:backtest_summary_window;
 
 import pludux.apps.backtest.app_state;
 
-namespace pludux::apps {
+export namespace pludux::apps {
 
-export class BacktestSummaryWindow {
+class BacktestSummaryWindow {
 public:
   void render(this const auto self, AppState& app_state)
   {

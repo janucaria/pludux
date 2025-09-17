@@ -5,15 +5,15 @@ module;
 
 #include <imgui.h>
 
-#include "../actions.hpp"
+#include "../app_state_data.hpp"
 
 export module pludux.apps.backtest.windows:backtests_window;
 
 import pludux.apps.backtest.app_state;
 
-namespace pludux::apps {
+export namespace pludux::apps {
 
-export class BacktestsWindow {
+class BacktestsWindow {
 public:
   BacktestsWindow()
   : is_adding_new_backtest_{false}

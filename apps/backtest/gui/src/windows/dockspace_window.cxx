@@ -2,12 +2,12 @@ module;
 
 #include <array>
 #include <ctime>
+#include <filesystem>
 #include <format>
-#include <fstream>
 #include <memory>
 #include <ranges>
-#include <sstream>
 #include <string>
+#include <fstream>
 
 #ifdef __EMSCRIPTEN__
 #include <cstdlib>
@@ -21,7 +21,7 @@ module;
 #include <imgui.h>
 #include <imgui_internal.h>
 
-#include "../actions.hpp"
+#include "../app_state_data.hpp"
 
 #include "../serialization.hpp"
 
@@ -29,9 +29,9 @@ export module pludux.apps.backtest.windows:dockspace_window;
 
 import pludux.apps.backtest.app_state;
 
-namespace pludux::apps {
+export namespace pludux::apps {
 
-export class DockspaceWindow {
+class DockspaceWindow {
 public:
   DockspaceWindow()
   : open_about_popup_{false}
@@ -308,8 +308,7 @@ public:
               }
 
               const auto selected_path = std::string(out_path.get());
-              app_state.emplace_action<ChangeStrategyJsonFileAction>(
-               selected_path);
+              app_state.push_action(ChangeStrategyJsonAction{selected_path});
             }
 
           } else if(result == NFD_CANCEL) {
@@ -393,7 +392,7 @@ public:
               }
 
               const auto selected_path = std::string(out_path.get());
-              app_state.emplace_action<LoadAssetCsvFileAction>(selected_path);
+              app_state.push_action(LoadAssetCsvAction{selected_path});
             }
 
           } else if(result == NFD_CANCEL) {
@@ -477,9 +476,9 @@ public:
                 throw std::runtime_error(error_message);
               }
 
-              const auto selected_path = std::string(out_path.get());
-              app_state.emplace_action<LoadBacktestsSetupFileAction>(
-               selected_path);
+              const auto selected_path =
+               std::filesystem::path{std::string(out_path.get())};
+              app_state.push_action(LoadBacktestsSetupAction{selected_path});
             }
 
           } else if(result == NFD_CANCEL) {

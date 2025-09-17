@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include <rapidcsv.h>
+
 #include <pludux/backtest/asset.hpp>
 #include <pludux/backtest/backtest_summary.hpp>
 #include <pludux/backtest/profile.hpp>

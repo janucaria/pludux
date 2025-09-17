@@ -3,15 +3,15 @@ module;
 
 #include <imgui.h>
 
-#include "../actions.hpp"
+#include "../app_state_data.hpp"
 
 export module pludux.apps.backtest.windows:strategies_window;
 
 import pludux.apps.backtest.app_state;
 
-namespace pludux::apps {
+export namespace pludux::apps {
 
-export class StrategiesWindow {
+class StrategiesWindow {
 public:
   void render(this auto& self, AppState& app_state)
   {

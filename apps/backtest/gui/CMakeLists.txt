@@ -107,14 +107,6 @@ FetchContent_MakeAvailable(cereal)
 
 add_executable(${PROJECT_NAME}
 
-
-  src/actions/change_strategy_json_file_action.cpp
-  src/actions/change_strategy_json_str_action.cpp
-  src/actions/load_asset_csv_file_action.cpp
-  src/actions/load_asset_csv_str_action.cpp
-  src/actions/load_backtests_setup_file_action.cpp
-  src/actions/load_backtests_setup_string_action.cpp
-
   src/main.cpp
   # backend files
   ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
@@ -134,6 +126,11 @@ target_sources(${PROJECT_NAME} PRIVATE
     CXX_MODULES
     BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src
     FILES
+
+    src/actions/change_strategy_json_action.cxx
+    src/actions/load_asset_csv_action.cxx
+    src/actions/load_backtests_setup_action.cxx
+    src/actions.cxx
     
     src/app_state.cxx
 
