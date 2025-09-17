@@ -13,6 +13,8 @@ module;
 
 export module pludux.apps.backtest.app_state_data;
 
+export import pludux.backtest;
+
 export namespace pludux::apps {
 
 struct AppStateData {

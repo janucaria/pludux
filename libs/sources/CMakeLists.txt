@@ -123,3 +123,13 @@ target_link_libraries(${PROJECT_NAME}
   PUBLIC
     nlohmann_json::nlohmann_json
 )
+
+if(EMSCRIPTEN)
+  target_compile_options(${PROJECT_NAME} PUBLIC
+    "-fwasm-exceptions"
+  )
+  
+  target_link_options(${PROJECT_NAME} PUBLIC
+    "-fwasm-exceptions"
+  )
+endif()

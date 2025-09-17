@@ -199,15 +199,8 @@ else()
   target_compile_definitions(${PROJECT_NAME} PUBLIC
     IMGUI_DISABLE_FILE_FUNCTIONS=1
   )
-
-  # add compiler flag -pthread
-  target_compile_options(${PROJECT_NAME} PRIVATE
-    "-fwasm-exceptions"
-  )
   
   target_link_options(${PROJECT_NAME} PRIVATE
-    "-fwasm-exceptions"
-
     "-sWASM=1"
     "-sUSE_WEBGPU=1"
     "-sUSE_GLFW=3"

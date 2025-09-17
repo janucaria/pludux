@@ -14,6 +14,8 @@
 #include <pludux/backtest.hpp>
 #include <pludux/backtest/backtest_summary.hpp>
 
+import pludux.backtest;
+
 auto main(int, const char**) -> int
 {
   using json = nlohmann::json;
