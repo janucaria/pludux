@@ -3,7 +3,9 @@
 
 #include <rapidcsv.h>
 
-#include <pludux/backtest/asset.hpp>
+#include <pludux/asset_history.hpp>
+#include <pludux/asset_snapshot.hpp>
+
 #include <pludux/backtest/backtest_summary.hpp>
 #include <pludux/backtest/strategy.hpp>
 
