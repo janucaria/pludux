@@ -41,7 +41,6 @@ target_sources(${PROJECT_NAME}
     sources/backtest/backtest_summary.cpp
     sources/backtest/asset.cpp
     sources/backtest/strategy.cpp
-    sources/backtest/profile.cpp
 )
 
 target_sources(${PROJECT_NAME}
@@ -49,6 +48,8 @@ target_sources(${PROJECT_NAME}
   FILE_SET CXX_MODULES
     BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/sources
     FILES
+    
+    sources/backtest/profile.cxx
 
     sources/backtest.cxx
 )

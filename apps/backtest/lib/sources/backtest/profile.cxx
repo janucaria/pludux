@@ -1,8 +1,39 @@
+module;
+
+#include <cstddef>
+#include <cstdint>
+#include <string>
 #include <utility>
 
-#include <pludux/backtest/profile.hpp>
+export module pludux.backtest.profile;
 
-namespace pludux::backtest {
+export namespace pludux::backtest {
+
+class Profile {
+public:
+  Profile(std::string name);
+
+  auto name() const noexcept -> const std::string&;
+
+  void name(std::string name) noexcept;
+
+  auto initial_capital() const noexcept -> double;
+
+  void initial_capital(double initial_capital) noexcept;
+
+  auto capital_risk() const noexcept -> double;
+
+  void capital_risk(double capital_risk) noexcept;
+
+  auto get_risk_value() const noexcept -> double;
+
+private:
+  std::string name_;
+  double initial_capital_;
+  double capital_risk_;
+};
+
+// ------------------------------------------------------------------------
 
 Profile::Profile(std::string name)
 : name_{std::move(name)}

@@ -5,7 +5,6 @@
 
 #include <pludux/backtest/asset.hpp>
 #include <pludux/backtest/backtest_summary.hpp>
-#include <pludux/backtest/profile.hpp>
 #include <pludux/backtest/strategy.hpp>
 
 #endif

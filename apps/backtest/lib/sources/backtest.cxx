@@ -18,6 +18,8 @@ module;
 
 export module pludux.backtest;
 
+export import pludux.backtest.profile;
+
 export namespace pludux {
 
 class Backtest {
