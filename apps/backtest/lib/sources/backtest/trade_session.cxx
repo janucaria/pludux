@@ -16,11 +16,11 @@ module;
 
 #include <pludux/backtest/trade_entry.hpp>
 #include <pludux/backtest/trade_exit.hpp>
-#include <pludux/backtest/trade_record.hpp>
 
 export module pludux.backtest.trade_session;
 
 export import pludux.backtest.trade_position;
+export import pludux.backtest.trade_record;
 
 export namespace pludux::backtest {
 
