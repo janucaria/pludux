@@ -12,9 +12,11 @@ module;
 
 #include <pludux/backtest.hpp>
 
-#include "../app_state.hpp"
+#include "../actions.hpp"
 
 export module pludux.apps.backtest.windows:plot_data_window;
+
+import pludux.apps.backtest.app_state;
 
 namespace pludux::apps {
 

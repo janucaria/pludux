@@ -5,9 +5,11 @@ module;
 
 #include <imgui.h>
 
-#include "../app_state.hpp"
+#include "../actions.hpp"
 
 export module pludux.apps.backtest.windows:profiles_window;
+
+import pludux.apps.backtest.app_state;
 
 namespace pludux::apps {
 

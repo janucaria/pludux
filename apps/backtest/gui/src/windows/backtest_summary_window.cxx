@@ -9,9 +9,11 @@ module;
 
 #include <pludux/backtest/backtest_summary.hpp>
 
-#include "../app_state.hpp"
+#include "../actions.hpp"
 
 export module pludux.apps.backtest.windows:backtest_summary_window;
+
+import pludux.apps.backtest.app_state;
 
 namespace pludux::apps {
 

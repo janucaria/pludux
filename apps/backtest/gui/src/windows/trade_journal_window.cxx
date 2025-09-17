@@ -10,9 +10,11 @@ module;
 #include <implot.h>
 #include <implot_internal.h>
 
-#include "../app_state.hpp"
+#include "../actions.hpp"
 
 export module pludux.apps.backtest.windows:trade_journal_window;
+
+import pludux.apps.backtest.app_state;
 
 namespace pludux::apps {
 

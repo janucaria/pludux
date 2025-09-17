@@ -25,7 +25,7 @@
 
 #include <glfw3webgpu.h>
 
-#include "./app_state.hpp"
+#include "./actions.hpp"
 #include "./serialization.hpp"
 
 import pludux.apps.backtest.application;

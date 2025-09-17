@@ -17,11 +17,13 @@ module;
 #include <pludux/screener.hpp>
 #include <pludux/ta.hpp>
 
-#include "./app_state.hpp"
+#include "./actions.hpp"
 #include "./serialization.hpp"
+
 
 export module pludux.apps.backtest.application;
 
+export import pludux.apps.backtest.app_state;
 import pludux.apps.backtest.windows;
 
 namespace pludux::apps {

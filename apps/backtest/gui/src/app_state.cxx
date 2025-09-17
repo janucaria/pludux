@@ -1,5 +1,4 @@
-#ifndef PLUDUX_APPS_BACKTEST_APP_STATE_HPP
-#define PLUDUX_APPS_BACKTEST_APP_STATE_HPP
+module;
 
 #include <queue>
 #include <vector>
@@ -7,13 +6,22 @@
 #include "./actions.hpp"
 #include "./app_state_data.hpp"
 
+export module pludux.apps.backtest.app_state;
+
 namespace pludux::apps {
 
-class AppState {
+export class AppState {
 public:
-  AppState(AppStateData& state, std::queue<AppPolyAction>& actions);
+  AppState(AppStateData& state, std::queue<AppPolyAction>& actions)
+  : state_data_{state}
+  , actions_{actions}
+  {
+  }
 
-  auto state() const noexcept -> const AppStateData&;
+  auto state() const noexcept -> const AppStateData&
+  {
+    return state_data_;
+  }
 
   template<typename TAppAction, typename... Args>
   void emplace_action(Args&&... args)
@@ -33,5 +41,3 @@ private:
 };
 
 } // namespace pludux::apps
-
-#endif

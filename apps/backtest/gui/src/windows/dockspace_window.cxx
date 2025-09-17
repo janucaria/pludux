@@ -21,10 +21,13 @@ module;
 #include <imgui.h>
 #include <imgui_internal.h>
 
-#include "../app_state.hpp"
+#include "../actions.hpp"
+
 #include "../serialization.hpp"
 
 export module pludux.apps.backtest.windows:dockspace_window;
+
+import pludux.apps.backtest.app_state;
 
 namespace pludux::apps {
 
