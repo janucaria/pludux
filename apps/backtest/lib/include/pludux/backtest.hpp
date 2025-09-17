@@ -8,7 +8,6 @@
 
 #include <pludux/backtest/trade_entry.hpp>
 #include <pludux/backtest/trade_exit.hpp>
-#include <pludux/backtest/trade_position.hpp>
 #include <pludux/backtest/trade_record.hpp>
 
 #endif

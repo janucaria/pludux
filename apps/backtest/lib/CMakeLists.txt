@@ -34,7 +34,6 @@ target_sources(${PROJECT_NAME}
 
     sources/backtest/trade_entry.cpp
     sources/backtest/trade_exit.cpp
-    sources/backtest/trade_position.cpp
     sources/backtest/trade_record.cpp
 )
 
@@ -44,6 +43,7 @@ target_sources(${PROJECT_NAME}
     BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/sources
     FILES
     
+    sources/backtest/trade_position.cxx
     sources/backtest/trade_session.cxx
     
     sources/backtest/asset.cxx
