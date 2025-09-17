@@ -13,7 +13,7 @@ module;
 #include <ctre.hpp>
 #include <rapidcsv.h>
 
-#include <pludux/backtest.hpp>
+#include <pludux/asset_snapshot.hpp>
 #include <pludux/config_parser.hpp>
 
 export module pludux.backtest;

@@ -6,7 +6,7 @@
 #include <utility>
 
 #include <nlohmann/json.hpp>
-
+#include <rapidcsv.h>
 #include <cereal/cereal.hpp>
 
 #include <cereal/archives/json.hpp>
@@ -19,7 +19,6 @@
 #include <cereal/types/vector.hpp>
 
 #include <pludux/asset_history.hpp>
-#include <pludux/backtest.hpp>
 #include <pludux/config_parser.hpp>
 #include <pludux/screener.hpp>
 

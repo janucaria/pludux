@@ -5,7 +5,7 @@ module;
 
 #include <imgui.h>
 
-#include <pludux/backtest.hpp>
+#include <pludux/asset_snapshot.hpp>
 
 export module pludux.apps.backtest.windows:profiles_window;
 

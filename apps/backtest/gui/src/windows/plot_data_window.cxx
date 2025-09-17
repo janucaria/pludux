@@ -10,7 +10,7 @@ module;
 #include <implot.h>
 #include <implot_internal.h>
 
-#include <pludux/backtest.hpp>
+#include <pludux/asset_snapshot.hpp>
 
 export module pludux.apps.backtest.windows:plot_data_window;
 

@@ -6,9 +6,8 @@ module;
 #include <istream>
 #include <sstream>
 #include <string>
+#include <format>
 #include <utility>
-
-#include <pludux/backtest.hpp>
 
 export module pludux.apps.backtest.actions:change_strategy_json_action;
 

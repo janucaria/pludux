@@ -13,8 +13,6 @@ module;
 
 #include <rapidcsv.h>
 
-#include <pludux/backtest.hpp>
-
 export module pludux.apps.backtest.actions:load_backtests_setup_action;
 
 import pludux.apps.backtest.app_state_data;

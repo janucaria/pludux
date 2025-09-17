@@ -11,8 +11,6 @@
 
 #include <nlohmann/json.hpp>
 
-#include <pludux/backtest.hpp>
-
 import pludux.backtest;
 
 auto main(int, const char**) -> int

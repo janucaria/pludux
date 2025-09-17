@@ -21,8 +21,6 @@ module;
 #include <imgui.h>
 #include <imgui_internal.h>
 
-#include <pludux/backtest.hpp>
-
 #include "../serialization.hpp"
 
 export module pludux.apps.backtest.windows:dockspace_window;

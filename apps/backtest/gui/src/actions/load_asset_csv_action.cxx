@@ -10,8 +10,6 @@ module;
 #include <utility>
 #include <vector>
 
-#include <pludux/backtest.hpp>
-
 export module pludux.apps.backtest.actions:load_asset_csv_action;
 
 import pludux.apps.backtest.app_state_data;
