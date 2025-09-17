@@ -4,6 +4,7 @@ module;
 #include <chrono>
 #include <queue>
 #include <ranges>
+#include <stdexcept>
 #include <string>
 
 #include <imgui.h>
@@ -17,9 +18,11 @@ module;
 #include <pludux/ta.hpp>
 
 #include "./app_state.hpp"
-#include "./windows.hpp"
+#include "./serialization.hpp"
 
 export module pludux.apps.backtest.application;
+
+import pludux.apps.backtest.windows;
 
 namespace pludux::apps {
 

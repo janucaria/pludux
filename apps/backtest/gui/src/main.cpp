@@ -10,6 +10,8 @@
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_wgpu.h>
+#include <implot.h>
+#include <implot_internal.h>
 
 #include <implot.h>
 
@@ -24,10 +26,7 @@
 #include <glfw3webgpu.h>
 
 #include "./app_state.hpp"
-
-#ifdef __EMSCRIPTEN__
 #include "./serialization.hpp"
-#endif
 
 import pludux.apps.backtest.application;
 

@@ -107,14 +107,6 @@ FetchContent_MakeAvailable(cereal)
 
 add_executable(${PROJECT_NAME}
 
-  src/windows/assets_window.cpp
-  src/windows/backtests_window.cpp
-  src/windows/backtest_summary_window.cpp
-  src/windows/dockspace_window.cpp
-  src/windows/plot_data_window.cpp
-  src/windows/trade_journal_window.cpp
-  src/windows/strategies_window.cpp
-  src/windows/profiles_window.cpp
 
   src/actions/change_strategy_json_file_action.cpp
   src/actions/change_strategy_json_str_action.cpp
@@ -143,6 +135,17 @@ target_sources(${PROJECT_NAME} PRIVATE
     CXX_MODULES
     BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src
     FILES
+
+    src/windows/assets_window.cxx
+    src/windows/backtests_window.cxx
+    src/windows/backtest_summary_window.cxx
+    src/windows/dockspace_window.cxx
+    src/windows/plot_data_window.cxx
+    src/windows/profiles_window.cxx
+    src/windows/strategies_window.cxx
+    src/windows/trade_journal_window.cxx
+    src/windows.cxx
+
     src/application.cxx
 )
 
