@@ -36,8 +36,6 @@ target_sources(${PROJECT_NAME}
     sources/backtest/trade_exit.cpp
     sources/backtest/trade_position.cpp
     sources/backtest/trade_record.cpp
-
-    sources/backtest/strategy.cpp
 )
 
 target_sources(${PROJECT_NAME}
@@ -51,6 +49,7 @@ target_sources(${PROJECT_NAME}
     sources/backtest/asset.cxx
     sources/backtest/profile.cxx
     sources/backtest/backtest_summary.cxx
+    sources/backtest/strategy.cxx
 
     sources/backtest.cxx
 )
