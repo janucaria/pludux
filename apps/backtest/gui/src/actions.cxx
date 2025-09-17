@@ -1,6 +1,5 @@
 module;
 
-#include "app_state_data.hpp"
 #include <functional>
 
 export module pludux.apps.backtest.actions;

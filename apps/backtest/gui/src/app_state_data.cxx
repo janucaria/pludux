@@ -1,5 +1,4 @@
-#ifndef PLUDUX_APPS_BACKTEST_APP_STATE_DATA_HPP
-#define PLUDUX_APPS_BACKTEST_APP_STATE_DATA_HPP
+module;
 
 #include <memory>
 #include <optional>
@@ -10,10 +9,11 @@
 
 #include <pludux/asset_history.hpp>
 #include <pludux/backtest.hpp>
-#include <pludux/backtest/asset.hpp>
 #include <pludux/screener.hpp>
 
-namespace pludux::apps {
+export module pludux.apps.backtest.app_state_data;
+
+export namespace pludux::apps {
 
 struct AppStateData {
   std::queue<std::string> alert_messages{};
@@ -30,5 +30,3 @@ struct AppStateData {
 };
 
 } // namespace pludux::apps
-
-#endif

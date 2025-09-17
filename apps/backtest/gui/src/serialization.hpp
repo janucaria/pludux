@@ -18,9 +18,12 @@
 #include <cereal/types/unordered_map.hpp>
 #include <cereal/types/vector.hpp>
 
+#include <pludux/asset_history.hpp>
+#include <pludux/backtest.hpp>
 #include <pludux/config_parser.hpp>
+#include <pludux/screener.hpp>
 
-#include "./app_state_data.hpp"
+import pludux.apps.backtest.app_state_data;
 
 namespace cereal {
 template<class Archive>

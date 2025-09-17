@@ -15,9 +15,9 @@ module;
 
 #include <pludux/backtest.hpp>
 
-#include "../app_state_data.hpp"
-
 export module pludux.apps.backtest.actions:load_backtests_setup_action;
+
+import pludux.apps.backtest.app_state_data;
 
 export namespace pludux::apps {
 

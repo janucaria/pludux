@@ -127,6 +127,8 @@ target_sources(${PROJECT_NAME} PRIVATE
     BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src
     FILES
 
+    src/app_state_data.cxx
+
     src/actions/change_strategy_json_action.cxx
     src/actions/load_asset_csv_action.cxx
     src/actions/load_backtests_setup_action.cxx

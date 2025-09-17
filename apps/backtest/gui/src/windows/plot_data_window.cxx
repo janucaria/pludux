@@ -12,8 +12,6 @@ module;
 
 #include <pludux/backtest.hpp>
 
-#include "../app_state_data.hpp"
-
 export module pludux.apps.backtest.windows:plot_data_window;
 
 import pludux.apps.backtest.app_state;

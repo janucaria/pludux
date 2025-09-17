@@ -7,10 +7,8 @@ module;
 #include <string>
 
 #include <imgui.h>
-#include <implot.h>
-#include <implot_internal.h>
 
-#include "../app_state_data.hpp"
+#include <pludux/backtest.hpp>
 
 export module pludux.apps.backtest.windows:trade_journal_window;
 

@@ -8,11 +8,11 @@ module;
 #include <string>
 #include <utility>
 
-#include <pludux/backtest/strategy.hpp>
-
-#include "../app_state_data.hpp"
+#include <pludux/backtest.hpp>
 
 export module pludux.apps.backtest.actions:change_strategy_json_action;
+
+import pludux.apps.backtest.app_state_data;
 
 export namespace pludux::apps {
 

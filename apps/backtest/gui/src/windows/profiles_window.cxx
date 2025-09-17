@@ -5,7 +5,7 @@ module;
 
 #include <imgui.h>
 
-#include "../app_state_data.hpp"
+#include <pludux/backtest.hpp>
 
 export module pludux.apps.backtest.windows:profiles_window;
 
