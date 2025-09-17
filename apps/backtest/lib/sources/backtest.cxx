@@ -20,6 +20,8 @@ export module pludux.backtest;
 
 export import pludux.backtest.asset;
 export import pludux.backtest.profile;
+export import pludux.backtest.trade_session;
+export import pludux.backtest.backtest_summary;
 
 export namespace pludux {
 
