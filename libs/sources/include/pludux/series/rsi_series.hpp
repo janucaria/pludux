@@ -7,13 +7,13 @@
 #include <utility>
 #include <vector>
 
-#include "change_series.hpp"
 #include "rma_series.hpp"
 #include "sma_series.hpp"
 #include "unary_fn_series.hpp"
 
 import pludux.series.series_output;
 import pludux.series.ref_series;
+import pludux.series.change_series;
 
 namespace pludux {
 
