@@ -35,8 +35,6 @@ target_sources(${PROJECT_NAME}
 
     src/screener/method_registry.cpp
 
-    src/screener/all_of_filter.cpp
-    src/screener/any_of_filter.cpp
     src/screener/crossover_filter.cpp
     src/screener/crossunder_filter.cpp
 
@@ -92,6 +90,10 @@ target_sources(${PROJECT_NAME}
 
         
         src/screener/screener_filter.cxx
+        src/screener/all_of_filter.cxx
+        src/screener/any_of_filter.cxx
+        src/screener/boolean_filter.cxx
+        src/screener.cxx
 )
 
 target_compile_features(${PROJECT_NAME}
