@@ -10,10 +10,11 @@ module;
 #include <nlohmann/json.hpp>
 
 #include <pludux/asset_snapshot.hpp>
-#include <pludux/config_parser.hpp>
 #include <pludux/screener.hpp>
 
 export module pludux.backtest.strategy;
+
+import pludux.config_parser;
 
 import pludux.backtest.trade_entry;
 import pludux.backtest.trade_exit;

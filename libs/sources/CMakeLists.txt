@@ -16,7 +16,6 @@ target_sources(${PROJECT_NAME}
   PUBLIC
     src/asset_history.cpp
     src/asset_snapshot.cpp
-    src/config_parser.cpp
 
     src/screener/abs_diff_method.cpp
     src/screener/arithmetic_method.cpp
@@ -106,6 +105,14 @@ target_sources(${PROJECT_NAME}
         include/pludux/series/tr_series.hpp
         include/pludux/series/unary_fn_series.hpp
         include/pludux/series/wma_series.hpp
+)
+
+target_sources(${PROJECT_NAME}
+  PUBLIC
+    FILE_SET CXX_MODULES
+      BASE_DIRS src/
+      FILES
+        src/config_parser.cxx
 )
 
 target_compile_features(${PROJECT_NAME}

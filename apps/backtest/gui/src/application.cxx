@@ -12,7 +12,6 @@ module;
 #include <nlohmann/json.hpp>
 
 #include <pludux/asset_history.hpp>
-#include <pludux/config_parser.hpp>
 #include <pludux/screener.hpp>
 #include <pludux/ta.hpp>
 

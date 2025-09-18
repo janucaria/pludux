@@ -14,9 +14,11 @@ module;
 #include <rapidcsv.h>
 
 #include <pludux/asset_snapshot.hpp>
-#include <pludux/config_parser.hpp>
+#include <pludux/screener.hpp>
 
 export module pludux.backtest;
+
+export import pludux.config_parser;
 
 export import pludux.backtest.asset;
 export import pludux.backtest.profile;

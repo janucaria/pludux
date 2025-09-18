@@ -19,7 +19,6 @@
 #include <cereal/types/vector.hpp>
 
 #include <pludux/asset_history.hpp>
-#include <pludux/config_parser.hpp>
 #include <pludux/screener.hpp>
 
 import pludux.apps.backtest.app_state_data;
