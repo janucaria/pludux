@@ -8,6 +8,5 @@
 #include "screener/reference_method.hpp"
 #include "screener/stoch_method.hpp"
 #include "screener/stoch_rsi_method.hpp"
-#include "screener/ta_with_period_method.hpp"
 
 #endif

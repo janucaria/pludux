@@ -85,8 +85,11 @@ private:
 export class MultiplyMethod
 : public BinaryArithmeticMethod<MultiplyMethod, std::multiplies<>> {
 public:
-  using BinaryArithmeticMethod<MultiplyMethod,
-                               std::multiplies<>>::BinaryArithmeticMethod;
+  MultiplyMethod(ScreenerMethod multiplicand, ScreenerMethod multiplier)
+  : BinaryArithmeticMethod<MultiplyMethod, std::multiplies<>>{
+     std::move(multiplicand), std::move(multiplier)}
+  {
+  }
 
   auto multiplicand() const noexcept -> const ScreenerMethod&
   {
@@ -102,8 +105,11 @@ public:
 export class DivideMethod
 : public BinaryArithmeticMethod<DivideMethod, std::divides<>> {
 public:
-  using BinaryArithmeticMethod<DivideMethod,
-                               std::divides<>>::BinaryArithmeticMethod;
+  DivideMethod(ScreenerMethod dividend, ScreenerMethod divisor)
+  : BinaryArithmeticMethod<DivideMethod, std::divides<>>{std::move(dividend),
+                                                         std::move(divisor)}
+  {
+  }
 
   auto dividend() const noexcept -> const ScreenerMethod&
   {
@@ -118,7 +124,11 @@ public:
 
 export class AddMethod : public BinaryArithmeticMethod<AddMethod, std::plus<>> {
 public:
-  using BinaryArithmeticMethod<AddMethod, std::plus<>>::BinaryArithmeticMethod;
+  AddMethod(ScreenerMethod augend, ScreenerMethod addend)
+  : BinaryArithmeticMethod<AddMethod, std::plus<>>{std::move(augend),
+                                                   std::move(addend)}
+  {
+  }
 
   auto augend() const noexcept -> const ScreenerMethod&
   {
@@ -134,8 +144,11 @@ public:
 export class SubtractMethod
 : public BinaryArithmeticMethod<SubtractMethod, std::minus<>> {
 public:
-  using BinaryArithmeticMethod<SubtractMethod,
-                               std::minus<>>::BinaryArithmeticMethod;
+  SubtractMethod(ScreenerMethod minuend, ScreenerMethod subtrahend)
+  : BinaryArithmeticMethod<SubtractMethod, std::minus<>>{std::move(minuend),
+                                                         std::move(subtrahend)}
+  {
+  }
 
   auto minuend() const noexcept -> const ScreenerMethod&
   {
@@ -150,7 +163,10 @@ public:
 
 export class NegateMethod : public UnaryArithmeticMethod<std::negate<>> {
 public:
-  using UnaryArithmeticMethod<std::negate<>>::UnaryArithmeticMethod;
+  explicit NegateMethod(ScreenerMethod operand)
+  : UnaryArithmeticMethod<std::negate<>>(std::move(operand))
+  {
+  }
 };
 
 template<typename T = void>
@@ -172,8 +188,11 @@ struct Percentages<void> {
 export class PercentageMethod
 : public BinaryArithmeticMethod<PercentageMethod, Percentages<>> {
 public:
-  using BinaryArithmeticMethod<PercentageMethod,
-                               Percentages<>>::BinaryArithmeticMethod;
+  PercentageMethod(ScreenerMethod total, ScreenerMethod percent)
+  : BinaryArithmeticMethod<PercentageMethod, Percentages<>>{std::move(total),
+                                                            std::move(percent)}
+  {
+  }
 
   auto total() const noexcept -> const ScreenerMethod&
   {
@@ -205,8 +224,11 @@ struct AbsoluteDifference<void> {
 export class AbsDiffMethod
 : public BinaryArithmeticMethod<AbsDiffMethod, AbsoluteDifference<>> {
 public:
-  using BinaryArithmeticMethod<AbsDiffMethod,
-                               AbsoluteDifference<>>::BinaryArithmeticMethod;
+  AbsDiffMethod(ScreenerMethod left, ScreenerMethod right)
+  : BinaryArithmeticMethod<AbsDiffMethod, AbsoluteDifference<>>{
+     std::move(left), std::move(right)}
+  {
+  }
 
   auto minuend() const noexcept -> const ScreenerMethod&
   {

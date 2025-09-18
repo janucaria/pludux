@@ -1,14 +1,14 @@
 module;
 
 #include <cstddef>
-
-#include <pludux/screener/ta_with_period_method.hpp>
+#include <utility>
 
 export module pludux.screener.bullish_divergence_method;
 
 import pludux.asset_snapshot;
 import pludux.screener.screener_method;
 import pludux.screener.ohlcv_method;
+import pludux.screener.ta_with_period_method;
 
 export namespace pludux::screener {
 

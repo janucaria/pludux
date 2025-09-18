@@ -80,6 +80,7 @@ target_sources(${PROJECT_NAME}
         src/screener/methods/ohlcv_method.cxx
         src/screener/methods/data_method.cxx
         src/screener/methods/arithmetic_method.cxx
+        src/screener/methods/ta_with_period_method.cxx
         src/screener/methods/atr_method.cxx
         src/screener/methods/bb_method.cxx
         src/screener/methods/changes_method.cxx
