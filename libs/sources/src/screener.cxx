@@ -12,11 +12,11 @@ export import pludux.screener.logical_filter;
 export import pludux.screener.crossover_filter;
 export import pludux.screener.crossunder_filter;
 
-
 export import pludux.screener.screener_method;
 export import pludux.screener.value_method;
 export import pludux.screener.ohlcv_method;
 export import pludux.screener.data_method;
+export import pludux.screener.arithmetic_method;
 
 export import pludux.screener.bb_method;
 export import pludux.screener.changes_method;
@@ -24,5 +24,3 @@ export import pludux.screener.atr_method;
 
 export import pludux.screener.bullish_divergence_method;
 export import pludux.screener.hidden_bullish_divergence_method;
-
-

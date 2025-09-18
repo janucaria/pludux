@@ -15,8 +15,6 @@ add_library(${CMAKE_PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 target_sources(${PROJECT_NAME}
   PUBLIC
 
-    src/screener/abs_diff_method.cpp
-    src/screener/arithmetic_method.cpp
     src/screener/kc_method.cpp
     src/screener/lookback_method.cpp
     src/screener/macd_method.cpp
@@ -81,6 +79,7 @@ target_sources(${PROJECT_NAME}
         src/screener/methods/value_method.cxx
         src/screener/methods/ohlcv_method.cxx
         src/screener/methods/data_method.cxx
+        src/screener/methods/arithmetic_method.cxx
         src/screener/methods/atr_method.cxx
         src/screener/methods/bb_method.cxx
         src/screener/methods/changes_method.cxx

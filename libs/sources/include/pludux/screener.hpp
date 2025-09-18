@@ -1,8 +1,6 @@
 #ifndef PLUDUX_PLUDUX_SCREENER_METHOD_HPP
 #define PLUDUX_PLUDUX_SCREENER_METHOD_HPP
 
-#include "screener/abs_diff_method.hpp"
-#include "screener/arithmetic_method.hpp"
 #include "screener/kc_method.hpp"
 #include "screener/lookback_method.hpp"
 #include "screener/macd_method.hpp"

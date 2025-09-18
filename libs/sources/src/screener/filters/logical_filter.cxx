@@ -52,7 +52,7 @@ template<typename T, typename TUnaryLogicalOperator>
   requires std::is_invocable_r_v<bool, TUnaryLogicalOperator, bool>
 class UnaryLogicalFilter {
 public:
-  UnaryLogicalFilter(ScreenerFilter condition)
+  explicit UnaryLogicalFilter(ScreenerFilter condition)
   : condition_{std::move(condition)}
   {
   }
@@ -92,20 +92,34 @@ struct LogicalXor<void> {
 };
 
 export struct AndFilter : BinaryLogicalFilter<AndFilter, std::logical_and<>> {
-  using BinaryLogicalFilter<AndFilter, std::logical_and<>>::BinaryLogicalFilter;
+  AndFilter(ScreenerFilter first, ScreenerFilter second)
+  : BinaryLogicalFilter<AndFilter, std::logical_and<>>(std::move(first),
+                                                       std::move(second))
+  {
+  }
 };
 
 export struct OrFilter : BinaryLogicalFilter<OrFilter, std::logical_or<>> {
-  using BinaryLogicalFilter<OrFilter, std::logical_or<>>::BinaryLogicalFilter;
+  OrFilter(ScreenerFilter first, ScreenerFilter second)
+  : BinaryLogicalFilter<OrFilter, std::logical_or<>>(std::move(first),
+                                                     std::move(second))
+  {
+  }
 };
 
 export struct NotFilter : UnaryLogicalFilter<NotFilter, std::logical_not<>> {
-  using UnaryLogicalFilter<NotFilter, std::logical_not<>>::UnaryLogicalFilter;
+  NotFilter(ScreenerFilter condition)
+  : UnaryLogicalFilter<NotFilter, std::logical_not<>>(std::move(condition))
+  {
+  }
 };
 
 export struct XorFilter : BinaryLogicalFilter<XorFilter, LogicalXor<>> {
-  using BinaryLogicalFilter<XorFilter, LogicalXor<>>::BinaryLogicalFilter;
+  XorFilter(ScreenerFilter first, ScreenerFilter second)
+  : BinaryLogicalFilter<XorFilter, LogicalXor<>>(std::move(first),
+                                                 std::move(second))
+  {
+  }
 };
 
 } // namespace pludux::screener
-
