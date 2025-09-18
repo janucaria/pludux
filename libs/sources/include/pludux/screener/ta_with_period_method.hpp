@@ -4,10 +4,9 @@
 #include <type_traits>
 #include <utility>
 
-#include <pludux/screener/ohlcv_method.hpp>
-
 import pludux.asset_snapshot;
 import pludux.screener.screener_method;
+import pludux.screener.ohlcv_method;
 
 namespace pludux::screener {
 

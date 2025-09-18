@@ -17,12 +17,6 @@ target_sources(${PROJECT_NAME}
 
     src/screener/abs_diff_method.cpp
     src/screener/arithmetic_method.cpp
-    src/screener/atr_method.cpp
-    src/screener/bb_method.cpp
-    src/screener/bullish_divergence_method.cpp
-    src/screener/changes_method.cpp
-    src/screener/data_method.cpp
-    src/screener/hidden_bullish_divergence_method.cpp
     src/screener/kc_method.cpp
     src/screener/lookback_method.cpp
     src/screener/macd_method.cpp
@@ -85,6 +79,13 @@ target_sources(${PROJECT_NAME}
         
         src/screener/methods/screener_method.cxx
         src/screener/methods/value_method.cxx
+        src/screener/methods/ohlcv_method.cxx
+        src/screener/methods/data_method.cxx
+        src/screener/methods/atr_method.cxx
+        src/screener/methods/bb_method.cxx
+        src/screener/methods/changes_method.cxx
+        src/screener/methods/bullish_divergence_method.cxx
+        src/screener/methods/hidden_bullish_divergence_method.cxx
         
         src/screener/filters/screener_filter.cxx
         src/screener/filters/all_of_filter.cxx
