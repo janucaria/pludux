@@ -7,10 +7,8 @@
 #include <utility>
 #include <vector>
 
-
 import pludux.series.series_output;
-
-#include "sma_series.hpp"
+import pludux.series.sma_series;
 
 namespace pludux {
 

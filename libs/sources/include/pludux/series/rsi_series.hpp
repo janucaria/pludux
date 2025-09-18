@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "rma_series.hpp"
-#include "sma_series.hpp"
 #include "unary_fn_series.hpp"
 
 import pludux.series.series_output;

@@ -58,6 +58,8 @@ target_sources(${PROJECT_NAME}
         src/series/repeat_series.cxx
         src/series/change_series.cxx
         
+        src/series/sma_series.cxx
+
         src/series/poly_series.cxx
 
         src/series/tr_series.cxx

@@ -5,10 +5,8 @@
 #include <limits>
 #include <utility>
 
-
-#include <pludux/series/sma_series.hpp>
-
 import pludux.series.series_output;
+import pludux.series.sma_series;
 
 namespace pludux {
 

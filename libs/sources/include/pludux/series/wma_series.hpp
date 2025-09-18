@@ -6,9 +6,6 @@
 #include <utility>
 #include <vector>
 
-
-#include "sma_series.hpp"
-
 import pludux.series.series_output;
 
 namespace pludux {
