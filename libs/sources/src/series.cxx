@@ -8,6 +8,7 @@ export import pludux.series.repeat_series;
 export import pludux.series.data_series;
 export import pludux.series.change_series;
 export import pludux.series.roc_series;
+export import pludux.series.stoch_series;
 
 export import pludux.series.sma_series;
 export import pludux.series.wma_series;

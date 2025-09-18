@@ -58,6 +58,7 @@ target_sources(${PROJECT_NAME}
         src/series/repeat_series.cxx
         src/series/change_series.cxx
         src/series/roc_series.cxx
+        src/series/stoch_series.cxx
         
         src/series/sma_series.cxx
         src/series/wma_series.cxx

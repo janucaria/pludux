@@ -1,14 +1,16 @@
-#ifndef PLUDUX_PLUDUX_SERIES_STOCH_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_STOCH_SERIES_HPP
+module;
 
+#include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <limits>
 #include <utility>
 
+export module pludux.series.stoch_series;
 
 import pludux.series.series_output;
 
-namespace pludux {
+export namespace pludux {
 
 template<typename THighSeries, typename TLowSeries, typename TCloseSeries>
 class StochSeries {
@@ -155,5 +157,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif
