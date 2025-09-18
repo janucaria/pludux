@@ -14,7 +14,7 @@ module;
 
 export module pludux.config_parser;
 
-import pludux.screener;
+export import pludux.screener;
 
 export namespace pludux {
 

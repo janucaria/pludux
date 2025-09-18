@@ -93,6 +93,8 @@ target_sources(${PROJECT_NAME}
         src/screener/all_of_filter.cxx
         src/screener/any_of_filter.cxx
         src/screener/boolean_filter.cxx
+        src/screener/comparison_filter.cxx
+        src/screener/logical_filter.cxx
         src/screener.cxx
 )
 

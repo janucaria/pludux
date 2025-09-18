@@ -5,3 +5,6 @@ export import pludux.screener.screener_filter;
 export import pludux.screener.all_of_filter;
 export import pludux.screener.any_of_filter;
 export import pludux.screener.boolean_filter;
+
+export import pludux.screener.comparison_filter;
+export import pludux.screener.logical_filter;

@@ -1,16 +1,15 @@
-#ifndef PLUDUX_PLUDUX_SCREENER_LOGICAL_FILTER_HPP
-#define PLUDUX_PLUDUX_SCREENER_LOGICAL_FILTER_HPP
+module;
 
 #include <functional>
 #include <type_traits>
 #include <vector>
 
+export module pludux.screener.logical_filter;
+
 import pludux.asset_snapshot;
 import pludux.screener.screener_filter;
 
 namespace pludux::screener {
-
-namespace detail {
 
 template<typename, typename TBinaryLogicalOperator>
   requires std::is_invocable_r_v<bool, TBinaryLogicalOperator, bool, bool>
@@ -31,7 +30,8 @@ public:
     return TBinaryLogicalOperator{}(first_condition, second_condition);
   }
 
-  auto operator==(const BinaryLogicalFilter& other) const noexcept -> bool = default;
+  auto operator==(const BinaryLogicalFilter& other) const noexcept
+   -> bool = default;
 
   auto first_condition() const -> const ScreenerFilter&
   {
@@ -63,7 +63,8 @@ public:
     return TUnaryLogicalOperator{}(condition);
   }
 
-  auto operator==(const UnaryLogicalFilter& other) const noexcept -> bool = default;
+  auto operator==(const UnaryLogicalFilter& other) const noexcept
+   -> bool = default;
 
   auto condition() const -> const ScreenerFilter&
   {
@@ -76,7 +77,7 @@ private:
 
 template<typename T = void>
 struct LogicalXor {
-  auto operator()(T a, T b) const -> bool
+  auto operator()(this const auto, T a, T b) -> bool
   {
     return a ? !b : b;
   }
@@ -84,35 +85,27 @@ struct LogicalXor {
 
 template<>
 struct LogicalXor<void> {
-  auto operator()(auto a, auto b) const
+  auto operator()(this const auto, auto a, auto b)
   {
     return a ? !b : b;
   }
 };
 
-} // namespace detail
-
-struct AndFilter : detail::BinaryLogicalFilter<AndFilter, std::logical_and<>> {
-  using detail::BinaryLogicalFilter<AndFilter,
-                                    std::logical_and<>>::BinaryLogicalFilter;
+export struct AndFilter : BinaryLogicalFilter<AndFilter, std::logical_and<>> {
+  using BinaryLogicalFilter<AndFilter, std::logical_and<>>::BinaryLogicalFilter;
 };
 
-struct OrFilter : detail::BinaryLogicalFilter<OrFilter, std::logical_or<>> {
-  using detail::BinaryLogicalFilter<OrFilter,
-                                    std::logical_or<>>::BinaryLogicalFilter;
+export struct OrFilter : BinaryLogicalFilter<OrFilter, std::logical_or<>> {
+  using BinaryLogicalFilter<OrFilter, std::logical_or<>>::BinaryLogicalFilter;
 };
 
-struct NotFilter : detail::UnaryLogicalFilter<NotFilter, std::logical_not<>> {
-  using detail::UnaryLogicalFilter<NotFilter,
-                                   std::logical_not<>>::UnaryLogicalFilter;
+export struct NotFilter : UnaryLogicalFilter<NotFilter, std::logical_not<>> {
+  using UnaryLogicalFilter<NotFilter, std::logical_not<>>::UnaryLogicalFilter;
 };
 
-struct XorFilter
-: detail::BinaryLogicalFilter<XorFilter, detail::LogicalXor<>> {
-  using detail::BinaryLogicalFilter<XorFilter,
-                                    detail::LogicalXor<>>::BinaryLogicalFilter;
+export struct XorFilter : BinaryLogicalFilter<XorFilter, LogicalXor<>> {
+  using BinaryLogicalFilter<XorFilter, LogicalXor<>>::BinaryLogicalFilter;
 };
 
 } // namespace pludux::screener
 
-#endif

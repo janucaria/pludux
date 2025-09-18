@@ -1,14 +1,15 @@
-#ifndef PLUDUX_PLUDUX_SCREENER_COMPARISON_FILTER_HPP
-#define PLUDUX_PLUDUX_SCREENER_COMPARISON_FILTER_HPP
+module;
 
 #include <vector>
 
 #include <pludux/screener/screener_method.hpp>
 
+export module pludux.screener.comparison_filter;
+
 import pludux.asset_snapshot;
 import pludux.screener.screener_filter;
 
-namespace pludux::screener {
+export namespace pludux::screener {
 
 template<typename T>
 class ComparisonFilter {
@@ -60,5 +61,3 @@ using EqualFilter = ComparisonFilter<std::equal_to<>>;
 using NotEqualFilter = ComparisonFilter<std::not_equal_to<>>;
 
 } // namespace pludux::screener
-
-#endif // PLUDUX_PLUDUX_SCREENER_GREATER_EQUAL_FILTER_HPP
