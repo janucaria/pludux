@@ -8,12 +8,12 @@
 #include <vector>
 
 #include "change_series.hpp"
-#include "ref_series.hpp"
 #include "rma_series.hpp"
 #include "sma_series.hpp"
 #include "unary_fn_series.hpp"
 
 import pludux.series.series_output;
+import pludux.series.ref_series;
 
 namespace pludux {
 

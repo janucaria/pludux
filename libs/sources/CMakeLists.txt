@@ -50,6 +50,7 @@ target_sources(${PROJECT_NAME}
       FILES
 
         src/series/series_output.cxx
+        src/series/ref_series.cxx
         src/series/output_by_name_series.cxx
         src/series.cxx
 

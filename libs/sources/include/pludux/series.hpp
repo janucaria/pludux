@@ -14,7 +14,6 @@
 #include <pludux/series/macd_series.hpp>
 #include <pludux/series/pivot_lows_series.hpp>
 #include <pludux/series/poly_series.hpp>
-#include <pludux/series/ref_series.hpp>
 #include <pludux/series/repeat_series.hpp>
 #include <pludux/series/rma_series.hpp>
 #include <pludux/series/roc_series.hpp>

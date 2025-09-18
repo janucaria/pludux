@@ -12,7 +12,6 @@
 #include "atr_series.hpp"
 #include "binary_fn_series.hpp"
 #include "ema_series.hpp"
-#include "ref_series.hpp"
 
 import pludux.series.series_output;
 

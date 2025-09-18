@@ -8,9 +8,9 @@
 
 #include "binary_fn_series.hpp"
 #include "ema_series.hpp"
-#include "ref_series.hpp"
 
 import pludux.series.series_output;
+import pludux.series.ref_series;
 
 namespace pludux {
 
