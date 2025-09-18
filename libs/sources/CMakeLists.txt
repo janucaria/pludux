@@ -27,7 +27,6 @@ target_sources(${PROJECT_NAME}
     src/screener/lookback_method.cpp
     src/screener/macd_method.cpp
     src/screener/output_by_name_method.cpp
-    src/screener/screener_method.cpp
     src/screener/stoch_method.cpp
     src/screener/stoch_rsi_method.cpp
     src/screener/reference_method.cpp
@@ -84,6 +83,7 @@ target_sources(${PROJECT_NAME}
         src/config_parser.cxx
 
         
+        src/screener/methods/screener_method.cxx
         src/screener/methods/value_method.cxx
         
         src/screener/filters/screener_filter.cxx

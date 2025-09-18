@@ -5,8 +5,7 @@
 #include <string>
 #include <unordered_map>
 
-#include <pludux/screener/screener_method.hpp>
-
+import pludux.screener.screener_method;
 
 namespace pludux::screener {
 

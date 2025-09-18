@@ -5,9 +5,9 @@
 #include <utility>
 
 #include <pludux/screener/ohlcv_method.hpp>
-#include <pludux/screener/screener_method.hpp>
 
 import pludux.asset_snapshot;
+import pludux.screener.screener_method;
 
 namespace pludux::screener {
 

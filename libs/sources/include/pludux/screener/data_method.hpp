@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 
-
 import pludux.asset_snapshot;
 
 namespace pludux::screener {

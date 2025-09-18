@@ -1,13 +1,13 @@
 module;
 
+#include <functional>
 #include <vector>
-
-#include <pludux/screener/screener_method.hpp>
 
 export module pludux.screener.comparison_filter;
 
 import pludux.asset_snapshot;
 import pludux.screener.screener_filter;
+import pludux.screener.screener_method;
 
 export namespace pludux::screener {
 

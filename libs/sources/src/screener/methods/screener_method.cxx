@@ -1,15 +1,16 @@
-#ifndef PLUDUX_PLUDUX_SCREENER_SCREENER_METHOD_HPP
-#define PLUDUX_PLUDUX_SCREENER_SCREENER_METHOD_HPP
+module;
 
 #include <functional>
 #include <memory>
 #include <type_traits>
 #include <vector>
 
+export module pludux.screener.screener_method;
+
 import pludux.asset_snapshot;
 import pludux.series;
 
-namespace pludux::screener {
+export namespace pludux::screener {
 
 class ScreenerMethod {
 public:
@@ -20,11 +21,20 @@ public:
   {
   }
 
-  auto operator()(AssetSnapshot asset_snapshot) const -> PolySeries<double>;
+  auto operator()(AssetSnapshot asset_snapshot) const -> PolySeries<double>
+  {
+    return impl_->operator()(std::move(asset_snapshot));
+  }
 
-  auto operator==(const ScreenerMethod& other) const noexcept -> bool;
+  auto operator==(const ScreenerMethod& other) const noexcept -> bool
+  {
+    return impl_->operator==(other);
+  }
 
-  auto operator!=(const ScreenerMethod& other) const noexcept -> bool;
+  auto operator!=(const ScreenerMethod& other) const noexcept -> bool
+  {
+    return impl_->operator!=(other);
+  }
 
   template<typename UMethod>
   friend auto screener_method_cast(const ScreenerMethod& method) noexcept
@@ -81,5 +91,3 @@ private:
 };
 
 } // namespace pludux::screener
-
-#endif

@@ -2,10 +2,11 @@
 #define PLUDUX_PLUDUX_SCREENER_Arithmetic_METHOD_HPP
 
 #include <cstddef>
-
-#include <pludux/screener/screener_method.hpp>
+#include <functional>
+#include <utility>
 
 import pludux.asset_snapshot;
+import pludux.screener.screener_method;
 
 namespace pludux::screener {
 

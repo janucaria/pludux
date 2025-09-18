@@ -1,10 +1,8 @@
 #ifndef PLUDUX_PLUDUX_SCREENER_OUTPUT_BY_NAME_METHOD_HPP
 #define PLUDUX_PLUDUX_SCREENER_OUTPUT_BY_NAME_METHOD_HPP
 
-#include <pludux/screener/screener_method.hpp>
-
-import pludux.series;
 import pludux.asset_snapshot;
+import pludux.screener.screener_method;
 
 namespace pludux::screener {
 
