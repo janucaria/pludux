@@ -12,7 +12,7 @@ export module pludux.series.data_series;
 
 import pludux.series.series_output;
 
-namespace pludux {
+export namespace pludux {
 
 template<typename T>
 class DataSeries {

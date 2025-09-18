@@ -10,6 +10,8 @@ module;
 
 export module pludux.asset_snapshot;
 
+export import pludux.series;
+
 export import pludux.asset_history;
 
 export namespace pludux {
@@ -42,7 +44,8 @@ public:
   auto get_high_values() const
    -> LookbackSeries<RefSeries<const PolySeries<double>>>;
 
-  auto get_low_values() const -> LookbackSeries<RefSeries<const PolySeries<double>>>;
+  auto get_low_values() const
+   -> LookbackSeries<RefSeries<const PolySeries<double>>>;
 
   auto get_close_values() const
    -> LookbackSeries<RefSeries<const PolySeries<double>>>;

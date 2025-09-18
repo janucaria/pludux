@@ -1,13 +1,14 @@
-#ifndef PLUDUX_PLUDUX_SERIES_LOOKBACK_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_LOOKBACK_SERIES_HPP
+module;
 
 #include <cstddef>
 #include <utility>
+#include <limits>
 
+export module pludux.series.lookback_series;
 
 import pludux.series.series_output;
 
-namespace pludux {
+export namespace pludux {
 
 template<typename TSeries>
 class LookbackSeries {
@@ -61,5 +62,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif

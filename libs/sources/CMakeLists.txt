@@ -52,6 +52,7 @@ target_sources(${PROJECT_NAME}
         src/series/series_output.cxx
         src/series/ref_series.cxx
         src/series/output_by_name_series.cxx
+        src/series/lookback_series.cxx
         src/series/data_series.cxx
         src/series.cxx
 
