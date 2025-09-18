@@ -1,15 +1,16 @@
-#ifndef PLUDUX_PLUDUX_SERIES_POLY_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_POLY_SERIES_HPP
+module;
 
 #include <cstddef>
 #include <initializer_list>
 #include <memory>
 #include <utility>
 
+export module pludux.series.poly_series;
+
 import pludux.series.series_output;
 import pludux.series.data_series;
 
-namespace pludux {
+export namespace pludux {
 
 template<typename T>
 class PolySeries {
@@ -86,5 +87,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif

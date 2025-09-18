@@ -16,6 +16,8 @@ module;
 
 export module pludux.asset_history;
 
+import pludux.series;
+
 export namespace pludux {
 
 class AssetHistory {
