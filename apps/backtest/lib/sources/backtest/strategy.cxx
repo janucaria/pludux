@@ -9,8 +9,6 @@ module;
 
 #include <nlohmann/json.hpp>
 
-#include <pludux/screener.hpp>
-
 export module pludux.backtest.strategy;
 
 import pludux.config_parser;

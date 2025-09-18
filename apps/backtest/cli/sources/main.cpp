@@ -6,8 +6,6 @@
 #include <iostream>
 #include <unordered_map>
 
-#include <pludux/screener.hpp>
-
 #include <nlohmann/json.hpp>
 
 import pludux.backtest;

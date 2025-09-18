@@ -5,11 +5,10 @@ module;
 #include <limits>
 #include <utility>
 #include <vector>
+export module pludux.series.ema_series;
 
 import pludux.series.series_output;
 import pludux.series.sma_series;
-
-export module pludux.series.ema_series;
 
 export namespace pludux {
 

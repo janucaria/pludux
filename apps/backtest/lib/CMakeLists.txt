@@ -31,7 +31,7 @@ add_library(pludux::backtest-lib ALIAS ${PROJECT_NAME})
 
 set_target_properties(${PROJECT_NAME}
   PROPERTIES
-    CXX_SCAN_FOR_MODULES ON
+    CXX_SCAN_FOR_MODULES OFF
 )
 
 target_sources(${PROJECT_NAME}

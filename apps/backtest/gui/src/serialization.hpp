@@ -18,8 +18,6 @@
 #include <cereal/types/unordered_map.hpp>
 #include <cereal/types/vector.hpp>
 
-#include <pludux/screener.hpp>
-
 import pludux.apps.backtest.app_state_data;
 
 namespace cereal {

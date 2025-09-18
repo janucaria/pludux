@@ -12,18 +12,9 @@ find_package(nlohmann_json REQUIRED)
 add_library(${PROJECT_NAME})
 add_library(${CMAKE_PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
-target_sources(${PROJECT_NAME}
-  PUBLIC
-
-    src/screener/kc_method.cpp
-    src/screener/lookback_method.cpp
-    src/screener/macd_method.cpp
-    src/screener/output_by_name_method.cpp
-    src/screener/stoch_method.cpp
-    src/screener/stoch_rsi_method.cpp
-    src/screener/reference_method.cpp
-
-    src/screener/method_registry.cpp
+set_target_properties(${PROJECT_NAME}
+  PROPERTIES
+    CXX_SCAN_FOR_MODULES OFF
 )
 
 target_sources(${PROJECT_NAME}
@@ -76,6 +67,12 @@ target_sources(${PROJECT_NAME}
 
         
         src/screener/methods/screener_method.cxx
+
+        src/screener/methods/method_registry.cxx
+        src/screener/methods/reference_method.cxx
+
+        src/screener/methods/lookback_method.cxx
+        src/screener/methods/output_by_name_method.cxx
         src/screener/methods/value_method.cxx
         src/screener/methods/ohlcv_method.cxx
         src/screener/methods/data_method.cxx
@@ -84,6 +81,10 @@ target_sources(${PROJECT_NAME}
         src/screener/methods/atr_method.cxx
         src/screener/methods/bb_method.cxx
         src/screener/methods/changes_method.cxx
+        src/screener/methods/kc_method.cxx
+        src/screener/methods/macd_method.cxx
+        src/screener/methods/stoch_method.cxx
+        src/screener/methods/stoch_rsi_method.cxx
         src/screener/methods/bullish_divergence_method.cxx
         src/screener/methods/hidden_bullish_divergence_method.cxx
         
@@ -96,19 +97,14 @@ target_sources(${PROJECT_NAME}
         src/screener/filters/crossover_filter.cxx
         src/screener/filters/crossunder_filter.cxx
 
-
         src/screener.cxx
+
+        src/pludux.cxx
 )
 
 target_compile_features(${PROJECT_NAME}
   PUBLIC
     cxx_std_23
-)
-
-target_include_directories(${PROJECT_NAME}
-  PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
 )
 
 target_link_libraries(${PROJECT_NAME}
