@@ -25,7 +25,7 @@ public:
     const auto operand1_series = operand1_(asset_data);
     const auto operand2_series = operand2_(asset_data);
 
-    auto result = BinaryFnSeries<T,
+    auto result = BinaryOpSeries<T,
                                  std::decay_t<decltype(operand1_series)>,
                                  std::decay_t<decltype(operand2_series)>>{
      operand1_series, operand2_series};
@@ -64,7 +64,7 @@ public:
     const auto operand_series = operand_(asset_data);
 
     auto result =
-     UnaryFnSeries<T, std::decay_t<decltype(operand_series)>>{operand_series};
+     UnaryOpSeries<T, std::decay_t<decltype(operand_series)>>{operand_series};
 
     return result;
   }

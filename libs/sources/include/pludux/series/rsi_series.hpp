@@ -1,18 +1,18 @@
 #ifndef PLUDUX_PLUDUX_SERIES_RSI_SERIES_HPP
 #define PLUDUX_PLUDUX_SERIES_RSI_SERIES_HPP
 
+#include <cmath>
 #include <cstddef>
 #include <limits>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
-#include "unary_fn_series.hpp"
-
 import pludux.series.series_output;
 import pludux.series.ref_series;
 import pludux.series.change_series;
 import pludux.series.rma_series;
+import pludux.series.operators_series;
 
 namespace pludux {
 
@@ -33,7 +33,7 @@ public:
     const auto changes = ChangeSeries{series};
 
     const auto gains =
-     UnaryFnSeries<std::remove_cvref_t<decltype([](auto value) {
+     UnaryOpSeries<std::remove_cvref_t<decltype([](auto value) {
                      if(std::isnan(value)) {
                        return std::numeric_limits<ValueType>::quiet_NaN();
                      }
@@ -41,7 +41,7 @@ public:
                    })>,
                    std::remove_cvref_t<decltype(changes)>>{changes};
     const auto losses =
-     UnaryFnSeries<std::remove_cvref_t<decltype([](auto value) {
+     UnaryOpSeries<std::remove_cvref_t<decltype([](auto value) {
                      if(std::isnan(value)) {
                        return std::numeric_limits<ValueType>::quiet_NaN();
                      }

@@ -6,6 +6,7 @@ export import pludux.series.output_by_name_series;
 export import pludux.series.lookback_series;
 export import pludux.series.repeat_series;
 export import pludux.series.data_series;
+export import pludux.series.operators_series;
 export import pludux.series.change_series;
 export import pludux.series.roc_series;
 export import pludux.series.stoch_series;

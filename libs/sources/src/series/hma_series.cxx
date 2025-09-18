@@ -4,14 +4,13 @@ module;
 #include <limits>
 #include <utility>
 
-#include <pludux/series/binary_fn_series.hpp>
-
 export module pludux.series.hma_series;
 
 import pludux.series.series_output;
 import pludux.series.ref_series;
 import pludux.series.repeat_series;
 import pludux.series.wma_series;
+import pludux.series.operators_series;
 
 export namespace pludux {
 

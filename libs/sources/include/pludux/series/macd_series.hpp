@@ -5,12 +5,10 @@
 #include <limits>
 #include <utility>
 
-
-#include "binary_fn_series.hpp"
-
 import pludux.series.series_output;
 import pludux.series.ref_series;
 import pludux.series.ema_series;
+import pludux.series.operators_series;
 
 namespace pludux {
 

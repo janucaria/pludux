@@ -56,6 +56,7 @@ target_sources(${PROJECT_NAME}
         src/series/lookback_series.cxx
         src/series/data_series.cxx
         src/series/repeat_series.cxx
+        src/series/operators_series.cxx
         src/series/change_series.cxx
         src/series/roc_series.cxx
         src/series/stoch_series.cxx
