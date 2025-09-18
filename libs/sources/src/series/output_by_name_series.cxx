@@ -1,5 +1,4 @@
-#ifndef PLUDUX_PLUDUX_SERIES_OUTPUT_BY_NAME_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_OUTPUT_BY_NAME_SERIES_HPP
+module;
 
 #include <algorithm>
 #include <cstddef>
@@ -9,9 +8,11 @@
 #include <utility>
 #include <vector>
 
+export module pludux.series.output_by_name_series;
+
 import pludux.series.series_output;
 
-namespace pludux {
+export namespace pludux {
 
 template<typename TSeries>
 class OutputByNameSeries {
@@ -51,5 +52,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif

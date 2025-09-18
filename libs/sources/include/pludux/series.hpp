@@ -12,7 +12,6 @@
 #include <pludux/series/hma_series.hpp>
 #include <pludux/series/kc_series.hpp>
 #include <pludux/series/macd_series.hpp>
-#include <pludux/series/output_by_name_series.hpp>
 #include <pludux/series/pivot_lows_series.hpp>
 #include <pludux/series/poly_series.hpp>
 #include <pludux/series/ref_series.hpp>

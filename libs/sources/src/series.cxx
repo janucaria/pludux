@@ -1,3 +1,4 @@
 export module pludux.series;
 
 export import pludux.series.series_output;
+export import pludux.series.output_by_name_series;
