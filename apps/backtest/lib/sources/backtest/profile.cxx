@@ -5,7 +5,7 @@ module;
 #include <string>
 #include <utility>
 
-export module pludux.backtest.profile;
+export module pludux.backtest:profile;
 
 export namespace pludux::backtest {
 

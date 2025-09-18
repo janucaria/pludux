@@ -5,7 +5,7 @@ module;
 #include <ctime>
 #include <limits>
 
-export module pludux.backtest.trade_record;
+export module pludux.backtest:trade_record;
 
 export namespace pludux::backtest {
 

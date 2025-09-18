@@ -6,9 +6,9 @@ module;
 #include <utility>
 #include <vector>
 
-export module pludux.backtest.backtest_summary;
+export module pludux.backtest:backtest_summary;
 
-export import pludux.backtest.trade_session;
+import :trade_session;
 
 export namespace pludux::backtest {
 

@@ -3,7 +3,7 @@ module;
 #include <string>
 #include <utility>
 
-export module pludux.backtest.asset;
+export module pludux.backtest:asset;
 
 import pludux.asset_snapshot;
 

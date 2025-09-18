@@ -10,9 +10,9 @@ module;
 #include <utility>
 #include <vector>
 
-export module pludux.backtest.trade_position;
+export module pludux.backtest:trade_position;
 
-export import pludux.backtest.trade_record;
+import :trade_record;
 
 export namespace pludux::backtest {
 

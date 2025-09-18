@@ -9,13 +9,13 @@ module;
 
 #include <nlohmann/json.hpp>
 
-export module pludux.backtest.strategy;
+export module pludux.backtest:strategy;
 
 import pludux.config_parser;
 import pludux.asset_snapshot;
 
-import pludux.backtest.trade_entry;
-import pludux.backtest.trade_exit;
+import :trade_entry;
+import :trade_exit;
 
 export namespace pludux::backtest {
 

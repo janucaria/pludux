@@ -3,7 +3,7 @@ module;
 #include <cstddef>
 #include <ctime>
 
-export module pludux.backtest.trade_exit;
+export module pludux.backtest:trade_exit;
 
 export namespace pludux::backtest {
 

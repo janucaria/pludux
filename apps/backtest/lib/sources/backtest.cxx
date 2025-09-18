@@ -15,18 +15,17 @@ module;
 
 export module pludux.backtest;
 
-export import pludux.config_parser;
-export import pludux.asset_snapshot;
+export import pludux;
 
-export import pludux.backtest.asset;
-export import pludux.backtest.profile;
-export import pludux.backtest.trade_entry;
-export import pludux.backtest.trade_exit;
-export import pludux.backtest.trade_record;
-export import pludux.backtest.trade_position;
-export import pludux.backtest.trade_session;
-export import pludux.backtest.backtest_summary;
-export import pludux.backtest.strategy;
+export import :asset;
+export import :profile;
+export import :trade_entry;
+export import :trade_exit;
+export import :trade_record;
+export import :trade_position;
+export import :trade_session;
+export import :backtest_summary;
+export import :strategy;
 
 export namespace pludux {
 

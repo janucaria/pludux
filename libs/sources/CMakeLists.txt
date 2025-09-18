@@ -99,7 +99,7 @@ target_sources(${PROJECT_NAME}
 
         src/screener.cxx
 
-        src/pludux.cxx
+        src/exports.cxx
 )
 
 target_compile_features(${PROJECT_NAME}
