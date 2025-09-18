@@ -12,6 +12,7 @@ export import pludux.series.stoch_series;
 
 export import pludux.series.sma_series;
 export import pludux.series.wma_series;
+export import pludux.series.ema_series;
 
 export import pludux.series.rvol_series;
 

@@ -8,11 +8,6 @@
 #include <type_traits>
 #include <utility>
 
-
-#include "atr_series.hpp"
-#include "binary_fn_series.hpp"
-#include "ema_series.hpp"
-
 import pludux.series.series_output;
 
 namespace pludux {

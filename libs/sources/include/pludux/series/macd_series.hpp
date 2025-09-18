@@ -7,10 +7,10 @@
 
 
 #include "binary_fn_series.hpp"
-#include "ema_series.hpp"
 
 import pludux.series.series_output;
 import pludux.series.ref_series;
+import pludux.series.ema_series;
 
 namespace pludux {
 

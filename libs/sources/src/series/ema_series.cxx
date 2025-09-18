@@ -1,5 +1,4 @@
-#ifndef PLUDUX_PLUDUX_SERIES_EMA_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_EMA_SERIES_HPP
+module;
 
 #include <cmath>
 #include <cstddef>
@@ -10,7 +9,9 @@
 import pludux.series.series_output;
 import pludux.series.sma_series;
 
-namespace pludux {
+export module pludux.series.ema_series;
+
+export namespace pludux {
 
 template<typename TSeries>
 class EmaSeries {
@@ -83,5 +84,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif
