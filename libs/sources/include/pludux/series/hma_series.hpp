@@ -6,11 +6,11 @@
 #include <utility>
 
 #include "binary_fn_series.hpp"
-#include "wma_series.hpp"
 
 import pludux.series.series_output;
 import pludux.series.ref_series;
 import pludux.series.repeat_series;
+import pludux.series.wma_series;
 
 namespace pludux {
 

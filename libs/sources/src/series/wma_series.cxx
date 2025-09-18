@@ -1,14 +1,15 @@
-#ifndef PLUDUX_PLUDUX_SERIES_WMA_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_WMA_SERIES_HPP
+module;
 
 #include <cstddef>
 #include <limits>
 #include <utility>
 #include <vector>
 
+export module pludux.series.wma_series;
+
 import pludux.series.series_output;
 
-namespace pludux {
+export namespace pludux {
 
 template<typename TSeries>
 class WmaSeries {
@@ -64,5 +65,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif

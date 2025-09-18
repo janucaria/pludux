@@ -59,6 +59,7 @@ target_sources(${PROJECT_NAME}
         src/series/change_series.cxx
         
         src/series/sma_series.cxx
+        src/series/wma_series.cxx
 
         src/series/poly_series.cxx
 

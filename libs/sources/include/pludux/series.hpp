@@ -15,6 +15,5 @@
 #include <pludux/series/stoch_rsi_series.hpp>
 #include <pludux/series/stoch_series.hpp>
 #include <pludux/series/unary_fn_series.hpp>
-#include <pludux/series/wma_series.hpp>
 
 #endif

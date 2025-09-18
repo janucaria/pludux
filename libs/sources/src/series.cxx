@@ -9,6 +9,7 @@ export import pludux.series.data_series;
 export import pludux.series.change_series;
 
 export import pludux.series.sma_series;
+export import pludux.series.wma_series;
 
 export import pludux.series.poly_series;
 
