@@ -31,7 +31,6 @@ target_sources(${PROJECT_NAME}
     src/screener/stoch_method.cpp
     src/screener/stoch_rsi_method.cpp
     src/screener/reference_method.cpp
-    src/screener/value_method.cpp
 
     src/screener/method_registry.cpp
 )
@@ -85,6 +84,8 @@ target_sources(${PROJECT_NAME}
         src/config_parser.cxx
 
         
+        src/screener/methods/value_method.cxx
+        
         src/screener/filters/screener_filter.cxx
         src/screener/filters/all_of_filter.cxx
         src/screener/filters/any_of_filter.cxx
@@ -93,6 +94,8 @@ target_sources(${PROJECT_NAME}
         src/screener/filters/logical_filter.cxx
         src/screener/filters/crossover_filter.cxx
         src/screener/filters/crossunder_filter.cxx
+
+
         src/screener.cxx
 )
 

@@ -11,3 +11,7 @@ export import pludux.screener.logical_filter;
 
 export import pludux.screener.crossover_filter;
 export import pludux.screener.crossunder_filter;
+
+
+export import pludux.screener.value_method;
+
