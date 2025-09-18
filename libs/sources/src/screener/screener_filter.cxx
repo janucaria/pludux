@@ -1,15 +1,15 @@
-#ifndef PLUDUX_PLUDUX_SCREENER_SCREENER_FILTER_HPP
-#define PLUDUX_PLUDUX_SCREENER_SCREENER_FILTER_HPP
+module;
 
 #include <functional>
 #include <memory>
 #include <type_traits>
 #include <vector>
 
+export module pludux.screener.screener_filter;
 
 import pludux.asset_snapshot;
 
-namespace pludux::screener {
+export namespace pludux::screener {
 
 class ScreenerFilter {
 public:
@@ -20,11 +20,20 @@ public:
   {
   }
 
-  auto operator()(AssetSnapshot asset_snapshot) const noexcept -> bool;
+  auto operator()(AssetSnapshot asset_snapshot) const noexcept -> bool
+  {
+    return impl_->operator()(std::move(asset_snapshot));
+  }
 
-  auto operator==(const ScreenerFilter& other) const noexcept -> bool;
+  auto operator==(const ScreenerFilter& other) const noexcept -> bool
+  {
+    return impl_->operator==(other);
+  }
 
-  auto operator!=(const ScreenerFilter& other) const noexcept -> bool;
+  auto operator!=(const ScreenerFilter& other) const noexcept -> bool
+  {
+    return impl_->operator!=(other);
+  }
 
   template<typename UImpl>
   friend auto screener_filter_cast(const ScreenerFilter& method) noexcept
@@ -81,5 +90,3 @@ private:
 };
 
 } // namespace pludux::screener
-
-#endif

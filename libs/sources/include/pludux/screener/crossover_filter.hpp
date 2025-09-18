@@ -3,10 +3,10 @@
 
 #include <vector>
 
-#include <pludux/screener/screener_filter.hpp>
 #include <pludux/screener/screener_method.hpp>
 
 import pludux.asset_snapshot;
+import pludux.screener.screener_filter;
 
 namespace pludux::screener {
 

@@ -29,6 +29,5 @@
 #include "screener/crossover_filter.hpp"
 #include "screener/crossunder_filter.hpp"
 #include "screener/logical_filter.hpp"
-#include "screener/screener_filter.hpp"
 
 #endif

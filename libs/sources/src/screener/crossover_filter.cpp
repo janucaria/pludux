@@ -1,6 +1,5 @@
 #include <vector>
 
-#include <pludux/screener/screener_filter.hpp>
 #include <pludux/screener/screener_method.hpp>
 
 #include <pludux/screener/crossover_filter.hpp>
