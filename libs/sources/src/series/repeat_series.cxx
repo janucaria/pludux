@@ -1,12 +1,13 @@
-#ifndef PLUDUX_PLUDUX_SERIES_REPEAT_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_REPEAT_SERIES_HPP
+module;
 
 #include <cstddef>
+#include <limits>
 
+export module pludux.series.repeat_series;
 
 import pludux.series.series_output;
 
-namespace pludux {
+export namespace pludux {
 
 template<typename T>
 class RepeatSeries {
@@ -19,10 +20,6 @@ public:
   {
   }
 
-  /**
-   * The 0 reverse_index is the latest value.
-   * If the reverse_index is out of bounds, return NaN.
-   */
   auto operator[](std::size_t index) const -> ValueType
   {
     if(index >= size()) {
@@ -43,5 +40,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif
