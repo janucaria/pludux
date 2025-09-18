@@ -13,6 +13,8 @@
 #include "sma_series.hpp"
 #include "unary_fn_series.hpp"
 
+import pludux.series.series_output;
+
 namespace pludux {
 
 template<typename TSeries>

@@ -5,12 +5,13 @@
 #include <limits>
 #include <utility>
 
-#include <pludux/series/series_output.hpp>
 
 #include "binary_fn_series.hpp"
 #include "ref_series.hpp"
 #include "repeat_series.hpp"
 #include "wma_series.hpp"
+
+import pludux.series.series_output;
 
 namespace pludux {
 

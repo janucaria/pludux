@@ -5,11 +5,12 @@
 #include <limits>
 #include <utility>
 
-#include <pludux/series/series_output.hpp>
 
 #include "rsi_series.hpp"
 #include "sma_series.hpp"
 #include "stoch_series.hpp"
+
+import pludux.series.series_output;
 
 namespace pludux {
 

@@ -108,6 +108,9 @@ target_sources(${PROJECT_NAME}
       BASE_DIRS src/
       FILES
 
+        src/series/series_output.cxx
+        src/series.cxx
+
         src/asset_history.cxx
         src/asset_snapshot.cxx
         src/config_parser.cxx

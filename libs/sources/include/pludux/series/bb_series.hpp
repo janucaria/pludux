@@ -7,11 +7,14 @@
 #include <type_traits>
 #include <utility>
 
-#include <pludux/series/series_output.hpp>
 
 #include "binary_fn_series.hpp"
 #include "ref_series.hpp"
 #include "sma_series.hpp"
+
+import pludux.series.series_output;
+
+import pludux.series.series_output;
 
 namespace pludux {
 

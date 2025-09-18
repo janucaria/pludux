@@ -3,7 +3,8 @@
 
 #include <cstddef>
 
-#include <pludux/series/series_output.hpp>
+
+import pludux.series.series_output;
 
 namespace pludux {
 

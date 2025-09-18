@@ -7,7 +7,8 @@
 #include <type_traits>
 #include <utility>
 
-#include <pludux/series/series_output.hpp>
+
+import pludux.series.series_output;
 
 namespace pludux {
 

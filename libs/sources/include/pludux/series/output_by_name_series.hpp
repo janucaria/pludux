@@ -9,7 +9,7 @@
 #include <utility>
 #include <vector>
 
-#include "series_output.hpp"
+import pludux.series.series_output;
 
 namespace pludux {
 

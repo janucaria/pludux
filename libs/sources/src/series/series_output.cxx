@@ -1,12 +1,13 @@
-#ifndef PLUDUX_PLUDUX_SERIES_SERIES_OUTPUT_HPP
-#define PLUDUX_PLUDUX_SERIES_SERIES_OUTPUT_HPP
+module;
 
 #include <cstddef>
 #include <limits>
 #include <unordered_map>
 #include <vector>
 
-namespace pludux {
+export module pludux.series.series_output;
+
+export namespace pludux {
 
 enum class OutputName {
   Default,
@@ -98,5 +99,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif

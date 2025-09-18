@@ -9,7 +9,8 @@
 #include <vector>
 
 #include <pludux/series/pivot_lows_series.hpp>
-#include <pludux/series/series_output.hpp>
+
+import pludux.series.series_output;
 
 namespace pludux {
 
