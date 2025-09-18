@@ -1,5 +1,4 @@
 #include <pludux/screener/screener_filter.hpp>
-#include <pludux/series.hpp>
 
 namespace pludux::screener {
 

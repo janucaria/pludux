@@ -1,5 +1,4 @@
 #include <pludux/screener/stoch_rsi_method.hpp>
-#include <pludux/series.hpp>
 
 namespace pludux::screener {
 

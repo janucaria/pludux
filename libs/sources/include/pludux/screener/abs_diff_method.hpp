@@ -4,7 +4,6 @@
 #include <cstddef>
 
 #include <pludux/screener/arithmetic_method.hpp>
-#include <pludux/series.hpp>
 
 import pludux.asset_snapshot;
 

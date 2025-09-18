@@ -6,8 +6,6 @@ module;
 #include <string_view>
 #include <unordered_map>
 
-#include <pludux/series.hpp>
-
 export module pludux.asset_snapshot;
 
 export import pludux.series;

@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 
-#include <pludux/series.hpp>
 
 import pludux.asset_snapshot;
 

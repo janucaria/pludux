@@ -6,8 +6,6 @@
 
 #include <pludux/screener/ohlcv_method.hpp>
 #include <pludux/screener/screener_method.hpp>
-#include <pludux/series.hpp>
-#include <pludux/ta.hpp>
 
 import pludux.asset_snapshot;
 
@@ -66,32 +64,32 @@ private:
 
 inline constexpr auto sma_wrapper = []<typename TSeries>(TSeries series,
                                                          std::size_t period) {
-  return ta::sma(series, period);
+  return SmaSeries{series, period};
 };
 
 inline constexpr auto ema_wrapper = []<typename TSeries>(TSeries series,
                                                          std::size_t period) {
-  return ta::ema(series, period);
+  return EmaSeries{series, period};
 };
 
 inline constexpr auto wma_wrapper = []<typename TSeries>(TSeries series,
                                                          std::size_t period) {
-  return ta::wma(series, period);
+  return WmaSeries{series, period};
 };
 
 inline constexpr auto rma_wrapper = []<typename TSeries>(TSeries series,
                                                          std::size_t period) {
-  return ta::rma(series, period);
+  return RmaSeries{series, period};
 };
 
 inline constexpr auto hma_wrapper = []<typename TSeries>(TSeries series,
                                                          std::size_t period) {
-  return ta::hma(series, period);
+  return HmaSeries{series, period};
 };
 
 inline constexpr auto rsi_wrapper = []<typename TSeries>(TSeries series,
                                                          std::size_t period) {
-  return ta::rsi(series, period);
+  return RsiSeries{series, period};
 };
 
 inline constexpr auto roc_wrapper = []<typename TSeries>(TSeries series,

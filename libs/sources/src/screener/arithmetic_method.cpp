@@ -1,5 +1,4 @@
 #include <pludux/screener/arithmetic_method.hpp>
-#include <pludux/series.hpp>
 
 namespace pludux::screener {
 

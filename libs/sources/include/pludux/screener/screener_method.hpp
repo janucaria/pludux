@@ -6,9 +6,8 @@
 #include <type_traits>
 #include <vector>
 
-#include <pludux/series.hpp>
-
 import pludux.asset_snapshot;
+import pludux.series;
 
 namespace pludux::screener {
 

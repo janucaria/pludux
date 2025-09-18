@@ -12,7 +12,6 @@ module;
 #include <utility>
 #include <vector>
 
-#include <pludux/series.hpp>
 
 export module pludux.asset_history;
 

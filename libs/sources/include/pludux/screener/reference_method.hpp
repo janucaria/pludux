@@ -7,7 +7,6 @@
 #include <vector>
 
 #include <pludux/screener/method_registry.hpp>
-#include <pludux/series.hpp>
 
 import pludux.asset_snapshot;
 
