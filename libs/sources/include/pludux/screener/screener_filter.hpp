@@ -6,7 +6,6 @@
 #include <type_traits>
 #include <vector>
 
-#include <pludux/asset_snapshot.hpp>
 
 import pludux.asset_snapshot;
 

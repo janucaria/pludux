@@ -4,7 +4,6 @@
 #include <stdexcept>
 #include <vector>
 
-#include <pludux/asset_snapshot.hpp>
 
 #include <pludux/screener/lookback_method.hpp>
 

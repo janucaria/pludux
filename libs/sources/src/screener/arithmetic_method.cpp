@@ -1,4 +1,3 @@
-#include <pludux/asset_snapshot.hpp>
 #include <pludux/screener/arithmetic_method.hpp>
 #include <pludux/series.hpp>
 

@@ -3,7 +3,6 @@
 
 #include <vector>
 
-#include <pludux/asset_snapshot.hpp>
 #include <pludux/screener/screener_filter.hpp>
 #include <pludux/screener/screener_method.hpp>
 

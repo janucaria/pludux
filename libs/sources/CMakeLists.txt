@@ -14,7 +14,6 @@ add_library(${CMAKE_PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
 target_sources(${PROJECT_NAME}
   PUBLIC
-    src/asset_history.cpp
 
     src/screener/abs_diff_method.cpp
     src/screener/arithmetic_method.cpp
@@ -46,7 +45,6 @@ target_sources(${PROJECT_NAME}
     FILE_SET HEADERS
       BASE_DIRS include/
       FILES
-        include/pludux/asset_history.cpp
         include/pludux/screener.hpp
         include/pludux/series.hpp
         include/pludux/ta.hpp
@@ -109,6 +107,8 @@ target_sources(${PROJECT_NAME}
     FILE_SET CXX_MODULES
       BASE_DIRS src/
       FILES
+
+        src/asset_history.cxx
         src/asset_snapshot.cxx
         src/config_parser.cxx
 )

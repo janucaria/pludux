@@ -11,10 +11,6 @@ module;
 #include <implot.h>
 #include <nlohmann/json.hpp>
 
-#include <pludux/asset_history.hpp>
-#include <pludux/screener.hpp>
-#include <pludux/ta.hpp>
-
 export module pludux.apps.backtest.application;
 
 import pludux.apps.backtest.actions;

@@ -7,9 +7,6 @@ module;
 #include <unordered_map>
 #include <vector>
 
-#include <pludux/asset_history.hpp>
-#include <pludux/screener.hpp>
-
 export module pludux.apps.backtest.app_state_data;
 
 export import pludux.backtest;

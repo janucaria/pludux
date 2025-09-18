@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 
-#include <pludux/asset_snapshot.hpp>
 #include <pludux/screener/method_registry.hpp>
 #include <pludux/series.hpp>
 

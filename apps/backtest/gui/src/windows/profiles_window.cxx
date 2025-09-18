@@ -1,11 +1,11 @@
 module;
 
+#include <algorithm>
 #include <format>
 #include <iterator>
+#include <memory>
 
 #include <imgui.h>
-
-#include <pludux/asset_snapshot.hpp>
 
 export module pludux.apps.backtest.windows:profiles_window;
 

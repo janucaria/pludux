@@ -1,10 +1,10 @@
 module;
 
 #include <iterator>
+#include <string>
 
 #include <imgui.h>
 
-#include <pludux/asset_snapshot.hpp>
 
 export module pludux.apps.backtest.windows:assets_window;
 

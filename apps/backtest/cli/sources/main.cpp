@@ -6,7 +6,6 @@
 #include <iostream>
 #include <unordered_map>
 
-#include <pludux/asset_history.hpp>
 #include <pludux/screener.hpp>
 
 #include <nlohmann/json.hpp>

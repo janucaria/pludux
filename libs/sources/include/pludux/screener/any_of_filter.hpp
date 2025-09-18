@@ -3,7 +3,6 @@
 
 #include <vector>
 
-#include <pludux/asset_snapshot.hpp>
 #include <pludux/screener/screener_filter.hpp>
 
 import pludux.asset_snapshot;
@@ -28,4 +27,4 @@ private:
 
 } // namespace pludux::screener
 
-#endif // PLUDUX_PLUDUX_SCREENER_ANY_OF_FILTER_HPP
+#endif

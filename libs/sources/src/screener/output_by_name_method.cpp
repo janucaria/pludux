@@ -4,7 +4,6 @@
 #include <stdexcept>
 #include <vector>
 
-#include <pludux/asset_snapshot.hpp>
 
 #include <pludux/screener/output_by_name_method.hpp>
 

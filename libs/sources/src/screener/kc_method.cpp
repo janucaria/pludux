@@ -1,4 +1,3 @@
-#include <pludux/asset_snapshot.hpp>
 #include <pludux/screener/kc_method.hpp>
 
 namespace pludux::screener {

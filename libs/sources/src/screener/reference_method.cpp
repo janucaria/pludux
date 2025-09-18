@@ -1,6 +1,5 @@
 #include <utility>
 
-#include <pludux/asset_snapshot.hpp>
 
 #include <pludux/screener/reference_method.hpp>
 

@@ -3,7 +3,6 @@
 
 #include <vector>
 
-#include <pludux/asset_snapshot.hpp>
 #include <pludux/series.hpp>
 
 import pludux.asset_snapshot;
