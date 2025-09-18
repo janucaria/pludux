@@ -59,7 +59,6 @@ target_sources(${PROJECT_NAME}
         src/series/operators_series.cxx
         src/series/change_series.cxx
         src/series/roc_series.cxx
-        src/series/stoch_series.cxx
 
         src/series/poly_series.cxx
         
@@ -68,6 +67,7 @@ target_sources(${PROJECT_NAME}
         src/series/ema_series.cxx
         src/series/hma_series.cxx
         src/series/rma_series.cxx
+        src/series/macd_series.cxx
 
         src/series/rvol_series.cxx
         src/series/kc_series.cxx
@@ -75,6 +75,10 @@ target_sources(${PROJECT_NAME}
 
         src/series/tr_series.cxx
         src/series/atr_series.cxx
+
+        src/series/stoch_series.cxx
+        src/series/rsi_series.cxx
+        src/series/stoch_rsi_series.cxx
 
         src/series/pivot_lows_series.cxx
         src/series/bullish_divergence_series.cxx

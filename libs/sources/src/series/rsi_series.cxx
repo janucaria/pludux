@@ -1,5 +1,4 @@
-#ifndef PLUDUX_PLUDUX_SERIES_RSI_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_RSI_SERIES_HPP
+module;
 
 #include <cmath>
 #include <cstddef>
@@ -8,13 +7,15 @@
 #include <utility>
 #include <vector>
 
+export module pludux.series.rsi_series;
+
 import pludux.series.series_output;
 import pludux.series.ref_series;
 import pludux.series.change_series;
 import pludux.series.rma_series;
 import pludux.series.operators_series;
 
-namespace pludux {
+export namespace pludux {
 
 template<typename TSeries>
 class RsiSeries {
@@ -69,5 +70,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif

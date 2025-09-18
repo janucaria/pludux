@@ -1,5 +1,6 @@
 module;
 
+#include <cmath>
 #include <cstddef>
 #include <limits>
 #include <tuple>
@@ -48,7 +49,7 @@ public:
       sum_squared_diff += diff * diff;
     }
 
-    const auto std_dev = sqrt(sum_squared_diff / period);
+    const auto std_dev = std::sqrt(sum_squared_diff / period);
     const auto std_dev_scaled = std_dev * stddev_;
 
     const auto middle = ma_[index];

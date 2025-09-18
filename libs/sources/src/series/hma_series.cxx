@@ -2,6 +2,7 @@ module;
 
 #include <cstddef>
 #include <limits>
+#include <cmath>
 #include <utility>
 
 export module pludux.series.hma_series;
@@ -34,7 +35,8 @@ public:
     const auto wam2 = WmaSeries{RefSeries{series_}, period_};
     const auto diff = SubtractSeries{times_2_wam1, wam2};
 
-    const auto hma = WmaSeries{diff, static_cast<std::size_t>(sqrt(period_))};
+    const auto hma =
+     WmaSeries{diff, static_cast<std::size_t>(std::sqrt(period_))};
 
     return hma[index];
   }

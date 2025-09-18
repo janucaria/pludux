@@ -1,15 +1,17 @@
-#ifndef PLUDUX_PLUDUX_SERIES_STOCH_RSI_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_STOCH_RSI_SERIES_HPP
+module;
 
+#include <algorithm>
 #include <cstddef>
 #include <limits>
+#include <numeric>
 #include <utility>
 
-#include "rsi_series.hpp"
+export module pludux.series.stoch_rsi_series;
 
 import pludux.series.series_output;
+import pludux.series.rsi_series;
 
-namespace pludux {
+export namespace pludux {
 
 template<typename TSeries>
 class StochRsiSeries {
@@ -125,5 +127,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif

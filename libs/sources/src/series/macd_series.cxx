@@ -1,16 +1,17 @@
-#ifndef PLUDUX_PLUDUX_SERIES_MACD_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_MACD_SERIES_HPP
+module;
 
 #include <cstddef>
 #include <limits>
 #include <utility>
+
+export module pludux.series.macd_series;
 
 import pludux.series.series_output;
 import pludux.series.ref_series;
 import pludux.series.ema_series;
 import pludux.series.operators_series;
 
-namespace pludux {
+export namespace pludux {
 
 template<typename TSeries>
 class MacdSeries {
@@ -67,5 +68,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif
