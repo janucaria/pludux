@@ -2,6 +2,7 @@ module;
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <limits>
 #include <type_traits>

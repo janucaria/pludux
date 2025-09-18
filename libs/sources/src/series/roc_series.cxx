@@ -1,14 +1,14 @@
-#ifndef PLUDUX_PLUDUX_SERIES_ROC_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_ROC_SERIES_HPP
+module;
 
 #include <cstddef>
 #include <limits>
 #include <utility>
 
+export module pludux.series.roc_series;
 
 import pludux.series.series_output;
 
-namespace pludux {
+export namespace pludux {
 
 template<typename TSeries>
 class RocSeries {
@@ -46,5 +46,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif
