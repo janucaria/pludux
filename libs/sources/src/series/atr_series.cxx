@@ -1,5 +1,4 @@
-#ifndef PLUDUX_PLUDUX_SERIES_ATR_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_ATR_SERIES_HPP
+module;
 
 #include <cassert>
 #include <cstddef>
@@ -7,11 +6,13 @@
 #include <type_traits>
 #include <utility>
 
+export module pludux.series.atr_series;
+
 import pludux.series.series_output;
 import pludux.series.tr_series;
 import pludux.series.rma_series;
 
-namespace pludux {
+export namespace pludux {
 
 template<typename THighSeries, typename TLowSeries, typename TCloseSeries>
 class AtrSeries {
@@ -48,5 +49,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef PLUDUX_PLUDUX_SERIES_BB_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_BB_SERIES_HPP
+module;
 
 #include <cstddef>
 #include <limits>
@@ -7,14 +6,12 @@
 #include <type_traits>
 #include <utility>
 
-
-#include "binary_fn_series.hpp"
+export module pludux.series.bb_series;
 
 import pludux.series.series_output;
-
 import pludux.series.sma_series;
 
-namespace pludux {
+export namespace pludux {
 
 template<typename TMaSeries>
   requires requires(TMaSeries ma) {
@@ -83,5 +80,3 @@ template<typename TSeries>
 BbSeries(TSeries, std::size_t, double) -> BbSeries<SmaSeries<TSeries>>;
 
 } // namespace pludux
-
-#endif

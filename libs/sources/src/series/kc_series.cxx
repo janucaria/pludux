@@ -1,5 +1,4 @@
-#ifndef PLUDUX_PLUDUX_SERIES_KC_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_KC_SERIES_HPP
+module;
 
 #include <cassert>
 #include <cstddef>
@@ -8,9 +7,11 @@
 #include <type_traits>
 #include <utility>
 
+export module pludux.series.kc_series;
+
 import pludux.series.series_output;
 
-namespace pludux {
+export namespace pludux {
 
 template<typename TRangeSeries, typename TMaSeries>
 class KcSeries {
@@ -53,5 +54,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif
