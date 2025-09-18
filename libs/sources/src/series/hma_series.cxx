@@ -1,18 +1,19 @@
-#ifndef PLUDUX_PLUDUX_SERIES_HMA_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_HMA_SERIES_HPP
+module;
 
 #include <cstddef>
 #include <limits>
 #include <utility>
 
-#include "binary_fn_series.hpp"
+#include <pludux/series/binary_fn_series.hpp>
+
+export module pludux.series.hma_series;
 
 import pludux.series.series_output;
 import pludux.series.ref_series;
 import pludux.series.repeat_series;
 import pludux.series.wma_series;
 
-namespace pludux {
+export namespace pludux {
 
 template<typename TSeries>
 class HmaSeries {
@@ -60,5 +61,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif

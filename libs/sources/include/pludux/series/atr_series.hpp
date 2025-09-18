@@ -7,10 +7,9 @@
 #include <type_traits>
 #include <utility>
 
-#include "rma_series.hpp"
-
 import pludux.series.series_output;
 import pludux.series.tr_series;
+import pludux.series.rma_series;
 
 namespace pludux {
 
