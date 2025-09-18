@@ -22,7 +22,4 @@
 #include "screener/ta_with_period_method.hpp"
 #include "screener/value_method.hpp"
 
-#include "screener/crossover_filter.hpp"
-#include "screener/crossunder_filter.hpp"
-
 #endif

@@ -8,3 +8,6 @@ export import pludux.screener.boolean_filter;
 
 export import pludux.screener.comparison_filter;
 export import pludux.screener.logical_filter;
+
+export import pludux.screener.crossover_filter;
+export import pludux.screener.crossunder_filter;

@@ -34,10 +34,6 @@ target_sources(${PROJECT_NAME}
     src/screener/value_method.cpp
 
     src/screener/method_registry.cpp
-
-    src/screener/crossover_filter.cpp
-    src/screener/crossunder_filter.cpp
-
 )
 
 target_sources(${PROJECT_NAME}
@@ -89,12 +85,14 @@ target_sources(${PROJECT_NAME}
         src/config_parser.cxx
 
         
-        src/screener/screener_filter.cxx
-        src/screener/all_of_filter.cxx
-        src/screener/any_of_filter.cxx
-        src/screener/boolean_filter.cxx
-        src/screener/comparison_filter.cxx
-        src/screener/logical_filter.cxx
+        src/screener/filters/screener_filter.cxx
+        src/screener/filters/all_of_filter.cxx
+        src/screener/filters/any_of_filter.cxx
+        src/screener/filters/boolean_filter.cxx
+        src/screener/filters/comparison_filter.cxx
+        src/screener/filters/logical_filter.cxx
+        src/screener/filters/crossover_filter.cxx
+        src/screener/filters/crossunder_filter.cxx
         src/screener.cxx
 )
 
