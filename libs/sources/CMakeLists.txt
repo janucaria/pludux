@@ -63,6 +63,8 @@ target_sources(${PROJECT_NAME}
         src/series/sma_series.cxx
         src/series/wma_series.cxx
 
+        src/series/rvol_series.cxx
+
         src/series/poly_series.cxx
 
         src/series/tr_series.cxx

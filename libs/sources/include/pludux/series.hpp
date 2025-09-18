@@ -10,7 +10,6 @@
 #include <pludux/series/macd_series.hpp>
 #include <pludux/series/rma_series.hpp>
 #include <pludux/series/rsi_series.hpp>
-#include <pludux/series/rvol_series.hpp>
 #include <pludux/series/stoch_rsi_series.hpp>
 #include <pludux/series/unary_fn_series.hpp>
 

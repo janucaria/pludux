@@ -13,6 +13,8 @@ export import pludux.series.stoch_series;
 export import pludux.series.sma_series;
 export import pludux.series.wma_series;
 
+export import pludux.series.rvol_series;
+
 export import pludux.series.poly_series;
 
 export import pludux.series.tr_series;

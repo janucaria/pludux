@@ -1,14 +1,15 @@
-#ifndef PLUDUX_PLUDUX_SERIES_RVOL_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_RVOL_SERIES_HPP
+module;
 
 #include <cstddef>
 #include <limits>
 #include <utility>
 
+export module pludux.series.rvol_series;
+
 import pludux.series.series_output;
 import pludux.series.sma_series;
 
-namespace pludux {
+export namespace pludux {
 
 template<typename TSeries>
 class RvolSeries {
@@ -40,5 +41,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif
