@@ -7,6 +7,7 @@
 
 #include <pludux/screener/screener_method.hpp>
 
+
 namespace pludux::screener {
 
 class MethodRegistry {

@@ -10,6 +10,8 @@
 #include <pludux/screener/method_registry.hpp>
 #include <pludux/series.hpp>
 
+import pludux.asset_snapshot;
+
 namespace pludux::screener {
 
 class ReferenceMethod {

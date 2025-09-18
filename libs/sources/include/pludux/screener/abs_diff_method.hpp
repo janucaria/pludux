@@ -7,6 +7,8 @@
 #include <pludux/screener/arithmetic_method.hpp>
 #include <pludux/series.hpp>
 
+import pludux.asset_snapshot;
+
 namespace pludux::screener {
 
 namespace details {

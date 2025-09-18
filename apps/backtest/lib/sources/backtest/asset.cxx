@@ -8,6 +8,8 @@ module;
 
 export module pludux.backtest.asset;
 
+import pludux.asset_snapshot;
+
 export namespace pludux::backtest {
 
 class Asset {

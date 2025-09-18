@@ -6,6 +6,8 @@
 #include <pludux/asset_snapshot.hpp>
 #include <pludux/screener/screener_filter.hpp>
 
+import pludux.asset_snapshot;
+
 namespace pludux::screener {
 
 class AnyOfFilter {

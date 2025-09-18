@@ -10,6 +10,8 @@
 #include <pludux/series.hpp>
 #include <pludux/ta.hpp>
 
+import pludux.asset_snapshot;
+
 namespace pludux::screener {
 
 namespace details {

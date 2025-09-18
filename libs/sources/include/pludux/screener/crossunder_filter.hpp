@@ -7,6 +7,8 @@
 #include <pludux/screener/screener_filter.hpp>
 #include <pludux/screener/screener_method.hpp>
 
+import pludux.asset_snapshot;
+
 namespace pludux::screener {
 
 class CrossunderFilter {

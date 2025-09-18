@@ -19,6 +19,7 @@ module;
 export module pludux.backtest;
 
 export import pludux.config_parser;
+export import pludux.asset_snapshot;
 
 export import pludux.backtest.asset;
 export import pludux.backtest.profile;

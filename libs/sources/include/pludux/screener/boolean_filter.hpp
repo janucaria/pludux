@@ -3,6 +3,8 @@
 
 #include <pludux/asset_snapshot.hpp>
 
+import pludux.asset_snapshot;
+
 namespace pludux::screener {
 
 namespace detail {
