@@ -7,9 +7,9 @@ module;
 #include <string>
 #include <vector>
 
-export module pludux.screener.data_method;
+export module pludux:screener.data_method;
 
-import pludux.asset_snapshot;
+import :asset_snapshot;
 
 export namespace pludux::screener {
 

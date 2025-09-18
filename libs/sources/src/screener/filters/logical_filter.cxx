@@ -4,10 +4,10 @@ module;
 #include <type_traits>
 #include <vector>
 
-export module pludux.screener.logical_filter;
+export module pludux:screener.logical_filter;
 
-import pludux.asset_snapshot;
-import pludux.screener.screener_filter;
+import :asset_snapshot;
+import :screener.screener_filter;
 
 namespace pludux::screener {
 

@@ -3,12 +3,12 @@ module;
 #include <cstddef>
 #include <utility>
 
-export module pludux.screener.hidden_bullish_divergence_method;
+export module pludux:screener.hidden_bullish_divergence_method;
 
-import pludux.asset_snapshot;
-import pludux.screener.screener_method;
-import pludux.screener.ohlcv_method;
-import pludux.screener.ta_with_period_method;
+import :asset_snapshot;
+import :screener.screener_method;
+import :screener.ohlcv_method;
+import :screener.ta_with_period_method;
 
 export namespace pludux::screener {
 

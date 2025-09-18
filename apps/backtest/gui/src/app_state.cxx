@@ -3,11 +3,10 @@ module;
 #include <queue>
 #include <vector>
 
-export module pludux.apps.backtest.app_state;
+export module pludux.apps.backtest:app_state;
 
-export import pludux.apps.backtest.actions;
-
-export import pludux.apps.backtest.app_state_data;
+import :actions;
+import :app_state_data;
 
 export namespace pludux::apps {
 

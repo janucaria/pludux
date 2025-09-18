@@ -5,10 +5,10 @@ module;
 #include <type_traits>
 #include <vector>
 
-export module pludux.screener.screener_method;
+export module pludux:screener.screener_method;
 
-import pludux.asset_snapshot;
-import pludux.series;
+import :asset_snapshot;
+import :series;
 
 export namespace pludux::screener {
 

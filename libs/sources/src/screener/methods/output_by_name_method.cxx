@@ -2,10 +2,10 @@ module;
 
 #include <utility>
 
-export module pludux.screener.output_by_name_method;
+export module pludux:screener.output_by_name_method;
 
-import pludux.asset_snapshot;
-import pludux.screener.screener_method;
+import :asset_snapshot;
+import :screener.screener_method;
 
 export namespace pludux::screener {
 

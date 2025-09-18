@@ -6,11 +6,11 @@ module;
 #include <type_traits>
 #include <utility>
 
-export module pludux.series.atr_series;
+export module pludux:series.atr_series;
 
-import pludux.series.series_output;
-import pludux.series.tr_series;
-import pludux.series.rma_series;
+import :series.series_output;
+import :series.tr_series;
+import :series.rma_series;
 
 export namespace pludux {
 

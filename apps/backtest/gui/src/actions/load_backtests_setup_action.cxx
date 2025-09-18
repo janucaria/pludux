@@ -13,9 +13,9 @@ module;
 
 #include <rapidcsv.h>
 
-export module pludux.apps.backtest.actions:load_backtests_setup_action;
+export module pludux.apps.backtest:actions.load_backtests_setup_action;
 
-import pludux.apps.backtest.app_state_data;
+import :app_state_data;
 
 export namespace pludux::apps {
 

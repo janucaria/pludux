@@ -5,7 +5,7 @@ module;
 
 export module pludux.backtest:asset;
 
-import pludux.asset_snapshot;
+import pludux;
 
 export namespace pludux::backtest {
 

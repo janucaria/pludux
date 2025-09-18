@@ -6,11 +6,10 @@ module;
 #include <string_view>
 #include <unordered_map>
 
-export module pludux.asset_snapshot;
+export module pludux:asset_snapshot;
 
-export import pludux.series;
-
-export import pludux.asset_history;
+export import :series;
+export import :asset_history;
 
 export namespace pludux {
 

@@ -4,9 +4,9 @@ module;
 #include <limits>
 #include <utility>
 
-export module pludux.series.pivot_lows_series;
+export module pludux:series.pivot_lows_series;
 
-import pludux.series.series_output;
+import :series.series_output;
 
 export namespace pludux {
 

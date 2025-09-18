@@ -4,9 +4,9 @@ module;
 #include <iterator>
 #include <vector>
 
-export module pludux.screener.value_method;
+export module pludux:screener.value_method;
 
-import pludux.asset_snapshot;
+import :asset_snapshot;
 
 export namespace pludux::screener {
 

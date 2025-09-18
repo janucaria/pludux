@@ -10,9 +10,9 @@ module;
 #include <utility>
 #include <vector>
 
-export module pludux.apps.backtest.actions:load_asset_csv_action;
+export module pludux.apps.backtest:actions.load_asset_csv_action;
 
-import pludux.apps.backtest.app_state_data;
+import :app_state_data;
 
 export namespace pludux::apps {
 

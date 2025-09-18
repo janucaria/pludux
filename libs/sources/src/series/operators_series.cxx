@@ -6,9 +6,9 @@ module;
 #include <type_traits>
 #include <utility>
 
-export module pludux.series.operators_series;
+export module pludux:series.operators_series;
 
-import pludux.series.series_output;
+import :series.series_output;
 
 export namespace pludux {
 

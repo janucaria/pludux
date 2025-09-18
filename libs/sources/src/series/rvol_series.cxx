@@ -4,10 +4,10 @@ module;
 #include <limits>
 #include <utility>
 
-export module pludux.series.rvol_series;
+export module pludux:series.rvol_series;
 
-import pludux.series.series_output;
-import pludux.series.sma_series;
+import :series.series_output;
+import :series.sma_series;
 
 export namespace pludux {
 

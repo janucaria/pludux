@@ -1,6 +1,6 @@
-export module pludux.screener.boolean_filter;
+export module pludux:screener.boolean_filter;
 
-import pludux.asset_snapshot;
+import :asset_snapshot;
 
 namespace pludux::screener {
 

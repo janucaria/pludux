@@ -7,9 +7,9 @@ module;
 #include <unordered_map>
 #include <vector>
 
-export module pludux.apps.backtest.app_state_data;
+export module pludux.apps.backtest:app_state_data;
 
-export import pludux.backtest;
+import pludux.backtest;
 
 export namespace pludux::apps {
 

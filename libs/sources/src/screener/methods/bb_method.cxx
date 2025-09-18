@@ -2,10 +2,10 @@ module;
 
 #include <cstddef>
 
-export module pludux.screener.bb_method;
+export module pludux:screener.bb_method;
 
-import pludux.asset_snapshot;
-import pludux.screener.screener_method;
+import :asset_snapshot;
+import :screener.screener_method;
 
 export namespace pludux::screener {
 

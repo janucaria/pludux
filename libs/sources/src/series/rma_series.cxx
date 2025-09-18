@@ -6,10 +6,10 @@ module;
 #include <utility>
 #include <vector>
 
-export module pludux.series.rma_series;
+export module pludux:series.rma_series;
 
-import pludux.series.series_output;
-import pludux.series.sma_series;
+import :series.series_output;
+import :series.sma_series;
 
 export namespace pludux {
 

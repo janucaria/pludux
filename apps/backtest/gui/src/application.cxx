@@ -11,11 +11,13 @@ module;
 #include <implot.h>
 #include <nlohmann/json.hpp>
 
-export module pludux.apps.backtest.application;
+export module pludux.apps.backtest;
 
-import pludux.apps.backtest.actions;
-export import pludux.apps.backtest.app_state;
-import pludux.apps.backtest.windows;
+export import :app_state_data;
+export import :app_state;
+export import :serialization;
+export import :actions;
+import :windows;
 
 export namespace pludux::apps {
 

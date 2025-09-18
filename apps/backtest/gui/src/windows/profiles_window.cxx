@@ -7,9 +7,9 @@ module;
 
 #include <imgui.h>
 
-export module pludux.apps.backtest.windows:profiles_window;
+export module pludux.apps.backtest:windows.profiles_window;
 
-import pludux.apps.backtest.app_state;
+import :app_state;
 
 export namespace pludux::apps {
 

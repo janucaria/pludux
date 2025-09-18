@@ -24,9 +24,20 @@
 
 #include <glfw3webgpu.h>
 
-#include "./serialization.hpp"
+#include <cereal/cereal.hpp>
+#include <nlohmann/json.hpp>
+#include <rapidcsv.h>
 
-import pludux.apps.backtest.application;
+#include <cereal/archives/json.hpp>
+#include <cereal/types/deque.hpp>
+#include <cereal/types/memory.hpp>
+#include <cereal/types/optional.hpp>
+#include <cereal/types/queue.hpp>
+#include <cereal/types/string.hpp>
+#include <cereal/types/unordered_map.hpp>
+#include <cereal/types/vector.hpp>
+
+import pludux.apps.backtest;
 
 #ifdef __EMSCRIPTEN__
 

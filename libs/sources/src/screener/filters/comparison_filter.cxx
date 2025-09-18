@@ -3,11 +3,11 @@ module;
 #include <functional>
 #include <vector>
 
-export module pludux.screener.comparison_filter;
+export module pludux:screener.comparison_filter;
 
-import pludux.asset_snapshot;
-import pludux.screener.screener_filter;
-import pludux.screener.screener_method;
+import :asset_snapshot;
+import :screener.screener_filter;
+import :screener.screener_method;
 
 export namespace pludux::screener {
 

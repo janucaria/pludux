@@ -5,10 +5,10 @@ module;
 #include <memory>
 #include <utility>
 
-export module pludux.series.poly_series;
+export module pludux:series.poly_series;
 
-import pludux.series.series_output;
-import pludux.series.data_series;
+import :series.series_output;
+import :series.data_series;
 
 export namespace pludux {
 

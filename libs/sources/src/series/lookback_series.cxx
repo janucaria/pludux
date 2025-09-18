@@ -4,9 +4,9 @@ module;
 #include <utility>
 #include <limits>
 
-export module pludux.series.lookback_series;
+export module pludux:series.lookback_series;
 
-import pludux.series.series_output;
+import :series.series_output;
 
 export namespace pludux {
 

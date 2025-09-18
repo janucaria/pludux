@@ -5,10 +5,10 @@ module;
 #include <string>
 #include <utility>
 
-export module pludux.screener.reference_method;
+export module pludux:screener.reference_method;
 
-import pludux.asset_snapshot;
-import pludux.screener.method_registry;
+import :asset_snapshot;
+import :screener.method_registry;
 
 export namespace pludux::screener {
 

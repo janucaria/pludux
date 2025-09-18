@@ -5,7 +5,7 @@ module;
 #include <unordered_map>
 #include <vector>
 
-export module pludux.series.series_output;
+export module pludux:series.series_output;
 
 export namespace pludux {
 

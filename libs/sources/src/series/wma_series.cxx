@@ -5,9 +5,9 @@ module;
 #include <utility>
 #include <vector>
 
-export module pludux.series.wma_series;
+export module pludux:series.wma_series;
 
-import pludux.series.series_output;
+import :series.series_output;
 
 export namespace pludux {
 

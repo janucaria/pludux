@@ -3,9 +3,9 @@ module;
 #include <cstddef>
 #include <limits>
 
-export module pludux.series.repeat_series;
+export module pludux:series.repeat_series;
 
-import pludux.series.series_output;
+import :series.series_output;
 
 export namespace pludux {
 

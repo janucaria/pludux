@@ -5,10 +5,10 @@ module;
 #include <stdexcept>
 #include <vector>
 
-export module pludux.screener.all_of_filter;
+export module pludux:screener.all_of_filter;
 
-import pludux.asset_snapshot;
-import pludux.screener.screener_filter;
+import :asset_snapshot;
+import :screener.screener_filter;
 
 export namespace pludux::screener {
 

@@ -8,9 +8,9 @@ module;
 #include <utility>
 #include <vector>
 
-export module pludux.series.output_by_name_series;
+export module pludux:series.output_by_name_series;
 
-import pludux.series.series_output;
+import :series.series_output;
 
 export namespace pludux {
 

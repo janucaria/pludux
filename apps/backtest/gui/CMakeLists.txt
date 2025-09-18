@@ -136,6 +136,8 @@ target_sources(${PROJECT_NAME} PRIVATE
     
     src/app_state.cxx
 
+    src/serialization.cxx
+
     src/windows/assets_window.cxx
     src/windows/backtests_window.cxx
     src/windows/backtest_summary_window.cxx

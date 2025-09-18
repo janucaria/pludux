@@ -4,12 +4,12 @@ module;
 #include <limits>
 #include <utility>
 
-export module pludux.series.macd_series;
+export module pludux:series.macd_series;
 
-import pludux.series.series_output;
-import pludux.series.ref_series;
-import pludux.series.ema_series;
-import pludux.series.operators_series;
+import :series.series_output;
+import :series.ref_series;
+import :series.ema_series;
+import :series.operators_series;
 
 export namespace pludux {
 

@@ -10,10 +10,9 @@ module;
 #include <implot.h>
 #include <implot_internal.h>
 
-export module pludux.apps.backtest.windows:plot_data_window;
+export module pludux.apps.backtest:windows.plot_data_window;
 
-import pludux.asset_snapshot;
-import pludux.apps.backtest.app_state;
+import :app_state;
 
 export namespace pludux::apps {
 

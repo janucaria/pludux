@@ -2,9 +2,9 @@ module;
 
 #include <cstddef>
 
-export module pludux.series.ref_series;
+export module pludux:series.ref_series;
 
-import pludux.series.series_output;
+import :series.series_output;
 
 export namespace pludux {
 

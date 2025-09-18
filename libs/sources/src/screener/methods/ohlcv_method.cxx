@@ -5,9 +5,9 @@ module;
 #include <string>
 #include <vector>
 
-export module pludux.screener.ohlcv_method;
+export module pludux:screener.ohlcv_method;
 
-import pludux.asset_snapshot;
+import :asset_snapshot;
 
 namespace pludux::screener {
 

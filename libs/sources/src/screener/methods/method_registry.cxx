@@ -4,9 +4,9 @@ module;
 #include <string>
 #include <unordered_map>
 
-export module pludux.screener.method_registry;
+export module pludux:screener.method_registry;
 
-import pludux.screener.screener_method;
+import :screener.screener_method;
 
 export namespace pludux::screener {
 

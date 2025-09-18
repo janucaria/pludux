@@ -9,9 +9,9 @@ module;
 #include <format>
 #include <utility>
 
-export module pludux.apps.backtest.actions:change_strategy_json_action;
+export module pludux.apps.backtest:actions.change_strategy_json_action;
 
-import pludux.apps.backtest.app_state_data;
+import :app_state_data;
 
 export namespace pludux::apps {
 

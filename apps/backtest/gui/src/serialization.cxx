@@ -1,13 +1,12 @@
-#ifndef PLUDUX_APPS_BACKTEST_SERIALIZATION_HPP
-#define PLUDUX_APPS_BACKTEST_SERIALIZATION_HPP
+module;
 
 #include <algorithm>
 #include <tuple>
 #include <utility>
 
+#include <cereal/cereal.hpp>
 #include <nlohmann/json.hpp>
 #include <rapidcsv.h>
-#include <cereal/cereal.hpp>
 
 #include <cereal/archives/json.hpp>
 #include <cereal/types/deque.hpp>
@@ -18,9 +17,15 @@
 #include <cereal/types/unordered_map.hpp>
 #include <cereal/types/vector.hpp>
 
-import pludux.apps.backtest.app_state_data;
+export module pludux.apps.backtest:serialization;
 
-namespace cereal {
+import pludux.backtest;
+
+import :app_state_data;
+
+
+export namespace cereal {
+
 template<class Archive>
 void save(Archive& archive, const nlohmann::json& json_data)
 {
@@ -649,5 +654,3 @@ void load(Archive& archive, pludux::apps::AppStateData& app_state_data)
 }
 
 } // namespace cereal
-
-#endif

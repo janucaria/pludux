@@ -9,10 +9,10 @@ module;
 #include <utility>
 #include <vector>
 
-export module pludux.series.bullish_divergence_series;
+export module pludux:series.bullish_divergence_series;
 
-import pludux.series.series_output;
-import pludux.series.pivot_lows_series;
+import :series.series_output;
+import :series.pivot_lows_series;
 
 export namespace pludux {
 

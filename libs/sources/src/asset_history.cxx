@@ -12,10 +12,9 @@ module;
 #include <utility>
 #include <vector>
 
+export module pludux:asset_history;
 
-export module pludux.asset_history;
-
-import pludux.series;
+import :series;
 
 export namespace pludux {
 

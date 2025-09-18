@@ -7,13 +7,13 @@ module;
 #include <utility>
 #include <vector>
 
-export module pludux.series.rsi_series;
+export module pludux:series.rsi_series;
 
-import pludux.series.series_output;
-import pludux.series.ref_series;
-import pludux.series.change_series;
-import pludux.series.rma_series;
-import pludux.series.operators_series;
+import :series.series_output;
+import :series.ref_series;
+import :series.change_series;
+import :series.rma_series;
+import :series.operators_series;
 
 export namespace pludux {
 

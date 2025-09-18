@@ -6,10 +6,10 @@ module;
 #include <numeric>
 #include <utility>
 
-export module pludux.series.stoch_rsi_series;
+export module pludux:series.stoch_rsi_series;
 
-import pludux.series.series_output;
-import pludux.series.rsi_series;
+import :series.series_output;
+import :series.rsi_series;
 
 export namespace pludux {
 

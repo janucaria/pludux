@@ -4,11 +4,11 @@ module;
 #include <type_traits>
 #include <utility>
 
-export module pludux.screener.ta_with_period_method;
+export module pludux:screener.ta_with_period_method;
 
-import pludux.asset_snapshot;
-import pludux.screener.screener_method;
-import pludux.screener.ohlcv_method;
+import :asset_snapshot;
+import :screener.screener_method;
+import :screener.ohlcv_method;
 
 namespace pludux::screener {
 

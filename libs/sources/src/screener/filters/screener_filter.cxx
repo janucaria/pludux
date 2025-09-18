@@ -5,9 +5,9 @@ module;
 #include <type_traits>
 #include <vector>
 
-export module pludux.screener.screener_filter;
+export module pludux:screener.screener_filter;
 
-import pludux.asset_snapshot;
+import :asset_snapshot;
 
 export namespace pludux::screener {
 

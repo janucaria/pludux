@@ -11,8 +11,7 @@ module;
 
 export module pludux.backtest:strategy;
 
-import pludux.config_parser;
-import pludux.asset_snapshot;
+import pludux;
 
 import :trade_entry;
 import :trade_exit;

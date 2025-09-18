@@ -4,10 +4,10 @@ module;
 #include <ctime>
 #include <filesystem>
 #include <format>
+#include <fstream>
 #include <memory>
 #include <ranges>
 #include <string>
-#include <fstream>
 
 #ifdef __EMSCRIPTEN__
 #include <cstdlib>
@@ -21,11 +21,23 @@ module;
 #include <imgui.h>
 #include <imgui_internal.h>
 
-#include "../serialization.hpp"
+#include <cereal/cereal.hpp>
+#include <nlohmann/json.hpp>
+#include <rapidcsv.h>
 
-export module pludux.apps.backtest.windows:dockspace_window;
+#include <cereal/archives/json.hpp>
+#include <cereal/types/deque.hpp>
+#include <cereal/types/memory.hpp>
+#include <cereal/types/optional.hpp>
+#include <cereal/types/queue.hpp>
+#include <cereal/types/string.hpp>
+#include <cereal/types/unordered_map.hpp>
+#include <cereal/types/vector.hpp>
 
-import pludux.apps.backtest.app_state;
+export module pludux.apps.backtest:windows.dockspace_window;
+
+import :app_state;
+import :serialization;
 
 export namespace pludux::apps {
 

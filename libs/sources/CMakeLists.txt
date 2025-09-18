@@ -99,7 +99,7 @@ target_sources(${PROJECT_NAME}
 
         src/screener.cxx
 
-        src/exports.cxx
+        src/module.cxx
 )
 
 target_compile_features(${PROJECT_NAME}

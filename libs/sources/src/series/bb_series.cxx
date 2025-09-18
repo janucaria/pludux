@@ -7,10 +7,10 @@ module;
 #include <type_traits>
 #include <utility>
 
-export module pludux.series.bb_series;
+export module pludux:series.bb_series;
 
-import pludux.series.series_output;
-import pludux.series.sma_series;
+import :series.series_output;
+import :series.sma_series;
 
 export namespace pludux {
 
