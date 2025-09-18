@@ -1,5 +1,4 @@
-#ifndef PLUDUX_PLUDUX_SERIES_VALUE_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_VALUE_SERIES_HPP
+module;
 
 #include <algorithm>
 #include <cstddef>
@@ -9,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+export module pludux.series.data_series;
 
 import pludux.series.series_output;
 
@@ -68,5 +68,3 @@ DataSeries(TBidirectIt, TBidirectIt)
  -> DataSeries<typename std::iterator_traits<TBidirectIt>::value_type>;
 
 } // namespace pludux
-
-#endif

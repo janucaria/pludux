@@ -6,10 +6,8 @@
 #include <memory>
 #include <utility>
 
-
-#include "data_series.hpp"
-
 import pludux.series.series_output;
+import pludux.series.data_series;
 
 namespace pludux {
 
