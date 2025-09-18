@@ -9,3 +9,7 @@ export import pludux.series.data_series;
 export import pludux.series.poly_series;
 
 export import pludux.series.tr_series;
+
+export import pludux.series.pivot_lows_series;
+export import pludux.series.bullish_divergence_series;
+export import pludux.series.hidden_bullish_divergence_series;

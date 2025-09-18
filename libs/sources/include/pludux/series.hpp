@@ -4,10 +4,8 @@
 #include <pludux/series/atr_series.hpp>
 #include <pludux/series/bb_series.hpp>
 #include <pludux/series/binary_fn_series.hpp>
-#include <pludux/series/bullish_divergence_series.hpp>
 #include <pludux/series/change_series.hpp>
 #include <pludux/series/ema_series.hpp>
-#include <pludux/series/hidden_bullish_divergence_series.hpp>
 #include <pludux/series/hma_series.hpp>
 #include <pludux/series/kc_series.hpp>
 #include <pludux/series/macd_series.hpp>

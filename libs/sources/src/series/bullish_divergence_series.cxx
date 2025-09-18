@@ -1,27 +1,30 @@
-#ifndef PLUDUX_PLUDUX_SERIES_HIDDEN_BULLISH_DIVERGENCE_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_HIDDEN_BULLISH_DIVERGENCE_SERIES_HPP
+module;
 
 #include <algorithm>
+#include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <limits>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
+export module pludux.series.bullish_divergence_series;
+
 import pludux.series.series_output;
 import pludux.series.pivot_lows_series;
 
-namespace pludux {
+export namespace pludux {
 
 template<typename TSeries, typename USeries>
-class HiddenBullishDivergenceSeries {
+class BullishDivergenceSeries {
 public:
   using ValueType = std::ptrdiff_t;
 
-  HiddenBullishDivergenceSeries(TSeries signal_series,
-                                USeries reference_series,
-                                std::size_t pivot_range = 5,
-                                std::size_t lookback_range = 60)
+  BullishDivergenceSeries(TSeries signal_series,
+                          USeries reference_series,
+                          std::size_t pivot_range = 5,
+                          std::size_t lookback_range = 60)
   : pivot_range_{pivot_range}
   , lookback_range_{lookback_range}
   , signal_series_{std::move(signal_series)}
@@ -59,11 +62,11 @@ public:
     const auto signal_prev_low = get_lows(signal, signal_prev_low_index);
     const auto reference_at_signal_prev_low = reference[signal_prev_low_index];
     const auto reference_at_signal_low = reference[signal_low_index];
-    const auto is_hidden_bullish_divergence =
-     signal_low < signal_prev_low &&
-     reference_at_signal_low > reference_at_signal_prev_low;
+    const auto is_bullish_divergence =
+     signal_low > signal_prev_low &&
+     reference_at_signal_low < reference_at_signal_prev_low;
 
-    return is_hidden_bullish_divergence ? signal_prev_low_index : -1;
+    return is_bullish_divergence ? signal_prev_low_index : -1;
   }
 
   auto size() const noexcept -> std::size_t
@@ -152,5 +155,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif

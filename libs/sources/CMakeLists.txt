@@ -59,7 +59,10 @@ target_sources(${PROJECT_NAME}
         src/series/poly_series.cxx
 
         src/series/tr_series.cxx
+
         src/series/pivot_lows_series.cxx
+        src/series/bullish_divergence_series.cxx
+        src/series/hidden_bullish_divergence_series.cxx
 
         src/series.cxx
 
