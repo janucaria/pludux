@@ -8,9 +8,9 @@
 #include <utility>
 
 #include "rma_series.hpp"
-#include "tr_series.hpp"
 
 import pludux.series.series_output;
+import pludux.series.tr_series;
 
 namespace pludux {
 

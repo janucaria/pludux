@@ -59,9 +59,10 @@ target_sources(${PROJECT_NAME}
         src/series/poly_series.cxx
 
         src/series/tr_series.cxx
+        src/series/pivot_lows_series.cxx
 
         src/series.cxx
-        
+
 
         src/asset_history.cxx
         src/asset_snapshot.cxx

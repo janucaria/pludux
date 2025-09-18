@@ -1,13 +1,14 @@
-#ifndef PLUDUX_PLUDUX_SERIES_PIVOT_LOWS_SERIES_HPP
-#define PLUDUX_PLUDUX_SERIES_PIVOT_LOWS_SERIES_HPP
+module;
 
 #include <cstddef>
 #include <limits>
 #include <utility>
 
+export module pludux.series.pivot_lows_series;
+
 import pludux.series.series_output;
 
-namespace pludux {
+export namespace pludux {
 
 template<typename TSeries>
 class PivotLowsSeries {
@@ -54,5 +55,3 @@ private:
 };
 
 } // namespace pludux
-
-#endif
