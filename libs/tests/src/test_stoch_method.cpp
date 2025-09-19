@@ -1,9 +1,6 @@
 #include <gtest/gtest.h>
-#include <pludux/asset_history.hpp>
-#include <pludux/screener/data_method.hpp>
-#include <pludux/screener/output_by_name_method.hpp>
-#include <pludux/screener/stoch_method.hpp>
-#include <pludux/series.hpp>
+
+import pludux;
 
 using namespace pludux;
 using namespace pludux::screener;

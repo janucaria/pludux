@@ -1,9 +1,8 @@
 #include <gtest/gtest.h>
+
 #include <nlohmann/json.hpp>
 
-#include <pludux/screener.hpp>
-
-#include <pludux/config_parser.hpp>
+import pludux;
 
 using namespace pludux;
 using namespace pludux::screener;

@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
-#include <pludux/asset_history.hpp>
-#include <pludux/screener.hpp>
-#include <pludux/series.hpp>
+
+import pludux;
 
 using namespace pludux::screener;
 
@@ -9,7 +8,7 @@ TEST(EmaMethodTest, RunOneMethod)
 {
   const auto field_method = DataMethod{"close"};
   const auto period = 5;
-  const auto ema_method = EmaMethod{period, field_method};
+  const auto ema_method = EmaMethod{field_method, period};
   const auto asset_data = pludux::AssetHistory{
    {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
@@ -22,7 +21,7 @@ TEST(EmaMethodTest, RunAllMethod)
 {
   const auto field_method = DataMethod{"close"};
   const auto period = 5;
-  const auto ema_method = EmaMethod{period, field_method};
+  const auto ema_method = EmaMethod{field_method, period};
   const auto asset_data = pludux::AssetHistory{
    {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
@@ -45,8 +44,8 @@ TEST(EmaMethodTest, EqualityOperator)
 {
   const auto field_method = DataMethod{"close"};
   const auto period = 5;
-  const auto ema_method1 = EmaMethod{period, field_method};
-  const auto ema_method2 = EmaMethod{period, field_method};
+  const auto ema_method1 = EmaMethod{field_method, period};
+  const auto ema_method2 = EmaMethod{field_method, period};
 
   EXPECT_TRUE(ema_method1 == ema_method2);
   EXPECT_FALSE(ema_method1 != ema_method2);
@@ -57,12 +56,12 @@ TEST(EmaMethodTest, NotEqualOperator)
 {
   const auto field_method1 = DataMethod{"close"};
   const auto period1 = 5;
-  const auto ema_method1 = EmaMethod{period1, field_method1};
+  const auto ema_method1 = EmaMethod{field_method1, period1};
 
   const auto field2 = "open";
   const auto field_method2 = DataMethod{field2};
   const auto period2 = 10;
-  const auto ema_method2 = EmaMethod{period2, field_method2};
+  const auto ema_method2 = EmaMethod{field_method2, period2};
 
   EXPECT_TRUE(ema_method1 != ema_method2);
   EXPECT_FALSE(ema_method1 == ema_method2);

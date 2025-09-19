@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <pludux/backtest/trade_session.hpp>
+import pludux.backtest;
 
 using namespace pludux;
 using namespace pludux::backtest;

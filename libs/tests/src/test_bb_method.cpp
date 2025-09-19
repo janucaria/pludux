@@ -1,10 +1,6 @@
 #include <gtest/gtest.h>
-#include <pludux/asset_history.hpp>
-#include <pludux/screener/arithmetic_method.hpp>
-#include <pludux/screener/bb_method.hpp>
-#include <pludux/screener/data_method.hpp>
-#include <pludux/screener/output_by_name_method.hpp>
-#include <pludux/series.hpp>
+
+import pludux;
 
 using namespace pludux;
 using namespace pludux::screener;

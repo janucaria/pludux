@@ -1,9 +1,8 @@
 #include <cmath>
+
 #include <gtest/gtest.h>
-#include <pludux/asset_history.hpp>
-#include <pludux/asset_snapshot.hpp>
-#include <string>
-#include <vector>
+
+import pludux;
 
 using namespace pludux;
 

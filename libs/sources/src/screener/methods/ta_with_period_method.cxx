@@ -12,7 +12,7 @@ import :screener.ohlcv_method;
 
 namespace pludux::screener {
 
-template<typename, typename T>
+template<typename, template<typename...> typename TSeries>
 class TaWithPeriodMethod {
 public:
   TaWithPeriodMethod(ScreenerMethod input, std::size_t period)
@@ -24,7 +24,7 @@ public:
   auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>
   {
     const auto sources = input_(asset_data);
-    const auto series = T{}(sources, period_);
+    const auto series = TSeries{sources, period_};
     return series;
   }
 
@@ -56,130 +56,106 @@ private:
   ScreenerMethod input_;
 };
 
-inline constexpr auto sma_wrapper = []<typename TSeries>(TSeries series,
-                                                         std::size_t period) {
-  return SmaSeries{series, period};
-};
-
-inline constexpr auto ema_wrapper = []<typename TSeries>(TSeries series,
-                                                         std::size_t period) {
-  return EmaSeries{series, period};
-};
-
-inline constexpr auto wma_wrapper = []<typename TSeries>(TSeries series,
-                                                         std::size_t period) {
-  return WmaSeries{series, period};
-};
-
-inline constexpr auto rma_wrapper = []<typename TSeries>(TSeries series,
-                                                         std::size_t period) {
-  return RmaSeries{series, period};
-};
-
-inline constexpr auto hma_wrapper = []<typename TSeries>(TSeries series,
-                                                         std::size_t period) {
-  return HmaSeries{series, period};
-};
-
-inline constexpr auto rsi_wrapper = []<typename TSeries>(TSeries series,
-                                                         std::size_t period) {
-  return RsiSeries{series, period};
-};
-
-inline constexpr auto roc_wrapper = []<typename TSeries>(TSeries series,
-                                                         std::size_t period) {
-  return RocSeries{series, period};
-};
-
-inline constexpr auto rvol_wrapper = []<typename TSeries>(TSeries series,
-                                                          std::size_t period) {
-  return RvolSeries{series, period};
-};
-
-export class SmaMethod
-: public TaWithPeriodMethod<SmaMethod, std::decay_t<decltype(sma_wrapper)>> {
+export class SmaMethod : public TaWithPeriodMethod<SmaMethod, SmaSeries> {
 public:
-  explicit SmaMethod(ScreenerMethod input = CloseMethod{},
-                     std::size_t period = 20)
-  : TaWithPeriodMethod<SmaMethod, std::decay_t<decltype(sma_wrapper)>>{
-     std::move(input), period}
+  SmaMethod()
+  : SmaMethod{CloseMethod{}, 20}
+  {
+  }
+
+  SmaMethod(ScreenerMethod input, std::size_t period)
+  : TaWithPeriodMethod<SmaMethod, SmaSeries>{std::move(input), period}
   {
   }
 };
 
-export class EmaMethod
-: public TaWithPeriodMethod<EmaMethod, std::decay_t<decltype(ema_wrapper)>> {
+export class EmaMethod : public TaWithPeriodMethod<EmaMethod, EmaSeries> {
 public:
-  explicit EmaMethod(ScreenerMethod input = CloseMethod{},
-                     std::size_t period = 20)
-  : TaWithPeriodMethod<EmaMethod, std::decay_t<decltype(ema_wrapper)>>{
-     std::move(input), period}
+  EmaMethod()
+  : EmaMethod{CloseMethod{}, 20}
+  {
+  }
+
+  explicit EmaMethod(ScreenerMethod input, std::size_t period)
+  : TaWithPeriodMethod<EmaMethod, EmaSeries>{std::move(input), period}
   {
   }
 };
 
-export class WmaMethod
-: public TaWithPeriodMethod<WmaMethod, std::decay_t<decltype(wma_wrapper)>> {
+export class WmaMethod : public TaWithPeriodMethod<WmaMethod, WmaSeries> {
 public:
-  explicit WmaMethod(ScreenerMethod input = CloseMethod{},
-                     std::size_t period = 20)
-  : TaWithPeriodMethod<WmaMethod, std::decay_t<decltype(wma_wrapper)>>{
-     std::move(input), period}
+  WmaMethod()
+  : WmaMethod{CloseMethod{}, 20}
+  {
+  }
+
+  WmaMethod(ScreenerMethod input, std::size_t period)
+  : TaWithPeriodMethod<WmaMethod, WmaSeries>{std::move(input), period}
   {
   }
 };
 
-export class RmaMethod
-: public TaWithPeriodMethod<RmaMethod, std::decay_t<decltype(rma_wrapper)>> {
+export class RmaMethod : public TaWithPeriodMethod<RmaMethod, RmaSeries> {
 public:
-  explicit RmaMethod(ScreenerMethod input = CloseMethod{},
-                     std::size_t period = 20)
-  : TaWithPeriodMethod<RmaMethod, std::decay_t<decltype(rma_wrapper)>>{
-     std::move(input), period}
+  RmaMethod()
+  : RmaMethod{CloseMethod{}, 20}
+  {
+  }
+
+  RmaMethod(ScreenerMethod input, std::size_t period)
+  : TaWithPeriodMethod<RmaMethod, RmaSeries>{std::move(input), period}
   {
   }
 };
 
-export class HmaMethod
-: public TaWithPeriodMethod<HmaMethod, std::decay_t<decltype(hma_wrapper)>> {
+export class HmaMethod : public TaWithPeriodMethod<HmaMethod, HmaSeries> {
 public:
-  explicit HmaMethod(ScreenerMethod input = CloseMethod{},
-                     std::size_t period = 20)
-  : TaWithPeriodMethod<HmaMethod, std::decay_t<decltype(hma_wrapper)>>{
-     std::move(input), period}
+  HmaMethod()
+  : HmaMethod{CloseMethod{}, 20}
+  {
+  }
+
+  HmaMethod(ScreenerMethod input, std::size_t period)
+  : TaWithPeriodMethod<HmaMethod, HmaSeries>{std::move(input), period}
   {
   }
 };
 
-export class RsiMethod
-: public TaWithPeriodMethod<RsiMethod, std::decay_t<decltype(rsi_wrapper)>> {
+export class RsiMethod : public TaWithPeriodMethod<RsiMethod, RsiSeries> {
 public:
-  explicit RsiMethod(ScreenerMethod input = CloseMethod{},
-                     std::size_t period = 14)
-  : TaWithPeriodMethod<RsiMethod, std::decay_t<decltype(rsi_wrapper)>>{
-     std::move(input), period}
+  RsiMethod()
+  : RsiMethod{CloseMethod{}, 14}
+  {
+  }
+
+  RsiMethod(ScreenerMethod input, std::size_t period)
+  : TaWithPeriodMethod<RsiMethod, RsiSeries>{std::move(input), period}
   {
   }
 };
 
-export class RocMethod
-: public TaWithPeriodMethod<RocMethod, std::decay_t<decltype(roc_wrapper)>> {
+export class RocMethod : public TaWithPeriodMethod<RocMethod, RocSeries> {
 public:
-  explicit RocMethod(ScreenerMethod input = CloseMethod{},
-                     std::size_t period = 20)
-  : TaWithPeriodMethod<RocMethod, std::decay_t<decltype(roc_wrapper)>>{
-     std::move(input), period}
+  RocMethod()
+  : RocMethod{CloseMethod{}, 20}
+  {
+  }
+
+  RocMethod(ScreenerMethod input, std::size_t period)
+  : TaWithPeriodMethod<RocMethod, RocSeries>{std::move(input), period}
   {
   }
 };
 
-export class RvolMethod
-: public TaWithPeriodMethod<RvolMethod, std::decay_t<decltype(rvol_wrapper)>> {
+export class RvolMethod : public TaWithPeriodMethod<RvolMethod, RvolSeries> {
 public:
-  explicit RvolMethod(ScreenerMethod input = CloseMethod{},
-                      std::size_t period = 20)
-  : TaWithPeriodMethod<RvolMethod, std::decay_t<decltype(rvol_wrapper)>>{
-     std::move(input), period}
+  RvolMethod()
+  : RvolMethod{CloseMethod{}, 20}
+  {
+  }
+
+  RvolMethod(ScreenerMethod input, std::size_t period)
+  : TaWithPeriodMethod<RvolMethod, RvolSeries>{std::move(input), period}
   {
   }
 };

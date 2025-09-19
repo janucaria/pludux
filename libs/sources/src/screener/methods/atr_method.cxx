@@ -24,7 +24,7 @@ public:
             ScreenerMethod low,
             ScreenerMethod close,
             std::size_t period,
-            double multiplier)
+            double multiplier = 1.0)
   : period_{period}
   , multiplier_{multiplier}
   , high_{std::move(high)}

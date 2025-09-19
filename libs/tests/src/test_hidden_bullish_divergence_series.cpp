@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
-#include <pludux/asset_history.hpp>
-#include <pludux/series.hpp>
+
+import pludux;
 
 using namespace pludux;
 

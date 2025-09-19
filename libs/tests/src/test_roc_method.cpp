@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
-#include <pludux/asset_history.hpp>
-#include <pludux/screener.hpp>
-#include <pludux/series.hpp>
+
+import pludux;
 
 using namespace pludux::screener;
 
@@ -9,7 +8,7 @@ TEST(RocMethodTest, RunOneMethod)
 {
   const auto field_method = DataMethod{"close"};
   const auto period = 5;
-  const auto roc_method = RocMethod{period, field_method};
+  const auto roc_method = RocMethod{field_method, period};
   const auto asset_data = pludux::AssetHistory{
    {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
@@ -21,7 +20,7 @@ TEST(RocMethodTest, RunAllMethod)
 {
   const auto field_method = DataMethod{"close"};
   const auto period = 5;
-  const auto roc_method = RocMethod{period, field_method};
+  const auto roc_method = RocMethod{field_method, period};
   const auto asset_data = pludux::AssetHistory{
    {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
@@ -44,11 +43,11 @@ TEST(RocMethodTest, EqualityOperator)
 {
   const auto field_method1 = DataMethod{"close"};
   const auto period1 = 5;
-  const auto roc_method1 = RocMethod{period1, field_method1};
+  const auto roc_method1 = RocMethod{field_method1, period1};
 
   const auto field_method2 = DataMethod{"close"};
   const auto period2 = 5;
-  const auto roc_method2 = RocMethod{period2, field_method2};
+  const auto roc_method2 = RocMethod{field_method2, period2};
 
   EXPECT_TRUE(roc_method1 == roc_method2);
   EXPECT_FALSE(roc_method1 != roc_method2);
@@ -59,11 +58,11 @@ TEST(RocMethodTest, NotEqualOperator)
 {
   const auto field_method1 = DataMethod{"close"};
   const auto period1 = 5;
-  const auto roc_method1 = RocMethod{period1, field_method1};
+  const auto roc_method1 = RocMethod{field_method1, period1};
 
   const auto field_method2 = DataMethod{"open"};
   const auto period2 = 10;
-  const auto roc_method2 = RocMethod{period2, field_method2};
+  const auto roc_method2 = RocMethod{field_method2, period2};
 
   EXPECT_TRUE(roc_method1 != roc_method2);
   EXPECT_FALSE(roc_method1 == roc_method2);

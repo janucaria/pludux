@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
-#include <pludux/asset_history.hpp>
-#include <pludux/screener.hpp>
-#include <pludux/series.hpp>
+
+import pludux;
 
 using namespace pludux::screener;
 
@@ -9,7 +8,7 @@ TEST(RvolMethodTest, RunOneMethod)
 {
   const auto data_method = DataMethod{"close"};
   const auto period = 5;
-  const auto sma_method = RvolMethod{period, data_method};
+  const auto sma_method = RvolMethod{data_method, period};
   const auto asset_data = pludux::AssetHistory{
    {"close",
     {11.01, 8.59, 14.1, 30.52, 34.18, 55.34, 43.26, 65.39, 90.97, 585.54}}};
@@ -22,7 +21,7 @@ TEST(RvolMethodTest, RunAllMethod)
 {
   const auto data_method = DataMethod{"close"};
   const auto period = 5;
-  const auto sma_method = RvolMethod{period, data_method};
+  const auto sma_method = RvolMethod{data_method, period};
   const auto asset_data = pludux::AssetHistory{
    {"close",
     {11.01, 8.59, 14.1, 30.52, 34.18, 55.34, 43.26, 65.39, 90.97, 585.54}}};
@@ -45,10 +44,10 @@ TEST(RvolMethodTest, RunAllMethod)
 TEST(RvolMethodTest, EqualityOperator)
 {
   const auto data_method1 = DataMethod{"close"};
-  const auto rvol_method1 = RvolMethod{5, data_method1};
+  const auto rvol_method1 = RvolMethod{data_method1, 5};
 
   const auto data_method2 = DataMethod{"close"};
-  const auto rvol_method2 = RvolMethod{5, data_method2};
+  const auto rvol_method2 = RvolMethod{data_method2, 5};
 
   EXPECT_TRUE(rvol_method1 == rvol_method2);
   EXPECT_FALSE(rvol_method1 != rvol_method2);
@@ -58,10 +57,10 @@ TEST(RvolMethodTest, EqualityOperator)
 TEST(RvolMethodTest, NotEqualOperator)
 {
   const auto data_method1 = DataMethod{"close"};
-  const auto rvol_method1 = RvolMethod{5, data_method1};
+  const auto rvol_method1 = RvolMethod{data_method1, 5};
 
   const auto data_method2 = DataMethod{"open"};
-  const auto rvol_method2 = RvolMethod{5, data_method2};
+  const auto rvol_method2 = RvolMethod{data_method2, 5};
 
   EXPECT_FALSE(rvol_method1 == rvol_method2);
   EXPECT_TRUE(rvol_method1 != rvol_method2);

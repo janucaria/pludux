@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
-#include <limits>
-#include <pludux/series.hpp>
-#include <vector>
+
+import pludux;
 
 using namespace pludux;
 
