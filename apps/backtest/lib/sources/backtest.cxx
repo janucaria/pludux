@@ -34,41 +34,153 @@ public:
   Backtest(std::string name,
            std::shared_ptr<backtest::Strategy> strategy_ptr,
            std::shared_ptr<backtest::Asset> asset_ptr,
-           std::shared_ptr<backtest::Profile> profile_ptr);
+           std::shared_ptr<backtest::Profile> profile_ptr)
+  : Backtest{std::move(name),
+             std::move(strategy_ptr),
+             std::move(asset_ptr),
+             std::move(profile_ptr),
+             std::vector<backtest::BacktestSummary>{}}
+  {
+  }
 
   Backtest(std::string name,
            std::shared_ptr<backtest::Strategy> strategy_ptr,
            std::shared_ptr<backtest::Asset> asset_ptr,
            std::shared_ptr<backtest::Profile> profile_ptr,
-           std::vector<backtest::BacktestSummary> summaries);
+           std::vector<backtest::BacktestSummary> summaries)
+  : name_{std::move(name)}
+  , strategy_ptr_{strategy_ptr}
+  , asset_ptr_{asset_ptr}
+  , profile_ptr_{profile_ptr}
+  , is_failed_{false}
+  , summaries_{std::move(summaries)}
+  {
+  }
 
-  auto name() const noexcept -> const std::string&;
+  auto name(this const auto& self) noexcept -> const std::string&
+  {
+    return self.name_;
+  }
 
-  auto strategy_ptr() const noexcept
-   -> const std::shared_ptr<backtest::Strategy>;
+  auto strategy_ptr(this const auto& self) noexcept
+   -> const std::shared_ptr<backtest::Strategy>
+  {
+    return self.strategy_ptr_;
+  }
 
-  auto asset_ptr() const noexcept -> const std::shared_ptr<backtest::Asset>;
+  auto strategy(this const auto& self) noexcept -> const backtest::Strategy&
+  {
+    return *self.strategy_ptr();
+  }
 
-  auto profile_ptr() const noexcept -> const std::shared_ptr<backtest::Profile>;
+  auto asset_ptr(this const auto& self) noexcept
+   -> const std::shared_ptr<backtest::Asset>
+  {
+    return self.asset_ptr_;
+  }
 
-  auto strategy() const noexcept -> const backtest::Strategy&;
+  auto asset(this const auto& self) noexcept -> const backtest::Asset&
+  {
+    return *self.asset_ptr();
+  }
 
-  auto asset() const noexcept -> const backtest::Asset&;
+  auto profile_ptr(this const auto& self) noexcept
+   -> const std::shared_ptr<backtest::Profile>
+  {
+    return self.profile_ptr_;
+  }
 
-  auto get_profile() const noexcept -> const backtest::Profile&;
+  auto profile(this const auto& self) noexcept -> const backtest::Profile&
+  {
+    return *self.profile_ptr();
+  }
 
-  void mark_as_failed() noexcept;
+  void mark_as_failed(this auto& self) noexcept
+  {
+    self.is_failed_ = true;
+  }
 
-  auto is_failed() const noexcept -> bool;
+  auto is_failed(this const auto& self) noexcept -> bool
+  {
+    return self.is_failed_;
+  }
 
-  auto summaries() const noexcept
-   -> const std::vector<backtest::BacktestSummary>&;
+  auto summaries(this const auto& self) noexcept
+   -> const std::vector<backtest::BacktestSummary>&
+  {
+    return self.summaries_;
+  }
 
-  void reset();
+  void reset(this auto& self) noexcept
+  {
+    self.is_failed_ = false;
+    self.summaries_.clear();
+  }
 
-  auto should_run() const noexcept -> bool;
+  auto should_run(this const auto& self) noexcept -> bool
+  {
+    const auto summaries_size = self.summaries_.size();
+    const auto asset_size = self.asset().size();
 
-  void run();
+    return summaries_size < asset_size && !self.is_failed();
+  }
+
+  void run(this auto& self)
+  {
+    using namespace backtest;
+
+    if(!self.should_run()) {
+      return;
+    }
+
+    const auto summaries_size = self.summaries_.size();
+    const auto asset_size = self.asset().size();
+    const auto last_index = asset_size - 1;
+    const auto asset_index = last_index - std::min(summaries_size, last_index);
+    const auto asset_snapshot = self.asset().get_snapshot(asset_index);
+    const auto asset_timestamp =
+     static_cast<std::time_t>(asset_snapshot.get_datetime());
+    const auto asset_price = asset_snapshot.get_close();
+    const auto& strategy = self.strategy();
+    const auto& profile = self.profile();
+
+    auto summary = !self.summaries_.empty()
+                    ? self.summaries_.back()
+                    : BacktestSummary{profile.initial_capital()};
+
+    auto trade_session = summary.trade_session();
+
+    trade_session.market_update(
+     static_cast<std::time_t>(asset_snapshot.get_datetime()),
+     asset_snapshot.get_close(),
+     asset_snapshot.offset());
+
+    trade_session.evaluate_exit_conditions(asset_snapshot[1].get_close(),
+                                           asset_snapshot.get_open(),
+                                           asset_snapshot.get_high(),
+                                           asset_snapshot.get_low());
+
+    const auto& open_position = trade_session.open_position();
+    if(open_position) {
+      const auto position_size = open_position->unrealized_position_size();
+      const auto exit_trade =
+       strategy.exit_trade(asset_snapshot, position_size);
+
+      if(exit_trade) {
+        trade_session.exit_position(*exit_trade);
+      }
+    } else {
+      const auto entry_trade =
+       strategy.entry_trade(asset_snapshot, profile.get_risk_value());
+      if(entry_trade) {
+        trade_session.entry_position(*entry_trade);
+      }
+    }
+
+    summary.update_to_next_summary(std::move(trade_session));
+
+    self.summaries_.emplace_back(std::move(summary));
+  }
 
 private:
   std::string name_;
@@ -81,167 +193,7 @@ private:
   std::vector<backtest::BacktestSummary> summaries_;
 };
 
-auto get_env_var(std::string_view var_name) -> std::optional<std::string>;
-
-auto csv_daily_stock_data(std::istream& csv_stream) -> AssetHistory;
-
-auto format_duration(std::size_t duration_in_seconds) -> std::string;
-
-auto format_datetime(std::time_t timestamp) -> std::string;
-
-auto format_currency(double value) -> std::string;
-
-// ----------------------------------------------------------------------------
-
-Backtest::Backtest(std::string name,
-                   std::shared_ptr<backtest::Strategy> strategy_ptr,
-                   std::shared_ptr<backtest::Asset> asset_ptr,
-                   std::shared_ptr<backtest::Profile> profile_ptr)
-: Backtest{std::move(name),
-           std::move(strategy_ptr),
-           std::move(asset_ptr),
-           std::move(profile_ptr),
-           std::vector<backtest::BacktestSummary>{}}
-{
-}
-
-Backtest::Backtest(std::string name,
-                   std::shared_ptr<backtest::Strategy> strategy_ptr,
-                   std::shared_ptr<backtest::Asset> asset_ptr,
-                   std::shared_ptr<backtest::Profile> profile_ptr,
-                   std::vector<backtest::BacktestSummary> summaries)
-: name_{std::move(name)}
-, strategy_ptr_{strategy_ptr}
-, asset_ptr_{asset_ptr}
-, profile_ptr_{profile_ptr}
-, is_failed_{false}
-, summaries_{std::move(summaries)}
-{
-}
-
-auto Backtest::name() const noexcept -> const std::string&
-{
-  return name_;
-}
-
-auto Backtest::strategy_ptr() const noexcept
- -> const std::shared_ptr<backtest::Strategy>
-{
-  return strategy_ptr_;
-}
-
-auto Backtest::asset_ptr() const noexcept
- -> const std::shared_ptr<backtest::Asset>
-{
-  return asset_ptr_;
-}
-
-auto Backtest::profile_ptr() const noexcept
- -> const std::shared_ptr<backtest::Profile>
-{
-  return profile_ptr_;
-}
-
-auto Backtest::strategy() const noexcept -> const backtest::Strategy&
-{
-  return *strategy_ptr();
-}
-
-auto Backtest::asset() const noexcept -> const backtest::Asset&
-{
-  return *asset_ptr();
-}
-
-auto Backtest::get_profile() const noexcept -> const backtest::Profile&
-{
-  return *profile_ptr();
-}
-
-void Backtest::mark_as_failed() noexcept
-{
-  is_failed_ = true;
-}
-
-auto Backtest::is_failed() const noexcept -> bool
-{
-  return is_failed_;
-}
-
-auto Backtest::summaries() const noexcept
- -> const std::vector<backtest::BacktestSummary>&
-{
-  return summaries_;
-}
-
-void Backtest::reset()
-{
-  is_failed_ = false;
-  summaries_.clear();
-}
-
-auto Backtest::should_run() const noexcept -> bool
-{
-  const auto summaries_size = summaries_.size();
-  const auto asset_size = asset().size();
-
-  return summaries_size < asset_size && !is_failed();
-}
-
-void Backtest::run()
-{
-  using namespace backtest;
-
-  if(!should_run()) {
-    return;
-  }
-
-  const auto summaries_size = summaries_.size();
-  const auto asset_size = asset().size();
-  const auto last_index = asset_size - 1;
-  const auto asset_index = last_index - std::min(summaries_size, last_index);
-  const auto asset_snapshot = asset().get_snapshot(asset_index);
-  const auto asset_timestamp =
-   static_cast<std::time_t>(asset_snapshot.get_datetime());
-  const auto asset_price = asset_snapshot.get_close();
-  const auto& strategy = *strategy_ptr();
-  const auto& profile = get_profile();
-
-  auto summary = !summaries_.empty()
-                  ? summaries_.back()
-                  : BacktestSummary{profile.initial_capital()};
-
-  auto trade_session = summary.trade_session();
-
-  trade_session.market_update(
-   static_cast<std::time_t>(asset_snapshot.get_datetime()),
-   asset_snapshot.get_close(),
-   asset_snapshot.offset());
-
-  trade_session.evaluate_exit_conditions(asset_snapshot[1].get_close(),
-                                         asset_snapshot.get_open(),
-                                         asset_snapshot.get_high(),
-                                         asset_snapshot.get_low());
-
-  const auto& open_position = trade_session.open_position();
-  if(open_position) {
-    const auto position_size = open_position->unrealized_position_size();
-    const auto exit_trade = strategy.exit_trade(asset_snapshot, position_size);
-
-    if(exit_trade) {
-      trade_session.exit_position(*exit_trade);
-    }
-  } else {
-    const auto entry_trade =
-     strategy.entry_trade(asset_snapshot, profile.get_risk_value());
-    if(entry_trade) {
-      trade_session.entry_position(*entry_trade);
-    }
-  }
-
-  summary.update_to_next_summary(std::move(trade_session));
-
-  summaries_.emplace_back(std::move(summary));
-}
+// ----------------------------------------------------------------
 
 auto get_env_var(std::string_view var_name) -> std::optional<std::string>
 {

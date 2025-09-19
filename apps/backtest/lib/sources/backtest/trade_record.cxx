@@ -34,85 +34,217 @@ public:
 
               double stop_loss_price,
               double trailing_stop_price,
-              double take_profit_price);
+              double take_profit_price)
+  : status_{status}
+  , position_size_{position_size}
+  , average_price_{average_price}
+  , entry_price_{entry_price}
+  , exit_price_{exit_price}
+  , stop_loss_price_{stop_loss_price}
+  , trailing_stop_price_{trailing_stop_price}
+  , take_profit_price_{take_profit_price}
+  , entry_index_{entry_index}
+  , exit_index_{exit_index}
+  , entry_timestamp_{entry_timestamp}
+  , exit_timestamp_{exit_timestamp}
+  {
+  }
 
-  auto status() const noexcept -> Status;
+  auto status(this const auto& self) noexcept -> Status
+  {
+    return self.status_;
+  }
 
-  void status(Status status) noexcept;
+  void status(this auto& self, Status status) noexcept
+  {
+    self.status_ = status;
+  }
 
-  auto position_size() const noexcept -> double;
+  auto position_size(this const auto& self) noexcept -> double
+  {
+    return self.position_size_;
+  }
 
-  void position_size(double size) noexcept;
+  void position_size(this auto& self, double size) noexcept
+  {
+    self.position_size_ = size;
+  }
 
-  auto entry_index() const noexcept -> std::size_t;
+  auto entry_index(this const auto& self) noexcept -> std::size_t
+  {
+    return self.entry_index_;
+  }
 
-  void entry_index(std::size_t index) noexcept;
+  void entry_index(this auto& self, std::size_t index) noexcept
+  {
+    self.entry_index_ = index;
+  }
 
-  auto exit_index() const noexcept -> std::size_t;
+  auto exit_index(this const auto& self) noexcept -> std::size_t
+  {
+    return self.exit_index_;
+  }
 
-  auto exit_index(std::size_t index) noexcept -> void;
+  void exit_index(this auto& self, std::size_t index) noexcept
+  {
+    self.exit_index_ = index;
+  }
 
-  auto entry_price() const noexcept -> double;
+  auto entry_price(this const auto& self) noexcept -> double
+  {
+    return self.entry_price_;
+  }
 
-  void entry_price(double price) noexcept;
+  void entry_price(this auto& self, double price) noexcept
+  {
+    self.entry_price_ = price;
+  }
 
-  auto average_price() const noexcept -> double;
+  auto average_price(this const auto& self) noexcept -> double
+  {
+    return self.average_price_;
+  }
 
-  void average_price(double price) noexcept;
+  void average_price(this auto& self, double price) noexcept
+  {
+    self.average_price_ = price;
+  }
 
-  auto exit_price() const noexcept -> double;
+  auto exit_price(this const auto& self) noexcept -> double
+  {
+    return self.exit_price_;
+  }
 
-  void exit_price(double price) noexcept;
+  void exit_price(this auto& self, double price) noexcept
+  {
+    self.exit_price_ = price;
+  }
 
-  auto stop_loss_price() const noexcept -> double;
+  auto entry_timestamp(this const auto& self) noexcept -> std::time_t
+  {
+    return self.entry_timestamp_;
+  }
 
-  void stop_loss_price(double price) noexcept;
+  void entry_timestamp(this auto& self, std::time_t timestamp) noexcept
+  {
+    self.entry_timestamp_ = timestamp;
+  }
 
-  auto trailing_stop_price() const noexcept -> double;
+  auto exit_timestamp(this const auto& self) noexcept -> std::time_t
+  {
+    return self.exit_timestamp_;
+  }
 
-  void trailing_stop_price(double price) noexcept;
+  void exit_timestamp(this auto& self, std::time_t timestamp) noexcept
+  {
+    self.exit_timestamp_ = timestamp;
+  }
 
-  auto take_profit_price() const noexcept -> double;
+  auto stop_loss_price(this const auto& self) noexcept -> double
+  {
+    return self.stop_loss_price_;
+  }
 
-  void take_profit_price(double price) noexcept;
+  void stop_loss_price(this auto& self, double price) noexcept
+  {
+    self.stop_loss_price_ = price;
+  }
 
-  auto entry_timestamp() const noexcept -> std::time_t;
+  auto trailing_stop_price(this const auto& self) noexcept -> double
+  {
+    return self.trailing_stop_price_;
+  }
 
-  void entry_timestamp(std::time_t timestamp) noexcept;
+  void trailing_stop_price(this auto& self, double price) noexcept
+  {
+    self.trailing_stop_price_ = price;
+  }
 
-  auto exit_timestamp() const noexcept -> std::time_t;
+  auto take_profit_price(this const auto& self) noexcept -> double
+  {
+    return self.take_profit_price_;
+  }
 
-  void exit_timestamp(std::time_t timestamp) noexcept;
+  void take_profit_price(this auto& self, double price) noexcept
+  {
+    self.take_profit_price_ = price;
+  }
 
-  auto entry_value() const noexcept -> double;
+  auto entry_value(this const auto& self) noexcept -> double
+  {
+    return self.position_size() * self.entry_price();
+  }
 
-  auto exit_value() const noexcept -> double;
+  auto exit_value(this const auto& self) noexcept -> double
+  {
+    return self.position_size() * self.exit_price();
+  }
 
-  auto investment() const noexcept -> double;
+  auto investment(this const auto& self) noexcept -> double
+  {
+    return self.position_size() * self.average_price();
+  }
 
-  auto pnl() const noexcept -> double;
+  auto pnl(this const auto& self) noexcept -> double
+  {
+    return self.exit_value() - self.investment();
+  }
 
-  auto duration() const noexcept -> std::time_t;
+  auto duration(this const auto& self) noexcept -> std::time_t
+  {
+    return self.exit_timestamp() - self.entry_timestamp();
+  }
 
-  auto is_open() const noexcept -> bool;
+  auto is_open(this const auto& self) noexcept -> bool
+  {
+    return self.status_ == Status::open;
+  }
 
-  auto is_closed() const noexcept -> bool;
+  auto is_closed(this const auto& self) noexcept -> bool
+  {
+    return self.is_closed_exit_signal() || self.is_closed_take_profit() ||
+           self.is_closed_stop_loss();
+  }
 
-  auto is_closed_exit_signal() const noexcept -> bool;
+  auto is_closed_exit_signal(this const auto& self) noexcept -> bool
+  {
+    return self.status_ == Status::closed_exit_signal;
+  }
 
-  auto is_closed_take_profit() const noexcept -> bool;
+  auto is_closed_take_profit(this const auto& self) noexcept -> bool
+  {
+    return self.status_ == Status::closed_take_profit;
+  }
 
-  auto is_closed_stop_loss() const noexcept -> bool;
+  auto is_closed_stop_loss(this const auto& self) noexcept -> bool
+  {
+    return self.status_ == Status::closed_stop_loss;
+  }
 
-  auto is_scaled() const noexcept -> bool;
+  auto is_scaled(this const auto& self) noexcept -> bool
+  {
+    return self.is_scaled_in() || self.is_scaled_out();
+  }
 
-  auto is_scaled_in() const noexcept -> bool;
+  auto is_scaled_in(this const auto& self) noexcept -> bool
+  {
+    return self.status_ == Status::scaled_in;
+  }
 
-  auto is_scaled_out() const noexcept -> bool;
+  auto is_scaled_out(this const auto& self) noexcept -> bool
+  {
+    return self.status_ == Status::scaled_out;
+  }
 
-  auto is_long_position() const noexcept -> bool;
+  auto is_long_position(this const auto& self) noexcept -> bool
+  {
+    return self.position_size_ > 0.0;
+  }
 
-  auto is_short_position() const noexcept -> bool;
+  auto is_short_position(this const auto& self) noexcept -> bool
+  {
+    return self.position_size_ < 0.0;
+  }
 
 private:
   Status status_;
@@ -132,233 +264,5 @@ private:
   std::time_t entry_timestamp_;
   std::time_t exit_timestamp_;
 };
-
-// -------------------------------------------------------------------
-
-TradeRecord::TradeRecord(Status status,
-                         double position_size,
-                         double average_price,
-
-                         std::time_t entry_timestamp,
-                         double entry_price,
-                         std::size_t entry_index,
-
-                         std::time_t exit_timestamp,
-                         double exit_price,
-                         std::size_t exit_index,
-
-                         double stop_loss_price,
-                         double trailing_stop_price,
-                         double take_profit_price)
-: status_{status}
-, position_size_{position_size}
-, average_price_{average_price}
-, entry_price_{entry_price}
-, exit_price_{exit_price}
-, stop_loss_price_{stop_loss_price}
-, trailing_stop_price_{trailing_stop_price}
-, take_profit_price_{take_profit_price}
-, entry_index_{entry_index}
-, exit_index_{exit_index}
-, entry_timestamp_{entry_timestamp}
-, exit_timestamp_{exit_timestamp}
-{
-}
-
-auto TradeRecord::status() const noexcept -> Status
-{
-  return status_;
-}
-
-void TradeRecord::status(Status status) noexcept
-{
-  status_ = status;
-}
-
-auto TradeRecord::position_size() const noexcept -> double
-{
-  return position_size_;
-}
-
-void TradeRecord::position_size(double size) noexcept
-{
-  position_size_ = size;
-}
-
-auto TradeRecord::entry_index() const noexcept -> std::size_t
-{
-  return entry_index_;
-}
-
-void TradeRecord::entry_index(std::size_t index) noexcept
-{
-  entry_index_ = index;
-}
-
-auto TradeRecord::exit_index() const noexcept -> std::size_t
-{
-  return exit_index_;
-}
-
-void TradeRecord::exit_index(std::size_t index) noexcept
-{
-  exit_index_ = index;
-}
-
-auto TradeRecord::entry_price() const noexcept -> double
-{
-  return entry_price_;
-}
-
-void TradeRecord::entry_price(double price) noexcept
-{
-  entry_price_ = price;
-}
-
-auto TradeRecord::average_price() const noexcept -> double
-{
-  return average_price_;
-}
-
-void TradeRecord::average_price(double price) noexcept
-{
-  average_price_ = price;
-}
-
-auto TradeRecord::exit_price() const noexcept -> double
-{
-  return exit_price_;
-}
-
-void TradeRecord::exit_price(double price) noexcept
-{
-  exit_price_ = price;
-}
-
-auto TradeRecord::entry_timestamp() const noexcept -> std::time_t
-{
-  return entry_timestamp_;
-}
-
-void TradeRecord::entry_timestamp(std::time_t timestamp) noexcept
-{
-  entry_timestamp_ = timestamp;
-}
-
-auto TradeRecord::exit_timestamp() const noexcept -> std::time_t
-{
-  return exit_timestamp_;
-}
-
-void TradeRecord::exit_timestamp(std::time_t timestamp) noexcept
-{
-  exit_timestamp_ = timestamp;
-}
-
-auto TradeRecord::stop_loss_price() const noexcept -> double
-{
-  return stop_loss_price_;
-}
-
-void TradeRecord::stop_loss_price(double price) noexcept
-{
-  stop_loss_price_ = price;
-}
-
-auto TradeRecord::trailing_stop_price() const noexcept -> double
-{
-  return trailing_stop_price_;
-}
-
-void TradeRecord::trailing_stop_price(double price) noexcept
-{
-  trailing_stop_price_ = price;
-}
-
-auto TradeRecord::take_profit_price() const noexcept -> double
-{
-  return take_profit_price_;
-}
-
-void TradeRecord::take_profit_price(double price) noexcept
-{
-  take_profit_price_ = price;
-}
-
-auto TradeRecord::entry_value() const noexcept -> double
-{
-  return position_size() * entry_price();
-}
-
-auto TradeRecord::exit_value() const noexcept -> double
-{
-  return position_size() * exit_price();
-}
-
-auto TradeRecord::investment() const noexcept -> double
-{
-  return position_size() * average_price();
-}
-
-auto TradeRecord::pnl() const noexcept -> double
-{
-  return exit_value() - investment();
-}
-
-auto TradeRecord::duration() const noexcept -> std::time_t
-{
-  return exit_timestamp() - entry_timestamp();
-}
-
-auto TradeRecord::is_open() const noexcept -> bool
-{
-  return status_ == Status::open;
-}
-
-auto TradeRecord::is_closed() const noexcept -> bool
-{
-  return is_closed_exit_signal() || is_closed_take_profit() ||
-         is_closed_stop_loss();
-}
-
-auto TradeRecord::is_closed_exit_signal() const noexcept -> bool
-{
-  return status_ == Status::closed_exit_signal;
-}
-
-auto TradeRecord::is_closed_take_profit() const noexcept -> bool
-{
-  return status_ == Status::closed_take_profit;
-}
-
-auto TradeRecord::is_closed_stop_loss() const noexcept -> bool
-{
-  return status_ == Status::closed_stop_loss;
-}
-
-auto TradeRecord::is_scaled() const noexcept -> bool
-{
-  return is_scaled_in() || is_scaled_out();
-}
-
-auto TradeRecord::is_scaled_in() const noexcept -> bool
-{
-  return status_ == Status::scaled_in;
-}
-
-auto TradeRecord::is_scaled_out() const noexcept -> bool
-{
-  return status_ == Status::scaled_out;
-}
-
-auto TradeRecord::is_long_position() const noexcept -> bool
-{
-  return position_size_ > 0.0;
-}
-
-auto TradeRecord::is_short_position() const noexcept -> bool
-{
-  return position_size_ < 0.0;
-}
 
 } // namespace pludux::backtest

@@ -53,7 +53,7 @@ auto main(int, const char**) -> int
   auto& ostream = std::cout;
 
   ostream << std::format("Risk per trade: {:.2f}\n",
-                         backtest.get_profile().get_risk_value());
+                         backtest.profile().get_risk_value());
   ostream << std::format("Total profit: {:.2f}\n", summary.cumulative_pnls());
 
   const auto total_duration =
@@ -86,7 +86,7 @@ auto main(int, const char**) -> int
                          summary.expected_value());
   ostream << std::format("EV to risk rate: {:.2f}%\n",
                          summary.expected_value() /
-                          backtest.get_profile().get_risk_value() * 100);
+                          backtest.profile().get_risk_value() * 100);
 
   ostream << std::format("Total closed trades: {}\n", summary.trade_count());
   ostream << std::format("Win rate: {:.2f}%\n", summary.profit_rate() * 100);

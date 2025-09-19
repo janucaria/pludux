@@ -11,47 +11,36 @@ export namespace pludux::backtest {
 
 class Asset {
 public:
-  Asset(std::string name, AssetHistory asset_history);
+  Asset(std::string name, AssetHistory asset_history)
+  : name_{std::move(name)}
+  , asset_history_{std::move(asset_history)}
+  {
+  }
 
-  auto name() const noexcept -> const std::string&;
+  auto name(this const auto& self) noexcept -> const std::string&
+  {
+    return self.name_;
+  }
 
-  auto history() const noexcept -> const AssetHistory&;
+  auto history(this const auto& self) noexcept -> const AssetHistory&
+  {
+    return self.asset_history_;
+  }
 
-  auto get_snapshot(std::size_t index = 0) const noexcept -> AssetSnapshot;
+  auto get_snapshot(this const auto& self, std::size_t index) noexcept
+   -> AssetSnapshot
+  {
+    return AssetSnapshot{index, self.history()};
+  }
 
-  auto size() const noexcept -> std::size_t;
+  auto size(this const auto& self) noexcept -> std::size_t
+  {
+    return self.history().size();
+  }
 
 private:
   std::string name_;
   AssetHistory asset_history_;
 };
-
-// ------------------------------------------------------------------------
-
-Asset::Asset(std::string name, AssetHistory asset_history)
-: name_{std::move(name)}
-, asset_history_{std::move(asset_history)}
-{
-}
-
-auto Asset::name() const noexcept -> const std::string&
-{
-  return name_;
-}
-
-auto Asset::history() const noexcept -> const AssetHistory&
-{
-  return asset_history_;
-}
-
-auto Asset::get_snapshot(std::size_t index) const noexcept -> AssetSnapshot
-{
-  return AssetSnapshot{index, asset_history_};
-}
-
-auto Asset::size() const noexcept -> std::size_t
-{
-  return asset_history_.size();
-}
 
 } // namespace pludux::backtest

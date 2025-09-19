@@ -24,7 +24,7 @@ public:
 
     if(!state.backtests.empty() && state.selected_backtest_index >= 0) {
       const auto& backtest = backtests[state.selected_backtest_index];
-      const auto& profile = backtest.get_profile();
+      const auto& profile = backtest.profile();
 
       const auto& backtest_name = backtest.name();
       ImGui::Text("%s", backtest_name.c_str());
