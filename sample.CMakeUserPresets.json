@@ -3,47 +3,52 @@
     "configurePresets": [
         {
             "name": "msvc-debug",
-            "binaryDir": "${sourceDir}/.out/build/${presetName}",
+            "binaryDir": "${sourceDir}/.out/build/${hostSystemName}/${presetName}",
             "toolchainFile": "${sourceDir}/.out/conan/generators/conan_toolchain.cmake",
-            "generator": "Visual Studio 17 2022"
+            "generator": "Visual Studio 17 2022",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": {
+                    "type": "STRING",
+                    "value": "Debug"
+                }
+            },
+            "toolset": {
+                "value": "v143",
+                "strategy": "external"
+            },
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
         },
         {
             "name": "msvc-release",
             "inherits": "msvc-debug",
-            "binaryDir": "${sourceDir}/.out/build/${presetName}",
+            "binaryDir": "${sourceDir}/.out/build/${hostSystemName}/${presetName}",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": {
                     "type": "STRING",
                     "value": "Release"
-                }
-            }
-        },
-        {
-            "name": "clang-debug",
-            "binaryDir": "${sourceDir}/.out/build/${presetName}",
-            "generator": "Ninja",
-            "cacheVariables": {
-                "CMAKE_CXX_COMPILER": {
-                    "type": "STRING",
-                    "value": "clang++"
-                },
-                "CMAKE_C_COMPILER": {
-                    "type": "STRING",
-                    "value": "clang"
-                },
-                "CMAKE_BUILD_TYPE": {
-                    "type": "STRING",
-                    "value": "Debug"
                 },
                 "BUILD_TESTING": {
                     "type": "BOOL",
                     "value": "OFF"
                 }
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
             }
         },
         {
             "name": "emscripten-debug",
-            "binaryDir": "${sourceDir}/.out/build/${presetName}",
+            "binaryDir": "${sourceDir}/.out/build/${hostSystemName}/${presetName}",
             "installDir": "${sourceDir}/.out/webroot",
             "generator": "Ninja",
             "toolchainFile": "$penv{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
@@ -60,17 +65,27 @@
             "environment": {
                 "CC": "emcc",
                 "CXX": "em++"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
             }
         },
         {
             "name": "emscripten-release",
             "inherits": "emscripten-debug",
-            "binaryDir": "${sourceDir}/.out/build/${presetName}",
+            "binaryDir": "${sourceDir}/.out/build/${hostSystemName}/${presetName}",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": {
                     "type": "STRING",
                     "value": "Release"
                 }
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
             }
         }
     ],
@@ -78,12 +93,43 @@
         {
             "name": "msvc-build-release",
             "configurePreset": "msvc-release",
-            "configuration": "Release"
+            "configuration": "Release",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        },
+        {
+            "name": "emscripten-build-debug",
+            "configurePreset": "emscripten-debug",
+            "configuration": "Debug",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
         },
         {
             "name": "emscripten-build-release",
-            "inherits": "msvc-build-release",
-            "configurePreset": "emscripten-release"
+            "inherits": "emscripten-build-debug",
+            "configurePreset": "emscripten-release",
+            "configuration": "Release",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
+        }
+    ],
+    "packagePresets": [
+        {
+            "name": "msvc-pack-release",
+            "configurePreset": "msvc-release",
+            "packageDirectory": "${sourceDir}/.out/packages",
+            "generators": [
+                "ZIP"
+            ]
         }
     ]
 }

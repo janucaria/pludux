@@ -1,5 +1,4 @@
-cmake_minimum_required(VERSION 3.10.2)
-project(pludux-backtest-gui C CXX)
+project(pludux-backtest-gui)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
@@ -108,24 +107,6 @@ FetchContent_MakeAvailable(cereal)
 
 add_executable(${PROJECT_NAME}
 
-  src/windows/assets_window.cpp
-  src/windows/backtests_window.cpp
-  src/windows/backtest_summary_window.cpp
-  src/windows/dockspace_window.cpp
-  src/windows/plot_data_window.cpp
-  src/windows/trade_journal_window.cpp
-  src/windows/strategies_window.cpp
-  src/windows/profiles_window.cpp
-
-  src/actions/change_strategy_json_file_action.cpp
-  src/actions/change_strategy_json_str_action.cpp
-  src/actions/load_asset_csv_file_action.cpp
-  src/actions/load_asset_csv_str_action.cpp
-  src/actions/load_backtests_setup_file_action.cpp
-  src/actions/load_backtests_setup_string_action.cpp
-
-  src/application.cpp
-  src/app_state.cpp
   src/main.cpp
   # backend files
   ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
@@ -138,6 +119,36 @@ add_executable(${PROJECT_NAME}
   # ImPlot files
   ${implot_SOURCE_DIR}/implot.cpp
   ${implot_SOURCE_DIR}/implot_items.cpp
+)
+
+target_sources(${PROJECT_NAME} PRIVATE
+  FILE_SET
+    CXX_MODULES
+    BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src
+    FILES
+
+    src/app_state_data.cxx
+
+    src/actions/change_strategy_json_action.cxx
+    src/actions/load_asset_csv_action.cxx
+    src/actions/load_backtests_setup_action.cxx
+    src/actions.cxx
+    
+    src/app_state.cxx
+
+    src/serialization.cxx
+
+    src/windows/assets_window.cxx
+    src/windows/backtests_window.cxx
+    src/windows/backtest_summary_window.cxx
+    src/windows/dockspace_window.cxx
+    src/windows/plot_data_window.cxx
+    src/windows/profiles_window.cxx
+    src/windows/strategies_window.cxx
+    src/windows/trade_journal_window.cxx
+    src/windows.cxx
+
+    src/application.cxx
 )
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC
@@ -190,15 +201,8 @@ else()
   target_compile_definitions(${PROJECT_NAME} PUBLIC
     IMGUI_DISABLE_FILE_FUNCTIONS=1
   )
-
-  # add compiler flag -pthread
-  target_compile_options(${PROJECT_NAME} PRIVATE
-    "-fwasm-exceptions"
-  )
   
   target_link_options(${PROJECT_NAME} PRIVATE
-    "-fwasm-exceptions"
-
     "-sWASM=1"
     "-sUSE_WEBGPU=1"
     "-sUSE_GLFW=3"

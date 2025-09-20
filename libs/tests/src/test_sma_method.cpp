@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
-#include <pludux/asset_history.hpp>
-#include <pludux/screener.hpp>
-#include <pludux/series.hpp>
+
+import pludux;
 
 using namespace pludux::screener;
 
@@ -10,7 +9,7 @@ TEST(SmaMethodTest, RunOneMethod)
   const auto field = "close";
   const auto field_method = DataMethod{field};
   const auto period = 5;
-  const auto sma_method = SmaMethod{period, field_method};
+  const auto sma_method = SmaMethod{field_method, period};
   const auto asset_data = pludux::AssetHistory{
    {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
@@ -23,7 +22,7 @@ TEST(SmaMethodTest, RunAllMethod)
   const auto field = "close";
   const auto field_method = DataMethod{field};
   const auto period = 5;
-  const auto sma_method = SmaMethod{period, field_method};
+  const auto sma_method = SmaMethod{field_method, period};
   const auto asset_data = pludux::AssetHistory{
    {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
@@ -45,8 +44,8 @@ TEST(SmaMethodTest, RunAllMethod)
 TEST(SmaMethodTest, EqualityOperator)
 {
   const auto field_method = DataMethod{"close"};
-  const auto sma_method1 = SmaMethod{5, field_method};
-  const auto sma_method2 = SmaMethod{5, field_method};
+  const auto sma_method1 = SmaMethod{field_method, 5};
+  const auto sma_method2 = SmaMethod{field_method, 5};
 
   EXPECT_TRUE(sma_method1 == sma_method2);
   EXPECT_EQ(sma_method1, sma_method2);
@@ -54,9 +53,9 @@ TEST(SmaMethodTest, EqualityOperator)
 
 TEST(SmaMethodTest, NotEqualOperator)
 {
-  const auto sma_method1 = SmaMethod{1, DataMethod{"close"}};
-  const auto sma_method2 = SmaMethod{1, DataMethod{"open"}};
-  const auto sma_method3 = SmaMethod{2, DataMethod{"close"}};
+  const auto sma_method1 = SmaMethod{DataMethod{"close"}, 1};
+  const auto sma_method2 = SmaMethod{DataMethod{"open"}, 1};
+  const auto sma_method3 = SmaMethod{DataMethod{"close"}, 2};
 
   EXPECT_NE(sma_method1, sma_method2);
   EXPECT_NE(sma_method1, sma_method3);

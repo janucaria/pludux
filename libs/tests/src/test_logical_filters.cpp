@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
-#include <pludux/asset_history.hpp>
-#include <pludux/screener/boolean_filter.hpp>
-#include <pludux/screener/logical_filter.hpp>
+
+import pludux;
 
 using namespace pludux::screener;
 using pludux::AssetHistory;

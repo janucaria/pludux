@@ -1,4 +1,4 @@
-project(pludux-backtest-cli LANGUAGES CXX)
+project(pludux-backtest-cli)
 
 add_executable(${PROJECT_NAME})
 

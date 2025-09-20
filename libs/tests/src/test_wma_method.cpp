@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
-#include <pludux/asset_history.hpp>
-#include <pludux/screener.hpp>
-#include <pludux/series.hpp>
+
+import pludux;
 
 using namespace pludux::screener;
 
@@ -10,7 +9,7 @@ TEST(WmaMethodTest, RunOneMethod)
   const auto field = "close";
   const auto field_method = DataMethod{field};
   const auto period = 5;
-  const auto wma_method = WmaMethod{period, field_method};
+  const auto wma_method = WmaMethod{field_method, period};
   const auto asset_data = pludux::AssetHistory{
    {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
@@ -23,7 +22,7 @@ TEST(WmaMethodTest, RunAllMethod)
   const auto field = "close";
   const auto field_method = DataMethod{field};
   const auto period = 5;
-  const auto wma_method = WmaMethod{period, field_method};
+  const auto wma_method = WmaMethod{field_method, period};
   const auto asset_data = pludux::AssetHistory{
    {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
@@ -47,8 +46,8 @@ TEST(WmaMethodTest, EqualityOperator)
   const auto field = "close";
   const auto field_method = DataMethod{field};
   const auto period = 5;
-  const auto wma_method1 = WmaMethod{period, field_method};
-  const auto wma_method2 = WmaMethod{period, field_method};
+  const auto wma_method1 = WmaMethod{field_method, period};
+  const auto wma_method2 = WmaMethod{field_method, period};
 
   EXPECT_TRUE(wma_method1 == wma_method2);
   EXPECT_FALSE(wma_method1 != wma_method2);
@@ -60,12 +59,12 @@ TEST(WmaMethodTest, NotEqualOperator)
   const auto field1 = "close";
   const auto field_method1 = DataMethod{field1};
   const auto period1 = 5;
-  const auto wma_method1 = WmaMethod{period1, field_method1};
+  const auto wma_method1 = WmaMethod{field_method1, period1};
 
   const auto field2 = "open";
   const auto field_method2 = DataMethod{field2};
   const auto period2 = 10;
-  const auto wma_method2 = WmaMethod{period2, field_method2};
+  const auto wma_method2 = WmaMethod{field_method2, period2};
 
   EXPECT_TRUE(wma_method1 != wma_method2);
   EXPECT_FALSE(wma_method1 == wma_method2);

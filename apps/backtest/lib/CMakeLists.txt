@@ -1,4 +1,4 @@
-project(pludux-backtest-lib LANGUAGES CXX)
+project(pludux-backtest-lib)
 
 FetchContent_Declare(
   rapidcsv
@@ -29,25 +29,29 @@ find_package(ctre REQUIRED)
 add_library(${PROJECT_NAME})
 add_library(pludux::backtest-lib ALIAS ${PROJECT_NAME})
 
-target_sources(${PROJECT_NAME}
-  PUBLIC
-    sources/backtest.cpp
-
-    sources/backtest/trade_entry.cpp
-    sources/backtest/trade_exit.cpp
-    sources/backtest/trade_position.cpp
-    sources/backtest/trade_record.cpp
-    sources/backtest/trade_session.cpp
-
-    sources/backtest/backtest_summary.cpp
-    sources/backtest/asset.cpp
-    sources/backtest/strategy.cpp
-    sources/backtest/profile.cpp
+set_target_properties(${PROJECT_NAME}
+  PROPERTIES
+    CXX_SCAN_FOR_MODULES OFF
 )
 
-target_include_directories(${PROJECT_NAME}
+target_sources(${PROJECT_NAME}
   PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
+  FILE_SET CXX_MODULES
+    BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/sources
+    FILES
+    
+    sources/backtest/trade_entry.cxx
+    sources/backtest/trade_exit.cxx
+    sources/backtest/trade_record.cxx
+    sources/backtest/trade_position.cxx
+    sources/backtest/trade_session.cxx
+    
+    sources/backtest/asset.cxx
+    sources/backtest/profile.cxx
+    sources/backtest/backtest_summary.cxx
+    sources/backtest/strategy.cxx
+
+    sources/backtest.cxx
 )
 
 target_link_libraries(${PROJECT_NAME}

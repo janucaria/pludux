@@ -1,13 +1,13 @@
 #include <gtest/gtest.h>
-#include <pludux/asset_history.hpp>
-#include <pludux/series.hpp>
+
+import pludux;
 
 using namespace pludux;
 
 TEST(BullishDivergenceSeriesTest, Constructor)
 {
-  const auto signal = DataSeries{"signal"};
-  const auto reference = DataSeries{"reference"};
+  const auto signal = DataSeries<double>{};
+  const auto reference = DataSeries<double>{};
   const auto series = BullishDivergenceSeries{signal, reference};
 
   EXPECT_EQ(series.pivot_range(), 5);

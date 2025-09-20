@@ -1,9 +1,6 @@
 #include <gtest/gtest.h>
-#include <pludux/asset_history.hpp>
-#include <pludux/screener/lookback_method.hpp>
-#include <pludux/screener/ohlcv_method.hpp>
-#include <pludux/series.hpp>
-#include <stdexcept>
+
+import pludux;
 
 using namespace pludux::screener;
 

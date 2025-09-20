@@ -1,9 +1,7 @@
 #include <cmath>
 #include <gtest/gtest.h>
-#include <pludux/asset_history.hpp>
-#include <pludux/asset_snapshot.hpp>
-#include <pludux/screener/ohlcv_method.hpp>
-#include <vector>
+
+import pludux;
 
 using namespace pludux;
 using namespace pludux::screener;

@@ -1,13 +1,12 @@
 #include <gtest/gtest.h>
-#include <limits>
-#include <pludux/series.hpp>
-#include <vector>
+
+import pludux;
 
 using namespace pludux;
 
 TEST(SeriesTest, ConstructorInitialization)
 {
-  const auto series = DataSeries{1, 2, 3, 4, 5};
+  const auto series = DataSeries{1., 2., 3., 4., 5.};
 
   ASSERT_EQ(series.size(), 5);
 }

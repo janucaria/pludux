@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
-#include <pludux/asset_history.hpp>
-#include <pludux/screener.hpp>
-#include <pludux/series.hpp>
+
+import pludux;
 
 using namespace pludux::screener;
 
@@ -10,7 +9,7 @@ TEST(RmaMethodTest, RunOneMethod)
   const auto field = "close";
   const auto field_method = DataMethod{field};
   const auto period = 5;
-  const auto rma_method = RmaMethod{period, field_method};
+  const auto rma_method = RmaMethod{field_method, period};
   const auto asset_data = pludux::AssetHistory{
    {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
@@ -23,7 +22,7 @@ TEST(RmaMethodTest, RunAllMethod)
   const auto field = "close";
   const auto field_method = DataMethod{field};
   const auto period = 5;
-  const auto rma_method = RmaMethod{period, field_method};
+  const auto rma_method = RmaMethod{field_method, period};
   const auto asset_data = pludux::AssetHistory{
    {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
 
@@ -45,10 +44,10 @@ TEST(RmaMethodTest, RunAllMethod)
 TEST(RmaMethodTest, EqualityOperator)
 {
   const auto operand1_method1 = DataMethod{"close"};
-  const auto rma_method1 = RmaMethod{5, operand1_method1};
+  const auto rma_method1 = RmaMethod{operand1_method1, 5};
 
   const auto operand1_method2 = DataMethod{"close"};
-  const auto rma_method2 = RmaMethod{5, operand1_method2};
+  const auto rma_method2 = RmaMethod{operand1_method2, 5};
 
   EXPECT_TRUE(rma_method1 == rma_method2);
   EXPECT_FALSE(rma_method1 != rma_method2);
@@ -58,10 +57,10 @@ TEST(RmaMethodTest, EqualityOperator)
 TEST(RmaMethodTest, NotEqualOperator)
 {
   const auto operand1_method1 = DataMethod{"close"};
-  const auto rma_method1 = RmaMethod{5, operand1_method1};
+  const auto rma_method1 = RmaMethod{operand1_method1, 5};
 
   const auto operand1_method2 = DataMethod{"close"};
-  const auto rma_method2 = RmaMethod{10, operand1_method2};
+  const auto rma_method2 = RmaMethod{operand1_method2, 10};
 
   EXPECT_FALSE(rma_method1 == rma_method2);
   EXPECT_TRUE(rma_method1 != rma_method2);

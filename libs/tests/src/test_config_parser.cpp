@@ -1,9 +1,8 @@
 #include <gtest/gtest.h>
+
 #include <nlohmann/json.hpp>
 
-#include <pludux/screener.hpp>
-
-#include <pludux/config_parser.hpp>
+import pludux;
 
 using namespace pludux;
 using namespace pludux::screener;
@@ -12,9 +11,10 @@ using json = nlohmann::json;
 class ConfigParserTest : public ::testing::Test {
 protected:
   ConfigParser config_parser;
+
   void SetUp() override
   {
-    config_parser.register_default_parsers();
+    config_parser = std::move(make_default_registered_config_parser());
 
     config_parser.parse_method(json::parse(R"(
       {
@@ -1569,8 +1569,8 @@ TEST_F(ConfigParserTest, ParseScreenerNotFilter)
   const auto not_filter = screener_filter_cast<NotFilter>(filter);
   ASSERT_NE(not_filter, nullptr);
 
-  const auto condition = not_filter->condition();
-  const auto true_filter = screener_filter_cast<TrueFilter>(condition);
+  const auto other_condition = not_filter->other_condition();
+  const auto true_filter = screener_filter_cast<TrueFilter>(other_condition);
 
   ASSERT_NE(true_filter, nullptr);
 
