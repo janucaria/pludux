@@ -6,13 +6,13 @@
 #include <iostream>
 #include <unordered_map>
 
-#include <nlohmann/json.hpp>
+#include <jsoncons/json.hpp>
 
 import pludux.backtest;
 
 auto main(int, const char**) -> int
 {
-  using json = nlohmann::json;
+  using json = jsoncons::json;
 
   const auto json_strategy_path =
    pludux::get_env_var("PLUDUX_BACKTEST_STRATEGY_JSON_PATH").value_or("");

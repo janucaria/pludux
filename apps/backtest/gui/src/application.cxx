@@ -9,7 +9,7 @@ module;
 
 #include <imgui.h>
 #include <implot.h>
-#include <nlohmann/json.hpp>
+#include <jsoncons/json.hpp>
 
 export module pludux.apps.backtest;
 

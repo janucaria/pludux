@@ -7,7 +7,7 @@ module;
 #include <string_view>
 #include <utility>
 
-#include <nlohmann/json.hpp>
+#include <jsoncons/json.hpp>
 
 export module pludux.backtest:strategy;
 
@@ -239,13 +239,13 @@ auto risk_reward_config_parser() -> ConfigParser
   config_parser.register_method_parser(
    "ATR",
    [](const ConfigParser& config_parser,
-      const screener::ScreenerMethod& method) -> nlohmann::json {
-     auto serialized_method = nlohmann::json{};
+      const screener::ScreenerMethod& method) -> jsoncons::json {
+     auto serialized_method = jsoncons::json{};
 
      auto atr_method = screener_method_cast<screener::AtrMethod>(method);
 
      if(atr_method) {
-       serialized_method["atr"] = nlohmann::json{};
+       serialized_method["atr"] = jsoncons::json{};
        serialized_method["atr"]["period"] = atr_method->period();
        serialized_method["atr"]["multiplier"] = atr_method->multiplier();
      }
@@ -253,17 +253,17 @@ auto risk_reward_config_parser() -> ConfigParser
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser,
-      const nlohmann::json& parameters) -> screener::ScreenerMethod {
+      const jsoncons::json& parameters) -> screener::ScreenerMethod {
      auto period = std::size_t{14};
      auto multiplier = 1.0;
 
      if(parameters.contains("atr") && parameters.at("atr").is_object()) {
        const auto& atr_params = parameters.at("atr");
        if(atr_params.contains("period")) {
-         period = atr_params.at("period").get<std::size_t>();
+         period = atr_params.at("period").as<std::size_t>();
        }
        if(atr_params.contains("multiplier")) {
-         multiplier = atr_params.at("multiplier").get<double>();
+         multiplier = atr_params.at("multiplier").as_double();
        }
      }
 
@@ -278,8 +278,8 @@ auto risk_reward_config_parser() -> ConfigParser
   config_parser.register_method_parser(
    "PERCENTAGE",
    [](const ConfigParser& config_parser,
-      const screener::ScreenerMethod& method) -> nlohmann::json {
-     auto serialized_method = nlohmann::json{};
+      const screener::ScreenerMethod& method) -> jsoncons::json {
+     auto serialized_method = jsoncons::json{};
 
      auto percent_method =
       screener_method_cast<screener::PercentageMethod>(method);
@@ -296,10 +296,10 @@ auto risk_reward_config_parser() -> ConfigParser
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser,
-      const nlohmann::json& parameters) -> screener::ScreenerMethod {
+      const jsoncons::json& parameters) -> screener::ScreenerMethod {
      const auto total_method = screener::CloseMethod{};
 
-     const auto percent = parameters.at("percentage").get<double>();
+     const auto percent = parameters.at("percentage").as_double();
      const auto percent_method = screener::ValueMethod{percent};
 
      const auto percentage_method =
@@ -311,8 +311,8 @@ auto risk_reward_config_parser() -> ConfigParser
   config_parser.register_method_parser(
    "VALUE",
    [](const ConfigParser& config_parser,
-      const screener::ScreenerMethod& method) -> nlohmann::json {
-     auto serialized_method = nlohmann::json{};
+      const screener::ScreenerMethod& method) -> jsoncons::json {
+     auto serialized_method = jsoncons::json{};
 
      auto value_method = screener_method_cast<screener::ValueMethod>(method);
 
@@ -323,8 +323,8 @@ auto risk_reward_config_parser() -> ConfigParser
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser,
-      const nlohmann::json& parameters) -> screener::ScreenerMethod {
-     const auto value = parameters.at("value").get<double>();
+      const jsoncons::json& parameters) -> screener::ScreenerMethod {
+     const auto value = parameters.at("value").as_double();
      return screener::ValueMethod{value};
    });
 
@@ -338,10 +338,11 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
   auto method_registry = std::make_shared<screener::MethodRegistry>();
   auto config_parser = make_default_registered_config_parser(method_registry);
 
-  auto strategy_json =
-   nlohmann::json::parse(json_strategy_stream, nullptr, true, true);
+  auto strategy_json = jsoncons::json::parse(
+   json_strategy_stream, jsoncons::json_options{}.allow_comments(true));
   if(strategy_json.contains("series")) {
-    for(const auto& [name, series_method] : strategy_json["series"].items()) {
+    for(const auto& [name, series_method] :
+        strategy_json["series"].object_range()) {
       const auto method = config_parser.parse_method(series_method);
       method_registry->set(name, method);
     }
@@ -385,12 +386,13 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
   auto take_profit_risk_multiplier = 1.0;
   if(strategy_json.contains("takeProfit")) {
     const auto take_profit_config = strategy_json.at("takeProfit");
-    if(take_profit_config.is_boolean()) {
-      is_take_profit_enabled = take_profit_config.get<bool>();
+    if(take_profit_config.is_bool()) {
+      is_take_profit_enabled = take_profit_config.as_bool();
     } else if(take_profit_config.is_object()) {
-      is_take_profit_enabled = take_profit_config.value("enabled", true);
+      is_take_profit_enabled =
+       take_profit_config.get_value_or<bool>("enabled", true);
       take_profit_risk_multiplier =
-       take_profit_config.value("riskMultiplier", 1.0);
+       take_profit_config.get_value_or<double>("riskMultiplier", 1.0);
     } else {
       throw std::runtime_error(
        "Invalid take profit configuration in strategy JSON");
@@ -402,11 +404,13 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
   auto stop_loss_risk_multiplier = 1.0;
   if(strategy_json.contains("stopLoss")) {
     const auto stop_loss_config = strategy_json.at("stopLoss");
-    if(stop_loss_config.is_boolean()) {
-      is_stop_loss_enabled = stop_loss_config.get<bool>();
+    if(stop_loss_config.is_bool()) {
+      is_stop_loss_enabled = stop_loss_config.as_bool();
     } else if(stop_loss_config.is_object()) {
-      is_trailing_stop_loss = stop_loss_config.value("isTrailing", false);
-      is_stop_loss_enabled = stop_loss_config.value("enabled", true);
+      is_trailing_stop_loss =
+       stop_loss_config.get_value_or<bool>("isTrailing", false);
+      is_stop_loss_enabled =
+       stop_loss_config.get_value_or<bool>("enabled", true);
     } else {
       throw std::runtime_error(
        "Invalid stop loss configuration in strategy JSON");

@@ -5,7 +5,7 @@ module;
 #include <utility>
 
 #include <cereal/cereal.hpp>
-#include <nlohmann/json.hpp>
+#include <jsoncons/json.hpp>
 #include <rapidcsv.h>
 
 #include <cereal/archives/json.hpp>
@@ -24,23 +24,6 @@ import pludux.backtest;
 import :app_state_data;
 
 export namespace cereal {
-
-template<class Archive>
-void save(Archive& archive, const nlohmann::json& json_data)
-{
-  const auto json_str = json_data.dump();
-  archive(make_nvp("json", json_str));
-}
-
-template<class Archive>
-void load(Archive& archive, nlohmann::json& json_data)
-{
-  auto json_str = std::string{};
-  archive(make_nvp("json", json_str));
-  json_data = nlohmann::json::parse(json_str);
-}
-
-/*--------------------------------------------------------------------------------------*/
 
 template<class Archive>
 void serialize(Archive& archive, pludux::backtest::TradeRecord& trade_record)
@@ -317,20 +300,27 @@ void serialize(Archive& archive, pludux::backtest::Strategy& strategy)
   const auto take_profit_risk_multiplier =
    strategy.take_profit_risk_multiplier();
 
-  auto registered_methods = std::unordered_map<std::string, nlohmann::json>{};
+  auto registered_methods = std::unordered_map<std::string, std::string>{};
   if(method_registry) {
     for(const auto& [method_name, method] : method_registry->methods()) {
-      registered_methods[method_name] = config_parser.serialize_method(method);
+      registered_methods[method_name] =
+       config_parser.serialize_method(method).to_string();
     }
   }
 
+  const auto risk_method_str = risk_method_json.to_string();
+  const auto long_entry_filter_str = long_entry_filter_json.to_string();
+  const auto long_exit_filter_str = long_exit_filter_json.to_string();
+  const auto short_entry_filter_str = short_entry_filter_json.to_string();
+  const auto short_exit_filter_str = short_exit_filter_json.to_string();
+
   archive(make_nvp("name", strategy.name()),
           make_nvp("registeredMethods", registered_methods),
-          make_nvp("riskMethod", risk_method_json),
-          make_nvp("longEntryFilter", long_entry_filter_json),
-          make_nvp("longExitFilter", long_exit_filter_json),
-          make_nvp("shortEntryFilter", short_entry_filter_json),
-          make_nvp("shortExitFilter", short_exit_filter_json),
+          make_nvp("riskMethod", risk_method_str),
+          make_nvp("longEntryFilter", long_entry_filter_str),
+          make_nvp("longExitFilter", long_exit_filter_str),
+          make_nvp("shortEntryFilter", short_entry_filter_str),
+          make_nvp("shortExitFilter", short_exit_filter_str),
           make_nvp("stopLossEnabled", stop_loss_enabled),
           make_nvp("stopLossTrailingEnabled", stop_loss_trailing_enabled),
           make_nvp("stopLossRiskMultiplier", stop_loss_risk_multiplier),
@@ -346,12 +336,12 @@ struct LoadAndConstruct<pludux::backtest::Strategy> {
                      construct<pludux::backtest::Strategy>& constructor)
   {
     auto name = std::string{};
-    auto registered_methods = std::unordered_map<std::string, nlohmann::json>{};
-    auto risk_method_json = nlohmann::json{};
-    auto long_entry_filter_json = nlohmann::json{};
-    auto long_exit_filter_json = nlohmann::json{};
-    auto short_entry_filter_json = nlohmann::json{};
-    auto short_exit_filter_json = nlohmann::json{};
+    auto registered_methods = std::unordered_map<std::string, std::string>{};
+    auto risk_method_str = std::string{};
+    auto long_entry_filter_str = std::string{};
+    auto long_exit_filter_str = std::string{};
+    auto short_entry_filter_str = std::string{};
+    auto short_exit_filter_str = std::string{};
     auto stop_loss_enabled = bool{};
     auto stop_loss_trailing_enabled = bool{};
     auto stop_loss_risk_multiplier = double{};
@@ -360,11 +350,11 @@ struct LoadAndConstruct<pludux::backtest::Strategy> {
 
     archive(make_nvp("name", name),
             make_nvp("registeredMethods", registered_methods),
-            make_nvp("riskMethod", risk_method_json),
-            make_nvp("longEntryFilter", long_entry_filter_json),
-            make_nvp("longExitFilter", long_exit_filter_json),
-            make_nvp("shortEntryFilter", short_entry_filter_json),
-            make_nvp("shortExitFilter", short_exit_filter_json),
+            make_nvp("riskMethod", risk_method_str),
+            make_nvp("longEntryFilter", long_entry_filter_str),
+            make_nvp("longExitFilter", long_exit_filter_str),
+            make_nvp("shortEntryFilter", short_entry_filter_str),
+            make_nvp("shortExitFilter", short_exit_filter_str),
             make_nvp("stopLossEnabled", stop_loss_enabled),
             make_nvp("stopLossTrailingEnabled", stop_loss_trailing_enabled),
             make_nvp("stopLossRiskMultiplier", stop_loss_risk_multiplier),
@@ -372,6 +362,16 @@ struct LoadAndConstruct<pludux::backtest::Strategy> {
             make_nvp("takeProfitRiskMultiplier", take_profit_risk_multiplier));
 
     auto method_registry = std::make_shared<pludux::screener::MethodRegistry>();
+
+    const auto risk_method_json = jsoncons::json::parse(risk_method_str);
+    const auto long_entry_filter_json =
+     jsoncons::json::parse(long_entry_filter_str);
+    const auto long_exit_filter_json =
+     jsoncons::json::parse(long_exit_filter_str);
+    const auto short_entry_filter_json =
+     jsoncons::json::parse(short_entry_filter_str);
+    const auto short_exit_filter_json =
+     jsoncons::json::parse(short_exit_filter_str);
 
     auto risk_parser = pludux::backtest::risk_reward_config_parser();
     auto risk_method = risk_parser.parse_method(risk_method_json);
@@ -385,7 +385,8 @@ struct LoadAndConstruct<pludux::backtest::Strategy> {
      config_parser.parse_filter(short_entry_filter_json);
     auto short_exit_filter = config_parser.parse_filter(short_exit_filter_json);
 
-    for(const auto& [method_name, method_json] : registered_methods) {
+    for(const auto& [method_name, method_str] : registered_methods) {
+      const auto method_json = jsoncons::json::parse(method_str);
       const auto method = config_parser.parse_method(method_json);
       method_registry->set(method_name, method);
     }

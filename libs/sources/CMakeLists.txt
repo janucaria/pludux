@@ -1,13 +1,15 @@
+SET(JSONCONS_BUILD_TESTS OFF)
 FetchContent_Declare(
-  nlohmann_json
-  GIT_REPOSITORY https://github.com/nlohmann/json.git
-  GIT_TAG        v3.12.0
+  jsoncons
+  GIT_REPOSITORY https://github.com/danielaparker/jsoncons.git
+  GIT_TAG        v1.4.1
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
   OVERRIDE_FIND_PACKAGE
+  EXCLUDE_FROM_ALL
 )
 
-find_package(nlohmann_json REQUIRED)
+find_package(jsoncons REQUIRED)
 
 add_library(${PROJECT_NAME})
 add_library(${CMAKE_PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
@@ -109,7 +111,7 @@ target_compile_features(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
-    nlohmann_json::nlohmann_json
+    jsoncons
 )
 
 if(EMSCRIPTEN)

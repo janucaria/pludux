@@ -1,12 +1,12 @@
 #include <gtest/gtest.h>
 
-#include <nlohmann/json.hpp>
+#include <jsoncons/json.hpp>
 
 import pludux;
 
 using namespace pludux;
 using namespace pludux::screener;
-using json = nlohmann::json;
+using json = jsoncons::json;
 
 class ConfigParserTest : public ::testing::Test {
 protected:
@@ -1033,7 +1033,6 @@ TEST_F(ConfigParserTest, ParseScreenerHiddenBullishDivergenceMethod)
    config_parser.parse_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
-
 
 TEST_F(ConfigParserTest, ParseScreenerInvalidMethod)
 {

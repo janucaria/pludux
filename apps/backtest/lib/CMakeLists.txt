@@ -57,7 +57,6 @@ target_sources(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
     pludux::pludux-lib
-    nlohmann_json::nlohmann_json
     rapidcsv
     ctre::ctre
 )

@@ -25,7 +25,7 @@
 #include <glfw3webgpu.h>
 
 #include <cereal/cereal.hpp>
-#include <nlohmann/json.hpp>
+#include <jsoncons/json.hpp>
 #include <rapidcsv.h>
 
 #include <cereal/archives/json.hpp>
