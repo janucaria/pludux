@@ -21,19 +21,22 @@ public:
   {
   }
 
-  auto operator()(AssetSnapshot asset_snapshot) const -> PolySeries<double>
+  auto operator()(this const ScreenerMethod& self, AssetSnapshot asset_snapshot)
+   -> PolySeries<double>
   {
-    return impl_->operator()(std::move(asset_snapshot));
+    return self.impl_->operator()(std::move(asset_snapshot));
   }
 
-  auto operator==(const ScreenerMethod& other) const noexcept -> bool
+  auto operator==(this const ScreenerMethod& self, const ScreenerMethod& other) noexcept
+   -> bool
   {
-    return impl_->operator==(other);
+    return self.impl_->operator==(other);
   }
 
-  auto operator!=(const ScreenerMethod& other) const noexcept -> bool
+  auto operator!=(this const ScreenerMethod& self, const ScreenerMethod& other) noexcept
+   -> bool
   {
-    return impl_->operator!=(other);
+    return self.impl_->operator!=(other);
   }
 
   template<typename UMethod>

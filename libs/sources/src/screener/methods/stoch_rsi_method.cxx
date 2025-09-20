@@ -24,14 +24,17 @@ public:
   {
   }
 
-  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>
-  {
-    const auto stoch_rsi_series = StochRsiSeries{
-     rsi_input_(asset_data), rsi_period_, k_period_, k_smooth_, d_period_};
-    return stoch_rsi_series;
-  }
-
   auto operator==(const StochRsiMethod& other) const noexcept -> bool = default;
+
+  auto operator()(this const auto& self, AssetSnapshot asset_data)
+   -> PolySeries<double>
+  {
+    return StochRsiSeries{self.rsi_input_(asset_data),
+                          self.rsi_period_,
+                          self.k_period_,
+                          self.k_smooth_,
+                          self.d_period_};
+  }
 
   auto rsi_input() const noexcept -> ScreenerMethod
   {

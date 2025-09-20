@@ -26,10 +26,11 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
+  auto operator[](this const auto& self, std::size_t lookback) noexcept
+   -> SeriesOutput<ValueType>
   {
-    const auto range = range_[index] * multiplier_;
-    const auto middle = ma_[index];
+    const auto range = self.range_[lookback] * self.multiplier_;
+    const auto middle = self.ma_[lookback];
 
     const auto upper = middle + range;
     const auto lower = middle - range;
@@ -42,9 +43,9 @@ public:
             }};
   }
 
-  auto size() const noexcept -> std::size_t
+  auto size(this const auto& self) noexcept -> std::size_t
   {
-    return ma_.size();
+    return self.ma_.size();
   }
 
 private:

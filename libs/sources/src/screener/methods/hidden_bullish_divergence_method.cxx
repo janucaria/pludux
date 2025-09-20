@@ -33,59 +33,60 @@ public:
   auto operator==(const HiddenBullishDivergenceMethod& other) const noexcept
    -> bool = default;
 
-  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>
+  auto operator()(this const auto& self, AssetSnapshot asset_data)
+   -> PolySeries<double>
   {
-    const auto signal_series = signal_(asset_data);
-    const auto reference_series = reference_(asset_data);
+    const auto signal_series = self.signal_(asset_data);
+    const auto reference_series = self.reference_(asset_data);
 
     const auto hidden_bullish_divergence_series = HiddenBullishDivergenceSeries{
      signal_series,
      reference_series,
-     pivot_range_,
-     lookback_range_,
+     self.pivot_range_,
+     self.lookback_range_,
     };
 
     return hidden_bullish_divergence_series;
   }
 
-  auto pivot_range() const noexcept -> std::size_t
+  auto pivot_range(this const auto& self) noexcept -> std::size_t
   {
-    return pivot_range_;
+    return self.pivot_range_;
   }
 
-  void pivot_range(std::size_t pivot_range) noexcept
+  void pivot_range(this auto& self, std::size_t pivot_range) noexcept
   {
-    pivot_range_ = pivot_range;
+    self.pivot_range_ = pivot_range;
   }
 
-  auto lookback_range() const noexcept -> std::size_t
+  auto lookback_range(this const auto& self) noexcept -> std::size_t
   {
-    return lookback_range_;
+    return self.lookback_range_;
   }
 
-  void lookback_range(std::size_t lookback_range) noexcept
+  void lookback_range(this auto& self, std::size_t lookback_range) noexcept
   {
-    lookback_range_ = lookback_range;
+    self.lookback_range_ = lookback_range;
   }
 
-  auto signal() const noexcept -> const ScreenerMethod&
+  auto signal(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return signal_;
+    return self.signal_;
   }
 
-  void signal(ScreenerMethod signal) noexcept
+  void signal(this auto& self, ScreenerMethod signal) noexcept
   {
-    signal_ = std::move(signal);
+    self.signal_ = std::move(signal);
   }
 
-  auto reference() const noexcept -> const ScreenerMethod&
+  auto reference(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return reference_;
+    return self.reference_;
   }
 
-  void reference(ScreenerMethod reference) noexcept
+  void reference(this auto& self, ScreenerMethod reference) noexcept
   {
-    reference_ = std::move(reference);
+    self.reference_ = std::move(reference);
   }
 
 private:

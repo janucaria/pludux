@@ -21,22 +21,24 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
+  auto operator[](this const auto& self, std::size_t lookback) noexcept
+   -> SeriesOutput<ValueType>
   {
-    if(index < range_ || index >= series_.size() - range_) {
+    if(lookback < self.range_ ||
+       lookback >= self.series_.size() - self.range_) {
       return std::numeric_limits<ValueType>::quiet_NaN();
     }
 
-    auto value = series_[index];
+    auto value = self.series_[lookback];
 
-    for(std::size_t i = 1; i <= range_; ++i) {
-      if(series_[index - i] <= value) {
+    for(std::size_t i = 1; i <= self.range_; ++i) {
+      if(self.series_[lookback - i] <= value) {
         return std::numeric_limits<ValueType>::quiet_NaN();
       }
     }
 
-    for(std::size_t i = 1; i <= range_; ++i) {
-      if(series_[index + i] <= value) {
+    for(std::size_t i = 1; i <= self.range_; ++i) {
+      if(self.series_[lookback + i] <= value) {
         return std::numeric_limits<ValueType>::quiet_NaN();
       }
     }
@@ -44,9 +46,9 @@ public:
     return value;
   }
 
-  auto size() const noexcept -> std::size_t
+  auto size(this const auto& self) noexcept -> std::size_t
   {
-    return series_.size();
+    return self.series_.size();
   }
 
 private:

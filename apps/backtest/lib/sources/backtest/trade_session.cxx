@@ -380,7 +380,7 @@ public:
 
   auto is_closed(this const auto& self) noexcept -> bool
   {
-    return !self.is_open(self) && self.closed_position_.has_value();
+    return !self.is_open() && self.closed_position_.has_value();
   }
 
   auto is_reopen(this const auto& self) noexcept -> bool

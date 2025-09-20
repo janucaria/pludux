@@ -21,23 +21,24 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> ValueType
+  auto operator[](this const auto& self, std::size_t lookback) noexcept
+   -> SeriesOutput<ValueType>
   {
-    const auto series_size = size();
-    const auto nan_index = series_size - period_;
-    if(index > nan_index) {
+    const auto series_size = self.size();
+    const auto nan_index = series_size - self.period_;
+    if(lookback > nan_index) {
       return std::numeric_limits<ValueType>::quiet_NaN();
     }
 
-    const auto current = series_[index];
-    const auto end = series_[index + period_];
+    const auto current = self.series_[lookback];
+    const auto end = self.series_[lookback + self.period_];
 
     return 100 * (current - end) / end;
   }
 
-  auto size() const noexcept -> std::size_t
+  auto size(this const auto& self) noexcept -> std::size_t
   {
-    return series_.size();
+    return self.series_.size();
   }
 
 private:

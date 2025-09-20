@@ -21,44 +21,45 @@ public:
 
   auto operator==(const KcMethod& other) const noexcept -> bool = default;
 
-  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>
+  auto operator()(this const auto& self, AssetSnapshot asset_data)
+   -> PolySeries<double>
   {
-    const auto ma_series = ma_(asset_data);
-    const auto range_series = range_(asset_data);
+    const auto ma_series = self.ma_(asset_data);
+    const auto range_series = self.range_(asset_data);
 
-    const auto kc = KcSeries{ma_series, range_series, multiplier_};
+    const auto kc = KcSeries{ma_series, range_series, self.multiplier_};
 
     return kc;
   }
 
-  auto multiplier() const noexcept -> double
+  auto multiplier(this const auto& self) noexcept -> double
   {
-    return multiplier_;
+    return self.multiplier_;
   }
 
-  void multiplier(double multiplier) noexcept
+  void multiplier(this auto& self, double multiplier) noexcept
   {
-    multiplier_ = multiplier;
+    self.multiplier_ = multiplier;
   }
 
-  auto ma() const noexcept -> ScreenerMethod
+  auto ma(this const auto& self) noexcept -> ScreenerMethod
   {
-    return ma_;
+    return self.ma_;
   }
 
-  void ma(ScreenerMethod ma) noexcept
+  void ma(this auto& self, ScreenerMethod ma) noexcept
   {
-    ma_ = std::move(ma);
+    self.ma_ = std::move(ma);
   }
 
-  auto range() const noexcept -> ScreenerMethod
+  auto range(this const auto& self) noexcept -> ScreenerMethod
   {
-    return range_;
+    return self.range_;
   }
 
-  void range(ScreenerMethod range) noexcept
+  void range(this auto& self, ScreenerMethod range) noexcept
   {
-    range_ = std::move(range);
+    self.range_ = std::move(range);
   }
 
 private:

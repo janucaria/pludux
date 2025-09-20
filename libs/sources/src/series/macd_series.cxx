@@ -29,17 +29,18 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
+  auto operator[](this const auto& self, std::size_t lookback) noexcept
+   -> SeriesOutput<ValueType>
   {
-    const auto input_series = RefSeries{input_};
-    const auto short_ema_series = EmaSeries{input_series, short_period_};
-    const auto long_ema_series = EmaSeries{input_series, long_period_};
+    const auto input_series = RefSeries{self.input_};
+    const auto short_ema_series = EmaSeries{input_series, self.short_period_};
+    const auto long_ema_series = EmaSeries{input_series, self.long_period_};
     const auto macd_series = SubtractSeries{short_ema_series, long_ema_series};
 
-    const auto macd = macd_series[index];
+    const auto macd = macd_series[lookback];
 
-    const auto signal_series = EmaSeries{macd_series, signal_period_};
-    const auto signal = signal_series[index];
+    const auto signal_series = EmaSeries{macd_series, self.signal_period_};
+    const auto signal = signal_series[lookback];
     const auto histogram = macd - signal;
 
     return {{macd, signal, histogram},
@@ -50,14 +51,14 @@ public:
             }};
   }
 
-  auto size() const noexcept -> std::size_t
+  auto size(this const auto& self) noexcept -> std::size_t
   {
-    return input_.size();
+    return self.input_.size();
   }
 
-  auto input() const noexcept
+  auto input(this const auto& self) noexcept -> const TSeries&
   {
-    return input_;
+    return self.input_;
   }
 
 private:

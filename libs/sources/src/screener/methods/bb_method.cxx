@@ -24,63 +24,69 @@ public:
   {
   }
 
-  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>
+  auto operator==(const BbMethod& other) const noexcept -> bool = default;
+
+  auto operator()(this const auto& self, AssetSnapshot asset_data)
+   -> PolySeries<double>
   {
-    switch(ma_type_) {
+    switch(self.ma_type_) {
     case MaType::ema:
-      return BbSeries{EmaSeries{input_(asset_data), period_}, stddev_};
+      return BbSeries{EmaSeries{self.input_(asset_data), self.period_},
+                      self.stddev_};
     case MaType::wma:
-      return BbSeries{WmaSeries{input_(asset_data), period_}, stddev_};
+      return BbSeries{WmaSeries{self.input_(asset_data), self.period_},
+                      self.stddev_};
     case MaType::rma:
-      return BbSeries{RmaSeries{input_(asset_data), period_}, stddev_};
+      return BbSeries{RmaSeries{self.input_(asset_data), self.period_},
+                      self.stddev_};
     case MaType::hma:
-      return BbSeries{HmaSeries{input_(asset_data), period_}, stddev_};
+      return BbSeries{HmaSeries{self.input_(asset_data), self.period_},
+                      self.stddev_};
     case MaType::sma:
     default:
-      return BbSeries{SmaSeries{input_(asset_data), period_}, stddev_};
+      return BbSeries{SmaSeries{self.input_(asset_data), self.period_},
+                      self.stddev_};
     }
   }
 
-  auto operator==(const BbMethod& other) const noexcept -> bool = default;
-
-  auto period() const noexcept -> std::size_t
+  auto period(this const auto& self) noexcept -> std::size_t
   {
-    return period_;
+    return self.period_;
   }
 
-  void period(std::size_t period) noexcept
+  void period(this auto& self, std::size_t period) noexcept
   {
-    period_ = period;
+    self.period_ = period;
   }
 
-  auto stddev() const noexcept -> double
+  auto stddev(this const auto& self) noexcept -> double
   {
-    return stddev_;
+    return self.stddev_;
   }
 
-  void stddev(double stddev) noexcept
+  void stddev(this auto& self, double stddev) noexcept
   {
-    stddev_ = stddev;
+    self.stddev_ = stddev;
   }
 
-  auto input() const noexcept -> ScreenerMethod
+  auto input(this const auto& self) noexcept -> ScreenerMethod
   {
-    return input_;
+    return self.input_;
   }
 
-  void input(ScreenerMethod input) noexcept
+  void input(this auto& self, ScreenerMethod input) noexcept
   {
-    input_ = input;
+    self.input_ = input;
   }
 
-  auto ma_type() const noexcept -> MaType
+  auto ma_type(this const auto& self) noexcept -> MaType
   {
-    return ma_type_;
+    return self.ma_type_;
   }
 
-  void ma_type(MaType ma_type) noexcept
+  void ma_type(this auto& self, MaType ma_type) noexcept
   {
-    ma_type_ = ma_type;
+    self.ma_type_ = ma_type;
   }
 
 private:

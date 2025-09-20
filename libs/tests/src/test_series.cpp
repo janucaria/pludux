@@ -6,7 +6,7 @@ using namespace pludux;
 
 TEST(SeriesTest, ConstructorInitialization)
 {
-  const auto series = DataSeries{1, 2, 3, 4, 5};
+  const auto series = DataSeries{1., 2., 3., 4., 5.};
 
   ASSERT_EQ(series.size(), 5);
 }

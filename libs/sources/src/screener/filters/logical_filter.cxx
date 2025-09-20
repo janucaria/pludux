@@ -22,25 +22,25 @@ public:
   {
   }
 
-  auto operator()(AssetSnapshot asset_data) const -> bool
+  auto operator==(const BinaryLogicalFilter& other) const noexcept
+   -> bool = default;
+
+  auto operator()(this const auto& self, AssetSnapshot asset_data) -> bool
   {
-    const auto first_condition = first_condition_(asset_data);
-    const auto second_condition = second_condition_(asset_data);
+    const auto first_condition = self.first_condition_(asset_data);
+    const auto second_condition = self.second_condition_(asset_data);
 
     return TBinaryLogicalOperator{}(first_condition, second_condition);
   }
 
-  auto operator==(const BinaryLogicalFilter& other) const noexcept
-   -> bool = default;
-
-  auto first_condition() const -> const ScreenerFilter&
+  auto first_condition(this const auto& self) -> const ScreenerFilter&
   {
-    return first_condition_;
+    return self.first_condition_;
   }
 
-  auto second_condition() const -> const ScreenerFilter&
+  auto second_condition(this const auto& self) -> const ScreenerFilter&
   {
-    return second_condition_;
+    return self.second_condition_;
   }
 
 private:
@@ -53,26 +53,26 @@ template<typename T, typename TUnaryLogicalOperator>
 class UnaryLogicalFilter {
 public:
   explicit UnaryLogicalFilter(ScreenerFilter condition)
-  : condition_{std::move(condition)}
+  : other_condition_{std::move(condition)}
   {
-  }
-
-  auto operator()(AssetSnapshot asset_data) const -> bool
-  {
-    const auto condition = condition_(asset_data);
-    return TUnaryLogicalOperator{}(condition);
   }
 
   auto operator==(const UnaryLogicalFilter& other) const noexcept
    -> bool = default;
 
-  auto condition() const -> const ScreenerFilter&
+  auto operator()(this const auto& self, AssetSnapshot asset_data) -> bool
   {
-    return condition_;
+    const auto condition = self.other_condition_(asset_data);
+    return TUnaryLogicalOperator{}(condition);
+  }
+
+  auto other_condition(this const auto& self) -> const ScreenerFilter&
+  {
+    return self.other_condition_;
   }
 
 private:
-  ScreenerFilter condition_;
+  ScreenerFilter other_condition_;
 };
 
 template<typename T = void>

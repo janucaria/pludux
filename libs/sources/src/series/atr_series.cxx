@@ -33,14 +33,15 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
+  auto operator[](this const auto& self, std::size_t lookback) noexcept
+   -> SeriesOutput<ValueType>
   {
-    return atr_series_[index] * multiplier_;
+    return self.atr_series_[lookback] * self.multiplier_;
   }
 
-  auto size() const noexcept -> std::size_t
+  auto size(this const auto& self) noexcept -> std::size_t
   {
-    return atr_series_.size();
+    return self.atr_series_.size();
   }
 
 private:

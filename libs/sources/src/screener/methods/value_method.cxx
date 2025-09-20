@@ -17,16 +17,17 @@ public:
   {
   }
 
-  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>
-  {
-    return RepeatSeries{value_, asset_data.size()};
-  }
-
   auto operator==(const ValueMethod& other) const noexcept -> bool = default;
 
-  auto value() const -> double
+  auto operator()(this const auto& self, AssetSnapshot asset_data)
+   -> PolySeries<double>
   {
-    return value_;
+    return RepeatSeries{self.value_, asset_data.size()};
+  }
+
+  auto value(this const auto& self) noexcept -> double
+  {
+    return self.value_;
   }
 
 private:

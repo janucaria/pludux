@@ -21,23 +21,23 @@ public:
   auto operator==(const CrossoverFilter& other) const noexcept
    -> bool = default;
 
-  auto operator()(AssetSnapshot asset_data) const -> bool
+  auto operator()(this const auto& self, AssetSnapshot asset_data) -> bool
   {
-    const auto signal_result = signal_(asset_data);
-    const auto reference_result = reference_(asset_data);
+    const auto signal_result = self.signal_(asset_data);
+    const auto reference_result = self.reference_(asset_data);
 
     return signal_result[0] > reference_result[0] &&
            signal_result[1] <= reference_result[1];
   }
 
-  auto signal() const noexcept -> const ScreenerMethod&
+  auto signal(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return signal_;
+    return self.signal_;
   }
 
-  auto reference() const noexcept -> const ScreenerMethod&
+  auto reference(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return reference_;
+    return self.reference_;
   }
 
 private:

@@ -336,9 +336,8 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
  -> backtest::Strategy
 {
   auto method_registry = std::make_shared<screener::MethodRegistry>();
-  auto config_parser = pludux::ConfigParser{method_registry};
+  auto config_parser = make_default_registered_config_parser(method_registry);
 
-  config_parser.register_default_parsers();
   auto strategy_json =
    nlohmann::json::parse(json_strategy_stream, nullptr, true, true);
   if(strategy_json.contains("series")) {

@@ -24,10 +24,11 @@ public:
   auto operator==(const ReferenceMethod& other) const noexcept
    -> bool = default;
 
-  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>
+  auto operator()(this const auto& self, AssetSnapshot asset_data)
+   -> PolySeries<double>
   {
-    if(registry_) {
-      const auto method_opt = registry_->get(name_);
+    if(self.registry_) {
+      const auto method_opt = self.registry_->get(self.name_);
       if(method_opt.has_value()) {
         const auto& method = method_opt.value();
         return method(asset_data);
@@ -38,24 +39,26 @@ public:
                                 asset_data.size()};
   }
 
-  auto registry() const noexcept -> std::shared_ptr<const MethodRegistry>
+  auto registry(this const auto& self) noexcept
+   -> std::shared_ptr<const MethodRegistry>
   {
-    return registry_;
+    return self.registry_;
   }
 
-  void registry(std::shared_ptr<const MethodRegistry> new_registry) noexcept
+  void registry(this auto& self,
+                std::shared_ptr<const MethodRegistry> new_registry) noexcept
   {
-    registry_ = std::move(new_registry);
+    self.registry_ = std::move(new_registry);
   }
 
-  auto name() const noexcept -> const std::string&
+  auto name(this const auto& self) noexcept -> const std::string&
   {
-    return name_;
+    return self.name_;
   }
 
-  void name(std::string new_name) noexcept
+  void name(this auto& self, std::string new_name) noexcept
   {
-    name_ = std::move(new_name);
+    self.name_ = std::move(new_name);
   }
 
 private:

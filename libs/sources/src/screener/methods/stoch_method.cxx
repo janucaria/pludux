@@ -26,63 +26,66 @@ public:
   {
   }
 
-  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>
-  {
-    const auto high_series = high_(asset_data);
-    const auto low_series = low_(asset_data);
-    const auto close_series = close_(asset_data);
-
-    const auto stoch = StochSeries{
-     high_series, low_series, close_series, k_period_, k_smooth_, d_period_};
-
-    return stoch;
-  }
-
   auto operator==(const StochMethod& other) const noexcept -> bool = default;
 
-  auto high() const noexcept -> ScreenerMethod
+  auto operator()(this const auto& self, AssetSnapshot asset_data)
+   -> PolySeries<double>
   {
-    return high_;
+    const auto high_series = self.high_(asset_data);
+    const auto low_series = self.low_(asset_data);
+    const auto close_series = self.close_(asset_data);
+
+    return StochSeries{high_series,
+                       low_series,
+                       close_series,
+                       self.k_period_,
+                       self.k_smooth_,
+                       self.d_period_};
   }
 
-  auto low() const noexcept -> ScreenerMethod
+  auto high(this const auto& self) noexcept -> ScreenerMethod
   {
-    return low_;
+    return self.high_;
   }
 
-  auto close() const noexcept -> ScreenerMethod
+  auto low(this const auto& self) noexcept -> ScreenerMethod
   {
-    return close_;
+    return self.low_;
   }
 
-  auto k_period() const noexcept -> std::size_t
+  auto close(this const auto& self) noexcept -> ScreenerMethod
   {
-    return k_period_;
+    return self.close_;
   }
 
-  void k_period(std::size_t k_period) noexcept
+  auto k_period(this const auto& self) noexcept -> std::size_t
   {
-    k_period_ = k_period;
+    return self.k_period_;
   }
 
-  auto k_smooth() const noexcept -> std::size_t
+  void k_period(this auto& self, std::size_t k_period) noexcept
   {
-    return k_smooth_;
+    self.k_period_ = k_period;
   }
 
-  void k_smooth(std::size_t k_smooth) noexcept
+  auto k_smooth(this const auto& self) noexcept -> std::size_t
   {
-    k_smooth_ = k_smooth;
+    return self.k_smooth_;
   }
 
-  auto d_period() const noexcept -> std::size_t
+  void k_smooth(this auto& self, std::size_t k_smooth) noexcept
   {
-    return d_period_;
+    self.k_smooth_ = k_smooth;
   }
 
-  void d_period(std::size_t d_period) noexcept
+  auto d_period(this const auto& self) noexcept -> std::size_t
   {
-    d_period_ = d_period;
+    return self.d_period_;
+  }
+
+  void d_period(this auto& self, std::size_t d_period) noexcept
+  {
+    self.d_period_ = d_period;
   }
 
 private:

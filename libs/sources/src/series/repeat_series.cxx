@@ -9,33 +9,35 @@ import :series.series_output;
 
 export namespace pludux {
 
-template<typename T>
+template<typename TValue>
+  requires std::numeric_limits<TValue>::has_quiet_NaN
 class RepeatSeries {
 public:
-  using ValueType = T;
+  using ValueType = TValue;
 
-  RepeatSeries(T value, std::size_t size)
+  RepeatSeries(TValue value, std::size_t size)
   : value_{value}
   , size_{size}
   {
   }
 
-  auto operator[](std::size_t index) const -> ValueType
+  // TODO: can't use SeriesOutput here because of MSVC bug
+  auto operator[](this const auto self, std::size_t index) -> ValueType
   {
-    if(index >= size()) {
-      return std::numeric_limits<T>::quiet_NaN();
+    if(index >= self.size()) {
+      return std::numeric_limits<TValue>::quiet_NaN();
     }
 
-    return value_;
+    return self.value_;
   }
 
-  auto size() const noexcept -> std::size_t
+  auto size(this const auto self) noexcept -> std::size_t
   {
-    return size_;
+    return self.size_;
   }
 
 private:
-  T value_;
+  TValue value_;
   std::size_t size_;
 };
 

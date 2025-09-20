@@ -28,14 +28,16 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
+  auto operator[](this const auto& self, std::size_t lookback) noexcept
+   -> SeriesOutput<ValueType>
   {
-    const auto high = highs_[index];
-    const auto low = lows_[index];
+    const auto high = self.highs_[lookback];
+    const auto low = self.lows_[lookback];
 
-    const auto close_last_index = closes_.size() - 1;
-    const auto prev_close =
-     index == close_last_index ? closes_[index] : closes_[index + 1];
+    const auto close_last_index = self.closes_.size() - 1;
+    const auto prev_close = lookback == close_last_index
+                             ? self.closes_[lookback]
+                             : self.closes_[lookback + 1];
 
     const auto hl = std::abs(high - low);
     const auto hc = std::abs(high - prev_close);
@@ -44,12 +46,12 @@ public:
     return std::max(std::max(hl, hc), lc);
   }
 
-  auto size() const noexcept -> std::size_t
+  auto size(this const auto& self) noexcept -> std::size_t
   {
-    assert(highs_.size() == lows_.size());
-    assert(highs_.size() == closes_.size());
+    assert(self.highs_.size() == self.lows_.size());
+    assert(self.highs_.size() == self.closes_.size());
 
-    return highs_.size();
+    return self.highs_.size();
   }
 
 private:

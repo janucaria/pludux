@@ -20,28 +20,28 @@ public:
 
   auto operator==(const LookbackMethod& other) const noexcept -> bool = default;
 
-  auto operator()(this const LookbackMethod self, AssetSnapshot asset_data)
+  auto operator()(this const auto& self, AssetSnapshot asset_data)
    -> PolySeries<double>
   {
     return LookbackSeries{self.source_(asset_data), self.period_};
   }
 
-  auto source(this const LookbackMethod self) noexcept -> ScreenerMethod
+  auto source(this const auto& self) noexcept -> ScreenerMethod
   {
     return self.source_;
   }
 
-  void source(this LookbackMethod self, ScreenerMethod source) noexcept
+  void source(this auto& self, ScreenerMethod source) noexcept
   {
     self.source_ = std::move(source);
   }
 
-  auto period(this const LookbackMethod self) noexcept -> std::size_t
+  auto period(this const auto& self) noexcept -> std::size_t
   {
     return self.period_;
   }
 
-  void period(this LookbackMethod self, std::size_t period) noexcept
+  void period(this auto& self, std::size_t period) noexcept
   {
     self.period_ = period;
   }

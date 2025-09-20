@@ -1,6 +1,7 @@
 module;
 
 #include <functional>
+#include <type_traits>
 #include <vector>
 
 export module pludux:screener.comparison_filter;
@@ -11,44 +12,38 @@ import :screener.screener_method;
 
 export namespace pludux::screener {
 
-template<typename T>
+template<typename TComparator>
+  requires std::is_invocable_r_v<bool, TComparator, double, double>
 class ComparisonFilter {
 public:
   ComparisonFilter(ScreenerMethod target, ScreenerMethod threshold)
-  : compare_{}
-  , target_{std::move(target)}
+  : target_{std::move(target)}
   , threshold_{std::move(threshold)}
   {
   }
 
-  auto operator()(AssetSnapshot asset_data) const -> bool
-  {
-    const auto target_result = target_(asset_data)[0];
-    const auto threshold_result = threshold_(asset_data)[0];
-
-    return compare_(target_result, threshold_result);
-  }
-
-  auto operator==(const ComparisonFilter& other) const noexcept -> bool
-  {
-    return target_ == other.target_ && threshold_ == other.threshold_;
-  }
-
-  auto operator!=(const ComparisonFilter& other) const noexcept
+  auto operator==(const ComparisonFilter& other) const noexcept
    -> bool = default;
 
-  auto target() const -> const ScreenerMethod&
+  auto operator()(this const auto& self, AssetSnapshot asset_data) -> bool
   {
-    return target_;
+    const auto target_result = self.target_(asset_data)[0];
+    const auto threshold_result = self.threshold_(asset_data)[0];
+
+    return TComparator{}(target_result, threshold_result);
   }
 
-  auto threshold() const -> const ScreenerMethod&
+  auto target(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return threshold_;
+    return self.target_;
+  }
+
+  auto threshold(this const auto& self) noexcept -> const ScreenerMethod&
+  {
+    return self.threshold_;
   }
 
 private:
-  T compare_;
   ScreenerMethod target_;
   ScreenerMethod threshold_;
 };

@@ -6,8 +6,8 @@ using namespace pludux;
 
 TEST(HiddenBullishDivergenceSeriesTest, Constructor)
 {
-  const auto signal = DataSeries{"signal"};
-  const auto reference = DataSeries{"reference"};
+  const auto signal = DataSeries<double>{};
+  const auto reference = DataSeries<double>{};
   const auto series = HiddenBullishDivergenceSeries{signal, reference};
 
   EXPECT_EQ(series.pivot_range(), 5);
@@ -161,7 +161,7 @@ TEST(HiddenBullishDivergenceSeriesTest, SignalDownReferenceUpNotPivotLow)
 TEST(HiddenBullishDivergenceSeriesTest, MultipleSignalDownReferenceUp)
 {
   const auto asset_data = AssetHistory{
-   {"signal",    {1, 9, 9, 9, 9, 9, 3, 9, 9, 9, 4, 9, 9, 9, 9, 9, 5}},
+   {"signal", {1, 9, 9, 9, 9, 9, 3, 9, 9, 9, 4, 9, 9, 9, 9, 9, 5}},
    {"reference", {5, 9, 9, 4, 9, 9, 3, 9, 9, 9, 2, 9, 9, 9, 9, 9, 1}}};
 
   const auto signal = asset_data["signal"];

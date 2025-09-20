@@ -35,24 +35,25 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
+  auto operator[](this const auto& self, std::size_t lookback) noexcept
+   -> SeriesOutput<ValueType>
   {
-    const auto period = ma_.period();
-    const auto& input = ma_.input();
+    const auto period = self.ma_.period();
+    const auto& input = self.ma_.input();
 
-    const auto begin = index;
-    const auto end = index + period;
+    const auto begin = lookback;
+    const auto end = lookback + period;
 
     auto sum_squared_diff = 0.0;
     for(auto i = begin; i < end; ++i) {
-      const auto diff = input[i] - ma_[index];
+      const auto diff = input[i] - self.ma_[lookback];
       sum_squared_diff += diff * diff;
     }
 
     const auto std_dev = std::sqrt(sum_squared_diff / period);
-    const auto std_dev_scaled = std_dev * stddev_;
+    const auto std_dev_scaled = std_dev * self.stddev_;
 
-    const auto middle = ma_[index];
+    const auto middle = self.ma_[lookback];
     const auto upper = middle + std_dev_scaled;
     const auto lower = middle - std_dev_scaled;
 
@@ -64,9 +65,9 @@ public:
             }};
   }
 
-  auto size() const noexcept -> std::size_t
+  auto size(this const auto& self) noexcept -> std::size_t
   {
-    return ma_.size();
+    return self.ma_.size();
   }
 
 private:

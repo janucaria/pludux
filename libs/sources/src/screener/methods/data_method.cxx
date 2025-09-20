@@ -22,18 +22,18 @@ public:
 
   auto operator==(const DataMethod& other) const noexcept -> bool = default;
 
-  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>
+  auto operator()(this const auto& self, AssetSnapshot asset_data) -> PolySeries<double>
   {
-    if(!asset_data.contains(field_)) {
+    if(!asset_data.contains(self.field_)) {
       return RepeatSeries{std::numeric_limits<double>::quiet_NaN(),
                           asset_data.size()};
     }
-    return asset_data.get_values(field_);
+    return asset_data.get_values(self.field_);
   }
 
-  auto field() const -> const std::string&
+  auto field(this const auto& self) -> const std::string&
   {
-    return field_;
+    return self.field_;
   }
 
 private:

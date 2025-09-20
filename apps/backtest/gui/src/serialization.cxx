@@ -23,7 +23,6 @@ import pludux.backtest;
 
 import :app_state_data;
 
-
 export namespace cereal {
 
 template<class Archive>
@@ -297,8 +296,8 @@ void serialize(Archive& archive, pludux::backtest::Strategy& strategy)
   const auto risk_method_json =
    risk_parser.serialize_method(strategy.risk_method());
 
-  auto config_parser = pludux::ConfigParser{method_registry};
-  config_parser.register_default_parsers();
+  auto config_parser =
+   pludux::make_default_registered_config_parser(method_registry);
 
   const auto long_entry_filter_json =
    config_parser.serialize_filter(strategy.long_entry_filter());
@@ -377,8 +376,8 @@ struct LoadAndConstruct<pludux::backtest::Strategy> {
     auto risk_parser = pludux::backtest::risk_reward_config_parser();
     auto risk_method = risk_parser.parse_method(risk_method_json);
 
-    auto config_parser = pludux::ConfigParser{method_registry};
-    config_parser.register_default_parsers();
+    auto config_parser =
+     pludux::make_default_registered_config_parser(method_registry);
 
     auto long_entry_filter = config_parser.parse_filter(long_entry_filter_json);
     auto long_exit_filter = config_parser.parse_filter(long_exit_filter_json);

@@ -21,30 +21,31 @@ public:
   {
   }
 
-  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>
-  {
-    const auto operand1_series = operand1_(asset_data);
-    const auto operand2_series = operand2_(asset_data);
+  auto operator==(const BinaryArithmeticMethod& other) const noexcept
+   -> bool = default;
 
-    auto result = BinaryOpSeries<T,
-                                 std::decay_t<decltype(operand1_series)>,
-                                 std::decay_t<decltype(operand2_series)>>{
-     operand1_series, operand2_series};
+  auto operator()(this const auto& self, AssetSnapshot asset_data)
+   -> PolySeries<double>
+  {
+    const auto operand1_series = self.operand1_(asset_data);
+    const auto operand2_series = self.operand2_(asset_data);
+
+    const auto result = []<typename T1, typename T2>(T1&& op1, T2&& op2) {
+      return BinaryOpSeries<T, std::decay_t<T1>, std::decay_t<T2>>{
+       std::forward<T1>(op1), std::forward<T2>(op2)};
+    }(operand1_series, operand2_series);
 
     return result;
   }
 
-  auto operator==(const BinaryArithmeticMethod& other) const noexcept
-   -> bool = default;
-
-  auto operand1() const noexcept -> const ScreenerMethod&
+  auto operand1(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return operand1_;
+    return self.operand1_;
   }
 
-  auto operand2() const noexcept -> const ScreenerMethod&
+  auto operand2(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return operand2_;
+    return self.operand2_;
   }
 
 private:
@@ -60,9 +61,13 @@ public:
   {
   }
 
-  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>
+  auto operator==(const UnaryArithmeticMethod& other) const noexcept
+   -> bool = default;
+
+  auto operator()(this const auto& self, AssetSnapshot asset_data)
+   -> PolySeries<double>
   {
-    const auto operand_series = operand_(asset_data);
+    const auto operand_series = self.operand_(asset_data);
 
     auto result =
      UnaryOpSeries<T, std::decay_t<decltype(operand_series)>>{operand_series};
@@ -70,12 +75,9 @@ public:
     return result;
   }
 
-  auto operator==(const UnaryArithmeticMethod& other) const noexcept
-   -> bool = default;
-
-  auto operand() const noexcept -> const ScreenerMethod&
+  auto operand(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return operand_;
+    return self.operand_;
   }
 
 private:
@@ -91,14 +93,14 @@ public:
   {
   }
 
-  auto multiplicand() const noexcept -> const ScreenerMethod&
+  auto multiplicand(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return operand1();
+    return self.operand1();
   }
 
-  auto multiplier() const noexcept -> const ScreenerMethod&
+  auto multiplier(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return operand2();
+    return self.operand2();
   }
 };
 
@@ -111,14 +113,14 @@ public:
   {
   }
 
-  auto dividend() const noexcept -> const ScreenerMethod&
+  auto dividend(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return operand1();
+    return self.operand1();
   }
 
-  auto divisor() const noexcept -> const ScreenerMethod&
+  auto divisor(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return operand2();
+    return self.operand2();
   }
 };
 
@@ -130,14 +132,14 @@ public:
   {
   }
 
-  auto augend() const noexcept -> const ScreenerMethod&
+  auto augend(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return operand1();
+    return self.operand1();
   }
 
-  auto addend() const noexcept -> const ScreenerMethod&
+  auto addend(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return operand2();
+    return self.operand2();
   }
 };
 
@@ -150,14 +152,14 @@ public:
   {
   }
 
-  auto minuend() const noexcept -> const ScreenerMethod&
+  auto minuend(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return operand1();
+    return self.operand1();
   }
 
-  auto subtrahend() const noexcept -> const ScreenerMethod&
+  auto subtrahend(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return operand2();
+    return self.operand2();
   }
 };
 
@@ -171,7 +173,7 @@ public:
 
 template<typename T = void>
 struct Percentages {
-  auto operator()(T total, T percent) const -> T
+  auto operator()(this const auto, T total, T percent) -> T
   {
     return total * (percent / 100.0);
   }
@@ -179,7 +181,7 @@ struct Percentages {
 
 template<>
 struct Percentages<void> {
-  auto operator()(auto total, auto percent) const
+  auto operator()(this const auto, auto total, auto percent)
   {
     return total * (percent / 100.0);
   }
@@ -194,14 +196,14 @@ public:
   {
   }
 
-  auto total() const noexcept -> const ScreenerMethod&
+  auto total(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return operand1();
+    return self.operand1();
   }
 
-  auto percent() const noexcept -> const ScreenerMethod&
+  auto percent(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return operand2();
+    return self.operand2();
   }
 };
 
@@ -230,14 +232,14 @@ public:
   {
   }
 
-  auto minuend() const noexcept -> const ScreenerMethod&
+  auto minuend(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return operand1();
+    return self.operand1();
   }
 
-  auto subtrahend() const noexcept -> const ScreenerMethod&
+  auto subtrahend(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return operand2();
+    return self.operand2();
   }
 };
 

@@ -27,21 +27,22 @@ public:
 
   auto operator==(const ChangesMethod& other) const noexcept -> bool = default;
 
-  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>
+  auto operator()(this const auto& self, AssetSnapshot asset_data)
+   -> PolySeries<double>
   {
-    const auto input_series = input_(asset_data);
+    const auto input_series = self.input_(asset_data);
     const auto result = ChangeSeries{input_series};
     return result;
   }
 
-  auto input() const noexcept -> const ScreenerMethod&
+  auto input(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return input_;
+    return self.input_;
   }
 
-  void input(ScreenerMethod input) noexcept
+  void input(this auto& self, ScreenerMethod input) noexcept
   {
-    input_ = std::move(input);
+    self.input_ = std::move(input);
   }
 
 private:

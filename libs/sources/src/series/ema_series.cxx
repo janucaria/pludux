@@ -20,66 +20,52 @@ public:
   EmaSeries(TSeries series, std::size_t period)
   : series_{std::move(series)}
   , period_{period}
-  , cache_values_{}
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
+  auto operator[](this const auto& self, std::size_t lookback) noexcept
+   -> SeriesOutput<ValueType>
   {
-    const auto series_size = size();
-
-    if(cache_values_.empty()) {
-      cache_values_.reserve(series_size);
-    }
-
-    const auto cache_index = series_size - 1 - index;
-    if(cache_index < cache_values_.size()) {
-      return cache_values_[cache_index];
-    }
-
-    const auto alpha = 2.0 / (period_ + 1);
-    const auto sma_index = series_size - period_;
+    const auto series_size = self.size();
+    const auto alpha = 2.0 / (self.period_ + 1);
+    const auto sma_index = series_size - self.period_;
     auto ema_value = std::numeric_limits<ValueType>::quiet_NaN();
-    for(auto ii = series_size; ii > index; --ii) {
+    for(auto ii = series_size; ii > lookback; --ii) {
       const auto i = ii - 1;
       if(i > sma_index) {
-        cache_values_.push_back(ema_value);
         continue;
       }
 
       if(std::isnan(ema_value)) {
-        ema_value = SmaSeries{series_, period_}[i];
-        cache_values_.push_back(ema_value);
+        ema_value = SmaSeries{self.series_, self.period_}[i];
         continue;
       }
 
-      const auto series_value = series_[i];
+      const auto series_value = self.series_[i];
       ema_value = series_value * alpha + ema_value * (1 - alpha);
-      cache_values_.push_back(ema_value);
     }
 
     return ema_value;
   }
 
-  auto size() const noexcept -> std::size_t
+  auto size(this const auto& self) noexcept -> std::size_t
   {
-    return series_.size();
+    return self.series_.size();
   }
 
-  auto input() const noexcept -> const TSeries&
+  auto input(this const auto& self) noexcept -> const TSeries&
   {
-    return series_;
+    return self.series_;
   }
 
-  auto period() const noexcept -> std::size_t
+  auto period(this const auto& self) noexcept -> std::size_t
   {
-    return period_;
+    return self.period_;
   }
 
 private:
   TSeries series_;
   std::size_t period_;
-  mutable std::vector<ValueType> cache_values_;
 };
 
 } // namespace pludux

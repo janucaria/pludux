@@ -25,17 +25,18 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const -> SeriesOutput<ValueType>
+  auto operator[](this const auto& self, std::size_t lookback)
+   -> SeriesOutput<ValueType>
   {
-    const auto operand1_value = operand1_[index];
-    const auto operand2_value = operand2_[index];
+    const auto operand1_value = self.operand1_[lookback];
+    const auto operand2_value = self.operand2_[lookback];
     return TBinaryFn{}(operand1_value, operand2_value);
   }
 
-  auto size() const noexcept -> std::size_t
+  auto size(this const auto& self) noexcept -> std::size_t
   {
-    assert(operand1_.size() == operand2_.size());
-    return operand1_.size();
+    assert(self.operand1_.size() == self.operand2_.size());
+    return self.operand1_.size();
   }
 
 private:
@@ -54,15 +55,16 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
+  auto operator[](this const auto& self, std::size_t lookback) noexcept
+   -> SeriesOutput<ValueType>
   {
-    const auto operand_value = static_cast<ValueType>(operand_[index]);
+    const auto operand_value = static_cast<ValueType>(self.operand_[lookback]);
     return TUnaryFn{}(operand_value);
   }
 
-  auto size() const noexcept -> std::size_t
+  auto size(this const auto& self) noexcept -> std::size_t
   {
-    return operand_.size();
+    return self.operand_.size();
   }
 
 private:

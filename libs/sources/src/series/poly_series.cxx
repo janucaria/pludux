@@ -34,9 +34,10 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
+  auto operator[](std::size_t lookback) const noexcept
+   -> SeriesOutput<ValueType>
   {
-    return impl_->operator[](index);
+    return impl_->operator[](lookback);
   }
 
   auto size() const noexcept -> std::size_t
@@ -56,7 +57,7 @@ private:
   struct ImplConcept {
     virtual ~ImplConcept() = default;
 
-    virtual auto operator[](std::size_t index) const noexcept
+    virtual auto operator[](std::size_t lookback) const noexcept
      -> SeriesOutput<ValueType> = 0;
 
     virtual auto size() const noexcept -> std::size_t = 0;
@@ -71,10 +72,10 @@ private:
     {
     }
 
-    auto operator[](std::size_t index) const noexcept
+    auto operator[](std::size_t lookback) const noexcept
      -> SeriesOutput<ValueType> override
     {
-      return SeriesOutput<ValueType>(impl[index]);
+      return SeriesOutput<ValueType>(impl[lookback]);
     }
 
     virtual auto size() const noexcept -> std::size_t override

@@ -1,8 +1,8 @@
 module;
 
+#include <cmath>
 #include <cstddef>
 #include <limits>
-#include <cmath>
 #include <utility>
 
 export module pludux:series.hma_series;
@@ -26,34 +26,35 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
+  auto operator[](this const auto& self, std::size_t lookback) noexcept
+   -> SeriesOutput<ValueType>
   {
-    const auto wam1 = WmaSeries{RefSeries{series_}, period_ / 2};
+    const auto wam1 = WmaSeries{RefSeries{self.series_}, self.period_ / 2};
     const auto scalar_2_series = RepeatSeries{2.0, wam1.size()};
     const auto times_2_wam1 = MultiplySeries{scalar_2_series, wam1};
 
-    const auto wam2 = WmaSeries{RefSeries{series_}, period_};
+    const auto wam2 = WmaSeries{RefSeries{self.series_}, self.period_};
     const auto diff = SubtractSeries{times_2_wam1, wam2};
 
     const auto hma =
-     WmaSeries{diff, static_cast<std::size_t>(std::sqrt(period_))};
+     WmaSeries{diff, static_cast<std::size_t>(std::sqrt(self.period_))};
 
-    return hma[index];
+    return hma[lookback];
   }
 
-  auto size() const noexcept -> std::size_t
+  auto size(this const auto& self) noexcept -> std::size_t
   {
-    return series_.size();
+    return self.series_.size();
   }
 
-  auto input() const noexcept -> const TSeries&
+  auto input(this const auto& self) noexcept -> const TSeries&
   {
-    return series_;
+    return self.series_;
   }
 
-  auto period() const noexcept -> std::size_t
+  auto period(this const auto& self) noexcept -> std::size_t
   {
-    return period_;
+    return self.period_;
   }
 
 private:

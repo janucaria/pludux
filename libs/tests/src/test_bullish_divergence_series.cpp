@@ -6,8 +6,8 @@ using namespace pludux;
 
 TEST(BullishDivergenceSeriesTest, Constructor)
 {
-  const auto signal = DataSeries{"signal"};
-  const auto reference = DataSeries{"reference"};
+  const auto signal = DataSeries<double>{};
+  const auto reference = DataSeries<double>{};
   const auto series = BullishDivergenceSeries{signal, reference};
 
   EXPECT_EQ(series.pivot_range(), 5);

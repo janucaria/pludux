@@ -33,68 +33,69 @@ public:
   {
   }
 
-  auto operator()(AssetSnapshot asset_data) const -> PolySeries<double>
-  {
-    const auto high_series = high_(asset_data);
-    const auto low_series = low_(asset_data);
-    const auto close_series = close_(asset_data);
+  auto operator==(const AtrMethod& other) const noexcept -> bool = default;
 
-    const auto atr =
-     AtrSeries{high_series, low_series, close_series, period_, multiplier_};
+  auto operator()(this const auto& self, AssetSnapshot asset_data)
+   -> PolySeries<double>
+  {
+    const auto high_series = self.high_(asset_data);
+    const auto low_series = self.low_(asset_data);
+    const auto close_series = self.close_(asset_data);
+
+    const auto atr = AtrSeries{
+     high_series, low_series, close_series, self.period_, self.multiplier_};
 
     return atr;
   }
 
-  auto operator==(const AtrMethod& other) const noexcept -> bool = default;
-
-  auto period() const noexcept -> std::size_t
+  auto period(this const auto& self) noexcept -> std::size_t
   {
-    return period_;
+    return self.period_;
   }
 
-  void period(std::size_t period) noexcept
+  void period(this auto& self, std::size_t period) noexcept
   {
-    period_ = period;
+    self.period_ = period;
   }
 
-  auto multiplier() const noexcept -> double
+  auto multiplier(this const auto& self) noexcept -> double
   {
-    return multiplier_;
+    return self.multiplier_;
   }
 
-  void multiplier(double multiplier) noexcept
+  void multiplier(this auto& self, double multiplier) noexcept
   {
-    multiplier_ = multiplier;
+    self.multiplier_ = multiplier;
   }
 
-  auto high() const noexcept -> const ScreenerMethod&
+  auto high(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return high_;
+    return self.high_;
   }
 
-  void high(ScreenerMethod high) noexcept
+  void high(this auto& self, ScreenerMethod high) noexcept
   {
-    high_ = std::move(high);
+    self.high_ = std::move(high);
   }
 
-  auto low() const noexcept -> const ScreenerMethod&
+  auto low(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return low_;
+    return self.low_;
   }
 
-  void low(ScreenerMethod low) noexcept
+  void low(this auto& self, ScreenerMethod low) noexcept
   {
-    low_ = std::move(low);
+    self.low_ = std::move(low);
   }
 
-  auto close() const noexcept -> const ScreenerMethod&
+  auto close(this const auto& self) noexcept -> const ScreenerMethod&
   {
-    return close_;
+    return self.close_;
   }
 
-  void close(ScreenerMethod close) noexcept
+  void close(this auto& self, ScreenerMethod close) noexcept
   {
-    close_ = std::move(close);
+    self.close_ = std::move(close);
   }
 
 private:

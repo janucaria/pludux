@@ -25,25 +25,26 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
+  auto operator[](this const auto& self, std::size_t lookback) noexcept
+   -> SeriesOutput<ValueType>
   {
-    const auto ref = series_[index];
-    return ref.get(output_name_);
+    const auto ref = self.series_[lookback];
+    return ref.get(self.output_name_);
   }
 
-  auto size() const noexcept -> std::size_t
+  auto size(this const auto& self) noexcept -> std::size_t
   {
-    return series_.size();
+    return self.series_.size();
   }
 
-  auto output_name() const noexcept -> OutputName
+  auto output_name(this const auto& self) noexcept -> OutputName
   {
-    return output_name_;
+    return self.output_name_;
   }
 
-  void output_name(OutputName new_named_index) noexcept
+  void output_name(this auto& self, OutputName new_named_index) noexcept
   {
-    output_name_ = new_named_index;
+    self.output_name_ = new_named_index;
   }
 
 private:

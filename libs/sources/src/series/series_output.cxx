@@ -60,37 +60,38 @@ public:
                             : outputs_[0];
   }
 
-  auto outputs() const noexcept -> const std::vector<ValueType>&
+  auto outputs(this const auto& self) noexcept -> const std::vector<ValueType>&
   {
-    return outputs_;
+    return self.outputs_;
   }
 
-  auto output_name_to_index() const noexcept
+  auto output_name_to_index(this const auto& self) noexcept
    -> const std::unordered_map<OutputName, std::size_t>&
   {
-    return output_name_to_index_;
+    return self.output_name_to_index_;
   }
 
-  auto operator[](std::size_t index) const noexcept -> ValueType
+  auto operator[](this const auto& self, std::size_t lookback) noexcept
+   -> ValueType
   {
-    return index < outputs_.size()
-            ? outputs_[index]
+    return lookback < self.outputs_.size()
+            ? self.outputs_[lookback]
             : std::numeric_limits<ValueType>::quiet_NaN();
   }
 
-  auto size() const noexcept -> std::size_t
+  auto size(this const auto& self) noexcept -> std::size_t
   {
-    return outputs_.size();
+    return self.outputs_.size();
   }
 
-  auto get(OutputName name) const noexcept -> ValueType
+  auto get(this const auto& self, OutputName name) noexcept -> ValueType
   {
-    const auto it = output_name_to_index_.find(name);
-    if(it == output_name_to_index_.end()) {
+    const auto it = self.output_name_to_index_.find(name);
+    if(it == self.output_name_to_index_.end()) {
       return std::numeric_limits<ValueType>::quiet_NaN();
     }
 
-    return outputs_[it->second];
+    return self.outputs_[it->second];
   }
 
 private:

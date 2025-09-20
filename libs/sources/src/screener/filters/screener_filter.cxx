@@ -20,19 +20,22 @@ public:
   {
   }
 
-  auto operator()(AssetSnapshot asset_snapshot) const noexcept -> bool
+  auto operator()(this const auto& self, AssetSnapshot asset_snapshot) noexcept
+   -> bool
   {
-    return impl_->operator()(std::move(asset_snapshot));
+    return self.impl_->operator()(std::move(asset_snapshot));
   }
 
-  auto operator==(const ScreenerFilter& other) const noexcept -> bool
+  auto operator==(this const auto& self, const ScreenerFilter& other) noexcept
+   -> bool
   {
-    return impl_->operator==(other);
+    return self.impl_->operator==(other);
   }
 
-  auto operator!=(const ScreenerFilter& other) const noexcept -> bool
+  auto operator!=(this const auto& self, const ScreenerFilter& other) noexcept
+   -> bool
   {
-    return impl_->operator!=(other);
+    return self.impl_->operator!=(other);
   }
 
   template<typename UImpl>

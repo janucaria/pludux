@@ -22,41 +22,42 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
+  auto operator[](this const auto& self, std::size_t index) noexcept
+   -> SeriesOutput<ValueType>
   {
-    const auto series_size = size();
-    const auto nan_index = series_size - period_;
+    const auto series_size = self.size();
+    const auto nan_index = series_size - self.period_;
     if(index > nan_index) {
       return std::numeric_limits<ValueType>::quiet_NaN();
     }
 
     const auto begin = index;
-    const auto end = index + period_;
+    const auto end = index + self.period_;
 
     auto norm = ValueType{0};
     auto sum = ValueType{0};
     for(auto i = begin; i < end; ++i) {
-      const auto weight = (period_ - (i - begin)) * period_;
-      sum += series_[i] * weight;
+      const auto weight = (self.period_ - (i - begin)) * self.period_;
+      sum += self.series_[i] * weight;
       norm += weight;
     }
 
     return sum / norm;
   }
 
-  auto size() const noexcept -> std::size_t
+  auto size(this const auto& self) noexcept -> std::size_t
   {
-    return series_.size();
+    return self.series_.size();
   }
 
-  auto input() const noexcept -> const TSeries&
+  auto input(this const auto& self) noexcept -> const TSeries&
   {
-    return series_;
+    return self.series_;
   }
 
-  auto period() const noexcept -> std::size_t
+  auto period(this const auto& self) noexcept -> std::size_t
   {
-    return period_;
+    return self.period_;
   }
 
 private:

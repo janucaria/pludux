@@ -18,14 +18,15 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const -> SeriesOutput<ValueType>
+  auto operator[](this const auto self, std::size_t index)
+   -> SeriesOutput<ValueType>
   {
-    return series_[index];
+    return self.series_[index];
   }
 
-  auto size() const noexcept -> std::size_t
+  auto size(this const auto self) noexcept -> std::size_t
   {
-    return series_.size();
+    return self.series_.size();
   }
 
 private:

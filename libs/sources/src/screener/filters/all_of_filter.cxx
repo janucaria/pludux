@@ -21,19 +21,19 @@ public:
   {
   }
 
-  auto operator()(AssetSnapshot asset_data) const -> bool
+  auto operator==(const AllOfFilter& other) const noexcept -> bool = default;
+
+  auto operator()(this const auto& self, AssetSnapshot asset_data) -> bool
   {
-    return std::all_of(
-     std::cbegin(conditions_),
-     std::cend(conditions_),
+    return std::ranges::all_of(
+     self.conditions_,
      [&asset_data](const auto& filter) { return filter(asset_data); });
   }
 
-  auto operator==(const AllOfFilter& other) const noexcept -> bool = default;
-
-  auto conditions() const -> const std::vector<ScreenerFilter>&
+  auto conditions(this const auto& self) noexcept
+   -> const std::vector<ScreenerFilter>&
   {
-    return conditions_;
+    return self.conditions_;
   }
 
 private:

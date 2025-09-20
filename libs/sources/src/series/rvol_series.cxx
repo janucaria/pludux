@@ -22,17 +22,18 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
+  auto operator[](std::size_t lookback) const noexcept
+   -> SeriesOutput<ValueType>
   {
-    const auto sma_volume = SmaSeries{volumes_, period_}[index];
-    const auto current_volume = volumes_[index];
+    const auto sma_volume = SmaSeries{volumes_, period_}[lookback];
+    const auto current_volume = volumes_[lookback];
     const auto rvol = current_volume / sma_volume;
     return rvol;
   }
 
-  auto size() const noexcept -> std::size_t
+  auto size(this const auto& self) noexcept -> std::size_t
   {
-    return volumes_.size();
+    return self.volumes_.size();
   }
 
 private:

@@ -1,8 +1,8 @@
 module;
 
 #include <cstddef>
-#include <utility>
 #include <limits>
+#include <utility>
 
 export module pludux:series.lookback_series;
 
@@ -32,28 +32,29 @@ public:
   {
   }
 
-  auto operator[](std::size_t lookback) const -> SeriesOutput<ValueType>
+  auto operator[](this const auto& self, std::size_t lookback) noexcept
+   -> SeriesOutput<ValueType>
   {
-    if(lookback >= series_.size()) {
+    if(lookback >= self.series_.size()) {
       return std::numeric_limits<ValueType>::quiet_NaN();
     }
 
-    return series_[lookback + period_];
+    return self.series_[lookback + self.period_];
   }
 
-  auto period() const noexcept -> std::size_t
+  auto period(this const auto& self) noexcept -> std::size_t
   {
-    return period_;
+    return self.period_;
   }
 
-  auto size() const noexcept -> std::size_t
+  auto size(this const auto& self) noexcept -> std::size_t
   {
-    return series_.size() - period_;
+    return self.series_.size() - self.period_;
   }
 
-  auto series() const noexcept -> const TSeries&
+  auto series(this const auto& self) noexcept -> const TSeries&
   {
-    return series_;
+    return self.series_;
   }
 
 private:

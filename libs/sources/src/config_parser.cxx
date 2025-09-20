@@ -21,14 +21,22 @@ class ConfigParser {
 public:
   class Parser {
   public:
-    Parser(ConfigParser& config_parser);
+    Parser(ConfigParser& config_parser)
+    : config_parser_{config_parser}
+    {
+    }
 
-    auto parse_method(const nlohmann::json& config) -> screener::ScreenerMethod;
+    auto parse_method(this auto& self, const nlohmann::json& config)
+     -> screener::ScreenerMethod
+    {
+      return self.config_parser_.parse_method(config);
+    }
 
-    auto parse_filter(const nlohmann::json& config) -> screener::ScreenerFilter;
-
-    auto method_registry() const noexcept
-     -> std::shared_ptr<const screener::MethodRegistry>;
+    auto parse_filter(this auto& self, const nlohmann::json& config)
+     -> screener::ScreenerFilter
+    {
+      return self.config_parser_.parse_filter(config);
+    }
 
   private:
     ConfigParser& config_parser_;
@@ -48,46 +56,167 @@ public:
   using MethodDeserialize = std::function<
    auto(ConfigParser::Parser, const nlohmann::json&)->screener::ScreenerMethod>;
 
-  ConfigParser();
+  ConfigParser()
+  : filter_parsers_{}
+  , method_parsers_{}
+  {
+  }
 
-  ConfigParser(std::shared_ptr<screener::MethodRegistry> method_registry);
-
-  void register_default_parsers();
-
-  void register_filter_parser(const std::string& filter_name,
-                              const FilterDeserialize& filter_deserialize);
-
-  void register_filter_parser(const std::string& filter_name,
+  void register_filter_parser(this auto& self,
+                              const std::string& filter_name,
                               const FilterSerialize& filter_serialize,
-                              const FilterDeserialize& filter_deserialize);
+                              const FilterDeserialize& filter_deserialize)
+  {
+    self.filter_parsers_.emplace(
+     filter_name, std::make_pair(filter_serialize, filter_deserialize));
+  }
 
-  void register_method_parser(const std::string& method_name,
-                              const MethodDeserialize& method_deserialize);
-
-  void register_method_parser(const std::string& method_name,
+  void register_method_parser(this auto& self,
+                              const std::string& method_name,
                               const MethodSerialize& method_serialize,
-                              const MethodDeserialize& method_deserialize);
+                              const MethodDeserialize& method_deserialize)
+  {
+    self.method_parsers_.emplace(
+     method_name, std::make_pair(method_serialize, method_deserialize));
+  }
 
-  auto parser() -> Parser;
+  auto parser(this auto& self) -> Parser
+  {
+    return Parser{self};
+  }
 
-  auto parse_filter(const nlohmann::json& config) -> screener::ScreenerFilter;
+  auto parse_filter(this auto& self, const nlohmann::json& config)
+   -> screener::ScreenerFilter
+  {
+    if(config.is_boolean()) {
+      if(config.get<bool>()) {
+        return screener::TrueFilter{};
+      }
 
-  auto serialize_filter(const screener::ScreenerFilter& filter) const
-   -> nlohmann::json;
+      return screener::FalseFilter{};
+    }
+    const auto& filter_parsers = self.filter_parsers_;
+    const auto filter = config.at("filter").get<std::string>();
 
-  auto parse_method(const nlohmann::json& config) -> screener::ScreenerMethod;
+    try {
+      if(filter_parsers.contains(filter)) {
+        const auto& [_, filter_deserialize] = filter_parsers.at(filter);
+        return filter_deserialize(self, config);
+      }
 
-  auto serialize_method(const screener::ScreenerMethod& method) const
-   -> nlohmann::json;
+      const auto error_message = std::format("Unknown filter: {}", filter);
+      throw std::invalid_argument{error_message};
+    } catch(const std::exception& e) {
+      const auto error_message =
+       std::format("Error parsing filter {}:\n{}", filter, e.what());
+      throw std::invalid_argument{error_message};
+    } catch(...) {
+      const auto error_message =
+       std::format("Unknown error parsing filter {}", filter);
+      throw std::invalid_argument{error_message};
+    }
+  }
+
+  auto serialize_filter(this const auto& self,
+                        const screener::ScreenerFilter& filter)
+   -> nlohmann::json
+  {
+    auto serialized_filter = nlohmann::json{};
+
+    for(const auto& [filter_name, filter_parser] : self.filter_parsers_) {
+      const auto& [filter_serialize, _] = filter_parser;
+      serialized_filter = filter_serialize(self, filter);
+      if(!serialized_filter.empty()) {
+        if(!serialized_filter.is_object()) {
+          const auto error_message = std::format(
+           "Filter {} serialization must return an object", filter_name);
+          throw std::invalid_argument{error_message};
+        }
+
+        if(!serialized_filter.contains("filter")) {
+          serialized_filter["filter"] = filter_name;
+        } else if(serialized_filter.at("filter").get<std::string>() !=
+                  filter_name) {
+          const auto error_message = std::format(
+           "Filter {} serialization must return 'filter' key with value {}",
+           filter_name,
+           filter_name);
+          throw std::invalid_argument{error_message};
+        }
+        break;
+      }
+    }
+
+    return serialized_filter;
+  }
+
+  auto parse_method(this auto& self, const nlohmann::json& config)
+   -> screener::ScreenerMethod
+  {
+    if(config.is_number()) {
+      return screener::ValueMethod{config.get<double>()};
+    }
+
+    if(config.is_string()) {
+      const auto named_method = config.get<std::string>();
+      const auto expanded_method = nlohmann::json{{"method", named_method}};
+
+      return self.parse_method(expanded_method);
+    }
+
+    auto config_method = config;
+    const auto method = config.at("method").get<std::string>();
+
+    auto& method_parsers = self.method_parsers_;
+    if(!method_parsers.contains(method)) {
+      const auto error_message = std::format("Unknown method: {}", method);
+      throw std::invalid_argument{error_message};
+    }
+
+    try {
+      const auto method_deserialize = method_parsers.at(method).second;
+      const auto method_result = method_deserialize(self, config_method);
+
+      return method_result;
+    } catch(const std::exception& e) {
+      const auto error_message =
+       std::format("Error parsing method {}:\n{}", method, e.what());
+      throw std::invalid_argument{error_message};
+    } catch(...) {
+      const auto error_message =
+       std::format("Unknown error parsing method {}", method);
+      throw std::invalid_argument{error_message};
+    }
+  }
+
+  auto serialize_method(this const auto& self,
+                        const screener::ScreenerMethod& method)
+   -> nlohmann::json
+  {
+    auto serialized_method = nlohmann::json{};
+
+    for(const auto& [method_name, method_parser] : self.method_parsers_) {
+      const auto& [method_serialize, _] = method_parser;
+      serialized_method = method_serialize(self, method);
+      if(serialized_method.is_object()) {
+        serialized_method["method"] = method_name;
+        break;
+      }
+    }
+
+    return serialized_method;
+  }
 
 private:
   std::unordered_map<std::string, std::pair<FilterSerialize, FilterDeserialize>>
    filter_parsers_;
   std::unordered_map<std::string, std::pair<MethodSerialize, MethodDeserialize>>
    method_parsers_;
-
-  std::shared_ptr<screener::MethodRegistry> method_registry_;
 };
+
+auto make_default_registered_config_parser(
+ std::shared_ptr<screener::MethodRegistry> method_registry = nullptr)
+ -> ConfigParser;
 
 } // namespace pludux
 
@@ -479,7 +608,7 @@ serialize_unary_function_filter(const ConfigParser& config_parser,
   auto unary_function_filter = screener_filter_cast<T>(filter);
   if(unary_function_filter) {
     serialized_filter[operand_key] =
-     config_parser.serialize_filter(unary_function_filter->condition());
+     config_parser.serialize_filter(unary_function_filter->other_condition());
   }
 
   return serialized_filter;
@@ -632,47 +761,43 @@ static auto serialize_crossover_filter(const ConfigParser& config_parser,
   return serialized_filter;
 }
 
-ConfigParser::ConfigParser()
-: ConfigParser{nullptr}
+auto make_default_registered_config_parser(
+ std::shared_ptr<screener::MethodRegistry> method_registry) -> ConfigParser
 {
-}
+  ConfigParser config_parser;
 
-ConfigParser::ConfigParser(
- std::shared_ptr<screener::MethodRegistry> method_registry)
-: filter_parsers_{}
-, method_parsers_{}
-, method_registry_{std::move(method_registry)}
-{
-}
-
-void ConfigParser::register_default_parsers()
-{
-  register_method_parser(
+  config_parser.register_method_parser(
    "VALUE", serialize_value_method, deserialize_value_method);
 
-  register_method_parser("DATA", serialize_data_method, parse_data_method);
+  config_parser.register_method_parser(
+   "DATA", serialize_data_method, parse_data_method);
 
-  register_method_parser("OPEN",
-                         serialize_ohlcv_method<screener::OpenMethod>,
-                         parse_ohlcv_method<screener::OpenMethod>);
+  config_parser.register_method_parser(
+   "OPEN",
+   serialize_ohlcv_method<screener::OpenMethod>,
+   parse_ohlcv_method<screener::OpenMethod>);
 
-  register_method_parser("HIGH",
-                         serialize_ohlcv_method<screener::HighMethod>,
-                         parse_ohlcv_method<screener::HighMethod>);
+  config_parser.register_method_parser(
+   "HIGH",
+   serialize_ohlcv_method<screener::HighMethod>,
+   parse_ohlcv_method<screener::HighMethod>);
 
-  register_method_parser("LOW",
-                         serialize_ohlcv_method<screener::LowMethod>,
-                         parse_ohlcv_method<screener::LowMethod>);
+  config_parser.register_method_parser(
+   "LOW",
+   serialize_ohlcv_method<screener::LowMethod>,
+   parse_ohlcv_method<screener::LowMethod>);
 
-  register_method_parser("CLOSE",
-                         serialize_ohlcv_method<screener::CloseMethod>,
-                         parse_ohlcv_method<screener::CloseMethod>);
+  config_parser.register_method_parser(
+   "CLOSE",
+   serialize_ohlcv_method<screener::CloseMethod>,
+   parse_ohlcv_method<screener::CloseMethod>);
 
-  register_method_parser("VOLUME",
-                         serialize_ohlcv_method<screener::VolumeMethod>,
-                         parse_ohlcv_method<screener::VolumeMethod>);
+  config_parser.register_method_parser(
+   "VOLUME",
+   serialize_ohlcv_method<screener::VolumeMethod>,
+   parse_ohlcv_method<screener::VolumeMethod>);
 
-  register_method_parser(
+  config_parser.register_method_parser(
    "CHANGES",
    [](const ConfigParser& config_parser,
       const screener::ScreenerMethod screener_method) -> nlohmann::json {
@@ -697,43 +822,53 @@ void ConfigParser::register_default_parsers()
      return changes_method;
    });
 
-  register_method_parser("SMA",
-                         serialize_ta_with_period_method<screener::SmaMethod>,
-                         parse_ta_with_period_method<screener::SmaMethod>);
+  config_parser.register_method_parser(
+   "SMA",
+   serialize_ta_with_period_method<screener::SmaMethod>,
+   parse_ta_with_period_method<screener::SmaMethod>);
 
-  register_method_parser("EMA",
-                         serialize_ta_with_period_method<screener::EmaMethod>,
-                         parse_ta_with_period_method<screener::EmaMethod>);
+  config_parser.register_method_parser(
+   "EMA",
+   serialize_ta_with_period_method<screener::EmaMethod>,
+   parse_ta_with_period_method<screener::EmaMethod>);
 
-  register_method_parser("WMA",
-                         serialize_ta_with_period_method<screener::WmaMethod>,
-                         parse_ta_with_period_method<screener::WmaMethod>);
+  config_parser.register_method_parser(
+   "WMA",
+   serialize_ta_with_period_method<screener::WmaMethod>,
+   parse_ta_with_period_method<screener::WmaMethod>);
 
-  register_method_parser("RMA",
-                         serialize_ta_with_period_method<screener::RmaMethod>,
-                         parse_ta_with_period_method<screener::RmaMethod>);
+  config_parser.register_method_parser(
+   "RMA",
+   serialize_ta_with_period_method<screener::RmaMethod>,
+   parse_ta_with_period_method<screener::RmaMethod>);
 
-  register_method_parser("HMA",
-                         serialize_ta_with_period_method<screener::HmaMethod>,
-                         parse_ta_with_period_method<screener::HmaMethod>);
+  config_parser.register_method_parser(
+   "HMA",
+   serialize_ta_with_period_method<screener::HmaMethod>,
+   parse_ta_with_period_method<screener::HmaMethod>);
 
-  register_method_parser("RSI",
-                         serialize_ta_with_period_method<screener::RsiMethod>,
-                         parse_ta_with_period_method<screener::RsiMethod>);
+  config_parser.register_method_parser(
+   "RSI",
+   serialize_ta_with_period_method<screener::RsiMethod>,
+   parse_ta_with_period_method<screener::RsiMethod>);
 
-  register_method_parser("ROC",
-                         serialize_ta_with_period_method<screener::RocMethod>,
-                         parse_ta_with_period_method<screener::RocMethod>);
+  config_parser.register_method_parser(
+   "ROC",
+   serialize_ta_with_period_method<screener::RocMethod>,
+   parse_ta_with_period_method<screener::RocMethod>);
 
-  register_method_parser("RVOL",
-                         serialize_ta_with_period_method<screener::RvolMethod>,
-                         parse_ta_with_period_method<screener::RvolMethod>);
+  config_parser.register_method_parser(
+   "RVOL",
+   serialize_ta_with_period_method<screener::RvolMethod>,
+   parse_ta_with_period_method<screener::RvolMethod>);
 
-  register_method_parser("ATR", serialize_atr_method, parse_atr_method);
+  config_parser.register_method_parser(
+   "ATR", serialize_atr_method, parse_atr_method);
 
-  register_method_parser("KC", serialize_kc_method, parse_kc_method);
+  config_parser.register_method_parser(
+   "KC", serialize_kc_method, parse_kc_method);
 
-  register_method_parser(
+  config_parser.register_method_parser(
    "REFERENCE",
    [](const ConfigParser& config_parser,
       const screener::ScreenerMethod screener_method) -> nlohmann::json {
@@ -747,12 +882,13 @@ void ConfigParser::register_default_parsers()
 
      return serialized_method;
    },
-   [](ConfigParser::Parser config_parser, const nlohmann::json& parameters) {
+   [method_registry](ConfigParser::Parser config_parser,
+                     const nlohmann::json& parameters) {
      const auto name = get_param_or<std::string>(parameters, "name", "");
-     return screener::ReferenceMethod{config_parser.method_registry(), name};
+     return screener::ReferenceMethod{method_registry, name};
    });
 
-  register_method_parser(
+  config_parser.register_method_parser(
    "LOOKBACK",
    [](const ConfigParser& config_parser,
       const screener::ScreenerMethod screener_method) -> nlohmann::json {
@@ -775,7 +911,7 @@ void ConfigParser::register_default_parsers()
      return screener::LookbackMethod{source_method, period};
    });
 
-  register_method_parser(
+  config_parser.register_method_parser(
    "OUTPUT_BY_NAME",
    [](const ConfigParser& config_parser,
       const screener::ScreenerMethod screener_method) -> nlohmann::json {
@@ -843,7 +979,7 @@ void ConfigParser::register_default_parsers()
      return screener::OutputByNameMethod{source_method, output};
    });
 
-  register_method_parser(
+  config_parser.register_method_parser(
    "ABS_DIFF",
    [](const ConfigParser& config_parser,
       const screener::ScreenerMethod screener_method) -> nlohmann::json {
@@ -855,7 +991,7 @@ void ConfigParser::register_default_parsers()
       config_parser, parameters, "minuend", "subtrahend");
    });
 
-  register_method_parser(
+  config_parser.register_method_parser(
    "BB",
    [](const ConfigParser& config_parser,
       const screener::ScreenerMethod screener_method) -> nlohmann::json {
@@ -924,7 +1060,7 @@ void ConfigParser::register_default_parsers()
      return bb_method;
    });
 
-  register_method_parser(
+  config_parser.register_method_parser(
    "MACD",
    [](const ConfigParser& config_parser,
       const screener::ScreenerMethod screener_method) -> nlohmann::json {
@@ -955,7 +1091,7 @@ void ConfigParser::register_default_parsers()
      return macd_method;
    });
 
-  register_method_parser(
+  config_parser.register_method_parser(
    "STOCH",
    [](const ConfigParser& config_parser,
       const screener::ScreenerMethod screener_method) -> nlohmann::json {
@@ -997,7 +1133,7 @@ void ConfigParser::register_default_parsers()
      return stoch_method;
    });
 
-  register_method_parser(
+  config_parser.register_method_parser(
    "STOCH_RSI",
    [](const ConfigParser& config_parser,
       const screener::ScreenerMethod screener_method) -> nlohmann::json {
@@ -1031,7 +1167,7 @@ void ConfigParser::register_default_parsers()
      return stoch_rsi_method;
    });
 
-  register_method_parser(
+  config_parser.register_method_parser(
    "ADD",
    [](const ConfigParser& config_parser,
       const screener::ScreenerMethod& screener_method) -> nlohmann::json {
@@ -1042,7 +1178,7 @@ void ConfigParser::register_default_parsers()
      return parse_binary_function_method<screener::AddMethod>(
       config_parser, parameters, "augend", "addend");
    });
-  register_method_parser(
+  config_parser.register_method_parser(
    "SUBTRACT",
    [](const ConfigParser& config_parser,
       const screener::ScreenerMethod& screener_method) -> nlohmann::json {
@@ -1053,7 +1189,7 @@ void ConfigParser::register_default_parsers()
      return parse_binary_function_method<screener::SubtractMethod>(
       config_parser, parameters, "minuend", "subtrahend");
    });
-  register_method_parser(
+  config_parser.register_method_parser(
    "MULTIPLY",
    [](const ConfigParser& config_parser,
       const screener::ScreenerMethod& screener_method) -> nlohmann::json {
@@ -1064,7 +1200,7 @@ void ConfigParser::register_default_parsers()
      return parse_binary_function_method<screener::MultiplyMethod>(
       config_parser, parameters, "multiplicand", "multiplier");
    });
-  register_method_parser(
+  config_parser.register_method_parser(
    "DIVIDE",
    [](const ConfigParser& config_parser,
       const screener::ScreenerMethod& screener_method) -> nlohmann::json {
@@ -1075,7 +1211,7 @@ void ConfigParser::register_default_parsers()
      return parse_binary_function_method<screener::DivideMethod>(
       config_parser, parameters, "dividend", "divisor");
    });
-  register_method_parser(
+  config_parser.register_method_parser(
    "NEGATE",
    [](const ConfigParser& config_parser,
       const screener::ScreenerMethod& screener_method) -> nlohmann::json {
@@ -1086,7 +1222,7 @@ void ConfigParser::register_default_parsers()
      return parse_unary_function_method<screener::NegateMethod>(
       config_parser, parameters, "operand");
    });
-  register_method_parser(
+  config_parser.register_method_parser(
    "PERCENTAGE",
    [](const ConfigParser& config_parser,
       const screener::ScreenerMethod& screener_method) -> nlohmann::json {
@@ -1097,45 +1233,49 @@ void ConfigParser::register_default_parsers()
      return parse_binary_function_method<screener::PercentageMethod>(
       config_parser, parameters, "total", "percent");
    });
-  register_method_parser(
+  config_parser.register_method_parser(
    "BULLISH_DIVERGENCE",
    serialize_divergence_method<screener::BullishDivergenceMethod>,
    parse_divergence_method<screener::BullishDivergenceMethod>);
-  register_method_parser(
+  config_parser.register_method_parser(
    "HIDDEN_BULLISH_DIVERGENCE",
    serialize_divergence_method<screener::HiddenBullishDivergenceMethod>,
    parse_divergence_method<screener::HiddenBullishDivergenceMethod>);
 
-  register_filter_parser(
+  config_parser.register_filter_parser(
    "ALL_OF", serialize_all_of_filter, parse_all_of_filter);
-  register_filter_parser(
+  config_parser.register_filter_parser(
    "ANY_OF", serialize_any_of_filter, parse_any_of_filter);
-  register_filter_parser(
+  config_parser.register_filter_parser(
    "CROSSUNDER", serialize_crossunder_filter, parse_crossunder_filter);
-  register_filter_parser(
+  config_parser.register_filter_parser(
    "CROSSOVER", serialize_crossover_filter, parse_crossover_filter);
-  register_filter_parser(
+  config_parser.register_filter_parser(
    "GREATER_THAN",
    serialize_comparison_filter<screener::GreaterThanFilter>,
    parse_comparison_filter<screener::GreaterThanFilter>);
-  register_filter_parser("LESS_THAN",
-                         serialize_comparison_filter<screener::LessThanFilter>,
-                         parse_comparison_filter<screener::LessThanFilter>);
-  register_filter_parser(
+  config_parser.register_filter_parser(
+   "LESS_THAN",
+   serialize_comparison_filter<screener::LessThanFilter>,
+   parse_comparison_filter<screener::LessThanFilter>);
+  config_parser.register_filter_parser(
    "GREATER_EQUAL",
    serialize_comparison_filter<screener::GreaterEqualFilter>,
    parse_comparison_filter<screener::GreaterEqualFilter>);
-  register_filter_parser("LESS_EQUAL",
-                         serialize_comparison_filter<screener::LessEqualFilter>,
-                         parse_comparison_filter<screener::LessEqualFilter>);
-  register_filter_parser("EQUAL",
-                         serialize_comparison_filter<screener::EqualFilter>,
-                         parse_comparison_filter<screener::EqualFilter>);
-  register_filter_parser("NOT_EQUAL",
-                         serialize_comparison_filter<screener::NotEqualFilter>,
-                         parse_comparison_filter<screener::NotEqualFilter>);
+  config_parser.register_filter_parser(
+   "LESS_EQUAL",
+   serialize_comparison_filter<screener::LessEqualFilter>,
+   parse_comparison_filter<screener::LessEqualFilter>);
+  config_parser.register_filter_parser(
+   "EQUAL",
+   serialize_comparison_filter<screener::EqualFilter>,
+   parse_comparison_filter<screener::EqualFilter>);
+  config_parser.register_filter_parser(
+   "NOT_EQUAL",
+   serialize_comparison_filter<screener::NotEqualFilter>,
+   parse_comparison_filter<screener::NotEqualFilter>);
 
-  register_filter_parser(
+  config_parser.register_filter_parser(
    "TRUE",
    [](const ConfigParser& config_parser,
       const screener::ScreenerFilter& screener_filter) -> nlohmann::json {
@@ -1154,7 +1294,7 @@ void ConfigParser::register_default_parsers()
      return screener::TrueFilter{};
    });
 
-  register_filter_parser(
+  config_parser.register_filter_parser(
    "FALSE",
    [](const ConfigParser& config_parser,
       const screener::ScreenerFilter& screener_filter) -> nlohmann::json {
@@ -1171,7 +1311,7 @@ void ConfigParser::register_default_parsers()
      return screener::FalseFilter{};
    });
 
-  register_filter_parser(
+  config_parser.register_filter_parser(
    "AND",
    [](const ConfigParser& config_parser,
       const screener::ScreenerFilter& screener_filter) -> nlohmann::json {
@@ -1183,7 +1323,7 @@ void ConfigParser::register_default_parsers()
       config_parser, parameters, "firstCondition", "secondCondition");
    });
 
-  register_filter_parser(
+  config_parser.register_filter_parser(
    "OR",
    [](const ConfigParser& config_parser,
       const screener::ScreenerFilter& screener_filter) -> nlohmann::json {
@@ -1195,7 +1335,7 @@ void ConfigParser::register_default_parsers()
       config_parser, parameters, "firstCondition", "secondCondition");
    });
 
-  register_filter_parser(
+  config_parser.register_filter_parser(
    "NOT",
    [](const ConfigParser& config_parser,
       const screener::ScreenerFilter& screener_filter) -> nlohmann::json {
@@ -1207,7 +1347,7 @@ void ConfigParser::register_default_parsers()
       config_parser, parameters, "condition");
    });
 
-  register_filter_parser(
+  config_parser.register_filter_parser(
    "XOR",
    [](const ConfigParser& config_parser,
       const screener::ScreenerFilter& screener_filter) -> nlohmann::json {
@@ -1218,194 +1358,8 @@ void ConfigParser::register_default_parsers()
      return parse_binary_function_filter<screener::XorFilter>(
       config_parser, parameters, "firstCondition", "secondCondition");
    });
-}
 
-void ConfigParser::register_filter_parser(
- const std::string& filter_name, const FilterDeserialize& filter_deserialize)
-{
-  register_filter_parser(
-   filter_name,
-   [](const ConfigParser& config_parser,
-      const screener::ScreenerFilter& screener_filter) -> nlohmann::json {
-     return nlohmann::json{};
-   },
-   filter_deserialize);
-}
-
-void ConfigParser::register_filter_parser(
- const std::string& filter_name,
- const FilterSerialize& filter_serialize,
- const FilterDeserialize& filter_deserialize)
-{
-  filter_parsers_.emplace(filter_name,
-                          std::make_pair(filter_serialize, filter_deserialize));
-}
-
-void ConfigParser::register_method_parser(
- const std::string& method_name, const MethodDeserialize& method_deserialize)
-{
-  register_method_parser(
-   method_name,
-   [](const ConfigParser& config_parser,
-      const screener::ScreenerMethod& method) { return nlohmann::json{}; },
-   method_deserialize);
-}
-
-void ConfigParser::register_method_parser(
- const std::string& method_name,
- const MethodSerialize& method_serialize,
- const MethodDeserialize& method_deserialize)
-{
-  method_parsers_.emplace(method_name,
-                          std::make_pair(method_serialize, method_deserialize));
-}
-
-auto ConfigParser::parser() -> Parser
-{
-  return Parser{*this};
-}
-
-auto ConfigParser::parse_filter(const nlohmann::json& config)
- -> screener::ScreenerFilter
-{
-  if(config.is_boolean()) {
-    if(config.get<bool>()) {
-      return screener::TrueFilter{};
-    }
-
-    return screener::FalseFilter{};
-  }
-  const auto& filter_parsers = filter_parsers_;
-  const auto filter = config.at("filter").get<std::string>();
-
-  try {
-    if(filter_parsers.contains(filter)) {
-      const auto& [_, filter_deserialize] = filter_parsers.at(filter);
-      return filter_deserialize(*this, config);
-    }
-
-    const auto error_message = std::format("Unknown filter: {}", filter);
-    throw std::invalid_argument{error_message};
-  } catch(const std::exception& e) {
-    const auto error_message =
-     std::format("Error parsing filter {}:\n{}", filter, e.what());
-    throw std::invalid_argument{error_message};
-  } catch(...) {
-    const auto error_message =
-     std::format("Unknown error parsing filter {}", filter);
-    throw std::invalid_argument{error_message};
-  }
-}
-
-auto ConfigParser::serialize_filter(
- const screener::ScreenerFilter& filter) const -> nlohmann::json
-{
-  auto serialized_filter = nlohmann::json{};
-
-  for(const auto& [filter_name, filter_parser] : filter_parsers_) {
-    const auto& [filter_serialize, _] = filter_parser;
-    serialized_filter = filter_serialize(*this, filter);
-    if(!serialized_filter.empty()) {
-      if(!serialized_filter.is_object()) {
-        const auto error_message = std::format(
-         "Filter {} serialization must return an object", filter_name);
-        throw std::invalid_argument{error_message};
-      }
-
-      if(!serialized_filter.contains("filter")) {
-        serialized_filter["filter"] = filter_name;
-      } else if(serialized_filter.at("filter").get<std::string>() !=
-                filter_name) {
-        const auto error_message = std::format(
-         "Filter {} serialization must return 'filter' key with value {}",
-         filter_name,
-         filter_name);
-        throw std::invalid_argument{error_message};
-      }
-      break;
-    }
-  }
-
-  return serialized_filter;
-}
-
-auto ConfigParser::parse_method(const nlohmann::json& config)
- -> screener::ScreenerMethod
-{
-  if(config.is_number()) {
-    return screener::ValueMethod{config.get<double>()};
-  }
-
-  if(config.is_string()) {
-    const auto named_method = config.get<std::string>();
-    const auto expanded_method = nlohmann::json{{"method", named_method}};
-
-    return parse_method(expanded_method);
-  }
-
-  auto config_method = config;
-  const auto method = config.at("method").get<std::string>();
-
-  auto& method_parsers = method_parsers_;
-  if(!method_parsers.contains(method)) {
-    const auto error_message = std::format("Unknown method: {}", method);
-    throw std::invalid_argument{error_message};
-  }
-
-  try {
-    const auto method_deserialize = method_parsers.at(method).second;
-    const auto method_result = method_deserialize(*this, config_method);
-
-    return method_result;
-  } catch(const std::exception& e) {
-    const auto error_message =
-     std::format("Error parsing method {}:\n{}", method, e.what());
-    throw std::invalid_argument{error_message};
-  } catch(...) {
-    const auto error_message =
-     std::format("Unknown error parsing method {}", method);
-    throw std::invalid_argument{error_message};
-  }
-}
-
-auto ConfigParser::serialize_method(
- const screener::ScreenerMethod& method) const -> nlohmann::json
-{
-  auto serialized_method = nlohmann::json{};
-
-  for(const auto& [method_name, method_parser] : method_parsers_) {
-    const auto& [method_serialize, _] = method_parser;
-    serialized_method = method_serialize(*this, method);
-    if(serialized_method.is_object()) {
-      serialized_method["method"] = method_name;
-      break;
-    }
-  }
-
-  return serialized_method;
-}
-
-ConfigParser::Parser::Parser(ConfigParser& config_parser)
-: config_parser_{config_parser}
-{
-}
-
-auto ConfigParser::Parser::parse_method(const nlohmann::json& config)
- -> screener::ScreenerMethod
-{
-  return config_parser_.parse_method(config);
-}
-
-auto ConfigParser::Parser::parse_filter(const nlohmann::json& config)
- -> screener::ScreenerFilter
-{
-  return config_parser_.parse_filter(config);
-}
-
-auto ConfigParser::Parser::method_registry() const noexcept
- -> std::shared_ptr<const screener::MethodRegistry>
-{
-  return config_parser_.method_registry_;
+  return config_parser;
 }
 
 } // namespace pludux

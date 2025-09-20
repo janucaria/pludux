@@ -28,9 +28,10 @@ public:
   {
   }
 
-  auto operator[](std::size_t index) const noexcept -> SeriesOutput<ValueType>
+  auto operator[](this const auto& self, std::size_t lookback) noexcept
+   -> SeriesOutput<ValueType>
   {
-    const auto series = RefSeries{series_};
+    const auto series = RefSeries{self.series_};
     const auto changes = ChangeSeries{series};
 
     const auto gains =
@@ -50,18 +51,18 @@ public:
                    })>,
                    std::remove_cvref_t<decltype(changes)>>{changes};
 
-    const auto avg_gain = RmaSeries{gains, period_};
-    const auto avg_loss = RmaSeries{losses, period_};
+    const auto avg_gain = RmaSeries{gains, self.period_};
+    const auto avg_loss = RmaSeries{losses, self.period_};
 
-    const auto rs = avg_gain[index] / avg_loss[index];
+    const auto rs = avg_gain[lookback] / avg_loss[lookback];
     const auto rsi = 100 - (100 / (1 + rs));
 
     return rsi;
   }
 
-  auto size() const noexcept -> std::size_t
+  auto size(this const auto& self) noexcept -> std::size_t
   {
-    return series_.size();
+    return self.series_.size();
   }
 
 private:

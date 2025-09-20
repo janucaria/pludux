@@ -14,7 +14,9 @@ import :series.series_output;
 
 export namespace pludux {
 
+// TODO: can't use deducing this DataSeries becuase of MSVC bug
 template<typename T>
+  requires std::numeric_limits<T>::has_quiet_NaN
 class DataSeries {
 public:
   using ValueType = T;
@@ -31,16 +33,17 @@ public:
   }
 
   /**
-   * The 0 reverse_index is the latest value.
-   * If the reverse_index is out of bounds, return NaN.
+   * The 0 lookback is the latest value.
+   * If the lookback is out of bounds, return NaN.
    */
-  auto operator[](std::size_t index) const -> SeriesOutput<ValueType>
+  auto operator[](std::size_t lookback) const noexcept
+   -> SeriesOutput<ValueType>
   {
-    if(index >= data_.size()) {
+    if(lookback >= data_.size()) {
       return std::numeric_limits<ValueType>::quiet_NaN();
     }
 
-    const auto value_index = data_.size() - 1 - index;
+    const auto value_index = data_.size() - 1 - lookback;
     return data_[value_index];
   }
 

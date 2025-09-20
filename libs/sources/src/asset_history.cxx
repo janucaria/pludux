@@ -21,7 +21,10 @@ export namespace pludux {
 class AssetHistory {
 public:
   AssetHistory(
-   std::initializer_list<std::pair<std::string, PolySeries<double>>> data);
+   std::initializer_list<std::pair<std::string, PolySeries<double>>> data)
+  : AssetHistory(data.begin(), data.end())
+  {
+  }
 
   template<typename TInputIt>
   AssetHistory(TInputIt begin_it, TInputIt end_it)
@@ -37,53 +40,129 @@ public:
     recalculate_size_();
   }
 
-  auto operator[](std::string_view key) const
-   -> RefSeries<const PolySeries<double>>;
+  auto operator[](this const auto& self, const std::string& key)
+   -> RefSeries<const PolySeries<double>>
+  {
+    return RefSeries{self.history_data_.at(key)};
+  }
 
-  auto datetime_key() const noexcept -> const std::string&;
+  auto size(this const auto& self) noexcept -> std::size_t
+  {
+    return self.size_;
+  }
 
-  void datetime_key(std::string key) noexcept;
+  auto history_data(this const auto& self) noexcept
+   -> const std::unordered_map<std::string, PolySeries<double>>&
+  {
+    return self.history_data_;
+  }
 
-  auto open_key() const noexcept -> const std::string&;
+  auto datetime_key(this const auto& self) noexcept -> const std::string&
+  {
+    return self.datetime_key_;
+  }
 
-  void open_key(std::string key) noexcept;
+  void datetime_key(this auto& self, std::string key) noexcept
+  {
+    self.datetime_key_ = std::move(key);
+  }
 
-  auto high_key() const noexcept -> const std::string&;
+  auto open_key(this const auto& self) noexcept -> const std::string&
+  {
+    return self.open_key_;
+  }
 
-  void high_key(std::string key) noexcept;
+  void open_key(this auto& self, std::string key) noexcept
+  {
+    self.open_key_ = std::move(key);
+  }
 
-  auto low_key() const noexcept -> const std::string&;
+  auto high_key(this const auto& self) noexcept -> const std::string&
+  {
+    return self.high_key_;
+  }
 
-  void low_key(std::string key) noexcept;
+  void high_key(this auto& self, std::string key) noexcept
+  {
+    self.high_key_ = std::move(key);
+  }
 
-  auto close_key() const noexcept -> const std::string&;
+  auto low_key(this const auto& self) noexcept -> const std::string&
+  {
+    return self.low_key_;
+  }
 
-  void close_key(std::string key) noexcept;
+  void low_key(this auto& self, std::string key) noexcept
+  {
+    self.low_key_ = std::move(key);
+  }
 
-  auto volume_key() const noexcept -> const std::string&;
+  auto close_key(this const auto& self) noexcept -> const std::string&
+  {
+    return self.close_key_;
+  }
 
-  void volume_key(std::string key) noexcept;
+  void close_key(this auto& self, std::string key) noexcept
+  {
+    self.close_key_ = std::move(key);
+  }
 
-  auto get_datetimes() const noexcept -> RefSeries<const PolySeries<double>>;
+  auto volume_key(this const auto& self) noexcept -> const std::string&
+  {
+    return self.volume_key_;
+  }
 
-  auto get_opens() const noexcept -> RefSeries<const PolySeries<double>>;
+  void volume_key(this auto& self, std::string key) noexcept
+  {
+    self.volume_key_ = std::move(key);
+  }
 
-  auto get_highs() const noexcept -> RefSeries<const PolySeries<double>>;
+  auto contains(this const auto& self, const std::string& key) noexcept -> bool
+  {
+    return self.history_data_.contains(key);
+  }
 
-  auto get_lows() const noexcept -> RefSeries<const PolySeries<double>>;
+  void insert(this auto& self, std::string key, PolySeries<double> series)
+  {
+    self.history_data_.emplace(std::move(key), std::move(series));
+    self.recalculate_size_();
+  }
 
-  auto get_closes() const noexcept -> RefSeries<const PolySeries<double>>;
+  auto get_datetimes(this const auto& self) noexcept
+   -> RefSeries<const PolySeries<double>>
+  {
+    return self[self.datetime_key_];
+  }
 
-  auto get_volumes() const noexcept -> RefSeries<const PolySeries<double>>;
+  auto get_opens(this const auto& self) noexcept
+   -> RefSeries<const PolySeries<double>>
+  {
+    return self[self.open_key_];
+  }
 
-  auto size() const noexcept -> std::size_t;
+  auto get_highs(this const auto& self) noexcept
+   -> RefSeries<const PolySeries<double>>
+  {
+    return self[self.high_key_];
+  }
 
-  auto history_data() const noexcept
-   -> const std::unordered_map<std::string, PolySeries<double>>&;
+  auto get_lows(this const auto& self) noexcept
+   -> RefSeries<const PolySeries<double>>
+  {
+    return self[self.low_key_];
+  }
 
-  auto contains(std::string_view key) const noexcept -> bool;
+  auto get_closes(this const auto& self) noexcept
+   -> RefSeries<const PolySeries<double>>
+  {
+    return self[self.close_key_];
+  }
 
-  void insert(std::string key, PolySeries<double> series);
+  auto get_volumes(this const auto& self) noexcept
+   -> RefSeries<const PolySeries<double>>
+  {
+    return self[self.volume_key_];
+  }
 
 private:
   std::unordered_map<std::string, PolySeries<double>> history_data_;
@@ -95,151 +174,18 @@ private:
   std::string close_key_;
   std::string volume_key_;
 
-  void recalculate_size_() noexcept;
+  void recalculate_size_(this auto& self) noexcept
+  {
+    self.size_ =
+     self.history_data_.empty()
+      ? 0
+      : std::max_element(self.history_data_.begin(),
+                         self.history_data_.end(),
+                         [](const auto& lhs, const auto& rhs) {
+                           return lhs.second.size() < rhs.second.size();
+                         })
+         ->second.size();
+  }
 };
-
-// ------------------------------------------------------------------------
-
-AssetHistory::AssetHistory(
- std::initializer_list<std::pair<std::string, PolySeries<double>>> data)
-: AssetHistory(data.begin(), data.end())
-{
-}
-
-auto AssetHistory::operator[](std::string_view key) const
- -> RefSeries<const PolySeries<double>>
-{
-  return RefSeries{history_data_.at(std::string(key))};
-}
-
-auto AssetHistory::size() const noexcept -> std::size_t
-{
-  return size_;
-}
-
-auto AssetHistory::history_data() const noexcept
- -> const std::unordered_map<std::string, PolySeries<double>>&
-{
-  return history_data_;
-}
-
-auto AssetHistory::datetime_key() const noexcept -> const std::string&
-{
-  return datetime_key_;
-}
-
-void AssetHistory::datetime_key(std::string key) noexcept
-{
-  datetime_key_ = std::move(key);
-}
-
-auto AssetHistory::open_key() const noexcept -> const std::string&
-{
-  return open_key_;
-}
-
-void AssetHistory::open_key(std::string key) noexcept
-{
-  open_key_ = std::move(key);
-}
-
-auto AssetHistory::high_key() const noexcept -> const std::string&
-{
-  return high_key_;
-}
-
-void AssetHistory::high_key(std::string key) noexcept
-{
-  high_key_ = std::move(key);
-}
-
-auto AssetHistory::low_key() const noexcept -> const std::string&
-{
-  return low_key_;
-}
-
-void AssetHistory::low_key(std::string key) noexcept
-{
-  low_key_ = std::move(key);
-}
-
-auto AssetHistory::close_key() const noexcept -> const std::string&
-{
-  return close_key_;
-}
-
-void AssetHistory::close_key(std::string key) noexcept
-{
-  close_key_ = std::move(key);
-}
-
-auto AssetHistory::volume_key() const noexcept -> const std::string&
-{
-  return volume_key_;
-}
-
-void AssetHistory::volume_key(std::string key) noexcept
-{
-  volume_key_ = std::move(key);
-}
-
-auto AssetHistory::contains(std::string_view key) const noexcept -> bool
-{
-  return history_data_.contains(std::string(key));
-}
-
-void AssetHistory::insert(std::string key, PolySeries<double> series)
-{
-  history_data_.emplace(std::move(key), std::move(series));
-  recalculate_size_();
-}
-
-auto AssetHistory::get_datetimes() const noexcept
- -> RefSeries<const PolySeries<double>>
-{
-  return (*this)[datetime_key_];
-}
-
-auto AssetHistory::get_opens() const noexcept
- -> RefSeries<const PolySeries<double>>
-{
-  return (*this)[open_key_];
-}
-
-auto AssetHistory::get_highs() const noexcept
- -> RefSeries<const PolySeries<double>>
-{
-  return (*this)[high_key_];
-}
-
-auto AssetHistory::get_lows() const noexcept
- -> RefSeries<const PolySeries<double>>
-{
-  return (*this)[low_key_];
-}
-
-auto AssetHistory::get_closes() const noexcept
- -> RefSeries<const PolySeries<double>>
-{
-  return (*this)[close_key_];
-}
-
-auto AssetHistory::get_volumes() const noexcept
- -> RefSeries<const PolySeries<double>>
-{
-  return (*this)[volume_key_];
-}
-
-void AssetHistory::recalculate_size_() noexcept
-{
-  size_ = history_data_.empty()
-           ? 0
-           : std::max_element(history_data_.begin(),
-                              history_data_.end(),
-                              [](const auto& lhs, const auto& rhs) {
-                                return lhs.second.size() < rhs.second.size();
-                              })
-              ->second.size();
-}
 
 } // namespace pludux
