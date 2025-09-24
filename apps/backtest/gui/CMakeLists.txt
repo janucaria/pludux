@@ -6,32 +6,45 @@ endif()
 
 if(NOT EMSCRIPTEN)
 
-  set(PLUDUX_WEBGPU_DOWNLOAD_BUILD "release")
+  set(PLUDUX_WEBGPU_DOWNLOAD "wgpu")
+
+  if(WIN32)
+    string(APPEND PLUDUX_WEBGPU_DOWNLOAD "-windows-x86_64-msvc")
+  else()
+    string(APPEND PLUDUX_WEBGPU_DOWNLOAD "-linux-x86_64")
+  endif()
 
   if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(PLUDUX_WEBGPU_DOWNLOAD_BUILD "debug")
+    string(APPEND PLUDUX_WEBGPU_DOWNLOAD "-debug")
+  else()
+    string(APPEND PLUDUX_WEBGPU_DOWNLOAD "-release")
   endif()
 
   FetchContent_Declare(
     wgpu_native
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-    URL "https://github.com/gfx-rs/wgpu-native/releases/download/v25.0.2.2/wgpu-windows-x86_64-msvc-${PLUDUX_WEBGPU_DOWNLOAD_BUILD}.zip"
+    URL "https://github.com/gfx-rs/wgpu-native/releases/download/v25.0.2.2/${PLUDUX_WEBGPU_DOWNLOAD}.zip"
   )
   
   FetchContent_MakeAvailable(wgpu_native)
 
-  add_library(webgpu SHARED IMPORTED)
+  add_library(webgpu STATIC IMPORTED)
 
   set_property(TARGET webgpu
     PROPERTY INTERFACE_INCLUDE_DIRECTORIES
       "${wgpu_native_SOURCE_DIR}/include"
       "${wgpu_native_SOURCE_DIR}/include/webgpu"
   )
-  
-  set_target_properties(webgpu PROPERTIES
-    IMPORTED_IMPLIB "${wgpu_native_SOURCE_DIR}/lib/wgpu_native.lib"
-    IMPORTED_LOCATION "${wgpu_native_SOURCE_DIR}/lib/wgpu_native.dll"
-  )  
+
+  if(WIN32)
+    set_target_properties(webgpu PROPERTIES
+      IMPORTED_LOCATION "${wgpu_native_SOURCE_DIR}/lib/wgpu_native.lib"
+    )
+  else()
+    set_target_properties(webgpu PROPERTIES
+      IMPORTED_LOCATION "${wgpu_native_SOURCE_DIR}/lib/libwgpu_native.a"
+    )
+  endif()
 
   FetchContent_Declare(
     glfw
@@ -42,7 +55,12 @@ if(NOT EMSCRIPTEN)
   )
   set(GLFW_INSTALL OFF)
   set(GLFW_BUILD_DOCS OFF)
-  
+
+  if(LINUX)
+    set(GLFW_BUILD_WAYLAND ON)
+    set(GLFW_BUILD_X11 OFF)
+  endif()
+
   FetchContent_Declare(
     nativefiledialog-extended
     GIT_REPOSITORY "https://github.com/btzy/nativefiledialog-extended.git"
@@ -176,27 +194,33 @@ if(NOT EMSCRIPTEN)
   target_compile_definitions(${PROJECT_NAME} PUBLIC
     IMGUI_IMPL_WEBGPU_BACKEND_WGPU
   )
-
+  
   target_link_libraries(${PROJECT_NAME}
     PUBLIC
-      runtimeobject
-      propsys
-      ole32
       webgpu
-      opengl32
-      userenv
-      ws2_32
-      d3dcompiler
-      ntdll
-      kernel32
       nfd::nfd
   )
 
-  add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}> $<TARGET_FILE_DIR:${PROJECT_NAME}>
-    COMMAND_EXPAND_LISTS
-  )
-  
+  if(MSVC)
+    target_link_libraries(${PROJECT_NAME}
+      PUBLIC
+        runtimeobject
+        propsys
+        ole32
+        opengl32
+        userenv
+        ws2_32
+        d3dcompiler
+        ntdll
+        kernel32
+    )
+
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${wgpu_native_SOURCE_DIR}/lib/wgpu_native.dll" $<TARGET_FILE_DIR:${PROJECT_NAME}>
+      COMMAND_EXPAND_LISTS
+    )
+
+  endif()
 else()
   target_compile_definitions(${PROJECT_NAME} PUBLIC
     IMGUI_DISABLE_FILE_FUNCTIONS=1

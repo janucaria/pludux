@@ -187,30 +187,27 @@ private:
       if(ImPlot::IsPlotHovered() && idx > -1 && idx < asset_history.size()) {
         const auto snapshot = AssetSnapshot(idx, asset_history);
 
-        ImGui::BeginTooltip();
-        ImGui::Text("Date:");
-        ImGui::SameLine(60);
-        ImGui::Text("%s", format_datetime(snapshot.get_datetime()).c_str());
-        ImGui::Text("Open:");
-        ImGui::SameLine(60);
-        ImGui::Text("%.2f", snapshot.get_open());
-        ImGui::Text("Close:");
-        ImGui::SameLine(60);
-        ImGui::Text("%.2f", snapshot.get_close());
-        ImGui::Text("High:");
-        ImGui::SameLine(60);
-        ImGui::Text("%.2f", snapshot.get_high());
-        ImGui::Text("Low:");
-        ImGui::SameLine(60);
-        ImGui::Text("%.2f", snapshot.get_low());
-        ImGui::Text("Volume:");
-        ImGui::SameLine(60);
-        ImGui::Text("%s",
-                    std::format(std::locale("en_US.UTF-8"),
-                                "{:L}",
-                                (int)(snapshot.get_volume()))
-                     .c_str());
-        ImGui::EndTooltip();
+        if(ImGui::BeginTooltip()) {
+          ImGui::Text("Date:");
+          ImGui::SameLine(60);
+          ImGui::Text("%s", format_datetime(snapshot.get_datetime()).c_str());
+          ImGui::Text("Open:");
+          ImGui::SameLine(60);
+          ImGui::Text("%.2f", snapshot.get_open());
+          ImGui::Text("Close:");
+          ImGui::SameLine(60);
+          ImGui::Text("%.2f", snapshot.get_close());
+          ImGui::Text("High:");
+          ImGui::SameLine(60);
+          ImGui::Text("%.2f", snapshot.get_high());
+          ImGui::Text("Low:");
+          ImGui::SameLine(60);
+          ImGui::Text("%.2f", snapshot.get_low());
+          ImGui::Text("Volume:");
+          ImGui::SameLine(60);
+          ImGui::Text("%s", format_currency(snapshot.get_volume()).c_str());
+          ImGui::EndTooltip();
+        }
       }
     }
   }

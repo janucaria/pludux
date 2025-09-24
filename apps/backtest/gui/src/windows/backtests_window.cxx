@@ -1,7 +1,9 @@
 module;
 
+#include <cstring>
 #include <format>
 #include <iterator>
+#include <string>
 
 #include <imgui.h>
 

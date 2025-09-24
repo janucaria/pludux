@@ -1,9 +1,11 @@
 module;
 
 #include <algorithm>
+#include <cstring>
 #include <format>
 #include <iterator>
 #include <memory>
+#include <string>
 
 #include <imgui.h>
 

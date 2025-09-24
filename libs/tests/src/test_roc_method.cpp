@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <cmath>
+
 import pludux;
 
 using namespace pludux::screener;

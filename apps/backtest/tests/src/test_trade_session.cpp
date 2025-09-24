@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <cmath>
+
 import pludux.backtest;
 
 using namespace pludux;

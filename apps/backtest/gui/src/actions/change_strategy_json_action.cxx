@@ -1,12 +1,13 @@
 module;
 
+#include <algorithm>
 #include <concepts>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <istream>
 #include <sstream>
 #include <string>
-#include <format>
 #include <utility>
 
 export module pludux.apps.backtest:actions.change_strategy_json_action;
