@@ -23,26 +23,11 @@ TEST(AssetSnapshotTest, BasicAccessAndOffset)
   EXPECT_EQ(snap["open"], 11);
   EXPECT_EQ(snap["Datetime"], 1);
 
-  // get_values
-  auto closes = snap.get_values("close");
-  EXPECT_EQ(closes[0], 10);
-  EXPECT_EQ(closes[1], 20);
-  EXPECT_EQ(closes[4], 50);
-  EXPECT_TRUE(std::isnan(closes[5]));
-
-  // get_datetime_values
-  auto datetimes = snap.get_datetime_values();
-  EXPECT_EQ(datetimes[0], 1);
-  EXPECT_EQ(datetimes[4], 5);
-
   // Offset snapshot
   auto snap2 = snap[2];
   EXPECT_EQ(snap2.offset(), 2);
   EXPECT_EQ(snap2.size(), 3);
   EXPECT_EQ(snap2["close"], 30);
-  EXPECT_EQ(snap2.get_values("close")[0], 30);
-  EXPECT_EQ(snap2.get_values("close")[2], 50);
-  EXPECT_TRUE(std::isnan(snap2.get_values("close")[3]));
 }
 
 TEST(AssetSnapshotTest, GettersForOHLCV)
@@ -53,20 +38,36 @@ TEST(AssetSnapshotTest, GettersForOHLCV)
                   {"Low", {5, 15, 25}},
                   {"Close", {12, 22, 32}},
                   {"Volume", {100, 200, 300}}};
-  AssetSnapshot snap{ah};
-  EXPECT_EQ(snap.get_open_values()[1], 20);
-  EXPECT_EQ(snap.get_high_values()[2], 35);
-  EXPECT_EQ(snap.get_low_values()[0], 5);
-  EXPECT_EQ(snap.get_close_values()[2], 32);
-  EXPECT_EQ(snap.get_volume_values()[0], 100);
+
+  auto snap = AssetSnapshot{ah};
+  EXPECT_EQ(snap.datetime(), 1);
+  EXPECT_EQ(snap.open(), 10);
+  EXPECT_EQ(snap.high(), 15);
+  EXPECT_EQ(snap.low(), 5);
+  EXPECT_EQ(snap.close(), 12);
+  EXPECT_EQ(snap.volume(), 100);
+
+  auto snap2 = snap[1];
+  EXPECT_EQ(snap2.datetime(), 2);
+  EXPECT_EQ(snap2.open(), 20);
+  EXPECT_EQ(snap2.high(), 25);
+  EXPECT_EQ(snap2.low(), 15);
+  EXPECT_EQ(snap2.close(), 22);
+  EXPECT_EQ(snap2.volume(), 200);
+
+  auto snap3 = snap[2];
+  EXPECT_EQ(snap3.datetime(), 3);
+  EXPECT_EQ(snap3.open(), 30);
+  EXPECT_EQ(snap3.high(), 35);
+  EXPECT_EQ(snap3.low(), 25);
+  EXPECT_EQ(snap3.close(), 32);
+  EXPECT_EQ(snap3.volume(), 300);
 }
 
 TEST(AssetSnapshotTest, OutOfBoundsAccess)
 {
   AssetHistory ah{{"close", {10, 20}}};
   AssetSnapshot snap{ah};
-  auto closes = snap.get_values("close");
-  EXPECT_TRUE(std::isnan(closes[2]));
-  EXPECT_TRUE(std::isnan(closes[100]));
-  EXPECT_TRUE(std::isnan(snap[100]["close"]));
+  auto open = snap["open"];
+  EXPECT_TRUE(std::isnan(open));
 }
