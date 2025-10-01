@@ -9,7 +9,9 @@ TEST(ScreenerFilterTest, RunOneFilter)
   const auto equal_filter = EqualFilter{ValueMethod{1.0}, ValueMethod{1.0}};
   const auto screener_filter = ScreenerFilter{equal_filter};
   const auto asset_data = pludux::AssetHistory{{"close", {0}}};
-  const auto result = screener_filter(asset_data);
+  const auto context = AnyMethodContext{};
+
+  const auto result = screener_filter(asset_data, context);
   EXPECT_TRUE(result);
 
   const auto casted_filter = screener_filter_cast<EqualFilter>(screener_filter);

@@ -1,69 +1,65 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <variant>
 
 import pludux;
 
 using namespace pludux::screener;
 
-TEST(RvolMethodTest, RunOneMethod)
+TEST(RvolMethodTest, ConstructorInitialization)
 {
-  const auto data_method = DataMethod{"close"};
-  const auto period = 5;
-  const auto sma_method = RvolMethod{data_method, period};
-  const auto asset_data = pludux::AssetHistory{
-   {"close",
-    {11.01, 8.59, 14.1, 30.52, 34.18, 55.34, 43.26, 65.39, 90.97, 585.54}}};
-
-  const auto result = sma_method(asset_data)[0];
-  EXPECT_DOUBLE_EQ(result, 0.55945121951219512);
+  {
+    auto rvol_method = RvolMethod{};
+    EXPECT_EQ(rvol_method.period(), 14);
+  }
+  {
+    auto rvol_method = RvolMethod{20};
+    EXPECT_EQ(rvol_method.period(), 20);
+  }
 }
 
 TEST(RvolMethodTest, RunAllMethod)
 {
-  const auto data_method = DataMethod{"close"};
-  const auto period = 5;
-  const auto sma_method = RvolMethod{data_method, period};
+  const auto rvol_method = RvolMethod{5};
   const auto asset_data = pludux::AssetHistory{
-   {"close",
+   {"Volume",
     {11.01, 8.59, 14.1, 30.52, 34.18, 55.34, 43.26, 65.39, 90.97, 585.54}}};
+  const auto asset_snapshot = pludux::AssetSnapshot{asset_data};
+  const auto context = std::monostate{};
 
-  const auto result = sma_method(asset_data);
-
-  ASSERT_EQ(result.size(), asset_data.size());
-  EXPECT_DOUBLE_EQ(result[0], 0.55945121951219512);
-  EXPECT_DOUBLE_EQ(result[1], 0.30091781685700275);
-  EXPECT_DOUBLE_EQ(result[2], 0.39740698985343859);
-  EXPECT_DOUBLE_EQ(result[3], 0.66727884909703095);
-  EXPECT_DOUBLE_EQ(result[4], 0.59106315279795263);
-  EXPECT_DOUBLE_EQ(result[5], 0.32920880428316479);
-  EXPECT_TRUE(std::isnan(result[6]));
-  EXPECT_TRUE(std::isnan(result[7]));
-  EXPECT_TRUE(std::isnan(result[8]));
-  EXPECT_TRUE(std::isnan(result[9]));
+  EXPECT_DOUBLE_EQ(rvol_method(asset_snapshot[0], context),
+                   0.55945121951219512);
+  EXPECT_DOUBLE_EQ(rvol_method(asset_snapshot[1], context),
+                   0.30091781685700275);
+  EXPECT_DOUBLE_EQ(rvol_method(asset_snapshot[2], context),
+                   0.39740698985343859);
+  EXPECT_DOUBLE_EQ(rvol_method(asset_snapshot[3], context),
+                   0.66727884909703095);
+  EXPECT_DOUBLE_EQ(rvol_method(asset_snapshot[4], context),
+                   0.59106315279795263);
+  EXPECT_DOUBLE_EQ(rvol_method(asset_snapshot[5], context),
+                   0.32920880428316479);
+  EXPECT_TRUE(std::isnan(rvol_method(asset_snapshot[6], context)));
+  EXPECT_TRUE(std::isnan(rvol_method(asset_snapshot[7], context)));
+  EXPECT_TRUE(std::isnan(rvol_method(asset_snapshot[8], context)));
+  EXPECT_TRUE(std::isnan(rvol_method(asset_snapshot[9], context)));
 }
 
 TEST(RvolMethodTest, EqualityOperator)
 {
-  const auto data_method1 = DataMethod{"close"};
-  const auto rvol_method1 = RvolMethod{data_method1, 5};
-
-  const auto data_method2 = DataMethod{"close"};
-  const auto rvol_method2 = RvolMethod{data_method2, 5};
+  const auto rvol_method1 = RvolMethod{5};
+  const auto rvol_method2 = RvolMethod{5};
 
   EXPECT_TRUE(rvol_method1 == rvol_method2);
-  EXPECT_FALSE(rvol_method1 != rvol_method2);
   EXPECT_EQ(rvol_method1, rvol_method2);
 }
 
 TEST(RvolMethodTest, NotEqualOperator)
 {
-  const auto data_method1 = DataMethod{"close"};
-  const auto rvol_method1 = RvolMethod{data_method1, 5};
+  const auto rvol_method1 = RvolMethod{5};
+  const auto rvol_method2 = RvolMethod{10};
 
-  const auto data_method2 = DataMethod{"open"};
-  const auto rvol_method2 = RvolMethod{data_method2, 5};
-
-  EXPECT_FALSE(rvol_method1 == rvol_method2);
   EXPECT_TRUE(rvol_method1 != rvol_method2);
+  EXPECT_NE(rvol_method1, rvol_method2);
 }

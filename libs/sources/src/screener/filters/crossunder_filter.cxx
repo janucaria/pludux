@@ -5,6 +5,8 @@ module;
 export module pludux:screener.crossunder_filter;
 
 import :asset_snapshot;
+import :screener.method_call_context;
+
 import :screener.screener_filter;
 import :screener.screener_method;
 
@@ -21,13 +23,16 @@ public:
   auto operator==(const CrossunderFilter& other) const noexcept
    -> bool = default;
 
-  auto operator()(this const auto& self, AssetSnapshot asset_data) -> bool
+  auto operator()(this const auto& self,
+                  AssetSnapshot asset_data,
+                  MethodCallContext<double> auto context) -> bool
   {
-    const auto signal_result = self.signal_(asset_data);
-    const auto reference_result = self.reference_(asset_data);
+    const auto signal_current = self.signal_(asset_data, context);
+    const auto signal_prev = self.signal_(asset_data[1], context);
+    const auto reference_current = self.reference_(asset_data, context);
+    const auto reference_prev = self.reference_(asset_data[1], context);
 
-    return signal_result[0] < reference_result[0] &&
-           signal_result[1] >= reference_result[1];
+    return signal_current < reference_current && signal_prev >= reference_prev;
   }
 
   auto signal(this const auto& self) noexcept -> const ScreenerMethod&

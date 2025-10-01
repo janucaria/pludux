@@ -4,6 +4,8 @@ import pludux;
 
 using namespace pludux::screener;
 
+const auto context = AnyMethodContext{};
+
 TEST(EqualFilterTest, TargetEqualThreshold)
 {
   const auto target_value = 40.0;
@@ -14,7 +16,7 @@ TEST(EqualFilterTest, TargetEqualThreshold)
    EqualFilter{std::move(target_method), std::move(threshold_method)};
   const auto asset_data = pludux::AssetHistory{{"close", {0}}};
 
-  EXPECT_FALSE(filter(asset_data));
+  EXPECT_FALSE(filter(asset_data, context));
 }
 
 TEST(EqualFilterTest, TargetEqualToThreshold)
@@ -27,7 +29,7 @@ TEST(EqualFilterTest, TargetEqualToThreshold)
    EqualFilter{std::move(target_method), std::move(threshold_method)};
   const auto asset_data = pludux::AssetHistory{{"close", {0}}};
 
-  EXPECT_TRUE(filter(asset_data));
+  EXPECT_TRUE(filter(asset_data, context));
 }
 
 TEST(EqualFilterTest, TargetGreaterThanThreshold)
@@ -40,7 +42,7 @@ TEST(EqualFilterTest, TargetGreaterThanThreshold)
    EqualFilter{std::move(target_method), std::move(threshold_method)};
   const auto asset_data = pludux::AssetHistory{{"close", {0}}};
 
-  EXPECT_FALSE(filter(asset_data));
+  EXPECT_FALSE(filter(asset_data, context));
 }
 
 TEST(EqualFilterTest, EqualityOperator)

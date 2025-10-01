@@ -8,22 +8,24 @@ module;
 export module pludux:screener.screener_filter;
 
 import :asset_snapshot;
+import :screener.any_method_context;
 
 export namespace pludux::screener {
 
 class ScreenerFilter {
 public:
   template<typename UImpl>
-    requires std::is_invocable_r_v<bool, UImpl, AssetSnapshot>
+    requires std::is_invocable_r_v<bool, UImpl, AssetSnapshot, AnyMethodContext>
   ScreenerFilter(UImpl impl)
   : impl_{std::make_shared<ImplModel<UImpl>>(std::move(impl))}
   {
   }
 
-  auto operator()(this const auto& self, AssetSnapshot asset_snapshot) noexcept
-   -> bool
+  auto operator()(this const auto& self,
+                  AssetSnapshot asset_snapshot,
+                  AnyMethodContext context) noexcept -> bool
   {
-    return self.impl_->operator()(std::move(asset_snapshot));
+    return self.impl_->operator()(std::move(asset_snapshot), context);
   }
 
   auto operator==(this const auto& self, const ScreenerFilter& other) noexcept
@@ -51,7 +53,8 @@ private:
   struct ImplConcept {
     virtual ~ImplConcept() = default;
 
-    virtual auto operator()(AssetSnapshot asset_snapshot) const noexcept
+    virtual auto operator()(AssetSnapshot asset_snapshot,
+                            AnyMethodContext context) const noexcept
      -> bool = 0;
 
     virtual auto operator==(const ScreenerFilter& other) const noexcept
@@ -70,10 +73,10 @@ private:
     {
     }
 
-    auto operator()(AssetSnapshot asset_snapshot) const noexcept
-     -> bool override
+    auto operator()(AssetSnapshot asset_snapshot,
+                    AnyMethodContext context) const noexcept -> bool override
     {
-      return impl(std::move(asset_snapshot));
+      return impl(std::move(asset_snapshot), context);
     }
 
     auto operator==(const ScreenerFilter& other) const noexcept -> bool override

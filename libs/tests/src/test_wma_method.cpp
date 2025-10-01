@@ -6,69 +6,67 @@ import pludux;
 
 using namespace pludux::screener;
 
-TEST(WmaMethodTest, RunOneMethod)
+TEST(WmaMethodTest, ConstructorInitialization)
 {
-  const auto field = "close";
-  const auto field_method = DataMethod{field};
-  const auto period = 5;
-  const auto wma_method = WmaMethod{field_method, period};
-  const auto asset_data = pludux::AssetHistory{
-   {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  {
+    auto wma_method = WmaMethod{};
 
-  const auto result = wma_method(asset_data)[0];
-  EXPECT_DOUBLE_EQ(result, 859.33333333333337);
+    EXPECT_EQ(wma_method.period(), 20);
+    EXPECT_EQ(wma_method.source(), CloseMethod{});
+  }
+  {
+    auto wma_method = WmaMethod{20};
+
+    EXPECT_EQ(wma_method.period(), 20);
+    EXPECT_EQ(wma_method.source(), CloseMethod{});
+  }
+  {
+    const auto wma_method = WmaMethod{OpenMethod{}, 5};
+
+    EXPECT_EQ(wma_method.period(), 5);
+    EXPECT_EQ(wma_method.source(), OpenMethod{});
+  }
 }
 
 TEST(WmaMethodTest, RunAllMethod)
 {
-  const auto field = "close";
-  const auto field_method = DataMethod{field};
-  const auto period = 5;
-  const auto wma_method = WmaMethod{field_method, period};
+  const auto wma_method = WmaMethod{CloseMethod{}, 5};
   const auto asset_data = pludux::AssetHistory{
-   {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+   {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  const auto asset_snapshot = pludux::AssetSnapshot{asset_data};
+  const auto context = std::monostate{};
 
-  const auto result = wma_method(asset_data);
-
-  ASSERT_EQ(result.size(), asset_data.size());
-  EXPECT_DOUBLE_EQ(result[0], 859.33333333333337);
-  EXPECT_DOUBLE_EQ(result[1], 862.66666666666663);
-  EXPECT_DOUBLE_EQ(result[2], 862.66666666666663);
-  EXPECT_DOUBLE_EQ(result[3], 858.66666666666663);
-  EXPECT_DOUBLE_EQ(result[4], 852.66666666666663);
-  EXPECT_DOUBLE_EQ(result[5], 841.66666666666663);
-  EXPECT_TRUE(std::isnan(result[6]));
-  EXPECT_TRUE(std::isnan(result[7]));
-  EXPECT_TRUE(std::isnan(result[8]));
-  EXPECT_TRUE(std::isnan(result[9]));
+  EXPECT_DOUBLE_EQ(wma_method(asset_snapshot[0], context), 859.33333333333337);
+  EXPECT_DOUBLE_EQ(wma_method(asset_snapshot[1], context), 862.66666666666663);
+  EXPECT_DOUBLE_EQ(wma_method(asset_snapshot[2], context), 862.66666666666663);
+  EXPECT_DOUBLE_EQ(wma_method(asset_snapshot[3], context), 858.66666666666663);
+  EXPECT_DOUBLE_EQ(wma_method(asset_snapshot[4], context), 852.66666666666663);
+  EXPECT_DOUBLE_EQ(wma_method(asset_snapshot[5], context), 841.66666666666663);
+  EXPECT_TRUE(std::isnan(wma_method(asset_snapshot[6], context)));
+  EXPECT_TRUE(std::isnan(wma_method(asset_snapshot[7], context)));
+  EXPECT_TRUE(std::isnan(wma_method(asset_snapshot[8], context)));
+  EXPECT_TRUE(std::isnan(wma_method(asset_snapshot[9], context)));
 }
 
 TEST(WmaMethodTest, EqualityOperator)
 {
-  const auto field = "close";
-  const auto field_method = DataMethod{field};
-  const auto period = 5;
-  const auto wma_method1 = WmaMethod{field_method, period};
-  const auto wma_method2 = WmaMethod{field_method, period};
+  const auto wma_method1 = WmaMethod{CloseMethod{}, 5};
+  const auto wma_method2 = WmaMethod{CloseMethod{}, 5};
 
   EXPECT_TRUE(wma_method1 == wma_method2);
-  EXPECT_FALSE(wma_method1 != wma_method2);
   EXPECT_EQ(wma_method1, wma_method2);
 }
 
 TEST(WmaMethodTest, NotEqualOperator)
 {
-  const auto field1 = "close";
-  const auto field_method1 = DataMethod{field1};
-  const auto period1 = 5;
-  const auto wma_method1 = WmaMethod{field_method1, period1};
-
-  const auto field2 = "open";
-  const auto field_method2 = DataMethod{field2};
-  const auto period2 = 10;
-  const auto wma_method2 = WmaMethod{field_method2, period2};
+  const auto wma_method1 = WmaMethod{DataMethod{"close"}, 5};
+  const auto wma_method2 = WmaMethod{DataMethod{"close"}, 10};
+  const auto wma_method3 = WmaMethod{DataMethod{"open"}, 10};
 
   EXPECT_TRUE(wma_method1 != wma_method2);
-  EXPECT_FALSE(wma_method1 == wma_method2);
   EXPECT_NE(wma_method1, wma_method2);
+  EXPECT_TRUE(wma_method1 != wma_method3);
+  EXPECT_NE(wma_method1, wma_method3);
+  EXPECT_TRUE(wma_method2 != wma_method3);
+  EXPECT_NE(wma_method2, wma_method3);
 }

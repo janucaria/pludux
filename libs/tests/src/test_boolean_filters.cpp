@@ -5,12 +5,14 @@ import pludux;
 using namespace pludux::screener;
 using pludux::AssetHistory;
 
+const auto context = AnyMethodContext{};
+
 TEST(BooleanFilterTest, TrueFilter)
 {
   const auto filter = TrueFilter{};
   const auto asset_data = AssetHistory{};
 
-  EXPECT_TRUE(filter(asset_data));
+  EXPECT_TRUE(filter(asset_data, context));
 }
 
 TEST(BooleanFilterTest, FalseFilter)
@@ -18,7 +20,7 @@ TEST(BooleanFilterTest, FalseFilter)
   const auto filter = FalseFilter{};
   const auto asset_data = AssetHistory{};
 
-  EXPECT_FALSE(filter(asset_data));
+  EXPECT_FALSE(filter(asset_data, context));
 }
 
 TEST(BooleanFilterTest, TrueFilterEquality)

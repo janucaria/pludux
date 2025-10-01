@@ -1,26 +1,34 @@
 module;
 
+#include <algorithm>
+#include <cassert>
 #include <cstddef>
+#include <limits>
+#include <utility>
 
 export module pludux:screener.stoch_method;
 
 import :asset_snapshot;
-import :screener.screener_method;
+import :screener.method_call_context;
+import :screener.method_output;
+
+import :screener.ohlcv_method;
+import :screener.operators_method;
+import :screener.value_method;
+import :screener.sma_method;
+import :screener.highest_method;
+import :screener.lowest_method;
 
 export namespace pludux::screener {
 
 class StochMethod {
 public:
-  StochMethod(ScreenerMethod high,
-              ScreenerMethod low,
-              ScreenerMethod close,
-              std::size_t k_period,
-              std::size_t k_smooth,
-              std::size_t d_period)
-  : high_{high}
-  , low_{low}
-  , close_{close}
-  , k_period_{k_period}
+  using ResultType = std::common_type_t<typename HighMethod::ResultType,
+                                        typename LowMethod::ResultType,
+                                        typename CloseMethod::ResultType>;
+
+  StochMethod(std::size_t k_period, std::size_t k_smooth, std::size_t d_period)
+  : k_period_{k_period}
   , k_smooth_{k_smooth}
   , d_period_{d_period}
   {
@@ -28,34 +36,43 @@ public:
 
   auto operator==(const StochMethod& other) const noexcept -> bool = default;
 
-  auto operator()(this const auto& self, AssetSnapshot asset_data)
-   -> PolySeries<double>
+  auto operator()(this const auto& self,
+                  AssetSnapshot asset_snapshot,
+                  MethodCallContext<ResultType> auto context) noexcept
+   -> ResultType
   {
-    const auto high_series = self.high_(asset_data);
-    const auto low_series = self.low_(asset_data);
-    const auto close_series = self.close_(asset_data);
-
-    return StochSeries{high_series,
-                       low_series,
-                       close_series,
-                       self.k_period_,
-                       self.k_smooth_,
-                       self.d_period_};
+    return self(asset_snapshot, MethodOutput::KPercent, context);
   }
 
-  auto high(this const auto& self) noexcept -> ScreenerMethod
+  auto operator()(this const auto& self,
+                  AssetSnapshot asset_snapshot,
+                  MethodOutput output,
+                  MethodCallContext<ResultType> auto context) noexcept
+   -> ResultType
   {
-    return self.high_;
-  }
+    const auto close = CloseMethod{};
+    const auto highest_high = HighestMethod{HighMethod{}, self.k_period_};
+    const auto lowest_low = LowestMethod{LowMethod{}, self.k_period_};
+    const auto stoch = DivideMethod{MultiplyMethod{ValueMethod<ResultType>{100},
+                                                   SubtractMethod{
+                                                    close,
+                                                    lowest_low,
+                                                   }},
+                                    SubtractMethod{
+                                     highest_high,
+                                     lowest_low,
+                                    }};
 
-  auto low(this const auto& self) noexcept -> ScreenerMethod
-  {
-    return self.low_;
-  }
+    const auto k_percent = SmaMethod{stoch, self.k_smooth_};
 
-  auto close(this const auto& self) noexcept -> ScreenerMethod
-  {
-    return self.close_;
+    switch(output) {
+    case MethodOutput::KPercent:
+      return k_percent(asset_snapshot, context);
+    case MethodOutput::DPercent:
+      return SmaMethod{k_percent, self.d_period_}(asset_snapshot, context);
+    default:
+      return std::numeric_limits<ResultType>::quiet_NaN();
+    }
   }
 
   auto k_period(this const auto& self) noexcept -> std::size_t
@@ -89,10 +106,6 @@ public:
   }
 
 private:
-  ScreenerMethod high_;
-  ScreenerMethod low_;
-  ScreenerMethod close_;
-
   std::size_t k_period_;
   std::size_t k_smooth_;
   std::size_t d_period_;

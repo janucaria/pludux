@@ -26,24 +26,22 @@ public:
   {
   }
 
-  auto operator[](this const auto& self, const std::string& key) noexcept
-   -> double
+  auto operator[](this auto self, const std::string& field) noexcept -> double
   {
-    return self.asset_history_[key][self.offset_];
+    return self.data(field);
   }
 
-  auto operator[](this const auto& self, std::size_t index) noexcept
-   -> AssetSnapshot
+  auto operator[](this auto self, std::size_t index) noexcept -> AssetSnapshot
   {
     return AssetSnapshot{self.offset_ + index, self.asset_history_};
   }
 
-  auto offset(this const auto& self) noexcept -> std::size_t
+  auto offset(this auto self) noexcept -> std::size_t
   {
     return self.offset_;
   }
 
-  auto size(this const auto& self) noexcept -> std::size_t
+  auto size(this auto self) noexcept -> std::size_t
   {
     if(self.offset_ >= self.asset_history_.size()) {
       return 0;
@@ -52,39 +50,44 @@ public:
     return self.asset_history_.size() - self.offset_;
   }
 
-  auto contains(this const auto& self, const std::string& key) noexcept -> bool
+  auto contains(this auto self, const std::string& field) noexcept -> bool
   {
-    return self.asset_history_.contains(key);
+    return self.asset_history_.contains(field);
   }
 
-  auto datetime(this const auto& self) noexcept -> double
+  auto datetime(this auto self) noexcept -> double
   {
     return self.asset_history_.datetime_series()[self.offset_];
   }
 
-  auto open(this const auto& self) noexcept -> double
+  auto open(this auto self) noexcept -> double
   {
     return self.asset_history_.open_series()[self.offset_];
   }
 
-  auto high(this const auto& self) noexcept -> double
+  auto high(this auto self) noexcept -> double
   {
     return self.asset_history_.high_series()[self.offset_];
   }
 
-  auto low(this const auto& self) noexcept -> double
+  auto low(this auto self) noexcept -> double
   {
     return self.asset_history_.low_series()[self.offset_];
   }
 
-  auto close(this const auto& self) noexcept -> double
+  auto close(this auto self) noexcept -> double
   {
     return self.asset_history_.close_series()[self.offset_];
   }
 
-  auto volume(this const auto& self) noexcept -> double
+  auto volume(this auto self) noexcept -> double
   {
     return self.asset_history_.volume_series()[self.offset_];
+  }
+
+  auto data(this auto self, const std::string& field) noexcept -> double
+  {
+    return self.asset_history_[field][self.offset_];
   }
 
 private:

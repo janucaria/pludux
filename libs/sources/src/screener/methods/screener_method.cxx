@@ -1,96 +1,125 @@
 module;
 
+#include <any>
 #include <functional>
 #include <memory>
 #include <type_traits>
+#include <variant>
 #include <vector>
 
 export module pludux:screener.screener_method;
 
 import :asset_snapshot;
-import :series;
+import :screener.method_call_context;
+import :screener.method_output;
+
+import :screener.any_method_context;
 
 export namespace pludux::screener {
 
 class ScreenerMethod {
 public:
+  using ResultType = double;
+
+  ScreenerMethod() = default;
+
   template<typename UMethod>
-    requires std::is_invocable_r_v<PolySeries<double>, UMethod, AssetSnapshot>
   ScreenerMethod(UMethod impl)
-  : impl_{std::make_shared<ImplModel<UMethod>>(std::move(impl))}
+  : impl_{std::make_any<UMethod>(std::move(impl))}
+  , invoke_{[](
+             const std::any& impl,
+             AssetSnapshot asset_snapshot,
+             AnyMethodContext context) static -> typename UMethod::ResultType {
+    auto* method = std::any_cast<UMethod>(&impl);
+    return method
+            ? (*method)(asset_snapshot, context)
+            : std::numeric_limits<typename UMethod::ResultType>::quiet_NaN();
+  }}
+  , invoke_with_output_{[](const std::any& impl,
+                           AssetSnapshot asset_snapshot,
+                           MethodOutput output,
+                           AnyMethodContext context) static
+                         -> typename UMethod::ResultType {
+    auto* method = std::any_cast<UMethod>(&impl);
+    return method
+            ? (*method)(asset_snapshot, output, context)
+            : std::numeric_limits<typename UMethod::ResultType>::quiet_NaN();
+  }}
+  , equals_{[](const std::any& impl,
+               const ScreenerMethod& other) static -> bool {
+    if(auto other_method = std::any_cast<UMethod>(&other.impl_)) {
+      const auto& method = std::any_cast<UMethod>(impl);
+      return method == *other_method;
+    }
+    return false;
+  }}
+  , not_equals_{
+     [](const std::any& impl, const ScreenerMethod& other) static -> bool {
+       if(auto other_method = std::any_cast<UMethod>(&other.impl_)) {
+         const auto& method = std::any_cast<UMethod>(impl);
+         return method != *other_method;
+       }
+       return true;
+     }}
   {
   }
 
-  auto operator()(this const ScreenerMethod& self, AssetSnapshot asset_snapshot)
-   -> PolySeries<double>
+  auto operator()(this const auto& self,
+                  AssetSnapshot asset_snapshot,
+                  AnyMethodContext context) -> ResultType
   {
-    return self.impl_->operator()(std::move(asset_snapshot));
+    return self.invoke_(self.impl_, asset_snapshot, context);
   }
 
-  auto operator==(this const ScreenerMethod& self, const ScreenerMethod& other) noexcept
+  auto operator()(this const auto& self,
+                  AssetSnapshot asset_snapshot,
+                  MethodOutput output,
+                  AnyMethodContext context) -> ResultType
+  {
+    return self.invoke_with_output_(
+     self.impl_, asset_snapshot, output, context);
+  }
+
+  auto operator==(this const auto& self, const ScreenerMethod& other) noexcept
    -> bool
   {
-    return self.impl_->operator==(other);
+    return self.equals_(self.impl_, other);
   }
 
-  auto operator!=(this const ScreenerMethod& self, const ScreenerMethod& other) noexcept
+  auto operator!=(this const auto& self, const ScreenerMethod& other) noexcept
    -> bool
   {
-    return self.impl_->operator!=(other);
+    return self.not_equals_(self.impl_, other);
   }
 
   template<typename UMethod>
   friend auto screener_method_cast(const ScreenerMethod& method) noexcept
    -> const UMethod*
   {
-    auto model =
-     std::dynamic_pointer_cast<const ImplModel<UMethod>>(method.impl_);
-    return model ? &model->impl : nullptr;
+    return std::any_cast<const UMethod>(&method.impl_);
+  }
+
+  template<typename UMethod>
+  friend auto screener_method_cast(ScreenerMethod& method) noexcept -> UMethod*
+  {
+    return std::any_cast<UMethod>(&method.impl_);
   }
 
 private:
-  struct ImplConcept {
-    virtual ~ImplConcept() = default;
+  std::any impl_;
 
-    virtual auto operator()(AssetSnapshot asset_snapshot) const
-     -> PolySeries<double> = 0;
+  std::function<
+   auto(const std::any&, AssetSnapshot, AnyMethodContext)->ResultType>
+   invoke_;
 
-    virtual auto operator==(const ScreenerMethod& other) const noexcept
-     -> bool = 0;
+  std::function<auto(
+                 const std::any&, AssetSnapshot, MethodOutput, AnyMethodContext)
+                 ->ResultType>
+   invoke_with_output_;
 
-    virtual auto operator!=(const ScreenerMethod& other) const noexcept
-     -> bool = 0;
-  };
+  std::function<auto(const std::any&, const ScreenerMethod&)->bool> equals_;
 
-  template<typename TMethod>
-  struct ImplModel final : ImplConcept {
-    TMethod impl;
-
-    explicit ImplModel(TMethod impl)
-    : impl{std::move(impl)}
-    {
-    }
-
-    auto operator()(AssetSnapshot asset_snapshot) const
-     -> PolySeries<double> override
-    {
-      return impl(std::move(asset_snapshot));
-    }
-
-    auto operator==(const ScreenerMethod& other) const noexcept -> bool override
-    {
-      auto other_model = screener_method_cast<TMethod>(other);
-      return other_model && impl == *other_model;
-    }
-
-    auto operator!=(const ScreenerMethod& other) const noexcept -> bool override
-    {
-      auto other_model = screener_method_cast<TMethod>(other);
-      return !other_model || impl != *other_model;
-    }
-  };
-
-  std::shared_ptr<const ImplConcept> impl_;
+  std::function<auto(const std::any&, const ScreenerMethod&)->bool> not_equals_;
 };
 
 } // namespace pludux::screener

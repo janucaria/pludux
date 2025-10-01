@@ -7,6 +7,8 @@ module;
 export module pludux:screener.logical_filter;
 
 import :asset_snapshot;
+import :screener.method_call_context;
+
 import :screener.screener_filter;
 
 namespace pludux::screener {
@@ -25,10 +27,13 @@ public:
   auto operator==(const BinaryLogicalFilter& other) const noexcept
    -> bool = default;
 
-  auto operator()(this const auto& self, AssetSnapshot asset_data) -> bool
+  auto operator()(this const auto& self,
+                  AssetSnapshot asset_snapshot,
+                  MethodCallContext<double> auto context) -> bool
   {
-    const auto first_condition = self.first_condition_(asset_data);
-    const auto second_condition = self.second_condition_(asset_data);
+    const auto first_condition = self.first_condition_(asset_snapshot, context);
+    const auto second_condition =
+     self.second_condition_(asset_snapshot, context);
 
     return TBinaryLogicalOperator{}(first_condition, second_condition);
   }
@@ -60,9 +65,11 @@ public:
   auto operator==(const UnaryLogicalFilter& other) const noexcept
    -> bool = default;
 
-  auto operator()(this const auto& self, AssetSnapshot asset_data) -> bool
+  auto operator()(this const auto& self,
+                  AssetSnapshot asset_snapshot,
+                  MethodCallContext<double> auto context) -> bool
   {
-    const auto condition = self.other_condition_(asset_data);
+    const auto condition = self.other_condition_(asset_snapshot, context);
     return TUnaryLogicalOperator{}(condition);
   }
 

@@ -4,17 +4,26 @@ module;
 #include <cmath>
 #include <format>
 #include <iterator>
+#include <limits>
 #include <string>
-#include <vector>
+#include <variant>
 
 export module pludux:screener.data_method;
 
 import :asset_snapshot;
+import :screener.method_call_context;
+import :screener.method_output;
 
 export namespace pludux::screener {
 
+template<typename T = double>
+  requires std::numeric_limits<T>::has_quiet_NaN
 class DataMethod {
 public:
+  using ResultType = T;
+
+  DataMethod() = default;
+
   explicit DataMethod(std::string field)
   : field_{std::move(field)}
   {
@@ -22,18 +31,30 @@ public:
 
   auto operator==(const DataMethod& other) const noexcept -> bool = default;
 
-  auto operator()(this const auto& self, AssetSnapshot asset_data) -> PolySeries<double>
+  auto operator()(this const auto& self,
+                  AssetSnapshot asset_snapshot,
+                  MethodCallContext<ResultType> auto context) noexcept
+   -> ResultType
   {
-    if(!asset_data.contains(self.field_)) {
-      return RepeatSeries{std::numeric_limits<double>::quiet_NaN(),
-                          asset_data.size()};
-    }
-    return asset_data.get_values(self.field_);
+    return asset_snapshot.data(self.field_);
+  }
+
+  auto operator()(this const auto& self,
+                  AssetSnapshot asset_snapshot,
+                  MethodOutput output,
+                  MethodCallContext<ResultType> auto context) noexcept
+  {
+    return std::numeric_limits<ResultType>::quiet_NaN();
   }
 
   auto field(this const auto& self) -> const std::string&
   {
     return self.field_;
+  }
+
+  void field(this auto& self, std::string new_field)
+  {
+    self.field_ = std::move(new_field);
   }
 
 private:

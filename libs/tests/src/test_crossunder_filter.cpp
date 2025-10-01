@@ -4,6 +4,8 @@ import pludux;
 
 using namespace pludux::screener;
 
+const auto context = AnyMethodContext{};
+
 TEST(CrossunderFilterTest, ReferenceMethod)
 {
   const auto signal_value = 40.0;
@@ -14,7 +16,7 @@ TEST(CrossunderFilterTest, ReferenceMethod)
    CrossunderFilter{std::move(signal_method), std::move(reference_method)};
   const auto asset_data = pludux::AssetHistory{{"close", {0}}};
 
-  EXPECT_EQ(filter.reference()(asset_data)[0], reference_value);
+  EXPECT_EQ(filter.reference()(asset_data, context), reference_value);
 }
 
 TEST(CrossunderFilterTest, SignalMethod)
@@ -27,7 +29,7 @@ TEST(CrossunderFilterTest, SignalMethod)
    CrossunderFilter{std::move(signal_method), std::move(reference_method)};
   const auto asset_data = pludux::AssetHistory{{"close", {0}}};
 
-  EXPECT_EQ(filter.signal()(asset_data)[0], signal_value);
+  EXPECT_EQ(filter.signal()(asset_data, context), signal_value);
 }
 
 TEST(CrossunderFilterTest, CrossunderConditionMet)
@@ -38,7 +40,7 @@ TEST(CrossunderFilterTest, CrossunderConditionMet)
    CrossunderFilter{std::move(signal_method), std::move(reference_method)};
   const auto asset_data = pludux::AssetHistory{{"close", {40, 60}}};
 
-  EXPECT_TRUE(crossunder_filter(asset_data));
+  EXPECT_TRUE(crossunder_filter(asset_data, context));
 }
 
 TEST(CrossunderFilterTest, CrossunderConditionNotMet)
@@ -49,7 +51,7 @@ TEST(CrossunderFilterTest, CrossunderConditionNotMet)
    CrossunderFilter{std::move(signal_method), std::move(reference_method)};
   const auto asset_data = pludux::AssetHistory{{"close", {50, 40}}};
 
-  EXPECT_FALSE(crossunder_filter(asset_data));
+  EXPECT_FALSE(crossunder_filter(asset_data, context));
 }
 
 TEST(CrossunderFilterTest, EqualityOperator)

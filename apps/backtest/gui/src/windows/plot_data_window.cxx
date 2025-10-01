@@ -190,22 +190,22 @@ private:
         if(ImGui::BeginTooltip()) {
           ImGui::Text("Date:");
           ImGui::SameLine(60);
-          ImGui::Text("%s", format_datetime(snapshot.get_datetime()).c_str());
+          ImGui::Text("%s", format_datetime(snapshot.datetime()).c_str());
           ImGui::Text("Open:");
           ImGui::SameLine(60);
-          ImGui::Text("%.2f", snapshot.get_open());
+          ImGui::Text("%.2f", snapshot.open());
           ImGui::Text("Close:");
           ImGui::SameLine(60);
-          ImGui::Text("%.2f", snapshot.get_close());
+          ImGui::Text("%.2f", snapshot.close());
           ImGui::Text("High:");
           ImGui::SameLine(60);
-          ImGui::Text("%.2f", snapshot.get_high());
+          ImGui::Text("%.2f", snapshot.high());
           ImGui::Text("Low:");
           ImGui::SameLine(60);
-          ImGui::Text("%.2f", snapshot.get_low());
+          ImGui::Text("%.2f", snapshot.low());
           ImGui::Text("Volume:");
           ImGui::SameLine(60);
-          ImGui::Text("%s", format_currency(snapshot.get_volume()).c_str());
+          ImGui::Text("%s", format_currency(snapshot.volume()).c_str());
           ImGui::EndTooltip();
         }
       }
@@ -241,18 +241,18 @@ private:
         for(int i = 0; i < asset_history.size(); ++i) {
           const auto snapshot = AssetSnapshot(i, asset_history);
 
-          ImPlot::FitPoint(ImPlotPoint(i, snapshot.get_low()));
-          ImPlot::FitPoint(ImPlotPoint(i, snapshot.get_high()));
+          ImPlot::FitPoint(ImPlotPoint(i, snapshot.low()));
+          ImPlot::FitPoint(ImPlotPoint(i, snapshot.high()));
         }
       }
 
       for(int i = 0, ii = asset_history.size(); i < ii; ++i) {
         const auto snapshot = AssetSnapshot(i, asset_history);
 
-        const auto open = snapshot.get_open();
-        const auto high = snapshot.get_high();
-        const auto low = snapshot.get_low();
-        const auto close = snapshot.get_close();
+        const auto open = snapshot.open();
+        const auto high = snapshot.high();
+        const auto low = snapshot.low();
+        const auto close = snapshot.close();
 
         const auto open_left_pos = ImPlot::PlotToPixels(i - half_width, open);
         const auto open_right_pos = ImPlot::PlotToPixels(i + half_width, open);
@@ -303,16 +303,16 @@ private:
           const auto snapshot = AssetSnapshot(i, asset_history);
 
           ImPlot::FitPoint(ImPlotPoint(i, 0));
-          ImPlot::FitPoint(ImPlotPoint(i, snapshot.get_volume()));
+          ImPlot::FitPoint(ImPlotPoint(i, snapshot.volume()));
         }
       }
       // render data
       for(int i = 0, ii = asset_history.size(); i < ii; ++i) {
         const auto snapshot = AssetSnapshot(i, asset_history);
 
-        const auto open = snapshot.get_open();
-        const auto close = snapshot.get_close();
-        const auto volume = snapshot.get_volume();
+        const auto open = snapshot.open();
+        const auto close = snapshot.close();
+        const auto volume = snapshot.volume();
 
         ImU32 color = ImGui::GetColorU32(open > close ? self.bearish_color_
                                                       : self.bullish_color_);
@@ -426,7 +426,7 @@ private:
             const auto record_entry_idx = record.entry_index();
 
             const auto entry_low =
-             AssetSnapshot{record_entry_idx, asset_history}.get_low();
+             AssetSnapshot{record_entry_idx, asset_history}.low();
 
             auto entry_pos = ImPlot::PlotToPixels(record_entry_idx, entry_low);
             entry_pos.y += marker_offset;
@@ -449,7 +449,7 @@ private:
           {
             if(record.is_closed()) {
               const auto exit_high =
-               AssetSnapshot{exit_idx, asset_history}.get_high();
+               AssetSnapshot{exit_idx, asset_history}.high();
 
               auto exit_pos = ImPlot::PlotToPixels(exit_idx, exit_high);
               exit_pos.y -= marker_offset;

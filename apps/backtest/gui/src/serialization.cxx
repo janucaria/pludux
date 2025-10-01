@@ -484,23 +484,23 @@ struct LoadAndConstruct<pludux::PolySeries<double>> {
 template<class Archive>
 void save(Archive& archive, const pludux::AssetHistory& asset_history)
 {
-  const auto& history_data = asset_history.history_data();
+  const auto& field_data = asset_history.field_data();
 
   auto history_data_map =
    std::unordered_map<std::string,
                       std::unique_ptr<pludux::PolySeries<double>>>{};
-  for(const auto& [key, series] : history_data) {
+  for(const auto& [key, series] : field_data) {
     history_data_map[key] =
      std::make_unique<pludux::PolySeries<double>>(series);
   }
 
   archive(make_nvp("historyData", history_data_map));
-  archive(make_nvp("datetimeKey", asset_history.datetime_key()));
-  archive(make_nvp("openKey", asset_history.open_key()));
-  archive(make_nvp("highKey", asset_history.high_key()));
-  archive(make_nvp("lowKey", asset_history.low_key()));
-  archive(make_nvp("closeKey", asset_history.close_key()));
-  archive(make_nvp("volumeKey", asset_history.volume_key()));
+  archive(make_nvp("datetimeKey", asset_history.datetime_field()));
+  archive(make_nvp("openKey", asset_history.open_field()));
+  archive(make_nvp("highKey", asset_history.high_field()));
+  archive(make_nvp("lowKey", asset_history.low_field()));
+  archive(make_nvp("closeKey", asset_history.close_field()));
+  archive(make_nvp("volumeKey", asset_history.volume_field()));
 }
 
 template<class Archive>
@@ -516,25 +516,25 @@ void load(Archive& archive, pludux::AssetHistory& asset_history)
     asset_history.insert(key, std::move(*series));
   }
 
-  auto datetime_key = std::string{};
-  auto open_key = std::string{};
-  auto high_key = std::string{};
-  auto low_key = std::string{};
-  auto close_key = std::string{};
-  auto volume_key = std::string{};
-  archive(make_nvp("datetimeKey", datetime_key),
-          make_nvp("openKey", open_key),
-          make_nvp("highKey", high_key),
-          make_nvp("lowKey", low_key),
-          make_nvp("closeKey", close_key),
-          make_nvp("volumeKey", volume_key));
+  auto datetime_field = std::string{};
+  auto open_field = std::string{};
+  auto high_field = std::string{};
+  auto low_field = std::string{};
+  auto close_field = std::string{};
+  auto volume_field = std::string{};
+  archive(make_nvp("datetimeKey", datetime_field),
+          make_nvp("openKey", open_field),
+          make_nvp("highKey", high_field),
+          make_nvp("lowKey", low_field),
+          make_nvp("closeKey", close_field),
+          make_nvp("volumeKey", volume_field));
 
-  asset_history.datetime_key(std::move(datetime_key));
-  asset_history.open_key(std::move(open_key));
-  asset_history.high_key(std::move(high_key));
-  asset_history.low_key(std::move(low_key));
-  asset_history.close_key(std::move(close_key));
-  asset_history.volume_key(std::move(volume_key));
+  asset_history.datetime_field(std::move(datetime_field));
+  asset_history.open_field(std::move(open_field));
+  asset_history.high_field(std::move(high_field));
+  asset_history.low_field(std::move(low_field));
+  asset_history.close_field(std::move(close_field));
+  asset_history.volume_field(std::move(volume_field));
 }
 
 /*--------------------------------------------------------------------------------------*/

@@ -61,10 +61,9 @@ TEST_F(ConfigParserTest, ParseScreenerReferenceMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto reference_method = screener_method_cast<ReferenceMethod>(method);
+  const auto reference_method = screener_method_cast<ReferenceMethod<>>(method);
   ASSERT_NE(reference_method, nullptr);
 
-  EXPECT_EQ(reference_method->registry(), nullptr);
   EXPECT_EQ(reference_method->name(), "close");
 
   const auto serialized_config = config_parser.serialize_method(method);
@@ -87,7 +86,8 @@ TEST_F(ConfigParserTest, ParseScrennerLookbackMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto lookback_method = screener_method_cast<LookbackMethod>(method);
+  const auto lookback_method =
+   screener_method_cast<LookbackMethod<ScreenerMethod>>(method);
   ASSERT_NE(lookback_method, nullptr);
 
   EXPECT_EQ(lookback_method->period(), 3);
@@ -101,11 +101,11 @@ TEST_F(ConfigParserTest, ParseScrennerLookbackMethod)
   EXPECT_EQ(method, deserialized_config);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerOutputByNameMethod)
+TEST_F(ConfigParserTest, ParseScreenerSelectOutputMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "OUTPUT_BY_NAME",
+      "method": "SELECT_OUTPUT",
       "name": "upper-band",
       "source": {
         "method": "MACD",
@@ -121,17 +121,17 @@ TEST_F(ConfigParserTest, ParseScreenerOutputByNameMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto output_by_name_method =
-   screener_method_cast<OutputByNameMethod>(method);
-  ASSERT_NE(output_by_name_method, nullptr);
-  EXPECT_EQ(output_by_name_method->output(), OutputName::UpperBand);
+  const auto select_output_method =
+   screener_method_cast<SelectOutputMethod<ScreenerMethod>>(method);
+  ASSERT_NE(select_output_method, nullptr);
+  EXPECT_EQ(select_output_method->output(), MethodOutput::UpperBand);
 
-  const auto macd_method =
-   screener_method_cast<MacdMethod>(output_by_name_method->source());
+  const auto macd_method = screener_method_cast<MacdMethod<ScreenerMethod>>(
+   select_output_method->source());
   ASSERT_NE(macd_method, nullptr);
 
-  const auto input = screener_method_cast<CloseMethod>(macd_method->input());
-  EXPECT_NE(input, nullptr);
+  const auto source = screener_method_cast<CloseMethod>(macd_method->source());
+  EXPECT_NE(source, nullptr);
   EXPECT_EQ(macd_method->fast_period(), 12);
   EXPECT_EQ(macd_method->slow_period(), 26);
   EXPECT_EQ(macd_method->signal_period(), 9);
@@ -243,7 +243,7 @@ TEST_F(ConfigParserTest, ParseScreenerSmaMethod)
     {
       "method": "SMA",
       "period": 14,
-      "input": {
+      "source": {
         "method": "DATA",
         "field": "close"
       }
@@ -252,15 +252,16 @@ TEST_F(ConfigParserTest, ParseScreenerSmaMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto sma_method = screener_method_cast<SmaMethod>(method);
+  const auto sma_method =
+   screener_method_cast<SmaMethod<ScreenerMethod>>(method);
   ASSERT_NE(sma_method, nullptr);
 
   EXPECT_EQ(sma_method->period(), 14);
 
-  const auto input = screener_method_cast<DataMethod>(sma_method->input());
-  ASSERT_NE(input, nullptr);
+  const auto source = screener_method_cast<DataMethod<>>(sma_method->source());
+  ASSERT_NE(source, nullptr);
 
-  EXPECT_EQ(input->field(), "close");
+  EXPECT_EQ(source->field(), "close");
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -274,7 +275,7 @@ TEST_F(ConfigParserTest, ParseScreenerEmaMethod)
     {
       "method": "EMA",
       "period": 10,
-      "input": {
+      "source": {
         "method": "DATA",
         "field": "open"
       }
@@ -283,15 +284,16 @@ TEST_F(ConfigParserTest, ParseScreenerEmaMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto ema_method = screener_method_cast<EmaMethod>(method);
+  const auto ema_method =
+   screener_method_cast<EmaMethod<ScreenerMethod>>(method);
   ASSERT_NE(ema_method, nullptr);
 
   EXPECT_EQ(ema_method->period(), 10);
 
-  const auto input = screener_method_cast<DataMethod>(ema_method->input());
-  ASSERT_NE(input, nullptr);
+  const auto source = screener_method_cast<DataMethod<>>(ema_method->source());
+  ASSERT_NE(source, nullptr);
 
-  EXPECT_EQ(input->field(), "open");
+  EXPECT_EQ(source->field(), "open");
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -305,7 +307,7 @@ TEST_F(ConfigParserTest, ParseScreenerWmaMethod)
       {
         "method": "WMA",
         "period": 20,
-        "input": {
+        "source": {
           "method": "DATA",
           "field": "high"
         }
@@ -314,15 +316,16 @@ TEST_F(ConfigParserTest, ParseScreenerWmaMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto wma_method = screener_method_cast<WmaMethod>(method);
+  const auto wma_method =
+   screener_method_cast<WmaMethod<ScreenerMethod>>(method);
   ASSERT_NE(wma_method, nullptr);
 
   EXPECT_EQ(wma_method->period(), 20);
 
-  const auto input = screener_method_cast<DataMethod>(wma_method->input());
-  ASSERT_NE(input, nullptr);
+  const auto source = screener_method_cast<DataMethod<>>(wma_method->source());
+  ASSERT_NE(source, nullptr);
 
-  EXPECT_EQ(input->field(), "high");
+  EXPECT_EQ(source->field(), "high");
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -336,7 +339,7 @@ TEST_F(ConfigParserTest, ParseScreenerRmaMethod)
       {
         "method": "RMA",
         "period": 15,
-        "input": {
+        "source": {
           "method": "DATA",
           "field": "low"
         }
@@ -345,15 +348,16 @@ TEST_F(ConfigParserTest, ParseScreenerRmaMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto rma_method = screener_method_cast<RmaMethod>(method);
+  const auto rma_method =
+   screener_method_cast<RmaMethod<ScreenerMethod>>(method);
   ASSERT_NE(rma_method, nullptr);
 
   EXPECT_EQ(rma_method->period(), 15);
 
-  const auto input = screener_method_cast<DataMethod>(rma_method->input());
-  ASSERT_NE(input, nullptr);
+  const auto source = screener_method_cast<DataMethod<>>(rma_method->source());
+  ASSERT_NE(source, nullptr);
 
-  EXPECT_EQ(input->field(), "low");
+  EXPECT_EQ(source->field(), "low");
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -367,7 +371,7 @@ TEST_F(ConfigParserTest, ParseScreenerHmaMethod)
       {
         "method": "HMA",
         "period": 25,
-        "input": {
+        "source": {
           "method": "DATA",
           "field": "volume"
         }
@@ -376,15 +380,16 @@ TEST_F(ConfigParserTest, ParseScreenerHmaMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto hma_method = screener_method_cast<HmaMethod>(method);
+  const auto hma_method =
+   screener_method_cast<HmaMethod<ScreenerMethod>>(method);
   ASSERT_NE(hma_method, nullptr);
 
   EXPECT_EQ(hma_method->period(), 25);
 
-  const auto input = screener_method_cast<DataMethod>(hma_method->input());
-  ASSERT_NE(input, nullptr);
+  const auto source = screener_method_cast<DataMethod<>>(hma_method->source());
+  ASSERT_NE(source, nullptr);
 
-  EXPECT_EQ(input->field(), "volume");
+  EXPECT_EQ(source->field(), "volume");
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -398,7 +403,7 @@ TEST_F(ConfigParserTest, ParseScreenerRsiMethod)
     {
       "method": "RSI",
       "period": 14,
-      "input": {
+      "source": {
         "method": "DATA",
         "field": "close"
       }
@@ -407,15 +412,16 @@ TEST_F(ConfigParserTest, ParseScreenerRsiMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto rsi_method = screener_method_cast<RsiMethod>(method);
+  const auto rsi_method =
+   screener_method_cast<RsiMethod<ScreenerMethod>>(method);
   ASSERT_NE(rsi_method, nullptr);
 
   EXPECT_EQ(rsi_method->period(), 14);
 
-  const auto input = screener_method_cast<DataMethod>(rsi_method->input());
-  ASSERT_NE(input, nullptr);
+  const auto source = screener_method_cast<DataMethod<>>(rsi_method->source());
+  ASSERT_NE(source, nullptr);
 
-  EXPECT_EQ(input->field(), "close");
+  EXPECT_EQ(source->field(), "close");
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -434,7 +440,7 @@ TEST_F(ConfigParserTest, ParseScreenerValueMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto value_method = screener_method_cast<ValueMethod>(method);
+  const auto value_method = screener_method_cast<ValueMethod<>>(method);
   ASSERT_NE(value_method, nullptr);
 
   EXPECT_EQ(value_method->value(), 100);
@@ -456,7 +462,7 @@ TEST_F(ConfigParserTest, ParseScreenerDataMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto field_method = screener_method_cast<DataMethod>(method);
+  const auto field_method = screener_method_cast<DataMethod<>>(method);
   ASSERT_NE(field_method, nullptr);
 
   EXPECT_EQ(field_method->field(), "open");
@@ -473,19 +479,7 @@ TEST_F(ConfigParserTest, ParseScreenerAtrMethod)
     {
       "method": "ATR",
       "period": 14,
-      "multiplier": 1.0,
-      "high": {
-        "method": "DATA",
-        "field": "high"
-      },
-      "low": {
-        "method": "DATA",
-        "field": "low"
-      },
-      "close": {
-        "method": "DATA",
-        "field": "close"
-      }
+      "multiplier": 1.0
     }
   )");
 
@@ -494,12 +488,6 @@ TEST_F(ConfigParserTest, ParseScreenerAtrMethod)
   const auto atr_method = screener_method_cast<AtrMethod>(method);
   ASSERT_NE(atr_method, nullptr);
 
-  const auto high = screener_method_cast<DataMethod>(atr_method->high());
-  const auto low = screener_method_cast<DataMethod>(atr_method->low());
-  const auto close = screener_method_cast<DataMethod>(atr_method->close());
-  EXPECT_NE(high, nullptr);
-  EXPECT_NE(low, nullptr);
-  EXPECT_NE(close, nullptr);
   EXPECT_EQ(atr_method->period(), 14);
   EXPECT_EQ(atr_method->multiplier(), 1.0);
 
@@ -517,7 +505,7 @@ TEST_F(ConfigParserTest, ParseScreenerBbMethod)
       "maType": "SMA",
       "period": 20,
       "stddev": 2.0,
-      "input": {
+      "maSource": {
         "method": "DATA",
         "field": "close"
       }
@@ -526,12 +514,13 @@ TEST_F(ConfigParserTest, ParseScreenerBbMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto bb_method = screener_method_cast<BbMethod>(method);
+  const auto bb_method = screener_method_cast<BbMethod<ScreenerMethod>>(method);
   ASSERT_NE(bb_method, nullptr);
 
-  const auto input = screener_method_cast<DataMethod>(bb_method->input());
-  EXPECT_NE(input, nullptr);
-  EXPECT_EQ(bb_method->ma_type(), BbMethod::MaType::sma);
+  const auto ma_source =
+   screener_method_cast<DataMethod<>>(bb_method->ma_source());
+  EXPECT_NE(ma_source, nullptr);
+  EXPECT_EQ(bb_method->ma_type(), BbMaType::Sma);
   EXPECT_EQ(bb_method->period(), 20);
   EXPECT_EQ(bb_method->stddev(), 2.0);
 
@@ -549,7 +538,7 @@ TEST_F(ConfigParserTest, ParseScreenerMacdMethod)
       "fast": 12,
       "slow": 26,
       "signal": 9,
-      "input": {
+      "source": {
         "method": "DATA",
         "field": "close"
       }
@@ -558,11 +547,12 @@ TEST_F(ConfigParserTest, ParseScreenerMacdMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto macd_method = screener_method_cast<MacdMethod>(method);
+  const auto macd_method =
+   screener_method_cast<MacdMethod<ScreenerMethod>>(method);
   ASSERT_NE(macd_method, nullptr);
 
-  const auto input = screener_method_cast<DataMethod>(macd_method->input());
-  EXPECT_NE(input, nullptr);
+  const auto source = screener_method_cast<DataMethod<>>(macd_method->source());
+  EXPECT_NE(source, nullptr);
   EXPECT_EQ(macd_method->fast_period(), 12);
   EXPECT_EQ(macd_method->slow_period(), 26);
   EXPECT_EQ(macd_method->signal_period(), 9);
@@ -580,19 +570,7 @@ TEST_F(ConfigParserTest, ParseScreenerStochMethod)
       "method": "STOCH",
       "kPeriod": 5,
       "kSmooth": 3,
-      "dPeriod": 3,
-      "high": {
-        "method": "DATA",
-        "field": "high"
-      },
-      "low": {
-        "method": "DATA",
-        "field": "low"
-      },
-      "close": {
-        "method": "DATA",
-        "field": "close"
-      }
+      "dPeriod": 3
     }
   )");
 
@@ -601,12 +579,6 @@ TEST_F(ConfigParserTest, ParseScreenerStochMethod)
   const auto stoch_method = screener_method_cast<StochMethod>(method);
   ASSERT_NE(stoch_method, nullptr);
 
-  const auto high = screener_method_cast<DataMethod>(stoch_method->high());
-  const auto low = screener_method_cast<DataMethod>(stoch_method->low());
-  const auto close = screener_method_cast<DataMethod>(stoch_method->close());
-  EXPECT_NE(high, nullptr);
-  EXPECT_NE(low, nullptr);
-  EXPECT_NE(close, nullptr);
   EXPECT_EQ(stoch_method->k_period(), 5);
   EXPECT_EQ(stoch_method->k_smooth(), 3);
   EXPECT_EQ(stoch_method->d_period(), 3);
@@ -626,7 +598,7 @@ TEST_F(ConfigParserTest, ParseScreenerStochRsiMethod)
       "kPeriod": 5,
       "kSmooth": 3,
       "dPeriod": 3,
-      "rsiInput": {
+      "rsiSource": {
         "method": "DATA",
         "field": "close"
       }
@@ -635,12 +607,13 @@ TEST_F(ConfigParserTest, ParseScreenerStochRsiMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto stoch_rsi_method = screener_method_cast<StochRsiMethod>(method);
+  const auto stoch_rsi_method =
+   screener_method_cast<StochRsiMethod<ScreenerMethod>>(method);
   ASSERT_NE(stoch_rsi_method, nullptr);
 
-  const auto rsi_input =
-   screener_method_cast<DataMethod>(stoch_rsi_method->rsi_input());
-  EXPECT_NE(rsi_input, nullptr);
+  const auto rsi_source =
+   screener_method_cast<DataMethod<>>(stoch_rsi_method->rsi_source());
+  EXPECT_NE(rsi_source, nullptr);
   EXPECT_EQ(stoch_rsi_method->rsi_period(), 14);
   EXPECT_EQ(stoch_rsi_method->k_period(), 5);
   EXPECT_EQ(stoch_rsi_method->k_smooth(), 3);
@@ -660,7 +633,7 @@ TEST_F(ConfigParserTest, ParseScreenerKcMethod)
       "ma": {
         "method": "SMA",
         "period": 5,
-        "input": {
+        "source": {
           "method": "DATA",
           "field": "close"
         }
@@ -675,10 +648,12 @@ TEST_F(ConfigParserTest, ParseScreenerKcMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto kc_method = screener_method_cast<KcMethod>(method);
+  const auto kc_method =
+   screener_method_cast<KcMethod<ScreenerMethod, ScreenerMethod>>(method);
   ASSERT_NE(kc_method, nullptr);
 
-  const auto ma_method = screener_method_cast<SmaMethod>(kc_method->ma());
+  const auto ma_method =
+   screener_method_cast<SmaMethod<ScreenerMethod>>(kc_method->ma());
   const auto range_method = screener_method_cast<AtrMethod>(kc_method->range());
   EXPECT_NE(ma_method, nullptr);
   EXPECT_NE(range_method, nullptr);
@@ -705,11 +680,12 @@ TEST_F(ConfigParserTest, ParseScreenerAddMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto add_method = screener_method_cast<AddMethod>(method);
+  const auto add_method =
+   screener_method_cast<AddMethod<ScreenerMethod, ScreenerMethod>>(method);
   ASSERT_NE(add_method, nullptr);
 
-  const auto augend = screener_method_cast<ValueMethod>(add_method->augend());
-  const auto addend = screener_method_cast<ValueMethod>(add_method->addend());
+  const auto augend = screener_method_cast<ValueMethod<>>(add_method->augend());
+  const auto addend = screener_method_cast<ValueMethod<>>(add_method->addend());
   ASSERT_NE(augend, nullptr);
   ASSERT_NE(addend, nullptr);
   EXPECT_EQ(augend->value(), 50);
@@ -739,13 +715,14 @@ TEST_F(ConfigParserTest, ParseScreenerSubtractMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto subtract_method = screener_method_cast<SubtractMethod>(method);
+  const auto subtract_method =
+   screener_method_cast<SubtractMethod<ScreenerMethod, ScreenerMethod>>(method);
   ASSERT_NE(subtract_method, nullptr);
 
   const auto minuend =
-   screener_method_cast<ValueMethod>(subtract_method->minuend());
+   screener_method_cast<ValueMethod<>>(subtract_method->minuend());
   const auto subtrahend =
-   screener_method_cast<ValueMethod>(subtract_method->subtrahend());
+   screener_method_cast<ValueMethod<>>(subtract_method->subtrahend());
   ASSERT_NE(minuend, nullptr);
   ASSERT_NE(subtrahend, nullptr);
   EXPECT_EQ(minuend->value(), 100);
@@ -775,13 +752,14 @@ TEST_F(ConfigParserTest, ParseScreenerMultiplyMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto multiply_method = screener_method_cast<MultiplyMethod>(method);
+  const auto multiply_method =
+   screener_method_cast<MultiplyMethod<ScreenerMethod, ScreenerMethod>>(method);
   ASSERT_NE(multiply_method, nullptr);
 
   const auto multiplicand =
-   screener_method_cast<ValueMethod>(multiply_method->multiplicand());
+   screener_method_cast<ValueMethod<>>(multiply_method->multiplicand());
   const auto multiplier =
-   screener_method_cast<ValueMethod>(multiply_method->multiplier());
+   screener_method_cast<ValueMethod<>>(multiply_method->multiplier());
   ASSERT_NE(multiplicand, nullptr);
   ASSERT_NE(multiplier, nullptr);
   EXPECT_EQ(multiplicand->value(), 10);
@@ -811,13 +789,14 @@ TEST_F(ConfigParserTest, ParseScreenerDivideMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto divide_method = screener_method_cast<DivideMethod>(method);
+  const auto divide_method =
+   screener_method_cast<DivideMethod<ScreenerMethod, ScreenerMethod>>(method);
   ASSERT_NE(divide_method, nullptr);
 
   const auto dividend =
-   screener_method_cast<ValueMethod>(divide_method->dividend());
+   screener_method_cast<ValueMethod<>>(divide_method->dividend());
   const auto divisor =
-   screener_method_cast<ValueMethod>(divide_method->divisor());
+   screener_method_cast<ValueMethod<>>(divide_method->divisor());
   ASSERT_NE(dividend, nullptr);
   ASSERT_NE(divisor, nullptr);
   EXPECT_EQ(dividend->value(), 100);
@@ -843,11 +822,12 @@ TEST_F(ConfigParserTest, ParseScreenerNegateMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto negate_method = screener_method_cast<NegateMethod>(method);
+  const auto negate_method =
+   screener_method_cast<NegateMethod<ScreenerMethod>>(method);
   ASSERT_NE(negate_method, nullptr);
 
   const auto operand =
-   screener_method_cast<ValueMethod>(negate_method->operand());
+   screener_method_cast<ValueMethod<>>(negate_method->operand());
   ASSERT_NE(operand, nullptr);
   EXPECT_EQ(operand->value(), 42);
 
@@ -857,12 +837,12 @@ TEST_F(ConfigParserTest, ParseScreenerNegateMethod)
   EXPECT_EQ(method, deserialized_config);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerChangesMethod)
+TEST_F(ConfigParserTest, ParseScreenerChangeMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "CHANGES",
-      "input": {
+      "method": "CHANGE",
+      "source": {
         "method": "DATA",
         "field": "close"
       }
@@ -871,12 +851,14 @@ TEST_F(ConfigParserTest, ParseScreenerChangesMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto changes_method = screener_method_cast<ChangesMethod>(method);
+  const auto changes_method =
+   screener_method_cast<ChangeMethod<ScreenerMethod>>(method);
   ASSERT_NE(changes_method, nullptr);
 
-  const auto input = screener_method_cast<DataMethod>(changes_method->input());
-  ASSERT_NE(input, nullptr);
-  EXPECT_EQ(input->field(), "close");
+  const auto source =
+   screener_method_cast<DataMethod<>>(changes_method->source());
+  ASSERT_NE(source, nullptr);
+  EXPECT_EQ(source->field(), "close");
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -902,13 +884,14 @@ TEST_F(ConfigParserTest, ParseScreenerAbsDiffMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto abs_diff_method = screener_method_cast<AbsDiffMethod>(method);
+  const auto abs_diff_method =
+   screener_method_cast<AbsDiffMethod<ScreenerMethod, ScreenerMethod>>(method);
   ASSERT_NE(abs_diff_method, nullptr);
 
   const auto minuend =
-   screener_method_cast<DataMethod>(abs_diff_method->minuend());
+   screener_method_cast<DataMethod<>>(abs_diff_method->minuend());
   const auto subtrahend =
-   screener_method_cast<DataMethod>(abs_diff_method->subtrahend());
+   screener_method_cast<DataMethod<>>(abs_diff_method->subtrahend());
   ASSERT_NE(minuend, nullptr);
   ASSERT_NE(subtrahend, nullptr);
   EXPECT_EQ(minuend->field(), "high");
@@ -932,101 +915,17 @@ TEST_F(ConfigParserTest, ParseScreenerPercentageMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto percentage_method = screener_method_cast<PercentageMethod>(method);
+  const auto percentage_method =
+   screener_method_cast<PercentageMethod<ScreenerMethod, ScreenerMethod>>(
+    method);
   ASSERT_NE(percentage_method, nullptr);
 
   const auto total =
-   screener_method_cast<ValueMethod>(percentage_method->total());
+   screener_method_cast<ValueMethod<>>(percentage_method->total());
   const auto percent =
-   screener_method_cast<ValueMethod>(percentage_method->percent());
+   screener_method_cast<ValueMethod<>>(percentage_method->percent());
   ASSERT_NE(total, nullptr);
   ASSERT_NE(percent, nullptr);
-
-  const auto serialized_config = config_parser.serialize_method(method);
-  const auto deserialized_config =
-   config_parser.parse_method(serialized_config);
-  EXPECT_EQ(method, deserialized_config);
-}
-
-TEST_F(ConfigParserTest, ParseScreenerBullishDivergenceMethod)
-{
-  const auto config = json::parse(R"(
-    {
-      "method": "BULLISH_DIVERGENCE",
-      "signal": {
-        "method": "RSI",
-        "period": 14,
-        "input": {
-          "method": "DATA",
-          "field": "close"
-        }
-      },
-      "reference": {
-        "method": "DATA",
-        "field": "low"
-      },
-      "pivotRange": 10,
-      "lookbackRange": 20
-    }
-  )");
-
-  const auto method = config_parser.parse_method(config);
-
-  const auto bullish_divergence_method =
-   screener_method_cast<BullishDivergenceMethod>(method);
-  ASSERT_NE(bullish_divergence_method, nullptr);
-  EXPECT_EQ(bullish_divergence_method->pivot_range(), 10);
-  EXPECT_EQ(bullish_divergence_method->lookback_range(), 20);
-
-  const auto signal_method =
-   screener_method_cast<RsiMethod>(bullish_divergence_method->signal());
-  const auto reference_method =
-   screener_method_cast<DataMethod>(bullish_divergence_method->reference());
-  ASSERT_NE(signal_method, nullptr);
-  ASSERT_NE(reference_method, nullptr);
-
-  const auto serialized_config = config_parser.serialize_method(method);
-  const auto deserialized_config =
-   config_parser.parse_method(serialized_config);
-  EXPECT_EQ(method, deserialized_config);
-}
-
-TEST_F(ConfigParserTest, ParseScreenerHiddenBullishDivergenceMethod)
-{
-  const auto config = json::parse(R"(
-    {
-      "method": "HIDDEN_BULLISH_DIVERGENCE",
-      "signal": {
-        "method": "RSI",
-        "period": 14,
-        "input": {
-          "method": "DATA",
-          "field": "close"
-        }
-      },
-      "reference": {
-        "method": "DATA",
-        "field": "low"
-      },
-      "pivotRange": 10,
-      "lookbackRange": 20
-    }
-  )");
-
-  const auto method = config_parser.parse_method(config);
-
-  const auto hidden_bullish_divergence_method =
-   screener_method_cast<HiddenBullishDivergenceMethod>(method);
-  ASSERT_NE(hidden_bullish_divergence_method, nullptr);
-  EXPECT_EQ(hidden_bullish_divergence_method->pivot_range(), 10);
-  EXPECT_EQ(hidden_bullish_divergence_method->lookback_range(), 20);
-
-  const auto signal_method =
-   screener_method_cast<RsiMethod>(hidden_bullish_divergence_method->signal());
-  const auto reference_method = screener_method_cast<DataMethod>(
-   hidden_bullish_divergence_method->reference());
-  ASSERT_NE(signal_method, nullptr);
-  ASSERT_NE(reference_method, nullptr);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -1173,13 +1072,13 @@ TEST_F(ConfigParserTest, ParseScreenerGreaterThanFilter)
   ASSERT_NE(greater_than_filter, nullptr);
 
   const auto target =
-   screener_method_cast<DataMethod>(greater_than_filter->target());
+   screener_method_cast<DataMethod<>>(greater_than_filter->target());
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "close");
 
   const auto threshold =
-   screener_method_cast<ValueMethod>(greater_than_filter->threshold());
+   screener_method_cast<ValueMethod<>>(greater_than_filter->threshold());
   ASSERT_NE(threshold, nullptr);
 
   EXPECT_EQ(threshold->value(), 100);
@@ -1213,7 +1112,7 @@ TEST_F(ConfigParserTest, ParseScreenerGreaterEqualFilter)
   ASSERT_NE(greater_equal_filter, nullptr);
 
   const auto target =
-   screener_method_cast<DataMethod>(greater_equal_filter->target());
+   screener_method_cast<DataMethod<>>(greater_equal_filter->target());
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "close");
@@ -1246,7 +1145,7 @@ TEST_F(ConfigParserTest, ParseScreenerLessThanFilter)
   ASSERT_NE(less_than_filter, nullptr);
 
   const auto target =
-   screener_method_cast<DataMethod>(less_than_filter->target());
+   screener_method_cast<DataMethod<>>(less_than_filter->target());
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "close");
@@ -1279,7 +1178,7 @@ TEST_F(ConfigParserTest, ParseScreenerLessEqualFilter)
   ASSERT_NE(less_equal_filter, nullptr);
 
   const auto target =
-   screener_method_cast<DataMethod>(less_equal_filter->target());
+   screener_method_cast<DataMethod<>>(less_equal_filter->target());
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "close");
@@ -1311,13 +1210,14 @@ TEST_F(ConfigParserTest, ParseScreenerEqualFilter)
   const auto equal_filter = screener_filter_cast<EqualFilter>(filter);
   ASSERT_NE(equal_filter, nullptr);
 
-  const auto target = screener_method_cast<DataMethod>(equal_filter->target());
+  const auto target =
+   screener_method_cast<DataMethod<>>(equal_filter->target());
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "close");
 
   const auto threshold =
-   screener_method_cast<ValueMethod>(equal_filter->threshold());
+   screener_method_cast<ValueMethod<>>(equal_filter->threshold());
   ASSERT_NE(threshold, nullptr);
 
   EXPECT_EQ(threshold->value(), 100);
@@ -1350,13 +1250,13 @@ TEST_F(ConfigParserTest, ParseScreenerNotEqualFilter)
   ASSERT_NE(not_equal_filter, nullptr);
 
   const auto target =
-   screener_method_cast<DataMethod>(not_equal_filter->target());
+   screener_method_cast<DataMethod<>>(not_equal_filter->target());
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "close");
 
   const auto threshold =
-   screener_method_cast<ValueMethod>(not_equal_filter->threshold());
+   screener_method_cast<ValueMethod<>>(not_equal_filter->threshold());
   ASSERT_NE(threshold, nullptr);
 
   EXPECT_EQ(threshold->value(), 100);
@@ -1386,13 +1286,13 @@ TEST_F(ConfigParserTest, ParseScreenerCrossunderFilter)
   ASSERT_NE(crossunder_filter, nullptr);
 
   const auto signal =
-   screener_method_cast<DataMethod>(crossunder_filter->signal());
+   screener_method_cast<DataMethod<>>(crossunder_filter->signal());
   ASSERT_NE(signal, nullptr);
 
   EXPECT_EQ(signal->field(), "close");
 
   const auto reference =
-   screener_method_cast<ValueMethod>(crossunder_filter->reference());
+   screener_method_cast<ValueMethod<>>(crossunder_filter->reference());
   ASSERT_NE(reference, nullptr);
 
   EXPECT_EQ(reference->value(), 100);
@@ -1425,13 +1325,13 @@ TEST_F(ConfigParserTest, ParseScreenerCrossoverFilter)
   ASSERT_NE(crossover_filter, nullptr);
 
   const auto signal =
-   screener_method_cast<DataMethod>(crossover_filter->signal());
+   screener_method_cast<DataMethod<>>(crossover_filter->signal());
   ASSERT_NE(signal, nullptr);
 
   EXPECT_EQ(signal->field(), "close");
 
   const auto reference =
-   screener_method_cast<ValueMethod>(crossover_filter->reference());
+   screener_method_cast<ValueMethod<>>(crossover_filter->reference());
   ASSERT_NE(reference, nullptr);
 
   EXPECT_EQ(reference->value(), 100);

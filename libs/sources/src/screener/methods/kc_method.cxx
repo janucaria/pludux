@@ -1,18 +1,36 @@
 module;
 
+#include <cassert>
 #include <cstddef>
+#include <limits>
+#include <tuple>
+#include <type_traits>
 #include <utility>
 
 export module pludux:screener.kc_method;
 
 import :asset_snapshot;
-import :screener.screener_method;
+import :screener.method_call_context;
+import :screener.method_output;
+
+import :screener.ohlcv_method;
+import :screener.ema_method;
+import :screener.atr_method;
 
 export namespace pludux::screener {
 
+template<typename TMaMethod = EmaMethod<>, typename TRangeMethod = AtrMethod>
 class KcMethod {
 public:
-  KcMethod(ScreenerMethod ma, ScreenerMethod range, double multiplier)
+  using ResultType = std::common_type_t<typename TRangeMethod::ResultType,
+                                        typename TMaMethod::ResultType>;
+
+  KcMethod()
+  : KcMethod{TMaMethod{}, TRangeMethod{14}, 1.5}
+  {
+  }
+
+  KcMethod(TMaMethod ma, TRangeMethod range, double multiplier)
   : multiplier_{multiplier}
   , ma_{std::move(ma)}
   , range_{std::move(range)}
@@ -21,15 +39,33 @@ public:
 
   auto operator==(const KcMethod& other) const noexcept -> bool = default;
 
-  auto operator()(this const auto& self, AssetSnapshot asset_data)
-   -> PolySeries<double>
+  auto operator()(this const auto& self,
+                  AssetSnapshot asset_data,
+                  MethodCallContext<ResultType> auto context) noexcept
+   -> ResultType
   {
-    const auto ma_series = self.ma_(asset_data);
-    const auto range_series = self.range_(asset_data);
+    return self(asset_data, MethodOutput::MiddleBand, context);
+  }
 
-    const auto kc = KcSeries{ma_series, range_series, self.multiplier_};
+  auto operator()(this const auto& self,
+                  AssetSnapshot asset_data,
+                  MethodOutput output,
+                  MethodCallContext<ResultType> auto context) noexcept
+   -> ResultType
+  {
+    const auto range = self.range_(asset_data, context) * self.multiplier_;
+    const auto middle = self.ma_(asset_data, context);
 
-    return kc;
+    switch(output) {
+    case MethodOutput::MiddleBand:
+      return middle;
+    case MethodOutput::UpperBand:
+      return middle + range;
+    case MethodOutput::LowerBand:
+      return middle - range;
+    default:
+      return std::numeric_limits<double>::quiet_NaN();
+    }
   }
 
   auto multiplier(this const auto& self) noexcept -> double
@@ -42,30 +78,32 @@ public:
     self.multiplier_ = multiplier;
   }
 
-  auto ma(this const auto& self) noexcept -> ScreenerMethod
+  auto ma(this const auto& self) noexcept -> const TMaMethod&
   {
     return self.ma_;
   }
 
-  void ma(this auto& self, ScreenerMethod ma) noexcept
+  void ma(this auto& self, TMaMethod ma) noexcept
   {
     self.ma_ = std::move(ma);
   }
 
-  auto range(this const auto& self) noexcept -> ScreenerMethod
+  auto range(this const auto& self) noexcept -> const TRangeMethod&
   {
     return self.range_;
   }
 
-  void range(this auto& self, ScreenerMethod range) noexcept
+  void range(this auto& self, TRangeMethod range) noexcept
   {
     self.range_ = std::move(range);
   }
 
 private:
   double multiplier_;
-  ScreenerMethod ma_;
-  ScreenerMethod range_;
+  TMaMethod ma_;
+  TRangeMethod range_;
 };
+
+KcMethod() -> KcMethod<EmaMethod<>, AtrMethod>;
 
 } // namespace pludux::screener

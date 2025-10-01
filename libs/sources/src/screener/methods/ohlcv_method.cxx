@@ -5,34 +5,135 @@ module;
 export module pludux:screener.ohlcv_method;
 
 import :asset_snapshot;
+import :screener.method_call_context;
+import :screener.method_output;
 
 namespace pludux::screener {
 
-template<typename TSelf, auto TFunc>
+template<typename>
 class OhlcvMethod {
 public:
-  auto operator==(const OhlcvMethod& other) const noexcept -> bool = default;
-
-  auto operator()(this const auto&, AssetSnapshot asset_data)
-   -> PolySeries<double>
+  template<typename TSelf>
+  auto operator==(this TSelf self, TSelf other) noexcept -> bool
   {
-    return std::invoke(TFunc, asset_data);
+    return true;
+  }
+
+  template<typename TSelf>
+  auto operator!=(this TSelf self, const TSelf& other) noexcept -> bool
+  {
+    return !(self == other);
   }
 };
 
-export struct OpenMethod
-: OhlcvMethod<OpenMethod, &AssetSnapshot::get_open_values> {};
+export struct OpenMethod : OhlcvMethod<OpenMethod> {
+public:
+  using ResultType = double;
 
-export struct HighMethod
-: OhlcvMethod<HighMethod, &AssetSnapshot::get_high_values> {};
+  auto operator()(this auto self,
+                  AssetSnapshot asset_snapshot,
+                  MethodCallContext<ResultType> auto context) noexcept
+   -> ResultType
+  {
+    return asset_snapshot.open();
+  }
 
-export struct LowMethod
-: OhlcvMethod<LowMethod, &AssetSnapshot::get_low_values> {};
+  auto operator()(this auto self,
+                  AssetSnapshot asset_snapshot,
+                  MethodOutput output,
+                  MethodCallContext<ResultType> auto context) noexcept
+   -> ResultType
+  {
+    return std::numeric_limits<ResultType>::quiet_NaN();
+  }
+};
 
-export struct CloseMethod
-: OhlcvMethod<CloseMethod, &AssetSnapshot::get_close_values> {};
+export struct HighMethod : OhlcvMethod<HighMethod> {
+public:
+  using ResultType = double;
 
-export struct VolumeMethod
-: OhlcvMethod<VolumeMethod, &AssetSnapshot::get_volume_values> {};
+  auto operator()(this auto self,
+                  AssetSnapshot asset_snapshot,
+                  MethodCallContext<ResultType> auto context) noexcept
+   -> ResultType
+  {
+    return asset_snapshot.high();
+  }
+
+  auto operator()(this auto self,
+                  AssetSnapshot asset_snapshot,
+                  MethodOutput output,
+                  MethodCallContext<ResultType> auto context) noexcept
+   -> ResultType
+  {
+    return std::numeric_limits<ResultType>::quiet_NaN();
+  }
+};
+
+export struct LowMethod : OhlcvMethod<LowMethod> {
+public:
+  using ResultType = double;
+
+  auto operator()(this auto self,
+                  AssetSnapshot asset_snapshot,
+                  MethodCallContext<ResultType> auto context) noexcept
+   -> ResultType
+  {
+    return asset_snapshot.low();
+  }
+
+  auto operator()(this auto self,
+                  AssetSnapshot asset_snapshot,
+                  MethodOutput output,
+                  MethodCallContext<ResultType> auto context) noexcept
+   -> ResultType
+  {
+    return std::numeric_limits<ResultType>::quiet_NaN();
+  }
+};
+
+export struct CloseMethod : OhlcvMethod<CloseMethod> {
+public:
+  using ResultType = double;
+
+  auto operator()(this auto self,
+                  AssetSnapshot asset_snapshot,
+                  MethodCallContext<ResultType> auto context) noexcept
+   -> ResultType
+  {
+    return asset_snapshot.close();
+  }
+
+  auto operator()(this auto self,
+                  AssetSnapshot asset_snapshot,
+                  MethodOutput output,
+                  MethodCallContext<ResultType> auto context) noexcept
+   -> ResultType
+  {
+    return std::numeric_limits<ResultType>::quiet_NaN();
+  }
+};
+
+export struct VolumeMethod : OhlcvMethod<VolumeMethod> {
+public:
+  using ResultType = double;
+
+  auto operator()(this auto self,
+                  AssetSnapshot asset_snapshot,
+                  MethodCallContext<ResultType> auto context) noexcept
+   -> ResultType
+  {
+    return asset_snapshot.volume();
+  }
+
+  auto operator()(this auto self,
+                  AssetSnapshot asset_snapshot,
+                  MethodOutput output,
+                  MethodCallContext<ResultType> auto context) noexcept
+   -> ResultType
+  {
+    return std::numeric_limits<ResultType>::quiet_NaN();
+  }
+};
 
 } // namespace pludux::screener

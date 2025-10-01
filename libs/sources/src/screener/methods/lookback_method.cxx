@@ -1,37 +1,67 @@
 module;
 
 #include <cstddef>
+#include <limits>
 #include <utility>
 
 export module pludux:screener.lookback_method;
 
 import :asset_snapshot;
-import :screener.screener_method;
+import :screener.method_call_context;
+import :screener.method_output;
 
 export namespace pludux::screener {
 
+template<typename TSourceMethod>
+  requires requires { typename TSourceMethod::ResultType; }
 class LookbackMethod {
 public:
-  LookbackMethod(ScreenerMethod source, std::size_t period)
+  using ResultType = TSourceMethod::ResultType;
+
+  explicit LookbackMethod(std::size_t period = 1)
+  : LookbackMethod{TSourceMethod{}, period}
+  {
+  }
+
+  LookbackMethod(TSourceMethod source, std::size_t period)
   : source_{std::move(source)}
   , period_{period}
   {
   }
 
-  auto operator==(const LookbackMethod& other) const noexcept -> bool = default;
-
-  auto operator()(this const auto& self, AssetSnapshot asset_data)
-   -> PolySeries<double>
+  template<typename UMethod>
+    requires requires { typename UMethod::ResultType; }
+  LookbackMethod(const LookbackMethod<UMethod>& other,
+                 std::size_t additional_period)
+  : LookbackMethod{other.source(), other.period() + additional_period}
   {
-    return LookbackSeries{self.source_(asset_data), self.period_};
   }
 
-  auto source(this const auto& self) noexcept -> ScreenerMethod
+  auto operator==(const LookbackMethod& other) const noexcept -> bool = default;
+
+  auto operator()(this const auto& self,
+                  AssetSnapshot asset_data,
+                  MethodCallContext<ResultType> auto context) noexcept
+   -> ResultType
+  {
+    return self.source_(asset_data[self.period_], context);
+  }
+
+  auto operator()(this const auto& self,
+                  AssetSnapshot asset_data,
+                  MethodOutput output,
+                  MethodCallContext<ResultType> auto context) noexcept
+   -> ResultType
+  {
+    return std::numeric_limits<ResultType>::quiet_NaN();
+  }
+
+  auto source(this const auto& self) noexcept -> const TSourceMethod&
   {
     return self.source_;
   }
 
-  void source(this auto& self, ScreenerMethod source) noexcept
+  void source(this auto& self, TSourceMethod source) noexcept
   {
     self.source_ = std::move(source);
   }
@@ -47,8 +77,13 @@ public:
   }
 
 private:
-  ScreenerMethod source_;
+  TSourceMethod source_;
   std::size_t period_;
 };
+
+// Deduction guide to deduce TSourceMethod from UMethod in the copy constructor
+template<typename UMethod>
+LookbackMethod(const LookbackMethod<UMethod>&, std::size_t)
+ -> LookbackMethod<UMethod>;
 
 } // namespace pludux::screener

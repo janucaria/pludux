@@ -13,61 +13,55 @@ TEST(ReferenceMethodTest, RunAllMethodClose)
   const auto close_method = CloseMethod{};
   const auto asset_data =
    AssetHistory{{"Open", {4.0, 4.1, 4.2}}, {"Close", {1.0, 1.1, 1.2}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  auto registry = std::make_shared<MethodRegistry>();
-  registry->set("open", open_method);
-  registry->set("close", close_method);
+  auto registry = MethodRegistry{};
+  registry.set("open", open_method);
+  registry.set("close", close_method);
 
-  const auto open_ref_method = ReferenceMethod{registry, "open"};
-  const auto open_series = open_ref_method(asset_data);
-  ASSERT_EQ(open_series.size(), 3);
-  EXPECT_EQ(open_series[0], 4.0);
-  EXPECT_EQ(open_series[1], 4.1);
-  EXPECT_EQ(open_series[2], 4.2);
+  auto context = DefaultMethodContext{registry};
 
-  const auto close_ref_method = ReferenceMethod{registry, "close"};
-  const auto close_series = close_ref_method(asset_data);
-  ASSERT_EQ(close_series.size(), 3);
-  EXPECT_EQ(close_series[0], 1.0);
-  EXPECT_EQ(close_series[1], 1.1);
-  EXPECT_EQ(close_series[2], 1.2);
+  const auto open_ref_method = ReferenceMethod{"open"};
+  EXPECT_EQ(open_ref_method(asset_snapshot[0], context), 4.0);
+  EXPECT_EQ(open_ref_method(asset_snapshot[1], context), 4.1);
+  EXPECT_EQ(open_ref_method(asset_snapshot[2], context), 4.2);
+
+  const auto close_ref_method = ReferenceMethod{"close"};
+  EXPECT_EQ(close_ref_method(asset_snapshot[0], context), 1.0);
+  EXPECT_EQ(close_ref_method(asset_snapshot[1], context), 1.1);
+  EXPECT_EQ(close_ref_method(asset_snapshot[2], context), 1.2);
 }
 
 TEST(ReferenceMethodTest, InvalidField)
 {
   const auto close_method = CloseMethod{};
   const auto asset_data = AssetHistory{{"Close", {4.0, 4.1, 4.2}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  auto registry = std::make_shared<MethodRegistry>();
-  registry->set("close", close_method);
+  auto registry = MethodRegistry{};
+  registry.set("close", close_method);
 
-  const auto not_found_ref_method = ReferenceMethod{registry, "invalid"};
-  const auto not_found_series = not_found_ref_method(asset_data);
+  auto context = DefaultMethodContext{registry};
 
-  EXPECT_TRUE(std::isnan(not_found_series[0]));
-  EXPECT_TRUE(std::isnan(not_found_series[1]));
+  const auto not_found_ref_method = ReferenceMethod{"invalid"};
+
+  EXPECT_TRUE(std::isnan(not_found_ref_method(asset_snapshot[0], context)));
+  EXPECT_TRUE(std::isnan(not_found_ref_method(asset_snapshot[1], context)));
 }
 
 TEST(ReferenceMethodTest, EqualityOperator)
 {
-  auto registry = std::make_shared<MethodRegistry>();
-
-  const auto ref_method1 = ReferenceMethod{registry, "close"};
-  const auto ref_method2 = ReferenceMethod{registry, "close"};
+  const auto ref_method1 = ReferenceMethod{"close"};
+  const auto ref_method2 = ReferenceMethod{"close"};
 
   EXPECT_EQ(ref_method1, ref_method2);
 }
 
 TEST(ReferenceMethodTest, NotEqualOperator)
 {
-  auto registry1 = std::make_shared<MethodRegistry>();
-  auto registry2 = std::make_shared<MethodRegistry>();
+  const auto ref_method1 = ReferenceMethod{"close"};
+  const auto ref_method2 = ReferenceMethod{"open"};
 
-  const auto ref_method1 = ReferenceMethod{registry1, "close"};
-  const auto ref_method2 = ReferenceMethod{registry2, "open"};
-  const auto ref_method3 = ReferenceMethod{registry2, "close"};
-
+  EXPECT_TRUE(ref_method1 != ref_method2);
   EXPECT_NE(ref_method1, ref_method2);
-  EXPECT_NE(ref_method1, ref_method3);
-  EXPECT_NE(ref_method2, ref_method3);
 }

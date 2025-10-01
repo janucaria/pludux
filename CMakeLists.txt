@@ -24,4 +24,4 @@ if(NOT EMSCRIPTEN)
 endif()
 
 add_subdirectory(libs)
-add_subdirectory(apps)
+# add_subdirectory(apps)

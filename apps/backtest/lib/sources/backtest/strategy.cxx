@@ -126,7 +126,7 @@ public:
     if(self.long_entry_filter()(asset_snapshot)) {
       const auto risk_size = self.risk_method_(asset_snapshot)[0];
       const auto position_size = risk_value / risk_size;
-      const auto entry_price = asset_snapshot.get_close();
+      const auto entry_price = asset_snapshot.close();
 
       const auto stop_loss_price =
        self.stop_loss_enabled_
@@ -158,7 +158,7 @@ public:
     if(self.short_entry_filter()(asset_snapshot)) {
       const auto risk_size = -self.risk_method_(asset_snapshot)[0];
       const auto position_size = risk_value / risk_size;
-      const auto entry_price = asset_snapshot.get_close();
+      const auto entry_price = asset_snapshot.close();
 
       const auto stop_loss_price =
        self.stop_loss_enabled_
@@ -195,7 +195,7 @@ public:
   {
     const auto is_long_direction = position_size > 0;
     const auto is_short_direction = position_size < 0;
-    const auto exit_price = asset_snapshot.get_close();
+    const auto exit_price = asset_snapshot.close();
 
     if(is_long_direction) {
       if(self.long_exit_filter()(asset_snapshot)) {
@@ -203,7 +203,7 @@ public:
       }
     } else if(is_short_direction) {
       if(self.short_exit_filter()(asset_snapshot)) {
-        const auto exit_price = asset_snapshot.get_close();
+        const auto exit_price = asset_snapshot.close();
         return TradeExit{position_size, exit_price, TradeExit::Reason::signal};
       }
     }

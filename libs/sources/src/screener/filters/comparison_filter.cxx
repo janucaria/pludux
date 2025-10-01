@@ -7,6 +7,8 @@ module;
 export module pludux:screener.comparison_filter;
 
 import :asset_snapshot;
+import :screener.method_call_context;
+
 import :screener.screener_filter;
 import :screener.screener_method;
 
@@ -25,10 +27,12 @@ public:
   auto operator==(const ComparisonFilter& other) const noexcept
    -> bool = default;
 
-  auto operator()(this const auto& self, AssetSnapshot asset_data) -> bool
+  auto operator()(this const auto& self,
+                  AssetSnapshot asset_data,
+                  MethodCallContext<double> auto context) -> bool
   {
-    const auto target_result = self.target_(asset_data)[0];
-    const auto threshold_result = self.threshold_(asset_data)[0];
+    const auto target_result = self.target_(asset_data, context);
+    const auto threshold_result = self.threshold_(asset_data, context);
 
     return TComparator{}(target_result, threshold_result);
   }
