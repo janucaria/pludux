@@ -4,7 +4,7 @@ export import :screener.method_output;
 export import :screener.method_call_context;
 export import :screener.any_method_context;
 
-export import :screener.screener_method;
+export import :screener.any_method;
 export import :screener.method_registry;
 export import :screener.default_method_context;
 
@@ -57,7 +57,7 @@ export import :screener.logical_filter;
 export import :screener.crossover_filter;
 export import :screener.crossunder_filter;
 
-export import :screener.screener_method;
+export import :screener.any_method;
 
 export import :screener.method_registry;
 export import :screener.reference_method;

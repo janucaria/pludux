@@ -16,11 +16,9 @@ import :screener.method_output;
 
 export namespace pludux::screener {
 
-template<typename T = double>
-  requires std::numeric_limits<T>::has_quiet_NaN
 class DataMethod {
 public:
-  using ResultType = T;
+  using ResultType = double;
 
   DataMethod() = default;
 
@@ -43,6 +41,7 @@ public:
                   AssetSnapshot asset_snapshot,
                   MethodOutput output,
                   MethodCallContext<ResultType> auto context) noexcept
+   -> ResultType
   {
     return std::numeric_limits<ResultType>::quiet_NaN();
   }

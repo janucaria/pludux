@@ -53,7 +53,7 @@ public:
     const auto close = CloseMethod{};
     const auto highest_high = HighestMethod{HighMethod{}, self.k_period_};
     const auto lowest_low = LowestMethod{LowMethod{}, self.k_period_};
-    const auto stoch = DivideMethod{MultiplyMethod{ValueMethod<ResultType>{100},
+    const auto stoch = DivideMethod{MultiplyMethod{ValueMethod{100},
                                                    SubtractMethod{
                                                     close,
                                                     lowest_low,

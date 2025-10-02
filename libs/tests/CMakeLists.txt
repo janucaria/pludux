@@ -25,7 +25,7 @@ set(PLUDUX_TEST_SOURCES
   src/test_rsi_method.cpp
   src/test_rvol_method.cpp
   src/test_sma_method.cpp
-  src/test_screener_method.cpp
+  src/test_any_method.cpp
   src/test_stoch_method.cpp
   src/test_stoch_rsi_method.cpp
   src/test_tr_method.cpp

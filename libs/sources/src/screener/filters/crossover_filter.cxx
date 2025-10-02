@@ -8,13 +8,13 @@ import :asset_snapshot;
 import :screener.method_call_context;
 
 import :screener.screener_filter;
-import :screener.screener_method;
+import :screener.any_method;
 
 export namespace pludux::screener {
 
 class CrossoverFilter {
 public:
-  CrossoverFilter(ScreenerMethod signal, ScreenerMethod reference)
+  CrossoverFilter(AnyMethod signal, AnyMethod reference)
   : signal_{std::move(signal)}
   , reference_{std::move(reference)}
   {
@@ -35,19 +35,19 @@ public:
     return signal_current > reference_current && signal_prev <= reference_prev;
   }
 
-  auto signal(this const auto& self) noexcept -> const ScreenerMethod&
+  auto signal(this const auto& self) noexcept -> const AnyMethod&
   {
     return self.signal_;
   }
 
-  auto reference(this const auto& self) noexcept -> const ScreenerMethod&
+  auto reference(this const auto& self) noexcept -> const AnyMethod&
   {
     return self.reference_;
   }
 
 private:
-  ScreenerMethod signal_;
-  ScreenerMethod reference_;
+  AnyMethod signal_;
+  AnyMethod reference_;
 };
 
 } // namespace pludux::screener

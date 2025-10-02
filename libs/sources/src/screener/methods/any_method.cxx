@@ -7,7 +7,7 @@ module;
 #include <variant>
 #include <vector>
 
-export module pludux:screener.screener_method;
+export module pludux:screener.any_method;
 
 import :asset_snapshot;
 import :screener.method_call_context;
@@ -17,14 +17,16 @@ import :screener.any_method_context;
 
 export namespace pludux::screener {
 
-class ScreenerMethod {
+class AnyMethod {
 public:
   using ResultType = double;
 
-  ScreenerMethod() = default;
-
   template<typename UMethod>
-  ScreenerMethod(UMethod impl)
+    requires requires {
+      typename UMethod::ResultType;
+      requires std::convertible_to<typename UMethod::ResultType, ResultType>;
+    }
+  AnyMethod(UMethod impl)
   : impl_{std::make_any<UMethod>(std::move(impl))}
   , invoke_{[](
              const std::any& impl,
@@ -46,7 +48,7 @@ public:
             : std::numeric_limits<typename UMethod::ResultType>::quiet_NaN();
   }}
   , equals_{[](const std::any& impl,
-               const ScreenerMethod& other) static -> bool {
+               const AnyMethod& other) static -> bool {
     if(auto other_method = std::any_cast<UMethod>(&other.impl_)) {
       const auto& method = std::any_cast<UMethod>(impl);
       return method == *other_method;
@@ -54,7 +56,7 @@ public:
     return false;
   }}
   , not_equals_{
-     [](const std::any& impl, const ScreenerMethod& other) static -> bool {
+     [](const std::any& impl, const AnyMethod& other) static -> bool {
        if(auto other_method = std::any_cast<UMethod>(&other.impl_)) {
          const auto& method = std::any_cast<UMethod>(impl);
          return method != *other_method;
@@ -80,27 +82,27 @@ public:
      self.impl_, asset_snapshot, output, context);
   }
 
-  auto operator==(this const auto& self, const ScreenerMethod& other) noexcept
+  auto operator==(this const auto& self, const AnyMethod& other) noexcept
    -> bool
   {
     return self.equals_(self.impl_, other);
   }
 
-  auto operator!=(this const auto& self, const ScreenerMethod& other) noexcept
+  auto operator!=(this const auto& self, const AnyMethod& other) noexcept
    -> bool
   {
     return self.not_equals_(self.impl_, other);
   }
 
   template<typename UMethod>
-  friend auto screener_method_cast(const ScreenerMethod& method) noexcept
+  friend auto any_method_cast(const AnyMethod& method) noexcept
    -> const UMethod*
   {
     return std::any_cast<const UMethod>(&method.impl_);
   }
 
   template<typename UMethod>
-  friend auto screener_method_cast(ScreenerMethod& method) noexcept -> UMethod*
+  friend auto any_method_cast(AnyMethod& method) noexcept -> UMethod*
   {
     return std::any_cast<UMethod>(&method.impl_);
   }
@@ -117,9 +119,9 @@ private:
                  ->ResultType>
    invoke_with_output_;
 
-  std::function<auto(const std::any&, const ScreenerMethod&)->bool> equals_;
+  std::function<auto(const std::any&, const AnyMethod&)->bool> equals_;
 
-  std::function<auto(const std::any&, const ScreenerMethod&)->bool> not_equals_;
+  std::function<auto(const std::any&, const AnyMethod&)->bool> not_equals_;
 };
 
 } // namespace pludux::screener

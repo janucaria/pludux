@@ -6,7 +6,7 @@ module;
 
 export module pludux:screener.method_registry;
 
-import :screener.screener_method;
+import :screener.any_method;
 
 export namespace pludux::screener {
 
@@ -14,25 +14,25 @@ class MethodRegistry {
 public:
   MethodRegistry() = default;
 
-  MethodRegistry(std::unordered_map<std::string, ScreenerMethod> methods)
+  MethodRegistry(std::unordered_map<std::string, AnyMethod> methods)
   : methods_{std::move(methods)}
   {
   }
 
   auto methods(this const auto& self) noexcept
-   -> const std::unordered_map<std::string, ScreenerMethod>&
+   -> const std::unordered_map<std::string, AnyMethod>&
   {
     return self.methods_;
   }
 
   void
   methods(this auto& self,
-          std::unordered_map<std::string, ScreenerMethod> new_methods) noexcept
+          std::unordered_map<std::string, AnyMethod> new_methods) noexcept
   {
     self.methods_ = std::move(new_methods);
   }
 
-  void set(this auto& self, const std::string& name, ScreenerMethod method)
+  void set(this auto& self, const std::string& name, AnyMethod method)
   {
     if(self.methods_.contains(name)) {
       self.methods_.at(name) = std::move(method);
@@ -42,7 +42,7 @@ public:
   }
 
   auto get(this const auto& self, const std::string& name)
-   -> std::optional<ScreenerMethod>
+   -> std::optional<AnyMethod>
   {
     const auto it = self.methods_.find(name);
     if(it == self.methods_.end()) {
@@ -57,7 +57,7 @@ public:
   }
 
 private:
-  std::unordered_map<std::string, ScreenerMethod> methods_;
+  std::unordered_map<std::string, AnyMethod> methods_;
 };
 
 } // namespace pludux::screener

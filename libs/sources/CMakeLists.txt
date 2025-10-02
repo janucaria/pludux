@@ -34,7 +34,7 @@ target_sources(${PROJECT_NAME}
         src/screener/methods/method_call_context.cxx
 
         src/screener/methods/any_method_context.cxx
-        src/screener/methods/screener_method.cxx
+        src/screener/methods/any_method.cxx
         src/screener/methods/method_registry.cxx
         src/screener/methods/default_method_context.cxx
 

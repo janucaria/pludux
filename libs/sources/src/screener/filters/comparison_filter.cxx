@@ -10,7 +10,7 @@ import :asset_snapshot;
 import :screener.method_call_context;
 
 import :screener.screener_filter;
-import :screener.screener_method;
+import :screener.any_method;
 
 export namespace pludux::screener {
 
@@ -18,7 +18,7 @@ template<typename TComparator>
   requires std::is_invocable_r_v<bool, TComparator, double, double>
 class ComparisonFilter {
 public:
-  ComparisonFilter(ScreenerMethod target, ScreenerMethod threshold)
+  ComparisonFilter(AnyMethod target, AnyMethod threshold)
   : target_{std::move(target)}
   , threshold_{std::move(threshold)}
   {
@@ -37,19 +37,19 @@ public:
     return TComparator{}(target_result, threshold_result);
   }
 
-  auto target(this const auto& self) noexcept -> const ScreenerMethod&
+  auto target(this const auto& self) noexcept -> const AnyMethod&
   {
     return self.target_;
   }
 
-  auto threshold(this const auto& self) noexcept -> const ScreenerMethod&
+  auto threshold(this const auto& self) noexcept -> const AnyMethod&
   {
     return self.threshold_;
   }
 
 private:
-  ScreenerMethod target_;
-  ScreenerMethod threshold_;
+  AnyMethod target_;
+  AnyMethod threshold_;
 };
 
 using GreaterEqualFilter = ComparisonFilter<std::greater_equal<>>;

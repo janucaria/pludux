@@ -26,7 +26,7 @@ public:
 
   Strategy(std::string name,
            std::shared_ptr<screener::MethodRegistry> method_registry,
-           screener::ScreenerMethod risk_method,
+           screener::AnyMethod risk_method,
            screener::ScreenerFilter long_entry_filter,
            screener::ScreenerFilter long_exit_filter,
            screener::ScreenerFilter short_entry_filter,
@@ -63,7 +63,7 @@ public:
   }
 
   auto risk_method(this const auto& self) noexcept
-   -> const screener::ScreenerMethod&
+   -> const screener::AnyMethod&
   {
     return self.risk_method_;
   }
@@ -222,7 +222,7 @@ private:
 
   std::shared_ptr<screener::MethodRegistry> method_registry_;
 
-  screener::ScreenerMethod risk_method_;
+  screener::AnyMethod risk_method_;
 
   screener::ScreenerFilter long_entry_filter_{screener::FalseFilter{}};
   screener::ScreenerFilter long_exit_filter_{screener::FalseFilter{}};
@@ -245,10 +245,10 @@ auto risk_reward_config_parser() -> ConfigParser
   config_parser.register_method_parser(
    "ATR",
    [](const ConfigParser& config_parser,
-      const screener::ScreenerMethod& method) -> jsoncons::json {
+      const screener::AnyMethod& method) -> jsoncons::json {
      auto serialized_method = jsoncons::json{};
 
-     auto atr_method = screener_method_cast<screener::AtrMethod>(method);
+     auto atr_method = any_method_cast<screener::AtrMethod>(method);
 
      if(atr_method) {
        serialized_method["atr"] = jsoncons::json{};
@@ -259,7 +259,7 @@ auto risk_reward_config_parser() -> ConfigParser
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser,
-      const jsoncons::json& parameters) -> screener::ScreenerMethod {
+      const jsoncons::json& parameters) -> screener::AnyMethod {
      auto period = std::size_t{14};
      auto multiplier = 1.0;
 
@@ -280,15 +280,15 @@ auto risk_reward_config_parser() -> ConfigParser
   config_parser.register_method_parser(
    "PERCENTAGE",
    [](const ConfigParser& config_parser,
-      const screener::ScreenerMethod& method) -> jsoncons::json {
+      const screener::AnyMethod& method) -> jsoncons::json {
      auto serialized_method = jsoncons::json{};
 
-     auto percent_method = screener_method_cast<
-      screener::PercentageMethod<screener::ScreenerMethod,
-                                 screener::ScreenerMethod>>(method);
+     auto percent_method = any_method_cast<
+      screener::PercentageMethod<screener::AnyMethod,
+                                 screener::AnyMethod>>(method);
 
      if(percent_method) {
-       auto value_method = screener_method_cast<screener::ValueMethod<>>(
+       auto value_method = any_method_cast<screener::ValueMethod>(
         percent_method->percent());
 
        if(value_method) {
@@ -299,7 +299,7 @@ auto risk_reward_config_parser() -> ConfigParser
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser,
-      const jsoncons::json& parameters) -> screener::ScreenerMethod {
+      const jsoncons::json& parameters) -> screener::AnyMethod {
      const auto total_method = screener::CloseMethod{};
 
      const auto percent = parameters.at("percentage").as_double();
@@ -314,10 +314,10 @@ auto risk_reward_config_parser() -> ConfigParser
   config_parser.register_method_parser(
    "VALUE",
    [](const ConfigParser& config_parser,
-      const screener::ScreenerMethod& method) -> jsoncons::json {
+      const screener::AnyMethod& method) -> jsoncons::json {
      auto serialized_method = jsoncons::json{};
 
-     auto value_method = screener_method_cast<screener::ValueMethod<>>(method);
+     auto value_method = any_method_cast<screener::ValueMethod>(method);
 
      if(value_method) {
        serialized_method["value"] = value_method->value();
@@ -326,7 +326,7 @@ auto risk_reward_config_parser() -> ConfigParser
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser,
-      const jsoncons::json& parameters) -> screener::ScreenerMethod {
+      const jsoncons::json& parameters) -> screener::AnyMethod {
      const auto value = parameters.at("value").as_double();
      return screener::ValueMethod{value};
    });

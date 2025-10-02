@@ -68,7 +68,7 @@ public:
   {
     const auto highest_rsi = HighestMethod{self.rsi_, self.k_period_};
     const auto lowest_rsi = LowestMethod{self.rsi_, self.k_period_};
-    const auto stoch = DivideMethod{MultiplyMethod{ValueMethod<ResultType>{100},
+    const auto stoch = DivideMethod{MultiplyMethod{ValueMethod{100},
                                                    SubtractMethod{
                                                     self.rsi_,
                                                     lowest_rsi,

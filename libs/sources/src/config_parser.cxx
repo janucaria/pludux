@@ -26,7 +26,7 @@ public:
     }
 
     auto parse_method(this auto& self, const jsoncons::json& config)
-     -> screener::ScreenerMethod
+     -> screener::AnyMethod
     {
       return self.config_parser_.parse_method(config);
     }
@@ -50,10 +50,10 @@ public:
    auto(ConfigParser::Parser, const jsoncons::json&)->screener::ScreenerFilter>;
 
   using MethodSerialize = std::function<
-   auto(const ConfigParser&, const screener::ScreenerMethod&)->jsoncons::json>;
+   auto(const ConfigParser&, const screener::AnyMethod&)->jsoncons::json>;
 
   using MethodDeserialize = std::function<
-   auto(ConfigParser::Parser, const jsoncons::json&)->screener::ScreenerMethod>;
+   auto(ConfigParser::Parser, const jsoncons::json&)->screener::AnyMethod>;
 
   ConfigParser()
   : filter_parsers_{}
@@ -149,7 +149,7 @@ public:
   }
 
   auto parse_method(this auto& self, const jsoncons::json& config)
-   -> screener::ScreenerMethod
+   -> screener::AnyMethod
   {
     if(config.is_number()) {
       return screener::ValueMethod{config.as_double()};
@@ -188,7 +188,7 @@ public:
   }
 
   auto serialize_method(this const auto& self,
-                        const screener::ScreenerMethod& method)
+                        const screener::AnyMethod& method)
    -> jsoncons::json
   {
     auto serialized_method = jsoncons::json::null();
@@ -232,8 +232,8 @@ static auto
 parse_method_from_param_or(ConfigParser::Parser config_parser,
                            const jsoncons::json& parameters,
                            const std::string& key,
-                           const screener::ScreenerMethod& default_value)
- -> screener::ScreenerMethod
+                           const screener::AnyMethod& default_value)
+ -> screener::AnyMethod
 {
   if(!parameters.contains(key)) {
     return default_value;
@@ -245,25 +245,25 @@ parse_method_from_param_or(ConfigParser::Parser config_parser,
 template<template<typename> typename TMethod>
 static auto parse_ta_with_period_method(ConfigParser::Parser config_parser,
                                         const jsoncons::json& parameters)
- -> screener::ScreenerMethod
+ -> screener::AnyMethod
 {
   const auto period = get_param_or<std::size_t>(parameters, "period", 14);
   const auto source = parse_method_from_param_or(
    config_parser, parameters, "source", screener::CloseMethod{});
 
-  return TMethod<screener::ScreenerMethod>{source, period};
+  return TMethod<screener::AnyMethod>{source, period};
 }
 
 template<template<typename> typename TMethod>
 static auto
 serialize_ta_with_period_method(const ConfigParser& config_parser,
-                                const screener::ScreenerMethod& method)
+                                const screener::AnyMethod& method)
  -> jsoncons::json
 {
   auto serialized_method = jsoncons::json::null();
 
   auto ta_method =
-   screener_method_cast<TMethod<screener::ScreenerMethod>>(method);
+   any_method_cast<TMethod<screener::AnyMethod>>(method);
 
   if(ta_method) {
     serialized_method = jsoncons::json{};
@@ -277,11 +277,11 @@ serialize_ta_with_period_method(const ConfigParser& config_parser,
 
 template<typename T>
 static auto serialize_ohlcv_method(const ConfigParser& config_parser,
-                                   const screener::ScreenerMethod& method)
+                                   const screener::AnyMethod& method)
  -> jsoncons::json
 {
   auto serialized_method = jsoncons::json::null();
-  auto ohlcv_method = screener_method_cast<T>(method);
+  auto ohlcv_method = any_method_cast<T>(method);
   if(ohlcv_method) {
     serialized_method = jsoncons::json{};
   }
@@ -291,19 +291,19 @@ static auto serialize_ohlcv_method(const ConfigParser& config_parser,
 template<typename T>
 static auto parse_ohlcv_method(ConfigParser::Parser config_parser,
                                const jsoncons::json& parameters)
- -> screener::ScreenerMethod
+ -> screener::AnyMethod
 {
   auto ohlcv_method = T{};
   return ohlcv_method;
 }
 
 static auto serialize_value_method(const ConfigParser& config_parser,
-                                   const screener::ScreenerMethod& method)
+                                   const screener::AnyMethod& method)
  -> jsoncons::json
 {
   auto serialized_method = jsoncons::json::null();
 
-  auto value_method = screener_method_cast<screener::ValueMethod<>>(method);
+  auto value_method = any_method_cast<screener::ValueMethod>(method);
 
   if(value_method) {
     serialized_method = jsoncons::json{};
@@ -315,7 +315,7 @@ static auto serialize_value_method(const ConfigParser& config_parser,
 
 static auto deserialize_value_method(ConfigParser::Parser config_parser,
                                      const jsoncons::json& parameters)
- -> screener::ScreenerMethod
+ -> screener::AnyMethod
 {
   const auto value = parameters.at("value").as_double();
   return screener::ValueMethod{value};
@@ -323,7 +323,7 @@ static auto deserialize_value_method(ConfigParser::Parser config_parser,
 
 static auto parse_data_method(ConfigParser::Parser config_parser,
                               const jsoncons::json& parameters)
- -> screener::ScreenerMethod
+ -> screener::AnyMethod
 {
   const auto field = parameters.at("field").as_string();
 
@@ -333,12 +333,12 @@ static auto parse_data_method(ConfigParser::Parser config_parser,
 }
 
 static auto serialize_data_method(const ConfigParser& config_parser,
-                                  const screener::ScreenerMethod& method)
+                                  const screener::AnyMethod& method)
  -> jsoncons::json
 {
   auto serialized_method = jsoncons::json::null();
 
-  auto data_method = screener_method_cast<screener::DataMethod<>>(method);
+  auto data_method = any_method_cast<screener::DataMethod>(method);
 
   if(data_method) {
     serialized_method = jsoncons::json{};
@@ -350,7 +350,7 @@ static auto serialize_data_method(const ConfigParser& config_parser,
 
 static auto parse_atr_method(ConfigParser::Parser config_parser,
                              const jsoncons::json& parameters)
- -> screener::ScreenerMethod
+ -> screener::AnyMethod
 {
   auto atr_method = screener::AtrMethod{};
 
@@ -366,12 +366,12 @@ static auto parse_atr_method(ConfigParser::Parser config_parser,
 }
 
 static auto serialize_atr_method(const ConfigParser& config_parser,
-                                 const screener::ScreenerMethod& method)
+                                 const screener::AnyMethod& method)
  -> jsoncons::json
 {
   auto serialized_method = jsoncons::json::null();
 
-  auto atr_method = screener_method_cast<screener::AtrMethod>(method);
+  auto atr_method = any_method_cast<screener::AtrMethod>(method);
   if(atr_method) {
     serialized_method = jsoncons::json{};
     serialized_method["period"] = atr_method->period();
@@ -382,13 +382,13 @@ static auto serialize_atr_method(const ConfigParser& config_parser,
 }
 
 static auto serialize_kc_method(const ConfigParser& config_parser,
-                                const screener::ScreenerMethod& method)
+                                const screener::AnyMethod& method)
  -> jsoncons::json
 {
   auto serialized_method = jsoncons::json::null();
 
-  auto kc_method = screener_method_cast<
-   screener::KcMethod<screener::ScreenerMethod, screener::ScreenerMethod>>(
+  auto kc_method = any_method_cast<
+   screener::KcMethod<screener::AnyMethod, screener::AnyMethod>>(
    method);
   if(kc_method) {
     serialized_method = jsoncons::json{};
@@ -403,7 +403,7 @@ static auto serialize_kc_method(const ConfigParser& config_parser,
 
 static auto parse_kc_method(ConfigParser::Parser config_parser,
                             const jsoncons::json& parameters)
- -> screener::ScreenerMethod
+ -> screener::AnyMethod
 {
   const auto ma_method = config_parser.parse_method(parameters.at("ma"));
   const auto range_method = config_parser.parse_method(parameters.at("range"));
@@ -419,7 +419,7 @@ static auto parse_binary_function_method(ConfigParser::Parser config_parser,
                                          const jsoncons::json& parameters,
                                          const std::string& first_operand_key,
                                          const std::string& second_operand_key)
- -> screener::ScreenerMethod
+ -> screener::AnyMethod
 {
   const auto first_operand =
    config_parser.parse_method(parameters.at(first_operand_key));
@@ -433,16 +433,16 @@ static auto parse_binary_function_method(ConfigParser::Parser config_parser,
 template<template<typename, typename> typename T>
 static auto
 serialize_binary_function_method(const ConfigParser& config_parser,
-                                 const screener::ScreenerMethod& method,
+                                 const screener::AnyMethod& method,
                                  const std::string& first_operand_key,
                                  const std::string& second_operand_key)
  -> jsoncons::json
 {
-  using TMethod = T<screener::ScreenerMethod, screener::ScreenerMethod>;
+  using TMethod = T<screener::AnyMethod, screener::AnyMethod>;
 
   auto serialized_method = jsoncons::json::null();
 
-  auto binary_function_method = screener_method_cast<TMethod>(method);
+  auto binary_function_method = any_method_cast<TMethod>(method);
   if(binary_function_method) {
     serialized_method = jsoncons::json{};
     serialized_method[first_operand_key] =
@@ -458,7 +458,7 @@ template<template<typename> typename T>
 static auto parse_unary_function_method(ConfigParser::Parser config_parser,
                                         const jsoncons::json& parameters,
                                         const std::string& operand_key)
- -> screener::ScreenerMethod
+ -> screener::AnyMethod
 {
   const auto operand = config_parser.parse_method(parameters.at(operand_key));
   const auto unary_function_method = T{operand};
@@ -468,14 +468,14 @@ static auto parse_unary_function_method(ConfigParser::Parser config_parser,
 template<template<typename> typename T>
 static auto
 serialize_unary_function_method(const ConfigParser& config_parser,
-                                const screener::ScreenerMethod& method,
+                                const screener::AnyMethod& method,
                                 const std::string& operand_key)
  -> jsoncons::json
 {
   auto serialized_method = jsoncons::json::null();
 
   auto unary_function_method =
-   screener_method_cast<T<screener::ScreenerMethod>>(method);
+   any_method_cast<T<screener::AnyMethod>>(method);
   if(unary_function_method) {
     serialized_method = jsoncons::json{};
     serialized_method[operand_key] =
@@ -488,7 +488,7 @@ serialize_unary_function_method(const ConfigParser& config_parser,
 template<typename T>
 static auto parse_divergence_method(ConfigParser::Parser config_parser,
                                     const jsoncons::json& parameters)
- -> screener::ScreenerMethod
+ -> screener::AnyMethod
 {
   auto divergence_method = T{};
 
@@ -517,12 +517,12 @@ static auto parse_divergence_method(ConfigParser::Parser config_parser,
 
 template<typename T>
 static auto serialize_divergence_method(const ConfigParser& config_parser,
-                                        const screener::ScreenerMethod& method)
+                                        const screener::AnyMethod& method)
  -> jsoncons::json
 {
   auto serialized_method = jsoncons::json::null();
 
-  auto divergence_method = screener_method_cast<T>(method);
+  auto divergence_method = any_method_cast<T>(method);
   if(divergence_method) {
     serialized_method = jsoncons::json{};
     serialized_method["signal"] =
@@ -788,12 +788,12 @@ auto make_default_registered_config_parser(
   config_parser.register_method_parser(
    "CHANGE",
    [](const ConfigParser& config_parser,
-      const screener::ScreenerMethod screener_method) -> jsoncons::json {
+      const screener::AnyMethod any_method) -> jsoncons::json {
      auto serialized_method = jsoncons::json::null();
 
      auto changes_method =
-      screener_method_cast<screener::ChangeMethod<screener::ScreenerMethod>>(
-       screener_method);
+      any_method_cast<screener::ChangeMethod<screener::AnyMethod>>(
+       any_method);
      if(changes_method) {
        serialized_method = jsoncons::json{};
        serialized_method["source"] =
@@ -847,11 +847,11 @@ auto make_default_registered_config_parser(
   config_parser.register_method_parser(
    "RVOL",
    [](const ConfigParser& config_parser,
-      const screener::ScreenerMethod screener_method) -> jsoncons::json {
+      const screener::AnyMethod any_method) -> jsoncons::json {
      auto serialized_method = jsoncons::json::null();
 
      auto rvol_method =
-      screener_method_cast<screener::RvolMethod>(screener_method);
+      any_method_cast<screener::RvolMethod>(any_method);
 
      if(rvol_method) {
        serialized_method = jsoncons::json{};
@@ -874,11 +874,11 @@ auto make_default_registered_config_parser(
   config_parser.register_method_parser(
    "REFERENCE",
    [](const ConfigParser& config_parser,
-      const screener::ScreenerMethod screener_method) -> jsoncons::json {
+      const screener::AnyMethod any_method) -> jsoncons::json {
      auto serialized_method = jsoncons::json::null();
 
      auto reference_method =
-      screener_method_cast<screener::ReferenceMethod<>>(screener_method);
+      any_method_cast<screener::ReferenceMethod<>>(any_method);
      if(reference_method) {
        serialized_method = jsoncons::json{};
        serialized_method["name"] = reference_method->name();
@@ -894,12 +894,12 @@ auto make_default_registered_config_parser(
   config_parser.register_method_parser(
    "LOOKBACK",
    [](const ConfigParser& config_parser,
-      const screener::ScreenerMethod screener_method) -> jsoncons::json {
+      const screener::AnyMethod any_method) -> jsoncons::json {
      auto serialized_method = jsoncons::json::null();
 
      auto lookback_method =
-      screener_method_cast<screener::LookbackMethod<screener::ScreenerMethod>>(
-       screener_method);
+      any_method_cast<screener::LookbackMethod<screener::AnyMethod>>(
+       any_method);
      if(lookback_method) {
        serialized_method = jsoncons::json{};
        serialized_method["period"] = lookback_method->period();
@@ -919,11 +919,11 @@ auto make_default_registered_config_parser(
   config_parser.register_method_parser(
    "SELECT_OUTPUT",
    [](const ConfigParser& config_parser,
-      const screener::ScreenerMethod screener_method) -> jsoncons::json {
+      const screener::AnyMethod any_method) -> jsoncons::json {
      auto serialized_method = jsoncons::json::null();
 
-     auto output_by_name_method = screener_method_cast<
-      screener::SelectOutputMethod<screener::ScreenerMethod>>(screener_method);
+     auto output_by_name_method = any_method_cast<
+      screener::SelectOutputMethod<screener::AnyMethod>>(any_method);
      if(output_by_name_method) {
        serialized_method = jsoncons::json{};
        serialized_method["name"] = [&]() -> std::string {
@@ -988,9 +988,9 @@ auto make_default_registered_config_parser(
   config_parser.register_method_parser(
    "ABS_DIFF",
    [](const ConfigParser& config_parser,
-      const screener::ScreenerMethod screener_method) -> jsoncons::json {
+      const screener::AnyMethod any_method) -> jsoncons::json {
      return serialize_binary_function_method<screener::AbsDiffMethod>(
-      config_parser, screener_method, "minuend", "subtrahend");
+      config_parser, any_method, "minuend", "subtrahend");
    },
    [](ConfigParser::Parser config_parser, const jsoncons::json& parameters) {
      return parse_binary_function_method<screener::AbsDiffMethod>(
@@ -1000,12 +1000,12 @@ auto make_default_registered_config_parser(
   config_parser.register_method_parser(
    "BB",
    [](const ConfigParser& config_parser,
-      const screener::ScreenerMethod screener_method) -> jsoncons::json {
+      const screener::AnyMethod any_method) -> jsoncons::json {
      auto serialized_method = jsoncons::json::null();
 
      auto bb_method =
-      screener_method_cast<screener::BbMethod<screener::ScreenerMethod>>(
-       screener_method);
+      any_method_cast<screener::BbMethod<screener::AnyMethod>>(
+       any_method);
      if(bb_method) {
        serialized_method = jsoncons::json{};
        serialized_method["maType"] =
@@ -1037,7 +1037,7 @@ auto make_default_registered_config_parser(
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser,
-      const jsoncons::json& parameters) -> screener::ScreenerMethod {
+      const jsoncons::json& parameters) -> screener::AnyMethod {
      auto ma_type = screener::BbMaType::Sma;
      const auto param_ma_type =
       get_param_or<std::string>(parameters, "maType", "SMA");
@@ -1072,12 +1072,12 @@ auto make_default_registered_config_parser(
   config_parser.register_method_parser(
    "MACD",
    [](const ConfigParser& config_parser,
-      const screener::ScreenerMethod screener_method) -> jsoncons::json {
+      const screener::AnyMethod any_method) -> jsoncons::json {
      auto serialized_method = jsoncons::json::null();
 
      auto macd_method =
-      screener_method_cast<screener::MacdMethod<screener::ScreenerMethod>>(
-       screener_method);
+      any_method_cast<screener::MacdMethod<screener::AnyMethod>>(
+       any_method);
      if(macd_method) {
        serialized_method = jsoncons::json{};
        serialized_method["fast"] = macd_method->fast_period();
@@ -1090,7 +1090,7 @@ auto make_default_registered_config_parser(
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser,
-      const jsoncons::json& parameters) -> screener::ScreenerMethod {
+      const jsoncons::json& parameters) -> screener::AnyMethod {
      const auto fast = get_param_or<std::size_t>(parameters, "fast", 12);
      const auto slow = get_param_or<std::size_t>(parameters, "slow", 26);
      const auto signal = get_param_or<std::size_t>(parameters, "signal", 9);
@@ -1105,11 +1105,11 @@ auto make_default_registered_config_parser(
   config_parser.register_method_parser(
    "STOCH",
    [](const ConfigParser& config_parser,
-      const screener::ScreenerMethod screener_method) -> jsoncons::json {
+      const screener::AnyMethod any_method) -> jsoncons::json {
      auto serialized_method = jsoncons::json::null();
 
      auto stoch_method =
-      screener_method_cast<screener::StochMethod>(screener_method);
+      any_method_cast<screener::StochMethod>(any_method);
      if(stoch_method) {
        serialized_method = jsoncons::json{};
        serialized_method["kPeriod"] = stoch_method->k_period();
@@ -1120,7 +1120,7 @@ auto make_default_registered_config_parser(
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser,
-      const jsoncons::json& parameters) -> screener::ScreenerMethod {
+      const jsoncons::json& parameters) -> screener::AnyMethod {
      const auto k_period = get_param_or<std::size_t>(parameters, "kPeriod", 5);
      const auto k_smooth = get_param_or<std::size_t>(parameters, "kSmooth", 3);
      const auto d_period = get_param_or<std::size_t>(parameters, "dPeriod", 3);
@@ -1133,12 +1133,12 @@ auto make_default_registered_config_parser(
   config_parser.register_method_parser(
    "STOCH_RSI",
    [](const ConfigParser& config_parser,
-      const screener::ScreenerMethod screener_method) -> jsoncons::json {
+      const screener::AnyMethod any_method) -> jsoncons::json {
      auto serialized_method = jsoncons::json::null();
 
      auto stoch_rsi_method =
-      screener_method_cast<screener::StochRsiMethod<screener::ScreenerMethod>>(
-       screener_method);
+      any_method_cast<screener::StochRsiMethod<screener::AnyMethod>>(
+       any_method);
      if(stoch_rsi_method) {
        serialized_method = jsoncons::json{};
        serialized_method["rsiSource"] =
@@ -1152,7 +1152,7 @@ auto make_default_registered_config_parser(
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser,
-      const jsoncons::json& parameters) -> screener::ScreenerMethod {
+      const jsoncons::json& parameters) -> screener::AnyMethod {
      const auto rsi_source_method = parse_method_from_param_or(
       config_parser, parameters, "rsiSource", screener::CloseMethod{});
      const auto rsi_period =
@@ -1169,9 +1169,9 @@ auto make_default_registered_config_parser(
   config_parser.register_method_parser(
    "ADD",
    [](const ConfigParser& config_parser,
-      const screener::ScreenerMethod& screener_method) -> jsoncons::json {
+      const screener::AnyMethod& any_method) -> jsoncons::json {
      return serialize_binary_function_method<screener::AddMethod>(
-      config_parser, screener_method, "augend", "addend");
+      config_parser, any_method, "augend", "addend");
    },
    [](ConfigParser::Parser config_parser, const jsoncons::json& parameters) {
      return parse_binary_function_method<screener::AddMethod>(
@@ -1180,9 +1180,9 @@ auto make_default_registered_config_parser(
   config_parser.register_method_parser(
    "SUBTRACT",
    [](const ConfigParser& config_parser,
-      const screener::ScreenerMethod& screener_method) -> jsoncons::json {
+      const screener::AnyMethod& any_method) -> jsoncons::json {
      return serialize_binary_function_method<screener::SubtractMethod>(
-      config_parser, screener_method, "minuend", "subtrahend");
+      config_parser, any_method, "minuend", "subtrahend");
    },
    [](ConfigParser::Parser config_parser, const jsoncons::json& parameters) {
      return parse_binary_function_method<screener::SubtractMethod>(
@@ -1191,9 +1191,9 @@ auto make_default_registered_config_parser(
   config_parser.register_method_parser(
    "MULTIPLY",
    [](const ConfigParser& config_parser,
-      const screener::ScreenerMethod& screener_method) -> jsoncons::json {
+      const screener::AnyMethod& any_method) -> jsoncons::json {
      return serialize_binary_function_method<screener::MultiplyMethod>(
-      config_parser, screener_method, "multiplicand", "multiplier");
+      config_parser, any_method, "multiplicand", "multiplier");
    },
    [](ConfigParser::Parser config_parser, const jsoncons::json& parameters) {
      return parse_binary_function_method<screener::MultiplyMethod>(
@@ -1202,9 +1202,9 @@ auto make_default_registered_config_parser(
   config_parser.register_method_parser(
    "DIVIDE",
    [](const ConfigParser& config_parser,
-      const screener::ScreenerMethod& screener_method) -> jsoncons::json {
+      const screener::AnyMethod& any_method) -> jsoncons::json {
      return serialize_binary_function_method<screener::DivideMethod>(
-      config_parser, screener_method, "dividend", "divisor");
+      config_parser, any_method, "dividend", "divisor");
    },
    [](ConfigParser::Parser config_parser, const jsoncons::json& parameters) {
      return parse_binary_function_method<screener::DivideMethod>(
@@ -1213,9 +1213,9 @@ auto make_default_registered_config_parser(
   config_parser.register_method_parser(
    "NEGATE",
    [](const ConfigParser& config_parser,
-      const screener::ScreenerMethod& screener_method) -> jsoncons::json {
+      const screener::AnyMethod& any_method) -> jsoncons::json {
      return serialize_unary_function_method<screener::NegateMethod>(
-      config_parser, screener_method, "operand");
+      config_parser, any_method, "operand");
    },
    [](ConfigParser::Parser config_parser, const jsoncons::json& parameters) {
      return parse_unary_function_method<screener::NegateMethod>(
@@ -1224,9 +1224,9 @@ auto make_default_registered_config_parser(
   config_parser.register_method_parser(
    "PERCENTAGE",
    [](const ConfigParser& config_parser,
-      const screener::ScreenerMethod& screener_method) -> jsoncons::json {
+      const screener::AnyMethod& any_method) -> jsoncons::json {
      return serialize_binary_function_method<screener::PercentageMethod>(
-      config_parser, screener_method, "total", "percent");
+      config_parser, any_method, "total", "percent");
    },
    [](ConfigParser::Parser config_parser, const jsoncons::json& parameters) {
      return parse_binary_function_method<screener::PercentageMethod>(

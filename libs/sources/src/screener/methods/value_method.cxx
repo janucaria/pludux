@@ -12,13 +12,11 @@ import :screener.method_output;
 
 export namespace pludux::screener {
 
-template<typename TResult = double>
-  requires std::numeric_limits<TResult>::has_quiet_NaN
 class ValueMethod {
 public:
-  using ResultType = TResult;
+  using ResultType = double;
 
-  explicit ValueMethod(TResult value)
+  explicit ValueMethod(ResultType value)
   : value_{value}
   {
   }
@@ -36,7 +34,8 @@ public:
   auto operator()(this auto self,
                   AssetSnapshot asset_data,
                   MethodOutput output_name,
-                  MethodCallContext<ResultType> auto context) noexcept -> double
+                  MethodCallContext<ResultType> auto context) noexcept
+   -> ResultType
   {
     return std::numeric_limits<ResultType>::quiet_NaN();
   }
