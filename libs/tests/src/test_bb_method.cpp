@@ -56,7 +56,7 @@ TEST(BbMethodTest, RunAllMethod)
   EXPECT_TRUE(std::isnan(middle_band(asset_snapshot[9], context)));
 
   const auto upper_band =
-   SelectOutputMethod{middle_band, MethodOutput::UpperBand};
+   SelectOutputMethod{middle_band, SeriesOutput::UpperBand};
   EXPECT_DOUBLE_EQ(upper_band(asset_snapshot[0], context), 875.56465996625059);
   EXPECT_DOUBLE_EQ(upper_band(asset_snapshot[1], context), 877.64911064067348);
   EXPECT_DOUBLE_EQ(upper_band(asset_snapshot[2], context), 887.5680975041804);
@@ -69,7 +69,7 @@ TEST(BbMethodTest, RunAllMethod)
   EXPECT_TRUE(std::isnan(upper_band(asset_snapshot[9], context)));
 
   const auto lower_band =
-   SelectOutputMethod{middle_band, MethodOutput::LowerBand};
+   SelectOutputMethod{middle_band, SeriesOutput::LowerBand};
   EXPECT_DOUBLE_EQ(lower_band(asset_snapshot[0], context), 848.43534003374941);
   EXPECT_DOUBLE_EQ(lower_band(asset_snapshot[1], context), 852.35088935932652);
   EXPECT_DOUBLE_EQ(lower_band(asset_snapshot[2], context), 832.4319024958196);

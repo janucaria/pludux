@@ -25,7 +25,7 @@ public:
   enum class Direction { long_direction, short_direction };
 
   Strategy(std::string name,
-           std::shared_ptr<MethodRegistry> method_registry,
+           std::shared_ptr<SeriesMethodRegistry> method_registry,
            AnySeriesMethod risk_method,
            AnyConditionMethod long_entry_filter,
            AnyConditionMethod long_exit_filter,
@@ -57,7 +57,7 @@ public:
   }
 
   auto method_registry(this const auto& self) noexcept
-   -> std::shared_ptr<MethodRegistry>
+   -> std::shared_ptr<SeriesMethodRegistry>
   {
     return self.method_registry_;
   }
@@ -220,7 +220,7 @@ public:
 private:
   std::string name_;
 
-  std::shared_ptr<MethodRegistry> method_registry_;
+  std::shared_ptr<SeriesMethodRegistry> method_registry_;
 
   AnySeriesMethod risk_method_;
 
@@ -338,7 +338,7 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
                                   std::istream& json_strategy_stream)
  -> backtest::Strategy
 {
-  auto method_registry = std::make_shared<MethodRegistry>();
+  auto method_registry = std::make_shared<SeriesMethodRegistry>();
   auto config_parser = make_default_registered_config_parser(method_registry);
 
   auto strategy_json = jsoncons::json::parse(

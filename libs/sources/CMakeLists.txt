@@ -31,13 +31,12 @@ target_sources(${PROJECT_NAME}
         src/asset_snapshot.cxx
 
         
-        src/series/method_output.cxx
-        src/series/method_contextable.cxx
+        src/series_output.cxx
+        src/method_contextable.cxx
+        src/any_method_context.cxx
 
-        src/series/any_method_context.cxx
         src/series/any_series_method.cxx
-        src/series/method_registry.cxx
-        src/series/default_method_context.cxx
+        src/series/series_method_registry.cxx
 
         src/series/value_method.cxx
         src/series/data_method.cxx
@@ -70,9 +69,6 @@ target_sources(${PROJECT_NAME}
 
         src/series/stoch_method.cxx
         src/series/stoch_rsi_method.cxx
-        
-        # src/series/bullish_divergence_method.cxx
-        # src/series/hidden_bullish_divergence_method.cxx
         src/series.cxx
 
         
@@ -87,6 +83,7 @@ target_sources(${PROJECT_NAME}
         src/conditions.cxx
 
         
+        src/default_method_context.cxx
         src/config_parser.cxx
 
         src/pludux.cxx

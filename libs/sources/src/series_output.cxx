@@ -1,10 +1,10 @@
 module;
 
-export module pludux:series.method_output;
+export module pludux:series_output;
 
 export namespace pludux {
 
-enum class MethodOutput {
+enum class SeriesOutput {
   UpperBand,
   MiddleBand,
   LowerBand,

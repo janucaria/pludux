@@ -10,8 +10,8 @@ module;
 export module pludux:series.kc_method;
 
 import :asset_snapshot;
-import :series.method_contextable;
-import :series.method_output;
+import :method_contextable;
+import :series_output;
 
 import :series.ohlcv_method;
 import :series.ema_method;
@@ -44,12 +44,12 @@ public:
                   MethodContextable auto context) noexcept
    -> ResultType
   {
-    return self(asset_data, MethodOutput::MiddleBand, context);
+    return self(asset_data, SeriesOutput::MiddleBand, context);
   }
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
-                  MethodOutput output,
+                  SeriesOutput output,
                   MethodContextable auto context) noexcept
    -> ResultType
   {
@@ -57,11 +57,11 @@ public:
     const auto middle = self.ma_(asset_data, context);
 
     switch(output) {
-    case MethodOutput::MiddleBand:
+    case SeriesOutput::MiddleBand:
       return middle;
-    case MethodOutput::UpperBand:
+    case SeriesOutput::UpperBand:
       return middle + range;
-    case MethodOutput::LowerBand:
+    case SeriesOutput::LowerBand:
       return middle - range;
     default:
       return std::numeric_limits<double>::quiet_NaN();

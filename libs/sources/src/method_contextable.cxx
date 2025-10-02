@@ -4,10 +4,10 @@ module;
 #include <string>
 #include <variant>
 
-export module pludux:series.method_contextable;
+export module pludux:method_contextable;
 
 import :asset_snapshot;
-import :series.method_output;
+import :series_output;
 
 export namespace pludux {
 
@@ -17,12 +17,12 @@ concept MethodContextable =
  requires(TContext context,
           const std::string& name,
           AssetSnapshot asset_snapshot,
-          MethodOutput output) {
+          SeriesOutput output) {
    {
-     context.dispatch_call(name, asset_snapshot)
+     context.call_series_method(name, asset_snapshot)
    } -> std::convertible_to<double>;
    {
-     context.dispatch_call(name, asset_snapshot, output)
+     context.call_series_method(name, asset_snapshot, output)
    } -> std::convertible_to<double>;
  };
 

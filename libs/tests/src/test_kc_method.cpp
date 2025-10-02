@@ -31,7 +31,7 @@ TEST(KcMethodTest, middle_EMA_range_ATR)
   EXPECT_TRUE(std::isnan(kc_middle(asset_snapshot[8], context)));
   EXPECT_TRUE(std::isnan(kc_middle(asset_snapshot[9], context)));
 
-  const auto kc_upper = SelectOutputMethod{kc_middle, MethodOutput::UpperBand};
+  const auto kc_upper = SelectOutputMethod{kc_middle, SeriesOutput::UpperBand};
   EXPECT_DOUBLE_EQ(kc_upper(asset_snapshot[0], context), 913.68584677613819);
   EXPECT_DOUBLE_EQ(kc_upper(asset_snapshot[1], context), 923.57289858217598);
   EXPECT_DOUBLE_EQ(kc_upper(asset_snapshot[2], context), 934.41818576388891);
@@ -43,7 +43,7 @@ TEST(KcMethodTest, middle_EMA_range_ATR)
   EXPECT_TRUE(std::isnan(kc_upper(asset_snapshot[8], context)));
   EXPECT_TRUE(std::isnan(kc_upper(asset_snapshot[9], context)));
 
-  const auto kc_lower = SelectOutputMethod{kc_upper, MethodOutput::LowerBand};
+  const auto kc_lower = SelectOutputMethod{kc_upper, SeriesOutput::LowerBand};
   EXPECT_DOUBLE_EQ(kc_lower(asset_snapshot[0], context), 800.21538779176319);
   EXPECT_DOUBLE_EQ(kc_lower(asset_snapshot[1], context), 792.27895326967598);
   EXPECT_DOUBLE_EQ(kc_lower(asset_snapshot[2], context), 779.35959201388891);
@@ -82,7 +82,7 @@ TEST(KcMethodTest, middle_SMA_range_Range)
   EXPECT_TRUE(std::isnan(kc_middle(asset_snapshot[8], context)));
   EXPECT_TRUE(std::isnan(kc_middle(asset_snapshot[9], context)));
 
-  const auto kc_upper = SelectOutputMethod{kc_middle, MethodOutput::UpperBand};
+  const auto kc_upper = SelectOutputMethod{kc_middle, SeriesOutput::UpperBand};
   EXPECT_DOUBLE_EQ(kc_upper(asset_snapshot[0], context), 894.18784000000005);
   EXPECT_DOUBLE_EQ(kc_upper(asset_snapshot[1], context), 901.48479999999995);
   EXPECT_DOUBLE_EQ(kc_upper(asset_snapshot[2], context), 901.85599999999999);
@@ -94,7 +94,7 @@ TEST(KcMethodTest, middle_SMA_range_Range)
   EXPECT_TRUE(std::isnan(kc_upper(asset_snapshot[8], context)));
   EXPECT_TRUE(std::isnan(kc_upper(asset_snapshot[9], context)));
 
-  const auto kc_lower = SelectOutputMethod{kc_middle, MethodOutput::LowerBand};
+  const auto kc_lower = SelectOutputMethod{kc_middle, SeriesOutput::LowerBand};
   EXPECT_DOUBLE_EQ(kc_lower(asset_snapshot[0], context), 829.81215999999995);
   EXPECT_DOUBLE_EQ(kc_lower(asset_snapshot[1], context), 828.51520000000005);
   EXPECT_DOUBLE_EQ(kc_lower(asset_snapshot[2], context), 818.14400000000001);

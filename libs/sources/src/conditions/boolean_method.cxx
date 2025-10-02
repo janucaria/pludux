@@ -1,7 +1,7 @@
 export module pludux:conditions.boolean_method;
 
 import :asset_snapshot;
-import :series.method_contextable;
+import :method_contextable;
 
 namespace pludux {
 

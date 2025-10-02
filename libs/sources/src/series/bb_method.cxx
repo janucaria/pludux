@@ -10,8 +10,8 @@ module;
 export module pludux:series.bb_method;
 
 import :asset_snapshot;
-import :series.method_contextable;
-import :series.method_output;
+import :method_contextable;
+import :series_output;
 
 import :series.sma_method;
 import :series.ema_method;
@@ -59,12 +59,12 @@ public:
                   MethodContextable auto context) noexcept
    -> ResultType
   {
-    return self(asset_snapshot, MethodOutput::MiddleBand, context);
+    return self(asset_snapshot, SeriesOutput::MiddleBand, context);
   }
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_snapshot,
-                  MethodOutput output,
+                  SeriesOutput output,
                   MethodContextable auto context) noexcept
    -> ResultType
   {
@@ -108,11 +108,11 @@ public:
     const auto lower = middle - std_dev_scaled;
 
     switch(output) {
-    case MethodOutput::MiddleBand:
+    case SeriesOutput::MiddleBand:
       return middle;
-    case MethodOutput::UpperBand:
+    case SeriesOutput::UpperBand:
       return upper;
-    case MethodOutput::LowerBand:
+    case SeriesOutput::LowerBand:
       return lower;
     default:
       return std::numeric_limits<ResultType>::quiet_NaN();

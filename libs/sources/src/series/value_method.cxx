@@ -7,8 +7,8 @@ module;
 export module pludux:series.value_method;
 
 import :asset_snapshot;
-import :series.method_contextable;
-import :series.method_output;
+import :method_contextable;
+import :series_output;
 
 export namespace pludux {
 
@@ -33,7 +33,7 @@ public:
 
   auto operator()(this auto self,
                   AssetSnapshot asset_data,
-                  MethodOutput output_name,
+                  SeriesOutput output_name,
                   MethodContextable auto context) noexcept
    -> ResultType
   {

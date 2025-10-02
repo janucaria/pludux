@@ -10,8 +10,8 @@ module;
 export module pludux:series.rsi_method;
 
 import :asset_snapshot;
-import :series.method_contextable;
-import :series.method_output;
+import :method_contextable;
+import :series_output;
 
 import :series.change_method;
 import :series.rma_method;
@@ -66,7 +66,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_snapshot,
-                  MethodOutput output,
+                  SeriesOutput output,
                   MethodContextable auto context) noexcept
    -> ResultType
   {

@@ -6,24 +6,24 @@ using namespace pludux;
 
 TEST(AnyConditionMethodTest, RunOneMethod)
 {
-  const auto equal_filter = EqualMethod{ValueMethod{1.0}, ValueMethod{1.0}};
-  const auto condition_method = AnyConditionMethod{equal_filter};
+  const auto equal_condition = EqualMethod{ValueMethod{1.0}, ValueMethod{1.0}};
+  const auto condition_method = AnyConditionMethod{equal_condition};
   const auto asset_data = AssetHistory{{"close", {0}}};
   const auto context = AnySeriesMethodContext{};
 
   const auto result = condition_method(asset_data, context);
   EXPECT_TRUE(result);
 
-  const auto casted_filter = condition_method_cast<EqualMethod>(condition_method);
-  ASSERT_NE(casted_filter, nullptr);
+  const auto casted_condition = condition_method_cast<EqualMethod>(condition_method);
+  ASSERT_NE(casted_condition, nullptr);
 }
 
 TEST(AnyConditionMethodTest, EqualityOperator)
 {
-  const auto filter1 = TrueMethod{};
-  const auto filter2 = TrueMethod{};
-  const auto condition_method1 = AnyConditionMethod{filter1};
-  const auto condition_method2 = AnyConditionMethod{filter2};
+  const auto condition1 = TrueMethod{};
+  const auto condition2 = TrueMethod{};
+  const auto condition_method1 = AnyConditionMethod{condition1};
+  const auto condition_method2 = AnyConditionMethod{condition2};
 
   EXPECT_TRUE(condition_method1 == condition_method2);
   EXPECT_FALSE(condition_method1 != condition_method2);
@@ -32,10 +32,10 @@ TEST(AnyConditionMethodTest, EqualityOperator)
 
 TEST(AnyConditionMethodTest, NotEqualOperator)
 {
-  const auto filter1 = TrueMethod{};
-  const auto filter2 = FalseMethod{};
-  const auto condition_method1 = AnyConditionMethod{filter1};
-  const auto condition_method2 = AnyConditionMethod{filter2};
+  const auto condition1 = TrueMethod{};
+  const auto condition2 = FalseMethod{};
+  const auto condition_method1 = AnyConditionMethod{condition1};
+  const auto condition_method2 = AnyConditionMethod{condition2};
 
   EXPECT_TRUE(condition_method1 != condition_method2);
   EXPECT_FALSE(condition_method1 == condition_method2);

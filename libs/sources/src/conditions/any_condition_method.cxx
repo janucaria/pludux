@@ -8,7 +8,7 @@ module;
 export module pludux:conditions.any_condition_method;
 
 import :asset_snapshot;
-import :series.any_method_context;
+import :any_method_context;
 
 export namespace pludux {
 

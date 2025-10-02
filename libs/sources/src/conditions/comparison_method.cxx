@@ -7,7 +7,7 @@ module;
 export module pludux:conditions.comparison_method;
 
 import :asset_snapshot;
-import :series.method_contextable;
+import :method_contextable;
 
 import :conditions.any_condition_method;
 import :series.any_series_method;

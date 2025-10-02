@@ -212,7 +212,7 @@ private:
 };
 
 auto make_default_registered_config_parser(
- std::shared_ptr<MethodRegistry> method_registry = nullptr) -> ConfigParser;
+ std::shared_ptr<SeriesMethodRegistry> method_registry = nullptr) -> ConfigParser;
 
 } // namespace pludux
 
@@ -728,7 +728,7 @@ static auto serialize_crossover_filter(const ConfigParser& config_parser,
 }
 
 auto make_default_registered_config_parser(
- std::shared_ptr<MethodRegistry> method_registry) -> ConfigParser
+ std::shared_ptr<SeriesMethodRegistry> method_registry) -> ConfigParser
 {
   ConfigParser config_parser;
 
@@ -893,21 +893,21 @@ auto make_default_registered_config_parser(
        serialized_method = jsoncons::json{};
        serialized_method["name"] = [&]() -> std::string {
          switch(output_by_name_method->output()) {
-         case MethodOutput::MacdLine:
+         case SeriesOutput::MacdLine:
            return "macd-line";
-         case MethodOutput::SignalLine:
+         case SeriesOutput::SignalLine:
            return "signal-line";
-         case MethodOutput::Histogram:
+         case SeriesOutput::Histogram:
            return "histogram";
-         case MethodOutput::KPercent:
+         case SeriesOutput::KPercent:
            return "k-percent";
-         case MethodOutput::DPercent:
+         case SeriesOutput::DPercent:
            return "d-percent";
-         case MethodOutput::MiddleBand:
+         case SeriesOutput::MiddleBand:
            return "middle-band";
-         case MethodOutput::UpperBand:
+         case SeriesOutput::UpperBand:
            return "upper-band";
-         case MethodOutput::LowerBand:
+         case SeriesOutput::LowerBand:
            return "lower-band";
          default:
            return "default";
@@ -922,25 +922,25 @@ auto make_default_registered_config_parser(
    },
    [](ConfigParser::Parser config_parser, const jsoncons::json& parameters) {
      const auto name = get_param_or<std::string>(parameters, "name", "default");
-     const auto output = [&]() -> MethodOutput {
+     const auto output = [&]() -> SeriesOutput {
        if(name == "macd-line") {
-         return MethodOutput::MacdLine;
+         return SeriesOutput::MacdLine;
        } else if(name == "signal-line") {
-         return MethodOutput::SignalLine;
+         return SeriesOutput::SignalLine;
        } else if(name == "histogram") {
-         return MethodOutput::Histogram;
+         return SeriesOutput::Histogram;
        } else if(name == "k-percent") {
-         return MethodOutput::KPercent;
+         return SeriesOutput::KPercent;
        } else if(name == "d-percent") {
-         return MethodOutput::DPercent;
+         return SeriesOutput::DPercent;
        } else if(name == "middle-band") {
-         return MethodOutput::MiddleBand;
+         return SeriesOutput::MiddleBand;
        } else if(name == "upper-band") {
-         return MethodOutput::UpperBand;
+         return SeriesOutput::UpperBand;
        } else if(name == "lower-band") {
-         return MethodOutput::LowerBand;
+         return SeriesOutput::LowerBand;
        } else {
-         return static_cast<MethodOutput>(-1);
+         return static_cast<SeriesOutput>(-1);
        }
      }();
 

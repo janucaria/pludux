@@ -14,7 +14,7 @@ TEST(ReferenceMethodTest, RunAllMethodClose)
    AssetHistory{{"Open", {4.0, 4.1, 4.2}}, {"Close", {1.0, 1.1, 1.2}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  auto registry = MethodRegistry{};
+  auto registry = SeriesMethodRegistry{};
   registry.set("open", open_method);
   registry.set("close", close_method);
 
@@ -37,7 +37,7 @@ TEST(ReferenceMethodTest, InvalidField)
   const auto asset_data = AssetHistory{{"Close", {4.0, 4.1, 4.2}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  auto registry = MethodRegistry{};
+  auto registry = SeriesMethodRegistry{};
   registry.set("close", close_method);
 
   auto context = DefaultMethodContext{registry};

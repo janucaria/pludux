@@ -11,8 +11,8 @@ module;
 export module pludux:series.operators_method;
 
 import :asset_snapshot;
-import :series.method_contextable;
-import :series.method_output;
+import :method_contextable;
+import :series_output;
 
 namespace pludux {
 
@@ -47,7 +47,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
-                  MethodOutput output,
+                  SeriesOutput output,
                   MethodContextable auto context) noexcept
    -> ResultType
   {
@@ -103,7 +103,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
-                  MethodOutput output,
+                  SeriesOutput output,
                   MethodContextable auto context) noexcept
    -> ResultType
   {

@@ -5,8 +5,8 @@ module;
 export module pludux:series.select_output_method;
 
 import :asset_snapshot;
-import :series.method_contextable;
-import :series.method_output;
+import :method_contextable;
+import :series_output;
 
 export namespace pludux {
 
@@ -16,7 +16,7 @@ class SelectOutputMethod {
 public:
   using ResultType = TSourceMethod::ResultType;
 
-  SelectOutputMethod(TSourceMethod source, MethodOutput output)
+  SelectOutputMethod(TSourceMethod source, SeriesOutput output)
   : source_{std::move(source)}
   , output_{output}
   {
@@ -25,7 +25,7 @@ public:
   template<typename UMethod>
     requires requires { typename UMethod::ResultType; }
   SelectOutputMethod(const SelectOutputMethod<UMethod>& other,
-                     MethodOutput output)
+                     SeriesOutput output)
   : SelectOutputMethod{other.source(), output}
   {
   }
@@ -43,7 +43,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
-                  MethodOutput output,
+                  SeriesOutput output,
                   MethodContextable auto context) noexcept
    -> ResultType
   {
@@ -60,24 +60,24 @@ public:
     self.source_ = std::move(source);
   }
 
-  auto output(this const auto& self) noexcept -> MethodOutput
+  auto output(this const auto& self) noexcept -> SeriesOutput
   {
     return self.output_;
   }
 
-  void output(this auto& self, MethodOutput output_name) noexcept
+  void output(this auto& self, SeriesOutput output_name) noexcept
   {
     self.output_ = std::move(output_name);
   }
 
 private:
   TSourceMethod source_;
-  MethodOutput output_;
+  SeriesOutput output_;
 };
 
 template<typename UMethod>
   requires requires { typename UMethod::ResultType; }
 SelectOutputMethod(const SelectOutputMethod<UMethod>& other,
-                   MethodOutput output) -> SelectOutputMethod<UMethod>;
+                   SeriesOutput output) -> SelectOutputMethod<UMethod>;
 
 } // namespace pludux

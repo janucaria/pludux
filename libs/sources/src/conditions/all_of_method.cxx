@@ -9,7 +9,7 @@ module;
 export module pludux:conditions.all_of_method;
 
 import :asset_snapshot;
-import :series.method_contextable;
+import :method_contextable;
 import :conditions.any_condition_method;
 
 export namespace pludux {
@@ -18,8 +18,8 @@ class AllOfMethod {
 public:
   AllOfMethod() = default;
 
-  explicit AllOfMethod(std::vector<AnyConditionMethod> filters)
-  : conditions_{std::move(filters)}
+  explicit AllOfMethod(std::vector<AnyConditionMethod> conditions)
+  : conditions_{std::move(conditions)}
   {
   }
 
@@ -30,8 +30,8 @@ public:
                   MethodContextable auto context) -> bool
   {
     return std::ranges::all_of(self.conditions_,
-                               [&asset_snapshot, &context](const auto& filter) {
-                                 return filter(asset_snapshot, context);
+                               [&asset_snapshot, &context](const auto& condition) {
+                                 return condition(asset_snapshot, context);
                                });
   }
 

@@ -6,10 +6,10 @@ module;
 #include <string>
 #include <type_traits>
 
-export module pludux:series.any_method_context;
+export module pludux:any_method_context;
 
 import :asset_snapshot;
-import :series.method_output;
+import :series_output;
 
 export namespace pludux {
 
@@ -28,22 +28,23 @@ public:
   {
   }
 
-  auto dispatch_call(this const auto& self,
-                     const std::string& name,
-                     AssetSnapshot asset_snapshot) noexcept
+  auto call_series_method(this const auto& self,
+                          const std::string& name,
+                          AssetSnapshot asset_snapshot) noexcept
    -> DispatchResultType
   {
     return self.impl_
-            ? self.impl_->dispatch_call(name, std::move(asset_snapshot))
+            ? self.impl_->call_series_method(name, std::move(asset_snapshot))
             : std::numeric_limits<DispatchResultType>::quiet_NaN();
   }
 
-  auto dispatch_call(this const auto& self,
-                     const std::string& name,
-                     AssetSnapshot asset_snapshot,
-                     MethodOutput output_name) noexcept -> DispatchResultType
+  auto call_series_method(this const auto& self,
+                          const std::string& name,
+                          AssetSnapshot asset_snapshot,
+                          SeriesOutput output_name) noexcept
+   -> DispatchResultType
   {
-    return self.impl_ ? self.impl_->dispatch_call(
+    return self.impl_ ? self.impl_->call_series_method(
                          name, std::move(asset_snapshot), output_name)
                       : std::numeric_limits<DispatchResultType>::quiet_NaN();
   }
@@ -61,13 +62,13 @@ private:
   struct ImplConcept {
     virtual ~ImplConcept() = default;
 
-    virtual auto dispatch_call(const std::string& name,
-                               AssetSnapshot asset_snapshot) const noexcept
+    virtual auto call_series_method(const std::string& name,
+                                    AssetSnapshot asset_snapshot) const noexcept
      -> DispatchResultType = 0;
 
-    virtual auto dispatch_call(const std::string& name,
-                               AssetSnapshot asset_snapshot,
-                               MethodOutput output_name) const noexcept
+    virtual auto call_series_method(const std::string& name,
+                                    AssetSnapshot asset_snapshot,
+                                    SeriesOutput output_name) const noexcept
      -> DispatchResultType = 0;
   };
 
@@ -80,19 +81,20 @@ private:
     {
     }
 
-    auto dispatch_call(const std::string& name,
-                       AssetSnapshot asset_snapshot) const noexcept
+    auto call_series_method(const std::string& name,
+                            AssetSnapshot asset_snapshot) const noexcept
      -> DispatchResultType override
     {
-      return impl.dispatch_call(name, std::move(asset_snapshot));
+      return impl.call_series_method(name, std::move(asset_snapshot));
     }
 
-    auto dispatch_call(const std::string& name,
-                       AssetSnapshot asset_snapshot,
-                       MethodOutput output_name) const noexcept
+    auto call_series_method(const std::string& name,
+                            AssetSnapshot asset_snapshot,
+                            SeriesOutput output_name) const noexcept
      -> DispatchResultType override
     {
-      return impl.dispatch_call(name, std::move(asset_snapshot), output_name);
+      return impl.call_series_method(
+       name, std::move(asset_snapshot), output_name);
     }
   };
 

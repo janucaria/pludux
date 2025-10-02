@@ -7,8 +7,8 @@ module;
 export module pludux:series.macd_method;
 
 import :asset_snapshot;
-import :series.method_contextable;
-import :series.method_output;
+import :method_contextable;
+import :series_output;
 
 import :series.ema_method;
 import :series.operators_method;
@@ -51,12 +51,12 @@ public:
                   MethodContextable auto context) noexcept
    -> ResultType
   {
-    return self(asset_snapshot, MethodOutput::MacdLine, context);
+    return self(asset_snapshot, SeriesOutput::MacdLine, context);
   }
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_snapshot,
-                  MethodOutput output,
+                  SeriesOutput output,
                   MethodContextable auto context) noexcept
    -> ResultType
   {
@@ -70,11 +70,11 @@ public:
     const auto histogram = macd - signal;
 
     switch(output) {
-    case MethodOutput::MacdLine:
+    case SeriesOutput::MacdLine:
       return macd;
-    case MethodOutput::SignalLine:
+    case SeriesOutput::SignalLine:
       return signal;
-    case MethodOutput::Histogram:
+    case SeriesOutput::Histogram:
       return histogram;
     default:
       return std::numeric_limits<ResultType>::quiet_NaN();

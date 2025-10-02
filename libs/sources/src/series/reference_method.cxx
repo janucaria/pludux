@@ -9,8 +9,8 @@ module;
 export module pludux:series.reference_method;
 
 import :asset_snapshot;
-import :series.method_contextable;
-import :series.method_output;
+import :method_contextable;
+import :series_output;
 
 export namespace pludux {
 
@@ -30,26 +30,24 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     if constexpr(std::is_same_v<std::monostate, decltype(context)>) {
       return std::numeric_limits<ResultType>::quiet_NaN();
     } else {
-      return context.dispatch_call(self.name(), asset_data);
+      return context.call_series_method(self.name(), asset_data);
     }
   }
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
-                  MethodOutput output_name,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  SeriesOutput output_name,
+                  MethodContextable auto context) noexcept -> ResultType
   {
     if constexpr(std::is_same_v<std::monostate, decltype(context)>) {
       return std::numeric_limits<ResultType>::quiet_NaN();
     } else {
-      return context.dispatch_call(self.name(), asset_data, output_name);
+      return context.call_series_method(self.name(), asset_data, output_name);
     }
   }
 

@@ -12,11 +12,11 @@ TEST(CrossoverMethodTest, ReferenceMethod)
   const auto reference_value = 50.0;
   auto signal_method = ValueMethod{signal_value};
   auto reference_method = ValueMethod{reference_value};
-  const auto filter =
+  const auto condition =
    CrossoverMethod{std::move(signal_method), std::move(reference_method)};
   const auto asset_data = AssetHistory{{"close", {0}}};
 
-  EXPECT_EQ(filter.reference()(asset_data, context), reference_value);
+  EXPECT_EQ(condition.reference()(asset_data, context), reference_value);
 }
 
 TEST(CrossoverMethodTest, SignalMethod)
@@ -25,65 +25,65 @@ TEST(CrossoverMethodTest, SignalMethod)
   const auto reference_value = 50.0;
   auto signal_method = ValueMethod{signal_value};
   auto reference_method = ValueMethod{reference_value};
-  const auto filter =
+  const auto condition =
    CrossoverMethod{std::move(signal_method), std::move(reference_method)};
   const auto asset_data = AssetHistory{{"close", {0}}};
 
-  EXPECT_EQ(filter.signal()(asset_data, context), signal_value);
+  EXPECT_EQ(condition.signal()(asset_data, context), signal_value);
 }
 
 TEST(CrossoverMethodTest, CrossoverConditionMet)
 {
   auto signal_method = DataMethod{"close"};
   auto reference_method = ValueMethod{50.0};
-  const auto crossover_filter =
+  const auto crossover_condition =
    CrossoverMethod{std::move(signal_method), std::move(reference_method)};
   const auto asset_data = AssetHistory{{"close", {60, 50}}};
 
-  EXPECT_TRUE(crossover_filter(asset_data, context));
+  EXPECT_TRUE(crossover_condition(asset_data, context));
 }
 
 TEST(CrossoverMethodTest, CrossoverConditionNotMet)
 {
   auto signal_method = DataMethod{"close"};
   auto reference_method = ValueMethod{50.0};
-  const auto crossover_filter =
+  const auto crossover_condition =
    CrossoverMethod{std::move(signal_method), std::move(reference_method)};
   const auto asset_data = AssetHistory{{"close", {50, 40}}};
 
-  EXPECT_FALSE(crossover_filter(asset_data, context));
+  EXPECT_FALSE(crossover_condition(asset_data, context));
 }
 
 TEST(CrossoverMethodTest, EqualityOperator)
 {
   auto signal_method1 = DataMethod{"close"};
   auto reference_method1 = ValueMethod{50.0};
-  const auto crossover_filter1 =
+  const auto crossover_condition1 =
    CrossoverMethod{std::move(signal_method1), std::move(reference_method1)};
 
   auto signal_method2 = DataMethod{"close"};
   auto reference_method2 = ValueMethod{50.0};
-  const auto crossover_filter2 =
+  const auto crossover_condition2 =
    CrossoverMethod{std::move(signal_method2), std::move(reference_method2)};
 
-  EXPECT_TRUE(crossover_filter1 == crossover_filter2);
-  EXPECT_FALSE(crossover_filter1 != crossover_filter2);
-  EXPECT_EQ(crossover_filter1, crossover_filter2);
+  EXPECT_TRUE(crossover_condition1 == crossover_condition2);
+  EXPECT_FALSE(crossover_condition1 != crossover_condition2);
+  EXPECT_EQ(crossover_condition1, crossover_condition2);
 }
 
 TEST(CrossoverMethodTest, NotEqualOperator)
 {
   auto signal_method1 = DataMethod{"close"};
   auto reference_method1 = ValueMethod{50.0};
-  const auto crossover_filter1 =
+  const auto crossover_condition1 =
    CrossoverMethod{std::move(signal_method1), std::move(reference_method1)};
 
   auto signal_method2 = DataMethod{"close"};
   auto reference_method2 = ValueMethod{60.0};
-  const auto crossover_filter2 =
+  const auto crossover_condition2 =
    CrossoverMethod{std::move(signal_method2), std::move(reference_method2)};
 
-  EXPECT_TRUE(crossover_filter1 != crossover_filter2);
-  EXPECT_FALSE(crossover_filter1 == crossover_filter2);
-  EXPECT_NE(crossover_filter1, crossover_filter2);
+  EXPECT_TRUE(crossover_condition1 != crossover_condition2);
+  EXPECT_FALSE(crossover_condition1 == crossover_condition2);
+  EXPECT_NE(crossover_condition1, crossover_condition2);
 }

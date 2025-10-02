@@ -51,7 +51,7 @@ TEST(StochRsiMethodTest, RunAllMethod)
   EXPECT_TRUE(std::isnan(result_k(asset_snapshot[13], context)));
   EXPECT_TRUE(std::isnan(result_k(asset_snapshot[14], context)));
 
-  const auto result_d = SelectOutputMethod{result_k, MethodOutput::DPercent};
+  const auto result_d = SelectOutputMethod{result_k, SeriesOutput::DPercent};
   EXPECT_DOUBLE_EQ(result_d(asset_snapshot[0], context), 12.5);
   EXPECT_DOUBLE_EQ(result_d(asset_snapshot[1], context), 25);
   EXPECT_DOUBLE_EQ(result_d(asset_snapshot[2], context), 25);

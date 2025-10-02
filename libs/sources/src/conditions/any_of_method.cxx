@@ -7,7 +7,7 @@ module;
 export module pludux:conditions.any_of_method;
 
 import :asset_snapshot;
-import :series.method_contextable;
+import :method_contextable;
 import :conditions.any_condition_method;
 
 export namespace pludux {
@@ -26,8 +26,8 @@ public:
                   MethodContextable auto context) -> bool
   {
     return std::ranges::any_of(self.conditions_,
-                               [&asset_data, &context](const auto& filter) {
-                                 return filter(asset_data, context);
+                               [&asset_data, &context](const auto& condition) {
+                                 return condition(asset_data, context);
                                });
   }
 

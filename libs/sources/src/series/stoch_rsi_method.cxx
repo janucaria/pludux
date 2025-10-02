@@ -9,8 +9,8 @@ module;
 export module pludux:series.stoch_rsi_method;
 
 import :asset_snapshot;
-import :series.method_contextable;
-import :series.method_output;
+import :method_contextable;
+import :series_output;
 
 import :series.rsi_method;
 import :series.sma_method;
@@ -57,12 +57,12 @@ public:
                   MethodContextable auto context) noexcept
    -> ResultType
   {
-    return self(asset_snapshot, MethodOutput::KPercent, context);
+    return self(asset_snapshot, SeriesOutput::KPercent, context);
   }
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_snapshot,
-                  MethodOutput output,
+                  SeriesOutput output,
                   MethodContextable auto context) noexcept
    -> ResultType
   {
@@ -81,9 +81,9 @@ public:
     const auto k_percent = SmaMethod{stoch, self.k_smooth_};
 
     switch(output) {
-    case MethodOutput::KPercent:
+    case SeriesOutput::KPercent:
       return k_percent(asset_snapshot, context);
-    case MethodOutput::DPercent:
+    case SeriesOutput::DPercent:
       return SmaMethod{k_percent, self.d_period_}(asset_snapshot, context);
     default:
       return std::numeric_limits<ResultType>::quiet_NaN();

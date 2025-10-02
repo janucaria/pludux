@@ -4,17 +4,17 @@ module;
 #include <string>
 #include <unordered_map>
 
-export module pludux:series.method_registry;
+export module pludux:series.series_method_registry;
 
 import :series.any_series_method;
 
 export namespace pludux {
 
-class MethodRegistry {
+class SeriesMethodRegistry {
 public:
-  MethodRegistry() = default;
+  SeriesMethodRegistry() = default;
 
-  MethodRegistry(std::unordered_map<std::string, AnySeriesMethod> methods)
+  SeriesMethodRegistry(std::unordered_map<std::string, AnySeriesMethod> methods)
   : methods_{std::move(methods)}
   {
   }

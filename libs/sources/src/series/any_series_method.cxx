@@ -10,10 +10,10 @@ module;
 export module pludux:series.any_series_method;
 
 import :asset_snapshot;
-import :series.method_contextable;
-import :series.method_output;
+import :method_contextable;
+import :series_output;
 
-import :series.any_method_context;
+import :any_method_context;
 
 export namespace pludux {
 
@@ -39,7 +39,7 @@ public:
   }}
   , invoke_with_output_{[](const std::any& impl,
                            AssetSnapshot asset_snapshot,
-                           MethodOutput output,
+                           SeriesOutput output,
                            AnySeriesMethodContext context) static
                          -> typename UMethod::ResultType {
     auto* method = std::any_cast<UMethod>(&impl);
@@ -75,7 +75,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_snapshot,
-                  MethodOutput output,
+                  SeriesOutput output,
                   AnySeriesMethodContext context) -> ResultType
   {
     return self.invoke_with_output_(
@@ -115,7 +115,7 @@ private:
    invoke_;
 
   std::function<auto(
-                 const std::any&, AssetSnapshot, MethodOutput, AnySeriesMethodContext)
+                 const std::any&, AssetSnapshot, SeriesOutput, AnySeriesMethodContext)
                  ->ResultType>
    invoke_with_output_;
 

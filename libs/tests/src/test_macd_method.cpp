@@ -79,7 +79,7 @@ TEST(MacdMethodTest, RunAllMethod)
   EXPECT_TRUE(std::isnan(macd_line(asset_snapshot[9], context)));
 
   const auto signal_line =
-   SelectOutputMethod{macd_line, MethodOutput::SignalLine};
+   SelectOutputMethod{macd_line, SeriesOutput::SignalLine};
   EXPECT_DOUBLE_EQ(signal_line(asset_snapshot[0], context),
                    -8.2285071355347075);
   EXPECT_DOUBLE_EQ(signal_line(asset_snapshot[1], context),
@@ -100,7 +100,7 @@ TEST(MacdMethodTest, RunAllMethod)
   EXPECT_TRUE(std::isnan(signal_line(asset_snapshot[9], context)));
 
   const auto histograms =
-   SelectOutputMethod{macd_line, MethodOutput::Histogram};
+   SelectOutputMethod{macd_line, SeriesOutput::Histogram};
   EXPECT_DOUBLE_EQ(histograms(asset_snapshot[0], context), -4.4279018686028646);
   EXPECT_DOUBLE_EQ(histograms(asset_snapshot[1], context), -3.8923677030471517);
   EXPECT_DOUBLE_EQ(histograms(asset_snapshot[2], context), -3.3858834579168233);

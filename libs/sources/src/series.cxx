@@ -1,12 +1,12 @@
 export module pludux:series;
 
-export import :series.method_output;
-export import :series.method_contextable;
-export import :series.any_method_context;
+export import :series_output;
+export import :method_contextable;
+export import :any_method_context;
 
 export import :series.any_series_method;
-export import :series.method_registry;
-export import :series.default_method_context;
+export import :series.series_method_registry;
+export import :default_method_context;
 
 export import :series.value_method;
 export import :series.data_method;
@@ -40,10 +40,7 @@ export import :series.rvol_method;
 export import :series.stoch_method;
 export import :series.stoch_rsi_method;
 
-// export import :series.bullish_divergence_method;
-// export import :series.hidden_bullish_divergence_method;
-
 export import :series.any_series_method;
 
-export import :series.method_registry;
+export import :series.series_method_registry;
 export import :series.reference_method;
