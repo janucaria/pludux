@@ -1,8 +1,8 @@
 {
   "series": {
     "macd_histogram": {
-      "method": "OUTPUT_BY_NAME",
-      "name": "macd-histogram",
+      "method": "SELECT_OUTPUT",
+      "name": "histogram",
       "source": {
         "method": "MACD",
         "fast": 12,

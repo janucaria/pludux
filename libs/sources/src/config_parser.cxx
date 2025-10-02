@@ -247,17 +247,11 @@ static auto parse_ta_with_period_method(ConfigParser::Parser config_parser,
                                         const jsoncons::json& parameters)
  -> screener::ScreenerMethod
 {
-  auto ta_method = TMethod<screener::ScreenerMethod>{};
+  const auto period = get_param_or<std::size_t>(parameters, "period", 14);
+  const auto source = parse_method_from_param_or(
+   config_parser, parameters, "source", screener::CloseMethod{});
 
-  if(parameters.contains("period")) {
-    ta_method.period(parameters.at("period").as<std::size_t>());
-  }
-
-  if(parameters.contains("source")) {
-    ta_method.source(config_parser.parse_method(parameters.at("source")));
-  }
-
-  return ta_method;
+  return TMethod<screener::ScreenerMethod>{source, period};
 }
 
 template<template<typename> typename TMethod>

@@ -179,12 +179,16 @@ private:
 
   void recalculate_size_(this auto& self) noexcept
   {
-    self.size_ =
-     std::ranges::fold_left_first(
-      self.field_data_ | std::views::values |
-       std::views::transform([](const auto& series) { return series.size(); }),
-      [](auto a, auto b) { return std::max(a, b); })
-      .value_or(0);
+    if(self.field_data_.empty()) {
+      self.size_ = 0;
+      return;
+    }
+
+    auto sizes =
+     self.field_data_ | std::views::values |
+     std::views::transform([](const auto& series) { return series.size(); });
+
+    self.size_ = *std::ranges::max_element(sizes);
   }
 };
 

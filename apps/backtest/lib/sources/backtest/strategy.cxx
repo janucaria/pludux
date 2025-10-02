@@ -123,8 +123,10 @@ public:
   {
     auto result = std::optional<TradeEntry>{};
 
-    if(self.long_entry_filter()(asset_snapshot)) {
-      const auto risk_size = self.risk_method_(asset_snapshot)[0];
+    auto context = screener::DefaultMethodContext{*self.method_registry_};
+
+    if(self.long_entry_filter()(asset_snapshot, context)) {
+      const auto risk_size = self.risk_method_(asset_snapshot, context);
       const auto position_size = risk_value / risk_size;
       const auto entry_price = asset_snapshot.close();
 
@@ -155,8 +157,10 @@ public:
   {
     auto result = std::optional<TradeEntry>{};
 
-    if(self.short_entry_filter()(asset_snapshot)) {
-      const auto risk_size = -self.risk_method_(asset_snapshot)[0];
+    auto context = screener::DefaultMethodContext{*self.method_registry_};
+
+    if(self.short_entry_filter()(asset_snapshot, context)) {
+      const auto risk_size = -self.risk_method_(asset_snapshot, context);
       const auto position_size = risk_value / risk_size;
       const auto entry_price = asset_snapshot.close();
 
@@ -196,13 +200,15 @@ public:
     const auto is_long_direction = position_size > 0;
     const auto is_short_direction = position_size < 0;
     const auto exit_price = asset_snapshot.close();
+    
+    auto context = screener::DefaultMethodContext{*self.method_registry_};
 
     if(is_long_direction) {
-      if(self.long_exit_filter()(asset_snapshot)) {
+      if(self.long_exit_filter()(asset_snapshot, context)) {
         return TradeExit{position_size, exit_price, TradeExit::Reason::signal};
       }
     } else if(is_short_direction) {
-      if(self.short_exit_filter()(asset_snapshot)) {
+      if(self.short_exit_filter()(asset_snapshot, context)) {
         const auto exit_price = asset_snapshot.close();
         return TradeExit{position_size, exit_price, TradeExit::Reason::signal};
       }
@@ -267,11 +273,7 @@ auto risk_reward_config_parser() -> ConfigParser
        }
      }
 
-     const auto atr_method = screener::AtrMethod{screener::HighMethod{},
-                                                 screener::LowMethod{},
-                                                 screener::CloseMethod{},
-                                                 period,
-                                                 multiplier};
+     const auto atr_method = screener::AtrMethod{period, multiplier};
      return atr_method;
    });
 
@@ -281,12 +283,13 @@ auto risk_reward_config_parser() -> ConfigParser
       const screener::ScreenerMethod& method) -> jsoncons::json {
      auto serialized_method = jsoncons::json{};
 
-     auto percent_method =
-      screener_method_cast<screener::PercentageMethod>(method);
+     auto percent_method = screener_method_cast<
+      screener::PercentageMethod<screener::ScreenerMethod,
+                                 screener::ScreenerMethod>>(method);
 
      if(percent_method) {
-       auto value_method =
-        screener_method_cast<screener::ValueMethod>(percent_method->percent());
+       auto value_method = screener_method_cast<screener::ValueMethod<>>(
+        percent_method->percent());
 
        if(value_method) {
          serialized_method["percentage"] = value_method->value();
@@ -314,7 +317,7 @@ auto risk_reward_config_parser() -> ConfigParser
       const screener::ScreenerMethod& method) -> jsoncons::json {
      auto serialized_method = jsoncons::json{};
 
-     auto value_method = screener_method_cast<screener::ValueMethod>(method);
+     auto value_method = screener_method_cast<screener::ValueMethod<>>(method);
 
      if(value_method) {
        serialized_method["value"] = value_method->value();

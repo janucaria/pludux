@@ -195,7 +195,7 @@
         }
       ]
     },
-    "outputByNameMethod": {
+    "selectOutputMethod": {
       "allOf": [
         {
           "$ref": "#/definitions/baseMethod"
@@ -203,7 +203,7 @@
         {
           "properties": {
             "method": {
-              "const": "OUTPUT_BY_NAME"
+              "const": "SELECT_OUTPUT"
             },
             "name": {
               "type": "string",
@@ -211,11 +211,11 @@
                 "upper-band",
                 "middle-band",
                 "lower-band",
-                "percent-k",
-                "percent-d",
-                "macd-macd",
-                "macd-signal",
-                "macd-histogram"
+                "k-percent",
+                "d-percent",
+                "macd-line",
+                "signal-line",
+                "histogram"
               ]
             },
             "source": {
@@ -307,7 +307,7 @@
             "period": {
               "type": "number"
             },
-            "input": {
+            "source": {
               "$ref": "#/definitions/methodAsParameter"
             }
           }
@@ -327,7 +327,7 @@
             "period": {
               "type": "number"
             },
-            "input": {
+            "source": {
               "$ref": "#/definitions/methodAsParameter"
             }
           }
@@ -388,7 +388,7 @@
             "stddev": {
               "type": "number"
             },
-            "input": {
+            "maSource": {
               "$ref": "#/definitions/methodAsParameter"
             }
           }
@@ -437,7 +437,7 @@
             "signal": {
               "type": "number"
             },
-            "input": {
+            "source": {
               "$ref": "#/definitions/methodAsParameter"
             }
           }
@@ -602,7 +602,7 @@
         }
       ]
     },
-    "changesMethod": {
+    "changeMethod": {
       "allOf": [
         {
           "$ref": "#/definitions/baseMethod"
@@ -610,9 +610,9 @@
         {
           "properties": {
             "method": {
-              "const": "CHANGES"
+              "const": "CHANGE"
             },
-            "input": {
+            "source": {
               "$ref": "#/definitions/methodAsParameter"
             }
           }
@@ -700,7 +700,7 @@
           "$ref": "#/definitions/referenceMethod"
         },
         {
-          "$ref": "#/definitions/outputByNameMethod"
+          "$ref": "#/definitions/selectOutputMethod"
         },
         {
           "$ref": "#/definitions/lookbackMethod"
@@ -754,7 +754,7 @@
           "$ref": "#/definitions/negateMethod"
         },
         {
-          "$ref": "#/definitions/changesMethod"
+          "$ref": "#/definitions/changeMethod"
         },
         {
           "$ref": "#/definitions/absDiffMethod"

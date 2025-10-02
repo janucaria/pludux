@@ -263,13 +263,12 @@ auto csv_daily_stock_data(std::istream& csv_stream) -> AssetHistory
     std::reverse(date_records.begin(), date_records.end());
   }
 
-  auto field_data =
-   std::vector<std::pair<std::string, pludux::DataSeries<double>>>{};
+  auto field_data = std::vector<std::pair<std::string, pludux::AssetData>>{};
 
   const auto date_record_header = csv_doc.GetColumnName(date_record_index);
   field_data.emplace_back(
    date_record_header,
-   pludux::DataSeries<double>(date_records.begin(), date_records.end()));
+   pludux::AssetData(date_records.begin(), date_records.end()));
 
   for(auto i = 1; i < column_count; ++i) {
     auto column = csv_doc.GetColumn<double>(i);
@@ -278,8 +277,8 @@ auto csv_daily_stock_data(std::istream& csv_stream) -> AssetHistory
     }
 
     const auto column_header = csv_doc.GetColumnName(i);
-    field_data.emplace_back(
-     column_header, pludux::DataSeries<double>(column.begin(), column.end()));
+    field_data.emplace_back(column_header,
+                            pludux::AssetData(column.begin(), column.end()));
   }
 
   auto result = AssetHistory{field_data.begin(), field_data.end()};

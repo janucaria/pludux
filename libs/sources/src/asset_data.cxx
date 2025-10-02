@@ -14,6 +14,8 @@ export namespace pludux {
 
 class AssetData {
 public:
+  AssetData() = default;
+
   AssetData(std::initializer_list<double> data)
   : AssetData(data.begin(), data.end())
   {

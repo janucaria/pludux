@@ -442,42 +442,20 @@ struct LoadAndConstruct<pludux::backtest::Profile> {
 /*--------------------------------------------------------------------------------------*/
 
 template<class Archive>
-void save(Archive& archive, const pludux::DataSeries<double>& data_series)
+void save(Archive& archive, const pludux::AssetData& asset_data)
 {
-  archive(make_nvp("data", data_series.data()));
+  archive(make_nvp("data", asset_data.data()));
 }
 
 template<class Archive>
-void load(Archive& archive, pludux::DataSeries<double>& data_series)
+void load(Archive& archive, pludux::AssetData& asset_data)
 {
   auto data = std::vector<double>{};
 
   archive(make_nvp("data", data));
 
-  data_series.data(std::move(data));
+  asset_data.data(std::move(data));
 }
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void serialize(Archive& archive, pludux::PolySeries<double>& series)
-{
-  const auto data_series = screener_cast<pludux::DataSeries<double>>(&series);
-  archive(make_nvp("series", *data_series));
-}
-
-template<>
-struct LoadAndConstruct<pludux::PolySeries<double>> {
-  template<class Archive>
-  static void
-  load_and_construct(Archive& archive,
-                     construct<pludux::PolySeries<double>>& constructor)
-  {
-    auto data_series = pludux::DataSeries<double>{};
-    archive(make_nvp("series", data_series));
-    constructor(std::move(data_series));
-  }
-};
 
 /*--------------------------------------------------------------------------------------*/
 
@@ -487,11 +465,9 @@ void save(Archive& archive, const pludux::AssetHistory& asset_history)
   const auto& field_data = asset_history.field_data();
 
   auto history_data_map =
-   std::unordered_map<std::string,
-                      std::unique_ptr<pludux::PolySeries<double>>>{};
+   std::unordered_map<std::string, std::unique_ptr<pludux::AssetData>>{};
   for(const auto& [key, series] : field_data) {
-    history_data_map[key] =
-     std::make_unique<pludux::PolySeries<double>>(series);
+    history_data_map[key] = std::make_unique<pludux::AssetData>(series);
   }
 
   archive(make_nvp("historyData", history_data_map));
@@ -507,8 +483,7 @@ template<class Archive>
 void load(Archive& archive, pludux::AssetHistory& asset_history)
 {
   auto history_data_map =
-   std::unordered_map<std::string,
-                      std::unique_ptr<pludux::PolySeries<double>>>{};
+   std::unordered_map<std::string, std::unique_ptr<pludux::AssetData>>{};
 
   archive(make_nvp("historyData", history_data_map));
 
