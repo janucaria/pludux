@@ -2,75 +2,75 @@
 
 import pludux;
 
-using namespace pludux::screener;
+using namespace pludux;
 
-const auto context = AnyMethodContext{};
+const auto context = AnySeriesMethodContext{};
 
-TEST(AllOfFilterTest, AllFiltersPass)
+TEST(AllOfMethodTest, AllMethodsPass)
 {
   const auto greater_than_filter =
-   GreaterThanFilter{ValueMethod{20.0}, ValueMethod{10.0}};
+   GreaterThanMethod{ValueMethod{20.0}, ValueMethod{10.0}};
   const auto less_than_filter =
-   LessThanFilter{ValueMethod{30.0}, ValueMethod{50.0}};
+   LessThanMethod{ValueMethod{30.0}, ValueMethod{50.0}};
   const auto all_of_filter =
-   AllOfFilter{{greater_than_filter, less_than_filter}};
-  const auto asset_data = pludux::AssetHistory{{"close", {0}}};
+   AllOfMethod{{greater_than_filter, less_than_filter}};
+  const auto asset_data = AssetHistory{{"close", {0}}};
 
   EXPECT_TRUE(all_of_filter(asset_data, context));
 }
 
-TEST(AllOfFilterTest, OneFilterFails)
+TEST(AllOfMethodTest, OneMethodFails)
 {
   const auto greater_than_filter =
-   GreaterThanFilter{ValueMethod{20.0}, ValueMethod{30.0}};
+   GreaterThanMethod{ValueMethod{20.0}, ValueMethod{30.0}};
   const auto less_than_filter =
-   LessThanFilter{ValueMethod{30.0}, ValueMethod{50.0}};
+   LessThanMethod{ValueMethod{30.0}, ValueMethod{50.0}};
   const auto all_of_filter =
-   AllOfFilter{{greater_than_filter, less_than_filter}};
-  const auto asset_data = pludux::AssetHistory{{"close", {0}}};
+   AllOfMethod{{greater_than_filter, less_than_filter}};
+  const auto asset_data = AssetHistory{{"close", {0}}};
 
   EXPECT_FALSE(all_of_filter(asset_data, context));
 }
 
-TEST(AllOfFilterTest, NoFilters)
+TEST(AllOfMethodTest, NoMethods)
 {
-  const auto all_of_filter = AllOfFilter{};
-  const auto asset_data = pludux::AssetHistory{{"close", {0}}};
+  const auto all_of_filter = AllOfMethod{};
+  const auto asset_data = AssetHistory{{"close", {0}}};
 
   EXPECT_TRUE(all_of_filter(asset_data, context));
 }
 
-TEST(AllOfFilterTest, EqualityOperator)
+TEST(AllOfMethodTest, EqualityOperator)
 {
   const auto greater_than_filter =
-   GreaterThanFilter{ValueMethod{20.0}, ValueMethod{10.0}};
+   GreaterThanMethod{ValueMethod{20.0}, ValueMethod{10.0}};
   const auto less_than_filter =
-   LessThanFilter{ValueMethod{30.0}, ValueMethod{50.0}};
+   LessThanMethod{ValueMethod{30.0}, ValueMethod{50.0}};
   const auto all_of_filter1 =
-   AllOfFilter{{greater_than_filter, less_than_filter}};
+   AllOfMethod{{greater_than_filter, less_than_filter}};
   const auto all_of_filter2 =
-   AllOfFilter{{greater_than_filter, less_than_filter}};
+   AllOfMethod{{greater_than_filter, less_than_filter}};
 
   EXPECT_TRUE(all_of_filter1 == all_of_filter2);
   EXPECT_FALSE(all_of_filter1 != all_of_filter2);
   EXPECT_EQ(all_of_filter1, all_of_filter2);
 }
 
-TEST(AllOfFilterTest, NotEqualOperator)
+TEST(AllOfMethodTest, NotEqualOperator)
 {
   const auto greater_than_filter1 =
-   GreaterThanFilter{ValueMethod{20.0}, ValueMethod{10.0}};
+   GreaterThanMethod{ValueMethod{20.0}, ValueMethod{10.0}};
   const auto less_than_filter1 =
-   LessThanFilter{ValueMethod{30.0}, ValueMethod{50.0}};
+   LessThanMethod{ValueMethod{30.0}, ValueMethod{50.0}};
   const auto all_of_filter1 =
-   AllOfFilter{{greater_than_filter1, less_than_filter1}};
+   AllOfMethod{{greater_than_filter1, less_than_filter1}};
 
   const auto greater_than_filter2 =
-   GreaterThanFilter{ValueMethod{25.0}, ValueMethod{15.0}};
+   GreaterThanMethod{ValueMethod{25.0}, ValueMethod{15.0}};
   const auto less_than_filter2 =
-   LessThanFilter{ValueMethod{35.0}, ValueMethod{55.0}};
+   LessThanMethod{ValueMethod{35.0}, ValueMethod{55.0}};
   const auto all_of_filter2 =
-   AllOfFilter{{greater_than_filter2, less_than_filter2}};
+   AllOfMethod{{greater_than_filter2, less_than_filter2}};
 
   EXPECT_TRUE(all_of_filter1 != all_of_filter2);
   EXPECT_FALSE(all_of_filter1 == all_of_filter2);

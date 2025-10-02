@@ -6,7 +6,6 @@
 import pludux;
 
 using namespace pludux;
-using namespace pludux::screener;
 
 TEST(MacdMethodTest, ConstructorInitialization)
 {
@@ -41,7 +40,7 @@ TEST(MacdMethodTest, RunAllMethod)
   const auto fast_period = 5;
   const auto slow_period = 10;
   const auto signal_period = 3;
-  const auto asset_data = pludux::AssetHistory{{"Close",
+  const auto asset_data = AssetHistory{{"Close",
                                                 {790,
                                                  810,
                                                  825,
@@ -57,7 +56,7 @@ TEST(MacdMethodTest, RunAllMethod)
                                                  800,
                                                  830,
                                                  875}}};
-  const auto asset_snapshot = pludux::AssetSnapshot{asset_data};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 
   auto macd_line =

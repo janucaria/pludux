@@ -5,7 +5,6 @@
 import pludux;
 
 using namespace pludux;
-using namespace pludux::screener;
 using json = jsoncons::json;
 
 class ConfigParserTest : public ::testing::Test {
@@ -87,7 +86,7 @@ TEST_F(ConfigParserTest, ParseScrennerLookbackMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto lookback_method =
-   any_method_cast<LookbackMethod<AnyMethod>>(method);
+   any_method_cast<LookbackMethod<AnySeriesMethod>>(method);
   ASSERT_NE(lookback_method, nullptr);
 
   EXPECT_EQ(lookback_method->period(), 3);
@@ -122,11 +121,11 @@ TEST_F(ConfigParserTest, ParseScreenerSelectOutputMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto select_output_method =
-   any_method_cast<SelectOutputMethod<AnyMethod>>(method);
+   any_method_cast<SelectOutputMethod<AnySeriesMethod>>(method);
   ASSERT_NE(select_output_method, nullptr);
   EXPECT_EQ(select_output_method->output(), MethodOutput::UpperBand);
 
-  const auto macd_method = any_method_cast<MacdMethod<AnyMethod>>(
+  const auto macd_method = any_method_cast<MacdMethod<AnySeriesMethod>>(
    select_output_method->source());
   ASSERT_NE(macd_method, nullptr);
 
@@ -253,7 +252,7 @@ TEST_F(ConfigParserTest, ParseScreenerSmaMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto sma_method =
-   any_method_cast<SmaMethod<AnyMethod>>(method);
+   any_method_cast<SmaMethod<AnySeriesMethod>>(method);
   ASSERT_NE(sma_method, nullptr);
 
   EXPECT_EQ(sma_method->period(), 14);
@@ -285,7 +284,7 @@ TEST_F(ConfigParserTest, ParseScreenerEmaMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto ema_method =
-   any_method_cast<EmaMethod<AnyMethod>>(method);
+   any_method_cast<EmaMethod<AnySeriesMethod>>(method);
   ASSERT_NE(ema_method, nullptr);
 
   EXPECT_EQ(ema_method->period(), 10);
@@ -317,7 +316,7 @@ TEST_F(ConfigParserTest, ParseScreenerWmaMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto wma_method =
-   any_method_cast<WmaMethod<AnyMethod>>(method);
+   any_method_cast<WmaMethod<AnySeriesMethod>>(method);
   ASSERT_NE(wma_method, nullptr);
 
   EXPECT_EQ(wma_method->period(), 20);
@@ -349,7 +348,7 @@ TEST_F(ConfigParserTest, ParseScreenerRmaMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto rma_method =
-   any_method_cast<RmaMethod<AnyMethod>>(method);
+   any_method_cast<RmaMethod<AnySeriesMethod>>(method);
   ASSERT_NE(rma_method, nullptr);
 
   EXPECT_EQ(rma_method->period(), 15);
@@ -381,7 +380,7 @@ TEST_F(ConfigParserTest, ParseScreenerHmaMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto hma_method =
-   any_method_cast<HmaMethod<AnyMethod>>(method);
+   any_method_cast<HmaMethod<AnySeriesMethod>>(method);
   ASSERT_NE(hma_method, nullptr);
 
   EXPECT_EQ(hma_method->period(), 25);
@@ -413,7 +412,7 @@ TEST_F(ConfigParserTest, ParseScreenerRsiMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto rsi_method =
-   any_method_cast<RsiMethod<AnyMethod>>(method);
+   any_method_cast<RsiMethod<AnySeriesMethod>>(method);
   ASSERT_NE(rsi_method, nullptr);
 
   EXPECT_EQ(rsi_method->period(), 14);
@@ -514,7 +513,7 @@ TEST_F(ConfigParserTest, ParseScreenerBbMethod)
 
   const auto method = config_parser.parse_method(config);
 
-  const auto bb_method = any_method_cast<BbMethod<AnyMethod>>(method);
+  const auto bb_method = any_method_cast<BbMethod<AnySeriesMethod>>(method);
   ASSERT_NE(bb_method, nullptr);
 
   const auto ma_source =
@@ -548,7 +547,7 @@ TEST_F(ConfigParserTest, ParseScreenerMacdMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto macd_method =
-   any_method_cast<MacdMethod<AnyMethod>>(method);
+   any_method_cast<MacdMethod<AnySeriesMethod>>(method);
   ASSERT_NE(macd_method, nullptr);
 
   const auto source = any_method_cast<DataMethod>(macd_method->source());
@@ -608,7 +607,7 @@ TEST_F(ConfigParserTest, ParseScreenerStochRsiMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto stoch_rsi_method =
-   any_method_cast<StochRsiMethod<AnyMethod>>(method);
+   any_method_cast<StochRsiMethod<AnySeriesMethod>>(method);
   ASSERT_NE(stoch_rsi_method, nullptr);
 
   const auto rsi_source =
@@ -649,11 +648,11 @@ TEST_F(ConfigParserTest, ParseScreenerKcMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto kc_method =
-   any_method_cast<KcMethod<AnyMethod, AnyMethod>>(method);
+   any_method_cast<KcMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(kc_method, nullptr);
 
   const auto ma_method =
-   any_method_cast<SmaMethod<AnyMethod>>(kc_method->ma());
+   any_method_cast<SmaMethod<AnySeriesMethod>>(kc_method->ma());
   const auto range_method = any_method_cast<AtrMethod>(kc_method->range());
   EXPECT_NE(ma_method, nullptr);
   EXPECT_NE(range_method, nullptr);
@@ -681,7 +680,7 @@ TEST_F(ConfigParserTest, ParseScreenerAddMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto add_method =
-   any_method_cast<AddMethod<AnyMethod, AnyMethod>>(method);
+   any_method_cast<AddMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(add_method, nullptr);
 
   const auto augend = any_method_cast<ValueMethod>(add_method->augend());
@@ -716,7 +715,7 @@ TEST_F(ConfigParserTest, ParseScreenerSubtractMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto subtract_method =
-   any_method_cast<SubtractMethod<AnyMethod, AnyMethod>>(method);
+   any_method_cast<SubtractMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(subtract_method, nullptr);
 
   const auto minuend =
@@ -753,7 +752,7 @@ TEST_F(ConfigParserTest, ParseScreenerMultiplyMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto multiply_method =
-   any_method_cast<MultiplyMethod<AnyMethod, AnyMethod>>(method);
+   any_method_cast<MultiplyMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(multiply_method, nullptr);
 
   const auto multiplicand =
@@ -790,7 +789,7 @@ TEST_F(ConfigParserTest, ParseScreenerDivideMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto divide_method =
-   any_method_cast<DivideMethod<AnyMethod, AnyMethod>>(method);
+   any_method_cast<DivideMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(divide_method, nullptr);
 
   const auto dividend =
@@ -823,7 +822,7 @@ TEST_F(ConfigParserTest, ParseScreenerNegateMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto negate_method =
-   any_method_cast<NegateMethod<AnyMethod>>(method);
+   any_method_cast<NegateMethod<AnySeriesMethod>>(method);
   ASSERT_NE(negate_method, nullptr);
 
   const auto operand =
@@ -852,7 +851,7 @@ TEST_F(ConfigParserTest, ParseScreenerChangeMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto changes_method =
-   any_method_cast<ChangeMethod<AnyMethod>>(method);
+   any_method_cast<ChangeMethod<AnySeriesMethod>>(method);
   ASSERT_NE(changes_method, nullptr);
 
   const auto source =
@@ -885,7 +884,7 @@ TEST_F(ConfigParserTest, ParseScreenerAbsDiffMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto abs_diff_method =
-   any_method_cast<AbsDiffMethod<AnyMethod, AnyMethod>>(method);
+   any_method_cast<AbsDiffMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(abs_diff_method, nullptr);
 
   const auto minuend =
@@ -916,7 +915,7 @@ TEST_F(ConfigParserTest, ParseScreenerPercentageMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto percentage_method =
-   any_method_cast<PercentageMethod<AnyMethod, AnyMethod>>(
+   any_method_cast<PercentageMethod<AnySeriesMethod, AnySeriesMethod>>(
     method);
   ASSERT_NE(percentage_method, nullptr);
 
@@ -944,7 +943,7 @@ TEST_F(ConfigParserTest, ParseScreenerInvalidMethod)
   EXPECT_THROW(config_parser.parse_method(config), std::invalid_argument);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerAllOfFilter)
+TEST_F(ConfigParserTest, ParseScreenerAllOfMethod)
 {
   const auto config = json::parse(R"(
     {
@@ -978,16 +977,16 @@ TEST_F(ConfigParserTest, ParseScreenerAllOfFilter)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto all_of_filter = screener_filter_cast<AllOfFilter>(filter);
+  const auto all_of_filter = condition_method_cast<AllOfMethod>(filter);
   ASSERT_NE(all_of_filter, nullptr);
 
   const auto filters = all_of_filter->conditions();
   ASSERT_EQ(filters.size(), 2);
 
   const auto greater_than_filter =
-   screener_filter_cast<GreaterThanFilter>(filters[0]);
+   condition_method_cast<GreaterThanMethod>(filters[0]);
   const auto less_than_filter =
-   screener_filter_cast<LessThanFilter>(filters[1]);
+   condition_method_cast<LessThanMethod>(filters[1]);
 
   EXPECT_NE(greater_than_filter, nullptr);
   EXPECT_NE(less_than_filter, nullptr);
@@ -998,7 +997,7 @@ TEST_F(ConfigParserTest, ParseScreenerAllOfFilter)
   EXPECT_EQ(filter, deserialized_filter);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerAnyOfFilter)
+TEST_F(ConfigParserTest, ParseScreenerAnyOfMethod)
 {
   const auto config = json::parse(R"(
     {
@@ -1032,16 +1031,16 @@ TEST_F(ConfigParserTest, ParseScreenerAnyOfFilter)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto any_of_filter = screener_filter_cast<AnyOfFilter>(filter);
+  const auto any_of_filter = condition_method_cast<AnyOfMethod>(filter);
   ASSERT_NE(any_of_filter, nullptr);
 
   const auto conditions = any_of_filter->conditions();
   ASSERT_EQ(conditions.size(), 2);
 
   const auto greater_than_filter =
-   screener_filter_cast<GreaterThanFilter>(conditions[0]);
+   condition_method_cast<GreaterThanMethod>(conditions[0]);
   const auto less_than_filter =
-   screener_filter_cast<LessThanFilter>(conditions[1]);
+   condition_method_cast<LessThanMethod>(conditions[1]);
 
   EXPECT_NE(greater_than_filter, nullptr);
   EXPECT_NE(less_than_filter, nullptr);
@@ -1052,7 +1051,7 @@ TEST_F(ConfigParserTest, ParseScreenerAnyOfFilter)
   EXPECT_EQ(filter, deserialized_filter);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerGreaterThanFilter)
+TEST_F(ConfigParserTest, ParseScreenerGreaterThanMethod)
 {
   const auto config = json::parse(R"(
     {
@@ -1068,7 +1067,7 @@ TEST_F(ConfigParserTest, ParseScreenerGreaterThanFilter)
   const auto filter = config_parser.parse_filter(config);
 
   const auto greater_than_filter =
-   screener_filter_cast<GreaterThanFilter>(filter);
+   condition_method_cast<GreaterThanMethod>(filter);
   ASSERT_NE(greater_than_filter, nullptr);
 
   const auto target =
@@ -1089,7 +1088,7 @@ TEST_F(ConfigParserTest, ParseScreenerGreaterThanFilter)
   EXPECT_EQ(filter, deserialized_filter);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerGreaterEqualFilter)
+TEST_F(ConfigParserTest, ParseScreenerGreaterEqualMethod)
 {
   const auto config = json::parse(R"(
     {
@@ -1108,7 +1107,7 @@ TEST_F(ConfigParserTest, ParseScreenerGreaterEqualFilter)
   const auto filter = config_parser.parse_filter(config);
 
   const auto greater_equal_filter =
-   screener_filter_cast<GreaterEqualFilter>(filter);
+   condition_method_cast<GreaterEqualMethod>(filter);
   ASSERT_NE(greater_equal_filter, nullptr);
 
   const auto target =
@@ -1123,7 +1122,7 @@ TEST_F(ConfigParserTest, ParseScreenerGreaterEqualFilter)
   EXPECT_EQ(filter, deserialized_filter);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerLessThanFilter)
+TEST_F(ConfigParserTest, ParseScreenerLessThanMethod)
 {
   const auto config = json::parse(R"(
     {
@@ -1141,7 +1140,7 @@ TEST_F(ConfigParserTest, ParseScreenerLessThanFilter)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto less_than_filter = screener_filter_cast<LessThanFilter>(filter);
+  const auto less_than_filter = condition_method_cast<LessThanMethod>(filter);
   ASSERT_NE(less_than_filter, nullptr);
 
   const auto target =
@@ -1156,7 +1155,7 @@ TEST_F(ConfigParserTest, ParseScreenerLessThanFilter)
   EXPECT_EQ(filter, deserialized_filter);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerLessEqualFilter)
+TEST_F(ConfigParserTest, ParseScreenerLessEqualMethod)
 {
   const auto config = json::parse(R"(
     {
@@ -1174,7 +1173,7 @@ TEST_F(ConfigParserTest, ParseScreenerLessEqualFilter)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto less_equal_filter = screener_filter_cast<LessEqualFilter>(filter);
+  const auto less_equal_filter = condition_method_cast<LessEqualMethod>(filter);
   ASSERT_NE(less_equal_filter, nullptr);
 
   const auto target =
@@ -1189,7 +1188,7 @@ TEST_F(ConfigParserTest, ParseScreenerLessEqualFilter)
   EXPECT_EQ(filter, deserialized_filter);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerEqualFilter)
+TEST_F(ConfigParserTest, ParseScreenerEqualMethod)
 {
   const auto config = json::parse(R"(
     {
@@ -1207,7 +1206,7 @@ TEST_F(ConfigParserTest, ParseScreenerEqualFilter)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto equal_filter = screener_filter_cast<EqualFilter>(filter);
+  const auto equal_filter = condition_method_cast<EqualMethod>(filter);
   ASSERT_NE(equal_filter, nullptr);
 
   const auto target =
@@ -1228,7 +1227,7 @@ TEST_F(ConfigParserTest, ParseScreenerEqualFilter)
   EXPECT_EQ(filter, deserialized_filter);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerNotEqualFilter)
+TEST_F(ConfigParserTest, ParseScreenerNotEqualMethod)
 {
   const auto config = json::parse(R"(
     {
@@ -1246,7 +1245,7 @@ TEST_F(ConfigParserTest, ParseScreenerNotEqualFilter)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto not_equal_filter = screener_filter_cast<NotEqualFilter>(filter);
+  const auto not_equal_filter = condition_method_cast<NotEqualMethod>(filter);
   ASSERT_NE(not_equal_filter, nullptr);
 
   const auto target =
@@ -1267,7 +1266,7 @@ TEST_F(ConfigParserTest, ParseScreenerNotEqualFilter)
   EXPECT_EQ(filter, deserialized_filter);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerCrossunderFilter)
+TEST_F(ConfigParserTest, ParseScreenerCrossunderMethod)
 {
   const auto config = json::parse(R"(
     {
@@ -1282,7 +1281,7 @@ TEST_F(ConfigParserTest, ParseScreenerCrossunderFilter)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto crossunder_filter = screener_filter_cast<CrossunderFilter>(filter);
+  const auto crossunder_filter = condition_method_cast<CrossunderMethod>(filter);
   ASSERT_NE(crossunder_filter, nullptr);
 
   const auto signal =
@@ -1303,7 +1302,7 @@ TEST_F(ConfigParserTest, ParseScreenerCrossunderFilter)
   EXPECT_EQ(filter, deserialized_filter);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerCrossoverFilter)
+TEST_F(ConfigParserTest, ParseScreenerCrossoverMethod)
 {
   const auto config = json::parse(R"(
     {
@@ -1321,7 +1320,7 @@ TEST_F(ConfigParserTest, ParseScreenerCrossoverFilter)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto crossover_filter = screener_filter_cast<CrossoverFilter>(filter);
+  const auto crossover_filter = condition_method_cast<CrossoverMethod>(filter);
   ASSERT_NE(crossover_filter, nullptr);
 
   const auto signal =
@@ -1342,7 +1341,7 @@ TEST_F(ConfigParserTest, ParseScreenerCrossoverFilter)
   EXPECT_EQ(filter, deserialized_filter);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerTrueFilter)
+TEST_F(ConfigParserTest, ParseScreenerTrueMethod)
 {
   const auto config = json::parse(R"(
     {
@@ -1352,7 +1351,7 @@ TEST_F(ConfigParserTest, ParseScreenerTrueFilter)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto true_filter = screener_filter_cast<TrueFilter>(filter);
+  const auto true_filter = condition_method_cast<TrueMethod>(filter);
   ASSERT_NE(true_filter, nullptr);
 
   const auto serialized_config = config_parser.serialize_filter(filter);
@@ -1361,7 +1360,7 @@ TEST_F(ConfigParserTest, ParseScreenerTrueFilter)
   EXPECT_EQ(filter, deserialized_filter);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerFalseFilter)
+TEST_F(ConfigParserTest, ParseScreenerFalseMethod)
 {
   const auto config = json::parse(R"(
     {
@@ -1371,7 +1370,7 @@ TEST_F(ConfigParserTest, ParseScreenerFalseFilter)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto false_filter = screener_filter_cast<FalseFilter>(filter);
+  const auto false_filter = condition_method_cast<FalseMethod>(filter);
   ASSERT_NE(false_filter, nullptr);
 
   const auto serialized_config = config_parser.serialize_filter(filter);
@@ -1380,7 +1379,7 @@ TEST_F(ConfigParserTest, ParseScreenerFalseFilter)
   EXPECT_EQ(filter, deserialized_filter);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerAndFilter)
+TEST_F(ConfigParserTest, ParseScreenerAndMethod)
 {
   const auto config = json::parse(R"(
     {
@@ -1399,14 +1398,14 @@ TEST_F(ConfigParserTest, ParseScreenerAndFilter)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto and_filter = screener_filter_cast<AndFilter>(filter);
+  const auto and_filter = condition_method_cast<AndMethod>(filter);
   ASSERT_NE(and_filter, nullptr);
 
   const auto first_condition = and_filter->first_condition();
   const auto second_condition = and_filter->second_condition();
 
-  const auto true_filter = screener_filter_cast<TrueFilter>(first_condition);
-  const auto false_filter = screener_filter_cast<FalseFilter>(second_condition);
+  const auto true_filter = condition_method_cast<TrueMethod>(first_condition);
+  const auto false_filter = condition_method_cast<FalseMethod>(second_condition);
 
   ASSERT_NE(true_filter, nullptr);
   ASSERT_NE(false_filter, nullptr);
@@ -1417,7 +1416,7 @@ TEST_F(ConfigParserTest, ParseScreenerAndFilter)
   EXPECT_EQ(filter, deserialized_filter);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerOrFilter)
+TEST_F(ConfigParserTest, ParseScreenerOrMethod)
 {
   const auto config = json::parse(R"(
     {
@@ -1436,14 +1435,14 @@ TEST_F(ConfigParserTest, ParseScreenerOrFilter)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto or_filter = screener_filter_cast<OrFilter>(filter);
+  const auto or_filter = condition_method_cast<OrMethod>(filter);
   ASSERT_NE(or_filter, nullptr);
 
   const auto first_condition = or_filter->first_condition();
   const auto second_condition = or_filter->second_condition();
 
-  const auto true_filter = screener_filter_cast<TrueFilter>(first_condition);
-  const auto false_filter = screener_filter_cast<FalseFilter>(second_condition);
+  const auto true_filter = condition_method_cast<TrueMethod>(first_condition);
+  const auto false_filter = condition_method_cast<FalseMethod>(second_condition);
 
   ASSERT_NE(true_filter, nullptr);
   ASSERT_NE(false_filter, nullptr);
@@ -1454,7 +1453,7 @@ TEST_F(ConfigParserTest, ParseScreenerOrFilter)
   EXPECT_EQ(filter, deserialized_filter);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerNotFilter)
+TEST_F(ConfigParserTest, ParseScreenerNotMethod)
 {
   const auto config = json::parse(R"(
     {
@@ -1465,11 +1464,11 @@ TEST_F(ConfigParserTest, ParseScreenerNotFilter)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto not_filter = screener_filter_cast<NotFilter>(filter);
+  const auto not_filter = condition_method_cast<NotMethod>(filter);
   ASSERT_NE(not_filter, nullptr);
 
   const auto other_condition = not_filter->other_condition();
-  const auto true_filter = screener_filter_cast<TrueFilter>(other_condition);
+  const auto true_filter = condition_method_cast<TrueMethod>(other_condition);
 
   ASSERT_NE(true_filter, nullptr);
 
@@ -1479,7 +1478,7 @@ TEST_F(ConfigParserTest, ParseScreenerNotFilter)
   EXPECT_EQ(filter, deserialized_filter);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerXorFilter)
+TEST_F(ConfigParserTest, ParseScreenerXorMethod)
 {
   const auto config = json::parse(R"(
     {
@@ -1498,14 +1497,14 @@ TEST_F(ConfigParserTest, ParseScreenerXorFilter)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto xor_filter = screener_filter_cast<XorFilter>(filter);
+  const auto xor_filter = condition_method_cast<XorMethod>(filter);
   ASSERT_NE(xor_filter, nullptr);
 
   const auto first_condition = xor_filter->first_condition();
   const auto second_condition = xor_filter->second_condition();
 
-  const auto true_filter = screener_filter_cast<TrueFilter>(first_condition);
-  const auto false_filter = screener_filter_cast<FalseFilter>(second_condition);
+  const auto true_filter = condition_method_cast<TrueMethod>(first_condition);
+  const auto false_filter = condition_method_cast<FalseMethod>(second_condition);
 
   ASSERT_NE(true_filter, nullptr);
   ASSERT_NE(false_filter, nullptr);
@@ -1516,7 +1515,7 @@ TEST_F(ConfigParserTest, ParseScreenerXorFilter)
   EXPECT_EQ(filter, deserialized_filter);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerFilterIsInvalid)
+TEST_F(ConfigParserTest, ParseAnyConditionMethodIsInvalid)
 {
   const auto config = json::parse(R"(
     {
@@ -1527,7 +1526,7 @@ TEST_F(ConfigParserTest, ParseScreenerFilterIsInvalid)
   EXPECT_THROW(config_parser.parse_filter(config), std::exception);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerFilterWithInvalidRequiredFields)
+TEST_F(ConfigParserTest, ParseAnyConditionMethodWithInvalidRequiredFields)
 {
   const auto config = json::parse(R"(
     {

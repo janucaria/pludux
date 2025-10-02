@@ -4,8 +4,7 @@
 
 import pludux;
 
-using namespace pludux::screener;
-using pludux::AssetSnapshot;
+using namespace pludux;
 
 const auto context = std::monostate{};
 
@@ -14,8 +13,8 @@ TEST(OperatorsMethodTest, MultiplyMethod)
   const auto operand1 = ValueMethod{2.0};
   const auto operand2 = DataMethod{"close"};
   const auto multiply_method = MultiplyMethod{operand1, operand2};
-  const auto asset_data = pludux::AssetHistory{{"close", {10, 15, 20, 25, 30}}};
-  const auto asset_snapshot = pludux::AssetSnapshot{asset_data};
+  const auto asset_data = AssetHistory{{"close", {10, 15, 20, 25, 30}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
 
   EXPECT_DOUBLE_EQ(multiply_method(asset_snapshot[0], context), 20.0);
   EXPECT_DOUBLE_EQ(multiply_method(asset_snapshot[1], context), 30.0);
@@ -63,8 +62,8 @@ TEST(OperatorsMethodTest, DivideMethod)
   const auto operand1 = ValueMethod{20.0};
   const auto operand2 = DataMethod{"close"};
   const auto divide_method = DivideMethod{operand1, operand2};
-  const auto asset_data = pludux::AssetHistory{{"close", {10, 15, 20, 25, 30}}};
-  const auto asset_snapshot = pludux::AssetSnapshot{asset_data};
+  const auto asset_data = AssetHistory{{"close", {10, 15, 20, 25, 30}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
 
   EXPECT_DOUBLE_EQ(divide_method(asset_snapshot[0], context), 2.0);
   EXPECT_DOUBLE_EQ(divide_method(asset_snapshot[1], context),
@@ -110,8 +109,8 @@ TEST(OperatorsMethodTest, AddMethod)
   const auto operand1 = ValueMethod{2.0};
   const auto operand2 = DataMethod{"close"};
   const auto add_method = AddMethod{operand1, operand2};
-  const auto asset_data = pludux::AssetHistory{{"close", {10, 15, 20, 25, 30}}};
-  const auto asset_snapshot = pludux::AssetSnapshot{asset_data};
+  const auto asset_data = AssetHistory{{"close", {10, 15, 20, 25, 30}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
 
   EXPECT_DOUBLE_EQ(add_method(asset_snapshot[0], context), 12.0);
   EXPECT_DOUBLE_EQ(add_method(asset_snapshot[1], context), 17.0);
@@ -155,8 +154,8 @@ TEST(OperatorsMethodTest, SubtractMethod)
   const auto operand1 = ValueMethod{15.0};
   const auto operand2 = DataMethod{"close"};
   const auto subtract_method = SubtractMethod{operand1, operand2};
-  const auto asset_data = pludux::AssetHistory{{"close", {10, 15, 20, 25, 30}}};
-  const auto asset_snapshot = pludux::AssetSnapshot{asset_data};
+  const auto asset_data = AssetHistory{{"close", {10, 15, 20, 25, 30}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
 
   EXPECT_DOUBLE_EQ(subtract_method(asset_snapshot[0], context), 5.0);
   EXPECT_DOUBLE_EQ(subtract_method(asset_snapshot[1], context), 0.0);
@@ -203,8 +202,8 @@ TEST(OperatorsMethodTest, NegateMethod)
 {
   const auto operand = DataMethod{"close"};
   const auto negate_method = NegateMethod{operand};
-  const auto asset_data = pludux::AssetHistory{{"close", {10, 15, 20, 25, 30}}};
-  const auto asset_snapshot = pludux::AssetSnapshot{asset_data};
+  const auto asset_data = AssetHistory{{"close", {10, 15, 20, 25, 30}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
 
   EXPECT_DOUBLE_EQ(negate_method(asset_snapshot[0], context), -10.0);
   EXPECT_DOUBLE_EQ(negate_method(asset_snapshot[1], context), -15.0);

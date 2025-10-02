@@ -5,7 +5,7 @@
 
 import pludux;
 
-using namespace pludux::screener;
+using namespace pludux;
 
 TEST(RvolMethodTest, ConstructorInitialization)
 {
@@ -22,10 +22,10 @@ TEST(RvolMethodTest, ConstructorInitialization)
 TEST(RvolMethodTest, RunAllMethod)
 {
   const auto rvol_method = RvolMethod{5};
-  const auto asset_data = pludux::AssetHistory{
+  const auto asset_data = AssetHistory{
    {"Volume",
     {11.01, 8.59, 14.1, 30.52, 34.18, 55.34, 43.26, 65.39, 90.97, 585.54}}};
-  const auto asset_snapshot = pludux::AssetSnapshot{asset_data};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 
   EXPECT_DOUBLE_EQ(rvol_method(asset_snapshot[0], context),

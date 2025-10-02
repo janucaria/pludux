@@ -6,7 +6,6 @@
 import pludux;
 
 using namespace pludux;
-using namespace pludux::screener;
 
 TEST(StochRsiMethodTest, RunAllMethod)
 {
@@ -15,7 +14,7 @@ TEST(StochRsiMethodTest, RunAllMethod)
   const auto k_period = 5;
   const auto k_smooth = 4;
   const auto d_period = 2;
-  const auto asset_data = pludux::AssetHistory{{"close",
+  const auto asset_data = AssetHistory{{"close",
                                                 {790,
                                                  810,
                                                  825,

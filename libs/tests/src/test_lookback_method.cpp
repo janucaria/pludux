@@ -5,7 +5,7 @@
 
 import pludux;
 
-using namespace pludux::screener;
+using namespace pludux;
 
 const auto context = std::monostate{};
 
@@ -26,8 +26,8 @@ TEST(LookbackMethodTest, ConstructorInitialization)
 
 TEST(LookbackMethodTest, RunAllMethodClose)
 {
-  const auto asset_data = pludux::AssetHistory{{"Close", {4.0, 4.1, 4.2}}};
-  const auto asset_snapshot = pludux::AssetSnapshot{asset_data};
+  const auto asset_data = AssetHistory{{"Close", {4.0, 4.1, 4.2}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto lookback_method = LookbackMethod{CloseMethod{}, 1};
 
   EXPECT_EQ((lookback_method(asset_snapshot[0], context)), 4.1);

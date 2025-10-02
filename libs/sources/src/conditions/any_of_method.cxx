@@ -4,19 +4,19 @@ module;
 #include <stdexcept>
 #include <vector>
 
-export module pludux:screener.any_of_filter;
+export module pludux:conditions.any_of_method;
 
 import :asset_snapshot;
 import :series.method_contextable;
-import :screener.screener_filter;
+import :conditions.any_condition_method;
 
-export namespace pludux::screener {
+export namespace pludux {
 
-class AnyOfFilter {
+class AnyOfMethod {
 public:
-  AnyOfFilter() = default;
+  AnyOfMethod() = default;
 
-  explicit AnyOfFilter(std::vector<ScreenerFilter> conditions)
+  explicit AnyOfMethod(std::vector<AnyConditionMethod> conditions)
   : conditions_{std::move(conditions)}
   {
   }
@@ -31,16 +31,16 @@ public:
                                });
   }
 
-  auto operator==(const AnyOfFilter& other) const noexcept -> bool = default;
+  auto operator==(const AnyOfMethod& other) const noexcept -> bool = default;
 
   auto conditions(this const auto& self) noexcept
-   -> const std::vector<ScreenerFilter>&
+   -> const std::vector<AnyConditionMethod>&
   {
     return self.conditions_;
   }
 
 private:
-  std::vector<ScreenerFilter> conditions_;
+  std::vector<AnyConditionMethod> conditions_;
 };
 
-} // namespace pludux::screener
+} // namespace pludux

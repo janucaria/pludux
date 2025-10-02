@@ -5,7 +5,7 @@
 
 import pludux;
 
-using namespace pludux::screener;
+using namespace pludux;
 
 TEST(HmaMethodTest, ConstructorInitialization)
 {
@@ -31,9 +31,9 @@ TEST(HmaMethodTest, ConstructorInitialization)
 TEST(HmaMethodTest, RunAllMethod)
 {
   const auto hma_method = HmaMethod{CloseMethod{}, 5};
-  const auto asset_data = pludux::AssetHistory{
+  const auto asset_data = AssetHistory{
    {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
-  const auto asset_snapshot = pludux::AssetSnapshot{asset_data};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 
   EXPECT_DOUBLE_EQ(hma_method(asset_snapshot[0], context), 855.11111111111097);

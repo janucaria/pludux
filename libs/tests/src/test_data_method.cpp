@@ -5,13 +5,13 @@
 
 import pludux;
 
-using namespace pludux::screener;
+using namespace pludux;
 
 TEST(DataMethodTest, RunAllMethodClose)
 {
   const auto data_method = DataMethod{"close"};
-  const auto asset_data = pludux::AssetHistory{{"close", {4.0, 4.1, 4.2}}};
-  const auto asset_snapshot = pludux::AssetSnapshot{asset_data};
+  const auto asset_data = AssetHistory{{"close", {4.0, 4.1, 4.2}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 
   const auto result_0 = data_method(asset_snapshot, context);
@@ -28,8 +28,8 @@ TEST(DataMethodTest, RunAllMethodClose)
 TEST(DataMethodTest, InvalidField)
 {
   const auto data_method = DataMethod{"invalid"};
-  const auto asset_data = pludux::AssetHistory{{"close", {4.0, 4.1, 4.2}}};
-  const auto asset_snapshot = pludux::AssetSnapshot{asset_data};
+  const auto asset_data = AssetHistory{{"close", {4.0, 4.1, 4.2}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 
   EXPECT_TRUE(std::isnan(data_method(asset_snapshot, context)));

@@ -29,12 +29,13 @@ target_sources(${PROJECT_NAME}
         src/asset_series.cxx
         src/asset_history.cxx
         src/asset_snapshot.cxx
+
         
         src/series/method_output.cxx
         src/series/method_contextable.cxx
 
         src/series/any_method_context.cxx
-        src/series/any_method.cxx
+        src/series/any_series_method.cxx
         src/series/method_registry.cxx
         src/series/default_method_context.cxx
 
@@ -69,26 +70,26 @@ target_sources(${PROJECT_NAME}
 
         src/series/stoch_method.cxx
         src/series/stoch_rsi_method.cxx
-
-        src/series.cxx
-
+        
         # src/series/bullish_divergence_method.cxx
         # src/series/hidden_bullish_divergence_method.cxx
-        
-        src/screener/filters/screener_filter.cxx
-        src/screener/filters/all_of_filter.cxx
-        src/screener/filters/any_of_filter.cxx
-        src/screener/filters/boolean_filter.cxx
-        src/screener/filters/comparison_filter.cxx
-        src/screener/filters/logical_filter.cxx
-        src/screener/filters/crossover_filter.cxx
-        src/screener/filters/crossunder_filter.cxx
+        src/series.cxx
 
-        src/screener.cxx
+        
+        src/conditions/any_condition_method.cxx
+        src/conditions/all_of_method.cxx
+        src/conditions/any_of_method.cxx
+        src/conditions/boolean_method.cxx
+        src/conditions/comparison_method.cxx
+        src/conditions/logical_method.cxx
+        src/conditions/crossover_method.cxx
+        src/conditions/crossunder_method.cxx
+        src/conditions.cxx
+
         
         src/config_parser.cxx
 
-        src/module.cxx
+        src/pludux.cxx
 )
 
 target_compile_features(${PROJECT_NAME}

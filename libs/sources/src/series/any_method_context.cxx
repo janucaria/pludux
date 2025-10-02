@@ -13,17 +13,17 @@ import :series.method_output;
 
 export namespace pludux {
 
-class AnyMethodContext {
+class AnySeriesMethodContext {
 public:
   using DispatchResultType = double;
 
-  AnyMethodContext()
+  AnySeriesMethodContext()
   : impl_{nullptr}
   {
   }
 
   template<typename UImpl>
-  AnyMethodContext(UImpl impl)
+  AnySeriesMethodContext(UImpl impl)
   : impl_{std::make_shared<ImplModel<UImpl>>(std::move(impl))}
   {
   }
@@ -49,7 +49,7 @@ public:
   }
 
   template<typename UImpl>
-  friend auto method_context_cast(const AnyMethodContext& method) noexcept
+  friend auto method_context_cast(const AnySeriesMethodContext& method) noexcept
    -> const UImpl*
   {
     auto model =

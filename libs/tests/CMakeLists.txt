@@ -25,7 +25,7 @@ set(PLUDUX_TEST_SOURCES
   src/test_rsi_method.cpp
   src/test_rvol_method.cpp
   src/test_sma_method.cpp
-  src/test_any_method.cpp
+  src/test_any_series_method.cpp
   src/test_stoch_method.cpp
   src/test_stoch_rsi_method.cpp
   src/test_tr_method.cpp
@@ -44,7 +44,7 @@ set(PLUDUX_TEST_SOURCES
   src/test_less_than_filter.cpp
   src/test_logical_filters.cpp
   src/test_not_equal_filter.cpp
-  src/test_screener_filter.cpp
+  src/test_condition_method.cpp
 
 )
 

@@ -5,15 +5,15 @@
 
 import pludux;
 
-using namespace pludux::screener;
+using namespace pludux;
 
 TEST(TrMethodTest, RunAllMethod)
 {
-  const auto asset_data = pludux::AssetHistory{
+  const auto asset_data = AssetHistory{
    {"High", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
    {"Low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},
    {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
-  const auto asset_snapshot = pludux::AssetSnapshot{asset_data};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
   const auto tr_method = TrMethod{};
 

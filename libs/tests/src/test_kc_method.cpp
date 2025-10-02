@@ -6,14 +6,13 @@
 import pludux;
 
 using namespace pludux;
-using namespace pludux::screener;
 
 TEST(KcMethodTest, middle_EMA_range_ATR)
 {
   const auto ma_method = EmaMethod{5};
   const auto range_method = AtrMethod{4};
   const auto multiplier = 2.0;
-  const auto asset_data = pludux::AssetHistory{
+  const auto asset_data = AssetHistory{
    {"High", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
    {"Low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},
    {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
@@ -64,7 +63,7 @@ TEST(KcMethodTest, middle_SMA_range_Range)
   const auto range_method =
    RmaMethod{SubtractMethod{HighMethod{}, LowMethod{}}, ma_period};
   const auto multiplier = 1.0;
-  const auto asset_data = pludux::AssetHistory{
+  const auto asset_data = AssetHistory{
    {"High", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
    {"Low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},
    {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};

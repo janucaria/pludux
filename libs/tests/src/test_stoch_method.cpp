@@ -6,14 +6,13 @@
 import pludux;
 
 using namespace pludux;
-using namespace pludux::screener;
 
 TEST(StochMethodTest, RunAllMethod)
 {
   const auto k_period = 5;
   const auto k_smooth = 3;
   const auto d_period = 2;
-  const auto asset_data = pludux::AssetHistory{
+  const auto asset_data = AssetHistory{
    {"High", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
    {"Low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},
    {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};

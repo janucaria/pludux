@@ -5014,7 +5014,7 @@ void ShowStyleEditor(ImPlotStyle* ref) {
             ImGui::SameLine(); ImGui::SetNextItemWidth(120); ImGui::Combo("##output_type", &output_dest, "To Clipboard\0To TTY\0");
             ImGui::SameLine(); ImGui::Checkbox("Only Modified Colors", &output_only_modified);
 
-            static ImGuiTextFilter filter;
+            static ImGuiTextMethod filter;
             filter.Draw("Filter colors", ImGui::GetFontSize() * 16);
 
             static ImGuiColorEditFlags alpha_flags = ImGuiColorEditFlags_AlphaPreviewHalf;
@@ -5035,7 +5035,7 @@ void ShowStyleEditor(ImPlotStyle* ref) {
             ImGui::PushItemWidth(-160);
             for (int i = 0; i < ImPlotCol_COUNT; i++) {
                 const char* name = ImPlot::GetStyleColorName(i);
-                if (!filter.PassFilter(name))
+                if (!filter.PassMethod(name))
                     continue;
                 ImGui::PushID(i);
                 ImVec4 temp = GetStyleColorVec4(i);

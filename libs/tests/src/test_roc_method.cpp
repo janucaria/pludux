@@ -5,7 +5,7 @@
 
 import pludux;
 
-using namespace pludux::screener;
+using namespace pludux;
 
 TEST(RocMethodTest, ConstructorInitialization)
 {
@@ -32,9 +32,9 @@ TEST(RocMethodTest, ConstructorInitialization)
 TEST(RocMethodTest, RunAllMethod)
 {
   const auto roc_method = RocMethod{5};
-  const auto asset_data = pludux::AssetHistory{
+  const auto asset_data = AssetHistory{
    {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
-  const auto asset_snapshot = pludux::AssetSnapshot{asset_data};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 
   EXPECT_DOUBLE_EQ(roc_method(asset_snapshot[0], context), -1.7241379310344827);

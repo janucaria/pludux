@@ -2,25 +2,25 @@ module;
 
 #include <vector>
 
-export module pludux:screener.crossover_filter;
+export module pludux:conditions.crossover_method;
 
 import :asset_snapshot;
 import :series.method_contextable;
 
-import :screener.screener_filter;
-import :series.any_method;
+import :conditions.any_condition_method;
+import :series.any_series_method;
 
-export namespace pludux::screener {
+export namespace pludux {
 
-class CrossoverFilter {
+class CrossoverMethod {
 public:
-  CrossoverFilter(AnyMethod signal, AnyMethod reference)
+  CrossoverMethod(AnySeriesMethod signal, AnySeriesMethod reference)
   : signal_{std::move(signal)}
   , reference_{std::move(reference)}
   {
   }
 
-  auto operator==(const CrossoverFilter& other) const noexcept
+  auto operator==(const CrossoverMethod& other) const noexcept
    -> bool = default;
 
   auto operator()(this const auto& self,
@@ -35,19 +35,19 @@ public:
     return signal_current > reference_current && signal_prev <= reference_prev;
   }
 
-  auto signal(this const auto& self) noexcept -> const AnyMethod&
+  auto signal(this const auto& self) noexcept -> const AnySeriesMethod&
   {
     return self.signal_;
   }
 
-  auto reference(this const auto& self) noexcept -> const AnyMethod&
+  auto reference(this const auto& self) noexcept -> const AnySeriesMethod&
   {
     return self.reference_;
   }
 
 private:
-  AnyMethod signal_;
-  AnyMethod reference_;
+  AnySeriesMethod signal_;
+  AnySeriesMethod reference_;
 };
 
-} // namespace pludux::screener
+} // namespace pludux

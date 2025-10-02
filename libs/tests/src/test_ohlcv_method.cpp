@@ -4,7 +4,6 @@
 import pludux;
 
 using namespace pludux;
-using namespace pludux::screener;
 
 const auto context = std::monostate{};
 

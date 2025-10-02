@@ -26,11 +26,11 @@ public:
 
   Strategy(std::string name,
            std::shared_ptr<MethodRegistry> method_registry,
-           AnyMethod risk_method,
-           screener::ScreenerFilter long_entry_filter,
-           screener::ScreenerFilter long_exit_filter,
-           screener::ScreenerFilter short_entry_filter,
-           screener::ScreenerFilter short_exit_filter,
+           AnySeriesMethod risk_method,
+           AnyConditionMethod long_entry_filter,
+           AnyConditionMethod long_exit_filter,
+           AnyConditionMethod short_entry_filter,
+           AnyConditionMethod short_exit_filter,
            bool stop_loss_enabled,
            bool stop_loss_trailing_enabled,
            double stop_loss_risk_multiplier,
@@ -63,31 +63,31 @@ public:
   }
 
   auto risk_method(this const auto& self) noexcept
-   -> const AnyMethod&
+   -> const AnySeriesMethod&
   {
     return self.risk_method_;
   }
 
   auto long_entry_filter(this const auto& self) noexcept
-   -> const screener::ScreenerFilter&
+   -> const AnyConditionMethod&
   {
     return self.long_entry_filter_;
   }
 
   auto long_exit_filter(this const auto& self) noexcept
-   -> const screener::ScreenerFilter&
+   -> const AnyConditionMethod&
   {
     return self.long_exit_filter_;
   }
 
   auto short_entry_filter(this const auto& self) noexcept
-   -> const screener::ScreenerFilter&
+   -> const AnyConditionMethod&
   {
     return self.short_entry_filter_;
   }
 
   auto short_exit_filter(this const auto& self) noexcept
-   -> const screener::ScreenerFilter&
+   -> const AnyConditionMethod&
   {
     return self.short_exit_filter_;
   }
@@ -222,13 +222,13 @@ private:
 
   std::shared_ptr<MethodRegistry> method_registry_;
 
-  AnyMethod risk_method_;
+  AnySeriesMethod risk_method_;
 
-  screener::ScreenerFilter long_entry_filter_{screener::FalseFilter{}};
-  screener::ScreenerFilter long_exit_filter_{screener::FalseFilter{}};
+  AnyConditionMethod long_entry_filter_{FalseMethod{}};
+  AnyConditionMethod long_exit_filter_{FalseMethod{}};
 
-  screener::ScreenerFilter short_entry_filter_{screener::FalseFilter{}};
-  screener::ScreenerFilter short_exit_filter_{screener::FalseFilter{}};
+  AnyConditionMethod short_entry_filter_{FalseMethod{}};
+  AnyConditionMethod short_exit_filter_{FalseMethod{}};
 
   bool stop_loss_enabled_{false};
   bool stop_loss_trailing_enabled_{false};
@@ -245,7 +245,7 @@ auto risk_reward_config_parser() -> ConfigParser
   config_parser.register_method_parser(
    "ATR",
    [](const ConfigParser& config_parser,
-      const AnyMethod& method) -> jsoncons::json {
+      const AnySeriesMethod& method) -> jsoncons::json {
      auto serialized_method = jsoncons::json{};
 
      auto atr_method = any_method_cast<AtrMethod>(method);
@@ -259,7 +259,7 @@ auto risk_reward_config_parser() -> ConfigParser
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser,
-      const jsoncons::json& parameters) -> AnyMethod {
+      const jsoncons::json& parameters) -> AnySeriesMethod {
      auto period = std::size_t{14};
      auto multiplier = 1.0;
 
@@ -280,12 +280,12 @@ auto risk_reward_config_parser() -> ConfigParser
   config_parser.register_method_parser(
    "PERCENTAGE",
    [](const ConfigParser& config_parser,
-      const AnyMethod& method) -> jsoncons::json {
+      const AnySeriesMethod& method) -> jsoncons::json {
      auto serialized_method = jsoncons::json{};
 
      auto percent_method = any_method_cast<
-      PercentageMethod<AnyMethod,
-                                 AnyMethod>>(method);
+      PercentageMethod<AnySeriesMethod,
+                                 AnySeriesMethod>>(method);
 
      if(percent_method) {
        auto value_method = any_method_cast<ValueMethod>(
@@ -299,7 +299,7 @@ auto risk_reward_config_parser() -> ConfigParser
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser,
-      const jsoncons::json& parameters) -> AnyMethod {
+      const jsoncons::json& parameters) -> AnySeriesMethod {
      const auto total_method = CloseMethod{};
 
      const auto percent = parameters.at("percentage").as_double();
@@ -314,7 +314,7 @@ auto risk_reward_config_parser() -> ConfigParser
   config_parser.register_method_parser(
    "VALUE",
    [](const ConfigParser& config_parser,
-      const AnyMethod& method) -> jsoncons::json {
+      const AnySeriesMethod& method) -> jsoncons::json {
      auto serialized_method = jsoncons::json{};
 
      auto value_method = any_method_cast<ValueMethod>(method);
@@ -326,7 +326,7 @@ auto risk_reward_config_parser() -> ConfigParser
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser,
-      const jsoncons::json& parameters) -> AnyMethod {
+      const jsoncons::json& parameters) -> AnySeriesMethod {
      const auto value = parameters.at("value").as_double();
      return ValueMethod{value};
    });
@@ -355,8 +355,8 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
   const auto risk_config = strategy_json.at("risk");
   const auto risk_method = risk_parser.parse_method(risk_config);
 
-  auto long_entry_filter = screener::ScreenerFilter{screener::FalseFilter{}};
-  auto long_exit_filter = screener::ScreenerFilter{screener::FalseFilter{}};
+  auto long_entry_filter = AnyConditionMethod{FalseMethod{}};
+  auto long_exit_filter = AnyConditionMethod{FalseMethod{}};
   if(strategy_json.contains("longPosition")) {
     const auto& long_position_json = strategy_json.at("longPosition");
 
@@ -370,8 +370,8 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
     }
   }
 
-  auto short_entry_filter = screener::ScreenerFilter{screener::FalseFilter{}};
-  auto short_exit_filter = screener::ScreenerFilter{screener::FalseFilter{}};
+  auto short_entry_filter = AnyConditionMethod{FalseMethod{}};
+  auto short_exit_filter = AnyConditionMethod{FalseMethod{}};
   if(strategy_json.contains("shortPosition")) {
     const auto& short_position_json = strategy_json.at("shortPosition");
 

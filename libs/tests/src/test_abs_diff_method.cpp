@@ -4,16 +4,15 @@
 
 import pludux;
 
-using namespace pludux::screener;
-using pludux::AssetSnapshot;
+using namespace pludux;
 
 TEST(AbsDiffMethodTest, RunMethod)
 {
   const auto operand1_method = ValueMethod{20.0};
   const auto operand2_method = DataMethod{"close"};
   const auto abs_diff_method = AbsDiffMethod{operand1_method, operand2_method};
-  const auto asset_data = pludux::AssetHistory{{"close", {10, 15, 20, 25, 30}}};
-  const auto asset_snapshot = pludux::AssetSnapshot{asset_data};
+  const auto asset_data = AssetHistory{{"close", {10, 15, 20, 25, 30}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 
   EXPECT_DOUBLE_EQ(abs_diff_method(asset_snapshot[0], context), 10);

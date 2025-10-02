@@ -6,24 +6,24 @@ module;
 #include <variant>
 #include <vector>
 
-export module pludux:screener.all_of_filter;
+export module pludux:conditions.all_of_method;
 
 import :asset_snapshot;
 import :series.method_contextable;
-import :screener.screener_filter;
+import :conditions.any_condition_method;
 
-export namespace pludux::screener {
+export namespace pludux {
 
-class AllOfFilter {
+class AllOfMethod {
 public:
-  AllOfFilter() = default;
+  AllOfMethod() = default;
 
-  explicit AllOfFilter(std::vector<ScreenerFilter> filters)
+  explicit AllOfMethod(std::vector<AnyConditionMethod> filters)
   : conditions_{std::move(filters)}
   {
   }
 
-  auto operator==(const AllOfFilter& other) const noexcept -> bool = default;
+  auto operator==(const AllOfMethod& other) const noexcept -> bool = default;
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_snapshot,
@@ -36,13 +36,13 @@ public:
   }
 
   auto conditions(this const auto& self) noexcept
-   -> const std::vector<ScreenerFilter>&
+   -> const std::vector<AnyConditionMethod>&
   {
     return self.conditions_;
   }
 
 private:
-  std::vector<ScreenerFilter> conditions_;
+  std::vector<AnyConditionMethod> conditions_;
 };
 
-} // namespace pludux::screener
+} // namespace pludux
