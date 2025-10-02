@@ -139,8 +139,8 @@ public:
     const auto asset_index = last_index - std::min(summaries_size, last_index);
     const auto asset_snapshot = self.asset().get_snapshot(asset_index);
     const auto asset_timestamp =
-     static_cast<std::time_t>(asset_snapshot.get_datetime());
-    const auto asset_price = asset_snapshot.get_close();
+     static_cast<std::time_t>(asset_snapshot.datetime());
+    const auto asset_price = asset_snapshot.close();
     const auto& strategy = self.strategy();
     const auto& profile = self.profile();
 
@@ -151,14 +151,14 @@ public:
     auto trade_session = summary.trade_session();
 
     trade_session.market_update(
-     static_cast<std::time_t>(asset_snapshot.get_datetime()),
-     asset_snapshot.get_close(),
-     asset_snapshot.offset());
+     static_cast<std::time_t>(asset_snapshot.datetime()),
+     asset_snapshot.close(),
+     asset_snapshot.lookback());
 
-    trade_session.evaluate_exit_conditions(asset_snapshot[1].get_close(),
-                                           asset_snapshot.get_open(),
-                                           asset_snapshot.get_high(),
-                                           asset_snapshot.get_low());
+    trade_session.evaluate_exit_conditions(asset_snapshot[1].close(),
+                                           asset_snapshot.open(),
+                                           asset_snapshot.high(),
+                                           asset_snapshot.low());
 
     const auto& open_position = trade_session.open_position();
     if(open_position) {
@@ -263,13 +263,12 @@ auto csv_daily_stock_data(std::istream& csv_stream) -> AssetHistory
     std::reverse(date_records.begin(), date_records.end());
   }
 
-  auto history_data =
-   std::vector<std::pair<std::string, pludux::DataSeries<double>>>{};
+  auto field_data = std::vector<std::pair<std::string, pludux::AssetData>>{};
 
   const auto date_record_header = csv_doc.GetColumnName(date_record_index);
-  history_data.emplace_back(
+  field_data.emplace_back(
    date_record_header,
-   pludux::DataSeries<double>(date_records.begin(), date_records.end()));
+   pludux::AssetData(date_records.begin(), date_records.end()));
 
   for(auto i = 1; i < column_count; ++i) {
     auto column = csv_doc.GetColumn<double>(i);
@@ -278,12 +277,12 @@ auto csv_daily_stock_data(std::istream& csv_stream) -> AssetHistory
     }
 
     const auto column_header = csv_doc.GetColumnName(i);
-    history_data.emplace_back(
-     column_header, pludux::DataSeries<double>(column.begin(), column.end()));
+    field_data.emplace_back(column_header,
+                            pludux::AssetData(column.begin(), column.end()));
   }
 
-  auto result = AssetHistory{history_data.begin(), history_data.end()};
-  result.datetime_key(date_record_header);
+  auto result = AssetHistory{field_data.begin(), field_data.end()};
+  result.datetime_field(date_record_header);
 
   return result;
 }

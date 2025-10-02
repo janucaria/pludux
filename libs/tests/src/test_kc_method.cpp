@@ -1,169 +1,131 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <variant>
 
 import pludux;
 
 using namespace pludux;
-using namespace pludux::screener;
 
 TEST(KcMethodTest, middle_EMA_range_ATR)
 {
-  const auto data_method = DataMethod{"close"};
-  const auto ma_method = EmaMethod{data_method, 5};
-  const auto range_method =
-   AtrMethod{DataMethod{"high"}, DataMethod{"low"}, DataMethod{"close"}, 4};
+  const auto ma_method = EmaMethod{5};
+  const auto range_method = AtrMethod{4};
   const auto multiplier = 2.0;
-  const auto asset_data = pludux::AssetHistory{
-   {"high", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
-   {"low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},
-   {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  const auto asset_data = AssetHistory{
+   {"High", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
+   {"Low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},
+   {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
+  const auto context = std::monostate{};
 
-  auto kc_method = KcMethod{ma_method, range_method, multiplier};
+  const auto kc_middle = KcMethod{ma_method, range_method, multiplier};
+  EXPECT_DOUBLE_EQ(kc_middle(asset_snapshot[0], context), 856.95061728395069);
+  EXPECT_DOUBLE_EQ(kc_middle(asset_snapshot[1], context), 857.92592592592598);
+  EXPECT_DOUBLE_EQ(kc_middle(asset_snapshot[2], context), 856.88888888888891);
+  EXPECT_DOUBLE_EQ(kc_middle(asset_snapshot[3], context), 855.33333333333337);
+  EXPECT_DOUBLE_EQ(kc_middle(asset_snapshot[4], context), 853);
+  EXPECT_DOUBLE_EQ(kc_middle(asset_snapshot[5], context), 842);
+  EXPECT_TRUE(std::isnan(kc_middle(asset_snapshot[6], context)));
+  EXPECT_TRUE(std::isnan(kc_middle(asset_snapshot[7], context)));
+  EXPECT_TRUE(std::isnan(kc_middle(asset_snapshot[8], context)));
+  EXPECT_TRUE(std::isnan(kc_middle(asset_snapshot[9], context)));
 
-  const auto kc_middle = kc_method(asset_data);
-  const auto expected_middle = ma_method(asset_data);
-  ASSERT_EQ(kc_middle.size(), asset_data.size());
-  EXPECT_DOUBLE_EQ(kc_middle[0], expected_middle[0]);
-  EXPECT_DOUBLE_EQ(kc_middle[1], expected_middle[1]);
-  EXPECT_DOUBLE_EQ(kc_middle[2], expected_middle[2]);
-  EXPECT_DOUBLE_EQ(kc_middle[3], expected_middle[3]);
-  EXPECT_DOUBLE_EQ(kc_middle[4], expected_middle[4]);
-  EXPECT_DOUBLE_EQ(kc_middle[5], expected_middle[5]);
-  EXPECT_TRUE(std::isnan(kc_middle[6]) && std::isnan(expected_middle[6]));
-  EXPECT_TRUE(std::isnan(kc_middle[7]) && std::isnan(expected_middle[7]));
-  EXPECT_TRUE(std::isnan(kc_middle[8]) && std::isnan(expected_middle[8]));
-  EXPECT_TRUE(std::isnan(kc_middle[9]) && std::isnan(expected_middle[9]));
+  const auto kc_upper = SelectOutputMethod{kc_middle, SeriesOutput::UpperBand};
+  EXPECT_DOUBLE_EQ(kc_upper(asset_snapshot[0], context), 913.68584677613819);
+  EXPECT_DOUBLE_EQ(kc_upper(asset_snapshot[1], context), 923.57289858217598);
+  EXPECT_DOUBLE_EQ(kc_upper(asset_snapshot[2], context), 934.41818576388891);
+  EXPECT_DOUBLE_EQ(kc_upper(asset_snapshot[3], context), 945.37239583333337);
+  EXPECT_DOUBLE_EQ(kc_upper(asset_snapshot[4], context), 949.71875);
+  EXPECT_DOUBLE_EQ(kc_upper(asset_snapshot[5], context), 957.625);
+  EXPECT_TRUE(std::isnan(kc_upper(asset_snapshot[6], context)));
+  EXPECT_TRUE(std::isnan(kc_upper(asset_snapshot[7], context)));
+  EXPECT_TRUE(std::isnan(kc_upper(asset_snapshot[8], context)));
+  EXPECT_TRUE(std::isnan(kc_upper(asset_snapshot[9], context)));
 
-  const auto kc_upper =
-   OutputByNameMethod{kc_method, OutputName::UpperBand}(asset_data);
-  ASSERT_EQ(kc_upper.size(), asset_data.size());
-  EXPECT_DOUBLE_EQ(kc_upper[0], 913.68584677613819);
-  EXPECT_DOUBLE_EQ(kc_upper[1], 923.57289858217598);
-  EXPECT_DOUBLE_EQ(kc_upper[2], 934.41818576388891);
-  EXPECT_DOUBLE_EQ(kc_upper[3], 945.37239583333337);
-  EXPECT_DOUBLE_EQ(kc_upper[4], 949.71875);
-  EXPECT_DOUBLE_EQ(kc_upper[5], 957.625);
-  EXPECT_TRUE(std::isnan(kc_upper[6]));
-  EXPECT_TRUE(std::isnan(kc_upper[7]));
-  EXPECT_TRUE(std::isnan(kc_upper[8]));
-  EXPECT_TRUE(std::isnan(kc_upper[9]));
-
-  const auto kc_lower =
-   OutputByNameMethod{kc_method, OutputName::LowerBand}(asset_data);
-  ASSERT_EQ(kc_lower.size(), asset_data.size());
-  EXPECT_DOUBLE_EQ(kc_lower[0], 800.21538779176319);
-  EXPECT_DOUBLE_EQ(kc_lower[1], 792.27895326967598);
-  EXPECT_DOUBLE_EQ(kc_lower[2], 779.35959201388891);
-  EXPECT_DOUBLE_EQ(kc_lower[3], 765.29427083333337);
-  EXPECT_DOUBLE_EQ(kc_lower[4], 756.28125);
-  EXPECT_DOUBLE_EQ(kc_lower[5], 726.375);
-  EXPECT_TRUE(std::isnan(kc_lower[6]));
-  EXPECT_TRUE(std::isnan(kc_lower[7]));
-  EXPECT_TRUE(std::isnan(kc_lower[8]));
-  EXPECT_TRUE(std::isnan(kc_lower[9]));
+  const auto kc_lower = SelectOutputMethod{kc_upper, SeriesOutput::LowerBand};
+  EXPECT_DOUBLE_EQ(kc_lower(asset_snapshot[0], context), 800.21538779176319);
+  EXPECT_DOUBLE_EQ(kc_lower(asset_snapshot[1], context), 792.27895326967598);
+  EXPECT_DOUBLE_EQ(kc_lower(asset_snapshot[2], context), 779.35959201388891);
+  EXPECT_DOUBLE_EQ(kc_lower(asset_snapshot[3], context), 765.29427083333337);
+  EXPECT_DOUBLE_EQ(kc_lower(asset_snapshot[4], context), 756.28125);
+  EXPECT_DOUBLE_EQ(kc_lower(asset_snapshot[5], context), 726.375);
+  EXPECT_TRUE(std::isnan(kc_lower(asset_snapshot[6], context)));
+  EXPECT_TRUE(std::isnan(kc_lower(asset_snapshot[7], context)));
+  EXPECT_TRUE(std::isnan(kc_lower(asset_snapshot[8], context)));
+  EXPECT_TRUE(std::isnan(kc_lower(asset_snapshot[9], context)));
 }
 
 TEST(KcMethodTest, middle_SMA_range_Range)
 {
-  const auto data_method = DataMethod{"close"};
   const auto ma_period = 5;
-  const auto ma_method = SmaMethod{data_method, ma_period};
+  const auto ma_method = SmaMethod{CloseMethod{}, ma_period};
   const auto range_method =
-   RmaMethod{SubtractMethod{DataMethod{"high"}, DataMethod{"low"}}, ma_period};
+   RmaMethod{SubtractMethod{HighMethod{}, LowMethod{}}, ma_period};
   const auto multiplier = 1.0;
-  const auto asset_data = pludux::AssetHistory{
-   {"high", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
-   {"low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},
-   {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  const auto asset_data = AssetHistory{
+   {"High", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
+   {"Low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},
+   {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
+  const auto context = std::monostate{};
 
-  auto kc_method = KcMethod{ma_method, range_method, multiplier};
+  const auto kc_middle = KcMethod{ma_method, range_method, multiplier};
+  EXPECT_DOUBLE_EQ(kc_middle(asset_snapshot[0], context), 862);
+  EXPECT_DOUBLE_EQ(kc_middle(asset_snapshot[1], context), 865);
+  EXPECT_DOUBLE_EQ(kc_middle(asset_snapshot[2], context), 860);
+  EXPECT_DOUBLE_EQ(kc_middle(asset_snapshot[3], context), 848);
+  EXPECT_DOUBLE_EQ(kc_middle(asset_snapshot[4], context), 842);
+  EXPECT_DOUBLE_EQ(kc_middle(asset_snapshot[5], context), 842);
+  EXPECT_TRUE(std::isnan(kc_middle(asset_snapshot[6], context)));
+  EXPECT_TRUE(std::isnan(kc_middle(asset_snapshot[7], context)));
+  EXPECT_TRUE(std::isnan(kc_middle(asset_snapshot[8], context)));
+  EXPECT_TRUE(std::isnan(kc_middle(asset_snapshot[9], context)));
 
-  const auto kc_middle = kc_method(asset_data);
-  const auto expected_middle = ma_method(asset_data);
-  ASSERT_EQ(kc_middle.size(), asset_data.size());
-  EXPECT_DOUBLE_EQ(kc_middle[0], expected_middle[0]);
-  EXPECT_DOUBLE_EQ(kc_middle[1], expected_middle[1]);
-  EXPECT_DOUBLE_EQ(kc_middle[2], expected_middle[2]);
-  EXPECT_DOUBLE_EQ(kc_middle[3], expected_middle[3]);
-  EXPECT_DOUBLE_EQ(kc_middle[4], expected_middle[4]);
-  EXPECT_DOUBLE_EQ(kc_middle[5], expected_middle[5]);
-  EXPECT_TRUE(std::isnan(kc_middle[6]) && std::isnan(expected_middle[6]));
-  EXPECT_TRUE(std::isnan(kc_middle[7]) && std::isnan(expected_middle[7]));
-  EXPECT_TRUE(std::isnan(kc_middle[8]) && std::isnan(expected_middle[8]));
-  EXPECT_TRUE(std::isnan(kc_middle[9]) && std::isnan(expected_middle[9]));
+  const auto kc_upper = SelectOutputMethod{kc_middle, SeriesOutput::UpperBand};
+  EXPECT_DOUBLE_EQ(kc_upper(asset_snapshot[0], context), 894.18784000000005);
+  EXPECT_DOUBLE_EQ(kc_upper(asset_snapshot[1], context), 901.48479999999995);
+  EXPECT_DOUBLE_EQ(kc_upper(asset_snapshot[2], context), 901.85599999999999);
+  EXPECT_DOUBLE_EQ(kc_upper(asset_snapshot[3], context), 895.32000000000005);
+  EXPECT_DOUBLE_EQ(kc_upper(asset_snapshot[4], context), 892.39999999999998);
+  EXPECT_DOUBLE_EQ(kc_upper(asset_snapshot[5], context), 900.0);
+  EXPECT_TRUE(std::isnan(kc_upper(asset_snapshot[6], context)));
+  EXPECT_TRUE(std::isnan(kc_upper(asset_snapshot[7], context)));
+  EXPECT_TRUE(std::isnan(kc_upper(asset_snapshot[8], context)));
+  EXPECT_TRUE(std::isnan(kc_upper(asset_snapshot[9], context)));
 
-  const auto kc_upper =
-   OutputByNameMethod{kc_method, OutputName::UpperBand}(asset_data);
-  ASSERT_EQ(kc_upper.size(), asset_data.size());
-  EXPECT_DOUBLE_EQ(kc_upper[0], 894.18784000000005);
-  EXPECT_DOUBLE_EQ(kc_upper[1], 901.48479999999995);
-  EXPECT_DOUBLE_EQ(kc_upper[2], 901.85599999999999);
-  EXPECT_DOUBLE_EQ(kc_upper[3], 895.32000000000005);
-  EXPECT_DOUBLE_EQ(kc_upper[4], 892.39999999999998);
-  EXPECT_DOUBLE_EQ(kc_upper[5], 900.0);
-  EXPECT_TRUE(std::isnan(kc_upper[6]));
-  EXPECT_TRUE(std::isnan(kc_upper[7]));
-  EXPECT_TRUE(std::isnan(kc_upper[8]));
-  EXPECT_TRUE(std::isnan(kc_upper[9]));
-
-  const auto kc_lower =
-   OutputByNameMethod{kc_method, OutputName::LowerBand}(asset_data);
-  ASSERT_EQ(kc_lower.size(), asset_data.size());
-  EXPECT_DOUBLE_EQ(kc_lower[0], 829.81215999999995);
-  EXPECT_DOUBLE_EQ(kc_lower[1], 828.51520000000005);
-  EXPECT_DOUBLE_EQ(kc_lower[2], 818.14400000000001);
-  EXPECT_DOUBLE_EQ(kc_lower[3], 800.67999999999995);
-  EXPECT_DOUBLE_EQ(kc_lower[4], 791.60000000000002);
-  EXPECT_DOUBLE_EQ(kc_lower[5], 784.0);
-  EXPECT_TRUE(std::isnan(kc_lower[6]));
-  EXPECT_TRUE(std::isnan(kc_lower[7]));
-  EXPECT_TRUE(std::isnan(kc_lower[8]));
-  EXPECT_TRUE(std::isnan(kc_lower[9]));
+  const auto kc_lower = SelectOutputMethod{kc_middle, SeriesOutput::LowerBand};
+  EXPECT_DOUBLE_EQ(kc_lower(asset_snapshot[0], context), 829.81215999999995);
+  EXPECT_DOUBLE_EQ(kc_lower(asset_snapshot[1], context), 828.51520000000005);
+  EXPECT_DOUBLE_EQ(kc_lower(asset_snapshot[2], context), 818.14400000000001);
+  EXPECT_DOUBLE_EQ(kc_lower(asset_snapshot[3], context), 800.67999999999995);
+  EXPECT_DOUBLE_EQ(kc_lower(asset_snapshot[4], context), 791.60000000000002);
+  EXPECT_DOUBLE_EQ(kc_lower(asset_snapshot[5], context), 784.0);
+  EXPECT_TRUE(std::isnan(kc_lower(asset_snapshot[6], context)));
+  EXPECT_TRUE(std::isnan(kc_lower(asset_snapshot[7], context)));
+  EXPECT_TRUE(std::isnan(kc_lower(asset_snapshot[8], context)));
+  EXPECT_TRUE(std::isnan(kc_lower(asset_snapshot[9], context)));
 }
 
 TEST(KcMethodTest, EqualityOperator)
 {
-  const auto operand1_method1 = DataMethod{"high"};
-  const auto operand2_method1 = DataMethod{"low"};
-  const auto operand3_method1 = DataMethod{"close"};
-  const auto kc_method1 =
-   KcMethod{EmaMethod{operand3_method1, 5},
-            AtrMethod{operand1_method1, operand2_method1, operand3_method1, 14},
-            2.0};
-
-  const auto operand1_method2 = DataMethod{"high"};
-  const auto operand2_method2 = DataMethod{"low"};
-  const auto operand3_method2 = DataMethod{"close"};
-  const auto kc_method2 =
-   KcMethod{EmaMethod{operand3_method2, 5},
-            AtrMethod{operand1_method2, operand2_method2, operand3_method2, 14},
-            2.0};
+  const auto kc_method1 = KcMethod{};
+  const auto kc_method2 = KcMethod{};
 
   EXPECT_TRUE(kc_method1 == kc_method2);
-  EXPECT_FALSE(kc_method1 != kc_method2);
   EXPECT_EQ(kc_method1, kc_method2);
 }
 
 TEST(KcMethodTest, NotEqualOperator)
 {
-  const auto operand1_method1 = DataMethod{"high"};
-  const auto operand2_method1 = DataMethod{"low"};
-  const auto operand3_method1 = DataMethod{"close"};
-  const auto kc_method1 =
-   KcMethod{EmaMethod{operand3_method1, 5},
-            AtrMethod{operand1_method1, operand2_method1, operand3_method1, 14},
-            2.0};
-
-  const auto operand1_method2 = DataMethod{"open"};
-  const auto operand2_method2 = DataMethod{"low"};
-  const auto operand3_method2 = DataMethod{"close"};
-  const auto kc_method2 =
-   KcMethod{EmaMethod{operand3_method2, 5},
-            AtrMethod{operand1_method2, operand2_method2, operand3_method2, 14},
-            2.0};
+  const auto kc_method1 = KcMethod{EmaMethod{5}, AtrMethod{14}, 2.0};
+  const auto kc_method2 = KcMethod{EmaMethod{5}, AtrMethod{20}, 2.0};
+  const auto kc_method3 = KcMethod{EmaMethod{9}, AtrMethod{14}, 2.0};
 
   EXPECT_TRUE(kc_method1 != kc_method2);
-  EXPECT_FALSE(kc_method1 == kc_method2);
   EXPECT_NE(kc_method1, kc_method2);
+  EXPECT_TRUE(kc_method1 != kc_method3);
+  EXPECT_NE(kc_method1, kc_method3);
+  EXPECT_TRUE(kc_method2 != kc_method3);
+  EXPECT_NE(kc_method2, kc_method3);
 }

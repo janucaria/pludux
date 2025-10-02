@@ -2,31 +2,32 @@
 
 import pludux;
 
-using namespace pludux::screener;
-using pludux::AssetHistory;
+using namespace pludux;
 
-TEST(BooleanFilterTest, TrueFilter)
+const auto context = AnySeriesMethodContext{};
+
+TEST(BooleanMethodTest, TrueMethod)
 {
-  const auto filter = TrueFilter{};
+  const auto condition = TrueMethod{};
   const auto asset_data = AssetHistory{};
 
-  EXPECT_TRUE(filter(asset_data));
+  EXPECT_TRUE(condition(asset_data, context));
 }
 
-TEST(BooleanFilterTest, FalseFilter)
+TEST(BooleanMethodTest, FalseMethod)
 {
-  const auto filter = FalseFilter{};
+  const auto condition = FalseMethod{};
   const auto asset_data = AssetHistory{};
 
-  EXPECT_FALSE(filter(asset_data));
+  EXPECT_FALSE(condition(asset_data, context));
 }
 
-TEST(BooleanFilterTest, TrueFilterEquality)
+TEST(BooleanMethodTest, TrueMethodEquality)
 {
-  const auto filter1 = TrueFilter{};
-  const auto filter2 = TrueFilter{};
+  const auto condition1 = TrueMethod{};
+  const auto condition2 = TrueMethod{};
 
-  EXPECT_TRUE(filter1 == filter2);
-  EXPECT_FALSE(filter1 != filter2);
-  EXPECT_EQ(filter1, filter2);
+  EXPECT_TRUE(condition1 == condition2);
+  EXPECT_FALSE(condition1 != condition2);
+  EXPECT_EQ(condition1, condition2);
 }

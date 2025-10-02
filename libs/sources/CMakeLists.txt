@@ -25,83 +25,69 @@ target_sources(${PROJECT_NAME}
       BASE_DIRS src/
       FILES
 
-        src/series/series_output.cxx
-
-        src/series/ref_series.cxx
-        src/series/output_by_name_series.cxx
-        src/series/lookback_series.cxx
-        src/series/data_series.cxx
-        src/series/repeat_series.cxx
-        src/series/operators_series.cxx
-        src/series/change_series.cxx
-        src/series/roc_series.cxx
-
-        src/series/poly_series.cxx
-        
-        src/series/sma_series.cxx
-        src/series/wma_series.cxx
-        src/series/ema_series.cxx
-        src/series/hma_series.cxx
-        src/series/rma_series.cxx
-        src/series/macd_series.cxx
-
-        src/series/rvol_series.cxx
-        src/series/kc_series.cxx
-        src/series/bb_series.cxx
-
-        src/series/tr_series.cxx
-        src/series/atr_series.cxx
-
-        src/series/stoch_series.cxx
-        src/series/rsi_series.cxx
-        src/series/stoch_rsi_series.cxx
-
-        src/series/pivot_lows_series.cxx
-        src/series/bullish_divergence_series.cxx
-        src/series/hidden_bullish_divergence_series.cxx
-
-        src/series.cxx
-
-
+        src/asset_data.cxx
+        src/asset_series.cxx
         src/asset_history.cxx
         src/asset_snapshot.cxx
+
+        
+        src/series_output.cxx
+        src/method_contextable.cxx
+        src/any_method_context.cxx
+
+        src/series/any_series_method.cxx
+        src/series/series_method_registry.cxx
+
+        src/series/value_method.cxx
+        src/series/data_method.cxx
+        src/series/ohlcv_method.cxx
+        src/series/change_method.cxx
+        src/series/lookback_method.cxx
+        src/series/select_output_method.cxx
+        src/series/reference_method.cxx
+
+        src/series/operators_method.cxx
+        src/series/highest_method.cxx
+        src/series/lowest_method.cxx
+        src/series/percentage_method.cxx
+
+        src/series/sma_method.cxx
+        src/series/ema_method.cxx
+        src/series/rma_method.cxx
+        src/series/wma_method.cxx
+        src/series/hma_method.cxx
+        src/series/macd_method.cxx
+        
+        src/series/tr_method.cxx
+        src/series/atr_method.cxx
+
+        src/series/roc_method.cxx
+        src/series/rsi_method.cxx
+        src/series/rvol_method.cxx
+
+        src/series/bb_method.cxx
+        src/series/kc_method.cxx
+
+        src/series/stoch_method.cxx
+        src/series/stoch_rsi_method.cxx
+        src/series.cxx
+
+        
+        src/conditions/any_condition_method.cxx
+        src/conditions/all_of_method.cxx
+        src/conditions/any_of_method.cxx
+        src/conditions/boolean_method.cxx
+        src/conditions/comparison_method.cxx
+        src/conditions/logical_method.cxx
+        src/conditions/crossover_method.cxx
+        src/conditions/crossunder_method.cxx
+        src/conditions.cxx
+
+        
+        src/default_method_context.cxx
         src/config_parser.cxx
 
-        
-        src/screener/methods/screener_method.cxx
-
-        src/screener/methods/method_registry.cxx
-        src/screener/methods/reference_method.cxx
-
-        src/screener/methods/lookback_method.cxx
-        src/screener/methods/output_by_name_method.cxx
-        src/screener/methods/value_method.cxx
-        src/screener/methods/ohlcv_method.cxx
-        src/screener/methods/data_method.cxx
-        src/screener/methods/arithmetic_method.cxx
-        src/screener/methods/ta_with_period_method.cxx
-        src/screener/methods/atr_method.cxx
-        src/screener/methods/bb_method.cxx
-        src/screener/methods/changes_method.cxx
-        src/screener/methods/kc_method.cxx
-        src/screener/methods/macd_method.cxx
-        src/screener/methods/stoch_method.cxx
-        src/screener/methods/stoch_rsi_method.cxx
-        src/screener/methods/bullish_divergence_method.cxx
-        src/screener/methods/hidden_bullish_divergence_method.cxx
-        
-        src/screener/filters/screener_filter.cxx
-        src/screener/filters/all_of_filter.cxx
-        src/screener/filters/any_of_filter.cxx
-        src/screener/filters/boolean_filter.cxx
-        src/screener/filters/comparison_filter.cxx
-        src/screener/filters/logical_filter.cxx
-        src/screener/filters/crossover_filter.cxx
-        src/screener/filters/crossunder_filter.cxx
-
-        src/screener.cxx
-
-        src/module.cxx
+        src/pludux.cxx
 )
 
 target_compile_features(${PROJECT_NAME}

@@ -280,7 +280,7 @@ void serialize(Archive& archive, pludux::backtest::Strategy& strategy)
    risk_parser.serialize_method(strategy.risk_method());
 
   auto config_parser =
-   pludux::make_default_registered_config_parser(method_registry);
+   pludux::make_default_registered_config_parser();
 
   const auto long_entry_filter_json =
    config_parser.serialize_filter(strategy.long_entry_filter());
@@ -317,10 +317,10 @@ void serialize(Archive& archive, pludux::backtest::Strategy& strategy)
   archive(make_nvp("name", strategy.name()),
           make_nvp("registeredMethods", registered_methods),
           make_nvp("riskMethod", risk_method_str),
-          make_nvp("longEntryFilter", long_entry_filter_str),
-          make_nvp("longExitFilter", long_exit_filter_str),
-          make_nvp("shortEntryFilter", short_entry_filter_str),
-          make_nvp("shortExitFilter", short_exit_filter_str),
+          make_nvp("longEntryMethod", long_entry_filter_str),
+          make_nvp("longExitMethod", long_exit_filter_str),
+          make_nvp("shortEntryMethod", short_entry_filter_str),
+          make_nvp("shortExitMethod", short_exit_filter_str),
           make_nvp("stopLossEnabled", stop_loss_enabled),
           make_nvp("stopLossTrailingEnabled", stop_loss_trailing_enabled),
           make_nvp("stopLossRiskMultiplier", stop_loss_risk_multiplier),
@@ -351,17 +351,17 @@ struct LoadAndConstruct<pludux::backtest::Strategy> {
     archive(make_nvp("name", name),
             make_nvp("registeredMethods", registered_methods),
             make_nvp("riskMethod", risk_method_str),
-            make_nvp("longEntryFilter", long_entry_filter_str),
-            make_nvp("longExitFilter", long_exit_filter_str),
-            make_nvp("shortEntryFilter", short_entry_filter_str),
-            make_nvp("shortExitFilter", short_exit_filter_str),
+            make_nvp("longEntryMethod", long_entry_filter_str),
+            make_nvp("longExitMethod", long_exit_filter_str),
+            make_nvp("shortEntryMethod", short_entry_filter_str),
+            make_nvp("shortExitMethod", short_exit_filter_str),
             make_nvp("stopLossEnabled", stop_loss_enabled),
             make_nvp("stopLossTrailingEnabled", stop_loss_trailing_enabled),
             make_nvp("stopLossRiskMultiplier", stop_loss_risk_multiplier),
             make_nvp("takeProfitEnabled", take_profit_enabled),
             make_nvp("takeProfitRiskMultiplier", take_profit_risk_multiplier));
 
-    auto method_registry = std::make_shared<pludux::screener::MethodRegistry>();
+    auto method_registry = std::make_shared<pludux::SeriesMethodRegistry>();
 
     const auto risk_method_json = jsoncons::json::parse(risk_method_str);
     const auto long_entry_filter_json =
@@ -377,7 +377,7 @@ struct LoadAndConstruct<pludux::backtest::Strategy> {
     auto risk_method = risk_parser.parse_method(risk_method_json);
 
     auto config_parser =
-     pludux::make_default_registered_config_parser(method_registry);
+     pludux::make_default_registered_config_parser();
 
     auto long_entry_filter = config_parser.parse_filter(long_entry_filter_json);
     auto long_exit_filter = config_parser.parse_filter(long_exit_filter_json);
@@ -442,73 +442,48 @@ struct LoadAndConstruct<pludux::backtest::Profile> {
 /*--------------------------------------------------------------------------------------*/
 
 template<class Archive>
-void save(Archive& archive, const pludux::DataSeries<double>& data_series)
+void save(Archive& archive, const pludux::AssetData& asset_data)
 {
-  archive(make_nvp("data", data_series.data()));
+  archive(make_nvp("data", asset_data.data()));
 }
 
 template<class Archive>
-void load(Archive& archive, pludux::DataSeries<double>& data_series)
+void load(Archive& archive, pludux::AssetData& asset_data)
 {
   auto data = std::vector<double>{};
 
   archive(make_nvp("data", data));
 
-  data_series.data(std::move(data));
+  asset_data.data(std::move(data));
 }
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void serialize(Archive& archive, pludux::PolySeries<double>& series)
-{
-  const auto data_series = screener_cast<pludux::DataSeries<double>>(&series);
-  archive(make_nvp("series", *data_series));
-}
-
-template<>
-struct LoadAndConstruct<pludux::PolySeries<double>> {
-  template<class Archive>
-  static void
-  load_and_construct(Archive& archive,
-                     construct<pludux::PolySeries<double>>& constructor)
-  {
-    auto data_series = pludux::DataSeries<double>{};
-    archive(make_nvp("series", data_series));
-    constructor(std::move(data_series));
-  }
-};
 
 /*--------------------------------------------------------------------------------------*/
 
 template<class Archive>
 void save(Archive& archive, const pludux::AssetHistory& asset_history)
 {
-  const auto& history_data = asset_history.history_data();
+  const auto& field_data = asset_history.field_data();
 
   auto history_data_map =
-   std::unordered_map<std::string,
-                      std::unique_ptr<pludux::PolySeries<double>>>{};
-  for(const auto& [key, series] : history_data) {
-    history_data_map[key] =
-     std::make_unique<pludux::PolySeries<double>>(series);
+   std::unordered_map<std::string, std::unique_ptr<pludux::AssetData>>{};
+  for(const auto& [key, series] : field_data) {
+    history_data_map[key] = std::make_unique<pludux::AssetData>(series);
   }
 
   archive(make_nvp("historyData", history_data_map));
-  archive(make_nvp("datetimeKey", asset_history.datetime_key()));
-  archive(make_nvp("openKey", asset_history.open_key()));
-  archive(make_nvp("highKey", asset_history.high_key()));
-  archive(make_nvp("lowKey", asset_history.low_key()));
-  archive(make_nvp("closeKey", asset_history.close_key()));
-  archive(make_nvp("volumeKey", asset_history.volume_key()));
+  archive(make_nvp("datetimeKey", asset_history.datetime_field()));
+  archive(make_nvp("openKey", asset_history.open_field()));
+  archive(make_nvp("highKey", asset_history.high_field()));
+  archive(make_nvp("lowKey", asset_history.low_field()));
+  archive(make_nvp("closeKey", asset_history.close_field()));
+  archive(make_nvp("volumeKey", asset_history.volume_field()));
 }
 
 template<class Archive>
 void load(Archive& archive, pludux::AssetHistory& asset_history)
 {
   auto history_data_map =
-   std::unordered_map<std::string,
-                      std::unique_ptr<pludux::PolySeries<double>>>{};
+   std::unordered_map<std::string, std::unique_ptr<pludux::AssetData>>{};
 
   archive(make_nvp("historyData", history_data_map));
 
@@ -516,25 +491,25 @@ void load(Archive& archive, pludux::AssetHistory& asset_history)
     asset_history.insert(key, std::move(*series));
   }
 
-  auto datetime_key = std::string{};
-  auto open_key = std::string{};
-  auto high_key = std::string{};
-  auto low_key = std::string{};
-  auto close_key = std::string{};
-  auto volume_key = std::string{};
-  archive(make_nvp("datetimeKey", datetime_key),
-          make_nvp("openKey", open_key),
-          make_nvp("highKey", high_key),
-          make_nvp("lowKey", low_key),
-          make_nvp("closeKey", close_key),
-          make_nvp("volumeKey", volume_key));
+  auto datetime_field = std::string{};
+  auto open_field = std::string{};
+  auto high_field = std::string{};
+  auto low_field = std::string{};
+  auto close_field = std::string{};
+  auto volume_field = std::string{};
+  archive(make_nvp("datetimeKey", datetime_field),
+          make_nvp("openKey", open_field),
+          make_nvp("highKey", high_field),
+          make_nvp("lowKey", low_field),
+          make_nvp("closeKey", close_field),
+          make_nvp("volumeKey", volume_field));
 
-  asset_history.datetime_key(std::move(datetime_key));
-  asset_history.open_key(std::move(open_key));
-  asset_history.high_key(std::move(high_key));
-  asset_history.low_key(std::move(low_key));
-  asset_history.close_key(std::move(close_key));
-  asset_history.volume_key(std::move(volume_key));
+  asset_history.datetime_field(std::move(datetime_field));
+  asset_history.open_field(std::move(open_field));
+  asset_history.high_field(std::move(high_field));
+  asset_history.low_field(std::move(low_field));
+  asset_history.close_field(std::move(close_field));
+  asset_history.volume_field(std::move(volume_field));
 }
 
 /*--------------------------------------------------------------------------------------*/

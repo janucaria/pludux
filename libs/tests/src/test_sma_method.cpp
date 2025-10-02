@@ -4,50 +4,53 @@
 
 import pludux;
 
-using namespace pludux::screener;
+using namespace pludux;
 
-TEST(SmaMethodTest, RunOneMethod)
+TEST(SmaMethodTest, ConstructorInitialization)
 {
-  const auto field = "close";
-  const auto field_method = DataMethod{field};
-  const auto period = 5;
-  const auto sma_method = SmaMethod{field_method, period};
-  const auto asset_data = pludux::AssetHistory{
-   {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  {
+    auto sma_method = SmaMethod{};
 
-  const auto result = sma_method(asset_data)[0];
-  EXPECT_DOUBLE_EQ(result, 862);
+    EXPECT_EQ(sma_method.period(), 20);
+    EXPECT_EQ(sma_method.source(), CloseMethod{});
+  }
+  {
+    auto sma_method = SmaMethod{20};
+    EXPECT_EQ(sma_method.period(), 20);
+    EXPECT_EQ(sma_method.source(), CloseMethod{});
+  }
+  {
+    const auto sma_method = SmaMethod{OpenMethod{}, 5};
+
+    EXPECT_EQ(sma_method.period(), 5);
+    EXPECT_EQ(sma_method.source(), OpenMethod{});
+  }
 }
 
 TEST(SmaMethodTest, RunAllMethod)
 {
-  const auto field = "close";
-  const auto field_method = DataMethod{field};
-  const auto period = 5;
-  const auto sma_method = SmaMethod{field_method, period};
-  const auto asset_data = pludux::AssetHistory{
-   {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  const auto sma_method = SmaMethod{CloseMethod{}, 5};
+  const auto asset_data = AssetHistory{
+   {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
+  const auto context = std::monostate{};
 
-  const auto result = sma_method(asset_data);
-
-  ASSERT_EQ(result.size(), asset_data.size());
-  EXPECT_DOUBLE_EQ(result[0], 862);
-  EXPECT_DOUBLE_EQ(result[1], 865);
-  EXPECT_DOUBLE_EQ(result[2], 860);
-  EXPECT_DOUBLE_EQ(result[3], 848);
-  EXPECT_DOUBLE_EQ(result[4], 842);
-  EXPECT_DOUBLE_EQ(result[5], 842);
-  EXPECT_TRUE(std::isnan(result[6]));
-  EXPECT_TRUE(std::isnan(result[7]));
-  EXPECT_TRUE(std::isnan(result[8]));
-  EXPECT_TRUE(std::isnan(result[9]));
+  EXPECT_DOUBLE_EQ(sma_method(asset_snapshot[0], context), 862);
+  EXPECT_DOUBLE_EQ(sma_method(asset_snapshot[1], context), 865);
+  EXPECT_DOUBLE_EQ(sma_method(asset_snapshot[2], context), 860);
+  EXPECT_DOUBLE_EQ(sma_method(asset_snapshot[3], context), 848);
+  EXPECT_DOUBLE_EQ(sma_method(asset_snapshot[4], context), 842);
+  EXPECT_DOUBLE_EQ(sma_method(asset_snapshot[5], context), 842);
+  EXPECT_TRUE(std::isnan(sma_method(asset_snapshot[6], context)));
+  EXPECT_TRUE(std::isnan(sma_method(asset_snapshot[7], context)));
+  EXPECT_TRUE(std::isnan(sma_method(asset_snapshot[8], context)));
+  EXPECT_TRUE(std::isnan(sma_method(asset_snapshot[9], context)));
 }
 
 TEST(SmaMethodTest, EqualityOperator)
 {
-  const auto field_method = DataMethod{"close"};
-  const auto sma_method1 = SmaMethod{field_method, 5};
-  const auto sma_method2 = SmaMethod{field_method, 5};
+  const auto sma_method1 = SmaMethod{CloseMethod{}, 5};
+  const auto sma_method2 = SmaMethod{CloseMethod{}, 5};
 
   EXPECT_TRUE(sma_method1 == sma_method2);
   EXPECT_EQ(sma_method1, sma_method2);

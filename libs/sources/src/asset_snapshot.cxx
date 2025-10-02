@@ -8,127 +8,91 @@ module;
 
 export module pludux:asset_snapshot;
 
-export import :series;
-export import :asset_history;
+import :asset_series;
+import :asset_history;
 
 export namespace pludux {
 
 class AssetSnapshot {
 public:
-  AssetSnapshot(const AssetHistory& asset_history)
+  AssetSnapshot(const AssetHistory& asset_history) noexcept
   : AssetSnapshot{0, asset_history}
   {
   }
 
-  AssetSnapshot(std::size_t offset, const AssetHistory& asset_history)
-  : offset_{offset}
+  AssetSnapshot(std::size_t lookback,
+                const AssetHistory& asset_history) noexcept
+  : lookback_{lookback}
   , asset_history_{asset_history}
   {
   }
 
-  auto operator[](this const auto& self, const std::string& key) -> double
+  auto operator[](this auto self, const std::string& field) noexcept -> double
   {
-    return self.get_values(key)[0];
+    return self.data(field);
   }
 
-  auto operator[](this const auto& self, std::size_t index) -> AssetSnapshot
+  auto operator[](this auto self, std::size_t index) noexcept -> AssetSnapshot
   {
-    return AssetSnapshot{self.offset_ + index, self.asset_history_};
+    return AssetSnapshot{self.lookback_ + index, self.asset_history_};
   }
 
-  auto offset(this const auto& self) noexcept -> std::size_t
+  auto lookback(this auto self) noexcept -> std::size_t
   {
-    return self.offset_;
+    return self.lookback_;
   }
 
-  auto size(this const auto& self) noexcept -> std::size_t
+  auto size(this auto self) noexcept -> std::size_t
   {
-    if(self.offset_ >= self.asset_history_.size()) {
+    if(self.lookback_ >= self.asset_history_.size()) {
       return 0;
     }
 
-    return self.asset_history_.size() - self.offset_;
+    return self.asset_history_.size() - self.lookback_;
   }
 
-  auto contains(this const auto& self, const std::string& key) noexcept -> bool
+  auto contains(this auto self, const std::string& field) noexcept -> bool
   {
-    return self.asset_history_.contains(key);
+    return self.asset_history_.contains(field);
   }
 
-  auto get_values(this const auto& self, const std::string& key)
-   -> LookbackSeries<RefSeries<const PolySeries<double>>>
+  auto datetime(this auto self) noexcept -> double
   {
-    return LookbackSeries{self.asset_history_[key], self.offset_};
+    return self.asset_history_.datetime_series()[self.lookback_];
   }
 
-  auto get_datetime_values(this const auto& self)
-   -> LookbackSeries<RefSeries<const PolySeries<double>>>
+  auto open(this auto self) noexcept -> double
   {
-    return self.get_values(self.asset_history_.datetime_key());
+    return self.asset_history_.open_series()[self.lookback_];
   }
 
-  auto get_open_values() const
-   -> LookbackSeries<RefSeries<const PolySeries<double>>>
+  auto high(this auto self) noexcept -> double
   {
-    return get_values(asset_history_.open_key());
+    return self.asset_history_.high_series()[self.lookback_];
   }
 
-  auto get_high_values() const
-   -> LookbackSeries<RefSeries<const PolySeries<double>>>
+  auto low(this auto self) noexcept -> double
   {
-    return get_values(asset_history_.high_key());
+    return self.asset_history_.low_series()[self.lookback_];
   }
 
-  auto get_low_values() const
-   -> LookbackSeries<RefSeries<const PolySeries<double>>>
+  auto close(this auto self) noexcept -> double
   {
-    return get_values(asset_history_.low_key());
+    return self.asset_history_.close_series()[self.lookback_];
   }
 
-  auto get_close_values() const
-   -> LookbackSeries<RefSeries<const PolySeries<double>>>
+  auto volume(this auto self) noexcept -> double
   {
-    return get_values(asset_history_.close_key());
+    return self.asset_history_.volume_series()[self.lookback_];
   }
 
-  auto get_volume_values() const
-   -> LookbackSeries<RefSeries<const PolySeries<double>>>
+  auto data(this auto self, const std::string& field) noexcept -> double
   {
-    return get_values(asset_history_.volume_key());
-  }
-
-  auto get_datetime(this const auto& self) -> double
-  {
-    return self.get_datetime_values()[0];
-  }
-
-  auto get_open(this const auto& self) -> double
-  {
-    return self.get_open_values()[0];
-  }
-
-  auto get_high(this const auto& self) -> double
-  {
-    return self.get_high_values()[0];
-  }
-
-  auto get_low(this const auto& self) -> double
-  {
-    return self.get_low_values()[0];
-  }
-
-  auto get_close(this const auto& self) -> double
-  {
-    return self.get_close_values()[0];
-  }
-
-  auto get_volume(this const auto& self) -> double
-  {
-    return self.get_volume_values()[0];
+    return self.asset_history_[field][self.lookback_];
   }
 
 private:
-  std::size_t offset_;
+  std::size_t lookback_;
   const AssetHistory& asset_history_;
 };
 

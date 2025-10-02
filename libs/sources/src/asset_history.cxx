@@ -6,6 +6,7 @@ module;
 #include <ctime>
 #include <initializer_list>
 #include <iterator>
+#include <ranges>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -14,36 +15,44 @@ module;
 
 export module pludux:asset_history;
 
-import :series;
+import :asset_data;
+import :asset_series;
 
 export namespace pludux {
 
 class AssetHistory {
 public:
+  using FieldDataType = std::unordered_map<std::string, AssetData>;
+
   AssetHistory(
-   std::initializer_list<std::pair<std::string, PolySeries<double>>> data)
+   std::initializer_list<std::pair<std::string, std::initializer_list<double>>>
+    data)
   : AssetHistory(data.begin(), data.end())
   {
   }
 
   template<typename TInputIt>
   AssetHistory(TInputIt begin_it, TInputIt end_it)
-  : history_data_(begin_it, end_it)
-  , size_(0)
-  , datetime_key_{"Datetime"}
-  , open_key_{"Open"}
-  , high_key_{"High"}
-  , low_key_{"Low"}
-  , close_key_{"Close"}
-  , volume_key_{"Volume"}
+  : field_data_(begin_it, end_it)
+  , size_{0}
+  , datetime_field_{"Datetime"}
+  , open_field_{"Open"}
+  , high_field_{"High"}
+  , low_field_{"Low"}
+  , close_field_{"Close"}
+  , volume_field_{"Volume"}
   {
     recalculate_size_();
   }
 
-  auto operator[](this const auto& self, const std::string& key)
-   -> RefSeries<const PolySeries<double>>
+  auto operator[](this const auto& self, const std::string& field) noexcept
+   -> AssetSeries
   {
-    return RefSeries{self.history_data_.at(key)};
+    const auto it = self.field_data_.find(field);
+    if(it != self.field_data_.end()) {
+      return AssetSeries{it->second.data()};
+    }
+    return AssetSeries{};
   }
 
   auto size(this const auto& self) noexcept -> std::size_t
@@ -51,140 +60,134 @@ public:
     return self.size_;
   }
 
-  auto history_data(this const auto& self) noexcept
-   -> const std::unordered_map<std::string, PolySeries<double>>&
+  auto field_data(this const auto& self) noexcept -> const FieldDataType&
   {
-    return self.history_data_;
+    return self.field_data_;
   }
 
-  auto datetime_key(this const auto& self) noexcept -> const std::string&
+  auto datetime_field(this const auto& self) noexcept -> const std::string&
   {
-    return self.datetime_key_;
+    return self.datetime_field_;
   }
 
-  void datetime_key(this auto& self, std::string key) noexcept
+  void datetime_field(this auto& self, std::string field) noexcept
   {
-    self.datetime_key_ = std::move(key);
+    self.datetime_field_ = std::move(field);
   }
 
-  auto open_key(this const auto& self) noexcept -> const std::string&
+  auto open_field(this const auto& self) noexcept -> const std::string&
   {
-    return self.open_key_;
+    return self.open_field_;
   }
 
-  void open_key(this auto& self, std::string key) noexcept
+  void open_field(this auto& self, std::string field) noexcept
   {
-    self.open_key_ = std::move(key);
+    self.open_field_ = std::move(field);
   }
 
-  auto high_key(this const auto& self) noexcept -> const std::string&
+  auto high_field(this const auto& self) noexcept -> const std::string&
   {
-    return self.high_key_;
+    return self.high_field_;
   }
 
-  void high_key(this auto& self, std::string key) noexcept
+  void high_field(this auto& self, std::string field) noexcept
   {
-    self.high_key_ = std::move(key);
+    self.high_field_ = std::move(field);
   }
 
-  auto low_key(this const auto& self) noexcept -> const std::string&
+  auto low_field(this const auto& self) noexcept -> const std::string&
   {
-    return self.low_key_;
+    return self.low_field_;
   }
 
-  void low_key(this auto& self, std::string key) noexcept
+  void low_field(this auto& self, std::string field) noexcept
   {
-    self.low_key_ = std::move(key);
+    self.low_field_ = std::move(field);
   }
 
-  auto close_key(this const auto& self) noexcept -> const std::string&
+  auto close_field(this const auto& self) noexcept -> const std::string&
   {
-    return self.close_key_;
+    return self.close_field_;
   }
 
-  void close_key(this auto& self, std::string key) noexcept
+  void close_field(this auto& self, std::string field) noexcept
   {
-    self.close_key_ = std::move(key);
+    self.close_field_ = std::move(field);
   }
 
-  auto volume_key(this const auto& self) noexcept -> const std::string&
+  auto volume_field(this const auto& self) noexcept -> const std::string&
   {
-    return self.volume_key_;
+    return self.volume_field_;
   }
 
-  void volume_key(this auto& self, std::string key) noexcept
+  void volume_field(this auto& self, std::string field) noexcept
   {
-    self.volume_key_ = std::move(key);
+    self.volume_field_ = std::move(field);
   }
 
-  auto contains(this const auto& self, const std::string& key) noexcept -> bool
+  auto contains(this const auto& self, const std::string& field) noexcept
+   -> bool
   {
-    return self.history_data_.contains(key);
+    return self.field_data_.contains(field);
   }
 
-  void insert(this auto& self, std::string key, PolySeries<double> series)
+  void insert(this auto& self, std::string field, AssetData series)
   {
-    self.history_data_.emplace(std::move(key), std::move(series));
+    self.field_data_.emplace(std::move(field), std::move(series));
     self.recalculate_size_();
   }
 
-  auto get_datetimes(this const auto& self) noexcept
-   -> RefSeries<const PolySeries<double>>
+  auto datetime_series(this const auto& self) noexcept -> AssetSeries
   {
-    return self[self.datetime_key_];
+    return self[self.datetime_field_];
   }
 
-  auto get_opens(this const auto& self) noexcept
-   -> RefSeries<const PolySeries<double>>
+  auto open_series(this const auto& self) noexcept -> AssetSeries
   {
-    return self[self.open_key_];
+    return self[self.open_field_];
   }
 
-  auto get_highs(this const auto& self) noexcept
-   -> RefSeries<const PolySeries<double>>
+  auto high_series(this const auto& self) noexcept -> AssetSeries
   {
-    return self[self.high_key_];
+    return self[self.high_field_];
   }
 
-  auto get_lows(this const auto& self) noexcept
-   -> RefSeries<const PolySeries<double>>
+  auto low_series(this const auto& self) noexcept -> AssetSeries
   {
-    return self[self.low_key_];
+    return self[self.low_field_];
   }
 
-  auto get_closes(this const auto& self) noexcept
-   -> RefSeries<const PolySeries<double>>
+  auto close_series(this const auto& self) noexcept -> AssetSeries
   {
-    return self[self.close_key_];
+    return self[self.close_field_];
   }
 
-  auto get_volumes(this const auto& self) noexcept
-   -> RefSeries<const PolySeries<double>>
+  auto volume_series(this const auto& self) noexcept -> AssetSeries
   {
-    return self[self.volume_key_];
+    return self[self.volume_field_];
   }
 
 private:
-  std::unordered_map<std::string, PolySeries<double>> history_data_;
+  FieldDataType field_data_;
   std::size_t size_;
-  std::string datetime_key_;
-  std::string open_key_;
-  std::string high_key_;
-  std::string low_key_;
-  std::string close_key_;
-  std::string volume_key_;
+  std::string datetime_field_;
+  std::string open_field_;
+  std::string high_field_;
+  std::string low_field_;
+  std::string close_field_;
+  std::string volume_field_;
 
   void recalculate_size_(this auto& self) noexcept
   {
-    self.size_ =
-     self.history_data_.empty()
-      ? 0
-      : std::max_element(self.history_data_.begin(),
-                         self.history_data_.end(),
-                         [](const auto& lhs, const auto& rhs) {
-                           return lhs.second.size() < rhs.second.size();
-                         })
-         ->second.size();
+    if(self.field_data_.empty()) {
+      self.size_ = 0;
+      return;
+    }
+
+    auto values_view = std::views::values(self.field_data_);
+    auto sizes = std::views::transform(values_view, [](const auto& series) { return series.size(); });
+
+    self.size_ = *std::ranges::max_element(sizes);
   }
 };
 

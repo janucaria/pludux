@@ -6,7 +6,7 @@
       "stddev": 2
     },
     "bb_upper": {
-      "method": "OUTPUT_BY_NAME",
+      "method": "SELECT_OUTPUT",
       "name": "upper-band",
       "source": {
         "method": "REFERENCE",
@@ -14,7 +14,7 @@
       }
     },
     "bb_lower": {
-      "method": "OUTPUT_BY_NAME",
+      "method": "SELECT_OUTPUT",
       "name": "lower-band",
       "source": {
         "method": "REFERENCE",

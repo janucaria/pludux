@@ -1,71 +1,73 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <variant>
 
 import pludux;
 
-using namespace pludux::screener;
+using namespace pludux;
 
-TEST(EmaMethodTest, RunOneMethod)
+TEST(EmaMethodTest, ConstructorInitialization)
 {
-  const auto field_method = DataMethod{"close"};
-  const auto period = 5;
-  const auto ema_method = EmaMethod{field_method, period};
-  const auto asset_data = pludux::AssetHistory{
-   {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  {
+    auto ema_method = EmaMethod{};
 
-  const auto result = ema_method(asset_data)[0];
+    EXPECT_EQ(ema_method.period(), 20);
+    EXPECT_EQ(ema_method.source(), CloseMethod{});
+  }
+  {
+    auto ema_method = EmaMethod{20};
 
-  EXPECT_DOUBLE_EQ(result, 856.95061728395069);
+    EXPECT_EQ(ema_method.period(), 20);
+    EXPECT_EQ(ema_method.source(), CloseMethod{});
+  }
+  {
+    const auto ema_method = EmaMethod{OpenMethod{}, 5};
+
+    EXPECT_EQ(ema_method.period(), 5);
+    EXPECT_EQ(ema_method.source(), OpenMethod{});
+  }
 }
 
 TEST(EmaMethodTest, RunAllMethod)
 {
-  const auto field_method = DataMethod{"close"};
-  const auto period = 5;
-  const auto ema_method = EmaMethod{field_method, period};
-  const auto asset_data = pludux::AssetHistory{
-   {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  const auto ema_method = EmaMethod{CloseMethod{}, 5};
+  const auto asset_data = AssetHistory{
+   {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
+  const auto context = std::monostate{};
 
-  const auto series = ema_method(asset_data);
-
-  ASSERT_EQ(series.size(), asset_data.size());
-  EXPECT_DOUBLE_EQ(series[0], 856.95061728395069);
-  EXPECT_DOUBLE_EQ(series[1], 857.92592592592598);
-  EXPECT_DOUBLE_EQ(series[2], 856.88888888888891);
-  EXPECT_DOUBLE_EQ(series[3], 855.33333333333337);
-  EXPECT_DOUBLE_EQ(series[4], 853);
-  EXPECT_DOUBLE_EQ(series[5], 842);
-  EXPECT_TRUE(std::isnan(series[6]));
-  EXPECT_TRUE(std::isnan(series[7]));
-  EXPECT_TRUE(std::isnan(series[8]));
-  EXPECT_TRUE(std::isnan(series[9]));
+  EXPECT_DOUBLE_EQ(ema_method(asset_snapshot[0], context), 856.95061728395069);
+  EXPECT_DOUBLE_EQ(ema_method(asset_snapshot[1], context), 857.92592592592598);
+  EXPECT_DOUBLE_EQ(ema_method(asset_snapshot[2], context), 856.88888888888891);
+  EXPECT_DOUBLE_EQ(ema_method(asset_snapshot[3], context), 855.33333333333337);
+  EXPECT_DOUBLE_EQ(ema_method(asset_snapshot[4], context), 853);
+  EXPECT_DOUBLE_EQ(ema_method(asset_snapshot[5], context), 842);
+  EXPECT_TRUE(std::isnan(ema_method(asset_snapshot[6], context)));
+  EXPECT_TRUE(std::isnan(ema_method(asset_snapshot[7], context)));
+  EXPECT_TRUE(std::isnan(ema_method(asset_snapshot[8], context)));
+  EXPECT_TRUE(std::isnan(ema_method(asset_snapshot[9], context)));
 }
 
 TEST(EmaMethodTest, EqualityOperator)
 {
-  const auto field_method = DataMethod{"close"};
-  const auto period = 5;
-  const auto ema_method1 = EmaMethod{field_method, period};
-  const auto ema_method2 = EmaMethod{field_method, period};
+  const auto ema_method1 = EmaMethod{CloseMethod{}, 5};
+  const auto ema_method2 = EmaMethod{CloseMethod{}, 5};
 
   EXPECT_TRUE(ema_method1 == ema_method2);
-  EXPECT_FALSE(ema_method1 != ema_method2);
   EXPECT_EQ(ema_method1, ema_method2);
 }
 
 TEST(EmaMethodTest, NotEqualOperator)
 {
-  const auto field_method1 = DataMethod{"close"};
-  const auto period1 = 5;
-  const auto ema_method1 = EmaMethod{field_method1, period1};
-
-  const auto field2 = "open";
-  const auto field_method2 = DataMethod{field2};
-  const auto period2 = 10;
-  const auto ema_method2 = EmaMethod{field_method2, period2};
+  const auto ema_method1 = EmaMethod{DataMethod{"close"}, 5};
+  const auto ema_method2 = EmaMethod{DataMethod{"close"}, 10};
+  const auto ema_method3 = EmaMethod{DataMethod{"open"}, 10};
 
   EXPECT_TRUE(ema_method1 != ema_method2);
-  EXPECT_FALSE(ema_method1 == ema_method2);
   EXPECT_NE(ema_method1, ema_method2);
+  EXPECT_TRUE(ema_method1 != ema_method3);
+  EXPECT_NE(ema_method1, ema_method3);
+  EXPECT_TRUE(ema_method2 != ema_method3);
+  EXPECT_NE(ema_method2, ema_method3);
 }
