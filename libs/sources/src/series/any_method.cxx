@@ -10,7 +10,7 @@ module;
 export module pludux:series.any_method;
 
 import :asset_snapshot;
-import :series.method_call_context;
+import :series.method_contextable;
 import :series.method_output;
 
 import :series.any_method_context;

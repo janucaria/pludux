@@ -5,7 +5,7 @@ module;
 export module pludux:series.ohlcv_method;
 
 import :asset_snapshot;
-import :series.method_call_context;
+import :series.method_contextable;
 import :series.method_output;
 
 namespace pludux::series {
@@ -32,7 +32,7 @@ public:
 
   auto operator()(this auto self,
                   AssetSnapshot asset_snapshot,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     return asset_snapshot.open();
@@ -41,7 +41,7 @@ public:
   auto operator()(this auto self,
                   AssetSnapshot asset_snapshot,
                   MethodOutput output,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     return std::numeric_limits<ResultType>::quiet_NaN();
@@ -54,7 +54,7 @@ public:
 
   auto operator()(this auto self,
                   AssetSnapshot asset_snapshot,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     return asset_snapshot.high();
@@ -63,7 +63,7 @@ public:
   auto operator()(this auto self,
                   AssetSnapshot asset_snapshot,
                   MethodOutput output,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     return std::numeric_limits<ResultType>::quiet_NaN();
@@ -76,7 +76,7 @@ public:
 
   auto operator()(this auto self,
                   AssetSnapshot asset_snapshot,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     return asset_snapshot.low();
@@ -85,7 +85,7 @@ public:
   auto operator()(this auto self,
                   AssetSnapshot asset_snapshot,
                   MethodOutput output,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     return std::numeric_limits<ResultType>::quiet_NaN();
@@ -98,7 +98,7 @@ public:
 
   auto operator()(this auto self,
                   AssetSnapshot asset_snapshot,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     return asset_snapshot.close();
@@ -107,7 +107,7 @@ public:
   auto operator()(this auto self,
                   AssetSnapshot asset_snapshot,
                   MethodOutput output,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     return std::numeric_limits<ResultType>::quiet_NaN();
@@ -120,7 +120,7 @@ public:
 
   auto operator()(this auto self,
                   AssetSnapshot asset_snapshot,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     return asset_snapshot.volume();
@@ -129,7 +129,7 @@ public:
   auto operator()(this auto self,
                   AssetSnapshot asset_snapshot,
                   MethodOutput output,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     return std::numeric_limits<ResultType>::quiet_NaN();

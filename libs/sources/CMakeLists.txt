@@ -31,7 +31,7 @@ target_sources(${PROJECT_NAME}
         src/asset_snapshot.cxx
         
         src/series/method_output.cxx
-        src/series/method_call_context.cxx
+        src/series/method_contextable.cxx
 
         src/series/any_method_context.cxx
         src/series/any_method.cxx

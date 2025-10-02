@@ -1,7 +1,7 @@
 export module pludux:series;
 
 export import :series.method_output;
-export import :series.method_call_context;
+export import :series.method_contextable;
 export import :series.any_method_context;
 
 export import :series.any_method;

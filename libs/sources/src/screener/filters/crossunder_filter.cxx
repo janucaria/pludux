@@ -5,7 +5,7 @@ module;
 export module pludux:screener.crossunder_filter;
 
 import :asset_snapshot;
-import :series.method_call_context;
+import :series.method_contextable;
 
 import :screener.screener_filter;
 import :series.any_method;
@@ -25,7 +25,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
-                  series::MethodCallContext<double> auto context) -> bool
+                  series::MethodContextable auto context) -> bool
   {
     const auto signal_current = self.signal_(asset_data, context);
     const auto signal_prev = self.signal_(asset_data[1], context);

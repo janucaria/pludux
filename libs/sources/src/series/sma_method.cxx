@@ -7,7 +7,7 @@ module;
 export module pludux:series.sma_method;
 
 import :asset_snapshot;
-import :series.method_call_context;
+import :series.method_contextable;
 import :series.method_output;
 
 import :series.ohlcv_method;
@@ -39,7 +39,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_snapshot,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     const auto asset_size = asset_snapshot.size();
@@ -58,7 +58,7 @@ public:
   auto operator()(this const auto& self,
                   AssetSnapshot asset_snapshot,
                   MethodOutput output,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     return std::numeric_limits<ResultType>::quiet_NaN();

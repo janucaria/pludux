@@ -8,7 +8,7 @@ module;
 export module pludux:series.change_method;
 
 import :asset_snapshot;
-import :series.method_call_context;
+import :series.method_contextable;
 import :series.method_output;
 
 import :series.ohlcv_method;
@@ -35,7 +35,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
-                  MethodCallContext<ResultType> auto context) noexcept -> double
+                  MethodContextable auto context) noexcept -> double
   {
     const auto current = self.source_(asset_data, context);
     const auto previous = self.source_(asset_data[1], context);
@@ -46,7 +46,7 @@ public:
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
                   MethodOutput output,
-                  MethodCallContext<ResultType> auto context) noexcept -> double
+                  MethodContextable auto context) noexcept -> double
   {
     return std::numeric_limits<ResultType>::quiet_NaN();
   }

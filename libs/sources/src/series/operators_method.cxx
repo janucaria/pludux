@@ -11,7 +11,7 @@ module;
 export module pludux:series.operators_method;
 
 import :asset_snapshot;
-import :series.method_call_context;
+import :series.method_contextable;
 import :series.method_output;
 
 namespace pludux::series {
@@ -36,7 +36,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     const auto operand1_result = self.operand1_(asset_data, context);
@@ -48,7 +48,7 @@ public:
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
                   MethodOutput output,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     return std::numeric_limits<ResultType>::quiet_NaN();
@@ -94,7 +94,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     const auto operand_result = self.operand_(asset_data, context);
@@ -104,7 +104,7 @@ public:
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
                   MethodOutput output,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     return std::numeric_limits<ResultType>::quiet_NaN();

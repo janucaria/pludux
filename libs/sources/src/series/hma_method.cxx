@@ -8,7 +8,7 @@ module;
 export module pludux:series.hma_method;
 
 import :asset_snapshot;
-import :series.method_call_context;
+import :series.method_contextable;
 import :series.method_output;
 
 import :series.value_method;
@@ -42,7 +42,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_snapshot,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     const auto wam1 = WmaMethod{self.source_, self.period_ / 2};
@@ -61,7 +61,7 @@ public:
   auto operator()(this const auto& self,
                   AssetSnapshot asset_snapshot,
                   MethodOutput output,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     return std::numeric_limits<ResultType>::quiet_NaN();

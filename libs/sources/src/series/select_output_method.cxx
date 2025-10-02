@@ -5,7 +5,7 @@ module;
 export module pludux:series.select_output_method;
 
 import :asset_snapshot;
-import :series.method_call_context;
+import :series.method_contextable;
 import :series.method_output;
 
 export namespace pludux::series {
@@ -35,7 +35,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     return self.source_(asset_data, self.output(), context);
@@ -44,7 +44,7 @@ public:
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
                   MethodOutput output,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     return self.source_(asset_data, output, context);

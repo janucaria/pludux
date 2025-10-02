@@ -10,7 +10,7 @@ module;
 export module pludux:series.kc_method;
 
 import :asset_snapshot;
-import :series.method_call_context;
+import :series.method_contextable;
 import :series.method_output;
 
 import :series.ohlcv_method;
@@ -41,7 +41,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     return self(asset_data, MethodOutput::MiddleBand, context);
@@ -50,7 +50,7 @@ public:
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
                   MethodOutput output,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     const auto range = self.range_(asset_data, context) * self.multiplier_;

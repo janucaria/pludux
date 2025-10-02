@@ -9,7 +9,7 @@ module;
 export module pludux:series.stoch_rsi_method;
 
 import :asset_snapshot;
-import :series.method_call_context;
+import :series.method_contextable;
 import :series.method_output;
 
 import :series.rsi_method;
@@ -54,7 +54,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_snapshot,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     return self(asset_snapshot, MethodOutput::KPercent, context);
@@ -63,7 +63,7 @@ public:
   auto operator()(this const auto& self,
                   AssetSnapshot asset_snapshot,
                   MethodOutput output,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     const auto highest_rsi = HighestMethod{self.rsi_, self.k_period_};

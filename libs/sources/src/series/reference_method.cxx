@@ -9,7 +9,7 @@ module;
 export module pludux:series.reference_method;
 
 import :asset_snapshot;
-import :series.method_call_context;
+import :series.method_contextable;
 import :series.method_output;
 
 export namespace pludux::series {
@@ -30,7 +30,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     if constexpr(std::is_same_v<std::monostate, decltype(context)>) {
@@ -43,7 +43,7 @@ public:
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
                   MethodOutput output_name,
-                  MethodCallContext<ResultType> auto context) noexcept
+                  MethodContextable auto context) noexcept
    -> ResultType
   {
     if constexpr(std::is_same_v<std::monostate, decltype(context)>) {
