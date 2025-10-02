@@ -7,7 +7,7 @@ module;
 export module pludux:screener.logical_filter;
 
 import :asset_snapshot;
-import :screener.method_call_context;
+import :series.method_call_context;
 
 import :screener.screener_filter;
 
@@ -29,7 +29,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_snapshot,
-                  MethodCallContext<double> auto context) -> bool
+                  series::MethodCallContext<double> auto context) -> bool
   {
     const auto first_condition = self.first_condition_(asset_snapshot, context);
     const auto second_condition =
@@ -67,7 +67,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_snapshot,
-                  MethodCallContext<double> auto context) -> bool
+                  series::MethodCallContext<double> auto context) -> bool
   {
     const auto condition = self.other_condition_(asset_snapshot, context);
     return TUnaryLogicalOperator{}(condition);

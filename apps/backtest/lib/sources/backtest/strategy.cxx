@@ -25,8 +25,8 @@ public:
   enum class Direction { long_direction, short_direction };
 
   Strategy(std::string name,
-           std::shared_ptr<screener::MethodRegistry> method_registry,
-           screener::AnyMethod risk_method,
+           std::shared_ptr<series::MethodRegistry> method_registry,
+           series::AnyMethod risk_method,
            screener::ScreenerFilter long_entry_filter,
            screener::ScreenerFilter long_exit_filter,
            screener::ScreenerFilter short_entry_filter,
@@ -57,13 +57,13 @@ public:
   }
 
   auto method_registry(this const auto& self) noexcept
-   -> std::shared_ptr<screener::MethodRegistry>
+   -> std::shared_ptr<series::MethodRegistry>
   {
     return self.method_registry_;
   }
 
   auto risk_method(this const auto& self) noexcept
-   -> const screener::AnyMethod&
+   -> const series::AnyMethod&
   {
     return self.risk_method_;
   }
@@ -123,7 +123,7 @@ public:
   {
     auto result = std::optional<TradeEntry>{};
 
-    auto context = screener::DefaultMethodContext{*self.method_registry_};
+    auto context = series::DefaultMethodContext{*self.method_registry_};
 
     if(self.long_entry_filter()(asset_snapshot, context)) {
       const auto risk_size = self.risk_method_(asset_snapshot, context);
@@ -157,7 +157,7 @@ public:
   {
     auto result = std::optional<TradeEntry>{};
 
-    auto context = screener::DefaultMethodContext{*self.method_registry_};
+    auto context = series::DefaultMethodContext{*self.method_registry_};
 
     if(self.short_entry_filter()(asset_snapshot, context)) {
       const auto risk_size = -self.risk_method_(asset_snapshot, context);
@@ -201,7 +201,7 @@ public:
     const auto is_short_direction = position_size < 0;
     const auto exit_price = asset_snapshot.close();
     
-    auto context = screener::DefaultMethodContext{*self.method_registry_};
+    auto context = series::DefaultMethodContext{*self.method_registry_};
 
     if(is_long_direction) {
       if(self.long_exit_filter()(asset_snapshot, context)) {
@@ -220,9 +220,9 @@ public:
 private:
   std::string name_;
 
-  std::shared_ptr<screener::MethodRegistry> method_registry_;
+  std::shared_ptr<series::MethodRegistry> method_registry_;
 
-  screener::AnyMethod risk_method_;
+  series::AnyMethod risk_method_;
 
   screener::ScreenerFilter long_entry_filter_{screener::FalseFilter{}};
   screener::ScreenerFilter long_exit_filter_{screener::FalseFilter{}};
@@ -245,10 +245,10 @@ auto risk_reward_config_parser() -> ConfigParser
   config_parser.register_method_parser(
    "ATR",
    [](const ConfigParser& config_parser,
-      const screener::AnyMethod& method) -> jsoncons::json {
+      const series::AnyMethod& method) -> jsoncons::json {
      auto serialized_method = jsoncons::json{};
 
-     auto atr_method = any_method_cast<screener::AtrMethod>(method);
+     auto atr_method = any_method_cast<series::AtrMethod>(method);
 
      if(atr_method) {
        serialized_method["atr"] = jsoncons::json{};
@@ -259,7 +259,7 @@ auto risk_reward_config_parser() -> ConfigParser
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser,
-      const jsoncons::json& parameters) -> screener::AnyMethod {
+      const jsoncons::json& parameters) -> series::AnyMethod {
      auto period = std::size_t{14};
      auto multiplier = 1.0;
 
@@ -273,22 +273,22 @@ auto risk_reward_config_parser() -> ConfigParser
        }
      }
 
-     const auto atr_method = screener::AtrMethod{period, multiplier};
+     const auto atr_method = series::AtrMethod{period, multiplier};
      return atr_method;
    });
 
   config_parser.register_method_parser(
    "PERCENTAGE",
    [](const ConfigParser& config_parser,
-      const screener::AnyMethod& method) -> jsoncons::json {
+      const series::AnyMethod& method) -> jsoncons::json {
      auto serialized_method = jsoncons::json{};
 
      auto percent_method = any_method_cast<
-      screener::PercentageMethod<screener::AnyMethod,
-                                 screener::AnyMethod>>(method);
+      series::PercentageMethod<series::AnyMethod,
+                                 series::AnyMethod>>(method);
 
      if(percent_method) {
-       auto value_method = any_method_cast<screener::ValueMethod>(
+       auto value_method = any_method_cast<series::ValueMethod>(
         percent_method->percent());
 
        if(value_method) {
@@ -299,14 +299,14 @@ auto risk_reward_config_parser() -> ConfigParser
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser,
-      const jsoncons::json& parameters) -> screener::AnyMethod {
-     const auto total_method = screener::CloseMethod{};
+      const jsoncons::json& parameters) -> series::AnyMethod {
+     const auto total_method = series::CloseMethod{};
 
      const auto percent = parameters.at("percentage").as_double();
-     const auto percent_method = screener::ValueMethod{percent};
+     const auto percent_method = series::ValueMethod{percent};
 
      const auto percentage_method =
-      screener::PercentageMethod{total_method, percent_method};
+      series::PercentageMethod{total_method, percent_method};
 
      return percentage_method;
    });
@@ -314,10 +314,10 @@ auto risk_reward_config_parser() -> ConfigParser
   config_parser.register_method_parser(
    "VALUE",
    [](const ConfigParser& config_parser,
-      const screener::AnyMethod& method) -> jsoncons::json {
+      const series::AnyMethod& method) -> jsoncons::json {
      auto serialized_method = jsoncons::json{};
 
-     auto value_method = any_method_cast<screener::ValueMethod>(method);
+     auto value_method = any_method_cast<series::ValueMethod>(method);
 
      if(value_method) {
        serialized_method["value"] = value_method->value();
@@ -326,9 +326,9 @@ auto risk_reward_config_parser() -> ConfigParser
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser,
-      const jsoncons::json& parameters) -> screener::AnyMethod {
+      const jsoncons::json& parameters) -> series::AnyMethod {
      const auto value = parameters.at("value").as_double();
-     return screener::ValueMethod{value};
+     return series::ValueMethod{value};
    });
 
   return config_parser;
@@ -338,7 +338,7 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
                                   std::istream& json_strategy_stream)
  -> backtest::Strategy
 {
-  auto method_registry = std::make_shared<screener::MethodRegistry>();
+  auto method_registry = std::make_shared<series::MethodRegistry>();
   auto config_parser = make_default_registered_config_parser(method_registry);
 
   auto strategy_json = jsoncons::json::parse(

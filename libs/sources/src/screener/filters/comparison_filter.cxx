@@ -7,10 +7,10 @@ module;
 export module pludux:screener.comparison_filter;
 
 import :asset_snapshot;
-import :screener.method_call_context;
+import :series.method_call_context;
 
 import :screener.screener_filter;
-import :screener.any_method;
+import :series.any_method;
 
 export namespace pludux::screener {
 
@@ -18,7 +18,7 @@ template<typename TComparator>
   requires std::is_invocable_r_v<bool, TComparator, double, double>
 class ComparisonFilter {
 public:
-  ComparisonFilter(AnyMethod target, AnyMethod threshold)
+  ComparisonFilter(series::AnyMethod target, series::AnyMethod threshold)
   : target_{std::move(target)}
   , threshold_{std::move(threshold)}
   {
@@ -29,7 +29,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
-                  MethodCallContext<double> auto context) -> bool
+                  series::MethodCallContext<double> auto context) -> bool
   {
     const auto target_result = self.target_(asset_data, context);
     const auto threshold_result = self.threshold_(asset_data, context);
@@ -37,19 +37,19 @@ public:
     return TComparator{}(target_result, threshold_result);
   }
 
-  auto target(this const auto& self) noexcept -> const AnyMethod&
+  auto target(this const auto& self) noexcept -> const series::AnyMethod&
   {
     return self.target_;
   }
 
-  auto threshold(this const auto& self) noexcept -> const AnyMethod&
+  auto threshold(this const auto& self) noexcept -> const series::AnyMethod&
   {
     return self.threshold_;
   }
 
 private:
-  AnyMethod target_;
-  AnyMethod threshold_;
+  series::AnyMethod target_;
+  series::AnyMethod threshold_;
 };
 
 using GreaterEqualFilter = ComparisonFilter<std::greater_equal<>>;

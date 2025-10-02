@@ -30,48 +30,50 @@ target_sources(${PROJECT_NAME}
         src/asset_history.cxx
         src/asset_snapshot.cxx
         
-        src/screener/methods/method_output.cxx
-        src/screener/methods/method_call_context.cxx
+        src/series/method_output.cxx
+        src/series/method_call_context.cxx
 
-        src/screener/methods/any_method_context.cxx
-        src/screener/methods/any_method.cxx
-        src/screener/methods/method_registry.cxx
-        src/screener/methods/default_method_context.cxx
+        src/series/any_method_context.cxx
+        src/series/any_method.cxx
+        src/series/method_registry.cxx
+        src/series/default_method_context.cxx
 
-        src/screener/methods/value_method.cxx
-        src/screener/methods/data_method.cxx
-        src/screener/methods/ohlcv_method.cxx
-        src/screener/methods/change_method.cxx
-        src/screener/methods/lookback_method.cxx
-        src/screener/methods/select_output_method.cxx
-        src/screener/methods/reference_method.cxx
+        src/series/value_method.cxx
+        src/series/data_method.cxx
+        src/series/ohlcv_method.cxx
+        src/series/change_method.cxx
+        src/series/lookback_method.cxx
+        src/series/select_output_method.cxx
+        src/series/reference_method.cxx
 
-        src/screener/methods/operators_method.cxx
-        src/screener/methods/highest_method.cxx
-        src/screener/methods/lowest_method.cxx
+        src/series/operators_method.cxx
+        src/series/highest_method.cxx
+        src/series/lowest_method.cxx
 
-        src/screener/methods/sma_method.cxx
-        src/screener/methods/ema_method.cxx
-        src/screener/methods/rma_method.cxx
-        src/screener/methods/wma_method.cxx
-        src/screener/methods/hma_method.cxx
-        src/screener/methods/macd_method.cxx
+        src/series/sma_method.cxx
+        src/series/ema_method.cxx
+        src/series/rma_method.cxx
+        src/series/wma_method.cxx
+        src/series/hma_method.cxx
+        src/series/macd_method.cxx
         
-        src/screener/methods/tr_method.cxx
-        src/screener/methods/atr_method.cxx
+        src/series/tr_method.cxx
+        src/series/atr_method.cxx
 
-        src/screener/methods/roc_method.cxx
-        src/screener/methods/rsi_method.cxx
-        src/screener/methods/rvol_method.cxx
+        src/series/roc_method.cxx
+        src/series/rsi_method.cxx
+        src/series/rvol_method.cxx
 
-        src/screener/methods/bb_method.cxx
-        src/screener/methods/kc_method.cxx
+        src/series/bb_method.cxx
+        src/series/kc_method.cxx
 
-        src/screener/methods/stoch_method.cxx
-        src/screener/methods/stoch_rsi_method.cxx
+        src/series/stoch_method.cxx
+        src/series/stoch_rsi_method.cxx
 
-        # src/screener/methods/bullish_divergence_method.cxx
-        # src/screener/methods/hidden_bullish_divergence_method.cxx
+        src/series.cxx
+
+        # src/series/bullish_divergence_method.cxx
+        # src/series/hidden_bullish_divergence_method.cxx
         
         src/screener/filters/screener_filter.cxx
         src/screener/filters/all_of_filter.cxx

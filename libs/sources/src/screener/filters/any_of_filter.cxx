@@ -7,7 +7,7 @@ module;
 export module pludux:screener.any_of_filter;
 
 import :asset_snapshot;
-import :screener.method_call_context;
+import :series.method_call_context;
 import :screener.screener_filter;
 
 export namespace pludux::screener {
@@ -23,7 +23,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
-                  MethodCallContext<double> auto context) -> bool
+                  series::MethodCallContext<double> auto context) -> bool
   {
     return std::ranges::any_of(self.conditions_,
                                [&asset_data, &context](const auto& filter) {
