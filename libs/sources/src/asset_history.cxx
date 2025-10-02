@@ -184,9 +184,8 @@ private:
       return;
     }
 
-    auto sizes =
-     self.field_data_ | std::views::values |
-     std::views::transform([](const auto& series) { return series.size(); });
+    auto values_view = std::views::values(self.field_data_);
+    auto sizes = std::views::transform(values_view, [](const auto& series) { return series.size(); });
 
     self.size_ = *std::ranges::max_element(sizes);
   }

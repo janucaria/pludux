@@ -14,7 +14,7 @@ TEST(AssetSnapshotTest, BasicAccessAndOffset)
 
   AssetSnapshot snap{ah};
   EXPECT_EQ(snap.size(), 5);
-  EXPECT_EQ(snap.offset(), 0);
+  EXPECT_EQ(snap.lookback(), 0);
   EXPECT_TRUE(snap.contains("close"));
   EXPECT_FALSE(snap.contains("foo"));
 
@@ -25,7 +25,7 @@ TEST(AssetSnapshotTest, BasicAccessAndOffset)
 
   // Offset snapshot
   auto snap2 = snap[2];
-  EXPECT_EQ(snap2.offset(), 2);
+  EXPECT_EQ(snap2.lookback(), 2);
   EXPECT_EQ(snap2.size(), 3);
   EXPECT_EQ(snap2["close"], 30);
 }

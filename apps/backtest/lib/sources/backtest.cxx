@@ -153,7 +153,7 @@ public:
     trade_session.market_update(
      static_cast<std::time_t>(asset_snapshot.datetime()),
      asset_snapshot.close(),
-     asset_snapshot.offset());
+     asset_snapshot.lookback());
 
     trade_session.evaluate_exit_conditions(asset_snapshot[1].close(),
                                            asset_snapshot.open(),
