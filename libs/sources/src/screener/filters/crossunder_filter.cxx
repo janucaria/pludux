@@ -14,7 +14,7 @@ export namespace pludux::screener {
 
 class CrossunderFilter {
 public:
-  CrossunderFilter(series::AnyMethod signal, series::AnyMethod reference)
+  CrossunderFilter(AnyMethod signal, AnyMethod reference)
   : signal_{std::move(signal)}
   , reference_{std::move(reference)}
   {
@@ -25,7 +25,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
-                  series::MethodContextable auto context) -> bool
+                  MethodContextable auto context) -> bool
   {
     const auto signal_current = self.signal_(asset_data, context);
     const auto signal_prev = self.signal_(asset_data[1], context);
@@ -35,19 +35,19 @@ public:
     return signal_current < reference_current && signal_prev >= reference_prev;
   }
 
-  auto signal(this const auto& self) noexcept -> const series::AnyMethod&
+  auto signal(this const auto& self) noexcept -> const AnyMethod&
   {
     return self.signal_;
   }
 
-  auto reference(this const auto& self) noexcept -> const series::AnyMethod&
+  auto reference(this const auto& self) noexcept -> const AnyMethod&
   {
     return self.reference_;
   }
 
 private:
-  series::AnyMethod signal_;
-  series::AnyMethod reference_;
+  AnyMethod signal_;
+  AnyMethod reference_;
 };
 
 // ------------------------------------------------------------------------

@@ -361,7 +361,7 @@ struct LoadAndConstruct<pludux::backtest::Strategy> {
             make_nvp("takeProfitEnabled", take_profit_enabled),
             make_nvp("takeProfitRiskMultiplier", take_profit_risk_multiplier));
 
-    auto method_registry = std::make_shared<pludux::series::MethodRegistry>();
+    auto method_registry = std::make_shared<pludux::MethodRegistry>();
 
     const auto risk_method_json = jsoncons::json::parse(risk_method_str);
     const auto long_entry_filter_json =

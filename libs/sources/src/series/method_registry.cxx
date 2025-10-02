@@ -8,7 +8,7 @@ export module pludux:series.method_registry;
 
 import :series.any_method;
 
-export namespace pludux::series {
+export namespace pludux {
 
 class MethodRegistry {
 public:
@@ -60,4 +60,4 @@ private:
   std::unordered_map<std::string, AnyMethod> methods_;
 };
 
-} // namespace pludux::series
+} // namespace pludux

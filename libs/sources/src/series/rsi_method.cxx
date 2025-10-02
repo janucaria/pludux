@@ -19,7 +19,7 @@ import :series.operators_method;
 import :series.ohlcv_method;
 import :series.value_method;
 
-export namespace pludux::series {
+export namespace pludux {
 
 template<typename TSourceMethod = CloseMethod>
 class RsiMethod {
@@ -101,4 +101,4 @@ private:
 RsiMethod() -> RsiMethod<CloseMethod>;
 RsiMethod(std::size_t) -> RsiMethod<CloseMethod>;
 
-} // namespace pludux::series
+} // namespace pludux

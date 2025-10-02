@@ -8,7 +8,7 @@ import :asset_snapshot;
 import :series.method_contextable;
 import :series.method_output;
 
-namespace pludux::series {
+namespace pludux {
 
 template<typename>
 class OhlcvMethod {
@@ -136,4 +136,4 @@ public:
   }
 };
 
-} // namespace pludux::series
+} // namespace pludux

@@ -11,7 +11,7 @@ struct BooleanFilter {
 
   auto operator()(this const auto,
                   AssetSnapshot,
-                  series::MethodContextable auto context) -> bool
+                  MethodContextable auto context) -> bool
   {
     return boolean_value;
   }

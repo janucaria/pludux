@@ -13,7 +13,7 @@ import :series.method_output;
 
 import :series.ohlcv_method;
 
-export namespace pludux::series {
+export namespace pludux {
 
 template<typename TSourceMethod = CloseMethod>
   requires requires { typename TSourceMethod::ResultType; }
@@ -65,4 +65,4 @@ private:
   TSourceMethod source_;
 };
 
-} // namespace pludux::series
+} // namespace pludux

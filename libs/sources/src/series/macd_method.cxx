@@ -14,7 +14,7 @@ import :series.ema_method;
 import :series.operators_method;
 import :series.ohlcv_method;
 
-export namespace pludux::series {
+export namespace pludux {
 
 template<typename TSourceMethod = CloseMethod>
 class MacdMethod {
@@ -148,4 +148,4 @@ private:
   std::size_t signal_period_;
 };
 
-} // namespace pludux::series
+} // namespace pludux

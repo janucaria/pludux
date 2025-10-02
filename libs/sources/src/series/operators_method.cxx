@@ -14,7 +14,7 @@ import :asset_snapshot;
 import :series.method_contextable;
 import :series.method_output;
 
-namespace pludux::series {
+namespace pludux {
 
 template<template<typename, typename> typename,
          typename TBinaryFn,
@@ -497,4 +497,4 @@ public:
   }
 };
 
-} // namespace pludux::series
+} // namespace pludux

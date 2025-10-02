@@ -12,7 +12,7 @@ import :asset_snapshot;
 import :series.method_contextable;
 import :series.method_output;
 
-export namespace pludux::series {
+export namespace pludux {
 
 template<typename T = double>
   requires std::numeric_limits<T>::has_quiet_NaN
@@ -67,4 +67,4 @@ private:
   std::string name_{};
 };
 
-} // namespace pludux::series
+} // namespace pludux

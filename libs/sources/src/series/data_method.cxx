@@ -14,7 +14,7 @@ import :asset_snapshot;
 import :series.method_contextable;
 import :series.method_output;
 
-export namespace pludux::series {
+export namespace pludux {
 
 class DataMethod {
 public:
@@ -60,4 +60,4 @@ private:
   std::string field_{};
 };
 
-} // namespace pludux::series
+} // namespace pludux

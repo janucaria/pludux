@@ -29,7 +29,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_snapshot,
-                  series::MethodContextable auto context) -> bool
+                  MethodContextable auto context) -> bool
   {
     const auto first_condition = self.first_condition_(asset_snapshot, context);
     const auto second_condition =
@@ -67,7 +67,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_snapshot,
-                  series::MethodContextable auto context) -> bool
+                  MethodContextable auto context) -> bool
   {
     const auto condition = self.other_condition_(asset_snapshot, context);
     return TUnaryLogicalOperator{}(condition);

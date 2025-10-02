@@ -15,7 +15,7 @@ import :series.value_method;
 import :series.wma_method;
 import :series.operators_method;
 
-export namespace pludux::series {
+export namespace pludux {
 
 template<typename TSourceMethod = CloseMethod>
 class HmaMethod {
@@ -92,4 +92,4 @@ private:
   std::size_t period_;
 };
 
-} // namespace pludux::series
+} // namespace pludux

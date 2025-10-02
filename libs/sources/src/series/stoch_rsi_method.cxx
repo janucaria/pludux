@@ -19,7 +19,7 @@ import :series.ohlcv_method;
 import :series.highest_method;
 import :series.lowest_method;
 
-export namespace pludux::series {
+export namespace pludux {
 
 template<typename TRsiSourceMethod = CloseMethod>
 class StochRsiMethod {
@@ -147,4 +147,4 @@ private:
   std::size_t d_period_;
 };
 
-} // namespace pludux::series
+} // namespace pludux

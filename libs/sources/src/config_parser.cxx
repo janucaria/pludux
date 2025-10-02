@@ -27,7 +27,7 @@ public:
     }
 
     auto parse_method(this auto& self, const jsoncons::json& config)
-     -> series::AnyMethod
+     -> AnyMethod
     {
       return self.config_parser_.parse_method(config);
     }
@@ -51,10 +51,10 @@ public:
    auto(ConfigParser::Parser, const jsoncons::json&)->screener::ScreenerFilter>;
 
   using MethodSerialize = std::function<
-   auto(const ConfigParser&, const series::AnyMethod&)->jsoncons::json>;
+   auto(const ConfigParser&, const AnyMethod&)->jsoncons::json>;
 
   using MethodDeserialize = std::function<
-   auto(ConfigParser::Parser, const jsoncons::json&)->series::AnyMethod>;
+   auto(ConfigParser::Parser, const jsoncons::json&)->AnyMethod>;
 
   ConfigParser()
   : filter_parsers_{}
@@ -150,10 +150,10 @@ public:
   }
 
   auto parse_method(this auto& self, const jsoncons::json& config)
-   -> series::AnyMethod
+   -> AnyMethod
   {
     if(config.is_number()) {
-      return series::ValueMethod{config.as_double()};
+      return ValueMethod{config.as_double()};
     }
 
     if(config.is_string()) {
@@ -188,7 +188,7 @@ public:
     }
   }
 
-  auto serialize_method(this const auto& self, const series::AnyMethod& method)
+  auto serialize_method(this const auto& self, const AnyMethod& method)
    -> jsoncons::json
   {
     auto serialized_method = jsoncons::json::null();
@@ -213,7 +213,7 @@ private:
 };
 
 auto make_default_registered_config_parser(
- std::shared_ptr<series::MethodRegistry> method_registry = nullptr)
+ std::shared_ptr<MethodRegistry> method_registry = nullptr)
  -> ConfigParser;
 
 } // namespace pludux
@@ -231,8 +231,8 @@ static auto get_param_or(const jsoncons::json& parameters,
 static auto parse_method_from_param_or(ConfigParser::Parser config_parser,
                                        const jsoncons::json& parameters,
                                        const std::string& key,
-                                       const series::AnyMethod& default_value)
- -> series::AnyMethod
+                                       const AnyMethod& default_value)
+ -> AnyMethod
 {
   if(!parameters.contains(key)) {
     return default_value;
@@ -244,23 +244,23 @@ static auto parse_method_from_param_or(ConfigParser::Parser config_parser,
 template<template<typename> typename TMethod>
 static auto parse_ta_with_period_method(ConfigParser::Parser config_parser,
                                         const jsoncons::json& parameters)
- -> series::AnyMethod
+ -> AnyMethod
 {
   const auto period = get_param_or<std::size_t>(parameters, "period", 14);
   const auto source = parse_method_from_param_or(
-   config_parser, parameters, "source", series::CloseMethod{});
+   config_parser, parameters, "source", CloseMethod{});
 
-  return TMethod<series::AnyMethod>{source, period};
+  return TMethod<AnyMethod>{source, period};
 }
 
 template<template<typename> typename TMethod>
 static auto serialize_ta_with_period_method(const ConfigParser& config_parser,
-                                            const series::AnyMethod& method)
+                                            const AnyMethod& method)
  -> jsoncons::json
 {
   auto serialized_method = jsoncons::json::null();
 
-  auto ta_method = any_method_cast<TMethod<series::AnyMethod>>(method);
+  auto ta_method = any_method_cast<TMethod<AnyMethod>>(method);
 
   if(ta_method) {
     serialized_method = jsoncons::json{};
@@ -274,7 +274,7 @@ static auto serialize_ta_with_period_method(const ConfigParser& config_parser,
 
 template<typename T>
 static auto serialize_ohlcv_method(const ConfigParser& config_parser,
-                                   const series::AnyMethod& method)
+                                   const AnyMethod& method)
  -> jsoncons::json
 {
   auto serialized_method = jsoncons::json::null();
@@ -288,19 +288,19 @@ static auto serialize_ohlcv_method(const ConfigParser& config_parser,
 template<typename T>
 static auto parse_ohlcv_method(ConfigParser::Parser config_parser,
                                const jsoncons::json& parameters)
- -> series::AnyMethod
+ -> AnyMethod
 {
   auto ohlcv_method = T{};
   return ohlcv_method;
 }
 
 static auto serialize_value_method(const ConfigParser& config_parser,
-                                   const series::AnyMethod& method)
+                                   const AnyMethod& method)
  -> jsoncons::json
 {
   auto serialized_method = jsoncons::json::null();
 
-  auto value_method = any_method_cast<series::ValueMethod>(method);
+  auto value_method = any_method_cast<ValueMethod>(method);
 
   if(value_method) {
     serialized_method = jsoncons::json{};
@@ -312,30 +312,30 @@ static auto serialize_value_method(const ConfigParser& config_parser,
 
 static auto deserialize_value_method(ConfigParser::Parser config_parser,
                                      const jsoncons::json& parameters)
- -> series::AnyMethod
+ -> AnyMethod
 {
   const auto value = parameters.at("value").as_double();
-  return series::ValueMethod{value};
+  return ValueMethod{value};
 }
 
 static auto parse_data_method(ConfigParser::Parser config_parser,
                               const jsoncons::json& parameters)
- -> series::AnyMethod
+ -> AnyMethod
 {
   const auto field = parameters.at("field").as_string();
 
-  const auto field_method = series::DataMethod{field};
+  const auto field_method = DataMethod{field};
 
   return field_method;
 }
 
 static auto serialize_data_method(const ConfigParser& config_parser,
-                                  const series::AnyMethod& method)
+                                  const AnyMethod& method)
  -> jsoncons::json
 {
   auto serialized_method = jsoncons::json::null();
 
-  auto data_method = any_method_cast<series::DataMethod>(method);
+  auto data_method = any_method_cast<DataMethod>(method);
 
   if(data_method) {
     serialized_method = jsoncons::json{};
@@ -347,9 +347,9 @@ static auto serialize_data_method(const ConfigParser& config_parser,
 
 static auto parse_atr_method(ConfigParser::Parser config_parser,
                              const jsoncons::json& parameters)
- -> series::AnyMethod
+ -> AnyMethod
 {
-  auto atr_method = series::AtrMethod{};
+  auto atr_method = AtrMethod{};
 
   if(parameters.contains("period")) {
     atr_method.period(parameters.at("period").as<std::size_t>());
@@ -363,12 +363,12 @@ static auto parse_atr_method(ConfigParser::Parser config_parser,
 }
 
 static auto serialize_atr_method(const ConfigParser& config_parser,
-                                 const series::AnyMethod& method)
+                                 const AnyMethod& method)
  -> jsoncons::json
 {
   auto serialized_method = jsoncons::json::null();
 
-  auto atr_method = any_method_cast<series::AtrMethod>(method);
+  auto atr_method = any_method_cast<AtrMethod>(method);
   if(atr_method) {
     serialized_method = jsoncons::json{};
     serialized_method["period"] = atr_method->period();
@@ -379,13 +379,13 @@ static auto serialize_atr_method(const ConfigParser& config_parser,
 }
 
 static auto serialize_kc_method(const ConfigParser& config_parser,
-                                const series::AnyMethod& method)
+                                const AnyMethod& method)
  -> jsoncons::json
 {
   auto serialized_method = jsoncons::json::null();
 
   auto kc_method =
-   any_method_cast<series::KcMethod<series::AnyMethod, series::AnyMethod>>(
+   any_method_cast<KcMethod<AnyMethod, AnyMethod>>(
     method);
   if(kc_method) {
     serialized_method = jsoncons::json{};
@@ -400,13 +400,13 @@ static auto serialize_kc_method(const ConfigParser& config_parser,
 
 static auto parse_kc_method(ConfigParser::Parser config_parser,
                             const jsoncons::json& parameters)
- -> series::AnyMethod
+ -> AnyMethod
 {
   const auto ma_method = config_parser.parse_method(parameters.at("ma"));
   const auto range_method = config_parser.parse_method(parameters.at("range"));
   const auto multiplier = parameters.at("multiplier").as_double();
 
-  const auto kc_method = series::KcMethod{ma_method, range_method, multiplier};
+  const auto kc_method = KcMethod{ma_method, range_method, multiplier};
   return kc_method;
 }
 
@@ -415,7 +415,7 @@ static auto parse_binary_function_method(ConfigParser::Parser config_parser,
                                          const jsoncons::json& parameters,
                                          const std::string& first_operand_key,
                                          const std::string& second_operand_key)
- -> series::AnyMethod
+ -> AnyMethod
 {
   const auto first_operand =
    config_parser.parse_method(parameters.at(first_operand_key));
@@ -429,12 +429,12 @@ static auto parse_binary_function_method(ConfigParser::Parser config_parser,
 template<template<typename, typename> typename T>
 static auto
 serialize_binary_function_method(const ConfigParser& config_parser,
-                                 const series::AnyMethod& method,
+                                 const AnyMethod& method,
                                  const std::string& first_operand_key,
                                  const std::string& second_operand_key)
  -> jsoncons::json
 {
-  using TMethod = T<series::AnyMethod, series::AnyMethod>;
+  using TMethod = T<AnyMethod, AnyMethod>;
 
   auto serialized_method = jsoncons::json::null();
 
@@ -454,7 +454,7 @@ template<template<typename> typename T>
 static auto parse_unary_function_method(ConfigParser::Parser config_parser,
                                         const jsoncons::json& parameters,
                                         const std::string& operand_key)
- -> series::AnyMethod
+ -> AnyMethod
 {
   const auto operand = config_parser.parse_method(parameters.at(operand_key));
   const auto unary_function_method = T{operand};
@@ -463,13 +463,13 @@ static auto parse_unary_function_method(ConfigParser::Parser config_parser,
 
 template<template<typename> typename T>
 static auto serialize_unary_function_method(const ConfigParser& config_parser,
-                                            const series::AnyMethod& method,
+                                            const AnyMethod& method,
                                             const std::string& operand_key)
  -> jsoncons::json
 {
   auto serialized_method = jsoncons::json::null();
 
-  auto unary_function_method = any_method_cast<T<series::AnyMethod>>(method);
+  auto unary_function_method = any_method_cast<T<AnyMethod>>(method);
   if(unary_function_method) {
     serialized_method = jsoncons::json{};
     serialized_method[operand_key] =
@@ -482,7 +482,7 @@ static auto serialize_unary_function_method(const ConfigParser& config_parser,
 template<typename T>
 static auto parse_divergence_method(ConfigParser::Parser config_parser,
                                     const jsoncons::json& parameters)
- -> series::AnyMethod
+ -> AnyMethod
 {
   auto divergence_method = T{};
 
@@ -511,7 +511,7 @@ static auto parse_divergence_method(ConfigParser::Parser config_parser,
 
 template<typename T>
 static auto serialize_divergence_method(const ConfigParser& config_parser,
-                                        const series::AnyMethod& method)
+                                        const AnyMethod& method)
  -> jsoncons::json
 {
   auto serialized_method = jsoncons::json::null();
@@ -744,7 +744,7 @@ static auto serialize_crossover_filter(const ConfigParser& config_parser,
 }
 
 auto make_default_registered_config_parser(
- std::shared_ptr<series::MethodRegistry> method_registry) -> ConfigParser
+ std::shared_ptr<MethodRegistry> method_registry) -> ConfigParser
 {
   ConfigParser config_parser;
 
@@ -756,37 +756,37 @@ auto make_default_registered_config_parser(
 
   config_parser.register_method_parser(
    "OPEN",
-   serialize_ohlcv_method<series::OpenMethod>,
-   parse_ohlcv_method<series::OpenMethod>);
+   serialize_ohlcv_method<OpenMethod>,
+   parse_ohlcv_method<OpenMethod>);
 
   config_parser.register_method_parser(
    "HIGH",
-   serialize_ohlcv_method<series::HighMethod>,
-   parse_ohlcv_method<series::HighMethod>);
+   serialize_ohlcv_method<HighMethod>,
+   parse_ohlcv_method<HighMethod>);
 
   config_parser.register_method_parser(
    "LOW",
-   serialize_ohlcv_method<series::LowMethod>,
-   parse_ohlcv_method<series::LowMethod>);
+   serialize_ohlcv_method<LowMethod>,
+   parse_ohlcv_method<LowMethod>);
 
   config_parser.register_method_parser(
    "CLOSE",
-   serialize_ohlcv_method<series::CloseMethod>,
-   parse_ohlcv_method<series::CloseMethod>);
+   serialize_ohlcv_method<CloseMethod>,
+   parse_ohlcv_method<CloseMethod>);
 
   config_parser.register_method_parser(
    "VOLUME",
-   serialize_ohlcv_method<series::VolumeMethod>,
-   parse_ohlcv_method<series::VolumeMethod>);
+   serialize_ohlcv_method<VolumeMethod>,
+   parse_ohlcv_method<VolumeMethod>);
 
   config_parser.register_method_parser(
    "CHANGE",
    [](const ConfigParser& config_parser,
-      const series::AnyMethod any_method) -> jsoncons::json {
+      const AnyMethod any_method) -> jsoncons::json {
      auto serialized_method = jsoncons::json::null();
 
      auto changes_method =
-      any_method_cast<series::ChangeMethod<series::AnyMethod>>(any_method);
+      any_method_cast<ChangeMethod<AnyMethod>>(any_method);
      if(changes_method) {
        serialized_method = jsoncons::json{};
        serialized_method["source"] =
@@ -797,53 +797,53 @@ auto make_default_registered_config_parser(
    },
    [](ConfigParser::Parser config_parser, const jsoncons::json& parameters) {
      const auto source = parse_method_from_param_or(
-      config_parser, parameters, "source", series::CloseMethod{});
+      config_parser, parameters, "source", CloseMethod{});
 
-     return series::ChangeMethod{source};
+     return ChangeMethod{source};
    });
 
   config_parser.register_method_parser(
    "SMA",
-   serialize_ta_with_period_method<series::SmaMethod>,
-   parse_ta_with_period_method<series::SmaMethod>);
+   serialize_ta_with_period_method<SmaMethod>,
+   parse_ta_with_period_method<SmaMethod>);
 
   config_parser.register_method_parser(
    "EMA",
-   serialize_ta_with_period_method<series::EmaMethod>,
-   parse_ta_with_period_method<series::EmaMethod>);
+   serialize_ta_with_period_method<EmaMethod>,
+   parse_ta_with_period_method<EmaMethod>);
 
   config_parser.register_method_parser(
    "WMA",
-   serialize_ta_with_period_method<series::WmaMethod>,
-   parse_ta_with_period_method<series::WmaMethod>);
+   serialize_ta_with_period_method<WmaMethod>,
+   parse_ta_with_period_method<WmaMethod>);
 
   config_parser.register_method_parser(
    "RMA",
-   serialize_ta_with_period_method<series::RmaMethod>,
-   parse_ta_with_period_method<series::RmaMethod>);
+   serialize_ta_with_period_method<RmaMethod>,
+   parse_ta_with_period_method<RmaMethod>);
 
   config_parser.register_method_parser(
    "HMA",
-   serialize_ta_with_period_method<series::HmaMethod>,
-   parse_ta_with_period_method<series::HmaMethod>);
+   serialize_ta_with_period_method<HmaMethod>,
+   parse_ta_with_period_method<HmaMethod>);
 
   config_parser.register_method_parser(
    "RSI",
-   serialize_ta_with_period_method<series::RsiMethod>,
-   parse_ta_with_period_method<series::RsiMethod>);
+   serialize_ta_with_period_method<RsiMethod>,
+   parse_ta_with_period_method<RsiMethod>);
 
   config_parser.register_method_parser(
    "ROC",
-   serialize_ta_with_period_method<series::RocMethod>,
-   parse_ta_with_period_method<series::RocMethod>);
+   serialize_ta_with_period_method<RocMethod>,
+   parse_ta_with_period_method<RocMethod>);
 
   config_parser.register_method_parser(
    "RVOL",
    [](const ConfigParser& config_parser,
-      const series::AnyMethod any_method) -> jsoncons::json {
+      const AnyMethod any_method) -> jsoncons::json {
      auto serialized_method = jsoncons::json::null();
 
-     auto rvol_method = any_method_cast<series::RvolMethod>(any_method);
+     auto rvol_method = any_method_cast<RvolMethod>(any_method);
 
      if(rvol_method) {
        serialized_method = jsoncons::json{};
@@ -854,7 +854,7 @@ auto make_default_registered_config_parser(
    },
    [](ConfigParser::Parser config_parser, const jsoncons::json& parameters) {
      const auto period = get_param_or<std::size_t>(parameters, "period", 14);
-     return series::RvolMethod{period};
+     return RvolMethod{period};
    });
 
   config_parser.register_method_parser(
@@ -866,11 +866,11 @@ auto make_default_registered_config_parser(
   config_parser.register_method_parser(
    "REFERENCE",
    [](const ConfigParser& config_parser,
-      const series::AnyMethod any_method) -> jsoncons::json {
+      const AnyMethod any_method) -> jsoncons::json {
      auto serialized_method = jsoncons::json::null();
 
      auto reference_method =
-      any_method_cast<series::ReferenceMethod<>>(any_method);
+      any_method_cast<ReferenceMethod<>>(any_method);
      if(reference_method) {
        serialized_method = jsoncons::json{};
        serialized_method["name"] = reference_method->name();
@@ -880,17 +880,17 @@ auto make_default_registered_config_parser(
    },
    [](ConfigParser::Parser config_parser, const jsoncons::json& parameters) {
      const auto name = get_param_or<std::string>(parameters, "name", "");
-     return series::ReferenceMethod{name};
+     return ReferenceMethod{name};
    });
 
   config_parser.register_method_parser(
    "LOOKBACK",
    [](const ConfigParser& config_parser,
-      const series::AnyMethod any_method) -> jsoncons::json {
+      const AnyMethod any_method) -> jsoncons::json {
      auto serialized_method = jsoncons::json::null();
 
      auto lookback_method =
-      any_method_cast<series::LookbackMethod<series::AnyMethod>>(any_method);
+      any_method_cast<LookbackMethod<AnyMethod>>(any_method);
      if(lookback_method) {
        serialized_method = jsoncons::json{};
        serialized_method["period"] = lookback_method->period();
@@ -903,38 +903,38 @@ auto make_default_registered_config_parser(
    [](ConfigParser::Parser config_parser, const jsoncons::json& parameters) {
      const auto period = parameters.at("period").as<std::size_t>();
      const auto source_method = parse_method_from_param_or(
-      config_parser, parameters, "source", series::CloseMethod{});
-     return series::LookbackMethod{source_method, period};
+      config_parser, parameters, "source", CloseMethod{});
+     return LookbackMethod{source_method, period};
    });
 
   config_parser.register_method_parser(
    "SELECT_OUTPUT",
    [](const ConfigParser& config_parser,
-      const series::AnyMethod any_method) -> jsoncons::json {
+      const AnyMethod any_method) -> jsoncons::json {
      auto serialized_method = jsoncons::json::null();
 
      auto output_by_name_method =
-      any_method_cast<series::SelectOutputMethod<series::AnyMethod>>(
+      any_method_cast<SelectOutputMethod<AnyMethod>>(
        any_method);
      if(output_by_name_method) {
        serialized_method = jsoncons::json{};
        serialized_method["name"] = [&]() -> std::string {
          switch(output_by_name_method->output()) {
-         case series::MethodOutput::MacdLine:
+         case MethodOutput::MacdLine:
            return "macd-line";
-         case series::MethodOutput::SignalLine:
+         case MethodOutput::SignalLine:
            return "signal-line";
-         case series::MethodOutput::Histogram:
+         case MethodOutput::Histogram:
            return "histogram";
-         case series::MethodOutput::KPercent:
+         case MethodOutput::KPercent:
            return "k-percent";
-         case series::MethodOutput::DPercent:
+         case MethodOutput::DPercent:
            return "d-percent";
-         case series::MethodOutput::MiddleBand:
+         case MethodOutput::MiddleBand:
            return "middle-band";
-         case series::MethodOutput::UpperBand:
+         case MethodOutput::UpperBand:
            return "upper-band";
-         case series::MethodOutput::LowerBand:
+         case MethodOutput::LowerBand:
            return "lower-band";
          default:
            return "default";
@@ -949,68 +949,68 @@ auto make_default_registered_config_parser(
    },
    [](ConfigParser::Parser config_parser, const jsoncons::json& parameters) {
      const auto name = get_param_or<std::string>(parameters, "name", "default");
-     const auto output = [&]() -> series::MethodOutput {
+     const auto output = [&]() -> MethodOutput {
        if(name == "macd-line") {
-         return series::MethodOutput::MacdLine;
+         return MethodOutput::MacdLine;
        } else if(name == "signal-line") {
-         return series::MethodOutput::SignalLine;
+         return MethodOutput::SignalLine;
        } else if(name == "histogram") {
-         return series::MethodOutput::Histogram;
+         return MethodOutput::Histogram;
        } else if(name == "k-percent") {
-         return series::MethodOutput::KPercent;
+         return MethodOutput::KPercent;
        } else if(name == "d-percent") {
-         return series::MethodOutput::DPercent;
+         return MethodOutput::DPercent;
        } else if(name == "middle-band") {
-         return series::MethodOutput::MiddleBand;
+         return MethodOutput::MiddleBand;
        } else if(name == "upper-band") {
-         return series::MethodOutput::UpperBand;
+         return MethodOutput::UpperBand;
        } else if(name == "lower-band") {
-         return series::MethodOutput::LowerBand;
+         return MethodOutput::LowerBand;
        } else {
-         return static_cast<series::MethodOutput>(-1);
+         return static_cast<MethodOutput>(-1);
        }
      }();
 
      const auto source_method = parse_method_from_param_or(
-      config_parser, parameters, "source", series::CloseMethod{});
+      config_parser, parameters, "source", CloseMethod{});
 
-     return series::SelectOutputMethod{source_method, output};
+     return SelectOutputMethod{source_method, output};
    });
 
   config_parser.register_method_parser(
    "ABS_DIFF",
    [](const ConfigParser& config_parser,
-      const series::AnyMethod any_method) -> jsoncons::json {
-     return serialize_binary_function_method<series::AbsDiffMethod>(
+      const AnyMethod any_method) -> jsoncons::json {
+     return serialize_binary_function_method<AbsDiffMethod>(
       config_parser, any_method, "minuend", "subtrahend");
    },
    [](ConfigParser::Parser config_parser, const jsoncons::json& parameters) {
-     return parse_binary_function_method<series::AbsDiffMethod>(
+     return parse_binary_function_method<AbsDiffMethod>(
       config_parser, parameters, "minuend", "subtrahend");
    });
 
   config_parser.register_method_parser(
    "BB",
    [](const ConfigParser& config_parser,
-      const series::AnyMethod any_method) -> jsoncons::json {
+      const AnyMethod any_method) -> jsoncons::json {
      auto serialized_method = jsoncons::json::null();
 
      auto bb_method =
-      any_method_cast<series::BbMethod<series::AnyMethod>>(any_method);
+      any_method_cast<BbMethod<AnyMethod>>(any_method);
      if(bb_method) {
        serialized_method = jsoncons::json{};
        serialized_method["maType"] =
-        [](series::BbMaType ma_type) static -> std::string {
+        [](BbMaType ma_type) static -> std::string {
          switch(ma_type) {
-         case series::BbMaType::Sma:
+         case BbMaType::Sma:
            return "SMA";
-         case series::BbMaType::Ema:
+         case BbMaType::Ema:
            return "EMA";
-         case series::BbMaType::Wma:
+         case BbMaType::Wma:
            return "WMA";
-         case series::BbMaType::Rma:
+         case BbMaType::Rma:
            return "RMA";
-         case series::BbMaType::Hma:
+         case BbMaType::Hma:
            return "HMA";
          default:
            const auto error_message =
@@ -1028,21 +1028,21 @@ auto make_default_registered_config_parser(
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser,
-      const jsoncons::json& parameters) -> series::AnyMethod {
-     auto ma_type = series::BbMaType::Sma;
+      const jsoncons::json& parameters) -> AnyMethod {
+     auto ma_type = BbMaType::Sma;
      const auto param_ma_type =
       get_param_or<std::string>(parameters, "maType", "SMA");
 
      if(param_ma_type == "SMA") {
-       ma_type = series::BbMaType::Sma;
+       ma_type = BbMaType::Sma;
      } else if(param_ma_type == "EMA") {
-       ma_type = series::BbMaType::Ema;
+       ma_type = BbMaType::Ema;
      } else if(param_ma_type == "WMA") {
-       ma_type = series::BbMaType::Wma;
+       ma_type = BbMaType::Wma;
      } else if(param_ma_type == "RMA") {
-       ma_type = series::BbMaType::Rma;
+       ma_type = BbMaType::Rma;
      } else if(param_ma_type == "HMA") {
-       ma_type = series::BbMaType::Hma;
+       ma_type = BbMaType::Hma;
      } else {
        const auto error_message =
         std::format("Error BB.maType: Unknown maType {}", param_ma_type);
@@ -1050,12 +1050,12 @@ auto make_default_registered_config_parser(
      }
 
      const auto ma_source_method = parse_method_from_param_or(
-      config_parser, parameters, "maSource", series::CloseMethod{});
+      config_parser, parameters, "maSource", CloseMethod{});
      const auto period = get_param_or(parameters, "period", std::size_t{20});
      const auto stddev = get_param_or(parameters, "stddev", 2.0);
 
      const auto bb_method =
-      series::BbMethod{ma_type, ma_source_method, period, stddev};
+      BbMethod{ma_type, ma_source_method, period, stddev};
 
      return bb_method;
    });
@@ -1063,11 +1063,11 @@ auto make_default_registered_config_parser(
   config_parser.register_method_parser(
    "MACD",
    [](const ConfigParser& config_parser,
-      const series::AnyMethod any_method) -> jsoncons::json {
+      const AnyMethod any_method) -> jsoncons::json {
      auto serialized_method = jsoncons::json::null();
 
      auto macd_method =
-      any_method_cast<series::MacdMethod<series::AnyMethod>>(any_method);
+      any_method_cast<MacdMethod<AnyMethod>>(any_method);
      if(macd_method) {
        serialized_method = jsoncons::json{};
        serialized_method["fast"] = macd_method->fast_period();
@@ -1080,25 +1080,25 @@ auto make_default_registered_config_parser(
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser,
-      const jsoncons::json& parameters) -> series::AnyMethod {
+      const jsoncons::json& parameters) -> AnyMethod {
      const auto fast = get_param_or<std::size_t>(parameters, "fast", 12);
      const auto slow = get_param_or<std::size_t>(parameters, "slow", 26);
      const auto signal = get_param_or<std::size_t>(parameters, "signal", 9);
      const auto source_method = parse_method_from_param_or(
-      config_parser, parameters, "source", series::CloseMethod{});
+      config_parser, parameters, "source", CloseMethod{});
 
      const auto macd_method =
-      series::MacdMethod{source_method, fast, slow, signal};
+      MacdMethod{source_method, fast, slow, signal};
      return macd_method;
    });
 
   config_parser.register_method_parser(
    "STOCH",
    [](const ConfigParser& config_parser,
-      const series::AnyMethod any_method) -> jsoncons::json {
+      const AnyMethod any_method) -> jsoncons::json {
      auto serialized_method = jsoncons::json::null();
 
-     auto stoch_method = any_method_cast<series::StochMethod>(any_method);
+     auto stoch_method = any_method_cast<StochMethod>(any_method);
      if(stoch_method) {
        serialized_method = jsoncons::json{};
        serialized_method["kPeriod"] = stoch_method->k_period();
@@ -1109,24 +1109,24 @@ auto make_default_registered_config_parser(
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser,
-      const jsoncons::json& parameters) -> series::AnyMethod {
+      const jsoncons::json& parameters) -> AnyMethod {
      const auto k_period = get_param_or<std::size_t>(parameters, "kPeriod", 5);
      const auto k_smooth = get_param_or<std::size_t>(parameters, "kSmooth", 3);
      const auto d_period = get_param_or<std::size_t>(parameters, "dPeriod", 3);
 
      const auto stoch_method =
-      series::StochMethod{k_period, k_smooth, d_period};
+      StochMethod{k_period, k_smooth, d_period};
      return stoch_method;
    });
 
   config_parser.register_method_parser(
    "STOCH_RSI",
    [](const ConfigParser& config_parser,
-      const series::AnyMethod any_method) -> jsoncons::json {
+      const AnyMethod any_method) -> jsoncons::json {
      auto serialized_method = jsoncons::json::null();
 
      auto stoch_rsi_method =
-      any_method_cast<series::StochRsiMethod<series::AnyMethod>>(any_method);
+      any_method_cast<StochRsiMethod<AnyMethod>>(any_method);
      if(stoch_rsi_method) {
        serialized_method = jsoncons::json{};
        serialized_method["rsiSource"] =
@@ -1140,16 +1140,16 @@ auto make_default_registered_config_parser(
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser,
-      const jsoncons::json& parameters) -> series::AnyMethod {
+      const jsoncons::json& parameters) -> AnyMethod {
      const auto rsi_source_method = parse_method_from_param_or(
-      config_parser, parameters, "rsiSource", series::CloseMethod{});
+      config_parser, parameters, "rsiSource", CloseMethod{});
      const auto rsi_period =
       get_param_or<std::size_t>(parameters, "rsiPeriod", 14);
      const auto k_period = get_param_or<std::size_t>(parameters, "kPeriod", 5);
      const auto k_smooth = get_param_or<std::size_t>(parameters, "kSmooth", 3);
      const auto d_period = get_param_or<std::size_t>(parameters, "dPeriod", 3);
 
-     const auto stoch_rsi_method = series::StochRsiMethod{
+     const auto stoch_rsi_method = StochRsiMethod{
       rsi_source_method, rsi_period, k_period, k_smooth, d_period};
      return stoch_rsi_method;
    });
@@ -1157,77 +1157,77 @@ auto make_default_registered_config_parser(
   config_parser.register_method_parser(
    "ADD",
    [](const ConfigParser& config_parser,
-      const series::AnyMethod& any_method) -> jsoncons::json {
-     return serialize_binary_function_method<series::AddMethod>(
+      const AnyMethod& any_method) -> jsoncons::json {
+     return serialize_binary_function_method<AddMethod>(
       config_parser, any_method, "augend", "addend");
    },
    [](ConfigParser::Parser config_parser, const jsoncons::json& parameters) {
-     return parse_binary_function_method<series::AddMethod>(
+     return parse_binary_function_method<AddMethod>(
       config_parser, parameters, "augend", "addend");
    });
   config_parser.register_method_parser(
    "SUBTRACT",
    [](const ConfigParser& config_parser,
-      const series::AnyMethod& any_method) -> jsoncons::json {
-     return serialize_binary_function_method<series::SubtractMethod>(
+      const AnyMethod& any_method) -> jsoncons::json {
+     return serialize_binary_function_method<SubtractMethod>(
       config_parser, any_method, "minuend", "subtrahend");
    },
    [](ConfigParser::Parser config_parser, const jsoncons::json& parameters) {
-     return parse_binary_function_method<series::SubtractMethod>(
+     return parse_binary_function_method<SubtractMethod>(
       config_parser, parameters, "minuend", "subtrahend");
    });
   config_parser.register_method_parser(
    "MULTIPLY",
    [](const ConfigParser& config_parser,
-      const series::AnyMethod& any_method) -> jsoncons::json {
-     return serialize_binary_function_method<series::MultiplyMethod>(
+      const AnyMethod& any_method) -> jsoncons::json {
+     return serialize_binary_function_method<MultiplyMethod>(
       config_parser, any_method, "multiplicand", "multiplier");
    },
    [](ConfigParser::Parser config_parser, const jsoncons::json& parameters) {
-     return parse_binary_function_method<series::MultiplyMethod>(
+     return parse_binary_function_method<MultiplyMethod>(
       config_parser, parameters, "multiplicand", "multiplier");
    });
   config_parser.register_method_parser(
    "DIVIDE",
    [](const ConfigParser& config_parser,
-      const series::AnyMethod& any_method) -> jsoncons::json {
-     return serialize_binary_function_method<series::DivideMethod>(
+      const AnyMethod& any_method) -> jsoncons::json {
+     return serialize_binary_function_method<DivideMethod>(
       config_parser, any_method, "dividend", "divisor");
    },
    [](ConfigParser::Parser config_parser, const jsoncons::json& parameters) {
-     return parse_binary_function_method<series::DivideMethod>(
+     return parse_binary_function_method<DivideMethod>(
       config_parser, parameters, "dividend", "divisor");
    });
   config_parser.register_method_parser(
    "NEGATE",
    [](const ConfigParser& config_parser,
-      const series::AnyMethod& any_method) -> jsoncons::json {
-     return serialize_unary_function_method<series::NegateMethod>(
+      const AnyMethod& any_method) -> jsoncons::json {
+     return serialize_unary_function_method<NegateMethod>(
       config_parser, any_method, "operand");
    },
    [](ConfigParser::Parser config_parser, const jsoncons::json& parameters) {
-     return parse_unary_function_method<series::NegateMethod>(
+     return parse_unary_function_method<NegateMethod>(
       config_parser, parameters, "operand");
    });
   config_parser.register_method_parser(
    "PERCENTAGE",
    [](const ConfigParser& config_parser,
-      const series::AnyMethod& any_method) -> jsoncons::json {
-     return serialize_binary_function_method<series::PercentageMethod>(
+      const AnyMethod& any_method) -> jsoncons::json {
+     return serialize_binary_function_method<PercentageMethod>(
       config_parser, any_method, "total", "percent");
    },
    [](ConfigParser::Parser config_parser, const jsoncons::json& parameters) {
-     return parse_binary_function_method<series::PercentageMethod>(
+     return parse_binary_function_method<PercentageMethod>(
       config_parser, parameters, "total", "percent");
    });
   // config_parser.register_method_parser(
   //  "BULLISH_DIVERGENCE",
-  //  serialize_divergence_method<series::BullishDivergenceMethod>,
-  //  parse_divergence_method<series::BullishDivergenceMethod>);
+  //  serialize_divergence_method<BullishDivergenceMethod>,
+  //  parse_divergence_method<BullishDivergenceMethod>);
   // config_parser.register_method_parser(
   //  "HIDDEN_BULLISH_DIVERGENCE",
-  //  serialize_divergence_method<series::HiddenBullishDivergenceMethod>,
-  //  parse_divergence_method<series::HiddenBullishDivergenceMethod>);
+  //  serialize_divergence_method<HiddenBullishDivergenceMethod>,
+  //  parse_divergence_method<HiddenBullishDivergenceMethod>);
 
   config_parser.register_filter_parser(
    "ALL_OF", serialize_all_of_filter, parse_all_of_filter);

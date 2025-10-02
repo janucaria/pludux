@@ -15,7 +15,7 @@ import :series.method_output;
 import :series.sma_method;
 import :series.ohlcv_method;
 
-export namespace pludux::series {
+export namespace pludux {
 
 template<typename TSourceMethod = CloseMethod>
 class EmaMethod {
@@ -102,4 +102,4 @@ private:
   std::size_t period_;
 };
 
-} // namespace pludux::series
+} // namespace pludux

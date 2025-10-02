@@ -15,7 +15,7 @@ import :series.method_output;
 import :series.tr_method;
 import :series.rma_method;
 
-export namespace pludux::series {
+export namespace pludux {
 
 class AtrMethod {
 public:
@@ -85,4 +85,4 @@ private:
   double multiplier_;
 };
 
-} // namespace pludux::series
+} // namespace pludux

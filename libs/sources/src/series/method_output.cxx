@@ -2,7 +2,7 @@ module;
 
 export module pludux:series.method_output;
 
-export namespace pludux::series {
+export namespace pludux {
 
 enum class MethodOutput {
   UpperBand,
@@ -15,4 +15,4 @@ enum class MethodOutput {
   DPercent
 };
 
-} // namespace pludux::series
+} // namespace pludux

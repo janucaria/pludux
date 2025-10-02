@@ -10,7 +10,7 @@ import :asset_snapshot;
 import :series.method_contextable;
 import :series.method_output;
 
-export namespace pludux::series {
+export namespace pludux {
 
 template<typename TSourceMethod>
   requires requires { typename TSourceMethod::ResultType; }
@@ -86,4 +86,4 @@ template<typename UMethod>
 LookbackMethod(const LookbackMethod<UMethod>&, std::size_t)
  -> LookbackMethod<UMethod>;
 
-} // namespace pludux::series
+} // namespace pludux

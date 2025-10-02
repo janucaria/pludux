@@ -9,7 +9,7 @@ export module pludux:series.default_method_context;
 
 import :series.method_registry;
 
-export namespace pludux::series {
+export namespace pludux {
 
 class DefaultMethodContext {
 public:
@@ -46,4 +46,4 @@ private:
   const MethodRegistry& methods_{};
 };
 
-} // namespace pludux::series
+} // namespace pludux

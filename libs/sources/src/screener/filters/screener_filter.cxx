@@ -16,7 +16,7 @@ class ScreenerFilter {
 public:
   template<typename UImpl>
     requires std::
-     is_invocable_r_v<bool, UImpl, AssetSnapshot, series::AnyMethodContext>
+     is_invocable_r_v<bool, UImpl, AssetSnapshot, AnyMethodContext>
    ScreenerFilter(UImpl impl)
   : impl_{std::make_shared<ImplModel<UImpl>>(std::move(impl))}
   {
@@ -24,7 +24,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_snapshot,
-                  series::AnyMethodContext context) noexcept -> bool
+                  AnyMethodContext context) noexcept -> bool
   {
     return self.impl_->operator()(std::move(asset_snapshot), context);
   }
@@ -55,7 +55,7 @@ private:
     virtual ~ImplConcept() = default;
 
     virtual auto operator()(AssetSnapshot asset_snapshot,
-                            series::AnyMethodContext context) const noexcept
+                            AnyMethodContext context) const noexcept
      -> bool = 0;
 
     virtual auto operator==(const ScreenerFilter& other) const noexcept
@@ -75,7 +75,7 @@ private:
     }
 
     auto operator()(AssetSnapshot asset_snapshot,
-                    series::AnyMethodContext context) const noexcept
+                    AnyMethodContext context) const noexcept
      -> bool override
     {
       return impl(std::move(asset_snapshot), context);

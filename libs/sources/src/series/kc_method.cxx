@@ -17,7 +17,7 @@ import :series.ohlcv_method;
 import :series.ema_method;
 import :series.atr_method;
 
-export namespace pludux::series {
+export namespace pludux {
 
 template<typename TMaMethod = EmaMethod<>, typename TRangeMethod = AtrMethod>
 class KcMethod {
@@ -106,4 +106,4 @@ private:
 
 KcMethod() -> KcMethod<EmaMethod<>, AtrMethod>;
 
-} // namespace pludux::series
+} // namespace pludux

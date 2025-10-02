@@ -18,7 +18,7 @@ template<typename TComparator>
   requires std::is_invocable_r_v<bool, TComparator, double, double>
 class ComparisonFilter {
 public:
-  ComparisonFilter(series::AnyMethod target, series::AnyMethod threshold)
+  ComparisonFilter(AnyMethod target, AnyMethod threshold)
   : target_{std::move(target)}
   , threshold_{std::move(threshold)}
   {
@@ -29,7 +29,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
-                  series::MethodContextable auto context) -> bool
+                  MethodContextable auto context) -> bool
   {
     const auto target_result = self.target_(asset_data, context);
     const auto threshold_result = self.threshold_(asset_data, context);
@@ -37,19 +37,19 @@ public:
     return TComparator{}(target_result, threshold_result);
   }
 
-  auto target(this const auto& self) noexcept -> const series::AnyMethod&
+  auto target(this const auto& self) noexcept -> const AnyMethod&
   {
     return self.target_;
   }
 
-  auto threshold(this const auto& self) noexcept -> const series::AnyMethod&
+  auto threshold(this const auto& self) noexcept -> const AnyMethod&
   {
     return self.threshold_;
   }
 
 private:
-  series::AnyMethod target_;
-  series::AnyMethod threshold_;
+  AnyMethod target_;
+  AnyMethod threshold_;
 };
 
 using GreaterEqualFilter = ComparisonFilter<std::greater_equal<>>;

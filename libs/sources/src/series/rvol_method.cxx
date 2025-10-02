@@ -15,7 +15,7 @@ import :series.ohlcv_method;
 import :series.sma_method;
 import :series.operators_method;
 
-export namespace pludux::series {
+export namespace pludux {
 
 class RvolMethod {
 public:
@@ -65,4 +65,4 @@ private:
   std::size_t period_;
 };
 
-} // namespace pludux::series
+} // namespace pludux

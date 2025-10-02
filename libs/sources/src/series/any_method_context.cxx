@@ -11,7 +11,7 @@ export module pludux:series.any_method_context;
 import :asset_snapshot;
 import :series.method_output;
 
-export namespace pludux::series {
+export namespace pludux {
 
 class AnyMethodContext {
 public:
@@ -99,4 +99,4 @@ private:
   std::shared_ptr<const ImplConcept> impl_;
 };
 
-} // namespace pludux::series
+} // namespace pludux

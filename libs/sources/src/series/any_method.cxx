@@ -15,7 +15,7 @@ import :series.method_output;
 
 import :series.any_method_context;
 
-export namespace pludux::series {
+export namespace pludux {
 
 class AnyMethod {
 public:
@@ -124,4 +124,4 @@ private:
   std::function<auto(const std::any&, const AnyMethod&)->bool> not_equals_;
 };
 
-} // namespace pludux::series
+} // namespace pludux

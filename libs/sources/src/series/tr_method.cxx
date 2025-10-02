@@ -16,7 +16,7 @@ import :series.method_output;
 
 import :series.ohlcv_method;
 
-export namespace pludux::series {
+export namespace pludux {
 
 class TrMethod {
 public:
@@ -58,4 +58,4 @@ public:
   }
 };
 
-} // namespace pludux::series
+} // namespace pludux

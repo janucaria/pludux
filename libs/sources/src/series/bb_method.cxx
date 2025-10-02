@@ -21,7 +21,7 @@ import :series.hma_method;
 
 import :series.ohlcv_method;
 
-export namespace pludux::series {
+export namespace pludux {
 
 enum class BbMaType { Sma, Ema, Wma, Rma, Hma };
 
@@ -166,4 +166,4 @@ private:
   double stddev_;
 };
 
-} // namespace pludux::series
+} // namespace pludux

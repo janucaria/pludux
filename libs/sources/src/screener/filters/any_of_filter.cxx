@@ -23,7 +23,7 @@ public:
 
   auto operator()(this const auto& self,
                   AssetSnapshot asset_data,
-                  series::MethodContextable auto context) -> bool
+                  MethodContextable auto context) -> bool
   {
     return std::ranges::any_of(self.conditions_,
                                [&asset_data, &context](const auto& filter) {

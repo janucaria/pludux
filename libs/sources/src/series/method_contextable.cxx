@@ -9,7 +9,7 @@ export module pludux:series.method_contextable;
 import :asset_snapshot;
 import :series.method_output;
 
-export namespace pludux::series {
+export namespace pludux {
 
 template<typename TContext>
 concept MethodContextable =
@@ -26,4 +26,4 @@ concept MethodContextable =
    } -> std::convertible_to<double>;
  };
 
-} // namespace pludux::series
+} // namespace pludux

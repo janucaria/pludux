@@ -8,7 +8,7 @@ import :asset_snapshot;
 import :series.method_contextable;
 import :series.method_output;
 
-export namespace pludux::series {
+export namespace pludux {
 
 template<typename TSourceMethod>
   requires requires { typename TSourceMethod::ResultType; }
@@ -80,4 +80,4 @@ template<typename UMethod>
 SelectOutputMethod(const SelectOutputMethod<UMethod>& other,
                    MethodOutput output) -> SelectOutputMethod<UMethod>;
 
-} // namespace pludux::series
+} // namespace pludux

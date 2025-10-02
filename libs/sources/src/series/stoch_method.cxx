@@ -19,7 +19,7 @@ import :series.sma_method;
 import :series.highest_method;
 import :series.lowest_method;
 
-export namespace pludux::series {
+export namespace pludux {
 
 class StochMethod {
 public:
@@ -111,4 +111,4 @@ private:
   std::size_t d_period_;
 };
 
-} // namespace pludux::series
+} // namespace pludux
