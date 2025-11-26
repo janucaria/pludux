@@ -1,6 +1,7 @@
 module;
 
 #include <algorithm>
+#include <initializer_list>
 #include <iterator>
 #include <stdexcept>
 #include <variant>
@@ -18,6 +19,11 @@ class AllOfMethod {
 public:
   AllOfMethod() = default;
 
+  AllOfMethod(std::initializer_list<AnyConditionMethod> conditions)
+  : conditions_{conditions}
+  {
+  }
+
   explicit AllOfMethod(std::vector<AnyConditionMethod> conditions)
   : conditions_{std::move(conditions)}
   {
@@ -29,10 +35,10 @@ public:
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) -> bool
   {
-    return std::ranges::all_of(self.conditions_,
-                               [&asset_snapshot, &context](const auto& condition) {
-                                 return condition(asset_snapshot, context);
-                               });
+    return std::ranges::all_of(
+     self.conditions_, [&asset_snapshot, &context](const auto& condition) {
+       return condition(asset_snapshot, context);
+     });
   }
 
   auto conditions(this const auto& self) noexcept

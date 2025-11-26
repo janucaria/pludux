@@ -12,7 +12,7 @@ import pludux.backtest;
 
 auto main(int, const char**) -> int
 {
-  using json = jsoncons::json;
+  using json = jsoncons::ojson;
 
   const auto json_strategy_path =
    pludux::get_env_var("PLUDUX_BACKTEST_STRATEGY_JSON_PATH").value_or("");

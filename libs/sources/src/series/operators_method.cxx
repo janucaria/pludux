@@ -62,6 +62,16 @@ public:
     self.operand1_ = std::move(operand1);
   }
 
+  auto left(this const auto& self) noexcept -> const TMethodOp1&
+  {
+    return self.operand1();
+  }
+
+  void left(this auto& self, TMethodOp1 left) noexcept
+  {
+    self.operand1(std::move(left));
+  }
+
   auto operand2(this const auto& self) noexcept -> const TMethodOp2&
   {
     return self.operand2_;
@@ -70,6 +80,16 @@ public:
   void operand2(this auto& self, TMethodOp2 operand2) noexcept
   {
     self.operand2_ = std::move(operand2);
+  }
+
+  auto right(this const auto& self) noexcept -> const TMethodOp2&
+  {
+    return self.operand2();
+  }
+
+  void right(this auto& self, TMethodOp2 right) noexcept
+  {
+    self.operand2(std::move(right));
   }
 
 private:

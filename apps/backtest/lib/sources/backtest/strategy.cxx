@@ -20,12 +20,8 @@ export namespace pludux::backtest {
 
 class Strategy {
 public:
-  enum class EntryRepeat { sequence, always };
-
-  enum class Direction { long_direction, short_direction };
-
   Strategy(std::string name,
-           std::shared_ptr<SeriesMethodRegistry> method_registry,
+           SeriesMethodRegistry series_registry,
            AnySeriesMethod risk_method,
            AnyConditionMethod long_entry_filter,
            AnyConditionMethod long_exit_filter,
@@ -37,7 +33,7 @@ public:
            bool take_profit_enabled,
            double take_profit_risk_multiplier)
   : name_{std::move(name)}
-  , method_registry_{std::move(method_registry)}
+  , series_registry_{series_registry}
   , risk_method_{risk_method}
   , long_entry_filter_{std::move(long_entry_filter)}
   , long_exit_filter_{std::move(long_exit_filter)}
@@ -56,15 +52,25 @@ public:
     return self.name_;
   }
 
-  auto method_registry(this const auto& self) noexcept
-   -> std::shared_ptr<SeriesMethodRegistry>
+  auto series_registry(this const auto& self) noexcept
+   -> const SeriesMethodRegistry&
   {
-    return self.method_registry_;
+    return self.series_registry_;
+  }
+
+  auto series_registry(this auto& self) noexcept -> SeriesMethodRegistry&
+  {
+    return self.series_registry_;
   }
 
   auto risk_method(this const auto& self) noexcept -> const AnySeriesMethod&
   {
     return self.risk_method_;
+  }
+
+  void risk_method(this auto& self, AnySeriesMethod risk_method) noexcept
+  {
+    self.risk_method_ = std::move(risk_method);
   }
 
   auto long_entry_filter(this const auto& self) noexcept
@@ -73,10 +79,22 @@ public:
     return self.long_entry_filter_;
   }
 
+  void long_entry_filter(this auto& self,
+                         AnyConditionMethod long_entry_filter) noexcept
+  {
+    self.long_entry_filter_ = std::move(long_entry_filter);
+  }
+
   auto long_exit_filter(this const auto& self) noexcept
    -> const AnyConditionMethod&
   {
     return self.long_exit_filter_;
+  }
+
+  void long_exit_filter(this auto& self,
+                        AnyConditionMethod long_exit_filter) noexcept
+  {
+    self.long_exit_filter_ = std::move(long_exit_filter);
   }
 
   auto short_entry_filter(this const auto& self) noexcept
@@ -85,10 +103,22 @@ public:
     return self.short_entry_filter_;
   }
 
+  void short_entry_filter(this auto& self,
+                          AnyConditionMethod short_entry_filter) noexcept
+  {
+    self.short_entry_filter_ = std::move(short_entry_filter);
+  }
+
   auto short_exit_filter(this const auto& self) noexcept
    -> const AnyConditionMethod&
   {
     return self.short_exit_filter_;
+  }
+
+  void short_exit_filter(this auto& self,
+                         AnyConditionMethod short_exit_filter) noexcept
+  {
+    self.short_exit_filter_ = std::move(short_exit_filter);
   }
 
   auto stop_loss_enabled(this const auto& self) noexcept -> bool
@@ -96,9 +126,20 @@ public:
     return self.stop_loss_enabled_;
   }
 
+  void stop_loss_enabled(this auto& self, bool stop_loss_enabled) noexcept
+  {
+    self.stop_loss_enabled_ = stop_loss_enabled;
+  }
+
   auto stop_loss_trailing_enabled(this const auto& self) noexcept -> bool
   {
     return self.stop_loss_trailing_enabled_;
+  }
+
+  void stop_loss_trailing_enabled(this auto& self,
+                                  bool stop_loss_trailing_enabled) noexcept
+  {
+    self.stop_loss_trailing_enabled_ = stop_loss_trailing_enabled;
   }
 
   auto stop_loss_risk_multiplier(this const auto& self) noexcept -> double
@@ -106,14 +147,31 @@ public:
     return self.stop_loss_risk_multiplier_;
   }
 
+  void stop_loss_risk_multiplier(this auto& self,
+                                 double stop_loss_risk_multiplier) noexcept
+  {
+    self.stop_loss_risk_multiplier_ = stop_loss_risk_multiplier;
+  }
+
   auto take_profit_enabled(this const auto& self) noexcept -> bool
   {
     return self.take_profit_enabled_;
   }
 
+  void take_profit_enabled(this auto& self, bool take_profit_enabled) noexcept
+  {
+    self.take_profit_enabled_ = take_profit_enabled;
+  }
+
   auto take_profit_risk_multiplier(this const auto& self) noexcept -> double
   {
     return self.take_profit_risk_multiplier_;
+  }
+
+  void take_profit_risk_multiplier(this auto& self,
+                                   double take_profit_risk_multiplier) noexcept
+  {
+    self.take_profit_risk_multiplier_ = take_profit_risk_multiplier;
   }
 
   auto entry_long_trade(this const auto& self,
@@ -122,7 +180,7 @@ public:
   {
     auto result = std::optional<TradeEntry>{};
 
-    auto context = DefaultMethodContext{*self.method_registry_};
+    auto context = DefaultMethodContext{self.series_registry_};
 
     if(self.long_entry_filter()(asset_snapshot, context)) {
       const auto risk_size = self.risk_method_(asset_snapshot, context);
@@ -156,7 +214,7 @@ public:
   {
     auto result = std::optional<TradeEntry>{};
 
-    auto context = DefaultMethodContext{*self.method_registry_};
+    auto context = DefaultMethodContext{self.series_registry_};
 
     if(self.short_entry_filter()(asset_snapshot, context)) {
       const auto risk_size = -self.risk_method_(asset_snapshot, context);
@@ -200,7 +258,7 @@ public:
     const auto is_short_direction = position_size < 0;
     const auto exit_price = asset_snapshot.close();
 
-    auto context = DefaultMethodContext{*self.method_registry_};
+    auto context = DefaultMethodContext{self.series_registry_};
 
     if(is_long_direction) {
       if(self.long_exit_filter()(asset_snapshot, context)) {
@@ -219,7 +277,7 @@ public:
 private:
   std::string name_;
 
-  std::shared_ptr<SeriesMethodRegistry> method_registry_;
+  SeriesMethodRegistry series_registry_;
 
   AnySeriesMethod risk_method_;
 
@@ -244,13 +302,13 @@ auto risk_reward_config_parser() -> ConfigParser
   config_parser.register_method_parser(
    "ATR",
    [](const ConfigParser& config_parser,
-      const AnySeriesMethod& method) -> jsoncons::json {
-     auto serialized_method = jsoncons::json{};
+      const AnySeriesMethod& method) -> jsoncons::ojson {
+     auto serialized_method = jsoncons::ojson{};
 
      auto atr_method = series_method_cast<AtrMethod>(method);
 
      if(atr_method) {
-       serialized_method["atr"] = jsoncons::json{};
+       serialized_method["atr"] = jsoncons::ojson{};
        serialized_method["atr"]["period"] = atr_method->period();
        serialized_method["atr"]["multiplier"] = atr_method->multiplier();
      }
@@ -258,7 +316,7 @@ auto risk_reward_config_parser() -> ConfigParser
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser,
-      const jsoncons::json& parameters) -> AnySeriesMethod {
+      const jsoncons::ojson& parameters) -> AnySeriesMethod {
      auto period = std::size_t{14};
      auto multiplier = 1.0;
 
@@ -279,8 +337,8 @@ auto risk_reward_config_parser() -> ConfigParser
   config_parser.register_method_parser(
    "PERCENTAGE",
    [](const ConfigParser& config_parser,
-      const AnySeriesMethod& method) -> jsoncons::json {
-     auto serialized_method = jsoncons::json{};
+      const AnySeriesMethod& method) -> jsoncons::ojson {
+     auto serialized_method = jsoncons::ojson{};
 
      auto percent_method =
       series_method_cast<PercentageMethod<AnySeriesMethod>>(method);
@@ -292,7 +350,7 @@ auto risk_reward_config_parser() -> ConfigParser
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser,
-      const jsoncons::json& parameters) -> AnySeriesMethod {
+      const jsoncons::ojson& parameters) -> AnySeriesMethod {
      const auto base_method = CloseMethod{};
 
      const auto percent = parameters.at("percentage").as_double();
@@ -305,8 +363,8 @@ auto risk_reward_config_parser() -> ConfigParser
   config_parser.register_method_parser(
    "VALUE",
    [](const ConfigParser& config_parser,
-      const AnySeriesMethod& method) -> jsoncons::json {
-     auto serialized_method = jsoncons::json{};
+      const AnySeriesMethod& method) -> jsoncons::ojson {
+     auto serialized_method = jsoncons::ojson{};
 
      auto value_method = series_method_cast<ValueMethod>(method);
 
@@ -317,7 +375,7 @@ auto risk_reward_config_parser() -> ConfigParser
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser,
-      const jsoncons::json& parameters) -> AnySeriesMethod {
+      const jsoncons::ojson& parameters) -> AnySeriesMethod {
      const auto value = parameters.at("value").as_double();
      return ValueMethod{value};
    });
@@ -329,16 +387,16 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
                                   std::istream& json_strategy_stream)
  -> backtest::Strategy
 {
-  auto method_registry = std::make_shared<SeriesMethodRegistry>();
+  auto series_registry = SeriesMethodRegistry{};
   auto config_parser = make_default_registered_config_parser();
 
-  auto strategy_json = jsoncons::json::parse(
+  auto strategy_json = jsoncons::ojson::parse(
    json_strategy_stream, jsoncons::json_options{}.allow_comments(true));
   if(strategy_json.contains("series")) {
     for(const auto& [name, series_method] :
         strategy_json["series"].object_range()) {
       const auto method = config_parser.parse_method(series_method);
-      method_registry->set(name, method);
+      series_registry.set(name, method);
     }
   }
 
@@ -412,7 +470,7 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
   }
 
   return pludux::backtest::Strategy{std::string{strategy_name},
-                                    std::move(method_registry),
+                                    std::move(series_registry),
                                     std::move(risk_method),
                                     std::move(long_entry_filter),
                                     std::move(long_exit_filter),

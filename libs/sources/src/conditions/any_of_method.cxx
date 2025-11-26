@@ -1,6 +1,7 @@
 module;
 
 #include <algorithm>
+#include <initializer_list>
 #include <stdexcept>
 #include <vector>
 
@@ -14,7 +15,10 @@ export namespace pludux {
 
 class AnyOfMethod {
 public:
-  AnyOfMethod() = default;
+  AnyOfMethod(std::initializer_list<AnyConditionMethod> conditions)
+  : conditions_{conditions}
+  {
+  }
 
   explicit AnyOfMethod(std::vector<AnyConditionMethod> conditions)
   : conditions_{std::move(conditions)}

@@ -42,9 +42,19 @@ public:
     return self.target_;
   }
 
+  void target(this auto& self, AnySeriesMethod target) noexcept
+  {
+    self.target_ = std::move(target);
+  }
+
   auto threshold(this const auto& self) noexcept -> const AnySeriesMethod&
   {
     return self.threshold_;
+  }
+
+  void threshold(this auto& self, AnySeriesMethod threshold) noexcept
+  {
+    self.threshold_ = std::move(threshold);
   }
 
 private:

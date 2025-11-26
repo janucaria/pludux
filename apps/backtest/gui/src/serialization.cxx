@@ -273,14 +273,11 @@ void load(Archive& archive, pludux::backtest::BacktestSummary& summary)
 template<class Archive>
 void serialize(Archive& archive, pludux::backtest::Strategy& strategy)
 {
-  const auto method_registry = strategy.method_registry();
-
   auto risk_parser = pludux::backtest::risk_reward_config_parser();
   const auto risk_method_json =
    risk_parser.serialize_method(strategy.risk_method());
 
-  auto config_parser =
-   pludux::make_default_registered_config_parser();
+  auto config_parser = pludux::make_default_registered_config_parser();
 
   const auto long_entry_filter_json =
    config_parser.serialize_filter(strategy.long_entry_filter());
@@ -300,12 +297,11 @@ void serialize(Archive& archive, pludux::backtest::Strategy& strategy)
   const auto take_profit_risk_multiplier =
    strategy.take_profit_risk_multiplier();
 
+  const auto& series_registry = strategy.series_registry();
   auto registered_methods = std::unordered_map<std::string, std::string>{};
-  if(method_registry) {
-    for(const auto& [method_name, method] : method_registry->methods()) {
-      registered_methods[method_name] =
-       config_parser.serialize_method(method).to_string();
-    }
+  for(const auto& [method_name, method] : series_registry) {
+    registered_methods[method_name] =
+     config_parser.serialize_method(method).to_string();
   }
 
   const auto risk_method_str = risk_method_json.to_string();
@@ -361,23 +357,20 @@ struct LoadAndConstruct<pludux::backtest::Strategy> {
             make_nvp("takeProfitEnabled", take_profit_enabled),
             make_nvp("takeProfitRiskMultiplier", take_profit_risk_multiplier));
 
-    auto method_registry = std::make_shared<pludux::SeriesMethodRegistry>();
-
-    const auto risk_method_json = jsoncons::json::parse(risk_method_str);
+    const auto risk_method_json = jsoncons::ojson::parse(risk_method_str);
     const auto long_entry_filter_json =
-     jsoncons::json::parse(long_entry_filter_str);
+     jsoncons::ojson::parse(long_entry_filter_str);
     const auto long_exit_filter_json =
-     jsoncons::json::parse(long_exit_filter_str);
+     jsoncons::ojson::parse(long_exit_filter_str);
     const auto short_entry_filter_json =
-     jsoncons::json::parse(short_entry_filter_str);
+     jsoncons::ojson::parse(short_entry_filter_str);
     const auto short_exit_filter_json =
-     jsoncons::json::parse(short_exit_filter_str);
+     jsoncons::ojson::parse(short_exit_filter_str);
 
     auto risk_parser = pludux::backtest::risk_reward_config_parser();
     auto risk_method = risk_parser.parse_method(risk_method_json);
 
-    auto config_parser =
-     pludux::make_default_registered_config_parser();
+    auto config_parser = pludux::make_default_registered_config_parser();
 
     auto long_entry_filter = config_parser.parse_filter(long_entry_filter_json);
     auto long_exit_filter = config_parser.parse_filter(long_exit_filter_json);
@@ -385,14 +378,15 @@ struct LoadAndConstruct<pludux::backtest::Strategy> {
      config_parser.parse_filter(short_entry_filter_json);
     auto short_exit_filter = config_parser.parse_filter(short_exit_filter_json);
 
+    auto series_registry = pludux::SeriesMethodRegistry{};
     for(const auto& [method_name, method_str] : registered_methods) {
-      const auto method_json = jsoncons::json::parse(method_str);
+      const auto method_json = jsoncons::ojson::parse(method_str);
       const auto method = config_parser.parse_method(method_json);
-      method_registry->set(method_name, method);
+      series_registry.set(method_name, method);
     }
 
     constructor(std::move(name),
-                std::move(method_registry),
+                std::move(series_registry),
                 std::move(risk_method),
                 std::move(long_entry_filter),
                 std::move(long_exit_filter),

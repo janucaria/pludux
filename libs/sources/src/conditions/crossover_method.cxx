@@ -40,9 +40,19 @@ public:
     return self.signal_;
   }
 
+  void signal(this auto& self, AnySeriesMethod signal) noexcept
+  {
+    self.signal_ = std::move(signal);
+  }
+
   auto reference(this const auto& self) noexcept -> const AnySeriesMethod&
   {
     return self.reference_;
+  }
+
+  void reference(this auto& self, AnySeriesMethod reference) noexcept
+  {
+    self.reference_ = std::move(reference);
   }
 
 private:

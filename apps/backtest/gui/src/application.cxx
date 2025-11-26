@@ -170,8 +170,7 @@ public:
       auto assets_window = AssetsWindow{};
       assets_window.render(app_state);
 
-      auto strategies_window = StrategiesWindow{};
-      strategies_window.render(app_state);
+      self.strategies_window_.render(app_state);
 
       self.profiles_window_.render(app_state);
 
@@ -211,6 +210,7 @@ private:
   PlotDataWindow plot_data_window_;
   BacktestsWindow backtests_window_;
   ProfilesWindow profiles_window_;
+  StrategiesWindow strategies_window_;
 
   AppStateData state_data_;
   std::queue<PolyAction> actions_;

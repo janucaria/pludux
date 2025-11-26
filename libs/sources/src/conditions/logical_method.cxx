@@ -43,9 +43,19 @@ public:
     return self.first_condition_;
   }
 
+  void first_condition(this auto& self, AnyConditionMethod condition)
+  {
+    self.first_condition_ = std::move(condition);
+  }
+
   auto second_condition(this const auto& self) -> const AnyConditionMethod&
   {
     return self.second_condition_;
+  }
+
+  void second_condition(this auto& self, AnyConditionMethod condition)
+  {
+    self.second_condition_ = std::move(condition);
   }
 
 private:
@@ -76,6 +86,11 @@ public:
   auto other_condition(this const auto& self) -> const AnyConditionMethod&
   {
     return self.other_condition_;
+  }
+
+  void other_condition(this auto& self, AnyConditionMethod condition)
+  {
+    self.other_condition_ = std::move(condition);
   }
 
 private:

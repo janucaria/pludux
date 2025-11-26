@@ -5,7 +5,7 @@
 import pludux;
 
 using namespace pludux;
-using json = jsoncons::json;
+using json = jsoncons::ojson;
 
 class ConfigParserTest : public ::testing::Test {
 protected:

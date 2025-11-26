@@ -28,10 +28,10 @@ public:
     }
   AnySeriesMethod(UMethod impl)
   : impl_{std::make_any<UMethod>(std::move(impl))}
-  , invoke_{[](
-             const std::any& impl,
-             AssetSnapshot asset_snapshot,
-             AnySeriesMethodContext context) static -> typename UMethod::ResultType {
+  , invoke_{[](const std::any& impl,
+               AssetSnapshot asset_snapshot,
+               AnySeriesMethodContext context) static
+             -> typename UMethod::ResultType {
     auto* method = std::any_cast<UMethod>(&impl);
     return method
             ? (*method)(asset_snapshot, context)
@@ -114,14 +114,15 @@ private:
    auto(const std::any&, AssetSnapshot, AnySeriesMethodContext)->ResultType>
    invoke_;
 
-  std::function<auto(
-                 const std::any&, AssetSnapshot, SeriesOutput, AnySeriesMethodContext)
-                 ->ResultType>
+  std::function<
+   auto(const std::any&, AssetSnapshot, SeriesOutput, AnySeriesMethodContext)
+    ->ResultType>
    invoke_with_output_;
 
   std::function<auto(const std::any&, const AnySeriesMethod&)->bool> equals_;
 
-  std::function<auto(const std::any&, const AnySeriesMethod&)->bool> not_equals_;
+  std::function<auto(const std::any&, const AnySeriesMethod&)->bool>
+   not_equals_;
 };
 
 } // namespace pludux

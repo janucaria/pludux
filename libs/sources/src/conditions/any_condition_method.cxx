@@ -29,14 +29,14 @@ public:
     return self.impl_->operator()(std::move(asset_snapshot), context);
   }
 
-  auto operator==(this const auto& self, const AnyConditionMethod& other) noexcept
-   -> bool
+  auto operator==(this const auto& self,
+                  const AnyConditionMethod& other) noexcept -> bool
   {
     return self.impl_->operator==(other);
   }
 
-  auto operator!=(this const auto& self, const AnyConditionMethod& other) noexcept
-   -> bool
+  auto operator!=(this const auto& self,
+                  const AnyConditionMethod& other) noexcept -> bool
   {
     return self.impl_->operator!=(other);
   }
@@ -69,8 +69,8 @@ private:
   struct ImplModel final : ImplConcept {
     TImpl impl;
 
-    explicit ImplModel(TImpl impl)
-    : impl{std::move(impl)}
+    explicit ImplModel(TImpl other_impl)
+    : impl(std::move(other_impl))
     {
     }
 
@@ -81,13 +81,15 @@ private:
       return impl(std::move(asset_snapshot), context);
     }
 
-    auto operator==(const AnyConditionMethod& other) const noexcept -> bool override
+    auto operator==(const AnyConditionMethod& other) const noexcept
+     -> bool override
     {
       auto other_model = condition_method_cast<TImpl>(other);
       return other_model && impl == *other_model;
     }
 
-    auto operator!=(const AnyConditionMethod& other) const noexcept -> bool override
+    auto operator!=(const AnyConditionMethod& other) const noexcept
+     -> bool override
     {
       auto other_model = condition_method_cast<TImpl>(other);
       return !other_model || impl != *other_model;
