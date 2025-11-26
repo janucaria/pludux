@@ -617,29 +617,14 @@ private:
         ImGui::SeparatorText("Stop Loss");
 
         auto stop_loss_enabled = self.new_strategy_->stop_loss_enabled();
-        auto stop_loss_risk_multiplier =
-         self.new_strategy_->stop_loss_risk_multiplier();
         auto stop_loss_trailing_enabled =
          self.new_strategy_->stop_loss_trailing_enabled();
 
         ImGui::Checkbox("Enable Stop Loss", &stop_loss_enabled);
-        ImGui::Text("Risk Multiplier:");
-        ImGui::SameLine();
-        if(ImGui::InputDouble("##stop_loss_risk_multiplier",
-                              &stop_loss_risk_multiplier,
-                              0.1,
-                              1.0,
-                              "%.2f")) {
-          if(stop_loss_risk_multiplier < 0.1) {
-            stop_loss_risk_multiplier = 0.1;
-          }
-        }
         ImGui::Checkbox("Enable Trailing Stop Loss",
                         &stop_loss_trailing_enabled);
 
         self.new_strategy_->stop_loss_enabled(stop_loss_enabled);
-        self.new_strategy_->stop_loss_risk_multiplier(
-         stop_loss_risk_multiplier);
         self.new_strategy_->stop_loss_trailing_enabled(
          stop_loss_trailing_enabled);
 

@@ -29,7 +29,6 @@ public:
            AnyConditionMethod short_exit_filter,
            bool stop_loss_enabled,
            bool stop_loss_trailing_enabled,
-           double stop_loss_risk_multiplier,
            bool take_profit_enabled,
            double take_profit_risk_multiplier)
   : name_{std::move(name)}
@@ -41,7 +40,6 @@ public:
   , short_exit_filter_{std::move(short_exit_filter)}
   , stop_loss_enabled_{stop_loss_enabled}
   , stop_loss_trailing_enabled_{stop_loss_trailing_enabled}
-  , stop_loss_risk_multiplier_{stop_loss_risk_multiplier}
   , take_profit_enabled_{take_profit_enabled}
   , take_profit_risk_multiplier_{take_profit_risk_multiplier}
   {
@@ -142,17 +140,6 @@ public:
     self.stop_loss_trailing_enabled_ = stop_loss_trailing_enabled;
   }
 
-  auto stop_loss_risk_multiplier(this const Strategy& self) noexcept -> double
-  {
-    return self.stop_loss_risk_multiplier_;
-  }
-
-  void stop_loss_risk_multiplier(this Strategy& self,
-                                 double stop_loss_risk_multiplier) noexcept
-  {
-    self.stop_loss_risk_multiplier_ = stop_loss_risk_multiplier;
-  }
-
   auto take_profit_enabled(this const Strategy& self) noexcept -> bool
   {
     return self.take_profit_enabled_;
@@ -189,9 +176,7 @@ public:
       const auto entry_price = asset_snapshot.close();
 
       const auto stop_loss_price =
-       self.stop_loss_enabled_
-        ? entry_price - risk_size * self.stop_loss_risk_multiplier_
-        : NAN;
+       self.stop_loss_enabled_ ? entry_price - risk_size : NAN;
       const auto is_stop_loss_trailing = self.stop_loss_trailing_enabled();
       const auto take_profit_price =
        self.take_profit_enabled_
@@ -223,9 +208,7 @@ public:
       const auto entry_price = asset_snapshot.close();
 
       const auto stop_loss_price =
-       self.stop_loss_enabled_
-        ? entry_price - risk_size * self.stop_loss_risk_multiplier_
-        : NAN;
+       self.stop_loss_enabled_ ? entry_price - risk_size : NAN;
       const auto is_stop_loss_trailing = self.stop_loss_trailing_enabled();
       const auto take_profit_price =
        self.take_profit_enabled_
@@ -290,7 +273,6 @@ private:
 
   bool stop_loss_enabled_{false};
   bool stop_loss_trailing_enabled_{false};
-  double stop_loss_risk_multiplier_{1.0};
 
   bool take_profit_enabled_{false};
   double take_profit_risk_multiplier_{1.0};
@@ -454,7 +436,6 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
 
   auto is_trailing_stop_loss = false;
   auto is_stop_loss_enabled = false;
-  auto stop_loss_risk_multiplier = 1.0;
   if(strategy_json.contains("stopLoss")) {
     const auto stop_loss_config = strategy_json.at("stopLoss");
     if(stop_loss_config.is_bool()) {
@@ -479,7 +460,6 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
                                     std::move(short_exit_filter),
                                     is_stop_loss_enabled,
                                     is_trailing_stop_loss,
-                                    stop_loss_risk_multiplier,
                                     is_take_profit_enabled,
                                     take_profit_risk_multiplier};
 }

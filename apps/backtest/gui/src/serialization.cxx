@@ -291,7 +291,6 @@ void serialize(Archive& archive, pludux::backtest::Strategy& strategy)
 
   const auto stop_loss_enabled = strategy.stop_loss_enabled();
   const auto stop_loss_trailing_enabled = strategy.stop_loss_trailing_enabled();
-  const auto stop_loss_risk_multiplier = strategy.stop_loss_risk_multiplier();
 
   const auto take_profit_enabled = strategy.take_profit_enabled();
   const auto take_profit_risk_multiplier =
@@ -319,7 +318,6 @@ void serialize(Archive& archive, pludux::backtest::Strategy& strategy)
           make_nvp("shortExitMethod", short_exit_filter_str),
           make_nvp("stopLossEnabled", stop_loss_enabled),
           make_nvp("stopLossTrailingEnabled", stop_loss_trailing_enabled),
-          make_nvp("stopLossRiskMultiplier", stop_loss_risk_multiplier),
           make_nvp("takeProfitEnabled", take_profit_enabled),
           make_nvp("takeProfitRiskMultiplier", take_profit_risk_multiplier));
 }
@@ -340,7 +338,6 @@ struct LoadAndConstruct<pludux::backtest::Strategy> {
     auto short_exit_filter_str = std::string{};
     auto stop_loss_enabled = bool{};
     auto stop_loss_trailing_enabled = bool{};
-    auto stop_loss_risk_multiplier = double{};
     auto take_profit_enabled = bool{};
     auto take_profit_risk_multiplier = double{};
 
@@ -353,7 +350,6 @@ struct LoadAndConstruct<pludux::backtest::Strategy> {
             make_nvp("shortExitMethod", short_exit_filter_str),
             make_nvp("stopLossEnabled", stop_loss_enabled),
             make_nvp("stopLossTrailingEnabled", stop_loss_trailing_enabled),
-            make_nvp("stopLossRiskMultiplier", stop_loss_risk_multiplier),
             make_nvp("takeProfitEnabled", take_profit_enabled),
             make_nvp("takeProfitRiskMultiplier", take_profit_risk_multiplier));
 
@@ -394,7 +390,6 @@ struct LoadAndConstruct<pludux::backtest::Strategy> {
                 std::move(short_exit_filter),
                 stop_loss_enabled,
                 stop_loss_trailing_enabled,
-                stop_loss_risk_multiplier,
                 take_profit_enabled,
                 take_profit_risk_multiplier);
   }
