@@ -2,6 +2,7 @@ module;
 
 #include <algorithm>
 #include <chrono>
+#include <fstream>
 #include <queue>
 #include <ranges>
 #include <stdexcept>

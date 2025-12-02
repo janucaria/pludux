@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.30)
 project(pludux
-  VERSION 0.0.11
+  VERSION 0.0.12
   HOMEPAGE_URL "https://github.com/janucaria/pludux"
   LANGUAGES CXX
 )
