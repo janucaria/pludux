@@ -23,7 +23,7 @@ if(NOT EMSCRIPTEN)
   FetchContent_Declare(
     wgpu_native
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-    URL "https://github.com/gfx-rs/wgpu-native/releases/download/v25.0.2.2/${PLUDUX_WEBGPU_DOWNLOAD}.zip"
+    URL "https://github.com/gfx-rs/wgpu-native/releases/download/v27.0.2.0/${PLUDUX_WEBGPU_DOWNLOAD}.zip"
   )
   
   FetchContent_MakeAvailable(wgpu_native)
@@ -56,10 +56,17 @@ if(NOT EMSCRIPTEN)
   set(GLFW_INSTALL OFF)
   set(GLFW_BUILD_DOCS OFF)
 
-  if(LINUX)
-    set(GLFW_BUILD_WAYLAND ON)
-    set(GLFW_BUILD_X11 OFF)
-  endif()
+  FetchContent_Declare(
+    glfw3webgpu
+    GIT_REPOSITORY "https://github.com/eliemichel/glfw3webgpu.git"
+    GIT_TAG        "v1.2.0"
+    GIT_SHALLOW    TRUE
+    GIT_PROGRESS   TRUE
+    PATCH_COMMAND 
+      ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/patch/glfw3webgpu/
+        <SOURCE_DIR>/
+  )
 
   FetchContent_Declare(
     nativefiledialog-extended
@@ -69,26 +76,14 @@ if(NOT EMSCRIPTEN)
     GIT_PROGRESS   TRUE
   )
 
-  FetchContent_MakeAvailable(glfw nativefiledialog-extended)
+  FetchContent_MakeAvailable(glfw glfw3webgpu nativefiledialog-extended)
 
 endif()
 
 FetchContent_Declare(
-  glfw3webgpu
-  GIT_REPOSITORY "https://github.com/eliemichel/glfw3webgpu.git"
-  GIT_TAG        "v1.2.0"
-  GIT_SHALLOW    TRUE
-  GIT_PROGRESS   TRUE
-  PATCH_COMMAND 
-    ${CMAKE_COMMAND} -E copy_directory
-      ${CMAKE_CURRENT_SOURCE_DIR}/patch/glfw3webgpu/
-      <SOURCE_DIR>/
-)
-
-FetchContent_Declare(
   imgui
   GIT_REPOSITORY "https://github.com/ocornut/imgui.git"
-  GIT_TAG        "v1.92.2b-docking"
+  GIT_TAG        "v1.92.5-docking"
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
 )
@@ -96,16 +91,12 @@ FetchContent_Declare(
 FetchContent_Declare(
   implot
   GIT_REPOSITORY "https://github.com/epezent/implot.git"
-  GIT_TAG        "v0.16"
+  GIT_TAG        "v0.17"
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
-  PATCH_COMMAND 
-    ${CMAKE_COMMAND} -E copy_directory
-      ${CMAKE_CURRENT_SOURCE_DIR}/patch/implot/
-      <SOURCE_DIR>/
 )
 
-FetchContent_MakeAvailable(glfw3webgpu imgui implot)
+FetchContent_MakeAvailable(imgui implot)
 
 FetchContent_Declare(
   cereal
@@ -188,7 +179,6 @@ target_link_libraries(${PROJECT_NAME}
   PUBLIC
     pludux::backtest-lib
     glfw
-    glfw3webgpu
     cereal::cereal
 )
 
@@ -200,8 +190,15 @@ if(NOT EMSCRIPTEN)
   target_link_libraries(${PROJECT_NAME}
     PUBLIC
       webgpu
+      glfw3webgpu
       nfd::nfd
   )
+
+  if(LINUX)
+    find_package(X11 REQUIRED)
+
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${X11_LIBRARIES})
+  endif()
 
   if(MSVC)
     target_link_libraries(${PROJECT_NAME}
@@ -227,10 +224,15 @@ else()
   target_compile_definitions(${PROJECT_NAME} PUBLIC
     IMGUI_DISABLE_FILE_FUNCTIONS=1
   )
+
+  target_compile_options(${PROJECT_NAME} PRIVATE
+    "--use-port=emdawnwebgpu"
+  )
   
   target_link_options(${PROJECT_NAME} PRIVATE
+    "--use-port=emdawnwebgpu"
+    
     "-sWASM=1"
-    "-sUSE_WEBGPU=1"
     "-sUSE_GLFW=3"
     "-sALLOW_MEMORY_GROWTH=1"
     "-sSTACK_SIZE=128kB"

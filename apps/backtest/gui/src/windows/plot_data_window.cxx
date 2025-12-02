@@ -2,7 +2,8 @@ module;
 
 #include <algorithm>
 #include <array>
-#include <format>
+#include <cmath>
+#include <string>
 #include <tuple>
 #include <vector>
 
@@ -437,8 +438,10 @@ private:
              ImVec2{entry_pos.x, entry_pos.y - 10},
              ImGui::GetColorU32(self.bullish_color_));
 
+            // TODO: Visual Studio 2026 have bug with include <format> causing
+            // compile error
             const auto trade_count_str =
-             std::format("#{}", summary.trade_count() + 1);
+             std::string("#") + std::to_string(summary.trade_count() + 1);
             const auto text_size = ImGui::CalcTextSize(trade_count_str.c_str());
             draw_list->AddText(
              ImVec2{entry_pos.x - text_size.x * 0.5f, entry_pos.y},
@@ -460,8 +463,10 @@ private:
                ImVec2{exit_pos.x, exit_pos.y + 10},
                ImGui::GetColorU32(self.bearish_color_));
 
+              // TODO: Visual Studio 2026 have bug with include <format> causing
+              // compile error
               const auto trade_count_str =
-               std::format("#{}", summary.trade_count());
+               std::string("#") + std::to_string(summary.trade_count());
               const auto text_size =
                ImGui::CalcTextSize(trade_count_str.c_str());
               draw_list->AddText(

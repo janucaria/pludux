@@ -5,24 +5,22 @@
 #include <sstream>
 #include <string>
 
-#include <GLFW/glfw3.h>
 #include <webgpu/webgpu.h>
+
+#include <GLFW/glfw3.h>
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#include <emscripten/html5.h>
+#else
+#include <glfw3webgpu.h>
+#endif
 
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_wgpu.h>
 #include <implot.h>
 #include <implot_internal.h>
-
-#ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-#include <emscripten/html5.h>
-#include <emscripten/html5_webgpu.h>
-#else
-#include <webgpu/wgpu.h>
-#endif
-
-#include <glfw3webgpu.h>
 
 #include <cereal/cereal.hpp>
 #include <jsoncons/json.hpp>
@@ -151,14 +149,21 @@ public:
 
     auto instance = wgpuCreateInstance(nullptr);
 
-    wgpu_surface_ = glfwCreateWindowWGPUSurface(instance, window_);
+    wgpu_surface_ = create_window_wgpu_surface(instance);
     if(!wgpu_surface_) {
       wgpuInstanceRelease(instance);
       return;
     }
 
 #ifdef __EMSCRIPTEN__
-    wgpu_preferred_fmt_ = wgpuSurfaceGetPreferredFormat(wgpu_surface_, nullptr);
+    auto surface_capabilities = WGPUSurfaceCapabilities{};
+    wgpuSurfaceGetCapabilities(wgpu_surface_, nullptr, &surface_capabilities);
+
+    wgpu_preferred_fmt_ = WGPUTextureFormat_Undefined;
+    if(surface_capabilities.formatCount > 0) {
+      wgpu_preferred_fmt_ = surface_capabilities.formats[0];
+    }
+
     wgpu_device_ = emscripten_webgpu_get_device();
 #else
     wgpu_preferred_fmt_ = WGPUTextureFormat_BGRA8Unorm;
@@ -415,23 +420,13 @@ private:
     auto surface_texture = WGPUSurfaceTexture{};
     wgpuSurfaceGetCurrentTexture(wgpu_surface_, &surface_texture);
 
-#ifdef __EMSCRIPTEN__
-    if(surface_texture.status != WGPUSurfaceGetCurrentTextureStatus_Success) {
-      return;
-    }
-#else
     if(surface_texture.status !=
        WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal) {
       return;
     }
-#endif
 
     auto tex_view_descriptor = WGPUTextureViewDescriptor{};
-#ifdef __EMSCRIPTEN__
-    tex_view_descriptor.label = "ImGui Surface Texture View";
-#else
     tex_view_descriptor.label = {"ImGui Surface Texture View", WGPU_STRLEN};
-#endif
     tex_view_descriptor.format = wgpuTextureGetFormat(surface_texture.texture);
     tex_view_descriptor.dimension = WGPUTextureViewDimension_2D;
     tex_view_descriptor.baseMipLevel = 0;
@@ -455,11 +450,7 @@ private:
     render_pass_desc.depthStencilAttachment = nullptr;
 
     auto enc_desc = WGPUCommandEncoderDescriptor{};
-#ifdef __EMSCRIPTEN__
-    enc_desc.label = "ImGui Command Encoder";
-#else
     enc_desc.label = {"ImGui Command Encoder", WGPU_STRLEN};
-#endif
     WGPUCommandEncoder encoder =
      wgpuDeviceCreateCommandEncoder(wgpu_device_, &enc_desc);
 
@@ -470,12 +461,7 @@ private:
     wgpuRenderPassEncoderRelease(pass);
 
     auto cmd_buffer_desc = WGPUCommandBufferDescriptor{};
-
-#ifdef __EMSCRIPTEN__
-    cmd_buffer_desc.label = "ImGui Command Buffer";
-#else
     cmd_buffer_desc.label = {"ImGui Command Buffer", WGPU_STRLEN};
-#endif
 
     WGPUCommandBuffer cmd_buffer =
      wgpuCommandEncoderFinish(encoder, &cmd_buffer_desc);
@@ -519,6 +505,27 @@ private:
 
     wgpuSurfaceUnconfigure(wgpu_surface_);
     configure_webgpu_surface();
+  }
+
+  WGPUSurface create_window_wgpu_surface(WGPUInstance instance)
+  {
+#ifdef __EMSCRIPTEN__
+    WGPUEmscriptenSurfaceSourceCanvasHTMLSelector fromCanvasHTMLSelector;
+    fromCanvasHTMLSelector.chain.sType =
+     WGPUSType_EmscriptenSurfaceSourceCanvasHTMLSelector;
+    fromCanvasHTMLSelector.selector = {"canvas", WGPU_STRLEN};
+
+    fromCanvasHTMLSelector.chain.next = nullptr;
+
+    WGPUSurfaceDescriptor surfaceDescriptor;
+    surfaceDescriptor.nextInChain = &fromCanvasHTMLSelector.chain;
+    surfaceDescriptor.label = {nullptr, WGPU_STRLEN};
+
+    return wgpuInstanceCreateSurface(instance, &surfaceDescriptor);
+
+#else
+    return glfwCreateWindowWGPUSurface(instance, window_);
+#endif
   }
 };
 

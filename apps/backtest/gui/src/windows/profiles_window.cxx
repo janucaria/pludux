@@ -2,7 +2,6 @@ module;
 
 #include <algorithm>
 #include <cstring>
-#include <format>
 #include <iterator>
 #include <memory>
 #include <string>
@@ -171,12 +170,14 @@ private:
          });
 
         if(is_name_exists) {
-          app_state.push_action([new_profile_name =
-                                  self.input_name_](AppStateData& state) {
-            const auto error_message =
-             std::format("Profile name '{}' already exists.", new_profile_name);
-            state.alert_messages.push(error_message);
-          });
+          app_state.push_action(
+           [new_profile_name = self.input_name_](AppStateData& state) {
+             // TODO: Visual Studio 2026 have bug with include <format> causing
+             // compile error
+             const auto error_message = std::string("Profile name '") +
+                                        new_profile_name + "' already exists.";
+             state.alert_messages.push(error_message);
+           });
         } else {
           app_state.push_action(
            [name = self.input_name_,
@@ -219,8 +220,10 @@ private:
     if(find_it == profiles.cend()) {
       app_state.push_action(
        [name = self.selected_profile_name_](AppStateData& state) {
+         // TODO: Visual Studio 2026 have bug with include <format> causing
+         // compile error
          const auto error_message =
-          std::format("Profile '{}' not found for Edit.", name);
+          std::string("Profile '") + name + "' not found for Edit.";
          state.alert_messages.push(error_message);
        });
       self.current_page_ = ProfilePage::List;
@@ -269,8 +272,11 @@ private:
                          });
 
            if(find_it == profiles.cend()) {
-             const auto error_message = std::format(
-              "Profile '{}' not found for Edit.", edited_profile_name);
+             // TODO: Visual Studio 2026 have bug with include <format> causing
+             // compile error
+             const auto error_message = std::string("Profile '") +
+                                        edited_profile_name +
+                                        "' not found for Edit.";
              state.alert_messages.push(error_message);
              return;
            }

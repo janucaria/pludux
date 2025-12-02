@@ -1,7 +1,6 @@
 module;
 
 #include <cstring>
-#include <format>
 #include <iterator>
 #include <string>
 
@@ -247,9 +246,10 @@ private:
           const auto& profile = state.profiles[profile_index];
 
           const auto backtest_name =
+           // TODO: Visual Studio 2026 have bug with include <format> causing
+           // compile error
            new_backtest_name.empty()
-            ? std::format(
-               "{} / {} / {}", asset->name(), strategy->name(), profile->name())
+            ? asset->name() + " / " + strategy->name() + " / " + profile->name()
             : new_backtest_name;
 
           state.backtests.emplace_back(backtest_name, strategy, asset, profile);

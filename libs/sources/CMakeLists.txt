@@ -2,7 +2,7 @@ SET(JSONCONS_BUILD_TESTS OFF)
 FetchContent_Declare(
   jsoncons
   GIT_REPOSITORY https://github.com/danielaparker/jsoncons.git
-  GIT_TAG        v1.4.1
+  GIT_TAG        v1.5.0
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
   OVERRIDE_FIND_PACKAGE

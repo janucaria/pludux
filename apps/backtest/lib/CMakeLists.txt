@@ -3,7 +3,7 @@ project(pludux-backtest-lib)
 FetchContent_Declare(
   rapidcsv
   GIT_REPOSITORY https://github.com/d99kris/rapidcsv.git
-  GIT_TAG        v8.88
+  GIT_TAG        v8.90
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
   OVERRIDE_FIND_PACKAGE
