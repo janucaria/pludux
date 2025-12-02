@@ -18,27 +18,27 @@ public:
   {
   }
 
-  auto position_size(this const auto& self) noexcept -> double
+  auto position_size(this const TradeExit& self) noexcept -> double
   {
     return self.position_size_;
   }
 
-  auto price(this const auto& self) noexcept -> double
+  auto price(this const TradeExit& self) noexcept -> double
   {
     return self.price_;
   }
 
-  auto reason(this const auto& self) noexcept -> Reason
+  auto reason(this const TradeExit& self) noexcept -> Reason
   {
     return self.reason_;
   }
 
-  auto is_long_direction(this const auto& self) noexcept -> bool
+  auto is_long_direction(this const TradeExit& self) noexcept -> bool
   {
     return self.position_size_ > 0.0;
   }
 
-  auto is_short_direction(this const auto& self) noexcept -> bool
+  auto is_short_direction(this const TradeExit& self) noexcept -> bool
   {
     return self.position_size_ < 0.0;
   }

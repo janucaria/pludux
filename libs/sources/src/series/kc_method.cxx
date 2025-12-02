@@ -39,14 +39,14 @@ public:
 
   auto operator==(const KcMethod& other) const noexcept -> bool = default;
 
-  auto operator()(this const auto& self,
+  auto operator()(this const KcMethod& self,
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) noexcept -> ResultType
   {
     return self(asset_snapshot, SeriesOutput::MiddleBand, context);
   }
 
-  auto operator()(this const auto& self,
+  auto operator()(this const KcMethod& self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output,
                   MethodContextable auto context) noexcept -> ResultType
@@ -66,32 +66,32 @@ public:
     }
   }
 
-  auto multiplier(this const auto& self) noexcept -> double
+  auto multiplier(this const KcMethod& self) noexcept -> double
   {
     return self.multiplier_;
   }
 
-  void multiplier(this auto& self, double multiplier) noexcept
+  void multiplier(this KcMethod& self, double multiplier) noexcept
   {
     self.multiplier_ = multiplier;
   }
 
-  auto ma(this const auto& self) noexcept -> const TMaMethod&
+  auto ma(this const KcMethod& self) noexcept -> const TMaMethod&
   {
     return self.ma_;
   }
 
-  void ma(this auto& self, TMaMethod ma) noexcept
+  void ma(this KcMethod& self, TMaMethod ma) noexcept
   {
     self.ma_ = std::move(ma);
   }
 
-  auto range(this const auto& self) noexcept -> const TRangeMethod&
+  auto range(this const KcMethod& self) noexcept -> const TRangeMethod&
   {
     return self.range_;
   }
 
-  void range(this auto& self, TRangeMethod range) noexcept
+  void range(this KcMethod& self, TRangeMethod range) noexcept
   {
     self.range_ = std::move(range);
   }

@@ -26,7 +26,7 @@ public:
   auto operator==(const ReferenceMethod& other) const noexcept
    -> bool = default;
 
-  auto operator()(this const auto& self,
+  auto operator()(this const ReferenceMethod& self,
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) noexcept -> ResultType
   {
@@ -37,7 +37,7 @@ public:
     }
   }
 
-  auto operator()(this const auto& self,
+  auto operator()(this const ReferenceMethod& self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output_name,
                   MethodContextable auto context) noexcept -> ResultType
@@ -50,12 +50,12 @@ public:
     }
   }
 
-  auto name(this const auto& self) noexcept -> const std::string&
+  auto name(this const ReferenceMethod& self) noexcept -> const std::string&
   {
     return self.name_;
   }
 
-  void name(this auto& self, std::string new_name) noexcept
+  void name(this ReferenceMethod& self, std::string new_name) noexcept
   {
     self.name_ = std::move(new_name);
   }

@@ -46,19 +46,17 @@ public:
 
   auto operator==(const MacdMethod& other) const noexcept -> bool = default;
 
-  auto operator()(this const auto& self,
+  auto operator()(this const MacdMethod& self,
                   AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     return self(asset_snapshot, SeriesOutput::MacdLine, context);
   }
 
-  auto operator()(this const auto& self,
+  auto operator()(this const MacdMethod& self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     const auto short_ema = EmaMethod{self.source_, self.short_period_};
     const auto long_ema = EmaMethod{self.source_, self.long_period_};
@@ -81,62 +79,62 @@ public:
     }
   }
 
-  auto source(this const auto& self) noexcept -> const TSourceMethod&
+  auto source(this const MacdMethod& self) noexcept -> const TSourceMethod&
   {
     return self.source_;
   }
 
-  void source(this auto& self, TSourceMethod source) noexcept
+  void source(this MacdMethod& self, TSourceMethod source) noexcept
   {
     self.source_ = std::move(source);
   }
 
-  auto short_period(this const auto& self) noexcept -> std::size_t
+  auto short_period(this const MacdMethod& self) noexcept -> std::size_t
   {
     return self.short_period_;
   }
 
-  void short_period(this auto& self, std::size_t period) noexcept
+  void short_period(this MacdMethod& self, std::size_t period) noexcept
   {
     self.short_period_ = period;
   }
 
-  auto fast_period(this const auto& self) noexcept -> std::size_t
+  auto fast_period(this const MacdMethod& self) noexcept -> std::size_t
   {
     return self.short_period_;
   }
 
-  void fast_period(this auto& self, std::size_t period) noexcept
+  void fast_period(this MacdMethod& self, std::size_t period) noexcept
   {
     self.short_period_ = period;
   }
 
-  auto long_period(this const auto& self) noexcept -> std::size_t
+  auto long_period(this const MacdMethod& self) noexcept -> std::size_t
   {
     return self.long_period_;
   }
 
-  void long_period(this auto& self, std::size_t period) noexcept
+  void long_period(this MacdMethod& self, std::size_t period) noexcept
   {
     self.long_period_ = period;
   }
 
-  auto slow_period(this const auto& self) noexcept -> std::size_t
+  auto slow_period(this const MacdMethod& self) noexcept -> std::size_t
   {
     return self.long_period_;
   }
 
-  void slow_period(this auto& self, std::size_t period) noexcept
+  void slow_period(this MacdMethod& self, std::size_t period) noexcept
   {
     self.long_period_ = period;
   }
 
-  auto signal_period(this const auto& self) noexcept -> std::size_t
+  auto signal_period(this const MacdMethod& self) noexcept -> std::size_t
   {
     return self.signal_period_;
   }
 
-  void signal_period(this auto& self, std::size_t period) noexcept
+  void signal_period(this MacdMethod& self, std::size_t period) noexcept
   {
     self.signal_period_ = period;
   }

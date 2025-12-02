@@ -31,7 +31,7 @@ public:
    * The 0 lookback is the latest value.
    * If the lookback is out of bounds, return NaN.
    */
-  auto operator[](this const auto& self, std::size_t lookback) noexcept
+  auto operator[](this const AssetData& self, std::size_t lookback) noexcept
    -> double
   {
     if(lookback >= self.data_.size()) {
@@ -42,17 +42,17 @@ public:
     return self.data_[value_index];
   }
 
-  auto size(this const auto& self) noexcept -> std::size_t
+  auto size(this const AssetData& self) noexcept -> std::size_t
   {
     return self.data_.size();
   }
 
-  auto data(this const auto& self) noexcept -> const std::vector<double>&
+  auto data(this const AssetData& self) noexcept -> const std::vector<double>&
   {
     return self.data_;
   }
 
-  void data(this auto& self, std::vector<double> new_data)
+  void data(this AssetData& self, std::vector<double> new_data)
   {
     self.data_ = std::move(new_data);
   }

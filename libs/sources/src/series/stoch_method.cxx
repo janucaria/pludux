@@ -36,19 +36,17 @@ public:
 
   auto operator==(const StochMethod& other) const noexcept -> bool = default;
 
-  auto operator()(this const auto& self,
+  auto operator()(this const StochMethod& self,
                   AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     return self(asset_snapshot, SeriesOutput::KPercent, context);
   }
 
-  auto operator()(this const auto& self,
+  auto operator()(this const StochMethod& self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     const auto close = CloseMethod{};
     const auto highest_high = HighestMethod{HighMethod{}, self.k_period_};
@@ -75,32 +73,32 @@ public:
     }
   }
 
-  auto k_period(this const auto& self) noexcept -> std::size_t
+  auto k_period(this const StochMethod& self) noexcept -> std::size_t
   {
     return self.k_period_;
   }
 
-  void k_period(this auto& self, std::size_t k_period) noexcept
+  void k_period(this StochMethod& self, std::size_t k_period) noexcept
   {
     self.k_period_ = k_period;
   }
 
-  auto k_smooth(this const auto& self) noexcept -> std::size_t
+  auto k_smooth(this const StochMethod& self) noexcept -> std::size_t
   {
     return self.k_smooth_;
   }
 
-  void k_smooth(this auto& self, std::size_t k_smooth) noexcept
+  void k_smooth(this StochMethod& self, std::size_t k_smooth) noexcept
   {
     self.k_smooth_ = k_smooth;
   }
 
-  auto d_period(this const auto& self) noexcept -> std::size_t
+  auto d_period(this const StochMethod& self) noexcept -> std::size_t
   {
     return self.d_period_;
   }
 
-  void d_period(this auto& self, std::size_t d_period) noexcept
+  void d_period(this StochMethod& self, std::size_t d_period) noexcept
   {
     self.d_period_ = d_period;
   }

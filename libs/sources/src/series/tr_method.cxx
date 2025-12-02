@@ -28,10 +28,9 @@ public:
 
   auto operator==(const TrMethod& other) const noexcept -> bool = default;
 
-  auto operator()(this auto self,
+  auto operator()(this TrMethod self,
                   AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     const auto high = HighMethod{}(asset_snapshot, context);
     const auto low = LowMethod{}(asset_snapshot, context);
@@ -48,11 +47,10 @@ public:
     return std::max(std::max(hl, hc), lc);
   }
 
-  auto operator()(this auto self,
+  auto operator()(this TrMethod self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     return std::numeric_limits<ResultType>::quiet_NaN();
   }

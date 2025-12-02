@@ -47,134 +47,135 @@ public:
   {
   }
 
-  auto name(this const auto& self) noexcept -> const std::string&
+  auto name(this const Strategy& self) noexcept -> const std::string&
   {
     return self.name_;
   }
 
-  auto series_registry(this const auto& self) noexcept
+  auto series_registry(this const Strategy& self) noexcept
    -> const SeriesMethodRegistry&
   {
     return self.series_registry_;
   }
 
-  auto series_registry(this auto& self) noexcept -> SeriesMethodRegistry&
+  auto series_registry(this Strategy& self) noexcept -> SeriesMethodRegistry&
   {
     return self.series_registry_;
   }
 
-  auto risk_method(this const auto& self) noexcept -> const AnySeriesMethod&
+  auto risk_method(this const Strategy& self) noexcept -> const AnySeriesMethod&
   {
     return self.risk_method_;
   }
 
-  void risk_method(this auto& self, AnySeriesMethod risk_method) noexcept
+  void risk_method(this Strategy& self, AnySeriesMethod risk_method) noexcept
   {
     self.risk_method_ = std::move(risk_method);
   }
 
-  auto long_entry_filter(this const auto& self) noexcept
+  auto long_entry_filter(this const Strategy& self) noexcept
    -> const AnyConditionMethod&
   {
     return self.long_entry_filter_;
   }
 
-  void long_entry_filter(this auto& self,
+  void long_entry_filter(this Strategy& self,
                          AnyConditionMethod long_entry_filter) noexcept
   {
     self.long_entry_filter_ = std::move(long_entry_filter);
   }
 
-  auto long_exit_filter(this const auto& self) noexcept
+  auto long_exit_filter(this const Strategy& self) noexcept
    -> const AnyConditionMethod&
   {
     return self.long_exit_filter_;
   }
 
-  void long_exit_filter(this auto& self,
+  void long_exit_filter(this Strategy& self,
                         AnyConditionMethod long_exit_filter) noexcept
   {
     self.long_exit_filter_ = std::move(long_exit_filter);
   }
 
-  auto short_entry_filter(this const auto& self) noexcept
+  auto short_entry_filter(this const Strategy& self) noexcept
    -> const AnyConditionMethod&
   {
     return self.short_entry_filter_;
   }
 
-  void short_entry_filter(this auto& self,
+  void short_entry_filter(this Strategy& self,
                           AnyConditionMethod short_entry_filter) noexcept
   {
     self.short_entry_filter_ = std::move(short_entry_filter);
   }
 
-  auto short_exit_filter(this const auto& self) noexcept
+  auto short_exit_filter(this const Strategy& self) noexcept
    -> const AnyConditionMethod&
   {
     return self.short_exit_filter_;
   }
 
-  void short_exit_filter(this auto& self,
+  void short_exit_filter(this Strategy& self,
                          AnyConditionMethod short_exit_filter) noexcept
   {
     self.short_exit_filter_ = std::move(short_exit_filter);
   }
 
-  auto stop_loss_enabled(this const auto& self) noexcept -> bool
+  auto stop_loss_enabled(this const Strategy& self) noexcept -> bool
   {
     return self.stop_loss_enabled_;
   }
 
-  void stop_loss_enabled(this auto& self, bool stop_loss_enabled) noexcept
+  void stop_loss_enabled(this Strategy& self, bool stop_loss_enabled) noexcept
   {
     self.stop_loss_enabled_ = stop_loss_enabled;
   }
 
-  auto stop_loss_trailing_enabled(this const auto& self) noexcept -> bool
+  auto stop_loss_trailing_enabled(this const Strategy& self) noexcept -> bool
   {
     return self.stop_loss_trailing_enabled_;
   }
 
-  void stop_loss_trailing_enabled(this auto& self,
+  void stop_loss_trailing_enabled(this Strategy& self,
                                   bool stop_loss_trailing_enabled) noexcept
   {
     self.stop_loss_trailing_enabled_ = stop_loss_trailing_enabled;
   }
 
-  auto stop_loss_risk_multiplier(this const auto& self) noexcept -> double
+  auto stop_loss_risk_multiplier(this const Strategy& self) noexcept -> double
   {
     return self.stop_loss_risk_multiplier_;
   }
 
-  void stop_loss_risk_multiplier(this auto& self,
+  void stop_loss_risk_multiplier(this Strategy& self,
                                  double stop_loss_risk_multiplier) noexcept
   {
     self.stop_loss_risk_multiplier_ = stop_loss_risk_multiplier;
   }
 
-  auto take_profit_enabled(this const auto& self) noexcept -> bool
+  auto take_profit_enabled(this const Strategy& self) noexcept -> bool
   {
     return self.take_profit_enabled_;
   }
 
-  void take_profit_enabled(this auto& self, bool take_profit_enabled) noexcept
+  void take_profit_enabled(this Strategy& self,
+                           bool take_profit_enabled) noexcept
   {
     self.take_profit_enabled_ = take_profit_enabled;
   }
 
-  auto take_profit_risk_multiplier(this const auto& self) noexcept -> double
+  auto take_profit_risk_multiplier(this const Strategy& self) noexcept -> double
   {
     return self.take_profit_risk_multiplier_;
   }
 
-  void take_profit_risk_multiplier(this auto& self,
+  void take_profit_risk_multiplier(this Strategy& self,
                                    double take_profit_risk_multiplier) noexcept
   {
     self.take_profit_risk_multiplier_ = take_profit_risk_multiplier;
   }
 
-  auto entry_long_trade(this const auto& self,
+  auto entry_long_trade(this const Strategy& self,
                         const AssetSnapshot& asset_snapshot,
                         double risk_value) noexcept -> std::optional<TradeEntry>
   {
@@ -207,7 +208,7 @@ public:
     return result;
   }
 
-  auto entry_short_trade(this const auto& self,
+  auto entry_short_trade(this const Strategy& self,
                          const AssetSnapshot& asset_snapshot,
                          double risk_value) noexcept
    -> std::optional<TradeEntry>
@@ -241,7 +242,7 @@ public:
     return result;
   }
 
-  auto entry_trade(this const auto& self,
+  auto entry_trade(this const Strategy& self,
                    const AssetSnapshot& asset_snapshot,
                    double risk_value) noexcept -> std::optional<TradeEntry>
   {
@@ -250,7 +251,7 @@ public:
     });
   }
 
-  auto exit_trade(this const auto& self,
+  auto exit_trade(this const Strategy& self,
                   const AssetSnapshot& asset_snapshot,
                   double position_size) noexcept -> std::optional<TradeExit>
   {

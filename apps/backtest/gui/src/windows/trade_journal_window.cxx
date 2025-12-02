@@ -16,7 +16,7 @@ export namespace pludux::apps {
 
 class TradeJournalWindow {
 public:
-  void render(this const auto, AppState& app_state)
+  void render(this const TradeJournalWindow, AppState& app_state)
   {
     const auto& state = app_state.state();
     const auto& backtests = state.backtests;

@@ -29,7 +29,7 @@ public:
   {
   }
 
-  void render(this auto& self, AppState& app_state)
+  void render(this PlotDataWindow& self, AppState& app_state)
   {
     const auto& state = app_state.state();
     const auto& backtests = state.backtests;
@@ -227,7 +227,7 @@ private:
     return snprintf(buff, size, "%g%s", value / v[4], p[4]);
   }
 
-  void PlotOHLC(this const auto& self,
+  void PlotOHLC(this const PlotDataWindow& self,
                 const char* label_id,
                 const AssetHistory& asset_history)
   {
@@ -285,7 +285,7 @@ private:
     }
   }
 
-  void PlotVolume(this const auto& self,
+  void PlotVolume(this const PlotDataWindow& self,
                   const char* label_id,
                   const AssetHistory& asset_history)
   {
@@ -338,7 +338,7 @@ private:
   }
 
   void
-  DrawTrades(this const auto& self,
+  DrawTrades(this const PlotDataWindow& self,
              const char* label_id,
              const std::vector<backtest::BacktestSummary>& backtest_summaries,
              const AssetHistory& asset_history)
@@ -514,7 +514,7 @@ private:
   }
 
   void
-  plot_equity(this const auto& self,
+  plot_equity(this const PlotDataWindow& self,
               const std::vector<backtest::BacktestSummary>& backtest_summaries)
   {
     const auto summaries_size = backtest_summaries.size();

@@ -28,42 +28,42 @@ public:
   {
   }
 
-  auto position_size(this const auto& self) noexcept -> double
+  auto position_size(this const TradeEntry& self) noexcept -> double
   {
     return self.position_size_;
   }
 
-  auto price(this const auto& self) noexcept -> double
+  auto price(this const TradeEntry& self) noexcept -> double
   {
     return self.price_;
   }
 
-  auto stop_loss_price(this const auto& self) noexcept -> double
+  auto stop_loss_price(this const TradeEntry& self) noexcept -> double
   {
     return self.stop_loss_price_;
   }
 
-  auto stop_loss_trailing_enabled(this const auto& self) noexcept -> bool
+  auto stop_loss_trailing_enabled(this const TradeEntry& self) noexcept -> bool
   {
     return self.stop_loss_trailing_enabled_;
   }
 
-  auto stop_loss_trailing_price(this const auto& self) noexcept -> double
+  auto stop_loss_trailing_price(this const TradeEntry& self) noexcept -> double
   {
     return self.stop_loss_trailing_enabled_ ? self.stop_loss_price_ : NAN;
   }
 
-  auto take_profit_price(this const auto& self) noexcept -> double
+  auto take_profit_price(this const TradeEntry& self) noexcept -> double
   {
     return self.take_profit_price_;
   }
 
-  auto is_long_direction(this const auto& self) noexcept -> bool
+  auto is_long_direction(this const TradeEntry& self) noexcept -> bool
   {
     return self.position_size_ > 0.0;
   }
 
-  auto is_short_direction(this const auto& self) noexcept -> bool
+  auto is_short_direction(this const TradeEntry& self) noexcept -> bool
   {
     return self.position_size_ < 0.0;
   }

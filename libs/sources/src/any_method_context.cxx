@@ -28,7 +28,7 @@ public:
   {
   }
 
-  auto call_series_method(this const auto& self,
+  auto call_series_method(this const AnySeriesMethodContext& self,
                           const std::string& name,
                           AssetSnapshot asset_snapshot) noexcept
    -> DispatchResultType
@@ -38,7 +38,7 @@ public:
             : std::numeric_limits<DispatchResultType>::quiet_NaN();
   }
 
-  auto call_series_method(this const auto& self,
+  auto call_series_method(this const AnySeriesMethodContext& self,
                           const std::string& name,
                           AssetSnapshot asset_snapshot,
                           SeriesOutput output_name) noexcept

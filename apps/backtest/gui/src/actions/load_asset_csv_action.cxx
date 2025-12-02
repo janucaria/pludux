@@ -38,7 +38,7 @@ public:
   {
   }
 
-  void operator()(this const auto& self, AppStateData& state)
+  void operator()(this const LoadAssetCsvAction& self, AppStateData& state)
   {
     if constexpr(std::same_as<std::string, TSource>) {
       std::istringstream csv_stream{self.source_};

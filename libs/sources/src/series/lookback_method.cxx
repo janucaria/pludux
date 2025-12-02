@@ -39,14 +39,14 @@ public:
 
   auto operator==(const LookbackMethod& other) const noexcept -> bool = default;
 
-  auto operator()(this const auto& self,
+  auto operator()(this const LookbackMethod& self,
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) noexcept -> ResultType
   {
     return self.source_(asset_snapshot[self.period_], context);
   }
 
-  auto operator()(this const auto& self,
+  auto operator()(this const LookbackMethod& self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output,
                   MethodContextable auto context) noexcept -> ResultType
@@ -54,22 +54,22 @@ public:
     return std::numeric_limits<ResultType>::quiet_NaN();
   }
 
-  auto source(this const auto& self) noexcept -> const TSourceMethod&
+  auto source(this const LookbackMethod& self) noexcept -> const TSourceMethod&
   {
     return self.source_;
   }
 
-  void source(this auto& self, TSourceMethod source) noexcept
+  void source(this LookbackMethod& self, TSourceMethod source) noexcept
   {
     self.source_ = std::move(source);
   }
 
-  auto period(this const auto& self) noexcept -> std::size_t
+  auto period(this const LookbackMethod& self) noexcept -> std::size_t
   {
     return self.period_;
   }
 
-  void period(this auto& self, std::size_t period) noexcept
+  void period(this LookbackMethod& self, std::size_t period) noexcept
   {
     self.period_ = period;
   }

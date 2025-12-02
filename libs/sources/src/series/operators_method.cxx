@@ -34,7 +34,7 @@ public:
   auto operator==(const BinaryOperatorMethod& other) const noexcept
    -> bool = default;
 
-  auto operator()(this const auto& self,
+  auto operator()(this const BinaryOperatorMethod& self,
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) noexcept -> ResultType
   {
@@ -44,7 +44,7 @@ public:
     return result;
   }
 
-  auto operator()(this const auto& self,
+  auto operator()(this const BinaryOperatorMethod& self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output,
                   MethodContextable auto context) noexcept -> ResultType
@@ -52,42 +52,45 @@ public:
     return std::numeric_limits<ResultType>::quiet_NaN();
   }
 
-  auto operand1(this const auto& self) noexcept -> const TMethodOp1&
+  auto operand1(this const BinaryOperatorMethod& self) noexcept
+   -> const TMethodOp1&
   {
     return self.operand1_;
   }
 
-  void operand1(this auto& self, TMethodOp1 operand1) noexcept
+  void operand1(this BinaryOperatorMethod& self, TMethodOp1 operand1) noexcept
   {
     self.operand1_ = std::move(operand1);
   }
 
-  auto left(this const auto& self) noexcept -> const TMethodOp1&
+  auto left(this const BinaryOperatorMethod& self) noexcept -> const TMethodOp1&
   {
     return self.operand1();
   }
 
-  void left(this auto& self, TMethodOp1 left) noexcept
+  void left(this BinaryOperatorMethod& self, TMethodOp1 left) noexcept
   {
     self.operand1(std::move(left));
   }
 
-  auto operand2(this const auto& self) noexcept -> const TMethodOp2&
+  auto operand2(this const BinaryOperatorMethod& self) noexcept
+   -> const TMethodOp2&
   {
     return self.operand2_;
   }
 
-  void operand2(this auto& self, TMethodOp2 operand2) noexcept
+  void operand2(this BinaryOperatorMethod& self, TMethodOp2 operand2) noexcept
   {
     self.operand2_ = std::move(operand2);
   }
 
-  auto right(this const auto& self) noexcept -> const TMethodOp2&
+  auto right(this const BinaryOperatorMethod& self) noexcept
+   -> const TMethodOp2&
   {
     return self.operand2();
   }
 
-  void right(this auto& self, TMethodOp2 right) noexcept
+  void right(this BinaryOperatorMethod& self, TMethodOp2 right) noexcept
   {
     self.operand2(std::move(right));
   }
@@ -110,7 +113,7 @@ public:
   auto operator==(const UnaryOperatorMethod& other) const noexcept
    -> bool = default;
 
-  auto operator()(this const auto& self,
+  auto operator()(this const UnaryOperatorMethod& self,
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) noexcept -> ResultType
   {
@@ -118,7 +121,7 @@ public:
     return TUnaryFn{}(operand_result);
   }
 
-  auto operator()(this const auto& self,
+  auto operator()(this const UnaryOperatorMethod& self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output,
                   MethodContextable auto context) noexcept -> ResultType
@@ -126,12 +129,13 @@ public:
     return std::numeric_limits<ResultType>::quiet_NaN();
   }
 
-  auto operand(this const auto& self) noexcept -> const TMethodOp&
+  auto operand(this const UnaryOperatorMethod& self) noexcept
+   -> const TMethodOp&
   {
     return self.operand_;
   }
 
-  void operand(this auto& self, TMethodOp operand) noexcept
+  void operand(this UnaryOperatorMethod& self, TMethodOp operand) noexcept
   {
     self.operand_ = std::move(operand);
   }
@@ -156,12 +160,13 @@ public:
   {
   }
 
-  auto multiplicand(this const auto& self) noexcept -> const TMethodOp1&
+  auto multiplicand(this const MultiplyMethod& self) noexcept
+   -> const TMethodOp1&
   {
     return self.operand1();
   }
 
-  auto multiplier(this const auto& self) noexcept -> const TMethodOp2&
+  auto multiplier(this const MultiplyMethod& self) noexcept -> const TMethodOp2&
   {
     return self.operand2();
   }
@@ -180,12 +185,12 @@ public:
   {
   }
 
-  auto dividend(this const auto& self) noexcept -> const TMethodOp1&
+  auto dividend(this const DivideMethod& self) noexcept -> const TMethodOp1&
   {
     return self.operand1();
   }
 
-  auto divisor(this const auto& self) noexcept -> const TMethodOp2&
+  auto divisor(this const DivideMethod& self) noexcept -> const TMethodOp2&
   {
     return self.operand2();
   }
@@ -201,12 +206,12 @@ public:
   {
   }
 
-  auto augend(this const auto& self) noexcept -> const TMethodOp1&
+  auto augend(this const AddMethod& self) noexcept -> const TMethodOp1&
   {
     return self.operand1();
   }
 
-  auto addend(this const auto& self) noexcept -> const TMethodOp2&
+  auto addend(this const AddMethod& self) noexcept -> const TMethodOp2&
   {
     return self.operand2();
   }
@@ -225,12 +230,12 @@ public:
   {
   }
 
-  auto minuend(this const auto& self) noexcept -> const TMethodOp1&
+  auto minuend(this const SubtractMethod& self) noexcept -> const TMethodOp1&
   {
     return self.operand1();
   }
 
-  auto subtrahend(this const auto& self) noexcept -> const TMethodOp2&
+  auto subtrahend(this const SubtractMethod& self) noexcept -> const TMethodOp2&
   {
     return self.operand2();
   }
@@ -251,7 +256,7 @@ public:
 
 template<typename T = void>
 struct Absolute {
-  auto operator()(this const auto, T value) -> T
+  auto operator()(this const Absolute, T value) -> T
   {
     return std::abs(value);
   }
@@ -259,7 +264,7 @@ struct Absolute {
 
 template<>
 struct Absolute<void> {
-  auto operator()(this const auto, auto value)
+  auto operator()(this const Absolute, auto value)
   {
     return std::abs(value);
   }
@@ -278,7 +283,7 @@ public:
 
 template<typename T = void>
 struct AbsoluteDifference {
-  auto operator()(this const auto, T left, T right) -> T
+  auto operator()(this const AbsoluteDifference, T left, T right) -> T
   {
     return std::abs(left - right);
   }
@@ -286,7 +291,7 @@ struct AbsoluteDifference {
 
 template<>
 struct AbsoluteDifference<void> {
-  auto operator()(this const auto, auto left, auto right)
+  auto operator()(this const AbsoluteDifference, auto left, auto right)
   {
     return std::abs(left - right);
   }
@@ -307,12 +312,12 @@ public:
   {
   }
 
-  auto minuend(this const auto& self) noexcept -> const TMethodOp1&
+  auto minuend(this const AbsDiffMethod& self) noexcept -> const TMethodOp1&
   {
     return self.operand1();
   }
 
-  auto subtrahend(this const auto& self) noexcept -> const TMethodOp2&
+  auto subtrahend(this const AbsDiffMethod& self) noexcept -> const TMethodOp2&
   {
     return self.operand2();
   }
@@ -322,7 +327,7 @@ public:
 
 template<typename T = void>
 struct Maximum {
-  auto operator()(this const auto, T left, T right) -> T
+  auto operator()(this const Maximum, T left, T right) -> T
   {
     return std::max(left, right);
   }
@@ -330,7 +335,7 @@ struct Maximum {
 
 template<>
 struct Maximum<void> {
-  auto operator()(this const auto, auto left, auto right)
+  auto operator()(this const Maximum, auto left, auto right)
   {
     return std::max(left, right);
   }
@@ -346,12 +351,12 @@ public:
   {
   }
 
-  auto left(this const auto& self) noexcept -> const TMethodOp1&
+  auto left(this const MaxMethod& self) noexcept -> const TMethodOp1&
   {
     return self.operand1();
   }
 
-  auto right(this const auto& self) noexcept -> const TMethodOp2&
+  auto right(this const MaxMethod& self) noexcept -> const TMethodOp2&
   {
     return self.operand2();
   }
@@ -361,7 +366,7 @@ public:
 
 template<typename T = void>
 struct Minimum {
-  auto operator()(this const auto, T left, T right) -> T
+  auto operator()(this const Minimum, T left, T right) -> T
   {
     return std::min(left, right);
   }
@@ -369,7 +374,7 @@ struct Minimum {
 
 template<>
 struct Minimum<void> {
-  auto operator()(this const auto, auto left, auto right)
+  auto operator()(this const Minimum, auto left, auto right)
   {
     return std::min(left, right);
   }
@@ -385,12 +390,12 @@ public:
   {
   }
 
-  auto left(this const auto& self) noexcept -> const TMethodOp1&
+  auto left(this const MinMethod& self) noexcept -> const TMethodOp1&
   {
     return self.operand1();
   }
 
-  auto right(this const auto& self) noexcept -> const TMethodOp2&
+  auto right(this const MinMethod& self) noexcept -> const TMethodOp2&
   {
     return self.operand2();
   }
@@ -400,7 +405,7 @@ public:
 
 template<typename T = void>
 struct PositivePart {
-  auto operator()(this const auto, T value) -> T
+  auto operator()(this const PositivePart, T value) -> T
   {
     if(std::isnan(value)) {
       return std::numeric_limits<T>::quiet_NaN();
@@ -411,7 +416,7 @@ struct PositivePart {
 
 template<>
 struct PositivePart<void> {
-  auto operator()(this const auto, auto value)
+  auto operator()(this const PositivePart, auto value)
   {
     using TValue = decltype(value);
 
@@ -438,7 +443,7 @@ public:
 
 template<typename T = void>
 struct NegativePart {
-  auto operator()(this const auto, T value) -> T
+  auto operator()(this const NegativePart, T value) -> T
   {
     if(std::isnan(value)) {
       return std::numeric_limits<T>::quiet_NaN();
@@ -449,7 +454,7 @@ struct NegativePart {
 
 template<>
 struct NegativePart<void> {
-  auto operator()(this const auto, auto value)
+  auto operator()(this const NegativePart, auto value)
   {
     if(std::isnan(value)) {
       return std::numeric_limits<decltype(value)>::quiet_NaN();

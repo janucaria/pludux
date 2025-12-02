@@ -27,7 +27,7 @@ public:
   auto operator==(const BinaryLogicalMethod& other) const noexcept
    -> bool = default;
 
-  auto operator()(this const auto& self,
+  auto operator()(this const BinaryLogicalMethod& self,
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) -> bool
   {
@@ -38,22 +38,26 @@ public:
     return TBinaryLogicalOperator{}(first_condition, second_condition);
   }
 
-  auto first_condition(this const auto& self) -> const AnyConditionMethod&
+  auto first_condition(this const BinaryLogicalMethod& self)
+   -> const AnyConditionMethod&
   {
     return self.first_condition_;
   }
 
-  void first_condition(this auto& self, AnyConditionMethod condition)
+  void first_condition(this BinaryLogicalMethod& self,
+                       AnyConditionMethod condition)
   {
     self.first_condition_ = std::move(condition);
   }
 
-  auto second_condition(this const auto& self) -> const AnyConditionMethod&
+  auto second_condition(this const BinaryLogicalMethod& self)
+   -> const AnyConditionMethod&
   {
     return self.second_condition_;
   }
 
-  void second_condition(this auto& self, AnyConditionMethod condition)
+  void second_condition(this BinaryLogicalMethod& self,
+                        AnyConditionMethod condition)
   {
     self.second_condition_ = std::move(condition);
   }
@@ -75,7 +79,7 @@ public:
   auto operator==(const UnaryLogicalMethod& other) const noexcept
    -> bool = default;
 
-  auto operator()(this const auto& self,
+  auto operator()(this const UnaryLogicalMethod& self,
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) -> bool
   {
@@ -83,12 +87,14 @@ public:
     return TUnaryLogicalOperator{}(condition);
   }
 
-  auto other_condition(this const auto& self) -> const AnyConditionMethod&
+  auto other_condition(this const UnaryLogicalMethod& self)
+   -> const AnyConditionMethod&
   {
     return self.other_condition_;
   }
 
-  void other_condition(this auto& self, AnyConditionMethod condition)
+  void other_condition(this UnaryLogicalMethod& self,
+                       AnyConditionMethod condition)
   {
     self.other_condition_ = std::move(condition);
   }
@@ -99,7 +105,7 @@ private:
 
 template<typename T = void>
 struct LogicalXor {
-  auto operator()(this const auto, T a, T b) -> bool
+  auto operator()(this const LogicalXor, T a, T b) -> bool
   {
     return a ? !b : b;
   }
@@ -107,7 +113,7 @@ struct LogicalXor {
 
 template<>
 struct LogicalXor<void> {
-  auto operator()(this const auto, auto a, auto b)
+  auto operator()(this const LogicalXor, auto a, auto b)
   {
     return a ? !b : b;
   }

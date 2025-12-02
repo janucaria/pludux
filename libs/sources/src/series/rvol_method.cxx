@@ -30,10 +30,9 @@ public:
 
   auto operator==(const RvolMethod& other) const noexcept -> bool = default;
 
-  auto operator()(this const auto self,
+  auto operator()(this const RvolMethod self,
                   AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     const auto volume = VolumeMethod{};
     const auto sma_volume = SmaMethod{VolumeMethod{}, self.period_};
@@ -42,21 +41,20 @@ public:
     return rvol_result;
   }
 
-  auto operator()(this auto self,
+  auto operator()(this RvolMethod self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     return std::numeric_limits<ResultType>::quiet_NaN();
   }
 
-  auto period(this auto self) noexcept -> std::size_t
+  auto period(this const RvolMethod& self) noexcept -> std::size_t
   {
     return self.period_;
   }
 
-  void period(this auto& self, std::size_t period) noexcept
+  void period(this RvolMethod& self, std::size_t period) noexcept
   {
     self.period_ = period;
   }

@@ -28,7 +28,7 @@ public:
   {
   }
 
-  void operator()(this const auto& self, AppStateData& state)
+  void operator()(this const EditStrategyAction& self, AppStateData& state)
   {
     const auto strategy_ptr = self.strategy_ptr_;
     *strategy_ptr = self.new_strategy;

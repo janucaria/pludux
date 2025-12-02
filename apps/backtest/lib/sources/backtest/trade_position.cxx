@@ -58,129 +58,132 @@ public:
   {
   }
 
-  auto position_size(this const auto& self) noexcept -> double
+  auto position_size(this const TradePosition& self) noexcept -> double
   {
     return self.position_size_;
   }
 
-  void position_size(this auto& self, double size) noexcept
+  void position_size(this TradePosition& self, double size) noexcept
   {
     self.position_size_ = size;
   }
 
-  auto average_price(this const auto& self) noexcept -> double
+  auto average_price(this const TradePosition& self) noexcept -> double
   {
     return self.average_price_;
   }
 
-  void average_price(this auto& self, double price) noexcept
+  void average_price(this TradePosition& self, double price) noexcept
   {
     self.average_price_ = price;
   }
 
-  auto entry_price(this const auto& self) noexcept -> double
+  auto entry_price(this const TradePosition& self) noexcept -> double
   {
     return self.entry_price_;
   }
 
-  void entry_price(this auto& self, double price) noexcept
+  void entry_price(this TradePosition& self, double price) noexcept
   {
     self.entry_price_ = price;
   }
 
-  auto stop_loss_initial_price(this const auto& self) noexcept -> double
+  auto stop_loss_initial_price(this const TradePosition& self) noexcept
+   -> double
   {
     return self.stop_loss_initial_price_;
   }
 
-  void stop_loss_initial_price(this auto& self, double price) noexcept
+  void stop_loss_initial_price(this TradePosition& self, double price) noexcept
   {
     self.stop_loss_initial_price_ = price;
   }
 
-  auto stop_loss_trailing_price(this const auto& self) noexcept -> double
+  auto stop_loss_trailing_price(this const TradePosition& self) noexcept
+   -> double
   {
     return self.stop_loss_trailing_price_;
   }
 
-  void stop_loss_trailing_price(this auto& self, double price) noexcept
+  void stop_loss_trailing_price(this TradePosition& self, double price) noexcept
   {
     self.stop_loss_trailing_price_ = price;
   }
 
-  auto take_profit_price(this const auto& self) noexcept -> double
+  auto take_profit_price(this const TradePosition& self) noexcept -> double
   {
     return self.take_profit_price_;
   }
 
-  void take_profit_price(this auto& self, double price) noexcept
+  void take_profit_price(this TradePosition& self, double price) noexcept
   {
     self.take_profit_price_ = price;
   }
 
-  auto entry_index(this const auto& self) noexcept -> std::size_t
+  auto entry_index(this const TradePosition& self) noexcept -> std::size_t
   {
     return self.entry_index_;
   }
 
-  void entry_index(this auto& self, std::size_t index) noexcept
+  void entry_index(this TradePosition& self, std::size_t index) noexcept
   {
     self.entry_index_ = index;
   }
 
-  auto entry_timestamp(this const auto& self) noexcept -> std::time_t
+  auto entry_timestamp(this const TradePosition& self) noexcept -> std::time_t
   {
     return self.entry_timestamp_;
   }
 
-  void entry_timestamp(this auto& self, std::time_t timestamp) noexcept
+  void entry_timestamp(this TradePosition& self, std::time_t timestamp) noexcept
   {
     self.entry_timestamp_ = timestamp;
   }
 
-  auto realized_records(this const auto& self) noexcept
+  auto realized_records(this const TradePosition& self) noexcept
    -> const std::vector<TradeRecord>&
   {
     return self.realized_records_;
   }
 
-  void realized_records(this auto& self,
+  void realized_records(this TradePosition& self,
                         std::vector<TradeRecord> records) noexcept
   {
     self.realized_records_ = std::move(records);
   }
 
-  auto stop_loss_price(this const auto& self) noexcept -> double
+  auto stop_loss_price(this const TradePosition& self) noexcept -> double
   {
     return std::isnan(self.stop_loss_trailing_price())
             ? self.stop_loss_initial_price()
             : self.stop_loss_trailing_price();
   }
 
-  auto unrealized_position_size(this const auto& self) noexcept -> double
+  auto unrealized_position_size(this const TradePosition& self) noexcept
+   -> double
   {
     return self.position_size();
   }
 
-  auto unrealized_investment(this const auto& self) noexcept -> double
+  auto unrealized_investment(this const TradePosition& self) noexcept -> double
   {
     return self.unrealized_position_size() * self.average_price();
   }
 
-  auto unrealized_pnl(this const auto& self, double market_price) noexcept
-   -> double
+  auto unrealized_pnl(this const TradePosition& self,
+                      double market_price) noexcept -> double
   {
     return self.unrealized_position_size() *
            (market_price - self.average_price());
   }
 
-  auto unrealized_duration(this const auto& self,
+  auto unrealized_duration(this const TradePosition& self,
                            std::time_t market_timestamp) noexcept -> std::time_t
   {
     return market_timestamp - self.entry_timestamp();
   }
 
-  auto realized_position_size(this const auto& self) noexcept -> double
+  auto realized_position_size(this const TradePosition& self) noexcept -> double
   {
     return std::ranges::fold_left(
      self.realized_records(), 0.0, [](double total, const TradeRecord& record) {
@@ -188,7 +191,7 @@ public:
      });
   }
 
-  auto realized_investment(this const auto& self) noexcept -> double
+  auto realized_investment(this const TradePosition& self) noexcept -> double
   {
     return std::ranges::fold_left(
      self.realized_records(), 0.0, [](double total, const TradeRecord& record) {
@@ -196,7 +199,7 @@ public:
      });
   }
 
-  auto realized_pnl(this const auto& self) noexcept -> double
+  auto realized_pnl(this const TradePosition& self) noexcept -> double
   {
     return std::ranges::fold_left(
      self.realized_records(), 0.0, [](double total, const TradeRecord& record) {
@@ -204,7 +207,7 @@ public:
      });
   }
 
-  auto realized_duration(this const auto& self) noexcept -> std::time_t
+  auto realized_duration(this const TradePosition& self) noexcept -> std::time_t
   {
     return std::ranges::fold_left(
      self.realized_records(),
@@ -214,22 +217,22 @@ public:
      });
   }
 
-  auto is_closed(this const auto& self) noexcept -> bool
+  auto is_closed(this const TradePosition& self) noexcept -> bool
   {
     return self.position_size() == 0;
   }
 
-  auto is_long_direction(this const auto& self) noexcept -> bool
+  auto is_long_direction(this const TradePosition& self) noexcept -> bool
   {
     return self.position_size() > 0;
   }
 
-  auto is_short_direction(this const auto& self) noexcept -> bool
+  auto is_short_direction(this const TradePosition& self) noexcept -> bool
   {
     return self.position_size() < 0;
   }
 
-  void scaled_in(this auto& self,
+  void scaled_in(this TradePosition& self,
                  double action_position_size,
                  std::time_t action_timestamp,
                  double action_price,
@@ -267,7 +270,7 @@ public:
     self.realized_records_.emplace_back(std::move(scaled_in_record));
   }
 
-  void scaled_out(this auto& self,
+  void scaled_out(this TradePosition& self,
                   double action_position_size,
                   std::time_t action_timestamp,
                   double action_price,
@@ -311,9 +314,10 @@ public:
     self.position_size(remaining_position_size);
   }
 
-  auto
-  trigger_stop_loss(this auto& self, double prev_close, double high, double low)
-   -> bool
+  auto trigger_stop_loss(this TradePosition& self,
+                         double prev_close,
+                         double high,
+                         double low) -> bool
   {
     const auto initial_stop_price = self.stop_loss_initial_price();
 
@@ -340,7 +344,8 @@ public:
     return low <= self.stop_loss_price();
   }
 
-  auto trigger_take_profit(this auto& self, double high, double low) -> bool
+  auto trigger_take_profit(this TradePosition& self, double high, double low)
+   -> bool
   {
     const auto reference_price = self.take_profit_price();
 

@@ -39,10 +39,9 @@ public:
 
   auto operator==(const HighestMethod& other) const noexcept -> bool = default;
 
-  auto operator()(this const auto& self,
+  auto operator()(this const HighestMethod& self,
                   AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     if(asset_snapshot.size() < self.period_) {
       return std::numeric_limits<ResultType>::quiet_NaN();
@@ -56,31 +55,30 @@ public:
     return highest;
   }
 
-  auto operator()(this const auto& self,
+  auto operator()(this const HighestMethod& self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     return std::numeric_limits<ResultType>::quiet_NaN();
   }
 
-  auto source(this const auto& self) -> const TSourceMethod&
+  auto source(this const HighestMethod& self) -> const TSourceMethod&
   {
     return self.source_;
   }
 
-  void source(this auto& self, TSourceMethod method)
+  void source(this HighestMethod& self, TSourceMethod method)
   {
     self.source_ = std::move(method);
   }
 
-  auto period(this const auto& self) noexcept -> std::size_t
+  auto period(this const HighestMethod& self) noexcept -> std::size_t
   {
     return self.period_;
   }
 
-  void period(this auto& self, std::size_t period)
+  void period(this HighestMethod& self, std::size_t period)
   {
     self.period_ = period;
   }

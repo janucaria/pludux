@@ -29,7 +29,8 @@ public:
   {
   }
 
-  void operator()(this const auto& self, AppStateData& state)
+  void operator()(this const LoadBacktestsSetupAction& self,
+                  AppStateData& state)
   {
     if constexpr(std::same_as<TSource, std::string>) {
       auto stream = std::istringstream{self.source_};

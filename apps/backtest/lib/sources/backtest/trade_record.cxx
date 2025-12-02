@@ -50,198 +50,198 @@ public:
   {
   }
 
-  auto status(this const auto& self) noexcept -> Status
+  auto status(this const TradeRecord& self) noexcept -> Status
   {
     return self.status_;
   }
 
-  void status(this auto& self, Status status) noexcept
+  void status(this TradeRecord& self, Status status) noexcept
   {
     self.status_ = status;
   }
 
-  auto position_size(this const auto& self) noexcept -> double
+  auto position_size(this const TradeRecord& self) noexcept -> double
   {
     return self.position_size_;
   }
 
-  void position_size(this auto& self, double size) noexcept
+  void position_size(this TradeRecord& self, double size) noexcept
   {
     self.position_size_ = size;
   }
 
-  auto entry_index(this const auto& self) noexcept -> std::size_t
+  auto entry_index(this const TradeRecord& self) noexcept -> std::size_t
   {
     return self.entry_index_;
   }
 
-  void entry_index(this auto& self, std::size_t index) noexcept
+  void entry_index(this TradeRecord& self, std::size_t index) noexcept
   {
     self.entry_index_ = index;
   }
 
-  auto exit_index(this const auto& self) noexcept -> std::size_t
+  auto exit_index(this const TradeRecord& self) noexcept -> std::size_t
   {
     return self.exit_index_;
   }
 
-  void exit_index(this auto& self, std::size_t index) noexcept
+  void exit_index(this TradeRecord& self, std::size_t index) noexcept
   {
     self.exit_index_ = index;
   }
 
-  auto entry_price(this const auto& self) noexcept -> double
+  auto entry_price(this const TradeRecord& self) noexcept -> double
   {
     return self.entry_price_;
   }
 
-  void entry_price(this auto& self, double price) noexcept
+  void entry_price(this TradeRecord& self, double price) noexcept
   {
     self.entry_price_ = price;
   }
 
-  auto average_price(this const auto& self) noexcept -> double
+  auto average_price(this const TradeRecord& self) noexcept -> double
   {
     return self.average_price_;
   }
 
-  void average_price(this auto& self, double price) noexcept
+  void average_price(this TradeRecord& self, double price) noexcept
   {
     self.average_price_ = price;
   }
 
-  auto exit_price(this const auto& self) noexcept -> double
+  auto exit_price(this const TradeRecord& self) noexcept -> double
   {
     return self.exit_price_;
   }
 
-  void exit_price(this auto& self, double price) noexcept
+  void exit_price(this TradeRecord& self, double price) noexcept
   {
     self.exit_price_ = price;
   }
 
-  auto entry_timestamp(this const auto& self) noexcept -> std::time_t
+  auto entry_timestamp(this const TradeRecord& self) noexcept -> std::time_t
   {
     return self.entry_timestamp_;
   }
 
-  void entry_timestamp(this auto& self, std::time_t timestamp) noexcept
+  void entry_timestamp(this TradeRecord& self, std::time_t timestamp) noexcept
   {
     self.entry_timestamp_ = timestamp;
   }
 
-  auto exit_timestamp(this const auto& self) noexcept -> std::time_t
+  auto exit_timestamp(this const TradeRecord& self) noexcept -> std::time_t
   {
     return self.exit_timestamp_;
   }
 
-  void exit_timestamp(this auto& self, std::time_t timestamp) noexcept
+  void exit_timestamp(this TradeRecord& self, std::time_t timestamp) noexcept
   {
     self.exit_timestamp_ = timestamp;
   }
 
-  auto stop_loss_price(this const auto& self) noexcept -> double
+  auto stop_loss_price(this const TradeRecord& self) noexcept -> double
   {
     return self.stop_loss_price_;
   }
 
-  void stop_loss_price(this auto& self, double price) noexcept
+  void stop_loss_price(this TradeRecord& self, double price) noexcept
   {
     self.stop_loss_price_ = price;
   }
 
-  auto trailing_stop_price(this const auto& self) noexcept -> double
+  auto trailing_stop_price(this const TradeRecord& self) noexcept -> double
   {
     return self.trailing_stop_price_;
   }
 
-  void trailing_stop_price(this auto& self, double price) noexcept
+  void trailing_stop_price(this TradeRecord& self, double price) noexcept
   {
     self.trailing_stop_price_ = price;
   }
 
-  auto take_profit_price(this const auto& self) noexcept -> double
+  auto take_profit_price(this const TradeRecord& self) noexcept -> double
   {
     return self.take_profit_price_;
   }
 
-  void take_profit_price(this auto& self, double price) noexcept
+  void take_profit_price(this TradeRecord& self, double price) noexcept
   {
     self.take_profit_price_ = price;
   }
 
-  auto entry_value(this const auto& self) noexcept -> double
+  auto entry_value(this const TradeRecord& self) noexcept -> double
   {
     return self.position_size() * self.entry_price();
   }
 
-  auto exit_value(this const auto& self) noexcept -> double
+  auto exit_value(this const TradeRecord& self) noexcept -> double
   {
     return self.position_size() * self.exit_price();
   }
 
-  auto investment(this const auto& self) noexcept -> double
+  auto investment(this const TradeRecord& self) noexcept -> double
   {
     return self.position_size() * self.average_price();
   }
 
-  auto pnl(this const auto& self) noexcept -> double
+  auto pnl(this const TradeRecord& self) noexcept -> double
   {
     return self.exit_value() - self.investment();
   }
 
-  auto duration(this const auto& self) noexcept -> std::time_t
+  auto duration(this const TradeRecord& self) noexcept -> std::time_t
   {
     return self.exit_timestamp() - self.entry_timestamp();
   }
 
-  auto is_open(this const auto& self) noexcept -> bool
+  auto is_open(this const TradeRecord& self) noexcept -> bool
   {
     return self.status_ == Status::open;
   }
 
-  auto is_closed(this const auto& self) noexcept -> bool
+  auto is_closed(this const TradeRecord& self) noexcept -> bool
   {
     return self.is_closed_exit_signal() || self.is_closed_take_profit() ||
            self.is_closed_stop_loss();
   }
 
-  auto is_closed_exit_signal(this const auto& self) noexcept -> bool
+  auto is_closed_exit_signal(this const TradeRecord& self) noexcept -> bool
   {
     return self.status_ == Status::closed_exit_signal;
   }
 
-  auto is_closed_take_profit(this const auto& self) noexcept -> bool
+  auto is_closed_take_profit(this const TradeRecord& self) noexcept -> bool
   {
     return self.status_ == Status::closed_take_profit;
   }
 
-  auto is_closed_stop_loss(this const auto& self) noexcept -> bool
+  auto is_closed_stop_loss(this const TradeRecord& self) noexcept -> bool
   {
     return self.status_ == Status::closed_stop_loss;
   }
 
-  auto is_scaled(this const auto& self) noexcept -> bool
+  auto is_scaled(this const TradeRecord& self) noexcept -> bool
   {
     return self.is_scaled_in() || self.is_scaled_out();
   }
 
-  auto is_scaled_in(this const auto& self) noexcept -> bool
+  auto is_scaled_in(this const TradeRecord& self) noexcept -> bool
   {
     return self.status_ == Status::scaled_in;
   }
 
-  auto is_scaled_out(this const auto& self) noexcept -> bool
+  auto is_scaled_out(this const TradeRecord& self) noexcept -> bool
   {
     return self.status_ == Status::scaled_out;
   }
 
-  auto is_long_position(this const auto& self) noexcept -> bool
+  auto is_long_position(this const TradeRecord& self) noexcept -> bool
   {
     return self.position_size_ > 0.0;
   }
 
-  auto is_short_position(this const auto& self) noexcept -> bool
+  auto is_short_position(this const TradeRecord& self) noexcept -> bool
   {
     return self.position_size_ < 0.0;
   }

@@ -45,8 +45,8 @@ public:
     recalculate_size_();
   }
 
-  auto operator[](this const auto& self, const std::string& field) noexcept
-   -> AssetSeries
+  auto operator[](this const AssetHistory& self,
+                  const std::string& field) noexcept -> AssetSeries
   {
     const auto it = self.field_data_.find(field);
     if(it != self.field_data_.end()) {
@@ -55,114 +55,118 @@ public:
     return AssetSeries{};
   }
 
-  auto size(this const auto& self) noexcept -> std::size_t
+  auto size(this const AssetHistory& self) noexcept -> std::size_t
   {
     return self.size_;
   }
 
-  auto field_data(this const auto& self) noexcept -> const FieldDataType&
+  auto field_data(this const AssetHistory& self) noexcept
+   -> const FieldDataType&
   {
     return self.field_data_;
   }
 
-  auto datetime_field(this const auto& self) noexcept -> const std::string&
+  auto datetime_field(this const AssetHistory& self) noexcept
+   -> const std::string&
   {
     return self.datetime_field_;
   }
 
-  void datetime_field(this auto& self, std::string field) noexcept
+  void datetime_field(this AssetHistory& self, std::string field) noexcept
   {
     self.datetime_field_ = std::move(field);
   }
 
-  auto open_field(this const auto& self) noexcept -> const std::string&
+  auto open_field(this const AssetHistory& self) noexcept -> const std::string&
   {
     return self.open_field_;
   }
 
-  void open_field(this auto& self, std::string field) noexcept
+  void open_field(this AssetHistory& self, std::string field) noexcept
   {
     self.open_field_ = std::move(field);
   }
 
-  auto high_field(this const auto& self) noexcept -> const std::string&
+  auto high_field(this const AssetHistory& self) noexcept -> const std::string&
   {
     return self.high_field_;
   }
 
-  void high_field(this auto& self, std::string field) noexcept
+  void high_field(this AssetHistory& self, std::string field) noexcept
   {
     self.high_field_ = std::move(field);
   }
 
-  auto low_field(this const auto& self) noexcept -> const std::string&
+  auto low_field(this const AssetHistory& self) noexcept -> const std::string&
   {
     return self.low_field_;
   }
 
-  void low_field(this auto& self, std::string field) noexcept
+  void low_field(this AssetHistory& self, std::string field) noexcept
   {
     self.low_field_ = std::move(field);
   }
 
-  auto close_field(this const auto& self) noexcept -> const std::string&
+  auto close_field(this const AssetHistory& self) noexcept -> const std::string&
   {
     return self.close_field_;
   }
 
-  void close_field(this auto& self, std::string field) noexcept
+  void close_field(this AssetHistory& self, std::string field) noexcept
   {
     self.close_field_ = std::move(field);
   }
 
-  auto volume_field(this const auto& self) noexcept -> const std::string&
+  auto volume_field(this const AssetHistory& self) noexcept
+   -> const std::string&
   {
     return self.volume_field_;
   }
 
-  void volume_field(this auto& self, std::string field) noexcept
+  void volume_field(this AssetHistory& self, std::string field) noexcept
   {
     self.volume_field_ = std::move(field);
   }
 
-  auto contains(this const auto& self, const std::string& field) noexcept
-   -> bool
+  auto contains(this const AssetHistory& self,
+                const std::string& field) noexcept -> bool
   {
     return self.field_data_.contains(field);
   }
 
-  void insert(this auto& self, std::string field, AssetData series)
+  void
+  insert(this AssetHistory& self, std::string field, AssetData series) noexcept
   {
     self.field_data_.emplace(std::move(field), std::move(series));
     self.recalculate_size_();
   }
 
-  auto datetime_series(this const auto& self) noexcept -> AssetSeries
+  auto datetime_series(this const AssetHistory& self) noexcept -> AssetSeries
   {
     return self[self.datetime_field_];
   }
 
-  auto open_series(this const auto& self) noexcept -> AssetSeries
+  auto open_series(this const AssetHistory& self) noexcept -> AssetSeries
   {
     return self[self.open_field_];
   }
 
-  auto high_series(this const auto& self) noexcept -> AssetSeries
+  auto high_series(this const AssetHistory& self) noexcept -> AssetSeries
   {
     return self[self.high_field_];
   }
 
-  auto low_series(this const auto& self) noexcept -> AssetSeries
+  auto low_series(this const AssetHistory& self) noexcept -> AssetSeries
   {
     return self[self.low_field_];
   }
 
-  auto close_series(this const auto& self) noexcept -> AssetSeries
+  auto close_series(this const AssetHistory& self) noexcept -> AssetSeries
   {
     return self[self.close_field_];
   }
 
-  auto volume_series(this const auto& self) noexcept -> AssetSeries
+  auto volume_series(this const AssetHistory& self) noexcept -> AssetSeries
   {
     return self[self.volume_field_];
   }
@@ -177,7 +181,7 @@ private:
   std::string close_field_;
   std::string volume_field_;
 
-  void recalculate_size_(this auto& self) noexcept
+  void recalculate_size_(this AssetHistory& self) noexcept
   {
     if(self.field_data_.empty()) {
       self.size_ = 0;
@@ -185,7 +189,8 @@ private:
     }
 
     auto values_view = std::views::values(self.field_data_);
-    auto sizes = std::views::transform(values_view, [](const auto& series) { return series.size(); });
+    auto sizes = std::views::transform(
+     values_view, [](const auto& series) { return series.size(); });
 
     self.size_ = *std::ranges::max_element(sizes);
   }

@@ -15,7 +15,7 @@ export namespace pludux::apps {
 
 class BacktestSummaryWindow {
 public:
-  void render(this const auto self, AppState& app_state)
+  void render(this const BacktestSummaryWindow self, AppState& app_state)
   {
     auto& state = app_state.state();
     auto& backtests = state.backtests;
@@ -118,7 +118,9 @@ public:
   }
 
 private:
-  void draw_row(this const auto, std::string_view label, std::string_view value)
+  void draw_row(this const BacktestSummaryWindow,
+                std::string_view label,
+                std::string_view value)
   {
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
@@ -127,32 +129,33 @@ private:
     ImGui::Text("%s", value.data());
   }
 
-  void draw_empty_row(this const auto)
+  void draw_empty_row(this const BacktestSummaryWindow)
   {
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
     ImGui::TableNextColumn();
   }
 
-  void draw_spacer_row(this const auto self)
+  void draw_spacer_row(this const BacktestSummaryWindow self)
   {
     self.draw_row("", "");
   }
 
-  void
-  draw_float_row(this const auto self, std::string_view label, double value)
+  void draw_float_row(this const BacktestSummaryWindow self,
+                      std::string_view label,
+                      double value)
   {
     self.draw_row(label, std::format("{:.2f}", value));
   }
 
-  void draw_count_row(this const auto self,
+  void draw_count_row(this const BacktestSummaryWindow self,
                       std::string_view label,
                       std::size_t value)
   {
     self.draw_row(label, std::to_string(value));
   }
 
-  void draw_count_row_with_rate(this const auto self,
+  void draw_count_row_with_rate(this const BacktestSummaryWindow self,
                                 std::string_view label,
                                 std::size_t value,
                                 double rate)
@@ -160,13 +163,14 @@ private:
     self.draw_row(label, std::format("{} ({:.2f}%)", value, rate * 100.0));
   }
 
-  void
-  draw_currency_row(this const auto self, std::string_view label, double value)
+  void draw_currency_row(this const BacktestSummaryWindow self,
+                         std::string_view label,
+                         double value)
   {
     self.draw_row(label, format_currency(value));
   }
 
-  void draw_currency_with_rate_row(this const auto self,
+  void draw_currency_with_rate_row(this const BacktestSummaryWindow self,
                                    std::string_view label,
                                    double value,
                                    double rate)
@@ -175,7 +179,7 @@ private:
      label, std::format("{} ({:.2f}%)", format_currency(value), rate * 100.0));
   }
 
-  void draw_currency_with_percent_row(this const auto self,
+  void draw_currency_with_percent_row(this const BacktestSummaryWindow self,
                                       std::string_view label,
                                       double value,
                                       double total)
@@ -186,14 +190,14 @@ private:
      std::format("{} ({:.2f}%)", format_currency(value), percentage * 100.0));
   }
 
-  void draw_duration_row(this const auto self,
+  void draw_duration_row(this const BacktestSummaryWindow self,
                          std::string_view label,
                          std::size_t duration)
   {
     self.draw_row(label, format_duration(duration));
   }
 
-  void draw_datetime_row(this const auto self,
+  void draw_datetime_row(this const BacktestSummaryWindow self,
                          std::string_view label,
                          std::time_t timestamp)
   {

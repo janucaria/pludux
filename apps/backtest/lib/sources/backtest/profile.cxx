@@ -18,37 +18,37 @@ public:
   {
   }
 
-  auto name(this const auto& self) noexcept -> const std::string&
+  auto name(this const Profile& self) noexcept -> const std::string&
   {
     return self.name_;
   }
 
-  void name(this auto& self, std::string name) noexcept
+  void name(this Profile& self, std::string name) noexcept
   {
     self.name_ = std::move(name);
   }
 
-  auto initial_capital(this const auto& self) noexcept -> double
+  auto initial_capital(this const Profile& self) noexcept -> double
   {
     return self.initial_capital_;
   }
 
-  void initial_capital(this auto& self, double initial_capital) noexcept
+  void initial_capital(this Profile& self, double initial_capital) noexcept
   {
     self.initial_capital_ = initial_capital;
   }
 
-  auto capital_risk(this const auto& self) noexcept -> double
+  auto capital_risk(this const Profile& self) noexcept -> double
   {
     return self.capital_risk_;
   }
 
-  void capital_risk(this auto& self, double capital_risk) noexcept
+  void capital_risk(this Profile& self, double capital_risk) noexcept
   {
     self.capital_risk_ = capital_risk;
   }
 
-  auto get_risk_value(this const auto& self) noexcept -> double
+  auto get_risk_value(this const Profile& self) noexcept -> double
   {
     return self.initial_capital_ * self.capital_risk_;
   }

@@ -22,20 +22,20 @@ public:
   {
   }
 
-  auto operator()(this const auto& self,
+  auto operator()(this const AnyConditionMethod& self,
                   AssetSnapshot asset_snapshot,
                   AnySeriesMethodContext context) noexcept -> bool
   {
     return self.impl_->operator()(std::move(asset_snapshot), context);
   }
 
-  auto operator==(this const auto& self,
+  auto operator==(this const AnyConditionMethod& self,
                   const AnyConditionMethod& other) noexcept -> bool
   {
     return self.impl_->operator==(other);
   }
 
-  auto operator!=(this const auto& self,
+  auto operator!=(this const AnyConditionMethod& self,
                   const AnyConditionMethod& other) noexcept -> bool
   {
     return self.impl_->operator!=(other);

@@ -17,23 +17,23 @@ public:
   {
   }
 
-  auto name(this const auto& self) noexcept -> const std::string&
+  auto name(this const Asset& self) noexcept -> const std::string&
   {
     return self.name_;
   }
 
-  auto history(this const auto& self) noexcept -> const AssetHistory&
+  auto history(this const Asset& self) noexcept -> const AssetHistory&
   {
     return self.asset_history_;
   }
 
-  auto get_snapshot(this const auto& self, std::size_t index) noexcept
+  auto get_snapshot(this const Asset& self, std::size_t index) noexcept
    -> AssetSnapshot
   {
     return AssetSnapshot{index, self.history()};
   }
 
-  auto size(this const auto& self) noexcept -> std::size_t
+  auto size(this const Asset& self) noexcept -> std::size_t
   {
     return self.history().size();
   }

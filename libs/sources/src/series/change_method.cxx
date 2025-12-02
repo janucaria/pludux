@@ -27,13 +27,13 @@ public:
   }
 
   explicit ChangeMethod(TSourceMethod source)
-  : source_{source}
+  : source_{std::move(source)}
   {
   }
 
   auto operator==(const ChangeMethod& other) const noexcept -> bool = default;
 
-  auto operator()(this const auto& self,
+  auto operator()(this const ChangeMethod& self,
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) noexcept -> double
   {
@@ -43,7 +43,7 @@ public:
     return current - previous;
   }
 
-  auto operator()(this const auto& self,
+  auto operator()(this const ChangeMethod& self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output,
                   MethodContextable auto context) noexcept -> double
@@ -51,12 +51,12 @@ public:
     return std::numeric_limits<ResultType>::quiet_NaN();
   }
 
-  auto source(this const auto& self) noexcept -> const TSourceMethod&
+  auto source(this const ChangeMethod& self) noexcept -> const TSourceMethod&
   {
     return self.source_;
   }
 
-  void source(this auto& self, TSourceMethod source) noexcept
+  void source(this ChangeMethod& self, TSourceMethod source) noexcept
   {
     self.source_ = std::move(source);
   }

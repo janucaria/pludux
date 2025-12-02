@@ -57,67 +57,67 @@ public:
   {
   }
 
-  auto name(this const auto& self) noexcept -> const std::string&
+  auto name(this const Backtest& self) noexcept -> const std::string&
   {
     return self.name_;
   }
 
-  auto strategy_ptr(this const auto& self) noexcept
+  auto strategy_ptr(this const Backtest& self) noexcept
    -> const std::shared_ptr<backtest::Strategy>
   {
     return self.strategy_ptr_;
   }
 
-  auto strategy(this const auto& self) noexcept -> const backtest::Strategy&
+  auto strategy(this const Backtest& self) noexcept -> const backtest::Strategy&
   {
     return *self.strategy_ptr();
   }
 
-  auto asset_ptr(this const auto& self) noexcept
+  auto asset_ptr(this const Backtest& self) noexcept
    -> const std::shared_ptr<backtest::Asset>
   {
     return self.asset_ptr_;
   }
 
-  auto asset(this const auto& self) noexcept -> const backtest::Asset&
+  auto asset(this const Backtest& self) noexcept -> const backtest::Asset&
   {
     return *self.asset_ptr();
   }
 
-  auto profile_ptr(this const auto& self) noexcept
+  auto profile_ptr(this const Backtest& self) noexcept
    -> const std::shared_ptr<backtest::Profile>
   {
     return self.profile_ptr_;
   }
 
-  auto profile(this const auto& self) noexcept -> const backtest::Profile&
+  auto profile(this const Backtest& self) noexcept -> const backtest::Profile&
   {
     return *self.profile_ptr();
   }
 
-  void mark_as_failed(this auto& self) noexcept
+  void mark_as_failed(this Backtest& self) noexcept
   {
     self.is_failed_ = true;
   }
 
-  auto is_failed(this const auto& self) noexcept -> bool
+  auto is_failed(this const Backtest& self) noexcept -> bool
   {
     return self.is_failed_;
   }
 
-  auto summaries(this const auto& self) noexcept
+  auto summaries(this const Backtest& self) noexcept
    -> const std::vector<backtest::BacktestSummary>&
   {
     return self.summaries_;
   }
 
-  void reset(this auto& self) noexcept
+  void reset(this Backtest& self) noexcept
   {
     self.is_failed_ = false;
     self.summaries_.clear();
   }
 
-  auto should_run(this const auto& self) noexcept -> bool
+  auto should_run(this const Backtest& self) noexcept -> bool
   {
     const auto summaries_size = self.summaries_.size();
     const auto asset_size = self.asset().size();
@@ -125,7 +125,7 @@ public:
     return summaries_size < asset_size && !self.is_failed();
   }
 
-  void run(this auto& self)
+  void run(this Backtest& self)
   {
     using namespace backtest;
 

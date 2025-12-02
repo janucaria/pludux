@@ -37,7 +37,7 @@ public:
   auto operator==(const PercentageMethod& other) const noexcept
    -> bool = default;
 
-  auto operator()(this const auto& self,
+  auto operator()(this const PercentageMethod& self,
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) noexcept -> ResultType
   {
@@ -46,7 +46,7 @@ public:
     return percentage;
   }
 
-  auto operator()(this const auto& self,
+  auto operator()(this const PercentageMethod& self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output_name,
                   MethodContextable auto context) noexcept -> ResultType
@@ -54,22 +54,22 @@ public:
     return std::numeric_limits<ResultType>::quiet_NaN();
   }
 
-  auto base(this const auto& self) noexcept -> const TMethod&
+  auto base(this const PercentageMethod& self) noexcept -> const TMethod&
   {
     return self.base_;
   }
 
-  void base(this auto& self, TMethod new_base) noexcept
+  void base(this PercentageMethod& self, TMethod new_base) noexcept
   {
     self.base_ = std::move(new_base);
   }
 
-  auto percent(this const auto& self) noexcept -> double
+  auto percent(this const PercentageMethod& self) noexcept -> double
   {
     return self.percent_;
   }
 
-  void percent(this auto& self, double new_percent) noexcept
+  void percent(this PercentageMethod& self, double new_percent) noexcept
   {
     self.percent_ = new_percent;
   }

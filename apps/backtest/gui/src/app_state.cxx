@@ -18,21 +18,21 @@ public:
   {
   }
 
-  auto state() const noexcept -> const AppStateData&
+  auto state(this const AppState& self) noexcept -> const AppStateData&
   {
-    return state_data_;
+    return self.state_data_;
   }
 
   template<typename TAppAction, typename... Args>
-  void emplace_action(Args&&... args)
+  void emplace_action(this AppState& self, Args&&... args)
   {
-    actions_.emplace(TAppAction{std::forward<Args>(args)...});
+    self.actions_.emplace(TAppAction{std::forward<Args>(args)...});
   }
 
   template<typename TAppAction>
-  void push_action(TAppAction action)
+  void push_action(this AppState& self, TAppAction action)
   {
-    actions_.push(std::move(action));
+    self.actions_.push(std::move(action));
   }
 
 private:

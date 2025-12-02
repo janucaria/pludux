@@ -23,7 +23,7 @@ public:
   auto operator==(const CrossunderMethod& other) const noexcept
    -> bool = default;
 
-  auto operator()(this const auto& self,
+  auto operator()(this const CrossunderMethod& self,
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) -> bool
   {
@@ -37,22 +37,25 @@ public:
     return signal_current < reference_current && signal_prev >= reference_prev;
   }
 
-  auto signal(this const auto& self) noexcept -> const AnySeriesMethod&
+  auto signal(this const CrossunderMethod& self) noexcept
+   -> const AnySeriesMethod&
   {
     return self.signal_;
   }
 
-  void signal(this auto& self, AnySeriesMethod signal) noexcept
+  void signal(this CrossunderMethod& self, AnySeriesMethod signal) noexcept
   {
     self.signal_ = std::move(signal);
   }
 
-  auto reference(this const auto& self) noexcept -> const AnySeriesMethod&
+  auto reference(this const CrossunderMethod& self) noexcept
+   -> const AnySeriesMethod&
   {
     return self.reference_;
   }
 
-  void reference(this auto& self, AnySeriesMethod reference) noexcept
+  void reference(this CrossunderMethod& self,
+                 AnySeriesMethod reference) noexcept
   {
     self.reference_ = std::move(reference);
   }

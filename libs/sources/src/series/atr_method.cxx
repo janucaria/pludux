@@ -41,8 +41,7 @@ public:
 
   auto operator()(this auto self,
                   AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     const auto tr_method = TrMethod{};
     const auto rma_method = RmaMethod{tr_method, self.period_};
@@ -51,31 +50,30 @@ public:
     return atr;
   }
 
-  auto operator()(this auto self,
+  auto operator()(this AtrMethod self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     return std::numeric_limits<ResultType>::quiet_NaN();
   }
 
-  auto period(this auto self) noexcept -> std::size_t
+  auto period(this AtrMethod self) noexcept -> std::size_t
   {
     return self.period_;
   }
 
-  void period(this auto& self, std::size_t new_period) noexcept
+  void period(this AtrMethod& self, std::size_t new_period) noexcept
   {
     self.period_ = new_period;
   }
 
-  auto multiplier(this auto self) noexcept -> double
+  auto multiplier(this AtrMethod self) noexcept -> double
   {
     return self.multiplier_;
   }
 
-  void multiplier(this auto& self, double new_multiplier) noexcept
+  void multiplier(this AtrMethod& self, double new_multiplier) noexcept
   {
     self.multiplier_ = new_multiplier;
   }

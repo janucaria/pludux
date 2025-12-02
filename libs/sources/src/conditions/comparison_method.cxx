@@ -27,7 +27,7 @@ public:
   auto operator==(const ComparisonMethod& other) const noexcept
    -> bool = default;
 
-  auto operator()(this const auto& self,
+  auto operator()(this const ComparisonMethod& self,
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) -> bool
   {
@@ -37,22 +37,25 @@ public:
     return TComparator{}(target_result, threshold_result);
   }
 
-  auto target(this const auto& self) noexcept -> const AnySeriesMethod&
+  auto target(this const ComparisonMethod& self) noexcept
+   -> const AnySeriesMethod&
   {
     return self.target_;
   }
 
-  void target(this auto& self, AnySeriesMethod target) noexcept
+  void target(this ComparisonMethod& self, AnySeriesMethod target) noexcept
   {
     self.target_ = std::move(target);
   }
 
-  auto threshold(this const auto& self) noexcept -> const AnySeriesMethod&
+  auto threshold(this const ComparisonMethod& self) noexcept
+   -> const AnySeriesMethod&
   {
     return self.threshold_;
   }
 
-  void threshold(this auto& self, AnySeriesMethod threshold) noexcept
+  void threshold(this ComparisonMethod& self,
+                 AnySeriesMethod threshold) noexcept
   {
     self.threshold_ = std::move(threshold);
   }

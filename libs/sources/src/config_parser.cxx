@@ -26,13 +26,13 @@ public:
     {
     }
 
-    auto parse_method(this auto& self, const jsoncons::ojson& config)
+    auto parse_method(this Parser& self, const jsoncons::ojson& config)
      -> AnySeriesMethod
     {
       return self.config_parser_.parse_method(config);
     }
 
-    auto parse_filter(this auto& self, const jsoncons::ojson& config)
+    auto parse_filter(this Parser& self, const jsoncons::ojson& config)
      -> AnyConditionMethod
     {
       return self.config_parser_.parse_filter(config);
@@ -62,7 +62,7 @@ public:
   {
   }
 
-  void register_filter_parser(this auto& self,
+  void register_filter_parser(this ConfigParser& self,
                               const std::string& filter_name,
                               const ConditionSerialize& filter_serialize,
                               const ConditionDeserialize& filter_deserialize)
@@ -71,7 +71,7 @@ public:
      filter_name, std::make_pair(filter_serialize, filter_deserialize));
   }
 
-  void register_method_parser(this auto& self,
+  void register_method_parser(this ConfigParser& self,
                               const std::string& method_name,
                               const MethodSerialize& method_serialize,
                               const MethodDeserialize& method_deserialize)
@@ -80,12 +80,12 @@ public:
      method_name, std::make_pair(method_serialize, method_deserialize));
   }
 
-  auto parser(this auto& self) -> Parser
+  auto parser(this ConfigParser& self) -> Parser
   {
     return Parser{self};
   }
 
-  auto parse_filter(this auto& self, const jsoncons::ojson& config)
+  auto parse_filter(this ConfigParser& self, const jsoncons::ojson& config)
    -> AnyConditionMethod
   {
     if(config.is_bool()) {
@@ -117,8 +117,8 @@ public:
     }
   }
 
-  auto serialize_filter(this const auto& self, const AnyConditionMethod& filter)
-   -> jsoncons::ojson
+  auto serialize_filter(this const ConfigParser& self,
+                        const AnyConditionMethod& filter) -> jsoncons::ojson
   {
     auto serialized_filter = jsoncons::ojson{};
 
@@ -148,7 +148,7 @@ public:
     return serialized_filter;
   }
 
-  auto parse_method(this auto& self, const jsoncons::ojson& config)
+  auto parse_method(this ConfigParser& self, const jsoncons::ojson& config)
    -> AnySeriesMethod
   {
     if(config.is_number()) {
@@ -187,8 +187,8 @@ public:
     }
   }
 
-  auto serialize_method(this const auto& self, const AnySeriesMethod& method)
-   -> jsoncons::ojson
+  auto serialize_method(this const ConfigParser& self,
+                        const AnySeriesMethod& method) -> jsoncons::ojson
   {
     auto serialized_method = jsoncons::ojson::null();
 

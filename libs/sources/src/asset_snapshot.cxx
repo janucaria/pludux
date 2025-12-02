@@ -27,22 +27,24 @@ public:
   {
   }
 
-  auto operator[](this auto self, const std::string& field) noexcept -> double
+  auto operator[](this AssetSnapshot self, const std::string& field) noexcept
+   -> double
   {
     return self.data(field);
   }
 
-  auto operator[](this auto self, std::size_t index) noexcept -> AssetSnapshot
+  auto operator[](this AssetSnapshot self, std::size_t index) noexcept
+   -> AssetSnapshot
   {
     return AssetSnapshot{self.lookback_ + index, self.asset_history_};
   }
 
-  auto lookback(this auto self) noexcept -> std::size_t
+  auto lookback(this AssetSnapshot self) noexcept -> std::size_t
   {
     return self.lookback_;
   }
 
-  auto size(this auto self) noexcept -> std::size_t
+  auto size(this AssetSnapshot self) noexcept -> std::size_t
   {
     if(self.lookback_ >= self.asset_history_.size()) {
       return 0;
@@ -51,42 +53,44 @@ public:
     return self.asset_history_.size() - self.lookback_;
   }
 
-  auto contains(this auto self, const std::string& field) noexcept -> bool
+  auto contains(this AssetSnapshot self, const std::string& field) noexcept
+   -> bool
   {
     return self.asset_history_.contains(field);
   }
 
-  auto datetime(this auto self) noexcept -> double
+  auto datetime(this AssetSnapshot self) noexcept -> double
   {
     return self.asset_history_.datetime_series()[self.lookback_];
   }
 
-  auto open(this auto self) noexcept -> double
+  auto open(this AssetSnapshot self) noexcept -> double
   {
     return self.asset_history_.open_series()[self.lookback_];
   }
 
-  auto high(this auto self) noexcept -> double
+  auto high(this AssetSnapshot self) noexcept -> double
   {
     return self.asset_history_.high_series()[self.lookback_];
   }
 
-  auto low(this auto self) noexcept -> double
+  auto low(this AssetSnapshot self) noexcept -> double
   {
     return self.asset_history_.low_series()[self.lookback_];
   }
 
-  auto close(this auto self) noexcept -> double
+  auto close(this AssetSnapshot self) noexcept -> double
   {
     return self.asset_history_.close_series()[self.lookback_];
   }
 
-  auto volume(this auto self) noexcept -> double
+  auto volume(this AssetSnapshot self) noexcept -> double
   {
     return self.asset_history_.volume_series()[self.lookback_];
   }
 
-  auto data(this auto self, const std::string& field) noexcept -> double
+  auto data(this AssetSnapshot self, const std::string& field) noexcept
+   -> double
   {
     return self.asset_history_[field][self.lookback_];
   }

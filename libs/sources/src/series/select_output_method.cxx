@@ -33,14 +33,14 @@ public:
   auto operator==(const SelectOutputMethod& other) const noexcept
    -> bool = default;
 
-  auto operator()(this const auto& self,
+  auto operator()(this const SelectOutputMethod& self,
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) noexcept -> ResultType
   {
     return self.source_(asset_snapshot, self.output(), context);
   }
 
-  auto operator()(this const auto& self,
+  auto operator()(this const SelectOutputMethod& self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output,
                   MethodContextable auto context) noexcept -> ResultType
@@ -48,22 +48,23 @@ public:
     return self.source_(asset_snapshot, output, context);
   }
 
-  auto source(this const auto& self) noexcept -> const TSourceMethod&
+  auto source(this const SelectOutputMethod& self) noexcept
+   -> const TSourceMethod&
   {
     return self.source_;
   }
 
-  void source(this auto& self, TSourceMethod source) noexcept
+  void source(this SelectOutputMethod& self, TSourceMethod source) noexcept
   {
     self.source_ = std::move(source);
   }
 
-  auto output(this const auto& self) noexcept -> SeriesOutput
+  auto output(this const SelectOutputMethod& self) noexcept -> SeriesOutput
   {
     return self.output_;
   }
 
-  void output(this auto& self, SeriesOutput output_name) noexcept
+  void output(this SelectOutputMethod& self, SeriesOutput output_name) noexcept
   {
     self.output_ = std::move(output_name);
   }

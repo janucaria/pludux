@@ -30,19 +30,17 @@ export struct OpenMethod : OhlcvMethod<OpenMethod> {
 public:
   using ResultType = double;
 
-  auto operator()(this auto self,
+  auto operator()(this OhlcvMethod self,
                   AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     return asset_snapshot.open();
   }
 
-  auto operator()(this auto self,
+  auto operator()(this OhlcvMethod self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     return std::numeric_limits<ResultType>::quiet_NaN();
   }
@@ -52,19 +50,17 @@ export struct HighMethod : OhlcvMethod<HighMethod> {
 public:
   using ResultType = double;
 
-  auto operator()(this auto self,
+  auto operator()(this HighMethod self,
                   AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     return asset_snapshot.high();
   }
 
-  auto operator()(this auto self,
+  auto operator()(this HighMethod self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     return std::numeric_limits<ResultType>::quiet_NaN();
   }
@@ -74,19 +70,17 @@ export struct LowMethod : OhlcvMethod<LowMethod> {
 public:
   using ResultType = double;
 
-  auto operator()(this auto self,
+  auto operator()(this LowMethod self,
                   AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     return asset_snapshot.low();
   }
 
-  auto operator()(this auto self,
+  auto operator()(this LowMethod self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     return std::numeric_limits<ResultType>::quiet_NaN();
   }
@@ -96,19 +90,17 @@ export struct CloseMethod : OhlcvMethod<CloseMethod> {
 public:
   using ResultType = double;
 
-  auto operator()(this auto self,
+  auto operator()(this CloseMethod self,
                   AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     return asset_snapshot.close();
   }
 
-  auto operator()(this auto self,
+  auto operator()(this CloseMethod self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     return std::numeric_limits<ResultType>::quiet_NaN();
   }
@@ -118,19 +110,17 @@ export struct VolumeMethod : OhlcvMethod<VolumeMethod> {
 public:
   using ResultType = double;
 
-  auto operator()(this auto self,
+  auto operator()(this VolumeMethod self,
                   AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     return asset_snapshot.volume();
   }
 
-  auto operator()(this auto self,
+  auto operator()(this VolumeMethod self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     return std::numeric_limits<ResultType>::quiet_NaN();
   }

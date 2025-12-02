@@ -66,14 +66,14 @@ public:
   {
   }
 
-  auto operator()(this const auto& self,
+  auto operator()(this const AnySeriesMethod& self,
                   AssetSnapshot asset_snapshot,
                   AnySeriesMethodContext context) -> ResultType
   {
     return self.invoke_(self.impl_, asset_snapshot, context);
   }
 
-  auto operator()(this const auto& self,
+  auto operator()(this const AnySeriesMethod& self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output,
                   AnySeriesMethodContext context) -> ResultType
@@ -82,14 +82,14 @@ public:
      self.impl_, asset_snapshot, output, context);
   }
 
-  auto operator==(this const auto& self, const AnySeriesMethod& other) noexcept
-   -> bool
+  auto operator==(this const AnySeriesMethod& self,
+                  const AnySeriesMethod& other) noexcept -> bool
   {
     return self.equals_(self.impl_, other);
   }
 
-  auto operator!=(this const auto& self, const AnySeriesMethod& other) noexcept
-   -> bool
+  auto operator!=(this const AnySeriesMethod& self,
+                  const AnySeriesMethod& other) noexcept -> bool
   {
     return self.not_equals_(self.impl_, other);
   }

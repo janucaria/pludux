@@ -28,7 +28,7 @@ public:
   {
   }
 
-  void on_before_main_loop(this auto& self)
+  void on_before_main_loop(this Application& self)
   {
     auto& state_data = self.state_data_;
     auto& actions = self.actions_;
@@ -80,17 +80,17 @@ public:
 #endif
   }
 
-  void on_after_main_loop(this auto& self)
+  void on_after_main_loop(this Application& self)
   {
   }
 
-  void set_window_size(this auto& self, int width, int height)
+  void set_window_size(this Application& self, int width, int height)
   {
     self.window_size_ =
      ImVec2{static_cast<float>(width), static_cast<float>(height)};
   }
 
-  void on_update(this auto& self)
+  void on_update(this Application& self)
   {
     auto& state_data = self.state_data_;
     auto& actions = self.actions_;

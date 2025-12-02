@@ -31,7 +31,7 @@ public:
 
   auto operator==(const AllOfMethod& other) const noexcept -> bool = default;
 
-  auto operator()(this const auto& self,
+  auto operator()(this const AllOfMethod& self,
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) -> bool
   {
@@ -41,7 +41,7 @@ public:
      });
   }
 
-  auto conditions(this const auto& self) noexcept
+  auto conditions(this const AllOfMethod& self) noexcept
    -> const std::vector<AnyConditionMethod>&
   {
     return self.conditions_;

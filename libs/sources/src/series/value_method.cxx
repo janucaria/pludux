@@ -23,14 +23,14 @@ public:
 
   auto operator==(const ValueMethod& other) const noexcept -> bool = default;
 
-  auto operator()(this auto self,
+  auto operator()(this ValueMethod self,
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) noexcept -> ResultType
   {
     return self.value_;
   }
 
-  auto operator()(this auto self,
+  auto operator()(this ValueMethod self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output_name,
                   MethodContextable auto context) noexcept -> ResultType
@@ -38,12 +38,12 @@ public:
     return std::numeric_limits<ResultType>::quiet_NaN();
   }
 
-  auto value(this auto self) noexcept -> ResultType
+  auto value(this ValueMethod self) noexcept -> ResultType
   {
     return self.value_;
   }
 
-  void value(this auto& self, ResultType new_value) noexcept
+  void value(this ValueMethod& self, ResultType new_value) noexcept
   {
     self.value_ = new_value;
   }

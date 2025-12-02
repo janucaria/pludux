@@ -35,7 +35,7 @@ public:
   {
   }
 
-  void update_to_next_summary(this auto& self,
+  void update_to_next_summary(this BacktestSummary& self,
                               TradeSession next_trade_session) noexcept
   {
     if(next_trade_session.closed_position()) {
@@ -62,211 +62,222 @@ public:
     self.max_drawdown_ = std::max(self.max_drawdown_, self.drawdown());
   }
 
-  auto trade_session(this const auto& self) noexcept -> const TradeSession&
+  auto trade_session(this const BacktestSummary& self) noexcept
+   -> const TradeSession&
   {
     return self.trade_session_;
   }
 
-  void trade_session(this auto& self, TradeSession trade_session) noexcept
+  void trade_session(this BacktestSummary& self,
+                     TradeSession trade_session) noexcept
   {
     self.trade_session_ = std::move(trade_session);
   }
 
-  auto capital(this const auto& self) noexcept -> double
+  auto capital(this const BacktestSummary& self) noexcept -> double
   {
     return self.capital_;
   }
 
-  void capital(this auto& self, double capital) noexcept
+  void capital(this BacktestSummary& self, double capital) noexcept
   {
     self.capital_ = capital;
   }
 
-  auto peak_equity(this const auto& self) noexcept -> double
+  auto peak_equity(this const BacktestSummary& self) noexcept -> double
   {
     return self.peak_equity_;
   }
 
-  void peak_equity(this auto& self, double peak_equity) noexcept
+  void peak_equity(this BacktestSummary& self, double peak_equity) noexcept
   {
     self.peak_equity_ = peak_equity;
   }
 
-  auto max_drawdown(this const auto& self) noexcept -> double
+  auto max_drawdown(this const BacktestSummary& self) noexcept -> double
   {
     return self.max_drawdown_;
   }
 
-  void max_drawdown(this auto& self, double max_drawdown) noexcept
+  void max_drawdown(this BacktestSummary& self, double max_drawdown) noexcept
   {
     self.max_drawdown_ = max_drawdown;
   }
 
-  auto cumulative_investments(this const auto& self) noexcept -> double
+  auto cumulative_investments(this const BacktestSummary& self) noexcept
+   -> double
   {
     return self.cumulative_investments_;
   }
 
-  void cumulative_investments(this auto& self, double investment) noexcept
+  void cumulative_investments(this BacktestSummary& self,
+                              double investment) noexcept
   {
     self.cumulative_investments_ = investment;
   }
 
-  auto average_investment(this const auto& self) noexcept -> double
+  auto average_investment(this const BacktestSummary& self) noexcept -> double
   {
     return self.trade_count()
             ? self.cumulative_investments() / self.trade_count()
             : 0.0;
   }
 
-  auto trade_count(this const auto& self) noexcept -> std::size_t
+  auto trade_count(this const BacktestSummary& self) noexcept -> std::size_t
   {
     return self.profit_count() + self.loss_count() + self.break_even_count();
   }
 
-  auto open_trade_count(this const auto& self) noexcept -> std::size_t
+  auto open_trade_count(this const BacktestSummary& self) noexcept
+   -> std::size_t
   {
     return self.trade_session_.is_open() ? 1 : 0;
   }
 
-  auto cumulative_pnls(this const auto& self) noexcept -> double
+  auto cumulative_pnls(this const BacktestSummary& self) noexcept -> double
   {
     return self.cumulative_profits() + self.cumulative_losses();
   }
 
-  auto cumulative_durations(this const auto& self) noexcept -> std::time_t
+  auto cumulative_durations(this const BacktestSummary& self) noexcept
+   -> std::time_t
   {
     return self.sum_of_durations_;
   }
 
-  void cumulative_durations(this auto& self, std::time_t duration) noexcept
+  void cumulative_durations(this BacktestSummary& self,
+                            std::time_t duration) noexcept
   {
     self.sum_of_durations_ = duration;
   }
 
-  auto average_duration(this const auto& self) noexcept -> std::time_t
+  auto average_duration(this const BacktestSummary& self) noexcept
+   -> std::time_t
   {
     return self.trade_count() ? self.cumulative_durations() / self.trade_count()
                               : 0;
   }
 
-  auto average_pnl(this const auto& self) noexcept -> double
+  auto average_pnl(this const BacktestSummary& self) noexcept -> double
   {
     return self.trade_count() ? self.cumulative_pnls() / self.trade_count()
                               : 0.0;
   }
 
-  auto expected_value(this const auto& self) noexcept -> double
+  auto expected_value(this const BacktestSummary& self) noexcept -> double
   {
     return self.profit_rate() * self.average_profit() +
            self.loss_rate() * self.average_loss();
   }
 
-  auto expected_return(this const auto& self) noexcept -> double
+  auto expected_return(this const BacktestSummary& self) noexcept -> double
   {
     return self.average_investment()
             ? self.expected_value() / self.average_investment() * 100
             : 0.0;
   }
 
-  auto profit_count(this const auto& self) noexcept -> std::size_t
+  auto profit_count(this const BacktestSummary& self) noexcept -> std::size_t
   {
     return self.profit_count_;
   }
 
-  void profit_count(this auto& self, std::size_t count) noexcept
+  void profit_count(this BacktestSummary& self, std::size_t count) noexcept
   {
     self.profit_count_ = count;
   }
 
-  auto profit_rate(this const auto& self) noexcept -> double
+  auto profit_rate(this const BacktestSummary& self) noexcept -> double
   {
     return self.trade_count()
             ? static_cast<double>(self.profit_count()) / self.trade_count()
             : 0.0;
   }
 
-  auto cumulative_profits(this const auto& self) noexcept -> double
+  auto cumulative_profits(this const BacktestSummary& self) noexcept -> double
   {
     return self.cumulative_profits_;
   }
 
-  void cumulative_profits(this auto& self, double profits) noexcept
+  void cumulative_profits(this BacktestSummary& self, double profits) noexcept
   {
     self.cumulative_profits_ = profits;
   }
 
-  auto cumulative_profit_percent(this const auto& self) noexcept -> double
+  auto cumulative_profit_percent(this const BacktestSummary& self) noexcept
+   -> double
   {
     return self.cumulative_investments()
             ? self.cumulative_profits() / self.cumulative_investments() * 100.0
             : 0.0;
   }
 
-  auto average_profit(this const auto& self) noexcept -> double
+  auto average_profit(this const BacktestSummary& self) noexcept -> double
   {
     return self.profit_count() ? self.cumulative_profits() / self.profit_count()
                                : 0.0;
   }
 
-  auto loss_count(this const auto& self) noexcept -> std::size_t
+  auto loss_count(this const BacktestSummary& self) noexcept -> std::size_t
   {
     return self.loss_count_;
   }
 
-  void loss_count(this auto& self, std::size_t count) noexcept
+  void loss_count(this BacktestSummary& self, std::size_t count) noexcept
   {
     self.loss_count_ = count;
   }
 
-  auto loss_rate(this const auto& self) noexcept -> double
+  auto loss_rate(this const BacktestSummary& self) noexcept -> double
   {
     return self.trade_count()
             ? static_cast<double>(self.loss_count()) / self.trade_count()
             : 0.0;
   }
 
-  auto cumulative_losses(this const auto& self) noexcept -> double
+  auto cumulative_losses(this const BacktestSummary& self) noexcept -> double
   {
     return self.cumulative_losses_;
   }
 
-  void cumulative_losses(this auto& self, double losses) noexcept
+  void cumulative_losses(this BacktestSummary& self, double losses) noexcept
   {
     self.cumulative_losses_ = losses;
   }
 
-  auto cumulative_loss_percent(this const auto& self) noexcept -> double
+  auto cumulative_loss_percent(this const BacktestSummary& self) noexcept
+   -> double
   {
     return self.cumulative_investments()
             ? self.cumulative_losses() / self.cumulative_investments() * 100.0
             : 0.0;
   }
 
-  auto average_loss(this const auto& self) noexcept -> double
+  auto average_loss(this const BacktestSummary& self) noexcept -> double
   {
     return self.loss_count() ? self.cumulative_losses() / self.loss_count()
                              : 0.0;
   }
 
-  auto break_even_count(this const auto& self) noexcept -> std::size_t
+  auto break_even_count(this const BacktestSummary& self) noexcept
+   -> std::size_t
   {
     return self.break_even_count_;
   }
 
-  void break_even_count(this auto& self, std::size_t count) noexcept
+  void break_even_count(this BacktestSummary& self, std::size_t count) noexcept
   {
     self.break_even_count_ = count;
   }
 
-  auto break_even_rate(this const auto& self) noexcept -> double
+  auto break_even_rate(this const BacktestSummary& self) noexcept -> double
   {
     return self.trade_count()
             ? static_cast<double>(self.break_even_count()) / self.trade_count()
             : 0.0;
   }
 
-  auto profit_factor(this const auto& self) noexcept -> double
+  auto profit_factor(this const BacktestSummary& self) noexcept -> double
   {
     if(self.cumulative_losses() == 0.0) {
       return std::numeric_limits<double>::infinity();
@@ -274,33 +285,35 @@ public:
     return self.cumulative_profits() / -self.cumulative_losses();
   }
 
-  auto unrealized_pnl(this const auto& self) noexcept -> double
+  auto unrealized_pnl(this const BacktestSummary& self) noexcept -> double
   {
     return self.trade_session_.unrealized_pnl();
   }
 
-  auto unrealized_investment(this const auto& self) noexcept -> double
+  auto unrealized_investment(this const BacktestSummary& self) noexcept
+   -> double
   {
     return self.trade_session_.unrealized_investment();
   }
 
-  auto unrealized_duration(this const auto& self) noexcept -> std::time_t
+  auto unrealized_duration(this const BacktestSummary& self) noexcept
+   -> std::time_t
   {
     return self.trade_session_.unrealized_duration();
   }
 
-  auto equity(this const auto& self) noexcept -> double
+  auto equity(this const BacktestSummary& self) noexcept -> double
   {
     return self.capital() + self.trade_session_.partial_realized_pnl() +
            self.trade_session_.unrealized_pnl();
   }
 
-  auto initial_capital(this const auto& self) noexcept -> double
+  auto initial_capital(this const BacktestSummary& self) noexcept -> double
   {
     return self.capital_ - self.cumulative_pnls();
   }
 
-  auto drawdown(this const auto& self) noexcept -> double
+  auto drawdown(this const BacktestSummary& self) noexcept -> double
   {
     return self.peak_equity_
             ? (self.peak_equity_ - self.equity()) / self.peak_equity_ * 100.0

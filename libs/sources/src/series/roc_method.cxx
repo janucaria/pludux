@@ -37,10 +37,9 @@ public:
 
   auto operator==(const RocMethod& other) const noexcept -> bool = default;
 
-  auto operator()(this const auto& self,
+  auto operator()(this const RocMethod& self,
                   AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     const auto source_size = asset_snapshot.size();
     if(source_size < self.period_) {
@@ -53,31 +52,30 @@ public:
     return 100 * (current - end) / end;
   }
 
-  auto operator()(this const auto& self,
+  auto operator()(this const RocMethod& self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     return std::numeric_limits<ResultType>::quiet_NaN();
   }
 
-  auto source(this const auto& self) noexcept -> TSourceMethod
+  auto source(this const RocMethod& self) noexcept -> TSourceMethod
   {
     return self.source_;
   }
 
-  void source(this auto& self, TSourceMethod source) noexcept
+  void source(this RocMethod& self, TSourceMethod source) noexcept
   {
     self.source_ = std::move(source);
   }
 
-  auto period(this const auto& self) noexcept -> std::size_t
+  auto period(this const RocMethod& self) noexcept -> std::size_t
   {
     return self.period_;
   }
 
-  void period(this auto& self, std::size_t period) noexcept
+  void period(this RocMethod& self, std::size_t period) noexcept
   {
     self.period_ = period;
   }

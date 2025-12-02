@@ -54,19 +54,17 @@ public:
 
   auto operator==(const BbMethod& other) const noexcept -> bool = default;
 
-  auto operator()(this const auto& self,
+  auto operator()(this const BbMethod& self,
                   AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     return self(asset_snapshot, SeriesOutput::MiddleBand, context);
   }
 
-  auto operator()(this const auto& self,
+  auto operator()(this const BbMethod& self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     const auto middle = [&]() -> ResultType {
       switch(self.ma_type_) {
@@ -119,42 +117,42 @@ public:
     }
   }
 
-  auto ma_type(this const auto& self) noexcept -> BbMaType
+  auto ma_type(this const BbMethod& self) noexcept -> BbMaType
   {
     return self.ma_type_;
   }
 
-  auto ma_type(this auto& self, BbMaType ma_type) noexcept
+  auto ma_type(this BbMethod& self, BbMaType ma_type) noexcept
   {
     self.ma_type_ = ma_type;
   }
 
-  auto ma_source(this const auto& self) noexcept -> const TMaSourceMethod&
+  auto ma_source(this const BbMethod& self) noexcept -> const TMaSourceMethod&
   {
     return self.ma_source_;
   }
 
-  void ma_source(this auto& self, TMaSourceMethod ma_source) noexcept
+  void ma_source(this BbMethod& self, TMaSourceMethod ma_source) noexcept
   {
     self.ma_source_ = std::move(ma_source);
   }
 
-  auto stddev(this const auto& self) noexcept -> double
+  auto stddev(this const BbMethod& self) noexcept -> double
   {
     return self.stddev_;
   }
 
-  void stddev(this auto& self, double new_stddev) noexcept
+  void stddev(this BbMethod& self, double new_stddev) noexcept
   {
     self.stddev_ = new_stddev;
   }
 
-  auto period(this const auto& self) noexcept -> std::size_t
+  auto period(this const BbMethod& self) noexcept -> std::size_t
   {
     return self.period_;
   }
 
-  void period(this auto& self, std::size_t new_period) noexcept
+  void period(this BbMethod& self, std::size_t new_period) noexcept
   {
     self.period_ = new_period;
   }

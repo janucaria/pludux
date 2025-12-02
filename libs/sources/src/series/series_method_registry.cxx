@@ -133,20 +133,22 @@ public:
   {
   }
 
-  auto methods(this const auto& self) noexcept
+  auto methods(this const SeriesMethodRegistry& self) noexcept
    -> const std::unordered_map<std::string, AnySeriesMethod>&
   {
     return self.methods_;
   }
 
   void
-  methods(this auto& self,
+  methods(this SeriesMethodRegistry& self,
           std::unordered_map<std::string, AnySeriesMethod> new_methods) noexcept
   {
     self.methods_ = std::move(new_methods);
   }
 
-  void set(this auto& self, const std::string& name, AnySeriesMethod method)
+  void set(this SeriesMethodRegistry& self,
+           const std::string& name,
+           AnySeriesMethod method)
   {
     if(self.methods_.contains(name)) {
       self.methods_.at(name) = std::move(method);
@@ -156,7 +158,7 @@ public:
     }
   }
 
-  auto get(this const auto& self, const std::string& name)
+  auto get(this const SeriesMethodRegistry& self, const std::string& name)
    -> std::optional<AnySeriesMethod>
   {
     const auto it = self.methods_.find(name);
@@ -166,12 +168,13 @@ public:
     return it->second;
   }
 
-  auto has(this const auto& self, const std::string& name) -> bool
+  auto has(this const SeriesMethodRegistry& self, const std::string& name)
+   -> bool
   {
     return self.methods_.contains(name);
   }
 
-  auto remove(this auto& self, const std::string& name) noexcept
+  auto remove(this SeriesMethodRegistry& self, const std::string& name) noexcept
    -> std::optional<AnySeriesMethod>
   {
     const auto it = self.methods_.find(name);
@@ -187,7 +190,7 @@ public:
     return method;
   }
 
-  auto rename(this auto& self,
+  auto rename(this SeriesMethodRegistry& self,
               const std::string& old_name,
               const std::string& new_name)
    -> std::expected<void, std::system_error>
@@ -241,13 +244,13 @@ public:
     return std::default_sentinel;
   }
 
-  auto size(this const auto& self) noexcept -> size_t
+  auto size(this const SeriesMethodRegistry& self) noexcept -> size_t
   {
     assert(self.methods_.size() == self.ordered_names_.size());
     return self.methods_.size();
   }
 
-  auto empty(this const auto& self) noexcept -> bool
+  auto empty(this const SeriesMethodRegistry& self) noexcept -> bool
   {
     assert(self.methods_.size() == self.ordered_names_.size());
     return self.methods_.empty();

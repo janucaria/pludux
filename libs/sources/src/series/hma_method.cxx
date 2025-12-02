@@ -40,10 +40,9 @@ public:
 
   auto operator==(const HmaMethod& other) const noexcept -> bool = default;
 
-  auto operator()(this const auto& self,
+  auto operator()(this const HmaMethod& self,
                   AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     const auto wam1 = WmaMethod{self.source_, self.period_ / 2};
     const auto scalar_2_method = ValueMethod{2.0};
@@ -58,31 +57,30 @@ public:
     return hma(asset_snapshot, context);
   }
 
-  auto operator()(this const auto& self,
+  auto operator()(this const HmaMethod& self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     return std::numeric_limits<ResultType>::quiet_NaN();
   }
 
-  auto source(this const auto& self) noexcept -> const TSourceMethod&
+  auto source(this const HmaMethod& self) noexcept -> const TSourceMethod&
   {
     return self.source_;
   }
 
-  void source(this auto& self, TSourceMethod source) noexcept
+  void source(this HmaMethod& self, TSourceMethod source) noexcept
   {
     self.source_ = std::move(source);
   }
 
-  auto period(this const auto& self) noexcept -> std::size_t
+  auto period(this const HmaMethod& self) noexcept -> std::size_t
   {
     return self.period_;
   }
 
-  void period(this auto& self, std::size_t period) noexcept
+  void period(this HmaMethod& self, std::size_t period) noexcept
   {
     self.period_ = period;
   }

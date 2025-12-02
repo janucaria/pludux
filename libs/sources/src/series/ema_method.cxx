@@ -40,10 +40,9 @@ public:
 
   auto operator==(const EmaMethod& other) const noexcept -> bool = default;
 
-  auto operator()(this const auto& self,
+  auto operator()(this const EmaMethod& self,
                   AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     const auto asset_size = asset_snapshot.size();
     const auto alpha = 2.0 / (self.period_ + 1);
@@ -68,31 +67,30 @@ public:
     return result;
   }
 
-  auto operator()(this const auto& self,
+  auto operator()(this const EmaMethod& self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     return std::numeric_limits<ResultType>::quiet_NaN();
   }
 
-  auto source(this const auto& self) noexcept -> const TSourceMethod&
+  auto source(this const EmaMethod& self) noexcept -> const TSourceMethod&
   {
     return self.source_;
   }
 
-  void source(this auto& self, TSourceMethod source) noexcept
+  void source(this EmaMethod& self, TSourceMethod source) noexcept
   {
     self.source_ = std::move(source);
   }
 
-  auto period(this const auto& self) noexcept -> std::size_t
+  auto period(this const EmaMethod& self) noexcept -> std::size_t
   {
     return self.period_;
   }
 
-  void period(this auto& self, std::size_t period) noexcept
+  void period(this EmaMethod& self, std::size_t period) noexcept
   {
     self.period_ = period;
   }

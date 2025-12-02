@@ -21,7 +21,7 @@ public:
   {
   }
 
-  auto operator[](this const auto& self, std::size_t lookback) noexcept
+  auto operator[](this const AssetSeries& self, std::size_t lookback) noexcept
    -> double
   {
     if(lookback >= self.data_view_.size()) {
@@ -32,7 +32,7 @@ public:
     return self.data_view_[value_index];
   }
 
-  auto size(this const auto& self) noexcept -> std::size_t
+  auto size(this const AssetSeries& self) noexcept -> std::size_t
   {
     return self.data_view_.size();
   }

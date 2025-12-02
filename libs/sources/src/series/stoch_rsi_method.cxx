@@ -52,19 +52,17 @@ public:
 
   auto operator==(const StochRsiMethod& other) const noexcept -> bool = default;
 
-  auto operator()(this const auto& self,
+  auto operator()(this const StochRsiMethod& self,
                   AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     return self(asset_snapshot, SeriesOutput::KPercent, context);
   }
 
-  auto operator()(this const auto& self,
+  auto operator()(this const StochRsiMethod& self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output,
-                  MethodContextable auto context) noexcept
-   -> ResultType
+                  MethodContextable auto context) noexcept -> ResultType
   {
     const auto highest_rsi = HighestMethod{self.rsi_, self.k_period_};
     const auto lowest_rsi = LowestMethod{self.rsi_, self.k_period_};
@@ -90,52 +88,54 @@ public:
     }
   }
 
-  auto rsi_source(this const auto& self) noexcept -> const TRsiSourceMethod&
+  auto rsi_source(this const StochRsiMethod& self) noexcept
+   -> const TRsiSourceMethod&
   {
     return self.rsi_.source();
   }
 
-  void rsi_source(this auto& self, TRsiSourceMethod rsi_source) noexcept
+  void rsi_source(this StochRsiMethod& self,
+                  TRsiSourceMethod rsi_source) noexcept
   {
     self.rsi_.source(rsi_source);
   }
 
-  auto rsi_period(this const auto& self) noexcept -> std::size_t
+  auto rsi_period(this const StochRsiMethod& self) noexcept -> std::size_t
   {
     return self.rsi_.period();
   }
 
-  void rsi_period(this auto& self, std::size_t period) noexcept
+  void rsi_period(this StochRsiMethod& self, std::size_t period) noexcept
   {
     self.rsi_.period(period);
   }
 
-  auto k_period(this const auto& self) noexcept -> std::size_t
+  auto k_period(this const StochRsiMethod& self) noexcept -> std::size_t
   {
     return self.k_period_;
   }
 
-  void k_period(this auto& self, std::size_t period) noexcept
+  void k_period(this StochRsiMethod& self, std::size_t period) noexcept
   {
     self.k_period_ = period;
   }
 
-  auto k_smooth(this const auto& self) noexcept -> std::size_t
+  auto k_smooth(this const StochRsiMethod& self) noexcept -> std::size_t
   {
     return self.k_smooth_;
   }
 
-  void k_smooth(this auto& self, std::size_t smooth) noexcept
+  void k_smooth(this StochRsiMethod& self, std::size_t smooth) noexcept
   {
     self.k_smooth_ = smooth;
   }
 
-  auto d_period(this const auto& self) noexcept -> std::size_t
+  auto d_period(this const StochRsiMethod& self) noexcept -> std::size_t
   {
     return self.d_period_;
   }
 
-  void d_period(this auto& self, std::size_t period) noexcept
+  void d_period(this StochRsiMethod& self, std::size_t period) noexcept
   {
     self.d_period_ = period;
   }
