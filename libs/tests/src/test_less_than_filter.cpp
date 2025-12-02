@@ -1,87 +1,88 @@
 #include <gtest/gtest.h>
-#include <pludux/asset_history.hpp>
-#include <pludux/screener.hpp>
-#include <pludux/series.hpp>
 
-using namespace pludux::screener;
+import pludux;
 
-TEST(LessThanFilterTest, TargetLessThanThreshold)
+using namespace pludux;
+
+const auto context = AnySeriesMethodContext{};
+
+TEST(LessThanMethodTest, TargetLessThanThreshold)
 {
   const auto target_value = 40.0;
   const auto threshold_value = 50.0;
   auto target_method = ValueMethod{target_value};
   auto threshold_method = ValueMethod{threshold_value};
-  const auto filter =
-   LessThanFilter{std::move(target_method), std::move(threshold_method)};
-  const auto asset_data = pludux::AssetHistory{{"close", {0}}};
+  const auto condition =
+   LessThanMethod{std::move(target_method), std::move(threshold_method)};
+  const auto asset_data = AssetHistory{{"close", {0}}};
 
-  EXPECT_TRUE(filter(asset_data));
+  EXPECT_TRUE(condition(asset_data, context));
 }
 
-TEST(LessThanFilterTest, TargetEqualToThreshold)
+TEST(LessThanMethodTest, TargetEqualToThreshold)
 {
   const auto target_value = 50.0;
   const auto threshold_value = 50.0;
   auto target_method = ValueMethod{target_value};
   auto threshold_method = ValueMethod{threshold_value};
-  const auto filter =
-   LessThanFilter{std::move(target_method), std::move(threshold_method)};
-  const auto asset_data = pludux::AssetHistory{{"close", {0}}};
+  const auto condition =
+   LessThanMethod{std::move(target_method), std::move(threshold_method)};
+  const auto asset_data = AssetHistory{{"close", {0}}};
 
-  EXPECT_FALSE(filter(asset_data));
+  EXPECT_FALSE(condition(asset_data, context));
 }
 
-TEST(LessThanFilterTest, TargetGreaterThanThreshold)
+TEST(LessThanMethodTest, TargetGreaterThanThreshold)
 {
   const auto target_value = 50.0;
   const auto threshold_value = 20.0;
   auto target_method = ValueMethod{target_value};
   auto threshold_method = ValueMethod{threshold_value};
-  const auto filter =
-   LessThanFilter{std::move(target_method), std::move(threshold_method)};
-  const auto asset_data = pludux::AssetHistory{{"close", {0}}};
+  const auto condition =
+   LessThanMethod{std::move(target_method), std::move(threshold_method)};
+  const auto asset_data = AssetHistory{{"close", {0}}};
 
-  EXPECT_FALSE(filter(asset_data));
+  EXPECT_FALSE(condition(asset_data, context));
 }
 
-TEST(LessThanFilterTest, EqualityOperator)
+TEST(LessThanMethodTest, EqualityOperator)
 {
   const auto target_value1 = 50.0;
   const auto threshold_value1 = 50.0;
   auto target_method1 = ValueMethod{target_value1};
   auto threshold_method1 = ValueMethod{threshold_value1};
-  const auto less_than_filter1 =
-   LessThanFilter{std::move(target_method1), std::move(threshold_method1)};
+  const auto less_than_condition1 =
+   LessThanMethod{std::move(target_method1), std::move(threshold_method1)};
 
   const auto target_value2 = 50.0;
   const auto threshold_value2 = 50.0;
   auto target_method2 = ValueMethod{target_value2};
   auto threshold_method2 = ValueMethod{threshold_value2};
-  const auto less_than_filter2 =
-   LessThanFilter{std::move(target_method2), std::move(threshold_method2)};
+  const auto less_than_condition2 =
+   LessThanMethod{std::move(target_method2), std::move(threshold_method2)};
 
-  EXPECT_TRUE(less_than_filter1 == less_than_filter2);
-  EXPECT_FALSE(less_than_filter1 != less_than_filter2);
-  EXPECT_EQ(less_than_filter1, less_than_filter2);
+  EXPECT_TRUE(less_than_condition1 == less_than_condition2);
+  EXPECT_FALSE(less_than_condition1 != less_than_condition2);
+  EXPECT_EQ(less_than_condition1, less_than_condition2);
 }
 
-TEST(LessThanFilterTest, NotEqualOperator)
+TEST(LessThanMethodTest, NotEqualOperator)
 {
   const auto target_value1 = 50.0;
   const auto threshold_value1 = 50.0;
   auto target_method1 = ValueMethod{target_value1};
   auto threshold_method1 = ValueMethod{threshold_value1};
-  const auto less_than_filter1 =
-   LessThanFilter{std::move(target_method1), std::move(threshold_method1)};
+  const auto less_than_condition1 =
+   LessThanMethod{std::move(target_method1), std::move(threshold_method1)};
 
   const auto target_value2 = 60.0;
   const auto threshold_value2 = 50.0;
   auto target_method2 = ValueMethod{target_value2};
   auto threshold_method2 = ValueMethod{threshold_value2};
-  const auto less_than_filter2 =
-   LessThanFilter{std::move(target_method2), std::move(threshold_method2)};
+  const auto less_than_condition2 =
+   LessThanMethod{std::move(target_method2), std::move(threshold_method2)};
 
-  EXPECT_FALSE(less_than_filter1 == less_than_filter2);
-  EXPECT_TRUE(less_than_filter1 != less_than_filter2);
-  EXPECT_NE(less_than_filter1, less_than_filter2);
+  EXPECT_FALSE(less_than_condition1 == less_than_condition2);
+  EXPECT_TRUE(less_than_condition1 != less_than_condition2);
+  EXPECT_NE(less_than_condition1, less_than_condition2);
 }

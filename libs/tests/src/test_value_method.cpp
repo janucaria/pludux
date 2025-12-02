@@ -1,29 +1,38 @@
 #include <gtest/gtest.h>
-#include <pludux/asset_history.hpp>
-#include <pludux/screener/value_method.hpp>
-#include <pludux/series.hpp>
 
-using namespace pludux::screener;
+#include <cmath>
+#include <variant>
+
+import pludux;
+
+using namespace pludux;
+
+const auto context = std::monostate{};
 
 TEST(ValueMethodTest, ConstructorInitialization)
 {
   const auto value = 42.0;
   const auto value_method = ValueMethod{value};
-  const auto asset_data = pludux::AssetHistory{{"close", {0}}};
+  const auto asset_data = AssetHistory{{"close", {0}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_EQ(value_method(asset_data)[0], value);
+  EXPECT_EQ(value_method(asset_snapshot[0], context), value);
+  EXPECT_EQ(value_method(asset_snapshot[1], context), value);
+  EXPECT_EQ(value_method(asset_snapshot[2], context), value);
+  EXPECT_EQ(value_method(asset_snapshot[3], context), value);
+  EXPECT_EQ(value_method(asset_snapshot[4], context), value);
 }
 
 TEST(ValueMethodTest, RunAllMethod)
 {
   const auto value = 42.0;
   const auto value_method = ValueMethod{value};
-  const auto asset_data = pludux::AssetHistory{{"close", {0}}};
+  const auto asset_data = AssetHistory{{"close", {0}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  auto series = value_method(asset_data);
-  ASSERT_EQ(series.size(), asset_data.size());
-  for(std::size_t i = 0; i < series.size(); ++i) {
-    EXPECT_EQ(series[i], value);
+  for(std::size_t i = 0; i < asset_snapshot.size(); ++i) {
+    auto result = value_method(asset_snapshot[i], context);
+    EXPECT_EQ(result, value);
   }
 }
 
@@ -31,9 +40,9 @@ TEST(ValueMethodTest, RunOneMethod)
 {
   const auto value = 42.0;
   const auto value_method = ValueMethod{value};
-  const auto asset_data = pludux::AssetHistory{{"close", {0}}};
+  const auto asset_data = AssetHistory{{"close", {0}}};
 
-  EXPECT_EQ(value_method(asset_data)[0], value);
+  EXPECT_EQ((value_method(asset_data, context)), value);
 }
 
 TEST(ValueMethodTest, EqualityOperator)

@@ -1,101 +1,106 @@
 #include <gtest/gtest.h>
-#include <pludux/asset_history.hpp>
-#include <pludux/screener/arithmetic_method.hpp>
-#include <pludux/screener/bb_method.hpp>
-#include <pludux/screener/data_method.hpp>
-#include <pludux/screener/output_by_name_method.hpp>
-#include <pludux/series.hpp>
+
+#include <cmath>
+#include <variant>
+
+import pludux;
 
 using namespace pludux;
-using namespace pludux::screener;
+
+TEST(BbMethodTest, ConstructorInitialization)
+{
+  {
+    auto bb_method = BbMethod{};
+
+    EXPECT_EQ(bb_method.ma_type(), BbMaType::Sma);
+    EXPECT_EQ(bb_method.ma_source(), CloseMethod{});
+    EXPECT_EQ(bb_method.period(), 20);
+    EXPECT_EQ(bb_method.stddev(), 1.5);
+  }
+  {
+    auto bb_method = BbMethod{10, 2.0};
+
+    EXPECT_EQ(bb_method.ma_type(), BbMaType::Sma);
+    EXPECT_EQ(bb_method.ma_source(), CloseMethod{});
+    EXPECT_EQ(bb_method.period(), 10);
+    EXPECT_EQ(bb_method.stddev(), 2.0);
+  }
+  {
+    const auto bb_method =
+     BbMethod{BbMaType::Ema, DataMethod{"close"}, 10, 2.5};
+
+    EXPECT_EQ(bb_method.ma_type(), BbMaType::Ema);
+    EXPECT_EQ(bb_method.ma_source(), DataMethod{"close"});
+    EXPECT_EQ(bb_method.period(), 10);
+    EXPECT_EQ(bb_method.stddev(), 2.5);
+  }
+}
 
 TEST(BbMethodTest, RunAllMethod)
 {
-  const auto data_method = DataMethod{"close"};
-  const auto period = 5;
-  const auto std_dev = 2.0;
-  const auto asset_data = pludux::AssetHistory{
-   {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  const auto asset_data = AssetHistory{
+   {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
+  const auto context = std::monostate{};
 
-  auto bb_method =
-   BbMethod{BbMethod::MaType::ema, data_method, period, std_dev};
-  auto bb_series = OutputByNameSeries{
-   BbSeries{EmaSeries{data_method(asset_data), period}, std_dev},
-   OutputName::MiddleBand};
+  const auto middle_band = BbMethod{5, 2.0};
+  EXPECT_DOUBLE_EQ(middle_band(asset_snapshot[0], context), 862);
+  EXPECT_DOUBLE_EQ(middle_band(asset_snapshot[1], context), 865);
+  EXPECT_DOUBLE_EQ(middle_band(asset_snapshot[2], context), 860);
+  EXPECT_DOUBLE_EQ(middle_band(asset_snapshot[3], context), 848);
+  EXPECT_DOUBLE_EQ(middle_band(asset_snapshot[4], context), 842);
+  EXPECT_DOUBLE_EQ(middle_band(asset_snapshot[5], context), 842);
+  EXPECT_TRUE(std::isnan(middle_band(asset_snapshot[6], context)));
+  EXPECT_TRUE(std::isnan(middle_band(asset_snapshot[7], context)));
+  EXPECT_TRUE(std::isnan(middle_band(asset_snapshot[8], context)));
+  EXPECT_TRUE(std::isnan(middle_band(asset_snapshot[9], context)));
 
-  const auto bb_middle = bb_method(asset_data);
-  const auto& expected_middle = bb_series;
-  ASSERT_EQ(bb_middle.size(), expected_middle.size());
-  EXPECT_DOUBLE_EQ(bb_middle[0], expected_middle[0]);
-  EXPECT_DOUBLE_EQ(bb_middle[1], expected_middle[1]);
-  EXPECT_DOUBLE_EQ(bb_middle[2], expected_middle[2]);
-  EXPECT_DOUBLE_EQ(bb_middle[3], expected_middle[3]);
-  EXPECT_DOUBLE_EQ(bb_middle[4], expected_middle[4]);
-  EXPECT_DOUBLE_EQ(bb_middle[5], 842);
-  EXPECT_TRUE(std::isnan(bb_middle[6]) && std::isnan(expected_middle[6]));
-  EXPECT_TRUE(std::isnan(bb_middle[7]) && std::isnan(expected_middle[7]));
-  EXPECT_TRUE(std::isnan(bb_middle[8]) && std::isnan(expected_middle[8]));
-  EXPECT_TRUE(std::isnan(bb_middle[9]) && std::isnan(expected_middle[9]));
+  const auto upper_band =
+   SelectOutputMethod{middle_band, SeriesOutput::UpperBand};
+  EXPECT_DOUBLE_EQ(upper_band(asset_snapshot[0], context), 875.56465996625059);
+  EXPECT_DOUBLE_EQ(upper_band(asset_snapshot[1], context), 877.64911064067348);
+  EXPECT_DOUBLE_EQ(upper_band(asset_snapshot[2], context), 887.5680975041804);
+  EXPECT_DOUBLE_EQ(upper_band(asset_snapshot[3], context), 903.35341001239215);
+  EXPECT_DOUBLE_EQ(upper_band(asset_snapshot[4], context), 897.35341001239215);
+  EXPECT_DOUBLE_EQ(upper_band(asset_snapshot[5], context), 897.35341001239215);
+  EXPECT_TRUE(std::isnan(upper_band(asset_snapshot[6], context)));
+  EXPECT_TRUE(std::isnan(upper_band(asset_snapshot[7], context)));
+  EXPECT_TRUE(std::isnan(upper_band(asset_snapshot[8], context)));
+  EXPECT_TRUE(std::isnan(upper_band(asset_snapshot[9], context)));
 
-  bb_series.output_name(OutputName::UpperBand);
-  const auto bb_upper =
-   OutputByNameMethod{bb_method, OutputName::UpperBand}(asset_data);
-  const auto& expected_upper = bb_series;
-  ASSERT_EQ(bb_upper.size(), expected_upper.size());
-  EXPECT_DOUBLE_EQ(bb_upper[0], expected_upper[0]);
-  EXPECT_DOUBLE_EQ(bb_upper[1], expected_upper[1]);
-  EXPECT_DOUBLE_EQ(bb_upper[2], expected_upper[2]);
-  EXPECT_DOUBLE_EQ(bb_upper[3], expected_upper[3]);
-  EXPECT_DOUBLE_EQ(bb_upper[4], expected_upper[4]);
-  EXPECT_DOUBLE_EQ(bb_upper[5], expected_upper[5]);
-  EXPECT_TRUE(std::isnan(bb_upper[6]) && std::isnan(expected_upper[6]));
-  EXPECT_TRUE(std::isnan(bb_upper[7]) && std::isnan(expected_upper[7]));
-  EXPECT_TRUE(std::isnan(bb_upper[8]) && std::isnan(expected_upper[8]));
-  EXPECT_TRUE(std::isnan(bb_upper[9]) && std::isnan(expected_upper[9]));
-
-  bb_series.output_name(OutputName::LowerBand);
-  const auto bb_lower =
-   OutputByNameMethod{bb_method, OutputName::LowerBand}(asset_data);
-  const auto& expected_lower = bb_series;
-  ASSERT_EQ(bb_lower.size(), expected_lower.size());
-  EXPECT_DOUBLE_EQ(bb_lower[0], expected_lower[0]);
-  EXPECT_DOUBLE_EQ(bb_lower[1], expected_lower[1]);
-  EXPECT_DOUBLE_EQ(bb_lower[2], expected_lower[2]);
-  EXPECT_DOUBLE_EQ(bb_lower[3], expected_lower[3]);
-  EXPECT_DOUBLE_EQ(bb_lower[4], expected_lower[4]);
-  EXPECT_DOUBLE_EQ(bb_lower[5], expected_lower[5]);
-  EXPECT_TRUE(std::isnan(bb_lower[6]) && std::isnan(expected_lower[6]));
-  EXPECT_TRUE(std::isnan(bb_lower[7]) && std::isnan(expected_lower[7]));
-  EXPECT_TRUE(std::isnan(bb_lower[8]) && std::isnan(expected_lower[8]));
-  EXPECT_TRUE(std::isnan(bb_lower[9]) && std::isnan(expected_lower[9]));
+  const auto lower_band =
+   SelectOutputMethod{middle_band, SeriesOutput::LowerBand};
+  EXPECT_DOUBLE_EQ(lower_band(asset_snapshot[0], context), 848.43534003374941);
+  EXPECT_DOUBLE_EQ(lower_band(asset_snapshot[1], context), 852.35088935932652);
+  EXPECT_DOUBLE_EQ(lower_band(asset_snapshot[2], context), 832.4319024958196);
+  EXPECT_DOUBLE_EQ(lower_band(asset_snapshot[3], context), 792.64658998760785);
+  EXPECT_DOUBLE_EQ(lower_band(asset_snapshot[4], context), 786.64658998760785);
+  EXPECT_DOUBLE_EQ(lower_band(asset_snapshot[5], context), 786.64658998760785);
+  EXPECT_TRUE(std::isnan(lower_band(asset_snapshot[6], context)));
+  EXPECT_TRUE(std::isnan(lower_band(asset_snapshot[7], context)));
+  EXPECT_TRUE(std::isnan(lower_band(asset_snapshot[8], context)));
+  EXPECT_TRUE(std::isnan(lower_band(asset_snapshot[9], context)));
 }
 
 TEST(BbMethodTest, EqualityOperator)
 {
-  const auto input_method1 = DataMethod{"close"};
-  const auto bb_method1 =
-   BbMethod{BbMethod::MaType::sma, input_method1, 20, 2.0};
-
-  const auto input_method2 = DataMethod{"close"};
-  const auto bb_method2 =
-   BbMethod{BbMethod::MaType::sma, input_method2, 20, 2.0};
+  const auto bb_method1 = BbMethod{};
+  const auto bb_method2 = BbMethod{};
 
   EXPECT_TRUE(bb_method1 == bb_method2);
-  EXPECT_FALSE(bb_method1 != bb_method2);
   EXPECT_EQ(bb_method1, bb_method2);
 }
 
 TEST(BbMethodTest, NotEqualOperator)
 {
-  const auto input_method1 = DataMethod{"close"};
-  const auto bb_method1 =
-   BbMethod{BbMethod::MaType::sma, input_method1, 20, 2.0};
-
-  const auto input_method2 = DataMethod{"open"};
-  const auto bb_method2 =
-   BbMethod{BbMethod::MaType::ema, input_method2, 20, 2.0};
+  const auto bb_method1 = BbMethod{BbMaType::Sma, DataMethod{"close"}, 10, 2.0};
+  const auto bb_method2 = BbMethod{BbMaType::Sma, DataMethod{"close"}, 10, 1.0};
+  const auto bb_method3 = BbMethod{BbMaType::Sma, DataMethod{"open"}, 10, 1.0};
 
   EXPECT_TRUE(bb_method1 != bb_method2);
-  EXPECT_FALSE(bb_method1 == bb_method2);
   EXPECT_NE(bb_method1, bb_method2);
+  EXPECT_TRUE(bb_method1 != bb_method3);
+  EXPECT_NE(bb_method1, bb_method3);
+  EXPECT_TRUE(bb_method2 != bb_method3);
+  EXPECT_NE(bb_method2, bb_method3);
 }

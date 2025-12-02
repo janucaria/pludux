@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -10,8 +11,8 @@
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_wgpu.h>
-
 #include <implot.h>
+#include <implot_internal.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -23,11 +24,22 @@
 
 #include <glfw3webgpu.h>
 
-#include "./application.hpp"
+#include <cereal/cereal.hpp>
+#include <jsoncons/json.hpp>
+#include <rapidcsv.h>
+
+#include <cereal/archives/json.hpp>
+#include <cereal/types/deque.hpp>
+#include <cereal/types/memory.hpp>
+#include <cereal/types/optional.hpp>
+#include <cereal/types/queue.hpp>
+#include <cereal/types/string.hpp>
+#include <cereal/types/unordered_map.hpp>
+#include <cereal/types/vector.hpp>
+
+import pludux.apps.backtest;
 
 #ifdef __EMSCRIPTEN__
-
-#include "./serialization.hpp"
 
 extern "C" {
 
@@ -60,7 +72,7 @@ EMSCRIPTEN_KEEPALIVE void
 pludux_apps_backtest_load_csv_asset(char* name, char* data, void* app_state_ptr)
 {
   using pludux::apps::AppState;
-  using pludux::apps::LoadAssetCsvStrAction;
+  using pludux::apps::LoadAssetCsvAction;
 
   auto name_str = std::string(name);
   std::free(name);
@@ -68,17 +80,17 @@ pludux_apps_backtest_load_csv_asset(char* name, char* data, void* app_state_ptr)
   auto data_str = std::string(data);
   std::free(data);
 
-  auto app_state = *reinterpret_cast<AppState*>(app_state_ptr);
+  auto action = LoadAssetCsvAction{std::move(name_str), std::move(data_str)};
 
-  app_state.emplace_action<LoadAssetCsvStrAction>(std::move(name_str),
-                                                  std::move(data_str));
+  auto app_state = *reinterpret_cast<AppState*>(app_state_ptr);
+  app_state.push_action(std::move(action));
 }
 
 EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_change_strategy_json_str(
  char* name, char* data, void* app_state_ptr)
 {
   using pludux::apps::AppState;
-  using pludux::apps::ChangeStrategyJsonStrAction;
+  using pludux::apps::ChangeStrategyJsonAction;
 
   auto name_str = std::string(name);
   std::free(name);
@@ -86,23 +98,26 @@ EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_change_strategy_json_str(
   auto data_str = std::string(data);
   std::free(data);
 
-  auto app_state = *reinterpret_cast<AppState*>(app_state_ptr);
+  auto action =
+   ChangeStrategyJsonAction{std::move(name_str), std::move(data_str)};
 
-  app_state.emplace_action<ChangeStrategyJsonStrAction>(std::move(name_str),
-                                                        std::move(data_str));
+  auto app_state = *reinterpret_cast<AppState*>(app_state_ptr);
+  app_state.push_action(std::move(action));
 }
 
 EMSCRIPTEN_KEEPALIVE void
 pludux_apps_backtest_load_backtests_setup(char* data, void* app_state_ptr)
 {
   using pludux::apps::AppState;
-  using pludux::apps::LoadBacktestsSetupStingAction;
+  using pludux::apps::LoadBacktestsSetupAction;
 
   auto data_str = std::string(data);
   std::free(data);
 
+  auto action = LoadBacktestsSetupAction{std::move(data_str)};
+
   auto app_state = *reinterpret_cast<AppState*>(app_state_ptr);
-  app_state.emplace_action<LoadBacktestsSetupStingAction>(std::move(data_str));
+  app_state.push_action(std::move(action));
 }
 }
 

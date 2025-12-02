@@ -13,7 +13,7 @@
       "multiplier": 2
     },
     "kc_upper": {
-      "method": "OUTPUT_BY_NAME",
+      "method": "SELECT_OUTPUT",
       "name": "upper-band",
       "source": {
         "method": "REFERENCE",
@@ -21,7 +21,7 @@
       }
     },
     "kc_lower": {
-      "method": "OUTPUT_BY_NAME",
+      "method": "SELECT_OUTPUT",
       "name": "lower-band",
       "source": {
         "method": "REFERENCE",

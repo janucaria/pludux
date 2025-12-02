@@ -1,20 +1,46 @@
 #include <gtest/gtest.h>
-#include <pludux/asset_history.hpp>
-#include <pludux/screener/data_method.hpp>
-#include <pludux/screener/macd_method.hpp>
-#include <pludux/screener/output_by_name_method.hpp>
-#include <pludux/series.hpp>
+
+#include <cmath>
+#include <variant>
+
+import pludux;
 
 using namespace pludux;
-using namespace pludux::screener;
+
+TEST(MacdMethodTest, ConstructorInitialization)
+{
+  {
+    auto macd_method = MacdMethod{};
+
+    EXPECT_EQ(macd_method.fast_period(), 12);
+    EXPECT_EQ(macd_method.slow_period(), 26);
+    EXPECT_EQ(macd_method.signal_period(), 9);
+    EXPECT_EQ(macd_method.source(), CloseMethod{});
+  }
+  {
+    auto macd_method = MacdMethod{5, 10, 3};
+
+    EXPECT_EQ(macd_method.fast_period(), 5);
+    EXPECT_EQ(macd_method.slow_period(), 10);
+    EXPECT_EQ(macd_method.signal_period(), 3);
+    EXPECT_EQ(macd_method.source(), CloseMethod{});
+  }
+  {
+    const auto macd_method = MacdMethod{OpenMethod{}, 5, 10, 3};
+
+    EXPECT_EQ(macd_method.fast_period(), 5);
+    EXPECT_EQ(macd_method.slow_period(), 10);
+    EXPECT_EQ(macd_method.signal_period(), 3);
+    EXPECT_EQ(macd_method.source(), OpenMethod{});
+  }
+}
 
 TEST(MacdMethodTest, RunAllMethod)
 {
-  const auto data_method = DataMethod{"close"};
   const auto fast_period = 5;
   const auto slow_period = 10;
   const auto signal_period = 3;
-  const auto asset_data = pludux::AssetHistory{{"close",
+  const auto asset_data = AssetHistory{{"Close",
                                                 {790,
                                                  810,
                                                  825,
@@ -30,106 +56,87 @@ TEST(MacdMethodTest, RunAllMethod)
                                                  800,
                                                  830,
                                                  875}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
+  const auto context = std::monostate{};
 
-  auto macd_method =
-   MacdMethod{data_method, fast_period, slow_period, signal_period};
-  auto macd_series = OutputByNameSeries{
-   MacdSeries{data_method(asset_data), fast_period, slow_period, signal_period},
-   OutputName::MacdLine};
+  auto macd_line =
+   MacdMethod{CloseMethod{}, fast_period, slow_period, signal_period};
 
-  const auto macd_lines = macd_method(asset_data);
-  ASSERT_EQ(macd_lines.size(), macd_series.size());
-  EXPECT_DOUBLE_EQ(macd_lines[0], macd_series[0]);
-  EXPECT_DOUBLE_EQ(macd_lines[1], macd_series[1]);
-  EXPECT_DOUBLE_EQ(macd_lines[2], macd_series[2]);
-  EXPECT_DOUBLE_EQ(macd_lines[3], macd_series[3]);
-  EXPECT_DOUBLE_EQ(macd_lines[4], macd_series[4]);
-  EXPECT_DOUBLE_EQ(macd_lines[5], macd_series[5]);
-  EXPECT_TRUE(std::isnan(macd_lines[10]) && macd_series[10]);
-  EXPECT_TRUE(std::isnan(macd_lines[11]) && macd_series[11]);
-  EXPECT_TRUE(std::isnan(macd_lines[12]) && macd_series[12]);
-  EXPECT_TRUE(std::isnan(macd_lines[13]) && macd_series[13]);
-  EXPECT_TRUE(std::isnan(macd_lines[14]) && macd_series[14]);
-  EXPECT_TRUE(std::isnan(macd_lines[6]) && macd_series[6]);
-  EXPECT_TRUE(std::isnan(macd_lines[7]) && macd_series[7]);
-  EXPECT_TRUE(std::isnan(macd_lines[8]) && macd_series[8]);
-  EXPECT_TRUE(std::isnan(macd_lines[9]) && macd_series[9]);
+  EXPECT_DOUBLE_EQ(macd_line(asset_snapshot[0], context), -12.656409004137572);
+  EXPECT_DOUBLE_EQ(macd_line(asset_snapshot[1], context), -7.6929729699789959);
+  EXPECT_DOUBLE_EQ(macd_line(asset_snapshot[2], context), -3.2941210218015158);
+  EXPECT_DOUBLE_EQ(macd_line(asset_snapshot[3], context), 0.969787663390548);
+  EXPECT_DOUBLE_EQ(macd_line(asset_snapshot[4], context), 4.5125327347551547);
+  EXPECT_DOUBLE_EQ(macd_line(asset_snapshot[5], context), 4.9506172839506917);
+  EXPECT_TRUE(std::isnan(macd_line(asset_snapshot[10], context)));
+  EXPECT_TRUE(std::isnan(macd_line(asset_snapshot[11], context)));
+  EXPECT_TRUE(std::isnan(macd_line(asset_snapshot[12], context)));
+  EXPECT_TRUE(std::isnan(macd_line(asset_snapshot[13], context)));
+  EXPECT_TRUE(std::isnan(macd_line(asset_snapshot[14], context)));
+  EXPECT_TRUE(std::isnan(macd_line(asset_snapshot[6], context)));
+  EXPECT_TRUE(std::isnan(macd_line(asset_snapshot[7], context)));
+  EXPECT_TRUE(std::isnan(macd_line(asset_snapshot[8], context)));
+  EXPECT_TRUE(std::isnan(macd_line(asset_snapshot[9], context)));
 
-  macd_series.output_name(OutputName::SignalLine);
-  const auto signal_lines =
-   OutputByNameMethod{macd_method, OutputName::SignalLine}(asset_data);
-  EXPECT_DOUBLE_EQ(signal_lines[0], macd_series[0]);
-  EXPECT_DOUBLE_EQ(signal_lines[1], macd_series[1]);
-  EXPECT_DOUBLE_EQ(signal_lines[2], macd_series[2]);
-  EXPECT_DOUBLE_EQ(signal_lines[3], macd_series[3]);
-  EXPECT_TRUE(std::isnan(signal_lines[10]) && macd_series[10]);
-  EXPECT_TRUE(std::isnan(signal_lines[11]) && macd_series[11]);
-  EXPECT_TRUE(std::isnan(signal_lines[12]) && macd_series[12]);
-  EXPECT_TRUE(std::isnan(signal_lines[13]) && macd_series[13]);
-  EXPECT_TRUE(std::isnan(signal_lines[14]) && macd_series[14]);
-  EXPECT_TRUE(std::isnan(signal_lines[4]) && macd_series[4]);
-  EXPECT_TRUE(std::isnan(signal_lines[5]) && macd_series[5]);
-  EXPECT_TRUE(std::isnan(signal_lines[6]) && macd_series[6]);
-  EXPECT_TRUE(std::isnan(signal_lines[7]) && macd_series[7]);
-  EXPECT_TRUE(std::isnan(signal_lines[8]) && macd_series[8]);
-  EXPECT_TRUE(std::isnan(signal_lines[9]) && macd_series[9]);
+  const auto signal_line =
+   SelectOutputMethod{macd_line, SeriesOutput::SignalLine};
+  EXPECT_DOUBLE_EQ(signal_line(asset_snapshot[0], context),
+                   -8.2285071355347075);
+  EXPECT_DOUBLE_EQ(signal_line(asset_snapshot[1], context),
+                   -3.8006052669318442);
+  EXPECT_DOUBLE_EQ(signal_line(asset_snapshot[2], context),
+                   0.091762436115307766);
+  EXPECT_DOUBLE_EQ(signal_line(asset_snapshot[3], context), 3.4776458940321313);
+  EXPECT_TRUE(std::isnan(signal_line(asset_snapshot[10], context)));
+  EXPECT_TRUE(std::isnan(signal_line(asset_snapshot[11], context)));
+  EXPECT_TRUE(std::isnan(signal_line(asset_snapshot[12], context)));
+  EXPECT_TRUE(std::isnan(signal_line(asset_snapshot[13], context)));
+  EXPECT_TRUE(std::isnan(signal_line(asset_snapshot[14], context)));
+  EXPECT_TRUE(std::isnan(signal_line(asset_snapshot[4], context)));
+  EXPECT_TRUE(std::isnan(signal_line(asset_snapshot[5], context)));
+  EXPECT_TRUE(std::isnan(signal_line(asset_snapshot[6], context)));
+  EXPECT_TRUE(std::isnan(signal_line(asset_snapshot[7], context)));
+  EXPECT_TRUE(std::isnan(signal_line(asset_snapshot[8], context)));
+  EXPECT_TRUE(std::isnan(signal_line(asset_snapshot[9], context)));
 
-  macd_series.output_name(OutputName::MacdHistogram);
   const auto histograms =
-   OutputByNameMethod{macd_method, OutputName::MacdHistogram}(asset_data);
-  EXPECT_DOUBLE_EQ(histograms[0], macd_series[0]);
-  EXPECT_DOUBLE_EQ(histograms[1], macd_series[1]);
-  EXPECT_DOUBLE_EQ(histograms[2], macd_series[2]);
-  EXPECT_DOUBLE_EQ(histograms[3], macd_series[3]);
-  EXPECT_TRUE(std::isnan(histograms[10]) && macd_series[10]);
-  EXPECT_TRUE(std::isnan(histograms[11]) && macd_series[11]);
-  EXPECT_TRUE(std::isnan(histograms[12]) && macd_series[12]);
-  EXPECT_TRUE(std::isnan(histograms[13]) && macd_series[13]);
-  EXPECT_TRUE(std::isnan(histograms[14]) && macd_series[14]);
-  EXPECT_TRUE(std::isnan(histograms[4]) && macd_series[4]);
-  EXPECT_TRUE(std::isnan(histograms[5]) && macd_series[5]);
-  EXPECT_TRUE(std::isnan(histograms[6]) && macd_series[6]);
-  EXPECT_TRUE(std::isnan(histograms[7]) && macd_series[7]);
-  EXPECT_TRUE(std::isnan(histograms[8]) && macd_series[8]);
-  EXPECT_TRUE(std::isnan(histograms[9]) && macd_series[9]);
+   SelectOutputMethod{macd_line, SeriesOutput::Histogram};
+  EXPECT_DOUBLE_EQ(histograms(asset_snapshot[0], context), -4.4279018686028646);
+  EXPECT_DOUBLE_EQ(histograms(asset_snapshot[1], context), -3.8923677030471517);
+  EXPECT_DOUBLE_EQ(histograms(asset_snapshot[2], context), -3.3858834579168233);
+  EXPECT_DOUBLE_EQ(histograms(asset_snapshot[3], context), -2.5078582306415833);
+  EXPECT_TRUE(std::isnan(histograms(asset_snapshot[10], context)));
+  EXPECT_TRUE(std::isnan(histograms(asset_snapshot[11], context)));
+  EXPECT_TRUE(std::isnan(histograms(asset_snapshot[12], context)));
+  EXPECT_TRUE(std::isnan(histograms(asset_snapshot[13], context)));
+  EXPECT_TRUE(std::isnan(histograms(asset_snapshot[14], context)));
+  EXPECT_TRUE(std::isnan(histograms(asset_snapshot[4], context)));
+  EXPECT_TRUE(std::isnan(histograms(asset_snapshot[5], context)));
+  EXPECT_TRUE(std::isnan(histograms(asset_snapshot[6], context)));
+  EXPECT_TRUE(std::isnan(histograms(asset_snapshot[7], context)));
+  EXPECT_TRUE(std::isnan(histograms(asset_snapshot[8], context)));
+  EXPECT_TRUE(std::isnan(histograms(asset_snapshot[9], context)));
 }
 
 TEST(MacdMethodTest, EqualityOperator)
 {
-  const auto data_method1 = DataMethod{"close"};
-  const auto fast_period1 = 5;
-  const auto slow_period1 = 10;
-  const auto signal_period1 = 3;
-  const auto macd_method1 =
-   MacdMethod{data_method1, fast_period1, slow_period1, signal_period1};
-
-  const auto data_method2 = DataMethod{"close"};
-  const auto fast_period2 = 5;
-  const auto slow_period2 = 10;
-  const auto signal_period2 = 3;
-  const auto macd_method2 =
-   MacdMethod{data_method2, fast_period2, slow_period2, signal_period2};
+  const auto macd_method1 = MacdMethod{CloseMethod{}, 5, 10, 3};
+  const auto macd_method2 = MacdMethod{CloseMethod{}, 5, 10, 3};
 
   EXPECT_TRUE(macd_method1 == macd_method2);
-  EXPECT_FALSE(macd_method1 != macd_method2);
+  EXPECT_EQ(macd_method1, macd_method2);
 }
 
 TEST(MacdMethodTest, NotEqualOperator)
 {
-  const auto data_method1 = DataMethod{"close"};
-  const auto fast_period1 = 5;
-  const auto slow_period1 = 10;
-  const auto signal_period1 = 3;
-  const auto macd_method1 =
-   MacdMethod{data_method1, fast_period1, slow_period1, signal_period1};
-
-  const auto data_method2 = DataMethod{"open"};
-  const auto fast_period2 = 5;
-  const auto slow_period2 = 10;
-  const auto signal_period2 = 3;
-  const auto macd_method2 =
-   MacdMethod{data_method2, fast_period2, slow_period2, signal_period2};
+  const auto macd_method1 = MacdMethod{DataMethod{"close"}, 5, 10, 3};
+  const auto macd_method2 = MacdMethod{DataMethod{"open"}, 5, 10, 3};
+  const auto macd_method3 = MacdMethod{DataMethod{"open"}, 5, 10, 5};
 
   EXPECT_TRUE(macd_method1 != macd_method2);
-  EXPECT_FALSE(macd_method1 == macd_method2);
+  EXPECT_NE(macd_method1, macd_method2);
+  EXPECT_TRUE(macd_method1 != macd_method3);
+  EXPECT_NE(macd_method1, macd_method3);
+  EXPECT_TRUE(macd_method2 != macd_method3);
+  EXPECT_NE(macd_method2, macd_method3);
 }

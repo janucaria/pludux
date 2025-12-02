@@ -1,8 +1,8 @@
+#include <cmath>
+
 #include <gtest/gtest.h>
-#include <limits>
-#include <pludux/asset_history.hpp>
-#include <string>
-#include <vector>
+
+import pludux;
 
 using namespace pludux;
 
@@ -53,32 +53,32 @@ TEST(AssetHistoryTest, GetterMethods)
                                     {"Volume", {100, 200, 300}}};
 
   // Default keys
-  EXPECT_EQ(asset_history.get_datetimes()[0], 1);
-  EXPECT_EQ(asset_history.get_opens()[1], 20);
-  EXPECT_EQ(asset_history.get_highs()[2], 35);
-  EXPECT_EQ(asset_history.get_lows()[0], 5);
-  EXPECT_EQ(asset_history.get_closes()[1], 22);
-  EXPECT_EQ(asset_history.get_volumes()[2], 300);
+  EXPECT_EQ(asset_history.datetime_series()[0], 1);
+  EXPECT_EQ(asset_history.open_series()[1], 20);
+  EXPECT_EQ(asset_history.high_series()[2], 35);
+  EXPECT_EQ(asset_history.low_series()[0], 5);
+  EXPECT_EQ(asset_history.close_series()[1], 22);
+  EXPECT_EQ(asset_history.volume_series()[2], 300);
 
   // Change keys and test
-  asset_history.datetime_key("High");
-  EXPECT_EQ(asset_history.get_datetimes()[0], 15);
-  asset_history.open_key("Low");
-  EXPECT_EQ(asset_history.get_opens()[1], 15);
-  asset_history.high_key("Volume");
-  EXPECT_EQ(asset_history.get_highs()[2], 300);
-  asset_history.low_key("Datetime");
-  EXPECT_EQ(asset_history.get_lows()[1], 2);
-  asset_history.close_key("Open");
-  EXPECT_EQ(asset_history.get_closes()[2], 30);
-  asset_history.volume_key("Close");
-  EXPECT_EQ(asset_history.get_volumes()[0], 12);
+  asset_history.datetime_field("High");
+  EXPECT_EQ(asset_history.datetime_series()[0], 15);
+  asset_history.open_field("Low");
+  EXPECT_EQ(asset_history.open_series()[1], 15);
+  asset_history.high_field("Volume");
+  EXPECT_EQ(asset_history.high_series()[2], 300);
+  asset_history.low_field("Datetime");
+  EXPECT_EQ(asset_history.low_series()[1], 2);
+  asset_history.close_field("Open");
+  EXPECT_EQ(asset_history.close_series()[2], 30);
+  asset_history.volume_field("Close");
+  EXPECT_EQ(asset_history.volume_series()[0], 12);
 }
 
 TEST(AssetHistoryTest, HistoryDataMethod)
 {
   auto asset_history = AssetHistory{{"close", {1, 2, 3}}, {"open", {4, 5, 6}}};
-  const auto& data = asset_history.history_data();
+  const auto& data = asset_history.field_data();
   EXPECT_EQ(data.size(), 2);
   EXPECT_TRUE(data.find("close") != data.end());
   EXPECT_TRUE(data.find("open") != data.end());
@@ -89,18 +89,18 @@ TEST(AssetHistoryTest, HistoryDataMethod)
 TEST(AssetHistoryTest, KeySettersAndGetters)
 {
   AssetHistory ah{{"foo", {1, 2, 3}}};
-  ah.datetime_key("foo");
-  EXPECT_EQ(ah.datetime_key(), "foo");
-  ah.open_key("foo");
-  EXPECT_EQ(ah.open_key(), "foo");
-  ah.high_key("foo");
-  EXPECT_EQ(ah.high_key(), "foo");
-  ah.low_key("foo");
-  EXPECT_EQ(ah.low_key(), "foo");
-  ah.close_key("foo");
-  EXPECT_EQ(ah.close_key(), "foo");
-  ah.volume_key("foo");
-  EXPECT_EQ(ah.volume_key(), "foo");
+  ah.datetime_field("foo");
+  EXPECT_EQ(ah.datetime_field(), "foo");
+  ah.open_field("foo");
+  EXPECT_EQ(ah.open_field(), "foo");
+  ah.high_field("foo");
+  EXPECT_EQ(ah.high_field(), "foo");
+  ah.low_field("foo");
+  EXPECT_EQ(ah.low_field(), "foo");
+  ah.close_field("foo");
+  EXPECT_EQ(ah.close_field(), "foo");
+  ah.volume_field("foo");
+  EXPECT_EQ(ah.volume_field(), "foo");
 }
 
 TEST(AssetHistoryTest, InsertAfterConstruction)
@@ -174,5 +174,11 @@ TEST(AssetHistoryTest, InsertMismatchedSeriesSize)
 TEST(AssetHistoryTest, AccessNonExistentKey)
 {
   const auto asset_history = AssetHistory{{"close", {875, 830, 800, 835, 870}}};
-  EXPECT_THROW(asset_history["open"], std::out_of_range);
+  EXPECT_FALSE(asset_history.contains("open"));
+
+  const auto open_series = asset_history["open"];
+  EXPECT_EQ(open_series.size(), 0);
+  EXPECT_TRUE(std::isnan(open_series[0]));
+  EXPECT_TRUE(std::isnan(open_series[1]));
+  EXPECT_TRUE(std::isnan(open_series[2]));
 }

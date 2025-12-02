@@ -1,24 +1,20 @@
 {
   "series": {
-    "bbands": {
-      "method": "BB",
-      "period": 20,
-      "stddev": 2
-    },
     "bb_upper": {
-      "method": "OUTPUT_BY_NAME",
+      "method": "SELECT_OUTPUT",
       "name": "upper-band",
       "source": {
-        "method": "REFERENCE",
-        "name": "bbands"
+        "method": "BB",
+        "period": 20,
+        "stddev": 2
       }
     },
     "bb_lower": {
-      "method": "OUTPUT_BY_NAME",
+      "method": "SELECT_OUTPUT",
       "name": "lower-band",
       "source": {
         "method": "REFERENCE",
-        "name": "bbands"
+        "name": "bb_upper"
       }
     }
   },

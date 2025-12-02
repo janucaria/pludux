@@ -1,39 +1,38 @@
 #include <gtest/gtest.h>
-#include <pludux/asset_history.hpp>
-#include <pludux/screener/abs_diff_method.hpp>
-#include <pludux/screener/data_method.hpp>
-#include <pludux/screener/value_method.hpp>
-#include <pludux/series.hpp>
 
-using namespace pludux::screener;
-using pludux::AssetSnapshot;
+#include <variant>
+
+import pludux;
+
+using namespace pludux;
 
 TEST(AbsDiffMethodTest, RunMethod)
 {
-  const auto operand1_method = ValueMethod{20};
+  const auto operand1_method = ValueMethod{20.0};
   const auto operand2_method = DataMethod{"close"};
   const auto abs_diff_method = AbsDiffMethod{operand1_method, operand2_method};
-  const auto asset_data = pludux::AssetHistory{{"close", {10, 15, 20, 25, 30}}};
+  const auto asset_data = AssetHistory{{"close", {10, 15, 20, 25, 30}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
+  const auto context = std::monostate{};
 
-  const auto result = abs_diff_method(asset_data);
-
-  ASSERT_EQ(result.size(), asset_data.size());
-  EXPECT_DOUBLE_EQ(result[0], 10);
-  EXPECT_DOUBLE_EQ(result[1], 5);
-  EXPECT_DOUBLE_EQ(result[2], 0);
-  EXPECT_DOUBLE_EQ(result[3], 5);
-  EXPECT_DOUBLE_EQ(result[4], 10);
+  EXPECT_DOUBLE_EQ(abs_diff_method(asset_snapshot[0], context), 10);
+  EXPECT_DOUBLE_EQ(abs_diff_method(asset_snapshot[1], context), 5);
+  EXPECT_DOUBLE_EQ(abs_diff_method(asset_snapshot[2], context), 0);
+  EXPECT_DOUBLE_EQ(abs_diff_method(asset_snapshot[3], context), 5);
+  EXPECT_DOUBLE_EQ(abs_diff_method(asset_snapshot[4], context), 10);
 }
 
 TEST(AbsDiffMethodTest, EqualityOperator)
 {
-  const auto operand1_method1 = ValueMethod{10};
+  const auto operand1_method1 = ValueMethod{10.0};
   const auto operand2_method1 = DataMethod{"open"};
-  const auto abs_diff_method1 = AbsDiffMethod{operand1_method1, operand2_method1};
+  const auto abs_diff_method1 =
+   AbsDiffMethod{operand1_method1, operand2_method1};
 
-  const auto operand1_method2 = ValueMethod{10};
+  const auto operand1_method2 = ValueMethod{10.0};
   const auto operand2_method2 = DataMethod{"open"};
-  const auto abs_diff_method2 = AbsDiffMethod{operand1_method2, operand2_method2};
+  const auto abs_diff_method2 =
+   AbsDiffMethod{operand1_method2, operand2_method2};
 
   EXPECT_TRUE(abs_diff_method1 == abs_diff_method2);
   EXPECT_FALSE(abs_diff_method1 != abs_diff_method2);
@@ -42,13 +41,15 @@ TEST(AbsDiffMethodTest, EqualityOperator)
 
 TEST(AbsDiffMethodTest, NotEqualOperator)
 {
-  const auto operand1_method1 = ValueMethod{10};
+  const auto operand1_method1 = ValueMethod{10.0};
   const auto operand2_method1 = DataMethod{"open"};
-  const auto abs_diff_method1 = AbsDiffMethod{operand1_method1, operand2_method1};
+  const auto abs_diff_method1 =
+   AbsDiffMethod{operand1_method1, operand2_method1};
 
-  const auto operand1_method2 = ValueMethod{20};
+  const auto operand1_method2 = ValueMethod{20.0};
   const auto operand2_method2 = DataMethod{"close"};
-  const auto abs_diff_method2 = AbsDiffMethod{operand1_method2, operand2_method2};
+  const auto abs_diff_method2 =
+   AbsDiffMethod{operand1_method2, operand2_method2};
 
   EXPECT_TRUE(abs_diff_method1 != abs_diff_method2);
   EXPECT_FALSE(abs_diff_method1 == abs_diff_method2);

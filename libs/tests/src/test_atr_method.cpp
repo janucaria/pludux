@@ -1,85 +1,70 @@
 #include <gtest/gtest.h>
-#include <pludux/asset_history.hpp>
-#include <pludux/screener/atr_method.hpp>
-#include <pludux/screener/data_method.hpp>
-#include <pludux/series.hpp>
 
-using namespace pludux::screener;
-using pludux::AssetSnapshot;
+#include <cmath>
+#include <variant>
 
-TEST(AtrMethodTest, RunOneMethod)
+import pludux;
+
+using namespace pludux;
+
+TEST(AtrMethodTest, ConstructorInitialization)
 {
-  const auto period = 5;
-  const auto atr_method = AtrMethod{
-   DataMethod{"high"}, DataMethod{"low"}, DataMethod{"close"}, period};
-  const auto asset_data = pludux::AssetHistory{
-   {"high", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
-   {"low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},
-   {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  {
+    auto atr_method = AtrMethod{14};
 
-  const auto result = atr_method(asset_data)[0];
-  EXPECT_DOUBLE_EQ(result, 32.187840000000008);
+    EXPECT_EQ(atr_method.period(), 14);
+    EXPECT_DOUBLE_EQ(atr_method.multiplier(), 1.0);
+  }
+  {
+    auto atr_method = AtrMethod{14, 2.0};
+
+    EXPECT_EQ(atr_method.period(), 14);
+    EXPECT_DOUBLE_EQ(atr_method.multiplier(), 2.0);
+  }
 }
 
 TEST(AtrMethodTest, RunAllMethod)
 {
-  const auto period = 5;
-  const auto atr_method = AtrMethod{
-   DataMethod{"high"}, DataMethod{"low"}, DataMethod{"close"}, period};
-  const auto asset_data = pludux::AssetHistory{
-   {"high", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
-   {"low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},
-   {"close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  const auto asset_data = AssetHistory{
+   {"High", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
+   {"Low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},
+   {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
+  const auto context = std::monostate{};
 
-  const auto result = atr_method(asset_data);
+  const auto atr_method = AtrMethod{5, 1.0};
 
-  ASSERT_EQ(result.size(), asset_data.size());
-  EXPECT_DOUBLE_EQ(result[0], 32.187840000000008);
-  EXPECT_DOUBLE_EQ(result[1], 36.484800000000007);
-  EXPECT_DOUBLE_EQ(result[2], 41.856000000000009);
-  EXPECT_DOUBLE_EQ(result[3], 47.320000000000007);
-  EXPECT_DOUBLE_EQ(result[4], 50.400000000000006);
-  EXPECT_DOUBLE_EQ(result[5], 58);
-  EXPECT_TRUE(std::isnan(result[6]));
-  EXPECT_TRUE(std::isnan(result[7]));
-  EXPECT_TRUE(std::isnan(result[8]));
-  EXPECT_TRUE(std::isnan(result[9]));
+  EXPECT_DOUBLE_EQ(atr_method(asset_snapshot[0], context), 32.187840000000008);
+  EXPECT_DOUBLE_EQ(atr_method(asset_snapshot[1], context), 36.484800000000007);
+  EXPECT_DOUBLE_EQ(atr_method(asset_snapshot[2], context), 41.856000000000009);
+  EXPECT_DOUBLE_EQ(atr_method(asset_snapshot[3], context), 47.320000000000007);
+  EXPECT_DOUBLE_EQ(atr_method(asset_snapshot[4], context), 50.400000000000006);
+  EXPECT_DOUBLE_EQ(atr_method(asset_snapshot[5], context), 58);
+  EXPECT_TRUE(std::isnan(atr_method(asset_snapshot[6], context)));
+  EXPECT_TRUE(std::isnan(atr_method(asset_snapshot[7], context)));
+  EXPECT_TRUE(std::isnan(atr_method(asset_snapshot[8], context)));
+  EXPECT_TRUE(std::isnan(atr_method(asset_snapshot[9], context)));
 }
 
 TEST(AtrMethodTest, EqualityOperator)
 {
-  const auto operand1_method1 = DataMethod{"high"};
-  const auto operand2_method1 = DataMethod{"low"};
-  const auto operand3_method1 = DataMethod{"close"};
-  const auto atr_method1 =
-   AtrMethod{operand1_method1, operand2_method1, operand3_method1, 14};
-
-  const auto operand1_method2 = DataMethod{"high"};
-  const auto operand2_method2 = DataMethod{"low"};
-  const auto operand3_method2 = DataMethod{"close"};
-  const auto atr_method2 =
-   AtrMethod{operand1_method2, operand2_method2, operand3_method2, 14};
+  const auto atr_method1 = AtrMethod{14};
+  const auto atr_method2 = AtrMethod{14};
 
   EXPECT_TRUE(atr_method1 == atr_method2);
-  EXPECT_FALSE(atr_method1 != atr_method2);
   EXPECT_EQ(atr_method1, atr_method2);
 }
 
 TEST(AtrMethodTest, NotEqualOperator)
 {
-  const auto operand1_method1 = DataMethod{"high"};
-  const auto operand2_method1 = DataMethod{"low"};
-  const auto operand3_method1 = DataMethod{"close"};
-  const auto atr_method1 =
-   AtrMethod{operand1_method1, operand2_method1, operand3_method1, 14};
-
-  const auto operand1_method2 = DataMethod{"high"};
-  const auto operand2_method2 = DataMethod{"low"};
-  const auto operand3_method2 = DataMethod{"close"};
-  const auto atr_method2 =
-   AtrMethod{operand1_method2, operand2_method2, operand3_method2, 20};
+  const auto atr_method1 = AtrMethod{14, 1.0};
+  const auto atr_method2 = AtrMethod{20, 1.0};
+  const auto atr_method3 = AtrMethod{20, 2.0};
 
   EXPECT_TRUE(atr_method1 != atr_method2);
-  EXPECT_FALSE(atr_method1 == atr_method2);
   EXPECT_NE(atr_method1, atr_method2);
+  EXPECT_TRUE(atr_method1 != atr_method3);
+  EXPECT_NE(atr_method1, atr_method3);
+  EXPECT_TRUE(atr_method2 != atr_method3);
+  EXPECT_NE(atr_method2, atr_method3);
 }

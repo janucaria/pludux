@@ -1,0 +1,91 @@
+module;
+
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <limits>
+#include <utility>
+
+export module pludux:series.lowest_method;
+
+import :asset_snapshot;
+import :method_contextable;
+import :series_output;
+
+import :series.ohlcv_method;
+
+export namespace pludux {
+
+template<typename TSourceMethod = CloseMethod>
+class LowestMethod {
+public:
+  using ResultType = typename TSourceMethod::ResultType;
+
+  LowestMethod()
+  : LowestMethod{14}
+  {
+  }
+
+  explicit LowestMethod(std::size_t period)
+  : LowestMethod{TSourceMethod{}, period}
+  {
+  }
+
+  explicit LowestMethod(TSourceMethod method, std::size_t period)
+  : source_{std::move(method)}
+  , period_{period}
+  {
+  }
+
+  auto operator==(const LowestMethod& other) const noexcept -> bool = default;
+
+  auto operator()(this const LowestMethod& self,
+                  AssetSnapshot asset_snapshot,
+                  MethodContextable auto context) noexcept -> ResultType
+  {
+    if(asset_snapshot.size() < self.period_) {
+      return std::numeric_limits<ResultType>::quiet_NaN();
+    }
+
+    auto lowest = std::numeric_limits<ResultType>::max();
+    for(auto i = 0uz; i < self.period_; ++i) {
+      const auto value = self.source_(asset_snapshot[i], context);
+      lowest = std::min(lowest, value);
+    }
+    return lowest;
+  }
+
+  auto operator()(this const LowestMethod& self,
+                  AssetSnapshot asset_snapshot,
+                  SeriesOutput output,
+                  MethodContextable auto context) noexcept -> ResultType
+  {
+    return std::numeric_limits<ResultType>::quiet_NaN();
+  }
+
+  auto source(this const LowestMethod& self) -> const TSourceMethod&
+  {
+    return self.source_;
+  }
+
+  void source(this LowestMethod& self, TSourceMethod method)
+  {
+    self.source_ = std::move(method);
+  }
+
+  auto period(this const LowestMethod& self) noexcept -> std::size_t
+  {
+    return self.period_;
+  }
+
+  void period(this LowestMethod& self, std::size_t period)
+  {
+    self.period_ = period;
+  }
+
+private:
+  TSourceMethod source_;
+  std::size_t period_;
+};
+
+} // namespace pludux

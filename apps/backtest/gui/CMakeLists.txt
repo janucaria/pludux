@@ -1,5 +1,4 @@
-cmake_minimum_required(VERSION 3.10.2)
-project(pludux-backtest-gui C CXX)
+project(pludux-backtest-gui)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
@@ -7,32 +6,45 @@ endif()
 
 if(NOT EMSCRIPTEN)
 
-  set(PLUDUX_WEBGPU_DOWNLOAD_BUILD "release")
+  set(PLUDUX_WEBGPU_DOWNLOAD "wgpu")
+
+  if(WIN32)
+    string(APPEND PLUDUX_WEBGPU_DOWNLOAD "-windows-x86_64-msvc")
+  else()
+    string(APPEND PLUDUX_WEBGPU_DOWNLOAD "-linux-x86_64")
+  endif()
 
   if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(PLUDUX_WEBGPU_DOWNLOAD_BUILD "debug")
+    string(APPEND PLUDUX_WEBGPU_DOWNLOAD "-debug")
+  else()
+    string(APPEND PLUDUX_WEBGPU_DOWNLOAD "-release")
   endif()
 
   FetchContent_Declare(
     wgpu_native
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-    URL "https://github.com/gfx-rs/wgpu-native/releases/download/v25.0.2.2/wgpu-windows-x86_64-msvc-${PLUDUX_WEBGPU_DOWNLOAD_BUILD}.zip"
+    URL "https://github.com/gfx-rs/wgpu-native/releases/download/v25.0.2.2/${PLUDUX_WEBGPU_DOWNLOAD}.zip"
   )
   
   FetchContent_MakeAvailable(wgpu_native)
 
-  add_library(webgpu SHARED IMPORTED)
+  add_library(webgpu STATIC IMPORTED)
 
   set_property(TARGET webgpu
     PROPERTY INTERFACE_INCLUDE_DIRECTORIES
       "${wgpu_native_SOURCE_DIR}/include"
       "${wgpu_native_SOURCE_DIR}/include/webgpu"
   )
-  
-  set_target_properties(webgpu PROPERTIES
-    IMPORTED_IMPLIB "${wgpu_native_SOURCE_DIR}/lib/wgpu_native.lib"
-    IMPORTED_LOCATION "${wgpu_native_SOURCE_DIR}/lib/wgpu_native.dll"
-  )  
+
+  if(WIN32)
+    set_target_properties(webgpu PROPERTIES
+      IMPORTED_LOCATION "${wgpu_native_SOURCE_DIR}/lib/wgpu_native.lib"
+    )
+  else()
+    set_target_properties(webgpu PROPERTIES
+      IMPORTED_LOCATION "${wgpu_native_SOURCE_DIR}/lib/libwgpu_native.a"
+    )
+  endif()
 
   FetchContent_Declare(
     glfw
@@ -43,7 +55,12 @@ if(NOT EMSCRIPTEN)
   )
   set(GLFW_INSTALL OFF)
   set(GLFW_BUILD_DOCS OFF)
-  
+
+  if(LINUX)
+    set(GLFW_BUILD_WAYLAND ON)
+    set(GLFW_BUILD_X11 OFF)
+  endif()
+
   FetchContent_Declare(
     nativefiledialog-extended
     GIT_REPOSITORY "https://github.com/btzy/nativefiledialog-extended.git"
@@ -108,24 +125,6 @@ FetchContent_MakeAvailable(cereal)
 
 add_executable(${PROJECT_NAME}
 
-  src/windows/assets_window.cpp
-  src/windows/backtests_window.cpp
-  src/windows/backtest_summary_window.cpp
-  src/windows/dockspace_window.cpp
-  src/windows/plot_data_window.cpp
-  src/windows/trade_journal_window.cpp
-  src/windows/strategies_window.cpp
-  src/windows/profiles_window.cpp
-
-  src/actions/change_strategy_json_file_action.cpp
-  src/actions/change_strategy_json_str_action.cpp
-  src/actions/load_asset_csv_file_action.cpp
-  src/actions/load_asset_csv_str_action.cpp
-  src/actions/load_backtests_setup_file_action.cpp
-  src/actions/load_backtests_setup_string_action.cpp
-
-  src/application.cpp
-  src/app_state.cpp
   src/main.cpp
   # backend files
   ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
@@ -135,9 +134,41 @@ add_executable(${PROJECT_NAME}
   ${imgui_SOURCE_DIR}/imgui_draw.cpp
   ${imgui_SOURCE_DIR}/imgui_tables.cpp
   ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+  ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
   # ImPlot files
   ${implot_SOURCE_DIR}/implot.cpp
   ${implot_SOURCE_DIR}/implot_items.cpp
+)
+
+target_sources(${PROJECT_NAME} PRIVATE
+  FILE_SET
+    CXX_MODULES
+    BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src
+    FILES
+
+    src/app_state_data.cxx
+
+    src/actions/change_strategy_json_action.cxx
+    src/actions/load_asset_csv_action.cxx
+    src/actions/load_backtests_setup_action.cxx
+    src/actions/edit_strategy_action.cxx
+    src/actions.cxx
+    
+    src/app_state.cxx
+
+    src/serialization.cxx
+
+    src/windows/assets_window.cxx
+    src/windows/backtests_window.cxx
+    src/windows/backtest_summary_window.cxx
+    src/windows/dockspace_window.cxx
+    src/windows/plot_data_window.cxx
+    src/windows/profiles_window.cxx
+    src/windows/strategies_window.cxx
+    src/windows/trade_journal_window.cxx
+    src/windows.cxx
+
+    src/application.cxx
 )
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC
@@ -165,40 +196,39 @@ if(NOT EMSCRIPTEN)
   target_compile_definitions(${PROJECT_NAME} PUBLIC
     IMGUI_IMPL_WEBGPU_BACKEND_WGPU
   )
-
+  
   target_link_libraries(${PROJECT_NAME}
     PUBLIC
-      runtimeobject
-      propsys
-      ole32
       webgpu
-      opengl32
-      userenv
-      ws2_32
-      d3dcompiler
-      ntdll
-      kernel32
       nfd::nfd
   )
 
-  add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}> $<TARGET_FILE_DIR:${PROJECT_NAME}>
-    COMMAND_EXPAND_LISTS
-  )
-  
+  if(MSVC)
+    target_link_libraries(${PROJECT_NAME}
+      PUBLIC
+        runtimeobject
+        propsys
+        ole32
+        opengl32
+        userenv
+        ws2_32
+        d3dcompiler
+        ntdll
+        kernel32
+    )
+
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${wgpu_native_SOURCE_DIR}/lib/wgpu_native.dll" $<TARGET_FILE_DIR:${PROJECT_NAME}>
+      COMMAND_EXPAND_LISTS
+    )
+
+  endif()
 else()
   target_compile_definitions(${PROJECT_NAME} PUBLIC
     IMGUI_DISABLE_FILE_FUNCTIONS=1
   )
-
-  # add compiler flag -pthread
-  target_compile_options(${PROJECT_NAME} PRIVATE
-    "-fwasm-exceptions"
-  )
   
   target_link_options(${PROJECT_NAME} PRIVATE
-    "-fwasm-exceptions"
-
     "-sWASM=1"
     "-sUSE_WEBGPU=1"
     "-sUSE_GLFW=3"

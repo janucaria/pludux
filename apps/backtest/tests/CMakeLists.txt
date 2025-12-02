@@ -1,5 +1,3 @@
-find_package(GTest REQUIRED)
-
 set(PLUDUX_TEST_SOURCES
   src/test_trade_session.cpp
 )

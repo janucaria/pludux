@@ -7,16 +7,16 @@
       "dSmooth": 3
     },
     "stoch_k": {
-      "method": "OUTPUT_BY_NAME",
-      "name": "percent-k",
+      "method": "SELECT_OUTPUT",
+      "name": "k-percent",
       "source": {
         "method": "REFERENCE",
         "name": "stoch"
       }
     },
     "stoch_d": {
-      "method": "OUTPUT_BY_NAME",
-      "name": "percent-d",
+      "method": "SELECT_OUTPUT",
+      "name": "d-percent",
       "source": {
         "method": "REFERENCE",
         "name": "stoch"
