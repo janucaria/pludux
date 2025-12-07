@@ -62,10 +62,22 @@ public:
     return self.name_;
   }
 
+  void name(this Backtest& self, std::string new_name) noexcept
+  {
+    self.name_ = std::move(new_name);
+  }
+
   auto strategy_ptr(this const Backtest& self) noexcept
    -> const std::shared_ptr<backtest::Strategy>
   {
     return self.strategy_ptr_;
+  }
+
+  void
+  strategy_ptr(this Backtest& self,
+               std::shared_ptr<backtest::Strategy> new_strategy_ptr) noexcept
+  {
+    self.strategy_ptr_ = std::move(new_strategy_ptr);
   }
 
   auto strategy(this const Backtest& self) noexcept -> const backtest::Strategy&
@@ -79,6 +91,12 @@ public:
     return self.asset_ptr_;
   }
 
+  void asset_ptr(this Backtest& self,
+                 std::shared_ptr<backtest::Asset> new_asset_ptr) noexcept
+  {
+    self.asset_ptr_ = std::move(new_asset_ptr);
+  }
+
   auto asset(this const Backtest& self) noexcept -> const backtest::Asset&
   {
     return *self.asset_ptr();
@@ -88,6 +106,12 @@ public:
    -> const std::shared_ptr<backtest::Profile>
   {
     return self.profile_ptr_;
+  }
+
+  void profile_ptr(this Backtest& self,
+                   std::shared_ptr<backtest::Profile> new_profile_ptr) noexcept
+  {
+    self.profile_ptr_ = std::move(new_profile_ptr);
   }
 
   auto profile(this const Backtest& self) noexcept -> const backtest::Profile&
