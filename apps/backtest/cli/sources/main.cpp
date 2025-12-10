@@ -39,8 +39,10 @@ auto main(int, const char**) -> int
   profile_ptr->initial_capital(100'000'000.0);
   profile_ptr->capital_risk(0.01);
 
-  auto backtest =
-   pludux::Backtest{"no name", strategy_ptr, asset_ptr, profile_ptr};
+  auto broker_ptr = std::make_shared<pludux::backtest::Broker>("Default");
+
+  auto backtest = pludux::Backtest{
+   "no name", strategy_ptr, asset_ptr, broker_ptr, profile_ptr};
   while(backtest.should_run()) {
     backtest.run();
   }

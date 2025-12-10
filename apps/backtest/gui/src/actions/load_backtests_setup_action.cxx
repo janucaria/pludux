@@ -67,6 +67,7 @@ private:
     }
 
     const auto profile_column_index = csv_doc.GetColumnIdx("Profile");
+    const auto broker_column_index = csv_doc.GetColumnIdx("Broker");
 
     const auto& assets = state.assets;
     const auto& strategies = state.strategies;
@@ -80,6 +81,11 @@ private:
       if(asset_name.empty() || strategy_name.empty()) {
         continue;
       }
+
+      const auto broker_name =
+       broker_column_index != -1
+        ? csv_doc.GetCell<std::string>(broker_column_index, i)
+        : std::string{"Default"};
 
       const auto profile_name =
        profile_column_index != -1
@@ -120,6 +126,19 @@ private:
 
       auto strategy_ptr = *strategy_it;
 
+      auto broker_it =
+       std::find_if(state.brokers.begin(),
+                    state.brokers.end(),
+                    [&broker_name](const auto& broker_ptr) {
+                      return broker_ptr && broker_ptr->name() == broker_name;
+                    });
+
+      if(broker_it == state.brokers.end()) {
+        continue;
+      }
+
+      auto broker_ptr = *broker_it;
+
       auto profile_it =
        std::find_if(state.profiles.begin(),
                     state.profiles.end(),
@@ -136,6 +155,7 @@ private:
       state.backtests.emplace_back(backtest_name,
                                    std::move(strategy_ptr),
                                    std::move(asset_ptr),
+                                   std::move(broker_ptr),
                                    std::move(profile_ptr));
     }
 

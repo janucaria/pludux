@@ -55,12 +55,14 @@ public:
 
       return TradeRecord{TradeRecord::Status::open,
                          open_position->position_size(),
-                         open_position->average_price(),
+                         open_position->investment(),
                          open_position->entry_timestamp(),
                          open_position->entry_price(),
+                         open_position->total_entry_fees(),
                          open_position->entry_index(),
                          self.session_.market_timestamp(),
                          self.session_.market_price(),
+                         NAN,
                          self.session_.market_index(),
                          open_position->stop_loss_initial_price(),
                          open_position->stop_loss_trailing_price(),
@@ -225,10 +227,18 @@ public:
 
   void entry_position(this TradeSession& self, const TradeEntry& entry) noexcept
   {
+    self.entry_position(entry, 0.0);
+  }
+
+  void entry_position(this TradeSession& self,
+                      const TradeEntry& entry,
+                      double total_fees) noexcept
+  {
     if(self.open_position_) {
       self.open_position_->scaled_in(entry.position_size(),
                                      self.market_timestamp_,
                                      entry.price(),
+                                     total_fees,
                                      self.market_index_);
 
       return;
@@ -237,6 +247,7 @@ public:
     self.open_position_ = TradePosition{entry.position_size(),
                                         self.market_timestamp_,
                                         entry.price(),
+                                        total_fees,
                                         self.market_index_,
                                         entry.stop_loss_price(),
                                         entry.stop_loss_trailing_price(),
@@ -244,6 +255,13 @@ public:
   }
 
   void exit_position(this TradeSession& self, const TradeExit& exit)
+  {
+    self.exit_position(exit, 0.0);
+  }
+
+  void exit_position(this TradeSession& self,
+                     const TradeExit& exit,
+                     double total_fees)
   {
     if(!self.open_position_) {
       throw std::runtime_error("Cannot exit a closed trade.");
@@ -264,11 +282,12 @@ public:
     self.open_position_->scaled_out(exit.position_size(),
                                     self.market_timestamp_,
                                     exit.price(),
+                                    total_fees,
                                     self.market_index_,
                                     trade_status);
 
     if(self.open_position_->is_closed()) {
-      self.closed_position_ = std::move(*self.open_position_);
+      self.closed_position_ = std::move(self.open_position_);
       self.open_position_ = std::nullopt;
     }
   }
@@ -281,6 +300,10 @@ public:
     self.market_timestamp(timestamp);
     self.market_price(price);
     self.market_index(index);
+
+    if(self.closed_position_) {
+      self.closed_position_ = std::nullopt;
+    }
   }
 
   auto trade_record_range(this const TradeSession& self) noexcept
@@ -289,23 +312,13 @@ public:
     return ConstTradeRecordRange{self};
   }
 
-  void evaluate_exit_conditions(this TradeSession& self,
+  auto evaluate_exit_conditions(this TradeSession& self,
                                 double prev_close,
                                 double open,
                                 double high,
-                                double low) noexcept
+                                double low) noexcept -> std::optional<TradeExit>
   {
-    if(self.is_flat()) {
-      return;
-    }
-
-    if(self.closed_position_) {
-      self.closed_position_ = std::nullopt;
-    }
-
-    if(!self.open_position_) {
-      return;
-    }
+    auto trade_exit = std::optional<TradeExit>{};
 
     const auto position_size = self.open_position_->unrealized_position_size();
 
@@ -314,20 +327,18 @@ public:
        self.open_position_->is_long_direction()
         ? std::min(open, self.open_position_->stop_loss_price())
         : std::max(open, self.open_position_->stop_loss_price());
-      auto trade_exit =
+      trade_exit =
        TradeExit{position_size, exit_price, TradeExit::Reason::stop_loss};
-
-      self.exit_position(trade_exit);
     } else if(self.open_position_->trigger_take_profit(high, low)) {
       const auto exit_price =
        self.open_position_->is_long_direction()
         ? std::max(open, self.open_position_->take_profit_price())
         : std::min(open, self.open_position_->take_profit_price());
-      auto trade_exit =
+      trade_exit =
        TradeExit{position_size, exit_price, TradeExit::Reason::take_profit};
-
-      self.exit_position(trade_exit);
     }
+
+    return trade_exit;
   }
 
   auto unrealized_pnl(this const TradeSession& self) noexcept -> double

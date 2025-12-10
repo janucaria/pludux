@@ -152,6 +152,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/windows/assets_window.cxx
     src/windows/backtests_window.cxx
     src/windows/backtest_summary_window.cxx
+    src/windows/brokers_window.cxx
     src/windows/dockspace_window.cxx
     src/windows/plot_data_window.cxx
     src/windows/profiles_window.cxx

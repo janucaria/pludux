@@ -8,6 +8,7 @@ module;
 #include <optional>
 #include <ranges>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <imgui.h>
@@ -111,21 +112,14 @@ private:
 
     if(ImGui::Button("Add New Backtest")) {
       self.backtest_panel_mode_ = BacktestPanelMode::AddNew;
-      self.new_backtest_ =
-       std::make_shared<pludux::Backtest>("", nullptr, nullptr, nullptr);
+      self.new_backtest_ = std::make_shared<pludux::Backtest>(
+       "", nullptr, nullptr, nullptr, nullptr);
     }
     ImGui::EndGroup();
   }
 
   void render_add_new_backtest(this auto& self, AppState& app_state)
   {
-    const auto& state = app_state.state();
-    const auto& strategies = state.strategies;
-    const auto& assets = state.assets;
-    const auto& profiles = state.profiles;
-
-    auto& new_backtest = self.new_backtest_;
-
     ImGui::BeginGroup();
     ImGui::BeginChild("item view",
                       ImVec2(0, -ImGui::GetFrameHeightWithSpacing()));
@@ -134,115 +128,18 @@ private:
     ImGui::Separator();
     ImGui::SetNextItemWidth(-1); // Full width for input text
 
-    {
-      ImGui::Text("Name:");
-
-      auto backtest_name = new_backtest->name();
-      ImGui::InputText("##NewBacktestName", &backtest_name);
-      new_backtest->name(std::move(backtest_name));
-    }
-
-    {
-      if(new_backtest->asset_ptr() == nullptr && !assets.empty()) {
-        new_backtest->asset_ptr(assets.front());
-      }
-
-      ImGui::Text("Asset:");
-      auto asset_preview = new_backtest->asset_ptr()
-                            ? new_backtest->asset_ptr()->name()
-                            : std::string{""};
-      if(ImGui::BeginCombo("##AssetCombo", asset_preview.c_str())) {
-        for(auto i = 0; i < assets.size(); ++i) {
-          const auto& asset = assets[i];
-          const auto& asset_name = asset->name();
-          const auto is_selected = new_backtest->asset_ptr() == asset;
-
-          ImGui::PushID(i);
-
-          if(ImGui::Selectable(asset_name.c_str(), is_selected)) {
-            new_backtest->asset_ptr(asset);
-          }
-
-          if(is_selected) {
-            ImGui::SetItemDefaultFocus();
-          }
-
-          ImGui::PopID();
-        }
-        ImGui::EndCombo();
-      }
-    }
-
-    {
-      if(new_backtest->strategy_ptr() == nullptr && !strategies.empty()) {
-        new_backtest->strategy_ptr(strategies.front());
-      }
-
-      ImGui::Text("Strategy:");
-      auto strategy_preview = new_backtest->strategy_ptr()
-                               ? new_backtest->strategy_ptr()->name()
-                               : std::string{""};
-      if(ImGui::BeginCombo("##StrategyCombo", strategy_preview.c_str())) {
-        for(auto i = 0; i < strategies.size(); ++i) {
-          const auto& strategy = strategies[i];
-          const auto& strategy_name = strategy->name();
-          const auto is_selected = new_backtest->strategy_ptr() == strategy;
-
-          ImGui::PushID(i);
-
-          if(ImGui::Selectable(strategy_name.c_str(), is_selected)) {
-            new_backtest->strategy_ptr(strategy);
-          }
-
-          if(is_selected) {
-            ImGui::SetItemDefaultFocus();
-          }
-
-          ImGui::PopID();
-        }
-        ImGui::EndCombo();
-      }
-    }
-
-    {
-      if(new_backtest->profile_ptr() == nullptr && !profiles.empty()) {
-        new_backtest->profile_ptr(profiles.front());
-      }
-
-      ImGui::Text("Profile:");
-      auto profile_preview = new_backtest->profile_ptr()
-                              ? new_backtest->profile_ptr()->name()
-                              : std::string{""};
-      if(ImGui::BeginCombo("##ProfileCombo", profile_preview.c_str())) {
-        for(auto i = 0; i < profiles.size(); ++i) {
-          const auto& profile = profiles[i];
-          const auto& profile_name = profile->name();
-          const auto is_selected = new_backtest->profile_ptr() == profile;
-
-          ImGui::PushID(i);
-
-          if(ImGui::Selectable(profile_name.c_str(), is_selected)) {
-            new_backtest->profile_ptr(profile);
-          }
-
-          if(is_selected) {
-            ImGui::SetItemDefaultFocus();
-          }
-
-          ImGui::PopID();
-        }
-        ImGui::EndCombo();
-      }
-    }
+    self.edit_backtest_form(app_state);
 
     ImGui::EndChild();
 
     if(ImGui::Button("Create Backtest")) {
+      auto& new_backtest = self.new_backtest_;
       if(new_backtest->strategy_ptr() && new_backtest->asset_ptr() &&
-         new_backtest->profile_ptr()) {
+         new_backtest->broker_ptr() && new_backtest->profile_ptr()) {
         app_state.push_action([new_backtest](AppStateData& state) {
           const auto& strategy = new_backtest->strategy_ptr();
           const auto& asset = new_backtest->asset_ptr();
+          const auto& broker = new_backtest->broker_ptr();
           const auto& profile = new_backtest->profile_ptr();
           const auto& new_backtest_name = new_backtest->name();
 
@@ -250,7 +147,8 @@ private:
            // TODO: Visual Studio 2026 have bug with include <format> causing
            // compile error
            new_backtest_name.empty()
-            ? asset->name() + " / " + strategy->name() + " / " + profile->name()
+            ? asset->name() + " / " + strategy->name() + " / " +
+               broker->name() + " / " + profile->name()
             : new_backtest_name;
           new_backtest->name(backtest_name);
 
@@ -263,7 +161,7 @@ private:
       } else {
         app_state.push_action([](AppStateData& state) {
           state.alert_messages.push(
-           "Please select a strategy, an asset, and a profile.");
+           "Please select a strategy, an asset, a broker, and a profile.");
         });
       }
     }
@@ -278,13 +176,6 @@ private:
 
   void render_edit_backtest(this auto& self, AppState& app_state)
   {
-    const auto& state = app_state.state();
-    const auto& strategies = state.strategies;
-    const auto& assets = state.assets;
-    const auto& profiles = state.profiles;
-
-    auto& new_backtest = self.new_backtest_;
-
     ImGui::BeginGroup();
     ImGui::BeginChild("item view",
                       ImVec2(0, -ImGui::GetFrameHeightWithSpacing()));
@@ -293,116 +184,18 @@ private:
     ImGui::Separator();
     ImGui::SetNextItemWidth(-1); // Full width for input text
 
-    {
-      ImGui::Text("Name:");
-
-      auto backtest_name = new_backtest->name();
-      ImGui::InputText("##NewBacktestName", &backtest_name);
-      new_backtest->name(std::move(backtest_name));
-    }
-
-    {
-      if(new_backtest->asset_ptr() == nullptr && !assets.empty()) {
-        new_backtest->asset_ptr(assets.front());
-      }
-
-      ImGui::Text("Asset:");
-      auto asset_preview = new_backtest->asset_ptr()
-                            ? new_backtest->asset_ptr()->name()
-                            : std::string{""};
-      if(ImGui::BeginCombo("##AssetCombo", asset_preview.c_str())) {
-        for(auto i = 0; i < assets.size(); ++i) {
-          const auto& asset = assets[i];
-          const auto& asset_name = asset->name();
-          const auto is_selected = new_backtest->asset_ptr() == asset;
-
-          ImGui::PushID(i);
-
-          if(ImGui::Selectable(asset_name.c_str(), is_selected)) {
-            new_backtest->asset_ptr(asset);
-          }
-
-          if(is_selected) {
-            ImGui::SetItemDefaultFocus();
-          }
-
-          ImGui::PopID();
-        }
-        ImGui::EndCombo();
-      }
-    }
-
-    {
-      if(new_backtest->strategy_ptr() == nullptr && !strategies.empty()) {
-        new_backtest->strategy_ptr(strategies.front());
-      }
-
-      ImGui::Text("Strategy:");
-      auto strategy_preview = new_backtest->strategy_ptr()
-                               ? new_backtest->strategy_ptr()->name()
-                               : std::string{""};
-      if(ImGui::BeginCombo("##StrategyCombo", strategy_preview.c_str())) {
-        for(auto i = 0; i < strategies.size(); ++i) {
-          const auto& strategy = strategies[i];
-          const auto& strategy_name = strategy->name();
-          const auto is_selected = new_backtest->strategy_ptr() == strategy;
-
-          ImGui::PushID(i);
-
-          if(ImGui::Selectable(strategy_name.c_str(), is_selected)) {
-            new_backtest->strategy_ptr(strategy);
-          }
-
-          if(is_selected) {
-            ImGui::SetItemDefaultFocus();
-          }
-
-          ImGui::PopID();
-        }
-        ImGui::EndCombo();
-      }
-    }
-
-    {
-      if(new_backtest->profile_ptr() == nullptr && !profiles.empty()) {
-        new_backtest->profile_ptr(profiles.front());
-      }
-
-      ImGui::Text("Profile:");
-      auto profile_preview = new_backtest->profile_ptr()
-                              ? new_backtest->profile_ptr()->name()
-                              : std::string{""};
-      if(ImGui::BeginCombo("##ProfileCombo", profile_preview.c_str())) {
-        for(auto i = 0; i < profiles.size(); ++i) {
-          const auto& profile = profiles[i];
-          const auto& profile_name = profile->name();
-          const auto is_selected = new_backtest->profile_ptr() == profile;
-
-          ImGui::PushID(i);
-
-          if(ImGui::Selectable(profile_name.c_str(), is_selected)) {
-            new_backtest->profile_ptr(profile);
-          }
-
-          if(is_selected) {
-            ImGui::SetItemDefaultFocus();
-          }
-
-          ImGui::PopID();
-        }
-        ImGui::EndCombo();
-      }
-    }
+    self.edit_backtest_form(app_state);
 
     ImGui::EndChild();
 
     if(ImGui::Button("Edit")) {
+      auto& new_backtest = self.new_backtest_;
       if(new_backtest->name().empty()) {
         app_state.push_action([](AppStateData& state) {
           state.alert_messages.push("Backtest name cannot be empty.");
         });
       } else if(!new_backtest->strategy_ptr() || !new_backtest->asset_ptr() ||
-                !new_backtest->profile_ptr()) {
+                !new_backtest->broker_ptr() || !new_backtest->profile_ptr()) {
         app_state.push_action([](AppStateData& state) {
           state.alert_messages.push(
            "Please select an asset, a strategy, and a profile.");
@@ -434,6 +227,148 @@ private:
     }
 
     ImGui::EndGroup();
+  }
+
+  void edit_backtest_form(this BacktestsWindow& self, AppState& app_state)
+  {
+    const auto& state = app_state.state();
+    const auto& strategies = state.strategies;
+    const auto& assets = state.assets;
+    const auto& brokers = state.brokers;
+    const auto& profiles = state.profiles;
+
+    auto& new_backtest = self.new_backtest_;
+    {
+      ImGui::Text("Name:");
+
+      auto backtest_name = new_backtest->name();
+      ImGui::InputText("##NewBacktestName", &backtest_name);
+      new_backtest->name(std::move(backtest_name));
+    }
+
+    {
+      if(new_backtest->asset_ptr() == nullptr && !assets.empty()) {
+        new_backtest->asset_ptr(assets.front());
+      }
+
+      ImGui::Text("Asset:");
+      auto asset_preview = new_backtest->asset_ptr()
+                            ? new_backtest->asset_ptr()->name()
+                            : std::string{""};
+      if(ImGui::BeginCombo("##AssetCombo", asset_preview.c_str())) {
+        for(auto i = 0; i < assets.size(); ++i) {
+          const auto& asset = assets[i];
+          const auto& asset_name = asset->name();
+          const auto is_selected = new_backtest->asset_ptr() == asset;
+
+          ImGui::PushID(i);
+
+          if(ImGui::Selectable(asset_name.c_str(), is_selected)) {
+            new_backtest->asset_ptr(asset);
+          }
+
+          if(is_selected) {
+            ImGui::SetItemDefaultFocus();
+          }
+
+          ImGui::PopID();
+        }
+        ImGui::EndCombo();
+      }
+    }
+
+    {
+      if(new_backtest->strategy_ptr() == nullptr && !strategies.empty()) {
+        new_backtest->strategy_ptr(strategies.front());
+      }
+
+      ImGui::Text("Strategy:");
+      auto strategy_preview = new_backtest->strategy_ptr()
+                               ? new_backtest->strategy_ptr()->name()
+                               : std::string{""};
+      if(ImGui::BeginCombo("##StrategyCombo", strategy_preview.c_str())) {
+        for(auto i = 0; i < strategies.size(); ++i) {
+          const auto& strategy = strategies[i];
+          const auto& strategy_name = strategy->name();
+          const auto is_selected = new_backtest->strategy_ptr() == strategy;
+
+          ImGui::PushID(i);
+
+          if(ImGui::Selectable(strategy_name.c_str(), is_selected)) {
+            new_backtest->strategy_ptr(strategy);
+          }
+
+          if(is_selected) {
+            ImGui::SetItemDefaultFocus();
+          }
+
+          ImGui::PopID();
+        }
+        ImGui::EndCombo();
+      }
+    }
+
+    {
+      if(new_backtest->broker_ptr() == nullptr && !brokers.empty()) {
+        new_backtest->broker_ptr(brokers.front());
+      }
+
+      ImGui::Text("Broker:");
+      auto broker_preview = new_backtest->broker_ptr()
+                             ? new_backtest->broker_ptr()->name()
+                             : std::string{""};
+      if(ImGui::BeginCombo("##BrokerCombo", broker_preview.c_str())) {
+        for(auto i = 0; i < brokers.size(); ++i) {
+          const auto& broker = brokers[i];
+          const auto& broker_name = broker->name();
+          const auto is_selected = new_backtest->broker_ptr() == broker;
+
+          ImGui::PushID(i);
+
+          if(ImGui::Selectable(broker_name.c_str(), is_selected)) {
+            new_backtest->broker_ptr(broker);
+          }
+
+          if(is_selected) {
+            ImGui::SetItemDefaultFocus();
+          }
+
+          ImGui::PopID();
+        }
+        ImGui::EndCombo();
+      }
+    }
+
+    {
+      if(new_backtest->profile_ptr() == nullptr && !profiles.empty()) {
+        new_backtest->profile_ptr(profiles.front());
+      }
+
+      ImGui::Text("Profile:");
+      auto profile_preview = new_backtest->profile_ptr()
+                              ? new_backtest->profile_ptr()->name()
+                              : std::string{""};
+      if(ImGui::BeginCombo("##ProfileCombo", profile_preview.c_str())) {
+        for(auto i = 0; i < profiles.size(); ++i) {
+          const auto& profile = profiles[i];
+          const auto& profile_name = profile->name();
+          const auto is_selected = new_backtest->profile_ptr() == profile;
+
+          ImGui::PushID(i);
+
+          if(ImGui::Selectable(profile_name.c_str(), is_selected)) {
+            new_backtest->profile_ptr(profile);
+          }
+
+          if(is_selected) {
+            ImGui::SetItemDefaultFocus();
+          }
+
+          ImGui::PopID();
+        }
+        ImGui::EndCombo();
+      }
+    }
   }
 };
 

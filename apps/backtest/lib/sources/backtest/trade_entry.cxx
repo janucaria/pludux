@@ -68,6 +68,21 @@ public:
     return self.position_size_ < 0.0;
   }
 
+  auto is_buy(this const TradeEntry& self) noexcept -> bool
+  {
+    return self.is_long_direction();
+  }
+
+  auto is_sell(this const TradeEntry& self) noexcept -> bool
+  {
+    return self.is_short_direction();
+  }
+
+  auto notional_value(this const TradeEntry& self) noexcept -> double
+  {
+    return std::abs(self.position_size_ * self.price_);
+  }
+
 private:
   double position_size_;
   double price_;

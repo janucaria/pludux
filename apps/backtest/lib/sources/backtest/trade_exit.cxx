@@ -1,5 +1,6 @@
 module;
 
+#include <cmath>
 #include <cstddef>
 #include <ctime>
 
@@ -41,6 +42,21 @@ public:
   auto is_short_direction(this const TradeExit& self) noexcept -> bool
   {
     return self.position_size_ < 0.0;
+  }
+
+  auto is_buy(this const TradeExit& self) noexcept -> bool
+  {
+    return self.is_short_direction();
+  }
+
+  auto is_sell(this const TradeExit& self) noexcept -> bool
+  {
+    return self.is_long_direction();
+  }
+
+  auto notional_value(this const TradeExit& self) noexcept -> double
+  {
+    return std::abs(self.position_size_ * self.price_);
   }
 
 private:

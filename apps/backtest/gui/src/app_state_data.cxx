@@ -25,6 +25,8 @@ struct AppStateData {
   std::vector<std::shared_ptr<backtest::Asset>> assets{};
 
   std::vector<std::shared_ptr<backtest::Profile>> profiles{};
+
+  std::vector<std::shared_ptr<backtest::Broker>> brokers{};
 };
 
 } // namespace pludux::apps

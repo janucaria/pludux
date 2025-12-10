@@ -105,6 +105,7 @@ public:
       ImGui::DockBuilderDockWindow("Backtests", dock_right_down_id);
       ImGui::DockBuilderDockWindow("Assets", dock_right_down_id);
       ImGui::DockBuilderDockWindow("Strategies", dock_right_down_id);
+      ImGui::DockBuilderDockWindow("Brokers", dock_right_down_id);
       ImGui::DockBuilderDockWindow("Profiles", dock_right_down_id);
 
       ImGui::DockBuilderFinish(dockspace_id);

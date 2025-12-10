@@ -26,6 +26,7 @@ export import :trade_position;
 export import :trade_session;
 export import :backtest_summary;
 export import :strategy;
+export import :broker;
 
 export namespace pludux {
 
@@ -34,10 +35,12 @@ public:
   Backtest(std::string name,
            std::shared_ptr<backtest::Strategy> strategy_ptr,
            std::shared_ptr<backtest::Asset> asset_ptr,
+           std::shared_ptr<backtest::Broker> broker_ptr,
            std::shared_ptr<backtest::Profile> profile_ptr)
   : Backtest{std::move(name),
              std::move(strategy_ptr),
              std::move(asset_ptr),
+             std::move(broker_ptr),
              std::move(profile_ptr),
              std::vector<backtest::BacktestSummary>{}}
   {
@@ -46,11 +49,13 @@ public:
   Backtest(std::string name,
            std::shared_ptr<backtest::Strategy> strategy_ptr,
            std::shared_ptr<backtest::Asset> asset_ptr,
+           std::shared_ptr<backtest::Broker> broker_ptr,
            std::shared_ptr<backtest::Profile> profile_ptr,
            std::vector<backtest::BacktestSummary> summaries)
   : name_{std::move(name)}
   , strategy_ptr_{strategy_ptr}
   , asset_ptr_{asset_ptr}
+  , broker_ptr_{broker_ptr}
   , profile_ptr_{profile_ptr}
   , is_failed_{false}
   , summaries_{std::move(summaries)}
@@ -100,6 +105,23 @@ public:
   auto asset(this const Backtest& self) noexcept -> const backtest::Asset&
   {
     return *self.asset_ptr();
+  }
+
+  auto broker_ptr(this const Backtest& self) noexcept
+   -> const std::shared_ptr<backtest::Broker>
+  {
+    return self.broker_ptr_;
+  }
+
+  void broker_ptr(this Backtest& self,
+                  std::shared_ptr<backtest::Broker> new_broker_ptr) noexcept
+  {
+    self.broker_ptr_ = std::move(new_broker_ptr);
+  }
+
+  auto broker(this const Backtest& self) noexcept -> const backtest::Broker&
+  {
+    return *self.broker_ptr();
   }
 
   auto profile_ptr(this const Backtest& self) noexcept
@@ -167,6 +189,7 @@ public:
     const auto asset_price = asset_snapshot.close();
     const auto& strategy = self.strategy();
     const auto& profile = self.profile();
+    const auto& broker = self.broker();
 
     auto summary = !self.summaries_.empty()
                     ? self.summaries_.back()
@@ -179,25 +202,30 @@ public:
      asset_snapshot.close(),
      asset_snapshot.lookback());
 
-    trade_session.evaluate_exit_conditions(asset_snapshot[1].close(),
-                                           asset_snapshot.open(),
-                                           asset_snapshot.high(),
-                                           asset_snapshot.low());
-
     const auto& open_position = trade_session.open_position();
     if(open_position) {
-      const auto position_size = open_position->unrealized_position_size();
       const auto exit_trade =
-       strategy.exit_trade(asset_snapshot, position_size);
+       trade_session
+        .evaluate_exit_conditions(asset_snapshot[1].close(),
+                                  asset_snapshot.open(),
+                                  asset_snapshot.high(),
+                                  asset_snapshot.low())
+        .or_else([&]() {
+          const auto position_size = open_position->unrealized_position_size();
+          return strategy.exit_trade(asset_snapshot, position_size);
+        });
 
       if(exit_trade) {
-        trade_session.exit_position(*exit_trade);
+        const auto fee = broker.calculate_fee(*exit_trade);
+        trade_session.exit_position(*exit_trade, fee);
       }
     } else {
       const auto entry_trade =
        strategy.entry_trade(asset_snapshot, profile.get_risk_value());
+
       if(entry_trade) {
-        trade_session.entry_position(*entry_trade);
+        const auto fee = broker.calculate_fee(*entry_trade);
+        trade_session.entry_position(*entry_trade, fee);
       }
     }
 
@@ -211,6 +239,7 @@ private:
 
   std::shared_ptr<backtest::Strategy> strategy_ptr_;
   std::shared_ptr<backtest::Asset> asset_ptr_;
+  std::shared_ptr<backtest::Broker> broker_ptr_;
   std::shared_ptr<backtest::Profile> profile_ptr_;
 
   bool is_failed_;

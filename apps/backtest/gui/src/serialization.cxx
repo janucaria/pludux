@@ -31,12 +31,14 @@ void serialize(Archive& archive, pludux::backtest::TradeRecord& trade_record)
   const auto status = static_cast<std::size_t>(trade_record.status());
   archive(make_nvp("status", status),
           make_nvp("positionSize", trade_record.position_size()),
-          make_nvp("averagePrice", trade_record.average_price()),
+          make_nvp("investment", trade_record.investment()),
           make_nvp("entryTimestamp", trade_record.entry_timestamp()),
           make_nvp("entryPrice", trade_record.entry_price()),
+          make_nvp("totalEntryFees", trade_record.total_entry_fees()),
           make_nvp("entryIndex", trade_record.entry_index()),
           make_nvp("exitTimestamp", trade_record.exit_timestamp()),
           make_nvp("exitPrice", trade_record.exit_price()),
+          make_nvp("totalExitFees", trade_record.total_exit_fees()),
           make_nvp("exitIndex", trade_record.exit_index()),
           make_nvp("stopLossPrice", trade_record.stop_loss_price()),
           make_nvp("trailingStopPrice", trade_record.trailing_stop_price()),
@@ -52,12 +54,14 @@ struct LoadAndConstruct<pludux::backtest::TradeRecord> {
   {
     auto status = std::size_t{};
     auto position_size = double{};
-    auto average_price = double{};
+    auto investment = double{};
     auto entry_timestamp = std::time_t{};
     auto entry_price = double{};
+    auto total_entry_fees = double{};
     auto entry_index = std::size_t{};
     auto exit_timestamp = std::time_t{};
     auto exit_price = double{};
+    auto total_exit_fees = double{};
     auto exit_index = std::size_t{};
     auto stop_loss_price = double{};
     auto trailing_stop_price = double{};
@@ -65,12 +69,14 @@ struct LoadAndConstruct<pludux::backtest::TradeRecord> {
 
     archive(make_nvp("status", status),
             make_nvp("positionSize", position_size),
-            make_nvp("averagePrice", average_price),
+            make_nvp("investment", investment),
             make_nvp("entryTimestamp", entry_timestamp),
             make_nvp("entryPrice", entry_price),
+            make_nvp("totalEntryFees", total_entry_fees),
             make_nvp("entryIndex", entry_index),
             make_nvp("exitTimestamp", exit_timestamp),
             make_nvp("exitPrice", exit_price),
+            make_nvp("totalExitFees", total_exit_fees),
             make_nvp("exitIndex", exit_index),
             make_nvp("stopLossPrice", stop_loss_price),
             make_nvp("trailingStopPrice", trailing_stop_price),
@@ -78,12 +84,14 @@ struct LoadAndConstruct<pludux::backtest::TradeRecord> {
 
     constructor(pludux::backtest::TradeRecord::Status(status),
                 position_size,
-                average_price,
+                investment,
                 entry_timestamp,
                 entry_price,
+                total_entry_fees,
                 entry_index,
                 exit_timestamp,
                 exit_price,
+                total_exit_fees,
                 exit_index,
                 stop_loss_price,
                 trailing_stop_price,
@@ -106,8 +114,9 @@ void serialize(Archive& archive,
 
   archive(
    make_nvp("positionSize", trade_position.position_size()),
-   make_nvp("averagePrice", trade_position.average_price()),
+   make_nvp("investment", trade_position.investment()),
    make_nvp("entryPrice", trade_position.entry_price()),
+   make_nvp("totalEntryFees", trade_position.total_entry_fees()),
    make_nvp("stopLossInitialPrice", trade_position.stop_loss_initial_price()),
    make_nvp("stopLossTrailingPrice", trade_position.stop_loss_trailing_price()),
    make_nvp("takeProfitPrice", trade_position.take_profit_price()),
@@ -124,8 +133,9 @@ struct LoadAndConstruct<pludux::backtest::TradePosition> {
    cereal::construct<pludux::backtest::TradePosition>& constructor)
   {
     auto position_size = double{};
-    auto average_price = double{};
+    auto investment = double{};
     auto entry_price = double{};
+    auto total_entry_fees = double{};
     auto stop_loss_initial_price = double{};
     auto stop_loss_trailing_price = double{};
     auto take_profit_price = double{};
@@ -135,8 +145,9 @@ struct LoadAndConstruct<pludux::backtest::TradePosition> {
      std::vector<std::unique_ptr<const pludux::backtest::TradeRecord>>{};
 
     archive(make_nvp("positionSize", position_size),
-            make_nvp("averagePrice", average_price),
+            make_nvp("investment", investment),
             make_nvp("entryPrice", entry_price),
+            make_nvp("totalEntryFees", total_entry_fees),
             make_nvp("stopLossInitialPrice", stop_loss_initial_price),
             make_nvp("stopLossTrailingPrice", stop_loss_trailing_price),
             make_nvp("takeProfitPrice", take_profit_price),
@@ -150,9 +161,10 @@ struct LoadAndConstruct<pludux::backtest::TradePosition> {
     }
 
     constructor(position_size,
-                average_price,
+                investment,
                 entry_timestamp,
                 entry_price,
+                total_entry_fees,
                 entry_index,
                 stop_loss_initial_price,
                 stop_loss_trailing_price,
@@ -431,6 +443,86 @@ struct LoadAndConstruct<pludux::backtest::Profile> {
 /*--------------------------------------------------------------------------------------*/
 
 template<class Archive>
+void serialize(Archive& archive, pludux::backtest::BrokerFee& broker_fee)
+{
+  const auto fee_type = static_cast<std::size_t>(broker_fee.fee_type());
+  const auto fee_position = static_cast<std::size_t>(broker_fee.fee_position());
+  const auto fee_trigger = static_cast<std::size_t>(broker_fee.fee_trigger());
+  archive(make_nvp("name", broker_fee.name()),
+          make_nvp("feeType", fee_type),
+          make_nvp("feePosition", fee_position),
+          make_nvp("feeTrigger", fee_trigger),
+          make_nvp("feeValue", broker_fee.value()));
+}
+
+template<>
+struct LoadAndConstruct<pludux::backtest::BrokerFee> {
+  template<class Archive>
+  static void
+  load_and_construct(Archive& archive,
+                     construct<pludux::backtest::BrokerFee>& constructor)
+  {
+    auto name = std::string{};
+    auto fee_type = std::size_t{};
+    auto fee_position = std::size_t{};
+    auto fee_trigger = std::size_t{};
+    auto fee_value = double{};
+
+    archive(make_nvp("name", name),
+            make_nvp("feeType", fee_type),
+            make_nvp("feePosition", fee_position),
+            make_nvp("feeTrigger", fee_trigger),
+            make_nvp("feeValue", fee_value));
+
+    constructor(
+     std::move(name),
+     static_cast<pludux::backtest::BrokerFee::FeeType>(fee_type),
+     static_cast<pludux::backtest::BrokerFee::FeePosition>(fee_position),
+     static_cast<pludux::backtest::BrokerFee::FeeTrigger>(fee_trigger),
+     fee_value);
+  }
+};
+
+// /*--------------------------------------------------------------------------------------*/
+
+template<class Archive>
+void serialize(Archive& archive, pludux::backtest::Broker& broker)
+{
+  auto fee_ptrs = std::vector<std::unique_ptr<const pludux::backtest::BrokerFee,
+                                              decltype([](auto*) {})>>{};
+
+  for(const auto& fee : broker.fees()) {
+    fee_ptrs.emplace_back(&fee);
+  }
+
+  archive(make_nvp("name", broker.name()));
+  archive(make_nvp("fees", fee_ptrs));
+}
+
+template<>
+struct LoadAndConstruct<pludux::backtest::Broker> {
+  template<class Archive>
+  static void
+  load_and_construct(Archive& archive,
+                     construct<pludux::backtest::Broker>& constructor)
+  {
+    auto name = std::string{};
+    auto fee_ptrs = std::vector<std::unique_ptr<pludux::backtest::BrokerFee>>{};
+
+    archive(make_nvp("name", name), make_nvp("fees", fee_ptrs));
+
+    auto fees = std::vector<pludux::backtest::BrokerFee>{};
+    for(auto& fee_ptr : fee_ptrs) {
+      fees.emplace_back(std::move(*fee_ptr));
+    }
+
+    constructor(std::move(name), std::move(fees));
+  }
+};
+
+/*--------------------------------------------------------------------------------------*/
+
+template<class Archive>
 void save(Archive& archive, const pludux::AssetData& asset_data)
 {
   archive(make_nvp("data", asset_data.data()));
@@ -504,7 +596,7 @@ void load(Archive& archive, pludux::AssetHistory& asset_history)
 /*--------------------------------------------------------------------------------------*/
 
 template<class Archive>
-void serialize(Archive& archive, const pludux::backtest::Asset& asset)
+void serialize(Archive& archive, pludux::backtest::Asset& asset)
 {
   archive(make_nvp("name", asset.name()), make_nvp("history", asset.history()));
 }
@@ -533,6 +625,7 @@ void serialize(Archive& archive, pludux::Backtest& backtest)
   archive(make_nvp("name", backtest.name()),
           make_nvp("strategy", backtest.strategy_ptr()),
           make_nvp("asset", backtest.asset_ptr()),
+          make_nvp("broker", backtest.broker_ptr()),
           make_nvp("profile", backtest.profile_ptr()),
           make_nvp("summaries", backtest.summaries()),
           make_nvp("isFailed", backtest.is_failed()));
@@ -547,6 +640,7 @@ struct LoadAndConstruct<pludux::Backtest> {
     auto name = std::string{};
     auto strategy_ptr = std::shared_ptr<pludux::backtest::Strategy>{};
     auto asset_ptr = std::shared_ptr<pludux::backtest::Asset>{};
+    auto broker_ptr = std::shared_ptr<pludux::backtest::Broker>{};
     auto profile_ptr = std::shared_ptr<pludux::backtest::Profile>{};
     auto summaries = std::vector<pludux::backtest::BacktestSummary>{};
     auto is_failed = bool{};
@@ -554,6 +648,7 @@ struct LoadAndConstruct<pludux::Backtest> {
     archive(make_nvp("name", name),
             make_nvp("strategy", strategy_ptr),
             make_nvp("asset", asset_ptr),
+            make_nvp("broker", broker_ptr),
             make_nvp("profile", profile_ptr),
             make_nvp("summaries", summaries),
             make_nvp("isFailed", is_failed));
@@ -561,6 +656,7 @@ struct LoadAndConstruct<pludux::Backtest> {
     auto backtest = pludux::Backtest{std::move(name),
                                      strategy_ptr,
                                      asset_ptr,
+                                     broker_ptr,
                                      profile_ptr,
                                      std::move(summaries)};
 
@@ -587,6 +683,7 @@ void save(Archive& archive, const pludux::apps::AppStateData& app_state_data)
    make_nvp("selectedBacktestIndex", app_state_data.selected_backtest_index));
   archive(make_nvp("strategies", app_state_data.strategies));
   archive(make_nvp("assets", app_state_data.assets));
+  archive(make_nvp("brokers", app_state_data.brokers));
   archive(make_nvp("profiles", app_state_data.profiles));
 
   auto backtest_ptrs = std::vector<
@@ -605,6 +702,7 @@ void load(Archive& archive, pludux::apps::AppStateData& app_state_data)
    make_nvp("selectedBacktestIndex", app_state_data.selected_backtest_index));
   archive(make_nvp("strategies", app_state_data.strategies));
   archive(make_nvp("assets", app_state_data.assets));
+  archive(make_nvp("brokers", app_state_data.brokers));
   archive(make_nvp("profiles", app_state_data.profiles));
 
   auto backtest_ptrs = std::vector<std::unique_ptr<pludux::Backtest>>{};

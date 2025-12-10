@@ -22,14 +22,16 @@ public:
 
   TradeRecord(Status status,
               double position_size,
-              double average_price,
+              double investment,
 
               std::time_t entry_timestamp,
               double entry_price,
+              double total_entry_fees,
               std::size_t entry_index,
 
               std::time_t exit_timestamp,
               double exit_price,
+              double total_exit_fees,
               std::size_t exit_index,
 
               double stop_loss_price,
@@ -37,9 +39,11 @@ public:
               double take_profit_price)
   : status_{status}
   , position_size_{position_size}
-  , average_price_{average_price}
+  , investment_{investment}
   , entry_price_{entry_price}
   , exit_price_{exit_price}
+  , total_entry_fees_{total_entry_fees}
+  , total_exit_fees_{total_exit_fees}
   , stop_loss_price_{stop_loss_price}
   , trailing_stop_price_{trailing_stop_price}
   , take_profit_price_{take_profit_price}
@@ -68,6 +72,16 @@ public:
   void position_size(this TradeRecord& self, double size) noexcept
   {
     self.position_size_ = size;
+  }
+
+  auto investment(this const TradeRecord& self) noexcept -> double
+  {
+    return self.investment_;
+  }
+
+  void investment(this TradeRecord& self, double investment) noexcept
+  {
+    self.investment_ = investment;
   }
 
   auto entry_index(this const TradeRecord& self) noexcept -> std::size_t
@@ -100,16 +114,6 @@ public:
     self.entry_price_ = price;
   }
 
-  auto average_price(this const TradeRecord& self) noexcept -> double
-  {
-    return self.average_price_;
-  }
-
-  void average_price(this TradeRecord& self, double price) noexcept
-  {
-    self.average_price_ = price;
-  }
-
   auto exit_price(this const TradeRecord& self) noexcept -> double
   {
     return self.exit_price_;
@@ -118,6 +122,26 @@ public:
   void exit_price(this TradeRecord& self, double price) noexcept
   {
     self.exit_price_ = price;
+  }
+
+  auto total_entry_fees(this const TradeRecord& self) noexcept -> double
+  {
+    return self.total_entry_fees_;
+  }
+
+  void total_entry_fees(this TradeRecord& self, double fees) noexcept
+  {
+    self.total_entry_fees_ = fees;
+  }
+
+  auto total_exit_fees(this const TradeRecord& self) noexcept -> double
+  {
+    return self.total_exit_fees_;
+  }
+
+  void total_exit_fees(this TradeRecord& self, double fees) noexcept
+  {
+    self.total_exit_fees_ = fees;
   }
 
   auto entry_timestamp(this const TradeRecord& self) noexcept -> std::time_t
@@ -180,14 +204,16 @@ public:
     return self.position_size() * self.exit_price();
   }
 
-  auto investment(this const TradeRecord& self) noexcept -> double
+  auto average_price(this const TradeRecord& self) noexcept -> double
   {
-    return self.position_size() * self.average_price();
+    return self.investment() / self.position_size();
   }
 
   auto pnl(this const TradeRecord& self) noexcept -> double
   {
-    return self.exit_value() - self.investment();
+    return self.position_size()
+            ? self.exit_value() - self.total_exit_fees() - self.investment()
+            : 0.0;
   }
 
   auto duration(this const TradeRecord& self) noexcept -> std::time_t
@@ -249,10 +275,13 @@ public:
 private:
   Status status_;
   double position_size_;
-  double average_price_;
+  double investment_;
 
   double entry_price_;
   double exit_price_;
+
+  double total_entry_fees_;
+  double total_exit_fees_;
 
   double stop_loss_price_;
   double trailing_stop_price_;
