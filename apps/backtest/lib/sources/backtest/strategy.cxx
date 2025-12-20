@@ -20,6 +20,21 @@ export namespace pludux::backtest {
 
 class Strategy {
 public:
+  Strategy()
+  : Strategy("",
+             SeriesMethodRegistry{},
+             PercentageMethod<>{10.0},
+             FalseMethod{},
+             FalseMethod{},
+             FalseMethod{},
+             FalseMethod{},
+             false,
+             false,
+             false,
+             1.0)
+  {
+  }
+
   Strategy(std::string name,
            SeriesMethodRegistry series_registry,
            AnySeriesMethod risk_method,
@@ -48,6 +63,11 @@ public:
   auto name(this const Strategy& self) noexcept -> const std::string&
   {
     return self.name_;
+  }
+
+  void name(this Strategy& self, std::string name) noexcept
+  {
+    self.name_ = std::move(name);
   }
 
   auto series_registry(this const Strategy& self) noexcept
