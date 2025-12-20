@@ -286,11 +286,12 @@ auto risk_reward_config_parser() -> ConfigParser
    "ATR",
    [](const ConfigParser& config_parser,
       const AnySeriesMethod& method) -> jsoncons::ojson {
-     auto serialized_method = jsoncons::ojson{};
+     auto serialized_method = jsoncons::ojson::null();
 
      auto atr_method = series_method_cast<AtrMethod>(method);
 
      if(atr_method) {
+       serialized_method = jsoncons::ojson{};
        serialized_method["atr"] = jsoncons::ojson{};
        serialized_method["atr"]["period"] = atr_method->period();
        serialized_method["atr"]["multiplier"] = atr_method->multiplier();
@@ -321,12 +322,13 @@ auto risk_reward_config_parser() -> ConfigParser
    "PERCENTAGE",
    [](const ConfigParser& config_parser,
       const AnySeriesMethod& method) -> jsoncons::ojson {
-     auto serialized_method = jsoncons::ojson{};
+     auto serialized_method = jsoncons::ojson::null();
 
      auto percent_method =
       series_method_cast<PercentageMethod<AnySeriesMethod>>(method);
 
      if(percent_method) {
+       serialized_method = jsoncons::ojson{};
        serialized_method["percentage"] = percent_method->percent();
      }
 
@@ -347,11 +349,12 @@ auto risk_reward_config_parser() -> ConfigParser
    "VALUE",
    [](const ConfigParser& config_parser,
       const AnySeriesMethod& method) -> jsoncons::ojson {
-     auto serialized_method = jsoncons::ojson{};
+     auto serialized_method = jsoncons::ojson::null();
 
      auto value_method = series_method_cast<ValueMethod>(method);
 
      if(value_method) {
+       serialized_method = jsoncons::ojson{};
        serialized_method["value"] = value_method->value();
      }
 
