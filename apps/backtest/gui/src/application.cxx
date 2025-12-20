@@ -39,6 +39,14 @@ public:
     ImPlot::GetStyle().Use24HourClock = true;
 
     {
+      auto& markets = state_data.markets;
+      if(markets.empty()) {
+        auto default_market = std::make_shared<backtest::Market>("Default");
+        markets.push_back(default_market);
+      }
+    }
+
+    {
       auto& brokers = state_data.brokers;
       if(brokers.empty()) {
         auto default_broker = std::make_shared<backtest::Broker>("Default");
@@ -181,6 +189,8 @@ public:
 
       self.strategies_window_.render(app_state);
 
+      self.markets_window_.render(app_state);
+
       self.brokers_window_.render(app_state);
 
       self.profiles_window_.render(app_state);
@@ -220,9 +230,10 @@ private:
   DockspaceWindow dockspace_window_;
   PlotDataWindow plot_data_window_;
   BacktestsWindow backtests_window_;
-  ProfilesWindow profiles_window_;
   StrategiesWindow strategies_window_;
+  MarketsWindow markets_window_;
   BrokersWindow brokers_window_;
+  ProfilesWindow profiles_window_;
 
   AppStateData state_data_;
   std::queue<PolyAction> actions_;

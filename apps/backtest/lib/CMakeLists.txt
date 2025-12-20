@@ -47,10 +47,11 @@ target_sources(${PROJECT_NAME}
     sources/backtest/trade_session.cxx
     
     sources/backtest/asset.cxx
+    sources/backtest/strategy.cxx
+    sources/backtest/market.cxx
+    sources/backtest/broker.cxx
     sources/backtest/profile.cxx
     sources/backtest/backtest_summary.cxx
-    sources/backtest/strategy.cxx
-    sources/backtest/broker.cxx
 
     sources/backtest.cxx
 )

@@ -41,8 +41,10 @@ auto main(int, const char**) -> int
 
   auto broker_ptr = std::make_shared<pludux::backtest::Broker>("Default");
 
+  auto market_ptr = std::make_shared<pludux::backtest::Market>("Default");
+
   auto backtest = pludux::Backtest{
-   "no name", strategy_ptr, asset_ptr, broker_ptr, profile_ptr};
+   "no name", asset_ptr, strategy_ptr, market_ptr, broker_ptr, profile_ptr};
   while(backtest.should_run()) {
     backtest.run();
   }

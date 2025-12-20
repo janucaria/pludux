@@ -27,19 +27,22 @@ export import :trade_session;
 export import :backtest_summary;
 export import :strategy;
 export import :broker;
+export import :market;
 
 export namespace pludux {
 
 class Backtest {
 public:
   Backtest(std::string name,
-           std::shared_ptr<backtest::Strategy> strategy_ptr,
            std::shared_ptr<backtest::Asset> asset_ptr,
+           std::shared_ptr<backtest::Strategy> strategy_ptr,
+           std::shared_ptr<backtest::Market> market_ptr,
            std::shared_ptr<backtest::Broker> broker_ptr,
            std::shared_ptr<backtest::Profile> profile_ptr)
   : Backtest{std::move(name),
-             std::move(strategy_ptr),
              std::move(asset_ptr),
+             std::move(strategy_ptr),
+             std::move(market_ptr),
              std::move(broker_ptr),
              std::move(profile_ptr),
              std::vector<backtest::BacktestSummary>{}}
@@ -47,14 +50,16 @@ public:
   }
 
   Backtest(std::string name,
-           std::shared_ptr<backtest::Strategy> strategy_ptr,
            std::shared_ptr<backtest::Asset> asset_ptr,
+           std::shared_ptr<backtest::Strategy> strategy_ptr,
+           std::shared_ptr<backtest::Market> market_ptr,
            std::shared_ptr<backtest::Broker> broker_ptr,
            std::shared_ptr<backtest::Profile> profile_ptr,
            std::vector<backtest::BacktestSummary> summaries)
   : name_{std::move(name)}
-  , strategy_ptr_{strategy_ptr}
   , asset_ptr_{asset_ptr}
+  , strategy_ptr_{strategy_ptr}
+  , market_ptr_{market_ptr}
   , broker_ptr_{broker_ptr}
   , profile_ptr_{profile_ptr}
   , is_failed_{false}
@@ -124,6 +129,23 @@ public:
     return *self.broker_ptr();
   }
 
+  auto market_ptr(this const Backtest& self) noexcept
+   -> const std::shared_ptr<backtest::Market>
+  {
+    return self.market_ptr_;
+  }
+
+  void market_ptr(this Backtest& self,
+                  std::shared_ptr<backtest::Market> new_market_ptr) noexcept
+  {
+    self.market_ptr_ = std::move(new_market_ptr);
+  }
+
+  auto market(this const Backtest& self) noexcept -> const backtest::Market&
+  {
+    return *self.market_ptr();
+  }
+
   auto profile_ptr(this const Backtest& self) noexcept
    -> const std::shared_ptr<backtest::Profile>
   {
@@ -190,6 +212,7 @@ public:
     const auto& strategy = self.strategy();
     const auto& profile = self.profile();
     const auto& broker = self.broker();
+    const auto& market = self.market();
 
     auto summary = !self.summaries_.empty()
                     ? self.summaries_.back()
@@ -220,10 +243,28 @@ public:
         trade_session.exit_position(*exit_trade, fee);
       }
     } else {
-      const auto entry_trade =
+      auto entry_trade =
        strategy.entry_trade(asset_snapshot, profile.get_risk_value());
 
       if(entry_trade) {
+        {
+          const auto qty_step = market.qty_step();
+          const auto min_order_qty = market.min_order_qty();
+
+          auto position_size = entry_trade->position_size();
+          if(qty_step > 0.0 &&
+             std::fmod(entry_trade->position_size(), qty_step) != 0.0) {
+            position_size =
+             qty_step * std::round(entry_trade->position_size() / qty_step);
+          }
+
+          if(position_size < min_order_qty) {
+            position_size = min_order_qty;
+          }
+
+          entry_trade->position_size(position_size);
+        }
+
         const auto fee = broker.calculate_fee(*entry_trade);
         trade_session.entry_position(*entry_trade, fee);
       }
@@ -237,8 +278,9 @@ public:
 private:
   std::string name_;
 
-  std::shared_ptr<backtest::Strategy> strategy_ptr_;
   std::shared_ptr<backtest::Asset> asset_ptr_;
+  std::shared_ptr<backtest::Strategy> strategy_ptr_;
+  std::shared_ptr<backtest::Market> market_ptr_;
   std::shared_ptr<backtest::Broker> broker_ptr_;
   std::shared_ptr<backtest::Profile> profile_ptr_;
 

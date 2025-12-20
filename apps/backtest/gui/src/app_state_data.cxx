@@ -20,13 +20,15 @@ struct AppStateData {
 
   std::ptrdiff_t selected_backtest_index{-1};
 
-  std::vector<std::shared_ptr<backtest::Strategy>> strategies{};
-
   std::vector<std::shared_ptr<backtest::Asset>> assets{};
 
-  std::vector<std::shared_ptr<backtest::Profile>> profiles{};
+  std::vector<std::shared_ptr<backtest::Strategy>> strategies{};
+
+  std::vector<std::shared_ptr<backtest::Market>> markets{};
 
   std::vector<std::shared_ptr<backtest::Broker>> brokers{};
+
+  std::vector<std::shared_ptr<backtest::Profile>> profiles{};
 };
 
 } // namespace pludux::apps

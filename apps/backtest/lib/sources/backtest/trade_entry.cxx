@@ -33,6 +33,11 @@ public:
     return self.position_size_;
   }
 
+  void position_size(this TradeEntry& self, double new_position_size) noexcept
+  {
+    self.position_size_ = new_position_size;
+  }
+
   auto price(this const TradeEntry& self) noexcept -> double
   {
     return self.price_;

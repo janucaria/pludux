@@ -66,8 +66,9 @@ private:
        "CSV file must contain 'asset' and 'strategy' columns.");
     }
 
-    const auto profile_column_index = csv_doc.GetColumnIdx("Profile");
+    const auto market_column_index = csv_doc.GetColumnIdx("Market");
     const auto broker_column_index = csv_doc.GetColumnIdx("Broker");
+    const auto profile_column_index = csv_doc.GetColumnIdx("Profile");
 
     const auto& assets = state.assets;
     const auto& strategies = state.strategies;
@@ -81,6 +82,11 @@ private:
       if(asset_name.empty() || strategy_name.empty()) {
         continue;
       }
+
+      const auto market_name =
+       market_column_index != -1
+        ? csv_doc.GetCell<std::string>(market_column_index, i)
+        : std::string{"Default"};
 
       const auto broker_name =
        broker_column_index != -1
@@ -126,6 +132,19 @@ private:
 
       auto strategy_ptr = *strategy_it;
 
+      auto market_it =
+       std::find_if(state.markets.begin(),
+                    state.markets.end(),
+                    [&market_name](const auto& market_ptr) {
+                      return market_ptr && market_ptr->name() == market_name;
+                    });
+
+      if(market_it == state.markets.end()) {
+        continue;
+      }
+
+      auto market_ptr = *market_it;
+
       auto broker_it =
        std::find_if(state.brokers.begin(),
                     state.brokers.end(),
@@ -153,8 +172,9 @@ private:
       auto profile_ptr = *profile_it;
 
       state.backtests.emplace_back(backtest_name,
-                                   std::move(strategy_ptr),
                                    std::move(asset_ptr),
+                                   std::move(strategy_ptr),
+                                   std::move(market_ptr),
                                    std::move(broker_ptr),
                                    std::move(profile_ptr));
     }

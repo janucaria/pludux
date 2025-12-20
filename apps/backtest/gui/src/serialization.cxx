@@ -483,7 +483,7 @@ struct LoadAndConstruct<pludux::backtest::BrokerFee> {
   }
 };
 
-// /*--------------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------------*/
 
 template<class Archive>
 void serialize(Archive& archive, pludux::backtest::Broker& broker)
@@ -517,6 +517,35 @@ struct LoadAndConstruct<pludux::backtest::Broker> {
     }
 
     constructor(std::move(name), std::move(fees));
+  }
+};
+
+/*--------------------------------------------------------------------------------------*/
+
+template<class Archive>
+void serialize(Archive& archive, pludux::backtest::Market& market)
+{
+  archive(make_nvp("name", market.name()),
+          make_nvp("minOrderQty", market.min_order_qty()),
+          make_nvp("qtyStep", market.qty_step()));
+}
+
+template<>
+struct LoadAndConstruct<pludux::backtest::Market> {
+  template<class Archive>
+  static void
+  load_and_construct(Archive& archive,
+                     construct<pludux::backtest::Market>& constructor)
+  {
+    auto name = std::string{};
+    auto min_order_qty = double{};
+    auto qty_step = double{};
+
+    archive(make_nvp("name", name),
+            make_nvp("minOrderQty", min_order_qty),
+            make_nvp("qtyStep", qty_step));
+
+    constructor(std::move(name), min_order_qty, qty_step);
   }
 };
 
@@ -623,8 +652,9 @@ template<class Archive>
 void serialize(Archive& archive, pludux::Backtest& backtest)
 {
   archive(make_nvp("name", backtest.name()),
-          make_nvp("strategy", backtest.strategy_ptr()),
           make_nvp("asset", backtest.asset_ptr()),
+          make_nvp("strategy", backtest.strategy_ptr()),
+          make_nvp("market", backtest.market_ptr()),
           make_nvp("broker", backtest.broker_ptr()),
           make_nvp("profile", backtest.profile_ptr()),
           make_nvp("summaries", backtest.summaries()),
@@ -638,24 +668,27 @@ struct LoadAndConstruct<pludux::Backtest> {
                                  construct<pludux::Backtest>& constructor)
   {
     auto name = std::string{};
-    auto strategy_ptr = std::shared_ptr<pludux::backtest::Strategy>{};
     auto asset_ptr = std::shared_ptr<pludux::backtest::Asset>{};
+    auto strategy_ptr = std::shared_ptr<pludux::backtest::Strategy>{};
+    auto market_ptr = std::shared_ptr<pludux::backtest::Market>{};
     auto broker_ptr = std::shared_ptr<pludux::backtest::Broker>{};
     auto profile_ptr = std::shared_ptr<pludux::backtest::Profile>{};
     auto summaries = std::vector<pludux::backtest::BacktestSummary>{};
     auto is_failed = bool{};
 
     archive(make_nvp("name", name),
-            make_nvp("strategy", strategy_ptr),
             make_nvp("asset", asset_ptr),
+            make_nvp("strategy", strategy_ptr),
+            make_nvp("market", market_ptr),
             make_nvp("broker", broker_ptr),
             make_nvp("profile", profile_ptr),
             make_nvp("summaries", summaries),
             make_nvp("isFailed", is_failed));
 
     auto backtest = pludux::Backtest{std::move(name),
-                                     strategy_ptr,
                                      asset_ptr,
+                                     strategy_ptr,
+                                     market_ptr,
                                      broker_ptr,
                                      profile_ptr,
                                      std::move(summaries)};
@@ -681,8 +714,9 @@ void save(Archive& archive, const pludux::apps::AppStateData& app_state_data)
   archive(make_nvp("alertMessages", app_state_data.alert_messages));
   archive(
    make_nvp("selectedBacktestIndex", app_state_data.selected_backtest_index));
-  archive(make_nvp("strategies", app_state_data.strategies));
   archive(make_nvp("assets", app_state_data.assets));
+  archive(make_nvp("strategies", app_state_data.strategies));
+  archive(make_nvp("markets", app_state_data.markets));
   archive(make_nvp("brokers", app_state_data.brokers));
   archive(make_nvp("profiles", app_state_data.profiles));
 
@@ -700,8 +734,9 @@ void load(Archive& archive, pludux::apps::AppStateData& app_state_data)
   archive(make_nvp("alertMessages", app_state_data.alert_messages));
   archive(
    make_nvp("selectedBacktestIndex", app_state_data.selected_backtest_index));
-  archive(make_nvp("strategies", app_state_data.strategies));
   archive(make_nvp("assets", app_state_data.assets));
+  archive(make_nvp("strategies", app_state_data.strategies));
+  archive(make_nvp("markets", app_state_data.markets));
   archive(make_nvp("brokers", app_state_data.brokers));
   archive(make_nvp("profiles", app_state_data.profiles));
 

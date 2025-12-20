@@ -113,7 +113,7 @@ private:
     if(ImGui::Button("Add New Backtest")) {
       self.backtest_panel_mode_ = BacktestPanelMode::AddNew;
       self.new_backtest_ = std::make_shared<pludux::Backtest>(
-       "", nullptr, nullptr, nullptr, nullptr);
+       "", nullptr, nullptr, nullptr, nullptr, nullptr);
     }
     ImGui::EndGroup();
   }
@@ -134,11 +134,13 @@ private:
 
     if(ImGui::Button("Create Backtest")) {
       auto& new_backtest = self.new_backtest_;
-      if(new_backtest->strategy_ptr() && new_backtest->asset_ptr() &&
-         new_backtest->broker_ptr() && new_backtest->profile_ptr()) {
+      if(new_backtest->asset_ptr() && new_backtest->strategy_ptr() &&
+         new_backtest->market_ptr() && new_backtest->broker_ptr() &&
+         new_backtest->profile_ptr()) {
         app_state.push_action([new_backtest](AppStateData& state) {
-          const auto& strategy = new_backtest->strategy_ptr();
           const auto& asset = new_backtest->asset_ptr();
+          const auto& strategy = new_backtest->strategy_ptr();
+          const auto& market = new_backtest->market_ptr();
           const auto& broker = new_backtest->broker_ptr();
           const auto& profile = new_backtest->profile_ptr();
           const auto& new_backtest_name = new_backtest->name();
@@ -147,8 +149,8 @@ private:
            // TODO: Visual Studio 2026 have bug with include <format> causing
            // compile error
            new_backtest_name.empty()
-            ? asset->name() + " / " + strategy->name() + " / " +
-               broker->name() + " / " + profile->name()
+            ? strategy->name() + " / " + asset->name() + " / " +
+               market->name() + " / " + broker->name() + " / " + profile->name()
             : new_backtest_name;
           new_backtest->name(backtest_name);
 
@@ -160,8 +162,8 @@ private:
         self.new_backtest_ = nullptr;
       } else {
         app_state.push_action([](AppStateData& state) {
-          state.alert_messages.push(
-           "Please select a strategy, an asset, a broker, and a profile.");
+          state.alert_messages.push("Please select an asset, a strategy, a "
+                                    "market, a broker, and a profile.");
         });
       }
     }
@@ -194,11 +196,12 @@ private:
         app_state.push_action([](AppStateData& state) {
           state.alert_messages.push("Backtest name cannot be empty.");
         });
-      } else if(!new_backtest->strategy_ptr() || !new_backtest->asset_ptr() ||
-                !new_backtest->broker_ptr() || !new_backtest->profile_ptr()) {
+      } else if(!new_backtest->asset_ptr() || !new_backtest->strategy_ptr() ||
+                !new_backtest->market_ptr() || !new_backtest->broker_ptr() ||
+                !new_backtest->profile_ptr()) {
         app_state.push_action([](AppStateData& state) {
-          state.alert_messages.push(
-           "Please select an asset, a strategy, and a profile.");
+          state.alert_messages.push("Please select an asset, a strategy, a "
+                                    "market, a broker, and a profile.");
         });
       } else {
         app_state.push_action([&old_backtest = self.old_backtest_.value().get(),
@@ -232,8 +235,9 @@ private:
   void edit_backtest_form(this BacktestsWindow& self, AppState& app_state)
   {
     const auto& state = app_state.state();
-    const auto& strategies = state.strategies;
     const auto& assets = state.assets;
+    const auto& strategies = state.strategies;
+    const auto& markets = state.markets;
     const auto& brokers = state.brokers;
     const auto& profiles = state.profiles;
 
@@ -296,6 +300,37 @@ private:
 
           if(ImGui::Selectable(strategy_name.c_str(), is_selected)) {
             new_backtest->strategy_ptr(strategy);
+          }
+
+          if(is_selected) {
+            ImGui::SetItemDefaultFocus();
+          }
+
+          ImGui::PopID();
+        }
+        ImGui::EndCombo();
+      }
+    }
+
+    {
+      if(new_backtest->market_ptr() == nullptr && !markets.empty()) {
+        new_backtest->market_ptr(markets.front());
+      }
+
+      ImGui::Text("Market:");
+      auto market_preview = new_backtest->market_ptr()
+                             ? new_backtest->market_ptr()->name()
+                             : std::string{""};
+      if(ImGui::BeginCombo("##MarketCombo", market_preview.c_str())) {
+        for(auto i = 0; i < markets.size(); ++i) {
+          const auto& market = markets[i];
+          const auto& market_name = market->name();
+          const auto is_selected = new_backtest->market_ptr() == market;
+
+          ImGui::PushID(i);
+
+          if(ImGui::Selectable(market_name.c_str(), is_selected)) {
+            new_backtest->market_ptr(market);
           }
 
           if(is_selected) {
