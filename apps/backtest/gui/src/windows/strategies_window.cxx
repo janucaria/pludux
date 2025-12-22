@@ -1,7 +1,9 @@
 module;
 #include <expected>
+#include <filesystem>
 #include <format>
 #include <fstream>
+#include <functional>
 #include <iterator>
 #include <map>
 #include <memory>
@@ -11,6 +13,15 @@ module;
 #include <system_error>
 #include <utility>
 #include <vector>
+
+#ifdef __EMSCRIPTEN__
+#include <cstdlib>
+
+#include <emscripten.h>
+#include <emscripten/val.h>
+#else
+#include <nfd.hpp>
+#endif
 
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
@@ -450,8 +461,66 @@ private:
 
         ImGui::SameLine();
 
-        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 100);
+        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 150);
 
+        if(ImGui::Button("Export")) {
+          auto serialized_strategy =
+           stringify_backtest_strategy(*strategy_ptr).to_string();
+
+#ifdef __EMSCRIPTEN__
+          const auto file_name = "pludux-strategy-" + strategy_name + ".json";
+          const auto& file_content = serialized_strategy;
+
+          EM_ASM(
+           {
+             var fileSave = document.createElement('a');
+             fileSave.download = Module.UTF8ToString($0);
+             fileSave.style.display = 'none';
+             var data = new Blob([Module.UTF8ToString($1)], {
+               type:
+                 'application/json'
+             });
+             fileSave.href = URL.createObjectURL(data);
+             fileSave.click();
+             URL.revokeObjectURL(fileSave.href);
+           },
+           file_name.c_str(),
+           file_content.c_str());
+
+#else
+          auto nfd_guard = NFD::Guard{};
+          auto out_path = NFD::UniquePath{};
+
+          const auto filter_item =
+           std::array<nfdfilteritem_t, 1>{{"JSON Files", "json"}};
+
+          auto result =
+           NFD::SaveDialog(out_path, filter_item.data(), filter_item.size());
+
+          if(result == NFD_OKAY) {
+            const auto saved_path = std::string(out_path.get());
+            app_state.push_action(
+             [saved_path, serialized_strategy](AppStateData& state) {
+               auto out_stream = std::ofstream{saved_path};
+
+               if(!out_stream.is_open()) {
+                 const auto error_message =
+                  std::format("Failed to open '{}' for writing.", saved_path);
+                 throw std::runtime_error(error_message);
+               }
+
+               out_stream << serialized_strategy;
+             });
+          } else if(result == NFD_CANCEL) {
+            // User cancelled the save dialog
+          } else {
+            const auto error_message =
+             std::format("Error '{}': {}", "Export", NFD::GetError());
+            throw std::runtime_error(error_message);
+          }
+#endif
+        }
+        ImGui::SameLine();
         if(ImGui::Button("Edit")) {
           self.old_strategy_ = strategy_ptr;
           self.new_strategy_ =
@@ -494,7 +563,117 @@ private:
       self.current_page_ = Page::AddNew;
 
       self.old_strategy_ = nullptr;
+
       self.new_strategy_ = std::make_shared<backtest::Strategy>();
+      self.new_strategy_->risk_method(PercentageMethod{CloseMethod{}, 10.0});
+    }
+
+    ImGui::SameLine();
+
+    if(ImGui::Button("Import Strategy")) {
+#ifdef __EMSCRIPTEN__
+
+      using JsOnOpenedFileContentReady =
+       std::function<void(const std::string&, const std::string&, void*)>;
+
+      auto callback = std::make_unique<JsOnOpenedFileContentReady>(
+       [](const std::string& file_name,
+          const std::string& file_data,
+          void* user_data) {
+         auto& strategies_window = *static_cast<StrategiesWindow*>(user_data);
+
+         const auto strategy_name =
+          std::filesystem::path(file_name).stem().string();
+
+         auto in_stream = std::istringstream{file_data};
+         auto parsed_strategy =
+          backtest::parse_backtest_strategy_json(strategy_name, in_stream);
+
+         strategies_window.new_strategy_ =
+          std::make_shared<backtest::Strategy>(std::move(parsed_strategy));
+         strategies_window.old_strategy_ = nullptr;
+         strategies_window.current_page_ = Page::AddNew;
+       });
+
+      EM_ASM(
+       {
+         var fileSelector = document.createElement('input');
+         fileSelector.type = 'file';
+         fileSelector.accept = '.json';
+         fileSelector.onchange = function(event)
+         {
+           var file = event.target.files[0];
+           if(!file) {
+             return;
+           }
+
+           var reader = new FileReader();
+           reader.onload = function(event)
+           {
+             var reader = event.target;
+             var fileName = reader.onload.prototype.fileName;
+             var data = reader.result;
+             var decoder = new TextDecoder('utf-8');
+             var decodedData = decoder.decode(data);
+
+             // transfer the data to the C++ side
+             var name_ptr = Module.stringToNewUTF8(fileName);
+             var data_ptr = Module.stringToNewUTF8(decodedData);
+
+             // call the C++ function
+             Module._pludux_apps_backtest_js_opened_file_content_ready(
+              name_ptr, data_ptr, $0, $1);
+           };
+           reader.onload.prototype.fileName = file.name;
+
+           reader.readAsArrayBuffer(file);
+         };
+         fileSelector.click();
+       },
+       callback.release(),
+       &self);
+#else
+      auto nfd_guard = NFD::Guard{};
+      auto in_path = NFD::UniquePath{};
+
+      const auto filter_item =
+       std::array<nfdfilteritem_t, 1>{{"JSON Files", "json"}};
+
+      auto result =
+       NFD::OpenDialog(in_path, filter_item.data(), filter_item.size());
+
+      if(result == NFD_OKAY) {
+        const auto selected_path = std::string(in_path.get());
+        auto in_stream = std::ifstream{selected_path};
+
+        if(!in_stream.is_open()) {
+          const auto error_message =
+           std::format("Failed to open '{}' for reading.", selected_path);
+          app_state.push_action([error_message](AppStateData& state) {
+            state.alert_messages.push(error_message);
+          });
+        } else {
+          const auto strategy_name =
+           std::filesystem::path(selected_path).stem().string();
+
+          auto parsed_strategy =
+           backtest::parse_backtest_strategy_json(strategy_name, in_stream);
+
+          self.new_strategy_ =
+           std::make_shared<backtest::Strategy>(std::move(parsed_strategy));
+          self.old_strategy_ = nullptr;
+          self.current_page_ = Page::AddNew;
+        }
+      } else if(result == NFD_CANCEL) {
+        // User cancelled the open dialog
+      } else {
+        const auto error_message =
+         std::format("Error '{}': {}", "Import", NFD::GetError());
+        app_state.push_action([error_message](AppStateData& state) {
+          state.alert_messages.push(error_message);
+        });
+      }
+#endif
     }
 
     ImGui::EndGroup();
@@ -751,7 +930,7 @@ private:
 
     {
       ImGui::SeparatorText("Risk");
-      self.render_risk_mode();
+      self.render_risk_mode(app_state);
       ImGui::Text("");
     }
 
@@ -802,7 +981,7 @@ private:
     ImGui::EndChild();
   }
 
-  void render_risk_mode(this auto& self)
+  void render_risk_mode(this auto& self, AppState& app_state)
   {
     auto& atr_risk_period = self.risk_atr_.first;
     auto& atr_risk_multiplier = self.risk_atr_.second;
@@ -825,6 +1004,15 @@ private:
                series_method_cast<ValueMethod>(risk_method)) {
       fixed_risk = value_method->value();
       risk_mode = static_cast<int>(RiskMode::Fixed);
+    } else {
+      app_state.push_action([](AppStateData& state) {
+        const auto error_message =
+         "ERROR: Unknown risk method in strategy. Tell the developer!";
+        state.alert_messages.push(error_message);
+      });
+
+      self.current_page_ = Page::List;
+      return;
     }
 
     {

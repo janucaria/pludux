@@ -360,7 +360,8 @@ auto risk_reward_config_parser() -> ConfigParser
 
      const auto percent = parameters.at("percentage").as_double();
 
-     const auto percentage_method = PercentageMethod{base_method, percent};
+     const auto percentage_method =
+      PercentageMethod<AnySeriesMethod>{base_method, percent};
 
      return percentage_method;
    });
@@ -485,6 +486,53 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
                                     is_trailing_stop_loss,
                                     is_take_profit_enabled,
                                     take_profit_risk_multiplier};
+}
+
+auto stringify_backtest_strategy(const backtest::Strategy& strategy)
+ -> jsoncons::ojson
+{
+  auto config_parser = make_default_registered_config_parser();
+  auto risk_parser = risk_reward_config_parser();
+
+  auto strategy_json = jsoncons::ojson{};
+
+  auto series_json = jsoncons::ojson{};
+  for(const auto& [name, method] : strategy.series_registry()) {
+    series_json[name] = config_parser.serialize_method(method);
+  }
+  strategy_json["series"] = std::move(series_json);
+
+  strategy_json["risk"] = risk_parser.serialize_method(strategy.risk_method());
+
+  auto long_position_json = jsoncons::ojson{};
+  long_position_json["entry"] = jsoncons::ojson{};
+  long_position_json["entry"]["signal"] =
+   config_parser.serialize_filter(strategy.long_entry_filter());
+  long_position_json["exit"] = jsoncons::ojson{};
+  long_position_json["exit"]["signal"] =
+   config_parser.serialize_filter(strategy.long_exit_filter());
+  strategy_json["longPosition"] = std::move(long_position_json);
+
+  auto short_position_json = jsoncons::ojson{};
+  short_position_json["entry"] = jsoncons::ojson{};
+  short_position_json["entry"]["signal"] =
+   config_parser.serialize_filter(strategy.short_entry_filter());
+  short_position_json["exit"] = jsoncons::ojson{};
+  short_position_json["exit"]["signal"] =
+   config_parser.serialize_filter(strategy.short_exit_filter());
+  strategy_json["shortPosition"] = std::move(short_position_json);
+
+  strategy_json["stopLoss"] = jsoncons::ojson{};
+  strategy_json["stopLoss"]["enabled"] = strategy.stop_loss_enabled();
+  strategy_json["stopLoss"]["isTrailing"] =
+   strategy.stop_loss_trailing_enabled();
+
+  strategy_json["takeProfit"] = jsoncons::ojson{};
+  strategy_json["takeProfit"]["enabled"] = strategy.take_profit_enabled();
+  strategy_json["takeProfit"]["riskMultiplier"] =
+   strategy.take_profit_risk_multiplier();
+
+  return strategy_json;
 }
 
 } // namespace pludux::backtest

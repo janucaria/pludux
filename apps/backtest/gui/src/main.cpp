@@ -1,9 +1,13 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <string>
+#include <type_traits>
+#include <utility>
 
 #include <webgpu/webgpu.h>
 
@@ -40,6 +44,24 @@ import pludux.apps.backtest;
 #ifdef __EMSCRIPTEN__
 
 extern "C" {
+
+EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_js_opened_file_content_ready(
+ char* name, char* data, void* user_callback, void* user_data)
+{
+  using JsOnOpenedFileContentReady =
+   std::function<void(const std::string&, const std::string&, void*)>;
+
+  const auto name_str = std::string(name);
+  std::free(name);
+
+  const auto data_str = std::string(data);
+  std::free(data);
+
+  const auto callback_ptr = std::unique_ptr<JsOnOpenedFileContentReady>(
+   reinterpret_cast<JsOnOpenedFileContentReady*>(user_callback));
+
+  (*callback_ptr)(name_str, data_str, user_data);
+}
 
 EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_open_file(char* data,
                                                          void* app_state_ptr)
