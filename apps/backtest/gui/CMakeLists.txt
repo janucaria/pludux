@@ -141,7 +141,6 @@ target_sources(${PROJECT_NAME} PRIVATE
 
     src/actions/change_strategy_json_action.cxx
     src/actions/load_asset_csv_action.cxx
-    src/actions/load_backtests_setup_action.cxx
     src/actions/edit_strategy_action.cxx
     src/actions.cxx
     
