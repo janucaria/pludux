@@ -74,7 +74,7 @@ public:
       return;
     }
 
-    ChangeStrategyJsonAction{json_strategy_path}(state_data);
+    LoadStrategyJsonAction{json_strategy_path}(state_data);
 
     {
       const auto csv_path =

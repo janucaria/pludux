@@ -250,8 +250,7 @@ public:
 #endif
         }
 
-        constexpr auto menu_item_open_config =
-         "Add or Replace Strategies (JSON)";
+        constexpr auto menu_item_open_config = "Load Strategies (JSON)";
         if(ImGui::MenuItem(menu_item_open_config)) {
 #ifdef __EMSCRIPTEN__
           EM_ASM(
@@ -278,7 +277,7 @@ public:
                    var data_ptr = Module.stringToNewUTF8(decodedData);
 
                    // call the C++ function
-                   Module._pludux_apps_backtest_change_strategy_json_str(
+                   Module._pludux_apps_backtest_load_strategy_json_str(
                     name_ptr, data_ptr, $0);
                  };
                  reader.onload.prototype.fileName = file.name;
@@ -320,7 +319,7 @@ public:
               }
 
               const auto selected_path = std::string(out_path.get());
-              app_state.push_action(ChangeStrategyJsonAction{selected_path});
+              app_state.push_action(LoadStrategyJsonAction{selected_path});
             }
 
           } else if(result == NFD_CANCEL) {

@@ -106,11 +106,11 @@ pludux_apps_backtest_load_csv_asset(char* name, char* data, void* app_state_ptr)
   app_state.push_action(std::move(action));
 }
 
-EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_change_strategy_json_str(
+EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_load_strategy_json_str(
  char* name, char* data, void* app_state_ptr)
 {
   using pludux::apps::AppState;
-  using pludux::apps::ChangeStrategyJsonAction;
+  using pludux::apps::LoadStrategyJsonAction;
 
   auto name_str = std::string(name);
   std::free(name);
@@ -119,7 +119,7 @@ EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_change_strategy_json_str(
   std::free(data);
 
   auto action =
-   ChangeStrategyJsonAction{std::move(name_str), std::move(data_str)};
+   LoadStrategyJsonAction{std::move(name_str), std::move(data_str)};
 
   auto app_state = *reinterpret_cast<AppState*>(app_state_ptr);
   app_state.push_action(std::move(action));

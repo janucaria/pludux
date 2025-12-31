@@ -429,8 +429,8 @@ public:
 private:
   enum class Page { List, AddNew, Edit } current_page_{Page::List};
 
-  std::shared_ptr<backtest::Strategy> old_strategy_;
-  std::shared_ptr<backtest::Strategy> new_strategy_;
+  std::shared_ptr<backtest::Strategy> selected_strategy_ptr_;
+  std::shared_ptr<backtest::Strategy> editing_strategy_ptr_;
 
   std::pair<int, double> risk_atr_{14, 2.0};
   double risk_percentage_{10.0};
@@ -522,9 +522,9 @@ private:
         }
         ImGui::SameLine();
         if(ImGui::Button("Edit")) {
-          self.old_strategy_ = strategy_ptr;
-          self.new_strategy_ =
-           std::make_shared<backtest::Strategy>(*self.old_strategy_);
+          self.selected_strategy_ptr_ = strategy_ptr;
+          self.editing_strategy_ptr_ =
+           std::make_shared<backtest::Strategy>(*self.selected_strategy_ptr_);
           self.current_page_ = Page::Edit;
         }
         ImGui::SameLine();
@@ -562,10 +562,11 @@ private:
     if(ImGui::Button("Add New Strategy")) {
       self.current_page_ = Page::AddNew;
 
-      self.old_strategy_ = nullptr;
+      self.selected_strategy_ptr_ = nullptr;
 
-      self.new_strategy_ = std::make_shared<backtest::Strategy>();
-      self.new_strategy_->risk_method(PercentageMethod{CloseMethod{}, 10.0});
+      self.editing_strategy_ptr_ = std::make_shared<backtest::Strategy>();
+      self.editing_strategy_ptr_->risk_method(
+       PercentageMethod{CloseMethod{}, 10.0});
     }
 
     ImGui::SameLine();
@@ -589,9 +590,9 @@ private:
          auto parsed_strategy =
           backtest::parse_backtest_strategy_json(strategy_name, in_stream);
 
-         strategies_window.new_strategy_ =
+         strategies_window.editing_strategy_ptr_ =
           std::make_shared<backtest::Strategy>(std::move(parsed_strategy));
-         strategies_window.old_strategy_ = nullptr;
+         strategies_window.selected_strategy_ptr_ = nullptr;
          strategies_window.current_page_ = Page::AddNew;
        });
 
@@ -659,9 +660,9 @@ private:
           auto parsed_strategy =
            backtest::parse_backtest_strategy_json(strategy_name, in_stream);
 
-          self.new_strategy_ =
+          self.editing_strategy_ptr_ =
            std::make_shared<backtest::Strategy>(std::move(parsed_strategy));
-          self.old_strategy_ = nullptr;
+          self.selected_strategy_ptr_ = nullptr;
           self.current_page_ = Page::AddNew;
         }
       } else if(result == NFD_CANCEL) {
@@ -699,41 +700,13 @@ private:
     ImGui::EndChild();
 
     if(ImGui::Button("Create")) {
-      const auto strategy_name = self.new_strategy_->name();
-      if(!strategy_name.empty()) {
-        // check for duplicate names
-        const auto is_name_exist =
-         std::ranges::find_if(strategies, [&](const auto& strategy_ptr) {
-           return strategy_ptr->name() == strategy_name;
-         }) != strategies.end();
-
-        if(!is_name_exist) {
-          app_state.push_action(
-           [new_strategy = self.new_strategy_](AppStateData& state) {
-             state.strategies.push_back(new_strategy);
-           });
-
-          self.old_strategy_ = nullptr;
-          self.new_strategy_ = nullptr;
-          self.current_page_ = Page::List;
-        } else {
-          app_state.push_action([strategy_name](AppStateData& state) {
-            state.alert_messages.push(
-             std::format("Strategy name '{}' already exists.", strategy_name));
-          });
-        }
-      } else {
-        app_state.push_action([](AppStateData& state) {
-          state.alert_messages.push("Strategy name cannot be empty.");
-        });
-      }
+      self.submit_strategy_changes(app_state);
+      self.reset();
     }
 
     ImGui::SameLine();
     if(ImGui::Button("Cancel")) {
-      self.old_strategy_ = nullptr;
-      self.new_strategy_ = nullptr;
-      self.current_page_ = Page::List;
+      self.reset();
     }
 
     ImGui::EndGroup();
@@ -759,45 +732,18 @@ private:
     ImGui::EndChild();
 
     if(ImGui::Button("Edit")) {
-      const auto strategy_name = self.new_strategy_->name();
-      if(!strategy_name.empty()) {
-        // check for duplicate names
-        const auto is_name_exist =
-         std::ranges::find_if(strategies, [&](const auto& strategy_ptr) {
-           return strategy_ptr->name() == strategy_name;
-         }) != strategies.end();
-
-        if(!is_name_exist || strategy_name == self.old_strategy_->name()) {
-          app_state.push_action(EditStrategyAction{
-           self.old_strategy_, *std::move(self.new_strategy_)});
-
-          self.old_strategy_ = nullptr;
-          self.new_strategy_ = nullptr;
-          self.current_page_ = Page::List;
-        } else {
-          app_state.push_action([strategy_name](AppStateData& state) {
-            state.alert_messages.push(
-             std::format("Strategy name '{}' already exists.", strategy_name));
-          });
-        }
-      } else {
-        app_state.push_action([](AppStateData& state) {
-          state.alert_messages.push("Strategy name cannot be empty.");
-        });
-      }
+      self.submit_strategy_changes(app_state);
+      self.reset();
     }
 
     ImGui::SameLine();
     if(ImGui::Button("Cancel")) {
-      self.old_strategy_ = nullptr;
-      self.new_strategy_ = nullptr;
-      self.current_page_ = Page::List;
+      self.reset();
     }
 
     ImGui::SameLine();
     if(ImGui::Button("Apply")) {
-      app_state.push_action(
-       EditStrategyAction{self.old_strategy_, *self.new_strategy_});
+      self.submit_strategy_changes(app_state);
     }
 
     ImGui::EndGroup();
@@ -811,16 +757,16 @@ private:
     {
       ImGui::Text("Strategy Name:");
       ImGui::SameLine();
-      auto strategy_name = self.new_strategy_->name();
+      auto strategy_name = self.editing_strategy_ptr_->name();
       ImGui::InputText("##strategy_name", &strategy_name);
-      self.new_strategy_->name(strategy_name);
+      self.editing_strategy_ptr_->name(strategy_name);
       ImGui::Text("");
     }
 
     {
       ImGui::SeparatorText("Series Methods");
 
-      auto& series_registry = self.new_strategy_->series_registry();
+      auto& series_registry = self.editing_strategy_ptr_->series_registry();
       ImGui::Separator();
       auto changed_names = std::vector<std::pair<std::string, std::string>>{};
       for(auto id_counter = 0;
@@ -873,9 +819,11 @@ private:
         {
           ImGui::Text("Entry Condition:");
           ImGui::PushID("long_entry");
-          const auto& any_long_entry = self.new_strategy_->long_entry_filter();
+          const auto& any_long_entry =
+           self.editing_strategy_ptr_->long_entry_filter();
           auto changed_method = self.render_condition_method(any_long_entry);
-          self.new_strategy_->long_entry_filter(std::move(changed_method));
+          self.editing_strategy_ptr_->long_entry_filter(
+           std::move(changed_method));
           ImGui::PopID();
         }
 
@@ -884,9 +832,11 @@ private:
         {
           ImGui::Text("Exit Condition:");
           ImGui::PushID("long_exit");
-          const auto& any_long_exit = self.new_strategy_->long_exit_filter();
+          const auto& any_long_exit =
+           self.editing_strategy_ptr_->long_exit_filter();
           auto changed_method = self.render_condition_method(any_long_exit);
-          self.new_strategy_->long_exit_filter(std::move(changed_method));
+          self.editing_strategy_ptr_->long_exit_filter(
+           std::move(changed_method));
           ImGui::PopID();
         }
 
@@ -905,9 +855,10 @@ private:
           ImGui::Text("Entry Condition:");
           ImGui::PushID("short_entry");
           const auto& any_short_entry =
-           self.new_strategy_->short_entry_filter();
+           self.editing_strategy_ptr_->short_entry_filter();
           auto changed_method = self.render_condition_method(any_short_entry);
-          self.new_strategy_->short_entry_filter(std::move(changed_method));
+          self.editing_strategy_ptr_->short_entry_filter(
+           std::move(changed_method));
           ImGui::PopID();
         }
 
@@ -916,9 +867,11 @@ private:
         {
           ImGui::Text("Exit Condition:");
           ImGui::PushID("short_exit");
-          const auto& any_short_exit = self.new_strategy_->short_exit_filter();
+          const auto& any_short_exit =
+           self.editing_strategy_ptr_->short_exit_filter();
           auto changed_method = self.render_condition_method(any_short_exit);
-          self.new_strategy_->short_exit_filter(std::move(changed_method));
+          self.editing_strategy_ptr_->short_exit_filter(
+           std::move(changed_method));
           ImGui::PopID();
         }
 
@@ -937,15 +890,15 @@ private:
     {
       ImGui::SeparatorText("Stop Loss");
 
-      auto stop_loss_enabled = self.new_strategy_->stop_loss_enabled();
+      auto stop_loss_enabled = self.editing_strategy_ptr_->stop_loss_enabled();
       auto stop_loss_trailing_enabled =
-       self.new_strategy_->stop_loss_trailing_enabled();
+       self.editing_strategy_ptr_->stop_loss_trailing_enabled();
 
       ImGui::Checkbox("Enable Stop Loss", &stop_loss_enabled);
       ImGui::Checkbox("Enable Trailing Stop Loss", &stop_loss_trailing_enabled);
 
-      self.new_strategy_->stop_loss_enabled(stop_loss_enabled);
-      self.new_strategy_->stop_loss_trailing_enabled(
+      self.editing_strategy_ptr_->stop_loss_enabled(stop_loss_enabled);
+      self.editing_strategy_ptr_->stop_loss_trailing_enabled(
        stop_loss_trailing_enabled);
 
       ImGui::Text("");
@@ -954,9 +907,10 @@ private:
     {
       ImGui::SeparatorText("Take Profit");
 
-      auto take_profit_enabled = self.new_strategy_->take_profit_enabled();
+      auto take_profit_enabled =
+       self.editing_strategy_ptr_->take_profit_enabled();
       auto take_profit_risk_multiplier =
-       self.new_strategy_->take_profit_risk_multiplier();
+       self.editing_strategy_ptr_->take_profit_risk_multiplier();
 
       ImGui::Checkbox("Enable Take Profit", &take_profit_enabled);
       ImGui::Text("R-Multiple:");
@@ -971,8 +925,8 @@ private:
         }
       }
 
-      self.new_strategy_->take_profit_enabled(take_profit_enabled);
-      self.new_strategy_->take_profit_risk_multiplier(
+      self.editing_strategy_ptr_->take_profit_enabled(take_profit_enabled);
+      self.editing_strategy_ptr_->take_profit_risk_multiplier(
        take_profit_risk_multiplier);
 
       ImGui::Text("");
@@ -991,7 +945,7 @@ private:
     enum class RiskMode : int { Atr, Percentage, Fixed };
     static auto risk_mode = static_cast<int>(RiskMode::Atr);
 
-    auto risk_method = self.new_strategy_->risk_method();
+    auto risk_method = self.editing_strategy_ptr_->risk_method();
     if(const auto atr_method = series_method_cast<AtrMethod>(risk_method)) {
       atr_risk_period = static_cast<int>(atr_method->period());
       atr_risk_multiplier = atr_method->multiplier();
@@ -1018,7 +972,7 @@ private:
     {
       if(ImGui::RadioButton(
           "ATR", &risk_mode, static_cast<int>(RiskMode::Atr))) {
-        self.new_strategy_->risk_method(AtrMethod{
+        self.editing_strategy_ptr_->risk_method(AtrMethod{
          static_cast<std::size_t>(atr_risk_period), atr_risk_multiplier});
       }
 
@@ -1031,7 +985,7 @@ private:
         }
 
         if(risk_mode == static_cast<int>(RiskMode::Atr)) {
-          self.new_strategy_->risk_method(AtrMethod{
+          self.editing_strategy_ptr_->risk_method(AtrMethod{
            static_cast<std::size_t>(atr_risk_period), atr_risk_multiplier});
         }
       }
@@ -1044,7 +998,7 @@ private:
         }
 
         if(risk_mode == static_cast<int>(RiskMode::Atr)) {
-          self.new_strategy_->risk_method(AtrMethod{
+          self.editing_strategy_ptr_->risk_method(AtrMethod{
            static_cast<std::size_t>(atr_risk_period), atr_risk_multiplier});
         }
       }
@@ -1053,7 +1007,7 @@ private:
     {
       if(ImGui::RadioButton(
           "Percentage", &risk_mode, static_cast<int>(RiskMode::Percentage))) {
-        self.new_strategy_->risk_method(
+        self.editing_strategy_ptr_->risk_method(
          PercentageMethod{CloseMethod{}, percent_risk});
       }
 
@@ -1067,7 +1021,7 @@ private:
         }
 
         if(risk_mode == static_cast<int>(RiskMode::Percentage)) {
-          self.new_strategy_->risk_method(
+          self.editing_strategy_ptr_->risk_method(
            PercentageMethod{CloseMethod{}, percent_risk});
         }
       }
@@ -1076,7 +1030,7 @@ private:
     {
       if(ImGui::RadioButton(
           "Fixed", &risk_mode, static_cast<int>(RiskMode::Fixed))) {
-        self.new_strategy_->risk_method(ValueMethod{fixed_risk});
+        self.editing_strategy_ptr_->risk_method(ValueMethod{fixed_risk});
       }
 
       ImGui::Indent();
@@ -1088,7 +1042,7 @@ private:
         }
 
         if(risk_mode == static_cast<int>(RiskMode::Fixed)) {
-          self.new_strategy_->risk_method(ValueMethod{fixed_risk});
+          self.editing_strategy_ptr_->risk_method(ValueMethod{fixed_risk});
         }
       }
       ImGui::Unindent();
@@ -2147,6 +2101,38 @@ private:
     auto changed_method = self.make_condition_method_from_other(
      updated_condition_id, std::move(new_condition));
     return changed_method;
+  }
+
+  void submit_strategy_changes(this auto& self, AppState& app_state)
+  {
+    if(self.editing_strategy_ptr_->name().empty()) {
+      self.editing_strategy_ptr_->name("Unnamed");
+    }
+
+    app_state.push_action(
+     [strategy_ptr = self.selected_strategy_ptr_,
+      edited_strategy = *self.editing_strategy_ptr_](AppStateData& state) {
+       if(strategy_ptr == nullptr) {
+         state.strategies.push_back(
+          std::make_shared<backtest::Strategy>(edited_strategy));
+         return;
+       }
+
+       *strategy_ptr = edited_strategy;
+
+       for(auto& backtest : state.backtests) {
+         if(backtest.strategy_ptr() == strategy_ptr) {
+           backtest.reset();
+         }
+       }
+     });
+  }
+
+  void reset(this auto& self)
+  {
+    self.current_page_ = Page::List;
+    self.selected_strategy_ptr_ = nullptr;
+    self.editing_strategy_ptr_ = nullptr;
   }
 };
 
