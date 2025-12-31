@@ -21,32 +21,6 @@ import :app_state;
 
 export namespace pludux::apps {
 
-class EditBrokerAction {
-public:
-  EditBrokerAction(std::shared_ptr<backtest::Broker> broker_ptr,
-                   backtest::Broker broker)
-  : broker_ptr_{std::move(broker_ptr)}
-  , new_broker_{std::move(broker)}
-  {
-  }
-
-  void operator()(this const EditBrokerAction& self, AppStateData& state)
-  {
-    const auto broker_ptr = self.broker_ptr_;
-    *broker_ptr = self.new_broker_;
-
-    for(auto& backtest : state.backtests) {
-      if(backtest.broker_ptr() == broker_ptr) {
-        backtest.reset();
-      }
-    }
-  }
-
-private:
-  std::shared_ptr<backtest::Broker> broker_ptr_;
-  backtest::Broker new_broker_;
-};
-
 class BrokersWindow {
 public:
   BrokersWindow()
@@ -172,43 +146,13 @@ private:
 
     ImGui::EndChild();
     if(ImGui::Button("Create Broker")) {
-      if(!self.editing_broker_ptr_->name().empty()) {
-        // check if the broker name already exists
-        auto new_broker_name = self.editing_broker_ptr_->name();
-
-        const auto is_name_exists =
-         std::ranges::any_of(brokers, [&](const auto& broker) {
-           return broker->name() == new_broker_name;
-         });
-
-        if(is_name_exists) {
-          app_state.push_action(
-           [broker_name = std::move(new_broker_name)](AppStateData& state) {
-             // TODO: Visual Studio 2026 have bug with include <format> causing
-             // compile error
-             const auto error_message =
-              std::string("Broker name '") + broker_name + "' already exists.";
-             state.alert_messages.push(error_message);
-           });
-        } else {
-          app_state.push_action(
-           [broker = std::move(self.editing_broker_ptr_)](AppStateData& state) {
-             state.brokers.push_back(broker);
-           });
-
-          self.current_page_ = BrokerPage::List;
-          self.editing_broker_ptr_ = nullptr;
-        }
-      } else {
-        app_state.push_action([](AppStateData& state) {
-          state.alert_messages.push("Please enter a broker name.");
-        });
-      }
+      self.submit_broker_changes(app_state);
+      self.reset();
     }
 
     ImGui::SameLine();
     if(ImGui::Button("Cancel")) {
-      self.current_page_ = BrokerPage::List;
+      self.reset();
     }
 
     ImGui::EndGroup();
@@ -227,37 +171,18 @@ private:
 
     ImGui::EndChild();
     if(ImGui::Button("Edit")) {
-      if(!self.editing_broker_ptr_->name().empty()) {
-        app_state.push_action(EditBrokerAction{
-         self.selected_broker_ptr_, std::move(*self.editing_broker_ptr_)});
-
-        self.current_page_ = BrokerPage::List;
-        self.selected_broker_ptr_ = nullptr;
-        self.editing_broker_ptr_ = nullptr;
-      } else {
-        app_state.push_action([](AppStateData& state) {
-          state.alert_messages.push("Broker name cannot be empty.");
-        });
-      }
+      self.submit_broker_changes(app_state);
+      self.reset();
     }
 
     ImGui::SameLine();
     if(ImGui::Button("Cancel")) {
-      self.current_page_ = BrokerPage::List;
-      self.selected_broker_ptr_ = nullptr;
-      self.editing_broker_ptr_ = nullptr;
+      self.reset();
     }
 
     ImGui::SameLine();
     if(ImGui::Button("Apply")) {
-      if(!self.editing_broker_ptr_->name().empty()) {
-        app_state.push_action(EditBrokerAction{self.selected_broker_ptr_,
-                                               *self.editing_broker_ptr_});
-      } else {
-        app_state.push_action([](AppStateData& state) {
-          state.alert_messages.push("Broker name cannot be empty.");
-        });
-      }
+      self.submit_broker_changes(app_state);
     }
 
     ImGui::EndGroup();
@@ -412,6 +337,38 @@ private:
 
       ImGui::Text("");
     }
+  }
+
+  void submit_broker_changes(this auto& self, AppState& app_state)
+  {
+    if(self.editing_broker_ptr_->name().empty()) {
+      self.editing_broker_ptr_->name("Unnamed");
+    }
+
+    app_state.push_action(
+     [broker_ptr = self.selected_broker_ptr_,
+      editing_broker = *self.editing_broker_ptr_](AppStateData& state) {
+       if(broker_ptr == nullptr) {
+         state.brokers.push_back(
+          std::make_shared<backtest::Broker>(editing_broker));
+         return;
+       }
+
+       *broker_ptr = editing_broker;
+
+       for(auto& backtest : state.backtests) {
+         if(backtest.broker_ptr() == broker_ptr) {
+           backtest.reset();
+         }
+       }
+     });
+  }
+
+  void reset(this BrokersWindow& self) noexcept
+  {
+    self.current_page_ = BrokerPage::List;
+    self.selected_broker_ptr_ = nullptr;
+    self.editing_broker_ptr_ = nullptr;
   }
 };
 
