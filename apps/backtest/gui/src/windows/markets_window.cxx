@@ -16,32 +16,6 @@ import :app_state;
 
 export namespace pludux::apps {
 
-class EditMarketAction {
-public:
-  EditMarketAction(std::shared_ptr<backtest::Market> market_ptr,
-                   backtest::Market market)
-  : market_ptr_{std::move(market_ptr)}
-  , new_market_{std::move(market)}
-  {
-  }
-
-  void operator()(this const EditMarketAction& self, AppStateData& state)
-  {
-    const auto market_ptr = self.market_ptr_;
-    *market_ptr = self.new_market_;
-
-    for(auto& backtest : state.backtests) {
-      if(backtest.market_ptr() == market_ptr) {
-        backtest.reset();
-      }
-    }
-  }
-
-private:
-  std::shared_ptr<backtest::Market> market_ptr_;
-  backtest::Market new_market_;
-};
-
 class MarketsWindow {
 public:
   MarketsWindow()
@@ -169,43 +143,13 @@ private:
 
     ImGui::EndChild();
     if(ImGui::Button("Create Market")) {
-      if(!self.editing_market_ptr_->name().empty()) {
-        // check if the market name already exists
-        auto new_market_name = self.editing_market_ptr_->name();
-
-        const auto is_name_exists =
-         std::ranges::any_of(markets, [&](const auto& market) {
-           return market->name() == new_market_name;
-         });
-
-        if(is_name_exists) {
-          app_state.push_action(
-           [market_name = std::move(new_market_name)](AppStateData& state) {
-             // TODO: Visual Studio 2026 have bug with include <format> causing
-             // compile error
-             const auto error_message =
-              std::string("Market name '") + market_name + "' already exists.";
-             state.alert_messages.push(error_message);
-           });
-        } else {
-          app_state.push_action(
-           [market = std::move(self.editing_market_ptr_)](AppStateData& state) {
-             state.markets.push_back(market);
-           });
-
-          self.current_page_ = MarketPage::List;
-          self.editing_market_ptr_ = nullptr;
-        }
-      } else {
-        app_state.push_action([](AppStateData& state) {
-          state.alert_messages.push("Market name cannot be empty.");
-        });
-      }
+      self.submit_market_changes(app_state);
+      self.reset();
     }
 
     ImGui::SameLine();
     if(ImGui::Button("Cancel")) {
-      self.current_page_ = MarketPage::List;
+      self.reset();
     }
 
     ImGui::EndGroup();
@@ -224,37 +168,18 @@ private:
 
     ImGui::EndChild();
     if(ImGui::Button("Edit")) {
-      if(!self.editing_market_ptr_->name().empty()) {
-        app_state.push_action(EditMarketAction{
-         self.selected_market_ptr_, std::move(*self.editing_market_ptr_)});
-
-        self.current_page_ = MarketPage::List;
-        self.selected_market_ptr_ = nullptr;
-        self.editing_market_ptr_ = nullptr;
-      } else {
-        app_state.push_action([](AppStateData& state) {
-          state.alert_messages.push("Market name cannot be empty.");
-        });
-      }
+      self.submit_market_changes(app_state);
+      self.reset();
     }
 
     ImGui::SameLine();
     if(ImGui::Button("Cancel")) {
-      self.current_page_ = MarketPage::List;
-      self.selected_market_ptr_ = nullptr;
-      self.editing_market_ptr_ = nullptr;
+      self.reset();
     }
 
     ImGui::SameLine();
     if(ImGui::Button("Apply")) {
-      if(!self.editing_market_ptr_->name().empty()) {
-        app_state.push_action(EditMarketAction{self.selected_market_ptr_,
-                                               *self.editing_market_ptr_});
-      } else {
-        app_state.push_action([](AppStateData& state) {
-          state.alert_messages.push("Market name cannot be empty.");
-        });
-      }
+      self.submit_market_changes(app_state);
     }
 
     ImGui::EndGroup();
@@ -277,6 +202,38 @@ private:
       ImGui::InputDouble("Quantity Step", &qty_step);
       self.editing_market_ptr_->qty_step(qty_step);
     }
+  }
+
+  void submit_market_changes(this auto& self, AppState& app_state)
+  {
+    if(self.editing_market_ptr_->name().empty()) {
+      self.editing_market_ptr_->name("Unnamed");
+    }
+
+    app_state.push_action(
+     [market_ptr = self.selected_market_ptr_,
+      editing_market = *self.editing_market_ptr_](AppStateData& state) {
+       if(market_ptr == nullptr) {
+         state.markets.push_back(
+          std::make_shared<backtest::Market>(editing_market));
+         return;
+       }
+
+       *market_ptr = editing_market;
+
+       for(auto& backtest : state.backtests) {
+         if(backtest.market_ptr() == market_ptr) {
+           backtest.reset();
+         }
+       }
+     });
+  }
+
+  void reset(this MarketsWindow& self) noexcept
+  {
+    self.current_page_ = MarketPage::List;
+    self.selected_market_ptr_ = nullptr;
+    self.editing_market_ptr_ = nullptr;
   }
 };
 
