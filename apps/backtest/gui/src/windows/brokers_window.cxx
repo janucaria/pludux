@@ -17,7 +17,7 @@ module;
 export module pludux.apps.backtest:windows.brokers_window;
 
 import pludux.backtest;
-import :app_state;
+import :window_context;
 
 export namespace pludux::apps {
 
@@ -28,21 +28,19 @@ public:
   {
   }
 
-  void render(this auto& self, AppState& app_state)
+  void render(this auto& self, WindowContext& context)
   {
-    auto& state = app_state.state();
-
     ImGui::Begin("Brokers", nullptr);
     switch(self.current_page_) {
     case BrokerPage::AddNewBroker:
-      self.render_add_new_broker(app_state);
+      self.render_add_new_broker(context);
       break;
     case BrokerPage::EditBroker:
-      self.render_edit_broker(app_state);
+      self.render_edit_broker(context);
       break;
     case BrokerPage::List:
     default:
-      self.render_brokers_list(app_state);
+      self.render_brokers_list(context);
       break;
     }
 
@@ -55,10 +53,9 @@ private:
   std::shared_ptr<backtest::Broker> selected_broker_ptr_;
   std::shared_ptr<backtest::Broker> editing_broker_ptr_;
 
-  void render_brokers_list(this auto& self, AppState& app_state)
+  void render_brokers_list(this auto& self, WindowContext& context)
   {
-    const auto& state = app_state.state();
-    const auto& brokers = state.brokers;
+    const auto& brokers = context.brokers();
 
     ImGui::BeginGroup();
     ImGui::BeginChild(
@@ -89,30 +86,8 @@ private:
         ImGui::SameLine();
 
         if(ImGui::Button("Delete")) {
-          app_state.push_action([i](AppStateData& state) {
-            auto& brokers = state.brokers;
-
-            const auto it = std::next(brokers.begin(), i);
-            auto& broker_ptr = *it;
-
-            auto& backtests = state.backtests;
-            for(auto j = 0; j < backtests.size(); ++j) {
-              auto& backtest = backtests[j];
-              if(backtest.broker_ptr()->name() == broker_ptr->name()) {
-                backtests.erase(std::next(backtests.begin(), j));
-
-                if(state.selected_backtest_index > i ||
-                   state.selected_backtest_index >= backtests.size()) {
-                  --state.selected_backtest_index;
-                }
-
-                // Adjust the index since we removed an element
-                --j;
-              }
-            }
-
-            // Remove the broker from the vector
-            state.brokers.erase(it);
+          context.push_action([i](ApplicationState& app_state) {
+            app_state.remove_broker_at_index(i);
           });
         }
 
@@ -130,10 +105,9 @@ private:
     ImGui::EndGroup();
   }
 
-  void render_add_new_broker(this auto& self, AppState& app_state)
+  void render_add_new_broker(this auto& self, WindowContext& context)
   {
-    const auto& state = app_state.state();
-    const auto& brokers = state.brokers;
+    const auto& brokers = context.brokers();
 
     ImGui::BeginGroup();
     ImGui::BeginChild("item view",
@@ -146,7 +120,7 @@ private:
 
     ImGui::EndChild();
     if(ImGui::Button("Create Broker")) {
-      self.submit_broker_changes(app_state);
+      self.submit_broker_changes(context);
       self.reset();
     }
 
@@ -158,7 +132,7 @@ private:
     ImGui::EndGroup();
   }
 
-  void render_edit_broker(this auto& self, AppState& app_state)
+  void render_edit_broker(this auto& self, WindowContext& context)
   {
     ImGui::BeginGroup();
     ImGui::BeginChild("item view",
@@ -171,7 +145,7 @@ private:
 
     ImGui::EndChild();
     if(ImGui::Button("Edit")) {
-      self.submit_broker_changes(app_state);
+      self.submit_broker_changes(context);
       self.reset();
     }
 
@@ -182,7 +156,7 @@ private:
 
     ImGui::SameLine();
     if(ImGui::Button("Apply")) {
-      self.submit_broker_changes(app_state);
+      self.submit_broker_changes(context);
     }
 
     ImGui::EndGroup();
@@ -339,26 +313,26 @@ private:
     }
   }
 
-  void submit_broker_changes(this auto& self, AppState& app_state)
+  void submit_broker_changes(this auto& self, WindowContext& context)
   {
     if(self.editing_broker_ptr_->name().empty()) {
       self.editing_broker_ptr_->name("Unnamed");
     }
 
-    app_state.push_action(
+    context.push_action(
      [broker_ptr = self.selected_broker_ptr_,
-      editing_broker = *self.editing_broker_ptr_](AppStateData& state) {
+      editing_broker = *self.editing_broker_ptr_](ApplicationState& app_state) {
        if(broker_ptr == nullptr) {
-         state.brokers.push_back(
+         app_state.add_broker(
           std::make_shared<backtest::Broker>(editing_broker));
          return;
        }
 
        *broker_ptr = editing_broker;
 
-       for(auto& backtest : state.backtests) {
-         if(backtest.broker_ptr() == broker_ptr) {
-           backtest.reset();
+       for(auto& backtest : app_state.backtests()) {
+         if(backtest->broker_ptr() == broker_ptr) {
+           backtest->reset();
          }
        }
      });

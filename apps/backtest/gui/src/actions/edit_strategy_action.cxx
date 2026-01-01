@@ -15,7 +15,7 @@ module;
 export module pludux.apps.backtest:actions.edit_strategy_action;
 
 import pludux.backtest;
-import :app_state_data;
+import :application_state;
 
 export namespace pludux::apps {
 
@@ -28,14 +28,15 @@ public:
   {
   }
 
-  void operator()(this const EditStrategyAction& self, AppStateData& state)
+  void operator()(this const EditStrategyAction& self,
+                  ApplicationState& app_state)
   {
     const auto strategy_ptr = self.strategy_ptr_;
     *strategy_ptr = self.new_strategy;
 
-    for(auto& backtest : state.backtests) {
-      if(backtest.strategy_ptr() == strategy_ptr) {
-        backtest.reset();
+    for(auto& backtest : app_state.backtests()) {
+      if(backtest->strategy_ptr() == strategy_ptr) {
+        backtest->reset();
       }
     }
   }

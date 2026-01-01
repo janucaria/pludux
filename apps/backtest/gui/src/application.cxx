@@ -14,8 +14,8 @@ module;
 
 export module pludux.apps.backtest;
 
-export import :app_state_data;
-export import :app_state;
+export import :application_state;
+export import :window_context;
 export import :serialization;
 export import :actions;
 import :windows;
@@ -31,7 +31,7 @@ public:
 
   void on_before_main_loop(this Application& self)
   {
-    auto& state_data = self.state_data_;
+    auto& app_state = self.app_state_;
     auto& actions = self.actions_;
 
     ImPlot::GetStyle().UseISO8601 = true;
@@ -39,28 +39,28 @@ public:
     ImPlot::GetStyle().Use24HourClock = true;
 
     {
-      auto& markets = state_data.markets;
+      const auto& markets = app_state.markets();
       if(markets.empty()) {
         auto default_market = std::make_shared<backtest::Market>("Default");
-        markets.push_back(default_market);
+        app_state.add_market(std::move(default_market));
       }
     }
 
     {
-      auto& brokers = state_data.brokers;
+      const auto& brokers = app_state.brokers();
       if(brokers.empty()) {
         auto default_broker = std::make_shared<backtest::Broker>("Default");
-        brokers.push_back(default_broker);
+        app_state.add_broker(std::move(default_broker));
       }
     }
 
     {
-      auto& profiles = state_data.profiles;
+      const auto& profiles = app_state.profiles();
       if(profiles.empty()) {
         auto default_profile = std::make_shared<backtest::Profile>("Default");
         default_profile->initial_capital(100'000'000.0);
         default_profile->capital_risk(0.01);
-        profiles.push_back(default_profile);
+        app_state.add_profile(std::move(default_profile));
       }
     }
 
@@ -74,14 +74,14 @@ public:
       return;
     }
 
-    LoadStrategyJsonAction{json_strategy_path}(state_data);
+    LoadStrategyJsonAction{json_strategy_path}(app_state);
 
     {
       const auto csv_path =
        get_env_var("PLUDUX_BACKTEST_CSV_DATA_PATH_1").value_or("");
 
       if(!csv_path.empty()) {
-        LoadAssetCsvAction{csv_path}(state_data);
+        LoadAssetCsvAction{csv_path}(app_state);
       }
     }
 
@@ -90,7 +90,7 @@ public:
        get_env_var("PLUDUX_BACKTEST_CSV_DATA_PATH_2").value_or("");
 
       if(!csv_path.empty()) {
-        LoadAssetCsvAction{csv_path}(state_data);
+        LoadAssetCsvAction{csv_path}(app_state);
       }
     }
 
@@ -109,11 +109,11 @@ public:
 
   void on_update(this Application& self)
   {
-    auto& state_data = self.state_data_;
+    auto& app_state = self.app_state_;
     auto& actions = self.actions_;
 
-    if(!state_data.backtests.empty()) {
-      auto& backtests = state_data.backtests;
+    if(!app_state.backtests().empty()) {
+      auto& backtests = app_state.backtests();
 
       // create a loop with timeout 60 fps
       auto last_update_time = std::chrono::high_resolution_clock::now();
@@ -125,11 +125,11 @@ public:
       do {
         for(auto& backtest : backtests) {
           try {
-            if(backtest.should_run()) {
-              backtest.run();
+            if(backtest->should_run()) {
+              backtest->run();
             }
           } catch(const std::exception& e) {
-            backtest.mark_as_failed();
+            backtest->mark_as_failed();
 
             // TODO: this line is buggy in emscripten release build.
             // The bug is failed to load/open the strategy, asset, or pludux
@@ -141,8 +141,8 @@ public:
             */
 
             const auto error_message =
-             "Backtest '" + backtest.name() + "' failed: " + e.what();
-            state_data.alert_messages.push(error_message);
+             "Backtest '" + backtest->name() + "' failed: " + e.what();
+            app_state.alert(error_message);
           }
         }
 
@@ -154,19 +154,18 @@ public:
       } while(time_diff < 1000 / 60);
     }
 
-    auto app_state = AppState{state_data, actions};
+    auto window_context = WindowContext{app_state, actions};
 
     {
-      if(!state_data.alert_messages.empty()) {
+      if(!app_state.alert_messages().empty()) {
         ImGui::OpenPopup("Alerts");
 
         if(ImGui::BeginPopupModal(
             "Alerts", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-          const auto alert_message = state_data.alert_messages.front();
+          const auto alert_message = app_state.pop_alert_messages();
           ImGui::Text("%s", alert_message.c_str());
 
           if(ImGui::Button("OK", ImVec2(120, 0))) {
-            state_data.alert_messages.pop();
             ImGui::CloseCurrentPopup();
           }
 
@@ -176,31 +175,31 @@ public:
     }
 
     try {
-      self.dockspace_window_.render(app_state);
-      self.plot_data_window_.render(app_state);
+      self.dockspace_window_.render(window_context);
+      self.plot_data_window_.render(window_context);
 
       auto backtesting_summary = BacktestSummaryWindow{};
-      backtesting_summary.render(app_state);
+      backtesting_summary.render(window_context);
 
-      self.backtests_window_.render(app_state);
+      self.backtests_window_.render(window_context);
 
       auto assets_window = AssetsWindow{};
-      assets_window.render(app_state);
+      assets_window.render(window_context);
 
-      self.strategies_window_.render(app_state);
+      self.strategies_window_.render(window_context);
 
-      self.markets_window_.render(app_state);
+      self.markets_window_.render(window_context);
 
-      self.brokers_window_.render(app_state);
+      self.brokers_window_.render(window_context);
 
-      self.profiles_window_.render(app_state);
+      self.profiles_window_.render(window_context);
 
       auto trade_journal = TradeJournalWindow{};
-      trade_journal.render(app_state);
+      trade_journal.render(window_context);
 
     } catch(const std::exception& e) {
       const auto error_message = std::format("Error: {}", e.what());
-      state_data.alert_messages.push(error_message);
+      app_state.alert(error_message);
     }
 
     while(!actions.empty()) {
@@ -208,18 +207,10 @@ public:
       actions.pop();
 
       try {
-        action(state_data);
+        action(app_state);
       } catch(const std::exception& e) {
-        // some error like failed in deserialization can cause addition of
-        // nullptr assets, so we need to remove them from the assets vector
-        state_data.assets.erase(
-         std::remove_if(state_data.assets.begin(),
-                        state_data.assets.end(),
-                        [](const auto& asset) { return !asset; }),
-         state_data.assets.end());
-
         const auto error_message = std::format("Error: {}", e.what());
-        state_data.alert_messages.push(error_message);
+        app_state.alert(error_message);
       }
     }
   }
@@ -235,7 +226,7 @@ private:
   BrokersWindow brokers_window_;
   ProfilesWindow profiles_window_;
 
-  AppStateData state_data_;
+  ApplicationState app_state_;
   std::queue<PolyAction> actions_;
 };
 

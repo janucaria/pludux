@@ -9,35 +9,35 @@ module;
 
 export module pludux.apps.backtest:windows.backtest_summary_window;
 
-import :app_state;
+import :window_context;
 
 export namespace pludux::apps {
 
 class BacktestSummaryWindow {
 public:
-  void render(this const BacktestSummaryWindow self, AppState& app_state)
+  void render(this const BacktestSummaryWindow self, WindowContext& context)
   {
-    auto& state = app_state.state();
-    auto& backtests = state.backtests;
+    auto& app_state = context.app_state();
+    auto& backtests = app_state.backtests();
 
     ImGui::Begin("Summary", nullptr);
 
-    if(!state.backtests.empty() && state.selected_backtest_index >= 0) {
-      const auto& backtest = backtests[state.selected_backtest_index];
-      const auto& profile = backtest.profile();
+    const auto backtest = app_state.selected_backtest();
+    if(backtest) {
+      const auto& profile = backtest->profile();
 
-      const auto& backtest_name = backtest.name();
+      const auto& backtest_name = backtest->name();
       ImGui::Text("%s", backtest_name.c_str());
       ImGui::Separator();
 
-      const auto& backtesting_summaries = backtest.summaries();
+      const auto& backtesting_summaries = backtest->summaries();
       if(!backtesting_summaries.empty() &&
          ImGui::BeginTable(
           "TradeSummaryTable", 2, ImGuiTableFlags_BordersInnerH)) {
         const auto& summary = backtesting_summaries.back();
 
-        self.draw_row("Asset", backtest.asset().name());
-        self.draw_row("Strategy", backtest.strategy().name());
+        self.draw_row("Asset", backtest->asset().name());
+        self.draw_row("Strategy", backtest->strategy().name());
         self.draw_row("Profile", profile.name());
         self.draw_count_row("Total trades", summary.trade_count());
         self.draw_duration_row("Total duration",

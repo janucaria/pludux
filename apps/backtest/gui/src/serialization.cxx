@@ -1,6 +1,7 @@
 module;
 
 #include <algorithm>
+#include <ranges>
 #include <tuple>
 #include <utility>
 
@@ -20,8 +21,7 @@ module;
 export module pludux.apps.backtest:serialization;
 
 import pludux.backtest;
-
-import :app_state_data;
+import :application_state;
 
 export namespace cereal {
 
@@ -704,50 +704,53 @@ struct LoadAndConstruct<pludux::Backtest> {
 /*--------------------------------------------------------------------------------------*/
 
 template<class Archive>
-void save(Archive& archive, const pludux::apps::AppStateData& app_state_data)
+void save(Archive& archive, const pludux::apps::ApplicationState& app_state)
 {
-  const auto& assets = app_state_data.assets;
-  const auto& strategies = app_state_data.strategies;
-  const auto& profiles = app_state_data.profiles;
-  const auto& backtests = app_state_data.backtests;
+  auto assets = app_state.assets();
+  auto strategies = app_state.strategies();
+  auto markets = app_state.markets();
+  auto brokers = app_state.brokers();
+  auto profiles = app_state.profiles();
+  auto backtests = app_state.backtests();
 
-  archive(make_nvp("alertMessages", app_state_data.alert_messages));
-  archive(
-   make_nvp("selectedBacktestIndex", app_state_data.selected_backtest_index));
-  archive(make_nvp("assets", app_state_data.assets));
-  archive(make_nvp("strategies", app_state_data.strategies));
-  archive(make_nvp("markets", app_state_data.markets));
-  archive(make_nvp("brokers", app_state_data.brokers));
-  archive(make_nvp("profiles", app_state_data.profiles));
-
-  auto backtest_ptrs = std::vector<
-   std::unique_ptr<const pludux::Backtest, decltype([](auto*) {})>>{};
-  for(const auto& backtest : backtests) {
-    backtest_ptrs.emplace_back(&backtest);
-  }
-  archive(make_nvp("backtests", backtest_ptrs));
+  archive(make_nvp("alertMessages", app_state.alert_messages()));
+  archive(make_nvp("backtests", backtests));
+  archive(make_nvp("assets", assets));
+  archive(make_nvp("strategies", strategies));
+  archive(make_nvp("markets", markets));
+  archive(make_nvp("brokers", brokers));
+  archive(make_nvp("profiles", profiles));
 }
 
 template<class Archive>
-void load(Archive& archive, pludux::apps::AppStateData& app_state_data)
+void load(Archive& archive, pludux::apps::ApplicationState& app_state)
 {
-  archive(make_nvp("alertMessages", app_state_data.alert_messages));
-  archive(
-   make_nvp("selectedBacktestIndex", app_state_data.selected_backtest_index));
-  archive(make_nvp("assets", app_state_data.assets));
-  archive(make_nvp("strategies", app_state_data.strategies));
-  archive(make_nvp("markets", app_state_data.markets));
-  archive(make_nvp("brokers", app_state_data.brokers));
-  archive(make_nvp("profiles", app_state_data.profiles));
+  auto alert_messages = std::queue<std::string>{};
+  auto assets = std::vector<std::shared_ptr<pludux::backtest::Asset>>{};
+  auto strategies = std::vector<std::shared_ptr<pludux::backtest::Strategy>>{};
+  auto markets = std::vector<std::shared_ptr<pludux::backtest::Market>>{};
+  auto brokers = std::vector<std::shared_ptr<pludux::backtest::Broker>>{};
+  auto profiles = std::vector<std::shared_ptr<pludux::backtest::Profile>>{};
+  auto backtests = std::vector<std::shared_ptr<pludux::Backtest>>{};
 
-  auto backtest_ptrs = std::vector<std::unique_ptr<pludux::Backtest>>{};
-  archive(make_nvp("backtests", backtest_ptrs));
-  app_state_data.backtests.clear();
-  for(auto& backtest_ptr : backtest_ptrs) {
-    if(backtest_ptr) {
-      app_state_data.backtests.emplace_back(std::move(*backtest_ptr));
-    }
-  }
+  archive(make_nvp("alertMessages", alert_messages));
+  archive(make_nvp("backtests", backtests));
+  archive(make_nvp("assets", assets));
+  archive(make_nvp("strategies", strategies));
+  archive(make_nvp("markets", markets));
+  archive(make_nvp("brokers", brokers));
+  archive(make_nvp("profiles", profiles));
+
+  const auto selected_backtest_index = !backtests.empty() ? 0 : -1;
+
+  app_state = pludux::apps::ApplicationState{selected_backtest_index,
+                                             std::move(alert_messages),
+                                             std::move(backtests),
+                                             std::move(assets),
+                                             std::move(strategies),
+                                             std::move(markets),
+                                             std::move(brokers),
+                                             std::move(profiles)};
 }
 
 } // namespace cereal

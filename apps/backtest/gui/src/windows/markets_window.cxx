@@ -12,7 +12,7 @@ module;
 export module pludux.apps.backtest:windows.markets_window;
 
 import pludux.backtest;
-import :app_state;
+import :window_context;
 
 export namespace pludux::apps {
 
@@ -25,21 +25,19 @@ public:
   {
   }
 
-  void render(this auto& self, AppState& app_state)
+  void render(this auto& self, WindowContext& context)
   {
-    auto& state = app_state.state();
-
     ImGui::Begin("Markets", nullptr);
     switch(self.current_page_) {
     case MarketPage::AddNew:
-      self.render_add_new_market(app_state);
+      self.render_add_new_market(context);
       break;
     case MarketPage::Edit:
-      self.render_edit_market(app_state);
+      self.render_edit_market(context);
       break;
     case MarketPage::List:
     default:
-      self.render_markets_list(app_state);
+      self.render_markets_list(context);
       break;
     }
 
@@ -52,10 +50,9 @@ private:
   std::shared_ptr<backtest::Market> selected_market_ptr_;
   std::shared_ptr<backtest::Market> editing_market_ptr_;
 
-  void render_markets_list(this auto& self, AppState& app_state)
+  void render_markets_list(this auto& self, WindowContext& context)
   {
-    const auto& state = app_state.state();
-    const auto& markets = state.markets;
+    const auto& markets = context.markets();
 
     ImGui::BeginGroup();
     ImGui::BeginChild(
@@ -86,30 +83,8 @@ private:
         ImGui::SameLine();
 
         if(ImGui::Button("Delete")) {
-          app_state.push_action([i](AppStateData& state) {
-            auto& markets = state.markets;
-
-            const auto it = std::next(markets.begin(), i);
-            auto& market_ptr = *it;
-
-            auto& backtests = state.backtests;
-            for(auto j = 0; j < backtests.size(); ++j) {
-              auto& backtest = backtests[j];
-              if(backtest.market_ptr()->name() == market_ptr->name()) {
-                backtests.erase(std::next(backtests.begin(), j));
-
-                if(state.selected_backtest_index > i ||
-                   state.selected_backtest_index >= backtests.size()) {
-                  --state.selected_backtest_index;
-                }
-
-                // Adjust the index since we removed an element
-                --j;
-              }
-            }
-
-            // Remove the market from the vector
-            state.markets.erase(it);
+          context.push_action([i](ApplicationState& app_state) {
+            app_state.remove_market_at_index(i);
           });
         }
 
@@ -127,10 +102,9 @@ private:
     ImGui::EndGroup();
   }
 
-  void render_add_new_market(this auto& self, AppState& app_state)
+  void render_add_new_market(this auto& self, WindowContext& context)
   {
-    const auto& state = app_state.state();
-    const auto& markets = state.markets;
+    const auto& markets = context.markets();
 
     ImGui::BeginGroup();
     ImGui::BeginChild("item view",
@@ -143,7 +117,7 @@ private:
 
     ImGui::EndChild();
     if(ImGui::Button("Create Market")) {
-      self.submit_market_changes(app_state);
+      self.submit_market_changes(context);
       self.reset();
     }
 
@@ -155,7 +129,7 @@ private:
     ImGui::EndGroup();
   }
 
-  void render_edit_market(this auto& self, AppState& app_state)
+  void render_edit_market(this auto& self, WindowContext& context)
   {
     ImGui::BeginGroup();
     ImGui::BeginChild("item view",
@@ -168,7 +142,7 @@ private:
 
     ImGui::EndChild();
     if(ImGui::Button("Edit")) {
-      self.submit_market_changes(app_state);
+      self.submit_market_changes(context);
       self.reset();
     }
 
@@ -179,7 +153,7 @@ private:
 
     ImGui::SameLine();
     if(ImGui::Button("Apply")) {
-      self.submit_market_changes(app_state);
+      self.submit_market_changes(context);
     }
 
     ImGui::EndGroup();
@@ -204,26 +178,26 @@ private:
     }
   }
 
-  void submit_market_changes(this auto& self, AppState& app_state)
+  void submit_market_changes(this auto& self, WindowContext& context)
   {
     if(self.editing_market_ptr_->name().empty()) {
       self.editing_market_ptr_->name("Unnamed");
     }
 
-    app_state.push_action(
+    context.push_action(
      [market_ptr = self.selected_market_ptr_,
-      editing_market = *self.editing_market_ptr_](AppStateData& state) {
+      editing_market = *self.editing_market_ptr_](ApplicationState& app_state) {
        if(market_ptr == nullptr) {
-         state.markets.push_back(
+         app_state.add_market(
           std::make_shared<backtest::Market>(editing_market));
          return;
        }
 
        *market_ptr = editing_market;
 
-       for(auto& backtest : state.backtests) {
-         if(backtest.market_ptr() == market_ptr) {
-           backtest.reset();
+       for(auto& backtest : app_state.backtests()) {
+         if(backtest->market_ptr() == market_ptr) {
+           backtest->reset();
          }
        }
      });

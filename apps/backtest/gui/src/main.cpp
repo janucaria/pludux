@@ -63,36 +63,39 @@ EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_js_opened_file_content_ready(
   (*callback_ptr)(name_str, data_str, user_data);
 }
 
-EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_open_file(char* data,
-                                                         void* app_state_ptr)
+EMSCRIPTEN_KEEPALIVE void
+pludux_apps_backtest_open_file(char* data, void* window_context_ptr)
 {
-  using pludux::apps::AppState;
+  using pludux::apps::WindowContext;
 
   const auto data_str = std::string(data);
   std::free(data);
 
-  auto app_state = *reinterpret_cast<AppState*>(app_state_ptr);
+  auto window_context = *reinterpret_cast<WindowContext*>(window_context_ptr);
 
-  app_state.push_action([data_str](pludux::apps::AppStateData& state) {
-    auto in_stream = std::istringstream{data_str};
+  window_context.push_action(
+   [data_str](pludux::apps::ApplicationState& app_state) {
+     auto in_stream = std::istringstream{data_str};
 
-    if(!in_stream.good()) {
-      const auto error_message =
-       std::format("Failed to open data stream for reading.");
-      throw std::runtime_error(error_message);
-    }
+     if(!in_stream.good()) {
+       const auto error_message =
+        std::format("Failed to open data stream for reading.");
+       throw std::runtime_error(error_message);
+     }
 
-    auto in_archive = cereal::JSONInputArchive(in_stream);
+     auto in_archive = cereal::JSONInputArchive(in_stream);
 
-    in_archive(cereal::make_nvp("pludux", state));
-  });
+     auto loaded_state = pludux::apps::ApplicationState{};
+     in_archive(cereal::make_nvp("pludux", loaded_state));
+     app_state = std::move(loaded_state);
+   });
 }
 
-EMSCRIPTEN_KEEPALIVE void
-pludux_apps_backtest_load_csv_asset(char* name, char* data, void* app_state_ptr)
+EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_load_csv_asset(
+ char* name, char* data, void* window_context_ptr)
 {
-  using pludux::apps::AppState;
   using pludux::apps::LoadAssetCsvAction;
+  using pludux::apps::WindowContext;
 
   auto name_str = std::string(name);
   std::free(name);
@@ -102,15 +105,15 @@ pludux_apps_backtest_load_csv_asset(char* name, char* data, void* app_state_ptr)
 
   auto action = LoadAssetCsvAction{std::move(name_str), std::move(data_str)};
 
-  auto app_state = *reinterpret_cast<AppState*>(app_state_ptr);
-  app_state.push_action(std::move(action));
+  auto window_context = *reinterpret_cast<WindowContext*>(window_context_ptr);
+  window_context.push_action(std::move(action));
 }
 
 EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_load_strategy_json_str(
- char* name, char* data, void* app_state_ptr)
+ char* name, char* data, void* window_context_ptr)
 {
-  using pludux::apps::AppState;
   using pludux::apps::LoadStrategyJsonAction;
+  using pludux::apps::WindowContext;
 
   auto name_str = std::string(name);
   std::free(name);
@@ -121,8 +124,8 @@ EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_load_strategy_json_str(
   auto action =
    LoadStrategyJsonAction{std::move(name_str), std::move(data_str)};
 
-  auto app_state = *reinterpret_cast<AppState*>(app_state_ptr);
-  app_state.push_action(std::move(action));
+  auto window_context = *reinterpret_cast<WindowContext*>(window_context_ptr);
+  window_context.push_action(std::move(action));
 }
 }
 

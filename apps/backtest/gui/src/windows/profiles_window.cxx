@@ -12,7 +12,7 @@ module;
 export module pludux.apps.backtest:windows.profiles_window;
 
 import pludux.backtest;
-import :app_state;
+import :window_context;
 
 export namespace pludux::apps {
 
@@ -25,21 +25,19 @@ public:
   {
   }
 
-  void render(this auto& self, AppState& app_state)
+  void render(this auto& self, WindowContext& context)
   {
-    auto& state = app_state.state();
-
     ImGui::Begin("Profiles", nullptr);
     switch(self.current_page_) {
     case ProfilePage::AddNewProfile:
-      self.render_add_new_profile(app_state);
+      self.render_add_new_profile(context);
       break;
     case ProfilePage::EditProfile:
-      self.render_edit_profile(app_state);
+      self.render_edit_profile(context);
       break;
     case ProfilePage::List:
     default:
-      self.render_profiles_list(app_state);
+      self.render_profiles_list(context);
       break;
     }
 
@@ -52,10 +50,9 @@ private:
   std::shared_ptr<backtest::Profile> selected_profile_ptr_;
   std::shared_ptr<backtest::Profile> editing_profile_ptr_;
 
-  void render_profiles_list(this auto& self, AppState& app_state)
+  void render_profiles_list(this auto& self, WindowContext& context)
   {
-    auto& state = app_state.state();
-    auto& profiles = state.profiles;
+    const auto& profiles = context.profiles();
 
     ImGui::BeginGroup();
     ImGui::BeginChild(
@@ -85,30 +82,8 @@ private:
         ImGui::SameLine();
 
         if(ImGui::Button("Delete")) {
-          app_state.push_action([i](AppStateData& state) {
-            auto& profiles = state.profiles;
-
-            const auto it = std::next(profiles.begin(), i);
-            auto& profile_ptr = *it;
-
-            auto& backtests = state.backtests;
-            for(auto j = 0; j < backtests.size(); ++j) {
-              auto& backtest = backtests[j];
-              if(backtest.profile_ptr() == profile_ptr) {
-                backtests.erase(std::next(backtests.begin(), j));
-
-                if(state.selected_backtest_index > i ||
-                   state.selected_backtest_index >= backtests.size()) {
-                  --state.selected_backtest_index;
-                }
-
-                // Adjust the index since we removed an element
-                --j;
-              }
-            }
-
-            // Remove the profile from the vector
-            state.profiles.erase(it);
+          context.push_action([i](ApplicationState& app_state) {
+            app_state.remove_profile_at_index(i);
           });
         }
 
@@ -128,10 +103,9 @@ private:
     ImGui::EndGroup();
   }
 
-  void render_add_new_profile(this auto& self, AppState& app_state)
+  void render_add_new_profile(this auto& self, WindowContext& context)
   {
-    const auto& state = app_state.state();
-    const auto& profiles = state.profiles;
+    const auto& profiles = context.profiles();
 
     ImGui::BeginGroup();
     ImGui::BeginChild("item view",
@@ -144,7 +118,7 @@ private:
 
     ImGui::EndChild();
     if(ImGui::Button("Create Profile")) {
-      self.submit_profile_changes(app_state);
+      self.submit_profile_changes(context);
       self.reset();
     }
 
@@ -156,7 +130,7 @@ private:
     ImGui::EndGroup();
   }
 
-  void render_edit_profile(this auto& self, AppState& app_state)
+  void render_edit_profile(this auto& self, WindowContext& context)
   {
     ImGui::BeginGroup();
     ImGui::BeginChild("item view",
@@ -169,7 +143,7 @@ private:
 
     ImGui::EndChild();
     if(ImGui::Button("Edit")) {
-      self.submit_profile_changes(app_state);
+      self.submit_profile_changes(context);
       self.reset();
     }
 
@@ -180,7 +154,7 @@ private:
 
     ImGui::SameLine();
     if(ImGui::Button("Apply")) {
-      self.submit_profile_changes(app_state);
+      self.submit_profile_changes(context);
     }
 
     ImGui::EndGroup();
@@ -206,29 +180,29 @@ private:
     }
   }
 
-  void submit_profile_changes(this auto& self, AppState& app_state)
+  void submit_profile_changes(this auto& self, WindowContext& context)
   {
     if(self.editing_profile_ptr_->name().empty()) {
       self.editing_profile_ptr_->name("Unnamed");
     }
 
-    app_state.push_action(
-     [profile_ptr = self.selected_profile_ptr_,
-      editing_profile = *self.editing_profile_ptr_](AppStateData& state) {
-       if(profile_ptr == nullptr) {
-         state.profiles.push_back(
-          std::make_shared<backtest::Profile>(editing_profile));
-         return;
-       }
+    context.push_action([profile_ptr = self.selected_profile_ptr_,
+                         editing_profile = *self.editing_profile_ptr_](
+                         ApplicationState& app_state) {
+      if(profile_ptr == nullptr) {
+        app_state.add_profile(
+         std::make_shared<backtest::Profile>(editing_profile));
+        return;
+      }
 
-       *profile_ptr = editing_profile;
+      *profile_ptr = editing_profile;
 
-       for(auto& backtest : state.backtests) {
-         if(backtest.profile_ptr() == profile_ptr) {
-           backtest.reset();
-         }
-       }
-     });
+      for(auto& backtest : app_state.backtests()) {
+        if(backtest->profile_ptr() == profile_ptr) {
+          backtest->reset();
+        }
+      }
+    });
   }
 
   void reset(this ProfilesWindow& self) noexcept

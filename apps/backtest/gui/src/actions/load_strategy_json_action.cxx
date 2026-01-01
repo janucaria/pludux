@@ -12,7 +12,7 @@ module;
 
 export module pludux.apps.backtest:actions.load_strategy_json_action;
 
-import :app_state_data;
+import :application_state;
 
 export namespace pludux::apps {
 
@@ -40,11 +40,12 @@ public:
   {
   }
 
-  void operator()(this const LoadStrategyJsonAction& self, AppStateData& state)
+  void operator()(this const LoadStrategyJsonAction& self,
+                  ApplicationState& app_state)
   {
     if constexpr(std::same_as<TSource, std::string>) {
       auto json_stream = std::istringstream{self.source_};
-      self.strategy_json_load(self.strategy_name_, json_stream, state);
+      self.strategy_json_load(self.strategy_name_, json_stream, app_state);
     } else if constexpr(std::same_as<TSource, std::filesystem::path>) {
       auto json_file = std::ifstream{self.source_};
       if(!json_file) {
@@ -52,7 +53,7 @@ public:
          "Failed to open strategy file '{}'", self.source_.string());
         throw std::invalid_argument{error_message};
       }
-      self.strategy_json_load(self.strategy_name_, json_file, state);
+      self.strategy_json_load(self.strategy_name_, json_file, app_state);
     }
   }
 
@@ -62,7 +63,7 @@ private:
 
   static void strategy_json_load(const std::string& strategy_name,
                                  std::istream& new_json_stream,
-                                 AppStateData& state)
+                                 ApplicationState& app_state)
   {
     auto parsed_strategy = [&]() {
       try {
@@ -77,9 +78,7 @@ private:
 
     auto strategy_ptr =
      std::make_shared<backtest::Strategy>(std::move(parsed_strategy));
-
-    auto& strategies = state.strategies;
-    strategies.emplace_back(std::move(strategy_ptr));
+    app_state.add_strategy(std::move(strategy_ptr));
   }
 };
 

@@ -137,17 +137,16 @@ target_sources(${PROJECT_NAME} PRIVATE
     BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src
     FILES
 
-    src/app_state_data.cxx
+    src/application_state.cxx
 
     src/actions/load_strategy_json_action.cxx
     src/actions/load_asset_csv_action.cxx
     src/actions/edit_strategy_action.cxx
     src/actions.cxx
     
-    src/app_state.cxx
-
     src/serialization.cxx
-
+    
+    src/window_context.cxx
     src/windows/assets_window.cxx
     src/windows/strategies_window.cxx
     src/windows/markets_window.cxx

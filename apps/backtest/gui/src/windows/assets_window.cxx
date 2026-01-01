@@ -1,23 +1,20 @@
 module;
 
-#include <iterator>
 #include <string>
 
 #include <imgui.h>
 
-
 export module pludux.apps.backtest:windows.assets_window;
 
-import :app_state;
+import :window_context;
 
 export namespace pludux::apps {
 
 class AssetsWindow {
 public:
-  void render(this const auto, AppState& app_state)
+  void render(this const auto, WindowContext& context)
   {
-    auto& state = app_state.state();
-    auto& assets = state.assets;
+    auto& assets = context.assets();
 
     ImGui::Begin("Assets", nullptr);
 
@@ -36,29 +33,8 @@ public:
 
         ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 50);
         if(ImGui::Button("Delete")) {
-          app_state.push_action([i](AppStateData& state) {
-            const auto& assets = state.assets;
-
-            const auto it = std::next(assets.begin(), i);
-            const auto& asset_ptr = *it;
-
-            auto& backtests = state.backtests;
-            for(auto j = 0; j < backtests.size(); ++j) {
-              auto& backtest = backtests[j];
-              if(backtest.asset_ptr()->name() == asset_ptr->name()) {
-                backtests.erase(std::next(backtests.begin(), j));
-
-                if(state.selected_backtest_index > i ||
-                   state.selected_backtest_index >= backtests.size()) {
-                  --state.selected_backtest_index;
-                }
-
-                // Adjust the index since we removed an element
-                --j;
-              }
-            }
-            // Remove the asset from the vector
-            state.assets.erase(it);
+          context.push_action([i](ApplicationState& app_state) {
+            app_state.remove_asset_at_index(i);
           });
         }
 

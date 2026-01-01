@@ -29,7 +29,7 @@ module;
 export module pludux.apps.backtest:windows.strategies_window;
 
 import pludux.backtest;
-import :app_state;
+import :window_context;
 
 namespace pludux::apps {
 
@@ -406,20 +406,20 @@ public:
   {
   }
 
-  void render(this auto& self, AppState& app_state)
+  void render(this auto& self, WindowContext& context)
   {
     ImGui::Begin("Strategies", nullptr);
 
     switch(self.current_page_) {
     case Page::AddNew:
-      self.render_add_new_strategy(app_state);
+      self.render_add_new_strategy(context);
       break;
     case Page::Edit:
-      self.render_edit_strategy(app_state);
+      self.render_edit_strategy(context);
       break;
     case Page::List:
     default:
-      self.render_list_strategies(app_state);
+      self.render_list_strategies(context);
       break;
     }
 
@@ -436,10 +436,9 @@ private:
   double risk_percentage_{10.0};
   double risk_fixed_{1000.0};
 
-  void render_list_strategies(this auto& self, AppState& app_state)
+  void render_list_strategies(this auto& self, WindowContext& context)
   {
-    auto& state = app_state.state();
-    auto& strategies = state.strategies;
+    auto& strategies = context.strategies();
 
     ImGui::BeginGroup();
     ImGui::BeginChild(
@@ -499,8 +498,8 @@ private:
 
           if(result == NFD_OKAY) {
             const auto saved_path = std::string(out_path.get());
-            app_state.push_action(
-             [saved_path, serialized_strategy](AppStateData& state) {
+            context.push_action(
+             [saved_path, serialized_strategy](ApplicationState& app_state) {
                auto out_stream = std::ofstream{saved_path};
 
                if(!out_stream.is_open()) {
@@ -529,28 +528,8 @@ private:
         }
         ImGui::SameLine();
         if(ImGui::Button("Delete")) {
-          app_state.push_action([i](AppStateData& state) {
-            const auto& strategies = state.strategies;
-            const auto it = std::next(strategies.begin(), i);
-            const auto& strategy_ptr = *it;
-
-            auto& backtests = state.backtests;
-            for(auto j = 0; j < backtests.size(); ++j) {
-              auto& backtest = backtests[j];
-              if(backtest.strategy_ptr()->name() == strategy_ptr->name()) {
-                backtests.erase(std::next(backtests.begin(), j));
-
-                if(state.selected_backtest_index > j ||
-                   state.selected_backtest_index >= backtests.size()) {
-                  --state.selected_backtest_index;
-                }
-
-                // Adjust the index since we removed an element
-                --j;
-              }
-            }
-
-            state.strategies.erase(it);
+          context.push_action([i](ApplicationState& app_state) {
+            app_state.remove_strategy_at_index(i);
           });
         }
 
@@ -650,8 +629,8 @@ private:
         if(!in_stream.is_open()) {
           const auto error_message =
            std::format("Failed to open '{}' for reading.", selected_path);
-          app_state.push_action([error_message](AppStateData& state) {
-            state.alert_messages.push(error_message);
+          context.push_action([error_message](ApplicationState& app_state) {
+            app_state.alert(error_message);
           });
         } else {
           const auto strategy_name =
@@ -670,8 +649,8 @@ private:
       } else {
         const auto error_message =
          std::format("Error '{}': {}", "Import", NFD::GetError());
-        app_state.push_action([error_message](AppStateData& state) {
-          state.alert_messages.push(error_message);
+        context.push_action([error_message](ApplicationState& app_state) {
+          app_state.alert(error_message);
         });
       }
 #endif
@@ -680,10 +659,9 @@ private:
     ImGui::EndGroup();
   }
 
-  void render_add_new_strategy(this auto& self, AppState& app_state)
+  void render_add_new_strategy(this auto& self, WindowContext& context)
   {
-    const auto& state = app_state.state();
-    const auto& strategies = state.strategies;
+    const auto& strategies = context.strategies();
 
     ImGui::BeginGroup();
     ImGui::BeginChild("add_new_strategy",
@@ -694,13 +672,13 @@ private:
     ImGui::SetNextItemWidth(-1);
 
     {
-      self.edit_strategy_form(app_state);
+      self.edit_strategy_form(context);
     }
 
     ImGui::EndChild();
 
     if(ImGui::Button("Create")) {
-      self.submit_strategy_changes(app_state);
+      self.submit_strategy_changes(context);
       self.reset();
     }
 
@@ -712,10 +690,9 @@ private:
     ImGui::EndGroup();
   }
 
-  void render_edit_strategy(this auto& self, AppState& app_state)
+  void render_edit_strategy(this auto& self, WindowContext& context)
   {
-    const auto& state = app_state.state();
-    const auto& strategies = state.strategies;
+    const auto& strategies = context.strategies();
 
     ImGui::BeginGroup();
     ImGui::BeginChild("edit_strategy",
@@ -726,13 +703,13 @@ private:
     ImGui::SetNextItemWidth(-1);
 
     {
-      self.edit_strategy_form(app_state);
+      self.edit_strategy_form(context);
     }
 
     ImGui::EndChild();
 
     if(ImGui::Button("Edit")) {
-      self.submit_strategy_changes(app_state);
+      self.submit_strategy_changes(context);
       self.reset();
     }
 
@@ -743,13 +720,13 @@ private:
 
     ImGui::SameLine();
     if(ImGui::Button("Apply")) {
-      self.submit_strategy_changes(app_state);
+      self.submit_strategy_changes(context);
     }
 
     ImGui::EndGroup();
   }
 
-  void edit_strategy_form(this auto& self, AppState& app_state)
+  void edit_strategy_form(this auto& self, WindowContext& context)
   {
     ImGui::BeginChild("edit_content",
                       ImVec2(0, -ImGui::GetFrameHeightWithSpacing()));
@@ -883,7 +860,7 @@ private:
 
     {
       ImGui::SeparatorText("Risk");
-      self.render_risk_mode(app_state);
+      self.render_risk_mode(context);
       ImGui::Text("");
     }
 
@@ -935,7 +912,7 @@ private:
     ImGui::EndChild();
   }
 
-  void render_risk_mode(this auto& self, AppState& app_state)
+  void render_risk_mode(this auto& self, WindowContext& context)
   {
     auto& atr_risk_period = self.risk_atr_.first;
     auto& atr_risk_multiplier = self.risk_atr_.second;
@@ -959,10 +936,10 @@ private:
       fixed_risk = value_method->value();
       risk_mode = static_cast<int>(RiskMode::Fixed);
     } else {
-      app_state.push_action([](AppStateData& state) {
+      context.push_action([](ApplicationState& app_state) {
         const auto error_message =
          "ERROR: Unknown risk method in strategy. Tell the developer!";
-        state.alert_messages.push(error_message);
+        app_state.alert(error_message);
       });
 
       self.current_page_ = Page::List;
@@ -2103,29 +2080,29 @@ private:
     return changed_method;
   }
 
-  void submit_strategy_changes(this auto& self, AppState& app_state)
+  void submit_strategy_changes(this auto& self, WindowContext& context)
   {
     if(self.editing_strategy_ptr_->name().empty()) {
       self.editing_strategy_ptr_->name("Unnamed");
     }
 
-    app_state.push_action(
-     [strategy_ptr = self.selected_strategy_ptr_,
-      edited_strategy = *self.editing_strategy_ptr_](AppStateData& state) {
-       if(strategy_ptr == nullptr) {
-         state.strategies.push_back(
-          std::make_shared<backtest::Strategy>(edited_strategy));
-         return;
-       }
+    context.push_action([strategy_ptr = self.selected_strategy_ptr_,
+                         edited_strategy = *self.editing_strategy_ptr_](
+                         ApplicationState& app_state) {
+      if(strategy_ptr == nullptr) {
+        app_state.add_strategy(
+         std::make_shared<backtest::Strategy>(edited_strategy));
+        return;
+      }
 
-       *strategy_ptr = edited_strategy;
+      *strategy_ptr = edited_strategy;
 
-       for(auto& backtest : state.backtests) {
-         if(backtest.strategy_ptr() == strategy_ptr) {
-           backtest.reset();
-         }
-       }
-     });
+      for(auto& backtest : app_state.backtests()) {
+        if(backtest->strategy_ptr() == strategy_ptr) {
+          backtest->reset();
+        }
+      }
+    });
   }
 
   void reset(this auto& self)

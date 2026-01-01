@@ -36,7 +36,8 @@ module;
 
 export module pludux.apps.backtest:windows.dockspace_window;
 
-import :app_state;
+import :application_state;
+import :window_context;
 import :serialization;
 
 export namespace pludux::apps {
@@ -48,11 +49,11 @@ public:
   {
   }
 
-  void render(this DockspaceWindow& self, AppState& app_state)
+  void render(this DockspaceWindow& self, WindowContext& context)
   {
     auto& open_about_popup = self.open_about_popup_;
 
-    const auto& state = app_state.state();
+    const auto& app_state = context.app_state();
 
     static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
 
@@ -149,7 +150,7 @@ public:
                };
                fileSelector.click();
              },
-             &app_state);
+             &context);
 
 #else
             auto nfd_guard = NFD::Guard{};
@@ -160,7 +161,7 @@ public:
              NFD::OpenDialog(in_path, filter_item.data(), filter_item.size());
             if(result == NFD_OKAY) {
               const auto selected_path = std::string(in_path.get());
-              app_state.push_action([selected_path](AppStateData& state) {
+              context.push_action([selected_path](ApplicationState& app_state) {
                 auto in_stream = std::ifstream{selected_path};
 
                 if(!in_stream.is_open()) {
@@ -171,7 +172,9 @@ public:
 
                 auto in_archive = cereal::JSONInputArchive(in_stream);
 
-                in_archive(cereal::make_nvp("pludux", state));
+                auto loaded_state = ApplicationState{};
+                in_archive(cereal::make_nvp("pludux", loaded_state));
+                app_state = std::move(loaded_state);
               });
             } else if(result == NFD_CANCEL) {
               // User cancelled the open dialog
@@ -190,7 +193,7 @@ public:
           if(ImGui::MenuItem(menu_item_save_as)) {
             auto out_stream = std::ostringstream{};
             auto out_archive = cereal::JSONOutputArchive(out_stream);
-            out_archive(cereal::make_nvp("pludux", app_state.state()));
+            out_archive(cereal::make_nvp("pludux", context.app_state()));
 
             // TODO: bug in Cereal not adding the close object at the end when
             // using stringstream
@@ -226,7 +229,7 @@ public:
 
             if(result == NFD_OKAY) {
               const auto saved_path = std::string(out_path.get());
-              app_state.push_action([saved_path](AppStateData& state) {
+              context.push_action([saved_path](ApplicationState& app_state) {
                 auto out_stream = std::ofstream{saved_path};
 
                 if(!out_stream.is_open()) {
@@ -237,7 +240,7 @@ public:
 
                 auto out_archive = cereal::JSONOutputArchive(out_stream);
 
-                out_archive(cereal::make_nvp("pludux", state));
+                out_archive(cereal::make_nvp("pludux", app_state));
               });
             } else if(result == NFD_CANCEL) {
               // User cancelled the save dialog
@@ -288,7 +291,7 @@ public:
              fileSelector.accept = '.json';
              fileSelector.click();
            },
-           &app_state);
+           &context);
 #else
           auto nfd_guard = NFD::Guard{};
           auto out_paths = NFD::UniquePathSet{};
@@ -319,7 +322,7 @@ public:
               }
 
               const auto selected_path = std::string(out_path.get());
-              app_state.push_action(LoadStrategyJsonAction{selected_path});
+              context.push_action(LoadStrategyJsonAction{selected_path});
             }
 
           } else if(result == NFD_CANCEL) {
@@ -370,7 +373,7 @@ public:
              fileSelector.accept = '.csv';
              fileSelector.click();
            },
-           &app_state);
+           &context);
 
 #else
           auto nfd_guard = NFD::Guard{};
@@ -403,7 +406,7 @@ public:
               }
 
               const auto selected_path = std::string(out_path.get());
-              app_state.push_action(LoadAssetCsvAction{selected_path});
+              context.push_action(LoadAssetCsvAction{selected_path});
             }
 
           } else if(result == NFD_CANCEL) {

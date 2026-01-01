@@ -17,7 +17,7 @@ module;
 export module pludux.apps.backtest:windows.backtests_window;
 
 import pludux.backtest;
-import :app_state;
+import :window_context;
 
 export namespace pludux::apps {
 
@@ -25,24 +25,24 @@ class BacktestsWindow {
 public:
   BacktestsWindow()
   : backtest_panel_mode_{BacktestPanelMode::List}
-  , old_backtest_{std::nullopt}
+  , old_backtest_{nullptr}
   , new_backtest_{nullptr}
   {
   }
 
-  void render(this auto& self, AppState& app_state)
+  void render(this auto& self, WindowContext& context)
   {
     ImGui::Begin("Backtests", nullptr);
 
     switch(self.backtest_panel_mode_) {
     case BacktestPanelMode::List:
-      self.render_backtests_list(app_state);
+      self.render_backtests_list(context);
       break;
     case BacktestPanelMode::Edit:
-      self.render_edit_backtest(app_state);
+      self.render_edit_backtest(context);
       break;
     case BacktestPanelMode::AddNew:
-      self.render_add_new_backtest(app_state);
+      self.render_add_new_backtest(context);
       break;
     }
 
@@ -52,13 +52,13 @@ public:
 private:
   enum class BacktestPanelMode { List, Edit, AddNew } backtest_panel_mode_;
 
-  std::optional<std::reference_wrapper<const pludux::Backtest>> old_backtest_;
+  std::shared_ptr<pludux::Backtest> old_backtest_;
   std::shared_ptr<pludux::Backtest> new_backtest_;
 
-  void render_backtests_list(this auto& self, AppState& app_state)
+  void render_backtests_list(this auto& self, WindowContext& context)
   {
-    const auto& state = app_state.state();
-    const auto& backtests = state.backtests;
+    const auto& app_state = context.app_state();
+    const auto& backtests = context.backtests();
 
     ImGui::BeginGroup();
     ImGui::BeginChild(
@@ -69,38 +69,32 @@ private:
 
     if(!backtests.empty()) {
       for(auto i = 0; i < backtests.size(); ++i) {
-        auto& backtest = backtests[i];
-        const auto& backtest_name = backtest.name();
-        auto is_selected = state.selected_backtest_index == i;
+        auto backtest = backtests[i];
+        const auto& backtest_name = backtest->name();
+        auto is_selected = app_state.selected_backtest() == backtest;
 
         ImGui::PushID(i);
 
         ImGui::SetNextItemAllowOverlap();
         if(ImGui::Selectable(backtest_name.c_str(), &is_selected)) {
-          app_state.push_action(
-           [i](AppStateData& state) { state.selected_backtest_index = i; });
+          context.push_action([backtest](ApplicationState& app_state) {
+            app_state.select_backtest(backtest);
+          });
         }
         ImGui::SameLine();
 
         ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 100);
         if(ImGui::Button("Edit")) {
           self.backtest_panel_mode_ = BacktestPanelMode::Edit;
-          self.old_backtest_.emplace(std::cref(backtest));
-          self.new_backtest_ = std::make_shared<pludux::Backtest>(backtest);
+          self.old_backtest_ = backtest;
+          self.new_backtest_ = std::make_shared<pludux::Backtest>(*backtest);
         }
 
         ImGui::SameLine();
 
         if(ImGui::Button("Delete")) {
-          app_state.push_action([i](AppStateData& state) {
-            auto& backtests = state.backtests;
-
-            backtests.erase(std::next(backtests.begin(), i));
-
-            if(state.selected_backtest_index > i ||
-               state.selected_backtest_index >= backtests.size()) {
-              --state.selected_backtest_index;
-            }
+          context.push_action([i](ApplicationState& app_state) {
+            app_state.remove_backtest_at_index(i);
           });
         }
 
@@ -118,7 +112,7 @@ private:
     ImGui::EndGroup();
   }
 
-  void render_add_new_backtest(this auto& self, AppState& app_state)
+  void render_add_new_backtest(this auto& self, WindowContext& context)
   {
     ImGui::BeginGroup();
     ImGui::BeginChild("item view",
@@ -128,7 +122,7 @@ private:
     ImGui::Separator();
     ImGui::SetNextItemWidth(-1); // Full width for input text
 
-    self.edit_backtest_form(app_state);
+    self.edit_backtest_form(context);
 
     ImGui::EndChild();
 
@@ -137,7 +131,7 @@ private:
       if(new_backtest->asset_ptr() && new_backtest->strategy_ptr() &&
          new_backtest->market_ptr() && new_backtest->broker_ptr() &&
          new_backtest->profile_ptr()) {
-        app_state.push_action([new_backtest](AppStateData& state) {
+        context.push_action([new_backtest](ApplicationState& app_state) {
           const auto& asset = new_backtest->asset_ptr();
           const auto& strategy = new_backtest->strategy_ptr();
           const auto& market = new_backtest->market_ptr();
@@ -154,16 +148,16 @@ private:
             : new_backtest_name;
           new_backtest->name(backtest_name);
 
-          state.backtests.emplace_back(std::move(*new_backtest));
-          state.selected_backtest_index = state.backtests.size() - 1;
+          app_state.add_backtest(new_backtest);
+          app_state.select_backtest(new_backtest);
         });
 
         self.backtest_panel_mode_ = BacktestPanelMode::List;
         self.new_backtest_ = nullptr;
       } else {
-        app_state.push_action([](AppStateData& state) {
-          state.alert_messages.push("Please select an asset, a strategy, a "
-                                    "market, a broker, and a profile.");
+        context.push_action([](ApplicationState& app_state) {
+          app_state.alert("Please select an asset, a strategy, a "
+                          "market, a broker, and a profile.");
         });
       }
     }
@@ -176,7 +170,7 @@ private:
     ImGui::EndGroup();
   }
 
-  void render_edit_backtest(this auto& self, AppState& app_state)
+  void render_edit_backtest(this auto& self, WindowContext& context)
   {
     ImGui::BeginGroup();
     ImGui::BeginChild("item view",
@@ -186,39 +180,33 @@ private:
     ImGui::Separator();
     ImGui::SetNextItemWidth(-1); // Full width for input text
 
-    self.edit_backtest_form(app_state);
+    self.edit_backtest_form(context);
 
     ImGui::EndChild();
 
     if(ImGui::Button("Edit")) {
       auto& new_backtest = self.new_backtest_;
       if(new_backtest->name().empty()) {
-        app_state.push_action([](AppStateData& state) {
-          state.alert_messages.push("Backtest name cannot be empty.");
+        context.push_action([](ApplicationState& app_state) {
+          app_state.alert("Backtest name cannot be empty.");
         });
       } else if(!new_backtest->asset_ptr() || !new_backtest->strategy_ptr() ||
                 !new_backtest->market_ptr() || !new_backtest->broker_ptr() ||
                 !new_backtest->profile_ptr()) {
-        app_state.push_action([](AppStateData& state) {
-          state.alert_messages.push("Please select an asset, a strategy, a "
-                                    "market, a broker, and a profile.");
+        context.push_action([](ApplicationState& app_state) {
+          app_state.alert("Please select an asset, a strategy, a "
+                          "market, a broker, and a profile.");
         });
       } else {
-        app_state.push_action([&old_backtest = self.old_backtest_.value().get(),
-                               new_backtest](AppStateData& state) {
+        context.push_action([old_backtest = self.old_backtest_,
+                             new_backtest](ApplicationState& app_state) {
           new_backtest->reset();
-
-          std::ranges::replace_if(
-           state.backtests,
-           [&old_backtest](const pludux::Backtest& backtest) {
-             return &backtest == &old_backtest;
-           },
-           std::move(*new_backtest));
+          app_state.replace_backtest(old_backtest, std::move(new_backtest));
         });
 
         self.backtest_panel_mode_ = BacktestPanelMode::List;
         self.new_backtest_ = nullptr;
-        self.old_backtest_ = std::nullopt;
+        self.old_backtest_ = nullptr;
       }
     }
 
@@ -226,20 +214,19 @@ private:
     if(ImGui::Button("Cancel")) {
       self.backtest_panel_mode_ = BacktestPanelMode::List;
       self.new_backtest_ = nullptr;
-      self.old_backtest_ = std::nullopt;
+      self.old_backtest_ = nullptr;
     }
 
     ImGui::EndGroup();
   }
 
-  void edit_backtest_form(this BacktestsWindow& self, AppState& app_state)
+  void edit_backtest_form(this BacktestsWindow& self, WindowContext& context)
   {
-    const auto& state = app_state.state();
-    const auto& assets = state.assets;
-    const auto& strategies = state.strategies;
-    const auto& markets = state.markets;
-    const auto& brokers = state.brokers;
-    const auto& profiles = state.profiles;
+    const auto& assets = context.assets();
+    const auto& strategies = context.strategies();
+    const auto& markets = context.markets();
+    const auto& brokers = context.brokers();
+    const auto& profiles = context.profiles();
 
     auto& new_backtest = self.new_backtest_;
     {

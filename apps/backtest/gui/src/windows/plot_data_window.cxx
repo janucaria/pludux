@@ -3,6 +3,7 @@ module;
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <memory>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -13,14 +14,15 @@ module;
 
 export module pludux.apps.backtest:windows.plot_data_window;
 
-import :app_state;
+import pludux.backtest;
+import :window_context;
 
 export namespace pludux::apps {
 
 class PlotDataWindow {
 public:
   PlotDataWindow()
-  : last_selected_backtest_index_{-1}
+  : last_selected_backtest_{nullptr}
   , bullish_color_{0.5, 1, 0, 1}
   , bearish_color_{1, 0, 0.5, 1}
   , risk_color_{1, 0, 0, 0.25}
@@ -30,28 +32,23 @@ public:
   {
   }
 
-  void render(this PlotDataWindow& self, AppState& app_state)
+  void render(this PlotDataWindow& self, WindowContext& context)
   {
-    const auto& state = app_state.state();
-    const auto& backtests = state.backtests;
+    const auto& app_state = context.app_state();
+    const auto backtest = app_state.selected_backtest();
 
     ImGui::Begin("Charts", nullptr);
 
-    if(backtests.empty()) {
+    if(!backtest) {
       ImGui::End();
       return;
     }
 
-    const auto& asset = backtests[state.selected_backtest_index].asset();
+    const auto& asset = backtest->asset();
     const auto& asset_history = asset.history();
 
-    auto backtest_summaries = std::vector<backtest::BacktestSummary>{};
-    auto is_backtest_should_run = false;
-    if(!state.backtests.empty()) {
-      const auto& backtest = state.backtests[state.selected_backtest_index];
-      is_backtest_should_run = backtest.should_run();
-      backtest_summaries = backtest.summaries();
-    }
+    auto backtest_summaries = backtest->summaries();
+    auto is_backtest_should_run = backtest->should_run();
 
     // get the avaliable space
     const auto available_space = ImGui::GetContentRegionAvail();
@@ -65,12 +62,12 @@ public:
                         ImPlotAxisFlags_NoHighlight;
 
     const auto reset_chart_view =
-     self.last_selected_backtest_index_ != state.selected_backtest_index;
+     self.last_selected_backtest_ != app_state.selected_backtest();
     if(is_backtest_should_run || reset_chart_view) {
       axis_x_flags |= ImPlotAxisFlags_AutoFit;
       axis_y_flags |= ImPlotAxisFlags_AutoFit;
 
-      self.last_selected_backtest_index_ = state.selected_backtest_index;
+      self.last_selected_backtest_ = app_state.selected_backtest();
     }
 
     if(ImPlot::BeginPlot("##OHLCPlot",
@@ -152,7 +149,7 @@ public:
   }
 
 private:
-  std::ptrdiff_t last_selected_backtest_index_;
+  std::shared_ptr<Backtest> last_selected_backtest_;
 
   ImVec4 bullish_color_;
   ImVec4 bearish_color_;
