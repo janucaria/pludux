@@ -235,7 +235,7 @@ public:
                                   asset_snapshot.low())
         .or_else([&]() {
           const auto position_size = open_position->unrealized_position_size();
-          return strategy.exit_trade(asset_snapshot, position_size);
+          return self.exit_trade(asset_snapshot, position_size);
         });
 
       if(exit_trade) {
@@ -244,7 +244,7 @@ public:
       }
     } else {
       auto entry_trade =
-       strategy.entry_trade(asset_snapshot, profile.get_risk_value());
+       self.entry_trade(asset_snapshot, profile.get_risk_value());
 
       if(entry_trade) {
         {
@@ -275,6 +275,111 @@ public:
     self.summaries_.emplace_back(std::move(summary));
   }
 
+  auto entry_long_trade(this Backtest& self,
+                        const AssetSnapshot& asset_snapshot,
+                        double risk_value) noexcept
+   -> std::optional<backtest::TradeEntry>
+  {
+    auto result = std::optional<backtest::TradeEntry>{};
+
+    const auto& strategy = self.strategy();
+    auto context = self.create_default_method_context();
+
+    if(strategy.long_entry_filter()(asset_snapshot, context)) {
+      const auto risk_size = strategy.risk_method()(asset_snapshot, context);
+      const auto position_size = risk_value / risk_size;
+      const auto entry_price = asset_snapshot.close();
+
+      const auto stop_loss_price =
+       strategy.stop_loss_enabled() ? entry_price - risk_size : NAN;
+      const auto is_stop_loss_trailing = strategy.stop_loss_trailing_enabled();
+      const auto take_profit_price =
+       strategy.take_profit_enabled()
+        ? entry_price + risk_size * strategy.take_profit_risk_multiplier()
+        : NAN;
+
+      result = backtest::TradeEntry{position_size,
+                                    entry_price,
+                                    stop_loss_price,
+                                    is_stop_loss_trailing,
+                                    take_profit_price};
+    }
+
+    return result;
+  }
+
+  auto entry_short_trade(this Backtest& self,
+                         const AssetSnapshot& asset_snapshot,
+                         double risk_value) noexcept
+   -> std::optional<backtest::TradeEntry>
+  {
+    auto result = std::optional<backtest::TradeEntry>{};
+
+    const auto& strategy = self.strategy();
+    auto context = self.create_default_method_context();
+
+    if(strategy.short_entry_filter()(asset_snapshot, context)) {
+      const auto risk_size = -strategy.risk_method()(asset_snapshot, context);
+      const auto position_size = risk_value / risk_size;
+      const auto entry_price = asset_snapshot.close();
+
+      const auto stop_loss_price =
+       strategy.stop_loss_enabled() ? entry_price - risk_size : NAN;
+      const auto is_stop_loss_trailing = strategy.stop_loss_trailing_enabled();
+      const auto take_profit_price =
+       strategy.take_profit_enabled()
+        ? entry_price + risk_size * strategy.take_profit_risk_multiplier()
+        : NAN;
+
+      result = backtest::TradeEntry{position_size,
+                                    entry_price,
+                                    stop_loss_price,
+                                    is_stop_loss_trailing,
+                                    take_profit_price};
+    }
+
+    return result;
+  }
+
+  auto entry_trade(this Backtest& self,
+                   const AssetSnapshot& asset_snapshot,
+                   double risk_value) noexcept
+   -> std::optional<backtest::TradeEntry>
+  {
+    return self.entry_long_trade(asset_snapshot, risk_value)
+     .or_else([=] mutable {
+       return self.entry_short_trade(asset_snapshot, risk_value);
+     });
+  }
+
+  auto exit_trade(this Backtest& self,
+                  const AssetSnapshot& asset_snapshot,
+                  double position_size) noexcept
+   -> std::optional<backtest::TradeExit>
+  {
+    const auto is_long_direction = position_size > 0;
+    const auto is_short_direction = position_size < 0;
+    const auto exit_price = asset_snapshot.close();
+
+    auto const& strategy = self.strategy();
+    auto context = self.create_default_method_context();
+
+    if(is_long_direction) {
+      if(strategy.long_exit_filter()(asset_snapshot, context)) {
+        return backtest::TradeExit{
+         position_size, exit_price, backtest::TradeExit::Reason::signal};
+      }
+    } else if(is_short_direction) {
+      if(strategy.short_exit_filter()(asset_snapshot, context)) {
+        const auto exit_price = asset_snapshot.close();
+        return backtest::TradeExit{
+         position_size, exit_price, backtest::TradeExit::Reason::signal};
+      }
+    }
+
+    return std::nullopt;
+  }
+
 private:
   std::string name_;
 
@@ -286,6 +391,12 @@ private:
 
   bool is_failed_;
   std::vector<backtest::BacktestSummary> summaries_;
+
+  auto create_default_method_context(this const Backtest& self)
+   -> DefaultMethodContext
+  {
+    return DefaultMethodContext{self.strategy().series_registry()};
+  }
 };
 
 // ----------------------------------------------------------------
