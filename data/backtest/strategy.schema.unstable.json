@@ -347,17 +347,14 @@
             "period": {
               "type": "number"
             },
-            "multiplier": {
-              "type": "number"
-            },
-            "high": {
-              "$ref": "#/definitions/methodAsParameter"
-            },
-            "low": {
-              "$ref": "#/definitions/methodAsParameter"
-            },
-            "close": {
-              "$ref": "#/definitions/methodAsParameter"
+            "maSmoothingType": {
+              "enum": [
+                "SMA",
+                "EMA",
+                "RMA",
+                "WMA",
+                "HMA"
+              ]
             }
           }
         }

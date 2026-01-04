@@ -18,6 +18,8 @@ import :trade_exit;
 
 export namespace pludux::backtest {
 
+using RiskAtrMethod = MultiplyMethod<AtrMethod, ValueMethod>;
+
 class Strategy {
 public:
   Strategy()
@@ -212,13 +214,15 @@ auto risk_reward_config_parser() -> ConfigParser
       const AnySeriesMethod& method) -> jsoncons::ojson {
      auto serialized_method = jsoncons::ojson::null();
 
-     auto atr_method = series_method_cast<AtrMethod>(method);
+     auto multiply_method = series_method_cast<RiskAtrMethod>(method);
 
-     if(atr_method) {
+     if(multiply_method) {
        serialized_method = jsoncons::ojson{};
        serialized_method["atr"] = jsoncons::ojson{};
-       serialized_method["atr"]["period"] = atr_method->period();
-       serialized_method["atr"]["multiplier"] = atr_method->multiplier();
+       serialized_method["atr"]["period"] =
+        multiply_method->multiplicand().period();
+       serialized_method["atr"]["multiplier"] =
+        multiply_method->multiplier().value();
      }
 
      return serialized_method;
@@ -238,7 +242,8 @@ auto risk_reward_config_parser() -> ConfigParser
        }
      }
 
-     const auto atr_method = AtrMethod{period, multiplier};
+     const auto atr_method =
+      RiskAtrMethod{AtrMethod{period}, ValueMethod{multiplier}};
      return atr_method;
    });
 

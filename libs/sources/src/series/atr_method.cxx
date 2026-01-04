@@ -13,13 +13,13 @@ import :method_contextable;
 import :series_output;
 
 import :series.tr_method;
-import :series.rma_method;
+import :series.ma_method_type;
 
 export namespace pludux {
 
 class AtrMethod {
 public:
-  using ResultType = typename RmaMethod<TrMethod>::ResultType;
+  using ResultType = typename TrMethod::ResultType;
 
   AtrMethod()
   : AtrMethod{14}
@@ -27,13 +27,13 @@ public:
   }
 
   explicit AtrMethod(std::size_t period)
-  : AtrMethod{period, 1.0}
+  : AtrMethod{MaMethodType::Rma, period}
   {
   }
 
-  explicit AtrMethod(std::size_t period, double multiplier)
+  explicit AtrMethod(MaMethodType ma_smoothing_type, std::size_t period)
   : period_{period}
-  , multiplier_{multiplier}
+  , ma_smoothing_type_{ma_smoothing_type}
   {
   }
 
@@ -44,8 +44,8 @@ public:
                   MethodContextable auto context) noexcept -> ResultType
   {
     const auto tr_method = TrMethod{};
-    const auto rma_method = RmaMethod{tr_method, self.period_};
-    const auto atr = rma_method(asset_snapshot, context) * self.multiplier_;
+    const auto atr = call_ma_method(
+     self.ma_smoothing_type_, tr_method, self.period_, asset_snapshot, context);
 
     return atr;
   }
@@ -68,19 +68,19 @@ public:
     self.period_ = new_period;
   }
 
-  auto multiplier(this AtrMethod self) noexcept -> double
+  auto ma_smoothing_type(this const AtrMethod& self) noexcept -> MaMethodType
   {
-    return self.multiplier_;
+    return self.ma_smoothing_type_;
   }
 
-  void multiplier(this AtrMethod& self, double new_multiplier) noexcept
+  void ma_smoothing_type(this AtrMethod& self, MaMethodType new_type) noexcept
   {
-    self.multiplier_ = new_multiplier;
+    self.ma_smoothing_type_ = new_type;
   }
 
 private:
   std::size_t period_;
-  double multiplier_;
+  MaMethodType ma_smoothing_type_;
 };
 
 } // namespace pludux

@@ -13,26 +13,26 @@ TEST(AtrMethodTest, ConstructorInitialization)
     auto atr_method = AtrMethod{14};
 
     EXPECT_EQ(atr_method.period(), 14);
-    EXPECT_DOUBLE_EQ(atr_method.multiplier(), 1.0);
+    EXPECT_EQ(atr_method.ma_smoothing_type(), MaMethodType::Rma);
   }
   {
-    auto atr_method = AtrMethod{14, 2.0};
+    auto atr_method = AtrMethod{MaMethodType::Ema, 14};
 
     EXPECT_EQ(atr_method.period(), 14);
-    EXPECT_DOUBLE_EQ(atr_method.multiplier(), 2.0);
+    EXPECT_EQ(atr_method.ma_smoothing_type(), MaMethodType::Ema);
   }
 }
 
 TEST(AtrMethodTest, RunAllMethod)
 {
-  const auto asset_data = AssetHistory{
-   {"High", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
-   {"Low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},
-   {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  const auto asset_data =
+   AssetHistory{{"High", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
+                {"Low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},
+                {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 
-  const auto atr_method = AtrMethod{5, 1.0};
+  const auto atr_method = AtrMethod{5};
 
   EXPECT_DOUBLE_EQ(atr_method(asset_snapshot[0], context), 32.187840000000008);
   EXPECT_DOUBLE_EQ(atr_method(asset_snapshot[1], context), 36.484800000000007);
@@ -57,9 +57,9 @@ TEST(AtrMethodTest, EqualityOperator)
 
 TEST(AtrMethodTest, NotEqualOperator)
 {
-  const auto atr_method1 = AtrMethod{14, 1.0};
-  const auto atr_method2 = AtrMethod{20, 1.0};
-  const auto atr_method3 = AtrMethod{20, 2.0};
+  const auto atr_method1 = AtrMethod{MaMethodType::Ema, 14};
+  const auto atr_method2 = AtrMethod{MaMethodType::Ema, 20};
+  const auto atr_method3 = AtrMethod{MaMethodType::Rma, 20};
 
   EXPECT_TRUE(atr_method1 != atr_method2);
   EXPECT_NE(atr_method1, atr_method2);

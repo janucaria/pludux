@@ -56,6 +56,7 @@ target_sources(${PROJECT_NAME}
         src/series/rma_method.cxx
         src/series/wma_method.cxx
         src/series/hma_method.cxx
+        src/series/ma_method_type.cxx
         src/series/macd_method.cxx
         
         src/series/tr_method.cxx

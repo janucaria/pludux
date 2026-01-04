@@ -353,8 +353,33 @@ static auto parse_atr_method(ConfigParser::Parser config_parser,
     atr_method.period(parameters.at("period").as<std::size_t>());
   }
 
-  if(parameters.contains("multiplier")) {
-    atr_method.multiplier(parameters.at("multiplier").as_double());
+  if(parameters.contains("maSmoothingType")) {
+    const auto ma_type = [](const std::string& ma_type_str) {
+      if(ma_type_str == "SMA") {
+        return MaMethodType::Sma;
+      }
+
+      if(ma_type_str == "EMA") {
+        return MaMethodType::Ema;
+      }
+
+      if(ma_type_str == "WMA") {
+        return MaMethodType::Wma;
+      }
+
+      if(ma_type_str == "HMA") {
+        return MaMethodType::Hma;
+      }
+
+      if(ma_type_str == "RMA") {
+        return MaMethodType::Rma;
+      }
+
+      // TODO: Raise error on unknown type
+      return MaMethodType::Rma;
+    }(parameters.at("maSmoothingType").as_string());
+
+    atr_method.ma_smoothing_type(ma_type);
   }
 
   return atr_method;
@@ -370,7 +395,21 @@ static auto serialize_atr_method(const ConfigParser& config_parser,
   if(atr_method) {
     serialized_method = jsoncons::ojson{};
     serialized_method["period"] = atr_method->period();
-    serialized_method["multiplier"] = atr_method->multiplier();
+    serialized_method["maSmoothingType"] = [](MaMethodType ma_type) static {
+      switch(ma_type) {
+      case MaMethodType::Sma:
+        return "SMA";
+      case MaMethodType::Ema:
+        return "EMA";
+      case MaMethodType::Wma:
+        return "WMA";
+      case MaMethodType::Rma:
+        return "RMA";
+      default:
+        // TODO: Raise error on unknown type
+        return "RMA";
+      }
+    }(atr_method->ma_smoothing_type());
   }
 
   return serialized_method;

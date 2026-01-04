@@ -478,7 +478,7 @@ TEST_F(ConfigParserTest, ParseScreenerAtrMethod)
     {
       "method": "ATR",
       "period": 14,
-      "multiplier": 1.0
+      "maSmoothingType": "RMA"
     }
   )");
 
@@ -488,7 +488,7 @@ TEST_F(ConfigParserTest, ParseScreenerAtrMethod)
   ASSERT_NE(atr_method, nullptr);
 
   EXPECT_EQ(atr_method->period(), 14);
-  EXPECT_EQ(atr_method->multiplier(), 1.0);
+  EXPECT_EQ(atr_method->ma_smoothing_type(), MaMethodType::Rma);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =

@@ -11,6 +11,7 @@ module;
 #include <sstream>
 #include <string>
 #include <system_error>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -60,6 +61,8 @@ using DivideMethod = pludux::DivideMethod<AnySeriesMethod, AnySeriesMethod>;
 using NegateMethod = pludux::NegateMethod<AnySeriesMethod>;
 using PercentageMethod = pludux::PercentageMethod<AnySeriesMethod>;
 using AbsDiffMethod = pludux::AbsDiffMethod<AnySeriesMethod, AnySeriesMethod>;
+
+using RiskAtrMethod = backtest::RiskAtrMethod;
 
 auto get_output_name_string(SeriesOutput output_name) -> std::string
 {
@@ -923,9 +926,9 @@ private:
     static auto risk_mode = static_cast<int>(RiskMode::Atr);
 
     auto risk_method = self.editing_strategy_ptr_->risk_method();
-    if(const auto atr_method = series_method_cast<AtrMethod>(risk_method)) {
-      atr_risk_period = static_cast<int>(atr_method->period());
-      atr_risk_multiplier = atr_method->multiplier();
+    if(const auto atr_method = series_method_cast<RiskAtrMethod>(risk_method)) {
+      atr_risk_period = static_cast<int>(atr_method->multiplicand().period());
+      atr_risk_multiplier = atr_method->multiplier().value();
       risk_mode = static_cast<int>(RiskMode::Atr);
     } else if(const auto percentage_method =
                series_method_cast<PercentageMethod>(risk_method)) {
@@ -949,8 +952,9 @@ private:
     {
       if(ImGui::RadioButton(
           "ATR", &risk_mode, static_cast<int>(RiskMode::Atr))) {
-        self.editing_strategy_ptr_->risk_method(AtrMethod{
-         static_cast<std::size_t>(atr_risk_period), atr_risk_multiplier});
+        self.editing_strategy_ptr_->risk_method(
+         RiskAtrMethod{AtrMethod{static_cast<std::size_t>(atr_risk_period)},
+                       ValueMethod{atr_risk_multiplier}});
       }
 
       ImGui::Indent();
@@ -962,8 +966,9 @@ private:
         }
 
         if(risk_mode == static_cast<int>(RiskMode::Atr)) {
-          self.editing_strategy_ptr_->risk_method(AtrMethod{
-           static_cast<std::size_t>(atr_risk_period), atr_risk_multiplier});
+          self.editing_strategy_ptr_->risk_method(
+           RiskAtrMethod{AtrMethod{static_cast<std::size_t>(atr_risk_period)},
+                         ValueMethod{atr_risk_multiplier}});
         }
       }
       ImGui::Text("Multiplier:");
@@ -975,8 +980,9 @@ private:
         }
 
         if(risk_mode == static_cast<int>(RiskMode::Atr)) {
-          self.editing_strategy_ptr_->risk_method(AtrMethod{
-           static_cast<std::size_t>(atr_risk_period), atr_risk_multiplier});
+          self.editing_strategy_ptr_->risk_method(
+           RiskAtrMethod{AtrMethod{static_cast<std::size_t>(atr_risk_period)},
+                         ValueMethod{atr_risk_multiplier}});
         }
       }
       ImGui::Unindent();
@@ -1548,14 +1554,26 @@ private:
       method.period(static_cast<std::size_t>(period));
     }
 
-    ImGui::Text("Multiplier:");
+    ImGui::Text("Smoothing:");
     ImGui::SameLine();
-    auto multiplier = method.multiplier();
-    if(ImGui::InputDouble("##atr_multiplier", &multiplier, 0.1, 1.0, "%.2f")) {
-      if(multiplier < 0.1) {
-        multiplier = 0.1;
+
+    const auto ma_types = std::unordered_map<MaMethodType, std::string>{
+     {MaMethodType::Sma, "SMA"},
+     {MaMethodType::Ema, "EMA"},
+     {MaMethodType::Wma, "WMA"},
+     {MaMethodType::Hma, "HMA"},
+     {MaMethodType::Rma, "RMA"},
+    };
+
+    const auto current_ma_title = ma_types.at(method.ma_smoothing_type());
+    if(ImGui::BeginCombo("##atr_smoothing_type", current_ma_title.c_str())) {
+      for(const auto& [ma_type, ma_title] : ma_types) {
+        const bool is_selected = method.ma_smoothing_type() == ma_type;
+        if(ImGui::Selectable(ma_title.c_str(), is_selected)) {
+          method.ma_smoothing_type(ma_type);
+        }
       }
-      method.multiplier(multiplier);
+      ImGui::EndCombo();
     }
   }
 
