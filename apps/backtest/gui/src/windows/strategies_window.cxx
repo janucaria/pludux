@@ -37,7 +37,7 @@ namespace pludux::apps {
 using SelectOutputMethod = pludux::SelectOutputMethod<AnySeriesMethod>;
 using ReferenceMethod = pludux::ReferenceMethod;
 using BbMethod = pludux::BbMethod<AnySeriesMethod>;
-using KcMethod = pludux::KcMethod<AnySeriesMethod, AnySeriesMethod>;
+using KcMethod = pludux::KcMethod<AnySeriesMethod>;
 using StochMethod = pludux::StochMethod;
 using StochRsiMethod = pludux::StochRsiMethod<AnySeriesMethod>;
 using SmaMethod = pludux::SmaMethod<AnySeriesMethod>;
@@ -121,7 +121,8 @@ auto get_default_series_method(const std::string& series_id) -> AnySeriesMethod
   } else if(series_id == "BB") {
     return BbMethod{BbMaType::Sma, CloseMethod{}, 20, 2.0};
   } else if(series_id == "KC") {
-    return KcMethod{EmaMethod{CloseMethod{}, 20}, AtrMethod{}, 1.5};
+    return KcMethod{
+     CloseMethod{}, MaMethodType::Ema, 20, KcBandMethodType::Atr, 14, 1.5};
   } else if(series_id == "STOCH") {
     return StochMethod{14, 3, 3};
   } else if(series_id == "STOCH_RSI") {
@@ -252,7 +253,7 @@ auto get_series_method_title(const std::string& series_id) -> std::string
   } else if(series_id == "BB") {
     return "Bollinger Bands";
   } else if(series_id == "KC") {
-    return "Keltner Channel";
+    return "Keltner Channel (KC)";
   } else if(series_id == "STOCH") {
     return "Stochastic Oscillator";
   } else if(series_id == "STOCH_RSI") {
@@ -1233,56 +1234,81 @@ private:
   void render_series_method_params(this auto& self, KcMethod& method)
   {
     {
-      ImGui::Text("MA:");
+      ImGui::Text("Length:");
       ImGui::SameLine();
-      {
-        const auto ma_ids =
-         std::vector<std::string>{"SMA", "EMA", "WMA", "HMA"};
-
-        auto ma_method = method.ma();
-        const auto selected_ma_id = get_series_method_id(ma_method);
-        const auto selected_ma_title = get_series_method_title(selected_ma_id);
-        if(ImGui::BeginCombo("##ma_type", selected_ma_title.c_str())) {
-          for(const auto& ma_id : ma_ids) {
-            const auto ma_title = get_series_method_title(ma_id);
-            const bool is_selected = selected_ma_title == ma_title;
-            if(ImGui::Selectable(ma_title.c_str(), is_selected)) {
-              ma_method = get_default_series_method(ma_id);
-            }
-          }
-          ImGui::EndCombo();
+      auto length = static_cast<int>(method.ma_period());
+      if(ImGui::InputInt("##kc_length", &length)) {
+        if(length < 1) {
+          length = 1;
         }
-        ImGui::Indent();
-        self.render_series_method_params(ma_method);
-        method.ma(std::move(ma_method));
-        ImGui::Unindent();
+        method.ma_period(static_cast<std::size_t>(length));
       }
     }
     {
-      ImGui::Text("Range:");
+      ImGui::Text("MA Type:");
       ImGui::SameLine();
       {
-        const auto range_ids =
-         std::vector<std::string>{"ATR", "PERCENTAGE", "VALUE"};
+        const auto ma_type_options =
+         std::unordered_map<MaMethodType, std::string>{
+          {MaMethodType::Sma, "SMA"},
+          {MaMethodType::Ema, "EMA"},
+          {MaMethodType::Wma, "WMA"},
+          {MaMethodType::Hma, "HMA"},
+          {MaMethodType::Rma, "RMA"}};
 
-        auto range_method = method.range();
-        const auto selected_range_id = get_series_method_id(range_method);
-        const auto selected_range_title =
-         get_series_method_title(selected_range_id);
-        if(ImGui::BeginCombo("##range_type", selected_range_title.c_str())) {
-          for(const auto& range_id : range_ids) {
-            const auto range_title = get_series_method_title(range_id);
-            const bool is_selected = selected_range_title == range_title;
-            if(ImGui::Selectable(range_title.c_str(), is_selected)) {
-              range_method = get_default_series_method(range_id);
+        const auto ma_type_str = ma_type_options.at(method.ma_method_type());
+        if(ImGui::BeginCombo("##kc_ma_type", ma_type_str.c_str())) {
+          for(const auto& [ma_type_option, ma_type_option_str] :
+              ma_type_options) {
+            const bool is_selected = ma_type_str == ma_type_option_str;
+            if(ImGui::Selectable(ma_type_option_str.c_str(), is_selected)) {
+              method.ma_method_type(ma_type_option);
             }
           }
           ImGui::EndCombo();
         }
-        ImGui::Indent();
-        self.render_series_method_params(range_method);
-        method.range(std::move(range_method));
-        ImGui::Unindent();
+      }
+    }
+    {
+      ImGui::Text("Source:");
+      ImGui::SameLine();
+      auto source = method.ma_source();
+      self.render_series_method(source);
+      method.ma_source(std::move(source));
+    }
+    {
+      ImGui::Text("Band Type:");
+      ImGui::SameLine();
+      {
+        const auto band_type_options =
+         std::unordered_map<KcBandMethodType, std::string>{
+          {KcBandMethodType::Atr, "ATR"},
+          {KcBandMethodType::Tr, "True Range"},
+          {KcBandMethodType::RangeHighLow, "Range (High-Low)"}};
+
+        const auto band_type_str =
+         band_type_options.at(method.band_method_type());
+        if(ImGui::BeginCombo("##kc_band_type", band_type_str.c_str())) {
+          for(const auto& [band_type_option, band_type_option_str] :
+              band_type_options) {
+            const bool is_selected = band_type_str == band_type_option_str;
+            if(ImGui::Selectable(band_type_option_str.c_str(), is_selected)) {
+              method.band_method_type(band_type_option);
+            }
+          }
+          ImGui::EndCombo();
+        }
+      }
+    }
+    {
+      ImGui::Text("ATR Length:");
+      ImGui::SameLine();
+      auto atr_length = static_cast<int>(method.band_atr_period());
+      if(ImGui::InputInt("##kc_atr_length", &atr_length)) {
+        if(atr_length < 1) {
+          atr_length = 1;
+        }
+        method.band_atr_period(static_cast<std::size_t>(atr_length));
       }
     }
     {

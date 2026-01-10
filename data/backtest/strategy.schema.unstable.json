@@ -402,11 +402,30 @@
             "method": {
               "const": "KC"
             },
-            "ma": {
-              "$ref": "#/definitions/maMethod"
+            "maSource": {
+              "$ref": "#/definitions/methodAsParameter"
             },
-            "range": {
-              "$ref": "#/definitions/atrMethod"
+            "maPeriod": {
+              "type": "integer"
+            },
+            "maMethodType": {
+              "enum": [
+                "SMA",
+                "EMA",
+                "RMA",
+                "WMA",
+                "HMA"
+              ]
+            },
+            "bandMethodType": {
+              "enum": [
+                "ATR",
+                "TR",
+                "RangeHighLow"
+              ]
+            },
+            "bandAtrPeriod": {
+              "type": "integer"
             },
             "multiplier": {
               "type": "number"

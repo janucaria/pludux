@@ -628,33 +628,30 @@ TEST_F(ConfigParserTest, ParseScreenerKcMethod)
   const auto config = json::parse(R"(
     {
       "method": "KC",
-      "ma": {
-        "method": "SMA",
-        "period": 5,
-        "source": {
-          "method": "DATA",
-          "field": "close"
-        }
+      "maMethodType": "SMA",
+      "maPeriod": 5,
+      "maSource": {
+        "method": "DATA",
+        "field": "close"
       },
-      "range": {
-        "method": "ATR",
-        "period": 14
-      },
+      "bandMethodType": "ATR",
+      "bandAtrPeriod": 14,
       "multiplier": 1.0
     }
   )");
 
   const auto method = config_parser.parse_method(config);
 
-  const auto kc_method =
-   series_method_cast<KcMethod<AnySeriesMethod, AnySeriesMethod>>(method);
+  const auto kc_method = series_method_cast<KcMethod<AnySeriesMethod>>(method);
   ASSERT_NE(kc_method, nullptr);
 
-  const auto ma_method =
-   series_method_cast<SmaMethod<AnySeriesMethod>>(kc_method->ma());
-  const auto range_method = series_method_cast<AtrMethod>(kc_method->range());
-  EXPECT_NE(ma_method, nullptr);
-  EXPECT_NE(range_method, nullptr);
+  const auto ma_source_method =
+   series_method_cast<DataMethod>(kc_method->ma_source());
+  EXPECT_NE(ma_source_method, nullptr);
+  EXPECT_EQ(kc_method->ma_method_type(), MaMethodType::Sma);
+  EXPECT_EQ(kc_method->ma_period(), 5);
+  EXPECT_EQ(kc_method->band_method_type(), KcBandMethodType::Atr);
+  EXPECT_EQ(kc_method->band_atr_period(), 14);
   EXPECT_EQ(kc_method->multiplier(), 1.0);
 
   const auto serialized_config = config_parser.serialize_method(method);

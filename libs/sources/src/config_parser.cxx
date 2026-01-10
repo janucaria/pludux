@@ -421,13 +421,43 @@ static auto serialize_kc_method(const ConfigParser& config_parser,
 {
   auto serialized_method = jsoncons::ojson::null();
 
-  auto kc_method =
-   series_method_cast<KcMethod<AnySeriesMethod, AnySeriesMethod>>(method);
+  auto kc_method = series_method_cast<KcMethod<AnySeriesMethod>>(method);
   if(kc_method) {
     serialized_method = jsoncons::ojson{};
-    serialized_method["ma"] = config_parser.serialize_method(kc_method->ma());
-    serialized_method["range"] =
-     config_parser.serialize_method(kc_method->range());
+    serialized_method["maMethodType"] = [&]() {
+      switch(kc_method->ma_method_type()) {
+      case MaMethodType::Sma:
+        return "SMA";
+      case MaMethodType::Ema:
+        return "EMA";
+      case MaMethodType::Wma:
+        return "WMA";
+      case MaMethodType::Hma:
+        return "HMA";
+      case MaMethodType::Rma:
+        return "RMA";
+      default:
+        // TODO: Raise error on unknown type
+        return "EMA";
+      }
+    }();
+    serialized_method["maPeriod"] = kc_method->ma_period();
+    serialized_method["maSource"] =
+     config_parser.serialize_method(kc_method->ma_source());
+    serialized_method["bandMethodType"] = [&]() {
+      switch(kc_method->band_method_type()) {
+      case KcBandMethodType::Atr:
+        return "ATR";
+      case KcBandMethodType::Tr:
+        return "TR";
+      case KcBandMethodType::RangeHighLow:
+        return "Range";
+      default:
+        // TODO: Raise error on unknown type
+        return "ATR";
+      }
+    }();
+    serialized_method["bandAtrPeriod"] = kc_method->band_atr_period();
     serialized_method["multiplier"] = kc_method->multiplier();
   }
 
@@ -438,11 +468,67 @@ static auto parse_kc_method(ConfigParser::Parser config_parser,
                             const jsoncons::ojson& parameters)
  -> AnySeriesMethod
 {
-  const auto ma_method = config_parser.parse_method(parameters.at("ma"));
-  const auto range_method = config_parser.parse_method(parameters.at("range"));
-  const auto multiplier = parameters.at("multiplier").as_double();
+  const auto ma_method_type = [&]() {
+    const auto ma_type_str =
+     get_param_or<std::string>(parameters, "maMethodType", "EMA");
 
-  const auto kc_method = KcMethod{ma_method, range_method, multiplier};
+    if(ma_type_str == "SMA") {
+      return MaMethodType::Sma;
+    }
+
+    if(ma_type_str == "EMA") {
+      return MaMethodType::Ema;
+    }
+
+    if(ma_type_str == "WMA") {
+      return MaMethodType::Wma;
+    }
+
+    if(ma_type_str == "HMA") {
+      return MaMethodType::Hma;
+    }
+
+    if(ma_type_str == "RMA") {
+      return MaMethodType::Rma;
+    }
+
+    // TODO: Raise error on unknown type
+    return MaMethodType::Ema;
+  }();
+  const auto ma_period = get_param_or<std::size_t>(parameters, "maPeriod", 20);
+  const auto ma_source = parse_method_from_param_or(
+   config_parser, parameters, "maSource", CloseMethod{});
+
+  const auto band_method_type = [&]() {
+    const auto band_type_str =
+     get_param_or<std::string>(parameters, "bandMethodType", "ATR");
+
+    if(band_type_str == "ATR") {
+      return KcBandMethodType::Atr;
+    }
+
+    if(band_type_str == "TR") {
+      return KcBandMethodType::Tr;
+    }
+
+    if(band_type_str == "Range") {
+      return KcBandMethodType::RangeHighLow;
+    }
+
+    // TODO: Raise error on unknown type
+    return KcBandMethodType::Atr;
+  }();
+  const auto band_atr_period =
+   get_param_or<std::size_t>(parameters, "bandAtrPeriod", 14);
+  const auto multiplier = get_param_or<double>(parameters, "multiplier", 1.5);
+
+  const auto kc_method = KcMethod<AnySeriesMethod>{ma_source,
+                                                   ma_method_type,
+                                                   ma_period,
+                                                   band_method_type,
+                                                   band_atr_period,
+                                                   multiplier};
+
   return kc_method;
 }
 
