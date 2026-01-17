@@ -37,14 +37,17 @@ public:
     return std::any_cast<UImpl>(impl).call_series_method(
      name, std::move(asset_snapshot));
   }}
-  , call_series_method_with_output_{
-     [](const std::any& impl,
-        const std::string& name,
-        AssetSnapshot asset_snapshot,
-        SeriesOutput output) -> DispatchResultType {
-       return std::any_cast<UImpl>(impl).call_series_method(
-        name, std::move(asset_snapshot), output);
-     }}
+  , call_series_method_with_output_{[](const std::any& impl,
+                                       const std::string& name,
+                                       AssetSnapshot asset_snapshot,
+                                       SeriesOutput output)
+                                     -> DispatchResultType {
+    return std::any_cast<UImpl>(impl).call_series_method(
+     name, std::move(asset_snapshot), output);
+  }}
+  , get_index_func_{[](const std::any& impl) -> std::size_t {
+    return std::any_cast<UImpl>(impl).index();
+  }}
   {
   }
 
@@ -65,6 +68,11 @@ public:
   {
     return self.call_series_method_with_output_(
      self.impl_, name, std::move(asset_snapshot), output_name);
+  }
+
+  auto index(this const AnySeriesMethodContext& self) noexcept -> std::size_t
+  {
+    return self.get_index_func_(self.impl_);
   }
 
   template<typename UImpl>
@@ -93,6 +101,8 @@ private:
    auto(const std::any&, const std::string&, AssetSnapshot, SeriesOutput)
     ->DispatchResultType>
    call_series_method_with_output_;
+
+  std::function<auto(const std::any&)->std::size_t> get_index_func_;
 };
 
 } // namespace pludux

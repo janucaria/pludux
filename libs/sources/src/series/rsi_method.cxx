@@ -14,7 +14,7 @@ import :method_contextable;
 import :series_output;
 
 import :series.change_method;
-import :series.rma_method;
+import :series.cached_results_rma_method;
 import :series.operators_method;
 import :series.ohlcv_method;
 import :series.value_method;
@@ -39,6 +39,10 @@ public:
   explicit RsiMethod(TSourceMethod source, std::size_t period)
   : source_{std::move(source)}
   , period_{period}
+  , rs_method_{DivideMethod{
+     CachedResultsRmaMethod{PositivePartMethod{ChangeMethod{source_}}, period_},
+     CachedResultsRmaMethod{NegativePartMethod{ChangeMethod{source_}},
+                            period_}}}
   {
   }
 
@@ -48,16 +52,7 @@ public:
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) noexcept -> ResultType
   {
-    const auto changes = ChangeMethod{self.source_};
-
-    const auto gains = PositivePartMethod{changes};
-    const auto losses = NegativePartMethod{changes};
-
-    const auto avg_gain = RmaMethod{gains, self.period_};
-    const auto avg_loss = RmaMethod{losses, self.period_};
-
-    const auto rs_method = DivideMethod{avg_gain, avg_loss};
-    const auto rs = rs_method(asset_snapshot, context);
+    const auto rs = self.rs_method_(asset_snapshot, context);
     const auto rsi = 100 - (100 / (1 + rs));
 
     return rsi;
@@ -79,6 +74,7 @@ public:
   void source(this RsiMethod& self, TSourceMethod source) noexcept
   {
     self.source_ = std::move(source);
+    self.recompute_rs_method();
   }
 
   auto period(this const RsiMethod& self) noexcept -> std::size_t
@@ -89,11 +85,26 @@ public:
   void period(this RsiMethod& self, std::size_t period) noexcept
   {
     self.period_ = period;
+    self.recompute_rs_method();
   }
 
 private:
   TSourceMethod source_;
   std::size_t period_;
+
+  DivideMethod<
+   CachedResultsRmaMethod<PositivePartMethod<ChangeMethod<TSourceMethod>>>,
+   CachedResultsRmaMethod<NegativePartMethod<ChangeMethod<TSourceMethod>>>>
+   rs_method_;
+
+  void recompute_rs_method(this RsiMethod& self) noexcept
+  {
+    self.rs_method_ = DivideMethod{
+     CachedResultsRmaMethod{PositivePartMethod{ChangeMethod{self.source_}},
+                            self.period_},
+     CachedResultsRmaMethod{NegativePartMethod{ChangeMethod{self.source_}},
+                            self.period_}};
+  }
 };
 
 RsiMethod() -> RsiMethod<CloseMethod>;

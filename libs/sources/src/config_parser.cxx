@@ -929,8 +929,8 @@ auto make_default_registered_config_parser() -> ConfigParser
 
   config_parser.register_method_parser(
    "RMA",
-   serialize_ta_with_period_method<RmaMethod>,
-   parse_ta_with_period_method<RmaMethod>);
+   serialize_ta_with_period_method<CachedResultsRmaMethod>,
+   parse_ta_with_period_method<CachedResultsRmaMethod>);
 
   config_parser.register_method_parser(
    "HMA",

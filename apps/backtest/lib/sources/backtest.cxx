@@ -395,7 +395,8 @@ private:
   auto create_default_method_context(this const Backtest& self)
    -> DefaultMethodContext
   {
-    return DefaultMethodContext{self.strategy().series_registry()};
+    return DefaultMethodContext{self.strategy().series_registry(),
+                                self.summaries_.size()};
   }
 };
 

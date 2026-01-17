@@ -348,7 +348,7 @@ TEST_F(ConfigParserTest, ParseScreenerRmaMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto rma_method =
-   series_method_cast<RmaMethod<AnySeriesMethod>>(method);
+   series_method_cast<CachedResultsRmaMethod<AnySeriesMethod>>(method);
   ASSERT_NE(rma_method, nullptr);
 
   EXPECT_EQ(rma_method->period(), 15);
