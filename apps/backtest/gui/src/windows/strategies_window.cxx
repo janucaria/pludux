@@ -41,7 +41,7 @@ using KcMethod = pludux::KcMethod<AnySeriesMethod>;
 using StochMethod = pludux::StochMethod;
 using StochRsiMethod = pludux::StochRsiMethod<AnySeriesMethod>;
 using SmaMethod = pludux::SmaMethod<AnySeriesMethod>;
-using EmaMethod = pludux::EmaMethod<AnySeriesMethod>;
+using CachedResultsEmaMethod = pludux::CachedResultsEmaMethod<AnySeriesMethod>;
 using WmaMethod = pludux::WmaMethod<AnySeriesMethod>;
 using HmaMethod = pludux::HmaMethod<AnySeriesMethod>;
 using RsiMethod = pludux::RsiMethod<AnySeriesMethod>;
@@ -107,7 +107,7 @@ auto get_default_series_method(const std::string& series_id) -> AnySeriesMethod
   } else if(series_id == "SMA") {
     return SmaMethod{CloseMethod{}, 14};
   } else if(series_id == "EMA") {
-    return EmaMethod{CloseMethod{}, 14};
+    return CachedResultsEmaMethod{CloseMethod{}, 14};
   } else if(series_id == "WMA") {
     return WmaMethod{CloseMethod{}, 14};
   } else if(series_id == "HMA") {
@@ -183,7 +183,7 @@ auto get_series_method_id(const AnySeriesMethod& method) -> std::string
     return "KC";
   } else if(series_method_cast<SmaMethod>(method)) {
     return "SMA";
-  } else if(series_method_cast<EmaMethod>(method)) {
+  } else if(series_method_cast<CachedResultsEmaMethod>(method)) {
     return "EMA";
   } else if(series_method_cast<WmaMethod>(method)) {
     return "WMA";
@@ -1100,7 +1100,7 @@ private:
                           StochMethod,
                           StochRsiMethod,
                           SmaMethod,
-                          EmaMethod,
+                          CachedResultsEmaMethod,
                           WmaMethod,
                           HmaMethod,
                           RsiMethod,
@@ -1418,7 +1418,7 @@ private:
 
   template<typename TMethodWithPeriod>
     requires std::same_as<TMethodWithPeriod, SmaMethod> ||
-             std::same_as<TMethodWithPeriod, EmaMethod> ||
+             std::same_as<TMethodWithPeriod, CachedResultsEmaMethod> ||
              std::same_as<TMethodWithPeriod, WmaMethod> ||
              std::same_as<TMethodWithPeriod, HmaMethod> ||
              std::same_as<TMethodWithPeriod, RsiMethod> ||

@@ -53,6 +53,7 @@ target_sources(${PROJECT_NAME}
 
         src/series/sma_method.cxx
         src/series/ema_method.cxx
+        src/series/cached_results_ema_method.cxx
         src/series/rma_method.cxx
         src/series/cached_results_rma_method.cxx
         src/series/wma_method.cxx

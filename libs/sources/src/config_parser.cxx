@@ -919,8 +919,8 @@ auto make_default_registered_config_parser() -> ConfigParser
 
   config_parser.register_method_parser(
    "EMA",
-   serialize_ta_with_period_method<EmaMethod>,
-   parse_ta_with_period_method<EmaMethod>);
+   serialize_ta_with_period_method<CachedResultsEmaMethod>,
+   parse_ta_with_period_method<CachedResultsEmaMethod>);
 
   config_parser.register_method_parser(
    "WMA",

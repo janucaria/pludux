@@ -284,7 +284,7 @@ TEST_F(ConfigParserTest, ParseScreenerEmaMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto ema_method =
-   series_method_cast<EmaMethod<AnySeriesMethod>>(method);
+   series_method_cast<CachedResultsEmaMethod<AnySeriesMethod>>(method);
   ASSERT_NE(ema_method, nullptr);
 
   EXPECT_EQ(ema_method->period(), 10);

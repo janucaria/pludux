@@ -23,6 +23,7 @@ export import :series.percentage_method;
 
 export import :series.sma_method;
 export import :series.ema_method;
+export import :series.cached_results_ema_method;
 export import :series.rma_method;
 export import :series.cached_results_rma_method;
 export import :series.wma_method;
