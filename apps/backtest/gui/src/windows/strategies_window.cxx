@@ -9,6 +9,7 @@ module;
 #include <memory>
 #include <ranges>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <system_error>
 #include <unordered_map>
@@ -554,105 +555,104 @@ private:
 
     ImGui::SameLine();
 
-    if(ImGui::Button("Import Strategy")) {
+    if(ImGui::Button("Import Strategies")) {
 #ifdef __EMSCRIPTEN__
 
       using JsOnOpenedFileContentReady =
        std::function<void(const std::string&, const std::string&, void*)>;
 
-      auto callback = std::make_unique<JsOnOpenedFileContentReady>(
-       [](const std::string& file_name,
-          const std::string& file_data,
-          void* user_data) {
-         auto& strategies_window = *static_cast<StrategiesWindow*>(user_data);
+      static const auto callback =
+       JsOnOpenedFileContentReady{[](const std::string& file_name,
+                                     const std::string& file_data,
+                                     void* user_data) {
+         auto& context = *reinterpret_cast<WindowContext*>(user_data);
 
-         const auto strategy_name =
-          std::filesystem::path(file_name).stem().string();
-
-         auto in_stream = std::istringstream{file_data};
-         auto parsed_strategy =
-          backtest::parse_backtest_strategy_json(strategy_name, in_stream);
-
-         strategies_window.editing_strategy_ptr_ =
-          std::make_shared<backtest::Strategy>(std::move(parsed_strategy));
-         strategies_window.selected_strategy_ptr_ = nullptr;
-         strategies_window.current_page_ = Page::AddNew;
-       });
+         auto action = LoadStrategyJsonAction{file_name, file_data};
+         context.push_action(std::move(action));
+       }};
 
       EM_ASM(
        {
          var fileSelector = document.createElement('input');
          fileSelector.type = 'file';
+         fileSelector.multiple = true;
          fileSelector.accept = '.json';
          fileSelector.onchange = function(event)
          {
-           var file = event.target.files[0];
-           if(!file) {
-             return;
+           var files = event.target.files;
+           for(var i = 0; i < files.length; i++) {
+             var file = files[i];
+
+             var reader = new FileReader();
+             reader.onload = function(event)
+             {
+               var reader = event.target;
+               var fileName = reader.onload.prototype.fileName;
+               var data = reader.result;
+               var decoder = new TextDecoder('utf-8');
+               var decodedData = decoder.decode(data);
+
+               // transfer the data to the C++ side
+               var name_ptr = Module.stringToNewUTF8(fileName);
+               var data_ptr = Module.stringToNewUTF8(decodedData);
+
+               // call the C++ function
+               Module._pludux_apps_backtest_js_opened_file_content_ready(
+                name_ptr, data_ptr, $0, $1);
+             };
+             reader.onload.prototype.fileName = file.name;
+
+             reader.readAsArrayBuffer(file);
            }
-
-           var reader = new FileReader();
-           reader.onload = function(event)
-           {
-             var reader = event.target;
-             var fileName = reader.onload.prototype.fileName;
-             var data = reader.result;
-             var decoder = new TextDecoder('utf-8');
-             var decodedData = decoder.decode(data);
-
-             // transfer the data to the C++ side
-             var name_ptr = Module.stringToNewUTF8(fileName);
-             var data_ptr = Module.stringToNewUTF8(decodedData);
-
-             // call the C++ function
-             Module._pludux_apps_backtest_js_opened_file_content_ready(
-              name_ptr, data_ptr, $0, $1);
-           };
-           reader.onload.prototype.fileName = file.name;
-
-           reader.readAsArrayBuffer(file);
          };
          fileSelector.click();
        },
-       callback.release(),
-       &self);
+       &callback,
+       &context);
 #else
       auto nfd_guard = NFD::Guard{};
-      auto in_path = NFD::UniquePath{};
+      auto in_paths = NFD::UniquePathSet{};
 
       const auto filter_item =
        std::array<nfdfilteritem_t, 1>{{"JSON Files", "json"}};
 
-      auto result =
-       NFD::OpenDialog(in_path, filter_item.data(), filter_item.size());
+      auto result = NFD::OpenDialogMultiple(
+       in_paths, filter_item.data(), filter_item.size());
 
-      if(result == NFD_OKAY) {
-        const auto selected_path = std::string(in_path.get());
-        auto in_stream = std::ifstream{selected_path};
+      try {
+        if(result == NFD_OKAY) {
+          auto paths_count = nfdpathsetsize_t{};
 
-        if(!in_stream.is_open()) {
-          const auto error_message =
-           std::format("Failed to open '{}' for reading.", selected_path);
-          context.push_action([error_message](ApplicationState& app_state) {
-            app_state.alert(error_message);
-          });
+          result = NFD::PathSet::Count(in_paths, paths_count);
+          if(result == NFD_ERROR) {
+            const auto error_message =
+             std::format("Error '{}': {}", "Import", NFD::GetError());
+            throw std::runtime_error(error_message);
+          }
+
+          for(nfdpathsetsize_t i = 0; i < paths_count; ++i) {
+            auto in_path = NFD::UniquePathSetPath{};
+            result = NFD::PathSet::GetPath(in_paths, i, in_path);
+
+            if(result == NFD_ERROR) {
+              const auto error_message =
+               std::format("Error '{}': {}", "Import", NFD::GetError());
+              throw std::runtime_error(error_message);
+            } else {
+              const auto selected_path = std::string(in_path.get());
+              context.push_action(LoadStrategyJsonAction{selected_path});
+            }
+          }
+
+        } else if(result == NFD_CANCEL) {
+          // User cancelled the open dialog
         } else {
-          const auto strategy_name =
-           std::filesystem::path(selected_path).stem().string();
-
-          auto parsed_strategy =
-           backtest::parse_backtest_strategy_json(strategy_name, in_stream);
-
-          self.editing_strategy_ptr_ =
-           std::make_shared<backtest::Strategy>(std::move(parsed_strategy));
-          self.selected_strategy_ptr_ = nullptr;
-          self.current_page_ = Page::AddNew;
+          const auto error_message =
+           std::format("Error '{}': {}", "Import", NFD::GetError());
+          throw std::runtime_error(error_message);
         }
-      } else if(result == NFD_CANCEL) {
-        // User cancelled the open dialog
-      } else {
-        const auto error_message =
-         std::format("Error '{}': {}", "Import", NFD::GetError());
+      } catch(const std::exception& ex) {
+        const auto error_message = std::string(ex.what());
         context.push_action([error_message](ApplicationState& app_state) {
           app_state.alert(error_message);
         });

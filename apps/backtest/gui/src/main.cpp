@@ -57,8 +57,8 @@ EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_js_opened_file_content_ready(
   const auto data_str = std::string(data);
   std::free(data);
 
-  const auto callback_ptr = std::unique_ptr<JsOnOpenedFileContentReady>(
-   reinterpret_cast<JsOnOpenedFileContentReady*>(user_callback));
+  const auto callback_ptr =
+   reinterpret_cast<JsOnOpenedFileContentReady*>(user_callback);
 
   (*callback_ptr)(name_str, data_str, user_data);
 }
@@ -104,25 +104,6 @@ EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_load_csv_asset(
   std::free(data);
 
   auto action = LoadAssetCsvAction{std::move(name_str), std::move(data_str)};
-
-  auto window_context = *reinterpret_cast<WindowContext*>(window_context_ptr);
-  window_context.push_action(std::move(action));
-}
-
-EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_load_strategy_json_str(
- char* name, char* data, void* window_context_ptr)
-{
-  using pludux::apps::LoadStrategyJsonAction;
-  using pludux::apps::WindowContext;
-
-  auto name_str = std::string(name);
-  std::free(name);
-
-  auto data_str = std::string(data);
-  std::free(data);
-
-  auto action =
-   LoadStrategyJsonAction{std::move(name_str), std::move(data_str)};
 
   auto window_context = *reinterpret_cast<WindowContext*>(window_context_ptr);
   window_context.push_action(std::move(action));
