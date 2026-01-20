@@ -70,79 +70,85 @@ public:
       self.last_selected_backtest_ = app_state.selected_backtest();
     }
 
-    if(ImPlot::BeginPlot("##OHLCPlot",
-                         {-1, -1},
-                         ImPlotFlags_NoLegend | ImPlotFlags_NoMouseText |
-                          ImPlotFlags_NoBoxSelect)) {
-      ImPlot::SetupAxisLinks(
-       ImAxis_X1, &self.plot_range_.Min, &self.plot_range_.Max);
-      ImPlot::SetupAxis(ImAxis_X1,
-                        nullptr,
-                        axis_x_flags | ImPlotAxisFlags_NoTickLabels |
-                         ImPlotAxisFlags_NoHighlight);
-      ImPlot::SetupAxisLimits(ImAxis_X1, 0, asset_history.size() + 100);
+    if(ImPlot::BeginAlignedPlots("MainPlots", true)) {
+      if(ImPlot::BeginPlot("##OHLCPlot",
+                           {-1, -1},
+                           ImPlotFlags_NoLegend | ImPlotFlags_NoMouseText |
+                            ImPlotFlags_NoBoxSelect)) {
+        ImPlot::SetupAxisLinks(
+         ImAxis_X1, &self.plot_range_.Min, &self.plot_range_.Max);
+        ImPlot::SetupAxis(ImAxis_X1,
+                          nullptr,
+                          axis_x_flags | ImPlotAxisFlags_NoTickLabels |
+                           ImPlotAxisFlags_NoHighlight);
+        ImPlot::SetupAxisLimits(ImAxis_X1, 0, asset_history.size() + 100);
 
-      ImPlot::SetupAxis(ImAxis_Y1, nullptr, axis_y_flags);
-      ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
+        ImPlot::SetupAxis(ImAxis_Y1, nullptr, axis_y_flags);
+        ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
 
-      self.DrawTrades("Trades", backtest_summaries, asset_history);
-      self.TickerTooltip(asset_history, false);
-      self.PlotOHLC("OHLC", asset_history);
+        self.DrawTrades("Trades", backtest_summaries, asset_history);
+        self.TickerTooltip(asset_history, false);
+        self.PlotOHLC("OHLC", asset_history);
 
-      ImPlot::EndPlot();
-    }
-    ImGui::EndChild();
-
-    ImGui::BeginChild("Bottom pane", ImVec2{-1, -1});
-    {
-      const auto tab_bar_flags = ImGuiTabBarFlags_None;
-
-      if(ImGui::BeginTabBar("Indicators", tab_bar_flags)) {
-        if(ImGui::BeginTabItem("Volume")) {
-          if(ImPlot::BeginPlot("##VolumePlot",
-                               {-1, -1},
-                               ImPlotFlags_NoLegend | ImPlotFlags_NoMouseText |
-                                ImPlotFlags_NoBoxSelect)) {
-            ImPlot::SetupAxisLinks(
-             ImAxis_X1, &self.plot_range_.Min, &self.plot_range_.Max);
-
-            ImPlot::SetupAxis(ImAxis_X1, nullptr, axis_x_flags);
-            ImPlot::SetupAxis(
-             ImAxis_Y1, nullptr, axis_y_flags | ImPlotAxisFlags_LockMin);
-            ImPlot::SetupAxisFormat(ImAxis_Y1, VolumeFormatter);
-
-            self.TickerTooltip(asset_history, false);
-            self.PlotVolume("Volume", asset_history);
-
-            ImPlot::EndPlot();
-          }
-
-          ImGui::EndTabItem();
-        }
-
-        if(ImGui::BeginTabItem("Equity (%)")) {
-          if(ImPlot::BeginPlot("##EquityPlot",
-                               {-1, -1},
-                               ImPlotFlags_NoLegend | ImPlotFlags_NoMouseText |
-                                ImPlotFlags_NoBoxSelect)) {
-            ImPlot::SetupAxisLinks(
-             ImAxis_X1, &self.plot_range_.Min, &self.plot_range_.Max);
-
-            ImPlot::SetupAxis(ImAxis_X1, nullptr, axis_x_flags);
-
-            ImPlot::SetupAxis(ImAxis_Y1, nullptr, axis_y_flags);
-            ImPlot::SetupAxisFormat(ImAxis_Y1, VolumeFormatter);
-
-            self.plot_equity(backtest_summaries);
-
-            ImPlot::EndPlot();
-          }
-
-          ImGui::EndTabItem();
-        }
-
-        ImGui::EndTabBar();
+        ImPlot::EndPlot();
       }
+      ImGui::EndChild();
+
+      ImGui::BeginChild("Bottom pane", ImVec2{-1, -1});
+      {
+        const auto tab_bar_flags = ImGuiTabBarFlags_None;
+
+        if(ImGui::BeginTabBar("Indicators", tab_bar_flags)) {
+          if(ImGui::BeginTabItem("Volume")) {
+            if(ImPlot::BeginPlot("##VolumePlot",
+                                 {-1, -1},
+                                 ImPlotFlags_NoLegend |
+                                  ImPlotFlags_NoMouseText |
+                                  ImPlotFlags_NoBoxSelect)) {
+              ImPlot::SetupAxisLinks(
+               ImAxis_X1, &self.plot_range_.Min, &self.plot_range_.Max);
+
+              ImPlot::SetupAxis(ImAxis_X1, nullptr, axis_x_flags);
+              ImPlot::SetupAxis(
+               ImAxis_Y1, nullptr, axis_y_flags | ImPlotAxisFlags_LockMin);
+              ImPlot::SetupAxisFormat(ImAxis_Y1, VolumeFormatter);
+
+              self.TickerTooltip(asset_history, false);
+              self.PlotVolume("Volume", asset_history);
+
+              ImPlot::EndPlot();
+            }
+
+            ImGui::EndTabItem();
+          }
+
+          if(ImGui::BeginTabItem("Equity (%)")) {
+            if(ImPlot::BeginPlot("##EquityPlot",
+                                 {-1, -1},
+                                 ImPlotFlags_NoLegend |
+                                  ImPlotFlags_NoMouseText |
+                                  ImPlotFlags_NoBoxSelect)) {
+              ImPlot::SetupAxisLinks(
+               ImAxis_X1, &self.plot_range_.Min, &self.plot_range_.Max);
+
+              ImPlot::SetupAxis(ImAxis_X1, nullptr, axis_x_flags);
+
+              ImPlot::SetupAxis(ImAxis_Y1, nullptr, axis_y_flags);
+              ImPlot::SetupAxisFormat(ImAxis_Y1, VolumeFormatter);
+
+              self.plot_equity(backtest_summaries);
+
+              ImPlot::EndPlot();
+            }
+
+            ImGui::EndTabItem();
+          }
+
+          ImGui::EndTabBar();
+        }
+      }
+
+      ImPlot::EndAlignedPlots();
     }
     ImGui::EndChild();
     ImGui::End();
