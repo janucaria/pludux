@@ -90,24 +90,6 @@ pludux_apps_backtest_open_file(char* data, void* window_context_ptr)
      app_state = std::move(loaded_state);
    });
 }
-
-EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_load_csv_asset(
- char* name, char* data, void* window_context_ptr)
-{
-  using pludux::apps::LoadAssetCsvAction;
-  using pludux::apps::WindowContext;
-
-  auto name_str = std::string(name);
-  std::free(name);
-
-  auto data_str = std::string(data);
-  std::free(data);
-
-  auto action = LoadAssetCsvAction{std::move(name_str), std::move(data_str)};
-
-  auto window_context = *reinterpret_cast<WindowContext*>(window_context_ptr);
-  window_context.push_action(std::move(action));
-}
 }
 
 #endif
