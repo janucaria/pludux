@@ -62,7 +62,7 @@ public:
                          open_position->entry_index(),
                          self.session_.market_timestamp(),
                          self.session_.market_price(),
-                         NAN,
+                         0.0,
                          self.session_.market_index(),
                          open_position->stop_loss_initial_price(),
                          open_position->stop_loss_trailing_price(),

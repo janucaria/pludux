@@ -273,7 +273,7 @@ public:
                                         self.entry_index(),
                                         action_timestamp,
                                         action_price,
-                                        NAN,
+                                        0.0,
                                         action_index,
                                         self.stop_loss_initial_price(),
                                         self.stop_loss_trailing_price(),
