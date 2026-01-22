@@ -283,12 +283,13 @@ public:
     auto result = std::optional<backtest::TradeEntry>{};
 
     const auto& strategy = self.strategy();
+    const auto prev_snapshot = asset_snapshot[1];
     auto context = self.create_default_method_context();
 
-    if(strategy.long_entry_filter()(asset_snapshot, context)) {
-      const auto risk_size = strategy.risk_method()(asset_snapshot, context);
+    if(strategy.long_entry_filter()(prev_snapshot, context)) {
+      const auto risk_size = strategy.risk_method()(prev_snapshot, context);
       const auto position_size = risk_value / risk_size;
-      const auto entry_price = asset_snapshot.close();
+      const auto entry_price = asset_snapshot.open();
 
       const auto stop_loss_price =
        strategy.stop_loss_enabled() ? entry_price - risk_size : NAN;
@@ -317,11 +318,12 @@ public:
 
     const auto& strategy = self.strategy();
     auto context = self.create_default_method_context();
+    const auto prev_snapshot = asset_snapshot[1];
 
-    if(strategy.short_entry_filter()(asset_snapshot, context)) {
-      const auto risk_size = -strategy.risk_method()(asset_snapshot, context);
+    if(strategy.short_entry_filter()(prev_snapshot, context)) {
+      const auto risk_size = -strategy.risk_method()(prev_snapshot, context);
       const auto position_size = risk_value / risk_size;
-      const auto entry_price = asset_snapshot.close();
+      const auto entry_price = asset_snapshot.open();
 
       const auto stop_loss_price =
        strategy.stop_loss_enabled() ? entry_price - risk_size : NAN;
@@ -359,19 +361,19 @@ public:
   {
     const auto is_long_direction = position_size > 0;
     const auto is_short_direction = position_size < 0;
-    const auto exit_price = asset_snapshot.close();
+    const auto exit_price = asset_snapshot.open();
 
     auto const& strategy = self.strategy();
     auto context = self.create_default_method_context();
+    const auto prev_snapshot = asset_snapshot[1];
 
     if(is_long_direction) {
-      if(strategy.long_exit_filter()(asset_snapshot, context)) {
+      if(strategy.long_exit_filter()(prev_snapshot, context)) {
         return backtest::TradeExit{
          position_size, exit_price, backtest::TradeExit::Reason::signal};
       }
     } else if(is_short_direction) {
-      if(strategy.short_exit_filter()(asset_snapshot, context)) {
-        const auto exit_price = asset_snapshot.close();
+      if(strategy.short_exit_filter()(prev_snapshot, context)) {
         return backtest::TradeExit{
          position_size, exit_price, backtest::TradeExit::Reason::signal};
       }
