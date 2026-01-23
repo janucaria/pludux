@@ -67,9 +67,9 @@ public:
 
           auto id_counter = 0;
           for(const auto& trade_record : trade_session.trade_record_range()) {
-            if(!trade_session.is_open() || trade_record.exit_index() == 0) {
+            if(trade_record.is_closed() || trade_record.exit_index() == 0) {
               const auto trade_count =
-               summary.trade_count() + (trade_session.is_open() ? 1 : 0);
+               summary.trade_count() + (trade_record.is_open() ? 1 : 0);
 
               ImGui::PushID(id_counter++);
               draw_trade_row(trade_count, trade_record);

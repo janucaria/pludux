@@ -386,7 +386,7 @@ public:
 
   auto is_flat(this const TradeSession& self) noexcept -> bool
   {
-    return !self.open_position_ && !self.closed_position_;
+    return !self.is_open() && !self.is_closed();
   }
 
   auto is_open(this const TradeSession& self) noexcept -> bool
@@ -396,12 +396,12 @@ public:
 
   auto is_closed(this const TradeSession& self) noexcept -> bool
   {
-    return !self.is_open() && self.closed_position_.has_value();
+    return self.closed_position_.has_value();
   }
 
   auto is_reopen(this const TradeSession& self) noexcept -> bool
   {
-    return self.open_position_.has_value() && self.closed_position_.has_value();
+    return self.is_open() && self.is_closed();
   }
 
 private:

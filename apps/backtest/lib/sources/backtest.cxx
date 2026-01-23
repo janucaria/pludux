@@ -242,7 +242,9 @@ public:
         const auto fee = broker.calculate_fee(*exit_trade);
         trade_session.exit_position(*exit_trade, fee);
       }
-    } else {
+    }
+
+    if(trade_session.is_flat() || trade_session.is_closed()) {
       auto entry_trade =
        self.entry_trade(asset_snapshot, profile.get_risk_value());
 
