@@ -28,7 +28,7 @@ public:
   , risk_color_{1, 0, 0, 0.25}
   , reward_color_{0, 1, 0, 0.25}
   , trailing_stop_color_{1, 0., 0., 0.9}
-  , plot_range_{0, 1}
+  , row_ratios_{1, 4, 1}
   {
   }
 
@@ -37,7 +37,7 @@ public:
     const auto& app_state = context.app_state();
     const auto backtest = app_state.selected_backtest();
 
-    ImGui::Begin("Charts", nullptr);
+    ImGui::Begin("Plots", nullptr);
 
     if(!backtest) {
       ImGui::End();
@@ -50,15 +50,9 @@ public:
     auto backtest_summaries = backtest->summaries();
     auto is_backtest_should_run = backtest->should_run();
 
-    // get the avaliable space
-    const auto available_space = ImGui::GetContentRegionAvail();
-
-    ImGui::BeginChild(
-     "Top pane", ImVec2{-1, available_space.y * 0.7f}, ImGuiChildFlags_ResizeY);
-
     auto axis_x_flags = ImPlotAxisFlags_None | ImPlotAxisFlags_Invert;
     auto axis_y_flags = ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_Opposite |
-                        ImPlotAxisFlags_Foreground | ImPlotAxisFlags_NoLabel |
+                        ImPlotAxisFlags_Foreground |
                         ImPlotAxisFlags_NoHighlight;
 
     const auto reset_chart_view =
@@ -70,20 +64,43 @@ public:
       self.last_selected_backtest_ = app_state.selected_backtest();
     }
 
-    if(ImPlot::BeginAlignedPlots("MainPlots", true)) {
+    auto subplot_rows = 3;
+
+    constexpr auto subplot_flags = ImPlotSubplotFlags_LinkAllX;
+    if(ImPlot::BeginSubplots("##MainPlots",
+                             subplot_rows,
+                             1,
+                             ImVec2{-1, -1},
+                             subplot_flags,
+                             self.row_ratios_.data())) {
+      if(ImPlot::BeginPlot("##EquityPlot",
+                           {-1, -1},
+                           ImPlotFlags_NoLegend | ImPlotFlags_NoMouseText |
+                            ImPlotFlags_NoBoxSelect)) {
+        ImPlot::SetupAxis(ImAxis_X1,
+                          nullptr,
+                          axis_x_flags | ImPlotAxisFlags_NoTickLabels |
+                           ImPlotAxisFlags_NoHighlight);
+
+        ImPlot::SetupAxis(ImAxis_Y1, "% Equity", axis_y_flags);
+        ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
+
+        self.plot_equity(backtest_summaries);
+
+        ImPlot::EndPlot();
+      }
+
       if(ImPlot::BeginPlot("##OHLCPlot",
                            {-1, -1},
                            ImPlotFlags_NoLegend | ImPlotFlags_NoMouseText |
                             ImPlotFlags_NoBoxSelect)) {
-        ImPlot::SetupAxisLinks(
-         ImAxis_X1, &self.plot_range_.Min, &self.plot_range_.Max);
         ImPlot::SetupAxis(ImAxis_X1,
                           nullptr,
                           axis_x_flags | ImPlotAxisFlags_NoTickLabels |
                            ImPlotAxisFlags_NoHighlight);
         ImPlot::SetupAxisLimits(ImAxis_X1, 0, asset_history.size() + 100);
 
-        ImPlot::SetupAxis(ImAxis_Y1, nullptr, axis_y_flags);
+        ImPlot::SetupAxis(ImAxis_Y1, "Price", axis_y_flags);
         ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
 
         self.DrawTrades("Trades", backtest_summaries, asset_history);
@@ -92,65 +109,23 @@ public:
 
         ImPlot::EndPlot();
       }
-      ImGui::EndChild();
+      if(ImPlot::BeginPlot("##VolumePlot",
+                           {-1, -1},
+                           ImPlotFlags_NoLegend | ImPlotFlags_NoMouseText |
+                            ImPlotFlags_NoBoxSelect)) {
+        ImPlot::SetupAxis(ImAxis_X1, nullptr, axis_x_flags);
+        ImPlot::SetupAxis(
+         ImAxis_Y1, "Volume", axis_y_flags | ImPlotAxisFlags_LockMin);
+        ImPlot::SetupAxisFormat(ImAxis_Y1, VolumeFormatter);
 
-      ImGui::BeginChild("Bottom pane", ImVec2{-1, -1});
-      {
-        const auto tab_bar_flags = ImGuiTabBarFlags_None;
+        self.TickerTooltip(asset_history, false);
+        self.PlotVolume("Volume", asset_history);
 
-        if(ImGui::BeginTabBar("Indicators", tab_bar_flags)) {
-          if(ImGui::BeginTabItem("Volume")) {
-            if(ImPlot::BeginPlot("##VolumePlot",
-                                 {-1, -1},
-                                 ImPlotFlags_NoLegend |
-                                  ImPlotFlags_NoMouseText |
-                                  ImPlotFlags_NoBoxSelect)) {
-              ImPlot::SetupAxisLinks(
-               ImAxis_X1, &self.plot_range_.Min, &self.plot_range_.Max);
-
-              ImPlot::SetupAxis(ImAxis_X1, nullptr, axis_x_flags);
-              ImPlot::SetupAxis(
-               ImAxis_Y1, nullptr, axis_y_flags | ImPlotAxisFlags_LockMin);
-              ImPlot::SetupAxisFormat(ImAxis_Y1, VolumeFormatter);
-
-              self.TickerTooltip(asset_history, false);
-              self.PlotVolume("Volume", asset_history);
-
-              ImPlot::EndPlot();
-            }
-
-            ImGui::EndTabItem();
-          }
-
-          if(ImGui::BeginTabItem("Equity (%)")) {
-            if(ImPlot::BeginPlot("##EquityPlot",
-                                 {-1, -1},
-                                 ImPlotFlags_NoLegend |
-                                  ImPlotFlags_NoMouseText |
-                                  ImPlotFlags_NoBoxSelect)) {
-              ImPlot::SetupAxisLinks(
-               ImAxis_X1, &self.plot_range_.Min, &self.plot_range_.Max);
-
-              ImPlot::SetupAxis(ImAxis_X1, nullptr, axis_x_flags);
-
-              ImPlot::SetupAxis(ImAxis_Y1, nullptr, axis_y_flags);
-              ImPlot::SetupAxisFormat(ImAxis_Y1, VolumeFormatter);
-
-              self.plot_equity(backtest_summaries);
-
-              ImPlot::EndPlot();
-            }
-
-            ImGui::EndTabItem();
-          }
-
-          ImGui::EndTabBar();
-        }
+        ImPlot::EndPlot();
       }
 
-      ImPlot::EndAlignedPlots();
+      ImPlot::EndSubplots();
     }
-    ImGui::EndChild();
     ImGui::End();
   }
 
@@ -165,7 +140,7 @@ private:
 
   ImVec4 trailing_stop_color_;
 
-  ImPlotRange plot_range_;
+  std::array<float, 3> row_ratios_;
 
   static void TickerTooltip(const AssetHistory& asset_history,
                             bool span_subplots)
