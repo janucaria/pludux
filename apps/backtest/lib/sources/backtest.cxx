@@ -258,8 +258,10 @@ public:
              qty_step * std::round(entry_trade->position_size() / qty_step);
           }
 
-          if(position_size < min_order_qty) {
+          if(position_size > 0.0 && position_size < min_order_qty) {
             position_size = min_order_qty;
+          } else if(position_size < 0.0 && position_size > -min_order_qty) {
+            position_size = -min_order_qty;
           }
 
           entry_trade->position_size(position_size);
@@ -275,7 +277,7 @@ public:
     self.summaries_.emplace_back(std::move(summary));
   }
 
-  auto entry_long_trade(this Backtest& self,
+  auto entry_long_trade(this const Backtest& self,
                         const AssetSnapshot& asset_snapshot,
                         double risk_value) noexcept
    -> std::optional<backtest::TradeEntry>
@@ -309,7 +311,7 @@ public:
     return result;
   }
 
-  auto entry_short_trade(this Backtest& self,
+  auto entry_short_trade(this const Backtest& self,
                          const AssetSnapshot& asset_snapshot,
                          double risk_value) noexcept
    -> std::optional<backtest::TradeEntry>
@@ -343,18 +345,17 @@ public:
     return result;
   }
 
-  auto entry_trade(this Backtest& self,
+  auto entry_trade(this const Backtest& self,
                    const AssetSnapshot& asset_snapshot,
                    double risk_value) noexcept
    -> std::optional<backtest::TradeEntry>
   {
-    return self.entry_long_trade(asset_snapshot, risk_value)
-     .or_else([=] mutable {
-       return self.entry_short_trade(asset_snapshot, risk_value);
-     });
+    return self.entry_long_trade(asset_snapshot, risk_value).or_else([&] {
+      return self.entry_short_trade(asset_snapshot, risk_value);
+    });
   }
 
-  auto exit_trade(this Backtest& self,
+  auto exit_trade(this const Backtest& self,
                   const AssetSnapshot& asset_snapshot,
                   double position_size) noexcept
    -> std::optional<backtest::TradeExit>
