@@ -2,6 +2,7 @@ module;
 
 #include <array>
 #include <format>
+#include <fstream>
 #include <functional>
 #include <stdexcept>
 #include <string>
