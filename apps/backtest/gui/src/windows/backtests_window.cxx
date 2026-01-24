@@ -132,20 +132,10 @@ private:
          new_backtest->market_ptr() && new_backtest->broker_ptr() &&
          new_backtest->profile_ptr()) {
         context.push_action([new_backtest](ApplicationState& app_state) {
-          const auto& asset = new_backtest->asset_ptr();
-          const auto& strategy = new_backtest->strategy_ptr();
-          const auto& market = new_backtest->market_ptr();
-          const auto& broker = new_backtest->broker_ptr();
-          const auto& profile = new_backtest->profile_ptr();
           const auto& new_backtest_name = new_backtest->name();
 
           const auto backtest_name =
-           // TODO: Visual Studio 2026 have bug with include <format> causing
-           // compile error
-           new_backtest_name.empty()
-            ? strategy->name() + " / " + asset->name() + " / " +
-               market->name() + " / " + broker->name() + " / " + profile->name()
-            : new_backtest_name;
+           new_backtest_name.empty() ? "Unnamed" : new_backtest_name;
           new_backtest->name(backtest_name);
 
           app_state.add_backtest(new_backtest);
