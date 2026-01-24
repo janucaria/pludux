@@ -228,6 +228,10 @@ private:
     }
 
     {
+      if(!std::ranges::contains(assets, new_backtest->asset_ptr())) {
+        new_backtest->asset_ptr(nullptr);
+      }
+
       if(new_backtest->asset_ptr() == nullptr && !assets.empty()) {
         new_backtest->asset_ptr(assets.front());
       }
@@ -259,6 +263,10 @@ private:
     }
 
     {
+      if(!std::ranges::contains(strategies, new_backtest->strategy_ptr())) {
+        new_backtest->strategy_ptr(nullptr);
+      }
+
       if(new_backtest->strategy_ptr() == nullptr && !strategies.empty()) {
         new_backtest->strategy_ptr(strategies.front());
       }
@@ -290,6 +298,10 @@ private:
     }
 
     {
+      if(!std::ranges::contains(markets, new_backtest->market_ptr())) {
+        new_backtest->market_ptr(nullptr);
+      }
+
       if(new_backtest->market_ptr() == nullptr && !markets.empty()) {
         new_backtest->market_ptr(markets.front());
       }
@@ -321,6 +333,10 @@ private:
     }
 
     {
+      if(!std::ranges::contains(brokers, new_backtest->broker_ptr())) {
+        new_backtest->broker_ptr(nullptr);
+      }
+
       if(new_backtest->broker_ptr() == nullptr && !brokers.empty()) {
         new_backtest->broker_ptr(brokers.front());
       }
@@ -352,6 +368,10 @@ private:
     }
 
     {
+      if(!std::ranges::contains(profiles, new_backtest->profile_ptr())) {
+        new_backtest->profile_ptr(nullptr);
+      }
+
       if(new_backtest->profile_ptr() == nullptr && !profiles.empty()) {
         new_backtest->profile_ptr(profiles.front());
       }
