@@ -38,7 +38,12 @@ public:
 
         self.draw_row("Asset", backtest->asset().name());
         self.draw_row("Strategy", backtest->strategy().name());
+        self.draw_row("Market", backtest->market().name());
+        self.draw_row("Broker", backtest->broker().name());
         self.draw_row("Profile", profile.name());
+
+        self.draw_spacer_row();
+
         self.draw_count_row("Total trades", summary.trade_count());
         self.draw_duration_row("Total duration",
                                summary.cumulative_durations());
