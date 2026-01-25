@@ -618,6 +618,23 @@
         }
       ]
     },
+    "sqrtMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "SQRT"
+            },
+            "operand": {
+              "$ref": "#/definitions/methodAsParameter"
+            }
+          }
+        }
+      ]
+    },
     "changeMethod": {
       "allOf": [
         {
@@ -733,6 +750,9 @@
         },
         {
           "$ref": "#/definitions/negateMethod"
+        },
+        {
+          "$ref": "#/definitions/sqrtMethod"
         },
         {
           "$ref": "#/definitions/changeMethod"

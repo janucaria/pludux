@@ -1341,6 +1341,17 @@ auto make_default_registered_config_parser() -> ConfigParser
 
      return PercentageMethod{base_method, percent};
    });
+  config_parser.register_method_parser(
+   "SQRT",
+   [](const ConfigParser& config_parser,
+      const AnySeriesMethod& any_series_method) -> jsoncons::ojson {
+     return serialize_unary_function_method<SqrtMethod>(
+      config_parser, any_series_method, "operand");
+   },
+   [](ConfigParser::Parser config_parser, const jsoncons::ojson& parameters) {
+     return parse_unary_function_method<SqrtMethod>(
+      config_parser, parameters, "operand");
+   });
   config_parser.register_filter_parser(
    "ALL_OF", serialize_all_of_filter, parse_all_of_filter);
   config_parser.register_filter_parser(

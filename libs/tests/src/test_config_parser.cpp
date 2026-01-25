@@ -832,6 +832,34 @@ TEST_F(ConfigParserTest, ParseScreenerNegateMethod)
   EXPECT_EQ(method, deserialized_config);
 }
 
+TEST_F(ConfigParserTest, ParseScreenerSqrtMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "SQRT",
+      "operand": {
+        "method": "VALUE",
+        "value": 16
+      }
+    }
+  )");
+
+  const auto method = config_parser.parse_method(config);
+
+  const auto sqrt_method =
+   series_method_cast<SqrtMethod<AnySeriesMethod>>(method);
+  ASSERT_NE(sqrt_method, nullptr);
+
+  const auto operand = series_method_cast<ValueMethod>(sqrt_method->operand());
+  ASSERT_NE(operand, nullptr);
+  EXPECT_EQ(operand->value(), 16);
+
+  const auto serialized_config = config_parser.serialize_method(method);
+  const auto deserialized_config =
+   config_parser.parse_method(serialized_config);
+  EXPECT_EQ(method, deserialized_config);
+}
+
 TEST_F(ConfigParserTest, ParseScreenerChangeMethod)
 {
   const auto config = json::parse(R"(

@@ -54,6 +54,7 @@ using ValueMethod = pludux::ValueMethod;
 using LookbackMethod = pludux::LookbackMethod<AnySeriesMethod>;
 using ChangeMethod = pludux::ChangeMethod<AnySeriesMethod>;
 using DataMethod = pludux::DataMethod;
+using SqrtAnyMethod = pludux::SqrtMethod<AnySeriesMethod>;
 
 using AddMethod = pludux::AddMethod<AnySeriesMethod, AnySeriesMethod>;
 using SubtractMethod = pludux::SubtractMethod<AnySeriesMethod, AnySeriesMethod>;
@@ -144,6 +145,8 @@ auto get_default_series_method(const std::string& series_id) -> AnySeriesMethod
     return DivideMethod{CloseMethod{}, CloseMethod{}};
   } else if(series_id == "NEGATE") {
     return NegateMethod{CloseMethod{}};
+  } else if(series_id == "SQRT") {
+    return SqrtAnyMethod{CloseMethod{}};
   } else if(series_id == "PERCENTAGE") {
     return PercentageMethod{CloseMethod{}, 100.0};
   } else if(series_id == "ABS_DIFF") {
@@ -210,6 +213,8 @@ auto get_series_method_id(const AnySeriesMethod& method) -> std::string
     return "DIVIDE";
   } else if(series_method_cast<NegateMethod>(method)) {
     return "NEGATE";
+  } else if(series_method_cast<SqrtAnyMethod>(method)) {
+    return "SQRT";
   } else if(series_method_cast<PercentageMethod>(method)) {
     return "PERCENTAGE";
   } else if(series_method_cast<AbsDiffMethod>(method)) {
@@ -275,6 +280,8 @@ auto get_series_method_title(const std::string& series_id) -> std::string
     return "Division";
   } else if(series_id == "NEGATE") {
     return "Negation";
+  } else if(series_id == "SQRT") {
+    return "Square Root";
   } else if(series_id == "PERCENTAGE") {
     return "Percentage";
   } else if(series_id == "ABS_DIFF") {
@@ -1036,12 +1043,12 @@ private:
   void render_series_method(this auto& self, AnySeriesMethod& series_method)
   {
     static const std::vector<std::string> series_ids = {
-     "OPEN",          "CLOSE",      "HIGH",     "LOW",      "VOLUME",
-     "CHANGE",        "ADD",        "SUBTRACT", "MULTIPLY", "DIVIDE",
-     "NEGATE",        "PERCENTAGE", "ABS_DIFF", "DATA",     "SMA",
-     "EMA",           "WMA",        "HMA",      "RSI",      "MACD",
-     "ATR",           "BB",         "KC",       "STOCH",    "STOCH_RSI",
-     "SELECT_OUTPUT", "REFERENCE",  "VALUE",    "LOOKBACK"};
+     "OPEN",      "CLOSE",         "HIGH",       "LOW",      "VOLUME",
+     "CHANGE",    "ADD",           "SUBTRACT",   "MULTIPLY", "DIVIDE",
+     "NEGATE",    "SQRT",          "PERCENTAGE", "ABS_DIFF", "DATA",
+     "SMA",       "EMA",           "WMA",        "HMA",      "RSI",
+     "MACD",      "ATR",           "BB",         "KC",       "STOCH",
+     "STOCH_RSI", "SELECT_OUTPUT", "REFERENCE",  "VALUE",    "LOOKBACK"};
 
     auto series_id = get_series_method_id(series_method);
 
@@ -1115,7 +1122,8 @@ private:
                           DivideMethod,
                           PercentageMethod,
                           AbsDiffMethod,
-                          NegateMethod>());
+                          NegateMethod,
+                          SqrtAnyMethod>());
   }
 
   void render_series_method_params(this auto& self, SelectOutputMethod& method)
@@ -1472,6 +1480,18 @@ private:
     }
   }
 
+  template<typename TUnaryOpMethod>
+    requires std::same_as<TUnaryOpMethod, NegateMethod> ||
+             std::same_as<TUnaryOpMethod, SqrtAnyMethod>
+  void render_series_method_params(this auto& self, TUnaryOpMethod& method)
+  {
+    ImGui::Text("Value:");
+    ImGui::SameLine();
+    auto value = method.operand();
+    self.render_series_method(value);
+    method.operand(std::move(value));
+  }
+
   void render_series_method_params(this auto& self, PercentageMethod& method)
   {
     {
@@ -1494,15 +1514,6 @@ private:
       method.base(std::move(base));
       ImGui::PopID();
     }
-  }
-
-  void render_series_method_params(this auto& self, NegateMethod& method)
-  {
-    ImGui::Text("Value:");
-    ImGui::SameLine();
-    auto value = method.operand();
-    self.render_series_method(value);
-    method.operand(std::move(value));
   }
 
   void render_series_method_params(this auto& self, ChangeMethod& method)
