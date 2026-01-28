@@ -428,6 +428,38 @@ TEST_F(ConfigParserTest, ParseScreenerRsiMethod)
   EXPECT_EQ(method, deserialized_config);
 }
 
+TEST_F(ConfigParserTest, ParseScreenerStddevMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "STDDEV",
+      "period": 20,
+      "source": {
+        "method": "DATA",
+        "field": "close"
+      }
+    }
+  )");
+
+  const auto method = config_parser.parse_method(config);
+
+  const auto stddev_method =
+   series_method_cast<StddevMethod<AnySeriesMethod>>(method);
+  ASSERT_NE(stddev_method, nullptr);
+
+  EXPECT_EQ(stddev_method->period(), 20);
+
+  const auto source = series_method_cast<DataMethod>(stddev_method->source());
+  ASSERT_NE(source, nullptr);
+
+  EXPECT_EQ(source->field(), "close");
+
+  const auto serialized_config = config_parser.serialize_method(method);
+  const auto deserialized_config =
+   config_parser.parse_method(serialized_config);
+  EXPECT_EQ(method, deserialized_config);
+}
+
 TEST_F(ConfigParserTest, ParseScreenerValueMethod)
 {
   const auto config = json::parse(R"(

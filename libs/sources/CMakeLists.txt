@@ -50,6 +50,7 @@ target_sources(${PROJECT_NAME}
         src/series/highest_method.cxx
         src/series/lowest_method.cxx
         src/series/percentage_method.cxx
+        src/series/stddev_method.cxx
 
         src/series/sma_method.cxx
         src/series/ema_method.cxx

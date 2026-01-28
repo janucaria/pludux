@@ -360,6 +360,26 @@
         }
       ]
     },
+    "stddevMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "STDDEV"
+            },
+            "period": {
+              "type": "integer"
+            },
+            "source": {
+              "$ref": "#/definitions/methodAsParameter"
+            }
+          }
+        }
+      ]
+    },
     "bbMethod": {
       "allOf": [
         {
@@ -720,6 +740,9 @@
         },
         {
           "$ref": "#/definitions/atrMethod"
+        },
+        {
+          "$ref": "#/definitions/stddevMethod"
         },
         {
           "$ref": "#/definitions/bbMethod"

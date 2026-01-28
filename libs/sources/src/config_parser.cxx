@@ -1352,6 +1352,10 @@ auto make_default_registered_config_parser() -> ConfigParser
      return parse_unary_function_method<SqrtMethod>(
       config_parser, parameters, "operand");
    });
+  config_parser.register_method_parser(
+   "STDDEV",
+   serialize_ta_with_period_method<StddevMethod>,
+   parse_ta_with_period_method<StddevMethod>);
   config_parser.register_filter_parser(
    "ALL_OF", serialize_all_of_filter, parse_all_of_filter);
   config_parser.register_filter_parser(

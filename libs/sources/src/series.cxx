@@ -20,6 +20,7 @@ export import :series.operators_method;
 export import :series.highest_method;
 export import :series.lowest_method;
 export import :series.percentage_method;
+export import :series.stddev_method;
 
 export import :series.sma_method;
 export import :series.ema_method;

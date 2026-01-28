@@ -55,6 +55,7 @@ using LookbackMethod = pludux::LookbackMethod<AnySeriesMethod>;
 using ChangeMethod = pludux::ChangeMethod<AnySeriesMethod>;
 using DataMethod = pludux::DataMethod;
 using SqrtAnyMethod = pludux::SqrtMethod<AnySeriesMethod>;
+using StddevAnyMethod = pludux::StddevMethod<AnySeriesMethod>;
 
 using AddMethod = pludux::AddMethod<AnySeriesMethod, AnySeriesMethod>;
 using SubtractMethod = pludux::SubtractMethod<AnySeriesMethod, AnySeriesMethod>;
@@ -120,6 +121,8 @@ auto get_default_series_method(const std::string& series_id) -> AnySeriesMethod
     return MacdMethod{CloseMethod{}, 12, 26, 9};
   } else if(series_id == "ATR") {
     return AtrMethod{14};
+  } else if(series_id == "STDDEV") {
+    return StddevAnyMethod{CloseMethod{}, 14};
   } else if(series_id == "BB") {
     return BbMethod{BbMaType::Sma, CloseMethod{}, 20, 2.0};
   } else if(series_id == "KC") {
@@ -181,6 +184,8 @@ auto get_series_method_id(const AnySeriesMethod& method) -> std::string
     return "DATA";
   } else if(series_method_cast<ValueMethod>(method)) {
     return "VALUE";
+  } else if(series_method_cast<StddevAnyMethod>(method)) {
+    return "STDDEV";
   } else if(series_method_cast<BbMethod>(method)) {
     return "BB";
   } else if(series_method_cast<KcMethod>(method)) {
@@ -256,6 +261,8 @@ auto get_series_method_title(const std::string& series_id) -> std::string
     return "Moving Average Convergence Divergence (MACD)";
   } else if(series_id == "ATR") {
     return "Average True Range (ATR)";
+  } else if(series_id == "STDDEV") {
+    return "Standard Deviation (STDDEV)";
   } else if(series_id == "BB") {
     return "Bollinger Bands";
   } else if(series_id == "KC") {
@@ -1043,12 +1050,13 @@ private:
   void render_series_method(this auto& self, AnySeriesMethod& series_method)
   {
     static const std::vector<std::string> series_ids = {
-     "OPEN",      "CLOSE",         "HIGH",       "LOW",      "VOLUME",
-     "CHANGE",    "ADD",           "SUBTRACT",   "MULTIPLY", "DIVIDE",
-     "NEGATE",    "SQRT",          "PERCENTAGE", "ABS_DIFF", "DATA",
-     "SMA",       "EMA",           "WMA",        "HMA",      "RSI",
-     "MACD",      "ATR",           "BB",         "KC",       "STOCH",
-     "STOCH_RSI", "SELECT_OUTPUT", "REFERENCE",  "VALUE",    "LOOKBACK"};
+     "OPEN",    "CLOSE",     "HIGH",          "LOW",       "VOLUME",
+     "CHANGE",  "ADD",       "SUBTRACT",      "MULTIPLY",  "DIVIDE",
+     "NEGATE",  "SQRT",      "PERCENTAGE",    "ABS_DIFF",  "DATA",
+     "SMA",     "EMA",       "WMA",           "HMA",       "RSI",
+     "MACD",    "ATR",       "STDDEV",        "BB",        "KC",
+     "STOCH",   "STOCH_RSI", "SELECT_OUTPUT", "REFERENCE", "VALUE",
+     "LOOKBACK"};
 
     auto series_id = get_series_method_id(series_method);
 
@@ -1123,7 +1131,8 @@ private:
                           PercentageMethod,
                           AbsDiffMethod,
                           NegateMethod,
-                          SqrtAnyMethod>());
+                          SqrtAnyMethod,
+                          StddevAnyMethod>());
   }
 
   void render_series_method_params(this auto& self, SelectOutputMethod& method)
@@ -1431,7 +1440,8 @@ private:
              std::same_as<TMethodWithPeriod, HmaMethod> ||
              std::same_as<TMethodWithPeriod, RsiMethod> ||
              std::same_as<TMethodWithPeriod, RocMethod> ||
-             std::same_as<TMethodWithPeriod, RvolMethod>
+             std::same_as<TMethodWithPeriod, RvolMethod> ||
+             std::same_as<TMethodWithPeriod, StddevAnyMethod>
   void render_series_method_params(this auto& self, TMethodWithPeriod& method)
   {
     ImGui::Text("Period:");
