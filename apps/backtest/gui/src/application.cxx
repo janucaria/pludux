@@ -154,18 +154,18 @@ public:
       } while(time_diff < 1000 / 60);
     }
 
-    auto window_context = WindowContext{app_state, actions};
-
     {
-      if(!app_state.alert_messages().empty()) {
+      const auto alert_message = app_state.top_alert_message();
+
+      if(alert_message) {
         ImGui::OpenPopup("Alerts");
 
         if(ImGui::BeginPopupModal(
             "Alerts", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-          const auto alert_message = app_state.pop_alert_messages();
-          ImGui::Text("%s", alert_message.c_str());
+          ImGui::Text("%s", alert_message->c_str());
 
-          if(ImGui::Button("OK", ImVec2(120, 0))) {
+          if(ImGui::Button("OK")) {
+            app_state.pop_alert_messages();
             ImGui::CloseCurrentPopup();
           }
 
@@ -173,6 +173,8 @@ public:
         }
       }
     }
+
+    auto window_context = WindowContext{app_state, actions};
 
     try {
       self.dockspace_window_.render(window_context);

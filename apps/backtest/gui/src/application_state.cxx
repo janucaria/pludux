@@ -60,6 +60,16 @@ public:
     self.alert_messages_.push(std::move(message));
   }
 
+  auto top_alert_message(this const ApplicationState& self) noexcept
+   -> std::optional<std::string>
+  {
+    if(self.alert_messages_.empty()) {
+      return std::nullopt;
+    }
+
+    return self.alert_messages_.front();
+  }
+
   auto pop_alert_messages(this ApplicationState& self) -> std::string
   {
     if(self.alert_messages_.empty()) {
