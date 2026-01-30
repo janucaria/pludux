@@ -581,7 +581,7 @@
         }
       ]
     },
-    "mutiplyMethod": {
+    "multiplyMethod": {
       "allOf": [
         {
           "$ref": "#/definitions/baseMethod"
@@ -766,7 +766,7 @@
           "$ref": "#/definitions/subtractMethod"
         },
         {
-          "$ref": "#/definitions/mutiplyMethod"
+          "$ref": "#/definitions/multiplyMethod"
         },
         {
           "$ref": "#/definitions/divideMethod"
