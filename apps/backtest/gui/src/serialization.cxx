@@ -35,11 +35,9 @@ void serialize(Archive& archive, pludux::backtest::TradeRecord& trade_record)
           make_nvp("entryTimestamp", trade_record.entry_timestamp()),
           make_nvp("entryPrice", trade_record.entry_price()),
           make_nvp("totalEntryFees", trade_record.total_entry_fees()),
-          make_nvp("entryIndex", trade_record.entry_index()),
           make_nvp("exitTimestamp", trade_record.exit_timestamp()),
           make_nvp("exitPrice", trade_record.exit_price()),
           make_nvp("totalExitFees", trade_record.total_exit_fees()),
-          make_nvp("exitIndex", trade_record.exit_index()),
           make_nvp("stopLossPrice", trade_record.stop_loss_price()),
           make_nvp("trailingStopPrice", trade_record.trailing_stop_price()),
           make_nvp("takeProfitPrice", trade_record.take_profit_price()));
@@ -58,11 +56,9 @@ struct LoadAndConstruct<pludux::backtest::TradeRecord> {
     auto entry_timestamp = std::time_t{};
     auto entry_price = double{};
     auto total_entry_fees = double{};
-    auto entry_index = std::size_t{};
     auto exit_timestamp = std::time_t{};
     auto exit_price = double{};
     auto total_exit_fees = double{};
-    auto exit_index = std::size_t{};
     auto stop_loss_price = double{};
     auto trailing_stop_price = double{};
     auto take_profit_price = double{};
@@ -73,11 +69,9 @@ struct LoadAndConstruct<pludux::backtest::TradeRecord> {
             make_nvp("entryTimestamp", entry_timestamp),
             make_nvp("entryPrice", entry_price),
             make_nvp("totalEntryFees", total_entry_fees),
-            make_nvp("entryIndex", entry_index),
             make_nvp("exitTimestamp", exit_timestamp),
             make_nvp("exitPrice", exit_price),
             make_nvp("totalExitFees", total_exit_fees),
-            make_nvp("exitIndex", exit_index),
             make_nvp("stopLossPrice", stop_loss_price),
             make_nvp("trailingStopPrice", trailing_stop_price),
             make_nvp("takeProfitPrice", take_profit_price));
@@ -88,11 +82,9 @@ struct LoadAndConstruct<pludux::backtest::TradeRecord> {
                 entry_timestamp,
                 entry_price,
                 total_entry_fees,
-                entry_index,
                 exit_timestamp,
                 exit_price,
                 total_exit_fees,
-                exit_index,
                 stop_loss_price,
                 trailing_stop_price,
                 take_profit_price);
@@ -120,7 +112,6 @@ void serialize(Archive& archive,
    make_nvp("stopLossInitialPrice", trade_position.stop_loss_initial_price()),
    make_nvp("stopLossTrailingPrice", trade_position.stop_loss_trailing_price()),
    make_nvp("takeProfitPrice", trade_position.take_profit_price()),
-   make_nvp("entryIndex", trade_position.entry_index()),
    make_nvp("entryTimestamp", trade_position.entry_timestamp()),
    make_nvp("realizedRecords", realized_record_ptrs));
 }
@@ -139,7 +130,6 @@ struct LoadAndConstruct<pludux::backtest::TradePosition> {
     auto stop_loss_initial_price = double{};
     auto stop_loss_trailing_price = double{};
     auto take_profit_price = double{};
-    auto entry_index = std::size_t{};
     auto entry_timestamp = std::time_t{};
     auto realized_record_ptrs =
      std::vector<std::unique_ptr<const pludux::backtest::TradeRecord>>{};
@@ -151,7 +141,6 @@ struct LoadAndConstruct<pludux::backtest::TradePosition> {
             make_nvp("stopLossInitialPrice", stop_loss_initial_price),
             make_nvp("stopLossTrailingPrice", stop_loss_trailing_price),
             make_nvp("takeProfitPrice", take_profit_price),
-            make_nvp("entryIndex", entry_index),
             make_nvp("entryTimestamp", entry_timestamp),
             make_nvp("realizedRecords", realized_record_ptrs));
 
@@ -165,7 +154,6 @@ struct LoadAndConstruct<pludux::backtest::TradePosition> {
                 entry_timestamp,
                 entry_price,
                 total_entry_fees,
-                entry_index,
                 stop_loss_initial_price,
                 stop_loss_trailing_price,
                 take_profit_price,
@@ -189,7 +177,7 @@ void save(Archive& archive, const pludux::backtest::TradeSession& trade_session)
                                    : nullptr);
   archive(make_nvp("marketTimestamp", trade_session.market_timestamp()),
           make_nvp("marketPrice", trade_session.market_price()),
-          make_nvp("marketIndex", trade_session.market_index()),
+          make_nvp("marketLookback", trade_session.market_lookback()),
           make_nvp("openPosition", open_position_ptr),
           make_nvp("closedPosition", closed_position_ptr));
 }
@@ -199,19 +187,19 @@ void load(Archive& archive, pludux::backtest::TradeSession& trade_session)
 {
   auto market_timestamp = std::time_t{};
   auto market_price = double{};
-  auto market_index = std::size_t{};
+  auto market_lookback = std::size_t{};
   auto open_position_ptr = std::unique_ptr<pludux::backtest::TradePosition>{};
   auto closed_position_ptr = std::unique_ptr<pludux::backtest::TradePosition>{};
 
   archive(make_nvp("marketTimestamp", market_timestamp),
           make_nvp("marketPrice", market_price),
-          make_nvp("marketIndex", market_index),
+          make_nvp("marketLookback", market_lookback),
           make_nvp("openPosition", open_position_ptr),
           make_nvp("closedPosition", closed_position_ptr));
 
   trade_session.market_timestamp(market_timestamp);
   trade_session.market_price(market_price);
-  trade_session.market_index(market_index);
+  trade_session.market_lookback(market_lookback);
   if(open_position_ptr) {
     trade_session.open_position(std::move(*open_position_ptr));
   }

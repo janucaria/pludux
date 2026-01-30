@@ -106,7 +106,7 @@ auto main(int, const char**) -> int
   for(int i = 0, ii = backtest_summaries.size(); i < ii; ++i) {
     const auto& session = backtest_summaries[i].trade_session();
     for(const auto& record : session.trade_record_range()) {
-      if(!record.is_open() || record.exit_index() == 0) {
+      if(!record.is_open() || i == ii - 1) {
         const auto entry_timestamp = record.entry_timestamp();
         const auto exit_timestamp = record.exit_timestamp();
         std::cout << "Entry date: " << pludux::format_datetime(entry_timestamp)

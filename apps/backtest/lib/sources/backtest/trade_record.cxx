@@ -27,12 +27,10 @@ public:
               std::time_t entry_timestamp,
               double entry_price,
               double total_entry_fees,
-              std::size_t entry_index,
 
               std::time_t exit_timestamp,
               double exit_price,
               double total_exit_fees,
-              std::size_t exit_index,
 
               double stop_loss_price,
               double trailing_stop_price,
@@ -47,8 +45,6 @@ public:
   , stop_loss_price_{stop_loss_price}
   , trailing_stop_price_{trailing_stop_price}
   , take_profit_price_{take_profit_price}
-  , entry_index_{entry_index}
-  , exit_index_{exit_index}
   , entry_timestamp_{entry_timestamp}
   , exit_timestamp_{exit_timestamp}
   {
@@ -82,26 +78,6 @@ public:
   void investment(this TradeRecord& self, double investment) noexcept
   {
     self.investment_ = investment;
-  }
-
-  auto entry_index(this const TradeRecord& self) noexcept -> std::size_t
-  {
-    return self.entry_index_;
-  }
-
-  void entry_index(this TradeRecord& self, std::size_t index) noexcept
-  {
-    self.entry_index_ = index;
-  }
-
-  auto exit_index(this const TradeRecord& self) noexcept -> std::size_t
-  {
-    return self.exit_index_;
-  }
-
-  void exit_index(this TradeRecord& self, std::size_t index) noexcept
-  {
-    self.exit_index_ = index;
   }
 
   auto entry_price(this const TradeRecord& self) noexcept -> double
@@ -221,6 +197,11 @@ public:
     return self.exit_timestamp() - self.entry_timestamp();
   }
 
+  auto is_entry(this const TradeRecord& self) noexcept -> bool
+  {
+    return self.entry_timestamp() == self.exit_timestamp();
+  }
+
   auto is_open(this const TradeRecord& self) noexcept -> bool
   {
     return self.status_ == Status::open;
@@ -286,9 +267,6 @@ private:
   double stop_loss_price_;
   double trailing_stop_price_;
   double take_profit_price_;
-
-  std::size_t entry_index_;
-  std::size_t exit_index_;
 
   std::time_t entry_timestamp_;
   std::time_t exit_timestamp_;

@@ -59,11 +59,9 @@ public:
                          open_position->entry_timestamp(),
                          open_position->entry_price(),
                          open_position->total_entry_fees(),
-                         open_position->entry_index(),
                          self.session_.market_timestamp(),
                          self.session_.market_price(),
                          0.0,
-                         self.session_.market_index(),
                          open_position->stop_loss_initial_price(),
                          open_position->stop_loss_trailing_price(),
                          open_position->take_profit_price()};
@@ -149,10 +147,10 @@ public:
 
   TradeSession(std::time_t market_timestamp_,
                double market_price_,
-               std::size_t market_index_)
+               std::size_t market_lookback_)
   : TradeSession{market_timestamp_,
                  market_price_,
-                 market_index_,
+                 market_lookback_,
                  std::nullopt,
                  std::nullopt}
   {
@@ -160,12 +158,12 @@ public:
 
   TradeSession(std::time_t market_timestamp_,
                double market_price_,
-               std::size_t market_index_,
+               std::size_t market_lookback_,
                std::optional<TradePosition> open_position,
                std::optional<TradePosition> closed_position)
   : market_timestamp_{market_timestamp_}
   , market_price_{market_price_}
-  , market_index_{market_index_}
+  , market_lookback_{market_lookback_}
   , open_position_{std::move(open_position)}
   , closed_position_{std::move(closed_position)}
   {
@@ -191,14 +189,14 @@ public:
     self.market_price_ = price;
   }
 
-  auto market_index(this const TradeSession& self) noexcept -> std::size_t
+  auto market_lookback(this const TradeSession& self) noexcept -> std::size_t
   {
-    return self.market_index_;
+    return self.market_lookback_;
   }
 
-  void market_index(this TradeSession& self, std::size_t index) noexcept
+  void market_lookback(this TradeSession& self, std::size_t index) noexcept
   {
-    self.market_index_ = index;
+    self.market_lookback_ = index;
   }
 
   auto open_position(this const TradeSession& self) noexcept
@@ -238,8 +236,7 @@ public:
       self.open_position_->scaled_in(entry.position_size(),
                                      self.market_timestamp_,
                                      entry.price(),
-                                     total_fees,
-                                     self.market_index_);
+                                     total_fees);
 
       return;
     }
@@ -248,7 +245,6 @@ public:
                                         self.market_timestamp_,
                                         entry.price(),
                                         total_fees,
-                                        self.market_index_,
                                         entry.stop_loss_price(),
                                         entry.stop_loss_trailing_price(),
                                         entry.take_profit_price()};
@@ -283,7 +279,6 @@ public:
                                     self.market_timestamp_,
                                     exit.price(),
                                     total_fees,
-                                    self.market_index_,
                                     trade_status);
 
     if(self.open_position_->is_closed()) {
@@ -299,7 +294,7 @@ public:
   {
     self.market_timestamp(timestamp);
     self.market_price(price);
-    self.market_index(index);
+    self.market_lookback(index);
 
     if(self.closed_position_) {
       self.closed_position_ = std::nullopt;
@@ -407,7 +402,7 @@ public:
 private:
   std::time_t market_timestamp_;
   double market_price_;
-  std::size_t market_index_;
+  std::size_t market_lookback_;
 
   std::optional<TradePosition> open_position_;
   std::optional<TradePosition> closed_position_;

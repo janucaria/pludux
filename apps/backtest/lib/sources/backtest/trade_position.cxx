@@ -22,7 +22,6 @@ public:
                 std::time_t entry_timestamp,
                 double entry_price,
                 double total_entry_fees,
-                std::size_t entry_index,
                 double stop_loss_initial_price,
                 double stop_loss_trailing_price,
                 double take_profit_price)
@@ -31,7 +30,6 @@ public:
                   entry_timestamp,
                   entry_price,
                   total_entry_fees,
-                  entry_index,
                   stop_loss_initial_price,
                   stop_loss_trailing_price,
                   take_profit_price,
@@ -44,7 +42,6 @@ public:
                 std::time_t entry_timestamp,
                 double entry_price,
                 double total_entry_fees,
-                std::size_t entry_index,
                 double stop_loss_initial_price,
                 double stop_loss_trailing_price,
                 double take_profit_price,
@@ -57,7 +54,6 @@ public:
   , stop_loss_trailing_price_{stop_loss_trailing_price}
   , take_profit_price_{take_profit_price}
   , entry_timestamp_{entry_timestamp}
-  , entry_index_{entry_index}
   , realized_records_{std::move(realized_records)}
   {
   }
@@ -132,16 +128,6 @@ public:
   void take_profit_price(this TradePosition& self, double price) noexcept
   {
     self.take_profit_price_ = price;
-  }
-
-  auto entry_index(this const TradePosition& self) noexcept -> std::size_t
-  {
-    return self.entry_index_;
-  }
-
-  void entry_index(this TradePosition& self, std::size_t index) noexcept
-  {
-    self.entry_index_ = index;
   }
 
   auto entry_timestamp(this const TradePosition& self) noexcept -> std::time_t
@@ -255,8 +241,7 @@ public:
                  double action_position_size,
                  std::time_t action_timestamp,
                  double action_price,
-                 double action_total_fees,
-                 std::size_t action_index)
+                 double action_total_fees)
   {
     if(self.is_closed()) {
       throw std::runtime_error("Cannot scaled in to a closed trade.");
@@ -270,11 +255,9 @@ public:
                                         self.entry_timestamp(),
                                         self.entry_price(),
                                         action_total_fees,
-                                        self.entry_index(),
                                         action_timestamp,
                                         action_price,
                                         0.0,
-                                        action_index,
                                         self.stop_loss_initial_price(),
                                         self.stop_loss_trailing_price(),
                                         self.take_profit_price()};
@@ -298,7 +281,6 @@ public:
                   std::time_t action_timestamp,
                   double action_price,
                   double action_total_fees,
-                  std::size_t action_index,
                   TradeRecord::Status trade_status)
   {
     if(self.is_closed()) {
@@ -329,11 +311,9 @@ public:
                                    self.entry_timestamp(),
                                    self.entry_price(),
                                    self.total_entry_fees(),
-                                   self.entry_index(),
                                    action_timestamp,
                                    action_price,
                                    action_total_fees,
-                                   action_index,
                                    self.stop_loss_initial_price(),
                                    self.stop_loss_trailing_price(),
                                    self.take_profit_price()};
@@ -399,7 +379,6 @@ private:
   double stop_loss_trailing_price_;
   double take_profit_price_;
 
-  std::size_t entry_index_;
   std::time_t entry_timestamp_;
 
   std::vector<TradeRecord> realized_records_;
