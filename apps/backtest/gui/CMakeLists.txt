@@ -236,7 +236,8 @@ else()
     "-sUSE_GLFW=3"
     "-sALLOW_MEMORY_GROWTH=1"
     "-sSTACK_SIZE=128kB"
-    "-sEXPORTED_FUNCTIONS=[_main,stringToNewUTF8,UTF8ToString]"
+    "-sEXPORTED_FUNCTIONS=['_main']"
+    "-sEXPORTED_RUNTIME_METHODS=['stringToNewUTF8','UTF8ToString']"
   )
   
   set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "index")

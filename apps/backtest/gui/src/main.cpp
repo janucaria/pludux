@@ -26,24 +26,21 @@
 #include <implot.h>
 #include <implot_internal.h>
 
-#include <cereal/cereal.hpp>
 #include <jsoncons/json.hpp>
 #include <rapidcsv.h>
-
-#include <cereal/archives/json.hpp>
-#include <cereal/types/deque.hpp>
-#include <cereal/types/memory.hpp>
-#include <cereal/types/optional.hpp>
-#include <cereal/types/queue.hpp>
-#include <cereal/types/string.hpp>
-#include <cereal/types/unordered_map.hpp>
-#include <cereal/types/vector.hpp>
 
 import pludux.apps.backtest;
 
 #ifdef __EMSCRIPTEN__
 
 extern "C" {
+
+struct StdFreeDeleter {
+  void operator()(void* ptr) const noexcept
+  {
+    std::free(ptr);
+  }
+};
 
 EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_js_opened_file_content_ready(
  char* name, char* data, void* user_callback, void* user_data)
@@ -63,32 +60,25 @@ EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_js_opened_file_content_ready(
   (*callback_ptr)(name_str, data_str, user_data);
 }
 
-EMSCRIPTEN_KEEPALIVE void
-pludux_apps_backtest_open_file(char* data, void* window_context_ptr)
+EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_js_opened_file_text_ready(
+ char* data, void* user_callback, void* user_data)
 {
-  using pludux::apps::WindowContext;
+  using pludux::apps::ApplicationState;
+  using JsOnPushOpenedFileAction =
+   std::function<void(const std::string&, ApplicationState&)>;
 
-  const auto data_str = std::string(data);
-  std::free(data);
+  auto unique_data = std::unique_ptr<char, StdFreeDeleter>{data};
 
-  auto window_context = *reinterpret_cast<WindowContext*>(window_context_ptr);
+  auto data_str = std::string(reinterpret_cast<const char*>(unique_data.get()));
 
+  auto callback_ptr =
+   reinterpret_cast<JsOnPushOpenedFileAction*>(user_callback);
+
+  auto& window_context =
+   *reinterpret_cast<pludux::apps::WindowContext*>(user_data);
   window_context.push_action(
-   [data_str](pludux::apps::ApplicationState& app_state) {
-     auto in_stream = std::istringstream{data_str};
-
-     if(!in_stream.good()) {
-       const auto error_message =
-        std::format("Failed to open data stream for reading.");
-       throw std::runtime_error(error_message);
-     }
-
-     auto in_archive = cereal::JSONInputArchive(in_stream);
-
-     auto loaded_state = pludux::apps::ApplicationState{};
-     in_archive(cereal::make_nvp("pludux", loaded_state));
-     app_state = std::move(loaded_state);
-   });
+   [data_str = std::move(data_str), callback_ptr = callback_ptr](
+    ApplicationState& app_state) { (*callback_ptr)(data_str, app_state); });
 }
 }
 

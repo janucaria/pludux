@@ -120,6 +120,25 @@ public:
           if(ImGui::MenuItem(menu_item_open)) {
 #ifdef __EMSCRIPTEN__
 
+            using JsOnPushOpenedFileAction =
+             std::function<void(const std::string&, ApplicationState&)>;
+
+            static const auto callback = JsOnPushOpenedFileAction{
+             [](const std::string& file_data, ApplicationState& app_state) {
+               auto in_stream = std::istringstream{file_data};
+               if(!in_stream.good()) {
+                 const auto error_message =
+                  std::format("Failed to open data stream for reading.");
+                 throw std::runtime_error(error_message);
+               }
+
+               auto in_archive = cereal::JSONInputArchive(in_stream);
+
+               auto loaded_state = ApplicationState{};
+               in_archive(cereal::make_nvp("pludux", loaded_state));
+               app_state = std::move(loaded_state);
+             }};
+
             EM_ASM(
              {
                var fileSelector = document.createElement('input');
@@ -142,14 +161,15 @@ public:
                    // transfer the data to the C++ side
                    var data_ptr = Module.stringToNewUTF8(decodedData);
 
-                   // call the C++ function
-                   Module._pludux_apps_backtest_open_file(data_ptr, $0);
+                   Module._pludux_apps_backtest_js_opened_file_text_ready(
+                    data_ptr, $0, $1);
                  };
 
                  reader.readAsArrayBuffer(file);
                };
                fileSelector.click();
              },
+             &callback,
              &context);
 
 #else
@@ -192,7 +212,9 @@ public:
           constexpr auto menu_item_save_as = "Save";
           if(ImGui::MenuItem(menu_item_save_as)) {
             auto out_stream = std::ostringstream{};
-            auto out_archive = cereal::JSONOutputArchive(out_stream);
+            auto out_archive = cereal::JSONOutputArchive(
+             out_stream, cereal::JSONOutputArchive::Options::NoIndent());
+
             out_archive(cereal::make_nvp("pludux", context.app_state()));
 
             // TODO: bug in Cereal not adding the close object at the end when
@@ -238,7 +260,8 @@ public:
                   throw std::runtime_error(error_message);
                 }
 
-                auto out_archive = cereal::JSONOutputArchive(out_stream);
+                auto out_archive = cereal::JSONOutputArchive(
+                 out_stream, cereal::JSONOutputArchive::Options::NoIndent());
 
                 out_archive(cereal::make_nvp("pludux", app_state));
               });
