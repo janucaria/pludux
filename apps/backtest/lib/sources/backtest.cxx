@@ -564,9 +564,13 @@ auto format_datetime(std::time_t timestamp) -> std::string
   const auto tm_ptr = std::localtime(&timestamp);
   const auto& tm = *tm_ptr;
 
-  // Example: "2025-06-29 14:30:00"
+  // Example: "29 Jan 2025 14:30:00"
   auto formated_datetime = std::format(
-   "{:04}-{:02}-{:02}", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
+   "{:02} {:s} {:04}",
+   tm.tm_mday,
+   std::string{"Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec"}.substr(
+    tm.tm_mon * 4, 3),
+   tm.tm_year + 1900);
 
   if(tm.tm_hour != 0 || tm.tm_min != 0) {
     formated_datetime += std::format(" {:02}:{:02}", tm.tm_hour, tm.tm_min);

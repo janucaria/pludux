@@ -3,6 +3,7 @@ module;
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <iomanip>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -106,6 +107,8 @@ public:
       if(ImPlot::BeginPlot("##VolumePlot", plot_size, plot_flags)) {
         ImPlot::SetupAxis(ImAxis_X1, nullptr, axis_x_flags);
 
+        ImPlot::SetupAxisFormat(ImAxis_X1, date_formatter, &context);
+
         ImPlot::SetupAxis(
          ImAxis_Y1, "Volume", axis_y_flags | ImPlotAxisFlags_LockMin);
         ImPlot::SetupAxisFormat(ImAxis_Y1, VolumeFormatter);
@@ -202,6 +205,31 @@ private:
       }
     }
     return snprintf(buff, size, "%g%s", value / v[4], p[4]);
+  }
+
+  static auto
+  date_formatter(double value, char* buff, int size, void* user_data) -> int
+  {
+    auto& context = *reinterpret_cast<WindowContext*>(user_data);
+    const auto& app_state = context.app_state();
+    const auto& backtest = app_state.selected_backtest();
+    const auto& summaries = backtest->summaries();
+
+    const auto idx = static_cast<std::ptrdiff_t>(value);
+    if(idx < 0 || idx >= summaries.size()) {
+      return snprintf(buff, size, "");
+    }
+
+    const auto& backtest_summary = summaries.at(idx);
+
+    const auto& asset = backtest->asset();
+    const auto& asset_history = asset.history();
+    const auto& snapshot = get_asset_snapshot(backtest_summary, asset_history);
+
+    const auto datetime = snapshot.datetime();
+    const auto timestamp = static_cast<std::time_t>(datetime);
+    const auto tm = *std::localtime(&timestamp);
+    return std::strftime(buff, size, "%b %Y", &tm);
   }
 
   static auto get_asset_snapshot(const backtest::BacktestSummary& summary,
