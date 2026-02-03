@@ -308,6 +308,20 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
 
   auto strategy_json = jsoncons::ojson::parse(
    json_strategy_stream, jsoncons::json_options{}.allow_comments(true));
+
+  if(!strategy_json.is_object()) {
+    throw std::runtime_error(
+     "Invalid strategy JSON: expected an object at the root");
+  }
+
+  if(strategy_json.contains("version")) {
+    const auto version = strategy_json.at("version").as<int>();
+    if(version != 1) {
+      throw std::runtime_error("Unsupported strategy JSON version: " +
+                               std::to_string(version));
+    }
+  }
+
   if(strategy_json.contains("series")) {
     for(const auto& [name, series_method] :
         strategy_json["series"].object_range()) {
@@ -404,6 +418,8 @@ auto stringify_backtest_strategy(const backtest::Strategy& strategy)
   auto risk_parser = risk_reward_config_parser();
 
   auto strategy_json = jsoncons::ojson{};
+
+  strategy_json["version"] = 1;
 
   auto series_json = jsoncons::ojson{};
   for(const auto& [name, method] : strategy.series_registry()) {

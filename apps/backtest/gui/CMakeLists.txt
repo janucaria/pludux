@@ -247,6 +247,10 @@ else()
     COMMAND_EXPAND_LISTS
   )
 
+  add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${CMAKE_CURRENT_LIST_DIR}/../../../data/backtest/schemas" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/schemas"
+    COMMAND_EXPAND_LISTS
+  )
   
   install(TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION "."
@@ -256,6 +260,11 @@ else()
     "${CMAKE_CURRENT_BINARY_DIR}/index.html"
     "${CMAKE_CURRENT_BINARY_DIR}/index.wasm"
     "${CMAKE_SOURCE_DIR}/LICENSE.txt"
+    DESTINATION "."
+  )
+
+  install(DIRECTORY
+    "${CMAKE_CURRENT_BINARY_DIR}/schemas"
     DESTINATION "."
   )
 

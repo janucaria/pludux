@@ -1,9 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema#",
-  "title": "Strategy Schema",
+  "$id": "http://pludux.com/schemas/pludux.backtest.strategy.v1.0.json",
+  "title": "Pludux Backtest Strategy Schema",
   "type": "object",
   "additionalProperties": false,
   "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
     "series": {
       "type": "object",
       "patternProperties": {
