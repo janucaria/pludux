@@ -21,7 +21,7 @@ public:
   ApplicationState()
   : ApplicationState(-1,
                      std::queue<std::string>{},
-                     std::vector<std::shared_ptr<Backtest>>{},
+                     std::vector<std::shared_ptr<backtest::Backtest>>{},
                      std::vector<std::shared_ptr<backtest::Asset>>{},
                      std::vector<std::shared_ptr<backtest::Strategy>>{},
                      std::vector<std::shared_ptr<backtest::Market>>{},
@@ -32,7 +32,7 @@ public:
 
   ApplicationState(std::ptrdiff_t selected_backtest_index,
                    std::queue<std::string> alert_messages,
-                   std::vector<std::shared_ptr<Backtest>> backtests,
+                   std::vector<std::shared_ptr<backtest::Backtest>> backtests,
                    std::vector<std::shared_ptr<backtest::Asset>> assets,
                    std::vector<std::shared_ptr<backtest::Strategy>> strategies,
                    std::vector<std::shared_ptr<backtest::Market>> markets,
@@ -82,31 +82,31 @@ public:
   }
 
   auto backtests(this const ApplicationState& self) noexcept
-   -> const std::vector<std::shared_ptr<Backtest>>&
+   -> const std::vector<std::shared_ptr<backtest::Backtest>>&
   {
     return self.backtests_;
   }
 
   auto backtests(this ApplicationState& self) noexcept
-   -> std::vector<std::shared_ptr<Backtest>>&
+   -> std::vector<std::shared_ptr<backtest::Backtest>>&
   {
     return self.backtests_;
   }
 
   void add_backtest(this ApplicationState& self,
-                    std::shared_ptr<Backtest> backtest_ptr)
+                    std::shared_ptr<backtest::Backtest> backtest_ptr)
   {
     self.backtests_.push_back(std::move(backtest_ptr));
   }
 
   void replace_backtest(this ApplicationState& self,
-                        std::shared_ptr<Backtest> old_backtest_ptr,
-                        std::shared_ptr<Backtest> new_backtest_ptr)
+                        std::shared_ptr<backtest::Backtest> old_backtest_ptr,
+                        std::shared_ptr<backtest::Backtest> new_backtest_ptr)
   {
     auto& backtests = self.backtests_;
     std::ranges::replace_if(
      backtests,
-     [&old_backtest_ptr](const std::shared_ptr<Backtest>& backtest) {
+     [&old_backtest_ptr](const std::shared_ptr<backtest::Backtest>& backtest) {
        return backtest == old_backtest_ptr;
      },
      std::move(new_backtest_ptr));
@@ -124,7 +124,7 @@ public:
   }
 
   auto select_backtest(this ApplicationState& self,
-                       std::shared_ptr<Backtest> backtest_ptr) -> bool
+                       std::shared_ptr<backtest::Backtest> backtest_ptr) -> bool
   {
     const auto& backtests = self.backtests_;
     const auto it = std::find(backtests.begin(), backtests.end(), backtest_ptr);
@@ -138,7 +138,7 @@ public:
   }
 
   auto selected_backtest(this const ApplicationState& self) noexcept
-   -> std::shared_ptr<Backtest>
+   -> std::shared_ptr<backtest::Backtest>
   {
     const auto& backtests = self.backtests_;
     const auto index = self.selected_backtest_index_;
@@ -345,7 +345,7 @@ private:
 
   std::queue<std::string> alert_messages_{};
 
-  std::vector<std::shared_ptr<Backtest>> backtests_{};
+  std::vector<std::shared_ptr<backtest::Backtest>> backtests_{};
 
   std::vector<std::shared_ptr<backtest::Asset>> assets_{};
 

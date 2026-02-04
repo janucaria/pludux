@@ -126,7 +126,7 @@ public:
   }
 
 private:
-  std::shared_ptr<Backtest> last_selected_backtest_;
+  std::shared_ptr<backtest::Backtest> last_selected_backtest_;
 
   ImVec4 bullish_color_;
   ImVec4 bearish_color_;

@@ -637,7 +637,7 @@ struct LoadAndConstruct<pludux::backtest::Asset> {
 /*--------------------------------------------------------------------------------------*/
 
 template<class Archive>
-void serialize(Archive& archive, pludux::Backtest& backtest)
+void serialize(Archive& archive, pludux::backtest::Backtest& backtest)
 {
   archive(make_nvp("name", backtest.name()),
           make_nvp("asset", backtest.asset_ptr()),
@@ -650,10 +650,11 @@ void serialize(Archive& archive, pludux::Backtest& backtest)
 }
 
 template<>
-struct LoadAndConstruct<pludux::Backtest> {
+struct LoadAndConstruct<pludux::backtest::Backtest> {
   template<class Archive>
-  static void load_and_construct(Archive& archive,
-                                 construct<pludux::Backtest>& constructor)
+  static void
+  load_and_construct(Archive& archive,
+                     construct<pludux::backtest::Backtest>& constructor)
   {
     auto name = std::string{};
     auto asset_ptr = std::shared_ptr<pludux::backtest::Asset>{};
@@ -673,13 +674,13 @@ struct LoadAndConstruct<pludux::Backtest> {
             make_nvp("summaries", summaries),
             make_nvp("isFailed", is_failed));
 
-    auto backtest = pludux::Backtest{std::move(name),
-                                     asset_ptr,
-                                     strategy_ptr,
-                                     market_ptr,
-                                     broker_ptr,
-                                     profile_ptr,
-                                     std::move(summaries)};
+    auto backtest = pludux::backtest::Backtest{std::move(name),
+                                               asset_ptr,
+                                               strategy_ptr,
+                                               market_ptr,
+                                               broker_ptr,
+                                               profile_ptr,
+                                               std::move(summaries)};
 
     if(is_failed) {
       backtest.mark_as_failed();
@@ -719,7 +720,7 @@ void load(Archive& archive, pludux::apps::ApplicationState& app_state)
   auto markets = std::vector<std::shared_ptr<pludux::backtest::Market>>{};
   auto brokers = std::vector<std::shared_ptr<pludux::backtest::Broker>>{};
   auto profiles = std::vector<std::shared_ptr<pludux::backtest::Profile>>{};
-  auto backtests = std::vector<std::shared_ptr<pludux::Backtest>>{};
+  auto backtests = std::vector<std::shared_ptr<pludux::backtest::Backtest>>{};
 
   archive(make_nvp("alertMessages", alert_messages));
   archive(make_nvp("backtests", backtests));

@@ -52,6 +52,7 @@ target_sources(${PROJECT_NAME}
     sources/backtest/broker.cxx
     sources/backtest/profile.cxx
     sources/backtest/backtest_summary.cxx
+    sources/backtest/backtest.cxx
 
     sources/backtest.cxx
 )

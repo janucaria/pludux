@@ -26,7 +26,7 @@ public:
   }
 
   auto backtests(this const WindowContext& self) noexcept
-   -> const std::vector<std::shared_ptr<Backtest>>&
+   -> const std::vector<std::shared_ptr<backtest::Backtest>>&
   {
     return self.app_state_.backtests();
   }
@@ -77,7 +77,8 @@ public:
   // void push_alert_action(this WindowContext& self, std::string alert_message)
   // {
   //   self.push_action(
-  //    [alert_message = std::move(alert_message)](ApplicationState& app_state) {
+  //    [alert_message = std::move(alert_message)](ApplicationState& app_state)
+  //    {
   //      app_state.alert(alert_message);
   //    });
   // }

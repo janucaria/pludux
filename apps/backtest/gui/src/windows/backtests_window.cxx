@@ -52,8 +52,8 @@ public:
 private:
   enum class BacktestPanelMode { List, Edit, AddNew } backtest_panel_mode_;
 
-  std::shared_ptr<pludux::Backtest> old_backtest_;
-  std::shared_ptr<pludux::Backtest> new_backtest_;
+  std::shared_ptr<backtest::Backtest> old_backtest_;
+  std::shared_ptr<backtest::Backtest> new_backtest_;
 
   void render_backtests_list(this auto& self, WindowContext& context)
   {
@@ -87,7 +87,7 @@ private:
         if(ImGui::Button("Edit")) {
           self.backtest_panel_mode_ = BacktestPanelMode::Edit;
           self.old_backtest_ = backtest;
-          self.new_backtest_ = std::make_shared<pludux::Backtest>(*backtest);
+          self.new_backtest_ = std::make_shared<backtest::Backtest>(*backtest);
         }
 
         ImGui::SameLine();
@@ -106,7 +106,7 @@ private:
 
     if(ImGui::Button("Add New Backtest")) {
       self.backtest_panel_mode_ = BacktestPanelMode::AddNew;
-      self.new_backtest_ = std::make_shared<pludux::Backtest>(
+      self.new_backtest_ = std::make_shared<backtest::Backtest>(
        "", nullptr, nullptr, nullptr, nullptr, nullptr);
     }
     ImGui::EndGroup();
