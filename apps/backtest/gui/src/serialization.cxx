@@ -442,22 +442,23 @@ template<class Archive>
 void save(Archive& archive, const pludux::backtest::Market& market)
 {
   archive(make_nvp("name", market.name()),
-          make_nvp("minOrderQty", market.min_order_qty()),
-          make_nvp("qtyStep", market.qty_step()));
+          make_nvp("minOrderQuantity", market.min_order_quantity()),
+          make_nvp("quantityStep", market.quantity_step()));
 }
 
 template<class Archive>
 void load(Archive& archive, pludux::backtest::Market& market)
 {
   auto name = std::string{};
-  auto min_order_qty = double{};
-  auto qty_step = double{};
+  auto min_order_quantity = double{};
+  auto quantity_step = double{};
 
   archive(make_nvp("name", name),
-          make_nvp("minOrderQty", min_order_qty),
-          make_nvp("qtyStep", qty_step));
+          make_nvp("minOrderQuantity", min_order_quantity),
+          make_nvp("quantityStep", quantity_step));
 
-  market = pludux::backtest::Market{std::move(name), min_order_qty, qty_step};
+  market =
+   pludux::backtest::Market{std::move(name), min_order_quantity, quantity_step};
 }
 
 /*--------------------------------------------------------------------------------------*/

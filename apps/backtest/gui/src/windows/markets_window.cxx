@@ -167,14 +167,14 @@ private:
       self.editing_market_ptr_->name(market_name);
     }
     {
-      auto min_order_qty = self.editing_market_ptr_->min_order_qty();
-      ImGui::InputDouble("Minimum Order Quantity", &min_order_qty);
-      self.editing_market_ptr_->min_order_qty(min_order_qty);
+      auto min_order_quantity = self.editing_market_ptr_->min_order_quantity();
+      ImGui::InputDouble("Minimum Order Quantity", &min_order_quantity);
+      self.editing_market_ptr_->min_order_quantity(min_order_quantity);
     }
     {
-      auto qty_step = self.editing_market_ptr_->qty_step();
-      ImGui::InputDouble("Quantity Step", &qty_step);
-      self.editing_market_ptr_->qty_step(qty_step);
+      auto quantity_step = self.editing_market_ptr_->quantity_step();
+      ImGui::InputDouble("Quantity Step", &quantity_step);
+      self.editing_market_ptr_->quantity_step(quantity_step);
     }
   }
 

@@ -263,18 +263,21 @@ public:
 
       if(entry_trade) {
         {
-          const auto qty_step = market.qty_step();
-          const auto min_order_qty = market.min_order_qty();
+          const auto quantity_step = market.quantity_step();
+          const auto min_order_quantity = market.min_order_quantity();
 
           auto position_size = entry_trade->position_size();
-          if(qty_step > 0.0 && std::fmod(position_size, qty_step) != 0.0) {
-            position_size = qty_step * std::round(position_size / qty_step);
+          if(quantity_step > 0.0 &&
+             std::fmod(position_size, quantity_step) != 0.0) {
+            position_size =
+             quantity_step * std::round(position_size / quantity_step);
           }
 
-          if(position_size > 0.0 && position_size < min_order_qty) {
-            position_size = min_order_qty;
-          } else if(position_size < 0.0 && position_size > -min_order_qty) {
-            position_size = -min_order_qty;
+          if(position_size > 0.0 && position_size < min_order_quantity) {
+            position_size = min_order_quantity;
+          } else if(position_size < 0.0 &&
+                    position_size > -min_order_quantity) {
+            position_size = -min_order_quantity;
           }
 
           entry_trade->position_size(position_size);

@@ -20,15 +20,15 @@ public:
   {
   }
 
-  Market(std::string name, double min_order_qty)
-  : Market{name, min_order_qty, min_order_qty}
+  Market(std::string name, double min_order_quantity)
+  : Market{name, min_order_quantity, min_order_quantity}
   {
   }
 
-  Market(std::string name, double min_order_qty, double qty_step)
+  Market(std::string name, double min_order_quantity, double quantity_step)
   : name_{std::move(name)}
-  , min_order_qty_{min_order_qty}
-  , qty_step_{qty_step}
+  , min_order_quantity_{min_order_quantity}
+  , quantity_step_{quantity_step}
   {
   }
 
@@ -42,31 +42,31 @@ public:
     self.name_ = std::move(new_name);
   }
 
-  auto min_order_qty(this const Market& self) noexcept -> double
+  auto min_order_quantity(this const Market& self) noexcept -> double
   {
-    return self.min_order_qty_;
+    return self.min_order_quantity_;
   }
 
-  void min_order_qty(this Market& self, double new_min_order_qty) noexcept
+  void min_order_quantity(this Market& self, double new_min_order_qty) noexcept
   {
-    self.min_order_qty_ = new_min_order_qty;
+    self.min_order_quantity_ = new_min_order_qty;
   }
 
-  auto qty_step(this const Market& self) noexcept -> double
+  auto quantity_step(this const Market& self) noexcept -> double
   {
-    return self.qty_step_;
+    return self.quantity_step_;
   }
 
-  void qty_step(this Market& self, double new_qty_step) noexcept
+  void quantity_step(this Market& self, double new_qty_step) noexcept
   {
-    self.qty_step_ = new_qty_step;
+    self.quantity_step_ = new_qty_step;
   }
 
 private:
   std::string name_;
 
-  double min_order_qty_;
-  double qty_step_;
+  double min_order_quantity_;
+  double quantity_step_;
 };
 
 } // namespace pludux::backtest
