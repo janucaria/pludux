@@ -73,6 +73,15 @@ public:
     self.actions_.push(std::move(action));
   }
 
+  // TODO: compiler bug in emscripten build
+  // void push_alert_action(this WindowContext& self, std::string alert_message)
+  // {
+  //   self.push_action(
+  //    [alert_message = std::move(alert_message)](ApplicationState& app_state) {
+  //      app_state.alert(alert_message);
+  //    });
+  // }
+
 private:
   ApplicationState& app_state_;
   std::queue<PolyAction>& actions_;
