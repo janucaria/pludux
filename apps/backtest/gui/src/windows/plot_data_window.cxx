@@ -84,7 +84,6 @@ public:
         ImPlot::SetupAxis(ImAxis_Y1, "% Equity", axis_y_flags);
         ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
 
-        self.ticker_tooltip(backtest_summaries, asset_history, true);
         self.plot_equity(backtest_summaries);
 
         ImPlot::EndPlot();
@@ -548,7 +547,7 @@ private:
       ys.push_back(equity_percentage);
     }
 
-    if(ImPlot::IsPlotHovered()) {
+    if(ImPlot::IsSubplotsHovered()) {
       constexpr auto half_width = 0.5;
       auto* draw_list = ImPlot::GetPlotDrawList();
       ImPlotPoint mouse = ImPlot::GetPlotMousePos();
