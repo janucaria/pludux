@@ -67,30 +67,6 @@ using AbsDiffMethod = pludux::AbsDiffMethod<AnySeriesMethod, AnySeriesMethod>;
 
 using RiskAtrMethod = backtest::RiskAtrMethod;
 
-auto get_output_name_string(SeriesOutput output_name) -> std::string
-{
-  switch(output_name) {
-  case SeriesOutput::UpperBand:
-    return "upper-band";
-  case SeriesOutput::MiddleBand:
-    return "middle-band";
-  case SeriesOutput::LowerBand:
-    return "lower-band";
-  case SeriesOutput::MacdLine:
-    return "macd-macd";
-  case SeriesOutput::SignalLine:
-    return "macd-signal";
-  case SeriesOutput::Histogram:
-    return "macd-histogram";
-  case SeriesOutput::KPercent:
-    return "percent-k";
-  case SeriesOutput::DPercent:
-    return "percent-d";
-  default:
-    return "default";
-  }
-}
-
 auto get_default_series_method(const std::string& series_id) -> AnySeriesMethod
 {
   if(series_id == "OPEN") {
@@ -1171,17 +1147,32 @@ private:
       const auto output_options =
        std::vector<SeriesOutput>{SeriesOutput::UpperBand,
                                  SeriesOutput::MiddleBand,
-                                 SeriesOutput::LowerBand};
+                                 SeriesOutput::LowerBand,
+                                 SeriesOutput::MacdLine,
+                                 SeriesOutput::SignalLine,
+                                 SeriesOutput::Histogram,
+                                 SeriesOutput::KPercent,
+                                 SeriesOutput::DPercent};
+
+      const auto output_map = std::unordered_map<SeriesOutput, std::string>{
+       {SeriesOutput::UpperBand, "Upper Band"},
+       {SeriesOutput::MiddleBand, "Middle Band"},
+       {SeriesOutput::LowerBand, "Lower Band"},
+       {SeriesOutput::MacdLine, "MACD Line"},
+       {SeriesOutput::SignalLine, "Signal Line"},
+       {SeriesOutput::Histogram, "Histogram"},
+       {SeriesOutput::KPercent, "%K"},
+       {SeriesOutput::DPercent, "%D"}};
+
       ImGui::Text("Output:");
       ImGui::SameLine();
-      auto output_name = method.output();
+      auto output = method.output();
       {
-        const auto output_str = get_output_name_string(output_name);
+        const auto output_str = output_map.at(output);
         if(ImGui::BeginCombo("##output", output_str.c_str())) {
           for(auto output_option : output_options) {
-            const auto output_option_str =
-             get_output_name_string(output_option);
-            const bool is_selected = output_name == output_option;
+            const auto output_option_str = output_map.at(output_option);
+            const bool is_selected = output == output_option;
             if(ImGui::Selectable(output_option_str.c_str(), is_selected)) {
               method.output(output_option);
             }
