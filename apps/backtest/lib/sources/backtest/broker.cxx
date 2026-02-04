@@ -23,6 +23,12 @@ public:
 
   enum class FeeTrigger { Entry, Exit, Buy, Sell, All };
 
+  BrokerFee()
+  : BrokerFee{
+     "", FeeType::PercentageNotional, FeePosition::Long, FeeTrigger::All, 0.0}
+  {
+  }
+
   BrokerFee(std::string name,
             FeeType fee_type,
             FeePosition fee_position,
@@ -150,6 +156,11 @@ private:
 
 class Broker {
 public:
+  Broker()
+  : Broker{""}
+  {
+  }
+
   Broker(std::string name)
   : Broker{std::move(name), {}}
   {

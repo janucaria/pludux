@@ -18,6 +18,11 @@ export namespace pludux::backtest {
 
 class TradePosition {
 public:
+  TradePosition()
+  : TradePosition{0.0, 0, std::time_t{}, 0.0, 0.0, 0.0, 0.0, 0.0, {}}
+  {
+  }
+
   TradePosition(double position_size,
                 std::time_t entry_timestamp,
                 double entry_price,

@@ -20,6 +20,25 @@ public:
     scaled_out
   };
 
+  TradeRecord()
+  : TradeRecord(Status::open,
+                0.0,
+                0.0,
+
+                std::time_t{},
+                0.0,
+                0.0,
+
+                std::time_t{},
+                0.0,
+                0.0,
+
+                NAN,
+                NAN,
+                NAN)
+  {
+  }
+
   TradeRecord(Status status,
               double position_size,
               double investment,

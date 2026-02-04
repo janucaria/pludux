@@ -11,6 +11,11 @@ export namespace pludux::backtest {
 
 class Asset {
 public:
+  Asset()
+  : Asset{"", AssetHistory{}}
+  {
+  }
+
   Asset(std::string name, AssetHistory asset_history)
   : name_{std::move(name)}
   , asset_history_{std::move(asset_history)}

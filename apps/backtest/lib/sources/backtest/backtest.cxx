@@ -31,6 +31,17 @@ export namespace pludux::backtest {
 
 class Backtest {
 public:
+  Backtest()
+  : Backtest{std::string{},
+             nullptr,
+             nullptr,
+             nullptr,
+             nullptr,
+             nullptr,
+             std::vector<BacktestSummary>{}}
+  {
+  }
+
   Backtest(std::string name,
            std::shared_ptr<Asset> asset_ptr,
            std::shared_ptr<Strategy> strategy_ptr,
@@ -184,6 +195,11 @@ public:
 
   auto should_run(this const Backtest& self) noexcept -> bool
   {
+    if(!self.asset_ptr() || !self.strategy_ptr() || !self.market_ptr() ||
+       !self.broker_ptr() || !self.profile_ptr()) {
+      return false;
+    }
+
     const auto summaries_size = self.summaries_.size();
     const auto asset_size = self.asset().size();
 

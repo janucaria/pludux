@@ -11,10 +11,20 @@ export namespace pludux::backtest {
 
 class Profile {
 public:
+  Profile()
+  : Profile{""}
+  {
+  }
+
   Profile(std::string name)
+  : Profile{std::move(name), 0.0, 0.0}
+  {
+  }
+
+  Profile(std::string name, double initial_capital, double capital_risk)
   : name_{std::move(name)}
-  , initial_capital_{0.0}
-  , capital_risk_{0.0}
+  , initial_capital_{initial_capital}
+  , capital_risk_{capital_risk}
   {
   }
 
