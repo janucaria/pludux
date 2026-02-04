@@ -84,6 +84,7 @@ public:
         ImPlot::SetupAxis(ImAxis_Y1, "% Equity", axis_y_flags);
         ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
 
+        self.ticker_tooltip(backtest_summaries, asset_history, true);
         self.plot_equity(backtest_summaries);
 
         ImPlot::EndPlot();
@@ -99,7 +100,7 @@ public:
         ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
 
         self.DrawTrades("Trades", backtest_summaries, asset_history);
-        self.TickerTooltip(backtest_summaries, asset_history, false);
+        self.ticker_tooltip(backtest_summaries, asset_history, true);
         self.PlotOHLC("OHLC", backtest_summaries, asset_history);
 
         ImPlot::EndPlot();
@@ -113,7 +114,7 @@ public:
          ImAxis_Y1, "Volume", axis_y_flags | ImPlotAxisFlags_LockMin);
         ImPlot::SetupAxisFormat(ImAxis_Y1, VolumeFormatter);
 
-        self.TickerTooltip(backtest_summaries, asset_history, false);
+        self.ticker_tooltip(backtest_summaries, asset_history, true);
         self.PlotVolume("Volume", backtest_summaries, asset_history);
 
         ImPlot::EndPlot();
@@ -137,7 +138,7 @@ private:
 
   std::array<float, 3> row_ratios_;
 
-  static void TickerTooltip(
+  static void ticker_tooltip(
    const std::vector<backtest::BacktestSummary>& backtest_summaries,
    const AssetHistory& asset_history,
    bool span_subplots)
