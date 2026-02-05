@@ -141,7 +141,11 @@ private:
     self.edit_market_form();
 
     ImGui::EndChild();
-    if(ImGui::Button("Edit")) {
+
+    const auto same_market =
+     *(self.selected_market_ptr_) == *(self.editing_market_ptr_);
+
+    if(ImGui::Button("OK")) {
       self.submit_market_changes(context);
       self.reset();
     }
@@ -152,9 +156,11 @@ private:
     }
 
     ImGui::SameLine();
+    ImGui::BeginDisabled(same_market);
     if(ImGui::Button("Apply")) {
       self.submit_market_changes(context);
     }
+    ImGui::EndDisabled();
 
     ImGui::EndGroup();
   }
@@ -180,26 +186,29 @@ private:
 
   void submit_market_changes(this auto& self, WindowContext& context)
   {
-    if(self.editing_market_ptr_->name().empty()) {
-      self.editing_market_ptr_->name("Unnamed");
-    }
-
     context.push_action(
      [market_ptr = self.selected_market_ptr_,
-      editing_market = *self.editing_market_ptr_](ApplicationState& app_state) {
+      edit_market_ptr = self.editing_market_ptr_](ApplicationState& app_state) {
+       if(edit_market_ptr->name().empty()) {
+         edit_market_ptr->name("Unnamed");
+       }
+
        if(market_ptr == nullptr) {
          app_state.add_market(
-          std::make_shared<backtest::Market>(editing_market));
+          std::make_shared<backtest::Market>(*edit_market_ptr));
          return;
        }
 
-       *market_ptr = editing_market;
-
-       for(auto& backtest : app_state.backtests()) {
-         if(backtest->market_ptr() == market_ptr) {
-           backtest->reset();
+       const auto reset_backtests = !market_ptr->equal_rules(*edit_market_ptr);
+       if(reset_backtests) {
+         for(auto& backtest : app_state.backtests()) {
+           if(backtest->market_ptr() == market_ptr) {
+             backtest->reset();
+           }
          }
        }
+
+       *market_ptr = *edit_market_ptr;
      });
   }
 

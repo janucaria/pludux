@@ -8,6 +8,7 @@ module;
 #include <format>
 #include <iostream>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -187,6 +188,29 @@ public:
     return self.summaries_;
   }
 
+  auto equal_rules(this const Backtest& self, const Backtest& other) noexcept
+   -> bool
+  {
+    return self.asset_ptr_ == other.asset_ptr_ &&
+           self.strategy_ptr_ == other.strategy_ptr_ &&
+           self.market_ptr_ == other.market_ptr_ &&
+           self.broker_ptr_ == other.broker_ptr_ &&
+           self.profile_ptr_ == other.profile_ptr_;
+  }
+
+  auto equal_rules_and_metadata(this const Backtest& self,
+                                const Backtest& other) noexcept -> bool
+  {
+    return self.name_ == other.name_ && self.equal_rules(other);
+  }
+
+  auto is_valid_rules(this const Backtest& self) noexcept -> bool
+  {
+    return self.asset_ptr_ != nullptr && self.strategy_ptr_ != nullptr &&
+           self.market_ptr_ != nullptr && self.broker_ptr_ != nullptr &&
+           self.profile_ptr_ != nullptr;
+  }
+
   void reset(this Backtest& self) noexcept
   {
     self.is_failed_ = false;
@@ -195,15 +219,11 @@ public:
 
   auto should_run(this const Backtest& self) noexcept -> bool
   {
-    if(!self.asset_ptr() || !self.strategy_ptr() || !self.market_ptr() ||
-       !self.broker_ptr() || !self.profile_ptr()) {
-      return false;
-    }
-
     const auto summaries_size = self.summaries_.size();
     const auto asset_size = self.asset().size();
 
-    return summaries_size < asset_size && !self.is_failed();
+    return summaries_size < asset_size && !self.is_failed() &&
+           self.is_valid_rules();
   }
 
   void run(this Backtest& self)

@@ -28,6 +28,8 @@ public:
   {
   }
 
+  auto operator==(const Profile&) const noexcept -> bool = default;
+
   auto name(this const Profile& self) noexcept -> const std::string&
   {
     return self.name_;
@@ -61,6 +63,13 @@ public:
   auto get_risk_value(this const Profile& self) noexcept -> double
   {
     return self.initial_capital_ * self.capital_risk_;
+  }
+
+  auto equal_rules(this const Profile& self, const Profile& other) noexcept
+   -> bool
+  {
+    return self.initial_capital_ == other.initial_capital_ &&
+           self.capital_risk_ == other.capital_risk_;
   }
 
 private:

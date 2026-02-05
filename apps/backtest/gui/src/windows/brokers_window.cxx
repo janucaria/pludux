@@ -144,7 +144,11 @@ private:
     self.edit_broker_form();
 
     ImGui::EndChild();
-    if(ImGui::Button("Edit")) {
+
+    const auto same_broker =
+     *(self.selected_broker_ptr_) == *(self.editing_broker_ptr_);
+
+    if(ImGui::Button("OK")) {
       self.submit_broker_changes(context);
       self.reset();
     }
@@ -154,10 +158,12 @@ private:
       self.reset();
     }
 
+    ImGui::BeginDisabled(same_broker);
     ImGui::SameLine();
     if(ImGui::Button("Apply")) {
       self.submit_broker_changes(context);
     }
+    ImGui::EndDisabled();
 
     ImGui::EndGroup();
   }
@@ -315,26 +321,29 @@ private:
 
   void submit_broker_changes(this auto& self, WindowContext& context)
   {
-    if(self.editing_broker_ptr_->name().empty()) {
-      self.editing_broker_ptr_->name("Unnamed");
-    }
-
     context.push_action(
      [broker_ptr = self.selected_broker_ptr_,
-      editing_broker = *self.editing_broker_ptr_](ApplicationState& app_state) {
+      edit_broker_ptr = self.editing_broker_ptr_](ApplicationState& app_state) {
+       if(edit_broker_ptr->name().empty()) {
+         edit_broker_ptr->name("Unnamed");
+       }
+
        if(broker_ptr == nullptr) {
          app_state.add_broker(
-          std::make_shared<backtest::Broker>(editing_broker));
+          std::make_shared<backtest::Broker>(*edit_broker_ptr));
          return;
        }
 
-       *broker_ptr = editing_broker;
-
-       for(auto& backtest : app_state.backtests()) {
-         if(backtest->broker_ptr() == broker_ptr) {
-           backtest->reset();
+       const auto reset_backtests = !broker_ptr->equal_rules(*edit_broker_ptr);
+       if(reset_backtests) {
+         for(auto& backtest : app_state.backtests()) {
+           if(backtest->broker_ptr() == broker_ptr) {
+             backtest->reset();
+           }
          }
        }
+
+       *broker_ptr = *edit_broker_ptr;
      });
   }
 

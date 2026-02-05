@@ -99,19 +99,6 @@ public:
     self.backtests_.push_back(std::move(backtest_ptr));
   }
 
-  void replace_backtest(this ApplicationState& self,
-                        std::shared_ptr<backtest::Backtest> old_backtest_ptr,
-                        std::shared_ptr<backtest::Backtest> new_backtest_ptr)
-  {
-    auto& backtests = self.backtests_;
-    std::ranges::replace_if(
-     backtests,
-     [&old_backtest_ptr](const std::shared_ptr<backtest::Backtest>& backtest) {
-       return backtest == old_backtest_ptr;
-     },
-     std::move(new_backtest_ptr));
-  }
-
   void remove_backtest_at_index(this ApplicationState& self, std::size_t index)
   {
     auto& backtests = self.backtests_;

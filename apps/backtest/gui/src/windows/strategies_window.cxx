@@ -704,7 +704,10 @@ private:
 
     ImGui::EndChild();
 
-    if(ImGui::Button("Edit")) {
+    const auto same_strategy =
+     *(self.selected_strategy_ptr_) == *(self.editing_strategy_ptr_);
+
+    if(ImGui::Button("OK")) {
       self.submit_strategy_changes(context);
       self.reset();
     }
@@ -714,10 +717,12 @@ private:
       self.reset();
     }
 
+    ImGui::BeginDisabled(same_strategy);
     ImGui::SameLine();
     if(ImGui::Button("Apply")) {
       self.submit_strategy_changes(context);
     }
+    ImGui::EndDisabled();
 
     ImGui::EndGroup();
   }
@@ -2224,26 +2229,30 @@ private:
 
   void submit_strategy_changes(this auto& self, WindowContext& context)
   {
-    if(self.editing_strategy_ptr_->name().empty()) {
-      self.editing_strategy_ptr_->name("Unnamed");
-    }
-
     context.push_action([strategy_ptr = self.selected_strategy_ptr_,
-                         edited_strategy = *self.editing_strategy_ptr_](
+                         edit_strategy_ptr = self.editing_strategy_ptr_](
                          ApplicationState& app_state) {
+      if(edit_strategy_ptr->name().empty()) {
+        edit_strategy_ptr->name("Unnamed");
+      }
+
       if(strategy_ptr == nullptr) {
         app_state.add_strategy(
-         std::make_shared<backtest::Strategy>(edited_strategy));
+         std::make_shared<backtest::Strategy>(*edit_strategy_ptr));
         return;
       }
 
-      *strategy_ptr = edited_strategy;
-
-      for(auto& backtest : app_state.backtests()) {
-        if(backtest->strategy_ptr() == strategy_ptr) {
-          backtest->reset();
+      const auto reset_backtests =
+       !strategy_ptr->equal_rules(*edit_strategy_ptr);
+      if(reset_backtests) {
+        for(auto& backtest : app_state.backtests()) {
+          if(backtest->strategy_ptr() == strategy_ptr) {
+            backtest->reset();
+          }
         }
       }
+
+      *strategy_ptr = *edit_strategy_ptr;
     });
   }
 

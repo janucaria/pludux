@@ -142,7 +142,11 @@ private:
     self.edit_profile_form();
 
     ImGui::EndChild();
-    if(ImGui::Button("Edit")) {
+
+    const auto same_profile =
+     *(self.selected_profile_ptr_) == *(self.editing_profile_ptr_);
+
+    if(ImGui::Button("OK")) {
       self.submit_profile_changes(context);
       self.reset();
     }
@@ -152,10 +156,12 @@ private:
       self.reset();
     }
 
+    ImGui::BeginDisabled(same_profile);
     ImGui::SameLine();
     if(ImGui::Button("Apply")) {
       self.submit_profile_changes(context);
     }
+    ImGui::EndDisabled();
 
     ImGui::EndGroup();
   }
@@ -182,26 +188,29 @@ private:
 
   void submit_profile_changes(this auto& self, WindowContext& context)
   {
-    if(self.editing_profile_ptr_->name().empty()) {
-      self.editing_profile_ptr_->name("Unnamed");
-    }
-
     context.push_action([profile_ptr = self.selected_profile_ptr_,
-                         editing_profile = *self.editing_profile_ptr_](
+                         edit_profile_ptr = self.editing_profile_ptr_](
                          ApplicationState& app_state) {
+      if(edit_profile_ptr->name().empty()) {
+        edit_profile_ptr->name("Unnamed");
+      }
+
       if(profile_ptr == nullptr) {
         app_state.add_profile(
-         std::make_shared<backtest::Profile>(editing_profile));
+         std::make_shared<backtest::Profile>(*edit_profile_ptr));
         return;
       }
 
-      *profile_ptr = editing_profile;
-
-      for(auto& backtest : app_state.backtests()) {
-        if(backtest->profile_ptr() == profile_ptr) {
-          backtest->reset();
+      const auto reset_backtests = !profile_ptr->equal_rules(*edit_profile_ptr);
+      if(reset_backtests) {
+        for(auto& backtest : app_state.backtests()) {
+          if(backtest->profile_ptr() == profile_ptr) {
+            backtest->reset();
+          }
         }
       }
+
+      *profile_ptr = *edit_profile_ptr;
     });
   }
 

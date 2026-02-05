@@ -42,6 +42,8 @@ public:
   {
   }
 
+  auto operator==(const BrokerFee&) const noexcept -> bool = default;
+
   auto name(this const BrokerFee& self) noexcept -> const std::string&
   {
     return self.name_;
@@ -90,6 +92,15 @@ public:
   void value(this BrokerFee& self, double value) noexcept
   {
     self.value_ = value;
+  }
+
+  auto equal_rules(this const BrokerFee& self, const BrokerFee& other) noexcept
+   -> bool
+  {
+    return self.fee_type_ == other.fee_type_ &&
+           self.fee_position_ == other.fee_position_ &&
+           self.fee_trigger_ == other.fee_trigger_ &&
+           self.value_ == other.value_;
   }
 
   template<typename TTradeAction>
@@ -172,6 +183,8 @@ public:
   {
   }
 
+  auto operator==(const Broker&) const noexcept -> bool = default;
+
   auto name(this const Broker& self) noexcept -> const std::string&
   {
     return self.name_;
@@ -190,6 +203,22 @@ public:
   void fees(this Broker& self, std::vector<BrokerFee> fees) noexcept
   {
     self.fees_ = std::move(fees);
+  }
+
+  auto equal_rules(this const Broker& self, const Broker& other) noexcept
+   -> bool
+  {
+    if(self.fees_.size() != other.fees_.size()) {
+      return false;
+    }
+
+    for(std::size_t i = 0; i < self.fees_.size(); ++i) {
+      if(!self.fees_[i].equal_rules(other.fees_[i])) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   template<typename TTradeAction>

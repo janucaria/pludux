@@ -62,6 +62,8 @@ public:
   {
   }
 
+  auto operator==(const Strategy&) const noexcept -> bool = default;
+
   auto name(this const Strategy& self) noexcept -> const std::string&
   {
     return self.name_;
@@ -182,6 +184,23 @@ public:
                                    double take_profit_risk_multiplier) noexcept
   {
     self.take_profit_risk_multiplier_ = take_profit_risk_multiplier;
+  }
+
+  auto equal_rules(this const Strategy& self, const Strategy& other) noexcept
+   -> bool
+  {
+    return self.series_registry_ == other.series_registry_ &&
+           self.risk_method_ == other.risk_method_ &&
+           self.long_entry_filter_ == other.long_entry_filter_ &&
+           self.long_exit_filter_ == other.long_exit_filter_ &&
+           self.short_entry_filter_ == other.short_entry_filter_ &&
+           self.short_exit_filter_ == other.short_exit_filter_ &&
+           self.stop_loss_enabled_ == other.stop_loss_enabled_ &&
+           self.stop_loss_trailing_enabled_ ==
+            other.stop_loss_trailing_enabled_ &&
+           self.take_profit_enabled_ == other.take_profit_enabled_ &&
+           self.take_profit_risk_multiplier_ ==
+            other.take_profit_risk_multiplier_;
   }
 
 private:

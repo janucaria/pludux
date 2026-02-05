@@ -32,6 +32,8 @@ public:
   {
   }
 
+  auto operator==(const Market&) const noexcept -> bool = default;
+
   auto name(this const Market& self) noexcept -> const std::string&
   {
     return self.name_;
@@ -60,6 +62,13 @@ public:
   void quantity_step(this Market& self, double new_qty_step) noexcept
   {
     self.quantity_step_ = new_qty_step;
+  }
+
+  auto equal_rules(this const Market& self, const Market& other) noexcept
+   -> bool
+  {
+    return self.min_order_quantity_ == other.min_order_quantity_ &&
+           self.quantity_step_ == other.quantity_step_;
   }
 
 private:
