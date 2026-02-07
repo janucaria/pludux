@@ -28,9 +28,9 @@ target_sources(${PROJECT_NAME}
         src/asset_data.cxx
         src/asset_series.cxx
         src/asset_history.cxx
+        src/asset_quote_field_resolver.cxx
         src/asset_snapshot.cxx
 
-        
         src/series_output.cxx
         src/method_contextable.cxx
         src/any_method_context.cxx

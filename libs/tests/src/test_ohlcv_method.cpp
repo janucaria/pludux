@@ -112,9 +112,12 @@ TEST(OhlcvMethodTest, InsertAfterConstruction)
 
 TEST(OhlcvMethodTest, ChangeKeyMapping)
 {
-  AssetHistory ah{{"foo", {1, 2, 3}}};
-  ah.open_field("foo");
-  auto snap = AssetSnapshot{ah};
+  auto asset_history = AssetHistory{{"foo", {1, 2, 3}}};
+
+  auto field_resolver = AssetQuoteFieldResolver{};
+  field_resolver.open_field("foo");
+
+  auto snap = AssetSnapshot{asset_history, field_resolver};
   auto open = OpenMethod{};
   auto open_val_0 = open(snap, context);
   auto open_val_2 = open(snap[2], context);

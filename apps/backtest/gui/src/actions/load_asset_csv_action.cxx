@@ -62,9 +62,8 @@ private:
                              std::istream& csv_stream,
                              ApplicationState& app_state)
   {
-    auto asset_history = csv_daily_stock_data(csv_stream);
-    auto asset_ptr =
-     std::make_shared<backtest::Asset>(asset_name, std::move(asset_history));
+    auto asset = pludux::make_asset_from_csv(asset_name, csv_stream);
+    auto asset_ptr = std::make_shared<backtest::Asset>(std::move(asset));
 
     auto& assets = app_state.assets();
     auto find_it = std::find_if(

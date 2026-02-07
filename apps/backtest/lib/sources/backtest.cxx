@@ -40,13 +40,14 @@ auto get_env_var(std::string_view var_name) -> std::optional<std::string>
   return std::nullopt;
 }
 
-auto csv_daily_stock_data(std::istream& csv_stream) -> AssetHistory
+auto make_asset_from_csv(std::string name, std::istream& csv_stream)
+ -> backtest::Asset
 {
   auto csv_doc = rapidcsv::Document(csv_stream);
   const auto column_count = csv_doc.GetColumnCount();
 
   if(column_count == 0) {
-    return AssetHistory{};
+    return backtest::Asset{std::move(name)};
   }
 
   constexpr auto date_record_index = 0;
@@ -118,10 +119,13 @@ auto csv_daily_stock_data(std::istream& csv_stream) -> AssetHistory
                             pludux::AssetData(column.begin(), column.end()));
   }
 
-  auto result = AssetHistory{field_data.begin(), field_data.end()};
-  result.datetime_field(date_record_header);
+  auto asset_history = AssetHistory{field_data.begin(), field_data.end()};
 
-  return result;
+  auto asset_field_resolver = AssetQuoteFieldResolver{};
+  asset_field_resolver.datetime_field(date_record_header);
+
+  return backtest::Asset{
+   std::move(name), std::move(asset_history), std::move(asset_field_resolver)};
 }
 
 auto format_duration(std::size_t duration_in_seconds) -> std::string

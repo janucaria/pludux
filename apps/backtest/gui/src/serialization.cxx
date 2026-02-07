@@ -464,6 +464,44 @@ void load(Archive& archive, pludux::backtest::Market& market)
 /*--------------------------------------------------------------------------------------*/
 
 template<class Archive>
+void save(Archive& archive, const pludux::AssetQuoteFieldResolver& resolver)
+{
+  archive(make_nvp("datetimeField", resolver.datetime_field()),
+          make_nvp("openField", resolver.open_field()),
+          make_nvp("highField", resolver.high_field()),
+          make_nvp("lowField", resolver.low_field()),
+          make_nvp("closeField", resolver.close_field()),
+          make_nvp("volumeField", resolver.volume_field()));
+}
+
+template<class Archive>
+void load(Archive& archive, pludux::AssetQuoteFieldResolver& resolver)
+{
+  auto datetime_field = std::string{};
+  auto open_field = std::string{};
+  auto high_field = std::string{};
+  auto low_field = std::string{};
+  auto close_field = std::string{};
+  auto volume_field = std::string{};
+
+  archive(make_nvp("datetimeField", datetime_field),
+          make_nvp("openField", open_field),
+          make_nvp("highField", high_field),
+          make_nvp("lowField", low_field),
+          make_nvp("closeField", close_field),
+          make_nvp("volumeField", volume_field));
+
+  resolver = pludux::AssetQuoteFieldResolver{std::move(datetime_field),
+                                             std::move(open_field),
+                                             std::move(high_field),
+                                             std::move(low_field),
+                                             std::move(close_field),
+                                             std::move(volume_field)};
+}
+
+/*--------------------------------------------------------------------------------------*/
+
+template<class Archive>
 void save(Archive& archive, const pludux::AssetData& asset_data)
 {
   archive(make_nvp("data", asset_data.data()));
@@ -485,43 +523,18 @@ template<class Archive>
 void save(Archive& archive, const pludux::AssetHistory& asset_history)
 {
   archive(make_nvp("fieldData", asset_history.field_data()));
-  archive(make_nvp("datetimeKey", asset_history.datetime_field()));
-  archive(make_nvp("openKey", asset_history.open_field()));
-  archive(make_nvp("highKey", asset_history.high_field()));
-  archive(make_nvp("lowKey", asset_history.low_field()));
-  archive(make_nvp("closeKey", asset_history.close_field()));
-  archive(make_nvp("volumeKey", asset_history.volume_field()));
 }
 
 template<class Archive>
 void load(Archive& archive, pludux::AssetHistory& asset_history)
 {
   auto field_data = pludux::AssetHistory::FieldDataType{};
-  auto datetime_field = std::string{};
-  auto open_field = std::string{};
-  auto high_field = std::string{};
-  auto low_field = std::string{};
-  auto close_field = std::string{};
-  auto volume_field = std::string{};
 
-  archive(make_nvp("fieldData", field_data),
-          make_nvp("datetimeKey", datetime_field),
-          make_nvp("openKey", open_field),
-          make_nvp("highKey", high_field),
-          make_nvp("lowKey", low_field),
-          make_nvp("closeKey", close_field),
-          make_nvp("volumeKey", volume_field));
+  archive(make_nvp("fieldData", field_data));
 
   for(auto& [key, series] : field_data) {
     asset_history.insert(key, std::move(series));
   }
-
-  asset_history.datetime_field(std::move(datetime_field));
-  asset_history.open_field(std::move(open_field));
-  asset_history.high_field(std::move(high_field));
-  asset_history.low_field(std::move(low_field));
-  asset_history.close_field(std::move(close_field));
-  asset_history.volume_field(std::move(volume_field));
 }
 
 /*--------------------------------------------------------------------------------------*/
@@ -529,7 +542,9 @@ void load(Archive& archive, pludux::AssetHistory& asset_history)
 template<class Archive>
 void save(Archive& archive, const pludux::backtest::Asset& asset)
 {
-  archive(make_nvp("name", asset.name()), make_nvp("history", asset.history()));
+  archive(make_nvp("name", asset.name()),
+          make_nvp("history", asset.history()),
+          make_nvp("fieldResolver", asset.field_resolver()));
 }
 
 template<class Archive>
@@ -537,10 +552,14 @@ void load(Archive& archive, pludux::backtest::Asset& asset)
 {
   auto name = std::string{};
   auto history = pludux::AssetHistory{};
+  auto field_resolver = pludux::AssetQuoteFieldResolver{};
 
-  archive(make_nvp("name", name), make_nvp("history", history));
+  archive(make_nvp("name", name),
+          make_nvp("history", history),
+          make_nvp("fieldResolver", field_resolver));
 
-  asset = pludux::backtest::Asset{std::move(name), std::move(history)};
+  asset = pludux::backtest::Asset{
+   std::move(name), std::move(history), std::move(field_resolver)};
 }
 
 /*--------------------------------------------------------------------------------------*/
