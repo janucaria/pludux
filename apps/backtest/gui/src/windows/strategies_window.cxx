@@ -435,6 +435,7 @@ private:
 
   void render_list_strategies(this auto& self, WindowContext& context)
   {
+    const auto& backtest = context.app_state().selected_backtest();
     auto& strategies = context.strategies();
 
     ImGui::BeginGroup();
@@ -452,8 +453,8 @@ private:
         ImGui::PushID(i);
 
         ImGui::SetNextItemAllowOverlap();
-
-        ImGui::Text("%s", strategy_name.c_str());
+        auto is_selected = backtest && backtest->strategy_ptr() == strategy_ptr;
+        ImGui::Selectable(strategy_name.c_str(), &is_selected);
 
         ImGui::SameLine();
 

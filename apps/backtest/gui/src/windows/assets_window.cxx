@@ -85,6 +85,7 @@ private:
 
   void render_assets_list(this auto& self, WindowContext& context)
   {
+    const auto& backtest = context.app_state().selected_backtest();
     const auto& assets = context.assets();
 
     ImGui::BeginGroup();
@@ -102,7 +103,8 @@ private:
 
         ImGui::SetNextItemAllowOverlap();
 
-        ImGui::Text("%s", asset->name().c_str());
+        auto is_selected = backtest && backtest->asset_ptr() == asset;
+        ImGui::Selectable(asset->name().c_str(), &is_selected);
 
         ImGui::SameLine();
 

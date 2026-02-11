@@ -55,6 +55,7 @@ private:
 
   void render_brokers_list(this auto& self, WindowContext& context)
   {
+    const auto& backtest = context.app_state().selected_backtest();
     const auto& brokers = context.brokers();
 
     ImGui::BeginGroup();
@@ -66,13 +67,14 @@ private:
 
     if(!brokers.empty()) {
       for(auto i = 0; i < brokers.size(); ++i) {
-        const auto broker = brokers[i];
+        const auto& broker = brokers[i];
         const auto& broker_name = broker->name();
 
         ImGui::PushID(i);
 
         ImGui::SetNextItemAllowOverlap();
-        ImGui::Text("%s", broker_name.c_str());
+        auto is_selected = backtest && backtest->broker_ptr() == broker;
+        ImGui::Selectable(broker_name.c_str(), &is_selected);
 
         ImGui::SameLine();
         ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 100);

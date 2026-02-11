@@ -52,6 +52,7 @@ private:
 
   void render_markets_list(this auto& self, WindowContext& context)
   {
+    const auto& backtest = context.app_state().selected_backtest();
     const auto& markets = context.markets();
 
     ImGui::BeginGroup();
@@ -69,7 +70,8 @@ private:
         ImGui::PushID(i);
 
         ImGui::SetNextItemAllowOverlap();
-        ImGui::Text("%s", market_name.c_str());
+        auto is_selected = backtest && backtest->market_ptr() == market;
+        ImGui::Selectable(market_name.c_str(), &is_selected);
 
         ImGui::SameLine();
         ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 100);

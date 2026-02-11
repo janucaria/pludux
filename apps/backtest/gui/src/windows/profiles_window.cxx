@@ -52,6 +52,7 @@ private:
 
   void render_profiles_list(this auto& self, WindowContext& context)
   {
+    const auto& backtest = context.app_state().selected_backtest();
     const auto& profiles = context.profiles();
 
     ImGui::BeginGroup();
@@ -68,7 +69,8 @@ private:
         ImGui::PushID(i);
 
         ImGui::SetNextItemAllowOverlap();
-        ImGui::Text("%s", profile->name().c_str());
+        auto is_selected = backtest && backtest->profile_ptr() == profile;
+        ImGui::Selectable(profile->name().c_str(), &is_selected);
 
         ImGui::SameLine();
         ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 100);
