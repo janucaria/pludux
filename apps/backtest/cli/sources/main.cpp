@@ -31,8 +31,8 @@ auto main(int, const char**) -> int
     return 1;
   }
 
-  auto asset = pludux::make_asset_from_csv(asset_file, csv_stream);
-  auto asset_ptr = std::make_shared<pludux::backtest::Asset>(std::move(asset));
+  auto asset_ptr = std::make_shared<pludux::backtest::Asset>(asset_file);
+  pludux::update_asset_from_csv(*asset_ptr, csv_stream);
 
   auto profile_ptr = std::make_shared<pludux::backtest::Profile>("Default");
   profile_ptr->initial_capital(100'000'000.0);

@@ -42,6 +42,19 @@ struct StdFreeDeleter {
   }
 };
 
+EMSCRIPTEN_KEEPALIVE void
+pludux_call_free_callback_2(void* user_function, void* arg1, void* arg2)
+{
+  using FunctionType = std::function<void(void*, void*)>;
+  auto function_ptr = reinterpret_cast<FunctionType*>(user_function);
+  auto unique_function = std::unique_ptr<FunctionType>(function_ptr);
+
+  auto unique_arg1 = std::unique_ptr<void, StdFreeDeleter>{arg1};
+  auto unique_arg2 = std::unique_ptr<void, StdFreeDeleter>{arg2};
+
+  (*unique_function)(unique_arg1.get(), unique_arg2.get());
+}
+
 EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_js_opened_file_content_ready(
  char* name, char* data, void* user_callback, void* user_data)
 {

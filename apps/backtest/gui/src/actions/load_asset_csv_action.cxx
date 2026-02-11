@@ -62,27 +62,10 @@ private:
                              std::istream& csv_stream,
                              ApplicationState& app_state)
   {
-    auto asset = pludux::make_asset_from_csv(asset_name, csv_stream);
-    auto asset_ptr = std::make_shared<backtest::Asset>(std::move(asset));
+    auto asset_ptr = std::make_shared<backtest::Asset>(asset_name);
+    pludux::update_asset_from_csv(*asset_ptr, csv_stream);
 
-    auto& assets = app_state.assets();
-    auto find_it = std::find_if(
-     assets.begin(), assets.end(), [&asset_name](const auto& asset) {
-       return asset->name() == asset_name;
-     });
-    if(find_it != assets.end()) {
-      auto existing_asset_ptr = *find_it;
-      *existing_asset_ptr = std::move(*asset_ptr);
-
-      for(auto& backtest : app_state.backtests()) {
-        if(backtest->asset_ptr() &&
-           backtest->asset_ptr()->name() == asset_name) {
-          backtest->reset();
-        }
-      }
-    } else {
-      app_state.add_asset(std::move(asset_ptr));
-    }
+    app_state.add_asset(std::move(asset_ptr));
   }
 };
 

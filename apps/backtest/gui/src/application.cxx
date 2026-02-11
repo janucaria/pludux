@@ -185,8 +185,7 @@ public:
 
       self.backtests_window_.render(window_context);
 
-      auto assets_window = AssetsWindow{};
-      assets_window.render(window_context);
+      self.assets_window_.render(window_context);
 
       self.strategies_window_.render(window_context);
 
@@ -223,6 +222,7 @@ private:
   DockspaceWindow dockspace_window_;
   PlotDataWindow plot_data_window_;
   BacktestsWindow backtests_window_;
+  AssetsWindow assets_window_;
   StrategiesWindow strategies_window_;
   MarketsWindow markets_window_;
   BrokersWindow brokers_window_;

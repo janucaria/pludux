@@ -40,14 +40,13 @@ auto get_env_var(std::string_view var_name) -> std::optional<std::string>
   return std::nullopt;
 }
 
-auto make_asset_from_csv(std::string name, std::istream& csv_stream)
- -> backtest::Asset
+void update_asset_from_csv(backtest::Asset& asset, std::istream& csv_stream)
 {
   auto csv_doc = rapidcsv::Document(csv_stream);
   const auto column_count = csv_doc.GetColumnCount();
 
   if(column_count == 0) {
-    return backtest::Asset{std::move(name)};
+    return;
   }
 
   constexpr auto date_record_index = 0;
@@ -124,8 +123,8 @@ auto make_asset_from_csv(std::string name, std::istream& csv_stream)
   auto asset_field_resolver = AssetQuoteFieldResolver{};
   asset_field_resolver.datetime_field(date_record_header);
 
-  return backtest::Asset{
-   std::move(name), std::move(asset_history), std::move(asset_field_resolver)};
+  asset.history(std::move(asset_history));
+  asset.field_resolver(std::move(asset_field_resolver));
 }
 
 auto format_duration(std::size_t duration_in_seconds) -> std::string
