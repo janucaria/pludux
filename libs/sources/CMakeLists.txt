@@ -59,7 +59,7 @@ target_sources(${PROJECT_NAME}
         src/series/cached_results_rma_method.cxx
         src/series/wma_method.cxx
         src/series/hma_method.cxx
-        src/series/ma_method_type.cxx
+        src/series/adaptive_ma_method.cxx
         src/series/macd_method.cxx
         
         src/series/tr_method.cxx

@@ -12,7 +12,7 @@ TEST(BbMethodTest, ConstructorInitialization)
   {
     auto bb_method = BbMethod{};
 
-    EXPECT_EQ(bb_method.ma_type(), BbMaType::Sma);
+    EXPECT_EQ(bb_method.ma_type(), MaMethodType::Sma);
     EXPECT_EQ(bb_method.ma_source(), CloseMethod{});
     EXPECT_EQ(bb_method.period(), 20);
     EXPECT_EQ(bb_method.stddev(), 1.5);
@@ -20,16 +20,16 @@ TEST(BbMethodTest, ConstructorInitialization)
   {
     auto bb_method = BbMethod{10, 2.0};
 
-    EXPECT_EQ(bb_method.ma_type(), BbMaType::Sma);
+    EXPECT_EQ(bb_method.ma_type(), MaMethodType::Sma);
     EXPECT_EQ(bb_method.ma_source(), CloseMethod{});
     EXPECT_EQ(bb_method.period(), 10);
     EXPECT_EQ(bb_method.stddev(), 2.0);
   }
   {
     const auto bb_method =
-     BbMethod{BbMaType::Ema, DataMethod{"close"}, 10, 2.5};
+     BbMethod{MaMethodType::Ema, DataMethod{"close"}, 10, 2.5};
 
-    EXPECT_EQ(bb_method.ma_type(), BbMaType::Ema);
+    EXPECT_EQ(bb_method.ma_type(), MaMethodType::Ema);
     EXPECT_EQ(bb_method.ma_source(), DataMethod{"close"});
     EXPECT_EQ(bb_method.period(), 10);
     EXPECT_EQ(bb_method.stddev(), 2.5);
@@ -38,8 +38,8 @@ TEST(BbMethodTest, ConstructorInitialization)
 
 TEST(BbMethodTest, RunAllMethod)
 {
-  const auto asset_data = AssetHistory{
-   {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  const auto asset_data =
+   AssetHistory{{"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 
@@ -93,9 +93,12 @@ TEST(BbMethodTest, EqualityOperator)
 
 TEST(BbMethodTest, NotEqualOperator)
 {
-  const auto bb_method1 = BbMethod{BbMaType::Sma, DataMethod{"close"}, 10, 2.0};
-  const auto bb_method2 = BbMethod{BbMaType::Sma, DataMethod{"close"}, 10, 1.0};
-  const auto bb_method3 = BbMethod{BbMaType::Sma, DataMethod{"open"}, 10, 1.0};
+  const auto bb_method1 =
+   BbMethod{MaMethodType::Sma, DataMethod{"close"}, 10, 2.0};
+  const auto bb_method2 =
+   BbMethod{MaMethodType::Sma, DataMethod{"close"}, 10, 1.0};
+  const auto bb_method3 =
+   BbMethod{MaMethodType::Sma, DataMethod{"open"}, 10, 1.0};
 
   EXPECT_TRUE(bb_method1 != bb_method2);
   EXPECT_NE(bb_method1, bb_method2);

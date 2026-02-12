@@ -550,7 +550,7 @@ TEST_F(ConfigParserTest, ParseScreenerBbMethod)
 
   const auto ma_source = series_method_cast<DataMethod>(bb_method->ma_source());
   EXPECT_NE(ma_source, nullptr);
-  EXPECT_EQ(bb_method->ma_type(), BbMaType::Sma);
+  EXPECT_EQ(bb_method->ma_type(), MaMethodType::Sma);
   EXPECT_EQ(bb_method->period(), 20);
   EXPECT_EQ(bb_method->stddev(), 2.0);
 

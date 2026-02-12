@@ -13,7 +13,7 @@ import :method_contextable;
 import :series_output;
 
 import :series.tr_method;
-import :series.ma_method_type;
+import :series.adaptive_ma_method;
 
 export namespace pludux {
 
@@ -32,8 +32,7 @@ public:
   }
 
   explicit AtrMethod(MaMethodType ma_smoothing_type, std::size_t period)
-  : period_{period}
-  , ma_smoothing_type_{ma_smoothing_type}
+  : ma_smoothing_method_{ma_smoothing_type, TrMethod{}, period}
   {
   }
 
@@ -43,9 +42,7 @@ public:
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) noexcept -> ResultType
   {
-    const auto tr_method = TrMethod{};
-    const auto atr = call_ma_method(
-     self.ma_smoothing_type_, tr_method, self.period_, asset_snapshot, context);
+    const auto atr = self.ma_smoothing_method_(asset_snapshot, context);
 
     return atr;
   }
@@ -60,27 +57,26 @@ public:
 
   auto period(this AtrMethod self) noexcept -> std::size_t
   {
-    return self.period_;
+    return self.ma_smoothing_method_.period();
   }
 
   void period(this AtrMethod& self, std::size_t new_period) noexcept
   {
-    self.period_ = new_period;
+    self.ma_smoothing_method_.period(new_period);
   }
 
   auto ma_smoothing_type(this const AtrMethod& self) noexcept -> MaMethodType
   {
-    return self.ma_smoothing_type_;
+    return self.ma_smoothing_method_.ma_type();
   }
 
   void ma_smoothing_type(this AtrMethod& self, MaMethodType new_type) noexcept
   {
-    self.ma_smoothing_type_ = new_type;
+    self.ma_smoothing_method_.ma_type(new_type);
   }
 
 private:
-  std::size_t period_;
-  MaMethodType ma_smoothing_type_;
+  AdaptiveMaMethod<TrMethod> ma_smoothing_method_;
 };
 
 } // namespace pludux

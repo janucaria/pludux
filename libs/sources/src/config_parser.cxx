@@ -1110,17 +1110,17 @@ auto make_default_registered_config_parser() -> ConfigParser
      if(bb_method) {
        serialized_method = jsoncons::ojson{};
        serialized_method["maType"] =
-        [](BbMaType ma_type) static -> std::string {
+        [](MaMethodType ma_type) static -> std::string {
          switch(ma_type) {
-         case BbMaType::Sma:
+         case MaMethodType::Sma:
            return "SMA";
-         case BbMaType::Ema:
+         case MaMethodType::Ema:
            return "EMA";
-         case BbMaType::Wma:
+         case MaMethodType::Wma:
            return "WMA";
-         case BbMaType::Rma:
+         case MaMethodType::Rma:
            return "RMA";
-         case BbMaType::Hma:
+         case MaMethodType::Hma:
            return "HMA";
          default:
            const auto error_message =
@@ -1139,20 +1139,20 @@ auto make_default_registered_config_parser() -> ConfigParser
    },
    [](ConfigParser::Parser config_parser,
       const jsoncons::ojson& parameters) -> AnySeriesMethod {
-     auto ma_type = BbMaType::Sma;
+     auto ma_type = MaMethodType::Sma;
      const auto param_ma_type =
       get_param_or<std::string>(parameters, "maType", "SMA");
 
      if(param_ma_type == "SMA") {
-       ma_type = BbMaType::Sma;
+       ma_type = MaMethodType::Sma;
      } else if(param_ma_type == "EMA") {
-       ma_type = BbMaType::Ema;
+       ma_type = MaMethodType::Ema;
      } else if(param_ma_type == "WMA") {
-       ma_type = BbMaType::Wma;
+       ma_type = MaMethodType::Wma;
      } else if(param_ma_type == "RMA") {
-       ma_type = BbMaType::Rma;
+       ma_type = MaMethodType::Rma;
      } else if(param_ma_type == "HMA") {
-       ma_type = BbMaType::Hma;
+       ma_type = MaMethodType::Hma;
      } else {
        const auto error_message =
         std::format("Error BB.maType: Unknown maType {}", param_ma_type);

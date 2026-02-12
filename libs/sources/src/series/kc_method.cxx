@@ -17,7 +17,7 @@ import :series.ohlcv_method;
 import :series.operators_method;
 import :series.tr_method;
 import :series.atr_method;
-import :series.ma_method_type;
+import :series.adaptive_ma_method;
 
 export namespace pludux {
 
@@ -54,11 +54,9 @@ public:
            KcBandMethodType band_method_type,
            std::size_t band_atr_period,
            double multiplier)
-  : ma_source_{std::move(ma_source)}
-  , ma_period_{ma_period}
-  , band_atr_period_{band_atr_period}
+  : band_atr_period_{band_atr_period}
   , multiplier_{multiplier}
-  , ma_method_type_{ma_method_type}
+  , ma_method_{ma_method_type, std::move(ma_source), ma_period}
   , band_method_type_{band_method_type}
   {
   }
@@ -77,7 +75,7 @@ public:
                   SeriesOutput output,
                   MethodContextable auto context) noexcept -> ResultType
   {
-    const auto range = [&]() -> double {
+    const auto band_range = [&]() -> double {
       switch(self.band_method_type_) {
       case KcBandMethodType::Atr: {
         const auto atr_method = AtrMethod{self.band_atr_period_};
@@ -94,21 +92,17 @@ public:
       default:
         return std::numeric_limits<double>::quiet_NaN();
       }
-    }() * self.multiplier_;
+    };
 
-    const auto middle = call_ma_method(self.ma_method_type_,
-                                       self.ma_source_,
-                                       self.ma_period_,
-                                       asset_snapshot,
-                                       context);
+    const auto middle = self.ma_method_(asset_snapshot, context);
 
     switch(output) {
     case SeriesOutput::MiddleBand:
       return middle;
     case SeriesOutput::UpperBand:
-      return middle + range;
+      return middle + (self.multiplier_ * band_range());
     case SeriesOutput::LowerBand:
-      return middle - range;
+      return middle - (self.multiplier_ * band_range());
     default:
       return std::numeric_limits<double>::quiet_NaN();
     }
@@ -126,32 +120,32 @@ public:
 
   auto ma_period(this const KcMethod& self) noexcept -> std::size_t
   {
-    return self.ma_period_;
+    return self.ma_method_.period();
   }
 
   void ma_period(this KcMethod& self, std::size_t ma_period) noexcept
   {
-    self.ma_period_ = ma_period;
+    self.ma_method_.period(ma_period);
   }
 
   auto ma_method_type(this const KcMethod& self) noexcept -> MaMethodType
   {
-    return self.ma_method_type_;
+    return self.ma_method_.ma_type();
   }
 
   void ma_method_type(this KcMethod& self, MaMethodType ma_method_type) noexcept
   {
-    self.ma_method_type_ = ma_method_type;
+    self.ma_method_.ma_type(ma_method_type);
   }
 
   auto ma_source(this const KcMethod& self) noexcept -> const TMaSourceMethod&
   {
-    return self.ma_source_;
+    return self.ma_method_.source();
   }
 
   void ma_source(this KcMethod& self, TMaSourceMethod ma_source) noexcept
   {
-    self.ma_source_ = std::move(ma_source);
+    self.ma_method_.source(std::move(ma_source));
   }
 
   auto band_method_type(this const KcMethod& self) noexcept -> KcBandMethodType
@@ -177,13 +171,10 @@ public:
   }
 
 private:
-  TMaSourceMethod ma_source_;
-
-  std::size_t ma_period_;
   std::size_t band_atr_period_;
   double multiplier_;
 
-  MaMethodType ma_method_type_;
+  AdaptiveMaMethod<TMaSourceMethod> ma_method_;
   KcBandMethodType band_method_type_;
 };
 

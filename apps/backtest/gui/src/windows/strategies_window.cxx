@@ -100,7 +100,7 @@ auto get_default_series_method(const std::string& series_id) -> AnySeriesMethod
   } else if(series_id == "STDDEV") {
     return StddevAnyMethod{CloseMethod{}, 14};
   } else if(series_id == "BB") {
-    return BbMethod{BbMaType::Sma, CloseMethod{}, 20, 2.0};
+    return BbMethod{MaMethodType::Sma, CloseMethod{}, 20, 2.0};
   } else if(series_id == "KC") {
     return KcMethod{
      CloseMethod{}, MaMethodType::Ema, 20, KcBandMethodType::Atr, 14, 1.5};
@@ -1234,24 +1234,24 @@ private:
     ImGui::Text("MA Type:");
     ImGui::SameLine();
     {
-      const auto ma_type_options = std::vector<BbMaType>{BbMaType::Sma,
-                                                         BbMaType::Ema,
-                                                         BbMaType::Wma,
-                                                         BbMaType::Hma,
-                                                         BbMaType::Rma};
+      const auto ma_type_options = std::vector<MaMethodType>{MaMethodType::Sma,
+                                                             MaMethodType::Ema,
+                                                             MaMethodType::Wma,
+                                                             MaMethodType::Hma,
+                                                             MaMethodType::Rma};
 
       const auto get_ma_type_string =
-       [](BbMaType ma_type) static -> std::string {
+       [](MaMethodType ma_type) static -> std::string {
         switch(ma_type) {
-        case BbMaType::Sma:
+        case MaMethodType::Sma:
           return "SMA";
-        case BbMaType::Ema:
+        case MaMethodType::Ema:
           return "EMA";
-        case BbMaType::Wma:
+        case MaMethodType::Wma:
           return "WMA";
-        case BbMaType::Hma:
+        case MaMethodType::Hma:
           return "HMA";
-        case BbMaType::Rma:
+        case MaMethodType::Rma:
           return "RMA";
         }
 

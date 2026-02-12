@@ -30,7 +30,7 @@ export import :series.cached_results_rma_method;
 export import :series.wma_method;
 export import :series.hma_method;
 export import :series.macd_method;
-export import :series.ma_method_type;
+export import :series.adaptive_ma_method;
 
 export import :series.tr_method;
 export import :series.atr_method;
