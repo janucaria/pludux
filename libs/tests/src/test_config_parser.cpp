@@ -1593,3 +1593,33 @@ TEST_F(ConfigParserTest, ParseAnyConditionMethodWithInvalidRequiredFields)
 
   EXPECT_THROW(config_parser.parse_filter(config), std::exception);
 }
+
+TEST_F(ConfigParserTest, SeriesMethodRegistrySerializationDeserialization)
+{
+  const auto config = json::parse(R"(
+    {
+      "name1": {
+        "method": "DATA",
+        "field": "close"
+      },
+      "name2": {
+        "method": "VALUE",
+        "value": 100
+      }
+    }
+  )");
+
+  auto registry = SeriesMethodRegistry{};
+  registry.set("name1", DataMethod{"close"});
+  registry.set("name2", ValueMethod{100});
+
+  const auto serialized_config =
+   config_parser.serialize_registered_methods(registry);
+
+  const auto deserialized_registry =
+   config_parser.parse_registered_methods(serialized_config);
+  const auto deserialized_config =
+   config_parser.parse_registered_methods(config);
+  EXPECT_EQ(deserialized_config, deserialized_registry);
+  EXPECT_EQ(registry, deserialized_registry);
+}

@@ -322,7 +322,6 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
                                   std::istream& json_strategy_stream)
  -> backtest::Strategy
 {
-  auto series_registry = SeriesMethodRegistry{};
   auto config_parser = make_default_registered_config_parser();
 
   auto strategy_json = jsoncons::ojson::parse(
@@ -341,13 +340,10 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
     }
   }
 
-  if(strategy_json.contains("series")) {
-    for(const auto& [name, series_method] :
-        strategy_json["series"].object_range()) {
-      const auto method = config_parser.parse_method(series_method);
-      series_registry.set(name, method);
-    }
-  }
+  auto series_registry =
+   strategy_json.contains("series")
+    ? config_parser.parse_registered_methods(strategy_json.at("series"))
+    : SeriesMethodRegistry{};
 
   auto risk_parser = risk_reward_config_parser();
   const auto risk_config = strategy_json.at("risk");
@@ -430,6 +426,14 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
                                     take_profit_risk_multiplier};
 }
 
+auto parse_backtest_strategy_json(std::string_view strategy_name,
+                                  const std::string& json_strategy_str)
+ -> backtest::Strategy
+{
+  auto json_strategy_stream = std::istringstream{json_strategy_str};
+  return parse_backtest_strategy_json(strategy_name, json_strategy_stream);
+}
+
 auto stringify_backtest_strategy(const backtest::Strategy& strategy)
  -> jsoncons::ojson
 {
@@ -440,11 +444,8 @@ auto stringify_backtest_strategy(const backtest::Strategy& strategy)
 
   strategy_json["version"] = 1;
 
-  auto series_json = jsoncons::ojson{};
-  for(const auto& [name, method] : strategy.series_registry()) {
-    series_json[name] = config_parser.serialize_method(method);
-  }
-  strategy_json["series"] = std::move(series_json);
+  strategy_json["series"] =
+   config_parser.serialize_registered_methods(strategy.series_registry());
 
   strategy_json["risk"] = risk_parser.serialize_method(strategy.risk_method());
 

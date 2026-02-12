@@ -238,120 +238,21 @@ void load(Archive& archive, pludux::backtest::BacktestSummary& summary)
 template<class Archive>
 void save(Archive& archive, const pludux::backtest::Strategy& strategy)
 {
-  auto risk_parser = pludux::backtest::risk_reward_config_parser();
-  const auto risk_method_json =
-   risk_parser.serialize_method(strategy.risk_method());
-
-  auto config_parser = pludux::make_default_registered_config_parser();
-
-  const auto long_entry_filter_json =
-   config_parser.serialize_filter(strategy.long_entry_filter());
-  const auto long_exit_filter_json =
-   config_parser.serialize_filter(strategy.long_exit_filter());
-
-  const auto short_entry_filter_json =
-   config_parser.serialize_filter(strategy.short_entry_filter());
-  const auto short_exit_filter_json =
-   config_parser.serialize_filter(strategy.short_exit_filter());
-
-  const auto stop_loss_enabled = strategy.stop_loss_enabled();
-  const auto stop_loss_trailing_enabled = strategy.stop_loss_trailing_enabled();
-
-  const auto take_profit_enabled = strategy.take_profit_enabled();
-  const auto take_profit_risk_multiplier =
-   strategy.take_profit_risk_multiplier();
-
-  const auto& series_registry = strategy.series_registry();
-  auto registered_methods = std::unordered_map<std::string, std::string>{};
-  for(const auto& [method_name, method] : series_registry) {
-    registered_methods[method_name] =
-     config_parser.serialize_method(method).to_string();
-  }
-
-  const auto risk_method_str = risk_method_json.to_string();
-  const auto long_entry_filter_str = long_entry_filter_json.to_string();
-  const auto long_exit_filter_str = long_exit_filter_json.to_string();
-  const auto short_entry_filter_str = short_entry_filter_json.to_string();
-  const auto short_exit_filter_str = short_exit_filter_json.to_string();
+  auto strategy_json = pludux::backtest::stringify_backtest_strategy(strategy);
 
   archive(make_nvp("name", strategy.name()),
-          make_nvp("registeredMethods", registered_methods),
-          make_nvp("riskMethod", risk_method_str),
-          make_nvp("longEntryMethod", long_entry_filter_str),
-          make_nvp("longExitMethod", long_exit_filter_str),
-          make_nvp("shortEntryMethod", short_entry_filter_str),
-          make_nvp("shortExitMethod", short_exit_filter_str),
-          make_nvp("stopLossEnabled", stop_loss_enabled),
-          make_nvp("stopLossTrailingEnabled", stop_loss_trailing_enabled),
-          make_nvp("takeProfitEnabled", take_profit_enabled),
-          make_nvp("takeProfitRiskMultiplier", take_profit_risk_multiplier));
+          make_nvp("strategyJson", strategy_json.to_string()));
 }
 
 template<class Archive>
 void load(Archive& archive, pludux::backtest::Strategy& strategy)
 {
   auto name = std::string{};
-  auto registered_methods = std::unordered_map<std::string, std::string>{};
-  auto risk_method_str = std::string{};
-  auto long_entry_filter_str = std::string{};
-  auto long_exit_filter_str = std::string{};
-  auto short_entry_filter_str = std::string{};
-  auto short_exit_filter_str = std::string{};
-  auto stop_loss_enabled = bool{};
-  auto stop_loss_trailing_enabled = bool{};
-  auto take_profit_enabled = bool{};
-  auto take_profit_risk_multiplier = double{};
+  auto strategy_str = std::string{};
 
-  archive(make_nvp("name", name),
-          make_nvp("registeredMethods", registered_methods),
-          make_nvp("riskMethod", risk_method_str),
-          make_nvp("longEntryMethod", long_entry_filter_str),
-          make_nvp("longExitMethod", long_exit_filter_str),
-          make_nvp("shortEntryMethod", short_entry_filter_str),
-          make_nvp("shortExitMethod", short_exit_filter_str),
-          make_nvp("stopLossEnabled", stop_loss_enabled),
-          make_nvp("stopLossTrailingEnabled", stop_loss_trailing_enabled),
-          make_nvp("takeProfitEnabled", take_profit_enabled),
-          make_nvp("takeProfitRiskMultiplier", take_profit_risk_multiplier));
+  archive(make_nvp("name", name), make_nvp("strategyJson", strategy_str));
 
-  const auto risk_method_json = jsoncons::ojson::parse(risk_method_str);
-  const auto long_entry_filter_json =
-   jsoncons::ojson::parse(long_entry_filter_str);
-  const auto long_exit_filter_json =
-   jsoncons::ojson::parse(long_exit_filter_str);
-  const auto short_entry_filter_json =
-   jsoncons::ojson::parse(short_entry_filter_str);
-  const auto short_exit_filter_json =
-   jsoncons::ojson::parse(short_exit_filter_str);
-
-  auto risk_parser = pludux::backtest::risk_reward_config_parser();
-  auto risk_method = risk_parser.parse_method(risk_method_json);
-
-  auto config_parser = pludux::make_default_registered_config_parser();
-
-  auto long_entry_filter = config_parser.parse_filter(long_entry_filter_json);
-  auto long_exit_filter = config_parser.parse_filter(long_exit_filter_json);
-  auto short_entry_filter = config_parser.parse_filter(short_entry_filter_json);
-  auto short_exit_filter = config_parser.parse_filter(short_exit_filter_json);
-
-  auto series_registry = pludux::SeriesMethodRegistry{};
-  for(const auto& [method_name, method_str] : registered_methods) {
-    const auto method_json = jsoncons::ojson::parse(method_str);
-    const auto method = config_parser.parse_method(method_json);
-    series_registry.set(method_name, method);
-  }
-
-  strategy = pludux::backtest::Strategy{std::move(name),
-                                        std::move(series_registry),
-                                        std::move(risk_method),
-                                        std::move(long_entry_filter),
-                                        std::move(long_exit_filter),
-                                        std::move(short_entry_filter),
-                                        std::move(short_exit_filter),
-                                        stop_loss_enabled,
-                                        stop_loss_trailing_enabled,
-                                        take_profit_enabled,
-                                        take_profit_risk_multiplier};
+  strategy = pludux::backtest::parse_backtest_strategy_json(name, strategy_str);
 }
 
 /*--------------------------------------------------------------------------------------*/

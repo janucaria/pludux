@@ -204,6 +204,33 @@ public:
     return serialized_method;
   }
 
+  auto serialize_registered_methods(this const ConfigParser& self,
+                                    const SeriesMethodRegistry& registry)
+   -> jsoncons::ojson
+  {
+    auto registered_methods = jsoncons::ojson{};
+
+    for(const auto& [method_name, method] : registry) {
+      registered_methods[method_name] = self.serialize_method(method);
+    }
+
+    return registered_methods;
+  }
+
+  auto parse_registered_methods(this ConfigParser& self,
+                                const jsoncons::ojson& config)
+   -> SeriesMethodRegistry
+  {
+    auto registry = SeriesMethodRegistry{};
+
+    for(const auto& [method_name, method_config] : config.object_range()) {
+      const auto method = self.parse_method(method_config);
+      registry.set(method_name, method);
+    }
+
+    return registry;
+  }
+
 private:
   std::unordered_map<std::string,
                      std::pair<ConditionSerialize, ConditionDeserialize>>
