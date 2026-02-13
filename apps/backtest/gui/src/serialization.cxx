@@ -1,9 +1,12 @@
 module;
 
 #include <algorithm>
+#include <memory>
 #include <ranges>
+#include <string>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 #include <cereal/cereal.hpp>
 #include <jsoncons/json.hpp>
@@ -517,25 +520,20 @@ void load(Archive& archive, pludux::backtest::Backtest& backtest)
 template<class Archive>
 void save(Archive& archive, const pludux::apps::ApplicationState& app_state)
 {
-  auto assets = app_state.assets();
-  auto strategies = app_state.strategies();
-  auto markets = app_state.markets();
-  auto brokers = app_state.brokers();
-  auto profiles = app_state.profiles();
-  auto backtests = app_state.backtests();
-
-  archive(make_nvp("alertMessages", app_state.alert_messages()));
-  archive(make_nvp("backtests", backtests));
-  archive(make_nvp("assets", assets));
-  archive(make_nvp("strategies", strategies));
-  archive(make_nvp("markets", markets));
-  archive(make_nvp("brokers", brokers));
-  archive(make_nvp("profiles", profiles));
+  archive(make_nvp("$version", std::string{PLUDUX_VERSION}),
+          make_nvp("alertMessages", app_state.alert_messages()),
+          make_nvp("backtests", app_state.backtests()),
+          make_nvp("assets", app_state.assets()),
+          make_nvp("strategies", app_state.strategies()),
+          make_nvp("markets", app_state.markets()),
+          make_nvp("brokers", app_state.brokers()),
+          make_nvp("profiles", app_state.profiles()));
 }
 
 template<class Archive>
 void load(Archive& archive, pludux::apps::ApplicationState& app_state)
 {
+  auto version = std::string{};
   auto alert_messages = std::queue<std::string>{};
   auto assets = std::vector<std::shared_ptr<pludux::backtest::Asset>>{};
   auto strategies = std::vector<std::shared_ptr<pludux::backtest::Strategy>>{};
@@ -544,6 +542,7 @@ void load(Archive& archive, pludux::apps::ApplicationState& app_state)
   auto profiles = std::vector<std::shared_ptr<pludux::backtest::Profile>>{};
   auto backtests = std::vector<std::shared_ptr<pludux::backtest::Backtest>>{};
 
+  archive(make_nvp("$version", version));
   archive(make_nvp("alertMessages", alert_messages));
   archive(make_nvp("backtests", backtests));
   archive(make_nvp("assets", assets));
@@ -553,6 +552,12 @@ void load(Archive& archive, pludux::apps::ApplicationState& app_state)
   archive(make_nvp("profiles", profiles));
 
   const auto selected_backtest_index = !backtests.empty() ? 0 : -1;
+
+  if(version != PLUDUX_VERSION) {
+    for(auto& backtest : backtests) {
+      backtest->reset();
+    }
+  }
 
   app_state = pludux::apps::ApplicationState{selected_backtest_index,
                                              std::move(alert_messages),
