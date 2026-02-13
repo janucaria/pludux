@@ -175,8 +175,8 @@ public:
 #else
             auto nfd_guard = NFD::Guard{};
             auto in_path = NFD::UniquePath{};
-            const auto filter_item = std::array<nfdfilteritem_t, 1>{
-             {"Pludux Files", "pludux"}};
+            const auto filter_item =
+             std::array<nfdfilteritem_t, 1>{{"Pludux Files", "pludux"}};
             auto result =
              NFD::OpenDialog(in_path, filter_item.data(), filter_item.size());
             if(result == NFD_OKAY) {
@@ -243,8 +243,8 @@ public:
             auto nfd_guard = NFD::Guard{};
             auto out_path = NFD::UniquePath{};
 
-            const auto filter_item = std::array<nfdfilteritem_t, 1>{
-             {"Pludux Files", "pludux"}};
+            const auto filter_item =
+             std::array<nfdfilteritem_t, 1>{{"Pludux Files", "pludux"}};
 
             auto result =
              NFD::SaveDialog(out_path, filter_item.data(), filter_item.size());
@@ -320,7 +320,7 @@ public:
 
         ImGui::Separator();
         ImGui::Text("%s", "This software is licensed under the AGPL License.");
-        ImGui::Text("%s", "Copyright (c) 2025 Januar Andaria");
+        ImGui::Text("%s", "Copyright (c) 2026 Januar Andaria");
         ImGui::Text("%s",
                     "Full licence text included in the LICENSE.txt file.");
 
