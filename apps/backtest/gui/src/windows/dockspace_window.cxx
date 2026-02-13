@@ -143,7 +143,7 @@ public:
              {
                var fileSelector = document.createElement('input');
                fileSelector.type = 'file';
-               fileSelector.accept = '.pludux-json';
+               fileSelector.accept = '.pludux';
                fileSelector.onchange = function(event)
                {
                  var file = event.target.files[0];
@@ -176,7 +176,7 @@ public:
             auto nfd_guard = NFD::Guard{};
             auto in_path = NFD::UniquePath{};
             const auto filter_item = std::array<nfdfilteritem_t, 1>{
-             {"Pludux JSON Files", "pludux-json"}};
+             {"Pludux Files", "pludux"}};
             auto result =
              NFD::OpenDialog(in_path, filter_item.data(), filter_item.size());
             if(result == NFD_OKAY) {
@@ -209,7 +209,7 @@ public:
 
         {
 #ifdef __EMSCRIPTEN__
-          constexpr auto menu_item_save_as = "Save";
+          constexpr auto menu_item_save_as = "Download";
           if(ImGui::MenuItem(menu_item_save_as)) {
             auto out_stream = std::ostringstream{};
             auto out_archive = cereal::JSONOutputArchive(
@@ -225,7 +225,7 @@ public:
             EM_ASM(
              {
                var fileSave = document.createElement('a');
-               fileSave.download = 'saved.pludux-json';
+               fileSave.download = 'download.pludux';
                fileSave.style.display = 'none';
                var data = new Blob([Module.UTF8ToString($0)], {
                  type:
@@ -244,7 +244,7 @@ public:
             auto out_path = NFD::UniquePath{};
 
             const auto filter_item = std::array<nfdfilteritem_t, 1>{
-             {"Pludux JSON Files", "pludux-json"}};
+             {"Pludux Files", "pludux"}};
 
             auto result =
              NFD::SaveDialog(out_path, filter_item.data(), filter_item.size());
