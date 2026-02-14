@@ -1,15 +1,12 @@
 {
+  "version": 1,
   "series": {
     "kchannel": {
       "method": "KC",
-      "ma": {
-        "method": "EMA",
-        "period": 20
-      },
-      "range": {
-        "method": "ATR",
-        "period": 10
-      },
+      "maPeriod": "20",
+      "maMethodType": "EMA",
+      "BandMethodType": "ATR",
+      "bandAtrPeriod": 10,
       "multiplier": 2
     },
     "kc_upper": {

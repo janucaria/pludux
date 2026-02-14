@@ -2,7 +2,7 @@ SET(JSONCONS_BUILD_TESTS OFF)
 FetchContent_Declare(
   jsoncons
   GIT_REPOSITORY https://github.com/danielaparker/jsoncons.git
-  GIT_TAG        v1.4.1
+  GIT_TAG        v1.5.0
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
   OVERRIDE_FIND_PACKAGE
@@ -28,9 +28,9 @@ target_sources(${PROJECT_NAME}
         src/asset_data.cxx
         src/asset_series.cxx
         src/asset_history.cxx
+        src/asset_quote_field_resolver.cxx
         src/asset_snapshot.cxx
 
-        
         src/series_output.cxx
         src/method_contextable.cxx
         src/any_method_context.cxx
@@ -50,12 +50,16 @@ target_sources(${PROJECT_NAME}
         src/series/highest_method.cxx
         src/series/lowest_method.cxx
         src/series/percentage_method.cxx
+        src/series/stddev_method.cxx
 
         src/series/sma_method.cxx
         src/series/ema_method.cxx
+        src/series/cached_results_ema_method.cxx
         src/series/rma_method.cxx
+        src/series/cached_results_rma_method.cxx
         src/series/wma_method.cxx
         src/series/hma_method.cxx
+        src/series/adaptive_ma_method.cxx
         src/series/macd_method.cxx
         
         src/series/tr_method.cxx

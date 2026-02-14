@@ -204,6 +204,33 @@ public:
     return serialized_method;
   }
 
+  auto serialize_registered_methods(this const ConfigParser& self,
+                                    const SeriesMethodRegistry& registry)
+   -> jsoncons::ojson
+  {
+    auto registered_methods = jsoncons::ojson{};
+
+    for(const auto& [method_name, method] : registry) {
+      registered_methods[method_name] = self.serialize_method(method);
+    }
+
+    return registered_methods;
+  }
+
+  auto parse_registered_methods(this ConfigParser& self,
+                                const jsoncons::ojson& config)
+   -> SeriesMethodRegistry
+  {
+    auto registry = SeriesMethodRegistry{};
+
+    for(const auto& [method_name, method_config] : config.object_range()) {
+      const auto method = self.parse_method(method_config);
+      registry.set(method_name, method);
+    }
+
+    return registry;
+  }
+
 private:
   std::unordered_map<std::string,
                      std::pair<ConditionSerialize, ConditionDeserialize>>
@@ -353,8 +380,33 @@ static auto parse_atr_method(ConfigParser::Parser config_parser,
     atr_method.period(parameters.at("period").as<std::size_t>());
   }
 
-  if(parameters.contains("multiplier")) {
-    atr_method.multiplier(parameters.at("multiplier").as_double());
+  if(parameters.contains("maSmoothingType")) {
+    const auto ma_type = [](const std::string& ma_type_str) {
+      if(ma_type_str == "SMA") {
+        return MaMethodType::Sma;
+      }
+
+      if(ma_type_str == "EMA") {
+        return MaMethodType::Ema;
+      }
+
+      if(ma_type_str == "WMA") {
+        return MaMethodType::Wma;
+      }
+
+      if(ma_type_str == "HMA") {
+        return MaMethodType::Hma;
+      }
+
+      if(ma_type_str == "RMA") {
+        return MaMethodType::Rma;
+      }
+
+      // TODO: Raise error on unknown type
+      return MaMethodType::Rma;
+    }(parameters.at("maSmoothingType").as_string());
+
+    atr_method.ma_smoothing_type(ma_type);
   }
 
   return atr_method;
@@ -370,7 +422,21 @@ static auto serialize_atr_method(const ConfigParser& config_parser,
   if(atr_method) {
     serialized_method = jsoncons::ojson{};
     serialized_method["period"] = atr_method->period();
-    serialized_method["multiplier"] = atr_method->multiplier();
+    serialized_method["maSmoothingType"] = [](MaMethodType ma_type) static {
+      switch(ma_type) {
+      case MaMethodType::Sma:
+        return "SMA";
+      case MaMethodType::Ema:
+        return "EMA";
+      case MaMethodType::Wma:
+        return "WMA";
+      case MaMethodType::Rma:
+        return "RMA";
+      default:
+        // TODO: Raise error on unknown type
+        return "RMA";
+      }
+    }(atr_method->ma_smoothing_type());
   }
 
   return serialized_method;
@@ -382,13 +448,43 @@ static auto serialize_kc_method(const ConfigParser& config_parser,
 {
   auto serialized_method = jsoncons::ojson::null();
 
-  auto kc_method =
-   series_method_cast<KcMethod<AnySeriesMethod, AnySeriesMethod>>(method);
+  auto kc_method = series_method_cast<KcMethod<AnySeriesMethod>>(method);
   if(kc_method) {
     serialized_method = jsoncons::ojson{};
-    serialized_method["ma"] = config_parser.serialize_method(kc_method->ma());
-    serialized_method["range"] =
-     config_parser.serialize_method(kc_method->range());
+    serialized_method["maMethodType"] = [&]() {
+      switch(kc_method->ma_method_type()) {
+      case MaMethodType::Sma:
+        return "SMA";
+      case MaMethodType::Ema:
+        return "EMA";
+      case MaMethodType::Wma:
+        return "WMA";
+      case MaMethodType::Hma:
+        return "HMA";
+      case MaMethodType::Rma:
+        return "RMA";
+      default:
+        // TODO: Raise error on unknown type
+        return "EMA";
+      }
+    }();
+    serialized_method["maPeriod"] = kc_method->ma_period();
+    serialized_method["maSource"] =
+     config_parser.serialize_method(kc_method->ma_source());
+    serialized_method["bandMethodType"] = [&]() {
+      switch(kc_method->band_method_type()) {
+      case KcBandMethodType::Atr:
+        return "ATR";
+      case KcBandMethodType::Tr:
+        return "TR";
+      case KcBandMethodType::RangeHighLow:
+        return "Range";
+      default:
+        // TODO: Raise error on unknown type
+        return "ATR";
+      }
+    }();
+    serialized_method["bandAtrPeriod"] = kc_method->band_atr_period();
     serialized_method["multiplier"] = kc_method->multiplier();
   }
 
@@ -399,11 +495,67 @@ static auto parse_kc_method(ConfigParser::Parser config_parser,
                             const jsoncons::ojson& parameters)
  -> AnySeriesMethod
 {
-  const auto ma_method = config_parser.parse_method(parameters.at("ma"));
-  const auto range_method = config_parser.parse_method(parameters.at("range"));
-  const auto multiplier = parameters.at("multiplier").as_double();
+  const auto ma_method_type = [&]() {
+    const auto ma_type_str =
+     get_param_or<std::string>(parameters, "maMethodType", "EMA");
 
-  const auto kc_method = KcMethod{ma_method, range_method, multiplier};
+    if(ma_type_str == "SMA") {
+      return MaMethodType::Sma;
+    }
+
+    if(ma_type_str == "EMA") {
+      return MaMethodType::Ema;
+    }
+
+    if(ma_type_str == "WMA") {
+      return MaMethodType::Wma;
+    }
+
+    if(ma_type_str == "HMA") {
+      return MaMethodType::Hma;
+    }
+
+    if(ma_type_str == "RMA") {
+      return MaMethodType::Rma;
+    }
+
+    // TODO: Raise error on unknown type
+    return MaMethodType::Ema;
+  }();
+  const auto ma_period = get_param_or<std::size_t>(parameters, "maPeriod", 20);
+  const auto ma_source = parse_method_from_param_or(
+   config_parser, parameters, "maSource", CloseMethod{});
+
+  const auto band_method_type = [&]() {
+    const auto band_type_str =
+     get_param_or<std::string>(parameters, "bandMethodType", "ATR");
+
+    if(band_type_str == "ATR") {
+      return KcBandMethodType::Atr;
+    }
+
+    if(band_type_str == "TR") {
+      return KcBandMethodType::Tr;
+    }
+
+    if(band_type_str == "Range") {
+      return KcBandMethodType::RangeHighLow;
+    }
+
+    // TODO: Raise error on unknown type
+    return KcBandMethodType::Atr;
+  }();
+  const auto band_atr_period =
+   get_param_or<std::size_t>(parameters, "bandAtrPeriod", 14);
+  const auto multiplier = get_param_or<double>(parameters, "multiplier", 1.5);
+
+  const auto kc_method = KcMethod<AnySeriesMethod>{ma_source,
+                                                   ma_method_type,
+                                                   ma_period,
+                                                   band_method_type,
+                                                   band_atr_period,
+                                                   multiplier};
+
   return kc_method;
 }
 
@@ -794,8 +946,8 @@ auto make_default_registered_config_parser() -> ConfigParser
 
   config_parser.register_method_parser(
    "EMA",
-   serialize_ta_with_period_method<EmaMethod>,
-   parse_ta_with_period_method<EmaMethod>);
+   serialize_ta_with_period_method<CachedResultsEmaMethod>,
+   parse_ta_with_period_method<CachedResultsEmaMethod>);
 
   config_parser.register_method_parser(
    "WMA",
@@ -804,8 +956,8 @@ auto make_default_registered_config_parser() -> ConfigParser
 
   config_parser.register_method_parser(
    "RMA",
-   serialize_ta_with_period_method<RmaMethod>,
-   parse_ta_with_period_method<RmaMethod>);
+   serialize_ta_with_period_method<CachedResultsRmaMethod>,
+   parse_ta_with_period_method<CachedResultsRmaMethod>);
 
   config_parser.register_method_parser(
    "HMA",
@@ -985,17 +1137,17 @@ auto make_default_registered_config_parser() -> ConfigParser
      if(bb_method) {
        serialized_method = jsoncons::ojson{};
        serialized_method["maType"] =
-        [](BbMaType ma_type) static -> std::string {
+        [](MaMethodType ma_type) static -> std::string {
          switch(ma_type) {
-         case BbMaType::Sma:
+         case MaMethodType::Sma:
            return "SMA";
-         case BbMaType::Ema:
+         case MaMethodType::Ema:
            return "EMA";
-         case BbMaType::Wma:
+         case MaMethodType::Wma:
            return "WMA";
-         case BbMaType::Rma:
+         case MaMethodType::Rma:
            return "RMA";
-         case BbMaType::Hma:
+         case MaMethodType::Hma:
            return "HMA";
          default:
            const auto error_message =
@@ -1014,20 +1166,20 @@ auto make_default_registered_config_parser() -> ConfigParser
    },
    [](ConfigParser::Parser config_parser,
       const jsoncons::ojson& parameters) -> AnySeriesMethod {
-     auto ma_type = BbMaType::Sma;
+     auto ma_type = MaMethodType::Sma;
      const auto param_ma_type =
       get_param_or<std::string>(parameters, "maType", "SMA");
 
      if(param_ma_type == "SMA") {
-       ma_type = BbMaType::Sma;
+       ma_type = MaMethodType::Sma;
      } else if(param_ma_type == "EMA") {
-       ma_type = BbMaType::Ema;
+       ma_type = MaMethodType::Ema;
      } else if(param_ma_type == "WMA") {
-       ma_type = BbMaType::Wma;
+       ma_type = MaMethodType::Wma;
      } else if(param_ma_type == "RMA") {
-       ma_type = BbMaType::Rma;
+       ma_type = MaMethodType::Rma;
      } else if(param_ma_type == "HMA") {
-       ma_type = BbMaType::Hma;
+       ma_type = MaMethodType::Hma;
      } else {
        const auto error_message =
         std::format("Error BB.maType: Unknown maType {}", param_ma_type);
@@ -1216,6 +1368,21 @@ auto make_default_registered_config_parser() -> ConfigParser
 
      return PercentageMethod{base_method, percent};
    });
+  config_parser.register_method_parser(
+   "SQRT",
+   [](const ConfigParser& config_parser,
+      const AnySeriesMethod& any_series_method) -> jsoncons::ojson {
+     return serialize_unary_function_method<SqrtMethod>(
+      config_parser, any_series_method, "operand");
+   },
+   [](ConfigParser::Parser config_parser, const jsoncons::ojson& parameters) {
+     return parse_unary_function_method<SqrtMethod>(
+      config_parser, parameters, "operand");
+   });
+  config_parser.register_method_parser(
+   "STDDEV",
+   serialize_ta_with_period_method<StddevMethod>,
+   parse_ta_with_period_method<StddevMethod>);
   config_parser.register_filter_parser(
    "ALL_OF", serialize_all_of_filter, parse_all_of_filter);
   config_parser.register_filter_parser(

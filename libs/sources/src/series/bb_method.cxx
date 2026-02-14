@@ -13,17 +13,11 @@ import :asset_snapshot;
 import :method_contextable;
 import :series_output;
 
-import :series.sma_method;
-import :series.ema_method;
-import :series.wma_method;
-import :series.rma_method;
-import :series.hma_method;
-
+import :series.adaptive_ma_method;
 import :series.ohlcv_method;
+import :series.stddev_method;
 
 export namespace pludux {
-
-enum class BbMaType { Sma, Ema, Wma, Rma, Hma };
 
 template<typename TMaSourceMethod = CloseMethod>
   requires requires { typename TMaSourceMethod::ResultType; }
@@ -36,18 +30,16 @@ public:
   {
   }
 
-  explicit BbMethod(std::size_t period, double stddev)
-  : BbMethod{BbMaType::Sma, TMaSourceMethod{}, period, stddev}
+  BbMethod(std::size_t period, double stddev)
+  : BbMethod{MaMethodType::Sma, TMaSourceMethod{}, period, stddev}
   {
   }
 
-  explicit BbMethod(BbMaType ma_type,
-                    TMaSourceMethod ma,
-                    std::size_t period,
-                    double stddev)
-  : ma_type_{ma_type}
-  , ma_source_{std::move(ma)}
-  , period_{period}
+  BbMethod(MaMethodType ma_type,
+           TMaSourceMethod ma,
+           std::size_t period,
+           double stddev)
+  : ma_method_{ma_type, std::move(ma), period}
   , stddev_{stddev}
   {
   }
@@ -66,75 +58,44 @@ public:
                   SeriesOutput output,
                   MethodContextable auto context) noexcept -> ResultType
   {
-    const auto middle = [&]() -> ResultType {
-      switch(self.ma_type_) {
-      case BbMaType::Sma: {
-        const auto ma = SmaMethod{self.ma_source_, self.period_};
-        return ma(asset_snapshot, context);
-      }
-      case BbMaType::Ema: {
-        const auto ma = EmaMethod{self.ma_source_, self.period_};
-        return ma(asset_snapshot, context);
-      }
-      case BbMaType::Wma: {
-        const auto ma = WmaMethod{self.ma_source_, self.period_};
-        return ma(asset_snapshot, context);
-      }
-      case BbMaType::Rma: {
-        const auto ma = RmaMethod{self.ma_source_, self.period_};
-        return ma(asset_snapshot, context);
-      }
-      case BbMaType::Hma: {
-        const auto ma = HmaMethod{self.ma_source_, self.period_};
-        return ma(asset_snapshot, context);
-      }
-      default:
-        return std::numeric_limits<ResultType>::quiet_NaN();
-      }
-    }();
+    const auto middle = self.ma_method_(asset_snapshot, context);
+    const auto ma_source = self.ma_method_.source();
+    const auto ma_period = self.ma_method_.period();
+    const auto stddev_method = StddevMethod{ma_source, ma_period};
 
-    auto sum_squared_diff = ResultType{0};
-    for(auto i = 0uz; i < self.period_; ++i) {
-      const auto diff = self.ma_source_(asset_snapshot[i], context) - middle;
-      sum_squared_diff += diff * diff;
-    }
-
-    const auto std_dev = std::sqrt(sum_squared_diff / self.period_);
+    const auto std_dev = stddev_method(asset_snapshot, context);
     const auto std_dev_scaled = std_dev * self.stddev_;
-
-    const auto upper = middle + std_dev_scaled;
-    const auto lower = middle - std_dev_scaled;
 
     switch(output) {
     case SeriesOutput::MiddleBand:
       return middle;
     case SeriesOutput::UpperBand:
-      return upper;
+      return middle + std_dev_scaled;
     case SeriesOutput::LowerBand:
-      return lower;
+      return middle - std_dev_scaled;
     default:
       return std::numeric_limits<ResultType>::quiet_NaN();
     }
   }
 
-  auto ma_type(this const BbMethod& self) noexcept -> BbMaType
+  auto ma_type(this const BbMethod& self) noexcept -> MaMethodType
   {
-    return self.ma_type_;
+    return self.ma_method_.ma_type();
   }
 
-  auto ma_type(this BbMethod& self, BbMaType ma_type) noexcept
+  auto ma_type(this BbMethod& self, MaMethodType ma_type) noexcept
   {
-    self.ma_type_ = ma_type;
+    self.ma_method_.ma_type(ma_type);
   }
 
   auto ma_source(this const BbMethod& self) noexcept -> const TMaSourceMethod&
   {
-    return self.ma_source_;
+    return self.ma_method_.source();
   }
 
   void ma_source(this BbMethod& self, TMaSourceMethod ma_source) noexcept
   {
-    self.ma_source_ = std::move(ma_source);
+    self.ma_method_.source(std::move(ma_source));
   }
 
   auto stddev(this const BbMethod& self) noexcept -> double
@@ -149,18 +110,16 @@ public:
 
   auto period(this const BbMethod& self) noexcept -> std::size_t
   {
-    return self.period_;
+    return self.ma_method_.period();
   }
 
   void period(this BbMethod& self, std::size_t new_period) noexcept
   {
-    self.period_ = new_period;
+    self.ma_method_.period(new_period);
   }
 
 private:
-  BbMaType ma_type_;
-  TMaSourceMethod ma_source_;
-  std::size_t period_{20};
+  AdaptiveMaMethod<TMaSourceMethod> ma_method_;
   double stddev_;
 };
 

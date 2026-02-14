@@ -18,182 +18,19 @@ export module pludux.backtest;
 export import pludux;
 
 export import :asset;
+export import :strategy;
+export import :market;
+export import :broker;
 export import :profile;
 export import :trade_entry;
 export import :trade_exit;
 export import :trade_record;
 export import :trade_position;
 export import :trade_session;
+export import :backtest;
 export import :backtest_summary;
-export import :strategy;
 
 export namespace pludux {
-
-class Backtest {
-public:
-  Backtest(std::string name,
-           std::shared_ptr<backtest::Strategy> strategy_ptr,
-           std::shared_ptr<backtest::Asset> asset_ptr,
-           std::shared_ptr<backtest::Profile> profile_ptr)
-  : Backtest{std::move(name),
-             std::move(strategy_ptr),
-             std::move(asset_ptr),
-             std::move(profile_ptr),
-             std::vector<backtest::BacktestSummary>{}}
-  {
-  }
-
-  Backtest(std::string name,
-           std::shared_ptr<backtest::Strategy> strategy_ptr,
-           std::shared_ptr<backtest::Asset> asset_ptr,
-           std::shared_ptr<backtest::Profile> profile_ptr,
-           std::vector<backtest::BacktestSummary> summaries)
-  : name_{std::move(name)}
-  , strategy_ptr_{strategy_ptr}
-  , asset_ptr_{asset_ptr}
-  , profile_ptr_{profile_ptr}
-  , is_failed_{false}
-  , summaries_{std::move(summaries)}
-  {
-  }
-
-  auto name(this const Backtest& self) noexcept -> const std::string&
-  {
-    return self.name_;
-  }
-
-  auto strategy_ptr(this const Backtest& self) noexcept
-   -> const std::shared_ptr<backtest::Strategy>
-  {
-    return self.strategy_ptr_;
-  }
-
-  auto strategy(this const Backtest& self) noexcept -> const backtest::Strategy&
-  {
-    return *self.strategy_ptr();
-  }
-
-  auto asset_ptr(this const Backtest& self) noexcept
-   -> const std::shared_ptr<backtest::Asset>
-  {
-    return self.asset_ptr_;
-  }
-
-  auto asset(this const Backtest& self) noexcept -> const backtest::Asset&
-  {
-    return *self.asset_ptr();
-  }
-
-  auto profile_ptr(this const Backtest& self) noexcept
-   -> const std::shared_ptr<backtest::Profile>
-  {
-    return self.profile_ptr_;
-  }
-
-  auto profile(this const Backtest& self) noexcept -> const backtest::Profile&
-  {
-    return *self.profile_ptr();
-  }
-
-  void mark_as_failed(this Backtest& self) noexcept
-  {
-    self.is_failed_ = true;
-  }
-
-  auto is_failed(this const Backtest& self) noexcept -> bool
-  {
-    return self.is_failed_;
-  }
-
-  auto summaries(this const Backtest& self) noexcept
-   -> const std::vector<backtest::BacktestSummary>&
-  {
-    return self.summaries_;
-  }
-
-  void reset(this Backtest& self) noexcept
-  {
-    self.is_failed_ = false;
-    self.summaries_.clear();
-  }
-
-  auto should_run(this const Backtest& self) noexcept -> bool
-  {
-    const auto summaries_size = self.summaries_.size();
-    const auto asset_size = self.asset().size();
-
-    return summaries_size < asset_size && !self.is_failed();
-  }
-
-  void run(this Backtest& self)
-  {
-    using namespace backtest;
-
-    if(!self.should_run()) {
-      return;
-    }
-
-    const auto summaries_size = self.summaries_.size();
-    const auto asset_size = self.asset().size();
-    const auto last_index = asset_size - 1;
-    const auto asset_index = last_index - std::min(summaries_size, last_index);
-    const auto asset_snapshot = self.asset().get_snapshot(asset_index);
-    const auto asset_timestamp =
-     static_cast<std::time_t>(asset_snapshot.datetime());
-    const auto asset_price = asset_snapshot.close();
-    const auto& strategy = self.strategy();
-    const auto& profile = self.profile();
-
-    auto summary = !self.summaries_.empty()
-                    ? self.summaries_.back()
-                    : BacktestSummary{profile.initial_capital()};
-
-    auto trade_session = summary.trade_session();
-
-    trade_session.market_update(
-     static_cast<std::time_t>(asset_snapshot.datetime()),
-     asset_snapshot.close(),
-     asset_snapshot.lookback());
-
-    trade_session.evaluate_exit_conditions(asset_snapshot[1].close(),
-                                           asset_snapshot.open(),
-                                           asset_snapshot.high(),
-                                           asset_snapshot.low());
-
-    const auto& open_position = trade_session.open_position();
-    if(open_position) {
-      const auto position_size = open_position->unrealized_position_size();
-      const auto exit_trade =
-       strategy.exit_trade(asset_snapshot, position_size);
-
-      if(exit_trade) {
-        trade_session.exit_position(*exit_trade);
-      }
-    } else {
-      const auto entry_trade =
-       strategy.entry_trade(asset_snapshot, profile.get_risk_value());
-      if(entry_trade) {
-        trade_session.entry_position(*entry_trade);
-      }
-    }
-
-    summary.update_to_next_summary(std::move(trade_session));
-
-    self.summaries_.emplace_back(std::move(summary));
-  }
-
-private:
-  std::string name_;
-
-  std::shared_ptr<backtest::Strategy> strategy_ptr_;
-  std::shared_ptr<backtest::Asset> asset_ptr_;
-  std::shared_ptr<backtest::Profile> profile_ptr_;
-
-  bool is_failed_;
-  std::vector<backtest::BacktestSummary> summaries_;
-};
-
-// ----------------------------------------------------------------
 
 auto get_env_var(std::string_view var_name) -> std::optional<std::string>
 {
@@ -203,13 +40,13 @@ auto get_env_var(std::string_view var_name) -> std::optional<std::string>
   return std::nullopt;
 }
 
-auto csv_daily_stock_data(std::istream& csv_stream) -> AssetHistory
+void update_asset_from_csv(backtest::Asset& asset, std::istream& csv_stream)
 {
   auto csv_doc = rapidcsv::Document(csv_stream);
   const auto column_count = csv_doc.GetColumnCount();
 
   if(column_count == 0) {
-    return AssetHistory{};
+    return;
   }
 
   constexpr auto date_record_index = 0;
@@ -281,10 +118,13 @@ auto csv_daily_stock_data(std::istream& csv_stream) -> AssetHistory
                             pludux::AssetData(column.begin(), column.end()));
   }
 
-  auto result = AssetHistory{field_data.begin(), field_data.end()};
-  result.datetime_field(date_record_header);
+  auto asset_history = AssetHistory{field_data.begin(), field_data.end()};
 
-  return result;
+  auto asset_field_resolver = AssetQuoteFieldResolver{};
+  asset_field_resolver.datetime_field(date_record_header);
+
+  asset.history(std::move(asset_history));
+  asset.field_resolver(std::move(asset_field_resolver));
 }
 
 auto format_duration(std::size_t duration_in_seconds) -> std::string
@@ -352,9 +192,13 @@ auto format_datetime(std::time_t timestamp) -> std::string
   const auto tm_ptr = std::localtime(&timestamp);
   const auto& tm = *tm_ptr;
 
-  // Example: "2025-06-29 14:30:00"
+  // Example: "29 Jan 2025 14:30:00"
   auto formated_datetime = std::format(
-   "{:04}-{:02}-{:02}", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
+   "{:02} {:s} {:04}",
+   tm.tm_mday,
+   std::string{"Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec"}.substr(
+    tm.tm_mon * 4, 3),
+   tm.tm_year + 1900);
 
   if(tm.tm_hour != 0 || tm.tm_min != 0) {
     formated_datetime += std::format(" {:02}:{:02}", tm.tm_hour, tm.tm_min);

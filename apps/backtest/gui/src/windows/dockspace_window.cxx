@@ -36,7 +36,8 @@ module;
 
 export module pludux.apps.backtest:windows.dockspace_window;
 
-import :app_state;
+import :application_state;
+import :window_context;
 import :serialization;
 
 export namespace pludux::apps {
@@ -48,11 +49,11 @@ public:
   {
   }
 
-  void render(this DockspaceWindow& self, AppState& app_state)
+  void render(this DockspaceWindow& self, WindowContext& context)
   {
     auto& open_about_popup = self.open_about_popup_;
 
-    const auto& state = app_state.state();
+    const auto& app_state = context.app_state();
 
     static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
 
@@ -99,12 +100,14 @@ public:
       auto dock_right_down_id = ImGui::DockBuilderSplitNode(
        dock_right_id, ImGuiDir_Down, 0.3f, nullptr, &dock_right_id);
 
-      ImGui::DockBuilderDockWindow("Charts", dock_left_id);
+      ImGui::DockBuilderDockWindow("Plots", dock_left_id);
       ImGui::DockBuilderDockWindow("Trades", dock_left_down_id);
       ImGui::DockBuilderDockWindow("Summary", dock_right_id);
       ImGui::DockBuilderDockWindow("Backtests", dock_right_down_id);
       ImGui::DockBuilderDockWindow("Assets", dock_right_down_id);
       ImGui::DockBuilderDockWindow("Strategies", dock_right_down_id);
+      ImGui::DockBuilderDockWindow("Markets", dock_right_down_id);
+      ImGui::DockBuilderDockWindow("Brokers", dock_right_down_id);
       ImGui::DockBuilderDockWindow("Profiles", dock_right_down_id);
 
       ImGui::DockBuilderFinish(dockspace_id);
@@ -117,11 +120,30 @@ public:
           if(ImGui::MenuItem(menu_item_open)) {
 #ifdef __EMSCRIPTEN__
 
+            using JsOnPushOpenedFileAction =
+             std::function<void(const std::string&, ApplicationState&)>;
+
+            static const auto callback = JsOnPushOpenedFileAction{
+             [](const std::string& file_data, ApplicationState& app_state) {
+               auto in_stream = std::istringstream{file_data};
+               if(!in_stream.good()) {
+                 const auto error_message =
+                  std::format("Failed to open data stream for reading.");
+                 throw std::runtime_error(error_message);
+               }
+
+               auto in_archive = cereal::JSONInputArchive(in_stream);
+
+               auto loaded_state = ApplicationState{};
+               in_archive(cereal::make_nvp("pludux", loaded_state));
+               app_state = std::move(loaded_state);
+             }};
+
             EM_ASM(
              {
                var fileSelector = document.createElement('input');
                fileSelector.type = 'file';
-               fileSelector.accept = '.pludux-json';
+               fileSelector.accept = '.pludux';
                fileSelector.onchange = function(event)
                {
                  var file = event.target.files[0];
@@ -139,26 +161,27 @@ public:
                    // transfer the data to the C++ side
                    var data_ptr = Module.stringToNewUTF8(decodedData);
 
-                   // call the C++ function
-                   Module._pludux_apps_backtest_open_file(data_ptr, $0);
+                   Module._pludux_apps_backtest_js_opened_file_text_ready(
+                    data_ptr, $0, $1);
                  };
 
                  reader.readAsArrayBuffer(file);
                };
                fileSelector.click();
              },
-             &app_state);
+             &callback,
+             &context);
 
 #else
             auto nfd_guard = NFD::Guard{};
             auto in_path = NFD::UniquePath{};
-            const auto filter_item = std::array<nfdfilteritem_t, 1>{
-             {"Pludux JSON Files", "pludux-json"}};
+            const auto filter_item =
+             std::array<nfdfilteritem_t, 1>{{"Pludux Files", "pludux"}};
             auto result =
              NFD::OpenDialog(in_path, filter_item.data(), filter_item.size());
             if(result == NFD_OKAY) {
               const auto selected_path = std::string(in_path.get());
-              app_state.push_action([selected_path](AppStateData& state) {
+              context.push_action([selected_path](ApplicationState& app_state) {
                 auto in_stream = std::ifstream{selected_path};
 
                 if(!in_stream.is_open()) {
@@ -169,7 +192,9 @@ public:
 
                 auto in_archive = cereal::JSONInputArchive(in_stream);
 
-                in_archive(cereal::make_nvp("pludux", state));
+                auto loaded_state = ApplicationState{};
+                in_archive(cereal::make_nvp("pludux", loaded_state));
+                app_state = std::move(loaded_state);
               });
             } else if(result == NFD_CANCEL) {
               // User cancelled the open dialog
@@ -184,11 +209,13 @@ public:
 
         {
 #ifdef __EMSCRIPTEN__
-          constexpr auto menu_item_save_as = "Save";
+          constexpr auto menu_item_save_as = "Download";
           if(ImGui::MenuItem(menu_item_save_as)) {
             auto out_stream = std::ostringstream{};
-            auto out_archive = cereal::JSONOutputArchive(out_stream);
-            out_archive(cereal::make_nvp("pludux", app_state.state()));
+            auto out_archive = cereal::JSONOutputArchive(
+             out_stream, cereal::JSONOutputArchive::Options::NoIndent());
+
+            out_archive(cereal::make_nvp("pludux", context.app_state()));
 
             // TODO: bug in Cereal not adding the close object at the end when
             // using stringstream
@@ -198,7 +225,7 @@ public:
             EM_ASM(
              {
                var fileSave = document.createElement('a');
-               fileSave.download = 'saved.pludux-json';
+               fileSave.download = 'download.pludux';
                fileSave.style.display = 'none';
                var data = new Blob([Module.UTF8ToString($0)], {
                  type:
@@ -216,15 +243,15 @@ public:
             auto nfd_guard = NFD::Guard{};
             auto out_path = NFD::UniquePath{};
 
-            const auto filter_item = std::array<nfdfilteritem_t, 1>{
-             {"Pludux JSON Files", "pludux-json"}};
+            const auto filter_item =
+             std::array<nfdfilteritem_t, 1>{{"Pludux Files", "pludux"}};
 
             auto result =
              NFD::SaveDialog(out_path, filter_item.data(), filter_item.size());
 
             if(result == NFD_OKAY) {
               const auto saved_path = std::string(out_path.get());
-              app_state.push_action([saved_path](AppStateData& state) {
+              context.push_action([saved_path](ApplicationState& app_state) {
                 auto out_stream = std::ofstream{saved_path};
 
                 if(!out_stream.is_open()) {
@@ -233,9 +260,10 @@ public:
                   throw std::runtime_error(error_message);
                 }
 
-                auto out_archive = cereal::JSONOutputArchive(out_stream);
+                auto out_archive = cereal::JSONOutputArchive(
+                 out_stream, cereal::JSONOutputArchive::Options::NoIndent());
 
-                out_archive(cereal::make_nvp("pludux", state));
+                out_archive(cereal::make_nvp("pludux", app_state));
               });
             } else if(result == NFD_CANCEL) {
               // User cancelled the save dialog
@@ -245,259 +273,6 @@ public:
               throw std::runtime_error(error_message);
             }
           }
-#endif
-        }
-
-        constexpr auto menu_item_open_config =
-         "Add or Replace Strategies (JSON)";
-        if(ImGui::MenuItem(menu_item_open_config)) {
-#ifdef __EMSCRIPTEN__
-          EM_ASM(
-           {
-             var fileSelector = document.createElement('input');
-             fileSelector.type = 'file';
-             fileSelector.multiple = true;
-             fileSelector.onchange = function(event)
-             {
-               for(var i = 0; i < event.target.files.length; i++) {
-                 var file = event.target.files[i];
-
-                 var reader = new FileReader();
-                 reader.onload = function(event)
-                 {
-                   var reader = event.target;
-                   var fileName = reader.onload.prototype.fileName;
-                   var data = reader.result;
-                   var decoder = new TextDecoder('utf-8');
-                   var decodedData = decoder.decode(data);
-
-                   // transfer the data to the C++ side
-                   var name_ptr = Module.stringToNewUTF8(fileName);
-                   var data_ptr = Module.stringToNewUTF8(decodedData);
-
-                   // call the C++ function
-                   Module._pludux_apps_backtest_change_strategy_json_str(
-                    name_ptr, data_ptr, $0);
-                 };
-                 reader.onload.prototype.fileName = file.name;
-
-                 reader.readAsArrayBuffer(file);
-               }
-             };
-             fileSelector.accept = '.json';
-             fileSelector.click();
-           },
-           &app_state);
-#else
-          auto nfd_guard = NFD::Guard{};
-          auto out_paths = NFD::UniquePathSet{};
-
-          const auto filter_item =
-           std::array<nfdfilteritem_t, 1>{{"JSON Files", "json"}};
-          auto result = NFD::OpenDialogMultiple(
-           out_paths, filter_item.data(), filter_item.size());
-
-          if(result == NFD_OKAY) {
-            auto paths_count = nfdpathsetsize_t{};
-
-            result = NFD::PathSet::Count(out_paths, paths_count);
-            if(result == NFD_ERROR) {
-              const auto error_message = std::format(
-               "Error '{}': {}", menu_item_open_config, NFD::GetError());
-              throw std::runtime_error(error_message);
-            }
-
-            for(nfdpathsetsize_t i = 0; i < paths_count; ++i) {
-              auto out_path = NFD::UniquePathSetPath{};
-              result = NFD::PathSet::GetPath(out_paths, i, out_path);
-
-              if(result == NFD_ERROR) {
-                const auto error_message = std::format(
-                 "Error '{}': {}", menu_item_open_config, NFD::GetError());
-                throw std::runtime_error(error_message);
-              }
-
-              const auto selected_path = std::string(out_path.get());
-              app_state.push_action(ChangeStrategyJsonAction{selected_path});
-            }
-
-          } else if(result == NFD_CANCEL) {
-          } else {
-            const auto error_message = std::format(
-             "Error '{}': {}", menu_item_open_config, NFD::GetError());
-            throw std::runtime_error(error_message);
-          }
-#endif
-        }
-
-        constexpr auto menu_item_open_csv = "Add or Replace Assets (CSV)";
-        if(ImGui::MenuItem(menu_item_open_csv)) {
-#ifdef __EMSCRIPTEN__
-
-          EM_ASM(
-           {
-             var fileSelector = document.createElement('input');
-             fileSelector.type = 'file';
-             fileSelector.multiple = true;
-             fileSelector.onchange = function(event)
-             {
-               for(var i = 0; i < event.target.files.length; i++) {
-                 var file = event.target.files[i];
-
-                 var reader = new FileReader();
-                 reader.onload = function(event)
-                 {
-                   var reader = event.target;
-                   var fileName = reader.onload.prototype.fileName;
-                   var data = reader.result;
-                   var decoder = new TextDecoder('utf-8');
-                   var decodedData = decoder.decode(data);
-
-                   // transfer the data to the C++ side
-                   var name_ptr = Module.stringToNewUTF8(fileName);
-                   var data_ptr = Module.stringToNewUTF8(decodedData);
-
-                   // call the C++ function
-                   Module._pludux_apps_backtest_load_csv_asset(
-                    name_ptr, data_ptr, $0);
-                 };
-                 reader.onload.prototype.fileName = file.name;
-
-                 reader.readAsArrayBuffer(file);
-               }
-             };
-             fileSelector.accept = '.csv';
-             fileSelector.click();
-           },
-           &app_state);
-
-#else
-          auto nfd_guard = NFD::Guard{};
-          auto out_paths = NFD::UniquePathSet{};
-
-          constexpr auto filter_item =
-           std::array<nfdfilteritem_t, 1>{{"CSV Files", "csv"}};
-
-          auto result = NFD::OpenDialogMultiple(
-           out_paths, filter_item.data(), filter_item.size());
-
-          if(result == NFD_OKAY) {
-            auto paths_count = nfdpathsetsize_t{};
-
-            result = NFD::PathSet::Count(out_paths, paths_count);
-            if(result == NFD_ERROR) {
-              const auto error_message = std::format(
-               "Error '{}': {}", menu_item_open_csv, NFD::GetError());
-              throw std::runtime_error(error_message);
-            }
-
-            for(nfdpathsetsize_t i = 0; i < paths_count; ++i) {
-              auto out_path = NFD::UniquePathSetPath{};
-              result = NFD::PathSet::GetPath(out_paths, i, out_path);
-
-              if(result == NFD_ERROR) {
-                const auto error_message = std::format(
-                 "Error '{}': {}", menu_item_open_csv, NFD::GetError());
-                throw std::runtime_error(error_message);
-              }
-
-              const auto selected_path = std::string(out_path.get());
-              app_state.push_action(LoadAssetCsvAction{selected_path});
-            }
-
-          } else if(result == NFD_CANCEL) {
-          } else {
-            const auto error_message =
-             std::format("Error '{}': {}", menu_item_open_csv, NFD::GetError());
-            throw std::runtime_error(error_message);
-          }
-
-#endif
-        }
-
-        constexpr auto menu_item_setup_backtest = "Load Backtests Setup (CSV)";
-        if(ImGui::MenuItem(menu_item_setup_backtest)) {
-#ifdef __EMSCRIPTEN__
-
-          EM_ASM(
-           {
-             var fileSelector = document.createElement('input');
-             fileSelector.type = 'file';
-             fileSelector.multiple = false;
-             fileSelector.onchange = function(event)
-             {
-               for(var i = 0; i < event.target.files.length; i++) {
-                 var file = event.target.files[i];
-
-                 var reader = new FileReader();
-                 reader.onload = function(event)
-                 {
-                   var reader = event.target;
-                   var fileName = reader.onload.prototype.fileName;
-                   var data = reader.result;
-                   var decoder = new TextDecoder('utf-8');
-                   var decodedData = decoder.decode(data);
-
-                   // transfer the data to the C++ side
-                   var data_ptr = Module.stringToNewUTF8(decodedData);
-
-                   // call the C++ function
-                   Module._pludux_apps_backtest_load_backtests_setup(data_ptr,
-                                                                     $0);
-                 };
-                 reader.onload.prototype.fileName = file.name;
-
-                 reader.readAsArrayBuffer(file);
-               }
-             };
-             fileSelector.accept = '.txt,.csv';
-             fileSelector.click();
-           },
-           &app_state);
-
-#else
-          auto nfd_guard = NFD::Guard{};
-          auto out_paths = NFD::UniquePathSet{};
-
-          constexpr auto filter_item =
-           std::array{nfdfilteritem_t{"Text Files", "txt"},
-                      nfdfilteritem_t{"CSV Files", "csv"}};
-
-          auto result = NFD::OpenDialogMultiple(
-           out_paths, filter_item.data(), filter_item.size());
-
-          if(result == NFD_OKAY) {
-            auto paths_count = nfdpathsetsize_t{};
-
-            result = NFD::PathSet::Count(out_paths, paths_count);
-            if(result == NFD_ERROR) {
-              const auto error_message = std::format(
-               "Error '{}': {}", menu_item_setup_backtest, NFD::GetError());
-              throw std::runtime_error(error_message);
-            }
-
-            for(nfdpathsetsize_t i = 0; i < paths_count; ++i) {
-              auto out_path = NFD::UniquePathSetPath{};
-              result = NFD::PathSet::GetPath(out_paths, i, out_path);
-
-              if(result == NFD_ERROR) {
-                const auto error_message = std::format(
-                 "Error '{}': {}", menu_item_setup_backtest, NFD::GetError());
-                throw std::runtime_error(error_message);
-              }
-
-              const auto selected_path =
-               std::filesystem::path{std::string(out_path.get())};
-              app_state.push_action(LoadBacktestsSetupAction{selected_path});
-            }
-
-          } else if(result == NFD_CANCEL) {
-          } else {
-            const auto error_message = std::format(
-             "Error '{}': {}", menu_item_setup_backtest, NFD::GetError());
-            throw std::runtime_error(error_message);
-          }
-
 #endif
         }
 
@@ -545,7 +320,7 @@ public:
 
         ImGui::Separator();
         ImGui::Text("%s", "This software is licensed under the AGPL License.");
-        ImGui::Text("%s", "Copyright (c) 2025 Januar Andaria");
+        ImGui::Text("%s", "Copyright (c) 2026 Januar Andaria");
         ImGui::Text("%s",
                     "Full licence text included in the LICENSE.txt file.");
 

@@ -324,6 +324,33 @@ public:
 };
 
 // -----------------------------------------------------------------------
+template<typename T = void>
+struct SquareRoot {
+  auto operator()(this const SquareRoot, T value) -> T
+  {
+    return std::sqrt(value);
+  }
+};
+
+template<>
+struct SquareRoot<void> {
+  auto operator()(this const SquareRoot, auto value)
+  {
+    return std::sqrt(value);
+  }
+};
+
+export template<typename TMethodOp>
+class SqrtMethod
+: public UnaryOperatorMethod<SqrtMethod, SquareRoot<>, TMethodOp> {
+public:
+  explicit SqrtMethod(TMethodOp operand)
+  : UnaryOperatorMethod<SqrtMethod, SquareRoot<>, TMethodOp>{std::move(operand)}
+  {
+  }
+};
+
+// -----------------------------------------------------------------------
 
 template<typename T = void>
 struct Maximum {

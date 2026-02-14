@@ -1,5 +1,6 @@
 module;
 
+#include <cstddef>
 #include <limits>
 #include <optional>
 #include <string>
@@ -15,8 +16,10 @@ class DefaultMethodContext {
 public:
   using DispatchResultType = double;
 
-  explicit DefaultMethodContext(const SeriesMethodRegistry& methods) noexcept
+  explicit DefaultMethodContext(const SeriesMethodRegistry& methods,
+                                std::size_t current_index = 0) noexcept
   : methods_{methods}
+  , current_index_{current_index}
   {
   }
 
@@ -46,8 +49,14 @@ public:
     return std::numeric_limits<DispatchResultType>::quiet_NaN();
   }
 
+  auto index(this const DefaultMethodContext& self) noexcept -> std::size_t
+  {
+    return self.current_index_;
+  }
+
 private:
   const SeriesMethodRegistry& methods_{};
+  std::size_t current_index_ = 0;
 };
 
 } // namespace pludux

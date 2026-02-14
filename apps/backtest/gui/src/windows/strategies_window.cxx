@@ -1,16 +1,29 @@
 module;
 #include <expected>
+#include <filesystem>
 #include <format>
 #include <fstream>
+#include <functional>
 #include <iterator>
 #include <map>
 #include <memory>
 #include <ranges>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <system_error>
+#include <unordered_map>
 #include <utility>
 #include <vector>
+
+#ifdef __EMSCRIPTEN__
+#include <cstdlib>
+
+#include <emscripten.h>
+#include <emscripten/val.h>
+#else
+#include <nfd.hpp>
+#endif
 
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
@@ -18,18 +31,18 @@ module;
 export module pludux.apps.backtest:windows.strategies_window;
 
 import pludux.backtest;
-import :app_state;
+import :window_context;
 
 namespace pludux::apps {
 
 using SelectOutputMethod = pludux::SelectOutputMethod<AnySeriesMethod>;
 using ReferenceMethod = pludux::ReferenceMethod;
 using BbMethod = pludux::BbMethod<AnySeriesMethod>;
-using KcMethod = pludux::KcMethod<AnySeriesMethod, AnySeriesMethod>;
+using KcMethod = pludux::KcMethod<AnySeriesMethod>;
 using StochMethod = pludux::StochMethod;
 using StochRsiMethod = pludux::StochRsiMethod<AnySeriesMethod>;
 using SmaMethod = pludux::SmaMethod<AnySeriesMethod>;
-using EmaMethod = pludux::EmaMethod<AnySeriesMethod>;
+using CachedResultsEmaMethod = pludux::CachedResultsEmaMethod<AnySeriesMethod>;
 using WmaMethod = pludux::WmaMethod<AnySeriesMethod>;
 using HmaMethod = pludux::HmaMethod<AnySeriesMethod>;
 using RsiMethod = pludux::RsiMethod<AnySeriesMethod>;
@@ -41,6 +54,8 @@ using ValueMethod = pludux::ValueMethod;
 using LookbackMethod = pludux::LookbackMethod<AnySeriesMethod>;
 using ChangeMethod = pludux::ChangeMethod<AnySeriesMethod>;
 using DataMethod = pludux::DataMethod;
+using SqrtAnyMethod = pludux::SqrtMethod<AnySeriesMethod>;
+using StddevAnyMethod = pludux::StddevMethod<AnySeriesMethod>;
 
 using AddMethod = pludux::AddMethod<AnySeriesMethod, AnySeriesMethod>;
 using SubtractMethod = pludux::SubtractMethod<AnySeriesMethod, AnySeriesMethod>;
@@ -50,29 +65,7 @@ using NegateMethod = pludux::NegateMethod<AnySeriesMethod>;
 using PercentageMethod = pludux::PercentageMethod<AnySeriesMethod>;
 using AbsDiffMethod = pludux::AbsDiffMethod<AnySeriesMethod, AnySeriesMethod>;
 
-auto get_output_name_string(SeriesOutput output_name) -> std::string
-{
-  switch(output_name) {
-  case SeriesOutput::UpperBand:
-    return "upper-band";
-  case SeriesOutput::MiddleBand:
-    return "middle-band";
-  case SeriesOutput::LowerBand:
-    return "lower-band";
-  case SeriesOutput::MacdLine:
-    return "macd-macd";
-  case SeriesOutput::SignalLine:
-    return "macd-signal";
-  case SeriesOutput::Histogram:
-    return "macd-histogram";
-  case SeriesOutput::KPercent:
-    return "percent-k";
-  case SeriesOutput::DPercent:
-    return "percent-d";
-  default:
-    return "default";
-  }
-}
+using RiskAtrMethod = backtest::RiskAtrMethod;
 
 auto get_default_series_method(const std::string& series_id) -> AnySeriesMethod
 {
@@ -93,7 +86,7 @@ auto get_default_series_method(const std::string& series_id) -> AnySeriesMethod
   } else if(series_id == "SMA") {
     return SmaMethod{CloseMethod{}, 14};
   } else if(series_id == "EMA") {
-    return EmaMethod{CloseMethod{}, 14};
+    return CachedResultsEmaMethod{CloseMethod{}, 14};
   } else if(series_id == "WMA") {
     return WmaMethod{CloseMethod{}, 14};
   } else if(series_id == "HMA") {
@@ -104,16 +97,19 @@ auto get_default_series_method(const std::string& series_id) -> AnySeriesMethod
     return MacdMethod{CloseMethod{}, 12, 26, 9};
   } else if(series_id == "ATR") {
     return AtrMethod{14};
+  } else if(series_id == "STDDEV") {
+    return StddevAnyMethod{CloseMethod{}, 14};
   } else if(series_id == "BB") {
-    return BbMethod{BbMaType::Sma, CloseMethod{}, 20, 2.0};
+    return BbMethod{MaMethodType::Sma, CloseMethod{}, 20, 2.0};
   } else if(series_id == "KC") {
-    return KcMethod{EmaMethod{CloseMethod{}, 20}, AtrMethod{}, 1.5};
+    return KcMethod{
+     CloseMethod{}, MaMethodType::Ema, 20, KcBandMethodType::Atr, 14, 1.5};
   } else if(series_id == "STOCH") {
     return StochMethod{14, 3, 3};
   } else if(series_id == "STOCH_RSI") {
     return StochRsiMethod{CloseMethod{}, 14, 14, 3, 3};
   } else if(series_id == "REFERENCE") {
-    return ReferenceMethod{"CLOSE"};
+    return ReferenceMethod{""};
   } else if(series_id == "VALUE") {
     return ValueMethod{0.0};
   } else if(series_id == "LOOKBACK") {
@@ -128,6 +124,8 @@ auto get_default_series_method(const std::string& series_id) -> AnySeriesMethod
     return DivideMethod{CloseMethod{}, CloseMethod{}};
   } else if(series_id == "NEGATE") {
     return NegateMethod{CloseMethod{}};
+  } else if(series_id == "SQRT") {
+    return SqrtAnyMethod{CloseMethod{}};
   } else if(series_id == "PERCENTAGE") {
     return PercentageMethod{CloseMethod{}, 100.0};
   } else if(series_id == "ABS_DIFF") {
@@ -162,13 +160,15 @@ auto get_series_method_id(const AnySeriesMethod& method) -> std::string
     return "DATA";
   } else if(series_method_cast<ValueMethod>(method)) {
     return "VALUE";
+  } else if(series_method_cast<StddevAnyMethod>(method)) {
+    return "STDDEV";
   } else if(series_method_cast<BbMethod>(method)) {
     return "BB";
   } else if(series_method_cast<KcMethod>(method)) {
     return "KC";
   } else if(series_method_cast<SmaMethod>(method)) {
     return "SMA";
-  } else if(series_method_cast<EmaMethod>(method)) {
+  } else if(series_method_cast<CachedResultsEmaMethod>(method)) {
     return "EMA";
   } else if(series_method_cast<WmaMethod>(method)) {
     return "WMA";
@@ -194,6 +194,8 @@ auto get_series_method_id(const AnySeriesMethod& method) -> std::string
     return "DIVIDE";
   } else if(series_method_cast<NegateMethod>(method)) {
     return "NEGATE";
+  } else if(series_method_cast<SqrtAnyMethod>(method)) {
+    return "SQRT";
   } else if(series_method_cast<PercentageMethod>(method)) {
     return "PERCENTAGE";
   } else if(series_method_cast<AbsDiffMethod>(method)) {
@@ -235,10 +237,12 @@ auto get_series_method_title(const std::string& series_id) -> std::string
     return "Moving Average Convergence Divergence (MACD)";
   } else if(series_id == "ATR") {
     return "Average True Range (ATR)";
+  } else if(series_id == "STDDEV") {
+    return "Standard Deviation (STDDEV)";
   } else if(series_id == "BB") {
     return "Bollinger Bands";
   } else if(series_id == "KC") {
-    return "Keltner Channel";
+    return "Keltner Channel (KC)";
   } else if(series_id == "STOCH") {
     return "Stochastic Oscillator";
   } else if(series_id == "STOCH_RSI") {
@@ -259,6 +263,8 @@ auto get_series_method_title(const std::string& series_id) -> std::string
     return "Division";
   } else if(series_id == "NEGATE") {
     return "Negation";
+  } else if(series_id == "SQRT") {
+    return "Square Root";
   } else if(series_id == "PERCENTAGE") {
     return "Percentage";
   } else if(series_id == "ABS_DIFF") {
@@ -395,17 +401,20 @@ public:
   {
   }
 
-  void render(this auto& self, AppState& app_state)
+  void render(this auto& self, WindowContext& context)
   {
     ImGui::Begin("Strategies", nullptr);
 
     switch(self.current_page_) {
+    case Page::AddNew:
+      self.render_add_new_strategy(context);
+      break;
     case Page::Edit:
-      self.render_edit_strategy(app_state);
+      self.render_edit_strategy(context);
       break;
     case Page::List:
     default:
-      self.render_list_strategies(app_state);
+      self.render_list_strategies(context);
       break;
     }
 
@@ -413,19 +422,28 @@ public:
   }
 
 private:
-  enum class Page { List, Edit } current_page_{Page::List};
+  enum class Page { List, AddNew, Edit } current_page_{Page::List};
 
-  std::shared_ptr<backtest::Strategy> old_strategy_;
-  std::shared_ptr<backtest::Strategy> new_strategy_;
+  std::shared_ptr<backtest::Strategy> selected_strategy_ptr_;
+  std::shared_ptr<backtest::Strategy> editing_strategy_ptr_;
 
   std::pair<int, double> risk_atr_{14, 2.0};
   double risk_percentage_{10.0};
   double risk_fixed_{1000.0};
 
-  void render_list_strategies(this auto& self, AppState& app_state)
+  std::vector<std::string> available_series_names_;
+
+  void render_list_strategies(this auto& self, WindowContext& context)
   {
-    auto& state = app_state.state();
-    auto& strategies = state.strategies;
+    const auto& backtest = context.app_state().selected_backtest();
+    auto& strategies = context.strategies();
+
+    ImGui::BeginGroup();
+    ImGui::BeginChild(
+     "item view",
+     ImVec2(
+      0,
+      -ImGui::GetFrameHeightWithSpacing())); // Leave room for 1 line below us
 
     if(!strategies.empty()) {
       for(auto i = 0; i < strategies.size(); ++i) {
@@ -435,53 +453,244 @@ private:
         ImGui::PushID(i);
 
         ImGui::SetNextItemAllowOverlap();
-
-        ImGui::Text("%s", strategy_name.c_str());
+        auto is_selected = backtest && backtest->strategy_ptr() == strategy_ptr;
+        ImGui::Selectable(strategy_name.c_str(), &is_selected);
 
         ImGui::SameLine();
 
-        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 100);
+        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 150);
 
+        if(ImGui::Button("Export")) {
+          auto serialized_strategy =
+           stringify_backtest_strategy(*strategy_ptr).to_string();
+
+#ifdef __EMSCRIPTEN__
+          const auto file_name = "pludux-strategy-" + strategy_name + ".json";
+          const auto& file_content = serialized_strategy;
+
+          EM_ASM(
+           {
+             var fileSave = document.createElement('a');
+             fileSave.download = Module.UTF8ToString($0);
+             fileSave.style.display = 'none';
+             var data = new Blob([Module.UTF8ToString($1)], {
+               type:
+                 'application/json'
+             });
+             fileSave.href = URL.createObjectURL(data);
+             fileSave.click();
+             URL.revokeObjectURL(fileSave.href);
+           },
+           file_name.c_str(),
+           file_content.c_str());
+
+#else
+          auto nfd_guard = NFD::Guard{};
+          auto out_path = NFD::UniquePath{};
+
+          const auto filter_item =
+           std::array<nfdfilteritem_t, 1>{{"JSON Files", "json"}};
+
+          auto result =
+           NFD::SaveDialog(out_path, filter_item.data(), filter_item.size());
+
+          if(result == NFD_OKAY) {
+            const auto saved_path = std::string(out_path.get());
+            context.push_action(
+             [saved_path, serialized_strategy](ApplicationState& app_state) {
+               auto out_stream = std::ofstream{saved_path};
+
+               if(!out_stream.is_open()) {
+                 const auto error_message =
+                  std::format("Failed to open '{}' for writing.", saved_path);
+                 throw std::runtime_error(error_message);
+               }
+
+               out_stream << serialized_strategy;
+             });
+          } else if(result == NFD_CANCEL) {
+            // User cancelled the save dialog
+          } else {
+            const auto error_message =
+             std::format("Error '{}': {}", "Export", NFD::GetError());
+            throw std::runtime_error(error_message);
+          }
+#endif
+        }
+        ImGui::SameLine();
         if(ImGui::Button("Edit")) {
-          self.old_strategy_ = strategy_ptr;
-          self.new_strategy_ =
-           std::make_shared<backtest::Strategy>(*self.old_strategy_);
+          self.selected_strategy_ptr_ = strategy_ptr;
+          self.editing_strategy_ptr_ =
+           std::make_shared<backtest::Strategy>(*self.selected_strategy_ptr_);
           self.current_page_ = Page::Edit;
         }
         ImGui::SameLine();
         if(ImGui::Button("Delete")) {
-          app_state.push_action([i](AppStateData& state) {
-            const auto& strategies = state.strategies;
-            const auto it = std::next(strategies.begin(), i);
-            const auto& strategy_ptr = *it;
-
-            auto& backtests = state.backtests;
-            for(auto j = 0; j < backtests.size(); ++j) {
-              auto& backtest = backtests[j];
-              if(backtest.strategy_ptr()->name() == strategy_ptr->name()) {
-                backtests.erase(std::next(backtests.begin(), j));
-
-                if(state.selected_backtest_index > j ||
-                   state.selected_backtest_index >= backtests.size()) {
-                  --state.selected_backtest_index;
-                }
-
-                // Adjust the index since we removed an element
-                --j;
-              }
-            }
-
-            state.strategies.erase(it);
+          context.push_action([i](ApplicationState& app_state) {
+            app_state.remove_strategy_at_index(i);
           });
         }
 
         ImGui::PopID();
       }
     }
+
+    ImGui::EndChild();
+    if(ImGui::Button("Add New Strategy")) {
+      self.current_page_ = Page::AddNew;
+
+      self.selected_strategy_ptr_ = nullptr;
+
+      self.editing_strategy_ptr_ = std::make_shared<backtest::Strategy>();
+      self.editing_strategy_ptr_->risk_method(
+       PercentageMethod{CloseMethod{}, 10.0});
+    }
+
+    ImGui::SameLine();
+
+    if(ImGui::Button("Import Strategies")) {
+#ifdef __EMSCRIPTEN__
+
+      using JsOnOpenedFileContentReady =
+       std::function<void(const std::string&, const std::string&, void*)>;
+
+      static const auto callback =
+       JsOnOpenedFileContentReady{[](const std::string& file_name,
+                                     const std::string& file_data,
+                                     void* user_data) {
+         auto& context = *reinterpret_cast<WindowContext*>(user_data);
+
+         auto action = LoadStrategyJsonAction{file_name, file_data};
+         context.push_action(std::move(action));
+       }};
+
+      EM_ASM(
+       {
+         var fileSelector = document.createElement('input');
+         fileSelector.type = 'file';
+         fileSelector.multiple = true;
+         fileSelector.accept = '.json';
+         fileSelector.onchange = function(event)
+         {
+           var files = event.target.files;
+           for(var i = 0; i < files.length; i++) {
+             var file = files[i];
+
+             var reader = new FileReader();
+             reader.onload = function(event)
+             {
+               var reader = event.target;
+               var fileName = reader.onload.prototype.fileName;
+               var data = reader.result;
+               var decoder = new TextDecoder('utf-8');
+               var decodedData = decoder.decode(data);
+
+               // transfer the data to the C++ side
+               var name_ptr = Module.stringToNewUTF8(fileName);
+               var data_ptr = Module.stringToNewUTF8(decodedData);
+
+               // call the C++ function
+               Module._pludux_apps_backtest_js_opened_file_content_ready(
+                name_ptr, data_ptr, $0, $1);
+             };
+             reader.onload.prototype.fileName = file.name;
+
+             reader.readAsArrayBuffer(file);
+           }
+         };
+         fileSelector.click();
+       },
+       &callback,
+       &context);
+#else
+      auto nfd_guard = NFD::Guard{};
+      auto in_paths = NFD::UniquePathSet{};
+
+      const auto filter_item =
+       std::array<nfdfilteritem_t, 1>{{"JSON Files", "json"}};
+
+      auto result = NFD::OpenDialogMultiple(
+       in_paths, filter_item.data(), filter_item.size());
+
+      try {
+        if(result == NFD_OKAY) {
+          auto paths_count = nfdpathsetsize_t{};
+
+          result = NFD::PathSet::Count(in_paths, paths_count);
+          if(result == NFD_ERROR) {
+            const auto error_message =
+             std::format("Error '{}': {}", "Import", NFD::GetError());
+            throw std::runtime_error(error_message);
+          }
+
+          for(nfdpathsetsize_t i = 0; i < paths_count; ++i) {
+            auto in_path = NFD::UniquePathSetPath{};
+            result = NFD::PathSet::GetPath(in_paths, i, in_path);
+
+            if(result == NFD_ERROR) {
+              const auto error_message =
+               std::format("Error '{}': {}", "Import", NFD::GetError());
+              throw std::runtime_error(error_message);
+            } else {
+              const auto selected_path = std::string(in_path.get());
+              context.push_action(LoadStrategyJsonAction{selected_path});
+            }
+          }
+
+        } else if(result == NFD_CANCEL) {
+          // User cancelled the open dialog
+        } else {
+          const auto error_message =
+           std::format("Error '{}': {}", "Import", NFD::GetError());
+          throw std::runtime_error(error_message);
+        }
+      } catch(const std::exception& ex) {
+        const auto error_message = std::string(ex.what());
+        context.push_action([error_message](ApplicationState& app_state) {
+          app_state.alert(error_message);
+        });
+      }
+#endif
+    }
+
+    ImGui::EndGroup();
   }
 
-  void render_edit_strategy(this auto& self, AppState& app_state)
+  void render_add_new_strategy(this auto& self, WindowContext& context)
   {
+    const auto& strategies = context.strategies();
+
+    ImGui::BeginGroup();
+    ImGui::BeginChild("add_new_strategy",
+                      ImVec2(0, -ImGui::GetFrameHeightWithSpacing()));
+
+    ImGui::Text("Add New Strategy");
+    ImGui::Separator();
+    ImGui::SetNextItemWidth(-1);
+
+    {
+      self.edit_strategy_form(context);
+    }
+
+    ImGui::EndChild();
+
+    if(ImGui::Button("Create")) {
+      self.submit_strategy_changes(context);
+      self.reset();
+    }
+
+    ImGui::SameLine();
+    if(ImGui::Button("Cancel")) {
+      self.reset();
+    }
+
+    ImGui::EndGroup();
+  }
+
+  void render_edit_strategy(this auto& self, WindowContext& context)
+  {
+    const auto& strategies = context.strategies();
+
     ImGui::BeginGroup();
     ImGui::BeginChild("edit_strategy",
                       ImVec2(0, -ImGui::GetFrameHeightWithSpacing()));
@@ -491,202 +700,228 @@ private:
     ImGui::SetNextItemWidth(-1);
 
     {
-      ImGui::BeginChild("edit_content",
-                        ImVec2(0, -ImGui::GetFrameHeightWithSpacing()));
-
-      {
-        ImGui::SeparatorText("Series Methods");
-
-        auto& series_registry = self.new_strategy_->series_registry();
-        ImGui::Separator();
-        auto changed_names = std::vector<std::pair<std::string, std::string>>{};
-        for(auto id_counter = 0;
-            auto& [series_name, series_method] : series_registry) {
-          ImGui::PushID(id_counter++);
-
-          ImGui::Text("Name:");
-          ImGui::SameLine();
-          auto input_series_name = series_name;
-          ImGui::InputText("##series_name", &input_series_name);
-          if(ImGui::IsItemDeactivatedAfterEdit()) {
-            if(input_series_name != series_name) {
-              changed_names.emplace_back(series_name, input_series_name);
-            }
-          }
-
-          ImGui::Text("Method:");
-          ImGui::SameLine();
-          self.render_series_method(series_method);
-          series_registry.set(series_name, series_method);
-
-          ImGui::Separator();
-          ImGui::PopID();
-        }
-
-        for(auto [old_name, new_name] : changed_names) {
-          // TODO: handle the errors
-          [[maybe_unused]]
-          const auto result = series_registry.rename(old_name, new_name);
-        }
-
-        if(ImGui::Button("Add Series")) {
-          auto new_series_name =
-           std::format("new_var_{}", series_registry.size() + 1);
-          auto new_series_method = get_default_series_method("CLOSE");
-          series_registry.set(new_series_name, new_series_method);
-        }
-
-        ImGui::Text("");
-      }
-
-      {
-        ImGui::SeparatorText("Positions");
-
-        {
-          ImGui::Text("Long Position:");
-          ImGui::PushID("long_position");
-          ImGui::Indent();
-
-          {
-            ImGui::Text("Entry Condition:");
-            ImGui::PushID("long_entry");
-            const auto& any_long_entry =
-             self.new_strategy_->long_entry_filter();
-            auto changed_method = self.render_condition_method(any_long_entry);
-            self.new_strategy_->long_entry_filter(std::move(changed_method));
-            ImGui::PopID();
-          }
-
-          ImGui::Separator();
-
-          {
-            ImGui::Text("Exit Condition:");
-            ImGui::PushID("long_exit");
-            const auto& any_long_exit = self.new_strategy_->long_exit_filter();
-            auto changed_method = self.render_condition_method(any_long_exit);
-            self.new_strategy_->long_exit_filter(std::move(changed_method));
-            ImGui::PopID();
-          }
-
-          ImGui::Unindent();
-          ImGui::PopID();
-        }
-
-        ImGui::Text("");
-
-        {
-          ImGui::Text("Short Position:");
-          ImGui::PushID("short_position");
-          ImGui::Indent();
-
-          {
-            ImGui::Text("Entry Condition:");
-            ImGui::PushID("short_entry");
-            const auto& any_short_entry =
-             self.new_strategy_->short_entry_filter();
-            auto changed_method = self.render_condition_method(any_short_entry);
-            self.new_strategy_->short_entry_filter(std::move(changed_method));
-            ImGui::PopID();
-          }
-
-          ImGui::Separator();
-
-          {
-            ImGui::Text("Exit Condition:");
-            ImGui::PushID("short_exit");
-            const auto& any_short_exit =
-             self.new_strategy_->short_exit_filter();
-            auto changed_method = self.render_condition_method(any_short_exit);
-            self.new_strategy_->short_exit_filter(std::move(changed_method));
-            ImGui::PopID();
-          }
-
-          ImGui::Unindent();
-          ImGui::PopID();
-        }
-        ImGui::Text("");
-      }
-
-      {
-        ImGui::SeparatorText("Risk");
-        self.render_risk_mode();
-        ImGui::Text("");
-      }
-
-      {
-        ImGui::SeparatorText("Stop Loss");
-
-        auto stop_loss_enabled = self.new_strategy_->stop_loss_enabled();
-        auto stop_loss_trailing_enabled =
-         self.new_strategy_->stop_loss_trailing_enabled();
-
-        ImGui::Checkbox("Enable Stop Loss", &stop_loss_enabled);
-        ImGui::Checkbox("Enable Trailing Stop Loss",
-                        &stop_loss_trailing_enabled);
-
-        self.new_strategy_->stop_loss_enabled(stop_loss_enabled);
-        self.new_strategy_->stop_loss_trailing_enabled(
-         stop_loss_trailing_enabled);
-
-        ImGui::Text("");
-      }
-
-      {
-        ImGui::SeparatorText("Take Profit");
-
-        auto take_profit_enabled = self.new_strategy_->take_profit_enabled();
-        auto take_profit_risk_multiplier =
-         self.new_strategy_->take_profit_risk_multiplier();
-
-        ImGui::Checkbox("Enable Take Profit", &take_profit_enabled);
-        ImGui::Text("R-Multiple:");
-        ImGui::SameLine();
-        if(ImGui::InputDouble("##take_profit_risk_multiplier",
-                              &take_profit_risk_multiplier,
-                              0.1,
-                              1.0,
-                              "%.2f")) {
-          if(take_profit_risk_multiplier < 0.1) {
-            take_profit_risk_multiplier = 0.1;
-          }
-        }
-
-        self.new_strategy_->take_profit_enabled(take_profit_enabled);
-        self.new_strategy_->take_profit_risk_multiplier(
-         take_profit_risk_multiplier);
-
-        ImGui::Text("");
-      }
-
-      ImGui::EndChild();
+      self.edit_strategy_form(context);
     }
 
     ImGui::EndChild();
 
-    if(ImGui::Button("Edit")) {
-      app_state.push_action(
-       EditStrategyAction{self.old_strategy_, *std::move(self.new_strategy_)});
+    const auto same_strategy =
+     *(self.selected_strategy_ptr_) == *(self.editing_strategy_ptr_);
 
-      self.current_page_ = Page::List;
+    if(ImGui::Button("OK")) {
+      self.submit_strategy_changes(context);
+      self.reset();
     }
 
     ImGui::SameLine();
     if(ImGui::Button("Cancel")) {
-      self.old_strategy_ = nullptr;
-      self.new_strategy_ = nullptr;
-      self.current_page_ = Page::List;
+      self.reset();
     }
 
+    ImGui::BeginDisabled(same_strategy);
     ImGui::SameLine();
     if(ImGui::Button("Apply")) {
-      app_state.push_action(
-       EditStrategyAction{self.old_strategy_, *self.new_strategy_});
+      self.submit_strategy_changes(context);
     }
+    ImGui::EndDisabled();
 
     ImGui::EndGroup();
   }
 
-  void render_risk_mode(this auto& self)
+  void edit_strategy_form(this auto& self, WindowContext& context)
+  {
+    ImGui::BeginChild("edit_content",
+                      ImVec2(0, -ImGui::GetFrameHeightWithSpacing()));
+
+    {
+      ImGui::Text("Strategy Name:");
+      ImGui::SameLine();
+      auto strategy_name = self.editing_strategy_ptr_->name();
+      ImGui::InputText("##strategy_name", &strategy_name);
+      self.editing_strategy_ptr_->name(strategy_name);
+      ImGui::Text("");
+    }
+
+    {
+      ImGui::SeparatorText("Series Methods");
+
+      auto& series_registry = self.editing_strategy_ptr_->series_registry();
+      ImGui::Separator();
+      auto changed_names = std::vector<std::pair<std::string, std::string>>{};
+      self.available_series_names_.clear();
+      for(auto id_counter = 0;
+          auto& [series_name, series_method] : series_registry) {
+        ImGui::PushID(id_counter++);
+
+        ImGui::Text("Name:");
+        ImGui::SameLine();
+        auto input_series_name = series_name;
+        ImGui::InputText("##series_name", &input_series_name);
+        if(ImGui::IsItemDeactivatedAfterEdit()) {
+          if(input_series_name != series_name) {
+            changed_names.emplace_back(series_name, input_series_name);
+          }
+        }
+
+        ImGui::Text("Method:");
+        ImGui::SameLine();
+        self.render_series_method(series_method, context);
+        series_registry.set(series_name, series_method);
+
+        ImGui::Separator();
+        ImGui::PopID();
+
+        self.available_series_names_.push_back(series_name);
+      }
+
+      for(auto [old_name, new_name] : changed_names) {
+        // TODO: handle the errors
+        [[maybe_unused]]
+        const auto result = series_registry.rename(old_name, new_name);
+      }
+
+      if(ImGui::Button("Add Series")) {
+        auto new_series_name =
+         std::format("new_var_{}", series_registry.size() + 1);
+        auto new_series_method = get_default_series_method("CLOSE");
+        series_registry.set(new_series_name, new_series_method);
+      }
+
+      ImGui::Text("");
+    }
+
+    {
+      ImGui::SeparatorText("Positions");
+
+      {
+        ImGui::Text("Long Position:");
+        ImGui::PushID("long_position");
+        ImGui::Indent();
+
+        {
+          ImGui::Text("Entry Condition:");
+          ImGui::PushID("long_entry");
+          const auto& any_long_entry =
+           self.editing_strategy_ptr_->long_entry_filter();
+          auto changed_method =
+           self.render_condition_method(any_long_entry, context);
+          self.editing_strategy_ptr_->long_entry_filter(
+           std::move(changed_method));
+          ImGui::PopID();
+        }
+
+        ImGui::Separator();
+
+        {
+          ImGui::Text("Exit Condition:");
+          ImGui::PushID("long_exit");
+          const auto& any_long_exit =
+           self.editing_strategy_ptr_->long_exit_filter();
+          auto changed_method =
+           self.render_condition_method(any_long_exit, context);
+          self.editing_strategy_ptr_->long_exit_filter(
+           std::move(changed_method));
+          ImGui::PopID();
+        }
+
+        ImGui::Unindent();
+        ImGui::PopID();
+      }
+
+      ImGui::Text("");
+
+      {
+        ImGui::Text("Short Position:");
+        ImGui::PushID("short_position");
+        ImGui::Indent();
+
+        {
+          ImGui::Text("Entry Condition:");
+          ImGui::PushID("short_entry");
+          const auto& any_short_entry =
+           self.editing_strategy_ptr_->short_entry_filter();
+          auto changed_method =
+           self.render_condition_method(any_short_entry, context);
+          self.editing_strategy_ptr_->short_entry_filter(
+           std::move(changed_method));
+          ImGui::PopID();
+        }
+
+        ImGui::Separator();
+
+        {
+          ImGui::Text("Exit Condition:");
+          ImGui::PushID("short_exit");
+          const auto& any_short_exit =
+           self.editing_strategy_ptr_->short_exit_filter();
+          auto changed_method =
+           self.render_condition_method(any_short_exit, context);
+          self.editing_strategy_ptr_->short_exit_filter(
+           std::move(changed_method));
+          ImGui::PopID();
+        }
+
+        ImGui::Unindent();
+        ImGui::PopID();
+      }
+      ImGui::Text("");
+    }
+
+    {
+      ImGui::SeparatorText("Risk");
+      self.render_risk_mode(context);
+      ImGui::Text("");
+    }
+
+    {
+      ImGui::SeparatorText("Stop Loss");
+
+      auto stop_loss_enabled = self.editing_strategy_ptr_->stop_loss_enabled();
+      auto stop_loss_trailing_enabled =
+       self.editing_strategy_ptr_->stop_loss_trailing_enabled();
+
+      ImGui::Checkbox("Enable Stop Loss", &stop_loss_enabled);
+      ImGui::Checkbox("Enable Trailing Stop Loss", &stop_loss_trailing_enabled);
+
+      self.editing_strategy_ptr_->stop_loss_enabled(stop_loss_enabled);
+      self.editing_strategy_ptr_->stop_loss_trailing_enabled(
+       stop_loss_trailing_enabled);
+
+      ImGui::Text("");
+    }
+
+    {
+      ImGui::SeparatorText("Take Profit");
+
+      auto take_profit_enabled =
+       self.editing_strategy_ptr_->take_profit_enabled();
+      auto take_profit_risk_multiplier =
+       self.editing_strategy_ptr_->take_profit_risk_multiplier();
+
+      ImGui::Checkbox("Enable Take Profit", &take_profit_enabled);
+      ImGui::Text("R-Multiple:");
+      ImGui::SameLine();
+      if(ImGui::InputDouble("##take_profit_risk_multiplier",
+                            &take_profit_risk_multiplier,
+                            0.1,
+                            1.0,
+                            "%.2f")) {
+        if(take_profit_risk_multiplier < 0.1) {
+          take_profit_risk_multiplier = 0.1;
+        }
+      }
+
+      self.editing_strategy_ptr_->take_profit_enabled(take_profit_enabled);
+      self.editing_strategy_ptr_->take_profit_risk_multiplier(
+       take_profit_risk_multiplier);
+
+      ImGui::Text("");
+    }
+
+    ImGui::EndChild();
+  }
+
+  void render_risk_mode(this auto& self, WindowContext& context)
   {
     auto& atr_risk_period = self.risk_atr_.first;
     auto& atr_risk_multiplier = self.risk_atr_.second;
@@ -696,10 +931,10 @@ private:
     enum class RiskMode : int { Atr, Percentage, Fixed };
     static auto risk_mode = static_cast<int>(RiskMode::Atr);
 
-    auto risk_method = self.new_strategy_->risk_method();
-    if(const auto atr_method = series_method_cast<AtrMethod>(risk_method)) {
-      atr_risk_period = static_cast<int>(atr_method->period());
-      atr_risk_multiplier = atr_method->multiplier();
+    auto risk_method = self.editing_strategy_ptr_->risk_method();
+    if(const auto atr_method = series_method_cast<RiskAtrMethod>(risk_method)) {
+      atr_risk_period = static_cast<int>(atr_method->multiplicand().period());
+      atr_risk_multiplier = atr_method->multiplier().value();
       risk_mode = static_cast<int>(RiskMode::Atr);
     } else if(const auto percentage_method =
                series_method_cast<PercentageMethod>(risk_method)) {
@@ -709,13 +944,23 @@ private:
                series_method_cast<ValueMethod>(risk_method)) {
       fixed_risk = value_method->value();
       risk_mode = static_cast<int>(RiskMode::Fixed);
+    } else {
+      context.push_action([](ApplicationState& app_state) {
+        const auto error_message =
+         "ERROR: Unknown risk method in strategy. Tell the developer!";
+        app_state.alert(error_message);
+      });
+
+      self.current_page_ = Page::List;
+      return;
     }
 
     {
       if(ImGui::RadioButton(
           "ATR", &risk_mode, static_cast<int>(RiskMode::Atr))) {
-        self.new_strategy_->risk_method(AtrMethod{
-         static_cast<std::size_t>(atr_risk_period), atr_risk_multiplier});
+        self.editing_strategy_ptr_->risk_method(
+         RiskAtrMethod{AtrMethod{static_cast<std::size_t>(atr_risk_period)},
+                       ValueMethod{atr_risk_multiplier}});
       }
 
       ImGui::Indent();
@@ -727,8 +972,9 @@ private:
         }
 
         if(risk_mode == static_cast<int>(RiskMode::Atr)) {
-          self.new_strategy_->risk_method(AtrMethod{
-           static_cast<std::size_t>(atr_risk_period), atr_risk_multiplier});
+          self.editing_strategy_ptr_->risk_method(
+           RiskAtrMethod{AtrMethod{static_cast<std::size_t>(atr_risk_period)},
+                         ValueMethod{atr_risk_multiplier}});
         }
       }
       ImGui::Text("Multiplier:");
@@ -740,8 +986,9 @@ private:
         }
 
         if(risk_mode == static_cast<int>(RiskMode::Atr)) {
-          self.new_strategy_->risk_method(AtrMethod{
-           static_cast<std::size_t>(atr_risk_period), atr_risk_multiplier});
+          self.editing_strategy_ptr_->risk_method(
+           RiskAtrMethod{AtrMethod{static_cast<std::size_t>(atr_risk_period)},
+                         ValueMethod{atr_risk_multiplier}});
         }
       }
       ImGui::Unindent();
@@ -749,7 +996,7 @@ private:
     {
       if(ImGui::RadioButton(
           "Percentage", &risk_mode, static_cast<int>(RiskMode::Percentage))) {
-        self.new_strategy_->risk_method(
+        self.editing_strategy_ptr_->risk_method(
          PercentageMethod{CloseMethod{}, percent_risk});
       }
 
@@ -763,7 +1010,7 @@ private:
         }
 
         if(risk_mode == static_cast<int>(RiskMode::Percentage)) {
-          self.new_strategy_->risk_method(
+          self.editing_strategy_ptr_->risk_method(
            PercentageMethod{CloseMethod{}, percent_risk});
         }
       }
@@ -772,7 +1019,7 @@ private:
     {
       if(ImGui::RadioButton(
           "Fixed", &risk_mode, static_cast<int>(RiskMode::Fixed))) {
-        self.new_strategy_->risk_method(ValueMethod{fixed_risk});
+        self.editing_strategy_ptr_->risk_method(ValueMethod{fixed_risk});
       }
 
       ImGui::Indent();
@@ -784,28 +1031,32 @@ private:
         }
 
         if(risk_mode == static_cast<int>(RiskMode::Fixed)) {
-          self.new_strategy_->risk_method(ValueMethod{fixed_risk});
+          self.editing_strategy_ptr_->risk_method(ValueMethod{fixed_risk});
         }
       }
       ImGui::Unindent();
     }
   }
 
-  void render_series_method(this auto& self, AnySeriesMethod& series_method)
+  void render_series_method(this auto& self,
+                            AnySeriesMethod& series_method,
+                            WindowContext& context)
   {
     static const std::vector<std::string> series_ids = {
-     "OPEN",          "CLOSE",      "HIGH",     "LOW",      "VOLUME",
-     "CHANGE",        "ADD",        "SUBTRACT", "MULTIPLY", "DIVIDE",
-     "NEGATE",        "PERCENTAGE", "ABS_DIFF", "DATA",     "SMA",
-     "EMA",           "WMA",        "HMA",      "RSI",      "MACD",
-     "ATR",           "BB",         "KC",       "STOCH",    "STOCH_RSI",
-     "SELECT_OUTPUT", "REFERENCE",  "VALUE",    "LOOKBACK"};
+     "OPEN",    "CLOSE",     "HIGH",          "LOW",       "VOLUME",
+     "CHANGE",  "ADD",       "SUBTRACT",      "MULTIPLY",  "DIVIDE",
+     "NEGATE",  "SQRT",      "PERCENTAGE",    "ABS_DIFF",  "DATA",
+     "SMA",     "EMA",       "WMA",           "HMA",       "RSI",
+     "MACD",    "ATR",       "STDDEV",        "BB",        "KC",
+     "STOCH",   "STOCH_RSI", "SELECT_OUTPUT", "REFERENCE", "VALUE",
+     "LOOKBACK"};
 
-    auto series_id = get_series_method_id(series_method);
+    auto method_series_id = get_series_method_id(series_method);
 
-    ImGui::PushID(series_id.c_str());
+    ImGui::PushID(method_series_id.c_str());
     {
-      const auto combo_preview_value = get_series_method_title(series_id);
+      const auto combo_preview_value =
+       get_series_method_title(method_series_id);
       if(ImGui::BeginCombo("##Series", combo_preview_value.c_str())) {
         static auto filter = ImGuiTextFilter{};
 
@@ -818,11 +1069,25 @@ private:
 
         for(const auto& series_id : series_ids) {
           const auto series_title = get_series_method_title(series_id);
-          const bool is_selected = series_id == series_id;
+          const bool is_selected = series_id == method_series_id;
 
           if(filter.PassFilter(series_title.c_str())) {
             if(ImGui::Selectable(series_title.c_str(), is_selected)) {
-              series_method = get_default_series_method(series_id);
+              if(series_id == "REFERENCE" &&
+                 self.available_series_names_.empty()) {
+                const auto reference_method_title =
+                 get_series_method_title("REFERENCE");
+                const auto error_message =
+                 std::format("Cannot select '{}' when there are no available "
+                             "series other than the current one.",
+                             reference_method_title);
+                context.push_action(
+                 [error_message](ApplicationState& app_state) {
+                   app_state.alert(error_message);
+                 });
+              } else {
+                series_method = get_default_series_method(series_id);
+              }
             }
           }
         }
@@ -831,18 +1096,20 @@ private:
     }
     {
       ImGui::Indent();
-      self.render_series_method_params(series_method);
+      self.render_series_method_params(series_method, context);
       ImGui::Unindent();
     }
     ImGui::PopID();
   }
 
-  void render_series_method_params(this auto& self, AnySeriesMethod& method)
+  void render_series_method_params(this auto& self,
+                                   AnySeriesMethod& method,
+                                   WindowContext& context)
   {
     ([&]<typename... Ts>() mutable {
       ([&]() mutable -> bool {
         if(auto specific_method = series_method_cast<Ts>(method)) {
-          self.render_series_method_params(*specific_method);
+          self.render_series_method_params(*specific_method, context);
           return true;
         }
 
@@ -858,7 +1125,7 @@ private:
                           StochMethod,
                           StochRsiMethod,
                           SmaMethod,
-                          EmaMethod,
+                          CachedResultsEmaMethod,
                           WmaMethod,
                           HmaMethod,
                           RsiMethod,
@@ -873,26 +1140,45 @@ private:
                           DivideMethod,
                           PercentageMethod,
                           AbsDiffMethod,
-                          NegateMethod>());
+                          NegateMethod,
+                          SqrtAnyMethod,
+                          StddevAnyMethod>());
   }
 
-  void render_series_method_params(this auto& self, SelectOutputMethod& method)
+  void render_series_method_params(this auto& self,
+                                   SelectOutputMethod& method,
+                                   WindowContext& context)
   {
     {
       const auto output_options =
        std::vector<SeriesOutput>{SeriesOutput::UpperBand,
                                  SeriesOutput::MiddleBand,
-                                 SeriesOutput::LowerBand};
+                                 SeriesOutput::LowerBand,
+                                 SeriesOutput::MacdLine,
+                                 SeriesOutput::SignalLine,
+                                 SeriesOutput::Histogram,
+                                 SeriesOutput::KPercent,
+                                 SeriesOutput::DPercent};
+
+      const auto output_map = std::unordered_map<SeriesOutput, std::string>{
+       {SeriesOutput::UpperBand, "Upper Band"},
+       {SeriesOutput::MiddleBand, "Middle Band"},
+       {SeriesOutput::LowerBand, "Lower Band"},
+       {SeriesOutput::MacdLine, "MACD Line"},
+       {SeriesOutput::SignalLine, "Signal Line"},
+       {SeriesOutput::Histogram, "Histogram"},
+       {SeriesOutput::KPercent, "%K"},
+       {SeriesOutput::DPercent, "%D"}};
+
       ImGui::Text("Output:");
       ImGui::SameLine();
-      auto output_name = method.output();
+      auto output = method.output();
       {
-        const auto output_str = get_output_name_string(output_name);
+        const auto output_str = output_map.at(output);
         if(ImGui::BeginCombo("##output", output_str.c_str())) {
           for(auto output_option : output_options) {
-            const auto output_option_str =
-             get_output_name_string(output_option);
-            const bool is_selected = output_name == output_option;
+            const auto output_option_str = output_map.at(output_option);
+            const bool is_selected = output == output_option;
             if(ImGui::Selectable(output_option_str.c_str(), is_selected)) {
               method.output(output_option);
             }
@@ -905,44 +1191,67 @@ private:
       ImGui::Text("Source:");
       ImGui::SameLine();
       auto output_source = method.source();
-      self.render_series_method(output_source);
+      self.render_series_method(output_source, context);
       method.source(std::move(output_source));
     }
   }
 
-  void render_series_method_params(this auto& self, ReferenceMethod& method)
+  void render_series_method_params(this auto& self,
+                                   ReferenceMethod& method,
+                                   WindowContext& context)
   {
+    if(std::ranges::find(self.available_series_names_, method.name()) ==
+       self.available_series_names_.end()) {
+      const auto new_name = self.available_series_names_.empty()
+                             ? ""
+                             : self.available_series_names_.front();
+      method.name(new_name);
+    }
+
     ImGui::Text("Name:");
     ImGui::SameLine();
-    auto name = method.name();
-    if(ImGui::InputText("##reference_name", &name)) {
-      method.name(name);
+
+    const auto display_name = method.name();
+    if(ImGui::BeginCombo("##reference_name", display_name.c_str())) {
+      for(const auto& name_option : self.available_series_names_) {
+        ImGui::PushID(name_option.c_str());
+
+        const bool is_selected = display_name == name_option;
+        if(ImGui::Selectable(name_option.c_str(), is_selected)) {
+          method.name(name_option);
+        }
+
+        ImGui::PopID();
+      }
+      ImGui::EndCombo();
     }
   }
 
-  void render_series_method_params(this auto& self, BbMethod& method)
+  void render_series_method_params(this auto& self,
+                                   BbMethod& method,
+                                   WindowContext& context)
   {
     ImGui::Text("MA Type:");
     ImGui::SameLine();
     {
-      const auto ma_type_options = std::vector<BbMaType>{BbMaType::Sma,
-                                                         BbMaType::Ema,
-                                                         BbMaType::Wma,
-                                                         BbMaType::Hma,
-                                                         BbMaType::Rma};
+      const auto ma_type_options = std::vector<MaMethodType>{MaMethodType::Sma,
+                                                             MaMethodType::Ema,
+                                                             MaMethodType::Wma,
+                                                             MaMethodType::Hma,
+                                                             MaMethodType::Rma};
 
       const auto get_ma_type_string =
-       [](BbMaType ma_type) static -> std::string {
+       [](MaMethodType ma_type) static -> std::string {
         switch(ma_type) {
-        case BbMaType::Sma:
+        case MaMethodType::Sma:
           return "SMA";
-        case BbMaType::Ema:
+        case MaMethodType::Ema:
           return "EMA";
-        case BbMaType::Wma:
+        case MaMethodType::Wma:
           return "WMA";
-        case BbMaType::Hma:
+        case MaMethodType::Hma:
           return "HMA";
-        case BbMaType::Rma:
+        case MaMethodType::Rma:
           return "RMA";
         }
 
@@ -985,63 +1294,90 @@ private:
     ImGui::Text("Source:");
     ImGui::SameLine();
     auto source = method.ma_source();
-    self.render_series_method(source);
+    self.render_series_method(source, context);
     method.ma_source(std::move(source));
   }
 
-  void render_series_method_params(this auto& self, KcMethod& method)
+  void render_series_method_params(this auto& self,
+                                   KcMethod& method,
+                                   WindowContext& context)
   {
     {
-      ImGui::Text("MA:");
+      ImGui::Text("Length:");
       ImGui::SameLine();
-      {
-        const auto ma_ids =
-         std::vector<std::string>{"SMA", "EMA", "WMA", "HMA"};
-
-        auto ma_method = method.ma();
-        const auto selected_ma_id = get_series_method_id(ma_method);
-        const auto selected_ma_title = get_series_method_title(selected_ma_id);
-        if(ImGui::BeginCombo("##ma_type", selected_ma_title.c_str())) {
-          for(const auto& ma_id : ma_ids) {
-            const auto ma_title = get_series_method_title(ma_id);
-            const bool is_selected = selected_ma_title == ma_title;
-            if(ImGui::Selectable(ma_title.c_str(), is_selected)) {
-              ma_method = get_default_series_method(ma_id);
-            }
-          }
-          ImGui::EndCombo();
+      auto length = static_cast<int>(method.ma_period());
+      if(ImGui::InputInt("##kc_length", &length)) {
+        if(length < 1) {
+          length = 1;
         }
-        ImGui::Indent();
-        self.render_series_method_params(ma_method);
-        method.ma(std::move(ma_method));
-        ImGui::Unindent();
+        method.ma_period(static_cast<std::size_t>(length));
       }
     }
     {
-      ImGui::Text("Range:");
+      ImGui::Text("MA Type:");
       ImGui::SameLine();
       {
-        const auto range_ids =
-         std::vector<std::string>{"ATR", "PERCENTAGE", "VALUE"};
+        const auto ma_type_options =
+         std::unordered_map<MaMethodType, std::string>{
+          {MaMethodType::Sma, "SMA"},
+          {MaMethodType::Ema, "EMA"},
+          {MaMethodType::Wma, "WMA"},
+          {MaMethodType::Hma, "HMA"},
+          {MaMethodType::Rma, "RMA"}};
 
-        auto range_method = method.range();
-        const auto selected_range_id = get_series_method_id(range_method);
-        const auto selected_range_title =
-         get_series_method_title(selected_range_id);
-        if(ImGui::BeginCombo("##range_type", selected_range_title.c_str())) {
-          for(const auto& range_id : range_ids) {
-            const auto range_title = get_series_method_title(range_id);
-            const bool is_selected = selected_range_title == range_title;
-            if(ImGui::Selectable(range_title.c_str(), is_selected)) {
-              range_method = get_default_series_method(range_id);
+        const auto ma_type_str = ma_type_options.at(method.ma_method_type());
+        if(ImGui::BeginCombo("##kc_ma_type", ma_type_str.c_str())) {
+          for(const auto& [ma_type_option, ma_type_option_str] :
+              ma_type_options) {
+            const bool is_selected = ma_type_str == ma_type_option_str;
+            if(ImGui::Selectable(ma_type_option_str.c_str(), is_selected)) {
+              method.ma_method_type(ma_type_option);
             }
           }
           ImGui::EndCombo();
         }
-        ImGui::Indent();
-        self.render_series_method_params(range_method);
-        method.range(std::move(range_method));
-        ImGui::Unindent();
+      }
+    }
+    {
+      ImGui::Text("Source:");
+      ImGui::SameLine();
+      auto source = method.ma_source();
+      self.render_series_method(source, context);
+      method.ma_source(std::move(source));
+    }
+    {
+      ImGui::Text("Band Type:");
+      ImGui::SameLine();
+      {
+        const auto band_type_options =
+         std::unordered_map<KcBandMethodType, std::string>{
+          {KcBandMethodType::Atr, "ATR"},
+          {KcBandMethodType::Tr, "True Range"},
+          {KcBandMethodType::RangeHighLow, "Range (High-Low)"}};
+
+        const auto band_type_str =
+         band_type_options.at(method.band_method_type());
+        if(ImGui::BeginCombo("##kc_band_type", band_type_str.c_str())) {
+          for(const auto& [band_type_option, band_type_option_str] :
+              band_type_options) {
+            const bool is_selected = band_type_str == band_type_option_str;
+            if(ImGui::Selectable(band_type_option_str.c_str(), is_selected)) {
+              method.band_method_type(band_type_option);
+            }
+          }
+          ImGui::EndCombo();
+        }
+      }
+    }
+    {
+      ImGui::Text("ATR Length:");
+      ImGui::SameLine();
+      auto atr_length = static_cast<int>(method.band_atr_period());
+      if(ImGui::InputInt("##kc_atr_length", &atr_length)) {
+        if(atr_length < 1) {
+          atr_length = 1;
+        }
+        method.band_atr_period(static_cast<std::size_t>(atr_length));
       }
     }
     {
@@ -1057,7 +1393,9 @@ private:
     }
   }
 
-  void render_series_method_params(this auto& self, StochMethod& method)
+  void render_series_method_params(this auto& self,
+                                   StochMethod& method,
+                                   WindowContext& context)
   {
     {
       ImGui::Text("D Period:");
@@ -1094,7 +1432,9 @@ private:
     }
   }
 
-  void render_series_method_params(this auto& self, StochRsiMethod& method)
+  void render_series_method_params(this auto& self,
+                                   StochRsiMethod& method,
+                                   WindowContext& context)
   {
     {
       ImGui::Text("D Period:");
@@ -1144,20 +1484,23 @@ private:
       ImGui::Text("RSI Source:");
       ImGui::SameLine();
       auto rsi_source = method.rsi_source();
-      self.render_series_method(rsi_source);
+      self.render_series_method(rsi_source, context);
       method.rsi_source(std::move(rsi_source));
     }
   }
 
   template<typename TMethodWithPeriod>
     requires std::same_as<TMethodWithPeriod, SmaMethod> ||
-             std::same_as<TMethodWithPeriod, EmaMethod> ||
+             std::same_as<TMethodWithPeriod, CachedResultsEmaMethod> ||
              std::same_as<TMethodWithPeriod, WmaMethod> ||
              std::same_as<TMethodWithPeriod, HmaMethod> ||
              std::same_as<TMethodWithPeriod, RsiMethod> ||
              std::same_as<TMethodWithPeriod, RocMethod> ||
-             std::same_as<TMethodWithPeriod, RvolMethod>
-  void render_series_method_params(this auto& self, TMethodWithPeriod& method)
+             std::same_as<TMethodWithPeriod, RvolMethod> ||
+             std::same_as<TMethodWithPeriod, StddevAnyMethod>
+  void render_series_method_params(this auto& self,
+                                   TMethodWithPeriod& method,
+                                   WindowContext& context)
   {
     ImGui::Text("Period:");
     ImGui::SameLine();
@@ -1172,7 +1515,7 @@ private:
     ImGui::Text("Source:");
     ImGui::SameLine();
     auto source = method.source();
-    self.render_series_method(source);
+    self.render_series_method(source, context);
     method.source(std::move(source));
   }
 
@@ -1182,14 +1525,16 @@ private:
              std::same_as<TBinaryOpMethod, MultiplyMethod> ||
              std::same_as<TBinaryOpMethod, DivideMethod> ||
              std::same_as<TBinaryOpMethod, AbsDiffMethod>
-  void render_series_method_params(this auto& self, TBinaryOpMethod& method)
+  void render_series_method_params(this auto& self,
+                                   TBinaryOpMethod& method,
+                                   WindowContext& context)
   {
     {
       ImGui::PushID("left");
       ImGui::Text("Left:");
       ImGui::SameLine();
       auto left = method.left();
-      self.render_series_method(left);
+      self.render_series_method(left, context);
       method.left(std::move(left));
       ImGui::PopID();
     }
@@ -1199,13 +1544,29 @@ private:
       ImGui::Text("Right:");
       ImGui::SameLine();
       auto right = method.right();
-      self.render_series_method(right);
+      self.render_series_method(right, context);
       method.right(std::move(right));
       ImGui::PopID();
     }
   }
 
-  void render_series_method_params(this auto& self, PercentageMethod& method)
+  template<typename TUnaryOpMethod>
+    requires std::same_as<TUnaryOpMethod, NegateMethod> ||
+             std::same_as<TUnaryOpMethod, SqrtAnyMethod>
+  void render_series_method_params(this auto& self,
+                                   TUnaryOpMethod& method,
+                                   WindowContext& context)
+  {
+    ImGui::Text("Value:");
+    ImGui::SameLine();
+    auto value = method.operand();
+    self.render_series_method(value, context);
+    method.operand(std::move(value));
+  }
+
+  void render_series_method_params(this auto& self,
+                                   PercentageMethod& method,
+                                   WindowContext& context)
   {
     {
       ImGui::PushID("percent");
@@ -1223,31 +1584,26 @@ private:
       ImGui::Text("Base:");
       ImGui::SameLine();
       auto base = method.base();
-      self.render_series_method(base);
+      self.render_series_method(base, context);
       method.base(std::move(base));
       ImGui::PopID();
     }
   }
 
-  void render_series_method_params(this auto& self, NegateMethod& method)
-  {
-    ImGui::Text("Value:");
-    ImGui::SameLine();
-    auto value = method.operand();
-    self.render_series_method(value);
-    method.operand(std::move(value));
-  }
-
-  void render_series_method_params(this auto& self, ChangeMethod& method)
+  void render_series_method_params(this auto& self,
+                                   ChangeMethod& method,
+                                   WindowContext& context)
   {
     ImGui::Text("Source:");
     ImGui::SameLine();
     auto source = method.source();
-    self.render_series_method(source);
+    self.render_series_method(source, context);
     method.source(std::move(source));
   }
 
-  void render_series_method_params(this auto& self, DataMethod& method)
+  void render_series_method_params(this auto& self,
+                                   DataMethod& method,
+                                   WindowContext& context)
   {
     ImGui::Text("Field:");
     ImGui::SameLine();
@@ -1257,7 +1613,9 @@ private:
     }
   }
 
-  void render_series_method_params(this auto& self, MacdMethod& method)
+  void render_series_method_params(this auto& self,
+                                   MacdMethod& method,
+                                   WindowContext& context)
   {
     {
       ImGui::Text("Fast Period:");
@@ -1296,12 +1654,14 @@ private:
       ImGui::Text("Source:");
       ImGui::SameLine();
       auto source = method.source();
-      self.render_series_method(source);
+      self.render_series_method(source, context);
       method.source(std::move(source));
     }
   }
 
-  void render_series_method_params(this auto& self, AtrMethod& method)
+  void render_series_method_params(this auto& self,
+                                   AtrMethod& method,
+                                   WindowContext& context)
   {
     ImGui::Text("Period:");
     ImGui::SameLine();
@@ -1313,18 +1673,32 @@ private:
       method.period(static_cast<std::size_t>(period));
     }
 
-    ImGui::Text("Multiplier:");
+    ImGui::Text("Smoothing:");
     ImGui::SameLine();
-    auto multiplier = method.multiplier();
-    if(ImGui::InputDouble("##atr_multiplier", &multiplier, 0.1, 1.0, "%.2f")) {
-      if(multiplier < 0.1) {
-        multiplier = 0.1;
+
+    const auto ma_types = std::unordered_map<MaMethodType, std::string>{
+     {MaMethodType::Sma, "SMA"},
+     {MaMethodType::Ema, "EMA"},
+     {MaMethodType::Wma, "WMA"},
+     {MaMethodType::Hma, "HMA"},
+     {MaMethodType::Rma, "RMA"},
+    };
+
+    const auto current_ma_title = ma_types.at(method.ma_smoothing_type());
+    if(ImGui::BeginCombo("##atr_smoothing_type", current_ma_title.c_str())) {
+      for(const auto& [ma_type, ma_title] : ma_types) {
+        const bool is_selected = method.ma_smoothing_type() == ma_type;
+        if(ImGui::Selectable(ma_title.c_str(), is_selected)) {
+          method.ma_smoothing_type(ma_type);
+        }
       }
-      method.multiplier(multiplier);
+      ImGui::EndCombo();
     }
   }
 
-  void render_series_method_params(this auto& self, ValueMethod& method)
+  void render_series_method_params(this auto& self,
+                                   ValueMethod& method,
+                                   WindowContext& context)
   {
     ImGui::Text("Value:");
     ImGui::SameLine();
@@ -1334,7 +1708,9 @@ private:
     }
   }
 
-  void render_series_method_params(this auto& self, LookbackMethod& method)
+  void render_series_method_params(this auto& self,
+                                   LookbackMethod& method,
+                                   WindowContext& context)
   {
     ImGui::Text("Periods:");
     ImGui::SameLine();
@@ -1616,59 +1992,59 @@ private:
   }
 
   auto render_condition_method(this auto& self,
-                               const AnyConditionMethod& any_condition)
-   -> AnyConditionMethod
+                               const AnyConditionMethod& any_condition,
+                               WindowContext& context) -> AnyConditionMethod
   {
     if(auto* condition_ptr =
         condition_method_cast<AllOfMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr);
+      return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
                condition_method_cast<AnyOfMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr);
+      return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
                condition_method_cast<TrueMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr);
+      return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
                condition_method_cast<FalseMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr);
+      return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
                condition_method_cast<LessThanMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr);
+      return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
                condition_method_cast<GreaterThanMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr);
+      return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
                condition_method_cast<LessEqualMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr);
+      return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
                condition_method_cast<GreaterEqualMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr);
+      return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
                condition_method_cast<EqualMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr);
+      return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
                condition_method_cast<NotEqualMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr);
+      return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
                condition_method_cast<CrossoverMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr);
+      return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
                condition_method_cast<CrossunderMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr);
+      return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
                condition_method_cast<NotMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr);
+      return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
                condition_method_cast<AndMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr);
+      return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
                condition_method_cast<OrMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr);
+      return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
                condition_method_cast<XorMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr);
+      return self.render_condition_method(*condition_ptr, context);
     } else {
-      return self.render_condition_method(*condition_ptr);
+      return self.render_condition_method(*condition_ptr, context);
     }
   }
 
@@ -1679,14 +2055,15 @@ private:
              std::same_as<TCondition, LessThanMethod> ||
              std::same_as<TCondition, GreaterEqualMethod> ||
              std::same_as<TCondition, LessEqualMethod>
-  auto render_condition_method(this auto& self, const TCondition& condition)
-   -> AnyConditionMethod
+  auto render_condition_method(this auto& self,
+                               const TCondition& condition,
+                               WindowContext& context) -> AnyConditionMethod
   {
     auto new_condition = condition;
 
     ImGui::PushID("left_param");
     auto target = new_condition.target();
-    self.render_series_method(target);
+    self.render_series_method(target, context);
     ImGui::PopID();
 
     const auto updated_condition_id =
@@ -1694,7 +2071,7 @@ private:
 
     ImGui::PushID("right_param");
     auto threshold = new_condition.threshold();
-    self.render_series_method(threshold);
+    self.render_series_method(threshold, context);
     ImGui::PopID();
 
     new_condition.target(std::move(target));
@@ -1709,14 +2086,15 @@ private:
   template<typename TCondition>
     requires std::same_as<TCondition, CrossoverMethod> ||
              std::same_as<TCondition, CrossunderMethod>
-  auto render_condition_method(this auto& self, const TCondition& condition)
-   -> AnyConditionMethod
+  auto render_condition_method(this auto& self,
+                               const TCondition& condition,
+                               WindowContext& context) -> AnyConditionMethod
   {
     auto new_condition = condition;
 
     ImGui::PushID("left_param");
     auto signal = new_condition.signal();
-    self.render_series_method(signal);
+    self.render_series_method(signal, context);
     ImGui::PopID();
 
     const auto updated_condition_id =
@@ -1724,7 +2102,7 @@ private:
 
     ImGui::PushID("right_param");
     auto reference = new_condition.reference();
-    self.render_series_method(reference);
+    self.render_series_method(reference, context);
     ImGui::PopID();
 
     new_condition.signal(std::move(signal));
@@ -1739,8 +2117,9 @@ private:
   template<typename TCondition>
     requires std::same_as<TCondition, TrueMethod> ||
              std::same_as<TCondition, FalseMethod>
-  auto render_condition_method(this auto& self, const TCondition& condition)
-   -> AnyConditionMethod
+  auto render_condition_method(this auto& self,
+                               const TCondition& condition,
+                               WindowContext& context) -> AnyConditionMethod
   {
     auto new_condition = condition;
     const auto updated_condition_id =
@@ -1755,8 +2134,9 @@ private:
   template<typename TCondition>
     requires std::same_as<TCondition, AllOfMethod> ||
              std::same_as<TCondition, AnyOfMethod>
-  auto render_condition_method(this auto& self, const TCondition& condition)
-   -> AnyConditionMethod
+  auto render_condition_method(this auto& self,
+                               const TCondition& condition,
+                               WindowContext& context) -> AnyConditionMethod
   {
     auto new_condition = condition;
     const auto updated_condition_id =
@@ -1766,7 +2146,7 @@ private:
     auto conditions = new_condition.conditions();
     for(auto counter_id = 0; auto& sub_condition : conditions) {
       ImGui::PushID(counter_id++);
-      sub_condition = self.render_condition_method(sub_condition);
+      sub_condition = self.render_condition_method(sub_condition, context);
 
       if(ImGui::Button("Remove Condition")) {
         conditions.erase(conditions.begin() + (counter_id - 1));
@@ -1793,15 +2173,16 @@ private:
 
   template<typename TCondition>
     requires std::same_as<TCondition, NotMethod>
-  auto render_condition_method(this auto& self, const TCondition& condition)
-   -> AnyConditionMethod
+  auto render_condition_method(this auto& self,
+                               const TCondition& condition,
+                               WindowContext& context) -> AnyConditionMethod
   {
     auto new_condition = condition;
     const auto updated_condition_id =
      self.draw_condition_method_combo(new_condition);
     ImGui::Indent();
     auto sub_condition = new_condition.other_condition();
-    sub_condition = self.render_condition_method(sub_condition);
+    sub_condition = self.render_condition_method(sub_condition, context);
     new_condition.other_condition(std::move(sub_condition));
     ImGui::Unindent();
     auto changed_method = self.make_condition_method_from_other(
@@ -1813,8 +2194,9 @@ private:
     requires std::same_as<TCondition, AndMethod> ||
              std::same_as<TCondition, OrMethod> ||
              std::same_as<TCondition, XorMethod>
-  auto render_condition_method(this auto& self, const TCondition& condition)
-   -> AnyConditionMethod
+  auto render_condition_method(this auto& self,
+                               const TCondition& condition,
+                               WindowContext& context) -> AnyConditionMethod
   {
     auto new_condition = condition;
     auto first_condition = new_condition.first_condition();
@@ -1822,7 +2204,7 @@ private:
 
     {
       ImGui::PushID("first_condition");
-      first_condition = self.render_condition_method(first_condition);
+      first_condition = self.render_condition_method(first_condition, context);
       ImGui::PopID();
     }
 
@@ -1833,7 +2215,8 @@ private:
 
     {
       ImGui::PushID("second_condition");
-      second_condition = self.render_condition_method(second_condition);
+      second_condition =
+       self.render_condition_method(second_condition, context);
       ImGui::PopID();
     }
 
@@ -1843,6 +2226,43 @@ private:
     auto changed_method = self.make_condition_method_from_other(
      updated_condition_id, std::move(new_condition));
     return changed_method;
+  }
+
+  void submit_strategy_changes(this auto& self, WindowContext& context)
+  {
+    context.push_action([strategy_ptr = self.selected_strategy_ptr_,
+                         edit_strategy_ptr = self.editing_strategy_ptr_](
+                         ApplicationState& app_state) {
+      if(edit_strategy_ptr->name().empty()) {
+        edit_strategy_ptr->name("Unnamed");
+      }
+
+      if(strategy_ptr == nullptr) {
+        app_state.add_strategy(
+         std::make_shared<backtest::Strategy>(*edit_strategy_ptr));
+        return;
+      }
+
+      const auto reset_backtests =
+       !strategy_ptr->equal_rules(*edit_strategy_ptr);
+      if(reset_backtests) {
+        for(auto& backtest : app_state.backtests()) {
+          if(backtest->strategy_ptr() == strategy_ptr) {
+            backtest->reset();
+          }
+        }
+      }
+
+      *strategy_ptr = *edit_strategy_ptr;
+    });
+  }
+
+  void reset(this auto& self)
+  {
+    self.current_page_ = Page::List;
+    self.selected_strategy_ptr_ = nullptr;
+    self.editing_strategy_ptr_ = nullptr;
+    self.available_series_names_.clear();
   }
 };
 

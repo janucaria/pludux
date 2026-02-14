@@ -10,22 +10,21 @@ module;
 
 export module pludux.apps.backtest:windows.trade_journal_window;
 
-import :app_state;
+import :window_context;
 
 export namespace pludux::apps {
 
 class TradeJournalWindow {
 public:
-  void render(this const TradeJournalWindow, AppState& app_state)
+  void render(this const TradeJournalWindow, WindowContext& context)
   {
-    const auto& state = app_state.state();
-    const auto& backtests = state.backtests;
+    const auto& app_state = context.app_state();
+    const auto& backtests = context.backtests();
 
     ImGui::Begin("Trades", nullptr);
 
-    if(!backtests.empty()) {
-      const auto backtest = backtests[state.selected_backtest_index];
-
+    const auto backtest = app_state.selected_backtest();
+    if(backtest) {
       const auto table_flags =
        ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
        ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
@@ -59,7 +58,7 @@ public:
 
         ImGui::TableHeadersRow();
 
-        const auto& backtest_summaries = backtest.summaries();
+        const auto& backtest_summaries = backtest->summaries();
         const auto backtest_summaries_size = backtest_summaries.size();
         for(int i = backtest_summaries_size - 1; i >= 0; --i) {
           const auto& summary = backtest_summaries.at(i);
@@ -68,9 +67,9 @@ public:
 
           auto id_counter = 0;
           for(const auto& trade_record : trade_session.trade_record_range()) {
-            if(!trade_session.is_open() || trade_record.exit_index() == 0) {
+            if(trade_record.is_closed() || i == 0) {
               const auto trade_count =
-               summary.trade_count() + (trade_session.is_open() ? 1 : 0);
+               summary.trade_count() + (trade_record.is_open() ? 1 : 0);
 
               ImGui::PushID(id_counter++);
               draw_trade_row(trade_count, trade_record);

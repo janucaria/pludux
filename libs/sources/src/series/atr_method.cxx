@@ -13,13 +13,13 @@ import :method_contextable;
 import :series_output;
 
 import :series.tr_method;
-import :series.rma_method;
+import :series.adaptive_ma_method;
 
 export namespace pludux {
 
 class AtrMethod {
 public:
-  using ResultType = typename RmaMethod<TrMethod>::ResultType;
+  using ResultType = typename TrMethod::ResultType;
 
   AtrMethod()
   : AtrMethod{14}
@@ -27,13 +27,12 @@ public:
   }
 
   explicit AtrMethod(std::size_t period)
-  : AtrMethod{period, 1.0}
+  : AtrMethod{MaMethodType::Rma, period}
   {
   }
 
-  explicit AtrMethod(std::size_t period, double multiplier)
-  : period_{period}
-  , multiplier_{multiplier}
+  explicit AtrMethod(MaMethodType ma_smoothing_type, std::size_t period)
+  : ma_smoothing_method_{ma_smoothing_type, TrMethod{}, period}
   {
   }
 
@@ -43,9 +42,7 @@ public:
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) noexcept -> ResultType
   {
-    const auto tr_method = TrMethod{};
-    const auto rma_method = RmaMethod{tr_method, self.period_};
-    const auto atr = rma_method(asset_snapshot, context) * self.multiplier_;
+    const auto atr = self.ma_smoothing_method_(asset_snapshot, context);
 
     return atr;
   }
@@ -60,27 +57,26 @@ public:
 
   auto period(this AtrMethod self) noexcept -> std::size_t
   {
-    return self.period_;
+    return self.ma_smoothing_method_.period();
   }
 
   void period(this AtrMethod& self, std::size_t new_period) noexcept
   {
-    self.period_ = new_period;
+    self.ma_smoothing_method_.period(new_period);
   }
 
-  auto multiplier(this AtrMethod self) noexcept -> double
+  auto ma_smoothing_type(this const AtrMethod& self) noexcept -> MaMethodType
   {
-    return self.multiplier_;
+    return self.ma_smoothing_method_.ma_type();
   }
 
-  void multiplier(this AtrMethod& self, double new_multiplier) noexcept
+  void ma_smoothing_type(this AtrMethod& self, MaMethodType new_type) noexcept
   {
-    self.multiplier_ = new_multiplier;
+    self.ma_smoothing_method_.ma_type(new_type);
   }
 
 private:
-  std::size_t period_;
-  double multiplier_;
+  AdaptiveMaMethod<TrMethod> ma_smoothing_method_;
 };
 
 } // namespace pludux

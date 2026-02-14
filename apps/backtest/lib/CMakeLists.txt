@@ -3,7 +3,7 @@ project(pludux-backtest-lib)
 FetchContent_Declare(
   rapidcsv
   GIT_REPOSITORY https://github.com/d99kris/rapidcsv.git
-  GIT_TAG        v8.88
+  GIT_TAG        v8.90
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
   OVERRIDE_FIND_PACKAGE
@@ -47,9 +47,12 @@ target_sources(${PROJECT_NAME}
     sources/backtest/trade_session.cxx
     
     sources/backtest/asset.cxx
+    sources/backtest/strategy.cxx
+    sources/backtest/market.cxx
+    sources/backtest/broker.cxx
     sources/backtest/profile.cxx
     sources/backtest/backtest_summary.cxx
-    sources/backtest/strategy.cxx
+    sources/backtest/backtest.cxx
 
     sources/backtest.cxx
 )

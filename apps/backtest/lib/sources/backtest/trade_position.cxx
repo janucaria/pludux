@@ -18,18 +18,23 @@ export namespace pludux::backtest {
 
 class TradePosition {
 public:
+  TradePosition()
+  : TradePosition{0.0, 0, std::time_t{}, 0.0, 0.0, 0.0, 0.0, 0.0, {}}
+  {
+  }
+
   TradePosition(double position_size,
                 std::time_t entry_timestamp,
                 double entry_price,
-                std::size_t entry_index,
+                double total_entry_fees,
                 double stop_loss_initial_price,
                 double stop_loss_trailing_price,
                 double take_profit_price)
   : TradePosition{position_size,
-                  entry_price,
+                  entry_price * position_size + total_entry_fees,
                   entry_timestamp,
                   entry_price,
-                  entry_index,
+                  total_entry_fees,
                   stop_loss_initial_price,
                   stop_loss_trailing_price,
                   take_profit_price,
@@ -38,22 +43,22 @@ public:
   }
 
   TradePosition(double position_size,
-                double average_price,
+                double investment,
                 std::time_t entry_timestamp,
                 double entry_price,
-                std::size_t entry_index,
+                double total_entry_fees,
                 double stop_loss_initial_price,
                 double stop_loss_trailing_price,
                 double take_profit_price,
                 std::vector<TradeRecord> realized_records)
   : position_size_{position_size}
-  , average_price_{average_price}
+  , investment_{investment}
   , entry_price_{entry_price}
+  , total_entry_fees_{total_entry_fees}
   , stop_loss_initial_price_{stop_loss_initial_price}
   , stop_loss_trailing_price_{stop_loss_trailing_price}
   , take_profit_price_{take_profit_price}
   , entry_timestamp_{entry_timestamp}
-  , entry_index_{entry_index}
   , realized_records_{std::move(realized_records)}
   {
   }
@@ -68,14 +73,14 @@ public:
     self.position_size_ = size;
   }
 
-  auto average_price(this const TradePosition& self) noexcept -> double
+  auto investment(this const TradePosition& self) noexcept -> double
   {
-    return self.average_price_;
+    return self.investment_;
   }
 
-  void average_price(this TradePosition& self, double price) noexcept
+  void investment(this TradePosition& self, double investment) noexcept
   {
-    self.average_price_ = price;
+    self.investment_ = investment;
   }
 
   auto entry_price(this const TradePosition& self) noexcept -> double
@@ -86,6 +91,16 @@ public:
   void entry_price(this TradePosition& self, double price) noexcept
   {
     self.entry_price_ = price;
+  }
+
+  auto total_entry_fees(this const TradePosition& self) noexcept -> double
+  {
+    return self.total_entry_fees_;
+  }
+
+  void total_entry_fees(this TradePosition& self, double fees) noexcept
+  {
+    self.total_entry_fees_ = fees;
   }
 
   auto stop_loss_initial_price(this const TradePosition& self) noexcept
@@ -120,16 +135,6 @@ public:
     self.take_profit_price_ = price;
   }
 
-  auto entry_index(this const TradePosition& self) noexcept -> std::size_t
-  {
-    return self.entry_index_;
-  }
-
-  void entry_index(this TradePosition& self, std::size_t index) noexcept
-  {
-    self.entry_index_ = index;
-  }
-
   auto entry_timestamp(this const TradePosition& self) noexcept -> std::time_t
   {
     return self.entry_timestamp_;
@@ -159,6 +164,11 @@ public:
             : self.stop_loss_trailing_price();
   }
 
+  auto average_price(this const TradePosition& self) noexcept -> double
+  {
+    return self.investment() / self.position_size();
+  }
+
   auto unrealized_position_size(this const TradePosition& self) noexcept
    -> double
   {
@@ -167,7 +177,7 @@ public:
 
   auto unrealized_investment(this const TradePosition& self) noexcept -> double
   {
-    return self.unrealized_position_size() * self.average_price();
+    return self.investment();
   }
 
   auto unrealized_pnl(this const TradePosition& self,
@@ -236,36 +246,37 @@ public:
                  double action_position_size,
                  std::time_t action_timestamp,
                  double action_price,
-                 std::size_t action_index)
+                 double action_total_fees)
   {
     if(self.is_closed()) {
       throw std::runtime_error("Cannot scaled in to a closed trade.");
     }
 
-    const auto last_position_size = self.position_size();
-    const auto last_average_price = self.average_price();
-    const auto last_investment = last_position_size * last_average_price;
-
-    const auto new_position_size = last_position_size + action_position_size;
-    const auto new_average_price =
-     (last_investment + action_position_size * action_price) /
-     new_position_size;
+    const auto last_investment = self.investment();
 
     auto scaled_in_record = TradeRecord{TradeRecord::Status::scaled_in,
                                         0.0,
-                                        last_average_price,
+                                        last_investment,
                                         self.entry_timestamp(),
                                         self.entry_price(),
-                                        self.entry_index(),
+                                        action_total_fees,
                                         action_timestamp,
                                         action_price,
-                                        action_index,
+                                        0.0,
                                         self.stop_loss_initial_price(),
                                         self.stop_loss_trailing_price(),
                                         self.take_profit_price()};
 
-    self.position_size(new_position_size);
-    self.average_price(new_average_price);
+    const auto last_position_size = self.position_size();
+    const auto new_investment =
+     action_position_size * action_price + action_total_fees;
+
+    const auto updated_position_size =
+     last_position_size + action_position_size;
+    const auto updated_investment = last_investment + new_investment;
+
+    self.position_size(updated_position_size);
+    self.investment(updated_investment);
 
     self.realized_records_.emplace_back(std::move(scaled_in_record));
   }
@@ -274,7 +285,7 @@ public:
                   double action_position_size,
                   std::time_t action_timestamp,
                   double action_price,
-                  std::size_t action_index,
+                  double action_total_fees,
                   TradeRecord::Status trade_status)
   {
     if(self.is_closed()) {
@@ -297,19 +308,24 @@ public:
       }
     }
 
+    const auto investment_closed = action_position_size * self.average_price();
+
     auto exit_record = TradeRecord{trade_status,
                                    action_position_size,
-                                   self.average_price(),
+                                   investment_closed,
                                    self.entry_timestamp(),
                                    self.entry_price(),
-                                   self.entry_index(),
+                                   self.total_entry_fees(),
                                    action_timestamp,
                                    action_price,
-                                   action_index,
+                                   action_total_fees,
                                    self.stop_loss_initial_price(),
                                    self.stop_loss_trailing_price(),
                                    self.take_profit_price()};
     self.realized_records_.emplace_back(std::move(exit_record));
+
+    const auto updated_investment = self.investment() - investment_closed;
+    self.investment(updated_investment);
 
     self.position_size(remaining_position_size);
   }
@@ -359,15 +375,15 @@ public:
 
 private:
   double position_size_;
-  double average_price_;
+  double investment_;
 
   double entry_price_;
+  double total_entry_fees_;
 
   double stop_loss_initial_price_;
   double stop_loss_trailing_price_;
   double take_profit_price_;
 
-  std::size_t entry_index_;
   std::time_t entry_timestamp_;
 
   std::vector<TradeRecord> realized_records_;

@@ -20,13 +20,17 @@ export import :series.operators_method;
 export import :series.highest_method;
 export import :series.lowest_method;
 export import :series.percentage_method;
+export import :series.stddev_method;
 
 export import :series.sma_method;
 export import :series.ema_method;
+export import :series.cached_results_ema_method;
 export import :series.rma_method;
+export import :series.cached_results_rma_method;
 export import :series.wma_method;
 export import :series.hma_method;
 export import :series.macd_method;
+export import :series.adaptive_ma_method;
 
 export import :series.tr_method;
 export import :series.atr_method;

@@ -31,16 +31,19 @@ auto main(int, const char**) -> int
     return 1;
   }
 
-  auto asset_history = pludux::csv_daily_stock_data(csv_stream);
-  auto asset_ptr = std::make_shared<pludux::backtest::Asset>(
-   asset_file, std::move(asset_history));
+  auto asset_ptr = std::make_shared<pludux::backtest::Asset>(asset_file);
+  pludux::update_asset_from_csv(*asset_ptr, csv_stream);
 
   auto profile_ptr = std::make_shared<pludux::backtest::Profile>("Default");
   profile_ptr->initial_capital(100'000'000.0);
   profile_ptr->capital_risk(0.01);
 
-  auto backtest =
-   pludux::Backtest{"no name", strategy_ptr, asset_ptr, profile_ptr};
+  auto broker_ptr = std::make_shared<pludux::backtest::Broker>("Default");
+
+  auto market_ptr = std::make_shared<pludux::backtest::Market>("Default");
+
+  auto backtest = pludux::backtest::Backtest{
+   "no name", asset_ptr, strategy_ptr, market_ptr, broker_ptr, profile_ptr};
   while(backtest.should_run()) {
     backtest.run();
   }
@@ -102,7 +105,7 @@ auto main(int, const char**) -> int
   for(int i = 0, ii = backtest_summaries.size(); i < ii; ++i) {
     const auto& session = backtest_summaries[i].trade_session();
     for(const auto& record : session.trade_record_range()) {
-      if(!record.is_open() || record.exit_index() == 0) {
+      if(!record.is_open() || i == ii - 1) {
         const auto entry_timestamp = record.entry_timestamp();
         const auto exit_timestamp = record.exit_timestamp();
         std::cout << "Entry date: " << pludux::format_datetime(entry_timestamp)

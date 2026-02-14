@@ -2,7 +2,10 @@ module;
 
 #include <algorithm>
 #include <array>
-#include <format>
+#include <cmath>
+#include <iomanip>
+#include <memory>
+#include <string>
 #include <tuple>
 #include <vector>
 
@@ -12,146 +15,115 @@ module;
 
 export module pludux.apps.backtest:windows.plot_data_window;
 
-import :app_state;
+import pludux.backtest;
+import :window_context;
 
 export namespace pludux::apps {
 
 class PlotDataWindow {
 public:
   PlotDataWindow()
-  : last_selected_backtest_index_{-1}
+  : last_selected_backtest_{nullptr}
   , bullish_color_{0.5, 1, 0, 1}
   , bearish_color_{1, 0, 0.5, 1}
   , risk_color_{1, 0, 0, 0.25}
   , reward_color_{0, 1, 0, 0.25}
   , trailing_stop_color_{1, 0., 0., 0.9}
-  , plot_range_{0, 1}
+  , row_ratios_{1, 4, 1}
   {
   }
 
-  void render(this PlotDataWindow& self, AppState& app_state)
+  void render(this PlotDataWindow& self, WindowContext& context)
   {
-    const auto& state = app_state.state();
-    const auto& backtests = state.backtests;
+    const auto& app_state = context.app_state();
+    const auto backtest = app_state.selected_backtest();
 
-    ImGui::Begin("Charts", nullptr);
+    ImGui::Begin("Plots", nullptr);
 
-    if(backtests.empty()) {
+    if(!backtest) {
       ImGui::End();
       return;
     }
 
-    const auto& asset = backtests[state.selected_backtest_index].asset();
-    const auto& asset_history = asset.history();
+    const auto& asset = backtest->asset();
+    const auto& backtest_summaries = backtest->summaries();
+    const auto is_backtest_should_run = backtest->should_run();
 
-    auto backtest_summaries = std::vector<backtest::BacktestSummary>{};
-    auto is_backtest_should_run = false;
-    if(!state.backtests.empty()) {
-      const auto& backtest = state.backtests[state.selected_backtest_index];
-      is_backtest_should_run = backtest.should_run();
-      backtest_summaries = backtest.summaries();
-    }
-
-    // get the avaliable space
-    const auto available_space = ImGui::GetContentRegionAvail();
-
-    ImGui::BeginChild(
-     "Top pane", ImVec2{-1, available_space.y * 0.7f}, ImGuiChildFlags_ResizeY);
-
-    auto axis_x_flags = ImPlotAxisFlags_None | ImPlotAxisFlags_Invert;
+    auto axis_x_flags = ImPlotAxisFlags{ImPlotAxisFlags_None};
     auto axis_y_flags = ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_Opposite |
-                        ImPlotAxisFlags_Foreground | ImPlotAxisFlags_NoLabel |
+                        ImPlotAxisFlags_Foreground |
                         ImPlotAxisFlags_NoHighlight;
 
     const auto reset_chart_view =
-     self.last_selected_backtest_index_ != state.selected_backtest_index;
+     self.last_selected_backtest_ != app_state.selected_backtest();
     if(is_backtest_should_run || reset_chart_view) {
       axis_x_flags |= ImPlotAxisFlags_AutoFit;
       axis_y_flags |= ImPlotAxisFlags_AutoFit;
 
-      self.last_selected_backtest_index_ = state.selected_backtest_index;
+      self.last_selected_backtest_ = app_state.selected_backtest();
     }
 
-    if(ImPlot::BeginPlot("##OHLCPlot",
-                         {-1, -1},
-                         ImPlotFlags_NoLegend | ImPlotFlags_NoMouseText |
-                          ImPlotFlags_NoBoxSelect)) {
-      ImPlot::SetupAxisLinks(
-       ImAxis_X1, &self.plot_range_.Min, &self.plot_range_.Max);
-      ImPlot::SetupAxis(ImAxis_X1,
-                        nullptr,
-                        axis_x_flags | ImPlotAxisFlags_NoTickLabels |
-                         ImPlotAxisFlags_NoHighlight);
-      ImPlot::SetupAxisLimits(ImAxis_X1, 0, asset_history.size() + 100);
+    if(ImPlot::BeginSubplots("##MainPlots",
+                             self.row_ratios_.size(),
+                             1,
+                             ImVec2{-1, -1},
+                             ImPlotSubplotFlags_LinkAllX,
+                             self.row_ratios_.data())) {
+      constexpr auto plot_size = ImVec2{-1, 0};
+      constexpr auto plot_flags =
+       ImPlotFlags_NoLegend | ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect;
 
-      ImPlot::SetupAxis(ImAxis_Y1, nullptr, axis_y_flags);
-      ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
+      if(ImPlot::BeginPlot("##EquityPlot", plot_size, plot_flags)) {
+        ImPlot::SetupAxis(ImAxis_X1,
+                          nullptr,
+                          axis_x_flags | ImPlotAxisFlags_NoTickLabels |
+                           ImPlotAxisFlags_NoHighlight);
 
-      self.DrawTrades("Trades", backtest_summaries, asset_history);
-      self.TickerTooltip(asset_history, false);
-      self.PlotOHLC("OHLC", asset_history);
+        ImPlot::SetupAxis(ImAxis_Y1, "% Equity", axis_y_flags);
+        ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
 
-      ImPlot::EndPlot();
-    }
-    ImGui::EndChild();
+        self.plot_equity(backtest_summaries);
 
-    ImGui::BeginChild("Bottom pane", ImVec2{-1, -1});
-    {
-      const auto tab_bar_flags = ImGuiTabBarFlags_None;
-
-      if(ImGui::BeginTabBar("Indicators", tab_bar_flags)) {
-        if(ImGui::BeginTabItem("Volume")) {
-          if(ImPlot::BeginPlot("##VolumePlot",
-                               {-1, -1},
-                               ImPlotFlags_NoLegend | ImPlotFlags_NoMouseText |
-                                ImPlotFlags_NoBoxSelect)) {
-            ImPlot::SetupAxisLinks(
-             ImAxis_X1, &self.plot_range_.Min, &self.plot_range_.Max);
-
-            ImPlot::SetupAxis(ImAxis_X1, nullptr, axis_x_flags);
-            ImPlot::SetupAxis(
-             ImAxis_Y1, nullptr, axis_y_flags | ImPlotAxisFlags_LockMin);
-            ImPlot::SetupAxisFormat(ImAxis_Y1, VolumeFormatter);
-
-            self.TickerTooltip(asset_history, false);
-            self.PlotVolume("Volume", asset_history);
-
-            ImPlot::EndPlot();
-          }
-
-          ImGui::EndTabItem();
-        }
-
-        if(ImGui::BeginTabItem("Equity (%)")) {
-          if(ImPlot::BeginPlot("##EquityPlot",
-                               {-1, -1},
-                               ImPlotFlags_NoLegend | ImPlotFlags_NoMouseText |
-                                ImPlotFlags_NoBoxSelect)) {
-            ImPlot::SetupAxisLinks(
-             ImAxis_X1, &self.plot_range_.Min, &self.plot_range_.Max);
-
-            ImPlot::SetupAxis(ImAxis_X1, nullptr, axis_x_flags);
-
-            ImPlot::SetupAxis(ImAxis_Y1, nullptr, axis_y_flags);
-            ImPlot::SetupAxisFormat(ImAxis_Y1, VolumeFormatter);
-
-            self.plot_equity(backtest_summaries);
-
-            ImPlot::EndPlot();
-          }
-
-          ImGui::EndTabItem();
-        }
-
-        ImGui::EndTabBar();
+        ImPlot::EndPlot();
       }
+
+      if(ImPlot::BeginPlot("##OHLCPlot", plot_size, plot_flags)) {
+        ImPlot::SetupAxis(ImAxis_X1,
+                          nullptr,
+                          axis_x_flags | ImPlotAxisFlags_NoTickLabels |
+                           ImPlotAxisFlags_NoHighlight);
+
+        ImPlot::SetupAxis(ImAxis_Y1, "Price", axis_y_flags);
+        ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
+
+        self.draw_trades("Trades", backtest_summaries, asset);
+        self.ticker_tooltip(backtest_summaries, asset, true);
+        self.plot_ohlc("OHLC", backtest_summaries, asset);
+
+        ImPlot::EndPlot();
+      }
+      if(ImPlot::BeginPlot("##VolumePlot", plot_size, plot_flags)) {
+        ImPlot::SetupAxis(ImAxis_X1, nullptr, axis_x_flags);
+
+        ImPlot::SetupAxisFormat(ImAxis_X1, date_formatter, &context);
+
+        ImPlot::SetupAxis(
+         ImAxis_Y1, "Volume", axis_y_flags | ImPlotAxisFlags_LockMin);
+        ImPlot::SetupAxisFormat(ImAxis_Y1, volume_formatter);
+
+        self.ticker_tooltip(backtest_summaries, asset, true);
+        self.plot_volume("Volume", backtest_summaries, asset);
+
+        ImPlot::EndPlot();
+      }
+
+      ImPlot::EndSubplots();
     }
-    ImGui::EndChild();
     ImGui::End();
   }
 
 private:
-  std::ptrdiff_t last_selected_backtest_index_;
+  std::shared_ptr<backtest::Backtest> last_selected_backtest_;
 
   ImVec4 bullish_color_;
   ImVec4 bearish_color_;
@@ -161,10 +133,12 @@ private:
 
   ImVec4 trailing_stop_color_;
 
-  ImPlotRange plot_range_;
+  std::array<float, 3> row_ratios_;
 
-  static void TickerTooltip(const AssetHistory& asset_history,
-                            bool span_subplots)
+  static void ticker_tooltip(
+   const std::vector<backtest::BacktestSummary>& backtest_summaries,
+   const backtest::Asset& asset,
+   bool span_subplots)
   {
     ImDrawList* draw_list = ImPlot::GetPlotDrawList();
     const double half_width = 0.5;
@@ -184,8 +158,10 @@ private:
       ImPlot::PopPlotClipRect();
 
       const auto idx = static_cast<int>(mouse.x);
-      if(ImPlot::IsPlotHovered() && idx > -1 && idx < asset_history.size()) {
-        const auto snapshot = AssetSnapshot(idx, asset_history);
+      if(ImPlot::IsPlotHovered() && idx > -1 &&
+         idx < backtest_summaries.size()) {
+        const auto& summary = backtest_summaries[idx];
+        const auto snapshot = get_asset_snapshot(summary, asset);
 
         if(ImGui::BeginTooltip()) {
           ImGui::Text("Date:");
@@ -212,7 +188,7 @@ private:
     }
   }
 
-  static auto VolumeFormatter(double value, char* buff, int size, void*) -> int
+  static auto volume_formatter(double value, char* buff, int size, void*) -> int
   {
     double v[] = {1000000000000, 1000000000, 1000000, 1000, 1};
     const char* p[] = {"T", "B", "M", "k", ""};
@@ -227,27 +203,52 @@ private:
     return snprintf(buff, size, "%g%s", value / v[4], p[4]);
   }
 
-  void PlotOHLC(this const PlotDataWindow& self,
-                const char* label_id,
-                const AssetHistory& asset_history)
+  static auto
+  date_formatter(double value, char* buff, int size, void* user_data) -> int
   {
-    auto* draw_list = ImPlot::GetPlotDrawList();
-    constexpr double half_width = 0.3;
+    auto& context = *reinterpret_cast<WindowContext*>(user_data);
+    const auto& app_state = context.app_state();
+    const auto& backtest = app_state.selected_backtest();
+    const auto& summaries = backtest->summaries();
 
+    const auto idx = static_cast<std::ptrdiff_t>(value);
+    if(idx < 0 || idx >= summaries.size()) {
+      return snprintf(buff, size, "");
+    }
+
+    const auto& backtest_summary = summaries.at(idx);
+
+    const auto& asset = backtest->asset();
+    const auto& snapshot = get_asset_snapshot(backtest_summary, asset);
+
+    const auto datetime = snapshot.datetime();
+    const auto timestamp = static_cast<std::time_t>(datetime);
+    const auto tm = *std::localtime(&timestamp);
+    return std::strftime(buff, size, "%b %Y", &tm);
+  }
+
+  static auto get_asset_snapshot(const backtest::BacktestSummary& summary,
+                                 const backtest::Asset& asset) -> AssetSnapshot
+  {
+    const auto& session = summary.trade_session();
+    const auto market_lookback = session.market_lookback();
+    return asset.get_snapshot(market_lookback);
+  }
+
+  void
+  plot_ohlc(this const PlotDataWindow& self,
+            const char* label_id,
+            const std::vector<backtest::BacktestSummary>& backtest_summaries,
+            const backtest::Asset& asset)
+  {
     if(ImPlot::BeginItem(label_id)) {
       ImPlot::GetCurrentItem()->Color = ImGui::GetColorU32(self.bullish_color_);
 
-      if(ImPlot::FitThisFrame()) {
-        for(int i = 0; i < asset_history.size(); ++i) {
-          const auto snapshot = AssetSnapshot(i, asset_history);
-
-          ImPlot::FitPoint(ImPlotPoint(i, snapshot.low()));
-          ImPlot::FitPoint(ImPlotPoint(i, snapshot.high()));
-        }
-      }
-
-      for(int i = 0, ii = asset_history.size(); i < ii; ++i) {
-        const auto snapshot = AssetSnapshot(i, asset_history);
+      auto* draw_list = ImPlot::GetPlotDrawList();
+      constexpr double half_width = 0.3;
+      for(int i = 0, ii = backtest_summaries.size(); i < ii; ++i) {
+        const auto& summary = backtest_summaries[i];
+        const auto snapshot = get_asset_snapshot(summary, asset);
 
         const auto open = snapshot.open();
         const auto high = snapshot.high();
@@ -281,34 +282,45 @@ private:
          ImDrawFlags_Closed,
          ImMax(1.0f, ImAbs(open_left_pos.x - close_right_pos.x) / 10.0f));
       }
+
+      if(ImPlot::FitThisFrame()) {
+        for(int i = 0; i < backtest_summaries.size(); ++i) {
+          const auto& summary = backtest_summaries[i];
+          const auto snapshot = get_asset_snapshot(summary, asset);
+
+          ImPlot::FitPoint(ImPlotPoint(i, snapshot.low()));
+          ImPlot::FitPoint(ImPlotPoint(i, snapshot.high()));
+        }
+      }
+
       ImPlot::EndItem();
     }
   }
 
-  void PlotVolume(this const PlotDataWindow& self,
-                  const char* label_id,
-                  const AssetHistory& asset_history)
+  void
+  plot_volume(this const PlotDataWindow& self,
+              const char* label_id,
+              const std::vector<backtest::BacktestSummary>& backtest_summaries,
+              const backtest::Asset& asset)
   {
-    // get ImGui window DrawList
-    ImDrawList* draw_list = ImPlot::GetPlotDrawList();
-    // calc real value width
-    const double half_width = 0.3;
-    // begin plot item
     if(ImPlot::BeginItem(label_id)) {
-      // override legend icon color
       ImPlot::GetCurrentItem()->Color = ImGui::GetColorU32(self.bullish_color_);
-      // fit data if requested
+
       if(ImPlot::FitThisFrame()) {
-        for(int i = 0; i < asset_history.size(); ++i) {
-          const auto snapshot = AssetSnapshot(i, asset_history);
+        for(int i = 0; i < backtest_summaries.size(); ++i) {
+          const auto& summary = backtest_summaries[i];
+          const auto snapshot = get_asset_snapshot(summary, asset);
 
           ImPlot::FitPoint(ImPlotPoint(i, 0));
           ImPlot::FitPoint(ImPlotPoint(i, snapshot.volume()));
         }
       }
-      // render data
-      for(int i = 0, ii = asset_history.size(); i < ii; ++i) {
-        const auto snapshot = AssetSnapshot(i, asset_history);
+
+      auto* draw_list = ImPlot::GetPlotDrawList();
+      constexpr auto half_width = 0.3;
+      for(int i = 0, ii = backtest_summaries.size(); i < ii; ++i) {
+        const auto& summary = backtest_summaries[i];
+        const auto snapshot = get_asset_snapshot(summary, asset);
 
         const auto open = snapshot.open();
         const auto close = snapshot.close();
@@ -332,16 +344,15 @@ private:
                                1.0f);
       }
 
-      // end plot item
       ImPlot::EndItem();
     }
   }
 
   void
-  DrawTrades(this const PlotDataWindow& self,
-             const char* label_id,
-             const std::vector<backtest::BacktestSummary>& backtest_summaries,
-             const AssetHistory& asset_history)
+  draw_trades(this const PlotDataWindow& self,
+              const char* label_id,
+              const std::vector<backtest::BacktestSummary>& backtest_summaries,
+              const backtest::Asset& asset)
   {
     constexpr auto marker_offset = 50.0f;
     const auto marker_text_color =
@@ -350,22 +361,22 @@ private:
 
     constexpr float half_width = 0.5f;
     if(ImPlot::BeginItem(label_id)) {
+      const auto asset_size = asset.history().size();
+      const auto summaries_size = backtest_summaries.size();
       auto trailing_stop_lines = std::vector<ImVec2>{};
-      trailing_stop_lines.reserve(backtest_summaries.size());
+      trailing_stop_lines.reserve(summaries_size);
 
-      for(auto i = std::size_t{0}, ii = backtest_summaries.size(); i < ii;
-          ++i) {
+      for(auto i = std::size_t{0}; i < summaries_size; ++i) {
         const auto& summary = backtest_summaries[i];
+        const auto snapshot = get_asset_snapshot(summary, asset);
         const auto& session = summary.trade_session();
 
         for(const auto& record : session.trade_record_range()) {
           const auto is_long_position = record.is_long_position();
-          const auto exit_idx = record.exit_index();
           const auto exit_price = record.exit_price();
           const auto take_profit_price = record.take_profit_price();
           const auto stop_loss_price = record.stop_loss_price();
           const auto trailing_stop_price = record.trailing_stop_price();
-          const auto entry_idx = record.entry_index();
           const auto avg_price = record.average_price();
 
           const auto top_color =
@@ -397,15 +408,16 @@ private:
             return std::tuple{top_price, middle_price, bottom_price};
           }();
 
-          const auto left_half_width = exit_idx == entry_idx ? 0.0 : half_width;
+          const auto left_half_width = record.is_entry() ? 0.0 : half_width;
           const auto right_half_width =
-           !record.is_closed() ? (exit_idx == 0 ? 10.0 : half_width) : 0.0;
+           !record.is_closed() ? (i == summaries_size - 1 ? 10.0 : half_width)
+                               : 0.0;
 
           {
             const auto risk_left_top_pos =
-             ImPlot::PlotToPixels(exit_idx + left_half_width, middle_price);
+             ImPlot::PlotToPixels(i - left_half_width, middle_price);
             const auto risk_right_bottom_pos =
-             ImPlot::PlotToPixels(exit_idx - right_half_width, bottom_price);
+             ImPlot::PlotToPixels(i + right_half_width, bottom_price);
 
             draw_list->AddRectFilled(risk_left_top_pos,
                                      risk_right_bottom_pos,
@@ -413,22 +425,19 @@ private:
           }
           {
             const auto reward_left_top_pos =
-             ImPlot::PlotToPixels(exit_idx + left_half_width, top_price);
+             ImPlot::PlotToPixels(i - left_half_width, top_price);
             const auto reward_right_bottom_pos =
-             ImPlot::PlotToPixels(exit_idx - right_half_width, middle_price);
+             ImPlot::PlotToPixels(i + right_half_width, middle_price);
 
             draw_list->AddRectFilled(reward_left_top_pos,
                                      reward_right_bottom_pos,
                                      ImGui::GetColorU32(top_color));
           }
 
-          if(record.entry_index() == record.exit_index()) {
-            const auto record_entry_idx = record.entry_index();
+          if(record.is_entry()) {
+            const auto entry_low = snapshot.low();
 
-            const auto entry_low =
-             AssetSnapshot{record_entry_idx, asset_history}.low();
-
-            auto entry_pos = ImPlot::PlotToPixels(record_entry_idx, entry_low);
+            auto entry_pos = ImPlot::PlotToPixels(i, entry_low);
             entry_pos.y += marker_offset;
 
             draw_list->AddTriangleFilled(
@@ -437,8 +446,10 @@ private:
              ImVec2{entry_pos.x, entry_pos.y - 10},
              ImGui::GetColorU32(self.bullish_color_));
 
+            // TODO: Visual Studio 2026 have bug with include <format> causing
+            // compile error
             const auto trade_count_str =
-             std::format("#{}", summary.trade_count() + 1);
+             std::string("#") + std::to_string(summary.trade_count() + 1);
             const auto text_size = ImGui::CalcTextSize(trade_count_str.c_str());
             draw_list->AddText(
              ImVec2{entry_pos.x - text_size.x * 0.5f, entry_pos.y},
@@ -448,10 +459,9 @@ private:
 
           {
             if(record.is_closed()) {
-              const auto exit_high =
-               AssetSnapshot{exit_idx, asset_history}.high();
+              const auto exit_high = snapshot.high();
 
-              auto exit_pos = ImPlot::PlotToPixels(exit_idx, exit_high);
+              auto exit_pos = ImPlot::PlotToPixels(i, exit_high);
               exit_pos.y -= marker_offset;
 
               draw_list->AddTriangleFilled(
@@ -460,8 +470,10 @@ private:
                ImVec2{exit_pos.x, exit_pos.y + 10},
                ImGui::GetColorU32(self.bearish_color_));
 
+              // TODO: Visual Studio 2026 have bug with include <format> causing
+              // compile error
               const auto trade_count_str =
-               std::format("#{}", summary.trade_count());
+               std::string("#") + std::to_string(summary.trade_count());
               const auto text_size =
                ImGui::CalcTextSize(trade_count_str.c_str());
               draw_list->AddText(
@@ -473,11 +485,11 @@ private:
 
           {
             const auto left_pos =
-             ImPlot::PlotToPixels(exit_idx + half_width, trailing_stop_price);
+             ImPlot::PlotToPixels(i - half_width, trailing_stop_price);
             const auto center_pos =
-             ImPlot::PlotToPixels(exit_idx, trailing_stop_price);
+             ImPlot::PlotToPixels(i, trailing_stop_price);
             const auto right_pos =
-             ImPlot::PlotToPixels(exit_idx - half_width, trailing_stop_price);
+             ImPlot::PlotToPixels(i + half_width, trailing_stop_price);
 
             trailing_stop_lines.push_back(left_pos);
             trailing_stop_lines.push_back(center_pos);
@@ -524,12 +536,12 @@ private:
       const auto& summary = backtest_summaries[summary_i];
       const auto equity = summary.equity();
       const auto equity_percentage = equity / summary.initial_capital() * 100.0;
-      const auto plot_idx = summaries_size - summary_i - 1;
+      const auto plot_idx = summary_i;
       xs.push_back(plot_idx);
       ys.push_back(equity_percentage);
     }
 
-    if(ImPlot::IsPlotHovered()) {
+    if(ImPlot::IsSubplotsHovered()) {
       constexpr auto half_width = 0.5;
       auto* draw_list = ImPlot::GetPlotDrawList();
       ImPlotPoint mouse = ImPlot::GetPlotMousePos();
@@ -547,7 +559,7 @@ private:
       const auto plot_idx = static_cast<int>(mouse.x);
       if(ImPlot::IsPlotHovered() && plot_idx > -1 &&
          plot_idx < summaries_size) {
-        const auto summary_i = summaries_size - plot_idx - 1;
+        const auto summary_i = plot_idx;
         ImGui::BeginTooltip();
         ImGui::Text("%s%%", format_currency(ys[summary_i]).c_str());
         ImGui::EndTooltip();

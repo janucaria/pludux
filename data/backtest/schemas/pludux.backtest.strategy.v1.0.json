@@ -1,9 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema#",
-  "title": "Strategy Schema",
+  "$id": "http://pludux.com/schemas/pludux.backtest.strategy.v1.0.json",
+  "title": "Pludux Backtest Strategy Schema",
   "type": "object",
   "additionalProperties": false,
   "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
     "series": {
       "type": "object",
       "patternProperties": {
@@ -347,16 +352,33 @@
             "period": {
               "type": "number"
             },
-            "multiplier": {
-              "type": "number"
+            "maSmoothingType": {
+              "enum": [
+                "SMA",
+                "EMA",
+                "RMA",
+                "WMA",
+                "HMA"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "stddevMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "STDDEV"
             },
-            "high": {
-              "$ref": "#/definitions/methodAsParameter"
+            "period": {
+              "type": "integer"
             },
-            "low": {
-              "$ref": "#/definitions/methodAsParameter"
-            },
-            "close": {
+            "source": {
               "$ref": "#/definitions/methodAsParameter"
             }
           }
@@ -405,11 +427,30 @@
             "method": {
               "const": "KC"
             },
-            "ma": {
-              "$ref": "#/definitions/maMethod"
+            "maSource": {
+              "$ref": "#/definitions/methodAsParameter"
             },
-            "range": {
-              "$ref": "#/definitions/atrMethod"
+            "maPeriod": {
+              "type": "integer"
+            },
+            "maMethodType": {
+              "enum": [
+                "SMA",
+                "EMA",
+                "RMA",
+                "WMA",
+                "HMA"
+              ]
+            },
+            "bandMethodType": {
+              "enum": [
+                "ATR",
+                "TR",
+                "RangeHighLow"
+              ]
+            },
+            "bandAtrPeriod": {
+              "type": "integer"
             },
             "multiplier": {
               "type": "number"
@@ -545,7 +586,7 @@
         }
       ]
     },
-    "mutiplyMethod": {
+    "multiplyMethod": {
       "allOf": [
         {
           "$ref": "#/definitions/baseMethod"
@@ -594,6 +635,23 @@
           "properties": {
             "method": {
               "const": "NEGATE"
+            },
+            "operand": {
+              "$ref": "#/definitions/methodAsParameter"
+            }
+          }
+        }
+      ]
+    },
+    "sqrtMethod": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "SQRT"
             },
             "operand": {
               "$ref": "#/definitions/methodAsParameter"
@@ -689,6 +747,9 @@
           "$ref": "#/definitions/atrMethod"
         },
         {
+          "$ref": "#/definitions/stddevMethod"
+        },
+        {
           "$ref": "#/definitions/bbMethod"
         },
         {
@@ -710,13 +771,16 @@
           "$ref": "#/definitions/subtractMethod"
         },
         {
-          "$ref": "#/definitions/mutiplyMethod"
+          "$ref": "#/definitions/multiplyMethod"
         },
         {
           "$ref": "#/definitions/divideMethod"
         },
         {
           "$ref": "#/definitions/negateMethod"
+        },
+        {
+          "$ref": "#/definitions/sqrtMethod"
         },
         {
           "$ref": "#/definitions/changeMethod"

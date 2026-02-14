@@ -1,4 +1,5 @@
 {
+  "version": 1,
   "series": {
     "stoch_rsi": {
       "method": "STOCH_RSI",

@@ -12,7 +12,7 @@ module;
 
 export module pludux.apps.backtest:actions.load_asset_csv_action;
 
-import :app_state_data;
+import :application_state;
 
 export namespace pludux::apps {
 
@@ -38,18 +38,19 @@ public:
   {
   }
 
-  void operator()(this const LoadAssetCsvAction& self, AppStateData& state)
+  void operator()(this const LoadAssetCsvAction& self,
+                  ApplicationState& app_state)
   {
     if constexpr(std::same_as<std::string, TSource>) {
       std::istringstream csv_stream{self.source_};
-      self.load_asset_csv(self.asset_name_, csv_stream, state);
+      self.load_asset_csv(self.asset_name_, csv_stream, app_state);
     } else if constexpr(std::same_as<std::filesystem::path, TSource>) {
       std::ifstream csv_stream{self.source_};
       if(!csv_stream.is_open()) {
         throw std::runtime_error{"Failed to open file: " +
                                  self.source_.string()};
       }
-      self.load_asset_csv(self.asset_name_, csv_stream, state);
+      self.load_asset_csv(self.asset_name_, csv_stream, app_state);
     }
   }
 
@@ -59,29 +60,12 @@ private:
 
   static void load_asset_csv(const std::string& asset_name,
                              std::istream& csv_stream,
-                             AppStateData& state)
+                             ApplicationState& app_state)
   {
-    auto asset_history = csv_daily_stock_data(csv_stream);
-    auto asset_ptr =
-     std::make_shared<backtest::Asset>(asset_name, std::move(asset_history));
+    auto asset_ptr = std::make_shared<backtest::Asset>(asset_name);
+    pludux::update_asset_from_csv(*asset_ptr, csv_stream);
 
-    auto& assets = state.assets;
-    auto find_it = std::find_if(
-     assets.begin(), assets.end(), [&asset_name](const auto& asset) {
-       return asset->name() == asset_name;
-     });
-    if(find_it != assets.end()) {
-      auto existing_asset_ptr = *find_it;
-      *existing_asset_ptr = std::move(*asset_ptr);
-
-      for(auto& backtest : state.backtests) {
-        if(backtest.asset_ptr() && backtest.asset_ptr()->name() == asset_name) {
-          backtest.reset();
-        }
-      }
-    } else {
-      assets.push_back(std::move(asset_ptr));
-    }
+    app_state.add_asset(std::move(asset_ptr));
   }
 };
 

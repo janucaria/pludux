@@ -237,3 +237,17 @@ TEST(OperatorsMethodTest, NegateNotEqualOperator)
   EXPECT_FALSE(negate_method1 == negate_method2);
   EXPECT_NE(negate_method1, negate_method2);
 }
+
+TEST(OperatorsMethodTest, SqrtMethod)
+{
+  const auto operand = DataMethod{"close"};
+  const auto sqrt_method = SqrtMethod{operand};
+  const auto asset_data = AssetHistory{{"close", {4, 9, 16, 25, 36}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
+
+  EXPECT_DOUBLE_EQ(sqrt_method(asset_snapshot[0], context), 2.0);
+  EXPECT_DOUBLE_EQ(sqrt_method(asset_snapshot[1], context), 3.0);
+  EXPECT_DOUBLE_EQ(sqrt_method(asset_snapshot[2], context), 4.0);
+  EXPECT_DOUBLE_EQ(sqrt_method(asset_snapshot[3], context), 5.0);
+  EXPECT_DOUBLE_EQ(sqrt_method(asset_snapshot[4], context), 6.0);
+}

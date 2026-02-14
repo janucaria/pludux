@@ -9,17 +9,20 @@ using namespace pludux;
 
 TEST(KcMethodTest, middle_EMA_range_ATR)
 {
-  const auto ma_method = EmaMethod{5};
-  const auto range_method = AtrMethod{4};
+  const auto ma_period = 5;
+  const auto ma_type = MaMethodType::Ema;
+  const auto range_period = 4;
+  const auto range_type = KcBandMethodType::Atr;
   const auto multiplier = 2.0;
-  const auto asset_data = AssetHistory{
-   {"High", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
-   {"Low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},
-   {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  const auto asset_data =
+   AssetHistory{{"High", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
+                {"Low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},
+                {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 
-  const auto kc_middle = KcMethod{ma_method, range_method, multiplier};
+  const auto kc_middle =
+   KcMethod{ma_type, ma_period, range_type, range_period, multiplier};
   EXPECT_DOUBLE_EQ(kc_middle(asset_snapshot[0], context), 856.95061728395069);
   EXPECT_DOUBLE_EQ(kc_middle(asset_snapshot[1], context), 857.92592592592598);
   EXPECT_DOUBLE_EQ(kc_middle(asset_snapshot[2], context), 856.88888888888891);
@@ -59,18 +62,19 @@ TEST(KcMethodTest, middle_EMA_range_ATR)
 TEST(KcMethodTest, middle_SMA_range_Range)
 {
   const auto ma_period = 5;
-  const auto ma_method = SmaMethod{CloseMethod{}, ma_period};
-  const auto range_method =
-   RmaMethod{SubtractMethod{HighMethod{}, LowMethod{}}, ma_period};
+  const auto ma_type = MaMethodType::Sma;
+  const auto range_period = 5;
+  const auto range_type = KcBandMethodType::Atr;
   const auto multiplier = 1.0;
-  const auto asset_data = AssetHistory{
-   {"High", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
-   {"Low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},
-   {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  const auto asset_data =
+   AssetHistory{{"High", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
+                {"Low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},
+                {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 
-  const auto kc_middle = KcMethod{ma_method, range_method, multiplier};
+  const auto kc_middle = KcMethod{
+   CloseMethod{}, ma_type, ma_period, range_type, range_period, multiplier};
   EXPECT_DOUBLE_EQ(kc_middle(asset_snapshot[0], context), 862);
   EXPECT_DOUBLE_EQ(kc_middle(asset_snapshot[1], context), 865);
   EXPECT_DOUBLE_EQ(kc_middle(asset_snapshot[2], context), 860);
@@ -118,10 +122,16 @@ TEST(KcMethodTest, EqualityOperator)
 
 TEST(KcMethodTest, NotEqualOperator)
 {
-  const auto kc_method1 = KcMethod{EmaMethod{5}, AtrMethod{14}, 2.0};
-  const auto kc_method2 = KcMethod{EmaMethod{5}, AtrMethod{20}, 2.0};
-  const auto kc_method3 = KcMethod{EmaMethod{9}, AtrMethod{14}, 2.0};
-
+  const auto kc_method1 = KcMethod{
+   CloseMethod{}, MaMethodType::Sma, 10, KcBandMethodType::Atr, 14, 1.5};
+  const auto kc_method2 = KcMethod{
+   CloseMethod{}, MaMethodType::Ema, 15, KcBandMethodType::Tr, 14, 2.0};
+  const auto kc_method3 = KcMethod{CloseMethod{},
+                                   MaMethodType::Wma,
+                                   20,
+                                   KcBandMethodType::RangeHighLow,
+                                   14,
+                                   1.0};
   EXPECT_TRUE(kc_method1 != kc_method2);
   EXPECT_NE(kc_method1, kc_method2);
   EXPECT_TRUE(kc_method1 != kc_method3);

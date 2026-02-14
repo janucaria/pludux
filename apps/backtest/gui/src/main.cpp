@@ -1,12 +1,24 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <string>
+#include <type_traits>
+#include <utility>
+
+#include <webgpu/webgpu.h>
 
 #include <GLFW/glfw3.h>
-#include <webgpu/webgpu.h>
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#include <emscripten/html5.h>
+#else
+#include <glfw3webgpu.h>
+#endif
 
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
@@ -14,28 +26,8 @@
 #include <implot.h>
 #include <implot_internal.h>
 
-#ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-#include <emscripten/html5.h>
-#include <emscripten/html5_webgpu.h>
-#else
-#include <webgpu/wgpu.h>
-#endif
-
-#include <glfw3webgpu.h>
-
-#include <cereal/cereal.hpp>
 #include <jsoncons/json.hpp>
 #include <rapidcsv.h>
-
-#include <cereal/archives/json.hpp>
-#include <cereal/types/deque.hpp>
-#include <cereal/types/memory.hpp>
-#include <cereal/types/optional.hpp>
-#include <cereal/types/queue.hpp>
-#include <cereal/types/string.hpp>
-#include <cereal/types/unordered_map.hpp>
-#include <cereal/types/vector.hpp>
 
 import pludux.apps.backtest;
 
@@ -43,81 +35,63 @@ import pludux.apps.backtest;
 
 extern "C" {
 
-EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_open_file(char* data,
-                                                         void* app_state_ptr)
+struct StdFreeDeleter {
+  void operator()(void* ptr) const noexcept
+  {
+    std::free(ptr);
+  }
+};
+
+EMSCRIPTEN_KEEPALIVE void
+pludux_call_free_callback_2(void* user_function, void* arg1, void* arg2)
 {
-  using pludux::apps::AppState;
+  using FunctionType = std::function<void(void*, void*)>;
+  auto function_ptr = reinterpret_cast<FunctionType*>(user_function);
+  auto unique_function = std::unique_ptr<FunctionType>(function_ptr);
+
+  auto unique_arg1 = std::unique_ptr<void, StdFreeDeleter>{arg1};
+  auto unique_arg2 = std::unique_ptr<void, StdFreeDeleter>{arg2};
+
+  (*unique_function)(unique_arg1.get(), unique_arg2.get());
+}
+
+EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_js_opened_file_content_ready(
+ char* name, char* data, void* user_callback, void* user_data)
+{
+  using JsOnOpenedFileContentReady =
+   std::function<void(const std::string&, const std::string&, void*)>;
+
+  const auto name_str = std::string(name);
+  std::free(name);
 
   const auto data_str = std::string(data);
   std::free(data);
 
-  auto app_state = *reinterpret_cast<AppState*>(app_state_ptr);
+  const auto callback_ptr =
+   reinterpret_cast<JsOnOpenedFileContentReady*>(user_callback);
 
-  app_state.push_action([data_str](pludux::apps::AppStateData& state) {
-    auto in_stream = std::istringstream{data_str};
-
-    if(!in_stream.good()) {
-      const auto error_message =
-       std::format("Failed to open data stream for reading.");
-      throw std::runtime_error(error_message);
-    }
-
-    auto in_archive = cereal::JSONInputArchive(in_stream);
-
-    in_archive(cereal::make_nvp("pludux", state));
-  });
+  (*callback_ptr)(name_str, data_str, user_data);
 }
 
-EMSCRIPTEN_KEEPALIVE void
-pludux_apps_backtest_load_csv_asset(char* name, char* data, void* app_state_ptr)
+EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_js_opened_file_text_ready(
+ char* data, void* user_callback, void* user_data)
 {
-  using pludux::apps::AppState;
-  using pludux::apps::LoadAssetCsvAction;
+  using pludux::apps::ApplicationState;
+  using JsOnPushOpenedFileAction =
+   std::function<void(const std::string&, ApplicationState&)>;
 
-  auto name_str = std::string(name);
-  std::free(name);
+  auto unique_data = std::unique_ptr<char, StdFreeDeleter>{data};
 
-  auto data_str = std::string(data);
-  std::free(data);
+  auto data_str = std::string(reinterpret_cast<const char*>(unique_data.get()));
 
-  auto action = LoadAssetCsvAction{std::move(name_str), std::move(data_str)};
+  auto callback_ptr =
+   reinterpret_cast<JsOnPushOpenedFileAction*>(user_callback);
 
-  auto app_state = *reinterpret_cast<AppState*>(app_state_ptr);
-  app_state.push_action(std::move(action));
-}
-
-EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_change_strategy_json_str(
- char* name, char* data, void* app_state_ptr)
-{
-  using pludux::apps::AppState;
-  using pludux::apps::ChangeStrategyJsonAction;
-
-  auto name_str = std::string(name);
-  std::free(name);
-
-  auto data_str = std::string(data);
-  std::free(data);
-
-  auto action =
-   ChangeStrategyJsonAction{std::move(name_str), std::move(data_str)};
-
-  auto app_state = *reinterpret_cast<AppState*>(app_state_ptr);
-  app_state.push_action(std::move(action));
-}
-
-EMSCRIPTEN_KEEPALIVE void
-pludux_apps_backtest_load_backtests_setup(char* data, void* app_state_ptr)
-{
-  using pludux::apps::AppState;
-  using pludux::apps::LoadBacktestsSetupAction;
-
-  auto data_str = std::string(data);
-  std::free(data);
-
-  auto action = LoadBacktestsSetupAction{std::move(data_str)};
-
-  auto app_state = *reinterpret_cast<AppState*>(app_state_ptr);
-  app_state.push_action(std::move(action));
+  auto& window_context =
+   *reinterpret_cast<pludux::apps::WindowContext*>(user_data);
+  window_context.push_action(
+   [data_str = std::move(data_str), callback_ptr = callback_ptr](
+    ApplicationState& app_state) { (*callback_ptr)(data_str, app_state); });
 }
 }
 
@@ -151,14 +125,21 @@ public:
 
     auto instance = wgpuCreateInstance(nullptr);
 
-    wgpu_surface_ = glfwCreateWindowWGPUSurface(instance, window_);
+    wgpu_surface_ = create_window_wgpu_surface(instance);
     if(!wgpu_surface_) {
       wgpuInstanceRelease(instance);
       return;
     }
 
 #ifdef __EMSCRIPTEN__
-    wgpu_preferred_fmt_ = wgpuSurfaceGetPreferredFormat(wgpu_surface_, nullptr);
+    auto surface_capabilities = WGPUSurfaceCapabilities{};
+    wgpuSurfaceGetCapabilities(wgpu_surface_, nullptr, &surface_capabilities);
+
+    wgpu_preferred_fmt_ = WGPUTextureFormat_Undefined;
+    if(surface_capabilities.formatCount > 0) {
+      wgpu_preferred_fmt_ = surface_capabilities.formats[0];
+    }
+
     wgpu_device_ = emscripten_webgpu_get_device();
 #else
     wgpu_preferred_fmt_ = WGPUTextureFormat_BGRA8Unorm;
@@ -415,23 +396,13 @@ private:
     auto surface_texture = WGPUSurfaceTexture{};
     wgpuSurfaceGetCurrentTexture(wgpu_surface_, &surface_texture);
 
-#ifdef __EMSCRIPTEN__
-    if(surface_texture.status != WGPUSurfaceGetCurrentTextureStatus_Success) {
-      return;
-    }
-#else
     if(surface_texture.status !=
        WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal) {
       return;
     }
-#endif
 
     auto tex_view_descriptor = WGPUTextureViewDescriptor{};
-#ifdef __EMSCRIPTEN__
-    tex_view_descriptor.label = "ImGui Surface Texture View";
-#else
     tex_view_descriptor.label = {"ImGui Surface Texture View", WGPU_STRLEN};
-#endif
     tex_view_descriptor.format = wgpuTextureGetFormat(surface_texture.texture);
     tex_view_descriptor.dimension = WGPUTextureViewDimension_2D;
     tex_view_descriptor.baseMipLevel = 0;
@@ -455,11 +426,7 @@ private:
     render_pass_desc.depthStencilAttachment = nullptr;
 
     auto enc_desc = WGPUCommandEncoderDescriptor{};
-#ifdef __EMSCRIPTEN__
-    enc_desc.label = "ImGui Command Encoder";
-#else
     enc_desc.label = {"ImGui Command Encoder", WGPU_STRLEN};
-#endif
     WGPUCommandEncoder encoder =
      wgpuDeviceCreateCommandEncoder(wgpu_device_, &enc_desc);
 
@@ -470,12 +437,7 @@ private:
     wgpuRenderPassEncoderRelease(pass);
 
     auto cmd_buffer_desc = WGPUCommandBufferDescriptor{};
-
-#ifdef __EMSCRIPTEN__
-    cmd_buffer_desc.label = "ImGui Command Buffer";
-#else
     cmd_buffer_desc.label = {"ImGui Command Buffer", WGPU_STRLEN};
-#endif
 
     WGPUCommandBuffer cmd_buffer =
      wgpuCommandEncoderFinish(encoder, &cmd_buffer_desc);
@@ -519,6 +481,27 @@ private:
 
     wgpuSurfaceUnconfigure(wgpu_surface_);
     configure_webgpu_surface();
+  }
+
+  WGPUSurface create_window_wgpu_surface(WGPUInstance instance)
+  {
+#ifdef __EMSCRIPTEN__
+    WGPUEmscriptenSurfaceSourceCanvasHTMLSelector fromCanvasHTMLSelector;
+    fromCanvasHTMLSelector.chain.sType =
+     WGPUSType_EmscriptenSurfaceSourceCanvasHTMLSelector;
+    fromCanvasHTMLSelector.selector = {"canvas", WGPU_STRLEN};
+
+    fromCanvasHTMLSelector.chain.next = nullptr;
+
+    WGPUSurfaceDescriptor surfaceDescriptor;
+    surfaceDescriptor.nextInChain = &fromCanvasHTMLSelector.chain;
+    surfaceDescriptor.label = {nullptr, WGPU_STRLEN};
+
+    return wgpuInstanceCreateSurface(instance, &surfaceDescriptor);
+
+#else
+    return glfwCreateWindowWGPUSurface(instance, window_);
+#endif
   }
 };
 

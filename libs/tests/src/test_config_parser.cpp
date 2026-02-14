@@ -284,7 +284,7 @@ TEST_F(ConfigParserTest, ParseScreenerEmaMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto ema_method =
-   series_method_cast<EmaMethod<AnySeriesMethod>>(method);
+   series_method_cast<CachedResultsEmaMethod<AnySeriesMethod>>(method);
   ASSERT_NE(ema_method, nullptr);
 
   EXPECT_EQ(ema_method->period(), 10);
@@ -348,7 +348,7 @@ TEST_F(ConfigParserTest, ParseScreenerRmaMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto rma_method =
-   series_method_cast<RmaMethod<AnySeriesMethod>>(method);
+   series_method_cast<CachedResultsRmaMethod<AnySeriesMethod>>(method);
   ASSERT_NE(rma_method, nullptr);
 
   EXPECT_EQ(rma_method->period(), 15);
@@ -428,6 +428,38 @@ TEST_F(ConfigParserTest, ParseScreenerRsiMethod)
   EXPECT_EQ(method, deserialized_config);
 }
 
+TEST_F(ConfigParserTest, ParseScreenerStddevMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "STDDEV",
+      "period": 20,
+      "source": {
+        "method": "DATA",
+        "field": "close"
+      }
+    }
+  )");
+
+  const auto method = config_parser.parse_method(config);
+
+  const auto stddev_method =
+   series_method_cast<StddevMethod<AnySeriesMethod>>(method);
+  ASSERT_NE(stddev_method, nullptr);
+
+  EXPECT_EQ(stddev_method->period(), 20);
+
+  const auto source = series_method_cast<DataMethod>(stddev_method->source());
+  ASSERT_NE(source, nullptr);
+
+  EXPECT_EQ(source->field(), "close");
+
+  const auto serialized_config = config_parser.serialize_method(method);
+  const auto deserialized_config =
+   config_parser.parse_method(serialized_config);
+  EXPECT_EQ(method, deserialized_config);
+}
+
 TEST_F(ConfigParserTest, ParseScreenerValueMethod)
 {
   const auto config = json::parse(R"(
@@ -478,7 +510,7 @@ TEST_F(ConfigParserTest, ParseScreenerAtrMethod)
     {
       "method": "ATR",
       "period": 14,
-      "multiplier": 1.0
+      "maSmoothingType": "RMA"
     }
   )");
 
@@ -488,7 +520,7 @@ TEST_F(ConfigParserTest, ParseScreenerAtrMethod)
   ASSERT_NE(atr_method, nullptr);
 
   EXPECT_EQ(atr_method->period(), 14);
-  EXPECT_EQ(atr_method->multiplier(), 1.0);
+  EXPECT_EQ(atr_method->ma_smoothing_type(), MaMethodType::Rma);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -518,7 +550,7 @@ TEST_F(ConfigParserTest, ParseScreenerBbMethod)
 
   const auto ma_source = series_method_cast<DataMethod>(bb_method->ma_source());
   EXPECT_NE(ma_source, nullptr);
-  EXPECT_EQ(bb_method->ma_type(), BbMaType::Sma);
+  EXPECT_EQ(bb_method->ma_type(), MaMethodType::Sma);
   EXPECT_EQ(bb_method->period(), 20);
   EXPECT_EQ(bb_method->stddev(), 2.0);
 
@@ -628,33 +660,30 @@ TEST_F(ConfigParserTest, ParseScreenerKcMethod)
   const auto config = json::parse(R"(
     {
       "method": "KC",
-      "ma": {
-        "method": "SMA",
-        "period": 5,
-        "source": {
-          "method": "DATA",
-          "field": "close"
-        }
+      "maMethodType": "SMA",
+      "maPeriod": 5,
+      "maSource": {
+        "method": "DATA",
+        "field": "close"
       },
-      "range": {
-        "method": "ATR",
-        "period": 14
-      },
+      "bandMethodType": "ATR",
+      "bandAtrPeriod": 14,
       "multiplier": 1.0
     }
   )");
 
   const auto method = config_parser.parse_method(config);
 
-  const auto kc_method =
-   series_method_cast<KcMethod<AnySeriesMethod, AnySeriesMethod>>(method);
+  const auto kc_method = series_method_cast<KcMethod<AnySeriesMethod>>(method);
   ASSERT_NE(kc_method, nullptr);
 
-  const auto ma_method =
-   series_method_cast<SmaMethod<AnySeriesMethod>>(kc_method->ma());
-  const auto range_method = series_method_cast<AtrMethod>(kc_method->range());
-  EXPECT_NE(ma_method, nullptr);
-  EXPECT_NE(range_method, nullptr);
+  const auto ma_source_method =
+   series_method_cast<DataMethod>(kc_method->ma_source());
+  EXPECT_NE(ma_source_method, nullptr);
+  EXPECT_EQ(kc_method->ma_method_type(), MaMethodType::Sma);
+  EXPECT_EQ(kc_method->ma_period(), 5);
+  EXPECT_EQ(kc_method->band_method_type(), KcBandMethodType::Atr);
+  EXPECT_EQ(kc_method->band_atr_period(), 14);
   EXPECT_EQ(kc_method->multiplier(), 1.0);
 
   const auto serialized_config = config_parser.serialize_method(method);
@@ -828,6 +857,34 @@ TEST_F(ConfigParserTest, ParseScreenerNegateMethod)
    series_method_cast<ValueMethod>(negate_method->operand());
   ASSERT_NE(operand, nullptr);
   EXPECT_EQ(operand->value(), 42);
+
+  const auto serialized_config = config_parser.serialize_method(method);
+  const auto deserialized_config =
+   config_parser.parse_method(serialized_config);
+  EXPECT_EQ(method, deserialized_config);
+}
+
+TEST_F(ConfigParserTest, ParseScreenerSqrtMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "SQRT",
+      "operand": {
+        "method": "VALUE",
+        "value": 16
+      }
+    }
+  )");
+
+  const auto method = config_parser.parse_method(config);
+
+  const auto sqrt_method =
+   series_method_cast<SqrtMethod<AnySeriesMethod>>(method);
+  ASSERT_NE(sqrt_method, nullptr);
+
+  const auto operand = series_method_cast<ValueMethod>(sqrt_method->operand());
+  ASSERT_NE(operand, nullptr);
+  EXPECT_EQ(operand->value(), 16);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -1535,4 +1592,34 @@ TEST_F(ConfigParserTest, ParseAnyConditionMethodWithInvalidRequiredFields)
   )");
 
   EXPECT_THROW(config_parser.parse_filter(config), std::exception);
+}
+
+TEST_F(ConfigParserTest, SeriesMethodRegistrySerializationDeserialization)
+{
+  const auto config = json::parse(R"(
+    {
+      "name1": {
+        "method": "DATA",
+        "field": "close"
+      },
+      "name2": {
+        "method": "VALUE",
+        "value": 100
+      }
+    }
+  )");
+
+  auto registry = SeriesMethodRegistry{};
+  registry.set("name1", DataMethod{"close"});
+  registry.set("name2", ValueMethod{100});
+
+  const auto serialized_config =
+   config_parser.serialize_registered_methods(registry);
+
+  const auto deserialized_registry =
+   config_parser.parse_registered_methods(serialized_config);
+  const auto deserialized_config =
+   config_parser.parse_registered_methods(config);
+  EXPECT_EQ(deserialized_config, deserialized_registry);
+  EXPECT_EQ(registry, deserialized_registry);
 }

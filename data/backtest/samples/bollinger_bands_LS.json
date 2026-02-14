@@ -1,4 +1,5 @@
 {
+  "version": 1,
   "series": {
     "bbands": {
       "method": "BB",
@@ -31,12 +32,8 @@
     "percentage": 5,
     "value": 1000
   },
-  "stopLoss": {
-    "isTrailing": true
-  },
-  "takeProfit": {
-    "riskMultiplier": 3
-  },
+  "stopLoss": false,
+  "takeProfit": false,
   "longPosition": {
     "entry": {
       "signal": {

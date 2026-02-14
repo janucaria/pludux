@@ -15,7 +15,7 @@ TEST(TradeSessionTest, DefaultConstructor)
   EXPECT_FALSE(session.closed_position().has_value());
   EXPECT_EQ(session.market_timestamp(), std::time_t{0});
   EXPECT_TRUE(std::isnan(session.market_price()));
-  EXPECT_EQ(session.market_index(), std::size_t{0});
+  EXPECT_EQ(session.market_lookback(), std::size_t{0});
 
   EXPECT_DOUBLE_EQ(session.unrealized_pnl(), 0.0);
   EXPECT_DOUBLE_EQ(session.partial_realized_pnl(), 0.0);
@@ -40,7 +40,7 @@ TEST(TradeSessionTest, ConstructorWithMarketParameters)
   EXPECT_FALSE(session.closed_position().has_value());
   EXPECT_EQ(session.market_timestamp(), std::time_t{1});
   EXPECT_DOUBLE_EQ(session.market_price(), 100.0);
-  EXPECT_EQ(session.market_index(), std::size_t{0});
+  EXPECT_EQ(session.market_lookback(), std::size_t{0});
 
   EXPECT_DOUBLE_EQ(session.unrealized_pnl(), 0.0);
   EXPECT_DOUBLE_EQ(session.partial_realized_pnl(), 0.0);

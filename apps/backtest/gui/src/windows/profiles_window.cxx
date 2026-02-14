@@ -2,16 +2,17 @@ module;
 
 #include <algorithm>
 #include <cstring>
-#include <format>
 #include <iterator>
 #include <memory>
 #include <string>
 
 #include <imgui.h>
+#include <misc/cpp/imgui_stdlib.h>
 
 export module pludux.apps.backtest:windows.profiles_window;
 
-import :app_state;
+import pludux.backtest;
+import :window_context;
 
 export namespace pludux::apps {
 
@@ -19,28 +20,24 @@ class ProfilesWindow {
 public:
   ProfilesWindow()
   : current_page_(ProfilePage::List)
-  , selected_profile_name_{}
-  , input_name_{}
-  , input_initial_capital_{100'000'000.0}
-  , input_capital_risk_{0.01}
+  , selected_profile_ptr_{nullptr}
+  , editing_profile_ptr_{nullptr}
   {
   }
 
-  void render(this auto& self, AppState& app_state)
+  void render(this auto& self, WindowContext& context)
   {
-    auto& state = app_state.state();
-
     ImGui::Begin("Profiles", nullptr);
     switch(self.current_page_) {
     case ProfilePage::AddNewProfile:
-      self.render_add_new_profile(app_state);
+      self.render_add_new_profile(context);
       break;
     case ProfilePage::EditProfile:
-      self.render_edit_profile(app_state);
+      self.render_edit_profile(context);
       break;
     case ProfilePage::List:
     default:
-      self.render_profiles_list(app_state);
+      self.render_profiles_list(context);
       break;
     }
 
@@ -50,16 +47,13 @@ public:
 private:
   enum class ProfilePage { List, AddNewProfile, EditProfile } current_page_;
 
-  std::string selected_profile_name_;
+  std::shared_ptr<backtest::Profile> selected_profile_ptr_;
+  std::shared_ptr<backtest::Profile> editing_profile_ptr_;
 
-  std::string input_name_;
-  double input_initial_capital_;
-  double input_capital_risk_;
-
-  void render_profiles_list(this auto& self, AppState& app_state)
+  void render_profiles_list(this auto& self, WindowContext& context)
   {
-    auto& state = app_state.state();
-    auto& profiles = state.profiles;
+    const auto& backtest = context.app_state().selected_backtest();
+    const auto& profiles = context.profiles();
 
     ImGui::BeginGroup();
     ImGui::BeginChild(
@@ -70,51 +64,28 @@ private:
 
     if(!profiles.empty()) {
       for(auto i = 0; i < profiles.size(); ++i) {
-        const auto& profile = *profiles[i];
-        const auto& profile_name = profile.name();
+        const auto& profile = profiles[i];
 
         ImGui::PushID(i);
 
         ImGui::SetNextItemAllowOverlap();
-        ImGui::Text("%s", profile_name.c_str());
+        auto is_selected = backtest && backtest->profile_ptr() == profile;
+        ImGui::Selectable(profile->name().c_str(), &is_selected);
 
         ImGui::SameLine();
         ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 100);
         if(ImGui::Button("Edit")) {
           self.current_page_ = ProfilePage::EditProfile;
-          self.selected_profile_name_ = profile_name;
-          self.input_name_ = profile_name;
-          self.input_initial_capital_ = profile.initial_capital();
-          self.input_capital_risk_ = profile.capital_risk();
+          self.selected_profile_ptr_ = profile;
+          self.editing_profile_ptr_ =
+           std::make_shared<backtest::Profile>(*profile);
         }
 
         ImGui::SameLine();
 
         if(ImGui::Button("Delete")) {
-          app_state.push_action([i](AppStateData& state) {
-            auto& profiles = state.profiles;
-
-            const auto it = std::next(profiles.begin(), i);
-            auto& profile_ptr = *it;
-
-            auto& backtests = state.backtests;
-            for(auto j = 0; j < backtests.size(); ++j) {
-              auto& backtest = backtests[j];
-              if(backtest.profile_ptr()->name() == profile_ptr->name()) {
-                backtests.erase(std::next(backtests.begin(), j));
-
-                if(state.selected_backtest_index > i ||
-                   state.selected_backtest_index >= backtests.size()) {
-                  --state.selected_backtest_index;
-                }
-
-                // Adjust the index since we removed an element
-                --j;
-              }
-            }
-
-            // Remove the profile from the vector
-            state.profiles.erase(it);
+          context.push_action([i](ApplicationState& app_state) {
+            app_state.remove_profile_at_index(i);
           });
         }
 
@@ -125,18 +96,18 @@ private:
     if(ImGui::Button("Add New Profile")) {
       self.current_page_ = ProfilePage::AddNewProfile;
 
-      self.input_name_ = "";
-      self.input_initial_capital_ = 100'000'000.0;
-      self.input_capital_risk_ = 0.01;
+      self.selected_profile_ptr_ = nullptr;
+      self.editing_profile_ptr_ = std::make_shared<backtest::Profile>("");
+      self.editing_profile_ptr_->initial_capital(100'000'000.0);
+      self.editing_profile_ptr_->capital_risk(0.01);
     }
 
     ImGui::EndGroup();
   }
 
-  void render_add_new_profile(this auto& self, AppState& app_state)
+  void render_add_new_profile(this auto& self, WindowContext& context)
   {
-    const auto& state = app_state.state();
-    const auto& profiles = state.profiles;
+    const auto& profiles = context.profiles();
 
     ImGui::BeginGroup();
     ImGui::BeginChild("item view",
@@ -145,90 +116,24 @@ private:
     ImGui::Text("Add New Profile");
     ImGui::Separator();
 
-    {
-      char name_buffer[64];
-      std::strcpy(name_buffer, self.input_name_.c_str());
-      ImGui::InputText("Name", name_buffer, sizeof(name_buffer));
-      self.input_name_ = std::string{name_buffer};
-    }
-
-    ImGui::InputDouble(
-     "Initial Capital", &self.input_initial_capital_, 100.0, 1000.0, "%.0f");
-
-    {
-      auto percentage = self.input_capital_risk_ * 100.0;
-      ImGui::InputDouble("Capital Risk (%)", &percentage, 1.0, 10.0, "%.2f");
-      self.input_capital_risk_ = percentage / 100.0;
-    }
+    self.edit_profile_form();
 
     ImGui::EndChild();
     if(ImGui::Button("Create Profile")) {
-      if(!self.input_name_.empty()) {
-        // check if the profile name already exists
-        const auto is_name_exists = std::any_of(
-         profiles.cbegin(), profiles.cend(), [&](const auto& profile) {
-           return profile->name() == self.input_name_;
-         });
-
-        if(is_name_exists) {
-          app_state.push_action([new_profile_name =
-                                  self.input_name_](AppStateData& state) {
-            const auto error_message =
-             std::format("Profile name '{}' already exists.", new_profile_name);
-            state.alert_messages.push(error_message);
-          });
-        } else {
-          app_state.push_action(
-           [name = self.input_name_,
-            initial_capital = self.input_initial_capital_,
-            capital_risk = self.input_capital_risk_](AppStateData& state) {
-             auto profile = std::make_shared<backtest::Profile>(name);
-             profile->initial_capital(initial_capital);
-             profile->capital_risk(capital_risk);
-
-             state.profiles.push_back(profile);
-           });
-
-          self.current_page_ = ProfilePage::List;
-        }
-      } else {
-        app_state.push_action([](AppStateData& state) {
-          state.alert_messages.push("Please enter a profile name.");
-        });
-      }
+      self.submit_profile_changes(context);
+      self.reset();
     }
 
     ImGui::SameLine();
     if(ImGui::Button("Cancel")) {
-      self.current_page_ = ProfilePage::List;
+      self.reset();
     }
 
     ImGui::EndGroup();
   }
 
-  void render_edit_profile(this auto& self, AppState& app_state)
+  void render_edit_profile(this auto& self, WindowContext& context)
   {
-    const auto& state = app_state.state();
-    const auto& profiles = state.profiles;
-
-    const auto find_it =
-     std::find_if(profiles.cbegin(), profiles.cend(), [&](const auto& profile) {
-       return profile->name() == self.selected_profile_name_;
-     });
-
-    if(find_it == profiles.cend()) {
-      app_state.push_action(
-       [name = self.selected_profile_name_](AppStateData& state) {
-         const auto error_message =
-          std::format("Profile '{}' not found for Edit.", name);
-         state.alert_messages.push(error_message);
-       });
-      self.current_page_ = ProfilePage::List;
-      return;
-    }
-
-    auto profile = *find_it;
-
     ImGui::BeginGroup();
     ImGui::BeginChild("item view",
                       ImVec2(0, -ImGui::GetFrameHeightWithSpacing()));
@@ -236,72 +141,86 @@ private:
     ImGui::Text("Edit Profile");
     ImGui::Separator();
 
-    {
-      char name_buffer[64];
-      std::strcpy(name_buffer, self.input_name_.c_str());
-      ImGui::InputText("Name", name_buffer, sizeof(name_buffer));
-      self.input_name_ = std::string{name_buffer};
-    }
-
-    ImGui::InputDouble(
-     "Initial Capital", &self.input_initial_capital_, 100.0, 1000.0, "%.0f");
-
-    {
-      auto percentage = self.input_capital_risk_ * 100.0;
-      ImGui::InputDouble("Capital Risk (%)", &percentage, 1.0, 10.0, "%.2f");
-      self.input_capital_risk_ = percentage / 100.0;
-    }
+    self.edit_profile_form();
 
     ImGui::EndChild();
-    if(ImGui::Button("Edit")) {
-      if(!self.input_name_.empty()) {
-        app_state.push_action(
-         [edited_profile_name = self.selected_profile_name_,
-          name = self.input_name_,
-          initial_capital = self.input_initial_capital_,
-          capital_risk = self.input_capital_risk_](AppStateData& state) {
-           auto& profiles = state.profiles;
-           const auto find_it =
-            std::find_if(profiles.cbegin(),
-                         profiles.cend(),
-                         [&edited_profile_name](const auto& profile) {
-                           return profile->name() == edited_profile_name;
-                         });
 
-           if(find_it == profiles.cend()) {
-             const auto error_message = std::format(
-              "Profile '{}' not found for Edit.", edited_profile_name);
-             state.alert_messages.push(error_message);
-             return;
-           }
+    const auto same_profile =
+     *(self.selected_profile_ptr_) == *(self.editing_profile_ptr_);
 
-           auto profile = *find_it;
-           profile->name(name);
-           profile->initial_capital(initial_capital);
-           profile->capital_risk(capital_risk);
-
-           auto& backtests = state.backtests;
-           for(auto& backtest : backtests) {
-             if(backtest.profile_ptr() == profile) {
-               backtest.reset();
-             }
-           }
-         });
-
-        self.current_page_ = ProfilePage::List;
-      } else {
-        app_state.push_action([](AppStateData& state) {
-          state.alert_messages.push("Please enter a profile name.");
-        });
-      }
+    if(ImGui::Button("OK")) {
+      self.submit_profile_changes(context);
+      self.reset();
     }
 
     ImGui::SameLine();
     if(ImGui::Button("Cancel")) {
-      self.current_page_ = ProfilePage::List;
+      self.reset();
     }
 
+    ImGui::BeginDisabled(same_profile);
+    ImGui::SameLine();
+    if(ImGui::Button("Apply")) {
+      self.submit_profile_changes(context);
+    }
+    ImGui::EndDisabled();
+
     ImGui::EndGroup();
+  }
+
+  void edit_profile_form(this auto& self)
+  {
+    {
+      auto profile_name = self.editing_profile_ptr_->name();
+      ImGui::InputText("Name", &profile_name);
+      self.editing_profile_ptr_->name(profile_name);
+    }
+    {
+      auto initial_capital = self.editing_profile_ptr_->initial_capital();
+      ImGui::InputDouble(
+       "Initial Capital", &initial_capital, 100.0, 1000.0, "%.0f");
+      self.editing_profile_ptr_->initial_capital(initial_capital);
+    }
+    {
+      auto percentage = self.editing_profile_ptr_->capital_risk() * 100.0;
+      ImGui::InputDouble("Capital Risk (%)", &percentage, 1.0, 10.0, "%.2f");
+      self.editing_profile_ptr_->capital_risk(percentage / 100.0);
+    }
+  }
+
+  void submit_profile_changes(this auto& self, WindowContext& context)
+  {
+    context.push_action([profile_ptr = self.selected_profile_ptr_,
+                         edit_profile_ptr = self.editing_profile_ptr_](
+                         ApplicationState& app_state) {
+      if(edit_profile_ptr->name().empty()) {
+        edit_profile_ptr->name("Unnamed");
+      }
+
+      if(profile_ptr == nullptr) {
+        app_state.add_profile(
+         std::make_shared<backtest::Profile>(*edit_profile_ptr));
+        return;
+      }
+
+      const auto reset_backtests = !profile_ptr->equal_rules(*edit_profile_ptr);
+      if(reset_backtests) {
+        for(auto& backtest : app_state.backtests()) {
+          if(backtest->profile_ptr() == profile_ptr) {
+            backtest->reset();
+          }
+        }
+      }
+
+      *profile_ptr = *edit_profile_ptr;
+    });
+  }
+
+  void reset(this ProfilesWindow& self) noexcept
+  {
+    self.current_page_ = ProfilePage::List;
+    self.selected_profile_ptr_ = nullptr;
+    self.editing_profile_ptr_ = nullptr;
   }
 };
 

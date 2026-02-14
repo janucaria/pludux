@@ -18,8 +18,25 @@ import :trade_exit;
 
 export namespace pludux::backtest {
 
+using RiskAtrMethod = MultiplyMethod<AtrMethod, ValueMethod>;
+
 class Strategy {
 public:
+  Strategy()
+  : Strategy("",
+             SeriesMethodRegistry{},
+             PercentageMethod<>{10.0},
+             FalseMethod{},
+             FalseMethod{},
+             FalseMethod{},
+             FalseMethod{},
+             false,
+             false,
+             false,
+             1.0)
+  {
+  }
+
   Strategy(std::string name,
            SeriesMethodRegistry series_registry,
            AnySeriesMethod risk_method,
@@ -45,9 +62,16 @@ public:
   {
   }
 
+  auto operator==(const Strategy&) const noexcept -> bool = default;
+
   auto name(this const Strategy& self) noexcept -> const std::string&
   {
     return self.name_;
+  }
+
+  void name(this Strategy& self, std::string name) noexcept
+  {
+    self.name_ = std::move(name);
   }
 
   auto series_registry(this const Strategy& self) noexcept
@@ -162,100 +186,21 @@ public:
     self.take_profit_risk_multiplier_ = take_profit_risk_multiplier;
   }
 
-  auto entry_long_trade(this const Strategy& self,
-                        const AssetSnapshot& asset_snapshot,
-                        double risk_value) noexcept -> std::optional<TradeEntry>
+  auto equal_rules(this const Strategy& self, const Strategy& other) noexcept
+   -> bool
   {
-    auto result = std::optional<TradeEntry>{};
-
-    auto context = DefaultMethodContext{self.series_registry_};
-
-    if(self.long_entry_filter()(asset_snapshot, context)) {
-      const auto risk_size = self.risk_method_(asset_snapshot, context);
-      const auto position_size = risk_value / risk_size;
-      const auto entry_price = asset_snapshot.close();
-
-      const auto stop_loss_price =
-       self.stop_loss_enabled_ ? entry_price - risk_size : NAN;
-      const auto is_stop_loss_trailing = self.stop_loss_trailing_enabled();
-      const auto take_profit_price =
-       self.take_profit_enabled_
-        ? entry_price + risk_size * self.take_profit_risk_multiplier_
-        : NAN;
-
-      result = TradeEntry{position_size,
-                          entry_price,
-                          stop_loss_price,
-                          is_stop_loss_trailing,
-                          take_profit_price};
-    }
-
-    return result;
-  }
-
-  auto entry_short_trade(this const Strategy& self,
-                         const AssetSnapshot& asset_snapshot,
-                         double risk_value) noexcept
-   -> std::optional<TradeEntry>
-  {
-    auto result = std::optional<TradeEntry>{};
-
-    auto context = DefaultMethodContext{self.series_registry_};
-
-    if(self.short_entry_filter()(asset_snapshot, context)) {
-      const auto risk_size = -self.risk_method_(asset_snapshot, context);
-      const auto position_size = risk_value / risk_size;
-      const auto entry_price = asset_snapshot.close();
-
-      const auto stop_loss_price =
-       self.stop_loss_enabled_ ? entry_price - risk_size : NAN;
-      const auto is_stop_loss_trailing = self.stop_loss_trailing_enabled();
-      const auto take_profit_price =
-       self.take_profit_enabled_
-        ? entry_price + risk_size * self.take_profit_risk_multiplier_
-        : NAN;
-
-      result = TradeEntry{position_size,
-                          entry_price,
-                          stop_loss_price,
-                          is_stop_loss_trailing,
-                          take_profit_price};
-    }
-
-    return result;
-  }
-
-  auto entry_trade(this const Strategy& self,
-                   const AssetSnapshot& asset_snapshot,
-                   double risk_value) noexcept -> std::optional<TradeEntry>
-  {
-    return self.entry_long_trade(asset_snapshot, risk_value).or_else([=] {
-      return self.entry_short_trade(asset_snapshot, risk_value);
-    });
-  }
-
-  auto exit_trade(this const Strategy& self,
-                  const AssetSnapshot& asset_snapshot,
-                  double position_size) noexcept -> std::optional<TradeExit>
-  {
-    const auto is_long_direction = position_size > 0;
-    const auto is_short_direction = position_size < 0;
-    const auto exit_price = asset_snapshot.close();
-
-    auto context = DefaultMethodContext{self.series_registry_};
-
-    if(is_long_direction) {
-      if(self.long_exit_filter()(asset_snapshot, context)) {
-        return TradeExit{position_size, exit_price, TradeExit::Reason::signal};
-      }
-    } else if(is_short_direction) {
-      if(self.short_exit_filter()(asset_snapshot, context)) {
-        const auto exit_price = asset_snapshot.close();
-        return TradeExit{position_size, exit_price, TradeExit::Reason::signal};
-      }
-    }
-
-    return std::nullopt;
+    return self.series_registry_ == other.series_registry_ &&
+           self.risk_method_ == other.risk_method_ &&
+           self.long_entry_filter_ == other.long_entry_filter_ &&
+           self.long_exit_filter_ == other.long_exit_filter_ &&
+           self.short_entry_filter_ == other.short_entry_filter_ &&
+           self.short_exit_filter_ == other.short_exit_filter_ &&
+           self.stop_loss_enabled_ == other.stop_loss_enabled_ &&
+           self.stop_loss_trailing_enabled_ ==
+            other.stop_loss_trailing_enabled_ &&
+           self.take_profit_enabled_ == other.take_profit_enabled_ &&
+           self.take_profit_risk_multiplier_ ==
+            other.take_profit_risk_multiplier_;
   }
 
 private:
@@ -286,14 +231,17 @@ auto risk_reward_config_parser() -> ConfigParser
    "ATR",
    [](const ConfigParser& config_parser,
       const AnySeriesMethod& method) -> jsoncons::ojson {
-     auto serialized_method = jsoncons::ojson{};
+     auto serialized_method = jsoncons::ojson::null();
 
-     auto atr_method = series_method_cast<AtrMethod>(method);
+     auto multiply_method = series_method_cast<RiskAtrMethod>(method);
 
-     if(atr_method) {
+     if(multiply_method) {
+       serialized_method = jsoncons::ojson{};
        serialized_method["atr"] = jsoncons::ojson{};
-       serialized_method["atr"]["period"] = atr_method->period();
-       serialized_method["atr"]["multiplier"] = atr_method->multiplier();
+       serialized_method["atr"]["period"] =
+        multiply_method->multiplicand().period();
+       serialized_method["atr"]["multiplier"] =
+        multiply_method->multiplier().value();
      }
 
      return serialized_method;
@@ -313,7 +261,8 @@ auto risk_reward_config_parser() -> ConfigParser
        }
      }
 
-     const auto atr_method = AtrMethod{period, multiplier};
+     const auto atr_method =
+      RiskAtrMethod{AtrMethod{period}, ValueMethod{multiplier}};
      return atr_method;
    });
 
@@ -321,12 +270,13 @@ auto risk_reward_config_parser() -> ConfigParser
    "PERCENTAGE",
    [](const ConfigParser& config_parser,
       const AnySeriesMethod& method) -> jsoncons::ojson {
-     auto serialized_method = jsoncons::ojson{};
+     auto serialized_method = jsoncons::ojson::null();
 
      auto percent_method =
       series_method_cast<PercentageMethod<AnySeriesMethod>>(method);
 
      if(percent_method) {
+       serialized_method = jsoncons::ojson{};
        serialized_method["percentage"] = percent_method->percent();
      }
 
@@ -338,7 +288,8 @@ auto risk_reward_config_parser() -> ConfigParser
 
      const auto percent = parameters.at("percentage").as_double();
 
-     const auto percentage_method = PercentageMethod{base_method, percent};
+     const auto percentage_method =
+      PercentageMethod<AnySeriesMethod>{base_method, percent};
 
      return percentage_method;
    });
@@ -347,11 +298,12 @@ auto risk_reward_config_parser() -> ConfigParser
    "VALUE",
    [](const ConfigParser& config_parser,
       const AnySeriesMethod& method) -> jsoncons::ojson {
-     auto serialized_method = jsoncons::ojson{};
+     auto serialized_method = jsoncons::ojson::null();
 
      auto value_method = series_method_cast<ValueMethod>(method);
 
      if(value_method) {
+       serialized_method = jsoncons::ojson{};
        serialized_method["value"] = value_method->value();
      }
 
@@ -370,18 +322,28 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
                                   std::istream& json_strategy_stream)
  -> backtest::Strategy
 {
-  auto series_registry = SeriesMethodRegistry{};
   auto config_parser = make_default_registered_config_parser();
 
   auto strategy_json = jsoncons::ojson::parse(
    json_strategy_stream, jsoncons::json_options{}.allow_comments(true));
-  if(strategy_json.contains("series")) {
-    for(const auto& [name, series_method] :
-        strategy_json["series"].object_range()) {
-      const auto method = config_parser.parse_method(series_method);
-      series_registry.set(name, method);
+
+  if(!strategy_json.is_object()) {
+    throw std::runtime_error(
+     "Invalid strategy JSON: expected an object at the root");
+  }
+
+  if(strategy_json.contains("version")) {
+    const auto version = strategy_json.at("version").as<int>();
+    if(version != 1) {
+      throw std::runtime_error("Unsupported strategy JSON version: " +
+                               std::to_string(version));
     }
   }
+
+  auto series_registry =
+   strategy_json.contains("series")
+    ? config_parser.parse_registered_methods(strategy_json.at("series"))
+    : SeriesMethodRegistry{};
 
   auto risk_parser = risk_reward_config_parser();
   const auto risk_config = strategy_json.at("risk");
@@ -462,6 +424,60 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
                                     is_trailing_stop_loss,
                                     is_take_profit_enabled,
                                     take_profit_risk_multiplier};
+}
+
+auto parse_backtest_strategy_json(std::string_view strategy_name,
+                                  const std::string& json_strategy_str)
+ -> backtest::Strategy
+{
+  auto json_strategy_stream = std::istringstream{json_strategy_str};
+  return parse_backtest_strategy_json(strategy_name, json_strategy_stream);
+}
+
+auto stringify_backtest_strategy(const backtest::Strategy& strategy)
+ -> jsoncons::ojson
+{
+  auto config_parser = make_default_registered_config_parser();
+  auto risk_parser = risk_reward_config_parser();
+
+  auto strategy_json = jsoncons::ojson{};
+
+  strategy_json["version"] = 1;
+
+  strategy_json["series"] =
+   config_parser.serialize_registered_methods(strategy.series_registry());
+
+  strategy_json["risk"] = risk_parser.serialize_method(strategy.risk_method());
+
+  auto long_position_json = jsoncons::ojson{};
+  long_position_json["entry"] = jsoncons::ojson{};
+  long_position_json["entry"]["signal"] =
+   config_parser.serialize_filter(strategy.long_entry_filter());
+  long_position_json["exit"] = jsoncons::ojson{};
+  long_position_json["exit"]["signal"] =
+   config_parser.serialize_filter(strategy.long_exit_filter());
+  strategy_json["longPosition"] = std::move(long_position_json);
+
+  auto short_position_json = jsoncons::ojson{};
+  short_position_json["entry"] = jsoncons::ojson{};
+  short_position_json["entry"]["signal"] =
+   config_parser.serialize_filter(strategy.short_entry_filter());
+  short_position_json["exit"] = jsoncons::ojson{};
+  short_position_json["exit"]["signal"] =
+   config_parser.serialize_filter(strategy.short_exit_filter());
+  strategy_json["shortPosition"] = std::move(short_position_json);
+
+  strategy_json["stopLoss"] = jsoncons::ojson{};
+  strategy_json["stopLoss"]["enabled"] = strategy.stop_loss_enabled();
+  strategy_json["stopLoss"]["isTrailing"] =
+   strategy.stop_loss_trailing_enabled();
+
+  strategy_json["takeProfit"] = jsoncons::ojson{};
+  strategy_json["takeProfit"]["enabled"] = strategy.take_profit_enabled();
+  strategy_json["takeProfit"]["riskMultiplier"] =
+   strategy.take_profit_risk_multiplier();
+
+  return strategy_json;
 }
 
 } // namespace pludux::backtest

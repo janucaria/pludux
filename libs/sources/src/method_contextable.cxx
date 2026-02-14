@@ -1,6 +1,7 @@
 module;
 
 #include <concepts>
+#include <cstddef>
 #include <string>
 #include <variant>
 
@@ -24,6 +25,7 @@ concept MethodContextable =
    {
      context.call_series_method(name, asset_snapshot, output)
    } -> std::convertible_to<double>;
+   { context.index() } -> std::convertible_to<std::size_t>;
  };
 
 } // namespace pludux
