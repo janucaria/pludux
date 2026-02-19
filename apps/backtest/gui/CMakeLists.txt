@@ -23,7 +23,7 @@ if(NOT EMSCRIPTEN)
   FetchContent_Declare(
     wgpu_native
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-    URL "https://github.com/gfx-rs/wgpu-native/releases/download/v27.0.2.0/${PLUDUX_WEBGPU_DOWNLOAD}.zip"
+    URL "https://github.com/gfx-rs/wgpu-native/releases/download/v27.0.4.0/${PLUDUX_WEBGPU_DOWNLOAD}.zip"
   )
   
   FetchContent_MakeAvailable(wgpu_native)
@@ -71,7 +71,7 @@ if(NOT EMSCRIPTEN)
   FetchContent_Declare(
     nativefiledialog-extended
     GIT_REPOSITORY "https://github.com/btzy/nativefiledialog-extended.git"
-    GIT_TAG        v1.2.1
+    GIT_TAG        "v1.3.0"
     GIT_SHALLOW    TRUE
     GIT_PROGRESS   TRUE
   )
@@ -83,7 +83,7 @@ endif()
 FetchContent_Declare(
   imgui
   GIT_REPOSITORY "https://github.com/ocornut/imgui.git"
-  GIT_TAG        "v1.92.5-docking"
+  GIT_TAG        "v1.92.6-docking"
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
 )
@@ -223,6 +223,7 @@ if(NOT EMSCRIPTEN)
 else()
   target_compile_definitions(${PROJECT_NAME} PUBLIC
     IMGUI_DISABLE_FILE_FUNCTIONS=1
+    IMGUI_IMPL_WEBGPU_BACKEND_DAWN
   )
 
   target_compile_options(${PROJECT_NAME} PRIVATE
