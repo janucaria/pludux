@@ -2,7 +2,18 @@
   "version": 6,
   "configurePresets": [
     {
+      "name": "fetchcontent-shared",
+      "hidden": true,
+      "cacheVariables": {
+        "FETCHCONTENT_BASE_DIR": {
+          "type": "PATH",
+          "value": "${sourceDir}/.out/deps/${hostSystemName}"
+        }
+      }
+    },
+    {
       "name": "msvc-debug",
+      "inherits": "fetchcontent-shared",
       "binaryDir": "${sourceDir}/.out/build/${hostSystemName}/${presetName}",
       "generator": "Visual Studio 18 2026",
       "cacheVariables": {
@@ -47,6 +58,7 @@
     },
     {
       "name": "clang-debug",
+      "inherits": "fetchcontent-shared",
       "binaryDir": "${sourceDir}/.out/build/${hostSystemName}/${presetName}",
       "generator": "Ninja",
       "cacheVariables": {
@@ -66,6 +78,7 @@
     },
     {
       "name": "emscripten-debug",
+      "inherits": "fetchcontent-shared",
       "binaryDir": "${sourceDir}/.out/build/${hostSystemName}/${presetName}",
       "generator": "Ninja",
       "toolchainFile": "$penv{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
