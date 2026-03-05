@@ -1,0 +1,1180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "http://pludux.com/schemas/pludux.backtest.strategy.v2.json",
+  "title": "Pludux Backtest Strategy Schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 2
+    },
+    "series": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z][a-z0-9_]*$": {
+          "$ref": "#/$defs/series"
+        }
+      }
+    },
+    "risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "enum": [
+            "ATR",
+            "PERCENTAGE",
+            "VALUE"
+          ]
+        },
+        "atr": {
+          "type": "object",
+          "properties": {
+            "period": {
+              "type": "integer"
+            },
+            "multiplier": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "period",
+            "multiplier"
+          ]
+        },
+        "percentage": {
+          "type": "number"
+        },
+        "value": {
+          "type": "number"
+        }
+      }
+    },
+    "stopLoss": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "isTrailing": {
+              "type": "boolean"
+            }
+          }
+        },
+        {
+          "type": "boolean"
+        }
+      ]
+    },
+    "takeProfit": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "riskMultiplier": {
+              "type": "number"
+            }
+          }
+        },
+        {
+          "type": "boolean"
+        }
+      ]
+    },
+    "longPosition": {
+      "$ref": "#/$defs/tradePosition"
+    },
+    "shortPosition": {
+      "$ref": "#/$defs/tradePosition"
+    }
+  },
+  "required": [
+    "risk"
+  ],
+  "$defs": {
+    "tradePosition": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "entry": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "signal": {
+              "$ref": "#/$defs/signalAsParameter"
+            }
+          },
+          "required": [
+            "signal"
+          ]
+        },
+        "exit": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "signal": {
+              "$ref": "#/$defs/signalAsParameter"
+            }
+          },
+          "required": [
+            "signal"
+          ]
+        }
+      },
+      "required": [
+        "entry"
+      ]
+    },
+    "seriesAsParameter": {
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string",
+          "pattern": "^[A-Z_]+$"
+        },
+        {
+          "$ref": "#/$defs/series"
+        }
+      ]
+    },
+    "baseMethod": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "type": "string",
+          "pattern": "^[A-Z_]+$"
+        },
+        "params": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "method"
+      ]
+    },
+    "quoteSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "OPEN",
+                "HIGH",
+                "LOW",
+                "CLOSE",
+                "VOLUME"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "seriesRefSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "SERIES_REFERENCE"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]*$"
+                }
+              },
+              "required": [
+                "name"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ]
+    },
+    "selectOutputSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "SELECT_OUTPUT"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "output": {
+                  "type": "string",
+                  "enum": [
+                    "upper-band",
+                    "middle-band",
+                    "lower-band",
+                    "k-percent",
+                    "d-percent",
+                    "macd-line",
+                    "signal-line",
+                    "histogram"
+                  ]
+                },
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                }
+              },
+              "required": [
+                "output",
+                "source"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ]
+    },
+    "lookbackSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "LOOKBACK"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                },
+                "period": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "source",
+                "period"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ]
+    },
+    "valueSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "VALUE"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "value": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "dataSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "DATA"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "field": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "maSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "SMA",
+                "EMA",
+                "RMA",
+                "WMA",
+                "HMA"
+              ]
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "type": "integer"
+                },
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "rsiSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "RSI"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "type": "integer"
+                },
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "atrSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "ATR"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "type": "integer"
+                },
+                "maSmoothingType": {
+                  "enum": [
+                    "SMA",
+                    "EMA",
+                    "RMA",
+                    "WMA",
+                    "HMA"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "stddevSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "STDDEV"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "type": "integer"
+                },
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "bbSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "BB"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "maType": {
+                  "enum": [
+                    "SMA",
+                    "EMA",
+                    "RMA",
+                    "WMA",
+                    "HMA"
+                  ]
+                },
+                "period": {
+                  "type": "integer"
+                },
+                "stddev": {
+                  "type": "number"
+                },
+                "maSource": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "kcSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "KC"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "maSource": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                },
+                "maPeriod": {
+                  "type": "integer"
+                },
+                "maMethodType": {
+                  "enum": [
+                    "SMA",
+                    "EMA",
+                    "RMA",
+                    "WMA",
+                    "HMA"
+                  ]
+                },
+                "bandMethodType": {
+                  "enum": [
+                    "ATR",
+                    "TR",
+                    "RangeHighLow"
+                  ]
+                },
+                "bandAtrPeriod": {
+                  "type": "integer"
+                },
+                "multiplier": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "macdSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "MACD"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "fast": {
+                  "type": "integer"
+                },
+                "slow": {
+                  "type": "integer"
+                },
+                "signal": {
+                  "type": "integer"
+                },
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "stochSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "STOCH"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "kPeriod": {
+                  "type": "integer"
+                },
+                "kSmooth": {
+                  "type": "integer"
+                },
+                "dPeriod": {
+                  "type": "integer"
+                },
+                "high": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                },
+                "low": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                },
+                "close": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "stochRsiSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "STOCH_RSI"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "kPeriod": {
+                  "type": "integer"
+                },
+                "kSmooth": {
+                  "type": "integer"
+                },
+                "dPeriod": {
+                  "type": "integer"
+                },
+                "rsiInput": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                },
+                "rsiPeriod": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "addSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "ADD"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "augend": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                },
+                "addend": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                }
+              }
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ]
+    },
+    "subtractSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "SUBTRACT"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "minuend": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                },
+                "subtrahend": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "multiplySeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "MULTIPLY"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "multiplicand": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                },
+                "multiplier": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "divideSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "DIVIDE"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "dividend": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                },
+                "divisor": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "negateSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "NEGATE"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "operand": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "sqrtSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "SQRT"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "operand": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "changeSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "CHANGE"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "absDiffSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "ABS_DIFF"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "minuend": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                },
+                "subtrahend": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "percentageSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "PERCENTAGE"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "base": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                },
+                "percentage": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "series": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/seriesRefSeries"
+        },
+        {
+          "$ref": "#/$defs/selectOutputSeries"
+        },
+        {
+          "$ref": "#/$defs/lookbackSeries"
+        },
+        {
+          "$ref": "#/$defs/quoteSeries"
+        },
+        {
+          "$ref": "#/$defs/valueSeries"
+        },
+        {
+          "$ref": "#/$defs/dataSeries"
+        },
+        {
+          "$ref": "#/$defs/maSeries"
+        },
+        {
+          "$ref": "#/$defs/rsiSeries"
+        },
+        {
+          "$ref": "#/$defs/atrSeries"
+        },
+        {
+          "$ref": "#/$defs/stddevSeries"
+        },
+        {
+          "$ref": "#/$defs/bbSeries"
+        },
+        {
+          "$ref": "#/$defs/kcSeries"
+        },
+        {
+          "$ref": "#/$defs/macdSeries"
+        },
+        {
+          "$ref": "#/$defs/stochSeries"
+        },
+        {
+          "$ref": "#/$defs/stochRsiSeries"
+        },
+        {
+          "$ref": "#/$defs/addSeries"
+        },
+        {
+          "$ref": "#/$defs/subtractSeries"
+        },
+        {
+          "$ref": "#/$defs/multiplySeries"
+        },
+        {
+          "$ref": "#/$defs/divideSeries"
+        },
+        {
+          "$ref": "#/$defs/negateSeries"
+        },
+        {
+          "$ref": "#/$defs/sqrtSeries"
+        },
+        {
+          "$ref": "#/$defs/changeSeries"
+        },
+        {
+          "$ref": "#/$defs/absDiffSeries"
+        },
+        {
+          "$ref": "#/$defs/percentageSeries"
+        }
+      ]
+    },
+    "signalAsParameter": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/signals"
+        },
+        {
+          "type": "boolean"
+        }
+      ]
+    },
+    "compositeConditionSignal": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "ALL_OF",
+                "ANY_OF"
+              ]
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "items": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "$ref": "#/$defs/signalAsParameter"
+                  }
+                }
+              },
+              "required": [
+                "items"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ]
+    },
+    "comparisonSignal": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "LESS_THAN",
+                "LESS_EQUAL",
+                "GREATER_THAN",
+                "GREATER_EQUAL",
+                "EQUAL",
+                "NOT_EQUAL"
+              ]
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "target": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                },
+                "threshold": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                }
+              },
+              "required": [
+                "target",
+                "threshold"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ]
+    },
+    "crossSignal": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "CROSSOVER",
+                "CROSSUNDER"
+              ]
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "value": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                },
+                "baseline": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                }
+              },
+              "required": [
+                "value",
+                "baseline"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ]
+    },
+    "booleanSignal": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "TRUE",
+                "FALSE"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "binaryLogicalSignal": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "AND",
+                "OR",
+                "XOR"
+              ]
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "firstCondition": {
+                  "$ref": "#/$defs/signalAsParameter"
+                },
+                "secondCondition": {
+                  "$ref": "#/$defs/signalAsParameter"
+                }
+              },
+              "required": [
+                "firstCondition",
+                "secondCondition"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ]
+    },
+    "unaryLogicalSignal": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "NOT"
+              ]
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "condition": {
+                  "$ref": "#/$defs/signalAsParameter"
+                }
+              },
+              "required": [
+                "condition"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ]
+    },
+    "signals": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/crossSignal"
+        },
+        {
+          "$ref": "#/$defs/compositeConditionSignal"
+        },
+        {
+          "$ref": "#/$defs/comparisonSignal"
+        },
+        {
+          "$ref": "#/$defs/booleanSignal"
+        },
+        {
+          "$ref": "#/$defs/binaryLogicalSignal"
+        },
+        {
+          "$ref": "#/$defs/unaryLogicalSignal"
+        }
+      ]
+    }
+  }
+}

@@ -1,9 +1,11 @@
 {
-  "version": 1,
+  "version": 2,
   "series": {
     "ma": {
       "method": "SMA",
-      "period": 9
+      "params": {
+        "period": 9
+      }
     }
   },
   "risk": {
@@ -24,21 +26,29 @@
   "longPosition": {
     "entry": {
       "signal": {
-        "filter": "CROSSOVER",
-        "signal": "CLOSE",
-        "reference": {
-          "method": "REFERENCE",
-          "name": "ma"
+        "method": "CROSSOVER",
+        "params": {
+          "value": "CLOSE",
+          "baseline": {
+            "method": "SERIES_REFERENCE",
+            "params": {
+              "name": "ma"
+            }
+          }
         }
       }
     },
     "exit": {
       "signal": {
-        "filter": "CROSSUNDER",
-        "signal": "CLOSE",
-        "reference": {
-          "method": "REFERENCE",
-          "name": "ma"
+        "method": "CROSSUNDER",
+        "params": {
+          "value": "CLOSE",
+          "baseline": {
+            "method": "SERIES_REFERENCE",
+            "params": {
+              "name": "ma"
+            }
+          }
         }
       }
     }

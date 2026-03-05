@@ -15,10 +15,10 @@ set(PLUDUX_TEST_SOURCES
   src/test_kc_method.cpp
   src/test_lookback_method.cpp
   src/test_macd_method.cpp
+  src/test_series_reference_method.cpp
   src/test_ohlcv_method.cpp
   src/test_operators_methods.cpp
   src/test_percentage_method.cpp
-  src/test_reference_method.cpp
   src/test_rma_method.cpp
   src/test_roc_method.cpp
   src/test_rsi_method.cpp

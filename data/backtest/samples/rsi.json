@@ -1,9 +1,11 @@
 {
-  "version": 1,
+  "version": 2,
   "series": {
     "rsi": {
       "method": "RSI",
-      "period": 14
+      "params": {
+        "period": 14
+      }
     }
   },
   "risk": {
@@ -25,22 +27,30 @@
   "longPosition": {
     "entry": {
       "signal": {
-        "filter": "CROSSUNDER",
-        "signal": {
-          "method": "REFERENCE",
-          "name": "rsi"
-        },
-        "reference": 30
+        "method": "CROSSUNDER",
+        "params": {
+          "value": {
+            "method": "SERIES_REFERENCE",
+            "params": {
+              "name": "rsi"
+            }
+          },
+          "baseline": 30
+        }
       }
     },
     "exit": {
       "signal": {
-        "filter": "CROSSOVER",
-        "signal": {
-          "method": "REFERENCE",
-          "name": "rsi"
-        },
-        "reference": 70
+        "method": "CROSSOVER",
+        "params": {
+          "value": {
+            "method": "SERIES_REFERENCE",
+            "params": {
+              "name": "rsi"
+            }
+          },
+          "baseline": 70
+        }
       }
     }
   }

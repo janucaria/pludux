@@ -1,37 +1,51 @@
 {
-  "version": 1,
+  "version": 2,
   "series": {
     "stoch_rsi": {
       "method": "STOCH_RSI",
-      "kPeriod": 14,
-      "kSmooth": 3,
-      "dSmooth": 3,
-      "rsiInput": "CLOSE",
-      "rsiPeriod": 14
+      "params": {
+        "kPeriod": 14,
+        "kSmooth": 3,
+        "dPeriod": 3,
+        "rsiInput": "CLOSE",
+        "rsiPeriod": 14
+      }
     },
     "stoch_rsi_k": {
       "method": "SELECT_OUTPUT",
-      "name": "k-percent",
-      "source": {
-        "method": "REFERENCE",
-        "name": "stoch_rsi"
+      "params": {
+        "output": "k-percent",
+        "source": {
+          "method": "SERIES_REFERENCE",
+          "params": {
+            "name": "stoch_rsi"
+          }
+        }
       }
     },
     "stoch_rsi_d": {
       "method": "SELECT_OUTPUT",
-      "name": "d-percent",
-      "source": {
-        "method": "REFERENCE",
-        "name": "stoch_rsi"
+      "params": {
+        "output": "d-percent",
+        "source": {
+          "method": "SERIES_REFERENCE",
+          "params": {
+            "name": "stoch_rsi"
+          }
+        }
       }
     },
     "overbought": {
       "method": "VALUE",
-      "value": 80
+      "params": {
+        "value": 80
+      }
     },
     "oversold": {
       "method": "VALUE",
-      "value": 20
+      "params": {
+        "value": 20
+      }
     }
   },
   "risk": {
@@ -50,60 +64,88 @@
   "longPosition": {
     "entry": {
       "signal": {
-        "filter": "ALL_OF",
-        "conditions": [
-          {
-            "filter": "CROSSOVER",
-            "signal": {
-              "method": "REFERENCE",
-              "name": "stoch_rsi_k"
+        "method": "ALL_OF",
+        "params": {
+          "items": [
+            {
+              "method": "CROSSOVER",
+              "params": {
+                "value": {
+                  "method": "SERIES_REFERENCE",
+                  "params": {
+                    "name": "stoch_rsi_k"
+                  }
+                },
+                "baseline": {
+                  "method": "SERIES_REFERENCE",
+                  "params": {
+                    "name": "stoch_rsi_d"
+                  }
+                }
+              }
             },
-            "reference": {
-              "method": "REFERENCE",
-              "name": "stoch_rsi_d"
+            {
+              "method": "LESS_THAN",
+              "params": {
+                "target": {
+                  "method": "SERIES_REFERENCE",
+                  "params": {
+                    "name": "stoch_rsi_k"
+                  }
+                },
+                "threshold": {
+                  "method": "SERIES_REFERENCE",
+                  "params": {
+                    "name": "oversold"
+                  }
+                }
+              }
             }
-          },
-          {
-            "filter": "LESS_THAN",
-            "target": {
-              "method": "REFERENCE",
-              "name": "stoch_rsi_k"
-            },
-            "threshold": {
-              "method": "REFERENCE",
-              "name": "oversold"
-            }
-          }
-        ]
+          ]
+        }
       }
     },
     "exit": {
       "signal": {
-        "filter": "ALL_OF",
-        "conditions": [
-          {
-            "filter": "CROSSUNDER",
-            "signal": {
-              "method": "REFERENCE",
-              "name": "stoch_rsi_k"
+        "method": "ALL_OF",
+        "params": {
+          "items": [
+            {
+              "method": "CROSSUNDER",
+              "params": {
+                "value": {
+                  "method": "SERIES_REFERENCE",
+                  "params": {
+                    "name": "stoch_rsi_k"
+                  }
+                },
+                "baseline": {
+                  "method": "SERIES_REFERENCE",
+                  "params": {
+                    "name": "stoch_rsi_d"
+                  }
+                }
+              }
             },
-            "reference": {
-              "method": "REFERENCE",
-              "name": "stoch_rsi_d"
+            {
+              "method": "GREATER_THAN",
+              "params": {
+                "target": {
+                  "method": "SERIES_REFERENCE",
+                  "params": {
+                    "name": "stoch_rsi_k"
+                  }
+                },
+                "threshold": {
+                  "method": "SERIES_REFERENCE",
+                  "params": {
+                    "name": "overbought"
+                  }
+                }
+              }
             }
-          },
-          {
-            "filter": "GREATER_THAN",
-            "target": {
-              "method": "REFERENCE",
-              "name": "stoch_rsi_k"
-            },
-            "threshold": {
-              "method": "REFERENCE",
-              "name": "overbought"
-            }
-          }
-        ]
+          ]
+        }
       }
     }
   }

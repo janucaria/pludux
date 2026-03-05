@@ -1,14 +1,18 @@
 {
-  "version": 1,
+  "version": 2,
   "series": {
     "macd_histogram": {
       "method": "SELECT_OUTPUT",
-      "name": "histogram",
-      "source": {
-        "method": "MACD",
-        "fast": 12,
-        "slow": 26,
-        "signal": 9
+      "params": {
+        "output": "histogram",
+        "source": {
+          "method": "MACD",
+          "params": {
+            "fast": 12,
+            "slow": 26,
+            "signal": 9
+          }
+        }
       }
     }
   },
@@ -28,27 +32,29 @@
   "longPosition": {
     "entry": {
       "signal": {
-        "filter": "CROSSOVER",
-        "signal": {
-          "method": "REFERENCE",
-          "name": "macd_histogram"
-        },
-        "reference": {
-          "method": "VALUE",
-          "value": 0
+        "method": "CROSSOVER",
+        "params": {
+          "value": {
+            "method": "SERIES_REFERENCE",
+            "params": {
+              "name": "macd_histogram"
+            }
+          },
+          "baseline": 0
         }
       }
     },
     "exit": {
       "signal": {
-        "filter": "CROSSUNDER",
-        "signal": {
-          "method": "REFERENCE",
-          "name": "macd_histogram"
-        },
-        "reference": {
-          "method": "VALUE",
-          "value": 0
+        "method": "CROSSUNDER",
+        "params": {
+          "value": {
+            "method": "SERIES_REFERENCE",
+            "params": {
+              "name": "macd_histogram"
+            }
+          },
+          "baseline": 0
         }
       }
     }

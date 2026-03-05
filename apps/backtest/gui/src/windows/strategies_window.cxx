@@ -36,7 +36,7 @@ import :window_context;
 namespace pludux::apps {
 
 using SelectOutputMethod = pludux::SelectOutputMethod<AnySeriesMethod>;
-using ReferenceMethod = pludux::ReferenceMethod;
+using SeriesReferenceMethod = pludux::SeriesReferenceMethod;
 using BbMethod = pludux::BbMethod<AnySeriesMethod>;
 using KcMethod = pludux::KcMethod<AnySeriesMethod>;
 using StochMethod = pludux::StochMethod;
@@ -108,8 +108,8 @@ auto get_default_series_method(const std::string& series_id) -> AnySeriesMethod
     return StochMethod{14, 3, 3};
   } else if(series_id == "STOCH_RSI") {
     return StochRsiMethod{CloseMethod{}, 14, 14, 3, 3};
-  } else if(series_id == "REFERENCE") {
-    return ReferenceMethod{""};
+  } else if(series_id == "SERIES_REFERENCE") {
+    return SeriesReferenceMethod{""};
   } else if(series_id == "VALUE") {
     return ValueMethod{0.0};
   } else if(series_id == "LOOKBACK") {
@@ -142,8 +142,8 @@ auto get_series_method_id(const AnySeriesMethod& method) -> std::string
 {
   if(series_method_cast<SelectOutputMethod>(method)) {
     return "SELECT_OUTPUT";
-  } else if(series_method_cast<ReferenceMethod>(method)) {
-    return "REFERENCE";
+  } else if(series_method_cast<SeriesReferenceMethod>(method)) {
+    return "SERIES_REFERENCE";
   } else if(series_method_cast<CloseMethod>(method)) {
     return "CLOSE";
   } else if(series_method_cast<OpenMethod>(method)) {
@@ -247,8 +247,8 @@ auto get_series_method_title(const std::string& series_id) -> std::string
     return "Stochastic Oscillator";
   } else if(series_id == "STOCH_RSI") {
     return "Stochastic RSI";
-  } else if(series_id == "REFERENCE") {
-    return "Series Reference";
+  } else if(series_id == "SERIES_REFERENCE") {
+    return "Named Series";
   } else if(series_id == "VALUE") {
     return "Value";
   } else if(series_id == "LOOKBACK") {
@@ -1042,14 +1042,37 @@ private:
                             AnySeriesMethod& series_method,
                             WindowContext& context)
   {
-    static const std::vector<std::string> series_ids = {
-     "OPEN",    "CLOSE",     "HIGH",          "LOW",       "VOLUME",
-     "CHANGE",  "ADD",       "SUBTRACT",      "MULTIPLY",  "DIVIDE",
-     "NEGATE",  "SQRT",      "PERCENTAGE",    "ABS_DIFF",  "DATA",
-     "SMA",     "EMA",       "WMA",           "HMA",       "RSI",
-     "MACD",    "ATR",       "STDDEV",        "BB",        "KC",
-     "STOCH",   "STOCH_RSI", "SELECT_OUTPUT", "REFERENCE", "VALUE",
-     "LOOKBACK"};
+    static const std::vector<std::string> series_ids = {"OPEN",
+                                                        "CLOSE",
+                                                        "HIGH",
+                                                        "LOW",
+                                                        "VOLUME",
+                                                        "CHANGE",
+                                                        "ADD",
+                                                        "SUBTRACT",
+                                                        "MULTIPLY",
+                                                        "DIVIDE",
+                                                        "NEGATE",
+                                                        "SQRT",
+                                                        "PERCENTAGE",
+                                                        "ABS_DIFF",
+                                                        "DATA",
+                                                        "SMA",
+                                                        "EMA",
+                                                        "WMA",
+                                                        "HMA",
+                                                        "RSI",
+                                                        "MACD",
+                                                        "ATR",
+                                                        "STDDEV",
+                                                        "BB",
+                                                        "KC",
+                                                        "STOCH",
+                                                        "STOCH_RSI",
+                                                        "SELECT_OUTPUT",
+                                                        "SERIES_REFERENCE",
+                                                        "VALUE",
+                                                        "LOOKBACK"};
 
     auto method_series_id = get_series_method_id(series_method);
 
@@ -1073,14 +1096,14 @@ private:
 
           if(filter.PassFilter(series_title.c_str())) {
             if(ImGui::Selectable(series_title.c_str(), is_selected)) {
-              if(series_id == "REFERENCE" &&
+              if(series_id == "SERIES_REFERENCE" &&
                  self.available_series_names_.empty()) {
-                const auto reference_method_title =
-                 get_series_method_title("REFERENCE");
+                const auto series_reference_method_title =
+                 get_series_method_title("SERIES_REFERENCE");
                 const auto error_message =
                  std::format("Cannot select '{}' when there are no available "
                              "series other than the current one.",
-                             reference_method_title);
+                             series_reference_method_title);
                 context.push_action(
                  [error_message](ApplicationState& app_state) {
                    app_state.alert(error_message);
@@ -1116,7 +1139,7 @@ private:
         return false;
       }() || ...);
     }.template operator()<SelectOutputMethod,
-                          ReferenceMethod,
+                          SeriesReferenceMethod,
                           DataMethod,
                           LookbackMethod,
 
@@ -1197,7 +1220,7 @@ private:
   }
 
   void render_series_method_params(this auto& self,
-                                   ReferenceMethod& method,
+                                   SeriesReferenceMethod& method,
                                    WindowContext& context)
   {
     if(std::ranges::find(self.available_series_names_, method.name()) ==
@@ -1212,7 +1235,7 @@ private:
     ImGui::SameLine();
 
     const auto display_name = method.name();
-    if(ImGui::BeginCombo("##reference_name", display_name.c_str())) {
+    if(ImGui::BeginCombo("##named_series", display_name.c_str())) {
       for(const auto& name_option : self.available_series_names_) {
         ImGui::PushID(name_option.c_str());
 

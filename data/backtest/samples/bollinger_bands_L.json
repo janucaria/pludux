@@ -1,21 +1,29 @@
 {
-  "version": 1,
+  "version": 2,
   "series": {
     "bb_upper": {
       "method": "SELECT_OUTPUT",
-      "name": "upper-band",
-      "source": {
-        "method": "BB",
-        "period": 20,
-        "stddev": 2
+      "params": {
+        "output": "upper-band",
+        "source": {
+          "method": "BB",
+          "params": {
+            "period": 20,
+            "stddev": 2
+          }
+        }
       }
     },
     "bb_lower": {
       "method": "SELECT_OUTPUT",
-      "name": "lower-band",
-      "source": {
-        "method": "REFERENCE",
-        "name": "bb_upper"
+      "params": {
+        "output": "lower-band",
+        "source": {
+          "method": "SERIES_REFERENCE",
+          "params": {
+            "name": "bb_upper"
+          }
+        }
       }
     }
   },
@@ -38,21 +46,29 @@
   "longPosition": {
     "entry": {
       "signal": {
-        "filter": "CROSSOVER",
-        "signal": "CLOSE",
-        "reference": {
-          "method": "REFERENCE",
-          "name": "bb_lower"
+        "method": "CROSSOVER",
+        "params": {
+          "value": "CLOSE",
+          "baseline": {
+            "method": "SERIES_REFERENCE",
+            "params": {
+              "name": "bb_lower"
+            }
+          }
         }
       }
     },
     "exit": {
       "signal": {
-        "filter": "CROSSUNDER",
-        "signal": "CLOSE",
-        "reference": {
-          "method": "REFERENCE",
-          "name": "bb_upper"
+        "method": "CROSSUNDER",
+        "params": {
+          "value": "CLOSE",
+          "baseline": {
+            "method": "SERIES_REFERENCE",
+            "params": {
+              "name": "bb_upper"
+            }
+          }
         }
       }
     }

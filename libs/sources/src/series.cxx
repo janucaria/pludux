@@ -14,7 +14,7 @@ export import :series.ohlcv_method;
 export import :series.change_method;
 export import :series.lookback_method;
 export import :series.select_output_method;
-export import :series.reference_method;
+export import :series.series_reference_method;
 
 export import :series.operators_method;
 export import :series.highest_method;
@@ -48,4 +48,3 @@ export import :series.stoch_rsi_method;
 export import :series.any_series_method;
 
 export import :series.series_method_registry;
-export import :series.reference_method;

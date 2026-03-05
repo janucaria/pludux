@@ -226,6 +226,7 @@ private:
 auto risk_reward_config_parser() -> ConfigParser
 {
   auto config_parser = ConfigParser{};
+  config_parser.use_series_params(false);
 
   config_parser.register_method_parser(
    "ATR",
@@ -286,7 +287,10 @@ auto risk_reward_config_parser() -> ConfigParser
       const jsoncons::ojson& parameters) -> AnySeriesMethod {
      const auto base_method = CloseMethod{};
 
-     const auto percent = parameters.at("percentage").as_double();
+     auto percent = 10.0;
+     if(parameters.contains("percentage")) {
+       percent = parameters.at("percentage").as_double();
+     }
 
      const auto percentage_method =
       PercentageMethod<AnySeriesMethod>{base_method, percent};
@@ -311,7 +315,10 @@ auto risk_reward_config_parser() -> ConfigParser
    },
    [](ConfigParser::Parser config_parser,
       const jsoncons::ojson& parameters) -> AnySeriesMethod {
-     const auto value = parameters.at("value").as_double();
+     auto value = 1000.0;
+     if(parameters.contains("value")) {
+       value = parameters.at("value").as_double();
+     }
      return ValueMethod{value};
    });
 
@@ -334,7 +341,7 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
 
   if(strategy_json.contains("version")) {
     const auto version = strategy_json.at("version").as<int>();
-    if(version != 1) {
+    if(version != 2) {
       throw std::runtime_error("Unsupported strategy JSON version: " +
                                std::to_string(version));
     }
@@ -442,7 +449,7 @@ auto stringify_backtest_strategy(const backtest::Strategy& strategy)
 
   auto strategy_json = jsoncons::ojson{};
 
-  strategy_json["version"] = 1;
+  strategy_json["version"] = 2;
 
   strategy_json["series"] =
    config_parser.serialize_registered_methods(strategy.series_registry());

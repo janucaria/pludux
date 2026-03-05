@@ -1,28 +1,38 @@
 {
-  "version": 1,
+  "version": 2,
   "series": {
     "kchannel": {
       "method": "KC",
-      "maPeriod": "20",
-      "maMethodType": "EMA",
-      "BandMethodType": "ATR",
-      "bandAtrPeriod": 10,
-      "multiplier": 2
+      "params": {
+        "maPeriod": 20,
+        "maMethodType": "EMA",
+        "bandMethodType": "ATR",
+        "bandAtrPeriod": 10,
+        "multiplier": 2
+      }
     },
     "kc_upper": {
       "method": "SELECT_OUTPUT",
-      "name": "upper-band",
-      "source": {
-        "method": "REFERENCE",
-        "name": "kchannel"
+      "params": {
+        "output": "upper-band",
+        "source": {
+          "method": "SERIES_REFERENCE",
+          "params": {
+            "name": "kchannel"
+          }
+        }
       }
     },
     "kc_lower": {
       "method": "SELECT_OUTPUT",
-      "name": "lower-band",
-      "source": {
-        "method": "REFERENCE",
-        "name": "kchannel"
+      "params": {
+        "output": "lower-band",
+        "source": {
+          "method": "SERIES_REFERENCE",
+          "params": {
+            "name": "kchannel"
+          }
+        }
       }
     }
   },
@@ -42,21 +52,29 @@
   "longPosition": {
     "entry": {
       "signal": {
-        "filter": "CROSSOVER",
-        "signal": "CLOSE",
-        "reference": {
-          "method": "REFERENCE",
-          "name": "kc_lower"
+        "method": "CROSSOVER",
+        "params": {
+          "value": "CLOSE",
+          "baseline": {
+            "method": "SERIES_REFERENCE",
+            "params": {
+              "name": "kc_lower"
+            }
+          }
         }
       }
     },
     "exit": {
       "signal": {
-        "filter": "CROSSUNDER",
-        "signal": "CLOSE",
-        "reference": {
-          "method": "REFERENCE",
-          "name": "kc_upper"
+        "method": "CROSSUNDER",
+        "params": {
+          "value": "CLOSE",
+          "baseline": {
+            "method": "SERIES_REFERENCE",
+            "params": {
+              "name": "kc_upper"
+            }
+          }
         }
       }
     }

@@ -18,52 +18,63 @@ protected:
     config_parser.parse_method(json::parse(R"(
       {
         "method": "DATA",
-        "name": "high",
-        "field": "high"
+        "params": {
+          "name": "high",
+          "field": "high"
+        }
       }
     )"));
 
     config_parser.parse_method(json::parse(R"(
       {
         "method": "DATA",
-        "name": "low",
-        "field": "low"
+        "params": {
+          "name": "low",
+          "field": "low"
+        }
       }
     )"));
 
     config_parser.parse_method(json::parse(R"(
       {
         "method": "DATA",
-        "name": "close",
-        "field": "close"
+        "params": {
+          "name": "close",
+          "field": "close"
+        }
       }
     )"));
 
     config_parser.parse_method(json::parse(R"(
       {
         "method": "DATA",
-        "name": "volume",
-        "field": "volume"
+        "params": {
+          "name": "volume",
+          "field": "volume"
+        }
       }
     )"));
   }
 };
 
-TEST_F(ConfigParserTest, ParseScreenerReferenceMethod)
+TEST_F(ConfigParserTest, ParseScreenerSeriesReferenceMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "REFERENCE",
-      "name": "close"
+      "method": "SERIES_REFERENCE",
+      "params": {
+        "name": "close"
+      }
     }
   )");
 
   const auto method = config_parser.parse_method(config);
 
-  const auto reference_method = series_method_cast<ReferenceMethod>(method);
-  ASSERT_NE(reference_method, nullptr);
+  const auto series_reference_method =
+   series_method_cast<SeriesReferenceMethod>(method);
+  ASSERT_NE(series_reference_method, nullptr);
 
-  EXPECT_EQ(reference_method->name(), "close");
+  EXPECT_EQ(series_reference_method->name(), "close");
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -71,14 +82,16 @@ TEST_F(ConfigParserTest, ParseScreenerReferenceMethod)
   EXPECT_EQ(method, deserialized_config);
 }
 
-TEST_F(ConfigParserTest, ParseScrennerLookbackMethod)
+TEST_F(ConfigParserTest, ParseScreenerLookbackMethod)
 {
   const auto config = json::parse(R"(
     {
       "method": "LOOKBACK",
-      "period": 3,
-      "source": {
-        "method": "CLOSE"
+      "params": {
+        "period": 3,
+        "source": {
+          "method": "CLOSE"
+        }
       }
     }
   )");
@@ -105,14 +118,18 @@ TEST_F(ConfigParserTest, ParseScreenerSelectOutputMethod)
   const auto config = json::parse(R"(
     {
       "method": "SELECT_OUTPUT",
-      "name": "upper-band",
-      "source": {
-        "method": "MACD",
-        "fastPeriod": 12,
-        "slowPeriod": 26,
-        "signalPeriod": 9,
-        "input": {
-          "method": "CLOSE"
+      "params": {
+        "output": "upper-band",
+        "source": {
+          "method": "MACD",
+          "params": {
+            "fastPeriod": 12,
+            "slowPeriod": 26,
+            "signalPeriod": 9,
+            "input": {
+              "method": "CLOSE"
+            }
+          }
         }
       }
     }
@@ -241,10 +258,14 @@ TEST_F(ConfigParserTest, ParseScreenerSmaMethod)
   const auto config = json::parse(R"(
     {
       "method": "SMA",
-      "period": 14,
-      "source": {
-        "method": "DATA",
-        "field": "close"
+      "params": {
+        "period": 14,
+        "source": {
+          "method": "DATA",
+          "params": {
+            "field": "close"
+          }
+        }
       }
     }
   )");
@@ -273,10 +294,14 @@ TEST_F(ConfigParserTest, ParseScreenerEmaMethod)
   const auto config = json::parse(R"(
     {
       "method": "EMA",
-      "period": 10,
-      "source": {
-        "method": "DATA",
-        "field": "open"
+      "params": {
+        "period": 10,
+        "source": {
+          "method": "DATA",
+          "params": {
+            "field": "open"
+          }
+        }
       }
     }
   )");
@@ -305,10 +330,14 @@ TEST_F(ConfigParserTest, ParseScreenerWmaMethod)
   const auto config = json::parse(R"(
       {
         "method": "WMA",
-        "period": 20,
-        "source": {
-          "method": "DATA",
-          "field": "high"
+        "params": {
+          "period": 20,
+          "source": {
+            "method": "DATA",
+            "params": {
+              "field": "high"
+            }
+          }
         }
       }
     )");
@@ -337,10 +366,14 @@ TEST_F(ConfigParserTest, ParseScreenerRmaMethod)
   const auto config = json::parse(R"(
       {
         "method": "RMA",
-        "period": 15,
-        "source": {
-          "method": "DATA",
-          "field": "low"
+        "params": {
+          "period": 15,
+          "source": {
+            "method": "DATA",
+            "params": {
+              "field": "low"
+            }
+          }
         }
       }
     )");
@@ -369,10 +402,14 @@ TEST_F(ConfigParserTest, ParseScreenerHmaMethod)
   const auto config = json::parse(R"(
       {
         "method": "HMA",
-        "period": 25,
-        "source": {
-          "method": "DATA",
-          "field": "volume"
+        "params": {
+          "period": 25,
+          "source": {
+            "method": "DATA",
+            "params": {
+              "field": "volume"
+            }
+          }
         }
       }
     )");
@@ -401,10 +438,14 @@ TEST_F(ConfigParserTest, ParseScreenerRsiMethod)
   const auto config = json::parse(R"(
     {
       "method": "RSI",
-      "period": 14,
-      "source": {
-        "method": "DATA",
-        "field": "close"
+      "params": {
+        "period": 14,
+        "source": {
+          "method": "DATA",
+          "params": {
+            "field": "close"
+          }
+        }
       }
     }
   )");
@@ -433,10 +474,14 @@ TEST_F(ConfigParserTest, ParseScreenerStddevMethod)
   const auto config = json::parse(R"(
     {
       "method": "STDDEV",
-      "period": 20,
-      "source": {
-        "method": "DATA",
-        "field": "close"
+      "params": {
+        "period": 20,
+        "source": {
+          "method": "DATA",
+          "params": {
+            "field": "close"
+          }
+        }
       }
     }
   )");
@@ -465,7 +510,9 @@ TEST_F(ConfigParserTest, ParseScreenerValueMethod)
   const auto config = json::parse(R"(
     {
       "method": "VALUE",
-      "value": 100
+      "params": {
+        "value": 100
+      }
     }
   )");
 
@@ -487,7 +534,9 @@ TEST_F(ConfigParserTest, ParseScreenerDataMethod)
   const auto config = json::parse(R"(
     {
       "method": "DATA",
-      "field": "open"
+      "params": {
+        "field": "open"
+      }
     }
   )");
 
@@ -509,8 +558,10 @@ TEST_F(ConfigParserTest, ParseScreenerAtrMethod)
   const auto config = json::parse(R"(
     {
       "method": "ATR",
-      "period": 14,
-      "maSmoothingType": "RMA"
+      "params": {
+        "period": 14,
+        "maSmoothingType": "RMA"
+      }
     }
   )");
 
@@ -533,12 +584,16 @@ TEST_F(ConfigParserTest, ParseScreenerBbMethod)
   const auto config = json::parse(R"(
     {
       "method": "BB",
-      "maType": "SMA",
-      "period": 20,
-      "stddev": 2.0,
-      "maSource": {
-        "method": "DATA",
-        "field": "close"
+      "params": {
+        "maType": "SMA",
+        "period": 20,
+        "stddev": 2.0,
+        "maSource": {
+          "method": "DATA",
+          "params": {
+            "field": "close"
+          }
+        }
       }
     }
   )");
@@ -565,12 +620,16 @@ TEST_F(ConfigParserTest, ParseScreenerMacdMethod)
   const auto config = json::parse(R"(
     {
       "method": "MACD",
-      "fast": 12,
-      "slow": 26,
-      "signal": 9,
-      "source": {
-        "method": "DATA",
-        "field": "close"
+      "params": {
+        "fast": 12,
+        "slow": 26,
+        "signal": 9,
+        "source": {
+          "method": "DATA",
+          "params": {
+            "field": "close"
+          }
+        }
       }
     }
   )");
@@ -598,9 +657,11 @@ TEST_F(ConfigParserTest, ParseScreenerStochMethod)
   const auto config = json::parse(R"(
     {
       "method": "STOCH",
-      "kPeriod": 5,
-      "kSmooth": 3,
-      "dPeriod": 3
+      "params": {
+        "kPeriod": 5,
+        "kSmooth": 3,
+        "dPeriod": 3
+      }
     }
   )");
 
@@ -624,13 +685,17 @@ TEST_F(ConfigParserTest, ParseScreenerStochRsiMethod)
   const auto config = json::parse(R"(
     {
       "method": "STOCH_RSI",
-      "rsiPeriod": 14,
-      "kPeriod": 5,
-      "kSmooth": 3,
-      "dPeriod": 3,
-      "rsiSource": {
-        "method": "DATA",
-        "field": "close"
+      "params": {
+        "rsiPeriod": 14,
+        "kPeriod": 5,
+        "kSmooth": 3,
+        "dPeriod": 3,
+        "rsiSource": {
+          "method": "DATA",
+          "params": {
+            "field": "close"
+          }
+        }
       }
     }
   )");
@@ -660,15 +725,19 @@ TEST_F(ConfigParserTest, ParseScreenerKcMethod)
   const auto config = json::parse(R"(
     {
       "method": "KC",
-      "maMethodType": "SMA",
-      "maPeriod": 5,
-      "maSource": {
-        "method": "DATA",
-        "field": "close"
-      },
-      "bandMethodType": "ATR",
-      "bandAtrPeriod": 14,
-      "multiplier": 1.0
+      "params": {
+        "maMethodType": "SMA",
+        "maPeriod": 5,
+        "maSource": {
+          "method": "DATA",
+          "params": {
+            "field": "close"
+          }
+        },
+        "bandMethodType": "ATR",
+        "bandAtrPeriod": 14,
+        "multiplier": 1.0
+      }
     }
   )");
 
@@ -697,10 +766,14 @@ TEST_F(ConfigParserTest, ParseScreenerAddMethod)
   const auto config = json::parse(R"(
     {
       "method": "ADD",
-      "augend": 50,
-      "addend": {
-        "method": "VALUE",
-        "value": 25
+      "params": {
+        "augend": 50,
+        "addend": {
+          "method": "VALUE",
+          "params": {
+            "value": 25
+          }
+        }
       }
     }
   )");
@@ -729,13 +802,19 @@ TEST_F(ConfigParserTest, ParseScreenerSubtractMethod)
   const auto config = json::parse(R"(
     {
       "method": "SUBTRACT",
-      "minuend": {
-        "method": "VALUE",
-        "value": 100
-      },
-      "subtrahend": {
-        "method": "VALUE",
-        "value": 30
+      "params": {
+        "minuend": {
+          "method": "VALUE",
+          "params": {
+            "value": 100
+          }
+        },
+        "subtrahend": {
+          "method": "VALUE",
+          "params": {
+            "value": 30
+          }
+        }
       }
     }
   )");
@@ -766,13 +845,19 @@ TEST_F(ConfigParserTest, ParseScreenerMultiplyMethod)
   const auto config = json::parse(R"(
     {
       "method": "MULTIPLY",
-      "multiplicand": {
-        "method": "VALUE",
-        "value": 10
-      },
-      "multiplier": {
-        "method": "VALUE",
-        "value": 5
+      "params": {
+        "multiplicand": {
+          "method": "VALUE",
+          "params": {
+            "value": 10
+          }
+        },
+        "multiplier": {
+          "method": "VALUE",
+          "params": {
+            "value": 5
+          }
+        }
       }
     }
   )");
@@ -803,13 +888,19 @@ TEST_F(ConfigParserTest, ParseScreenerDivideMethod)
   const auto config = json::parse(R"(
     {
       "method": "DIVIDE",
-      "dividend": {
-        "method": "VALUE",
-        "value": 100
-      },
-      "divisor": {
-        "method": "VALUE",
-        "value": 2
+      "params": {
+        "dividend": {
+          "method": "VALUE",
+          "params": {
+            "value": 100
+          }
+        },
+        "divisor": {
+          "method": "VALUE",
+          "params": {
+            "value": 2
+          }
+        }
       }
     }
   )");
@@ -840,9 +931,13 @@ TEST_F(ConfigParserTest, ParseScreenerNegateMethod)
   const auto config = json::parse(R"(
     {
       "method": "NEGATE",
-      "operand": {
-        "method": "VALUE",
-        "value": 42
+      "params": {
+        "operand": {
+          "method": "VALUE",
+          "params": {
+            "value": 42
+          }
+        }
       }
     }
   )");
@@ -869,9 +964,13 @@ TEST_F(ConfigParserTest, ParseScreenerSqrtMethod)
   const auto config = json::parse(R"(
     {
       "method": "SQRT",
-      "operand": {
-        "method": "VALUE",
-        "value": 16
+      "params": {
+        "operand": {
+          "method": "VALUE",
+          "params": {
+            "value": 16
+          }
+        }
       }
     }
   )");
@@ -897,9 +996,13 @@ TEST_F(ConfigParserTest, ParseScreenerChangeMethod)
   const auto config = json::parse(R"(
     {
       "method": "CHANGE",
-      "source": {
-        "method": "DATA",
-        "field": "close"
+      "params": {
+        "source": {
+          "method": "DATA",
+          "params": {
+            "field": "close"
+          }
+        }
       }
     }
   )");
@@ -925,13 +1028,19 @@ TEST_F(ConfigParserTest, ParseScreenerAbsDiffMethod)
   const auto config = json::parse(R"(
     {
       "method": "ABS_DIFF",
-      "minuend": {
-        "method": "DATA",
-        "field": "high"
-      },
-      "subtrahend": {
-        "method": "DATA",
-        "field": "low"
+      "params": {
+        "minuend": {
+          "method": "DATA",
+          "params": {
+            "field": "high"
+          }
+        },
+        "subtrahend": {
+          "method": "DATA",
+          "params": {
+            "field": "low"
+          }
+        }
       }
     }
   )");
@@ -962,8 +1071,15 @@ TEST_F(ConfigParserTest, ParseScreenerPercentageMethod)
   const auto config = json::parse(R"(
     {
       "method": "PERCENTAGE",
-      "base": 100,
-      "percent": 20
+      "params": {
+        "base": {
+          "method": "VALUE",
+          "params": {
+            "value": 100
+          }
+        },
+        "percent": 20
+      }
     }
   )");
 
@@ -1001,31 +1117,45 @@ TEST_F(ConfigParserTest, ParseScreenerAllOfMethod)
 {
   const auto config = json::parse(R"(
     {
-      "filter": "ALL_OF",
-      "conditions": [
-        {
-          "filter": "GREATER_THAN",
-          "threshold": {
-            "method": "VALUE",
-            "value": 100
+      "method": "ALL_OF",
+      "params": {
+        "items": [
+          {
+            "method": "GREATER_THAN",
+            "params": {
+              "threshold": {
+                "method": "VALUE",
+                "params": {
+                  "value": 100
+                }
+              },
+              "target": {
+                "method": "DATA",
+                "params": {
+                  "field": "close"
+                }
+              }
+            }
           },
-          "target": {
-            "method": "DATA",
-            "field": "close"
+          {
+            "method": "LESS_THAN",
+            "params": {
+              "threshold": {
+                "method": "VALUE",
+                "params": {
+                  "value": 200
+                }
+              },
+              "target": {
+                "method": "DATA",
+                "params": {
+                  "field": "close"
+                }
+              }
+            }
           }
-        },
-        {
-          "filter": "LESS_THAN",
-          "threshold": {
-            "method": "VALUE",
-            "value": 200
-          },
-          "target": {
-            "method": "DATA",
-            "field": "close"
-          }
-        }
-      ]
+        ]
+      }
     }
   )");
 
@@ -1055,31 +1185,45 @@ TEST_F(ConfigParserTest, ParseScreenerAnyOfMethod)
 {
   const auto config = json::parse(R"(
     {
-      "filter": "ANY_OF",
-      "conditions": [
-        {
-          "filter": "GREATER_THAN",
-          "threshold": {
-            "method": "VALUE",
-            "value": 100
+      "method": "ANY_OF",
+      "params": {
+        "items": [
+          {
+            "method": "GREATER_THAN",
+            "params": {
+              "threshold": {
+                "method": "VALUE",
+                "params": {
+                  "value": 100
+                }
+              },
+              "target": {
+                "method": "DATA",
+                "params": {
+                  "field": "close"
+                }
+              }
+            }
           },
-          "target": {
-            "method": "DATA",
-            "field": "close"
+          {
+            "method": "LESS_THAN",
+            "params": {
+              "threshold": {
+                "method": "VALUE",
+                "params": {
+                  "value": 200
+                }
+              },
+              "target": {
+                "method": "DATA",
+                "params": {
+                  "field": "close"
+                }
+              }
+            }
           }
-        },
-        {
-          "filter": "LESS_THAN",
-          "threshold": {
-            "method": "VALUE",
-            "value": 200
-          },
-          "target": {
-            "method": "DATA",
-            "field": "close"
-          }
-        }
-      ]
+        ]
+      }
     }
   )");
 
@@ -1109,11 +1253,20 @@ TEST_F(ConfigParserTest, ParseScreenerGreaterThanMethod)
 {
   const auto config = json::parse(R"(
     {
-      "filter": "GREATER_THAN",
-      "threshold": 100,
-      "target": {
-        "method": "DATA",
-        "field": "close"
+      "method": "GREATER_THAN",
+      "params": {
+        "threshold": {
+          "method": "VALUE",
+          "params": {
+            "value": 100
+          }
+        },
+        "target": {
+          "method": "DATA",
+          "params": {
+            "field": "close"
+          }
+        }
       }
     }
   )");
@@ -1146,14 +1299,20 @@ TEST_F(ConfigParserTest, ParseScreenerGreaterEqualMethod)
 {
   const auto config = json::parse(R"(
     {
-      "filter": "GREATER_EQUAL",
-      "threshold": {
-        "method": "VALUE",
-        "value": 100
-      },
-      "target": {
-        "method": "DATA",
-        "field": "close"
+      "method": "GREATER_EQUAL",
+      "params": {
+        "threshold": {
+          "method": "VALUE",
+          "params": {
+            "value": 100
+          }
+        },
+        "target": {
+          "method": "DATA",
+          "params": {
+            "field": "close"
+          }
+        }
       }
     }
   )");
@@ -1180,14 +1339,20 @@ TEST_F(ConfigParserTest, ParseScreenerLessThanMethod)
 {
   const auto config = json::parse(R"(
     {
-      "filter": "LESS_THAN",
-      "threshold": {
-        "method": "VALUE",
-        "value": 100
-      },
-      "target": {
-        "method": "DATA",
-        "field": "close"
+      "method": "LESS_THAN",
+      "params": {
+        "threshold": {
+          "method": "VALUE",
+          "params": {
+            "value": 100
+          }
+        },
+        "target": {
+          "method": "DATA",
+          "params": {
+            "field": "close"
+          }
+        }
       }
     }
   )");
@@ -1213,14 +1378,20 @@ TEST_F(ConfigParserTest, ParseScreenerLessEqualMethod)
 {
   const auto config = json::parse(R"(
     {
-      "filter": "LESS_EQUAL",
-      "threshold": {
-        "method": "VALUE",
-        "value": 100
-      },
-      "target": {
-        "method": "DATA",
-        "field": "close"
+      "method": "LESS_EQUAL",
+      "params": {
+        "threshold": {
+          "method": "VALUE",
+          "params": {
+            "value": 100
+          }
+        },
+        "target": {
+          "method": "DATA",
+          "params": {
+            "field": "close"
+          }
+        }
       }
     }
   )");
@@ -1246,14 +1417,20 @@ TEST_F(ConfigParserTest, ParseScreenerEqualMethod)
 {
   const auto config = json::parse(R"(
     {
-      "filter": "EQUAL",
-      "threshold": {
-        "method": "VALUE",
-        "value": 100
-      },
-      "target": {
-        "method": "DATA",
-        "field": "close"
+      "method": "EQUAL",
+      "params": {
+        "threshold": {
+          "method": "VALUE",
+          "params": {
+            "value": 100
+          }
+        },
+        "target": {
+          "method": "DATA",
+          "params": {
+            "field": "close"
+          }
+        }
       }
     }
   )");
@@ -1284,14 +1461,20 @@ TEST_F(ConfigParserTest, ParseScreenerNotEqualMethod)
 {
   const auto config = json::parse(R"(
     {
-      "filter": "NOT_EQUAL",
-      "threshold": {
-        "method": "VALUE",
-        "value": 100
-      },
-      "target": {
-        "method": "DATA",
-        "field": "close"
+      "method": "NOT_EQUAL",
+      "params": {
+        "threshold": {
+          "method": "VALUE",
+          "params": {
+            "value": 100
+          }
+        },
+        "target": {
+          "method": "DATA",
+          "params": {
+            "field": "close"
+          }
+        }
       }
     }
   )");
@@ -1323,12 +1506,21 @@ TEST_F(ConfigParserTest, ParseScreenerCrossunderMethod)
 {
   const auto config = json::parse(R"(
     {
-      "filter": "CROSSUNDER",
-      "signal": {
-        "method": "DATA",
-        "field": "close"
-      },
-      "reference": 100
+      "method": "CROSSUNDER",
+      "params": {
+        "value": {
+          "method": "DATA",
+          "params": {
+            "field": "close"
+          }
+        },
+        "baseline": {
+          "method": "VALUE",
+          "params": {
+            "value": 100
+          }
+        }
+      }
     }
   )");
 
@@ -1360,14 +1552,20 @@ TEST_F(ConfigParserTest, ParseScreenerCrossoverMethod)
 {
   const auto config = json::parse(R"(
     {
-      "filter": "CROSSOVER",
-      "signal": {
-        "method": "DATA",
-        "field": "close"
-      },
-      "reference": {
-        "method": "VALUE",
-        "value": 100
+      "method": "CROSSOVER",
+      "params": {
+        "value": {
+          "method": "DATA",
+          "params": {
+            "field": "close"
+          }
+        },
+        "baseline": {
+          "method": "VALUE",
+          "params": {
+            "value": 100
+          }
+        }
       }
     }
   )");
@@ -1399,7 +1597,7 @@ TEST_F(ConfigParserTest, ParseScreenerTrueMethod)
 {
   const auto config = json::parse(R"(
     {
-      "filter": "TRUE"
+      "method": "TRUE"
     }
   )");
 
@@ -1418,7 +1616,7 @@ TEST_F(ConfigParserTest, ParseScreenerFalseMethod)
 {
   const auto config = json::parse(R"(
     {
-      "filter": "FALSE"
+      "method": "FALSE"
     }
   )");
 
@@ -1437,16 +1635,15 @@ TEST_F(ConfigParserTest, ParseScreenerAndMethod)
 {
   const auto config = json::parse(R"(
     {
-      "filter": "AND",
-      "firstCondition":
-        {
-          "filter": "TRUE"
+      "method": "AND",
+      "params": {
+        "firstCondition": {
+          "method": "TRUE"
         },
-
-      "secondCondition":
-        {
-          "filter": "FALSE"
+        "secondCondition": {
+          "method": "FALSE"
         }
+      }
     }
   )");
 
@@ -1475,16 +1672,15 @@ TEST_F(ConfigParserTest, ParseScreenerOrMethod)
 {
   const auto config = json::parse(R"(
     {
-      "filter": "OR",
-      "firstCondition":
-        {
-          "filter": "TRUE"
+      "method": "OR",
+      "params": {
+        "firstCondition": {
+          "method": "TRUE"
         },
-
-      "secondCondition":
-        {
-          "filter": "FALSE"
+        "secondCondition": {
+          "method": "FALSE"
         }
+      }
     }
   )");
 
@@ -1513,8 +1709,10 @@ TEST_F(ConfigParserTest, ParseScreenerNotMethod)
 {
   const auto config = json::parse(R"(
     {
-      "filter": "NOT",
-      "condition": true
+      "method": "NOT",
+      "params": {
+        "condition": true
+      }
     }
   )");
 
@@ -1538,16 +1736,15 @@ TEST_F(ConfigParserTest, ParseScreenerXorMethod)
 {
   const auto config = json::parse(R"(
     {
-      "filter": "XOR",
-      "firstCondition":
-        {
-          "filter": "TRUE"
+      "method": "XOR",
+      "params": {
+        "firstCondition": {
+          "method": "TRUE"
         },
-
-      "secondCondition":
-        {
-          "filter": "FALSE"
+        "secondCondition": {
+          "method": "FALSE"
         }
+      }
     }
   )");
 
@@ -1576,7 +1773,7 @@ TEST_F(ConfigParserTest, ParseAnyConditionMethodIsInvalid)
 {
   const auto config = json::parse(R"(
     {
-      "filter": "invalid not existed filter should throw exception"
+      "method": "invalid not existed filter should throw exception"
     }
   )");
 
@@ -1587,7 +1784,7 @@ TEST_F(ConfigParserTest, ParseAnyConditionMethodWithInvalidRequiredFields)
 {
   const auto config = json::parse(R"(
     {
-      "filter": "AND"
+      "method": "AND"
     }
   )");
 
@@ -1600,11 +1797,15 @@ TEST_F(ConfigParserTest, SeriesMethodRegistrySerializationDeserialization)
     {
       "name1": {
         "method": "DATA",
-        "field": "close"
+        "params": {
+          "field": "close"
+        }
       },
       "name2": {
         "method": "VALUE",
-        "value": 100
+        "params": {
+          "value": 100
+        }
       }
     }
   )");
