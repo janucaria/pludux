@@ -33,15 +33,6 @@
       }
     }
   },
-  "risk": {
-    "method": "ATR",
-    "atr": {
-      "period": 14,
-      "multiplier": 2
-    },
-    "percentage": 5,
-    "value": 1000
-  },
   "stopLoss": false,
   "takeProfit": false,
   "longPosition": {

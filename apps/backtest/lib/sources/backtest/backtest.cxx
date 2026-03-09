@@ -331,20 +331,22 @@ public:
     auto result = std::optional<TradeEntry>{};
 
     const auto& strategy = self.strategy();
+    const auto& profile = self.profile();
     const auto prev_snapshot = asset_snapshot[1];
     auto context = self.create_default_method_context();
 
     if(strategy.long_entry_filter()(prev_snapshot, context)) {
-      const auto risk_size = strategy.risk_method()(prev_snapshot, context);
-      const auto position_size = risk_value / risk_size;
       const auto entry_price = asset_snapshot.open();
+      const auto r_distance =
+       profile.get_r_distance(entry_price, prev_snapshot, context);
+      const auto position_size = risk_value / r_distance;
 
       const auto stop_loss_price =
-       strategy.stop_loss_enabled() ? entry_price - risk_size : NAN;
+       strategy.stop_loss_enabled() ? entry_price - r_distance : NAN;
       const auto is_stop_loss_trailing = strategy.stop_loss_trailing_enabled();
       const auto take_profit_price =
        strategy.take_profit_enabled()
-        ? entry_price + risk_size * strategy.take_profit_risk_multiplier()
+        ? entry_price + r_distance * strategy.take_profit_risk_multiplier()
         : NAN;
 
       result = TradeEntry{position_size,
@@ -365,20 +367,22 @@ public:
     auto result = std::optional<TradeEntry>{};
 
     const auto& strategy = self.strategy();
+    const auto& profile = self.profile();
     auto context = self.create_default_method_context();
     const auto prev_snapshot = asset_snapshot[1];
 
     if(strategy.short_entry_filter()(prev_snapshot, context)) {
-      const auto risk_size = -strategy.risk_method()(prev_snapshot, context);
-      const auto position_size = risk_value / risk_size;
       const auto entry_price = asset_snapshot.open();
+      const auto r_distance =
+       -profile.get_r_distance(entry_price, prev_snapshot, context);
+      const auto position_size = risk_value / r_distance;
 
       const auto stop_loss_price =
-       strategy.stop_loss_enabled() ? entry_price - risk_size : NAN;
+       strategy.stop_loss_enabled() ? entry_price - r_distance : NAN;
       const auto is_stop_loss_trailing = strategy.stop_loss_trailing_enabled();
       const auto take_profit_price =
        strategy.take_profit_enabled()
-        ? entry_price + risk_size * strategy.take_profit_risk_multiplier()
+        ? entry_price + r_distance * strategy.take_profit_risk_multiplier()
         : NAN;
 
       result = TradeEntry{position_size,

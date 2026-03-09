@@ -66,8 +66,6 @@ using NegateMethod = pludux::NegateMethod<AnySeriesMethod>;
 using PercentageMethod = pludux::PercentageMethod<AnySeriesMethod>;
 using AbsDiffMethod = pludux::AbsDiffMethod<AnySeriesMethod, AnySeriesMethod>;
 
-using RiskAtrMethod = backtest::RiskAtrMethod;
-
 auto get_default_series_method(const std::string& series_id) -> AnySeriesMethod
 {
   if(series_id == "OPEN") {
@@ -434,10 +432,6 @@ private:
   std::shared_ptr<backtest::Strategy> selected_strategy_ptr_;
   std::shared_ptr<backtest::Strategy> editing_strategy_ptr_;
 
-  std::pair<int, double> risk_atr_{14, 2.0};
-  double risk_percentage_{10.0};
-  double risk_fixed_{1000.0};
-
   std::vector<std::string> available_series_names_;
 
   void render_list_strategies(this auto& self, WindowContext& context)
@@ -549,8 +543,6 @@ private:
       self.selected_strategy_ptr_ = nullptr;
 
       self.editing_strategy_ptr_ = std::make_shared<backtest::Strategy>();
-      self.editing_strategy_ptr_->risk_method(
-       PercentageMethod{CloseMethod{}, 10.0});
     }
 
     ImGui::SameLine();
@@ -875,12 +867,6 @@ private:
     }
 
     {
-      ImGui::SeparatorText("Risk");
-      self.render_risk_mode(context);
-      ImGui::Text("");
-    }
-
-    {
       ImGui::SeparatorText("Stop Loss");
 
       auto stop_loss_enabled = self.editing_strategy_ptr_->stop_loss_enabled();
@@ -926,123 +912,6 @@ private:
     }
 
     ImGui::EndChild();
-  }
-
-  void render_risk_mode(this auto& self, WindowContext& context)
-  {
-    auto& atr_risk_period = self.risk_atr_.first;
-    auto& atr_risk_multiplier = self.risk_atr_.second;
-    auto& percent_risk = self.risk_percentage_;
-    auto& fixed_risk = self.risk_fixed_;
-
-    enum class RiskMode : int { Atr, Percentage, Fixed };
-    static auto risk_mode = static_cast<int>(RiskMode::Atr);
-
-    auto risk_method = self.editing_strategy_ptr_->risk_method();
-    if(const auto atr_method = series_method_cast<RiskAtrMethod>(risk_method)) {
-      atr_risk_period = static_cast<int>(atr_method->multiplicand().period());
-      atr_risk_multiplier = atr_method->multiplier().value();
-      risk_mode = static_cast<int>(RiskMode::Atr);
-    } else if(const auto percentage_method =
-               series_method_cast<PercentageMethod>(risk_method)) {
-      percent_risk = percentage_method->percent();
-      risk_mode = static_cast<int>(RiskMode::Percentage);
-    } else if(const auto value_method =
-               series_method_cast<ValueMethod>(risk_method)) {
-      fixed_risk = value_method->value();
-      risk_mode = static_cast<int>(RiskMode::Fixed);
-    } else {
-      context.push_action([](ApplicationState& app_state) {
-        const auto error_message =
-         "ERROR: Unknown risk method in strategy. Tell the developer!";
-        app_state.alert(error_message);
-      });
-
-      self.current_page_ = Page::List;
-      return;
-    }
-
-    {
-      if(ImGui::RadioButton(
-          "ATR", &risk_mode, static_cast<int>(RiskMode::Atr))) {
-        self.editing_strategy_ptr_->risk_method(
-         RiskAtrMethod{AtrMethod{static_cast<std::size_t>(atr_risk_period)},
-                       ValueMethod{atr_risk_multiplier}});
-      }
-
-      ImGui::Indent();
-      ImGui::Text("Period:");
-      ImGui::SameLine();
-      if(ImGui::InputInt("##atr_risk_period", &atr_risk_period)) {
-        if(atr_risk_period < 1) {
-          atr_risk_period = 1;
-        }
-
-        if(risk_mode == static_cast<int>(RiskMode::Atr)) {
-          self.editing_strategy_ptr_->risk_method(
-           RiskAtrMethod{AtrMethod{static_cast<std::size_t>(atr_risk_period)},
-                         ValueMethod{atr_risk_multiplier}});
-        }
-      }
-      ImGui::Text("Multiplier:");
-      ImGui::SameLine();
-      if(ImGui::InputDouble(
-          "##atr_risk_multiplier", &atr_risk_multiplier, 0.1, 1.0, "%.2f")) {
-        if(atr_risk_multiplier < 0.1) {
-          atr_risk_multiplier = 0.1;
-        }
-
-        if(risk_mode == static_cast<int>(RiskMode::Atr)) {
-          self.editing_strategy_ptr_->risk_method(
-           RiskAtrMethod{AtrMethod{static_cast<std::size_t>(atr_risk_period)},
-                         ValueMethod{atr_risk_multiplier}});
-        }
-      }
-      ImGui::Unindent();
-    }
-    {
-      if(ImGui::RadioButton(
-          "Percentage", &risk_mode, static_cast<int>(RiskMode::Percentage))) {
-        self.editing_strategy_ptr_->risk_method(
-         PercentageMethod{CloseMethod{}, percent_risk});
-      }
-
-      ImGui::Indent();
-      ImGui::Text("Percent:");
-      ImGui::SameLine();
-      if(ImGui::InputDouble(
-          "##percentage_risk", &percent_risk, 0.1, 1.0, "%.2f")) {
-        if(percent_risk < 0.1) {
-          percent_risk = 0.1;
-        }
-
-        if(risk_mode == static_cast<int>(RiskMode::Percentage)) {
-          self.editing_strategy_ptr_->risk_method(
-           PercentageMethod{CloseMethod{}, percent_risk});
-        }
-      }
-      ImGui::Unindent();
-    }
-    {
-      if(ImGui::RadioButton(
-          "Fixed", &risk_mode, static_cast<int>(RiskMode::Fixed))) {
-        self.editing_strategy_ptr_->risk_method(ValueMethod{fixed_risk});
-      }
-
-      ImGui::Indent();
-      ImGui::Text("Amount:");
-      ImGui::SameLine();
-      if(ImGui::InputDouble("##fixed_risk", &fixed_risk, 0.1, 1.0, "%.2f")) {
-        if(fixed_risk < 0.1) {
-          fixed_risk = 0.1;
-        }
-
-        if(risk_mode == static_cast<int>(RiskMode::Fixed)) {
-          self.editing_strategy_ptr_->risk_method(ValueMethod{fixed_risk});
-        }
-      }
-      ImGui::Unindent();
-    }
   }
 
   void render_series_method(this auto& self,

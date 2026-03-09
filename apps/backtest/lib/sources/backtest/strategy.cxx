@@ -18,14 +18,11 @@ import :trade_exit;
 
 export namespace pludux::backtest {
 
-using RiskAtrMethod = MultiplyMethod<AtrMethod, ValueMethod>;
-
 class Strategy {
 public:
   Strategy()
   : Strategy("",
              SeriesMethodRegistry{},
-             PercentageMethod<>{10.0},
              FalseMethod{},
              FalseMethod{},
              FalseMethod{},
@@ -39,7 +36,6 @@ public:
 
   Strategy(std::string name,
            SeriesMethodRegistry series_registry,
-           AnySeriesMethod risk_method,
            AnyConditionMethod long_entry_filter,
            AnyConditionMethod long_exit_filter,
            AnyConditionMethod short_entry_filter,
@@ -50,7 +46,6 @@ public:
            double take_profit_risk_multiplier)
   : name_{std::move(name)}
   , series_registry_{series_registry}
-  , risk_method_{risk_method}
   , long_entry_filter_{std::move(long_entry_filter)}
   , long_exit_filter_{std::move(long_exit_filter)}
   , short_entry_filter_{std::move(short_entry_filter)}
@@ -83,16 +78,6 @@ public:
   auto series_registry(this Strategy& self) noexcept -> SeriesMethodRegistry&
   {
     return self.series_registry_;
-  }
-
-  auto risk_method(this const Strategy& self) noexcept -> const AnySeriesMethod&
-  {
-    return self.risk_method_;
-  }
-
-  void risk_method(this Strategy& self, AnySeriesMethod risk_method) noexcept
-  {
-    self.risk_method_ = std::move(risk_method);
   }
 
   auto long_entry_filter(this const Strategy& self) noexcept
@@ -190,7 +175,6 @@ public:
    -> bool
   {
     return self.series_registry_ == other.series_registry_ &&
-           self.risk_method_ == other.risk_method_ &&
            self.long_entry_filter_ == other.long_entry_filter_ &&
            self.long_exit_filter_ == other.long_exit_filter_ &&
            self.short_entry_filter_ == other.short_entry_filter_ &&
@@ -208,8 +192,6 @@ private:
 
   SeriesMethodRegistry series_registry_;
 
-  AnySeriesMethod risk_method_;
-
   AnyConditionMethod long_entry_filter_{FalseMethod{}};
   AnyConditionMethod long_exit_filter_{FalseMethod{}};
 
@@ -222,108 +204,6 @@ private:
   bool take_profit_enabled_{false};
   double take_profit_risk_multiplier_{1.0};
 };
-
-auto risk_reward_config_parser() -> ConfigParser
-{
-  auto config_parser = ConfigParser{};
-  config_parser.use_series_params(false);
-
-  config_parser.register_method_parser(
-   "ATR",
-   [](const ConfigParser& config_parser,
-      const AnySeriesMethod& method) -> jsoncons::ojson {
-     auto serialized_method = jsoncons::ojson::null();
-
-     auto multiply_method = series_method_cast<RiskAtrMethod>(method);
-
-     if(multiply_method) {
-       serialized_method = jsoncons::ojson{};
-       serialized_method["atr"] = jsoncons::ojson{};
-       serialized_method["atr"]["period"] =
-        multiply_method->multiplicand().period();
-       serialized_method["atr"]["multiplier"] =
-        multiply_method->multiplier().value();
-     }
-
-     return serialized_method;
-   },
-   [](ConfigParser::Parser config_parser,
-      const jsoncons::ojson& parameters) -> AnySeriesMethod {
-     auto period = std::size_t{14};
-     auto multiplier = 1.0;
-
-     if(parameters.contains("atr") && parameters.at("atr").is_object()) {
-       const auto& atr_params = parameters.at("atr");
-       if(atr_params.contains("period")) {
-         period = atr_params.at("period").as<std::size_t>();
-       }
-       if(atr_params.contains("multiplier")) {
-         multiplier = atr_params.at("multiplier").as_double();
-       }
-     }
-
-     const auto atr_method =
-      RiskAtrMethod{AtrMethod{period}, ValueMethod{multiplier}};
-     return atr_method;
-   });
-
-  config_parser.register_method_parser(
-   "PERCENTAGE",
-   [](const ConfigParser& config_parser,
-      const AnySeriesMethod& method) -> jsoncons::ojson {
-     auto serialized_method = jsoncons::ojson::null();
-
-     auto percent_method =
-      series_method_cast<PercentageMethod<AnySeriesMethod>>(method);
-
-     if(percent_method) {
-       serialized_method = jsoncons::ojson{};
-       serialized_method["percentage"] = percent_method->percent();
-     }
-
-     return serialized_method;
-   },
-   [](ConfigParser::Parser config_parser,
-      const jsoncons::ojson& parameters) -> AnySeriesMethod {
-     const auto base_method = CloseMethod{};
-
-     auto percent = 10.0;
-     if(parameters.contains("percentage")) {
-       percent = parameters.at("percentage").as_double();
-     }
-
-     const auto percentage_method =
-      PercentageMethod<AnySeriesMethod>{base_method, percent};
-
-     return percentage_method;
-   });
-
-  config_parser.register_method_parser(
-   "VALUE",
-   [](const ConfigParser& config_parser,
-      const AnySeriesMethod& method) -> jsoncons::ojson {
-     auto serialized_method = jsoncons::ojson::null();
-
-     auto value_method = series_method_cast<ValueMethod>(method);
-
-     if(value_method) {
-       serialized_method = jsoncons::ojson{};
-       serialized_method["value"] = value_method->value();
-     }
-
-     return serialized_method;
-   },
-   [](ConfigParser::Parser config_parser,
-      const jsoncons::ojson& parameters) -> AnySeriesMethod {
-     auto value = 1000.0;
-     if(parameters.contains("value")) {
-       value = parameters.at("value").as_double();
-     }
-     return ValueMethod{value};
-   });
-
-  return config_parser;
-}
 
 auto parse_backtest_strategy_json(std::string_view strategy_name,
                                   std::istream& json_strategy_stream)
@@ -351,10 +231,6 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
    strategy_json.contains("series")
     ? config_parser.parse_registered_methods(strategy_json.at("series"))
     : SeriesMethodRegistry{};
-
-  auto risk_parser = risk_reward_config_parser();
-  const auto risk_config = strategy_json.at("risk");
-  const auto risk_method = risk_parser.parse_method(risk_config);
 
   auto long_entry_filter = AnyConditionMethod{FalseMethod{}};
   auto long_exit_filter = AnyConditionMethod{FalseMethod{}};
@@ -422,7 +298,6 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
 
   return pludux::backtest::Strategy{std::string{strategy_name},
                                     std::move(series_registry),
-                                    std::move(risk_method),
                                     std::move(long_entry_filter),
                                     std::move(long_exit_filter),
                                     std::move(short_entry_filter),
@@ -445,7 +320,6 @@ auto stringify_backtest_strategy(const backtest::Strategy& strategy)
  -> jsoncons::ojson
 {
   auto config_parser = make_default_registered_config_parser();
-  auto risk_parser = risk_reward_config_parser();
 
   auto strategy_json = jsoncons::ojson{};
 
@@ -453,8 +327,6 @@ auto stringify_backtest_strategy(const backtest::Strategy& strategy)
 
   strategy_json["series"] =
    config_parser.serialize_registered_methods(strategy.series_registry());
-
-  strategy_json["risk"] = risk_parser.serialize_method(strategy.risk_method());
 
   auto long_position_json = jsoncons::ojson{};
   long_position_json["entry"] = jsoncons::ojson{};

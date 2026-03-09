@@ -11,43 +11,10 @@
     },
     "series": {
       "type": "object",
+      "additionalProperties": false,
       "patternProperties": {
         "^[a-z][a-z0-9_]*$": {
           "$ref": "#/$defs/series"
-        }
-      }
-    },
-    "risk": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "method": {
-          "enum": [
-            "ATR",
-            "PERCENTAGE",
-            "VALUE"
-          ]
-        },
-        "atr": {
-          "type": "object",
-          "properties": {
-            "period": {
-              "type": "integer"
-            },
-            "multiplier": {
-              "type": "number"
-            }
-          },
-          "required": [
-            "period",
-            "multiplier"
-          ]
-        },
-        "percentage": {
-          "type": "number"
-        },
-        "value": {
-          "type": "number"
         }
       }
     },
@@ -96,9 +63,6 @@
       "$ref": "#/$defs/tradePosition"
     }
   },
-  "required": [
-    "risk"
-  ],
   "$defs": {
     "tradePosition": {
       "type": "object",

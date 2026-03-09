@@ -46,10 +46,6 @@
       }
     }
   },
-  "risk": {
-    "method": "PERCENTAGE",
-    "percentage": 10
-  },
   "stopLoss": true,
   "takeProfit": {
     "riskMultiplier": 2

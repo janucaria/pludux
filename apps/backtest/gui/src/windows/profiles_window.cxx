@@ -116,7 +116,7 @@ private:
     ImGui::Text("Add New Profile");
     ImGui::Separator();
 
-    self.edit_profile_form();
+    self.edit_profile_form(context);
 
     ImGui::EndChild();
     if(ImGui::Button("Create Profile")) {
@@ -141,7 +141,7 @@ private:
     ImGui::Text("Edit Profile");
     ImGui::Separator();
 
-    self.edit_profile_form();
+    self.edit_profile_form(context);
 
     ImGui::EndChild();
 
@@ -168,7 +168,7 @@ private:
     ImGui::EndGroup();
   }
 
-  void edit_profile_form(this auto& self)
+  void edit_profile_form(this auto& self, WindowContext& context)
   {
     {
       auto profile_name = self.editing_profile_ptr_->name();
@@ -185,6 +185,100 @@ private:
       auto percentage = self.editing_profile_ptr_->capital_risk() * 100.0;
       ImGui::InputDouble("Capital Risk (%)", &percentage, 1.0, 10.0, "%.2f");
       self.editing_profile_ptr_->capital_risk(percentage / 100.0);
+    }
+    {
+      ImGui::SeparatorText("R Distance");
+      self.render_r_distance(context);
+      ImGui::Text("");
+    }
+  }
+
+  void render_r_distance(this auto& self, WindowContext& context)
+  {
+    auto r_distance_mode =
+     static_cast<int>(self.editing_profile_ptr_->r_distance_mode());
+    {
+      if(ImGui::RadioButton(
+          "ATR",
+          &r_distance_mode,
+          static_cast<int>(backtest::Profile::RDistance::Atr))) {
+        self.editing_profile_ptr_->r_distance_mode(
+         backtest::Profile::RDistance::Atr);
+      }
+
+      ImGui::Indent();
+      ImGui::Text("Period:");
+      ImGui::SameLine();
+      auto r_mode_atr_period =
+       static_cast<int>(self.editing_profile_ptr_->r_mode_atr().first);
+      if(ImGui::InputInt("##r_mode_atr_period", &r_mode_atr_period)) {
+        if(r_mode_atr_period < 1) {
+          r_mode_atr_period = 1;
+        }
+      }
+      ImGui::Text("Multiplier:");
+      ImGui::SameLine();
+      auto r_mode_atr_multiplier =
+       self.editing_profile_ptr_->r_mode_atr().second;
+      if(ImGui::InputDouble("##r_mode_atr_multiplier",
+                            &r_mode_atr_multiplier,
+                            0.1,
+                            1.0,
+                            "%.2f")) {
+        if(r_mode_atr_multiplier < 0.1) {
+          r_mode_atr_multiplier = 0.1;
+        }
+      }
+
+      self.editing_profile_ptr_->r_mode_atr(
+       {r_mode_atr_period, r_mode_atr_multiplier});
+      ImGui::Unindent();
+    }
+    {
+      if(ImGui::RadioButton(
+          "Percentage",
+          &r_distance_mode,
+          static_cast<int>(backtest::Profile::RDistance::Percentage))) {
+        self.editing_profile_ptr_->r_distance_mode(
+         backtest::Profile::RDistance::Percentage);
+      }
+
+      ImGui::Indent();
+      ImGui::Text("Percent:");
+      ImGui::SameLine();
+      auto r_mode_percentage = self.editing_profile_ptr_->r_mode_percentage();
+      if(ImGui::InputDouble(
+          "##percentage_risk", &r_mode_percentage, 0.1, 1.0, "%.2f")) {
+        if(r_mode_percentage < 0.1) {
+          r_mode_percentage = 0.1;
+        }
+
+        self.editing_profile_ptr_->r_mode_percentage(r_mode_percentage);
+      }
+      ImGui::Unindent();
+    }
+    {
+      if(ImGui::RadioButton(
+          "Price",
+          &r_distance_mode,
+          static_cast<int>(backtest::Profile::RDistance::Price))) {
+        self.editing_profile_ptr_->r_distance_mode(
+         backtest::Profile::RDistance::Price);
+      }
+
+      ImGui::Indent();
+      ImGui::Text("Amount:");
+      ImGui::SameLine();
+      auto r_mode_price = self.editing_profile_ptr_->r_mode_price();
+      if(ImGui::InputDouble(
+          "##r_mode_price", &r_mode_price, 0.1, 1.0, "%.2f")) {
+        if(r_mode_price < 0.1) {
+          r_mode_price = 0.1;
+        }
+
+        self.editing_profile_ptr_->r_mode_price(r_mode_price);
+      }
+      ImGui::Unindent();
     }
   }
 

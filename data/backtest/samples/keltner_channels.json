@@ -36,15 +36,6 @@
       }
     }
   },
-  "risk": {
-    "method": "ATR",
-    "atr": {
-      "period": 14,
-      "multiplier": 2
-    },
-    "percentage": 5,
-    "value": 1000
-  },
   "stopLoss": true,
   "takeProfit": {
     "riskMultiplier": 5

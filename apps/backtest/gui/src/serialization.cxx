@@ -19,6 +19,7 @@ module;
 #include <cereal/types/queue.hpp>
 #include <cereal/types/string.hpp>
 #include <cereal/types/unordered_map.hpp>
+#include <cereal/types/utility.hpp>
 #include <cereal/types/vector.hpp>
 
 export module pludux.apps.backtest:serialization;
@@ -277,9 +278,15 @@ void load(Archive& archive, pludux::backtest::Strategy& strategy)
 template<class Archive>
 void save(Archive& archive, const pludux::backtest::Profile& profile)
 {
-  archive(make_nvp("name", profile.name()),
-          make_nvp("initialCapital", profile.initial_capital()),
-          make_nvp("capitalRisk", profile.capital_risk()));
+  archive(
+   make_nvp("name", profile.name()),
+   make_nvp("initialCapital", profile.initial_capital()),
+   make_nvp("capitalRisk", profile.capital_risk()),
+   make_nvp("rDistanceMode", static_cast<int>(profile.r_distance_mode())),
+   make_nvp("rModeAtrPeriod", profile.r_mode_atr().first),
+   make_nvp("rModeAtrMultiplier", profile.r_mode_atr().second),
+   make_nvp("rModePercentage", profile.r_mode_percentage()),
+   make_nvp("rModePrice", profile.r_mode_price()));
 }
 
 template<class Archive>
@@ -288,13 +295,28 @@ void load(Archive& archive, pludux::backtest::Profile& profile)
   auto name = std::string{};
   auto initial_capital = double{};
   auto capital_risk = double{};
+  auto r_distance_mode = int{};
+  auto r_mode_atr = std::pair<std::size_t, double>{};
+  auto r_mode_percentage = double{};
+  auto r_mode_price = double{};
 
   archive(make_nvp("name", name),
           make_nvp("initialCapital", initial_capital),
-          make_nvp("capitalRisk", capital_risk));
+          make_nvp("capitalRisk", capital_risk),
+          make_nvp("rDistanceMode", r_distance_mode),
+          make_nvp("rModeAtrPeriod", r_mode_atr.first),
+          make_nvp("rModeAtrMultiplier", r_mode_atr.second),
+          make_nvp("rModePercentage", r_mode_percentage),
+          make_nvp("rModePrice", r_mode_price));
 
-  profile =
-   pludux::backtest::Profile{std::move(name), initial_capital, capital_risk};
+  profile = pludux::backtest::Profile{
+   std::move(name),
+   initial_capital,
+   capital_risk,
+   static_cast<pludux::backtest::Profile::RDistance>(r_distance_mode),
+   std::move(r_mode_atr),
+   r_mode_percentage,
+   r_mode_price};
 }
 
 /*--------------------------------------------------------------------------------------*/
