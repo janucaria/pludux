@@ -82,6 +82,31 @@ TEST_F(ConfigParserTest, ParseScreenerSeriesReferenceMethod)
   EXPECT_EQ(method, deserialized_config);
 }
 
+TEST_F(ConfigParserTest, ParseScreenerSeriesResultMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "SERIES_RESULT",
+      "params": {
+        "name": "close"
+      }
+    }
+  )");
+
+  const auto method = config_parser.parse_method(config);
+
+  const auto series_result_method =
+   series_method_cast<SeriesResultMethod>(method);
+  ASSERT_NE(series_result_method, nullptr);
+
+  EXPECT_EQ(series_result_method->name(), "close");
+
+  const auto serialized_config = config_parser.serialize_method(method);
+  const auto deserialized_config =
+   config_parser.parse_method(serialized_config);
+  EXPECT_EQ(method, deserialized_config);
+}
+
 TEST_F(ConfigParserTest, ParseScreenerLookbackMethod)
 {
   const auto config = json::parse(R"(

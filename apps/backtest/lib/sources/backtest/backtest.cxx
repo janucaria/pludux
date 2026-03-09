@@ -33,13 +33,7 @@ export namespace pludux::backtest {
 class Backtest {
 public:
   Backtest()
-  : Backtest{std::string{},
-             nullptr,
-             nullptr,
-             nullptr,
-             nullptr,
-             nullptr,
-             std::vector<BacktestSummary>{}}
+  : Backtest{"", nullptr, nullptr, nullptr, nullptr, nullptr}
   {
   }
 
@@ -55,7 +49,8 @@ public:
              std::move(market_ptr),
              std::move(broker_ptr),
              std::move(profile_ptr),
-             std::vector<BacktestSummary>{}}
+             std::vector<BacktestSummary>{},
+             SeriesResultsCollector{}}
   {
   }
 
@@ -65,7 +60,8 @@ public:
            std::shared_ptr<Market> market_ptr,
            std::shared_ptr<Broker> broker_ptr,
            std::shared_ptr<Profile> profile_ptr,
-           std::vector<BacktestSummary> summaries)
+           std::vector<BacktestSummary> summaries,
+           SeriesResultsCollector series_results_collector)
   : name_{std::move(name)}
   , asset_ptr_{asset_ptr}
   , strategy_ptr_{strategy_ptr}
@@ -74,6 +70,7 @@ public:
   , profile_ptr_{profile_ptr}
   , is_failed_{false}
   , summaries_{std::move(summaries)}
+  , series_results_collector_{std::move(series_results_collector)}
   {
   }
 
@@ -188,6 +185,12 @@ public:
     return self.summaries_;
   }
 
+  auto series_results_collector(this const Backtest& self) noexcept
+   -> const SeriesResultsCollector&
+  {
+    return self.series_results_collector_;
+  }
+
   auto equal_rules(this const Backtest& self, const Backtest& other) noexcept
    -> bool
   {
@@ -215,6 +218,7 @@ public:
   {
     self.is_failed_ = false;
     self.summaries_.clear();
+    self.series_results_collector_.clear();
   }
 
   auto should_run(this const Backtest& self) noexcept -> bool
@@ -237,15 +241,22 @@ public:
     const auto summaries_size = self.summaries_.size();
     const auto asset_size = self.asset().size();
     const auto last_index = asset_size - 1;
-    const auto asset_index = last_index - std::min(summaries_size, last_index);
-    const auto asset_snapshot = self.asset().get_snapshot(asset_index);
-    const auto asset_timestamp =
-     static_cast<std::time_t>(asset_snapshot.datetime());
-    const auto asset_price = asset_snapshot.close();
+    const auto asset_lookback =
+     last_index - std::min(summaries_size, last_index);
+    const auto asset_snapshot = self.asset().get_snapshot(asset_lookback);
     const auto& strategy = self.strategy();
     const auto& profile = self.profile();
     const auto& broker = self.broker();
     const auto& market = self.market();
+
+    {
+      const auto& series_registry = strategy.series_registry();
+      auto context = self.create_default_method_context();
+      for(const auto& [series_name, series] : series_registry) {
+        const auto series_value = series(asset_snapshot, context);
+        self.series_results_collector_.collect(series_name, series_value);
+      }
+    }
 
     auto summary = !self.summaries_.empty()
                     ? self.summaries_.back()
@@ -424,12 +435,15 @@ private:
   std::shared_ptr<Profile> profile_ptr_;
 
   bool is_failed_;
+
   std::vector<BacktestSummary> summaries_;
+  SeriesResultsCollector series_results_collector_;
 
   auto create_default_method_context(this const Backtest& self)
    -> DefaultMethodContext
   {
     return DefaultMethodContext{self.strategy().series_registry(),
+                                self.series_results_collector_,
                                 self.summaries_.size()};
   }
 };

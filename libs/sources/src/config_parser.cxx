@@ -1054,6 +1054,26 @@ auto make_default_registered_config_parser() -> ConfigParser
    });
 
   config_parser.register_method_parser(
+   "SERIES_RESULT",
+   [](const ConfigParser& config_parser,
+      const AnySeriesMethod any_series_method) -> jsoncons::ojson {
+     auto serialized_method = jsoncons::ojson::null();
+
+     auto series_result_method =
+      series_method_cast<SeriesResultMethod>(any_series_method);
+     if(series_result_method) {
+       serialized_method = jsoncons::ojson{};
+       serialized_method["name"] = series_result_method->name();
+     }
+
+     return serialized_method;
+   },
+   [](ConfigParser::Parser config_parser, const jsoncons::ojson& parameters) {
+     const auto name = get_param_or<std::string>(parameters, "name", "");
+     return SeriesResultMethod{name};
+   });
+
+  config_parser.register_method_parser(
    "LOOKBACK",
    [](const ConfigParser& config_parser,
       const AnySeriesMethod any_series_method) -> jsoncons::ojson {

@@ -183,7 +183,7 @@
         }
       ]
     },
-    "seriesRefSeries": {
+    "seriesReferenceSeries": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -192,6 +192,36 @@
           "properties": {
             "method": {
               "const": "SERIES_REFERENCE"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]*$"
+                }
+              },
+              "required": [
+                "name"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ]
+    },
+    "seriesResultSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "SERIES_RESULT"
             },
             "params": {
               "type": "object",
@@ -874,7 +904,10 @@
     "series": {
       "oneOf": [
         {
-          "$ref": "#/$defs/seriesRefSeries"
+          "$ref": "#/$defs/seriesReferenceSeries"
+        },
+        {
+          "$ref": "#/$defs/seriesResultSeries"
         },
         {
           "$ref": "#/$defs/selectOutputSeries"

@@ -37,6 +37,7 @@ namespace pludux::apps {
 
 using SelectOutputMethod = pludux::SelectOutputMethod<AnySeriesMethod>;
 using SeriesReferenceMethod = pludux::SeriesReferenceMethod;
+using SeriesResultMethod = pludux::SeriesResultMethod;
 using BbMethod = pludux::BbMethod<AnySeriesMethod>;
 using KcMethod = pludux::KcMethod<AnySeriesMethod>;
 using StochMethod = pludux::StochMethod;
@@ -110,6 +111,8 @@ auto get_default_series_method(const std::string& series_id) -> AnySeriesMethod
     return StochRsiMethod{CloseMethod{}, 14, 14, 3, 3};
   } else if(series_id == "SERIES_REFERENCE") {
     return SeriesReferenceMethod{""};
+  } else if(series_id == "SERIES_RESULT") {
+    return SeriesResultMethod{""};
   } else if(series_id == "VALUE") {
     return ValueMethod{0.0};
   } else if(series_id == "LOOKBACK") {
@@ -144,6 +147,8 @@ auto get_series_method_id(const AnySeriesMethod& method) -> std::string
     return "SELECT_OUTPUT";
   } else if(series_method_cast<SeriesReferenceMethod>(method)) {
     return "SERIES_REFERENCE";
+  } else if(series_method_cast<SeriesResultMethod>(method)) {
+    return "SERIES_RESULT";
   } else if(series_method_cast<CloseMethod>(method)) {
     return "CLOSE";
   } else if(series_method_cast<OpenMethod>(method)) {
@@ -248,7 +253,9 @@ auto get_series_method_title(const std::string& series_id) -> std::string
   } else if(series_id == "STOCH_RSI") {
     return "Stochastic RSI";
   } else if(series_id == "SERIES_REFERENCE") {
-    return "Named Series";
+    return "Series Reference";
+  } else if(series_id == "SERIES_RESULT") {
+    return "Series Result";
   } else if(series_id == "VALUE") {
     return "Value";
   } else if(series_id == "LOOKBACK") {
@@ -1071,6 +1078,7 @@ private:
                                                         "STOCH_RSI",
                                                         "SELECT_OUTPUT",
                                                         "SERIES_REFERENCE",
+                                                        "SERIES_RESULT",
                                                         "VALUE",
                                                         "LOOKBACK"};
 
@@ -1096,10 +1104,11 @@ private:
 
           if(filter.PassFilter(series_title.c_str())) {
             if(ImGui::Selectable(series_title.c_str(), is_selected)) {
-              if(series_id == "SERIES_REFERENCE" &&
+              if((series_id == "SERIES_REFERENCE" ||
+                  series_id == "SERIES_RESULT") &&
                  self.available_series_names_.empty()) {
                 const auto series_reference_method_title =
-                 get_series_method_title("SERIES_REFERENCE");
+                 get_series_method_title(series_id);
                 const auto error_message =
                  std::format("Cannot select '{}' when there are no available "
                              "series other than the current one.",
@@ -1140,6 +1149,7 @@ private:
       }() || ...);
     }.template operator()<SelectOutputMethod,
                           SeriesReferenceMethod,
+                          SeriesResultMethod,
                           DataMethod,
                           LookbackMethod,
 
@@ -1221,6 +1231,37 @@ private:
 
   void render_series_method_params(this auto& self,
                                    SeriesReferenceMethod& method,
+                                   WindowContext& context)
+  {
+    if(std::ranges::find(self.available_series_names_, method.name()) ==
+       self.available_series_names_.end()) {
+      const auto new_name = self.available_series_names_.empty()
+                             ? ""
+                             : self.available_series_names_.front();
+      method.name(new_name);
+    }
+
+    ImGui::Text("Name:");
+    ImGui::SameLine();
+
+    const auto display_name = method.name();
+    if(ImGui::BeginCombo("##named_series", display_name.c_str())) {
+      for(const auto& name_option : self.available_series_names_) {
+        ImGui::PushID(name_option.c_str());
+
+        const bool is_selected = display_name == name_option;
+        if(ImGui::Selectable(name_option.c_str(), is_selected)) {
+          method.name(name_option);
+        }
+
+        ImGui::PopID();
+      }
+      ImGui::EndCombo();
+    }
+  }
+
+  void render_series_method_params(this auto& self,
+                                   SeriesResultMethod& method,
                                    WindowContext& context)
   {
     if(std::ranges::find(self.available_series_names_, method.name()) ==

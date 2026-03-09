@@ -30,6 +30,11 @@ public:
   template<typename UImpl>
   AnySeriesMethodContext(UImpl impl)
   : impl_{std::move(impl)}
+  , get_series_result_{[](const std::any& impl,
+                          const std::string& name,
+                          std::size_t result_index) -> DispatchResultType {
+    return std::any_cast<UImpl>(impl).get_series_result(name, result_index);
+  }}
   , call_series_method_no_output_{[](const std::any& impl,
                                      const std::string& name,
                                      AssetSnapshot asset_snapshot)
@@ -70,6 +75,14 @@ public:
      self.impl_, name, std::move(asset_snapshot), output_name);
   }
 
+  auto get_series_result(this const AnySeriesMethodContext& self,
+                         const std::string& name,
+                         std::size_t result_index) noexcept
+   -> DispatchResultType
+  {
+    return self.get_series_result_(self.impl_, name, result_index);
+  }
+
   auto index(this const AnySeriesMethodContext& self) noexcept -> std::size_t
   {
     return self.get_index_func_(self.impl_);
@@ -92,6 +105,10 @@ public:
 
 private:
   std::any impl_;
+
+  std::function<
+   auto(const std::any&, const std::string&, std::size_t)->DispatchResultType>
+   get_series_result_;
 
   std::function<
    auto(const std::any&, const std::string&, AssetSnapshot)->DispatchResultType>

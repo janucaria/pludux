@@ -29,6 +29,20 @@ import :application_state;
 export namespace cereal {
 
 template<class Archive>
+void save(Archive& archive, const pludux::SeriesResultsCollector& collector)
+{
+  archive(make_nvp("results", collector.results()));
+}
+
+template<class Archive>
+void load(Archive& archive, pludux::SeriesResultsCollector& collector)
+{
+  auto results = std::unordered_map<std::string, std::vector<double>>{};
+  archive(make_nvp("results", results));
+  collector.results(std::move(results));
+}
+
+template<class Archive>
 void save(Archive& archive, const pludux::backtest::TradeRecord& trade_record)
 {
   const auto status = static_cast<std::size_t>(trade_record.status());
@@ -471,14 +485,16 @@ void load(Archive& archive, pludux::backtest::Asset& asset)
 template<class Archive>
 void save(Archive& archive, const pludux::backtest::Backtest& backtest)
 {
-  archive(make_nvp("name", backtest.name()),
-          make_nvp("asset", backtest.asset_ptr()),
-          make_nvp("strategy", backtest.strategy_ptr()),
-          make_nvp("market", backtest.market_ptr()),
-          make_nvp("broker", backtest.broker_ptr()),
-          make_nvp("profile", backtest.profile_ptr()),
-          make_nvp("summaries", backtest.summaries()),
-          make_nvp("isFailed", backtest.is_failed()));
+  archive(
+   make_nvp("name", backtest.name()),
+   make_nvp("asset", backtest.asset_ptr()),
+   make_nvp("strategy", backtest.strategy_ptr()),
+   make_nvp("market", backtest.market_ptr()),
+   make_nvp("broker", backtest.broker_ptr()),
+   make_nvp("profile", backtest.profile_ptr()),
+   make_nvp("summaries", backtest.summaries()),
+   make_nvp("isFailed", backtest.is_failed()),
+   make_nvp("seriesResultsCollector", backtest.series_results_collector()));
 }
 
 template<class Archive>
@@ -492,6 +508,7 @@ void load(Archive& archive, pludux::backtest::Backtest& backtest)
   auto profile_ptr = std::shared_ptr<pludux::backtest::Profile>{};
   auto summaries = std::vector<pludux::backtest::BacktestSummary>{};
   auto is_failed = bool{};
+  auto series_results_collector = pludux::SeriesResultsCollector{};
 
   archive(make_nvp("name", name),
           make_nvp("asset", asset_ptr),
@@ -500,7 +517,8 @@ void load(Archive& archive, pludux::backtest::Backtest& backtest)
           make_nvp("broker", broker_ptr),
           make_nvp("profile", profile_ptr),
           make_nvp("summaries", summaries),
-          make_nvp("isFailed", is_failed));
+          make_nvp("isFailed", is_failed),
+          make_nvp("seriesResultsCollector", series_results_collector));
 
   backtest = pludux::backtest::Backtest{std::move(name),
                                         asset_ptr,
@@ -508,7 +526,8 @@ void load(Archive& archive, pludux::backtest::Backtest& backtest)
                                         market_ptr,
                                         broker_ptr,
                                         profile_ptr,
-                                        std::move(summaries)};
+                                        std::move(summaries),
+                                        std::move(series_results_collector)};
 
   if(is_failed) {
     backtest.mark_as_failed();

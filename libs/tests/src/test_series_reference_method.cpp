@@ -18,7 +18,8 @@ TEST(SeriesReferenceMethodTest, RunAllMethodClose)
   registry.set("open", open_method);
   registry.set("close", close_method);
 
-  auto context = DefaultMethodContext{registry};
+  auto results_collector = SeriesResultsCollector{};
+  auto context = DefaultMethodContext{registry, results_collector};
 
   const auto open_ref_method = SeriesReferenceMethod{"open"};
   EXPECT_EQ(open_ref_method(asset_snapshot[0], context), 4.0);
@@ -40,7 +41,8 @@ TEST(SeriesReferenceMethodTest, InvalidField)
   auto registry = SeriesMethodRegistry{};
   registry.set("close", close_method);
 
-  auto context = DefaultMethodContext{registry};
+  auto results_collector = SeriesResultsCollector{};
+  auto context = DefaultMethodContext{registry, results_collector};
 
   const auto not_found_ref_method = SeriesReferenceMethod{"invalid"};
 
