@@ -16,32 +16,34 @@
       }
     }
   },
-  "longPosition": {
-    "entry": {
-      "signal": {
-        "method": "CROSSOVER",
-        "params": {
-          "value": {
-            "method": "SERIES_REFERENCE",
-            "params": {
-              "name": "macd_histogram"
-            }
-          },
-          "baseline": 0
+  "positions": {
+    "long": {
+      "entry": {
+        "signal": {
+          "method": "CROSSOVER",
+          "params": {
+            "value": {
+              "method": "SERIES_REFERENCE",
+              "params": {
+                "name": "macd_histogram"
+              }
+            },
+            "baseline": 0
+          }
         }
-      }
-    },
-    "exit": {
-      "signal": {
-        "method": "CROSSUNDER",
-        "params": {
-          "value": {
-            "method": "SERIES_REFERENCE",
-            "params": {
-              "name": "macd_histogram"
-            }
-          },
-          "baseline": 0
+      },
+      "exit": {
+        "signal": {
+          "method": "CROSSUNDER",
+          "params": {
+            "value": {
+              "method": "SERIES_REFERENCE",
+              "params": {
+                "name": "macd_histogram"
+              }
+            },
+            "baseline": 0
+          }
         }
       }
     }

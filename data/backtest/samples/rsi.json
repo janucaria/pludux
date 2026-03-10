@@ -15,32 +15,34 @@
     "enabled": true,
     "rMultiple": 3
   },
-  "longPosition": {
-    "entry": {
-      "signal": {
-        "method": "CROSSUNDER",
-        "params": {
-          "value": {
-            "method": "SERIES_REFERENCE",
-            "params": {
-              "name": "rsi"
-            }
-          },
-          "baseline": 30
+  "positions": {
+    "long": {
+      "entry": {
+        "signal": {
+          "method": "CROSSUNDER",
+          "params": {
+            "value": {
+              "method": "SERIES_REFERENCE",
+              "params": {
+                "name": "rsi"
+              }
+            },
+            "baseline": 30
+          }
         }
-      }
-    },
-    "exit": {
-      "signal": {
-        "method": "CROSSOVER",
-        "params": {
-          "value": {
-            "method": "SERIES_REFERENCE",
-            "params": {
-              "name": "rsi"
-            }
-          },
-          "baseline": 70
+      },
+      "exit": {
+        "signal": {
+          "method": "CROSSOVER",
+          "params": {
+            "value": {
+              "method": "SERIES_REFERENCE",
+              "params": {
+                "name": "rsi"
+              }
+            },
+            "baseline": 70
+          }
         }
       }
     }

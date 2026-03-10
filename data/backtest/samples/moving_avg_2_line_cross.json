@@ -24,40 +24,42 @@
     "enabled": true,
     "rMultiple": 3
   },
-  "longPosition": {
-    "entry": {
-      "signal": {
-        "method": "CROSSOVER",
-        "params": {
-          "value": {
-            "method": "SERIES_REFERENCE",
-            "params": {
-              "name": "ma_fast"
-            }
-          },
-          "baseline": {
-            "method": "SERIES_REFERENCE",
-            "params": {
-              "name": "ma_slow"
+  "positions": {
+    "long": {
+      "entry": {
+        "signal": {
+          "method": "CROSSOVER",
+          "params": {
+            "value": {
+              "method": "SERIES_REFERENCE",
+              "params": {
+                "name": "ma_fast"
+              }
+            },
+            "baseline": {
+              "method": "SERIES_REFERENCE",
+              "params": {
+                "name": "ma_slow"
+              }
             }
           }
         }
-      }
-    },
-    "exit": {
-      "signal": {
-        "method": "CROSSUNDER",
-        "params": {
-          "value": {
-            "method": "SERIES_REFERENCE",
-            "params": {
-              "name": "ma_fast"
-            }
-          },
-          "baseline": {
-            "method": "SERIES_REFERENCE",
-            "params": {
-              "name": "ma_slow"
+      },
+      "exit": {
+        "signal": {
+          "method": "CROSSUNDER",
+          "params": {
+            "value": {
+              "method": "SERIES_REFERENCE",
+              "params": {
+                "name": "ma_fast"
+              }
+            },
+            "baseline": {
+              "method": "SERIES_REFERENCE",
+              "params": {
+                "name": "ma_slow"
+              }
             }
           }
         }

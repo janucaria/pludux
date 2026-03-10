@@ -39,30 +39,32 @@
   "takeProfit": {
     "rMultiple": 2
   },
-  "shortPosition": {
-    "entry": {
-      "signal": {
-        "method": "CROSSOVER",
-        "params": {
-          "value": "CLOSE",
-          "baseline": {
-            "method": "SERIES_REFERENCE",
-            "params": {
-              "name": "bb_lower"
+  "positions": {
+    "short": {
+      "entry": {
+        "signal": {
+          "method": "CROSSOVER",
+          "params": {
+            "value": "CLOSE",
+            "baseline": {
+              "method": "SERIES_REFERENCE",
+              "params": {
+                "name": "bb_lower"
+              }
             }
           }
         }
-      }
-    },
-    "exit": {
-      "signal": {
-        "method": "CROSSUNDER",
-        "params": {
-          "value": "CLOSE",
-          "baseline": {
-            "method": "SERIES_REFERENCE",
-            "params": {
-              "name": "bb_upper"
+      },
+      "exit": {
+        "signal": {
+          "method": "CROSSUNDER",
+          "params": {
+            "value": "CLOSE",
+            "baseline": {
+              "method": "SERIES_REFERENCE",
+              "params": {
+                "name": "bb_upper"
+              }
             }
           }
         }

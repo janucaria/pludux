@@ -18,6 +18,20 @@
         }
       }
     },
+    "positions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "long": {
+          "$ref": "#/$defs/positionSide",
+          "default": false
+        },
+        "short": {
+          "$ref": "#/$defs/positionSide",
+          "default": false
+        }
+      }
+    },
     "stopLoss": {
       "oneOf": [
         {
@@ -66,47 +80,49 @@
         }
       ],
       "default": false
-    },
-    "longPosition": {
-      "$ref": "#/$defs/tradePosition"
-    },
-    "shortPosition": {
-      "$ref": "#/$defs/tradePosition"
     }
   },
   "$defs": {
-    "tradePosition": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "entry": {
+    "positionSide": {
+      "oneOf": [
+        {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "signal": {
-              "$ref": "#/$defs/signalAsParameter"
+            "entry": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "signal": {
+                  "$ref": "#/$defs/signalAsParameter"
+                }
+              },
+              "required": [
+                "signal"
+              ]
+            },
+            "exit": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "signal": {
+                  "$ref": "#/$defs/signalAsParameter"
+                }
+              },
+              "required": [
+                "signal"
+              ]
             }
           },
           "required": [
-            "signal"
+            "entry"
           ]
         },
-        "exit": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "signal": {
-              "$ref": "#/$defs/signalAsParameter"
-            }
-          },
-          "required": [
-            "signal"
-          ]
+        {
+          "type": "boolean"
         }
-      },
-      "required": [
-        "entry"
-      ]
+      ],
+      "default": false
     },
     "seriesAsParameter": {
       "oneOf": [

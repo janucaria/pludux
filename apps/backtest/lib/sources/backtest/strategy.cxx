@@ -233,31 +233,38 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
 
   auto long_entry_filter = AnyConditionMethod{FalseMethod{}};
   auto long_exit_filter = AnyConditionMethod{FalseMethod{}};
-  if(strategy_json.contains("longPosition")) {
-    const auto& long_position_json = strategy_json.at("longPosition");
-
-    if(long_position_json.contains("entry")) {
-      const auto& entry_json = long_position_json.at("entry");
-      long_entry_filter = config_parser.parse_filter(entry_json.at("signal"));
-    }
-    if(long_position_json.contains("exit")) {
-      const auto& exit_json = long_position_json.at("exit");
-      long_exit_filter = config_parser.parse_filter(exit_json.at("signal"));
-    }
-  }
 
   auto short_entry_filter = AnyConditionMethod{FalseMethod{}};
   auto short_exit_filter = AnyConditionMethod{FalseMethod{}};
-  if(strategy_json.contains("shortPosition")) {
-    const auto& short_position_json = strategy_json.at("shortPosition");
 
-    if(short_position_json.contains("entry")) {
-      const auto& entry_json = short_position_json.at("entry");
-      short_entry_filter = config_parser.parse_filter(entry_json.at("signal"));
+  if(strategy_json.contains("positions")) {
+    const auto positions_json = strategy_json.at("positions");
+
+    if(positions_json.contains("long")) {
+      const auto& long_position_json = positions_json.at("long");
+
+      if(long_position_json.contains("entry")) {
+        const auto& entry_json = long_position_json.at("entry");
+        long_entry_filter = config_parser.parse_filter(entry_json.at("signal"));
+      }
+      if(long_position_json.contains("exit")) {
+        const auto& exit_json = long_position_json.at("exit");
+        long_exit_filter = config_parser.parse_filter(exit_json.at("signal"));
+      }
     }
-    if(short_position_json.contains("exit")) {
-      const auto& exit_json = short_position_json.at("exit");
-      short_exit_filter = config_parser.parse_filter(exit_json.at("signal"));
+
+    if(positions_json.contains("short")) {
+      const auto& short_position_json = positions_json.at("short");
+
+      if(short_position_json.contains("entry")) {
+        const auto& entry_json = short_position_json.at("entry");
+        short_entry_filter =
+         config_parser.parse_filter(entry_json.at("signal"));
+      }
+      if(short_position_json.contains("exit")) {
+        const auto& exit_json = short_position_json.at("exit");
+        short_exit_filter = config_parser.parse_filter(exit_json.at("signal"));
+      }
     }
   }
 
@@ -327,6 +334,8 @@ auto stringify_backtest_strategy(const backtest::Strategy& strategy)
   strategy_json["series"] =
    config_parser.serialize_registered_methods(strategy.series_registry());
 
+  auto positions_json = jsoncons::ojson{};
+
   auto long_position_json = jsoncons::ojson{};
   long_position_json["entry"] = jsoncons::ojson{};
   long_position_json["entry"]["signal"] =
@@ -334,7 +343,7 @@ auto stringify_backtest_strategy(const backtest::Strategy& strategy)
   long_position_json["exit"] = jsoncons::ojson{};
   long_position_json["exit"]["signal"] =
    config_parser.serialize_filter(strategy.long_exit_filter());
-  strategy_json["longPosition"] = std::move(long_position_json);
+  positions_json["long"] = std::move(long_position_json);
 
   auto short_position_json = jsoncons::ojson{};
   short_position_json["entry"] = jsoncons::ojson{};
@@ -343,7 +352,9 @@ auto stringify_backtest_strategy(const backtest::Strategy& strategy)
   short_position_json["exit"] = jsoncons::ojson{};
   short_position_json["exit"]["signal"] =
    config_parser.serialize_filter(strategy.short_exit_filter());
-  strategy_json["shortPosition"] = std::move(short_position_json);
+  positions_json["short"] = std::move(short_position_json);
+
+  strategy_json["positions"] = std::move(positions_json);
 
   strategy_json["stopLoss"] = jsoncons::ojson{};
   strategy_json["stopLoss"]["enabled"] = strategy.stop_loss_enabled();

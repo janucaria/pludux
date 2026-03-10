@@ -50,90 +50,92 @@
   "takeProfit": {
     "rMultiple": 2
   },
-  "longPosition": {
-    "entry": {
-      "signal": {
-        "method": "ALL_OF",
-        "params": {
-          "items": [
-            {
-              "method": "CROSSOVER",
-              "params": {
-                "value": {
-                  "method": "SERIES_REFERENCE",
-                  "params": {
-                    "name": "stoch_k"
+  "positions": {
+    "long": {
+      "entry": {
+        "signal": {
+          "method": "ALL_OF",
+          "params": {
+            "items": [
+              {
+                "method": "CROSSOVER",
+                "params": {
+                  "value": {
+                    "method": "SERIES_REFERENCE",
+                    "params": {
+                      "name": "stoch_k"
+                    }
+                  },
+                  "baseline": {
+                    "method": "SERIES_REFERENCE",
+                    "params": {
+                      "name": "stoch_d"
+                    }
                   }
-                },
-                "baseline": {
-                  "method": "SERIES_REFERENCE",
-                  "params": {
-                    "name": "stoch_d"
+                }
+              },
+              {
+                "method": "LESS_THAN",
+                "params": {
+                  "target": {
+                    "method": "SERIES_REFERENCE",
+                    "params": {
+                      "name": "stoch_k"
+                    }
+                  },
+                  "threshold": {
+                    "method": "SERIES_REFERENCE",
+                    "params": {
+                      "name": "oversold"
+                    }
                   }
                 }
               }
-            },
-            {
-              "method": "LESS_THAN",
-              "params": {
-                "target": {
-                  "method": "SERIES_REFERENCE",
-                  "params": {
-                    "name": "stoch_k"
-                  }
-                },
-                "threshold": {
-                  "method": "SERIES_REFERENCE",
-                  "params": {
-                    "name": "oversold"
-                  }
-                }
-              }
-            }
-          ]
+            ]
+          }
         }
-      }
-    },
-    "exit": {
-      "signal": {
-        "method": "ALL_OF",
-        "params": {
-          "items": [
-            {
-              "method": "CROSSUNDER",
-              "params": {
-                "value": {
-                  "method": "SERIES_REFERENCE",
-                  "params": {
-                    "name": "stoch_k"
+      },
+      "exit": {
+        "signal": {
+          "method": "ALL_OF",
+          "params": {
+            "items": [
+              {
+                "method": "CROSSUNDER",
+                "params": {
+                  "value": {
+                    "method": "SERIES_REFERENCE",
+                    "params": {
+                      "name": "stoch_k"
+                    }
+                  },
+                  "baseline": {
+                    "method": "SERIES_REFERENCE",
+                    "params": {
+                      "name": "stoch_d"
+                    }
                   }
-                },
-                "baseline": {
-                  "method": "SERIES_REFERENCE",
-                  "params": {
-                    "name": "stoch_d"
+                }
+              },
+              {
+                "method": "GREATER_THAN",
+                "params": {
+                  "target": {
+                    "method": "SERIES_REFERENCE",
+                    "params": {
+                      "name": "stoch_k"
+                    }
+                  },
+                  "threshold": {
+                    "method": "SERIES_REFERENCE",
+                    "params": {
+                      "name": "overbought"
+                    }
                   }
                 }
               }
-            },
-            {
-              "method": "GREATER_THAN",
-              "params": {
-                "target": {
-                  "method": "SERIES_REFERENCE",
-                  "params": {
-                    "name": "stoch_k"
-                  }
-                },
-                "threshold": {
-                  "method": "SERIES_REFERENCE",
-                  "params": {
-                    "name": "overbought"
-                  }
-                }
-              }
-            }
-          ]
+            ]
+          }
         }
       }
     }
