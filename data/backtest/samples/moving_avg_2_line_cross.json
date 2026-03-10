@@ -18,11 +18,11 @@
   },
   "stopLoss": {
     "enabled": true,
-    "isTrailing": false
+    "trailing": false
   },
   "takeProfit": {
     "enabled": true,
-    "riskMultiplier": 3
+    "rMultiple": 3
   },
   "longPosition": {
     "entry": {

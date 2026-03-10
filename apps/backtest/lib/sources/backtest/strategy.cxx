@@ -43,7 +43,7 @@ public:
            bool stop_loss_enabled,
            bool stop_loss_trailing_enabled,
            bool take_profit_enabled,
-           double take_profit_risk_multiplier)
+           double take_profit_r_multiple)
   : name_{std::move(name)}
   , series_registry_{series_registry}
   , long_entry_filter_{std::move(long_entry_filter)}
@@ -53,7 +53,7 @@ public:
   , stop_loss_enabled_{stop_loss_enabled}
   , stop_loss_trailing_enabled_{stop_loss_trailing_enabled}
   , take_profit_enabled_{take_profit_enabled}
-  , take_profit_risk_multiplier_{take_profit_risk_multiplier}
+  , take_profit_r_multiple_{take_profit_r_multiple}
   {
   }
 
@@ -160,15 +160,15 @@ public:
     self.take_profit_enabled_ = take_profit_enabled;
   }
 
-  auto take_profit_risk_multiplier(this const Strategy& self) noexcept -> double
+  auto take_profit_r_multiple(this const Strategy& self) noexcept -> double
   {
-    return self.take_profit_risk_multiplier_;
+    return self.take_profit_r_multiple_;
   }
 
-  void take_profit_risk_multiplier(this Strategy& self,
-                                   double take_profit_risk_multiplier) noexcept
+  void take_profit_r_multiple(this Strategy& self,
+                              double take_profit_r_multiple) noexcept
   {
-    self.take_profit_risk_multiplier_ = take_profit_risk_multiplier;
+    self.take_profit_r_multiple_ = take_profit_r_multiple;
   }
 
   auto equal_rules(this const Strategy& self, const Strategy& other) noexcept
@@ -183,8 +183,7 @@ public:
            self.stop_loss_trailing_enabled_ ==
             other.stop_loss_trailing_enabled_ &&
            self.take_profit_enabled_ == other.take_profit_enabled_ &&
-           self.take_profit_risk_multiplier_ ==
-            other.take_profit_risk_multiplier_;
+           self.take_profit_r_multiple_ == other.take_profit_r_multiple_;
   }
 
 private:
@@ -202,7 +201,7 @@ private:
   bool stop_loss_trailing_enabled_{false};
 
   bool take_profit_enabled_{false};
-  double take_profit_risk_multiplier_{1.0};
+  double take_profit_r_multiple_{1.0};
 };
 
 auto parse_backtest_strategy_json(std::string_view strategy_name,
@@ -263,7 +262,7 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
   }
 
   auto is_take_profit_enabled = false;
-  auto take_profit_risk_multiplier = 1.0;
+  auto take_profit_r_multiple = 1.0;
   if(strategy_json.contains("takeProfit")) {
     const auto take_profit_config = strategy_json.at("takeProfit");
     if(take_profit_config.is_bool()) {
@@ -271,8 +270,8 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
     } else if(take_profit_config.is_object()) {
       is_take_profit_enabled =
        take_profit_config.get_value_or<bool>("enabled", true);
-      take_profit_risk_multiplier =
-       take_profit_config.get_value_or<double>("riskMultiplier", 1.0);
+      take_profit_r_multiple =
+       take_profit_config.get_value_or<double>("rMultiple", 1.0);
     } else {
       throw std::runtime_error(
        "Invalid take profit configuration in strategy JSON");
@@ -287,7 +286,7 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
       is_stop_loss_enabled = stop_loss_config.as_bool();
     } else if(stop_loss_config.is_object()) {
       is_trailing_stop_loss =
-       stop_loss_config.get_value_or<bool>("isTrailing", false);
+       stop_loss_config.get_value_or<bool>("trailing", false);
       is_stop_loss_enabled =
        stop_loss_config.get_value_or<bool>("enabled", true);
     } else {
@@ -305,7 +304,7 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
                                     is_stop_loss_enabled,
                                     is_trailing_stop_loss,
                                     is_take_profit_enabled,
-                                    take_profit_risk_multiplier};
+                                    take_profit_r_multiple};
 }
 
 auto parse_backtest_strategy_json(std::string_view strategy_name,
@@ -348,13 +347,11 @@ auto stringify_backtest_strategy(const backtest::Strategy& strategy)
 
   strategy_json["stopLoss"] = jsoncons::ojson{};
   strategy_json["stopLoss"]["enabled"] = strategy.stop_loss_enabled();
-  strategy_json["stopLoss"]["isTrailing"] =
-   strategy.stop_loss_trailing_enabled();
+  strategy_json["stopLoss"]["trailing"] = strategy.stop_loss_trailing_enabled();
 
   strategy_json["takeProfit"] = jsoncons::ojson{};
   strategy_json["takeProfit"]["enabled"] = strategy.take_profit_enabled();
-  strategy_json["takeProfit"]["riskMultiplier"] =
-   strategy.take_profit_risk_multiplier();
+  strategy_json["takeProfit"]["rMultiple"] = strategy.take_profit_r_multiple();
 
   return strategy_json;
 }

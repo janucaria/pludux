@@ -13,7 +13,7 @@
   },
   "takeProfit": {
     "enabled": true,
-    "riskMultiplier": 3
+    "rMultiple": 3
   },
   "longPosition": {
     "entry": {

@@ -346,7 +346,7 @@ public:
       const auto is_stop_loss_trailing = strategy.stop_loss_trailing_enabled();
       const auto take_profit_price =
        strategy.take_profit_enabled()
-        ? entry_price + r_distance * strategy.take_profit_risk_multiplier()
+        ? entry_price + r_distance * strategy.take_profit_r_multiple()
         : NAN;
 
       result = TradeEntry{position_size,
@@ -382,7 +382,7 @@ public:
       const auto is_stop_loss_trailing = strategy.stop_loss_trailing_enabled();
       const auto take_profit_price =
        strategy.take_profit_enabled()
-        ? entry_price + r_distance * strategy.take_profit_risk_multiplier()
+        ? entry_price + r_distance * strategy.take_profit_r_multiple()
         : NAN;
 
       result = TradeEntry{position_size,

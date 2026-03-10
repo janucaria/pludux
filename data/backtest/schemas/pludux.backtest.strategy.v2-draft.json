@@ -27,15 +27,20 @@
             "enabled": {
               "type": "boolean"
             },
-            "isTrailing": {
+            "trailing": {
               "type": "boolean"
             }
+          },
+          "default": {
+            "enabled": true,
+            "trailing": false
           }
         },
         {
           "type": "boolean"
         }
-      ]
+      ],
+      "default": false
     },
     "takeProfit": {
       "oneOf": [
@@ -46,15 +51,21 @@
             "enabled": {
               "type": "boolean"
             },
-            "riskMultiplier": {
-              "type": "number"
+            "rMultiple": {
+              "type": "number",
+              "exclusiveMinimum": 0
             }
+          },
+          "default": {
+            "enabled": true,
+            "rMultiple": 2.0
           }
         },
         {
           "type": "boolean"
         }
-      ]
+      ],
+      "default": false
     },
     "longPosition": {
       "$ref": "#/$defs/tradePosition"

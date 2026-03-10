@@ -34,10 +34,10 @@
     }
   },
   "stopLoss": {
-    "isTrailing": true
+    "trailing": true
   },
   "takeProfit": {
-    "riskMultiplier": 2
+    "rMultiple": 2
   },
   "shortPosition": {
     "entry": {

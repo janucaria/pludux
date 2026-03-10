@@ -9,10 +9,10 @@
     }
   },
   "stopLoss": {
-    "isTrailing": false
+    "trailing": false
   },
   "takeProfit": {
-    "riskMultiplier": 3
+    "rMultiple": 3
   },
   "longPosition": {
     "entry": {

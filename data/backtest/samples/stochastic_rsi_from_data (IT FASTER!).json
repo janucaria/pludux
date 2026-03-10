@@ -28,7 +28,7 @@
   },
   "stopLoss": true,
   "takeProfit": {
-    "riskMultiplier": 3
+    "rMultiple": 3
   },
   "longPosition": {
     "entry": {

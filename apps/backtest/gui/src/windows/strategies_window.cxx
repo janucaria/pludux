@@ -888,25 +888,25 @@ private:
 
       auto take_profit_enabled =
        self.editing_strategy_ptr_->take_profit_enabled();
-      auto take_profit_risk_multiplier =
-       self.editing_strategy_ptr_->take_profit_risk_multiplier();
+      auto take_profit_r_multiple =
+       self.editing_strategy_ptr_->take_profit_r_multiple();
 
       ImGui::Checkbox("Enable Take Profit", &take_profit_enabled);
       ImGui::Text("R-Multiple:");
       ImGui::SameLine();
-      if(ImGui::InputDouble("##take_profit_risk_multiplier",
-                            &take_profit_risk_multiplier,
+      if(ImGui::InputDouble("##take_profit_r_multiple",
+                            &take_profit_r_multiple,
                             0.1,
                             1.0,
                             "%.2f")) {
-        if(take_profit_risk_multiplier < 0.1) {
-          take_profit_risk_multiplier = 0.1;
+        if(take_profit_r_multiple < 0.1) {
+          take_profit_r_multiple = 0.1;
         }
       }
 
       self.editing_strategy_ptr_->take_profit_enabled(take_profit_enabled);
-      self.editing_strategy_ptr_->take_profit_risk_multiplier(
-       take_profit_risk_multiplier);
+      self.editing_strategy_ptr_->take_profit_r_multiple(
+       take_profit_r_multiple);
 
       ImGui::Text("");
     }
