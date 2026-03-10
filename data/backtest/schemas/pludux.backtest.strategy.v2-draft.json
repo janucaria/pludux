@@ -80,6 +80,30 @@
         }
       ],
       "default": false
+    },
+    "plots": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "overlays": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/plotGroup"
+          },
+          "default": []
+        },
+        "panels": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/plotGroup"
+          },
+          "default": []
+        }
+      },
+      "default": {
+        "overlays": [],
+        "panels": []
+      }
     }
   },
   "$defs": {
@@ -1198,6 +1222,220 @@
         {
           "$ref": "#/$defs/unaryLogicalSignal"
         }
+      ]
+    },
+    "plotColor": {
+      "type": "string",
+      "enum": [
+        "white",
+        "black",
+        "gray",
+        "red",
+        "green",
+        "blue",
+        "yellow",
+        "orange",
+        "purple",
+        "cyan",
+        "magenta",
+        "brown"
+      ]
+    },
+    "plotSource": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/plotSeriesSource"
+        },
+        {
+          "$ref": "#/$defs/plotConstantSource"
+        }
+      ]
+    },
+    "plotSeriesSource": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "SERIES"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]*$"
+                }
+              },
+              "required": [
+                "name"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ]
+    },
+    "plotConstantSource": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "CONSTANT"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "value": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "value"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ]
+    },
+    "linePlot": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "LINE"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "source": {
+                  "$ref": "#/$defs/plotSource"
+                },
+                "color": {
+                  "$ref": "#/$defs/plotColor"
+                }
+              },
+              "required": [
+                "source"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ]
+    },
+    "levelPlot": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "LEVEL"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "value": {
+                  "type": "number"
+                },
+                "color": {
+                  "$ref": "#/$defs/plotColor"
+                }
+              },
+              "required": [
+                "value"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ]
+    },
+    "histogramPlot": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "HISTOGRAM"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "source": {
+                  "$ref": "#/$defs/plotSource"
+                },
+                "color": {
+                  "$ref": "#/$defs/plotColor"
+                }
+              },
+              "required": [
+                "source"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ]
+    },
+    "plotItem": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/linePlot"
+        },
+        {
+          "$ref": "#/$defs/levelPlot"
+        },
+        {
+          "$ref": "#/$defs/histogramPlot"
+        }
+      ]
+    },
+    "plotGroup": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/plotItem"
+          }
+        }
+      },
+      "required": [
+        "items"
       ]
     }
   }
