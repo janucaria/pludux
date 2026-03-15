@@ -1,4 +1,5 @@
 module;
+#include <array>
 #include <expected>
 #include <filesystem>
 #include <format>
@@ -13,6 +14,7 @@ module;
 #include <string>
 #include <system_error>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -65,6 +67,13 @@ using DivideMethod = pludux::DivideMethod<AnySeriesMethod, AnySeriesMethod>;
 using NegateMethod = pludux::NegateMethod<AnySeriesMethod>;
 using PercentageMethod = pludux::PercentageMethod<AnySeriesMethod>;
 using AbsDiffMethod = pludux::AbsDiffMethod<AnySeriesMethod, AnySeriesMethod>;
+
+using pludux::backtest::AnyPlotMethod;
+using pludux::backtest::AnyPlotSourceMethod;
+using pludux::backtest::HLinePlotMethod;
+using LinePlotMethod = pludux::backtest::LinePlotMethod<AnyPlotSourceMethod>;
+using pludux::backtest::ConstantPlotSourceMethod;
+using pludux::backtest::SeriesPlotSourceMethod;
 
 auto get_default_series_method(const std::string& series_id) -> AnySeriesMethod
 {
@@ -398,6 +407,82 @@ auto get_default_condition_method(const std::string& condition_id)
 
   throw std::invalid_argument{
    std::format("Unknown condition method id: {}", condition_id)};
+}
+
+auto get_plot_method_id(const AnyPlotMethod& method) -> std::string
+{
+  if(plot_method_cast<LinePlotMethod>(method)) {
+    return "LINE";
+  } else if(plot_method_cast<HLinePlotMethod>(method)) {
+    return "HLINE";
+  }
+
+  return "UNKNOWN";
+}
+
+auto get_plot_method_title(const std::string& plot_id) -> std::string
+{
+  if(plot_id == "LINE") {
+    return "Line";
+  } else if(plot_id == "HLINE") {
+    return "Horizontal Line";
+  }
+
+  return "Unknown";
+}
+
+auto get_default_plot_method(const std::string& plot_id) -> AnyPlotMethod
+{
+  if(plot_id == "LINE") {
+    return LinePlotMethod{ConstantPlotSourceMethod{0.0}, 0xFFFFFFFF};
+  }
+
+  if(plot_id == "HLINE") {
+    return HLinePlotMethod{0.0, 0xFFFFFFFF};
+  }
+
+  throw std::invalid_argument{
+   std::format("Unknown plot method id: {}", plot_id)};
+}
+
+auto get_plot_source_method_id(const AnyPlotSourceMethod& method) -> std::string
+{
+  if(plot_source_method_cast<ConstantPlotSourceMethod>(method)) {
+    return "CONSTANT";
+  } else if(plot_source_method_cast<SeriesPlotSourceMethod>(method)) {
+    return "SERIES";
+  }
+
+  return "UNKNOWN";
+}
+
+auto get_plot_source_method_title(const std::string& plot_source_id)
+ -> std::string
+{
+  if(plot_source_id == "CONSTANT") {
+    return "Constant Value";
+  }
+
+  if(plot_source_id == "SERIES") {
+    return "Series Name";
+  }
+
+  return "Unknown";
+}
+
+auto get_default_plot_source_method(const std::string& plot_source_id)
+ -> AnyPlotSourceMethod
+{
+  if(plot_source_id == "CONSTANT") {
+    return ConstantPlotSourceMethod{0.0};
+  }
+
+  if(plot_source_id == "SERIES") {
+    return SeriesPlotSourceMethod{""};
+  }
+
+  throw std::invalid_argument{
+   std::format("Unknown plot source method id: {}", plot_source_id)};
 }
 
 export class StrategiesWindow {
@@ -909,6 +994,69 @@ private:
        take_profit_r_multiple);
 
       ImGui::Text("");
+    }
+
+    {
+      ImGui::SeparatorText("Plots");
+
+      auto plot_groups = self.editing_strategy_ptr_->plots();
+      for(auto i = 0; i < plot_groups.size(); ++i) {
+        auto& plot_group = plot_groups[i];
+
+        ImGui::PushID(i);
+
+        ImGui::Text("Plot Name:");
+        ImGui::SameLine();
+        auto plot_name = plot_group.name();
+        ImGui::InputText("##plot_name", &plot_name);
+        plot_group.name(plot_name);
+
+        ImGui::Text("Overlays");
+        ImGui::SameLine();
+        auto overlay_enabled = plot_group.is_overlay();
+        ImGui::Checkbox("##overlay_enabled", &overlay_enabled);
+        plot_group.is_overlay(overlay_enabled);
+
+        ImGui::Separator();
+
+        {
+          auto plot_items = plot_group.items();
+          for(auto j = 0; j < plot_items.size(); ++j) {
+            auto& plot_method = plot_items[j];
+            ImGui::PushID(j);
+
+            self.render_plot_method(plot_method, context);
+
+            if(ImGui::Button("Remove Item")) {
+              plot_items.erase(plot_items.begin() + j);
+              --j; // Adjust index after removal
+            }
+
+            ImGui::Separator();
+            ImGui::PopID();
+          }
+
+          if(ImGui::Button("Add Item")) {
+            plot_items.emplace_back(get_default_plot_method("HLINE"));
+          }
+
+          plot_group.items(plot_items);
+        }
+
+        if(ImGui::Button("Remove Plot")) {
+          plot_groups.erase(plot_groups.begin() + i);
+          --i; // Adjust index after removal
+        }
+
+        ImGui::Separator();
+        ImGui::PopID();
+      }
+
+      if(ImGui::Button("Add Plot")) {
+        plot_groups.emplace_back("New Plot");
+      }
+
+      self.editing_strategy_ptr_->plots(std::move(plot_groups));
     }
 
     ImGui::EndChild();
@@ -2159,6 +2307,197 @@ private:
     auto changed_method = self.make_condition_method_from_other(
      updated_condition_id, std::move(new_condition));
     return changed_method;
+  }
+
+  void render_plot_method(this auto& self,
+                          AnyPlotMethod& plot_method,
+                          WindowContext& context)
+  {
+    const auto plot_method_id = get_plot_method_id(plot_method);
+    const auto combo_preview_value = get_plot_method_title(plot_method_id);
+    if(ImGui::BeginCombo("##plot_method", combo_preview_value.c_str())) {
+      static auto filter = ImGuiTextFilter{};
+
+      if(ImGui::IsWindowAppearing()) {
+        ImGui::SetKeyboardFocusHere();
+        filter.Clear();
+      }
+
+      filter.Draw("##Filter", -FLT_MIN);
+
+      for(const auto& plot_method_option : {"LINE", "HLINE"}) {
+        const auto plot_method_title =
+         get_plot_method_title(plot_method_option);
+        const bool is_selected = plot_method_option == plot_method_id;
+
+        if(filter.PassFilter(plot_method_title.c_str())) {
+          if(ImGui::Selectable(plot_method_title.c_str(), is_selected)) {
+            plot_method = get_default_plot_method(plot_method_option);
+          }
+        }
+      }
+      ImGui::EndCombo();
+    }
+
+    {
+      ImGui::Indent();
+      if(auto* method_ptr = plot_method_cast<LinePlotMethod>(plot_method)) {
+        self.render_plot_method(*method_ptr, context);
+      } else if(auto* method_ptr =
+                 plot_method_cast<HLinePlotMethod>(plot_method)) {
+        self.render_plot_method(*method_ptr, context);
+      } else {
+        self.render_plot_method(*method_ptr, context);
+      }
+      ImGui::Unindent();
+    }
+  }
+
+  void render_plot_method(this auto& self,
+                          HLinePlotMethod& plot_method,
+                          WindowContext& context)
+  {
+    ImGui::Text("Level:");
+    ImGui::SameLine();
+    auto level = plot_method.level();
+    if(ImGui::InputDouble("##hline_level", &level, 0.1, 1.0, "%.2f")) {
+      plot_method.level(level);
+    }
+
+    ImGui::Text("Color:");
+    ImGui::SameLine();
+    const auto color_vec = ImGui::ColorConvertU32ToFloat4(plot_method.color());
+    auto color = std::array{color_vec.x, color_vec.y, color_vec.z, color_vec.w};
+    if(ImGui::ColorEdit4("##hline_color", color.data())) {
+      plot_method.color(ImGui::ColorConvertFloat4ToU32(
+       {color[0], color[1], color[2], color[3]}));
+    }
+  }
+
+  void render_plot_method(this auto& self,
+                          LinePlotMethod& plot_method,
+                          WindowContext& context)
+  {
+    static const auto source_ids =
+     std::vector<std::string>{"SERIES", "CONSTANT"};
+
+    ImGui::Text("Source:");
+    ImGui::SameLine();
+    {
+      auto plot_source_id = get_plot_source_method_id(plot_method.source());
+      const auto combo_preview_value =
+       get_plot_source_method_title(plot_source_id);
+      if(ImGui::BeginCombo("##Sources", combo_preview_value.c_str())) {
+        static auto filter = ImGuiTextFilter{};
+
+        if(ImGui::IsWindowAppearing()) {
+          ImGui::SetKeyboardFocusHere();
+          filter.Clear();
+        }
+
+        filter.Draw("##Filter", -FLT_MIN);
+
+        for(const auto& source_id : source_ids) {
+          const auto source_title = get_plot_source_method_title(source_id);
+          const bool is_selected = source_id == plot_source_id;
+
+          if(filter.PassFilter(source_title.c_str())) {
+            if(ImGui::Selectable(source_title.c_str(), is_selected)) {
+              if(source_id == "SERIES" &&
+                 self.available_series_names_.empty()) {
+                const auto source_method_title =
+                 get_plot_source_method_title(source_id);
+                const auto error_message =
+                 std::format("Cannot select '{}' when there are no available "
+                             "series other than the current one.",
+                             source_method_title);
+                context.push_action(
+                 [error_message](ApplicationState& app_state) {
+                   app_state.alert(error_message);
+                 });
+              } else {
+                auto source = get_default_plot_source_method(source_id);
+
+                if(source_id == "SERIES") {
+                  if(auto* series_source_ptr =
+                      plot_source_method_cast<SeriesPlotSourceMethod>(source)) {
+                    const auto first_available_series_name =
+                     self.available_series_names_.front();
+                    series_source_ptr->series_name(first_available_series_name);
+                  }
+                }
+
+                plot_method.source(std::move(source));
+              }
+            }
+          }
+        }
+        ImGui::EndCombo();
+      }
+    }
+
+    ImGui::Indent();
+    auto source = plot_method.source();
+    self.render_plot_source_method(source, context);
+    plot_method.source(std::move(source));
+    ImGui::Unindent();
+
+    ImGui::Text("Color:");
+    ImGui::SameLine();
+    const auto color_vec = ImGui::ColorConvertU32ToFloat4(plot_method.color());
+    auto color = std::array{color_vec.x, color_vec.y, color_vec.z, color_vec.w};
+    if(ImGui::ColorEdit4("##line_color", color.data())) {
+      plot_method.color(ImGui::ColorConvertFloat4ToU32(
+       {color[0], color[1], color[2], color[3]}));
+    }
+  }
+
+  void render_plot_source_method(this auto& self,
+                                 SeriesPlotSourceMethod& plot_source_method,
+                                 WindowContext& context)
+  {
+    ImGui::Text("Series:");
+    ImGui::SameLine();
+    auto series_name = plot_source_method.series_name();
+    if(ImGui::BeginCombo("##series_names", series_name.c_str())) {
+      for(const auto& available_series_name : self.available_series_names_) {
+        const bool is_selected = series_name == available_series_name;
+        if(ImGui::Selectable(available_series_name.c_str(), is_selected)) {
+          series_name = available_series_name;
+        }
+      }
+      ImGui::EndCombo();
+    }
+
+    plot_source_method.series_name(series_name);
+  }
+
+  void render_plot_source_method(this auto& self,
+                                 ConstantPlotSourceMethod& plot_source_method,
+                                 WindowContext& context)
+  {
+    ImGui::Text("Value:");
+    ImGui::SameLine();
+    auto value = plot_source_method.value();
+    if(ImGui::InputDouble("##constant_value", &value, 0.1, 1.0, "%.2f")) {
+      plot_source_method.value(value);
+    }
+  }
+
+  void render_plot_source_method(this auto& self,
+                                 AnyPlotSourceMethod& plot_source_method,
+                                 WindowContext& context)
+  {
+    if(auto* method_ptr =
+        plot_source_method_cast<SeriesPlotSourceMethod>(plot_source_method)) {
+      self.render_plot_source_method(*method_ptr, context);
+    } else if(auto* method_ptr =
+               plot_source_method_cast<ConstantPlotSourceMethod>(
+                plot_source_method)) {
+      self.render_plot_source_method(*method_ptr, context);
+    } else {
+      self.render_plot_source_method(*method_ptr, context);
+    }
   }
 
   void submit_strategy_changes(this auto& self, WindowContext& context)

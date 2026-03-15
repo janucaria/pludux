@@ -46,5 +46,39 @@
         }
       }
     }
-  }
+  },
+  "plots": [
+    {
+      "label": "RSI",
+      "overlay": false,
+      "items": [
+        {
+          "method": "LINE",
+          "params": {
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "rsi"
+              }
+            },
+            "color": 4278190079
+          }
+        },
+        {
+          "method": "HLINE",
+          "params": {
+            "level": 30,
+            "color": 4278190079
+          }
+        },
+        {
+          "method": "HLINE",
+          "params": {
+            "level": 70,
+            "color": 4278190079
+          }
+        }
+      ]
+    }
+  ]
 }

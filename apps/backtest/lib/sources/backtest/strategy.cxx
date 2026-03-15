@@ -1,5 +1,7 @@
 module;
 
+#include <cctype>
+#include <cstdint>
 #include <istream>
 #include <memory>
 #include <optional>
@@ -15,6 +17,8 @@ import pludux;
 
 import :trade_entry;
 import :trade_exit;
+import :plot_group;
+import :plot_method_parser;
 
 export namespace pludux::backtest {
 
@@ -30,7 +34,8 @@ public:
              false,
              false,
              false,
-             1.0)
+             1.0,
+             {})
   {
   }
 
@@ -43,7 +48,8 @@ public:
            bool stop_loss_enabled,
            bool stop_loss_trailing_enabled,
            bool take_profit_enabled,
-           double take_profit_r_multiple)
+           double take_profit_r_multiple,
+           std::vector<PlotGroup> plots)
   : name_{std::move(name)}
   , series_registry_{series_registry}
   , long_entry_filter_{std::move(long_entry_filter)}
@@ -54,6 +60,7 @@ public:
   , stop_loss_trailing_enabled_{stop_loss_trailing_enabled}
   , take_profit_enabled_{take_profit_enabled}
   , take_profit_r_multiple_{take_profit_r_multiple}
+  , plots_{std::move(plots)}
   {
   }
 
@@ -171,6 +178,17 @@ public:
     self.take_profit_r_multiple_ = take_profit_r_multiple;
   }
 
+  auto plots(this const Strategy& self) noexcept
+   -> const std::vector<PlotGroup>&
+  {
+    return self.plots_;
+  }
+
+  void plots(this Strategy& self, std::vector<PlotGroup> plots) noexcept
+  {
+    self.plots_ = std::move(plots);
+  }
+
   auto equal_rules(this const Strategy& self, const Strategy& other) noexcept
    -> bool
   {
@@ -202,6 +220,8 @@ private:
 
   bool take_profit_enabled_{false};
   double take_profit_r_multiple_{1.0};
+
+  std::vector<PlotGroup> plots_;
 };
 
 auto parse_backtest_strategy_json(std::string_view strategy_name,
@@ -302,16 +322,40 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
     }
   }
 
-  return pludux::backtest::Strategy{std::string{strategy_name},
-                                    std::move(series_registry),
-                                    std::move(long_entry_filter),
-                                    std::move(long_exit_filter),
-                                    std::move(short_entry_filter),
-                                    std::move(short_exit_filter),
-                                    is_stop_loss_enabled,
-                                    is_trailing_stop_loss,
-                                    is_take_profit_enabled,
-                                    take_profit_r_multiple};
+  auto plots = std::vector<PlotGroup>{};
+  if(strategy_json.contains("plots")) {
+    const auto& plots_json = strategy_json.at("plots");
+    auto plot_method_parser = make_default_registered_plot_method_parser();
+
+    for(const auto& plot_group_json : plots_json.array_range()) {
+      const auto label =
+       plot_group_json.get_value_or<std::string>("label", "Unnamed");
+      const auto overlay = plot_group_json.get_value_or<bool>("overlay", true);
+      auto plot_items = std::vector<AnyPlotMethod>{};
+
+      if(plot_group_json.contains("items")) {
+        const auto& items_json = plot_group_json.at("items");
+        for(const auto& item_json : items_json.array_range()) {
+          auto plot_method = plot_method_parser.deserialize_method(item_json);
+          plot_items.push_back(std::move(plot_method));
+        }
+      }
+
+      plots.emplace_back(PlotGroup{label, overlay, std::move(plot_items)});
+    }
+  }
+
+  return Strategy{std::string{strategy_name},
+                  std::move(series_registry),
+                  std::move(long_entry_filter),
+                  std::move(long_exit_filter),
+                  std::move(short_entry_filter),
+                  std::move(short_exit_filter),
+                  is_stop_loss_enabled,
+                  is_trailing_stop_loss,
+                  is_take_profit_enabled,
+                  take_profit_r_multiple,
+                  plots};
 }
 
 auto parse_backtest_strategy_json(std::string_view strategy_name,

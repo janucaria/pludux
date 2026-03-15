@@ -29,6 +29,8 @@ export import :trade_position;
 export import :trade_session;
 export import :backtest;
 export import :backtest_summary;
+export import :plot_group;
+export import :plots;
 
 export namespace pludux {
 
