@@ -141,5 +141,51 @@
         }
       }
     }
-  }
+  },
+  "plots": [
+    {
+      "label": "Stoch RSI",
+      "overlay": false,
+      "items": [
+        {
+          "method": "LINE",
+          "params": {
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "stoch_rsi_k"
+              }
+            },
+            "color": "yellow"
+          }
+        },
+        {
+          "method": "LINE",
+          "params": {
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "stoch_rsi_d"
+              }
+            },
+            "color": "cyan"
+          }
+        },
+        {
+          "method": "HLINE",
+          "params": {
+            "level": 80,
+            "color": "#FFFFFF"
+          }
+        },
+        {
+          "method": "HLINE",
+          "params": {
+            "level": 20,
+            "color": "#FFFFFF"
+          }
+        }
+      ]
+    }
+  ]
 }

@@ -10,6 +10,7 @@ module;
 #include <limits>
 #include <memory>
 #include <optional>
+#include <unordered_map>
 #include <vector>
 
 export module pludux.backtest:backtest;
@@ -189,6 +190,12 @@ public:
    -> const SeriesResultsCollector&
   {
     return self.series_results_collector_;
+  }
+
+  auto series_results(this const Backtest& self) noexcept
+   -> const std::unordered_map<std::string, std::vector<double>>&
+  {
+    return self.series_results_collector().results();
   }
 
   auto equal_rules(this const Backtest& self, const Backtest& other) noexcept

@@ -14,6 +14,30 @@
           }
         }
       }
+    },
+    "macd_signal": {
+      "method": "SELECT_OUTPUT",
+      "params": {
+        "output": "signal-line",
+        "source": {
+          "method": "SERIES_REFERENCE",
+          "params": {
+            "name": "macd_histogram"
+          }
+        }
+      }
+    },
+    "macd_line": {
+      "method": "SELECT_OUTPUT",
+      "params": {
+        "output": "macd-line",
+        "source": {
+          "method": "SERIES_REFERENCE",
+          "params": {
+            "name": "macd_histogram"
+          }
+        }
+      }
     }
   },
   "positions": {
@@ -47,5 +71,56 @@
         }
       }
     }
-  }
+  },
+  "plots": [
+    {
+      "label": "MACD",
+      "overlay": false,
+      "items": [
+        {
+          "method": "HLINE",
+          "params": {
+            "level": 0,
+            "color": "#FFFFFF"
+          }
+        },
+        {
+          "method": "HISTOGRAM",
+          "params": {
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "macd_histogram"
+              }
+            },
+            "color": "yellow"
+          }
+        },
+        {
+          "method": "LINE",
+          "params": {
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "macd_signal"
+              }
+            },
+            "color": "#ff6d00"
+          }
+        },
+        {
+          "method": "LINE",
+          "params": {
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "macd_line"
+              }
+            },
+            "color": "#2962ff"
+          }
+        }
+      ]
+    }
+  ]
 }

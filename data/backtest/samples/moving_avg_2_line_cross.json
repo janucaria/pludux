@@ -65,5 +65,37 @@
         }
       }
     }
-  }
+  },
+  "plots": [
+    {
+      "label": "2 Ma Cross",
+      "overlay": true,
+      "items": [
+        {
+          "method": "LINE",
+          "params": {
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "ma_fast"
+              }
+            },
+            "color": "yellow"
+          }
+        },
+        {
+          "method": "LINE",
+          "params": {
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "ma_slow"
+              }
+            },
+            "color": "aliceblue"
+          }
+        }
+      ]
+    }
+  ]
 }

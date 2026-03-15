@@ -3,10 +3,15 @@ module;
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
+#include <format>
 #include <iomanip>
 #include <memory>
+#include <ranges>
 #include <string>
+#include <string_view>
 #include <tuple>
+#include <unordered_map>
 #include <vector>
 
 #include <imgui.h>
@@ -18,9 +23,118 @@ export module pludux.apps.backtest:windows.plot_data_window;
 import pludux.backtest;
 import :window_context;
 
-export namespace pludux::apps {
+namespace pludux::apps {
 
-class PlotDataWindow {
+class PlotContext {
+public:
+  PlotContext(
+   const std::unordered_map<std::string, std::vector<double>>& series_results,
+   std::size_t results_size,
+   bool overlay)
+  : series_results_{series_results}
+  , results_size_{results_size}
+  , overlay_{overlay}
+  {
+  }
+
+  void render_plot_line(this const PlotContext& self,
+                        const std::vector<double>& data,
+                        std::uint32_t color)
+  {
+    const auto summaries_size = self.results_size_;
+
+    if(!self.overlay_) {
+      if(ImPlot::IsSubplotsHovered()) {
+        constexpr auto half_width = 0.5;
+        auto* draw_list = ImPlot::GetPlotDrawList();
+        ImPlotPoint mouse = ImPlot::GetPlotMousePos();
+        mouse.x = std::round(mouse.x);
+        float tool_l = ImPlot::PlotToPixels(mouse.x - half_width, mouse.y).x;
+        float tool_r = ImPlot::PlotToPixels(mouse.x + half_width, mouse.y).x;
+        float tool_t = ImPlot::GetPlotPos().y;
+        float tool_b = tool_t + ImPlot::GetPlotSize().y;
+        ImPlot::PushPlotClipRect();
+        draw_list->AddRectFilled(ImVec2(tool_l, tool_t),
+                                 ImVec2(tool_r, tool_b),
+                                 IM_COL32(128, 128, 128, 64));
+        ImPlot::PopPlotClipRect();
+
+        const auto plot_idx = static_cast<int>(mouse.x);
+        if(ImPlot::IsPlotHovered() && plot_idx > -1 && plot_idx < data.size()) {
+          const auto summary_i = plot_idx;
+          ImGui::BeginTooltip();
+          ImGui::Text("%s", std::to_string(data[summary_i]).c_str());
+          ImGui::EndTooltip();
+        }
+      }
+    }
+
+    ImPlot::PushStyleColor(
+     ImPlotCol_Line, ImGui::ColorConvertU32ToFloat4(static_cast<ImU32>(color)));
+    ImPlot::PlotLine("", data.data(), data.size());
+    ImPlot::PopStyleColor();
+  }
+
+  void render_plot_histogram(this const PlotContext& self,
+                             const std::vector<double>& data,
+                             std::uint32_t color)
+  {
+    const auto summaries_size = self.results_size_;
+
+    if(!self.overlay_) {
+      if(ImPlot::IsSubplotsHovered()) {
+        constexpr auto half_width = 0.5;
+        auto* draw_list = ImPlot::GetPlotDrawList();
+        ImPlotPoint mouse = ImPlot::GetPlotMousePos();
+        mouse.x = std::round(mouse.x);
+        float tool_l = ImPlot::PlotToPixels(mouse.x - half_width, mouse.y).x;
+        float tool_r = ImPlot::PlotToPixels(mouse.x + half_width, mouse.y).x;
+        float tool_t = ImPlot::GetPlotPos().y;
+        float tool_b = tool_t + ImPlot::GetPlotSize().y;
+        ImPlot::PushPlotClipRect();
+        draw_list->AddRectFilled(ImVec2(tool_l, tool_t),
+                                 ImVec2(tool_r, tool_b),
+                                 IM_COL32(128, 128, 128, 64));
+        ImPlot::PopPlotClipRect();
+
+        const auto plot_idx = static_cast<int>(mouse.x);
+        if(ImPlot::IsPlotHovered() && plot_idx > -1 && plot_idx < data.size()) {
+          const auto summary_i = plot_idx;
+          ImGui::BeginTooltip();
+          ImGui::Text("%s", std::to_string(data[summary_i]).c_str());
+          ImGui::EndTooltip();
+        }
+      }
+    }
+
+    ImPlot::PushStyleColor(
+     ImPlotCol_Fill, ImGui::ColorConvertU32ToFloat4(static_cast<ImU32>(color)));
+    ImPlot::PlotBars("", data.data(), data.size(), 0.8);
+    ImPlot::PopStyleColor();
+  }
+
+  auto series_results(this const PlotContext& self, const std::string& name)
+   -> std::optional<std::reference_wrapper<const std::vector<double>>>
+  {
+    const auto it = self.series_results_.find(name);
+    return it != self.series_results_.end()
+            ? std::make_optional(std::cref(it->second))
+            : std::nullopt;
+  }
+
+  auto results_size(this const PlotContext& self) -> std::size_t
+  {
+    return self.results_size_;
+  }
+
+private:
+  const std::unordered_map<std::string, std::vector<double>>& series_results_;
+  std::size_t results_size_;
+
+  bool overlay_;
+};
+
+export class PlotDataWindow {
 public:
   PlotDataWindow()
   : last_selected_backtest_{nullptr}
@@ -49,14 +163,34 @@ public:
     const auto& backtest_summaries = backtest->summaries();
     const auto is_backtest_should_run = backtest->should_run();
 
+    const auto& plots = backtest->strategy().plots();
+    const auto no_overlays_view = std::views::filter(
+     [](const auto& plot_group) { return !plot_group.is_overlay(); });
+    const auto additional_plots_count =
+     std::ranges::distance(plots | no_overlays_view);
+
     auto axis_x_flags = ImPlotAxisFlags{ImPlotAxisFlags_None};
     auto axis_y_flags = ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_Opposite |
                         ImPlotAxisFlags_Foreground |
                         ImPlotAxisFlags_NoHighlight;
+    const auto not_last_x_flags =
+     ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_NoHighlight;
+
+    constexpr auto minimum_row_ratios_size = int{3};
+    const auto total_row_count =
+     additional_plots_count + minimum_row_ratios_size;
+    const auto must_resize_row_ratios =
+     self.row_ratios_.size() != total_row_count;
+    if(must_resize_row_ratios) {
+      self.row_ratios_.resize(total_row_count, 1);
+    }
 
     const auto reset_chart_view =
-     self.last_selected_backtest_ != app_state.selected_backtest();
-    if(is_backtest_should_run || reset_chart_view) {
+     is_backtest_should_run ||
+     self.last_selected_backtest_ != app_state.selected_backtest() ||
+     must_resize_row_ratios;
+
+    if(reset_chart_view) {
       axis_x_flags |= ImPlotAxisFlags_AutoFit;
       axis_y_flags |= ImPlotAxisFlags_AutoFit;
 
@@ -64,7 +198,7 @@ public:
     }
 
     if(ImPlot::BeginSubplots("##MainPlots",
-                             self.row_ratios_.size(),
+                             static_cast<int>(self.row_ratios_.size()),
                              1,
                              ImVec2{-1, -1},
                              ImPlotSubplotFlags_LinkAllX,
@@ -87,7 +221,7 @@ public:
         ImPlot::EndPlot();
       }
 
-      if(ImPlot::BeginPlot("##OHLCPlot", plot_size, plot_flags)) {
+      if(ImPlot::BeginPlot("##main_plots", plot_size, plot_flags)) {
         ImPlot::SetupAxis(ImAxis_X1,
                           nullptr,
                           axis_x_flags | ImPlotAxisFlags_NoTickLabels |
@@ -99,13 +233,21 @@ public:
         self.draw_trades("Trades", backtest_summaries, asset);
         self.ticker_tooltip(backtest_summaries, asset, true);
         self.plot_ohlc("OHLC", backtest_summaries, asset);
+        self.overlays_plots(context);
 
         ImPlot::EndPlot();
       }
-      if(ImPlot::BeginPlot("##VolumePlot", plot_size, plot_flags)) {
-        ImPlot::SetupAxis(ImAxis_X1, nullptr, axis_x_flags);
 
-        ImPlot::SetupAxisFormat(ImAxis_X1, date_formatter, &context);
+      if(ImPlot::BeginPlot("##VolumePlot", plot_size, plot_flags)) {
+        auto is_last_plot = additional_plots_count == 0;
+
+        if(is_last_plot) {
+          ImPlot::SetupAxis(ImAxis_X1, nullptr, axis_x_flags);
+          ImPlot::SetupAxisFormat(ImAxis_X1, date_formatter, &context);
+        } else {
+          ImPlot::SetupAxis(
+           ImAxis_X1, nullptr, axis_x_flags | not_last_x_flags);
+        }
 
         ImPlot::SetupAxis(
          ImAxis_Y1, "Volume", axis_y_flags | ImPlotAxisFlags_LockMin);
@@ -115,6 +257,41 @@ public:
         self.plot_volume("Volume", backtest_summaries, asset);
 
         ImPlot::EndPlot();
+      }
+
+      const auto& series_results = backtest->series_results();
+      // TODO: use std::view::enumerate when it's available
+      auto i = 0;
+      for(const auto& plot_group : plots | no_overlays_view) {
+        const auto plot_id = std::format("##Plot{}", i);
+
+        const auto context_for_plots = PlotContext{
+         series_results, backtest->summaries().size(), plot_group.is_overlay()};
+
+        if(ImPlot::BeginPlot(plot_id.c_str(), plot_size, plot_flags)) {
+          const auto is_last_plot = i == additional_plots_count - 1;
+
+          if(is_last_plot) {
+            ImPlot::SetupAxis(ImAxis_X1, nullptr, axis_x_flags);
+            ImPlot::SetupAxisFormat(ImAxis_X1, date_formatter, &context);
+          } else {
+            ImPlot::SetupAxis(
+             ImAxis_X1, nullptr, axis_x_flags | not_last_x_flags);
+          }
+
+          ImPlot::SetupAxis(ImAxis_Y1, plot_group.name().c_str(), axis_y_flags);
+
+          {
+            const auto& plot_items = plot_group.items();
+            for(const auto& plot_method : plot_items) {
+              plot_method(context_for_plots);
+            }
+          }
+
+          ImPlot::EndPlot();
+        }
+
+        ++i;
       }
 
       ImPlot::EndSubplots();
@@ -133,7 +310,7 @@ private:
 
   ImVec4 trailing_stop_color_;
 
-  std::array<float, 3> row_ratios_;
+  std::vector<float> row_ratios_;
 
   static void ticker_tooltip(
    const std::vector<backtest::BacktestSummary>& backtest_summaries,
@@ -574,6 +751,28 @@ private:
       ImPlot::PlotLine("Equity", xs.data(), ys.data(), xs.size());
 
       ImPlot::EndItem();
+    }
+  }
+
+  void overlays_plots(this const PlotDataWindow& self, WindowContext& context)
+  {
+    const auto& app_state = context.app_state();
+    const auto& backtest = app_state.selected_backtest();
+    const auto& series_results = backtest->series_results();
+    const auto& strategy = backtest->strategy();
+    const auto& plots = strategy.plots();
+
+    const auto context_for_plots =
+     PlotContext{series_results, backtest->summaries().size(), true};
+
+    for(const auto& plot_group :
+        plots | std::views::filter([](const auto& plot_group) {
+          return plot_group.is_overlay();
+        })) {
+      const auto& plot_items = plot_group.items();
+      for(const auto& plot_method : plot_items) {
+        plot_method(context_for_plots);
+      }
     }
   }
 };

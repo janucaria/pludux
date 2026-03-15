@@ -70,5 +70,37 @@
         }
       }
     }
-  }
+  },
+  "plots": [
+    {
+      "label": "BB",
+      "overlay": true,
+      "items": [
+        {
+          "method": "LINE",
+          "params": {
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "bb_upper"
+              }
+            },
+            "color": "aliceblue"
+          }
+        },
+        {
+          "method": "LINE",
+          "params": {
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "bb_lower"
+              }
+            },
+            "color": "lightslategray"
+          }
+        }
+      ]
+    }
+  ]
 }

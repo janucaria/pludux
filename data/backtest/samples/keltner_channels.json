@@ -71,5 +71,37 @@
         }
       }
     }
-  }
+  },
+  "plots": [
+    {
+      "label": "KC",
+      "overlay": true,
+      "items": [
+        {
+          "method": "LINE",
+          "params": {
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "kc_upper"
+              }
+            },
+            "color": "aliceblue"
+          }
+        },
+        {
+          "method": "LINE",
+          "params": {
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "kc_lower"
+              }
+            },
+            "color": "lightslategray"
+          }
+        }
+      ]
+    }
+  ]
 }
