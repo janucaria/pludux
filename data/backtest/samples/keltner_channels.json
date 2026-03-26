@@ -16,7 +16,7 @@
       "params": {
         "output": "upper-band",
         "source": {
-          "method": "SERIES_REFERENCE",
+          "method": "SERIES_NODE",
           "params": {
             "name": "kchannel"
           }
@@ -28,7 +28,7 @@
       "params": {
         "output": "lower-band",
         "source": {
-          "method": "SERIES_REFERENCE",
+          "method": "SERIES_NODE",
           "params": {
             "name": "kchannel"
           }
@@ -48,7 +48,7 @@
           "params": {
             "value": "CLOSE",
             "baseline": {
-              "method": "SERIES_REFERENCE",
+              "method": "SERIES_VALUE",
               "params": {
                 "name": "kc_lower"
               }
@@ -62,7 +62,7 @@
           "params": {
             "value": "CLOSE",
             "baseline": {
-              "method": "SERIES_REFERENCE",
+              "method": "SERIES_VALUE",
               "params": {
                 "name": "kc_upper"
               }

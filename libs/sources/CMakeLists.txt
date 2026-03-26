@@ -45,8 +45,8 @@ target_sources(${PROJECT_NAME}
         src/series/change_method.cxx
         src/series/lookback_method.cxx
         src/series/select_output_method.cxx
-        src/series/series_reference_method.cxx
-        src/series/series_result_method.cxx
+        src/series/series_node_method.cxx
+        src/series/series_value_method.cxx
 
         src/series/operators_method.cxx
         src/series/highest_method.cxx

@@ -20,7 +20,7 @@
       "params": {
         "output": "signal-line",
         "source": {
-          "method": "SERIES_REFERENCE",
+          "method": "SERIES_NODE",
           "params": {
             "name": "macd_histogram"
           }
@@ -32,7 +32,7 @@
       "params": {
         "output": "macd-line",
         "source": {
-          "method": "SERIES_REFERENCE",
+          "method": "SERIES_NODE",
           "params": {
             "name": "macd_histogram"
           }
@@ -47,7 +47,7 @@
           "method": "CROSSOVER",
           "params": {
             "value": {
-              "method": "SERIES_REFERENCE",
+              "method": "SERIES_VALUE",
               "params": {
                 "name": "macd_histogram"
               }
@@ -61,7 +61,7 @@
           "method": "CROSSUNDER",
           "params": {
             "value": {
-              "method": "SERIES_REFERENCE",
+              "method": "SERIES_VALUE",
               "params": {
                 "name": "macd_histogram"
               }

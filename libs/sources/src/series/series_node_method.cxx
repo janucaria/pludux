@@ -6,7 +6,7 @@ module;
 #include <utility>
 #include <variant>
 
-export module pludux:series.series_reference_method;
+export module pludux:series.series_node_method;
 
 import :asset_snapshot;
 import :method_contextable;
@@ -14,19 +14,19 @@ import :series_output;
 
 export namespace pludux {
 
-class SeriesReferenceMethod {
+class SeriesNodeMethod {
 public:
   using ResultType = double;
 
-  SeriesReferenceMethod(std::string name)
+  SeriesNodeMethod(std::string name)
   : name_{std::move(name)}
   {
   }
 
-  auto operator==(const SeriesReferenceMethod& other) const noexcept
+  auto operator==(const SeriesNodeMethod& other) const noexcept
    -> bool = default;
 
-  auto operator()(this const SeriesReferenceMethod& self,
+  auto operator()(this const SeriesNodeMethod& self,
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) noexcept -> ResultType
   {
@@ -37,7 +37,7 @@ public:
     }
   }
 
-  auto operator()(this const SeriesReferenceMethod& self,
+  auto operator()(this const SeriesNodeMethod& self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output_name,
                   MethodContextable auto context) noexcept -> ResultType
@@ -50,13 +50,13 @@ public:
     }
   }
 
-  auto name(this const SeriesReferenceMethod& self) noexcept
+  auto name(this const SeriesNodeMethod& self) noexcept
    -> const std::string&
   {
     return self.name_;
   }
 
-  void name(this SeriesReferenceMethod& self, std::string new_name) noexcept
+  void name(this SeriesNodeMethod& self, std::string new_name) noexcept
   {
     self.name_ = std::move(new_name);
   }

@@ -21,12 +21,12 @@ TEST(SeriesReferenceMethodTest, RunAllMethodClose)
   auto results_collector = SeriesResultsCollector{};
   auto context = DefaultMethodContext{registry, results_collector};
 
-  const auto open_ref_method = SeriesReferenceMethod{"open"};
+  const auto open_ref_method = SeriesNodeMethod{"open"};
   EXPECT_EQ(open_ref_method(asset_snapshot[0], context), 4.0);
   EXPECT_EQ(open_ref_method(asset_snapshot[1], context), 4.1);
   EXPECT_EQ(open_ref_method(asset_snapshot[2], context), 4.2);
 
-  const auto close_ref_method = SeriesReferenceMethod{"close"};
+  const auto close_ref_method = SeriesNodeMethod{"close"};
   EXPECT_EQ(close_ref_method(asset_snapshot[0], context), 1.0);
   EXPECT_EQ(close_ref_method(asset_snapshot[1], context), 1.1);
   EXPECT_EQ(close_ref_method(asset_snapshot[2], context), 1.2);
@@ -44,7 +44,7 @@ TEST(SeriesReferenceMethodTest, InvalidField)
   auto results_collector = SeriesResultsCollector{};
   auto context = DefaultMethodContext{registry, results_collector};
 
-  const auto not_found_ref_method = SeriesReferenceMethod{"invalid"};
+  const auto not_found_ref_method = SeriesNodeMethod{"invalid"};
 
   EXPECT_TRUE(std::isnan(not_found_ref_method(asset_snapshot[0], context)));
   EXPECT_TRUE(std::isnan(not_found_ref_method(asset_snapshot[1], context)));
@@ -52,16 +52,16 @@ TEST(SeriesReferenceMethodTest, InvalidField)
 
 TEST(SeriesReferenceMethodTest, EqualityOperator)
 {
-  const auto ref_method1 = SeriesReferenceMethod{"close"};
-  const auto ref_method2 = SeriesReferenceMethod{"close"};
+  const auto ref_method1 = SeriesNodeMethod{"close"};
+  const auto ref_method2 = SeriesNodeMethod{"close"};
 
   EXPECT_EQ(ref_method1, ref_method2);
 }
 
 TEST(SeriesReferenceMethodTest, NotEqualOperator)
 {
-  const auto ref_method1 = SeriesReferenceMethod{"close"};
-  const auto ref_method2 = SeriesReferenceMethod{"open"};
+  const auto ref_method1 = SeriesNodeMethod{"close"};
+  const auto ref_method2 = SeriesNodeMethod{"open"};
 
   EXPECT_TRUE(ref_method1 != ref_method2);
   EXPECT_NE(ref_method1, ref_method2);

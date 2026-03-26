@@ -38,8 +38,8 @@ import :window_context;
 namespace pludux::apps {
 
 using SelectOutputMethod = pludux::SelectOutputMethod<AnySeriesMethod>;
-using SeriesReferenceMethod = pludux::SeriesReferenceMethod;
-using SeriesResultMethod = pludux::SeriesResultMethod;
+using SeriesNodeMethod = pludux::SeriesNodeMethod;
+using SeriesValueMethod = pludux::SeriesValueMethod;
 using BbMethod = pludux::BbMethod<AnySeriesMethod>;
 using KcMethod = pludux::KcMethod<AnySeriesMethod>;
 using StochMethod = pludux::StochMethod;
@@ -119,9 +119,9 @@ auto get_default_series_method(const std::string& series_id) -> AnySeriesMethod
   } else if(series_id == "STOCH_RSI") {
     return StochRsiMethod{CloseMethod{}, 14, 14, 3, 3};
   } else if(series_id == "SERIES_REFERENCE") {
-    return SeriesReferenceMethod{""};
+    return SeriesNodeMethod{""};
   } else if(series_id == "SERIES_RESULT") {
-    return SeriesResultMethod{""};
+    return SeriesValueMethod{""};
   } else if(series_id == "VALUE") {
     return ValueMethod{0.0};
   } else if(series_id == "LOOKBACK") {
@@ -154,9 +154,9 @@ auto get_series_method_id(const AnySeriesMethod& method) -> std::string
 {
   if(series_method_cast<SelectOutputMethod>(method)) {
     return "SELECT_OUTPUT";
-  } else if(series_method_cast<SeriesReferenceMethod>(method)) {
+  } else if(series_method_cast<SeriesNodeMethod>(method)) {
     return "SERIES_REFERENCE";
-  } else if(series_method_cast<SeriesResultMethod>(method)) {
+  } else if(series_method_cast<SeriesValueMethod>(method)) {
     return "SERIES_RESULT";
   } else if(series_method_cast<CloseMethod>(method)) {
     return "CLOSE";
@@ -262,9 +262,9 @@ auto get_series_method_title(const std::string& series_id) -> std::string
   } else if(series_id == "STOCH_RSI") {
     return "Stochastic RSI";
   } else if(series_id == "SERIES_REFERENCE") {
-    return "Series Reference";
+    return "Series Node";
   } else if(series_id == "SERIES_RESULT") {
-    return "Series Result";
+    return "Series Value";
   } else if(series_id == "VALUE") {
     return "Value";
   } else if(series_id == "LOOKBACK") {
@@ -1179,8 +1179,8 @@ private:
         return false;
       }() || ...);
     }.template operator()<SelectOutputMethod,
-                          SeriesReferenceMethod,
-                          SeriesResultMethod,
+                          SeriesNodeMethod,
+                          SeriesValueMethod,
                           DataMethod,
                           LookbackMethod,
 
@@ -1261,7 +1261,7 @@ private:
   }
 
   void render_series_method_params(this auto& self,
-                                   SeriesReferenceMethod& method,
+                                   SeriesNodeMethod& method,
                                    WindowContext& context)
   {
     if(std::ranges::find(self.available_series_names_, method.name()) ==
@@ -1292,7 +1292,7 @@ private:
   }
 
   void render_series_method_params(this auto& self,
-                                   SeriesResultMethod& method,
+                                   SeriesValueMethod& method,
                                    WindowContext& context)
   {
     if(std::ranges::find(self.available_series_names_, method.name()) ==

@@ -16,7 +16,7 @@
       "params": {
         "output": "k-percent",
         "source": {
-          "method": "SERIES_REFERENCE",
+          "method": "SERIES_NODE",
           "params": {
             "name": "stoch_rsi"
           }
@@ -28,7 +28,7 @@
       "params": {
         "output": "d-percent",
         "source": {
-          "method": "SERIES_REFERENCE",
+          "method": "SERIES_NODE",
           "params": {
             "name": "stoch_rsi"
           }
@@ -63,13 +63,13 @@
                 "method": "CROSSOVER",
                 "params": {
                   "value": {
-                    "method": "SERIES_REFERENCE",
+                    "method": "SERIES_VALUE",
                     "params": {
                       "name": "stoch_rsi_k"
                     }
                   },
                   "baseline": {
-                    "method": "SERIES_REFERENCE",
+                    "method": "SERIES_VALUE",
                     "params": {
                       "name": "stoch_rsi_d"
                     }
@@ -80,13 +80,13 @@
                 "method": "LESS_THAN",
                 "params": {
                   "target": {
-                    "method": "SERIES_REFERENCE",
+                    "method": "SERIES_VALUE",
                     "params": {
                       "name": "stoch_rsi_k"
                     }
                   },
                   "threshold": {
-                    "method": "SERIES_REFERENCE",
+                    "method": "SERIES_VALUE",
                     "params": {
                       "name": "oversold"
                     }
@@ -106,13 +106,13 @@
                 "method": "CROSSUNDER",
                 "params": {
                   "value": {
-                    "method": "SERIES_REFERENCE",
+                    "method": "SERIES_VALUE",
                     "params": {
                       "name": "stoch_rsi_k"
                     }
                   },
                   "baseline": {
-                    "method": "SERIES_REFERENCE",
+                    "method": "SERIES_VALUE",
                     "params": {
                       "name": "stoch_rsi_d"
                     }
@@ -123,13 +123,13 @@
                 "method": "GREATER_THAN",
                 "params": {
                   "target": {
-                    "method": "SERIES_REFERENCE",
+                    "method": "SERIES_VALUE",
                     "params": {
                       "name": "stoch_rsi_k"
                     }
                   },
                   "threshold": {
-                    "method": "SERIES_REFERENCE",
+                    "method": "SERIES_VALUE",
                     "params": {
                       "name": "overbought"
                     }

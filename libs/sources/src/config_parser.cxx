@@ -1034,43 +1034,43 @@ auto make_default_registered_config_parser() -> ConfigParser
    "KC", serialize_kc_method, parse_kc_method);
 
   config_parser.register_method_parser(
-   "SERIES_REFERENCE",
+   "SERIES_NODE",
    [](const ConfigParser& config_parser,
       const AnySeriesMethod any_series_method) -> jsoncons::ojson {
      auto serialized_method = jsoncons::ojson::null();
 
-     auto series_reference_method =
-      series_method_cast<SeriesReferenceMethod>(any_series_method);
-     if(series_reference_method) {
+     auto series_node_method =
+      series_method_cast<SeriesNodeMethod>(any_series_method);
+     if(series_node_method) {
        serialized_method = jsoncons::ojson{};
-       serialized_method["name"] = series_reference_method->name();
+       serialized_method["name"] = series_node_method->name();
      }
 
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser, const jsoncons::ojson& parameters) {
      const auto name = get_param_or<std::string>(parameters, "name", "");
-     return SeriesReferenceMethod{name};
+     return SeriesNodeMethod{name};
    });
 
   config_parser.register_method_parser(
-   "SERIES_RESULT",
+   "SERIES_VALUE",
    [](const ConfigParser& config_parser,
       const AnySeriesMethod any_series_method) -> jsoncons::ojson {
      auto serialized_method = jsoncons::ojson::null();
 
-     auto series_result_method =
-      series_method_cast<SeriesResultMethod>(any_series_method);
-     if(series_result_method) {
+     auto series_value_method =
+      series_method_cast<SeriesValueMethod>(any_series_method);
+     if(series_value_method) {
        serialized_method = jsoncons::ojson{};
-       serialized_method["name"] = series_result_method->name();
+       serialized_method["name"] = series_value_method->name();
      }
 
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser, const jsoncons::ojson& parameters) {
      const auto name = get_param_or<std::string>(parameters, "name", "");
-     return SeriesResultMethod{name};
+     return SeriesValueMethod{name};
    });
 
   config_parser.register_method_parser(

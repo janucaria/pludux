@@ -22,7 +22,7 @@
           "params": {
             "value": "CLOSE",
             "baseline": {
-              "method": "SERIES_REFERENCE",
+              "method": "SERIES_VALUE",
               "params": {
                 "name": "ma"
               }
@@ -36,7 +36,7 @@
           "params": {
             "value": "CLOSE",
             "baseline": {
-              "method": "SERIES_REFERENCE",
+              "method": "SERIES_VALUE",
               "params": {
                 "name": "ma"
               }

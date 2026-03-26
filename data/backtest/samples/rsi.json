@@ -22,7 +22,7 @@
           "method": "CROSSUNDER",
           "params": {
             "value": {
-              "method": "SERIES_REFERENCE",
+              "method": "SERIES_VALUE",
               "params": {
                 "name": "rsi"
               }
@@ -36,7 +36,7 @@
           "method": "CROSSOVER",
           "params": {
             "value": {
-              "method": "SERIES_REFERENCE",
+              "method": "SERIES_VALUE",
               "params": {
                 "name": "rsi"
               }

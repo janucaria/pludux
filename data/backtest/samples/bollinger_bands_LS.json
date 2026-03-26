@@ -13,7 +13,7 @@
       "params": {
         "output": "upper-band",
         "source": {
-          "method": "SERIES_REFERENCE",
+          "method": "SERIES_NODE",
           "params": {
             "name": "bbands"
           }
@@ -25,7 +25,7 @@
       "params": {
         "output": "lower-band",
         "source": {
-          "method": "SERIES_REFERENCE",
+          "method": "SERIES_NODE",
           "params": {
             "name": "bbands"
           }
@@ -43,7 +43,7 @@
           "params": {
             "value": "CLOSE",
             "baseline": {
-              "method": "SERIES_REFERENCE",
+              "method": "SERIES_VALUE",
               "params": {
                 "name": "bb_upper"
               }
@@ -57,7 +57,7 @@
           "params": {
             "value": "CLOSE",
             "baseline": {
-              "method": "SERIES_REFERENCE",
+              "method": "SERIES_VALUE",
               "params": {
                 "name": "bb_lower"
               }
@@ -73,7 +73,7 @@
           "params": {
             "value": "CLOSE",
             "baseline": {
-              "method": "SERIES_REFERENCE",
+              "method": "SERIES_VALUE",
               "params": {
                 "name": "bb_lower"
               }
@@ -87,7 +87,7 @@
           "params": {
             "value": "CLOSE",
             "baseline": {
-              "method": "SERIES_REFERENCE",
+              "method": "SERIES_VALUE",
               "params": {
                 "name": "bb_upper"
               }

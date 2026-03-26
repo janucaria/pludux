@@ -5,7 +5,7 @@ module;
 #include <utility>
 #include <variant>
 
-export module pludux:series.series_result_method;
+export module pludux:series.series_value_method;
 
 import :asset_snapshot;
 import :method_contextable;
@@ -13,19 +13,19 @@ import :series_output;
 
 export namespace pludux {
 
-class SeriesResultMethod {
+class SeriesValueMethod {
 public:
   using ResultType = double;
 
-  SeriesResultMethod(std::string name)
+  SeriesValueMethod(std::string name)
   : name_{std::move(name)}
   {
   }
 
-  auto operator==(const SeriesResultMethod& other) const noexcept
+  auto operator==(const SeriesValueMethod& other) const noexcept
    -> bool = default;
 
-  auto operator()(this const SeriesResultMethod& self,
+  auto operator()(this const SeriesValueMethod& self,
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) noexcept -> ResultType
   {
@@ -37,7 +37,7 @@ public:
     return context.get_series_result(self.name(), result_index);
   }
 
-  auto operator()(this const SeriesResultMethod& self,
+  auto operator()(this const SeriesValueMethod& self,
                   AssetSnapshot asset_snapshot,
                   SeriesOutput output_name,
                   MethodContextable auto context) noexcept -> ResultType
@@ -45,12 +45,12 @@ public:
     return std::numeric_limits<ResultType>::quiet_NaN();
   }
 
-  auto name(this const SeriesResultMethod& self) noexcept -> const std::string&
+  auto name(this const SeriesValueMethod& self) noexcept -> const std::string&
   {
     return self.name_;
   }
 
-  void name(this SeriesResultMethod& self, std::string new_name) noexcept
+  void name(this SeriesValueMethod& self, std::string new_name) noexcept
   {
     self.name_ = std::move(new_name);
   }
