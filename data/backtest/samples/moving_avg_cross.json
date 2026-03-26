@@ -1,46 +1,68 @@
 {
-  "version": 1,
+  "version": 2,
   "series": {
     "ma": {
       "method": "SMA",
-      "period": 9
+      "params": {
+        "period": 9
+      }
     }
-  },
-  "risk": {
-    "method": "ATR",
-    "atr": {
-      "period": 14,
-      "multiplier": 1.5
-    },
-    "percentage": 5,
-    "value": 1000
   },
   "stopLoss": {
-    "isTrailing": false
+    "trailing": false
   },
   "takeProfit": {
-    "riskMultiplier": 3
+    "rMultiple": 3
   },
-  "longPosition": {
-    "entry": {
-      "signal": {
-        "filter": "CROSSOVER",
-        "signal": "CLOSE",
-        "reference": {
-          "method": "REFERENCE",
-          "name": "ma"
+  "positions": {
+    "long": {
+      "entry": {
+        "signal": {
+          "method": "CROSSOVER",
+          "params": {
+            "value": "CLOSE",
+            "baseline": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "ma"
+              }
+            }
+          }
         }
-      }
-    },
-    "exit": {
-      "signal": {
-        "filter": "CROSSUNDER",
-        "signal": "CLOSE",
-        "reference": {
-          "method": "REFERENCE",
-          "name": "ma"
+      },
+      "exit": {
+        "signal": {
+          "method": "CROSSUNDER",
+          "params": {
+            "value": "CLOSE",
+            "baseline": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "ma"
+              }
+            }
+          }
         }
       }
     }
-  }
+  },
+  "plots": [
+    {
+      "label": "ma",
+      "overlay": true,
+      "items": [
+        {
+          "method": "LINE",
+          "params": {
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "ma"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
 }

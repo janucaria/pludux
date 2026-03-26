@@ -1,47 +1,84 @@
 {
-  "version": 1,
+  "version": 2,
   "series": {
     "rsi": {
       "method": "RSI",
-      "period": 14
+      "params": {
+        "period": 14
+      }
     }
-  },
-  "risk": {
-    "method": "ATR",
-    "atr": {
-      "period": 14,
-      "multiplier": 2
-    },
-    "percentage": 5,
-    "value": 1000
   },
   "stopLoss": {
     "enabled": false
   },
   "takeProfit": {
     "enabled": true,
-    "riskMultiplier": 3
+    "rMultiple": 3
   },
-  "longPosition": {
-    "entry": {
-      "signal": {
-        "filter": "CROSSUNDER",
+  "positions": {
+    "long": {
+      "entry": {
         "signal": {
-          "method": "REFERENCE",
-          "name": "rsi"
-        },
-        "reference": 30
-      }
-    },
-    "exit": {
-      "signal": {
-        "filter": "CROSSOVER",
+          "method": "CROSSUNDER",
+          "params": {
+            "value": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "rsi"
+              }
+            },
+            "baseline": 30
+          }
+        }
+      },
+      "exit": {
         "signal": {
-          "method": "REFERENCE",
-          "name": "rsi"
-        },
-        "reference": 70
+          "method": "CROSSOVER",
+          "params": {
+            "value": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "rsi"
+              }
+            },
+            "baseline": 70
+          }
+        }
       }
     }
-  }
+  },
+  "plots": [
+    {
+      "label": "RSI",
+      "overlay": false,
+      "items": [
+        {
+          "method": "LINE",
+          "params": {
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "rsi"
+              }
+            },
+            "color": 4278190079
+          }
+        },
+        {
+          "method": "HLINE",
+          "params": {
+            "level": 30,
+            "color": 4278190079
+          }
+        },
+        {
+          "method": "HLINE",
+          "params": {
+            "level": 70,
+            "color": 4278190079
+          }
+        }
+      ]
+    }
+  ]
 }

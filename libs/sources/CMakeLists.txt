@@ -32,6 +32,7 @@ target_sources(${PROJECT_NAME}
         src/asset_snapshot.cxx
 
         src/series_output.cxx
+        src/series_results_collector.cxx
         src/method_contextable.cxx
         src/any_method_context.cxx
 
@@ -44,7 +45,8 @@ target_sources(${PROJECT_NAME}
         src/series/change_method.cxx
         src/series/lookback_method.cxx
         src/series/select_output_method.cxx
-        src/series/reference_method.cxx
+        src/series/series_node_method.cxx
+        src/series/series_value_method.cxx
 
         src/series/operators_method.cxx
         src/series/highest_method.cxx

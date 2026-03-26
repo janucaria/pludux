@@ -1,60 +1,101 @@
 {
-  "version": 1,
+  "version": 2,
   "series": {
     "ma_fast": {
       "method": "SMA",
-      "period": 9,
-      "input": "CLOSE"
+      "params": {
+        "period": 9,
+        "source": "CLOSE"
+      }
     },
     "ma_slow": {
       "method": "SMA",
-      "period": 18,
-      "input": "CLOSE"
+      "params": {
+        "period": 18,
+        "source": "CLOSE"
+      }
     }
-  },
-  "risk": {
-    "method": "ATR",
-    "atr": {
-      "period": 14,
-      "multiplier": 2
-    },
-    "percentage": 5,
-    "value": 1000
   },
   "stopLoss": {
     "enabled": true,
-    "isTrailing": false
+    "trailing": false
   },
   "takeProfit": {
     "enabled": true,
-    "riskMultiplier": 3
+    "rMultiple": 3
   },
-  "longPosition": {
-    "entry": {
-      "signal": {
-        "filter": "CROSSOVER",
+  "positions": {
+    "long": {
+      "entry": {
         "signal": {
-          "method": "REFERENCE",
-          "name": "ma_fast"
-        },
-        "reference": {
-          "method": "REFERENCE",
-          "name": "ma_slow"
+          "method": "CROSSOVER",
+          "params": {
+            "value": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "ma_fast"
+              }
+            },
+            "baseline": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "ma_slow"
+              }
+            }
+          }
         }
-      }
-    },
-    "exit": {
-      "signal": {
-        "filter": "CROSSUNDER",
+      },
+      "exit": {
         "signal": {
-          "method": "REFERENCE",
-          "name": "ma_fast"
-        },
-        "reference": {
-          "method": "REFERENCE",
-          "name": "ma_slow"
+          "method": "CROSSUNDER",
+          "params": {
+            "value": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "ma_fast"
+              }
+            },
+            "baseline": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "ma_slow"
+              }
+            }
+          }
         }
       }
     }
-  }
+  },
+  "plots": [
+    {
+      "label": "2 Ma Cross",
+      "overlay": true,
+      "items": [
+        {
+          "method": "LINE",
+          "params": {
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "ma_fast"
+              }
+            },
+            "color": "yellow"
+          }
+        },
+        {
+          "method": "LINE",
+          "params": {
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "ma_slow"
+              }
+            },
+            "color": "aliceblue"
+          }
+        }
+      ]
+    }
+  ]
 }

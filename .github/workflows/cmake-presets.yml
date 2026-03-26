@@ -1,0 +1,70 @@
+name: CMake Presets CI
+
+on:
+  push:
+    branches-ignore:
+      - main
+  pull_request:
+    branches-ignore:
+      - main
+
+jobs:
+  linux-presets:
+    name: "${{ matrix.name }}"
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - name: clang-debug
+            configure_preset: clang-debug
+            build_preset: clang-build-debug
+            run_tests: true
+          - name: emscripten-debug
+            configure_preset: emscripten-debug
+            build_preset: emscripten-build-debug
+            run_tests: false
+          - name: emscripten-release
+            configure_preset: emscripten-release
+            build_preset: emscripten-build-release
+            run_tests: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ninja-build \
+            pkg-config \
+            libgtk-3-dev \
+            libx11-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxcursor-dev \
+            libxi-dev \
+            libgl1-mesa-dev
+
+      - name: Setup Emscripten SDK
+        uses: mymindstorm/setup-emsdk@v14
+
+      - name: Cache FetchContent sources
+        uses: actions/cache@v4
+        with:
+          path: .out/deps/${{ runner.os }}
+          key: ${{ runner.os }}-fetchcontent-${{ hashFiles('CMakePresets.json', 'CMakeLists.txt', 'libs/**/CMakeLists.txt', 'apps/**/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-fetchcontent-
+
+      - name: Configure (${{ matrix.configure_preset }})
+        run: cmake --preset "${{ matrix.configure_preset }}"
+
+      - name: Build (${{ matrix.build_preset }})
+        run: cmake --build --preset "${{ matrix.build_preset }}" --parallel
+
+      - name: Test (clang-debug only)
+        if: matrix.run_tests
+        run: ctest --test-dir ".out/build/${{ runner.os }}/${{ matrix.configure_preset }}" --output-on-failure -C Debug

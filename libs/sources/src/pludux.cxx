@@ -7,4 +7,5 @@ export import :asset_quote_field_resolver;
 export import :asset_snapshot;
 export import :conditions;
 export import :series;
+export import :series_results_collector;
 export import :config_parser;

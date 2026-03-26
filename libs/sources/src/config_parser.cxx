@@ -59,7 +59,19 @@ public:
   ConfigParser()
   : filter_parsers_{}
   , method_parsers_{}
+  , use_series_params_{true}
   {
+  }
+
+  auto use_series_params(this const ConfigParser& self) noexcept -> bool
+  {
+    return self.use_series_params_;
+  }
+
+  void use_series_params(this ConfigParser& self,
+                         bool use_series_params) noexcept
+  {
+    self.use_series_params_ = use_series_params;
   }
 
   void register_filter_parser(this ConfigParser& self,
@@ -96,23 +108,27 @@ public:
       return FalseMethod{};
     }
     const auto& filter_parsers = self.filter_parsers_;
-    const auto filter = config.at("filter").as_string();
+    const auto filter = config.at("method").as_string();
 
     try {
       if(filter_parsers.contains(filter)) {
         const auto& [_, filter_deserialize] = filter_parsers.at(filter);
-        return filter_deserialize(self, config);
+        const auto params = config.contains("params")
+                             ? config.at("params")
+                             : jsoncons::ojson::object();
+        return filter_deserialize(self, params);
       }
 
-      const auto error_message = std::format("Unknown filter: {}", filter);
+      const auto error_message =
+       std::format("Unknown signal method: {}", filter);
       throw std::invalid_argument{error_message};
     } catch(const std::exception& e) {
       const auto error_message =
-       std::format("Error parsing filter {}:\n{}", filter, e.what());
+       std::format("Error parsing signal method {}:\n{}", filter, e.what());
       throw std::invalid_argument{error_message};
     } catch(...) {
       const auto error_message =
-       std::format("Unknown error parsing filter {}", filter);
+       std::format("Unknown error parsing signal method {}", filter);
       throw std::invalid_argument{error_message};
     }
   }
@@ -120,50 +136,38 @@ public:
   auto serialize_filter(this const ConfigParser& self,
                         const AnyConditionMethod& filter) -> jsoncons::ojson
   {
-    auto serialized_filter = jsoncons::ojson{};
-
     for(const auto& [filter_name, filter_parser] : self.filter_parsers_) {
       const auto& [filter_serialize, _] = filter_parser;
-      serialized_filter = filter_serialize(self, filter);
-      if(!serialized_filter.empty()) {
-        if(!serialized_filter.is_object()) {
-          const auto error_message = std::format(
-           "Condition {} serialization must return an object", filter_name);
-          throw std::invalid_argument{error_message};
+      const auto serialized_params_filter = filter_serialize(self, filter);
+      if(!serialized_params_filter.is_null()) {
+        auto serialized_filter = jsoncons::ojson{};
+        serialized_filter["method"] = filter_name;
+        if(!serialized_params_filter.empty()) {
+          serialized_filter["params"] = std::move(serialized_params_filter);
         }
 
-        if(!serialized_filter.contains("filter")) {
-          serialized_filter["filter"] = filter_name;
-        } else if(serialized_filter.at("filter").as_string() != filter_name) {
-          const auto error_message = std::format(
-           "Condition {} serialization must return 'filter' key with value {}",
-           filter_name,
-           filter_name);
-          throw std::invalid_argument{error_message};
-        }
-        break;
+        return serialized_filter;
       }
     }
 
-    return serialized_filter;
+    return jsoncons::ojson::null();
   }
 
-  auto parse_method(this ConfigParser& self, const jsoncons::ojson& config)
-   -> AnySeriesMethod
+  auto parse_method(this ConfigParser& self,
+                    const jsoncons::ojson& config_method) -> AnySeriesMethod
   {
-    if(config.is_number()) {
-      return ValueMethod{config.as_double()};
+    if(config_method.is_number()) {
+      return ValueMethod{config_method.as_double()};
     }
 
-    if(config.is_string()) {
-      const auto named_method = config.as_string();
+    if(config_method.is_string()) {
+      const auto named_method = config_method.as_string();
       const auto expanded_method =
        jsoncons::ojson::object{{"method", named_method}};
       return self.parse_method(expanded_method);
     }
 
-    auto config_method = config;
-    const auto method = config.at("method").as_string();
+    const auto method = config_method.at("method").as_string();
 
     auto& method_parsers = self.method_parsers_;
     if(!method_parsers.contains(method)) {
@@ -173,7 +177,15 @@ public:
 
     try {
       const auto method_deserialize = method_parsers.at(method).second;
-      const auto method_result = method_deserialize(self, config_method);
+      auto json_params = jsoncons::ojson{};
+      if(self.use_series_params_) {
+        json_params = config_method.contains("params")
+                       ? config_method.at("params")
+                       : jsoncons::ojson::object();
+      } else {
+        json_params = config_method;
+      }
+      const auto method_result = method_deserialize(self, json_params);
 
       return method_result;
     } catch(const std::exception& e) {
@@ -190,18 +202,26 @@ public:
   auto serialize_method(this const ConfigParser& self,
                         const AnySeriesMethod& method) -> jsoncons::ojson
   {
-    auto serialized_method = jsoncons::ojson::null();
-
     for(const auto& [method_name, method_parser] : self.method_parsers_) {
-      const auto& [method_serialize, _] = method_parser;
-      serialized_method = method_serialize(self, method);
-      if(serialized_method.is_object()) {
-        serialized_method["method"] = method_name;
-        break;
+      const auto& [method_params_serialize, _] = method_parser;
+      auto serialized_params_method = method_params_serialize(self, method);
+      if(!serialized_params_method.is_null()) {
+        auto serialized_method = jsoncons::ojson{};
+        if(self.use_series_params_) {
+          serialized_method["method"] = method_name;
+          if(!serialized_params_method.empty()) {
+            serialized_method["params"] = std::move(serialized_params_method);
+          }
+        } else {
+          serialized_method = std::move(serialized_params_method);
+          serialized_method["method"] = method_name;
+        }
+
+        return serialized_method;
       }
     }
 
-    return serialized_method;
+    return jsoncons::ojson::null();
   }
 
   auto serialize_registered_methods(this const ConfigParser& self,
@@ -237,6 +257,8 @@ private:
    filter_parsers_;
   std::unordered_map<std::string, std::pair<MethodSerialize, MethodDeserialize>>
    method_parsers_;
+
+  bool use_series_params_;
 };
 
 auto make_default_registered_config_parser() -> ConfigParser;
@@ -703,15 +725,17 @@ serialize_binary_function_filter(const ConfigParser& config_parser,
                                  const std::string& second_operand_key)
  -> jsoncons::ojson
 {
+  auto binary_function_filter = condition_method_cast<T>(filter);
+  if(!binary_function_filter) {
+    return jsoncons::ojson::null();
+  }
+
   auto serialized_filter = jsoncons::ojson{};
 
-  auto binary_function_filter = condition_method_cast<T>(filter);
-  if(binary_function_filter) {
-    serialized_filter[first_operand_key] =
-     config_parser.serialize_filter(binary_function_filter->first_condition());
-    serialized_filter[second_operand_key] =
-     config_parser.serialize_filter(binary_function_filter->second_condition());
-  }
+  serialized_filter[first_operand_key] =
+   config_parser.serialize_filter(binary_function_filter->first_condition());
+  serialized_filter[second_operand_key] =
+   config_parser.serialize_filter(binary_function_filter->second_condition());
 
   return serialized_filter;
 }
@@ -733,13 +757,15 @@ static auto serialize_unary_function_filter(const ConfigParser& config_parser,
                                             const std::string& operand_key)
  -> jsoncons::ojson
 {
+  const auto unary_function_filter = condition_method_cast<T>(filter);
+  if(!unary_function_filter) {
+    return jsoncons::ojson::null();
+  }
+
   auto serialized_filter = jsoncons::ojson{};
 
-  auto unary_function_filter = condition_method_cast<T>(filter);
-  if(unary_function_filter) {
-    serialized_filter[operand_key] =
-     config_parser.serialize_filter(unary_function_filter->other_condition());
-  }
+  serialized_filter[operand_key] =
+   config_parser.serialize_filter(unary_function_filter->other_condition());
 
   return serialized_filter;
 }
@@ -759,15 +785,17 @@ static auto serialize_comparison_filter(const ConfigParser& config_parser,
                                         const AnyConditionMethod& filter)
  -> jsoncons::ojson
 {
+  const auto comparison_filter = condition_method_cast<T>(filter);
+  if(!comparison_filter) {
+    return jsoncons::ojson::null();
+  }
+
   auto serialized_filter = jsoncons::ojson{};
 
-  auto comparison_filter = condition_method_cast<T>(filter);
-  if(comparison_filter) {
-    serialized_filter["target"] =
-     config_parser.serialize_method(comparison_filter->target());
-    serialized_filter["threshold"] =
-     config_parser.serialize_method(comparison_filter->threshold());
-  }
+  serialized_filter["target"] =
+   config_parser.serialize_method(comparison_filter->target());
+  serialized_filter["threshold"] =
+   config_parser.serialize_method(comparison_filter->threshold());
 
   return serialized_filter;
 }
@@ -776,12 +804,12 @@ static auto parse_all_of_filter(ConfigParser::Parser config_parser,
                                 const jsoncons::ojson& parameters)
  -> AnyConditionMethod
 {
-  if(!parameters.contains("conditions")) {
-    throw std::invalid_argument{"ALL_OF: 'conditions' is not found"};
+  if(!parameters.contains("items")) {
+    throw std::invalid_argument{"ALL_OF: 'items' is not found"};
   }
 
   auto conditions = std::vector<AnyConditionMethod>{};
-  for(const auto& filter : parameters.at("conditions").array_range()) {
+  for(const auto& filter : parameters.at("items").array_range()) {
     conditions.push_back(config_parser.parse_filter(filter));
   }
   return AllOfMethod{conditions};
@@ -791,16 +819,18 @@ static auto serialize_all_of_filter(const ConfigParser& config_parser,
                                     const AnyConditionMethod& filter)
  -> jsoncons::ojson
 {
+  auto all_of_filter = condition_method_cast<AllOfMethod>(filter);
+  if(!all_of_filter) {
+    return jsoncons::ojson::null();
+  }
+
   auto serialized_filter = jsoncons::ojson{};
 
-  auto all_of_filter = condition_method_cast<AllOfMethod>(filter);
-  if(all_of_filter) {
-    auto conditions = jsoncons::ojson::array();
-    for(const auto& condition : all_of_filter->conditions()) {
-      conditions.push_back(config_parser.serialize_filter(condition));
-    }
-    serialized_filter["conditions"] = conditions;
+  auto conditions = jsoncons::ojson::array();
+  for(const auto& condition : all_of_filter->conditions()) {
+    conditions.push_back(config_parser.serialize_filter(condition));
   }
+  serialized_filter["items"] = conditions;
 
   return serialized_filter;
 }
@@ -809,11 +839,11 @@ static auto parse_any_of_filter(ConfigParser::Parser config_parser,
                                 const jsoncons::ojson& parameters)
  -> AnyConditionMethod
 {
-  if(!parameters.contains("conditions")) {
-    throw std::invalid_argument{"ANY_OF: 'conditions' is not found"};
+  if(!parameters.contains("items")) {
+    throw std::invalid_argument{"ANY_OF: 'items' is not found"};
   }
   auto conditions = std::vector<AnyConditionMethod>{};
-  for(const auto& filter : parameters.at("conditions").array_range()) {
+  for(const auto& filter : parameters.at("items").array_range()) {
     conditions.push_back(config_parser.parse_filter(filter));
   }
   return AnyOfMethod{conditions};
@@ -823,16 +853,17 @@ static auto serialize_any_of_filter(const ConfigParser& config_parser,
                                     const AnyConditionMethod& filter)
  -> jsoncons::ojson
 {
-  auto serialized_filter = jsoncons::ojson{};
-
   auto any_of_filter = condition_method_cast<AnyOfMethod>(filter);
-  if(any_of_filter) {
-    auto conditions = jsoncons::ojson::array();
-    for(const auto& condition : any_of_filter->conditions()) {
-      conditions.push_back(config_parser.serialize_filter(condition));
-    }
-    serialized_filter["conditions"] = conditions;
+  if(!any_of_filter) {
+    return jsoncons::ojson::null();
   }
+
+  auto serialized_filter = jsoncons::ojson{};
+  auto conditions = jsoncons::ojson::array();
+  for(const auto& condition : any_of_filter->conditions()) {
+    conditions.push_back(config_parser.serialize_filter(condition));
+  }
+  serialized_filter["items"] = conditions;
 
   return serialized_filter;
 }
@@ -841,8 +872,8 @@ static auto parse_crossunder_filter(ConfigParser::Parser config_parser,
                                     const jsoncons::ojson& parameters)
  -> AnyConditionMethod
 {
-  auto signal = config_parser.parse_method(parameters.at("signal"));
-  auto reference = config_parser.parse_method(parameters.at("reference"));
+  auto signal = config_parser.parse_method(parameters.at("value"));
+  auto reference = config_parser.parse_method(parameters.at("baseline"));
   return CrossunderMethod{signal, reference};
 }
 
@@ -850,15 +881,16 @@ static auto serialize_crossunder_filter(const ConfigParser& config_parser,
                                         const AnyConditionMethod& filter)
  -> jsoncons::ojson
 {
-  auto serialized_filter = jsoncons::ojson{};
-
   auto crossunder_filter = condition_method_cast<CrossunderMethod>(filter);
-  if(crossunder_filter) {
-    serialized_filter["signal"] =
-     config_parser.serialize_method(crossunder_filter->signal());
-    serialized_filter["reference"] =
-     config_parser.serialize_method(crossunder_filter->reference());
+  if(!crossunder_filter) {
+    return jsoncons::ojson::null();
   }
+
+  auto serialized_filter = jsoncons::ojson{};
+  serialized_filter["value"] =
+   config_parser.serialize_method(crossunder_filter->signal());
+  serialized_filter["baseline"] =
+   config_parser.serialize_method(crossunder_filter->reference());
 
   return serialized_filter;
 }
@@ -867,8 +899,8 @@ static auto parse_crossover_filter(ConfigParser::Parser config_parser,
                                    const jsoncons::ojson& parameters)
  -> AnyConditionMethod
 {
-  auto signal = config_parser.parse_method(parameters.at("signal"));
-  auto reference = config_parser.parse_method(parameters.at("reference"));
+  auto signal = config_parser.parse_method(parameters.at("value"));
+  auto reference = config_parser.parse_method(parameters.at("baseline"));
   return CrossoverMethod{signal, reference};
 }
 
@@ -876,15 +908,16 @@ static auto serialize_crossover_filter(const ConfigParser& config_parser,
                                        const AnyConditionMethod& filter)
  -> jsoncons::ojson
 {
-  auto serialized_filter = jsoncons::ojson{};
-
   auto crossover_filter = condition_method_cast<CrossoverMethod>(filter);
-  if(crossover_filter) {
-    serialized_filter["signal"] =
-     config_parser.serialize_method(crossover_filter->signal());
-    serialized_filter["reference"] =
-     config_parser.serialize_method(crossover_filter->reference());
+  if(!crossover_filter) {
+    return jsoncons::ojson::null();
   }
+
+  auto serialized_filter = jsoncons::ojson{};
+  serialized_filter["value"] =
+   config_parser.serialize_method(crossover_filter->signal());
+  serialized_filter["baseline"] =
+   config_parser.serialize_method(crossover_filter->reference());
 
   return serialized_filter;
 }
@@ -1001,23 +1034,43 @@ auto make_default_registered_config_parser() -> ConfigParser
    "KC", serialize_kc_method, parse_kc_method);
 
   config_parser.register_method_parser(
-   "REFERENCE",
+   "SERIES_NODE",
    [](const ConfigParser& config_parser,
       const AnySeriesMethod any_series_method) -> jsoncons::ojson {
      auto serialized_method = jsoncons::ojson::null();
 
-     auto reference_method =
-      series_method_cast<ReferenceMethod>(any_series_method);
-     if(reference_method) {
+     auto series_node_method =
+      series_method_cast<SeriesNodeMethod>(any_series_method);
+     if(series_node_method) {
        serialized_method = jsoncons::ojson{};
-       serialized_method["name"] = reference_method->name();
+       serialized_method["name"] = series_node_method->name();
      }
 
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser, const jsoncons::ojson& parameters) {
      const auto name = get_param_or<std::string>(parameters, "name", "");
-     return ReferenceMethod{name};
+     return SeriesNodeMethod{name};
+   });
+
+  config_parser.register_method_parser(
+   "SERIES_VALUE",
+   [](const ConfigParser& config_parser,
+      const AnySeriesMethod any_series_method) -> jsoncons::ojson {
+     auto serialized_method = jsoncons::ojson::null();
+
+     auto series_value_method =
+      series_method_cast<SeriesValueMethod>(any_series_method);
+     if(series_value_method) {
+       serialized_method = jsoncons::ojson{};
+       serialized_method["name"] = series_value_method->name();
+     }
+
+     return serialized_method;
+   },
+   [](ConfigParser::Parser config_parser, const jsoncons::ojson& parameters) {
+     const auto name = get_param_or<std::string>(parameters, "name", "");
+     return SeriesValueMethod{name};
    });
 
   config_parser.register_method_parser(
@@ -1055,7 +1108,7 @@ auto make_default_registered_config_parser() -> ConfigParser
        any_series_method);
      if(output_by_name_method) {
        serialized_method = jsoncons::ojson{};
-       serialized_method["name"] = [&]() -> std::string {
+       serialized_method["output"] = [&]() -> std::string {
          switch(output_by_name_method->output()) {
          case SeriesOutput::MacdLine:
            return "macd-line";
@@ -1085,23 +1138,24 @@ auto make_default_registered_config_parser() -> ConfigParser
      return serialized_method;
    },
    [](ConfigParser::Parser config_parser, const jsoncons::ojson& parameters) {
-     const auto name = get_param_or<std::string>(parameters, "name", "default");
+     const auto output_name =
+      get_param_or<std::string>(parameters, "output", "default");
      const auto output = [&]() -> SeriesOutput {
-       if(name == "macd-line") {
+       if(output_name == "macd-line") {
          return SeriesOutput::MacdLine;
-       } else if(name == "signal-line") {
+       } else if(output_name == "signal-line") {
          return SeriesOutput::SignalLine;
-       } else if(name == "histogram") {
+       } else if(output_name == "histogram") {
          return SeriesOutput::Histogram;
-       } else if(name == "k-percent") {
+       } else if(output_name == "k-percent") {
          return SeriesOutput::KPercent;
-       } else if(name == "d-percent") {
+       } else if(output_name == "d-percent") {
          return SeriesOutput::DPercent;
-       } else if(name == "middle-band") {
+       } else if(output_name == "middle-band") {
          return SeriesOutput::MiddleBand;
-       } else if(name == "upper-band") {
+       } else if(output_name == "upper-band") {
          return SeriesOutput::UpperBand;
-       } else if(name == "lower-band") {
+       } else if(output_name == "lower-band") {
          return SeriesOutput::LowerBand;
        } else {
          return static_cast<SeriesOutput>(-1);
@@ -1419,16 +1473,10 @@ auto make_default_registered_config_parser() -> ConfigParser
    "TRUE",
    [](const ConfigParser& config_parser,
       const AnyConditionMethod& condition_method) -> jsoncons::ojson {
-     auto serialized_filter = jsoncons::ojson{};
-
      const auto true_filter =
       condition_method_cast<TrueMethod>(condition_method);
 
-     if(true_filter) {
-       serialized_filter["filter"] = "TRUE";
-     }
-
-     return serialized_filter;
+     return true_filter ? jsoncons::ojson{} : jsoncons::ojson::null();
    },
    [](ConfigParser::Parser, const jsoncons::ojson&) -> AnyConditionMethod {
      return TrueMethod{};
@@ -1438,14 +1486,10 @@ auto make_default_registered_config_parser() -> ConfigParser
    "FALSE",
    [](const ConfigParser& config_parser,
       const AnyConditionMethod& condition_method) -> jsoncons::ojson {
-     auto serialized_filter = jsoncons::ojson{};
-
      const auto false_filter =
       condition_method_cast<FalseMethod>(condition_method);
-     if(false_filter) {
-       serialized_filter["filter"] = "FALSE";
-     }
-     return serialized_filter;
+
+     return false_filter ? jsoncons::ojson{} : jsoncons::ojson::null();
    },
    [](ConfigParser::Parser, const jsoncons::ojson&) -> AnyConditionMethod {
      return FalseMethod{};

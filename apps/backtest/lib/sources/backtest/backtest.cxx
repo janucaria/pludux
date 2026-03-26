@@ -10,6 +10,7 @@ module;
 #include <limits>
 #include <memory>
 #include <optional>
+#include <unordered_map>
 #include <vector>
 
 export module pludux.backtest:backtest;
@@ -33,13 +34,7 @@ export namespace pludux::backtest {
 class Backtest {
 public:
   Backtest()
-  : Backtest{std::string{},
-             nullptr,
-             nullptr,
-             nullptr,
-             nullptr,
-             nullptr,
-             std::vector<BacktestSummary>{}}
+  : Backtest{"", nullptr, nullptr, nullptr, nullptr, nullptr}
   {
   }
 
@@ -55,7 +50,8 @@ public:
              std::move(market_ptr),
              std::move(broker_ptr),
              std::move(profile_ptr),
-             std::vector<BacktestSummary>{}}
+             std::vector<BacktestSummary>{},
+             SeriesResultsCollector{}}
   {
   }
 
@@ -65,7 +61,8 @@ public:
            std::shared_ptr<Market> market_ptr,
            std::shared_ptr<Broker> broker_ptr,
            std::shared_ptr<Profile> profile_ptr,
-           std::vector<BacktestSummary> summaries)
+           std::vector<BacktestSummary> summaries,
+           SeriesResultsCollector series_results_collector)
   : name_{std::move(name)}
   , asset_ptr_{asset_ptr}
   , strategy_ptr_{strategy_ptr}
@@ -74,6 +71,7 @@ public:
   , profile_ptr_{profile_ptr}
   , is_failed_{false}
   , summaries_{std::move(summaries)}
+  , series_results_collector_{std::move(series_results_collector)}
   {
   }
 
@@ -188,6 +186,18 @@ public:
     return self.summaries_;
   }
 
+  auto series_results_collector(this const Backtest& self) noexcept
+   -> const SeriesResultsCollector&
+  {
+    return self.series_results_collector_;
+  }
+
+  auto series_results(this const Backtest& self) noexcept
+   -> const std::unordered_map<std::string, std::vector<double>>&
+  {
+    return self.series_results_collector().results();
+  }
+
   auto equal_rules(this const Backtest& self, const Backtest& other) noexcept
    -> bool
   {
@@ -215,6 +225,7 @@ public:
   {
     self.is_failed_ = false;
     self.summaries_.clear();
+    self.series_results_collector_.clear();
   }
 
   auto should_run(this const Backtest& self) noexcept -> bool
@@ -237,15 +248,22 @@ public:
     const auto summaries_size = self.summaries_.size();
     const auto asset_size = self.asset().size();
     const auto last_index = asset_size - 1;
-    const auto asset_index = last_index - std::min(summaries_size, last_index);
-    const auto asset_snapshot = self.asset().get_snapshot(asset_index);
-    const auto asset_timestamp =
-     static_cast<std::time_t>(asset_snapshot.datetime());
-    const auto asset_price = asset_snapshot.close();
+    const auto asset_lookback =
+     last_index - std::min(summaries_size, last_index);
+    const auto asset_snapshot = self.asset().get_snapshot(asset_lookback);
     const auto& strategy = self.strategy();
     const auto& profile = self.profile();
     const auto& broker = self.broker();
     const auto& market = self.market();
+
+    {
+      const auto& series_registry = strategy.series_registry();
+      auto context = self.create_default_method_context();
+      for(const auto& [series_name, series] : series_registry) {
+        const auto series_value = series(asset_snapshot, context);
+        self.series_results_collector_.collect(series_name, series_value);
+      }
+    }
 
     auto summary = !self.summaries_.empty()
                     ? self.summaries_.back()
@@ -320,20 +338,22 @@ public:
     auto result = std::optional<TradeEntry>{};
 
     const auto& strategy = self.strategy();
+    const auto& profile = self.profile();
     const auto prev_snapshot = asset_snapshot[1];
     auto context = self.create_default_method_context();
 
     if(strategy.long_entry_filter()(prev_snapshot, context)) {
-      const auto risk_size = strategy.risk_method()(prev_snapshot, context);
-      const auto position_size = risk_value / risk_size;
       const auto entry_price = asset_snapshot.open();
+      const auto r_distance =
+       profile.get_r_distance(entry_price, prev_snapshot, context);
+      const auto position_size = risk_value / r_distance;
 
       const auto stop_loss_price =
-       strategy.stop_loss_enabled() ? entry_price - risk_size : NAN;
+       strategy.stop_loss_enabled() ? entry_price - r_distance : NAN;
       const auto is_stop_loss_trailing = strategy.stop_loss_trailing_enabled();
       const auto take_profit_price =
        strategy.take_profit_enabled()
-        ? entry_price + risk_size * strategy.take_profit_risk_multiplier()
+        ? entry_price + r_distance * strategy.take_profit_r_multiple()
         : NAN;
 
       result = TradeEntry{position_size,
@@ -354,20 +374,22 @@ public:
     auto result = std::optional<TradeEntry>{};
 
     const auto& strategy = self.strategy();
+    const auto& profile = self.profile();
     auto context = self.create_default_method_context();
     const auto prev_snapshot = asset_snapshot[1];
 
     if(strategy.short_entry_filter()(prev_snapshot, context)) {
-      const auto risk_size = -strategy.risk_method()(prev_snapshot, context);
-      const auto position_size = risk_value / risk_size;
       const auto entry_price = asset_snapshot.open();
+      const auto r_distance =
+       -profile.get_r_distance(entry_price, prev_snapshot, context);
+      const auto position_size = risk_value / r_distance;
 
       const auto stop_loss_price =
-       strategy.stop_loss_enabled() ? entry_price - risk_size : NAN;
+       strategy.stop_loss_enabled() ? entry_price - r_distance : NAN;
       const auto is_stop_loss_trailing = strategy.stop_loss_trailing_enabled();
       const auto take_profit_price =
        strategy.take_profit_enabled()
-        ? entry_price + risk_size * strategy.take_profit_risk_multiplier()
+        ? entry_price + r_distance * strategy.take_profit_r_multiple()
         : NAN;
 
       result = TradeEntry{position_size,
@@ -424,12 +446,15 @@ private:
   std::shared_ptr<Profile> profile_ptr_;
 
   bool is_failed_;
+
   std::vector<BacktestSummary> summaries_;
+  SeriesResultsCollector series_results_collector_;
 
   auto create_default_method_context(this const Backtest& self)
    -> DefaultMethodContext
   {
     return DefaultMethodContext{self.strategy().series_registry(),
+                                self.series_results_collector_,
                                 self.summaries_.size()};
   }
 };

@@ -1,64 +1,107 @@
 {
-  "version": 1,
+  "version": 2,
   "series": {
     "kchannel": {
       "method": "KC",
-      "maPeriod": "20",
-      "maMethodType": "EMA",
-      "BandMethodType": "ATR",
-      "bandAtrPeriod": 10,
-      "multiplier": 2
+      "params": {
+        "maPeriod": 20,
+        "maMethodType": "EMA",
+        "bandMethodType": "ATR",
+        "bandAtrPeriod": 10,
+        "multiplier": 2
+      }
     },
     "kc_upper": {
       "method": "SELECT_OUTPUT",
-      "name": "upper-band",
-      "source": {
-        "method": "REFERENCE",
-        "name": "kchannel"
+      "params": {
+        "output": "upper-band",
+        "source": {
+          "method": "SERIES_NODE",
+          "params": {
+            "name": "kchannel"
+          }
+        }
       }
     },
     "kc_lower": {
       "method": "SELECT_OUTPUT",
-      "name": "lower-band",
-      "source": {
-        "method": "REFERENCE",
-        "name": "kchannel"
+      "params": {
+        "output": "lower-band",
+        "source": {
+          "method": "SERIES_NODE",
+          "params": {
+            "name": "kchannel"
+          }
+        }
       }
     }
-  },
-  "risk": {
-    "method": "ATR",
-    "atr": {
-      "period": 14,
-      "multiplier": 2
-    },
-    "percentage": 5,
-    "value": 1000
   },
   "stopLoss": true,
   "takeProfit": {
-    "riskMultiplier": 5
+    "rMultiple": 5
   },
-  "longPosition": {
-    "entry": {
-      "signal": {
-        "filter": "CROSSOVER",
-        "signal": "CLOSE",
-        "reference": {
-          "method": "REFERENCE",
-          "name": "kc_lower"
+  "positions": {
+    "long": {
+      "entry": {
+        "signal": {
+          "method": "CROSSOVER",
+          "params": {
+            "value": "CLOSE",
+            "baseline": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "kc_lower"
+              }
+            }
+          }
         }
-      }
-    },
-    "exit": {
-      "signal": {
-        "filter": "CROSSUNDER",
-        "signal": "CLOSE",
-        "reference": {
-          "method": "REFERENCE",
-          "name": "kc_upper"
+      },
+      "exit": {
+        "signal": {
+          "method": "CROSSUNDER",
+          "params": {
+            "value": "CLOSE",
+            "baseline": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "kc_upper"
+              }
+            }
+          }
         }
       }
     }
-  }
+  },
+  "plots": [
+    {
+      "label": "KC",
+      "overlay": true,
+      "items": [
+        {
+          "method": "LINE",
+          "params": {
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "kc_upper"
+              }
+            },
+            "color": "aliceblue"
+          }
+        },
+        {
+          "method": "LINE",
+          "params": {
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "kc_lower"
+              }
+            },
+            "color": "lightslategray"
+          }
+        }
+      ]
+    }
+  ]
 }

@@ -1,0 +1,2646 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pludux.com/schemas/pludux.backtest.strategy.v2-draft.json",
+  "title": "Pludux Backtest Strategy Schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 2,
+      "title": "Schema Version",
+      "description": "Version of the Pludux strategy schema. Must be 2 for this draft."
+    },
+    "series": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z][a-z0-9_]*$": {
+          "$ref": "#/$defs/series"
+        }
+      },
+      "title": "Named Series",
+      "description": "A dictionary of reusable named series. Each key must be lower_snake_case. Define indicators, transformed price series, and intermediate calculations here so positions, signals, and plots can reference them consistently. When one named series needs the numeric output of another named series, use SERIES_VALUE. When a method needs the named series definition itself, use SERIES_NODE.",
+      "examples": [
+        {
+          "fast_ema": {
+            "method": "EMA",
+            "params": {
+              "period": 20,
+              "source": "CLOSE"
+            }
+          },
+          "bbands": {
+            "method": "BB",
+            "params": {
+              "period": 20,
+              "stddev": 2,
+              "source": "CLOSE"
+            }
+          }
+        }
+      ]
+    },
+    "positions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "long": {
+          "$ref": "#/$defs/positionSide",
+          "default": false,
+          "title": "Long Side",
+          "description": "Rules for opening and closing long positions. Set to false to disable long trading."
+        },
+        "short": {
+          "$ref": "#/$defs/positionSide",
+          "default": false,
+          "title": "Short Side",
+          "description": "Rules for opening and closing short positions. Set to false to disable short trading."
+        }
+      },
+      "title": "Positions",
+      "description": "Trading rules for long and short positions. Each side can be disabled with false, or configured with entry and optional exit signals."
+    },
+    "stopLoss": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "title": "Enabled",
+              "description": "Whether stop-loss logic is enabled."
+            },
+            "trailing": {
+              "type": "boolean",
+              "title": "Trailing",
+              "description": "When true, the stop loss trails favorable price movement instead of staying fixed."
+            }
+          },
+          "default": {
+            "enabled": true,
+            "trailing": false
+          },
+          "title": "Stop Loss Settings",
+          "description": "Object form of the global stop-loss configuration."
+        },
+        {
+          "type": "boolean"
+        }
+      ],
+      "default": false,
+      "title": "Stop Loss",
+      "description": "Global stop-loss behavior for the strategy. Use false to disable it, or provide an object to enable it and optionally make it trailing."
+    },
+    "takeProfit": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "title": "Enabled",
+              "description": "Whether take-profit logic is enabled."
+            },
+            "rMultiple": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "title": "R Multiple",
+              "description": "Profit target measured in multiples of 1R, where 1R is the strategy's risk distance."
+            }
+          },
+          "default": {
+            "enabled": true,
+            "rMultiple": 2.0
+          },
+          "title": "Take Profit Settings",
+          "description": "Object form of the global take-profit configuration."
+        },
+        {
+          "type": "boolean"
+        }
+      ],
+      "default": false,
+      "title": "Take Profit",
+      "description": "Global take-profit behavior for the strategy. Use false to disable it, or provide an object to enable it and define the target in R-multiples."
+    },
+    "plots": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/plotGroup"
+      },
+      "default": [],
+      "title": "Plots",
+      "description": "Optional visual plot groups for chart rendering. Plot groups can be overlaid on price or rendered in their own pane."
+    }
+  },
+  "$defs": {
+    "positionSide": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "entry": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "signal": {
+                  "$ref": "#/$defs/signalAsParameter",
+                  "title": "Signal",
+                  "description": "Boolean signal definition for this entry rule. It can be an inline signal object or a literal true/false value."
+                }
+              },
+              "required": [
+                "signal"
+              ],
+              "title": "Entry",
+              "description": "Entry rule for this side. The entry signal decides when to open a position."
+            },
+            "exit": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "signal": {
+                  "$ref": "#/$defs/signalAsParameter",
+                  "title": "Signal",
+                  "description": "Boolean signal definition for this exit rule. It can be an inline signal object or a literal true/false value."
+                }
+              },
+              "required": [
+                "signal"
+              ],
+              "title": "Exit",
+              "description": "Optional exit rule for this side. The exit signal decides when to close a position before stop-loss or take-profit rules."
+            }
+          },
+          "required": [
+            "entry"
+          ]
+        },
+        {
+          "type": "boolean"
+        }
+      ],
+      "default": false,
+      "title": "Position Side",
+      "description": "Configuration for one trading direction, such as long or short. Use false to disable the side, or provide entry and optional exit signal rules."
+    },
+    "seriesAsParameter": {
+      "title": "Series Input (Flexible Expression)",
+      "description": "Represents an input that can be a constant, a raw price series, a previously defined named series, or an inline series expression.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer using SERIES_VALUE to reference a named series defined in top-level 'series'.\n2. Prefer full method objects (e.g., EMA, RSI) when parameters are customized.\n3. Use quote shorthand (e.g., \"CLOSE\") only for raw OHLCV inputs.\n4. Use indicator shorthand (e.g., \"EMA\") ONLY when the default parameters are intended exactly.\n5. Use plain numbers only for constant values.\n\nConsistency rule:\n- Prefer defining reusable logic in top-level 'series' and referencing it via SERIES_VALUE instead of repeating inline expressions.\n\nDiscouraged but valid:\n- Mixing multiple styles in the same strategy (e.g., sometimes using shorthand, sometimes full objects).\n- Using indicator shorthand when custom parameters are needed.\n\nThis flexibility exists for convenience, but AI-generated strategies should follow a consistent style using named series and explicit method definitions.",
+      "oneOf": [
+        {
+          "type": "number",
+          "description": "A constant numeric value (e.g., 70, 0, 1.5)."
+        },
+        {
+          "type": "string",
+          "enum": [
+            "OPEN",
+            "HIGH",
+            "LOW",
+            "CLOSE",
+            "VOLUME"
+          ],
+          "description": "Quote shorthand representing raw market data. Preferred only for direct price/volume inputs."
+        },
+        {
+          "$ref": "#/$defs/series",
+          "description": "A full series expression using method + params. Preferred when defining indicators or transformations."
+        },
+        {
+          "type": "string",
+          "enum": [
+            "SMA",
+            "EMA",
+            "RMA",
+            "WMA",
+            "HMA",
+            "ATR",
+            "STDDEV",
+            "BB",
+            "KC",
+            "MACD",
+            "STOCH",
+            "STOCH_RSI"
+          ],
+          "description": "Indicator shorthand with default parameters. Convenience syntax only. Avoid using this if any parameter customization is required."
+        }
+      ],
+      "examples": [
+        {
+          "value": "CLOSE",
+          "description": "Preferred: raw price input using quote shorthand"
+        },
+        {
+          "value": {
+            "method": "SERIES_VALUE",
+            "params": {
+              "name": "fast_ema"
+            }
+          },
+          "description": "Preferred: referencing a previously defined series"
+        },
+        {
+          "value": {
+            "method": "EMA",
+            "params": {
+              "period": 20,
+              "source": "CLOSE"
+            }
+          },
+          "description": "Preferred: explicit indicator with custom parameters"
+        },
+        {
+          "value": "EMA",
+          "description": "Allowed but discouraged unless default parameters are intended exactly"
+        }
+      ]
+    },
+    "baseMethod": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "type": "string",
+          "pattern": "^[A-Z_]+$",
+          "title": "Method",
+          "description": "Uppercase method name that identifies what this object does, such as SMA, RSI, CROSSOVER, or LINE."
+        },
+        "params": {
+          "type": "object",
+          "title": "Parameters",
+          "description": "Method-specific parameters. The required keys depend on the method."
+        }
+      },
+      "required": [
+        "method"
+      ],
+      "title": "Base Method Object",
+      "description": "Base shape shared by Pludux method objects. Most series, signals, and plots are expressed as an object with a UPPERCASE method name and an optional params object."
+    },
+    "quoteSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "OPEN",
+                "HIGH",
+                "LOW",
+                "CLOSE",
+                "VOLUME"
+              ]
+            }
+          }
+        }
+      ],
+      "title": "Quote Series",
+      "description": "Built-in market data series from the current bar, such as OPEN, HIGH, LOW, CLOSE, or VOLUME."
+    },
+    "seriesNodeSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "SERIES_NODE",
+              "title": "Method",
+              "description": "Always use SERIES_NODE to refer to a named series definition itself."
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]*$",
+                  "title": "Series Name",
+                  "description": "Name of a previously defined series in the top-level series object."
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "title": "Parameters",
+              "description": "Parameters for the SERIES_NODE method.",
+              "examples": [
+                {
+                  "name": "bbands"
+                }
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Series Node",
+      "description": "References a previously defined named series as a series node. Use SERIES_NODE when another method needs the named series definition itself, such as selecting one output from a multi-output indicator. Do not use SERIES_NODE where a numeric value is expected.",
+      "examples": [
+        {
+          "method": "SERIES_NODE",
+          "params": {
+            "name": "bbands"
+          }
+        }
+      ]
+    },
+    "seriesValueSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "SERIES_VALUE",
+              "title": "Method",
+              "description": "Always use SERIES_VALUE to read the numeric output of a named series."
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]*$",
+                  "title": "Series Name",
+                  "description": "Name of a previously defined series in the top-level series object."
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "title": "Parameters",
+              "description": "Parameters for the SERIES_VALUE method.",
+              "examples": [
+                {
+                  "name": "fast_ema"
+                }
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Series Value",
+      "description": "References the evaluated output value of a previously defined named series at the current bar. Use SERIES_VALUE when a method needs a numeric series value, such as comparisons, arithmetic, and crossover signals.",
+      "examples": [
+        {
+          "method": "SERIES_VALUE",
+          "params": {
+            "name": "fast_ema"
+          }
+        }
+      ]
+    },
+    "selectOutputSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "SELECT_OUTPUT"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "output": {
+                  "type": "string",
+                  "enum": [
+                    "upper-band",
+                    "middle-band",
+                    "lower-band",
+                    "k-percent",
+                    "d-percent",
+                    "macd-line",
+                    "signal-line",
+                    "histogram"
+                  ],
+                  "title": "Output Name",
+                  "description": "Which output line to select from the source series, such as upper-band, lower-band, macd-line, signal-line, or histogram."
+                },
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Source Series",
+                  "description": "Source multi-output series node. Use a multi-output indicator directly, or use SERIES_NODE to refer to a named multi-output series. Do not use SERIES_VALUE here because SELECT_OUTPUT needs the series node, not its evaluated numeric value."
+                }
+              },
+              "required": [
+                "output",
+                "source"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Select Output",
+      "description": "Selects one named output from a multi-output series node, such as Bollinger Bands, MACD, STOCH, or STOCH_RSI. The source should usually be a multi-output indicator definition directly, or a SERIES_NODE reference to a named multi-output series.",
+      "examples": [
+        {
+          "method": "SELECT_OUTPUT",
+          "params": {
+            "output": "upper-band",
+            "source": {
+              "method": "SERIES_NODE",
+              "params": {
+                "name": "bbands"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "lookbackSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "LOOKBACK"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Source Series",
+                  "description": "Series to read from a previous bar."
+                },
+                "period": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "title": "Lookback Period",
+                  "description": "Number of bars to look back. 0 means the current bar, 1 means one bar ago, and so on."
+                }
+              },
+              "required": [
+                "source",
+                "period"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Lookback",
+      "description": "Returns the value of a source series from a previous bar. For example, period 1 means one bar ago."
+    },
+    "valueSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "VALUE"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "value": {
+                  "type": "number",
+                  "title": "Value",
+                  "description": "Constant numeric value to use as a series."
+                }
+              },
+              "required": [
+                "value"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Value",
+      "description": "Wraps a constant number as a series object."
+    },
+    "dataSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "DATA"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "title": "Field Name",
+                  "description": "Name of the custom dataset field to read."
+                }
+              },
+              "required": [
+                "field"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Data Field",
+      "description": "Reads a custom data field from the input dataset, such as a user-provided column in the historical data file."
+    },
+    "smaSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "SMA"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "type": "integer",
+                  "title": "Period",
+                  "description": "Lookback period used by the indicator."
+                },
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Source",
+                  "description": "Source series used as the indicator input."
+                }
+              }
+            }
+          },
+          "default": {
+            "method": "SMA",
+            "params": {
+              "period": 14,
+              "source": "CLOSE"
+            }
+          }
+        }
+      ],
+      "title": "Simple Moving Average",
+      "description": "Calculates the simple moving average of a source series over a lookback period."
+    },
+    "emaSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "EMA"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "type": "integer",
+                  "title": "Period",
+                  "description": "Lookback period used by the indicator."
+                },
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Source",
+                  "description": "Source series used as the indicator input."
+                }
+              }
+            }
+          },
+          "default": {
+            "method": "EMA",
+            "params": {
+              "period": 14,
+              "source": "CLOSE"
+            }
+          }
+        }
+      ],
+      "title": "Exponential Moving Average",
+      "description": "Calculates the exponential moving average of a source series over a lookback period."
+    },
+    "rmaSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "RMA"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "type": "integer",
+                  "title": "Period",
+                  "description": "Lookback period used by the indicator."
+                },
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Source",
+                  "description": "Source series used as the indicator input."
+                }
+              }
+            }
+          },
+          "default": {
+            "method": "RMA",
+            "params": {
+              "period": 14,
+              "source": "CLOSE"
+            }
+          }
+        }
+      ],
+      "title": "Running Moving Average",
+      "description": "Calculates Wilder's running moving average of a source series over a lookback period."
+    },
+    "wmaSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "WMA"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "type": "integer",
+                  "title": "Period",
+                  "description": "Lookback period used by the indicator."
+                },
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Source",
+                  "description": "Source series used as the indicator input."
+                }
+              }
+            }
+          },
+          "default": {
+            "method": "WMA",
+            "params": {
+              "period": 14,
+              "source": "CLOSE"
+            }
+          }
+        }
+      ],
+      "title": "Weighted Moving Average",
+      "description": "Calculates the weighted moving average of a source series over a lookback period."
+    },
+    "hmaSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "HMA"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "type": "integer",
+                  "title": "Period",
+                  "description": "Lookback period used by the indicator."
+                },
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Source",
+                  "description": "Source series used as the indicator input."
+                }
+              }
+            }
+          },
+          "default": {
+            "method": "HMA",
+            "params": {
+              "period": 14,
+              "source": "CLOSE"
+            }
+          }
+        }
+      ],
+      "title": "Hull Moving Average",
+      "description": "Calculates the Hull moving average of a source series over a lookback period."
+    },
+    "maSeries": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/smaSeries"
+        },
+        {
+          "$ref": "#/$defs/emaSeries"
+        },
+        {
+          "$ref": "#/$defs/rmaSeries"
+        },
+        {
+          "$ref": "#/$defs/wmaSeries"
+        },
+        {
+          "$ref": "#/$defs/hmaSeries"
+        }
+      ],
+      "title": "Moving Average Series",
+      "description": "Union of supported moving-average method objects."
+    },
+    "rsiSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "RSI"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "type": "integer",
+                  "title": "Period",
+                  "description": "Lookback period used by the indicator."
+                },
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Source",
+                  "description": "Source series used as the indicator input."
+                }
+              }
+            }
+          },
+          "default": {
+            "method": "RSI",
+            "params": {
+              "period": 14,
+              "source": "CLOSE"
+            }
+          }
+        }
+      ],
+      "title": "Relative Strength Index",
+      "description": "Calculates the RSI oscillator from a source series."
+    },
+    "atrSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "ATR"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "type": "integer",
+                  "title": "Period",
+                  "description": "Lookback period used for ATR."
+                },
+                "maSmoothingType": {
+                  "enum": [
+                    "SMA",
+                    "EMA",
+                    "RMA",
+                    "WMA",
+                    "HMA"
+                  ],
+                  "title": "Smoothing Type",
+                  "description": "Moving-average smoothing method used to smooth true range into ATR."
+                }
+              }
+            }
+          },
+          "default": {
+            "method": "ATR",
+            "params": {
+              "period": 14,
+              "maSmoothingType": "RMA"
+            }
+          }
+        }
+      ],
+      "title": "Average True Range",
+      "description": "Calculates ATR as a volatility measure using a chosen smoothing method."
+    },
+    "stddevSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "STDDEV"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "type": "integer",
+                  "title": "Period",
+                  "description": "Rolling window length for the standard deviation calculation."
+                },
+                "source": {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/seriesAsParameter"
+                    },
+                    {
+                      "default": "CLOSE"
+                    }
+                  ],
+                  "title": "Source",
+                  "description": "Source series whose dispersion is measured."
+                }
+              },
+              "required": [
+                "period"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Standard Deviation",
+      "description": "Calculates rolling standard deviation of a source series."
+    },
+    "bbSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "BB"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "maType": {
+                  "enum": [
+                    "SMA",
+                    "EMA",
+                    "RMA",
+                    "WMA",
+                    "HMA"
+                  ],
+                  "title": "Moving Average Type",
+                  "description": "Moving average method used for the Bollinger Bands middle line."
+                },
+                "period": {
+                  "type": "integer",
+                  "title": "Period",
+                  "description": "Lookback period for the middle band and standard deviation."
+                },
+                "stddev": {
+                  "type": "number",
+                  "title": "Standard Deviation Multiplier",
+                  "description": "Number of standard deviations used to place the upper and lower bands."
+                },
+                "maSource": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Moving Average Source",
+                  "description": "Source series used to calculate the Bollinger Bands."
+                }
+              }
+            }
+          },
+          "default": {
+            "method": "BB",
+            "params": {
+              "period": 20,
+              "stddev": 2.0,
+              "maType": "SMA",
+              "maSource": "CLOSE"
+            }
+          }
+        }
+      ],
+      "title": "Bollinger Bands",
+      "description": "Calculates a multi-output Bollinger Bands series with upper, middle, and lower bands."
+    },
+    "kcSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "KC"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "maSource": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "maSource",
+                  "description": "Source series used for the Keltner Channel center line."
+                },
+                "maPeriod": {
+                  "type": "integer",
+                  "title": "maPeriod",
+                  "description": "Lookback period for the center-line moving average."
+                },
+                "maMethodType": {
+                  "enum": [
+                    "SMA",
+                    "EMA",
+                    "RMA",
+                    "WMA",
+                    "HMA"
+                  ],
+                  "title": "maMethodType",
+                  "description": "Moving average method used for the center line."
+                },
+                "bandMethodType": {
+                  "enum": [
+                    "ATR",
+                    "TR",
+                    "RangeHighLow"
+                  ],
+                  "title": "bandMethodType",
+                  "description": "Volatility method used for the channel width. ATR uses average true range, TR uses true range, and RangeHighLow uses raw high-low range."
+                },
+                "bandAtrPeriod": {
+                  "type": "integer",
+                  "title": "bandAtrPeriod",
+                  "description": "ATR period used when bandMethodType is ATR."
+                },
+                "multiplier": {
+                  "type": "number",
+                  "title": "multiplier",
+                  "description": "Multiplier applied to the band width."
+                }
+              }
+            }
+          },
+          "default": {
+            "method": "KC",
+            "params": {
+              "maSource": "CLOSE",
+              "maPeriod": 20,
+              "maMethodType": "SMA",
+              "bandMethodType": "ATR",
+              "bandAtrPeriod": 14,
+              "multiplier": 1.5
+            }
+          }
+        }
+      ],
+      "title": "Keltner Channel",
+      "description": "Calculates a multi-output Keltner Channel series using a moving average center line and a volatility band method."
+    },
+    "macdSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "MACD"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "fast": {
+                  "type": "integer",
+                  "title": "Fast",
+                  "description": "Fast moving-average period."
+                },
+                "slow": {
+                  "type": "integer",
+                  "title": "Slow",
+                  "description": "Slow moving-average period."
+                },
+                "signal": {
+                  "type": "integer",
+                  "title": "Signal Period",
+                  "description": "Signal-line period."
+                },
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Source",
+                  "description": "Source series used for the MACD calculation."
+                }
+              }
+            }
+          },
+          "default": {
+            "method": "MACD",
+            "params": {
+              "fast": 12,
+              "slow": 26,
+              "signal": 9,
+              "source": "CLOSE"
+            }
+          }
+        }
+      ],
+      "title": "MACD",
+      "description": "Calculates a multi-output MACD series with MACD line, signal line, and histogram."
+    },
+    "stochSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "STOCH"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "kPeriod": {
+                  "type": "integer",
+                  "title": "kPeriod",
+                  "description": "Lookback period used to compute raw %K."
+                },
+                "kSmooth": {
+                  "type": "integer",
+                  "title": "kSmooth",
+                  "description": "Smoothing period applied to %K."
+                },
+                "dPeriod": {
+                  "type": "integer",
+                  "title": "dPeriod",
+                  "description": "Smoothing period used to compute %D."
+                },
+                "high": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "high",
+                  "description": "Series used as the high input."
+                },
+                "low": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "low",
+                  "description": "Series used as the low input."
+                },
+                "close": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "close",
+                  "description": "Series used as the close input."
+                }
+              }
+            }
+          },
+          "default": {
+            "method": "STOCH",
+            "params": {
+              "kPeriod": 14,
+              "kSmooth": 3,
+              "dPeriod": 3,
+              "high": "HIGH",
+              "low": "LOW",
+              "close": "CLOSE"
+            }
+          }
+        }
+      ],
+      "title": "Stochastic Oscillator",
+      "description": "Calculates a multi-output stochastic oscillator with %K and %D outputs."
+    },
+    "stochRsiSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "STOCH_RSI"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "kPeriod": {
+                  "type": "integer",
+                  "title": "kPeriod",
+                  "description": "Lookback period used to compute raw stochastic values on RSI."
+                },
+                "kSmooth": {
+                  "type": "integer",
+                  "title": "kSmooth",
+                  "description": "Smoothing period applied to %K."
+                },
+                "dPeriod": {
+                  "type": "integer",
+                  "title": "dPeriod",
+                  "description": "Smoothing period used to compute %D."
+                },
+                "rsiInput": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "rsiInput",
+                  "description": "Source series used to calculate RSI before applying stochastic."
+                },
+                "rsiPeriod": {
+                  "type": "integer",
+                  "title": "rsiPeriod",
+                  "description": "RSI lookback period."
+                }
+              }
+            }
+          },
+          "default": {
+            "method": "STOCH_RSI",
+            "params": {
+              "kPeriod": 14,
+              "kSmooth": 3,
+              "dPeriod": 3,
+              "rsiInput": "CLOSE",
+              "rsiPeriod": 14
+            }
+          }
+        }
+      ],
+      "title": "Stochastic RSI",
+      "description": "Calculates a multi-output stochastic RSI oscillator with %K and %D outputs."
+    },
+    "addSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "ADD"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "augend": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Augend",
+                  "description": "First numeric input to add. Prefer SERIES_VALUE for named series and plain numbers for constants."
+                },
+                "addend": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Addend",
+                  "description": "Second numeric input to add. Prefer SERIES_VALUE for named series and plain numbers for constants."
+                }
+              },
+              "required": [
+                "augend",
+                "addend"
+              ],
+              "title": "Parameters",
+              "description": "Parameters for addition.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer SERIES_VALUE for named series inputs.\n2. Prefer plain numbers for constants.\n3. Prefer naming reusable arithmetic expressions in top-level 'series' instead of repeating them inline."
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Add",
+      "description": "Returns the sum of two numeric inputs.",
+      "examples": [
+        {
+          "method": "ADD",
+          "params": {
+            "augend": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "fast_ema"
+              }
+            },
+            "addend": 5
+          }
+        }
+      ]
+    },
+    "subtractSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "SUBTRACT"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "minuend": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Minuend",
+                  "description": "Value to subtract from. Prefer SERIES_VALUE for named series."
+                },
+                "subtrahend": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Subtrahend",
+                  "description": "Value to subtract. Prefer SERIES_VALUE for named series and numbers for constants."
+                }
+              },
+              "required": [
+                "minuend",
+                "subtrahend"
+              ],
+              "title": "Parameters",
+              "description": "Parameters for subtraction. Prefer reusable named series instead of repeated inline expressions."
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Subtract",
+      "description": "Returns the result of subtracting one numeric input from another.",
+      "examples": [
+        {
+          "method": "SUBTRACT",
+          "params": {
+            "minuend": "CLOSE",
+            "subtrahend": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "slow_ema"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "multiplySeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "MULTIPLY"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "multiplicand": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Multiplicand",
+                  "description": "First numeric input to multiply."
+                },
+                "multiplier": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Multiplier",
+                  "description": "Second numeric input to multiply."
+                }
+              },
+              "required": [
+                "multiplicand",
+                "multiplier"
+              ],
+              "title": "Parameters",
+              "description": "Parameters for multiplication. Prefer SERIES_VALUE for named series and plain numbers for constants such as 2, 0.5, or 100."
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Multiply",
+      "description": "Returns the product of two numeric inputs.",
+      "examples": [
+        {
+          "method": "MULTIPLY",
+          "params": {
+            "multiplicand": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "atr_14"
+              }
+            },
+            "multiplier": 2
+          }
+        }
+      ]
+    },
+    "divideSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "DIVIDE"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "dividend": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Dividend",
+                  "description": "Numeric value to divide."
+                },
+                "divisor": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Divisor",
+                  "description": "Numeric value used as the divisor. Ensure the divisor is intended to be non-zero at runtime."
+                }
+              },
+              "required": [
+                "dividend",
+                "divisor"
+              ],
+              "title": "Parameters",
+              "description": "Parameters for division. Prefer SERIES_VALUE for named series and plain numbers for constants."
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Divide",
+      "description": "Returns one numeric input divided by another.",
+      "examples": [
+        {
+          "method": "DIVIDE",
+          "params": {
+            "dividend": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "price_spread"
+              }
+            },
+            "divisor": 2
+          }
+        }
+      ]
+    },
+    "negateSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "NEGATE"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "operand": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Operand",
+                  "description": "Numeric value to multiply by -1. Prefer SERIES_VALUE for named series."
+                }
+              },
+              "required": [
+                "operand"
+              ],
+              "title": "Parameters",
+              "description": "Parameters for numeric negation."
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Negate",
+      "description": "Returns the negative of a numeric input.",
+      "examples": [
+        {
+          "method": "NEGATE",
+          "params": {
+            "operand": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "momentum"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "sqrtSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "SQRT"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "operand": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Operand",
+                  "description": "Numeric value whose square root is calculated."
+                }
+              },
+              "required": [
+                "operand"
+              ],
+              "title": "Parameters",
+              "description": "Parameters for square root. Use only when the runtime values are intended to be non-negative."
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Square Root",
+      "description": "Returns the square root of a numeric input.",
+      "examples": [
+        {
+          "method": "SQRT",
+          "params": {
+            "operand": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "variance_like_series"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "changeSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "CHANGE"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Source",
+                  "description": "Numeric source whose bar-to-bar change is calculated. Prefer SERIES_VALUE for named series and quote shorthand for raw OHLCV inputs."
+                }
+              },
+              "title": "Parameters",
+              "description": "Parameters for bar-to-bar change. Prefer defining reusable source logic in top-level 'series' when the same source is used in multiple places."
+            }
+          }
+        }
+      ],
+      "title": "Change",
+      "description": "Returns the bar-to-bar difference of a numeric source.",
+      "default": {
+        "method": "CHANGE",
+        "params": {
+          "source": "CLOSE"
+        }
+      },
+      "examples": [
+        {
+          "method": "CHANGE",
+          "params": {
+            "source": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "fast_ema"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "absDiffSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "ABS_DIFF"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "minuend": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Minuend",
+                  "description": "First numeric input in the absolute-difference calculation."
+                },
+                "subtrahend": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Subtrahend",
+                  "description": "Second numeric input in the absolute-difference calculation."
+                }
+              },
+              "required": [
+                "minuend",
+                "subtrahend"
+              ],
+              "title": "Parameters",
+              "description": "Parameters for absolute difference. Prefer SERIES_VALUE for named series and numbers for constants."
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Absolute Difference",
+      "description": "Returns the absolute value of the difference between two numeric inputs.",
+      "examples": [
+        {
+          "method": "ABS_DIFF",
+          "params": {
+            "minuend": "CLOSE",
+            "subtrahend": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "slow_ema"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "percentageSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "PERCENTAGE"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "base": {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/seriesAsParameter"
+                    },
+                    {
+                      "default": "CLOSE"
+                    }
+                  ],
+                  "title": "Base",
+                  "description": "Base numeric input that the percentage is applied to. Prefer quote shorthand for direct OHLCV input and SERIES_VALUE for named series."
+                },
+                "percentage": {
+                  "type": "number",
+                  "title": "Percentage",
+                  "description": "Percentage amount to apply, such as 2 for 2%."
+                }
+              },
+              "required": [
+                "percentage"
+              ],
+              "title": "Parameters",
+              "description": "Parameters for percentage-of-base calculation. This is commonly used for offsets, thresholds, and derived levels."
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Percentage of Base",
+      "description": "Returns a percentage of a base numeric input.",
+      "examples": [
+        {
+          "method": "PERCENTAGE",
+          "params": {
+            "base": "CLOSE",
+            "percentage": 2
+          }
+        },
+        {
+          "method": "PERCENTAGE",
+          "params": {
+            "base": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "atr_14"
+              }
+            },
+            "percentage": 50
+          }
+        }
+      ]
+    },
+    "series": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/seriesNodeSeries"
+        },
+        {
+          "$ref": "#/$defs/seriesValueSeries"
+        },
+        {
+          "$ref": "#/$defs/selectOutputSeries"
+        },
+        {
+          "$ref": "#/$defs/lookbackSeries"
+        },
+        {
+          "$ref": "#/$defs/quoteSeries"
+        },
+        {
+          "$ref": "#/$defs/valueSeries"
+        },
+        {
+          "$ref": "#/$defs/dataSeries"
+        },
+        {
+          "$ref": "#/$defs/maSeries"
+        },
+        {
+          "$ref": "#/$defs/rsiSeries"
+        },
+        {
+          "$ref": "#/$defs/atrSeries"
+        },
+        {
+          "$ref": "#/$defs/stddevSeries"
+        },
+        {
+          "$ref": "#/$defs/bbSeries"
+        },
+        {
+          "$ref": "#/$defs/kcSeries"
+        },
+        {
+          "$ref": "#/$defs/macdSeries"
+        },
+        {
+          "$ref": "#/$defs/stochSeries"
+        },
+        {
+          "$ref": "#/$defs/stochRsiSeries"
+        },
+        {
+          "$ref": "#/$defs/addSeries"
+        },
+        {
+          "$ref": "#/$defs/subtractSeries"
+        },
+        {
+          "$ref": "#/$defs/multiplySeries"
+        },
+        {
+          "$ref": "#/$defs/divideSeries"
+        },
+        {
+          "$ref": "#/$defs/negateSeries"
+        },
+        {
+          "$ref": "#/$defs/sqrtSeries"
+        },
+        {
+          "$ref": "#/$defs/changeSeries"
+        },
+        {
+          "$ref": "#/$defs/absDiffSeries"
+        },
+        {
+          "$ref": "#/$defs/percentageSeries"
+        }
+      ],
+      "title": "Series Definition",
+      "description": "Any valid Pludux series definition. This can be a raw market series, indicator, transformation, arithmetic series, SELECT_OUTPUT chain, SERIES_NODE reference, or SERIES_VALUE reference."
+    },
+    "signalAsParameter": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/signals"
+        },
+        {
+          "type": "boolean"
+        }
+      ],
+      "title": "Signal Parameter",
+      "description": "A boolean input accepted by entry, exit, and logical signal methods. It can be a signal object or a literal true or false."
+    },
+    "compositeConditionSignal": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "ALL_OF",
+                "ANY_OF"
+              ]
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "items": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "$ref": "#/$defs/signalAsParameter"
+                  },
+                  "title": "Items",
+                  "description": "Signal list to combine. ALL_OF requires every item to be true. ANY_OF requires at least one item to be true."
+                }
+              },
+              "required": [
+                "items"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Composite Signal",
+      "description": "Combines one or more signals into a grouped condition using ALL_OF or ANY_OF."
+    },
+    "comparisonSignal": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "LESS_THAN",
+                "LESS_EQUAL",
+                "GREATER_THAN",
+                "GREATER_EQUAL",
+                "EQUAL",
+                "NOT_EQUAL"
+              ],
+              "title": "Comparison Method",
+              "description": "Comparison operator applied to two numeric inputs."
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "target": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Target",
+                  "description": "Left-hand numeric input being compared. For AI-generated strategies, prefer SERIES_VALUE when referring to a previously defined named series. Raw quote shorthand like \"CLOSE\" is fine for direct market inputs. Avoid repeating complex inline indicator expressions here if they can be defined once in top-level 'series' and reused."
+                },
+                "threshold": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Threshold",
+                  "description": "Right-hand numeric input used as the comparison reference. This can be a constant number, raw quote shorthand, another indicator output, or SERIES_VALUE. Prefer constants for fixed thresholds such as 30, 50, or 70. Prefer SERIES_VALUE when the threshold comes from another named series."
+                }
+              },
+              "required": [
+                "target",
+                "threshold"
+              ],
+              "title": "Parameters",
+              "description": "Parameters for a numeric comparison signal.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer SERIES_VALUE when either side refers to a named series.\n2. Prefer plain numbers for fixed thresholds.\n3. Prefer quote shorthand only for direct OHLCV inputs.\n4. Prefer reusing named series instead of repeating inline indicator expressions.\n\nDiscouraged but valid:\n- Comparing a complex inline indicator on one side when the same logic is reused elsewhere.\n- Mixing shorthand and nested styles inconsistently across the same strategy."
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Comparison Signal",
+      "description": "Boolean signal that compares two numeric values or series over time. Use this for threshold logic such as RSI < 30, CLOSE > EMA, or one named series compared to another.",
+      "examples": [
+        {
+          "method": "LESS_EQUAL",
+          "params": {
+            "target": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "rsi_14"
+              }
+            },
+            "threshold": 30
+          }
+        },
+        {
+          "method": "GREATER_THAN",
+          "params": {
+            "target": "CLOSE",
+            "threshold": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "fast_ema"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "crossSignal": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "CROSSOVER",
+                "CROSSUNDER"
+              ],
+              "title": "Cross Method",
+              "description": "Detects when one numeric series crosses above or below another."
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "value": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Value",
+                  "description": "The changing numeric series being tested for a cross. For AI-generated strategies, this should usually be a price source, an indicator output, or SERIES_VALUE referring to a named series."
+                },
+                "baseline": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Baseline",
+                  "description": "The numeric reference that 'value' is checked against. This is commonly another named indicator output via SERIES_VALUE, a raw quote series, or a constant threshold."
+                }
+              },
+              "required": [
+                "value",
+                "baseline"
+              ],
+              "title": "Parameters",
+              "description": "Parameters for a cross signal.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer SERIES_VALUE when crossing one named series against another named series.\n2. Prefer quote shorthand only for direct OHLCV inputs.\n3. Prefer defining reusable indicators in top-level 'series' and then crossing their SERIES_VALUE outputs.\n4. Use constants only when intentionally crossing against a fixed level.\n\nDiscouraged but valid:\n- Repeating inline indicator expressions inside CROSSOVER or CROSSUNDER when they could be named once and reused.\n- Using SERIES_NODE here. Cross signals operate on numeric values, not series definitions."
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Cross Signal",
+      "description": "Boolean signal that detects when one numeric series crosses above or below another numeric series or level.",
+      "examples": [
+        {
+          "method": "CROSSOVER",
+          "params": {
+            "value": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "fast_ema"
+              }
+            },
+            "baseline": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "slow_ema"
+              }
+            }
+          }
+        },
+        {
+          "method": "CROSSUNDER",
+          "params": {
+            "value": "CLOSE",
+            "baseline": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "bb_upper"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "booleanSignal": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "TRUE",
+                "FALSE"
+              ]
+            }
+          }
+        }
+      ],
+      "title": "Boolean Constant Signal",
+      "description": "Always-true or always-false signal."
+    },
+    "binaryLogicalSignal": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "AND",
+                "OR",
+                "XOR"
+              ]
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "firstCondition": {
+                  "$ref": "#/$defs/signalAsParameter",
+                  "title": "First Condition",
+                  "description": "First input signal."
+                },
+                "secondCondition": {
+                  "$ref": "#/$defs/signalAsParameter",
+                  "title": "Second Condition",
+                  "description": "Second input signal."
+                }
+              },
+              "required": [
+                "firstCondition",
+                "secondCondition"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Binary Logical Signal",
+      "description": "Combines two signals with AND, OR, or XOR."
+    },
+    "unaryLogicalSignal": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "NOT"
+              ]
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "condition": {
+                  "$ref": "#/$defs/signalAsParameter",
+                  "title": "Condition",
+                  "description": "Signal to negate."
+                }
+              },
+              "required": [
+                "condition"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Unary Logical Signal",
+      "description": "Applies NOT to a single signal."
+    },
+    "signals": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/crossSignal"
+        },
+        {
+          "$ref": "#/$defs/compositeConditionSignal"
+        },
+        {
+          "$ref": "#/$defs/comparisonSignal"
+        },
+        {
+          "$ref": "#/$defs/booleanSignal"
+        },
+        {
+          "$ref": "#/$defs/binaryLogicalSignal"
+        },
+        {
+          "$ref": "#/$defs/unaryLogicalSignal"
+        }
+      ],
+      "title": "Signals",
+      "description": "Any valid Pludux signal object. A signal produces boolean values over time and is commonly used for entries, exits, and filters."
+    },
+    "namedColor": {
+      "type": "string",
+      "enum": [
+        "aliceblue",
+        "antiquewhite",
+        "aqua",
+        "aquamarine",
+        "azure",
+        "beige",
+        "bisque",
+        "black",
+        "blanchedalmond",
+        "blue",
+        "blueviolet",
+        "brown",
+        "burlywood",
+        "cadetblue",
+        "chartreuse",
+        "chocolate",
+        "coral",
+        "cornflowerblue",
+        "cornsilk",
+        "crimson",
+        "cyan",
+        "darkblue",
+        "darkcyan",
+        "darkgoldenrod",
+        "darkgray",
+        "darkgreen",
+        "darkgrey",
+        "darkkhaki",
+        "darkmagenta",
+        "darkolivegreen",
+        "darkorange",
+        "darkorchid",
+        "darkred",
+        "darksalmon",
+        "darkseagreen",
+        "darkslateblue",
+        "darkslategray",
+        "darkslategrey",
+        "darkturquoise",
+        "darkviolet",
+        "deeppink",
+        "deepskyblue",
+        "dimgray",
+        "dimgrey",
+        "dodgerblue",
+        "firebrick",
+        "floralwhite",
+        "forestgreen",
+        "fuchsia",
+        "gainsboro",
+        "ghostwhite",
+        "gold",
+        "goldenrod",
+        "gray",
+        "green",
+        "greenyellow",
+        "grey",
+        "honeydew",
+        "hotpink",
+        "indianred",
+        "indigo",
+        "ivory",
+        "khaki",
+        "lavender",
+        "lavenderblush",
+        "lawngreen",
+        "lemonchiffon",
+        "lightblue",
+        "lightcoral",
+        "lightcyan",
+        "lightgoldenrodyellow",
+        "lightgray",
+        "lightgreen",
+        "lightgrey",
+        "lightpink",
+        "lightsalmon",
+        "lightseagreen",
+        "lightskyblue",
+        "lightslategray",
+        "lightslategrey",
+        "lightsteelblue",
+        "lightyellow",
+        "lime",
+        "limegreen",
+        "linen",
+        "magenta",
+        "maroon",
+        "mediumaquamarine",
+        "mediumblue",
+        "mediumorchid",
+        "mediumpurple",
+        "mediumseagreen",
+        "mediumslateblue",
+        "mediumspringgreen",
+        "mediumturquoise",
+        "mediumvioletred",
+        "midnightblue",
+        "mintcream",
+        "mistyrose",
+        "moccasin",
+        "navajowhite",
+        "navy",
+        "oldlace",
+        "olive",
+        "olivedrab",
+        "orange",
+        "orangered",
+        "orchid",
+        "palegoldenrod",
+        "palegreen",
+        "paleturquoise",
+        "palevioletred",
+        "papayawhip",
+        "peachpuff",
+        "peru",
+        "pink",
+        "plum",
+        "powderblue",
+        "purple",
+        "rebeccapurple",
+        "red",
+        "rosybrown",
+        "royalblue",
+        "saddlebrown",
+        "salmon",
+        "sandybrown",
+        "seagreen",
+        "seashell",
+        "sienna",
+        "silver",
+        "skyblue",
+        "slateblue",
+        "slategray",
+        "slategrey",
+        "snow",
+        "springgreen",
+        "steelblue",
+        "tan",
+        "teal",
+        "thistle",
+        "tomato",
+        "turquoise",
+        "violet",
+        "wheat",
+        "white",
+        "whitesmoke",
+        "yellow",
+        "yellowgreen"
+      ],
+      "title": "Named Color",
+      "description": "CSS-style named color that can be used for plot styling."
+    },
+    "hexColor": {
+      "type": "string",
+      "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+      "title": "Hex Color",
+      "description": "Color in CSS hex format, such as #ff0000 or #0f0."
+    },
+    "rgbColor": {
+      "type": "string",
+      "pattern": "^rgb\\((\\s*([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\s*,){2}\\s*([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\s*\\)$",
+      "title": "RGB Color",
+      "description": "Color in CSS rgb(r,g,b) format."
+    },
+    "rgbaColor": {
+      "type": "string",
+      "pattern": "^rgba\\((\\s*([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\s*,){3}\\s*(0|0?\\.\\d+|1(\\.0)?)\\s*\\)$",
+      "title": "RGBA Color",
+      "description": "Color in CSS rgba(r,g,b,a) format."
+    },
+    "plotColor": {
+      "oneOf": [
+        {
+          "type": "integer",
+          "minimum": 0
+        },
+        {
+          "$ref": "#/$defs/namedColor"
+        },
+        {
+          "$ref": "#/$defs/hexColor"
+        },
+        {
+          "$ref": "#/$defs/rgbColor"
+        },
+        {
+          "$ref": "#/$defs/rgbaColor"
+        }
+      ],
+      "title": "Plot Color",
+      "description": "Color for a plot item. Can be a named color or an explicit RGBA color object."
+    },
+    "plotSource": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/seriesPlotSource"
+        },
+        {
+          "$ref": "#/$defs/constantPlotSource"
+        }
+      ],
+      "title": "Plot Source",
+      "description": "Source used by a plot item. This can be a series or a signal result that Pludux can render."
+    },
+    "seriesPlotSource": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "SERIES"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]*$",
+                  "title": "Series Name",
+                  "description": "Name of the top-level series to plot."
+                }
+              },
+              "required": [
+                "name"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Series Plot Source",
+      "description": "Plot source that reads the output of a named series by name."
+    },
+    "constantPlotSource": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "CONSTANT"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "value": {
+                  "type": "number",
+                  "title": "Value",
+                  "description": "Constant value to plot."
+                }
+              },
+              "required": [
+                "value"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Constant Plot Source",
+      "description": "Plot source that renders a constant numeric value."
+    },
+    "linePlot": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "LINE"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "source": {
+                  "$ref": "#/$defs/plotSource",
+                  "title": "Source",
+                  "description": "Series or signal source to render."
+                },
+                "color": {
+                  "$ref": "#/$defs/plotColor",
+                  "title": "Color",
+                  "description": "Optional color override for this plot item."
+                }
+              },
+              "required": [
+                "source"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Line Plot",
+      "description": "Plots a source as a line."
+    },
+    "hlinePlot": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "HLINE"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "level": {
+                  "type": "number",
+                  "title": "Level",
+                  "description": "Y-axis value where the horizontal line is drawn."
+                },
+                "color": {
+                  "$ref": "#/$defs/plotColor",
+                  "title": "Color",
+                  "description": "Optional color override for this plot item."
+                }
+              },
+              "required": [
+                "level"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Horizontal Line Plot",
+      "description": "Plots a constant horizontal line at a numeric level."
+    },
+    "histogramPlot": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "HISTOGRAM"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "source": {
+                  "$ref": "#/$defs/plotSource",
+                  "title": "Source",
+                  "description": "Series or signal source to render."
+                },
+                "color": {
+                  "$ref": "#/$defs/plotColor",
+                  "title": "Color",
+                  "description": "Optional color override for this plot item."
+                }
+              },
+              "required": [
+                "source"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Histogram Plot",
+      "description": "Plots a source as histogram bars."
+    },
+    "plotItem": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/linePlot"
+        },
+        {
+          "$ref": "#/$defs/hlinePlot"
+        },
+        {
+          "$ref": "#/$defs/histogramPlot"
+        }
+      ],
+      "title": "Plot Item",
+      "description": "Any valid plot item."
+    },
+    "plotGroup": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "type": "string",
+          "title": "Label",
+          "description": "Optional label shown for the plot group."
+        },
+        "overlay": {
+          "type": "boolean",
+          "default": true,
+          "title": "Overlay",
+          "description": "When true, render the plot group on top of the main price chart. When false, render it in a separate pane."
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/plotItem"
+          },
+          "title": "Items",
+          "description": "Plot items included in this group."
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "title": "Plot Group",
+      "description": "A group of one or more plot items, optionally overlaid on price."
+    }
+  },
+  "description": "Schema for a Pludux backtest strategy file. This schema is designed to be machine-validatable and AI-friendly so an AI can generate complete strategy JSON files with named series, signals, trading rules, and optional chart plots. Important rule: use SERIES_NODE when another method needs a named series definition itself, and use SERIES_VALUE when another method needs the evaluated numeric output of a named series.",
+  "examples": [
+    {
+      "version": 2,
+      "series": {
+        "fast_ema": {
+          "method": "EMA",
+          "params": {
+            "period": 20,
+            "source": "CLOSE"
+          }
+        },
+        "slow_ema": {
+          "method": "EMA",
+          "params": {
+            "period": 50,
+            "source": "CLOSE"
+          }
+        },
+        "bbands": {
+          "method": "BB",
+          "params": {
+            "period": 20,
+            "stddev": 2,
+            "source": "CLOSE"
+          }
+        },
+        "bb_upper": {
+          "method": "SELECT_OUTPUT",
+          "params": {
+            "output": "upper-band",
+            "source": {
+              "method": "SERIES_NODE",
+              "params": {
+                "name": "bbands"
+              }
+            }
+          }
+        }
+      },
+      "positions": {
+        "long": {
+          "entry": {
+            "signal": {
+              "method": "CROSSOVER",
+              "params": {
+                "value": {
+                  "method": "SERIES_VALUE",
+                  "params": {
+                    "name": "fast_ema"
+                  }
+                },
+                "baseline": {
+                  "method": "SERIES_VALUE",
+                  "params": {
+                    "name": "slow_ema"
+                  }
+                }
+              }
+            }
+          },
+          "exit": {
+            "signal": {
+              "method": "CROSSUNDER",
+              "params": {
+                "value": {
+                  "method": "SERIES_VALUE",
+                  "params": {
+                    "name": "fast_ema"
+                  }
+                },
+                "baseline": {
+                  "method": "SERIES_VALUE",
+                  "params": {
+                    "name": "slow_ema"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "short": false
+      },
+      "stopLoss": {
+        "enabled": true,
+        "trailing": false
+      },
+      "takeProfit": {
+        "enabled": true,
+        "rMultiple": 2.0
+      }
+    }
+  ]
+}

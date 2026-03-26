@@ -18,13 +18,18 @@ concept MethodContextable =
  requires(TContext context,
           const std::string& name,
           AssetSnapshot asset_snapshot,
-          SeriesOutput output) {
+          SeriesOutput output,
+          std::size_t index) {
    {
      context.call_series_method(name, asset_snapshot)
    } -> std::convertible_to<double>;
+
    {
      context.call_series_method(name, asset_snapshot, output)
    } -> std::convertible_to<double>;
+
+   { context.get_series_result(name, index) } -> std::convertible_to<double>;
+
    { context.index() } -> std::convertible_to<std::size_t>;
  };
 

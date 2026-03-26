@@ -39,6 +39,25 @@ target_sources(${PROJECT_NAME}
   FILE_SET CXX_MODULES
     BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/sources
     FILES
+
+    sources/backtest/method_serializer_mixin.cxx
+
+    sources/backtest/plots/plot_method_contextable.cxx
+    sources/backtest/plots/any_plot_method_context.cxx
+    
+    sources/backtest/plots/source/any_plot_source_method.cxx
+    sources/backtest/plots/source/constant_plot_source_method.cxx
+    sources/backtest/plots/source/series_plot_source_method.cxx
+
+    sources/backtest/plots/any_plot_method.cxx
+    sources/backtest/plots/hline_plot_method.cxx
+    sources/backtest/plots/line_plot_method.cxx
+    sources/backtest/plots/histogram_plot_method.cxx
+
+    sources/backtest/plots.cxx
+    sources/backtest/plot_group.cxx
+    sources/backtest/plot_method_parser.cxx
+    sources/backtest/plot_source_method_parser.cxx
     
     sources/backtest/trade_entry.cxx
     sources/backtest/trade_exit.cxx

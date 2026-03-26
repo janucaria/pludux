@@ -61,6 +61,11 @@ public:
     return self.lookback_;
   }
 
+  auto index(this AssetSnapshot self) noexcept -> std::size_t
+  {
+    return self.asset_history_.size() - 1 - self.lookback();
+  }
+
   auto size(this AssetSnapshot self) noexcept -> std::size_t
   {
     if(self.lookback_ >= self.asset_history_.size()) {
