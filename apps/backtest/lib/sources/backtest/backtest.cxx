@@ -34,17 +34,19 @@ export namespace pludux::backtest {
 class Backtest {
 public:
   Backtest()
-  : Backtest{"", nullptr, nullptr, nullptr, nullptr, nullptr}
+  : Backtest{"", 1'000'000, nullptr, nullptr, nullptr, nullptr, nullptr}
   {
   }
 
   Backtest(std::string name,
+           double initial_capital,
            std::shared_ptr<Asset> asset_ptr,
            std::shared_ptr<Strategy> strategy_ptr,
            std::shared_ptr<Market> market_ptr,
            std::shared_ptr<Broker> broker_ptr,
            std::shared_ptr<Profile> profile_ptr)
   : Backtest{std::move(name),
+             initial_capital,
              std::move(asset_ptr),
              std::move(strategy_ptr),
              std::move(market_ptr),
@@ -56,6 +58,7 @@ public:
   }
 
   Backtest(std::string name,
+           double initial_capital,
            std::shared_ptr<Asset> asset_ptr,
            std::shared_ptr<Strategy> strategy_ptr,
            std::shared_ptr<Market> market_ptr,
@@ -64,6 +67,7 @@ public:
            std::vector<BacktestSummary> summaries,
            SeriesResultsCollector series_results_collector)
   : name_{std::move(name)}
+  , initial_capital_{initial_capital}
   , asset_ptr_{asset_ptr}
   , strategy_ptr_{strategy_ptr}
   , market_ptr_{market_ptr}
@@ -83,6 +87,16 @@ public:
   void name(this Backtest& self, std::string new_name) noexcept
   {
     self.name_ = std::move(new_name);
+  }
+
+  auto initial_capital(this const Backtest& self) noexcept -> double
+  {
+    return self.initial_capital_;
+  }
+
+  void initial_capital(this Backtest& self, double initial_capital) noexcept
+  {
+    self.initial_capital_ = initial_capital;
   }
 
   auto strategy_ptr(this const Backtest& self) noexcept
@@ -201,7 +215,8 @@ public:
   auto equal_rules(this const Backtest& self, const Backtest& other) noexcept
    -> bool
   {
-    return self.asset_ptr_ == other.asset_ptr_ &&
+    return self.initial_capital_ == other.initial_capital_ &&
+           self.asset_ptr_ == other.asset_ptr_ &&
            self.strategy_ptr_ == other.strategy_ptr_ &&
            self.market_ptr_ == other.market_ptr_ &&
            self.broker_ptr_ == other.broker_ptr_ &&
@@ -212,6 +227,11 @@ public:
                                 const Backtest& other) noexcept -> bool
   {
     return self.name_ == other.name_ && self.equal_rules(other);
+  }
+
+  auto get_risk_value(this const Backtest& self) noexcept -> double
+  {
+    return self.profile().capital_risk() * self.initial_capital();
   }
 
   auto is_valid_rules(this const Backtest& self) noexcept -> bool
@@ -267,7 +287,7 @@ public:
 
     auto summary = !self.summaries_.empty()
                     ? self.summaries_.back()
-                    : BacktestSummary{profile.initial_capital()};
+                    : BacktestSummary{self.initial_capital()};
 
     auto trade_session = summary.trade_session();
 
@@ -296,9 +316,9 @@ public:
     }
 
     if(trade_session.is_flat() || trade_session.is_closed()) {
-      auto entry_trade =
-       self.entry_trade(asset_snapshot, profile.get_risk_value());
+      const auto risk_value = self.get_risk_value();
 
+      auto entry_trade = self.entry_trade(asset_snapshot, risk_value);
       if(entry_trade) {
         {
           const auto quantity_step = market.quantity_step();
@@ -438,6 +458,7 @@ public:
 
 private:
   std::string name_;
+  double initial_capital_;
 
   std::shared_ptr<Asset> asset_ptr_;
   std::shared_ptr<Strategy> strategy_ptr_;

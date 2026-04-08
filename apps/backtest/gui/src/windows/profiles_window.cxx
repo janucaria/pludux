@@ -97,8 +97,7 @@ private:
       self.current_page_ = ProfilePage::AddNewProfile;
 
       self.selected_profile_ptr_ = nullptr;
-      self.editing_profile_ptr_ = std::make_shared<backtest::Profile>("");
-      self.editing_profile_ptr_->initial_capital(100'000'000.0);
+      self.editing_profile_ptr_ = std::make_shared<backtest::Profile>();
       self.editing_profile_ptr_->capital_risk(0.01);
     }
 
@@ -174,12 +173,6 @@ private:
       auto profile_name = self.editing_profile_ptr_->name();
       ImGui::InputText("Name", &profile_name);
       self.editing_profile_ptr_->name(profile_name);
-    }
-    {
-      auto initial_capital = self.editing_profile_ptr_->initial_capital();
-      ImGui::InputDouble(
-       "Initial Capital", &initial_capital, 100.0, 1000.0, "%.0f");
-      self.editing_profile_ptr_->initial_capital(initial_capital);
     }
     {
       auto percentage = self.editing_profile_ptr_->capital_risk() * 100.0;

@@ -194,6 +194,15 @@ private:
     }
 
     {
+      ImGui::Text("Initial Capital:");
+
+      auto initial_capital = edit_backtest_ptr->initial_capital();
+      ImGui::InputDouble(
+       "##NewInitialCapital", &initial_capital, 100.0, 1000.0, "%.0f");
+      edit_backtest_ptr->initial_capital(initial_capital);
+    }
+
+    {
       if(!std::ranges::contains(assets, edit_backtest_ptr->asset_ptr())) {
         edit_backtest_ptr->asset_ptr(nullptr);
       }

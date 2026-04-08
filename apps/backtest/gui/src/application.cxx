@@ -58,7 +58,6 @@ public:
       const auto& profiles = app_state.profiles();
       if(profiles.empty()) {
         auto default_profile = std::make_shared<backtest::Profile>("Default");
-        default_profile->initial_capital(100'000'000.0);
         default_profile->capital_risk(0.01);
         app_state.add_profile(std::move(default_profile));
       }
