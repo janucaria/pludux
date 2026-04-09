@@ -336,6 +336,9 @@ private:
       ImGui::InputText("Volume Field", &volume_field);
       field_resolver.volume_field(volume_field);
     }
+
+    self.editing_asset_ptr_->field_resolver(field_resolver);
+
     {
       if(ImGui::Button("Select CSV File")) {
 #ifdef __EMSCRIPTEN__
@@ -421,8 +424,6 @@ private:
 #endif
       }
     }
-
-    self.editing_asset_ptr_->field_resolver(field_resolver);
   }
 
   void submit_asset_changes(this auto& self, WindowContext& context)
