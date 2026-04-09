@@ -27,10 +27,10 @@ public:
   Strategy()
   : Strategy("",
              SeriesMethodRegistry{},
-             FalseMethod{},
-             FalseMethod{},
-             FalseMethod{},
-             FalseMethod{},
+             NeverMethod{},
+             NeverMethod{},
+             NeverMethod{},
+             NeverMethod{},
              false,
              false,
              false,
@@ -209,11 +209,11 @@ private:
 
   SeriesMethodRegistry series_registry_;
 
-  AnyConditionMethod long_entry_filter_{FalseMethod{}};
-  AnyConditionMethod long_exit_filter_{FalseMethod{}};
+  AnyConditionMethod long_entry_filter_{NeverMethod{}};
+  AnyConditionMethod long_exit_filter_{NeverMethod{}};
 
-  AnyConditionMethod short_entry_filter_{FalseMethod{}};
-  AnyConditionMethod short_exit_filter_{FalseMethod{}};
+  AnyConditionMethod short_entry_filter_{NeverMethod{}};
+  AnyConditionMethod short_exit_filter_{NeverMethod{}};
 
   bool stop_loss_enabled_{false};
   bool stop_loss_trailing_enabled_{false};
@@ -251,11 +251,11 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
     ? config_parser.parse_registered_methods(strategy_json.at("series"))
     : SeriesMethodRegistry{};
 
-  auto long_entry_filter = AnyConditionMethod{FalseMethod{}};
-  auto long_exit_filter = AnyConditionMethod{FalseMethod{}};
+  auto long_entry_filter = AnyConditionMethod{NeverMethod{}};
+  auto long_exit_filter = AnyConditionMethod{NeverMethod{}};
 
-  auto short_entry_filter = AnyConditionMethod{FalseMethod{}};
-  auto short_exit_filter = AnyConditionMethod{FalseMethod{}};
+  auto short_entry_filter = AnyConditionMethod{NeverMethod{}};
+  auto short_exit_filter = AnyConditionMethod{NeverMethod{}};
 
   if(strategy_json.contains("positions")) {
     const auto positions_json = strategy_json.at("positions");

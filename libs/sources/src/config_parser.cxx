@@ -102,10 +102,10 @@ public:
   {
     if(config.is_bool()) {
       if(config.as_bool()) {
-        return TrueMethod{};
+        return AlwaysMethod{};
       }
 
-      return FalseMethod{};
+      return NeverMethod{};
     }
     const auto& filter_parsers = self.filter_parsers_;
     const auto filter = config.at("method").as_string();
@@ -1470,29 +1470,29 @@ auto make_default_registered_config_parser() -> ConfigParser
    parse_comparison_filter<NotEqualMethod>);
 
   config_parser.register_filter_parser(
-   "TRUE",
+   "ALWAYS",
    [](const ConfigParser& config_parser,
       const AnyConditionMethod& condition_method) -> jsoncons::ojson {
-     const auto true_filter =
-      condition_method_cast<TrueMethod>(condition_method);
+     const auto always_filter =
+      condition_method_cast<AlwaysMethod>(condition_method);
 
-     return true_filter ? jsoncons::ojson{} : jsoncons::ojson::null();
+     return always_filter ? jsoncons::ojson{} : jsoncons::ojson::null();
    },
    [](ConfigParser::Parser, const jsoncons::ojson&) -> AnyConditionMethod {
-     return TrueMethod{};
+     return AlwaysMethod{};
    });
 
   config_parser.register_filter_parser(
-   "FALSE",
+   "NEVER",
    [](const ConfigParser& config_parser,
       const AnyConditionMethod& condition_method) -> jsoncons::ojson {
-     const auto false_filter =
-      condition_method_cast<FalseMethod>(condition_method);
+     const auto never_filter =
+      condition_method_cast<NeverMethod>(condition_method);
 
-     return false_filter ? jsoncons::ojson{} : jsoncons::ojson::null();
+     return never_filter ? jsoncons::ojson{} : jsoncons::ojson::null();
    },
    [](ConfigParser::Parser, const jsoncons::ojson&) -> AnyConditionMethod {
-     return FalseMethod{};
+     return NeverMethod{};
    });
 
   config_parser.register_filter_parser(

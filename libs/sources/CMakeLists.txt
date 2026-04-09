@@ -82,8 +82,8 @@ target_sources(${PROJECT_NAME}
         src/conditions/any_condition_method.cxx
         src/conditions/all_of_method.cxx
         src/conditions/any_of_method.cxx
-        src/conditions/boolean_method.cxx
         src/conditions/comparison_method.cxx
+        src/conditions/fixed_method.cxx
         src/conditions/logical_method.cxx
         src/conditions/crossover_method.cxx
         src/conditions/crossunder_method.cxx

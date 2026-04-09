@@ -8,8 +8,8 @@ const auto context = AnySeriesMethodContext{};
 
 TEST(BooleanMethodTest, AndMethod)
 {
-  const auto true_condition = TrueMethod{};
-  const auto false_condition = FalseMethod{};
+  const auto true_condition = AlwaysMethod{};
+  const auto false_condition = NeverMethod{};
   const auto asset_data = AssetHistory{};
 
   const auto true_and_true = AndMethod{true_condition, true_condition};
@@ -27,7 +27,7 @@ TEST(BooleanMethodTest, AndMethod)
 
 TEST(BooleanMethodTest, EqualityAndMethod)
 {
-  const auto true_condition = TrueMethod{};
+  const auto true_condition = AlwaysMethod{};
   const auto condition1 = AndMethod{true_condition, true_condition};
   const auto condition2 = AndMethod{true_condition, true_condition};
 
@@ -38,8 +38,8 @@ TEST(BooleanMethodTest, EqualityAndMethod)
 
 TEST(BooleanMethodTest, NotEqualAndMethod)
 {
-  const auto true_condition = TrueMethod{};
-  const auto false_condition = FalseMethod{};
+  const auto true_condition = AlwaysMethod{};
+  const auto false_condition = NeverMethod{};
   const auto condition1 = AndMethod{true_condition, false_condition};
   const auto condition2 = AndMethod{false_condition, true_condition};
 
@@ -50,8 +50,8 @@ TEST(BooleanMethodTest, NotEqualAndMethod)
 
 TEST(BooleanMethodTest, OrMethod)
 {
-  const auto true_condition = TrueMethod{};
-  const auto false_condition = FalseMethod{};
+  const auto true_condition = AlwaysMethod{};
+  const auto false_condition = NeverMethod{};
   const auto asset_data = AssetHistory{};
 
   const auto true_or_true = OrMethod{true_condition, true_condition};
@@ -69,7 +69,7 @@ TEST(BooleanMethodTest, OrMethod)
 
 TEST(BooleanMethodTest, EqualityOrMethod)
 {
-  const auto true_condition = TrueMethod{};
+  const auto true_condition = AlwaysMethod{};
   const auto condition1 = OrMethod{true_condition, true_condition};
   const auto condition2 = OrMethod{true_condition, true_condition};
 
@@ -80,8 +80,8 @@ TEST(BooleanMethodTest, EqualityOrMethod)
 
 TEST(BooleanMethodTest, NotEqualOrMethod)
 {
-  const auto true_condition = TrueMethod{};
-  const auto false_condition = FalseMethod{};
+  const auto true_condition = AlwaysMethod{};
+  const auto false_condition = NeverMethod{};
   const auto condition1 = OrMethod{true_condition, false_condition};
   const auto condition2 = OrMethod{false_condition, true_condition};
 
@@ -92,8 +92,8 @@ TEST(BooleanMethodTest, NotEqualOrMethod)
 
 TEST(BooleanMethodTest, NotMethod)
 {
-  const auto true_condition = TrueMethod{};
-  const auto false_condition = FalseMethod{};
+  const auto true_condition = AlwaysMethod{};
+  const auto false_condition = NeverMethod{};
   const auto asset_data = AssetHistory{};
 
   const auto not_true = NotMethod{true_condition};
@@ -105,7 +105,7 @@ TEST(BooleanMethodTest, NotMethod)
 
 TEST(BooleanMethodTest, EqualityNotMethod)
 {
-  const auto true_condition = TrueMethod{};
+  const auto true_condition = AlwaysMethod{};
   const auto not_condition1 = NotMethod{true_condition};
   const auto not_condition2 = NotMethod{true_condition};
 
@@ -116,8 +116,8 @@ TEST(BooleanMethodTest, EqualityNotMethod)
 
 TEST(BooleanMethodTest, NotEqualNotMethod)
 {
-  const auto true_condition = TrueMethod{};
-  const auto false_condition = FalseMethod{};
+  const auto true_condition = AlwaysMethod{};
+  const auto false_condition = NeverMethod{};
   const auto not_condition1 = NotMethod{true_condition};
   const auto not_condition2 = NotMethod{false_condition};
 
@@ -128,8 +128,8 @@ TEST(BooleanMethodTest, NotEqualNotMethod)
 
 TEST(BooleanMethodTest, XorMethod)
 {
-  const auto true_condition = TrueMethod{};
-  const auto false_condition = FalseMethod{};
+  const auto true_condition = AlwaysMethod{};
+  const auto false_condition = NeverMethod{};
   const auto asset_data = AssetHistory{};
 
   const auto true_xor_true = XorMethod{true_condition, true_condition};
@@ -147,7 +147,7 @@ TEST(BooleanMethodTest, XorMethod)
 
 TEST(BooleanMethodTest, EqualityXorMethod)
 {
-  const auto true_condition = TrueMethod{};
+  const auto true_condition = AlwaysMethod{};
   const auto condition1 = XorMethod{true_condition, true_condition};
   const auto condition2 = XorMethod{true_condition, true_condition};
 
@@ -158,8 +158,8 @@ TEST(BooleanMethodTest, EqualityXorMethod)
 
 TEST(BooleanMethodTest, NotEqualXorMethod)
 {
-  const auto true_condition = TrueMethod{};
-  const auto false_condition = FalseMethod{};
+  const auto true_condition = AlwaysMethod{};
+  const auto false_condition = NeverMethod{};
   const auto condition1 = XorMethod{true_condition, false_condition};
   const auto condition2 = XorMethod{false_condition, true_condition};
 

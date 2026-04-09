@@ -34,11 +34,11 @@ set(PLUDUX_TEST_SOURCES
 
   src/test_all_of_filter.cpp
   src/test_any_of_filter.cpp
-  src/test_boolean_filters.cpp
   src/test_condition_method.cpp
   src/test_crossover_filter.cpp
   src/test_crossunder_filter.cpp
   src/test_equal_filter.cpp
+  src/test_fixed_filters.cpp
   src/test_greater_equal_filter.cpp
   src/test_greater_than_filter.cpp
   src/test_less_equal_filter.cpp
