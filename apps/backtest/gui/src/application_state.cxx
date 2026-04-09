@@ -19,18 +19,20 @@ export namespace pludux::apps {
 class ApplicationState {
 public:
   ApplicationState()
-  : ApplicationState(-1,
+  : ApplicationState{"",
+                     -1,
                      std::queue<std::string>{},
                      std::vector<std::shared_ptr<backtest::Backtest>>{},
                      std::vector<std::shared_ptr<backtest::Asset>>{},
                      std::vector<std::shared_ptr<backtest::Strategy>>{},
                      std::vector<std::shared_ptr<backtest::Market>>{},
                      std::vector<std::shared_ptr<backtest::Broker>>{},
-                     std::vector<std::shared_ptr<backtest::Profile>>{})
+                     std::vector<std::shared_ptr<backtest::Profile>>{}}
   {
   }
 
-  ApplicationState(std::ptrdiff_t selected_backtest_index,
+  ApplicationState(std::string imgui_ini_settings,
+                   std::ptrdiff_t selected_backtest_index,
                    std::queue<std::string> alert_messages,
                    std::vector<std::shared_ptr<backtest::Backtest>> backtests,
                    std::vector<std::shared_ptr<backtest::Asset>> assets,
@@ -38,7 +40,8 @@ public:
                    std::vector<std::shared_ptr<backtest::Market>> markets,
                    std::vector<std::shared_ptr<backtest::Broker>> brokers,
                    std::vector<std::shared_ptr<backtest::Profile>> profiles)
-  : selected_backtest_index_{selected_backtest_index}
+  : imgui_ini_settings_{std::move(imgui_ini_settings)}
+  , selected_backtest_index_{selected_backtest_index}
   , alert_messages_{std::move(alert_messages)}
   , backtests_{std::move(backtests)}
   , assets_{std::move(assets)}
@@ -47,6 +50,18 @@ public:
   , brokers_{std::move(brokers)}
   , profiles_{std::move(profiles)}
   {
+  }
+
+  auto imgui_ini_settings(this const ApplicationState& self) noexcept
+   -> const std::string&
+  {
+    return self.imgui_ini_settings_;
+  }
+
+  void imgui_ini_settings(this ApplicationState& self,
+                          std::string settings) noexcept
+  {
+    self.imgui_ini_settings_ = std::move(settings);
   }
 
   auto alert_messages(this const ApplicationState& self) noexcept
@@ -328,6 +343,8 @@ public:
   }
 
 private:
+  std::string imgui_ini_settings_{};
+
   std::ptrdiff_t selected_backtest_index_{-1};
 
   std::queue<std::string> alert_messages_{};

@@ -137,6 +137,8 @@ public:
                auto loaded_state = ApplicationState{};
                in_archive(cereal::make_nvp("pludux", loaded_state));
                app_state = std::move(loaded_state);
+
+               reload_imgui_ini_settings(app_state.imgui_ini_settings());
              }};
 
             EM_ASM(
@@ -195,6 +197,8 @@ public:
                 auto loaded_state = ApplicationState{};
                 in_archive(cereal::make_nvp("pludux", loaded_state));
                 app_state = std::move(loaded_state);
+
+                reload_imgui_ini_settings(app_state.imgui_ini_settings());
               });
             } else if(result == NFD_CANCEL) {
               // User cancelled the open dialog
@@ -211,6 +215,8 @@ public:
 #ifdef __EMSCRIPTEN__
           constexpr auto menu_item_save_as = "Download";
           if(ImGui::MenuItem(menu_item_save_as)) {
+            context.update_imgui_ini_settings();
+
             auto out_stream = std::ostringstream{};
             auto out_archive = cereal::JSONOutputArchive(
              out_stream, cereal::JSONOutputArchive::Options::NoIndent());
@@ -250,6 +256,8 @@ public:
              NFD::SaveDialog(out_path, filter_item.data(), filter_item.size());
 
             if(result == NFD_OKAY) {
+              context.update_imgui_ini_settings();
+
               const auto saved_path = std::string(out_path.get());
               context.push_action([saved_path](ApplicationState& app_state) {
                 auto out_stream = std::ofstream{saved_path};
@@ -335,6 +343,11 @@ public:
 
 private:
   bool open_about_popup_;
+
+  static void reload_imgui_ini_settings(const std::string& ini_settings)
+  {
+    ImGui::LoadIniSettingsFromMemory(ini_settings.c_str(), ini_settings.size());
+  }
 };
 
 } // namespace pludux::apps
