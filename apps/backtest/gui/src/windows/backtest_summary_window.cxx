@@ -114,9 +114,9 @@ public:
                                             summary.unrealized_investment());
         self.draw_duration_row("Ongoing trade duration",
                                summary.unrealized_duration());
-      }
 
-      ImGui::EndTable();
+        ImGui::EndTable();
+      }
     }
 
     ImGui::End();
