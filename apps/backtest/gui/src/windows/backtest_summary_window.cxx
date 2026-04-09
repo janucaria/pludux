@@ -23,7 +23,7 @@ public:
     ImGui::Begin("Summary", nullptr);
 
     const auto backtest = app_state.selected_backtest();
-    if(backtest) {
+    if(backtest && backtest->is_valid_rules()) {
       const auto& profile = backtest->profile();
 
       const auto& backtest_name = backtest->name();
