@@ -261,7 +261,8 @@ else()
   
   target_link_options(${PROJECT_NAME} PRIVATE
     "--use-port=emdawnwebgpu"
-    
+    "--js-library=${CMAKE_CURRENT_LIST_DIR}/web/pludux_library.js"
+
     "-sWASM=1"
     "-sUSE_GLFW=3"
     "-sALLOW_MEMORY_GROWTH=1"

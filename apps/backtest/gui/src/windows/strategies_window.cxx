@@ -19,10 +19,7 @@ module;
 #include <vector>
 
 #ifdef __EMSCRIPTEN__
-#include <cstdlib>
-
-#include <emscripten.h>
-#include <emscripten/val.h>
+#include "../emscripten_js_imports.hpp"
 #else
 #include <nfd.hpp>
 #endif
@@ -567,22 +564,8 @@ private:
 #ifdef __EMSCRIPTEN__
           const auto file_name = "pludux-strategy-" + strategy_name + ".json";
           const auto& file_content = serialized_strategy;
-
-          EM_ASM(
-           {
-             var fileSave = document.createElement('a');
-             fileSave.download = Module.UTF8ToString($0);
-             fileSave.style.display = 'none';
-             var data = new Blob([Module.UTF8ToString($1)], {
-               type:
-                 'application/json'
-             });
-             fileSave.href = URL.createObjectURL(data);
-             fileSave.click();
-             URL.revokeObjectURL(fileSave.href);
-           },
-           file_name.c_str(),
-           file_content.c_str());
+          pludux_js_save_file(
+           file_name.c_str(), file_content.c_str(), "application/json");
 
 #else
           auto nfd_guard = NFD::Guard{};
@@ -662,44 +645,7 @@ private:
          context.push_action(std::move(action));
        }};
 
-      EM_ASM(
-       {
-         var fileSelector = document.createElement('input');
-         fileSelector.type = 'file';
-         fileSelector.multiple = true;
-         fileSelector.accept = '.json';
-         fileSelector.onchange = function(event)
-         {
-           var files = event.target.files;
-           for(var i = 0; i < files.length; i++) {
-             var file = files[i];
-
-             var reader = new FileReader();
-             reader.onload = function(event)
-             {
-               var reader = event.target;
-               var fileName = reader.onload.prototype.fileName;
-               var data = reader.result;
-               var decoder = new TextDecoder('utf-8');
-               var decodedData = decoder.decode(data);
-
-               // transfer the data to the C++ side
-               var name_ptr = Module.stringToNewUTF8(fileName);
-               var data_ptr = Module.stringToNewUTF8(decodedData);
-
-               // call the C++ function
-               Module._pludux_apps_backtest_js_opened_file_content_ready(
-                name_ptr, data_ptr, $0, $1);
-             };
-             reader.onload.prototype.fileName = file.name;
-
-             reader.readAsArrayBuffer(file);
-           }
-         };
-         fileSelector.click();
-       },
-       &callback,
-       &context);
+      pludux_js_open_multiple_text_files(".json", &callback, &context);
 #else
       auto nfd_guard = NFD::Guard{};
       auto in_paths = NFD::UniquePathSet{};

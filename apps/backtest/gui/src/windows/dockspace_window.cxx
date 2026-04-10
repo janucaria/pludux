@@ -10,10 +10,7 @@ module;
 #include <string>
 
 #ifdef __EMSCRIPTEN__
-#include <cstdlib>
-
-#include <emscripten.h>
-#include <emscripten/val.h>
+#include "../emscripten_js_imports.hpp"
 #else
 #include <nfd.hpp>
 #endif
@@ -141,38 +138,7 @@ public:
                reload_imgui_ini_settings(app_state.imgui_ini_settings());
              }};
 
-            EM_ASM(
-             {
-               var fileSelector = document.createElement('input');
-               fileSelector.type = 'file';
-               fileSelector.accept = '.pludux';
-               fileSelector.onchange = function(event)
-               {
-                 var file = event.target.files[0];
-                 if(!file) {
-                   return;
-                 }
-
-                 var reader = new FileReader();
-                 reader.onload = function(event)
-                 {
-                   var data = event.target.result;
-                   var decoder = new TextDecoder('utf-8');
-                   var decodedData = decoder.decode(data);
-
-                   // transfer the data to the C++ side
-                   var data_ptr = Module.stringToNewUTF8(decodedData);
-
-                   Module._pludux_apps_backtest_js_opened_file_text_ready(
-                    data_ptr, $0, $1);
-                 };
-
-                 reader.readAsArrayBuffer(file);
-               };
-               fileSelector.click();
-             },
-             &callback,
-             &context);
+            pludux_js_open_single_text_file(".pludux", &callback, &context);
 
 #else
             auto nfd_guard = NFD::Guard{};
@@ -213,7 +179,9 @@ public:
 
         {
 #ifdef __EMSCRIPTEN__
-          constexpr auto menu_item_save_as = "Download";
+          const auto menu_item_save_as =
+           pludux_js_is_file_system_access_supported() ? "Save As..."
+                                                       : "Download";
           if(ImGui::MenuItem(menu_item_save_as)) {
             context.update_imgui_ini_settings();
 
@@ -228,20 +196,11 @@ public:
             out_stream << "}\n";
 
             const auto out_str = out_stream.str();
-            EM_ASM(
-             {
-               var fileSave = document.createElement('a');
-               fileSave.download = 'download.pludux';
-               fileSave.style.display = 'none';
-               var data = new Blob([Module.UTF8ToString($0)], {
-                 type:
-                   'application/json'
-               });
-               fileSave.href = URL.createObjectURL(data);
-               fileSave.click();
-               URL.revokeObjectURL(fileSave.href);
-             },
-             out_str.c_str());
+            const auto file_name = "pludux-backtest-" +
+                                   std::to_string(std::time(nullptr)) +
+                                   ".pludux";
+            pludux_js_save_file(
+             file_name.c_str(), out_str.c_str(), "application/json");
           }
 #else
           constexpr auto menu_item_save_as = "Save As...";
@@ -312,17 +271,10 @@ public:
         ImGui::TextColored(ImVec4(0, 1, 1, 1), "%s", PLUDUX_SOURCE_CODE_URL);
 
 #ifdef __EMSCRIPTEN__
-        EM_ASM(
-         { document.body.style.cursor = $0 ? 'pointer' : 'default'; },
-         ImGui::IsItemHovered());
+        pludux_js_set_body_cursor(ImGui::IsItemHovered());
         if(ImGui::IsItemClicked()) {
           ImGui::CloseCurrentPopup();
-          EM_ASM(
-           {
-             var url = Module.UTF8ToString($0);
-             window.open(url, '_blank');
-           },
-           PLUDUX_SOURCE_CODE_URL);
+          pludux_js_open_url(PLUDUX_SOURCE_CODE_URL);
         }
 #endif
 
