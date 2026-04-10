@@ -19,18 +19,20 @@ export namespace pludux::apps {
 class ApplicationState {
 public:
   ApplicationState()
-  : ApplicationState(-1,
+  : ApplicationState{"",
+                     -1,
                      std::queue<std::string>{},
                      std::vector<std::shared_ptr<backtest::Backtest>>{},
                      std::vector<std::shared_ptr<backtest::Asset>>{},
                      std::vector<std::shared_ptr<backtest::Strategy>>{},
                      std::vector<std::shared_ptr<backtest::Market>>{},
                      std::vector<std::shared_ptr<backtest::Broker>>{},
-                     std::vector<std::shared_ptr<backtest::Profile>>{})
+                     std::vector<std::shared_ptr<backtest::Profile>>{}}
   {
   }
 
-  ApplicationState(std::ptrdiff_t selected_backtest_index,
+  ApplicationState(std::string imgui_ini_settings,
+                   std::ptrdiff_t selected_backtest_index,
                    std::queue<std::string> alert_messages,
                    std::vector<std::shared_ptr<backtest::Backtest>> backtests,
                    std::vector<std::shared_ptr<backtest::Asset>> assets,
@@ -38,7 +40,8 @@ public:
                    std::vector<std::shared_ptr<backtest::Market>> markets,
                    std::vector<std::shared_ptr<backtest::Broker>> brokers,
                    std::vector<std::shared_ptr<backtest::Profile>> profiles)
-  : selected_backtest_index_{selected_backtest_index}
+  : imgui_ini_settings_{std::move(imgui_ini_settings)}
+  , selected_backtest_index_{selected_backtest_index}
   , alert_messages_{std::move(alert_messages)}
   , backtests_{std::move(backtests)}
   , assets_{std::move(assets)}
@@ -47,6 +50,18 @@ public:
   , brokers_{std::move(brokers)}
   , profiles_{std::move(profiles)}
   {
+  }
+
+  auto imgui_ini_settings(this const ApplicationState& self) noexcept
+   -> const std::string&
+  {
+    return self.imgui_ini_settings_;
+  }
+
+  void imgui_ini_settings(this ApplicationState& self,
+                          std::string settings) noexcept
+  {
+    self.imgui_ini_settings_ = std::move(settings);
   }
 
   auto alert_messages(this const ApplicationState& self) noexcept
@@ -152,27 +167,12 @@ public:
   void remove_asset_at_index(this ApplicationState& self, std::size_t index)
   {
     const auto& assets = self.assets_;
-
     const auto it = std::next(assets.begin(), index);
-    const auto& asset_ptr = *it;
-
-    auto& backtests = self.backtests_;
-    for(auto j = 0; j < backtests.size(); ++j) {
-      auto& backtest = backtests[j];
-      if(backtest->asset_ptr()->name() == asset_ptr->name()) {
-        backtests.erase(std::next(backtests.begin(), j));
-
-        if(self.selected_backtest_index_ > index ||
-           self.selected_backtest_index_ >= backtests.size()) {
-          --self.selected_backtest_index_;
-        }
-
-        // Adjust the index since we removed an element
-        --j;
-      }
+    if(it != assets.end()) {
+      auto asset_ptr = *it;
+      asset_ptr.reset();
+      self.assets_.erase(it);
     }
-    // Remove the asset from the vector
-    self.assets_.erase(it);
   }
 
   auto strategies(this const ApplicationState& self) noexcept
@@ -192,25 +192,11 @@ public:
     const auto& strategies = self.strategies_;
 
     const auto it = std::next(strategies.begin(), index);
-    const auto& strategy_ptr = *it;
-
-    auto& backtests = self.backtests_;
-    for(auto j = 0; j < backtests.size(); ++j) {
-      auto& backtest = backtests[j];
-      if(backtest->strategy_ptr() == strategy_ptr) {
-        backtests.erase(std::next(backtests.begin(), j));
-
-        if(self.selected_backtest_index_ > index ||
-           self.selected_backtest_index_ >= backtests.size()) {
-          --self.selected_backtest_index_;
-        }
-
-        // Adjust the index since we removed an element
-        --j;
-      }
+    if(it != strategies.end()) {
+      auto strategy_ptr = *it;
+      strategy_ptr.reset();
+      self.strategies_.erase(it);
     }
-    // Remove the strategy from the vector
-    self.strategies_.erase(it);
   }
 
   auto markets(this const ApplicationState& self) noexcept
@@ -230,25 +216,11 @@ public:
     const auto& markets = self.markets_;
 
     const auto it = std::next(markets.begin(), index);
-    const auto& market_ptr = *it;
-
-    auto& backtests = self.backtests_;
-    for(auto j = 0; j < backtests.size(); ++j) {
-      auto& backtest = backtests[j];
-      if(backtest->market_ptr() == market_ptr) {
-        backtests.erase(std::next(backtests.begin(), j));
-
-        if(self.selected_backtest_index_ > index ||
-           self.selected_backtest_index_ >= backtests.size()) {
-          --self.selected_backtest_index_;
-        }
-
-        // Adjust the index since we removed an element
-        --j;
-      }
+    if(it != markets.end()) {
+      auto market_ptr = *it;
+      market_ptr.reset();
+      self.markets_.erase(it);
     }
-    // Remove the market from the vector
-    self.markets_.erase(it);
   }
 
   auto brokers(this const ApplicationState& self) noexcept
@@ -268,25 +240,11 @@ public:
     const auto& brokers = self.brokers_;
 
     const auto it = std::next(brokers.begin(), index);
-    const auto& broker_ptr = *it;
-
-    auto& backtests = self.backtests_;
-    for(auto j = 0; j < backtests.size(); ++j) {
-      auto& backtest = backtests[j];
-      if(backtest->broker_ptr() == broker_ptr) {
-        backtests.erase(std::next(backtests.begin(), j));
-
-        if(self.selected_backtest_index_ > index ||
-           self.selected_backtest_index_ >= backtests.size()) {
-          --self.selected_backtest_index_;
-        }
-
-        // Adjust the index since we removed an element
-        --j;
-      }
+    if(it != brokers.end()) {
+      auto broker_ptr = *it;
+      broker_ptr.reset();
+      self.brokers_.erase(it);
     }
-    // Remove the broker from the vector
-    self.brokers_.erase(it);
   }
 
   auto profiles(this const ApplicationState& self) noexcept
@@ -306,28 +264,16 @@ public:
     const auto& profiles = self.profiles_;
 
     const auto it = std::next(profiles.begin(), index);
-    const auto& profile_ptr = *it;
-
-    auto& backtests = self.backtests_;
-    for(auto j = 0; j < backtests.size(); ++j) {
-      auto& backtest = backtests[j];
-      if(backtest->profile_ptr() == profile_ptr) {
-        backtests.erase(std::next(backtests.begin(), j));
-
-        if(self.selected_backtest_index_ > index ||
-           self.selected_backtest_index_ >= backtests.size()) {
-          --self.selected_backtest_index_;
-        }
-
-        // Adjust the index since we removed an element
-        --j;
-      }
+    if(it != profiles.end()) {
+      auto profile_ptr = *it;
+      profile_ptr.reset();
+      self.profiles_.erase(it);
     }
-    // Remove the profile from the vector
-    self.profiles_.erase(it);
   }
 
 private:
+  std::string imgui_ini_settings_{};
+
   std::ptrdiff_t selected_backtest_index_{-1};
 
   std::queue<std::string> alert_messages_{};

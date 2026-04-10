@@ -23,7 +23,7 @@ public:
     ImGui::Begin("Summary", nullptr);
 
     const auto backtest = app_state.selected_backtest();
-    if(backtest) {
+    if(backtest && backtest->is_valid_rules()) {
       const auto& profile = backtest->profile();
 
       const auto& backtest_name = backtest->name();
@@ -114,9 +114,9 @@ public:
                                             summary.unrealized_investment());
         self.draw_duration_row("Ongoing trade duration",
                                summary.unrealized_duration());
-      }
 
-      ImGui::EndTable();
+        ImGui::EndTable();
+      }
     }
 
     ImGui::End();

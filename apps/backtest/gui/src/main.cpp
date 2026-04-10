@@ -295,16 +295,12 @@ public:
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOther(window_, true);
-#ifdef __EMSCRIPTEN__
     io.IniFilename = nullptr;
-    ImGui_ImplGlfw_InstallEmscriptenCallbacks(window_, "#canvas");
-#else
-    const auto temp_dir = std::filesystem::temp_directory_path();
-    const auto ini_file = temp_dir / "imgui.ini";
-    ini_file_ = ini_file.generic_string();
 
-    io.IniFilename = ini_file_.c_str();
+#ifdef __EMSCRIPTEN__
+    ImGui_ImplGlfw_InstallEmscriptenCallbacks(window_, "#canvas");
 #endif
+
     auto init_info = ImGui_ImplWGPU_InitInfo{};
     init_info.Device = wgpu_device_;
     init_info.NumFramesInFlight = 3;

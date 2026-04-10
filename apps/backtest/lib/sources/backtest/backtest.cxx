@@ -34,17 +34,19 @@ export namespace pludux::backtest {
 class Backtest {
 public:
   Backtest()
-  : Backtest{"", nullptr, nullptr, nullptr, nullptr, nullptr}
+  : Backtest{"", 1'000'000, nullptr, nullptr, nullptr, nullptr, nullptr}
   {
   }
 
   Backtest(std::string name,
+           double initial_capital,
            std::shared_ptr<Asset> asset_ptr,
            std::shared_ptr<Strategy> strategy_ptr,
            std::shared_ptr<Market> market_ptr,
            std::shared_ptr<Broker> broker_ptr,
            std::shared_ptr<Profile> profile_ptr)
   : Backtest{std::move(name),
+             initial_capital,
              std::move(asset_ptr),
              std::move(strategy_ptr),
              std::move(market_ptr),
@@ -56,6 +58,7 @@ public:
   }
 
   Backtest(std::string name,
+           double initial_capital,
            std::shared_ptr<Asset> asset_ptr,
            std::shared_ptr<Strategy> strategy_ptr,
            std::shared_ptr<Market> market_ptr,
@@ -64,11 +67,12 @@ public:
            std::vector<BacktestSummary> summaries,
            SeriesResultsCollector series_results_collector)
   : name_{std::move(name)}
-  , asset_ptr_{asset_ptr}
-  , strategy_ptr_{strategy_ptr}
-  , market_ptr_{market_ptr}
-  , broker_ptr_{broker_ptr}
-  , profile_ptr_{profile_ptr}
+  , initial_capital_{initial_capital}
+  , asset_weak_ptr_{asset_ptr}
+  , strategy_weak_ptr_{strategy_ptr}
+  , market_weak_ptr_{market_ptr}
+  , broker_weak_ptr_{broker_ptr}
+  , profile_weak_ptr_{profile_ptr}
   , is_failed_{false}
   , summaries_{std::move(summaries)}
   , series_results_collector_{std::move(series_results_collector)}
@@ -85,16 +89,26 @@ public:
     self.name_ = std::move(new_name);
   }
 
+  auto initial_capital(this const Backtest& self) noexcept -> double
+  {
+    return self.initial_capital_;
+  }
+
+  void initial_capital(this Backtest& self, double initial_capital) noexcept
+  {
+    self.initial_capital_ = initial_capital;
+  }
+
   auto strategy_ptr(this const Backtest& self) noexcept
    -> const std::shared_ptr<Strategy>
   {
-    return self.strategy_ptr_;
+    return self.strategy_weak_ptr_.lock();
   }
 
   void strategy_ptr(this Backtest& self,
                     std::shared_ptr<Strategy> new_strategy_ptr) noexcept
   {
-    self.strategy_ptr_ = std::move(new_strategy_ptr);
+    self.strategy_weak_ptr_ = std::move(new_strategy_ptr);
   }
 
   auto strategy(this const Backtest& self) noexcept -> const Strategy&
@@ -105,13 +119,13 @@ public:
   auto asset_ptr(this const Backtest& self) noexcept
    -> const std::shared_ptr<Asset>
   {
-    return self.asset_ptr_;
+    return self.asset_weak_ptr_.lock();
   }
 
   void asset_ptr(this Backtest& self,
                  std::shared_ptr<Asset> new_asset_ptr) noexcept
   {
-    self.asset_ptr_ = std::move(new_asset_ptr);
+    self.asset_weak_ptr_ = std::move(new_asset_ptr);
   }
 
   auto asset(this const Backtest& self) noexcept -> const Asset&
@@ -122,13 +136,13 @@ public:
   auto broker_ptr(this const Backtest& self) noexcept
    -> const std::shared_ptr<Broker>
   {
-    return self.broker_ptr_;
+    return self.broker_weak_ptr_.lock();
   }
 
   void broker_ptr(this Backtest& self,
                   std::shared_ptr<Broker> new_broker_ptr) noexcept
   {
-    self.broker_ptr_ = std::move(new_broker_ptr);
+    self.broker_weak_ptr_ = std::move(new_broker_ptr);
   }
 
   auto broker(this const Backtest& self) noexcept -> const Broker&
@@ -139,13 +153,13 @@ public:
   auto market_ptr(this const Backtest& self) noexcept
    -> const std::shared_ptr<Market>
   {
-    return self.market_ptr_;
+    return self.market_weak_ptr_.lock();
   }
 
   void market_ptr(this Backtest& self,
                   std::shared_ptr<Market> new_market_ptr) noexcept
   {
-    self.market_ptr_ = std::move(new_market_ptr);
+    self.market_weak_ptr_ = std::move(new_market_ptr);
   }
 
   auto market(this const Backtest& self) noexcept -> const Market&
@@ -156,13 +170,13 @@ public:
   auto profile_ptr(this const Backtest& self) noexcept
    -> const std::shared_ptr<Profile>
   {
-    return self.profile_ptr_;
+    return self.profile_weak_ptr_.lock();
   }
 
   void profile_ptr(this Backtest& self,
                    std::shared_ptr<Profile> new_profile_ptr) noexcept
   {
-    self.profile_ptr_ = std::move(new_profile_ptr);
+    self.profile_weak_ptr_ = std::move(new_profile_ptr);
   }
 
   auto profile(this const Backtest& self) noexcept -> const Profile&
@@ -201,11 +215,12 @@ public:
   auto equal_rules(this const Backtest& self, const Backtest& other) noexcept
    -> bool
   {
-    return self.asset_ptr_ == other.asset_ptr_ &&
-           self.strategy_ptr_ == other.strategy_ptr_ &&
-           self.market_ptr_ == other.market_ptr_ &&
-           self.broker_ptr_ == other.broker_ptr_ &&
-           self.profile_ptr_ == other.profile_ptr_;
+    return self.initial_capital_ == other.initial_capital_ &&
+           self.asset_ptr() == other.asset_ptr() &&
+           self.strategy_ptr() == other.strategy_ptr() &&
+           self.market_ptr() == other.market_ptr() &&
+           self.broker_ptr() == other.broker_ptr() &&
+           self.profile_ptr() == other.profile_ptr();
   }
 
   auto equal_rules_and_metadata(this const Backtest& self,
@@ -214,11 +229,18 @@ public:
     return self.name_ == other.name_ && self.equal_rules(other);
   }
 
+  auto get_risk_value(this const Backtest& self) noexcept -> double
+  {
+    return self.profile().capital_risk() * self.initial_capital();
+  }
+
   auto is_valid_rules(this const Backtest& self) noexcept -> bool
   {
-    return self.asset_ptr_ != nullptr && self.strategy_ptr_ != nullptr &&
-           self.market_ptr_ != nullptr && self.broker_ptr_ != nullptr &&
-           self.profile_ptr_ != nullptr;
+    return !self.asset_weak_ptr_.expired() &&
+           !self.strategy_weak_ptr_.expired() &&
+           !self.market_weak_ptr_.expired() &&
+           !self.broker_weak_ptr_.expired() &&
+           !self.profile_weak_ptr_.expired();
   }
 
   void reset(this Backtest& self) noexcept
@@ -230,11 +252,14 @@ public:
 
   auto should_run(this const Backtest& self) noexcept -> bool
   {
+    if(!self.is_valid_rules()) {
+      return false;
+    }
+
     const auto summaries_size = self.summaries_.size();
     const auto asset_size = self.asset().size();
 
-    return summaries_size < asset_size && !self.is_failed() &&
-           self.is_valid_rules();
+    return summaries_size < asset_size && !self.is_failed();
   }
 
   void run(this Backtest& self)
@@ -267,7 +292,7 @@ public:
 
     auto summary = !self.summaries_.empty()
                     ? self.summaries_.back()
-                    : BacktestSummary{profile.initial_capital()};
+                    : BacktestSummary{self.initial_capital()};
 
     auto trade_session = summary.trade_session();
 
@@ -296,9 +321,9 @@ public:
     }
 
     if(trade_session.is_flat() || trade_session.is_closed()) {
-      auto entry_trade =
-       self.entry_trade(asset_snapshot, profile.get_risk_value());
+      const auto risk_value = self.get_risk_value();
 
+      auto entry_trade = self.entry_trade(asset_snapshot, risk_value);
       if(entry_trade) {
         {
           const auto quantity_step = market.quantity_step();
@@ -438,12 +463,13 @@ public:
 
 private:
   std::string name_;
+  double initial_capital_;
 
-  std::shared_ptr<Asset> asset_ptr_;
-  std::shared_ptr<Strategy> strategy_ptr_;
-  std::shared_ptr<Market> market_ptr_;
-  std::shared_ptr<Broker> broker_ptr_;
-  std::shared_ptr<Profile> profile_ptr_;
+  std::weak_ptr<Asset> asset_weak_ptr_;
+  std::weak_ptr<Strategy> strategy_weak_ptr_;
+  std::weak_ptr<Market> market_weak_ptr_;
+  std::weak_ptr<Broker> broker_weak_ptr_;
+  std::weak_ptr<Profile> profile_weak_ptr_;
 
   bool is_failed_;
 

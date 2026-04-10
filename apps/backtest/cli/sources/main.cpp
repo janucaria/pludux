@@ -35,15 +35,21 @@ auto main(int, const char**) -> int
   pludux::update_asset_from_csv(*asset_ptr, csv_stream);
 
   auto profile_ptr = std::make_shared<pludux::backtest::Profile>("Default");
-  profile_ptr->initial_capital(100'000'000.0);
   profile_ptr->capital_risk(0.01);
 
   auto broker_ptr = std::make_shared<pludux::backtest::Broker>("Default");
 
   auto market_ptr = std::make_shared<pludux::backtest::Market>("Default");
 
-  auto backtest = pludux::backtest::Backtest{
-   "no name", asset_ptr, strategy_ptr, market_ptr, broker_ptr, profile_ptr};
+  const auto intial_capital = 1'000'000;
+
+  auto backtest = pludux::backtest::Backtest{"no name",
+                                             intial_capital,
+                                             asset_ptr,
+                                             strategy_ptr,
+                                             market_ptr,
+                                             broker_ptr,
+                                             profile_ptr};
   while(backtest.should_run()) {
     backtest.run();
   }
@@ -55,8 +61,7 @@ auto main(int, const char**) -> int
 
   auto& ostream = std::cout;
 
-  ostream << std::format("Risk per trade: {:.2f}\n",
-                         backtest.profile().get_risk_value());
+  ostream << std::format("Risk per trade: {:.2f}\n", backtest.get_risk_value());
   ostream << std::format("Total profit: {:.2f}\n", summary.cumulative_pnls());
 
   const auto total_duration =
@@ -88,8 +93,8 @@ auto main(int, const char**) -> int
   ostream << std::format("Expected value (EV): {:.2f}\n",
                          summary.expected_value());
   ostream << std::format("EV to risk rate: {:.2f}%\n",
-                         summary.expected_value() /
-                          backtest.profile().get_risk_value() * 100);
+                         summary.expected_value() / backtest.get_risk_value() *
+                          100);
 
   ostream << std::format("Total closed trades: {}\n", summary.trade_count());
   ostream << std::format("Win rate: {:.2f}%\n", summary.profit_rate() * 100);

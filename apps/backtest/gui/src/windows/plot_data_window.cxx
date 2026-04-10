@@ -154,7 +154,7 @@ public:
 
     ImGui::Begin("Plots", nullptr);
 
-    if(!backtest) {
+    if(!backtest || !backtest->is_valid_rules()) {
       ImGui::End();
       return;
     }

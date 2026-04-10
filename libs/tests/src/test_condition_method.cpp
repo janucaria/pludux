@@ -20,8 +20,8 @@ TEST(AnyConditionMethodTest, RunOneMethod)
 
 TEST(AnyConditionMethodTest, EqualityOperator)
 {
-  const auto condition1 = TrueMethod{};
-  const auto condition2 = TrueMethod{};
+  const auto condition1 = AlwaysMethod{};
+  const auto condition2 = AlwaysMethod{};
   const auto condition_method1 = AnyConditionMethod{condition1};
   const auto condition_method2 = AnyConditionMethod{condition2};
 
@@ -32,8 +32,8 @@ TEST(AnyConditionMethodTest, EqualityOperator)
 
 TEST(AnyConditionMethodTest, NotEqualOperator)
 {
-  const auto condition1 = TrueMethod{};
-  const auto condition2 = FalseMethod{};
+  const auto condition1 = AlwaysMethod{};
+  const auto condition2 = NeverMethod{};
   const auto condition_method1 = AnyConditionMethod{condition1};
   const auto condition_method2 = AnyConditionMethod{condition2};
 

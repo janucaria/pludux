@@ -19,10 +19,7 @@ module;
 #include <vector>
 
 #ifdef __EMSCRIPTEN__
-#include <cstdlib>
-
-#include <emscripten.h>
-#include <emscripten/val.h>
+#include "../emscripten_js_imports.hpp"
 #else
 #include <nfd.hpp>
 #endif
@@ -298,10 +295,10 @@ auto get_condition_method_id(const AnyConditionMethod& method) -> std::string
     return "ALL_OF";
   } else if(condition_method_cast<AnyOfMethod>(method)) {
     return "ANY_OF";
-  } else if(condition_method_cast<TrueMethod>(method)) {
-    return "TRUE";
-  } else if(condition_method_cast<FalseMethod>(method)) {
-    return "FALSE";
+  } else if(condition_method_cast<AlwaysMethod>(method)) {
+    return "ALWAYS";
+  } else if(condition_method_cast<NeverMethod>(method)) {
+    return "NEVER";
   } else if(condition_method_cast<LessThanMethod>(method)) {
     return "LESS_THAN";
   } else if(condition_method_cast<GreaterThanMethod>(method)) {
@@ -337,10 +334,10 @@ auto get_condition_method_title(const std::string& condition_id) -> std::string
     return "All Of";
   } else if(condition_id == "ANY_OF") {
     return "Any Of";
-  } else if(condition_id == "TRUE") {
-    return "True";
-  } else if(condition_id == "FALSE") {
-    return "False";
+  } else if(condition_id == "ALWAYS") {
+    return "Always";
+  } else if(condition_id == "NEVER") {
+    return "Never";
   } else if(condition_id == "LESS_THAN") {
     return "Less Than";
   } else if(condition_id == "GREATER_THAN") {
@@ -377,10 +374,10 @@ auto get_default_condition_method(const std::string& condition_id)
     return AllOfMethod{};
   } else if(condition_id == "ANY_OF") {
     return AnyOfMethod{};
-  } else if(condition_id == "TRUE") {
-    return TrueMethod{};
-  } else if(condition_id == "FALSE") {
-    return FalseMethod{};
+  } else if(condition_id == "ALWAYS") {
+    return AlwaysMethod{};
+  } else if(condition_id == "NEVER") {
+    return NeverMethod{};
   } else if(condition_id == "LESS_THAN") {
     return LessThanMethod{CloseMethod{}, CloseMethod{}};
   } else if(condition_id == "GREATER_THAN") {
@@ -398,13 +395,13 @@ auto get_default_condition_method(const std::string& condition_id)
   } else if(condition_id == "CROSSUNDER") {
     return CrossunderMethod{CloseMethod{}, CloseMethod{}};
   } else if(condition_id == "NOT") {
-    return NotMethod{FalseMethod{}};
+    return NotMethod{NeverMethod{}};
   } else if(condition_id == "AND") {
-    return AndMethod{FalseMethod{}, FalseMethod{}};
+    return AndMethod{NeverMethod{}, NeverMethod{}};
   } else if(condition_id == "OR") {
-    return OrMethod{FalseMethod{}, FalseMethod{}};
+    return OrMethod{NeverMethod{}, NeverMethod{}};
   } else if(condition_id == "XOR") {
-    return XorMethod{FalseMethod{}, FalseMethod{}};
+    return XorMethod{NeverMethod{}, NeverMethod{}};
   }
 
   throw std::invalid_argument{
@@ -567,22 +564,8 @@ private:
 #ifdef __EMSCRIPTEN__
           const auto file_name = "pludux-strategy-" + strategy_name + ".json";
           const auto& file_content = serialized_strategy;
-
-          EM_ASM(
-           {
-             var fileSave = document.createElement('a');
-             fileSave.download = Module.UTF8ToString($0);
-             fileSave.style.display = 'none';
-             var data = new Blob([Module.UTF8ToString($1)], {
-               type:
-                 'application/json'
-             });
-             fileSave.href = URL.createObjectURL(data);
-             fileSave.click();
-             URL.revokeObjectURL(fileSave.href);
-           },
-           file_name.c_str(),
-           file_content.c_str());
+          pludux_js_save_file(
+           file_name.c_str(), file_content.c_str(), "application/json");
 
 #else
           auto nfd_guard = NFD::Guard{};
@@ -662,44 +645,7 @@ private:
          context.push_action(std::move(action));
        }};
 
-      EM_ASM(
-       {
-         var fileSelector = document.createElement('input');
-         fileSelector.type = 'file';
-         fileSelector.multiple = true;
-         fileSelector.accept = '.json';
-         fileSelector.onchange = function(event)
-         {
-           var files = event.target.files;
-           for(var i = 0; i < files.length; i++) {
-             var file = files[i];
-
-             var reader = new FileReader();
-             reader.onload = function(event)
-             {
-               var reader = event.target;
-               var fileName = reader.onload.prototype.fileName;
-               var data = reader.result;
-               var decoder = new TextDecoder('utf-8');
-               var decodedData = decoder.decode(data);
-
-               // transfer the data to the C++ side
-               var name_ptr = Module.stringToNewUTF8(fileName);
-               var data_ptr = Module.stringToNewUTF8(decodedData);
-
-               // call the C++ function
-               Module._pludux_apps_backtest_js_opened_file_content_ready(
-                name_ptr, data_ptr, $0, $1);
-             };
-             reader.onload.prototype.fileName = file.name;
-
-             reader.readAsArrayBuffer(file);
-           }
-         };
-         fileSelector.click();
-       },
-       &callback,
-       &context);
+      pludux_js_open_multiple_text_files(".json", &callback, &context);
 #else
       auto nfd_guard = NFD::Guard{};
       auto in_paths = NFD::UniquePathSet{};
@@ -1836,8 +1782,8 @@ private:
                                                                "AND",
                                                                "OR",
                                                                "XOR",
-                                                               "TRUE",
-                                                               "FALSE"};
+                                                               "ALWAYS",
+                                                               "NEVER"};
 
     auto result_condition_id = get_condition_method_id(condition);
 
@@ -2075,15 +2021,15 @@ private:
                        get_second_condition_param(other_condition)};
     }
 
-    if(condition_id == "TRUE") {
-      return TrueMethod{};
+    if(condition_id == "ALWAYS") {
+      return AlwaysMethod{};
     }
 
-    if(condition_id == "FALSE") {
-      return FalseMethod{};
+    if(condition_id == "NEVER") {
+      return NeverMethod{};
     }
 
-    return FalseMethod{};
+    return NeverMethod{};
   }
 
   auto render_condition_method(this auto& self,
@@ -2097,10 +2043,10 @@ private:
                condition_method_cast<AnyOfMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<TrueMethod>(any_condition)) {
+               condition_method_cast<AlwaysMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<FalseMethod>(any_condition)) {
+               condition_method_cast<NeverMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
                condition_method_cast<LessThanMethod>(any_condition)) {
@@ -2210,8 +2156,8 @@ private:
   }
 
   template<typename TCondition>
-    requires std::same_as<TCondition, TrueMethod> ||
-             std::same_as<TCondition, FalseMethod>
+    requires std::same_as<TCondition, AlwaysMethod> ||
+             std::same_as<TCondition, NeverMethod>
   auto render_condition_method(this auto& self,
                                const TCondition& condition,
                                WindowContext& context) -> AnyConditionMethod
@@ -2253,7 +2199,7 @@ private:
     }
 
     if(ImGui::Button("Add Condition")) {
-      conditions.emplace_back(FalseMethod{});
+      conditions.emplace_back(NeverMethod{});
     }
 
     new_condition = TCondition(std::move(conditions));

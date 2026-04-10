@@ -1994,7 +1994,7 @@
         }
       ]
     },
-    "booleanSignal": {
+    "fixedSignal": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -2003,14 +2003,14 @@
           "properties": {
             "method": {
               "enum": [
-                "TRUE",
-                "FALSE"
+                "ALWAYS",
+                "NEVER"
               ]
             }
           }
         }
       ],
-      "title": "Boolean Constant Signal",
+      "title": "Fixed Signal",
       "description": "Always-true or always-false signal."
     },
     "binaryLogicalSignal": {
@@ -2103,7 +2103,7 @@
           "$ref": "#/$defs/comparisonSignal"
         },
         {
-          "$ref": "#/$defs/booleanSignal"
+          "$ref": "#/$defs/fixedSignal"
         },
         {
           "$ref": "#/$defs/binaryLogicalSignal"

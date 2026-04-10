@@ -58,23 +58,58 @@ public:
       const auto& profiles = app_state.profiles();
       if(profiles.empty()) {
         auto default_profile = std::make_shared<backtest::Profile>("Default");
-        default_profile->initial_capital(100'000'000.0);
         default_profile->capital_risk(0.01);
         app_state.add_profile(std::move(default_profile));
       }
     }
 
-// run in debug mode and not in emscripten
-#if !defined(__EMSCRIPTEN__) && !defined(NDEBUG) && 1
-
-    const auto json_strategy_path =
-     get_env_var("PLUDUX_BACKTEST_STRATEGY_JSON_PATH").value_or("");
-
-    if(json_strategy_path.empty()) {
-      return;
+    {
+      const auto json_ma_cross_sample =
+       std::string{PLUDUX_SAMPLES_STRATEGY_moving_avg_cross};
+      LoadStrategyJsonAction{std::string{"MA Cross"},
+                             json_ma_cross_sample}(app_state);
+    }
+    {
+      const auto json_ma_2_lines_cross_sample =
+       std::string{PLUDUX_SAMPLES_STRATEGY_moving_avg_2_line_cross};
+      LoadStrategyJsonAction{std::string{"MA 2 Lines Cross"},
+                             json_ma_2_lines_cross_sample}(app_state);
+    }
+    {
+      const auto json_bollinger_bands_sample =
+       std::string{PLUDUX_SAMPLES_STRATEGY_bollinger_bands_L};
+      LoadStrategyJsonAction{std::string{"Bollinger Bands"},
+                             json_bollinger_bands_sample}(app_state);
+    }
+    {
+      const auto json_rsi_sample = std::string{PLUDUX_SAMPLES_STRATEGY_rsi};
+      LoadStrategyJsonAction{std::string{"RSI"}, json_rsi_sample}(app_state);
+    }
+    {
+      const auto json_macd_sample = std::string{PLUDUX_SAMPLES_STRATEGY_macd};
+      LoadStrategyJsonAction{std::string{"MACD"}, json_macd_sample}(app_state);
+    }
+    {
+      const auto json_keltner_channels_sample =
+       std::string{PLUDUX_SAMPLES_STRATEGY_keltner_channels};
+      LoadStrategyJsonAction{std::string{"Keltner Channels"},
+                             json_keltner_channels_sample}(app_state);
+    }
+    {
+      const auto json_stochastic_sample =
+       std::string{PLUDUX_SAMPLES_STRATEGY_stochastic};
+      LoadStrategyJsonAction{std::string{"Stochastic"},
+                             json_stochastic_sample}(app_state);
+    }
+    {
+      const auto json_stochastic_rsi_sample =
+       std::string{PLUDUX_SAMPLES_STRATEGY_stochastic_rsi};
+      LoadStrategyJsonAction{std::string{"Stochastic RSI"},
+                             json_stochastic_rsi_sample}(app_state);
     }
 
-    LoadStrategyJsonAction{json_strategy_path}(app_state);
+// run in debug mode and not in emscripten
+#if !defined(__EMSCRIPTEN__) && !defined(NDEBUG) && 1
 
     {
       const auto csv_path =

@@ -194,12 +194,22 @@ private:
     }
 
     {
-      if(!std::ranges::contains(assets, edit_backtest_ptr->asset_ptr())) {
-        edit_backtest_ptr->asset_ptr(nullptr);
-      }
+      ImGui::Text("Initial Capital:");
 
-      if(edit_backtest_ptr->asset_ptr() == nullptr && !assets.empty()) {
-        edit_backtest_ptr->asset_ptr(assets.front());
+      auto initial_capital = edit_backtest_ptr->initial_capital();
+      ImGui::InputDouble(
+       "##NewInitialCapital", &initial_capital, 100.0, 1000.0, "%.0f");
+      edit_backtest_ptr->initial_capital(initial_capital);
+    }
+
+    {
+      if(!edit_backtest_ptr->asset_ptr()) {
+        if(!self.selected_backtest_ptr_ && !assets.empty()) {
+          edit_backtest_ptr->asset_ptr(assets.front());
+        }
+      } else if(!std::ranges::contains(assets,
+                                       edit_backtest_ptr->asset_ptr())) {
+        edit_backtest_ptr->asset_ptr(nullptr);
       }
 
       ImGui::Text("Asset:");
@@ -229,13 +239,13 @@ private:
     }
 
     {
-      if(!std::ranges::contains(strategies,
-                                edit_backtest_ptr->strategy_ptr())) {
+      if(!edit_backtest_ptr->strategy_ptr()) {
+        if(!self.selected_backtest_ptr_ && !strategies.empty()) {
+          edit_backtest_ptr->strategy_ptr(strategies.front());
+        }
+      } else if(!std::ranges::contains(strategies,
+                                       edit_backtest_ptr->strategy_ptr())) {
         edit_backtest_ptr->strategy_ptr(nullptr);
-      }
-
-      if(edit_backtest_ptr->strategy_ptr() == nullptr && !strategies.empty()) {
-        edit_backtest_ptr->strategy_ptr(strategies.front());
       }
 
       ImGui::Text("Strategy:");
@@ -266,12 +276,13 @@ private:
     }
 
     {
-      if(!std::ranges::contains(markets, edit_backtest_ptr->market_ptr())) {
+      if(!edit_backtest_ptr->market_ptr()) {
+        if(!self.selected_backtest_ptr_ && !markets.empty()) {
+          edit_backtest_ptr->market_ptr(markets.front());
+        }
+      } else if(!std::ranges::contains(markets,
+                                       edit_backtest_ptr->market_ptr())) {
         edit_backtest_ptr->market_ptr(nullptr);
-      }
-
-      if(edit_backtest_ptr->market_ptr() == nullptr && !markets.empty()) {
-        edit_backtest_ptr->market_ptr(markets.front());
       }
 
       ImGui::Text("Market:");
@@ -301,12 +312,13 @@ private:
     }
 
     {
-      if(!std::ranges::contains(brokers, edit_backtest_ptr->broker_ptr())) {
+      if(!edit_backtest_ptr->broker_ptr()) {
+        if(!self.selected_backtest_ptr_ && !brokers.empty()) {
+          edit_backtest_ptr->broker_ptr(brokers.front());
+        }
+      } else if(!std::ranges::contains(brokers,
+                                       edit_backtest_ptr->broker_ptr())) {
         edit_backtest_ptr->broker_ptr(nullptr);
-      }
-
-      if(edit_backtest_ptr->broker_ptr() == nullptr && !brokers.empty()) {
-        edit_backtest_ptr->broker_ptr(brokers.front());
       }
 
       ImGui::Text("Broker:");
@@ -336,12 +348,13 @@ private:
     }
 
     {
-      if(!std::ranges::contains(profiles, edit_backtest_ptr->profile_ptr())) {
+      if(!edit_backtest_ptr->profile_ptr()) {
+        if(!self.selected_backtest_ptr_ && !profiles.empty()) {
+          edit_backtest_ptr->profile_ptr(profiles.front());
+        }
+      } else if(!std::ranges::contains(profiles,
+                                       edit_backtest_ptr->profile_ptr())) {
         edit_backtest_ptr->profile_ptr(nullptr);
-      }
-
-      if(edit_backtest_ptr->profile_ptr() == nullptr && !profiles.empty()) {
-        edit_backtest_ptr->profile_ptr(profiles.front());
       }
 
       ImGui::Text("Profile:");

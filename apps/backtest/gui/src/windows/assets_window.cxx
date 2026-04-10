@@ -13,10 +13,7 @@ module;
 #include <utility>
 
 #ifdef __EMSCRIPTEN__
-#include <cstdlib>
-
-#include <emscripten.h>
-#include <emscripten/val.h>
+#include "../emscripten_js_imports.hpp"
 #else
 #include <nfd.hpp>
 #endif
@@ -38,19 +35,7 @@ public:
   , editing_asset_ptr_{nullptr}
   {
 #ifdef __EMSCRIPTEN__
-    EM_ASM(
-     {
-       const inputElementId = UTF8ToString($0);
-       if(!document.getElementById(inputElementId)) {
-         var fileInput = document.createElement('input');
-         fileInput.type = 'file';
-         fileInput.id = inputElementId;
-         fileInput.accept = '.csv';
-         fileInput.style.display = 'none';
-         document.body.appendChild(fileInput);
-       }
-     },
-     input_element_id_);
+    pludux_js_ensure_hidden_file_input(input_element_id_, ".csv");
 #endif
   }
 
@@ -154,43 +139,7 @@ private:
          context.push_action(std::move(action));
        }};
 
-      EM_ASM(
-       {
-         var fileSelector = document.createElement('input');
-         fileSelector.type = 'file';
-         fileSelector.accept = '.csv';
-         fileSelector.multiple = true;
-         fileSelector.onchange = function(event)
-         {
-           for(var i = 0; i < event.target.files.length; i++) {
-             var file = event.target.files[i];
-
-             var reader = new FileReader();
-             reader.onload = function(event)
-             {
-               var reader = event.target;
-               var fileName = reader.onload.prototype.fileName;
-               var data = reader.result;
-               var decoder = new TextDecoder('utf-8');
-               var decodedData = decoder.decode(data);
-
-               // transfer the data to the C++ side
-               var name_ptr = Module.stringToNewUTF8(fileName);
-               var data_ptr = Module.stringToNewUTF8(decodedData);
-
-               // call the C++ function
-               Module._pludux_apps_backtest_js_opened_file_content_ready(
-                name_ptr, data_ptr, $0, $1);
-             };
-             reader.onload.prototype.fileName = file.name;
-
-             reader.readAsArrayBuffer(file);
-           }
-         };
-         fileSelector.click();
-       },
-       &callback,
-       &context);
+      pludux_js_open_multiple_text_files(".csv", &callback, &context);
 
 #else
       auto nfd_guard = NFD::Guard{};
@@ -336,40 +285,13 @@ private:
       ImGui::InputText("Volume Field", &volume_field);
       field_resolver.volume_field(volume_field);
     }
+
+    self.editing_asset_ptr_->field_resolver(field_resolver);
+
     {
       if(ImGui::Button("Select CSV File")) {
 #ifdef __EMSCRIPTEN__
-        EM_ASM(
-         {
-           var fileSelector = document.getElementById(UTF8ToString($0));
-
-           fileSelector.onchange = function(event)
-           {
-             var file = fileSelector.files[0];
-
-             var reader = new FileReader();
-             reader.onload = function(event)
-             {
-               var reader = event.target;
-               var fileName = reader.onload.prototype.fileName;
-               var data = reader.result;
-               var decoder = new TextDecoder('utf-8');
-               var decodedData = decoder.decode(data);
-
-               var namePtr = Module.stringToNewUTF8(fileName);
-               var dataPtr = Module.stringToNewUTF8(decodedData);
-
-               Module._pludux_call_free_callback_2($1, namePtr, dataPtr);
-
-               fileSelector.value = "";
-             };
-             reader.onload.prototype.fileName = file.name;
-
-             reader.readAsArrayBuffer(file);
-           };
-
-           fileSelector.click();
-         },
+        pludux_js_open_managed_text_file_input(
          input_element_id_,
          std::make_unique<std::function<void(void*, void*)>>(
           [edit_asset_ptr = self.editing_asset_ptr_](void* name_ptr,
@@ -421,8 +343,6 @@ private:
 #endif
       }
     }
-
-    self.editing_asset_ptr_->field_resolver(field_resolver);
   }
 
   void submit_asset_changes(this auto& self, WindowContext& context)

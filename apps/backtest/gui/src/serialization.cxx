@@ -280,7 +280,6 @@ void save(Archive& archive, const pludux::backtest::Profile& profile)
 {
   archive(
    make_nvp("name", profile.name()),
-   make_nvp("initialCapital", profile.initial_capital()),
    make_nvp("capitalRisk", profile.capital_risk()),
    make_nvp("rDistanceMode", static_cast<int>(profile.r_distance_mode())),
    make_nvp("rModeAtrPeriod", profile.r_mode_atr().first),
@@ -293,7 +292,6 @@ template<class Archive>
 void load(Archive& archive, pludux::backtest::Profile& profile)
 {
   auto name = std::string{};
-  auto initial_capital = double{};
   auto capital_risk = double{};
   auto r_distance_mode = int{};
   auto r_mode_atr = std::pair<std::size_t, double>{};
@@ -301,7 +299,6 @@ void load(Archive& archive, pludux::backtest::Profile& profile)
   auto r_mode_price = double{};
 
   archive(make_nvp("name", name),
-          make_nvp("initialCapital", initial_capital),
           make_nvp("capitalRisk", capital_risk),
           make_nvp("rDistanceMode", r_distance_mode),
           make_nvp("rModeAtrPeriod", r_mode_atr.first),
@@ -311,7 +308,6 @@ void load(Archive& archive, pludux::backtest::Profile& profile)
 
   profile = pludux::backtest::Profile{
    std::move(name),
-   initial_capital,
    capital_risk,
    static_cast<pludux::backtest::Profile::RDistance>(r_distance_mode),
    std::move(r_mode_atr),
@@ -509,6 +505,7 @@ void save(Archive& archive, const pludux::backtest::Backtest& backtest)
 {
   archive(
    make_nvp("name", backtest.name()),
+   make_nvp("initialCapital", backtest.initial_capital()),
    make_nvp("asset", backtest.asset_ptr()),
    make_nvp("strategy", backtest.strategy_ptr()),
    make_nvp("market", backtest.market_ptr()),
@@ -523,6 +520,7 @@ template<class Archive>
 void load(Archive& archive, pludux::backtest::Backtest& backtest)
 {
   auto name = std::string{};
+  auto initial_capital = double{};
   auto asset_ptr = std::shared_ptr<pludux::backtest::Asset>{};
   auto strategy_ptr = std::shared_ptr<pludux::backtest::Strategy>{};
   auto market_ptr = std::shared_ptr<pludux::backtest::Market>{};
@@ -533,6 +531,7 @@ void load(Archive& archive, pludux::backtest::Backtest& backtest)
   auto series_results_collector = pludux::SeriesResultsCollector{};
 
   archive(make_nvp("name", name),
+          make_nvp("initialCapital", initial_capital),
           make_nvp("asset", asset_ptr),
           make_nvp("strategy", strategy_ptr),
           make_nvp("market", market_ptr),
@@ -543,6 +542,7 @@ void load(Archive& archive, pludux::backtest::Backtest& backtest)
           make_nvp("seriesResultsCollector", series_results_collector));
 
   backtest = pludux::backtest::Backtest{std::move(name),
+                                        initial_capital,
                                         asset_ptr,
                                         strategy_ptr,
                                         market_ptr,
@@ -562,6 +562,7 @@ template<class Archive>
 void save(Archive& archive, const pludux::apps::ApplicationState& app_state)
 {
   archive(make_nvp("$version", std::string{PLUDUX_VERSION}),
+          make_nvp("imguiIniSettings", app_state.imgui_ini_settings()),
           make_nvp("alertMessages", app_state.alert_messages()),
           make_nvp("backtests", app_state.backtests()),
           make_nvp("assets", app_state.assets()),
@@ -575,6 +576,7 @@ template<class Archive>
 void load(Archive& archive, pludux::apps::ApplicationState& app_state)
 {
   auto version = std::string{};
+  auto imgui_ini_settings = std::string{};
   auto alert_messages = std::queue<std::string>{};
   auto assets = std::vector<std::shared_ptr<pludux::backtest::Asset>>{};
   auto strategies = std::vector<std::shared_ptr<pludux::backtest::Strategy>>{};
@@ -584,6 +586,7 @@ void load(Archive& archive, pludux::apps::ApplicationState& app_state)
   auto backtests = std::vector<std::shared_ptr<pludux::backtest::Backtest>>{};
 
   archive(make_nvp("$version", version));
+  archive(make_nvp("imguiIniSettings", imgui_ini_settings));
   archive(make_nvp("alertMessages", alert_messages));
   archive(make_nvp("backtests", backtests));
   archive(make_nvp("assets", assets));
@@ -600,7 +603,8 @@ void load(Archive& archive, pludux::apps::ApplicationState& app_state)
     }
   }
 
-  app_state = pludux::apps::ApplicationState{selected_backtest_index,
+  app_state = pludux::apps::ApplicationState{std::move(imgui_ini_settings),
+                                             selected_backtest_index,
                                              std::move(alert_messages),
                                              std::move(backtests),
                                              std::move(assets),

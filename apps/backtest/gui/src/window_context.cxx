@@ -4,6 +4,8 @@ module;
 #include <queue>
 #include <vector>
 
+#include <imgui.h>
+
 export module pludux.apps.backtest:window_context;
 
 import :actions;
@@ -71,6 +73,13 @@ public:
   void push_action(this WindowContext& self, TAppAction action)
   {
     self.actions_.push(std::move(action));
+  }
+
+  void update_imgui_ini_settings(this WindowContext& self)
+  {
+    auto ini_size = std::size_t{0};
+    const auto ini_data = ImGui::SaveIniSettingsToMemory(&ini_size);
+    self.app_state_.imgui_ini_settings(std::string(ini_data, ini_size));
   }
 
   // TODO: compiler bug in emscripten build

@@ -2,7 +2,7 @@ SET(JSONCONS_BUILD_TESTS OFF)
 FetchContent_Declare(
   jsoncons
   GIT_REPOSITORY https://github.com/danielaparker/jsoncons.git
-  GIT_TAG        v1.5.0
+  GIT_TAG        v1.6.0
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
   OVERRIDE_FIND_PACKAGE
@@ -82,8 +82,8 @@ target_sources(${PROJECT_NAME}
         src/conditions/any_condition_method.cxx
         src/conditions/all_of_method.cxx
         src/conditions/any_of_method.cxx
-        src/conditions/boolean_method.cxx
         src/conditions/comparison_method.cxx
+        src/conditions/fixed_method.cxx
         src/conditions/logical_method.cxx
         src/conditions/crossover_method.cxx
         src/conditions/crossunder_method.cxx

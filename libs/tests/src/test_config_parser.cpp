@@ -1617,18 +1617,18 @@ TEST_F(ConfigParserTest, ParseScreenerCrossoverMethod)
   EXPECT_EQ(filter, deserialized_filter);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerTrueMethod)
+TEST_F(ConfigParserTest, ParseScreenerAlwaysMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "TRUE"
+      "method": "ALWAYS"
     }
   )");
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto true_filter = condition_method_cast<TrueMethod>(filter);
-  ASSERT_NE(true_filter, nullptr);
+  const auto always_filter = condition_method_cast<AlwaysMethod>(filter);
+  ASSERT_NE(always_filter, nullptr);
 
   const auto serialized_config = config_parser.serialize_filter(filter);
   const auto deserialized_filter =
@@ -1636,18 +1636,18 @@ TEST_F(ConfigParserTest, ParseScreenerTrueMethod)
   EXPECT_EQ(filter, deserialized_filter);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerFalseMethod)
+TEST_F(ConfigParserTest, ParseScreenerNeverMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "FALSE"
+      "method": "NEVER"
     }
   )");
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto false_filter = condition_method_cast<FalseMethod>(filter);
-  ASSERT_NE(false_filter, nullptr);
+  const auto never_filter = condition_method_cast<NeverMethod>(filter);
+  ASSERT_NE(never_filter, nullptr);
 
   const auto serialized_config = config_parser.serialize_filter(filter);
   const auto deserialized_filter =
@@ -1662,10 +1662,10 @@ TEST_F(ConfigParserTest, ParseScreenerAndMethod)
       "method": "AND",
       "params": {
         "firstCondition": {
-          "method": "TRUE"
+          "method": "ALWAYS"
         },
         "secondCondition": {
-          "method": "FALSE"
+          "method": "NEVER"
         }
       }
     }
@@ -1679,12 +1679,13 @@ TEST_F(ConfigParserTest, ParseScreenerAndMethod)
   const auto first_condition = and_filter->first_condition();
   const auto second_condition = and_filter->second_condition();
 
-  const auto true_filter = condition_method_cast<TrueMethod>(first_condition);
-  const auto false_filter =
-   condition_method_cast<FalseMethod>(second_condition);
+  const auto always_filter =
+   condition_method_cast<AlwaysMethod>(first_condition);
+  const auto never_filter =
+   condition_method_cast<NeverMethod>(second_condition);
 
-  ASSERT_NE(true_filter, nullptr);
-  ASSERT_NE(false_filter, nullptr);
+  ASSERT_NE(always_filter, nullptr);
+  ASSERT_NE(never_filter, nullptr);
 
   const auto serialized_config = config_parser.serialize_filter(filter);
   const auto deserialized_filter =
@@ -1699,10 +1700,10 @@ TEST_F(ConfigParserTest, ParseScreenerOrMethod)
       "method": "OR",
       "params": {
         "firstCondition": {
-          "method": "TRUE"
+          "method": "ALWAYS"
         },
         "secondCondition": {
-          "method": "FALSE"
+          "method": "NEVER"
         }
       }
     }
@@ -1716,12 +1717,13 @@ TEST_F(ConfigParserTest, ParseScreenerOrMethod)
   const auto first_condition = or_filter->first_condition();
   const auto second_condition = or_filter->second_condition();
 
-  const auto true_filter = condition_method_cast<TrueMethod>(first_condition);
-  const auto false_filter =
-   condition_method_cast<FalseMethod>(second_condition);
+  const auto always_filter =
+   condition_method_cast<AlwaysMethod>(first_condition);
+  const auto never_filter =
+   condition_method_cast<NeverMethod>(second_condition);
 
-  ASSERT_NE(true_filter, nullptr);
-  ASSERT_NE(false_filter, nullptr);
+  ASSERT_NE(always_filter, nullptr);
+  ASSERT_NE(never_filter, nullptr);
 
   const auto serialized_config = config_parser.serialize_filter(filter);
   const auto deserialized_filter =
@@ -1746,9 +1748,10 @@ TEST_F(ConfigParserTest, ParseScreenerNotMethod)
   ASSERT_NE(not_filter, nullptr);
 
   const auto other_condition = not_filter->other_condition();
-  const auto true_filter = condition_method_cast<TrueMethod>(other_condition);
+  const auto always_filter =
+   condition_method_cast<AlwaysMethod>(other_condition);
 
-  ASSERT_NE(true_filter, nullptr);
+  ASSERT_NE(always_filter, nullptr);
 
   const auto serialized_config = config_parser.serialize_filter(filter);
   const auto deserialized_filter =
@@ -1763,10 +1766,10 @@ TEST_F(ConfigParserTest, ParseScreenerXorMethod)
       "method": "XOR",
       "params": {
         "firstCondition": {
-          "method": "TRUE"
+          "method": "ALWAYS"
         },
         "secondCondition": {
-          "method": "FALSE"
+          "method": "NEVER"
         }
       }
     }
@@ -1780,12 +1783,13 @@ TEST_F(ConfigParserTest, ParseScreenerXorMethod)
   const auto first_condition = xor_filter->first_condition();
   const auto second_condition = xor_filter->second_condition();
 
-  const auto true_filter = condition_method_cast<TrueMethod>(first_condition);
-  const auto false_filter =
-   condition_method_cast<FalseMethod>(second_condition);
+  const auto always_filter =
+   condition_method_cast<AlwaysMethod>(first_condition);
+  const auto never_filter =
+   condition_method_cast<NeverMethod>(second_condition);
 
-  ASSERT_NE(true_filter, nullptr);
-  ASSERT_NE(false_filter, nullptr);
+  ASSERT_NE(always_filter, nullptr);
+  ASSERT_NE(never_filter, nullptr);
 
   const auto serialized_config = config_parser.serialize_filter(filter);
   const auto deserialized_filter =
