@@ -447,8 +447,6 @@ private:
 
 #ifndef __EMSCRIPTEN__
     wgpuSurfacePresent(wgpu_surface_);
-
-    wgpuDevicePoll(wgpu_device_, false, nullptr);
 #endif
 
     wgpuQueueRelease(wgpu_queue);

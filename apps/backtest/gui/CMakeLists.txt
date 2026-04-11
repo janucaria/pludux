@@ -23,7 +23,7 @@ if(NOT EMSCRIPTEN)
   FetchContent_Declare(
     wgpu_native
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-    URL "https://github.com/gfx-rs/wgpu-native/releases/download/v27.0.4.0/${PLUDUX_WEBGPU_DOWNLOAD}.zip"
+    URL "https://github.com/gfx-rs/wgpu-native/releases/download/v29.0.0.0/${PLUDUX_WEBGPU_DOWNLOAD}.zip"
   )
   
   FetchContent_MakeAvailable(wgpu_native)
@@ -90,7 +90,7 @@ endif()
 FetchContent_Declare(
   imgui
   GIT_REPOSITORY "https://github.com/ocornut/imgui.git"
-  GIT_TAG        "v1.92.6-docking"
+  GIT_TAG        "v1.92.7-docking"
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
 )
@@ -98,7 +98,7 @@ FetchContent_Declare(
 FetchContent_Declare(
   implot
   GIT_REPOSITORY "https://github.com/epezent/implot.git"
-  GIT_TAG        "v0.17"
+  GIT_TAG        "v1.0"
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
 )
@@ -213,7 +213,7 @@ target_link_libraries(${PROJECT_NAME}
 
 if(NOT EMSCRIPTEN)
   target_compile_definitions(${PROJECT_NAME} PUBLIC
-    IMGUI_IMPL_WEBGPU_BACKEND_WGPU
+    IMGUI_IMPL_WEBGPU_BACKEND_DAWN
   )
   
   target_link_libraries(${PROJECT_NAME}

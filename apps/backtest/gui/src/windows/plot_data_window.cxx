@@ -69,10 +69,11 @@ public:
       }
     }
 
-    ImPlot::PushStyleColor(
-     ImPlotCol_Line, ImGui::ColorConvertU32ToFloat4(static_cast<ImU32>(color)));
-    ImPlot::PlotLine("", data.data(), data.size());
-    ImPlot::PopStyleColor();
+    const auto plot_spec =
+     ImPlotSpec{ImPlotProp_LineColor,
+                ImGui::ColorConvertU32ToFloat4(static_cast<ImU32>(color))};
+
+    ImPlot::PlotLine("", data.data(), data.size(), 1.0, 0.0, plot_spec);
   }
 
   void render_plot_histogram(this const PlotContext& self,
@@ -107,10 +108,10 @@ public:
       }
     }
 
-    ImPlot::PushStyleColor(
-     ImPlotCol_Fill, ImGui::ColorConvertU32ToFloat4(static_cast<ImU32>(color)));
-    ImPlot::PlotBars("", data.data(), data.size(), 0.8);
-    ImPlot::PopStyleColor();
+    const auto plot_spec =
+     ImPlotSpec{ImPlotProp_FillColor,
+                ImGui::ColorConvertU32ToFloat4(static_cast<ImU32>(color))};
+    ImPlot::PlotBars("", data.data(), data.size(), 0.8, 0.0, plot_spec);
   }
 
   auto series_results(this const PlotContext& self, const std::string& name)
@@ -744,9 +745,9 @@ private:
     }
 
     if(ImPlot::BeginItem("Equity")) {
-      ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.5f);
-      ImPlot::PlotShaded("Equity", xs.data(), ys.data(), xs.size(), 100);
-      ImPlot::PopStyleVar();
+      const auto plot_spec = ImPlotSpec{ImPlotProp_FillAlpha, 0.75f};
+      ImPlot::PlotShaded(
+       "Equity", xs.data(), ys.data(), xs.size(), 100, plot_spec);
 
       ImPlot::PlotLine("Equity", xs.data(), ys.data(), xs.size());
 
