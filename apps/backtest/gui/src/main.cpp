@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -314,7 +315,13 @@ public:
     emscripten_set_main_loop_arg(
      [](void* arg) {
        auto app = reinterpret_cast<Main*>(arg);
-       app->on_main_loop();
+       try {
+         app->on_main_loop();
+       } catch(const std::exception& ex) {
+         app->enter_fatal_state(ex.what());
+       } catch(...) {
+         app->enter_fatal_state("unknown exception");
+       }
      },
      this,
      0,
@@ -350,6 +357,17 @@ private:
   GLFWwindow* window_;
 
   pludux::apps::Application application_;
+
+  void enter_fatal_state(const std::string& reason)
+  {
+    std::cerr << "Fatal main-loop error: " << reason << std::endl;
+
+#ifdef __EMSCRIPTEN__
+    emscripten_cancel_main_loop();
+#else
+    glfwSetWindowShouldClose(window_, GLFW_TRUE);
+#endif
+  }
 
   void on_main_loop()
   {
