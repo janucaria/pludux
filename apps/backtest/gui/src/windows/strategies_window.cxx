@@ -1762,6 +1762,13 @@ private:
       }
       method.period(static_cast<std::size_t>(periods));
     }
+    {
+      ImGui::Text("Source:");
+      ImGui::SameLine();
+      auto source = method.source();
+      self.render_series_method(source, context);
+      method.source(std::move(source));
+    }
   }
 
   auto draw_condition_method_combo(this auto& self,
