@@ -2185,17 +2185,18 @@ private:
     ImGui::Indent();
 
     auto conditions = new_condition.conditions();
-    for(auto counter_id = 0; auto& sub_condition : conditions) {
-      ImGui::PushID(counter_id++);
+    for(auto i = 0; i < conditions.size(); ++i) {
+      ImGui::PushID(i);
+      auto& sub_condition = conditions[i];
       sub_condition = self.render_condition_method(sub_condition, context);
 
       if(ImGui::Button("Remove Condition")) {
-        conditions.erase(conditions.begin() + (counter_id - 1));
-        --counter_id;
+        conditions.erase(conditions.begin() + i);
+        --i;
       }
-      ImGui::PopID();
 
       ImGui::Separator();
+      ImGui::PopID();
     }
 
     if(ImGui::Button("Add Condition")) {
