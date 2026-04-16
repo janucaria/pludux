@@ -415,10 +415,8 @@ private:
         self.reset();
       }
     } else {
-      context.push_action([](ApplicationState& app_state) {
-        app_state.alert("Please select an asset, a strategy, a "
-                        "market, a broker, and a profile.");
-      });
+      context.alert("Please select an asset, a strategy, a "
+                    "market, a broker, and a profile.");
     }
   }
 

@@ -563,7 +563,6 @@ void save(Archive& archive, const pludux::apps::ApplicationState& app_state)
 {
   archive(make_nvp("$version", std::string{PLUDUX_VERSION}),
           make_nvp("imguiIniSettings", app_state.imgui_ini_settings()),
-          make_nvp("alertMessages", app_state.alert_messages()),
           make_nvp("backtests", app_state.backtests()),
           make_nvp("assets", app_state.assets()),
           make_nvp("strategies", app_state.strategies()),
@@ -577,7 +576,6 @@ void load(Archive& archive, pludux::apps::ApplicationState& app_state)
 {
   auto version = std::string{};
   auto imgui_ini_settings = std::string{};
-  auto alert_messages = std::queue<std::string>{};
   auto assets = std::vector<std::shared_ptr<pludux::backtest::Asset>>{};
   auto strategies = std::vector<std::shared_ptr<pludux::backtest::Strategy>>{};
   auto markets = std::vector<std::shared_ptr<pludux::backtest::Market>>{};
@@ -587,7 +585,6 @@ void load(Archive& archive, pludux::apps::ApplicationState& app_state)
 
   archive(make_nvp("$version", version));
   archive(make_nvp("imguiIniSettings", imgui_ini_settings));
-  archive(make_nvp("alertMessages", alert_messages));
   archive(make_nvp("backtests", backtests));
   archive(make_nvp("assets", assets));
   archive(make_nvp("strategies", strategies));
@@ -605,7 +602,6 @@ void load(Archive& archive, pludux::apps::ApplicationState& app_state)
 
   app_state = pludux::apps::ApplicationState{std::move(imgui_ini_settings),
                                              selected_backtest_index,
-                                             std::move(alert_messages),
                                              std::move(backtests),
                                              std::move(assets),
                                              std::move(strategies),

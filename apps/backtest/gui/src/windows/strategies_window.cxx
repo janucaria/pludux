@@ -690,9 +690,7 @@ private:
         }
       } catch(const std::exception& ex) {
         const auto error_message = std::string(ex.what());
-        context.push_action([error_message](ApplicationState& app_state) {
-          app_state.alert(error_message);
-        });
+        context.alert(error_message);
       }
 #endif
     }
@@ -1090,10 +1088,7 @@ private:
                  std::format("Cannot select '{}' when there are no available "
                              "series other than the current one.",
                              series_reference_method_title);
-                context.push_action(
-                 [error_message](ApplicationState& app_state) {
-                   app_state.alert(error_message);
-                 });
+                context.alert(error_message);
               } else {
                 series_method = get_default_series_method(series_id);
               }
@@ -2383,10 +2378,7 @@ private:
                  std::format("Cannot select '{}' when there are no available "
                              "series other than the current one.",
                              source_method_title);
-                context.push_action(
-                 [error_message](ApplicationState& app_state) {
-                   app_state.alert(error_message);
-                 });
+                context.alert(error_message);
               } else {
                 auto source = get_default_plot_source_method(source_id);
 

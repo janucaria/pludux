@@ -177,7 +177,7 @@ public:
 
             const auto error_message =
              "Backtest '" + backtest->name() + "' failed: " + e.what();
-            app_state.alert(error_message);
+            self.alert_messages_.push(error_message);
           }
         }
 
@@ -189,27 +189,26 @@ public:
       } while(time_diff < 1000 / 60);
     }
 
-    {
-      const auto alert_message = app_state.top_alert_message();
+    if(!self.alert_messages_.empty()) {
+      const auto& alert_message = self.alert_messages_.front();
 
-      if(alert_message) {
-        ImGui::OpenPopup("Alerts");
+      ImGui::OpenPopup("Alerts");
 
-        if(ImGui::BeginPopupModal(
-            "Alerts", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-          ImGui::Text("%s", alert_message->c_str());
+      if(ImGui::BeginPopupModal(
+          "Alerts", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("%s", alert_message.c_str());
 
-          if(ImGui::Button("OK")) {
-            app_state.pop_alert_messages();
-            ImGui::CloseCurrentPopup();
-          }
-
-          ImGui::EndPopup();
+        if(ImGui::Button("OK")) {
+          self.alert_messages_.pop();
+          ImGui::CloseCurrentPopup();
         }
+
+        ImGui::EndPopup();
       }
     }
 
-    auto window_context = WindowContext{app_state, actions};
+    auto window_context =
+     WindowContext{app_state, self.alert_messages_, actions};
 
     try {
       self.dockspace_window_.render(window_context);
@@ -235,7 +234,7 @@ public:
 
     } catch(const std::exception& e) {
       const auto error_message = std::format("Error: {}", e.what());
-      app_state.alert(error_message);
+      self.alert_messages_.push(error_message);
     }
 
     while(!actions.empty()) {
@@ -246,7 +245,7 @@ public:
         action(app_state);
       } catch(const std::exception& e) {
         const auto error_message = std::format("Error: {}", e.what());
-        app_state.alert(error_message);
+        self.alert_messages_.push(error_message);
       }
     }
   }
@@ -265,6 +264,7 @@ private:
 
   ApplicationState app_state_;
   std::queue<PolyAction> actions_;
+  std::queue<std::string> alert_messages_{};
 };
 
 } // namespace pludux::apps
