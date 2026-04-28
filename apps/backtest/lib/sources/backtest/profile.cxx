@@ -124,7 +124,7 @@ public:
     return std::numeric_limits<double>::quiet_NaN();
   }
 
-  auto equal_rules(this const Profile& self, const Profile& other) noexcept
+  auto equivalent_rules(this const Profile& self, const Profile& other) noexcept
    -> bool
   {
     if(self.capital_risk_ == other.capital_risk_ &&

@@ -16,6 +16,12 @@ class SeriesResultsCollector {
 public:
   SeriesResultsCollector() = default;
 
+  explicit SeriesResultsCollector(
+   std::unordered_map<std::string, std::vector<double>> results) noexcept
+  : results_(std::move(results))
+  {
+  }
+
   auto results(this const SeriesResultsCollector& self) noexcept
    -> const std::unordered_map<std::string, std::vector<double>>&
   {

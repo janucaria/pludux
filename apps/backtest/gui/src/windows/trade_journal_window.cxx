@@ -19,12 +19,13 @@ public:
   void render(this const TradeJournalWindow, WindowContext& context)
   {
     const auto& app_state = context.app_state();
-    const auto& backtests = context.backtests();
 
     ImGui::Begin("Trades", nullptr);
 
-    const auto backtest = app_state.selected_backtest();
-    if(backtest) {
+    const auto backtest_handle = app_state.selected_backtest_handle();
+    const auto backtest_ptr =
+     app_state.get_backtest_if_present(backtest_handle);
+    if(backtest_ptr) {
       const auto table_flags =
        ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
        ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
@@ -58,7 +59,8 @@ public:
 
         ImGui::TableHeadersRow();
 
-        const auto& backtest_summaries = backtest->summaries();
+        const auto& backtest_summaries =
+         app_state.get_backtest_summaries(backtest_handle);
         const auto backtest_summaries_size = backtest_summaries.size();
         for(int i = backtest_summaries_size - 1; i >= 0; --i) {
           const auto& summary = backtest_summaries.at(i);

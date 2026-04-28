@@ -22,9 +22,8 @@ template<typename TSource>
 class LoadStrategyJsonAction {
 public:
   LoadStrategyJsonAction(std::string config_name, std::string source)
-  : strategy_name_{std::filesystem::path{std::move(config_name)}
-                    .stem()
-                    .string()}
+  : strategy_name_{
+     std::filesystem::path{std::move(config_name)}.stem().string()}
   , source_{std::move(source)}
   {
   }
@@ -76,9 +75,7 @@ private:
       }
     }();
 
-    auto strategy_ptr =
-     std::make_shared<backtest::Strategy>(std::move(parsed_strategy));
-    app_state.add_strategy(std::move(strategy_ptr));
+    app_state.add_strategy(std::move(parsed_strategy));
   }
 };
 

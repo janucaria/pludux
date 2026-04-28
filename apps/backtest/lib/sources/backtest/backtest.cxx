@@ -17,6 +17,7 @@ export module pludux.backtest:backtest;
 
 import pludux;
 
+import :store_handle;
 import :asset;
 import :profile;
 import :trade_entry;
@@ -34,48 +35,50 @@ export namespace pludux::backtest {
 class Backtest {
 public:
   Backtest()
-  : Backtest{"", 1'000'000, nullptr, nullptr, nullptr, nullptr, nullptr}
+  : Backtest{"",
+             1'000'000,
+             AssetStoreHandle{},
+             StrategyStoreHandle{},
+             MarketStoreHandle{},
+             BrokerStoreHandle{},
+             ProfileStoreHandle{}}
   {
   }
 
   Backtest(std::string name,
            double initial_capital,
-           std::shared_ptr<Asset> asset_ptr,
-           std::shared_ptr<Strategy> strategy_ptr,
-           std::shared_ptr<Market> market_ptr,
-           std::shared_ptr<Broker> broker_ptr,
-           std::shared_ptr<Profile> profile_ptr)
+           AssetStoreHandle asset_handle,
+           StrategyStoreHandle strategy_handle,
+           MarketStoreHandle market_handle,
+           BrokerStoreHandle broker_handle,
+           ProfileStoreHandle profile_handle)
   : Backtest{std::move(name),
              initial_capital,
-             std::move(asset_ptr),
-             std::move(strategy_ptr),
-             std::move(market_ptr),
-             std::move(broker_ptr),
-             std::move(profile_ptr),
-             std::vector<BacktestSummary>{},
-             SeriesResultsCollector{}}
+             std::move(asset_handle),
+             std::move(strategy_handle),
+             std::move(market_handle),
+             std::move(broker_handle),
+             std::move(profile_handle),
+             false}
   {
   }
 
   Backtest(std::string name,
            double initial_capital,
-           std::shared_ptr<Asset> asset_ptr,
-           std::shared_ptr<Strategy> strategy_ptr,
-           std::shared_ptr<Market> market_ptr,
-           std::shared_ptr<Broker> broker_ptr,
-           std::shared_ptr<Profile> profile_ptr,
-           std::vector<BacktestSummary> summaries,
-           SeriesResultsCollector series_results_collector)
+           AssetStoreHandle asset_handle,
+           StrategyStoreHandle strategy_handle,
+           MarketStoreHandle market_handle,
+           BrokerStoreHandle broker_handle,
+           ProfileStoreHandle profile_handle,
+           bool is_failed)
   : name_{std::move(name)}
   , initial_capital_{initial_capital}
-  , asset_weak_ptr_{asset_ptr}
-  , strategy_weak_ptr_{strategy_ptr}
-  , market_weak_ptr_{market_ptr}
-  , broker_weak_ptr_{broker_ptr}
-  , profile_weak_ptr_{profile_ptr}
-  , is_failed_{false}
-  , summaries_{std::move(summaries)}
-  , series_results_collector_{std::move(series_results_collector)}
+  , asset_handle_{std::move(asset_handle)}
+  , strategy_handle_{std::move(strategy_handle)}
+  , market_handle_{std::move(market_handle)}
+  , broker_handle_{std::move(broker_handle)}
+  , profile_handle_{std::move(profile_handle)}
+  , is_failed_{is_failed}
   {
   }
 
@@ -99,94 +102,60 @@ public:
     self.initial_capital_ = initial_capital;
   }
 
-  auto strategy_ptr(this const Backtest& self) noexcept
-   -> const std::shared_ptr<Strategy>
+  auto asset_handle(this const Backtest& self) noexcept -> AssetStoreHandle
   {
-    return self.strategy_weak_ptr_.lock();
+    return self.asset_handle_;
   }
 
-  void strategy_ptr(this Backtest& self,
-                    std::shared_ptr<Strategy> new_strategy_ptr) noexcept
+  void asset_handle(this Backtest& self,
+                    AssetStoreHandle new_asset_handle) noexcept
   {
-    self.strategy_weak_ptr_ = std::move(new_strategy_ptr);
+    self.asset_handle_ = std::move(new_asset_handle);
   }
 
-  auto strategy(this const Backtest& self) noexcept -> const Strategy&
+  auto strategy_handle(this const Backtest& self) noexcept
+   -> StrategyStoreHandle
   {
-    return *self.strategy_ptr();
+    return self.strategy_handle_;
   }
 
-  auto asset_ptr(this const Backtest& self) noexcept
-   -> const std::shared_ptr<Asset>
+  void strategy_handle(this Backtest& self,
+                       StrategyStoreHandle new_strategy_handle) noexcept
   {
-    return self.asset_weak_ptr_.lock();
+    self.strategy_handle_ = std::move(new_strategy_handle);
   }
 
-  void asset_ptr(this Backtest& self,
-                 std::shared_ptr<Asset> new_asset_ptr) noexcept
+  auto market_handle(this const Backtest& self) noexcept -> MarketStoreHandle
   {
-    self.asset_weak_ptr_ = std::move(new_asset_ptr);
+    return self.market_handle_;
   }
 
-  auto asset(this const Backtest& self) noexcept -> const Asset&
+  void market_handle(this Backtest& self,
+                     MarketStoreHandle new_market_handle) noexcept
   {
-    return *self.asset_ptr();
+    self.market_handle_ = std::move(new_market_handle);
   }
 
-  auto broker_ptr(this const Backtest& self) noexcept
-   -> const std::shared_ptr<Broker>
+  auto broker_handle(this const Backtest& self) noexcept -> BrokerStoreHandle
   {
-    return self.broker_weak_ptr_.lock();
+    return self.broker_handle_;
   }
 
-  void broker_ptr(this Backtest& self,
-                  std::shared_ptr<Broker> new_broker_ptr) noexcept
+  void broker_handle(this Backtest& self,
+                     BrokerStoreHandle new_broker_handle) noexcept
   {
-    self.broker_weak_ptr_ = std::move(new_broker_ptr);
+    self.broker_handle_ = std::move(new_broker_handle);
   }
 
-  auto broker(this const Backtest& self) noexcept -> const Broker&
+  auto profile_handle(this const Backtest& self) noexcept -> ProfileStoreHandle
   {
-    return *self.broker_ptr();
+    return self.profile_handle_;
   }
 
-  auto market_ptr(this const Backtest& self) noexcept
-   -> const std::shared_ptr<Market>
+  void profile_handle(this Backtest& self,
+                      ProfileStoreHandle new_profile_handle) noexcept
   {
-    return self.market_weak_ptr_.lock();
-  }
-
-  void market_ptr(this Backtest& self,
-                  std::shared_ptr<Market> new_market_ptr) noexcept
-  {
-    self.market_weak_ptr_ = std::move(new_market_ptr);
-  }
-
-  auto market(this const Backtest& self) noexcept -> const Market&
-  {
-    return *self.market_ptr();
-  }
-
-  auto profile_ptr(this const Backtest& self) noexcept
-   -> const std::shared_ptr<Profile>
-  {
-    return self.profile_weak_ptr_.lock();
-  }
-
-  void profile_ptr(this Backtest& self,
-                   std::shared_ptr<Profile> new_profile_ptr) noexcept
-  {
-    self.profile_weak_ptr_ = std::move(new_profile_ptr);
-  }
-
-  auto profile(this const Backtest& self) noexcept -> const Profile&
-  {
-    return *self.profile_ptr();
-  }
-
-  void mark_as_failed(this Backtest& self) noexcept
-  {
-    self.is_failed_ = true;
+    self.profile_handle_ = std::move(new_profile_handle);
   }
 
   auto is_failed(this const Backtest& self) noexcept -> bool
@@ -194,295 +163,39 @@ public:
     return self.is_failed_;
   }
 
-  auto summaries(this const Backtest& self) noexcept
-   -> const std::vector<BacktestSummary>&
+  void is_failed(this Backtest& self, bool is_failed) noexcept
   {
-    return self.summaries_;
+    self.is_failed_ = is_failed;
   }
 
-  auto series_results_collector(this const Backtest& self) noexcept
-   -> const SeriesResultsCollector&
-  {
-    return self.series_results_collector_;
-  }
-
-  auto series_results(this const Backtest& self) noexcept
-   -> const std::unordered_map<std::string, std::vector<double>>&
-  {
-    return self.series_results_collector().results();
-  }
-
-  auto equal_rules(this const Backtest& self, const Backtest& other) noexcept
-   -> bool
+  auto equivalent_rules(this const Backtest& self,
+                        const Backtest& other) noexcept -> bool
   {
     return self.initial_capital_ == other.initial_capital_ &&
-           self.asset_ptr() == other.asset_ptr() &&
-           self.strategy_ptr() == other.strategy_ptr() &&
-           self.market_ptr() == other.market_ptr() &&
-           self.broker_ptr() == other.broker_ptr() &&
-           self.profile_ptr() == other.profile_ptr();
+           self.asset_handle() == other.asset_handle() &&
+           self.strategy_handle() == other.strategy_handle() &&
+           self.market_handle() == other.market_handle() &&
+           self.broker_handle() == other.broker_handle() &&
+           self.profile_handle() == other.profile_handle();
   }
 
-  auto equal_rules_and_metadata(this const Backtest& self,
-                                const Backtest& other) noexcept -> bool
+  auto equivalent_rules_and_metadata(this const Backtest& self,
+                                     const Backtest& other) noexcept -> bool
   {
-    return self.name_ == other.name_ && self.equal_rules(other);
-  }
-
-  auto get_risk_value(this const Backtest& self) noexcept -> double
-  {
-    return self.profile().capital_risk() * self.initial_capital();
-  }
-
-  auto is_valid_rules(this const Backtest& self) noexcept -> bool
-  {
-    return !self.asset_weak_ptr_.expired() &&
-           !self.strategy_weak_ptr_.expired() &&
-           !self.market_weak_ptr_.expired() &&
-           !self.broker_weak_ptr_.expired() &&
-           !self.profile_weak_ptr_.expired();
-  }
-
-  void reset(this Backtest& self) noexcept
-  {
-    self.is_failed_ = false;
-    self.summaries_.clear();
-    self.series_results_collector_.clear();
-  }
-
-  auto should_run(this const Backtest& self) noexcept -> bool
-  {
-    if(!self.is_valid_rules()) {
-      return false;
-    }
-
-    const auto summaries_size = self.summaries_.size();
-    const auto asset_size = self.asset().size();
-
-    return summaries_size < asset_size && !self.is_failed();
-  }
-
-  void run(this Backtest& self)
-  {
-    using namespace backtest;
-
-    if(!self.should_run()) {
-      return;
-    }
-
-    const auto summaries_size = self.summaries_.size();
-    const auto asset_size = self.asset().size();
-    const auto last_index = asset_size - 1;
-    const auto asset_lookback =
-     last_index - std::min(summaries_size, last_index);
-    const auto asset_snapshot = self.asset().get_snapshot(asset_lookback);
-    const auto& strategy = self.strategy();
-    const auto& profile = self.profile();
-    const auto& broker = self.broker();
-    const auto& market = self.market();
-
-    {
-      const auto& series_registry = strategy.series_registry();
-      auto context = self.create_default_method_context();
-      for(const auto& [series_name, series] : series_registry) {
-        const auto series_value = series(asset_snapshot, context);
-        self.series_results_collector_.collect(series_name, series_value);
-      }
-    }
-
-    auto summary = !self.summaries_.empty()
-                    ? self.summaries_.back()
-                    : BacktestSummary{self.initial_capital()};
-
-    auto trade_session = summary.trade_session();
-
-    trade_session.market_update(
-     static_cast<std::time_t>(asset_snapshot.datetime()),
-     asset_snapshot.close(),
-     asset_snapshot.lookback());
-
-    const auto& open_position = trade_session.open_position();
-    if(open_position) {
-      const auto exit_trade =
-       trade_session
-        .evaluate_exit_conditions(asset_snapshot[1].close(),
-                                  asset_snapshot.open(),
-                                  asset_snapshot.high(),
-                                  asset_snapshot.low())
-        .or_else([&]() {
-          const auto position_size = open_position->unrealized_position_size();
-          return self.exit_trade(asset_snapshot, position_size);
-        });
-
-      if(exit_trade) {
-        const auto fee = broker.calculate_fee(*exit_trade);
-        trade_session.exit_position(*exit_trade, fee);
-      }
-    }
-
-    if(trade_session.is_flat() || trade_session.is_closed()) {
-      const auto risk_value = self.get_risk_value();
-
-      auto entry_trade = self.entry_trade(asset_snapshot, risk_value);
-      if(entry_trade) {
-        {
-          const auto quantity_step = market.quantity_step();
-          const auto min_order_quantity = market.min_order_quantity();
-
-          auto position_size = entry_trade->position_size();
-          if(quantity_step > 0.0 &&
-             std::fmod(position_size, quantity_step) != 0.0) {
-            position_size =
-             quantity_step * std::round(position_size / quantity_step);
-          }
-
-          if(position_size > 0.0 && position_size < min_order_quantity) {
-            position_size = min_order_quantity;
-          } else if(position_size < 0.0 &&
-                    position_size > -min_order_quantity) {
-            position_size = -min_order_quantity;
-          }
-
-          entry_trade->position_size(position_size);
-        }
-
-        const auto fee = broker.calculate_fee(*entry_trade);
-        trade_session.entry_position(*entry_trade, fee);
-      }
-    }
-
-    summary.update_to_next_summary(std::move(trade_session));
-
-    self.summaries_.emplace_back(std::move(summary));
-  }
-
-  auto entry_long_trade(this const Backtest& self,
-                        const AssetSnapshot& asset_snapshot,
-                        double risk_value) noexcept -> std::optional<TradeEntry>
-  {
-    auto result = std::optional<TradeEntry>{};
-
-    const auto& strategy = self.strategy();
-    const auto& profile = self.profile();
-    const auto prev_snapshot = asset_snapshot[1];
-    auto context = self.create_default_method_context();
-
-    if(strategy.long_entry_filter()(prev_snapshot, context)) {
-      const auto entry_price = asset_snapshot.open();
-      const auto r_distance =
-       profile.get_r_distance(entry_price, prev_snapshot, context);
-      const auto position_size = risk_value / r_distance;
-
-      const auto stop_loss_price =
-       strategy.stop_loss_enabled() ? entry_price - r_distance : NAN;
-      const auto is_stop_loss_trailing = strategy.stop_loss_trailing_enabled();
-      const auto take_profit_price =
-       strategy.take_profit_enabled()
-        ? entry_price + r_distance * strategy.take_profit_r_multiple()
-        : NAN;
-
-      result = TradeEntry{position_size,
-                          entry_price,
-                          stop_loss_price,
-                          is_stop_loss_trailing,
-                          take_profit_price};
-    }
-
-    return result;
-  }
-
-  auto entry_short_trade(this const Backtest& self,
-                         const AssetSnapshot& asset_snapshot,
-                         double risk_value) noexcept
-   -> std::optional<TradeEntry>
-  {
-    auto result = std::optional<TradeEntry>{};
-
-    const auto& strategy = self.strategy();
-    const auto& profile = self.profile();
-    auto context = self.create_default_method_context();
-    const auto prev_snapshot = asset_snapshot[1];
-
-    if(strategy.short_entry_filter()(prev_snapshot, context)) {
-      const auto entry_price = asset_snapshot.open();
-      const auto r_distance =
-       -profile.get_r_distance(entry_price, prev_snapshot, context);
-      const auto position_size = risk_value / r_distance;
-
-      const auto stop_loss_price =
-       strategy.stop_loss_enabled() ? entry_price - r_distance : NAN;
-      const auto is_stop_loss_trailing = strategy.stop_loss_trailing_enabled();
-      const auto take_profit_price =
-       strategy.take_profit_enabled()
-        ? entry_price + r_distance * strategy.take_profit_r_multiple()
-        : NAN;
-
-      result = TradeEntry{position_size,
-                          entry_price,
-                          stop_loss_price,
-                          is_stop_loss_trailing,
-                          take_profit_price};
-    }
-
-    return result;
-  }
-
-  auto entry_trade(this const Backtest& self,
-                   const AssetSnapshot& asset_snapshot,
-                   double risk_value) noexcept -> std::optional<TradeEntry>
-  {
-    return self.entry_long_trade(asset_snapshot, risk_value).or_else([&] {
-      return self.entry_short_trade(asset_snapshot, risk_value);
-    });
-  }
-
-  auto exit_trade(this const Backtest& self,
-                  const AssetSnapshot& asset_snapshot,
-                  double position_size) noexcept -> std::optional<TradeExit>
-  {
-    const auto is_long_direction = position_size > 0;
-    const auto is_short_direction = position_size < 0;
-    const auto exit_price = asset_snapshot.open();
-
-    auto const& strategy = self.strategy();
-    auto context = self.create_default_method_context();
-    const auto prev_snapshot = asset_snapshot[1];
-
-    if(is_long_direction) {
-      if(strategy.long_exit_filter()(prev_snapshot, context)) {
-        return TradeExit{position_size, exit_price, TradeExit::Reason::signal};
-      }
-    } else if(is_short_direction) {
-      if(strategy.short_exit_filter()(prev_snapshot, context)) {
-        return TradeExit{position_size, exit_price, TradeExit::Reason::signal};
-      }
-    }
-
-    return std::nullopt;
+    return self.name_ == other.name_ && self.equivalent_rules(other);
   }
 
 private:
   std::string name_;
   double initial_capital_;
 
-  std::weak_ptr<Asset> asset_weak_ptr_;
-  std::weak_ptr<Strategy> strategy_weak_ptr_;
-  std::weak_ptr<Market> market_weak_ptr_;
-  std::weak_ptr<Broker> broker_weak_ptr_;
-  std::weak_ptr<Profile> profile_weak_ptr_;
+  AssetStoreHandle asset_handle_;
+  StrategyStoreHandle strategy_handle_;
+  MarketStoreHandle market_handle_;
+  BrokerStoreHandle broker_handle_;
+  ProfileStoreHandle profile_handle_;
 
   bool is_failed_;
-
-  std::vector<BacktestSummary> summaries_;
-  SeriesResultsCollector series_results_collector_;
-
-  auto create_default_method_context(this const Backtest& self)
-   -> DefaultMethodContext
-  {
-    return DefaultMethodContext{self.strategy().series_registry(),
-                                self.series_results_collector_,
-                                self.summaries_.size()};
-  }
 };
 
 } // namespace pludux::backtest
