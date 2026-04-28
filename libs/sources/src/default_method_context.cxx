@@ -73,9 +73,9 @@ public:
   }
 
 private:
-  const SeriesMethodRegistry& methods_{};
-  const SeriesResultsCollector& results_collector_{};
-  std::size_t current_index_ = 0;
+  const SeriesMethodRegistry& methods_;
+  const SeriesResultsCollector& results_collector_;
+  std::size_t current_index_;
 };
 
 } // namespace pludux

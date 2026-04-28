@@ -40,6 +40,13 @@ target_sources(${PROJECT_NAME}
     BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/sources
     FILES
 
+    sources/backtest/store_handle.cxx
+    sources/backtest/store_slot.cxx
+    sources/backtest/store_data_resolver.cxx
+    sources/backtest/store_descriptor.cxx
+    sources/backtest/store_arena.cxx
+    sources/backtest/store.cxx
+
     sources/backtest/method_serializer_mixin.cxx
 
     sources/backtest/plots/plot_method_contextable.cxx
@@ -72,6 +79,8 @@ target_sources(${PROJECT_NAME}
     sources/backtest/profile.cxx
     sources/backtest/backtest_summary.cxx
     sources/backtest/backtest.cxx
+
+    sources/backtest/backtest_runner.cxx
 
     sources/backtest.cxx
 )

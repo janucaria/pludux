@@ -64,7 +64,7 @@ public:
     self.quantity_step_ = new_qty_step;
   }
 
-  auto equal_rules(this const Market& self, const Market& other) noexcept
+  auto equivalent_rules(this const Market& self, const Market& other) noexcept
    -> bool
   {
     return self.min_order_quantity_ == other.min_order_quantity_ &&
