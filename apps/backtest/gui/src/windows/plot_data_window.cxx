@@ -138,7 +138,7 @@ private:
 export class PlotDataWindow {
 public:
   PlotDataWindow()
-  : last_selected_backtest_{nullptr}
+  : last_selected_backtest_{}
   , bullish_color_{0.5, 1, 0, 1}
   , bearish_color_{1, 0, 0.5, 1}
   , risk_color_{1, 0, 0, 0.25}
@@ -151,20 +151,31 @@ public:
   void render(this PlotDataWindow& self, WindowContext& context)
   {
     const auto& app_state = context.app_state();
-    const auto backtest = app_state.selected_backtest();
+    const auto backtest_handle = app_state.selected_backtest_handle();
+    const auto backtest_ptr =
+     app_state.get_backtest_if_present(backtest_handle);
 
     ImGui::Begin("Plots", nullptr);
 
-    if(!backtest || !backtest->is_valid_rules()) {
+    if(!backtest_ptr || !context.is_backtest_ready(*backtest_ptr)) {
       ImGui::End();
       return;
     }
 
-    const auto& asset = backtest->asset();
-    const auto& backtest_summaries = backtest->summaries();
-    const auto is_backtest_should_run = backtest->should_run();
+    const auto& backtest = *backtest_ptr;
+    const auto asset_handle = backtest.asset_handle();
+    const auto& asset = app_state.get_asset(asset_handle);
+    const auto& backtest_summaries =
+     app_state.get_backtest_summaries(backtest_handle);
+    const auto& backtest_series_results =
+     app_state.get_series_results(backtest_handle);
+    const auto is_backtest_should_run =
+     backtest_summaries.size() < asset.size();
 
-    const auto& plots = backtest->strategy().plots();
+    const auto startegy_handle = backtest.strategy_handle();
+    const auto& strategy = app_state.get_strategy(startegy_handle);
+
+    const auto& plots = strategy.plots();
     const auto no_overlays_view = std::views::filter(
      [](const auto& plot_group) { return !plot_group.is_overlay(); });
     const auto additional_plots_count =
@@ -188,14 +199,14 @@ public:
 
     const auto reset_chart_view =
      is_backtest_should_run ||
-     self.last_selected_backtest_ != app_state.selected_backtest() ||
+     self.last_selected_backtest_ != app_state.selected_backtest_handle() ||
      must_resize_row_ratios;
 
     if(reset_chart_view) {
       axis_x_flags |= ImPlotAxisFlags_AutoFit;
       axis_y_flags |= ImPlotAxisFlags_AutoFit;
 
-      self.last_selected_backtest_ = app_state.selected_backtest();
+      self.last_selected_backtest_ = app_state.selected_backtest_handle();
     }
 
     if(ImPlot::BeginSubplots("##MainPlots",
@@ -260,14 +271,15 @@ public:
         ImPlot::EndPlot();
       }
 
-      const auto& series_results = backtest->series_results();
       // TODO: use std::view::enumerate when it's available
       auto i = 0;
       for(const auto& plot_group : plots | no_overlays_view) {
         const auto plot_id = std::format("##Plot{}", i);
 
-        const auto context_for_plots = PlotContext{
-         series_results, backtest->summaries().size(), plot_group.is_overlay()};
+        const auto context_for_plots =
+         PlotContext{backtest_series_results.results(),
+                     backtest_summaries.size(),
+                     plot_group.is_overlay()};
 
         if(ImPlot::BeginPlot(plot_id.c_str(), plot_size, plot_flags)) {
           const auto is_last_plot = i == additional_plots_count - 1;
@@ -301,7 +313,7 @@ public:
   }
 
 private:
-  std::shared_ptr<backtest::Backtest> last_selected_backtest_;
+  backtest::StoreHandle<backtest::Backtest> last_selected_backtest_;
 
   ImVec4 bullish_color_;
   ImVec4 bearish_color_;
@@ -386,8 +398,9 @@ private:
   {
     auto& context = *reinterpret_cast<WindowContext*>(user_data);
     const auto& app_state = context.app_state();
-    const auto& backtest = app_state.selected_backtest();
-    const auto& summaries = backtest->summaries();
+    const auto backtest_handle = app_state.selected_backtest_handle();
+    const auto& backtest = app_state.get_backtest(backtest_handle);
+    const auto& summaries = app_state.get_backtest_summaries(backtest_handle);
 
     const auto idx = static_cast<std::ptrdiff_t>(value);
     if(idx < 0 || idx >= summaries.size()) {
@@ -396,7 +409,8 @@ private:
 
     const auto& backtest_summary = summaries.at(idx);
 
-    const auto& asset = backtest->asset();
+    const auto& asset_handle = backtest.asset_handle();
+    const auto& asset = app_state.get_asset(asset_handle);
     const auto& snapshot = get_asset_snapshot(backtest_summary, asset);
 
     const auto datetime = snapshot.datetime();
@@ -758,13 +772,18 @@ private:
   void overlays_plots(this const PlotDataWindow& self, WindowContext& context)
   {
     const auto& app_state = context.app_state();
+    const auto backtest_handle = app_state.selected_backtest_handle();
     const auto& backtest = app_state.selected_backtest();
-    const auto& series_results = backtest->series_results();
-    const auto& strategy = backtest->strategy();
+    const auto& strategy_handle = backtest.strategy_handle();
+    const auto& strategy = app_state.get_strategy(strategy_handle);
+    const auto& backtest_summaries =
+     app_state.get_backtest_summaries(backtest_handle);
+    const auto& series_results =
+     app_state.get_series_results(backtest_handle).results();
     const auto& plots = strategy.plots();
 
     const auto context_for_plots =
-     PlotContext{series_results, backtest->summaries().size(), true};
+     PlotContext{series_results, backtest_summaries.size(), true};
 
     for(const auto& plot_group :
         plots | std::views::filter([](const auto& plot_group) {

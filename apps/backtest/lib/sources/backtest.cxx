@@ -17,6 +17,7 @@ export module pludux.backtest;
 
 export import pludux;
 
+export import :store;
 export import :asset;
 export import :strategy;
 export import :market;
@@ -29,6 +30,7 @@ export import :trade_position;
 export import :trade_session;
 export import :backtest;
 export import :backtest_summary;
+export import :backtest_runner;
 export import :plot_group;
 export import :plots;
 

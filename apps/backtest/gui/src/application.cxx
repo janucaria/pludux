@@ -38,29 +38,20 @@ public:
     ImPlot::GetStyle().UseLocalTime = true;
     ImPlot::GetStyle().Use24HourClock = true;
 
-    {
-      const auto& markets = app_state.markets();
-      if(markets.empty()) {
-        auto default_market = std::make_shared<backtest::Market>("Default");
-        app_state.add_market(std::move(default_market));
-      }
+    if(app_state.get_market_handles().empty()) {
+      auto default_market = backtest::Market{"Default"};
+      app_state.add_market(std::move(default_market));
     }
 
-    {
-      const auto& brokers = app_state.brokers();
-      if(brokers.empty()) {
-        auto default_broker = std::make_shared<backtest::Broker>("Default");
-        app_state.add_broker(std::move(default_broker));
-      }
+    if(app_state.get_broker_handles().empty()) {
+      auto default_broker = backtest::Broker{"Default"};
+      app_state.add_broker(std::move(default_broker));
     }
 
-    {
-      const auto& profiles = app_state.profiles();
-      if(profiles.empty()) {
-        auto default_profile = std::make_shared<backtest::Profile>("Default");
-        default_profile->capital_risk(0.01);
-        app_state.add_profile(std::move(default_profile));
-      }
+    if(app_state.get_profile_handles().empty()) {
+      auto default_profile = backtest::Profile{"Default"};
+      default_profile.capital_risk(0.01);
+      app_state.add_profile(std::move(default_profile));
     }
 
     {
@@ -147,9 +138,8 @@ public:
     auto& app_state = self.app_state_;
     auto& actions = self.actions_;
 
-    if(!app_state.backtests().empty()) {
-      auto& backtests = app_state.backtests();
-
+    auto& backtest_handles = app_state.get_backtest_handles();
+    if(!backtest_handles.empty()) {
       // create a loop with timeout 60 fps
       auto last_update_time = std::chrono::high_resolution_clock::now();
       auto current_time = std::chrono::high_resolution_clock::now();
@@ -158,13 +148,38 @@ public:
                         .count();
 
       do {
-        for(auto& backtest : backtests) {
+        for(auto&& backtest_handle : backtest_handles) {
+          auto& backtest = app_state.get_backtest(backtest_handle);
+          auto summaries_ptr =
+           app_state.get_backtest_summaries_if_present(backtest_handle);
+          if(!summaries_ptr) {
+            app_state.add_backtest_summaries(
+             backtest_handle, std::vector<backtest::BacktestSummary>{});
+            summaries_ptr =
+             app_state.get_backtest_summaries_if_present(backtest_handle);
+          }
+
+          auto series_results_ptr =
+           app_state.get_series_results_if_present(backtest_handle);
+
+          if(!series_results_ptr) {
+            app_state.add_series_results(backtest_handle,
+                                         SeriesResultsCollector{});
+            series_results_ptr =
+             app_state.get_series_results_if_present(backtest_handle);
+          }
+
           try {
-            if(backtest->should_run()) {
-              backtest->run();
-            }
+            auto backtest_runner = backtest::BacktestRunner{
+             backtest, *summaries_ptr, *series_results_ptr};
+
+            backtest_runner.run(app_state.get_asset_store(),
+                                app_state.get_strategy_store(),
+                                app_state.get_market_store(),
+                                app_state.get_broker_store(),
+                                app_state.get_profile_store());
           } catch(const std::exception& e) {
-            backtest->mark_as_failed();
+            backtest.is_failed(true);
 
             // TODO: this line is buggy in emscripten release build.
             // The bug is failed to load/open the strategy, asset, or pludux
@@ -176,7 +191,7 @@ public:
             */
 
             const auto error_message =
-             "Backtest '" + backtest->name() + "' failed: " + e.what();
+             "Backtest '" + backtest.name() + "' failed: " + e.what();
             self.alert_messages_.push(error_message);
           }
         }

@@ -25,7 +25,7 @@ class BacktestsWindow {
 public:
   BacktestsWindow()
   : backtest_panel_mode_{BacktestPanelMode::List}
-  , selected_backtest_ptr_{nullptr}
+  , selected_backtest_handle_opt_{std::nullopt}
   , editing_backtest_ptr_{nullptr}
   {
   }
@@ -52,13 +52,14 @@ public:
 private:
   enum class BacktestPanelMode { List, Edit, AddNew } backtest_panel_mode_;
 
-  std::shared_ptr<backtest::Backtest> selected_backtest_ptr_;
+  std::optional<backtest::StoreHandle<backtest::Backtest>>
+   selected_backtest_handle_opt_;
   std::shared_ptr<backtest::Backtest> editing_backtest_ptr_;
 
   void render_backtests_list(this auto& self, WindowContext& context)
   {
     const auto& app_state = context.app_state();
-    const auto& backtests = context.backtests();
+    const auto& backtest_handles = app_state.get_backtest_handles();
 
     ImGui::BeginGroup();
     ImGui::BeginChild(
@@ -67,18 +68,20 @@ private:
       0,
       -ImGui::GetFrameHeightWithSpacing())); // Leave room for 1 line below us
 
-    if(!backtests.empty()) {
-      for(auto i = 0; i < backtests.size(); ++i) {
-        auto backtest = backtests[i];
-        const auto& backtest_name = backtest->name();
-        auto is_selected = app_state.selected_backtest() == backtest;
+    if(!backtest_handles.empty()) {
+      for(auto i = 0; i < backtest_handles.size(); ++i) {
+        const auto backtest_handle = backtest_handles[i];
+        const auto& backtest = app_state.get_backtest(backtest_handle);
+        const auto& backtest_name = backtest.name();
+        auto is_selected =
+         app_state.selected_backtest_handle() == backtest_handle;
 
         ImGui::PushID(i);
 
         ImGui::SetNextItemAllowOverlap();
         if(ImGui::Selectable(backtest_name.c_str(), &is_selected)) {
-          context.push_action([backtest](ApplicationState& app_state) {
-            app_state.select_backtest(backtest);
+          context.push_action([backtest_handle](ApplicationState& app_state) {
+            app_state.select_backtest(backtest_handle);
           });
         }
         ImGui::SameLine();
@@ -86,16 +89,16 @@ private:
         ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 100);
         if(ImGui::Button("Edit")) {
           self.backtest_panel_mode_ = BacktestPanelMode::Edit;
-          self.selected_backtest_ptr_ = backtest;
+          self.selected_backtest_handle_opt_ = backtest_handle;
           self.editing_backtest_ptr_ =
-           std::make_shared<backtest::Backtest>(*backtest);
+           std::make_shared<backtest::Backtest>(backtest);
         }
 
         ImGui::SameLine();
 
         if(ImGui::Button("Delete")) {
-          context.push_action([i](ApplicationState& app_state) {
-            app_state.remove_backtest_at_index(i);
+          context.push_action([backtest_handle](ApplicationState& app_state) {
+            app_state.remove_backtest(backtest_handle);
           });
         }
 
@@ -107,7 +110,7 @@ private:
 
     if(ImGui::Button("Add New Backtest")) {
       self.backtest_panel_mode_ = BacktestPanelMode::AddNew;
-      self.selected_backtest_ptr_ = nullptr;
+      self.selected_backtest_handle_opt_ = std::nullopt;
       self.editing_backtest_ptr_ = std::make_shared<backtest::Backtest>();
     }
     ImGui::EndGroup();
@@ -153,9 +156,12 @@ private:
 
     ImGui::EndChild();
 
-    const auto same_backtest =
-     self.selected_backtest_ptr_->equal_rules_and_metadata(
-      *self.editing_backtest_ptr_);
+    const auto selected_backtest_handle =
+     self.selected_backtest_handle_opt_.value();
+    const auto& selected_backtest =
+     context.app_state().get_backtest(selected_backtest_handle);
+    const auto same_backtest = selected_backtest.equivalent_rules_and_metadata(
+     *self.editing_backtest_ptr_);
 
     if(ImGui::Button("OK")) {
       self.submit_backtest_changes(context, true);
@@ -178,11 +184,7 @@ private:
 
   void edit_backtest_form(this BacktestsWindow& self, WindowContext& context)
   {
-    const auto& assets = context.assets();
-    const auto& strategies = context.strategies();
-    const auto& markets = context.markets();
-    const auto& brokers = context.brokers();
-    const auto& profiles = context.profiles();
+    const auto& app_state = context.app_state();
 
     auto& edit_backtest_ptr = self.editing_backtest_ptr_;
     {
@@ -203,29 +205,32 @@ private:
     }
 
     {
-      if(!edit_backtest_ptr->asset_ptr()) {
-        if(!self.selected_backtest_ptr_ && !assets.empty()) {
-          edit_backtest_ptr->asset_ptr(assets.front());
+      const auto& asset_handles = app_state.get_asset_handles();
+      const auto edit_asset_handle = edit_backtest_ptr->asset_handle();
+      const auto& edit_asset_ptr =
+       app_state.get_asset_if_present(edit_asset_handle);
+
+      if(!edit_asset_ptr) {
+        if(!self.selected_backtest_handle_opt_ && !asset_handles.empty()) {
+          edit_backtest_ptr->asset_handle(asset_handles.front());
         }
-      } else if(!std::ranges::contains(assets,
-                                       edit_backtest_ptr->asset_ptr())) {
-        edit_backtest_ptr->asset_ptr(nullptr);
       }
 
       ImGui::Text("Asset:");
-      auto asset_preview = edit_backtest_ptr->asset_ptr()
-                            ? edit_backtest_ptr->asset_ptr()->name()
-                            : std::string{""};
+      auto asset_preview =
+       edit_asset_ptr ? edit_asset_ptr->name() : std::string{""};
       if(ImGui::BeginCombo("##AssetCombo", asset_preview.c_str())) {
-        for(auto i = 0; i < assets.size(); ++i) {
-          const auto& asset = assets[i];
-          const auto& asset_name = asset->name();
-          const auto is_selected = edit_backtest_ptr->asset_ptr() == asset;
+        for(auto i = 0; i < asset_handles.size(); ++i) {
+          const auto& asset_handle = asset_handles[i];
+          const auto& asset = app_state.get_asset(asset_handle);
+          const auto& asset_name = asset.name();
+          const auto is_selected =
+           edit_backtest_ptr->asset_handle() == asset_handle;
 
           ImGui::PushID(i);
 
           if(ImGui::Selectable(asset_name.c_str(), is_selected)) {
-            edit_backtest_ptr->asset_ptr(asset);
+            edit_backtest_ptr->asset_handle(asset_handle);
           }
 
           if(is_selected) {
@@ -239,30 +244,32 @@ private:
     }
 
     {
-      if(!edit_backtest_ptr->strategy_ptr()) {
-        if(!self.selected_backtest_ptr_ && !strategies.empty()) {
-          edit_backtest_ptr->strategy_ptr(strategies.front());
+      const auto& strategy_handles = app_state.get_strategy_handles();
+      const auto edit_strategy_handle = edit_backtest_ptr->strategy_handle();
+      const auto& edit_strategy_ptr =
+       app_state.get_strategy_if_present(edit_strategy_handle);
+
+      if(!edit_strategy_ptr) {
+        if(!self.selected_backtest_handle_opt_ && !strategy_handles.empty()) {
+          edit_backtest_ptr->strategy_handle(strategy_handles.front());
         }
-      } else if(!std::ranges::contains(strategies,
-                                       edit_backtest_ptr->strategy_ptr())) {
-        edit_backtest_ptr->strategy_ptr(nullptr);
       }
 
       ImGui::Text("Strategy:");
-      auto strategy_preview = edit_backtest_ptr->strategy_ptr()
-                               ? edit_backtest_ptr->strategy_ptr()->name()
-                               : std::string{""};
+      auto strategy_preview =
+       edit_strategy_ptr ? edit_strategy_ptr->name() : std::string{""};
       if(ImGui::BeginCombo("##StrategyCombo", strategy_preview.c_str())) {
-        for(auto i = 0; i < strategies.size(); ++i) {
-          const auto& strategy = strategies[i];
-          const auto& strategy_name = strategy->name();
+        for(auto i = 0; i < strategy_handles.size(); ++i) {
+          const auto& strategy_handle = strategy_handles[i];
+          const auto& strategy = app_state.get_strategy(strategy_handle);
+          const auto& strategy_name = strategy.name();
           const auto is_selected =
-           edit_backtest_ptr->strategy_ptr() == strategy;
+           edit_backtest_ptr->strategy_handle() == strategy_handle;
 
           ImGui::PushID(i);
 
           if(ImGui::Selectable(strategy_name.c_str(), is_selected)) {
-            edit_backtest_ptr->strategy_ptr(strategy);
+            edit_backtest_ptr->strategy_handle(strategy_handle);
           }
 
           if(is_selected) {
@@ -276,29 +283,32 @@ private:
     }
 
     {
-      if(!edit_backtest_ptr->market_ptr()) {
-        if(!self.selected_backtest_ptr_ && !markets.empty()) {
-          edit_backtest_ptr->market_ptr(markets.front());
+      const auto& market_handles = app_state.get_market_handles();
+      const auto edit_market_handle = edit_backtest_ptr->market_handle();
+      const auto& edit_market_ptr =
+       app_state.get_market_if_present(edit_market_handle);
+
+      if(!edit_market_ptr) {
+        if(!self.selected_backtest_handle_opt_ && !market_handles.empty()) {
+          edit_backtest_ptr->market_handle(market_handles.front());
         }
-      } else if(!std::ranges::contains(markets,
-                                       edit_backtest_ptr->market_ptr())) {
-        edit_backtest_ptr->market_ptr(nullptr);
       }
 
       ImGui::Text("Market:");
-      auto market_preview = edit_backtest_ptr->market_ptr()
-                             ? edit_backtest_ptr->market_ptr()->name()
-                             : std::string{""};
+      auto market_preview =
+       edit_market_ptr ? edit_market_ptr->name() : std::string{""};
       if(ImGui::BeginCombo("##MarketCombo", market_preview.c_str())) {
-        for(auto i = 0; i < markets.size(); ++i) {
-          const auto& market = markets[i];
-          const auto& market_name = market->name();
-          const auto is_selected = edit_backtest_ptr->market_ptr() == market;
+        for(auto i = 0; i < market_handles.size(); ++i) {
+          const auto& market_handle = market_handles[i];
+          const auto& market = app_state.get_market(market_handle);
+          const auto& market_name = market.name();
+          const auto is_selected =
+           edit_backtest_ptr->market_handle() == market_handle;
 
           ImGui::PushID(i);
 
           if(ImGui::Selectable(market_name.c_str(), is_selected)) {
-            edit_backtest_ptr->market_ptr(market);
+            edit_backtest_ptr->market_handle(market_handle);
           }
 
           if(is_selected) {
@@ -312,29 +322,32 @@ private:
     }
 
     {
-      if(!edit_backtest_ptr->broker_ptr()) {
-        if(!self.selected_backtest_ptr_ && !brokers.empty()) {
-          edit_backtest_ptr->broker_ptr(brokers.front());
+      const auto& broker_handles = app_state.get_broker_handles();
+      const auto edit_broker_handle = edit_backtest_ptr->broker_handle();
+      const auto& edit_broker_ptr =
+       app_state.get_broker_if_present(edit_broker_handle);
+
+      if(!edit_broker_ptr) {
+        if(!self.selected_backtest_handle_opt_ && !broker_handles.empty()) {
+          edit_backtest_ptr->broker_handle(broker_handles.front());
         }
-      } else if(!std::ranges::contains(brokers,
-                                       edit_backtest_ptr->broker_ptr())) {
-        edit_backtest_ptr->broker_ptr(nullptr);
       }
 
       ImGui::Text("Broker:");
-      auto broker_preview = edit_backtest_ptr->broker_ptr()
-                             ? edit_backtest_ptr->broker_ptr()->name()
-                             : std::string{""};
+      auto broker_preview =
+       edit_broker_ptr ? edit_broker_ptr->name() : std::string{""};
       if(ImGui::BeginCombo("##BrokerCombo", broker_preview.c_str())) {
-        for(auto i = 0; i < brokers.size(); ++i) {
-          const auto& broker = brokers[i];
-          const auto& broker_name = broker->name();
-          const auto is_selected = edit_backtest_ptr->broker_ptr() == broker;
+        for(auto i = 0; i < broker_handles.size(); ++i) {
+          const auto& broker_handle = broker_handles[i];
+          const auto& broker = app_state.get_broker(broker_handle);
+          const auto& broker_name = broker.name();
+          const auto is_selected =
+           edit_backtest_ptr->broker_handle() == broker_handle;
 
           ImGui::PushID(i);
 
           if(ImGui::Selectable(broker_name.c_str(), is_selected)) {
-            edit_backtest_ptr->broker_ptr(broker);
+            edit_backtest_ptr->broker_handle(broker_handle);
           }
 
           if(is_selected) {
@@ -348,29 +361,32 @@ private:
     }
 
     {
-      if(!edit_backtest_ptr->profile_ptr()) {
-        if(!self.selected_backtest_ptr_ && !profiles.empty()) {
-          edit_backtest_ptr->profile_ptr(profiles.front());
+      const auto& profile_handles = app_state.get_profile_handles();
+      const auto edit_profile_handle = edit_backtest_ptr->profile_handle();
+      const auto& edit_profile_ptr =
+       app_state.get_profile_if_present(edit_profile_handle);
+
+      if(!edit_profile_ptr) {
+        if(!self.selected_backtest_handle_opt_ && !profile_handles.empty()) {
+          edit_backtest_ptr->profile_handle(profile_handles.front());
         }
-      } else if(!std::ranges::contains(profiles,
-                                       edit_backtest_ptr->profile_ptr())) {
-        edit_backtest_ptr->profile_ptr(nullptr);
       }
 
       ImGui::Text("Profile:");
-      auto profile_preview = edit_backtest_ptr->profile_ptr()
-                              ? edit_backtest_ptr->profile_ptr()->name()
-                              : std::string{""};
+      auto profile_preview =
+       edit_profile_ptr ? edit_profile_ptr->name() : std::string{""};
       if(ImGui::BeginCombo("##ProfileCombo", profile_preview.c_str())) {
-        for(auto i = 0; i < profiles.size(); ++i) {
-          const auto& profile = profiles[i];
-          const auto& profile_name = profile->name();
-          const auto is_selected = edit_backtest_ptr->profile_ptr() == profile;
+        for(auto i = 0; i < profile_handles.size(); ++i) {
+          const auto profile_handle = profile_handles[i];
+          const auto& profile = app_state.get_profile(profile_handle);
+          const auto& profile_name = profile.name();
+          const auto is_selected =
+           edit_backtest_ptr->profile_handle() == profile_handle;
 
           ImGui::PushID(i);
 
           if(ImGui::Selectable(profile_name.c_str(), is_selected)) {
-            edit_backtest_ptr->profile_ptr(profile);
+            edit_backtest_ptr->profile_handle(profile_handle);
           }
 
           if(is_selected) {
@@ -389,24 +405,27 @@ private:
                                bool reset_on_success)
   {
     auto& edit_backtest_ptr = self.editing_backtest_ptr_;
-    if(edit_backtest_ptr->is_valid_rules()) {
-      context.push_action([backtest_ptr = self.selected_backtest_ptr_,
+    if(context.is_backtest_ready(*edit_backtest_ptr)) {
+      context.push_action([backtest_handle_opt =
+                            self.selected_backtest_handle_opt_,
                            edit_backtest_ptr](ApplicationState& app_state) {
         if(edit_backtest_ptr->name().empty()) {
           edit_backtest_ptr->name("Unnamed");
         }
 
-        if(backtest_ptr == nullptr) {
-          app_state.add_backtest(edit_backtest_ptr);
-          app_state.select_backtest(edit_backtest_ptr);
+        if(!backtest_handle_opt) {
+          const auto edit_handle_opt =
+           app_state.add_backtest(*edit_backtest_ptr);
+          app_state.select_backtest(edit_handle_opt.value());
         } else {
+          const auto backtest_handle = backtest_handle_opt.value();
+          auto& backtest = app_state.get_backtest(backtest_handle);
           const auto rule_changed =
-           !backtest_ptr->equal_rules(*edit_backtest_ptr);
+           !backtest.equivalent_rules(*edit_backtest_ptr);
           if(rule_changed) {
-            edit_backtest_ptr->reset();
-            *backtest_ptr = *edit_backtest_ptr;
+            app_state.update_backtest(*backtest_handle_opt, *edit_backtest_ptr);
           } else {
-            backtest_ptr->name(edit_backtest_ptr->name());
+            backtest.name(edit_backtest_ptr->name());
           }
         }
       });
@@ -423,7 +442,7 @@ private:
   void reset(this BacktestsWindow& self) noexcept
   {
     self.backtest_panel_mode_ = BacktestPanelMode::List;
-    self.selected_backtest_ptr_ = nullptr;
+    self.selected_backtest_handle_opt_ = std::nullopt;
     self.editing_backtest_ptr_ = nullptr;
   }
 };

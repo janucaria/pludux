@@ -525,15 +525,17 @@ public:
 private:
   enum class Page { List, AddNew, Edit } current_page_{Page::List};
 
-  std::shared_ptr<backtest::Strategy> selected_strategy_ptr_;
+  std::optional<backtest::StoreHandle<backtest::Strategy>>
+   selected_strategy_handle_opt_;
   std::shared_ptr<backtest::Strategy> editing_strategy_ptr_;
 
   std::vector<std::string> available_series_names_;
 
   void render_list_strategies(this auto& self, WindowContext& context)
   {
-    const auto& backtest = context.app_state().selected_backtest();
-    auto& strategies = context.strategies();
+    const auto& app_state = context.app_state();
+    const auto& strategy_handles = app_state.get_strategy_handles();
+    const auto backtest_ptr = app_state.selected_backtest_if_present();
 
     ImGui::BeginGroup();
     ImGui::BeginChild(
@@ -542,87 +544,87 @@ private:
       0,
       -ImGui::GetFrameHeightWithSpacing())); // Leave room for 1 line below us
 
-    if(!strategies.empty()) {
-      for(auto i = 0; i < strategies.size(); ++i) {
-        const auto& strategy_ptr = strategies[i];
-        const auto& strategy_name = strategy_ptr->name();
+    for(auto i = 0; i < strategy_handles.size(); ++i) {
+      const auto strategy_handle = strategy_handles[i];
+      const auto& strategy = app_state.get_strategy(strategy_handle);
+      const auto& strategy_name = strategy.name();
 
-        ImGui::PushID(i);
+      ImGui::PushID(i);
 
-        ImGui::SetNextItemAllowOverlap();
-        auto is_selected = backtest && backtest->strategy_ptr() == strategy_ptr;
-        ImGui::Selectable(strategy_name.c_str(), &is_selected);
+      ImGui::SetNextItemAllowOverlap();
+      auto is_selected =
+       backtest_ptr && backtest_ptr->strategy_handle() == strategy_handle;
+      ImGui::Selectable(strategy_name.c_str(), &is_selected);
 
-        ImGui::SameLine();
+      ImGui::SameLine();
 
-        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 150);
+      ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 150);
 
-        if(ImGui::Button("Export")) {
-          auto serialized_strategy =
-           stringify_backtest_strategy(*strategy_ptr).to_string();
+      if(ImGui::Button("Export")) {
+        auto serialized_strategy =
+         stringify_backtest_strategy(strategy).to_string();
 
 #ifdef __EMSCRIPTEN__
-          const auto file_name = "pludux-strategy-" + strategy_name + ".json";
-          const auto& file_content = serialized_strategy;
-          pludux_js_save_file(
-           file_name.c_str(), file_content.c_str(), "application/json");
+        const auto file_name = "pludux-strategy-" + strategy_name + ".json";
+        const auto& file_content = serialized_strategy;
+        pludux_js_save_file(
+         file_name.c_str(), file_content.c_str(), "application/json");
 
 #else
-          auto nfd_guard = NFD::Guard{};
-          auto out_path = NFD::UniquePath{};
+        auto nfd_guard = NFD::Guard{};
+        auto out_path = NFD::UniquePath{};
 
-          const auto filter_item =
-           std::array<nfdfilteritem_t, 1>{{"JSON Files", "json"}};
+        const auto filter_item =
+         std::array<nfdfilteritem_t, 1>{{"JSON Files", "json"}};
 
-          auto result =
-           NFD::SaveDialog(out_path, filter_item.data(), filter_item.size());
+        auto result =
+         NFD::SaveDialog(out_path, filter_item.data(), filter_item.size());
 
-          if(result == NFD_OKAY) {
-            const auto saved_path = std::string(out_path.get());
-            context.push_action(
-             [saved_path, serialized_strategy](ApplicationState& app_state) {
-               auto out_stream = std::ofstream{saved_path};
+        if(result == NFD_OKAY) {
+          const auto saved_path = std::string(out_path.get());
+          context.push_action(
+           [saved_path, serialized_strategy](ApplicationState& app_state) {
+             auto out_stream = std::ofstream{saved_path};
 
-               if(!out_stream.is_open()) {
-                 const auto error_message =
-                  std::format("Failed to open '{}' for writing.", saved_path);
-                 throw std::runtime_error(error_message);
-               }
+             if(!out_stream.is_open()) {
+               const auto error_message =
+                std::format("Failed to open '{}' for writing.", saved_path);
+               throw std::runtime_error(error_message);
+             }
 
-               out_stream << serialized_strategy;
-             });
-          } else if(result == NFD_CANCEL) {
-            // User cancelled the save dialog
-          } else {
-            const auto error_message =
-             std::format("Error '{}': {}", "Export", NFD::GetError());
-            throw std::runtime_error(error_message);
-          }
+             out_stream << serialized_strategy;
+           });
+        } else if(result == NFD_CANCEL) {
+          // User cancelled the save dialog
+        } else {
+          const auto error_message =
+           std::format("Error '{}': {}", "Export", NFD::GetError());
+          throw std::runtime_error(error_message);
+        }
 #endif
-        }
-        ImGui::SameLine();
-        if(ImGui::Button("Edit")) {
-          self.selected_strategy_ptr_ = strategy_ptr;
-          self.editing_strategy_ptr_ =
-           std::make_shared<backtest::Strategy>(*self.selected_strategy_ptr_);
-          self.current_page_ = Page::Edit;
-        }
-        ImGui::SameLine();
-        if(ImGui::Button("Delete")) {
-          context.push_action([i](ApplicationState& app_state) {
-            app_state.remove_strategy_at_index(i);
-          });
-        }
-
-        ImGui::PopID();
       }
+      ImGui::SameLine();
+      if(ImGui::Button("Edit")) {
+        self.selected_strategy_handle_opt_ = strategy_handle;
+        self.editing_strategy_ptr_ =
+         std::make_shared<backtest::Strategy>(strategy);
+        self.current_page_ = Page::Edit;
+      }
+      ImGui::SameLine();
+      if(ImGui::Button("Delete")) {
+        context.push_action([strategy_handle](ApplicationState& app_state) {
+          app_state.remove_strategy(strategy_handle);
+        });
+      }
+
+      ImGui::PopID();
     }
 
     ImGui::EndChild();
     if(ImGui::Button("Add New Strategy")) {
       self.current_page_ = Page::AddNew;
 
-      self.selected_strategy_ptr_ = nullptr;
+      self.selected_strategy_handle_opt_ = std::nullopt;
 
       self.editing_strategy_ptr_ = std::make_shared<backtest::Strategy>();
     }
@@ -700,8 +702,6 @@ private:
 
   void render_add_new_strategy(this auto& self, WindowContext& context)
   {
-    const auto& strategies = context.strategies();
-
     ImGui::BeginGroup();
     ImGui::BeginChild("add_new_strategy",
                       ImVec2(0, -ImGui::GetFrameHeightWithSpacing()));
@@ -731,8 +731,6 @@ private:
 
   void render_edit_strategy(this auto& self, WindowContext& context)
   {
-    const auto& strategies = context.strategies();
-
     ImGui::BeginGroup();
     ImGui::BeginChild("edit_strategy",
                       ImVec2(0, -ImGui::GetFrameHeightWithSpacing()));
@@ -747,8 +745,13 @@ private:
 
     ImGui::EndChild();
 
+    const auto selected_strategy_handle =
+     self.selected_strategy_handle_opt_.value();
+    const auto& selected_strategy =
+     context.app_state().get_strategy(selected_strategy_handle);
+
     const auto same_strategy =
-     *(self.selected_strategy_ptr_) == *(self.editing_strategy_ptr_);
+     selected_strategy == *(self.editing_strategy_ptr_);
 
     if(ImGui::Button("OK")) {
       self.submit_strategy_changes(context);
@@ -2466,37 +2469,28 @@ private:
 
   void submit_strategy_changes(this auto& self, WindowContext& context)
   {
-    context.push_action([strategy_ptr = self.selected_strategy_ptr_,
-                         edit_strategy_ptr = self.editing_strategy_ptr_](
-                         ApplicationState& app_state) {
-      if(edit_strategy_ptr->name().empty()) {
-        edit_strategy_ptr->name("Unnamed");
-      }
+    context.push_action(
+     [strategy_handle_opt = self.selected_strategy_handle_opt_,
+      edit_strategy_ptr =
+       self.editing_strategy_ptr_](ApplicationState& app_state) {
+       if(edit_strategy_ptr->name().empty()) {
+         edit_strategy_ptr->name("Unnamed");
+       }
 
-      if(strategy_ptr == nullptr) {
-        app_state.add_strategy(
-         std::make_shared<backtest::Strategy>(*edit_strategy_ptr));
-        return;
-      }
+       if(!strategy_handle_opt) {
+         app_state.add_strategy(std::move(*edit_strategy_ptr));
+         return;
+       }
 
-      const auto reset_backtests =
-       !strategy_ptr->equal_rules(*edit_strategy_ptr);
-      if(reset_backtests) {
-        for(auto& backtest : app_state.backtests()) {
-          if(backtest->strategy_ptr() == strategy_ptr) {
-            backtest->reset();
-          }
-        }
-      }
-
-      *strategy_ptr = *edit_strategy_ptr;
-    });
+       app_state.update_strategy(strategy_handle_opt.value(),
+                                 *edit_strategy_ptr);
+     });
   }
 
   void reset(this auto& self)
   {
     self.current_page_ = Page::List;
-    self.selected_strategy_ptr_ = nullptr;
+    self.selected_strategy_handle_opt_ = std::nullopt;
     self.editing_strategy_ptr_ = nullptr;
     self.available_series_names_.clear();
   }

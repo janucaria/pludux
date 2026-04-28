@@ -50,13 +50,15 @@ public:
 private:
   enum class BrokerPage { List, AddNewBroker, EditBroker } current_page_;
 
-  std::shared_ptr<backtest::Broker> selected_broker_ptr_;
+  std::optional<backtest::StoreHandle<backtest::Broker>>
+   selected_broker_handle_opt_;
   std::shared_ptr<backtest::Broker> editing_broker_ptr_;
 
   void render_brokers_list(this auto& self, WindowContext& context)
   {
-    const auto& backtest = context.app_state().selected_backtest();
-    const auto& brokers = context.brokers();
+    const auto& app_state = context.app_state();
+    const auto& broker_handles = app_state.get_broker_handles();
+    const auto backtest_ptr = app_state.selected_backtest_if_present();
 
     ImGui::BeginGroup();
     ImGui::BeginChild(
@@ -65,42 +67,42 @@ private:
       0,
       -ImGui::GetFrameHeightWithSpacing())); // Leave room for 1 line below us
 
-    if(!brokers.empty()) {
-      for(auto i = 0; i < brokers.size(); ++i) {
-        const auto& broker = brokers[i];
-        const auto& broker_name = broker->name();
+    for(auto i = 0; i < broker_handles.size(); ++i) {
+      const auto broker_handle = broker_handles[i];
+      const auto& broker = app_state.get_broker(broker_handle);
+      const auto& broker_name = broker.name();
 
-        ImGui::PushID(i);
+      ImGui::PushID(i);
 
-        ImGui::SetNextItemAllowOverlap();
-        auto is_selected = backtest && backtest->broker_ptr() == broker;
-        ImGui::Selectable(broker_name.c_str(), &is_selected);
+      ImGui::SetNextItemAllowOverlap();
+      auto is_selected =
+       backtest_ptr && backtest_ptr->broker_handle() == broker_handle;
+      ImGui::Selectable(broker_name.c_str(), &is_selected);
 
-        ImGui::SameLine();
-        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 100);
-        if(ImGui::Button("Edit")) {
-          self.current_page_ = BrokerPage::EditBroker;
-          self.selected_broker_ptr_ = broker;
-          self.editing_broker_ptr_ =
-           std::make_shared<backtest::Broker>(*broker);
-        }
-
-        ImGui::SameLine();
-
-        if(ImGui::Button("Delete")) {
-          context.push_action([i](ApplicationState& app_state) {
-            app_state.remove_broker_at_index(i);
-          });
-        }
-
-        ImGui::PopID();
+      ImGui::SameLine();
+      ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 100);
+      if(ImGui::Button("Edit")) {
+        self.current_page_ = BrokerPage::EditBroker;
+        self.selected_broker_handle_opt_ = broker_handle;
+        self.editing_broker_ptr_ = std::make_shared<backtest::Broker>(broker);
       }
+
+      ImGui::SameLine();
+
+      if(ImGui::Button("Delete")) {
+        context.push_action([broker_handle](ApplicationState& app_state) {
+          app_state.remove_broker(broker_handle);
+        });
+      }
+
+      ImGui::PopID();
     }
+
     ImGui::EndChild();
     if(ImGui::Button("Add New Broker")) {
       self.current_page_ = BrokerPage::AddNewBroker;
 
-      self.selected_broker_ptr_ = nullptr;
+      self.selected_broker_handle_opt_ = std::nullopt;
       self.editing_broker_ptr_ = std::make_shared<backtest::Broker>("");
     }
 
@@ -109,8 +111,6 @@ private:
 
   void render_add_new_broker(this auto& self, WindowContext& context)
   {
-    const auto& brokers = context.brokers();
-
     ImGui::BeginGroup();
     ImGui::BeginChild("item view",
                       ImVec2(0, -ImGui::GetFrameHeightWithSpacing()));
@@ -147,8 +147,11 @@ private:
 
     ImGui::EndChild();
 
-    const auto same_broker =
-     *(self.selected_broker_ptr_) == *(self.editing_broker_ptr_);
+    const auto selected_broker_handle =
+     self.selected_broker_handle_opt_.value();
+    const auto& selected_broker =
+     context.app_state().get_broker(selected_broker_handle);
+    const auto same_broker = selected_broker == *(self.editing_broker_ptr_);
 
     if(ImGui::Button("OK")) {
       self.submit_broker_changes(context);
@@ -324,35 +327,25 @@ private:
   void submit_broker_changes(this auto& self, WindowContext& context)
   {
     context.push_action(
-     [broker_ptr = self.selected_broker_ptr_,
+     [broker_handle_opt = self.selected_broker_handle_opt_,
       edit_broker_ptr = self.editing_broker_ptr_](ApplicationState& app_state) {
        if(edit_broker_ptr->name().empty()) {
          edit_broker_ptr->name("Unnamed");
        }
 
-       if(broker_ptr == nullptr) {
-         app_state.add_broker(
-          std::make_shared<backtest::Broker>(*edit_broker_ptr));
+       if(!broker_handle_opt) {
+         app_state.add_broker(*edit_broker_ptr);
          return;
        }
 
-       const auto reset_backtests = !broker_ptr->equal_rules(*edit_broker_ptr);
-       if(reset_backtests) {
-         for(auto& backtest : app_state.backtests()) {
-           if(backtest->broker_ptr() == broker_ptr) {
-             backtest->reset();
-           }
-         }
-       }
-
-       *broker_ptr = *edit_broker_ptr;
+       app_state.update_broker(broker_handle_opt.value(), *edit_broker_ptr);
      });
   }
 
   void reset(this BrokersWindow& self) noexcept
   {
     self.current_page_ = BrokerPage::List;
-    self.selected_broker_ptr_ = nullptr;
+    self.selected_broker_handle_opt_ = std::nullopt;
     self.editing_broker_ptr_ = nullptr;
   }
 };

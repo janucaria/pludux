@@ -25,6 +25,9 @@ module;
 export module pludux.apps.backtest:serialization;
 
 import pludux.backtest;
+
+import :state_arena;
+import :state_descriptor;
 import :application_state;
 
 export namespace cereal {
@@ -500,20 +503,96 @@ void load(Archive& archive, pludux::backtest::Asset& asset)
 
 /*--------------------------------------------------------------------------------------*/
 
+template<class Archive, typename THandle>
+void save(Archive& archive,
+          const pludux::backtest::StoreHandle<THandle>& handle)
+{
+  archive(make_nvp("slotIndex", handle.slot_index()),
+          make_nvp("generation", handle.generation()));
+}
+
+template<class Archive, typename THandle>
+void load(Archive& archive, pludux::backtest::StoreHandle<THandle>& handle)
+{
+  auto slot_index = std::size_t{};
+  auto generation = std::size_t{};
+
+  archive(make_nvp("slotIndex", slot_index),
+          make_nvp("generation", generation));
+
+  handle = pludux::backtest::StoreHandle<THandle>{slot_index, generation};
+}
+
+/*--------------------------------------------------------------------------------------*/
+
+template<class Archive>
+void save(Archive& archive, const pludux::backtest::StoreSlot& slot)
+{
+  archive(make_nvp("valueIndex", slot.value_index()),
+          make_nvp("generation", slot.generation()),
+          make_nvp("alive", slot.alive()));
+}
+
+template<class Archive>
+void load(Archive& archive, pludux::backtest::StoreSlot& slot)
+{
+  auto value_index = std::size_t{};
+  auto generation = std::size_t{};
+  auto alive = bool{};
+
+  archive(make_nvp("valueIndex", value_index),
+          make_nvp("generation", generation),
+          make_nvp("alive", alive));
+
+  slot = pludux::backtest::StoreSlot{value_index, generation, alive};
+}
+
+/*--------------------------------------------------------------------------------------*/
+
+template<class Archive, typename TValue, typename THandleValue>
+void save(Archive& archive,
+          const pludux::backtest::Store<TValue, THandleValue>& store)
+{
+  archive(make_nvp("values", store.values()),
+          make_nvp("slots", store.slots()),
+          make_nvp("valueToSlotIndices", store.value_to_slot_indices()),
+          make_nvp("freeSlotIndices", store.free_slot_indices()));
+}
+
+template<class Archive, typename TValue, typename THandleValue>
+void load(Archive& archive,
+          pludux::backtest::Store<TValue, THandleValue>& store)
+{
+  auto values = std::vector<TValue>{};
+  auto slots = std::vector<pludux::backtest::StoreSlot>{};
+  auto value_to_slot_indices = std::vector<std::size_t>{};
+  auto free_slot_indices = std::vector<std::size_t>{};
+
+  archive(make_nvp("values", values),
+          make_nvp("slots", slots),
+          make_nvp("valueToSlotIndices", value_to_slot_indices),
+          make_nvp("freeSlotIndices", free_slot_indices));
+
+  store = pludux::backtest::Store<TValue, THandleValue>{
+   std::move(values),
+   std::move(slots),
+   std::move(value_to_slot_indices),
+   std::move(free_slot_indices)};
+}
+
+/*--------------------------------------------------------------------------------------*/
+
 template<class Archive>
 void save(Archive& archive, const pludux::backtest::Backtest& backtest)
 {
-  archive(
-   make_nvp("name", backtest.name()),
-   make_nvp("initialCapital", backtest.initial_capital()),
-   make_nvp("asset", backtest.asset_ptr()),
-   make_nvp("strategy", backtest.strategy_ptr()),
-   make_nvp("market", backtest.market_ptr()),
-   make_nvp("broker", backtest.broker_ptr()),
-   make_nvp("profile", backtest.profile_ptr()),
-   make_nvp("summaries", backtest.summaries()),
-   make_nvp("isFailed", backtest.is_failed()),
-   make_nvp("seriesResultsCollector", backtest.series_results_collector()));
+  archive(make_nvp("name", backtest.name()),
+          make_nvp("initialCapital", backtest.initial_capital()),
+          make_nvp("asset", backtest.asset_handle()),
+          make_nvp("strategy", backtest.strategy_handle()),
+          make_nvp("market", backtest.market_handle()),
+          make_nvp("broker", backtest.broker_handle()),
+          make_nvp("profile", backtest.profile_handle()),
+          make_nvp("isFailed", backtest.is_failed()));
 }
 
 template<class Archive>
@@ -521,39 +600,138 @@ void load(Archive& archive, pludux::backtest::Backtest& backtest)
 {
   auto name = std::string{};
   auto initial_capital = double{};
-  auto asset_ptr = std::shared_ptr<pludux::backtest::Asset>{};
-  auto strategy_ptr = std::shared_ptr<pludux::backtest::Strategy>{};
-  auto market_ptr = std::shared_ptr<pludux::backtest::Market>{};
-  auto broker_ptr = std::shared_ptr<pludux::backtest::Broker>{};
-  auto profile_ptr = std::shared_ptr<pludux::backtest::Profile>{};
-  auto summaries = std::vector<pludux::backtest::BacktestSummary>{};
+  auto asset_handle = pludux::backtest::StoreHandle<pludux::backtest::Asset>{};
+  auto strategy_handle =
+   pludux::backtest::StoreHandle<pludux::backtest::Strategy>{};
+  auto market_handle =
+   pludux::backtest::StoreHandle<pludux::backtest::Market>{};
+  auto broker_handle =
+   pludux::backtest::StoreHandle<pludux::backtest::Broker>{};
+  auto profile_handle =
+   pludux::backtest::StoreHandle<pludux::backtest::Profile>{};
   auto is_failed = bool{};
-  auto series_results_collector = pludux::SeriesResultsCollector{};
 
   archive(make_nvp("name", name),
           make_nvp("initialCapital", initial_capital),
-          make_nvp("asset", asset_ptr),
-          make_nvp("strategy", strategy_ptr),
-          make_nvp("market", market_ptr),
-          make_nvp("broker", broker_ptr),
-          make_nvp("profile", profile_ptr),
-          make_nvp("summaries", summaries),
-          make_nvp("isFailed", is_failed),
-          make_nvp("seriesResultsCollector", series_results_collector));
+          make_nvp("asset", asset_handle),
+          make_nvp("strategy", strategy_handle),
+          make_nvp("market", market_handle),
+          make_nvp("broker", broker_handle),
+          make_nvp("profile", profile_handle),
+          make_nvp("isFailed", is_failed));
 
   backtest = pludux::backtest::Backtest{std::move(name),
                                         initial_capital,
-                                        asset_ptr,
-                                        strategy_ptr,
-                                        market_ptr,
-                                        broker_ptr,
-                                        profile_ptr,
-                                        std::move(summaries),
-                                        std::move(series_results_collector)};
+                                        asset_handle,
+                                        strategy_handle,
+                                        market_handle,
+                                        broker_handle,
+                                        profile_handle,
+                                        is_failed};
+}
 
-  if(is_failed) {
-    backtest.mark_as_failed();
-  }
+/*--------------------------------------------------------------------------------------*/
+
+template<class Archive>
+void save(Archive& archive, const pludux::apps::StateArena& arena)
+{
+  archive(make_nvp("imguiIniSettings", arena.imgui_ini_settings()),
+          make_nvp("backtestStore", arena.backtest_store()),
+          make_nvp("assetStore", arena.asset_store()),
+          make_nvp("strategyStore", arena.strategy_store()),
+          make_nvp("marketStore", arena.market_store()),
+          make_nvp("brokerStore", arena.broker_store()),
+          make_nvp("profileStore", arena.profile_store()),
+          make_nvp("backtestSummariesStore", arena.backtest_summaries_store()),
+          make_nvp("seriesResultsStore", arena.series_results_store()));
+}
+
+template<class Archive>
+void load(Archive& archive, pludux::apps::StateArena& arena)
+{
+  auto imgui_ini_settings = std::string{};
+  auto backtest_store = pludux::backtest::Store<pludux::backtest::Backtest>{};
+  auto asset_store = pludux::backtest::Store<pludux::backtest::Asset>{};
+  auto strategy_store = pludux::backtest::Store<pludux::backtest::Strategy>{};
+  auto market_store = pludux::backtest::Store<pludux::backtest::Market>{};
+  auto broker_store = pludux::backtest::Store<pludux::backtest::Broker>{};
+  auto profile_store = pludux::backtest::Store<pludux::backtest::Profile>{};
+  auto backtest_summaries_store =
+   pludux::backtest::Store<std::vector<pludux::backtest::BacktestSummary>,
+                           pludux::backtest::Backtest>{};
+  auto series_results_store =
+   pludux::backtest::Store<pludux::SeriesResultsCollector,
+                           pludux::backtest::Backtest>{};
+
+  archive(make_nvp("imguiIniSettings", imgui_ini_settings),
+          make_nvp("backtestStore", backtest_store),
+          make_nvp("assetStore", asset_store),
+          make_nvp("strategyStore", strategy_store),
+          make_nvp("marketStore", market_store),
+          make_nvp("brokerStore", broker_store),
+          make_nvp("profileStore", profile_store),
+          make_nvp("backtestSummariesStore", backtest_summaries_store),
+          make_nvp("seriesResultsStore", series_results_store));
+
+  arena = pludux::apps::StateArena{std::move(imgui_ini_settings),
+                                   std::move(backtest_store),
+                                   std::move(asset_store),
+                                   std::move(strategy_store),
+                                   std::move(market_store),
+                                   std::move(broker_store),
+                                   std::move(profile_store),
+                                   std::move(backtest_summaries_store),
+                                   std::move(series_results_store)};
+}
+
+/*--------------------------------------------------------------------------------------*/
+
+template<class Archive>
+void save(Archive& archive, const pludux::apps::StateDescriptor& descriptor)
+{
+  archive(
+   make_nvp("selectedBacktestHandle", descriptor.selected_backtest_handle()),
+   make_nvp("backtestHandles", descriptor.backtest_handles()),
+   make_nvp("assetHandles", descriptor.asset_handles()),
+   make_nvp("strategyHandles", descriptor.strategy_handles()),
+   make_nvp("marketHandles", descriptor.market_handles()),
+   make_nvp("brokerHandles", descriptor.broker_handles()),
+   make_nvp("profileHandles", descriptor.profile_handles()));
+}
+
+template<class Archive>
+void load(Archive& archive, pludux::apps::StateDescriptor& descriptor)
+{
+  auto selected_backtest_handle =
+   pludux::backtest::StoreHandle<pludux::backtest::Backtest>{};
+  auto backtest_handles =
+   std::vector<pludux::backtest::StoreHandle<pludux::backtest::Backtest>>{};
+  auto asset_handles =
+   std::vector<pludux::backtest::StoreHandle<pludux::backtest::Asset>>{};
+  auto strategy_handles =
+   std::vector<pludux::backtest::StoreHandle<pludux::backtest::Strategy>>{};
+  auto market_handles =
+   std::vector<pludux::backtest::StoreHandle<pludux::backtest::Market>>{};
+  auto broker_handles =
+   std::vector<pludux::backtest::StoreHandle<pludux::backtest::Broker>>{};
+  auto profile_handles =
+   std::vector<pludux::backtest::StoreHandle<pludux::backtest::Profile>>{};
+
+  archive(make_nvp("selectedBacktestHandle", selected_backtest_handle),
+          make_nvp("backtestHandles", backtest_handles),
+          make_nvp("assetHandles", asset_handles),
+          make_nvp("strategyHandles", strategy_handles),
+          make_nvp("marketHandles", market_handles),
+          make_nvp("brokerHandles", broker_handles),
+          make_nvp("profileHandles", profile_handles));
+
+  descriptor = pludux::apps::StateDescriptor{selected_backtest_handle,
+                                             std::move(backtest_handles),
+                                             std::move(asset_handles),
+                                             std::move(strategy_handles),
+                                             std::move(market_handles),
+                                             std::move(broker_handles),
+                                             std::move(profile_handles)};
 }
 
 /*--------------------------------------------------------------------------------------*/
@@ -562,52 +740,27 @@ template<class Archive>
 void save(Archive& archive, const pludux::apps::ApplicationState& app_state)
 {
   archive(make_nvp("$version", std::string{PLUDUX_VERSION}),
-          make_nvp("imguiIniSettings", app_state.imgui_ini_settings()),
-          make_nvp("backtests", app_state.backtests()),
-          make_nvp("assets", app_state.assets()),
-          make_nvp("strategies", app_state.strategies()),
-          make_nvp("markets", app_state.markets()),
-          make_nvp("brokers", app_state.brokers()),
-          make_nvp("profiles", app_state.profiles()));
+          make_nvp("stateArena", app_state.state_arena()),
+          make_nvp("stateDescriptor", app_state.state_descriptor()));
 }
 
 template<class Archive>
 void load(Archive& archive, pludux::apps::ApplicationState& app_state)
 {
   auto version = std::string{};
-  auto imgui_ini_settings = std::string{};
-  auto assets = std::vector<std::shared_ptr<pludux::backtest::Asset>>{};
-  auto strategies = std::vector<std::shared_ptr<pludux::backtest::Strategy>>{};
-  auto markets = std::vector<std::shared_ptr<pludux::backtest::Market>>{};
-  auto brokers = std::vector<std::shared_ptr<pludux::backtest::Broker>>{};
-  auto profiles = std::vector<std::shared_ptr<pludux::backtest::Profile>>{};
-  auto backtests = std::vector<std::shared_ptr<pludux::backtest::Backtest>>{};
+  auto state_arena = pludux::apps::StateArena{};
+  auto state_descriptor = pludux::apps::StateDescriptor{};
 
-  archive(make_nvp("$version", version));
-  archive(make_nvp("imguiIniSettings", imgui_ini_settings));
-  archive(make_nvp("backtests", backtests));
-  archive(make_nvp("assets", assets));
-  archive(make_nvp("strategies", strategies));
-  archive(make_nvp("markets", markets));
-  archive(make_nvp("brokers", brokers));
-  archive(make_nvp("profiles", profiles));
+  archive(make_nvp("$version", version),
+          make_nvp("stateArena", state_arena),
+          make_nvp("stateDescriptor", state_descriptor));
 
-  const auto selected_backtest_index = !backtests.empty() ? 0 : -1;
+  app_state = pludux::apps::ApplicationState{std::move(state_descriptor),
+                                             std::move(state_arena)};
 
   if(version != PLUDUX_VERSION) {
-    for(auto& backtest : backtests) {
-      backtest->reset();
-    }
+    app_state.reset_all_backtests();
   }
-
-  app_state = pludux::apps::ApplicationState{std::move(imgui_ini_settings),
-                                             selected_backtest_index,
-                                             std::move(backtests),
-                                             std::move(assets),
-                                             std::move(strategies),
-                                             std::move(markets),
-                                             std::move(brokers),
-                                             std::move(profiles)};
 }
 
 } // namespace cereal

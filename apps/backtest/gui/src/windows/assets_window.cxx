@@ -31,7 +31,7 @@ class AssetsWindow {
 public:
   AssetsWindow()
   : current_page_(AssetPage::List)
-  , selected_asset_ptr_{nullptr}
+  , selected_asset_handle_opt_{std::nullopt}
   , editing_asset_ptr_{nullptr}
   {
 #ifdef __EMSCRIPTEN__
@@ -65,13 +65,15 @@ private:
 
   enum class AssetPage { List, AddNewAsset, EditAsset } current_page_;
 
-  std::shared_ptr<backtest::Asset> selected_asset_ptr_;
+  std::optional<backtest::StoreHandle<backtest::Asset>>
+   selected_asset_handle_opt_;
   std::shared_ptr<backtest::Asset> editing_asset_ptr_;
 
   void render_assets_list(this auto& self, WindowContext& context)
   {
-    const auto& backtest = context.app_state().selected_backtest();
-    const auto& assets = context.assets();
+    const auto& app_state = context.app_state();
+    const auto& asset_handles = app_state.get_asset_handles();
+    const auto backtest_ptr = app_state.selected_backtest_if_present();
 
     ImGui::BeginGroup();
     ImGui::BeginChild(
@@ -80,44 +82,43 @@ private:
       0,
       -ImGui::GetFrameHeightWithSpacing())); // Leave room for 1 line below us
 
-    if(!assets.empty()) {
-      for(auto i = 0; i < assets.size(); ++i) {
-        const auto& asset = assets[i];
+    for(auto i = 0; i < asset_handles.size(); ++i) {
+      const auto asset_handle = asset_handles[i];
+      const auto& asset = app_state.get_asset(asset_handle);
 
-        ImGui::PushID(i);
+      ImGui::PushID(i);
 
-        ImGui::SetNextItemAllowOverlap();
+      ImGui::SetNextItemAllowOverlap();
 
-        auto is_selected = backtest && backtest->asset_ptr() == asset;
-        ImGui::Selectable(asset->name().c_str(), &is_selected);
+      auto is_selected =
+       backtest_ptr && backtest_ptr->asset_handle() == asset_handle;
+      ImGui::Selectable(asset.name().c_str(), &is_selected);
 
-        ImGui::SameLine();
+      ImGui::SameLine();
 
-        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 100);
-        if(ImGui::Button("Edit")) {
-          self.current_page_ = AssetPage::EditAsset;
-          self.selected_asset_ptr_ = asset;
-          self.editing_asset_ptr_ =
-           std::make_shared<backtest::Asset>(*self.selected_asset_ptr_);
-        }
-
-        ImGui::SameLine();
-
-        if(ImGui::Button("Delete")) {
-          context.push_action([i](ApplicationState& app_state) {
-            app_state.remove_asset_at_index(i);
-          });
-        }
-
-        ImGui::PopID();
+      ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 100);
+      if(ImGui::Button("Edit")) {
+        self.current_page_ = AssetPage::EditAsset;
+        self.selected_asset_handle_opt_ = asset_handle;
+        self.editing_asset_ptr_ = std::make_shared<backtest::Asset>(asset);
       }
+
+      ImGui::SameLine();
+
+      if(ImGui::Button("Delete")) {
+        context.push_action([asset_handle](ApplicationState& app_state) {
+          app_state.remove_asset(asset_handle);
+        });
+      }
+
+      ImGui::PopID();
     }
 
     ImGui::EndChild();
     if(ImGui::Button("Add New Asset")) {
       self.current_page_ = AssetPage::AddNewAsset;
 
-      self.selected_asset_ptr_ = nullptr;
+      self.selected_asset_handle_opt_ = std::nullopt;
       self.editing_asset_ptr_ = std::make_shared<backtest::Asset>();
     }
 
@@ -227,9 +228,11 @@ private:
 
     ImGui::EndChild();
 
+    const auto selected_asset_handle = self.selected_asset_handle_opt_.value();
+    const auto& selected_asset =
+     context.app_state().get_asset(selected_asset_handle);
     const auto equivalent_asset =
-     self.selected_asset_ptr_->equivalent_with_nans_as_equal(
-      *self.editing_asset_ptr_);
+     selected_asset.equivalent_with_nans_as_equal(*self.editing_asset_ptr_);
 
     if(ImGui::Button("OK")) {
       self.submit_asset_changes(context);
@@ -348,36 +351,25 @@ private:
   void submit_asset_changes(this auto& self, WindowContext& context)
   {
     context.push_action(
-     [asset_ptr = self.selected_asset_ptr_,
+     [asset_handle_opt = self.selected_asset_handle_opt_,
       edit_asset_ptr = self.editing_asset_ptr_](ApplicationState& app_state) {
        if(edit_asset_ptr->name().empty()) {
          edit_asset_ptr->name("Unnamed");
        }
 
-       if(asset_ptr == nullptr) {
-         app_state.add_asset(
-          std::make_shared<backtest::Asset>(std::move(*edit_asset_ptr)));
+       if(!asset_handle_opt.has_value()) {
+         app_state.add_asset(std::move(*edit_asset_ptr));
          return;
        }
 
-       const auto reset_backtests =
-        !asset_ptr->equivalent_rules(*edit_asset_ptr);
-       if(reset_backtests) {
-         for(auto& backtest : app_state.backtests()) {
-           if(backtest->asset_ptr() == asset_ptr) {
-             backtest->reset();
-           }
-         }
-       }
-
-       *asset_ptr = *edit_asset_ptr;
+       app_state.update_asset(asset_handle_opt.value(), *edit_asset_ptr);
      });
   }
 
   void reset(this auto& self)
   {
     self.current_page_ = AssetPage::List;
-    self.selected_asset_ptr_ = nullptr;
+    self.selected_asset_handle_opt_ = std::nullopt;
     self.editing_asset_ptr_ = nullptr;
   }
 };

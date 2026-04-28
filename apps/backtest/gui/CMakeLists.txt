@@ -144,11 +144,12 @@ target_sources(${PROJECT_NAME} PRIVATE
     BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src
     FILES
 
+    src/state_arena.cxx
+    src/state_descriptor.cxx
     src/application_state.cxx
 
     src/actions/load_strategy_json_action.cxx
     src/actions/load_asset_csv_action.cxx
-    src/actions/edit_strategy_action.cxx
     src/actions.cxx
     
     src/serialization.cxx
