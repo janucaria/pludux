@@ -82,6 +82,8 @@ public:
   {
   }
 
+  auto operator==(const Backtest&) const noexcept -> bool = default;
+
   auto name(this const Backtest& self) noexcept -> const std::string&
   {
     return self.name_;
@@ -177,12 +179,6 @@ public:
            self.market_handle() == other.market_handle() &&
            self.broker_handle() == other.broker_handle() &&
            self.profile_handle() == other.profile_handle();
-  }
-
-  auto equivalent_rules_and_metadata(this const Backtest& self,
-                                     const Backtest& other) noexcept -> bool
-  {
-    return self.name_ == other.name_ && self.equivalent_rules(other);
   }
 
 private:

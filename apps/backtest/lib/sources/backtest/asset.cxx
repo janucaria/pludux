@@ -36,14 +36,9 @@ public:
   {
   }
 
-  auto equivalent_with_nans_as_equal(this const Asset& self,
-                                     const Asset& other) noexcept -> bool
+  auto operator==(const Asset& other) const noexcept -> bool
   {
-    if(self.name_ != other.name_) {
-      return false;
-    }
-
-    return self.equivalent_rules(other);
+    return name_ == other.name_ && equivalent_rules(other);
   }
 
   auto name(this const Asset& self) noexcept -> const std::string&

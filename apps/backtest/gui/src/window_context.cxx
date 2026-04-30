@@ -11,8 +11,9 @@ module;
 
 export module pludux.apps.backtest:window_context;
 
-import :actions;
 import :application_state;
+import :actions;
+import :command_executor;
 
 export namespace pludux::apps {
 
@@ -20,10 +21,10 @@ class WindowContext {
 public:
   WindowContext(ApplicationState& app_state,
                 std::list<std::string>& alert_messages,
-                std::queue<PolyAction>& actions)
+                CommandExecutor& command_executor)
   : app_state_{app_state}
   , alert_messages_{alert_messages}
-  , actions_{actions}
+  , command_executor_{command_executor}
   {
   }
 
@@ -36,13 +37,13 @@ public:
   template<typename TAppAction, typename... Args>
   void emplace_action(this WindowContext& self, Args&&... args)
   {
-    self.actions_.emplace(TAppAction{std::forward<Args>(args)...});
+    self.command_executor_.push(TAppAction{std::forward<Args>(args)...});
   }
 
   template<typename TAppAction>
   void push_action(this WindowContext& self, TAppAction action)
   {
-    self.actions_.push(std::move(action));
+    self.command_executor_.push(std::move(action));
   }
 
   void update_imgui_ini_settings(this WindowContext& self)
@@ -57,10 +58,30 @@ public:
     self.alert_messages_.push_back(std::move(alert_message));
   }
 
+  void push_undo(this WindowContext& self)
+  {
+    self.command_executor_.push(UndoCommand{});
+  }
+
+  auto has_undo(this const WindowContext& self) -> bool
+  {
+    return self.command_executor_.can_undo();
+  }
+
+  void push_redo(this WindowContext& self)
+  {
+    self.command_executor_.push(RedoCommand{});
+  }
+
+  auto has_redo(this const WindowContext& self) -> bool
+  {
+    return self.command_executor_.can_redo();
+  }
+
 private:
   ApplicationState& app_state_;
   std::list<std::string>& alert_messages_;
-  std::queue<PolyAction>& actions_;
+  CommandExecutor& command_executor_;
 };
 
 } // namespace pludux::apps

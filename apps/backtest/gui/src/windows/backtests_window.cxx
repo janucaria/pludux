@@ -52,8 +52,7 @@ public:
 private:
   enum class BacktestPanelMode { List, Edit, AddNew } backtest_panel_mode_;
 
-  std::optional<backtest::BacktestStoreHandle>
-   selected_backtest_handle_opt_;
+  std::optional<backtest::BacktestStoreHandle> selected_backtest_handle_opt_;
   std::shared_ptr<backtest::Backtest> editing_backtest_ptr_;
 
   void render_backtests_list(this auto& self, WindowContext& context)
@@ -160,8 +159,7 @@ private:
      self.selected_backtest_handle_opt_.value();
     const auto& selected_backtest =
      context.app_state().get_backtest(selected_backtest_handle);
-    const auto same_backtest = selected_backtest.equivalent_rules_and_metadata(
-     *self.editing_backtest_ptr_);
+    const auto same_backtest = selected_backtest == *self.editing_backtest_ptr_;
 
     if(ImGui::Button("OK")) {
       self.submit_backtest_changes(context, true);

@@ -146,11 +146,13 @@ target_sources(${PROJECT_NAME} PRIVATE
 
     src/ui_state.cxx
     src/application_state.cxx
+    src/state_diff.cxx
 
     src/actions/load_strategy_json_action.cxx
     src/actions/load_asset_csv_action.cxx
     src/actions.cxx
-    
+
+    src/command_executor.cxx
     src/serialization.cxx
     
     src/window_context.cxx

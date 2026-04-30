@@ -22,6 +22,9 @@ public:
   {
   }
 
+  auto operator==(const SeriesResultsCollector&) const noexcept
+   -> bool = default;
+
   auto results(this const SeriesResultsCollector& self) noexcept
    -> const std::unordered_map<std::string, std::vector<double>>&
   {

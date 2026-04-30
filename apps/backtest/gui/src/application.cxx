@@ -4,7 +4,6 @@ module;
 #include <chrono>
 #include <fstream>
 #include <list>
-#include <queue>
 #include <ranges>
 #include <stdexcept>
 #include <string>
@@ -16,9 +15,11 @@ module;
 export module pludux.apps.backtest;
 
 export import :application_state;
+export import :state_diff;
 export import :window_context;
 export import :serialization;
 export import :actions;
+export import :command_executor;
 import :windows;
 
 export namespace pludux::apps {
@@ -33,7 +34,6 @@ public:
   void on_before_main_loop(this Application& self)
   {
     auto& app_state = self.app_state_;
-    auto& actions = self.actions_;
 
     ImPlot::GetStyle().UseISO8601 = true;
     ImPlot::GetStyle().UseLocalTime = true;
@@ -137,7 +137,6 @@ public:
   void on_update(this Application& self)
   {
     auto& app_state = self.app_state_;
-    auto& actions = self.actions_;
     auto& alert_messages = self.alert_messages_;
 
     auto& backtest_handles = app_state.get_backtest_handles();
@@ -223,7 +222,8 @@ public:
       } while(time_diff < 1000 / 60);
     }
 
-    auto window_context = WindowContext{app_state, alert_messages, actions};
+    auto window_context =
+     WindowContext{app_state, alert_messages, self.command_executor_};
 
     try {
       self.dockspace_window_.render(window_context);
@@ -252,16 +252,11 @@ public:
       alert_messages.push_back(error_message);
     }
 
-    while(!actions.empty()) {
-      auto action = std::move(actions.front());
-      actions.pop();
-
-      try {
-        action(app_state);
-      } catch(const std::exception& e) {
-        const auto error_message = std::format("Error: {}", e.what());
-        alert_messages.push_back(error_message);
-      }
+    try {
+      self.command_executor_.execute(app_state);
+    } catch(const std::exception& e) {
+      const auto error_message = std::format("Error: {}", e.what());
+      alert_messages.push_back(error_message);
     }
 
     if(!alert_messages.empty()) {
@@ -297,7 +292,7 @@ private:
 
   ApplicationState app_state_;
   std::list<std::string> alert_messages_;
-  std::queue<PolyAction> actions_;
+  CommandExecutor command_executor_{};
 };
 
 } // namespace pludux::apps

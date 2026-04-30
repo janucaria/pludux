@@ -1,7 +1,5 @@
 module;
 
-#include <chrono>
-#include <ctime>
 #include <string>
 
 #include <imgui.h>
@@ -14,7 +12,7 @@ export namespace pludux::apps {
 
 class TradeJournalWindow {
 public:
-  void render(this const auto&, WindowContext& context)
+  void render(this auto& self, WindowContext& context)
   {
     const auto& app_state = context.app_state();
 

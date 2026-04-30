@@ -65,8 +65,7 @@ private:
 
   enum class AssetPage { List, AddNewAsset, EditAsset } current_page_;
 
-  std::optional<backtest::AssetStoreHandle>
-   selected_asset_handle_opt_;
+  std::optional<backtest::AssetStoreHandle> selected_asset_handle_opt_;
   std::shared_ptr<backtest::Asset> editing_asset_ptr_;
 
   void render_assets_list(this auto& self, WindowContext& context)
@@ -231,8 +230,7 @@ private:
     const auto selected_asset_handle = self.selected_asset_handle_opt_.value();
     const auto& selected_asset =
      context.app_state().get_asset(selected_asset_handle);
-    const auto equivalent_asset =
-     selected_asset.equivalent_with_nans_as_equal(*self.editing_asset_ptr_);
+    const auto same_asset = selected_asset == *self.editing_asset_ptr_;
 
     if(ImGui::Button("OK")) {
       self.submit_asset_changes(context);
@@ -245,7 +243,7 @@ private:
     }
 
     ImGui::SameLine();
-    ImGui::BeginDisabled(equivalent_asset);
+    ImGui::BeginDisabled(same_asset);
     if(ImGui::Button("Apply")) {
       self.submit_asset_changes(context);
     }

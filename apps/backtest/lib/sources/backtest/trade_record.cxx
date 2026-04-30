@@ -69,6 +69,8 @@ public:
   {
   }
 
+  auto operator==(const TradeRecord&) const noexcept -> bool = default;
+
   auto status(this const TradeRecord& self) noexcept -> Status
   {
     return self.status_;
