@@ -3,6 +3,7 @@ module;
 #include <algorithm>
 #include <chrono>
 #include <fstream>
+#include <list>
 #include <queue>
 #include <ranges>
 #include <stdexcept>
@@ -146,6 +147,7 @@ public:
   {
     auto& app_state = self.app_state_;
     auto& actions = self.actions_;
+    auto& alert_messages = self.alert_messages_;
 
     if(!app_state.backtests().empty()) {
       auto& backtests = app_state.backtests();
@@ -177,7 +179,7 @@ public:
 
             const auto error_message =
              "Backtest '" + backtest->name() + "' failed: " + e.what();
-            app_state.alert(error_message);
+            alert_messages.push_back(error_message);
           }
         }
 
@@ -189,27 +191,7 @@ public:
       } while(time_diff < 1000 / 60);
     }
 
-    {
-      const auto alert_message = app_state.top_alert_message();
-
-      if(alert_message) {
-        ImGui::OpenPopup("Alerts");
-
-        if(ImGui::BeginPopupModal(
-            "Alerts", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-          ImGui::Text("%s", alert_message->c_str());
-
-          if(ImGui::Button("OK")) {
-            app_state.pop_alert_messages();
-            ImGui::CloseCurrentPopup();
-          }
-
-          ImGui::EndPopup();
-        }
-      }
-    }
-
-    auto window_context = WindowContext{app_state, actions};
+    auto window_context = WindowContext{app_state, alert_messages, actions};
 
     try {
       self.dockspace_window_.render(window_context);
@@ -235,7 +217,7 @@ public:
 
     } catch(const std::exception& e) {
       const auto error_message = std::format("Error: {}", e.what());
-      app_state.alert(error_message);
+      alert_messages.push_back(error_message);
     }
 
     while(!actions.empty()) {
@@ -246,7 +228,25 @@ public:
         action(app_state);
       } catch(const std::exception& e) {
         const auto error_message = std::format("Error: {}", e.what());
-        app_state.alert(error_message);
+        alert_messages.push_back(error_message);
+      }
+    }
+
+    if(!alert_messages.empty()) {
+      const auto& alert_message = alert_messages.front();
+
+      ImGui::OpenPopup("Alerts");
+
+      if(ImGui::BeginPopupModal(
+          "Alerts", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("%s", alert_message.c_str());
+
+        if(ImGui::Button("OK")) {
+          alert_messages.pop_front();
+          ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
       }
     }
   }
@@ -264,6 +264,7 @@ private:
   ProfilesWindow profiles_window_;
 
   ApplicationState app_state_;
+  std::list<std::string> alert_messages_;
   std::queue<PolyAction> actions_;
 };
 

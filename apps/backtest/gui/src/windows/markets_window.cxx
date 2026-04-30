@@ -4,7 +4,9 @@ module;
 #include <cstring>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <string>
+#include <utility>
 
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>

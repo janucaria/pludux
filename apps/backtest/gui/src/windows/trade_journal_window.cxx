@@ -2,7 +2,6 @@ module;
 
 #include <chrono>
 #include <ctime>
-#include <format>
 #include <ranges>
 #include <string>
 
@@ -16,7 +15,7 @@ export namespace pludux::apps {
 
 class TradeJournalWindow {
 public:
-  void render(this const TradeJournalWindow, WindowContext& context)
+  void render(this const auto&, WindowContext& context)
   {
     const auto& app_state = context.app_state();
     const auto& backtests = context.backtests();

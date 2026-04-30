@@ -21,7 +21,6 @@ public:
   ApplicationState()
   : ApplicationState{"",
                      -1,
-                     std::queue<std::string>{},
                      std::vector<std::shared_ptr<backtest::Backtest>>{},
                      std::vector<std::shared_ptr<backtest::Asset>>{},
                      std::vector<std::shared_ptr<backtest::Strategy>>{},
@@ -33,7 +32,6 @@ public:
 
   ApplicationState(std::string imgui_ini_settings,
                    std::ptrdiff_t selected_backtest_index,
-                   std::queue<std::string> alert_messages,
                    std::vector<std::shared_ptr<backtest::Backtest>> backtests,
                    std::vector<std::shared_ptr<backtest::Asset>> assets,
                    std::vector<std::shared_ptr<backtest::Strategy>> strategies,
@@ -42,7 +40,6 @@ public:
                    std::vector<std::shared_ptr<backtest::Profile>> profiles)
   : imgui_ini_settings_{std::move(imgui_ini_settings)}
   , selected_backtest_index_{selected_backtest_index}
-  , alert_messages_{std::move(alert_messages)}
   , backtests_{std::move(backtests)}
   , assets_{std::move(assets)}
   , strategies_{std::move(strategies)}
@@ -62,38 +59,6 @@ public:
                           std::string settings) noexcept
   {
     self.imgui_ini_settings_ = std::move(settings);
-  }
-
-  auto alert_messages(this const ApplicationState& self) noexcept
-   -> const std::queue<std::string>&
-  {
-    return self.alert_messages_;
-  }
-
-  auto alert(this ApplicationState& self, std::string message)
-  {
-    self.alert_messages_.push(std::move(message));
-  }
-
-  auto top_alert_message(this const ApplicationState& self) noexcept
-   -> std::optional<std::string>
-  {
-    if(self.alert_messages_.empty()) {
-      return std::nullopt;
-    }
-
-    return self.alert_messages_.front();
-  }
-
-  auto pop_alert_messages(this ApplicationState& self) -> std::string
-  {
-    if(self.alert_messages_.empty()) {
-      return {};
-    }
-
-    const auto message = self.alert_messages_.front();
-    self.alert_messages_.pop();
-    return message;
   }
 
   auto backtests(this const ApplicationState& self) noexcept
@@ -275,8 +240,6 @@ private:
   std::string imgui_ini_settings_{};
 
   std::ptrdiff_t selected_backtest_index_{-1};
-
-  std::queue<std::string> alert_messages_{};
 
   std::vector<std::shared_ptr<backtest::Backtest>> backtests_{};
 

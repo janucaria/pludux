@@ -1,7 +1,10 @@
 module;
 
+#include <list>
 #include <memory>
 #include <queue>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include <imgui.h>
@@ -15,8 +18,11 @@ export namespace pludux::apps {
 
 class WindowContext {
 public:
-  WindowContext(ApplicationState& app_state, std::queue<PolyAction>& actions)
+  WindowContext(ApplicationState& app_state,
+                std::list<std::string>& alert_messages,
+                std::queue<PolyAction>& actions)
   : app_state_{app_state}
+  , alert_messages_{alert_messages}
   , actions_{actions}
   {
   }
@@ -82,18 +88,14 @@ public:
     self.app_state_.imgui_ini_settings(std::string(ini_data, ini_size));
   }
 
-  // TODO: compiler bug in emscripten build
-  // void push_alert_action(this WindowContext& self, std::string alert_message)
-  // {
-  //   self.push_action(
-  //    [alert_message = std::move(alert_message)](ApplicationState& app_state)
-  //    {
-  //      app_state.alert(alert_message);
-  //    });
-  // }
+  void alert(this WindowContext& self, std::string alert_message)
+  {
+    self.alert_messages_.push_back(std::move(alert_message));
+  }
 
 private:
   ApplicationState& app_state_;
+  std::list<std::string>& alert_messages_;
   std::queue<PolyAction>& actions_;
 };
 
