@@ -25,6 +25,8 @@ target_sources(${PROJECT_NAME}
       BASE_DIRS src/
       FILES
 
+        src/myers_diff.cxx
+
         src/asset_data.cxx
         src/asset_series.cxx
         src/asset_history.cxx

@@ -94,8 +94,8 @@ public:
     self.value_ = value;
   }
 
-  auto equal_rules(this const BrokerFee& self, const BrokerFee& other) noexcept
-   -> bool
+  auto equivalent_rules(this const BrokerFee& self,
+                        const BrokerFee& other) noexcept -> bool
   {
     return self.fee_type_ == other.fee_type_ &&
            self.fee_position_ == other.fee_position_ &&
@@ -205,7 +205,7 @@ public:
     self.fees_ = std::move(fees);
   }
 
-  auto equal_rules(this const Broker& self, const Broker& other) noexcept
+  auto equivalent_rules(this const Broker& self, const Broker& other) noexcept
    -> bool
   {
     if(self.fees_.size() != other.fees_.size()) {
@@ -213,7 +213,7 @@ public:
     }
 
     for(std::size_t i = 0; i < self.fees_.size(); ++i) {
-      if(!self.fees_[i].equal_rules(other.fees_[i])) {
+      if(!self.fees_[i].equivalent_rules(other.fees_[i])) {
         return false;
       }
     }

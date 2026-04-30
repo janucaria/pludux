@@ -169,6 +169,8 @@ public:
   {
   }
 
+  auto operator==(const TradeSession&) const noexcept -> bool = default;
+
   auto market_timestamp(this const TradeSession& self) noexcept -> std::time_t
   {
     return self.market_timestamp_;

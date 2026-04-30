@@ -189,8 +189,8 @@ public:
     self.plots_ = std::move(plots);
   }
 
-  auto equal_rules(this const Strategy& self, const Strategy& other) noexcept
-   -> bool
+  auto equivalent_rules(this const Strategy& self,
+                        const Strategy& other) noexcept -> bool
   {
     return self.series_registry_ == other.series_registry_ &&
            self.long_entry_filter_ == other.long_entry_filter_ &&

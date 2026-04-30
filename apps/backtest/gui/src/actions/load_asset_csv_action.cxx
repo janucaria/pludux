@@ -62,8 +62,8 @@ private:
                              std::istream& csv_stream,
                              ApplicationState& app_state)
   {
-    auto asset_ptr = std::make_shared<backtest::Asset>(asset_name);
-    pludux::update_asset_from_csv(*asset_ptr, csv_stream);
+    auto asset_ptr = backtest::Asset{asset_name};
+    pludux::update_asset_from_csv(asset_ptr, csv_stream);
 
     app_state.add_asset(std::move(asset_ptr));
   }

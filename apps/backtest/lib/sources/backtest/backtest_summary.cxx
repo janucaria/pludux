@@ -35,6 +35,8 @@ public:
   {
   }
 
+  auto operator==(const BacktestSummary&) const noexcept -> bool = default;
+
   void update_to_next_summary(this BacktestSummary& self,
                               TradeSession next_trade_session) noexcept
   {

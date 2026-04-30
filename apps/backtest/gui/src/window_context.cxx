@@ -1,23 +1,30 @@
 module;
 
+#include <list>
 #include <memory>
 #include <queue>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include <imgui.h>
 
 export module pludux.apps.backtest:window_context;
 
-import :actions;
 import :application_state;
+import :actions;
+import :command_executor;
 
 export namespace pludux::apps {
 
 class WindowContext {
 public:
-  WindowContext(ApplicationState& app_state, std::queue<PolyAction>& actions)
+  WindowContext(ApplicationState& app_state,
+                std::list<std::string>& alert_messages,
+                CommandExecutor& command_executor)
   : app_state_{app_state}
-  , actions_{actions}
+  , alert_messages_{alert_messages}
+  , command_executor_{command_executor}
   {
   }
 
@@ -27,52 +34,16 @@ public:
     return self.app_state_;
   }
 
-  auto backtests(this const WindowContext& self) noexcept
-   -> const std::vector<std::shared_ptr<backtest::Backtest>>&
-  {
-    return self.app_state_.backtests();
-  }
-
-  auto assets(this const WindowContext& self) noexcept
-   -> const std::vector<std::shared_ptr<backtest::Asset>>&
-  {
-    return self.app_state_.assets();
-  }
-
-  auto strategies(this const WindowContext& self) noexcept
-   -> const std::vector<std::shared_ptr<backtest::Strategy>>&
-  {
-    return self.app_state_.strategies();
-  }
-
-  auto markets(this const WindowContext& self) noexcept
-   -> const std::vector<std::shared_ptr<backtest::Market>>&
-  {
-    return self.app_state_.markets();
-  }
-
-  auto brokers(this const WindowContext& self) noexcept
-   -> const std::vector<std::shared_ptr<backtest::Broker>>&
-  {
-    return self.app_state_.brokers();
-  }
-
-  auto profiles(this const WindowContext& self) noexcept
-   -> const std::vector<std::shared_ptr<backtest::Profile>>&
-  {
-    return self.app_state_.profiles();
-  }
-
   template<typename TAppAction, typename... Args>
   void emplace_action(this WindowContext& self, Args&&... args)
   {
-    self.actions_.emplace(TAppAction{std::forward<Args>(args)...});
+    self.command_executor_.push(TAppAction{std::forward<Args>(args)...});
   }
 
   template<typename TAppAction>
   void push_action(this WindowContext& self, TAppAction action)
   {
-    self.actions_.push(std::move(action));
+    self.command_executor_.push(std::move(action));
   }
 
   void update_imgui_ini_settings(this WindowContext& self)
@@ -82,19 +53,35 @@ public:
     self.app_state_.imgui_ini_settings(std::string(ini_data, ini_size));
   }
 
-  // TODO: compiler bug in emscripten build
-  // void push_alert_action(this WindowContext& self, std::string alert_message)
-  // {
-  //   self.push_action(
-  //    [alert_message = std::move(alert_message)](ApplicationState& app_state)
-  //    {
-  //      app_state.alert(alert_message);
-  //    });
-  // }
+  void alert(this WindowContext& self, std::string alert_message)
+  {
+    self.alert_messages_.push_back(std::move(alert_message));
+  }
+
+  void push_undo(this WindowContext& self)
+  {
+    self.command_executor_.push(UndoCommand{});
+  }
+
+  auto has_undo(this const WindowContext& self) -> bool
+  {
+    return self.command_executor_.can_undo();
+  }
+
+  void push_redo(this WindowContext& self)
+  {
+    self.command_executor_.push(RedoCommand{});
+  }
+
+  auto has_redo(this const WindowContext& self) -> bool
+  {
+    return self.command_executor_.can_redo();
+  }
 
 private:
   ApplicationState& app_state_;
-  std::queue<PolyAction>& actions_;
+  std::list<std::string>& alert_messages_;
+  CommandExecutor& command_executor_;
 };
 
 } // namespace pludux::apps

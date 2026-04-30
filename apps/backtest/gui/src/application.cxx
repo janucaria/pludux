@@ -3,7 +3,7 @@ module;
 #include <algorithm>
 #include <chrono>
 #include <fstream>
-#include <queue>
+#include <list>
 #include <ranges>
 #include <stdexcept>
 #include <string>
@@ -15,9 +15,11 @@ module;
 export module pludux.apps.backtest;
 
 export import :application_state;
+export import :state_diff;
 export import :window_context;
 export import :serialization;
 export import :actions;
+export import :command_executor;
 import :windows;
 
 export namespace pludux::apps {
@@ -32,35 +34,25 @@ public:
   void on_before_main_loop(this Application& self)
   {
     auto& app_state = self.app_state_;
-    auto& actions = self.actions_;
 
     ImPlot::GetStyle().UseISO8601 = true;
     ImPlot::GetStyle().UseLocalTime = true;
     ImPlot::GetStyle().Use24HourClock = true;
 
-    {
-      const auto& markets = app_state.markets();
-      if(markets.empty()) {
-        auto default_market = std::make_shared<backtest::Market>("Default");
-        app_state.add_market(std::move(default_market));
-      }
+    if(app_state.get_market_handles().empty()) {
+      auto default_market = backtest::Market{"Default"};
+      app_state.add_market(std::move(default_market));
     }
 
-    {
-      const auto& brokers = app_state.brokers();
-      if(brokers.empty()) {
-        auto default_broker = std::make_shared<backtest::Broker>("Default");
-        app_state.add_broker(std::move(default_broker));
-      }
+    if(app_state.get_broker_handles().empty()) {
+      auto default_broker = backtest::Broker{"Default"};
+      app_state.add_broker(std::move(default_broker));
     }
 
-    {
-      const auto& profiles = app_state.profiles();
-      if(profiles.empty()) {
-        auto default_profile = std::make_shared<backtest::Profile>("Default");
-        default_profile->capital_risk(0.01);
-        app_state.add_profile(std::move(default_profile));
-      }
+    if(app_state.get_profile_handles().empty()) {
+      auto default_profile = backtest::Profile{"Default"};
+      default_profile.capital_risk(0.01);
+      app_state.add_profile(std::move(default_profile));
     }
 
     {
@@ -145,11 +137,10 @@ public:
   void on_update(this Application& self)
   {
     auto& app_state = self.app_state_;
-    auto& actions = self.actions_;
+    auto& alert_messages = self.alert_messages_;
 
-    if(!app_state.backtests().empty()) {
-      auto& backtests = app_state.backtests();
-
+    auto& backtest_handles = app_state.get_backtest_handles();
+    if(!backtest_handles.empty()) {
       // create a loop with timeout 60 fps
       auto last_update_time = std::chrono::high_resolution_clock::now();
       auto current_time = std::chrono::high_resolution_clock::now();
@@ -158,13 +149,56 @@ public:
                         .count();
 
       do {
-        for(auto& backtest : backtests) {
+        for(auto&& backtest_handle : backtest_handles) {
+          auto& backtest = app_state.get_backtest(backtest_handle);
+          auto summaries_ptr =
+           app_state.get_backtest_summaries_if_present(backtest_handle);
+          if(!summaries_ptr) {
+            app_state.add_backtest_summaries(
+             backtest_handle, std::vector<backtest::BacktestSummary>{});
+            summaries_ptr =
+             app_state.get_backtest_summaries_if_present(backtest_handle);
+          }
+
+          auto series_results_ptr =
+           app_state.get_series_results_if_present(backtest_handle);
+
+          if(!series_results_ptr) {
+            app_state.add_series_results(backtest_handle,
+                                         SeriesResultsCollector{});
+            series_results_ptr =
+             app_state.get_series_results_if_present(backtest_handle);
+          }
+
           try {
-            if(backtest->should_run()) {
-              backtest->run();
+            if(app_state.is_backtest_ready(backtest)) {
+              const auto& asset = app_state.get_asset(backtest.asset_handle());
+              const auto& strategy =
+               app_state.get_strategy(backtest.strategy_handle());
+              const auto& market =
+               app_state.get_market(backtest.market_handle());
+              const auto& broker =
+               app_state.get_broker(backtest.broker_handle());
+              const auto& profile =
+               app_state.get_profile(backtest.profile_handle());
+
+              auto backtest_runner =
+               backtest::BacktestRunner{backtest.initial_capital(),
+                                        asset,
+                                        strategy,
+                                        market,
+                                        broker,
+                                        profile,
+                                        *summaries_ptr,
+                                        *series_results_ptr};
+
+              if(!backtest.is_failed() &&
+                 summaries_ptr->size() < asset.size()) {
+                backtest_runner.run();
+              }
             }
           } catch(const std::exception& e) {
-            backtest->mark_as_failed();
+            backtest.is_failed(true);
 
             // TODO: this line is buggy in emscripten release build.
             // The bug is failed to load/open the strategy, asset, or pludux
@@ -176,8 +210,8 @@ public:
             */
 
             const auto error_message =
-             "Backtest '" + backtest->name() + "' failed: " + e.what();
-            app_state.alert(error_message);
+             "Backtest '" + backtest.name() + "' failed: " + e.what();
+            alert_messages.push_back(error_message);
           }
         }
 
@@ -185,31 +219,11 @@ public:
         time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(
                      current_time - last_update_time)
                      .count();
-
       } while(time_diff < 1000 / 60);
     }
 
-    {
-      const auto alert_message = app_state.top_alert_message();
-
-      if(alert_message) {
-        ImGui::OpenPopup("Alerts");
-
-        if(ImGui::BeginPopupModal(
-            "Alerts", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-          ImGui::Text("%s", alert_message->c_str());
-
-          if(ImGui::Button("OK")) {
-            app_state.pop_alert_messages();
-            ImGui::CloseCurrentPopup();
-          }
-
-          ImGui::EndPopup();
-        }
-      }
-    }
-
-    auto window_context = WindowContext{app_state, actions};
+    auto window_context =
+     WindowContext{app_state, alert_messages, self.command_executor_};
 
     try {
       self.dockspace_window_.render(window_context);
@@ -235,18 +249,31 @@ public:
 
     } catch(const std::exception& e) {
       const auto error_message = std::format("Error: {}", e.what());
-      app_state.alert(error_message);
+      alert_messages.push_back(error_message);
     }
 
-    while(!actions.empty()) {
-      auto action = std::move(actions.front());
-      actions.pop();
+    try {
+      self.command_executor_.execute(app_state);
+    } catch(const std::exception& e) {
+      const auto error_message = std::format("Error: {}", e.what());
+      alert_messages.push_back(error_message);
+    }
 
-      try {
-        action(app_state);
-      } catch(const std::exception& e) {
-        const auto error_message = std::format("Error: {}", e.what());
-        app_state.alert(error_message);
+    if(!alert_messages.empty()) {
+      const auto& alert_message = alert_messages.front();
+
+      ImGui::OpenPopup("Alerts");
+
+      if(ImGui::BeginPopupModal(
+          "Alerts", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("%s", alert_message.c_str());
+
+        if(ImGui::Button("OK")) {
+          alert_messages.pop_front();
+          ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
       }
     }
   }
@@ -264,7 +291,8 @@ private:
   ProfilesWindow profiles_window_;
 
   ApplicationState app_state_;
-  std::queue<PolyAction> actions_;
+  std::list<std::string> alert_messages_;
+  CommandExecutor command_executor_{};
 };
 
 } // namespace pludux::apps

@@ -4,7 +4,9 @@ module;
 #include <cstring>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <string>
+#include <utility>
 
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
@@ -20,7 +22,7 @@ class ProfilesWindow {
 public:
   ProfilesWindow()
   : current_page_(ProfilePage::List)
-  , selected_profile_ptr_{nullptr}
+  , selected_profile_handle_opt_{}
   , editing_profile_ptr_{nullptr}
   {
   }
@@ -47,13 +49,14 @@ public:
 private:
   enum class ProfilePage { List, AddNewProfile, EditProfile } current_page_;
 
-  std::shared_ptr<backtest::Profile> selected_profile_ptr_;
+  std::optional<backtest::ProfileStoreHandle> selected_profile_handle_opt_;
   std::shared_ptr<backtest::Profile> editing_profile_ptr_;
 
   void render_profiles_list(this auto& self, WindowContext& context)
   {
-    const auto& backtest = context.app_state().selected_backtest();
-    const auto& profiles = context.profiles();
+    const auto& app_state = context.app_state();
+    const auto& profile_handles = app_state.get_profile_handles();
+    const auto backtest_ptr = app_state.selected_backtest_if_present();
 
     ImGui::BeginGroup();
     ImGui::BeginChild(
@@ -62,41 +65,42 @@ private:
       0,
       -ImGui::GetFrameHeightWithSpacing())); // Leave room for 1 line below us
 
-    if(!profiles.empty()) {
-      for(auto i = 0; i < profiles.size(); ++i) {
-        const auto& profile = profiles[i];
+    for(auto i = 0; i < profile_handles.size(); ++i) {
+      const auto profile_handle = profile_handles[i];
+      const auto& profile = app_state.get_profile(profile_handle);
 
-        ImGui::PushID(i);
+      ImGui::PushID(i);
 
-        ImGui::SetNextItemAllowOverlap();
-        auto is_selected = backtest && backtest->profile_ptr() == profile;
-        ImGui::Selectable(profile->name().c_str(), &is_selected);
+      ImGui::SetNextItemAllowOverlap();
+      auto is_selected =
+       backtest_ptr && backtest_ptr->profile_handle() == profile_handle;
+      ImGui::Selectable(profile.name().c_str(), &is_selected);
 
-        ImGui::SameLine();
-        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 100);
-        if(ImGui::Button("Edit")) {
-          self.current_page_ = ProfilePage::EditProfile;
-          self.selected_profile_ptr_ = profile;
-          self.editing_profile_ptr_ =
-           std::make_shared<backtest::Profile>(*profile);
-        }
-
-        ImGui::SameLine();
-
-        if(ImGui::Button("Delete")) {
-          context.push_action([i](ApplicationState& app_state) {
-            app_state.remove_profile_at_index(i);
-          });
-        }
-
-        ImGui::PopID();
+      ImGui::SameLine();
+      ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 100);
+      if(ImGui::Button("Edit")) {
+        self.current_page_ = ProfilePage::EditProfile;
+        self.selected_profile_handle_opt_ = profile_handle;
+        self.editing_profile_ptr_ =
+         std::make_shared<backtest::Profile>(profile);
       }
+
+      ImGui::SameLine();
+
+      if(ImGui::Button("Delete")) {
+        context.push_action([profile_handle](ApplicationState& app_state) {
+          app_state.remove_profile(profile_handle);
+        });
+      }
+
+      ImGui::PopID();
     }
+
     ImGui::EndChild();
     if(ImGui::Button("Add New Profile")) {
       self.current_page_ = ProfilePage::AddNewProfile;
 
-      self.selected_profile_ptr_ = nullptr;
+      self.selected_profile_handle_opt_ = std::nullopt;
       self.editing_profile_ptr_ = std::make_shared<backtest::Profile>();
       self.editing_profile_ptr_->capital_risk(0.01);
     }
@@ -106,8 +110,6 @@ private:
 
   void render_add_new_profile(this auto& self, WindowContext& context)
   {
-    const auto& profiles = context.profiles();
-
     ImGui::BeginGroup();
     ImGui::BeginChild("item view",
                       ImVec2(0, -ImGui::GetFrameHeightWithSpacing()));
@@ -144,8 +146,11 @@ private:
 
     ImGui::EndChild();
 
-    const auto same_profile =
-     *(self.selected_profile_ptr_) == *(self.editing_profile_ptr_);
+    const auto selected_profile_handle =
+     self.selected_profile_handle_opt_.value();
+    const auto& selected_profile =
+     context.app_state().get_profile(selected_profile_handle);
+    const auto same_profile = selected_profile == *(self.editing_profile_ptr_);
 
     if(ImGui::Button("OK")) {
       self.submit_profile_changes(context);
@@ -277,36 +282,26 @@ private:
 
   void submit_profile_changes(this auto& self, WindowContext& context)
   {
-    context.push_action([profile_ptr = self.selected_profile_ptr_,
+    context.push_action([profile_handle_opt = self.selected_profile_handle_opt_,
                          edit_profile_ptr = self.editing_profile_ptr_](
                          ApplicationState& app_state) {
       if(edit_profile_ptr->name().empty()) {
         edit_profile_ptr->name("Unnamed");
       }
 
-      if(profile_ptr == nullptr) {
-        app_state.add_profile(
-         std::make_shared<backtest::Profile>(*edit_profile_ptr));
+      if(!profile_handle_opt.has_value()) {
+        app_state.add_profile(*edit_profile_ptr);
         return;
       }
 
-      const auto reset_backtests = !profile_ptr->equal_rules(*edit_profile_ptr);
-      if(reset_backtests) {
-        for(auto& backtest : app_state.backtests()) {
-          if(backtest->profile_ptr() == profile_ptr) {
-            backtest->reset();
-          }
-        }
-      }
-
-      *profile_ptr = *edit_profile_ptr;
+      app_state.update_profile(profile_handle_opt.value(), *edit_profile_ptr);
     });
   }
 
   void reset(this ProfilesWindow& self) noexcept
   {
     self.current_page_ = ProfilePage::List;
-    self.selected_profile_ptr_ = nullptr;
+    self.selected_profile_handle_opt_ = std::nullopt;
     self.editing_profile_ptr_ = nullptr;
   }
 };

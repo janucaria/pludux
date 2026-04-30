@@ -246,6 +246,20 @@ public:
         ImGui::EndMenu();
       }
 
+      if(ImGui::BeginMenu("Edit")) {
+        const auto has_undo = context.has_undo();
+        if(ImGui::MenuItem("Undo", nullptr, false, has_undo)) {
+          context.push_undo();
+        }
+
+        const auto has_redo = context.has_redo();
+        if(ImGui::MenuItem("Redo", nullptr, false, has_redo)) {
+          context.push_redo();
+        }
+
+        ImGui::EndMenu();
+      }
+
       if(ImGui::BeginMenu("Help")) {
         if(ImGui::MenuItem("About")) {
           open_about_popup = true;

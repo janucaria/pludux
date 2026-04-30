@@ -18,28 +18,46 @@ public:
   void render(this const BacktestSummaryWindow self, WindowContext& context)
   {
     auto& app_state = context.app_state();
-    auto& backtests = app_state.backtests();
 
     ImGui::Begin("Summary", nullptr);
 
-    const auto backtest = app_state.selected_backtest();
-    if(backtest && backtest->is_valid_rules()) {
-      const auto& profile = backtest->profile();
+    const auto backtest_handle = app_state.selected_backtest_handle();
+    const auto backtest_ptr =
+     app_state.get_backtest_if_present(backtest_handle);
+    if(backtest_ptr && app_state.is_backtest_ready(*backtest_ptr)) {
+      const auto& backtest = *backtest_ptr;
 
-      const auto& backtest_name = backtest->name();
+      const auto asset_handle = backtest.asset_handle();
+      const auto& asset = app_state.get_asset(asset_handle);
+
+      const auto strategy_handle = backtest.strategy_handle();
+      const auto& strategy = app_state.get_strategy(strategy_handle);
+
+      const auto profile_handle = backtest.profile_handle();
+      const auto& profile = app_state.get_profile(profile_handle);
+
+      const auto& market_handle = backtest.market_handle();
+      const auto& market = app_state.get_market(market_handle);
+
+      const auto& broker_handle = backtest.broker_handle();
+      const auto& broker = app_state.get_broker(broker_handle);
+
+      const auto& backtesting_summaries =
+       app_state.get_backtest_summaries(backtest_handle);
+
+      const auto& backtest_name = backtest.name();
       ImGui::Text("%s", backtest_name.c_str());
       ImGui::Separator();
 
-      const auto& backtesting_summaries = backtest->summaries();
       if(!backtesting_summaries.empty() &&
          ImGui::BeginTable(
           "TradeSummaryTable", 2, ImGuiTableFlags_BordersInnerH)) {
         const auto& summary = backtesting_summaries.back();
 
-        self.draw_row("Asset", backtest->asset().name());
-        self.draw_row("Strategy", backtest->strategy().name());
-        self.draw_row("Market", backtest->market().name());
-        self.draw_row("Broker", backtest->broker().name());
+        self.draw_row("Asset", asset.name());
+        self.draw_row("Strategy", strategy.name());
+        self.draw_row("Market", market.name());
+        self.draw_row("Broker", broker.name());
         self.draw_row("Profile", profile.name());
 
         self.draw_spacer_row();

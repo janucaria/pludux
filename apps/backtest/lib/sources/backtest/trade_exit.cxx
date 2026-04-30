@@ -19,6 +19,8 @@ public:
   {
   }
 
+  auto operator==(const TradeExit&) const noexcept -> bool = default;
+
   auto position_size(this const TradeExit& self) noexcept -> double
   {
     return self.position_size_;

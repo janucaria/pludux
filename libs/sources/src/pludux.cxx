@@ -1,5 +1,6 @@
 export module pludux;
 
+export import :myers_diff;
 export import :asset_data;
 export import :asset_series;
 export import :asset_history;

@@ -62,12 +62,6 @@ public:
     self.items_ = std::move(items);
   }
 
-  auto equal_rules(this const PlotGroup& self, const PlotGroup& other) noexcept
-   -> bool
-  {
-    return self.is_overlay_ == other.is_overlay_ && self.items_ == other.items_;
-  }
-
 private:
   std::string name_;
 

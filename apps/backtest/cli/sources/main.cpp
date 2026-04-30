@@ -22,7 +22,6 @@ auto main(int, const char**) -> int
   auto json_strategy_file = std::ifstream{json_strategy_path};
   auto strategy = pludux::backtest::parse_backtest_strategy_json(
    "Strategy", json_strategy_file);
-  auto strategy_ptr = std::make_shared<pludux::backtest::Strategy>(strategy);
 
   auto csv_stream = std::ifstream{asset_file};
 
@@ -31,37 +30,69 @@ auto main(int, const char**) -> int
     return 1;
   }
 
-  auto asset_ptr = std::make_shared<pludux::backtest::Asset>(asset_file);
-  pludux::update_asset_from_csv(*asset_ptr, csv_stream);
+  auto store = pludux::backtest::Store{};
 
-  auto profile_ptr = std::make_shared<pludux::backtest::Profile>("Default");
-  profile_ptr->capital_risk(0.01);
+  auto asset = pludux::backtest::Asset{asset_file};
+  pludux::update_asset_from_csv(asset, csv_stream);
 
-  auto broker_ptr = std::make_shared<pludux::backtest::Broker>("Default");
+  auto broker = pludux::backtest::Broker{"Default"};
 
-  auto market_ptr = std::make_shared<pludux::backtest::Market>("Default");
+  auto market = pludux::backtest::Market{"Default"};
+
+  auto profile = pludux::backtest::Profile{"Default"};
+  profile.capital_risk(0.01);
+
+  const auto asset_handle = store.add_asset(std::move(asset)).value();
+  const auto strategy_handle = store.add_strategy(std::move(strategy)).value();
+  const auto market_handle = store.add_market(std::move(market)).value();
+  const auto broker_handle = store.add_broker(std::move(broker)).value();
+  const auto profile_handle = store.add_profile(std::move(profile)).value();
 
   const auto intial_capital = 1'000'000;
 
   auto backtest = pludux::backtest::Backtest{"no name",
                                              intial_capital,
-                                             asset_ptr,
-                                             strategy_ptr,
-                                             market_ptr,
-                                             broker_ptr,
-                                             profile_ptr};
-  while(backtest.should_run()) {
-    backtest.run();
+                                             asset_handle,
+                                             strategy_handle,
+                                             market_handle,
+                                             broker_handle,
+                                             profile_handle};
+
+  auto backtest_handle = store.add_backtest(std::move(backtest)).value();
+
+  backtest = store.get_backtest(backtest_handle);
+  asset = store.get_asset(backtest.asset_handle());
+  strategy = store.get_strategy(backtest.strategy_handle());
+  market = store.get_market(backtest.market_handle());
+  broker = store.get_broker(backtest.broker_handle());
+  profile = store.get_profile(backtest.profile_handle());
+
+  auto& backtest_summaries = store.get_backtest_summaries(backtest_handle);
+  auto& series_results = store.get_series_results(backtest_handle);
+
+  auto backtest_runner =
+   pludux::backtest::BacktestRunner{backtest.initial_capital(),
+                                    asset,
+                                    strategy,
+                                    market,
+                                    broker,
+                                    profile,
+                                    backtest_summaries,
+                                    series_results};
+
+  while(!backtest.is_failed() && backtest_summaries.size() < asset.size()) {
+    backtest_runner.run();
   }
 
-  const auto& backtest_summaries = backtest.summaries();
   const auto& summary = !backtest_summaries.empty()
                          ? backtest_summaries.back()
                          : pludux::backtest::BacktestSummary{};
 
+  const auto risk_value = profile.capital_risk() * backtest.initial_capital();
+
   auto& ostream = std::cout;
 
-  ostream << std::format("Risk per trade: {:.2f}\n", backtest.get_risk_value());
+  ostream << std::format("Risk per trade: {:.2f}\n", risk_value);
   ostream << std::format("Total profit: {:.2f}\n", summary.cumulative_pnls());
 
   const auto total_duration =
@@ -93,8 +124,7 @@ auto main(int, const char**) -> int
   ostream << std::format("Expected value (EV): {:.2f}\n",
                          summary.expected_value());
   ostream << std::format("EV to risk rate: {:.2f}%\n",
-                         summary.expected_value() / backtest.get_risk_value() *
-                          100);
+                         summary.expected_value() / risk_value * 100);
 
   ostream << std::format("Total closed trades: {}\n", summary.trade_count());
   ostream << std::format("Win rate: {:.2f}%\n", summary.profit_rate() * 100);
