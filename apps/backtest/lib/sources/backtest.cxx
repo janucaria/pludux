@@ -67,7 +67,7 @@ void update_asset_from_csv(backtest::Asset& asset, std::istream& csv_stream)
                "(\\d{4})-(\\d{2})-(\\d{2})" // YYYY-MM-DD
                "(?:[T ](\\d{2}):(\\d{2})"   // hh:mm
                "(?::(\\d{2}(?:\\.\\d+)?))?" // :ss.s
-               "(Z|[+\\-]\\d{2}:\\d{2})"    // Z or +hh:mm or -hh:mm
+               "(Z|[+\\-]\\d{2}:\\d{2})?"    // Z or +hh:mm or -hh:mm
                ")?"
                "$">;
 
