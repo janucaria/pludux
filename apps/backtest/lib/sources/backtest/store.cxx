@@ -448,6 +448,19 @@ public:
                                                       handle);
   }
 
+  auto get_or_create_backtest_summaries(this Store& self,
+                                        BacktestStoreHandle handle)
+   -> std::vector<BacktestSummary>&
+  {
+    auto* summaries_ptr = self.get_backtest_summaries_if_present(handle);
+    if(!summaries_ptr) {
+      self.add_backtest_summaries(handle, std::vector<BacktestSummary>{});
+      summaries_ptr = self.get_backtest_summaries_if_present(handle);
+    }
+
+    return *summaries_ptr;
+  }
+
   auto update_backtest_summaries(this Store& self,
                                  BacktestStoreHandle handle,
                                  std::vector<BacktestSummary> summaries) -> bool
@@ -523,6 +536,19 @@ public:
      self.descriptor_.series_results_store_data_resolver();
 
     return series_results_resolver.get_if_present(series_results, handle);
+  }
+
+  auto get_or_create_series_results(this Store& self,
+                                    BacktestStoreHandle handle)
+   -> SeriesResultsCollector&
+  {
+    auto* series_results_ptr = self.get_series_results_if_present(handle);
+    if(!series_results_ptr) {
+      self.add_series_results(handle, SeriesResultsCollector{});
+      series_results_ptr = self.get_series_results_if_present(handle);
+    }
+
+    return *series_results_ptr;
   }
 
   auto update_series_results(this Store& self,

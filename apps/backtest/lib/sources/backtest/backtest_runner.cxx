@@ -35,34 +35,50 @@ export namespace pludux::backtest {
 
 class BacktestRunner {
 public:
-  BacktestRunner(double initial_capital,
-                 const Asset& asset,
-                 const Strategy& strategy,
-                 const Market& market,
-                 const Broker& broker,
-                 const Profile& profile,
-                 std::vector<BacktestSummary>& summaries,
-                 SeriesResultsCollector& series_results_collector)
-  : initial_capital_{initial_capital}
-  , asset_{asset}
-  , strategy_{strategy}
-  , market_{market}
-  , broker_{broker}
-  , profile_{profile}
-  , summaries_{summaries}
-  , series_results_collector_{series_results_collector}
+  BacktestRunner(BacktestStoreHandle backtest_handle)
+  : backtest_handle_{backtest_handle}
   {
   }
 
-  void run(this BacktestRunner& self)
+  auto backtest_handle(this const BacktestRunner& self) noexcept
+   -> BacktestStoreHandle
   {
-    const auto& asset = self.asset_;
-    const auto& strategy = self.strategy_;
-    const auto& market = self.market_;
-    const auto& broker = self.broker_;
-    const auto& profile = self.profile_;
+    return self.backtest_handle_;
+  }
 
-    auto& summaries = self.summaries_;
+  void run(this BacktestRunner& self, Store& store)
+  {
+    auto& backtest = store.get_backtest(self.backtest_handle_);
+
+    if(backtest.is_failed()) {
+      return;
+    }
+
+    const auto* asset_ptr = store.get_asset_if_present(backtest.asset_handle());
+    const auto* strategy_ptr =
+     store.get_strategy_if_present(backtest.strategy_handle());
+    const auto* market_ptr =
+     store.get_market_if_present(backtest.market_handle());
+    const auto* broker_ptr =
+     store.get_broker_if_present(backtest.broker_handle());
+    const auto* profile_ptr =
+     store.get_profile_if_present(backtest.profile_handle());
+
+    if(!asset_ptr || !strategy_ptr || !market_ptr || !broker_ptr ||
+       !profile_ptr) {
+      return;
+    }
+
+    const auto& asset = *asset_ptr;
+    const auto& strategy = *strategy_ptr;
+    const auto& market = *market_ptr;
+    const auto& broker = *broker_ptr;
+    const auto& profile = *profile_ptr;
+
+    auto& summaries =
+     store.get_or_create_backtest_summaries(self.backtest_handle_);
+    auto& series_results_collector =
+     store.get_or_create_series_results(self.backtest_handle_);
 
     const auto summaries_size = summaries.size();
     const auto asset_size = asset.size();
@@ -75,17 +91,21 @@ public:
      last_index - std::min(summaries_size, last_index);
     const auto asset_snapshot = asset.get_snapshot(asset_lookback);
 
+    const auto initial_capital = backtest.initial_capital();
+
+    auto context = DefaultMethodContext{
+     strategy.series_registry(), series_results_collector, summaries.size()};
+
     {
       const auto& series_registry = strategy.series_registry();
-      auto context = self.create_default_method_context(strategy);
       for(const auto& [series_name, series] : series_registry) {
         const auto series_value = series(asset_snapshot, context);
-        self.series_results_collector_.collect(series_name, series_value);
+        series_results_collector.collect(series_name, series_value);
       }
     }
 
-    auto summary = !summaries.empty() ? summaries.back()
-                                      : BacktestSummary{self.initial_capital_};
+    auto summary =
+     !summaries.empty() ? summaries.back() : BacktestSummary{initial_capital};
 
     auto trade_session = summary.trade_session();
 
@@ -104,7 +124,8 @@ public:
                                   asset_snapshot.low())
         .or_else([&]() {
           const auto position_size = open_position->unrealized_position_size();
-          return self.exit_trade(asset_snapshot, position_size, strategy);
+          return self.exit_trade(
+           asset_snapshot, position_size, strategy, context);
         });
 
       if(exit_trade) {
@@ -114,7 +135,8 @@ public:
     }
 
     if(trade_session.is_flat() || trade_session.is_closed()) {
-      auto entry_trade = self.entry_trade(asset_snapshot, strategy, profile);
+      auto entry_trade = self.entry_trade(
+       asset_snapshot, initial_capital, strategy, profile, context);
       if(entry_trade) {
         {
           const auto quantity_step = market.quantity_step();
@@ -148,40 +170,23 @@ public:
   }
 
 private:
-  double initial_capital_;
-
-  const Asset& asset_;
-  const Strategy& strategy_;
-  const Market& market_;
-  const Broker& broker_;
-  const Profile& profile_;
-
-  std::vector<BacktestSummary>& summaries_;
-  SeriesResultsCollector& series_results_collector_;
-
-  auto create_default_method_context(this const BacktestRunner& self,
-                                     const Strategy& strategy)
-   -> DefaultMethodContext
-  {
-    return DefaultMethodContext{strategy.series_registry(),
-                                self.series_results_collector_,
-                                self.summaries_.size()};
-  }
+  BacktestStoreHandle backtest_handle_;
 
   auto entry_long_trade(this const BacktestRunner& self,
                         const AssetSnapshot& asset_snapshot,
+                        double initial_capital,
                         const Strategy& strategy,
-                        const Profile& profile) noexcept
+                        const Profile& profile,
+                        MethodContextable auto context) noexcept
    -> std::optional<TradeEntry>
   {
     auto result = std::optional<TradeEntry>{};
 
     const auto prev_snapshot = asset_snapshot[1];
-    auto context = self.create_default_method_context(strategy);
 
     if(strategy.long_entry_filter()(prev_snapshot, context)) {
       const auto entry_price = asset_snapshot.open();
-      const auto risk_value = profile.capital_risk() * self.initial_capital_;
+      const auto risk_value = profile.capital_risk() * initial_capital;
       const auto r_distance =
        profile.get_r_distance(entry_price, prev_snapshot, context);
       const auto position_size = risk_value / r_distance;
@@ -206,18 +211,19 @@ private:
 
   auto entry_short_trade(this const BacktestRunner& self,
                          const AssetSnapshot& asset_snapshot,
+                         double initial_capital,
                          const Strategy& strategy,
-                         const Profile& profile) noexcept
+                         const Profile& profile,
+                         MethodContextable auto context) noexcept
    -> std::optional<TradeEntry>
   {
     auto result = std::optional<TradeEntry>{};
 
-    auto context = self.create_default_method_context(strategy);
     const auto prev_snapshot = asset_snapshot[1];
 
     if(strategy.short_entry_filter()(prev_snapshot, context)) {
       const auto entry_price = asset_snapshot.open();
-      const auto risk_value = profile.capital_risk() * self.initial_capital_;
+      const auto risk_value = profile.capital_risk() * initial_capital;
       const auto r_distance =
        -profile.get_r_distance(entry_price, prev_snapshot, context);
       const auto position_size = risk_value / r_distance;
@@ -242,25 +248,32 @@ private:
 
   auto entry_trade(this const BacktestRunner& self,
                    const AssetSnapshot& asset_snapshot,
+                   double initial_capital,
                    const Strategy& strategy,
-                   const Profile& profile) noexcept -> std::optional<TradeEntry>
+                   const Profile& profile,
+                   MethodContextable auto context) noexcept
+   -> std::optional<TradeEntry>
   {
-    return self.entry_long_trade(asset_snapshot, strategy, profile)
+    return self
+     .entry_long_trade(
+      asset_snapshot, initial_capital, strategy, profile, context)
      .or_else([&] {
-       return self.entry_short_trade(asset_snapshot, strategy, profile);
+       return self.entry_short_trade(
+        asset_snapshot, initial_capital, strategy, profile, context);
      });
   }
 
   auto exit_trade(this const BacktestRunner& self,
                   const AssetSnapshot& asset_snapshot,
                   double position_size,
-                  const Strategy& strategy) noexcept -> std::optional<TradeExit>
+                  const Strategy& strategy,
+                  MethodContextable auto context) noexcept
+   -> std::optional<TradeExit>
   {
     const auto is_long_direction = position_size > 0;
     const auto is_short_direction = position_size < 0;
     const auto exit_price = asset_snapshot.open();
 
-    auto context = self.create_default_method_context(strategy);
     const auto prev_snapshot = asset_snapshot[1];
 
     if(is_long_direction) {

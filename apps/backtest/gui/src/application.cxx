@@ -3,10 +3,12 @@ module;
 #include <algorithm>
 #include <chrono>
 #include <fstream>
+#include <functional>
 #include <list>
 #include <ranges>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 
 #include <imgui.h>
 #include <implot.h>
@@ -21,6 +23,23 @@ export import :serialization;
 export import :actions;
 export import :command_executor;
 import :windows;
+
+export namespace std {
+
+template<>
+struct hash<pludux::backtest::BacktestStoreHandle> {
+  auto
+  operator()(const pludux::backtest::BacktestStoreHandle& handle) const noexcept
+   -> size_t
+  {
+    const auto slot_hash = std::hash<std::size_t>{}(handle.slot_index());
+    const auto generation_hash = std::hash<std::size_t>{}(handle.generation());
+
+    return slot_hash ^ (generation_hash << 1);
+  }
+};
+
+} // namespace std
 
 export namespace pludux::apps {
 
@@ -137,9 +156,25 @@ public:
   void on_update(this Application& self)
   {
     auto& app_state = self.app_state_;
+    auto& store = app_state.store();
     auto& alert_messages = self.alert_messages_;
 
     auto& backtest_handles = app_state.get_backtest_handles();
+
+    // sync backtest runners with backtest handles in the app state, and run the
+    // backtests
+    for(auto it = self.running_backtests_.begin();
+        it != self.running_backtests_.end();) {
+      const auto& backtest_handle = it->first;
+
+      if(std::ranges::find(backtest_handles, backtest_handle) ==
+         backtest_handles.end()) {
+        it = self.running_backtests_.erase(it);
+      } else {
+        ++it;
+      }
+    }
+
     if(!backtest_handles.empty()) {
       // create a loop with timeout 60 fps
       auto last_update_time = std::chrono::high_resolution_clock::now();
@@ -151,52 +186,13 @@ public:
       do {
         for(auto&& backtest_handle : backtest_handles) {
           auto& backtest = app_state.get_backtest(backtest_handle);
-          auto summaries_ptr =
-           app_state.get_backtest_summaries_if_present(backtest_handle);
-          if(!summaries_ptr) {
-            app_state.add_backtest_summaries(
-             backtest_handle, std::vector<backtest::BacktestSummary>{});
-            summaries_ptr =
-             app_state.get_backtest_summaries_if_present(backtest_handle);
-          }
 
-          auto series_results_ptr =
-           app_state.get_series_results_if_present(backtest_handle);
-
-          if(!series_results_ptr) {
-            app_state.add_series_results(backtest_handle,
-                                         SeriesResultsCollector{});
-            series_results_ptr =
-             app_state.get_series_results_if_present(backtest_handle);
-          }
+          auto [runner_it, _] = self.running_backtests_.try_emplace(
+           backtest_handle, backtest::BacktestRunner{backtest_handle});
+          auto& backtest_runner = runner_it->second;
 
           try {
-            if(app_state.is_backtest_ready(backtest)) {
-              const auto& asset = app_state.get_asset(backtest.asset_handle());
-              const auto& strategy =
-               app_state.get_strategy(backtest.strategy_handle());
-              const auto& market =
-               app_state.get_market(backtest.market_handle());
-              const auto& broker =
-               app_state.get_broker(backtest.broker_handle());
-              const auto& profile =
-               app_state.get_profile(backtest.profile_handle());
-
-              auto backtest_runner =
-               backtest::BacktestRunner{backtest.initial_capital(),
-                                        asset,
-                                        strategy,
-                                        market,
-                                        broker,
-                                        profile,
-                                        *summaries_ptr,
-                                        *series_results_ptr};
-
-              if(!backtest.is_failed() &&
-                 summaries_ptr->size() < asset.size()) {
-                backtest_runner.run();
-              }
-            }
+            backtest_runner.run(store);
           } catch(const std::exception& e) {
             backtest.is_failed(true);
 
@@ -291,6 +287,8 @@ private:
   ProfilesWindow profiles_window_;
 
   ApplicationState app_state_;
+  std::unordered_map<backtest::BacktestStoreHandle, backtest::BacktestRunner>
+   running_backtests_;
   std::list<std::string> alert_messages_;
   CommandExecutor command_executor_{};
 };

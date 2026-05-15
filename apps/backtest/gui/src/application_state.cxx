@@ -34,6 +34,11 @@ public:
     return self.store_;
   }
 
+  auto store(this ApplicationState& self) noexcept -> backtest::Store&
+  {
+    return self.store_;
+  }
+
   auto ui_state(this const ApplicationState& self) noexcept -> const UiState&
   {
     return self.ui_state_;

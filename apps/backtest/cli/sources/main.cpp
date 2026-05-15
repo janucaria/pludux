@@ -70,18 +70,10 @@ auto main(int, const char**) -> int
   auto& backtest_summaries = store.get_backtest_summaries(backtest_handle);
   auto& series_results = store.get_series_results(backtest_handle);
 
-  auto backtest_runner =
-   pludux::backtest::BacktestRunner{backtest.initial_capital(),
-                                    asset,
-                                    strategy,
-                                    market,
-                                    broker,
-                                    profile,
-                                    backtest_summaries,
-                                    series_results};
+  auto backtest_runner = pludux::backtest::BacktestRunner{backtest_handle};
 
   while(!backtest.is_failed() && backtest_summaries.size() < asset.size()) {
-    backtest_runner.run();
+    backtest_runner.run(store);
   }
 
   const auto& summary = !backtest_summaries.empty()
