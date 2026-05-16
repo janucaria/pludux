@@ -34,7 +34,8 @@ public:
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) noexcept -> ResultType
   {
-    return asset_snapshot.open();
+    return evaluate_series_method(
+     OpenMethod{}, std::move(asset_snapshot), context);
   }
 
   auto operator()(this OhlcvMethod self,
@@ -54,7 +55,8 @@ public:
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) noexcept -> ResultType
   {
-    return asset_snapshot.high();
+    return evaluate_series_method(
+     HighMethod{}, std::move(asset_snapshot), context);
   }
 
   auto operator()(this HighMethod self,
@@ -74,7 +76,8 @@ public:
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) noexcept -> ResultType
   {
-    return asset_snapshot.low();
+    return evaluate_series_method(
+     LowMethod{}, std::move(asset_snapshot), context);
   }
 
   auto operator()(this LowMethod self,
@@ -94,7 +97,8 @@ public:
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) noexcept -> ResultType
   {
-    return asset_snapshot.close();
+    return evaluate_series_method(
+     CloseMethod{}, std::move(asset_snapshot), context);
   }
 
   auto operator()(this CloseMethod self,
@@ -114,7 +118,8 @@ public:
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) noexcept -> ResultType
   {
-    return asset_snapshot.volume();
+    return evaluate_series_method(
+     VolumeMethod{}, std::move(asset_snapshot), context);
   }
 
   auto operator()(this VolumeMethod self,

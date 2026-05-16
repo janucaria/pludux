@@ -31,8 +31,10 @@ public:
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) -> bool
   {
-    const auto target_result = self.target_(asset_snapshot, context);
-    const auto threshold_result = self.threshold_(asset_snapshot, context);
+    const auto target_result =
+     evaluate_series_method(self.target_, asset_snapshot, context);
+    const auto threshold_result =
+     evaluate_series_method(self.threshold_, asset_snapshot, context);
 
     return TComparator{}(target_result, threshold_result);
   }

@@ -19,8 +19,6 @@ export namespace pludux {
 template<typename TSourceMethod = CloseMethod>
 class HighestMethod {
 public:
-  using ResultType = typename TSourceMethod::ResultType;
-
   HighestMethod()
   : HighestMethod{14}
   {
@@ -38,30 +36,6 @@ public:
   }
 
   auto operator==(const HighestMethod& other) const noexcept -> bool = default;
-
-  auto operator()(this const HighestMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    if(asset_snapshot.size() < self.period_) {
-      return std::numeric_limits<ResultType>::quiet_NaN();
-    }
-
-    auto highest = std::numeric_limits<ResultType>::min();
-    for(auto i = 0uz; i < self.period_; ++i) {
-      const auto value = self.source_(asset_snapshot[i], context);
-      highest = std::max(highest, value);
-    }
-    return highest;
-  }
-
-  auto operator()(this const HighestMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  SeriesOutput output,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    return std::numeric_limits<ResultType>::quiet_NaN();
-  }
 
   auto source(this const HighestMethod& self) -> const TSourceMethod&
   {

@@ -11,11 +11,8 @@ import :series_output;
 export namespace pludux {
 
 template<typename TSourceMethod>
-  requires requires { typename TSourceMethod::ResultType; }
 class SelectOutputMethod {
 public:
-  using ResultType = TSourceMethod::ResultType;
-
   SelectOutputMethod(TSourceMethod source, SeriesOutput output)
   : source_{std::move(source)}
   , output_{output}
@@ -32,21 +29,6 @@ public:
 
   auto operator==(const SelectOutputMethod& other) const noexcept
    -> bool = default;
-
-  auto operator()(this const SelectOutputMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    return self.source_(asset_snapshot, self.output(), context);
-  }
-
-  auto operator()(this const SelectOutputMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  SeriesOutput output,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    return self.source_(asset_snapshot, output, context);
-  }
 
   auto source(this const SelectOutputMethod& self) noexcept
    -> const TSourceMethod&

@@ -15,8 +15,11 @@ TEST(CrossunderMethodTest, ReferenceMethod)
   const auto condition =
    CrossunderMethod{std::move(signal_method), std::move(reference_method)};
   const auto asset_data = AssetHistory{{"close", {0}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_EQ(condition.reference()(asset_data, context), reference_value);
+  EXPECT_EQ(
+   evaluate_series_method(condition.reference(), asset_snapshot, context),
+   reference_value);
 }
 
 TEST(CrossunderMethodTest, SignalMethod)
@@ -28,8 +31,10 @@ TEST(CrossunderMethodTest, SignalMethod)
   const auto condition =
    CrossunderMethod{std::move(signal_method), std::move(reference_method)};
   const auto asset_data = AssetHistory{{"close", {0}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_EQ(condition.signal()(asset_data, context), signal_value);
+  EXPECT_EQ(evaluate_series_method(condition.signal(), asset_snapshot, context),
+            signal_value);
 }
 
 TEST(CrossunderMethodTest, CrossunderConditionMet)
@@ -39,8 +44,9 @@ TEST(CrossunderMethodTest, CrossunderConditionMet)
   const auto crossunder_condition =
    CrossunderMethod{std::move(signal_method), std::move(reference_method)};
   const auto asset_data = AssetHistory{{"close", {40, 60}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_TRUE(crossunder_condition(asset_data, context));
+  EXPECT_TRUE(crossunder_condition(asset_snapshot, context));
 }
 
 TEST(CrossunderMethodTest, CrossunderConditionNotMet)
@@ -50,8 +56,9 @@ TEST(CrossunderMethodTest, CrossunderConditionNotMet)
   const auto crossunder_condition =
    CrossunderMethod{std::move(signal_method), std::move(reference_method)};
   const auto asset_data = AssetHistory{{"close", {50, 40}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_FALSE(crossunder_condition(asset_data, context));
+  EXPECT_FALSE(crossunder_condition(asset_snapshot, context));
 }
 
 TEST(CrossunderMethodTest, EqualityOperator)

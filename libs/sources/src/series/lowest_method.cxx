@@ -19,8 +19,6 @@ export namespace pludux {
 template<typename TSourceMethod = CloseMethod>
 class LowestMethod {
 public:
-  using ResultType = typename TSourceMethod::ResultType;
-
   LowestMethod()
   : LowestMethod{14}
   {
@@ -38,30 +36,6 @@ public:
   }
 
   auto operator==(const LowestMethod& other) const noexcept -> bool = default;
-
-  auto operator()(this const LowestMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    if(asset_snapshot.size() < self.period_) {
-      return std::numeric_limits<ResultType>::quiet_NaN();
-    }
-
-    auto lowest = std::numeric_limits<ResultType>::max();
-    for(auto i = 0uz; i < self.period_; ++i) {
-      const auto value = self.source_(asset_snapshot[i], context);
-      lowest = std::min(lowest, value);
-    }
-    return lowest;
-  }
-
-  auto operator()(this const LowestMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  SeriesOutput output,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    return std::numeric_limits<ResultType>::quiet_NaN();
-  }
 
   auto source(this const LowestMethod& self) -> const TSourceMethod&
   {

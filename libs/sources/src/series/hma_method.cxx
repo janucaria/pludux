@@ -11,6 +11,7 @@ import :asset_snapshot;
 import :method_contextable;
 import :series_output;
 
+import :series.ohlcv_method;
 import :series.value_method;
 import :series.wma_method;
 import :series.operators_method;
@@ -20,8 +21,6 @@ export namespace pludux {
 template<typename TSourceMethod = CloseMethod>
 class HmaMethod {
 public:
-  using ResultType = typename TSourceMethod::ResultType;
-
   HmaMethod()
   : HmaMethod{20}
   {
@@ -39,31 +38,6 @@ public:
   }
 
   auto operator==(const HmaMethod& other) const noexcept -> bool = default;
-
-  auto operator()(this const HmaMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    const auto wam1 = WmaMethod{self.source_, self.period_ / 2};
-    const auto scalar_2_method = ValueMethod{2.0};
-    const auto times_2_wam1 = MultiplyMethod{scalar_2_method, wam1};
-
-    const auto wam2 = WmaMethod{self.source_, self.period_};
-    const auto diff = SubtractMethod{times_2_wam1, wam2};
-
-    const auto hma =
-     WmaMethod{diff, static_cast<std::size_t>(std::sqrt(self.period_))};
-
-    return hma(asset_snapshot, context);
-  }
-
-  auto operator()(this const HmaMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  SeriesOutput output,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    return std::numeric_limits<ResultType>::quiet_NaN();
-  }
 
   auto source(this const HmaMethod& self) noexcept -> const TSourceMethod&
   {

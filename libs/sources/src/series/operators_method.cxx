@@ -22,9 +22,6 @@ template<template<typename, typename> typename,
          typename TMethodOp2>
 class BinaryOperatorMethod {
 public:
-  using ResultType = std::common_type_t<typename TMethodOp1::ResultType,
-                                        typename TMethodOp2::ResultType>;
-
   BinaryOperatorMethod(TMethodOp1 operand1, TMethodOp2 operand2)
   : operand1_{std::move(operand1)}
   , operand2_{std::move(operand2)}
@@ -33,24 +30,6 @@ public:
 
   auto operator==(const BinaryOperatorMethod& other) const noexcept
    -> bool = default;
-
-  auto operator()(this const BinaryOperatorMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    const auto operand1_result = self.operand1_(asset_snapshot, context);
-    const auto operand2_result = self.operand2_(asset_snapshot, context);
-    const auto result = TBinaryFn{}(operand1_result, operand2_result);
-    return result;
-  }
-
-  auto operator()(this const BinaryOperatorMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  SeriesOutput output,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    return std::numeric_limits<ResultType>::quiet_NaN();
-  }
 
   auto operand1(this const BinaryOperatorMethod& self) noexcept
    -> const TMethodOp1&
@@ -103,8 +82,6 @@ private:
 template<template<typename> typename, typename TUnaryFn, typename TMethodOp>
 class UnaryOperatorMethod {
 public:
-  using ResultType = typename TMethodOp::ResultType;
-
   explicit UnaryOperatorMethod(TMethodOp operand)
   : operand_{std::move(operand)}
   {
@@ -112,22 +89,6 @@ public:
 
   auto operator==(const UnaryOperatorMethod& other) const noexcept
    -> bool = default;
-
-  auto operator()(this const UnaryOperatorMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    const auto operand_result = self.operand_(asset_snapshot, context);
-    return TUnaryFn{}(operand_result);
-  }
-
-  auto operator()(this const UnaryOperatorMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  SeriesOutput output,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    return std::numeric_limits<ResultType>::quiet_NaN();
-  }
 
   auto operand(this const UnaryOperatorMethod& self) noexcept
    -> const TMethodOp&

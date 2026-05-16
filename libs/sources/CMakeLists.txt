@@ -37,10 +37,9 @@ target_sources(${PROJECT_NAME}
         src/series_results_collector.cxx
         src/method_contextable.cxx
         src/any_method_context.cxx
-
-        src/series/any_series_method.cxx
-        src/series/series_method_registry.cxx
-
+        
+        src/series/ma_method_type.cxx
+        
         src/series/value_method.cxx
         src/series/data_method.cxx
         src/series/ohlcv_method.cxx
@@ -58,9 +57,7 @@ target_sources(${PROJECT_NAME}
 
         src/series/sma_method.cxx
         src/series/ema_method.cxx
-        src/series/cached_results_ema_method.cxx
         src/series/rma_method.cxx
-        src/series/cached_results_rma_method.cxx
         src/series/wma_method.cxx
         src/series/hma_method.cxx
         src/series/adaptive_ma_method.cxx
@@ -78,6 +75,11 @@ target_sources(${PROJECT_NAME}
 
         src/series/stoch_method.cxx
         src/series/stoch_rsi_method.cxx
+        
+        src/evaluate_series_method.cxx
+        src/series/any_series_method.cxx
+        src/series/series_method_registry.cxx
+
         src/series.cxx
 
         

@@ -20,8 +20,6 @@ export namespace pludux {
 template<typename TSourceMethod = CloseMethod>
 class StddevMethod {
 public:
-  using ResultType = typename TSourceMethod::ResultType;
-
   StddevMethod()
   : StddevMethod{20}
   {
@@ -39,36 +37,6 @@ public:
   }
 
   auto operator==(const StddevMethod& other) const noexcept -> bool = default;
-
-  auto operator()(this const StddevMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    const auto sum = std::ranges::fold_left(
-     std::views::iota(0uz, self.period_), ResultType{0}, [&](auto acc, auto i) {
-       return acc + self.source_(asset_snapshot[i], context);
-     });
-    const auto mean = sum / static_cast<ResultType>(self.period_);
-
-    auto sum_squared_diff = ResultType{0};
-    for(auto i = 0uz; i < self.period_; ++i) {
-      const auto diff = self.source_(asset_snapshot[i], context) - mean;
-      sum_squared_diff += diff * diff;
-    }
-
-    const auto variance =
-     sum_squared_diff / static_cast<ResultType>(self.period_);
-    const auto stddev = std::sqrt(variance);
-    return stddev;
-  }
-
-  auto operator()(this const StddevMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  SeriesOutput output,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    return std::numeric_limits<ResultType>::quiet_NaN();
-  }
 
   auto source(this const StddevMethod& self) noexcept -> const TSourceMethod&
   {

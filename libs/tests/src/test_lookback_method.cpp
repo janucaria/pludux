@@ -30,9 +30,12 @@ TEST(LookbackMethodTest, RunAllMethodClose)
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto lookback_method = LookbackMethod{CloseMethod{}, 1};
 
-  EXPECT_EQ((lookback_method(asset_snapshot[0], context)), 4.1);
-  EXPECT_EQ((lookback_method(asset_snapshot[1], context)), 4.2);
-  EXPECT_TRUE(std::isnan((lookback_method(asset_snapshot[2], context))));
+  EXPECT_EQ(
+   (evaluate_series_method(lookback_method, asset_snapshot[0], context)), 4.1);
+  EXPECT_EQ(
+   (evaluate_series_method(lookback_method, asset_snapshot[1], context)), 4.2);
+  EXPECT_TRUE(std::isnan(
+   (evaluate_series_method(lookback_method, asset_snapshot[2], context))));
 }
 
 TEST(LookbackMethodTest, EqualityComparisonOperator)

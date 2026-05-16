@@ -23,10 +23,6 @@ export namespace pludux {
 
 class StochMethod {
 public:
-  using ResultType = std::common_type_t<typename HighMethod::ResultType,
-                                        typename LowMethod::ResultType,
-                                        typename CloseMethod::ResultType>;
-
   StochMethod(std::size_t k_period, std::size_t k_smooth, std::size_t d_period)
   : k_period_{k_period}
   , k_smooth_{k_smooth}
@@ -35,43 +31,6 @@ public:
   }
 
   auto operator==(const StochMethod& other) const noexcept -> bool = default;
-
-  auto operator()(this const StochMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    return self(asset_snapshot, SeriesOutput::KPercent, context);
-  }
-
-  auto operator()(this const StochMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  SeriesOutput output,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    const auto close = CloseMethod{};
-    const auto highest_high = HighestMethod{HighMethod{}, self.k_period_};
-    const auto lowest_low = LowestMethod{LowMethod{}, self.k_period_};
-    const auto stoch = DivideMethod{MultiplyMethod{ValueMethod{100},
-                                                   SubtractMethod{
-                                                    close,
-                                                    lowest_low,
-                                                   }},
-                                    SubtractMethod{
-                                     highest_high,
-                                     lowest_low,
-                                    }};
-
-    const auto k_percent = SmaMethod{stoch, self.k_smooth_};
-
-    switch(output) {
-    case SeriesOutput::KPercent:
-      return k_percent(asset_snapshot, context);
-    case SeriesOutput::DPercent:
-      return SmaMethod{k_percent, self.d_period_}(asset_snapshot, context);
-    default:
-      return std::numeric_limits<ResultType>::quiet_NaN();
-    }
-  }
 
   auto k_period(this const StochMethod& self) noexcept -> std::size_t
   {

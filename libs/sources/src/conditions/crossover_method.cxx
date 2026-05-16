@@ -27,10 +27,14 @@ public:
                   AssetSnapshot asset_snapshot,
                   MethodContextable auto context) -> bool
   {
-    const auto signal_current = self.signal_(asset_snapshot, context);
-    const auto signal_prev = self.signal_(asset_snapshot[1], context);
-    const auto reference_current = self.reference_(asset_snapshot, context);
-    const auto reference_prev = self.reference_(asset_snapshot[1], context);
+    const auto signal_current =
+     evaluate_series_method(self.signal_, asset_snapshot, context);
+    const auto signal_prev =
+     evaluate_series_method(self.signal_, asset_snapshot[1], context);
+    const auto reference_current =
+     evaluate_series_method(self.reference_, asset_snapshot, context);
+    const auto reference_prev =
+     evaluate_series_method(self.reference_, asset_snapshot[1], context);
 
     return signal_current > reference_current && signal_prev <= reference_prev;
   }

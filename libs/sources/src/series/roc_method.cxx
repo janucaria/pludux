@@ -17,8 +17,6 @@ export namespace pludux {
 template<typename TSourceMethod = CloseMethod>
 class RocMethod {
 public:
-  using ResultType = typename TSourceMethod::ResultType;
-
   RocMethod()
   : RocMethod{14}
   {
@@ -36,29 +34,6 @@ public:
   }
 
   auto operator==(const RocMethod& other) const noexcept -> bool = default;
-
-  auto operator()(this const RocMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    const auto source_size = asset_snapshot.size();
-    if(source_size < self.period_) {
-      return std::numeric_limits<ResultType>::quiet_NaN();
-    }
-
-    const auto current = self.source_(asset_snapshot, context);
-    const auto end = self.source_(asset_snapshot[self.period_], context);
-
-    return 100 * (current - end) / end;
-  }
-
-  auto operator()(this const RocMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  SeriesOutput output,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    return std::numeric_limits<ResultType>::quiet_NaN();
-  }
 
   auto source(this const RocMethod& self) noexcept -> TSourceMethod
   {

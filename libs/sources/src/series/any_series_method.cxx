@@ -1,6 +1,7 @@
 module;
 
 #include <any>
+#include <concepts>
 #include <functional>
 #include <memory>
 #include <type_traits>
@@ -12,45 +13,44 @@ export module pludux:series.any_series_method;
 import :asset_snapshot;
 import :method_contextable;
 import :series_output;
-
 import :any_method_context;
 
 export namespace pludux {
 
 class AnySeriesMethod {
 public:
-  using ResultType = double;
-
   template<typename UMethod>
-    requires requires {
-      typename UMethod::ResultType;
-      requires std::convertible_to<typename UMethod::ResultType, ResultType>;
-    }
+    requires requires(UMethod method,
+                      AssetSnapshot asset_snapshot,
+                      SeriesOutput output,
+                      AnySeriesMethodContext context) {
+      // TODO: compile error in clang and emscripten
+      // {
+      //   evaluate_series_method(method, asset_snapshot, context)
+      // } -> std::convertible_to<double>;
+      { method == method } -> std::convertible_to<bool>;
+      { method != method } -> std::convertible_to<bool>;
+    } && (!std::same_as<std::remove_cvref_t<UMethod>, AnySeriesMethod>)
   AnySeriesMethod(UMethod impl)
   : impl_{std::make_any<UMethod>(std::move(impl))}
-  , invoke_{[](const std::any& impl,
-               AssetSnapshot asset_snapshot,
-               AnySeriesMethodContext context) static
-             -> typename UMethod::ResultType {
-    auto* method = std::any_cast<UMethod>(&impl);
-    return method
-            ? (*method)(asset_snapshot, context)
-            : std::numeric_limits<typename UMethod::ResultType>::quiet_NaN();
+  , evaluate_{[](const std::any& impl,
+                 AssetSnapshot asset_snapshot,
+                 AnySeriesMethodContext context) static -> double {
+    const auto& method = *std::any_cast<UMethod>(&impl);
+    return evaluate_series_method(method, asset_snapshot, context);
   }}
-  , invoke_with_output_{[](const std::any& impl,
-                           AssetSnapshot asset_snapshot,
-                           SeriesOutput output,
-                           AnySeriesMethodContext context) static
-                         -> typename UMethod::ResultType {
-    auto* method = std::any_cast<UMethod>(&impl);
-    return method
-            ? (*method)(asset_snapshot, output, context)
-            : std::numeric_limits<typename UMethod::ResultType>::quiet_NaN();
+  , evaluate_with_output_{[](const std::any& impl,
+                             SeriesOutput output,
+                             AssetSnapshot asset_snapshot,
+                             AnySeriesMethodContext context) static -> double {
+    const auto& method = *std::any_cast<UMethod>(&impl);
+    return evaluate_selected_output_series_or_nan(
+     method, output, asset_snapshot, context);
   }}
   , equals_{[](const std::any& impl,
                const AnySeriesMethod& other) static -> bool {
     if(auto other_method = std::any_cast<UMethod>(&other.impl_)) {
-      const auto& method = std::any_cast<UMethod>(impl);
+      const auto& method = *std::any_cast<UMethod>(&impl);
       return method == *other_method;
     }
     return false;
@@ -58,7 +58,7 @@ public:
   , not_equals_{
      [](const std::any& impl, const AnySeriesMethod& other) static -> bool {
        if(auto other_method = std::any_cast<UMethod>(&other.impl_)) {
-         const auto& method = std::any_cast<UMethod>(impl);
+         const auto& method = *std::any_cast<UMethod>(&impl);
          return method != *other_method;
        }
        return true;
@@ -66,20 +66,20 @@ public:
   {
   }
 
-  auto operator()(this const AnySeriesMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  AnySeriesMethodContext context) -> ResultType
+  friend auto evaluate_series_method(const AnySeriesMethod& method,
+                                     AssetSnapshot asset_snapshot,
+                                     MethodContextable auto context) -> double
   {
-    return self.invoke_(self.impl_, asset_snapshot, context);
+    return method.evaluate_(method.impl_, asset_snapshot, context);
   }
 
-  auto operator()(this const AnySeriesMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  SeriesOutput output,
-                  AnySeriesMethodContext context) -> ResultType
+  friend auto evaluate_series_method(SeriesOutput output,
+                                     const AnySeriesMethod& method,
+                                     AssetSnapshot asset_snapshot,
+                                     MethodContextable auto context) -> double
   {
-    return self.invoke_with_output_(
-     self.impl_, asset_snapshot, output, context);
+    return method.evaluate_with_output_(
+     method.impl_, output, asset_snapshot, context);
   }
 
   auto operator==(this const AnySeriesMethod& self,
@@ -111,13 +111,13 @@ private:
   std::any impl_;
 
   std::function<
-   auto(const std::any&, AssetSnapshot, AnySeriesMethodContext)->ResultType>
-   invoke_;
+   auto(const std::any&, AssetSnapshot, AnySeriesMethodContext)->double>
+   evaluate_;
 
   std::function<
-   auto(const std::any&, AssetSnapshot, SeriesOutput, AnySeriesMethodContext)
-    ->ResultType>
-   invoke_with_output_;
+   auto(const std::any&, SeriesOutput, AssetSnapshot, AnySeriesMethodContext)
+    ->double>
+   evaluate_with_output_;
 
   std::function<auto(const std::any&, const AnySeriesMethod&)->bool> equals_;
 

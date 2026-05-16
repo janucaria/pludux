@@ -34,7 +34,7 @@ public:
     if(const auto method_opt = self.methods_.get(name);
        method_opt.has_value()) {
       const auto& method = method_opt.value();
-      return method(asset_snapshot, self);
+      return evaluate_series_method(method, asset_snapshot, self);
     }
     return std::numeric_limits<DispatchResultType>::quiet_NaN();
   }
@@ -47,7 +47,7 @@ public:
     if(const auto method_opt = self.methods_.get(name);
        method_opt.has_value()) {
       const auto& method = method_opt.value();
-      return method(asset_snapshot, output, self);
+      return evaluate_series_method(output, method, asset_snapshot, self);
     }
     return std::numeric_limits<DispatchResultType>::quiet_NaN();
   }

@@ -490,9 +490,9 @@ static auto serialize_kc_method(const ConfigParser& config_parser,
         return "EMA";
       }
     }();
-    serialized_method["maPeriod"] = kc_method->ma_period();
+    serialized_method["maPeriod"] = kc_method->period();
     serialized_method["maSource"] =
-     config_parser.serialize_method(kc_method->ma_source());
+     config_parser.serialize_method(kc_method->source());
     serialized_method["bandMethodType"] = [&]() {
       switch(kc_method->band_method_type()) {
       case KcBandMethodType::Atr:
@@ -572,11 +572,11 @@ static auto parse_kc_method(ConfigParser::Parser config_parser,
   const auto multiplier = get_param_or<double>(parameters, "multiplier", 1.5);
 
   const auto kc_method = KcMethod<AnySeriesMethod>{ma_source,
-                                                   ma_method_type,
                                                    ma_period,
-                                                   band_method_type,
+                                                   multiplier,
                                                    band_atr_period,
-                                                   multiplier};
+                                                   band_method_type,
+                                                   ma_method_type};
 
   return kc_method;
 }
@@ -979,8 +979,8 @@ auto make_default_registered_config_parser() -> ConfigParser
 
   config_parser.register_method_parser(
    "EMA",
-   serialize_ta_with_period_method<CachedResultsEmaMethod>,
-   parse_ta_with_period_method<CachedResultsEmaMethod>);
+   serialize_ta_with_period_method<EmaMethod>,
+   parse_ta_with_period_method<EmaMethod>);
 
   config_parser.register_method_parser(
    "WMA",
@@ -989,8 +989,8 @@ auto make_default_registered_config_parser() -> ConfigParser
 
   config_parser.register_method_parser(
    "RMA",
-   serialize_ta_with_period_method<CachedResultsRmaMethod>,
-   parse_ta_with_period_method<CachedResultsRmaMethod>);
+   serialize_ta_with_period_method<RmaMethod>,
+   parse_ta_with_period_method<RmaMethod>);
 
   config_parser.register_method_parser(
    "HMA",
@@ -1204,14 +1204,14 @@ auto make_default_registered_config_parser() -> ConfigParser
          case MaMethodType::Hma:
            return "HMA";
          default:
-           const auto error_message =
-            std::format("Unknown BB.maType: {}", static_cast<int>(ma_type));
+           const auto error_message = std::format("Unknown BB.maMethodType: {}",
+                                                  static_cast<int>(ma_type));
            throw std::invalid_argument{error_message};
          }
-       }(bb_method->ma_type());
+       }(bb_method->ma_method_type());
 
        serialized_method["maSource"] =
-        config_parser.serialize_method(bb_method->ma_source());
+        config_parser.serialize_method(bb_method->source());
        serialized_method["period"] = bb_method->period();
        serialized_method["stddev"] = bb_method->stddev();
      }
@@ -1245,7 +1245,7 @@ auto make_default_registered_config_parser() -> ConfigParser
      const auto period = get_param_or(parameters, "period", std::size_t{20});
      const auto stddev = get_param_or(parameters, "stddev", 2.0);
 
-     const auto bb_method = BbMethod{ma_type, ma_source_method, period, stddev};
+     const auto bb_method = BbMethod{ma_source_method, period, stddev, ma_type};
 
      return bb_method;
    });

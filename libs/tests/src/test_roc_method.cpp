@@ -32,21 +32,34 @@ TEST(RocMethodTest, ConstructorInitialization)
 TEST(RocMethodTest, RunAllMethod)
 {
   const auto roc_method = RocMethod{5};
-  const auto asset_data = AssetHistory{
-   {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  const auto asset_data =
+   AssetHistory{{"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 
-  EXPECT_DOUBLE_EQ(roc_method(asset_snapshot[0], context), -1.7241379310344827);
-  EXPECT_DOUBLE_EQ(roc_method(asset_snapshot[1], context), 2.9940119760479043);
-  EXPECT_DOUBLE_EQ(roc_method(asset_snapshot[2], context), 7.50);
-  EXPECT_DOUBLE_EQ(roc_method(asset_snapshot[3], context), 3.6144578313253013);
-  EXPECT_DOUBLE_EQ(roc_method(asset_snapshot[4], context), 0.00);
-  EXPECT_TRUE(std::isnan(roc_method(asset_snapshot[5], context)));
-  EXPECT_TRUE(std::isnan(roc_method(asset_snapshot[6], context)));
-  EXPECT_TRUE(std::isnan(roc_method(asset_snapshot[7], context)));
-  EXPECT_TRUE(std::isnan(roc_method(asset_snapshot[8], context)));
-  EXPECT_TRUE(std::isnan(roc_method(asset_snapshot[9], context)));
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(roc_method, asset_snapshot[0], context),
+   -1.7241379310344827);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(roc_method, asset_snapshot[1], context),
+   2.9940119760479043);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(roc_method, asset_snapshot[2], context), 7.50);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(roc_method, asset_snapshot[3], context),
+   3.6144578313253013);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(roc_method, asset_snapshot[4], context), 0.00);
+  EXPECT_TRUE(
+   std::isnan(evaluate_series_method(roc_method, asset_snapshot[5], context)));
+  EXPECT_TRUE(
+   std::isnan(evaluate_series_method(roc_method, asset_snapshot[6], context)));
+  EXPECT_TRUE(
+   std::isnan(evaluate_series_method(roc_method, asset_snapshot[7], context)));
+  EXPECT_TRUE(
+   std::isnan(evaluate_series_method(roc_method, asset_snapshot[8], context)));
+  EXPECT_TRUE(
+   std::isnan(evaluate_series_method(roc_method, asset_snapshot[9], context)));
 }
 
 TEST(RocMethodTest, EqualityOperator)

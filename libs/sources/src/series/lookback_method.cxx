@@ -13,11 +13,8 @@ import :series_output;
 export namespace pludux {
 
 template<typename TSourceMethod>
-  requires requires { typename TSourceMethod::ResultType; }
 class LookbackMethod {
 public:
-  using ResultType = TSourceMethod::ResultType;
-
   explicit LookbackMethod(std::size_t period = 1)
   : LookbackMethod{TSourceMethod{}, period}
   {
@@ -38,21 +35,6 @@ public:
   }
 
   auto operator==(const LookbackMethod& other) const noexcept -> bool = default;
-
-  auto operator()(this const LookbackMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    return self.source_(asset_snapshot[self.period_], context);
-  }
-
-  auto operator()(this const LookbackMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  SeriesOutput output,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    return std::numeric_limits<ResultType>::quiet_NaN();
-  }
 
   auto source(this const LookbackMethod& self) noexcept -> const TSourceMethod&
   {

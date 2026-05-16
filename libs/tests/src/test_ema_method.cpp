@@ -32,21 +32,35 @@ TEST(EmaMethodTest, ConstructorInitialization)
 TEST(EmaMethodTest, RunAllMethod)
 {
   const auto ema_method = EmaMethod{CloseMethod{}, 5};
-  const auto asset_data = AssetHistory{
-   {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  const auto asset_data =
+   AssetHistory{{"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 
-  EXPECT_DOUBLE_EQ(ema_method(asset_snapshot[0], context), 856.95061728395069);
-  EXPECT_DOUBLE_EQ(ema_method(asset_snapshot[1], context), 857.92592592592598);
-  EXPECT_DOUBLE_EQ(ema_method(asset_snapshot[2], context), 856.88888888888891);
-  EXPECT_DOUBLE_EQ(ema_method(asset_snapshot[3], context), 855.33333333333337);
-  EXPECT_DOUBLE_EQ(ema_method(asset_snapshot[4], context), 853);
-  EXPECT_DOUBLE_EQ(ema_method(asset_snapshot[5], context), 842);
-  EXPECT_TRUE(std::isnan(ema_method(asset_snapshot[6], context)));
-  EXPECT_TRUE(std::isnan(ema_method(asset_snapshot[7], context)));
-  EXPECT_TRUE(std::isnan(ema_method(asset_snapshot[8], context)));
-  EXPECT_TRUE(std::isnan(ema_method(asset_snapshot[9], context)));
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(ema_method, asset_snapshot[0], context),
+   856.95061728395069);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(ema_method, asset_snapshot[1], context),
+   857.92592592592598);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(ema_method, asset_snapshot[2], context),
+   856.88888888888891);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(ema_method, asset_snapshot[3], context),
+   855.33333333333337);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(ema_method, asset_snapshot[4], context), 853);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(ema_method, asset_snapshot[5], context), 842);
+  EXPECT_TRUE(
+   std::isnan(evaluate_series_method(ema_method, asset_snapshot[6], context)));
+  EXPECT_TRUE(
+   std::isnan(evaluate_series_method(ema_method, asset_snapshot[7], context)));
+  EXPECT_TRUE(
+   std::isnan(evaluate_series_method(ema_method, asset_snapshot[8], context)));
+  EXPECT_TRUE(
+   std::isnan(evaluate_series_method(ema_method, asset_snapshot[9], context)));
 }
 
 TEST(EmaMethodTest, EqualityOperator)

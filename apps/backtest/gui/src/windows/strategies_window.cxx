@@ -42,7 +42,7 @@ using KcMethod = pludux::KcMethod<AnySeriesMethod>;
 using StochMethod = pludux::StochMethod;
 using StochRsiMethod = pludux::StochRsiMethod<AnySeriesMethod>;
 using SmaMethod = pludux::SmaMethod<AnySeriesMethod>;
-using CachedResultsEmaMethod = pludux::CachedResultsEmaMethod<AnySeriesMethod>;
+using EmaMethod = pludux::EmaMethod<AnySeriesMethod>;
 using WmaMethod = pludux::WmaMethod<AnySeriesMethod>;
 using HmaMethod = pludux::HmaMethod<AnySeriesMethod>;
 using RsiMethod = pludux::RsiMethod<AnySeriesMethod>;
@@ -93,7 +93,7 @@ auto get_default_series_method(const std::string& series_id) -> AnySeriesMethod
   } else if(series_id == "SMA") {
     return SmaMethod{CloseMethod{}, 14};
   } else if(series_id == "EMA") {
-    return CachedResultsEmaMethod{CloseMethod{}, 14};
+    return EmaMethod{CloseMethod{}, 14};
   } else if(series_id == "WMA") {
     return WmaMethod{CloseMethod{}, 14};
   } else if(series_id == "HMA") {
@@ -107,10 +107,10 @@ auto get_default_series_method(const std::string& series_id) -> AnySeriesMethod
   } else if(series_id == "STDDEV") {
     return StddevAnyMethod{CloseMethod{}, 14};
   } else if(series_id == "BB") {
-    return BbMethod{MaMethodType::Sma, CloseMethod{}, 20, 2.0};
+    return BbMethod{CloseMethod{}, 20, 2.0, MaMethodType::Sma};
   } else if(series_id == "KC") {
     return KcMethod{
-     CloseMethod{}, MaMethodType::Ema, 20, KcBandMethodType::Atr, 14, 1.5};
+     CloseMethod{}, 20, 1.5, 14, KcBandMethodType::Atr, MaMethodType::Ema};
   } else if(series_id == "STOCH") {
     return StochMethod{14, 3, 3};
   } else if(series_id == "STOCH_RSI") {
@@ -179,7 +179,7 @@ auto get_series_method_id(const AnySeriesMethod& method) -> std::string
     return "KC";
   } else if(series_method_cast<SmaMethod>(method)) {
     return "SMA";
-  } else if(series_method_cast<CachedResultsEmaMethod>(method)) {
+  } else if(series_method_cast<EmaMethod>(method)) {
     return "EMA";
   } else if(series_method_cast<WmaMethod>(method)) {
     return "WMA";
@@ -1132,7 +1132,7 @@ private:
                           StochMethod,
                           StochRsiMethod,
                           SmaMethod,
-                          CachedResultsEmaMethod,
+                          EmaMethod,
                           WmaMethod,
                           HmaMethod,
                           RsiMethod,
@@ -1296,13 +1296,13 @@ private:
         std::unreachable();
       };
 
-      const auto ma_type_str = get_ma_type_string(method.ma_type());
+      const auto ma_type_str = get_ma_type_string(method.ma_method_type());
       if(ImGui::BeginCombo("##ma_type", ma_type_str.c_str())) {
         for(const auto& ma_type_option : ma_type_options) {
           const auto ma_type_option_str = get_ma_type_string(ma_type_option);
           const bool is_selected = ma_type_str == ma_type_option_str;
           if(ImGui::Selectable(ma_type_option_str.c_str(), is_selected)) {
-            method.ma_type(ma_type_option);
+            method.ma_method_type(ma_type_option);
           }
         }
         ImGui::EndCombo();
@@ -1331,9 +1331,9 @@ private:
 
     ImGui::Text("Source:");
     ImGui::SameLine();
-    auto source = method.ma_source();
+    auto source = method.source();
     self.render_series_method(source, context);
-    method.ma_source(std::move(source));
+    method.source(std::move(source));
   }
 
   void render_series_method_params(this auto& self,
@@ -1343,12 +1343,12 @@ private:
     {
       ImGui::Text("Length:");
       ImGui::SameLine();
-      auto length = static_cast<int>(method.ma_period());
+      auto length = static_cast<int>(method.period());
       if(ImGui::InputInt("##kc_length", &length)) {
         if(length < 1) {
           length = 1;
         }
-        method.ma_period(static_cast<std::size_t>(length));
+        method.period(static_cast<std::size_t>(length));
       }
     }
     {
@@ -1379,9 +1379,9 @@ private:
     {
       ImGui::Text("Source:");
       ImGui::SameLine();
-      auto source = method.ma_source();
+      auto source = method.source();
       self.render_series_method(source, context);
-      method.ma_source(std::move(source));
+      method.source(std::move(source));
     }
     {
       ImGui::Text("Band Type:");
@@ -1529,7 +1529,7 @@ private:
 
   template<typename TMethodWithPeriod>
     requires std::same_as<TMethodWithPeriod, SmaMethod> ||
-             std::same_as<TMethodWithPeriod, CachedResultsEmaMethod> ||
+             std::same_as<TMethodWithPeriod, EmaMethod> ||
              std::same_as<TMethodWithPeriod, WmaMethod> ||
              std::same_as<TMethodWithPeriod, HmaMethod> ||
              std::same_as<TMethodWithPeriod, RsiMethod> ||

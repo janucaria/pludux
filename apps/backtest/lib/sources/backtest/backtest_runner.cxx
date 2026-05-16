@@ -99,7 +99,8 @@ public:
     {
       const auto& series_registry = strategy.series_registry();
       for(const auto& [series_name, series] : series_registry) {
-        const auto series_value = series(asset_snapshot, context);
+        const auto series_value =
+         evaluate_series_method(series, asset_snapshot, context);
         series_results_collector.collect(series_name, series_value);
       }
     }

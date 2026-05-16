@@ -17,8 +17,6 @@ export namespace pludux {
 template<typename TSourceMethod = CloseMethod>
 class SmaMethod {
 public:
-  using ResultType = typename TSourceMethod::ResultType;
-
   SmaMethod()
   : SmaMethod{20}
   {
@@ -36,31 +34,6 @@ public:
   }
 
   auto operator==(const SmaMethod& other) const noexcept -> bool = default;
-
-  auto operator()(this const SmaMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    const auto asset_size = asset_snapshot.size();
-    if(asset_size < self.period_) {
-      return std::numeric_limits<ResultType>::quiet_NaN();
-    }
-
-    auto sum = ResultType{0};
-    for(auto i = 0uz; i < self.period_; ++i) {
-      sum += self.source_(asset_snapshot[i], context);
-    }
-
-    return sum / self.period_;
-  }
-
-  auto operator()(this const SmaMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  SeriesOutput output,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    return std::numeric_limits<ResultType>::quiet_NaN();
-  }
 
   auto source(this const SmaMethod& self) noexcept -> const TSourceMethod&
   {

@@ -3,7 +3,9 @@ export module pludux:series;
 export import :series_output;
 export import :method_contextable;
 export import :any_method_context;
+export import :evaluate_series_method;
 
+export import :series.ma_method_type;
 export import :series.any_series_method;
 export import :series.series_method_registry;
 export import :default_method_context;
@@ -25,9 +27,7 @@ export import :series.stddev_method;
 
 export import :series.sma_method;
 export import :series.ema_method;
-export import :series.cached_results_ema_method;
 export import :series.rma_method;
-export import :series.cached_results_rma_method;
 export import :series.wma_method;
 export import :series.hma_method;
 export import :series.macd_method;

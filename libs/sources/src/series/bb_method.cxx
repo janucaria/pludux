@@ -13,89 +13,65 @@ import :asset_snapshot;
 import :method_contextable;
 import :series_output;
 
-import :series.adaptive_ma_method;
 import :series.ohlcv_method;
-import :series.stddev_method;
+import :series.ma_method_type;
 
 export namespace pludux {
 
-template<typename TMaSourceMethod = CloseMethod>
-  requires requires { typename TMaSourceMethod::ResultType; }
+template<typename TSourceMethod = CloseMethod>
 class BbMethod {
 public:
-  using ResultType = typename TMaSourceMethod::ResultType;
-
   BbMethod()
   : BbMethod{20, 1.5}
   {
   }
 
   BbMethod(std::size_t period, double stddev)
-  : BbMethod{MaMethodType::Sma, TMaSourceMethod{}, period, stddev}
+  : BbMethod{TSourceMethod{}, period, stddev}
   {
   }
 
-  BbMethod(MaMethodType ma_type,
-           TMaSourceMethod ma,
+  BbMethod(TSourceMethod source,
            std::size_t period,
-           double stddev)
-  : ma_method_{ma_type, std::move(ma), period}
+           double stddev,
+           MaMethodType ma_method_type = MaMethodType::Sma)
+  : source_{std::move(source)}
+  , period_{period}
   , stddev_{stddev}
+  , ma_method_type_{ma_method_type}
   {
   }
 
   auto operator==(const BbMethod& other) const noexcept -> bool = default;
 
-  auto operator()(this const BbMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept -> ResultType
+  auto source(this const BbMethod& self) noexcept -> const TSourceMethod&
   {
-    return self(asset_snapshot, SeriesOutput::MiddleBand, context);
+    return self.source_;
   }
 
-  auto operator()(this const BbMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  SeriesOutput output,
-                  MethodContextable auto context) noexcept -> ResultType
+  void source(this BbMethod& self, TSourceMethod source) noexcept
   {
-    const auto middle = self.ma_method_(asset_snapshot, context);
-    const auto ma_source = self.ma_method_.source();
-    const auto ma_period = self.ma_method_.period();
-    const auto stddev_method = StddevMethod{ma_source, ma_period};
-
-    const auto std_dev = stddev_method(asset_snapshot, context);
-    const auto std_dev_scaled = std_dev * self.stddev_;
-
-    switch(output) {
-    case SeriesOutput::MiddleBand:
-      return middle;
-    case SeriesOutput::UpperBand:
-      return middle + std_dev_scaled;
-    case SeriesOutput::LowerBand:
-      return middle - std_dev_scaled;
-    default:
-      return std::numeric_limits<ResultType>::quiet_NaN();
-    }
+    self.source_ = std::move(source);
   }
 
-  auto ma_type(this const BbMethod& self) noexcept -> MaMethodType
+  auto ma_method_type(this const BbMethod& self) noexcept -> MaMethodType
   {
-    return self.ma_method_.ma_type();
+    return self.ma_method_type_;
   }
 
-  auto ma_type(this BbMethod& self, MaMethodType ma_type) noexcept
+  auto ma_method_type(this BbMethod& self, MaMethodType ma_method_type) noexcept
   {
-    self.ma_method_.ma_type(ma_type);
+    self.ma_method_type_ = ma_method_type;
   }
 
-  auto ma_source(this const BbMethod& self) noexcept -> const TMaSourceMethod&
+  auto period(this const BbMethod& self) noexcept -> std::size_t
   {
-    return self.ma_method_.source();
+    return self.period_;
   }
 
-  void ma_source(this BbMethod& self, TMaSourceMethod ma_source) noexcept
+  void period(this BbMethod& self, std::size_t new_period) noexcept
   {
-    self.ma_method_.source(std::move(ma_source));
+    self.period_ = new_period;
   }
 
   auto stddev(this const BbMethod& self) noexcept -> double
@@ -108,19 +84,11 @@ public:
     self.stddev_ = new_stddev;
   }
 
-  auto period(this const BbMethod& self) noexcept -> std::size_t
-  {
-    return self.ma_method_.period();
-  }
-
-  void period(this BbMethod& self, std::size_t new_period) noexcept
-  {
-    self.ma_method_.period(new_period);
-  }
-
 private:
-  AdaptiveMaMethod<TMaSourceMethod> ma_method_;
+  TSourceMethod source_;
+  std::size_t period_;
   double stddev_;
+  MaMethodType ma_method_type_;
 };
 
 } // namespace pludux

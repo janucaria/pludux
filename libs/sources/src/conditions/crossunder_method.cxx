@@ -29,10 +29,14 @@ public:
   {
     const auto prev_snapshot = asset_snapshot[1];
 
-    const auto signal_current = self.signal_(asset_snapshot, context);
-    const auto signal_prev = self.signal_(prev_snapshot, context);
-    const auto reference_current = self.reference_(asset_snapshot, context);
-    const auto reference_prev = self.reference_(prev_snapshot, context);
+    const auto signal_current =
+     evaluate_series_method(self.signal_, asset_snapshot, context);
+    const auto signal_prev =
+     evaluate_series_method(self.signal_, prev_snapshot, context);
+    const auto reference_current =
+     evaluate_series_method(self.reference_, asset_snapshot, context);
+    const auto reference_prev =
+     evaluate_series_method(self.reference_, prev_snapshot, context);
 
     return signal_current < reference_current && signal_prev >= reference_prev;
   }

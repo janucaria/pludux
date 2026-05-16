@@ -16,8 +16,6 @@ export namespace pludux {
 template<typename TMethod = CloseMethod>
 class PercentageMethod {
 public:
-  using ResultType = TMethod::ResultType;
-
   PercentageMethod()
   : PercentageMethod{TMethod{}, 100.0}
   {
@@ -36,23 +34,6 @@ public:
 
   auto operator==(const PercentageMethod& other) const noexcept
    -> bool = default;
-
-  auto operator()(this const PercentageMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    const auto total = self.base_(asset_snapshot, context);
-    const auto percentage = total * (self.percent() / 100.0);
-    return percentage;
-  }
-
-  auto operator()(this const PercentageMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  SeriesOutput output_name,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    return std::numeric_limits<ResultType>::quiet_NaN();
-  }
 
   auto base(this const PercentageMethod& self) noexcept -> const TMethod&
   {

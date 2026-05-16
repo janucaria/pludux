@@ -333,7 +333,7 @@ TEST_F(ConfigParserTest, ParseScreenerEmaMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto ema_method =
-   series_method_cast<CachedResultsEmaMethod<AnySeriesMethod>>(method);
+   series_method_cast<EmaMethod<AnySeriesMethod>>(method);
   ASSERT_NE(ema_method, nullptr);
 
   EXPECT_EQ(ema_method->period(), 10);
@@ -405,7 +405,7 @@ TEST_F(ConfigParserTest, ParseScreenerRmaMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto rma_method =
-   series_method_cast<CachedResultsRmaMethod<AnySeriesMethod>>(method);
+   series_method_cast<RmaMethod<AnySeriesMethod>>(method);
   ASSERT_NE(rma_method, nullptr);
 
   EXPECT_EQ(rma_method->period(), 15);
@@ -627,9 +627,9 @@ TEST_F(ConfigParserTest, ParseScreenerBbMethod)
   const auto bb_method = series_method_cast<BbMethod<AnySeriesMethod>>(method);
   ASSERT_NE(bb_method, nullptr);
 
-  const auto ma_source = series_method_cast<DataMethod>(bb_method->ma_source());
+  const auto ma_source = series_method_cast<DataMethod>(bb_method->source());
   EXPECT_NE(ma_source, nullptr);
-  EXPECT_EQ(bb_method->ma_type(), MaMethodType::Sma);
+  EXPECT_EQ(bb_method->ma_method_type(), MaMethodType::Sma);
   EXPECT_EQ(bb_method->period(), 20);
   EXPECT_EQ(bb_method->stddev(), 2.0);
 
@@ -771,10 +771,10 @@ TEST_F(ConfigParserTest, ParseScreenerKcMethod)
   ASSERT_NE(kc_method, nullptr);
 
   const auto ma_source_method =
-   series_method_cast<DataMethod>(kc_method->ma_source());
+   series_method_cast<DataMethod>(kc_method->source());
   EXPECT_NE(ma_source_method, nullptr);
   EXPECT_EQ(kc_method->ma_method_type(), MaMethodType::Sma);
-  EXPECT_EQ(kc_method->ma_period(), 5);
+  EXPECT_EQ(kc_method->period(), 5);
   EXPECT_EQ(kc_method->band_method_type(), KcBandMethodType::Atr);
   EXPECT_EQ(kc_method->band_atr_period(), 14);
   EXPECT_EQ(kc_method->multiplier(), 1.0);

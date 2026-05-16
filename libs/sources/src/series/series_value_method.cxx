@@ -15,8 +15,6 @@ export namespace pludux {
 
 class SeriesValueMethod {
 public:
-  using ResultType = double;
-
   SeriesValueMethod(std::string name)
   : name_{std::move(name)}
   {
@@ -24,26 +22,6 @@ public:
 
   auto operator==(const SeriesValueMethod& other) const noexcept
    -> bool = default;
-
-  auto operator()(this const SeriesValueMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    if constexpr(std::is_same_v<std::monostate, decltype(context)>) {
-      return std::numeric_limits<ResultType>::quiet_NaN();
-    }
-
-    const auto result_index = asset_snapshot.index();
-    return context.get_series_result(self.name(), result_index);
-  }
-
-  auto operator()(this const SeriesValueMethod& self,
-                  AssetSnapshot asset_snapshot,
-                  SeriesOutput output_name,
-                  MethodContextable auto context) noexcept -> ResultType
-  {
-    return std::numeric_limits<ResultType>::quiet_NaN();
-  }
 
   auto name(this const SeriesValueMethod& self) noexcept -> const std::string&
   {

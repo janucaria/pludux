@@ -35,16 +35,30 @@ TEST(PercentageMethodTest, RunAllMethod)
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 
-  EXPECT_DOUBLE_EQ(percentage_method(asset_snapshot[0], context), 42.75);
-  EXPECT_DOUBLE_EQ(percentage_method(asset_snapshot[1], context), 43.0);
-  EXPECT_DOUBLE_EQ(percentage_method(asset_snapshot[2], context), 43.0);
-  EXPECT_DOUBLE_EQ(percentage_method(asset_snapshot[3], context), 43.0);
-  EXPECT_DOUBLE_EQ(percentage_method(asset_snapshot[4], context), 43.75);
-  EXPECT_DOUBLE_EQ(percentage_method(asset_snapshot[5], context), 43.5);
-  EXPECT_DOUBLE_EQ(percentage_method(asset_snapshot[6], context), 41.75);
-  EXPECT_DOUBLE_EQ(percentage_method(asset_snapshot[7], context), 40.0);
-  EXPECT_DOUBLE_EQ(percentage_method(asset_snapshot[8], context), 41.5);
-  EXPECT_DOUBLE_EQ(percentage_method(asset_snapshot[9], context), 43.75);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(percentage_method, asset_snapshot[0], context),
+   42.75);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(percentage_method, asset_snapshot[1], context), 43.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(percentage_method, asset_snapshot[2], context), 43.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(percentage_method, asset_snapshot[3], context), 43.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(percentage_method, asset_snapshot[4], context),
+   43.75);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(percentage_method, asset_snapshot[5], context), 43.5);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(percentage_method, asset_snapshot[6], context),
+   41.75);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(percentage_method, asset_snapshot[7], context), 40.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(percentage_method, asset_snapshot[8], context), 41.5);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(percentage_method, asset_snapshot[9], context),
+   43.75);
 }
 
 TEST(PercentageMethodTest, EqualityOperator)
