@@ -77,7 +77,7 @@ public:
 
     auto& summaries =
      store.get_or_create_backtest_summaries(self.backtest_handle_);
-    auto& series_results_collector =
+    auto& series_evaluation_results =
      store.get_or_create_series_results(self.backtest_handle_);
 
     const auto summaries_size = summaries.size();
@@ -94,14 +94,14 @@ public:
     const auto initial_capital = backtest.initial_capital();
 
     auto context = DefaultMethodContext{
-     strategy.series_registry(), series_results_collector, summaries.size()};
+     strategy.series_registry(), series_evaluation_results, summaries.size()};
 
     {
       const auto& series_registry = strategy.series_registry();
       for(const auto& [series_name, series] : series_registry) {
         const auto series_value =
          evaluate_series_method(series, asset_snapshot, context);
-        series_results_collector.collect(series_name, series_value);
+        series_evaluation_results.put(series, series_value);
       }
     }
 

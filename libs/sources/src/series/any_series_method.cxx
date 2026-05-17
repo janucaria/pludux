@@ -15,23 +15,26 @@ import :method_contextable;
 import :series_output;
 import :any_method_context;
 
+import :series.ohlcv_method;
+
 export namespace pludux {
 
 class AnySeriesMethod {
 public:
-  template<typename UMethod>
-    requires requires(UMethod method,
+  template<typename UMethod = CloseMethod>
+    requires(!std::same_as<std::remove_cvref_t<UMethod>, AnySeriesMethod>) &&
+             requires(UMethod method,
                       AssetSnapshot asset_snapshot,
                       SeriesOutput output,
                       AnySeriesMethodContext context) {
-      // TODO: compile error in clang and emscripten
-      // {
-      //   evaluate_series_method(method, asset_snapshot, context)
-      // } -> std::convertible_to<double>;
-      { method == method } -> std::convertible_to<bool>;
-      { method != method } -> std::convertible_to<bool>;
-    } && (!std::same_as<std::remove_cvref_t<UMethod>, AnySeriesMethod>)
-  AnySeriesMethod(UMethod impl)
+               // TODO: compile error on clang and emscripten
+               //  {
+               //    evaluate_series_method(method, asset_snapshot, context)
+               //  } -> std::convertible_to<double>;
+               { method == method } -> std::convertible_to<bool>;
+               { method != method } -> std::convertible_to<bool>;
+             }
+  AnySeriesMethod(UMethod impl = UMethod{})
   : impl_{std::make_any<UMethod>(std::move(impl))}
   , evaluate_{[](const std::any& impl,
                  AssetSnapshot asset_snapshot,
@@ -46,6 +49,10 @@ public:
     const auto& method = *std::any_cast<UMethod>(&impl);
     return evaluate_selected_output_series_or_nan(
      method, output, asset_snapshot, context);
+  }}
+  , hash_series_method_{[](const std::any& impl) static -> std::size_t {
+    const auto& method = *std::any_cast<UMethod>(&impl);
+    return hash_series_method(method);
   }}
   , equals_{[](const std::any& impl,
                const AnySeriesMethod& other) static -> bool {
@@ -80,6 +87,11 @@ public:
   {
     return method.evaluate_with_output_(
      method.impl_, output, asset_snapshot, context);
+  }
+
+  friend auto hash_series_method(const AnySeriesMethod& method) -> size_t
+  {
+    return method.hash_series_method_(method.impl_);
   }
 
   auto operator==(this const AnySeriesMethod& self,
@@ -118,6 +130,8 @@ private:
    auto(const std::any&, SeriesOutput, AssetSnapshot, AnySeriesMethodContext)
     ->double>
    evaluate_with_output_;
+
+  std::function<auto(const std::any&)->std::size_t> hash_series_method_;
 
   std::function<auto(const std::any&, const AnySeriesMethod&)->bool> equals_;
 

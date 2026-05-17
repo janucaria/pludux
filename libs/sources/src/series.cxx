@@ -49,3 +49,6 @@ export import :series.stoch_rsi_method;
 export import :series.any_series_method;
 
 export import :series.series_method_registry;
+
+export import :hash_series_method;
+export import :series_evaluation_results;

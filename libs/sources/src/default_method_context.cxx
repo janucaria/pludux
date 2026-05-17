@@ -8,8 +8,8 @@ module;
 
 export module pludux:default_method_context;
 
-import :series_results_collector;
 import :series.series_method_registry;
+import :series_evaluation_results;
 
 export namespace pludux {
 
@@ -17,11 +17,12 @@ class DefaultMethodContext {
 public:
   using DispatchResultType = double;
 
-  explicit DefaultMethodContext(const SeriesMethodRegistry& methods,
-                                const SeriesResultsCollector& results_collector,
-                                std::size_t current_index = 0) noexcept
+  explicit DefaultMethodContext(
+   const SeriesMethodRegistry& methods,
+   const SeriesEvaluationResults& series_evaluation_results,
+   std::size_t current_index = 0) noexcept
   : methods_{methods}
-  , results_collector_{results_collector}
+  , series_evaluation_results_{series_evaluation_results}
   , current_index_{current_index}
   {
   }
@@ -57,13 +58,20 @@ public:
                          std::size_t result_index) noexcept
    -> DispatchResultType
   {
-    if(const auto results_opt = self.results_collector_.results(name);
+    const auto& method_opt = self.methods_.get(name);
+    if(!method_opt.has_value()) {
+      return std::numeric_limits<DispatchResultType>::quiet_NaN();
+    }
+
+    if(const auto results_opt =
+        self.series_evaluation_results_.results(method_opt.value());
        results_opt.has_value()) {
       const auto& results = results_opt.value().get();
       if(result_index < results.size()) {
         return results[result_index];
       }
     }
+
     return std::numeric_limits<DispatchResultType>::quiet_NaN();
   }
 
@@ -74,7 +82,7 @@ public:
 
 private:
   const SeriesMethodRegistry& methods_;
-  const SeriesResultsCollector& results_collector_;
+  const SeriesEvaluationResults& series_evaluation_results_;
   std::size_t current_index_;
 };
 

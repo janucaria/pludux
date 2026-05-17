@@ -9,7 +9,22 @@ FetchContent_Declare(
   EXCLUDE_FROM_ALL
 )
 
+FetchContent_Declare(
+  boost_mp11
+  GIT_REPOSITORY https://github.com/boostorg/mp11.git
+  GIT_TAG        boost-1.91.0
+  GIT_SHALLOW    TRUE
+  GIT_PROGRESS   TRUE
+  OVERRIDE_FIND_PACKAGE
+  EXCLUDE_FROM_ALL
+  PATCH_COMMAND
+    ${CMAKE_COMMAND} -E copy_directory
+      ${CMAKE_CURRENT_SOURCE_DIR}/../patch/mp11/
+      <SOURCE_DIR>/
+)
+
 find_package(jsoncons REQUIRED)
+find_package(boost_mp11 REQUIRED)
 
 add_library(${PROJECT_NAME})
 add_library(${CMAKE_PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
@@ -33,8 +48,8 @@ target_sources(${PROJECT_NAME}
         src/asset_quote_field_resolver.cxx
         src/asset_snapshot.cxx
 
+        src/method_key.cxx
         src/series_output.cxx
-        src/series_results_collector.cxx
         src/method_contextable.cxx
         src/any_method_context.cxx
         
@@ -78,6 +93,9 @@ target_sources(${PROJECT_NAME}
         
         src/evaluate_series_method.cxx
         src/series/any_series_method.cxx
+
+        src/hash_series_method.cxx
+
         src/series/series_method_registry.cxx
 
         src/series.cxx
@@ -93,7 +111,7 @@ target_sources(${PROJECT_NAME}
         src/conditions/crossunder_method.cxx
         src/conditions.cxx
 
-        
+        src/series_evaluation_results.cxx
         src/default_method_context.cxx
         src/config_parser.cxx
 
@@ -108,6 +126,7 @@ target_compile_features(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
     jsoncons
+    Boost::mp11
 )
 
 if(EMSCRIPTEN)

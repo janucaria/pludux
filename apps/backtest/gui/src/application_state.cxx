@@ -624,23 +624,23 @@ public:
 
   auto add_series_results(this ApplicationState& self,
                           backtest::BacktestStoreHandle handle,
-                          SeriesResultsCollector series_results_collector)
+                          SeriesEvaluationResults series_results)
    -> bool
   {
     return self.store_.add_series_results(handle,
-                                          std::move(series_results_collector));
+                                          std::move(series_results));
   }
 
   auto get_series_results(this const ApplicationState& self,
                           backtest::BacktestStoreHandle handle) noexcept
-   -> const SeriesResultsCollector&
+   -> const SeriesEvaluationResults&
   {
     return self.store_.get_series_results(handle);
   }
 
   auto get_series_results(this ApplicationState& self,
                           backtest::BacktestStoreHandle handle) noexcept
-   -> SeriesResultsCollector&
+   -> SeriesEvaluationResults&
   {
     return self.store_.get_series_results(handle);
   }
@@ -648,7 +648,7 @@ public:
   auto
   get_series_results_if_present(this const ApplicationState& self,
                                 backtest::BacktestStoreHandle handle) noexcept
-   -> const SeriesResultsCollector*
+   -> const SeriesEvaluationResults*
   {
     return self.store_.get_series_results_if_present(handle);
   }
@@ -656,18 +656,18 @@ public:
   auto
   get_series_results_if_present(this ApplicationState& self,
                                 backtest::BacktestStoreHandle handle) noexcept
-   -> SeriesResultsCollector*
+   -> SeriesEvaluationResults*
   {
     return self.store_.get_series_results_if_present(handle);
   }
 
   auto update_series_results(this ApplicationState& self,
                              backtest::BacktestStoreHandle handle,
-                             SeriesResultsCollector series_results_collector)
+                             SeriesEvaluationResults series_results)
    -> bool
   {
     return self.store_.update_series_results(
-     handle, std::move(series_results_collector));
+     handle, std::move(series_results));
   }
 
   auto remove_series_results(this ApplicationState& self,

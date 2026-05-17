@@ -33,18 +33,19 @@ import :application_state;
 export namespace cereal {
 
 template<class Archive>
-void save(Archive& archive, const pludux::SeriesResultsCollector& collector)
+void save(Archive& archive,
+          const pludux::SeriesEvaluationResults& series_results)
 {
-  archive(make_nvp("results", collector.results()));
+  // TODO: implement me
 }
 
 template<class Archive>
-void load(Archive& archive, pludux::SeriesResultsCollector& collector)
+void load(Archive& archive, pludux::SeriesEvaluationResults& series_results)
 {
-  auto results = std::unordered_map<std::string, std::vector<double>>{};
-  archive(make_nvp("results", results));
-  collector.results(std::move(results));
+  // TODO: implement me
 }
+
+/*--------------------------------------------------------------------------------------*/
 
 template<class Archive>
 void save(Archive& archive, const pludux::backtest::TradeRecord& trade_record)
@@ -635,7 +636,7 @@ void load(Archive& archive, pludux::backtest::StoreDescriptor& descriptor)
     std::vector<pludux::backtest::BacktestSummary>,
     pludux::backtest::BacktestStoreHandle>{};
   auto series_results_store_data_resolver =
-   pludux::backtest::StoreDataResolver<pludux::SeriesResultsCollector,
+   pludux::backtest::StoreDataResolver<pludux::SeriesEvaluationResults,
                                        pludux::backtest::BacktestStoreHandle>{};
 
   archive(make_nvp("backtestStoreDataResolver", backtest_store_data_resolver),
@@ -686,7 +687,7 @@ void load(Archive& archive, pludux::backtest::StoreArena& arena)
   auto profiles = std::vector<pludux::backtest::Profile>{};
   auto backtest_summaries =
    std::vector<std::vector<pludux::backtest::BacktestSummary>>{};
-  auto series_results = std::vector<pludux::SeriesResultsCollector>{};
+  auto series_results = std::vector<pludux::SeriesEvaluationResults>{};
 
   archive(make_nvp("backtests", backtests),
           make_nvp("assets", assets),
@@ -844,9 +845,13 @@ void load(Archive& archive, pludux::apps::ApplicationState& app_state)
   app_state =
    pludux::apps::ApplicationState{std::move(store), std::move(ui_state)};
 
-  if(version != PLUDUX_VERSION) {
-    app_state.reset_all_backtests();
-  }
+  // TODO: Reset all backtests if version mismatch, for now we just reset
+  // everything since the serialization of SeriesEvaluationResults is not
+  // implemented yet and it causes deserialization to fail when loading a state
+  // with existing series results.
+  // if(version != PLUDUX_VERSION) {
+  app_state.reset_all_backtests();
+  // }
 }
 
 } // namespace cereal

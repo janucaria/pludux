@@ -35,7 +35,7 @@ public:
    StoreDataResolver<Profile, ProfileStoreHandle> profile_store_data_resolver,
    StoreDataResolver<std::vector<BacktestSummary>, BacktestStoreHandle>
     backtest_summaries_store_data_resolver,
-   StoreDataResolver<SeriesResultsCollector, BacktestStoreHandle>
+   StoreDataResolver<SeriesEvaluationResults, BacktestStoreHandle>
     series_results_store_data_resolver)
   : backtest_store_data_resolver_{std::move(backtest_store_data_resolver)}
   , asset_store_data_resolver_{std::move(asset_store_data_resolver)}
@@ -138,13 +138,13 @@ public:
 
   auto
   series_results_store_data_resolver(this const StoreDescriptor& self) noexcept
-   -> const StoreDataResolver<SeriesResultsCollector, BacktestStoreHandle>&
+   -> const StoreDataResolver<SeriesEvaluationResults, BacktestStoreHandle>&
   {
     return self.series_results_store_data_resolver_;
   }
 
   auto series_results_store_data_resolver(this StoreDescriptor& self) noexcept
-   -> StoreDataResolver<SeriesResultsCollector, BacktestStoreHandle>&
+   -> StoreDataResolver<SeriesEvaluationResults, BacktestStoreHandle>&
   {
     return self.series_results_store_data_resolver_;
   }
@@ -162,7 +162,7 @@ private:
   StoreDataResolver<std::vector<BacktestSummary>, BacktestStoreHandle>
    backtest_summaries_store_data_resolver_;
 
-  StoreDataResolver<SeriesResultsCollector, BacktestStoreHandle>
+  StoreDataResolver<SeriesEvaluationResults, BacktestStoreHandle>
    series_results_store_data_resolver_;
 };
 

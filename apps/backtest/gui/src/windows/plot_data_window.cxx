@@ -28,11 +28,12 @@ namespace pludux::apps {
 
 class PlotContext {
 public:
-  PlotContext(
-   const std::unordered_map<std::string, std::vector<double>>& series_results,
-   std::size_t results_size,
-   bool overlay)
-  : series_results_{series_results}
+  PlotContext(const SeriesMethodRegistry& series_registry,
+              const SeriesEvaluationResults& series_results,
+              std::size_t results_size,
+              bool overlay)
+  : series_registry_{series_registry}
+  , series_results_{series_results}
   , results_size_{results_size}
   , overlay_{overlay}
   {
@@ -118,10 +119,13 @@ public:
   auto series_results(this const PlotContext& self, const std::string& name)
    -> std::optional<std::reference_wrapper<const std::vector<double>>>
   {
-    const auto it = self.series_results_.find(name);
-    return it != self.series_results_.end()
-            ? std::make_optional(std::cref(it->second))
-            : std::nullopt;
+    const auto method_opt = self.series_registry_.get(name);
+    if(!method_opt) {
+      return std::nullopt;
+    }
+
+    const auto& method = *method_opt;
+    return self.series_results_.results(method);
   }
 
   auto results_size(this const PlotContext& self) -> std::size_t
@@ -130,7 +134,8 @@ public:
   }
 
 private:
-  const std::unordered_map<std::string, std::vector<double>>& series_results_;
+  const SeriesMethodRegistry& series_registry_;
+  const SeriesEvaluationResults& series_results_;
   std::size_t results_size_;
 
   bool overlay_;
@@ -277,10 +282,10 @@ public:
       for(const auto& plot_group : plots | no_overlays_view) {
         const auto plot_id = std::format("##Plot{}", i);
 
-        const auto context_for_plots =
-         PlotContext{backtest_series_results.results(),
-                     backtest_summaries.size(),
-                     plot_group.is_overlay()};
+        const auto context_for_plots = PlotContext{strategy.series_registry(),
+                                                   backtest_series_results,
+                                                   backtest_summaries.size(),
+                                                   plot_group.is_overlay()};
 
         if(ImPlot::BeginPlot(plot_id.c_str(), plot_size, plot_flags)) {
           const auto is_last_plot = i == additional_plots_count - 1;
@@ -787,12 +792,13 @@ private:
     const auto& strategy = app_state.get_strategy(strategy_handle);
     const auto& backtest_summaries =
      app_state.get_backtest_summaries(backtest_handle);
-    const auto& series_results =
-     app_state.get_series_results(backtest_handle).results();
+    const auto& series_results = app_state.get_series_results(backtest_handle);
     const auto& plots = strategy.plots();
 
-    const auto context_for_plots =
-     PlotContext{series_results, backtest_summaries.size(), true};
+    const auto context_for_plots = PlotContext{strategy.series_registry(),
+                                               series_results,
+                                               backtest_summaries.size(),
+                                               true};
 
     for(const auto& plot_group :
         plots | std::views::filter([](const auto& plot_group) {

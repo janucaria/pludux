@@ -18,7 +18,7 @@ TEST(SeriesReferenceMethodTest, RunAllMethodClose)
   registry.set("open", open_method);
   registry.set("close", close_method);
 
-  auto results_collector = SeriesResultsCollector{};
+  auto results_collector = SeriesEvaluationResults{};
   auto context = DefaultMethodContext{registry, results_collector};
 
   const auto open_ref_method = SeriesNodeMethod{"open"};
@@ -47,7 +47,7 @@ TEST(SeriesReferenceMethodTest, InvalidField)
   auto registry = SeriesMethodRegistry{};
   registry.set("close", close_method);
 
-  auto results_collector = SeriesResultsCollector{};
+  auto results_collector = SeriesEvaluationResults{};
   auto context = DefaultMethodContext{registry, results_collector};
 
   const auto not_found_ref_method = SeriesNodeMethod{"invalid"};

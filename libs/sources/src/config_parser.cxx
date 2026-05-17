@@ -154,6 +154,13 @@ public:
   }
 
   auto parse_method(this ConfigParser& self,
+                    const std::string& config_method_str) -> AnySeriesMethod
+  {
+    const auto config_method_json = jsoncons::ojson::parse(config_method_str);
+    return self.parse_method(config_method_json);
+  }
+
+  auto parse_method(this ConfigParser& self,
                     const jsoncons::ojson& config_method) -> AnySeriesMethod
   {
     if(config_method.is_number()) {

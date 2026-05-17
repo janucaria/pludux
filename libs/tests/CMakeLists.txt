@@ -48,6 +48,7 @@ set(PLUDUX_TEST_SOURCES
   src/test_logical_filters.cpp
   src/test_not_equal_filter.cpp
 
+  src/test_hash_series_method.cpp
 )
 
 foreach(PLUDUX_TEST_SOURCE ${PLUDUX_TEST_SOURCES})

@@ -28,7 +28,7 @@ public:
              std::vector<Broker> brokers,
              std::vector<Profile> profiles,
              std::vector<std::vector<BacktestSummary>> backtest_summaries,
-             std::vector<SeriesResultsCollector> series_results)
+             std::vector<SeriesEvaluationResults> series_results)
   : backtests_{std::move(backtests)}
   , assets_{std::move(assets)}
   , strategies_{std::move(strategies)}
@@ -118,13 +118,13 @@ public:
   }
 
   auto series_results(this const StoreArena& self) noexcept
-   -> const std::vector<SeriesResultsCollector>&
+   -> const std::vector<SeriesEvaluationResults>&
   {
     return self.series_results_;
   }
 
   auto series_results(this StoreArena& self) noexcept
-   -> std::vector<SeriesResultsCollector>&
+   -> std::vector<SeriesEvaluationResults>&
   {
     return self.series_results_;
   }
@@ -137,7 +137,7 @@ private:
   std::vector<Broker> brokers_;
   std::vector<Profile> profiles_;
   std::vector<std::vector<BacktestSummary>> backtest_summaries_;
-  std::vector<SeriesResultsCollector> series_results_;
+  std::vector<SeriesEvaluationResults> series_results_;
 };
 
 } // namespace pludux::backtest
