@@ -53,6 +53,18 @@ public:
     return std::nullopt;
   }
 
+  auto results(this SeriesEvaluationResults& self,
+               const MethodKey& method_key) noexcept
+   -> std::optional<std::reference_wrapper<std::vector<double>>>
+  {
+    const auto it = self.results_.find(method_key);
+    if(it != self.results_.end()) {
+      return std::ref(it->second);
+    }
+
+    return std::nullopt;
+  }
+
   void results(this SeriesEvaluationResults& self,
                const MethodKey& method_key,
                std::vector<double> new_results) noexcept

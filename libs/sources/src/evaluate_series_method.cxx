@@ -200,61 +200,78 @@ auto evaluate_series_method(const SmaMethod<TSourceMethod>& method,
   return sum / method.period();
 }
 
-// EMA
-template<typename TSourceMethod>
-auto evaluate_series_method(const EmaMethod<TSourceMethod>& method,
+// EMA RMA
+template<template<typename> typename TEmaMethod, typename TSourceMethod>
+  requires(std::same_as<std::remove_cvref_t<TEmaMethod<TSourceMethod>>,
+                        EmaMethod<TSourceMethod>> ||
+           std::same_as<std::remove_cvref_t<TEmaMethod<TSourceMethod>>,
+                        RmaMethod<TSourceMethod>>)
+auto evaluate_series_method(const TEmaMethod<TSourceMethod>& method,
                             AssetSnapshot asset_snapshot,
                             MethodContextable auto context) noexcept -> double
 {
-  const auto asset_size = asset_snapshot.size();
-  const auto alpha = 2.0 / (method.period() + 1);
-  const auto sma_index = asset_size - method.period();
-  auto result = std::numeric_limits<double>::quiet_NaN();
-  for(auto ii = asset_size; ii > 0; --ii) {
-    const auto i = ii - 1;
-    if(i > sma_index) {
-      continue;
-    }
+  auto empty_results = std::vector<double>{};
 
-    if(std::isnan(result)) {
-      result = evaluate_series_method(
-       SmaMethod{method.source(), method.period()}, asset_snapshot[i], context);
-      continue;
+  auto& cached_results = [&]() mutable -> std::vector<double>& {
+    if constexpr(!std::is_same_v<std::remove_cvref_t<decltype(context)>,
+                                 std::monostate>) {
+      return context.get_series_results(MethodKey{method});
+    } else {
+      return empty_results;
     }
+  }();
 
-    const auto source_value =
-     evaluate_series_method(method.source(), asset_snapshot[i], context);
-    result = source_value * alpha + result * (1 - alpha);
+  const auto results_size = static_cast<std::ptrdiff_t>(cached_results.size());
+  const auto snapshot_size = static_cast<std::ptrdiff_t>(asset_snapshot.size());
+
+  if(snapshot_size > 0 && snapshot_size <= results_size) {
+    const auto cached_index = snapshot_size - 1;
+    return cached_results[cached_index];
   }
-  return result;
+
+  const auto results_to_compute = snapshot_size - results_size;
+  for(auto ii = results_to_compute; ii > 1; --ii) {
+    const auto i = ii - 1;
+    const auto result =
+     evaluate_series_method(cached_results, method, asset_snapshot[i], context);
+    cached_results.push_back(result);
+  }
+
+  return evaluate_series_method(
+   cached_results, method, std::move(asset_snapshot), context);
 }
 
-// RMA
-template<typename TSourceMethod>
-auto evaluate_series_method(const RmaMethod<TSourceMethod>& method,
+template<template<typename> typename TEmaMethod, typename TSourceMethod>
+  requires(std::same_as<std::remove_cvref_t<TEmaMethod<TSourceMethod>>,
+                        EmaMethod<TSourceMethod>> ||
+           std::same_as<std::remove_cvref_t<TEmaMethod<TSourceMethod>>,
+                        RmaMethod<TSourceMethod>>)
+auto evaluate_series_method(std::vector<double>& cached_results,
+                            const TEmaMethod<TSourceMethod>& method,
                             AssetSnapshot asset_snapshot,
                             MethodContextable auto context) noexcept -> double
 {
-  const auto asset_size = asset_snapshot.size();
-  const auto alpha = 1.0 / method.period();
-  const auto sma_index = asset_size - method.period();
-  auto result = std::numeric_limits<double>::quiet_NaN();
-  for(auto ii = asset_size; ii > 0; --ii) {
-    const auto i = ii - 1;
-    if(i > sma_index) {
-      continue;
-    }
+  const auto& source_method = method.source();
+  const auto period = method.period();
 
-    if(std::isnan(result)) {
-      result = evaluate_series_method(
-       SmaMethod{method.source(), method.period()}, asset_snapshot[i], context);
-      continue;
-    }
-
-    const auto source_value =
-     evaluate_series_method(method.source(), asset_snapshot[i], context);
-    result = source_value * alpha + result * (1 - alpha);
+  const auto prev_result = cached_results.empty()
+                            ? std::numeric_limits<double>::quiet_NaN()
+                            : cached_results.back();
+  if(std::isnan(prev_result)) {
+    return evaluate_series_method(
+     SmaMethod{source_method, period}, asset_snapshot, context);
   }
+
+  const auto alpha =
+   std::is_same_v<std::remove_cvref_t<TEmaMethod<TSourceMethod>>,
+                  EmaMethod<TSourceMethod>>
+    ? 2.0 / (period + 1)
+    : 1.0 / period;
+
+  const auto source =
+   evaluate_series_method(source_method, asset_snapshot, context);
+
+  const auto result = alpha * source + (1 - alpha) * prev_result;
 
   return result;
 }

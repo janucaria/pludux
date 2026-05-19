@@ -4,11 +4,13 @@ module;
 #include <cstddef>
 #include <string>
 #include <variant>
+#include <vector>
 
 export module pludux:method_contextable;
 
 import :asset_snapshot;
 import :series_output;
+import :method_key;
 
 export namespace pludux {
 
@@ -29,6 +31,10 @@ concept MethodContextable =
    } -> std::convertible_to<double>;
 
    { context.get_series_result(name, index) } -> std::convertible_to<double>;
+
+   {
+     context.get_series_results(std::declval<MethodKey>())
+   } -> std::convertible_to<std::vector<double>&>;
 
    { context.index() } -> std::convertible_to<std::size_t>;
  };

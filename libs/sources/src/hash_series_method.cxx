@@ -96,6 +96,7 @@ using MethodRegistry = mp11::mp_list<mp11::mp_quote<AbsDiffMethod>,
                                      StochMethod,
                                      mp11::mp_quote<StochRsiMethod>,
                                      mp11::mp_quote<SubtractMethod>,
+                                     TrMethod,
                                      ValueMethod,
                                      VolumeMethod,
                                      mp11::mp_quote<WmaMethod>>;
@@ -132,7 +133,9 @@ constexpr auto hash_series_method_or_std_hash(const T& value) noexcept
  -> std::size_t
 {
   if constexpr(requires {
-                 { hash_series_method(value) } -> std::convertible_to<std::size_t>;
+                 {
+                   hash_series_method(value)
+                 } -> std::convertible_to<std::size_t>;
                }) {
     // Preserve method parameters by delegating to the dedicated method hasher.
     return hash_series_method(value);
@@ -147,6 +150,13 @@ auto hash_series_method(const AtrMethod& method) noexcept -> std::size_t
   const auto type_hash = series_type_hash_id_of(method);
   const auto period_hash = hash_series_method_or_std_hash(method.period());
   return merge_hashes(type_hash, period_hash);
+}
+
+// TR
+auto hash_series_method(const TrMethod& method) noexcept -> std::size_t
+{
+  const auto type_hash = series_type_hash_id_of(method);
+  return type_hash;
 }
 
 // BB
@@ -588,13 +598,12 @@ auto hash_series_method(const StochRsiMethod<TRsiSourceMethod>& method) noexcept
   const auto k_period_hash = hash_series_method_or_std_hash(method.k_period());
   const auto d_period_hash = hash_series_method_or_std_hash(method.d_period());
   const auto k_smooth_hash = hash_series_method_or_std_hash(method.k_smooth());
-  return merge_hashes(
-    type_hash,
-    rsi_source_hash,
-    rsi_period_hash,
-    k_period_hash,
-    d_period_hash,
-    k_smooth_hash);
+  return merge_hashes(type_hash,
+                      rsi_source_hash,
+                      rsi_period_hash,
+                      k_period_hash,
+                      d_period_hash,
+                      k_smooth_hash);
 }
 
 // Value
