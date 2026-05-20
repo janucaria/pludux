@@ -1,25 +1,14 @@
 module;
 
-#include <algorithm>
 #include <concepts>
-#include <memory>
-#include <ranges>
 #include <string>
-#include <tuple>
 #include <utility>
 #include <vector>
-#include <istream>
 
 #include <cereal/cereal.hpp>
-#include <rapidcsv.h>
 
 #include <cereal/archives/json.hpp>
-#include <cereal/types/deque.hpp>
-#include <cereal/types/memory.hpp>
-#include <cereal/types/optional.hpp>
-#include <cereal/types/queue.hpp>
 #include <cereal/types/string.hpp>
-#include <cereal/types/unordered_map.hpp>
 #include <cereal/types/utility.hpp>
 #include <cereal/types/vector.hpp>
 
@@ -31,231 +20,6 @@ import :ui_state;
 import :application_state;
 
 export namespace cereal {
-
-template<class Archive>
-void save(Archive& archive,
-          const pludux::SeriesEvaluationResults& series_results)
-{
-  // TODO: implement me
-}
-
-template<class Archive>
-void load(Archive& archive, pludux::SeriesEvaluationResults& series_results)
-{
-  // TODO: implement me
-}
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void save(Archive& archive, const pludux::backtest::TradeRecord& trade_record)
-{
-  const auto status = static_cast<std::size_t>(trade_record.status());
-  archive(make_nvp("status", status),
-          make_nvp("positionSize", trade_record.position_size()),
-          make_nvp("investment", trade_record.investment()),
-          make_nvp("entryTimestamp", trade_record.entry_timestamp()),
-          make_nvp("entryPrice", trade_record.entry_price()),
-          make_nvp("totalEntryFees", trade_record.total_entry_fees()),
-          make_nvp("exitTimestamp", trade_record.exit_timestamp()),
-          make_nvp("exitPrice", trade_record.exit_price()),
-          make_nvp("totalExitFees", trade_record.total_exit_fees()),
-          make_nvp("stopLossPrice", trade_record.stop_loss_price()),
-          make_nvp("trailingStopPrice", trade_record.trailing_stop_price()),
-          make_nvp("takeProfitPrice", trade_record.take_profit_price()));
-}
-
-template<class Archive>
-void load(Archive& archive, pludux::backtest::TradeRecord& trade_record)
-{
-  auto status = std::size_t{};
-  auto position_size = double{};
-  auto investment = double{};
-  auto entry_timestamp = std::time_t{};
-  auto entry_price = double{};
-  auto total_entry_fees = double{};
-  auto exit_timestamp = std::time_t{};
-  auto exit_price = double{};
-  auto total_exit_fees = double{};
-  auto stop_loss_price = double{};
-  auto trailing_stop_price = double{};
-  auto take_profit_price = double{};
-
-  archive(make_nvp("status", status),
-          make_nvp("positionSize", position_size),
-          make_nvp("investment", investment),
-          make_nvp("entryTimestamp", entry_timestamp),
-          make_nvp("entryPrice", entry_price),
-          make_nvp("totalEntryFees", total_entry_fees),
-          make_nvp("exitTimestamp", exit_timestamp),
-          make_nvp("exitPrice", exit_price),
-          make_nvp("totalExitFees", total_exit_fees),
-          make_nvp("stopLossPrice", stop_loss_price),
-          make_nvp("trailingStopPrice", trailing_stop_price),
-          make_nvp("takeProfitPrice", take_profit_price));
-
-  trade_record = pludux::backtest::TradeRecord{
-   static_cast<pludux::backtest::TradeRecord::Status>(status),
-   position_size,
-   investment,
-   entry_timestamp,
-   entry_price,
-   total_entry_fees,
-   exit_timestamp,
-   exit_price,
-   total_exit_fees,
-   stop_loss_price,
-   trailing_stop_price,
-   take_profit_price};
-}
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void save(Archive& archive,
-          const pludux::backtest::TradePosition& trade_position)
-{
-  archive(
-   make_nvp("positionSize", trade_position.position_size()),
-   make_nvp("investment", trade_position.investment()),
-   make_nvp("entryPrice", trade_position.entry_price()),
-   make_nvp("totalEntryFees", trade_position.total_entry_fees()),
-   make_nvp("stopLossInitialPrice", trade_position.stop_loss_initial_price()),
-   make_nvp("stopLossTrailingPrice", trade_position.stop_loss_trailing_price()),
-   make_nvp("takeProfitPrice", trade_position.take_profit_price()),
-   make_nvp("entryTimestamp", trade_position.entry_timestamp()),
-   make_nvp("realizedRecords", trade_position.realized_records()));
-}
-
-template<class Archive>
-void load(Archive& archive, pludux::backtest::TradePosition& trade_position)
-{
-  auto position_size = double{};
-  auto investment = double{};
-  auto entry_price = double{};
-  auto total_entry_fees = double{};
-  auto stop_loss_initial_price = double{};
-  auto stop_loss_trailing_price = double{};
-  auto take_profit_price = double{};
-  auto entry_timestamp = std::time_t{};
-  auto realized_records = std::vector<pludux::backtest::TradeRecord>{};
-
-  archive(make_nvp("positionSize", position_size),
-          make_nvp("investment", investment),
-          make_nvp("entryPrice", entry_price),
-          make_nvp("totalEntryFees", total_entry_fees),
-          make_nvp("stopLossInitialPrice", stop_loss_initial_price),
-          make_nvp("stopLossTrailingPrice", stop_loss_trailing_price),
-          make_nvp("takeProfitPrice", take_profit_price),
-          make_nvp("entryTimestamp", entry_timestamp),
-          make_nvp("realizedRecords", realized_records));
-
-  trade_position = pludux::backtest::TradePosition{position_size,
-                                                   investment,
-                                                   entry_timestamp,
-                                                   entry_price,
-                                                   total_entry_fees,
-                                                   stop_loss_initial_price,
-                                                   stop_loss_trailing_price,
-                                                   take_profit_price,
-                                                   std::move(realized_records)};
-}
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void save(Archive& archive, const pludux::backtest::TradeSession& trade_session)
-{
-  archive(make_nvp("marketTimestamp", trade_session.market_timestamp()),
-          make_nvp("marketPrice", trade_session.market_price()),
-          make_nvp("marketLookback", trade_session.market_lookback()),
-          make_nvp("openPosition", trade_session.open_position()),
-          make_nvp("closedPosition", trade_session.closed_position()));
-}
-
-template<class Archive>
-void load(Archive& archive, pludux::backtest::TradeSession& trade_session)
-{
-  auto market_timestamp = std::time_t{};
-  auto market_price = double{};
-  auto market_lookback = std::size_t{};
-  auto open_position = std::optional<pludux::backtest::TradePosition>{};
-  auto closed_position = std::optional<pludux::backtest::TradePosition>{};
-
-  archive(make_nvp("marketTimestamp", market_timestamp),
-          make_nvp("marketPrice", market_price),
-          make_nvp("marketLookback", market_lookback),
-          make_nvp("openPosition", open_position),
-          make_nvp("closedPosition", closed_position));
-
-  trade_session.market_timestamp(market_timestamp);
-  trade_session.market_price(market_price);
-  trade_session.market_lookback(market_lookback);
-  trade_session.open_position(std::move(open_position));
-  trade_session.closed_position(std::move(closed_position));
-}
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void save(Archive& archive, const pludux::backtest::BacktestSummary& summary)
-{
-  archive(make_nvp("tradeSession", summary.trade_session()),
-          make_nvp("capital", summary.capital()),
-          make_nvp("peakEquity", summary.peak_equity()),
-          make_nvp("maxDrawdown", summary.max_drawdown()),
-          make_nvp("cumulativeDurations", summary.cumulative_durations()),
-          make_nvp("cumulativeInvestments", summary.cumulative_investments()),
-          make_nvp("cumulativeProfits", summary.cumulative_profits()),
-          make_nvp("cumulativeLosses", summary.cumulative_losses()),
-          make_nvp("profitCount", summary.profit_count()),
-          make_nvp("lossCount", summary.loss_count()),
-          make_nvp("breakEvenCount", summary.break_even_count()));
-}
-
-template<class Archive>
-void load(Archive& archive, pludux::backtest::BacktestSummary& summary)
-{
-  auto trade_session = pludux::backtest::TradeSession{};
-  auto capital = double{};
-  auto peak_equity = double{};
-  auto max_drawdown = double{};
-  auto cumulative_durations = std::time_t{};
-  auto cumulative_investments = double{};
-  auto cumulative_profits = double{};
-  auto cumulative_losses = double{};
-  auto profit_count = std::size_t{};
-  auto loss_count = std::size_t{};
-  auto break_even_count = std::size_t{};
-
-  archive(make_nvp("tradeSession", trade_session),
-          make_nvp("capital", capital),
-          make_nvp("peakEquity", peak_equity),
-          make_nvp("maxDrawdown", max_drawdown),
-          make_nvp("cumulativeDurations", cumulative_durations),
-          make_nvp("cumulativeInvestments", cumulative_investments),
-          make_nvp("cumulativeProfits", cumulative_profits),
-          make_nvp("cumulativeLosses", cumulative_losses),
-          make_nvp("profitCount", profit_count),
-          make_nvp("lossCount", loss_count),
-          make_nvp("breakEvenCount", break_even_count));
-
-  auto new_summary = pludux::backtest::BacktestSummary{};
-  new_summary.trade_session(std::move(trade_session));
-  new_summary.capital(capital);
-  new_summary.peak_equity(peak_equity);
-  new_summary.max_drawdown(max_drawdown);
-  new_summary.cumulative_durations(cumulative_durations);
-  new_summary.cumulative_investments(cumulative_investments);
-  new_summary.cumulative_profits(cumulative_profits);
-  new_summary.cumulative_losses(cumulative_losses);
-  new_summary.profit_count(profit_count);
-  new_summary.loss_count(loss_count);
-  new_summary.break_even_count(break_even_count);
-
-  summary = std::move(new_summary);
-}
-
-/*--------------------------------------------------------------------------------------*/
 
 template<class Archive>
 void save(Archive& archive, const pludux::backtest::Strategy& strategy)
@@ -603,11 +367,7 @@ void save(Archive& archive, const pludux::backtest::StoreDescriptor& descriptor)
    make_nvp("marketStoreDataResolver", descriptor.market_store_data_resolver()),
    make_nvp("brokerStoreDataResolver", descriptor.broker_store_data_resolver()),
    make_nvp("profileStoreDataResolver",
-            descriptor.profile_store_data_resolver()),
-   make_nvp("backtestSummariesStoreDataResolver",
-            descriptor.backtest_summaries_store_data_resolver()),
-   make_nvp("seriesResultsStoreDataResolver",
-            descriptor.series_results_store_data_resolver()));
+            descriptor.profile_store_data_resolver()));
 }
 
 template<class Archive>
@@ -631,6 +391,14 @@ void load(Archive& archive, pludux::backtest::StoreDescriptor& descriptor)
   auto profile_store_data_resolver =
    pludux::backtest::StoreDataResolver<pludux::backtest::Profile,
                                        pludux::backtest::ProfileStoreHandle>{};
+
+  archive(make_nvp("backtestStoreDataResolver", backtest_store_data_resolver),
+          make_nvp("assetStoreDataResolver", asset_store_data_resolver),
+          make_nvp("strategyStoreDataResolver", strategy_store_data_resolver),
+          make_nvp("marketStoreDataResolver", market_store_data_resolver),
+          make_nvp("brokerStoreDataResolver", broker_store_data_resolver),
+          make_nvp("profileStoreDataResolver", profile_store_data_resolver));
+
   auto backtest_summaries_store_data_resolver =
    pludux::backtest::StoreDataResolver<
     std::vector<pludux::backtest::BacktestSummary>,
@@ -638,17 +406,6 @@ void load(Archive& archive, pludux::backtest::StoreDescriptor& descriptor)
   auto series_results_store_data_resolver =
    pludux::backtest::StoreDataResolver<pludux::SeriesEvaluationResults,
                                        pludux::backtest::BacktestStoreHandle>{};
-
-  archive(make_nvp("backtestStoreDataResolver", backtest_store_data_resolver),
-          make_nvp("assetStoreDataResolver", asset_store_data_resolver),
-          make_nvp("strategyStoreDataResolver", strategy_store_data_resolver),
-          make_nvp("marketStoreDataResolver", market_store_data_resolver),
-          make_nvp("brokerStoreDataResolver", broker_store_data_resolver),
-          make_nvp("profileStoreDataResolver", profile_store_data_resolver),
-          make_nvp("backtestSummariesStoreDataResolver",
-                   backtest_summaries_store_data_resolver),
-          make_nvp("seriesResultsStoreDataResolver",
-                   series_results_store_data_resolver));
 
   descriptor = pludux::backtest::StoreDescriptor{
    std::move(backtest_store_data_resolver),
@@ -671,9 +428,7 @@ void save(Archive& archive, const pludux::backtest::StoreArena& arena)
           make_nvp("strategies", arena.strategies()),
           make_nvp("markets", arena.markets()),
           make_nvp("brokers", arena.brokers()),
-          make_nvp("profiles", arena.profiles()),
-          make_nvp("backtestSummaries", arena.backtest_summaries()),
-          make_nvp("seriesResults", arena.series_results()));
+          make_nvp("profiles", arena.profiles()));
 }
 
 template<class Archive>
@@ -685,18 +440,17 @@ void load(Archive& archive, pludux::backtest::StoreArena& arena)
   auto markets = std::vector<pludux::backtest::Market>{};
   auto brokers = std::vector<pludux::backtest::Broker>{};
   auto profiles = std::vector<pludux::backtest::Profile>{};
-  auto backtest_summaries =
-   std::vector<std::vector<pludux::backtest::BacktestSummary>>{};
-  auto series_results = std::vector<pludux::SeriesEvaluationResults>{};
 
   archive(make_nvp("backtests", backtests),
           make_nvp("assets", assets),
           make_nvp("strategies", strategies),
           make_nvp("markets", markets),
           make_nvp("brokers", brokers),
-          make_nvp("profiles", profiles),
-          make_nvp("backtestSummaries", backtest_summaries),
-          make_nvp("seriesResults", series_results));
+          make_nvp("profiles", profiles));
+
+  auto backtest_summaries =
+   std::vector<std::vector<pludux::backtest::BacktestSummary>>{};
+  auto series_results = std::vector<pludux::SeriesEvaluationResults>{};
 
   arena = pludux::backtest::StoreArena{std::move(backtests),
                                        std::move(assets),
@@ -842,13 +596,9 @@ void load(Archive& archive, pludux::apps::ApplicationState& app_state)
   app_state =
    pludux::apps::ApplicationState{std::move(store), std::move(ui_state)};
 
-  // TODO: Reset all backtests if version mismatch, for now we just reset
-  // everything since the serialization of SeriesEvaluationResults is not
-  // implemented yet and it causes deserialization to fail when loading a state
-  // with existing series results.
-  // if(version != PLUDUX_VERSION) {
-  app_state.reset_all_backtests();
-  // }
+  if(version != PLUDUX_VERSION) {
+    app_state.reset_all_backtests();
+  }
 }
 
 } // namespace cereal
