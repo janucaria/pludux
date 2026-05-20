@@ -103,8 +103,6 @@ public:
      last_index - std::min(summaries_size, last_index);
     const auto asset_snapshot = asset.get_snapshot(asset_lookback);
 
-    const auto initial_capital = backtest.initial_capital();
-
     auto context = DefaultMethodContext{
      strategy.series_registry(), series_evaluation_results, summaries.size()};
 
@@ -117,9 +115,11 @@ public:
       }
     }
 
-    auto summary =
-     !summaries.empty() ? summaries.back() : BacktestSummary{initial_capital};
+    auto summary = !summaries.empty()
+                    ? summaries.back()
+                    : BacktestSummary{backtest.initial_capital()};
 
+    auto total_equity = summary.equity();
     auto trade_session = summary.trade_session();
 
     trade_session.market_update(
@@ -133,7 +133,7 @@ public:
         const auto is_long_direction = open_position->is_long_direction();
         if(is_long_direction) {
           auto pyramiding_trade = self.pyramiding_long_trade(
-           asset_snapshot, initial_capital, strategy, profile, context);
+           asset_snapshot, total_equity, strategy, profile, context);
           if(pyramiding_trade) {
             const auto fee = broker.calculate_fee(*pyramiding_trade);
             trade_session.entry_position(*pyramiding_trade, fee);
@@ -141,7 +141,7 @@ public:
           }
         } else {
           auto pyramiding_trade = self.pyramiding_short_trade(
-           asset_snapshot, initial_capital, strategy, profile, context);
+           asset_snapshot, total_equity, strategy, profile, context);
           if(pyramiding_trade) {
             const auto fee = broker.calculate_fee(*pyramiding_trade);
             trade_session.entry_position(*pyramiding_trade, fee);
@@ -171,7 +171,7 @@ public:
 
     if(trade_session.is_flat() || trade_session.is_closed()) {
       auto entry_trade = self.entry_trade(
-       asset_snapshot, initial_capital, strategy, profile, context);
+       asset_snapshot, total_equity, strategy, profile, context);
       if(entry_trade) {
         {
           const auto quantity_step = market.quantity_step();
@@ -212,7 +212,7 @@ private:
 
   auto entry_long_trade(this const BacktestRunner& self,
                         const AssetSnapshot& asset_snapshot,
-                        double initial_capital,
+                        double total_equity,
                         const Strategy& strategy,
                         const Profile& profile,
                         MethodContextable auto context) noexcept
@@ -224,7 +224,7 @@ private:
 
     if(strategy.long_entry_filter()(prev_snapshot, context)) {
       const auto entry_price = asset_snapshot.open();
-      const auto risk_value = profile.capital_risk() * initial_capital;
+      const auto risk_value = profile.capital_risk() * total_equity;
       const auto r_distance =
        profile.get_r_distance(entry_price, prev_snapshot, context);
       const auto position_size = risk_value / r_distance;
@@ -249,7 +249,7 @@ private:
 
   auto entry_short_trade(this const BacktestRunner& self,
                          const AssetSnapshot& asset_snapshot,
-                         double initial_capital,
+                         double total_equity,
                          const Strategy& strategy,
                          const Profile& profile,
                          MethodContextable auto context) noexcept
@@ -261,7 +261,7 @@ private:
 
     if(strategy.short_entry_filter()(prev_snapshot, context)) {
       const auto entry_price = asset_snapshot.open();
-      const auto risk_value = profile.capital_risk() * initial_capital;
+      const auto risk_value = profile.capital_risk() * total_equity;
       const auto r_distance =
        -profile.get_r_distance(entry_price, prev_snapshot, context);
       const auto position_size = risk_value / r_distance;
@@ -286,7 +286,7 @@ private:
 
   auto pyramiding_long_trade(this const BacktestRunner& self,
                              const AssetSnapshot& asset_snapshot,
-                             double initial_capital,
+                             double total_equity,
                              const Strategy& strategy,
                              const Profile& profile,
                              MethodContextable auto context) noexcept
@@ -302,7 +302,7 @@ private:
     if(pyramiding_signal(prev_snapshot, context) &&
        self.pyramiding_layers_ < pyramiding_max_layers) {
       const auto entry_price = asset_snapshot.open();
-      const auto risk_value = profile.capital_risk() * initial_capital;
+      const auto risk_value = profile.capital_risk() * total_equity;
       const auto r_distance =
        profile.get_r_distance(entry_price, prev_snapshot, context);
       const auto position_size = risk_value / r_distance;
@@ -327,7 +327,7 @@ private:
 
   auto pyramiding_short_trade(this const BacktestRunner& self,
                               const AssetSnapshot& asset_snapshot,
-                              double initial_capital,
+                              double total_equity,
                               const Strategy& strategy,
                               const Profile& profile,
                               MethodContextable auto context) noexcept
@@ -344,7 +344,7 @@ private:
     if(pyramiding_signal(prev_snapshot, context) &&
        self.pyramiding_layers_ < pyramiding_max_layers) {
       const auto entry_price = asset_snapshot.open();
-      const auto risk_value = profile.capital_risk() * initial_capital;
+      const auto risk_value = profile.capital_risk() * total_equity;
       const auto r_distance =
        -profile.get_r_distance(entry_price, prev_snapshot, context);
       const auto position_size = risk_value / r_distance;
@@ -369,18 +369,17 @@ private:
 
   auto entry_trade(this const BacktestRunner& self,
                    const AssetSnapshot& asset_snapshot,
-                   double initial_capital,
+                   double total_equity,
                    const Strategy& strategy,
                    const Profile& profile,
                    MethodContextable auto context) noexcept
    -> std::optional<TradeEntry>
   {
     return self
-     .entry_long_trade(
-      asset_snapshot, initial_capital, strategy, profile, context)
+     .entry_long_trade(asset_snapshot, total_equity, strategy, profile, context)
      .or_else([&] {
        return self.entry_short_trade(
-        asset_snapshot, initial_capital, strategy, profile, context);
+        asset_snapshot, total_equity, strategy, profile, context);
      });
   }
 
