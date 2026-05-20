@@ -8,9 +8,9 @@ module;
 #include <tuple>
 #include <utility>
 #include <vector>
+#include <istream>
 
 #include <cereal/cereal.hpp>
-#include <jsoncons/json.hpp>
 #include <rapidcsv.h>
 
 #include <cereal/archives/json.hpp>
@@ -263,7 +263,7 @@ void save(Archive& archive, const pludux::backtest::Strategy& strategy)
   auto strategy_json = pludux::backtest::stringify_backtest_strategy(strategy);
 
   archive(make_nvp("name", strategy.name()),
-          make_nvp("strategyJson", strategy_json.to_string()));
+          make_nvp("strategyJson", strategy_json));
 }
 
 template<class Archive>

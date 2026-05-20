@@ -11,6 +11,7 @@ module;
 #include <vector>
 
 #include <ctre.hpp>
+#include <jsoncons/json.hpp>
 #include <rapidcsv.h>
 
 export module pludux.backtest;
@@ -38,6 +39,8 @@ export import :backtest_summary;
 export import :backtest_runner;
 export import :plot_group;
 export import :plots;
+
+export import :strategy_parser;
 
 export namespace pludux {
 
@@ -67,7 +70,7 @@ void update_asset_from_csv(backtest::Asset& asset, std::istream& csv_stream)
                "(\\d{4})-(\\d{2})-(\\d{2})" // YYYY-MM-DD
                "(?:[T ](\\d{2}):(\\d{2})"   // hh:mm
                "(?::(\\d{2}(?:\\.\\d+)?))?" // :ss.s
-               "(Z|[+\\-]\\d{2}:\\d{2})?"    // Z or +hh:mm or -hh:mm
+               "(Z|[+\\-]\\d{2}:\\d{2})?"   // Z or +hh:mm or -hh:mm
                ")?"
                "$">;
 

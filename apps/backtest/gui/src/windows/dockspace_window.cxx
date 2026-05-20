@@ -8,6 +8,7 @@ module;
 #include <memory>
 #include <ranges>
 #include <string>
+#include <istream>
 
 #ifdef __EMSCRIPTEN__
 #include "../emscripten_js_imports.hpp"
@@ -19,7 +20,6 @@ module;
 #include <imgui_internal.h>
 
 #include <cereal/cereal.hpp>
-#include <jsoncons/json.hpp>
 #include <rapidcsv.h>
 
 #include <cereal/archives/json.hpp>

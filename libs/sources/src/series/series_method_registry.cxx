@@ -133,7 +133,10 @@ public:
   {
   }
 
-  auto operator==(const SeriesMethodRegistry&) const noexcept -> bool = default;
+  auto operator==(const SeriesMethodRegistry& other) const -> bool
+  {
+    return ordered_names_ == other.ordered_names_ && methods_ == other.methods_;
+  }
 
   auto methods(this const SeriesMethodRegistry& self) noexcept
    -> const std::unordered_map<std::string, AnySeriesMethod>&

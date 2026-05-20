@@ -560,8 +560,7 @@ private:
       ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 150);
 
       if(ImGui::Button("Export")) {
-        auto serialized_strategy =
-         stringify_backtest_strategy(strategy).to_string();
+        auto serialized_strategy = stringify_backtest_strategy(strategy);
 
 #ifdef __EMSCRIPTEN__
         const auto file_name = "pludux-strategy-" + strategy_name + ".json";

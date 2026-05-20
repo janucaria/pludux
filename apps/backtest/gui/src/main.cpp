@@ -28,7 +28,6 @@
 #include <implot_internal.h>
 
 #include <jsoncons/json.hpp>
-#include <rapidcsv.h>
 
 import pludux.apps.backtest;
 

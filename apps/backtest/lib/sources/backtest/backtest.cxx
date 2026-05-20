@@ -1,34 +1,13 @@
 module;
 
-#include <algorithm>
-#include <chrono>
-#include <cmath>
-#include <cstdlib>
-#include <ctime>
-#include <format>
-#include <iostream>
-#include <limits>
-#include <memory>
-#include <optional>
-#include <unordered_map>
-#include <vector>
+#include <string>
+#include <utility>
 
 export module pludux.backtest:backtest;
 
 import pludux;
 
 import :store_handle;
-import :asset;
-import :profile;
-import :trade_entry;
-import :trade_exit;
-import :trade_record;
-import :trade_position;
-import :trade_session;
-import :backtest_summary;
-import :strategy;
-import :broker;
-import :market;
 
 export namespace pludux::backtest {
 
