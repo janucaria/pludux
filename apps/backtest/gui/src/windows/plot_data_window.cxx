@@ -614,10 +614,11 @@ private:
             return std::tuple{top_price, middle_price, bottom_price};
           }();
 
-          const auto left_half_width = record.is_entry() ? 0.0 : half_width;
+          const auto left_half_width =
+           record.is_entry_or_scaled_in() ? 0.0 : half_width;
           const auto right_half_width =
-           !record.is_closed() ? (i == summaries_size - 1 ? 10.0 : half_width)
-                               : 0.0;
+           record.is_open() ? (i == summaries_size - 1 ? 10.0 : half_width)
+                            : 0.0;
 
           {
             const auto risk_left_top_pos =
@@ -640,7 +641,7 @@ private:
                                      ImGui::GetColorU32(top_color));
           }
 
-          if(record.is_entry()) {
+          if(record.is_entry_or_scaled_in()) {
             const auto entry_low = snapshot.low();
 
             auto entry_pos = ImPlot::PlotToPixels(i, entry_low);
@@ -652,8 +653,8 @@ private:
              ImVec2{entry_pos.x, entry_pos.y - 10},
              ImGui::GetColorU32(self.bullish_color_));
 
-            // TODO: Visual Studio 2026 have bug with include <format> causing
-            // compile error
+            // TODO: Visual Studio 2026 have bug with include
+            // <format> causing compile error
             const auto trade_count_str =
              std::string("#") + std::to_string(summary.trade_count() + 1);
             const auto text_size = ImGui::CalcTextSize(trade_count_str.c_str());
@@ -664,7 +665,7 @@ private:
           }
 
           {
-            if(record.is_closed()) {
+            if(!record.is_open() || i == 0) {
               const auto exit_high = snapshot.high();
 
               auto exit_pos = ImPlot::PlotToPixels(i, exit_high);
@@ -676,10 +677,12 @@ private:
                ImVec2{exit_pos.x, exit_pos.y + 10},
                ImGui::GetColorU32(self.bearish_color_));
 
-              // TODO: Visual Studio 2026 have bug with include <format> causing
-              // compile error
+              const auto trade_count =
+               summary.trade_count() + (!record.is_closed() ? 1 : 0);
+              // TODO: Visual Studio 2026 have bug with
+              // include <format> causing compile error
               const auto trade_count_str =
-               std::string("#") + std::to_string(summary.trade_count());
+               std::string("#") + std::to_string(trade_count);
               const auto text_size =
                ImGui::CalcTextSize(trade_count_str.c_str());
               draw_list->AddText(

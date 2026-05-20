@@ -117,6 +117,27 @@ public:
 
     const auto& open_position = trade_session.open_position();
     if(open_position) {
+      {
+        const auto is_long_direction = open_position->is_long_direction();
+        if(is_long_direction) {
+          auto pyramiding_trade = self.pyramiding_long_trade(
+           asset_snapshot, initial_capital, strategy, profile, context);
+          if(pyramiding_trade) {
+            const auto fee = broker.calculate_fee(*pyramiding_trade);
+            trade_session.entry_position(*pyramiding_trade, fee);
+            self.pyramiding_layers_++;
+          }
+        } else {
+          auto pyramiding_trade = self.pyramiding_short_trade(
+           asset_snapshot, initial_capital, strategy, profile, context);
+          if(pyramiding_trade) {
+            const auto fee = broker.calculate_fee(*pyramiding_trade);
+            trade_session.entry_position(*pyramiding_trade, fee);
+            self.pyramiding_layers_++;
+          }
+        }
+      }
+
       const auto exit_trade =
        trade_session
         .evaluate_exit_conditions(asset_snapshot[1].close(),
@@ -132,6 +153,7 @@ public:
       if(exit_trade) {
         const auto fee = broker.calculate_fee(*exit_trade);
         trade_session.exit_position(*exit_trade, fee);
+        self.pyramiding_layers_ = 0;
       }
     }
 
@@ -162,6 +184,7 @@ public:
 
         const auto fee = broker.calculate_fee(*entry_trade);
         trade_session.entry_position(*entry_trade, fee);
+        self.pyramiding_layers_ = 1;
       }
     }
 
@@ -172,6 +195,7 @@ public:
 
 private:
   BacktestStoreHandle backtest_handle_;
+  std::size_t pyramiding_layers_{0};
 
   auto entry_long_trade(this const BacktestRunner& self,
                         const AssetSnapshot& asset_snapshot,
@@ -223,6 +247,89 @@ private:
     const auto prev_snapshot = asset_snapshot[1];
 
     if(strategy.short_entry_filter()(prev_snapshot, context)) {
+      const auto entry_price = asset_snapshot.open();
+      const auto risk_value = profile.capital_risk() * initial_capital;
+      const auto r_distance =
+       -profile.get_r_distance(entry_price, prev_snapshot, context);
+      const auto position_size = risk_value / r_distance;
+
+      const auto stop_loss_price =
+       strategy.stop_loss_enabled() ? entry_price - r_distance : NAN;
+      const auto is_stop_loss_trailing = strategy.stop_loss_trailing_enabled();
+      const auto take_profit_price =
+       strategy.take_profit_enabled()
+        ? entry_price + r_distance * strategy.take_profit_r_multiple()
+        : NAN;
+
+      result = TradeEntry{position_size,
+                          entry_price,
+                          stop_loss_price,
+                          is_stop_loss_trailing,
+                          take_profit_price};
+    }
+
+    return result;
+  }
+
+  auto pyramiding_long_trade(this const BacktestRunner& self,
+                             const AssetSnapshot& asset_snapshot,
+                             double initial_capital,
+                             const Strategy& strategy,
+                             const Profile& profile,
+                             MethodContextable auto context) noexcept
+   -> std::optional<TradeEntry>
+  {
+    auto result = std::optional<TradeEntry>{};
+
+    const auto prev_snapshot = asset_snapshot[1];
+
+    const auto& pyramiding = strategy.positions().long_side().pyramiding();
+    const auto pyramiding_signal = pyramiding.signal();
+    const auto pyramiding_max_layers = pyramiding.max_layers();
+    if(pyramiding_signal(prev_snapshot, context) &&
+       self.pyramiding_layers_ < pyramiding_max_layers) {
+      const auto entry_price = asset_snapshot.open();
+      const auto risk_value = profile.capital_risk() * initial_capital;
+      const auto r_distance =
+       profile.get_r_distance(entry_price, prev_snapshot, context);
+      const auto position_size = risk_value / r_distance;
+
+      const auto stop_loss_price =
+       strategy.stop_loss_enabled() ? entry_price - r_distance : NAN;
+      const auto is_stop_loss_trailing = strategy.stop_loss_trailing_enabled();
+      const auto take_profit_price =
+       strategy.take_profit_enabled()
+        ? entry_price + r_distance * strategy.take_profit_r_multiple()
+        : NAN;
+
+      result = TradeEntry{position_size,
+                          entry_price,
+                          stop_loss_price,
+                          is_stop_loss_trailing,
+                          take_profit_price};
+    }
+
+    return result;
+  }
+
+  auto pyramiding_short_trade(this const BacktestRunner& self,
+                              const AssetSnapshot& asset_snapshot,
+                              double initial_capital,
+                              const Strategy& strategy,
+                              const Profile& profile,
+                              MethodContextable auto context) noexcept
+   -> std::optional<TradeEntry>
+  {
+    auto result = std::optional<TradeEntry>{};
+
+    const auto prev_snapshot = asset_snapshot[1];
+
+    const auto& pyramiding = strategy.positions().short_side().pyramiding();
+    const auto pyramiding_signal = pyramiding.signal();
+    const auto pyramiding_max_layers = pyramiding.max_layers();
+
+    if(pyramiding_signal(prev_snapshot, context) &&
+       self.pyramiding_layers_ < pyramiding_max_layers) {
       const auto entry_price = asset_snapshot.open();
       const auto risk_value = profile.capital_risk() * initial_capital;
       const auto r_distance =

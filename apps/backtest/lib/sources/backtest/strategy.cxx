@@ -24,6 +24,91 @@ export namespace pludux::backtest {
 
 class Strategy {
 public:
+  class Pyramiding {
+  public:
+    Pyramiding() = default;
+
+    auto operator==(const Pyramiding&) const noexcept -> bool = default;
+
+    auto signal(this const Pyramiding& self) noexcept
+     -> const AnyConditionMethod&
+    {
+      return self.signal_;
+    }
+
+    void signal(this Pyramiding& self, AnyConditionMethod signal) noexcept
+    {
+      self.signal_ = std::move(signal);
+    }
+
+    auto max_layers(this const Pyramiding& self) noexcept -> std::size_t
+    {
+      return self.max_layers_;
+    }
+
+    void max_layers(this Pyramiding& self, std::size_t max_layers) noexcept
+    {
+      self.max_layers_ = max_layers;
+    }
+
+  private:
+    AnyConditionMethod signal_{NeverMethod{}};
+    std::size_t max_layers_{1};
+  };
+
+  class PositionSide {
+  public:
+    PositionSide() = default;
+
+    auto operator==(const PositionSide&) const noexcept -> bool = default;
+
+    auto pyramiding(this const PositionSide& self) noexcept -> const Pyramiding&
+    {
+      return self.pyramiding_;
+    }
+
+    void pyramiding(this PositionSide& self, Pyramiding pyramiding) noexcept
+    {
+      self.pyramiding_ = std::move(pyramiding);
+    }
+
+  private:
+    Pyramiding pyramiding_;
+  };
+
+  class Positions {
+  public:
+    Positions() = default;
+
+    auto operator==(const Positions&) const noexcept -> bool = default;
+
+    auto long_side(this const Positions& self) noexcept -> const PositionSide&
+    {
+      return self.long_side_;
+    }
+
+    void long_side(this Positions& self,
+                   PositionSide long_position_side) noexcept
+    {
+      self.long_side_ = std::move(long_position_side);
+    }
+
+    auto short_side(this const Positions& self) noexcept -> const PositionSide&
+    {
+      return self.short_side_;
+    }
+
+    void short_side(this Positions& self,
+                    PositionSide short_position_side) noexcept
+    {
+      self.short_side_ = std::move(short_position_side);
+    }
+
+  private:
+    PositionSide long_side_;
+    PositionSide short_side_;
+  };
+
   Strategy()
   : Strategy("",
              SeriesMethodRegistry{},
@@ -31,6 +116,7 @@ public:
              NeverMethod{},
              NeverMethod{},
              NeverMethod{},
+             Positions{},
              false,
              false,
              false,
@@ -45,6 +131,7 @@ public:
            AnyConditionMethod long_exit_filter,
            AnyConditionMethod short_entry_filter,
            AnyConditionMethod short_exit_filter,
+           Positions position,
            bool stop_loss_enabled,
            bool stop_loss_trailing_enabled,
            bool take_profit_enabled,
@@ -56,6 +143,7 @@ public:
   , long_exit_filter_{std::move(long_exit_filter)}
   , short_entry_filter_{std::move(short_entry_filter)}
   , short_exit_filter_{std::move(short_exit_filter)}
+  , positions_{std::move(position)}
   , stop_loss_enabled_{stop_loss_enabled}
   , stop_loss_trailing_enabled_{stop_loss_trailing_enabled}
   , take_profit_enabled_{take_profit_enabled}
@@ -135,6 +223,16 @@ public:
     self.short_exit_filter_ = std::move(short_exit_filter);
   }
 
+  auto positions(this const Strategy& self) noexcept -> const Positions&
+  {
+    return self.positions_;
+  }
+
+  void positions(this Strategy& self, Positions positions) noexcept
+  {
+    self.positions_ = std::move(positions);
+  }
+
   auto stop_loss_enabled(this const Strategy& self) noexcept -> bool
   {
     return self.stop_loss_enabled_;
@@ -197,6 +295,7 @@ public:
            self.long_exit_filter_ == other.long_exit_filter_ &&
            self.short_entry_filter_ == other.short_entry_filter_ &&
            self.short_exit_filter_ == other.short_exit_filter_ &&
+           self.positions_ == other.positions_ &&
            self.stop_loss_enabled_ == other.stop_loss_enabled_ &&
            self.stop_loss_trailing_enabled_ ==
             other.stop_loss_trailing_enabled_ &&
@@ -214,6 +313,8 @@ private:
 
   AnyConditionMethod short_entry_filter_{NeverMethod{}};
   AnyConditionMethod short_exit_filter_{NeverMethod{}};
+
+  Positions positions_;
 
   bool stop_loss_enabled_{false};
   bool stop_loss_trailing_enabled_{false};
@@ -253,6 +354,7 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
 
   auto long_entry_filter = AnyConditionMethod{NeverMethod{}};
   auto long_exit_filter = AnyConditionMethod{NeverMethod{}};
+  auto position = Strategy::Positions{};
 
   auto short_entry_filter = AnyConditionMethod{NeverMethod{}};
   auto short_exit_filter = AnyConditionMethod{NeverMethod{}};
@@ -260,6 +362,7 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
   if(strategy_json.contains("positions")) {
     const auto positions_json = strategy_json.at("positions");
 
+    auto long_position_side = Strategy::PositionSide{};
     if(positions_json.contains("long")) {
       const auto& long_position_json = positions_json.at("long");
 
@@ -271,8 +374,22 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
         const auto& exit_json = long_position_json.at("exit");
         long_exit_filter = config_parser.parse_filter(exit_json.at("signal"));
       }
+      if(long_position_json.contains("pyramiding")) {
+        const auto& pyramiding_json = long_position_json.at("pyramiding");
+        auto pyramiding = Strategy::Pyramiding{};
+        if(pyramiding_json.contains("signal")) {
+          pyramiding.signal(
+           config_parser.parse_filter(pyramiding_json.at("signal")));
+        }
+        if(pyramiding_json.contains("maxLayers")) {
+          pyramiding.max_layers(
+           pyramiding_json.at("maxLayers").as<std::size_t>());
+        }
+        long_position_side.pyramiding(std::move(pyramiding));
+      }
     }
 
+    auto short_position_side = Strategy::PositionSide{};
     if(positions_json.contains("short")) {
       const auto& short_position_json = positions_json.at("short");
 
@@ -285,7 +402,23 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
         const auto& exit_json = short_position_json.at("exit");
         short_exit_filter = config_parser.parse_filter(exit_json.at("signal"));
       }
+      if(short_position_json.contains("pyramiding")) {
+        const auto& pyramiding_json = short_position_json.at("pyramiding");
+        auto pyramiding = Strategy::Pyramiding{};
+        if(pyramiding_json.contains("signal")) {
+          pyramiding.signal(
+           config_parser.parse_filter(pyramiding_json.at("signal")));
+        }
+        if(pyramiding_json.contains("maxLayers")) {
+          pyramiding.max_layers(
+           pyramiding_json.at("maxLayers").as<std::size_t>());
+        }
+        short_position_side.pyramiding(std::move(pyramiding));
+      }
     }
+
+    position.long_side(std::move(long_position_side));
+    position.short_side(std::move(short_position_side));
   }
 
   auto is_take_profit_enabled = false;
@@ -351,6 +484,7 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
                   std::move(long_exit_filter),
                   std::move(short_entry_filter),
                   std::move(short_exit_filter),
+                  std::move(position),
                   is_stop_loss_enabled,
                   is_trailing_stop_loss,
                   is_take_profit_enabled,
@@ -387,6 +521,13 @@ auto stringify_backtest_strategy(const backtest::Strategy& strategy)
   long_position_json["exit"] = jsoncons::ojson{};
   long_position_json["exit"]["signal"] =
    config_parser.serialize_filter(strategy.long_exit_filter());
+  {
+    long_position_json["pyramiding"] = jsoncons::ojson{};
+    long_position_json["pyramiding"]["signal"] = config_parser.serialize_filter(
+     strategy.positions().long_side().pyramiding().signal());
+    long_position_json["pyramiding"]["maxLayers"] =
+     strategy.positions().long_side().pyramiding().max_layers();
+  }
   positions_json["long"] = std::move(long_position_json);
 
   auto short_position_json = jsoncons::ojson{};
@@ -396,6 +537,14 @@ auto stringify_backtest_strategy(const backtest::Strategy& strategy)
   short_position_json["exit"] = jsoncons::ojson{};
   short_position_json["exit"]["signal"] =
    config_parser.serialize_filter(strategy.short_exit_filter());
+  {
+    short_position_json["pyramiding"] = jsoncons::ojson{};
+    short_position_json["pyramiding"]["signal"] =
+     config_parser.serialize_filter(
+      strategy.positions().short_side().pyramiding().signal());
+    short_position_json["pyramiding"]["maxLayers"] =
+     strategy.positions().short_side().pyramiding().max_layers();
+  }
   positions_json["short"] = std::move(short_position_json);
 
   strategy_json["positions"] = std::move(positions_json);

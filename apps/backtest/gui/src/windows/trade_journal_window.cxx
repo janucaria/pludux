@@ -63,11 +63,11 @@ public:
           const auto& trade_session = summary.trade_session();
           const auto asset_index = backtest_summaries_size - i - 1;
 
-          auto id_counter = 0;
+          auto id_counter = i * backtest_summaries_size;
           for(const auto& trade_record : trade_session.trade_record_range()) {
-            if(trade_record.is_closed() || i == 0) {
+            if(!trade_record.is_open() || i == 0) {
               const auto trade_count =
-               summary.trade_count() + (trade_record.is_open() ? 1 : 0);
+               summary.trade_count() + (!trade_record.is_closed() ? 1 : 0);
 
               ImGui::PushID(id_counter++);
               draw_trade_row(trade_count, trade_record);

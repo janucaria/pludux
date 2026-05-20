@@ -837,10 +837,14 @@ private:
     {
       ImGui::SeparatorText("Positions");
 
+      auto positions = self.editing_strategy_ptr_->positions();
+
       {
         ImGui::Text("Long Position:");
         ImGui::PushID("long_position");
         ImGui::Indent();
+
+        auto long_position = positions.long_side();
 
         {
           ImGui::Text("Entry Condition:");
@@ -853,10 +857,8 @@ private:
            std::move(changed_method));
           ImGui::PopID();
         }
-
-        ImGui::Separator();
-
         {
+          ImGui::Separator();
           ImGui::Text("Exit Condition:");
           ImGui::PushID("long_exit");
           const auto& any_long_exit =
@@ -867,6 +869,35 @@ private:
            std::move(changed_method));
           ImGui::PopID();
         }
+        {
+          ImGui::SeparatorText("Pyramiding");
+          ImGui::PushID("long_pyramiding");
+
+          ImGui::Text("Signal:");
+          auto pyramiding = long_position.pyramiding();
+
+          const auto& any_long_pyramiding = pyramiding.signal();
+          auto changed_method =
+           self.render_condition_method(any_long_pyramiding, context);
+          pyramiding.signal(std::move(changed_method));
+
+          auto pyramiding_max_layers =
+           static_cast<int>(pyramiding.max_layers());
+          ImGui::Text("Max Layers:");
+          ImGui::SameLine();
+          if(ImGui::InputInt("##long_pyramiding_max_layers",
+                             &pyramiding_max_layers)) {
+            if(pyramiding_max_layers < 1) {
+              pyramiding_max_layers = 1;
+            }
+            pyramiding.max_layers(pyramiding_max_layers);
+          }
+
+          long_position.pyramiding(pyramiding);
+          ImGui::PopID();
+        }
+
+        positions.long_side(long_position);
 
         ImGui::Unindent();
         ImGui::PopID();
@@ -879,6 +910,8 @@ private:
         ImGui::PushID("short_position");
         ImGui::Indent();
 
+        auto short_position = positions.short_side();
+
         {
           ImGui::Text("Entry Condition:");
           ImGui::PushID("short_entry");
@@ -890,10 +923,8 @@ private:
            std::move(changed_method));
           ImGui::PopID();
         }
-
-        ImGui::Separator();
-
         {
+          ImGui::Separator();
           ImGui::Text("Exit Condition:");
           ImGui::PushID("short_exit");
           const auto& any_short_exit =
@@ -904,10 +935,41 @@ private:
            std::move(changed_method));
           ImGui::PopID();
         }
+        {
+          ImGui::SeparatorText("Pyramiding");
+          ImGui::PushID("short_pyramiding");
+
+          ImGui::Text("Signal:");
+          auto pyramiding = short_position.pyramiding();
+
+          const auto& any_short_pyramiding = pyramiding.signal();
+          auto changed_method =
+           self.render_condition_method(any_short_pyramiding, context);
+          pyramiding.signal(std::move(changed_method));
+
+          auto pyramiding_max_layers =
+           static_cast<int>(pyramiding.max_layers());
+          ImGui::Text("Max Layers:");
+          ImGui::SameLine();
+          if(ImGui::InputInt("##short_pyramiding_max_layers",
+                             &pyramiding_max_layers)) {
+            if(pyramiding_max_layers < 1) {
+              pyramiding_max_layers = 1;
+            }
+            pyramiding.max_layers(pyramiding_max_layers);
+          }
+
+          short_position.pyramiding(pyramiding);
+          ImGui::PopID();
+        }
+
+        positions.short_side(short_position);
 
         ImGui::Unindent();
         ImGui::PopID();
       }
+
+      self.editing_strategy_ptr_->positions(positions);
       ImGui::Text("");
     }
 

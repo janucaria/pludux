@@ -208,6 +208,10 @@ public:
 
   auto pnl(this const TradeRecord& self) noexcept -> double
   {
+    if(self.is_scaled_in()) {
+      return 0.0;
+    }
+
     return self.position_size()
             ? self.exit_value() - self.total_exit_fees() - self.investment()
             : 0.0;
@@ -221,6 +225,11 @@ public:
   auto is_entry(this const TradeRecord& self) noexcept -> bool
   {
     return self.entry_timestamp() == self.exit_timestamp();
+  }
+
+  auto is_entry_or_scaled_in(this const TradeRecord& self) noexcept -> bool
+  {
+    return self.is_entry() || self.is_scaled_in();
   }
 
   auto is_open(this const TradeRecord& self) noexcept -> bool

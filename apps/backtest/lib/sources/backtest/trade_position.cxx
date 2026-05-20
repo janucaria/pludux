@@ -248,26 +248,31 @@ public:
                  double action_position_size,
                  std::time_t action_timestamp,
                  double action_price,
-                 double action_total_fees)
+                 double action_total_fees,
+                 double stop_loss_initial_price,
+                 double stop_loss_trailing_price,
+                 double take_profit_price)
   {
     if(self.is_closed()) {
       throw std::runtime_error("Cannot scaled in to a closed trade.");
     }
 
-    const auto last_investment = self.investment();
+    const auto scaled_in_record = TradeRecord{TradeRecord::Status::scaled_in,
+                                              self.position_size(),
+                                              self.investment(),
 
-    auto scaled_in_record = TradeRecord{TradeRecord::Status::scaled_in,
-                                        0.0,
-                                        last_investment,
-                                        self.entry_timestamp(),
-                                        self.entry_price(),
-                                        action_total_fees,
-                                        action_timestamp,
-                                        action_price,
-                                        0.0,
-                                        self.stop_loss_initial_price(),
-                                        self.stop_loss_trailing_price(),
-                                        self.take_profit_price()};
+                                              self.entry_timestamp(),
+                                              self.entry_price(),
+                                              self.total_entry_fees(),
+
+                                              action_timestamp,
+                                              action_price,
+                                              action_total_fees,
+
+                                              self.stop_loss_initial_price(),
+                                              self.stop_loss_trailing_price(),
+                                              self.take_profit_price()};
+    self.realized_records_.emplace_back(scaled_in_record);
 
     const auto last_position_size = self.position_size();
     const auto new_investment =
@@ -275,12 +280,16 @@ public:
 
     const auto updated_position_size =
      last_position_size + action_position_size;
-    const auto updated_investment = last_investment + new_investment;
+    const auto updated_investment = self.investment() + new_investment;
 
     self.position_size(updated_position_size);
     self.investment(updated_investment);
 
-    self.realized_records_.emplace_back(std::move(scaled_in_record));
+    self.entry_price(action_price);
+
+    self.stop_loss_initial_price(stop_loss_initial_price);
+    self.stop_loss_trailing_price(stop_loss_trailing_price);
+    self.take_profit_price(take_profit_price);
   }
 
   void scaled_out(this TradePosition& self,
