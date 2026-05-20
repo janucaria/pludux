@@ -37,6 +37,8 @@ class BacktestRunner {
 public:
   BacktestRunner(BacktestStoreHandle backtest_handle)
   : backtest_handle_{backtest_handle}
+  , pyramiding_layers_{0}
+  , is_failed_{false}
   {
   }
 
@@ -46,11 +48,21 @@ public:
     return self.backtest_handle_;
   }
 
+  auto is_failed(this const BacktestRunner& self) noexcept -> bool
+  {
+    return self.is_failed_;
+  }
+
+  void is_failed(this BacktestRunner& self, bool is_failed) noexcept
+  {
+    self.is_failed_ = is_failed;
+  }
+
   void run(this BacktestRunner& self, Store& store)
   {
     auto& backtest = store.get_backtest(self.backtest_handle_);
 
-    if(backtest.is_failed()) {
+    if(self.is_failed()) {
       return;
     }
 
@@ -195,7 +207,8 @@ public:
 
 private:
   BacktestStoreHandle backtest_handle_;
-  std::size_t pyramiding_layers_{0};
+  std::size_t pyramiding_layers_;
+  bool is_failed_;
 
   auto entry_long_trade(this const BacktestRunner& self,
                         const AssetSnapshot& asset_snapshot,

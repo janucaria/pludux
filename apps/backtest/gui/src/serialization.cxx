@@ -739,8 +739,7 @@ void save(Archive& archive, const pludux::backtest::Backtest& backtest)
           make_nvp("strategy", backtest.strategy_handle()),
           make_nvp("market", backtest.market_handle()),
           make_nvp("broker", backtest.broker_handle()),
-          make_nvp("profile", backtest.profile_handle()),
-          make_nvp("isFailed", backtest.is_failed()));
+          make_nvp("profile", backtest.profile_handle()));
 }
 
 template<class Archive>
@@ -761,8 +760,7 @@ void load(Archive& archive, pludux::backtest::Backtest& backtest)
           make_nvp("strategy", strategy_handle),
           make_nvp("market", market_handle),
           make_nvp("broker", broker_handle),
-          make_nvp("profile", profile_handle),
-          make_nvp("isFailed", is_failed));
+          make_nvp("profile", profile_handle));
 
   backtest = pludux::backtest::Backtest{std::move(name),
                                         initial_capital,
@@ -770,8 +768,7 @@ void load(Archive& archive, pludux::backtest::Backtest& backtest)
                                         strategy_handle,
                                         market_handle,
                                         broker_handle,
-                                        profile_handle,
-                                        is_failed};
+                                        profile_handle};
 }
 
 /*--------------------------------------------------------------------------------------*/

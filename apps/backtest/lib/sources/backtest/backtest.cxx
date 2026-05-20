@@ -52,25 +52,6 @@ public:
            MarketStoreHandle market_handle,
            BrokerStoreHandle broker_handle,
            ProfileStoreHandle profile_handle)
-  : Backtest{std::move(name),
-             initial_capital,
-             std::move(asset_handle),
-             std::move(strategy_handle),
-             std::move(market_handle),
-             std::move(broker_handle),
-             std::move(profile_handle),
-             false}
-  {
-  }
-
-  Backtest(std::string name,
-           double initial_capital,
-           AssetStoreHandle asset_handle,
-           StrategyStoreHandle strategy_handle,
-           MarketStoreHandle market_handle,
-           BrokerStoreHandle broker_handle,
-           ProfileStoreHandle profile_handle,
-           bool is_failed)
   : name_{std::move(name)}
   , initial_capital_{initial_capital}
   , asset_handle_{std::move(asset_handle)}
@@ -78,7 +59,6 @@ public:
   , market_handle_{std::move(market_handle)}
   , broker_handle_{std::move(broker_handle)}
   , profile_handle_{std::move(profile_handle)}
-  , is_failed_{is_failed}
   {
   }
 
@@ -160,16 +140,6 @@ public:
     self.profile_handle_ = std::move(new_profile_handle);
   }
 
-  auto is_failed(this const Backtest& self) noexcept -> bool
-  {
-    return self.is_failed_;
-  }
-
-  void is_failed(this Backtest& self, bool is_failed) noexcept
-  {
-    self.is_failed_ = is_failed;
-  }
-
   auto equivalent_rules(this const Backtest& self,
                         const Backtest& other) noexcept -> bool
   {
@@ -190,8 +160,6 @@ private:
   MarketStoreHandle market_handle_;
   BrokerStoreHandle broker_handle_;
   ProfileStoreHandle profile_handle_;
-
-  bool is_failed_;
 };
 
 } // namespace pludux::backtest

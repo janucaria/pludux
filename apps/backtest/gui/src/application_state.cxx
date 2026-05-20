@@ -624,11 +624,9 @@ public:
 
   auto add_series_results(this ApplicationState& self,
                           backtest::BacktestStoreHandle handle,
-                          SeriesEvaluationResults series_results)
-   -> bool
+                          SeriesEvaluationResults series_results) -> bool
   {
-    return self.store_.add_series_results(handle,
-                                          std::move(series_results));
+    return self.store_.add_series_results(handle, std::move(series_results));
   }
 
   auto get_series_results(this const ApplicationState& self,
@@ -663,11 +661,9 @@ public:
 
   auto update_series_results(this ApplicationState& self,
                              backtest::BacktestStoreHandle handle,
-                             SeriesEvaluationResults series_results)
-   -> bool
+                             SeriesEvaluationResults series_results) -> bool
   {
-    return self.store_.update_series_results(
-     handle, std::move(series_results));
+    return self.store_.update_series_results(handle, std::move(series_results));
   }
 
   auto remove_series_results(this ApplicationState& self,
@@ -739,13 +735,10 @@ private:
   void reset_backtest(this ApplicationState& self,
                       backtest::BacktestStoreHandle handle)
   {
-    auto& backtest = self.store_.get_backtest(handle);
-    backtest.is_failed(false);
-
     const auto summaries = self.store_.update_backtest_summaries(handle, {});
-    const auto series_resulkt = self.store_.update_series_results(handle, {});
+    const auto series_results = self.store_.update_series_results(handle, {});
 
-    if(summaries || series_resulkt) {
+    if(summaries || series_results) {
       // TODO: Handle error case where summaries or series results fail to
       // update after backtest reset
     }

@@ -194,7 +194,7 @@ public:
           try {
             backtest_runner.run(store);
           } catch(const std::exception& e) {
-            backtest.is_failed(true);
+            backtest_runner.is_failed(true);
 
             // TODO: this line is buggy in emscripten release build.
             // The bug is failed to load/open the strategy, asset, or pludux
