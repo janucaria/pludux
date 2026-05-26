@@ -112,6 +112,13 @@ public:
     return self.ui_state_.backtest_handles();
   }
 
+  void reorder_list_backtest(this ApplicationState& self,
+                             std::size_t from_index,
+                             std::size_t to_index)
+  {
+    self.ui_state_.reorder_backtest_handle(from_index, to_index);
+  }
+
   auto add_backtest(this ApplicationState& self, backtest::Backtest backtest)
    -> std::optional<backtest::BacktestStoreHandle>
   {
@@ -185,6 +192,13 @@ public:
    -> const std::vector<backtest::AssetStoreHandle>&
   {
     return self.ui_state_.asset_handles();
+  }
+
+  void reorder_list_asset(this ApplicationState& self,
+                          std::size_t from_index,
+                          std::size_t to_index)
+  {
+    self.ui_state_.reorder_asset_handle(from_index, to_index);
   }
 
   void add_asset(this ApplicationState& self, backtest::Asset asset)
@@ -265,6 +279,13 @@ public:
     return self.ui_state_.strategy_handles();
   }
 
+  void reorder_list_strategy(this ApplicationState& self,
+                             std::size_t from_index,
+                             std::size_t to_index)
+  {
+    self.ui_state_.reorder_strategy_handle(from_index, to_index);
+  }
+
   void add_strategy(this ApplicationState& self, backtest::Strategy strategy)
   {
     const auto handle_opt = self.store_.add_strategy(std::move(strategy));
@@ -341,6 +362,13 @@ public:
    -> const std::vector<backtest::MarketStoreHandle>&
   {
     return self.ui_state_.market_handles();
+  }
+
+  void reorder_list_market(this ApplicationState& self,
+                           std::size_t from_index,
+                           std::size_t to_index)
+  {
+    self.ui_state_.reorder_market_handle(from_index, to_index);
   }
 
   void add_market(this ApplicationState& self, backtest::Market market)
@@ -421,6 +449,13 @@ public:
     return self.ui_state_.broker_handles();
   }
 
+  void reorder_list_broker(this ApplicationState& self,
+                           std::size_t from_index,
+                           std::size_t to_index)
+  {
+    self.ui_state_.reorder_broker_handle(from_index, to_index);
+  }
+
   void add_broker(this ApplicationState& self, backtest::Broker broker)
   {
     const auto handle_opt = self.store_.add_broker(std::move(broker));
@@ -497,6 +532,13 @@ public:
    -> const std::vector<backtest::ProfileStoreHandle>&
   {
     return self.ui_state_.profile_handles();
+  }
+
+  void reorder_list_profile(this ApplicationState& self,
+                            std::size_t from_index,
+                            std::size_t to_index)
+  {
+    self.ui_state_.reorder_profile_handle(from_index, to_index);
   }
 
   void add_profile(this ApplicationState& self, backtest::Profile profile)

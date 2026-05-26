@@ -543,7 +543,7 @@ private:
       0,
       -ImGui::GetFrameHeightWithSpacing())); // Leave room for 1 line below us
 
-    for(auto i = 0; i < strategy_handles.size(); ++i) {
+    for(std::size_t i = 0; i < strategy_handles.size(); ++i) {
       const auto strategy_handle = strategy_handles[i];
       const auto& strategy = app_state.get_strategy(strategy_handle);
       const auto& strategy_name = strategy.name();
@@ -553,11 +553,34 @@ private:
       ImGui::SetNextItemAllowOverlap();
       auto is_selected =
        backtest_ptr && backtest_ptr->strategy_handle() == strategy_handle;
-      ImGui::Selectable(strategy_name.c_str(), &is_selected);
+      const auto row_start = ImGui::GetCursorScreenPos();
+      const auto row_width = ImGui::GetContentRegionAvail().x;
+      const auto row_height = ImGui::GetFrameHeight();
 
-      ImGui::SameLine();
+      ImGui::Selectable("##strategy_row",
+                        &is_selected,
+                        ImGuiSelectableFlags_AllowOverlap,
+                        ImVec2(row_width, row_height));
 
-      ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 150);
+      ImGui::SetCursorScreenPos(row_start);
+      ImGui::AlignTextToFramePadding();
+      ImGui::TextUnformatted(strategy_name.c_str());
+
+      const auto spacing = ImGui::GetStyle().ItemSpacing.x;
+      const auto frame_padding_x = ImGui::GetStyle().FramePadding.x;
+      const auto export_width =
+       ImGui::CalcTextSize("Export").x + (2.0f * frame_padding_x);
+      const auto edit_width =
+       ImGui::CalcTextSize("Edit").x + (2.0f * frame_padding_x);
+      const auto delete_width =
+       ImGui::CalcTextSize("Delete").x + (2.0f * frame_padding_x);
+      const auto more_width =
+       ImGui::CalcTextSize("More...").x + (2.0f * frame_padding_x);
+      const auto buttons_width = export_width + spacing + edit_width + spacing +
+       delete_width + spacing + more_width;
+      const auto buttons_start_x = row_start.x + row_width - buttons_width;
+
+      ImGui::SetCursorScreenPos(ImVec2(buttons_start_x, row_start.y));
 
       if(ImGui::Button("Export")) {
         auto serialized_strategy = stringify_backtest_strategy(strategy);
@@ -613,6 +636,40 @@ private:
         context.push_action([strategy_handle](ApplicationState& app_state) {
           app_state.remove_strategy(strategy_handle);
         });
+      }
+
+      ImGui::SameLine();
+      if(ImGui::Button("More...")) {
+        ImGui::OpenPopup("strategy_menu_more");
+      }
+
+      if(ImGui::BeginPopup("strategy_menu_more")) {
+        if(ImGui::MenuItem("Duplicate")) {
+          context.push_action([strategy_handle](ApplicationState& app_state) {
+            const auto& strategy = app_state.get_strategy(strategy_handle);
+            auto duplicate_strategy = strategy;
+            duplicate_strategy.name(strategy.name() + " Copy");
+            app_state.add_strategy(std::move(duplicate_strategy));
+          });
+        }
+
+        const auto move_up_disabled = i == 0;
+        if(ImGui::MenuItem("Move Up", nullptr, false, !move_up_disabled)) {
+          context.push_action(
+           [from_index = i, to_index = i - 1](ApplicationState& app_state) {
+             app_state.reorder_list_strategy(from_index, to_index);
+           });
+        }
+
+        const auto move_down_disabled = i == strategy_handles.size() - 1;
+        if(ImGui::MenuItem("Move Down", nullptr, false, !move_down_disabled)) {
+          context.push_action(
+           [from_index = i, to_index = i + 1](ApplicationState& app_state) {
+             app_state.reorder_list_strategy(from_index, to_index);
+           });
+        }
+
+        ImGui::EndPopup();
       }
 
       ImGui::PopID();
