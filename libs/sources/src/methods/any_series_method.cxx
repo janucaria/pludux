@@ -7,6 +7,7 @@ module;
 #include <memory>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 export module pludux:methods.any_series_method;
 
@@ -26,6 +27,8 @@ class AnySeriesMethod {
 public:
   template<typename UMethod = CloseMethod>
     requires(!std::same_as<std::remove_cvref_t<UMethod>, AnySeriesMethod>) &&
+             (!std::same_as<std::remove_cvref_t<UMethod>,
+                            std::vector<AnySeriesMethod>>) &&
              requires(UMethod method,
                       AssetSnapshot asset_snapshot,
                       MethodOutput output,

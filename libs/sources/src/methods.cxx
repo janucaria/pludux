@@ -36,4 +36,12 @@ export import :methods.rvol_method;
 export import :methods.stoch_method;
 export import :methods.stoch_rsi_method;
 
+export import :methods.all_of_method;
+export import :methods.any_of_method;
+export import :methods.crossover_method;
+export import :methods.crossunder_method;
+export import :methods.logical_method;
+export import :methods.boolean_method;
+export import :methods.comparison_method;
+
 export import :methods.any_series_method;

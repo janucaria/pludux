@@ -47,12 +47,12 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
     ? config_parser.parse_registered_methods(strategy_json.at("series"))
     : SeriesMethodRegistry{};
 
-  auto long_entry_filter = AnyConditionMethod{NeverMethod{}};
-  auto long_exit_filter = AnyConditionMethod{NeverMethod{}};
+  auto long_entry_filter = AnySeriesMethod{FalseMethod{}};
+  auto long_exit_filter = AnySeriesMethod{FalseMethod{}};
   auto position = Strategy::Positions{};
 
-  auto short_entry_filter = AnyConditionMethod{NeverMethod{}};
-  auto short_exit_filter = AnyConditionMethod{NeverMethod{}};
+  auto short_entry_filter = AnySeriesMethod{FalseMethod{}};
+  auto short_exit_filter = AnySeriesMethod{FalseMethod{}};
 
   if(strategy_json.contains("positions")) {
     const auto positions_json = strategy_json.at("positions");

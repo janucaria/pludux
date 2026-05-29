@@ -6,7 +6,6 @@ export import :asset_series;
 export import :asset_history;
 export import :asset_quote_field_resolver;
 export import :asset_snapshot;
-export import :conditions;
 export import :methods;
 export import :config_parser;
 export import :method_contextable;

@@ -15,8 +15,9 @@ TEST(GreaterEqualMethodTest, TargetGreaterEqualThreshold)
   const auto condition =
    GreaterEqualMethod{std::move(target_method), std::move(threshold_method)};
   const auto asset_data = AssetHistory{{"close", {0}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_TRUE(condition(asset_data, context));
+  EXPECT_TRUE(evaluate_series_method(condition, asset_snapshot[0], context));
 }
 
 TEST(GreaterEqualMethodTest, TargetEqualToThreshold)
@@ -28,8 +29,9 @@ TEST(GreaterEqualMethodTest, TargetEqualToThreshold)
   const auto condition =
    GreaterEqualMethod{std::move(target_method), std::move(threshold_method)};
   const auto asset_data = AssetHistory{{"close", {0}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_TRUE(condition(asset_data, context));
+  EXPECT_TRUE(evaluate_series_method(condition, asset_snapshot[0], context));
 }
 
 TEST(GreaterEqualMethodTest, TargetLessThanThreshold)
@@ -41,8 +43,9 @@ TEST(GreaterEqualMethodTest, TargetLessThanThreshold)
   const auto condition =
    GreaterEqualMethod{std::move(target_method), std::move(threshold_method)};
   const auto asset_data = AssetHistory{{"close", {0}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_FALSE(condition(asset_data, context));
+  EXPECT_FALSE(evaluate_series_method(condition, asset_snapshot[0], context));
 }
 
 TEST(GreaterEqualMethodTest, EqualityOperator)
@@ -86,4 +89,3 @@ TEST(GreaterEqualMethodTest, NotEqualOperator)
   EXPECT_FALSE(greater_equal_condition1 == greater_equal_condition2);
   EXPECT_NE(greater_equal_condition1, greater_equal_condition2);
 }
-

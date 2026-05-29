@@ -5,6 +5,7 @@ module;
 #include <concepts>
 #include <functional>
 #include <limits>
+#include <ranges>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -47,6 +48,13 @@ import :methods.stoch_rsi_method;
 import :methods.tr_method;
 import :methods.value_method;
 import :methods.wma_method;
+import :methods.all_of_method;
+import :methods.any_of_method;
+import :methods.crossover_method;
+import :methods.crossunder_method;
+import :methods.logical_method;
+import :methods.boolean_method;
+import :methods.comparison_method;
 
 export namespace pludux {
 
@@ -907,6 +915,135 @@ auto evaluate_series_method(const ValueMethod& method,
                             MethodContextable auto context) noexcept -> double
 {
   return method.value();
+}
+
+// AllOf
+template<typename TConditionMethod>
+auto evaluate_series_method(const AllOfMethod<TConditionMethod>& method,
+                            AssetSnapshot asset_snapshot,
+                            MethodContextable auto context) noexcept -> double
+{
+  return std::ranges::all_of(
+   method.conditions(), [&asset_snapshot, &context](const auto& method) {
+     return static_cast<bool>(
+      evaluate_series_method(method, asset_snapshot, context));
+   });
+}
+
+// AnyOf
+template<typename TConditionMethod>
+auto evaluate_series_method(const AnyOfMethod<TConditionMethod>& method,
+                            AssetSnapshot asset_snapshot,
+                            MethodContextable auto context) noexcept -> double
+{
+  return std::ranges::any_of(
+   method.conditions(), [&asset_snapshot, &context](const auto& method) {
+     return static_cast<bool>(
+      evaluate_series_method(method, asset_snapshot, context));
+   });
+}
+
+// Crossover
+template<typename TSourceMethod, typename TReferenceMethod>
+auto evaluate_series_method(
+ const CrossoverMethod<TSourceMethod, TReferenceMethod>& method,
+ AssetSnapshot asset_snapshot,
+ MethodContextable auto context) noexcept -> double
+{
+  const auto source_current =
+   evaluate_series_method(method.source(), asset_snapshot, context);
+  const auto reference_current =
+   evaluate_series_method(method.reference(), asset_snapshot, context);
+
+  const auto source_previous =
+   evaluate_series_method(method.source(), asset_snapshot[1], context);
+  const auto reference_previous =
+   evaluate_series_method(method.reference(), asset_snapshot[1], context);
+
+  const auto crossed_over = (source_previous <= reference_previous) &&
+                            (source_current > reference_current);
+
+  return crossed_over;
+}
+
+// Crossunder
+template<typename TSourceMethod, typename TReferenceMethod>
+auto evaluate_series_method(
+ const CrossunderMethod<TSourceMethod, TReferenceMethod>& method,
+ AssetSnapshot asset_snapshot,
+ MethodContextable auto context) noexcept -> double
+{
+  const auto source_current =
+   evaluate_series_method(method.source(), asset_snapshot, context);
+  const auto reference_current =
+   evaluate_series_method(method.reference(), asset_snapshot, context);
+
+  const auto source_previous =
+   evaluate_series_method(method.source(), asset_snapshot[1], context);
+  const auto reference_previous =
+   evaluate_series_method(method.reference(), asset_snapshot[1], context);
+
+  const auto crossed_under = (source_previous >= reference_previous) &&
+                             (source_current < reference_current);
+
+  return crossed_under;
+}
+
+// Boolean (True, False)
+template<bool TBool>
+auto evaluate_series_method(const BooleanMethod<TBool>& method,
+                            AssetSnapshot asset_snapshot,
+                            MethodContextable auto context) noexcept -> double
+{
+  return TBool;
+}
+
+// Binary Logical (And, Or, Xor)
+template<typename TOperation,
+         typename TFirstCondition,
+         typename TSecondCondition>
+auto evaluate_series_method(
+ const BinaryLogicalMethod<TOperation, TFirstCondition, TSecondCondition>&
+  method,
+ AssetSnapshot asset_snapshot,
+ MethodContextable auto context) noexcept -> double
+{
+  const auto first_result =
+   evaluate_series_method(method.first_condition(), asset_snapshot, context);
+  const auto second_result =
+   evaluate_series_method(method.second_condition(), asset_snapshot, context);
+
+  return TOperation{}(first_result, second_result);
+}
+
+// Unary Logical (Not)
+template<typename TOperation, typename TOtherCondition>
+auto evaluate_series_method(
+ const UnaryLogicalMethod<TOperation, TOtherCondition>& method,
+ AssetSnapshot asset_snapshot,
+ MethodContextable auto context) noexcept -> double
+{
+  const auto other_result =
+   evaluate_series_method(method.other_condition(), asset_snapshot, context);
+
+  return TOperation{}(other_result);
+}
+
+// Comparison (Greater, GreaterEqual, Less, LessEqual, Equal, NotEqual)
+template<typename TComparator,
+         typename TTargetMethod,
+         typename TThresholdMethod>
+auto evaluate_series_method(
+ const ComparisonMethod<TComparator, TTargetMethod, TThresholdMethod>& method,
+ AssetSnapshot asset_snapshot,
+ MethodContextable auto context) noexcept -> double
+{
+  const auto target_result =
+   evaluate_series_method(method.target(), asset_snapshot, context);
+  const auto threshold_result =
+   evaluate_series_method(method.threshold(), asset_snapshot, context);
+
+  return TComparator{}(target_result, threshold_result);
 }
 
 } // namespace pludux

@@ -84,6 +84,14 @@ target_sources(${PROJECT_NAME}
         src/methods/stoch_method.cxx
         src/methods/stoch_rsi_method.cxx
         
+        src/methods/all_of_method.cxx
+        src/methods/any_of_method.cxx
+        src/methods/comparison_method.cxx
+        src/methods/boolean_method.cxx
+        src/methods/logical_method.cxx
+        src/methods/crossover_method.cxx
+        src/methods/crossunder_method.cxx
+        
         src/method_key.cxx
         src/series_method_registry.cxx
         src/method_contextable.cxx
@@ -94,18 +102,6 @@ target_sources(${PROJECT_NAME}
         src/methods/any_series_method.cxx
         
         src/methods.cxx
-        
-        
-
-        src/conditions/any_condition_method.cxx
-        src/conditions/all_of_method.cxx
-        src/conditions/any_of_method.cxx
-        src/conditions/comparison_method.cxx
-        src/conditions/fixed_method.cxx
-        src/conditions/logical_method.cxx
-        src/conditions/crossover_method.cxx
-        src/conditions/crossunder_method.cxx
-        src/conditions.cxx
 
         src/series_evaluation_results.cxx
         src/default_method_context.cxx

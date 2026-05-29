@@ -50,6 +50,13 @@ import :methods.stoch_rsi_method;
 import :methods.tr_method;
 import :methods.value_method;
 import :methods.wma_method;
+import :methods.all_of_method;
+import :methods.any_of_method;
+import :methods.crossover_method;
+import :methods.crossunder_method;
+import :methods.logical_method;
+import :methods.boolean_method;
+import :methods.comparison_method;
 
 export namespace pludux {
 
@@ -98,7 +105,23 @@ using MethodRegistry = mp11::mp_list<mp11::mp_quote<AbsDiffMethod>,
                                      TrMethod,
                                      ValueMethod,
                                      VolumeMethod,
-                                     mp11::mp_quote<WmaMethod>>;
+                                     mp11::mp_quote<WmaMethod>,
+                                     mp11::mp_quote<AllOfMethod>,
+                                     mp11::mp_quote<AnyOfMethod>,
+                                     mp11::mp_quote<CrossoverMethod>,
+                                     mp11::mp_quote<CrossunderMethod>,
+                                     mp11::mp_quote<LogicalAndMethod>,
+                                     mp11::mp_quote<LogicalOrMethod>,
+                                     mp11::mp_quote<LogicalNotMethod>,
+                                     mp11::mp_quote<LogicalXorMethod>,
+                                     TrueMethod,
+                                     FalseMethod,
+                                     mp11::mp_quote<EqualMethod>,
+                                     mp11::mp_quote<NotEqualMethod>,
+                                     mp11::mp_quote<GreaterThanMethod>,
+                                     mp11::mp_quote<GreaterEqualMethod>,
+                                     mp11::mp_quote<LessThanMethod>,
+                                     mp11::mp_quote<LessEqualMethod>>;
 
 template<typename TMethod>
 consteval auto series_type_hash_id_of(const TMethod&) -> std::size_t
@@ -611,6 +634,110 @@ auto hash_series_method(const ValueMethod& method) noexcept -> std::size_t
   const auto type_hash = series_type_hash_id_of(method);
   const auto value_hash = hash_series_method_or_std_hash(method.value());
   return merge_hashes(type_hash, value_hash);
+}
+
+// AllOf
+template<typename TConditionMethod>
+auto hash_series_method(const AllOfMethod<TConditionMethod>& method) noexcept
+ -> std::size_t
+{
+  const auto type_hash = series_type_hash_id_of(method);
+  std::size_t conditions_hash = 0;
+  for(const auto& condition : method.conditions()) {
+    const auto condition_hash = hash_series_method_or_std_hash(condition);
+    conditions_hash = merge_hashes(conditions_hash, condition_hash);
+  }
+  return merge_hashes(type_hash, conditions_hash);
+}
+
+// AnyOf
+template<typename TConditionMethod>
+auto hash_series_method(const AnyOfMethod<TConditionMethod>& method) noexcept
+ -> std::size_t
+{
+  const auto type_hash = series_type_hash_id_of(method);
+  std::size_t conditions_hash = 0;
+  for(const auto& condition : method.conditions()) {
+    const auto condition_hash = hash_series_method_or_std_hash(condition);
+    conditions_hash = merge_hashes(conditions_hash, condition_hash);
+  }
+  return merge_hashes(type_hash, conditions_hash);
+}
+
+// Crossover
+template<typename TSourceMethod, typename TReferenceMethod>
+auto hash_series_method(
+ const CrossoverMethod<TSourceMethod, TReferenceMethod>& method) noexcept
+ -> std::size_t
+{
+  const auto type_hash = series_type_hash_id_of(method);
+  const auto source_hash = hash_series_method_or_std_hash(method.source());
+  const auto reference_hash =
+   hash_series_method_or_std_hash(method.reference());
+  return merge_hashes(type_hash, source_hash, reference_hash);
+}
+
+// Crossunder
+template<typename TSourceMethod, typename TReferenceMethod>
+auto hash_series_method(
+ const CrossunderMethod<TSourceMethod, TReferenceMethod>& method) noexcept
+ -> std::size_t
+{
+  const auto type_hash = series_type_hash_id_of(method);
+  const auto source_hash = hash_series_method_or_std_hash(method.source());
+  const auto reference_hash =
+   hash_series_method_or_std_hash(method.reference());
+  return merge_hashes(type_hash, source_hash, reference_hash);
+}
+
+// Boolean (True, False)
+template<bool TBool>
+auto hash_series_method(const BooleanMethod<TBool>& method) noexcept
+ -> std::size_t
+{
+  return series_type_hash_id_of(method);
+}
+
+// Binary Logical (And, Or, Xor)
+template<typename TOperation,
+         typename TFirstCondition,
+         typename TSecondCondition>
+auto hash_series_method(
+ const BinaryLogicalMethod<TOperation, TFirstCondition, TSecondCondition>&
+  method) noexcept -> std::size_t
+{
+  const auto type_hash = series_type_hash_id_of(method);
+
+  const auto first_result = hash_series_method(method.first_condition());
+  const auto second_result = hash_series_method(method.second_condition());
+
+  return merge_hashes(type_hash, first_result, second_result);
+}
+
+// Unary Logical (Not)
+template<typename TOperation, typename TOtherCondition>
+auto hash_series_method(
+ const UnaryLogicalMethod<TOperation, TOtherCondition>& method) noexcept
+ -> std::size_t
+{
+  const auto type_hash = series_type_hash_id_of(method);
+  const auto other_result = hash_series_method(method.other_condition());
+  return merge_hashes(type_hash, other_result);
+}
+
+// Comparison (Greater, GreaterEqual, Less, LessEqual, Equal, NotEqual)
+template<typename TComparator,
+         typename TTargetMethod,
+         typename TThresholdMethod>
+auto hash_series_method(
+ const ComparisonMethod<TComparator, TTargetMethod, TThresholdMethod>&
+  method) noexcept -> std::size_t
+{
+  const auto type_hash = series_type_hash_id_of(method);
+  const auto target_result = hash_series_method(method.target());
+  const auto threshold_result = hash_series_method(method.threshold());
+
+  return merge_hashes(type_hash, target_result, threshold_result);
 }
 
 } // namespace pludux

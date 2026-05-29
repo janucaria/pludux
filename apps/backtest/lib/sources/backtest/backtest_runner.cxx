@@ -222,7 +222,8 @@ private:
 
     const auto prev_snapshot = asset_snapshot[1];
 
-    if(strategy.long_entry_filter()(prev_snapshot, context)) {
+    if(static_cast<bool>(evaluate_series_method(
+        strategy.long_entry_filter(), prev_snapshot, context))) {
       const auto entry_price = asset_snapshot.open();
       const auto risk_value = profile.capital_risk() * total_equity;
       const auto r_distance =
@@ -259,7 +260,8 @@ private:
 
     const auto prev_snapshot = asset_snapshot[1];
 
-    if(strategy.short_entry_filter()(prev_snapshot, context)) {
+    if(static_cast<bool>(evaluate_series_method(
+        strategy.short_entry_filter(), prev_snapshot, context))) {
       const auto entry_price = asset_snapshot.open();
       const auto risk_value = profile.capital_risk() * total_equity;
       const auto r_distance =
@@ -299,7 +301,8 @@ private:
     const auto& pyramiding = strategy.positions().long_side().pyramiding();
     const auto pyramiding_signal = pyramiding.signal();
     const auto pyramiding_max_layers = pyramiding.max_layers();
-    if(pyramiding_signal(prev_snapshot, context) &&
+    if(static_cast<bool>(
+        evaluate_series_method(pyramiding_signal, prev_snapshot, context)) &&
        self.pyramiding_layers_ < pyramiding_max_layers) {
       const auto entry_price = asset_snapshot.open();
       const auto risk_value = profile.capital_risk() * total_equity;
@@ -341,7 +344,8 @@ private:
     const auto pyramiding_signal = pyramiding.signal();
     const auto pyramiding_max_layers = pyramiding.max_layers();
 
-    if(pyramiding_signal(prev_snapshot, context) &&
+    if(static_cast<bool>(
+        evaluate_series_method(pyramiding_signal, prev_snapshot, context)) &&
        self.pyramiding_layers_ < pyramiding_max_layers) {
       const auto entry_price = asset_snapshot.open();
       const auto risk_value = profile.capital_risk() * total_equity;
@@ -397,11 +401,13 @@ private:
     const auto prev_snapshot = asset_snapshot[1];
 
     if(is_long_direction) {
-      if(strategy.long_exit_filter()(prev_snapshot, context)) {
+      if(static_cast<bool>(evaluate_series_method(
+          strategy.long_exit_filter(), prev_snapshot, context))) {
         return TradeExit{position_size, exit_price, TradeExit::Reason::signal};
       }
     } else if(is_short_direction) {
-      if(strategy.short_exit_filter()(prev_snapshot, context)) {
+      if(static_cast<bool>(evaluate_series_method(
+          strategy.short_exit_filter(), prev_snapshot, context))) {
         return TradeExit{position_size, exit_price, TradeExit::Reason::signal};
       }
     }

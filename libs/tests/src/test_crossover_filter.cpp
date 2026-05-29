@@ -18,7 +18,7 @@ TEST(CrossoverMethodTest, ReferenceMethod)
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
   EXPECT_EQ(
-   evaluate_series_method(condition.reference(), asset_snapshot, context),
+   evaluate_series_method(condition.reference(), asset_snapshot[0], context),
    reference_value);
 }
 
@@ -33,8 +33,9 @@ TEST(CrossoverMethodTest, SignalMethod)
   const auto asset_data = AssetHistory{{"close", {0}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_EQ(evaluate_series_method(condition.signal(), asset_snapshot, context),
-            signal_value);
+  EXPECT_EQ(
+   evaluate_series_method(condition.source(), asset_snapshot[0], context),
+   signal_value);
 }
 
 TEST(CrossoverMethodTest, CrossoverConditionMet)
@@ -46,7 +47,8 @@ TEST(CrossoverMethodTest, CrossoverConditionMet)
   const auto asset_data = AssetHistory{{"close", {60, 50}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_TRUE(crossover_condition(asset_snapshot, context));
+  EXPECT_TRUE(
+   evaluate_series_method(crossover_condition, asset_snapshot[0], context));
 }
 
 TEST(CrossoverMethodTest, CrossoverConditionNotMet)
@@ -58,7 +60,8 @@ TEST(CrossoverMethodTest, CrossoverConditionNotMet)
   const auto asset_data = AssetHistory{{"close", {50, 40}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_FALSE(crossover_condition(asset_snapshot, context));
+  EXPECT_FALSE(
+   evaluate_series_method(crossover_condition, asset_snapshot[0], context));
 }
 
 TEST(CrossoverMethodTest, EqualityOperator)

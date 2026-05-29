@@ -64,6 +64,27 @@ using DivideMethod = pludux::DivideMethod<AnySeriesMethod, AnySeriesMethod>;
 using NegateMethod = pludux::NegateMethod<AnySeriesMethod>;
 using PercentageMethod = pludux::PercentageMethod<AnySeriesMethod>;
 using AbsDiffMethod = pludux::AbsDiffMethod<AnySeriesMethod, AnySeriesMethod>;
+using AllOfMethod = pludux::AllOfMethod<AnySeriesMethod>;
+using AnyOfMethod = pludux::AnyOfMethod<AnySeriesMethod>;
+using CrossoverMethod =
+ pludux::CrossoverMethod<AnySeriesMethod, AnySeriesMethod>;
+using CrossunderMethod =
+ pludux::CrossunderMethod<AnySeriesMethod, AnySeriesMethod>;
+using AlwaysMethod = pludux::TrueMethod;
+using NeverMethod = pludux::FalseMethod;
+using EqualMethod = pludux::EqualMethod<AnySeriesMethod, AnySeriesMethod>;
+using NotEqualMethod = pludux::NotEqualMethod<AnySeriesMethod, AnySeriesMethod>;
+using GreaterThanMethod =
+ pludux::GreaterThanMethod<AnySeriesMethod, AnySeriesMethod>;
+using GreaterEqualMethod =
+ pludux::GreaterEqualMethod<AnySeriesMethod, AnySeriesMethod>;
+using LessThanMethod = pludux::LessThanMethod<AnySeriesMethod, AnySeriesMethod>;
+using LessEqualMethod =
+ pludux::LessEqualMethod<AnySeriesMethod, AnySeriesMethod>;
+using NotMethod = pludux::LogicalNotMethod<AnySeriesMethod>;
+using AndMethod = pludux::LogicalAndMethod<AnySeriesMethod, AnySeriesMethod>;
+using OrMethod = pludux::LogicalOrMethod<AnySeriesMethod, AnySeriesMethod>;
+using XorMethod = pludux::LogicalXorMethod<AnySeriesMethod, AnySeriesMethod>;
 
 using pludux::backtest::AnyPlotMethod;
 using pludux::backtest::AnyPlotSourceMethod;
@@ -289,39 +310,39 @@ auto get_series_method_title(const std::string& series_id) -> std::string
   return "Unknown";
 }
 
-auto get_condition_method_id(const AnyConditionMethod& method) -> std::string
+auto get_condition_method_id(const AnySeriesMethod& method) -> std::string
 {
-  if(condition_method_cast<AllOfMethod>(method)) {
+  if(series_method_cast<AllOfMethod>(method)) {
     return "ALL_OF";
-  } else if(condition_method_cast<AnyOfMethod>(method)) {
+  } else if(series_method_cast<AnyOfMethod>(method)) {
     return "ANY_OF";
-  } else if(condition_method_cast<AlwaysMethod>(method)) {
+  } else if(series_method_cast<AlwaysMethod>(method)) {
     return "ALWAYS";
-  } else if(condition_method_cast<NeverMethod>(method)) {
+  } else if(series_method_cast<NeverMethod>(method)) {
     return "NEVER";
-  } else if(condition_method_cast<LessThanMethod>(method)) {
+  } else if(series_method_cast<LessThanMethod>(method)) {
     return "LESS_THAN";
-  } else if(condition_method_cast<GreaterThanMethod>(method)) {
+  } else if(series_method_cast<GreaterThanMethod>(method)) {
     return "GREATER_THAN";
-  } else if(condition_method_cast<LessEqualMethod>(method)) {
+  } else if(series_method_cast<LessEqualMethod>(method)) {
     return "LESS_EQUAL";
-  } else if(condition_method_cast<GreaterEqualMethod>(method)) {
+  } else if(series_method_cast<GreaterEqualMethod>(method)) {
     return "GREATER_EQUAL";
-  } else if(condition_method_cast<EqualMethod>(method)) {
+  } else if(series_method_cast<EqualMethod>(method)) {
     return "EQUAL";
-  } else if(condition_method_cast<NotEqualMethod>(method)) {
+  } else if(series_method_cast<NotEqualMethod>(method)) {
     return "NOT_EQUAL";
-  } else if(condition_method_cast<CrossoverMethod>(method)) {
+  } else if(series_method_cast<CrossoverMethod>(method)) {
     return "CROSSOVER";
-  } else if(condition_method_cast<CrossunderMethod>(method)) {
+  } else if(series_method_cast<CrossunderMethod>(method)) {
     return "CROSSUNDER";
-  } else if(condition_method_cast<NotMethod>(method)) {
+  } else if(series_method_cast<NotMethod>(method)) {
     return "NOT";
-  } else if(condition_method_cast<AndMethod>(method)) {
+  } else if(series_method_cast<AndMethod>(method)) {
     return "AND";
-  } else if(condition_method_cast<OrMethod>(method)) {
+  } else if(series_method_cast<OrMethod>(method)) {
     return "OR";
-  } else if(condition_method_cast<XorMethod>(method)) {
+  } else if(series_method_cast<XorMethod>(method)) {
     return "XOR";
   }
 
@@ -368,7 +389,7 @@ auto get_condition_method_title(const std::string& condition_id) -> std::string
 }
 
 auto get_default_condition_method(const std::string& condition_id)
- -> AnyConditionMethod
+ -> AnySeriesMethod
 {
   if(condition_id == "ALL_OF") {
     return AllOfMethod{};
@@ -577,7 +598,7 @@ private:
       const auto more_width =
        ImGui::CalcTextSize("More...").x + (2.0f * frame_padding_x);
       const auto buttons_width = export_width + spacing + edit_width + spacing +
-       delete_width + spacing + more_width;
+                                 delete_width + spacing + more_width;
       const auto buttons_start_x = row_start.x + row_width - buttons_width;
 
       ImGui::SetCursorScreenPos(ImVec2(buttons_start_x, row_start.y));
@@ -1887,7 +1908,7 @@ private:
   }
 
   auto draw_condition_method_combo(this auto& self,
-                                   const AnyConditionMethod& condition)
+                                   const AnySeriesMethod& condition)
    -> std::string
   {
     static const auto condition_ids = std::vector<std::string>{"EQUAL",
@@ -1944,21 +1965,20 @@ private:
 
   auto make_condition_method_from_other(this auto& self,
                                         const std::string& condition_id,
-                                        auto other_condition)
-   -> AnyConditionMethod
+                                        auto other_condition) -> AnySeriesMethod
   {
     const auto get_condition_series_params =
      []<typename TMethod>(
       const TMethod& method) -> std::pair<AnySeriesMethod, AnySeriesMethod> {
       if constexpr(requires {
                      {
-                       method.signal()
+                       method.source()
                      } -> std::convertible_to<AnySeriesMethod>;
                      {
                        method.reference()
                      } -> std::convertible_to<AnySeriesMethod>;
                    }) {
-        return {method.signal(), method.reference()};
+        return {method.source(), method.reference()};
       } else if constexpr(requires {
                             {
                               method.target()
@@ -2031,26 +2051,26 @@ private:
 
     const auto get_conditions_param =
      []<typename TMethod>(
-      const TMethod& method) -> std::vector<AnyConditionMethod> {
+      const TMethod& method) -> std::vector<AnySeriesMethod> {
       if constexpr(requires {
                      {
                        method.conditions()
-                     } -> std::convertible_to<std::vector<AnyConditionMethod>>;
+                     } -> std::convertible_to<std::vector<AnySeriesMethod>>;
                    }) {
         return method.conditions();
       } else if constexpr(requires {
                             {
                               method.other_condition()
-                            } -> std::convertible_to<AnyConditionMethod>;
+                            } -> std::convertible_to<AnySeriesMethod>;
                           }) {
         return {method.other_condition()};
       } else if constexpr(requires {
                             {
                               method.first_condition()
-                            } -> std::convertible_to<AnyConditionMethod>;
+                            } -> std::convertible_to<AnySeriesMethod>;
                             {
                               method.second_condition()
-                            } -> std::convertible_to<AnyConditionMethod>;
+                            } -> std::convertible_to<AnySeriesMethod>;
                           }) {
         return {method.first_condition(), method.second_condition()};
       } else {
@@ -2069,24 +2089,24 @@ private:
     }
 
     const auto get_first_condition_param =
-     []<typename TMethod>(const TMethod& method) -> AnyConditionMethod {
+     []<typename TMethod>(const TMethod& method) -> AnySeriesMethod {
       if constexpr(requires {
                      {
                        method.condition()
-                     } -> std::convertible_to<AnyConditionMethod>;
+                     } -> std::convertible_to<AnySeriesMethod>;
                    }) {
         return method.condition();
       } else if constexpr(requires {
                             {
                               method.first_condition()
-                            } -> std::convertible_to<AnyConditionMethod>;
+                            } -> std::convertible_to<AnySeriesMethod>;
                           }) {
         return method.first_condition();
       } else if constexpr(requires {
                             {
                               method.conditions()
                             } -> std::convertible_to<
-                             std::vector<AnyConditionMethod>>;
+                             std::vector<AnySeriesMethod>>;
                           }) {
         const auto conditions = method.conditions();
         if(!conditions.empty()) {
@@ -2097,7 +2117,7 @@ private:
       } else if constexpr(requires {
                             {
                               method.other_condition()
-                            } -> std::convertible_to<AnyConditionMethod>;
+                            } -> std::convertible_to<AnySeriesMethod>;
                           }) {
         return method.other_condition();
       } else {
@@ -2106,17 +2126,17 @@ private:
     };
 
     const auto get_second_condition_param =
-     []<typename TMethod>(const TMethod& method) -> AnyConditionMethod {
+     []<typename TMethod>(const TMethod& method) -> AnySeriesMethod {
       if constexpr(requires {
                      {
                        method.other_condition()
-                     } -> std::convertible_to<AnyConditionMethod>;
+                     } -> std::convertible_to<AnySeriesMethod>;
                    }) {
         return method.other_condition();
       } else if constexpr(requires {
                             {
                               method.second_condition()
-                            } -> std::convertible_to<AnyConditionMethod>;
+                            } -> std::convertible_to<AnySeriesMethod>;
                           }) {
         return method.second_condition();
       } else {
@@ -2155,59 +2175,58 @@ private:
   }
 
   auto render_condition_method(this auto& self,
-                               const AnyConditionMethod& any_condition,
-                               WindowContext& context) -> AnyConditionMethod
+                               const AnySeriesMethod& any_condition,
+                               WindowContext& context) -> AnySeriesMethod
   {
-    if(auto* condition_ptr =
-        condition_method_cast<AllOfMethod>(any_condition)) {
+    if(auto* condition_ptr = series_method_cast<AllOfMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<AnyOfMethod>(any_condition)) {
+               series_method_cast<AnyOfMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<AlwaysMethod>(any_condition)) {
+               series_method_cast<AlwaysMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<NeverMethod>(any_condition)) {
+               series_method_cast<NeverMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<LessThanMethod>(any_condition)) {
+               series_method_cast<LessThanMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<GreaterThanMethod>(any_condition)) {
+               series_method_cast<GreaterThanMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<LessEqualMethod>(any_condition)) {
+               series_method_cast<LessEqualMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<GreaterEqualMethod>(any_condition)) {
+               series_method_cast<GreaterEqualMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<EqualMethod>(any_condition)) {
+               series_method_cast<EqualMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<NotEqualMethod>(any_condition)) {
+               series_method_cast<NotEqualMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<CrossoverMethod>(any_condition)) {
+               series_method_cast<CrossoverMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<CrossunderMethod>(any_condition)) {
+               series_method_cast<CrossunderMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<NotMethod>(any_condition)) {
+               series_method_cast<NotMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<AndMethod>(any_condition)) {
+               series_method_cast<AndMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<OrMethod>(any_condition)) {
+               series_method_cast<OrMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<XorMethod>(any_condition)) {
+               series_method_cast<XorMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else {
-      return self.render_condition_method(*condition_ptr, context);
+      return any_condition;
     }
   }
 
@@ -2220,7 +2239,7 @@ private:
              std::same_as<TCondition, LessEqualMethod>
   auto render_condition_method(this auto& self,
                                const TCondition& condition,
-                               WindowContext& context) -> AnyConditionMethod
+                               WindowContext& context) -> AnySeriesMethod
   {
     auto new_condition = condition;
 
@@ -2251,13 +2270,13 @@ private:
              std::same_as<TCondition, CrossunderMethod>
   auto render_condition_method(this auto& self,
                                const TCondition& condition,
-                               WindowContext& context) -> AnyConditionMethod
+                               WindowContext& context) -> AnySeriesMethod
   {
     auto new_condition = condition;
 
     ImGui::PushID("left_param");
-    auto signal = new_condition.signal();
-    self.render_series_method(signal, context);
+    auto source = new_condition.source();
+    self.render_series_method(source, context);
     ImGui::PopID();
 
     const auto updated_condition_id =
@@ -2268,7 +2287,7 @@ private:
     self.render_series_method(reference, context);
     ImGui::PopID();
 
-    new_condition.signal(std::move(signal));
+    new_condition.source(std::move(source));
     new_condition.reference(std::move(reference));
 
     auto changed_method = self.make_condition_method_from_other(
@@ -2282,7 +2301,7 @@ private:
              std::same_as<TCondition, NeverMethod>
   auto render_condition_method(this auto& self,
                                const TCondition& condition,
-                               WindowContext& context) -> AnyConditionMethod
+                               WindowContext& context) -> AnySeriesMethod
   {
     auto new_condition = condition;
     const auto updated_condition_id =
@@ -2299,7 +2318,7 @@ private:
              std::same_as<TCondition, AnyOfMethod>
   auto render_condition_method(this auto& self,
                                const TCondition& condition,
-                               WindowContext& context) -> AnyConditionMethod
+                               WindowContext& context) -> AnySeriesMethod
   {
     auto new_condition = condition;
     const auto updated_condition_id =
@@ -2339,7 +2358,7 @@ private:
     requires std::same_as<TCondition, NotMethod>
   auto render_condition_method(this auto& self,
                                const TCondition& condition,
-                               WindowContext& context) -> AnyConditionMethod
+                               WindowContext& context) -> AnySeriesMethod
   {
     auto new_condition = condition;
     const auto updated_condition_id =
@@ -2360,7 +2379,7 @@ private:
              std::same_as<TCondition, XorMethod>
   auto render_condition_method(this auto& self,
                                const TCondition& condition,
-                               WindowContext& context) -> AnyConditionMethod
+                               WindowContext& context) -> AnySeriesMethod
   {
     auto new_condition = condition;
     auto first_condition = new_condition.first_condition();

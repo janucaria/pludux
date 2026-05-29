@@ -15,8 +15,9 @@ TEST(NotEqualMethodTest, TargetEqualThreshold)
   const auto condition =
    NotEqualMethod{std::move(target_method), std::move(threshold_method)};
   const auto asset_data = AssetHistory{{"close", {0}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_TRUE(condition(asset_data, context));
+  EXPECT_TRUE(evaluate_series_method(condition, asset_snapshot[0], context));
 }
 
 TEST(NotEqualMethodTest, TargetEqualToThreshold)
@@ -28,8 +29,9 @@ TEST(NotEqualMethodTest, TargetEqualToThreshold)
   const auto condition =
    NotEqualMethod{std::move(target_method), std::move(threshold_method)};
   const auto asset_data = AssetHistory{{"close", {0}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_FALSE(condition(asset_data, context));
+  EXPECT_FALSE(evaluate_series_method(condition, asset_snapshot[0], context));
 }
 
 TEST(NotEqualMethodTest, TargetGreaterThanThreshold)
@@ -41,8 +43,9 @@ TEST(NotEqualMethodTest, TargetGreaterThanThreshold)
   const auto condition =
    NotEqualMethod{std::move(target_method), std::move(threshold_method)};
   const auto asset_data = AssetHistory{{"close", {0}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_TRUE(condition(asset_data, context));
+  EXPECT_TRUE(evaluate_series_method(condition, asset_snapshot[0], context));
 }
 
 TEST(NotEqualMethodTest, EqualityOperator)

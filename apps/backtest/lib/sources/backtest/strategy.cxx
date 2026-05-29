@@ -22,13 +22,12 @@ public:
 
     auto operator==(const Pyramiding&) const noexcept -> bool = default;
 
-    auto signal(this const Pyramiding& self) noexcept
-     -> const AnyConditionMethod&
+    auto signal(this const Pyramiding& self) noexcept -> const AnySeriesMethod&
     {
       return self.signal_;
     }
 
-    void signal(this Pyramiding& self, AnyConditionMethod signal) noexcept
+    void signal(this Pyramiding& self, AnySeriesMethod signal) noexcept
     {
       self.signal_ = std::move(signal);
     }
@@ -44,7 +43,7 @@ public:
     }
 
   private:
-    AnyConditionMethod signal_{NeverMethod{}};
+    AnySeriesMethod signal_{FalseMethod{}};
     std::size_t max_layers_{1};
   };
 
@@ -104,10 +103,10 @@ public:
   Strategy()
   : Strategy("",
              SeriesMethodRegistry{},
-             NeverMethod{},
-             NeverMethod{},
-             NeverMethod{},
-             NeverMethod{},
+             FalseMethod{},
+             FalseMethod{},
+             FalseMethod{},
+             FalseMethod{},
              Positions{},
              false,
              false,
@@ -119,10 +118,10 @@ public:
 
   Strategy(std::string name,
            SeriesMethodRegistry series_registry,
-           AnyConditionMethod long_entry_filter,
-           AnyConditionMethod long_exit_filter,
-           AnyConditionMethod short_entry_filter,
-           AnyConditionMethod short_exit_filter,
+           AnySeriesMethod long_entry_filter,
+           AnySeriesMethod long_exit_filter,
+           AnySeriesMethod short_entry_filter,
+           AnySeriesMethod short_exit_filter,
            Positions position,
            bool stop_loss_enabled,
            bool stop_loss_trailing_enabled,
@@ -168,49 +167,49 @@ public:
   }
 
   auto long_entry_filter(this const Strategy& self) noexcept
-   -> const AnyConditionMethod&
+   -> const AnySeriesMethod&
   {
     return self.long_entry_filter_;
   }
 
   void long_entry_filter(this Strategy& self,
-                         AnyConditionMethod long_entry_filter) noexcept
+                         AnySeriesMethod long_entry_filter) noexcept
   {
     self.long_entry_filter_ = std::move(long_entry_filter);
   }
 
   auto long_exit_filter(this const Strategy& self) noexcept
-   -> const AnyConditionMethod&
+   -> const AnySeriesMethod&
   {
     return self.long_exit_filter_;
   }
 
   void long_exit_filter(this Strategy& self,
-                        AnyConditionMethod long_exit_filter) noexcept
+                        AnySeriesMethod long_exit_filter) noexcept
   {
     self.long_exit_filter_ = std::move(long_exit_filter);
   }
 
   auto short_entry_filter(this const Strategy& self) noexcept
-   -> const AnyConditionMethod&
+   -> const AnySeriesMethod&
   {
     return self.short_entry_filter_;
   }
 
   void short_entry_filter(this Strategy& self,
-                          AnyConditionMethod short_entry_filter) noexcept
+                          AnySeriesMethod short_entry_filter) noexcept
   {
     self.short_entry_filter_ = std::move(short_entry_filter);
   }
 
   auto short_exit_filter(this const Strategy& self) noexcept
-   -> const AnyConditionMethod&
+   -> const AnySeriesMethod&
   {
     return self.short_exit_filter_;
   }
 
   void short_exit_filter(this Strategy& self,
-                         AnyConditionMethod short_exit_filter) noexcept
+                         AnySeriesMethod short_exit_filter) noexcept
   {
     self.short_exit_filter_ = std::move(short_exit_filter);
   }
@@ -300,11 +299,11 @@ private:
 
   SeriesMethodRegistry series_registry_;
 
-  AnyConditionMethod long_entry_filter_{NeverMethod{}};
-  AnyConditionMethod long_exit_filter_{NeverMethod{}};
+  AnySeriesMethod long_entry_filter_{FalseMethod{}};
+  AnySeriesMethod long_exit_filter_{FalseMethod{}};
 
-  AnyConditionMethod short_entry_filter_{NeverMethod{}};
-  AnyConditionMethod short_exit_filter_{NeverMethod{}};
+  AnySeriesMethod short_entry_filter_{FalseMethod{}};
+  AnySeriesMethod short_exit_filter_{FalseMethod{}};
 
   Positions positions_;
 
