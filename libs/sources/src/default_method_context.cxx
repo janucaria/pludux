@@ -9,7 +9,7 @@ module;
 
 export module pludux:default_method_context;
 
-import :series.series_method_registry;
+import :series_method_registry;
 import :series_evaluation_results;
 import :method_key;
 
@@ -45,7 +45,7 @@ public:
   auto call_series_method(this const DefaultMethodContext& self,
                           const std::string& name,
                           AssetSnapshot asset_snapshot,
-                          SeriesOutput output) noexcept -> DispatchResultType
+                          MethodOutput output) noexcept -> DispatchResultType
   {
     if(const auto method_opt = self.methods_.get(name);
        method_opt.has_value()) {

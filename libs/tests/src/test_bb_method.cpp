@@ -66,7 +66,7 @@ TEST(BbMethodTest, RunAllMethod)
    std::isnan(evaluate_series_method(middle_band, asset_snapshot[9], context)));
 
   const auto upper_band =
-   SelectOutputMethod{middle_band, SeriesOutput::UpperBand};
+   SelectOutputMethod{middle_band, MethodOutput::UpperBand};
   EXPECT_DOUBLE_EQ(
    evaluate_series_method(upper_band, asset_snapshot[0], context),
    875.56465996625059);
@@ -95,7 +95,7 @@ TEST(BbMethodTest, RunAllMethod)
    std::isnan(evaluate_series_method(upper_band, asset_snapshot[9], context)));
 
   const auto lower_band =
-   SelectOutputMethod{middle_band, SeriesOutput::LowerBand};
+   SelectOutputMethod{middle_band, MethodOutput::LowerBand};
   EXPECT_DOUBLE_EQ(
    evaluate_series_method(lower_band, asset_snapshot[0], context),
    848.43534003374941);

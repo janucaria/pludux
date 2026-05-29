@@ -164,7 +164,7 @@ TEST_F(ConfigParserTest, ParseScreenerSelectOutputMethod)
   const auto select_output_method =
    series_method_cast<SelectOutputMethod<AnySeriesMethod>>(method);
   ASSERT_NE(select_output_method, nullptr);
-  EXPECT_EQ(select_output_method->output(), SeriesOutput::UpperBand);
+  EXPECT_EQ(select_output_method->output(), MethodOutput::UpperBand);
 
   const auto macd_method = series_method_cast<MacdMethod<AnySeriesMethod>>(
    select_output_method->source());

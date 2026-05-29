@@ -12,8 +12,9 @@ module;
 export module pludux:any_method_context;
 
 import :asset_snapshot;
-import :series_output;
 import :method_key;
+
+import :methods.select_output_method;
 
 export namespace pludux {
 
@@ -46,7 +47,7 @@ public:
   , call_series_method_with_output_{[](const std::any& impl,
                                        const std::string& name,
                                        AssetSnapshot asset_snapshot,
-                                       SeriesOutput output)
+                                       MethodOutput output)
                                      -> DispatchResultType {
     return std::any_cast<UImpl>(impl).call_series_method(
      name, std::move(asset_snapshot), output);
@@ -69,7 +70,7 @@ public:
   auto call_series_method(this const AnySeriesMethodContext& self,
                           const std::string& name,
                           AssetSnapshot asset_snapshot,
-                          SeriesOutput output_name) noexcept
+                          MethodOutput output_name) noexcept
    -> DispatchResultType
   {
     return self.call_series_method_with_output_(
@@ -125,7 +126,7 @@ private:
    call_series_method_no_output_;
 
   std::function<
-   auto(const std::any&, const std::string&, AssetSnapshot, SeriesOutput)
+   auto(const std::any&, const std::string&, AssetSnapshot, MethodOutput)
     ->DispatchResultType>
    call_series_method_with_output_;
 

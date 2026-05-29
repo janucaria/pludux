@@ -554,7 +554,7 @@ TEST_F(HashSeriesMethodOtherTest, ValueMethodHashProducesValidHash)
 TEST_F(HashSeriesMethodOtherTest, SelectOutputMethodHashProducesValidHash)
 {
   SelectOutputMethod<MacdMethod<CloseMethod>> select{
-   MacdMethod<CloseMethod>{CloseMethod{}, 12, 26, 9}, SeriesOutput::MacdLine};
+   MacdMethod<CloseMethod>{CloseMethod{}, 12, 26, 9}, MethodOutput::MacdLine};
   const auto hash = hash_series_method(select);
   EXPECT_NE(hash, 0);
 }

@@ -140,7 +140,7 @@ auto get_default_series_method(const std::string& series_id) -> AnySeriesMethod
   } else if(series_id == "ABS_DIFF") {
     return AbsDiffMethod{CloseMethod{}, CloseMethod{}};
   } else if(series_id == "SELECT_OUTPUT") {
-    return SelectOutputMethod{CloseMethod{}, SeriesOutput::MiddleBand};
+    return SelectOutputMethod{CloseMethod{}, MethodOutput::MiddleBand};
   }
 
   throw std::invalid_argument{
@@ -1276,24 +1276,24 @@ private:
   {
     {
       const auto output_options =
-       std::vector<SeriesOutput>{SeriesOutput::UpperBand,
-                                 SeriesOutput::MiddleBand,
-                                 SeriesOutput::LowerBand,
-                                 SeriesOutput::MacdLine,
-                                 SeriesOutput::SignalLine,
-                                 SeriesOutput::Histogram,
-                                 SeriesOutput::KPercent,
-                                 SeriesOutput::DPercent};
+       std::vector<MethodOutput>{MethodOutput::UpperBand,
+                                 MethodOutput::MiddleBand,
+                                 MethodOutput::LowerBand,
+                                 MethodOutput::MacdLine,
+                                 MethodOutput::SignalLine,
+                                 MethodOutput::Histogram,
+                                 MethodOutput::KPercent,
+                                 MethodOutput::DPercent};
 
-      const auto output_map = std::unordered_map<SeriesOutput, std::string>{
-       {SeriesOutput::UpperBand, "Upper Band"},
-       {SeriesOutput::MiddleBand, "Middle Band"},
-       {SeriesOutput::LowerBand, "Lower Band"},
-       {SeriesOutput::MacdLine, "MACD Line"},
-       {SeriesOutput::SignalLine, "Signal Line"},
-       {SeriesOutput::Histogram, "Histogram"},
-       {SeriesOutput::KPercent, "%K"},
-       {SeriesOutput::DPercent, "%D"}};
+      const auto output_map = std::unordered_map<MethodOutput, std::string>{
+       {MethodOutput::UpperBand, "Upper Band"},
+       {MethodOutput::MiddleBand, "Middle Band"},
+       {MethodOutput::LowerBand, "Lower Band"},
+       {MethodOutput::MacdLine, "MACD Line"},
+       {MethodOutput::SignalLine, "Signal Line"},
+       {MethodOutput::Histogram, "Histogram"},
+       {MethodOutput::KPercent, "%K"},
+       {MethodOutput::DPercent, "%D"}};
 
       ImGui::Text("Output:");
       ImGui::SameLine();

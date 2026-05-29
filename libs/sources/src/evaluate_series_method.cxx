@@ -13,48 +13,47 @@ module;
 export module pludux:evaluate_series_method;
 
 import :asset_snapshot;
-import :series_output;
 import :method_contextable;
 
 // Import all method modules for type/template visibility
-import :series.atr_method;
-import :series.bb_method;
-import :series.change_method;
-import :series.data_method;
-import :series.percentage_method;
-import :series.roc_method;
-import :series.rvol_method;
-import :series.rsi_method;
-import :series.rma_method;
-import :series.ema_method;
-import :series.highest_method;
-import :series.hma_method;
-import :series.kc_method;
-import :series.lookback_method;
-import :series.lowest_method;
-import :series.macd_method;
-import :series.ohlcv_method;
-import :series.operators_method;
-import :series.adaptive_ma_method;
-import :series.sma_method;
-import :series.wma_method;
-import :series.rma_method;
-import :series.select_output_method;
-import :series.series_node_method;
-import :series.series_value_method;
-import :series.stddev_method;
-import :series.stoch_method;
-import :series.stoch_rsi_method;
-import :series.tr_method;
-import :series.value_method;
-import :series.wma_method;
+import :methods.atr_method;
+import :methods.bb_method;
+import :methods.change_method;
+import :methods.data_method;
+import :methods.percentage_method;
+import :methods.roc_method;
+import :methods.rvol_method;
+import :methods.rsi_method;
+import :methods.rma_method;
+import :methods.ema_method;
+import :methods.highest_method;
+import :methods.hma_method;
+import :methods.kc_method;
+import :methods.lookback_method;
+import :methods.lowest_method;
+import :methods.macd_method;
+import :methods.ohlcv_method;
+import :methods.operators_method;
+import :methods.adaptive_ma_method;
+import :methods.sma_method;
+import :methods.wma_method;
+import :methods.rma_method;
+import :methods.select_output_method;
+import :methods.series_node_method;
+import :methods.series_value_method;
+import :methods.stddev_method;
+import :methods.stoch_method;
+import :methods.stoch_rsi_method;
+import :methods.tr_method;
+import :methods.value_method;
+import :methods.wma_method;
 
 export namespace pludux {
 
 template<typename TMethod>
 auto evaluate_selected_output_series_or_nan(
  const TMethod& method,
- SeriesOutput output,
+ MethodOutput output,
  AssetSnapshot asset_snapshot,
  MethodContextable auto context) noexcept -> double
   requires requires {
@@ -115,11 +114,11 @@ auto evaluate_series_method(const BbMethod<TMaSourceMethod>& method,
                             MethodContextable auto context) noexcept -> double
 {
   return evaluate_series_method(
-   SeriesOutput::MiddleBand, method, std::move(asset_snapshot), context);
+   MethodOutput::MiddleBand, method, std::move(asset_snapshot), context);
 }
 
 template<typename TMaSourceMethod>
-auto evaluate_series_method(SeriesOutput output,
+auto evaluate_series_method(MethodOutput output,
                             const BbMethod<TMaSourceMethod>& method,
                             AssetSnapshot asset_snapshot,
                             MethodContextable auto context) noexcept -> double
@@ -136,11 +135,11 @@ auto evaluate_series_method(SeriesOutput output,
    evaluate_series_method(stddev_method, asset_snapshot, context);
   const auto std_dev_scaled = std_dev * method.stddev();
   switch(output) {
-  case SeriesOutput::MiddleBand:
+  case MethodOutput::MiddleBand:
     return middle;
-  case SeriesOutput::UpperBand:
+  case MethodOutput::UpperBand:
     return middle + std_dev_scaled;
-  case SeriesOutput::LowerBand:
+  case MethodOutput::LowerBand:
     return middle - std_dev_scaled;
   default:
     return std::numeric_limits<double>::quiet_NaN();
@@ -394,11 +393,11 @@ auto evaluate_series_method(const KcMethod<TMaSourceMethod>& method,
                             MethodContextable auto context) noexcept -> double
 {
   return evaluate_series_method(
-   SeriesOutput::MiddleBand, method, std::move(asset_snapshot), context);
+   MethodOutput::MiddleBand, method, std::move(asset_snapshot), context);
 }
 
 template<typename TMaSourceMethod>
-auto evaluate_series_method(SeriesOutput output,
+auto evaluate_series_method(MethodOutput output,
                             const KcMethod<TMaSourceMethod>& method,
                             AssetSnapshot asset_snapshot,
                             MethodContextable auto context) noexcept -> double
@@ -428,11 +427,11 @@ auto evaluate_series_method(SeriesOutput output,
    evaluate_series_method(ma_method, asset_snapshot, context);
 
   switch(output) {
-  case SeriesOutput::MiddleBand:
+  case MethodOutput::MiddleBand:
     return middle;
-  case SeriesOutput::UpperBand:
+  case MethodOutput::UpperBand:
     return middle + (method.multiplier() * band_range());
-  case SeriesOutput::LowerBand:
+  case MethodOutput::LowerBand:
     return middle - (method.multiplier() * band_range());
   default:
     return std::numeric_limits<double>::quiet_NaN();
@@ -461,7 +460,7 @@ auto evaluate_series_method(const SelectOutputMethod<TSourceMethod>& method,
 }
 
 template<typename TSourceMethod>
-auto evaluate_series_method(SeriesOutput output,
+auto evaluate_series_method(MethodOutput output,
                             const SelectOutputMethod<TSourceMethod>& method,
                             AssetSnapshot asset_snapshot,
                             MethodContextable auto context) noexcept -> double
@@ -498,11 +497,11 @@ auto evaluate_series_method(const MacdMethod<TSourceMethod>& method,
                             MethodContextable auto context) noexcept -> double
 {
   return evaluate_series_method(
-   SeriesOutput::MacdLine, method, asset_snapshot, context);
+   MethodOutput::MacdLine, method, asset_snapshot, context);
 }
 
 template<typename TSourceMethod>
-auto evaluate_series_method(SeriesOutput output,
+auto evaluate_series_method(MethodOutput output,
                             const MacdMethod<TSourceMethod>& method,
                             AssetSnapshot asset_snapshot,
                             MethodContextable auto context) noexcept -> double
@@ -519,11 +518,11 @@ auto evaluate_series_method(SeriesOutput output,
   const auto histogram = macd - signal;
 
   switch(output) {
-  case SeriesOutput::MacdLine:
+  case MethodOutput::MacdLine:
     return macd;
-  case SeriesOutput::SignalLine:
+  case MethodOutput::SignalLine:
     return signal;
-  case SeriesOutput::Histogram:
+  case MethodOutput::Histogram:
     return histogram;
   default:
     return std::numeric_limits<double>::quiet_NaN();
@@ -764,7 +763,7 @@ auto evaluate_series_method(const SeriesNodeMethod& method,
   }
 }
 
-auto evaluate_series_method(SeriesOutput output,
+auto evaluate_series_method(MethodOutput output,
                             const SeriesNodeMethod& method,
                             AssetSnapshot asset_snapshot,
                             MethodContextable auto context) noexcept -> double
@@ -826,10 +825,10 @@ auto evaluate_series_method(const StochMethod& method,
                             MethodContextable auto context) noexcept -> double
 {
   return evaluate_series_method(
-   SeriesOutput::KPercent, method, asset_snapshot, context);
+   MethodOutput::KPercent, method, asset_snapshot, context);
 }
 
-auto evaluate_series_method(SeriesOutput output,
+auto evaluate_series_method(MethodOutput output,
                             const StochMethod& method,
                             AssetSnapshot asset_snapshot,
                             MethodContextable auto context) noexcept -> double
@@ -850,9 +849,9 @@ auto evaluate_series_method(SeriesOutput output,
   const auto k_percent = SmaMethod{stoch, method.k_smooth()};
 
   switch(output) {
-  case SeriesOutput::KPercent:
+  case MethodOutput::KPercent:
     return evaluate_series_method(k_percent, asset_snapshot, context);
-  case SeriesOutput::DPercent:
+  case MethodOutput::DPercent:
     return evaluate_series_method(
      SmaMethod{k_percent, method.d_period()}, asset_snapshot, context);
   default:
@@ -867,11 +866,11 @@ auto evaluate_series_method(const StochRsiMethod<TRsiSourceMethod>& method,
                             MethodContextable auto context) noexcept -> double
 {
   return evaluate_series_method(
-   SeriesOutput::KPercent, method, std::move(asset_snapshot), context);
+   MethodOutput::KPercent, method, std::move(asset_snapshot), context);
 }
 
 template<typename TRsiSourceMethod>
-auto evaluate_series_method(SeriesOutput output,
+auto evaluate_series_method(MethodOutput output,
                             const StochRsiMethod<TRsiSourceMethod>& method,
                             AssetSnapshot asset_snapshot,
                             MethodContextable auto context) noexcept -> double
@@ -892,9 +891,9 @@ auto evaluate_series_method(SeriesOutput output,
   const auto k_percent = SmaMethod{stoch, method.k_smooth()};
 
   switch(output) {
-  case SeriesOutput::KPercent:
+  case MethodOutput::KPercent:
     return evaluate_series_method(k_percent, asset_snapshot, context);
-  case SeriesOutput::DPercent:
+  case MethodOutput::DPercent:
     return evaluate_series_method(
      SmaMethod{k_percent, method.d_period()}, asset_snapshot, context);
   default:

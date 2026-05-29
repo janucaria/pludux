@@ -13,7 +13,8 @@ module;
 export module pludux:config_parser;
 
 import :conditions;
-import :series;
+import :methods;
+import :series_method_registry;
 
 export namespace pludux {
 
@@ -1117,21 +1118,21 @@ auto make_default_registered_config_parser() -> ConfigParser
        serialized_method = jsoncons::ojson{};
        serialized_method["output"] = [&]() -> std::string {
          switch(output_by_name_method->output()) {
-         case SeriesOutput::MacdLine:
+         case MethodOutput::MacdLine:
            return "macd-line";
-         case SeriesOutput::SignalLine:
+         case MethodOutput::SignalLine:
            return "signal-line";
-         case SeriesOutput::Histogram:
+         case MethodOutput::Histogram:
            return "histogram";
-         case SeriesOutput::KPercent:
+         case MethodOutput::KPercent:
            return "k-percent";
-         case SeriesOutput::DPercent:
+         case MethodOutput::DPercent:
            return "d-percent";
-         case SeriesOutput::MiddleBand:
+         case MethodOutput::MiddleBand:
            return "middle-band";
-         case SeriesOutput::UpperBand:
+         case MethodOutput::UpperBand:
            return "upper-band";
-         case SeriesOutput::LowerBand:
+         case MethodOutput::LowerBand:
            return "lower-band";
          default:
            return "default";
@@ -1147,25 +1148,25 @@ auto make_default_registered_config_parser() -> ConfigParser
    [](ConfigParser::Parser config_parser, const jsoncons::ojson& parameters) {
      const auto output_name =
       get_param_or<std::string>(parameters, "output", "default");
-     const auto output = [&]() -> SeriesOutput {
+     const auto output = [&]() -> MethodOutput {
        if(output_name == "macd-line") {
-         return SeriesOutput::MacdLine;
+         return MethodOutput::MacdLine;
        } else if(output_name == "signal-line") {
-         return SeriesOutput::SignalLine;
+         return MethodOutput::SignalLine;
        } else if(output_name == "histogram") {
-         return SeriesOutput::Histogram;
+         return MethodOutput::Histogram;
        } else if(output_name == "k-percent") {
-         return SeriesOutput::KPercent;
+         return MethodOutput::KPercent;
        } else if(output_name == "d-percent") {
-         return SeriesOutput::DPercent;
+         return MethodOutput::DPercent;
        } else if(output_name == "middle-band") {
-         return SeriesOutput::MiddleBand;
+         return MethodOutput::MiddleBand;
        } else if(output_name == "upper-band") {
-         return SeriesOutput::UpperBand;
+         return MethodOutput::UpperBand;
        } else if(output_name == "lower-band") {
-         return SeriesOutput::LowerBand;
+         return MethodOutput::LowerBand;
        } else {
-         return static_cast<SeriesOutput>(-1);
+         return static_cast<MethodOutput>(-1);
        }
      }();
 

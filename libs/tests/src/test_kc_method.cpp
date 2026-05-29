@@ -48,7 +48,7 @@ TEST(KcMethodTest, middle_EMA_range_ATR)
   EXPECT_TRUE(
    std::isnan(evaluate_series_method(kc_middle, asset_snapshot[9], context)));
 
-  const auto kc_upper = SelectOutputMethod{kc_middle, SeriesOutput::UpperBand};
+  const auto kc_upper = SelectOutputMethod{kc_middle, MethodOutput::UpperBand};
   EXPECT_DOUBLE_EQ(evaluate_series_method(kc_upper, asset_snapshot[0], context),
                    913.68584677613819);
   EXPECT_DOUBLE_EQ(evaluate_series_method(kc_upper, asset_snapshot[1], context),
@@ -70,7 +70,7 @@ TEST(KcMethodTest, middle_EMA_range_ATR)
   EXPECT_TRUE(
    std::isnan(evaluate_series_method(kc_upper, asset_snapshot[9], context)));
 
-  const auto kc_lower = SelectOutputMethod{kc_upper, SeriesOutput::LowerBand};
+  const auto kc_lower = SelectOutputMethod{kc_upper, MethodOutput::LowerBand};
   EXPECT_DOUBLE_EQ(evaluate_series_method(kc_lower, asset_snapshot[0], context),
                    800.21538779176319);
   EXPECT_DOUBLE_EQ(evaluate_series_method(kc_lower, asset_snapshot[1], context),
@@ -130,7 +130,7 @@ TEST(KcMethodTest, middle_SMA_range_Range)
   EXPECT_TRUE(
    std::isnan(evaluate_series_method(kc_middle, asset_snapshot[9], context)));
 
-  const auto kc_upper = SelectOutputMethod{kc_middle, SeriesOutput::UpperBand};
+  const auto kc_upper = SelectOutputMethod{kc_middle, MethodOutput::UpperBand};
   EXPECT_DOUBLE_EQ(evaluate_series_method(kc_upper, asset_snapshot[0], context),
                    894.18784000000005);
   EXPECT_DOUBLE_EQ(evaluate_series_method(kc_upper, asset_snapshot[1], context),
@@ -152,7 +152,7 @@ TEST(KcMethodTest, middle_SMA_range_Range)
   EXPECT_TRUE(
    std::isnan(evaluate_series_method(kc_upper, asset_snapshot[9], context)));
 
-  const auto kc_lower = SelectOutputMethod{kc_middle, SeriesOutput::LowerBand};
+  const auto kc_lower = SelectOutputMethod{kc_middle, MethodOutput::LowerBand};
   EXPECT_DOUBLE_EQ(evaluate_series_method(kc_lower, asset_snapshot[0], context),
                    829.81215999999995);
   EXPECT_DOUBLE_EQ(evaluate_series_method(kc_lower, asset_snapshot[1], context),

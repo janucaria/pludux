@@ -10,7 +10,7 @@ import :asset_snapshot;
 import :method_contextable;
 
 import :conditions.any_condition_method;
-import :series.any_series_method;
+import :methods.any_series_method;
 
 export namespace pludux {
 
