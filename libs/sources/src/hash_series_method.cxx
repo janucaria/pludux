@@ -433,129 +433,32 @@ auto hash_series_method(const VolumeMethod& method) noexcept -> std::size_t
 
 // Operators (Multiply, Divide, Add, Subtract, Negate, Abs, AbsDiff, Sqrt, Max,
 // Min, PositivePart, NegativePart)
-
-template<typename TMethodOp1, typename TMethodOp2>
+template<typename TBinaryFn,
+         typename TLeftOperandMethod,
+         typename TRightOperandMethod>
 auto hash_series_method(
- const MultiplyMethod<TMethodOp1, TMethodOp2>& method) noexcept -> std::size_t
+ const BinaryOperatorMethod<TBinaryFn, TLeftOperandMethod, TRightOperandMethod>&
+  method) noexcept -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);
-  const auto left_hash = hash_series_method_or_std_hash(method.left());
-  const auto right_hash = hash_series_method_or_std_hash(method.right());
-  return merge_hashes(type_hash, left_hash, right_hash);
+
+  const auto left_result = hash_series_method(method.left());
+  const auto right_result = hash_series_method(method.right());
+
+  return merge_hashes(type_hash, left_result, right_result);
 }
 
-template<typename TMethodOp1, typename TMethodOp2>
+template<typename TUnaryFn, typename TOperandMethod>
 auto hash_series_method(
- const DivideMethod<TMethodOp1, TMethodOp2>& method) noexcept -> std::size_t
-{
-  const auto type_hash = series_type_hash_id_of(method);
-  const auto dividend_hash = hash_series_method_or_std_hash(method.dividend());
-  const auto divisor_hash = hash_series_method_or_std_hash(method.divisor());
-  return merge_hashes(type_hash, dividend_hash, divisor_hash);
-}
-
-template<typename TMethodOp1, typename TMethodOp2>
-auto hash_series_method(
- const AddMethod<TMethodOp1, TMethodOp2>& method) noexcept -> std::size_t
-{
-  const auto type_hash = series_type_hash_id_of(method);
-  const auto augend_hash = hash_series_method_or_std_hash(method.augend());
-  const auto addend_hash = hash_series_method_or_std_hash(method.addend());
-  return merge_hashes(type_hash, augend_hash, addend_hash);
-}
-
-template<typename TMethodOp1, typename TMethodOp2>
-auto hash_series_method(
- const SubtractMethod<TMethodOp1, TMethodOp2>& method) noexcept -> std::size_t
-{
-  const auto type_hash = series_type_hash_id_of(method);
-  const auto minuend_hash = hash_series_method_or_std_hash(method.minuend());
-  const auto subtrahend_hash =
-   hash_series_method_or_std_hash(method.subtrahend());
-  return merge_hashes(type_hash, minuend_hash, subtrahend_hash);
-}
-
-template<typename TMethodOp>
-auto hash_series_method(const NegateMethod<TMethodOp>& method) noexcept
+ const UnaryOperatorMethod<TUnaryFn, TOperandMethod>& method) noexcept
  -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);
-  const auto operand_hash = hash_series_method_or_std_hash(method.operand());
-  return merge_hashes(type_hash, operand_hash);
-}
-
-template<typename TMethodOp>
-auto hash_series_method(const AbsMethod<TMethodOp>& method) noexcept
- -> std::size_t
-{
-  const auto type_hash = series_type_hash_id_of(method);
-  const auto operand_hash = hash_series_method_or_std_hash(method.operand());
-  return merge_hashes(type_hash, operand_hash);
-}
-
-template<typename TMethodOp1, typename TMethodOp2>
-auto hash_series_method(
- const AbsDiffMethod<TMethodOp1, TMethodOp2>& method) noexcept -> std::size_t
-{
-  const auto type_hash = series_type_hash_id_of(method);
-  const auto left_hash = hash_series_method_or_std_hash(method.left());
-  const auto right_hash = hash_series_method_or_std_hash(method.right());
-  return merge_hashes(type_hash, left_hash, right_hash);
-}
-
-template<typename TMethodOp>
-auto hash_series_method(const SqrtMethod<TMethodOp>& method) noexcept
- -> std::size_t
-{
-  const auto type_hash = series_type_hash_id_of(method);
-  const auto operand_hash = hash_series_method_or_std_hash(method.operand());
-  return merge_hashes(type_hash, operand_hash);
-}
-
-// MAX
-template<typename TMethodOp1, typename TMethodOp2>
-auto hash_series_method(
- const MaxMethod<TMethodOp1, TMethodOp2>& method) noexcept -> std::size_t
-{
-  const auto type_hash = series_type_hash_id_of(method);
-  const auto left_hash = hash_series_method_or_std_hash(method.left());
-  const auto right_hash = hash_series_method_or_std_hash(method.right());
-  return merge_hashes(type_hash, left_hash, right_hash);
-}
-
-// MIN
-template<typename TMethodOp1, typename TMethodOp2>
-auto hash_series_method(
- const MinMethod<TMethodOp1, TMethodOp2>& method) noexcept -> std::size_t
-{
-  const auto type_hash = series_type_hash_id_of(method);
-  const auto left_hash = hash_series_method_or_std_hash(method.left());
-  const auto right_hash = hash_series_method_or_std_hash(method.right());
-  return merge_hashes(type_hash, left_hash, right_hash);
-}
-
-// POSITIVE PART
-template<typename TMethodOp>
-auto hash_series_method(const PositivePartMethod<TMethodOp>& method) noexcept
- -> std::size_t
-{
-  const auto type_hash = series_type_hash_id_of(method);
-  const auto operand_hash = hash_series_method_or_std_hash(method.operand());
-  return merge_hashes(type_hash, operand_hash);
-}
-
-// NEGATIVE PART
-template<typename TMethodOp>
-auto hash_series_method(const NegativePartMethod<TMethodOp>& method) noexcept
- -> std::size_t
-{
-  const auto type_hash = series_type_hash_id_of(method);
-  const auto operand_hash = hash_series_method_or_std_hash(method.operand());
+  const auto operand_hash = hash_series_method(method.operand());
   return merge_hashes(type_hash, operand_hash);
 }
 
 // Adaptive MA
-
 template<typename TSourceMethod>
 auto hash_series_method(const AdaptiveMaMethod<TSourceMethod>& method) noexcept
  -> std::size_t

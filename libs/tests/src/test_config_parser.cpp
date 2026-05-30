@@ -835,8 +835,8 @@ TEST_F(ConfigParserTest, ParseScreenerAddMethod)
    series_method_cast<AddMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(add_method, nullptr);
 
-  const auto augend = series_method_cast<ValueMethod>(add_method->augend());
-  const auto addend = series_method_cast<ValueMethod>(add_method->addend());
+  const auto augend = series_method_cast<ValueMethod>(add_method->left());
+  const auto addend = series_method_cast<ValueMethod>(add_method->right());
   ASSERT_NE(augend, nullptr);
   ASSERT_NE(addend, nullptr);
   EXPECT_EQ(augend->value(), 50);
@@ -877,9 +877,9 @@ TEST_F(ConfigParserTest, ParseScreenerSubtractMethod)
   ASSERT_NE(subtract_method, nullptr);
 
   const auto minuend =
-   series_method_cast<ValueMethod>(subtract_method->minuend());
+   series_method_cast<ValueMethod>(subtract_method->left());
   const auto subtrahend =
-   series_method_cast<ValueMethod>(subtract_method->subtrahend());
+   series_method_cast<ValueMethod>(subtract_method->right());
   ASSERT_NE(minuend, nullptr);
   ASSERT_NE(subtrahend, nullptr);
   EXPECT_EQ(minuend->value(), 100);
@@ -920,9 +920,9 @@ TEST_F(ConfigParserTest, ParseScreenerMultiplyMethod)
   ASSERT_NE(multiply_method, nullptr);
 
   const auto multiplicand =
-   series_method_cast<ValueMethod>(multiply_method->multiplicand());
+   series_method_cast<ValueMethod>(multiply_method->left());
   const auto multiplier =
-   series_method_cast<ValueMethod>(multiply_method->multiplier());
+   series_method_cast<ValueMethod>(multiply_method->right());
   ASSERT_NE(multiplicand, nullptr);
   ASSERT_NE(multiplier, nullptr);
   EXPECT_EQ(multiplicand->value(), 10);
@@ -963,9 +963,9 @@ TEST_F(ConfigParserTest, ParseScreenerDivideMethod)
   ASSERT_NE(divide_method, nullptr);
 
   const auto dividend =
-   series_method_cast<ValueMethod>(divide_method->dividend());
+   series_method_cast<ValueMethod>(divide_method->left());
   const auto divisor =
-   series_method_cast<ValueMethod>(divide_method->divisor());
+   series_method_cast<ValueMethod>(divide_method->right());
   ASSERT_NE(dividend, nullptr);
   ASSERT_NE(divisor, nullptr);
   EXPECT_EQ(dividend->value(), 100);
@@ -1103,9 +1103,9 @@ TEST_F(ConfigParserTest, ParseScreenerAbsDiffMethod)
   ASSERT_NE(abs_diff_method, nullptr);
 
   const auto minuend =
-   series_method_cast<DataMethod>(abs_diff_method->minuend());
+   series_method_cast<DataMethod>(abs_diff_method->left());
   const auto subtrahend =
-   series_method_cast<DataMethod>(abs_diff_method->subtrahend());
+   series_method_cast<DataMethod>(abs_diff_method->right());
   ASSERT_NE(minuend, nullptr);
   ASSERT_NE(subtrahend, nullptr);
   EXPECT_EQ(minuend->field(), "high");

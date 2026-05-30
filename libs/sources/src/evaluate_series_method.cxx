@@ -577,152 +577,33 @@ auto evaluate_series_method(VolumeMethod method,
 // Operators (Multiply, Divide, Add, Subtract, Negate, Abs, AbsDiff, Sqrt, Max,
 // Min, PositivePart, NegativePart)
 
-template<typename TMethodOp1, typename TMethodOp2>
+template<typename TBinaryFn,
+         typename TLeftOperandMethod,
+         typename TRightOperandMethod>
 auto evaluate_series_method(
- const MultiplyMethod<TMethodOp1, TMethodOp2>& method,
+ const BinaryOperatorMethod<TBinaryFn, TLeftOperandMethod, TRightOperandMethod>&
+  method,
  AssetSnapshot asset_snapshot,
  MethodContextable auto context) noexcept -> double
 {
-  const auto multiplicand_result =
-   evaluate_series_method(method.multiplicand(), asset_snapshot, context);
-  const auto multiplier_result =
-   evaluate_series_method(method.multiplier(), asset_snapshot, context);
+  const auto left_result =
+   evaluate_series_method(method.left(), asset_snapshot, context);
+  const auto right_result =
+   evaluate_series_method(method.right(), asset_snapshot, context);
 
-  return std::multiplies<>{}(multiplicand_result, multiplier_result);
+  return TBinaryFn{}(left_result, right_result);
 }
 
-template<typename TMethodOp1, typename TMethodOp2>
-auto evaluate_series_method(const DivideMethod<TMethodOp1, TMethodOp2>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
-{
-  const auto dividend_result =
-   evaluate_series_method(method.dividend(), asset_snapshot, context);
-  const auto divisor_result =
-   evaluate_series_method(method.divisor(), asset_snapshot, context);
-
-  return std::divides<>{}(dividend_result, divisor_result);
-}
-
-template<typename TMethodOp1, typename TMethodOp2>
-auto evaluate_series_method(const AddMethod<TMethodOp1, TMethodOp2>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
-{
-  const auto augend_result =
-   evaluate_series_method(method.augend(), asset_snapshot, context);
-  const auto addend_result =
-   evaluate_series_method(method.addend(), asset_snapshot, context);
-
-  return std::plus<>{}(augend_result, addend_result);
-}
-
-template<typename TMethodOp1, typename TMethodOp2>
+template<typename TUnaryFn, typename TOperandMethod>
 auto evaluate_series_method(
- const SubtractMethod<TMethodOp1, TMethodOp2>& method,
+ const UnaryOperatorMethod<TUnaryFn, TOperandMethod>& method,
  AssetSnapshot asset_snapshot,
  MethodContextable auto context) noexcept -> double
 {
-  const auto minuend_result =
-   evaluate_series_method(method.minuend(), asset_snapshot, context);
-  const auto subtrahend_result =
-   evaluate_series_method(method.subtrahend(), asset_snapshot, context);
-
-  return std::minus<>{}(minuend_result, subtrahend_result);
-}
-
-template<typename TMethodOp>
-auto evaluate_series_method(const NegateMethod<TMethodOp>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
-{
   const auto operand_result =
    evaluate_series_method(method.operand(), asset_snapshot, context);
 
-  return std::negate<>{}(operand_result);
-}
-
-template<typename TMethodOp>
-auto evaluate_series_method(const AbsMethod<TMethodOp>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
-{
-  const auto operand_result =
-   evaluate_series_method(method.operand(), asset_snapshot, context);
-
-  return Absolute<>{}(operand_result);
-}
-
-template<typename TMethodOp1, typename TMethodOp2>
-auto evaluate_series_method(const AbsDiffMethod<TMethodOp1, TMethodOp2>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
-{
-  const auto left_result =
-   evaluate_series_method(method.left(), asset_snapshot, context);
-  const auto right_result =
-   evaluate_series_method(method.right(), asset_snapshot, context);
-
-  return AbsoluteDifference<>{}(left_result, right_result);
-}
-
-template<typename TMethodOp>
-auto evaluate_series_method(const SqrtMethod<TMethodOp>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
-{
-  const auto operand_result =
-   evaluate_series_method(method.operand(), asset_snapshot, context);
-
-  return SquareRoot<>{}(operand_result);
-}
-
-template<typename TMethodOp1, typename TMethodOp2>
-auto evaluate_series_method(const MaxMethod<TMethodOp1, TMethodOp2>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
-{
-  const auto left_result =
-   evaluate_series_method(method.left(), asset_snapshot, context);
-  const auto right_result =
-   evaluate_series_method(method.right(), asset_snapshot, context);
-
-  return Maximum<>{}(left_result, right_result);
-}
-
-template<typename TMethodOp1, typename TMethodOp2>
-auto evaluate_series_method(const MinMethod<TMethodOp1, TMethodOp2>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
-{
-  const auto left_result =
-   evaluate_series_method(method.left(), asset_snapshot, context);
-  const auto right_result =
-   evaluate_series_method(method.right(), asset_snapshot, context);
-
-  return Minimum<>{}(left_result, right_result);
-}
-
-template<typename TMethodOp>
-auto evaluate_series_method(const PositivePartMethod<TMethodOp>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
-{
-  const auto operand_result =
-   evaluate_series_method(method.operand(), asset_snapshot, context);
-
-  return PositivePart<>{}(operand_result);
-}
-
-template<typename TMethodOp>
-auto evaluate_series_method(const NegativePartMethod<TMethodOp>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
-{
-  const auto operand_result =
-   evaluate_series_method(method.operand(), asset_snapshot, context);
-
-  return NegativePart<>{}(operand_result);
+  return TUnaryFn{}(operand_result);
 }
 
 // Adaptive MA
