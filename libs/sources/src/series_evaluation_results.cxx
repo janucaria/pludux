@@ -82,6 +82,11 @@ public:
     self.results_.clear();
   }
 
+  auto empty(this const SeriesEvaluationResults& self) noexcept -> bool
+  {
+    return self.results_.empty();
+  }
+
 private:
   std::unordered_map<MethodKey, std::vector<double>> results_;
 };

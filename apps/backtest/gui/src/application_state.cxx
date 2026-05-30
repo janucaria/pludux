@@ -124,6 +124,8 @@ public:
   {
     const auto handle_opt = self.store_.add_backtest(std::move(backtest));
     if(handle_opt) {
+      self.add_backtest_summaries(*handle_opt, {});
+      self.add_series_results(*handle_opt, {});
       self.ui_state_.add_backtest_handle(*handle_opt);
     }
     return handle_opt;
@@ -780,7 +782,7 @@ private:
     const auto summaries = self.store_.update_backtest_summaries(handle, {});
     const auto series_results = self.store_.update_series_results(handle, {});
 
-    if(summaries || series_results) {
+    if(!summaries || !series_results) {
       // TODO: Handle error case where summaries or series results fail to
       // update after backtest reset
     }

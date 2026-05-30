@@ -141,6 +141,11 @@ public:
     }
 
 #endif
+
+    const auto& backtest_handles = app_state.get_backtest_handles();
+    for(const auto& backtest_handle : backtest_handles) {
+      self.recreate_backtest_runner(app_state, backtest_handle);
+    }
   }
 
   void on_after_main_loop(this Application& self)
@@ -187,12 +192,19 @@ public:
         for(auto&& backtest_handle : backtest_handles) {
           auto& backtest = app_state.get_backtest(backtest_handle);
 
-          auto [runner_it, _] = self.running_backtests_.try_emplace(
-           backtest_handle, backtest::BacktestRunner{backtest_handle});
-          auto& backtest_runner = runner_it->second;
+          if(!self.running_backtests_.contains(backtest_handle)) {
+            continue;
+          }
+
+          auto& summaries =
+           store.get_or_create_backtest_summaries(backtest_handle);
+          auto& series_evaluation_results =
+           store.get_or_create_series_results(backtest_handle);
+
+          auto& backtest_runner = self.running_backtests_.at(backtest_handle);
 
           try {
-            backtest_runner.run(store);
+            backtest_runner.run(series_evaluation_results, summaries);
           } catch(const std::exception& e) {
             backtest_runner.is_failed(true);
 
@@ -249,7 +261,21 @@ public:
     }
 
     try {
-      self.command_executor_.execute(app_state);
+      if(self.command_executor_.execute(app_state)) {
+        // check if the backtest has reset, if so, remove the backtest runner
+        // from the running backtests
+        for(auto&& backtest_handle : backtest_handles) {
+          const auto reset_needed =
+           self.should_reset_backtest_runner(app_state, backtest_handle);
+
+          if(reset_needed) {
+            // backtest has reset, replace the backtest runner with a new one to
+            // reset its state
+            self.running_backtests_.erase(backtest_handle);
+            self.recreate_backtest_runner(app_state, backtest_handle);
+          }
+        }
+      }
     } catch(const std::exception& e) {
       const auto error_message = std::format("Error: {}", e.what());
       alert_messages.push_back(error_message);
@@ -275,6 +301,73 @@ public:
   }
 
 private:
+  auto
+  should_reset_backtest_runner(this const Application& self,
+                               const ApplicationState& app_state,
+                               backtest::BacktestStoreHandle backtest_handle)
+   -> bool
+  {
+    const auto* backtest = app_state.get_backtest_if_present(backtest_handle);
+    if(!backtest) {
+      return true;
+    }
+
+    const auto& store = app_state.store();
+
+    const auto* summaries =
+     store.get_backtest_summaries_if_present(backtest_handle);
+    if(!summaries) {
+      return true;
+    }
+
+    const auto* series_evaluation_results =
+     store.get_series_results_if_present(backtest_handle);
+    if(!series_evaluation_results) {
+      return true;
+    }
+
+    if(summaries->empty()) {
+      return true;
+    }
+
+    if(series_evaluation_results->empty()) {
+      return true;
+    }
+
+    return false;
+  }
+
+  void recreate_backtest_runner(this Application& self,
+                                ApplicationState& app_state,
+                                backtest::BacktestStoreHandle backtest_handle)
+  {
+    auto& backtest = app_state.get_backtest(backtest_handle);
+    const auto* asset_ptr =
+     app_state.get_asset_if_present(backtest.asset_handle());
+    const auto* strategy_ptr =
+     app_state.get_strategy_if_present(backtest.strategy_handle());
+    const auto* market_ptr =
+     app_state.get_market_if_present(backtest.market_handle());
+    const auto* broker_ptr =
+     app_state.get_broker_if_present(backtest.broker_handle());
+    const auto* profile_ptr =
+     app_state.get_profile_if_present(backtest.profile_handle());
+
+    if(!asset_ptr || !strategy_ptr || !market_ptr || !broker_ptr ||
+       !profile_ptr) {
+      return;
+    }
+
+    self.running_backtests_.emplace(
+     backtest_handle,
+     backtest::BacktestRunner{*asset_ptr,
+                              *strategy_ptr,
+                              *market_ptr,
+                              *broker_ptr,
+                              *profile_ptr,
+                              backtest.initial_capital()});
+  }
+
   ImVec2 window_size_;
 
   DockspaceWindow dockspace_window_;

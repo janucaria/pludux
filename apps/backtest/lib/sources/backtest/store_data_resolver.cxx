@@ -234,7 +234,9 @@ public:
            HandleType handle) -> const ValueType&
   {
     auto value = self.get_if_present(values, handle);
-    assert(value != nullptr);
+    if(value == nullptr) {
+      assert(value != nullptr);
+    }
     return *value;
   }
 
@@ -243,7 +245,9 @@ public:
            HandleType handle) -> ValueType&
   {
     auto value = self.get_if_present(values, handle);
-    assert(value != nullptr);
+    if(value == nullptr) {
+      assert(value != nullptr);
+    }
     return *value;
   }
 
