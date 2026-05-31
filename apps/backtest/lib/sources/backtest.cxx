@@ -1,7 +1,9 @@
 module;
 
 #include <algorithm>
+#include <array>
 #include <chrono>
+#include <cmath>
 #include <cstdlib>
 #include <ctime>
 #include <format>
@@ -231,6 +233,22 @@ auto format_currency(double value) -> std::string
     num = "-" + num;
   }
   return num;
+}
+
+auto format_compact_integer(double value) -> std::string
+{
+  if(value == 0) {
+    return "0";
+  }
+  const auto v =
+   std::array<double, 5>{1000000000000, 1000000000, 1000000, 1000, 1};
+  const auto p = std::array<const char*, 5>{"T", "B", "M", "k", ""};
+  for(int i = 0; i < v.size(); ++i) {
+    if(std::abs(value) >= v[i]) {
+      return std::format("{:d}{}", static_cast<int>(value / v[i]), p[i]);
+    }
+  }
+  return std::format("{:d}{}", static_cast<int>(value / v[4]), p[4]);
 }
 
 } // namespace pludux
