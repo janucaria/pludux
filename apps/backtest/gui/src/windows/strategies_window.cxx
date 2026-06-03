@@ -1144,7 +1144,19 @@ private:
 
             self.render_plot_method(plot_method, context);
 
-            if(ImGui::Button("Remove Item")) {
+            const auto btn_label = "Remove Item";
+            {
+              const auto spacing = ImGui::GetStyle().ItemSpacing.x;
+              const auto frame_padding_x = ImGui::GetStyle().FramePadding.x;
+              const auto delete_width =
+               ImGui::CalcTextSize(btn_label).x + (2.0f * frame_padding_x);
+              const auto line_start = ImGui::GetCursorScreenPos();
+              const auto line_width = ImGui::GetContentRegionAvail().x;
+              const auto delete_button_x =
+               line_start.x + line_width - delete_width;
+              ImGui::SetCursorScreenPos(ImVec2(delete_button_x, line_start.y));
+            }
+            if(ImGui::Button(btn_label)) {
               plot_items.erase(plot_items.begin() + j);
               --j; // Adjust index after removal
             }
@@ -1160,7 +1172,18 @@ private:
           plot_group.items(plot_items);
         }
 
-        if(ImGui::Button("Remove Plot")) {
+        const auto btn_label = "Remove Plot";
+        {
+          const auto spacing = ImGui::GetStyle().ItemSpacing.x;
+          const auto frame_padding_x = ImGui::GetStyle().FramePadding.x;
+          const auto delete_width =
+           ImGui::CalcTextSize(btn_label).x + (2.0f * frame_padding_x);
+          const auto line_start = ImGui::GetCursorScreenPos();
+          const auto line_width = ImGui::GetContentRegionAvail().x;
+          const auto delete_button_x = line_start.x + line_width - delete_width;
+          ImGui::SetCursorScreenPos(ImVec2(delete_button_x, line_start.y));
+        }
+        if(ImGui::Button(btn_label)) {
           plot_groups.erase(plot_groups.begin() + i);
           --i; // Adjust index after removal
         }
@@ -2349,7 +2372,18 @@ private:
       auto& sub_condition = conditions[i];
       sub_condition = self.render_condition_method(sub_condition, context);
 
-      if(ImGui::Button("Remove Condition")) {
+      const auto btn_label = "Remove Condition";
+      {
+        const auto spacing = ImGui::GetStyle().ItemSpacing.x;
+        const auto frame_padding_x = ImGui::GetStyle().FramePadding.x;
+        const auto delete_width =
+         ImGui::CalcTextSize(btn_label).x + (2.0f * frame_padding_x);
+        const auto line_start = ImGui::GetCursorScreenPos();
+        const auto line_width = ImGui::GetContentRegionAvail().x;
+        const auto delete_button_x = line_start.x + line_width - delete_width;
+        ImGui::SetCursorScreenPos(ImVec2(delete_button_x, line_start.y));
+      }
+      if(ImGui::Button(btn_label)) {
         conditions.erase(conditions.begin() + i);
         --i;
       }
