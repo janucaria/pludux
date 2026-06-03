@@ -28,6 +28,7 @@ export import :methods.atr_method;
 
 export import :methods.bb_method;
 export import :methods.kc_method;
+export import :methods.donchian_channel_method;
 
 export import :methods.roc_method;
 export import :methods.rsi_method;

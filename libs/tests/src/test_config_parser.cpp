@@ -812,6 +812,30 @@ TEST_F(ConfigParserTest, ParseScreenerKcMethod)
   EXPECT_EQ(method, deserialized_config);
 }
 
+TEST_F(ConfigParserTest, ParseScreenerDonchianChannelMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "DC",
+      "params": {
+        "period": 5
+      }
+    }
+  )");
+
+  const auto method = config_parser.parse_method(config);
+
+  const auto dc_method = series_method_cast<DonchianChannelMethod>(method);
+  ASSERT_NE(dc_method, nullptr);
+
+  EXPECT_EQ(dc_method->period(), 5);
+
+  const auto serialized_config = config_parser.serialize_method(method);
+  const auto deserialized_config =
+   config_parser.parse_method(serialized_config);
+  EXPECT_EQ(method, deserialized_config);
+}
+
 TEST_F(ConfigParserTest, ParseScreenerAddMethod)
 {
   const auto config = json::parse(R"(
@@ -876,8 +900,7 @@ TEST_F(ConfigParserTest, ParseScreenerSubtractMethod)
    series_method_cast<SubtractMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(subtract_method, nullptr);
 
-  const auto minuend =
-   series_method_cast<ValueMethod>(subtract_method->left());
+  const auto minuend = series_method_cast<ValueMethod>(subtract_method->left());
   const auto subtrahend =
    series_method_cast<ValueMethod>(subtract_method->right());
   ASSERT_NE(minuend, nullptr);
@@ -962,10 +985,8 @@ TEST_F(ConfigParserTest, ParseScreenerDivideMethod)
    series_method_cast<DivideMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(divide_method, nullptr);
 
-  const auto dividend =
-   series_method_cast<ValueMethod>(divide_method->left());
-  const auto divisor =
-   series_method_cast<ValueMethod>(divide_method->right());
+  const auto dividend = series_method_cast<ValueMethod>(divide_method->left());
+  const auto divisor = series_method_cast<ValueMethod>(divide_method->right());
   ASSERT_NE(dividend, nullptr);
   ASSERT_NE(divisor, nullptr);
   EXPECT_EQ(dividend->value(), 100);
@@ -1102,8 +1123,7 @@ TEST_F(ConfigParserTest, ParseScreenerAbsDiffMethod)
    series_method_cast<AbsDiffMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(abs_diff_method, nullptr);
 
-  const auto minuend =
-   series_method_cast<DataMethod>(abs_diff_method->left());
+  const auto minuend = series_method_cast<DataMethod>(abs_diff_method->left());
   const auto subtrahend =
    series_method_cast<DataMethod>(abs_diff_method->right());
   ASSERT_NE(minuend, nullptr);

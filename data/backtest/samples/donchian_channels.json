@@ -1,0 +1,145 @@
+{
+  "version": 2,
+  "series": {
+    "dchannel20": {
+      "method": "DC",
+      "params": {
+        "period": 20
+      }
+    },
+    "dc_upper10": {
+      "method": "SELECT_OUTPUT",
+      "params": {
+        "output": "lower-band",
+        "source": {
+          "method": "DC",
+          "params": {
+            "period": 10
+          }
+        }
+      }
+    },
+    "dc_upper20": {
+      "method": "SELECT_OUTPUT",
+      "params": {
+        "output": "upper-band",
+        "source": {
+          "method": "SERIES_NODE",
+          "params": {
+            "name": "dchannel20"
+          }
+        }
+      }
+    },
+    "dc_lower20": {
+      "method": "SELECT_OUTPUT",
+      "params": {
+        "output": "lower-band",
+        "source": {
+          "method": "SERIES_NODE",
+          "params": {
+            "name": "dchannel20"
+          }
+        }
+      }
+    }
+  },
+  "positions": {
+    "long": {
+      "entry": {
+        "signal": {
+          "method": "GREATER_THAN",
+          "params": {
+            "target": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "dc_upper20"
+              }
+            },
+            "threshold": {
+              "method": "LOOKBACK",
+              "params": {
+                "period": 1,
+                "source": {
+                  "method": "SERIES_VALUE",
+                  "params": {
+                    "name": "dc_upper20"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "exit": {
+        "signal": {
+          "method": "LESS_THAN",
+          "params": {
+            "target": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "dc_upper10"
+              }
+            },
+            "threshold": {
+              "method": "LOOKBACK",
+              "params": {
+                "period": 1,
+                "source": {
+                  "method": "SERIES_VALUE",
+                  "params": {
+                    "name": "dc_upper10"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "plots": [
+    {
+      "label": "DC",
+      "overlay": true,
+      "items": [
+        {
+          "method": "LINE",
+          "params": {
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "dc_upper20"
+              }
+            },
+            "color": 4294965488
+          }
+        },
+        {
+          "method": "LINE",
+          "params": {
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "dc_lower20"
+              }
+            },
+            "color": 4288252023
+          }
+        },
+        {
+          "method": "LINE",
+          "params": {
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "dc_upper10"
+              }
+            },
+            "color": 4294938511
+          }
+        }
+      ]
+    }
+  ]
+}

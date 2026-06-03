@@ -55,6 +55,7 @@ import :methods.crossunder_method;
 import :methods.logical_method;
 import :methods.boolean_method;
 import :methods.comparison_method;
+import :methods.donchian_channel_method;
 
 export namespace pludux {
 
@@ -446,8 +447,49 @@ auto evaluate_series_method(MethodOutput output,
   }
 }
 
-// Lookback
+// DONCHIAN CHANNEL
+auto evaluate_series_method(const DonchianChannelMethod& method,
+                            AssetSnapshot asset_snapshot,
+                            MethodContextable auto context) noexcept -> double
+{
+  return evaluate_series_method(
+   MethodOutput::MiddleBand, method, std::move(asset_snapshot), context);
+}
 
+auto evaluate_series_method(MethodOutput output,
+                            const DonchianChannelMethod& method,
+                            AssetSnapshot asset_snapshot,
+                            MethodContextable auto context) noexcept -> double
+{
+  const auto period = method.period();
+  if(asset_snapshot.size() < period) {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+
+  auto highest = std::numeric_limits<double>::min();
+  auto lowest = std::numeric_limits<double>::max();
+  for(auto i = 0uz; i < period; ++i) {
+    const auto high =
+     evaluate_series_method(HighMethod{}, asset_snapshot[i], context);
+    const auto low =
+     evaluate_series_method(LowMethod{}, asset_snapshot[i], context);
+    highest = std::max(highest, high);
+    lowest = std::min(lowest, low);
+  }
+
+  switch(output) {
+  case MethodOutput::MiddleBand:
+    return (highest + lowest) / 2.0;
+  case MethodOutput::UpperBand:
+    return highest;
+  case MethodOutput::LowerBand:
+    return lowest;
+  default:
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+}
+
+// Lookback
 template<typename TSourceMethod>
 auto evaluate_series_method(const LookbackMethod<TSourceMethod>& method,
                             AssetSnapshot asset_snapshot,

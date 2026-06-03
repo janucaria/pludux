@@ -1058,6 +1058,26 @@ auto make_default_registered_config_parser() -> ConfigParser
    "KC", serialize_kc_method, parse_kc_method);
 
   config_parser.register_method_parser(
+   "DC",
+   [](const ConfigParser& config_parser,
+      const AnySeriesMethod any_series_method) -> jsoncons::ojson {
+     auto serialized_method = jsoncons::ojson::null();
+
+     auto dc_method =
+      series_method_cast<DonchianChannelMethod>(any_series_method);
+     if(dc_method) {
+       serialized_method = jsoncons::ojson{};
+       serialized_method["period"] = dc_method->period();
+     }
+
+     return serialized_method;
+   },
+   [](ConfigParser::Parser config_parser, const jsoncons::ojson& parameters) {
+     const auto period = get_param_or<std::size_t>(parameters, "period", 20);
+     return DonchianChannelMethod{period};
+   });
+
+  config_parser.register_method_parser(
    "SERIES_NODE",
    [](const ConfigParser& config_parser,
       const AnySeriesMethod any_series_method) -> jsoncons::ojson {

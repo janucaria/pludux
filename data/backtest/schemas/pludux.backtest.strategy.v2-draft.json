@@ -244,6 +244,7 @@
             "STDDEV",
             "BB",
             "KC",
+            "DC",
             "MACD",
             "STOCH",
             "STOCH_RSI"
@@ -1071,6 +1072,39 @@
       "title": "Keltner Channel",
       "description": "Calculates a multi-output Keltner Channel series using a moving average center line and a volatility band method."
     },
+    "donchianChannelSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "DC"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "type": "integer",
+                  "title": "Period",
+                  "description": "Lookback period used to calculate the Donchian Channel."
+                }
+              }
+            }
+          },
+          "default": {
+            "method": "DC",
+            "params": {
+              "period": 20
+            }
+          }
+        }
+      ],
+      "title": "Donchian Channel",
+      "description": "Calculates a multi-output Donchian Channel series with upper and lower bands based on the highest high and lowest low over a lookback period."
+    },
     "macdSeries": {
       "allOf": [
         {
@@ -1769,6 +1803,9 @@
         },
         {
           "$ref": "#/$defs/kcSeries"
+        },
+        {
+          "$ref": "#/$defs/donchianChannelSeries"
         },
         {
           "$ref": "#/$defs/macdSeries"

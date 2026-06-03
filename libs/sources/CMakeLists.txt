@@ -80,6 +80,7 @@ target_sources(${PROJECT_NAME}
 
         src/methods/bb_method.cxx
         src/methods/kc_method.cxx
+        src/methods/donchian_channel_method.cxx
 
         src/methods/stoch_method.cxx
         src/methods/stoch_rsi_method.cxx

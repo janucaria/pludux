@@ -108,6 +108,12 @@ public:
                              json_keltner_channels_sample}(app_state);
     }
     {
+      const auto json_donchian_channels_sample =
+       std::string{PLUDUX_SAMPLES_STRATEGY_donchian_channels};
+      LoadStrategyJsonAction{std::string{"Donchian Channels"},
+                             json_donchian_channels_sample}(app_state);
+    }
+    {
       const auto json_stochastic_sample =
        std::string{PLUDUX_SAMPLES_STRATEGY_stochastic};
       LoadStrategyJsonAction{std::string{"Stochastic"},

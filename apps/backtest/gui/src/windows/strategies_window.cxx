@@ -132,6 +132,8 @@ auto get_default_series_method(const std::string& series_id) -> AnySeriesMethod
   } else if(series_id == "KC") {
     return KcMethod{
      CloseMethod{}, 20, 1.5, 14, KcBandMethodType::Atr, MaMethodType::Ema};
+  } else if(series_id == "DC") {
+    return DonchianChannelMethod{};
   } else if(series_id == "STOCH") {
     return StochMethod{14, 3, 3};
   } else if(series_id == "STOCH_RSI") {
@@ -198,6 +200,8 @@ auto get_series_method_id(const AnySeriesMethod& method) -> std::string
     return "BB";
   } else if(series_method_cast<KcMethod>(method)) {
     return "KC";
+  } else if(series_method_cast<DonchianChannelMethod>(method)) {
+    return "DC";
   } else if(series_method_cast<SmaMethod>(method)) {
     return "SMA";
   } else if(series_method_cast<EmaMethod>(method)) {
@@ -275,6 +279,8 @@ auto get_series_method_title(const std::string& series_id) -> std::string
     return "Bollinger Bands";
   } else if(series_id == "KC") {
     return "Keltner Channel (KC)";
+  } else if(series_id == "DC") {
+    return "Donchian Channels (DC)";
   } else if(series_id == "STOCH") {
     return "Stochastic Oscillator";
   } else if(series_id == "STOCH_RSI") {
@@ -1231,6 +1237,7 @@ private:
                                                         "STDDEV",
                                                         "BB",
                                                         "KC",
+                                                        "DC",
                                                         "STOCH",
                                                         "STOCH_RSI",
                                                         "SELECT_OUTPUT",
@@ -1309,6 +1316,7 @@ private:
 
                           BbMethod,
                           KcMethod,
+                          DonchianChannelMethod,
                           StochMethod,
                           StochRsiMethod,
                           SmaMethod,
@@ -1607,6 +1615,23 @@ private:
           multiplier = 0.1;
         }
         method.multiplier(multiplier);
+      }
+    }
+  }
+
+  void render_series_method_params(this auto& self,
+                                   DonchianChannelMethod& method,
+                                   WindowContext& context)
+  {
+    {
+      ImGui::Text("Length:");
+      ImGui::SameLine();
+      auto length = static_cast<int>(method.period());
+      if(ImGui::InputInt("##dc_length", &length)) {
+        if(length < 1) {
+          length = 1;
+        }
+        method.period(static_cast<std::size_t>(length));
       }
     }
   }
