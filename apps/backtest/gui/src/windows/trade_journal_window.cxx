@@ -57,15 +57,15 @@ public:
 
         const auto& backtest_summaries =
          app_state.get_backtest_summaries(backtest_handle);
-        const auto backtest_summaries_size = backtest_summaries.size();
-        for(int i = backtest_summaries_size - 1; i >= 0; --i) {
+        const auto last_summary_index = backtest_summaries.size() - 1;
+        for(int i = last_summary_index; i >= 0; --i) {
           const auto& summary = backtest_summaries.at(i);
           const auto& trade_session = summary.trade_session();
-          const auto asset_index = backtest_summaries_size - i - 1;
+          const auto asset_index = last_summary_index - i;
 
-          auto id_counter = i * backtest_summaries_size;
+          auto id_counter = i * last_summary_index;
           for(const auto& trade_record : trade_session.trade_record_range()) {
-            if(!trade_record.is_open() || i == 0) {
+            if(!trade_record.is_open() || i == last_summary_index) {
               const auto trade_count =
                summary.trade_count() + (!trade_record.is_closed() ? 1 : 0);
 
