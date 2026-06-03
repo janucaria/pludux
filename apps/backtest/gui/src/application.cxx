@@ -2,6 +2,7 @@ module;
 
 #include <algorithm>
 #include <chrono>
+#include <format>
 #include <fstream>
 #include <functional>
 #include <list>
@@ -208,17 +209,8 @@ public:
           } catch(const std::exception& e) {
             backtest_runner.is_failed(true);
 
-            // TODO: this line is buggy in emscripten release build.
-            // The bug is failed to load/open the strategy, asset, or pludux
-            // file. No error message is shown in the GUI nor in the console. No
-            // crash, just no error message.
-            /*
             const auto error_message =
              std::format("Backtest '{}' failed: {}", backtest.name(), e.what());
-            */
-
-            const auto error_message =
-             "Backtest '" + backtest.name() + "' failed: " + e.what();
             alert_messages.push_back(error_message);
           }
         }

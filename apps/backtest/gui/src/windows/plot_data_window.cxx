@@ -651,10 +651,8 @@ private:
              ImVec2{entry_pos.x, entry_pos.y - 10},
              ImGui::GetColorU32(self.bullish_color_));
 
-            // TODO: Visual Studio 2026 have bug with include
-            // <format> causing compile error
             const auto trade_count_str =
-             std::string("#") + std::to_string(summary.trade_count() + 1);
+             std::format("#{}", summary.trade_count() + 1);
             const auto text_size = ImGui::CalcTextSize(trade_count_str.c_str());
             draw_list->AddText(
              ImVec2{entry_pos.x - text_size.x * 0.5f, entry_pos.y},
@@ -677,10 +675,7 @@ private:
 
               const auto trade_count =
                summary.trade_count() + (!record.is_closed() ? 1 : 0);
-              // TODO: Visual Studio 2026 have bug with
-              // include <format> causing compile error
-              const auto trade_count_str =
-               std::string("#") + std::to_string(trade_count);
+              const auto trade_count_str = std::format("#{}", trade_count);
               const auto text_size =
                ImGui::CalcTextSize(trade_count_str.c_str());
               draw_list->AddText(
