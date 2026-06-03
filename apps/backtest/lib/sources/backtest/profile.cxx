@@ -1,5 +1,6 @@
 module;
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -111,12 +112,14 @@ public:
                       MethodContextable auto context) noexcept -> double
   {
     switch(self.r_distance_mode_) {
-    case RDistance::Atr:
+    case RDistance::Atr: {
+      const auto atr_period =
+       std::min(static_cast<std::size_t>(self.r_mode_atr_.first),
+                prev_snapshot.index() + 1);
       return self.r_mode_atr_.second *
              evaluate_series_method(
-              AtrMethod{static_cast<std::size_t>(self.r_mode_atr_.first)},
-              prev_snapshot,
-              context);
+              AtrMethod{atr_period}, prev_snapshot, context);
+    }
     case RDistance::Percentage:
       return entry_price * (self.r_mode_percentage_ / 100.0);
     case RDistance::Price:

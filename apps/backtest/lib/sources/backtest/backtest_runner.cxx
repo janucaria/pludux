@@ -212,6 +212,8 @@ private:
       const auto risk_value = self.profile_.capital_risk() * self.total_equity_;
       const auto r_distance =
        self.profile_.get_r_distance(entry_price, prev_snapshot, context);
+
+      // TODO: Handle the case when r_distance is zero, negative, or NAN.
       const auto position_size = risk_value / r_distance;
 
       const auto stop_loss_price =
