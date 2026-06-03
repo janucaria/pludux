@@ -867,8 +867,8 @@ private:
       ImGui::SeparatorText("Series Methods");
 
       auto& series_registry = self.editing_strategy_ptr_->series_registry();
+      auto updated_registry = series_registry;
       ImGui::Separator();
-      auto changed_names = std::vector<std::pair<std::string, std::string>>{};
       self.available_series_names_.clear();
       for(auto id_counter = 0;
           auto& [series_name, series_method] : series_registry) {
@@ -876,29 +876,47 @@ private:
 
         ImGui::Text("Name:");
         ImGui::SameLine();
-        auto input_series_name = series_name;
-        ImGui::InputText("##series_name", &input_series_name);
+        auto updated_series_name = series_name;
+        ImGui::InputText("##series_name", &updated_series_name);
         if(ImGui::IsItemDeactivatedAfterEdit()) {
-          if(input_series_name != series_name) {
-            changed_names.emplace_back(series_name, input_series_name);
+          if(updated_series_name != series_name) {
+            if(!updated_registry.rename(series_name, updated_series_name)) {
+              const auto error_message =
+               std::format("Failed to rename series '{}' to '{}'.",
+                           series_name,
+                           updated_series_name);
+              context.alert(error_message);
+            }
           }
         }
 
         ImGui::Text("Method:");
         ImGui::SameLine();
         self.render_series_method(series_method, context);
-        series_registry.set(series_name, series_method);
+        updated_registry.set(updated_series_name, series_method);
+
+        // Delete button for the series. Right aligned on the new line
+        const auto spacing = ImGui::GetStyle().ItemSpacing.x;
+        const auto frame_padding_x = ImGui::GetStyle().FramePadding.x;
+        const auto delete_width =
+         ImGui::CalcTextSize("Delete").x + (2.0f * frame_padding_x);
+        const auto line_start = ImGui::GetCursorScreenPos();
+        const auto line_width = ImGui::GetContentRegionAvail().x;
+        const auto delete_button_x = line_start.x + line_width - delete_width;
+        ImGui::SetCursorScreenPos(ImVec2(delete_button_x, line_start.y));
+
+        if(ImGui::Button("Delete")) {
+          updated_registry.remove(updated_series_name);
+        }
 
         ImGui::Separator();
         ImGui::PopID();
-
-        self.available_series_names_.push_back(series_name);
       }
+      series_registry = std::move(updated_registry);
 
-      for(auto [old_name, new_name] : changed_names) {
-        // TODO: handle the errors
-        [[maybe_unused]]
-        const auto result = series_registry.rename(old_name, new_name);
+      self.available_series_names_.clear();
+      for(const auto& [series_name, _] : series_registry) {
+        self.available_series_names_.push_back(series_name);
       }
 
       if(ImGui::Button("Add Series")) {

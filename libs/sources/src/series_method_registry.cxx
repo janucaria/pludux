@@ -41,7 +41,9 @@ public:
     {
       assert(index_ < ordered_names_.size());
       const auto& name = ordered_names_[index_];
-      assert(methods_.contains(name));
+      if(!methods_.contains(name)) {
+        assert(false);
+      }
       return *methods_.find(name);
     }
 
