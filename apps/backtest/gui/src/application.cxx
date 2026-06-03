@@ -259,19 +259,16 @@ public:
     }
 
     try {
-      if(self.command_executor_.execute(app_state)) {
+      const auto command_executed = self.command_executor_.execute(app_state);
+      if(command_executed) {
         // check if the backtest has reset, if so, remove the backtest runner
         // from the running backtests
         for(auto&& backtest_handle : backtest_handles) {
-          const auto reset_needed =
-           self.should_reset_backtest_runner(app_state, backtest_handle);
-
-          if(reset_needed) {
-            // backtest has reset, replace the backtest runner with a new one to
-            // reset its state
-            self.running_backtests_.erase(backtest_handle);
-            self.recreate_backtest_runner(app_state, backtest_handle);
-          }
+          // TODO: should check if the backtest has reset instead of just
+          // recreating the backtest runner every time a command is executed,
+          // but for now this is simpler and works fine
+          self.running_backtests_.erase(backtest_handle);
+          self.recreate_backtest_runner(app_state, backtest_handle);
         }
       }
     } catch(const std::exception& e) {
@@ -299,42 +296,6 @@ public:
   }
 
 private:
-  auto
-  should_reset_backtest_runner(this const Application& self,
-                               const ApplicationState& app_state,
-                               backtest::BacktestStoreHandle backtest_handle)
-   -> bool
-  {
-    const auto* backtest = app_state.get_backtest_if_present(backtest_handle);
-    if(!backtest) {
-      return true;
-    }
-
-    const auto& store = app_state.store();
-
-    const auto* summaries =
-     store.get_backtest_summaries_if_present(backtest_handle);
-    if(!summaries) {
-      return true;
-    }
-
-    const auto* series_evaluation_results =
-     store.get_series_results_if_present(backtest_handle);
-    if(!series_evaluation_results) {
-      return true;
-    }
-
-    if(summaries->empty()) {
-      return true;
-    }
-
-    if(series_evaluation_results->empty()) {
-      return true;
-    }
-
-    return false;
-  }
-
   void recreate_backtest_runner(this Application& self,
                                 ApplicationState& app_state,
                                 backtest::BacktestStoreHandle backtest_handle)
