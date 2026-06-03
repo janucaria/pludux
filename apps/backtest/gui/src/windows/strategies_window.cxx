@@ -556,6 +556,7 @@ private:
   std::shared_ptr<backtest::Strategy> editing_strategy_ptr_;
 
   std::vector<std::string> available_series_names_;
+  std::unordered_map<std::string, std::string> changed_series_names_;
 
   void render_list_strategies(this auto& self, WindowContext& context)
   {
@@ -874,7 +875,7 @@ private:
 
       auto& series_registry = self.editing_strategy_ptr_->series_registry();
       auto updated_registry = series_registry;
-      ImGui::Separator();
+      self.changed_series_names_.clear();
       self.available_series_names_.clear();
       for(auto id_counter = 0;
           auto& [series_name, series_method] : series_registry) {
@@ -886,20 +887,14 @@ private:
         ImGui::InputText("##series_name", &updated_series_name);
         if(ImGui::IsItemDeactivatedAfterEdit()) {
           if(updated_series_name != series_name) {
-            if(!updated_registry.rename(series_name, updated_series_name)) {
-              const auto error_message =
-               std::format("Failed to rename series '{}' to '{}'.",
-                           series_name,
-                           updated_series_name);
-              context.alert(error_message);
-            }
+            self.changed_series_names_[series_name] = updated_series_name;
           }
         }
 
         ImGui::Text("Method:");
         ImGui::SameLine();
         self.render_series_method(series_method, context);
-        updated_registry.set(updated_series_name, series_method);
+        updated_registry.set(series_name, series_method);
 
         // Delete button for the series. Right aligned on the new line
         const auto spacing = ImGui::GetStyle().ItemSpacing.x;
@@ -912,18 +907,30 @@ private:
         ImGui::SetCursorScreenPos(ImVec2(delete_button_x, line_start.y));
 
         if(ImGui::Button("Delete")) {
-          updated_registry.remove(updated_series_name);
+          updated_registry.remove(series_name);
+          self.changed_series_names_.erase(series_name);
+        } else {
+          self.available_series_names_.push_back(series_name);
         }
 
         ImGui::Separator();
         ImGui::PopID();
       }
-      series_registry = std::move(updated_registry);
 
-      self.available_series_names_.clear();
-      for(const auto& [series_name, _] : series_registry) {
-        self.available_series_names_.push_back(series_name);
+      for(auto& [old_name, new_name] : self.changed_series_names_) {
+        if(updated_registry.rename(old_name, new_name)) {
+          auto it = std::ranges::find(self.available_series_names_, old_name);
+          if(it != self.available_series_names_.end()) {
+            *it = new_name;
+          }
+        } else {
+          const auto error_message = std::format(
+           "Failed to rename series '{}' to '{}'.", old_name, new_name);
+          context.alert(error_message);
+        }
       }
+
+      series_registry = std::move(updated_registry);
 
       if(ImGui::Button("Add Series")) {
         auto new_series_name =
@@ -1395,12 +1402,12 @@ private:
                                    SeriesNodeMethod& method,
                                    WindowContext& context)
   {
-    if(std::ranges::find(self.available_series_names_, method.name()) ==
-       self.available_series_names_.end()) {
-      const auto new_name = self.available_series_names_.empty()
-                             ? ""
-                             : self.available_series_names_.front();
+    if(self.changed_series_names_.contains(method.name())) {
+      const auto new_name = self.changed_series_names_.at(method.name());
       method.name(new_name);
+    } else if(std::ranges::find(self.available_series_names_, method.name()) ==
+              self.available_series_names_.end()) {
+      method.name("");
     }
 
     ImGui::Text("Name:");
@@ -1426,12 +1433,12 @@ private:
                                    SeriesValueMethod& method,
                                    WindowContext& context)
   {
-    if(std::ranges::find(self.available_series_names_, method.name()) ==
-       self.available_series_names_.end()) {
-      const auto new_name = self.available_series_names_.empty()
-                             ? ""
-                             : self.available_series_names_.front();
+    if(self.changed_series_names_.contains(method.name())) {
+      const auto new_name = self.changed_series_names_.at(method.name());
       method.name(new_name);
+    } else if(std::ranges::find(self.available_series_names_, method.name()) ==
+              self.available_series_names_.end()) {
+      method.name("");
     }
 
     ImGui::Text("Name:");
@@ -2636,6 +2643,15 @@ private:
                                  SeriesPlotSourceMethod& plot_source_method,
                                  WindowContext& context)
   {
+    if(self.changed_series_names_.contains(plot_source_method.series_name())) {
+      plot_source_method.series_name(
+       self.changed_series_names_.at(plot_source_method.series_name()));
+    } else if(std::ranges::find(self.available_series_names_,
+                                plot_source_method.series_name()) ==
+              self.available_series_names_.end()) {
+      plot_source_method.series_name("");
+    }
+
     ImGui::Text("Series:");
     ImGui::SameLine();
     auto series_name = plot_source_method.series_name();
@@ -2706,6 +2722,7 @@ private:
     self.selected_strategy_handle_opt_ = std::nullopt;
     self.editing_strategy_ptr_ = nullptr;
     self.available_series_names_.clear();
+    self.changed_series_names_.clear();
   }
 };
 
