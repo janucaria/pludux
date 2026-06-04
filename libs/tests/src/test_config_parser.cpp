@@ -7,6 +7,33 @@ import pludux;
 using namespace pludux;
 using json = jsoncons::ojson;
 
+using SignalAllOfMethod = pludux::AllOfMethod<AnySeriesMethod>;
+using SignalAnyOfMethod = pludux::AnyOfMethod<AnySeriesMethod>;
+using SignalAlwaysMethod = pludux::TrueMethod;
+using SignalNeverMethod = pludux::FalseMethod;
+using SignalEqualMethod = pludux::EqualMethod<AnySeriesMethod, AnySeriesMethod>;
+using SignalNotEqualMethod =
+ pludux::NotEqualMethod<AnySeriesMethod, AnySeriesMethod>;
+using SignalGreaterThanMethod =
+ pludux::GreaterThanMethod<AnySeriesMethod, AnySeriesMethod>;
+using SignalGreaterEqualMethod =
+ pludux::GreaterEqualMethod<AnySeriesMethod, AnySeriesMethod>;
+using SignalLessThanMethod =
+ pludux::LessThanMethod<AnySeriesMethod, AnySeriesMethod>;
+using SignalLessEqualMethod =
+ pludux::LessEqualMethod<AnySeriesMethod, AnySeriesMethod>;
+using SignalCrossoverMethod =
+ pludux::CrossoverMethod<AnySeriesMethod, AnySeriesMethod>;
+using SignalCrossunderMethod =
+ pludux::CrossunderMethod<AnySeriesMethod, AnySeriesMethod>;
+using SignalNotMethod = pludux::LogicalNotMethod<AnySeriesMethod>;
+using SignalAndMethod =
+ pludux::LogicalAndMethod<AnySeriesMethod, AnySeriesMethod>;
+using SignalOrMethod =
+ pludux::LogicalOrMethod<AnySeriesMethod, AnySeriesMethod>;
+using SignalXorMethod =
+ pludux::LogicalXorMethod<AnySeriesMethod, AnySeriesMethod>;
+
 class ConfigParserTest : public ::testing::Test {
 protected:
   ConfigParser config_parser;
@@ -164,7 +191,7 @@ TEST_F(ConfigParserTest, ParseScreenerSelectOutputMethod)
   const auto select_output_method =
    series_method_cast<SelectOutputMethod<AnySeriesMethod>>(method);
   ASSERT_NE(select_output_method, nullptr);
-  EXPECT_EQ(select_output_method->output(), SeriesOutput::UpperBand);
+  EXPECT_EQ(select_output_method->output(), MethodOutput::UpperBand);
 
   const auto macd_method = series_method_cast<MacdMethod<AnySeriesMethod>>(
    select_output_method->source());
@@ -333,7 +360,7 @@ TEST_F(ConfigParserTest, ParseScreenerEmaMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto ema_method =
-   series_method_cast<CachedResultsEmaMethod<AnySeriesMethod>>(method);
+   series_method_cast<EmaMethod<AnySeriesMethod>>(method);
   ASSERT_NE(ema_method, nullptr);
 
   EXPECT_EQ(ema_method->period(), 10);
@@ -405,7 +432,7 @@ TEST_F(ConfigParserTest, ParseScreenerRmaMethod)
   const auto method = config_parser.parse_method(config);
 
   const auto rma_method =
-   series_method_cast<CachedResultsRmaMethod<AnySeriesMethod>>(method);
+   series_method_cast<RmaMethod<AnySeriesMethod>>(method);
   ASSERT_NE(rma_method, nullptr);
 
   EXPECT_EQ(rma_method->period(), 15);
@@ -627,9 +654,9 @@ TEST_F(ConfigParserTest, ParseScreenerBbMethod)
   const auto bb_method = series_method_cast<BbMethod<AnySeriesMethod>>(method);
   ASSERT_NE(bb_method, nullptr);
 
-  const auto ma_source = series_method_cast<DataMethod>(bb_method->ma_source());
+  const auto ma_source = series_method_cast<DataMethod>(bb_method->source());
   EXPECT_NE(ma_source, nullptr);
-  EXPECT_EQ(bb_method->ma_type(), MaMethodType::Sma);
+  EXPECT_EQ(bb_method->ma_method_type(), MaMethodType::Sma);
   EXPECT_EQ(bb_method->period(), 20);
   EXPECT_EQ(bb_method->stddev(), 2.0);
 
@@ -771,13 +798,37 @@ TEST_F(ConfigParserTest, ParseScreenerKcMethod)
   ASSERT_NE(kc_method, nullptr);
 
   const auto ma_source_method =
-   series_method_cast<DataMethod>(kc_method->ma_source());
+   series_method_cast<DataMethod>(kc_method->source());
   EXPECT_NE(ma_source_method, nullptr);
   EXPECT_EQ(kc_method->ma_method_type(), MaMethodType::Sma);
-  EXPECT_EQ(kc_method->ma_period(), 5);
+  EXPECT_EQ(kc_method->period(), 5);
   EXPECT_EQ(kc_method->band_method_type(), KcBandMethodType::Atr);
   EXPECT_EQ(kc_method->band_atr_period(), 14);
   EXPECT_EQ(kc_method->multiplier(), 1.0);
+
+  const auto serialized_config = config_parser.serialize_method(method);
+  const auto deserialized_config =
+   config_parser.parse_method(serialized_config);
+  EXPECT_EQ(method, deserialized_config);
+}
+
+TEST_F(ConfigParserTest, ParseScreenerDonchianChannelMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "DC",
+      "params": {
+        "period": 5
+      }
+    }
+  )");
+
+  const auto method = config_parser.parse_method(config);
+
+  const auto dc_method = series_method_cast<DonchianChannelMethod>(method);
+  ASSERT_NE(dc_method, nullptr);
+
+  EXPECT_EQ(dc_method->period(), 5);
 
   const auto serialized_config = config_parser.serialize_method(method);
   const auto deserialized_config =
@@ -808,8 +859,8 @@ TEST_F(ConfigParserTest, ParseScreenerAddMethod)
    series_method_cast<AddMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(add_method, nullptr);
 
-  const auto augend = series_method_cast<ValueMethod>(add_method->augend());
-  const auto addend = series_method_cast<ValueMethod>(add_method->addend());
+  const auto augend = series_method_cast<ValueMethod>(add_method->left());
+  const auto addend = series_method_cast<ValueMethod>(add_method->right());
   ASSERT_NE(augend, nullptr);
   ASSERT_NE(addend, nullptr);
   EXPECT_EQ(augend->value(), 50);
@@ -849,10 +900,9 @@ TEST_F(ConfigParserTest, ParseScreenerSubtractMethod)
    series_method_cast<SubtractMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(subtract_method, nullptr);
 
-  const auto minuend =
-   series_method_cast<ValueMethod>(subtract_method->minuend());
+  const auto minuend = series_method_cast<ValueMethod>(subtract_method->left());
   const auto subtrahend =
-   series_method_cast<ValueMethod>(subtract_method->subtrahend());
+   series_method_cast<ValueMethod>(subtract_method->right());
   ASSERT_NE(minuend, nullptr);
   ASSERT_NE(subtrahend, nullptr);
   EXPECT_EQ(minuend->value(), 100);
@@ -893,9 +943,9 @@ TEST_F(ConfigParserTest, ParseScreenerMultiplyMethod)
   ASSERT_NE(multiply_method, nullptr);
 
   const auto multiplicand =
-   series_method_cast<ValueMethod>(multiply_method->multiplicand());
+   series_method_cast<ValueMethod>(multiply_method->left());
   const auto multiplier =
-   series_method_cast<ValueMethod>(multiply_method->multiplier());
+   series_method_cast<ValueMethod>(multiply_method->right());
   ASSERT_NE(multiplicand, nullptr);
   ASSERT_NE(multiplier, nullptr);
   EXPECT_EQ(multiplicand->value(), 10);
@@ -935,10 +985,8 @@ TEST_F(ConfigParserTest, ParseScreenerDivideMethod)
    series_method_cast<DivideMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(divide_method, nullptr);
 
-  const auto dividend =
-   series_method_cast<ValueMethod>(divide_method->dividend());
-  const auto divisor =
-   series_method_cast<ValueMethod>(divide_method->divisor());
+  const auto dividend = series_method_cast<ValueMethod>(divide_method->left());
+  const auto divisor = series_method_cast<ValueMethod>(divide_method->right());
   ASSERT_NE(dividend, nullptr);
   ASSERT_NE(divisor, nullptr);
   EXPECT_EQ(dividend->value(), 100);
@@ -1075,10 +1123,9 @@ TEST_F(ConfigParserTest, ParseScreenerAbsDiffMethod)
    series_method_cast<AbsDiffMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(abs_diff_method, nullptr);
 
-  const auto minuend =
-   series_method_cast<DataMethod>(abs_diff_method->minuend());
+  const auto minuend = series_method_cast<DataMethod>(abs_diff_method->left());
   const auto subtrahend =
-   series_method_cast<DataMethod>(abs_diff_method->subtrahend());
+   series_method_cast<DataMethod>(abs_diff_method->right());
   ASSERT_NE(minuend, nullptr);
   ASSERT_NE(subtrahend, nullptr);
   EXPECT_EQ(minuend->field(), "high");
@@ -1184,22 +1231,13 @@ TEST_F(ConfigParserTest, ParseScreenerAllOfMethod)
   )");
 
   const auto filter = config_parser.parse_filter(config);
-
-  const auto all_of_filter = condition_method_cast<AllOfMethod>(filter);
-  ASSERT_NE(all_of_filter, nullptr);
-
-  const auto filters = all_of_filter->conditions();
-  ASSERT_EQ(filters.size(), 2);
-
-  const auto greater_than_filter =
-   condition_method_cast<GreaterThanMethod>(filters[0]);
-  const auto less_than_filter =
-   condition_method_cast<LessThanMethod>(filters[1]);
-
-  EXPECT_NE(greater_than_filter, nullptr);
-  EXPECT_NE(less_than_filter, nullptr);
+  ASSERT_EQ(config.at("params").at("items").size(), 2);
+  const auto parsed_all_of = series_method_cast<SignalAllOfMethod>(filter);
+  ASSERT_NE(parsed_all_of, nullptr);
+  ASSERT_EQ(parsed_all_of->conditions().size(), 2);
 
   const auto serialized_config = config_parser.serialize_filter(filter);
+
   const auto deserialized_filter =
    config_parser.parse_filter(serialized_config);
   EXPECT_EQ(filter, deserialized_filter);
@@ -1252,22 +1290,13 @@ TEST_F(ConfigParserTest, ParseScreenerAnyOfMethod)
   )");
 
   const auto filter = config_parser.parse_filter(config);
-
-  const auto any_of_filter = condition_method_cast<AnyOfMethod>(filter);
-  ASSERT_NE(any_of_filter, nullptr);
-
-  const auto conditions = any_of_filter->conditions();
-  ASSERT_EQ(conditions.size(), 2);
-
-  const auto greater_than_filter =
-   condition_method_cast<GreaterThanMethod>(conditions[0]);
-  const auto less_than_filter =
-   condition_method_cast<LessThanMethod>(conditions[1]);
-
-  EXPECT_NE(greater_than_filter, nullptr);
-  EXPECT_NE(less_than_filter, nullptr);
+  ASSERT_EQ(config.at("params").at("items").size(), 2);
+  const auto parsed_any_of = series_method_cast<SignalAnyOfMethod>(filter);
+  ASSERT_NE(parsed_any_of, nullptr);
+  ASSERT_EQ(parsed_any_of->conditions().size(), 2);
 
   const auto serialized_config = config_parser.serialize_filter(filter);
+
   const auto deserialized_filter =
    config_parser.parse_filter(serialized_config);
   EXPECT_EQ(filter, deserialized_filter);
@@ -1298,7 +1327,7 @@ TEST_F(ConfigParserTest, ParseScreenerGreaterThanMethod)
   const auto filter = config_parser.parse_filter(config);
 
   const auto greater_than_filter =
-   condition_method_cast<GreaterThanMethod>(filter);
+   series_method_cast<SignalGreaterThanMethod>(filter);
   ASSERT_NE(greater_than_filter, nullptr);
 
   const auto target =
@@ -1344,7 +1373,7 @@ TEST_F(ConfigParserTest, ParseScreenerGreaterEqualMethod)
   const auto filter = config_parser.parse_filter(config);
 
   const auto greater_equal_filter =
-   condition_method_cast<GreaterEqualMethod>(filter);
+   series_method_cast<SignalGreaterEqualMethod>(filter);
   ASSERT_NE(greater_equal_filter, nullptr);
 
   const auto target =
@@ -1383,7 +1412,8 @@ TEST_F(ConfigParserTest, ParseScreenerLessThanMethod)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto less_than_filter = condition_method_cast<LessThanMethod>(filter);
+  const auto less_than_filter =
+   series_method_cast<SignalLessThanMethod>(filter);
   ASSERT_NE(less_than_filter, nullptr);
 
   const auto target =
@@ -1422,7 +1452,8 @@ TEST_F(ConfigParserTest, ParseScreenerLessEqualMethod)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto less_equal_filter = condition_method_cast<LessEqualMethod>(filter);
+  const auto less_equal_filter =
+   series_method_cast<SignalLessEqualMethod>(filter);
   ASSERT_NE(less_equal_filter, nullptr);
 
   const auto target =
@@ -1461,7 +1492,7 @@ TEST_F(ConfigParserTest, ParseScreenerEqualMethod)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto equal_filter = condition_method_cast<EqualMethod>(filter);
+  const auto equal_filter = series_method_cast<SignalEqualMethod>(filter);
   ASSERT_NE(equal_filter, nullptr);
 
   const auto target = series_method_cast<DataMethod>(equal_filter->target());
@@ -1505,7 +1536,8 @@ TEST_F(ConfigParserTest, ParseScreenerNotEqualMethod)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto not_equal_filter = condition_method_cast<NotEqualMethod>(filter);
+  const auto not_equal_filter =
+   series_method_cast<SignalNotEqualMethod>(filter);
   ASSERT_NE(not_equal_filter, nullptr);
 
   const auto target =
@@ -1551,11 +1583,11 @@ TEST_F(ConfigParserTest, ParseScreenerCrossunderMethod)
   const auto filter = config_parser.parse_filter(config);
 
   const auto crossunder_filter =
-   condition_method_cast<CrossunderMethod>(filter);
+   series_method_cast<SignalCrossunderMethod>(filter);
   ASSERT_NE(crossunder_filter, nullptr);
 
   const auto signal =
-   series_method_cast<DataMethod>(crossunder_filter->signal());
+   series_method_cast<DataMethod>(crossunder_filter->source());
   ASSERT_NE(signal, nullptr);
 
   EXPECT_EQ(signal->field(), "close");
@@ -1596,11 +1628,12 @@ TEST_F(ConfigParserTest, ParseScreenerCrossoverMethod)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto crossover_filter = condition_method_cast<CrossoverMethod>(filter);
+  const auto crossover_filter =
+   series_method_cast<SignalCrossoverMethod>(filter);
   ASSERT_NE(crossover_filter, nullptr);
 
   const auto signal =
-   series_method_cast<DataMethod>(crossover_filter->signal());
+   series_method_cast<DataMethod>(crossover_filter->source());
   ASSERT_NE(signal, nullptr);
 
   EXPECT_EQ(signal->field(), "close");
@@ -1627,7 +1660,7 @@ TEST_F(ConfigParserTest, ParseScreenerAlwaysMethod)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto always_filter = condition_method_cast<AlwaysMethod>(filter);
+  const auto always_filter = series_method_cast<SignalAlwaysMethod>(filter);
   ASSERT_NE(always_filter, nullptr);
 
   const auto serialized_config = config_parser.serialize_filter(filter);
@@ -1646,7 +1679,7 @@ TEST_F(ConfigParserTest, ParseScreenerNeverMethod)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto never_filter = condition_method_cast<NeverMethod>(filter);
+  const auto never_filter = series_method_cast<SignalNeverMethod>(filter);
   ASSERT_NE(never_filter, nullptr);
 
   const auto serialized_config = config_parser.serialize_filter(filter);
@@ -1673,16 +1706,16 @@ TEST_F(ConfigParserTest, ParseScreenerAndMethod)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto and_filter = condition_method_cast<AndMethod>(filter);
+  const auto and_filter = series_method_cast<SignalAndMethod>(filter);
   ASSERT_NE(and_filter, nullptr);
 
   const auto first_condition = and_filter->first_condition();
   const auto second_condition = and_filter->second_condition();
 
   const auto always_filter =
-   condition_method_cast<AlwaysMethod>(first_condition);
+   series_method_cast<SignalAlwaysMethod>(first_condition);
   const auto never_filter =
-   condition_method_cast<NeverMethod>(second_condition);
+   series_method_cast<SignalNeverMethod>(second_condition);
 
   ASSERT_NE(always_filter, nullptr);
   ASSERT_NE(never_filter, nullptr);
@@ -1711,16 +1744,16 @@ TEST_F(ConfigParserTest, ParseScreenerOrMethod)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto or_filter = condition_method_cast<OrMethod>(filter);
+  const auto or_filter = series_method_cast<SignalOrMethod>(filter);
   ASSERT_NE(or_filter, nullptr);
 
   const auto first_condition = or_filter->first_condition();
   const auto second_condition = or_filter->second_condition();
 
   const auto always_filter =
-   condition_method_cast<AlwaysMethod>(first_condition);
+   series_method_cast<SignalAlwaysMethod>(first_condition);
   const auto never_filter =
-   condition_method_cast<NeverMethod>(second_condition);
+   series_method_cast<SignalNeverMethod>(second_condition);
 
   ASSERT_NE(always_filter, nullptr);
   ASSERT_NE(never_filter, nullptr);
@@ -1744,12 +1777,12 @@ TEST_F(ConfigParserTest, ParseScreenerNotMethod)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto not_filter = condition_method_cast<NotMethod>(filter);
+  const auto not_filter = series_method_cast<SignalNotMethod>(filter);
   ASSERT_NE(not_filter, nullptr);
 
   const auto other_condition = not_filter->other_condition();
   const auto always_filter =
-   condition_method_cast<AlwaysMethod>(other_condition);
+   series_method_cast<SignalAlwaysMethod>(other_condition);
 
   ASSERT_NE(always_filter, nullptr);
 
@@ -1777,16 +1810,16 @@ TEST_F(ConfigParserTest, ParseScreenerXorMethod)
 
   const auto filter = config_parser.parse_filter(config);
 
-  const auto xor_filter = condition_method_cast<XorMethod>(filter);
+  const auto xor_filter = series_method_cast<SignalXorMethod>(filter);
   ASSERT_NE(xor_filter, nullptr);
 
   const auto first_condition = xor_filter->first_condition();
   const auto second_condition = xor_filter->second_condition();
 
   const auto always_filter =
-   condition_method_cast<AlwaysMethod>(first_condition);
+   series_method_cast<SignalAlwaysMethod>(first_condition);
   const auto never_filter =
-   condition_method_cast<NeverMethod>(second_condition);
+   series_method_cast<SignalNeverMethod>(second_condition);
 
   ASSERT_NE(always_filter, nullptr);
   ASSERT_NE(never_filter, nullptr);

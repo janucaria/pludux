@@ -36,16 +36,32 @@ TEST(WmaMethodTest, RunAllMethod)
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 
-  EXPECT_DOUBLE_EQ(wma_method(asset_snapshot[0], context), 859.33333333333337);
-  EXPECT_DOUBLE_EQ(wma_method(asset_snapshot[1], context), 862.66666666666663);
-  EXPECT_DOUBLE_EQ(wma_method(asset_snapshot[2], context), 862.66666666666663);
-  EXPECT_DOUBLE_EQ(wma_method(asset_snapshot[3], context), 858.66666666666663);
-  EXPECT_DOUBLE_EQ(wma_method(asset_snapshot[4], context), 852.66666666666663);
-  EXPECT_DOUBLE_EQ(wma_method(asset_snapshot[5], context), 841.66666666666663);
-  EXPECT_TRUE(std::isnan(wma_method(asset_snapshot[6], context)));
-  EXPECT_TRUE(std::isnan(wma_method(asset_snapshot[7], context)));
-  EXPECT_TRUE(std::isnan(wma_method(asset_snapshot[8], context)));
-  EXPECT_TRUE(std::isnan(wma_method(asset_snapshot[9], context)));
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(wma_method, asset_snapshot[0], context),
+   859.33333333333337);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(wma_method, asset_snapshot[1], context),
+   862.66666666666663);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(wma_method, asset_snapshot[2], context),
+   862.66666666666663);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(wma_method, asset_snapshot[3], context),
+   858.66666666666663);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(wma_method, asset_snapshot[4], context),
+   852.66666666666663);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(wma_method, asset_snapshot[5], context),
+   841.66666666666663);
+  EXPECT_TRUE(
+   std::isnan(evaluate_series_method(wma_method, asset_snapshot[6], context)));
+  EXPECT_TRUE(
+   std::isnan(evaluate_series_method(wma_method, asset_snapshot[7], context)));
+  EXPECT_TRUE(
+   std::isnan(evaluate_series_method(wma_method, asset_snapshot[8], context)));
+  EXPECT_TRUE(
+   std::isnan(evaluate_series_method(wma_method, asset_snapshot[9], context)));
 }
 
 TEST(WmaMethodTest, EqualityOperator)

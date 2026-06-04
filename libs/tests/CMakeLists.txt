@@ -12,6 +12,7 @@ set(PLUDUX_TEST_SOURCES
   src/test_bb_method.cpp
   src/test_change_method.cpp
   src/test_data_method.cpp
+  src/test_donchian_channel_method.cpp
   src/test_ema_method.cpp
   src/test_hma_method.cpp
   src/test_kc_method.cpp
@@ -48,6 +49,7 @@ set(PLUDUX_TEST_SOURCES
   src/test_logical_filters.cpp
   src/test_not_equal_filter.cpp
 
+  src/test_hash_series_method.cpp
 )
 
 foreach(PLUDUX_TEST_SOURCE ${PLUDUX_TEST_SOURCES})

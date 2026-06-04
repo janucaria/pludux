@@ -4,6 +4,7 @@ module;
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <format>
 #include <iomanip>
 #include <memory>
@@ -28,11 +29,12 @@ namespace pludux::apps {
 
 class PlotContext {
 public:
-  PlotContext(
-   const std::unordered_map<std::string, std::vector<double>>& series_results,
-   std::size_t results_size,
-   bool overlay)
-  : series_results_{series_results}
+  PlotContext(const SeriesMethodRegistry& series_registry,
+              const SeriesEvaluationResults& series_results,
+              std::size_t results_size,
+              bool overlay)
+  : series_registry_{series_registry}
+  , series_results_{series_results}
   , results_size_{results_size}
   , overlay_{overlay}
   {
@@ -43,32 +45,6 @@ public:
                         std::uint32_t color)
   {
     const auto summaries_size = self.results_size_;
-
-    if(!self.overlay_) {
-      if(ImPlot::IsSubplotsHovered()) {
-        constexpr auto half_width = 0.5;
-        auto* draw_list = ImPlot::GetPlotDrawList();
-        ImPlotPoint mouse = ImPlot::GetPlotMousePos();
-        mouse.x = std::round(mouse.x);
-        float tool_l = ImPlot::PlotToPixels(mouse.x - half_width, mouse.y).x;
-        float tool_r = ImPlot::PlotToPixels(mouse.x + half_width, mouse.y).x;
-        float tool_t = ImPlot::GetPlotPos().y;
-        float tool_b = tool_t + ImPlot::GetPlotSize().y;
-        ImPlot::PushPlotClipRect();
-        draw_list->AddRectFilled(ImVec2(tool_l, tool_t),
-                                 ImVec2(tool_r, tool_b),
-                                 IM_COL32(128, 128, 128, 64));
-        ImPlot::PopPlotClipRect();
-
-        const auto plot_idx = static_cast<int>(mouse.x);
-        if(ImPlot::IsPlotHovered() && plot_idx > -1 && plot_idx < data.size()) {
-          const auto summary_i = plot_idx;
-          ImGui::BeginTooltip();
-          ImGui::Text("%s", std::to_string(data[summary_i]).c_str());
-          ImGui::EndTooltip();
-        }
-      }
-    }
 
     const auto plot_spec =
      ImPlotSpec{ImPlotProp_LineColor,
@@ -83,32 +59,6 @@ public:
   {
     const auto summaries_size = self.results_size_;
 
-    if(!self.overlay_) {
-      if(ImPlot::IsSubplotsHovered()) {
-        constexpr auto half_width = 0.5;
-        auto* draw_list = ImPlot::GetPlotDrawList();
-        ImPlotPoint mouse = ImPlot::GetPlotMousePos();
-        mouse.x = std::round(mouse.x);
-        float tool_l = ImPlot::PlotToPixels(mouse.x - half_width, mouse.y).x;
-        float tool_r = ImPlot::PlotToPixels(mouse.x + half_width, mouse.y).x;
-        float tool_t = ImPlot::GetPlotPos().y;
-        float tool_b = tool_t + ImPlot::GetPlotSize().y;
-        ImPlot::PushPlotClipRect();
-        draw_list->AddRectFilled(ImVec2(tool_l, tool_t),
-                                 ImVec2(tool_r, tool_b),
-                                 IM_COL32(128, 128, 128, 64));
-        ImPlot::PopPlotClipRect();
-
-        const auto plot_idx = static_cast<int>(mouse.x);
-        if(ImPlot::IsPlotHovered() && plot_idx > -1 && plot_idx < data.size()) {
-          const auto summary_i = plot_idx;
-          ImGui::BeginTooltip();
-          ImGui::Text("%s", std::to_string(data[summary_i]).c_str());
-          ImGui::EndTooltip();
-        }
-      }
-    }
-
     const auto plot_spec =
      ImPlotSpec{ImPlotProp_FillColor,
                 ImGui::ColorConvertU32ToFloat4(static_cast<ImU32>(color))};
@@ -118,10 +68,13 @@ public:
   auto series_results(this const PlotContext& self, const std::string& name)
    -> std::optional<std::reference_wrapper<const std::vector<double>>>
   {
-    const auto it = self.series_results_.find(name);
-    return it != self.series_results_.end()
-            ? std::make_optional(std::cref(it->second))
-            : std::nullopt;
+    const auto method_opt = self.series_registry_.get(name);
+    if(!method_opt) {
+      return std::nullopt;
+    }
+
+    const auto& method = *method_opt;
+    return self.series_results_.results(method);
   }
 
   auto results_size(this const PlotContext& self) -> std::size_t
@@ -130,7 +83,8 @@ public:
   }
 
 private:
-  const std::unordered_map<std::string, std::vector<double>>& series_results_;
+  const SeriesMethodRegistry& series_registry_;
+  const SeriesEvaluationResults& series_results_;
   std::size_t results_size_;
 
   bool overlay_;
@@ -218,13 +172,14 @@ public:
                              self.row_ratios_.data())) {
       constexpr auto plot_size = ImVec2{-1, 0};
       constexpr auto plot_flags =
-       ImPlotFlags_NoLegend | ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect;
+       ImPlotFlags_NoLegend | ImPlotFlags_Crosshairs | ImPlotFlags_NoBoxSelect;
 
       if(ImPlot::BeginPlot("##EquityPlot", plot_size, plot_flags)) {
         ImPlot::SetupAxis(ImAxis_X1,
                           nullptr,
                           axis_x_flags | ImPlotAxisFlags_NoTickLabels |
                            ImPlotAxisFlags_NoHighlight);
+        ImPlot::SetupAxisFormat(ImAxis_X1, date_formatter, &context);
 
         ImPlot::SetupAxis(ImAxis_Y1, "% Equity", axis_y_flags);
         ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
@@ -239,12 +194,12 @@ public:
                           nullptr,
                           axis_x_flags | ImPlotAxisFlags_NoTickLabels |
                            ImPlotAxisFlags_NoHighlight);
+        ImPlot::SetupAxisFormat(ImAxis_X1, date_formatter, &context);
 
         ImPlot::SetupAxis(ImAxis_Y1, "Price", axis_y_flags);
         ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
 
         self.draw_trades("Trades", backtest_summaries, asset);
-        self.ticker_tooltip(backtest_summaries, asset, true);
         self.plot_ohlc("OHLC", backtest_summaries, asset);
         self.overlays_plots(context);
 
@@ -256,17 +211,16 @@ public:
 
         if(is_last_plot) {
           ImPlot::SetupAxis(ImAxis_X1, nullptr, axis_x_flags);
-          ImPlot::SetupAxisFormat(ImAxis_X1, date_formatter, &context);
         } else {
           ImPlot::SetupAxis(
            ImAxis_X1, nullptr, axis_x_flags | not_last_x_flags);
         }
+        ImPlot::SetupAxisFormat(ImAxis_X1, date_formatter, &context);
 
         ImPlot::SetupAxis(
          ImAxis_Y1, "Volume", axis_y_flags | ImPlotAxisFlags_LockMin);
         ImPlot::SetupAxisFormat(ImAxis_Y1, volume_formatter);
 
-        self.ticker_tooltip(backtest_summaries, asset, true);
         self.plot_volume("Volume", backtest_summaries, asset);
 
         ImPlot::EndPlot();
@@ -277,21 +231,21 @@ public:
       for(const auto& plot_group : plots | no_overlays_view) {
         const auto plot_id = std::format("##Plot{}", i);
 
-        const auto context_for_plots =
-         PlotContext{backtest_series_results.results(),
-                     backtest_summaries.size(),
-                     plot_group.is_overlay()};
+        const auto context_for_plots = PlotContext{strategy.series_registry(),
+                                                   backtest_series_results,
+                                                   backtest_summaries.size(),
+                                                   plot_group.is_overlay()};
 
         if(ImPlot::BeginPlot(plot_id.c_str(), plot_size, plot_flags)) {
           const auto is_last_plot = i == additional_plots_count - 1;
 
           if(is_last_plot) {
             ImPlot::SetupAxis(ImAxis_X1, nullptr, axis_x_flags);
-            ImPlot::SetupAxisFormat(ImAxis_X1, date_formatter, &context);
           } else {
             ImPlot::SetupAxis(
              ImAxis_X1, nullptr, axis_x_flags | not_last_x_flags);
           }
+          ImPlot::SetupAxisFormat(ImAxis_X1, date_formatter, &context);
 
           ImPlot::SetupAxis(ImAxis_Y1, plot_group.name().c_str(), axis_y_flags);
 
@@ -326,72 +280,10 @@ private:
 
   std::vector<float> row_ratios_;
 
-  static void ticker_tooltip(
-   const std::vector<backtest::BacktestSummary>& backtest_summaries,
-   const backtest::Asset& asset,
-   bool span_subplots)
-  {
-    ImDrawList* draw_list = ImPlot::GetPlotDrawList();
-    const double half_width = 0.5;
-    const bool hovered =
-     span_subplots ? ImPlot::IsSubplotsHovered() : ImPlot::IsPlotHovered();
-    if(hovered) {
-      ImPlotPoint mouse = ImPlot::GetPlotMousePos();
-      mouse.x = std::round(mouse.x);
-      float tool_l = ImPlot::PlotToPixels(mouse.x - half_width, mouse.y).x;
-      float tool_r = ImPlot::PlotToPixels(mouse.x + half_width, mouse.y).x;
-      float tool_t = ImPlot::GetPlotPos().y;
-      float tool_b = tool_t + ImPlot::GetPlotSize().y;
-      ImPlot::PushPlotClipRect();
-      draw_list->AddRectFilled(ImVec2(tool_l, tool_t),
-                               ImVec2(tool_r, tool_b),
-                               IM_COL32(128, 128, 128, 64));
-      ImPlot::PopPlotClipRect();
-
-      const auto idx = static_cast<int>(mouse.x);
-      if(ImPlot::IsPlotHovered() && idx > -1 &&
-         idx < backtest_summaries.size()) {
-        const auto& summary = backtest_summaries[idx];
-        const auto snapshot = get_asset_snapshot(summary, asset);
-
-        if(ImGui::BeginTooltip()) {
-          ImGui::Text("Date:");
-          ImGui::SameLine(60);
-          ImGui::Text("%s", format_datetime(snapshot.datetime()).c_str());
-          ImGui::Text("Open:");
-          ImGui::SameLine(60);
-          ImGui::Text("%.2f", snapshot.open());
-          ImGui::Text("Close:");
-          ImGui::SameLine(60);
-          ImGui::Text("%.2f", snapshot.close());
-          ImGui::Text("High:");
-          ImGui::SameLine(60);
-          ImGui::Text("%.2f", snapshot.high());
-          ImGui::Text("Low:");
-          ImGui::SameLine(60);
-          ImGui::Text("%.2f", snapshot.low());
-          ImGui::Text("Volume:");
-          ImGui::SameLine(60);
-          ImGui::Text("%s", format_currency(snapshot.volume()).c_str());
-          ImGui::EndTooltip();
-        }
-      }
-    }
-  }
-
   static auto volume_formatter(double value, char* buff, int size, void*) -> int
   {
-    double v[] = {1000000000000, 1000000000, 1000000, 1000, 1};
-    const char* p[] = {"T", "B", "M", "k", ""};
-    if(value == 0) {
-      return snprintf(buff, size, "0");
-    }
-    for(int i = 0; i < 5; ++i) {
-      if(fabs(value) >= v[i]) {
-        return snprintf(buff, size, "%g%s", value / v[i], p[i]);
-      }
-    }
-    return snprintf(buff, size, "%g%s", value / v[4], p[4]);
+    return std::snprintf(
+     buff, size, "%s", format_compact_integer(value).c_str());
   }
 
   static auto
@@ -405,7 +297,7 @@ private:
 
     const auto idx = static_cast<std::ptrdiff_t>(value);
     if(idx < 0 || idx >= summaries.size()) {
-      return snprintf(buff, size, "");
+      return std::snprintf(buff, size, "");
     }
 
     const auto& backtest_summary = summaries.at(idx);
@@ -416,8 +308,9 @@ private:
 
     const auto datetime = snapshot.datetime();
     const auto timestamp = static_cast<std::time_t>(datetime);
-    const auto tm = *std::localtime(&timestamp);
-    return std::strftime(buff, size, "%b %Y", &tm);
+
+    const auto formated_datetime = format_datetime(timestamp);
+    return std::snprintf(buff, size, "%s", formated_datetime.c_str());
   }
 
   static auto get_asset_snapshot(const backtest::BacktestSummary& summary,
@@ -442,7 +335,7 @@ private:
             const std::vector<backtest::BacktestSummary>& backtest_summaries,
             const backtest::Asset& asset)
   {
-    if(ImPlot::BeginItem(label_id)) {
+    if(ImPlot::BeginItem(label_id) && !backtest_summaries.empty()) {
       ImPlot::GetCurrentItem()->Color = ImGui::GetColorU32(self.bullish_color_);
 
       auto* draw_list = ImPlot::GetPlotDrawList();
@@ -494,6 +387,70 @@ private:
         }
       }
 
+      {
+        auto summary_i = static_cast<int>(backtest_summaries.size()) - 1;
+        const auto is_hovered =
+         ImPlot::IsSubplotsHovered() || ImPlot::IsPlotHovered();
+        if(is_hovered) {
+          ImPlotPoint mouse = ImPlot::GetPlotMousePos();
+          mouse.x = std::round(mouse.x);
+          const auto hovered_idx = static_cast<int>(mouse.x);
+          const auto summaries_size =
+           static_cast<int>(backtest_summaries.size());
+          if(hovered_idx > -1 && hovered_idx < summaries_size) {
+            summary_i = hovered_idx;
+          }
+        }
+
+        const auto& summary = backtest_summaries[summary_i];
+        const auto snapshot = get_asset_snapshot(summary, asset);
+
+        const auto open = snapshot.open();
+        const auto high = snapshot.high();
+        const auto low = snapshot.low();
+        const auto close = snapshot.close();
+
+        const auto change = close - open;
+        const auto change_percent = open != 0.0 ? (change / open) * 100.0 : 0.0;
+        const auto is_bullish = close >= open;
+
+        const auto o_label_text = std::string{"O"};
+        const auto o_value_text = std::format("{:.2f}", open);
+        const auto h_label_text = std::string{"  H"};
+        const auto h_value_text = std::format("{:.2f}", high);
+        const auto l_label_text = std::string{"  L"};
+        const auto l_value_text = std::format("{:.2f}", low);
+        const auto c_label_text = std::string{"  C"};
+        const auto close_text = std::format("{:.2f}", close);
+        const auto change_text =
+         std::format("  {:+.2f} ({:+.2f}%)", change, change_percent);
+
+        const auto marker_text_color =
+         ImGui::GetColorU32(ImVec4{1.0f, 1.0f, 1.0f, 1.0f});
+        const auto close_text_color = ImGui::GetColorU32(
+         is_bullish ? self.bullish_color_ : self.bearish_color_);
+        const auto plot_pos = ImPlot::GetPlotPos();
+        auto text_cursor = ImVec2{plot_pos.x + 8.0f, plot_pos.y + 8.0f};
+
+        const auto draw_text_segment = [&](const std::string& text,
+                                           ImU32 color) {
+          draw_list->AddText(text_cursor, color, text.c_str());
+          text_cursor.x += ImGui::CalcTextSize(text.c_str()).x;
+        };
+
+        ImPlot::PushPlotClipRect();
+        draw_text_segment(o_label_text, marker_text_color);
+        draw_text_segment(o_value_text, close_text_color);
+        draw_text_segment(h_label_text, marker_text_color);
+        draw_text_segment(h_value_text, close_text_color);
+        draw_text_segment(l_label_text, marker_text_color);
+        draw_text_segment(l_value_text, close_text_color);
+        draw_text_segment(c_label_text, marker_text_color);
+        draw_text_segment(close_text, close_text_color);
+        draw_text_segment(change_text, close_text_color);
+        ImPlot::PopPlotClipRect();
+      }
+
       ImPlot::EndItem();
     }
   }
@@ -518,6 +475,52 @@ private:
       }
 
       auto* draw_list = ImPlot::GetPlotDrawList();
+
+      if(!backtest_summaries.empty()) {
+        auto summary_i = static_cast<int>(backtest_summaries.size()) - 1;
+        const auto is_hovered =
+         ImPlot::IsSubplotsHovered() || ImPlot::IsPlotHovered();
+        if(is_hovered) {
+          ImPlotPoint mouse = ImPlot::GetPlotMousePos();
+          mouse.x = std::round(mouse.x);
+          const auto hovered_idx = static_cast<int>(mouse.x);
+          const auto summaries_size =
+           static_cast<int>(backtest_summaries.size());
+          if(hovered_idx > -1 && hovered_idx < summaries_size) {
+            summary_i = hovered_idx;
+          }
+        }
+
+        const auto& summary = backtest_summaries[summary_i];
+        const auto snapshot = get_asset_snapshot(summary, asset);
+        const auto open = snapshot.open();
+        const auto close = snapshot.close();
+        const auto volume = snapshot.volume();
+
+        const auto is_bullish = close >= open;
+
+        const auto v_label_text = std::string{"Vol "};
+        const auto v_value_text = format_compact_integer(volume);
+
+        const auto marker_text_color =
+         ImGui::GetColorU32(ImVec4{1.0f, 1.0f, 1.0f, 1.0f});
+        const auto close_text_color = ImGui::GetColorU32(
+         is_bullish ? self.bullish_color_ : self.bearish_color_);
+        const auto plot_pos = ImPlot::GetPlotPos();
+        auto text_cursor = ImVec2{plot_pos.x + 8.0f, plot_pos.y + 8.0f};
+
+        const auto draw_text_segment = [&](const std::string& text,
+                                           ImU32 color) {
+          draw_list->AddText(text_cursor, color, text.c_str());
+          text_cursor.x += ImGui::CalcTextSize(text.c_str()).x;
+        };
+
+        ImPlot::PushPlotClipRect();
+        draw_text_segment(v_label_text, marker_text_color);
+        draw_text_segment(v_value_text, close_text_color);
+        ImPlot::PopPlotClipRect();
+      }
+
       constexpr auto half_width = 0.3;
       for(int i = 0, ii = backtest_summaries.size(); i < ii; ++i) {
         const auto& summary = backtest_summaries[i];
@@ -609,10 +612,11 @@ private:
             return std::tuple{top_price, middle_price, bottom_price};
           }();
 
-          const auto left_half_width = record.is_entry() ? 0.0 : half_width;
+          const auto left_half_width =
+           record.is_entry_or_scaled_in() ? 0.0 : half_width;
           const auto right_half_width =
-           !record.is_closed() ? (i == summaries_size - 1 ? 10.0 : half_width)
-                               : 0.0;
+           record.is_open() ? (i == summaries_size - 1 ? 10.0 : half_width)
+                            : 0.0;
 
           {
             const auto risk_left_top_pos =
@@ -635,7 +639,7 @@ private:
                                      ImGui::GetColorU32(top_color));
           }
 
-          if(record.is_entry()) {
+          if(record.is_entry_or_scaled_in()) {
             const auto entry_low = snapshot.low();
 
             auto entry_pos = ImPlot::PlotToPixels(i, entry_low);
@@ -647,10 +651,8 @@ private:
              ImVec2{entry_pos.x, entry_pos.y - 10},
              ImGui::GetColorU32(self.bullish_color_));
 
-            // TODO: Visual Studio 2026 have bug with include <format> causing
-            // compile error
             const auto trade_count_str =
-             std::string("#") + std::to_string(summary.trade_count() + 1);
+             std::format("#{}", summary.trade_count() + 1);
             const auto text_size = ImGui::CalcTextSize(trade_count_str.c_str());
             draw_list->AddText(
              ImVec2{entry_pos.x - text_size.x * 0.5f, entry_pos.y},
@@ -659,7 +661,7 @@ private:
           }
 
           {
-            if(record.is_closed()) {
+            if(!record.is_open() || i == 0) {
               const auto exit_high = snapshot.high();
 
               auto exit_pos = ImPlot::PlotToPixels(i, exit_high);
@@ -671,10 +673,9 @@ private:
                ImVec2{exit_pos.x, exit_pos.y + 10},
                ImGui::GetColorU32(self.bearish_color_));
 
-              // TODO: Visual Studio 2026 have bug with include <format> causing
-              // compile error
-              const auto trade_count_str =
-               std::string("#") + std::to_string(summary.trade_count());
+              const auto trade_count =
+               summary.trade_count() + (!record.is_closed() ? 1 : 0);
+              const auto trade_count_str = std::format("#{}", trade_count);
               const auto text_size =
                ImGui::CalcTextSize(trade_count_str.c_str());
               draw_list->AddText(
@@ -742,6 +743,9 @@ private:
       ys.push_back(equity_percentage);
     }
 
+    auto equity_i =
+     summaries_size > 0 ? static_cast<int>(summaries_size) - 1 : -1;
+
     if(ImPlot::IsSubplotsHovered()) {
       constexpr auto half_width = 0.5;
       auto* draw_list = ImPlot::GetPlotDrawList();
@@ -758,6 +762,10 @@ private:
       ImPlot::PopPlotClipRect();
 
       const auto plot_idx = static_cast<int>(mouse.x);
+      if(plot_idx > -1 && plot_idx < summaries_size) {
+        equity_i = plot_idx;
+      }
+
       if(ImPlot::IsPlotHovered() && plot_idx > -1 &&
          plot_idx < summaries_size) {
         const auto summary_i = plot_idx;
@@ -765,6 +773,29 @@ private:
         ImGui::Text("%s%%", format_currency(ys[summary_i]).c_str());
         ImGui::EndTooltip();
       }
+    }
+
+    if(equity_i > -1) {
+      auto* draw_list = ImPlot::GetPlotDrawList();
+      const auto marker_text_color =
+       ImGui::GetColorU32(ImVec4{1.0f, 1.0f, 1.0f, 1.0f});
+      const auto equity_color = ImGui::GetColorU32(
+       ys[equity_i] >= 100.0 ? self.bullish_color_ : self.bearish_color_);
+      const auto plot_pos = ImPlot::GetPlotPos();
+      auto text_cursor = ImVec2{plot_pos.x + 8.0f, plot_pos.y + 8.0f};
+      const auto eq_label_text = std::string{"Eq "};
+      const auto eq_value_text =
+       std::string{format_currency(ys[equity_i])} + "%";
+
+      const auto draw_text_segment = [&](const std::string& text, ImU32 color) {
+        draw_list->AddText(text_cursor, color, text.c_str());
+        text_cursor.x += ImGui::CalcTextSize(text.c_str()).x;
+      };
+
+      ImPlot::PushPlotClipRect();
+      draw_text_segment(eq_label_text, marker_text_color);
+      draw_text_segment(eq_value_text, equity_color);
+      ImPlot::PopPlotClipRect();
     }
 
     if(ImPlot::BeginItem("Equity")) {
@@ -787,12 +818,13 @@ private:
     const auto& strategy = app_state.get_strategy(strategy_handle);
     const auto& backtest_summaries =
      app_state.get_backtest_summaries(backtest_handle);
-    const auto& series_results =
-     app_state.get_series_results(backtest_handle).results();
+    const auto& series_results = app_state.get_series_results(backtest_handle);
     const auto& plots = strategy.plots();
 
-    const auto context_for_plots =
-     PlotContext{series_results, backtest_summaries.size(), true};
+    const auto context_for_plots = PlotContext{strategy.series_registry(),
+                                               series_results,
+                                               backtest_summaries.size(),
+                                               true};
 
     for(const auto& plot_group :
         plots | std::views::filter([](const auto& plot_group) {

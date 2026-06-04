@@ -4,65 +4,80 @@ import pludux;
 
 using namespace pludux;
 
+using SignalGreaterThanMethod =
+ pludux::GreaterThanMethod<AnySeriesMethod, AnySeriesMethod>;
+using SignalLessThanMethod =
+ pludux::LessThanMethod<AnySeriesMethod, AnySeriesMethod>;
+using SignalAnyOfMethod = pludux::AnyOfMethod<AnySeriesMethod>;
+
 const auto context = AnySeriesMethodContext{};
+
+static auto make_asset_snapshot() -> AssetSnapshot
+{
+  return AssetSnapshot{AssetHistory{{"close", {0}}}};
+}
 
 TEST(AnyOfMethodTest, AllMethodsPass)
 {
   const auto greater_than_condition =
-   GreaterThanMethod{ValueMethod{20.0}, ValueMethod{10.0}};
+   SignalGreaterThanMethod{ValueMethod{20.0}, ValueMethod{10.0}};
   const auto less_than_condition =
-   LessThanMethod{ValueMethod{30.0}, ValueMethod{50.0}};
+   SignalLessThanMethod{ValueMethod{30.0}, ValueMethod{50.0}};
   const auto any_of_condition =
-   AnyOfMethod{{greater_than_condition, less_than_condition}};
-  const auto asset_data = AssetHistory{{"close", {0}}};
+   SignalAnyOfMethod{{greater_than_condition, less_than_condition}};
+  const auto asset_snapshot = make_asset_snapshot();
 
-  EXPECT_TRUE(any_of_condition(asset_data, context));
+  EXPECT_TRUE(
+   evaluate_series_method(any_of_condition, asset_snapshot[0], context));
 }
 
 TEST(AnyOfMethodTest, OneMethodFails)
 {
   const auto greater_than_condition =
-   GreaterThanMethod{ValueMethod{20.0}, ValueMethod{30.0}};
+   SignalGreaterThanMethod{ValueMethod{20.0}, ValueMethod{30.0}};
   const auto less_than_condition =
-   LessThanMethod{ValueMethod{30.0}, ValueMethod{50.0}};
+   SignalLessThanMethod{ValueMethod{30.0}, ValueMethod{50.0}};
   const auto any_of_condition =
-   AnyOfMethod{{greater_than_condition, less_than_condition}};
-  const auto asset_data = AssetHistory{{"close", {0}}};
+   SignalAnyOfMethod{{greater_than_condition, less_than_condition}};
+  const auto asset_snapshot = make_asset_snapshot();
 
-  EXPECT_TRUE(any_of_condition(asset_data, context));
+  EXPECT_TRUE(
+   evaluate_series_method(any_of_condition, asset_snapshot[0], context));
 }
 
 TEST(AnyOfMethodTest, AllMethodsFails)
 {
   const auto greater_than_condition =
-   GreaterThanMethod{ValueMethod{20.0}, ValueMethod{30.0}};
+   SignalGreaterThanMethod{ValueMethod{20.0}, ValueMethod{30.0}};
   const auto less_than_condition =
-   LessThanMethod{ValueMethod{80.0}, ValueMethod{50.0}};
+   SignalLessThanMethod{ValueMethod{80.0}, ValueMethod{50.0}};
   const auto any_of_condition =
-   AnyOfMethod{{greater_than_condition, less_than_condition}};
-  const auto asset_data = AssetHistory{{"close", {0}}};
+   SignalAnyOfMethod{{greater_than_condition, less_than_condition}};
+  const auto asset_snapshot = make_asset_snapshot();
 
-  EXPECT_FALSE(any_of_condition(asset_data, context));
+  EXPECT_FALSE(
+   evaluate_series_method(any_of_condition, asset_snapshot[0], context));
 }
 
 TEST(AnyOfMethodTest, NoMethods)
 {
-  const auto any_of_condition = AnyOfMethod{};
-  const auto asset_data = AssetHistory{{"close", {0}}};
+  const auto any_of_condition = SignalAnyOfMethod{};
+  const auto asset_snapshot = make_asset_snapshot();
 
-  EXPECT_FALSE(any_of_condition(asset_data, context));
+  EXPECT_FALSE(
+   evaluate_series_method(any_of_condition, asset_snapshot[0], context));
 }
 
 TEST(AnyOfMethodTest, EqualityOperator)
 {
   const auto greater_than_condition =
-   GreaterThanMethod{ValueMethod{20.0}, ValueMethod{10.0}};
+   SignalGreaterThanMethod{ValueMethod{20.0}, ValueMethod{10.0}};
   const auto less_than_condition =
-   LessThanMethod{ValueMethod{30.0}, ValueMethod{50.0}};
+   SignalLessThanMethod{ValueMethod{30.0}, ValueMethod{50.0}};
   const auto any_of_condition1 =
-   AnyOfMethod{{greater_than_condition, less_than_condition}};
+   SignalAnyOfMethod{{greater_than_condition, less_than_condition}};
   const auto any_of_condition2 =
-   AnyOfMethod{{greater_than_condition, less_than_condition}};
+   SignalAnyOfMethod{{greater_than_condition, less_than_condition}};
 
   EXPECT_TRUE(any_of_condition1 == any_of_condition2);
   EXPECT_FALSE(any_of_condition1 != any_of_condition2);
@@ -72,18 +87,18 @@ TEST(AnyOfMethodTest, EqualityOperator)
 TEST(AnyOfMethodTest, NotEqualOperator)
 {
   const auto greater_than_condition1 =
-   GreaterThanMethod{ValueMethod{20.0}, ValueMethod{10.0}};
+   SignalGreaterThanMethod{ValueMethod{20.0}, ValueMethod{10.0}};
   const auto less_than_condition1 =
-   LessThanMethod{ValueMethod{30.0}, ValueMethod{50.0}};
+   SignalLessThanMethod{ValueMethod{30.0}, ValueMethod{50.0}};
   const auto any_of_condition1 =
-   AnyOfMethod{{greater_than_condition1, less_than_condition1}};
+   SignalAnyOfMethod{{greater_than_condition1, less_than_condition1}};
 
   const auto greater_than_condition2 =
-   GreaterThanMethod{ValueMethod{20.0}, ValueMethod{30.0}};
+   SignalGreaterThanMethod{ValueMethod{20.0}, ValueMethod{30.0}};
   const auto less_than_condition2 =
-   LessThanMethod{ValueMethod{80.0}, ValueMethod{50.0}};
+   SignalLessThanMethod{ValueMethod{80.0}, ValueMethod{50.0}};
   const auto any_of_condition2 =
-   AnyOfMethod{{greater_than_condition2, less_than_condition2}};
+   SignalAnyOfMethod{{greater_than_condition2, less_than_condition2}};
 
   EXPECT_TRUE(any_of_condition1 != any_of_condition2);
   EXPECT_FALSE(any_of_condition1 == any_of_condition2);

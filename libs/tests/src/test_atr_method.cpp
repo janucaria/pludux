@@ -16,7 +16,7 @@ TEST(AtrMethodTest, ConstructorInitialization)
     EXPECT_EQ(atr_method.ma_smoothing_type(), MaMethodType::Rma);
   }
   {
-    auto atr_method = AtrMethod{MaMethodType::Ema, 14};
+    auto atr_method = AtrMethod{14, MaMethodType::Ema};
 
     EXPECT_EQ(atr_method.period(), 14);
     EXPECT_EQ(atr_method.ma_smoothing_type(), MaMethodType::Ema);
@@ -34,16 +34,31 @@ TEST(AtrMethodTest, RunAllMethod)
 
   const auto atr_method = AtrMethod{5};
 
-  EXPECT_DOUBLE_EQ(atr_method(asset_snapshot[0], context), 32.187840000000008);
-  EXPECT_DOUBLE_EQ(atr_method(asset_snapshot[1], context), 36.484800000000007);
-  EXPECT_DOUBLE_EQ(atr_method(asset_snapshot[2], context), 41.856000000000009);
-  EXPECT_DOUBLE_EQ(atr_method(asset_snapshot[3], context), 47.320000000000007);
-  EXPECT_DOUBLE_EQ(atr_method(asset_snapshot[4], context), 50.400000000000006);
-  EXPECT_DOUBLE_EQ(atr_method(asset_snapshot[5], context), 58);
-  EXPECT_TRUE(std::isnan(atr_method(asset_snapshot[6], context)));
-  EXPECT_TRUE(std::isnan(atr_method(asset_snapshot[7], context)));
-  EXPECT_TRUE(std::isnan(atr_method(asset_snapshot[8], context)));
-  EXPECT_TRUE(std::isnan(atr_method(asset_snapshot[9], context)));
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(atr_method, asset_snapshot[0], context),
+   32.187840000000008);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(atr_method, asset_snapshot[1], context),
+   36.484800000000007);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(atr_method, asset_snapshot[2], context),
+   41.856000000000009);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(atr_method, asset_snapshot[3], context),
+   47.320000000000007);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(atr_method, asset_snapshot[4], context),
+   50.400000000000006);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(atr_method, asset_snapshot[5], context), 58);
+  EXPECT_TRUE(
+   std::isnan(evaluate_series_method(atr_method, asset_snapshot[6], context)));
+  EXPECT_TRUE(
+   std::isnan(evaluate_series_method(atr_method, asset_snapshot[7], context)));
+  EXPECT_TRUE(
+   std::isnan(evaluate_series_method(atr_method, asset_snapshot[8], context)));
+  EXPECT_TRUE(
+   std::isnan(evaluate_series_method(atr_method, asset_snapshot[9], context)));
 }
 
 TEST(AtrMethodTest, EqualityOperator)
@@ -57,9 +72,9 @@ TEST(AtrMethodTest, EqualityOperator)
 
 TEST(AtrMethodTest, NotEqualOperator)
 {
-  const auto atr_method1 = AtrMethod{MaMethodType::Ema, 14};
-  const auto atr_method2 = AtrMethod{MaMethodType::Ema, 20};
-  const auto atr_method3 = AtrMethod{MaMethodType::Rma, 20};
+  const auto atr_method1 = AtrMethod{14, MaMethodType::Ema};
+  const auto atr_method2 = AtrMethod{20, MaMethodType::Ema};
+  const auto atr_method3 = AtrMethod{20, MaMethodType::Rma};
 
   EXPECT_TRUE(atr_method1 != atr_method2);
   EXPECT_NE(atr_method1, atr_method2);

@@ -14,10 +14,14 @@ TEST(DataMethodTest, RunAllMethodClose)
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 
-  const auto result_0 = data_method(asset_snapshot, context);
-  const auto result_1 = data_method(asset_snapshot[1], context);
-  const auto result_2 = data_method(asset_snapshot[2], context);
-  const auto result_3 = data_method(asset_snapshot[3], context);
+  const auto result_0 =
+   evaluate_series_method(data_method, asset_snapshot, context);
+  const auto result_1 =
+   evaluate_series_method(data_method, asset_snapshot[1], context);
+  const auto result_2 =
+   evaluate_series_method(data_method, asset_snapshot[2], context);
+  const auto result_3 =
+   evaluate_series_method(data_method, asset_snapshot[3], context);
 
   EXPECT_EQ(result_0, 4.0);
   EXPECT_EQ(result_1, 4.1);
@@ -32,7 +36,8 @@ TEST(DataMethodTest, InvalidField)
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 
-  EXPECT_TRUE(std::isnan(data_method(asset_snapshot, context)));
+  EXPECT_TRUE(
+   std::isnan(evaluate_series_method(data_method, asset_snapshot, context)));
 }
 
 TEST(DataMethodTest, EqualityOperator)

@@ -42,7 +42,7 @@ using KcMethod = pludux::KcMethod<AnySeriesMethod>;
 using StochMethod = pludux::StochMethod;
 using StochRsiMethod = pludux::StochRsiMethod<AnySeriesMethod>;
 using SmaMethod = pludux::SmaMethod<AnySeriesMethod>;
-using CachedResultsEmaMethod = pludux::CachedResultsEmaMethod<AnySeriesMethod>;
+using EmaMethod = pludux::EmaMethod<AnySeriesMethod>;
 using WmaMethod = pludux::WmaMethod<AnySeriesMethod>;
 using HmaMethod = pludux::HmaMethod<AnySeriesMethod>;
 using RsiMethod = pludux::RsiMethod<AnySeriesMethod>;
@@ -64,6 +64,27 @@ using DivideMethod = pludux::DivideMethod<AnySeriesMethod, AnySeriesMethod>;
 using NegateMethod = pludux::NegateMethod<AnySeriesMethod>;
 using PercentageMethod = pludux::PercentageMethod<AnySeriesMethod>;
 using AbsDiffMethod = pludux::AbsDiffMethod<AnySeriesMethod, AnySeriesMethod>;
+using AllOfMethod = pludux::AllOfMethod<AnySeriesMethod>;
+using AnyOfMethod = pludux::AnyOfMethod<AnySeriesMethod>;
+using CrossoverMethod =
+ pludux::CrossoverMethod<AnySeriesMethod, AnySeriesMethod>;
+using CrossunderMethod =
+ pludux::CrossunderMethod<AnySeriesMethod, AnySeriesMethod>;
+using AlwaysMethod = pludux::TrueMethod;
+using NeverMethod = pludux::FalseMethod;
+using EqualMethod = pludux::EqualMethod<AnySeriesMethod, AnySeriesMethod>;
+using NotEqualMethod = pludux::NotEqualMethod<AnySeriesMethod, AnySeriesMethod>;
+using GreaterThanMethod =
+ pludux::GreaterThanMethod<AnySeriesMethod, AnySeriesMethod>;
+using GreaterEqualMethod =
+ pludux::GreaterEqualMethod<AnySeriesMethod, AnySeriesMethod>;
+using LessThanMethod = pludux::LessThanMethod<AnySeriesMethod, AnySeriesMethod>;
+using LessEqualMethod =
+ pludux::LessEqualMethod<AnySeriesMethod, AnySeriesMethod>;
+using NotMethod = pludux::LogicalNotMethod<AnySeriesMethod>;
+using AndMethod = pludux::LogicalAndMethod<AnySeriesMethod, AnySeriesMethod>;
+using OrMethod = pludux::LogicalOrMethod<AnySeriesMethod, AnySeriesMethod>;
+using XorMethod = pludux::LogicalXorMethod<AnySeriesMethod, AnySeriesMethod>;
 
 using pludux::backtest::AnyPlotMethod;
 using pludux::backtest::AnyPlotSourceMethod;
@@ -93,7 +114,7 @@ auto get_default_series_method(const std::string& series_id) -> AnySeriesMethod
   } else if(series_id == "SMA") {
     return SmaMethod{CloseMethod{}, 14};
   } else if(series_id == "EMA") {
-    return CachedResultsEmaMethod{CloseMethod{}, 14};
+    return EmaMethod{CloseMethod{}, 14};
   } else if(series_id == "WMA") {
     return WmaMethod{CloseMethod{}, 14};
   } else if(series_id == "HMA") {
@@ -107,10 +128,12 @@ auto get_default_series_method(const std::string& series_id) -> AnySeriesMethod
   } else if(series_id == "STDDEV") {
     return StddevAnyMethod{CloseMethod{}, 14};
   } else if(series_id == "BB") {
-    return BbMethod{MaMethodType::Sma, CloseMethod{}, 20, 2.0};
+    return BbMethod{CloseMethod{}, 20, 2.0, MaMethodType::Sma};
   } else if(series_id == "KC") {
     return KcMethod{
-     CloseMethod{}, MaMethodType::Ema, 20, KcBandMethodType::Atr, 14, 1.5};
+     CloseMethod{}, 20, 1.5, 14, KcBandMethodType::Atr, MaMethodType::Ema};
+  } else if(series_id == "DC") {
+    return DonchianChannelMethod{};
   } else if(series_id == "STOCH") {
     return StochMethod{14, 3, 3};
   } else if(series_id == "STOCH_RSI") {
@@ -140,7 +163,7 @@ auto get_default_series_method(const std::string& series_id) -> AnySeriesMethod
   } else if(series_id == "ABS_DIFF") {
     return AbsDiffMethod{CloseMethod{}, CloseMethod{}};
   } else if(series_id == "SELECT_OUTPUT") {
-    return SelectOutputMethod{CloseMethod{}, SeriesOutput::MiddleBand};
+    return SelectOutputMethod{CloseMethod{}, MethodOutput::MiddleBand};
   }
 
   throw std::invalid_argument{
@@ -177,9 +200,11 @@ auto get_series_method_id(const AnySeriesMethod& method) -> std::string
     return "BB";
   } else if(series_method_cast<KcMethod>(method)) {
     return "KC";
+  } else if(series_method_cast<DonchianChannelMethod>(method)) {
+    return "DC";
   } else if(series_method_cast<SmaMethod>(method)) {
     return "SMA";
-  } else if(series_method_cast<CachedResultsEmaMethod>(method)) {
+  } else if(series_method_cast<EmaMethod>(method)) {
     return "EMA";
   } else if(series_method_cast<WmaMethod>(method)) {
     return "WMA";
@@ -254,6 +279,8 @@ auto get_series_method_title(const std::string& series_id) -> std::string
     return "Bollinger Bands";
   } else if(series_id == "KC") {
     return "Keltner Channel (KC)";
+  } else if(series_id == "DC") {
+    return "Donchian Channels (DC)";
   } else if(series_id == "STOCH") {
     return "Stochastic Oscillator";
   } else if(series_id == "STOCH_RSI") {
@@ -289,39 +316,39 @@ auto get_series_method_title(const std::string& series_id) -> std::string
   return "Unknown";
 }
 
-auto get_condition_method_id(const AnyConditionMethod& method) -> std::string
+auto get_condition_method_id(const AnySeriesMethod& method) -> std::string
 {
-  if(condition_method_cast<AllOfMethod>(method)) {
+  if(series_method_cast<AllOfMethod>(method)) {
     return "ALL_OF";
-  } else if(condition_method_cast<AnyOfMethod>(method)) {
+  } else if(series_method_cast<AnyOfMethod>(method)) {
     return "ANY_OF";
-  } else if(condition_method_cast<AlwaysMethod>(method)) {
+  } else if(series_method_cast<AlwaysMethod>(method)) {
     return "ALWAYS";
-  } else if(condition_method_cast<NeverMethod>(method)) {
+  } else if(series_method_cast<NeverMethod>(method)) {
     return "NEVER";
-  } else if(condition_method_cast<LessThanMethod>(method)) {
+  } else if(series_method_cast<LessThanMethod>(method)) {
     return "LESS_THAN";
-  } else if(condition_method_cast<GreaterThanMethod>(method)) {
+  } else if(series_method_cast<GreaterThanMethod>(method)) {
     return "GREATER_THAN";
-  } else if(condition_method_cast<LessEqualMethod>(method)) {
+  } else if(series_method_cast<LessEqualMethod>(method)) {
     return "LESS_EQUAL";
-  } else if(condition_method_cast<GreaterEqualMethod>(method)) {
+  } else if(series_method_cast<GreaterEqualMethod>(method)) {
     return "GREATER_EQUAL";
-  } else if(condition_method_cast<EqualMethod>(method)) {
+  } else if(series_method_cast<EqualMethod>(method)) {
     return "EQUAL";
-  } else if(condition_method_cast<NotEqualMethod>(method)) {
+  } else if(series_method_cast<NotEqualMethod>(method)) {
     return "NOT_EQUAL";
-  } else if(condition_method_cast<CrossoverMethod>(method)) {
+  } else if(series_method_cast<CrossoverMethod>(method)) {
     return "CROSSOVER";
-  } else if(condition_method_cast<CrossunderMethod>(method)) {
+  } else if(series_method_cast<CrossunderMethod>(method)) {
     return "CROSSUNDER";
-  } else if(condition_method_cast<NotMethod>(method)) {
+  } else if(series_method_cast<NotMethod>(method)) {
     return "NOT";
-  } else if(condition_method_cast<AndMethod>(method)) {
+  } else if(series_method_cast<AndMethod>(method)) {
     return "AND";
-  } else if(condition_method_cast<OrMethod>(method)) {
+  } else if(series_method_cast<OrMethod>(method)) {
     return "OR";
-  } else if(condition_method_cast<XorMethod>(method)) {
+  } else if(series_method_cast<XorMethod>(method)) {
     return "XOR";
   }
 
@@ -368,7 +395,7 @@ auto get_condition_method_title(const std::string& condition_id) -> std::string
 }
 
 auto get_default_condition_method(const std::string& condition_id)
- -> AnyConditionMethod
+ -> AnySeriesMethod
 {
   if(condition_id == "ALL_OF") {
     return AllOfMethod{};
@@ -529,6 +556,7 @@ private:
   std::shared_ptr<backtest::Strategy> editing_strategy_ptr_;
 
   std::vector<std::string> available_series_names_;
+  std::unordered_map<std::string, std::string> changed_series_names_;
 
   void render_list_strategies(this auto& self, WindowContext& context)
   {
@@ -543,7 +571,7 @@ private:
       0,
       -ImGui::GetFrameHeightWithSpacing())); // Leave room for 1 line below us
 
-    for(auto i = 0; i < strategy_handles.size(); ++i) {
+    for(std::size_t i = 0; i < strategy_handles.size(); ++i) {
       const auto strategy_handle = strategy_handles[i];
       const auto& strategy = app_state.get_strategy(strategy_handle);
       const auto& strategy_name = strategy.name();
@@ -553,15 +581,37 @@ private:
       ImGui::SetNextItemAllowOverlap();
       auto is_selected =
        backtest_ptr && backtest_ptr->strategy_handle() == strategy_handle;
-      ImGui::Selectable(strategy_name.c_str(), &is_selected);
+      const auto row_start = ImGui::GetCursorScreenPos();
+      const auto row_width = ImGui::GetContentRegionAvail().x;
+      const auto row_height = ImGui::GetFrameHeight();
 
-      ImGui::SameLine();
+      ImGui::Selectable("##strategy_row",
+                        &is_selected,
+                        ImGuiSelectableFlags_AllowOverlap,
+                        ImVec2(row_width, row_height));
 
-      ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 150);
+      ImGui::SetCursorScreenPos(row_start);
+      ImGui::AlignTextToFramePadding();
+      ImGui::TextUnformatted(strategy_name.c_str());
+
+      const auto spacing = ImGui::GetStyle().ItemSpacing.x;
+      const auto frame_padding_x = ImGui::GetStyle().FramePadding.x;
+      const auto export_width =
+       ImGui::CalcTextSize("Export").x + (2.0f * frame_padding_x);
+      const auto edit_width =
+       ImGui::CalcTextSize("Edit").x + (2.0f * frame_padding_x);
+      const auto delete_width =
+       ImGui::CalcTextSize("Delete").x + (2.0f * frame_padding_x);
+      const auto more_width =
+       ImGui::CalcTextSize("More...").x + (2.0f * frame_padding_x);
+      const auto buttons_width = export_width + spacing + edit_width + spacing +
+                                 delete_width + spacing + more_width;
+      const auto buttons_start_x = row_start.x + row_width - buttons_width;
+
+      ImGui::SetCursorScreenPos(ImVec2(buttons_start_x, row_start.y));
 
       if(ImGui::Button("Export")) {
-        auto serialized_strategy =
-         stringify_backtest_strategy(strategy).to_string();
+        auto serialized_strategy = stringify_backtest_strategy(strategy);
 
 #ifdef __EMSCRIPTEN__
         const auto file_name = "pludux-strategy-" + strategy_name + ".json";
@@ -614,6 +664,40 @@ private:
         context.push_action([strategy_handle](ApplicationState& app_state) {
           app_state.remove_strategy(strategy_handle);
         });
+      }
+
+      ImGui::SameLine();
+      if(ImGui::Button("More...")) {
+        ImGui::OpenPopup("strategy_menu_more");
+      }
+
+      if(ImGui::BeginPopup("strategy_menu_more")) {
+        if(ImGui::MenuItem("Duplicate")) {
+          context.push_action([strategy_handle](ApplicationState& app_state) {
+            const auto& strategy = app_state.get_strategy(strategy_handle);
+            auto duplicate_strategy = strategy;
+            duplicate_strategy.name(strategy.name() + " Copy");
+            app_state.add_strategy(std::move(duplicate_strategy));
+          });
+        }
+
+        const auto move_up_disabled = i == 0;
+        if(ImGui::MenuItem("Move Up", nullptr, false, !move_up_disabled)) {
+          context.push_action(
+           [from_index = i, to_index = i - 1](ApplicationState& app_state) {
+             app_state.reorder_list_strategy(from_index, to_index);
+           });
+        }
+
+        const auto move_down_disabled = i == strategy_handles.size() - 1;
+        if(ImGui::MenuItem("Move Down", nullptr, false, !move_down_disabled)) {
+          context.push_action(
+           [from_index = i, to_index = i + 1](ApplicationState& app_state) {
+             app_state.reorder_list_strategy(from_index, to_index);
+           });
+        }
+
+        ImGui::EndPopup();
       }
 
       ImGui::PopID();
@@ -790,8 +874,8 @@ private:
       ImGui::SeparatorText("Series Methods");
 
       auto& series_registry = self.editing_strategy_ptr_->series_registry();
-      ImGui::Separator();
-      auto changed_names = std::vector<std::pair<std::string, std::string>>{};
+      auto updated_registry = series_registry;
+      self.changed_series_names_.clear();
       self.available_series_names_.clear();
       for(auto id_counter = 0;
           auto& [series_name, series_method] : series_registry) {
@@ -799,30 +883,54 @@ private:
 
         ImGui::Text("Name:");
         ImGui::SameLine();
-        auto input_series_name = series_name;
-        ImGui::InputText("##series_name", &input_series_name);
+        auto updated_series_name = series_name;
+        ImGui::InputText("##series_name", &updated_series_name);
         if(ImGui::IsItemDeactivatedAfterEdit()) {
-          if(input_series_name != series_name) {
-            changed_names.emplace_back(series_name, input_series_name);
+          if(updated_series_name != series_name) {
+            self.changed_series_names_[series_name] = updated_series_name;
           }
         }
 
         ImGui::Text("Method:");
         ImGui::SameLine();
         self.render_series_method(series_method, context);
-        series_registry.set(series_name, series_method);
+        updated_registry.set(series_name, series_method);
+
+        // Delete button for the series. Right aligned on the new line
+        const auto spacing = ImGui::GetStyle().ItemSpacing.x;
+        const auto frame_padding_x = ImGui::GetStyle().FramePadding.x;
+        const auto delete_width =
+         ImGui::CalcTextSize("Delete").x + (2.0f * frame_padding_x);
+        const auto line_start = ImGui::GetCursorScreenPos();
+        const auto line_width = ImGui::GetContentRegionAvail().x;
+        const auto delete_button_x = line_start.x + line_width - delete_width;
+        ImGui::SetCursorScreenPos(ImVec2(delete_button_x, line_start.y));
+
+        if(ImGui::Button("Delete")) {
+          updated_registry.remove(series_name);
+          self.changed_series_names_.erase(series_name);
+        } else {
+          self.available_series_names_.push_back(series_name);
+        }
 
         ImGui::Separator();
         ImGui::PopID();
-
-        self.available_series_names_.push_back(series_name);
       }
 
-      for(auto [old_name, new_name] : changed_names) {
-        // TODO: handle the errors
-        [[maybe_unused]]
-        const auto result = series_registry.rename(old_name, new_name);
+      for(auto& [old_name, new_name] : self.changed_series_names_) {
+        if(updated_registry.rename(old_name, new_name)) {
+          auto it = std::ranges::find(self.available_series_names_, old_name);
+          if(it != self.available_series_names_.end()) {
+            *it = new_name;
+          }
+        } else {
+          const auto error_message = std::format(
+           "Failed to rename series '{}' to '{}'.", old_name, new_name);
+          context.alert(error_message);
+        }
       }
+
+      series_registry = std::move(updated_registry);
 
       if(ImGui::Button("Add Series")) {
         auto new_series_name =
@@ -837,10 +945,14 @@ private:
     {
       ImGui::SeparatorText("Positions");
 
+      auto positions = self.editing_strategy_ptr_->positions();
+
       {
         ImGui::Text("Long Position:");
         ImGui::PushID("long_position");
         ImGui::Indent();
+
+        auto long_position = positions.long_side();
 
         {
           ImGui::Text("Entry Condition:");
@@ -853,10 +965,8 @@ private:
            std::move(changed_method));
           ImGui::PopID();
         }
-
-        ImGui::Separator();
-
         {
+          ImGui::Separator();
           ImGui::Text("Exit Condition:");
           ImGui::PushID("long_exit");
           const auto& any_long_exit =
@@ -867,6 +977,35 @@ private:
            std::move(changed_method));
           ImGui::PopID();
         }
+        {
+          ImGui::SeparatorText("Pyramiding");
+          ImGui::PushID("long_pyramiding");
+
+          ImGui::Text("Signal:");
+          auto pyramiding = long_position.pyramiding();
+
+          const auto& any_long_pyramiding = pyramiding.signal();
+          auto changed_method =
+           self.render_condition_method(any_long_pyramiding, context);
+          pyramiding.signal(std::move(changed_method));
+
+          auto pyramiding_max_layers =
+           static_cast<int>(pyramiding.max_layers());
+          ImGui::Text("Max Layers:");
+          ImGui::SameLine();
+          if(ImGui::InputInt("##long_pyramiding_max_layers",
+                             &pyramiding_max_layers)) {
+            if(pyramiding_max_layers < 1) {
+              pyramiding_max_layers = 1;
+            }
+            pyramiding.max_layers(pyramiding_max_layers);
+          }
+
+          long_position.pyramiding(pyramiding);
+          ImGui::PopID();
+        }
+
+        positions.long_side(long_position);
 
         ImGui::Unindent();
         ImGui::PopID();
@@ -879,6 +1018,8 @@ private:
         ImGui::PushID("short_position");
         ImGui::Indent();
 
+        auto short_position = positions.short_side();
+
         {
           ImGui::Text("Entry Condition:");
           ImGui::PushID("short_entry");
@@ -890,10 +1031,8 @@ private:
            std::move(changed_method));
           ImGui::PopID();
         }
-
-        ImGui::Separator();
-
         {
+          ImGui::Separator();
           ImGui::Text("Exit Condition:");
           ImGui::PushID("short_exit");
           const auto& any_short_exit =
@@ -904,10 +1043,41 @@ private:
            std::move(changed_method));
           ImGui::PopID();
         }
+        {
+          ImGui::SeparatorText("Pyramiding");
+          ImGui::PushID("short_pyramiding");
+
+          ImGui::Text("Signal:");
+          auto pyramiding = short_position.pyramiding();
+
+          const auto& any_short_pyramiding = pyramiding.signal();
+          auto changed_method =
+           self.render_condition_method(any_short_pyramiding, context);
+          pyramiding.signal(std::move(changed_method));
+
+          auto pyramiding_max_layers =
+           static_cast<int>(pyramiding.max_layers());
+          ImGui::Text("Max Layers:");
+          ImGui::SameLine();
+          if(ImGui::InputInt("##short_pyramiding_max_layers",
+                             &pyramiding_max_layers)) {
+            if(pyramiding_max_layers < 1) {
+              pyramiding_max_layers = 1;
+            }
+            pyramiding.max_layers(pyramiding_max_layers);
+          }
+
+          short_position.pyramiding(pyramiding);
+          ImGui::PopID();
+        }
+
+        positions.short_side(short_position);
 
         ImGui::Unindent();
         ImGui::PopID();
       }
+
+      self.editing_strategy_ptr_->positions(positions);
       ImGui::Text("");
     }
 
@@ -987,7 +1157,19 @@ private:
 
             self.render_plot_method(plot_method, context);
 
-            if(ImGui::Button("Remove Item")) {
+            const auto btn_label = "Remove Item";
+            {
+              const auto spacing = ImGui::GetStyle().ItemSpacing.x;
+              const auto frame_padding_x = ImGui::GetStyle().FramePadding.x;
+              const auto delete_width =
+               ImGui::CalcTextSize(btn_label).x + (2.0f * frame_padding_x);
+              const auto line_start = ImGui::GetCursorScreenPos();
+              const auto line_width = ImGui::GetContentRegionAvail().x;
+              const auto delete_button_x =
+               line_start.x + line_width - delete_width;
+              ImGui::SetCursorScreenPos(ImVec2(delete_button_x, line_start.y));
+            }
+            if(ImGui::Button(btn_label)) {
               plot_items.erase(plot_items.begin() + j);
               --j; // Adjust index after removal
             }
@@ -1003,7 +1185,18 @@ private:
           plot_group.items(plot_items);
         }
 
-        if(ImGui::Button("Remove Plot")) {
+        const auto btn_label = "Remove Plot";
+        {
+          const auto spacing = ImGui::GetStyle().ItemSpacing.x;
+          const auto frame_padding_x = ImGui::GetStyle().FramePadding.x;
+          const auto delete_width =
+           ImGui::CalcTextSize(btn_label).x + (2.0f * frame_padding_x);
+          const auto line_start = ImGui::GetCursorScreenPos();
+          const auto line_width = ImGui::GetContentRegionAvail().x;
+          const auto delete_button_x = line_start.x + line_width - delete_width;
+          ImGui::SetCursorScreenPos(ImVec2(delete_button_x, line_start.y));
+        }
+        if(ImGui::Button(btn_label)) {
           plot_groups.erase(plot_groups.begin() + i);
           --i; // Adjust index after removal
         }
@@ -1051,6 +1244,7 @@ private:
                                                         "STDDEV",
                                                         "BB",
                                                         "KC",
+                                                        "DC",
                                                         "STOCH",
                                                         "STOCH_RSI",
                                                         "SELECT_OUTPUT",
@@ -1129,10 +1323,11 @@ private:
 
                           BbMethod,
                           KcMethod,
+                          DonchianChannelMethod,
                           StochMethod,
                           StochRsiMethod,
                           SmaMethod,
-                          CachedResultsEmaMethod,
+                          EmaMethod,
                           WmaMethod,
                           HmaMethod,
                           RsiMethod,
@@ -1158,24 +1353,24 @@ private:
   {
     {
       const auto output_options =
-       std::vector<SeriesOutput>{SeriesOutput::UpperBand,
-                                 SeriesOutput::MiddleBand,
-                                 SeriesOutput::LowerBand,
-                                 SeriesOutput::MacdLine,
-                                 SeriesOutput::SignalLine,
-                                 SeriesOutput::Histogram,
-                                 SeriesOutput::KPercent,
-                                 SeriesOutput::DPercent};
+       std::vector<MethodOutput>{MethodOutput::UpperBand,
+                                 MethodOutput::MiddleBand,
+                                 MethodOutput::LowerBand,
+                                 MethodOutput::MacdLine,
+                                 MethodOutput::SignalLine,
+                                 MethodOutput::Histogram,
+                                 MethodOutput::KPercent,
+                                 MethodOutput::DPercent};
 
-      const auto output_map = std::unordered_map<SeriesOutput, std::string>{
-       {SeriesOutput::UpperBand, "Upper Band"},
-       {SeriesOutput::MiddleBand, "Middle Band"},
-       {SeriesOutput::LowerBand, "Lower Band"},
-       {SeriesOutput::MacdLine, "MACD Line"},
-       {SeriesOutput::SignalLine, "Signal Line"},
-       {SeriesOutput::Histogram, "Histogram"},
-       {SeriesOutput::KPercent, "%K"},
-       {SeriesOutput::DPercent, "%D"}};
+      const auto output_map = std::unordered_map<MethodOutput, std::string>{
+       {MethodOutput::UpperBand, "Upper Band"},
+       {MethodOutput::MiddleBand, "Middle Band"},
+       {MethodOutput::LowerBand, "Lower Band"},
+       {MethodOutput::MacdLine, "MACD Line"},
+       {MethodOutput::SignalLine, "Signal Line"},
+       {MethodOutput::Histogram, "Histogram"},
+       {MethodOutput::KPercent, "%K"},
+       {MethodOutput::DPercent, "%D"}};
 
       ImGui::Text("Output:");
       ImGui::SameLine();
@@ -1207,12 +1402,12 @@ private:
                                    SeriesNodeMethod& method,
                                    WindowContext& context)
   {
-    if(std::ranges::find(self.available_series_names_, method.name()) ==
-       self.available_series_names_.end()) {
-      const auto new_name = self.available_series_names_.empty()
-                             ? ""
-                             : self.available_series_names_.front();
+    if(self.changed_series_names_.contains(method.name())) {
+      const auto new_name = self.changed_series_names_.at(method.name());
       method.name(new_name);
+    } else if(std::ranges::find(self.available_series_names_, method.name()) ==
+              self.available_series_names_.end()) {
+      method.name("");
     }
 
     ImGui::Text("Name:");
@@ -1238,12 +1433,12 @@ private:
                                    SeriesValueMethod& method,
                                    WindowContext& context)
   {
-    if(std::ranges::find(self.available_series_names_, method.name()) ==
-       self.available_series_names_.end()) {
-      const auto new_name = self.available_series_names_.empty()
-                             ? ""
-                             : self.available_series_names_.front();
+    if(self.changed_series_names_.contains(method.name())) {
+      const auto new_name = self.changed_series_names_.at(method.name());
       method.name(new_name);
+    } else if(std::ranges::find(self.available_series_names_, method.name()) ==
+              self.available_series_names_.end()) {
+      method.name("");
     }
 
     ImGui::Text("Name:");
@@ -1296,13 +1491,13 @@ private:
         std::unreachable();
       };
 
-      const auto ma_type_str = get_ma_type_string(method.ma_type());
+      const auto ma_type_str = get_ma_type_string(method.ma_method_type());
       if(ImGui::BeginCombo("##ma_type", ma_type_str.c_str())) {
         for(const auto& ma_type_option : ma_type_options) {
           const auto ma_type_option_str = get_ma_type_string(ma_type_option);
           const bool is_selected = ma_type_str == ma_type_option_str;
           if(ImGui::Selectable(ma_type_option_str.c_str(), is_selected)) {
-            method.ma_type(ma_type_option);
+            method.ma_method_type(ma_type_option);
           }
         }
         ImGui::EndCombo();
@@ -1331,9 +1526,9 @@ private:
 
     ImGui::Text("Source:");
     ImGui::SameLine();
-    auto source = method.ma_source();
+    auto source = method.source();
     self.render_series_method(source, context);
-    method.ma_source(std::move(source));
+    method.source(std::move(source));
   }
 
   void render_series_method_params(this auto& self,
@@ -1343,12 +1538,12 @@ private:
     {
       ImGui::Text("Length:");
       ImGui::SameLine();
-      auto length = static_cast<int>(method.ma_period());
+      auto length = static_cast<int>(method.period());
       if(ImGui::InputInt("##kc_length", &length)) {
         if(length < 1) {
           length = 1;
         }
-        method.ma_period(static_cast<std::size_t>(length));
+        method.period(static_cast<std::size_t>(length));
       }
     }
     {
@@ -1379,9 +1574,9 @@ private:
     {
       ImGui::Text("Source:");
       ImGui::SameLine();
-      auto source = method.ma_source();
+      auto source = method.source();
       self.render_series_method(source, context);
-      method.ma_source(std::move(source));
+      method.source(std::move(source));
     }
     {
       ImGui::Text("Band Type:");
@@ -1427,6 +1622,23 @@ private:
           multiplier = 0.1;
         }
         method.multiplier(multiplier);
+      }
+    }
+  }
+
+  void render_series_method_params(this auto& self,
+                                   DonchianChannelMethod& method,
+                                   WindowContext& context)
+  {
+    {
+      ImGui::Text("Length:");
+      ImGui::SameLine();
+      auto length = static_cast<int>(method.period());
+      if(ImGui::InputInt("##dc_length", &length)) {
+        if(length < 1) {
+          length = 1;
+        }
+        method.period(static_cast<std::size_t>(length));
       }
     }
   }
@@ -1529,7 +1741,7 @@ private:
 
   template<typename TMethodWithPeriod>
     requires std::same_as<TMethodWithPeriod, SmaMethod> ||
-             std::same_as<TMethodWithPeriod, CachedResultsEmaMethod> ||
+             std::same_as<TMethodWithPeriod, EmaMethod> ||
              std::same_as<TMethodWithPeriod, WmaMethod> ||
              std::same_as<TMethodWithPeriod, HmaMethod> ||
              std::same_as<TMethodWithPeriod, RsiMethod> ||
@@ -1769,7 +1981,7 @@ private:
   }
 
   auto draw_condition_method_combo(this auto& self,
-                                   const AnyConditionMethod& condition)
+                                   const AnySeriesMethod& condition)
    -> std::string
   {
     static const auto condition_ids = std::vector<std::string>{"EQUAL",
@@ -1826,21 +2038,20 @@ private:
 
   auto make_condition_method_from_other(this auto& self,
                                         const std::string& condition_id,
-                                        auto other_condition)
-   -> AnyConditionMethod
+                                        auto other_condition) -> AnySeriesMethod
   {
     const auto get_condition_series_params =
      []<typename TMethod>(
       const TMethod& method) -> std::pair<AnySeriesMethod, AnySeriesMethod> {
       if constexpr(requires {
                      {
-                       method.signal()
+                       method.source()
                      } -> std::convertible_to<AnySeriesMethod>;
                      {
                        method.reference()
                      } -> std::convertible_to<AnySeriesMethod>;
                    }) {
-        return {method.signal(), method.reference()};
+        return {method.source(), method.reference()};
       } else if constexpr(requires {
                             {
                               method.target()
@@ -1913,26 +2124,26 @@ private:
 
     const auto get_conditions_param =
      []<typename TMethod>(
-      const TMethod& method) -> std::vector<AnyConditionMethod> {
+      const TMethod& method) -> std::vector<AnySeriesMethod> {
       if constexpr(requires {
                      {
                        method.conditions()
-                     } -> std::convertible_to<std::vector<AnyConditionMethod>>;
+                     } -> std::convertible_to<std::vector<AnySeriesMethod>>;
                    }) {
         return method.conditions();
       } else if constexpr(requires {
                             {
                               method.other_condition()
-                            } -> std::convertible_to<AnyConditionMethod>;
+                            } -> std::convertible_to<AnySeriesMethod>;
                           }) {
         return {method.other_condition()};
       } else if constexpr(requires {
                             {
                               method.first_condition()
-                            } -> std::convertible_to<AnyConditionMethod>;
+                            } -> std::convertible_to<AnySeriesMethod>;
                             {
                               method.second_condition()
-                            } -> std::convertible_to<AnyConditionMethod>;
+                            } -> std::convertible_to<AnySeriesMethod>;
                           }) {
         return {method.first_condition(), method.second_condition()};
       } else {
@@ -1951,24 +2162,24 @@ private:
     }
 
     const auto get_first_condition_param =
-     []<typename TMethod>(const TMethod& method) -> AnyConditionMethod {
+     []<typename TMethod>(const TMethod& method) -> AnySeriesMethod {
       if constexpr(requires {
                      {
                        method.condition()
-                     } -> std::convertible_to<AnyConditionMethod>;
+                     } -> std::convertible_to<AnySeriesMethod>;
                    }) {
         return method.condition();
       } else if constexpr(requires {
                             {
                               method.first_condition()
-                            } -> std::convertible_to<AnyConditionMethod>;
+                            } -> std::convertible_to<AnySeriesMethod>;
                           }) {
         return method.first_condition();
       } else if constexpr(requires {
                             {
                               method.conditions()
                             } -> std::convertible_to<
-                             std::vector<AnyConditionMethod>>;
+                             std::vector<AnySeriesMethod>>;
                           }) {
         const auto conditions = method.conditions();
         if(!conditions.empty()) {
@@ -1979,7 +2190,7 @@ private:
       } else if constexpr(requires {
                             {
                               method.other_condition()
-                            } -> std::convertible_to<AnyConditionMethod>;
+                            } -> std::convertible_to<AnySeriesMethod>;
                           }) {
         return method.other_condition();
       } else {
@@ -1988,17 +2199,17 @@ private:
     };
 
     const auto get_second_condition_param =
-     []<typename TMethod>(const TMethod& method) -> AnyConditionMethod {
+     []<typename TMethod>(const TMethod& method) -> AnySeriesMethod {
       if constexpr(requires {
                      {
                        method.other_condition()
-                     } -> std::convertible_to<AnyConditionMethod>;
+                     } -> std::convertible_to<AnySeriesMethod>;
                    }) {
         return method.other_condition();
       } else if constexpr(requires {
                             {
                               method.second_condition()
-                            } -> std::convertible_to<AnyConditionMethod>;
+                            } -> std::convertible_to<AnySeriesMethod>;
                           }) {
         return method.second_condition();
       } else {
@@ -2037,59 +2248,58 @@ private:
   }
 
   auto render_condition_method(this auto& self,
-                               const AnyConditionMethod& any_condition,
-                               WindowContext& context) -> AnyConditionMethod
+                               const AnySeriesMethod& any_condition,
+                               WindowContext& context) -> AnySeriesMethod
   {
-    if(auto* condition_ptr =
-        condition_method_cast<AllOfMethod>(any_condition)) {
+    if(auto* condition_ptr = series_method_cast<AllOfMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<AnyOfMethod>(any_condition)) {
+               series_method_cast<AnyOfMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<AlwaysMethod>(any_condition)) {
+               series_method_cast<AlwaysMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<NeverMethod>(any_condition)) {
+               series_method_cast<NeverMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<LessThanMethod>(any_condition)) {
+               series_method_cast<LessThanMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<GreaterThanMethod>(any_condition)) {
+               series_method_cast<GreaterThanMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<LessEqualMethod>(any_condition)) {
+               series_method_cast<LessEqualMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<GreaterEqualMethod>(any_condition)) {
+               series_method_cast<GreaterEqualMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<EqualMethod>(any_condition)) {
+               series_method_cast<EqualMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<NotEqualMethod>(any_condition)) {
+               series_method_cast<NotEqualMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<CrossoverMethod>(any_condition)) {
+               series_method_cast<CrossoverMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<CrossunderMethod>(any_condition)) {
+               series_method_cast<CrossunderMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<NotMethod>(any_condition)) {
+               series_method_cast<NotMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<AndMethod>(any_condition)) {
+               series_method_cast<AndMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<OrMethod>(any_condition)) {
+               series_method_cast<OrMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               condition_method_cast<XorMethod>(any_condition)) {
+               series_method_cast<XorMethod>(any_condition)) {
       return self.render_condition_method(*condition_ptr, context);
     } else {
-      return self.render_condition_method(*condition_ptr, context);
+      return any_condition;
     }
   }
 
@@ -2102,7 +2312,7 @@ private:
              std::same_as<TCondition, LessEqualMethod>
   auto render_condition_method(this auto& self,
                                const TCondition& condition,
-                               WindowContext& context) -> AnyConditionMethod
+                               WindowContext& context) -> AnySeriesMethod
   {
     auto new_condition = condition;
 
@@ -2133,13 +2343,13 @@ private:
              std::same_as<TCondition, CrossunderMethod>
   auto render_condition_method(this auto& self,
                                const TCondition& condition,
-                               WindowContext& context) -> AnyConditionMethod
+                               WindowContext& context) -> AnySeriesMethod
   {
     auto new_condition = condition;
 
     ImGui::PushID("left_param");
-    auto signal = new_condition.signal();
-    self.render_series_method(signal, context);
+    auto source = new_condition.source();
+    self.render_series_method(source, context);
     ImGui::PopID();
 
     const auto updated_condition_id =
@@ -2150,7 +2360,7 @@ private:
     self.render_series_method(reference, context);
     ImGui::PopID();
 
-    new_condition.signal(std::move(signal));
+    new_condition.source(std::move(source));
     new_condition.reference(std::move(reference));
 
     auto changed_method = self.make_condition_method_from_other(
@@ -2164,7 +2374,7 @@ private:
              std::same_as<TCondition, NeverMethod>
   auto render_condition_method(this auto& self,
                                const TCondition& condition,
-                               WindowContext& context) -> AnyConditionMethod
+                               WindowContext& context) -> AnySeriesMethod
   {
     auto new_condition = condition;
     const auto updated_condition_id =
@@ -2181,7 +2391,7 @@ private:
              std::same_as<TCondition, AnyOfMethod>
   auto render_condition_method(this auto& self,
                                const TCondition& condition,
-                               WindowContext& context) -> AnyConditionMethod
+                               WindowContext& context) -> AnySeriesMethod
   {
     auto new_condition = condition;
     const auto updated_condition_id =
@@ -2194,7 +2404,18 @@ private:
       auto& sub_condition = conditions[i];
       sub_condition = self.render_condition_method(sub_condition, context);
 
-      if(ImGui::Button("Remove Condition")) {
+      const auto btn_label = "Remove Condition";
+      {
+        const auto spacing = ImGui::GetStyle().ItemSpacing.x;
+        const auto frame_padding_x = ImGui::GetStyle().FramePadding.x;
+        const auto delete_width =
+         ImGui::CalcTextSize(btn_label).x + (2.0f * frame_padding_x);
+        const auto line_start = ImGui::GetCursorScreenPos();
+        const auto line_width = ImGui::GetContentRegionAvail().x;
+        const auto delete_button_x = line_start.x + line_width - delete_width;
+        ImGui::SetCursorScreenPos(ImVec2(delete_button_x, line_start.y));
+      }
+      if(ImGui::Button(btn_label)) {
         conditions.erase(conditions.begin() + i);
         --i;
       }
@@ -2221,7 +2442,7 @@ private:
     requires std::same_as<TCondition, NotMethod>
   auto render_condition_method(this auto& self,
                                const TCondition& condition,
-                               WindowContext& context) -> AnyConditionMethod
+                               WindowContext& context) -> AnySeriesMethod
   {
     auto new_condition = condition;
     const auto updated_condition_id =
@@ -2242,7 +2463,7 @@ private:
              std::same_as<TCondition, XorMethod>
   auto render_condition_method(this auto& self,
                                const TCondition& condition,
-                               WindowContext& context) -> AnyConditionMethod
+                               WindowContext& context) -> AnySeriesMethod
   {
     auto new_condition = condition;
     auto first_condition = new_condition.first_condition();
@@ -2422,6 +2643,15 @@ private:
                                  SeriesPlotSourceMethod& plot_source_method,
                                  WindowContext& context)
   {
+    if(self.changed_series_names_.contains(plot_source_method.series_name())) {
+      plot_source_method.series_name(
+       self.changed_series_names_.at(plot_source_method.series_name()));
+    } else if(std::ranges::find(self.available_series_names_,
+                                plot_source_method.series_name()) ==
+              self.available_series_names_.end()) {
+      plot_source_method.series_name("");
+    }
+
     ImGui::Text("Series:");
     ImGui::SameLine();
     auto series_name = plot_source_method.series_name();
@@ -2492,6 +2722,7 @@ private:
     self.selected_strategy_handle_opt_ = std::nullopt;
     self.editing_strategy_ptr_ = nullptr;
     self.available_series_names_.clear();
+    self.changed_series_names_.clear();
   }
 };
 

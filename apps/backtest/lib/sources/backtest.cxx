@@ -1,7 +1,9 @@
 module;
 
 #include <algorithm>
+#include <array>
 #include <chrono>
+#include <cmath>
 #include <cstdlib>
 #include <ctime>
 #include <format>
@@ -11,6 +13,7 @@ module;
 #include <vector>
 
 #include <ctre.hpp>
+#include <jsoncons/json.hpp>
 #include <rapidcsv.h>
 
 export module pludux.backtest;
@@ -38,6 +41,8 @@ export import :backtest_summary;
 export import :backtest_runner;
 export import :plot_group;
 export import :plots;
+
+export import :strategy_parser;
 
 export namespace pludux {
 
@@ -67,7 +72,7 @@ void update_asset_from_csv(backtest::Asset& asset, std::istream& csv_stream)
                "(\\d{4})-(\\d{2})-(\\d{2})" // YYYY-MM-DD
                "(?:[T ](\\d{2}):(\\d{2})"   // hh:mm
                "(?::(\\d{2}(?:\\.\\d+)?))?" // :ss.s
-               "(Z|[+\\-]\\d{2}:\\d{2})?"    // Z or +hh:mm or -hh:mm
+               "(Z|[+\\-]\\d{2}:\\d{2})?"   // Z or +hh:mm or -hh:mm
                ")?"
                "$">;
 
@@ -228,6 +233,22 @@ auto format_currency(double value) -> std::string
     num = "-" + num;
   }
   return num;
+}
+
+auto format_compact_integer(double value) -> std::string
+{
+  if(value == 0) {
+    return "0";
+  }
+  const auto v =
+   std::array<double, 5>{1000000000000, 1000000000, 1000000, 1000, 1};
+  const auto p = std::array<const char*, 5>{"T", "B", "M", "k", ""};
+  for(int i = 0; i < v.size(); ++i) {
+    if(std::abs(value) >= v[i]) {
+      return std::format("{:d}{}", static_cast<int>(value / v[i]), p[i]);
+    }
+  }
+  return std::format("{:d}{}", static_cast<int>(value / v[4]), p[4]);
 }
 
 } // namespace pludux

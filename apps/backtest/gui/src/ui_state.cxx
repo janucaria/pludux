@@ -75,6 +75,18 @@ public:
     return self.backtest_handles_;
   }
 
+  void reorder_backtest_handle(this UiState& self,
+                               std::size_t from_index,
+                               std::size_t to_index) noexcept
+  {
+    auto& backtest_handles = self.backtest_handles_;
+    if(from_index < backtest_handles.size() && to_index < backtest_handles.size()) {
+      const auto handle = backtest_handles[from_index];
+      backtest_handles.erase(backtest_handles.begin() + from_index);
+      backtest_handles.insert(backtest_handles.begin() + to_index, handle);
+    }
+  }
+
   void
   add_backtest_handle(this UiState& self,
                       backtest::BacktestStoreHandle backtest_handle) noexcept
@@ -99,6 +111,18 @@ public:
     return self.asset_handles_;
   }
 
+  void reorder_asset_handle(this UiState& self,
+                            std::size_t from_index,
+                            std::size_t to_index) noexcept
+  {
+    auto& asset_handles = self.asset_handles_;
+    if(from_index < asset_handles.size() && to_index < asset_handles.size()) {
+      const auto handle = asset_handles[from_index];
+      asset_handles.erase(asset_handles.begin() + from_index);
+      asset_handles.insert(asset_handles.begin() + to_index, handle);
+    }
+  }
+
   void add_asset_handle(this UiState& self,
                         backtest::AssetStoreHandle asset_handle) noexcept
   {
@@ -119,6 +143,18 @@ public:
    -> const std::vector<backtest::StrategyStoreHandle>&
   {
     return self.strategy_handles_;
+  }
+
+  void reorder_strategy_handle(this UiState& self,
+                               std::size_t from_index,
+                               std::size_t to_index) noexcept
+  {
+    auto& strategy_handles = self.strategy_handles_;
+    if(from_index < strategy_handles.size() && to_index < strategy_handles.size()) {
+      const auto handle = strategy_handles[from_index];
+      strategy_handles.erase(strategy_handles.begin() + from_index);
+      strategy_handles.insert(strategy_handles.begin() + to_index, handle);
+    }
   }
 
   void
@@ -145,6 +181,18 @@ public:
     return self.market_handles_;
   }
 
+  void reorder_market_handle(this UiState& self,
+                             std::size_t from_index,
+                             std::size_t to_index) noexcept
+  {
+    auto& market_handles = self.market_handles_;
+    if(from_index < market_handles.size() && to_index < market_handles.size()) {
+      const auto handle = market_handles[from_index];
+      market_handles.erase(market_handles.begin() + from_index);
+      market_handles.insert(market_handles.begin() + to_index, handle);
+    }
+  }
+
   void add_market_handle(this UiState& self,
                          backtest::MarketStoreHandle market_handle) noexcept
   {
@@ -167,6 +215,18 @@ public:
     return self.broker_handles_;
   }
 
+  void reorder_broker_handle(this UiState& self,
+                             std::size_t from_index,
+                             std::size_t to_index) noexcept
+  {
+    auto& broker_handles = self.broker_handles_;
+    if(from_index < broker_handles.size() && to_index < broker_handles.size()) {
+      const auto handle = broker_handles[from_index];
+      broker_handles.erase(broker_handles.begin() + from_index);
+      broker_handles.insert(broker_handles.begin() + to_index, handle);
+    }
+  }
+
   void add_broker_handle(this UiState& self,
                          backtest::BrokerStoreHandle broker_handle) noexcept
   {
@@ -187,6 +247,19 @@ public:
    -> const std::vector<backtest::ProfileStoreHandle>&
   {
     return self.profile_handles_;
+  }
+
+  void reorder_profile_handle(this UiState& self,
+                              std::size_t from_index,
+                              std::size_t to_index) noexcept
+  {
+    auto& profile_handles = self.profile_handles_;
+    if(from_index < profile_handles.size() &&
+       to_index < profile_handles.size()) {
+      const auto handle = profile_handles[from_index];
+      profile_handles.erase(profile_handles.begin() + from_index);
+      profile_handles.insert(profile_handles.begin() + to_index, handle);
+    }
   }
 
   void add_profile_handle(this UiState& self,

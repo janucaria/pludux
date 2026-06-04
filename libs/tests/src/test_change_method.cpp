@@ -29,21 +29,31 @@ TEST(ChangeMethodTest, ConstructorInitialization)
 TEST(ChangeMethodTest, RunAllMethod)
 {
   const auto change_method = ChangeMethod{};
-  const auto asset_data = AssetHistory{
-   {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+  const auto asset_data =
+   AssetHistory{{"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 
-  EXPECT_DOUBLE_EQ(change_method(asset_snapshot[0], context), -5);
-  EXPECT_DOUBLE_EQ(change_method(asset_snapshot[1], context), 0);
-  EXPECT_DOUBLE_EQ(change_method(asset_snapshot[2], context), 0);
-  EXPECT_DOUBLE_EQ(change_method(asset_snapshot[3], context), -15);
-  EXPECT_DOUBLE_EQ(change_method(asset_snapshot[4], context), 5);
-  EXPECT_DOUBLE_EQ(change_method(asset_snapshot[5], context), 35);
-  EXPECT_DOUBLE_EQ(change_method(asset_snapshot[6], context), 35);
-  EXPECT_DOUBLE_EQ(change_method(asset_snapshot[7], context), -30);
-  EXPECT_DOUBLE_EQ(change_method(asset_snapshot[8], context), -45);
-  EXPECT_TRUE(std::isnan(change_method(asset_snapshot[9], context)));
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(change_method, asset_snapshot[0], context), -5);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(change_method, asset_snapshot[1], context), 0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(change_method, asset_snapshot[2], context), 0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(change_method, asset_snapshot[3], context), -15);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(change_method, asset_snapshot[4], context), 5);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(change_method, asset_snapshot[5], context), 35);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(change_method, asset_snapshot[6], context), 35);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(change_method, asset_snapshot[7], context), -30);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(change_method, asset_snapshot[8], context), -45);
+  EXPECT_TRUE(std::isnan(
+   evaluate_series_method(change_method, asset_snapshot[9], context)));
 }
 
 TEST(ChangeMethodTest, EqualityOperator)

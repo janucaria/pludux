@@ -15,11 +15,16 @@ TEST(AbsDiffMethodTest, RunMethod)
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 
-  EXPECT_DOUBLE_EQ(abs_diff_method(asset_snapshot[0], context), 10);
-  EXPECT_DOUBLE_EQ(abs_diff_method(asset_snapshot[1], context), 5);
-  EXPECT_DOUBLE_EQ(abs_diff_method(asset_snapshot[2], context), 0);
-  EXPECT_DOUBLE_EQ(abs_diff_method(asset_snapshot[3], context), 5);
-  EXPECT_DOUBLE_EQ(abs_diff_method(asset_snapshot[4], context), 10);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(abs_diff_method, asset_snapshot[0], context), 10);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(abs_diff_method, asset_snapshot[1], context), 5);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(abs_diff_method, asset_snapshot[2], context), 0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(abs_diff_method, asset_snapshot[3], context), 5);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(abs_diff_method, asset_snapshot[4], context), 10);
 }
 
 TEST(AbsDiffMethodTest, EqualityOperator)

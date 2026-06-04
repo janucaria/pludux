@@ -68,11 +68,19 @@ public:
 
         self.draw_spacer_row();
 
-        self.draw_currency_with_rate_row("Expected value",
+        self.draw_float_row("Profit factor", summary.profit_factor());
+        self.draw_currency_with_rate_row("Expectancy",
                                          summary.expected_value(),
                                          summary.expected_value() /
                                           summary.average_investment());
-        self.draw_float_row("Profit factor", summary.profit_factor());
+
+        self.draw_count_row_with_rate(
+         "Winning trades", summary.profit_count(), summary.profit_rate());
+        self.draw_count_row_with_rate(
+         "Losing trades", summary.loss_count(), summary.loss_rate());
+        self.draw_count_row_with_rate("Break-even trades",
+                                      summary.break_even_count(),
+                                      summary.break_even_rate());
 
         self.draw_spacer_row();
 
@@ -90,16 +98,6 @@ public:
                                           summary.average_investment());
         self.draw_currency_row("Avg investment", summary.average_investment());
         self.draw_duration_row("Avg duration", summary.average_duration());
-
-        self.draw_spacer_row();
-
-        self.draw_count_row_with_rate(
-         "Winning trades", summary.profit_count(), summary.profit_rate());
-        self.draw_count_row_with_rate(
-         "Losing trades", summary.loss_count(), summary.loss_rate());
-        self.draw_count_row_with_rate("Break-even trades",
-                                      summary.break_even_count(),
-                                      summary.break_even_rate());
 
         self.draw_spacer_row();
 

@@ -24,20 +24,12 @@ public:
   , render_plot_line_{[](const std::any& impl,
                          const std::vector<double>& data,
                          std::uint32_t color) {
-    auto* context = std::any_cast<TPlotMethodContext>(&impl);
-    if(context) {
-      context->render_plot_line(data, color);
-    }
-    // TODO: handle error case (e.g., log an error message)
+    std::any_cast<TPlotMethodContext>(impl).render_plot_line(data, color);
   }}
   , render_plot_histogram_{[](const std::any& impl,
                               const std::vector<double>& data,
                               std::uint32_t color) {
-    auto* context = std::any_cast<TPlotMethodContext>(&impl);
-    if(context) {
-      context->render_plot_histogram(data, color);
-    }
-    // TODO: handle error case (e.g., log an error message)
+    std::any_cast<TPlotMethodContext>(impl).render_plot_histogram(data, color);
   }}
   , series_results_{[](const std::any& impl, const std::string& series_name)
                      -> std::optional<

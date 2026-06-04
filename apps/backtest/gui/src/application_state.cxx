@@ -34,6 +34,11 @@ public:
     return self.store_;
   }
 
+  auto store(this ApplicationState& self) noexcept -> backtest::Store&
+  {
+    return self.store_;
+  }
+
   auto ui_state(this const ApplicationState& self) noexcept -> const UiState&
   {
     return self.ui_state_;
@@ -107,11 +112,20 @@ public:
     return self.ui_state_.backtest_handles();
   }
 
+  void reorder_list_backtest(this ApplicationState& self,
+                             std::size_t from_index,
+                             std::size_t to_index)
+  {
+    self.ui_state_.reorder_backtest_handle(from_index, to_index);
+  }
+
   auto add_backtest(this ApplicationState& self, backtest::Backtest backtest)
    -> std::optional<backtest::BacktestStoreHandle>
   {
     const auto handle_opt = self.store_.add_backtest(std::move(backtest));
     if(handle_opt) {
+      self.add_backtest_summaries(*handle_opt, {});
+      self.add_series_results(*handle_opt, {});
       self.ui_state_.add_backtest_handle(*handle_opt);
     }
     return handle_opt;
@@ -180,6 +194,13 @@ public:
    -> const std::vector<backtest::AssetStoreHandle>&
   {
     return self.ui_state_.asset_handles();
+  }
+
+  void reorder_list_asset(this ApplicationState& self,
+                          std::size_t from_index,
+                          std::size_t to_index)
+  {
+    self.ui_state_.reorder_asset_handle(from_index, to_index);
   }
 
   void add_asset(this ApplicationState& self, backtest::Asset asset)
@@ -260,6 +281,13 @@ public:
     return self.ui_state_.strategy_handles();
   }
 
+  void reorder_list_strategy(this ApplicationState& self,
+                             std::size_t from_index,
+                             std::size_t to_index)
+  {
+    self.ui_state_.reorder_strategy_handle(from_index, to_index);
+  }
+
   void add_strategy(this ApplicationState& self, backtest::Strategy strategy)
   {
     const auto handle_opt = self.store_.add_strategy(std::move(strategy));
@@ -336,6 +364,13 @@ public:
    -> const std::vector<backtest::MarketStoreHandle>&
   {
     return self.ui_state_.market_handles();
+  }
+
+  void reorder_list_market(this ApplicationState& self,
+                           std::size_t from_index,
+                           std::size_t to_index)
+  {
+    self.ui_state_.reorder_market_handle(from_index, to_index);
   }
 
   void add_market(this ApplicationState& self, backtest::Market market)
@@ -416,6 +451,13 @@ public:
     return self.ui_state_.broker_handles();
   }
 
+  void reorder_list_broker(this ApplicationState& self,
+                           std::size_t from_index,
+                           std::size_t to_index)
+  {
+    self.ui_state_.reorder_broker_handle(from_index, to_index);
+  }
+
   void add_broker(this ApplicationState& self, backtest::Broker broker)
   {
     const auto handle_opt = self.store_.add_broker(std::move(broker));
@@ -492,6 +534,13 @@ public:
    -> const std::vector<backtest::ProfileStoreHandle>&
   {
     return self.ui_state_.profile_handles();
+  }
+
+  void reorder_list_profile(this ApplicationState& self,
+                            std::size_t from_index,
+                            std::size_t to_index)
+  {
+    self.ui_state_.reorder_profile_handle(from_index, to_index);
   }
 
   void add_profile(this ApplicationState& self, backtest::Profile profile)
@@ -619,23 +668,21 @@ public:
 
   auto add_series_results(this ApplicationState& self,
                           backtest::BacktestStoreHandle handle,
-                          SeriesResultsCollector series_results_collector)
-   -> bool
+                          SeriesEvaluationResults series_results) -> bool
   {
-    return self.store_.add_series_results(handle,
-                                          std::move(series_results_collector));
+    return self.store_.add_series_results(handle, std::move(series_results));
   }
 
   auto get_series_results(this const ApplicationState& self,
                           backtest::BacktestStoreHandle handle) noexcept
-   -> const SeriesResultsCollector&
+   -> const SeriesEvaluationResults&
   {
     return self.store_.get_series_results(handle);
   }
 
   auto get_series_results(this ApplicationState& self,
                           backtest::BacktestStoreHandle handle) noexcept
-   -> SeriesResultsCollector&
+   -> SeriesEvaluationResults&
   {
     return self.store_.get_series_results(handle);
   }
@@ -643,7 +690,7 @@ public:
   auto
   get_series_results_if_present(this const ApplicationState& self,
                                 backtest::BacktestStoreHandle handle) noexcept
-   -> const SeriesResultsCollector*
+   -> const SeriesEvaluationResults*
   {
     return self.store_.get_series_results_if_present(handle);
   }
@@ -651,18 +698,16 @@ public:
   auto
   get_series_results_if_present(this ApplicationState& self,
                                 backtest::BacktestStoreHandle handle) noexcept
-   -> SeriesResultsCollector*
+   -> SeriesEvaluationResults*
   {
     return self.store_.get_series_results_if_present(handle);
   }
 
   auto update_series_results(this ApplicationState& self,
                              backtest::BacktestStoreHandle handle,
-                             SeriesResultsCollector series_results_collector)
-   -> bool
+                             SeriesEvaluationResults series_results) -> bool
   {
-    return self.store_.update_series_results(
-     handle, std::move(series_results_collector));
+    return self.store_.update_series_results(handle, std::move(series_results));
   }
 
   auto remove_series_results(this ApplicationState& self,
@@ -734,13 +779,10 @@ private:
   void reset_backtest(this ApplicationState& self,
                       backtest::BacktestStoreHandle handle)
   {
-    auto& backtest = self.store_.get_backtest(handle);
-    backtest.is_failed(false);
-
     const auto summaries = self.store_.update_backtest_summaries(handle, {});
-    const auto series_resulkt = self.store_.update_series_results(handle, {});
+    const auto series_results = self.store_.update_series_results(handle, {});
 
-    if(summaries || series_resulkt) {
+    if(!summaries || !series_results) {
       // TODO: Handle error case where summaries or series results fail to
       // update after backtest reset
     }

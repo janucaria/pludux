@@ -22,10 +22,6 @@
           "value": "Debug"
         }
       },
-      "toolset": {
-        "value": "v143",
-        "strategy": "external"
-      },
       "architecture": {
         "value": "x64",
         "strategy": "external"

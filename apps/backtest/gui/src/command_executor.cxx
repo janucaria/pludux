@@ -28,8 +28,12 @@ using CommandVariant = std::variant<ActionCommand, UndoCommand, RedoCommand>;
 
 class CommandExecutor {
 public:
-  void execute(this CommandExecutor& self, ApplicationState& app_state)
+  auto execute(this CommandExecutor& self, ApplicationState& app_state) -> bool
   {
+    if(self.pending_commands_.empty()) {
+      return false;
+    }
+
     while(!self.pending_commands_.empty()) {
       auto command_variant = std::move(self.pending_commands_.front());
       self.pending_commands_.pop_front();
@@ -40,6 +44,7 @@ public:
        },
        command_variant);
     }
+    return true;
   }
 
   void push(this CommandExecutor& self, CommandVariant command_variant)

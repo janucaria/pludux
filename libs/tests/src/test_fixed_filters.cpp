@@ -4,28 +4,33 @@ import pludux;
 
 using namespace pludux;
 
+using SignalAlwaysMethod = pludux::TrueMethod;
+using SignalNeverMethod = pludux::FalseMethod;
+
 const auto context = AnySeriesMethodContext{};
 
 TEST(FixedMethodTest, AlwaysMethod)
 {
-  const auto condition = AlwaysMethod{};
-  const auto asset_data = AssetHistory{};
+  const auto condition = SignalAlwaysMethod{};
+  const auto asset_data = AssetHistory{{"close", {0}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_TRUE(condition(asset_data, context));
+  EXPECT_TRUE(evaluate_series_method(condition, asset_snapshot[0], context));
 }
 
 TEST(FixedMethodTest, NeverMethod)
 {
-  const auto condition = NeverMethod{};
-  const auto asset_data = AssetHistory{};
+  const auto condition = SignalNeverMethod{};
+  const auto asset_data = AssetHistory{{"close", {0}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_FALSE(condition(asset_data, context));
+  EXPECT_FALSE(evaluate_series_method(condition, asset_snapshot[0], context));
 }
 
 TEST(FixedMethodTest, AlwaysMethodEquality)
 {
-  const auto condition1 = AlwaysMethod{};
-  const auto condition2 = AlwaysMethod{};
+  const auto condition1 = SignalAlwaysMethod{};
+  const auto condition2 = SignalAlwaysMethod{};
 
   EXPECT_TRUE(condition1 == condition2);
   EXPECT_FALSE(condition1 != condition2);
@@ -34,8 +39,8 @@ TEST(FixedMethodTest, AlwaysMethodEquality)
 
 TEST(FixedMethodTest, NeverMethodEquality)
 {
-  const auto condition1 = NeverMethod{};
-  const auto condition2 = NeverMethod{};
+  const auto condition1 = SignalNeverMethod{};
+  const auto condition2 = SignalNeverMethod{};
 
   EXPECT_TRUE(condition1 == condition2);
   EXPECT_FALSE(condition1 != condition2);

@@ -16,11 +16,16 @@ TEST(OperatorsMethodTest, MultiplyMethod)
   const auto asset_data = AssetHistory{{"close", {10, 15, 20, 25, 30}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_DOUBLE_EQ(multiply_method(asset_snapshot[0], context), 20.0);
-  EXPECT_DOUBLE_EQ(multiply_method(asset_snapshot[1], context), 30.0);
-  EXPECT_DOUBLE_EQ(multiply_method(asset_snapshot[2], context), 40.0);
-  EXPECT_DOUBLE_EQ(multiply_method(asset_snapshot[3], context), 50.0);
-  EXPECT_DOUBLE_EQ(multiply_method(asset_snapshot[4], context), 60.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(multiply_method, asset_snapshot[0], context), 20.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(multiply_method, asset_snapshot[1], context), 30.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(multiply_method, asset_snapshot[2], context), 40.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(multiply_method, asset_snapshot[3], context), 50.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(multiply_method, asset_snapshot[4], context), 60.0);
 }
 
 TEST(OperatorsMethodTest, MultiplyEqualityOperator)
@@ -65,13 +70,18 @@ TEST(OperatorsMethodTest, DivideMethod)
   const auto asset_data = AssetHistory{{"close", {10, 15, 20, 25, 30}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_DOUBLE_EQ(divide_method(asset_snapshot[0], context), 2.0);
-  EXPECT_DOUBLE_EQ(divide_method(asset_snapshot[1], context),
-                   1.3333333333333333);
-  EXPECT_DOUBLE_EQ(divide_method(asset_snapshot[2], context), 1.0);
-  EXPECT_DOUBLE_EQ(divide_method(asset_snapshot[3], context), 0.8);
-  EXPECT_DOUBLE_EQ(divide_method(asset_snapshot[4], context),
-                   0.6666666666666666);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(divide_method, asset_snapshot[0], context), 2.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(divide_method, asset_snapshot[1], context),
+   1.3333333333333333);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(divide_method, asset_snapshot[2], context), 1.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(divide_method, asset_snapshot[3], context), 0.8);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(divide_method, asset_snapshot[4], context),
+   0.6666666666666666);
 }
 
 TEST(OperatorsMethodTest, DivideEqualityOperator)
@@ -112,11 +122,16 @@ TEST(OperatorsMethodTest, AddMethod)
   const auto asset_data = AssetHistory{{"close", {10, 15, 20, 25, 30}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_DOUBLE_EQ(add_method(asset_snapshot[0], context), 12.0);
-  EXPECT_DOUBLE_EQ(add_method(asset_snapshot[1], context), 17.0);
-  EXPECT_DOUBLE_EQ(add_method(asset_snapshot[2], context), 22.0);
-  EXPECT_DOUBLE_EQ(add_method(asset_snapshot[3], context), 27.0);
-  EXPECT_DOUBLE_EQ(add_method(asset_snapshot[4], context), 32.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(add_method, asset_snapshot[0], context), 12.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(add_method, asset_snapshot[1], context), 17.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(add_method, asset_snapshot[2], context), 22.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(add_method, asset_snapshot[3], context), 27.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(add_method, asset_snapshot[4], context), 32.0);
 }
 
 TEST(OperatorsMethodTest, AddEqualityOperator)
@@ -157,11 +172,16 @@ TEST(OperatorsMethodTest, SubtractMethod)
   const auto asset_data = AssetHistory{{"close", {10, 15, 20, 25, 30}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_DOUBLE_EQ(subtract_method(asset_snapshot[0], context), 5.0);
-  EXPECT_DOUBLE_EQ(subtract_method(asset_snapshot[1], context), 0.0);
-  EXPECT_DOUBLE_EQ(subtract_method(asset_snapshot[2], context), -5.0);
-  EXPECT_DOUBLE_EQ(subtract_method(asset_snapshot[3], context), -10.0);
-  EXPECT_DOUBLE_EQ(subtract_method(asset_snapshot[4], context), -15.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(subtract_method, asset_snapshot[0], context), 5.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(subtract_method, asset_snapshot[1], context), 0.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(subtract_method, asset_snapshot[2], context), -5.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(subtract_method, asset_snapshot[3], context), -10.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(subtract_method, asset_snapshot[4], context), -15.0);
 }
 
 TEST(OperatorsMethodTest, SubtractEqualityOperator)
@@ -205,11 +225,16 @@ TEST(OperatorsMethodTest, NegateMethod)
   const auto asset_data = AssetHistory{{"close", {10, 15, 20, 25, 30}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_DOUBLE_EQ(negate_method(asset_snapshot[0], context), -10.0);
-  EXPECT_DOUBLE_EQ(negate_method(asset_snapshot[1], context), -15.0);
-  EXPECT_DOUBLE_EQ(negate_method(asset_snapshot[2], context), -20.0);
-  EXPECT_DOUBLE_EQ(negate_method(asset_snapshot[3], context), -25.0);
-  EXPECT_DOUBLE_EQ(negate_method(asset_snapshot[4], context), -30.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(negate_method, asset_snapshot[0], context), -10.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(negate_method, asset_snapshot[1], context), -15.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(negate_method, asset_snapshot[2], context), -20.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(negate_method, asset_snapshot[3], context), -25.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(negate_method, asset_snapshot[4], context), -30.0);
 }
 
 TEST(OperatorsMethodTest, NegateEqualityOperator)
@@ -245,9 +270,14 @@ TEST(OperatorsMethodTest, SqrtMethod)
   const auto asset_data = AssetHistory{{"close", {4, 9, 16, 25, 36}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_DOUBLE_EQ(sqrt_method(asset_snapshot[0], context), 2.0);
-  EXPECT_DOUBLE_EQ(sqrt_method(asset_snapshot[1], context), 3.0);
-  EXPECT_DOUBLE_EQ(sqrt_method(asset_snapshot[2], context), 4.0);
-  EXPECT_DOUBLE_EQ(sqrt_method(asset_snapshot[3], context), 5.0);
-  EXPECT_DOUBLE_EQ(sqrt_method(asset_snapshot[4], context), 6.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(sqrt_method, asset_snapshot[0], context), 2.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(sqrt_method, asset_snapshot[1], context), 3.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(sqrt_method, asset_snapshot[2], context), 4.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(sqrt_method, asset_snapshot[3], context), 5.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(sqrt_method, asset_snapshot[4], context), 6.0);
 }

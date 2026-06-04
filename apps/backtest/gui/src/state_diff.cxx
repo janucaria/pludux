@@ -31,7 +31,7 @@ public:
    Patch<backtest::Broker> broker_patch,
    Patch<backtest::Profile> profile_patch,
    Patch<std::vector<backtest::BacktestSummary>> backtest_summaries_patch,
-   Patch<SeriesResultsCollector> series_results_patch)
+   Patch<SeriesEvaluationResults> series_results_patch)
   : ui_state_{std::move(ui_state)}
   , store_descriptor_{std::move(store_descriptor)}
   , backtest_patch_{std::move(backtest_patch)}
@@ -86,7 +86,7 @@ private:
   Patch<backtest::Broker> broker_patch_;
   Patch<backtest::Profile> profile_patch_;
   Patch<std::vector<backtest::BacktestSummary>> backtest_summaries_patch_;
-  Patch<SeriesResultsCollector> series_results_patch_;
+  Patch<SeriesEvaluationResults> series_results_patch_;
 };
 
 auto create_state_diff(const ApplicationState& old_state,

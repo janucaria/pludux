@@ -28,22 +28,32 @@ TEST(RvolMethodTest, RunAllMethod)
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 
-  EXPECT_DOUBLE_EQ(rvol_method(asset_snapshot[0], context),
-                   0.55945121951219512);
-  EXPECT_DOUBLE_EQ(rvol_method(asset_snapshot[1], context),
-                   0.30091781685700275);
-  EXPECT_DOUBLE_EQ(rvol_method(asset_snapshot[2], context),
-                   0.39740698985343859);
-  EXPECT_DOUBLE_EQ(rvol_method(asset_snapshot[3], context),
-                   0.66727884909703095);
-  EXPECT_DOUBLE_EQ(rvol_method(asset_snapshot[4], context),
-                   0.59106315279795263);
-  EXPECT_DOUBLE_EQ(rvol_method(asset_snapshot[5], context),
-                   0.32920880428316479);
-  EXPECT_TRUE(std::isnan(rvol_method(asset_snapshot[6], context)));
-  EXPECT_TRUE(std::isnan(rvol_method(asset_snapshot[7], context)));
-  EXPECT_TRUE(std::isnan(rvol_method(asset_snapshot[8], context)));
-  EXPECT_TRUE(std::isnan(rvol_method(asset_snapshot[9], context)));
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(rvol_method, asset_snapshot[0], context),
+   0.55945121951219512);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(rvol_method, asset_snapshot[1], context),
+   0.30091781685700275);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(rvol_method, asset_snapshot[2], context),
+   0.39740698985343859);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(rvol_method, asset_snapshot[3], context),
+   0.66727884909703095);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(rvol_method, asset_snapshot[4], context),
+   0.59106315279795263);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(rvol_method, asset_snapshot[5], context),
+   0.32920880428316479);
+  EXPECT_TRUE(
+   std::isnan(evaluate_series_method(rvol_method, asset_snapshot[6], context)));
+  EXPECT_TRUE(
+   std::isnan(evaluate_series_method(rvol_method, asset_snapshot[7], context)));
+  EXPECT_TRUE(
+   std::isnan(evaluate_series_method(rvol_method, asset_snapshot[8], context)));
+  EXPECT_TRUE(
+   std::isnan(evaluate_series_method(rvol_method, asset_snapshot[9], context)));
 }
 
 TEST(RvolMethodTest, EqualityOperator)

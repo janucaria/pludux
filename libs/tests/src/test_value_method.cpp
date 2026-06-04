@@ -16,11 +16,16 @@ TEST(ValueMethodTest, ConstructorInitialization)
   const auto asset_data = AssetHistory{{"close", {0}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_EQ(value_method(asset_snapshot[0], context), value);
-  EXPECT_EQ(value_method(asset_snapshot[1], context), value);
-  EXPECT_EQ(value_method(asset_snapshot[2], context), value);
-  EXPECT_EQ(value_method(asset_snapshot[3], context), value);
-  EXPECT_EQ(value_method(asset_snapshot[4], context), value);
+  EXPECT_EQ(evaluate_series_method(value_method, asset_snapshot[0], context),
+            value);
+  EXPECT_EQ(evaluate_series_method(value_method, asset_snapshot[1], context),
+            value);
+  EXPECT_EQ(evaluate_series_method(value_method, asset_snapshot[2], context),
+            value);
+  EXPECT_EQ(evaluate_series_method(value_method, asset_snapshot[3], context),
+            value);
+  EXPECT_EQ(evaluate_series_method(value_method, asset_snapshot[4], context),
+            value);
 }
 
 TEST(ValueMethodTest, RunAllMethod)
@@ -31,7 +36,8 @@ TEST(ValueMethodTest, RunAllMethod)
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
   for(std::size_t i = 0; i < asset_snapshot.size(); ++i) {
-    auto result = value_method(asset_snapshot[i], context);
+    auto result =
+     evaluate_series_method(value_method, asset_snapshot[i], context);
     EXPECT_EQ(result, value);
   }
 }
@@ -41,8 +47,10 @@ TEST(ValueMethodTest, RunOneMethod)
   const auto value = 42.0;
   const auto value_method = ValueMethod{value};
   const auto asset_data = AssetHistory{{"close", {0}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  EXPECT_EQ((value_method(asset_data, context)), value);
+  EXPECT_EQ(evaluate_series_method(value_method, asset_snapshot[0], context),
+            value);
 }
 
 TEST(ValueMethodTest, EqualityOperator)

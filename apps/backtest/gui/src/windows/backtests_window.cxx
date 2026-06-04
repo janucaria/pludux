@@ -68,7 +68,7 @@ private:
       -ImGui::GetFrameHeightWithSpacing())); // Leave room for 1 line below us
 
     if(!backtest_handles.empty()) {
-      for(auto i = 0; i < backtest_handles.size(); ++i) {
+      for(std::size_t i = 0; i < backtest_handles.size(); ++i) {
         const auto backtest_handle = backtest_handles[i];
         const auto& backtest = app_state.get_backtest(backtest_handle);
         const auto& backtest_name = backtest.name();
@@ -78,14 +78,35 @@ private:
         ImGui::PushID(i);
 
         ImGui::SetNextItemAllowOverlap();
-        if(ImGui::Selectable(backtest_name.c_str(), &is_selected)) {
+        const auto row_start = ImGui::GetCursorScreenPos();
+        const auto row_width = ImGui::GetContentRegionAvail().x;
+        const auto row_height = ImGui::GetFrameHeight();
+
+        if(ImGui::Selectable("##backtest_row",
+                             &is_selected,
+                             ImGuiSelectableFlags_AllowOverlap,
+                             ImVec2(row_width, row_height))) {
           context.push_action([backtest_handle](ApplicationState& app_state) {
             app_state.select_backtest(backtest_handle);
           });
         }
-        ImGui::SameLine();
 
-        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 100);
+        ImGui::SetCursorScreenPos(row_start);
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(backtest_name.c_str());
+
+        const auto spacing = ImGui::GetStyle().ItemSpacing.x;
+        const auto frame_padding_x = ImGui::GetStyle().FramePadding.x;
+        const auto edit_width =
+         ImGui::CalcTextSize("Edit").x + (2.0f * frame_padding_x);
+        const auto delete_width =
+         ImGui::CalcTextSize("Delete").x + (2.0f * frame_padding_x);
+        const auto more_width =
+         ImGui::CalcTextSize("More...").x + (2.0f * frame_padding_x);
+        const auto buttons_width = edit_width + spacing + delete_width + spacing + more_width;
+        const auto buttons_start_x = row_start.x + row_width - buttons_width;
+
+        ImGui::SetCursorScreenPos(ImVec2(buttons_start_x, row_start.y));
         if(ImGui::Button("Edit")) {
           self.backtest_panel_mode_ = BacktestPanelMode::Edit;
           self.selected_backtest_handle_opt_ = backtest_handle;
@@ -99,6 +120,40 @@ private:
           context.push_action([backtest_handle](ApplicationState& app_state) {
             app_state.remove_backtest(backtest_handle);
           });
+        }
+
+        ImGui::SameLine();
+        if(ImGui::Button("More...")) {
+          ImGui::OpenPopup("backtest_menu_more");
+        }
+
+        if(ImGui::BeginPopup("backtest_menu_more")) {
+          if(ImGui::MenuItem("Duplicate")) {
+            context.push_action([backtest_handle](ApplicationState& app_state) {
+              const auto& backtest = app_state.get_backtest(backtest_handle);
+              auto duplicate_backtest = backtest;
+              duplicate_backtest.name(backtest.name() + " Copy");
+              app_state.add_backtest(std::move(duplicate_backtest));
+            });
+          }
+
+          const auto move_up_disabled = i == 0;
+          if(ImGui::MenuItem("Move Up", nullptr, false, !move_up_disabled)) {
+            context.push_action(
+             [from_index = i, to_index = i - 1](ApplicationState& app_state) {
+               app_state.reorder_list_backtest(from_index, to_index);
+             });
+          }
+
+          const auto move_down_disabled = i == backtest_handles.size() - 1;
+          if(ImGui::MenuItem("Move Down", nullptr, false, !move_down_disabled)) {
+            context.push_action(
+             [from_index = i, to_index = i + 1](ApplicationState& app_state) {
+               app_state.reorder_list_backtest(from_index, to_index);
+             });
+          }
+
+          ImGui::EndPopup();
         }
 
         ImGui::PopID();

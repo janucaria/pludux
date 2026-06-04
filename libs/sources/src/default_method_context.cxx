@@ -5,11 +5,13 @@ module;
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 export module pludux:default_method_context;
 
-import :series_results_collector;
-import :series.series_method_registry;
+import :series_method_registry;
+import :series_evaluation_results;
+import :method_key;
 
 export namespace pludux {
 
@@ -17,11 +19,12 @@ class DefaultMethodContext {
 public:
   using DispatchResultType = double;
 
-  explicit DefaultMethodContext(const SeriesMethodRegistry& methods,
-                                const SeriesResultsCollector& results_collector,
-                                std::size_t current_index = 0) noexcept
+  explicit DefaultMethodContext(
+   const SeriesMethodRegistry& methods,
+   SeriesEvaluationResults& series_evaluation_results,
+   std::size_t current_index = 0) noexcept
   : methods_{methods}
-  , results_collector_{results_collector}
+  , series_evaluation_results_{series_evaluation_results}
   , current_index_{current_index}
   {
   }
@@ -34,7 +37,7 @@ public:
     if(const auto method_opt = self.methods_.get(name);
        method_opt.has_value()) {
       const auto& method = method_opt.value();
-      return method(asset_snapshot, self);
+      return evaluate_series_method(method, asset_snapshot, self);
     }
     return std::numeric_limits<DispatchResultType>::quiet_NaN();
   }
@@ -42,12 +45,12 @@ public:
   auto call_series_method(this const DefaultMethodContext& self,
                           const std::string& name,
                           AssetSnapshot asset_snapshot,
-                          SeriesOutput output) noexcept -> DispatchResultType
+                          MethodOutput output) noexcept -> DispatchResultType
   {
     if(const auto method_opt = self.methods_.get(name);
        method_opt.has_value()) {
       const auto& method = method_opt.value();
-      return method(asset_snapshot, output, self);
+      return evaluate_series_method(output, method, asset_snapshot, self);
     }
     return std::numeric_limits<DispatchResultType>::quiet_NaN();
   }
@@ -57,14 +60,37 @@ public:
                          std::size_t result_index) noexcept
    -> DispatchResultType
   {
-    if(const auto results_opt = self.results_collector_.results(name);
+    const auto& method_opt = self.methods_.get(name);
+    if(!method_opt.has_value()) {
+      return std::numeric_limits<DispatchResultType>::quiet_NaN();
+    }
+
+    if(const auto results_opt =
+        self.series_evaluation_results_.results(method_opt.value());
        results_opt.has_value()) {
       const auto& results = results_opt.value().get();
       if(result_index < results.size()) {
         return results[result_index];
       }
     }
+
     return std::numeric_limits<DispatchResultType>::quiet_NaN();
+  }
+
+  auto get_series_results(this DefaultMethodContext& self,
+                          const MethodKey& method_key) noexcept
+   -> std::vector<double>&
+  {
+    const auto results_opt =
+     self.series_evaluation_results_.results(method_key);
+
+    if(!results_opt.has_value()) {
+      // If there are no results for the given method key, we initialize an
+      // empty vector of results for it.
+      self.series_evaluation_results_.results(method_key, {});
+    }
+
+    return self.series_evaluation_results_.results(method_key).value();
   }
 
   auto index(this const DefaultMethodContext& self) noexcept -> std::size_t
@@ -74,7 +100,7 @@ public:
 
 private:
   const SeriesMethodRegistry& methods_;
-  const SeriesResultsCollector& results_collector_;
+  SeriesEvaluationResults& series_evaluation_results_;
   std::size_t current_index_;
 };
 

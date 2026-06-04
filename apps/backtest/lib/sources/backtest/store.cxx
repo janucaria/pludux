@@ -448,6 +448,19 @@ public:
                                                       handle);
   }
 
+  auto get_or_create_backtest_summaries(this Store& self,
+                                        BacktestStoreHandle handle)
+   -> std::vector<BacktestSummary>&
+  {
+    auto* summaries_ptr = self.get_backtest_summaries_if_present(handle);
+    if(!summaries_ptr) {
+      self.add_backtest_summaries(handle, std::vector<BacktestSummary>{});
+      summaries_ptr = self.get_backtest_summaries_if_present(handle);
+    }
+
+    return *summaries_ptr;
+  }
+
   auto update_backtest_summaries(this Store& self,
                                  BacktestStoreHandle handle,
                                  std::vector<BacktestSummary> summaries) -> bool
@@ -472,7 +485,7 @@ public:
 
   auto add_series_results(this Store& self,
                           BacktestStoreHandle handle,
-                          SeriesResultsCollector series_result) -> bool
+                          SeriesEvaluationResults series_result) -> bool
   {
     auto& series_results = self.arena_.series_results();
     auto& series_results_resolver =
@@ -484,7 +497,7 @@ public:
 
   auto get_series_results(this const Store& self,
                           BacktestStoreHandle handle) noexcept
-   -> const SeriesResultsCollector&
+   -> const SeriesEvaluationResults&
   {
     const auto& series_results = self.arena_.series_results();
     const auto& series_results_resolver =
@@ -494,7 +507,7 @@ public:
   }
 
   auto get_series_results(this Store& self, BacktestStoreHandle handle) noexcept
-   -> SeriesResultsCollector&
+   -> SeriesEvaluationResults&
   {
     auto& series_results = self.arena_.series_results();
     auto& series_results_resolver =
@@ -505,7 +518,7 @@ public:
 
   auto get_series_results_if_present(this const Store& self,
                                      BacktestStoreHandle handle) noexcept
-   -> const SeriesResultsCollector*
+   -> const SeriesEvaluationResults*
   {
     const auto& series_results = self.arena_.series_results();
     const auto& series_results_resolver =
@@ -516,7 +529,7 @@ public:
 
   auto get_series_results_if_present(this Store& self,
                                      BacktestStoreHandle handle) noexcept
-   -> SeriesResultsCollector*
+   -> SeriesEvaluationResults*
   {
     auto& series_results = self.arena_.series_results();
     auto& series_results_resolver =
@@ -525,9 +538,22 @@ public:
     return series_results_resolver.get_if_present(series_results, handle);
   }
 
+  auto get_or_create_series_results(this Store& self,
+                                    BacktestStoreHandle handle)
+   -> SeriesEvaluationResults&
+  {
+    auto* series_results_ptr = self.get_series_results_if_present(handle);
+    if(!series_results_ptr) {
+      self.add_series_results(handle, SeriesEvaluationResults{});
+      series_results_ptr = self.get_series_results_if_present(handle);
+    }
+
+    return *series_results_ptr;
+  }
+
   auto update_series_results(this Store& self,
                              BacktestStoreHandle handle,
-                             SeriesResultsCollector series_result) -> bool
+                             SeriesEvaluationResults series_result) -> bool
   {
     auto& series_results = self.arena_.series_results();
     auto& series_results_resolver =

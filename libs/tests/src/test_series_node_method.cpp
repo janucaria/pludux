@@ -18,18 +18,24 @@ TEST(SeriesReferenceMethodTest, RunAllMethodClose)
   registry.set("open", open_method);
   registry.set("close", close_method);
 
-  auto results_collector = SeriesResultsCollector{};
+  auto results_collector = SeriesEvaluationResults{};
   auto context = DefaultMethodContext{registry, results_collector};
 
   const auto open_ref_method = SeriesNodeMethod{"open"};
-  EXPECT_EQ(open_ref_method(asset_snapshot[0], context), 4.0);
-  EXPECT_EQ(open_ref_method(asset_snapshot[1], context), 4.1);
-  EXPECT_EQ(open_ref_method(asset_snapshot[2], context), 4.2);
+  EXPECT_EQ(evaluate_series_method(open_ref_method, asset_snapshot[0], context),
+            4.0);
+  EXPECT_EQ(evaluate_series_method(open_ref_method, asset_snapshot[1], context),
+            4.1);
+  EXPECT_EQ(evaluate_series_method(open_ref_method, asset_snapshot[2], context),
+            4.2);
 
   const auto close_ref_method = SeriesNodeMethod{"close"};
-  EXPECT_EQ(close_ref_method(asset_snapshot[0], context), 1.0);
-  EXPECT_EQ(close_ref_method(asset_snapshot[1], context), 1.1);
-  EXPECT_EQ(close_ref_method(asset_snapshot[2], context), 1.2);
+  EXPECT_EQ(
+   evaluate_series_method(close_ref_method, asset_snapshot[0], context), 1.0);
+  EXPECT_EQ(
+   evaluate_series_method(close_ref_method, asset_snapshot[1], context), 1.1);
+  EXPECT_EQ(
+   evaluate_series_method(close_ref_method, asset_snapshot[2], context), 1.2);
 }
 
 TEST(SeriesReferenceMethodTest, InvalidField)
@@ -41,13 +47,15 @@ TEST(SeriesReferenceMethodTest, InvalidField)
   auto registry = SeriesMethodRegistry{};
   registry.set("close", close_method);
 
-  auto results_collector = SeriesResultsCollector{};
+  auto results_collector = SeriesEvaluationResults{};
   auto context = DefaultMethodContext{registry, results_collector};
 
   const auto not_found_ref_method = SeriesNodeMethod{"invalid"};
 
-  EXPECT_TRUE(std::isnan(not_found_ref_method(asset_snapshot[0], context)));
-  EXPECT_TRUE(std::isnan(not_found_ref_method(asset_snapshot[1], context)));
+  EXPECT_TRUE(std::isnan(
+   evaluate_series_method(not_found_ref_method, asset_snapshot[0], context)));
+  EXPECT_TRUE(std::isnan(
+   evaluate_series_method(not_found_ref_method, asset_snapshot[1], context)));
 }
 
 TEST(SeriesReferenceMethodTest, EqualityOperator)

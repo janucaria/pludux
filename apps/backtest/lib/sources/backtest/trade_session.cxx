@@ -33,24 +33,34 @@ public:
 
     ConstTradeRecordIterator(const TradeSession& session)
     : session_{session}
-    , closed_position_index_{0}
-    , open_position_index_{0}
-    , waiting_for_open_record_{session.open_position().has_value()}
+    , realized_closed_position_done_{false}
+    , realized_open_position_done_{false}
+    , unrealized_record_done_{false}
     {
+      auto& self = *this;
+
+      const auto closed_position = self.session_.closed_position();
+      self.realized_closed_position_done_ =
+       !closed_position || closed_position->realized_records().empty();
+
+      const auto open_position = self.session_.open_position();
+
+      self.realized_open_position_done_ =
+       !open_position || open_position->realized_records().empty();
+
+      self.unrealized_record_done_ = !open_position;
     }
 
     auto operator*(this const ConstTradeRecordIterator& self) -> TradeRecord
     {
-      const auto& closed_position = self.session_.closed_position();
-      if(closed_position && self.closed_position_index_ <
-                             closed_position->realized_records().size()) {
-        return closed_position->realized_records().at(
-         self.closed_position_index_);
+      if(!self.realized_closed_position_done_) {
+        const auto closed_position = self.session_.closed_position();
+        return closed_position->realized_records().back();
       }
 
-      const auto& open_position = self.session_.open_position();
-      if(self.open_position_index_ < open_position->realized_records().size()) {
-        return open_position->realized_records().at(self.open_position_index_);
+      const auto open_position = self.session_.open_position();
+      if(!self.realized_open_position_done_) {
+        return open_position->realized_records().back();
       }
 
       return TradeRecord{TradeRecord::Status::open,
@@ -70,19 +80,17 @@ public:
     auto operator++(this ConstTradeRecordIterator& self)
      -> ConstTradeRecordIterator&
     {
-      const auto& closed_position = self.session_.closed_position();
-      if(closed_position && self.closed_position_index_ <
-                             closed_position->realized_records().size()) {
-        self.closed_position_index_++;
-      } else {
-        const auto& open_position = self.session_.open_position();
-        if(open_position && self.open_position_index_ <
-                             open_position->realized_records().size()) {
-          self.open_position_index_++;
-        } else if(self.waiting_for_open_record_) {
-          self.waiting_for_open_record_ = false;
-        }
+      if(!self.realized_closed_position_done_) {
+        self.realized_closed_position_done_ = true;
+        return self;
       }
+
+      if(!self.realized_open_position_done_) {
+        self.realized_open_position_done_ = true;
+        return self;
+      }
+
+      self.unrealized_record_done_ = true;
 
       return self;
     }
@@ -98,24 +106,16 @@ public:
     auto operator==(this const ConstTradeRecordIterator& self,
                     std::default_sentinel_t) -> bool
     {
-      const auto& closed_position = self.session_.closed_position();
-      const auto& open_position = self.session_.open_position();
-
-      const auto closed_position_size =
-       closed_position ? closed_position->realized_records().size() : 0;
-      const auto open_position_size =
-       open_position ? open_position->realized_records().size() : 0;
-
-      return self.closed_position_index_ >= closed_position_size &&
-             self.open_position_index_ >= open_position_size &&
-             !self.waiting_for_open_record_;
+      return self.realized_open_position_done_ &&
+             self.realized_closed_position_done_ &&
+             self.unrealized_record_done_;
     }
 
   private:
     const TradeSession& session_;
-    std::size_t closed_position_index_;
-    std::size_t open_position_index_;
-    bool waiting_for_open_record_;
+    bool realized_closed_position_done_;
+    bool realized_open_position_done_;
+    bool unrealized_record_done_;
   };
 
   class ConstTradeRecordRange {
@@ -238,7 +238,10 @@ public:
       self.open_position_->scaled_in(entry.position_size(),
                                      self.market_timestamp_,
                                      entry.price(),
-                                     total_fees);
+                                     total_fees,
+                                     entry.stop_loss_price(),
+                                     entry.stop_loss_trailing_price(),
+                                     entry.take_profit_price());
 
       return;
     }
@@ -300,6 +303,10 @@ public:
 
     if(self.closed_position_) {
       self.closed_position_ = std::nullopt;
+    }
+
+    if(self.open_position_) {
+      self.open_position_->realized_records({});
     }
   }
 

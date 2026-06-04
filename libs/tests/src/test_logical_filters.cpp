@@ -4,32 +4,52 @@ import pludux;
 
 using namespace pludux;
 
+using SignalAlwaysMethod = pludux::TrueMethod;
+using SignalNeverMethod = pludux::FalseMethod;
+using SignalAndMethod =
+ pludux::LogicalAndMethod<AnySeriesMethod, AnySeriesMethod>;
+using SignalOrMethod =
+ pludux::LogicalOrMethod<AnySeriesMethod, AnySeriesMethod>;
+using SignalNotMethod = pludux::LogicalNotMethod<AnySeriesMethod>;
+using SignalXorMethod =
+ pludux::LogicalXorMethod<AnySeriesMethod, AnySeriesMethod>;
+
 const auto context = AnySeriesMethodContext{};
+
+static auto make_asset_snapshot() -> AssetSnapshot
+{
+  return AssetSnapshot{AssetHistory{{"close", {0}}}};
+}
 
 TEST(BooleanMethodTest, AndMethod)
 {
-  const auto true_condition = AlwaysMethod{};
-  const auto false_condition = NeverMethod{};
-  const auto asset_data = AssetHistory{};
+  const auto true_condition = SignalAlwaysMethod{};
+  const auto false_condition = SignalNeverMethod{};
+  const auto asset_snapshot = make_asset_snapshot();
 
-  const auto true_and_true = AndMethod{true_condition, true_condition};
-  EXPECT_TRUE(true_and_true(asset_data, context));
+  const auto true_and_true = SignalAndMethod{true_condition, true_condition};
+  EXPECT_TRUE(
+   evaluate_series_method(true_and_true, asset_snapshot[0], context));
 
-  const auto true_and_false = AndMethod{true_condition, false_condition};
-  EXPECT_FALSE(true_and_false(asset_data, context));
+  const auto true_and_false = SignalAndMethod{true_condition, false_condition};
+  EXPECT_FALSE(
+   evaluate_series_method(true_and_false, asset_snapshot[0], context));
 
-  const auto false_and_true = AndMethod{false_condition, true_condition};
-  EXPECT_FALSE(false_and_true(asset_data, context));
+  const auto false_and_true = SignalAndMethod{false_condition, true_condition};
+  EXPECT_FALSE(
+   evaluate_series_method(false_and_true, asset_snapshot[0], context));
 
-  const auto false_and_false = AndMethod{false_condition, false_condition};
-  EXPECT_FALSE(false_and_false(asset_data, context));
+  const auto false_and_false =
+   SignalAndMethod{false_condition, false_condition};
+  EXPECT_FALSE(
+   evaluate_series_method(false_and_false, asset_snapshot[0], context));
 }
 
 TEST(BooleanMethodTest, EqualityAndMethod)
 {
-  const auto true_condition = AlwaysMethod{};
-  const auto condition1 = AndMethod{true_condition, true_condition};
-  const auto condition2 = AndMethod{true_condition, true_condition};
+  const auto true_condition = SignalAlwaysMethod{};
+  const auto condition1 = SignalAndMethod{true_condition, true_condition};
+  const auto condition2 = SignalAndMethod{true_condition, true_condition};
 
   EXPECT_TRUE(condition1 == condition2);
   EXPECT_FALSE(condition1 != condition2);
@@ -38,10 +58,10 @@ TEST(BooleanMethodTest, EqualityAndMethod)
 
 TEST(BooleanMethodTest, NotEqualAndMethod)
 {
-  const auto true_condition = AlwaysMethod{};
-  const auto false_condition = NeverMethod{};
-  const auto condition1 = AndMethod{true_condition, false_condition};
-  const auto condition2 = AndMethod{false_condition, true_condition};
+  const auto true_condition = SignalAlwaysMethod{};
+  const auto false_condition = SignalNeverMethod{};
+  const auto condition1 = SignalAndMethod{true_condition, false_condition};
+  const auto condition2 = SignalAndMethod{false_condition, true_condition};
 
   EXPECT_TRUE(condition1 != condition2);
   EXPECT_FALSE(condition1 == condition2);
@@ -50,28 +70,31 @@ TEST(BooleanMethodTest, NotEqualAndMethod)
 
 TEST(BooleanMethodTest, OrMethod)
 {
-  const auto true_condition = AlwaysMethod{};
-  const auto false_condition = NeverMethod{};
-  const auto asset_data = AssetHistory{};
+  const auto true_condition = SignalAlwaysMethod{};
+  const auto false_condition = SignalNeverMethod{};
+  const auto asset_snapshot = make_asset_snapshot();
 
-  const auto true_or_true = OrMethod{true_condition, true_condition};
-  EXPECT_TRUE(true_or_true(asset_data, context));
+  const auto true_or_true = SignalOrMethod{true_condition, true_condition};
+  EXPECT_TRUE(evaluate_series_method(true_or_true, asset_snapshot[0], context));
 
-  const auto true_or_false = OrMethod{true_condition, false_condition};
-  EXPECT_TRUE(true_or_false(asset_data, context));
+  const auto true_or_false = SignalOrMethod{true_condition, false_condition};
+  EXPECT_TRUE(
+   evaluate_series_method(true_or_false, asset_snapshot[0], context));
 
-  const auto false_or_true = OrMethod{false_condition, true_condition};
-  EXPECT_TRUE(false_or_true(asset_data, context));
+  const auto false_or_true = SignalOrMethod{false_condition, true_condition};
+  EXPECT_TRUE(
+   evaluate_series_method(false_or_true, asset_snapshot[0], context));
 
-  const auto false_or_false = OrMethod{false_condition, false_condition};
-  EXPECT_FALSE(false_or_false(asset_data, context));
+  const auto false_or_false = SignalOrMethod{false_condition, false_condition};
+  EXPECT_FALSE(
+   evaluate_series_method(false_or_false, asset_snapshot[0], context));
 }
 
 TEST(BooleanMethodTest, EqualityOrMethod)
 {
-  const auto true_condition = AlwaysMethod{};
-  const auto condition1 = OrMethod{true_condition, true_condition};
-  const auto condition2 = OrMethod{true_condition, true_condition};
+  const auto true_condition = SignalAlwaysMethod{};
+  const auto condition1 = SignalOrMethod{true_condition, true_condition};
+  const auto condition2 = SignalOrMethod{true_condition, true_condition};
 
   EXPECT_TRUE(condition1 == condition2);
   EXPECT_FALSE(condition1 != condition2);
@@ -80,10 +103,10 @@ TEST(BooleanMethodTest, EqualityOrMethod)
 
 TEST(BooleanMethodTest, NotEqualOrMethod)
 {
-  const auto true_condition = AlwaysMethod{};
-  const auto false_condition = NeverMethod{};
-  const auto condition1 = OrMethod{true_condition, false_condition};
-  const auto condition2 = OrMethod{false_condition, true_condition};
+  const auto true_condition = SignalAlwaysMethod{};
+  const auto false_condition = SignalNeverMethod{};
+  const auto condition1 = SignalOrMethod{true_condition, false_condition};
+  const auto condition2 = SignalOrMethod{false_condition, true_condition};
 
   EXPECT_TRUE(condition1 != condition2);
   EXPECT_FALSE(condition1 == condition2);
@@ -92,22 +115,22 @@ TEST(BooleanMethodTest, NotEqualOrMethod)
 
 TEST(BooleanMethodTest, NotMethod)
 {
-  const auto true_condition = AlwaysMethod{};
-  const auto false_condition = NeverMethod{};
-  const auto asset_data = AssetHistory{};
+  const auto true_condition = SignalAlwaysMethod{};
+  const auto false_condition = SignalNeverMethod{};
+  const auto asset_snapshot = make_asset_snapshot();
 
-  const auto not_true = NotMethod{true_condition};
-  EXPECT_FALSE(not_true(asset_data, context));
+  const auto not_true = SignalNotMethod{true_condition};
+  EXPECT_FALSE(evaluate_series_method(not_true, asset_snapshot[0], context));
 
-  const auto not_false = NotMethod{false_condition};
-  EXPECT_TRUE(not_false(asset_data, context));
+  const auto not_false = SignalNotMethod{false_condition};
+  EXPECT_TRUE(evaluate_series_method(not_false, asset_snapshot[0], context));
 }
 
 TEST(BooleanMethodTest, EqualityNotMethod)
 {
-  const auto true_condition = AlwaysMethod{};
-  const auto not_condition1 = NotMethod{true_condition};
-  const auto not_condition2 = NotMethod{true_condition};
+  const auto true_condition = SignalAlwaysMethod{};
+  const auto not_condition1 = SignalNotMethod{true_condition};
+  const auto not_condition2 = SignalNotMethod{true_condition};
 
   EXPECT_TRUE(not_condition1 == not_condition2);
   EXPECT_FALSE(not_condition1 != not_condition2);
@@ -116,10 +139,10 @@ TEST(BooleanMethodTest, EqualityNotMethod)
 
 TEST(BooleanMethodTest, NotEqualNotMethod)
 {
-  const auto true_condition = AlwaysMethod{};
-  const auto false_condition = NeverMethod{};
-  const auto not_condition1 = NotMethod{true_condition};
-  const auto not_condition2 = NotMethod{false_condition};
+  const auto true_condition = SignalAlwaysMethod{};
+  const auto false_condition = SignalNeverMethod{};
+  const auto not_condition1 = SignalNotMethod{true_condition};
+  const auto not_condition2 = SignalNotMethod{false_condition};
 
   EXPECT_TRUE(not_condition1 != not_condition2);
   EXPECT_FALSE(not_condition1 == not_condition2);
@@ -128,28 +151,33 @@ TEST(BooleanMethodTest, NotEqualNotMethod)
 
 TEST(BooleanMethodTest, XorMethod)
 {
-  const auto true_condition = AlwaysMethod{};
-  const auto false_condition = NeverMethod{};
-  const auto asset_data = AssetHistory{};
+  const auto true_condition = SignalAlwaysMethod{};
+  const auto false_condition = SignalNeverMethod{};
+  const auto asset_snapshot = make_asset_snapshot();
 
-  const auto true_xor_true = XorMethod{true_condition, true_condition};
-  EXPECT_FALSE(true_xor_true(asset_data, context));
+  const auto true_xor_true = SignalXorMethod{true_condition, true_condition};
+  EXPECT_FALSE(
+   evaluate_series_method(true_xor_true, asset_snapshot[0], context));
 
-  const auto true_xor_false = XorMethod{true_condition, false_condition};
-  EXPECT_TRUE(true_xor_false(asset_data, context));
+  const auto true_xor_false = SignalXorMethod{true_condition, false_condition};
+  EXPECT_TRUE(
+   evaluate_series_method(true_xor_false, asset_snapshot[0], context));
 
-  const auto false_xor_true = XorMethod{false_condition, true_condition};
-  EXPECT_TRUE(false_xor_true(asset_data, context));
+  const auto false_xor_true = SignalXorMethod{false_condition, true_condition};
+  EXPECT_TRUE(
+   evaluate_series_method(false_xor_true, asset_snapshot[0], context));
 
-  const auto false_xor_false = XorMethod{false_condition, false_condition};
-  EXPECT_FALSE(false_xor_false(asset_data, context));
+  const auto false_xor_false =
+   SignalXorMethod{false_condition, false_condition};
+  EXPECT_FALSE(
+   evaluate_series_method(false_xor_false, asset_snapshot[0], context));
 }
 
 TEST(BooleanMethodTest, EqualityXorMethod)
 {
-  const auto true_condition = AlwaysMethod{};
-  const auto condition1 = XorMethod{true_condition, true_condition};
-  const auto condition2 = XorMethod{true_condition, true_condition};
+  const auto true_condition = SignalAlwaysMethod{};
+  const auto condition1 = SignalXorMethod{true_condition, true_condition};
+  const auto condition2 = SignalXorMethod{true_condition, true_condition};
 
   EXPECT_TRUE(condition1 == condition2);
   EXPECT_FALSE(condition1 != condition2);
@@ -158,10 +186,10 @@ TEST(BooleanMethodTest, EqualityXorMethod)
 
 TEST(BooleanMethodTest, NotEqualXorMethod)
 {
-  const auto true_condition = AlwaysMethod{};
-  const auto false_condition = NeverMethod{};
-  const auto condition1 = XorMethod{true_condition, false_condition};
-  const auto condition2 = XorMethod{false_condition, true_condition};
+  const auto true_condition = SignalAlwaysMethod{};
+  const auto false_condition = SignalNeverMethod{};
+  const auto condition1 = SignalXorMethod{true_condition, false_condition};
+  const auto condition2 = SignalXorMethod{false_condition, true_condition};
 
   EXPECT_TRUE(condition1 != condition2);
   EXPECT_FALSE(condition1 == condition2);

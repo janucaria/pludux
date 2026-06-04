@@ -9,7 +9,22 @@ FetchContent_Declare(
   EXCLUDE_FROM_ALL
 )
 
+FetchContent_Declare(
+  boost_mp11
+  GIT_REPOSITORY https://github.com/boostorg/mp11.git
+  GIT_TAG        boost-1.91.0
+  GIT_SHALLOW    TRUE
+  GIT_PROGRESS   TRUE
+  OVERRIDE_FIND_PACKAGE
+  EXCLUDE_FROM_ALL
+  PATCH_COMMAND
+    ${CMAKE_COMMAND} -E copy_directory
+      ${CMAKE_CURRENT_SOURCE_DIR}/../patch/mp11/
+      <SOURCE_DIR>/
+)
+
 find_package(jsoncons REQUIRED)
+find_package(boost_mp11 REQUIRED)
 
 add_library(${PROJECT_NAME})
 add_library(${CMAKE_PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
@@ -32,66 +47,64 @@ target_sources(${PROJECT_NAME}
         src/asset_history.cxx
         src/asset_quote_field_resolver.cxx
         src/asset_snapshot.cxx
+        
+        src/methods/value_method.cxx
+        src/methods/data_method.cxx
+        src/methods/ohlcv_method.cxx
+        src/methods/change_method.cxx
+        src/methods/lookback_method.cxx
+        src/methods/select_output_method.cxx
+        src/methods/series_node_method.cxx
+        src/methods/series_value_method.cxx
 
-        src/series_output.cxx
-        src/series_results_collector.cxx
+        src/methods/operators_method.cxx
+        src/methods/highest_method.cxx
+        src/methods/lowest_method.cxx
+        src/methods/percentage_method.cxx
+        src/methods/stddev_method.cxx
+
+        src/methods/sma_method.cxx
+        src/methods/ema_method.cxx
+        src/methods/rma_method.cxx
+        src/methods/wma_method.cxx
+        src/methods/hma_method.cxx
+        src/methods/adaptive_ma_method.cxx
+        src/methods/macd_method.cxx
+        
+        src/methods/tr_method.cxx
+        src/methods/atr_method.cxx
+
+        src/methods/roc_method.cxx
+        src/methods/rsi_method.cxx
+        src/methods/rvol_method.cxx
+
+        src/methods/bb_method.cxx
+        src/methods/kc_method.cxx
+        src/methods/donchian_channel_method.cxx
+
+        src/methods/stoch_method.cxx
+        src/methods/stoch_rsi_method.cxx
+        
+        src/methods/all_of_method.cxx
+        src/methods/any_of_method.cxx
+        src/methods/comparison_method.cxx
+        src/methods/boolean_method.cxx
+        src/methods/logical_method.cxx
+        src/methods/crossover_method.cxx
+        src/methods/crossunder_method.cxx
+        
+        src/method_key.cxx
+        src/series_method_registry.cxx
         src/method_contextable.cxx
+        src/evaluate_series_method.cxx
+        src/hash_series_method.cxx
         src/any_method_context.cxx
 
-        src/series/any_series_method.cxx
-        src/series/series_method_registry.cxx
-
-        src/series/value_method.cxx
-        src/series/data_method.cxx
-        src/series/ohlcv_method.cxx
-        src/series/change_method.cxx
-        src/series/lookback_method.cxx
-        src/series/select_output_method.cxx
-        src/series/series_node_method.cxx
-        src/series/series_value_method.cxx
-
-        src/series/operators_method.cxx
-        src/series/highest_method.cxx
-        src/series/lowest_method.cxx
-        src/series/percentage_method.cxx
-        src/series/stddev_method.cxx
-
-        src/series/sma_method.cxx
-        src/series/ema_method.cxx
-        src/series/cached_results_ema_method.cxx
-        src/series/rma_method.cxx
-        src/series/cached_results_rma_method.cxx
-        src/series/wma_method.cxx
-        src/series/hma_method.cxx
-        src/series/adaptive_ma_method.cxx
-        src/series/macd_method.cxx
+        src/methods/any_series_method.cxx
         
-        src/series/tr_method.cxx
-        src/series/atr_method.cxx
+        src/methods.cxx
 
-        src/series/roc_method.cxx
-        src/series/rsi_method.cxx
-        src/series/rvol_method.cxx
-
-        src/series/bb_method.cxx
-        src/series/kc_method.cxx
-
-        src/series/stoch_method.cxx
-        src/series/stoch_rsi_method.cxx
-        src/series.cxx
-
-        
-        src/conditions/any_condition_method.cxx
-        src/conditions/all_of_method.cxx
-        src/conditions/any_of_method.cxx
-        src/conditions/comparison_method.cxx
-        src/conditions/fixed_method.cxx
-        src/conditions/logical_method.cxx
-        src/conditions/crossover_method.cxx
-        src/conditions/crossunder_method.cxx
-        src/conditions.cxx
-
-        
+        src/series_evaluation_results.cxx
         src/default_method_context.cxx
         src/config_parser.cxx
 
@@ -106,6 +119,7 @@ target_compile_features(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
     jsoncons
+    Boost::mp11
 )
 
 if(EMSCRIPTEN)

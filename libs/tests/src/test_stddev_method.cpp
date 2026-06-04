@@ -37,22 +37,32 @@ TEST(StddevMethodTest, RunAllMethod)
 
   const auto stddev_method = StddevMethod{5};
 
-  EXPECT_DOUBLE_EQ(stddev_method(asset_snapshot[0], context),
-                   6.7823299831252681);
-  EXPECT_DOUBLE_EQ(stddev_method(asset_snapshot[1], context),
-                   6.324555320336759);
-  EXPECT_DOUBLE_EQ(stddev_method(asset_snapshot[2], context),
-                   13.784048752090222);
-  EXPECT_DOUBLE_EQ(stddev_method(asset_snapshot[3], context),
-                   27.676705006196094);
-  EXPECT_DOUBLE_EQ(stddev_method(asset_snapshot[4], context),
-                   27.676705006196094);
-  EXPECT_DOUBLE_EQ(stddev_method(asset_snapshot[5], context),
-                   27.676705006196094);
-  EXPECT_TRUE(std::isnan(stddev_method(asset_snapshot[6], context)));
-  EXPECT_TRUE(std::isnan(stddev_method(asset_snapshot[7], context)));
-  EXPECT_TRUE(std::isnan(stddev_method(asset_snapshot[8], context)));
-  EXPECT_TRUE(std::isnan(stddev_method(asset_snapshot[9], context)));
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(stddev_method, asset_snapshot[0], context),
+   6.7823299831252681);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(stddev_method, asset_snapshot[1], context),
+   6.324555320336759);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(stddev_method, asset_snapshot[2], context),
+   13.784048752090222);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(stddev_method, asset_snapshot[3], context),
+   27.676705006196094);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(stddev_method, asset_snapshot[4], context),
+   27.676705006196094);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(stddev_method, asset_snapshot[5], context),
+   27.676705006196094);
+  EXPECT_TRUE(std::isnan(
+   evaluate_series_method(stddev_method, asset_snapshot[6], context)));
+  EXPECT_TRUE(std::isnan(
+   evaluate_series_method(stddev_method, asset_snapshot[7], context)));
+  EXPECT_TRUE(std::isnan(
+   evaluate_series_method(stddev_method, asset_snapshot[8], context)));
+  EXPECT_TRUE(std::isnan(
+   evaluate_series_method(stddev_method, asset_snapshot[9], context)));
 }
 
 TEST(StddevMethodTest, EqualityOperator)

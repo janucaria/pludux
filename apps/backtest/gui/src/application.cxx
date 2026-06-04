@@ -2,11 +2,14 @@ module;
 
 #include <algorithm>
 #include <chrono>
+#include <format>
 #include <fstream>
+#include <functional>
 #include <list>
 #include <ranges>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 
 #include <imgui.h>
 #include <implot.h>
@@ -21,6 +24,23 @@ export import :serialization;
 export import :actions;
 export import :command_executor;
 import :windows;
+
+export namespace std {
+
+template<>
+struct hash<pludux::backtest::BacktestStoreHandle> {
+  auto
+  operator()(const pludux::backtest::BacktestStoreHandle& handle) const noexcept
+   -> size_t
+  {
+    const auto slot_hash = std::hash<std::size_t>{}(handle.slot_index());
+    const auto generation_hash = std::hash<std::size_t>{}(handle.generation());
+
+    return slot_hash ^ (generation_hash << 1);
+  }
+};
+
+} // namespace std
 
 export namespace pludux::apps {
 
@@ -88,6 +108,12 @@ public:
                              json_keltner_channels_sample}(app_state);
     }
     {
+      const auto json_donchian_channels_sample =
+       std::string{PLUDUX_SAMPLES_STRATEGY_donchian_channels};
+      LoadStrategyJsonAction{std::string{"Donchian Channels"},
+                             json_donchian_channels_sample}(app_state);
+    }
+    {
       const auto json_stochastic_sample =
        std::string{PLUDUX_SAMPLES_STRATEGY_stochastic};
       LoadStrategyJsonAction{std::string{"Stochastic"},
@@ -122,6 +148,11 @@ public:
     }
 
 #endif
+
+    const auto& backtest_handles = app_state.get_backtest_handles();
+    for(const auto& backtest_handle : backtest_handles) {
+      self.recreate_backtest_runner(app_state, backtest_handle);
+    }
   }
 
   void on_after_main_loop(this Application& self)
@@ -137,9 +168,25 @@ public:
   void on_update(this Application& self)
   {
     auto& app_state = self.app_state_;
+    auto& store = app_state.store();
     auto& alert_messages = self.alert_messages_;
 
     auto& backtest_handles = app_state.get_backtest_handles();
+
+    // sync backtest runners with backtest handles in the app state, and run the
+    // backtests
+    for(auto it = self.running_backtests_.begin();
+        it != self.running_backtests_.end();) {
+      const auto& backtest_handle = it->first;
+
+      if(std::ranges::find(backtest_handles, backtest_handle) ==
+         backtest_handles.end()) {
+        it = self.running_backtests_.erase(it);
+      } else {
+        ++it;
+      }
+    }
+
     if(!backtest_handles.empty()) {
       // create a loop with timeout 60 fps
       auto last_update_time = std::chrono::high_resolution_clock::now();
@@ -151,66 +198,25 @@ public:
       do {
         for(auto&& backtest_handle : backtest_handles) {
           auto& backtest = app_state.get_backtest(backtest_handle);
-          auto summaries_ptr =
-           app_state.get_backtest_summaries_if_present(backtest_handle);
-          if(!summaries_ptr) {
-            app_state.add_backtest_summaries(
-             backtest_handle, std::vector<backtest::BacktestSummary>{});
-            summaries_ptr =
-             app_state.get_backtest_summaries_if_present(backtest_handle);
+
+          if(!self.running_backtests_.contains(backtest_handle)) {
+            continue;
           }
 
-          auto series_results_ptr =
-           app_state.get_series_results_if_present(backtest_handle);
+          auto& summaries =
+           store.get_or_create_backtest_summaries(backtest_handle);
+          auto& series_evaluation_results =
+           store.get_or_create_series_results(backtest_handle);
 
-          if(!series_results_ptr) {
-            app_state.add_series_results(backtest_handle,
-                                         SeriesResultsCollector{});
-            series_results_ptr =
-             app_state.get_series_results_if_present(backtest_handle);
-          }
+          auto& backtest_runner = self.running_backtests_.at(backtest_handle);
 
           try {
-            if(app_state.is_backtest_ready(backtest)) {
-              const auto& asset = app_state.get_asset(backtest.asset_handle());
-              const auto& strategy =
-               app_state.get_strategy(backtest.strategy_handle());
-              const auto& market =
-               app_state.get_market(backtest.market_handle());
-              const auto& broker =
-               app_state.get_broker(backtest.broker_handle());
-              const auto& profile =
-               app_state.get_profile(backtest.profile_handle());
-
-              auto backtest_runner =
-               backtest::BacktestRunner{backtest.initial_capital(),
-                                        asset,
-                                        strategy,
-                                        market,
-                                        broker,
-                                        profile,
-                                        *summaries_ptr,
-                                        *series_results_ptr};
-
-              if(!backtest.is_failed() &&
-                 summaries_ptr->size() < asset.size()) {
-                backtest_runner.run();
-              }
-            }
+            backtest_runner.run(series_evaluation_results, summaries);
           } catch(const std::exception& e) {
-            backtest.is_failed(true);
+            backtest_runner.is_failed(true);
 
-            // TODO: this line is buggy in emscripten release build.
-            // The bug is failed to load/open the strategy, asset, or pludux
-            // file. No error message is shown in the GUI nor in the console. No
-            // crash, just no error message.
-            /*
             const auto error_message =
              std::format("Backtest '{}' failed: {}", backtest.name(), e.what());
-            */
-
-            const auto error_message =
-             "Backtest '" + backtest.name() + "' failed: " + e.what();
             alert_messages.push_back(error_message);
           }
         }
@@ -253,7 +259,18 @@ public:
     }
 
     try {
-      self.command_executor_.execute(app_state);
+      const auto command_executed = self.command_executor_.execute(app_state);
+      if(command_executed) {
+        // check if the backtest has reset, if so, remove the backtest runner
+        // from the running backtests
+        for(auto&& backtest_handle : backtest_handles) {
+          // TODO: should check if the backtest has reset instead of just
+          // recreating the backtest runner every time a command is executed,
+          // but for now this is simpler and works fine
+          self.running_backtests_.erase(backtest_handle);
+          self.recreate_backtest_runner(app_state, backtest_handle);
+        }
+      }
     } catch(const std::exception& e) {
       const auto error_message = std::format("Error: {}", e.what());
       alert_messages.push_back(error_message);
@@ -279,6 +296,37 @@ public:
   }
 
 private:
+  void recreate_backtest_runner(this Application& self,
+                                ApplicationState& app_state,
+                                backtest::BacktestStoreHandle backtest_handle)
+  {
+    auto& backtest = app_state.get_backtest(backtest_handle);
+    const auto* asset_ptr =
+     app_state.get_asset_if_present(backtest.asset_handle());
+    const auto* strategy_ptr =
+     app_state.get_strategy_if_present(backtest.strategy_handle());
+    const auto* market_ptr =
+     app_state.get_market_if_present(backtest.market_handle());
+    const auto* broker_ptr =
+     app_state.get_broker_if_present(backtest.broker_handle());
+    const auto* profile_ptr =
+     app_state.get_profile_if_present(backtest.profile_handle());
+
+    if(!asset_ptr || !strategy_ptr || !market_ptr || !broker_ptr ||
+       !profile_ptr) {
+      return;
+    }
+
+    self.running_backtests_.emplace(
+     backtest_handle,
+     backtest::BacktestRunner{*asset_ptr,
+                              *strategy_ptr,
+                              *market_ptr,
+                              *broker_ptr,
+                              *profile_ptr,
+                              backtest.initial_capital()});
+  }
+
   ImVec2 window_size_;
 
   DockspaceWindow dockspace_window_;
@@ -291,6 +339,8 @@ private:
   ProfilesWindow profiles_window_;
 
   ApplicationState app_state_;
+  std::unordered_map<backtest::BacktestStoreHandle, backtest::BacktestRunner>
+   running_backtests_;
   std::list<std::string> alert_messages_;
   CommandExecutor command_executor_{};
 };
