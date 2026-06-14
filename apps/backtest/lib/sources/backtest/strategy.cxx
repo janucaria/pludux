@@ -102,6 +102,7 @@ public:
 
   Strategy()
   : Strategy("",
+             OrderedNamedRegistry<ConstrainedNumericInput>{},
              SeriesMethodRegistry{},
              FalseMethod{},
              FalseMethod{},
@@ -117,6 +118,7 @@ public:
   }
 
   Strategy(std::string name,
+           OrderedNamedRegistry<ConstrainedNumericInput> inputs,
            SeriesMethodRegistry series_registry,
            AnySeriesMethod long_entry_filter,
            AnySeriesMethod long_exit_filter,
@@ -129,6 +131,7 @@ public:
            double take_profit_r_multiple,
            std::vector<PlotGroup> plots)
   : name_{std::move(name)}
+  , inputs_{std::move(inputs)}
   , series_registry_{series_registry}
   , long_entry_filter_{std::move(long_entry_filter)}
   , long_exit_filter_{std::move(long_exit_filter)}
@@ -153,6 +156,18 @@ public:
   void name(this Strategy& self, std::string name) noexcept
   {
     self.name_ = std::move(name);
+  }
+
+  auto inputs(this const Strategy& self) noexcept
+   -> const OrderedNamedRegistry<ConstrainedNumericInput>&
+  {
+    return self.inputs_;
+  }
+
+  void inputs(this Strategy& self,
+              OrderedNamedRegistry<ConstrainedNumericInput> inputs) noexcept
+  {
+    self.inputs_ = std::move(inputs);
   }
 
   auto series_registry(this const Strategy& self) noexcept
@@ -291,12 +306,14 @@ public:
            self.stop_loss_trailing_enabled_ ==
             other.stop_loss_trailing_enabled_ &&
            self.take_profit_enabled_ == other.take_profit_enabled_ &&
-           self.take_profit_r_multiple_ == other.take_profit_r_multiple_;
+           self.take_profit_r_multiple_ == other.take_profit_r_multiple_ &&
+           self.inputs_ == other.inputs_;
   }
 
 private:
   std::string name_;
 
+  OrderedNamedRegistry<ConstrainedNumericInput> inputs_;
   SeriesMethodRegistry series_registry_;
 
   AnySeriesMethod long_entry_filter_{FalseMethod{}};

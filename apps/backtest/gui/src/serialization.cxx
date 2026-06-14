@@ -1,6 +1,8 @@
 module;
 
 #include <concepts>
+#include <cstddef>
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
@@ -485,6 +487,60 @@ void load(Archive& archive, pludux::backtest::Store& store)
 /*--------------------------------------------------------------------------------------*/
 
 template<class Archive>
+void save(Archive& archive, const pludux::ConstrainedNumericInput& input)
+{
+  archive(make_nvp("label", input.label()),
+          make_nvp("representation", static_cast<int>(input.representation())),
+          make_nvp("value", input.value()));
+}
+
+template<class Archive>
+void load(Archive& archive, pludux::ConstrainedNumericInput& input)
+{
+  auto label = std::string{};
+  auto value = double{};
+  auto representation = int{};
+
+  archive(make_nvp("label", label),
+          make_nvp("value", value),
+          make_nvp("representation", representation));
+
+  input = pludux::ConstrainedNumericInput{
+   std::move(label),
+   static_cast<pludux::ConstrainedNumericInput::ValueRepresentation>(
+    representation),
+   value};
+}
+
+/*--------------------------------------------------------------------------------------*/
+
+template<class Archive>
+void save(
+ Archive& archive,
+ const pludux::OrderedNamedRegistry<pludux::ConstrainedNumericInput>& registry)
+{
+  archive(make_nvp("orderedNames", registry.ordered_names()),
+          make_nvp("values", registry.values()));
+}
+
+template<class Archive>
+void load(
+ Archive& archive,
+ pludux::OrderedNamedRegistry<pludux::ConstrainedNumericInput>& registry)
+{
+  auto ordered_names = std::vector<std::string>{};
+  auto values =
+   std::unordered_map<std::string, pludux::ConstrainedNumericInput>{};
+
+  archive(make_nvp("orderedNames", ordered_names), make_nvp("values", values));
+
+  registry = pludux::OrderedNamedRegistry<pludux::ConstrainedNumericInput>{
+   std::move(ordered_names), std::move(values)};
+}
+
+/*--------------------------------------------------------------------------------------*/
+
+template<class Archive>
 void save(Archive& archive, const pludux::backtest::Backtest& backtest)
 {
   archive(make_nvp("name", backtest.name()),
@@ -493,7 +549,8 @@ void save(Archive& archive, const pludux::backtest::Backtest& backtest)
           make_nvp("strategy", backtest.strategy_handle()),
           make_nvp("market", backtest.market_handle()),
           make_nvp("broker", backtest.broker_handle()),
-          make_nvp("profile", backtest.profile_handle()));
+          make_nvp("profile", backtest.profile_handle()),
+          make_nvp("inputs", backtest.inputs()));
 }
 
 template<class Archive>
@@ -506,7 +563,7 @@ void load(Archive& archive, pludux::backtest::Backtest& backtest)
   auto market_handle = pludux::backtest::MarketStoreHandle{};
   auto broker_handle = pludux::backtest::BrokerStoreHandle{};
   auto profile_handle = pludux::backtest::ProfileStoreHandle{};
-  auto is_failed = bool{};
+  auto inputs = pludux::OrderedNamedRegistry<pludux::ConstrainedNumericInput>{};
 
   archive(make_nvp("name", name),
           make_nvp("initialCapital", initial_capital),
@@ -514,7 +571,8 @@ void load(Archive& archive, pludux::backtest::Backtest& backtest)
           make_nvp("strategy", strategy_handle),
           make_nvp("market", market_handle),
           make_nvp("broker", broker_handle),
-          make_nvp("profile", profile_handle));
+          make_nvp("profile", profile_handle),
+          make_nvp("inputs", inputs));
 
   backtest = pludux::backtest::Backtest{std::move(name),
                                         initial_capital,
@@ -522,7 +580,8 @@ void load(Archive& archive, pludux::backtest::Backtest& backtest)
                                         strategy_handle,
                                         market_handle,
                                         broker_handle,
-                                        profile_handle};
+                                        profile_handle,
+                                        std::move(inputs)};
 }
 
 /*--------------------------------------------------------------------------------------*/

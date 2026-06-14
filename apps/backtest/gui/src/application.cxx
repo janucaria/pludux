@@ -261,12 +261,22 @@ public:
     try {
       const auto command_executed = self.command_executor_.execute(app_state);
       if(command_executed) {
-        // check if the backtest has reset, if so, remove the backtest runner
-        // from the running backtests
+        // Resolve and sync backtest inputs with strategy template inputs after
+        // each command execution, then recreate runners for updated state.
         for(auto&& backtest_handle : backtest_handles) {
-          // TODO: should check if the backtest has reset instead of just
-          // recreating the backtest runner every time a command is executed,
-          // but for now this is simpler and works fine
+          auto* backtest_ptr =
+           app_state.get_backtest_if_present(backtest_handle);
+          if(!backtest_ptr) {
+            continue;
+          }
+
+          const auto* strategy_ptr =
+           app_state.get_strategy_if_present(backtest_ptr->strategy_handle());
+          if(strategy_ptr) {
+            self.resolve_and_sync_backtest_inputs(*backtest_ptr,
+                                                  strategy_ptr->inputs());
+          }
+
           self.running_backtests_.erase(backtest_handle);
           self.recreate_backtest_runner(app_state, backtest_handle);
         }
@@ -296,6 +306,35 @@ public:
   }
 
 private:
+  void resolve_and_sync_backtest_inputs(
+   this Application& self,
+   backtest::Backtest& backtest,
+   const pludux::OrderedNamedRegistry<pludux::ConstrainedNumericInput>&
+    strategy_inputs) noexcept
+  {
+    auto synced_inputs =
+     pludux::OrderedNamedRegistry<pludux::ConstrainedNumericInput>{};
+
+    for(const auto& [input_name, strategy_input] : strategy_inputs) {
+      const auto backtest_input_opt = backtest.inputs().get(input_name);
+
+      if(!backtest_input_opt.has_value()) {
+        synced_inputs.set(input_name, strategy_input);
+        continue;
+      }
+
+      auto synced_input = backtest_input_opt.value();
+      const auto current_numeric_value = synced_input.value();
+
+      synced_input.label(strategy_input.label());
+      synced_input.representation(strategy_input.representation());
+      synced_input.value(current_numeric_value);
+      synced_inputs.set(input_name, std::move(synced_input));
+    }
+
+    backtest.inputs(std::move(synced_inputs));
+  }
+
   void recreate_backtest_runner(this Application& self,
                                 ApplicationState& app_state,
                                 backtest::BacktestStoreHandle backtest_handle)
@@ -324,6 +363,7 @@ private:
                               *market_ptr,
                               *broker_ptr,
                               *profile_ptr,
+                              backtest.inputs(),
                               backtest.initial_capital()});
   }
 

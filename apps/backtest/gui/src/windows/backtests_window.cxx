@@ -1,6 +1,8 @@
 module;
 
 #include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <functional>
 #include <iterator>
@@ -9,6 +11,7 @@ module;
 #include <ranges>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <imgui.h>
@@ -103,7 +106,8 @@ private:
          ImGui::CalcTextSize("Delete").x + (2.0f * frame_padding_x);
         const auto more_width =
          ImGui::CalcTextSize("More...").x + (2.0f * frame_padding_x);
-        const auto buttons_width = edit_width + spacing + delete_width + spacing + more_width;
+        const auto buttons_width =
+         edit_width + spacing + delete_width + spacing + more_width;
         const auto buttons_start_x = row_start.x + row_width - buttons_width;
 
         ImGui::SetCursorScreenPos(ImVec2(buttons_start_x, row_start.y));
@@ -146,7 +150,8 @@ private:
           }
 
           const auto move_down_disabled = i == backtest_handles.size() - 1;
-          if(ImGui::MenuItem("Move Down", nullptr, false, !move_down_disabled)) {
+          if(ImGui::MenuItem(
+              "Move Down", nullptr, false, !move_down_disabled)) {
             context.push_action(
              [from_index = i, to_index = i + 1](ApplicationState& app_state) {
                app_state.reorder_list_backtest(from_index, to_index);
@@ -332,6 +337,60 @@ private:
           ImGui::PopID();
         }
         ImGui::EndCombo();
+      }
+
+      auto backtest_inputs = edit_backtest_ptr->inputs();
+      if(!backtest_inputs.empty()) {
+        ImGui::Indent();
+
+        ImGui::SeparatorText("Inputs");
+
+        for(auto id_counter = 0;
+            auto& [input_name, backtest_input] : backtest_inputs) {
+          ImGui::PushID(id_counter++);
+
+          ImGui::Text("%s: ", backtest_input.label().c_str());
+          ImGui::SameLine();
+
+          auto input_value = backtest_input.value();
+          switch(backtest_input.representation()) {
+          case pludux::ConstrainedNumericInput::ValueRepresentation::Decimal: {
+            auto editable = input_value;
+            if(ImGui::InputScalar(
+                "##input_value", ImGuiDataType_Double, &editable)) {
+              input_value = editable;
+            }
+            break;
+          }
+          case pludux::ConstrainedNumericInput::ValueRepresentation::
+           SignedInteger: {
+            auto editable = static_cast<std::int64_t>(input_value);
+            if(ImGui::InputScalar(
+                "##input_value", ImGuiDataType_S64, &editable)) {
+              input_value = static_cast<double>(editable);
+            }
+            break;
+          }
+          case pludux::ConstrainedNumericInput::ValueRepresentation::
+           UnsignedInteger: {
+            auto editable = static_cast<std::uint64_t>(input_value);
+            if(ImGui::InputScalar(
+                "##input_value", ImGuiDataType_U64, &editable)) {
+              input_value = static_cast<double>(editable);
+            }
+            break;
+          }
+          }
+
+          backtest_input.value(input_value);
+
+          ImGui::Separator();
+          ImGui::PopID();
+        }
+
+        edit_backtest_ptr->inputs(std::move(backtest_inputs));
+
+        ImGui::Unindent();
       }
     }
 

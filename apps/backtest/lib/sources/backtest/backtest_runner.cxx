@@ -35,19 +35,22 @@ export namespace pludux::backtest {
 
 class BacktestRunner {
 public:
-  BacktestRunner(const Asset& asset,
-                 const Strategy& strategy,
-                 const Market& market,
-                 const Broker& broker,
-                 const Profile& profile,
-                 double total_equity = 0.0,
-                 std::size_t pyramiding_layers = 0,
-                 bool is_failed = false)
+  BacktestRunner(
+   const Asset& asset,
+   const Strategy& strategy,
+   const Market& market,
+   const Broker& broker,
+   const Profile& profile,
+   const OrderedNamedRegistry<ConstrainedNumericInput>& backtest_inputs,
+   double total_equity = 0.0,
+   std::size_t pyramiding_layers = 0,
+   bool is_failed = false)
   : asset_{asset}
   , strategy_{strategy}
   , market_{market}
   , broker_{broker}
   , profile_{profile}
+  , backtest_inputs_{backtest_inputs}
   , total_equity_{total_equity}
   , pyramiding_layers_{pyramiding_layers}
   , is_failed_{is_failed}
@@ -84,8 +87,10 @@ public:
     const auto asset_snapshot = self.asset_.get_snapshot(asset_lookback);
 
     const auto& series_registry = self.strategy_.series_registry();
-    auto context = DefaultMethodContext{
-     series_registry, series_evaluation_results, summaries.size()};
+    auto context = DefaultMethodContext{series_registry,
+                                        series_evaluation_results,
+                                        self.backtest_inputs_,
+                                        summaries.size()};
 
     for(const auto& [series_name, series] : series_registry) {
       const auto series_value =
@@ -190,6 +195,8 @@ private:
   const Broker& broker_;
 
   const Profile& profile_;
+
+  const OrderedNamedRegistry<ConstrainedNumericInput>& backtest_inputs_;
 
   double total_equity_;
 

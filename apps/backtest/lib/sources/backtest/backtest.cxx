@@ -1,5 +1,6 @@
 module;
 
+#include <cstddef>
 #include <string>
 #include <utility>
 
@@ -20,7 +21,8 @@ public:
              StrategyStoreHandle{},
              MarketStoreHandle{},
              BrokerStoreHandle{},
-             ProfileStoreHandle{}}
+             ProfileStoreHandle{},
+             {}}
   {
   }
 
@@ -30,7 +32,8 @@ public:
            StrategyStoreHandle strategy_handle,
            MarketStoreHandle market_handle,
            BrokerStoreHandle broker_handle,
-           ProfileStoreHandle profile_handle)
+           ProfileStoreHandle profile_handle,
+           OrderedNamedRegistry<ConstrainedNumericInput> inputs = {})
   : name_{std::move(name)}
   , initial_capital_{initial_capital}
   , asset_handle_{std::move(asset_handle)}
@@ -38,6 +41,7 @@ public:
   , market_handle_{std::move(market_handle)}
   , broker_handle_{std::move(broker_handle)}
   , profile_handle_{std::move(profile_handle)}
+  , inputs_{std::move(inputs)}
   {
   }
 
@@ -119,6 +123,18 @@ public:
     self.profile_handle_ = std::move(new_profile_handle);
   }
 
+  auto inputs(this const Backtest& self) noexcept
+   -> const OrderedNamedRegistry<ConstrainedNumericInput>&
+  {
+    return self.inputs_;
+  }
+
+  void inputs(this Backtest& self,
+              OrderedNamedRegistry<ConstrainedNumericInput> new_inputs) noexcept
+  {
+    self.inputs_ = std::move(new_inputs);
+  }
+
   auto equivalent_rules(this const Backtest& self,
                         const Backtest& other) noexcept -> bool
   {
@@ -127,7 +143,8 @@ public:
            self.strategy_handle() == other.strategy_handle() &&
            self.market_handle() == other.market_handle() &&
            self.broker_handle() == other.broker_handle() &&
-           self.profile_handle() == other.profile_handle();
+           self.profile_handle() == other.profile_handle() &&
+           self.inputs_ == other.inputs_;
   }
 
 private:
@@ -139,6 +156,8 @@ private:
   MarketStoreHandle market_handle_;
   BrokerStoreHandle broker_handle_;
   ProfileStoreHandle profile_handle_;
+
+  OrderedNamedRegistry<ConstrainedNumericInput> inputs_;
 };
 
 } // namespace pludux::backtest

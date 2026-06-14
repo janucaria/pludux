@@ -4,14 +4,16 @@ module;
 #include <limits>
 #include <optional>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 export module pludux:default_method_context;
 
+import :asset_snapshot;
 import :series_method_registry;
 import :series_evaluation_results;
 import :method_key;
+import :constrained_numeric_input;
+import :ordered_named_registry;
 
 export namespace pludux {
 
@@ -22,9 +24,11 @@ public:
   explicit DefaultMethodContext(
    const SeriesMethodRegistry& methods,
    SeriesEvaluationResults& series_evaluation_results,
+    const OrderedNamedRegistry<ConstrainedNumericInput>& inputs,
    std::size_t current_index = 0) noexcept
   : methods_{methods}
   , series_evaluation_results_{series_evaluation_results}
+  , inputs_{inputs}
   , current_index_{current_index}
   {
   }
@@ -98,9 +102,20 @@ public:
     return self.current_index_;
   }
 
+  auto get_input_value(this const DefaultMethodContext& self,
+                       const std::string& key) noexcept -> double
+  {
+    if(const auto input_opt = self.inputs_.get(key); input_opt.has_value()) {
+      const auto& input = input_opt.value();
+      return input.resolved_value();
+    }
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+
 private:
   const SeriesMethodRegistry& methods_;
   SeriesEvaluationResults& series_evaluation_results_;
+  const OrderedNamedRegistry<ConstrainedNumericInput>& inputs_;
   std::size_t current_index_;
 };
 

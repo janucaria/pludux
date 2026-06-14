@@ -58,6 +58,7 @@ import :methods.logical_method;
 import :methods.boolean_method;
 import :methods.comparison_method;
 import :methods.donchian_channel_method;
+import :methods.input_method;
 
 export namespace pludux {
 
@@ -123,7 +124,8 @@ using MethodRegistry = mp11::mp_list<mp11::mp_quote<AbsDiffMethod>,
                                      mp11::mp_quote<GreaterEqualMethod>,
                                      mp11::mp_quote<LessThanMethod>,
                                      mp11::mp_quote<LessEqualMethod>,
-                                     DonchianChannelMethod>;
+                                     DonchianChannelMethod,
+                                     InputMethod>;
 
 template<typename TMethod>
 consteval auto series_type_hash_id_of(const TMethod&) -> std::size_t
@@ -493,6 +495,14 @@ auto hash_series_method(const SeriesNodeMethod& method) noexcept -> std::size_t
 // SeriesValue
 
 auto hash_series_method(const SeriesValueMethod& method) noexcept -> std::size_t
+{
+  const auto type_hash = series_type_hash_id_of(method);
+  const auto name_hash = hash_series_method_or_std_hash(method.name());
+  return merge_hashes(type_hash, name_hash);
+}
+
+// Input
+auto hash_series_method(const InputMethod& method) noexcept -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);
   const auto name_hash = hash_series_method_or_std_hash(method.name());

@@ -134,9 +134,88 @@
       "default": [],
       "title": "Plots",
       "description": "Optional visual plot groups for chart rendering. Plot groups can be overlaid on price or rendered in their own pane."
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z][a-z0-9_]*$": {
+          "$ref": "#/$defs/constrainedNumericInput"
+        }
+      },
+      "title": "Strategy Inputs",
+      "description": "Optional named strategy inputs with format constraints. Each key must be lower_snake_case. Inputs are customizable parameters that influence strategy behavior. Use the 'representation' field to specify the value format: Decimal for floating-point values, SignedInteger for signed integers, or UnsignedInteger for non-negative integers.",
+      "examples": [
+        {
+          "rsi_period": {
+            "label": "RSI Period",
+            "representation": "UnsignedInteger",
+            "value": 14
+          },
+          "volatility_factor": {
+            "label": "Volatility Factor",
+            "representation": "Decimal",
+            "value": 1.5
+          }
+        }
+      ]
     }
   },
   "$defs": {
+    "valueRepresentation": {
+      "type": "string",
+      "enum": [
+        "Decimal",
+        "SignedInteger",
+        "UnsignedInteger"
+      ],
+      "title": "Value Representation",
+      "description": "Numeric representation format for a constrained numeric input. Decimal allows floating-point values. SignedInteger restricts to integer values including negative. UnsignedInteger restricts to non-negative integer values.",
+      "examples": [
+        "Decimal",
+        "SignedInteger",
+        "UnsignedInteger"
+      ]
+    },
+    "constrainedNumericInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "type": "string",
+          "title": "Label",
+          "description": "Human-readable label for the input parameter, shown in the UI."
+        },
+        "representation": {
+          "$ref": "#/$defs/valueRepresentation",
+          "default": "Decimal",
+          "title": "Representation",
+          "description": "Value format constraint. Decimal (default) allows any floating-point number. SignedInteger restricts values to whole numbers including negative. UnsignedInteger restricts to non-negative whole numbers."
+        },
+        "value": {
+          "type": "number",
+          "title": "Value",
+          "description": "The numeric value of the input. When representation is SignedInteger or UnsignedInteger, this value is normalized by the system (truncated toward zero, or clamped to zero for unsigned)."
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "Constrained Numeric Input",
+      "description": "A named strategy input parameter with a label, representation format, and numeric value. The representation constrains how the value is interpreted and displayed in the UI and at runtime.",
+      "examples": [
+        {
+          "label": "RSI Period",
+          "representation": "UnsignedInteger",
+          "value": 14
+        },
+        {
+          "label": "Volatility Multiplier",
+          "representation": "Decimal",
+          "value": 2.5
+        }
+      ]
+    },
     "positionSide": {
       "oneOf": [
         {
@@ -530,6 +609,40 @@
       ],
       "title": "Lookback",
       "description": "Returns the value of a source series from a previous bar. For example, period 1 means one bar ago."
+    },
+    "inputSeries": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "INPUT"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]*$",
+                  "title": "Input Name",
+                  "description": "Name of a strategy input defined in the top-level inputs object."
+                }
+              },
+              "required": [
+                "name"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Strategy Input",
+      "description": "References a numeric strategy input parameter defined in the top-level inputs object. Use this method to incorporate user-defined parameters into series calculations and signals."
     },
     "valueSeries": {
       "allOf": [
@@ -1778,6 +1891,9 @@
           "$ref": "#/$defs/lookbackSeries"
         },
         {
+          "$ref": "#/$defs/inputSeries"
+        },
+        {
           "$ref": "#/$defs/quoteSeries"
         },
         {
@@ -2608,10 +2724,22 @@
       "description": "A group of one or more plot items, optionally overlaid on price."
     }
   },
-  "description": "Schema for a Pludux backtest strategy file. This schema is designed to be machine-validatable and AI-friendly so an AI can generate complete strategy JSON files with named series, signals, trading rules, and optional chart plots. Important rule: use SERIES_NODE when another method needs a named series definition itself, and use SERIES_VALUE when another method needs the evaluated numeric output of a named series.",
+  "description": "Schema for a Pludux backtest strategy file. This schema is designed to be machine-validatable and AI-friendly so an AI can generate complete strategy JSON files with named series, strategy inputs, signals, trading rules, and optional chart plots. Important rule: use SERIES_NODE when another method needs a named series definition itself, and use SERIES_VALUE when another method needs the evaluated numeric output of a named series. For strategy inputs, specify representation (Decimal, SignedInteger, or UnsignedInteger) to constrain how values are formatted and displayed.",
   "examples": [
     {
       "version": 2,
+      "inputs": {
+        "rsi_period": {
+          "label": "RSI Period",
+          "representation": "UnsignedInteger",
+          "value": 14
+        },
+        "rsi_oversold": {
+          "label": "Oversold Threshold",
+          "representation": "Decimal",
+          "value": 30.0
+        }
+      },
       "series": {
         "fast_ema": {
           "method": "EMA",

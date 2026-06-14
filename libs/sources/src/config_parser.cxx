@@ -1142,6 +1142,25 @@ auto make_default_registered_config_parser() -> ConfigParser
    });
 
   config_parser.register_method_parser(
+   "INPUT",
+   [](const ConfigParser& config_parser,
+      const AnySeriesMethod any_series_method) -> jsoncons::ojson {
+     auto serialized_method = jsoncons::ojson::null();
+
+     auto input_method = series_method_cast<InputMethod>(any_series_method);
+     if(input_method) {
+       serialized_method = jsoncons::ojson{};
+       serialized_method["name"] = input_method->name();
+     }
+
+     return serialized_method;
+   },
+   [](ConfigParser::Parser config_parser, const jsoncons::ojson& parameters) {
+     const auto name = get_param_or<std::string>(parameters, "name", "");
+     return InputMethod{name};
+   });
+
+  config_parser.register_method_parser(
    "SELECT_OUTPUT",
    [](const ConfigParser& config_parser,
       const AnySeriesMethod any_series_method) -> jsoncons::ojson {
