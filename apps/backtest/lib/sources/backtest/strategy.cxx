@@ -22,12 +22,12 @@ public:
 
     auto operator==(const Pyramiding&) const noexcept -> bool = default;
 
-    auto signal(this const Pyramiding& self) noexcept -> const AnySeriesMethod&
+    auto signal(this const Pyramiding& self) noexcept -> const ErasedNode&
     {
       return self.signal_;
     }
 
-    void signal(this Pyramiding& self, AnySeriesMethod signal) noexcept
+    void signal(this Pyramiding& self, ErasedNode signal) noexcept
     {
       self.signal_ = std::move(signal);
     }
@@ -43,7 +43,7 @@ public:
     }
 
   private:
-    AnySeriesMethod signal_{FalseMethod{}};
+    ErasedNode signal_{FalseNode{}};
     std::size_t max_layers_{1};
   };
 
@@ -103,11 +103,11 @@ public:
   Strategy()
   : Strategy("",
              OrderedNamedRegistry<ConstrainedNumericInput>{},
-             SeriesMethodRegistry{},
-             FalseMethod{},
-             FalseMethod{},
-             FalseMethod{},
-             FalseMethod{},
+             OrderedNamedRegistry<ErasedNode>{},
+             FalseNode{},
+             FalseNode{},
+             FalseNode{},
+             FalseNode{},
              Positions{},
              false,
              false,
@@ -119,11 +119,11 @@ public:
 
   Strategy(std::string name,
            OrderedNamedRegistry<ConstrainedNumericInput> inputs,
-           SeriesMethodRegistry series_registry,
-           AnySeriesMethod long_entry_filter,
-           AnySeriesMethod long_exit_filter,
-           AnySeriesMethod short_entry_filter,
-           AnySeriesMethod short_exit_filter,
+           OrderedNamedRegistry<ErasedNode> series_nodes,
+           ErasedNode long_entry_node,
+           ErasedNode long_exit_node,
+           ErasedNode short_entry_node,
+           ErasedNode short_exit_node,
            Positions position,
            bool stop_loss_enabled,
            bool stop_loss_trailing_enabled,
@@ -132,11 +132,11 @@ public:
            std::vector<PlotGroup> plots)
   : name_{std::move(name)}
   , inputs_{std::move(inputs)}
-  , series_registry_{series_registry}
-  , long_entry_filter_{std::move(long_entry_filter)}
-  , long_exit_filter_{std::move(long_exit_filter)}
-  , short_entry_filter_{std::move(short_entry_filter)}
-  , short_exit_filter_{std::move(short_exit_filter)}
+  , series_nodes_{series_nodes}
+  , long_entry_node_{std::move(long_entry_node)}
+  , long_exit_node_{std::move(long_exit_node)}
+  , short_entry_node_{std::move(short_entry_node)}
+  , short_exit_node_{std::move(short_exit_node)}
   , positions_{std::move(position)}
   , stop_loss_enabled_{stop_loss_enabled}
   , stop_loss_trailing_enabled_{stop_loss_trailing_enabled}
@@ -170,63 +170,63 @@ public:
     self.inputs_ = std::move(inputs);
   }
 
-  auto series_registry(this const Strategy& self) noexcept
-   -> const SeriesMethodRegistry&
+  auto series_nodes(this const Strategy& self) noexcept
+   -> const OrderedNamedRegistry<ErasedNode>&
   {
-    return self.series_registry_;
+    return self.series_nodes_;
   }
 
-  auto series_registry(this Strategy& self) noexcept -> SeriesMethodRegistry&
+  auto series_nodes(this Strategy& self) noexcept
+   -> OrderedNamedRegistry<ErasedNode>&
   {
-    return self.series_registry_;
+    return self.series_nodes_;
   }
 
-  auto long_entry_filter(this const Strategy& self) noexcept
-   -> const AnySeriesMethod&
+  auto long_entry_node(this const Strategy& self) noexcept
+   -> const ErasedNode&
   {
-    return self.long_entry_filter_;
+    return self.long_entry_node_;
   }
 
-  void long_entry_filter(this Strategy& self,
-                         AnySeriesMethod long_entry_filter) noexcept
+  void long_entry_node(this Strategy& self,
+                         ErasedNode long_entry_node) noexcept
   {
-    self.long_entry_filter_ = std::move(long_entry_filter);
+    self.long_entry_node_ = std::move(long_entry_node);
   }
 
-  auto long_exit_filter(this const Strategy& self) noexcept
-   -> const AnySeriesMethod&
+  auto long_exit_node(this const Strategy& self) noexcept -> const ErasedNode&
   {
-    return self.long_exit_filter_;
+    return self.long_exit_node_;
   }
 
-  void long_exit_filter(this Strategy& self,
-                        AnySeriesMethod long_exit_filter) noexcept
+  void long_exit_node(this Strategy& self,
+                        ErasedNode long_exit_node) noexcept
   {
-    self.long_exit_filter_ = std::move(long_exit_filter);
+    self.long_exit_node_ = std::move(long_exit_node);
   }
 
-  auto short_entry_filter(this const Strategy& self) noexcept
-   -> const AnySeriesMethod&
+  auto short_entry_node(this const Strategy& self) noexcept
+   -> const ErasedNode&
   {
-    return self.short_entry_filter_;
+    return self.short_entry_node_;
   }
 
-  void short_entry_filter(this Strategy& self,
-                          AnySeriesMethod short_entry_filter) noexcept
+  void short_entry_node(this Strategy& self,
+                          ErasedNode short_entry_node) noexcept
   {
-    self.short_entry_filter_ = std::move(short_entry_filter);
+    self.short_entry_node_ = std::move(short_entry_node);
   }
 
-  auto short_exit_filter(this const Strategy& self) noexcept
-   -> const AnySeriesMethod&
+  auto short_exit_node(this const Strategy& self) noexcept
+   -> const ErasedNode&
   {
-    return self.short_exit_filter_;
+    return self.short_exit_node_;
   }
 
-  void short_exit_filter(this Strategy& self,
-                         AnySeriesMethod short_exit_filter) noexcept
+  void short_exit_node(this Strategy& self,
+                         ErasedNode short_exit_node) noexcept
   {
-    self.short_exit_filter_ = std::move(short_exit_filter);
+    self.short_exit_node_ = std::move(short_exit_node);
   }
 
   auto positions(this const Strategy& self) noexcept -> const Positions&
@@ -296,11 +296,11 @@ public:
   auto equivalent_rules(this const Strategy& self,
                         const Strategy& other) noexcept -> bool
   {
-    return self.series_registry_ == other.series_registry_ &&
-           self.long_entry_filter_ == other.long_entry_filter_ &&
-           self.long_exit_filter_ == other.long_exit_filter_ &&
-           self.short_entry_filter_ == other.short_entry_filter_ &&
-           self.short_exit_filter_ == other.short_exit_filter_ &&
+    return self.series_nodes_ == other.series_nodes_ &&
+           self.long_entry_node_ == other.long_entry_node_ &&
+           self.long_exit_node_ == other.long_exit_node_ &&
+           self.short_entry_node_ == other.short_entry_node_ &&
+           self.short_exit_node_ == other.short_exit_node_ &&
            self.positions_ == other.positions_ &&
            self.stop_loss_enabled_ == other.stop_loss_enabled_ &&
            self.stop_loss_trailing_enabled_ ==
@@ -314,13 +314,13 @@ private:
   std::string name_;
 
   OrderedNamedRegistry<ConstrainedNumericInput> inputs_;
-  SeriesMethodRegistry series_registry_;
+  OrderedNamedRegistry<ErasedNode> series_nodes_;
 
-  AnySeriesMethod long_entry_filter_{FalseMethod{}};
-  AnySeriesMethod long_exit_filter_{FalseMethod{}};
+  ErasedNode long_entry_node_{FalseNode{}};
+  ErasedNode long_exit_node_{FalseNode{}};
 
-  AnySeriesMethod short_entry_filter_{FalseMethod{}};
-  AnySeriesMethod short_exit_filter_{FalseMethod{}};
+  ErasedNode short_entry_node_{FalseNode{}};
+  ErasedNode short_exit_node_{FalseNode{}};
 
   Positions positions_;
 

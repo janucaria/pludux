@@ -356,14 +356,41 @@ private:
       return;
     }
 
+    auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+    for(const auto& [series_name, series_node] :
+        strategy_ptr->series_nodes()) {
+      series_methods.set(series_name, node_to_erased_method(series_node));
+    }
+
+    const auto& long_pyramiding =
+     strategy_ptr->positions().long_side().pyramiding();
+    const auto& short_pyramiding =
+     strategy_ptr->positions().short_side().pyramiding();
+
     self.running_backtests_.emplace(
      backtest_handle,
      backtest::BacktestRunner{*asset_ptr,
-                              *strategy_ptr,
                               *market_ptr,
                               *broker_ptr,
                               *profile_ptr,
                               backtest.inputs(),
+                              std::move(series_methods),
+                              node_to_erased_method(
+                               strategy_ptr->long_entry_node()),
+                              node_to_erased_method(
+                               strategy_ptr->long_exit_node()),
+                              node_to_erased_method(long_pyramiding.signal()),
+                              long_pyramiding.max_layers(),
+                              node_to_erased_method(
+                               strategy_ptr->short_entry_node()),
+                              node_to_erased_method(
+                               strategy_ptr->short_exit_node()),
+                              node_to_erased_method(short_pyramiding.signal()),
+                              short_pyramiding.max_layers(),
+                              strategy_ptr->stop_loss_enabled(),
+                              strategy_ptr->stop_loss_trailing_enabled(),
+                              strategy_ptr->take_profit_enabled(),
+                              strategy_ptr->take_profit_r_multiple(),
                               backtest.initial_capital()});
   }
 

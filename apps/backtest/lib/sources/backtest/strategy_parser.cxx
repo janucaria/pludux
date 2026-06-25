@@ -42,10 +42,13 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
     }
   }
 
-  auto series_registry =
-   strategy_json.contains("series")
-    ? config_parser.parse_registered_methods(strategy_json.at("series"))
-    : SeriesMethodRegistry{};
+  auto series_nodes = OrderedNamedRegistry<ErasedNode>{};
+  if(strategy_json.contains("series")) {
+    const auto& series_json = strategy_json.at("series");
+    for(const auto& [series_name, series_config] : series_json.object_range()) {
+      series_nodes.set(series_name, config_parser.parse_node(series_config));
+    }
+  }
 
   auto inputs_registry = OrderedNamedRegistry<ConstrainedNumericInput>{};
   if(strategy_json.contains("inputs")) {
@@ -68,12 +71,12 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
     }
   }
 
-  auto long_entry_filter = AnySeriesMethod{FalseMethod{}};
-  auto long_exit_filter = AnySeriesMethod{FalseMethod{}};
+  auto long_entry_node = ErasedNode{FalseNode{}};
+  auto long_exit_node = ErasedNode{FalseNode{}};
   auto position = Strategy::Positions{};
 
-  auto short_entry_filter = AnySeriesMethod{FalseMethod{}};
-  auto short_exit_filter = AnySeriesMethod{FalseMethod{}};
+  auto short_entry_node = ErasedNode{FalseNode{}};
+  auto short_exit_node = ErasedNode{FalseNode{}};
 
   if(strategy_json.contains("positions")) {
     const auto positions_json = strategy_json.at("positions");
@@ -84,18 +87,18 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
 
       if(long_position_json.contains("entry")) {
         const auto& entry_json = long_position_json.at("entry");
-        long_entry_filter = config_parser.parse_filter(entry_json.at("signal"));
+        long_entry_node = config_parser.parse_node(entry_json.at("signal"));
       }
       if(long_position_json.contains("exit")) {
         const auto& exit_json = long_position_json.at("exit");
-        long_exit_filter = config_parser.parse_filter(exit_json.at("signal"));
+        long_exit_node = config_parser.parse_node(exit_json.at("signal"));
       }
       if(long_position_json.contains("pyramiding")) {
         const auto& pyramiding_json = long_position_json.at("pyramiding");
         auto pyramiding = Strategy::Pyramiding{};
         if(pyramiding_json.contains("signal")) {
           pyramiding.signal(
-           config_parser.parse_filter(pyramiding_json.at("signal")));
+           config_parser.parse_node(pyramiding_json.at("signal")));
         }
         if(pyramiding_json.contains("maxLayers")) {
           pyramiding.max_layers(
@@ -111,19 +114,18 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
 
       if(short_position_json.contains("entry")) {
         const auto& entry_json = short_position_json.at("entry");
-        short_entry_filter =
-         config_parser.parse_filter(entry_json.at("signal"));
+        short_entry_node = config_parser.parse_node(entry_json.at("signal"));
       }
       if(short_position_json.contains("exit")) {
         const auto& exit_json = short_position_json.at("exit");
-        short_exit_filter = config_parser.parse_filter(exit_json.at("signal"));
+        short_exit_node = config_parser.parse_node(exit_json.at("signal"));
       }
       if(short_position_json.contains("pyramiding")) {
         const auto& pyramiding_json = short_position_json.at("pyramiding");
         auto pyramiding = Strategy::Pyramiding{};
         if(pyramiding_json.contains("signal")) {
           pyramiding.signal(
-           config_parser.parse_filter(pyramiding_json.at("signal")));
+           config_parser.parse_node(pyramiding_json.at("signal")));
         }
         if(pyramiding_json.contains("maxLayers")) {
           pyramiding.max_layers(
@@ -196,11 +198,11 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
 
   return Strategy{std::string{strategy_name},
                   std::move(inputs_registry),
-                  std::move(series_registry),
-                  std::move(long_entry_filter),
-                  std::move(long_exit_filter),
-                  std::move(short_entry_filter),
-                  std::move(short_exit_filter),
+                  std::move(series_nodes),
+                  std::move(long_entry_node),
+                  std::move(long_exit_node),
+                  std::move(short_entry_node),
+                  std::move(short_exit_node),
                   std::move(position),
                   is_stop_loss_enabled,
                   is_trailing_stop_loss,
@@ -246,21 +248,24 @@ auto stringify_backtest_strategy(const backtest::Strategy& strategy)
     strategy_json["inputs"] = std::move(inputs_json);
   }
 
-  strategy_json["series"] =
-   config_parser.serialize_registered_methods(strategy.series_registry());
+  auto series_json = jsoncons::ojson{};
+  for(const auto& [series_name, series_node] : strategy.series_nodes()) {
+    series_json[series_name] = config_parser.serialize_node(series_node);
+  }
+  strategy_json["series"] = std::move(series_json);
 
   auto positions_json = jsoncons::ojson{};
 
   auto long_position_json = jsoncons::ojson{};
   long_position_json["entry"] = jsoncons::ojson{};
   long_position_json["entry"]["signal"] =
-   config_parser.serialize_filter(strategy.long_entry_filter());
+   config_parser.serialize_node(strategy.long_entry_node());
   long_position_json["exit"] = jsoncons::ojson{};
   long_position_json["exit"]["signal"] =
-   config_parser.serialize_filter(strategy.long_exit_filter());
+   config_parser.serialize_node(strategy.long_exit_node());
   {
     long_position_json["pyramiding"] = jsoncons::ojson{};
-    long_position_json["pyramiding"]["signal"] = config_parser.serialize_filter(
+    long_position_json["pyramiding"]["signal"] = config_parser.serialize_node(
      strategy.positions().long_side().pyramiding().signal());
     long_position_json["pyramiding"]["maxLayers"] =
      strategy.positions().long_side().pyramiding().max_layers();
@@ -270,14 +275,14 @@ auto stringify_backtest_strategy(const backtest::Strategy& strategy)
   auto short_position_json = jsoncons::ojson{};
   short_position_json["entry"] = jsoncons::ojson{};
   short_position_json["entry"]["signal"] =
-   config_parser.serialize_filter(strategy.short_entry_filter());
+   config_parser.serialize_node(strategy.short_entry_node());
   short_position_json["exit"] = jsoncons::ojson{};
   short_position_json["exit"]["signal"] =
-   config_parser.serialize_filter(strategy.short_exit_filter());
+   config_parser.serialize_node(strategy.short_exit_node());
   {
     short_position_json["pyramiding"] = jsoncons::ojson{};
     short_position_json["pyramiding"]["signal"] =
-     config_parser.serialize_filter(
+     config_parser.serialize_node(
       strategy.positions().short_side().pyramiding().signal());
     short_position_json["pyramiding"]["maxLayers"] =
      strategy.positions().short_side().pyramiding().max_layers();

@@ -37,59 +37,6 @@ import :window_context;
 
 namespace pludux::apps {
 
-using SelectOutputMethod = pludux::SelectOutputMethod<AnySeriesMethod>;
-using SeriesNodeMethod = pludux::SeriesNodeMethod;
-using SeriesValueMethod = pludux::SeriesValueMethod;
-using BbMethod = pludux::BbMethod<AnySeriesMethod>;
-using KcMethod = pludux::KcMethod<AnySeriesMethod>;
-using StochMethod = pludux::StochMethod;
-using StochRsiMethod = pludux::StochRsiMethod<AnySeriesMethod>;
-using SmaMethod = pludux::SmaMethod<AnySeriesMethod>;
-using EmaMethod = pludux::EmaMethod<AnySeriesMethod>;
-using WmaMethod = pludux::WmaMethod<AnySeriesMethod>;
-using HmaMethod = pludux::HmaMethod<AnySeriesMethod>;
-using RsiMethod = pludux::RsiMethod<AnySeriesMethod>;
-using RocMethod = pludux::RocMethod<AnySeriesMethod>;
-using RvolMethod = pludux::RvolMethod;
-using MacdMethod = pludux::MacdMethod<AnySeriesMethod>;
-using AtrMethod = pludux::AtrMethod;
-using ValueMethod = pludux::ValueMethod;
-using LookbackMethod = pludux::LookbackMethod<AnySeriesMethod>;
-using pludux::InputMethod;
-using ChangeMethod = pludux::ChangeMethod<AnySeriesMethod>;
-using DataMethod = pludux::DataMethod;
-using SqrtAnyMethod = pludux::SqrtMethod<AnySeriesMethod>;
-using StddevAnyMethod = pludux::StddevMethod<AnySeriesMethod>;
-
-using AddMethod = pludux::AddMethod<AnySeriesMethod, AnySeriesMethod>;
-using SubtractMethod = pludux::SubtractMethod<AnySeriesMethod, AnySeriesMethod>;
-using MultiplyMethod = pludux::MultiplyMethod<AnySeriesMethod, AnySeriesMethod>;
-using DivideMethod = pludux::DivideMethod<AnySeriesMethod, AnySeriesMethod>;
-using NegateMethod = pludux::NegateMethod<AnySeriesMethod>;
-using PercentageMethod = pludux::PercentageMethod<AnySeriesMethod>;
-using AbsDiffMethod = pludux::AbsDiffMethod<AnySeriesMethod, AnySeriesMethod>;
-using AllOfMethod = pludux::AllOfMethod<AnySeriesMethod>;
-using AnyOfMethod = pludux::AnyOfMethod<AnySeriesMethod>;
-using CrossoverMethod =
- pludux::CrossoverMethod<AnySeriesMethod, AnySeriesMethod>;
-using CrossunderMethod =
- pludux::CrossunderMethod<AnySeriesMethod, AnySeriesMethod>;
-using AlwaysMethod = pludux::TrueMethod;
-using NeverMethod = pludux::FalseMethod;
-using EqualMethod = pludux::EqualMethod<AnySeriesMethod, AnySeriesMethod>;
-using NotEqualMethod = pludux::NotEqualMethod<AnySeriesMethod, AnySeriesMethod>;
-using GreaterThanMethod =
- pludux::GreaterThanMethod<AnySeriesMethod, AnySeriesMethod>;
-using GreaterEqualMethod =
- pludux::GreaterEqualMethod<AnySeriesMethod, AnySeriesMethod>;
-using LessThanMethod = pludux::LessThanMethod<AnySeriesMethod, AnySeriesMethod>;
-using LessEqualMethod =
- pludux::LessEqualMethod<AnySeriesMethod, AnySeriesMethod>;
-using NotMethod = pludux::LogicalNotMethod<AnySeriesMethod>;
-using AndMethod = pludux::LogicalAndMethod<AnySeriesMethod, AnySeriesMethod>;
-using OrMethod = pludux::LogicalOrMethod<AnySeriesMethod, AnySeriesMethod>;
-using XorMethod = pludux::LogicalXorMethod<AnySeriesMethod, AnySeriesMethod>;
-
 using pludux::backtest::AnyPlotMethod;
 using pludux::backtest::AnyPlotSourceMethod;
 using pludux::backtest::HLinePlotMethod;
@@ -99,159 +46,159 @@ using HistogramPlotMethod =
 using pludux::backtest::ConstantPlotSourceMethod;
 using pludux::backtest::SeriesPlotSourceMethod;
 
-auto get_default_series_method(const std::string& series_id) -> AnySeriesMethod
+auto get_default_series_node(const std::string& series_id) -> ErasedNode
 {
   if(series_id == "OPEN") {
-    return OpenMethod{};
+    return OpenNode{};
   } else if(series_id == "CLOSE") {
-    return CloseMethod{};
+    return CloseNode{};
   } else if(series_id == "HIGH") {
-    return HighMethod{};
+    return HighNode{};
   } else if(series_id == "LOW") {
-    return LowMethod{};
+    return LowNode{};
   } else if(series_id == "VOLUME") {
-    return VolumeMethod{};
+    return VolumeNode{};
   } else if(series_id == "CHANGE") {
-    return ChangeMethod{CloseMethod{}};
+    return ChangeNode{CloseNode{}};
   } else if(series_id == "DATA") {
-    return DataMethod{};
+    return DataNode{};
   } else if(series_id == "SMA") {
-    return SmaMethod{CloseMethod{}, 14};
+    return SmaNode{CloseNode{}, 14};
   } else if(series_id == "EMA") {
-    return EmaMethod{CloseMethod{}, 14};
+    return EmaNode{CloseNode{}, 14};
   } else if(series_id == "WMA") {
-    return WmaMethod{CloseMethod{}, 14};
+    return WmaNode{CloseNode{}, 14};
   } else if(series_id == "HMA") {
-    return HmaMethod{CloseMethod{}, 14};
+    return HmaNode{CloseNode{}, 14};
   } else if(series_id == "RSI") {
-    return RsiMethod{CloseMethod{}, 14};
+    return RsiNode{CloseNode{}, 14};
   } else if(series_id == "MACD") {
-    return MacdMethod{CloseMethod{}, 12, 26, 9};
+    return MacdNode{CloseNode{}, 12, 26, 9};
   } else if(series_id == "ATR") {
-    return AtrMethod{14};
+    return AtrNode{14};
   } else if(series_id == "STDDEV") {
-    return StddevAnyMethod{CloseMethod{}, 14};
+    return StddevNode{CloseNode{}, 14};
   } else if(series_id == "BB") {
-    return BbMethod{CloseMethod{}, 20, 2.0, MaMethodType::Sma};
+    return BbNode{CloseNode{}, 20, 2.0, MaNodeType::Sma};
   } else if(series_id == "KC") {
-    return KcMethod{
-     CloseMethod{}, 20, 1.5, 14, KcBandMethodType::Atr, MaMethodType::Ema};
+    return KcNode{
+     CloseNode{}, 20, 1.5, 14, KcBandNodeType::Atr, MaNodeType::Ema};
   } else if(series_id == "DC") {
-    return DonchianChannelMethod{};
+    return DonchianChannelNode{};
   } else if(series_id == "STOCH") {
-    return StochMethod{14, 3, 3};
+    return StochNode{14, 3, 3};
   } else if(series_id == "STOCH_RSI") {
-    return StochRsiMethod{CloseMethod{}, 14, 14, 3, 3};
+    return StochRsiNode{CloseNode{}, 14, 14, 3, 3};
   } else if(series_id == "SERIES_REFERENCE") {
-    return SeriesNodeMethod{""};
+    return SeriesNode{""};
   } else if(series_id == "SERIES_RESULT") {
-    return SeriesValueMethod{""};
+    return SeriesValueNode{""};
   } else if(series_id == "VALUE") {
-    return ValueMethod{0.0};
+    return ValueNode{0.0};
   } else if(series_id == "LOOKBACK") {
-    return LookbackMethod{CloseMethod{}, 1};
+    return LookbackNode{CloseNode{}, 1};
   } else if(series_id == "INPUT") {
-    return InputMethod{};
+    return InputNode{};
   } else if(series_id == "ADD") {
-    return AddMethod{CloseMethod{}, CloseMethod{}};
+    return AddNode{CloseNode{}, CloseNode{}};
   } else if(series_id == "SUBTRACT") {
-    return SubtractMethod{CloseMethod{}, CloseMethod{}};
+    return SubtractNode{CloseNode{}, CloseNode{}};
   } else if(series_id == "MULTIPLY") {
-    return MultiplyMethod{CloseMethod{}, CloseMethod{}};
+    return MultiplyNode{CloseNode{}, CloseNode{}};
   } else if(series_id == "DIVIDE") {
-    return DivideMethod{CloseMethod{}, CloseMethod{}};
+    return DivideNode{CloseNode{}, CloseNode{}};
   } else if(series_id == "NEGATE") {
-    return NegateMethod{CloseMethod{}};
+    return NegateNode{CloseNode{}};
   } else if(series_id == "SQRT") {
-    return SqrtAnyMethod{CloseMethod{}};
+    return SqrtNode{CloseNode{}};
   } else if(series_id == "PERCENTAGE") {
-    return PercentageMethod{CloseMethod{}, 100.0};
+    return PercentageNode{CloseNode{}, 100.0};
   } else if(series_id == "ABS_DIFF") {
-    return AbsDiffMethod{CloseMethod{}, CloseMethod{}};
+    return AbsDiffNode{CloseNode{}, CloseNode{}};
   } else if(series_id == "SELECT_OUTPUT") {
-    return SelectOutputMethod{CloseMethod{}, MethodOutput::MiddleBand};
+    return SelectOutputNode{CloseNode{}, NodeOutput::MiddleBand};
   }
 
   throw std::invalid_argument{
-   std::format("Unknown series method id: {}", series_id)};
+   std::format("Unknown series node id: {}", series_id)};
 }
 
-auto get_series_method_id(const AnySeriesMethod& method) -> std::string
+auto get_series_node_id(const ErasedNode& node) -> std::string
 {
-  if(series_method_cast<SelectOutputMethod>(method)) {
+  if(node_cast<SelectOutputNode>(node)) {
     return "SELECT_OUTPUT";
-  } else if(series_method_cast<SeriesNodeMethod>(method)) {
+  } else if(node_cast<SeriesNode>(node)) {
     return "SERIES_REFERENCE";
-  } else if(series_method_cast<SeriesValueMethod>(method)) {
+  } else if(node_cast<SeriesValueNode>(node)) {
     return "SERIES_RESULT";
-  } else if(series_method_cast<CloseMethod>(method)) {
+  } else if(node_cast<CloseNode>(node)) {
     return "CLOSE";
-  } else if(series_method_cast<OpenMethod>(method)) {
+  } else if(node_cast<OpenNode>(node)) {
     return "OPEN";
-  } else if(series_method_cast<HighMethod>(method)) {
+  } else if(node_cast<HighNode>(node)) {
     return "HIGH";
-  } else if(series_method_cast<LowMethod>(method)) {
+  } else if(node_cast<LowNode>(node)) {
     return "LOW";
-  } else if(series_method_cast<VolumeMethod>(method)) {
+  } else if(node_cast<VolumeNode>(node)) {
     return "VOLUME";
-  } else if(series_method_cast<ChangeMethod>(method)) {
+  } else if(node_cast<ChangeNode>(node)) {
     return "CHANGE";
-  } else if(series_method_cast<DataMethod>(method)) {
+  } else if(node_cast<DataNode>(node)) {
     return "DATA";
-  } else if(series_method_cast<ValueMethod>(method)) {
+  } else if(node_cast<ValueNode>(node)) {
     return "VALUE";
-  } else if(series_method_cast<StddevAnyMethod>(method)) {
+  } else if(node_cast<StddevNode>(node)) {
     return "STDDEV";
-  } else if(series_method_cast<BbMethod>(method)) {
+  } else if(node_cast<BbNode>(node)) {
     return "BB";
-  } else if(series_method_cast<KcMethod>(method)) {
+  } else if(node_cast<KcNode>(node)) {
     return "KC";
-  } else if(series_method_cast<DonchianChannelMethod>(method)) {
+  } else if(node_cast<DonchianChannelNode>(node)) {
     return "DC";
-  } else if(series_method_cast<SmaMethod>(method)) {
+  } else if(node_cast<SmaNode>(node)) {
     return "SMA";
-  } else if(series_method_cast<EmaMethod>(method)) {
+  } else if(node_cast<EmaNode>(node)) {
     return "EMA";
-  } else if(series_method_cast<WmaMethod>(method)) {
+  } else if(node_cast<WmaNode>(node)) {
     return "WMA";
-  } else if(series_method_cast<HmaMethod>(method)) {
+  } else if(node_cast<HmaNode>(node)) {
     return "HMA";
-  } else if(series_method_cast<RsiMethod>(method)) {
+  } else if(node_cast<RsiNode>(node)) {
     return "RSI";
-  } else if(series_method_cast<MacdMethod>(method)) {
+  } else if(node_cast<MacdNode>(node)) {
     return "MACD";
-  } else if(series_method_cast<AtrMethod>(method)) {
+  } else if(node_cast<AtrNode>(node)) {
     return "ATR";
-  } else if(series_method_cast<StochMethod>(method)) {
+  } else if(node_cast<StochNode>(node)) {
     return "STOCH";
-  } else if(series_method_cast<StochRsiMethod>(method)) {
+  } else if(node_cast<StochRsiNode>(node)) {
     return "STOCH_RSI";
-  } else if(series_method_cast<AddMethod>(method)) {
+  } else if(node_cast<AddNode>(node)) {
     return "ADD";
-  } else if(series_method_cast<SubtractMethod>(method)) {
+  } else if(node_cast<SubtractNode>(node)) {
     return "SUBTRACT";
-  } else if(series_method_cast<MultiplyMethod>(method)) {
+  } else if(node_cast<MultiplyNode>(node)) {
     return "MULTIPLY";
-  } else if(series_method_cast<DivideMethod>(method)) {
+  } else if(node_cast<DivideNode>(node)) {
     return "DIVIDE";
-  } else if(series_method_cast<NegateMethod>(method)) {
+  } else if(node_cast<NegateNode>(node)) {
     return "NEGATE";
-  } else if(series_method_cast<SqrtAnyMethod>(method)) {
+  } else if(node_cast<SqrtNode>(node)) {
     return "SQRT";
-  } else if(series_method_cast<PercentageMethod>(method)) {
+  } else if(node_cast<PercentageNode>(node)) {
     return "PERCENTAGE";
-  } else if(series_method_cast<AbsDiffMethod>(method)) {
+  } else if(node_cast<AbsDiffNode>(node)) {
     return "ABS_DIFF";
-  } else if(series_method_cast<LookbackMethod>(method)) {
+  } else if(node_cast<LookbackNode>(node)) {
     return "LOOKBACK";
-  } else if(series_method_cast<InputMethod>(method)) {
+  } else if(node_cast<InputNode>(node)) {
     return "INPUT";
   }
 
   return "UNKNOWN";
 }
 
-auto get_series_method_title(const std::string& series_id) -> std::string
+auto get_series_node_title(const std::string& series_id) -> std::string
 {
   if(series_id == "OPEN") {
     return "Open Price";
@@ -326,46 +273,46 @@ auto get_series_method_title(const std::string& series_id) -> std::string
   return "Unknown";
 }
 
-auto get_condition_method_id(const AnySeriesMethod& method) -> std::string
+auto get_condition_node_id(const ErasedNode& node) -> std::string
 {
-  if(series_method_cast<AllOfMethod>(method)) {
+  if(node_cast<AllOfNode>(node)) {
     return "ALL_OF";
-  } else if(series_method_cast<AnyOfMethod>(method)) {
+  } else if(node_cast<AnyOfNode>(node)) {
     return "ANY_OF";
-  } else if(series_method_cast<AlwaysMethod>(method)) {
+  } else if(node_cast<TrueNode>(node)) {
     return "ALWAYS";
-  } else if(series_method_cast<NeverMethod>(method)) {
+  } else if(node_cast<FalseNode>(node)) {
     return "NEVER";
-  } else if(series_method_cast<LessThanMethod>(method)) {
+  } else if(node_cast<LessThanNode>(node)) {
     return "LESS_THAN";
-  } else if(series_method_cast<GreaterThanMethod>(method)) {
+  } else if(node_cast<GreaterThanNode>(node)) {
     return "GREATER_THAN";
-  } else if(series_method_cast<LessEqualMethod>(method)) {
+  } else if(node_cast<LessEqualNode>(node)) {
     return "LESS_EQUAL";
-  } else if(series_method_cast<GreaterEqualMethod>(method)) {
+  } else if(node_cast<GreaterEqualNode>(node)) {
     return "GREATER_EQUAL";
-  } else if(series_method_cast<EqualMethod>(method)) {
+  } else if(node_cast<EqualNode>(node)) {
     return "EQUAL";
-  } else if(series_method_cast<NotEqualMethod>(method)) {
+  } else if(node_cast<NotEqualNode>(node)) {
     return "NOT_EQUAL";
-  } else if(series_method_cast<CrossoverMethod>(method)) {
+  } else if(node_cast<CrossoverNode>(node)) {
     return "CROSSOVER";
-  } else if(series_method_cast<CrossunderMethod>(method)) {
+  } else if(node_cast<CrossunderNode>(node)) {
     return "CROSSUNDER";
-  } else if(series_method_cast<NotMethod>(method)) {
+  } else if(node_cast<LogicalNotNode>(node)) {
     return "NOT";
-  } else if(series_method_cast<AndMethod>(method)) {
+  } else if(node_cast<LogicalAndNode>(node)) {
     return "AND";
-  } else if(series_method_cast<OrMethod>(method)) {
+  } else if(node_cast<LogicalOrNode>(node)) {
     return "OR";
-  } else if(series_method_cast<XorMethod>(method)) {
+  } else if(node_cast<LogicalXorNode>(node)) {
     return "XOR";
   }
 
   return "UNKNOWN";
 }
 
-auto get_condition_method_title(const std::string& condition_id) -> std::string
+auto get_condition_node_title(const std::string& condition_id) -> std::string
 {
   if(condition_id == "ALL_OF") {
     return "All Of";
@@ -404,45 +351,44 @@ auto get_condition_method_title(const std::string& condition_id) -> std::string
   return "Unknown";
 }
 
-auto get_default_condition_method(const std::string& condition_id)
- -> AnySeriesMethod
+auto get_default_condition_node(const std::string& condition_id) -> ErasedNode
 {
   if(condition_id == "ALL_OF") {
-    return AllOfMethod{};
+    return AllOfNode{};
   } else if(condition_id == "ANY_OF") {
-    return AnyOfMethod{};
+    return AnyOfNode{};
   } else if(condition_id == "ALWAYS") {
-    return AlwaysMethod{};
+    return TrueNode{};
   } else if(condition_id == "NEVER") {
-    return NeverMethod{};
+    return FalseNode{};
   } else if(condition_id == "LESS_THAN") {
-    return LessThanMethod{CloseMethod{}, CloseMethod{}};
+    return LessThanNode{CloseNode{}, CloseNode{}};
   } else if(condition_id == "GREATER_THAN") {
-    return GreaterThanMethod{CloseMethod{}, CloseMethod{}};
+    return GreaterThanNode{CloseNode{}, CloseNode{}};
   } else if(condition_id == "LESS_EQUAL") {
-    return LessEqualMethod{CloseMethod{}, CloseMethod{}};
+    return LessEqualNode{CloseNode{}, CloseNode{}};
   } else if(condition_id == "GREATER_EQUAL") {
-    return GreaterEqualMethod{CloseMethod{}, CloseMethod{}};
+    return GreaterEqualNode{CloseNode{}, CloseNode{}};
   } else if(condition_id == "EQUAL") {
-    return EqualMethod{CloseMethod{}, CloseMethod{}};
+    return EqualNode{CloseNode{}, CloseNode{}};
   } else if(condition_id == "NOT_EQUAL") {
-    return NotEqualMethod{CloseMethod{}, CloseMethod{}};
+    return NotEqualNode{CloseNode{}, CloseNode{}};
   } else if(condition_id == "CROSSOVER") {
-    return CrossoverMethod{CloseMethod{}, CloseMethod{}};
+    return CrossoverNode{CloseNode{}, CloseNode{}};
   } else if(condition_id == "CROSSUNDER") {
-    return CrossunderMethod{CloseMethod{}, CloseMethod{}};
+    return CrossunderNode{CloseNode{}, CloseNode{}};
   } else if(condition_id == "NOT") {
-    return NotMethod{NeverMethod{}};
+    return LogicalNotNode{FalseNode{}};
   } else if(condition_id == "AND") {
-    return AndMethod{NeverMethod{}, NeverMethod{}};
+    return LogicalAndNode{FalseNode{}, FalseNode{}};
   } else if(condition_id == "OR") {
-    return OrMethod{NeverMethod{}, NeverMethod{}};
+    return LogicalOrNode{FalseNode{}, FalseNode{}};
   } else if(condition_id == "XOR") {
-    return XorMethod{NeverMethod{}, NeverMethod{}};
+    return LogicalXorNode{FalseNode{}, FalseNode{}};
   }
 
   throw std::invalid_argument{
-   std::format("Unknown condition method id: {}", condition_id)};
+   std::format("Unknown condition node id: {}", condition_id)};
 }
 
 auto get_plot_method_id(const AnyPlotMethod& method) -> std::string
@@ -1007,14 +953,14 @@ private:
     }
 
     {
-      ImGui::SeparatorText("Series Methods");
+      ImGui::SeparatorText("Series Nodes");
 
-      auto& series_registry = self.editing_strategy_ptr_->series_registry();
-      auto updated_registry = series_registry;
+      auto& series_nodes = self.editing_strategy_ptr_->series_nodes();
+      auto updated_series_nodes = series_nodes;
       self.changed_series_names_.clear();
       self.available_series_names_.clear();
       for(auto id_counter = 0;
-          auto& [series_name, series_method] : series_registry) {
+          auto& [series_name, series_node] : series_nodes) {
         ImGui::PushID(id_counter++);
 
         ImGui::Text("Name:");
@@ -1027,10 +973,10 @@ private:
           }
         }
 
-        ImGui::Text("Method:");
+        ImGui::Text("Node:");
         ImGui::SameLine();
-        self.render_series_method(series_method, context);
-        updated_registry.set(series_name, series_method);
+        self.render_series_node(series_node, context);
+        updated_series_nodes.set(series_name, series_node);
 
         // Delete button for the series. Right aligned on the new line
         const auto spacing = ImGui::GetStyle().ItemSpacing.x;
@@ -1043,7 +989,7 @@ private:
         ImGui::SetCursorScreenPos(ImVec2(delete_button_x, line_start.y));
 
         if(ImGui::Button("Delete")) {
-          updated_registry.remove(series_name);
+          updated_series_nodes.remove(series_name);
           self.changed_series_names_.erase(series_name);
         } else {
           self.available_series_names_.push_back(series_name);
@@ -1054,7 +1000,7 @@ private:
       }
 
       for(auto& [old_name, new_name] : self.changed_series_names_) {
-        if(updated_registry.rename(old_name, new_name)) {
+        if(updated_series_nodes.rename(old_name, new_name)) {
           auto it = std::ranges::find(self.available_series_names_, old_name);
           if(it != self.available_series_names_.end()) {
             *it = new_name;
@@ -1066,13 +1012,13 @@ private:
         }
       }
 
-      series_registry = std::move(updated_registry);
+      series_nodes = std::move(updated_series_nodes);
 
       if(ImGui::Button("Add Series")) {
         auto new_series_name =
-         std::format("new_var_{}", series_registry.size() + 1);
-        auto new_series_method = get_default_series_method("CLOSE");
-        series_registry.set(new_series_name, new_series_method);
+         std::format("new_var_{}", series_nodes.size() + 1);
+        auto new_series_node = get_default_series_node("CLOSE");
+        series_nodes.set(new_series_name, new_series_node);
       }
 
       ImGui::Text("");
@@ -1093,24 +1039,18 @@ private:
         {
           ImGui::Text("Entry Condition:");
           ImGui::PushID("long_entry");
-          const auto& any_long_entry =
-           self.editing_strategy_ptr_->long_entry_filter();
-          auto changed_method =
-           self.render_condition_method(any_long_entry, context);
-          self.editing_strategy_ptr_->long_entry_filter(
-           std::move(changed_method));
+          auto changed_node = self.render_condition_node(
+           self.editing_strategy_ptr_->long_entry_node(), context);
+          self.editing_strategy_ptr_->long_entry_node(changed_node);
           ImGui::PopID();
         }
         {
           ImGui::Separator();
           ImGui::Text("Exit Condition:");
           ImGui::PushID("long_exit");
-          const auto& any_long_exit =
-           self.editing_strategy_ptr_->long_exit_filter();
-          auto changed_method =
-           self.render_condition_method(any_long_exit, context);
-          self.editing_strategy_ptr_->long_exit_filter(
-           std::move(changed_method));
+          auto changed_node = self.render_condition_node(
+           self.editing_strategy_ptr_->long_exit_node(), context);
+          self.editing_strategy_ptr_->long_exit_node(changed_node);
           ImGui::PopID();
         }
         {
@@ -1120,10 +1060,9 @@ private:
           ImGui::Text("Signal:");
           auto pyramiding = long_position.pyramiding();
 
-          const auto& any_long_pyramiding = pyramiding.signal();
-          auto changed_method =
-           self.render_condition_method(any_long_pyramiding, context);
-          pyramiding.signal(std::move(changed_method));
+          auto changed_node =
+           self.render_condition_node(pyramiding.signal(), context);
+          pyramiding.signal(changed_node);
 
           auto pyramiding_max_layers =
            static_cast<int>(pyramiding.max_layers());
@@ -1159,24 +1098,18 @@ private:
         {
           ImGui::Text("Entry Condition:");
           ImGui::PushID("short_entry");
-          const auto& any_short_entry =
-           self.editing_strategy_ptr_->short_entry_filter();
-          auto changed_method =
-           self.render_condition_method(any_short_entry, context);
-          self.editing_strategy_ptr_->short_entry_filter(
-           std::move(changed_method));
+          auto changed_node = self.render_condition_node(
+           self.editing_strategy_ptr_->short_entry_node(), context);
+          self.editing_strategy_ptr_->short_entry_node(changed_node);
           ImGui::PopID();
         }
         {
           ImGui::Separator();
           ImGui::Text("Exit Condition:");
           ImGui::PushID("short_exit");
-          const auto& any_short_exit =
-           self.editing_strategy_ptr_->short_exit_filter();
-          auto changed_method =
-           self.render_condition_method(any_short_exit, context);
-          self.editing_strategy_ptr_->short_exit_filter(
-           std::move(changed_method));
+          auto changed_node = self.render_condition_node(
+           self.editing_strategy_ptr_->short_exit_node(), context);
+          self.editing_strategy_ptr_->short_exit_node(changed_node);
           ImGui::PopID();
         }
         {
@@ -1186,10 +1119,9 @@ private:
           ImGui::Text("Signal:");
           auto pyramiding = short_position.pyramiding();
 
-          const auto& any_short_pyramiding = pyramiding.signal();
-          auto changed_method =
-           self.render_condition_method(any_short_pyramiding, context);
-          pyramiding.signal(std::move(changed_method));
+          auto changed_node =
+           self.render_condition_node(pyramiding.signal(), context);
+          pyramiding.signal(changed_node);
 
           auto pyramiding_max_layers =
            static_cast<int>(pyramiding.max_layers());
@@ -1351,9 +1283,9 @@ private:
     ImGui::EndChild();
   }
 
-  void render_series_method(this auto& self,
-                            AnySeriesMethod& series_method,
-                            WindowContext& context)
+  void render_series_node(this auto& self,
+                          ErasedNode& series_node,
+                          WindowContext& context)
   {
     static const std::vector<std::string> series_ids = {"OPEN",
                                                         "CLOSE",
@@ -1390,12 +1322,11 @@ private:
                                                         "VALUE",
                                                         "LOOKBACK"};
 
-    auto method_series_id = get_series_method_id(series_method);
+    auto series_node_id = get_series_node_id(series_node);
 
-    ImGui::PushID(method_series_id.c_str());
+    ImGui::PushID(series_node_id.c_str());
     {
-      const auto combo_preview_value =
-       get_series_method_title(method_series_id);
+      const auto combo_preview_value = get_series_node_title(series_node_id);
       if(ImGui::BeginCombo("##Series", combo_preview_value.c_str())) {
         static auto filter = ImGuiTextFilter{};
 
@@ -1407,30 +1338,29 @@ private:
         filter.Draw("##Filter", -FLT_MIN);
 
         for(const auto& series_id : series_ids) {
-          const auto series_title = get_series_method_title(series_id);
-          const bool is_selected = series_id == method_series_id;
+          const auto series_title = get_series_node_title(series_id);
+          const bool is_selected = series_id == series_node_id;
 
           if(filter.PassFilter(series_title.c_str())) {
             if(ImGui::Selectable(series_title.c_str(), is_selected)) {
               if((series_id == "SERIES_REFERENCE" ||
                   series_id == "SERIES_RESULT") &&
                  self.available_series_names_.empty()) {
-                const auto series_reference_method_title =
-                 get_series_method_title(series_id);
+                const auto series_reference_node_title =
+                 get_series_node_title(series_id);
                 const auto error_message =
                  std::format("Cannot select '{}' when there are no available "
                              "series other than the current one.",
-                             series_reference_method_title);
+                             series_reference_node_title);
                 context.alert(error_message);
               } else {
-                series_method = get_default_series_method(series_id);
+                series_node = get_default_series_node(series_id);
 
                 auto& inputs = self.editing_strategy_ptr_->inputs();
-                auto* input_method =
-                 series_method_cast<InputMethod>(series_method);
-                if(input_method && !inputs.empty()) {
+                auto* input_node = node_cast<InputNode>(series_node);
+                if(input_node && !inputs.empty()) {
                   const auto& first_input = *inputs.begin();
-                  input_method->name(first_input.first);
+                  input_node->name(first_input.first);
                 }
               }
             }
@@ -1441,86 +1371,86 @@ private:
     }
     {
       ImGui::Indent();
-      self.render_series_method_params(series_method, context);
+      self.render_series_node_params(series_node, context);
       ImGui::Unindent();
     }
     ImGui::PopID();
   }
 
-  void render_series_method_params(this auto& self,
-                                   AnySeriesMethod& method,
-                                   WindowContext& context)
+  void render_series_node_params(this auto& self,
+                                 ErasedNode& node,
+                                 WindowContext& context)
   {
     ([&]<typename... Ts>() mutable {
       ([&]() mutable -> bool {
-        if(auto specific_method = series_method_cast<Ts>(method)) {
-          self.render_series_method_params(*specific_method, context);
+        if(auto specific_node = node_cast<Ts>(node)) {
+          self.render_series_node_params(*specific_node, context);
           return true;
         }
 
         return false;
       }() || ...);
-    }.template operator()<SelectOutputMethod,
-                          SeriesNodeMethod,
-                          SeriesValueMethod,
-                          DataMethod,
-                          LookbackMethod,
-                          InputMethod,
+    }.template operator()<SelectOutputNode,
+                          SeriesNode,
+                          SeriesValueNode,
+                          DataNode,
+                          LookbackNode,
+                          InputNode,
 
-                          BbMethod,
-                          KcMethod,
-                          DonchianChannelMethod,
-                          StochMethod,
-                          StochRsiMethod,
-                          SmaMethod,
-                          EmaMethod,
-                          WmaMethod,
-                          HmaMethod,
-                          RsiMethod,
+                          BbNode,
+                          KcNode,
+                          DonchianChannelNode,
+                          StochNode,
+                          StochRsiNode,
+                          SmaNode,
+                          EmaNode,
+                          WmaNode,
+                          HmaNode,
+                          RsiNode,
 
-                          MacdMethod,
-                          AtrMethod,
-                          ValueMethod,
-                          ChangeMethod,
-                          AddMethod,
-                          SubtractMethod,
-                          MultiplyMethod,
-                          DivideMethod,
-                          PercentageMethod,
-                          AbsDiffMethod,
-                          NegateMethod,
-                          SqrtAnyMethod,
-                          StddevAnyMethod>());
+                          MacdNode,
+                          AtrNode,
+                          ValueNode,
+                          ChangeNode,
+                          AddNode,
+                          SubtractNode,
+                          MultiplyNode,
+                          DivideNode,
+                          PercentageNode,
+                          AbsDiffNode,
+                          NegateNode,
+                          SqrtNode,
+                          StddevNode>());
   }
 
-  void render_series_method_params(this auto& self,
-                                   SelectOutputMethod& method,
-                                   WindowContext& context)
+  void render_series_node_params(this auto& self,
+                                 SelectOutputNode& node,
+                                 WindowContext& context)
   {
     {
       const auto output_options =
-       std::vector<MethodOutput>{MethodOutput::UpperBand,
-                                 MethodOutput::MiddleBand,
-                                 MethodOutput::LowerBand,
-                                 MethodOutput::MacdLine,
-                                 MethodOutput::SignalLine,
-                                 MethodOutput::Histogram,
-                                 MethodOutput::KPercent,
-                                 MethodOutput::DPercent};
+       std::vector<NodeOutput>{NodeOutput::UpperBand,
+                               NodeOutput::MiddleBand,
+                               NodeOutput::LowerBand,
+                               NodeOutput::MacdLine,
+                               NodeOutput::SignalLine,
+                               NodeOutput::Histogram,
+                               NodeOutput::KPercent,
+                               NodeOutput::DPercent};
 
-      const auto output_map = std::unordered_map<MethodOutput, std::string>{
-       {MethodOutput::UpperBand, "Upper Band"},
-       {MethodOutput::MiddleBand, "Middle Band"},
-       {MethodOutput::LowerBand, "Lower Band"},
-       {MethodOutput::MacdLine, "MACD Line"},
-       {MethodOutput::SignalLine, "Signal Line"},
-       {MethodOutput::Histogram, "Histogram"},
-       {MethodOutput::KPercent, "%K"},
-       {MethodOutput::DPercent, "%D"}};
+      const auto output_map = std::unordered_map<NodeOutput, std::string>{
+       {NodeOutput::UpperBand, "Upper Band"},
+       {NodeOutput::MiddleBand, "Middle Band"},
+       {NodeOutput::LowerBand, "Lower Band"},
+       {NodeOutput::MacdLine, "MACD Line"},
+       {NodeOutput::SignalLine, "Signal Line"},
+       {NodeOutput::Histogram, "Histogram"},
+       {NodeOutput::KPercent, "%K"},
+       {NodeOutput::DPercent, "%D"}};
 
       ImGui::Text("Output:");
       ImGui::SameLine();
-      auto output = method.output();
+      auto output = node.output();
       {
         const auto output_str = output_map.at(output);
         if(ImGui::BeginCombo("##output", output_str.c_str())) {
@@ -1528,7 +1458,7 @@ private:
             const auto output_option_str = output_map.at(output_option);
             const bool is_selected = output == output_option;
             if(ImGui::Selectable(output_option_str.c_str(), is_selected)) {
-              method.output(output_option);
+              node.output(output_option);
             }
           }
           ImGui::EndCombo();
@@ -1538,35 +1468,35 @@ private:
     {
       ImGui::Text("Source:");
       ImGui::SameLine();
-      auto output_source = method.source();
-      self.render_series_method(output_source, context);
-      method.source(std::move(output_source));
+      auto output_source = node.source();
+      self.render_series_node(output_source, context);
+      node.source(std::move(output_source));
     }
   }
 
-  void render_series_method_params(this auto& self,
-                                   SeriesNodeMethod& method,
-                                   WindowContext& context)
+  void render_series_node_params(this auto& self,
+                                 SeriesNode& node,
+                                 WindowContext& context)
   {
-    if(self.changed_series_names_.contains(method.name())) {
-      const auto new_name = self.changed_series_names_.at(method.name());
-      method.name(new_name);
-    } else if(std::ranges::find(self.available_series_names_, method.name()) ==
+    if(self.changed_series_names_.contains(node.name())) {
+      const auto new_name = self.changed_series_names_.at(node.name());
+      node.name(new_name);
+    } else if(std::ranges::find(self.available_series_names_, node.name()) ==
               self.available_series_names_.end()) {
-      method.name("");
+      node.name("");
     }
 
     ImGui::Text("Name:");
     ImGui::SameLine();
 
-    const auto display_name = method.name();
+    const auto display_name = node.name();
     if(ImGui::BeginCombo("##named_series", display_name.c_str())) {
       for(const auto& name_option : self.available_series_names_) {
         ImGui::PushID(name_option.c_str());
 
         const bool is_selected = display_name == name_option;
         if(ImGui::Selectable(name_option.c_str(), is_selected)) {
-          method.name(name_option);
+          node.name(name_option);
         }
 
         ImGui::PopID();
@@ -1575,29 +1505,29 @@ private:
     }
   }
 
-  void render_series_method_params(this auto& self,
-                                   SeriesValueMethod& method,
-                                   WindowContext& context)
+  void render_series_node_params(this auto& self,
+                                 SeriesValueNode& node,
+                                 WindowContext& context)
   {
-    if(self.changed_series_names_.contains(method.name())) {
-      const auto new_name = self.changed_series_names_.at(method.name());
-      method.name(new_name);
-    } else if(std::ranges::find(self.available_series_names_, method.name()) ==
+    if(self.changed_series_names_.contains(node.name())) {
+      const auto new_name = self.changed_series_names_.at(node.name());
+      node.name(new_name);
+    } else if(std::ranges::find(self.available_series_names_, node.name()) ==
               self.available_series_names_.end()) {
-      method.name("");
+      node.name("");
     }
 
     ImGui::Text("Name:");
     ImGui::SameLine();
 
-    const auto display_name = method.name();
+    const auto display_name = node.name();
     if(ImGui::BeginCombo("##named_series", display_name.c_str())) {
       for(const auto& name_option : self.available_series_names_) {
         ImGui::PushID(name_option.c_str());
 
         const bool is_selected = display_name == name_option;
         if(ImGui::Selectable(name_option.c_str(), is_selected)) {
-          method.name(name_option);
+          node.name(name_option);
         }
 
         ImGui::PopID();
@@ -1606,44 +1536,44 @@ private:
     }
   }
 
-  void render_series_method_params(this auto& self,
-                                   BbMethod& method,
-                                   WindowContext& context)
+  void render_series_node_params(this auto& self,
+                                 BbNode& node,
+                                 WindowContext& context)
   {
     ImGui::Text("MA Type:");
     ImGui::SameLine();
     {
-      const auto ma_type_options = std::vector<MaMethodType>{MaMethodType::Sma,
-                                                             MaMethodType::Ema,
-                                                             MaMethodType::Wma,
-                                                             MaMethodType::Hma,
-                                                             MaMethodType::Rma};
+      const auto ma_type_options = std::vector<MaNodeType>{MaNodeType::Sma,
+                                                           MaNodeType::Ema,
+                                                           MaNodeType::Wma,
+                                                           MaNodeType::Hma,
+                                                           MaNodeType::Rma};
 
       const auto get_ma_type_string =
-       [](MaMethodType ma_type) static -> std::string {
+       [](MaNodeType ma_type) static -> std::string {
         switch(ma_type) {
-        case MaMethodType::Sma:
+        case MaNodeType::Sma:
           return "SMA";
-        case MaMethodType::Ema:
+        case MaNodeType::Ema:
           return "EMA";
-        case MaMethodType::Wma:
+        case MaNodeType::Wma:
           return "WMA";
-        case MaMethodType::Hma:
+        case MaNodeType::Hma:
           return "HMA";
-        case MaMethodType::Rma:
+        case MaNodeType::Rma:
           return "RMA";
         }
 
         std::unreachable();
       };
 
-      const auto ma_type_str = get_ma_type_string(method.ma_method_type());
+      const auto ma_type_str = get_ma_type_string(node.ma_node_type());
       if(ImGui::BeginCombo("##ma_type", ma_type_str.c_str())) {
         for(const auto& ma_type_option : ma_type_options) {
           const auto ma_type_option_str = get_ma_type_string(ma_type_option);
           const bool is_selected = ma_type_str == ma_type_option_str;
           if(ImGui::Selectable(ma_type_option_str.c_str(), is_selected)) {
-            method.ma_method_type(ma_type_option);
+            node.ma_node_type(ma_type_option);
           }
         }
         ImGui::EndCombo();
@@ -1652,44 +1582,44 @@ private:
 
     ImGui::Text("Period:");
     ImGui::SameLine();
-    auto period = static_cast<int>(method.period());
+    auto period = static_cast<int>(node.period());
     if(ImGui::InputInt("##bb_period", &period)) {
       if(period < 1) {
         period = 1;
       }
-      method.period(static_cast<std::size_t>(period));
+      node.period(static_cast<std::size_t>(period));
     }
 
     ImGui::Text("StdDev:");
     ImGui::SameLine();
-    auto stddev_multiplier = method.stddev();
+    auto stddev_multiplier = node.stddev();
     if(ImGui::InputDouble("##bb_stddev_multiplier", &stddev_multiplier)) {
       if(stddev_multiplier < 0.1) {
         stddev_multiplier = 0.1;
       }
-      method.stddev(stddev_multiplier);
+      node.stddev(stddev_multiplier);
     }
 
     ImGui::Text("Source:");
     ImGui::SameLine();
-    auto source = method.source();
-    self.render_series_method(source, context);
-    method.source(std::move(source));
+    auto source = node.source();
+    self.render_series_node(source, context);
+    node.source(std::move(source));
   }
 
-  void render_series_method_params(this auto& self,
-                                   KcMethod& method,
-                                   WindowContext& context)
+  void render_series_node_params(this auto& self,
+                                 KcNode& node,
+                                 WindowContext& context)
   {
     {
       ImGui::Text("Length:");
       ImGui::SameLine();
-      auto length = static_cast<int>(method.period());
+      auto length = static_cast<int>(node.period());
       if(ImGui::InputInt("##kc_length", &length)) {
         if(length < 1) {
           length = 1;
         }
-        method.period(static_cast<std::size_t>(length));
+        node.period(static_cast<std::size_t>(length));
       }
     }
     {
@@ -1697,20 +1627,19 @@ private:
       ImGui::SameLine();
       {
         const auto ma_type_options =
-         std::unordered_map<MaMethodType, std::string>{
-          {MaMethodType::Sma, "SMA"},
-          {MaMethodType::Ema, "EMA"},
-          {MaMethodType::Wma, "WMA"},
-          {MaMethodType::Hma, "HMA"},
-          {MaMethodType::Rma, "RMA"}};
+         std::unordered_map<MaNodeType, std::string>{{MaNodeType::Sma, "SMA"},
+                                                     {MaNodeType::Ema, "EMA"},
+                                                     {MaNodeType::Wma, "WMA"},
+                                                     {MaNodeType::Hma, "HMA"},
+                                                     {MaNodeType::Rma, "RMA"}};
 
-        const auto ma_type_str = ma_type_options.at(method.ma_method_type());
+        const auto ma_type_str = ma_type_options.at(node.ma_node_type());
         if(ImGui::BeginCombo("##kc_ma_type", ma_type_str.c_str())) {
           for(const auto& [ma_type_option, ma_type_option_str] :
               ma_type_options) {
             const bool is_selected = ma_type_str == ma_type_option_str;
             if(ImGui::Selectable(ma_type_option_str.c_str(), is_selected)) {
-              method.ma_method_type(ma_type_option);
+              node.ma_node_type(ma_type_option);
             }
           }
           ImGui::EndCombo();
@@ -1720,28 +1649,28 @@ private:
     {
       ImGui::Text("Source:");
       ImGui::SameLine();
-      auto source = method.source();
-      self.render_series_method(source, context);
-      method.source(std::move(source));
+      auto source = node.source();
+      self.render_series_node(source, context);
+      node.source(std::move(source));
     }
     {
       ImGui::Text("Band Type:");
       ImGui::SameLine();
       {
         const auto band_type_options =
-         std::unordered_map<KcBandMethodType, std::string>{
-          {KcBandMethodType::Atr, "ATR"},
-          {KcBandMethodType::Tr, "True Range"},
-          {KcBandMethodType::RangeHighLow, "Range (High-Low)"}};
+         std::unordered_map<KcBandNodeType, std::string>{
+          {KcBandNodeType::Atr, "ATR"},
+          {KcBandNodeType::Tr, "True Range"},
+          {KcBandNodeType::RangeHighLow, "Range (High-Low)"}};
 
         const auto band_type_str =
-         band_type_options.at(method.band_method_type());
+         band_type_options.at(node.band_node_type());
         if(ImGui::BeginCombo("##kc_band_type", band_type_str.c_str())) {
           for(const auto& [band_type_option, band_type_option_str] :
               band_type_options) {
             const bool is_selected = band_type_str == band_type_option_str;
             if(ImGui::Selectable(band_type_option_str.c_str(), is_selected)) {
-              method.band_method_type(band_type_option);
+              node.band_node_type(band_type_option);
             }
           }
           ImGui::EndCombo();
@@ -1751,187 +1680,187 @@ private:
     {
       ImGui::Text("ATR Length:");
       ImGui::SameLine();
-      auto atr_length = static_cast<int>(method.band_atr_period());
+      auto atr_length = static_cast<int>(node.band_atr_period());
       if(ImGui::InputInt("##kc_atr_length", &atr_length)) {
         if(atr_length < 1) {
           atr_length = 1;
         }
-        method.band_atr_period(static_cast<std::size_t>(atr_length));
+        node.band_atr_period(static_cast<std::size_t>(atr_length));
       }
     }
     {
       ImGui::Text("Multiplier:");
       ImGui::SameLine();
-      auto multiplier = method.multiplier();
+      auto multiplier = node.multiplier();
       if(ImGui::InputDouble("##kc_multiplier", &multiplier, 0.1, 1.0, "%.2f")) {
         if(multiplier < 0.1) {
           multiplier = 0.1;
         }
-        method.multiplier(multiplier);
+        node.multiplier(multiplier);
       }
     }
   }
 
-  void render_series_method_params(this auto& self,
-                                   DonchianChannelMethod& method,
-                                   WindowContext& context)
+  void render_series_node_params(this auto& self,
+                                 DonchianChannelNode& node,
+                                 WindowContext& context)
   {
     {
       ImGui::Text("Length:");
       ImGui::SameLine();
-      auto length = static_cast<int>(method.period());
+      auto length = static_cast<int>(node.period());
       if(ImGui::InputInt("##dc_length", &length)) {
         if(length < 1) {
           length = 1;
         }
-        method.period(static_cast<std::size_t>(length));
+        node.period(static_cast<std::size_t>(length));
       }
     }
   }
 
-  void render_series_method_params(this auto& self,
-                                   StochMethod& method,
-                                   WindowContext& context)
+  void render_series_node_params(this auto& self,
+                                 StochNode& node,
+                                 WindowContext& context)
   {
     {
       ImGui::Text("D Period:");
       ImGui::SameLine();
-      auto d_period = static_cast<int>(method.d_period());
+      auto d_period = static_cast<int>(node.d_period());
       if(ImGui::InputInt("##stoch_d_period", &d_period)) {
         if(d_period < 1) {
           d_period = 1;
         }
-        method.d_period(static_cast<std::size_t>(d_period));
+        node.d_period(static_cast<std::size_t>(d_period));
       }
     }
     {
       ImGui::Text("K Period:");
       ImGui::SameLine();
-      auto k_period = static_cast<int>(method.k_period());
+      auto k_period = static_cast<int>(node.k_period());
       if(ImGui::InputInt("##stoch_k_period", &k_period)) {
         if(k_period < 1) {
           k_period = 1;
         }
-        method.k_period(static_cast<std::size_t>(k_period));
+        node.k_period(static_cast<std::size_t>(k_period));
       }
     }
     {
       ImGui::Text("K Smooth:");
       ImGui::SameLine();
-      auto slowing_period = static_cast<int>(method.k_smooth());
+      auto slowing_period = static_cast<int>(node.k_smooth());
       if(ImGui::InputInt("##stoch_slowing_period", &slowing_period)) {
         if(slowing_period < 1) {
           slowing_period = 1;
         }
-        method.k_smooth(static_cast<std::size_t>(slowing_period));
+        node.k_smooth(static_cast<std::size_t>(slowing_period));
       }
     }
   }
 
-  void render_series_method_params(this auto& self,
-                                   StochRsiMethod& method,
-                                   WindowContext& context)
+  void render_series_node_params(this auto& self,
+                                 StochRsiNode& node,
+                                 WindowContext& context)
   {
     {
       ImGui::Text("D Period:");
       ImGui::SameLine();
-      auto d_period = static_cast<int>(method.d_period());
+      auto d_period = static_cast<int>(node.d_period());
       if(ImGui::InputInt("##stoch_rsi_d_period", &d_period)) {
         if(d_period < 1) {
           d_period = 1;
         }
-        method.d_period(static_cast<std::size_t>(d_period));
+        node.d_period(static_cast<std::size_t>(d_period));
       }
     }
     {
       ImGui::Text("K Period:");
       ImGui::SameLine();
-      auto k_period = static_cast<int>(method.k_period());
+      auto k_period = static_cast<int>(node.k_period());
       if(ImGui::InputInt("##stoch_rsi_k_period", &k_period)) {
         if(k_period < 1) {
           k_period = 1;
         }
-        method.k_period(static_cast<std::size_t>(k_period));
+        node.k_period(static_cast<std::size_t>(k_period));
       }
     }
     {
       ImGui::Text("K Smooth:");
       ImGui::SameLine();
-      auto k_smooth = static_cast<int>(method.k_smooth());
+      auto k_smooth = static_cast<int>(node.k_smooth());
       if(ImGui::InputInt("##stoch_rsi_k_smooth", &k_smooth)) {
         if(k_smooth < 1) {
           k_smooth = 1;
         }
-        method.k_smooth(static_cast<std::size_t>(k_smooth));
+        node.k_smooth(static_cast<std::size_t>(k_smooth));
       }
     }
     {
       ImGui::Text("RSI Period:");
       ImGui::SameLine();
-      auto rsi_period = static_cast<int>(method.rsi_period());
+      auto rsi_period = static_cast<int>(node.rsi_period());
       if(ImGui::InputInt("##stoch_rsi_rsi_period", &rsi_period)) {
         if(rsi_period < 1) {
           rsi_period = 1;
         }
-        method.rsi_period(static_cast<std::size_t>(rsi_period));
+        node.rsi_period(static_cast<std::size_t>(rsi_period));
       }
     }
     {
       ImGui::Text("RSI Source:");
       ImGui::SameLine();
-      auto rsi_source = method.rsi_source();
-      self.render_series_method(rsi_source, context);
-      method.rsi_source(std::move(rsi_source));
+      auto rsi_source = node.rsi_source();
+      self.render_series_node(rsi_source, context);
+      node.rsi_source(std::move(rsi_source));
     }
   }
 
-  template<typename TMethodWithPeriod>
-    requires std::same_as<TMethodWithPeriod, SmaMethod> ||
-             std::same_as<TMethodWithPeriod, EmaMethod> ||
-             std::same_as<TMethodWithPeriod, WmaMethod> ||
-             std::same_as<TMethodWithPeriod, HmaMethod> ||
-             std::same_as<TMethodWithPeriod, RsiMethod> ||
-             std::same_as<TMethodWithPeriod, RocMethod> ||
-             std::same_as<TMethodWithPeriod, RvolMethod> ||
-             std::same_as<TMethodWithPeriod, StddevAnyMethod>
-  void render_series_method_params(this auto& self,
-                                   TMethodWithPeriod& method,
-                                   WindowContext& context)
+  template<typename TNodeWithPeriod>
+    requires std::same_as<TNodeWithPeriod, SmaNode> ||
+             std::same_as<TNodeWithPeriod, EmaNode> ||
+             std::same_as<TNodeWithPeriod, WmaNode> ||
+             std::same_as<TNodeWithPeriod, HmaNode> ||
+             std::same_as<TNodeWithPeriod, RsiNode> ||
+             std::same_as<TNodeWithPeriod, RocNode> ||
+             std::same_as<TNodeWithPeriod, RvolNode> ||
+             std::same_as<TNodeWithPeriod, StddevNode>
+  void render_series_node_params(this auto& self,
+                                 TNodeWithPeriod& node,
+                                 WindowContext& context)
   {
     ImGui::Text("Period:");
     ImGui::SameLine();
-    auto period = static_cast<int>(method.period());
+    auto period = static_cast<int>(node.period());
     if(ImGui::InputInt("##period", &period)) {
       if(period < 1) {
         period = 1;
       }
-      method.period(static_cast<std::size_t>(period));
+      node.period(static_cast<std::size_t>(period));
     }
 
     ImGui::Text("Source:");
     ImGui::SameLine();
-    auto source = method.source();
-    self.render_series_method(source, context);
-    method.source(std::move(source));
+    auto source = node.source();
+    self.render_series_node(source, context);
+    node.source(std::move(source));
   }
 
-  template<typename TBinaryOpMethod>
-    requires std::same_as<TBinaryOpMethod, AddMethod> ||
-             std::same_as<TBinaryOpMethod, SubtractMethod> ||
-             std::same_as<TBinaryOpMethod, MultiplyMethod> ||
-             std::same_as<TBinaryOpMethod, DivideMethod> ||
-             std::same_as<TBinaryOpMethod, AbsDiffMethod>
-  void render_series_method_params(this auto& self,
-                                   TBinaryOpMethod& method,
-                                   WindowContext& context)
+  template<typename TBinaryOpNode>
+    requires std::same_as<TBinaryOpNode, AddNode> ||
+             std::same_as<TBinaryOpNode, SubtractNode> ||
+             std::same_as<TBinaryOpNode, MultiplyNode> ||
+             std::same_as<TBinaryOpNode, DivideNode> ||
+             std::same_as<TBinaryOpNode, AbsDiffNode>
+  void render_series_node_params(this auto& self,
+                                 TBinaryOpNode& node,
+                                 WindowContext& context)
   {
     {
       ImGui::PushID("left");
       ImGui::Text("Left:");
       ImGui::SameLine();
-      auto left = method.left();
-      self.render_series_method(left, context);
-      method.left(std::move(left));
+      auto left = node.left();
+      self.render_series_node(left, context);
+      node.left(std::move(left));
       ImGui::PopID();
     }
 
@@ -1939,38 +1868,38 @@ private:
       ImGui::PushID("right");
       ImGui::Text("Right:");
       ImGui::SameLine();
-      auto right = method.right();
-      self.render_series_method(right, context);
-      method.right(std::move(right));
+      auto right = node.right();
+      self.render_series_node(right, context);
+      node.right(std::move(right));
       ImGui::PopID();
     }
   }
 
-  template<typename TUnaryOpMethod>
-    requires std::same_as<TUnaryOpMethod, NegateMethod> ||
-             std::same_as<TUnaryOpMethod, SqrtAnyMethod>
-  void render_series_method_params(this auto& self,
-                                   TUnaryOpMethod& method,
-                                   WindowContext& context)
+  template<typename TUnaryOpNode>
+    requires std::same_as<TUnaryOpNode, NegateNode> ||
+             std::same_as<TUnaryOpNode, SqrtNode>
+  void render_series_node_params(this auto& self,
+                                 TUnaryOpNode& node,
+                                 WindowContext& context)
   {
     ImGui::Text("Value:");
     ImGui::SameLine();
-    auto value = method.operand();
-    self.render_series_method(value, context);
-    method.operand(std::move(value));
+    auto value = node.operand();
+    self.render_series_node(value, context);
+    node.operand(std::move(value));
   }
 
-  void render_series_method_params(this auto& self,
-                                   PercentageMethod& method,
-                                   WindowContext& context)
+  void render_series_node_params(this auto& self,
+                                 PercentageNode& node,
+                                 WindowContext& context)
   {
     {
       ImGui::PushID("percent");
       ImGui::Text("Percent:");
       ImGui::SameLine();
-      auto percent = method.percent();
+      auto percent = node.percent();
       if(ImGui::InputDouble("##percent", &percent, 0.1, 1.0, "%.2f")) {
-        method.percent(std::move(percent));
+        node.percent(std::move(percent));
       }
       ImGui::PopID();
     }
@@ -1979,167 +1908,167 @@ private:
       ImGui::PushID("base");
       ImGui::Text("Base:");
       ImGui::SameLine();
-      auto base = method.base();
-      self.render_series_method(base, context);
-      method.base(std::move(base));
+      auto base = node.base();
+      self.render_series_node(base, context);
+      node.base(std::move(base));
       ImGui::PopID();
     }
   }
 
-  void render_series_method_params(this auto& self,
-                                   ChangeMethod& method,
-                                   WindowContext& context)
+  void render_series_node_params(this auto& self,
+                                 ChangeNode& node,
+                                 WindowContext& context)
   {
     ImGui::Text("Source:");
     ImGui::SameLine();
-    auto source = method.source();
-    self.render_series_method(source, context);
-    method.source(std::move(source));
+    auto source = node.source();
+    self.render_series_node(source, context);
+    node.source(std::move(source));
   }
 
-  void render_series_method_params(this auto& self,
-                                   DataMethod& method,
-                                   WindowContext& context)
+  void render_series_node_params(this auto& self,
+                                 DataNode& node,
+                                 WindowContext& context)
   {
     ImGui::Text("Field:");
     ImGui::SameLine();
-    auto field = method.field();
+    auto field = node.field();
     if(ImGui::InputText("##field", &field)) {
-      method.field(field);
+      node.field(field);
     }
   }
 
-  void render_series_method_params(this auto& self,
-                                   MacdMethod& method,
-                                   WindowContext& context)
+  void render_series_node_params(this auto& self,
+                                 MacdNode& node,
+                                 WindowContext& context)
   {
     {
       ImGui::Text("Fast Period:");
       ImGui::SameLine();
-      auto fast_period = static_cast<int>(method.fast_period());
+      auto fast_period = static_cast<int>(node.fast_period());
       if(ImGui::InputInt("##macd_fast_period", &fast_period)) {
         if(fast_period < 1) {
           fast_period = 1;
         }
-        method.fast_period(static_cast<std::size_t>(fast_period));
+        node.fast_period(static_cast<std::size_t>(fast_period));
       }
     }
     {
       ImGui::Text("Slow Period:");
       ImGui::SameLine();
-      auto slow_period = static_cast<int>(method.slow_period());
+      auto slow_period = static_cast<int>(node.slow_period());
       if(ImGui::InputInt("##macd_slow_period", &slow_period)) {
         if(slow_period < 1) {
           slow_period = 1;
         }
-        method.slow_period(static_cast<std::size_t>(slow_period));
+        node.slow_period(static_cast<std::size_t>(slow_period));
       }
     }
     {
       ImGui::Text("Signal Period:");
       ImGui::SameLine();
-      auto signal_period = static_cast<int>(method.signal_period());
+      auto signal_period = static_cast<int>(node.signal_period());
       if(ImGui::InputInt("##macd_signal_period", &signal_period)) {
         if(signal_period < 1) {
           signal_period = 1;
         }
-        method.signal_period(static_cast<std::size_t>(signal_period));
+        node.signal_period(static_cast<std::size_t>(signal_period));
       }
     }
     {
       ImGui::Text("Source:");
       ImGui::SameLine();
-      auto source = method.source();
-      self.render_series_method(source, context);
-      method.source(std::move(source));
+      auto source = node.source();
+      self.render_series_node(source, context);
+      node.source(std::move(source));
     }
   }
 
-  void render_series_method_params(this auto& self,
-                                   AtrMethod& method,
-                                   WindowContext& context)
+  void render_series_node_params(this auto& self,
+                                 AtrNode& node,
+                                 WindowContext& context)
   {
     ImGui::Text("Period:");
     ImGui::SameLine();
-    auto period = static_cast<int>(method.period());
+    auto period = static_cast<int>(node.period());
     if(ImGui::InputInt("##atr_period", &period)) {
       if(period < 1) {
         period = 1;
       }
-      method.period(static_cast<std::size_t>(period));
+      node.period(static_cast<std::size_t>(period));
     }
 
     ImGui::Text("Smoothing:");
     ImGui::SameLine();
 
-    const auto ma_types = std::unordered_map<MaMethodType, std::string>{
-     {MaMethodType::Sma, "SMA"},
-     {MaMethodType::Ema, "EMA"},
-     {MaMethodType::Wma, "WMA"},
-     {MaMethodType::Hma, "HMA"},
-     {MaMethodType::Rma, "RMA"},
+    const auto ma_types = std::unordered_map<MaNodeType, std::string>{
+     {MaNodeType::Sma, "SMA"},
+     {MaNodeType::Ema, "EMA"},
+     {MaNodeType::Wma, "WMA"},
+     {MaNodeType::Hma, "HMA"},
+     {MaNodeType::Rma, "RMA"},
     };
 
-    const auto current_ma_title = ma_types.at(method.ma_smoothing_type());
+    const auto current_ma_title = ma_types.at(node.ma_smoothing_type());
     if(ImGui::BeginCombo("##atr_smoothing_type", current_ma_title.c_str())) {
       for(const auto& [ma_type, ma_title] : ma_types) {
-        const bool is_selected = method.ma_smoothing_type() == ma_type;
+        const bool is_selected = node.ma_smoothing_type() == ma_type;
         if(ImGui::Selectable(ma_title.c_str(), is_selected)) {
-          method.ma_smoothing_type(ma_type);
+          node.ma_smoothing_type(ma_type);
         }
       }
       ImGui::EndCombo();
     }
   }
 
-  void render_series_method_params(this auto& self,
-                                   ValueMethod& method,
-                                   WindowContext& context)
+  void render_series_node_params(this auto& self,
+                                 ValueNode& node,
+                                 WindowContext& context)
   {
     ImGui::Text("Value:");
     ImGui::SameLine();
-    auto value = method.value();
+    auto value = node.value();
     if(ImGui::InputDouble("##value", &value, 0.1, 1.0, "%.2f")) {
-      method.value(value);
+      node.value(value);
     }
   }
 
-  void render_series_method_params(this auto& self,
-                                   LookbackMethod& method,
-                                   WindowContext& context)
+  void render_series_node_params(this auto& self,
+                                 LookbackNode& node,
+                                 WindowContext& context)
   {
     ImGui::Text("Periods:");
     ImGui::SameLine();
-    auto periods = static_cast<int>(method.period());
+    auto periods = static_cast<int>(node.period());
     if(ImGui::InputInt("##lookback_periods", &periods)) {
       if(periods < 1) {
         periods = 1;
       }
-      method.period(static_cast<std::size_t>(periods));
+      node.period(static_cast<std::size_t>(periods));
     }
     {
       ImGui::Text("Source:");
       ImGui::SameLine();
-      auto source = method.source();
-      self.render_series_method(source, context);
-      method.source(std::move(source));
+      auto source = node.source();
+      self.render_series_node(source, context);
+      node.source(std::move(source));
     }
   }
 
-  void render_series_method_params(this auto& self,
-                                   InputMethod& method,
-                                   WindowContext& context)
+  void render_series_node_params(this auto& self,
+                                 InputNode& node,
+                                 WindowContext& context)
   {
     ImGui::Text("Name:");
     ImGui::SameLine();
 
-    const auto selected_name = method.name();
+    const auto selected_name = node.name();
     if(ImGui::BeginCombo("##input_name", selected_name.c_str())) {
       const auto& strategy_inputs = self.editing_strategy_ptr_->inputs();
       for(const auto& [input_name, input_value] : strategy_inputs) {
         const auto is_selected = selected_name == input_name;
         if(ImGui::Selectable(input_name.c_str(), is_selected)) {
-          method.name(input_name);
+          node.name(input_name);
         }
 
         if(is_selected) {
@@ -2150,8 +2079,7 @@ private:
     }
   }
 
-  auto draw_condition_method_combo(this auto& self,
-                                   const AnySeriesMethod& condition)
+  auto draw_condition_node_combo(this auto& self, const ErasedNode& condition)
    -> std::string
   {
     static const auto condition_ids = std::vector<std::string>{"EQUAL",
@@ -2171,12 +2099,12 @@ private:
                                                                "ALWAYS",
                                                                "NEVER"};
 
-    auto result_condition_id = get_condition_method_id(condition);
+    auto result_condition_id = get_condition_node_id(condition);
 
     ImGui::PushID(result_condition_id.c_str());
     {
       const auto combo_preview_value =
-       get_condition_method_title(result_condition_id);
+       get_condition_node_title(result_condition_id);
       if(ImGui::BeginCombo("##Conditions", combo_preview_value.c_str())) {
         static auto filter = ImGuiTextFilter{};
 
@@ -2189,7 +2117,7 @@ private:
 
         for(const auto& condition_id : condition_ids) {
           const bool is_selected = condition_id == result_condition_id;
-          const auto condition_title = get_condition_method_title(condition_id);
+          const auto condition_title = get_condition_node_title(condition_id);
 
           if(filter.PassFilter(condition_title.c_str())) {
             if(ImGui::Selectable(condition_title.c_str(), is_selected)) {
@@ -2206,373 +2134,351 @@ private:
     return result_condition_id;
   }
 
-  auto make_condition_method_from_other(this auto& self,
-                                        const std::string& condition_id,
-                                        auto other_condition) -> AnySeriesMethod
+  auto make_condition_node_from_other(this auto& self,
+                                      const std::string& condition_id,
+                                      auto other_condition) -> ErasedNode
   {
     const auto get_condition_series_params =
-     []<typename TMethod>(
-      const TMethod& method) -> std::pair<AnySeriesMethod, AnySeriesMethod> {
+     []<typename TNode>(
+      const TNode& node) -> std::pair<ErasedNode, ErasedNode> {
       if constexpr(requires {
-                     {
-                       method.source()
-                     } -> std::convertible_to<AnySeriesMethod>;
-                     {
-                       method.reference()
-                     } -> std::convertible_to<AnySeriesMethod>;
+                     { node.source() } -> std::convertible_to<ErasedNode>;
+                     { node.reference() } -> std::convertible_to<ErasedNode>;
                    }) {
-        return {method.source(), method.reference()};
+        return {node.source(), node.reference()};
       } else if constexpr(requires {
                             {
-                              method.target()
-                            } -> std::convertible_to<AnySeriesMethod>;
+                              node.target()
+                            } -> std::convertible_to<ErasedNode>;
                             {
-                              method.threshold()
-                            } -> std::convertible_to<AnySeriesMethod>;
+                              node.threshold()
+                            } -> std::convertible_to<ErasedNode>;
                           }) {
-        return {method.target(), method.threshold()};
+        return {node.target(), node.threshold()};
       } else {
-        return {CloseMethod{}, CloseMethod{}};
+        return {CloseNode{}, CloseNode{}};
       }
     };
 
     if(condition_id == "EQUAL") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
-      return EqualMethod{std::move(lhs_series_param),
-                         std::move(rhs_series_param)};
+      return EqualNode{std::move(lhs_series_param),
+                       std::move(rhs_series_param)};
     }
 
     if(condition_id == "NOT_EQUAL") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
-      return NotEqualMethod{std::move(lhs_series_param),
-                            std::move(rhs_series_param)};
+      return NotEqualNode{std::move(lhs_series_param),
+                          std::move(rhs_series_param)};
     }
 
     if(condition_id == "GREATER_THAN") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
-      return GreaterThanMethod{std::move(lhs_series_param),
-                               std::move(rhs_series_param)};
+      return GreaterThanNode{std::move(lhs_series_param),
+                             std::move(rhs_series_param)};
     }
 
     if(condition_id == "LESS_THAN") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
-      return LessThanMethod{std::move(lhs_series_param),
-                            std::move(rhs_series_param)};
+      return LessThanNode{std::move(lhs_series_param),
+                          std::move(rhs_series_param)};
     }
 
     if(condition_id == "GREATER_EQUAL") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
-      return GreaterEqualMethod{std::move(lhs_series_param),
-                                std::move(rhs_series_param)};
+      return GreaterEqualNode{std::move(lhs_series_param),
+                              std::move(rhs_series_param)};
     }
 
     if(condition_id == "LESS_EQUAL") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
-      return LessEqualMethod{std::move(lhs_series_param),
-                             std::move(rhs_series_param)};
+      return LessEqualNode{std::move(lhs_series_param),
+                           std::move(rhs_series_param)};
     }
 
     if(condition_id == "CROSSOVER") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
-      return CrossoverMethod{std::move(lhs_series_param),
-                             std::move(rhs_series_param)};
+      return CrossoverNode{std::move(lhs_series_param),
+                           std::move(rhs_series_param)};
     }
 
     if(condition_id == "CROSSUNDER") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
-      return CrossunderMethod{std::move(lhs_series_param),
-                              std::move(rhs_series_param)};
+      return CrossunderNode{std::move(lhs_series_param),
+                            std::move(rhs_series_param)};
     }
 
     const auto get_conditions_param =
-     []<typename TMethod>(
-      const TMethod& method) -> std::vector<AnySeriesMethod> {
+     []<typename TNode>(const TNode& node) -> std::vector<ErasedNode> {
       if constexpr(requires {
                      {
-                       method.conditions()
-                     } -> std::convertible_to<std::vector<AnySeriesMethod>>;
+                       node.conditions()
+                     } -> std::convertible_to<std::vector<ErasedNode>>;
                    }) {
-        return method.conditions();
+        return node.conditions();
       } else if constexpr(requires {
                             {
-                              method.other_condition()
-                            } -> std::convertible_to<AnySeriesMethod>;
+                              node.other_condition()
+                            } -> std::convertible_to<ErasedNode>;
                           }) {
-        return {method.other_condition()};
+        return {node.other_condition()};
       } else if constexpr(requires {
                             {
-                              method.first_condition()
-                            } -> std::convertible_to<AnySeriesMethod>;
+                              node.first_condition()
+                            } -> std::convertible_to<ErasedNode>;
                             {
-                              method.second_condition()
-                            } -> std::convertible_to<AnySeriesMethod>;
+                              node.second_condition()
+                            } -> std::convertible_to<ErasedNode>;
                           }) {
-        return {method.first_condition(), method.second_condition()};
+        return {node.first_condition(), node.second_condition()};
       } else {
-        return {method};
+        return {node};
       }
     };
 
     if(condition_id == "ALL_OF") {
       const auto conditions = get_conditions_param(other_condition);
-      return AllOfMethod{conditions};
+      return AllOfNode{conditions};
     }
 
     if(condition_id == "ANY_OF") {
       const auto conditions = get_conditions_param(other_condition);
-      return AnyOfMethod{conditions};
+      return AnyOfNode{conditions};
     }
 
     const auto get_first_condition_param =
-     []<typename TMethod>(const TMethod& method) -> AnySeriesMethod {
+     []<typename TNode>(const TNode& node) -> ErasedNode {
       if constexpr(requires {
-                     {
-                       method.condition()
-                     } -> std::convertible_to<AnySeriesMethod>;
+                     { node.condition() } -> std::convertible_to<ErasedNode>;
                    }) {
-        return method.condition();
+        return node.condition();
       } else if constexpr(requires {
                             {
-                              method.first_condition()
-                            } -> std::convertible_to<AnySeriesMethod>;
+                              node.first_condition()
+                            } -> std::convertible_to<ErasedNode>;
                           }) {
-        return method.first_condition();
+        return node.first_condition();
       } else if constexpr(requires {
                             {
-                              method.conditions()
-                            } -> std::convertible_to<
-                             std::vector<AnySeriesMethod>>;
+                              node.conditions()
+                            } -> std::convertible_to<std::vector<ErasedNode>>;
                           }) {
-        const auto conditions = method.conditions();
+        const auto conditions = node.conditions();
         if(!conditions.empty()) {
           return conditions.front();
         } else {
-          return method;
+          return node;
         }
       } else if constexpr(requires {
                             {
-                              method.other_condition()
-                            } -> std::convertible_to<AnySeriesMethod>;
+                              node.other_condition()
+                            } -> std::convertible_to<ErasedNode>;
                           }) {
-        return method.other_condition();
+        return node.other_condition();
       } else {
-        return method;
+        return node;
       }
     };
 
     const auto get_second_condition_param =
-     []<typename TMethod>(const TMethod& method) -> AnySeriesMethod {
+     []<typename TNode>(const TNode& node) -> ErasedNode {
       if constexpr(requires {
                      {
-                       method.other_condition()
-                     } -> std::convertible_to<AnySeriesMethod>;
+                       node.other_condition()
+                     } -> std::convertible_to<ErasedNode>;
                    }) {
-        return method.other_condition();
+        return node.other_condition();
       } else if constexpr(requires {
                             {
-                              method.second_condition()
-                            } -> std::convertible_to<AnySeriesMethod>;
+                              node.second_condition()
+                            } -> std::convertible_to<ErasedNode>;
                           }) {
-        return method.second_condition();
+        return node.second_condition();
       } else {
-        return method;
+        return node;
       }
     };
 
     if(condition_id == "NOT") {
-      return NotMethod{get_first_condition_param(other_condition)};
+      return LogicalNotNode{get_first_condition_param(other_condition)};
     }
 
     if(condition_id == "AND") {
-      return AndMethod{get_first_condition_param(other_condition),
-                       get_second_condition_param(other_condition)};
+      return LogicalAndNode{get_first_condition_param(other_condition),
+                            get_second_condition_param(other_condition)};
     }
 
     if(condition_id == "OR") {
-      return OrMethod{get_first_condition_param(other_condition),
-                      get_second_condition_param(other_condition)};
+      return LogicalOrNode{get_first_condition_param(other_condition),
+                           get_second_condition_param(other_condition)};
     }
 
     if(condition_id == "XOR") {
-      return XorMethod{get_first_condition_param(other_condition),
-                       get_second_condition_param(other_condition)};
+      return LogicalXorNode{get_first_condition_param(other_condition),
+                            get_second_condition_param(other_condition)};
     }
 
     if(condition_id == "ALWAYS") {
-      return AlwaysMethod{};
+      return TrueNode{};
     }
 
     if(condition_id == "NEVER") {
-      return NeverMethod{};
+      return FalseNode{};
     }
 
-    return NeverMethod{};
+    return FalseNode{};
   }
 
-  auto render_condition_method(this auto& self,
-                               const AnySeriesMethod& any_condition,
-                               WindowContext& context) -> AnySeriesMethod
+  auto render_condition_node(this auto& self,
+                             const ErasedNode& any_condition,
+                             WindowContext& context) -> ErasedNode
   {
-    if(auto* condition_ptr = series_method_cast<AllOfMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr, context);
+    if(auto* condition_ptr = node_cast<AllOfNode>(any_condition)) {
+      return self.render_condition_node(*condition_ptr, context);
+    } else if(auto* condition_ptr = node_cast<AnyOfNode>(any_condition)) {
+      return self.render_condition_node(*condition_ptr, context);
+    } else if(auto* condition_ptr = node_cast<TrueNode>(any_condition)) {
+      return self.render_condition_node(*condition_ptr, context);
+    } else if(auto* condition_ptr = node_cast<FalseNode>(any_condition)) {
+      return self.render_condition_node(*condition_ptr, context);
+    } else if(auto* condition_ptr = node_cast<LessThanNode>(any_condition)) {
+      return self.render_condition_node(*condition_ptr, context);
+    } else if(auto* condition_ptr = node_cast<GreaterThanNode>(any_condition)) {
+      return self.render_condition_node(*condition_ptr, context);
+    } else if(auto* condition_ptr = node_cast<LessEqualNode>(any_condition)) {
+      return self.render_condition_node(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               series_method_cast<AnyOfMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr, context);
-    } else if(auto* condition_ptr =
-               series_method_cast<AlwaysMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr, context);
-    } else if(auto* condition_ptr =
-               series_method_cast<NeverMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr, context);
-    } else if(auto* condition_ptr =
-               series_method_cast<LessThanMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr, context);
-    } else if(auto* condition_ptr =
-               series_method_cast<GreaterThanMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr, context);
-    } else if(auto* condition_ptr =
-               series_method_cast<LessEqualMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr, context);
-    } else if(auto* condition_ptr =
-               series_method_cast<GreaterEqualMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr, context);
-    } else if(auto* condition_ptr =
-               series_method_cast<EqualMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr, context);
-    } else if(auto* condition_ptr =
-               series_method_cast<NotEqualMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr, context);
-    } else if(auto* condition_ptr =
-               series_method_cast<CrossoverMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr, context);
-    } else if(auto* condition_ptr =
-               series_method_cast<CrossunderMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr, context);
-    } else if(auto* condition_ptr =
-               series_method_cast<NotMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr, context);
-    } else if(auto* condition_ptr =
-               series_method_cast<AndMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr, context);
-    } else if(auto* condition_ptr =
-               series_method_cast<OrMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr, context);
-    } else if(auto* condition_ptr =
-               series_method_cast<XorMethod>(any_condition)) {
-      return self.render_condition_method(*condition_ptr, context);
+               node_cast<GreaterEqualNode>(any_condition)) {
+      return self.render_condition_node(*condition_ptr, context);
+    } else if(auto* condition_ptr = node_cast<EqualNode>(any_condition)) {
+      return self.render_condition_node(*condition_ptr, context);
+    } else if(auto* condition_ptr = node_cast<NotEqualNode>(any_condition)) {
+      return self.render_condition_node(*condition_ptr, context);
+    } else if(auto* condition_ptr = node_cast<CrossoverNode>(any_condition)) {
+      return self.render_condition_node(*condition_ptr, context);
+    } else if(auto* condition_ptr = node_cast<CrossunderNode>(any_condition)) {
+      return self.render_condition_node(*condition_ptr, context);
+    } else if(auto* condition_ptr = node_cast<LogicalNotNode>(any_condition)) {
+      return self.render_condition_node(*condition_ptr, context);
+    } else if(auto* condition_ptr = node_cast<LogicalAndNode>(any_condition)) {
+      return self.render_condition_node(*condition_ptr, context);
+    } else if(auto* condition_ptr = node_cast<LogicalOrNode>(any_condition)) {
+      return self.render_condition_node(*condition_ptr, context);
+    } else if(auto* condition_ptr = node_cast<LogicalXorNode>(any_condition)) {
+      return self.render_condition_node(*condition_ptr, context);
     } else {
       return any_condition;
     }
   }
 
   template<typename TCondition>
-    requires std::same_as<TCondition, EqualMethod> ||
-             std::same_as<TCondition, NotEqualMethod> ||
-             std::same_as<TCondition, GreaterThanMethod> ||
-             std::same_as<TCondition, LessThanMethod> ||
-             std::same_as<TCondition, GreaterEqualMethod> ||
-             std::same_as<TCondition, LessEqualMethod>
-  auto render_condition_method(this auto& self,
-                               const TCondition& condition,
-                               WindowContext& context) -> AnySeriesMethod
+    requires std::same_as<TCondition, EqualNode> ||
+             std::same_as<TCondition, NotEqualNode> ||
+             std::same_as<TCondition, GreaterThanNode> ||
+             std::same_as<TCondition, LessThanNode> ||
+             std::same_as<TCondition, GreaterEqualNode> ||
+             std::same_as<TCondition, LessEqualNode>
+  auto render_condition_node(this auto& self,
+                             const TCondition& condition,
+                             WindowContext& context) -> ErasedNode
   {
     auto new_condition = condition;
 
     ImGui::PushID("left_param");
     auto target = new_condition.target();
-    self.render_series_method(target, context);
+    self.render_series_node(target, context);
     ImGui::PopID();
 
     const auto updated_condition_id =
-     self.draw_condition_method_combo(new_condition);
+     self.draw_condition_node_combo(new_condition);
 
     ImGui::PushID("right_param");
     auto threshold = new_condition.threshold();
-    self.render_series_method(threshold, context);
+    self.render_series_node(threshold, context);
     ImGui::PopID();
 
     new_condition.target(std::move(target));
     new_condition.threshold(std::move(threshold));
 
-    auto changed_method = self.make_condition_method_from_other(
+    auto changed_node = self.make_condition_node_from_other(
      updated_condition_id, std::move(new_condition));
 
-    return changed_method;
+    return changed_node;
   }
 
   template<typename TCondition>
-    requires std::same_as<TCondition, CrossoverMethod> ||
-             std::same_as<TCondition, CrossunderMethod>
-  auto render_condition_method(this auto& self,
-                               const TCondition& condition,
-                               WindowContext& context) -> AnySeriesMethod
+    requires std::same_as<TCondition, CrossoverNode> ||
+             std::same_as<TCondition, CrossunderNode>
+  auto render_condition_node(this auto& self,
+                             const TCondition& condition,
+                             WindowContext& context) -> ErasedNode
   {
     auto new_condition = condition;
 
     ImGui::PushID("left_param");
     auto source = new_condition.source();
-    self.render_series_method(source, context);
+    self.render_series_node(source, context);
     ImGui::PopID();
 
     const auto updated_condition_id =
-     self.draw_condition_method_combo(new_condition);
+     self.draw_condition_node_combo(new_condition);
 
     ImGui::PushID("right_param");
     auto reference = new_condition.reference();
-    self.render_series_method(reference, context);
+    self.render_series_node(reference, context);
     ImGui::PopID();
 
     new_condition.source(std::move(source));
     new_condition.reference(std::move(reference));
 
-    auto changed_method = self.make_condition_method_from_other(
+    auto changed_node = self.make_condition_node_from_other(
      updated_condition_id, std::move(new_condition));
 
-    return changed_method;
+    return changed_node;
   }
 
   template<typename TCondition>
-    requires std::same_as<TCondition, AlwaysMethod> ||
-             std::same_as<TCondition, NeverMethod>
-  auto render_condition_method(this auto& self,
-                               const TCondition& condition,
-                               WindowContext& context) -> AnySeriesMethod
+    requires std::same_as<TCondition, TrueNode> ||
+             std::same_as<TCondition, FalseNode>
+  auto render_condition_node(this auto& self,
+                             const TCondition& condition,
+                             WindowContext& context) -> ErasedNode
   {
     auto new_condition = condition;
     const auto updated_condition_id =
-     self.draw_condition_method_combo(new_condition);
+     self.draw_condition_node_combo(new_condition);
 
-    auto changed_method = self.make_condition_method_from_other(
+    auto changed_node = self.make_condition_node_from_other(
      updated_condition_id, std::move(new_condition));
 
-    return changed_method;
+    return changed_node;
   }
 
   template<typename TCondition>
-    requires std::same_as<TCondition, AllOfMethod> ||
-             std::same_as<TCondition, AnyOfMethod>
-  auto render_condition_method(this auto& self,
-                               const TCondition& condition,
-                               WindowContext& context) -> AnySeriesMethod
+    requires std::same_as<TCondition, AllOfNode> ||
+             std::same_as<TCondition, AnyOfNode>
+  auto render_condition_node(this auto& self,
+                             const TCondition& condition,
+                             WindowContext& context) -> ErasedNode
   {
     auto new_condition = condition;
     const auto updated_condition_id =
-     self.draw_condition_method_combo(new_condition);
+     self.draw_condition_node_combo(new_condition);
     ImGui::Indent();
 
     auto conditions = new_condition.conditions();
     for(auto i = 0; i < conditions.size(); ++i) {
       ImGui::PushID(i);
       auto& sub_condition = conditions[i];
-      sub_condition = self.render_condition_method(sub_condition, context);
+      sub_condition = self.render_condition_node(sub_condition, context);
 
       const auto btn_label = "Remove Condition";
       {
@@ -2595,45 +2501,45 @@ private:
     }
 
     if(ImGui::Button("Add Condition")) {
-      conditions.emplace_back(NeverMethod{});
+      conditions.emplace_back(FalseNode{});
     }
 
     new_condition = TCondition(std::move(conditions));
 
     ImGui::Unindent();
 
-    auto changed_method = self.make_condition_method_from_other(
+    auto changed_node = self.make_condition_node_from_other(
      updated_condition_id, std::move(new_condition));
 
-    return changed_method;
+    return changed_node;
   }
 
   template<typename TCondition>
-    requires std::same_as<TCondition, NotMethod>
-  auto render_condition_method(this auto& self,
-                               const TCondition& condition,
-                               WindowContext& context) -> AnySeriesMethod
+    requires std::same_as<TCondition, LogicalNotNode>
+  auto render_condition_node(this auto& self,
+                             const TCondition& condition,
+                             WindowContext& context) -> ErasedNode
   {
     auto new_condition = condition;
     const auto updated_condition_id =
-     self.draw_condition_method_combo(new_condition);
+     self.draw_condition_node_combo(new_condition);
     ImGui::Indent();
     auto sub_condition = new_condition.other_condition();
-    sub_condition = self.render_condition_method(sub_condition, context);
+    sub_condition = self.render_condition_node(sub_condition, context);
     new_condition.other_condition(std::move(sub_condition));
     ImGui::Unindent();
-    auto changed_method = self.make_condition_method_from_other(
+    auto changed_node = self.make_condition_node_from_other(
      updated_condition_id, std::move(new_condition));
-    return changed_method;
+    return changed_node;
   }
 
   template<typename TCondition>
-    requires std::same_as<TCondition, AndMethod> ||
-             std::same_as<TCondition, OrMethod> ||
-             std::same_as<TCondition, XorMethod>
-  auto render_condition_method(this auto& self,
-                               const TCondition& condition,
-                               WindowContext& context) -> AnySeriesMethod
+    requires std::same_as<TCondition, LogicalAndNode> ||
+             std::same_as<TCondition, LogicalOrNode> ||
+             std::same_as<TCondition, LogicalXorNode>
+  auto render_condition_node(this auto& self,
+                             const TCondition& condition,
+                             WindowContext& context) -> ErasedNode
   {
     auto new_condition = condition;
     auto first_condition = new_condition.first_condition();
@@ -2641,28 +2547,27 @@ private:
 
     {
       ImGui::PushID("first_condition");
-      first_condition = self.render_condition_method(first_condition, context);
+      first_condition = self.render_condition_node(first_condition, context);
       ImGui::PopID();
     }
 
     ImGui::Separator();
     const auto updated_condition_id =
-     self.draw_condition_method_combo(new_condition);
+     self.draw_condition_node_combo(new_condition);
     ImGui::Separator();
 
     {
       ImGui::PushID("second_condition");
-      second_condition =
-       self.render_condition_method(second_condition, context);
+      second_condition = self.render_condition_node(second_condition, context);
       ImGui::PopID();
     }
 
     new_condition.first_condition(std::move(first_condition));
     new_condition.second_condition(std::move(second_condition));
 
-    auto changed_method = self.make_condition_method_from_other(
+    auto changed_node = self.make_condition_node_from_other(
      updated_condition_id, std::move(new_condition));
-    return changed_method;
+    return changed_node;
   }
 
   void render_plot_method(this auto& self,

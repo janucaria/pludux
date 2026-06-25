@@ -10,7 +10,7 @@ module;
 
 export module pludux:methods.operators_method;
 
-namespace pludux {
+export namespace pludux {
 
 template<typename T = void>
 struct Absolute {
@@ -153,148 +153,142 @@ struct NegativePart<void> {
 
 /*---------------------------------------------------------------*/
 
-export {
-  template<typename TBinaryFn,
-           typename TLeftOperandMethod,
-           typename TRightOperandMethod>
-  class BinaryOperatorMethod {
-  public:
-    BinaryOperatorMethod(TLeftOperandMethod operand1,
-                         TRightOperandMethod operand2)
-    : operand1_{std::move(operand1)}
-    , operand2_{std::move(operand2)}
-    {
-    }
+template<typename TBinaryFn,
+         typename TLeftOperandMethod,
+         typename TRightOperandMethod>
+class BinaryOperatorMethod {
+public:
+  BinaryOperatorMethod(TLeftOperandMethod operand1,
+                       TRightOperandMethod operand2)
+  : operand1_{std::move(operand1)}
+  , operand2_{std::move(operand2)}
+  {
+  }
 
-    auto operator==(const BinaryOperatorMethod& other) const noexcept
-     -> bool = default;
+  auto operator==(const BinaryOperatorMethod& other) const noexcept
+   -> bool = default;
 
-    auto operand1(this const BinaryOperatorMethod& self) noexcept
-     -> const TLeftOperandMethod&
-    {
-      return self.operand1_;
-    }
+  auto operand1(this const BinaryOperatorMethod& self) noexcept
+   -> const TLeftOperandMethod&
+  {
+    return self.operand1_;
+  }
 
-    void operand1(this BinaryOperatorMethod& self,
-                  TLeftOperandMethod operand1) noexcept
-    {
-      self.operand1_ = std::move(operand1);
-    }
+  void operand1(this BinaryOperatorMethod& self,
+                TLeftOperandMethod operand1) noexcept
+  {
+    self.operand1_ = std::move(operand1);
+  }
 
-    auto left(this const BinaryOperatorMethod& self) noexcept
-     -> const TLeftOperandMethod&
-    {
-      return self.operand1();
-    }
+  auto left(this const BinaryOperatorMethod& self) noexcept
+   -> const TLeftOperandMethod&
+  {
+    return self.operand1();
+  }
 
-    void left(this BinaryOperatorMethod& self, TLeftOperandMethod left) noexcept
-    {
-      self.operand1(std::move(left));
-    }
+  void left(this BinaryOperatorMethod& self, TLeftOperandMethod left) noexcept
+  {
+    self.operand1(std::move(left));
+  }
 
-    auto operand2(this const BinaryOperatorMethod& self) noexcept
-     -> const TRightOperandMethod&
-    {
-      return self.operand2_;
-    }
+  auto operand2(this const BinaryOperatorMethod& self) noexcept
+   -> const TRightOperandMethod&
+  {
+    return self.operand2_;
+  }
 
-    void operand2(this BinaryOperatorMethod& self,
-                  TRightOperandMethod operand2) noexcept
-    {
-      self.operand2_ = std::move(operand2);
-    }
+  void operand2(this BinaryOperatorMethod& self,
+                TRightOperandMethod operand2) noexcept
+  {
+    self.operand2_ = std::move(operand2);
+  }
 
-    auto right(this const BinaryOperatorMethod& self) noexcept
-     -> const TRightOperandMethod&
-    {
-      return self.operand2();
-    }
+  auto right(this const BinaryOperatorMethod& self) noexcept
+   -> const TRightOperandMethod&
+  {
+    return self.operand2();
+  }
 
-    void right(this BinaryOperatorMethod& self,
-               TRightOperandMethod right) noexcept
-    {
-      self.operand2(std::move(right));
-    }
+  void right(this BinaryOperatorMethod& self,
+             TRightOperandMethod right) noexcept
+  {
+    self.operand2(std::move(right));
+  }
 
-  private:
-    TLeftOperandMethod operand1_;
-    TRightOperandMethod operand2_;
-  };
+private:
+  TLeftOperandMethod operand1_;
+  TRightOperandMethod operand2_;
+};
 
-  template<typename TUnaryFn, typename TOperandMethod>
-  class UnaryOperatorMethod {
-  public:
-    explicit UnaryOperatorMethod(TOperandMethod operand)
-    : operand_{std::move(operand)}
-    {
-    }
+template<typename TUnaryFn, typename TOperandMethod>
+class UnaryOperatorMethod {
+public:
+  explicit UnaryOperatorMethod(TOperandMethod operand)
+  : operand_{std::move(operand)}
+  {
+  }
 
-    auto operator==(const UnaryOperatorMethod& other) const noexcept
-     -> bool = default;
+  auto operator==(const UnaryOperatorMethod& other) const noexcept
+   -> bool = default;
 
-    auto operand(this const UnaryOperatorMethod& self) noexcept
-     -> const TOperandMethod&
-    {
-      return self.operand_;
-    }
+  auto operand(this const UnaryOperatorMethod& self) noexcept
+   -> const TOperandMethod&
+  {
+    return self.operand_;
+  }
 
-    void operand(this UnaryOperatorMethod& self,
-                 TOperandMethod operand) noexcept
-    {
-      self.operand_ = std::move(operand);
-    }
+  void operand(this UnaryOperatorMethod& self, TOperandMethod operand) noexcept
+  {
+    self.operand_ = std::move(operand);
+  }
 
-  private:
-    TOperandMethod operand_;
-  };
+private:
+  TOperandMethod operand_;
+};
 
-  template<typename TLeftOperandMethod, typename TRightOperandMethod>
-  using MultiplyMethod = BinaryOperatorMethod<std::multiplies<>,
-                                              TLeftOperandMethod,
-                                              TRightOperandMethod>;
-
-  template<typename TLeftOperandMethod, typename TRightOperandMethod>
-  using DivideMethod = BinaryOperatorMethod<std::divides<>,
+template<typename TLeftOperandMethod, typename TRightOperandMethod>
+using MultiplyMethod = BinaryOperatorMethod<std::multiplies<>,
                                             TLeftOperandMethod,
                                             TRightOperandMethod>;
 
-  template<typename TLeftOperandMethod, typename TRightOperandMethod>
-  using AddMethod =
-   BinaryOperatorMethod<std::plus<>, TLeftOperandMethod, TRightOperandMethod>;
+template<typename TLeftOperandMethod, typename TRightOperandMethod>
+using DivideMethod =
+ BinaryOperatorMethod<std::divides<>, TLeftOperandMethod, TRightOperandMethod>;
 
-  template<typename TLeftOperandMethod, typename TRightOperandMethod>
-  using SubtractMethod =
-   BinaryOperatorMethod<std::minus<>, TLeftOperandMethod, TRightOperandMethod>;
+template<typename TLeftOperandMethod, typename TRightOperandMethod>
+using AddMethod =
+ BinaryOperatorMethod<std::plus<>, TLeftOperandMethod, TRightOperandMethod>;
 
-  template<typename TOperandMethod>
-  using NegateMethod = UnaryOperatorMethod<std::negate<>, TOperandMethod>;
+template<typename TLeftOperandMethod, typename TRightOperandMethod>
+using SubtractMethod =
+ BinaryOperatorMethod<std::minus<>, TLeftOperandMethod, TRightOperandMethod>;
 
-  template<typename TOperandMethod>
-  using AbsMethod = UnaryOperatorMethod<Absolute<>, TOperandMethod>;
+template<typename TOperandMethod>
+using NegateMethod = UnaryOperatorMethod<std::negate<>, TOperandMethod>;
 
-  template<typename TLeftOperandMethod, typename TRightOperandMethod>
-  using AbsDiffMethod = BinaryOperatorMethod<AbsoluteDifference<>,
-                                             TLeftOperandMethod,
-                                             TRightOperandMethod>;
+template<typename TOperandMethod>
+using AbsMethod = UnaryOperatorMethod<Absolute<>, TOperandMethod>;
 
-  template<typename TOperandMethod>
-  using SqrtMethod = UnaryOperatorMethod<SquareRoot<>, TOperandMethod>;
+template<typename TLeftOperandMethod, typename TRightOperandMethod>
+using AbsDiffMethod = BinaryOperatorMethod<AbsoluteDifference<>,
+                                           TLeftOperandMethod,
+                                           TRightOperandMethod>;
 
-  template<typename TLeftOperandMethod, typename TRightOperandMethod>
-  using MaxMethod =
-   BinaryOperatorMethod<Maximum<>, TLeftOperandMethod, TRightOperandMethod>;
+template<typename TOperandMethod>
+using SqrtMethod = UnaryOperatorMethod<SquareRoot<>, TOperandMethod>;
 
-  template<typename TLeftOperandMethod, typename TRightOperandMethod>
-  using MinMethod =
-   BinaryOperatorMethod<Minimum<>, TLeftOperandMethod, TRightOperandMethod>;
+template<typename TLeftOperandMethod, typename TRightOperandMethod>
+using MaxMethod =
+ BinaryOperatorMethod<Maximum<>, TLeftOperandMethod, TRightOperandMethod>;
 
-  template<typename TOperandMethod>
-  using PositivePartMethod =
-   UnaryOperatorMethod<PositivePart<>, TOperandMethod>;
+template<typename TLeftOperandMethod, typename TRightOperandMethod>
+using MinMethod =
+ BinaryOperatorMethod<Minimum<>, TLeftOperandMethod, TRightOperandMethod>;
 
-  template<typename TOperandMethod>
-  using NegativePartMethod =
-   UnaryOperatorMethod<NegativePart<>, TOperandMethod>;
-}
+template<typename TOperandMethod>
+using PositivePartMethod = UnaryOperatorMethod<PositivePart<>, TOperandMethod>;
+
+template<typename TOperandMethod>
+using NegativePartMethod = UnaryOperatorMethod<NegativePart<>, TOperandMethod>;
 
 } // namespace pludux

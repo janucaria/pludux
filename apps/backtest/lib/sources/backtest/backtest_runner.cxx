@@ -11,6 +11,7 @@ module;
 #include <memory>
 #include <optional>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 export module pludux.backtest:backtest_runner;
@@ -26,7 +27,6 @@ import :trade_record;
 import :trade_position;
 import :trade_session;
 import :backtest_summary;
-import :strategy;
 import :broker;
 import :market;
 import :backtest;
@@ -37,21 +37,45 @@ class BacktestRunner {
 public:
   BacktestRunner(
    const Asset& asset,
-   const Strategy& strategy,
    const Market& market,
    const Broker& broker,
    const Profile& profile,
    const OrderedNamedRegistry<ConstrainedNumericInput>& backtest_inputs,
+   OrderedNamedRegistry<AnySeriesMethod> series_methods,
+   AnySeriesMethod long_entry_method,
+   AnySeriesMethod long_exit_method,
+   AnySeriesMethod long_pyramiding_signal,
+   std::size_t long_pyramiding_max_layers,
+   AnySeriesMethod short_entry_method,
+   AnySeriesMethod short_exit_method,
+   AnySeriesMethod short_pyramiding_signal,
+   std::size_t short_pyramiding_max_layers,
+   bool stop_loss_enabled,
+   bool stop_loss_trailing_enabled,
+   bool take_profit_enabled,
+   double take_profit_r_multiple,
    double total_equity = 0.0,
    std::size_t pyramiding_layers = 0,
    bool is_failed = false)
   : asset_{asset}
-  , strategy_{strategy}
   , market_{market}
   , broker_{broker}
   , profile_{profile}
   , backtest_inputs_{backtest_inputs}
   , total_equity_{total_equity}
+  , series_methods_{std::move(series_methods)}
+  , long_entry_method_{std::move(long_entry_method)}
+  , long_exit_method_{std::move(long_exit_method)}
+  , long_pyramiding_signal_{std::move(long_pyramiding_signal)}
+  , long_pyramiding_max_layers_{long_pyramiding_max_layers}
+  , short_entry_method_{std::move(short_entry_method)}
+  , short_exit_method_{std::move(short_exit_method)}
+  , short_pyramiding_signal_{std::move(short_pyramiding_signal)}
+  , short_pyramiding_max_layers_{short_pyramiding_max_layers}
+  , stop_loss_enabled_{stop_loss_enabled}
+  , stop_loss_trailing_enabled_{stop_loss_trailing_enabled}
+  , take_profit_enabled_{take_profit_enabled}
+  , take_profit_r_multiple_{take_profit_r_multiple}
   , pyramiding_layers_{pyramiding_layers}
   , is_failed_{is_failed}
   {
@@ -86,16 +110,17 @@ public:
      last_index - std::min(summaries_size, last_index);
     const auto asset_snapshot = self.asset_.get_snapshot(asset_lookback);
 
-    const auto& series_registry = self.strategy_.series_registry();
-    auto context = DefaultMethodContext{series_registry,
+    const auto& series_methods = self.series_methods_;
+    auto context = DefaultMethodContext{series_methods,
                                         series_evaluation_results,
                                         self.backtest_inputs_,
                                         summaries.size()};
 
-    for(const auto& [series_name, series] : series_registry) {
+    for(const auto& [series_name, series_method] : series_methods) {
       const auto series_value =
-       evaluate_series_method(series, asset_snapshot, context);
-      series_evaluation_results.put(series, series_value);
+       evaluate_series_method(series_method, asset_snapshot, context);
+      series_evaluation_results.alias(series_name, series_method);
+      series_evaluation_results.put(series_method, series_value);
     }
 
     auto summary = !summaries.empty() ? summaries.back()
@@ -188,8 +213,6 @@ public:
 private:
   const Asset& asset_;
 
-  const Strategy& strategy_;
-
   const Market& market_;
 
   const Broker& broker_;
@@ -199,6 +222,23 @@ private:
   const OrderedNamedRegistry<ConstrainedNumericInput>& backtest_inputs_;
 
   double total_equity_;
+
+  OrderedNamedRegistry<AnySeriesMethod> series_methods_;
+
+  AnySeriesMethod long_entry_method_;
+  AnySeriesMethod long_exit_method_;
+  AnySeriesMethod long_pyramiding_signal_;
+  std::size_t long_pyramiding_max_layers_;
+
+  AnySeriesMethod short_entry_method_;
+  AnySeriesMethod short_exit_method_;
+  AnySeriesMethod short_pyramiding_signal_;
+  std::size_t short_pyramiding_max_layers_;
+
+  bool stop_loss_enabled_;
+  bool stop_loss_trailing_enabled_;
+  bool take_profit_enabled_;
+  double take_profit_r_multiple_;
 
   std::size_t pyramiding_layers_;
 
@@ -214,7 +254,7 @@ private:
     const auto prev_snapshot = asset_snapshot[1];
 
     if(static_cast<bool>(evaluate_series_method(
-        self.strategy_.long_entry_filter(), prev_snapshot, context))) {
+        self.long_entry_method_, prev_snapshot, context))) {
       const auto entry_price = asset_snapshot.open();
       const auto risk_value = self.profile_.capital_risk() * self.total_equity_;
       const auto r_distance =
@@ -224,12 +264,11 @@ private:
       const auto position_size = risk_value / r_distance;
 
       const auto stop_loss_price =
-       self.strategy_.stop_loss_enabled() ? entry_price - r_distance : NAN;
-      const auto is_stop_loss_trailing =
-       self.strategy_.stop_loss_trailing_enabled();
+       self.stop_loss_enabled_ ? entry_price - r_distance : NAN;
+      const auto is_stop_loss_trailing = self.stop_loss_trailing_enabled_;
       const auto take_profit_price =
-       self.strategy_.take_profit_enabled()
-        ? entry_price + r_distance * self.strategy_.take_profit_r_multiple()
+       self.take_profit_enabled_
+        ? entry_price + r_distance * self.take_profit_r_multiple_
         : NAN;
 
       result = TradeEntry{position_size,
@@ -252,7 +291,7 @@ private:
     const auto prev_snapshot = asset_snapshot[1];
 
     if(static_cast<bool>(evaluate_series_method(
-        self.strategy_.short_entry_filter(), prev_snapshot, context))) {
+        self.short_entry_method_, prev_snapshot, context))) {
       const auto entry_price = asset_snapshot.open();
       const auto risk_value = self.profile_.capital_risk() * self.total_equity_;
       const auto r_distance =
@@ -260,12 +299,11 @@ private:
       const auto position_size = risk_value / r_distance;
 
       const auto stop_loss_price =
-       self.strategy_.stop_loss_enabled() ? entry_price - r_distance : NAN;
-      const auto is_stop_loss_trailing =
-       self.strategy_.stop_loss_trailing_enabled();
+       self.stop_loss_enabled_ ? entry_price - r_distance : NAN;
+      const auto is_stop_loss_trailing = self.stop_loss_trailing_enabled_;
       const auto take_profit_price =
-       self.strategy_.take_profit_enabled()
-        ? entry_price + r_distance * self.strategy_.take_profit_r_multiple()
+       self.take_profit_enabled_
+        ? entry_price + r_distance * self.take_profit_r_multiple_
         : NAN;
 
       result = TradeEntry{position_size,
@@ -287,13 +325,9 @@ private:
 
     const auto prev_snapshot = asset_snapshot[1];
 
-    const auto& pyramiding =
-     self.strategy_.positions().long_side().pyramiding();
-    const auto pyramiding_signal = pyramiding.signal();
-    const auto pyramiding_max_layers = pyramiding.max_layers();
-    if(static_cast<bool>(
-        evaluate_series_method(pyramiding_signal, prev_snapshot, context)) &&
-       self.pyramiding_layers_ < pyramiding_max_layers) {
+    if(static_cast<bool>(evaluate_series_method(
+        self.long_pyramiding_signal_, prev_snapshot, context)) &&
+       self.pyramiding_layers_ < self.long_pyramiding_max_layers_) {
       const auto entry_price = asset_snapshot.open();
       const auto risk_value = self.profile_.capital_risk() * self.total_equity_;
       const auto r_distance =
@@ -301,12 +335,11 @@ private:
       const auto position_size = risk_value / r_distance;
 
       const auto stop_loss_price =
-       self.strategy_.stop_loss_enabled() ? entry_price - r_distance : NAN;
-      const auto is_stop_loss_trailing =
-       self.strategy_.stop_loss_trailing_enabled();
+       self.stop_loss_enabled_ ? entry_price - r_distance : NAN;
+      const auto is_stop_loss_trailing = self.stop_loss_trailing_enabled_;
       const auto take_profit_price =
-       self.strategy_.take_profit_enabled()
-        ? entry_price + r_distance * self.strategy_.take_profit_r_multiple()
+       self.take_profit_enabled_
+        ? entry_price + r_distance * self.take_profit_r_multiple_
         : NAN;
 
       result = TradeEntry{position_size,
@@ -328,14 +361,9 @@ private:
 
     const auto prev_snapshot = asset_snapshot[1];
 
-    const auto& pyramiding =
-     self.strategy_.positions().short_side().pyramiding();
-    const auto pyramiding_signal = pyramiding.signal();
-    const auto pyramiding_max_layers = pyramiding.max_layers();
-
-    if(static_cast<bool>(
-        evaluate_series_method(pyramiding_signal, prev_snapshot, context)) &&
-       self.pyramiding_layers_ < pyramiding_max_layers) {
+    if(static_cast<bool>(evaluate_series_method(
+        self.short_pyramiding_signal_, prev_snapshot, context)) &&
+       self.pyramiding_layers_ < self.short_pyramiding_max_layers_) {
       const auto entry_price = asset_snapshot.open();
       const auto risk_value = self.profile_.capital_risk() * self.total_equity_;
       const auto r_distance =
@@ -343,12 +371,11 @@ private:
       const auto position_size = risk_value / r_distance;
 
       const auto stop_loss_price =
-       self.strategy_.stop_loss_enabled() ? entry_price - r_distance : NAN;
-      const auto is_stop_loss_trailing =
-       self.strategy_.stop_loss_trailing_enabled();
+       self.stop_loss_enabled_ ? entry_price - r_distance : NAN;
+      const auto is_stop_loss_trailing = self.stop_loss_trailing_enabled_;
       const auto take_profit_price =
-       self.strategy_.take_profit_enabled()
-        ? entry_price + r_distance * self.strategy_.take_profit_r_multiple()
+       self.take_profit_enabled_
+        ? entry_price + r_distance * self.take_profit_r_multiple_
         : NAN;
 
       result = TradeEntry{position_size,
@@ -385,12 +412,12 @@ private:
 
     if(is_long_direction) {
       if(static_cast<bool>(evaluate_series_method(
-          self.strategy_.long_exit_filter(), prev_snapshot, context))) {
+          self.long_exit_method_, prev_snapshot, context))) {
         return TradeExit{position_size, exit_price, TradeExit::Reason::signal};
       }
     } else if(is_short_direction) {
       if(static_cast<bool>(evaluate_series_method(
-          self.strategy_.short_exit_filter(), prev_snapshot, context))) {
+          self.short_exit_method_, prev_snapshot, context))) {
         return TradeExit{position_size, exit_price, TradeExit::Reason::signal};
       }
     }

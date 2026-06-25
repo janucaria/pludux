@@ -96,7 +96,6 @@ target_sources(${PROJECT_NAME}
         src/method_key.cxx
         src/ordered_named_registry.cxx
         src/constrained_numeric_input.cxx
-        src/series_method_registry.cxx
         src/method_contextable.cxx
         src/evaluate_series_method.cxx
         src/hash_series_method.cxx
@@ -105,6 +104,57 @@ target_sources(${PROJECT_NAME}
         src/methods/any_series_method.cxx
         
         src/methods.cxx
+
+        src/nodes/input_node.cxx
+        src/nodes/value_node.cxx
+        src/nodes/data_node.cxx
+        src/nodes/ohlcv_node.cxx
+        src/nodes/erased_node.cxx
+        src/nodes/change_node.cxx
+        src/nodes/lookback_node.cxx
+        src/nodes/select_output_node.cxx
+        src/nodes/series_node.cxx
+        src/nodes/series_value_node.cxx
+
+        src/nodes/operators_node.cxx
+        src/nodes/highest_node.cxx
+        src/nodes/lowest_node.cxx
+        src/nodes/percentage_node.cxx
+        src/nodes/stddev_node.cxx
+
+        src/nodes/sma_node.cxx
+        src/nodes/ema_node.cxx
+        src/nodes/rma_node.cxx
+        src/nodes/wma_node.cxx
+        src/nodes/hma_node.cxx
+        src/nodes/adaptive_ma_node.cxx
+        src/nodes/macd_node.cxx
+        
+        src/nodes/tr_node.cxx
+        src/nodes/atr_node.cxx
+
+        src/nodes/roc_node.cxx
+        src/nodes/rsi_node.cxx
+        src/nodes/rvol_node.cxx
+
+        src/nodes/bb_node.cxx
+        src/nodes/kc_node.cxx
+        src/nodes/donchian_channel_node.cxx
+
+        src/nodes/stoch_node.cxx
+        src/nodes/stoch_rsi_node.cxx
+        
+        src/nodes/all_of_node.cxx
+        src/nodes/any_of_node.cxx
+        src/nodes/comparison_node.cxx
+        src/nodes/boolean_node.cxx
+        src/nodes/logical_node.cxx
+        src/nodes/crossover_node.cxx
+        src/nodes/crossunder_node.cxx
+
+        src/nodes.cxx
+
+        src/node_to_erased_method.cxx
 
         src/series_evaluation_results.cxx
         src/default_method_context.cxx
