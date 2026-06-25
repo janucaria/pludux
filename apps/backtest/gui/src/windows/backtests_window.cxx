@@ -345,8 +345,7 @@ private:
 
         ImGui::SeparatorText("Inputs");
 
-        for(auto id_counter = 0;
-            auto& [input_name, backtest_input] : backtest_inputs) {
+        for(auto id_counter = 0; auto& backtest_input : backtest_inputs) {
           ImGui::PushID(id_counter++);
 
           ImGui::Text("%s: ", backtest_input.label().c_str());
@@ -354,7 +353,7 @@ private:
 
           auto input_value = backtest_input.value();
           switch(backtest_input.representation()) {
-          case pludux::ConstrainedNumericInput::ValueRepresentation::Decimal: {
+          case pludux::NumericInputNode::ValueRepresentation::Decimal: {
             auto editable = input_value;
             if(ImGui::InputScalar(
                 "##input_value", ImGuiDataType_Double, &editable)) {
@@ -362,8 +361,7 @@ private:
             }
             break;
           }
-          case pludux::ConstrainedNumericInput::ValueRepresentation::
-           SignedInteger: {
+          case pludux::NumericInputNode::ValueRepresentation::SignedInteger: {
             auto editable = static_cast<std::int64_t>(input_value);
             if(ImGui::InputScalar(
                 "##input_value", ImGuiDataType_S64, &editable)) {
@@ -371,7 +369,7 @@ private:
             }
             break;
           }
-          case pludux::ConstrainedNumericInput::ValueRepresentation::
+          case pludux::NumericInputNode::ValueRepresentation::
            UnsignedInteger: {
             auto editable = static_cast<std::uint64_t>(input_value);
             if(ImGui::InputScalar(

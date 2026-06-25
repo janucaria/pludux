@@ -3,6 +3,7 @@ module;
 #include <cstddef>
 #include <string>
 #include <utility>
+#include <vector>
 
 export module pludux.backtest:backtest;
 
@@ -33,7 +34,7 @@ public:
            MarketStoreHandle market_handle,
            BrokerStoreHandle broker_handle,
            ProfileStoreHandle profile_handle,
-           OrderedNamedRegistry<ConstrainedNumericInput> inputs = {})
+           std::vector<NumericInputNode> inputs = {})
   : name_{std::move(name)}
   , initial_capital_{initial_capital}
   , asset_handle_{std::move(asset_handle)}
@@ -124,13 +125,13 @@ public:
   }
 
   auto inputs(this const Backtest& self) noexcept
-   -> const OrderedNamedRegistry<ConstrainedNumericInput>&
+   -> const std::vector<NumericInputNode>&
   {
     return self.inputs_;
   }
 
   void inputs(this Backtest& self,
-              OrderedNamedRegistry<ConstrainedNumericInput> new_inputs) noexcept
+              std::vector<NumericInputNode> new_inputs) noexcept
   {
     self.inputs_ = std::move(new_inputs);
   }
@@ -157,7 +158,7 @@ private:
   BrokerStoreHandle broker_handle_;
   ProfileStoreHandle profile_handle_;
 
-  OrderedNamedRegistry<ConstrainedNumericInput> inputs_;
+  std::vector<NumericInputNode> inputs_;
 };
 
 } // namespace pludux::backtest

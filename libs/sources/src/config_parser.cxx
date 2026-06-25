@@ -856,17 +856,38 @@ auto make_default_registered_config_parser() -> ConfigParser
   config_parser.register_node_parser(
    "INPUT",
    [](const ConfigParser&, const ErasedNode& node) {
-     const auto input_node = node_cast<InputNode>(node);
+     const auto input_node = node_cast<NumericInputNode>(node);
      if(!input_node) {
        return jsoncons::ojson::null();
      }
      auto serialized_node = jsoncons::ojson{};
-     serialized_node["name"] = input_node->name();
+     serialized_node["label"] = input_node->label();
+     serialized_node["representation"] = [&]() -> std::string {
+       switch(input_node->representation()) {
+       case NumericInputNode::ValueRepresentation::SignedInteger:
+         return "SignedInteger";
+       case NumericInputNode::ValueRepresentation::UnsignedInteger:
+         return "UnsignedInteger";
+       case NumericInputNode::ValueRepresentation::Decimal:
+       default:
+         return "Decimal";
+       }
+     }();
+     serialized_node["value"] = input_node->value();
      return serialized_node;
    },
    [](ConfigParser::Parser, const jsoncons::ojson& params) {
-     const auto name = get_param_or<std::string>(params, "name", "");
-     return ErasedNode{InputNode{name}};
+     const auto label = get_param_or<std::string>(params, "label", "");
+     const auto representation_str =
+      get_param_or<std::string>(params, "representation", "Decimal");
+     const auto value = get_param_or<double>(params, "value", 0.0);
+     const auto representation =
+      representation_str == "SignedInteger"
+       ? NumericInputNode::ValueRepresentation::SignedInteger
+      : representation_str == "UnsignedInteger"
+        ? NumericInputNode::ValueRepresentation::UnsignedInteger
+        : NumericInputNode::ValueRepresentation::Decimal;
+     return ErasedNode{NumericInputNode{label, representation, value}};
    });
 
   config_parser.register_node_parser(

@@ -21,9 +21,8 @@ TEST(SeriesReferenceMethodTest, RunAllMethodClose)
   series_methods.set("close", close_method);
 
   auto results_collector = SeriesEvaluationResults{};
-  auto empty_inputs = OrderedNamedRegistry<ConstrainedNumericInput>{};
   auto context =
-   DefaultMethodContext{series_methods, results_collector, empty_inputs};
+   DefaultMethodContext{series_methods, results_collector};
 
   const auto open_ref_method = SeriesNodeMethod{"open"};
   EXPECT_EQ(evaluate_series_method(open_ref_method, asset_snapshot[0], context),
@@ -52,9 +51,8 @@ TEST(SeriesReferenceMethodTest, InvalidField)
   series_methods.set("close", close_method);
 
   auto results_collector = SeriesEvaluationResults{};
-  auto empty_inputs = OrderedNamedRegistry<ConstrainedNumericInput>{};
   auto context =
-   DefaultMethodContext{series_methods, results_collector, empty_inputs};
+   DefaultMethodContext{series_methods, results_collector};
 
   const auto not_found_ref_method = SeriesNodeMethod{"invalid"};
 

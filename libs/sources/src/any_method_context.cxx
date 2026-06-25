@@ -55,10 +55,6 @@ public:
   , get_index_func_{[](const std::any& impl) -> std::size_t {
     return std::any_cast<UImpl>(impl).index();
   }}
-  , get_input_value_{
-     [](const std::any& impl, const std::string& key) -> double {
-       return std::any_cast<UImpl>(impl).get_input_value(key);
-     }}
   {
   }
 
@@ -100,12 +96,6 @@ public:
     return self.get_index_func_(self.impl_);
   }
 
-  auto get_input_value(this const AnySeriesMethodContext& self,
-                       const std::string& key) noexcept -> double
-  {
-    return self.get_input_value_(self.impl_, key);
-  }
-
   template<typename UImpl>
   friend auto
   series_method_context_cast(const AnySeriesMethodContext& method) noexcept
@@ -142,8 +132,6 @@ private:
 
   std::function<auto(const std::any&)->std::size_t> get_index_func_;
 
-  std::function<auto(const std::any&, const std::string&)->double>
-   get_input_value_;
 };
 
 } // namespace pludux

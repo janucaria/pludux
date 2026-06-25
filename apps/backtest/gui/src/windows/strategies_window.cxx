@@ -98,7 +98,7 @@ auto get_default_series_node(const std::string& series_id) -> ErasedNode
   } else if(series_id == "LOOKBACK") {
     return LookbackNode{CloseNode{}, 1};
   } else if(series_id == "INPUT") {
-    return InputNode{};
+    return NumericInputNode{"Input"};
   } else if(series_id == "ADD") {
     return AddNode{CloseNode{}, CloseNode{}};
   } else if(series_id == "SUBTRACT") {
@@ -191,7 +191,7 @@ auto get_series_node_id(const ErasedNode& node) -> std::string
     return "ABS_DIFF";
   } else if(node_cast<LookbackNode>(node)) {
     return "LOOKBACK";
-  } else if(node_cast<InputNode>(node)) {
+  } else if(node_cast<NumericInputNode>(node)) {
     return "INPUT";
   }
 
@@ -827,132 +827,6 @@ private:
     }
 
     {
-      ImGui::SeparatorText("Inputs");
-
-      auto inputs = self.editing_strategy_ptr_->inputs();
-      std::unordered_map<std::string, std::string> changed_input_names;
-      std::vector<std::string> input_names_to_remove;
-      for(auto id_counter = 0; auto& [input_name, input_value] : inputs) {
-        ImGui::PushID(id_counter++);
-
-        ImGui::Text("Name:");
-        ImGui::SameLine();
-        auto updated_input_name = input_name;
-        ImGui::InputText("##input_name", &updated_input_name);
-        if(ImGui::IsItemDeactivatedAfterEdit()) {
-          if(updated_input_name != input_name) {
-            changed_input_names[input_name] = updated_input_name;
-          }
-        }
-
-        ImGui::Text("Label:");
-        ImGui::SameLine();
-        auto input_label = input_value.label();
-        if(ImGui::InputText("##input_label", &input_label)) {
-          input_value.label(std::move(input_label));
-        }
-
-        auto formatted_value = input_value.value();
-        auto input_representation = input_value.representation();
-        auto value_changed = false;
-
-        constexpr std::array<const char*, 3> input_types{
-         "Decimal", "Signed Integer", "Unsigned Integer"};
-
-        auto selected_type_index = static_cast<int>(input_representation);
-
-        ImGui::Text("Type:");
-        ImGui::SameLine();
-        if(ImGui::Combo("##input_type",
-                        &selected_type_index,
-                        input_types.data(),
-                        static_cast<int>(input_types.size()))) {
-          input_representation =
-           static_cast<pludux::ConstrainedNumericInput::ValueRepresentation>(
-            selected_type_index);
-          input_value.representation(input_representation);
-          formatted_value = input_value.value();
-          value_changed = true;
-        }
-
-        ImGui::Text("Value:");
-        ImGui::SameLine();
-        if(input_representation ==
-           pludux::ConstrainedNumericInput::ValueRepresentation::Decimal) {
-          auto editable = formatted_value;
-          if(ImGui::InputDouble("##input_value", &editable)) {
-            formatted_value = editable;
-            value_changed = true;
-          }
-        } else if(input_representation == pludux::ConstrainedNumericInput::
-                                           ValueRepresentation::SignedInteger) {
-          auto editable = static_cast<std::int64_t>(formatted_value);
-          if(ImGui::InputScalar(
-              "##input_value", ImGuiDataType_S64, &editable)) {
-            formatted_value = static_cast<double>(editable);
-            value_changed = true;
-          }
-        } else {
-          auto editable = static_cast<std::uint64_t>(formatted_value);
-          if(ImGui::InputScalar(
-              "##input_value", ImGuiDataType_U64, &editable)) {
-            formatted_value = static_cast<double>(editable);
-            value_changed = true;
-          }
-        }
-
-        if(value_changed) {
-          input_value.value(formatted_value);
-        }
-
-        ImGui::SameLine();
-        if(ImGui::Button("Delete Input")) {
-          input_names_to_remove.push_back(input_name);
-        }
-
-        ImGui::Separator();
-        ImGui::PopID();
-      }
-
-      for(const auto& input_name : input_names_to_remove) {
-        inputs.remove(input_name);
-      }
-
-      for(auto& [old_name, new_name] : changed_input_names) {
-        if(std::ranges::find(input_names_to_remove, old_name) !=
-           input_names_to_remove.end()) {
-          continue;
-        }
-
-        if(!inputs.rename(old_name, new_name)) {
-          const auto error_message = std::format(
-           "Failed to rename input '{}' to '{}'.", old_name, new_name);
-          context.alert(error_message);
-        }
-      }
-
-      if(ImGui::Button("Add Input")) {
-        auto suffix = inputs.size() + 1;
-        auto new_input_name = std::format("new_input_{}", suffix);
-        while(inputs.has(new_input_name)) {
-          ++suffix;
-          new_input_name = std::format("new_input_{}", suffix);
-        }
-
-        inputs.set(
-         new_input_name,
-         pludux::ConstrainedNumericInput{
-          new_input_name,
-          pludux::ConstrainedNumericInput::ValueRepresentation::Decimal,
-          0.0});
-      }
-
-      self.editing_strategy_ptr_->inputs(std::move(inputs));
-
-      ImGui::Text("");
-    }
-
-    {
       ImGui::SeparatorText("Series Nodes");
 
       auto& series_nodes = self.editing_strategy_ptr_->series_nodes();
@@ -1355,13 +1229,6 @@ private:
                 context.alert(error_message);
               } else {
                 series_node = get_default_series_node(series_id);
-
-                auto& inputs = self.editing_strategy_ptr_->inputs();
-                auto* input_node = node_cast<InputNode>(series_node);
-                if(input_node && !inputs.empty()) {
-                  const auto& first_input = *inputs.begin();
-                  input_node->name(first_input.first);
-                }
               }
             }
           }
@@ -1395,7 +1262,7 @@ private:
                           SeriesValueNode,
                           DataNode,
                           LookbackNode,
-                          InputNode,
+                          NumericInputNode,
 
                           BbNode,
                           KcNode,
@@ -1663,8 +1530,7 @@ private:
           {KcBandNodeType::Tr, "True Range"},
           {KcBandNodeType::RangeHighLow, "Range (High-Low)"}};
 
-        const auto band_type_str =
-         band_type_options.at(node.band_node_type());
+        const auto band_type_str = band_type_options.at(node.band_node_type());
         if(ImGui::BeginCombo("##kc_band_type", band_type_str.c_str())) {
           for(const auto& [band_type_option, band_type_option_str] :
               band_type_options) {
@@ -2056,26 +1922,64 @@ private:
   }
 
   void render_series_node_params(this auto& self,
-                                 InputNode& node,
+                                 NumericInputNode& node,
                                  WindowContext& context)
   {
-    ImGui::Text("Name:");
+    ImGui::Text("Label:");
     ImGui::SameLine();
 
-    const auto selected_name = node.name();
-    if(ImGui::BeginCombo("##input_name", selected_name.c_str())) {
-      const auto& strategy_inputs = self.editing_strategy_ptr_->inputs();
-      for(const auto& [input_name, input_value] : strategy_inputs) {
-        const auto is_selected = selected_name == input_name;
-        if(ImGui::Selectable(input_name.c_str(), is_selected)) {
-          node.name(input_name);
-        }
+    auto input_label = node.label();
+    if(ImGui::InputText("##input_label", &input_label)) {
+      node.label(std::move(input_label));
+    }
 
-        if(is_selected) {
-          ImGui::SetItemDefaultFocus();
-        }
+    auto input_representation = node.representation();
+    auto formatted_value = node.value();
+    auto value_changed = false;
+
+    constexpr std::array<const char*, 3> input_types{
+     "Decimal", "Signed Integer", "Unsigned Integer"};
+    auto selected_type_index = static_cast<int>(input_representation);
+
+    ImGui::Text("Type:");
+    ImGui::SameLine();
+    if(ImGui::Combo("##input_type",
+                    &selected_type_index,
+                    input_types.data(),
+                    static_cast<int>(input_types.size()))) {
+      input_representation =
+       static_cast<pludux::NumericInputNode::ValueRepresentation>(
+        selected_type_index);
+      node.representation(input_representation);
+      value_changed = true;
+    }
+
+    ImGui::Text("Value:");
+    ImGui::SameLine();
+    if(input_representation ==
+       pludux::NumericInputNode::ValueRepresentation::Decimal) {
+      auto editable = formatted_value;
+      if(ImGui::InputDouble("##input_value", &editable)) {
+        formatted_value = editable;
+        value_changed = true;
       }
-      ImGui::EndCombo();
+    } else if(input_representation ==
+              pludux::NumericInputNode::ValueRepresentation::SignedInteger) {
+      auto editable = static_cast<std::int64_t>(formatted_value);
+      if(ImGui::InputScalar("##input_value", ImGuiDataType_S64, &editable)) {
+        formatted_value = static_cast<double>(editable);
+        value_changed = true;
+      }
+    } else {
+      auto editable = static_cast<std::uint64_t>(formatted_value);
+      if(ImGui::InputScalar("##input_value", ImGuiDataType_U64, &editable)) {
+        formatted_value = static_cast<double>(editable);
+        value_changed = true;
+      }
+    }
+
+    if(value_changed) {
+      node.value(formatted_value);
     }
   }
 

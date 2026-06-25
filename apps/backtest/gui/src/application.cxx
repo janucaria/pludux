@@ -151,6 +151,14 @@ public:
 
     const auto& backtest_handles = app_state.get_backtest_handles();
     for(const auto& backtest_handle : backtest_handles) {
+      auto* backtest_ptr = app_state.get_backtest_if_present(backtest_handle);
+      if(backtest_ptr) {
+        const auto* strategy_ptr =
+         app_state.get_strategy_if_present(backtest_ptr->strategy_handle());
+        if(strategy_ptr) {
+          self.resolve_and_sync_backtest_inputs(*backtest_ptr, *strategy_ptr);
+        }
+      }
       self.recreate_backtest_runner(app_state, backtest_handle);
     }
   }
@@ -274,7 +282,7 @@ public:
            app_state.get_strategy_if_present(backtest_ptr->strategy_handle());
           if(strategy_ptr) {
             self.resolve_and_sync_backtest_inputs(*backtest_ptr,
-                                                  strategy_ptr->inputs());
+                                                  *strategy_ptr);
           }
 
           self.running_backtests_.erase(backtest_handle);
@@ -309,27 +317,17 @@ private:
   void resolve_and_sync_backtest_inputs(
    this Application& self,
    backtest::Backtest& backtest,
-   const pludux::OrderedNamedRegistry<pludux::ConstrainedNumericInput>&
-    strategy_inputs) noexcept
+   const backtest::Strategy& strategy) noexcept
   {
-    auto synced_inputs =
-     pludux::OrderedNamedRegistry<pludux::ConstrainedNumericInput>{};
+    auto synced_inputs = backtest::collect_numeric_inputs(strategy);
+    const auto& previous_inputs = backtest.inputs();
 
-    for(const auto& [input_name, strategy_input] : strategy_inputs) {
-      const auto backtest_input_opt = backtest.inputs().get(input_name);
-
-      if(!backtest_input_opt.has_value()) {
-        synced_inputs.set(input_name, strategy_input);
+    for(auto index = std::size_t{0}; index < synced_inputs.size(); ++index) {
+      if(index >= previous_inputs.size()) {
         continue;
       }
 
-      auto synced_input = backtest_input_opt.value();
-      const auto current_numeric_value = synced_input.value();
-
-      synced_input.label(strategy_input.label());
-      synced_input.representation(strategy_input.representation());
-      synced_input.value(current_numeric_value);
-      synced_inputs.set(input_name, std::move(synced_input));
+      synced_inputs[index].value(previous_inputs[index].value());
     }
 
     backtest.inputs(std::move(synced_inputs));
@@ -356,10 +354,12 @@ private:
       return;
     }
 
+    auto input_context = NodeToErasedMethodContext{backtest.inputs()};
     auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
     for(const auto& [series_name, series_node] :
         strategy_ptr->series_nodes()) {
-      series_methods.set(series_name, node_to_erased_method(series_node));
+      series_methods.set(series_name,
+                         node_to_erased_method(series_node, input_context));
     }
 
     const auto& long_pyramiding =
@@ -373,19 +373,24 @@ private:
                               *market_ptr,
                               *broker_ptr,
                               *profile_ptr,
-                              backtest.inputs(),
                               std::move(series_methods),
                               node_to_erased_method(
-                               strategy_ptr->long_entry_node()),
+                               strategy_ptr->long_entry_node(),
+                               input_context),
                               node_to_erased_method(
-                               strategy_ptr->long_exit_node()),
-                              node_to_erased_method(long_pyramiding.signal()),
+                               strategy_ptr->long_exit_node(),
+                               input_context),
+                              node_to_erased_method(long_pyramiding.signal(),
+                                                    input_context),
                               long_pyramiding.max_layers(),
                               node_to_erased_method(
-                               strategy_ptr->short_entry_node()),
+                               strategy_ptr->short_entry_node(),
+                               input_context),
                               node_to_erased_method(
-                               strategy_ptr->short_exit_node()),
-                              node_to_erased_method(short_pyramiding.signal()),
+                               strategy_ptr->short_exit_node(),
+                               input_context),
+                              node_to_erased_method(short_pyramiding.signal(),
+                                                    input_context),
                               short_pyramiding.max_layers(),
                               strategy_ptr->stop_loss_enabled(),
                               strategy_ptr->stop_loss_trailing_enabled(),

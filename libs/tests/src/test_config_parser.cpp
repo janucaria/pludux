@@ -26,11 +26,13 @@ using SignalAndNode = pludux::LogicalAndNode;
 using SignalOrNode = pludux::LogicalOrNode;
 using SignalXorNode = pludux::LogicalXorNode;
 
+auto node_context = NodeToErasedMethodContext{};
+
 class ParsedConfigNodeMethod {
 public:
   ParsedConfigNodeMethod(ErasedNode node)
   : node_{std::move(node)}
-  , method_{node_to_erased_method(node_)}
+  , method_{node_to_erased_method(node_, node_context)}
   {
   }
 
@@ -40,7 +42,8 @@ public:
     return self.method_;
   }
 
-  auto node(this const ParsedConfigNodeMethod& self) noexcept -> const ErasedNode&
+  auto node(this const ParsedConfigNodeMethod& self) noexcept
+   -> const ErasedNode&
   {
     return self.node_;
   }
@@ -57,8 +60,8 @@ private:
 };
 
 template<typename UMethod>
-auto series_method_cast(const ParsedConfigNodeMethod& parsed_node_method) noexcept
- -> const UMethod*
+auto series_method_cast(
+ const ParsedConfigNodeMethod& parsed_node_method) noexcept -> const UMethod*
 {
   const auto& method = parsed_node_method.method();
   return series_method_cast<UMethod>(method);
@@ -68,12 +71,14 @@ class ConfigParserTest : public ::testing::Test {
 protected:
   ConfigParser config_parser;
 
-  auto parse_node_method(const jsoncons::ojson& config) -> ParsedConfigNodeMethod
+  auto parse_node_method(const jsoncons::ojson& config)
+   -> ParsedConfigNodeMethod
   {
     return ParsedConfigNodeMethod{config_parser.parse_node(config)};
   }
 
-  auto serialize_node_method(const ParsedConfigNodeMethod& parsed_node_method) const
+  auto
+  serialize_node_method(const ParsedConfigNodeMethod& parsed_node_method) const
    -> jsoncons::ojson
   {
     return config_parser.serialize_node(parsed_node_method.node());
@@ -144,8 +149,7 @@ TEST_F(ConfigParserTest, ParseScreenerSeriesNodeMethod)
   EXPECT_EQ(series_node_method->name(), "close");
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -169,8 +173,7 @@ TEST_F(ConfigParserTest, ParseScreenerSeriesValueMethod)
   EXPECT_EQ(series_value_method->name(), "close");
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -200,9 +203,35 @@ TEST_F(ConfigParserTest, ParseScreenerLookbackMethod)
   ASSERT_NE(source_method, nullptr);
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
+}
+
+TEST_F(ConfigParserTest, ParseNumericInputNode)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "INPUT",
+      "params": {
+        "label": "Length",
+        "representation": "UnsignedInteger",
+        "value": 14.9
+      }
+    }
+  )");
+
+  const auto parsed_node = config_parser.parse_node(config);
+  const auto* input_node = node_cast<NumericInputNode>(parsed_node);
+
+  ASSERT_NE(input_node, nullptr);
+  EXPECT_EQ(input_node->label(), "Length");
+  EXPECT_EQ(input_node->representation(),
+            NumericInputNode::ValueRepresentation::UnsignedInteger);
+  EXPECT_DOUBLE_EQ(input_node->value(), 14.9);
+
+  const auto serialized_config = config_parser.serialize_node(parsed_node);
+  const auto deserialized_node = config_parser.parse_node(serialized_config);
+  EXPECT_EQ(parsed_node, deserialized_node);
 }
 
 TEST_F(ConfigParserTest, ParseScreenerSelectOutputMethod)
@@ -245,8 +274,7 @@ TEST_F(ConfigParserTest, ParseScreenerSelectOutputMethod)
   EXPECT_EQ(macd_method->signal_period(), 9);
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -264,8 +292,7 @@ TEST_F(ConfigParserTest, ParseScreenerOpenMethod)
   ASSERT_NE(open_method, nullptr);
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -283,8 +310,7 @@ TEST_F(ConfigParserTest, ParseScreenerHighMethod)
   ASSERT_NE(high_method, nullptr);
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -302,8 +328,7 @@ TEST_F(ConfigParserTest, ParseScreenerLowMethod)
   ASSERT_NE(low_method, nullptr);
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -321,8 +346,7 @@ TEST_F(ConfigParserTest, ParseScreenerCloseMethod)
   ASSERT_NE(close_method, nullptr);
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -340,8 +364,7 @@ TEST_F(ConfigParserTest, ParseScreenerVolumeMethod)
   ASSERT_NE(volume_method, nullptr);
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -376,8 +399,7 @@ TEST_F(ConfigParserTest, ParseScreenerSmaMethod)
   EXPECT_EQ(source->field(), "close");
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -412,8 +434,7 @@ TEST_F(ConfigParserTest, ParseScreenerEmaMethod)
   EXPECT_EQ(source->field(), "open");
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -448,8 +469,7 @@ TEST_F(ConfigParserTest, ParseScreenerWmaMethod)
   EXPECT_EQ(source->field(), "high");
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -484,8 +504,7 @@ TEST_F(ConfigParserTest, ParseScreenerRmaMethod)
   EXPECT_EQ(source->field(), "low");
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -520,8 +539,7 @@ TEST_F(ConfigParserTest, ParseScreenerHmaMethod)
   EXPECT_EQ(source->field(), "volume");
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -556,8 +574,7 @@ TEST_F(ConfigParserTest, ParseScreenerRsiMethod)
   EXPECT_EQ(source->field(), "close");
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -592,8 +609,7 @@ TEST_F(ConfigParserTest, ParseScreenerStddevMethod)
   EXPECT_EQ(source->field(), "close");
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -616,8 +632,7 @@ TEST_F(ConfigParserTest, ParseScreenerValueMethod)
   EXPECT_EQ(value_method->value(), 100);
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -640,8 +655,7 @@ TEST_F(ConfigParserTest, ParseScreenerDataMethod)
   EXPECT_EQ(field_method->field(), "open");
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -666,8 +680,7 @@ TEST_F(ConfigParserTest, ParseScreenerAtrMethod)
   EXPECT_EQ(atr_method->ma_smoothing_type(), MaMethodType::Rma);
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -702,8 +715,7 @@ TEST_F(ConfigParserTest, ParseScreenerBbMethod)
   EXPECT_EQ(bb_method->stddev(), 2.0);
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -739,8 +751,7 @@ TEST_F(ConfigParserTest, ParseScreenerMacdMethod)
   EXPECT_EQ(macd_method->signal_period(), 9);
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -767,8 +778,7 @@ TEST_F(ConfigParserTest, ParseScreenerStochMethod)
   EXPECT_EQ(stoch_method->d_period(), 3);
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -807,8 +817,7 @@ TEST_F(ConfigParserTest, ParseScreenerStochRsiMethod)
   EXPECT_EQ(stoch_rsi_method->d_period(), 3);
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -848,8 +857,7 @@ TEST_F(ConfigParserTest, ParseScreenerKcMethod)
   EXPECT_EQ(kc_method->multiplier(), 1.0);
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -872,8 +880,7 @@ TEST_F(ConfigParserTest, ParseScreenerDonchianChannelMethod)
   EXPECT_EQ(dc_method->period(), 5);
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -908,8 +915,7 @@ TEST_F(ConfigParserTest, ParseScreenerAddMethod)
   EXPECT_EQ(addend->value(), 25);
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -950,8 +956,7 @@ TEST_F(ConfigParserTest, ParseScreenerSubtractMethod)
   EXPECT_EQ(subtrahend->value(), 30);
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -993,8 +998,7 @@ TEST_F(ConfigParserTest, ParseScreenerMultiplyMethod)
   EXPECT_EQ(multiplier->value(), 5);
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -1034,8 +1038,7 @@ TEST_F(ConfigParserTest, ParseScreenerDivideMethod)
   EXPECT_EQ(divisor->value(), 2);
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -1067,8 +1070,7 @@ TEST_F(ConfigParserTest, ParseScreenerNegateMethod)
   EXPECT_EQ(operand->value(), 42);
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -1099,8 +1101,7 @@ TEST_F(ConfigParserTest, ParseScreenerSqrtMethod)
   EXPECT_EQ(operand->value(), 16);
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -1131,8 +1132,7 @@ TEST_F(ConfigParserTest, ParseScreenerChangeMethod)
   EXPECT_EQ(source->field(), "close");
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -1173,8 +1173,7 @@ TEST_F(ConfigParserTest, ParseScreenerAbsDiffMethod)
   EXPECT_EQ(subtrahend->field(), "low");
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -1209,8 +1208,7 @@ TEST_F(ConfigParserTest, ParseScreenerPercentageMethod)
   EXPECT_EQ(percent, 20);
 
   const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config =
-   parse_node_method(serialized_config);
+  const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
 
@@ -1279,8 +1277,7 @@ TEST_F(ConfigParserTest, ParseScreenerAllOfMethod)
 
   const auto serialized_config = config_parser.serialize_node(filter);
 
-  const auto deserialized_filter =
-   config_parser.parse_node(serialized_config);
+  const auto deserialized_filter = config_parser.parse_node(serialized_config);
   EXPECT_EQ(filter, deserialized_filter);
 }
 
@@ -1338,8 +1335,7 @@ TEST_F(ConfigParserTest, ParseScreenerAnyOfMethod)
 
   const auto serialized_config = config_parser.serialize_node(filter);
 
-  const auto deserialized_filter =
-   config_parser.parse_node(serialized_config);
+  const auto deserialized_filter = config_parser.parse_node(serialized_config);
   EXPECT_EQ(filter, deserialized_filter);
 }
 
@@ -1367,25 +1363,21 @@ TEST_F(ConfigParserTest, ParseScreenerGreaterThanMethod)
 
   const auto filter = config_parser.parse_node(config);
 
-  const auto greater_than_filter =
-   node_cast<SignalGreaterThanNode>(filter);
+  const auto greater_than_filter = node_cast<SignalGreaterThanNode>(filter);
   ASSERT_NE(greater_than_filter, nullptr);
 
-  const auto target =
-   node_cast<DataNode>(greater_than_filter->target());
+  const auto target = node_cast<DataNode>(greater_than_filter->target());
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "close");
 
-  const auto threshold =
-   node_cast<ValueNode>(greater_than_filter->threshold());
+  const auto threshold = node_cast<ValueNode>(greater_than_filter->threshold());
   ASSERT_NE(threshold, nullptr);
 
   EXPECT_EQ(threshold->value(), 100);
 
   const auto serialized_config = config_parser.serialize_node(filter);
-  const auto deserialized_filter =
-   config_parser.parse_node(serialized_config);
+  const auto deserialized_filter = config_parser.parse_node(serialized_config);
   EXPECT_EQ(filter, deserialized_filter);
 }
 
@@ -1413,19 +1405,16 @@ TEST_F(ConfigParserTest, ParseScreenerGreaterEqualMethod)
 
   const auto filter = config_parser.parse_node(config);
 
-  const auto greater_equal_filter =
-   node_cast<SignalGreaterEqualNode>(filter);
+  const auto greater_equal_filter = node_cast<SignalGreaterEqualNode>(filter);
   ASSERT_NE(greater_equal_filter, nullptr);
 
-  const auto target =
-   node_cast<DataNode>(greater_equal_filter->target());
+  const auto target = node_cast<DataNode>(greater_equal_filter->target());
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "close");
 
   const auto serialized_config = config_parser.serialize_node(filter);
-  const auto deserialized_filter =
-   config_parser.parse_node(serialized_config);
+  const auto deserialized_filter = config_parser.parse_node(serialized_config);
   EXPECT_EQ(filter, deserialized_filter);
 }
 
@@ -1453,19 +1442,16 @@ TEST_F(ConfigParserTest, ParseScreenerLessThanMethod)
 
   const auto filter = config_parser.parse_node(config);
 
-  const auto less_than_filter =
-   node_cast<SignalLessThanNode>(filter);
+  const auto less_than_filter = node_cast<SignalLessThanNode>(filter);
   ASSERT_NE(less_than_filter, nullptr);
 
-  const auto target =
-   node_cast<DataNode>(less_than_filter->target());
+  const auto target = node_cast<DataNode>(less_than_filter->target());
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "close");
 
   const auto serialized_config = config_parser.serialize_node(filter);
-  const auto deserialized_filter =
-   config_parser.parse_node(serialized_config);
+  const auto deserialized_filter = config_parser.parse_node(serialized_config);
   EXPECT_EQ(filter, deserialized_filter);
 }
 
@@ -1493,19 +1479,16 @@ TEST_F(ConfigParserTest, ParseScreenerLessEqualMethod)
 
   const auto filter = config_parser.parse_node(config);
 
-  const auto less_equal_filter =
-   node_cast<SignalLessEqualNode>(filter);
+  const auto less_equal_filter = node_cast<SignalLessEqualNode>(filter);
   ASSERT_NE(less_equal_filter, nullptr);
 
-  const auto target =
-   node_cast<DataNode>(less_equal_filter->target());
+  const auto target = node_cast<DataNode>(less_equal_filter->target());
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "close");
 
   const auto serialized_config = config_parser.serialize_node(filter);
-  const auto deserialized_filter =
-   config_parser.parse_node(serialized_config);
+  const auto deserialized_filter = config_parser.parse_node(serialized_config);
   EXPECT_EQ(filter, deserialized_filter);
 }
 
@@ -1541,15 +1524,13 @@ TEST_F(ConfigParserTest, ParseScreenerEqualMethod)
 
   EXPECT_EQ(target->field(), "close");
 
-  const auto threshold =
-   node_cast<ValueNode>(equal_filter->threshold());
+  const auto threshold = node_cast<ValueNode>(equal_filter->threshold());
   ASSERT_NE(threshold, nullptr);
 
   EXPECT_EQ(threshold->value(), 100);
 
   const auto serialized_config = config_parser.serialize_node(filter);
-  const auto deserialized_filter =
-   config_parser.parse_node(serialized_config);
+  const auto deserialized_filter = config_parser.parse_node(serialized_config);
   EXPECT_EQ(filter, deserialized_filter);
 }
 
@@ -1577,25 +1558,21 @@ TEST_F(ConfigParserTest, ParseScreenerNotEqualMethod)
 
   const auto filter = config_parser.parse_node(config);
 
-  const auto not_equal_filter =
-   node_cast<SignalNotEqualNode>(filter);
+  const auto not_equal_filter = node_cast<SignalNotEqualNode>(filter);
   ASSERT_NE(not_equal_filter, nullptr);
 
-  const auto target =
-   node_cast<DataNode>(not_equal_filter->target());
+  const auto target = node_cast<DataNode>(not_equal_filter->target());
   ASSERT_NE(target, nullptr);
 
   EXPECT_EQ(target->field(), "close");
 
-  const auto threshold =
-   node_cast<ValueNode>(not_equal_filter->threshold());
+  const auto threshold = node_cast<ValueNode>(not_equal_filter->threshold());
   ASSERT_NE(threshold, nullptr);
 
   EXPECT_EQ(threshold->value(), 100);
 
   const auto serialized_config = config_parser.serialize_node(filter);
-  const auto deserialized_filter =
-   config_parser.parse_node(serialized_config);
+  const auto deserialized_filter = config_parser.parse_node(serialized_config);
   EXPECT_EQ(filter, deserialized_filter);
 }
 
@@ -1623,25 +1600,21 @@ TEST_F(ConfigParserTest, ParseScreenerCrossunderMethod)
 
   const auto filter = config_parser.parse_node(config);
 
-  const auto crossunder_filter =
-   node_cast<SignalCrossunderNode>(filter);
+  const auto crossunder_filter = node_cast<SignalCrossunderNode>(filter);
   ASSERT_NE(crossunder_filter, nullptr);
 
-  const auto signal =
-   node_cast<DataNode>(crossunder_filter->source());
+  const auto signal = node_cast<DataNode>(crossunder_filter->source());
   ASSERT_NE(signal, nullptr);
 
   EXPECT_EQ(signal->field(), "close");
 
-  const auto reference =
-   node_cast<ValueNode>(crossunder_filter->reference());
+  const auto reference = node_cast<ValueNode>(crossunder_filter->reference());
   ASSERT_NE(reference, nullptr);
 
   EXPECT_EQ(reference->value(), 100);
 
   const auto serialized_config = config_parser.serialize_node(filter);
-  const auto deserialized_filter =
-   config_parser.parse_node(serialized_config);
+  const auto deserialized_filter = config_parser.parse_node(serialized_config);
   EXPECT_EQ(filter, deserialized_filter);
 }
 
@@ -1669,25 +1642,21 @@ TEST_F(ConfigParserTest, ParseScreenerCrossoverMethod)
 
   const auto filter = config_parser.parse_node(config);
 
-  const auto crossover_filter =
-   node_cast<SignalCrossoverNode>(filter);
+  const auto crossover_filter = node_cast<SignalCrossoverNode>(filter);
   ASSERT_NE(crossover_filter, nullptr);
 
-  const auto signal =
-   node_cast<DataNode>(crossover_filter->source());
+  const auto signal = node_cast<DataNode>(crossover_filter->source());
   ASSERT_NE(signal, nullptr);
 
   EXPECT_EQ(signal->field(), "close");
 
-  const auto reference =
-   node_cast<ValueNode>(crossover_filter->reference());
+  const auto reference = node_cast<ValueNode>(crossover_filter->reference());
   ASSERT_NE(reference, nullptr);
 
   EXPECT_EQ(reference->value(), 100);
 
   const auto serialized_config = config_parser.serialize_node(filter);
-  const auto deserialized_filter =
-   config_parser.parse_node(serialized_config);
+  const auto deserialized_filter = config_parser.parse_node(serialized_config);
   EXPECT_EQ(filter, deserialized_filter);
 }
 
@@ -1705,8 +1674,7 @@ TEST_F(ConfigParserTest, ParseScreenerAlwaysMethod)
   ASSERT_NE(always_filter, nullptr);
 
   const auto serialized_config = config_parser.serialize_node(filter);
-  const auto deserialized_filter =
-   config_parser.parse_node(serialized_config);
+  const auto deserialized_filter = config_parser.parse_node(serialized_config);
   EXPECT_EQ(filter, deserialized_filter);
 }
 
@@ -1724,8 +1692,7 @@ TEST_F(ConfigParserTest, ParseScreenerNeverMethod)
   ASSERT_NE(never_filter, nullptr);
 
   const auto serialized_config = config_parser.serialize_node(filter);
-  const auto deserialized_filter =
-   config_parser.parse_node(serialized_config);
+  const auto deserialized_filter = config_parser.parse_node(serialized_config);
   EXPECT_EQ(filter, deserialized_filter);
 }
 
@@ -1753,17 +1720,14 @@ TEST_F(ConfigParserTest, ParseScreenerAndMethod)
   const auto first_condition = and_filter->first_condition();
   const auto second_condition = and_filter->second_condition();
 
-  const auto always_filter =
-   node_cast<SignalAlwaysNode>(first_condition);
-  const auto never_filter =
-   node_cast<SignalNeverNode>(second_condition);
+  const auto always_filter = node_cast<SignalAlwaysNode>(first_condition);
+  const auto never_filter = node_cast<SignalNeverNode>(second_condition);
 
   ASSERT_NE(always_filter, nullptr);
   ASSERT_NE(never_filter, nullptr);
 
   const auto serialized_config = config_parser.serialize_node(filter);
-  const auto deserialized_filter =
-   config_parser.parse_node(serialized_config);
+  const auto deserialized_filter = config_parser.parse_node(serialized_config);
   EXPECT_EQ(filter, deserialized_filter);
 }
 
@@ -1791,17 +1755,14 @@ TEST_F(ConfigParserTest, ParseScreenerOrMethod)
   const auto first_condition = or_filter->first_condition();
   const auto second_condition = or_filter->second_condition();
 
-  const auto always_filter =
-   node_cast<SignalAlwaysNode>(first_condition);
-  const auto never_filter =
-   node_cast<SignalNeverNode>(second_condition);
+  const auto always_filter = node_cast<SignalAlwaysNode>(first_condition);
+  const auto never_filter = node_cast<SignalNeverNode>(second_condition);
 
   ASSERT_NE(always_filter, nullptr);
   ASSERT_NE(never_filter, nullptr);
 
   const auto serialized_config = config_parser.serialize_node(filter);
-  const auto deserialized_filter =
-   config_parser.parse_node(serialized_config);
+  const auto deserialized_filter = config_parser.parse_node(serialized_config);
   EXPECT_EQ(filter, deserialized_filter);
 }
 
@@ -1822,14 +1783,12 @@ TEST_F(ConfigParserTest, ParseScreenerNotMethod)
   ASSERT_NE(not_filter, nullptr);
 
   const auto other_condition = not_filter->other_condition();
-  const auto always_filter =
-   node_cast<SignalAlwaysNode>(other_condition);
+  const auto always_filter = node_cast<SignalAlwaysNode>(other_condition);
 
   ASSERT_NE(always_filter, nullptr);
 
   const auto serialized_config = config_parser.serialize_node(filter);
-  const auto deserialized_filter =
-   config_parser.parse_node(serialized_config);
+  const auto deserialized_filter = config_parser.parse_node(serialized_config);
   EXPECT_EQ(filter, deserialized_filter);
 }
 
@@ -1857,17 +1816,14 @@ TEST_F(ConfigParserTest, ParseScreenerXorMethod)
   const auto first_condition = xor_filter->first_condition();
   const auto second_condition = xor_filter->second_condition();
 
-  const auto always_filter =
-   node_cast<SignalAlwaysNode>(first_condition);
-  const auto never_filter =
-   node_cast<SignalNeverNode>(second_condition);
+  const auto always_filter = node_cast<SignalAlwaysNode>(first_condition);
+  const auto never_filter = node_cast<SignalNeverNode>(second_condition);
 
   ASSERT_NE(always_filter, nullptr);
   ASSERT_NE(never_filter, nullptr);
 
   const auto serialized_config = config_parser.serialize_node(filter);
-  const auto deserialized_filter =
-   config_parser.parse_node(serialized_config);
+  const auto deserialized_filter = config_parser.parse_node(serialized_config);
   EXPECT_EQ(filter, deserialized_filter);
 }
 
@@ -1918,17 +1874,19 @@ TEST_F(ConfigParserTest, SeriesNodeRegistrySerializationDeserialization)
 
   auto serialize_series_nodes =
    [this](const OrderedNamedRegistry<ErasedNode>& series_nodes) {
-    auto series_nodes_config = jsoncons::ojson{};
-    for(const auto& [series_name, series_node] : series_nodes) {
-      series_nodes_config[series_name] = config_parser.serialize_node(series_node);
-    }
-    return series_nodes_config;
-  };
+     auto series_nodes_config = jsoncons::ojson{};
+     for(const auto& [series_name, series_node] : series_nodes) {
+       series_nodes_config[series_name] =
+        config_parser.serialize_node(series_node);
+     }
+     return series_nodes_config;
+   };
   auto parse_series_nodes = [this](const jsoncons::ojson& series_nodes_config) {
     auto parsed_series_nodes = OrderedNamedRegistry<ErasedNode>{};
     for(const auto& [series_name, series_config] :
         series_nodes_config.object_range()) {
-      parsed_series_nodes.set(series_name, config_parser.parse_node(series_config));
+      parsed_series_nodes.set(series_name,
+                              config_parser.parse_node(series_config));
     }
     return parsed_series_nodes;
   };
@@ -1940,5 +1898,3 @@ TEST_F(ConfigParserTest, SeriesNodeRegistrySerializationDeserialization)
   EXPECT_EQ(deserialized_config, deserialized_series_nodes);
   EXPECT_EQ(series_nodes, deserialized_series_nodes);
 }
-
-

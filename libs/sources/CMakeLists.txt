@@ -47,7 +47,6 @@ target_sources(${PROJECT_NAME}
         src/asset_history.cxx
         src/asset_quote_field_resolver.cxx
         src/asset_snapshot.cxx
-        src/methods/input_method.cxx
         src/methods/value_method.cxx
         src/methods/data_method.cxx
         src/methods/ohlcv_method.cxx
@@ -95,7 +94,6 @@ target_sources(${PROJECT_NAME}
         
         src/method_key.cxx
         src/ordered_named_registry.cxx
-        src/constrained_numeric_input.cxx
         src/method_contextable.cxx
         src/evaluate_series_method.cxx
         src/hash_series_method.cxx
@@ -105,7 +103,7 @@ target_sources(${PROJECT_NAME}
         
         src/methods.cxx
 
-        src/nodes/input_node.cxx
+        src/nodes/numeric_input_node.cxx
         src/nodes/value_node.cxx
         src/nodes/data_node.cxx
         src/nodes/ohlcv_node.cxx

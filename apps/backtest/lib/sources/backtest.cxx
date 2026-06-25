@@ -28,6 +28,7 @@ export import :store_arena;
 export import :store;
 export import :asset;
 export import :strategy;
+export import :strategy_inputs;
 export import :market;
 export import :broker;
 export import :profile;

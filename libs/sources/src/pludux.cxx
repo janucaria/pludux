@@ -9,7 +9,6 @@ export import :asset_snapshot;
 export import :methods;
 export import :nodes;
 export import :node_to_erased_method;
-export import :constrained_numeric_input;
 export import :config_parser;
 export import :method_contextable;
 export import :any_method_context;

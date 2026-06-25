@@ -1,4 +1,5 @@
 set(PLUDUX_TEST_SOURCES
+  src/test_strategy_inputs.cpp
   src/test_trade_session.cpp
 )
 

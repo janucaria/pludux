@@ -56,7 +56,6 @@ import :methods.logical_method;
 import :methods.boolean_method;
 import :methods.comparison_method;
 import :methods.donchian_channel_method;
-import :methods.input_method;
 
 export namespace pludux {
 
@@ -968,18 +967,6 @@ auto evaluate_series_method(
    evaluate_series_method(method.threshold(), asset_snapshot, context);
 
   return TComparator{}(target_result, threshold_result);
-}
-
-// Input
-auto evaluate_series_method(const InputMethod& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
-{
-  if constexpr(std::is_same_v<std::monostate, decltype(context)>) {
-    return std::numeric_limits<double>::quiet_NaN();
-  } else {
-    return context.get_input_value(method.name());
-  }
 }
 
 } // namespace pludux

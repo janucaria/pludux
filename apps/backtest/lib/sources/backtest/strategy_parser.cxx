@@ -50,27 +50,6 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
     }
   }
 
-  auto inputs_registry = OrderedNamedRegistry<ConstrainedNumericInput>{};
-  if(strategy_json.contains("inputs")) {
-    const auto& inputs_json = strategy_json.at("inputs");
-    for(const auto& [key, value] : inputs_json.object_range()) {
-      const auto label = value.get_value_or<std::string>("label", key);
-      const auto representation_str =
-       value.get_value_or<std::string>("representation", "Decimal");
-      const auto numeric_value = value.get_value_or<double>("value", 0.0);
-
-      auto representation =
-       representation_str == "SignedInteger"
-        ? ConstrainedNumericInput::ValueRepresentation::SignedInteger
-       : representation_str == "UnsignedInteger"
-         ? ConstrainedNumericInput::ValueRepresentation::UnsignedInteger
-         : ConstrainedNumericInput::ValueRepresentation::Decimal;
-
-      inputs_registry.set(
-       key, ConstrainedNumericInput{label, representation, numeric_value});
-    }
-  }
-
   auto long_entry_node = ErasedNode{FalseNode{}};
   auto long_exit_node = ErasedNode{FalseNode{}};
   auto position = Strategy::Positions{};
@@ -197,7 +176,6 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
   }
 
   return Strategy{std::string{strategy_name},
-                  std::move(inputs_registry),
                   std::move(series_nodes),
                   std::move(long_entry_node),
                   std::move(long_exit_node),
@@ -227,26 +205,6 @@ auto stringify_backtest_strategy(const backtest::Strategy& strategy)
   auto strategy_json = jsoncons::ojson{};
 
   strategy_json["version"] = 2;
-
-  auto inputs_json = jsoncons::ojson{};
-  for(const auto& [key, input] : strategy.inputs()) {
-    auto input_json = jsoncons::ojson{};
-    input_json["label"] = input.label();
-    const auto representation_str =
-     input.representation() ==
-       ConstrainedNumericInput::ValueRepresentation::SignedInteger
-      ? std::string("SignedInteger")
-     : input.representation() ==
-        ConstrainedNumericInput::ValueRepresentation::UnsignedInteger
-       ? std::string("UnsignedInteger")
-       : std::string("Decimal");
-    input_json["representation"] = representation_str;
-    input_json["value"] = input.value();
-    inputs_json[key] = std::move(input_json);
-  }
-  if(!inputs_json.empty()) {
-    strategy_json["inputs"] = std::move(inputs_json);
-  }
 
   auto series_json = jsoncons::ojson{};
   for(const auto& [series_name, series_node] : strategy.series_nodes()) {
@@ -281,9 +239,8 @@ auto stringify_backtest_strategy(const backtest::Strategy& strategy)
    config_parser.serialize_node(strategy.short_exit_node());
   {
     short_position_json["pyramiding"] = jsoncons::ojson{};
-    short_position_json["pyramiding"]["signal"] =
-     config_parser.serialize_node(
-      strategy.positions().short_side().pyramiding().signal());
+    short_position_json["pyramiding"]["signal"] = config_parser.serialize_node(
+     strategy.positions().short_side().pyramiding().signal());
     short_position_json["pyramiding"]["maxLayers"] =
      strategy.positions().short_side().pyramiding().max_layers();
   }

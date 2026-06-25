@@ -9,7 +9,7 @@ export import :nodes.lookback_node;
 export import :nodes.select_output_node;
 export import :nodes.series_node;
 export import :nodes.series_value_node;
-export import :nodes.input_node;
+export import :nodes.numeric_input_node;
 
 export import :nodes.operators_node;
 export import :nodes.highest_node;

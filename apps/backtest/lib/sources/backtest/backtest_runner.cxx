@@ -40,7 +40,6 @@ public:
    const Market& market,
    const Broker& broker,
    const Profile& profile,
-   const OrderedNamedRegistry<ConstrainedNumericInput>& backtest_inputs,
    OrderedNamedRegistry<AnySeriesMethod> series_methods,
    AnySeriesMethod long_entry_method,
    AnySeriesMethod long_exit_method,
@@ -61,7 +60,6 @@ public:
   , market_{market}
   , broker_{broker}
   , profile_{profile}
-  , backtest_inputs_{backtest_inputs}
   , total_equity_{total_equity}
   , series_methods_{std::move(series_methods)}
   , long_entry_method_{std::move(long_entry_method)}
@@ -113,7 +111,6 @@ public:
     const auto& series_methods = self.series_methods_;
     auto context = DefaultMethodContext{series_methods,
                                         series_evaluation_results,
-                                        self.backtest_inputs_,
                                         summaries.size()};
 
     for(const auto& [series_name, series_method] : series_methods) {
@@ -219,7 +216,6 @@ private:
 
   const Profile& profile_;
 
-  const OrderedNamedRegistry<ConstrainedNumericInput>& backtest_inputs_;
 
   double total_equity_;
 

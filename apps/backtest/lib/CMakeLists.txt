@@ -71,6 +71,7 @@ target_sources(${PROJECT_NAME}
     
     sources/backtest/asset.cxx
     sources/backtest/strategy.cxx
+    sources/backtest/strategy_inputs.cxx
     sources/backtest/market.cxx
     sources/backtest/broker.cxx
     sources/backtest/profile.cxx

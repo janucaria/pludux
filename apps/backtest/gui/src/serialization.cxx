@@ -487,7 +487,7 @@ void load(Archive& archive, pludux::backtest::Store& store)
 /*--------------------------------------------------------------------------------------*/
 
 template<class Archive>
-void save(Archive& archive, const pludux::ConstrainedNumericInput& input)
+void save(Archive& archive, const pludux::NumericInputNode& input)
 {
   archive(make_nvp("label", input.label()),
           make_nvp("representation", static_cast<int>(input.representation())),
@@ -495,7 +495,7 @@ void save(Archive& archive, const pludux::ConstrainedNumericInput& input)
 }
 
 template<class Archive>
-void load(Archive& archive, pludux::ConstrainedNumericInput& input)
+void load(Archive& archive, pludux::NumericInputNode& input)
 {
   auto label = std::string{};
   auto value = double{};
@@ -505,37 +505,11 @@ void load(Archive& archive, pludux::ConstrainedNumericInput& input)
           make_nvp("value", value),
           make_nvp("representation", representation));
 
-  input = pludux::ConstrainedNumericInput{
+  input = pludux::NumericInputNode{
    std::move(label),
-   static_cast<pludux::ConstrainedNumericInput::ValueRepresentation>(
+   static_cast<pludux::NumericInputNode::ValueRepresentation>(
     representation),
    value};
-}
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void save(
- Archive& archive,
- const pludux::OrderedNamedRegistry<pludux::ConstrainedNumericInput>& registry)
-{
-  archive(make_nvp("orderedNames", registry.ordered_names()),
-          make_nvp("values", registry.values()));
-}
-
-template<class Archive>
-void load(
- Archive& archive,
- pludux::OrderedNamedRegistry<pludux::ConstrainedNumericInput>& registry)
-{
-  auto ordered_names = std::vector<std::string>{};
-  auto values =
-   std::unordered_map<std::string, pludux::ConstrainedNumericInput>{};
-
-  archive(make_nvp("orderedNames", ordered_names), make_nvp("values", values));
-
-  registry = pludux::OrderedNamedRegistry<pludux::ConstrainedNumericInput>{
-   std::move(ordered_names), std::move(values)};
 }
 
 /*--------------------------------------------------------------------------------------*/
@@ -563,7 +537,7 @@ void load(Archive& archive, pludux::backtest::Backtest& backtest)
   auto market_handle = pludux::backtest::MarketStoreHandle{};
   auto broker_handle = pludux::backtest::BrokerStoreHandle{};
   auto profile_handle = pludux::backtest::ProfileStoreHandle{};
-  auto inputs = pludux::OrderedNamedRegistry<pludux::ConstrainedNumericInput>{};
+  auto inputs = std::vector<pludux::NumericInputNode>{};
 
   archive(make_nvp("name", name),
           make_nvp("initialCapital", initial_capital),
