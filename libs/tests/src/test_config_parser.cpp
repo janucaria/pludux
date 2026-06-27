@@ -67,6 +67,13 @@ auto series_method_cast(
   return series_method_cast<UMethod>(method);
 }
 
+auto value_method_value(const AnySeriesMethod& method) noexcept -> double
+{
+  const auto* value_method = series_method_cast<ValueMethod>(method);
+  EXPECT_NE(value_method, nullptr);
+  return value_method == nullptr ? 0.0 : value_method->value();
+}
+
 class ConfigParserTest : public ::testing::Test {
 protected:
   ConfigParser config_parser;
@@ -263,15 +270,16 @@ TEST_F(ConfigParserTest, ParseScreenerSelectOutputMethod)
   ASSERT_NE(select_output_method, nullptr);
   EXPECT_EQ(select_output_method->output(), MethodOutput::UpperBand);
 
-  const auto macd_method = series_method_cast<MacdMethod<AnySeriesMethod>>(
-   select_output_method->source());
+  const auto macd_method =
+   series_method_cast<MacdMethod<AnySeriesMethod, AnySeriesMethod>>(
+    select_output_method->source());
   ASSERT_NE(macd_method, nullptr);
 
   const auto source = series_method_cast<CloseMethod>(macd_method->source());
   EXPECT_NE(source, nullptr);
-  EXPECT_EQ(macd_method->fast_period(), 12);
-  EXPECT_EQ(macd_method->slow_period(), 26);
-  EXPECT_EQ(macd_method->signal_period(), 9);
+  EXPECT_EQ(value_method_value(macd_method->fast_period()), 12);
+  EXPECT_EQ(value_method_value(macd_method->slow_period()), 26);
+  EXPECT_EQ(value_method_value(macd_method->signal_period()), 9);
 
   const auto serialized_config = serialize_node_method(method);
   const auto deserialized_config = parse_node_method(serialized_config);
@@ -374,7 +382,13 @@ TEST_F(ConfigParserTest, ParseScreenerSmaMethod)
     {
       "method": "SMA",
       "params": {
-        "period": 14,
+        "period": {
+          "method": "INPUT",
+          "params": {
+            "representation": "UnsignedInteger",
+            "value": 14
+          }
+        },
         "source": {
           "method": "DATA",
           "params": {
@@ -388,10 +402,10 @@ TEST_F(ConfigParserTest, ParseScreenerSmaMethod)
   const auto method = parse_node_method(config);
 
   const auto sma_method =
-   series_method_cast<SmaMethod<AnySeriesMethod>>(method);
+   series_method_cast<SmaMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(sma_method, nullptr);
 
-  EXPECT_EQ(sma_method->period(), 14);
+  EXPECT_EQ(value_method_value(sma_method->period()), 14);
 
   const auto source = series_method_cast<DataMethod>(sma_method->source());
   ASSERT_NE(source, nullptr);
@@ -409,7 +423,13 @@ TEST_F(ConfigParserTest, ParseScreenerEmaMethod)
     {
       "method": "EMA",
       "params": {
-        "period": 10,
+        "period": {
+          "method": "INPUT",
+          "params": {
+            "representation": "UnsignedInteger",
+            "value": 10
+          }
+        },
         "source": {
           "method": "DATA",
           "params": {
@@ -423,10 +443,10 @@ TEST_F(ConfigParserTest, ParseScreenerEmaMethod)
   const auto method = parse_node_method(config);
 
   const auto ema_method =
-   series_method_cast<EmaMethod<AnySeriesMethod>>(method);
+   series_method_cast<EmaMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(ema_method, nullptr);
 
-  EXPECT_EQ(ema_method->period(), 10);
+  EXPECT_EQ(value_method_value(ema_method->period()), 10);
 
   const auto source = series_method_cast<DataMethod>(ema_method->source());
   ASSERT_NE(source, nullptr);
@@ -444,7 +464,13 @@ TEST_F(ConfigParserTest, ParseScreenerWmaMethod)
       {
         "method": "WMA",
         "params": {
-          "period": 20,
+          "period": {
+            "method": "INPUT",
+            "params": {
+              "representation": "UnsignedInteger",
+              "value": 20
+            }
+          },
           "source": {
             "method": "DATA",
             "params": {
@@ -458,10 +484,10 @@ TEST_F(ConfigParserTest, ParseScreenerWmaMethod)
   const auto method = parse_node_method(config);
 
   const auto wma_method =
-   series_method_cast<WmaMethod<AnySeriesMethod>>(method);
+   series_method_cast<WmaMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(wma_method, nullptr);
 
-  EXPECT_EQ(wma_method->period(), 20);
+  EXPECT_EQ(value_method_value(wma_method->period()), 20);
 
   const auto source = series_method_cast<DataMethod>(wma_method->source());
   ASSERT_NE(source, nullptr);
@@ -479,7 +505,13 @@ TEST_F(ConfigParserTest, ParseScreenerRmaMethod)
       {
         "method": "RMA",
         "params": {
-          "period": 15,
+          "period": {
+            "method": "INPUT",
+            "params": {
+              "representation": "UnsignedInteger",
+              "value": 15
+            }
+          },
           "source": {
             "method": "DATA",
             "params": {
@@ -493,10 +525,10 @@ TEST_F(ConfigParserTest, ParseScreenerRmaMethod)
   const auto method = parse_node_method(config);
 
   const auto rma_method =
-   series_method_cast<RmaMethod<AnySeriesMethod>>(method);
+   series_method_cast<RmaMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(rma_method, nullptr);
 
-  EXPECT_EQ(rma_method->period(), 15);
+  EXPECT_EQ(value_method_value(rma_method->period()), 15);
 
   const auto source = series_method_cast<DataMethod>(rma_method->source());
   ASSERT_NE(source, nullptr);
@@ -514,7 +546,13 @@ TEST_F(ConfigParserTest, ParseScreenerHmaMethod)
       {
         "method": "HMA",
         "params": {
-          "period": 25,
+          "period": {
+            "method": "INPUT",
+            "params": {
+              "representation": "UnsignedInteger",
+              "value": 25
+            }
+          },
           "source": {
             "method": "DATA",
             "params": {
@@ -528,10 +566,10 @@ TEST_F(ConfigParserTest, ParseScreenerHmaMethod)
   const auto method = parse_node_method(config);
 
   const auto hma_method =
-   series_method_cast<HmaMethod<AnySeriesMethod>>(method);
+   series_method_cast<HmaMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(hma_method, nullptr);
 
-  EXPECT_EQ(hma_method->period(), 25);
+  EXPECT_EQ(value_method_value(hma_method->period()), 25);
 
   const auto source = series_method_cast<DataMethod>(hma_method->source());
   ASSERT_NE(source, nullptr);
@@ -563,10 +601,10 @@ TEST_F(ConfigParserTest, ParseScreenerRsiMethod)
   const auto method = parse_node_method(config);
 
   const auto rsi_method =
-   series_method_cast<RsiMethod<AnySeriesMethod>>(method);
+   series_method_cast<RsiMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(rsi_method, nullptr);
 
-  EXPECT_EQ(rsi_method->period(), 14);
+  EXPECT_EQ(value_method_value(rsi_method->period()), 14);
 
   const auto source = series_method_cast<DataMethod>(rsi_method->source());
   ASSERT_NE(source, nullptr);
@@ -598,10 +636,10 @@ TEST_F(ConfigParserTest, ParseScreenerStddevMethod)
   const auto method = parse_node_method(config);
 
   const auto stddev_method =
-   series_method_cast<StddevMethod<AnySeriesMethod>>(method);
+   series_method_cast<StddevMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(stddev_method, nullptr);
 
-  EXPECT_EQ(stddev_method->period(), 20);
+  EXPECT_EQ(value_method_value(stddev_method->period()), 20);
 
   const auto source = series_method_cast<DataMethod>(stddev_method->source());
   ASSERT_NE(source, nullptr);
@@ -665,7 +703,13 @@ TEST_F(ConfigParserTest, ParseScreenerAtrMethod)
     {
       "method": "ATR",
       "params": {
-        "period": 14,
+        "period": {
+          "method": "INPUT",
+          "params": {
+            "representation": "UnsignedInteger",
+            "value": 14
+          }
+        },
         "maSmoothingType": "RMA"
       }
     }
@@ -673,10 +717,11 @@ TEST_F(ConfigParserTest, ParseScreenerAtrMethod)
 
   const auto method = parse_node_method(config);
 
-  const auto atr_method = series_method_cast<AtrMethod>(method);
+  const auto atr_method =
+   series_method_cast<AtrMethod<AnySeriesMethod>>(method);
   ASSERT_NE(atr_method, nullptr);
 
-  EXPECT_EQ(atr_method->period(), 14);
+  EXPECT_EQ(value_method_value(atr_method->period()), 14);
   EXPECT_EQ(atr_method->ma_smoothing_type(), MaMethodType::Rma);
 
   const auto serialized_config = serialize_node_method(method);
@@ -691,8 +736,20 @@ TEST_F(ConfigParserTest, ParseScreenerBbMethod)
       "method": "BB",
       "params": {
         "maType": "SMA",
-        "period": 20,
-        "stddev": 2.0,
+        "period": {
+          "method": "INPUT",
+          "params": {
+            "representation": "UnsignedInteger",
+            "value": 20
+          }
+        },
+        "stddev": {
+          "method": "INPUT",
+          "params": {
+            "representation": "Decimal",
+            "value": 2.0
+          }
+        },
         "maSource": {
           "method": "DATA",
           "params": {
@@ -705,14 +762,15 @@ TEST_F(ConfigParserTest, ParseScreenerBbMethod)
 
   const auto method = parse_node_method(config);
 
-  const auto bb_method = series_method_cast<BbMethod<AnySeriesMethod>>(method);
+  const auto bb_method =
+   series_method_cast<BbMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(bb_method, nullptr);
 
   const auto ma_source = series_method_cast<DataMethod>(bb_method->source());
   EXPECT_NE(ma_source, nullptr);
   EXPECT_EQ(bb_method->ma_method_type(), MaMethodType::Sma);
-  EXPECT_EQ(bb_method->period(), 20);
-  EXPECT_EQ(bb_method->stddev(), 2.0);
+  EXPECT_EQ(value_method_value(bb_method->period()), 20);
+  EXPECT_EQ(value_method_value(bb_method->stddev()), 2.0);
 
   const auto serialized_config = serialize_node_method(method);
   const auto deserialized_config = parse_node_method(serialized_config);
@@ -725,9 +783,27 @@ TEST_F(ConfigParserTest, ParseScreenerMacdMethod)
     {
       "method": "MACD",
       "params": {
-        "fast": 12,
-        "slow": 26,
-        "signal": 9,
+        "fastPeriod": {
+          "method": "INPUT",
+          "params": {
+            "representation": "UnsignedInteger",
+            "value": 12
+          }
+        },
+        "slowPeriod": {
+          "method": "INPUT",
+          "params": {
+            "representation": "UnsignedInteger",
+            "value": 26
+          }
+        },
+        "signalPeriod": {
+          "method": "INPUT",
+          "params": {
+            "representation": "UnsignedInteger",
+            "value": 9
+          }
+        },
         "source": {
           "method": "DATA",
           "params": {
@@ -741,14 +817,14 @@ TEST_F(ConfigParserTest, ParseScreenerMacdMethod)
   const auto method = parse_node_method(config);
 
   const auto macd_method =
-   series_method_cast<MacdMethod<AnySeriesMethod>>(method);
+   series_method_cast<MacdMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(macd_method, nullptr);
 
   const auto source = series_method_cast<DataMethod>(macd_method->source());
   EXPECT_NE(source, nullptr);
-  EXPECT_EQ(macd_method->fast_period(), 12);
-  EXPECT_EQ(macd_method->slow_period(), 26);
-  EXPECT_EQ(macd_method->signal_period(), 9);
+  EXPECT_EQ(value_method_value(macd_method->fast_period()), 12);
+  EXPECT_EQ(value_method_value(macd_method->slow_period()), 26);
+  EXPECT_EQ(value_method_value(macd_method->signal_period()), 9);
 
   const auto serialized_config = serialize_node_method(method);
   const auto deserialized_config = parse_node_method(serialized_config);
@@ -761,21 +837,40 @@ TEST_F(ConfigParserTest, ParseScreenerStochMethod)
     {
       "method": "STOCH",
       "params": {
-        "kPeriod": 5,
-        "kSmooth": 3,
-        "dPeriod": 3
+        "kPeriod": {
+          "method": "INPUT",
+          "params": {
+            "representation": "UnsignedInteger",
+            "value": 5
+          }
+        },
+        "kSmooth": {
+          "method": "INPUT",
+          "params": {
+            "representation": "UnsignedInteger",
+            "value": 3
+          }
+        },
+        "dPeriod": {
+          "method": "INPUT",
+          "params": {
+            "representation": "UnsignedInteger",
+            "value": 3
+          }
+        }
       }
     }
   )");
 
   const auto method = parse_node_method(config);
 
-  const auto stoch_method = series_method_cast<StochMethod>(method);
+  const auto stoch_method =
+   series_method_cast<StochMethod<AnySeriesMethod>>(method);
   ASSERT_NE(stoch_method, nullptr);
 
-  EXPECT_EQ(stoch_method->k_period(), 5);
-  EXPECT_EQ(stoch_method->k_smooth(), 3);
-  EXPECT_EQ(stoch_method->d_period(), 3);
+  EXPECT_EQ(value_method_value(stoch_method->k_period()), 5);
+  EXPECT_EQ(value_method_value(stoch_method->k_smooth()), 3);
+  EXPECT_EQ(value_method_value(stoch_method->d_period()), 3);
 
   const auto serialized_config = serialize_node_method(method);
   const auto deserialized_config = parse_node_method(serialized_config);
@@ -788,10 +883,34 @@ TEST_F(ConfigParserTest, ParseScreenerStochRsiMethod)
     {
       "method": "STOCH_RSI",
       "params": {
-        "rsiPeriod": 14,
-        "kPeriod": 5,
-        "kSmooth": 3,
-        "dPeriod": 3,
+        "rsiPeriod": {
+          "method": "INPUT",
+          "params": {
+            "representation": "UnsignedInteger",
+            "value": 14
+          }
+        },
+        "kPeriod": {
+          "method": "INPUT",
+          "params": {
+            "representation": "UnsignedInteger",
+            "value": 5
+          }
+        },
+        "kSmooth": {
+          "method": "INPUT",
+          "params": {
+            "representation": "UnsignedInteger",
+            "value": 3
+          }
+        },
+        "dPeriod": {
+          "method": "INPUT",
+          "params": {
+            "representation": "UnsignedInteger",
+            "value": 3
+          }
+        },
         "rsiSource": {
           "method": "DATA",
           "params": {
@@ -805,16 +924,16 @@ TEST_F(ConfigParserTest, ParseScreenerStochRsiMethod)
   const auto method = parse_node_method(config);
 
   const auto stoch_rsi_method =
-   series_method_cast<StochRsiMethod<AnySeriesMethod>>(method);
+   series_method_cast<StochRsiMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(stoch_rsi_method, nullptr);
 
   const auto rsi_source =
    series_method_cast<DataMethod>(stoch_rsi_method->rsi_source());
   EXPECT_NE(rsi_source, nullptr);
-  EXPECT_EQ(stoch_rsi_method->rsi_period(), 14);
-  EXPECT_EQ(stoch_rsi_method->k_period(), 5);
-  EXPECT_EQ(stoch_rsi_method->k_smooth(), 3);
-  EXPECT_EQ(stoch_rsi_method->d_period(), 3);
+  EXPECT_EQ(value_method_value(stoch_rsi_method->rsi_period()), 14);
+  EXPECT_EQ(value_method_value(stoch_rsi_method->k_period()), 5);
+  EXPECT_EQ(value_method_value(stoch_rsi_method->k_smooth()), 3);
+  EXPECT_EQ(value_method_value(stoch_rsi_method->d_period()), 3);
 
   const auto serialized_config = serialize_node_method(method);
   const auto deserialized_config = parse_node_method(serialized_config);
@@ -828,7 +947,13 @@ TEST_F(ConfigParserTest, ParseScreenerKcMethod)
       "method": "KC",
       "params": {
         "maMethodType": "SMA",
-        "maPeriod": 5,
+        "period": {
+          "method": "INPUT",
+          "params": {
+            "representation": "UnsignedInteger",
+            "value": 5
+          }
+        },
         "maSource": {
           "method": "DATA",
           "params": {
@@ -836,25 +961,38 @@ TEST_F(ConfigParserTest, ParseScreenerKcMethod)
           }
         },
         "bandMethodType": "ATR",
-        "bandAtrPeriod": 14,
-        "multiplier": 1.0
+        "bandAtrPeriod": {
+          "method": "INPUT",
+          "params": {
+            "representation": "UnsignedInteger",
+            "value": 14
+          }
+        },
+        "multiplier": {
+          "method": "INPUT",
+          "params": {
+            "representation": "Decimal",
+            "value": 1.0
+          }
+        }
       }
     }
   )");
 
   const auto method = parse_node_method(config);
 
-  const auto kc_method = series_method_cast<KcMethod<AnySeriesMethod>>(method);
+  const auto kc_method =
+   series_method_cast<KcMethod<AnySeriesMethod, AnySeriesMethod>>(method);
   ASSERT_NE(kc_method, nullptr);
 
   const auto ma_source_method =
    series_method_cast<DataMethod>(kc_method->source());
   EXPECT_NE(ma_source_method, nullptr);
   EXPECT_EQ(kc_method->ma_method_type(), MaMethodType::Sma);
-  EXPECT_EQ(kc_method->period(), 5);
+  EXPECT_EQ(value_method_value(kc_method->period()), 5);
   EXPECT_EQ(kc_method->band_method_type(), KcBandMethodType::Atr);
-  EXPECT_EQ(kc_method->band_atr_period(), 14);
-  EXPECT_EQ(kc_method->multiplier(), 1.0);
+  EXPECT_EQ(value_method_value(kc_method->band_atr_period()), 14);
+  EXPECT_EQ(value_method_value(kc_method->multiplier()), 1.0);
 
   const auto serialized_config = serialize_node_method(method);
   const auto deserialized_config = parse_node_method(serialized_config);
@@ -867,17 +1005,24 @@ TEST_F(ConfigParserTest, ParseScreenerDonchianChannelMethod)
     {
       "method": "DC",
       "params": {
-        "period": 5
+        "period": {
+          "method": "INPUT",
+          "params": {
+            "representation": "UnsignedInteger",
+            "value": 5
+          }
+        }
       }
     }
   )");
 
   const auto method = parse_node_method(config);
 
-  const auto dc_method = series_method_cast<DonchianChannelMethod>(method);
+  const auto dc_method =
+   series_method_cast<DonchianChannelMethod<AnySeriesMethod>>(method);
   ASSERT_NE(dc_method, nullptr);
 
-  EXPECT_EQ(dc_method->period(), 5);
+  EXPECT_EQ(value_method_value(dc_method->period()), 5);
 
   const auto serialized_config = serialize_node_method(method);
   const auto deserialized_config = parse_node_method(serialized_config);

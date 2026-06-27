@@ -26,16 +26,37 @@
           "fast_ema": {
             "method": "EMA",
             "params": {
-              "period": 20,
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 20
+                }
+              },
               "source": "CLOSE"
             }
           },
           "bbands": {
             "method": "BB",
             "params": {
-              "period": 20,
-              "stddev": 2,
-              "source": "CLOSE"
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 20
+                }
+              },
+              "stddev": {
+                "method": "INPUT",
+                "params": {
+                  "label": "StdDev",
+                  "representation": "Decimal",
+                  "value": 2
+                }
+              },
+              "maSource": "CLOSE"
             }
           }
         }
@@ -150,45 +171,6 @@
         "Decimal",
         "SignedInteger",
         "UnsignedInteger"
-      ]
-    },
-    "numericInput": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "label": {
-          "type": "string",
-          "title": "Label",
-          "description": "Human-readable label for the input parameter, shown in the UI."
-        },
-        "representation": {
-          "$ref": "#/$defs/valueRepresentation",
-          "default": "Decimal",
-          "title": "Representation",
-          "description": "Value format constraint. Decimal (default) allows any floating-point number. SignedInteger restricts values to whole numbers including negative. UnsignedInteger restricts to non-negative whole numbers."
-        },
-        "value": {
-          "type": "number",
-          "title": "Value",
-          "description": "The numeric value of the input. When representation is SignedInteger or UnsignedInteger, this value is normalized by the system (truncated toward zero, or clamped to zero for unsigned)."
-        }
-      },
-      "required": [
-        "value"
-      ],
-      "title": "Numeric Input",
-      "description": "An inline numeric input parameter with a label, representation format, and numeric value. The representation constrains how the value is interpreted and displayed in the UI and when converted to a series value.",
-      "examples": [
-        {
-          "label": "RSI Period",
-          "representation": "UnsignedInteger",
-          "value": 14
-        },
-        {
-          "label": "Volatility Multiplier",
-          "representation": "Decimal",
-          "value": 2.5
-        }
       ]
     },
     "positionSide": {
@@ -602,7 +584,7 @@
                 "label": {
                   "type": "string",
                   "title": "Label",
-                  "description": "Human-readable label for the input parameter, shown in the UI. Labels are display text and may be duplicated."
+                  "description": "Human-readable label for the input parameter, shown in the UI."
                 },
                 "representation": {
                   "$ref": "#/$defs/valueRepresentation",
@@ -613,7 +595,7 @@
                 "value": {
                   "type": "number",
                   "title": "Value",
-                  "description": "The numeric value of the input. The strategy value acts as the default; backtests may store an edited copy."
+                  "description": "The numeric value of the input. When representation is SignedInteger or UnsignedInteger, this value is normalized by the system (truncated toward zero, or clamped to zero for unsigned)."
                 }
               },
               "required": [
@@ -710,7 +692,7 @@
               "additionalProperties": false,
               "properties": {
                 "period": {
-                  "type": "integer",
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Period",
                   "description": "Lookback period used by the indicator."
                 },
@@ -725,7 +707,14 @@
           "default": {
             "method": "SMA",
             "params": {
-              "period": 14,
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
               "source": "CLOSE"
             }
           }
@@ -749,7 +738,7 @@
               "additionalProperties": false,
               "properties": {
                 "period": {
-                  "type": "integer",
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Period",
                   "description": "Lookback period used by the indicator."
                 },
@@ -764,7 +753,14 @@
           "default": {
             "method": "EMA",
             "params": {
-              "period": 14,
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
               "source": "CLOSE"
             }
           }
@@ -788,7 +784,7 @@
               "additionalProperties": false,
               "properties": {
                 "period": {
-                  "type": "integer",
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Period",
                   "description": "Lookback period used by the indicator."
                 },
@@ -803,7 +799,14 @@
           "default": {
             "method": "RMA",
             "params": {
-              "period": 14,
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
               "source": "CLOSE"
             }
           }
@@ -827,7 +830,7 @@
               "additionalProperties": false,
               "properties": {
                 "period": {
-                  "type": "integer",
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Period",
                   "description": "Lookback period used by the indicator."
                 },
@@ -842,7 +845,14 @@
           "default": {
             "method": "WMA",
             "params": {
-              "period": 14,
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
               "source": "CLOSE"
             }
           }
@@ -866,7 +876,7 @@
               "additionalProperties": false,
               "properties": {
                 "period": {
-                  "type": "integer",
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Period",
                   "description": "Lookback period used by the indicator."
                 },
@@ -881,7 +891,14 @@
           "default": {
             "method": "HMA",
             "params": {
-              "period": 14,
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
               "source": "CLOSE"
             }
           }
@@ -926,7 +943,7 @@
               "additionalProperties": false,
               "properties": {
                 "period": {
-                  "type": "integer",
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Period",
                   "description": "Lookback period used by the indicator."
                 },
@@ -941,7 +958,14 @@
           "default": {
             "method": "RSI",
             "params": {
-              "period": 14,
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
               "source": "CLOSE"
             }
           }
@@ -965,7 +989,7 @@
               "additionalProperties": false,
               "properties": {
                 "period": {
-                  "type": "integer",
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Period",
                   "description": "Lookback period used for ATR."
                 },
@@ -986,7 +1010,14 @@
           "default": {
             "method": "ATR",
             "params": {
-              "period": 14,
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
               "maSmoothingType": "RMA"
             }
           }
@@ -1010,7 +1041,7 @@
               "additionalProperties": false,
               "properties": {
                 "period": {
-                  "type": "integer",
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Period",
                   "description": "Rolling window length for the standard deviation calculation."
                 },
@@ -1026,15 +1057,23 @@
                   "title": "Source",
                   "description": "Source series whose dispersion is measured."
                 }
-              },
-              "required": [
-                "period"
-              ]
+              }
             }
           },
-          "required": [
-            "params"
-          ]
+          "default": {
+            "method": "STDDEV",
+            "params": {
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 20
+                }
+              },
+              "source": "CLOSE"
+            }
+          }
         }
       ],
       "title": "Standard Deviation",
@@ -1066,12 +1105,12 @@
                   "description": "Moving average method used for the Bollinger Bands middle line."
                 },
                 "period": {
-                  "type": "integer",
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Period",
                   "description": "Lookback period for the middle band and standard deviation."
                 },
                 "stddev": {
-                  "type": "number",
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Standard Deviation Multiplier",
                   "description": "Number of standard deviations used to place the upper and lower bands."
                 },
@@ -1086,8 +1125,22 @@
           "default": {
             "method": "BB",
             "params": {
-              "period": 20,
-              "stddev": 2.0,
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 20
+                }
+              },
+              "stddev": {
+                "method": "INPUT",
+                "params": {
+                  "label": "StdDev",
+                  "representation": "Decimal",
+                  "value": 2.0
+                }
+              },
               "maType": "SMA",
               "maSource": "CLOSE"
             }
@@ -1116,9 +1169,9 @@
                   "title": "maSource",
                   "description": "Source series used for the Keltner Channel center line."
                 },
-                "maPeriod": {
-                  "type": "integer",
-                  "title": "maPeriod",
+                "period": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Period",
                   "description": "Lookback period for the center-line moving average."
                 },
                 "maMethodType": {
@@ -1142,13 +1195,13 @@
                   "description": "Volatility method used for the channel width. ATR uses average true range, TR uses true range, and RangeHighLow uses raw high-low range."
                 },
                 "bandAtrPeriod": {
-                  "type": "integer",
-                  "title": "bandAtrPeriod",
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Band ATR Period",
                   "description": "ATR period used when bandMethodType is ATR."
                 },
                 "multiplier": {
-                  "type": "number",
-                  "title": "multiplier",
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Multiplier",
                   "description": "Multiplier applied to the band width."
                 }
               }
@@ -1158,11 +1211,32 @@
             "method": "KC",
             "params": {
               "maSource": "CLOSE",
-              "maPeriod": 20,
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 20
+                }
+              },
               "maMethodType": "SMA",
               "bandMethodType": "ATR",
-              "bandAtrPeriod": 14,
-              "multiplier": 1.5
+              "bandAtrPeriod": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Band ATR Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
+              "multiplier": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Multiplier",
+                  "representation": "Decimal",
+                  "value": 1.5
+                }
+              }
             }
           }
         }
@@ -1185,7 +1259,7 @@
               "additionalProperties": false,
               "properties": {
                 "period": {
-                  "type": "integer",
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Period",
                   "description": "Lookback period used to calculate the Donchian Channel."
                 }
@@ -1195,7 +1269,14 @@
           "default": {
             "method": "DC",
             "params": {
-              "period": 20
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 20
+                }
+              }
             }
           }
         }
@@ -1217,18 +1298,18 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
-                "fast": {
-                  "type": "integer",
+                "fastPeriod": {
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Fast",
                   "description": "Fast moving-average period."
                 },
-                "slow": {
-                  "type": "integer",
+                "slowPeriod": {
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Slow",
                   "description": "Slow moving-average period."
                 },
-                "signal": {
-                  "type": "integer",
+                "signalPeriod": {
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Signal Period",
                   "description": "Signal-line period."
                 },
@@ -1243,9 +1324,30 @@
           "default": {
             "method": "MACD",
             "params": {
-              "fast": 12,
-              "slow": 26,
-              "signal": 9,
+              "fastPeriod": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Fast Period",
+                  "representation": "UnsignedInteger",
+                  "value": 12
+                }
+              },
+              "slowPeriod": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Slow Period",
+                  "representation": "UnsignedInteger",
+                  "value": 26
+                }
+              },
+              "signalPeriod": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Signal Period",
+                  "representation": "UnsignedInteger",
+                  "value": 9
+                }
+              },
               "source": "CLOSE"
             }
           }
@@ -1269,18 +1371,18 @@
               "additionalProperties": false,
               "properties": {
                 "kPeriod": {
-                  "type": "integer",
-                  "title": "kPeriod",
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "K Period",
                   "description": "Lookback period used to compute raw %K."
                 },
                 "kSmooth": {
-                  "type": "integer",
-                  "title": "kSmooth",
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "K Smooth",
                   "description": "Smoothing period applied to %K."
                 },
                 "dPeriod": {
-                  "type": "integer",
-                  "title": "dPeriod",
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "D Period",
                   "description": "Smoothing period used to compute %D."
                 },
                 "high": {
@@ -1304,9 +1406,30 @@
           "default": {
             "method": "STOCH",
             "params": {
-              "kPeriod": 14,
-              "kSmooth": 3,
-              "dPeriod": 3,
+              "kPeriod": {
+                "method": "INPUT",
+                "params": {
+                  "label": "K Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
+              "kSmooth": {
+                "method": "INPUT",
+                "params": {
+                  "label": "K Smooth",
+                  "representation": "UnsignedInteger",
+                  "value": 3
+                }
+              },
+              "dPeriod": {
+                "method": "INPUT",
+                "params": {
+                  "label": "D Period",
+                  "representation": "UnsignedInteger",
+                  "value": 3
+                }
+              },
               "high": "HIGH",
               "low": "LOW",
               "close": "CLOSE"
@@ -1332,28 +1455,28 @@
               "additionalProperties": false,
               "properties": {
                 "kPeriod": {
-                  "type": "integer",
-                  "title": "kPeriod",
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "K Period",
                   "description": "Lookback period used to compute raw stochastic values on RSI."
                 },
                 "kSmooth": {
-                  "type": "integer",
-                  "title": "kSmooth",
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "K Smooth",
                   "description": "Smoothing period applied to %K."
                 },
                 "dPeriod": {
-                  "type": "integer",
-                  "title": "dPeriod",
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "D Period",
                   "description": "Smoothing period used to compute %D."
                 },
-                "rsiInput": {
+                "rsiSource": {
                   "$ref": "#/$defs/seriesAsParameter",
-                  "title": "rsiInput",
+                  "title": "rsiSource",
                   "description": "Source series used to calculate RSI before applying stochastic."
                 },
                 "rsiPeriod": {
-                  "type": "integer",
-                  "title": "rsiPeriod",
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "RSI Period",
                   "description": "RSI lookback period."
                 }
               }
@@ -1362,11 +1485,39 @@
           "default": {
             "method": "STOCH_RSI",
             "params": {
-              "kPeriod": 14,
-              "kSmooth": 3,
-              "dPeriod": 3,
-              "rsiInput": "CLOSE",
-              "rsiPeriod": 14
+              "kPeriod": {
+                "method": "INPUT",
+                "params": {
+                  "label": "K Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
+              "kSmooth": {
+                "method": "INPUT",
+                "params": {
+                  "label": "K Smooth",
+                  "representation": "UnsignedInteger",
+                  "value": 3
+                }
+              },
+              "dPeriod": {
+                "method": "INPUT",
+                "params": {
+                  "label": "D Period",
+                  "representation": "UnsignedInteger",
+                  "value": 3
+                }
+              },
+              "rsiSource": "CLOSE",
+              "rsiPeriod": {
+                "method": "INPUT",
+                "params": {
+                  "label": "RSI Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              }
             }
           }
         }
@@ -2717,23 +2868,51 @@
         "fast_ema": {
           "method": "EMA",
           "params": {
-            "period": 20,
+            "period": {
+              "method": "INPUT",
+              "params": {
+                "label": "Period",
+                "representation": "UnsignedInteger",
+                "value": 20
+              }
+            },
             "source": "CLOSE"
           }
         },
         "slow_ema": {
           "method": "EMA",
           "params": {
-            "period": 50,
+            "period": {
+              "method": "INPUT",
+              "params": {
+                "label": "Period",
+                "representation": "UnsignedInteger",
+                "value": 50
+              }
+            },
             "source": "CLOSE"
           }
         },
         "bbands": {
           "method": "BB",
           "params": {
-            "period": 20,
-            "stddev": 2,
-            "source": "CLOSE"
+            "period": {
+              "method": "INPUT",
+              "params": {
+                "label": "Period",
+                "representation": "UnsignedInteger",
+                "value": 20
+              }
+            },
+            "stddev": {
+              "method": "INPUT",
+              "params": {
+                "label": "StdDev",
+                "representation": "Decimal",
+                "value": 2
+              }
+            },
+            "maSource": "CLOSE"
           }
         },
         "bb_upper": {

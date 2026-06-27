@@ -9,6 +9,7 @@ module;
 export module pludux:nodes.atr_node;
 
 import :nodes.adaptive_ma_node;
+import :nodes.erased_node;
 
 export namespace pludux {
 
@@ -20,23 +21,33 @@ public:
   }
 
   explicit AtrNode(std::size_t period,
-                     MaNodeType ma_smoothing_type = MaNodeType::Rma)
-  : period_{period}
+                   MaNodeType ma_smoothing_type = MaNodeType::Rma)
+  : AtrNode{ErasedNode{period}, ma_smoothing_type}
+  {
+  }
+
+  explicit AtrNode(ErasedNode period,
+                   MaNodeType ma_smoothing_type = MaNodeType::Rma)
+  : period_{std::move(period)}
   , ma_smoothing_type_{ma_smoothing_type}
   {
   }
 
   auto operator==(const AtrNode& other) const noexcept -> bool = default;
 
-
-  auto period(this AtrNode self) noexcept -> std::size_t
+  auto period(this const AtrNode& self) noexcept -> const ErasedNode&
   {
     return self.period_;
   }
 
   void period(this AtrNode& self, std::size_t new_period) noexcept
   {
-    self.period_ = new_period;
+    self.period_ = ErasedNode{new_period};
+  }
+
+  void period(this AtrNode& self, ErasedNode period) noexcept
+  {
+    self.period_ = std::move(period);
   }
 
   auto ma_smoothing_type(this const AtrNode& self) noexcept -> MaNodeType
@@ -50,7 +61,7 @@ public:
   }
 
 private:
-  std::size_t period_;
+  ErasedNode period_;
   MaNodeType ma_smoothing_type_;
 };
 

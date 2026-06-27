@@ -849,7 +849,9 @@ private:
 
         ImGui::Text("Node:");
         ImGui::SameLine();
+        ImGui::PushID("series_node");
         self.render_series_node(series_node, context);
+        ImGui::PopID();
         updated_series_nodes.set(series_name, series_node);
 
         // Delete button for the series. Right aligned on the new line
@@ -1197,8 +1199,6 @@ private:
                                                         "LOOKBACK"};
 
     auto series_node_id = get_series_node_id(series_node);
-
-    ImGui::PushID(series_node_id.c_str());
     {
       const auto combo_preview_value = get_series_node_title(series_node_id);
       if(ImGui::BeginCombo("##Series", combo_preview_value.c_str())) {
@@ -1241,7 +1241,6 @@ private:
       self.render_series_node_params(series_node, context);
       ImGui::Unindent();
     }
-    ImGui::PopID();
   }
 
   void render_series_node_params(this auto& self,
@@ -1271,9 +1270,12 @@ private:
                           StochRsiNode,
                           SmaNode,
                           EmaNode,
+                          RmaNode,
                           WmaNode,
                           HmaNode,
                           RsiNode,
+                          RocNode,
+                          RvolNode,
 
                           MacdNode,
                           AtrNode,
@@ -1336,7 +1338,9 @@ private:
       ImGui::Text("Source:");
       ImGui::SameLine();
       auto output_source = node.source();
+      ImGui::PushID("source");
       self.render_series_node(output_source, context);
+      ImGui::PopID();
       node.source(std::move(output_source));
     }
   }
@@ -1449,28 +1453,26 @@ private:
 
     ImGui::Text("Period:");
     ImGui::SameLine();
-    auto period = static_cast<int>(node.period());
-    if(ImGui::InputInt("##bb_period", &period)) {
-      if(period < 1) {
-        period = 1;
-      }
-      node.period(static_cast<std::size_t>(period));
-    }
+    auto period = node.period();
+    ImGui::PushID("period");
+    self.render_series_node(period, context);
+    ImGui::PopID();
+    node.period(std::move(period));
 
     ImGui::Text("StdDev:");
     ImGui::SameLine();
-    auto stddev_multiplier = node.stddev();
-    if(ImGui::InputDouble("##bb_stddev_multiplier", &stddev_multiplier)) {
-      if(stddev_multiplier < 0.1) {
-        stddev_multiplier = 0.1;
-      }
-      node.stddev(stddev_multiplier);
-    }
+    auto stddev = node.stddev();
+    ImGui::PushID("stddev");
+    self.render_series_node(stddev, context);
+    ImGui::PopID();
+    node.stddev(std::move(stddev));
 
     ImGui::Text("Source:");
     ImGui::SameLine();
     auto source = node.source();
+    ImGui::PushID("source");
     self.render_series_node(source, context);
+    ImGui::PopID();
     node.source(std::move(source));
   }
 
@@ -1481,13 +1483,11 @@ private:
     {
       ImGui::Text("Length:");
       ImGui::SameLine();
-      auto length = static_cast<int>(node.period());
-      if(ImGui::InputInt("##kc_length", &length)) {
-        if(length < 1) {
-          length = 1;
-        }
-        node.period(static_cast<std::size_t>(length));
-      }
+      auto period = node.period();
+      ImGui::PushID("period");
+      self.render_series_node(period, context);
+      ImGui::PopID();
+      node.period(std::move(period));
     }
     {
       ImGui::Text("MA Type:");
@@ -1517,7 +1517,9 @@ private:
       ImGui::Text("Source:");
       ImGui::SameLine();
       auto source = node.source();
+      ImGui::PushID("source");
       self.render_series_node(source, context);
+      ImGui::PopID();
       node.source(std::move(source));
     }
     {
@@ -1546,24 +1548,20 @@ private:
     {
       ImGui::Text("ATR Length:");
       ImGui::SameLine();
-      auto atr_length = static_cast<int>(node.band_atr_period());
-      if(ImGui::InputInt("##kc_atr_length", &atr_length)) {
-        if(atr_length < 1) {
-          atr_length = 1;
-        }
-        node.band_atr_period(static_cast<std::size_t>(atr_length));
-      }
+      auto band_atr_period = node.band_atr_period();
+      ImGui::PushID("band_atr_period");
+      self.render_series_node(band_atr_period, context);
+      ImGui::PopID();
+      node.band_atr_period(std::move(band_atr_period));
     }
     {
       ImGui::Text("Multiplier:");
       ImGui::SameLine();
       auto multiplier = node.multiplier();
-      if(ImGui::InputDouble("##kc_multiplier", &multiplier, 0.1, 1.0, "%.2f")) {
-        if(multiplier < 0.1) {
-          multiplier = 0.1;
-        }
-        node.multiplier(multiplier);
-      }
+      ImGui::PushID("multiplier");
+      self.render_series_node(multiplier, context);
+      ImGui::PopID();
+      node.multiplier(std::move(multiplier));
     }
   }
 
@@ -1574,13 +1572,11 @@ private:
     {
       ImGui::Text("Length:");
       ImGui::SameLine();
-      auto length = static_cast<int>(node.period());
-      if(ImGui::InputInt("##dc_length", &length)) {
-        if(length < 1) {
-          length = 1;
-        }
-        node.period(static_cast<std::size_t>(length));
-      }
+      auto period = node.period();
+      ImGui::PushID("period");
+      self.render_series_node(period, context);
+      ImGui::PopID();
+      node.period(std::move(period));
     }
   }
 
@@ -1591,35 +1587,29 @@ private:
     {
       ImGui::Text("D Period:");
       ImGui::SameLine();
-      auto d_period = static_cast<int>(node.d_period());
-      if(ImGui::InputInt("##stoch_d_period", &d_period)) {
-        if(d_period < 1) {
-          d_period = 1;
-        }
-        node.d_period(static_cast<std::size_t>(d_period));
-      }
+      auto d_period = node.d_period();
+      ImGui::PushID("d_period");
+      self.render_series_node(d_period, context);
+      ImGui::PopID();
+      node.d_period(std::move(d_period));
     }
     {
       ImGui::Text("K Period:");
       ImGui::SameLine();
-      auto k_period = static_cast<int>(node.k_period());
-      if(ImGui::InputInt("##stoch_k_period", &k_period)) {
-        if(k_period < 1) {
-          k_period = 1;
-        }
-        node.k_period(static_cast<std::size_t>(k_period));
-      }
+      auto k_period = node.k_period();
+      ImGui::PushID("k_period");
+      self.render_series_node(k_period, context);
+      ImGui::PopID();
+      node.k_period(std::move(k_period));
     }
     {
       ImGui::Text("K Smooth:");
       ImGui::SameLine();
-      auto slowing_period = static_cast<int>(node.k_smooth());
-      if(ImGui::InputInt("##stoch_slowing_period", &slowing_period)) {
-        if(slowing_period < 1) {
-          slowing_period = 1;
-        }
-        node.k_smooth(static_cast<std::size_t>(slowing_period));
-      }
+      auto k_smooth = node.k_smooth();
+      ImGui::PushID("k_smooth");
+      self.render_series_node(k_smooth, context);
+      ImGui::PopID();
+      node.k_smooth(std::move(k_smooth));
     }
   }
 
@@ -1630,64 +1620,71 @@ private:
     {
       ImGui::Text("D Period:");
       ImGui::SameLine();
-      auto d_period = static_cast<int>(node.d_period());
-      if(ImGui::InputInt("##stoch_rsi_d_period", &d_period)) {
-        if(d_period < 1) {
-          d_period = 1;
-        }
-        node.d_period(static_cast<std::size_t>(d_period));
-      }
+      auto d_period = node.d_period();
+      ImGui::PushID("d_period");
+      self.render_series_node(d_period, context);
+      ImGui::PopID();
+      node.d_period(std::move(d_period));
     }
     {
       ImGui::Text("K Period:");
       ImGui::SameLine();
-      auto k_period = static_cast<int>(node.k_period());
-      if(ImGui::InputInt("##stoch_rsi_k_period", &k_period)) {
-        if(k_period < 1) {
-          k_period = 1;
-        }
-        node.k_period(static_cast<std::size_t>(k_period));
-      }
+      auto k_period = node.k_period();
+      ImGui::PushID("k_period");
+      self.render_series_node(k_period, context);
+      ImGui::PopID();
+      node.k_period(std::move(k_period));
     }
     {
       ImGui::Text("K Smooth:");
       ImGui::SameLine();
-      auto k_smooth = static_cast<int>(node.k_smooth());
-      if(ImGui::InputInt("##stoch_rsi_k_smooth", &k_smooth)) {
-        if(k_smooth < 1) {
-          k_smooth = 1;
-        }
-        node.k_smooth(static_cast<std::size_t>(k_smooth));
-      }
+      auto k_smooth = node.k_smooth();
+      ImGui::PushID("k_smooth");
+      self.render_series_node(k_smooth, context);
+      ImGui::PopID();
+      node.k_smooth(std::move(k_smooth));
     }
     {
       ImGui::Text("RSI Period:");
       ImGui::SameLine();
-      auto rsi_period = static_cast<int>(node.rsi_period());
-      if(ImGui::InputInt("##stoch_rsi_rsi_period", &rsi_period)) {
-        if(rsi_period < 1) {
-          rsi_period = 1;
-        }
-        node.rsi_period(static_cast<std::size_t>(rsi_period));
-      }
+      auto rsi_period = node.rsi_period();
+      ImGui::PushID("rsi_period");
+      self.render_series_node(rsi_period, context);
+      ImGui::PopID();
+      node.rsi_period(std::move(rsi_period));
     }
     {
       ImGui::Text("RSI Source:");
       ImGui::SameLine();
       auto rsi_source = node.rsi_source();
+      ImGui::PushID("rsi_source");
       self.render_series_node(rsi_source, context);
+      ImGui::PopID();
       node.rsi_source(std::move(rsi_source));
     }
+  }
+
+  void render_series_node_params(this auto& self,
+                                 RvolNode& node,
+                                 WindowContext& context)
+  {
+    ImGui::Text("Period:");
+    ImGui::SameLine();
+    auto period = node.period();
+    ImGui::PushID("period");
+    self.render_series_node(period, context);
+    ImGui::PopID();
+    node.period(std::move(period));
   }
 
   template<typename TNodeWithPeriod>
     requires std::same_as<TNodeWithPeriod, SmaNode> ||
              std::same_as<TNodeWithPeriod, EmaNode> ||
+             std::same_as<TNodeWithPeriod, RmaNode> ||
              std::same_as<TNodeWithPeriod, WmaNode> ||
              std::same_as<TNodeWithPeriod, HmaNode> ||
              std::same_as<TNodeWithPeriod, RsiNode> ||
              std::same_as<TNodeWithPeriod, RocNode> ||
-             std::same_as<TNodeWithPeriod, RvolNode> ||
              std::same_as<TNodeWithPeriod, StddevNode>
   void render_series_node_params(this auto& self,
                                  TNodeWithPeriod& node,
@@ -1695,18 +1692,18 @@ private:
   {
     ImGui::Text("Period:");
     ImGui::SameLine();
-    auto period = static_cast<int>(node.period());
-    if(ImGui::InputInt("##period", &period)) {
-      if(period < 1) {
-        period = 1;
-      }
-      node.period(static_cast<std::size_t>(period));
-    }
+    auto period = node.period();
+    ImGui::PushID("period");
+    self.render_series_node(period, context);
+    ImGui::PopID();
+    node.period(std::move(period));
 
     ImGui::Text("Source:");
     ImGui::SameLine();
     auto source = node.source();
+    ImGui::PushID("source");
     self.render_series_node(source, context);
+    ImGui::PopID();
     node.source(std::move(source));
   }
 
@@ -1721,23 +1718,23 @@ private:
                                  WindowContext& context)
   {
     {
-      ImGui::PushID("left");
       ImGui::Text("Left:");
       ImGui::SameLine();
       auto left = node.left();
+      ImGui::PushID("left");
       self.render_series_node(left, context);
-      node.left(std::move(left));
       ImGui::PopID();
+      node.left(std::move(left));
     }
 
     {
-      ImGui::PushID("right");
       ImGui::Text("Right:");
       ImGui::SameLine();
       auto right = node.right();
+      ImGui::PushID("right");
       self.render_series_node(right, context);
-      node.right(std::move(right));
       ImGui::PopID();
+      node.right(std::move(right));
     }
   }
 
@@ -1751,7 +1748,9 @@ private:
     ImGui::Text("Value:");
     ImGui::SameLine();
     auto value = node.operand();
+    ImGui::PushID("value");
     self.render_series_node(value, context);
+    ImGui::PopID();
     node.operand(std::move(value));
   }
 
@@ -1760,10 +1759,10 @@ private:
                                  WindowContext& context)
   {
     {
-      ImGui::PushID("percent");
       ImGui::Text("Percent:");
       ImGui::SameLine();
       auto percent = node.percent();
+      ImGui::PushID("percent");
       if(ImGui::InputDouble("##percent", &percent, 0.1, 1.0, "%.2f")) {
         node.percent(std::move(percent));
       }
@@ -1771,13 +1770,13 @@ private:
     }
 
     {
-      ImGui::PushID("base");
       ImGui::Text("Base:");
       ImGui::SameLine();
       auto base = node.base();
+      ImGui::PushID("base");
       self.render_series_node(base, context);
-      node.base(std::move(base));
       ImGui::PopID();
+      node.base(std::move(base));
     }
   }
 
@@ -1788,7 +1787,9 @@ private:
     ImGui::Text("Source:");
     ImGui::SameLine();
     auto source = node.source();
+    ImGui::PushID("source");
     self.render_series_node(source, context);
+    ImGui::PopID();
     node.source(std::move(source));
   }
 
@@ -1811,41 +1812,37 @@ private:
     {
       ImGui::Text("Fast Period:");
       ImGui::SameLine();
-      auto fast_period = static_cast<int>(node.fast_period());
-      if(ImGui::InputInt("##macd_fast_period", &fast_period)) {
-        if(fast_period < 1) {
-          fast_period = 1;
-        }
-        node.fast_period(static_cast<std::size_t>(fast_period));
-      }
+      auto fast_period = node.fast_period();
+      ImGui::PushID("fast_period");
+      self.render_series_node(fast_period, context);
+      ImGui::PopID();
+      node.fast_period(std::move(fast_period));
     }
     {
       ImGui::Text("Slow Period:");
       ImGui::SameLine();
-      auto slow_period = static_cast<int>(node.slow_period());
-      if(ImGui::InputInt("##macd_slow_period", &slow_period)) {
-        if(slow_period < 1) {
-          slow_period = 1;
-        }
-        node.slow_period(static_cast<std::size_t>(slow_period));
-      }
+      auto slow_period = node.slow_period();
+      ImGui::PushID("slow_period");
+      self.render_series_node(slow_period, context);
+      ImGui::PopID();
+      node.slow_period(std::move(slow_period));
     }
     {
       ImGui::Text("Signal Period:");
       ImGui::SameLine();
-      auto signal_period = static_cast<int>(node.signal_period());
-      if(ImGui::InputInt("##macd_signal_period", &signal_period)) {
-        if(signal_period < 1) {
-          signal_period = 1;
-        }
-        node.signal_period(static_cast<std::size_t>(signal_period));
-      }
+      auto signal_period = node.signal_period();
+      ImGui::PushID("signal_period");
+      self.render_series_node(signal_period, context);
+      ImGui::PopID();
+      node.signal_period(std::move(signal_period));
     }
     {
       ImGui::Text("Source:");
       ImGui::SameLine();
       auto source = node.source();
+      ImGui::PushID("source");
       self.render_series_node(source, context);
+      ImGui::PopID();
       node.source(std::move(source));
     }
   }
@@ -1856,13 +1853,11 @@ private:
   {
     ImGui::Text("Period:");
     ImGui::SameLine();
-    auto period = static_cast<int>(node.period());
-    if(ImGui::InputInt("##atr_period", &period)) {
-      if(period < 1) {
-        period = 1;
-      }
-      node.period(static_cast<std::size_t>(period));
-    }
+    auto period = node.period();
+    ImGui::PushID("period");
+    self.render_series_node(period, context);
+    ImGui::PopID();
+    node.period(std::move(period));
 
     ImGui::Text("Smoothing:");
     ImGui::SameLine();
@@ -1916,7 +1911,9 @@ private:
       ImGui::Text("Source:");
       ImGui::SameLine();
       auto source = node.source();
+      ImGui::PushID("source");
       self.render_series_node(source, context);
+      ImGui::PopID();
       node.source(std::move(source));
     }
   }
@@ -2296,16 +2293,16 @@ private:
   {
     auto new_condition = condition;
 
-    ImGui::PushID("left_param");
     auto target = new_condition.target();
+    ImGui::PushID("left_param");
     self.render_series_node(target, context);
     ImGui::PopID();
 
     const auto updated_condition_id =
      self.draw_condition_node_combo(new_condition);
 
-    ImGui::PushID("right_param");
     auto threshold = new_condition.threshold();
+    ImGui::PushID("right_param");
     self.render_series_node(threshold, context);
     ImGui::PopID();
 
@@ -2327,16 +2324,16 @@ private:
   {
     auto new_condition = condition;
 
-    ImGui::PushID("left_param");
     auto source = new_condition.source();
+    ImGui::PushID("left_param");
     self.render_series_node(source, context);
     ImGui::PopID();
 
     const auto updated_condition_id =
      self.draw_condition_node_combo(new_condition);
 
-    ImGui::PushID("right_param");
     auto reference = new_condition.reference();
+    ImGui::PushID("right_param");
     self.render_series_node(reference, context);
     ImGui::PopID();
 

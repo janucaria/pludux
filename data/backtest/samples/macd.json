@@ -8,9 +8,30 @@
         "source": {
           "method": "MACD",
           "params": {
-            "fast": 12,
-            "slow": 26,
-            "signal": 9
+            "fastPeriod": {
+              "method": "INPUT",
+              "params": {
+                "label": "Fast Period",
+                "representation": "UnsignedInteger",
+                "value": 12
+              }
+            },
+            "slowPeriod": {
+              "method": "INPUT",
+              "params": {
+                "label": "Slow Period",
+                "representation": "UnsignedInteger",
+                "value": 26
+              }
+            },
+            "signalPeriod": {
+              "method": "INPUT",
+              "params": {
+                "label": "Signal Period",
+                "representation": "UnsignedInteger",
+                "value": 9
+              }
+            }
           }
         }
       }

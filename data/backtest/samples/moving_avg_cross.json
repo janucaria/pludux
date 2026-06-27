@@ -4,7 +4,14 @@
     "ma": {
       "method": "SMA",
       "params": {
-        "period": 9
+        "period": {
+          "method": "INPUT",
+          "params": {
+            "label": "MA Period",
+            "representation": "UnsignedInteger",
+            "value": 9
+          }
+        }
       }
     }
   },

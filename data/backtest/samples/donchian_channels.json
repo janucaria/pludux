@@ -4,7 +4,14 @@
     "dchannel20": {
       "method": "DC",
       "params": {
-        "period": 20
+        "period": {
+          "method": "INPUT",
+          "params": {
+            "label": "Period",
+            "representation": "UnsignedInteger",
+            "value": 20
+          }
+        }
       }
     },
     "dc_upper10": {
@@ -14,7 +21,14 @@
         "source": {
           "method": "DC",
           "params": {
-            "period": 10
+            "period": {
+              "method": "INPUT",
+              "params": {
+                "label": "Fast Period",
+                "representation": "UnsignedInteger",
+                "value": 10
+              }
+            }
           }
         }
       }

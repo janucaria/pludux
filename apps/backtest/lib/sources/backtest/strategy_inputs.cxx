@@ -1,7 +1,7 @@
 module;
 
-#include <vector>
 #include <string>
+#include <vector>
 
 export module pludux.backtest:strategy_inputs;
 
@@ -11,167 +11,190 @@ import :strategy;
 
 export namespace pludux::backtest {
 
-void collect_numeric_inputs_from_node(
- const ErasedNode& node,
- std::vector<NumericInputNode>& inputs);
+void collect_numeric_inputs_from_node(const ErasedNode& node,
+                                      std::vector<NumericInputNode>& inputs);
 
-void collect_numeric_inputs_from_node(
- const NumericInputNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const NumericInputNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   inputs.push_back(node);
 }
 
 void collect_numeric_inputs_from_node(const auto&,
-                                             std::vector<NumericInputNode>&)
+                                      std::vector<NumericInputNode>&)
 {
 }
 
-void collect_numeric_inputs_from_node(
- const ChangeNode& node,
- std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.source(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const LookbackNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const ChangeNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
 }
 
-void collect_numeric_inputs_from_node(
- const SelectOutputNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const LookbackNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
 }
 
-void collect_numeric_inputs_from_node(
- const AdaptiveMaNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const SelectOutputNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
 }
 
-void collect_numeric_inputs_from_node(
- const HighestNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const AdaptiveMaNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
 }
 
-void collect_numeric_inputs_from_node(
- const LowestNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const HighestNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
 }
 
-void collect_numeric_inputs_from_node(
- const PercentageNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const LowestNode& node,
+                                      std::vector<NumericInputNode>& inputs)
+{
+  collect_numeric_inputs_from_node(node.source(), inputs);
+}
+
+void collect_numeric_inputs_from_node(const PercentageNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.base(), inputs);
 }
 
-void collect_numeric_inputs_from_node(
- const StddevNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const StddevNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
+  collect_numeric_inputs_from_node(node.period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(
- const SmaNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const SmaNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
+  collect_numeric_inputs_from_node(node.period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(
- const EmaNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const EmaNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
+  collect_numeric_inputs_from_node(node.period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(
- const RmaNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const RmaNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
+  collect_numeric_inputs_from_node(node.period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(
- const WmaNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const WmaNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
+  collect_numeric_inputs_from_node(node.period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(
- const HmaNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const HmaNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
+  collect_numeric_inputs_from_node(node.period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(
- const MacdNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const MacdNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
+  collect_numeric_inputs_from_node(node.fast_period(), inputs);
+  collect_numeric_inputs_from_node(node.slow_period(), inputs);
+  collect_numeric_inputs_from_node(node.signal_period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(
- const RocNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const AtrNode& node,
+                                      std::vector<NumericInputNode>& inputs)
+{
+  collect_numeric_inputs_from_node(node.period(), inputs);
+}
+
+void collect_numeric_inputs_from_node(const RocNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
+  collect_numeric_inputs_from_node(node.period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(
- const RsiNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const RsiNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
+  collect_numeric_inputs_from_node(node.period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(
- const BbNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const BbNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
+  collect_numeric_inputs_from_node(node.period(), inputs);
+  collect_numeric_inputs_from_node(node.stddev(), inputs);
 }
 
-void collect_numeric_inputs_from_node(
- const KcNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const KcNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
+  collect_numeric_inputs_from_node(node.period(), inputs);
+  collect_numeric_inputs_from_node(node.multiplier(), inputs);
+  collect_numeric_inputs_from_node(node.band_atr_period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(
- const StochRsiNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const RvolNode& node,
+                                      std::vector<NumericInputNode>& inputs)
+{
+  collect_numeric_inputs_from_node(node.period(), inputs);
+}
+
+void collect_numeric_inputs_from_node(const DonchianChannelNode& node,
+                                      std::vector<NumericInputNode>& inputs)
+{
+  collect_numeric_inputs_from_node(node.period(), inputs);
+}
+
+void collect_numeric_inputs_from_node(const StochNode& node,
+                                      std::vector<NumericInputNode>& inputs)
+{
+  collect_numeric_inputs_from_node(node.k_period(), inputs);
+  collect_numeric_inputs_from_node(node.k_smooth(), inputs);
+  collect_numeric_inputs_from_node(node.d_period(), inputs);
+}
+
+void collect_numeric_inputs_from_node(const StochRsiNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.rsi_source(), inputs);
+  collect_numeric_inputs_from_node(node.rsi_period(), inputs);
+  collect_numeric_inputs_from_node(node.k_period(), inputs);
+  collect_numeric_inputs_from_node(node.k_smooth(), inputs);
+  collect_numeric_inputs_from_node(node.d_period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(
- const AllOfNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const AllOfNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   for(const auto& condition : node.conditions()) {
     collect_numeric_inputs_from_node(condition, inputs);
   }
 }
 
-void collect_numeric_inputs_from_node(
- const AnyOfNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const AnyOfNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   for(const auto& condition : node.conditions()) {
     collect_numeric_inputs_from_node(condition, inputs);
@@ -179,67 +202,60 @@ void collect_numeric_inputs_from_node(
 }
 
 template<typename TComparator>
-void collect_numeric_inputs_from_node(
- const ComparisonNode<TComparator>& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const ComparisonNode<TComparator>& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.target(), inputs);
   collect_numeric_inputs_from_node(node.threshold(), inputs);
 }
 
 template<typename TOperator>
-void collect_numeric_inputs_from_node(
- const BinaryLogicalNode<TOperator>& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const BinaryLogicalNode<TOperator>& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.first_condition(), inputs);
   collect_numeric_inputs_from_node(node.second_condition(), inputs);
 }
 
 template<typename TOperator>
-void collect_numeric_inputs_from_node(
- const UnaryLogicalNode<TOperator>& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const UnaryLogicalNode<TOperator>& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.other_condition(), inputs);
 }
 
-void collect_numeric_inputs_from_node(
- const CrossoverNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const CrossoverNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
   collect_numeric_inputs_from_node(node.reference(), inputs);
 }
 
-void collect_numeric_inputs_from_node(
- const CrossunderNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const CrossunderNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
   collect_numeric_inputs_from_node(node.reference(), inputs);
 }
 
 template<typename TBinaryFn>
-void collect_numeric_inputs_from_node(
- const BinaryOperatorNode<TBinaryFn>& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const BinaryOperatorNode<TBinaryFn>& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.operand1(), inputs);
   collect_numeric_inputs_from_node(node.operand2(), inputs);
 }
 
 template<typename TUnaryFn>
-void collect_numeric_inputs_from_node(
- const UnaryOperatorNode<TUnaryFn>& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const UnaryOperatorNode<TUnaryFn>& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.operand(), inputs);
 }
 
 template<typename TNode>
 auto collect_if_node(const ErasedNode& node,
-                            std::vector<NumericInputNode>& inputs) -> bool
+                     std::vector<NumericInputNode>& inputs) -> bool
 {
   const auto* typed_node = node_cast<TNode>(node);
   if(!typed_node) {
@@ -250,12 +266,13 @@ auto collect_if_node(const ErasedNode& node,
   return true;
 }
 
-void collect_numeric_inputs_from_node(
- const ErasedNode& node,
- std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(const ErasedNode& node,
+                                      std::vector<NumericInputNode>& inputs)
 {
-#define PLUDUX_COLLECT_IF_NODE(TNode) \
-  if(collect_if_node<TNode>(node, inputs)) { return; }
+#define PLUDUX_COLLECT_IF_NODE(TNode)        \
+  if(collect_if_node<TNode>(node, inputs)) { \
+    return;                                  \
+  }
 
   PLUDUX_COLLECT_IF_NODE(NumericInputNode)
   PLUDUX_COLLECT_IF_NODE(ValueNode)

@@ -5,7 +5,6 @@ module;
 
 export module pludux:nodes.numeric_input_node;
 
-
 export namespace pludux {
 
 class NumericInputNode {
@@ -27,11 +26,21 @@ public:
   {
   }
 
-  auto operator==(const NumericInputNode& other) const noexcept
-   -> bool = default;
+  auto operator==(this const NumericInputNode& self,
+                  const NumericInputNode& other) noexcept -> bool
+  {
+    return self.label_ == other.label_ &&
+           self.representation_ == other.representation_ &&
+           self.value_ == other.value_;
+  }
 
-  auto label(this const NumericInputNode& self) noexcept
-   -> const std::string&
+  auto operator!=(this const NumericInputNode& self,
+                  const NumericInputNode& other) noexcept -> bool
+  {
+    return !(self == other);
+  }
+
+  auto label(this const NumericInputNode& self) noexcept -> const std::string&
   {
     return self.label_;
   }

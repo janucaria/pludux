@@ -1,9 +1,11 @@
 module;
 
 #include <cstddef>
+#include <utility>
 
 export module pludux:nodes.donchian_channel_node;
 
+import :nodes.erased_node;
 
 export namespace pludux {
 
@@ -15,26 +17,35 @@ public:
   }
 
   DonchianChannelNode(std::size_t period)
-  : period_{period}
+  : DonchianChannelNode{ErasedNode{period}}
   {
   }
 
-  auto operator==(const DonchianChannelNode&) const noexcept
-   -> bool = default;
+  explicit DonchianChannelNode(ErasedNode period)
+  : period_{std::move(period)}
+  {
+  }
 
+  auto operator==(const DonchianChannelNode&) const noexcept -> bool = default;
 
-  auto period(this const DonchianChannelNode& self) noexcept -> std::size_t
+  auto period(this const DonchianChannelNode& self) noexcept
+   -> const ErasedNode&
   {
     return self.period_;
   }
 
   void period(this DonchianChannelNode& self, std::size_t period) noexcept
   {
-    self.period_ = period;
+    self.period_ = ErasedNode{period};
+  }
+
+  void period(this DonchianChannelNode& self, ErasedNode period) noexcept
+  {
+    self.period_ = std::move(period);
   }
 
 private:
-  std::size_t period_;
+  ErasedNode period_;
 };
 
 } // namespace pludux

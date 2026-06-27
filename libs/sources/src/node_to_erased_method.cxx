@@ -65,12 +65,20 @@ auto resolve_numeric_input_value(const NumericInputNode& node) noexcept
   }
 }
 
+auto consume_numeric_input_value(NodeToErasedMethodContext& context,
+                                 const NumericInputNode& fallback) noexcept
+ -> double
+{
+  const auto& input = context.consume(fallback);
+  return resolve_numeric_input_value(input);
+}
+
 auto node_to_erased_method(const NumericInputNode& node,
                            NodeToErasedMethodContext& context)
  -> AnySeriesMethod
 {
-  const auto& input = context.consume(node);
-  return AnySeriesMethod{ValueMethod{resolve_numeric_input_value(input)}};
+  return AnySeriesMethod{
+   ValueMethod{consume_numeric_input_value(context, node)}};
 }
 
 auto node_to_erased_method(const ValueNode& node, NodeToErasedMethodContext&)
@@ -190,59 +198,73 @@ auto node_to_erased_method(const StddevNode& node,
                            NodeToErasedMethodContext& context)
  -> AnySeriesMethod
 {
-  return AnySeriesMethod{
-   StddevMethod{node_to_erased_method(node.source(), context), node.period()}};
+  const auto source_method = node_to_erased_method(node.source(), context);
+  const auto period = node_to_erased_method(node.period(), context);
+
+  return StddevMethod{source_method, period};
 }
 
 auto node_to_erased_method(const SmaNode& node,
                            NodeToErasedMethodContext& context)
  -> AnySeriesMethod
 {
-  return AnySeriesMethod{
-   SmaMethod{node_to_erased_method(node.source(), context), node.period()}};
+  const auto source_method = node_to_erased_method(node.source(), context);
+  const auto period = node_to_erased_method(node.period(), context);
+
+  return SmaMethod{source_method, period};
 }
 
 auto node_to_erased_method(const EmaNode& node,
                            NodeToErasedMethodContext& context)
  -> AnySeriesMethod
 {
-  return AnySeriesMethod{
-   EmaMethod{node_to_erased_method(node.source(), context), node.period()}};
+  const auto source_method = node_to_erased_method(node.source(), context);
+  const auto period = node_to_erased_method(node.period(), context);
+
+  return EmaMethod{source_method, period};
 }
 
 auto node_to_erased_method(const RmaNode& node,
                            NodeToErasedMethodContext& context)
  -> AnySeriesMethod
 {
-  return AnySeriesMethod{
-   RmaMethod{node_to_erased_method(node.source(), context), node.period()}};
+  const auto source_method = node_to_erased_method(node.source(), context);
+  const auto period = node_to_erased_method(node.period(), context);
+
+  return RmaMethod{source_method, period};
 }
 
 auto node_to_erased_method(const WmaNode& node,
                            NodeToErasedMethodContext& context)
  -> AnySeriesMethod
 {
-  return AnySeriesMethod{
-   WmaMethod{node_to_erased_method(node.source(), context), node.period()}};
+  const auto source_method = node_to_erased_method(node.source(), context);
+  const auto period = node_to_erased_method(node.period(), context);
+
+  return WmaMethod{source_method, period};
 }
 
 auto node_to_erased_method(const HmaNode& node,
                            NodeToErasedMethodContext& context)
  -> AnySeriesMethod
 {
-  return AnySeriesMethod{
-   HmaMethod{node_to_erased_method(node.source(), context), node.period()}};
+  const auto source_method = node_to_erased_method(node.source(), context);
+  const auto period = node_to_erased_method(node.period(), context);
+
+  return HmaMethod{source_method, period};
 }
 
 auto node_to_erased_method(const MacdNode& node,
                            NodeToErasedMethodContext& context)
  -> AnySeriesMethod
 {
-  return AnySeriesMethod{
-   MacdMethod{node_to_erased_method(node.source(), context),
-              node.short_period(),
-              node.long_period(),
-              node.signal_period()}};
+  const auto source_method = node_to_erased_method(node.source(), context);
+  const auto fast_period = node_to_erased_method(node.fast_period(), context);
+  const auto slow_period = node_to_erased_method(node.slow_period(), context);
+  const auto signal_period =
+   node_to_erased_method(node.signal_period(), context);
+
+  return MacdMethod{source_method, fast_period, slow_period, signal_period};
 }
 
 auto node_to_erased_method(const TrNode&, NodeToErasedMethodContext&)
@@ -251,82 +273,110 @@ auto node_to_erased_method(const TrNode&, NodeToErasedMethodContext&)
   return AnySeriesMethod{TrMethod{}};
 }
 
-auto node_to_erased_method(const AtrNode& node, NodeToErasedMethodContext&)
+auto node_to_erased_method(const AtrNode& node,
+                           NodeToErasedMethodContext& context)
  -> AnySeriesMethod
 {
-  return AnySeriesMethod{AtrMethod{
-   node.period(), static_cast<MaMethodType>(node.ma_smoothing_type())}};
+  const auto period = node_to_erased_method(node.period(), context);
+
+  return AnySeriesMethod{
+   AtrMethod{period, static_cast<MaMethodType>(node.ma_smoothing_type())}};
 }
 
 auto node_to_erased_method(const RocNode& node,
                            NodeToErasedMethodContext& context)
  -> AnySeriesMethod
 {
-  return AnySeriesMethod{
-   RocMethod{node_to_erased_method(node.source(), context), node.period()}};
+  const auto source_method = node_to_erased_method(node.source(), context);
+  const auto period = node_to_erased_method(node.period(), context);
+
+  return RocMethod{source_method, period};
 }
 
 auto node_to_erased_method(const RsiNode& node,
                            NodeToErasedMethodContext& context)
  -> AnySeriesMethod
 {
-  return AnySeriesMethod{
-   RsiMethod{node_to_erased_method(node.source(), context), node.period()}};
+  const auto source_method = node_to_erased_method(node.source(), context);
+  const auto period = node_to_erased_method(node.period(), context);
+
+  return RsiMethod{source_method, period};
 }
 
-auto node_to_erased_method(const RvolNode& node, NodeToErasedMethodContext&)
+auto node_to_erased_method(const RvolNode& node,
+                           NodeToErasedMethodContext& context)
  -> AnySeriesMethod
 {
-  return AnySeriesMethod{RvolMethod{node.period()}};
+  const auto period = node_to_erased_method(node.period(), context);
+
+  return AnySeriesMethod{RvolMethod{period}};
 }
 
 auto node_to_erased_method(const BbNode& node,
                            NodeToErasedMethodContext& context)
  -> AnySeriesMethod
 {
-  return AnySeriesMethod{
-   BbMethod{node_to_erased_method(node.source(), context),
-            node.period(),
-            node.stddev(),
-            static_cast<MaMethodType>(node.ma_node_type())}};
+  const auto source_method = node_to_erased_method(node.source(), context);
+  const auto period = node_to_erased_method(node.period(), context);
+  const auto stddev = node_to_erased_method(node.stddev(), context);
+
+  return BbMethod{source_method,
+                  period,
+                  stddev,
+                  static_cast<MaMethodType>(node.ma_node_type())};
 }
 
 auto node_to_erased_method(const KcNode& node,
                            NodeToErasedMethodContext& context)
  -> AnySeriesMethod
 {
-  return AnySeriesMethod{
-   KcMethod{node_to_erased_method(node.source(), context),
-            node.period(),
-            node.multiplier(),
-            node.band_atr_period(),
-            static_cast<KcBandMethodType>(node.band_node_type()),
-            static_cast<MaMethodType>(node.ma_node_type())}};
+  const auto source_method = node_to_erased_method(node.source(), context);
+  const auto period = node_to_erased_method(node.period(), context);
+  const auto multiplier = node_to_erased_method(node.multiplier(), context);
+  const auto band_atr_period =
+   node_to_erased_method(node.band_atr_period(), context);
+
+  return KcMethod{source_method,
+                  period,
+                  multiplier,
+                  band_atr_period,
+                  static_cast<KcBandMethodType>(node.band_node_type()),
+                  static_cast<MaMethodType>(node.ma_node_type())};
 }
 
 auto node_to_erased_method(const DonchianChannelNode& node,
-                           NodeToErasedMethodContext&) -> AnySeriesMethod
-{
-  return AnySeriesMethod{DonchianChannelMethod{node.period()}};
-}
-
-auto node_to_erased_method(const StochNode& node, NodeToErasedMethodContext&)
+                           NodeToErasedMethodContext& context)
  -> AnySeriesMethod
 {
-  return AnySeriesMethod{
-   StochMethod{node.k_period(), node.k_smooth(), node.d_period()}};
+  const auto period = node_to_erased_method(node.period(), context);
+
+  return AnySeriesMethod{DonchianChannelMethod{period}};
+}
+
+auto node_to_erased_method(const StochNode& node,
+                           NodeToErasedMethodContext& context)
+ -> AnySeriesMethod
+{
+  const auto k_period = node_to_erased_method(node.k_period(), context);
+  const auto k_smooth = node_to_erased_method(node.k_smooth(), context);
+  const auto d_period = node_to_erased_method(node.d_period(), context);
+
+  return StochMethod{k_period, k_smooth, d_period};
 }
 
 auto node_to_erased_method(const StochRsiNode& node,
                            NodeToErasedMethodContext& context)
  -> AnySeriesMethod
 {
-  return AnySeriesMethod{
-   StochRsiMethod{node_to_erased_method(node.rsi_source(), context),
-                  node.rsi_period(),
-                  node.k_period(),
-                  node.k_smooth(),
-                  node.d_period()}};
+  const auto rsi_source_method =
+   node_to_erased_method(node.rsi_source(), context);
+  const auto rsi_period = node_to_erased_method(node.rsi_period(), context);
+  const auto k_period = node_to_erased_method(node.k_period(), context);
+  const auto k_smooth = node_to_erased_method(node.k_smooth(), context);
+  const auto d_period = node_to_erased_method(node.d_period(), context);
+
+  return StochRsiMethod{
+   rsi_source_method, rsi_period, k_period, k_smooth, d_period};
 }
 
 auto node_to_erased_method(const AllOfNode& node,

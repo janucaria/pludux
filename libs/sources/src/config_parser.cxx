@@ -41,8 +41,8 @@ public:
   using NodeSerialize =
    std::function<auto(const ConfigParser&, const ErasedNode&)->jsoncons::ojson>;
 
-  using NodeDeserialize =
-   std::function<auto(ConfigParser::Parser, const jsoncons::ojson&)->ErasedNode>;
+  using NodeDeserialize = std::function<
+   auto(ConfigParser::Parser, const jsoncons::ojson&)->ErasedNode>;
 
   ConfigParser() = default;
 
@@ -91,8 +91,7 @@ public:
 
     if(config_node.is_string()) {
       const auto node_name = config_node.as_string();
-      const auto expanded_node =
-       jsoncons::ojson::object{{"method", node_name}};
+      const auto expanded_node = jsoncons::ojson::object{{"method", node_name}};
       return self.parse_node(expanded_node);
     }
 
@@ -192,22 +191,29 @@ static auto serialize_node_as(const ErasedNode& node) -> const TNode*
   return node_cast<TNode>(node);
 }
 
-template<typename TNode>
-static auto parse_ta_with_period_node(ConfigParser::Parser config_parser,
-                                      const jsoncons::ojson& parameters)
+template<typename TNode, std::size_t default_period>
+static auto parse_ta_with_erased_period_node(ConfigParser::Parser config_parser,
+                                             const jsoncons::ojson& parameters)
  -> ErasedNode
 {
-  const auto period = get_param_or<std::size_t>(parameters, "period", 14);
-  const auto source = parse_node_from_param_or(
-   config_parser, parameters, "source", CloseNode{});
+  auto period = parse_node_from_param_or(
+   config_parser,
+   parameters,
+   "period",
+   NumericInputNode{"Period",
+                    NumericInputNode::ValueRepresentation::UnsignedInteger,
+                    static_cast<double>(default_period)});
+
+  const auto source =
+   parse_node_from_param_or(config_parser, parameters, "source", CloseNode{});
 
   return TNode{source, period};
 }
 
 template<typename TNode>
-static auto serialize_ta_with_period_node(const ConfigParser& config_parser,
-                                          const ErasedNode& node)
- -> jsoncons::ojson
+static auto
+serialize_ta_with_erased_period_node(const ConfigParser& config_parser,
+                                     const ErasedNode& node) -> jsoncons::ojson
 {
   const auto ta_node = serialize_node_as<TNode>(node);
   if(!ta_node) {
@@ -215,7 +221,7 @@ static auto serialize_ta_with_period_node(const ConfigParser& config_parser,
   }
 
   auto serialized_node = jsoncons::ojson{};
-  serialized_node["period"] = ta_node->period();
+  serialized_node["period"] = config_parser.serialize_node(ta_node->period());
   serialized_node["source"] = config_parser.serialize_node(ta_node->source());
   return serialized_node;
 }
@@ -224,8 +230,7 @@ template<typename TNode>
 static auto serialize_ohlcv_node(const ConfigParser&, const ErasedNode& node)
  -> jsoncons::ojson
 {
-  return node_cast<TNode>(node) ? jsoncons::ojson{}
-                                : jsoncons::ojson::null();
+  return node_cast<TNode>(node) ? jsoncons::ojson{} : jsoncons::ojson::null();
 }
 
 template<typename TNode>
@@ -248,8 +253,8 @@ static auto serialize_value_node(const ConfigParser&, const ErasedNode& node)
   return serialized_node;
 }
 
-static auto parse_value_node(ConfigParser::Parser, const jsoncons::ojson& params)
- -> ErasedNode
+static auto parse_value_node(ConfigParser::Parser,
+                             const jsoncons::ojson& params) -> ErasedNode
 {
   return ValueNode{params.at("value").as_double()};
 }
@@ -297,8 +302,7 @@ static auto parse_ma_node_type(const std::string& ma_type_str,
 }
 
 static auto serialize_ma_node_type(MaNodeType ma_type,
-                                   std::string fallback = "RMA")
- -> std::string
+                                   std::string fallback = "RMA") -> std::string
 {
   switch(ma_type) {
   case MaNodeType::Sma:
@@ -316,14 +320,15 @@ static auto serialize_ma_node_type(MaNodeType ma_type,
   return fallback;
 }
 
-static auto parse_atr_node(ConfigParser::Parser, const jsoncons::ojson& params)
- -> ErasedNode
+static auto parse_atr_node(ConfigParser::Parser config_parser,
+                           const jsoncons::ojson& params) -> ErasedNode
 {
-  auto atr_node = AtrNode{};
-
-  if(params.contains("period")) {
-    atr_node.period(params.at("period").as<std::size_t>());
-  }
+  auto atr_node = AtrNode{parse_node_from_param_or(
+   config_parser,
+   params,
+   "period",
+   NumericInputNode{
+    "Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 14.0})};
 
   if(params.contains("maSmoothingType")) {
     atr_node.ma_smoothing_type(parse_ma_node_type(
@@ -333,8 +338,8 @@ static auto parse_atr_node(ConfigParser::Parser, const jsoncons::ojson& params)
   return atr_node;
 }
 
-static auto serialize_atr_node(const ConfigParser&, const ErasedNode& node)
- -> jsoncons::ojson
+static auto serialize_atr_node(const ConfigParser& config_parser,
+                               const ErasedNode& node) -> jsoncons::ojson
 {
   const auto atr_node = node_cast<AtrNode>(node);
   if(!atr_node) {
@@ -342,7 +347,7 @@ static auto serialize_atr_node(const ConfigParser&, const ErasedNode& node)
   }
 
   auto serialized_node = jsoncons::ojson{};
-  serialized_node["period"] = atr_node->period();
+  serialized_node["period"] = config_parser.serialize_node(atr_node->period());
   serialized_node["maSmoothingType"] =
    serialize_ma_node_type(atr_node->ma_smoothing_type());
   return serialized_node;
@@ -364,8 +369,7 @@ static auto parse_kc_band_node_type(const std::string& band_type_str)
   return KcBandNodeType::Atr;
 }
 
-static auto serialize_kc_band_node_type(KcBandNodeType band_type)
- -> std::string
+static auto serialize_kc_band_node_type(KcBandNodeType band_type) -> std::string
 {
   switch(band_type) {
   case KcBandNodeType::Atr:
@@ -390,12 +394,14 @@ static auto serialize_kc_node(const ConfigParser& config_parser,
   auto serialized_node = jsoncons::ojson{};
   serialized_node["maMethodType"] =
    serialize_ma_node_type(kc_node->ma_node_type(), "EMA");
-  serialized_node["maPeriod"] = kc_node->period();
+  serialized_node["period"] = config_parser.serialize_node(kc_node->period());
   serialized_node["maSource"] = config_parser.serialize_node(kc_node->source());
   serialized_node["bandMethodType"] =
    serialize_kc_band_node_type(kc_node->band_node_type());
-  serialized_node["bandAtrPeriod"] = kc_node->band_atr_period();
-  serialized_node["multiplier"] = kc_node->multiplier();
+  serialized_node["bandAtrPeriod"] =
+   config_parser.serialize_node(kc_node->band_atr_period());
+  serialized_node["multiplier"] =
+   config_parser.serialize_node(kc_node->multiplier());
   return serialized_node;
 }
 
@@ -404,18 +410,34 @@ static auto parse_kc_node(ConfigParser::Parser config_parser,
 {
   const auto ma_node_type = parse_ma_node_type(
    get_param_or<std::string>(params, "maMethodType", "EMA"), MaNodeType::Ema);
-  const auto ma_period = get_param_or<std::size_t>(params, "maPeriod", 20);
+  const auto period = parse_node_from_param_or(
+   config_parser,
+   params,
+   "period",
+   NumericInputNode{
+    "Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 20.0});
   const auto ma_source =
    parse_node_from_param_or(config_parser, params, "maSource", CloseNode{});
 
   const auto band_node_type = parse_kc_band_node_type(
    get_param_or<std::string>(params, "bandMethodType", "ATR"));
-  const auto band_atr_period =
-   get_param_or<std::size_t>(params, "bandAtrPeriod", 14);
-  const auto multiplier = get_param_or<double>(params, "multiplier", 1.5);
+  const auto band_atr_period = parse_node_from_param_or(
+   config_parser,
+   params,
+   "bandAtrPeriod",
+   NumericInputNode{"Band ATR Period",
+                    NumericInputNode::ValueRepresentation::UnsignedInteger,
+                    14.0});
+
+  const auto multiplier = parse_node_from_param_or(
+   config_parser,
+   params,
+   "multiplier",
+   NumericInputNode{
+    "Multiplier", NumericInputNode::ValueRepresentation::Decimal, 1.5});
 
   return KcNode{ma_source,
-                ma_period,
+                period,
                 multiplier,
                 band_atr_period,
                 band_node_type,
@@ -438,10 +460,11 @@ static auto parse_binary_operator_node(ConfigParser::Parser config_parser,
 }
 
 template<typename TNode>
-static auto serialize_binary_operator_node(const ConfigParser& config_parser,
-                                           const ErasedNode& node,
-                                           const std::string& first_operand_key,
-                                           const std::string& second_operand_key)
+static auto
+serialize_binary_operator_node(const ConfigParser& config_parser,
+                               const ErasedNode& node,
+                               const std::string& first_operand_key,
+                               const std::string& second_operand_key)
  -> jsoncons::ojson
 {
   const auto binary_operator_node = node_cast<TNode>(node);
@@ -555,8 +578,7 @@ static auto parse_comparison_node(ConfigParser::Parser config_parser,
 
 template<typename TNode>
 static auto serialize_comparison_node(const ConfigParser& config_parser,
-                                      const ErasedNode& node)
- -> jsoncons::ojson
+                                      const ErasedNode& node) -> jsoncons::ojson
 {
   const auto comparison_node = node_cast<TNode>(node);
   if(!comparison_node) {
@@ -654,8 +676,7 @@ static auto parse_crossunder_node(ConfigParser::Parser config_parser,
 }
 
 static auto serialize_crossunder_node(const ConfigParser& config_parser,
-                                      const ErasedNode& node)
- -> jsoncons::ojson
+                                      const ErasedNode& node) -> jsoncons::ojson
 {
   const auto crossunder_node = node_cast<CrossunderNode>(node);
   if(!crossunder_node) {
@@ -713,7 +734,8 @@ auto make_default_registered_config_parser() -> ConfigParser
   config_parser.register_node_parser(
    "VALUE", serialize_value_node, parse_value_node);
 
-  config_parser.register_node_parser("DATA", serialize_data_node, parse_data_node);
+  config_parser.register_node_parser(
+   "DATA", serialize_data_node, parse_data_node);
 
   config_parser.register_node_parser(
    "OPEN", serialize_ohlcv_node<OpenNode>, parse_ohlcv_node<OpenNode>);
@@ -745,41 +767,54 @@ auto make_default_registered_config_parser() -> ConfigParser
    });
 
   config_parser.register_node_parser(
-   "SMA", serialize_ta_with_period_node<SmaNode>,
-   parse_ta_with_period_node<SmaNode>);
+   "SMA",
+   serialize_ta_with_erased_period_node<SmaNode>,
+   parse_ta_with_erased_period_node<SmaNode, 20>);
   config_parser.register_node_parser(
-   "EMA", serialize_ta_with_period_node<EmaNode>,
-   parse_ta_with_period_node<EmaNode>);
+   "EMA",
+   serialize_ta_with_erased_period_node<EmaNode>,
+   parse_ta_with_erased_period_node<EmaNode, 20>);
   config_parser.register_node_parser(
-   "WMA", serialize_ta_with_period_node<WmaNode>,
-   parse_ta_with_period_node<WmaNode>);
+   "WMA",
+   serialize_ta_with_erased_period_node<WmaNode>,
+   parse_ta_with_erased_period_node<WmaNode, 20>);
   config_parser.register_node_parser(
-   "RMA", serialize_ta_with_period_node<RmaNode>,
-   parse_ta_with_period_node<RmaNode>);
+   "RMA",
+   serialize_ta_with_erased_period_node<RmaNode>,
+   parse_ta_with_erased_period_node<RmaNode, 20>);
   config_parser.register_node_parser(
-   "HMA", serialize_ta_with_period_node<HmaNode>,
-   parse_ta_with_period_node<HmaNode>);
+   "HMA",
+   serialize_ta_with_erased_period_node<HmaNode>,
+   parse_ta_with_erased_period_node<HmaNode, 20>);
   config_parser.register_node_parser(
-   "RSI", serialize_ta_with_period_node<RsiNode>,
-   parse_ta_with_period_node<RsiNode>);
+   "RSI",
+   serialize_ta_with_erased_period_node<RsiNode>,
+   parse_ta_with_erased_period_node<RsiNode, 14>);
   config_parser.register_node_parser(
-   "ROC", serialize_ta_with_period_node<RocNode>,
-   parse_ta_with_period_node<RocNode>);
+   "ROC",
+   serialize_ta_with_erased_period_node<RocNode>,
+   parse_ta_with_erased_period_node<RocNode, 14>);
 
   config_parser.register_node_parser(
    "RVOL",
-   [](const ConfigParser&, const ErasedNode& node) {
+   [](const ConfigParser& config_parser, const ErasedNode& node) {
      const auto rvol_node = node_cast<RvolNode>(node);
      if(!rvol_node) {
        return jsoncons::ojson::null();
      }
      auto serialized_node = jsoncons::ojson{};
-     serialized_node["period"] = rvol_node->period();
+     serialized_node["period"] =
+      config_parser.serialize_node(rvol_node->period());
      return serialized_node;
    },
-   [](ConfigParser::Parser, const jsoncons::ojson& params) {
-     const auto period = get_param_or<std::size_t>(params, "period", 14);
-     return ErasedNode{RvolNode{period}};
+   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
+     return ErasedNode{RvolNode{parse_node_from_param_or(
+      config_parser,
+      params,
+      "period",
+      NumericInputNode{"Period",
+                       NumericInputNode::ValueRepresentation::UnsignedInteger,
+                       14.0})}};
    });
 
   config_parser.register_node_parser("ATR", serialize_atr_node, parse_atr_node);
@@ -787,18 +822,24 @@ auto make_default_registered_config_parser() -> ConfigParser
 
   config_parser.register_node_parser(
    "DC",
-   [](const ConfigParser&, const ErasedNode& node) {
+   [](const ConfigParser& config_parser, const ErasedNode& node) {
      const auto dc_node = node_cast<DonchianChannelNode>(node);
      if(!dc_node) {
        return jsoncons::ojson::null();
      }
      auto serialized_node = jsoncons::ojson{};
-     serialized_node["period"] = dc_node->period();
+     serialized_node["period"] =
+      config_parser.serialize_node(dc_node->period());
      return serialized_node;
    },
-   [](ConfigParser::Parser, const jsoncons::ojson& params) {
-     const auto period = get_param_or<std::size_t>(params, "period", 20);
-     return ErasedNode{DonchianChannelNode{period}};
+   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
+     return ErasedNode{DonchianChannelNode{parse_node_from_param_or(
+      config_parser,
+      params,
+      "period",
+      NumericInputNode{"Period",
+                       NumericInputNode::ValueRepresentation::UnsignedInteger,
+                       20.0})}};
    });
 
   config_parser.register_node_parser(
@@ -973,9 +1014,12 @@ auto make_default_registered_config_parser() -> ConfigParser
      auto serialized_node = jsoncons::ojson{};
      serialized_node["maType"] =
       serialize_ma_node_type(bb_node->ma_node_type(), "SMA");
-     serialized_node["maSource"] = config_parser.serialize_node(bb_node->source());
-     serialized_node["period"] = bb_node->period();
-     serialized_node["stddev"] = bb_node->stddev();
+     serialized_node["maSource"] =
+      config_parser.serialize_node(bb_node->source());
+     serialized_node["period"] =
+      config_parser.serialize_node(bb_node->period());
+     serialized_node["stddev"] =
+      config_parser.serialize_node(bb_node->stddev());
      return serialized_node;
    },
    [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
@@ -983,9 +1027,21 @@ auto make_default_registered_config_parser() -> ConfigParser
       get_param_or<std::string>(params, "maType", "SMA"), MaNodeType::Sma);
      const auto ma_source =
       parse_node_from_param_or(config_parser, params, "maSource", CloseNode{});
-     const auto period = get_param_or(params, "period", std::size_t{20});
-     const auto stddev = get_param_or(params, "stddev", 2.0);
-     return ErasedNode{BbNode{ma_source, period, stddev, ma_type}};
+     const auto period = parse_node_from_param_or(
+      config_parser,
+      params,
+      "period",
+      NumericInputNode{
+       "Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 20.0});
+
+     const auto stddev = parse_node_from_param_or(
+      config_parser,
+      params,
+      "stddev",
+      NumericInputNode{
+       "StdDev", NumericInputNode::ValueRepresentation::Decimal, 2.0});
+
+     return BbNode{ma_source, period, stddev, ma_type};
    });
 
   config_parser.register_node_parser(
@@ -996,39 +1052,82 @@ auto make_default_registered_config_parser() -> ConfigParser
        return jsoncons::ojson::null();
      }
      auto serialized_node = jsoncons::ojson{};
-     serialized_node["fast"] = macd_node->fast_period();
-     serialized_node["slow"] = macd_node->slow_period();
-     serialized_node["signal"] = macd_node->signal_period();
+     serialized_node["fastPeriod"] =
+      config_parser.serialize_node(macd_node->fast_period());
+     serialized_node["slowPeriod"] =
+      config_parser.serialize_node(macd_node->slow_period());
+     serialized_node["signalPeriod"] =
+      config_parser.serialize_node(macd_node->signal_period());
      serialized_node["source"] =
       config_parser.serialize_node(macd_node->source());
      return serialized_node;
    },
    [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     const auto fast = get_param_or<std::size_t>(params, "fast", 12);
-     const auto slow = get_param_or<std::size_t>(params, "slow", 26);
-     const auto signal = get_param_or<std::size_t>(params, "signal", 9);
+     const auto fast_period = parse_node_from_param_or(
+      config_parser,
+      params,
+      "fastPeriod",
+      NumericInputNode{"Fast Period",
+                       NumericInputNode::ValueRepresentation::UnsignedInteger,
+                       12.0});
+     const auto slow_period = parse_node_from_param_or(
+      config_parser,
+      params,
+      "slowPeriod",
+      NumericInputNode{"Slow Period",
+                       NumericInputNode::ValueRepresentation::UnsignedInteger,
+                       26.0});
+     const auto signal_period = parse_node_from_param_or(
+      config_parser,
+      params,
+      "signalPeriod",
+      NumericInputNode{"Signal Period",
+                       NumericInputNode::ValueRepresentation::UnsignedInteger,
+                       9.0});
      const auto source =
       parse_node_from_param_or(config_parser, params, "source", CloseNode{});
-     return ErasedNode{MacdNode{source, fast, slow, signal}};
+     return ErasedNode{
+      MacdNode{source, fast_period, slow_period, signal_period}};
    });
 
   config_parser.register_node_parser(
    "STOCH",
-   [](const ConfigParser&, const ErasedNode& node) {
+   [](const ConfigParser& config_parser, const ErasedNode& node) {
      const auto stoch_node = node_cast<StochNode>(node);
      if(!stoch_node) {
        return jsoncons::ojson::null();
      }
      auto serialized_node = jsoncons::ojson{};
-     serialized_node["kPeriod"] = stoch_node->k_period();
-     serialized_node["kSmooth"] = stoch_node->k_smooth();
-     serialized_node["dPeriod"] = stoch_node->d_period();
+     serialized_node["kPeriod"] =
+      config_parser.serialize_node(stoch_node->k_period());
+     serialized_node["kSmooth"] =
+      config_parser.serialize_node(stoch_node->k_smooth());
+     serialized_node["dPeriod"] =
+      config_parser.serialize_node(stoch_node->d_period());
      return serialized_node;
    },
-   [](ConfigParser::Parser, const jsoncons::ojson& params) {
-     const auto k_period = get_param_or<std::size_t>(params, "kPeriod", 5);
-     const auto k_smooth = get_param_or<std::size_t>(params, "kSmooth", 3);
-     const auto d_period = get_param_or<std::size_t>(params, "dPeriod", 3);
+   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
+     const auto k_period = parse_node_from_param_or(
+      config_parser,
+      params,
+      "kPeriod",
+      NumericInputNode{"K Period",
+                       NumericInputNode::ValueRepresentation::UnsignedInteger,
+                       5.0});
+     const auto k_smooth = parse_node_from_param_or(
+      config_parser,
+      params,
+      "kSmooth",
+      NumericInputNode{"K Smooth",
+                       NumericInputNode::ValueRepresentation::UnsignedInteger,
+                       3.0});
+     const auto d_period = parse_node_from_param_or(
+      config_parser,
+      params,
+      "dPeriod",
+      NumericInputNode{"D Period",
+                       NumericInputNode::ValueRepresentation::UnsignedInteger,
+                       3.0});
      return ErasedNode{StochNode{k_period, k_smooth, d_period}};
    });
 
@@ -1042,20 +1141,47 @@ auto make_default_registered_config_parser() -> ConfigParser
      auto serialized_node = jsoncons::ojson{};
      serialized_node["rsiSource"] =
       config_parser.serialize_node(stoch_rsi_node->rsi_source());
-     serialized_node["rsiPeriod"] = stoch_rsi_node->rsi_period();
-     serialized_node["kPeriod"] = stoch_rsi_node->k_period();
-     serialized_node["kSmooth"] = stoch_rsi_node->k_smooth();
-     serialized_node["dPeriod"] = stoch_rsi_node->d_period();
+     serialized_node["rsiPeriod"] =
+      config_parser.serialize_node(stoch_rsi_node->rsi_period());
+     serialized_node["kPeriod"] =
+      config_parser.serialize_node(stoch_rsi_node->k_period());
+     serialized_node["kSmooth"] =
+      config_parser.serialize_node(stoch_rsi_node->k_smooth());
+     serialized_node["dPeriod"] =
+      config_parser.serialize_node(stoch_rsi_node->d_period());
      return serialized_node;
    },
    [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
      const auto rsi_source =
       parse_node_from_param_or(config_parser, params, "rsiSource", CloseNode{});
-     const auto rsi_period =
-      get_param_or<std::size_t>(params, "rsiPeriod", 14);
-     const auto k_period = get_param_or<std::size_t>(params, "kPeriod", 5);
-     const auto k_smooth = get_param_or<std::size_t>(params, "kSmooth", 3);
-     const auto d_period = get_param_or<std::size_t>(params, "dPeriod", 3);
+     const auto rsi_period = parse_node_from_param_or(
+      config_parser,
+      params,
+      "rsiPeriod",
+      NumericInputNode{"RSI Period",
+                       NumericInputNode::ValueRepresentation::UnsignedInteger,
+                       14.0});
+     const auto k_period = parse_node_from_param_or(
+      config_parser,
+      params,
+      "kPeriod",
+      NumericInputNode{"K Period",
+                       NumericInputNode::ValueRepresentation::UnsignedInteger,
+                       5.0});
+     const auto k_smooth = parse_node_from_param_or(
+      config_parser,
+      params,
+      "kSmooth",
+      NumericInputNode{"K Smooth",
+                       NumericInputNode::ValueRepresentation::UnsignedInteger,
+                       3.0});
+     const auto d_period = parse_node_from_param_or(
+      config_parser,
+      params,
+      "dPeriod",
+      NumericInputNode{"D Period",
+                       NumericInputNode::ValueRepresentation::UnsignedInteger,
+                       3.0});
      return ErasedNode{
       StochRsiNode{rsi_source, rsi_period, k_period, k_smooth, d_period}};
    });
@@ -1142,8 +1268,9 @@ auto make_default_registered_config_parser() -> ConfigParser
       config_parser, params, "operand");
    });
   config_parser.register_node_parser(
-   "STDDEV", serialize_ta_with_period_node<StddevNode>,
-   parse_ta_with_period_node<StddevNode>);
+   "STDDEV",
+   serialize_ta_with_erased_period_node<StddevNode>,
+   parse_ta_with_erased_period_node<StddevNode, 20>);
 
   config_parser.register_node_parser(
    "ALL_OF", serialize_all_of_node, parse_all_of_node);
@@ -1153,24 +1280,25 @@ auto make_default_registered_config_parser() -> ConfigParser
    "CROSSUNDER", serialize_crossunder_node, parse_crossunder_node);
   config_parser.register_node_parser(
    "CROSSOVER", serialize_crossover_node, parse_crossover_node);
+  config_parser.register_node_parser("GREATER_THAN",
+                                     serialize_comparison_node<GreaterThanNode>,
+                                     parse_comparison_node<GreaterThanNode>);
+  config_parser.register_node_parser("LESS_THAN",
+                                     serialize_comparison_node<LessThanNode>,
+                                     parse_comparison_node<LessThanNode>);
   config_parser.register_node_parser(
-   "GREATER_THAN", serialize_comparison_node<GreaterThanNode>,
-   parse_comparison_node<GreaterThanNode>);
-  config_parser.register_node_parser(
-   "LESS_THAN", serialize_comparison_node<LessThanNode>,
-   parse_comparison_node<LessThanNode>);
-  config_parser.register_node_parser(
-   "GREATER_EQUAL", serialize_comparison_node<GreaterEqualNode>,
+   "GREATER_EQUAL",
+   serialize_comparison_node<GreaterEqualNode>,
    parse_comparison_node<GreaterEqualNode>);
-  config_parser.register_node_parser(
-   "LESS_EQUAL", serialize_comparison_node<LessEqualNode>,
-   parse_comparison_node<LessEqualNode>);
-  config_parser.register_node_parser(
-   "EQUAL", serialize_comparison_node<EqualNode>,
-   parse_comparison_node<EqualNode>);
-  config_parser.register_node_parser(
-   "NOT_EQUAL", serialize_comparison_node<NotEqualNode>,
-   parse_comparison_node<NotEqualNode>);
+  config_parser.register_node_parser("LESS_EQUAL",
+                                     serialize_comparison_node<LessEqualNode>,
+                                     parse_comparison_node<LessEqualNode>);
+  config_parser.register_node_parser("EQUAL",
+                                     serialize_comparison_node<EqualNode>,
+                                     parse_comparison_node<EqualNode>);
+  config_parser.register_node_parser("NOT_EQUAL",
+                                     serialize_comparison_node<NotEqualNode>,
+                                     parse_comparison_node<NotEqualNode>);
 
   config_parser.register_node_parser(
    "ALWAYS",

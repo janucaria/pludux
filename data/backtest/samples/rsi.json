@@ -4,7 +4,30 @@
     "rsi": {
       "method": "RSI",
       "params": {
-        "period": 14
+        "period": {
+          "method": "INPUT",
+          "params": {
+            "label": "RSI Period",
+            "representation": "UnsignedInteger",
+            "value": 14
+          }
+        }
+      }
+    },
+    "overbought": {
+      "method": "INPUT",
+      "params": {
+        "label": "Overbought",
+        "representation": "Decimal",
+        "value": 70
+      }
+    },
+    "oversold": {
+      "method": "INPUT",
+      "params": {
+        "label": "Oversold",
+        "representation": "Decimal",
+        "value": 30
       }
     }
   },
@@ -27,7 +50,12 @@
                 "name": "rsi"
               }
             },
-            "baseline": 30
+            "baseline": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "oversold"
+              }
+            }
           }
         }
       },
@@ -41,7 +69,12 @@
                 "name": "rsi"
               }
             },
-            "baseline": 70
+            "baseline": {
+              "method": "SERIES_VALUE",
+              "params": {
+                "name": "overbought"
+              }
+            }
           }
         }
       }
@@ -65,16 +98,26 @@
           }
         },
         {
-          "method": "HLINE",
+          "method": "LINE",
           "params": {
-            "level": 30,
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "oversold"
+              }
+            },
             "color": 4278190079
           }
         },
         {
-          "method": "HLINE",
+          "method": "LINE",
           "params": {
-            "level": 70,
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "overbought"
+              }
+            },
             "color": 4278190079
           }
         }

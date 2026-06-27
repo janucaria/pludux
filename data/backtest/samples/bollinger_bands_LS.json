@@ -4,8 +4,22 @@
     "bbands": {
       "method": "BB",
       "params": {
-        "period": 20,
-        "stddev": 2
+        "period": {
+          "method": "INPUT",
+          "params": {
+            "label": "Period",
+            "representation": "UnsignedInteger",
+            "value": 20
+          }
+        },
+        "stddev": {
+          "method": "INPUT",
+          "params": {
+            "label": "StdDev",
+            "representation": "Decimal",
+            "value": 2
+          }
+        }
       }
     },
     "bb_upper": {

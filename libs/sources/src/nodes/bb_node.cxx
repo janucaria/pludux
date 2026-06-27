@@ -26,18 +26,26 @@ public:
   }
 
   BbNode(ErasedNode source,
-           std::size_t period,
-           double stddev,
-           MaNodeType ma_node_type = MaNodeType::Sma)
+         std::size_t period,
+         double stddev,
+         MaNodeType ma_node_type = MaNodeType::Sma)
+  : BbNode{
+     std::move(source), ErasedNode{period}, ErasedNode{stddev}, ma_node_type}
+  {
+  }
+
+  BbNode(ErasedNode source,
+         ErasedNode period,
+         ErasedNode stddev,
+         MaNodeType ma_node_type = MaNodeType::Sma)
   : source_{std::move(source)}
-  , period_{period}
-  , stddev_{stddev}
+  , period_{std::move(period)}
+  , stddev_{std::move(stddev)}
   , ma_node_type_{ma_node_type}
   {
   }
 
   auto operator==(const BbNode& other) const noexcept -> bool = default;
-
 
   auto source(this const BbNode& self) noexcept -> const ErasedNode&
   {
@@ -59,30 +67,40 @@ public:
     self.ma_node_type_ = ma_node_type;
   }
 
-  auto period(this const BbNode& self) noexcept -> std::size_t
+  auto period(this const BbNode& self) noexcept -> const ErasedNode&
   {
     return self.period_;
   }
 
   void period(this BbNode& self, std::size_t new_period) noexcept
   {
-    self.period_ = new_period;
+    self.period_ = ErasedNode{new_period};
   }
 
-  auto stddev(this const BbNode& self) noexcept -> double
+  void period(this BbNode& self, ErasedNode period) noexcept
+  {
+    self.period_ = std::move(period);
+  }
+
+  auto stddev(this const BbNode& self) noexcept -> const ErasedNode&
   {
     return self.stddev_;
   }
 
   void stddev(this BbNode& self, double new_stddev) noexcept
   {
-    self.stddev_ = new_stddev;
+    self.stddev_ = ErasedNode{new_stddev};
+  }
+
+  void stddev(this BbNode& self, ErasedNode stddev) noexcept
+  {
+    self.stddev_ = std::move(stddev);
   }
 
 private:
   ErasedNode source_;
-  std::size_t period_;
-  double stddev_;
+  ErasedNode period_;
+  ErasedNode stddev_;
   MaNodeType ma_node_type_;
 };
 

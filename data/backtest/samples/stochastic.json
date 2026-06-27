@@ -4,9 +4,30 @@
     "stoch": {
       "method": "STOCH",
       "params": {
-        "kPeriod": 14,
-        "kSmooth": 3,
-        "dPeriod": 3
+        "kPeriod": {
+          "method": "INPUT",
+          "params": {
+            "label": "K Period",
+            "representation": "UnsignedInteger",
+            "value": 14
+          }
+        },
+        "kSmooth": {
+          "method": "INPUT",
+          "params": {
+            "label": "K Smooth",
+            "representation": "UnsignedInteger",
+            "value": 3
+          }
+        },
+        "dPeriod": {
+          "method": "INPUT",
+          "params": {
+            "label": "D Period",
+            "representation": "UnsignedInteger",
+            "value": 3
+          }
+        }
       }
     },
     "stoch_k": {
@@ -34,14 +55,18 @@
       }
     },
     "overbought": {
-      "method": "VALUE",
+      "method": "INPUT",
       "params": {
+        "label": "Overbought",
+        "representation": "Decimal",
         "value": 80
       }
     },
     "oversold": {
-      "method": "VALUE",
+      "method": "INPUT",
       "params": {
+        "label": "Oversold",
+        "representation": "Decimal",
         "value": 20
       }
     }
@@ -170,16 +195,26 @@
           }
         },
         {
-          "method": "HLINE",
+          "method": "LINE",
           "params": {
-            "level": 80,
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "overbought"
+              }
+            },
             "color": "#FFFFFF"
           }
         },
         {
-          "method": "HLINE",
+          "method": "LINE",
           "params": {
-            "level": 20,
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "oversold"
+              }
+            },
             "color": "#FFFFFF"
           }
         }

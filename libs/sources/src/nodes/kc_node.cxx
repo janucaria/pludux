@@ -29,36 +29,50 @@ public:
   }
 
   KcNode(std::size_t period,
-           double multiplier,
-           std::size_t band_atr_period,
-           KcBandNodeType band_node_type,
-           MaNodeType ma_node_type)
+         double multiplier,
+         std::size_t band_atr_period,
+         KcBandNodeType band_node_type,
+         MaNodeType ma_node_type)
   : KcNode{ErasedNode{},
-             period,
-             multiplier,
-             band_atr_period,
-             band_node_type,
-             ma_node_type}
+           period,
+           multiplier,
+           band_atr_period,
+           band_node_type,
+           ma_node_type}
   {
   }
 
   KcNode(ErasedNode source,
-           std::size_t period,
-           double multiplier,
-           std::size_t band_atr_period,
-           KcBandNodeType band_node_type = KcBandNodeType::Atr,
-           MaNodeType ma_node_type = MaNodeType::Ema)
+         std::size_t period,
+         double multiplier,
+         std::size_t band_atr_period,
+         KcBandNodeType band_node_type = KcBandNodeType::Atr,
+         MaNodeType ma_node_type = MaNodeType::Ema)
+  : KcNode{std::move(source),
+           ErasedNode{period},
+           ErasedNode{multiplier},
+           ErasedNode{band_atr_period},
+           band_node_type,
+           ma_node_type}
+  {
+  }
+
+  KcNode(ErasedNode source,
+         ErasedNode period,
+         ErasedNode multiplier,
+         ErasedNode band_atr_period,
+         KcBandNodeType band_node_type = KcBandNodeType::Atr,
+         MaNodeType ma_node_type = MaNodeType::Ema)
   : source_{std::move(source)}
-  , period_{period}
-  , multiplier_{multiplier}
-  , band_atr_period_{band_atr_period}
+  , period_{std::move(period)}
+  , multiplier_{std::move(multiplier)}
+  , band_atr_period_{std::move(band_atr_period)}
   , band_node_type_{band_node_type}
   , ma_node_type_{ma_node_type}
   {
   }
 
   auto operator==(const KcNode& other) const noexcept -> bool = default;
-
 
   auto source(this const KcNode& self) noexcept -> const ErasedNode&
   {
@@ -80,14 +94,19 @@ public:
     self.ma_node_type_ = ma_node_type;
   }
 
-  auto period(this const KcNode& self) noexcept -> std::size_t
+  auto period(this const KcNode& self) noexcept -> const ErasedNode&
   {
     return self.period_;
   }
 
   void period(this KcNode& self, std::size_t period) noexcept
   {
-    self.period_ = period;
+    self.period_ = ErasedNode{period};
+  }
+
+  void period(this KcNode& self, ErasedNode period) noexcept
+  {
+    self.period_ = std::move(period);
   }
 
   auto band_node_type(this const KcNode& self) noexcept -> KcBandNodeType
@@ -95,39 +114,46 @@ public:
     return self.band_node_type_;
   }
 
-  void band_node_type(this KcNode& self,
-                        KcBandNodeType band_node_type) noexcept
+  void band_node_type(this KcNode& self, KcBandNodeType band_node_type) noexcept
   {
     self.band_node_type_ = band_node_type;
   }
 
-  auto band_atr_period(this const KcNode& self) noexcept -> std::size_t
+  auto band_atr_period(this const KcNode& self) noexcept -> const ErasedNode&
   {
     return self.band_atr_period_;
   }
 
-  void band_atr_period(this KcNode& self,
-                       std::size_t band_atr_period) noexcept
+  void band_atr_period(this KcNode& self, std::size_t band_atr_period) noexcept
   {
-    self.band_atr_period_ = band_atr_period;
+    self.band_atr_period_ = ErasedNode{band_atr_period};
   }
 
-  auto multiplier(this const KcNode& self) noexcept -> double
+  void band_atr_period(this KcNode& self, ErasedNode band_atr_period) noexcept
+  {
+    self.band_atr_period_ = std::move(band_atr_period);
+  }
+
+  auto multiplier(this const KcNode& self) noexcept -> const ErasedNode&
   {
     return self.multiplier_;
   }
 
   void multiplier(this KcNode& self, double multiplier) noexcept
   {
-    self.multiplier_ = multiplier;
+    self.multiplier_ = ErasedNode{multiplier};
+  }
+
+  void multiplier(this KcNode& self, ErasedNode multiplier) noexcept
+  {
+    self.multiplier_ = std::move(multiplier);
   }
 
 private:
   ErasedNode source_;
-  std::size_t period_;
-  double multiplier_;
-
-  std::size_t band_atr_period_;
+  ErasedNode period_;
+  ErasedNode multiplier_;
+  ErasedNode band_atr_period_;
   KcBandNodeType band_node_type_;
   MaNodeType ma_node_type_;
 };

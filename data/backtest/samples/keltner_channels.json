@@ -4,11 +4,32 @@
     "kchannel": {
       "method": "KC",
       "params": {
-        "maPeriod": 20,
+        "period": {
+          "method": "INPUT",
+          "params": {
+            "label": "MA Period",
+            "representation": "UnsignedInteger",
+            "value": 20
+          }
+        },
         "maMethodType": "EMA",
         "bandMethodType": "ATR",
-        "bandAtrPeriod": 10,
-        "multiplier": 2
+        "bandAtrPeriod": {
+          "method": "INPUT",
+          "params": {
+            "label": "Band ATR Period",
+            "representation": "UnsignedInteger",
+            "value": 10
+          }
+        },
+        "multiplier": {
+          "method": "INPUT",
+          "params": {
+            "label": "ATR Multiplier",
+            "representation": "Decimal",
+            "value": 2
+          }
+        }
       }
     },
     "kc_upper": {

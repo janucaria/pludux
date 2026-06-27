@@ -10,7 +10,6 @@ module;
 export module pludux:nodes.rsi_node;
 
 import :nodes.erased_node;
-import :nodes.value_node;
 
 export namespace pludux {
 
@@ -26,9 +25,19 @@ public:
   {
   }
 
-  explicit RsiNode(ErasedNode source, std::size_t period)
+  explicit RsiNode(ErasedNode source)
+  : RsiNode{std::move(source), 14}
+  {
+  }
+
+  RsiNode(ErasedNode source, std::size_t period)
+  : RsiNode{std::move(source), ErasedNode{period}}
+  {
+  }
+
+  RsiNode(ErasedNode source, ErasedNode period)
   : source_{std::move(source)}
-  , period_{period}
+  , period_{std::move(period)}
   {
   }
 
@@ -44,19 +53,24 @@ public:
     self.source_ = std::move(source);
   }
 
-  auto period(this const RsiNode& self) noexcept -> std::size_t
+  auto period(this const RsiNode& self) noexcept -> const ErasedNode&
   {
     return self.period_;
   }
 
+  void period(this RsiNode& self, ErasedNode period) noexcept
+  {
+    self.period_ = std::move(period);
+  }
+
   void period(this RsiNode& self, std::size_t period) noexcept
   {
-    self.period_ = period;
+    self.period_ = ErasedNode{period};
   }
 
 private:
   ErasedNode source_;
-  std::size_t period_;
+  ErasedNode period_;
 };
 
 } // namespace pludux

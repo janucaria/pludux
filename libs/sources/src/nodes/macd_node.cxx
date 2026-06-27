@@ -18,25 +18,35 @@ public:
   }
 
   MacdNode(std::size_t short_period,
-             std::size_t long_period,
-             std::size_t signal_period)
+           std::size_t long_period,
+           std::size_t signal_period)
   : MacdNode{ErasedNode{}, short_period, long_period, signal_period}
   {
   }
 
   MacdNode(ErasedNode source,
-             std::size_t short_period,
-             std::size_t long_period,
-             std::size_t signal_period)
+           std::size_t short_period,
+           std::size_t long_period,
+           std::size_t signal_period)
+  : MacdNode{std::move(source),
+             ErasedNode{short_period},
+             ErasedNode{long_period},
+             ErasedNode{signal_period}}
+  {
+  }
+
+  MacdNode(ErasedNode source,
+           ErasedNode fast_period,
+           ErasedNode slow_period,
+           ErasedNode signal_period)
   : source_{std::move(source)}
-  , short_period_{short_period}
-  , long_period_{long_period}
-  , signal_period_{signal_period}
+  , fast_period_{std::move(fast_period)}
+  , slow_period_{std::move(slow_period)}
+  , signal_period_{std::move(signal_period)}
   {
   }
 
   auto operator==(const MacdNode& other) const noexcept -> bool = default;
-
 
   auto source(this const MacdNode& self) noexcept -> const ErasedNode&
   {
@@ -48,61 +58,86 @@ public:
     self.source_ = std::move(source);
   }
 
-  auto short_period(this const MacdNode& self) noexcept -> std::size_t
+  auto short_period(this const MacdNode& self) noexcept -> const ErasedNode&
   {
-    return self.short_period_;
+    return self.fast_period_;
   }
 
   void short_period(this MacdNode& self, std::size_t period) noexcept
   {
-    self.short_period_ = period;
+    self.fast_period_ = ErasedNode{period};
   }
 
-  auto fast_period(this const MacdNode& self) noexcept -> std::size_t
+  void short_period(this MacdNode& self, ErasedNode period) noexcept
   {
-    return self.short_period_;
+    self.fast_period_ = std::move(period);
+  }
+
+  auto fast_period(this const MacdNode& self) noexcept -> const ErasedNode&
+  {
+    return self.short_period();
   }
 
   void fast_period(this MacdNode& self, std::size_t period) noexcept
   {
-    self.short_period_ = period;
+    self.short_period(period);
   }
 
-  auto long_period(this const MacdNode& self) noexcept -> std::size_t
+  void fast_period(this MacdNode& self, ErasedNode period) noexcept
   {
-    return self.long_period_;
+    self.short_period(std::move(period));
+  }
+
+  auto long_period(this const MacdNode& self) noexcept -> const ErasedNode&
+  {
+    return self.slow_period_;
   }
 
   void long_period(this MacdNode& self, std::size_t period) noexcept
   {
-    self.long_period_ = period;
+    self.slow_period_ = ErasedNode{period};
   }
 
-  auto slow_period(this const MacdNode& self) noexcept -> std::size_t
+  void long_period(this MacdNode& self, ErasedNode period) noexcept
   {
-    return self.long_period_;
+    self.slow_period_ = std::move(period);
+  }
+
+  auto slow_period(this const MacdNode& self) noexcept -> const ErasedNode&
+  {
+    return self.long_period();
   }
 
   void slow_period(this MacdNode& self, std::size_t period) noexcept
   {
-    self.long_period_ = period;
+    self.long_period(period);
   }
 
-  auto signal_period(this const MacdNode& self) noexcept -> std::size_t
+  void slow_period(this MacdNode& self, ErasedNode period) noexcept
+  {
+    self.long_period(std::move(period));
+  }
+
+  auto signal_period(this const MacdNode& self) noexcept -> const ErasedNode&
   {
     return self.signal_period_;
   }
 
   void signal_period(this MacdNode& self, std::size_t period) noexcept
   {
-    self.signal_period_ = period;
+    self.signal_period_ = ErasedNode{period};
+  }
+
+  void signal_period(this MacdNode& self, ErasedNode period) noexcept
+  {
+    self.signal_period_ = std::move(period);
   }
 
 private:
   ErasedNode source_;
-  std::size_t short_period_;
-  std::size_t long_period_;
-  std::size_t signal_period_;
+  ErasedNode fast_period_;
+  ErasedNode slow_period_;
+  ErasedNode signal_period_;
 };
 
 } // namespace pludux

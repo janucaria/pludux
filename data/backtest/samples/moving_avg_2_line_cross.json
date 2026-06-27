@@ -4,14 +4,28 @@
     "ma_fast": {
       "method": "SMA",
       "params": {
-        "period": 9,
+        "period": {
+          "method": "INPUT",
+          "params": {
+            "label": "MA Fast Period",
+            "representation": "UnsignedInteger",
+            "value": 9
+          }
+        },
         "source": "CLOSE"
       }
     },
     "ma_slow": {
       "method": "SMA",
       "params": {
-        "period": 18,
+        "period": {
+          "method": "INPUT",
+          "params": {
+            "label": "MA Slow Period",
+            "representation": "UnsignedInteger",
+            "value": 18
+          }
+        },
         "source": "CLOSE"
       }
     }
