@@ -1353,6 +1353,7 @@ TEST_F(ConfigParserTest, ParseScreenerPercentageMethod)
   EXPECT_EQ(percent, 20);
 
   const auto serialized_config = serialize_node_method(method);
+  EXPECT_TRUE(serialized_config.at("params").contains("percent"));
   const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }

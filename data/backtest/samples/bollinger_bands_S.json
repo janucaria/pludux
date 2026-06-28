@@ -47,12 +47,6 @@
       }
     }
   },
-  "stopLoss": {
-    "trailing": true
-  },
-  "takeProfit": {
-    "rMultiple": 2
-  },
   "positions": {
     "short": {
       "entry": {
@@ -78,6 +72,39 @@
               "method": "SERIES_VALUE",
               "params": {
                 "name": "bb_upper"
+              }
+            }
+          }
+        }
+      },
+      "stopLoss": {
+        "enabled": true,
+        "trailing": true,
+        "stopPrice": {
+          "method": "ADD",
+          "params": {
+            "augend": "OPEN",
+            "addend": {
+              "method": "PERCENTAGE",
+              "params": {
+                "base": "OPEN",
+                "percent": 10
+              }
+            }
+          }
+        }
+      },
+      "takeProfit": {
+        "enabled": true,
+        "targetPrice": {
+          "method": "SUBTRACT",
+          "params": {
+            "minuend": "OPEN",
+            "subtrahend": {
+              "method": "PERCENTAGE",
+              "params": {
+                "base": "OPEN",
+                "percent": 20
               }
             }
           }

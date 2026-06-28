@@ -281,8 +281,7 @@ public:
           const auto* strategy_ptr =
            app_state.get_strategy_if_present(backtest_ptr->strategy_handle());
           if(strategy_ptr) {
-            self.resolve_and_sync_backtest_inputs(*backtest_ptr,
-                                                  *strategy_ptr);
+            self.resolve_and_sync_backtest_inputs(*backtest_ptr, *strategy_ptr);
           }
 
           self.running_backtests_.erase(backtest_handle);
@@ -314,10 +313,10 @@ public:
   }
 
 private:
-  void resolve_and_sync_backtest_inputs(
-   this Application& self,
-   backtest::Backtest& backtest,
-   const backtest::Strategy& strategy) noexcept
+  void
+  resolve_and_sync_backtest_inputs(this Application& self,
+                                   backtest::Backtest& backtest,
+                                   const backtest::Strategy& strategy) noexcept
   {
     auto synced_inputs = backtest::collect_numeric_inputs(strategy);
     const auto& previous_inputs = backtest.inputs();
@@ -356,47 +355,37 @@ private:
 
     auto input_context = NodeToErasedMethodContext{backtest.inputs()};
     auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
-    for(const auto& [series_name, series_node] :
-        strategy_ptr->series_nodes()) {
+    for(const auto& [series_name, series_node] : strategy_ptr->series_nodes()) {
       series_methods.set(series_name,
                          node_to_erased_method(series_node, input_context));
     }
 
-    const auto& long_pyramiding =
-     strategy_ptr->positions().long_side().pyramiding();
-    const auto& short_pyramiding =
-     strategy_ptr->positions().short_side().pyramiding();
+    const auto make_position_rule =
+     [&input_context](const backtest::Strategy::Position& position) {
+       return backtest::BacktestRunner::PositionRule{
+        node_to_erased_method(position.entry().signal(), input_context),
+        node_to_erased_method(position.exit().signal(), input_context),
+        node_to_erased_method(position.pyramiding().signal(), input_context),
+        position.pyramiding().max_layers(),
+        node_to_erased_method(position.stop_loss().stop_price(), input_context),
+        position.stop_loss().enabled(),
+        position.stop_loss().trailing(),
+        node_to_erased_method(position.take_profit().target_price(),
+                              input_context),
+        position.take_profit().enabled()};
+     };
 
     self.running_backtests_.emplace(
      backtest_handle,
-     backtest::BacktestRunner{*asset_ptr,
-                              *market_ptr,
-                              *broker_ptr,
-                              *profile_ptr,
-                              std::move(series_methods),
-                              node_to_erased_method(
-                               strategy_ptr->long_entry_node(),
-                               input_context),
-                              node_to_erased_method(
-                               strategy_ptr->long_exit_node(),
-                               input_context),
-                              node_to_erased_method(long_pyramiding.signal(),
-                                                    input_context),
-                              long_pyramiding.max_layers(),
-                              node_to_erased_method(
-                               strategy_ptr->short_entry_node(),
-                               input_context),
-                              node_to_erased_method(
-                               strategy_ptr->short_exit_node(),
-                               input_context),
-                              node_to_erased_method(short_pyramiding.signal(),
-                                                    input_context),
-                              short_pyramiding.max_layers(),
-                              strategy_ptr->stop_loss_enabled(),
-                              strategy_ptr->stop_loss_trailing_enabled(),
-                              strategy_ptr->take_profit_enabled(),
-                              strategy_ptr->take_profit_r_multiple(),
-                              backtest.initial_capital()});
+     backtest::BacktestRunner{
+      *asset_ptr,
+      *market_ptr,
+      *broker_ptr,
+      *profile_ptr,
+      std::move(series_methods),
+      make_position_rule(strategy_ptr->long_position()),
+      make_position_rule(strategy_ptr->short_position()),
+      backtest.initial_capital()});
   }
 
   ImVec2 window_size_;

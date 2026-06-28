@@ -903,60 +903,14 @@ private:
     {
       ImGui::SeparatorText("Positions");
 
-      auto positions = self.editing_strategy_ptr_->positions();
-
       {
         ImGui::Text("Long Position:");
         ImGui::PushID("long_position");
         ImGui::Indent();
 
-        auto long_position = positions.long_side();
-
-        {
-          ImGui::Text("Entry Condition:");
-          ImGui::PushID("long_entry");
-          auto changed_node = self.render_condition_node(
-           self.editing_strategy_ptr_->long_entry_node(), context);
-          self.editing_strategy_ptr_->long_entry_node(changed_node);
-          ImGui::PopID();
-        }
-        {
-          ImGui::Separator();
-          ImGui::Text("Exit Condition:");
-          ImGui::PushID("long_exit");
-          auto changed_node = self.render_condition_node(
-           self.editing_strategy_ptr_->long_exit_node(), context);
-          self.editing_strategy_ptr_->long_exit_node(changed_node);
-          ImGui::PopID();
-        }
-        {
-          ImGui::SeparatorText("Pyramiding");
-          ImGui::PushID("long_pyramiding");
-
-          ImGui::Text("Signal:");
-          auto pyramiding = long_position.pyramiding();
-
-          auto changed_node =
-           self.render_condition_node(pyramiding.signal(), context);
-          pyramiding.signal(changed_node);
-
-          auto pyramiding_max_layers =
-           static_cast<int>(pyramiding.max_layers());
-          ImGui::Text("Max Layers:");
-          ImGui::SameLine();
-          if(ImGui::InputInt("##long_pyramiding_max_layers",
-                             &pyramiding_max_layers)) {
-            if(pyramiding_max_layers < 1) {
-              pyramiding_max_layers = 1;
-            }
-            pyramiding.max_layers(pyramiding_max_layers);
-          }
-
-          long_position.pyramiding(pyramiding);
-          ImGui::PopID();
-        }
-
-        positions.long_side(long_position);
+        auto long_position = self.editing_strategy_ptr_->long_position();
+        self.render_position_form(long_position, context);
+        self.editing_strategy_ptr_->long_position(std::move(long_position));
 
         ImGui::Unindent();
         ImGui::PopID();
@@ -969,103 +923,13 @@ private:
         ImGui::PushID("short_position");
         ImGui::Indent();
 
-        auto short_position = positions.short_side();
-
-        {
-          ImGui::Text("Entry Condition:");
-          ImGui::PushID("short_entry");
-          auto changed_node = self.render_condition_node(
-           self.editing_strategy_ptr_->short_entry_node(), context);
-          self.editing_strategy_ptr_->short_entry_node(changed_node);
-          ImGui::PopID();
-        }
-        {
-          ImGui::Separator();
-          ImGui::Text("Exit Condition:");
-          ImGui::PushID("short_exit");
-          auto changed_node = self.render_condition_node(
-           self.editing_strategy_ptr_->short_exit_node(), context);
-          self.editing_strategy_ptr_->short_exit_node(changed_node);
-          ImGui::PopID();
-        }
-        {
-          ImGui::SeparatorText("Pyramiding");
-          ImGui::PushID("short_pyramiding");
-
-          ImGui::Text("Signal:");
-          auto pyramiding = short_position.pyramiding();
-
-          auto changed_node =
-           self.render_condition_node(pyramiding.signal(), context);
-          pyramiding.signal(changed_node);
-
-          auto pyramiding_max_layers =
-           static_cast<int>(pyramiding.max_layers());
-          ImGui::Text("Max Layers:");
-          ImGui::SameLine();
-          if(ImGui::InputInt("##short_pyramiding_max_layers",
-                             &pyramiding_max_layers)) {
-            if(pyramiding_max_layers < 1) {
-              pyramiding_max_layers = 1;
-            }
-            pyramiding.max_layers(pyramiding_max_layers);
-          }
-
-          short_position.pyramiding(pyramiding);
-          ImGui::PopID();
-        }
-
-        positions.short_side(short_position);
+        auto short_position = self.editing_strategy_ptr_->short_position();
+        self.render_position_form(short_position, context);
+        self.editing_strategy_ptr_->short_position(std::move(short_position));
 
         ImGui::Unindent();
         ImGui::PopID();
       }
-
-      self.editing_strategy_ptr_->positions(positions);
-      ImGui::Text("");
-    }
-
-    {
-      ImGui::SeparatorText("Stop Loss");
-
-      auto stop_loss_enabled = self.editing_strategy_ptr_->stop_loss_enabled();
-      auto stop_loss_trailing_enabled =
-       self.editing_strategy_ptr_->stop_loss_trailing_enabled();
-
-      ImGui::Checkbox("Enable Stop Loss", &stop_loss_enabled);
-      ImGui::Checkbox("Enable Trailing Stop Loss", &stop_loss_trailing_enabled);
-
-      self.editing_strategy_ptr_->stop_loss_enabled(stop_loss_enabled);
-      self.editing_strategy_ptr_->stop_loss_trailing_enabled(
-       stop_loss_trailing_enabled);
-
-      ImGui::Text("");
-    }
-
-    {
-      ImGui::SeparatorText("Take Profit");
-
-      auto take_profit_enabled =
-       self.editing_strategy_ptr_->take_profit_enabled();
-      auto take_profit_r_multiple =
-       self.editing_strategy_ptr_->take_profit_r_multiple();
-
-      ImGui::Checkbox("Enable Take Profit", &take_profit_enabled);
-      ImGui::Text("R-Multiple:");
-      ImGui::SameLine();
-      if(ImGui::InputDouble("##take_profit_r_multiple",
-                            &take_profit_r_multiple,
-                            0.1,
-                            1.0,
-                            "%.2f")) {
-        if(take_profit_r_multiple < 0.1) {
-          take_profit_r_multiple = 0.1;
-        }
-      }
-
-      self.editing_strategy_ptr_->take_profit_enabled(take_profit_enabled);
-      self.editing_strategy_ptr_->take_profit_r_multiple(
-       take_profit_r_multiple);
 
       ImGui::Text("");
     }
@@ -1157,6 +1021,99 @@ private:
     }
 
     ImGui::EndChild();
+  }
+
+  void render_position_form(this auto& self,
+                            backtest::Strategy::Position& position,
+                            WindowContext& context)
+  {
+    {
+      ImGui::Text("Entry:");
+      ImGui::PushID("entry");
+      auto entry = position.entry();
+      auto changed_node = self.render_condition_node(entry.signal(), context);
+      entry.signal(std::move(changed_node));
+      position.entry(std::move(entry));
+      ImGui::PopID();
+    }
+    {
+      ImGui::Separator();
+      ImGui::Text("Exit:");
+      ImGui::PushID("exit");
+      auto exit = position.exit();
+      auto changed_node = self.render_condition_node(exit.signal(), context);
+      exit.signal(std::move(changed_node));
+      position.exit(std::move(exit));
+      ImGui::PopID();
+    }
+    {
+      ImGui::SeparatorText("Pyramiding");
+      ImGui::PushID("pyramiding");
+
+      ImGui::Text("Signal:");
+      auto pyramiding = position.pyramiding();
+
+      auto changed_node =
+       self.render_condition_node(pyramiding.signal(), context);
+      pyramiding.signal(std::move(changed_node));
+
+      auto pyramiding_max_layers = static_cast<int>(pyramiding.max_layers());
+      ImGui::Text("Max Layers:");
+      ImGui::SameLine();
+      if(ImGui::InputInt("##max_layers", &pyramiding_max_layers)) {
+        if(pyramiding_max_layers < 1) {
+          pyramiding_max_layers = 1;
+        }
+        pyramiding.max_layers(pyramiding_max_layers);
+      }
+
+      position.pyramiding(std::move(pyramiding));
+      ImGui::PopID();
+    }
+    {
+      ImGui::SeparatorText("Stop Loss");
+      ImGui::PushID("stop_loss");
+
+      auto stop_loss = position.stop_loss();
+      auto stop_loss_enabled = stop_loss.enabled();
+      auto stop_loss_trailing = stop_loss.trailing();
+
+      ImGui::Checkbox("Enable Stop Loss", &stop_loss_enabled);
+      ImGui::Checkbox("Enable Trailing Stop Loss", &stop_loss_trailing);
+      stop_loss.enabled(stop_loss_enabled);
+      stop_loss.trailing(stop_loss_trailing);
+
+      ImGui::Text("Stop Price:");
+      ImGui::SameLine();
+      auto stop_price = stop_loss.stop_price();
+      ImGui::PushID("stop_price");
+      self.render_series_node(stop_price, context);
+      ImGui::PopID();
+      stop_loss.stop_price(std::move(stop_price));
+
+      position.stop_loss(std::move(stop_loss));
+      ImGui::PopID();
+    }
+    {
+      ImGui::SeparatorText("Take Profit");
+      ImGui::PushID("take_profit");
+
+      auto take_profit = position.take_profit();
+      auto take_profit_enabled = take_profit.enabled();
+      ImGui::Checkbox("Enable Take Profit", &take_profit_enabled);
+      take_profit.enabled(take_profit_enabled);
+
+      ImGui::Text("Target Price:");
+      ImGui::SameLine();
+      auto target_price = take_profit.target_price();
+      ImGui::PushID("target_price");
+      self.render_series_node(target_price, context);
+      ImGui::PopID();
+      take_profit.target_price(std::move(target_price));
+
+      position.take_profit(std::move(take_profit));
+      ImGui::PopID();
+    }
   }
 
   void render_series_node(this auto& self,

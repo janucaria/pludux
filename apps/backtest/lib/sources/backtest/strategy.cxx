@@ -16,6 +16,62 @@ export namespace pludux::backtest {
 
 class Strategy {
 public:
+  class Entry {
+  public:
+    Entry()
+    : Entry(FalseNode{})
+    {
+    }
+
+    Entry(ErasedNode signal)
+    : signal_{std::move(signal)}
+    {
+    }
+
+    auto operator==(const Entry&) const noexcept -> bool = default;
+
+    auto signal(this const Entry& self) noexcept -> const ErasedNode&
+    {
+      return self.signal_;
+    }
+
+    void signal(this Entry& self, ErasedNode signal) noexcept
+    {
+      self.signal_ = std::move(signal);
+    }
+
+  private:
+    ErasedNode signal_;
+  };
+
+  class Exit {
+  public:
+    Exit()
+    : Exit(FalseNode{})
+    {
+    }
+
+    Exit(ErasedNode signal)
+    : signal_{std::move(signal)}
+    {
+    }
+
+    auto operator==(const Exit&) const noexcept -> bool = default;
+
+    auto signal(this const Exit& self) noexcept -> const ErasedNode&
+    {
+      return self.signal_;
+    }
+
+    void signal(this Exit& self, ErasedNode signal) noexcept
+    {
+      self.signal_ = std::move(signal);
+    }
+
+  private:
+    ErasedNode signal_;
+  };
+
   class Pyramiding {
   public:
     Pyramiding() = default;
@@ -47,98 +103,172 @@ public:
     std::size_t max_layers_{1};
   };
 
-  class PositionSide {
+  class TakeProfit {
   public:
-    PositionSide() = default;
+    TakeProfit(bool enabled = false, ErasedNode target_price = OpenNode{})
+    : enabled_{enabled}
+    , target_price_{std::move(target_price)}
+    {
+    }
 
-    auto operator==(const PositionSide&) const noexcept -> bool = default;
+    auto operator==(const TakeProfit&) const noexcept -> bool = default;
 
-    auto pyramiding(this const PositionSide& self) noexcept -> const Pyramiding&
+    auto enabled(this const TakeProfit& self) noexcept -> bool
+    {
+      return self.enabled_;
+    }
+
+    void enabled(this TakeProfit& self, bool enabled) noexcept
+    {
+      self.enabled_ = enabled;
+    }
+
+    auto target_price(this const TakeProfit& self) noexcept -> const ErasedNode&
+    {
+      return self.target_price_;
+    }
+
+    void target_price(this TakeProfit& self, ErasedNode target_price) noexcept
+    {
+      self.target_price_ = std::move(target_price);
+    }
+
+  private:
+    bool enabled_;
+    ErasedNode target_price_;
+  };
+
+  class StopLoss {
+  public:
+    StopLoss(bool enabled = false,
+             ErasedNode stop_price = OpenNode{},
+             bool trailing = false)
+    : enabled_{enabled}
+    , stop_price_{std::move(stop_price)}
+    , trailing_{trailing}
+    {
+    }
+
+    auto operator==(const StopLoss&) const noexcept -> bool = default;
+
+    auto enabled(this const StopLoss& self) noexcept -> bool
+    {
+      return self.enabled_;
+    }
+
+    void enabled(this StopLoss& self, bool enabled) noexcept
+    {
+      self.enabled_ = enabled;
+    }
+
+    auto trailing(this const StopLoss& self) noexcept -> bool
+    {
+      return self.trailing_;
+    }
+
+    void trailing(this StopLoss& self, bool trailing) noexcept
+    {
+      self.trailing_ = trailing;
+    }
+
+    auto stop_price(this const StopLoss& self) noexcept -> const ErasedNode&
+    {
+      return self.stop_price_;
+    }
+
+    void stop_price(this StopLoss& self, ErasedNode stop_price) noexcept
+    {
+      self.stop_price_ = std::move(stop_price);
+    }
+
+  private:
+    bool enabled_;
+    bool trailing_;
+    ErasedNode stop_price_;
+  };
+
+  class Position {
+  public:
+    Position() = default;
+
+    auto operator==(const Position&) const noexcept -> bool = default;
+
+    auto entry(this const Position& self) noexcept -> const Entry&
+    {
+      return self.entry_;
+    }
+
+    void entry(this Position& self, Entry entry) noexcept
+    {
+      self.entry_ = std::move(entry);
+    }
+
+    auto exit(this const Position& self) noexcept -> const Exit&
+    {
+      return self.exit_;
+    }
+
+    void exit(this Position& self, Exit exit) noexcept
+    {
+      self.exit_ = std::move(exit);
+    }
+
+    auto pyramiding(this const Position& self) noexcept -> const Pyramiding&
     {
       return self.pyramiding_;
     }
 
-    void pyramiding(this PositionSide& self, Pyramiding pyramiding) noexcept
+    void pyramiding(this Position& self, Pyramiding pyramiding) noexcept
     {
       self.pyramiding_ = std::move(pyramiding);
     }
 
+    auto take_profit(this const Position& self) noexcept -> const TakeProfit&
+    {
+      return self.take_profit_;
+    }
+
+    void take_profit(this Position& self, TakeProfit take_profit) noexcept
+    {
+      self.take_profit_ = std::move(take_profit);
+    }
+
+    auto stop_loss(this const Position& self) noexcept -> const StopLoss&
+    {
+      return self.stop_loss_;
+    }
+
+    void stop_loss(this Position& self, StopLoss stop_loss) noexcept
+    {
+      self.stop_loss_ = std::move(stop_loss);
+    }
+
   private:
+    Entry entry_;
+    Exit exit_;
     Pyramiding pyramiding_;
-  };
-
-  class Positions {
-  public:
-    Positions() = default;
-
-    auto operator==(const Positions&) const noexcept -> bool = default;
-
-    auto long_side(this const Positions& self) noexcept -> const PositionSide&
-    {
-      return self.long_side_;
-    }
-
-    void long_side(this Positions& self,
-                   PositionSide long_position_side) noexcept
-    {
-      self.long_side_ = std::move(long_position_side);
-    }
-
-    auto short_side(this const Positions& self) noexcept -> const PositionSide&
-    {
-      return self.short_side_;
-    }
-
-    void short_side(this Positions& self,
-                    PositionSide short_position_side) noexcept
-    {
-      self.short_side_ = std::move(short_position_side);
-    }
-
-  private:
-    PositionSide long_side_;
-    PositionSide short_side_;
+    TakeProfit take_profit_;
+    StopLoss stop_loss_;
   };
 
   Strategy()
   : Strategy("",
              OrderedNamedRegistry<ErasedNode>{},
-             FalseNode{},
-             FalseNode{},
-             FalseNode{},
-             FalseNode{},
-             Positions{},
-             false,
-             false,
-             false,
-             1.0,
-             {})
+             Position{},
+             Position{},
+             std::vector<PlotGroup>{})
   {
   }
 
   Strategy(std::string name,
            OrderedNamedRegistry<ErasedNode> series_nodes,
-           ErasedNode long_entry_node,
-           ErasedNode long_exit_node,
-           ErasedNode short_entry_node,
-           ErasedNode short_exit_node,
-           Positions position,
-           bool stop_loss_enabled,
-           bool stop_loss_trailing_enabled,
-           bool take_profit_enabled,
-           double take_profit_r_multiple,
+           Position long_position,
+           Position short_position,
            std::vector<PlotGroup> plots)
   : name_{std::move(name)}
-  , series_nodes_{series_nodes}
-  , long_entry_node_{std::move(long_entry_node)}
-  , long_exit_node_{std::move(long_exit_node)}
-  , short_entry_node_{std::move(short_entry_node)}
-  , short_exit_node_{std::move(short_exit_node)}
-  , positions_{std::move(position)}
-  , stop_loss_enabled_{stop_loss_enabled}
-  , stop_loss_trailing_enabled_{stop_loss_trailing_enabled}
-  , take_profit_enabled_{take_profit_enabled}
-  , take_profit_r_multiple_{take_profit_r_multiple}
+  , series_nodes_{std::move(series_nodes)}
+  , long_position_{std::move(long_position)}
+  , short_position_{std::move(short_position)}
   , plots_{std::move(plots)}
   {
   }
@@ -167,104 +297,30 @@ public:
     return self.series_nodes_;
   }
 
-  auto long_entry_node(this const Strategy& self) noexcept
-   -> const ErasedNode&
+  void series_nodes(this Strategy& self,
+                    OrderedNamedRegistry<ErasedNode> series_nodes) noexcept
   {
-    return self.long_entry_node_;
+    self.series_nodes_ = std::move(series_nodes);
   }
 
-  void long_entry_node(this Strategy& self,
-                         ErasedNode long_entry_node) noexcept
+  auto long_position(this const Strategy& self) noexcept -> const Position&
   {
-    self.long_entry_node_ = std::move(long_entry_node);
+    return self.long_position_;
   }
 
-  auto long_exit_node(this const Strategy& self) noexcept -> const ErasedNode&
+  void long_position(this Strategy& self, Position long_position) noexcept
   {
-    return self.long_exit_node_;
+    self.long_position_ = std::move(long_position);
   }
 
-  void long_exit_node(this Strategy& self,
-                        ErasedNode long_exit_node) noexcept
+  auto short_position(this const Strategy& self) noexcept -> const Position&
   {
-    self.long_exit_node_ = std::move(long_exit_node);
+    return self.short_position_;
   }
 
-  auto short_entry_node(this const Strategy& self) noexcept
-   -> const ErasedNode&
+  void short_position(this Strategy& self, Position short_position) noexcept
   {
-    return self.short_entry_node_;
-  }
-
-  void short_entry_node(this Strategy& self,
-                          ErasedNode short_entry_node) noexcept
-  {
-    self.short_entry_node_ = std::move(short_entry_node);
-  }
-
-  auto short_exit_node(this const Strategy& self) noexcept
-   -> const ErasedNode&
-  {
-    return self.short_exit_node_;
-  }
-
-  void short_exit_node(this Strategy& self,
-                         ErasedNode short_exit_node) noexcept
-  {
-    self.short_exit_node_ = std::move(short_exit_node);
-  }
-
-  auto positions(this const Strategy& self) noexcept -> const Positions&
-  {
-    return self.positions_;
-  }
-
-  void positions(this Strategy& self, Positions positions) noexcept
-  {
-    self.positions_ = std::move(positions);
-  }
-
-  auto stop_loss_enabled(this const Strategy& self) noexcept -> bool
-  {
-    return self.stop_loss_enabled_;
-  }
-
-  void stop_loss_enabled(this Strategy& self, bool stop_loss_enabled) noexcept
-  {
-    self.stop_loss_enabled_ = stop_loss_enabled;
-  }
-
-  auto stop_loss_trailing_enabled(this const Strategy& self) noexcept -> bool
-  {
-    return self.stop_loss_trailing_enabled_;
-  }
-
-  void stop_loss_trailing_enabled(this Strategy& self,
-                                  bool stop_loss_trailing_enabled) noexcept
-  {
-    self.stop_loss_trailing_enabled_ = stop_loss_trailing_enabled;
-  }
-
-  auto take_profit_enabled(this const Strategy& self) noexcept -> bool
-  {
-    return self.take_profit_enabled_;
-  }
-
-  void take_profit_enabled(this Strategy& self,
-                           bool take_profit_enabled) noexcept
-  {
-    self.take_profit_enabled_ = take_profit_enabled;
-  }
-
-  auto take_profit_r_multiple(this const Strategy& self) noexcept -> double
-  {
-    return self.take_profit_r_multiple_;
-  }
-
-  void take_profit_r_multiple(this Strategy& self,
-                              double take_profit_r_multiple) noexcept
-  {
-    self.take_profit_r_multiple_ = take_profit_r_multiple;
+    self.short_position_ = std::move(short_position);
   }
 
   auto plots(this const Strategy& self) noexcept
@@ -282,16 +338,8 @@ public:
                         const Strategy& other) noexcept -> bool
   {
     return self.series_nodes_ == other.series_nodes_ &&
-           self.long_entry_node_ == other.long_entry_node_ &&
-           self.long_exit_node_ == other.long_exit_node_ &&
-           self.short_entry_node_ == other.short_entry_node_ &&
-           self.short_exit_node_ == other.short_exit_node_ &&
-           self.positions_ == other.positions_ &&
-           self.stop_loss_enabled_ == other.stop_loss_enabled_ &&
-           self.stop_loss_trailing_enabled_ ==
-            other.stop_loss_trailing_enabled_ &&
-           self.take_profit_enabled_ == other.take_profit_enabled_ &&
-           self.take_profit_r_multiple_ == other.take_profit_r_multiple_;
+           self.long_position_ == other.long_position_ &&
+           self.short_position_ == other.short_position_;
   }
 
 private:
@@ -299,19 +347,8 @@ private:
 
   OrderedNamedRegistry<ErasedNode> series_nodes_;
 
-  ErasedNode long_entry_node_{FalseNode{}};
-  ErasedNode long_exit_node_{FalseNode{}};
-
-  ErasedNode short_entry_node_{FalseNode{}};
-  ErasedNode short_exit_node_{FalseNode{}};
-
-  Positions positions_;
-
-  bool stop_loss_enabled_{false};
-  bool stop_loss_trailing_enabled_{false};
-
-  bool take_profit_enabled_{false};
-  double take_profit_r_multiple_{1.0};
+  Position long_position_;
+  Position short_position_;
 
   std::vector<PlotGroup> plots_;
 };

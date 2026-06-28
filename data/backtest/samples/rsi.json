@@ -31,13 +31,6 @@
       }
     }
   },
-  "stopLoss": {
-    "enabled": false
-  },
-  "takeProfit": {
-    "enabled": true,
-    "rMultiple": 3
-  },
   "positions": {
     "long": {
       "entry": {
@@ -73,6 +66,39 @@
               "method": "SERIES_VALUE",
               "params": {
                 "name": "overbought"
+              }
+            }
+          }
+        }
+      },
+      "stopLoss": {
+        "enabled": false,
+        "trailing": false,
+        "stopPrice": {
+          "method": "SUBTRACT",
+          "params": {
+            "minuend": "OPEN",
+            "subtrahend": {
+              "method": "PERCENTAGE",
+              "params": {
+                "base": "OPEN",
+                "percent": 10
+              }
+            }
+          }
+        }
+      },
+      "takeProfit": {
+        "enabled": true,
+        "targetPrice": {
+          "method": "ADD",
+          "params": {
+            "augend": "OPEN",
+            "addend": {
+              "method": "PERCENTAGE",
+              "params": {
+                "base": "OPEN",
+                "percent": 20
               }
             }
           }

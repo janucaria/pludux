@@ -47,8 +47,6 @@
       }
     }
   },
-  "stopLoss": false,
-  "takeProfit": false,
   "positions": {
     "long": {
       "entry": {
@@ -74,6 +72,23 @@
               "method": "SERIES_VALUE",
               "params": {
                 "name": "bb_lower"
+              }
+            }
+          }
+        }
+      },
+      "stopLoss": {
+        "enabled": false,
+        "trailing": false,
+        "stopPrice": {
+          "method": "SUBTRACT",
+          "params": {
+            "minuend": "OPEN",
+            "subtrahend": {
+              "method": "PERCENTAGE",
+              "params": {
+                "base": "OPEN",
+                "percent": 10
               }
             }
           }
@@ -104,6 +119,23 @@
               "method": "SERIES_VALUE",
               "params": {
                 "name": "bb_upper"
+              }
+            }
+          }
+        }
+      },
+      "stopLoss": {
+        "enabled": false,
+        "trailing": false,
+        "stopPrice": {
+          "method": "ADD",
+          "params": {
+            "augend": "OPEN",
+            "addend": {
+              "method": "PERCENTAGE",
+              "params": {
+                "base": "OPEN",
+                "percent": 10
               }
             }
           }

@@ -109,6 +109,23 @@
             }
           }
         }
+      },
+      "stopLoss": {
+        "enabled": false,
+        "trailing": false,
+        "stopPrice": {
+          "method": "SUBTRACT",
+          "params": {
+            "minuend": "OPEN",
+            "subtrahend": {
+              "method": "PERCENTAGE",
+              "params": {
+                "base": "OPEN",
+                "percent": 10
+              }
+            }
+          }
+        }
       }
     }
   },

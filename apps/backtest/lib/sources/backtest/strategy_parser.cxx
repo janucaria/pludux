@@ -5,6 +5,8 @@ module;
 #include <istream>
 #include <memory>
 #include <optional>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -19,6 +21,116 @@ import :strategy;
 import :plot_method_parser;
 
 export namespace pludux::backtest {
+
+auto parse_strategy_position(const jsoncons::ojson& position_json,
+                             auto& config_parser) -> Strategy::Position
+{
+  auto position = Strategy::Position{};
+
+  if(position_json.is_bool()) {
+    if(!position_json.as_bool()) {
+      return position;
+    }
+
+    throw std::runtime_error{
+     "Invalid position configuration in strategy JSON: expected false or an "
+     "object"};
+  }
+
+  if(!position_json.is_object()) {
+    throw std::runtime_error{
+     "Invalid position configuration in strategy JSON: expected false or an "
+     "object"};
+  }
+
+  if(position_json.contains("entry")) {
+    const auto& entry_json = position_json.at("entry");
+    position.entry(
+     Strategy::Entry{config_parser.parse_node(entry_json.at("signal"))});
+  }
+
+  if(position_json.contains("exit")) {
+    const auto& exit_json = position_json.at("exit");
+    position.exit(
+     Strategy::Exit{config_parser.parse_node(exit_json.at("signal"))});
+  }
+
+  if(position_json.contains("pyramiding")) {
+    const auto& pyramiding_json = position_json.at("pyramiding");
+    auto pyramiding = Strategy::Pyramiding{};
+    if(pyramiding_json.contains("signal")) {
+      pyramiding.signal(config_parser.parse_node(pyramiding_json.at("signal")));
+    }
+    if(pyramiding_json.contains("maxLayers")) {
+      pyramiding.max_layers(pyramiding_json.at("maxLayers").as<std::size_t>());
+    }
+    position.pyramiding(std::move(pyramiding));
+  }
+
+  if(!position_json.contains("stopLoss")) {
+    throw std::runtime_error{
+     "Invalid position configuration in strategy JSON: missing stopLoss"};
+  }
+
+  const auto& stop_loss_json = position_json.at("stopLoss");
+  if(!stop_loss_json.is_object() || !stop_loss_json.contains("stopPrice")) {
+    throw std::runtime_error{"Invalid stopLoss configuration in strategy JSON"};
+  }
+
+  position.stop_loss(
+   Strategy::StopLoss{stop_loss_json.get_value_or<bool>("enabled", false),
+                      config_parser.parse_node(stop_loss_json.at("stopPrice")),
+                      stop_loss_json.get_value_or<bool>("trailing", false)});
+
+  if(position_json.contains("takeProfit")) {
+    const auto& take_profit_json = position_json.at("takeProfit");
+    if(!take_profit_json.is_object() ||
+       !take_profit_json.contains("targetPrice")) {
+      throw std::runtime_error{
+       "Invalid takeProfit configuration in strategy JSON"};
+    }
+
+    position.take_profit(Strategy::TakeProfit{
+     take_profit_json.get_value_or<bool>("enabled", false),
+     config_parser.parse_node(take_profit_json.at("targetPrice"))});
+  }
+
+  return position;
+}
+
+auto serialize_strategy_position(const Strategy::Position& position,
+                                 auto& config_parser) -> jsoncons::ojson
+{
+  auto position_json = jsoncons::ojson{};
+
+  position_json["entry"] = jsoncons::ojson{};
+  position_json["entry"]["signal"] =
+   config_parser.serialize_node(position.entry().signal());
+
+  position_json["exit"] = jsoncons::ojson{};
+  position_json["exit"]["signal"] =
+   config_parser.serialize_node(position.exit().signal());
+
+  position_json["pyramiding"] = jsoncons::ojson{};
+  position_json["pyramiding"]["signal"] =
+   config_parser.serialize_node(position.pyramiding().signal());
+  position_json["pyramiding"]["maxLayers"] = position.pyramiding().max_layers();
+
+  position_json["stopLoss"] = jsoncons::ojson{};
+  position_json["stopLoss"]["enabled"] = position.stop_loss().enabled();
+  position_json["stopLoss"]["trailing"] = position.stop_loss().trailing();
+  position_json["stopLoss"]["stopPrice"] =
+   config_parser.serialize_node(position.stop_loss().stop_price());
+
+  if(position.take_profit().enabled()) {
+    position_json["takeProfit"] = jsoncons::ojson{};
+    position_json["takeProfit"]["enabled"] = true;
+    position_json["takeProfit"]["targetPrice"] =
+     config_parser.serialize_node(position.take_profit().target_price());
+  }
+
+  return position_json;
+}
 
 auto parse_backtest_strategy_json(std::string_view strategy_name,
                                   std::istream& json_strategy_stream)
@@ -50,105 +162,20 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
     }
   }
 
-  auto long_entry_node = ErasedNode{FalseNode{}};
-  auto long_exit_node = ErasedNode{FalseNode{}};
-  auto position = Strategy::Positions{};
-
-  auto short_entry_node = ErasedNode{FalseNode{}};
-  auto short_exit_node = ErasedNode{FalseNode{}};
+  auto long_position = Strategy::Position{};
+  auto short_position = Strategy::Position{};
 
   if(strategy_json.contains("positions")) {
     const auto positions_json = strategy_json.at("positions");
 
-    auto long_position_side = Strategy::PositionSide{};
     if(positions_json.contains("long")) {
-      const auto& long_position_json = positions_json.at("long");
-
-      if(long_position_json.contains("entry")) {
-        const auto& entry_json = long_position_json.at("entry");
-        long_entry_node = config_parser.parse_node(entry_json.at("signal"));
-      }
-      if(long_position_json.contains("exit")) {
-        const auto& exit_json = long_position_json.at("exit");
-        long_exit_node = config_parser.parse_node(exit_json.at("signal"));
-      }
-      if(long_position_json.contains("pyramiding")) {
-        const auto& pyramiding_json = long_position_json.at("pyramiding");
-        auto pyramiding = Strategy::Pyramiding{};
-        if(pyramiding_json.contains("signal")) {
-          pyramiding.signal(
-           config_parser.parse_node(pyramiding_json.at("signal")));
-        }
-        if(pyramiding_json.contains("maxLayers")) {
-          pyramiding.max_layers(
-           pyramiding_json.at("maxLayers").as<std::size_t>());
-        }
-        long_position_side.pyramiding(std::move(pyramiding));
-      }
+      long_position =
+       parse_strategy_position(positions_json.at("long"), config_parser);
     }
 
-    auto short_position_side = Strategy::PositionSide{};
     if(positions_json.contains("short")) {
-      const auto& short_position_json = positions_json.at("short");
-
-      if(short_position_json.contains("entry")) {
-        const auto& entry_json = short_position_json.at("entry");
-        short_entry_node = config_parser.parse_node(entry_json.at("signal"));
-      }
-      if(short_position_json.contains("exit")) {
-        const auto& exit_json = short_position_json.at("exit");
-        short_exit_node = config_parser.parse_node(exit_json.at("signal"));
-      }
-      if(short_position_json.contains("pyramiding")) {
-        const auto& pyramiding_json = short_position_json.at("pyramiding");
-        auto pyramiding = Strategy::Pyramiding{};
-        if(pyramiding_json.contains("signal")) {
-          pyramiding.signal(
-           config_parser.parse_node(pyramiding_json.at("signal")));
-        }
-        if(pyramiding_json.contains("maxLayers")) {
-          pyramiding.max_layers(
-           pyramiding_json.at("maxLayers").as<std::size_t>());
-        }
-        short_position_side.pyramiding(std::move(pyramiding));
-      }
-    }
-
-    position.long_side(std::move(long_position_side));
-    position.short_side(std::move(short_position_side));
-  }
-
-  auto is_take_profit_enabled = false;
-  auto take_profit_r_multiple = 1.0;
-  if(strategy_json.contains("takeProfit")) {
-    const auto take_profit_config = strategy_json.at("takeProfit");
-    if(take_profit_config.is_bool()) {
-      is_take_profit_enabled = take_profit_config.as_bool();
-    } else if(take_profit_config.is_object()) {
-      is_take_profit_enabled =
-       take_profit_config.get_value_or<bool>("enabled", true);
-      take_profit_r_multiple =
-       take_profit_config.get_value_or<double>("rMultiple", 1.0);
-    } else {
-      throw std::runtime_error(
-       "Invalid take profit configuration in strategy JSON");
-    }
-  }
-
-  auto is_trailing_stop_loss = false;
-  auto is_stop_loss_enabled = false;
-  if(strategy_json.contains("stopLoss")) {
-    const auto stop_loss_config = strategy_json.at("stopLoss");
-    if(stop_loss_config.is_bool()) {
-      is_stop_loss_enabled = stop_loss_config.as_bool();
-    } else if(stop_loss_config.is_object()) {
-      is_trailing_stop_loss =
-       stop_loss_config.get_value_or<bool>("trailing", false);
-      is_stop_loss_enabled =
-       stop_loss_config.get_value_or<bool>("enabled", true);
-    } else {
-      throw std::runtime_error(
-       "Invalid stop loss configuration in strategy JSON");
+      short_position =
+       parse_strategy_position(positions_json.at("short"), config_parser);
     }
   }
 
@@ -177,15 +204,8 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
 
   return Strategy{std::string{strategy_name},
                   std::move(series_nodes),
-                  std::move(long_entry_node),
-                  std::move(long_exit_node),
-                  std::move(short_entry_node),
-                  std::move(short_exit_node),
-                  std::move(position),
-                  is_stop_loss_enabled,
-                  is_trailing_stop_loss,
-                  is_take_profit_enabled,
-                  take_profit_r_multiple,
+                  std::move(long_position),
+                  std::move(short_position),
                   plots};
 }
 
@@ -214,47 +234,12 @@ auto stringify_backtest_strategy(const backtest::Strategy& strategy)
 
   auto positions_json = jsoncons::ojson{};
 
-  auto long_position_json = jsoncons::ojson{};
-  long_position_json["entry"] = jsoncons::ojson{};
-  long_position_json["entry"]["signal"] =
-   config_parser.serialize_node(strategy.long_entry_node());
-  long_position_json["exit"] = jsoncons::ojson{};
-  long_position_json["exit"]["signal"] =
-   config_parser.serialize_node(strategy.long_exit_node());
-  {
-    long_position_json["pyramiding"] = jsoncons::ojson{};
-    long_position_json["pyramiding"]["signal"] = config_parser.serialize_node(
-     strategy.positions().long_side().pyramiding().signal());
-    long_position_json["pyramiding"]["maxLayers"] =
-     strategy.positions().long_side().pyramiding().max_layers();
-  }
-  positions_json["long"] = std::move(long_position_json);
-
-  auto short_position_json = jsoncons::ojson{};
-  short_position_json["entry"] = jsoncons::ojson{};
-  short_position_json["entry"]["signal"] =
-   config_parser.serialize_node(strategy.short_entry_node());
-  short_position_json["exit"] = jsoncons::ojson{};
-  short_position_json["exit"]["signal"] =
-   config_parser.serialize_node(strategy.short_exit_node());
-  {
-    short_position_json["pyramiding"] = jsoncons::ojson{};
-    short_position_json["pyramiding"]["signal"] = config_parser.serialize_node(
-     strategy.positions().short_side().pyramiding().signal());
-    short_position_json["pyramiding"]["maxLayers"] =
-     strategy.positions().short_side().pyramiding().max_layers();
-  }
-  positions_json["short"] = std::move(short_position_json);
+  positions_json["long"] =
+   serialize_strategy_position(strategy.long_position(), config_parser);
+  positions_json["short"] =
+   serialize_strategy_position(strategy.short_position(), config_parser);
 
   strategy_json["positions"] = std::move(positions_json);
-
-  strategy_json["stopLoss"] = jsoncons::ojson{};
-  strategy_json["stopLoss"]["enabled"] = strategy.stop_loss_enabled();
-  strategy_json["stopLoss"]["trailing"] = strategy.stop_loss_trailing_enabled();
-
-  strategy_json["takeProfit"] = jsoncons::ojson{};
-  strategy_json["takeProfit"]["enabled"] = strategy.take_profit_enabled();
-  strategy_json["takeProfit"]["rMultiple"] = strategy.take_profit_r_multiple();
 
   auto plot_method_parser = make_default_registered_plot_method_parser();
   auto plots_json = jsoncons::ojson::array();

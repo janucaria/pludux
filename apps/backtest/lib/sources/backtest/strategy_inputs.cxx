@@ -349,14 +349,20 @@ auto collect_numeric_inputs(const Strategy& strategy)
     collect_numeric_inputs_from_node(series_node, inputs);
   }
 
-  collect_numeric_inputs_from_node(strategy.long_entry_node(), inputs);
-  collect_numeric_inputs_from_node(strategy.long_exit_node(), inputs);
-  collect_numeric_inputs_from_node(
-   strategy.positions().long_side().pyramiding().signal(), inputs);
-  collect_numeric_inputs_from_node(strategy.short_entry_node(), inputs);
-  collect_numeric_inputs_from_node(strategy.short_exit_node(), inputs);
-  collect_numeric_inputs_from_node(
-   strategy.positions().short_side().pyramiding().signal(), inputs);
+  const auto collect_from_position = [&inputs](
+                                      const Strategy::Position& position) {
+    collect_numeric_inputs_from_node(position.entry().signal(), inputs);
+    collect_numeric_inputs_from_node(position.exit().signal(), inputs);
+    collect_numeric_inputs_from_node(position.pyramiding().signal(), inputs);
+    collect_numeric_inputs_from_node(position.stop_loss().stop_price(), inputs);
+    if(position.take_profit().enabled()) {
+      collect_numeric_inputs_from_node(position.take_profit().target_price(),
+                                       inputs);
+    }
+  };
+
+  collect_from_position(strategy.long_position());
+  collect_from_position(strategy.short_position());
 
   return inputs;
 }

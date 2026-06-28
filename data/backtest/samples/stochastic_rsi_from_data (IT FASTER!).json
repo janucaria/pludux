@@ -26,10 +26,6 @@
       }
     }
   },
-  "stopLoss": true,
-  "takeProfit": {
-    "rMultiple": 3
-  },
   "positions": {
     "long": {
       "entry": {
@@ -115,6 +111,39 @@
                 }
               }
             ]
+          }
+        }
+      },
+      "stopLoss": {
+        "enabled": true,
+        "trailing": false,
+        "stopPrice": {
+          "method": "SUBTRACT",
+          "params": {
+            "minuend": "OPEN",
+            "subtrahend": {
+              "method": "PERCENTAGE",
+              "params": {
+                "base": "OPEN",
+                "percent": 10
+              }
+            }
+          }
+        }
+      },
+      "takeProfit": {
+        "enabled": true,
+        "targetPrice": {
+          "method": "ADD",
+          "params": {
+            "augend": "OPEN",
+            "addend": {
+              "method": "PERCENTAGE",
+              "params": {
+                "base": "OPEN",
+                "percent": 20
+              }
+            }
           }
         }
       }

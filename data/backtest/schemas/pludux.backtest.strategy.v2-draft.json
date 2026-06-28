@@ -70,82 +70,17 @@
           "$ref": "#/$defs/positionSide",
           "default": false,
           "title": "Long Side",
-          "description": "Rules for opening and closing long positions. Set to false to disable long trading."
+          "description": "Rules for opening, sizing, and closing long positions. Set to false to disable long trading."
         },
         "short": {
           "$ref": "#/$defs/positionSide",
           "default": false,
           "title": "Short Side",
-          "description": "Rules for opening and closing short positions. Set to false to disable short trading."
+          "description": "Rules for opening, sizing, and closing short positions. Set to false to disable short trading."
         }
       },
       "title": "Positions",
-      "description": "Trading rules for long and short positions. Each side can be disabled with false, or configured with entry and optional exit signals."
-    },
-    "stopLoss": {
-      "oneOf": [
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "title": "Enabled",
-              "description": "Whether stop-loss logic is enabled."
-            },
-            "trailing": {
-              "type": "boolean",
-              "title": "Trailing",
-              "description": "When true, the stop loss trails favorable price movement instead of staying fixed."
-            }
-          },
-          "default": {
-            "enabled": true,
-            "trailing": false
-          },
-          "title": "Stop Loss Settings",
-          "description": "Object form of the global stop-loss configuration."
-        },
-        {
-          "type": "boolean"
-        }
-      ],
-      "default": false,
-      "title": "Stop Loss",
-      "description": "Global stop-loss behavior for the strategy. Use false to disable it, or provide an object to enable it and optionally make it trailing."
-    },
-    "takeProfit": {
-      "oneOf": [
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "title": "Enabled",
-              "description": "Whether take-profit logic is enabled."
-            },
-            "rMultiple": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "title": "R Multiple",
-              "description": "Profit target measured in multiples of 1R, where 1R is the strategy's risk distance."
-            }
-          },
-          "default": {
-            "enabled": true,
-            "rMultiple": 2.0
-          },
-          "title": "Take Profit Settings",
-          "description": "Object form of the global take-profit configuration."
-        },
-        {
-          "type": "boolean"
-        }
-      ],
-      "default": false,
-      "title": "Take Profit",
-      "description": "Global take-profit behavior for the strategy. Use false to disable it, or provide an object to enable it and define the target in R-multiples."
+      "description": "Trading rules for long and short positions. Each side can be disabled with false, or configured with entry rules, a required stop price for risk sizing, and optional exit or take-profit rules."
     },
     "plots": {
       "type": "array",
@@ -231,19 +166,77 @@
                 "signal": false,
                 "maxLayers": 1
               }
+            },
+            "stopLoss": {
+              "$ref": "#/$defs/stopLoss"
+            },
+            "takeProfit": {
+              "$ref": "#/$defs/takeProfit"
             }
           },
           "required": [
-            "entry"
+            "entry",
+            "stopLoss"
           ]
         },
         {
-          "type": "boolean"
+          "type": "boolean",
+          "const": false
         }
       ],
       "default": false,
       "title": "Position Side",
-      "description": "Configuration for one trading direction, such as long or short. Use false to disable the side, or provide entry and optional exit signal rules."
+      "description": "Configuration for one trading direction, such as long or short. Use false to disable the side, or provide entry rules plus a required stop price used for risk sizing."
+    },
+    "stopLoss": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "title": "Enabled",
+          "description": "Whether the strategy exits the position when price reaches the stop price."
+        },
+        "trailing": {
+          "type": "boolean",
+          "default": false,
+          "title": "Trailing",
+          "description": "When true, the stop-loss exit trails favorable price movement instead of staying fixed."
+        },
+        "stopPrice": {
+          "$ref": "#/$defs/seriesAsParameter",
+          "title": "Stop Price",
+          "description": "Required price expression for the stop side of the trade. The evaluated stop price is always used to calculate risk-based position size; when enabled is true, it is also used as the stop-loss exit level."
+        }
+      },
+      "required": [
+        "stopPrice"
+      ],
+      "title": "Stop Loss",
+      "description": "Stop-side configuration for a position. The stop price is required because its price gap from entry is used for position sizing, even when automatic stop-loss exits are disabled."
+    },
+    "takeProfit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "title": "Enabled",
+          "description": "Whether the strategy exits the position when price reaches the target price."
+        },
+        "targetPrice": {
+          "$ref": "#/$defs/seriesAsParameter",
+          "title": "Target Price",
+          "description": "Price expression for the profit target. It can be a constant, a raw price series, a named series, or an inline series expression."
+        }
+      },
+      "required": [
+        "targetPrice"
+      ],
+      "title": "Take Profit",
+      "description": "Profit-side configuration for a position. When enabled is true, the evaluated target price is used as the take-profit exit level."
     },
     "seriesAsParameter": {
       "title": "Series Input (Flexible Expression)",
@@ -1970,14 +1963,14 @@
                   "title": "Base",
                   "description": "Base numeric input that the percentage is applied to. Prefer quote shorthand for direct OHLCV input and SERIES_VALUE for named series."
                 },
-                "percentage": {
+                "percent": {
                   "type": "number",
-                  "title": "Percentage",
+                  "title": "Percent",
                   "description": "Percentage amount to apply, such as 2 for 2%."
                 }
               },
               "required": [
-                "percentage"
+                "percent"
               ],
               "title": "Parameters",
               "description": "Parameters for percentage-of-base calculation. This is commonly used for offsets, thresholds, and derived levels."
@@ -1995,7 +1988,7 @@
           "method": "PERCENTAGE",
           "params": {
             "base": "CLOSE",
-            "percentage": 2
+            "percent": 2
           }
         },
         {
@@ -2007,7 +2000,7 @@
                 "name": "atr_14"
               }
             },
-            "percentage": 50
+            "percent": 50
           }
         }
       ]
@@ -2967,17 +2960,42 @@
                 }
               }
             }
+          },
+          "stopLoss": {
+            "enabled": true,
+            "trailing": false,
+            "stopPrice": {
+              "method": "SUBTRACT",
+              "params": {
+                "minuend": "OPEN",
+                "subtrahend": {
+                  "method": "PERCENTAGE",
+                  "params": {
+                    "base": "OPEN",
+                    "percent": 10.0
+                  }
+                }
+              }
+            }
+          },
+          "takeProfit": {
+            "enabled": true,
+            "targetPrice": {
+              "method": "ADD",
+              "params": {
+                "augend": "OPEN",
+                "addend": {
+                  "method": "PERCENTAGE",
+                  "params": {
+                    "base": "OPEN",
+                    "percent": 20.0
+                  }
+                }
+              }
+            }
           }
         },
         "short": false
-      },
-      "stopLoss": {
-        "enabled": true,
-        "trailing": false
-      },
-      "takeProfit": {
-        "enabled": true,
-        "rMultiple": 2.0
       }
     }
   ]
