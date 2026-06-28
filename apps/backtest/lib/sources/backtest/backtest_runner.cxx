@@ -189,6 +189,7 @@ public:
 
     auto summary = !summaries.empty() ? summaries.back()
                                       : BacktestSummary{self.total_equity_};
+    const auto current_drawdown_ratio = summary.drawdown() / 100.0;
 
     auto trade_session = summary.trade_session();
 
@@ -202,16 +203,16 @@ public:
       {
         const auto is_long_direction = open_position->is_long_direction();
         if(is_long_direction) {
-          auto pyramiding_trade =
-           self.pyramiding_long_trade(asset_snapshot, context);
+          auto pyramiding_trade = self.pyramiding_long_trade(
+           asset_snapshot, context, current_drawdown_ratio);
           if(pyramiding_trade) {
             const auto fee = self.broker_.calculate_fee(*pyramiding_trade);
             trade_session.entry_position(*pyramiding_trade, fee);
             self.pyramiding_layers_++;
           }
         } else {
-          auto pyramiding_trade =
-           self.pyramiding_short_trade(asset_snapshot, context);
+          auto pyramiding_trade = self.pyramiding_short_trade(
+           asset_snapshot, context, current_drawdown_ratio);
           if(pyramiding_trade) {
             const auto fee = self.broker_.calculate_fee(*pyramiding_trade);
             trade_session.entry_position(*pyramiding_trade, fee);
@@ -239,7 +240,8 @@ public:
     }
 
     if(trade_session.is_flat() || trade_session.is_closed()) {
-      auto entry_trade = self.entry_trade(asset_snapshot, context);
+      auto entry_trade =
+       self.entry_trade(asset_snapshot, context, current_drawdown_ratio);
       if(entry_trade) {
         {
           const auto quantity_step = self.market_.quantity_step();
@@ -302,7 +304,8 @@ private:
                     bool is_long,
                     bool is_pyramiding,
                     const AssetSnapshot& asset_snapshot,
-                    MethodContextable auto context) -> std::optional<TradeEntry>
+                    MethodContextable auto context,
+                    double current_drawdown_ratio) -> std::optional<TradeEntry>
   {
     auto result = std::optional<TradeEntry>{};
 
@@ -333,8 +336,10 @@ private:
       }
       const auto position_quantity = self.calculate_position_quantity(
        position_sizing, is_long, entry_price, stop_price);
+      const auto adjusted_position_quantity = self.apply_drawdown_adjustment(
+       position_quantity, current_drawdown_ratio);
       const auto direction = is_long ? 1.0 : -1.0;
-      const auto position_size = direction * position_quantity;
+      const auto position_size = direction * adjusted_position_quantity;
 
       const auto stop_loss_price =
        position.stop_loss_enabled() ? stop_price : NAN;
@@ -353,6 +358,30 @@ private:
     }
 
     return result;
+  }
+
+  auto apply_drawdown_adjustment(this const BacktestRunner& self,
+                                 double position_quantity,
+                                 double current_drawdown_ratio) -> double
+  {
+    const auto& drawdown_adjustment = self.profile_.drawdown_adjustment();
+
+    if(!drawdown_adjustment.enabled()) {
+      return position_quantity;
+    }
+
+    const auto drawdown_step = drawdown_adjustment.drawdown_step();
+    const auto size_reduction = drawdown_adjustment.size_reduction();
+    if(!std::isfinite(current_drawdown_ratio) ||
+       !std::isfinite(drawdown_step) || drawdown_step <= 0.0 ||
+       !std::isfinite(size_reduction) || size_reduction < 0.0) {
+      throw std::runtime_error{"Invalid drawdown adjustment"};
+    }
+
+    const auto steps =
+     std::floor(std::max(current_drawdown_ratio, 0.0) / drawdown_step);
+    const auto multiplier = std::max(1.0 - steps * size_reduction, 0.0);
+    return position_quantity * multiplier;
   }
 
   auto calculate_position_quantity(this const BacktestRunner& self,
@@ -402,47 +431,71 @@ private:
 
   auto entry_long_trade(this const BacktestRunner& self,
                         const AssetSnapshot& asset_snapshot,
-                        MethodContextable auto context)
+                        MethodContextable auto context,
+                        double current_drawdown_ratio)
    -> std::optional<TradeEntry>
   {
-    return self.create_trade(
-     self.long_position_, true, false, asset_snapshot, context);
+    return self.create_trade(self.long_position_,
+                             true,
+                             false,
+                             asset_snapshot,
+                             context,
+                             current_drawdown_ratio);
   }
 
   auto entry_short_trade(this const BacktestRunner& self,
                          const AssetSnapshot& asset_snapshot,
-                         MethodContextable auto context)
+                         MethodContextable auto context,
+                         double current_drawdown_ratio)
    -> std::optional<TradeEntry>
   {
-    return self.create_trade(
-     self.short_position_, false, false, asset_snapshot, context);
+    return self.create_trade(self.short_position_,
+                             false,
+                             false,
+                             asset_snapshot,
+                             context,
+                             current_drawdown_ratio);
   }
 
   auto pyramiding_long_trade(this const BacktestRunner& self,
                              const AssetSnapshot& asset_snapshot,
-                             MethodContextable auto context)
+                             MethodContextable auto context,
+                             double current_drawdown_ratio)
    -> std::optional<TradeEntry>
   {
-    return self.create_trade(
-     self.long_position_, true, true, asset_snapshot, context);
+    return self.create_trade(self.long_position_,
+                             true,
+                             true,
+                             asset_snapshot,
+                             context,
+                             current_drawdown_ratio);
   }
 
   auto pyramiding_short_trade(this const BacktestRunner& self,
                               const AssetSnapshot& asset_snapshot,
-                              MethodContextable auto context)
+                              MethodContextable auto context,
+                              double current_drawdown_ratio)
    -> std::optional<TradeEntry>
   {
-    return self.create_trade(
-     self.short_position_, false, true, asset_snapshot, context);
+    return self.create_trade(self.short_position_,
+                             false,
+                             true,
+                             asset_snapshot,
+                             context,
+                             current_drawdown_ratio);
   }
 
   auto entry_trade(this const BacktestRunner& self,
                    const AssetSnapshot& asset_snapshot,
-                   MethodContextable auto context) -> std::optional<TradeEntry>
+                   MethodContextable auto context,
+                   double current_drawdown_ratio) -> std::optional<TradeEntry>
   {
-    return self.entry_long_trade(asset_snapshot, context).or_else([&] {
-      return self.entry_short_trade(asset_snapshot, context);
-    });
+    return self
+     .entry_long_trade(asset_snapshot, context, current_drawdown_ratio)
+     .or_else([&] {
+       return self.entry_short_trade(
+        asset_snapshot, context, current_drawdown_ratio);
+     });
   }
 
   auto exit_trade(this const BacktestRunner& self,

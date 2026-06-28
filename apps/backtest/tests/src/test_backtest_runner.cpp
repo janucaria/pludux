@@ -19,15 +19,36 @@ auto make_single_bar_asset(double open_price = 100.0) -> Asset
                             {"Volume", {0.0}}}};
 }
 
-auto run_single_entry(PositionSizing position_sizing,
-                      double entry_price = 100.0) -> BacktestSummary
+auto make_two_bar_asset(double open_price = 100.0) -> Asset
 {
-  const auto asset = make_single_bar_asset(entry_price);
+  return Asset{"Test",
+               AssetHistory{{"Datetime", {2.0, 1.0}},
+                            {"Open", {open_price, open_price}},
+                            {"High", {open_price, open_price}},
+                            {"Low", {open_price, open_price}},
+                            {"Close", {open_price, open_price}},
+                            {"Volume", {0.0, 0.0}}}};
+}
+
+auto make_summary_with_drawdown(double drawdown_ratio) -> BacktestSummary
+{
+  auto summary = BacktestSummary{1000.0};
+  summary.capital(1000.0 * (1.0 - drawdown_ratio));
+  return summary;
+}
+
+auto run_single_entry(PositionSizing position_sizing,
+                      double entry_price = 100.0,
+                      DrawdownAdjustment drawdown_adjustment = {},
+                      std::vector<BacktestSummary> summaries = {})
+ -> BacktestSummary
+{
+  const auto asset = summaries.empty() ? make_single_bar_asset(entry_price)
+                                       : make_two_bar_asset(entry_price);
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
-  const auto profile = Profile{"Test", position_sizing};
+  const auto profile = Profile{"Test", position_sizing, drawdown_adjustment};
   auto series_results = SeriesEvaluationResults{};
-  auto summaries = std::vector<BacktestSummary>{};
 
   auto runner =
    BacktestRunner{asset,
@@ -141,4 +162,68 @@ TEST(BacktestRunnerTest, EquityPercentSizingConvertsByCurrentEquity)
   ASSERT_TRUE(summary.trade_session().open_position().has_value());
   EXPECT_DOUBLE_EQ(summary.trade_session().open_position()->position_size(),
                    2.5);
+}
+
+TEST(BacktestRunnerTest, DisabledDrawdownAdjustmentLeavesSizingUnchanged)
+{
+  const auto summary =
+   run_single_entry(PositionSizing{PositionSizing::Mode::FixedQuantity, 100.0},
+                    100.0,
+                    DrawdownAdjustment{false, 0.10, 0.20},
+                    {make_summary_with_drawdown(0.10)});
+
+  ASSERT_TRUE(summary.trade_session().open_position().has_value());
+  EXPECT_DOUBLE_EQ(summary.trade_session().open_position()->position_size(),
+                   100.0);
+}
+
+TEST(BacktestRunnerTest, DrawdownAdjustmentLeavesSizeUnchangedAtZeroDrawdown)
+{
+  const auto summary =
+   run_single_entry(PositionSizing{PositionSizing::Mode::FixedQuantity, 100.0},
+                    100.0,
+                    DrawdownAdjustment{true, 0.10, 0.20});
+
+  ASSERT_TRUE(summary.trade_session().open_position().has_value());
+  EXPECT_DOUBLE_EQ(summary.trade_session().open_position()->position_size(),
+                   100.0);
+}
+
+TEST(BacktestRunnerTest, DrawdownAdjustmentReducesSizeAtTenPercentDrawdown)
+{
+  const auto summary =
+   run_single_entry(PositionSizing{PositionSizing::Mode::FixedQuantity, 100.0},
+                    100.0,
+                    DrawdownAdjustment{true, 0.10, 0.20},
+                    {make_summary_with_drawdown(0.10)});
+
+  ASSERT_TRUE(summary.trade_session().open_position().has_value());
+  EXPECT_DOUBLE_EQ(summary.trade_session().open_position()->position_size(),
+                   80.0);
+}
+
+TEST(BacktestRunnerTest, DrawdownAdjustmentReducesSizeAtTwentyPercentDrawdown)
+{
+  const auto summary =
+   run_single_entry(PositionSizing{PositionSizing::Mode::FixedQuantity, 100.0},
+                    100.0,
+                    DrawdownAdjustment{true, 0.10, 0.20},
+                    {make_summary_with_drawdown(0.20)});
+
+  ASSERT_TRUE(summary.trade_session().open_position().has_value());
+  EXPECT_DOUBLE_EQ(summary.trade_session().open_position()->position_size(),
+                   60.0);
+}
+
+TEST(BacktestRunnerTest, DrawdownAdjustmentClampsSizeAtZero)
+{
+  const auto summary =
+   run_single_entry(PositionSizing{PositionSizing::Mode::FixedQuantity, 100.0},
+                    100.0,
+                    DrawdownAdjustment{true, 0.10, 0.20},
+                    {make_summary_with_drawdown(0.60)});
+
+  ASSERT_TRUE(summary.trade_session().open_position().has_value());
+  EXPECT_DOUBLE_EQ(summary.trade_session().open_position()->position_size(),
+                   0.0);
 }

@@ -1,6 +1,7 @@
 module;
 
 #include <algorithm>
+#include <array>
 #include <cstring>
 #include <iterator>
 #include <memory>
@@ -312,6 +313,25 @@ private:
       position_sizing.value(value);
       self.last_position_sizing_values_[mode] = value;
       self.editing_profile_ptr_->position_sizing(position_sizing);
+    }
+    {
+      auto drawdown_adjustment =
+       self.editing_profile_ptr_->drawdown_adjustment();
+      auto enabled = drawdown_adjustment.enabled();
+      ImGui::Checkbox("Drawdown Adjustment", &enabled);
+      drawdown_adjustment.enabled(enabled);
+
+      auto drawdown_step = drawdown_adjustment.drawdown_step() * 100.0;
+      ImGui::InputDouble(
+       "Drawdown Step (%)", &drawdown_step, 1.0, 10.0, "%.2f");
+      drawdown_adjustment.drawdown_step(drawdown_step / 100.0);
+
+      auto size_reduction = drawdown_adjustment.size_reduction() * 100.0;
+      ImGui::InputDouble(
+       "Size Reduction (%)", &size_reduction, 1.0, 10.0, "%.2f");
+      drawdown_adjustment.size_reduction(size_reduction / 100.0);
+
+      self.editing_profile_ptr_->drawdown_adjustment(drawdown_adjustment);
     }
   }
 

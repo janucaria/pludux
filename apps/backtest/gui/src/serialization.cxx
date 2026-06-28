@@ -50,18 +50,15 @@ void save(Archive& archive,
           const pludux::backtest::PositionSizing& position_sizing)
 {
   auto mode =
-   static_cast<std::underlying_type_t<
-    pludux::backtest::PositionSizing::Mode>>(position_sizing.mode());
-  archive(
-   make_nvp("mode", mode),
-   make_nvp("value", position_sizing.value()));
+   static_cast<std::underlying_type_t<pludux::backtest::PositionSizing::Mode>>(
+    position_sizing.mode());
+  archive(make_nvp("mode", mode), make_nvp("value", position_sizing.value()));
 }
 
 template<class Archive>
 void load(Archive& archive, pludux::backtest::PositionSizing& position_sizing)
 {
-  auto mode =
-   std::underlying_type_t<pludux::backtest::PositionSizing::Mode>{};
+  auto mode = std::underlying_type_t<pludux::backtest::PositionSizing::Mode>{};
   auto value = double{};
 
   archive(make_nvp("mode", mode), make_nvp("value", value));
@@ -73,10 +70,38 @@ void load(Archive& archive, pludux::backtest::PositionSizing& position_sizing)
 /*--------------------------------------------------------------------------------------*/
 
 template<class Archive>
+void save(Archive& archive,
+          const pludux::backtest::DrawdownAdjustment& drawdown_adjustment)
+{
+  archive(make_nvp("enabled", drawdown_adjustment.enabled()),
+          make_nvp("drawdownStep", drawdown_adjustment.drawdown_step()),
+          make_nvp("sizeReduction", drawdown_adjustment.size_reduction()));
+}
+
+template<class Archive>
+void load(Archive& archive,
+          pludux::backtest::DrawdownAdjustment& drawdown_adjustment)
+{
+  auto enabled = bool{};
+  auto drawdown_step = double{};
+  auto size_reduction = double{};
+
+  archive(make_nvp("enabled", enabled),
+          make_nvp("drawdownStep", drawdown_step),
+          make_nvp("sizeReduction", size_reduction));
+
+  drawdown_adjustment =
+   pludux::backtest::DrawdownAdjustment{enabled, drawdown_step, size_reduction};
+}
+
+/*--------------------------------------------------------------------------------------*/
+
+template<class Archive>
 void save(Archive& archive, const pludux::backtest::Profile& profile)
 {
   archive(make_nvp("name", profile.name()),
-          make_nvp("positionSizing", profile.position_sizing()));
+          make_nvp("positionSizing", profile.position_sizing()),
+          make_nvp("drawdownAdjustment", profile.drawdown_adjustment()));
 }
 
 template<class Archive>
@@ -84,10 +109,14 @@ void load(Archive& archive, pludux::backtest::Profile& profile)
 {
   auto name = std::string{};
   auto position_sizing = pludux::backtest::PositionSizing{};
+  auto drawdown_adjustment = pludux::backtest::DrawdownAdjustment{};
 
-  archive(make_nvp("name", name), make_nvp("positionSizing", position_sizing));
+  archive(make_nvp("name", name),
+          make_nvp("positionSizing", position_sizing),
+          make_nvp("drawdownAdjustment", drawdown_adjustment));
 
-  profile = pludux::backtest::Profile{std::move(name), position_sizing};
+  profile = pludux::backtest::Profile{
+   std::move(name), position_sizing, drawdown_adjustment};
 }
 
 /*--------------------------------------------------------------------------------------*/

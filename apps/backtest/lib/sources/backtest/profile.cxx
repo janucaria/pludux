@@ -51,6 +51,60 @@ private:
   double value_;
 };
 
+class DrawdownAdjustment {
+public:
+  DrawdownAdjustment()
+  : DrawdownAdjustment{false, 0.10, 0.20}
+  {
+  }
+
+  DrawdownAdjustment(bool enabled, double drawdown_step, double size_reduction)
+  : enabled_{enabled}
+  , drawdown_step_{drawdown_step}
+  , size_reduction_{size_reduction}
+  {
+  }
+
+  auto operator==(const DrawdownAdjustment&) const noexcept -> bool = default;
+
+  auto enabled(this const DrawdownAdjustment& self) noexcept -> bool
+  {
+    return self.enabled_;
+  }
+
+  void enabled(this DrawdownAdjustment& self, bool enabled) noexcept
+  {
+    self.enabled_ = enabled;
+  }
+
+  auto drawdown_step(this const DrawdownAdjustment& self) noexcept -> double
+  {
+    return self.drawdown_step_;
+  }
+
+  void drawdown_step(this DrawdownAdjustment& self,
+                     double drawdown_step) noexcept
+  {
+    self.drawdown_step_ = drawdown_step;
+  }
+
+  auto size_reduction(this const DrawdownAdjustment& self) noexcept -> double
+  {
+    return self.size_reduction_;
+  }
+
+  void size_reduction(this DrawdownAdjustment& self,
+                      double size_reduction) noexcept
+  {
+    self.size_reduction_ = size_reduction;
+  }
+
+private:
+  bool enabled_;
+  double drawdown_step_;
+  double size_reduction_;
+};
+
 class Profile {
 public:
   Profile()
@@ -65,8 +119,16 @@ public:
   }
 
   Profile(std::string name, PositionSizing position_sizing)
+  : Profile{std::move(name), position_sizing, DrawdownAdjustment{}}
+  {
+  }
+
+  Profile(std::string name,
+          PositionSizing position_sizing,
+          DrawdownAdjustment drawdown_adjustment)
   : name_{std::move(name)}
   , position_sizing_{position_sizing}
+  , drawdown_adjustment_{drawdown_adjustment}
   {
   }
 
@@ -94,15 +156,29 @@ public:
     self.position_sizing_ = position_sizing;
   }
 
+  auto drawdown_adjustment(this const Profile& self) noexcept
+   -> const DrawdownAdjustment&
+  {
+    return self.drawdown_adjustment_;
+  }
+
+  void drawdown_adjustment(this Profile& self,
+                           DrawdownAdjustment drawdown_adjustment) noexcept
+  {
+    self.drawdown_adjustment_ = drawdown_adjustment;
+  }
+
   auto equivalent_rules(this const Profile& self, const Profile& other) noexcept
    -> bool
   {
-    return self.position_sizing_ == other.position_sizing_;
+    return self.position_sizing_ == other.position_sizing_ &&
+           self.drawdown_adjustment_ == other.drawdown_adjustment_;
   }
 
 private:
   std::string name_;
   PositionSizing position_sizing_;
+  DrawdownAdjustment drawdown_adjustment_;
 };
 
 } // namespace pludux::backtest
