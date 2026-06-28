@@ -317,20 +317,24 @@ private:
 
     if(can_enter && can_pyramid) {
       const auto entry_price = asset_snapshot.open();
-      const auto risk_value = self.profile_.capital_risk() * self.total_equity_;
-      const auto stop_price = evaluate_series_method(
-       position.stop_price_method(), asset_snapshot, context);
-      const auto risk_distance =
-       is_long ? entry_price - stop_price : stop_price - entry_price;
-
-      if(std::isnan(stop_price) || !std::isfinite(risk_distance) ||
-         risk_distance <= 0.0) {
-        throw std::runtime_error{
-         "Invalid stop price for risk-based position sizing"};
+      const auto position_sizing = self.profile_.position_sizing();
+      const auto uses_risk_distance =
+       position_sizing.mode() == PositionSizing::Mode::RiskDistance;
+      const auto needs_stop_price =
+       uses_risk_distance || position.stop_loss_enabled();
+      const auto stop_price =
+       needs_stop_price ? evaluate_series_method(position.stop_price_method(),
+                                                 asset_snapshot,
+                                                 context)
+                        : NAN;
+      if(position.stop_loss_enabled() && !uses_risk_distance &&
+         !std::isfinite(stop_price)) {
+        throw std::runtime_error{"Invalid stop price for stop-loss exit"};
       }
-
+      const auto position_quantity = self.calculate_position_quantity(
+       position_sizing, is_long, entry_price, stop_price);
       const auto direction = is_long ? 1.0 : -1.0;
-      const auto position_size = direction * (risk_value / risk_distance);
+      const auto position_size = direction * position_quantity;
 
       const auto stop_loss_price =
        position.stop_loss_enabled() ? stop_price : NAN;
@@ -349,6 +353,51 @@ private:
     }
 
     return result;
+  }
+
+  auto calculate_position_quantity(this const BacktestRunner& self,
+                                   const PositionSizing& position_sizing,
+                                   bool is_long,
+                                   double entry_price,
+                                   double stop_price) -> double
+  {
+    const auto value = position_sizing.value();
+
+    if(!std::isfinite(value)) {
+      throw std::runtime_error{"Invalid position sizing value"};
+    }
+
+    switch(position_sizing.mode()) {
+    case PositionSizing::Mode::RiskDistance: {
+      const auto risk_distance =
+       is_long ? entry_price - stop_price : stop_price - entry_price;
+
+      if(std::isnan(stop_price) || !std::isfinite(risk_distance) ||
+         risk_distance <= 0.0) {
+        throw std::runtime_error{
+         "Invalid stop price for risk-based position sizing"};
+      }
+
+      const auto risk_value = value * self.total_equity_;
+      return std::abs(risk_value / risk_distance);
+    }
+    case PositionSizing::Mode::FixedQuantity:
+      return std::abs(value);
+    case PositionSizing::Mode::FixedNotional:
+      if(!std::isfinite(entry_price) || entry_price <= 0.0) {
+        throw std::runtime_error{
+         "Invalid entry price for fixed-notional position sizing"};
+      }
+      return std::abs(value / entry_price);
+    case PositionSizing::Mode::EquityPercent:
+      if(!std::isfinite(entry_price) || entry_price <= 0.0) {
+        throw std::runtime_error{
+         "Invalid entry price for equity-percent position sizing"};
+      }
+      return std::abs(self.total_equity_ * value / entry_price);
+    }
+
+    return 0.0;
   }
 
   auto entry_long_trade(this const BacktestRunner& self,

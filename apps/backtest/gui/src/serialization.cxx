@@ -4,6 +4,7 @@ module;
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include <cereal/cereal.hpp>
@@ -45,21 +46,48 @@ void load(Archive& archive, pludux::backtest::Strategy& strategy)
 /*--------------------------------------------------------------------------------------*/
 
 template<class Archive>
+void save(Archive& archive,
+          const pludux::backtest::PositionSizing& position_sizing)
+{
+  auto mode =
+   static_cast<std::underlying_type_t<
+    pludux::backtest::PositionSizing::Mode>>(position_sizing.mode());
+  archive(
+   make_nvp("mode", mode),
+   make_nvp("value", position_sizing.value()));
+}
+
+template<class Archive>
+void load(Archive& archive, pludux::backtest::PositionSizing& position_sizing)
+{
+  auto mode =
+   std::underlying_type_t<pludux::backtest::PositionSizing::Mode>{};
+  auto value = double{};
+
+  archive(make_nvp("mode", mode), make_nvp("value", value));
+
+  position_sizing = pludux::backtest::PositionSizing{
+   static_cast<pludux::backtest::PositionSizing::Mode>(mode), value};
+}
+
+/*--------------------------------------------------------------------------------------*/
+
+template<class Archive>
 void save(Archive& archive, const pludux::backtest::Profile& profile)
 {
   archive(make_nvp("name", profile.name()),
-          make_nvp("capitalRisk", profile.capital_risk()));
+          make_nvp("positionSizing", profile.position_sizing()));
 }
 
 template<class Archive>
 void load(Archive& archive, pludux::backtest::Profile& profile)
 {
   auto name = std::string{};
-  auto capital_risk = double{};
+  auto position_sizing = pludux::backtest::PositionSizing{};
 
-  archive(make_nvp("name", name), make_nvp("capitalRisk", capital_risk));
+  archive(make_nvp("name", name), make_nvp("positionSizing", position_sizing));
 
-  profile = pludux::backtest::Profile{std::move(name), capital_risk};
+  profile = pludux::backtest::Profile{std::move(name), position_sizing};
 }
 
 /*--------------------------------------------------------------------------------------*/

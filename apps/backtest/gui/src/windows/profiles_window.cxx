@@ -6,6 +6,7 @@ module;
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <utility>
 
 #include <imgui.h>
@@ -24,6 +25,11 @@ public:
   : current_page_(ProfilePage::List)
   , selected_profile_handle_opt_{}
   , editing_profile_ptr_{nullptr}
+  , last_position_sizing_values_{
+     {backtest::PositionSizing::Mode::RiskDistance, 0.01},
+     {backtest::PositionSizing::Mode::FixedQuantity, 1.0},
+     {backtest::PositionSizing::Mode::FixedNotional, 1000.0},
+     {backtest::PositionSizing::Mode::EquityPercent, 1.0}}
   {
   }
 
@@ -51,6 +57,9 @@ private:
 
   std::optional<backtest::ProfileStoreHandle> selected_profile_handle_opt_;
   std::shared_ptr<backtest::Profile> editing_profile_ptr_;
+
+  std::unordered_map<backtest::PositionSizing::Mode, double>
+   last_position_sizing_values_;
 
   void render_profiles_list(this auto& self, WindowContext& context)
   {
@@ -159,7 +168,8 @@ private:
 
       self.selected_profile_handle_opt_ = std::nullopt;
       self.editing_profile_ptr_ = std::make_shared<backtest::Profile>();
-      self.editing_profile_ptr_->capital_risk(0.01);
+      self.editing_profile_ptr_->position_sizing(backtest::PositionSizing{
+       backtest::PositionSizing::Mode::RiskDistance, 0.01});
     }
 
     ImGui::EndGroup();
@@ -237,9 +247,71 @@ private:
       self.editing_profile_ptr_->name(profile_name);
     }
     {
-      auto percentage = self.editing_profile_ptr_->capital_risk() * 100.0;
-      ImGui::InputDouble("Capital Risk (%)", &percentage, 1.0, 10.0, "%.2f");
-      self.editing_profile_ptr_->capital_risk(percentage / 100.0);
+      auto position_sizing = self.editing_profile_ptr_->position_sizing();
+      const auto mode_label = [](backtest::PositionSizing::Mode mode) {
+        switch(mode) {
+        case backtest::PositionSizing::Mode::RiskDistance:
+          return "Risk Distance";
+        case backtest::PositionSizing::Mode::FixedQuantity:
+          return "Fixed Quantity";
+        case backtest::PositionSizing::Mode::FixedNotional:
+          return "Fixed Notional";
+        case backtest::PositionSizing::Mode::EquityPercent:
+          return "Equity Percent";
+        }
+
+        return "Risk Distance";
+      };
+
+      constexpr auto position_sizing_modes =
+       std::array{backtest::PositionSizing::Mode::RiskDistance,
+                  backtest::PositionSizing::Mode::FixedQuantity,
+                  backtest::PositionSizing::Mode::FixedNotional,
+                  backtest::PositionSizing::Mode::EquityPercent};
+
+      auto mode = position_sizing.mode();
+      if(ImGui::BeginCombo("Position Sizing", mode_label(mode))) {
+        for(const auto& position_sizing_mode : position_sizing_modes) {
+          const auto selected = mode == position_sizing_mode;
+          if(ImGui::Selectable(mode_label(position_sizing_mode), selected)) {
+            mode = position_sizing_mode;
+            const auto value = self.last_position_sizing_values_[mode];
+            position_sizing = backtest::PositionSizing{mode, value};
+          }
+          if(selected) {
+            ImGui::SetItemDefaultFocus();
+          }
+        }
+
+        ImGui::EndCombo();
+      }
+
+      auto value = position_sizing.value();
+      switch(mode) {
+      case backtest::PositionSizing::Mode::RiskDistance: {
+        auto percentage = value * 100.0;
+        ImGui::InputDouble("Capital Risk (%)", &percentage, 1.0, 10.0, "%.2f");
+        value = percentage / 100.0;
+        break;
+      }
+      case backtest::PositionSizing::Mode::FixedQuantity:
+        ImGui::InputDouble("Quantity", &value, 1.0, 10.0, "%.8f");
+        break;
+      case backtest::PositionSizing::Mode::FixedNotional:
+        ImGui::InputDouble("Notional", &value, 100.0, 1000.0, "%.2f");
+        break;
+      case backtest::PositionSizing::Mode::EquityPercent: {
+        auto percentage = value * 100.0;
+        ImGui::InputDouble("Equity (%)", &percentage, 1.0, 10.0, "%.2f");
+        value = percentage / 100.0;
+        break;
+      }
+      }
+
+      position_sizing.mode(mode);
+      position_sizing.value(value);
+      self.last_position_sizing_values_[mode] = value;
+      self.editing_profile_ptr_->position_sizing(position_sizing);
     }
   }
 

@@ -70,8 +70,10 @@ public:
     }
 
     if(app_state.get_profile_handles().empty()) {
-      auto default_profile = backtest::Profile{"Default"};
-      default_profile.capital_risk(0.01);
+      auto default_profile =
+       backtest::Profile{"Default",
+                         backtest::PositionSizing{
+                          backtest::PositionSizing::Mode::RiskDistance, 0.01}};
       app_state.add_profile(std::move(default_profile));
     }
 

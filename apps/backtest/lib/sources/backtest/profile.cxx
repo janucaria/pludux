@@ -9,6 +9,48 @@ import pludux;
 
 export namespace pludux::backtest {
 
+class PositionSizing {
+public:
+  enum class Mode { RiskDistance, FixedQuantity, FixedNotional, EquityPercent };
+
+  PositionSizing()
+  : PositionSizing{Mode::RiskDistance, 0.0}
+  {
+  }
+
+  PositionSizing(Mode mode, double value)
+  : mode_{mode}
+  , value_{value}
+  {
+  }
+
+  auto operator==(const PositionSizing&) const noexcept -> bool = default;
+
+  auto mode(this const PositionSizing& self) noexcept -> Mode
+  {
+    return self.mode_;
+  }
+
+  void mode(this PositionSizing& self, Mode mode) noexcept
+  {
+    self.mode_ = mode;
+  }
+
+  auto value(this const PositionSizing& self) noexcept -> double
+  {
+    return self.value_;
+  }
+
+  void value(this PositionSizing& self, double value) noexcept
+  {
+    self.value_ = value;
+  }
+
+private:
+  Mode mode_;
+  double value_;
+};
+
 class Profile {
 public:
   Profile()
@@ -17,13 +59,14 @@ public:
   }
 
   Profile(std::string name)
-  : Profile{std::move(name), 0.0}
+  : Profile{std::move(name),
+            PositionSizing{PositionSizing::Mode::RiskDistance, 0.0}}
   {
   }
 
-  Profile(std::string name, double capital_risk)
+  Profile(std::string name, PositionSizing position_sizing)
   : name_{std::move(name)}
-  , capital_risk_{capital_risk}
+  , position_sizing_{position_sizing}
   {
   }
 
@@ -39,25 +82,27 @@ public:
     self.name_ = std::move(name);
   }
 
-  auto capital_risk(this const Profile& self) noexcept -> double
+  auto position_sizing(this const Profile& self) noexcept
+   -> const PositionSizing&
   {
-    return self.capital_risk_;
+    return self.position_sizing_;
   }
 
-  void capital_risk(this Profile& self, double capital_risk) noexcept
+  void position_sizing(this Profile& self,
+                       PositionSizing position_sizing) noexcept
   {
-    self.capital_risk_ = capital_risk;
+    self.position_sizing_ = position_sizing;
   }
 
   auto equivalent_rules(this const Profile& self, const Profile& other) noexcept
    -> bool
   {
-    return self.capital_risk_ == other.capital_risk_;
+    return self.position_sizing_ == other.position_sizing_;
   }
 
 private:
   std::string name_;
-  double capital_risk_;
+  PositionSizing position_sizing_;
 };
 
 } // namespace pludux::backtest
