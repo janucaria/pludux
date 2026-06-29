@@ -435,10 +435,9 @@ void load(Archive& archive, pludux::backtest::StoreDescriptor& descriptor)
           make_nvp("brokerStoreDataResolver", broker_store_data_resolver),
           make_nvp("profileStoreDataResolver", profile_store_data_resolver));
 
-  auto backtest_summaries_store_data_resolver =
-   pludux::backtest::StoreDataResolver<
-    std::vector<pludux::backtest::BacktestSummary>,
-    pludux::backtest::BacktestStoreHandle>{};
+  auto backtest_timelines_store_data_resolver =
+   pludux::backtest::StoreDataResolver<pludux::backtest::BacktestTimeline,
+                                       pludux::backtest::BacktestStoreHandle>{};
   auto series_results_store_data_resolver =
    pludux::backtest::StoreDataResolver<pludux::SeriesEvaluationResults,
                                        pludux::backtest::BacktestStoreHandle>{};
@@ -450,7 +449,7 @@ void load(Archive& archive, pludux::backtest::StoreDescriptor& descriptor)
    std::move(market_store_data_resolver),
    std::move(broker_store_data_resolver),
    std::move(profile_store_data_resolver),
-   std::move(backtest_summaries_store_data_resolver),
+   std::move(backtest_timelines_store_data_resolver),
    std::move(series_results_store_data_resolver)};
 }
 
@@ -484,8 +483,7 @@ void load(Archive& archive, pludux::backtest::StoreArena& arena)
           make_nvp("brokers", brokers),
           make_nvp("profiles", profiles));
 
-  auto backtest_summaries =
-   std::vector<std::vector<pludux::backtest::BacktestSummary>>{};
+  auto backtest_timelines = std::vector<pludux::backtest::BacktestTimeline>{};
   auto series_results = std::vector<pludux::SeriesEvaluationResults>{};
 
   arena = pludux::backtest::StoreArena{std::move(backtests),
@@ -494,7 +492,7 @@ void load(Archive& archive, pludux::backtest::StoreArena& arena)
                                        std::move(markets),
                                        std::move(brokers),
                                        std::move(profiles),
-                                       std::move(backtest_summaries),
+                                       std::move(backtest_timelines),
                                        std::move(series_results)};
 }
 

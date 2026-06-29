@@ -75,7 +75,7 @@ target_sources(${PROJECT_NAME}
     sources/backtest/market.cxx
     sources/backtest/broker.cxx
     sources/backtest/profile.cxx
-    sources/backtest/backtest_summary.cxx
+    sources/backtest/backtest_timeline.cxx
     sources/backtest/backtest.cxx
     
     sources/backtest/store_descriptor.cxx

@@ -21,17 +21,16 @@ export namespace pludux::apps {
 
 class StateDiff {
 public:
-  StateDiff(
-   UiState ui_state,
-   backtest::StoreDescriptor store_descriptor,
-   Patch<backtest::Backtest> backtest_patch,
-   Patch<backtest::Asset> asset_patch,
-   Patch<backtest::Strategy> strategy_patch,
-   Patch<backtest::Market> market_patch,
-   Patch<backtest::Broker> broker_patch,
-   Patch<backtest::Profile> profile_patch,
-   Patch<std::vector<backtest::BacktestSummary>> backtest_summaries_patch,
-   Patch<SeriesEvaluationResults> series_results_patch)
+  StateDiff(UiState ui_state,
+            backtest::StoreDescriptor store_descriptor,
+            Patch<backtest::Backtest> backtest_patch,
+            Patch<backtest::Asset> asset_patch,
+            Patch<backtest::Strategy> strategy_patch,
+            Patch<backtest::Market> market_patch,
+            Patch<backtest::Broker> broker_patch,
+            Patch<backtest::Profile> profile_patch,
+            Patch<backtest::BacktestTimeline> backtest_timelines_patch,
+            Patch<SeriesEvaluationResults> series_results_patch)
   : ui_state_{std::move(ui_state)}
   , store_descriptor_{std::move(store_descriptor)}
   , backtest_patch_{std::move(backtest_patch)}
@@ -40,7 +39,7 @@ public:
   , market_patch_{std::move(market_patch)}
   , broker_patch_{std::move(broker_patch)}
   , profile_patch_{std::move(profile_patch)}
-  , backtest_summaries_patch_{std::move(backtest_summaries_patch)}
+  , backtest_timelines_patch_{std::move(backtest_timelines_patch)}
   , series_results_patch_{std::move(series_results_patch)}
   {
   }
@@ -57,8 +56,8 @@ public:
     auto markets = self.market_patch_.apply(store_arena.markets());
     auto brokers = self.broker_patch_.apply(store_arena.brokers());
     auto profiles = self.profile_patch_.apply(store_arena.profiles());
-    auto backtest_summaries =
-     self.backtest_summaries_patch_.apply(store_arena.backtest_summaries());
+    auto backtest_timelines =
+     self.backtest_timelines_patch_.apply(store_arena.backtest_timelines());
     auto series_results =
      self.series_results_patch_.apply(store_arena.series_results());
 
@@ -70,7 +69,7 @@ public:
                                           std::move(markets),
                                           std::move(brokers),
                                           std::move(profiles),
-                                          std::move(backtest_summaries),
+                                          std::move(backtest_timelines),
                                           std::move(series_results)}},
      self.ui_state_};
   }
@@ -85,7 +84,7 @@ private:
   Patch<backtest::Market> market_patch_;
   Patch<backtest::Broker> broker_patch_;
   Patch<backtest::Profile> profile_patch_;
-  Patch<std::vector<backtest::BacktestSummary>> backtest_summaries_patch_;
+  Patch<backtest::BacktestTimeline> backtest_timelines_patch_;
   Patch<SeriesEvaluationResults> series_results_patch_;
 };
 
@@ -109,8 +108,8 @@ auto create_state_diff(const ApplicationState& old_state,
    diff(old_store_arena.brokers(), new_store_arena.brokers());
   auto profile_patch =
    diff(old_store_arena.profiles(), new_store_arena.profiles());
-  auto backtest_summaries_patch = diff(old_store_arena.backtest_summaries(),
-                                       new_store_arena.backtest_summaries());
+  auto backtest_timelines_patch = diff(old_store_arena.backtest_timelines(),
+                                       new_store_arena.backtest_timelines());
   auto series_results_patch =
    diff(old_store_arena.series_results(), new_store_arena.series_results());
 
@@ -122,7 +121,7 @@ auto create_state_diff(const ApplicationState& old_state,
                    std::move(market_patch),
                    std::move(broker_patch),
                    std::move(profile_patch),
-                   std::move(backtest_summaries_patch),
+                   std::move(backtest_timelines_patch),
                    std::move(series_results_patch)};
 }
 

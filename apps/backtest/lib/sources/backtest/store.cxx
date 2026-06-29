@@ -390,97 +390,97 @@ public:
     return profile_resolver.remove(profiles, handle);
   }
 
-  auto add_backtest_summaries(this Store& self,
+  auto add_backtest_timelines(this Store& self,
                               BacktestStoreHandle handle,
-                              std::vector<BacktestSummary> summaries) -> bool
+                              BacktestTimeline timeline) -> bool
   {
-    auto& backtest_summaries = self.arena_.backtest_summaries();
-    auto& backtest_summaries_resolver =
-     self.descriptor_.backtest_summaries_store_data_resolver();
+    auto& backtest_timelines = self.arena_.backtest_timelines();
+    auto& backtest_timelines_resolver =
+     self.descriptor_.backtest_timelines_store_data_resolver();
 
-    return backtest_summaries_resolver.add(
-     backtest_summaries, handle, std::move(summaries));
+    return backtest_timelines_resolver.add(
+     backtest_timelines, handle, std::move(timeline));
   }
 
-  auto get_backtest_summaries(this const Store& self,
+  auto get_backtest_timelines(this const Store& self,
                               BacktestStoreHandle handle) noexcept
-   -> const std::vector<BacktestSummary>&
+   -> const BacktestTimeline&
   {
-    const auto& backtest_summaries = self.arena_.backtest_summaries();
-    const auto& backtest_summaries_resolver =
-     self.descriptor_.backtest_summaries_store_data_resolver();
+    const auto& backtest_timelines = self.arena_.backtest_timelines();
+    const auto& backtest_timelines_resolver =
+     self.descriptor_.backtest_timelines_store_data_resolver();
 
-    return backtest_summaries_resolver.get(backtest_summaries, handle);
+    return backtest_timelines_resolver.get(backtest_timelines, handle);
   }
 
-  auto get_backtest_summaries(this Store& self,
+  auto get_backtest_timelines(this Store& self,
                               BacktestStoreHandle handle) noexcept
-   -> std::vector<BacktestSummary>&
+   -> BacktestTimeline&
   {
-    auto& backtest_summaries = self.arena_.backtest_summaries();
-    auto& backtest_summaries_resolver =
-     self.descriptor_.backtest_summaries_store_data_resolver();
+    auto& backtest_timelines = self.arena_.backtest_timelines();
+    auto& backtest_timelines_resolver =
+     self.descriptor_.backtest_timelines_store_data_resolver();
 
-    return backtest_summaries_resolver.get(backtest_summaries, handle);
+    return backtest_timelines_resolver.get(backtest_timelines, handle);
   }
 
-  auto get_backtest_summaries_if_present(this const Store& self,
+  auto get_backtest_timelines_if_present(this const Store& self,
                                          BacktestStoreHandle handle) noexcept
-   -> const std::vector<BacktestSummary>*
+   -> const BacktestTimeline*
   {
-    const auto& backtest_summaries = self.arena_.backtest_summaries();
-    const auto& backtest_summaries_resolver =
-     self.descriptor_.backtest_summaries_store_data_resolver();
+    const auto& backtest_timelines = self.arena_.backtest_timelines();
+    const auto& backtest_timelines_resolver =
+     self.descriptor_.backtest_timelines_store_data_resolver();
 
-    return backtest_summaries_resolver.get_if_present(backtest_summaries,
+    return backtest_timelines_resolver.get_if_present(backtest_timelines,
                                                       handle);
   }
 
-  auto get_backtest_summaries_if_present(this Store& self,
+  auto get_backtest_timelines_if_present(this Store& self,
                                          BacktestStoreHandle handle) noexcept
-   -> std::vector<BacktestSummary>*
+   -> BacktestTimeline*
   {
-    auto& backtest_summaries = self.arena_.backtest_summaries();
-    auto& backtest_summaries_resolver =
-     self.descriptor_.backtest_summaries_store_data_resolver();
+    auto& backtest_timelines = self.arena_.backtest_timelines();
+    auto& backtest_timelines_resolver =
+     self.descriptor_.backtest_timelines_store_data_resolver();
 
-    return backtest_summaries_resolver.get_if_present(backtest_summaries,
+    return backtest_timelines_resolver.get_if_present(backtest_timelines,
                                                       handle);
   }
 
-  auto get_or_create_backtest_summaries(this Store& self,
+  auto get_or_create_backtest_timelines(this Store& self,
                                         BacktestStoreHandle handle)
-   -> std::vector<BacktestSummary>&
+   -> BacktestTimeline&
   {
-    auto* summaries_ptr = self.get_backtest_summaries_if_present(handle);
-    if(!summaries_ptr) {
-      self.add_backtest_summaries(handle, std::vector<BacktestSummary>{});
-      summaries_ptr = self.get_backtest_summaries_if_present(handle);
+    auto* timeline_ptr = self.get_backtest_timelines_if_present(handle);
+    if(!timeline_ptr) {
+      self.add_backtest_timelines(handle, BacktestTimeline{});
+      timeline_ptr = self.get_backtest_timelines_if_present(handle);
     }
 
-    return *summaries_ptr;
+    return *timeline_ptr;
   }
 
-  auto update_backtest_summaries(this Store& self,
+  auto update_backtest_timelines(this Store& self,
                                  BacktestStoreHandle handle,
-                                 std::vector<BacktestSummary> summaries) -> bool
+                                 BacktestTimeline timeline) -> bool
   {
-    auto& backtest_summaries = self.arena_.backtest_summaries();
-    auto& backtest_summaries_resolver =
-     self.descriptor_.backtest_summaries_store_data_resolver();
+    auto& backtest_timelines = self.arena_.backtest_timelines();
+    auto& backtest_timelines_resolver =
+     self.descriptor_.backtest_timelines_store_data_resolver();
 
-    return backtest_summaries_resolver.update(
-     backtest_summaries, handle, std::move(summaries));
+    return backtest_timelines_resolver.update(
+     backtest_timelines, handle, std::move(timeline));
   }
 
-  auto remove_backtest_summaries(this Store& self, BacktestStoreHandle handle)
+  auto remove_backtest_timelines(this Store& self, BacktestStoreHandle handle)
    -> bool
   {
-    auto& backtest_summaries = self.arena_.backtest_summaries();
-    auto& backtest_summaries_resolver =
-     self.descriptor_.backtest_summaries_store_data_resolver();
+    auto& backtest_timelines = self.arena_.backtest_timelines();
+    auto& backtest_timelines_resolver =
+     self.descriptor_.backtest_timelines_store_data_resolver();
 
-    return backtest_summaries_resolver.remove(backtest_summaries, handle);
+    return backtest_timelines_resolver.remove(backtest_timelines, handle);
   }
 
   auto add_series_results(this Store& self,

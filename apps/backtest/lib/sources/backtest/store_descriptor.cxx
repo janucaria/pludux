@@ -13,7 +13,7 @@ import :strategy;
 import :market;
 import :broker;
 import :profile;
-import :backtest_summary;
+import :backtest_timeline;
 
 import :store_handle;
 import :store_data_resolver;
@@ -33,8 +33,8 @@ public:
    StoreDataResolver<Market, MarketStoreHandle> market_store_data_resolver,
    StoreDataResolver<Broker, BrokerStoreHandle> broker_store_data_resolver,
    StoreDataResolver<Profile, ProfileStoreHandle> profile_store_data_resolver,
-   StoreDataResolver<std::vector<BacktestSummary>, BacktestStoreHandle>
-    backtest_summaries_store_data_resolver,
+   StoreDataResolver<BacktestTimeline, BacktestStoreHandle>
+    backtest_timelines_store_data_resolver,
    StoreDataResolver<SeriesEvaluationResults, BacktestStoreHandle>
     series_results_store_data_resolver)
   : backtest_store_data_resolver_{std::move(backtest_store_data_resolver)}
@@ -43,8 +43,8 @@ public:
   , market_store_data_resolver_{std::move(market_store_data_resolver)}
   , broker_store_data_resolver_{std::move(broker_store_data_resolver)}
   , profile_store_data_resolver_{std::move(profile_store_data_resolver)}
-  , backtest_summaries_store_data_resolver_{std::move(
-     backtest_summaries_store_data_resolver)}
+  , backtest_timelines_store_data_resolver_{std::move(
+     backtest_timelines_store_data_resolver)}
   , series_results_store_data_resolver_{
      std::move(series_results_store_data_resolver)}
   {
@@ -122,18 +122,18 @@ public:
     return self.profile_store_data_resolver_;
   }
 
-  auto backtest_summaries_store_data_resolver(
+  auto backtest_timelines_store_data_resolver(
    this const StoreDescriptor& self) noexcept -> const
-   StoreDataResolver<std::vector<BacktestSummary>, BacktestStoreHandle>&
+   StoreDataResolver<BacktestTimeline, BacktestStoreHandle>&
   {
-    return self.backtest_summaries_store_data_resolver_;
+    return self.backtest_timelines_store_data_resolver_;
   }
 
   auto
-  backtest_summaries_store_data_resolver(this StoreDescriptor& self) noexcept
-   -> StoreDataResolver<std::vector<BacktestSummary>, BacktestStoreHandle>&
+  backtest_timelines_store_data_resolver(this StoreDescriptor& self) noexcept
+   -> StoreDataResolver<BacktestTimeline, BacktestStoreHandle>&
   {
-    return self.backtest_summaries_store_data_resolver_;
+    return self.backtest_timelines_store_data_resolver_;
   }
 
   auto
@@ -159,8 +159,8 @@ private:
   StoreDataResolver<Broker, BrokerStoreHandle> broker_store_data_resolver_;
   StoreDataResolver<Profile, ProfileStoreHandle> profile_store_data_resolver_;
 
-  StoreDataResolver<std::vector<BacktestSummary>, BacktestStoreHandle>
-   backtest_summaries_store_data_resolver_;
+  StoreDataResolver<BacktestTimeline, BacktestStoreHandle>
+   backtest_timelines_store_data_resolver_;
 
   StoreDataResolver<SeriesEvaluationResults, BacktestStoreHandle>
    series_results_store_data_resolver_;

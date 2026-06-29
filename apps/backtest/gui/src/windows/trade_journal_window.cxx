@@ -55,19 +55,23 @@ public:
 
         ImGui::TableHeadersRow();
 
-        const auto& backtest_summaries =
-         app_state.get_backtest_summaries(backtest_handle);
-        const auto last_summary_index = backtest_summaries.size() - 1;
-        for(int i = last_summary_index; i >= 0; --i) {
-          const auto& summary = backtest_summaries.at(i);
-          const auto& trade_session = summary.trade_session();
-          const auto asset_index = last_summary_index - i;
+        const auto& backtest_timelines =
+         app_state.get_backtest_timelines(backtest_handle);
+        if(backtest_timelines.empty()) {
+          ImGui::EndTable();
+          ImGui::End();
+          return;
+        }
 
-          auto id_counter = i * last_summary_index;
-          for(const auto& trade_record : trade_session.trade_record_range()) {
-            if(!trade_record.is_open() || i == last_summary_index) {
-              const auto trade_count =
-               summary.trade_count() + (!trade_record.is_closed() ? 1 : 0);
+        const auto last_timeline_index = backtest_timelines.size() - 1;
+        const auto last_timeline_index_i =
+         static_cast<int>(last_timeline_index);
+        for(auto i = last_timeline_index_i; i >= 0; --i) {
+          auto id_counter = i * last_timeline_index;
+          for(const auto& trade_record : backtest_timelines.trade_records(i)) {
+            if(!trade_record.is_open() || i == last_timeline_index_i) {
+              const auto trade_count = backtest_timelines.trade_count(i) +
+                                       (!trade_record.is_closed() ? 1 : 0);
 
               ImGui::PushID(id_counter++);
               draw_trade_row(trade_count, trade_record);

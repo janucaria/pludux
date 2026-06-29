@@ -42,17 +42,16 @@ public:
       const auto& broker_handle = backtest.broker_handle();
       const auto& broker = app_state.get_broker(broker_handle);
 
-      const auto& backtesting_summaries =
-       app_state.get_backtest_summaries(backtest_handle);
+      const auto& timeline = app_state.get_backtest_timelines(backtest_handle);
 
       const auto& backtest_name = backtest.name();
       ImGui::Text("%s", backtest_name.c_str());
       ImGui::Separator();
 
-      if(!backtesting_summaries.empty() &&
+      if(!timeline.empty() &&
          ImGui::BeginTable(
           "TradeSummaryTable", 2, ImGuiTableFlags_BordersInnerH)) {
-        const auto& summary = backtesting_summaries.back();
+        const auto timeline_i = timeline.size() - 1;
 
         self.draw_row("Asset", asset.name());
         self.draw_row("Strategy", strategy.name());
@@ -62,74 +61,98 @@ public:
 
         self.draw_spacer_row();
 
-        self.draw_count_row("Total trades", summary.trade_count());
+        self.draw_count_row("Total trades", timeline.trade_count(timeline_i));
         self.draw_duration_row("Total duration",
-                               summary.cumulative_durations());
+                               timeline.cumulative_durations(timeline_i));
 
         self.draw_spacer_row();
 
-        self.draw_float_row("Profit factor", summary.profit_factor());
-        self.draw_currency_with_rate_row("Expectancy",
-                                         summary.expected_value(),
-                                         summary.expected_value() /
-                                          summary.average_investment());
+        self.draw_float_row("Profit factor",
+                            timeline.profit_factor(timeline_i));
+        self.draw_currency_with_rate_row(
+         "Expectancy",
+         timeline.expected_value(timeline_i),
+         timeline.expected_value(timeline_i) /
+          timeline.average_investment(timeline_i));
 
-        self.draw_count_row_with_rate(
-         "Winning trades", summary.profit_count(), summary.profit_rate());
-        self.draw_count_row_with_rate(
-         "Losing trades", summary.loss_count(), summary.loss_rate());
+        self.draw_count_row_with_rate("Winning trades",
+                                      timeline.profit_count(timeline_i),
+                                      timeline.profit_rate(timeline_i));
+        self.draw_count_row_with_rate("Losing trades",
+                                      timeline.loss_count(timeline_i),
+                                      timeline.loss_rate(timeline_i));
         self.draw_count_row_with_rate("Break-even trades",
-                                      summary.break_even_count(),
-                                      summary.break_even_rate());
+                                      timeline.break_even_count(timeline_i),
+                                      timeline.break_even_rate(timeline_i));
 
         self.draw_spacer_row();
 
-        self.draw_currency_with_rate_row("Avg P&L",
-                                         summary.average_pnl(),
-                                         summary.average_pnl() /
-                                          summary.average_investment());
-        self.draw_currency_with_rate_row("Avg profit",
-                                         summary.average_profit(),
-                                         summary.average_profit() /
-                                          summary.average_investment());
-        self.draw_currency_with_rate_row("Avg loss",
-                                         summary.average_loss(),
-                                         summary.average_loss() /
-                                          summary.average_investment());
-        self.draw_currency_row("Avg investment", summary.average_investment());
-        self.draw_duration_row("Avg duration", summary.average_duration());
+        self.draw_currency_with_rate_row(
+         "Avg P&L",
+         timeline.average_pnl(timeline_i),
+         timeline.average_pnl(timeline_i) /
+          timeline.average_investment(timeline_i));
+        self.draw_currency_with_rate_row(
+         "Avg profit",
+         timeline.average_profit(timeline_i),
+         timeline.average_profit(timeline_i) /
+          timeline.average_investment(timeline_i));
+        self.draw_currency_with_rate_row(
+         "Avg loss",
+         timeline.average_loss(timeline_i),
+         timeline.average_loss(timeline_i) /
+          timeline.average_investment(timeline_i));
+        self.draw_currency_row("Avg investment",
+                               timeline.average_investment(timeline_i));
+        self.draw_duration_row("Avg duration",
+                               timeline.average_duration(timeline_i));
 
         self.draw_spacer_row();
 
-        self.draw_currency_row("Initial capital", summary.initial_capital());
-        self.draw_currency_with_percent_row("Total profits",
-                                            summary.cumulative_profits(),
-                                            summary.initial_capital());
-        self.draw_currency_with_percent_row("Total losses",
-                                            summary.cumulative_losses(),
-                                            summary.initial_capital());
+        self.draw_currency_row("Initial capital",
+                               timeline.initial_capital(timeline_i));
         self.draw_currency_with_percent_row(
-         "Net P&L", summary.cumulative_pnls(), summary.initial_capital());
+         "Total profits",
+         timeline.cumulative_profits(timeline_i),
+         timeline.initial_capital(timeline_i));
         self.draw_currency_with_percent_row(
-         "Total Capital", summary.capital(), summary.initial_capital());
+         "Total losses",
+         timeline.cumulative_losses(timeline_i),
+         timeline.initial_capital(timeline_i));
+        self.draw_currency_with_percent_row(
+         "Net P&L",
+         timeline.cumulative_pnls(timeline_i),
+         timeline.initial_capital(timeline_i));
+        self.draw_currency_with_percent_row(
+         "Total Capital",
+         timeline.capital(timeline_i),
+         timeline.initial_capital(timeline_i));
 
         self.draw_spacer_row();
         self.draw_currency_with_percent_row(
-         "Equity", summary.equity(), summary.initial_capital());
+         "Equity",
+         timeline.equity(timeline_i),
+         timeline.initial_capital(timeline_i));
         self.draw_currency_with_percent_row(
-         "Peak equity", summary.peak_equity(), summary.initial_capital());
-        self.draw_row("Drawdown", std::format("{:.2f}%", summary.drawdown()));
-        self.draw_row("Max drawdown",
-                      std::format("{:.2f}%", summary.max_drawdown()));
+         "Peak equity",
+         timeline.peak_equity(timeline_i),
+         timeline.initial_capital(timeline_i));
+        self.draw_row("Drawdown",
+                      std::format("{:.2f}%", timeline.drawdown(timeline_i)));
+        self.draw_row(
+         "Max drawdown",
+         std::format("{:.2f}%", timeline.max_drawdown(timeline_i)));
 
         self.draw_spacer_row();
 
-        self.draw_count_row("Total open trades", summary.open_trade_count());
-        self.draw_currency_with_percent_row("Unrealized P&L",
-                                            summary.unrealized_pnl(),
-                                            summary.unrealized_investment());
+        self.draw_count_row("Total open trades",
+                            timeline.open_trade_count(timeline_i));
+        self.draw_currency_with_percent_row(
+         "Unrealized P&L",
+         timeline.unrealized_pnl(timeline_i),
+         timeline.unrealized_investment(timeline_i));
         self.draw_duration_row("Ongoing trade duration",
-                               summary.unrealized_duration());
+                               timeline.unrealized_duration(timeline_i));
 
         ImGui::EndTable();
       }

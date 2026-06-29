@@ -213,15 +213,15 @@ public:
             continue;
           }
 
-          auto& summaries =
-           store.get_or_create_backtest_summaries(backtest_handle);
+          auto& timelines =
+           store.get_or_create_backtest_timelines(backtest_handle);
           auto& series_evaluation_results =
            store.get_or_create_series_results(backtest_handle);
 
           auto& backtest_runner = self.running_backtests_.at(backtest_handle);
 
           try {
-            backtest_runner.run(series_evaluation_results, summaries);
+            backtest_runner.run(series_evaluation_results, timelines);
           } catch(const std::exception& e) {
             backtest_runner.is_failed(true);
 
