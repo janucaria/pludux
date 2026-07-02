@@ -4,11 +4,7 @@ module;
 #include <cmath>
 #include <cstddef>
 #include <ctime>
-#include <numeric>
-#include <ranges>
 #include <stdexcept>
-#include <utility>
-#include <vector>
 
 export module pludux.backtest:trade_position;
 
@@ -19,7 +15,7 @@ export namespace pludux::backtest {
 class TradePosition {
 public:
   TradePosition()
-  : TradePosition{0.0, 0, std::time_t{}, 0.0, 0.0, 0.0, 0.0, 0.0, {}}
+  : TradePosition{0.0, 0, std::time_t{}, 0.0, 0.0, 0.0, 0.0}
   {
   }
 
@@ -37,8 +33,7 @@ public:
                   total_entry_fees,
                   stop_loss_initial_price,
                   stop_loss_trailing_price,
-                  take_profit_price,
-                  {}}
+                  take_profit_price}
   {
   }
 
@@ -49,8 +44,7 @@ public:
                 double total_entry_fees,
                 double stop_loss_initial_price,
                 double stop_loss_trailing_price,
-                double take_profit_price,
-                std::vector<TradeRecord> realized_records)
+                double take_profit_price)
   : position_size_{position_size}
   , investment_{investment}
   , entry_price_{entry_price}
@@ -59,7 +53,6 @@ public:
   , stop_loss_trailing_price_{stop_loss_trailing_price}
   , take_profit_price_{take_profit_price}
   , entry_timestamp_{entry_timestamp}
-  , realized_records_{std::move(realized_records)}
   {
   }
 
@@ -147,18 +140,6 @@ public:
     self.entry_timestamp_ = timestamp;
   }
 
-  auto realized_records(this const TradePosition& self) noexcept
-   -> const std::vector<TradeRecord>&
-  {
-    return self.realized_records_;
-  }
-
-  void realized_records(this TradePosition& self,
-                        std::vector<TradeRecord> records) noexcept
-  {
-    self.realized_records_ = std::move(records);
-  }
-
   auto stop_loss_price(this const TradePosition& self) noexcept -> double
   {
     return std::isnan(self.stop_loss_trailing_price())
@@ -195,40 +176,6 @@ public:
     return market_timestamp - self.entry_timestamp();
   }
 
-  auto realized_position_size(this const TradePosition& self) noexcept -> double
-  {
-    return std::ranges::fold_left(
-     self.realized_records(), 0.0, [](double total, const TradeRecord& record) {
-       return total + record.position_size();
-     });
-  }
-
-  auto realized_investment(this const TradePosition& self) noexcept -> double
-  {
-    return std::ranges::fold_left(
-     self.realized_records(), 0.0, [](double total, const TradeRecord& record) {
-       return total + record.investment();
-     });
-  }
-
-  auto realized_pnl(this const TradePosition& self) noexcept -> double
-  {
-    return std::ranges::fold_left(
-     self.realized_records(), 0.0, [](double total, const TradeRecord& record) {
-       return total + record.pnl();
-     });
-  }
-
-  auto realized_duration(this const TradePosition& self) noexcept -> std::time_t
-  {
-    return std::ranges::fold_left(
-     self.realized_records(),
-     std::time_t{},
-     [](std::time_t total, const TradeRecord& record) {
-       return total + record.duration();
-     });
-  }
-
   auto is_closed(this const TradePosition& self) noexcept -> bool
   {
     return self.position_size() == 0;
@@ -244,14 +191,14 @@ public:
     return self.position_size() < 0;
   }
 
-  void scaled_in(this TradePosition& self,
+  auto scaled_in(this TradePosition& self,
                  double action_position_size,
                  std::time_t action_timestamp,
                  double action_price,
                  double action_total_fees,
                  double stop_loss_initial_price,
                  double stop_loss_trailing_price,
-                 double take_profit_price)
+                 double take_profit_price) -> TradeRecord
   {
     if(self.is_closed()) {
       throw std::runtime_error("Cannot scaled in to a closed trade.");
@@ -272,7 +219,6 @@ public:
                                               self.stop_loss_initial_price(),
                                               self.stop_loss_trailing_price(),
                                               self.take_profit_price()};
-    self.realized_records_.emplace_back(scaled_in_record);
 
     const auto last_position_size = self.position_size();
     const auto new_investment =
@@ -290,14 +236,16 @@ public:
     self.stop_loss_initial_price(stop_loss_initial_price);
     self.stop_loss_trailing_price(stop_loss_trailing_price);
     self.take_profit_price(take_profit_price);
+
+    return scaled_in_record;
   }
 
-  void scaled_out(this TradePosition& self,
+  auto scaled_out(this TradePosition& self,
                   double action_position_size,
                   std::time_t action_timestamp,
                   double action_price,
                   double action_total_fees,
-                  TradeRecord::Status trade_status)
+                  TradeRecord::Status trade_status) -> TradeRecord
   {
     if(self.is_closed()) {
       throw std::runtime_error("Cannot add action to a closed trade.");
@@ -333,46 +281,56 @@ public:
                                    self.stop_loss_initial_price(),
                                    self.stop_loss_trailing_price(),
                                    self.take_profit_price()};
-    self.realized_records_.emplace_back(std::move(exit_record));
 
     const auto updated_investment = self.investment() - investment_closed;
     self.investment(updated_investment);
 
     self.position_size(remaining_position_size);
+
+    return exit_record;
   }
 
-  auto trigger_stop_loss(this TradePosition& self,
-                         double prev_close,
-                         double high,
-                         double low) -> bool
+  void update_trailing_stop(this TradePosition& self,
+                            double prev_close) noexcept
   {
     const auto initial_stop_price = self.stop_loss_initial_price();
 
     if(self.is_closed() || std::isnan(initial_stop_price)) {
-      return false;
+      return;
     }
 
-    const auto is_short_position = self.is_short_direction();
     const auto risk = self.average_price() - initial_stop_price;
     const auto new_stop_price = prev_close - risk;
 
-    if(is_short_position) {
+    if(self.is_short_direction()) {
       if(new_stop_price < self.stop_loss_trailing_price()) {
         self.stop_loss_trailing_price(new_stop_price);
       }
 
-      return high >= self.stop_loss_price();
+      return;
     }
 
     if(new_stop_price > self.stop_loss_trailing_price()) {
       self.stop_loss_trailing_price(new_stop_price);
     }
-
-    return low <= self.stop_loss_price();
   }
 
-  auto trigger_take_profit(this TradePosition& self, double high, double low)
-   -> bool
+  auto is_stop_loss_triggered(this const TradePosition& self,
+                              double high,
+                              double low) noexcept -> bool
+  {
+    const auto stop_price = self.stop_loss_price();
+
+    if(self.is_closed() || std::isnan(stop_price)) {
+      return false;
+    }
+
+    return self.is_long_direction() ? low <= stop_price : high >= stop_price;
+  }
+
+  auto is_take_profit_triggered(this const TradePosition& self,
+                                double high,
+                                double low) noexcept -> bool
   {
     const auto reference_price = self.take_profit_price();
 
@@ -396,8 +354,6 @@ private:
   double take_profit_price_;
 
   std::time_t entry_timestamp_;
-
-  std::vector<TradeRecord> realized_records_;
 };
 
 } // namespace pludux::backtest

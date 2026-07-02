@@ -19,12 +19,12 @@ auto make_single_bar_asset(double open_price = 100.0) -> Asset
                             {"Volume", {0.0}}}};
 }
 
-auto run_single_entry(PositionSizing position_sizing,
-                      double entry_price = 100.0,
-                      DrawdownAdjustment drawdown_adjustment = {},
-                      double initial_capital = 1000.0,
-                      double peak_equity =
-                       std::numeric_limits<double>::quiet_NaN())
+auto run_single_entry(
+ PositionSizing position_sizing,
+ double entry_price = 100.0,
+ DrawdownAdjustment drawdown_adjustment = {},
+ double initial_capital = 1000.0,
+ double peak_equity = std::numeric_limits<double>::quiet_NaN())
  -> BacktestTimeline
 {
   const auto asset = make_single_bar_asset(entry_price);
@@ -173,10 +173,9 @@ TEST(BacktestRunnerTest, RiskSizingUsesCurrentEquityAfterClosedTrade)
 
   ASSERT_EQ(timeline.size(), 2);
   ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(timeline.trade_records(last_timeline_index(timeline))
-                    .back()
-                    .position_size(),
-                   10.0);
+  EXPECT_DOUBLE_EQ(
+   timeline.trade_records(last_timeline_index(timeline)).back().position_size(),
+   10.0);
 
   runner.run(series_results, timeline);
 
@@ -189,10 +188,9 @@ TEST(BacktestRunnerTest, RiskSizingUsesCurrentEquityAfterClosedTrade)
   ASSERT_EQ(timeline.size(), 4);
   EXPECT_EQ(timeline.open_trade_count(last_timeline_index(timeline)), 1);
   ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(timeline.trade_records(last_timeline_index(timeline))
-                    .back()
-                    .position_size(),
-                   5.5);
+  EXPECT_DOUBLE_EQ(
+   timeline.trade_records(last_timeline_index(timeline)).back().position_size(),
+   5.5);
 }
 
 TEST(BacktestRunnerTest, FixedQuantitySizingUsesExactQuantity)
@@ -283,4 +281,224 @@ TEST(BacktestRunnerTest, DrawdownAdjustmentClampsSizeAtZero)
 
   ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
   EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 0.0);
+}
+
+auto make_two_bar_asset(double first_open,
+                        double first_high,
+                        double first_low,
+                        double first_close,
+                        double second_open,
+                        double second_high,
+                        double second_low,
+                        double second_close) -> Asset
+{
+  return Asset{"Test",
+               AssetHistory{{"Datetime", {2.0, 1.0}},
+                            {"Open", {second_open, first_open}},
+                            {"High", {second_high, first_high}},
+                            {"Low", {second_low, first_low}},
+                            {"Close", {second_close, first_close}},
+                            {"Volume", {0.0, 0.0}}}};
+}
+
+TEST(BacktestRunnerTest, SameBarSameDirectionReentryIsBlockedAfterExit)
+{
+  const auto asset =
+   make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 110.0, 110.0, 110.0, 110.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                               BooleanMethod<true>{},
+                                               BooleanMethod<false>{},
+                                               1,
+                                               OpenMethod{},
+                                               false,
+                                               false,
+                                               OpenMethod{},
+                                               false},
+                  BacktestRunner::PositionRule{},
+                  1000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+
+  ASSERT_EQ(timeline.size(), 2);
+  EXPECT_EQ(timeline.open_trade_count(last_timeline_index(timeline)), 0);
+  ASSERT_EQ(timeline.trade_records(last_timeline_index(timeline)).size(), 1);
+  EXPECT_TRUE(latest_record(timeline).is_closed_exit_signal());
+}
+
+TEST(BacktestRunnerTest, SameBarOppositeDirectionReversalIsAllowedAfterExit)
+{
+  const auto asset =
+   make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 110.0, 110.0, 110.0, 110.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                               BooleanMethod<true>{},
+                                               BooleanMethod<false>{},
+                                               1,
+                                               OpenMethod{},
+                                               false,
+                                               false,
+                                               OpenMethod{},
+                                               false},
+                  BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                               BooleanMethod<false>{},
+                                               BooleanMethod<false>{},
+                                               1,
+                                               OpenMethod{},
+                                               false,
+                                               false,
+                                               OpenMethod{},
+                                               false},
+                  1000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+
+  ASSERT_EQ(timeline.size(), 2);
+  EXPECT_EQ(timeline.open_trade_count(last_timeline_index(timeline)), 1);
+  ASSERT_EQ(timeline.trade_records(last_timeline_index(timeline)).size(), 2);
+  EXPECT_TRUE(timeline.trade_records(last_timeline_index(timeline))
+               .front()
+               .is_closed_exit_signal());
+  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), -1.0);
+}
+
+TEST(BacktestRunnerTest, StopLossExitIsDecidedByRunner)
+{
+  const auto asset =
+   make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 95.0, 96.0, 89.0, 95.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                               BooleanMethod<false>{},
+                                               BooleanMethod<false>{},
+                                               1,
+                                               ValueMethod{90.0},
+                                               true,
+                                               false,
+                                               OpenMethod{},
+                                               false},
+                  BacktestRunner::PositionRule{},
+                  1000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+
+  ASSERT_EQ(timeline.size(), 2);
+  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
+  EXPECT_TRUE(latest_record(timeline).is_closed_stop_loss());
+  EXPECT_DOUBLE_EQ(latest_record(timeline).exit_price(), 90.0);
+}
+
+TEST(BacktestRunnerTest, TrailingStopMutationUsesTradePositionState)
+{
+  const auto asset =
+   make_two_bar_asset(100.0, 115.0, 100.0, 115.0, 110.0, 112.0, 104.0, 110.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                               BooleanMethod<false>{},
+                                               BooleanMethod<false>{},
+                                               1,
+                                               ValueMethod{90.0},
+                                               true,
+                                               true,
+                                               OpenMethod{},
+                                               false},
+                  BacktestRunner::PositionRule{},
+                  1000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+
+  ASSERT_EQ(timeline.size(), 2);
+  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
+  EXPECT_TRUE(latest_record(timeline).is_closed_stop_loss());
+  EXPECT_DOUBLE_EQ(latest_record(timeline).trailing_stop_price(), 105.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).exit_price(), 105.0);
+}
+
+TEST(BacktestRunnerTest, TakeProfitExitIsDecidedByRunner)
+{
+  const auto asset =
+   make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 110.0, 121.0, 109.0, 110.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                               BooleanMethod<false>{},
+                                               BooleanMethod<false>{},
+                                               1,
+                                               OpenMethod{},
+                                               false,
+                                               false,
+                                               ValueMethod{120.0},
+                                               true},
+                  BacktestRunner::PositionRule{},
+                  1000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+
+  ASSERT_EQ(timeline.size(), 2);
+  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
+  EXPECT_TRUE(latest_record(timeline).is_closed_take_profit());
+  EXPECT_DOUBLE_EQ(latest_record(timeline).exit_price(), 120.0);
 }

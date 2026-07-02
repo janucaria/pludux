@@ -1,15 +1,9 @@
 module;
 
-#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <ctime>
-#include <functional>
-#include <iterator>
-#include <limits>
-#include <numeric>
 #include <optional>
-#include <ranges>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -25,147 +19,27 @@ export namespace pludux::backtest {
 
 class TradeSession {
 public:
-  class ConstTradeRecordIterator {
-  public:
-    using iterator_category = std::input_iterator_tag;
-    using value_type = TradeRecord;
-    using difference_type = std::ptrdiff_t;
-
-    ConstTradeRecordIterator(const TradeSession& session)
-    : session_{session}
-    , realized_closed_position_done_{false}
-    , realized_open_position_done_{false}
-    , unrealized_record_done_{false}
-    {
-      auto& self = *this;
-
-      const auto closed_position = self.session_.closed_position();
-      self.realized_closed_position_done_ =
-       !closed_position || closed_position->realized_records().empty();
-
-      const auto open_position = self.session_.open_position();
-
-      self.realized_open_position_done_ =
-       !open_position || open_position->realized_records().empty();
-
-      self.unrealized_record_done_ = !open_position;
-    }
-
-    auto operator*(this const ConstTradeRecordIterator& self) -> TradeRecord
-    {
-      if(!self.realized_closed_position_done_) {
-        const auto closed_position = self.session_.closed_position();
-        return closed_position->realized_records().back();
-      }
-
-      const auto open_position = self.session_.open_position();
-      if(!self.realized_open_position_done_) {
-        return open_position->realized_records().back();
-      }
-
-      return TradeRecord{TradeRecord::Status::open,
-                         open_position->position_size(),
-                         open_position->investment(),
-                         open_position->entry_timestamp(),
-                         open_position->entry_price(),
-                         open_position->total_entry_fees(),
-                         self.session_.market_timestamp(),
-                         self.session_.market_price(),
-                         0.0,
-                         open_position->stop_loss_initial_price(),
-                         open_position->stop_loss_trailing_price(),
-                         open_position->take_profit_price()};
-    }
-
-    auto operator++(this ConstTradeRecordIterator& self)
-     -> ConstTradeRecordIterator&
-    {
-      if(!self.realized_closed_position_done_) {
-        self.realized_closed_position_done_ = true;
-        return self;
-      }
-
-      if(!self.realized_open_position_done_) {
-        self.realized_open_position_done_ = true;
-        return self;
-      }
-
-      self.unrealized_record_done_ = true;
-
-      return self;
-    }
-
-    auto operator++(this ConstTradeRecordIterator& self, int)
-     -> ConstTradeRecordIterator
-    {
-      auto tmp = self;
-      ++self;
-      return tmp;
-    }
-
-    auto operator==(this const ConstTradeRecordIterator& self,
-                    std::default_sentinel_t) -> bool
-    {
-      return self.realized_open_position_done_ &&
-             self.realized_closed_position_done_ &&
-             self.unrealized_record_done_;
-    }
-
-  private:
-    const TradeSession& session_;
-    bool realized_closed_position_done_;
-    bool realized_open_position_done_;
-    bool unrealized_record_done_;
-  };
-
-  class ConstTradeRecordRange {
-  public:
-    ConstTradeRecordRange(const TradeSession& session)
-    : session_{session}
-    {
-    }
-
-    auto begin(this const ConstTradeRecordRange& self)
-     -> ConstTradeRecordIterator
-    {
-      return ConstTradeRecordIterator{self.session_};
-    }
-
-    auto end(this const ConstTradeRecordRange&) -> std::default_sentinel_t
-    {
-      return std::default_sentinel;
-    }
-
-  private:
-    const TradeSession& session_;
-  };
-
   TradeSession()
   : TradeSession{0, NAN, 0}
   {
   }
 
-  TradeSession(std::time_t market_timestamp_,
-               double market_price_,
-               std::size_t market_lookback_)
-  : TradeSession{market_timestamp_,
-                 market_price_,
-                 market_lookback_,
-                 std::nullopt,
-                 std::nullopt}
+  TradeSession(std::time_t market_timestamp,
+               double market_price,
+               std::size_t market_lookback)
+  : TradeSession{market_timestamp, market_price, market_lookback, std::nullopt}
   {
   }
 
-  TradeSession(std::time_t market_timestamp_,
-               double market_price_,
-               std::size_t market_lookback_,
-               std::optional<TradePosition> open_position,
-               std::optional<TradePosition> closed_position)
-  : market_timestamp_{market_timestamp_}
-  , market_price_{market_price_}
-  , market_lookback_{market_lookback_}
+  TradeSession(std::time_t market_timestamp,
+               double market_price,
+               std::size_t market_lookback,
+               std::optional<TradePosition> open_position)
+  : market_timestamp_{market_timestamp}
+  , market_price_{market_price}
+  , market_lookback_{market_lookback}
   , open_position_{std::move(open_position)}
-  , closed_position_{std::move(closed_position)}
+  , trade_records_{}
   {
   }
 
@@ -176,29 +50,14 @@ public:
     return self.market_timestamp_;
   }
 
-  void market_timestamp(this TradeSession& self, std::time_t timestamp) noexcept
-  {
-    self.market_timestamp_ = timestamp;
-  }
-
   auto market_price(this const TradeSession& self) noexcept -> double
   {
     return self.market_price_;
   }
 
-  void market_price(this TradeSession& self, double price) noexcept
-  {
-    self.market_price_ = price;
-  }
-
   auto market_lookback(this const TradeSession& self) noexcept -> std::size_t
   {
     return self.market_lookback_;
-  }
-
-  void market_lookback(this TradeSession& self, std::size_t index) noexcept
-  {
-    self.market_lookback_ = index;
   }
 
   auto open_position(this const TradeSession& self) noexcept
@@ -207,42 +66,48 @@ public:
     return self.open_position_;
   }
 
-  void open_position(this TradeSession& self,
-                     std::optional<TradePosition> position) noexcept
+  auto open_position(this TradeSession& self) noexcept
+   -> std::optional<TradePosition>&
   {
-    self.open_position_ = std::move(position);
+    return self.open_position_;
   }
 
-  auto closed_position(this const TradeSession& self) noexcept
-   -> const std::optional<TradePosition>&
+  auto trade_records(this const TradeSession& self) noexcept
+   -> const std::vector<TradeRecord>&
   {
-    return self.closed_position_;
+    return self.trade_records_;
   }
 
-  void closed_position(this TradeSession& self,
-                       std::optional<TradePosition> position) noexcept
+  void begin_market_bar(this TradeSession& self,
+                        std::time_t timestamp,
+                        double price,
+                        std::size_t lookback) noexcept
   {
-    self.closed_position_ = std::move(position);
+    self.market_timestamp_ = timestamp;
+    self.market_price_ = price;
+    self.market_lookback_ = lookback;
+    self.trade_records_.clear();
   }
 
-  void entry_position(this TradeSession& self, const TradeEntry& entry) noexcept
+  void entry_position(this TradeSession& self, const TradeEntry& entry)
   {
     self.entry_position(entry, 0.0);
   }
 
   void entry_position(this TradeSession& self,
                       const TradeEntry& entry,
-                      double total_fees) noexcept
+                      double total_fees)
   {
     if(self.open_position_) {
-      self.open_position_->scaled_in(entry.position_size(),
-                                     self.market_timestamp_,
-                                     entry.price(),
-                                     total_fees,
-                                     entry.stop_loss_price(),
-                                     entry.stop_loss_trailing_price(),
-                                     entry.take_profit_price());
-
+      auto trade_record =
+       self.open_position_->scaled_in(entry.position_size(),
+                                      self.market_timestamp_,
+                                      entry.price(),
+                                      total_fees,
+                                      entry.stop_loss_price(),
+                                      entry.stop_loss_trailing_price(),
+                                      entry.take_profit_price());
+      self.trade_records_.push_back(std::move(trade_record));
       return;
     }
 
@@ -265,7 +130,7 @@ public:
                      double total_fees)
   {
     if(!self.open_position_) {
-      throw std::runtime_error("Cannot exit a closed trade.");
+      throw std::runtime_error{"Cannot exit a closed trade."};
     }
 
     const auto trade_status = [](TradeExit::Reason reason) {
@@ -280,69 +145,16 @@ public:
       }
     }(exit.reason());
 
-    self.open_position_->scaled_out(exit.position_size(),
-                                    self.market_timestamp_,
-                                    exit.price(),
-                                    total_fees,
-                                    trade_status);
+    auto trade_record = self.open_position_->scaled_out(exit.position_size(),
+                                                        self.market_timestamp_,
+                                                        exit.price(),
+                                                        total_fees,
+                                                        trade_status);
+    self.trade_records_.push_back(std::move(trade_record));
 
     if(self.open_position_->is_closed()) {
-      self.closed_position_ = std::move(self.open_position_);
       self.open_position_ = std::nullopt;
     }
-  }
-
-  void market_update(this TradeSession& self,
-                     std::time_t timestamp,
-                     double price,
-                     std::size_t index) noexcept
-  {
-    self.market_timestamp(timestamp);
-    self.market_price(price);
-    self.market_lookback(index);
-
-    if(self.closed_position_) {
-      self.closed_position_ = std::nullopt;
-    }
-
-    if(self.open_position_) {
-      self.open_position_->realized_records({});
-    }
-  }
-
-  auto trade_record_range(this const TradeSession& self) noexcept
-   -> ConstTradeRecordRange
-  {
-    return ConstTradeRecordRange{self};
-  }
-
-  auto evaluate_exit_conditions(this TradeSession& self,
-                                double prev_close,
-                                double open,
-                                double high,
-                                double low) noexcept -> std::optional<TradeExit>
-  {
-    auto trade_exit = std::optional<TradeExit>{};
-
-    const auto position_size = self.open_position_->unrealized_position_size();
-
-    if(self.open_position_->trigger_stop_loss(prev_close, high, low)) {
-      const auto exit_price =
-       self.open_position_->is_long_direction()
-        ? std::min(open, self.open_position_->stop_loss_price())
-        : std::max(open, self.open_position_->stop_loss_price());
-      trade_exit =
-       TradeExit{position_size, exit_price, TradeExit::Reason::stop_loss};
-    } else if(self.open_position_->trigger_take_profit(high, low)) {
-      const auto exit_price =
-       self.open_position_->is_long_direction()
-        ? std::max(open, self.open_position_->take_profit_price())
-        : std::min(open, self.open_position_->take_profit_price());
-      trade_exit =
-       TradeExit{position_size, exit_price, TradeExit::Reason::take_profit};
-    }
-
-    return trade_exit;
   }
 
   auto unrealized_pnl(this const TradeSession& self) noexcept -> double
@@ -350,11 +162,6 @@ public:
     return self.open_position_
             ? self.open_position_->unrealized_pnl(self.market_price_)
             : 0.0;
-  }
-
-  auto partial_realized_pnl(this const TradeSession& self) noexcept -> double
-  {
-    return self.open_position_ ? self.open_position_->realized_pnl() : 0.0;
   }
 
   auto unrealized_investment(this const TradeSession& self) noexcept -> double
@@ -371,41 +178,14 @@ public:
             : 0;
   }
 
-  auto realized_pnl(this const TradeSession& self) noexcept -> double
-  {
-    return self.closed_position_ ? self.closed_position_->realized_pnl() : 0.0;
-  }
-
-  auto realized_investment(this const TradeSession& self) noexcept -> double
-  {
-    return self.closed_position_ ? self.closed_position_->realized_investment()
-                                 : 0.0;
-  }
-
-  auto realized_duration(this const TradeSession& self) noexcept -> std::time_t
-  {
-    return self.closed_position_ ? self.closed_position_->realized_duration()
-                                 : 0;
-  }
-
   auto is_flat(this const TradeSession& self) noexcept -> bool
   {
-    return !self.is_open() && !self.is_closed();
+    return !self.is_open();
   }
 
   auto is_open(this const TradeSession& self) noexcept -> bool
   {
     return self.open_position_.has_value();
-  }
-
-  auto is_closed(this const TradeSession& self) noexcept -> bool
-  {
-    return self.closed_position_.has_value();
-  }
-
-  auto is_reopen(this const TradeSession& self) noexcept -> bool
-  {
-    return self.is_open() && self.is_closed();
   }
 
 private:
@@ -414,7 +194,7 @@ private:
   std::size_t market_lookback_;
 
   std::optional<TradePosition> open_position_;
-  std::optional<TradePosition> closed_position_;
+  std::vector<TradeRecord> trade_records_;
 };
 
 } // namespace pludux::backtest

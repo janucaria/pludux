@@ -201,13 +201,14 @@ public:
 
     const auto current_drawdown_ratio = self.current_drawdown() / 100.0;
 
-    self.trade_session_.market_update(
+    self.trade_session_.begin_market_bar(
      static_cast<std::time_t>(asset_snapshot.datetime()),
      asset_snapshot.close(),
      asset_snapshot.lookback());
 
-    const auto& open_position = self.trade_session_.open_position();
-    if(open_position) {
+    auto closed_position_is_long = std::optional<bool>{};
+
+    if(auto& open_position = self.trade_session_.open_position()) {
       {
         const auto is_long_direction = open_position->is_long_direction();
         if(is_long_direction) {
@@ -229,27 +230,30 @@ public:
         }
       }
 
-      const auto exit_trade =
-       self.trade_session_
-        .evaluate_exit_conditions(asset_snapshot[1].close(),
-                                  asset_snapshot.open(),
-                                  asset_snapshot.high(),
-                                  asset_snapshot.low())
-        .or_else([&]() {
-          const auto position_size = open_position->unrealized_position_size();
-          return self.exit_trade(asset_snapshot, position_size, context);
-        });
+      if(auto& updated_open_position = self.trade_session_.open_position()) {
+        const auto exit_trade =
+         self.exit_trade(asset_snapshot, *updated_open_position, context);
 
-      if(exit_trade) {
-        const auto fee = self.broker_.calculate_fee(*exit_trade);
-        self.trade_session_.exit_position(*exit_trade, fee);
-        self.pyramiding_layers_ = 0;
+        if(exit_trade) {
+          const auto fee = self.broker_.calculate_fee(*exit_trade);
+          const auto closing_position_is_long =
+           updated_open_position->is_long_direction();
+          self.trade_session_.exit_position(*exit_trade, fee);
+
+          if(!self.trade_session_.is_open()) {
+            closed_position_is_long = closing_position_is_long;
+          }
+
+          self.pyramiding_layers_ = 0;
+        }
       }
     }
 
-    if(self.trade_session_.is_flat() || self.trade_session_.is_closed()) {
-      auto entry_trade =
-       self.entry_trade(asset_snapshot, context, current_drawdown_ratio);
+    if(self.trade_session_.is_flat()) {
+      auto entry_trade = self.entry_trade(asset_snapshot,
+                                          context,
+                                          current_drawdown_ratio,
+                                          closed_position_is_long);
       if(entry_trade) {
         {
           const auto quantity_step = self.market_.quantity_step();
@@ -281,10 +285,7 @@ public:
     self.update_accounting();
     self.total_equity_ = self.current_equity();
 
-    auto trade_records = std::vector<TradeRecord>{};
-    for(const auto& trade_record : self.trade_session_.trade_record_range()) {
-      trade_records.push_back(trade_record);
-    }
+    auto trade_records = self.trade_records();
 
     timeline.append(BacktestTimeline::Row{
      .market_timestamp = self.trade_session_.market_timestamp(),
@@ -347,8 +348,7 @@ private:
 
   auto current_equity(this const BacktestRunner& self) noexcept -> double
   {
-    return self.capital_ + self.trade_session_.partial_realized_pnl() +
-           self.trade_session_.unrealized_pnl();
+    return self.capital_ + self.trade_session_.unrealized_pnl();
   }
 
   auto current_drawdown(this const BacktestRunner& self) noexcept -> double
@@ -360,11 +360,15 @@ private:
 
   void update_accounting(this BacktestRunner& self) noexcept
   {
-    if(self.trade_session_.closed_position()) {
-      const auto pnl = self.trade_session_.realized_pnl();
+    for(const auto& trade_record : self.trade_session_.trade_records()) {
+      if(!trade_record.is_closed()) {
+        continue;
+      }
 
-      self.sum_of_durations_ += self.trade_session_.realized_duration();
-      self.cumulative_investments_ += self.trade_session_.realized_investment();
+      const auto pnl = trade_record.pnl();
+
+      self.sum_of_durations_ += trade_record.duration();
+      self.cumulative_investments_ += trade_record.investment();
 
       if(pnl > 0) {
         self.profit_count_++;
@@ -572,27 +576,65 @@ private:
   auto entry_trade(this const BacktestRunner& self,
                    const AssetSnapshot& asset_snapshot,
                    MethodContextable auto context,
-                   double current_drawdown_ratio) -> std::optional<TradeEntry>
+                   double current_drawdown_ratio,
+                   std::optional<bool> closed_position_is_long = std::nullopt)
+   -> std::optional<TradeEntry>
   {
-    return self
-     .entry_long_trade(asset_snapshot, context, current_drawdown_ratio)
-     .or_else([&] {
-       return self.entry_short_trade(
-        asset_snapshot, context, current_drawdown_ratio);
-     });
+    const auto can_enter_long =
+     !closed_position_is_long || !*closed_position_is_long;
+    const auto can_enter_short =
+     !closed_position_is_long || *closed_position_is_long;
+
+    if(can_enter_long) {
+      auto entry_trade =
+       self.entry_long_trade(asset_snapshot, context, current_drawdown_ratio);
+      if(entry_trade) {
+        return entry_trade;
+      }
+    }
+
+    if(can_enter_short) {
+      return self.entry_short_trade(
+       asset_snapshot, context, current_drawdown_ratio);
+    }
+
+    return std::nullopt;
   }
 
-  auto exit_trade(this const BacktestRunner& self,
+  auto exit_trade(this BacktestRunner& self,
                   const AssetSnapshot& asset_snapshot,
-                  double position_size,
+                  TradePosition& position,
                   MethodContextable auto context) noexcept
    -> std::optional<TradeExit>
   {
+    const auto position_size = position.unrealized_position_size();
     const auto is_long_direction = position_size > 0;
     const auto is_short_direction = position_size < 0;
     const auto exit_price = asset_snapshot.open();
 
     const auto prev_snapshot = asset_snapshot[1];
+
+    position.update_trailing_stop(prev_snapshot.close());
+
+    if(position.is_stop_loss_triggered(asset_snapshot.high(),
+                                       asset_snapshot.low())) {
+      const auto stop_price = position.stop_loss_price();
+      const auto stop_exit_price = is_long_direction
+                                    ? std::min(exit_price, stop_price)
+                                    : std::max(exit_price, stop_price);
+      return TradeExit{
+       position_size, stop_exit_price, TradeExit::Reason::stop_loss};
+    }
+
+    if(position.is_take_profit_triggered(asset_snapshot.high(),
+                                         asset_snapshot.low())) {
+      const auto target_price = position.take_profit_price();
+      const auto target_exit_price = is_long_direction
+                                      ? std::max(exit_price, target_price)
+                                      : std::min(exit_price, target_price);
+      return TradeExit{
+       position_size, target_exit_price, TradeExit::Reason::take_profit};
+    }
 
     if(is_long_direction) {
       if(static_cast<bool>(evaluate_series_method(
@@ -607,6 +649,29 @@ private:
     }
 
     return std::nullopt;
+  }
+
+  auto trade_records(this const BacktestRunner& self)
+   -> std::vector<TradeRecord>
+  {
+    auto trade_records = self.trade_session_.trade_records();
+
+    if(const auto& open_position = self.trade_session_.open_position()) {
+      trade_records.emplace_back(TradeRecord::Status::open,
+                                 open_position->position_size(),
+                                 open_position->investment(),
+                                 open_position->entry_timestamp(),
+                                 open_position->entry_price(),
+                                 open_position->total_entry_fees(),
+                                 self.trade_session_.market_timestamp(),
+                                 self.trade_session_.market_price(),
+                                 0.0,
+                                 open_position->stop_loss_initial_price(),
+                                 open_position->stop_loss_trailing_price(),
+                                 open_position->take_profit_price());
+    }
+
+    return trade_records;
   }
 };
 
