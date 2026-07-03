@@ -8,7 +8,7 @@ module;
 
 export module pludux:nodes.atr_node;
 
-import :nodes.adaptive_ma_node;
+import :ma_node_type;
 import :nodes.erased_node;
 
 export namespace pludux {

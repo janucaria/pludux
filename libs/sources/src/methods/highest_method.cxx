@@ -2,15 +2,18 @@ module;
 
 #include <cstddef>
 #include <limits>
+#include <type_traits>
 #include <utility>
 
 export module pludux:methods.highest_method;
 
 import :methods.ohlcv_method;
+import :methods.value_method;
 
 export namespace pludux {
 
-template<typename TSourceMethod = CloseMethod>
+template<typename TSourceMethod = CloseMethod,
+         typename TPeriodMethod = ValueMethod>
 class HighestMethod {
 public:
   HighestMethod()
@@ -23,37 +26,43 @@ public:
   {
   }
 
-  explicit HighestMethod(TSourceMethod method, std::size_t period)
-  : source_{std::move(method)}
-  , period_{period}
+  explicit HighestMethod(TSourceMethod source, std::size_t period)
+  : HighestMethod{std::move(source), ValueMethod{static_cast<double>(period)}}
+  {
+  }
+
+  HighestMethod(TSourceMethod source, TPeriodMethod period)
+    requires(!std::is_arithmetic_v<TPeriodMethod>)
+  : source_{std::move(source)}
+  , period_{std::move(period)}
   {
   }
 
   auto operator==(const HighestMethod& other) const noexcept -> bool = default;
 
-  auto source(this const HighestMethod& self) -> const TSourceMethod&
+  auto source(this const HighestMethod& self) noexcept -> const TSourceMethod&
   {
     return self.source_;
   }
 
-  void source(this HighestMethod& self, TSourceMethod method)
+  void source(this HighestMethod& self, TSourceMethod source) noexcept
   {
-    self.source_ = std::move(method);
+    self.source_ = std::move(source);
   }
 
-  auto period(this const HighestMethod& self) noexcept -> std::size_t
+  auto period(this const HighestMethod& self) noexcept -> const TPeriodMethod&
   {
     return self.period_;
   }
 
-  void period(this HighestMethod& self, std::size_t period)
+  void period(this HighestMethod& self, TPeriodMethod period) noexcept
   {
-    self.period_ = period;
+    self.period_ = std::move(period);
   }
 
 private:
   TSourceMethod source_;
-  std::size_t period_;
+  TPeriodMethod period_;
 };
 
 } // namespace pludux

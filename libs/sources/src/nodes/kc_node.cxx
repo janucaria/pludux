@@ -10,7 +10,7 @@ module;
 export module pludux:nodes.kc_node;
 
 import :nodes.erased_node;
-import :nodes.adaptive_ma_node;
+import :ma_node_type;
 
 export namespace pludux {
 

@@ -791,6 +791,14 @@ auto make_default_registered_config_parser() -> ConfigParser
    serialize_ta_with_erased_period_node<RsiNode>,
    parse_ta_with_erased_period_node<RsiNode, 14>);
   config_parser.register_node_parser(
+   "HIGHEST",
+   serialize_ta_with_erased_period_node<HighestNode>,
+   parse_ta_with_erased_period_node<HighestNode, 14>);
+  config_parser.register_node_parser(
+   "LOWEST",
+   serialize_ta_with_erased_period_node<LowestNode>,
+   parse_ta_with_erased_period_node<LowestNode, 14>);
+  config_parser.register_node_parser(
    "ROC",
    serialize_ta_with_erased_period_node<RocNode>,
    parse_ta_with_erased_period_node<RocNode, 14>);
@@ -818,6 +826,8 @@ auto make_default_registered_config_parser() -> ConfigParser
    });
 
   config_parser.register_node_parser("ATR", serialize_atr_node, parse_atr_node);
+  config_parser.register_node_parser(
+   "TR", serialize_ohlcv_node<TrNode>, parse_ohlcv_node<TrNode>);
   config_parser.register_node_parser("KC", serialize_kc_node, parse_kc_node);
 
   config_parser.register_node_parser(

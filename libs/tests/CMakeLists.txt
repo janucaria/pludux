@@ -15,8 +15,10 @@ set(PLUDUX_TEST_SOURCES
   src/test_donchian_channel_method.cpp
   src/test_ema_method.cpp
   src/test_hma_method.cpp
+  src/test_highest_method.cpp
   src/test_kc_method.cpp
   src/test_lookback_method.cpp
+  src/test_lowest_method.cpp
   src/test_macd_method.cpp
   src/test_series_node_method.cpp
   src/test_ohlcv_method.cpp

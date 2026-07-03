@@ -384,7 +384,7 @@
       "title": "Base Method Object",
       "description": "Base shape shared by Pludux method objects. Most series, signals, and plots are expressed as an object with a UPPERCASE method name and an optional params object."
     },
-    "quoteSeries": {
+    "quoteMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -406,7 +406,7 @@
       "title": "Quote Series",
       "description": "Built-in market data series from the current bar, such as OPEN, HIGH, LOW, CLOSE, or VOLUME."
     },
-    "seriesNodeSeries": {
+    "seriesNodeMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -457,7 +457,7 @@
         }
       ]
     },
-    "seriesValueSeries": {
+    "seriesValueMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -508,7 +508,7 @@
         }
       ]
     },
-    "selectOutputSeries": {
+    "selectOutputMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -571,7 +571,7 @@
         }
       ]
     },
-    "lookbackSeries": {
+    "lookbackMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -611,7 +611,7 @@
       "title": "Lookback",
       "description": "Returns the value of a source series from a previous bar. For example, period 1 means one bar ago."
     },
-    "inputSeries": {
+    "inputMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -655,7 +655,7 @@
       "title": "Strategy Input",
       "description": "Defines an inline numeric input parameter. Backtests collect INPUT nodes from series and signals in traversal order and may override their values."
     },
-    "valueSeries": {
+    "valueMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -688,7 +688,7 @@
       "title": "Value",
       "description": "Wraps a constant number as a series object."
     },
-    "dataSeries": {
+    "dataMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -721,7 +721,7 @@
       "title": "Data Field",
       "description": "Reads a custom data field from the input dataset, such as a user-provided column in the historical data file."
     },
-    "smaSeries": {
+    "smaMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -767,7 +767,7 @@
       "title": "Simple Moving Average",
       "description": "Calculates the simple moving average of a source series over a lookback period."
     },
-    "emaSeries": {
+    "emaMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -813,7 +813,7 @@
       "title": "Exponential Moving Average",
       "description": "Calculates the exponential moving average of a source series over a lookback period."
     },
-    "rmaSeries": {
+    "rmaMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -859,7 +859,7 @@
       "title": "Running Moving Average",
       "description": "Calculates Wilder's running moving average of a source series over a lookback period."
     },
-    "wmaSeries": {
+    "wmaMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -905,7 +905,7 @@
       "title": "Weighted Moving Average",
       "description": "Calculates the weighted moving average of a source series over a lookback period."
     },
-    "hmaSeries": {
+    "hmaMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -951,28 +951,28 @@
       "title": "Hull Moving Average",
       "description": "Calculates the Hull moving average of a source series over a lookback period."
     },
-    "maSeries": {
+    "maMethod": {
       "oneOf": [
         {
-          "$ref": "#/$defs/smaSeries"
+          "$ref": "#/$defs/smaMethod"
         },
         {
-          "$ref": "#/$defs/emaSeries"
+          "$ref": "#/$defs/emaMethod"
         },
         {
-          "$ref": "#/$defs/rmaSeries"
+          "$ref": "#/$defs/rmaMethod"
         },
         {
-          "$ref": "#/$defs/wmaSeries"
+          "$ref": "#/$defs/wmaMethod"
         },
         {
-          "$ref": "#/$defs/hmaSeries"
+          "$ref": "#/$defs/hmaMethod"
         }
       ],
       "title": "Moving Average Series",
       "description": "Union of supported moving-average method objects."
     },
-    "rsiSeries": {
+    "rsiMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1018,7 +1018,7 @@
       "title": "Relative Strength Index",
       "description": "Calculates the RSI oscillator from a source series."
     },
-    "atrSeries": {
+    "atrMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1070,7 +1070,7 @@
       "title": "Average True Range",
       "description": "Calculates ATR as a volatility measure using a chosen smoothing method."
     },
-    "stddevSeries": {
+    "stddevMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1123,7 +1123,201 @@
       "title": "Standard Deviation",
       "description": "Calculates rolling standard deviation of a source series."
     },
-    "bbSeries": {
+    "highestMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "HIGHEST"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Period",
+                  "description": "Lookback period used to compute the highest value."
+                },
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Source",
+                  "description": "Source series used as input."
+                }
+              }
+            }
+          },
+          "default": {
+            "method": "HIGHEST",
+            "params": {
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
+              "source": "CLOSE"
+            }
+          }
+        }
+      ],
+      "title": "Highest",
+      "description": "Calculates the highest value of a source series over a lookback period."
+    },
+    "lowestMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "LOWEST"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Period",
+                  "description": "Lookback period used to compute the lowest value."
+                },
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Source",
+                  "description": "Source series used as input."
+                }
+              }
+            }
+          },
+          "default": {
+            "method": "LOWEST",
+            "params": {
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
+              "source": "CLOSE"
+            }
+          }
+        }
+      ],
+      "title": "Lowest",
+      "description": "Calculates the lowest value of a source series over a lookback period."
+    },
+    "rocMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "ROC"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Period",
+                  "description": "Lookback period used for the rate-of-change calculation."
+                },
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Source",
+                  "description": "Source series used as input."
+                }
+              }
+            }
+          },
+          "default": {
+            "method": "ROC",
+            "params": {
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
+              "source": "CLOSE"
+            }
+          }
+        }
+      ],
+      "title": "Rate of Change",
+      "description": "Calculates percentage rate of change for a source series over a lookback period."
+    },
+    "rvolMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "RVOL"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Period",
+                  "description": "Lookback period used to compute relative volume."
+                }
+              }
+            }
+          },
+          "default": {
+            "method": "RVOL",
+            "params": {
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              }
+            }
+          }
+        }
+      ],
+      "title": "Relative Volume",
+      "description": "Calculates relative volume by comparing current volume to average volume over a lookback period."
+    },
+    "trMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "TR"
+            }
+          }
+        }
+      ],
+      "title": "True Range",
+      "description": "Calculates true range for the current bar."
+    },
+    "bbMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1194,7 +1388,7 @@
       "title": "Bollinger Bands",
       "description": "Calculates a multi-output Bollinger Bands series with upper, middle, and lower bands."
     },
-    "kcSeries": {
+    "kcMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1288,7 +1482,7 @@
       "title": "Keltner Channel",
       "description": "Calculates a multi-output Keltner Channel series using a moving average center line and a volatility band method."
     },
-    "donchianChannelSeries": {
+    "donchianChannelMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1328,7 +1522,7 @@
       "title": "Donchian Channel",
       "description": "Calculates a multi-output Donchian Channel series with upper and lower bands based on the highest high and lowest low over a lookback period."
     },
-    "macdSeries": {
+    "macdMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1400,7 +1594,7 @@
       "title": "MACD",
       "description": "Calculates a multi-output MACD series with MACD line, signal line, and histogram."
     },
-    "stochSeries": {
+    "stochMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1484,7 +1678,7 @@
       "title": "Stochastic Oscillator",
       "description": "Calculates a multi-output stochastic oscillator with %K and %D outputs."
     },
-    "stochRsiSeries": {
+    "stochRsiMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1569,7 +1763,7 @@
       "title": "Stochastic RSI",
       "description": "Calculates a multi-output stochastic RSI oscillator with %K and %D outputs."
     },
-    "addSeries": {
+    "addMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1624,7 +1818,7 @@
         }
       ]
     },
-    "subtractSeries": {
+    "subtractMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1679,7 +1873,7 @@
         }
       ]
     },
-    "multiplySeries": {
+    "multiplyMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1734,7 +1928,7 @@
         }
       ]
     },
-    "divideSeries": {
+    "divideMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1789,7 +1983,7 @@
         }
       ]
     },
-    "negateSeries": {
+    "negateMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1837,7 +2031,7 @@
         }
       ]
     },
-    "sqrtSeries": {
+    "sqrtMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1885,7 +2079,7 @@
         }
       ]
     },
-    "changeSeries": {
+    "changeMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1933,7 +2127,7 @@
         }
       ]
     },
-    "absDiffSeries": {
+    "absDiffMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1988,7 +2182,7 @@
         }
       ]
     },
-    "percentageSeries": {
+    "percentageMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -2059,89 +2253,122 @@
     "series": {
       "oneOf": [
         {
-          "$ref": "#/$defs/seriesNodeSeries"
+          "$ref": "#/$defs/seriesNodeMethod"
         },
         {
-          "$ref": "#/$defs/seriesValueSeries"
+          "$ref": "#/$defs/seriesValueMethod"
         },
         {
-          "$ref": "#/$defs/selectOutputSeries"
+          "$ref": "#/$defs/selectOutputMethod"
         },
         {
-          "$ref": "#/$defs/lookbackSeries"
+          "$ref": "#/$defs/lookbackMethod"
         },
         {
-          "$ref": "#/$defs/inputSeries"
+          "$ref": "#/$defs/inputMethod"
         },
         {
-          "$ref": "#/$defs/quoteSeries"
+          "$ref": "#/$defs/quoteMethod"
         },
         {
-          "$ref": "#/$defs/valueSeries"
+          "$ref": "#/$defs/valueMethod"
         },
         {
-          "$ref": "#/$defs/dataSeries"
+          "$ref": "#/$defs/dataMethod"
         },
         {
-          "$ref": "#/$defs/maSeries"
+          "$ref": "#/$defs/maMethod"
         },
         {
-          "$ref": "#/$defs/rsiSeries"
+          "$ref": "#/$defs/rsiMethod"
         },
         {
-          "$ref": "#/$defs/atrSeries"
+          "$ref": "#/$defs/atrMethod"
         },
         {
-          "$ref": "#/$defs/stddevSeries"
+          "$ref": "#/$defs/stddevMethod"
         },
         {
-          "$ref": "#/$defs/bbSeries"
+          "$ref": "#/$defs/highestMethod"
         },
         {
-          "$ref": "#/$defs/kcSeries"
+          "$ref": "#/$defs/lowestMethod"
         },
         {
-          "$ref": "#/$defs/donchianChannelSeries"
+          "$ref": "#/$defs/rocMethod"
         },
         {
-          "$ref": "#/$defs/macdSeries"
+          "$ref": "#/$defs/rvolMethod"
         },
         {
-          "$ref": "#/$defs/stochSeries"
+          "$ref": "#/$defs/trMethod"
         },
         {
-          "$ref": "#/$defs/stochRsiSeries"
+          "$ref": "#/$defs/bbMethod"
         },
         {
-          "$ref": "#/$defs/addSeries"
+          "$ref": "#/$defs/kcMethod"
         },
         {
-          "$ref": "#/$defs/subtractSeries"
+          "$ref": "#/$defs/donchianChannelMethod"
         },
         {
-          "$ref": "#/$defs/multiplySeries"
+          "$ref": "#/$defs/macdMethod"
         },
         {
-          "$ref": "#/$defs/divideSeries"
+          "$ref": "#/$defs/stochMethod"
         },
         {
-          "$ref": "#/$defs/negateSeries"
+          "$ref": "#/$defs/stochRsiMethod"
         },
         {
-          "$ref": "#/$defs/sqrtSeries"
+          "$ref": "#/$defs/addMethod"
         },
         {
-          "$ref": "#/$defs/changeSeries"
+          "$ref": "#/$defs/subtractMethod"
         },
         {
-          "$ref": "#/$defs/absDiffSeries"
+          "$ref": "#/$defs/multiplyMethod"
         },
         {
-          "$ref": "#/$defs/percentageSeries"
+          "$ref": "#/$defs/divideMethod"
+        },
+        {
+          "$ref": "#/$defs/negateMethod"
+        },
+        {
+          "$ref": "#/$defs/sqrtMethod"
+        },
+        {
+          "$ref": "#/$defs/changeMethod"
+        },
+        {
+          "$ref": "#/$defs/absDiffMethod"
+        },
+        {
+          "$ref": "#/$defs/percentageMethod"
+        },
+        {
+          "$ref": "#/$defs/crossMethod"
+        },
+        {
+          "$ref": "#/$defs/compositeConditionMethod"
+        },
+        {
+          "$ref": "#/$defs/comparisonMethod"
+        },
+        {
+          "$ref": "#/$defs/fixedMethod"
+        },
+        {
+          "$ref": "#/$defs/binaryLogicalMethod"
+        },
+        {
+          "$ref": "#/$defs/unaryLogicalMethod"
         }
       ],
       "title": "Series Definition",
-      "description": "Any valid Pludux series definition. This can be a raw market series, indicator, transformation, arithmetic series, SELECT_OUTPUT chain, SERIES_NODE reference, or SERIES_VALUE reference."
+      "description": "Any valid Pludux series definition. This can be a raw market series, indicator, transformation, arithmetic series, SELECT_OUTPUT chain, SERIES_NODE reference, SERIES_VALUE reference, or a signal method used as a numeric series. When a signal method is used in series context, true is coerced to 1 and false is coerced to 0."
     },
     "signalAsParameter": {
       "oneOf": [
@@ -2155,7 +2382,7 @@
       "title": "Signal Parameter",
       "description": "A boolean input accepted by entry, exit, and logical signal methods. It can be a signal object or a literal true or false."
     },
-    "compositeConditionSignal": {
+    "compositeConditionMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -2195,7 +2422,7 @@
       "title": "Composite Signal",
       "description": "Combines one or more signals into a grouped condition using ALL_OF or ANY_OF."
     },
-    "comparisonSignal": {
+    "comparisonMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -2271,7 +2498,7 @@
         }
       ]
     },
-    "crossSignal": {
+    "crossMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -2348,7 +2575,7 @@
         }
       ]
     },
-    "fixedSignal": {
+    "fixedMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -2367,7 +2594,7 @@
       "title": "Fixed Signal",
       "description": "Always-true or always-false signal."
     },
-    "binaryLogicalSignal": {
+    "binaryLogicalMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -2410,7 +2637,7 @@
       "title": "Binary Logical Signal",
       "description": "Combines two signals with AND, OR, or XOR."
     },
-    "unaryLogicalSignal": {
+    "unaryLogicalMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -2448,22 +2675,22 @@
     "signals": {
       "oneOf": [
         {
-          "$ref": "#/$defs/crossSignal"
+          "$ref": "#/$defs/crossMethod"
         },
         {
-          "$ref": "#/$defs/compositeConditionSignal"
+          "$ref": "#/$defs/compositeConditionMethod"
         },
         {
-          "$ref": "#/$defs/comparisonSignal"
+          "$ref": "#/$defs/comparisonMethod"
         },
         {
-          "$ref": "#/$defs/fixedSignal"
+          "$ref": "#/$defs/fixedMethod"
         },
         {
-          "$ref": "#/$defs/binaryLogicalSignal"
+          "$ref": "#/$defs/binaryLogicalMethod"
         },
         {
-          "$ref": "#/$defs/unaryLogicalSignal"
+          "$ref": "#/$defs/unaryLogicalMethod"
         }
       ],
       "title": "Signals",

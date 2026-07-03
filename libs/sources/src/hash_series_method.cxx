@@ -320,8 +320,9 @@ auto hash_series_method(const RvolMethod<TPeriodMethod>& method) noexcept
 }
 
 // Highest
-template<typename TSourceMethod>
-auto hash_series_method(const HighestMethod<TSourceMethod>& method) noexcept
+template<typename TSourceMethod, typename TPeriodMethod>
+auto hash_series_method(
+ const HighestMethod<TSourceMethod, TPeriodMethod>& method) noexcept
  -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);
@@ -391,8 +392,9 @@ auto hash_series_method(
 
 // Lowest
 
-template<typename TSourceMethod>
-auto hash_series_method(const LowestMethod<TSourceMethod>& method) noexcept
+template<typename TSourceMethod, typename TPeriodMethod>
+auto hash_series_method(
+ const LowestMethod<TSourceMethod, TPeriodMethod>& method) noexcept
  -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);

@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <utility>
+#include <vector>
 
 #include <jsoncons/json.hpp>
 
@@ -1971,6 +1972,120 @@ TEST_F(ConfigParserTest, ParseScreenerXorMethod)
   const auto serialized_config = config_parser.serialize_node(filter);
   const auto deserialized_filter = config_parser.parse_node(serialized_config);
   EXPECT_EQ(filter, deserialized_filter);
+}
+
+TEST_F(ConfigParserTest, ParseHighestMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "HIGHEST",
+      "params": {
+        "period": {
+          "method": "VALUE",
+          "params": {
+            "value": 14
+          }
+        },
+        "source": {
+          "method": "CLOSE"
+        }
+      }
+    }
+  )");
+
+  const auto method = parse_node_method(config);
+  const auto highest_method =
+   series_method_cast<HighestMethod<AnySeriesMethod, AnySeriesMethod>>(method);
+  ASSERT_NE(highest_method, nullptr);
+
+  const auto serialized_config = serialize_node_method(method);
+  const auto deserialized_config = parse_node_method(serialized_config);
+  EXPECT_EQ(method, deserialized_config);
+}
+
+TEST_F(ConfigParserTest, ParseLowestMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "LOWEST",
+      "params": {
+        "period": {
+          "method": "VALUE",
+          "params": {
+            "value": 14
+          }
+        },
+        "source": {
+          "method": "CLOSE"
+        }
+      }
+    }
+  )");
+
+  const auto method = parse_node_method(config);
+  const auto lowest_method =
+   series_method_cast<LowestMethod<AnySeriesMethod, AnySeriesMethod>>(method);
+  ASSERT_NE(lowest_method, nullptr);
+
+  const auto serialized_config = serialize_node_method(method);
+  const auto deserialized_config = parse_node_method(serialized_config);
+  EXPECT_EQ(method, deserialized_config);
+}
+
+TEST_F(ConfigParserTest, ParseTrMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "TR"
+    }
+  )");
+
+  const auto method = parse_node_method(config);
+  const auto tr_method = series_method_cast<TrMethod>(method);
+  ASSERT_NE(tr_method, nullptr);
+
+  const auto serialized_config = serialize_node_method(method);
+  const auto deserialized_config = parse_node_method(serialized_config);
+  EXPECT_EQ(method, deserialized_config);
+}
+
+TEST_F(ConfigParserTest, ParseSignalMethodsAsSeriesRoundTrip)
+{
+  const auto configs = std::vector<json>{
+   json::parse(R"({"method":"ALWAYS"})"),
+   json::parse(R"({"method":"NEVER"})"),
+   json::parse(R"({"method":"NOT","params":{"condition":true}})"),
+   json::parse(
+    R"({"method":"AND","params":{"firstCondition":true,"secondCondition":false}})"),
+   json::parse(
+    R"({"method":"OR","params":{"firstCondition":false,"secondCondition":true}})"),
+   json::parse(
+    R"({"method":"XOR","params":{"firstCondition":true,"secondCondition":false}})"),
+   json::parse(R"({"method":"ALL_OF","params":{"items":[true,false,true]}})"),
+   json::parse(R"({"method":"ANY_OF","params":{"items":[false,false,true]}})"),
+   json::parse(
+    R"({"method":"CROSSOVER","params":{"value":{"method":"VALUE","params":{"value":2}},"baseline":{"method":"VALUE","params":{"value":1}}}})"),
+   json::parse(
+    R"({"method":"CROSSUNDER","params":{"value":{"method":"VALUE","params":{"value":1}},"baseline":{"method":"VALUE","params":{"value":2}}}})"),
+   json::parse(
+    R"({"method":"GREATER_THAN","params":{"target":{"method":"VALUE","params":{"value":2}},"threshold":{"method":"VALUE","params":{"value":1}}}})"),
+   json::parse(
+    R"({"method":"GREATER_EQUAL","params":{"target":{"method":"VALUE","params":{"value":2}},"threshold":{"method":"VALUE","params":{"value":2}}}})"),
+   json::parse(
+    R"({"method":"LESS_THAN","params":{"target":{"method":"VALUE","params":{"value":1}},"threshold":{"method":"VALUE","params":{"value":2}}}})"),
+   json::parse(
+    R"({"method":"LESS_EQUAL","params":{"target":{"method":"VALUE","params":{"value":1}},"threshold":{"method":"VALUE","params":{"value":1}}}})"),
+   json::parse(
+    R"({"method":"EQUAL","params":{"target":{"method":"VALUE","params":{"value":1}},"threshold":{"method":"VALUE","params":{"value":1}}}})"),
+   json::parse(
+    R"({"method":"NOT_EQUAL","params":{"target":{"method":"VALUE","params":{"value":1}},"threshold":{"method":"VALUE","params":{"value":2}}}})")};
+
+  for(const auto& config : configs) {
+    const auto method = parse_node_method(config);
+    const auto serialized_config = serialize_node_method(method);
+    const auto deserialized_config = parse_node_method(serialized_config);
+    EXPECT_EQ(method, deserialized_config);
+  }
 }
 
 TEST_F(ConfigParserTest, ParseAnyConditionMethodIsInvalid)

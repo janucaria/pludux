@@ -23,38 +23,53 @@ public:
   {
   }
 
-  explicit HighestNode(ErasedNode node, std::size_t period)
-  : source_{std::move(node)}
-  , period_{period}
+  explicit HighestNode(ErasedNode source)
+  : HighestNode{std::move(source), 14}
+  {
+  }
+
+  HighestNode(ErasedNode source, std::size_t period)
+  : HighestNode{std::move(source), ErasedNode{period}}
+  {
+  }
+
+  HighestNode(ErasedNode source, ErasedNode period)
+  : source_{std::move(source)}
+  , period_{std::move(period)}
   {
   }
 
   auto operator==(const HighestNode& other) const noexcept -> bool = default;
 
 
-  auto source(this const HighestNode& self) -> const ErasedNode&
+  auto source(this const HighestNode& self) noexcept -> const ErasedNode&
   {
     return self.source_;
   }
 
-  void source(this HighestNode& self, ErasedNode node)
+  void source(this HighestNode& self, ErasedNode source) noexcept
   {
-    self.source_ = std::move(node);
+    self.source_ = std::move(source);
   }
 
-  auto period(this const HighestNode& self) noexcept -> std::size_t
+  auto period(this const HighestNode& self) noexcept -> const ErasedNode&
   {
     return self.period_;
   }
 
-  void period(this HighestNode& self, std::size_t period)
+  void period(this HighestNode& self, ErasedNode period) noexcept
   {
-    self.period_ = period;
+    self.period_ = std::move(period);
+  }
+
+  void period(this HighestNode& self, std::size_t period) noexcept
+  {
+    self.period_ = ErasedNode{period};
   }
 
 private:
   ErasedNode source_;
-  std::size_t period_;
+  ErasedNode period_;
 };
 
 } // namespace pludux

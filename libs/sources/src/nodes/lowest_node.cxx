@@ -6,7 +6,6 @@ module;
 
 export module pludux:nodes.lowest_node;
 
-
 import :nodes.erased_node;
 
 export namespace pludux {
@@ -23,38 +22,52 @@ public:
   {
   }
 
-  explicit LowestNode(ErasedNode node, std::size_t period)
-  : source_{std::move(node)}
-  , period_{period}
+  explicit LowestNode(ErasedNode source)
+  : LowestNode{std::move(source), 14}
+  {
+  }
+
+  LowestNode(ErasedNode source, std::size_t period)
+  : LowestNode{std::move(source), ErasedNode{period}}
+  {
+  }
+
+  LowestNode(ErasedNode source, ErasedNode period)
+  : source_{std::move(source)}
+  , period_{std::move(period)}
   {
   }
 
   auto operator==(const LowestNode& other) const noexcept -> bool = default;
 
-
-  auto source(this const LowestNode& self) -> const ErasedNode&
+  auto source(this const LowestNode& self) noexcept -> const ErasedNode&
   {
     return self.source_;
   }
 
-  void source(this LowestNode& self, ErasedNode node)
+  void source(this LowestNode& self, ErasedNode source) noexcept
   {
-    self.source_ = std::move(node);
+    self.source_ = std::move(source);
   }
 
-  auto period(this const LowestNode& self) noexcept -> std::size_t
+  auto period(this const LowestNode& self) noexcept -> const ErasedNode&
   {
     return self.period_;
   }
 
-  void period(this LowestNode& self, std::size_t period)
+  void period(this LowestNode& self, ErasedNode period) noexcept
   {
-    self.period_ = period;
+    self.period_ = std::move(period);
+  }
+
+  void period(this LowestNode& self, std::size_t period) noexcept
+  {
+    self.period_ = ErasedNode{period};
   }
 
 private:
   ErasedNode source_;
-  std::size_t period_;
+  ErasedNode period_;
 };
 
 } // namespace pludux

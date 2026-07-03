@@ -70,8 +70,20 @@ auto get_default_series_node(const std::string& series_id) -> ErasedNode
     return WmaNode{CloseNode{}, 14};
   } else if(series_id == "HMA") {
     return HmaNode{CloseNode{}, 14};
+  } else if(series_id == "RMA") {
+    return RmaNode{CloseNode{}, 14};
   } else if(series_id == "RSI") {
     return RsiNode{CloseNode{}, 14};
+  } else if(series_id == "ROC") {
+    return RocNode{CloseNode{}, 14};
+  } else if(series_id == "RVOL") {
+    return RvolNode{14};
+  } else if(series_id == "HIGHEST") {
+    return HighestNode{CloseNode{}, 14};
+  } else if(series_id == "LOWEST") {
+    return LowestNode{CloseNode{}, 14};
+  } else if(series_id == "TR") {
+    return TrNode{};
   } else if(series_id == "MACD") {
     return MacdNode{CloseNode{}, 12, 26, 9};
   } else if(series_id == "ATR") {
@@ -97,6 +109,38 @@ auto get_default_series_node(const std::string& series_id) -> ErasedNode
     return ValueNode{0.0};
   } else if(series_id == "LOOKBACK") {
     return LookbackNode{CloseNode{}, 1};
+  } else if(series_id == "ALL_OF") {
+    return AllOfNode{};
+  } else if(series_id == "ANY_OF") {
+    return AnyOfNode{};
+  } else if(series_id == "ALWAYS") {
+    return TrueNode{};
+  } else if(series_id == "NEVER") {
+    return FalseNode{};
+  } else if(series_id == "LESS_THAN") {
+    return LessThanNode{CloseNode{}, CloseNode{}};
+  } else if(series_id == "GREATER_THAN") {
+    return GreaterThanNode{CloseNode{}, CloseNode{}};
+  } else if(series_id == "LESS_EQUAL") {
+    return LessEqualNode{CloseNode{}, CloseNode{}};
+  } else if(series_id == "GREATER_EQUAL") {
+    return GreaterEqualNode{CloseNode{}, CloseNode{}};
+  } else if(series_id == "EQUAL") {
+    return EqualNode{CloseNode{}, CloseNode{}};
+  } else if(series_id == "NOT_EQUAL") {
+    return NotEqualNode{CloseNode{}, CloseNode{}};
+  } else if(series_id == "CROSSOVER") {
+    return CrossoverNode{CloseNode{}, CloseNode{}};
+  } else if(series_id == "CROSSUNDER") {
+    return CrossunderNode{CloseNode{}, CloseNode{}};
+  } else if(series_id == "NOT") {
+    return LogicalNotNode{FalseNode{}};
+  } else if(series_id == "AND") {
+    return LogicalAndNode{FalseNode{}, FalseNode{}};
+  } else if(series_id == "OR") {
+    return LogicalOrNode{FalseNode{}, FalseNode{}};
+  } else if(series_id == "XOR") {
+    return LogicalXorNode{FalseNode{}, FalseNode{}};
   } else if(series_id == "INPUT") {
     return NumericInputNode{"Input"};
   } else if(series_id == "ADD") {
@@ -163,8 +207,20 @@ auto get_series_node_id(const ErasedNode& node) -> std::string
     return "WMA";
   } else if(node_cast<HmaNode>(node)) {
     return "HMA";
+  } else if(node_cast<RmaNode>(node)) {
+    return "RMA";
   } else if(node_cast<RsiNode>(node)) {
     return "RSI";
+  } else if(node_cast<RocNode>(node)) {
+    return "ROC";
+  } else if(node_cast<RvolNode>(node)) {
+    return "RVOL";
+  } else if(node_cast<HighestNode>(node)) {
+    return "HIGHEST";
+  } else if(node_cast<LowestNode>(node)) {
+    return "LOWEST";
+  } else if(node_cast<TrNode>(node)) {
+    return "TR";
   } else if(node_cast<MacdNode>(node)) {
     return "MACD";
   } else if(node_cast<AtrNode>(node)) {
@@ -193,6 +249,38 @@ auto get_series_node_id(const ErasedNode& node) -> std::string
     return "LOOKBACK";
   } else if(node_cast<NumericInputNode>(node)) {
     return "INPUT";
+  } else if(node_cast<AllOfNode>(node)) {
+    return "ALL_OF";
+  } else if(node_cast<AnyOfNode>(node)) {
+    return "ANY_OF";
+  } else if(node_cast<TrueNode>(node)) {
+    return "ALWAYS";
+  } else if(node_cast<FalseNode>(node)) {
+    return "NEVER";
+  } else if(node_cast<LessThanNode>(node)) {
+    return "LESS_THAN";
+  } else if(node_cast<GreaterThanNode>(node)) {
+    return "GREATER_THAN";
+  } else if(node_cast<LessEqualNode>(node)) {
+    return "LESS_EQUAL";
+  } else if(node_cast<GreaterEqualNode>(node)) {
+    return "GREATER_EQUAL";
+  } else if(node_cast<EqualNode>(node)) {
+    return "EQUAL";
+  } else if(node_cast<NotEqualNode>(node)) {
+    return "NOT_EQUAL";
+  } else if(node_cast<CrossoverNode>(node)) {
+    return "CROSSOVER";
+  } else if(node_cast<CrossunderNode>(node)) {
+    return "CROSSUNDER";
+  } else if(node_cast<LogicalNotNode>(node)) {
+    return "NOT";
+  } else if(node_cast<LogicalAndNode>(node)) {
+    return "AND";
+  } else if(node_cast<LogicalOrNode>(node)) {
+    return "OR";
+  } else if(node_cast<LogicalXorNode>(node)) {
+    return "XOR";
   }
 
   return "UNKNOWN";
@@ -222,8 +310,20 @@ auto get_series_node_title(const std::string& series_id) -> std::string
     return "Weighted Moving Average (WMA)";
   } else if(series_id == "HMA") {
     return "Hull Moving Average (HMA)";
+  } else if(series_id == "RMA") {
+    return "Running Moving Average (RMA)";
   } else if(series_id == "RSI") {
     return "Relative Strength Index (RSI)";
+  } else if(series_id == "ROC") {
+    return "Rate of Change (ROC)";
+  } else if(series_id == "RVOL") {
+    return "Relative Volume (RVOL)";
+  } else if(series_id == "HIGHEST") {
+    return "Highest";
+  } else if(series_id == "LOWEST") {
+    return "Lowest";
+  } else if(series_id == "TR") {
+    return "True Range (TR)";
   } else if(series_id == "MACD") {
     return "Moving Average Convergence Divergence (MACD)";
   } else if(series_id == "ATR") {
@@ -248,6 +348,38 @@ auto get_series_node_title(const std::string& series_id) -> std::string
     return "Value";
   } else if(series_id == "LOOKBACK") {
     return "Lookback";
+  } else if(series_id == "ALL_OF") {
+    return "All Of";
+  } else if(series_id == "ANY_OF") {
+    return "Any Of";
+  } else if(series_id == "ALWAYS") {
+    return "Always";
+  } else if(series_id == "NEVER") {
+    return "Never";
+  } else if(series_id == "LESS_THAN") {
+    return "Less Than";
+  } else if(series_id == "GREATER_THAN") {
+    return "Greater Than";
+  } else if(series_id == "LESS_EQUAL") {
+    return "Less Equal";
+  } else if(series_id == "GREATER_EQUAL") {
+    return "Greater Equal";
+  } else if(series_id == "EQUAL") {
+    return "Equal";
+  } else if(series_id == "NOT_EQUAL") {
+    return "Not Equal";
+  } else if(series_id == "CROSSOVER") {
+    return "Crossover";
+  } else if(series_id == "CROSSUNDER") {
+    return "Crossunder";
+  } else if(series_id == "NOT") {
+    return "Not";
+  } else if(series_id == "AND") {
+    return "And";
+  } else if(series_id == "OR") {
+    return "Or";
+  } else if(series_id == "XOR") {
+    return "Xor";
   } else if(series_id == "INPUT") {
     return "From Input";
   } else if(series_id == "ADD") {
@@ -1190,7 +1322,13 @@ private:
                                                         "EMA",
                                                         "WMA",
                                                         "HMA",
+                                                        "RMA",
                                                         "RSI",
+                                                        "ROC",
+                                                        "RVOL",
+                                                        "HIGHEST",
+                                                        "LOWEST",
+                                                        "TR",
                                                         "MACD",
                                                         "ATR",
                                                         "STDDEV",
@@ -1203,7 +1341,23 @@ private:
                                                         "SERIES_REFERENCE",
                                                         "SERIES_RESULT",
                                                         "VALUE",
-                                                        "LOOKBACK"};
+                                                        "LOOKBACK",
+                                                        "ALL_OF",
+                                                        "ANY_OF",
+                                                        "ALWAYS",
+                                                        "NEVER",
+                                                        "LESS_THAN",
+                                                        "GREATER_THAN",
+                                                        "LESS_EQUAL",
+                                                        "GREATER_EQUAL",
+                                                        "EQUAL",
+                                                        "NOT_EQUAL",
+                                                        "CROSSOVER",
+                                                        "CROSSUNDER",
+                                                        "NOT",
+                                                        "AND",
+                                                        "OR",
+                                                        "XOR"};
 
     auto series_node_id = get_series_node_id(series_node);
     {
@@ -1270,11 +1424,31 @@ private:
                           LookbackNode,
                           NumericInputNode,
 
+                          AllOfNode,
+                          AnyOfNode,
+                          TrueNode,
+                          FalseNode,
+                          LessThanNode,
+                          GreaterThanNode,
+                          LessEqualNode,
+                          GreaterEqualNode,
+                          EqualNode,
+                          NotEqualNode,
+                          CrossoverNode,
+                          CrossunderNode,
+                          LogicalNotNode,
+                          LogicalAndNode,
+                          LogicalOrNode,
+                          LogicalXorNode,
+
                           BbNode,
                           KcNode,
                           DonchianChannelNode,
                           StochNode,
                           StochRsiNode,
+                          HighestNode,
+                          LowestNode,
+                          TrNode,
                           SmaNode,
                           EmaNode,
                           RmaNode,
@@ -1684,6 +1858,40 @@ private:
     node.period(std::move(period));
   }
 
+  template<typename TConditionNode>
+    requires std::same_as<TConditionNode, AllOfNode> ||
+             std::same_as<TConditionNode, AnyOfNode> ||
+             std::same_as<TConditionNode, TrueNode> ||
+             std::same_as<TConditionNode, FalseNode> ||
+             std::same_as<TConditionNode, LessThanNode> ||
+             std::same_as<TConditionNode, GreaterThanNode> ||
+             std::same_as<TConditionNode, LessEqualNode> ||
+             std::same_as<TConditionNode, GreaterEqualNode> ||
+             std::same_as<TConditionNode, EqualNode> ||
+             std::same_as<TConditionNode, NotEqualNode> ||
+             std::same_as<TConditionNode, CrossoverNode> ||
+             std::same_as<TConditionNode, CrossunderNode> ||
+             std::same_as<TConditionNode, LogicalNotNode> ||
+             std::same_as<TConditionNode, LogicalAndNode> ||
+             std::same_as<TConditionNode, LogicalOrNode> ||
+             std::same_as<TConditionNode, LogicalXorNode>
+  void render_series_node_params(this auto& self,
+                                 TConditionNode& node,
+                                 WindowContext& context)
+  {
+    auto changed_node = self.render_condition_node(ErasedNode{node}, context);
+    if(const auto* updated = node_cast<TConditionNode>(changed_node)) {
+      node = *updated;
+    }
+  }
+
+  void render_series_node_params(this auto& self,
+                                 TrNode& node,
+                                 WindowContext& context)
+  {
+    ImGui::TextUnformatted("No parameters.");
+  }
+
   template<typename TNodeWithPeriod>
     requires std::same_as<TNodeWithPeriod, SmaNode> ||
              std::same_as<TNodeWithPeriod, EmaNode> ||
@@ -1692,6 +1900,8 @@ private:
              std::same_as<TNodeWithPeriod, HmaNode> ||
              std::same_as<TNodeWithPeriod, RsiNode> ||
              std::same_as<TNodeWithPeriod, RocNode> ||
+             std::same_as<TNodeWithPeriod, HighestNode> ||
+             std::same_as<TNodeWithPeriod, LowestNode> ||
              std::same_as<TNodeWithPeriod, StddevNode>
   void render_series_node_params(this auto& self,
                                  TNodeWithPeriod& node,

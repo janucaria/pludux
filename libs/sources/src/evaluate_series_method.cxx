@@ -428,17 +428,21 @@ auto evaluate_series_method(const RvolMethod<TPeriodMethod>& method,
 }
 
 // Highest
-template<typename TSourceMethod>
-auto evaluate_series_method(const HighestMethod<TSourceMethod>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+template<typename TSourceMethod, typename TPeriodMethod>
+auto evaluate_series_method(
+ const HighestMethod<TSourceMethod, TPeriodMethod>& method,
+ AssetSnapshot asset_snapshot,
+ MethodContextable auto context) noexcept -> double
 {
-  if(asset_snapshot.size() < method.period()) {
+  const auto period =
+   evaluated_method_to_size(method.period(), asset_snapshot, context);
+
+  if(asset_snapshot.size() < period) {
     return std::numeric_limits<double>::quiet_NaN();
   }
 
   auto highest = std::numeric_limits<double>::min();
-  for(auto i = 0uz; i < method.period(); ++i) {
+  for(auto i = 0uz; i < period; ++i) {
     const auto value =
      evaluate_series_method(method.source(), asset_snapshot[i], context);
     highest = std::max(highest, value);
@@ -583,17 +587,21 @@ auto evaluate_series_method(MethodOutput output,
 
 // Lowest
 
-template<typename TSourceMethod>
-auto evaluate_series_method(const LowestMethod<TSourceMethod>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+template<typename TSourceMethod, typename TPeriodMethod>
+auto evaluate_series_method(
+ const LowestMethod<TSourceMethod, TPeriodMethod>& method,
+ AssetSnapshot asset_snapshot,
+ MethodContextable auto context) noexcept -> double
 {
-  if(asset_snapshot.size() < method.period()) {
+  const auto period =
+   evaluated_method_to_size(method.period(), asset_snapshot, context);
+
+  if(asset_snapshot.size() < period) {
     return std::numeric_limits<double>::quiet_NaN();
   }
 
   auto lowest = std::numeric_limits<double>::max();
-  for(auto i = 0uz; i < method.period(); ++i) {
+  for(auto i = 0uz; i < period; ++i) {
     const auto value =
      evaluate_series_method(method.source(), asset_snapshot[i], context);
     lowest = std::min(lowest, value);

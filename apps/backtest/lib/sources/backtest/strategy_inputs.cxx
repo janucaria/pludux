@@ -43,22 +43,18 @@ void collect_numeric_inputs_from_node(const SelectOutputNode& node,
   collect_numeric_inputs_from_node(node.source(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const AdaptiveMaNode& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.source(), inputs);
-}
-
 void collect_numeric_inputs_from_node(const HighestNode& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
+  collect_numeric_inputs_from_node(node.period(), inputs);
 }
 
 void collect_numeric_inputs_from_node(const LowestNode& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
+  collect_numeric_inputs_from_node(node.period(), inputs);
 }
 
 void collect_numeric_inputs_from_node(const PercentageNode& node,
@@ -287,7 +283,6 @@ void collect_numeric_inputs_from_node(const ErasedNode& node,
   PLUDUX_COLLECT_IF_NODE(SelectOutputNode)
   PLUDUX_COLLECT_IF_NODE(SeriesNode)
   PLUDUX_COLLECT_IF_NODE(SeriesValueNode)
-  PLUDUX_COLLECT_IF_NODE(AdaptiveMaNode)
   PLUDUX_COLLECT_IF_NODE(HighestNode)
   PLUDUX_COLLECT_IF_NODE(LowestNode)
   PLUDUX_COLLECT_IF_NODE(PercentageNode)

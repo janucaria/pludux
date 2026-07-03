@@ -23,7 +23,6 @@ export import :nodes.rma_node;
 export import :nodes.wma_node;
 export import :nodes.hma_node;
 export import :nodes.macd_node;
-export import :nodes.adaptive_ma_node;
 
 export import :nodes.tr_node;
 export import :nodes.atr_node;

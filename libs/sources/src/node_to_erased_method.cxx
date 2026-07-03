@@ -160,30 +160,24 @@ auto node_to_erased_method(const SeriesValueNode& node,
   return AnySeriesMethod{SeriesValueMethod{node.name()}};
 }
 
-auto node_to_erased_method(const AdaptiveMaNode& node,
-                           NodeToErasedMethodContext& context)
- -> AnySeriesMethod
-{
-  return AnySeriesMethod{
-   AdaptiveMaMethod{node_to_erased_method(node.source(), context),
-                    static_cast<MaMethodType>(node.ma_type()),
-                    node.period()}};
-}
-
 auto node_to_erased_method(const HighestNode& node,
                            NodeToErasedMethodContext& context)
  -> AnySeriesMethod
 {
-  return AnySeriesMethod{
-   HighestMethod{node_to_erased_method(node.source(), context), node.period()}};
+  const auto source_method = node_to_erased_method(node.source(), context);
+  const auto period = node_to_erased_method(node.period(), context);
+
+  return AnySeriesMethod{HighestMethod{source_method, period}};
 }
 
 auto node_to_erased_method(const LowestNode& node,
                            NodeToErasedMethodContext& context)
  -> AnySeriesMethod
 {
-  return AnySeriesMethod{
-   LowestMethod{node_to_erased_method(node.source(), context), node.period()}};
+  const auto source_method = node_to_erased_method(node.source(), context);
+  const auto period = node_to_erased_method(node.period(), context);
+
+  return AnySeriesMethod{LowestMethod{source_method, period}};
 }
 
 auto node_to_erased_method(const PercentageNode& node,
@@ -509,7 +503,6 @@ auto node_to_erased_method(const ErasedNode& node,
   PLUDUX_TRY_NODE_TO_METHOD(SelectOutputNode)
   PLUDUX_TRY_NODE_TO_METHOD(SeriesNode)
   PLUDUX_TRY_NODE_TO_METHOD(SeriesValueNode)
-  PLUDUX_TRY_NODE_TO_METHOD(AdaptiveMaNode)
   PLUDUX_TRY_NODE_TO_METHOD(HighestNode)
   PLUDUX_TRY_NODE_TO_METHOD(LowestNode)
   PLUDUX_TRY_NODE_TO_METHOD(PercentageNode)

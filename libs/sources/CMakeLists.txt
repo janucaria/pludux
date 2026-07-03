@@ -103,6 +103,8 @@ target_sources(${PROJECT_NAME}
 
         src/methods.cxx
 
+        src/ma_node_type.cxx
+        
         src/nodes/numeric_input_node.cxx
         src/nodes/value_node.cxx
         src/nodes/data_node.cxx
@@ -125,7 +127,6 @@ target_sources(${PROJECT_NAME}
         src/nodes/rma_node.cxx
         src/nodes/wma_node.cxx
         src/nodes/hma_node.cxx
-        src/nodes/adaptive_ma_node.cxx
         src/nodes/macd_node.cxx
         
         src/nodes/tr_node.cxx
