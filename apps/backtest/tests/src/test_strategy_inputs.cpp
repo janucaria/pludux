@@ -211,3 +211,26 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
   EXPECT_FALSE(strategy_json.contains("stopLoss"));
   EXPECT_FALSE(strategy_json.contains("takeProfit"));
 }
+
+TEST(StrategyParserTest, JsonconsConvTraitsRoundTripSchemaConfig)
+{
+  auto long_position = Strategy::Position{};
+  long_position.entry(Strategy::Entry{TrueNode{}, 0, CloseNode{}});
+  long_position.stop_loss(Strategy::StopLoss{true, OpenNode{}, false});
+
+  const auto strategy = Strategy{
+   "Config Name", {}, std::move(long_position), Strategy::Position{}, {}};
+
+  auto strategy_json_str = std::string{};
+  jsoncons::encode_json(strategy, strategy_json_str);
+
+  const auto strategy_json = jsoncons::ojson::parse(strategy_json_str);
+  EXPECT_EQ(strategy_json.at("version").as<int>(), 2);
+  EXPECT_FALSE(strategy_json.contains("name"));
+
+  const auto decoded_strategy =
+   jsoncons::decode_json<Strategy>(strategy_json_str);
+
+  EXPECT_TRUE(decoded_strategy.name().empty());
+  EXPECT_TRUE(decoded_strategy.equivalent_rules(strategy));
+}

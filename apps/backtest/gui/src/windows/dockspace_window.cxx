@@ -5,10 +5,13 @@ module;
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <istream>
 #include <memory>
 #include <ranges>
+// FIXME: Work around MSVC modules import failure in <stop_token> when this
+// module imports pludux-backed GUI modules.
+#include <stop_token>
 #include <string>
-#include <istream>
 
 #ifdef __EMSCRIPTEN__
 #include "../emscripten_js_imports.hpp"
@@ -19,17 +22,7 @@ module;
 #include <imgui.h>
 #include <imgui_internal.h>
 
-#include <cereal/cereal.hpp>
 #include <rapidcsv.h>
-
-#include <cereal/archives/json.hpp>
-#include <cereal/types/deque.hpp>
-#include <cereal/types/memory.hpp>
-#include <cereal/types/optional.hpp>
-#include <cereal/types/queue.hpp>
-#include <cereal/types/string.hpp>
-#include <cereal/types/unordered_map.hpp>
-#include <cereal/types/vector.hpp>
 
 export module pludux.apps.backtest:windows.dockspace_window;
 
@@ -129,11 +122,7 @@ public:
                  throw std::runtime_error(error_message);
                }
 
-               auto in_archive = cereal::JSONInputArchive(in_stream);
-
-               auto loaded_state = ApplicationState{};
-               in_archive(cereal::make_nvp("pludux", loaded_state));
-               app_state = std::move(loaded_state);
+               app_state = load_application_state_json(in_stream);
 
                reload_imgui_ini_settings(app_state.imgui_ini_settings());
              }};
@@ -158,11 +147,7 @@ public:
                   throw std::runtime_error(error_message);
                 }
 
-                auto in_archive = cereal::JSONInputArchive(in_stream);
-
-                auto loaded_state = ApplicationState{};
-                in_archive(cereal::make_nvp("pludux", loaded_state));
-                app_state = std::move(loaded_state);
+                app_state = load_application_state_json(in_stream);
 
                 reload_imgui_ini_settings(app_state.imgui_ini_settings());
               });
@@ -186,14 +171,7 @@ public:
             context.update_imgui_ini_settings();
 
             auto out_stream = std::ostringstream{};
-            auto out_archive = cereal::JSONOutputArchive(
-             out_stream, cereal::JSONOutputArchive::Options::NoIndent());
-
-            out_archive(cereal::make_nvp("pludux", context.app_state()));
-
-            // TODO: bug in Cereal not adding the close object at the end when
-            // using stringstream
-            out_stream << "}\n";
+            save_application_state_json(out_stream, context.app_state());
 
             const auto out_str = out_stream.str();
             const auto file_name = "pludux-backtest-" +
@@ -227,10 +205,7 @@ public:
                   throw std::runtime_error(error_message);
                 }
 
-                auto out_archive = cereal::JSONOutputArchive(
-                 out_stream, cereal::JSONOutputArchive::Options::NoIndent());
-
-                out_archive(cereal::make_nvp("pludux", app_state));
+                save_application_state_json(out_stream, app_state);
               });
             } else if(result == NFD_CANCEL) {
               // User cancelled the save dialog

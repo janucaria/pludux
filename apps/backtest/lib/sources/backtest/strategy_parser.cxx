@@ -12,6 +12,7 @@ module;
 #include <utility>
 
 #include <jsoncons/json.hpp>
+#include <jsoncons/reflect/json_conv_traits.hpp>
 
 export module pludux.backtest:strategy_parser;
 
@@ -149,14 +150,11 @@ auto serialize_strategy_position(const Strategy::Position& position,
   return position_json;
 }
 
-auto parse_backtest_strategy_json(std::string_view strategy_name,
-                                  std::istream& json_strategy_stream)
+auto parse_backtest_strategy_config_json(std::string_view strategy_name,
+                                         const jsoncons::ojson& strategy_json)
  -> backtest::Strategy
 {
   auto config_parser = make_default_registered_config_parser();
-
-  auto strategy_json = jsoncons::ojson::parse(
-   json_strategy_stream, jsoncons::json_options{}.allow_comments(true));
 
   if(!strategy_json.is_object()) {
     throw std::runtime_error(
@@ -227,6 +225,16 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
 }
 
 auto parse_backtest_strategy_json(std::string_view strategy_name,
+                                  std::istream& json_strategy_stream)
+ -> backtest::Strategy
+{
+  auto strategy_json = jsoncons::ojson::parse(
+   json_strategy_stream, jsoncons::json_options{}.allow_comments(true));
+
+  return parse_backtest_strategy_config_json(strategy_name, strategy_json);
+}
+
+auto parse_backtest_strategy_json(std::string_view strategy_name,
                                   const std::string& json_strategy_str)
  -> backtest::Strategy
 {
@@ -234,8 +242,8 @@ auto parse_backtest_strategy_json(std::string_view strategy_name,
   return parse_backtest_strategy_json(strategy_name, json_strategy_stream);
 }
 
-auto stringify_backtest_strategy(const backtest::Strategy& strategy)
- -> std::string
+auto serialize_backtest_strategy_config_json(const backtest::Strategy& strategy)
+ -> jsoncons::ojson
 {
   auto config_parser = make_default_registered_config_parser();
 
@@ -275,7 +283,54 @@ auto stringify_backtest_strategy(const backtest::Strategy& strategy)
   }
   strategy_json["plots"] = std::move(plots_json);
 
+  return strategy_json;
+}
+
+auto stringify_backtest_strategy(const backtest::Strategy& strategy)
+ -> std::string
+{
+  const auto strategy_json = serialize_backtest_strategy_config_json(strategy);
   return strategy_json.to_string();
 }
 
 } // namespace pludux::backtest
+
+export namespace jsoncons::reflect {
+
+template<typename Json>
+struct json_conv_traits<Json, pludux::backtest::Strategy> {
+  using value_type = pludux::backtest::Strategy;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      const auto strategy_json = jsoncons::ojson::parse(json.to_string());
+      return result_type{pludux::backtest::parse_backtest_strategy_config_json(
+       "", strategy_json)};
+    } catch(...) {
+      return result_type{jsoncons::unexpect,
+                         jsoncons::conv_errc::conversion_failed};
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                      const value_type& strategy)
+  {
+    const auto strategy_json =
+     pludux::backtest::serialize_backtest_strategy_config_json(strategy);
+    return Json::parse(strategy_json.to_string());
+  }
+};
+
+} // namespace jsoncons::reflect

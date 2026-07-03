@@ -1,3 +1,9 @@
+module;
+
+// FIXME: Work around MSVC modules import failure in <stop_token> when this
+// aggregate module re-exports pludux-backed window modules.
+#include <stop_token>
+
 export module pludux.apps.backtest:windows;
 
 export import :windows.assets_window;

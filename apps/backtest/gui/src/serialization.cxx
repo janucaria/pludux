@@ -1,18 +1,15 @@
 module;
 
-#include <concepts>
 #include <cstddef>
-#include <cstdint>
+#include <istream>
+#include <ostream>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
-#include <cereal/cereal.hpp>
-
-#include <cereal/archives/json.hpp>
-#include <cereal/types/string.hpp>
-#include <cereal/types/utility.hpp>
-#include <cereal/types/vector.hpp>
+#include <jsoncons/json.hpp>
+#include <jsoncons/reflect/json_conv_traits.hpp>
 
 export module pludux.apps.backtest:serialization;
 
@@ -21,648 +18,996 @@ import pludux.backtest;
 import :ui_state;
 import :application_state;
 
-export namespace cereal {
+namespace {
 
-template<class Archive>
-void save(Archive& archive, const pludux::backtest::Strategy& strategy)
+template<typename T>
+auto conversion_failed() -> jsoncons::conversion_result<T>
 {
-  auto strategy_json = pludux::backtest::stringify_backtest_strategy(strategy);
-
-  archive(make_nvp("name", strategy.name()),
-          make_nvp("strategyJson", strategy_json));
+  return jsoncons::conversion_result<T>{jsoncons::unexpect,
+                                        jsoncons::conv_errc::conversion_failed};
 }
 
-template<class Archive>
-void load(Archive& archive, pludux::backtest::Strategy& strategy)
+template<typename T, typename Json>
+auto required_as(const Json& json, const std::string& key) -> T
 {
-  auto name = std::string{};
-  auto strategy_str = std::string{};
-
-  archive(make_nvp("name", name), make_nvp("strategyJson", strategy_str));
-
-  strategy = pludux::backtest::parse_backtest_strategy_json(name, strategy_str);
+  return json.at(key).template as<T>();
 }
 
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void save(Archive& archive,
-          const pludux::backtest::PositionSizing& position_sizing)
+template<typename Json, typename TValue>
+void set_json(Json& json,
+              const auto& aset,
+              const std::string& key,
+              const TValue& value)
 {
-  auto mode =
-   static_cast<std::underlying_type_t<pludux::backtest::PositionSizing::Mode>>(
-    position_sizing.mode());
-  archive(make_nvp("mode", mode), make_nvp("value", position_sizing.value()));
+  json[key] =
+   jsoncons::reflect::json_conv_traits<Json, TValue>::to_json(aset, value);
 }
 
-template<class Archive>
-void load(Archive& archive, pludux::backtest::PositionSizing& position_sizing)
+template<typename Json, typename TValue>
+auto vector_to_json(const auto& aset, const std::vector<TValue>& values) -> Json
 {
-  auto mode = std::underlying_type_t<pludux::backtest::PositionSizing::Mode>{};
-  auto value = double{};
-
-  archive(make_nvp("mode", mode), make_nvp("value", value));
-
-  position_sizing = pludux::backtest::PositionSizing{
-   static_cast<pludux::backtest::PositionSizing::Mode>(mode), value};
-}
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void save(Archive& archive,
-          const pludux::backtest::DrawdownAdjustment& drawdown_adjustment)
-{
-  archive(make_nvp("enabled", drawdown_adjustment.enabled()),
-          make_nvp("drawdownStep", drawdown_adjustment.drawdown_step()),
-          make_nvp("sizeReduction", drawdown_adjustment.size_reduction()));
-}
-
-template<class Archive>
-void load(Archive& archive,
-          pludux::backtest::DrawdownAdjustment& drawdown_adjustment)
-{
-  auto enabled = bool{};
-  auto drawdown_step = double{};
-  auto size_reduction = double{};
-
-  archive(make_nvp("enabled", enabled),
-          make_nvp("drawdownStep", drawdown_step),
-          make_nvp("sizeReduction", size_reduction));
-
-  drawdown_adjustment =
-   pludux::backtest::DrawdownAdjustment{enabled, drawdown_step, size_reduction};
-}
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void save(Archive& archive, const pludux::backtest::Profile& profile)
-{
-  archive(make_nvp("name", profile.name()),
-          make_nvp("positionSizing", profile.position_sizing()),
-          make_nvp("drawdownAdjustment", profile.drawdown_adjustment()));
-}
-
-template<class Archive>
-void load(Archive& archive, pludux::backtest::Profile& profile)
-{
-  auto name = std::string{};
-  auto position_sizing = pludux::backtest::PositionSizing{};
-  auto drawdown_adjustment = pludux::backtest::DrawdownAdjustment{};
-
-  archive(make_nvp("name", name),
-          make_nvp("positionSizing", position_sizing),
-          make_nvp("drawdownAdjustment", drawdown_adjustment));
-
-  profile = pludux::backtest::Profile{
-   std::move(name), position_sizing, drawdown_adjustment};
-}
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void save(Archive& archive, const pludux::backtest::BrokerFee& broker_fee)
-{
-  const auto fee_type = static_cast<std::size_t>(broker_fee.fee_type());
-  const auto fee_position = static_cast<std::size_t>(broker_fee.fee_position());
-  const auto fee_trigger = static_cast<std::size_t>(broker_fee.fee_trigger());
-  archive(make_nvp("name", broker_fee.name()),
-          make_nvp("feeType", fee_type),
-          make_nvp("feePosition", fee_position),
-          make_nvp("feeTrigger", fee_trigger),
-          make_nvp("feeValue", broker_fee.value()));
-}
-
-template<class Archive>
-void load(Archive& archive, pludux::backtest::BrokerFee& broker_fee)
-{
-  auto name = std::string{};
-  auto fee_type = std::size_t{};
-  auto fee_position = std::size_t{};
-  auto fee_trigger = std::size_t{};
-  auto fee_value = double{};
-
-  archive(make_nvp("name", name),
-          make_nvp("feeType", fee_type),
-          make_nvp("feePosition", fee_position),
-          make_nvp("feeTrigger", fee_trigger),
-          make_nvp("feeValue", fee_value));
-
-  broker_fee = pludux::backtest::BrokerFee{
-   std::move(name),
-   static_cast<pludux::backtest::BrokerFee::FeeType>(fee_type),
-   static_cast<pludux::backtest::BrokerFee::FeePosition>(fee_position),
-   static_cast<pludux::backtest::BrokerFee::FeeTrigger>(fee_trigger),
-   fee_value};
-}
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void save(Archive& archive, const pludux::backtest::Broker& broker)
-{
-  archive(make_nvp("name", broker.name()), make_nvp("fees", broker.fees()));
-}
-
-template<class Archive>
-void load(Archive& archive, pludux::backtest::Broker& broker)
-{
-  auto name = std::string{};
-  auto fees = std::vector<pludux::backtest::BrokerFee>{};
-
-  archive(make_nvp("name", name), make_nvp("fees", fees));
-
-  broker = pludux::backtest::Broker{std::move(name), std::move(fees)};
-}
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void save(Archive& archive, const pludux::backtest::Market& market)
-{
-  archive(make_nvp("name", market.name()),
-          make_nvp("minOrderQuantity", market.min_order_quantity()),
-          make_nvp("quantityStep", market.quantity_step()));
-}
-
-template<class Archive>
-void load(Archive& archive, pludux::backtest::Market& market)
-{
-  auto name = std::string{};
-  auto min_order_quantity = double{};
-  auto quantity_step = double{};
-
-  archive(make_nvp("name", name),
-          make_nvp("minOrderQuantity", min_order_quantity),
-          make_nvp("quantityStep", quantity_step));
-
-  market =
-   pludux::backtest::Market{std::move(name), min_order_quantity, quantity_step};
-}
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void save(Archive& archive, const pludux::AssetQuoteFieldResolver& resolver)
-{
-  archive(make_nvp("datetimeField", resolver.datetime_field()),
-          make_nvp("openField", resolver.open_field()),
-          make_nvp("highField", resolver.high_field()),
-          make_nvp("lowField", resolver.low_field()),
-          make_nvp("closeField", resolver.close_field()),
-          make_nvp("volumeField", resolver.volume_field()));
-}
-
-template<class Archive>
-void load(Archive& archive, pludux::AssetQuoteFieldResolver& resolver)
-{
-  auto datetime_field = std::string{};
-  auto open_field = std::string{};
-  auto high_field = std::string{};
-  auto low_field = std::string{};
-  auto close_field = std::string{};
-  auto volume_field = std::string{};
-
-  archive(make_nvp("datetimeField", datetime_field),
-          make_nvp("openField", open_field),
-          make_nvp("highField", high_field),
-          make_nvp("lowField", low_field),
-          make_nvp("closeField", close_field),
-          make_nvp("volumeField", volume_field));
-
-  resolver = pludux::AssetQuoteFieldResolver{std::move(datetime_field),
-                                             std::move(open_field),
-                                             std::move(high_field),
-                                             std::move(low_field),
-                                             std::move(close_field),
-                                             std::move(volume_field)};
-}
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void save(Archive& archive, const pludux::AssetData& asset_data)
-{
-  archive(make_nvp("data", asset_data.data()));
-}
-
-template<class Archive>
-void load(Archive& archive, pludux::AssetData& asset_data)
-{
-  auto data = std::vector<double>{};
-
-  archive(make_nvp("data", data));
-
-  asset_data.data(std::move(data));
-}
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void save(Archive& archive, const pludux::AssetHistory& asset_history)
-{
-  archive(make_nvp("fieldData", asset_history.field_data()));
-}
-
-template<class Archive>
-void load(Archive& archive, pludux::AssetHistory& asset_history)
-{
-  auto field_data = pludux::AssetHistory::FieldDataType{};
-
-  archive(make_nvp("fieldData", field_data));
-
-  for(auto& [key, series] : field_data) {
-    asset_history.insert(key, std::move(series));
+  auto json = typename Json::array();
+  for(const auto& value : values) {
+    json.push_back(
+     jsoncons::reflect::json_conv_traits<Json, TValue>::to_json(aset, value));
   }
+  return json;
 }
 
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void save(Archive& archive, const pludux::backtest::Asset& asset)
+template<typename TValue, typename Json>
+auto vector_from_json(const Json& json) -> std::vector<TValue>
 {
-  archive(make_nvp("name", asset.name()),
-          make_nvp("history", asset.history()),
-          make_nvp("fieldResolver", asset.field_resolver()));
+  auto values = std::vector<TValue>{};
+  values.reserve(json.size());
+  for(const auto& item : json.array_range()) {
+    values.push_back(item.template as<TValue>());
+  }
+  return values;
 }
 
-template<class Archive>
-void load(Archive& archive, pludux::backtest::Asset& asset)
+template<typename Json>
+auto strategy_entry_to_json(const auto& aset,
+                            const pludux::backtest::Strategy& strategy) -> Json
 {
-  auto name = std::string{};
-  auto history = pludux::AssetHistory{};
-  auto field_resolver = pludux::AssetQuoteFieldResolver{};
-
-  archive(make_nvp("name", name),
-          make_nvp("history", history),
-          make_nvp("fieldResolver", field_resolver));
-
-  asset = pludux::backtest::Asset{
-   std::move(name), std::move(history), std::move(field_resolver)};
+  auto json = Json{};
+  json["name"] = strategy.name();
+  json["config"] = jsoncons::reflect::
+   json_conv_traits<Json, pludux::backtest::Strategy>::to_json(aset, strategy);
+  return json;
 }
 
-/*--------------------------------------------------------------------------------------*/
+template<typename TStrategy, typename Json>
+auto strategy_entry_from_json(const Json& json) -> TStrategy
+{
+  auto strategy = json.at("config").template as<TStrategy>();
+  strategy.name(required_as<std::string>(json, "name"));
+  return strategy;
+}
 
-template<class Archive, typename THandle>
+template<typename Json>
+auto strategies_to_json(const auto& aset,
+                        const std::vector<pludux::backtest::Strategy>& values)
+ -> Json
+{
+  auto json = typename Json::array();
+  for(const auto& value : values) {
+    json.push_back(strategy_entry_to_json<Json>(aset, value));
+  }
+  return json;
+}
+
+template<typename Json>
+auto strategies_from_json(const Json& json)
+ -> std::vector<pludux::backtest::Strategy>
+{
+  auto values = std::vector<pludux::backtest::Strategy>{};
+  values.reserve(json.size());
+  for(const auto& item : json.array_range()) {
+    values.push_back(
+     strategy_entry_from_json<pludux::backtest::Strategy>(item));
+  }
+  return values;
+}
+
+} // namespace
+
+export namespace jsoncons::reflect {
+
+template<typename Json>
+struct json_conv_traits<Json, pludux::NumericInputNode> {
+  using value_type = pludux::NumericInputNode;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      return result_type{
+       value_type{required_as<std::string>(json, "label"),
+                  static_cast<value_type::ValueRepresentation>(
+                   required_as<int>(json, "representation")),
+                  required_as<double>(json, "value")}};
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                      const value_type& input)
+  {
+    auto json = Json{};
+    json["label"] = input.label();
+    json["representation"] = static_cast<int>(input.representation());
+    json["value"] = input.value();
+    return json;
+  }
+};
+
+template<typename Json>
+struct json_conv_traits<Json, pludux::backtest::PositionSizing> {
+  using value_type = pludux::backtest::PositionSizing;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      return result_type{value_type{
+       static_cast<value_type::Mode>(
+        required_as<std::underlying_type_t<value_type::Mode>>(json, "mode")),
+       required_as<double>(json, "value")}};
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                      const value_type& position_sizing)
+  {
+    auto json = Json{};
+    json["mode"] = static_cast<std::underlying_type_t<value_type::Mode>>(
+     position_sizing.mode());
+    json["value"] = position_sizing.value();
+    return json;
+  }
+};
+
+template<typename Json>
+struct json_conv_traits<Json, pludux::backtest::DrawdownAdjustment> {
+  using value_type = pludux::backtest::DrawdownAdjustment;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      return result_type{
+       value_type{required_as<bool>(json, "enabled"),
+                  required_as<double>(json, "drawdownStep"),
+                  required_as<double>(json, "sizeReduction")}};
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                      const value_type& adjustment)
+  {
+    auto json = Json{};
+    json["enabled"] = adjustment.enabled();
+    json["drawdownStep"] = adjustment.drawdown_step();
+    json["sizeReduction"] = adjustment.size_reduction();
+    return json;
+  }
+};
+
+template<typename Json>
+struct json_conv_traits<Json, pludux::backtest::Profile> {
+  using value_type = pludux::backtest::Profile;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      return result_type{value_type{
+       required_as<std::string>(json, "name"),
+       required_as<pludux::backtest::PositionSizing>(json, "positionSizing"),
+       required_as<pludux::backtest::DrawdownAdjustment>(
+        json, "drawdownAdjustment")}};
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>& aset,
+                      const value_type& profile)
+  {
+    auto json = Json{};
+    json["name"] = profile.name();
+    set_json(json, aset, "positionSizing", profile.position_sizing());
+    set_json(json, aset, "drawdownAdjustment", profile.drawdown_adjustment());
+    return json;
+  }
+};
+
+template<typename Json>
+struct json_conv_traits<Json, pludux::backtest::BrokerFee> {
+  using value_type = pludux::backtest::BrokerFee;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      return result_type{
+       value_type{required_as<std::string>(json, "name"),
+                  static_cast<value_type::FeeType>(
+                   required_as<std::size_t>(json, "feeType")),
+                  static_cast<value_type::FeePosition>(
+                   required_as<std::size_t>(json, "feePosition")),
+                  static_cast<value_type::FeeTrigger>(
+                   required_as<std::size_t>(json, "feeTrigger")),
+                  required_as<double>(json, "feeValue")}};
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                      const value_type& fee)
+  {
+    auto json = Json{};
+    json["name"] = fee.name();
+    json["feeType"] = static_cast<std::size_t>(fee.fee_type());
+    json["feePosition"] = static_cast<std::size_t>(fee.fee_position());
+    json["feeTrigger"] = static_cast<std::size_t>(fee.fee_trigger());
+    json["feeValue"] = fee.value();
+    return json;
+  }
+};
+
+template<typename Json>
+struct json_conv_traits<Json, pludux::backtest::Broker> {
+  using value_type = pludux::backtest::Broker;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      return result_type{value_type{
+       required_as<std::string>(json, "name"),
+       vector_from_json<pludux::backtest::BrokerFee>(json.at("fees"))}};
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>& aset,
+                      const value_type& broker)
+  {
+    auto json = Json{};
+    json["name"] = broker.name();
+    json["fees"] = vector_to_json<Json>(aset, broker.fees());
+    return json;
+  }
+};
+
+template<typename Json>
+struct json_conv_traits<Json, pludux::backtest::Market> {
+  using value_type = pludux::backtest::Market;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      return result_type{
+       value_type{required_as<std::string>(json, "name"),
+                  required_as<double>(json, "minOrderQuantity"),
+                  required_as<double>(json, "quantityStep")}};
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                      const value_type& market)
+  {
+    auto json = Json{};
+    json["name"] = market.name();
+    json["minOrderQuantity"] = market.min_order_quantity();
+    json["quantityStep"] = market.quantity_step();
+    return json;
+  }
+};
+
+template<typename Json>
+struct json_conv_traits<Json, pludux::AssetQuoteFieldResolver> {
+  using value_type = pludux::AssetQuoteFieldResolver;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      return result_type{
+       value_type{required_as<std::string>(json, "datetimeField"),
+                  required_as<std::string>(json, "openField"),
+                  required_as<std::string>(json, "highField"),
+                  required_as<std::string>(json, "lowField"),
+                  required_as<std::string>(json, "closeField"),
+                  required_as<std::string>(json, "volumeField")}};
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                      const value_type& resolver)
+  {
+    auto json = Json{};
+    json["datetimeField"] = resolver.datetime_field();
+    json["openField"] = resolver.open_field();
+    json["highField"] = resolver.high_field();
+    json["lowField"] = resolver.low_field();
+    json["closeField"] = resolver.close_field();
+    json["volumeField"] = resolver.volume_field();
+    return json;
+  }
+};
+
+template<typename Json>
+struct json_conv_traits<Json, pludux::AssetData> {
+  using value_type = pludux::AssetData;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      auto data = std::vector<double>{};
+      for(const auto& item : json.at("data").array_range()) {
+        data.push_back(item.template as<double>());
+      }
+
+      auto asset_data = value_type{};
+      asset_data.data(std::move(data));
+      return result_type{std::move(asset_data)};
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                      const value_type& asset_data)
+  {
+    auto json = Json{};
+    json["data"] = asset_data.data();
+    return json;
+  }
+};
+
+template<typename Json>
+struct json_conv_traits<Json, pludux::AssetHistory> {
+  using value_type = pludux::AssetHistory;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      auto history = value_type{};
+      for(const auto& [field, data_json] :
+          json.at("fieldData").object_range()) {
+        history.insert(field, data_json.template as<pludux::AssetData>());
+      }
+      return result_type{std::move(history)};
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>& aset,
+                      const value_type& history)
+  {
+    auto json = Json{};
+    auto field_data_json = Json{};
+    for(const auto& [field, data] : history.field_data()) {
+      set_json(field_data_json, aset, field, data);
+    }
+    json["fieldData"] = std::move(field_data_json);
+    return json;
+  }
+};
+
+template<typename Json>
+struct json_conv_traits<Json, pludux::backtest::Asset> {
+  using value_type = pludux::backtest::Asset;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      return result_type{value_type{
+       required_as<std::string>(json, "name"),
+       required_as<pludux::AssetHistory>(json, "history"),
+       required_as<pludux::AssetQuoteFieldResolver>(json, "fieldResolver")}};
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>& aset,
+                      const value_type& asset)
+  {
+    auto json = Json{};
+    json["name"] = asset.name();
+    set_json(json, aset, "history", asset.history());
+    set_json(json, aset, "fieldResolver", asset.field_resolver());
+    return json;
+  }
+};
+
+template<typename Json, typename THandle>
   requires std::same_as<THandle, pludux::backtest::AssetStoreHandle> ||
            std::same_as<THandle, pludux::backtest::StrategyStoreHandle> ||
            std::same_as<THandle, pludux::backtest::MarketStoreHandle> ||
            std::same_as<THandle, pludux::backtest::BrokerStoreHandle> ||
            std::same_as<THandle, pludux::backtest::ProfileStoreHandle> ||
            std::same_as<THandle, pludux::backtest::BacktestStoreHandle>
-void save(Archive& archive, const THandle& handle)
-{
-  archive(make_nvp("slotIndex", handle.slot_index()),
-          make_nvp("generation", handle.generation()));
-}
+struct json_conv_traits<Json, THandle> {
+  using value_type = THandle;
+  using result_type = jsoncons::conversion_result<value_type>;
 
-template<class Archive, typename THandle>
-  requires std::same_as<THandle, pludux::backtest::AssetStoreHandle> ||
-           std::same_as<THandle, pludux::backtest::StrategyStoreHandle> ||
-           std::same_as<THandle, pludux::backtest::MarketStoreHandle> ||
-           std::same_as<THandle, pludux::backtest::BrokerStoreHandle> ||
-           std::same_as<THandle, pludux::backtest::ProfileStoreHandle> ||
-           std::same_as<THandle, pludux::backtest::BacktestStoreHandle>
-void load(Archive& archive, THandle& handle)
-{
-  auto slot_index = std::size_t{};
-  auto generation = std::size_t{};
+  static constexpr bool is_compatible = true;
 
-  archive(make_nvp("slotIndex", slot_index),
-          make_nvp("generation", generation));
-
-  handle = THandle{slot_index, generation};
-}
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void save(Archive& archive, const pludux::backtest::StoreSlot& slot)
-{
-  archive(make_nvp("valueIndex", slot.value_index()),
-          make_nvp("generation", slot.generation()),
-          make_nvp("alive", slot.alive()));
-}
-
-template<class Archive>
-void load(Archive& archive, pludux::backtest::StoreSlot& slot)
-{
-  auto value_index = std::size_t{};
-  auto generation = std::size_t{};
-  auto alive = bool{};
-
-  archive(make_nvp("valueIndex", value_index),
-          make_nvp("generation", generation),
-          make_nvp("alive", alive));
-
-  slot = pludux::backtest::StoreSlot{value_index, generation, alive};
-}
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive, typename TValue, typename THandle>
-void save(
- Archive& archive,
- const pludux::backtest::StoreDataResolver<TValue, THandle>& data_resolver)
-{
-  archive(make_nvp("slots", data_resolver.slots()),
-          make_nvp("valueToSlotIndices", data_resolver.value_to_slot_indices()),
-          make_nvp("freeSlotIndices", data_resolver.free_slot_indices()));
-}
-
-template<class Archive, typename TValue, typename THandle>
-void load(Archive& archive,
-          pludux::backtest::StoreDataResolver<TValue, THandle>& data_resolver)
-{
-  auto slots = std::vector<pludux::backtest::StoreSlot>{};
-  auto value_to_slot_indices = std::vector<std::size_t>{};
-  auto free_slot_indices = std::vector<std::size_t>{};
-
-  archive(make_nvp("slots", slots),
-          make_nvp("valueToSlotIndices", value_to_slot_indices),
-          make_nvp("freeSlotIndices", free_slot_indices));
-
-  data_resolver = pludux::backtest::StoreDataResolver<TValue, THandle>{
-   std::move(slots),
-   std::move(value_to_slot_indices),
-   std::move(free_slot_indices)};
-}
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void save(Archive& archive, const pludux::backtest::StoreDescriptor& descriptor)
-{
-  archive(
-   make_nvp("backtestStoreDataResolver",
-            descriptor.backtest_store_data_resolver()),
-   make_nvp("assetStoreDataResolver", descriptor.asset_store_data_resolver()),
-   make_nvp("strategyStoreDataResolver",
-            descriptor.strategy_store_data_resolver()),
-   make_nvp("marketStoreDataResolver", descriptor.market_store_data_resolver()),
-   make_nvp("brokerStoreDataResolver", descriptor.broker_store_data_resolver()),
-   make_nvp("profileStoreDataResolver",
-            descriptor.profile_store_data_resolver()));
-}
-
-template<class Archive>
-void load(Archive& archive, pludux::backtest::StoreDescriptor& descriptor)
-{
-  auto backtest_store_data_resolver =
-   pludux::backtest::StoreDataResolver<pludux::backtest::Backtest,
-                                       pludux::backtest::BacktestStoreHandle>{};
-  auto asset_store_data_resolver =
-   pludux::backtest::StoreDataResolver<pludux::backtest::Asset,
-                                       pludux::backtest::AssetStoreHandle>{};
-  auto strategy_store_data_resolver =
-   pludux::backtest::StoreDataResolver<pludux::backtest::Strategy,
-                                       pludux::backtest::StrategyStoreHandle>{};
-  auto market_store_data_resolver =
-   pludux::backtest::StoreDataResolver<pludux::backtest::Market,
-                                       pludux::backtest::MarketStoreHandle>{};
-  auto broker_store_data_resolver =
-   pludux::backtest::StoreDataResolver<pludux::backtest::Broker,
-                                       pludux::backtest::BrokerStoreHandle>{};
-  auto profile_store_data_resolver =
-   pludux::backtest::StoreDataResolver<pludux::backtest::Profile,
-                                       pludux::backtest::ProfileStoreHandle>{};
-
-  archive(make_nvp("backtestStoreDataResolver", backtest_store_data_resolver),
-          make_nvp("assetStoreDataResolver", asset_store_data_resolver),
-          make_nvp("strategyStoreDataResolver", strategy_store_data_resolver),
-          make_nvp("marketStoreDataResolver", market_store_data_resolver),
-          make_nvp("brokerStoreDataResolver", broker_store_data_resolver),
-          make_nvp("profileStoreDataResolver", profile_store_data_resolver));
-
-  auto backtest_timelines_store_data_resolver =
-   pludux::backtest::StoreDataResolver<pludux::backtest::BacktestTimeline,
-                                       pludux::backtest::BacktestStoreHandle>{};
-  auto series_results_store_data_resolver =
-   pludux::backtest::StoreDataResolver<pludux::SeriesEvaluationResults,
-                                       pludux::backtest::BacktestStoreHandle>{};
-
-  descriptor = pludux::backtest::StoreDescriptor{
-   std::move(backtest_store_data_resolver),
-   std::move(asset_store_data_resolver),
-   std::move(strategy_store_data_resolver),
-   std::move(market_store_data_resolver),
-   std::move(broker_store_data_resolver),
-   std::move(profile_store_data_resolver),
-   std::move(backtest_timelines_store_data_resolver),
-   std::move(series_results_store_data_resolver)};
-}
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void save(Archive& archive, const pludux::backtest::StoreArena& arena)
-{
-  archive(make_nvp("backtests", arena.backtests()),
-          make_nvp("assets", arena.assets()),
-          make_nvp("strategies", arena.strategies()),
-          make_nvp("markets", arena.markets()),
-          make_nvp("brokers", arena.brokers()),
-          make_nvp("profiles", arena.profiles()));
-}
-
-template<class Archive>
-void load(Archive& archive, pludux::backtest::StoreArena& arena)
-{
-  auto backtests = std::vector<pludux::backtest::Backtest>{};
-  auto assets = std::vector<pludux::backtest::Asset>{};
-  auto strategies = std::vector<pludux::backtest::Strategy>{};
-  auto markets = std::vector<pludux::backtest::Market>{};
-  auto brokers = std::vector<pludux::backtest::Broker>{};
-  auto profiles = std::vector<pludux::backtest::Profile>{};
-
-  archive(make_nvp("backtests", backtests),
-          make_nvp("assets", assets),
-          make_nvp("strategies", strategies),
-          make_nvp("markets", markets),
-          make_nvp("brokers", brokers),
-          make_nvp("profiles", profiles));
-
-  auto backtest_timelines = std::vector<pludux::backtest::BacktestTimeline>{};
-  auto series_results = std::vector<pludux::SeriesEvaluationResults>{};
-
-  arena = pludux::backtest::StoreArena{std::move(backtests),
-                                       std::move(assets),
-                                       std::move(strategies),
-                                       std::move(markets),
-                                       std::move(brokers),
-                                       std::move(profiles),
-                                       std::move(backtest_timelines),
-                                       std::move(series_results)};
-}
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void save(Archive& archive, const pludux::backtest::Store& store)
-{
-  archive(make_nvp("descriptor", store.descriptor()),
-          make_nvp("arena", store.arena()));
-}
-
-template<class Archive>
-void load(Archive& archive, pludux::backtest::Store& store)
-{
-  auto descriptor = pludux::backtest::StoreDescriptor{};
-  auto arena = pludux::backtest::StoreArena{};
-
-  archive(make_nvp("descriptor", descriptor), make_nvp("arena", arena));
-
-  store = pludux::backtest::Store{std::move(descriptor), std::move(arena)};
-}
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void save(Archive& archive, const pludux::NumericInputNode& input)
-{
-  archive(make_nvp("label", input.label()),
-          make_nvp("representation", static_cast<int>(input.representation())),
-          make_nvp("value", input.value()));
-}
-
-template<class Archive>
-void load(Archive& archive, pludux::NumericInputNode& input)
-{
-  auto label = std::string{};
-  auto value = double{};
-  auto representation = int{};
-
-  archive(make_nvp("label", label),
-          make_nvp("value", value),
-          make_nvp("representation", representation));
-
-  input = pludux::NumericInputNode{
-   std::move(label),
-   static_cast<pludux::NumericInputNode::ValueRepresentation>(representation),
-   value};
-}
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void save(Archive& archive, const pludux::backtest::Backtest& backtest)
-{
-  archive(make_nvp("name", backtest.name()),
-          make_nvp("initialCapital", backtest.initial_capital()),
-          make_nvp("asset", backtest.asset_handle()),
-          make_nvp("strategy", backtest.strategy_handle()),
-          make_nvp("market", backtest.market_handle()),
-          make_nvp("broker", backtest.broker_handle()),
-          make_nvp("profile", backtest.profile_handle()),
-          make_nvp("inputs", backtest.inputs()));
-}
-
-template<class Archive>
-void load(Archive& archive, pludux::backtest::Backtest& backtest)
-{
-  auto name = std::string{};
-  auto initial_capital = double{};
-  auto asset_handle = pludux::backtest::AssetStoreHandle{};
-  auto strategy_handle = pludux::backtest::StrategyStoreHandle{};
-  auto market_handle = pludux::backtest::MarketStoreHandle{};
-  auto broker_handle = pludux::backtest::BrokerStoreHandle{};
-  auto profile_handle = pludux::backtest::ProfileStoreHandle{};
-  auto inputs = std::vector<pludux::NumericInputNode>{};
-
-  archive(make_nvp("name", name),
-          make_nvp("initialCapital", initial_capital),
-          make_nvp("asset", asset_handle),
-          make_nvp("strategy", strategy_handle),
-          make_nvp("market", market_handle),
-          make_nvp("broker", broker_handle),
-          make_nvp("profile", profile_handle),
-          make_nvp("inputs", inputs));
-
-  backtest = pludux::backtest::Backtest{std::move(name),
-                                        initial_capital,
-                                        asset_handle,
-                                        strategy_handle,
-                                        market_handle,
-                                        broker_handle,
-                                        profile_handle,
-                                        std::move(inputs)};
-}
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void save(Archive& archive, const pludux::apps::UiState& descriptor)
-{
-  archive(
-   make_nvp("imguiIniSettings", descriptor.imgui_ini_settings()),
-   make_nvp("selectedBacktestHandle", descriptor.selected_backtest_handle()),
-   make_nvp("backtestHandles", descriptor.backtest_handles()),
-   make_nvp("assetHandles", descriptor.asset_handles()),
-   make_nvp("strategyHandles", descriptor.strategy_handles()),
-   make_nvp("marketHandles", descriptor.market_handles()),
-   make_nvp("brokerHandles", descriptor.broker_handles()),
-   make_nvp("profileHandles", descriptor.profile_handles()));
-}
-
-template<class Archive>
-void load(Archive& archive, pludux::apps::UiState& descriptor)
-{
-  auto imgui_ini_settings = std::string{};
-  auto selected_backtest_handle = pludux::backtest::BacktestStoreHandle{};
-  auto backtest_handles = std::vector<pludux::backtest::BacktestStoreHandle>{};
-  auto asset_handles = std::vector<pludux::backtest::AssetStoreHandle>{};
-  auto strategy_handles = std::vector<pludux::backtest::StrategyStoreHandle>{};
-  auto market_handles = std::vector<pludux::backtest::MarketStoreHandle>{};
-  auto broker_handles = std::vector<pludux::backtest::BrokerStoreHandle>{};
-  auto profile_handles = std::vector<pludux::backtest::ProfileStoreHandle>{};
-
-  archive(make_nvp("imguiIniSettings", imgui_ini_settings),
-          make_nvp("selectedBacktestHandle", selected_backtest_handle),
-          make_nvp("backtestHandles", backtest_handles),
-          make_nvp("assetHandles", asset_handles),
-          make_nvp("strategyHandles", strategy_handles),
-          make_nvp("marketHandles", market_handles),
-          make_nvp("brokerHandles", broker_handles),
-          make_nvp("profileHandles", profile_handles));
-
-  descriptor = pludux::apps::UiState{imgui_ini_settings,
-                                     selected_backtest_handle,
-                                     std::move(backtest_handles),
-                                     std::move(asset_handles),
-                                     std::move(strategy_handles),
-                                     std::move(market_handles),
-                                     std::move(broker_handles),
-                                     std::move(profile_handles)};
-}
-
-/*--------------------------------------------------------------------------------------*/
-
-template<class Archive>
-void save(Archive& archive, const pludux::apps::ApplicationState& app_state)
-{
-  archive(make_nvp("$version", std::string{PLUDUX_VERSION}),
-          make_nvp("store", app_state.store()),
-          make_nvp("uiState", app_state.ui_state()));
-}
-
-template<class Archive>
-void load(Archive& archive, pludux::apps::ApplicationState& app_state)
-{
-  auto version = std::string{};
-  auto store = pludux::backtest::Store{};
-  auto ui_state = pludux::apps::UiState{};
-
-  archive(make_nvp("$version", version),
-          make_nvp("store", store),
-          make_nvp("uiState", ui_state));
-
-  app_state =
-   pludux::apps::ApplicationState{std::move(store), std::move(ui_state)};
-
-  if(version != PLUDUX_VERSION) {
-    app_state.reset_all_backtests();
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
   }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      return result_type{
+       value_type{required_as<std::size_t>(json, "slotIndex"),
+                  required_as<std::size_t>(json, "generation")}};
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                      const value_type& handle)
+  {
+    auto json = Json{};
+    json["slotIndex"] = handle.slot_index();
+    json["generation"] = handle.generation();
+    return json;
+  }
+};
+
+template<typename Json>
+struct json_conv_traits<Json, pludux::backtest::StoreSlot> {
+  using value_type = pludux::backtest::StoreSlot;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      return result_type{
+       value_type{required_as<std::size_t>(json, "valueIndex"),
+                  required_as<std::size_t>(json, "generation"),
+                  required_as<bool>(json, "alive")}};
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                      const value_type& slot)
+  {
+    auto json = Json{};
+    json["valueIndex"] = slot.value_index();
+    json["generation"] = slot.generation();
+    json["alive"] = slot.alive();
+    return json;
+  }
+};
+
+template<typename Json, typename TValue, typename THandle>
+struct json_conv_traits<Json,
+                        pludux::backtest::StoreDataResolver<TValue, THandle>> {
+  using value_type = pludux::backtest::StoreDataResolver<TValue, THandle>;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      return result_type{value_type{
+       vector_from_json<pludux::backtest::StoreSlot>(json.at("slots")),
+       required_as<std::vector<std::size_t>>(json, "valueToSlotIndices"),
+       required_as<std::vector<std::size_t>>(json, "freeSlotIndices")}};
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>& aset,
+                      const value_type& resolver)
+  {
+    auto json = Json{};
+    json["slots"] = vector_to_json<Json>(aset, resolver.slots());
+    json["valueToSlotIndices"] = resolver.value_to_slot_indices();
+    json["freeSlotIndices"] = resolver.free_slot_indices();
+    return json;
+  }
+};
+
+template<typename Json>
+struct json_conv_traits<Json, pludux::backtest::Backtest> {
+  using value_type = pludux::backtest::Backtest;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      return result_type{value_type{
+       required_as<std::string>(json, "name"),
+       required_as<double>(json, "initialCapital"),
+       required_as<pludux::backtest::AssetStoreHandle>(json, "asset"),
+       required_as<pludux::backtest::StrategyStoreHandle>(json, "strategy"),
+       required_as<pludux::backtest::MarketStoreHandle>(json, "market"),
+       required_as<pludux::backtest::BrokerStoreHandle>(json, "broker"),
+       required_as<pludux::backtest::ProfileStoreHandle>(json, "profile"),
+       vector_from_json<pludux::NumericInputNode>(json.at("inputs"))}};
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>& aset,
+                      const value_type& backtest)
+  {
+    auto json = Json{};
+    json["name"] = backtest.name();
+    json["initialCapital"] = backtest.initial_capital();
+    set_json(json, aset, "asset", backtest.asset_handle());
+    set_json(json, aset, "strategy", backtest.strategy_handle());
+    set_json(json, aset, "market", backtest.market_handle());
+    set_json(json, aset, "broker", backtest.broker_handle());
+    set_json(json, aset, "profile", backtest.profile_handle());
+    json["inputs"] = vector_to_json<Json>(aset, backtest.inputs());
+    return json;
+  }
+};
+
+template<typename Json>
+struct json_conv_traits<Json, pludux::backtest::StoreDescriptor> {
+  using value_type = pludux::backtest::StoreDescriptor;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      auto backtest_timeline_resolver = pludux::backtest::StoreDataResolver<
+       pludux::backtest::BacktestTimeline,
+       pludux::backtest::BacktestStoreHandle>{};
+      auto series_results_resolver = pludux::backtest::StoreDataResolver<
+       pludux::SeriesEvaluationResults,
+       pludux::backtest::BacktestStoreHandle>{};
+
+      return result_type{value_type{
+       required_as<pludux::backtest::StoreDataResolver<
+        pludux::backtest::Backtest,
+        pludux::backtest::BacktestStoreHandle>>(json,
+                                                "backtestStoreDataResolver"),
+       required_as<pludux::backtest::StoreDataResolver<
+        pludux::backtest::Asset,
+        pludux::backtest::AssetStoreHandle>>(json, "assetStoreDataResolver"),
+       required_as<pludux::backtest::StoreDataResolver<
+        pludux::backtest::Strategy,
+        pludux::backtest::StrategyStoreHandle>>(json,
+                                                "strategyStoreDataResolver"),
+       required_as<pludux::backtest::StoreDataResolver<
+        pludux::backtest::Market,
+        pludux::backtest::MarketStoreHandle>>(json, "marketStoreDataResolver"),
+       required_as<pludux::backtest::StoreDataResolver<
+        pludux::backtest::Broker,
+        pludux::backtest::BrokerStoreHandle>>(json, "brokerStoreDataResolver"),
+       required_as<pludux::backtest::StoreDataResolver<
+        pludux::backtest::Profile,
+        pludux::backtest::ProfileStoreHandle>>(json,
+                                               "profileStoreDataResolver"),
+       std::move(backtest_timeline_resolver),
+       std::move(series_results_resolver)}};
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>& aset,
+                      const value_type& descriptor)
+  {
+    auto json = Json{};
+    set_json(json,
+             aset,
+             "backtestStoreDataResolver",
+             descriptor.backtest_store_data_resolver());
+    set_json(json,
+             aset,
+             "assetStoreDataResolver",
+             descriptor.asset_store_data_resolver());
+    set_json(json,
+             aset,
+             "strategyStoreDataResolver",
+             descriptor.strategy_store_data_resolver());
+    set_json(json,
+             aset,
+             "marketStoreDataResolver",
+             descriptor.market_store_data_resolver());
+    set_json(json,
+             aset,
+             "brokerStoreDataResolver",
+             descriptor.broker_store_data_resolver());
+    set_json(json,
+             aset,
+             "profileStoreDataResolver",
+             descriptor.profile_store_data_resolver());
+    return json;
+  }
+};
+
+template<typename Json>
+struct json_conv_traits<Json, pludux::backtest::StoreArena> {
+  using value_type = pludux::backtest::StoreArena;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      return result_type{value_type{
+       vector_from_json<pludux::backtest::Backtest>(json.at("backtests")),
+       vector_from_json<pludux::backtest::Asset>(json.at("assets")),
+       strategies_from_json(json.at("strategies")),
+       vector_from_json<pludux::backtest::Market>(json.at("markets")),
+       vector_from_json<pludux::backtest::Broker>(json.at("brokers")),
+       vector_from_json<pludux::backtest::Profile>(json.at("profiles")),
+       {},
+       {}}};
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>& aset,
+                      const value_type& arena)
+  {
+    auto json = Json{};
+    json["backtests"] = vector_to_json<Json>(aset, arena.backtests());
+    json["assets"] = vector_to_json<Json>(aset, arena.assets());
+    json["strategies"] = strategies_to_json<Json>(aset, arena.strategies());
+    json["markets"] = vector_to_json<Json>(aset, arena.markets());
+    json["brokers"] = vector_to_json<Json>(aset, arena.brokers());
+    json["profiles"] = vector_to_json<Json>(aset, arena.profiles());
+    return json;
+  }
+};
+
+template<typename Json>
+struct json_conv_traits<Json, pludux::backtest::Store> {
+  using value_type = pludux::backtest::Store;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      return result_type{value_type{
+       required_as<pludux::backtest::StoreDescriptor>(json, "descriptor"),
+       required_as<pludux::backtest::StoreArena>(json, "arena")}};
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>& aset,
+                      const value_type& store)
+  {
+    auto json = Json{};
+    set_json(json, aset, "descriptor", store.descriptor());
+    set_json(json, aset, "arena", store.arena());
+    return json;
+  }
+};
+
+template<typename Json>
+struct json_conv_traits<Json, pludux::apps::UiState> {
+  using value_type = pludux::apps::UiState;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      return result_type{
+       value_type{required_as<std::string>(json, "imguiIniSettings"),
+                  required_as<pludux::backtest::BacktestStoreHandle>(
+                   json, "selectedBacktestHandle"),
+                  vector_from_json<pludux::backtest::BacktestStoreHandle>(
+                   json.at("backtestHandles")),
+                  vector_from_json<pludux::backtest::AssetStoreHandle>(
+                   json.at("assetHandles")),
+                  vector_from_json<pludux::backtest::StrategyStoreHandle>(
+                   json.at("strategyHandles")),
+                  vector_from_json<pludux::backtest::MarketStoreHandle>(
+                   json.at("marketHandles")),
+                  vector_from_json<pludux::backtest::BrokerStoreHandle>(
+                   json.at("brokerHandles")),
+                  vector_from_json<pludux::backtest::ProfileStoreHandle>(
+                   json.at("profileHandles"))}};
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>& aset,
+                      const value_type& ui_state)
+  {
+    auto json = Json{};
+    json["imguiIniSettings"] = ui_state.imgui_ini_settings();
+    set_json(
+     json, aset, "selectedBacktestHandle", ui_state.selected_backtest_handle());
+    json["backtestHandles"] =
+     vector_to_json<Json>(aset, ui_state.backtest_handles());
+    json["assetHandles"] = vector_to_json<Json>(aset, ui_state.asset_handles());
+    json["strategyHandles"] =
+     vector_to_json<Json>(aset, ui_state.strategy_handles());
+    json["marketHandles"] =
+     vector_to_json<Json>(aset, ui_state.market_handles());
+    json["brokerHandles"] =
+     vector_to_json<Json>(aset, ui_state.broker_handles());
+    json["profileHandles"] =
+     vector_to_json<Json>(aset, ui_state.profile_handles());
+    return json;
+  }
+};
+
+template<typename Json>
+struct json_conv_traits<Json, pludux::apps::ApplicationState> {
+  using value_type = pludux::apps::ApplicationState;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      auto app_state =
+       value_type{required_as<pludux::backtest::Store>(json, "store"),
+                  required_as<pludux::apps::UiState>(json, "uiState")};
+
+      if(required_as<std::string>(json, "$version") != PLUDUX_VERSION) {
+        app_state.reset_all_backtests();
+      }
+
+      return result_type{std::move(app_state)};
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>& aset,
+                      const value_type& app_state)
+  {
+    auto json = Json{};
+    json["$version"] = std::string{PLUDUX_VERSION};
+    set_json(json, aset, "store", app_state.store());
+    set_json(json, aset, "uiState", app_state.ui_state());
+    return json;
+  }
+};
+
+} // namespace jsoncons::reflect
+
+export namespace pludux::apps {
+
+void save_application_state_json(std::ostream& out_stream,
+                                 const ApplicationState& app_state)
+{
+  auto root = jsoncons::ojson{};
+  root["pludux"] =
+   jsoncons::reflect::json_conv_traits<jsoncons::ojson, ApplicationState>::
+    to_json(jsoncons::make_alloc_set(), app_state);
+
+  out_stream << root.to_string();
 }
 
-} // namespace cereal
+auto load_application_state_json(std::istream& in_stream) -> ApplicationState
+{
+  const auto root_json = jsoncons::ojson::parse(in_stream);
+  return root_json.at("pludux").as<ApplicationState>();
+}
+
+} // namespace pludux::apps

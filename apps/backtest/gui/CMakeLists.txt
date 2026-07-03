@@ -105,22 +105,6 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(imgui implot)
 
-FetchContent_Declare(
-  cereal
-  GIT_REPOSITORY "https://github.com/USCiLab/cereal.git"
-  GIT_TAG        "v1.3.2"
-  GIT_SHALLOW    TRUE
-  GIT_PROGRESS   TRUE
-)
-set(BUILD_DOC OFF)
-set(BUILD_SANDBOX OFF)
-set(SKIP_PERFORMANCE_COMPARISON ON)
-set(THREAD_SAFE OFF)
-set(JUST_INSTALL_CEREAL ON)
-
-FetchContent_MakeAvailable(cereal)
-
-
 add_executable(${PROJECT_NAME}
 
   src/main.cpp
@@ -210,7 +194,6 @@ target_link_libraries(${PROJECT_NAME}
   PUBLIC
     pludux::backtest-lib
     glfw
-    cereal::cereal
 )
 
 if(NOT EMSCRIPTEN)
