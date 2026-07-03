@@ -1033,6 +1033,22 @@ private:
       auto entry = position.entry();
       auto changed_node = self.render_condition_node(entry.signal(), context);
       entry.signal(std::move(changed_node));
+      auto signal_delay = static_cast<int>(entry.signal_delay());
+      ImGui::Text("Signal Delay:");
+      ImGui::SameLine();
+      if(ImGui::InputInt("##signal_delay", &signal_delay)) {
+        if(signal_delay < 0) {
+          signal_delay = 0;
+        }
+        entry.signal_delay(static_cast<std::size_t>(signal_delay));
+      }
+      ImGui::Text("Entry Price:");
+      ImGui::SameLine();
+      auto price = entry.price();
+      ImGui::PushID("price");
+      self.render_series_node(price, context);
+      ImGui::PopID();
+      entry.price(std::move(price));
       position.entry(std::move(entry));
       ImGui::PopID();
     }
@@ -1043,6 +1059,22 @@ private:
       auto exit = position.exit();
       auto changed_node = self.render_condition_node(exit.signal(), context);
       exit.signal(std::move(changed_node));
+      auto signal_delay = static_cast<int>(exit.signal_delay());
+      ImGui::Text("Signal Delay:");
+      ImGui::SameLine();
+      if(ImGui::InputInt("##signal_delay", &signal_delay)) {
+        if(signal_delay < 0) {
+          signal_delay = 0;
+        }
+        exit.signal_delay(static_cast<std::size_t>(signal_delay));
+      }
+      ImGui::Text("Exit Price:");
+      ImGui::SameLine();
+      auto price = exit.price();
+      ImGui::PushID("price");
+      self.render_series_node(price, context);
+      ImGui::PopID();
+      exit.price(std::move(price));
       position.exit(std::move(exit));
       ImGui::PopID();
     }
@@ -1056,6 +1088,24 @@ private:
       auto changed_node =
        self.render_condition_node(pyramiding.signal(), context);
       pyramiding.signal(std::move(changed_node));
+
+      auto signal_delay = static_cast<int>(pyramiding.signal_delay());
+      ImGui::Text("Signal Delay:");
+      ImGui::SameLine();
+      if(ImGui::InputInt("##signal_delay", &signal_delay)) {
+        if(signal_delay < 0) {
+          signal_delay = 0;
+        }
+        pyramiding.signal_delay(static_cast<std::size_t>(signal_delay));
+      }
+
+      ImGui::Text("Pyramiding Price:");
+      ImGui::SameLine();
+      auto price = pyramiding.price();
+      ImGui::PushID("price");
+      self.render_series_node(price, context);
+      ImGui::PopID();
+      pyramiding.price(std::move(price));
 
       auto pyramiding_max_layers = static_cast<int>(pyramiding.max_layers());
       ImGui::Text("Max Layers:");

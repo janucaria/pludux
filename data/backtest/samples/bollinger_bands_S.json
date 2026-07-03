@@ -50,6 +50,8 @@
   "positions": {
     "short": {
       "entry": {
+        "signalDelay": 1,
+        "price": "OPEN",
         "signal": {
           "method": "CROSSOVER",
           "params": {
@@ -64,6 +66,8 @@
         }
       },
       "exit": {
+        "signalDelay": 1,
+        "price": "OPEN",
         "signal": {
           "method": "CROSSUNDER",
           "params": {

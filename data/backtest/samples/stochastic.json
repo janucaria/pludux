@@ -74,6 +74,8 @@
   "positions": {
     "long": {
       "entry": {
+        "signalDelay": 1,
+        "price": "OPEN",
         "signal": {
           "method": "ALL_OF",
           "params": {
@@ -117,6 +119,8 @@
         }
       },
       "exit": {
+        "signalDelay": 1,
+        "price": "OPEN",
         "signal": {
           "method": "ALL_OF",
           "params": {

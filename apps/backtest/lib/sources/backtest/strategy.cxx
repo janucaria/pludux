@@ -19,12 +19,16 @@ public:
   class Entry {
   public:
     Entry()
-    : Entry(FalseNode{})
+    : Entry(FalseNode{}, 1, OpenNode{})
     {
     }
 
-    Entry(ErasedNode signal)
+    Entry(ErasedNode signal,
+          std::size_t signal_delay = 1,
+          ErasedNode price = OpenNode{})
     : signal_{std::move(signal)}
+    , signal_delay_{signal_delay}
+    , price_{std::move(price)}
     {
     }
 
@@ -40,19 +44,45 @@ public:
       self.signal_ = std::move(signal);
     }
 
+    auto signal_delay(this const Entry& self) noexcept -> std::size_t
+    {
+      return self.signal_delay_;
+    }
+
+    void signal_delay(this Entry& self, std::size_t signal_delay) noexcept
+    {
+      self.signal_delay_ = signal_delay;
+    }
+
+    auto price(this const Entry& self) noexcept -> const ErasedNode&
+    {
+      return self.price_;
+    }
+
+    void price(this Entry& self, ErasedNode price) noexcept
+    {
+      self.price_ = std::move(price);
+    }
+
   private:
     ErasedNode signal_;
+    std::size_t signal_delay_;
+    ErasedNode price_;
   };
 
   class Exit {
   public:
     Exit()
-    : Exit(FalseNode{})
+    : Exit(FalseNode{}, 1, OpenNode{})
     {
     }
 
-    Exit(ErasedNode signal)
+    Exit(ErasedNode signal,
+         std::size_t signal_delay = 1,
+         ErasedNode price = OpenNode{})
     : signal_{std::move(signal)}
+    , signal_delay_{signal_delay}
+    , price_{std::move(price)}
     {
     }
 
@@ -68,8 +98,30 @@ public:
       self.signal_ = std::move(signal);
     }
 
+    auto signal_delay(this const Exit& self) noexcept -> std::size_t
+    {
+      return self.signal_delay_;
+    }
+
+    void signal_delay(this Exit& self, std::size_t signal_delay) noexcept
+    {
+      self.signal_delay_ = signal_delay;
+    }
+
+    auto price(this const Exit& self) noexcept -> const ErasedNode&
+    {
+      return self.price_;
+    }
+
+    void price(this Exit& self, ErasedNode price) noexcept
+    {
+      self.price_ = std::move(price);
+    }
+
   private:
     ErasedNode signal_;
+    std::size_t signal_delay_;
+    ErasedNode price_;
   };
 
   class Pyramiding {
@@ -88,6 +140,26 @@ public:
       self.signal_ = std::move(signal);
     }
 
+    auto signal_delay(this const Pyramiding& self) noexcept -> std::size_t
+    {
+      return self.signal_delay_;
+    }
+
+    void signal_delay(this Pyramiding& self, std::size_t signal_delay) noexcept
+    {
+      self.signal_delay_ = signal_delay;
+    }
+
+    auto price(this const Pyramiding& self) noexcept -> const ErasedNode&
+    {
+      return self.price_;
+    }
+
+    void price(this Pyramiding& self, ErasedNode price) noexcept
+    {
+      self.price_ = std::move(price);
+    }
+
     auto max_layers(this const Pyramiding& self) noexcept -> std::size_t
     {
       return self.max_layers_;
@@ -100,6 +172,8 @@ public:
 
   private:
     ErasedNode signal_{FalseNode{}};
+    std::size_t signal_delay_{1};
+    ErasedNode price_{OpenNode{}};
     std::size_t max_layers_{1};
   };
 

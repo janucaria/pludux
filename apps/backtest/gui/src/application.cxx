@@ -374,7 +374,13 @@ private:
         position.stop_loss().trailing(),
         node_to_erased_method(position.take_profit().target_price(),
                               input_context),
-        position.take_profit().enabled()};
+        position.take_profit().enabled(),
+        position.entry().signal_delay(),
+        node_to_erased_method(position.entry().price(), input_context),
+        position.exit().signal_delay(),
+        node_to_erased_method(position.exit().price(), input_context),
+        position.pyramiding().signal_delay(),
+        node_to_erased_method(position.pyramiding().price(), input_context)};
      };
 
     self.running_backtests_.emplace(

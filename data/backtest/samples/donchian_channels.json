@@ -61,6 +61,8 @@
   "positions": {
     "long": {
       "entry": {
+        "signalDelay": 1,
+        "price": "OPEN",
         "signal": {
           "method": "GREATER_THAN",
           "params": {
@@ -86,6 +88,8 @@
         }
       },
       "exit": {
+        "signalDelay": 1,
+        "price": "OPEN",
         "signal": {
           "method": "LESS_THAN",
           "params": {

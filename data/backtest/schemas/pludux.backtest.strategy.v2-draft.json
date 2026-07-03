@@ -122,10 +122,25 @@
                   "$ref": "#/$defs/signalAsParameter",
                   "title": "Signal",
                   "description": "Boolean signal definition for this entry rule. It can be an inline signal object or a literal true/false value."
+                },
+                "signalDelay": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "default": 1,
+                  "title": "Signal Delay",
+                  "description": "Number of bars between the signal bar and the entry action bar. Use 1 with price OPEN for next-open entry behavior."
+                },
+                "price": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "default": "OPEN",
+                  "title": "Entry Price",
+                  "description": "Price expression evaluated on the action bar and used as the entry execution price."
                 }
               },
               "required": [
-                "signal"
+                "signal",
+                "signalDelay",
+                "price"
               ],
               "title": "Entry",
               "description": "Entry rule for this side. The entry signal decides when to open a position."
@@ -138,10 +153,25 @@
                   "$ref": "#/$defs/signalAsParameter",
                   "title": "Signal",
                   "description": "Boolean signal definition for this exit rule. It can be an inline signal object or a literal true/false value."
+                },
+                "signalDelay": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "default": 1,
+                  "title": "Signal Delay",
+                  "description": "Number of bars between the signal bar and the exit action bar. Use 1 with price OPEN for next-open exit behavior."
+                },
+                "price": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "default": "OPEN",
+                  "title": "Exit Price",
+                  "description": "Price expression evaluated on the action bar and used as the signal-exit execution price."
                 }
               },
               "required": [
-                "signal"
+                "signal",
+                "signalDelay",
+                "price"
               ],
               "title": "Exit",
               "description": "Optional exit rule for this side. The exit signal decides when to close a position before stop-loss or take-profit rules."
@@ -155,6 +185,19 @@
                   "title": "Signal",
                   "description": "Boolean signal definition for this pyramiding rule. It can be an inline signal object or a literal true/false value."
                 },
+                "signalDelay": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "default": 1,
+                  "title": "Signal Delay",
+                  "description": "Number of bars between the signal bar and the pyramiding action bar. Use 1 with price OPEN for next-open pyramiding behavior."
+                },
+                "price": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "default": "OPEN",
+                  "title": "Pyramiding Price",
+                  "description": "Price expression evaluated on the action bar and used as the pyramiding execution price."
+                },
                 "maxLayers": {
                   "type": "integer",
                   "minimum": 1,
@@ -162,8 +205,16 @@
                   "description": "Maximum number of pyramiding layers allowed. For example, maxLayers 3 means the initial position plus 2 additional layers."
                 }
               },
+              "required": [
+                "signal",
+                "signalDelay",
+                "price",
+                "maxLayers"
+              ],
               "default": {
                 "signal": false,
+                "signalDelay": 1,
+                "price": "OPEN",
                 "maxLayers": 1
               }
             },
@@ -1131,7 +1182,7 @@
                 "params": {
                   "label": "StdDev",
                   "representation": "Decimal",
-                  "value": 2.0
+                  "value": 2
                 }
               },
               "maType": "SMA",
@@ -2940,7 +2991,9 @@
                   }
                 }
               }
-            }
+            },
+            "signalDelay": 1,
+            "price": "OPEN"
           },
           "exit": {
             "signal": {
@@ -2959,7 +3012,9 @@
                   }
                 }
               }
-            }
+            },
+            "signalDelay": 1,
+            "price": "OPEN"
           },
           "stopLoss": {
             "enabled": true,
@@ -2972,7 +3027,7 @@
                   "method": "PERCENTAGE",
                   "params": {
                     "base": "OPEN",
-                    "percent": 10.0
+                    "percent": 10
                   }
                 }
               }
@@ -2988,7 +3043,7 @@
                   "method": "PERCENTAGE",
                   "params": {
                     "base": "OPEN",
-                    "percent": 20.0
+                    "percent": 20
                   }
                 }
               }

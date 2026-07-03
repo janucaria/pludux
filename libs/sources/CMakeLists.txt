@@ -100,7 +100,7 @@ target_sources(${PROJECT_NAME}
         src/any_method_context.cxx
 
         src/methods/any_series_method.cxx
-        
+
         src/methods.cxx
 
         src/nodes/numeric_input_node.cxx

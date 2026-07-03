@@ -47,7 +47,13 @@ public:
                  bool stop_loss_enabled,
                  bool stop_loss_trailing_enabled,
                  AnySeriesMethod target_price_method,
-                 bool take_profit_enabled)
+                 bool take_profit_enabled,
+                 std::size_t entry_signal_delay = 1,
+                 AnySeriesMethod entry_price_method = OpenMethod{},
+                 std::size_t exit_signal_delay = 1,
+                 AnySeriesMethod exit_price_method = OpenMethod{},
+                 std::size_t pyramiding_signal_delay = 1,
+                 AnySeriesMethod pyramiding_price_method = OpenMethod{})
     : entry_method_{std::move(entry_method)}
     , exit_method_{std::move(exit_method)}
     , pyramiding_signal_{std::move(pyramiding_signal)}
@@ -57,6 +63,12 @@ public:
     , stop_loss_trailing_enabled_{stop_loss_trailing_enabled}
     , target_price_method_{std::move(target_price_method)}
     , take_profit_enabled_{take_profit_enabled}
+    , entry_signal_delay_{entry_signal_delay}
+    , entry_price_method_{std::move(entry_price_method)}
+    , exit_signal_delay_{exit_signal_delay}
+    , exit_price_method_{std::move(exit_price_method)}
+    , pyramiding_signal_delay_{pyramiding_signal_delay}
+    , pyramiding_price_method_{std::move(pyramiding_price_method)}
     {
     }
 
@@ -112,6 +124,42 @@ public:
       return self.take_profit_enabled_;
     }
 
+    auto entry_signal_delay(this const PositionRule& self) noexcept
+     -> std::size_t
+    {
+      return self.entry_signal_delay_;
+    }
+
+    auto entry_price_method(this const PositionRule& self) noexcept
+     -> const AnySeriesMethod&
+    {
+      return self.entry_price_method_;
+    }
+
+    auto exit_signal_delay(this const PositionRule& self) noexcept
+     -> std::size_t
+    {
+      return self.exit_signal_delay_;
+    }
+
+    auto exit_price_method(this const PositionRule& self) noexcept
+     -> const AnySeriesMethod&
+    {
+      return self.exit_price_method_;
+    }
+
+    auto pyramiding_signal_delay(this const PositionRule& self) noexcept
+     -> std::size_t
+    {
+      return self.pyramiding_signal_delay_;
+    }
+
+    auto pyramiding_price_method(this const PositionRule& self) noexcept
+     -> const AnySeriesMethod&
+    {
+      return self.pyramiding_price_method_;
+    }
+
   private:
     AnySeriesMethod entry_method_{BooleanMethod<false>{}};
     AnySeriesMethod exit_method_{BooleanMethod<false>{}};
@@ -122,6 +170,12 @@ public:
     bool stop_loss_trailing_enabled_{false};
     AnySeriesMethod target_price_method_{OpenMethod{}};
     bool take_profit_enabled_{false};
+    std::size_t entry_signal_delay_{1};
+    AnySeriesMethod entry_price_method_{OpenMethod{}};
+    std::size_t exit_signal_delay_{1};
+    AnySeriesMethod exit_price_method_{OpenMethod{}};
+    std::size_t pyramiding_signal_delay_{1};
+    AnySeriesMethod pyramiding_price_method_{OpenMethod{}};
   };
 
   BacktestRunner(const Asset& asset,
@@ -397,17 +451,23 @@ private:
   {
     auto result = std::optional<TradeEntry>{};
 
-    const auto prev_snapshot = asset_snapshot[1];
     const auto& signal =
      is_pyramiding ? position.pyramiding_signal() : position.entry_method();
-    const auto can_enter =
-     static_cast<bool>(evaluate_series_method(signal, prev_snapshot, context));
+    const auto signal_delay = is_pyramiding ? position.pyramiding_signal_delay()
+                                            : position.entry_signal_delay();
+    const auto& price_method = is_pyramiding
+                                ? position.pyramiding_price_method()
+                                : position.entry_price_method();
+    const auto signal_snapshot = asset_snapshot[signal_delay];
+    const auto can_enter = static_cast<bool>(
+     evaluate_series_method(signal, signal_snapshot, context));
     const auto can_pyramid =
      !is_pyramiding ||
      self.pyramiding_layers_ < position.pyramiding_max_layers();
 
     if(can_enter && can_pyramid) {
-      const auto entry_price = asset_snapshot.open();
+      const auto entry_price =
+       evaluate_series_method(price_method, asset_snapshot, context);
       const auto position_sizing = self.profile_.position_sizing();
       const auto uses_risk_distance =
        position_sizing.mode() == PositionSizing::Mode::RiskDistance;
@@ -610,7 +670,7 @@ private:
     const auto position_size = position.unrealized_position_size();
     const auto is_long_direction = position_size > 0;
     const auto is_short_direction = position_size < 0;
-    const auto exit_price = asset_snapshot.open();
+    const auto open_exit_price = asset_snapshot.open();
 
     const auto prev_snapshot = asset_snapshot[1];
 
@@ -620,8 +680,8 @@ private:
                                        asset_snapshot.low())) {
       const auto stop_price = position.stop_loss_price();
       const auto stop_exit_price = is_long_direction
-                                    ? std::min(exit_price, stop_price)
-                                    : std::max(exit_price, stop_price);
+                                    ? std::min(open_exit_price, stop_price)
+                                    : std::max(open_exit_price, stop_price);
       return TradeExit{
        position_size, stop_exit_price, TradeExit::Reason::stop_loss};
     }
@@ -630,20 +690,28 @@ private:
                                          asset_snapshot.low())) {
       const auto target_price = position.take_profit_price();
       const auto target_exit_price = is_long_direction
-                                      ? std::max(exit_price, target_price)
-                                      : std::min(exit_price, target_price);
+                                      ? std::max(open_exit_price, target_price)
+                                      : std::min(open_exit_price, target_price);
       return TradeExit{
        position_size, target_exit_price, TradeExit::Reason::take_profit};
     }
 
     if(is_long_direction) {
+      const auto signal_snapshot =
+       asset_snapshot[self.long_position_.exit_signal_delay()];
       if(static_cast<bool>(evaluate_series_method(
-          self.long_position_.exit_method(), prev_snapshot, context))) {
+          self.long_position_.exit_method(), signal_snapshot, context))) {
+        const auto exit_price = evaluate_series_method(
+         self.long_position_.exit_price_method(), asset_snapshot, context);
         return TradeExit{position_size, exit_price, TradeExit::Reason::signal};
       }
     } else if(is_short_direction) {
+      const auto signal_snapshot =
+       asset_snapshot[self.short_position_.exit_signal_delay()];
       if(static_cast<bool>(evaluate_series_method(
-          self.short_position_.exit_method(), prev_snapshot, context))) {
+          self.short_position_.exit_method(), signal_snapshot, context))) {
+        const auto exit_price = evaluate_series_method(
+         self.short_position_.exit_price_method(), asset_snapshot, context);
         return TradeExit{position_size, exit_price, TradeExit::Reason::signal};
       }
     }

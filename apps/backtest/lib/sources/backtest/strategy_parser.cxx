@@ -46,13 +46,17 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
   if(position_json.contains("entry")) {
     const auto& entry_json = position_json.at("entry");
     position.entry(
-     Strategy::Entry{config_parser.parse_node(entry_json.at("signal"))});
+     Strategy::Entry{config_parser.parse_node(entry_json.at("signal")),
+                     entry_json.at("signalDelay").as<std::size_t>(),
+                     config_parser.parse_node(entry_json.at("price"))});
   }
 
   if(position_json.contains("exit")) {
     const auto& exit_json = position_json.at("exit");
     position.exit(
-     Strategy::Exit{config_parser.parse_node(exit_json.at("signal"))});
+     Strategy::Exit{config_parser.parse_node(exit_json.at("signal")),
+                    exit_json.at("signalDelay").as<std::size_t>(),
+                    config_parser.parse_node(exit_json.at("price"))});
   }
 
   if(position_json.contains("pyramiding")) {
@@ -61,6 +65,9 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
     if(pyramiding_json.contains("signal")) {
       pyramiding.signal(config_parser.parse_node(pyramiding_json.at("signal")));
     }
+    pyramiding.signal_delay(
+     pyramiding_json.at("signalDelay").as<std::size_t>());
+    pyramiding.price(config_parser.parse_node(pyramiding_json.at("price")));
     if(pyramiding_json.contains("maxLayers")) {
       pyramiding.max_layers(pyramiding_json.at("maxLayers").as<std::size_t>());
     }
@@ -106,14 +113,24 @@ auto serialize_strategy_position(const Strategy::Position& position,
   position_json["entry"] = jsoncons::ojson{};
   position_json["entry"]["signal"] =
    config_parser.serialize_node(position.entry().signal());
+  position_json["entry"]["signalDelay"] = position.entry().signal_delay();
+  position_json["entry"]["price"] =
+   config_parser.serialize_node(position.entry().price());
 
   position_json["exit"] = jsoncons::ojson{};
   position_json["exit"]["signal"] =
    config_parser.serialize_node(position.exit().signal());
+  position_json["exit"]["signalDelay"] = position.exit().signal_delay();
+  position_json["exit"]["price"] =
+   config_parser.serialize_node(position.exit().price());
 
   position_json["pyramiding"] = jsoncons::ojson{};
   position_json["pyramiding"]["signal"] =
    config_parser.serialize_node(position.pyramiding().signal());
+  position_json["pyramiding"]["signalDelay"] =
+   position.pyramiding().signal_delay();
+  position_json["pyramiding"]["price"] =
+   config_parser.serialize_node(position.pyramiding().price());
   position_json["pyramiding"]["maxLayers"] = position.pyramiding().max_layers();
 
   position_json["stopLoss"] = jsoncons::ojson{};

@@ -352,8 +352,11 @@ auto collect_numeric_inputs(const Strategy& strategy)
   const auto collect_from_position = [&inputs](
                                       const Strategy::Position& position) {
     collect_numeric_inputs_from_node(position.entry().signal(), inputs);
+    collect_numeric_inputs_from_node(position.entry().price(), inputs);
     collect_numeric_inputs_from_node(position.exit().signal(), inputs);
+    collect_numeric_inputs_from_node(position.exit().price(), inputs);
     collect_numeric_inputs_from_node(position.pyramiding().signal(), inputs);
+    collect_numeric_inputs_from_node(position.pyramiding().price(), inputs);
     collect_numeric_inputs_from_node(position.stop_loss().stop_price(), inputs);
     if(position.take_profit().enabled()) {
       collect_numeric_inputs_from_node(position.take_profit().target_price(),
