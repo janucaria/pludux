@@ -10,7 +10,6 @@ export import :methods;
 export import :ma_node_type;
 export import :nodes;
 export import :node_to_erased_method;
-export import :config_parser;
 export import :method_contextable;
 export import :any_method_context;
 export import :evaluate_series_method;

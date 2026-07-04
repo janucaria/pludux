@@ -1,5 +1,16 @@
 project(pludux-backtest-lib)
 
+SET(JSONCONS_BUILD_TESTS OFF)
+FetchContent_Declare(
+  jsoncons
+  GIT_REPOSITORY https://github.com/danielaparker/jsoncons.git
+  GIT_TAG        v1.6.0
+  GIT_SHALLOW    TRUE
+  GIT_PROGRESS   TRUE
+  OVERRIDE_FIND_PACKAGE
+  EXCLUDE_FROM_ALL
+)
+
 FetchContent_Declare(
   rapidcsv
   GIT_REPOSITORY https://github.com/d99kris/rapidcsv.git
@@ -22,6 +33,7 @@ FetchContent_Declare(
       <SOURCE_DIR>/
 )
 
+find_package(jsoncons REQUIRED)
 find_package(rapidcsv REQUIRED)
 find_package(ctre REQUIRED)
 
@@ -84,6 +96,7 @@ target_sources(${PROJECT_NAME}
 
     sources/backtest/backtest_runner.cxx
 
+    sources/backtest/config_parser.cxx
     sources/backtest/strategy_parser.cxx
 
     sources/backtest.cxx
@@ -92,6 +105,7 @@ target_sources(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
     pludux::pludux-lib
+    jsoncons
     rapidcsv
     ctre::ctre
 )

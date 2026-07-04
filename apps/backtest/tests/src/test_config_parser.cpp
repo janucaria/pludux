@@ -5,9 +5,11 @@
 
 #include <jsoncons/json.hpp>
 
-import pludux;
+import pludux.backtest;
 
 using namespace pludux;
+using pludux::backtest::ConfigParser;
+using pludux::backtest::make_default_registered_config_parser;
 using json = jsoncons::ojson;
 
 using SignalAllOfNode = pludux::AllOfNode;

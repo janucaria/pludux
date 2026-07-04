@@ -1,14 +1,3 @@
-SET(JSONCONS_BUILD_TESTS OFF)
-FetchContent_Declare(
-  jsoncons
-  GIT_REPOSITORY https://github.com/danielaparker/jsoncons.git
-  GIT_TAG        v1.6.0
-  GIT_SHALLOW    TRUE
-  GIT_PROGRESS   TRUE
-  OVERRIDE_FIND_PACKAGE
-  EXCLUDE_FROM_ALL
-)
-
 FetchContent_Declare(
   boost_mp11
   GIT_REPOSITORY https://github.com/boostorg/mp11.git
@@ -23,7 +12,6 @@ FetchContent_Declare(
       <SOURCE_DIR>/
 )
 
-find_package(jsoncons REQUIRED)
 find_package(boost_mp11 REQUIRED)
 
 add_library(${PROJECT_NAME})
@@ -156,7 +144,6 @@ target_sources(${PROJECT_NAME}
 
         src/series_evaluation_results.cxx
         src/default_method_context.cxx
-        src/config_parser.cxx
 
         src/pludux.cxx
 )
@@ -168,7 +155,6 @@ target_compile_features(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
-    jsoncons
     Boost::mp11
 )
 

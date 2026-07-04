@@ -20,6 +20,7 @@ import pludux;
 
 import :strategy;
 import :plot_method_parser;
+import :config_parser;
 
 export namespace pludux::backtest {
 

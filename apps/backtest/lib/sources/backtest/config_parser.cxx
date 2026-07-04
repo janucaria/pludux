@@ -11,12 +11,11 @@ module;
 
 #include <jsoncons/json.hpp>
 
-export module pludux:config_parser;
+export module pludux.backtest:config_parser;
 
-import :node_to_erased_method;
-import :nodes;
+import pludux;
 
-export namespace pludux {
+export namespace pludux::backtest {
 
 class ConfigParser {
 public:
@@ -161,9 +160,9 @@ private:
 
 auto make_default_registered_config_parser() -> ConfigParser;
 
-} // namespace pludux
+} // namespace pludux::backtest
 
-namespace pludux {
+namespace pludux::backtest {
 
 template<typename T>
 static auto get_param_or(const jsoncons::ojson& parameters,
@@ -1371,4 +1370,4 @@ auto make_default_registered_config_parser() -> ConfigParser
   return config_parser;
 }
 
-} // namespace pludux
+} // namespace pludux::backtest

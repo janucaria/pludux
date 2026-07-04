@@ -43,6 +43,7 @@ export import :backtest_runner;
 export import :plot_group;
 export import :plots;
 
+export import :config_parser;
 export import :strategy_parser;
 
 export namespace pludux {
