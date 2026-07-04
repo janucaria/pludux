@@ -53,8 +53,7 @@ public:
                              AssetSnapshot asset_snapshot,
                              AnySeriesMethodContext context) static -> double {
     const auto& method = *std::any_cast<UMethod>(&impl);
-    return evaluate_selected_output_series_or_nan(
-     method, output, asset_snapshot, context);
+    return evaluate_series_method(output, method, asset_snapshot, context);
   }}
   , hash_series_method_{[](const std::any& impl) static -> std::size_t {
     const auto& method = *std::any_cast<UMethod>(&impl);
@@ -79,17 +78,19 @@ public:
   {
   }
 
-  friend auto evaluate_series_method(const AnySeriesMethod& method,
-                                     AssetSnapshot asset_snapshot,
-                                     MethodContextable auto context) -> double
+  friend auto pludux_tag_invoke(EvaluateSeriesMethod,
+                                const AnySeriesMethod& method,
+                                AssetSnapshot asset_snapshot,
+                                MethodContextable auto context) -> double
   {
     return method.evaluate_(method.impl_, asset_snapshot, context);
   }
 
-  friend auto evaluate_series_method(MethodOutput output,
-                                     const AnySeriesMethod& method,
-                                     AssetSnapshot asset_snapshot,
-                                     MethodContextable auto context) -> double
+  friend auto pludux_tag_invoke(EvaluateSeriesMethod,
+                                MethodOutput output,
+                                const AnySeriesMethod& method,
+                                AssetSnapshot asset_snapshot,
+                                MethodContextable auto context) -> double
   {
     return method.evaluate_with_output_(
      method.impl_, output, asset_snapshot, context);

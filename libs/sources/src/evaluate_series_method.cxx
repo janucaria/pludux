@@ -59,29 +59,89 @@ import :methods.donchian_channel_method;
 
 export namespace pludux {
 
-template<typename TMethod>
-auto evaluate_selected_output_series_or_nan(
- const TMethod& method,
- MethodOutput output,
- AssetSnapshot asset_snapshot,
- MethodContextable auto context) noexcept -> double
-  requires requires {
-    {
-      evaluate_series_method(method, asset_snapshot, context)
-    } -> std::convertible_to<double>;
+void pludux_tag_invoke();
+
+inline constexpr struct EvaluateSeriesMethod {
+  template<typename TMethod>
+  auto operator()(
+   this EvaluateSeriesMethod self,
+   TMethod&& method,
+   AssetSnapshot asset_snapshot,
+   MethodContextable auto
+    context) noexcept(noexcept(pludux_tag_invoke(self,
+                                                 std::forward<TMethod>(method),
+                                                 std::move(asset_snapshot),
+                                                 context))) -> decltype(auto)
+  {
+    return pludux_tag_invoke(
+     self, std::forward<TMethod>(method), std::move(asset_snapshot), context);
   }
-{
-  if constexpr(requires {
-                 {
-                   evaluate_series_method(
-                    output, method, asset_snapshot, context)
-                 } -> std::convertible_to<double>;
-               }) {
-    return evaluate_series_method(output, method, asset_snapshot, context);
-  } else {
+
+  template<typename TMethod>
+  auto operator()(
+   this EvaluateSeriesMethod self,
+   MethodOutput output,
+   TMethod&& method,
+   AssetSnapshot asset_snapshot,
+   MethodContextable auto
+    context) noexcept(noexcept(pludux_tag_invoke(self,
+                                                 output,
+                                                 std::forward<TMethod>(method),
+                                                 std::move(asset_snapshot),
+                                                 context))) -> decltype(auto)
+    requires requires {
+      {
+        pludux_tag_invoke(self,
+                          std::forward<TMethod>(method),
+                          std::move(asset_snapshot),
+                          context)
+      } -> std::convertible_to<double>;
+      {
+        pludux_tag_invoke(self,
+                          output,
+                          std::forward<TMethod>(method),
+                          std::move(asset_snapshot),
+                          context)
+      } -> std::convertible_to<double>;
+    }
+  {
+    return pludux_tag_invoke(self,
+                             output,
+                             std::forward<TMethod>(method),
+                             std::move(asset_snapshot),
+                             context);
+  }
+
+  template<typename TMethod>
+  auto operator()(this EvaluateSeriesMethod self,
+                  MethodOutput output,
+                  TMethod&& method,
+                  AssetSnapshot asset_snapshot,
+                  MethodContextable auto context) noexcept -> double
+    requires requires {
+      {
+        pludux_tag_invoke(self,
+                          std::forward<TMethod>(method),
+                          std::move(asset_snapshot),
+                          context)
+      } -> std::convertible_to<double>;
+      requires(!requires {
+        {
+          pludux_tag_invoke(self,
+                            output,
+                            std::forward<TMethod>(method),
+                            std::move(asset_snapshot),
+                            context)
+        } -> std::convertible_to<double>;
+      });
+    }
+  {
     return std::numeric_limits<double>::quiet_NaN();
   }
-}
+
+  auto operator()(this EvaluateSeriesMethod,
+                  const EvaluateSeriesMethod&) noexcept -> double = delete;
+} evaluate_series_method;
 
 template<typename TParameterMethod>
 auto evaluated_method_to_size(const TParameterMethod& parameter,
@@ -95,18 +155,20 @@ auto evaluated_method_to_size(const TParameterMethod& parameter,
 
 template<typename TMethod>
   requires std::is_arithmetic_v<TMethod>
-auto evaluate_series_method(TMethod method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       TMethod method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   return static_cast<double>(method);
 }
 
 // ATR
 template<typename TPeriodMethod>
-auto evaluate_series_method(const AtrMethod<TPeriodMethod>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const AtrMethod<TPeriodMethod>& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   const auto period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
@@ -117,9 +179,10 @@ auto evaluate_series_method(const AtrMethod<TPeriodMethod>& method,
 }
 
 // TR
-auto evaluate_series_method(const TrMethod& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const TrMethod& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   const auto high =
    evaluate_series_method(HighMethod{}, asset_snapshot, context);
@@ -140,7 +203,8 @@ auto evaluate_series_method(const TrMethod& method,
 
 // BB
 template<typename TMaSourceMethod, typename TParameterMethod>
-auto evaluate_series_method(
+auto pludux_tag_invoke(
+ EvaluateSeriesMethod,
  const BbMethod<TMaSourceMethod, TParameterMethod>& method,
  AssetSnapshot asset_snapshot,
  MethodContextable auto context) noexcept -> double
@@ -150,7 +214,8 @@ auto evaluate_series_method(
 }
 
 template<typename TMaSourceMethod, typename TParameterMethod>
-auto evaluate_series_method(
+auto pludux_tag_invoke(
+ EvaluateSeriesMethod,
  MethodOutput output,
  const BbMethod<TMaSourceMethod, TParameterMethod>& method,
  AssetSnapshot asset_snapshot,
@@ -184,9 +249,10 @@ auto evaluate_series_method(
 
 // Change
 template<typename TSourceMethod>
-auto evaluate_series_method(const ChangeMethod<TSourceMethod>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const ChangeMethod<TSourceMethod>& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   const auto current =
    evaluate_series_method(method.source(), asset_snapshot, context);
@@ -197,18 +263,20 @@ auto evaluate_series_method(const ChangeMethod<TSourceMethod>& method,
 }
 
 // Data
-auto evaluate_series_method(const DataMethod& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const DataMethod& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   return asset_snapshot.data(method.field());
 }
 
 // Percentage
 template<typename TMethod>
-auto evaluate_series_method(const PercentageMethod<TMethod>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const PercentageMethod<TMethod>& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   const auto total =
    evaluate_series_method(method.base(), asset_snapshot, context);
@@ -218,10 +286,10 @@ auto evaluate_series_method(const PercentageMethod<TMethod>& method,
 
 // SMA
 template<typename TSourceMethod, typename TPeriodMethod>
-auto evaluate_series_method(
- const SmaMethod<TSourceMethod, TPeriodMethod>& method,
- AssetSnapshot asset_snapshot,
- MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const SmaMethod<TSourceMethod, TPeriodMethod>& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   const auto period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
@@ -247,51 +315,7 @@ template<template<typename, typename> typename TEmaMethod,
                 EmaMethod<TSourceMethod, TPeriodMethod>> ||
    std::same_as<std::remove_cvref_t<TEmaMethod<TSourceMethod, TPeriodMethod>>,
                 RmaMethod<TSourceMethod, TPeriodMethod>>)
-auto evaluate_series_method(
- const TEmaMethod<TSourceMethod, TPeriodMethod>& method,
- AssetSnapshot asset_snapshot,
- MethodContextable auto context) noexcept -> double
-{
-  auto empty_results = std::vector<double>{};
-
-  auto& cached_results = [&]() mutable -> std::vector<double>& {
-    if constexpr(!std::is_same_v<std::remove_cvref_t<decltype(context)>,
-                                 std::monostate>) {
-      return context.get_series_results(MethodKey{method});
-    } else {
-      return empty_results;
-    }
-  }();
-
-  const auto results_size = static_cast<std::ptrdiff_t>(cached_results.size());
-  const auto snapshot_size = static_cast<std::ptrdiff_t>(asset_snapshot.size());
-
-  if(snapshot_size > 0 && snapshot_size <= results_size) {
-    const auto cached_index = snapshot_size - 1;
-    return cached_results[cached_index];
-  }
-
-  const auto results_to_compute = snapshot_size - results_size;
-  for(auto ii = results_to_compute; ii > 1; --ii) {
-    const auto i = ii - 1;
-    const auto result =
-     evaluate_series_method(cached_results, method, asset_snapshot[i], context);
-    cached_results.push_back(result);
-  }
-
-  return evaluate_series_method(
-   cached_results, method, std::move(asset_snapshot), context);
-}
-
-template<template<typename, typename> typename TEmaMethod,
-         typename TSourceMethod,
-         typename TPeriodMethod>
-  requires(
-   std::same_as<std::remove_cvref_t<TEmaMethod<TSourceMethod, TPeriodMethod>>,
-                EmaMethod<TSourceMethod, TPeriodMethod>> ||
-   std::same_as<std::remove_cvref_t<TEmaMethod<TSourceMethod, TPeriodMethod>>,
-                RmaMethod<TSourceMethod, TPeriodMethod>>)
-auto evaluate_series_method(
+auto evaluate_ema_or_rma_with_cached_results(
  std::vector<double>& cached_results,
  const TEmaMethod<TSourceMethod, TPeriodMethod>& method,
  AssetSnapshot asset_snapshot,
@@ -323,12 +347,56 @@ auto evaluate_series_method(
   return result;
 }
 
+template<template<typename, typename> typename TEmaMethod,
+         typename TSourceMethod,
+         typename TPeriodMethod>
+  requires(
+   std::same_as<std::remove_cvref_t<TEmaMethod<TSourceMethod, TPeriodMethod>>,
+                EmaMethod<TSourceMethod, TPeriodMethod>> ||
+   std::same_as<std::remove_cvref_t<TEmaMethod<TSourceMethod, TPeriodMethod>>,
+                RmaMethod<TSourceMethod, TPeriodMethod>>)
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const TEmaMethod<TSourceMethod, TPeriodMethod>& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
+{
+  auto empty_results = std::vector<double>{};
+
+  auto& cached_results = [&]() mutable -> std::vector<double>& {
+    if constexpr(!std::is_same_v<std::remove_cvref_t<decltype(context)>,
+                                 std::monostate>) {
+      return context.get_series_results(MethodKey{method});
+    } else {
+      return empty_results;
+    }
+  }();
+
+  const auto results_size = static_cast<std::ptrdiff_t>(cached_results.size());
+  const auto snapshot_size = static_cast<std::ptrdiff_t>(asset_snapshot.size());
+
+  if(snapshot_size > 0 && snapshot_size <= results_size) {
+    const auto cached_index = snapshot_size - 1;
+    return cached_results[cached_index];
+  }
+
+  const auto results_to_compute = snapshot_size - results_size;
+  for(auto ii = results_to_compute; ii > 1; --ii) {
+    const auto i = ii - 1;
+    const auto result = evaluate_ema_or_rma_with_cached_results(
+     cached_results, method, asset_snapshot[i], context);
+    cached_results.push_back(result);
+  }
+
+  return evaluate_ema_or_rma_with_cached_results(
+   cached_results, method, std::move(asset_snapshot), context);
+}
+
 // WMA
 template<typename TSourceMethod, typename TPeriodMethod>
-auto evaluate_series_method(
- const WmaMethod<TSourceMethod, TPeriodMethod>& method,
- AssetSnapshot asset_snapshot,
- MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const WmaMethod<TSourceMethod, TPeriodMethod>& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   const auto period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
@@ -351,10 +419,10 @@ auto evaluate_series_method(
 
 // HMA
 template<typename TSourceMethod, typename TPeriodMethod>
-auto evaluate_series_method(
- const HmaMethod<TSourceMethod, TPeriodMethod>& method,
- AssetSnapshot asset_snapshot,
- MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const HmaMethod<TSourceMethod, TPeriodMethod>& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   const auto period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
@@ -372,10 +440,10 @@ auto evaluate_series_method(
 
 // RSI
 template<typename TSourceMethod, typename TPeriodMethod>
-auto evaluate_series_method(
- const RsiMethod<TSourceMethod, TPeriodMethod>& method,
- AssetSnapshot asset_snapshot,
- MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const RsiMethod<TSourceMethod, TPeriodMethod>& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   const auto period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
@@ -391,10 +459,10 @@ auto evaluate_series_method(
 
 // ROC
 template<typename TSourceMethod, typename TPeriodMethod>
-auto evaluate_series_method(
- const RocMethod<TSourceMethod, TPeriodMethod>& method,
- AssetSnapshot asset_snapshot,
- MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const RocMethod<TSourceMethod, TPeriodMethod>& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   const auto period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
@@ -413,9 +481,10 @@ auto evaluate_series_method(
 
 // RVOL
 template<typename TPeriodMethod>
-auto evaluate_series_method(const RvolMethod<TPeriodMethod>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const RvolMethod<TPeriodMethod>& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   const auto period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
@@ -429,7 +498,8 @@ auto evaluate_series_method(const RvolMethod<TPeriodMethod>& method,
 
 // Highest
 template<typename TSourceMethod, typename TPeriodMethod>
-auto evaluate_series_method(
+auto pludux_tag_invoke(
+ EvaluateSeriesMethod,
  const HighestMethod<TSourceMethod, TPeriodMethod>& method,
  AssetSnapshot asset_snapshot,
  MethodContextable auto context) noexcept -> double
@@ -452,7 +522,8 @@ auto evaluate_series_method(
 
 // KC
 template<typename TMaSourceMethod, typename TParameterMethod>
-auto evaluate_series_method(
+auto pludux_tag_invoke(
+ EvaluateSeriesMethod,
  const KcMethod<TMaSourceMethod, TParameterMethod>& method,
  AssetSnapshot asset_snapshot,
  MethodContextable auto context) noexcept -> double
@@ -462,7 +533,8 @@ auto evaluate_series_method(
 }
 
 template<typename TMaSourceMethod, typename TParameterMethod>
-auto evaluate_series_method(
+auto pludux_tag_invoke(
+ EvaluateSeriesMethod,
  MethodOutput output,
  const KcMethod<TMaSourceMethod, TParameterMethod>& method,
  AssetSnapshot asset_snapshot,
@@ -512,19 +584,21 @@ auto evaluate_series_method(
 
 // DONCHIAN CHANNEL
 template<typename TPeriodMethod>
-auto evaluate_series_method(const DonchianChannelMethod<TPeriodMethod>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const DonchianChannelMethod<TPeriodMethod>& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   return evaluate_series_method(
    MethodOutput::MiddleBand, method, std::move(asset_snapshot), context);
 }
 
 template<typename TPeriodMethod>
-auto evaluate_series_method(MethodOutput output,
-                            const DonchianChannelMethod<TPeriodMethod>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       MethodOutput output,
+                       const DonchianChannelMethod<TPeriodMethod>& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   const auto period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
@@ -557,9 +631,10 @@ auto evaluate_series_method(MethodOutput output,
 
 // Lookback
 template<typename TSourceMethod>
-auto evaluate_series_method(const LookbackMethod<TSourceMethod>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const LookbackMethod<TSourceMethod>& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   return evaluate_series_method(
    method.source(), asset_snapshot[method.period()], context);
@@ -567,31 +642,33 @@ auto evaluate_series_method(const LookbackMethod<TSourceMethod>& method,
 
 // SelectOutput
 template<typename TSourceMethod>
-auto evaluate_series_method(const SelectOutputMethod<TSourceMethod>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const SelectOutputMethod<TSourceMethod>& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   return evaluate_series_method(
    method.output(), method, asset_snapshot, context);
 }
 
 template<typename TSourceMethod>
-auto evaluate_series_method(MethodOutput output,
-                            const SelectOutputMethod<TSourceMethod>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       MethodOutput output,
+                       const SelectOutputMethod<TSourceMethod>& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
-  return evaluate_selected_output_series_or_nan(
-   method.source(), output, asset_snapshot, context);
+  return evaluate_series_method(
+   output, method.source(), asset_snapshot, context);
 }
 
 // Lowest
 
 template<typename TSourceMethod, typename TPeriodMethod>
-auto evaluate_series_method(
- const LowestMethod<TSourceMethod, TPeriodMethod>& method,
- AssetSnapshot asset_snapshot,
- MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const LowestMethod<TSourceMethod, TPeriodMethod>& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   const auto period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
@@ -612,7 +689,8 @@ auto evaluate_series_method(
 // MACD
 
 template<typename TSourceMethod, typename TParameterMethod>
-auto evaluate_series_method(
+auto pludux_tag_invoke(
+ EvaluateSeriesMethod,
  const MacdMethod<TSourceMethod, TParameterMethod>& method,
  AssetSnapshot asset_snapshot,
  MethodContextable auto context) noexcept -> double
@@ -622,7 +700,8 @@ auto evaluate_series_method(
 }
 
 template<typename TSourceMethod, typename TParameterMethod>
-auto evaluate_series_method(
+auto pludux_tag_invoke(
+ EvaluateSeriesMethod,
  MethodOutput output,
  const MacdMethod<TSourceMethod, TParameterMethod>& method,
  AssetSnapshot asset_snapshot,
@@ -659,37 +738,42 @@ auto evaluate_series_method(
 
 // OhlcvMethod (Open, High, Low, Close, Volume)
 
-auto evaluate_series_method(OpenMethod method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       OpenMethod method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   return asset_snapshot.open();
 }
 
-auto evaluate_series_method(HighMethod method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       HighMethod method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   return asset_snapshot.high();
 }
 
-auto evaluate_series_method(LowMethod method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       LowMethod method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   return asset_snapshot.low();
 }
 
-auto evaluate_series_method(CloseMethod method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       CloseMethod method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   return asset_snapshot.close();
 }
 
-auto evaluate_series_method(VolumeMethod method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       VolumeMethod method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   return asset_snapshot.volume();
 }
@@ -700,7 +784,8 @@ auto evaluate_series_method(VolumeMethod method,
 template<typename TBinaryFn,
          typename TLeftOperandMethod,
          typename TRightOperandMethod>
-auto evaluate_series_method(
+auto pludux_tag_invoke(
+ EvaluateSeriesMethod,
  const BinaryOperatorMethod<TBinaryFn, TLeftOperandMethod, TRightOperandMethod>&
   method,
  AssetSnapshot asset_snapshot,
@@ -715,7 +800,8 @@ auto evaluate_series_method(
 }
 
 template<typename TUnaryFn, typename TOperandMethod>
-auto evaluate_series_method(
+auto pludux_tag_invoke(
+ EvaluateSeriesMethod,
  const UnaryOperatorMethod<TUnaryFn, TOperandMethod>& method,
  AssetSnapshot asset_snapshot,
  MethodContextable auto context) noexcept -> double
@@ -729,9 +815,10 @@ auto evaluate_series_method(
 // Adaptive MA
 
 template<typename TSourceMethod>
-auto evaluate_series_method(const AdaptiveMaMethod<TSourceMethod>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const AdaptiveMaMethod<TSourceMethod>& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   switch(method.ma_type()) {
   case MaMethodType::Sma: {
@@ -761,9 +848,10 @@ auto evaluate_series_method(const AdaptiveMaMethod<TSourceMethod>& method,
 
 // SeriesNode
 
-auto evaluate_series_method(const SeriesNodeMethod& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const SeriesNodeMethod& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   if constexpr(std::is_same_v<std::monostate, decltype(context)>) {
     return std::numeric_limits<double>::quiet_NaN();
@@ -772,10 +860,11 @@ auto evaluate_series_method(const SeriesNodeMethod& method,
   }
 }
 
-auto evaluate_series_method(MethodOutput output,
-                            const SeriesNodeMethod& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       MethodOutput output,
+                       const SeriesNodeMethod& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   if constexpr(std::is_same_v<std::monostate, decltype(context)>) {
     return std::numeric_limits<double>::quiet_NaN();
@@ -786,9 +875,10 @@ auto evaluate_series_method(MethodOutput output,
 
 // SeriesValue
 
-auto evaluate_series_method(const SeriesValueMethod& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const SeriesValueMethod& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   if constexpr(std::is_same_v<std::monostate, decltype(context)>) {
     return std::numeric_limits<double>::quiet_NaN();
@@ -801,10 +891,10 @@ auto evaluate_series_method(const SeriesValueMethod& method,
 // Stddev
 
 template<typename TSourceMethod, typename TPeriodMethod>
-auto evaluate_series_method(
- const StddevMethod<TSourceMethod, TPeriodMethod>& method,
- AssetSnapshot asset_snapshot,
- MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const StddevMethod<TSourceMethod, TPeriodMethod>& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   const auto period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
@@ -833,19 +923,21 @@ auto evaluate_series_method(
 
 // Stochastic
 template<typename TParameterMethod>
-auto evaluate_series_method(const StochMethod<TParameterMethod>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const StochMethod<TParameterMethod>& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   return evaluate_series_method(
    MethodOutput::KPercent, method, asset_snapshot, context);
 }
 
 template<typename TParameterMethod>
-auto evaluate_series_method(MethodOutput output,
-                            const StochMethod<TParameterMethod>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       MethodOutput output,
+                       const StochMethod<TParameterMethod>& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   const auto k_period =
    evaluated_method_to_size(method.k_period(), asset_snapshot, context);
@@ -881,7 +973,8 @@ auto evaluate_series_method(MethodOutput output,
 
 // Stochastic RSI
 template<typename TRsiSourceMethod, typename TParameterMethod>
-auto evaluate_series_method(
+auto pludux_tag_invoke(
+ EvaluateSeriesMethod,
  const StochRsiMethod<TRsiSourceMethod, TParameterMethod>& method,
  AssetSnapshot asset_snapshot,
  MethodContextable auto context) noexcept -> double
@@ -891,7 +984,8 @@ auto evaluate_series_method(
 }
 
 template<typename TRsiSourceMethod, typename TParameterMethod>
-auto evaluate_series_method(
+auto pludux_tag_invoke(
+ EvaluateSeriesMethod,
  MethodOutput output,
  const StochRsiMethod<TRsiSourceMethod, TParameterMethod>& method,
  AssetSnapshot asset_snapshot,
@@ -932,18 +1026,20 @@ auto evaluate_series_method(
 }
 
 // Value
-auto evaluate_series_method(const ValueMethod& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const ValueMethod& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   return method.value();
 }
 
 // AllOf
 template<typename TConditionMethod>
-auto evaluate_series_method(const AllOfMethod<TConditionMethod>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const AllOfMethod<TConditionMethod>& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   return std::ranges::all_of(
    method.conditions(), [&asset_snapshot, &context](const auto& method) {
@@ -954,9 +1050,10 @@ auto evaluate_series_method(const AllOfMethod<TConditionMethod>& method,
 
 // AnyOf
 template<typename TConditionMethod>
-auto evaluate_series_method(const AnyOfMethod<TConditionMethod>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const AnyOfMethod<TConditionMethod>& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   return std::ranges::any_of(
    method.conditions(), [&asset_snapshot, &context](const auto& method) {
@@ -967,7 +1064,8 @@ auto evaluate_series_method(const AnyOfMethod<TConditionMethod>& method,
 
 // Crossover
 template<typename TSourceMethod, typename TReferenceMethod>
-auto evaluate_series_method(
+auto pludux_tag_invoke(
+ EvaluateSeriesMethod,
  const CrossoverMethod<TSourceMethod, TReferenceMethod>& method,
  AssetSnapshot asset_snapshot,
  MethodContextable auto context) noexcept -> double
@@ -990,7 +1088,8 @@ auto evaluate_series_method(
 
 // Crossunder
 template<typename TSourceMethod, typename TReferenceMethod>
-auto evaluate_series_method(
+auto pludux_tag_invoke(
+ EvaluateSeriesMethod,
  const CrossunderMethod<TSourceMethod, TReferenceMethod>& method,
  AssetSnapshot asset_snapshot,
  MethodContextable auto context) noexcept -> double
@@ -1013,9 +1112,10 @@ auto evaluate_series_method(
 
 // Boolean (True, False)
 template<bool TBool>
-auto evaluate_series_method(const BooleanMethod<TBool>& method,
-                            AssetSnapshot asset_snapshot,
-                            MethodContextable auto context) noexcept -> double
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const BooleanMethod<TBool>& method,
+                       AssetSnapshot asset_snapshot,
+                       MethodContextable auto context) noexcept -> double
 {
   return TBool;
 }
@@ -1024,7 +1124,8 @@ auto evaluate_series_method(const BooleanMethod<TBool>& method,
 template<typename TOperation,
          typename TFirstCondition,
          typename TSecondCondition>
-auto evaluate_series_method(
+auto pludux_tag_invoke(
+ EvaluateSeriesMethod,
  const BinaryLogicalMethod<TOperation, TFirstCondition, TSecondCondition>&
   method,
  AssetSnapshot asset_snapshot,
@@ -1040,7 +1141,8 @@ auto evaluate_series_method(
 
 // Unary Logical (Not)
 template<typename TOperation, typename TOtherCondition>
-auto evaluate_series_method(
+auto pludux_tag_invoke(
+ EvaluateSeriesMethod,
  const UnaryLogicalMethod<TOperation, TOtherCondition>& method,
  AssetSnapshot asset_snapshot,
  MethodContextable auto context) noexcept -> double
@@ -1055,7 +1157,8 @@ auto evaluate_series_method(
 template<typename TComparator,
          typename TTargetMethod,
          typename TThresholdMethod>
-auto evaluate_series_method(
+auto pludux_tag_invoke(
+ EvaluateSeriesMethod,
  const ComparisonMethod<TComparator, TTargetMethod, TThresholdMethod>& method,
  AssetSnapshot asset_snapshot,
  MethodContextable auto context) noexcept -> double
