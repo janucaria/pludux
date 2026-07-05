@@ -377,6 +377,88 @@ TEST(BacktestRunnerTest, PrevEquityPercentUsesLatestCompletedTimelineRow)
   EXPECT_DOUBLE_EQ(third_results->get()[2], 110.0);
 }
 
+TEST(BacktestRunnerTest, PrevDrawdownSignalUsesLatestCompletedTimelineRow)
+{
+  const auto asset = Asset{"Test",
+                           AssetHistory{{"Datetime", {4.0, 3.0, 2.0, 1.0}},
+                                        {"Open", {90.0, 90.0, 100.0, 100.0}},
+                                        {"High", {90.0, 90.0, 100.0, 100.0}},
+                                        {"Low", {90.0, 90.0, 100.0, 100.0}},
+                                        {"Close", {90.0, 90.0, 100.0, 100.0}},
+                                        {"Volume", {0.0, 0.0, 0.0, 0.0}}}};
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  series_methods.set("prev_drawdown", DrawdownMethod{});
+
+  const auto entry_signal = EqualMethod{CloseMethod{}, ValueMethod{100.0}};
+  const auto exit_signal = EqualMethod{CloseMethod{}, ValueMethod{90.0}};
+  const auto short_entry_signal =
+   EqualMethod{DrawdownMethod{}, ValueMethod{1.0}};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  std::move(series_methods),
+                  BacktestRunner::PositionRule{entry_signal,
+                                               exit_signal,
+                                               BooleanMethod<false>{},
+                                               1,
+                                               OpenMethod{},
+                                               false,
+                                               false,
+                                               OpenMethod{},
+                                               false,
+                                               0,
+                                               OpenMethod{},
+                                               0,
+                                               OpenMethod{}},
+                  BacktestRunner::PositionRule{short_entry_signal,
+                                               BooleanMethod<false>{},
+                                               BooleanMethod<false>{},
+                                               1,
+                                               OpenMethod{},
+                                               false,
+                                               false,
+                                               OpenMethod{},
+                                               false,
+                                               0,
+                                               OpenMethod{}},
+                  1000.0};
+
+  runner.run(series_results, timeline);
+
+  ASSERT_EQ(timeline.size(), 1);
+  const auto first_results =
+   series_results.results(std::string{"prev_drawdown"});
+  ASSERT_TRUE(first_results.has_value());
+  ASSERT_EQ(first_results->get().size(), 1);
+  EXPECT_TRUE(std::isnan(first_results->get()[0]));
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+
+  ASSERT_EQ(timeline.size(), 3);
+  EXPECT_DOUBLE_EQ(timeline.drawdown(2), 1.0);
+
+  runner.run(series_results, timeline);
+
+  ASSERT_EQ(timeline.size(), 4);
+  EXPECT_EQ(timeline.open_trade_count(last_timeline_index(timeline)), 1);
+  const auto last_results =
+   series_results.results(std::string{"prev_drawdown"});
+  ASSERT_TRUE(last_results.has_value());
+  ASSERT_EQ(last_results->get().size(), 4);
+  EXPECT_DOUBLE_EQ(last_results->get()[3], 1.0);
+}
+
 TEST(BacktestRunnerTest, FixedQuantitySizingUsesExactQuantity)
 {
   const auto timeline =

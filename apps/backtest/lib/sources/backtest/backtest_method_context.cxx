@@ -106,6 +106,22 @@ public:
     return self.timeline_.equity(previous_index) / initial_capital * 100.0;
   }
 
+  auto previous_drawdown(this const BacktestMethodContext& self) noexcept
+   -> double
+  {
+    const auto index = self.index();
+    if(index == 0 || self.timeline_.empty()) {
+      return std::numeric_limits<double>::quiet_NaN();
+    }
+
+    const auto previous_index = index - 1;
+    if(previous_index >= self.timeline_.size()) {
+      return std::numeric_limits<double>::quiet_NaN();
+    }
+
+    return self.timeline_.drawdown(previous_index);
+  }
+
 private:
   DefaultMethodContext default_context_;
   const OrderedNamedRegistry<AnySeriesMethod>& series_methods_;

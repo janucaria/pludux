@@ -15,6 +15,7 @@ export module pludux.backtest:config_parser;
 
 import pludux;
 
+import :drawdown_node;
 import :equity_node;
 
 export namespace pludux::backtest {
@@ -305,6 +306,19 @@ static auto parse_equity_percent_node(ConfigParser::Parser,
                                       const jsoncons::ojson&) -> ErasedNode
 {
   return EquityPercentNode{};
+}
+
+static auto serialize_drawdown_node(const ConfigParser&, const ErasedNode& node)
+ -> jsoncons::ojson
+{
+  return node_cast<DrawdownNode>(node) ? jsoncons::ojson{}
+                                       : jsoncons::ojson::null();
+}
+
+static auto parse_drawdown_node(ConfigParser::Parser, const jsoncons::ojson&)
+ -> ErasedNode
+{
+  return DrawdownNode{};
 }
 
 static auto parse_ma_node_type(const std::string& ma_type_str,
@@ -772,6 +786,9 @@ auto make_default_registered_config_parser() -> ConfigParser
   config_parser.register_node_parser("PREV_EQUITY_PERCENT",
                                      serialize_equity_percent_node,
                                      parse_equity_percent_node);
+
+  config_parser.register_node_parser(
+   "PREV_DRAWDOWN", serialize_drawdown_node, parse_drawdown_node);
 
   config_parser.register_node_parser(
    "OPEN", serialize_ohlcv_node<OpenNode>, parse_ohlcv_node<OpenNode>);

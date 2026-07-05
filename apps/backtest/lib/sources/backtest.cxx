@@ -40,6 +40,8 @@ export import :trade_session;
 export import :backtest;
 export import :backtest_timeline;
 export import :backtest_method_context;
+export import :drawdown_method;
+export import :drawdown_node;
 export import :equity_method;
 export import :equity_node;
 export import :backtest_runner;

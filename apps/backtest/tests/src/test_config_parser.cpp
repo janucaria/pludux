@@ -738,6 +738,25 @@ TEST_F(ConfigParserTest, ParsePrevEquityPercentMethod)
   EXPECT_EQ(method, deserialized_config);
 }
 
+TEST_F(ConfigParserTest, ParsePrevDrawdownMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "PREV_DRAWDOWN"
+    }
+  )");
+
+  const auto method = parse_node_method(config);
+
+  const auto drawdown_method =
+   series_method_cast<pludux::backtest::DrawdownMethod>(method);
+  ASSERT_NE(drawdown_method, nullptr);
+
+  const auto serialized_config = serialize_node_method(method);
+  const auto deserialized_config = parse_node_method(serialized_config);
+  EXPECT_EQ(method, deserialized_config);
+}
+
 TEST_F(ConfigParserTest, ParseScreenerAtrMethod)
 {
   const auto config = json::parse(R"(

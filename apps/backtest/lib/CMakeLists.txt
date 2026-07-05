@@ -89,6 +89,8 @@ target_sources(${PROJECT_NAME}
     sources/backtest/profile.cxx
     sources/backtest/backtest_timeline.cxx
     sources/backtest/backtest_method_context.cxx
+    sources/backtest/drawdown_method.cxx
+    sources/backtest/drawdown_node.cxx
     sources/backtest/equity_method.cxx
     sources/backtest/equity_node.cxx
     sources/backtest/backtest.cxx
