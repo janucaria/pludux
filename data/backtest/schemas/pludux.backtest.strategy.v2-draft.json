@@ -309,6 +309,14 @@
           "description": "Quote shorthand representing raw market data. Preferred only for direct price/volume inputs."
         },
         {
+          "type": "string",
+          "enum": [
+            "PREV_EQUITY",
+            "PREV_EQUITY_PERCENT"
+          ],
+          "description": "Backtest account-state shorthand. PREV_EQUITY reads the latest completed timeline row equity before the current signal evaluation. PREV_EQUITY_PERCENT reads that equity as a percentage of initial capital."
+        },
+        {
           "$ref": "#/$defs/series",
           "description": "A full series expression using method + params. Preferred when defining indicators or transformations."
         },
@@ -720,6 +728,56 @@
       ],
       "title": "Data Field",
       "description": "Reads a custom data field from the input dataset, such as a user-provided column in the historical data file."
+    },
+    "prevEquityMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "PREV_EQUITY"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false
+            }
+          }
+        }
+      ],
+      "title": "Previous Equity",
+      "description": "Reads the equity from the latest completed backtest timeline row before the current signal evaluation. On the first bar, the value is NaN.",
+      "examples": [
+        {
+          "method": "PREV_EQUITY"
+        }
+      ]
+    },
+    "prevEquityPercentMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "PREV_EQUITY_PERCENT"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false
+            }
+          }
+        }
+      ],
+      "title": "Previous Equity Percent",
+      "description": "Reads previous equity as a percentage of initial capital from the latest completed backtest timeline row before the current signal evaluation. On the first bar, the value is NaN.",
+      "examples": [
+        {
+          "method": "PREV_EQUITY_PERCENT"
+        }
+      ]
     },
     "smaMethod": {
       "allOf": [
@@ -2275,6 +2333,12 @@
         },
         {
           "$ref": "#/$defs/dataMethod"
+        },
+        {
+          "$ref": "#/$defs/prevEquityMethod"
+        },
+        {
+          "$ref": "#/$defs/prevEquityPercentMethod"
         },
         {
           "$ref": "#/$defs/maMethod"

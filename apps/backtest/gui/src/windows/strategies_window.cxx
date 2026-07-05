@@ -39,6 +39,8 @@ namespace pludux::apps {
 
 using pludux::backtest::AnyPlotMethod;
 using pludux::backtest::AnyPlotSourceMethod;
+using pludux::backtest::EquityNode;
+using pludux::backtest::EquityPercentNode;
 using pludux::backtest::HLinePlotMethod;
 using LinePlotMethod = pludux::backtest::LinePlotMethod<AnyPlotSourceMethod>;
 using HistogramPlotMethod =
@@ -62,6 +64,10 @@ auto get_default_series_node(const std::string& series_id) -> ErasedNode
     return ChangeNode{CloseNode{}};
   } else if(series_id == "DATA") {
     return DataNode{};
+  } else if(series_id == "PREV_EQUITY") {
+    return EquityNode{};
+  } else if(series_id == "PREV_EQUITY_PERCENT") {
+    return EquityPercentNode{};
   } else if(series_id == "SMA") {
     return SmaNode{CloseNode{}, 14};
   } else if(series_id == "EMA") {
@@ -189,6 +195,10 @@ auto get_series_node_id(const ErasedNode& node) -> std::string
     return "CHANGE";
   } else if(node_cast<DataNode>(node)) {
     return "DATA";
+  } else if(node_cast<EquityNode>(node)) {
+    return "PREV_EQUITY";
+  } else if(node_cast<EquityPercentNode>(node)) {
+    return "PREV_EQUITY_PERCENT";
   } else if(node_cast<ValueNode>(node)) {
     return "VALUE";
   } else if(node_cast<StddevNode>(node)) {
@@ -302,6 +312,10 @@ auto get_series_node_title(const std::string& series_id) -> std::string
     return "Change";
   } else if(series_id == "DATA") {
     return "Data";
+  } else if(series_id == "PREV_EQUITY") {
+    return "Previous Equity";
+  } else if(series_id == "PREV_EQUITY_PERCENT") {
+    return "Previous Equity (%)";
   } else if(series_id == "SMA") {
     return "Simple Moving Average (SMA)";
   } else if(series_id == "EMA") {
@@ -1318,6 +1332,8 @@ private:
                                                         "PERCENTAGE",
                                                         "ABS_DIFF",
                                                         "DATA",
+                                                        "PREV_EQUITY",
+                                                        "PREV_EQUITY_PERCENT",
                                                         "SMA",
                                                         "EMA",
                                                         "WMA",

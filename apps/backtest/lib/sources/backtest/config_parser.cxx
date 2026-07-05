@@ -15,6 +15,8 @@ export module pludux.backtest:config_parser;
 
 import pludux;
 
+import :equity_node;
+
 export namespace pludux::backtest {
 
 class ConfigParser {
@@ -276,6 +278,33 @@ static auto parse_data_node(ConfigParser::Parser, const jsoncons::ojson& params)
  -> ErasedNode
 {
   return DataNode{params.at("field").as_string()};
+}
+
+static auto serialize_equity_node(const ConfigParser&, const ErasedNode& node)
+ -> jsoncons::ojson
+{
+  return node_cast<EquityNode>(node) ? jsoncons::ojson{}
+                                     : jsoncons::ojson::null();
+}
+
+static auto parse_equity_node(ConfigParser::Parser, const jsoncons::ojson&)
+ -> ErasedNode
+{
+  return EquityNode{};
+}
+
+static auto serialize_equity_percent_node(const ConfigParser&,
+                                          const ErasedNode& node)
+ -> jsoncons::ojson
+{
+  return node_cast<EquityPercentNode>(node) ? jsoncons::ojson{}
+                                            : jsoncons::ojson::null();
+}
+
+static auto parse_equity_percent_node(ConfigParser::Parser,
+                                      const jsoncons::ojson&) -> ErasedNode
+{
+  return EquityPercentNode{};
 }
 
 static auto parse_ma_node_type(const std::string& ma_type_str,
@@ -736,6 +765,13 @@ auto make_default_registered_config_parser() -> ConfigParser
 
   config_parser.register_node_parser(
    "DATA", serialize_data_node, parse_data_node);
+
+  config_parser.register_node_parser(
+   "PREV_EQUITY", serialize_equity_node, parse_equity_node);
+
+  config_parser.register_node_parser("PREV_EQUITY_PERCENT",
+                                     serialize_equity_percent_node,
+                                     parse_equity_percent_node);
 
   config_parser.register_node_parser(
    "OPEN", serialize_ohlcv_node<OpenNode>, parse_ohlcv_node<OpenNode>);

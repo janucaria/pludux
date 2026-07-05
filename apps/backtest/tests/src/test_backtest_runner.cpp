@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <vector>
 
@@ -242,6 +243,138 @@ TEST(BacktestRunnerTest, RiskSizingUsesCurrentEquityAfterClosedTrade)
   EXPECT_DOUBLE_EQ(
    timeline.trade_records(last_timeline_index(timeline)).back().position_size(),
    5.5);
+}
+
+TEST(BacktestRunnerTest, PrevEquitySignalUsesLatestCompletedTimelineRow)
+{
+  const auto asset = Asset{"Test",
+                           AssetHistory{{"Datetime", {2.0, 1.0}},
+                                        {"Open", {110.0, 100.0}},
+                                        {"High", {110.0, 100.0}},
+                                        {"Low", {110.0, 100.0}},
+                                        {"Close", {110.0, 100.0}},
+                                        {"Volume", {0.0, 0.0}}}};
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  series_methods.set("prev_equity", EquityMethod{});
+
+  const auto entry_signal = EqualMethod{EquityMethod{}, ValueMethod{1000.0}};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  std::move(series_methods),
+                  BacktestRunner::PositionRule{entry_signal,
+                                               BooleanMethod<false>{},
+                                               BooleanMethod<false>{},
+                                               1,
+                                               OpenMethod{},
+                                               false,
+                                               false,
+                                               OpenMethod{},
+                                               false,
+                                               0,
+                                               OpenMethod{}},
+                  BacktestRunner::PositionRule{},
+                  1000.0};
+
+  runner.run(series_results, timeline);
+
+  ASSERT_EQ(timeline.size(), 1);
+  EXPECT_EQ(timeline.open_trade_count(last_timeline_index(timeline)), 0);
+  const auto first_results = series_results.results(std::string{"prev_equity"});
+  ASSERT_TRUE(first_results.has_value());
+  ASSERT_EQ(first_results->get().size(), 1);
+  EXPECT_TRUE(std::isnan(first_results->get()[0]));
+
+  runner.run(series_results, timeline);
+
+  ASSERT_EQ(timeline.size(), 2);
+  EXPECT_EQ(timeline.open_trade_count(last_timeline_index(timeline)), 1);
+  const auto second_results =
+   series_results.results(std::string{"prev_equity"});
+  ASSERT_TRUE(second_results.has_value());
+  ASSERT_EQ(second_results->get().size(), 2);
+  EXPECT_DOUBLE_EQ(second_results->get()[1], 1000.0);
+}
+
+TEST(BacktestRunnerTest, PrevEquityPercentUsesLatestCompletedTimelineRow)
+{
+  const auto asset = Asset{"Test",
+                           AssetHistory{{"Datetime", {3.0, 2.0, 1.0}},
+                                        {"Open", {100.0, 100.0, 100.0}},
+                                        {"High", {110.0, 200.0, 100.0}},
+                                        {"Low", {100.0, 100.0, 100.0}},
+                                        {"Close", {110.0, 200.0, 100.0}},
+                                        {"Volume", {0.0, 0.0, 0.0}}}};
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  series_methods.set("prev_equity_percent", EquityPercentMethod{});
+
+  const auto entry_signal =
+   EqualMethod{EquityPercentMethod{}, ValueMethod{100.0}};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  std::move(series_methods),
+                  BacktestRunner::PositionRule{entry_signal,
+                                               BooleanMethod<false>{},
+                                               BooleanMethod<false>{},
+                                               1,
+                                               OpenMethod{},
+                                               false,
+                                               false,
+                                               OpenMethod{},
+                                               false,
+                                               0,
+                                               OpenMethod{}},
+                  BacktestRunner::PositionRule{},
+                  1000.0};
+
+  runner.run(series_results, timeline);
+
+  ASSERT_EQ(timeline.size(), 1);
+  const auto first_results =
+   series_results.results(std::string{"prev_equity_percent"});
+  ASSERT_TRUE(first_results.has_value());
+  ASSERT_EQ(first_results->get().size(), 1);
+  EXPECT_TRUE(std::isnan(first_results->get()[0]));
+
+  runner.run(series_results, timeline);
+
+  ASSERT_EQ(timeline.size(), 2);
+  const auto second_results =
+   series_results.results(std::string{"prev_equity_percent"});
+  ASSERT_TRUE(second_results.has_value());
+  ASSERT_EQ(second_results->get().size(), 2);
+  EXPECT_DOUBLE_EQ(second_results->get()[1], 100.0);
+  EXPECT_DOUBLE_EQ(timeline.equity(last_timeline_index(timeline)), 1100.0);
+
+  runner.run(series_results, timeline);
+
+  ASSERT_EQ(timeline.size(), 3);
+  const auto third_results =
+   series_results.results(std::string{"prev_equity_percent"});
+  ASSERT_TRUE(third_results.has_value());
+  ASSERT_EQ(third_results->get().size(), 3);
+  EXPECT_DOUBLE_EQ(third_results->get()[2], 110.0);
 }
 
 TEST(BacktestRunnerTest, FixedQuantitySizingUsesExactQuantity)

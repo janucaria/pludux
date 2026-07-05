@@ -27,6 +27,7 @@ import :trade_record;
 import :trade_position;
 import :trade_session;
 import :backtest_timeline;
+import :backtest_method_context;
 import :broker;
 import :market;
 import :backtest;
@@ -243,8 +244,10 @@ public:
     const auto asset_snapshot = self.asset_.get_snapshot(asset_lookback);
 
     const auto& series_methods = self.series_methods_;
-    auto context = DefaultMethodContext{
+    auto default_context = DefaultMethodContext{
      series_methods, series_evaluation_results, timeline.size()};
+    auto context =
+     BacktestMethodContext{default_context, series_methods, timeline};
 
     for(const auto& [series_name, series_method] : series_methods) {
       const auto series_value =

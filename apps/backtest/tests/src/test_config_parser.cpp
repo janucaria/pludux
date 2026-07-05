@@ -700,6 +700,44 @@ TEST_F(ConfigParserTest, ParseScreenerDataMethod)
   EXPECT_EQ(method, deserialized_config);
 }
 
+TEST_F(ConfigParserTest, ParsePrevEquityMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "PREV_EQUITY"
+    }
+  )");
+
+  const auto method = parse_node_method(config);
+
+  const auto equity_method =
+   series_method_cast<pludux::backtest::EquityMethod>(method);
+  ASSERT_NE(equity_method, nullptr);
+
+  const auto serialized_config = serialize_node_method(method);
+  const auto deserialized_config = parse_node_method(serialized_config);
+  EXPECT_EQ(method, deserialized_config);
+}
+
+TEST_F(ConfigParserTest, ParsePrevEquityPercentMethod)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "PREV_EQUITY_PERCENT"
+    }
+  )");
+
+  const auto method = parse_node_method(config);
+
+  const auto equity_percent_method =
+   series_method_cast<pludux::backtest::EquityPercentMethod>(method);
+  ASSERT_NE(equity_percent_method, nullptr);
+
+  const auto serialized_config = serialize_node_method(method);
+  const auto deserialized_config = parse_node_method(serialized_config);
+  EXPECT_EQ(method, deserialized_config);
+}
+
 TEST_F(ConfigParserTest, ParseScreenerAtrMethod)
 {
   const auto config = json::parse(R"(
