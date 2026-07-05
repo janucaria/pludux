@@ -15,9 +15,9 @@ TEST(KcMethodTest, middle_EMA_range_ATR)
   const auto range_type = KcBandMethodType::Atr;
   const auto multiplier = 2.0;
   const auto asset_data =
-   AssetHistory{{"High", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
-                {"Low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},
-                {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+   AssetHistory{{"High", {925, 875, 840, 840, 875, 875, 880, 875, 865, 865}},
+                {"Low", {815, 830, 800, 800, 820, 855, 845, 855, 850, 850}},
+                {"Close", {875, 830, 800, 835, 870, 875, 860, 860, 860, 855}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 
@@ -101,9 +101,9 @@ TEST(KcMethodTest, middle_SMA_range_Range)
   const auto range_type = KcBandMethodType::Atr;
   const auto multiplier = 1.0;
   const auto asset_data =
-   AssetHistory{{"High", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
-                {"Low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}},
-                {"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+   AssetHistory{{"High", {925, 875, 840, 840, 875, 875, 880, 875, 865, 865}},
+                {"Low", {815, 830, 800, 800, 820, 855, 845, 855, 850, 850}},
+                {"Close", {875, 830, 800, 835, 870, 875, 860, 860, 860, 855}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 

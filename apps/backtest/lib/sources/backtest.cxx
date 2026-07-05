@@ -116,7 +116,7 @@ void update_asset_from_csv(backtest::Asset& asset, std::istream& csv_stream)
      return static_cast<double>(timestamp);
    });
 
-  const auto should_reverse = date_records.front() < date_records.back();
+  const auto should_reverse = date_records.back() < date_records.front();
   if(should_reverse) {
     std::reverse(date_records.begin(), date_records.end());
   }

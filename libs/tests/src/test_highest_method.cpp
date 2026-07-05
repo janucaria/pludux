@@ -11,7 +11,7 @@ TEST(HighestMethodTest, RunWithDynamicPeriodMethod)
 {
   const auto period = AddMethod{ValueMethod{1.0}, ValueMethod{2.0}};
   const auto highest_method = HighestMethod{CloseMethod{}, period};
-  const auto asset_data = AssetHistory{{"Close", {5.0, 4.0, 3.0, 2.0, 1.0}}};
+  const auto asset_data = AssetHistory{{"Close", {1.0, 2.0, 3.0, 4.0, 5.0}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 

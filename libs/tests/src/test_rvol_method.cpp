@@ -24,7 +24,7 @@ TEST(RvolMethodTest, RunAllMethod)
   const auto rvol_method = RvolMethod{5};
   const auto asset_data = AssetHistory{
    {"Volume",
-    {11.01, 8.59, 14.1, 30.52, 34.18, 55.34, 43.26, 65.39, 90.97, 585.54}}};
+    {585.54, 90.97, 65.39, 43.26, 55.34, 34.18, 30.52, 14.1, 8.59, 11.01}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 

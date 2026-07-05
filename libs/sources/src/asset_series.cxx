@@ -1,12 +1,8 @@
 module;
 
-#include <algorithm>
 #include <cstddef>
-#include <initializer_list>
-#include <iterator>
 #include <limits>
 #include <span>
-#include <utility>
 
 export module pludux:asset_series;
 
@@ -21,15 +17,14 @@ public:
   {
   }
 
-  auto operator[](this const AssetSeries& self, std::size_t lookback) noexcept
+  auto operator[](this const AssetSeries& self, std::size_t index) noexcept
    -> double
   {
-    if(lookback >= self.data_view_.size()) {
+    if(index >= self.data_view_.size()) {
       return std::numeric_limits<double>::quiet_NaN();
     }
 
-    const auto value_index = self.data_view_.size() - 1 - lookback;
-    return self.data_view_[value_index];
+    return self.data_view_[index];
   }
 
   auto size(this const AssetSeries& self) noexcept -> std::size_t

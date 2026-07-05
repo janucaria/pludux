@@ -185,11 +185,11 @@ TEST(BacktestTimelineTest, CalculatesDerivedMetricsByIndex)
 TEST(BacktestRunnerTest, RiskSizingUsesCurrentEquityAfterClosedTrade)
 {
   const auto asset = Asset{"Test",
-                           AssetHistory{{"Datetime", {4.0, 3.0, 2.0, 1.0}},
-                                        {"Open", {110.0, 110.0, 100.0, 50.0}},
-                                        {"High", {110.0, 110.0, 100.0, 50.0}},
-                                        {"Low", {110.0, 110.0, 100.0, 50.0}},
-                                        {"Close", {110.0, 110.0, 100.0, 50.0}},
+                           AssetHistory{{"Datetime", {1.0, 2.0, 3.0, 4.0}},
+                                        {"Open", {50.0, 100.0, 110.0, 110.0}},
+                                        {"High", {50.0, 100.0, 110.0, 110.0}},
+                                        {"Low", {50.0, 100.0, 110.0, 110.0}},
+                                        {"Close", {50.0, 100.0, 110.0, 110.0}},
                                         {"Volume", {0.0, 0.0, 0.0, 0.0}}}};
 
   const auto market = Market{"Test", 0.0, 0.0};
@@ -248,11 +248,11 @@ TEST(BacktestRunnerTest, RiskSizingUsesCurrentEquityAfterClosedTrade)
 TEST(BacktestRunnerTest, PrevEquitySignalUsesLatestCompletedTimelineRow)
 {
   const auto asset = Asset{"Test",
-                           AssetHistory{{"Datetime", {2.0, 1.0}},
-                                        {"Open", {110.0, 100.0}},
-                                        {"High", {110.0, 100.0}},
-                                        {"Low", {110.0, 100.0}},
-                                        {"Close", {110.0, 100.0}},
+                           AssetHistory{{"Datetime", {1.0, 2.0}},
+                                        {"Open", {100.0, 110.0}},
+                                        {"High", {100.0, 110.0}},
+                                        {"Low", {100.0, 110.0}},
+                                        {"Close", {100.0, 110.0}},
                                         {"Volume", {0.0, 0.0}}}};
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
@@ -309,11 +309,11 @@ TEST(BacktestRunnerTest, PrevEquitySignalUsesLatestCompletedTimelineRow)
 TEST(BacktestRunnerTest, PrevEquityPercentUsesLatestCompletedTimelineRow)
 {
   const auto asset = Asset{"Test",
-                           AssetHistory{{"Datetime", {3.0, 2.0, 1.0}},
+                           AssetHistory{{"Datetime", {1.0, 2.0, 3.0}},
                                         {"Open", {100.0, 100.0, 100.0}},
-                                        {"High", {110.0, 200.0, 100.0}},
+                                        {"High", {100.0, 200.0, 110.0}},
                                         {"Low", {100.0, 100.0, 100.0}},
-                                        {"Close", {110.0, 200.0, 100.0}},
+                                        {"Close", {100.0, 200.0, 110.0}},
                                         {"Volume", {0.0, 0.0, 0.0}}}};
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
@@ -380,11 +380,11 @@ TEST(BacktestRunnerTest, PrevEquityPercentUsesLatestCompletedTimelineRow)
 TEST(BacktestRunnerTest, PrevDrawdownSignalUsesLatestCompletedTimelineRow)
 {
   const auto asset = Asset{"Test",
-                           AssetHistory{{"Datetime", {4.0, 3.0, 2.0, 1.0}},
-                                        {"Open", {90.0, 90.0, 100.0, 100.0}},
-                                        {"High", {90.0, 90.0, 100.0, 100.0}},
-                                        {"Low", {90.0, 90.0, 100.0, 100.0}},
-                                        {"Close", {90.0, 90.0, 100.0, 100.0}},
+                           AssetHistory{{"Datetime", {1.0, 2.0, 3.0, 4.0}},
+                                        {"Open", {100.0, 100.0, 90.0, 90.0}},
+                                        {"High", {100.0, 100.0, 90.0, 90.0}},
+                                        {"Low", {100.0, 100.0, 90.0, 90.0}},
+                                        {"Close", {100.0, 100.0, 90.0, 90.0}},
                                         {"Volume", {0.0, 0.0, 0.0, 0.0}}}};
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
@@ -604,11 +604,11 @@ auto make_two_bar_asset(double first_open,
                         double second_close) -> Asset
 {
   return Asset{"Test",
-               AssetHistory{{"Datetime", {2.0, 1.0}},
-                            {"Open", {second_open, first_open}},
-                            {"High", {second_high, first_high}},
-                            {"Low", {second_low, first_low}},
-                            {"Close", {second_close, first_close}},
+               AssetHistory{{"Datetime", {1.0, 2.0}},
+                            {"Open", {first_open, second_open}},
+                            {"High", {first_high, second_high}},
+                            {"Low", {first_low, second_low}},
+                            {"Close", {first_close, second_close}},
                             {"Volume", {0.0, 0.0}}}};
 }
 
@@ -626,11 +626,11 @@ auto make_three_bar_asset(double first_open,
                           double third_close) -> Asset
 {
   return Asset{"Test",
-               AssetHistory{{"Datetime", {3.0, 2.0, 1.0}},
-                            {"Open", {third_open, second_open, first_open}},
-                            {"High", {third_high, second_high, first_high}},
-                            {"Low", {third_low, second_low, first_low}},
-                            {"Close", {third_close, second_close, first_close}},
+               AssetHistory{{"Datetime", {1.0, 2.0, 3.0}},
+                            {"Open", {first_open, second_open, third_open}},
+                            {"High", {first_high, second_high, third_high}},
+                            {"Low", {first_low, second_low, third_low}},
+                            {"Close", {first_close, second_close, third_close}},
                             {"Volume", {0.0, 0.0, 0.0}}}};
 }
 

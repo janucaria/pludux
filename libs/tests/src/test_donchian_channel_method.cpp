@@ -22,8 +22,8 @@ TEST(DonchianChannelMethodTest, ConstructorInitialization)
 TEST(DonchianChannelMethodTest, RunAllMethod)
 {
   const auto asset_data =
-   AssetHistory{{"High", {865, 865, 875, 880, 875, 875, 840, 840, 875, 925}},
-                {"Low", {850, 850, 855, 845, 855, 820, 800, 800, 830, 815}}};
+   AssetHistory{{"High", {925, 875, 840, 840, 875, 875, 880, 875, 865, 865}},
+                {"Low", {815, 830, 800, 800, 820, 855, 845, 855, 850, 850}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 

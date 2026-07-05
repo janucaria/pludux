@@ -13,7 +13,7 @@ TEST(SeriesReferenceMethodTest, RunAllMethodClose)
   const auto open_method = OpenMethod{};
   const auto close_method = CloseMethod{};
   const auto asset_data =
-   AssetHistory{{"Open", {4.0, 4.1, 4.2}}, {"Close", {1.0, 1.1, 1.2}}};
+   AssetHistory{{"Open", {4.2, 4.1, 4.0}}, {"Close", {1.2, 1.1, 1.0}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
   auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
@@ -21,8 +21,7 @@ TEST(SeriesReferenceMethodTest, RunAllMethodClose)
   series_methods.set("close", close_method);
 
   auto results_collector = SeriesEvaluationResults{};
-  auto context =
-   DefaultMethodContext{series_methods, results_collector};
+  auto context = DefaultMethodContext{series_methods, results_collector};
 
   const auto open_ref_method = SeriesNodeMethod{"open"};
   EXPECT_EQ(evaluate_series_method(open_ref_method, asset_snapshot[0], context),
@@ -44,15 +43,14 @@ TEST(SeriesReferenceMethodTest, RunAllMethodClose)
 TEST(SeriesReferenceMethodTest, InvalidField)
 {
   const auto close_method = CloseMethod{};
-  const auto asset_data = AssetHistory{{"Close", {4.0, 4.1, 4.2}}};
+  const auto asset_data = AssetHistory{{"Close", {4.2, 4.1, 4.0}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
   auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
   series_methods.set("close", close_method);
 
   auto results_collector = SeriesEvaluationResults{};
-  auto context =
-   DefaultMethodContext{series_methods, results_collector};
+  auto context = DefaultMethodContext{series_methods, results_collector};
 
   const auto not_found_ref_method = SeriesNodeMethod{"invalid"};
 

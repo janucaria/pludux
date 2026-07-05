@@ -43,17 +43,39 @@ public:
   {
   }
 
+  static auto index_to_lookback(std::size_t index,
+                                std::size_t history_size) noexcept
+   -> std::size_t
+  {
+    if(index >= history_size) {
+      return history_size;
+    }
+
+    return history_size - 1 - index;
+  }
+
+  static auto lookback_to_index(std::size_t lookback,
+                                std::size_t history_size) noexcept
+   -> std::size_t
+  {
+    if(lookback >= history_size) {
+      return history_size;
+    }
+
+    return history_size - 1 - lookback;
+  }
+
   auto operator[](this AssetSnapshot self, const std::string& field) noexcept
    -> double
   {
     return self.data(field);
   }
 
-  auto operator[](this AssetSnapshot self, std::size_t index) noexcept
+  auto operator[](this AssetSnapshot self, std::size_t lookback) noexcept
    -> AssetSnapshot
   {
     return AssetSnapshot{
-     self.lookback_ + index, self.asset_history_, self.field_resolver_};
+     self.lookback_ + lookback, self.asset_history_, self.field_resolver_};
   }
 
   auto lookback(this AssetSnapshot self) noexcept -> std::size_t
@@ -63,7 +85,7 @@ public:
 
   auto index(this AssetSnapshot self) noexcept -> std::size_t
   {
-    return self.asset_history_.size() - 1 - self.lookback();
+    return lookback_to_index(self.lookback_, self.asset_history_.size());
   }
 
   auto size(this AssetSnapshot self) noexcept -> std::size_t
@@ -84,45 +106,54 @@ public:
   auto datetime(this AssetSnapshot self) noexcept -> double
   {
     return self.field_resolver_.get_datetimes(
-     self.asset_history_)[self.lookback_];
+     self.asset_history_)[self.data_index_()];
   }
 
   auto open(this AssetSnapshot self) noexcept -> double
   {
-    return self.field_resolver_.get_opens(self.asset_history_)[self.lookback_];
+    return self.field_resolver_.get_opens(
+     self.asset_history_)[self.data_index_()];
   }
 
   auto high(this AssetSnapshot self) noexcept -> double
   {
-    return self.field_resolver_.get_highs(self.asset_history_)[self.lookback_];
+    return self.field_resolver_.get_highs(
+     self.asset_history_)[self.data_index_()];
   }
 
   auto low(this AssetSnapshot self) noexcept -> double
   {
-    return self.field_resolver_.get_lows(self.asset_history_)[self.lookback_];
+    return self.field_resolver_.get_lows(
+     self.asset_history_)[self.data_index_()];
   }
 
   auto close(this AssetSnapshot self) noexcept -> double
   {
-    return self.field_resolver_.get_closes(self.asset_history_)[self.lookback_];
+    return self.field_resolver_.get_closes(
+     self.asset_history_)[self.data_index_()];
   }
 
   auto volume(this AssetSnapshot self) noexcept -> double
   {
     return self.field_resolver_.get_volumes(
-     self.asset_history_)[self.lookback_];
+     self.asset_history_)[self.data_index_()];
   }
 
   auto data(this AssetSnapshot self, const std::string& field) noexcept
    -> double
   {
-    return self.asset_history_[field][self.lookback_];
+    return self.asset_history_[field][self.data_index_()];
   }
 
 private:
   std::size_t lookback_;
   const AssetHistory& asset_history_;
   const AssetQuoteFieldResolver& field_resolver_;
+
+  auto data_index_(this AssetSnapshot self) noexcept -> std::size_t
+  {
+    return lookback_to_index(self.lookback_, self.asset_history_.size());
+  }
 };
 
 } // namespace pludux

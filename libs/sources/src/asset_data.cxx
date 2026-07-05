@@ -1,9 +1,7 @@
 module;
 
-#include <algorithm>
 #include <cstddef>
 #include <initializer_list>
-#include <iterator>
 #include <limits>
 #include <utility>
 #include <vector>
@@ -23,23 +21,21 @@ public:
 
   template<typename TBidirectIt>
   AssetData(TBidirectIt first, TBidirectIt last)
-  : data_{std::make_reverse_iterator(last), std::make_reverse_iterator(first)}
+  : data_{first, last}
   {
   }
 
   /**
-   * The 0 lookback is the latest value.
-   * If the lookback is out of bounds, return NaN.
+   * If the index is out of bounds, return NaN.
    */
-  auto operator[](this const AssetData& self, std::size_t lookback) noexcept
+  auto operator[](this const AssetData& self, std::size_t index) noexcept
    -> double
   {
-    if(lookback >= self.data_.size()) {
+    if(index >= self.data_.size()) {
       return std::numeric_limits<double>::quiet_NaN();
     }
 
-    const auto value_index = self.data_.size() - 1 - lookback;
-    return self.data_[value_index];
+    return self.data_[index];
   }
 
   auto size(this const AssetData& self) noexcept -> std::size_t

@@ -13,7 +13,7 @@ TEST(OperatorsMethodTest, MultiplyMethod)
   const auto operand1 = ValueMethod{2.0};
   const auto operand2 = DataMethod{"close"};
   const auto multiply_method = MultiplyMethod{operand1, operand2};
-  const auto asset_data = AssetHistory{{"close", {10, 15, 20, 25, 30}}};
+  const auto asset_data = AssetHistory{{"close", {30, 25, 20, 15, 10}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
   EXPECT_DOUBLE_EQ(
@@ -67,7 +67,7 @@ TEST(OperatorsMethodTest, DivideMethod)
   const auto operand1 = ValueMethod{20.0};
   const auto operand2 = DataMethod{"close"};
   const auto divide_method = DivideMethod{operand1, operand2};
-  const auto asset_data = AssetHistory{{"close", {10, 15, 20, 25, 30}}};
+  const auto asset_data = AssetHistory{{"close", {30, 25, 20, 15, 10}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
   EXPECT_DOUBLE_EQ(
@@ -119,7 +119,7 @@ TEST(OperatorsMethodTest, AddMethod)
   const auto operand1 = ValueMethod{2.0};
   const auto operand2 = DataMethod{"close"};
   const auto add_method = AddMethod{operand1, operand2};
-  const auto asset_data = AssetHistory{{"close", {10, 15, 20, 25, 30}}};
+  const auto asset_data = AssetHistory{{"close", {30, 25, 20, 15, 10}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
   EXPECT_DOUBLE_EQ(
@@ -169,7 +169,7 @@ TEST(OperatorsMethodTest, SubtractMethod)
   const auto operand1 = ValueMethod{15.0};
   const auto operand2 = DataMethod{"close"};
   const auto subtract_method = SubtractMethod{operand1, operand2};
-  const auto asset_data = AssetHistory{{"close", {10, 15, 20, 25, 30}}};
+  const auto asset_data = AssetHistory{{"close", {30, 25, 20, 15, 10}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
   EXPECT_DOUBLE_EQ(
@@ -222,7 +222,7 @@ TEST(OperatorsMethodTest, NegateMethod)
 {
   const auto operand = DataMethod{"close"};
   const auto negate_method = NegateMethod{operand};
-  const auto asset_data = AssetHistory{{"close", {10, 15, 20, 25, 30}}};
+  const auto asset_data = AssetHistory{{"close", {30, 25, 20, 15, 10}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
   EXPECT_DOUBLE_EQ(
@@ -267,7 +267,7 @@ TEST(OperatorsMethodTest, SqrtMethod)
 {
   const auto operand = DataMethod{"close"};
   const auto sqrt_method = SqrtMethod{operand};
-  const auto asset_data = AssetHistory{{"close", {4, 9, 16, 25, 36}}};
+  const auto asset_data = AssetHistory{{"close", {36, 25, 16, 9, 4}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
   EXPECT_DOUBLE_EQ(

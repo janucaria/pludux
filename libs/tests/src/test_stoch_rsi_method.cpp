@@ -15,21 +15,21 @@ TEST(StochRsiMethodTest, RunAllMethod)
   const auto k_smooth = 4;
   const auto d_period = 2;
   const auto asset_data = AssetHistory{{"close",
-                                        {790,
-                                         810,
-                                         825,
-                                         840,
+                                        {875,
+                                         830,
+                                         800,
+                                         835,
+                                         870,
+                                         875,
+                                         860,
+                                         860,
                                          860,
                                          855,
                                          860,
-                                         860,
-                                         860,
-                                         875,
-                                         870,
-                                         835,
-                                         800,
-                                         830,
-                                         875}}};
+                                         840,
+                                         825,
+                                         810,
+                                         790}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 
