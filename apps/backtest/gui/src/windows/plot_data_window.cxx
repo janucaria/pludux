@@ -115,8 +115,8 @@ public:
      app_state.get_backtest_timelines(backtest_handle);
     const auto& backtest_series_results =
      app_state.get_series_results(backtest_handle);
-    const auto is_backtest_should_run =
-     backtest_timelines.size() < asset.size();
+    const auto timeline_size = backtest_timelines.size();
+    const auto is_backtest_should_run = timeline_size < asset.size();
 
     const auto startegy_handle = backtest.strategy_handle();
     const auto& strategy = app_state.get_strategy(startegy_handle);
@@ -191,7 +191,7 @@ public:
         ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
 
         self.draw_trades("Trades", backtest_timelines, asset);
-        self.plot_ohlc("OHLC", backtest_timelines, asset);
+        self.plot_ohlc("OHLC", asset, timeline_size);
         self.overlays_plots(context);
 
         ImPlot::EndPlot();
@@ -212,7 +212,7 @@ public:
          ImAxis_Y1, "Volume", axis_y_flags | ImPlotAxisFlags_LockMin);
         ImPlot::SetupAxisFormat(ImAxis_Y1, volume_formatter);
 
-        self.plot_volume("Volume", backtest_timelines, asset);
+        self.plot_volume("Volume", asset, timeline_size);
 
         ImPlot::EndPlot();
       }
@@ -222,9 +222,8 @@ public:
       for(const auto& plot_group : plots | no_overlays_view) {
         const auto plot_id = std::format("##Plot{}", i);
 
-        const auto context_for_plots = PlotContext{backtest_series_results,
-                                                   backtest_timelines.size(),
-                                                   plot_group.is_overlay()};
+        const auto context_for_plots = PlotContext{
+         backtest_series_results, timeline_size, plot_group.is_overlay()};
 
         if(ImPlot::BeginPlot(plot_id.c_str(), plot_size, plot_flags)) {
           const auto is_last_plot = i == additional_plots_count - 1;
@@ -292,21 +291,13 @@ private:
 
     const auto& asset_handle = backtest.asset_handle();
     const auto& asset = app_state.get_asset(asset_handle);
-    const auto& snapshot = get_asset_snapshot(timeline, idx, asset);
+    const auto& snapshot = asset.get_snapshot(idx);
 
     const auto datetime = snapshot.datetime();
     const auto timestamp = static_cast<std::time_t>(datetime);
 
     const auto formated_datetime = format_datetime(timestamp);
     return std::snprintf(buff, size, "%s", formated_datetime.c_str());
-  }
-
-  static auto get_asset_snapshot(const backtest::BacktestTimeline& timeline,
-                                 std::size_t timeline_i,
-                                 const backtest::Asset& asset) -> AssetSnapshot
-  {
-    const auto market_lookback = timeline.market_lookback(timeline_i);
-    return asset.get_snapshot(market_lookback);
   }
 
   auto is_selected_backtest_changed(
@@ -319,16 +310,16 @@ private:
 
   void plot_ohlc(this const PlotDataWindow& self,
                  const char* label_id,
-                 const backtest::BacktestTimeline& backtest_timelines,
-                 const backtest::Asset& asset)
+                 const backtest::Asset& asset,
+                 std::size_t total_count)
   {
-    if(ImPlot::BeginItem(label_id) && !backtest_timelines.empty()) {
+    if(ImPlot::BeginItem(label_id) && total_count > 0) {
       ImPlot::GetCurrentItem()->Color = ImGui::GetColorU32(self.bullish_color_);
 
       auto* draw_list = ImPlot::GetPlotDrawList();
       constexpr double half_width = 0.3;
-      for(int i = 0, ii = backtest_timelines.size(); i < ii; ++i) {
-        const auto snapshot = get_asset_snapshot(backtest_timelines, i, asset);
+      for(int i = 0, ii = static_cast<int>(total_count); i < ii; ++i) {
+        const auto snapshot = asset.get_snapshot(i);
 
         const auto open = snapshot.open();
         const auto high = snapshot.high();
@@ -364,9 +355,8 @@ private:
       }
 
       if(ImPlot::FitThisFrame()) {
-        for(auto i = std::size_t{0}; i < backtest_timelines.size(); ++i) {
-          const auto snapshot =
-           get_asset_snapshot(backtest_timelines, i, asset);
+        for(auto i = std::size_t{0}; i < total_count; ++i) {
+          const auto snapshot = asset.get_snapshot(i);
 
           ImPlot::FitPoint(ImPlotPoint(i, snapshot.low()));
           ImPlot::FitPoint(ImPlotPoint(i, snapshot.high()));
@@ -374,22 +364,20 @@ private:
       }
 
       {
-        auto timeline_i = static_cast<int>(backtest_timelines.size()) - 1;
+        auto timeline_i = static_cast<int>(total_count) - 1;
         const auto is_hovered =
          ImPlot::IsSubplotsHovered() || ImPlot::IsPlotHovered();
         if(is_hovered) {
           ImPlotPoint mouse = ImPlot::GetPlotMousePos();
           mouse.x = std::round(mouse.x);
           const auto hovered_idx = static_cast<int>(mouse.x);
-          const auto timeline_size_i =
-           static_cast<int>(backtest_timelines.size());
+          const auto timeline_size_i = static_cast<int>(total_count);
           if(hovered_idx > -1 && hovered_idx < timeline_size_i) {
             timeline_i = hovered_idx;
           }
         }
 
-        const auto snapshot =
-         get_asset_snapshot(backtest_timelines, timeline_i, asset);
+        const auto snapshot = asset.get_snapshot(timeline_i);
 
         const auto open = snapshot.open();
         const auto high = snapshot.high();
@@ -443,16 +431,15 @@ private:
 
   void plot_volume(this const PlotDataWindow& self,
                    const char* label_id,
-                   const backtest::BacktestTimeline& backtest_timelines,
-                   const backtest::Asset& asset)
+                   const backtest::Asset& asset,
+                   std::size_t total_count)
   {
     if(ImPlot::BeginItem(label_id)) {
       ImPlot::GetCurrentItem()->Color = ImGui::GetColorU32(self.bullish_color_);
 
       if(ImPlot::FitThisFrame()) {
-        for(auto i = std::size_t{0}; i < backtest_timelines.size(); ++i) {
-          const auto snapshot =
-           get_asset_snapshot(backtest_timelines, i, asset);
+        for(auto i = std::size_t{0}; i < total_count; ++i) {
+          const auto snapshot = asset.get_snapshot(i);
 
           ImPlot::FitPoint(ImPlotPoint(i, 0));
           ImPlot::FitPoint(ImPlotPoint(i, snapshot.volume()));
@@ -461,23 +448,21 @@ private:
 
       auto* draw_list = ImPlot::GetPlotDrawList();
 
-      if(!backtest_timelines.empty()) {
-        auto timeline_i = static_cast<int>(backtest_timelines.size()) - 1;
+      if(total_count > 0) {
+        auto timeline_i = static_cast<int>(total_count) - 1;
         const auto is_hovered =
          ImPlot::IsSubplotsHovered() || ImPlot::IsPlotHovered();
         if(is_hovered) {
           ImPlotPoint mouse = ImPlot::GetPlotMousePos();
           mouse.x = std::round(mouse.x);
           const auto hovered_idx = static_cast<int>(mouse.x);
-          const auto timeline_size_i =
-           static_cast<int>(backtest_timelines.size());
+          const auto timeline_size_i = static_cast<int>(total_count);
           if(hovered_idx > -1 && hovered_idx < timeline_size_i) {
             timeline_i = hovered_idx;
           }
         }
 
-        const auto snapshot =
-         get_asset_snapshot(backtest_timelines, timeline_i, asset);
+        const auto snapshot = asset.get_snapshot(timeline_i);
         const auto open = snapshot.open();
         const auto close = snapshot.close();
         const auto volume = snapshot.volume();
@@ -507,8 +492,8 @@ private:
       }
 
       constexpr auto half_width = 0.3;
-      for(int i = 0, ii = backtest_timelines.size(); i < ii; ++i) {
-        const auto snapshot = get_asset_snapshot(backtest_timelines, i, asset);
+      for(int i = 0, ii = static_cast<int>(total_count); i < ii; ++i) {
+        const auto snapshot = asset.get_snapshot(i);
 
         const auto open = snapshot.open();
         const auto close = snapshot.close();
@@ -553,7 +538,7 @@ private:
       trailing_stop_lines.reserve(timeline_size);
 
       for(auto i = std::size_t{0}; i < timeline_size; ++i) {
-        const auto snapshot = get_asset_snapshot(backtest_timelines, i, asset);
+        const auto snapshot = asset.get_snapshot(i);
         for(const auto& record : backtest_timelines.trade_records(i)) {
           const auto is_long_position = record.is_long_position();
           const auto exit_price = record.exit_price();

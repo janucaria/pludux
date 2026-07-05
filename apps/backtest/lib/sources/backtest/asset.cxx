@@ -73,9 +73,11 @@ public:
     self.field_resolver_ = std::move(new_resolver);
   }
 
-  auto get_snapshot(this const Asset& self, std::size_t lookback) noexcept
+  auto get_snapshot(this const Asset& self, std::size_t index) noexcept
    -> AssetSnapshot
   {
+    auto lookback =
+     AssetSnapshot::index_to_lookback(index, self.history().size());
     return AssetSnapshot{lookback, self.history(), self.field_resolver()};
   }
 

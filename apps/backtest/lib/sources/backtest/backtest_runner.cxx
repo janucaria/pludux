@@ -238,10 +238,7 @@ public:
       return;
     }
 
-    const auto last_index = asset_size - 1;
-    const auto asset_lookback =
-     last_index - std::min(timeline_size, last_index);
-    const auto asset_snapshot = self.asset_.get_snapshot(asset_lookback);
+    const auto asset_snapshot = self.asset_.get_snapshot(timeline_size);
 
     const auto& series_methods = self.series_methods_;
     auto default_context = DefaultMethodContext{
