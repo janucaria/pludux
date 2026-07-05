@@ -471,13 +471,10 @@ private:
       const auto position_sizing = self.profile_.position_sizing();
       const auto uses_risk_distance =
        position_sizing.mode() == PositionSizing::Mode::RiskDistance;
-      const auto needs_stop_price =
-       uses_risk_distance || position.stop_loss_enabled();
-      const auto stop_price =
-       needs_stop_price ? evaluate_series_method(position.stop_price_method(),
-                                                 asset_snapshot,
-                                                 context)
-                        : NAN;
+      const auto stop_price = evaluate_series_method(
+       position.stop_price_method(), asset_snapshot, context);
+      const auto target_price = evaluate_series_method(
+       position.target_price_method(), asset_snapshot, context);
       if(position.stop_loss_enabled() && !uses_risk_distance &&
          !std::isfinite(stop_price)) {
         throw std::runtime_error{"Invalid stop price for stop-loss exit"};
@@ -493,13 +490,12 @@ private:
        position.stop_loss_enabled() ? stop_price : NAN;
       const auto is_stop_loss_trailing = position.stop_loss_trailing_enabled();
       const auto take_profit_price =
-       position.take_profit_enabled()
-        ? evaluate_series_method(
-           position.target_price_method(), asset_snapshot, context)
-        : NAN;
+       position.take_profit_enabled() ? target_price : NAN;
 
       result = TradeEntry{position_size,
                           entry_price,
+                          stop_price,
+                          target_price,
                           stop_loss_price,
                           is_stop_loss_trailing,
                           take_profit_price};
@@ -734,8 +730,9 @@ private:
                                  self.trade_session_.market_timestamp(),
                                  self.trade_session_.market_price(),
                                  0.0,
-                                 open_position->stop_loss_initial_price(),
-                                 open_position->stop_loss_trailing_price(),
+                                 open_position->stop_price(),
+                                 open_position->target_price(),
+                                 open_position->stop_loss_price(),
                                  open_position->take_profit_price());
     }
 

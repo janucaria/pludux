@@ -35,6 +35,7 @@ public:
 
                 NAN,
                 NAN,
+                NAN,
                 NAN)
   {
   }
@@ -51,8 +52,9 @@ public:
               double exit_price,
               double total_exit_fees,
 
+              double stop_price,
+              double target_price,
               double stop_loss_price,
-              double trailing_stop_price,
               double take_profit_price)
   : status_{status}
   , position_size_{position_size}
@@ -61,8 +63,9 @@ public:
   , exit_price_{exit_price}
   , total_entry_fees_{total_entry_fees}
   , total_exit_fees_{total_exit_fees}
+  , stop_price_{stop_price}
+  , target_price_{target_price}
   , stop_loss_price_{stop_loss_price}
-  , trailing_stop_price_{trailing_stop_price}
   , take_profit_price_{take_profit_price}
   , entry_timestamp_{entry_timestamp}
   , exit_timestamp_{exit_timestamp}
@@ -161,6 +164,26 @@ public:
     self.exit_timestamp_ = timestamp;
   }
 
+  auto stop_price(this const TradeRecord& self) noexcept -> double
+  {
+    return self.stop_price_;
+  }
+
+  void stop_price(this TradeRecord& self, double price) noexcept
+  {
+    self.stop_price_ = price;
+  }
+
+  auto target_price(this const TradeRecord& self) noexcept -> double
+  {
+    return self.target_price_;
+  }
+
+  void target_price(this TradeRecord& self, double price) noexcept
+  {
+    self.target_price_ = price;
+  }
+
   auto stop_loss_price(this const TradeRecord& self) noexcept -> double
   {
     return self.stop_loss_price_;
@@ -169,16 +192,6 @@ public:
   void stop_loss_price(this TradeRecord& self, double price) noexcept
   {
     self.stop_loss_price_ = price;
-  }
-
-  auto trailing_stop_price(this const TradeRecord& self) noexcept -> double
-  {
-    return self.trailing_stop_price_;
-  }
-
-  void trailing_stop_price(this TradeRecord& self, double price) noexcept
-  {
-    self.trailing_stop_price_ = price;
   }
 
   auto take_profit_price(this const TradeRecord& self) noexcept -> double
@@ -294,8 +307,9 @@ private:
   double total_entry_fees_;
   double total_exit_fees_;
 
+  double stop_price_;
+  double target_price_;
   double stop_loss_price_;
-  double trailing_stop_price_;
   double take_profit_price_;
 
   std::time_t entry_timestamp_;

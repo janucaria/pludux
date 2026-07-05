@@ -15,7 +15,7 @@ export namespace pludux::backtest {
 class TradePosition {
 public:
   TradePosition()
-  : TradePosition{0.0, 0, std::time_t{}, 0.0, 0.0, 0.0, 0.0}
+  : TradePosition{0.0, 0, std::time_t{}, 0.0, 0.0, 0.0, 0.0, false, 0.0}
   {
   }
 
@@ -23,16 +23,20 @@ public:
                 std::time_t entry_timestamp,
                 double entry_price,
                 double total_entry_fees,
-                double stop_loss_initial_price,
-                double stop_loss_trailing_price,
+                double stop_price,
+                double target_price,
+                double stop_loss_price,
+                bool stop_loss_trailing_enabled,
                 double take_profit_price)
   : TradePosition{position_size,
                   entry_price * position_size + total_entry_fees,
                   entry_timestamp,
                   entry_price,
                   total_entry_fees,
-                  stop_loss_initial_price,
-                  stop_loss_trailing_price,
+                  stop_price,
+                  target_price,
+                  stop_loss_price,
+                  stop_loss_trailing_enabled,
                   take_profit_price}
   {
   }
@@ -42,16 +46,20 @@ public:
                 std::time_t entry_timestamp,
                 double entry_price,
                 double total_entry_fees,
-                double stop_loss_initial_price,
-                double stop_loss_trailing_price,
+                double stop_price,
+                double target_price,
+                double stop_loss_price,
+                bool stop_loss_trailing_enabled,
                 double take_profit_price)
   : position_size_{position_size}
   , investment_{investment}
   , entry_price_{entry_price}
   , total_entry_fees_{total_entry_fees}
-  , stop_loss_initial_price_{stop_loss_initial_price}
-  , stop_loss_trailing_price_{stop_loss_trailing_price}
+  , stop_price_{stop_price}
+  , target_price_{target_price}
+  , stop_loss_price_{stop_loss_price}
   , take_profit_price_{take_profit_price}
+  , stop_loss_trailing_enabled_{stop_loss_trailing_enabled}
   , entry_timestamp_{entry_timestamp}
   {
   }
@@ -98,26 +106,46 @@ public:
     self.total_entry_fees_ = fees;
   }
 
-  auto stop_loss_initial_price(this const TradePosition& self) noexcept
-   -> double
+  auto stop_price(this const TradePosition& self) noexcept -> double
   {
-    return self.stop_loss_initial_price_;
+    return self.stop_price_;
   }
 
-  void stop_loss_initial_price(this TradePosition& self, double price) noexcept
+  void stop_price(this TradePosition& self, double price) noexcept
   {
-    self.stop_loss_initial_price_ = price;
+    self.stop_price_ = price;
   }
 
-  auto stop_loss_trailing_price(this const TradePosition& self) noexcept
-   -> double
+  auto target_price(this const TradePosition& self) noexcept -> double
   {
-    return self.stop_loss_trailing_price_;
+    return self.target_price_;
   }
 
-  void stop_loss_trailing_price(this TradePosition& self, double price) noexcept
+  void target_price(this TradePosition& self, double price) noexcept
   {
-    self.stop_loss_trailing_price_ = price;
+    self.target_price_ = price;
+  }
+
+  auto stop_loss_price(this const TradePosition& self) noexcept -> double
+  {
+    return self.stop_loss_price_;
+  }
+
+  void stop_loss_price(this TradePosition& self, double price) noexcept
+  {
+    self.stop_loss_price_ = price;
+  }
+
+  auto stop_loss_trailing_enabled(this const TradePosition& self) noexcept
+   -> bool
+  {
+    return self.stop_loss_trailing_enabled_;
+  }
+
+  void stop_loss_trailing_enabled(this TradePosition& self,
+                                  bool enabled) noexcept
+  {
+    self.stop_loss_trailing_enabled_ = enabled;
   }
 
   auto take_profit_price(this const TradePosition& self) noexcept -> double
@@ -138,13 +166,6 @@ public:
   void entry_timestamp(this TradePosition& self, std::time_t timestamp) noexcept
   {
     self.entry_timestamp_ = timestamp;
-  }
-
-  auto stop_loss_price(this const TradePosition& self) noexcept -> double
-  {
-    return std::isnan(self.stop_loss_trailing_price())
-            ? self.stop_loss_initial_price()
-            : self.stop_loss_trailing_price();
   }
 
   auto average_price(this const TradePosition& self) noexcept -> double
@@ -196,8 +217,10 @@ public:
                  std::time_t action_timestamp,
                  double action_price,
                  double action_total_fees,
-                 double stop_loss_initial_price,
-                 double stop_loss_trailing_price,
+                 double stop_price,
+                 double target_price,
+                 double stop_loss_price,
+                 bool stop_loss_trailing_enabled,
                  double take_profit_price) -> TradeRecord
   {
     if(self.is_closed()) {
@@ -216,8 +239,9 @@ public:
                                               action_price,
                                               action_total_fees,
 
-                                              self.stop_loss_initial_price(),
-                                              self.stop_loss_trailing_price(),
+                                              self.stop_price(),
+                                              self.target_price(),
+                                              self.stop_loss_price(),
                                               self.take_profit_price()};
 
     const auto last_position_size = self.position_size();
@@ -233,8 +257,10 @@ public:
 
     self.entry_price(action_price);
 
-    self.stop_loss_initial_price(stop_loss_initial_price);
-    self.stop_loss_trailing_price(stop_loss_trailing_price);
+    self.stop_price(stop_price);
+    self.target_price(target_price);
+    self.stop_loss_price(stop_loss_price);
+    self.stop_loss_trailing_enabled(stop_loss_trailing_enabled);
     self.take_profit_price(take_profit_price);
 
     return scaled_in_record;
@@ -278,8 +304,9 @@ public:
                                    action_timestamp,
                                    action_price,
                                    action_total_fees,
-                                   self.stop_loss_initial_price(),
-                                   self.stop_loss_trailing_price(),
+                                   self.stop_price(),
+                                   self.target_price(),
+                                   self.stop_loss_price(),
                                    self.take_profit_price()};
 
     const auto updated_investment = self.investment() - investment_closed;
@@ -293,25 +320,26 @@ public:
   void update_trailing_stop(this TradePosition& self,
                             double prev_close) noexcept
   {
-    const auto initial_stop_price = self.stop_loss_initial_price();
+    const auto stop_price = self.stop_price();
 
-    if(self.is_closed() || std::isnan(initial_stop_price)) {
+    if(self.is_closed() || !self.stop_loss_trailing_enabled() ||
+       std::isnan(stop_price) || std::isnan(self.stop_loss_price())) {
       return;
     }
 
-    const auto risk = self.average_price() - initial_stop_price;
+    const auto risk = self.average_price() - stop_price;
     const auto new_stop_price = prev_close - risk;
 
     if(self.is_short_direction()) {
-      if(new_stop_price < self.stop_loss_trailing_price()) {
-        self.stop_loss_trailing_price(new_stop_price);
+      if(new_stop_price < self.stop_loss_price()) {
+        self.stop_loss_price(new_stop_price);
       }
 
       return;
     }
 
-    if(new_stop_price > self.stop_loss_trailing_price()) {
-      self.stop_loss_trailing_price(new_stop_price);
+    if(new_stop_price > self.stop_loss_price()) {
+      self.stop_loss_price(new_stop_price);
     }
   }
 
@@ -349,9 +377,11 @@ private:
   double entry_price_;
   double total_entry_fees_;
 
-  double stop_loss_initial_price_;
-  double stop_loss_trailing_price_;
+  double stop_price_;
+  double target_price_;
+  double stop_loss_price_;
   double take_profit_price_;
+  bool stop_loss_trailing_enabled_;
 
   std::time_t entry_timestamp_;
 };

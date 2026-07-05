@@ -82,9 +82,11 @@ TEST(TradeSessionTest, ScaleInEmitsScaledInRecord)
 {
   auto session = TradeSession{static_cast<std::time_t>(20), 100.0, 1};
 
-  session.entry_position(TradeEntry{2.0, 100.0});
+  session.entry_position(
+   TradeEntry{2.0, 100.0, 90.0, 120.0, 90.0, false, 120.0});
   session.begin_market_bar(static_cast<std::time_t>(25), 130.0, 5);
-  session.entry_position(TradeEntry{1.0, 130.0});
+  session.entry_position(
+   TradeEntry{1.0, 130.0, 95.0, 150.0, 95.0, false, 150.0});
 
   ASSERT_TRUE(session.open_position().has_value());
   ASSERT_EQ(session.trade_records().size(), 1);
@@ -95,6 +97,13 @@ TEST(TradeSessionTest, ScaleInEmitsScaledInRecord)
   EXPECT_DOUBLE_EQ(record.investment(), 200.0);
   EXPECT_EQ(record.entry_timestamp(), std::time_t{20});
   EXPECT_EQ(record.exit_timestamp(), std::time_t{25});
+  EXPECT_DOUBLE_EQ(record.stop_price(), 90.0);
+  EXPECT_DOUBLE_EQ(record.target_price(), 120.0);
+  EXPECT_DOUBLE_EQ(record.stop_loss_price(), 90.0);
+  EXPECT_DOUBLE_EQ(record.take_profit_price(), 120.0);
+
+  EXPECT_DOUBLE_EQ(session.open_position()->stop_price(), 95.0);
+  EXPECT_DOUBLE_EQ(session.open_position()->target_price(), 150.0);
 
   EXPECT_DOUBLE_EQ(session.unrealized_pnl(), 60.0);
   EXPECT_DOUBLE_EQ(session.unrealized_investment(), 330.0);
@@ -147,12 +156,20 @@ TEST(TradeSessionTest, FullExitEmitsRecordAndClearsOpenPosition)
 
 TEST(TradePositionTest, UpdatesTrailingStopAndChecksTriggers)
 {
-  auto position = TradePosition{
-   2.0, static_cast<std::time_t>(20), 100.0, 0.0, 90.0, 90.0, 120.0};
+  auto position = TradePosition{2.0,
+                                static_cast<std::time_t>(20),
+                                100.0,
+                                0.0,
+                                90.0,
+                                120.0,
+                                90.0,
+                                true,
+                                120.0};
 
   position.update_trailing_stop(115.0);
 
-  EXPECT_DOUBLE_EQ(position.stop_loss_trailing_price(), 105.0);
+  EXPECT_DOUBLE_EQ(position.stop_price(), 90.0);
+  EXPECT_DOUBLE_EQ(position.stop_loss_price(), 105.0);
   EXPECT_TRUE(position.is_stop_loss_triggered(110.0, 104.0));
   EXPECT_TRUE(position.is_take_profit_triggered(121.0, 110.0));
 }

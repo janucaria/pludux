@@ -12,7 +12,6 @@ module;
 #include <ranges>
 #include <string>
 #include <string_view>
-#include <tuple>
 #include <unordered_map>
 #include <vector>
 
@@ -526,83 +525,145 @@ private:
                    const backtest::BacktestTimeline& backtest_timelines,
                    const backtest::Asset& asset)
   {
-    constexpr auto marker_offset = 50.0f;
-    const auto marker_text_color =
-     ImGui::GetColorU32(ImVec4{1.0f, 1.0f, 1.0f, 1.0f});
+    static_cast<void>(label_id);
+
+    self.plot_position("Trade Positions", backtest_timelines);
+    self.plot_signal("Trade Signals", backtest_timelines, asset);
+  }
+
+  void plot_position(this const PlotDataWindow& self,
+                     const char* label_id,
+                     const backtest::BacktestTimeline& backtest_timelines)
+  {
     auto* draw_list = ImPlot::GetPlotDrawList();
 
     constexpr float half_width = 0.5f;
     if(ImPlot::BeginItem(label_id)) {
       const auto timeline_size = backtest_timelines.size();
-      auto trailing_stop_lines = std::vector<ImVec2>{};
-      trailing_stop_lines.reserve(timeline_size);
+      const auto stop_line_color =
+       ImGui::GetColorU32(self.trailing_stop_color_);
+      auto take_profit_line_color = self.reward_color_;
+      take_profit_line_color.w = 0.9f;
+      const auto target_line_color = ImGui::GetColorU32(take_profit_line_color);
+      auto stop_loss_line_points = std::vector<ImVec2>{};
+      auto take_profit_line_points = std::vector<ImVec2>{};
+      stop_loss_line_points.reserve(timeline_size * 3);
+      take_profit_line_points.reserve(timeline_size * 3);
+
+      const auto flush_price_line = [&](std::vector<ImVec2>& line_points,
+                                        ImU32 color) {
+        if(line_points.size() > 1) {
+          draw_list->AddPolyline(line_points.data(),
+                                 line_points.size(),
+                                 color,
+                                 ImDrawFlags_None,
+                                 1.4f);
+        }
+
+        line_points.clear();
+      };
 
       for(auto i = std::size_t{0}; i < timeline_size; ++i) {
-        const auto snapshot = asset.get_snapshot(i);
         for(const auto& record : backtest_timelines.trade_records(i)) {
-          const auto is_long_position = record.is_long_position();
-          const auto exit_price = record.exit_price();
+          const auto stop_price = record.stop_price();
+          const auto target_price = record.target_price();
           const auto take_profit_price = record.take_profit_price();
           const auto stop_loss_price = record.stop_loss_price();
-          const auto trailing_stop_price = record.trailing_stop_price();
           const auto avg_price = record.average_price();
-
-          const auto top_color =
-           is_long_position ? self.reward_color_ : self.risk_color_;
-          const auto bottom_color =
-           is_long_position ? self.risk_color_ : self.reward_color_;
-
-          const auto [top_price, middle_price, bottom_price] = [&]() {
-            if(is_long_position) {
-              const auto top_price = !std::isnan(take_profit_price)
-                                      ? take_profit_price
-                                      : std::max(avg_price, exit_price);
-              const auto middle_price = std::max(avg_price, stop_loss_price);
-              const auto bottom_price = !std::isnan(stop_loss_price)
-                                         ? stop_loss_price
-                                         : std::min(middle_price, exit_price);
-
-              return std::tuple{top_price, middle_price, bottom_price};
-            }
-
-            const auto top_price = !std::isnan(stop_loss_price)
-                                    ? stop_loss_price
-                                    : std::max(avg_price, exit_price);
-            const auto middle_price = std::max(avg_price, take_profit_price);
-            const auto bottom_price = !std::isnan(take_profit_price)
-                                       ? take_profit_price
-                                       : std::min(middle_price, exit_price);
-
-            return std::tuple{top_price, middle_price, bottom_price};
-          }();
 
           const auto left_half_width =
            record.is_entry_or_scaled_in() ? 0.0 : half_width;
           const auto right_half_width =
            record.is_open() ? (i == timeline_size - 1 ? 10.0 : half_width)
                             : 0.0;
+          const auto left_x = static_cast<double>(i) - left_half_width;
+          const auto right_x = static_cast<double>(i) + right_half_width;
 
-          {
-            const auto risk_left_top_pos =
-             ImPlot::PlotToPixels(i - left_half_width, middle_price);
-            const auto risk_right_bottom_pos =
-             ImPlot::PlotToPixels(i + right_half_width, bottom_price);
+          const auto draw_price_band = [&](double boundary_price,
+                                           double action_price,
+                                           const ImVec4& color) {
+            if(!std::isfinite(boundary_price) || !std::isfinite(action_price)) {
+              return;
+            }
+
+            const auto risk_left_top_pos = ImPlot::PlotToPixels(
+             left_x, std::max(boundary_price, action_price));
+            const auto risk_right_bottom_pos = ImPlot::PlotToPixels(
+             right_x, std::min(boundary_price, action_price));
 
             draw_list->AddRectFilled(risk_left_top_pos,
                                      risk_right_bottom_pos,
-                                     ImGui::GetColorU32(bottom_color));
-          }
-          {
-            const auto reward_left_top_pos =
-             ImPlot::PlotToPixels(i - left_half_width, top_price);
-            const auto reward_right_bottom_pos =
-             ImPlot::PlotToPixels(i + right_half_width, middle_price);
+                                     ImGui::GetColorU32(color));
+          };
 
-            draw_list->AddRectFilled(reward_left_top_pos,
-                                     reward_right_bottom_pos,
-                                     ImGui::GetColorU32(top_color));
-          }
+          const auto append_price_line =
+           [&](std::vector<ImVec2>& line_points, double price, ImU32 color) {
+             if(!std::isfinite(price)) {
+               flush_price_line(line_points, color);
+               return;
+             }
 
+             const auto left_pos = ImPlot::PlotToPixels(left_x, price);
+             const auto right_pos = ImPlot::PlotToPixels(right_x, price);
+
+             if(!line_points.empty()) {
+               const auto last_pos = line_points.back();
+               constexpr auto connected_line_epsilon = 0.5f;
+               const auto has_gap =
+                ImAbs(last_pos.x - left_pos.x) > connected_line_epsilon;
+
+               if(has_gap) {
+                 flush_price_line(line_points, color);
+               } else if(last_pos.y != left_pos.y) {
+                 line_points.push_back(left_pos);
+               }
+             }
+
+             if(line_points.empty()) {
+               line_points.push_back(left_pos);
+             }
+
+             line_points.push_back(right_pos);
+           };
+
+          draw_price_band(avg_price, stop_price, self.risk_color_);
+          draw_price_band(avg_price, target_price, self.reward_color_);
+
+          append_price_line(
+           stop_loss_line_points, stop_loss_price, stop_line_color);
+          append_price_line(
+           take_profit_line_points, take_profit_price, target_line_color);
+
+          if(record.is_closed()) {
+            flush_price_line(stop_loss_line_points, stop_line_color);
+            flush_price_line(take_profit_line_points, target_line_color);
+          }
+        }
+      }
+
+      flush_price_line(stop_loss_line_points, stop_line_color);
+      flush_price_line(take_profit_line_points, target_line_color);
+
+      ImPlot::EndItem();
+    }
+  }
+
+  void plot_signal(this const PlotDataWindow& self,
+                   const char* label_id,
+                   const backtest::BacktestTimeline& backtest_timelines,
+                   const backtest::Asset& asset)
+  {
+    constexpr auto marker_offset = 50.0f;
+    const auto marker_text_color =
+     ImGui::GetColorU32(ImVec4{1.0f, 1.0f, 1.0f, 1.0f});
+    auto* draw_list = ImPlot::GetPlotDrawList();
+
+    if(ImPlot::BeginItem(label_id)) {
+      const auto timeline_size = backtest_timelines.size();
+
+      for(auto i = std::size_t{0}; i < timeline_size; ++i) {
+        const auto snapshot = asset.get_snapshot(i);
+        for(const auto& record : backtest_timelines.trade_records(i)) {
           if(record.is_entry_or_scaled_in()) {
             const auto entry_low = snapshot.low();
 
@@ -624,66 +685,40 @@ private:
              trade_count_str.c_str());
           }
 
-          {
-            if(!record.is_open() || i == 0) {
-              const auto exit_high = snapshot.high();
+          if(!record.is_open() || i == 0) {
+            const auto exit_high = snapshot.high();
 
-              auto exit_pos = ImPlot::PlotToPixels(i, exit_high);
-              exit_pos.y -= marker_offset;
+            auto exit_pos = ImPlot::PlotToPixels(i, exit_high);
+            exit_pos.y -= marker_offset;
 
-              draw_list->AddTriangleFilled(
-               ImVec2{exit_pos.x - 5, exit_pos.y},
-               ImVec2{exit_pos.x + 5, exit_pos.y},
-               ImVec2{exit_pos.x, exit_pos.y + 10},
-               ImGui::GetColorU32(self.bearish_color_));
+            const auto exit_color = [&]() {
+              if(record.is_closed_stop_loss()) {
+                return ImGui::GetColorU32(self.trailing_stop_color_);
+              }
 
-              const auto trade_count = backtest_timelines.trade_count(i) +
-                                       (!record.is_closed() ? 1 : 0);
-              const auto trade_count_str = std::format("#{}", trade_count);
-              const auto text_size =
-               ImGui::CalcTextSize(trade_count_str.c_str());
-              draw_list->AddText(
-               ImVec2{exit_pos.x - text_size.x * 0.5f, exit_pos.y - 13},
-               marker_text_color,
-               trade_count_str.c_str());
-            }
+              if(record.is_closed_take_profit()) {
+                auto color = self.reward_color_;
+                color.w = 0.9f;
+                return ImGui::GetColorU32(color);
+              }
+
+              return ImGui::GetColorU32(self.bearish_color_);
+            }();
+
+            draw_list->AddTriangleFilled(ImVec2{exit_pos.x - 5, exit_pos.y},
+                                         ImVec2{exit_pos.x + 5, exit_pos.y},
+                                         ImVec2{exit_pos.x, exit_pos.y + 10},
+                                         exit_color);
+
+            const auto trade_count =
+             backtest_timelines.trade_count(i) + (!record.is_closed() ? 1 : 0);
+            const auto trade_count_str = std::format("#{}", trade_count);
+            const auto text_size = ImGui::CalcTextSize(trade_count_str.c_str());
+            draw_list->AddText(
+             ImVec2{exit_pos.x - text_size.x * 0.5f, exit_pos.y - 13},
+             marker_text_color,
+             trade_count_str.c_str());
           }
-
-          {
-            const auto left_pos =
-             ImPlot::PlotToPixels(i - half_width, trailing_stop_price);
-            const auto center_pos =
-             ImPlot::PlotToPixels(i, trailing_stop_price);
-            const auto right_pos =
-             ImPlot::PlotToPixels(i + half_width, trailing_stop_price);
-
-            trailing_stop_lines.push_back(left_pos);
-            trailing_stop_lines.push_back(center_pos);
-            trailing_stop_lines.push_back(right_pos);
-
-            if(record.is_closed()) {
-              const auto nan_pos = ImVec2{NAN, NAN};
-              trailing_stop_lines.push_back(nan_pos);
-            }
-          }
-        }
-      }
-
-      {
-        // remove duplicates of consecutive points
-        auto it = std::unique(trailing_stop_lines.begin(),
-                              trailing_stop_lines.end(),
-                              [](const ImVec2& a, const ImVec2& b) {
-                                return a.x == b.x && a.y == b.y;
-                              });
-
-        trailing_stop_lines.erase(it, trailing_stop_lines.end());
-        if(!trailing_stop_lines.empty()) {
-          draw_list->AddPolyline(trailing_stop_lines.data(),
-                                 trailing_stop_lines.size(),
-                                 ImGui::GetColorU32(self.trailing_stop_color_),
-                                 ImDrawFlags_None,
-                                 1.2f);
         }
       }
 

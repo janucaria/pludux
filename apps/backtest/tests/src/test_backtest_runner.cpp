@@ -529,6 +529,45 @@ TEST(BacktestRunnerTest, RiskDistanceSizingUsesSelectedEntryPrice)
   ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
   EXPECT_DOUBLE_EQ(latest_record(timeline).entry_price(), 125.0);
   EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 2.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 75.0);
+  EXPECT_TRUE(std::isnan(latest_record(timeline).stop_loss_price()));
+}
+
+TEST(BacktestRunnerTest, DisabledTakeProfitKeepsTargetReferencePrice)
+{
+  const auto asset = make_single_bar_asset(100.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                               BooleanMethod<false>{},
+                                               BooleanMethod<false>{},
+                                               1,
+                                               ValueMethod{90.0},
+                                               false,
+                                               false,
+                                               ValueMethod{120.0},
+                                               false},
+                  BacktestRunner::PositionRule{},
+                  1000.0};
+
+  runner.run(series_results, timeline);
+
+  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
+  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 90.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 120.0);
+  EXPECT_TRUE(std::isnan(latest_record(timeline).stop_loss_price()));
+  EXPECT_TRUE(std::isnan(latest_record(timeline).take_profit_price()));
 }
 
 TEST(BacktestRunnerTest, DisabledDrawdownAdjustmentLeavesSizingUnchanged)
@@ -983,6 +1022,8 @@ TEST(BacktestRunnerTest, StopLossExitIsDecidedByRunner)
   ASSERT_EQ(timeline.size(), 2);
   ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
   EXPECT_TRUE(latest_record(timeline).is_closed_stop_loss());
+  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 90.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_loss_price(), 90.0);
   EXPECT_DOUBLE_EQ(latest_record(timeline).exit_price(), 90.0);
 }
 
@@ -1021,7 +1062,8 @@ TEST(BacktestRunnerTest, TrailingStopMutationUsesTradePositionState)
   ASSERT_EQ(timeline.size(), 2);
   ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
   EXPECT_TRUE(latest_record(timeline).is_closed_stop_loss());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).trailing_stop_price(), 105.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 90.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_loss_price(), 105.0);
   EXPECT_DOUBLE_EQ(latest_record(timeline).exit_price(), 105.0);
 }
 
@@ -1060,5 +1102,7 @@ TEST(BacktestRunnerTest, TakeProfitExitIsDecidedByRunner)
   ASSERT_EQ(timeline.size(), 2);
   ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
   EXPECT_TRUE(latest_record(timeline).is_closed_take_profit());
+  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 120.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).take_profit_price(), 120.0);
   EXPECT_DOUBLE_EQ(latest_record(timeline).exit_price(), 120.0);
 }

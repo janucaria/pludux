@@ -104,8 +104,10 @@ public:
                                       self.market_timestamp_,
                                       entry.price(),
                                       total_fees,
+                                      entry.stop_price(),
+                                      entry.target_price(),
                                       entry.stop_loss_price(),
-                                      entry.stop_loss_trailing_price(),
+                                      entry.stop_loss_trailing_enabled(),
                                       entry.take_profit_price());
       self.trade_records_.push_back(std::move(trade_record));
       return;
@@ -115,8 +117,10 @@ public:
                                         self.market_timestamp_,
                                         entry.price(),
                                         total_fees,
+                                        entry.stop_price(),
+                                        entry.target_price(),
                                         entry.stop_loss_price(),
-                                        entry.stop_loss_trailing_price(),
+                                        entry.stop_loss_trailing_enabled(),
                                         entry.take_profit_price()};
   }
 
