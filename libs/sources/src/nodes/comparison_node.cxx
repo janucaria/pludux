@@ -5,6 +5,8 @@ module;
 
 export module pludux:nodes.comparison_node;
 
+import :methods.comparison_method;
+import :node_to_erased_method;
 import :nodes.erased_node;
 
 export namespace pludux {
@@ -18,12 +20,9 @@ public:
   {
   }
 
-  auto operator==(const ComparisonNode& other) const noexcept
-   -> bool = default;
+  auto operator==(const ComparisonNode& other) const noexcept -> bool = default;
 
-
-  auto target(this const ComparisonNode& self) noexcept
-   -> const ErasedNode&
+  auto target(this const ComparisonNode& self) noexcept -> const ErasedNode&
   {
     return self.target_;
   }
@@ -33,14 +32,12 @@ public:
     self.target_ = std::move(target);
   }
 
-  auto threshold(this const ComparisonNode& self) noexcept
-   -> const ErasedNode&
+  auto threshold(this const ComparisonNode& self) noexcept -> const ErasedNode&
   {
     return self.threshold_;
   }
 
-  void threshold(this ComparisonNode& self,
-                 ErasedNode threshold) noexcept
+  void threshold(this ComparisonNode& self, ErasedNode threshold) noexcept
   {
     self.threshold_ = std::move(threshold);
   }
@@ -50,22 +47,28 @@ private:
   ErasedNode threshold_;
 };
 
-using GreaterEqualNode =
- ComparisonNode<std::greater_equal<>>;
+using GreaterEqualNode = ComparisonNode<std::greater_equal<>>;
 
-using GreaterThanNode =
- ComparisonNode<std::greater<>>;
+using GreaterThanNode = ComparisonNode<std::greater<>>;
 
-using LessThanNode =
- ComparisonNode<std::less<>>;
+using LessThanNode = ComparisonNode<std::less<>>;
 
-using LessEqualNode =
- ComparisonNode<std::less_equal<>>;
+using LessEqualNode = ComparisonNode<std::less_equal<>>;
 
-using EqualNode =
- ComparisonNode<std::equal_to<>>;
+using EqualNode = ComparisonNode<std::equal_to<>>;
 
-using NotEqualNode =
- ComparisonNode<std::not_equal_to<>>;
+using NotEqualNode = ComparisonNode<std::not_equal_to<>>;
+
+template<typename TComparator>
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const ComparisonNode<TComparator>& node,
+                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+{
+  auto target = node_to_erased_method(node.target(), context);
+  auto threshold = node_to_erased_method(node.threshold(), context);
+  return AnySeriesMethod{
+   ComparisonMethod<TComparator, AnySeriesMethod, AnySeriesMethod>{
+    std::move(target), std::move(threshold)}};
+}
 
 } // namespace pludux

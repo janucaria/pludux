@@ -5,6 +5,8 @@ module;
 
 export module pludux:nodes.data_node;
 
+import :methods.data_method;
+import :node_to_erased_method;
 
 export namespace pludux {
 
@@ -19,7 +21,6 @@ public:
 
   auto operator==(const DataNode& other) const noexcept -> bool = default;
 
-
   auto field(this const DataNode& self) -> const std::string&
   {
     return self.field_;
@@ -33,5 +34,12 @@ public:
 private:
   std::string field_{};
 };
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const DataNode& node,
+                       NodeToErasedMethodContext&) -> AnySeriesMethod
+{
+  return AnySeriesMethod{DataMethod{node.field()}};
+}
 
 } // namespace pludux

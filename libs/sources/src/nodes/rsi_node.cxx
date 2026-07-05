@@ -9,19 +9,23 @@ module;
 
 export module pludux:nodes.rsi_node;
 
+import :methods.rsi_method;
+import :node_to_erased_method;
 import :nodes.erased_node;
+import :nodes.ohlcv_node;
+import :nodes.value_node;
 
 export namespace pludux {
 
 class RsiNode {
 public:
   RsiNode()
-  : RsiNode{14}
+  : RsiNode{CloseNode{}, 14}
   {
   }
 
   explicit RsiNode(std::size_t period)
-  : RsiNode{ErasedNode{}, period}
+  : RsiNode{CloseNode{}, period}
   {
   }
 
@@ -31,7 +35,7 @@ public:
   }
 
   RsiNode(ErasedNode source, std::size_t period)
-  : RsiNode{std::move(source), ErasedNode{period}}
+  : RsiNode{std::move(source), ValueNode{static_cast<double>(period)}}
   {
   }
 
@@ -65,12 +69,22 @@ public:
 
   void period(this RsiNode& self, std::size_t period) noexcept
   {
-    self.period_ = ErasedNode{period};
+    self.period_ = ValueNode{static_cast<double>(period)};
   }
 
 private:
   ErasedNode source_;
   ErasedNode period_;
 };
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const RsiNode& node,
+                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+{
+  const auto source_method = node_to_erased_method(node.source(), context);
+  const auto period = node_to_erased_method(node.period(), context);
+
+  return RsiMethod{source_method, period};
+}
 
 } // namespace pludux

@@ -25,22 +25,17 @@ export namespace pludux {
 
 class AnySeriesMethod {
 public:
-  template<typename UMethod = CloseMethod>
+  AnySeriesMethod()
+  : AnySeriesMethod{CloseMethod{}}
+  {
+  }
+
+  template<typename UMethod>
     requires(!std::same_as<std::remove_cvref_t<UMethod>, AnySeriesMethod>) &&
              (!std::same_as<std::remove_cvref_t<UMethod>,
                             std::vector<AnySeriesMethod>>) &&
-             requires(UMethod method,
-                      AssetSnapshot asset_snapshot,
-                      MethodOutput output,
-                      AnySeriesMethodContext context) {
-               // TODO: compile error on clang and emscripten
-               //  {
-               //    evaluate_series_method(method, asset_snapshot, context)
-               //  } -> std::convertible_to<double>;
-               { method == method } -> std::convertible_to<bool>;
-               { method != method } -> std::convertible_to<bool>;
-             }
-  AnySeriesMethod(UMethod impl = UMethod{})
+             std::equality_comparable<UMethod>
+  AnySeriesMethod(UMethod impl)
   : impl_{std::make_any<UMethod>(std::move(impl))}
   , evaluate_{[](const std::any& impl,
                  AssetSnapshot asset_snapshot,

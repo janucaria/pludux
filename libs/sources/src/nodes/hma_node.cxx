@@ -6,19 +6,23 @@ module;
 
 export module pludux:nodes.hma_node;
 
+import :methods.hma_method;
+import :node_to_erased_method;
 import :nodes.erased_node;
+import :nodes.ohlcv_node;
+import :nodes.value_node;
 
 export namespace pludux {
 
 class HmaNode {
 public:
   HmaNode()
-  : HmaNode{20}
+  : HmaNode{CloseNode{}, 20}
   {
   }
 
   explicit HmaNode(std::size_t period)
-  : HmaNode{ErasedNode{}, period}
+  : HmaNode{CloseNode{}, period}
   {
   }
 
@@ -28,7 +32,7 @@ public:
   }
 
   HmaNode(ErasedNode source, std::size_t period)
-  : HmaNode{std::move(source), ErasedNode{period}}
+  : HmaNode{std::move(source), ValueNode{static_cast<double>(period)}}
   {
   }
 
@@ -62,12 +66,22 @@ public:
 
   void period(this HmaNode& self, std::size_t period) noexcept
   {
-    self.period_ = ErasedNode{period};
+    self.period_ = ValueNode{static_cast<double>(period)};
   }
 
 private:
   ErasedNode source_;
   ErasedNode period_;
 };
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const HmaNode& node,
+                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+{
+  const auto source_method = node_to_erased_method(node.source(), context);
+  const auto period = node_to_erased_method(node.period(), context);
+
+  return HmaMethod{source_method, period};
+}
 
 } // namespace pludux

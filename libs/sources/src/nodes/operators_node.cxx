@@ -10,6 +10,7 @@ module;
 
 export module pludux:nodes.operators_node;
 
+import :node_to_erased_method;
 import :methods.operators_method;
 import :nodes.erased_node;
 
@@ -26,21 +27,18 @@ public:
   auto operator==(const BinaryOperatorNode& other) const noexcept
    -> bool = default;
 
-
   auto operand1(this const BinaryOperatorNode& self) noexcept
    -> const ErasedNode&
   {
     return self.operand1_;
   }
 
-  void operand1(this BinaryOperatorNode& self,
-                ErasedNode operand1) noexcept
+  void operand1(this BinaryOperatorNode& self, ErasedNode operand1) noexcept
   {
     self.operand1_ = std::move(operand1);
   }
 
-  auto left(this const BinaryOperatorNode& self) noexcept
-   -> const ErasedNode&
+  auto left(this const BinaryOperatorNode& self) noexcept -> const ErasedNode&
   {
     return self.operand1();
   }
@@ -56,14 +54,12 @@ public:
     return self.operand2_;
   }
 
-  void operand2(this BinaryOperatorNode& self,
-                ErasedNode operand2) noexcept
+  void operand2(this BinaryOperatorNode& self, ErasedNode operand2) noexcept
   {
     self.operand2_ = std::move(operand2);
   }
 
-  auto right(this const BinaryOperatorNode& self) noexcept
-   -> const ErasedNode&
+  auto right(this const BinaryOperatorNode& self) noexcept -> const ErasedNode&
   {
     return self.operand2();
   }
@@ -89,9 +85,7 @@ public:
   auto operator==(const UnaryOperatorNode& other) const noexcept
    -> bool = default;
 
-
-  auto operand(this const UnaryOperatorNode& self) noexcept
-   -> const ErasedNode&
+  auto operand(this const UnaryOperatorNode& self) noexcept -> const ErasedNode&
   {
     return self.operand_;
   }
@@ -105,35 +99,49 @@ private:
   ErasedNode operand_;
 };
 
-using MultiplyNode =
- BinaryOperatorNode<std::multiplies<>>;
+using MultiplyNode = BinaryOperatorNode<std::multiplies<>>;
 
-using DivideNode =
- BinaryOperatorNode<std::divides<>>;
+using DivideNode = BinaryOperatorNode<std::divides<>>;
 
-using AddNode =
- BinaryOperatorNode<std::plus<>>;
+using AddNode = BinaryOperatorNode<std::plus<>>;
 
-using SubtractNode =
- BinaryOperatorNode<std::minus<>>;
+using SubtractNode = BinaryOperatorNode<std::minus<>>;
 
 using NegateNode = UnaryOperatorNode<std::negate<>>;
 
 using AbsNode = UnaryOperatorNode<Absolute<>>;
 
-using AbsDiffNode =
- BinaryOperatorNode<AbsoluteDifference<>>;
+using AbsDiffNode = BinaryOperatorNode<AbsoluteDifference<>>;
 
 using SqrtNode = UnaryOperatorNode<SquareRoot<>>;
 
-using MaxNode =
- BinaryOperatorNode<Maximum<>>;
+using MaxNode = BinaryOperatorNode<Maximum<>>;
 
-using MinNode =
- BinaryOperatorNode<Minimum<>>;
+using MinNode = BinaryOperatorNode<Minimum<>>;
 
 using PositivePartNode = UnaryOperatorNode<PositivePart<>>;
 
 using NegativePartNode = UnaryOperatorNode<NegativePart<>>;
+
+template<typename TBinaryFn>
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const BinaryOperatorNode<TBinaryFn>& node,
+                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+{
+  auto operand1 = node_to_erased_method(node.operand1(), context);
+  auto operand2 = node_to_erased_method(node.operand2(), context);
+  return AnySeriesMethod{
+   BinaryOperatorMethod<TBinaryFn, AnySeriesMethod, AnySeriesMethod>{
+    std::move(operand1), std::move(operand2)}};
+}
+
+template<typename TUnaryFn>
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const UnaryOperatorNode<TUnaryFn>& node,
+                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+{
+  return AnySeriesMethod{UnaryOperatorMethod<TUnaryFn, AnySeriesMethod>{
+   node_to_erased_method(node.operand(), context)}};
+}
 
 } // namespace pludux

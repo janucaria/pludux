@@ -4,6 +4,8 @@ module;
 
 export module pludux:nodes.select_output_node;
 
+import :methods.select_output_method;
+import :node_to_erased_method;
 import :nodes.erased_node;
 
 export namespace pludux {
@@ -27,8 +29,7 @@ public:
   {
   }
 
-  SelectOutputNode(const SelectOutputNode& other,
-                     NodeOutput output)
+  SelectOutputNode(const SelectOutputNode& other, NodeOutput output)
   : SelectOutputNode{other.source(), output}
   {
   }
@@ -36,9 +37,7 @@ public:
   auto operator==(const SelectOutputNode& other) const noexcept
    -> bool = default;
 
-
-  auto source(this const SelectOutputNode& self) noexcept
-   -> const ErasedNode&
+  auto source(this const SelectOutputNode& self) noexcept -> const ErasedNode&
   {
     return self.source_;
   }
@@ -62,5 +61,14 @@ private:
   ErasedNode source_;
   NodeOutput output_;
 };
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const SelectOutputNode& node,
+                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+{
+  return AnySeriesMethod{
+   SelectOutputMethod{node_to_erased_method(node.source(), context),
+                      static_cast<MethodOutput>(node.output())}};
+}
 
 } // namespace pludux

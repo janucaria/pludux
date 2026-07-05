@@ -6,7 +6,11 @@ module;
 
 export module pludux:nodes.macd_node;
 
+import :methods.macd_method;
+import :node_to_erased_method;
 import :nodes.erased_node;
+import :nodes.ohlcv_node;
+import :nodes.value_node;
 
 export namespace pludux {
 
@@ -20,7 +24,7 @@ public:
   MacdNode(std::size_t short_period,
            std::size_t long_period,
            std::size_t signal_period)
-  : MacdNode{ErasedNode{}, short_period, long_period, signal_period}
+  : MacdNode{CloseNode{}, short_period, long_period, signal_period}
   {
   }
 
@@ -29,9 +33,9 @@ public:
            std::size_t long_period,
            std::size_t signal_period)
   : MacdNode{std::move(source),
-             ErasedNode{short_period},
-             ErasedNode{long_period},
-             ErasedNode{signal_period}}
+             ValueNode{static_cast<double>(short_period)},
+             ValueNode{static_cast<double>(long_period)},
+             ValueNode{static_cast<double>(signal_period)}}
   {
   }
 
@@ -65,7 +69,7 @@ public:
 
   void short_period(this MacdNode& self, std::size_t period) noexcept
   {
-    self.fast_period_ = ErasedNode{period};
+    self.fast_period_ = ValueNode{static_cast<double>(period)};
   }
 
   void short_period(this MacdNode& self, ErasedNode period) noexcept
@@ -95,7 +99,7 @@ public:
 
   void long_period(this MacdNode& self, std::size_t period) noexcept
   {
-    self.slow_period_ = ErasedNode{period};
+    self.slow_period_ = ValueNode{static_cast<double>(period)};
   }
 
   void long_period(this MacdNode& self, ErasedNode period) noexcept
@@ -125,7 +129,7 @@ public:
 
   void signal_period(this MacdNode& self, std::size_t period) noexcept
   {
-    self.signal_period_ = ErasedNode{period};
+    self.signal_period_ = ValueNode{static_cast<double>(period)};
   }
 
   void signal_period(this MacdNode& self, ErasedNode period) noexcept
@@ -139,5 +143,18 @@ private:
   ErasedNode slow_period_;
   ErasedNode signal_period_;
 };
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const MacdNode& node,
+                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+{
+  const auto source_method = node_to_erased_method(node.source(), context);
+  const auto fast_period = node_to_erased_method(node.fast_period(), context);
+  const auto slow_period = node_to_erased_method(node.slow_period(), context);
+  const auto signal_period =
+   node_to_erased_method(node.signal_period(), context);
+
+  return MacdMethod{source_method, fast_period, slow_period, signal_period};
+}
 
 } // namespace pludux

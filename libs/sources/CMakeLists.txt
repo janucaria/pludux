@@ -106,6 +106,7 @@ target_sources(${PROJECT_NAME}
         src/ma_node_type.cxx
         
         src/nodes/numeric_input_node.cxx
+        src/node_to_erased_method.cxx
         src/nodes/value_node.cxx
         src/nodes/data_node.cxx
         src/nodes/ohlcv_node.cxx
@@ -152,8 +153,6 @@ target_sources(${PROJECT_NAME}
         src/nodes/crossunder_node.cxx
 
         src/nodes.cxx
-
-        src/node_to_erased_method.cxx
 
         src/series_evaluation_results.cxx
         src/default_method_context.cxx

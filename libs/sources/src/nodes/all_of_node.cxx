@@ -6,6 +6,8 @@ module;
 
 export module pludux:nodes.all_of_node;
 
+import :methods.all_of_method;
+import :node_to_erased_method;
 import :nodes.erased_node;
 
 export namespace pludux {
@@ -26,7 +28,6 @@ public:
 
   auto operator==(const AllOfNode& other) const noexcept -> bool = default;
 
-
   auto conditions(this const AllOfNode& self) noexcept
    -> const std::vector<ErasedNode>&
   {
@@ -42,5 +43,18 @@ public:
 private:
   std::vector<ErasedNode> conditions_;
 };
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const AllOfNode& node,
+                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+{
+  auto conditions = std::vector<AnySeriesMethod>{};
+  conditions.reserve(node.conditions().size());
+  for(const auto& condition : node.conditions()) {
+    conditions.emplace_back(node_to_erased_method(condition, context));
+  }
+
+  return AnySeriesMethod{AllOfMethod<AnySeriesMethod>{std::move(conditions)}};
+}
 
 } // namespace pludux

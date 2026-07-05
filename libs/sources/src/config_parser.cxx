@@ -13,6 +13,7 @@ module;
 
 export module pludux:config_parser;
 
+import :node_to_erased_method;
 import :nodes;
 
 export namespace pludux {

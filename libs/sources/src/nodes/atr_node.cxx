@@ -9,7 +9,10 @@ module;
 export module pludux:nodes.atr_node;
 
 import :ma_node_type;
+import :methods.atr_method;
+import :node_to_erased_method;
 import :nodes.erased_node;
+import :nodes.value_node;
 
 export namespace pludux {
 
@@ -22,7 +25,7 @@ public:
 
   explicit AtrNode(std::size_t period,
                    MaNodeType ma_smoothing_type = MaNodeType::Rma)
-  : AtrNode{ErasedNode{period}, ma_smoothing_type}
+  : AtrNode{ValueNode{static_cast<double>(period)}, ma_smoothing_type}
   {
   }
 
@@ -42,7 +45,7 @@ public:
 
   void period(this AtrNode& self, std::size_t new_period) noexcept
   {
-    self.period_ = ErasedNode{new_period};
+    self.period_ = ValueNode{static_cast<double>(new_period)};
   }
 
   void period(this AtrNode& self, ErasedNode period) noexcept
@@ -64,5 +67,15 @@ private:
   ErasedNode period_;
   MaNodeType ma_smoothing_type_;
 };
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const AtrNode& node,
+                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+{
+  const auto period = node_to_erased_method(node.period(), context);
+
+  return AnySeriesMethod{
+   AtrMethod{period, static_cast<MaMethodType>(node.ma_smoothing_type())}};
+}
 
 } // namespace pludux

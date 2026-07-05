@@ -6,14 +6,18 @@ module;
 
 export module pludux:nodes.ema_node;
 
+import :methods.ema_method;
+import :node_to_erased_method;
 import :nodes.erased_node;
+import :nodes.ohlcv_node;
+import :nodes.value_node;
 
 export namespace pludux {
 
 class EmaNode {
 public:
   EmaNode()
-  : EmaNode{20}
+  : EmaNode{CloseNode{}, 20}
   {
   }
 
@@ -23,7 +27,7 @@ public:
   }
 
   EmaNode(ErasedNode source, std::size_t period)
-  : EmaNode{std::move(source), ErasedNode{period}}
+  : EmaNode{std::move(source), ValueNode{static_cast<double>(period)}}
   {
   }
 
@@ -57,12 +61,22 @@ public:
 
   void period(this EmaNode& self, std::size_t period) noexcept
   {
-    self.period_ = ErasedNode{period};
+    self.period_ = ValueNode{static_cast<double>(period)};
   }
 
 private:
   ErasedNode source_;
   ErasedNode period_;
 };
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const EmaNode& node,
+                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+{
+  const auto source_method = node_to_erased_method(node.source(), context);
+  const auto period = node_to_erased_method(node.period(), context);
+
+  return EmaMethod{source_method, period};
+}
 
 } // namespace pludux

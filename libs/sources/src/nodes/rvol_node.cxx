@@ -7,14 +7,17 @@ module;
 
 export module pludux:nodes.rvol_node;
 
+import :methods.rvol_method;
+import :node_to_erased_method;
 import :nodes.erased_node;
+import :nodes.value_node;
 
 export namespace pludux {
 
 class RvolNode {
 public:
   explicit RvolNode(std::size_t period = 14)
-  : RvolNode{ErasedNode{period}}
+  : RvolNode{ValueNode{static_cast<double>(period)}}
   {
   }
 
@@ -32,7 +35,7 @@ public:
 
   void period(this RvolNode& self, std::size_t period) noexcept
   {
-    self.period_ = ErasedNode{period};
+    self.period_ = ValueNode{static_cast<double>(period)};
   }
 
   void period(this RvolNode& self, ErasedNode period) noexcept
@@ -43,5 +46,14 @@ public:
 private:
   ErasedNode period_;
 };
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const RvolNode& node,
+                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+{
+  const auto period = node_to_erased_method(node.period(), context);
+
+  return AnySeriesMethod{RvolMethod{period}};
+}
 
 } // namespace pludux

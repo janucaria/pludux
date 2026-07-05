@@ -34,11 +34,7 @@ TEST(NodeToErasedMethodTest, NumericInputNodeConsumesContextByTraversalOrder)
    NumericInputNode{
     "Duplicate", NumericInputNode::ValueRepresentation::UnsignedInteger, 2.0}}};
 
-  const auto inputs = std::vector<NumericInputNode>{
-   NumericInputNode{
-    "Duplicate", NumericInputNode::ValueRepresentation::Decimal, 10.5},
-   NumericInputNode{
-    "Duplicate", NumericInputNode::ValueRepresentation::UnsignedInteger, -4.8}};
+  const auto inputs = std::vector<double>{10.5, -4.8};
   auto input_context = NodeToErasedMethodContext{inputs};
 
   const auto method = node_to_erased_method(node, input_context);
@@ -66,8 +62,7 @@ TEST(NodeToErasedMethodTest, MovingAveragePeriodConsumesContextInput)
    NumericInputNode{
     "Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 20.0}}};
 
-  const auto inputs = std::vector<NumericInputNode>{NumericInputNode{
-   "Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 7.0}};
+  const auto inputs = std::vector<double>{7.0};
   auto input_context = NodeToErasedMethodContext{inputs};
 
   const auto method = node_to_erased_method(node, input_context);
@@ -103,11 +98,7 @@ TEST(NodeToErasedMethodTest, BollingerBandInputsConsumeContextInOrder)
    NumericInputNode{
     "StdDev", NumericInputNode::ValueRepresentation::Decimal, 2.0}}};
 
-  const auto inputs = std::vector<NumericInputNode>{
-   NumericInputNode{
-    "Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 7.0},
-   NumericInputNode{
-    "StdDev", NumericInputNode::ValueRepresentation::Decimal, 1.25}};
+  const auto inputs = std::vector<double>{7.0, 1.25};
   auto input_context = NodeToErasedMethodContext{inputs};
 
   const auto method = node_to_erased_method(node, input_context);
@@ -132,14 +123,7 @@ TEST(NodeToErasedMethodTest, KeltnerChannelInputsConsumeContextInOrder)
                     NumericInputNode::ValueRepresentation::UnsignedInteger,
                     14.0}}};
 
-  const auto inputs = std::vector<NumericInputNode>{
-   NumericInputNode{
-    "Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 9.0},
-   NumericInputNode{
-    "Multiplier", NumericInputNode::ValueRepresentation::Decimal, 2.25},
-   NumericInputNode{"Band ATR Period",
-                    NumericInputNode::ValueRepresentation::UnsignedInteger,
-                    6.0}};
+  const auto inputs = std::vector<double>{9.0, 2.25, 6.0};
   auto input_context = NodeToErasedMethodContext{inputs};
 
   const auto method = node_to_erased_method(node, input_context);
@@ -167,15 +151,7 @@ TEST(NodeToErasedMethodTest, MacdInputsConsumeContextInOrder)
                     NumericInputNode::ValueRepresentation::UnsignedInteger,
                     9.0}}};
 
-  const auto inputs = std::vector<NumericInputNode>{
-   NumericInputNode{
-    "Fast Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 5.0},
-   NumericInputNode{"Slow Period",
-                    NumericInputNode::ValueRepresentation::UnsignedInteger,
-                    13.0},
-   NumericInputNode{"Signal Period",
-                    NumericInputNode::ValueRepresentation::UnsignedInteger,
-                    3.0}};
+  const auto inputs = std::vector<double>{5.0, 13.0, 3.0};
   auto input_context = NodeToErasedMethodContext{inputs};
 
   const auto method = node_to_erased_method(node, input_context);
@@ -202,15 +178,7 @@ TEST(NodeToErasedMethodTest, StochRsiInputsConsumeContextInOrder)
    NumericInputNode{
     "D Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 3.0}}};
 
-  const auto inputs = std::vector<NumericInputNode>{
-   NumericInputNode{
-    "RSI Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 21.0},
-   NumericInputNode{
-    "K Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 8.0},
-   NumericInputNode{
-    "K Smooth", NumericInputNode::ValueRepresentation::UnsignedInteger, 4.0},
-   NumericInputNode{
-    "D Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 2.0}};
+  const auto inputs = std::vector<double>{21.0, 8.0, 4.0, 2.0};
   auto input_context = NodeToErasedMethodContext{inputs};
 
   const auto method = node_to_erased_method(node, input_context);

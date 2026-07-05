@@ -5,6 +5,8 @@ module;
 
 export module pludux:nodes.series_value_node;
 
+import :methods.series_value_method;
+import :node_to_erased_method;
 
 export namespace pludux {
 
@@ -17,7 +19,6 @@ public:
 
   auto operator==(const SeriesValueNode& other) const noexcept
    -> bool = default;
-
 
   auto name(this const SeriesValueNode& self) noexcept -> const std::string&
   {
@@ -32,5 +33,12 @@ public:
 private:
   std::string name_{};
 };
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const SeriesValueNode& node,
+                       NodeToErasedMethodContext&) -> AnySeriesMethod
+{
+  return AnySeriesMethod{SeriesValueMethod{node.name()}};
+}
 
 } // namespace pludux

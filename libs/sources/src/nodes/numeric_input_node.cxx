@@ -1,9 +1,14 @@
 module;
 
+#include <algorithm>
+#include <cmath>
 #include <string>
 #include <utility>
 
 export module pludux:nodes.numeric_input_node;
+
+import :methods.value_method;
+import :node_to_erased_method;
 
 export namespace pludux {
 
@@ -77,5 +82,30 @@ private:
   ValueRepresentation representation_;
   double value_;
 };
+
+auto resolve_numeric_input_value(
+ double value, NumericInputNode::ValueRepresentation representation) noexcept
+ -> double
+{
+  switch(representation) {
+  case NumericInputNode::ValueRepresentation::Decimal:
+    return value;
+  case NumericInputNode::ValueRepresentation::SignedInteger:
+    return std::trunc(value);
+  case NumericInputNode::ValueRepresentation::UnsignedInteger:
+    return std::max(0.0, std::trunc(value));
+  default:
+    return value;
+  }
+}
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const NumericInputNode& node,
+                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+{
+  const auto value = context.consume(node.value());
+  return AnySeriesMethod{
+   ValueMethod{resolve_numeric_input_value(value, node.representation())}};
+}
 
 } // namespace pludux

@@ -6,14 +6,17 @@ module;
 
 export module pludux:nodes.lookback_node;
 
+import :methods.lookback_method;
+import :node_to_erased_method;
 import :nodes.erased_node;
+import :nodes.ohlcv_node;
 
 export namespace pludux {
 
 class LookbackNode {
 public:
   explicit LookbackNode(std::size_t period = 1)
-  : LookbackNode{ErasedNode{}, period}
+  : LookbackNode{CloseNode{}, period}
   {
   }
 
@@ -23,14 +26,12 @@ public:
   {
   }
 
-  LookbackNode(const LookbackNode& other,
-                 std::size_t additional_period)
+  LookbackNode(const LookbackNode& other, std::size_t additional_period)
   : LookbackNode{other.source(), other.period() + additional_period}
   {
   }
 
   auto operator==(const LookbackNode& other) const noexcept -> bool = default;
-
 
   auto source(this const LookbackNode& self) noexcept -> const ErasedNode&
   {
@@ -56,5 +57,13 @@ private:
   ErasedNode source_;
   std::size_t period_;
 };
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const LookbackNode& node,
+                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+{
+  return AnySeriesMethod{LookbackMethod{
+   node_to_erased_method(node.source(), context), node.period()}};
+}
 
 } // namespace pludux

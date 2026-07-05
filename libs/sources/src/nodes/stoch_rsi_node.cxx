@@ -6,7 +6,11 @@ module;
 
 export module pludux:nodes.stoch_rsi_node;
 
+import :methods.stoch_rsi_method;
+import :node_to_erased_method;
 import :nodes.erased_node;
+import :nodes.ohlcv_node;
+import :nodes.value_node;
 
 export namespace pludux {
 
@@ -20,7 +24,7 @@ public:
   explicit StochRsiNode(std::size_t k_period,
                         std::size_t k_smooth,
                         std::size_t d_period)
-  : StochRsiNode{ErasedNode{}, 14, k_period, k_smooth, d_period}
+  : StochRsiNode{CloseNode{}, 14, k_period, k_smooth, d_period}
   {
   }
 
@@ -30,10 +34,10 @@ public:
                std::size_t k_smooth,
                std::size_t d_period)
   : StochRsiNode{std::move(rsi_source),
-                 ErasedNode{rsi_period},
-                 ErasedNode{k_period},
-                 ErasedNode{k_smooth},
-                 ErasedNode{d_period}}
+                 ValueNode{static_cast<double>(rsi_period)},
+                 ValueNode{static_cast<double>(k_period)},
+                 ValueNode{static_cast<double>(k_smooth)},
+                 ValueNode{static_cast<double>(d_period)}}
   {
   }
 
@@ -69,7 +73,7 @@ public:
 
   void rsi_period(this StochRsiNode& self, std::size_t period) noexcept
   {
-    self.rsi_period_ = ErasedNode{period};
+    self.rsi_period_ = ValueNode{static_cast<double>(period)};
   }
 
   void rsi_period(this StochRsiNode& self, ErasedNode rsi_period) noexcept
@@ -84,7 +88,7 @@ public:
 
   void k_period(this StochRsiNode& self, std::size_t period) noexcept
   {
-    self.k_period_ = ErasedNode{period};
+    self.k_period_ = ValueNode{static_cast<double>(period)};
   }
 
   void k_period(this StochRsiNode& self, ErasedNode k_period) noexcept
@@ -99,7 +103,7 @@ public:
 
   void k_smooth(this StochRsiNode& self, std::size_t smooth) noexcept
   {
-    self.k_smooth_ = ErasedNode{smooth};
+    self.k_smooth_ = ValueNode{static_cast<double>(smooth)};
   }
 
   void k_smooth(this StochRsiNode& self, ErasedNode k_smooth) noexcept
@@ -114,7 +118,7 @@ public:
 
   void d_period(this StochRsiNode& self, std::size_t period) noexcept
   {
-    self.d_period_ = ErasedNode{period};
+    self.d_period_ = ValueNode{static_cast<double>(period)};
   }
 
   void d_period(this StochRsiNode& self, ErasedNode d_period) noexcept
@@ -129,5 +133,20 @@ private:
   ErasedNode k_smooth_;
   ErasedNode d_period_;
 };
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const StochRsiNode& node,
+                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+{
+  const auto rsi_source_method =
+   node_to_erased_method(node.rsi_source(), context);
+  const auto rsi_period = node_to_erased_method(node.rsi_period(), context);
+  const auto k_period = node_to_erased_method(node.k_period(), context);
+  const auto k_smooth = node_to_erased_method(node.k_smooth(), context);
+  const auto d_period = node_to_erased_method(node.d_period(), context);
+
+  return StochRsiMethod{
+   rsi_source_method, rsi_period, k_period, k_smooth, d_period};
+}
 
 } // namespace pludux

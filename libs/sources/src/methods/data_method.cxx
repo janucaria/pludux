@@ -16,7 +16,15 @@ public:
   {
   }
 
-  auto operator==(const DataMethod& other) const noexcept -> bool = default;
+  auto operator==(const DataMethod& other) const noexcept -> bool
+  {
+    return field_ == other.field_;
+  }
+
+  auto operator!=(const DataMethod& other) const noexcept -> bool
+  {
+    return !(*this == other);
+  }
 
   auto field(this const DataMethod& self) -> const std::string&
   {

@@ -10,6 +10,8 @@ module;
 
 export module pludux:nodes.tr_node;
 
+import :methods.tr_method;
+import :node_to_erased_method;
 
 export namespace pludux {
 
@@ -18,7 +20,13 @@ public:
   TrNode() = default;
 
   auto operator==(const TrNode& other) const noexcept -> bool = default;
-
 };
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const TrNode&,
+                       NodeToErasedMethodContext&) -> AnySeriesMethod
+{
+  return AnySeriesMethod{TrMethod{}};
+}
 
 } // namespace pludux

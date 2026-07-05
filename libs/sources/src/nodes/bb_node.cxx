@@ -8,7 +8,11 @@ module;
 
 export module pludux:nodes.bb_node;
 
+import :methods.bb_method;
+import :node_to_erased_method;
 import :nodes.erased_node;
+import :nodes.ohlcv_node;
+import :nodes.value_node;
 import :ma_node_type;
 
 export namespace pludux {
@@ -21,7 +25,7 @@ public:
   }
 
   BbNode(std::size_t period, double stddev)
-  : BbNode{ErasedNode{}, period, stddev}
+  : BbNode{CloseNode{}, period, stddev}
   {
   }
 
@@ -29,8 +33,10 @@ public:
          std::size_t period,
          double stddev,
          MaNodeType ma_node_type = MaNodeType::Sma)
-  : BbNode{
-     std::move(source), ErasedNode{period}, ErasedNode{stddev}, ma_node_type}
+  : BbNode{std::move(source),
+           ValueNode{static_cast<double>(period)},
+           ValueNode{stddev},
+           ma_node_type}
   {
   }
 
@@ -74,7 +80,7 @@ public:
 
   void period(this BbNode& self, std::size_t new_period) noexcept
   {
-    self.period_ = ErasedNode{new_period};
+    self.period_ = ValueNode{static_cast<double>(new_period)};
   }
 
   void period(this BbNode& self, ErasedNode period) noexcept
@@ -89,7 +95,7 @@ public:
 
   void stddev(this BbNode& self, double new_stddev) noexcept
   {
-    self.stddev_ = ErasedNode{new_stddev};
+    self.stddev_ = ValueNode{new_stddev};
   }
 
   void stddev(this BbNode& self, ErasedNode stddev) noexcept
@@ -103,5 +109,19 @@ private:
   ErasedNode stddev_;
   MaNodeType ma_node_type_;
 };
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const BbNode& node,
+                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+{
+  const auto source_method = node_to_erased_method(node.source(), context);
+  const auto period = node_to_erased_method(node.period(), context);
+  const auto stddev = node_to_erased_method(node.stddev(), context);
+
+  return BbMethod{source_method,
+                  period,
+                  stddev,
+                  static_cast<MaMethodType>(node.ma_node_type())};
+}
 
 } // namespace pludux

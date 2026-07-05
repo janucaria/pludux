@@ -9,7 +9,11 @@ module;
 
 export module pludux:nodes.kc_node;
 
+import :methods.kc_method;
+import :node_to_erased_method;
 import :nodes.erased_node;
+import :nodes.ohlcv_node;
+import :nodes.value_node;
 import :ma_node_type;
 
 export namespace pludux {
@@ -24,7 +28,7 @@ public:
   }
 
   KcNode(std::size_t period, double multiplier, std::size_t band_atr_period)
-  : KcNode{ErasedNode{}, period, multiplier, band_atr_period}
+  : KcNode{CloseNode{}, period, multiplier, band_atr_period}
   {
   }
 
@@ -33,7 +37,7 @@ public:
          std::size_t band_atr_period,
          KcBandNodeType band_node_type,
          MaNodeType ma_node_type)
-  : KcNode{ErasedNode{},
+  : KcNode{CloseNode{},
            period,
            multiplier,
            band_atr_period,
@@ -49,9 +53,9 @@ public:
          KcBandNodeType band_node_type = KcBandNodeType::Atr,
          MaNodeType ma_node_type = MaNodeType::Ema)
   : KcNode{std::move(source),
-           ErasedNode{period},
-           ErasedNode{multiplier},
-           ErasedNode{band_atr_period},
+           ValueNode{static_cast<double>(period)},
+           ValueNode{multiplier},
+           ValueNode{static_cast<double>(band_atr_period)},
            band_node_type,
            ma_node_type}
   {
@@ -101,7 +105,7 @@ public:
 
   void period(this KcNode& self, std::size_t period) noexcept
   {
-    self.period_ = ErasedNode{period};
+    self.period_ = ValueNode{static_cast<double>(period)};
   }
 
   void period(this KcNode& self, ErasedNode period) noexcept
@@ -126,7 +130,7 @@ public:
 
   void band_atr_period(this KcNode& self, std::size_t band_atr_period) noexcept
   {
-    self.band_atr_period_ = ErasedNode{band_atr_period};
+    self.band_atr_period_ = ValueNode{static_cast<double>(band_atr_period)};
   }
 
   void band_atr_period(this KcNode& self, ErasedNode band_atr_period) noexcept
@@ -141,7 +145,7 @@ public:
 
   void multiplier(this KcNode& self, double multiplier) noexcept
   {
-    self.multiplier_ = ErasedNode{multiplier};
+    self.multiplier_ = ValueNode{multiplier};
   }
 
   void multiplier(this KcNode& self, ErasedNode multiplier) noexcept
@@ -157,5 +161,23 @@ private:
   KcBandNodeType band_node_type_;
   MaNodeType ma_node_type_;
 };
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const KcNode& node,
+                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+{
+  const auto source_method = node_to_erased_method(node.source(), context);
+  const auto period = node_to_erased_method(node.period(), context);
+  const auto multiplier = node_to_erased_method(node.multiplier(), context);
+  const auto band_atr_period =
+   node_to_erased_method(node.band_atr_period(), context);
+
+  return KcMethod{source_method,
+                  period,
+                  multiplier,
+                  band_atr_period,
+                  static_cast<KcBandMethodType>(node.band_node_type()),
+                  static_cast<MaMethodType>(node.ma_node_type())};
+}
 
 } // namespace pludux

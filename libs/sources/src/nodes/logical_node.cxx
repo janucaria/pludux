@@ -6,6 +6,7 @@ module;
 export module pludux:nodes.logical_node;
 
 import :methods.logical_method;
+import :node_to_erased_method;
 import :nodes.erased_node;
 
 export namespace pludux {
@@ -13,8 +14,7 @@ export namespace pludux {
 template<typename TOperator>
 class BinaryLogicalNode {
 public:
-  BinaryLogicalNode(ErasedNode first_condition,
-                    ErasedNode second_condition)
+  BinaryLogicalNode(ErasedNode first_condition, ErasedNode second_condition)
   : first_condition_{std::move(first_condition)}
   , second_condition_{std::move(second_condition)}
   {
@@ -23,9 +23,7 @@ public:
   auto operator==(const BinaryLogicalNode& other) const noexcept
    -> bool = default;
 
-
-  auto first_condition(this const BinaryLogicalNode& self)
-   -> const ErasedNode&
+  auto first_condition(this const BinaryLogicalNode& self) -> const ErasedNode&
   {
     return self.first_condition_;
   }
@@ -35,14 +33,12 @@ public:
     self.first_condition_ = std::move(condition);
   }
 
-  auto second_condition(this const BinaryLogicalNode& self)
-   -> const ErasedNode&
+  auto second_condition(this const BinaryLogicalNode& self) -> const ErasedNode&
   {
     return self.second_condition_;
   }
 
-  void second_condition(this BinaryLogicalNode& self,
-                        ErasedNode condition)
+  void second_condition(this BinaryLogicalNode& self, ErasedNode condition)
   {
     self.second_condition_ = std::move(condition);
   }
@@ -63,9 +59,7 @@ public:
   auto operator==(const UnaryLogicalNode& other) const noexcept
    -> bool = default;
 
-
-  auto other_condition(this const UnaryLogicalNode& self)
-   -> const ErasedNode&
+  auto other_condition(this const UnaryLogicalNode& self) -> const ErasedNode&
   {
     return self.other_condition_;
   }
@@ -79,15 +73,34 @@ private:
   ErasedNode other_condition_;
 };
 
-using LogicalAndNode =
- BinaryLogicalNode<std::logical_and<>>;
+using LogicalAndNode = BinaryLogicalNode<std::logical_and<>>;
 
-using LogicalOrNode =
- BinaryLogicalNode<std::logical_or<>>;
+using LogicalOrNode = BinaryLogicalNode<std::logical_or<>>;
 
 using LogicalNotNode = UnaryLogicalNode<std::logical_not<>>;
 
-using LogicalXorNode =
- BinaryLogicalNode<LogicalXor<>>;
+using LogicalXorNode = BinaryLogicalNode<LogicalXor<>>;
+
+template<typename TOperator>
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const BinaryLogicalNode<TOperator>& node,
+                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+{
+  auto first_condition = node_to_erased_method(node.first_condition(), context);
+  auto second_condition =
+   node_to_erased_method(node.second_condition(), context);
+  return AnySeriesMethod{
+   BinaryLogicalMethod<TOperator, AnySeriesMethod, AnySeriesMethod>{
+    std::move(first_condition), std::move(second_condition)}};
+}
+
+template<typename TOperator>
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const UnaryLogicalNode<TOperator>& node,
+                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+{
+  return AnySeriesMethod{UnaryLogicalMethod<TOperator, AnySeriesMethod>{
+   node_to_erased_method(node.other_condition(), context)}};
+}
 
 } // namespace pludux

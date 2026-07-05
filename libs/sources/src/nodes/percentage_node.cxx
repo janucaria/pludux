@@ -4,19 +4,22 @@ module;
 
 export module pludux:nodes.percentage_node;
 
+import :methods.percentage_method;
+import :node_to_erased_method;
 import :nodes.erased_node;
+import :nodes.ohlcv_node;
 
 export namespace pludux {
 
 class PercentageNode {
 public:
   PercentageNode()
-  : PercentageNode{ErasedNode{}, 100.0}
+  : PercentageNode{CloseNode{}, 100.0}
   {
   }
 
   explicit PercentageNode(double percent)
-  : PercentageNode{ErasedNode{}, percent}
+  : PercentageNode{CloseNode{}, percent}
   {
   }
 
@@ -26,9 +29,7 @@ public:
   {
   }
 
-  auto operator==(const PercentageNode& other) const noexcept
-   -> bool = default;
-
+  auto operator==(const PercentageNode& other) const noexcept -> bool = default;
 
   auto base(this const PercentageNode& self) noexcept -> const ErasedNode&
   {
@@ -54,5 +55,13 @@ private:
   ErasedNode base_;
   double percent_;
 };
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const PercentageNode& node,
+                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+{
+  return AnySeriesMethod{PercentageMethod{
+   node_to_erased_method(node.base(), context), node.percent()}};
+}
 
 } // namespace pludux

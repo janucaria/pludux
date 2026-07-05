@@ -14,8 +14,15 @@ public:
   {
   }
 
-  auto operator==(const SeriesNodeMethod& other) const noexcept
-   -> bool = default;
+  auto operator==(const SeriesNodeMethod& other) const noexcept -> bool
+  {
+    return name_ == other.name_;
+  }
+
+  auto operator!=(const SeriesNodeMethod& other) const noexcept -> bool
+  {
+    return !(*this == other);
+  }
 
   auto name(this const SeriesNodeMethod& self) noexcept -> const std::string&
   {

@@ -5,7 +5,10 @@ module;
 
 export module pludux:nodes.donchian_channel_node;
 
+import :methods.donchian_channel_method;
+import :node_to_erased_method;
 import :nodes.erased_node;
+import :nodes.value_node;
 
 export namespace pludux {
 
@@ -17,7 +20,7 @@ public:
   }
 
   DonchianChannelNode(std::size_t period)
-  : DonchianChannelNode{ErasedNode{period}}
+  : DonchianChannelNode{ValueNode{static_cast<double>(period)}}
   {
   }
 
@@ -36,7 +39,7 @@ public:
 
   void period(this DonchianChannelNode& self, std::size_t period) noexcept
   {
-    self.period_ = ErasedNode{period};
+    self.period_ = ValueNode{static_cast<double>(period)};
   }
 
   void period(this DonchianChannelNode& self, ErasedNode period) noexcept
@@ -47,5 +50,14 @@ public:
 private:
   ErasedNode period_;
 };
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const DonchianChannelNode& node,
+                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+{
+  const auto period = node_to_erased_method(node.period(), context);
+
+  return AnySeriesMethod{DonchianChannelMethod{period}};
+}
 
 } // namespace pludux

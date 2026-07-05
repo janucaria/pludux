@@ -10,6 +10,7 @@ module;
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include <imgui.h>
 #include <implot.h>
@@ -355,7 +356,13 @@ private:
       return;
     }
 
-    auto input_context = NodeToErasedMethodContext{backtest.inputs()};
+    auto input_values = std::vector<double>{};
+    input_values.reserve(backtest.inputs().size());
+    for(const auto& input : backtest.inputs()) {
+      input_values.emplace_back(input.value());
+    }
+
+    auto input_context = NodeToErasedMethodContext{input_values};
     auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
     for(const auto& [series_name, series_node] : strategy_ptr->series_nodes()) {
       series_methods.set(series_name,
