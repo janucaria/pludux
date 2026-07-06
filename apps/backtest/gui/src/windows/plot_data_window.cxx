@@ -564,81 +564,76 @@ private:
       };
 
       for(auto i = std::size_t{0}; i < timeline_size; ++i) {
-        for(const auto& record : backtest_timelines.trade_records(i)) {
-          const auto stop_price = record.stop_price();
-          const auto target_price = record.target_price();
-          const auto take_profit_price = record.take_profit_price();
-          const auto stop_loss_price = record.stop_loss_price();
-          const auto avg_price = record.average_price();
+        const auto& open_position = backtest_timelines.open_position(i);
+        if(!open_position) {
+          flush_price_line(stop_loss_line_points, stop_line_color);
+          flush_price_line(take_profit_line_points, target_line_color);
+          continue;
+        }
 
-          const auto left_half_width =
-           record.is_entry_or_scaled_in() ? 0.0 : half_width;
-          const auto right_half_width =
-           record.is_open() ? (i == timeline_size - 1 ? 10.0 : half_width)
-                            : 0.0;
-          const auto left_x = static_cast<double>(i) - left_half_width;
-          const auto right_x = static_cast<double>(i) + right_half_width;
+        const auto stop_price = open_position->stop_price();
+        const auto target_price = open_position->target_price();
+        const auto take_profit_price = open_position->take_profit_price();
+        const auto stop_loss_price = open_position->stop_loss_price();
+        const auto avg_price = open_position->average_price();
 
-          const auto draw_price_band = [&](double boundary_price,
-                                           double action_price,
-                                           const ImVec4& color) {
-            if(!std::isfinite(boundary_price) || !std::isfinite(action_price)) {
-              return;
-            }
+        const auto left_x = static_cast<double>(i) - half_width;
+        const auto right_x =
+         static_cast<double>(i) + (i == timeline_size - 1 ? 10.0 : half_width);
 
-            const auto risk_left_top_pos = ImPlot::PlotToPixels(
-             left_x, std::max(boundary_price, action_price));
-            const auto risk_right_bottom_pos = ImPlot::PlotToPixels(
-             right_x, std::min(boundary_price, action_price));
+        const auto draw_price_band = [&](double boundary_price,
+                                         double action_price,
+                                         const ImVec4& color) {
+          if(!std::isfinite(boundary_price) || !std::isfinite(action_price)) {
+            return;
+          }
 
-            draw_list->AddRectFilled(risk_left_top_pos,
-                                     risk_right_bottom_pos,
-                                     ImGui::GetColorU32(color));
-          };
+          const auto risk_left_top_pos =
+           ImPlot::PlotToPixels(left_x, std::max(boundary_price, action_price));
+          const auto risk_right_bottom_pos = ImPlot::PlotToPixels(
+           right_x, std::min(boundary_price, action_price));
 
-          const auto append_price_line =
-           [&](std::vector<ImVec2>& line_points, double price, ImU32 color) {
-             if(!std::isfinite(price)) {
+          draw_list->AddRectFilled(
+           risk_left_top_pos, risk_right_bottom_pos, ImGui::GetColorU32(color));
+        };
+
+        const auto append_price_line =
+         [&](std::vector<ImVec2>& line_points, double price, ImU32 color) {
+           if(!std::isfinite(price)) {
+             flush_price_line(line_points, color);
+             return;
+           }
+
+           const auto left_pos = ImPlot::PlotToPixels(left_x, price);
+           const auto right_pos = ImPlot::PlotToPixels(right_x, price);
+
+           if(!line_points.empty()) {
+             const auto last_pos = line_points.back();
+             constexpr auto connected_line_epsilon = 0.5f;
+             const auto has_gap =
+              ImAbs(last_pos.x - left_pos.x) > connected_line_epsilon;
+
+             if(has_gap) {
                flush_price_line(line_points, color);
-               return;
-             }
-
-             const auto left_pos = ImPlot::PlotToPixels(left_x, price);
-             const auto right_pos = ImPlot::PlotToPixels(right_x, price);
-
-             if(!line_points.empty()) {
-               const auto last_pos = line_points.back();
-               constexpr auto connected_line_epsilon = 0.5f;
-               const auto has_gap =
-                ImAbs(last_pos.x - left_pos.x) > connected_line_epsilon;
-
-               if(has_gap) {
-                 flush_price_line(line_points, color);
-               } else if(last_pos.y != left_pos.y) {
-                 line_points.push_back(left_pos);
-               }
-             }
-
-             if(line_points.empty()) {
+             } else if(last_pos.y != left_pos.y) {
                line_points.push_back(left_pos);
              }
+           }
 
-             line_points.push_back(right_pos);
-           };
+           if(line_points.empty()) {
+             line_points.push_back(left_pos);
+           }
 
-          draw_price_band(avg_price, stop_price, self.risk_color_);
-          draw_price_band(avg_price, target_price, self.reward_color_);
+           line_points.push_back(right_pos);
+         };
 
-          append_price_line(
-           stop_loss_line_points, stop_loss_price, stop_line_color);
-          append_price_line(
-           take_profit_line_points, take_profit_price, target_line_color);
+        draw_price_band(avg_price, stop_price, self.risk_color_);
+        draw_price_band(avg_price, target_price, self.reward_color_);
 
-          if(record.is_closed()) {
-            flush_price_line(stop_loss_line_points, stop_line_color);
-            flush_price_line(take_profit_line_points, target_line_color);
-          }
-        }
+        append_price_line(
+         stop_loss_line_points, stop_loss_price, stop_line_color);
+        append_price_line(
+         take_profit_line_points, take_profit_price, target_line_color);
       }
 
       flush_price_line(stop_loss_line_points, stop_line_color);
@@ -663,8 +658,8 @@ private:
 
       for(auto i = std::size_t{0}; i < timeline_size; ++i) {
         const auto snapshot = asset.get_snapshot(i);
-        for(const auto& record : backtest_timelines.trade_records(i)) {
-          if(record.is_entry_or_scaled_in()) {
+        for(const auto& event : backtest_timelines.trade_events(i)) {
+          if(event.is_entry() || event.is_scale_in()) {
             const auto entry_low = snapshot.low();
 
             auto entry_pos = ImPlot::PlotToPixels(i, entry_low);
@@ -676,8 +671,7 @@ private:
              ImVec2{entry_pos.x, entry_pos.y - 10},
              ImGui::GetColorU32(self.bullish_color_));
 
-            const auto trade_count_str =
-             std::format("#{}", backtest_timelines.trade_count(i) + 1);
+            const auto trade_count_str = std::format("#{}", event.trade_id());
             const auto text_size = ImGui::CalcTextSize(trade_count_str.c_str());
             draw_list->AddText(
              ImVec2{entry_pos.x - text_size.x * 0.5f, entry_pos.y},
@@ -685,18 +679,18 @@ private:
              trade_count_str.c_str());
           }
 
-          if(!record.is_open() || i == 0) {
+          if(event.is_exit() || event.is_scale_out()) {
             const auto exit_high = snapshot.high();
 
             auto exit_pos = ImPlot::PlotToPixels(i, exit_high);
             exit_pos.y -= marker_offset;
 
             const auto exit_color = [&]() {
-              if(record.is_closed_stop_loss()) {
+              if(event.type() == backtest::TradeEvent::Type::stop_loss) {
                 return ImGui::GetColorU32(self.trailing_stop_color_);
               }
 
-              if(record.is_closed_take_profit()) {
+              if(event.type() == backtest::TradeEvent::Type::take_profit) {
                 auto color = self.reward_color_;
                 color.w = 0.9f;
                 return ImGui::GetColorU32(color);
@@ -710,9 +704,7 @@ private:
                                          ImVec2{exit_pos.x, exit_pos.y + 10},
                                          exit_color);
 
-            const auto trade_count =
-             backtest_timelines.trade_count(i) + (!record.is_closed() ? 1 : 0);
-            const auto trade_count_str = std::format("#{}", trade_count);
+            const auto trade_count_str = std::format("#{}", event.trade_id());
             const auto text_size = ImGui::CalcTextSize(trade_count_str.c_str());
             draw_list->AddText(
              ImVec2{exit_pos.x - text_size.x * 0.5f, exit_pos.y - 13},

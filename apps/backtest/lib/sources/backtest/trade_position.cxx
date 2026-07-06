@@ -8,18 +8,21 @@ module;
 
 export module pludux.backtest:trade_position;
 
-import :trade_record;
+import :closed_trade;
+import :open_position_snapshot;
+import :trade_event;
 
 export namespace pludux::backtest {
 
 class TradePosition {
 public:
   TradePosition()
-  : TradePosition{0.0, 0, std::time_t{}, 0.0, 0.0, 0.0, 0.0, false, 0.0}
+  : TradePosition{0, 0.0, 0, std::time_t{}, 0.0, 0.0, 0.0, 0.0, false, 0.0}
   {
   }
 
-  TradePosition(double position_size,
+  TradePosition(std::size_t trade_id,
+                double position_size,
                 std::time_t entry_timestamp,
                 double entry_price,
                 double total_entry_fees,
@@ -28,7 +31,8 @@ public:
                 double stop_loss_price,
                 bool stop_loss_trailing_enabled,
                 double take_profit_price)
-  : TradePosition{position_size,
+  : TradePosition{trade_id,
+                  position_size,
                   entry_price * position_size + total_entry_fees,
                   entry_timestamp,
                   entry_price,
@@ -41,7 +45,8 @@ public:
   {
   }
 
-  TradePosition(double position_size,
+  TradePosition(std::size_t trade_id,
+                double position_size,
                 double investment,
                 std::time_t entry_timestamp,
                 double entry_price,
@@ -51,7 +56,9 @@ public:
                 double stop_loss_price,
                 bool stop_loss_trailing_enabled,
                 double take_profit_price)
-  : position_size_{position_size}
+  : trade_id_{trade_id}
+  , trade_event_count_{1}
+  , position_size_{position_size}
   , investment_{investment}
   , entry_price_{entry_price}
   , total_entry_fees_{total_entry_fees}
@@ -65,6 +72,16 @@ public:
   }
 
   auto operator==(const TradePosition&) const noexcept -> bool = default;
+
+  auto trade_id(this const TradePosition& self) noexcept -> std::size_t
+  {
+    return self.trade_id_;
+  }
+
+  auto trade_event_count(this const TradePosition& self) noexcept -> std::size_t
+  {
+    return self.trade_event_count_;
+  }
 
   auto position_size(this const TradePosition& self) noexcept -> double
   {
@@ -170,7 +187,8 @@ public:
 
   auto average_price(this const TradePosition& self) noexcept -> double
   {
-    return self.investment() / self.position_size();
+    return self.position_size() ? self.investment() / self.position_size()
+                                : 0.0;
   }
 
   auto unrealized_position_size(this const TradePosition& self) noexcept
@@ -212,7 +230,26 @@ public:
     return self.position_size() < 0;
   }
 
+  auto snapshot(this const TradePosition& self,
+                std::time_t market_timestamp,
+                double market_price) noexcept -> OpenPositionSnapshot
+  {
+    return OpenPositionSnapshot{self.trade_id(),
+                                self.entry_timestamp(),
+                                market_timestamp,
+                                market_price,
+                                self.position_size(),
+                                self.investment(),
+                                self.entry_price(),
+                                self.total_entry_fees(),
+                                self.stop_price(),
+                                self.target_price(),
+                                self.stop_loss_price(),
+                                self.take_profit_price()};
+  }
+
   auto scaled_in(this TradePosition& self,
+                 std::size_t event_id,
                  double action_position_size,
                  std::time_t action_timestamp,
                  double action_price,
@@ -221,30 +258,15 @@ public:
                  double target_price,
                  double stop_loss_price,
                  bool stop_loss_trailing_enabled,
-                 double take_profit_price) -> TradeRecord
+                 double take_profit_price) -> TradeEvent
   {
     if(self.is_closed()) {
       throw std::runtime_error("Cannot scaled in to a closed trade.");
     }
 
-    const auto scaled_in_record = TradeRecord{TradeRecord::Status::scaled_in,
-                                              self.position_size(),
-                                              self.investment(),
-
-                                              self.entry_timestamp(),
-                                              self.entry_price(),
-                                              self.total_entry_fees(),
-
-                                              action_timestamp,
-                                              action_price,
-                                              action_total_fees,
-
-                                              self.stop_price(),
-                                              self.target_price(),
-                                              self.stop_loss_price(),
-                                              self.take_profit_price()};
-
     const auto last_position_size = self.position_size();
+    const auto last_investment = self.investment();
+    const auto last_average_price = self.average_price();
     const auto new_investment =
      action_position_size * action_price + action_total_fees;
 
@@ -260,22 +282,43 @@ public:
     self.stop_loss_price(stop_loss_price);
     self.stop_loss_trailing_enabled(stop_loss_trailing_enabled);
     self.take_profit_price(take_profit_price);
+    self.trade_event_count_++;
 
-    return scaled_in_record;
+    return TradeEvent{self.trade_id(),
+                      event_id,
+                      self.trade_event_count(),
+                      TradeEvent::Type::scale_in,
+                      action_timestamp,
+                      action_price,
+                      action_position_size,
+                      action_total_fees,
+                      last_position_size,
+                      last_investment,
+                      last_average_price,
+                      self.position_size(),
+                      self.investment(),
+                      self.average_price(),
+                      self.stop_price(),
+                      self.target_price(),
+                      self.stop_loss_price(),
+                      self.take_profit_price()};
   }
 
   auto scaled_out(this TradePosition& self,
+                  std::size_t event_id,
                   double action_position_size,
                   std::time_t action_timestamp,
                   double action_price,
                   double action_total_fees,
-                  TradeRecord::Status trade_status) -> TradeRecord
+                  TradeEvent::Type event_type) -> TradeEvent
   {
     if(self.is_closed()) {
       throw std::runtime_error("Cannot add action to a closed trade.");
     }
 
     const auto last_position_size = self.position_size();
+    const auto last_investment = self.investment();
+    const auto last_average_price = self.average_price();
     const auto remaining_position_size =
      last_position_size - action_position_size;
 
@@ -293,26 +336,56 @@ public:
 
     const auto investment_closed = action_position_size * self.average_price();
 
-    auto exit_record = TradeRecord{trade_status,
-                                   action_position_size,
-                                   investment_closed,
-                                   self.entry_timestamp(),
-                                   self.entry_price(),
-                                   self.total_entry_fees(),
-                                   action_timestamp,
-                                   action_price,
-                                   action_total_fees,
-                                   self.stop_price(),
-                                   self.target_price(),
-                                   self.stop_loss_price(),
-                                   self.take_profit_price()};
-
     const auto updated_investment = self.investment() - investment_closed;
     self.investment(updated_investment);
 
     self.position_size(remaining_position_size);
+    self.trade_event_count_++;
 
-    return exit_record;
+    return TradeEvent{self.trade_id(),
+                      event_id,
+                      self.trade_event_count(),
+                      event_type,
+                      action_timestamp,
+                      action_price,
+                      action_position_size,
+                      action_total_fees,
+                      last_position_size,
+                      last_investment,
+                      last_average_price,
+                      self.position_size(),
+                      self.investment(),
+                      self.average_price(),
+                      self.stop_price(),
+                      self.target_price(),
+                      self.stop_loss_price(),
+                      self.take_profit_price()};
+  }
+
+  auto closed_trade(this const TradePosition& self,
+                    std::size_t exit_event_id,
+                    TradeEvent::Type exit_type,
+                    std::time_t exit_timestamp,
+                    double exit_price,
+                    double total_exit_fees,
+                    double closed_position_size,
+                    double closed_investment) noexcept -> ClosedTrade
+  {
+    return ClosedTrade{self.trade_id(),
+                       exit_event_id,
+                       exit_type,
+                       self.entry_timestamp(),
+                       exit_timestamp,
+                       closed_position_size,
+                       closed_investment,
+                       self.entry_price(),
+                       exit_price,
+                       self.total_entry_fees(),
+                       total_exit_fees,
+                       self.stop_price(),
+                       self.target_price(),
+                       self.stop_loss_price(),
+                       self.take_profit_price()};
   }
 
   void update_trailing_stop(this TradePosition& self,
@@ -369,6 +442,9 @@ public:
   }
 
 private:
+  std::size_t trade_id_;
+  std::size_t trade_event_count_;
+
   double position_size_;
   double investment_;
 

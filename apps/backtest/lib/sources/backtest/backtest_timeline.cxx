@@ -9,7 +9,9 @@ module;
 
 export module pludux.backtest:backtest_timeline;
 
-import :trade_record;
+import :closed_trade;
+import :open_position_snapshot;
+import :trade_event;
 
 export namespace pludux::backtest {
 
@@ -21,7 +23,9 @@ public:
     std::time_t market_timestamp{};
     double market_price{};
     std::size_t market_lookback{};
-    std::vector<TradeRecord> trade_records{};
+    std::vector<TradeEvent> trade_events{};
+    std::vector<ClosedTrade> closed_trades{};
+    std::optional<OpenPositionSnapshot> open_position{};
 
     double capital{};
     double equity{};
@@ -63,7 +67,9 @@ public:
     self.market_timestamps_.clear();
     self.market_prices_.clear();
     self.market_lookbacks_.clear();
-    self.trade_records_.clear();
+    self.trade_events_.clear();
+    self.closed_trades_.clear();
+    self.open_positions_.clear();
     self.capitals_.clear();
     self.equities_.clear();
     self.peak_equities_.clear();
@@ -87,7 +93,9 @@ public:
     self.market_timestamps_.reserve(size);
     self.market_prices_.reserve(size);
     self.market_lookbacks_.reserve(size);
-    self.trade_records_.reserve(size);
+    self.trade_events_.reserve(size);
+    self.closed_trades_.reserve(size);
+    self.open_positions_.reserve(size);
     self.capitals_.reserve(size);
     self.equities_.reserve(size);
     self.peak_equities_.reserve(size);
@@ -111,7 +119,9 @@ public:
     self.market_timestamps_.push_back(row.market_timestamp);
     self.market_prices_.push_back(row.market_price);
     self.market_lookbacks_.push_back(row.market_lookback);
-    self.trade_records_.push_back(std::move(row.trade_records));
+    self.trade_events_.push_back(std::move(row.trade_events));
+    self.closed_trades_.push_back(std::move(row.closed_trades));
+    self.open_positions_.push_back(std::move(row.open_position));
     self.capitals_.push_back(row.capital);
     self.equities_.push_back(row.equity);
     self.peak_equities_.push_back(row.peak_equity);
@@ -148,11 +158,25 @@ public:
     return self.market_lookbacks_[index];
   }
 
-  auto trade_records(this const BacktestTimeline& self,
-                     std::size_t index) noexcept
-   -> const std::vector<TradeRecord>&
+  auto trade_events(this const BacktestTimeline& self,
+                    std::size_t index) noexcept
+   -> const std::vector<TradeEvent>&
   {
-    return self.trade_records_[index];
+    return self.trade_events_[index];
+  }
+
+  auto closed_trades(this const BacktestTimeline& self,
+                     std::size_t index) noexcept
+   -> const std::vector<ClosedTrade>&
+  {
+    return self.closed_trades_[index];
+  }
+
+  auto open_position(this const BacktestTimeline& self,
+                     std::size_t index) noexcept
+   -> const std::optional<OpenPositionSnapshot>&
+  {
+    return self.open_positions_[index];
   }
 
   auto capital(this const BacktestTimeline& self, std::size_t index) noexcept
@@ -383,7 +407,9 @@ private:
   std::vector<std::time_t> market_timestamps_;
   std::vector<double> market_prices_;
   std::vector<std::size_t> market_lookbacks_;
-  std::vector<std::vector<TradeRecord>> trade_records_;
+  std::vector<std::vector<TradeEvent>> trade_events_;
+  std::vector<std::vector<ClosedTrade>> closed_trades_;
+  std::vector<std::optional<OpenPositionSnapshot>> open_positions_;
 
   std::vector<double> capitals_;
   std::vector<double> equities_;

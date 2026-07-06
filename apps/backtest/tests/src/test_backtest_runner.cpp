@@ -141,10 +141,23 @@ auto last_timeline_index(const BacktestTimeline& timeline) -> std::size_t
   return timeline.size() - 1;
 }
 
-auto latest_record(const BacktestTimeline& timeline) -> const TradeRecord&
+auto latest_position(const BacktestTimeline& timeline)
+ -> const OpenPositionSnapshot&
 {
   const auto timeline_i = last_timeline_index(timeline);
-  return timeline.trade_records(timeline_i).back();
+  return *timeline.open_position(timeline_i);
+}
+
+auto latest_closed_trade(const BacktestTimeline& timeline) -> const ClosedTrade&
+{
+  const auto timeline_i = last_timeline_index(timeline);
+  return timeline.closed_trades(timeline_i).back();
+}
+
+auto latest_event(const BacktestTimeline& timeline) -> const TradeEvent&
+{
+  const auto timeline_i = last_timeline_index(timeline);
+  return timeline.trade_events(timeline_i).back();
 }
 
 TEST(BacktestTimelineTest, DefaultConstructorCreatesEmptyTimeline)
@@ -247,9 +260,10 @@ TEST(BacktestRunnerTest, RiskSizingUsesCurrentEquityAfterClosedTrade)
   runner.run(series_results, timeline);
 
   ASSERT_EQ(timeline.size(), 2);
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(
-   timeline.trade_records(last_timeline_index(timeline)).back().position_size(),
+   timeline.open_position(last_timeline_index(timeline))->position_size(),
    10.0);
 
   runner.run(series_results, timeline);
@@ -262,10 +276,10 @@ TEST(BacktestRunnerTest, RiskSizingUsesCurrentEquityAfterClosedTrade)
 
   ASSERT_EQ(timeline.size(), 4);
   EXPECT_EQ(timeline.open_trade_count(last_timeline_index(timeline)), 1);
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(
-   timeline.trade_records(last_timeline_index(timeline)).back().position_size(),
-   5.5);
+   timeline.open_position(last_timeline_index(timeline))->position_size(), 5.5);
 }
 
 TEST(BacktestRunnerTest, PrevEquitySignalUsesLatestCompletedTimelineRow)
@@ -487,8 +501,9 @@ TEST(BacktestRunnerTest, FixedQuantitySizingUsesExactQuantity)
   const auto timeline =
    run_single_entry(PositionSizing{PositionSizing::Mode::FixedQuantity, 12.5});
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 12.5);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 12.5);
 }
 
 TEST(BacktestRunnerTest, FixedNotionalSizingConvertsByEntryPrice)
@@ -496,8 +511,9 @@ TEST(BacktestRunnerTest, FixedNotionalSizingConvertsByEntryPrice)
   const auto timeline =
    run_single_entry(PositionSizing{PositionSizing::Mode::FixedNotional, 250.0});
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 2.5);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.5);
 }
 
 TEST(BacktestRunnerTest, FixedNotionalSizingConvertsBySelectedEntryPrice)
@@ -515,11 +531,12 @@ TEST(BacktestRunnerTest, FixedNotionalSizingConvertsBySelectedEntryPrice)
    std::numeric_limits<double>::quiet_NaN(),
    broker);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).entry_price(), 125.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).investment(), 252.5);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).total_entry_fees(), 2.5);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).entry_price(), 125.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).investment(), 252.5);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).total_entry_fees(), 2.5);
 }
 
 TEST(BacktestRunnerTest, EquityPercentSizingConvertsByCurrentEquity)
@@ -527,8 +544,9 @@ TEST(BacktestRunnerTest, EquityPercentSizingConvertsByCurrentEquity)
   const auto timeline =
    run_single_entry(PositionSizing{PositionSizing::Mode::EquityPercent, 0.25});
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 2.5);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.5);
 }
 
 TEST(BacktestRunnerTest, EquityPercentSizingConvertsBySelectedEntryPrice)
@@ -536,9 +554,10 @@ TEST(BacktestRunnerTest, EquityPercentSizingConvertsBySelectedEntryPrice)
   const auto timeline = run_single_close_price_entry(
    PositionSizing{PositionSizing::Mode::EquityPercent, 0.25});
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).entry_price(), 125.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 2.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).entry_price(), 125.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
 }
 
 TEST(BacktestRunnerTest, RiskDistanceSizingUsesSelectedEntryPrice)
@@ -549,11 +568,12 @@ TEST(BacktestRunnerTest, RiskDistanceSizingUsesSelectedEntryPrice)
    125.0,
    75.0);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).entry_price(), 125.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 75.0);
-  EXPECT_TRUE(std::isnan(latest_record(timeline).stop_loss_price()));
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).entry_price(), 125.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 75.0);
+  EXPECT_TRUE(std::isnan(latest_position(timeline).stop_loss_price()));
 }
 
 TEST(BacktestRunnerTest, DisabledTakeProfitKeepsTargetReferencePrice)
@@ -586,11 +606,12 @@ TEST(BacktestRunnerTest, DisabledTakeProfitKeepsTargetReferencePrice)
 
   runner.run(series_results, timeline);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 90.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 120.0);
-  EXPECT_TRUE(std::isnan(latest_record(timeline).stop_loss_price()));
-  EXPECT_TRUE(std::isnan(latest_record(timeline).take_profit_price()));
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 90.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 120.0);
+  EXPECT_TRUE(std::isnan(latest_position(timeline).stop_loss_price()));
+  EXPECT_TRUE(std::isnan(latest_position(timeline).take_profit_price()));
 }
 
 TEST(BacktestRunnerTest, StopTargetAmountMethodsUseEntryDirection)
@@ -623,13 +644,14 @@ TEST(BacktestRunnerTest, StopTargetAmountMethodsUseEntryDirection)
 
   runner.run(series_results, timeline);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).entry_price(), 100.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), -1.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 110.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 80.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_loss_price(), 110.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).take_profit_price(), 80.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).entry_price(), 100.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), -1.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 110.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 80.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_loss_price(), 110.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).take_profit_price(), 80.0);
 }
 
 TEST(BacktestRunnerTest, ScopedStopTargetAmountMethodsEvaluateDirectly)
@@ -728,9 +750,10 @@ TEST(BacktestRunnerTest, StopTargetPercentageMethodsUseEntryPrice)
 
   runner.run(series_results, timeline);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 180.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 240.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 180.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 240.0);
 }
 
 TEST(BacktestRunnerTest, StopTargetPercentageMethodsUseFeeAdjustedAveragePrice)
@@ -768,10 +791,11 @@ TEST(BacktestRunnerTest, StopTargetPercentageMethodsUseFeeAdjustedAveragePrice)
 
   runner.run(series_results, timeline);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).average_price(), 110.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 99.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 132.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 110.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 99.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 132.0);
 }
 
 TEST(BacktestRunnerTest, ScopedStopTargetPercentMethodsEvaluateDirectly)
@@ -823,10 +847,11 @@ TEST(BacktestRunnerTest, AtrStopAndRMultipleTargetUseScopedContext)
 
   runner.run(series_results, timeline);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).entry_price(), 100.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 60.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 180.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).entry_price(), 100.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 60.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 180.0);
 }
 
 TEST(BacktestRunnerTest, PositionContextMethodsUseNormalLongEntryContext)
@@ -859,9 +884,10 @@ TEST(BacktestRunnerTest, PositionContextMethodsUseNormalLongEntryContext)
 
   runner.run(series_results, timeline);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 100.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 1.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 100.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 1.0);
 }
 
 TEST(BacktestRunnerTest, PositionContextMethodsUseNormalShortEntryContext)
@@ -894,9 +920,10 @@ TEST(BacktestRunnerTest, PositionContextMethodsUseNormalShortEntryContext)
 
   runner.run(series_results, timeline);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 100.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), -1.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 100.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), -1.0);
 }
 
 TEST(BacktestRunnerTest, PositionContextMethodsUsePyramidingPriceContext)
@@ -931,10 +958,11 @@ TEST(BacktestRunnerTest, PositionContextMethodsUsePyramidingPriceContext)
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).average_price(), 110.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 110.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 120.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 110.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 110.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 120.0);
 }
 
 TEST(BacktestRunnerTest, PositionContextMethodsUseConfiguredReferenceContext)
@@ -977,9 +1005,10 @@ TEST(BacktestRunnerTest, PositionContextMethodsUseConfiguredReferenceContext)
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 100.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 120.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 100.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 120.0);
 }
 
 TEST(BacktestRunnerTest, CustomStopTargetFormulasUseReferenceAndDirection)
@@ -1018,9 +1047,10 @@ TEST(BacktestRunnerTest, CustomStopTargetFormulasUseReferenceAndDirection)
 
   runner.run(series_results, timeline);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 90.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 120.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 90.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 120.0);
 }
 
 TEST(BacktestRunnerTest, ScopedAtrStopAndRMultipleTargetEvaluateDirectly)
@@ -1054,8 +1084,9 @@ TEST(BacktestRunnerTest, DisabledDrawdownAdjustmentLeavesSizingUnchanged)
                     900.0,
                     1000.0);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 100.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 100.0);
 }
 
 TEST(BacktestRunnerTest, DrawdownAdjustmentLeavesSizeUnchangedAtZeroDrawdown)
@@ -1065,8 +1096,9 @@ TEST(BacktestRunnerTest, DrawdownAdjustmentLeavesSizeUnchangedAtZeroDrawdown)
                     100.0,
                     DrawdownAdjustment{true, 0.10, 0.20});
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 100.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 100.0);
 }
 
 TEST(BacktestRunnerTest, DrawdownAdjustmentReducesSizeAtTenPercentDrawdown)
@@ -1078,8 +1110,9 @@ TEST(BacktestRunnerTest, DrawdownAdjustmentReducesSizeAtTenPercentDrawdown)
                     900.0,
                     1000.0);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 80.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 80.0);
 }
 
 TEST(BacktestRunnerTest, DrawdownAdjustmentReducesSizeAtTwentyPercentDrawdown)
@@ -1091,8 +1124,9 @@ TEST(BacktestRunnerTest, DrawdownAdjustmentReducesSizeAtTwentyPercentDrawdown)
                     800.0,
                     1000.0);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 60.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 60.0);
 }
 
 TEST(BacktestRunnerTest, DrawdownAdjustmentClampsSizeAtZero)
@@ -1104,8 +1138,9 @@ TEST(BacktestRunnerTest, DrawdownAdjustmentClampsSizeAtZero)
                     400.0,
                     1000.0);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 0.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 0.0);
 }
 
 auto make_two_bar_asset(double first_open,
@@ -1181,9 +1216,10 @@ TEST(BacktestRunnerTest,
 
   runner.run(series_results, timeline);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).entry_price(), 125.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 2.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).entry_price(), 125.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
 }
 
 TEST(BacktestRunnerTest, NextOpenEntryUsesPreviousSignalAndOpenPrice)
@@ -1232,8 +1268,9 @@ TEST(BacktestRunnerTest, NextOpenEntryUsesPreviousSignalAndOpenPrice)
 
   runner.run(series_results, timeline);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).entry_price(), 125.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).entry_price(), 125.0);
   EXPECT_EQ(timeline.open_trade_count(last_timeline_index(timeline)), 1);
 }
 
@@ -1284,8 +1321,9 @@ TEST(BacktestRunnerTest, SignalDelayZeroEntryUsesCurrentSignal)
 
   runner.run(series_results, timeline);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).entry_price(), 75.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).entry_price(), 75.0);
   EXPECT_EQ(timeline.open_trade_count(last_timeline_index(timeline)), 1);
 }
 
@@ -1326,9 +1364,10 @@ TEST(BacktestRunnerTest, SignalDelayZeroCloseExitUsesCurrentSignalAndClosePrice)
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_TRUE(latest_record(timeline).is_closed_exit_signal());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).exit_price(), 120.0);
+  ASSERT_EQ(timeline.closed_trades(last_timeline_index(timeline)).size(), 1);
+  EXPECT_EQ(latest_closed_trade(timeline).exit_type(),
+            TradeEvent::Type::exit_signal);
+  EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).exit_price(), 120.0);
 }
 
 TEST(BacktestRunnerTest, SignalDelayZeroClosePyramidingUsesOwnTimingAndPrice)
@@ -1370,9 +1409,10 @@ TEST(BacktestRunnerTest, SignalDelayZeroClosePyramidingUsesOwnTimingAndPrice)
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).investment(), 220.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).investment(), 220.0);
 }
 
 TEST(BacktestRunnerTest,
@@ -1408,11 +1448,12 @@ TEST(BacktestRunnerTest,
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).average_price(), 110.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 99.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 132.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 110.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 99.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 132.0);
 }
 
 TEST(BacktestRunnerTest, PyramidingUsesPostScaleInFeeAdjustedAverageReference)
@@ -1452,11 +1493,12 @@ TEST(BacktestRunnerTest, PyramidingUsesPostScaleInFeeAdjustedAverageReference)
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).average_price(), 120.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 108.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 144.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 120.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 108.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 144.0);
 }
 
 TEST(BacktestRunnerTest,
@@ -1492,11 +1534,12 @@ TEST(BacktestRunnerTest,
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).average_price(), 90.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 81.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 108.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 90.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 81.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 108.0);
 }
 
 TEST(BacktestRunnerTest,
@@ -1532,11 +1575,12 @@ TEST(BacktestRunnerTest,
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), -2.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).average_price(), 90.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 99.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 72.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), -2.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 90.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 99.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 72.0);
 }
 
 TEST(BacktestRunnerTest, PyramidingCanUseLatestEntryReference)
@@ -1579,11 +1623,12 @@ TEST(BacktestRunnerTest, PyramidingCanUseLatestEntryReference)
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).average_price(), 110.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 108.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 144.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 110.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 108.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 144.0);
 }
 
 TEST(BacktestRunnerTest,
@@ -1619,11 +1664,12 @@ TEST(BacktestRunnerTest,
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), -2.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).average_price(), 110.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 121.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 88.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), -2.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 110.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 121.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 88.0);
 }
 
 TEST(BacktestRunnerTest, PyramidingCanUseInitialEntryReference)
@@ -1666,11 +1712,12 @@ TEST(BacktestRunnerTest, PyramidingCanUseInitialEntryReference)
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
 
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).average_price(), 110.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 90.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 120.0);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 110.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 90.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 120.0);
 }
 
 TEST(BacktestRunnerTest, SameBarSameDirectionReentryIsBlockedAfterExit)
@@ -1707,8 +1754,9 @@ TEST(BacktestRunnerTest, SameBarSameDirectionReentryIsBlockedAfterExit)
 
   ASSERT_EQ(timeline.size(), 2);
   EXPECT_EQ(timeline.open_trade_count(last_timeline_index(timeline)), 0);
-  ASSERT_EQ(timeline.trade_records(last_timeline_index(timeline)).size(), 1);
-  EXPECT_TRUE(latest_record(timeline).is_closed_exit_signal());
+  ASSERT_EQ(timeline.closed_trades(last_timeline_index(timeline)).size(), 1);
+  EXPECT_EQ(latest_closed_trade(timeline).exit_type(),
+            TradeEvent::Type::exit_signal);
 }
 
 TEST(BacktestRunnerTest, SameBarOppositeDirectionReversalIsAllowedAfterExit)
@@ -1753,11 +1801,13 @@ TEST(BacktestRunnerTest, SameBarOppositeDirectionReversalIsAllowedAfterExit)
 
   ASSERT_EQ(timeline.size(), 2);
   EXPECT_EQ(timeline.open_trade_count(last_timeline_index(timeline)), 1);
-  ASSERT_EQ(timeline.trade_records(last_timeline_index(timeline)).size(), 2);
-  EXPECT_TRUE(timeline.trade_records(last_timeline_index(timeline))
-               .front()
-               .is_closed_exit_signal());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), -1.0);
+  ASSERT_EQ(timeline.closed_trades(last_timeline_index(timeline)).size(), 1);
+  ASSERT_TRUE(
+   timeline.open_position(last_timeline_index(timeline)).has_value());
+  EXPECT_EQ(
+   timeline.closed_trades(last_timeline_index(timeline)).front().exit_type(),
+   TradeEvent::Type::exit_signal);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), -1.0);
 }
 
 TEST(BacktestRunnerTest, StopLossExitIsDecidedByRunner)
@@ -1793,11 +1843,12 @@ TEST(BacktestRunnerTest, StopLossExitIsDecidedByRunner)
   runner.run(series_results, timeline);
 
   ASSERT_EQ(timeline.size(), 2);
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_TRUE(latest_record(timeline).is_closed_stop_loss());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 90.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_loss_price(), 90.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).exit_price(), 90.0);
+  ASSERT_EQ(timeline.closed_trades(last_timeline_index(timeline)).size(), 1);
+  EXPECT_EQ(latest_closed_trade(timeline).exit_type(),
+            TradeEvent::Type::stop_loss);
+  EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).stop_price(), 90.0);
+  EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).stop_loss_price(), 90.0);
+  EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).exit_price(), 90.0);
 }
 
 TEST(BacktestRunnerTest, TrailingStopMutationUsesTradePositionState)
@@ -1833,11 +1884,12 @@ TEST(BacktestRunnerTest, TrailingStopMutationUsesTradePositionState)
   runner.run(series_results, timeline);
 
   ASSERT_EQ(timeline.size(), 2);
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_TRUE(latest_record(timeline).is_closed_stop_loss());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 90.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_loss_price(), 105.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).exit_price(), 105.0);
+  ASSERT_EQ(timeline.closed_trades(last_timeline_index(timeline)).size(), 1);
+  EXPECT_EQ(latest_closed_trade(timeline).exit_type(),
+            TradeEvent::Type::stop_loss);
+  EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).stop_price(), 90.0);
+  EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).stop_loss_price(), 105.0);
+  EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).exit_price(), 105.0);
 }
 
 TEST(BacktestRunnerTest, TakeProfitExitIsDecidedByRunner)
@@ -1873,9 +1925,10 @@ TEST(BacktestRunnerTest, TakeProfitExitIsDecidedByRunner)
   runner.run(series_results, timeline);
 
   ASSERT_EQ(timeline.size(), 2);
-  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
-  EXPECT_TRUE(latest_record(timeline).is_closed_take_profit());
-  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 120.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).take_profit_price(), 120.0);
-  EXPECT_DOUBLE_EQ(latest_record(timeline).exit_price(), 120.0);
+  ASSERT_EQ(timeline.closed_trades(last_timeline_index(timeline)).size(), 1);
+  EXPECT_EQ(latest_closed_trade(timeline).exit_type(),
+            TradeEvent::Type::take_profit);
+  EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).target_price(), 120.0);
+  EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).take_profit_price(), 120.0);
+  EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).exit_price(), 120.0);
 }

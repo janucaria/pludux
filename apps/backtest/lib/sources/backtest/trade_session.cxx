@@ -10,10 +10,12 @@ module;
 
 export module pludux.backtest:trade_session;
 
+import :closed_trade;
+import :open_position_snapshot;
 import :trade_entry;
+import :trade_event;
 import :trade_exit;
 import :trade_position;
-import :trade_record;
 
 export namespace pludux::backtest {
 
@@ -39,7 +41,10 @@ public:
   , market_price_{market_price}
   , market_lookback_{market_lookback}
   , open_position_{std::move(open_position)}
-  , trade_records_{}
+  , trade_events_{}
+  , closed_trades_{}
+  , next_trade_id_{1}
+  , next_event_id_{1}
   {
   }
 
@@ -72,10 +77,16 @@ public:
     return self.open_position_;
   }
 
-  auto trade_records(this const TradeSession& self) noexcept
-   -> const std::vector<TradeRecord>&
+  auto trade_events(this const TradeSession& self) noexcept
+   -> const std::vector<TradeEvent>&
   {
-    return self.trade_records_;
+    return self.trade_events_;
+  }
+
+  auto closed_trades(this const TradeSession& self) noexcept
+   -> const std::vector<ClosedTrade>&
+  {
+    return self.closed_trades_;
   }
 
   void begin_market_bar(this TradeSession& self,
@@ -86,7 +97,8 @@ public:
     self.market_timestamp_ = timestamp;
     self.market_price_ = price;
     self.market_lookback_ = lookback;
-    self.trade_records_.clear();
+    self.trade_events_.clear();
+    self.closed_trades_.clear();
   }
 
   void entry_position(this TradeSession& self, const TradeEntry& entry)
@@ -99,8 +111,9 @@ public:
                       double total_fees)
   {
     if(self.open_position_) {
-      auto trade_record =
-       self.open_position_->scaled_in(entry.position_size(),
+      auto event =
+       self.open_position_->scaled_in(self.next_event_id_++,
+                                      entry.position_size(),
                                       self.market_timestamp_,
                                       entry.price(),
                                       total_fees,
@@ -109,11 +122,13 @@ public:
                                       entry.stop_loss_price(),
                                       entry.stop_loss_trailing_enabled(),
                                       entry.take_profit_price());
-      self.trade_records_.push_back(std::move(trade_record));
+      self.trade_events_.push_back(std::move(event));
       return;
     }
 
-    self.open_position_ = TradePosition{entry.position_size(),
+    const auto trade_id = self.next_trade_id_++;
+    self.open_position_ = TradePosition{trade_id,
+                                        entry.position_size(),
                                         self.market_timestamp_,
                                         entry.price(),
                                         total_fees,
@@ -122,6 +137,24 @@ public:
                                         entry.stop_loss_price(),
                                         entry.stop_loss_trailing_enabled(),
                                         entry.take_profit_price()};
+    self.trade_events_.emplace_back(trade_id,
+                                    self.next_event_id_++,
+                                    1,
+                                    TradeEvent::Type::entry,
+                                    self.market_timestamp_,
+                                    entry.price(),
+                                    entry.position_size(),
+                                    total_fees,
+                                    0.0,
+                                    0.0,
+                                    0.0,
+                                    self.open_position_->position_size(),
+                                    self.open_position_->investment(),
+                                    self.open_position_->average_price(),
+                                    self.open_position_->stop_price(),
+                                    self.open_position_->target_price(),
+                                    self.open_position_->stop_loss_price(),
+                                    self.open_position_->take_profit_price());
   }
 
   void exit_position(this TradeSession& self, const TradeExit& exit)
@@ -137,28 +170,70 @@ public:
       throw std::runtime_error{"Cannot exit a closed trade."};
     }
 
-    const auto trade_status = [](TradeExit::Reason reason) {
+    const auto event_type = [](TradeExit::Reason reason) {
       switch(reason) {
       case TradeExit::Reason::stop_loss:
-        return TradeRecord::Status::closed_stop_loss;
+        return TradeEvent::Type::stop_loss;
       case TradeExit::Reason::take_profit:
-        return TradeRecord::Status::closed_take_profit;
+        return TradeEvent::Type::take_profit;
       case TradeExit::Reason::signal:
       default:
-        return TradeRecord::Status::closed_exit_signal;
+        return TradeEvent::Type::exit_signal;
       }
     }(exit.reason());
 
-    auto trade_record = self.open_position_->scaled_out(exit.position_size(),
-                                                        self.market_timestamp_,
-                                                        exit.price(),
-                                                        total_fees,
-                                                        trade_status);
-    self.trade_records_.push_back(std::move(trade_record));
+    const auto closed_position_size = exit.position_size();
+    const auto closed_investment =
+     closed_position_size * self.open_position_->average_price();
+    const auto exit_event_id = self.next_event_id_++;
+    const auto closed_trade =
+     self.open_position_->closed_trade(exit_event_id,
+                                       event_type,
+                                       self.market_timestamp_,
+                                       exit.price(),
+                                       total_fees,
+                                       closed_position_size,
+                                       closed_investment);
+    auto event = self.open_position_->scaled_out(exit_event_id,
+                                                 exit.position_size(),
+                                                 self.market_timestamp_,
+                                                 exit.price(),
+                                                 total_fees,
+                                                 event_type);
+    self.trade_events_.push_back(std::move(event));
 
     if(self.open_position_->is_closed()) {
+      self.closed_trades_.push_back(closed_trade);
       self.open_position_ = std::nullopt;
     }
+  }
+
+  auto open_position_snapshot(this const TradeSession& self) noexcept
+   -> std::optional<OpenPositionSnapshot>
+  {
+    if(!self.open_position_) {
+      return std::nullopt;
+    }
+
+    return self.open_position_->snapshot(self.market_timestamp_,
+                                         self.market_price_);
+  }
+
+  void sync_latest_event_with_open_position(this TradeSession& self) noexcept
+  {
+    if(!self.open_position_ || self.trade_events_.empty()) {
+      return;
+    }
+
+    auto& event = self.trade_events_.back();
+    const auto& position = *self.open_position_;
+    event.after_state(position.position_size(),
+                      position.investment(),
+                      position.average_price(),
+                      position.stop_price(),
+                      position.target_price(),
+                      position.stop_loss_price(),
+                      position.take_profit_price());
   }
 
   auto unrealized_pnl(this const TradeSession& self) noexcept -> double
@@ -198,7 +273,10 @@ private:
   std::size_t market_lookback_;
 
   std::optional<TradePosition> open_position_;
-  std::vector<TradeRecord> trade_records_;
+  std::vector<TradeEvent> trade_events_;
+  std::vector<ClosedTrade> closed_trades_;
+  std::size_t next_trade_id_;
+  std::size_t next_event_id_;
 };
 
 } // namespace pludux::backtest

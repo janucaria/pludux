@@ -23,7 +23,9 @@ import :asset;
 import :profile;
 import :trade_entry;
 import :trade_exit;
-import :trade_record;
+import :closed_trade;
+import :open_position_snapshot;
+import :trade_event;
 import :trade_position;
 import :trade_session;
 import :backtest_timeline;
@@ -302,6 +304,7 @@ public:
                                              true,
                                              asset_snapshot,
                                              context);
+              self.trade_session_.sync_latest_event_with_open_position();
             }
             self.pyramiding_layers_++;
           }
@@ -319,6 +322,7 @@ public:
                                              true,
                                              asset_snapshot,
                                              context);
+              self.trade_session_.sync_latest_event_with_open_position();
             }
             self.pyramiding_layers_++;
           }
@@ -382,6 +386,7 @@ public:
                                          false,
                                          asset_snapshot,
                                          context);
+          self.trade_session_.sync_latest_event_with_open_position();
         }
         self.pyramiding_layers_ = 1;
       }
@@ -390,13 +395,13 @@ public:
     self.update_accounting();
     self.total_equity_ = self.current_equity();
 
-    auto trade_records = self.trade_records();
-
     timeline.append(BacktestTimeline::Row{
      .market_timestamp = self.trade_session_.market_timestamp(),
      .market_price = self.trade_session_.market_price(),
      .market_lookback = self.trade_session_.market_lookback(),
-     .trade_records = std::move(trade_records),
+     .trade_events = self.trade_session_.trade_events(),
+     .closed_trades = self.trade_session_.closed_trades(),
+     .open_position = self.trade_session_.open_position_snapshot(),
      .capital = self.capital_,
      .equity = self.current_equity(),
      .peak_equity = self.peak_equity_,
@@ -465,15 +470,11 @@ private:
 
   void update_accounting(this BacktestRunner& self) noexcept
   {
-    for(const auto& trade_record : self.trade_session_.trade_records()) {
-      if(!trade_record.is_closed()) {
-        continue;
-      }
+    for(const auto& closed_trade : self.trade_session_.closed_trades()) {
+      const auto pnl = closed_trade.pnl();
 
-      const auto pnl = trade_record.pnl();
-
-      self.sum_of_durations_ += trade_record.duration();
-      self.cumulative_investments_ += trade_record.investment();
+      self.sum_of_durations_ += closed_trade.duration();
+      self.cumulative_investments_ += closed_trade.investment();
 
       if(pnl > 0) {
         self.profit_count_++;
@@ -826,30 +827,6 @@ private:
     }
 
     return std::nullopt;
-  }
-
-  auto trade_records(this const BacktestRunner& self)
-   -> std::vector<TradeRecord>
-  {
-    auto trade_records = self.trade_session_.trade_records();
-
-    if(const auto& open_position = self.trade_session_.open_position()) {
-      trade_records.emplace_back(TradeRecord::Status::open,
-                                 open_position->position_size(),
-                                 open_position->investment(),
-                                 open_position->entry_timestamp(),
-                                 open_position->entry_price(),
-                                 open_position->total_entry_fees(),
-                                 self.trade_session_.market_timestamp(),
-                                 self.trade_session_.market_price(),
-                                 0.0,
-                                 open_position->stop_price(),
-                                 open_position->target_price(),
-                                 open_position->stop_loss_price(),
-                                 open_position->take_profit_price());
-    }
-
-    return trade_records;
   }
 };
 

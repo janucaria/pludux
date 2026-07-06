@@ -12,7 +12,8 @@ TEST(TradeSessionTest, DefaultConstructor)
   auto session = TradeSession{};
 
   EXPECT_FALSE(session.open_position().has_value());
-  EXPECT_TRUE(session.trade_records().empty());
+  EXPECT_TRUE(session.trade_events().empty());
+  EXPECT_TRUE(session.closed_trades().empty());
   EXPECT_EQ(session.market_timestamp(), std::time_t{0});
   EXPECT_TRUE(std::isnan(session.market_price()));
   EXPECT_EQ(session.market_lookback(), std::size_t{0});
@@ -32,25 +33,29 @@ TEST(TradeSessionTest, BeginMarketBarUpdatesMarketAndClearsRecords)
   session.entry_position(TradeEntry{3.0, 100.0});
   session.exit_position(TradeExit{1.0, 130.0, TradeExit::Reason::signal});
 
-  ASSERT_FALSE(session.trade_records().empty());
+  ASSERT_FALSE(session.trade_events().empty());
 
   session.begin_market_bar(static_cast<std::time_t>(25), 120.0, 2);
 
   EXPECT_EQ(session.market_timestamp(), std::time_t{25});
   EXPECT_DOUBLE_EQ(session.market_price(), 120.0);
   EXPECT_EQ(session.market_lookback(), std::size_t{2});
-  EXPECT_TRUE(session.trade_records().empty());
+  EXPECT_TRUE(session.trade_events().empty());
   EXPECT_TRUE(session.open_position().has_value());
 }
 
-TEST(TradeSessionTest, EntryOpensLongPositionWithoutEmittingEvent)
+TEST(TradeSessionTest, EntryOpensLongPositionAndEmitsEntryEvent)
 {
   auto session = TradeSession{static_cast<std::time_t>(20), 100.0, 1};
 
   session.entry_position(TradeEntry{2.0, 100.0});
 
   ASSERT_TRUE(session.open_position().has_value());
-  EXPECT_TRUE(session.trade_records().empty());
+  ASSERT_EQ(session.trade_events().size(), 1);
+  EXPECT_TRUE(session.trade_events().back().is_entry());
+  EXPECT_EQ(session.trade_events().back().trade_id(), std::size_t{1});
+  EXPECT_EQ(session.trade_events().back().event_id(), std::size_t{1});
+  EXPECT_EQ(session.trade_events().back().trade_event_index(), std::size_t{1});
   EXPECT_DOUBLE_EQ(session.unrealized_pnl(), 0.0);
   EXPECT_DOUBLE_EQ(session.unrealized_investment(), 200.0);
   EXPECT_EQ(session.unrealized_duration(), 0);
@@ -62,14 +67,17 @@ TEST(TradeSessionTest, EntryOpensLongPositionWithoutEmittingEvent)
   EXPECT_EQ(session.unrealized_duration(), 5);
 }
 
-TEST(TradeSessionTest, EntryOpensShortPositionWithoutEmittingEvent)
+TEST(TradeSessionTest, EntryOpensShortPositionAndEmitsEntryEvent)
 {
   auto session = TradeSession{static_cast<std::time_t>(20), 100.0, 1};
 
   session.entry_position(TradeEntry{-2.0, 100.0});
 
   ASSERT_TRUE(session.open_position().has_value());
-  EXPECT_TRUE(session.trade_records().empty());
+  ASSERT_EQ(session.trade_events().size(), 1);
+  EXPECT_TRUE(session.trade_events().back().is_entry());
+  EXPECT_EQ(session.trade_events().back().trade_id(), std::size_t{1});
+  EXPECT_EQ(session.trade_events().back().event_id(), std::size_t{1});
   EXPECT_DOUBLE_EQ(session.unrealized_investment(), -200.0);
 
   session.begin_market_bar(static_cast<std::time_t>(25), 95.0, 2);
@@ -78,7 +86,7 @@ TEST(TradeSessionTest, EntryOpensShortPositionWithoutEmittingEvent)
   EXPECT_EQ(session.unrealized_duration(), 5);
 }
 
-TEST(TradeSessionTest, ScaleInEmitsScaledInRecord)
+TEST(TradeSessionTest, ScaleInEmitsScaleInEvent)
 {
   auto session = TradeSession{static_cast<std::time_t>(20), 100.0, 1};
 
@@ -89,18 +97,20 @@ TEST(TradeSessionTest, ScaleInEmitsScaledInRecord)
    TradeEntry{1.0, 130.0, 95.0, 150.0, 95.0, false, 150.0});
 
   ASSERT_TRUE(session.open_position().has_value());
-  ASSERT_EQ(session.trade_records().size(), 1);
+  ASSERT_EQ(session.trade_events().size(), 1);
 
-  const auto& record = session.trade_records().back();
-  EXPECT_TRUE(record.is_scaled_in());
-  EXPECT_DOUBLE_EQ(record.position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(record.investment(), 200.0);
-  EXPECT_EQ(record.entry_timestamp(), std::time_t{20});
-  EXPECT_EQ(record.exit_timestamp(), std::time_t{25});
-  EXPECT_DOUBLE_EQ(record.stop_price(), 90.0);
-  EXPECT_DOUBLE_EQ(record.target_price(), 120.0);
-  EXPECT_DOUBLE_EQ(record.stop_loss_price(), 90.0);
-  EXPECT_DOUBLE_EQ(record.take_profit_price(), 120.0);
+  const auto& event = session.trade_events().back();
+  EXPECT_TRUE(event.is_scale_in());
+  EXPECT_EQ(event.trade_id(), std::size_t{1});
+  EXPECT_EQ(event.event_id(), std::size_t{2});
+  EXPECT_EQ(event.trade_event_index(), std::size_t{2});
+  EXPECT_DOUBLE_EQ(event.position_size(), 1.0);
+  EXPECT_DOUBLE_EQ(event.position_size_before(), 2.0);
+  EXPECT_DOUBLE_EQ(event.investment_before(), 200.0);
+  EXPECT_EQ(event.timestamp(), std::time_t{25});
+  EXPECT_DOUBLE_EQ(event.price(), 130.0);
+  EXPECT_DOUBLE_EQ(event.position_size_after(), 3.0);
+  EXPECT_DOUBLE_EQ(event.investment_after(), 330.0);
 
   EXPECT_DOUBLE_EQ(session.open_position()->stop_price(), 95.0);
   EXPECT_DOUBLE_EQ(session.open_position()->target_price(), 150.0);
@@ -119,13 +129,13 @@ TEST(TradeSessionTest, PartialScaleOutEmitsRecordAndKeepsPositionOpen)
   session.exit_position(TradeExit{1.0, 130.0, TradeExit::Reason::signal});
 
   ASSERT_TRUE(session.open_position().has_value());
-  ASSERT_EQ(session.trade_records().size(), 1);
+  ASSERT_EQ(session.trade_events().size(), 1);
+  EXPECT_TRUE(session.closed_trades().empty());
 
-  const auto& record = session.trade_records().back();
-  EXPECT_TRUE(record.is_closed_exit_signal());
-  EXPECT_DOUBLE_EQ(record.position_size(), 1.0);
-  EXPECT_DOUBLE_EQ(record.investment(), 100.0);
-  EXPECT_DOUBLE_EQ(record.pnl(), 30.0);
+  const auto& event = session.trade_events().back();
+  EXPECT_TRUE(event.is_exit());
+  EXPECT_DOUBLE_EQ(event.position_size(), 1.0);
+  EXPECT_DOUBLE_EQ(event.investment_before(), 300.0);
 
   EXPECT_DOUBLE_EQ(session.unrealized_pnl(), 40.0);
   EXPECT_DOUBLE_EQ(session.unrealized_investment(), 200.0);
@@ -140,14 +150,19 @@ TEST(TradeSessionTest, FullExitEmitsRecordAndClearsOpenPosition)
   session.exit_position(TradeExit{2.0, 105.0, TradeExit::Reason::signal});
 
   EXPECT_FALSE(session.open_position().has_value());
-  ASSERT_EQ(session.trade_records().size(), 1);
+  ASSERT_EQ(session.trade_events().size(), 1);
+  ASSERT_EQ(session.closed_trades().size(), 1);
 
-  const auto& record = session.trade_records().back();
-  EXPECT_TRUE(record.is_closed_exit_signal());
-  EXPECT_DOUBLE_EQ(record.position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(record.investment(), 200.0);
-  EXPECT_DOUBLE_EQ(record.pnl(), 10.0);
-  EXPECT_EQ(record.duration(), std::time_t{10});
+  const auto& event = session.trade_events().back();
+  EXPECT_TRUE(event.is_exit());
+  EXPECT_DOUBLE_EQ(event.position_size(), 2.0);
+
+  const auto& trade = session.closed_trades().back();
+  EXPECT_EQ(trade.trade_id(), std::size_t{1});
+  EXPECT_DOUBLE_EQ(trade.position_size(), 2.0);
+  EXPECT_DOUBLE_EQ(trade.investment(), 200.0);
+  EXPECT_DOUBLE_EQ(trade.pnl(), 10.0);
+  EXPECT_EQ(trade.duration(), std::time_t{10});
 
   EXPECT_DOUBLE_EQ(session.unrealized_pnl(), 0.0);
   EXPECT_DOUBLE_EQ(session.unrealized_investment(), 0.0);
@@ -156,7 +171,8 @@ TEST(TradeSessionTest, FullExitEmitsRecordAndClearsOpenPosition)
 
 TEST(TradePositionTest, UpdatesTrailingStopAndChecksTriggers)
 {
-  auto position = TradePosition{2.0,
+  auto position = TradePosition{1,
+                                2.0,
                                 static_cast<std::time_t>(20),
                                 100.0,
                                 0.0,

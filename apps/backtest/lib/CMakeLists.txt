@@ -77,7 +77,9 @@ target_sources(${PROJECT_NAME}
     
     sources/backtest/trade_entry.cxx
     sources/backtest/trade_exit.cxx
-    sources/backtest/trade_record.cxx
+    sources/backtest/trade_event.cxx
+    sources/backtest/open_position_snapshot.cxx
+    sources/backtest/closed_trade.cxx
     sources/backtest/trade_position.cxx
     sources/backtest/trade_session.cxx
     

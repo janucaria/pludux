@@ -1,5 +1,6 @@
 module;
 
+#include <array>
 #include <string>
 
 #include <imgui.h>
@@ -68,15 +69,19 @@ public:
          static_cast<int>(last_timeline_index);
         for(auto i = last_timeline_index_i; i >= 0; --i) {
           auto id_counter = i * last_timeline_index;
-          for(const auto& trade_record : backtest_timelines.trade_records(i)) {
-            if(!trade_record.is_open() || i == last_timeline_index_i) {
-              const auto trade_count = backtest_timelines.trade_count(i) +
-                                       (!trade_record.is_closed() ? 1 : 0);
-
+          if(i == last_timeline_index_i) {
+            if(const auto& open_position =
+                backtest_timelines.open_position(i)) {
               ImGui::PushID(id_counter++);
-              draw_trade_row(trade_count, trade_record);
+              draw_open_trade_row(*open_position);
               ImGui::PopID();
             }
+          }
+
+          for(const auto& closed_trade : backtest_timelines.closed_trades(i)) {
+            ImGui::PushID(id_counter++);
+            draw_closed_trade_row(closed_trade);
+            ImGui::PopID();
           }
         }
 
@@ -88,33 +93,26 @@ public:
   }
 
 private:
-  static void draw_trade_row(int trade_count,
-                             const backtest::TradeRecord& trade)
+  static void draw_closed_trade_row(const backtest::ClosedTrade& trade)
   {
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
-    ImGui::Selectable(std::to_string(trade_count).c_str(),
+    ImGui::Selectable(std::to_string(trade.trade_id()).c_str(),
                       false,
                       ImGuiSelectableFlags_SpanAllColumns |
                        ImGuiSelectableFlags_AllowOverlap);
     ImGui::TableNextColumn();
-    ImGui::Text("%s", trade.is_long_position() ? "Long" : "Short");
+    ImGui::Text("%s", trade.position_size() > 0.0 ? "Long" : "Short");
     ImGui::TableNextColumn();
-    ImGui::Text("%s", format_trade_status(trade.status()).c_str());
+    ImGui::Text("%s", format_trade_status(trade.exit_type()).c_str());
     ImGui::TableNextColumn();
     ImGui::Text("%s", format_datetime(trade.entry_timestamp()).c_str());
     ImGui::TableNextColumn();
-    ImGui::Text(
-     "%s",
-     trade.is_open() ? "N/A" : format_datetime(trade.exit_timestamp()).c_str());
+    ImGui::Text("%s", format_datetime(trade.exit_timestamp()).c_str());
     ImGui::TableNextColumn();
     ImGui::Text("%s", format_currency(trade.entry_price()).c_str());
     ImGui::TableNextColumn();
-    if(trade.is_open()) {
-      ImGui::Text("N/A");
-    } else {
-      ImGui::Text("%s", format_currency(trade.exit_price()).c_str());
-    }
+    ImGui::Text("%s", format_currency(trade.exit_price()).c_str());
     ImGui::TableNextColumn();
     ImGui::Text("%s", format_currency(trade.take_profit_price()).c_str());
     ImGui::TableNextColumn();
@@ -134,27 +132,59 @@ private:
     ImGui::Text("%s", format_duration(trade.duration()).c_str());
   }
 
-  static auto format_trade_status(backtest::TradeRecord::Status status) noexcept
+  static void draw_open_trade_row(const backtest::OpenPositionSnapshot& trade)
+  {
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::Selectable(std::to_string(trade.trade_id()).c_str(),
+                      false,
+                      ImGuiSelectableFlags_SpanAllColumns |
+                       ImGuiSelectableFlags_AllowOverlap);
+    ImGui::TableNextColumn();
+    ImGui::Text("%s", trade.position_size() > 0.0 ? "Long" : "Short");
+    ImGui::TableNextColumn();
+    ImGui::Text("Open");
+    ImGui::TableNextColumn();
+    ImGui::Text("%s", format_datetime(trade.entry_timestamp()).c_str());
+    ImGui::TableNextColumn();
+    ImGui::Text("N/A");
+    ImGui::TableNextColumn();
+    ImGui::Text("%s", format_currency(trade.entry_price()).c_str());
+    ImGui::TableNextColumn();
+    ImGui::Text("N/A");
+    ImGui::TableNextColumn();
+    ImGui::Text("%s", format_currency(trade.take_profit_price()).c_str());
+    ImGui::TableNextColumn();
+    ImGui::Text("%s", format_currency(trade.stop_loss_price()).c_str());
+    ImGui::TableNextColumn();
+    ImGui::Text("%s", format_currency(trade.average_price()).c_str());
+    ImGui::TableNextColumn();
+    const auto investment = trade.investment();
+    ImGui::Text(
+     "%s (%.0f)", format_currency(investment).c_str(), trade.position_size());
+    ImGui::TableNextColumn();
+    ImGui::Text("%s (%.2f%%)",
+                format_currency(trade.unrealized_pnl()).c_str(),
+                trade.unrealized_pnl() / trade.investment() * 100.0);
+    ImGui::TableNextColumn();
+    ImGui::Text("%s", format_duration(trade.duration()).c_str());
+  }
+
+  static auto format_trade_status(backtest::TradeEvent::Type status) noexcept
    -> std::string
   {
     switch(status) {
-    case backtest::TradeRecord::Status::open:
-      return "Open";
-    case backtest::TradeRecord::Status::closed_exit_signal:
+    case backtest::TradeEvent::Type::exit_signal:
       return "Exit Signal";
-    case backtest::TradeRecord::Status::closed_take_profit:
+    case backtest::TradeEvent::Type::take_profit:
       return "Take Profit";
-    case backtest::TradeRecord::Status::closed_stop_loss:
+    case backtest::TradeEvent::Type::stop_loss:
       return "Stop Loss";
-    case backtest::TradeRecord::Status::scaled_in:
-      return "Scaled In";
-    case backtest::TradeRecord::Status::scaled_out:
-      return "Scaled Out";
+    default:
+      break;
     }
 
-    [[unlikely]] {
-      return "Unknown";
-    }
+    return "Unknown";
   }
 };
 
