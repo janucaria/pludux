@@ -24,6 +24,35 @@ import :config_parser;
 
 export namespace pludux::backtest {
 
+auto parse_stop_target_reference_price(std::string_view value)
+ -> StopTargetReferencePrice
+{
+  if(value == "LATEST_ENTRY_PRICE") {
+    return StopTargetReferencePrice::LatestEntryPrice;
+  }
+  if(value == "AVERAGE_PRICE") {
+    return StopTargetReferencePrice::AveragePrice;
+  }
+  if(value == "INITIAL_ENTRY_PRICE") {
+    return StopTargetReferencePrice::InitialEntryPrice;
+  }
+  throw std::runtime_error{"Invalid pyramiding stop/target reference price"};
+}
+
+auto serialize_stop_target_reference_price(StopTargetReferencePrice reference)
+ -> std::string
+{
+  switch(reference) {
+  case StopTargetReferencePrice::LatestEntryPrice:
+    return "LATEST_ENTRY_PRICE";
+  case StopTargetReferencePrice::AveragePrice:
+    return "AVERAGE_PRICE";
+  case StopTargetReferencePrice::InitialEntryPrice:
+    return "INITIAL_ENTRY_PRICE";
+  }
+  return "AVERAGE_PRICE";
+}
+
 auto parse_strategy_position(const jsoncons::ojson& position_json,
                              auto& config_parser) -> Strategy::Position
 {
@@ -72,6 +101,18 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
     pyramiding.price(config_parser.parse_node(pyramiding_json.at("price")));
     if(pyramiding_json.contains("maxLayers")) {
       pyramiding.max_layers(pyramiding_json.at("maxLayers").as<std::size_t>());
+    }
+    if(pyramiding_json.contains("stopTargetReference")) {
+      const auto& stop_target_reference_json =
+       pyramiding_json.at("stopTargetReference");
+      pyramiding.favorable_stop_target_reference(
+       parse_stop_target_reference_price(
+        stop_target_reference_json.get_value_or<std::string>("favorable",
+                                                             "AVERAGE_PRICE")));
+      pyramiding.unfavorable_stop_target_reference(
+       parse_stop_target_reference_price(
+        stop_target_reference_json.get_value_or<std::string>("unfavorable",
+                                                             "AVERAGE_PRICE")));
     }
     position.pyramiding(std::move(pyramiding));
   }
@@ -134,6 +175,13 @@ auto serialize_strategy_position(const Strategy::Position& position,
   position_json["pyramiding"]["price"] =
    config_parser.serialize_node(position.pyramiding().price());
   position_json["pyramiding"]["maxLayers"] = position.pyramiding().max_layers();
+  position_json["pyramiding"]["stopTargetReference"] = jsoncons::ojson{};
+  position_json["pyramiding"]["stopTargetReference"]["favorable"] =
+   serialize_stop_target_reference_price(
+    position.pyramiding().favorable_stop_target_reference());
+  position_json["pyramiding"]["stopTargetReference"]["unfavorable"] =
+   serialize_stop_target_reference_price(
+    position.pyramiding().unfavorable_stop_target_reference());
 
   position_json["stopLoss"] = jsoncons::ojson{};
   position_json["stopLoss"]["enabled"] = position.stop_loss().enabled();

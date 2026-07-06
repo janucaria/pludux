@@ -42,6 +42,13 @@ using pludux::backtest::AnyPlotSourceMethod;
 using pludux::backtest::EquityNode;
 using pludux::backtest::EquityPercentNode;
 using pludux::backtest::HLinePlotMethod;
+using pludux::backtest::SlAmountNode;
+using pludux::backtest::SlAtrNode;
+using pludux::backtest::SlPercentNode;
+using pludux::backtest::TpAmountNode;
+using pludux::backtest::TpAtrNode;
+using pludux::backtest::TpPercentNode;
+using pludux::backtest::TpRMultipleNode;
 using LinePlotMethod = pludux::backtest::LinePlotMethod<AnyPlotSourceMethod>;
 using HistogramPlotMethod =
  pludux::backtest::HistogramPlotMethod<AnyPlotSourceMethod>;
@@ -163,6 +170,20 @@ auto get_default_series_node(const std::string& series_id) -> ErasedNode
     return SqrtNode{CloseNode{}};
   } else if(series_id == "PERCENTAGE") {
     return PercentageNode{CloseNode{}, 100.0};
+  } else if(series_id == "SL_AMOUNT") {
+    return SlAmountNode{1000.0};
+  } else if(series_id == "TP_AMOUNT") {
+    return TpAmountNode{2000.0};
+  } else if(series_id == "SL_PERCENT") {
+    return SlPercentNode{10.0};
+  } else if(series_id == "TP_PERCENT") {
+    return TpPercentNode{20.0};
+  } else if(series_id == "SL_ATR") {
+    return SlAtrNode{14.0, 2.0};
+  } else if(series_id == "TP_ATR") {
+    return TpAtrNode{14.0, 4.0};
+  } else if(series_id == "TP_R_MULTIPLE") {
+    return TpRMultipleNode{2.0};
   } else if(series_id == "ABS_DIFF") {
     return AbsDiffNode{CloseNode{}, CloseNode{}};
   } else if(series_id == "SELECT_OUTPUT") {
@@ -253,6 +274,20 @@ auto get_series_node_id(const ErasedNode& node) -> std::string
     return "SQRT";
   } else if(node_cast<PercentageNode>(node)) {
     return "PERCENTAGE";
+  } else if(node_cast<SlAmountNode>(node)) {
+    return "SL_AMOUNT";
+  } else if(node_cast<TpAmountNode>(node)) {
+    return "TP_AMOUNT";
+  } else if(node_cast<SlPercentNode>(node)) {
+    return "SL_PERCENT";
+  } else if(node_cast<TpPercentNode>(node)) {
+    return "TP_PERCENT";
+  } else if(node_cast<SlAtrNode>(node)) {
+    return "SL_ATR";
+  } else if(node_cast<TpAtrNode>(node)) {
+    return "TP_ATR";
+  } else if(node_cast<TpRMultipleNode>(node)) {
+    return "TP_R_MULTIPLE";
   } else if(node_cast<AbsDiffNode>(node)) {
     return "ABS_DIFF";
   } else if(node_cast<LookbackNode>(node)) {
@@ -410,6 +445,20 @@ auto get_series_node_title(const std::string& series_id) -> std::string
     return "Square Root";
   } else if(series_id == "PERCENTAGE") {
     return "Percentage";
+  } else if(series_id == "SL_AMOUNT") {
+    return "Stop Loss Amount";
+  } else if(series_id == "TP_AMOUNT") {
+    return "Take Profit Amount";
+  } else if(series_id == "SL_PERCENT") {
+    return "Stop Loss Percent";
+  } else if(series_id == "TP_PERCENT") {
+    return "Take Profit Percent";
+  } else if(series_id == "SL_ATR") {
+    return "Stop Loss ATR";
+  } else if(series_id == "TP_ATR") {
+    return "Take Profit ATR";
+  } else if(series_id == "TP_R_MULTIPLE") {
+    return "Take Profit R Multiple";
   } else if(series_id == "ABS_DIFF") {
     return "Absolute Difference";
   } else if(series_id == "SELECT_OUTPUT") {
@@ -1263,6 +1312,54 @@ private:
         pyramiding.max_layers(pyramiding_max_layers);
       }
 
+      const auto reference_options =
+       std::vector<std::pair<backtest::StopTargetReferencePrice, std::string>>{
+        {backtest::StopTargetReferencePrice::LatestEntryPrice,
+         "Latest Entry Price"},
+        {backtest::StopTargetReferencePrice::AveragePrice, "Average Price"},
+        {backtest::StopTargetReferencePrice::InitialEntryPrice,
+         "Initial Entry Price"}};
+      const auto render_reference_combo =
+       [&reference_options](const char* label,
+                            const char* id,
+                            backtest::StopTargetReferencePrice current) {
+         ImGui::Text("%s", label);
+         ImGui::SameLine();
+
+         auto selected = current;
+         auto preview = std::string{"Latest Entry Price"};
+         for(const auto& [reference, title] : reference_options) {
+           if(reference == current) {
+             preview = title;
+             break;
+           }
+         }
+
+         if(ImGui::BeginCombo(id, preview.c_str())) {
+           for(const auto& [reference, title] : reference_options) {
+             const auto is_selected = selected == reference;
+             if(ImGui::Selectable(title.c_str(), is_selected)) {
+               selected = reference;
+             }
+             if(is_selected) {
+               ImGui::SetItemDefaultFocus();
+             }
+           }
+           ImGui::EndCombo();
+         }
+
+         return selected;
+       };
+
+      pyramiding.favorable_stop_target_reference(
+       render_reference_combo("Favorable SL/TP Reference:",
+                              "##favorable_stop_target_reference",
+                              pyramiding.favorable_stop_target_reference()));
+      pyramiding.unfavorable_stop_target_reference(
+       render_reference_combo("Unfavorable SL/TP Reference:",
+                              "##unfavorable_stop_target_reference",
+                              pyramiding.unfavorable_stop_target_reference()));
+
       position.pyramiding(std::move(pyramiding));
       ImGui::PopID();
     }
@@ -1330,6 +1427,13 @@ private:
                                                         "NEGATE",
                                                         "SQRT",
                                                         "PERCENTAGE",
+                                                        "SL_AMOUNT",
+                                                        "TP_AMOUNT",
+                                                        "SL_PERCENT",
+                                                        "TP_PERCENT",
+                                                        "SL_ATR",
+                                                        "TP_ATR",
+                                                        "TP_R_MULTIPLE",
                                                         "ABS_DIFF",
                                                         "DATA",
                                                         "PREV_EQUITY",
@@ -1483,6 +1587,13 @@ private:
                           MultiplyNode,
                           DivideNode,
                           PercentageNode,
+                          SlAmountNode,
+                          TpAmountNode,
+                          SlPercentNode,
+                          TpPercentNode,
+                          SlAtrNode,
+                          TpAtrNode,
+                          TpRMultipleNode,
                           AbsDiffNode,
                           NegateNode,
                           SqrtNode,
@@ -2013,6 +2124,55 @@ private:
     }
   }
 
+  void render_stop_target_value_node_params(this auto& self,
+                                            auto& node,
+                                            WindowContext& context,
+                                            const char* label)
+  {
+    ImGui::Text("%s:", label);
+    ImGui::SameLine();
+    auto value = node.value();
+    ImGui::PushID(label);
+    self.render_series_node(value, context);
+    ImGui::PopID();
+    node.value(std::move(value));
+  }
+
+  void render_series_node_params(this auto& self,
+                                 SlAmountNode& node,
+                                 WindowContext& context)
+  {
+    self.render_stop_target_value_node_params(node, context, "Amount");
+  }
+
+  void render_series_node_params(this auto& self,
+                                 TpAmountNode& node,
+                                 WindowContext& context)
+  {
+    self.render_stop_target_value_node_params(node, context, "Amount");
+  }
+
+  void render_series_node_params(this auto& self,
+                                 SlPercentNode& node,
+                                 WindowContext& context)
+  {
+    self.render_stop_target_value_node_params(node, context, "Percent");
+  }
+
+  void render_series_node_params(this auto& self,
+                                 TpPercentNode& node,
+                                 WindowContext& context)
+  {
+    self.render_stop_target_value_node_params(node, context, "Percent");
+  }
+
+  void render_series_node_params(this auto& self,
+                                 TpRMultipleNode& node,
+                                 WindowContext& context)
+  {
+    self.render_stop_target_value_node_params(node, context, "Multiple");
+  }
+
   void render_series_node_params(this auto& self,
                                  ChangeNode& node,
                                  WindowContext& context)
@@ -2113,6 +2273,63 @@ private:
       }
       ImGui::EndCombo();
     }
+  }
+
+  void render_stop_target_atr_node_params(this auto& self,
+                                          auto& node,
+                                          WindowContext& context)
+  {
+    ImGui::Text("Period:");
+    ImGui::SameLine();
+    auto period = node.period();
+    ImGui::PushID("period");
+    self.render_series_node(period, context);
+    ImGui::PopID();
+    node.period(std::move(period));
+
+    ImGui::Text("Multiplier:");
+    ImGui::SameLine();
+    auto multiplier = node.multiplier();
+    ImGui::PushID("multiplier");
+    self.render_series_node(multiplier, context);
+    ImGui::PopID();
+    node.multiplier(std::move(multiplier));
+
+    ImGui::Text("Smoothing:");
+    ImGui::SameLine();
+
+    const auto ma_types = std::unordered_map<MaNodeType, std::string>{
+     {MaNodeType::Sma, "SMA"},
+     {MaNodeType::Ema, "EMA"},
+     {MaNodeType::Wma, "WMA"},
+     {MaNodeType::Hma, "HMA"},
+     {MaNodeType::Rma, "RMA"},
+    };
+
+    const auto current_ma_title = ma_types.at(node.ma_smoothing_type());
+    if(ImGui::BeginCombo("##atr_smoothing_type", current_ma_title.c_str())) {
+      for(const auto& [ma_type, ma_title] : ma_types) {
+        const bool is_selected = node.ma_smoothing_type() == ma_type;
+        if(ImGui::Selectable(ma_title.c_str(), is_selected)) {
+          node.ma_smoothing_type(ma_type);
+        }
+      }
+      ImGui::EndCombo();
+    }
+  }
+
+  void render_series_node_params(this auto& self,
+                                 SlAtrNode& node,
+                                 WindowContext& context)
+  {
+    self.render_stop_target_atr_node_params(node, context);
+  }
+
+  void render_series_node_params(this auto& self,
+                                 TpAtrNode& node,
+                                 WindowContext& context)
+  {
+    self.render_stop_target_atr_node_params(node, context);
   }
 
   void render_series_node_params(this auto& self,

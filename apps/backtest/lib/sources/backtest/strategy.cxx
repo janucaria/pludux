@@ -11,8 +11,15 @@ import pludux;
 import :trade_entry;
 import :trade_exit;
 import :plot_group;
+import :stop_target_price_node;
 
 export namespace pludux::backtest {
+
+enum class StopTargetReferencePrice {
+  LatestEntryPrice,
+  AveragePrice,
+  InitialEntryPrice
+};
 
 class Strategy {
 public:
@@ -170,16 +177,46 @@ public:
       self.max_layers_ = max_layers;
     }
 
+    auto favorable_stop_target_reference(this const Pyramiding& self) noexcept
+     -> StopTargetReferencePrice
+    {
+      return self.favorable_stop_target_reference_;
+    }
+
+    void
+    favorable_stop_target_reference(this Pyramiding& self,
+                                    StopTargetReferencePrice reference) noexcept
+    {
+      self.favorable_stop_target_reference_ = reference;
+    }
+
+    auto unfavorable_stop_target_reference(this const Pyramiding& self) noexcept
+     -> StopTargetReferencePrice
+    {
+      return self.unfavorable_stop_target_reference_;
+    }
+
+    void unfavorable_stop_target_reference(
+     this Pyramiding& self, StopTargetReferencePrice reference) noexcept
+    {
+      self.unfavorable_stop_target_reference_ = reference;
+    }
+
   private:
     ErasedNode signal_{FalseNode{}};
     std::size_t signal_delay_{1};
     ErasedNode price_{OpenNode{}};
     std::size_t max_layers_{1};
+    StopTargetReferencePrice favorable_stop_target_reference_{
+     StopTargetReferencePrice::AveragePrice};
+    StopTargetReferencePrice unfavorable_stop_target_reference_{
+     StopTargetReferencePrice::AveragePrice};
   };
 
   class TakeProfit {
   public:
-    TakeProfit(bool enabled = false, ErasedNode target_price = OpenNode{})
+    TakeProfit(bool enabled = false,
+               ErasedNode target_price = TpRMultipleNode{2.0})
     : enabled_{enabled}
     , target_price_{std::move(target_price)}
     {
@@ -215,7 +252,7 @@ public:
   class StopLoss {
   public:
     StopLoss(bool enabled = false,
-             ErasedNode stop_price = OpenNode{},
+             ErasedNode stop_price = SlAtrNode{14.0, 2.0},
              bool trailing = false)
     : enabled_{enabled}
     , stop_price_{std::move(stop_price)}

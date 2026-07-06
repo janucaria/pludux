@@ -17,6 +17,7 @@ import pludux;
 
 import :drawdown_node;
 import :equity_node;
+import :stop_target_price_node;
 
 export namespace pludux::backtest {
 
@@ -391,6 +392,67 @@ static auto serialize_atr_node(const ConfigParser& config_parser,
 
   auto serialized_node = jsoncons::ojson{};
   serialized_node["period"] = config_parser.serialize_node(atr_node->period());
+  serialized_node["maSmoothingType"] =
+   serialize_ma_node_type(atr_node->ma_smoothing_type());
+  return serialized_node;
+}
+
+template<typename TNode>
+static auto parse_stop_target_value_node(ConfigParser::Parser config_parser,
+                                         const jsoncons::ojson& params,
+                                         const std::string& key,
+                                         double fallback) -> ErasedNode
+{
+  return TNode{
+   parse_node_from_param_or(config_parser, params, key, ValueNode{fallback})};
+}
+
+template<typename TNode>
+static auto serialize_stop_target_value_node(const ConfigParser& config_parser,
+                                             const ErasedNode& node,
+                                             const std::string& key)
+ -> jsoncons::ojson
+{
+  const auto value_node = node_cast<TNode>(node);
+  if(!value_node) {
+    return jsoncons::ojson::null();
+  }
+
+  auto serialized_node = jsoncons::ojson{};
+  serialized_node[key] = config_parser.serialize_node(value_node->value());
+  return serialized_node;
+}
+
+template<typename TNode>
+static auto parse_stop_target_atr_node(ConfigParser::Parser config_parser,
+                                       const jsoncons::ojson& params)
+ -> ErasedNode
+{
+  auto period =
+   parse_node_from_param_or(config_parser, params, "period", ValueNode{14.0});
+  auto multiplier = parse_node_from_param_or(
+   config_parser, params, "multiplier", ValueNode{2.0});
+  const auto ma_smoothing_type = parse_ma_node_type(
+   get_param_or<std::string>(params, "maSmoothingType", "RMA"),
+   MaNodeType::Rma);
+
+  return TNode{period, multiplier, ma_smoothing_type};
+}
+
+template<typename TNode>
+static auto serialize_stop_target_atr_node(const ConfigParser& config_parser,
+                                           const ErasedNode& node)
+ -> jsoncons::ojson
+{
+  const auto atr_node = node_cast<TNode>(node);
+  if(!atr_node) {
+    return jsoncons::ojson::null();
+  }
+
+  auto serialized_node = jsoncons::ojson{};
+  serialized_node["period"] = config_parser.serialize_node(atr_node->period());
+  serialized_node["multiplier"] =
+   config_parser.serialize_node(atr_node->multiplier());
   serialized_node["maSmoothingType"] =
    serialize_ma_node_type(atr_node->ma_smoothing_type());
   return serialized_node;
@@ -1318,6 +1380,69 @@ auto make_default_registered_config_parser() -> ConfigParser
       parse_node_from_param_or(config_parser, params, "base", CloseNode{});
      auto percent = get_param_or<double>(params, "percent", 100.0);
      return ErasedNode{PercentageNode{base, percent}};
+   });
+
+  config_parser.register_node_parser(
+   "SL_AMOUNT",
+   [](const ConfigParser& config_parser, const ErasedNode& node) {
+     return serialize_stop_target_value_node<SlAmountNode>(
+      config_parser, node, "amount");
+   },
+   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
+     return parse_stop_target_value_node<SlAmountNode>(
+      config_parser, params, "amount", 0.0);
+   });
+
+  config_parser.register_node_parser(
+   "TP_AMOUNT",
+   [](const ConfigParser& config_parser, const ErasedNode& node) {
+     return serialize_stop_target_value_node<TpAmountNode>(
+      config_parser, node, "amount");
+   },
+   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
+     return parse_stop_target_value_node<TpAmountNode>(
+      config_parser, params, "amount", 0.0);
+   });
+
+  config_parser.register_node_parser(
+   "SL_PERCENT",
+   [](const ConfigParser& config_parser, const ErasedNode& node) {
+     return serialize_stop_target_value_node<SlPercentNode>(
+      config_parser, node, "percent");
+   },
+   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
+     return parse_stop_target_value_node<SlPercentNode>(
+      config_parser, params, "percent", 0.0);
+   });
+
+  config_parser.register_node_parser(
+   "TP_PERCENT",
+   [](const ConfigParser& config_parser, const ErasedNode& node) {
+     return serialize_stop_target_value_node<TpPercentNode>(
+      config_parser, node, "percent");
+   },
+   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
+     return parse_stop_target_value_node<TpPercentNode>(
+      config_parser, params, "percent", 0.0);
+   });
+
+  config_parser.register_node_parser("SL_ATR",
+                                     serialize_stop_target_atr_node<SlAtrNode>,
+                                     parse_stop_target_atr_node<SlAtrNode>);
+
+  config_parser.register_node_parser("TP_ATR",
+                                     serialize_stop_target_atr_node<TpAtrNode>,
+                                     parse_stop_target_atr_node<TpAtrNode>);
+
+  config_parser.register_node_parser(
+   "TP_R_MULTIPLE",
+   [](const ConfigParser& config_parser, const ErasedNode& node) {
+     return serialize_stop_target_value_node<TpRMultipleNode>(
+      config_parser, node, "multiple");
+   },
+   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
+     return parse_stop_target_value_node<TpRMultipleNode>(
+      config_parser, params, "multiple", 2.0);
    });
 
   config_parser.register_node_parser(

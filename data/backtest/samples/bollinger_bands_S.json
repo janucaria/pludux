@@ -85,30 +85,33 @@
         "enabled": true,
         "trailing": true,
         "stopPrice": {
-          "method": "ADD",
+          "method": "SL_ATR",
           "params": {
-            "augend": "OPEN",
-            "addend": {
-              "method": "PERCENTAGE",
+            "period": {
+              "method": "VALUE",
               "params": {
-                "base": "OPEN",
-                "percent": 10
+                "value": 14
               }
-            }
+            },
+            "multiplier": {
+              "method": "VALUE",
+              "params": {
+                "value": 2
+              }
+            },
+            "maSmoothingType": "RMA"
           }
         }
       },
       "takeProfit": {
         "enabled": true,
         "targetPrice": {
-          "method": "SUBTRACT",
+          "method": "TP_R_MULTIPLE",
           "params": {
-            "minuend": "OPEN",
-            "subtrahend": {
-              "method": "PERCENTAGE",
+            "multiple": {
+              "method": "VALUE",
               "params": {
-                "base": "OPEN",
-                "percent": 20
+                "value": 2
               }
             }
           }

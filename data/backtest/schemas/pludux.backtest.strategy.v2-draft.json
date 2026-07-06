@@ -203,6 +203,32 @@
                   "minimum": 1,
                   "title": "Max Layers",
                   "description": "Maximum number of pyramiding layers allowed. For example, maxLayers 3 means the initial position plus 2 additional layers."
+                },
+                "stopTargetReference": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "favorable": {
+                      "$ref": "#/$defs/stopTargetReferencePrice",
+                      "default": "AVERAGE_PRICE",
+                      "title": "Favorable SL/TP Reference",
+                      "description": "Reference price used by stop/target methods when the pyramiding entry is favorable relative to the current average and position direction."
+                    },
+                    "unfavorable": {
+                      "$ref": "#/$defs/stopTargetReferencePrice",
+                      "default": "AVERAGE_PRICE",
+                      "title": "Unfavorable SL/TP Reference",
+                      "description": "Reference price used by stop/target methods when the pyramiding entry is unfavorable relative to the current average and position direction."
+                    }
+                  },
+                  "required": [
+                    "favorable",
+                    "unfavorable"
+                  ],
+                  "default": {
+                    "favorable": "AVERAGE_PRICE",
+                    "unfavorable": "AVERAGE_PRICE"
+                  }
                 }
               },
               "required": [
@@ -215,7 +241,11 @@
                 "signal": false,
                 "signalDelay": 1,
                 "price": "OPEN",
-                "maxLayers": 1
+                "maxLayers": 1,
+                "stopTargetReference": {
+                  "favorable": "AVERAGE_PRICE",
+                  "unfavorable": "AVERAGE_PRICE"
+                }
               }
             },
             "stopLoss": {
@@ -2334,6 +2364,173 @@
         }
       ]
     },
+    "stopTargetAmountMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "SL_AMOUNT",
+                "TP_AMOUNT"
+              ]
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "amount": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Amount",
+                  "description": "Absolute price distance from the entry price."
+                }
+              },
+              "required": [
+                "amount"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Stop/Target Amount",
+      "description": "Calculates an absolute stop-loss or take-profit price from entry price and fixed amount."
+    },
+    "stopTargetPercentageMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "SL_PERCENT",
+                "TP_PERCENT"
+              ]
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "percent": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Percent",
+                  "description": "Percentage distance from the entry price, such as 10 for 10%."
+                }
+              },
+              "required": [
+                "percent"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Stop/Target Percentage",
+      "description": "Calculates an absolute stop-loss or take-profit price from entry price and percentage distance."
+    },
+    "stopTargetAtrMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "SL_ATR",
+                "TP_ATR"
+              ]
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Period",
+                  "description": "Lookback period used for ATR."
+                },
+                "multiplier": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Multiplier",
+                  "description": "ATR distance multiplier."
+                },
+                "maSmoothingType": {
+                  "enum": [
+                    "SMA",
+                    "EMA",
+                    "RMA",
+                    "WMA",
+                    "HMA"
+                  ],
+                  "title": "Smoothing Type",
+                  "description": "Moving-average smoothing method used to smooth true range into ATR."
+                }
+              },
+              "required": [
+                "period",
+                "multiplier"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Stop/Target ATR",
+      "description": "Calculates an absolute stop-loss or take-profit price from entry price and ATR distance."
+    },
+    "takeProfitRMultipleMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "TP_R_MULTIPLE"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "multiple": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Multiple",
+                  "description": "Reward multiple of the evaluated entry-to-stop risk distance."
+                }
+              },
+              "required": [
+                "multiple"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Take Profit R Multiple",
+      "description": "Calculates an absolute take-profit price from entry price and the evaluated stop risk distance."
+    },
+    "stopTargetReferencePrice": {
+      "type": "string",
+      "enum": [
+        "LATEST_ENTRY_PRICE",
+        "AVERAGE_PRICE",
+        "INITIAL_ENTRY_PRICE"
+      ],
+      "description": "Reference price used when evaluating stop-loss and take-profit methods during pyramiding."
+    },
     "series": {
       "oneOf": [
         {
@@ -2440,6 +2637,18 @@
         },
         {
           "$ref": "#/$defs/percentageMethod"
+        },
+        {
+          "$ref": "#/$defs/stopTargetAmountMethod"
+        },
+        {
+          "$ref": "#/$defs/stopTargetPercentageMethod"
+        },
+        {
+          "$ref": "#/$defs/stopTargetAtrMethod"
+        },
+        {
+          "$ref": "#/$defs/takeProfitRMultipleMethod"
         },
         {
           "$ref": "#/$defs/crossMethod"
@@ -3340,30 +3549,33 @@
             "enabled": true,
             "trailing": false,
             "stopPrice": {
-              "method": "SUBTRACT",
+              "method": "SL_ATR",
               "params": {
-                "minuend": "OPEN",
-                "subtrahend": {
-                  "method": "PERCENTAGE",
+                "period": {
+                  "method": "VALUE",
                   "params": {
-                    "base": "OPEN",
-                    "percent": 10
+                    "value": 14
                   }
-                }
+                },
+                "multiplier": {
+                  "method": "VALUE",
+                  "params": {
+                    "value": 2
+                  }
+                },
+                "maSmoothingType": "RMA"
               }
             }
           },
           "takeProfit": {
             "enabled": true,
             "targetPrice": {
-              "method": "ADD",
+              "method": "TP_R_MULTIPLE",
               "params": {
-                "augend": "OPEN",
-                "addend": {
-                  "method": "PERCENTAGE",
+                "multiple": {
+                  "method": "VALUE",
                   "params": {
-                    "base": "OPEN",
-                    "percent": 20
+                    "value": 2
                   }
                 }
               }

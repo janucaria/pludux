@@ -8,6 +8,7 @@ export module pludux.backtest:strategy_inputs;
 import pludux;
 
 import :strategy;
+import :stop_target_price_node;
 
 export namespace pludux::backtest {
 
@@ -61,6 +62,50 @@ void collect_numeric_inputs_from_node(const PercentageNode& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.base(), inputs);
+}
+
+void collect_numeric_inputs_from_node(const SlAmountNode& node,
+                                      std::vector<NumericInputNode>& inputs)
+{
+  collect_numeric_inputs_from_node(node.value(), inputs);
+}
+
+void collect_numeric_inputs_from_node(const TpAmountNode& node,
+                                      std::vector<NumericInputNode>& inputs)
+{
+  collect_numeric_inputs_from_node(node.value(), inputs);
+}
+
+void collect_numeric_inputs_from_node(const SlPercentNode& node,
+                                      std::vector<NumericInputNode>& inputs)
+{
+  collect_numeric_inputs_from_node(node.value(), inputs);
+}
+
+void collect_numeric_inputs_from_node(const TpPercentNode& node,
+                                      std::vector<NumericInputNode>& inputs)
+{
+  collect_numeric_inputs_from_node(node.value(), inputs);
+}
+
+void collect_numeric_inputs_from_node(const SlAtrNode& node,
+                                      std::vector<NumericInputNode>& inputs)
+{
+  collect_numeric_inputs_from_node(node.period(), inputs);
+  collect_numeric_inputs_from_node(node.multiplier(), inputs);
+}
+
+void collect_numeric_inputs_from_node(const TpAtrNode& node,
+                                      std::vector<NumericInputNode>& inputs)
+{
+  collect_numeric_inputs_from_node(node.period(), inputs);
+  collect_numeric_inputs_from_node(node.multiplier(), inputs);
+}
+
+void collect_numeric_inputs_from_node(const TpRMultipleNode& node,
+                                      std::vector<NumericInputNode>& inputs)
+{
+  collect_numeric_inputs_from_node(node.value(), inputs);
 }
 
 void collect_numeric_inputs_from_node(const StddevNode& node,
@@ -331,6 +376,13 @@ void collect_numeric_inputs_from_node(const ErasedNode& node,
   PLUDUX_COLLECT_IF_NODE(MinNode)
   PLUDUX_COLLECT_IF_NODE(PositivePartNode)
   PLUDUX_COLLECT_IF_NODE(NegativePartNode)
+  PLUDUX_COLLECT_IF_NODE(SlAmountNode)
+  PLUDUX_COLLECT_IF_NODE(TpAmountNode)
+  PLUDUX_COLLECT_IF_NODE(SlPercentNode)
+  PLUDUX_COLLECT_IF_NODE(TpPercentNode)
+  PLUDUX_COLLECT_IF_NODE(SlAtrNode)
+  PLUDUX_COLLECT_IF_NODE(TpAtrNode)
+  PLUDUX_COLLECT_IF_NODE(TpRMultipleNode)
 
 #undef PLUDUX_COLLECT_IF_NODE
 }

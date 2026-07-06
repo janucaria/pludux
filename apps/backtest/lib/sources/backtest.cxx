@@ -44,6 +44,8 @@ export import :drawdown_method;
 export import :drawdown_node;
 export import :equity_method;
 export import :equity_node;
+export import :stop_target_price_method;
+export import :stop_target_price_node;
 export import :backtest_runner;
 export import :plot_group;
 export import :plots;

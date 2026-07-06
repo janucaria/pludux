@@ -122,10 +122,52 @@ public:
     return self.timeline_.drawdown(previous_index);
   }
 
+  auto with_position_reference(this const BacktestMethodContext& self,
+                               double reference_price,
+                               double direction) noexcept
+   -> BacktestMethodContext
+  {
+    auto context = self;
+    context.position_reference_price_ = reference_price;
+    context.position_direction_ = direction;
+    context.position_stop_price_ = std::numeric_limits<double>::quiet_NaN();
+    return context;
+  }
+
+  auto with_position_stop_price(this const BacktestMethodContext& self,
+                                double stop_price) noexcept
+   -> BacktestMethodContext
+  {
+    auto context = self;
+    context.position_stop_price_ = stop_price;
+    return context;
+  }
+
+  auto position_reference_price(this const BacktestMethodContext& self) noexcept
+   -> double
+  {
+    return self.position_reference_price_;
+  }
+
+  auto position_direction(this const BacktestMethodContext& self) noexcept
+   -> double
+  {
+    return self.position_direction_;
+  }
+
+  auto position_stop_price(this const BacktestMethodContext& self) noexcept
+   -> double
+  {
+    return self.position_stop_price_;
+  }
+
 private:
   DefaultMethodContext default_context_;
   const OrderedNamedRegistry<AnySeriesMethod>& series_methods_;
   const BacktestTimeline& timeline_;
+  double position_reference_price_{std::numeric_limits<double>::quiet_NaN()};
+  double position_direction_{std::numeric_limits<double>::quiet_NaN()};
+  double position_stop_price_{std::numeric_limits<double>::quiet_NaN()};
 };
 
 } // namespace pludux::backtest

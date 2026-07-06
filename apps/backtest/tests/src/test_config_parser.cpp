@@ -1418,6 +1418,32 @@ TEST_F(ConfigParserTest, ParseScreenerPercentageMethod)
   EXPECT_EQ(method, deserialized_config);
 }
 
+TEST_F(ConfigParserTest, ParseStopTargetPriceMethods)
+{
+  const auto configs = std::vector<json>{
+   json::parse(
+    R"({"method":"SL_AMOUNT","params":{"amount":{"method":"VALUE","params":{"value":10}}}})"),
+   json::parse(
+    R"({"method":"TP_AMOUNT","params":{"amount":{"method":"VALUE","params":{"value":20}}}})"),
+   json::parse(
+    R"({"method":"SL_PERCENT","params":{"percent":{"method":"VALUE","params":{"value":10}}}})"),
+   json::parse(
+    R"({"method":"TP_PERCENT","params":{"percent":{"method":"VALUE","params":{"value":20}}}})"),
+   json::parse(
+    R"({"method":"SL_ATR","params":{"period":{"method":"VALUE","params":{"value":14}},"multiplier":{"method":"VALUE","params":{"value":2}},"maSmoothingType":"RMA"}})"),
+   json::parse(
+    R"({"method":"TP_ATR","params":{"period":{"method":"VALUE","params":{"value":14}},"multiplier":{"method":"VALUE","params":{"value":2}},"maSmoothingType":"RMA"}})"),
+   json::parse(
+    R"({"method":"TP_R_MULTIPLE","params":{"multiple":{"method":"VALUE","params":{"value":2}}}})")};
+
+  for(const auto& config : configs) {
+    const auto method = parse_node_method(config);
+    const auto serialized_config = serialize_node_method(method);
+    const auto deserialized_config = parse_node_method(serialized_config);
+    EXPECT_EQ(method, deserialized_config);
+  }
+}
+
 TEST_F(ConfigParserTest, ParseScreenerInvalidMethod)
 {
   const auto config = json::parse(R"(

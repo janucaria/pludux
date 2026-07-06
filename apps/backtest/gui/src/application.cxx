@@ -387,7 +387,9 @@ private:
         position.exit().signal_delay(),
         node_to_erased_method(position.exit().price(), input_context),
         position.pyramiding().signal_delay(),
-        node_to_erased_method(position.pyramiding().price(), input_context)};
+        node_to_erased_method(position.pyramiding().price(), input_context),
+        position.pyramiding().favorable_stop_target_reference(),
+        position.pyramiding().unfavorable_stop_target_reference()};
      };
 
     self.running_backtests_.emplace(

@@ -93,6 +93,8 @@ target_sources(${PROJECT_NAME}
     sources/backtest/drawdown_node.cxx
     sources/backtest/equity_method.cxx
     sources/backtest/equity_node.cxx
+    sources/backtest/stop_target_price_method.cxx
+    sources/backtest/stop_target_price_node.cxx
     sources/backtest/backtest.cxx
     
     sources/backtest/store_descriptor.cxx

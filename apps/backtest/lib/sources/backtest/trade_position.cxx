@@ -255,8 +255,6 @@ public:
     self.position_size(updated_position_size);
     self.investment(updated_investment);
 
-    self.entry_price(action_price);
-
     self.stop_price(stop_price);
     self.target_price(target_price);
     self.stop_loss_price(stop_loss_price);

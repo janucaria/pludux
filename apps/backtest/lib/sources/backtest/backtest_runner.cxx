@@ -54,7 +54,11 @@ public:
                  std::size_t exit_signal_delay = 1,
                  AnySeriesMethod exit_price_method = OpenMethod{},
                  std::size_t pyramiding_signal_delay = 1,
-                 AnySeriesMethod pyramiding_price_method = OpenMethod{})
+                 AnySeriesMethod pyramiding_price_method = OpenMethod{},
+                 StopTargetReferencePrice favorable_stop_target_reference =
+                  StopTargetReferencePrice::AveragePrice,
+                 StopTargetReferencePrice unfavorable_stop_target_reference =
+                  StopTargetReferencePrice::AveragePrice)
     : entry_method_{std::move(entry_method)}
     , exit_method_{std::move(exit_method)}
     , pyramiding_signal_{std::move(pyramiding_signal)}
@@ -70,6 +74,8 @@ public:
     , exit_price_method_{std::move(exit_price_method)}
     , pyramiding_signal_delay_{pyramiding_signal_delay}
     , pyramiding_price_method_{std::move(pyramiding_price_method)}
+    , favorable_stop_target_reference_{favorable_stop_target_reference}
+    , unfavorable_stop_target_reference_{unfavorable_stop_target_reference}
     {
     }
 
@@ -161,6 +167,19 @@ public:
       return self.pyramiding_price_method_;
     }
 
+    auto favorable_stop_target_reference(this const PositionRule& self) noexcept
+     -> StopTargetReferencePrice
+    {
+      return self.favorable_stop_target_reference_;
+    }
+
+    auto
+    unfavorable_stop_target_reference(this const PositionRule& self) noexcept
+     -> StopTargetReferencePrice
+    {
+      return self.unfavorable_stop_target_reference_;
+    }
+
   private:
     AnySeriesMethod entry_method_{BooleanMethod<false>{}};
     AnySeriesMethod exit_method_{BooleanMethod<false>{}};
@@ -177,6 +196,10 @@ public:
     AnySeriesMethod exit_price_method_{OpenMethod{}};
     std::size_t pyramiding_signal_delay_{1};
     AnySeriesMethod pyramiding_price_method_{OpenMethod{}};
+    StopTargetReferencePrice favorable_stop_target_reference_{
+     StopTargetReferencePrice::AveragePrice};
+    StopTargetReferencePrice unfavorable_stop_target_reference_{
+     StopTargetReferencePrice::AveragePrice};
   };
 
   BacktestRunner(const Asset& asset,
@@ -468,13 +491,14 @@ private:
     if(can_enter && can_pyramid) {
       const auto entry_price =
        evaluate_series_method(price_method, asset_snapshot, context);
+      const auto direction = is_long ? 1.0 : -1.0;
+      const auto initial_price_context =
+       context.with_position_reference(entry_price, direction);
       const auto position_sizing = self.profile_.position_sizing();
       const auto uses_risk_distance =
        position_sizing.mode() == PositionSizing::Mode::RiskDistance;
-      const auto stop_price = evaluate_series_method(
-       position.stop_price_method(), asset_snapshot, context);
-      const auto target_price = evaluate_series_method(
-       position.target_price_method(), asset_snapshot, context);
+      auto stop_price = evaluate_series_method(
+       position.stop_price_method(), asset_snapshot, initial_price_context);
       if(position.stop_loss_enabled() && !uses_risk_distance &&
          !std::isfinite(stop_price)) {
         throw std::runtime_error{"Invalid stop price for stop-loss exit"};
@@ -483,8 +507,26 @@ private:
        position_sizing, is_long, entry_price, stop_price);
       const auto adjusted_position_quantity = self.apply_drawdown_adjustment(
        position_quantity, current_drawdown_ratio);
-      const auto direction = is_long ? 1.0 : -1.0;
       const auto position_size = direction * adjusted_position_quantity;
+      auto reference_price = entry_price;
+
+      if(is_pyramiding) {
+        reference_price = self.pyramiding_reference_price(
+         position, is_long, entry_price, position_size);
+      }
+
+      const auto stop_context =
+       context.with_position_reference(reference_price, direction);
+      stop_price = evaluate_series_method(
+       position.stop_price_method(), asset_snapshot, stop_context);
+      const auto target_context =
+       stop_context.with_position_stop_price(stop_price);
+      const auto target_price = evaluate_series_method(
+       position.target_price_method(), asset_snapshot, target_context);
+      if(position.stop_loss_enabled() && !uses_risk_distance &&
+         !std::isfinite(stop_price)) {
+        throw std::runtime_error{"Invalid stop price for stop-loss exit"};
+      }
 
       const auto stop_loss_price =
        position.stop_loss_enabled() ? stop_price : NAN;
@@ -571,6 +613,44 @@ private:
     }
 
     return 0.0;
+  }
+
+  auto pyramiding_reference_price(this const BacktestRunner& self,
+                                  const PositionRule& position,
+                                  bool is_long,
+                                  double entry_price,
+                                  double position_size) -> double
+  {
+    const auto& open_position = self.trade_session_.open_position();
+    if(!open_position) {
+      return entry_price;
+    }
+
+    const auto current_average_price = open_position->average_price();
+    const auto is_favorable = is_long ? entry_price >= current_average_price
+                                      : entry_price <= current_average_price;
+    const auto reference = is_favorable
+                            ? position.favorable_stop_target_reference()
+                            : position.unfavorable_stop_target_reference();
+
+    switch(reference) {
+    case StopTargetReferencePrice::LatestEntryPrice:
+      return entry_price;
+    case StopTargetReferencePrice::AveragePrice: {
+      const auto projected_position_size =
+       open_position->position_size() + position_size;
+      if(projected_position_size == 0.0) {
+        return entry_price;
+      }
+      const auto projected_investment =
+       open_position->investment() + position_size * entry_price;
+      return projected_investment / projected_position_size;
+    }
+    case StopTargetReferencePrice::InitialEntryPrice:
+      return open_position->entry_price();
+    }
+
+    return entry_price;
   }
 
   auto entry_long_trade(this const BacktestRunner& self,

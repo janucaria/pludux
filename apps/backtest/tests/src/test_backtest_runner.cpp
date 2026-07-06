@@ -33,6 +33,20 @@ auto make_single_bar_asset_with_close(double open_price, double close_price)
                             {"Volume", {0.0}}}};
 }
 
+auto make_single_bar_asset_with_range(double open_price,
+                                      double high_price,
+                                      double low_price,
+                                      double close_price) -> Asset
+{
+  return Asset{"Test",
+               AssetHistory{{"Datetime", {1.0}},
+                            {"Open", {open_price}},
+                            {"High", {high_price}},
+                            {"Low", {low_price}},
+                            {"Close", {close_price}},
+                            {"Volume", {0.0}}}};
+}
+
 auto run_single_entry(
  PositionSizing position_sizing,
  double entry_price = 100.0,
@@ -570,6 +584,182 @@ TEST(BacktestRunnerTest, DisabledTakeProfitKeepsTargetReferencePrice)
   EXPECT_TRUE(std::isnan(latest_record(timeline).take_profit_price()));
 }
 
+TEST(BacktestRunnerTest, StopTargetAmountMethodsUseEntryDirection)
+{
+  const auto asset = make_single_bar_asset(100.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  BacktestRunner::PositionRule{},
+                  BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                               BooleanMethod<false>{},
+                                               BooleanMethod<false>{},
+                                               1,
+                                               SlAmountMethod{10.0},
+                                               true,
+                                               false,
+                                               TpAmountMethod{20.0},
+                                               true},
+                  1000.0};
+
+  runner.run(series_results, timeline);
+
+  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
+  EXPECT_DOUBLE_EQ(latest_record(timeline).entry_price(), 100.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), -1.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 110.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 80.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_loss_price(), 110.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).take_profit_price(), 80.0);
+}
+
+TEST(BacktestRunnerTest, ScopedStopTargetAmountMethodsEvaluateDirectly)
+{
+  const auto asset = make_single_bar_asset(100.0);
+  const auto snapshot = asset.get_snapshot(0);
+  const auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  auto series_results = SeriesEvaluationResults{};
+  const auto timeline = BacktestTimeline{};
+  auto default_context = DefaultMethodContext{series_methods, series_results};
+  auto context =
+   BacktestMethodContext{default_context, series_methods, timeline};
+
+  const auto long_context = context.with_position_reference(100.0, 1.0);
+  const auto short_context = context.with_position_reference(100.0, -1.0);
+
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(SlAmountMethod{10.0}, snapshot, long_context), 90.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(TpAmountMethod{20.0}, snapshot, long_context), 120.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(SlAmountMethod{10.0}, snapshot, short_context),
+   110.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(TpAmountMethod{20.0}, snapshot, short_context), 80.0);
+}
+
+TEST(BacktestRunnerTest, StopTargetPercentageMethodsUseEntryPrice)
+{
+  const auto asset = make_single_bar_asset(200.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                               BooleanMethod<false>{},
+                                               BooleanMethod<false>{},
+                                               1,
+                                               SlPercentMethod{10.0},
+                                               true,
+                                               false,
+                                               TpPercentMethod{20.0},
+                                               true},
+                  BacktestRunner::PositionRule{},
+                  1000.0};
+
+  runner.run(series_results, timeline);
+
+  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
+  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 180.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 240.0);
+}
+
+TEST(BacktestRunnerTest, ScopedStopTargetPercentMethodsEvaluateDirectly)
+{
+  const auto asset = make_single_bar_asset(200.0);
+  const auto snapshot = asset.get_snapshot(0);
+  const auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  auto series_results = SeriesEvaluationResults{};
+  const auto timeline = BacktestTimeline{};
+  auto default_context = DefaultMethodContext{series_methods, series_results};
+  const auto context =
+   BacktestMethodContext{default_context, series_methods, timeline}
+    .with_position_reference(200.0, 1.0);
+
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(SlPercentMethod{10.0}, snapshot, context), 180.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(TpPercentMethod{20.0}, snapshot, context), 240.0);
+}
+
+TEST(BacktestRunnerTest, AtrStopAndRMultipleTargetUseScopedContext)
+{
+  const auto asset =
+   make_single_bar_asset_with_range(100.0, 110.0, 90.0, 100.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                               BooleanMethod<false>{},
+                                               BooleanMethod<false>{},
+                                               1,
+                                               SlAtrMethod{1.0, 2.0},
+                                               true,
+                                               false,
+                                               TpRMultipleMethod{2.0},
+                                               true},
+                  BacktestRunner::PositionRule{},
+                  1000.0};
+
+  runner.run(series_results, timeline);
+
+  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
+  EXPECT_DOUBLE_EQ(latest_record(timeline).entry_price(), 100.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 60.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 180.0);
+}
+
+TEST(BacktestRunnerTest, ScopedAtrStopAndRMultipleTargetEvaluateDirectly)
+{
+  const auto asset =
+   make_single_bar_asset_with_range(100.0, 110.0, 90.0, 100.0);
+  const auto snapshot = asset.get_snapshot(0);
+  const auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  auto series_results = SeriesEvaluationResults{};
+  const auto timeline = BacktestTimeline{};
+  auto default_context = DefaultMethodContext{series_methods, series_results};
+  auto context =
+   BacktestMethodContext{default_context, series_methods, timeline};
+  const auto stop_context = context.with_position_reference(100.0, 1.0);
+  const auto stop_price =
+   evaluate_series_method(SlAtrMethod{1.0, 2.0}, snapshot, stop_context);
+  const auto target_context = stop_context.with_position_stop_price(stop_price);
+
+  EXPECT_DOUBLE_EQ(stop_price, 60.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(TpRMultipleMethod{2.0}, snapshot, target_context),
+   180.0);
+}
+
 TEST(BacktestRunnerTest, DisabledDrawdownAdjustmentLeavesSizingUnchanged)
 {
   const auto timeline =
@@ -898,6 +1088,260 @@ TEST(BacktestRunnerTest, SignalDelayZeroClosePyramidingUsesOwnTimingAndPrice)
   ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
   EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 2.0);
   EXPECT_DOUBLE_EQ(latest_record(timeline).investment(), 220.0);
+}
+
+TEST(BacktestRunnerTest,
+     FavorableLongPyramidingUsesProjectedAverageReferenceByDefault)
+{
+  const auto asset =
+   make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 120.0, 120.0, 120.0, 120.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                               BooleanMethod<false>{},
+                                               BooleanMethod<true>{},
+                                               2,
+                                               SlPercentMethod{10.0},
+                                               false,
+                                               false,
+                                               TpRMultipleMethod{2.0},
+                                               false},
+                  BacktestRunner::PositionRule{},
+                  1000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+
+  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
+  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 2.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).average_price(), 110.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 99.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 132.0);
+}
+
+TEST(BacktestRunnerTest,
+     UnfavorableLongPyramidingUsesProjectedAverageReferenceByDefault)
+{
+  const auto asset =
+   make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 80.0, 80.0, 80.0, 80.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                               BooleanMethod<false>{},
+                                               BooleanMethod<true>{},
+                                               2,
+                                               SlPercentMethod{10.0},
+                                               false,
+                                               false,
+                                               TpRMultipleMethod{2.0},
+                                               false},
+                  BacktestRunner::PositionRule{},
+                  1000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+
+  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
+  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 2.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).average_price(), 90.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 81.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 108.0);
+}
+
+TEST(BacktestRunnerTest,
+     FavorableShortPyramidingUsesProjectedAverageReferenceByDefault)
+{
+  const auto asset =
+   make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 80.0, 80.0, 80.0, 80.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  BacktestRunner::PositionRule{},
+                  BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                               BooleanMethod<false>{},
+                                               BooleanMethod<true>{},
+                                               2,
+                                               SlPercentMethod{10.0},
+                                               false,
+                                               false,
+                                               TpRMultipleMethod{2.0},
+                                               false},
+                  1000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+
+  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
+  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), -2.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).average_price(), 90.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 99.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 72.0);
+}
+
+TEST(BacktestRunnerTest, PyramidingCanUseLatestEntryReference)
+{
+  const auto asset =
+   make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 120.0, 120.0, 120.0, 120.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   {},
+   BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                BooleanMethod<false>{},
+                                BooleanMethod<true>{},
+                                2,
+                                SlPercentMethod{10.0},
+                                false,
+                                false,
+                                TpRMultipleMethod{2.0},
+                                false,
+                                1,
+                                OpenMethod{},
+                                1,
+                                OpenMethod{},
+                                1,
+                                OpenMethod{},
+                                StopTargetReferencePrice::LatestEntryPrice,
+                                StopTargetReferencePrice::AveragePrice},
+   BacktestRunner::PositionRule{},
+   1000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+
+  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
+  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 2.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).average_price(), 110.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 108.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 144.0);
+}
+
+TEST(BacktestRunnerTest,
+     UnfavorableShortPyramidingUsesProjectedAverageReferenceByDefault)
+{
+  const auto asset =
+   make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 120.0, 120.0, 120.0, 120.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  BacktestRunner::PositionRule{},
+                  BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                               BooleanMethod<false>{},
+                                               BooleanMethod<true>{},
+                                               2,
+                                               SlPercentMethod{10.0},
+                                               false,
+                                               false,
+                                               TpRMultipleMethod{2.0},
+                                               false},
+                  1000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+
+  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
+  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), -2.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).average_price(), 110.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 121.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 88.0);
+}
+
+TEST(BacktestRunnerTest, PyramidingCanUseInitialEntryReference)
+{
+  const auto asset =
+   make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 120.0, 120.0, 120.0, 120.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   {},
+   BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                BooleanMethod<false>{},
+                                BooleanMethod<true>{},
+                                2,
+                                SlPercentMethod{10.0},
+                                false,
+                                false,
+                                TpRMultipleMethod{2.0},
+                                false,
+                                1,
+                                OpenMethod{},
+                                1,
+                                OpenMethod{},
+                                1,
+                                OpenMethod{},
+                                StopTargetReferencePrice::InitialEntryPrice,
+                                StopTargetReferencePrice::InitialEntryPrice},
+   BacktestRunner::PositionRule{},
+   1000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+
+  ASSERT_FALSE(timeline.trade_records(last_timeline_index(timeline)).empty());
+  EXPECT_DOUBLE_EQ(latest_record(timeline).position_size(), 2.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).average_price(), 110.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).stop_price(), 90.0);
+  EXPECT_DOUBLE_EQ(latest_record(timeline).target_price(), 120.0);
 }
 
 TEST(BacktestRunnerTest, SameBarSameDirectionReentryIsBlockedAfterExit)

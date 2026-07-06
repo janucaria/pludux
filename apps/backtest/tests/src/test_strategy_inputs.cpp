@@ -114,7 +114,11 @@ TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
           "signalDelay": 0,
           "price": "CLOSE",
           "signal": false,
-          "maxLayers": 2
+          "maxLayers": 2,
+          "stopTargetReference": {
+            "favorable": "INITIAL_ENTRY_PRICE",
+            "unfavorable": "LATEST_ENTRY_PRICE"
+          }
         }
       },
       "short": false
@@ -131,6 +135,12 @@ TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
   EXPECT_EQ(strategy.long_position().pyramiding().signal_delay(), 0);
   EXPECT_TRUE(
    node_cast<CloseNode>(strategy.long_position().pyramiding().price()));
+  EXPECT_EQ(
+   strategy.long_position().pyramiding().favorable_stop_target_reference(),
+   StopTargetReferencePrice::InitialEntryPrice);
+  EXPECT_EQ(
+   strategy.long_position().pyramiding().unfavorable_stop_target_reference(),
+   StopTargetReferencePrice::LatestEntryPrice);
   EXPECT_TRUE(strategy.long_position().stop_loss().trailing());
   EXPECT_TRUE(
    node_cast<OpenNode>(strategy.long_position().stop_loss().stop_price()));
@@ -149,6 +159,10 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
   auto pyramiding = Strategy::Pyramiding{};
   pyramiding.signal_delay(0);
   pyramiding.price(CloseNode{});
+  pyramiding.favorable_stop_target_reference(
+   StopTargetReferencePrice::InitialEntryPrice);
+  pyramiding.unfavorable_stop_target_reference(
+   StopTargetReferencePrice::LatestEntryPrice);
   long_position.pyramiding(pyramiding);
   long_position.stop_loss(Strategy::StopLoss{true, OpenNode{}, false});
   long_position.take_profit(Strategy::TakeProfit{true, ValueNode{120.0}});
@@ -208,6 +222,20 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
              .at("method")
              .as<std::string>(),
             "CLOSE");
+  EXPECT_EQ(strategy_json.at("positions")
+             .at("long")
+             .at("pyramiding")
+             .at("stopTargetReference")
+             .at("favorable")
+             .as<std::string>(),
+            "INITIAL_ENTRY_PRICE");
+  EXPECT_EQ(strategy_json.at("positions")
+             .at("long")
+             .at("pyramiding")
+             .at("stopTargetReference")
+             .at("unfavorable")
+             .as<std::string>(),
+            "LATEST_ENTRY_PRICE");
   EXPECT_FALSE(strategy_json.contains("stopLoss"));
   EXPECT_FALSE(strategy_json.contains("takeProfit"));
 }
@@ -233,4 +261,23 @@ TEST(StrategyParserTest, JsonconsConvTraitsRoundTripSchemaConfig)
 
   EXPECT_TRUE(decoded_strategy.name().empty());
   EXPECT_TRUE(decoded_strategy.equivalent_rules(strategy));
+}
+
+TEST(StrategyParserTest, DefaultStopLossAndTakeProfitUseRiskNodes)
+{
+  const auto strategy = Strategy{};
+
+  const auto* stop_price =
+   node_cast<SlAtrNode>(strategy.long_position().stop_loss().stop_price());
+  ASSERT_NE(stop_price, nullptr);
+  const auto* stop_multiplier = node_cast<ValueNode>(stop_price->multiplier());
+  ASSERT_NE(stop_multiplier, nullptr);
+  EXPECT_DOUBLE_EQ(stop_multiplier->value(), 2.0);
+
+  const auto* target_price = node_cast<TpRMultipleNode>(
+   strategy.long_position().take_profit().target_price());
+  ASSERT_NE(target_price, nullptr);
+  const auto* target_multiple = node_cast<ValueNode>(target_price->value());
+  ASSERT_NE(target_multiple, nullptr);
+  EXPECT_DOUBLE_EQ(target_multiple->value(), 2.0);
 }
