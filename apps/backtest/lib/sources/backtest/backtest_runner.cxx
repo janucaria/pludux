@@ -294,6 +294,15 @@ public:
           if(pyramiding_trade) {
             const auto fee = self.broker_.calculate_fee(*pyramiding_trade);
             self.trade_session_.entry_position(*pyramiding_trade, fee);
+            if(auto& updated_open_position =
+                self.trade_session_.open_position()) {
+              self.update_stop_target_prices(*updated_open_position,
+                                             *pyramiding_trade,
+                                             self.long_position_,
+                                             true,
+                                             asset_snapshot,
+                                             context);
+            }
             self.pyramiding_layers_++;
           }
         } else {
@@ -302,6 +311,15 @@ public:
           if(pyramiding_trade) {
             const auto fee = self.broker_.calculate_fee(*pyramiding_trade);
             self.trade_session_.entry_position(*pyramiding_trade, fee);
+            if(auto& updated_open_position =
+                self.trade_session_.open_position()) {
+              self.update_stop_target_prices(*updated_open_position,
+                                             *pyramiding_trade,
+                                             self.short_position_,
+                                             true,
+                                             asset_snapshot,
+                                             context);
+            }
             self.pyramiding_layers_++;
           }
         }
@@ -355,6 +373,16 @@ public:
 
         const auto fee = self.broker_.calculate_fee(*entry_trade);
         self.trade_session_.entry_position(*entry_trade, fee);
+        if(auto& open_position = self.trade_session_.open_position()) {
+          self.update_stop_target_prices(*open_position,
+                                         *entry_trade,
+                                         entry_trade->is_long_direction()
+                                          ? self.long_position_
+                                          : self.short_position_,
+                                         false,
+                                         asset_snapshot,
+                                         context);
+        }
         self.pyramiding_layers_ = 1;
       }
     }
@@ -508,52 +536,8 @@ private:
       const auto adjusted_position_quantity = self.apply_drawdown_adjustment(
        position_quantity, current_drawdown_ratio);
       const auto position_size = direction * adjusted_position_quantity;
-      auto initial_entry_price = entry_price;
-      auto latest_entry_price = entry_price;
-      auto average_price = entry_price;
-      auto reference_price = entry_price;
 
-      if(is_pyramiding) {
-        const auto& open_position = self.trade_session_.open_position();
-        if(open_position) {
-          initial_entry_price = open_position->entry_price();
-          average_price =
-           self.pyramiding_average_price(entry_price, position_size);
-        }
-        reference_price = self.pyramiding_reference_price(
-         position, is_long, entry_price, average_price);
-      }
-
-      const auto stop_context =
-       context.with_position_prices(initial_entry_price,
-                                    latest_entry_price,
-                                    average_price,
-                                    reference_price,
-                                    direction);
-      stop_price = evaluate_series_method(
-       position.stop_price_method(), asset_snapshot, stop_context);
-      const auto target_context =
-       stop_context.with_position_stop_price(stop_price);
-      const auto target_price = evaluate_series_method(
-       position.target_price_method(), asset_snapshot, target_context);
-      if(position.stop_loss_enabled() && !uses_risk_distance &&
-         !std::isfinite(stop_price)) {
-        throw std::runtime_error{"Invalid stop price for stop-loss exit"};
-      }
-
-      const auto stop_loss_price =
-       position.stop_loss_enabled() ? stop_price : NAN;
-      const auto is_stop_loss_trailing = position.stop_loss_trailing_enabled();
-      const auto take_profit_price =
-       position.take_profit_enabled() ? target_price : NAN;
-
-      result = TradeEntry{position_size,
-                          entry_price,
-                          stop_price,
-                          target_price,
-                          stop_loss_price,
-                          is_stop_loss_trailing,
-                          take_profit_price};
+      result = TradeEntry{position_size, entry_price};
     }
 
     return result;
@@ -628,39 +612,21 @@ private:
     return 0.0;
   }
 
-  auto pyramiding_average_price(this const BacktestRunner& self,
-                                double entry_price,
-                                double position_size) -> double
+  auto stop_target_reference_price(this const BacktestRunner&,
+                                   const PositionRule& position,
+                                   const TradePosition& open_position,
+                                   const TradeEntry& entry,
+                                   bool is_pyramiding) noexcept -> double
   {
-    const auto& open_position = self.trade_session_.open_position();
-    if(!open_position) {
-      return entry_price;
+    const auto entry_price = entry.price();
+    const auto average_price = open_position.average_price();
+    if(!is_pyramiding) {
+      return average_price;
     }
 
-    const auto projected_position_size =
-     open_position->position_size() + position_size;
-    if(projected_position_size == 0.0) {
-      return entry_price;
-    }
-    const auto projected_investment =
-     open_position->investment() + position_size * entry_price;
-    return projected_investment / projected_position_size;
-  }
-
-  auto pyramiding_reference_price(this const BacktestRunner& self,
-                                  const PositionRule& position,
-                                  bool is_long,
-                                  double entry_price,
-                                  double average_price) -> double
-  {
-    const auto& open_position = self.trade_session_.open_position();
-    if(!open_position) {
-      return entry_price;
-    }
-
-    const auto current_average_price = open_position->average_price();
-    const auto is_favorable = is_long ? entry_price >= current_average_price
-                                      : entry_price <= current_average_price;
+    const auto is_long = open_position.is_long_direction();
+    const auto is_favorable =
+     is_long ? entry_price >= average_price : entry_price <= average_price;
     const auto reference = is_favorable
                             ? position.favorable_stop_target_reference()
                             : position.unfavorable_stop_target_reference();
@@ -671,10 +637,53 @@ private:
     case StopTargetReferencePrice::AveragePrice:
       return average_price;
     case StopTargetReferencePrice::InitialEntryPrice:
-      return open_position->entry_price();
+      return open_position.entry_price();
     }
 
     return entry_price;
+  }
+
+  void update_stop_target_prices(this const BacktestRunner& self,
+                                 TradePosition& open_position,
+                                 const TradeEntry& entry,
+                                 const PositionRule& position,
+                                 bool is_pyramiding,
+                                 const AssetSnapshot& asset_snapshot,
+                                 MethodContextable auto context)
+  {
+    const auto direction = open_position.is_long_direction() ? 1.0 : -1.0;
+    const auto initial_entry_price = open_position.entry_price();
+    const auto latest_entry_price = entry.price();
+    const auto average_price = open_position.average_price();
+    const auto reference_price = self.stop_target_reference_price(
+     position, open_position, entry, is_pyramiding);
+    const auto stop_context = context.with_position_prices(initial_entry_price,
+                                                           latest_entry_price,
+                                                           average_price,
+                                                           reference_price,
+                                                           direction);
+    const auto stop_price = evaluate_series_method(
+     position.stop_price_method(), asset_snapshot, stop_context);
+    const auto target_context =
+     stop_context.with_position_stop_price(stop_price);
+    const auto target_price = evaluate_series_method(
+     position.target_price_method(), asset_snapshot, target_context);
+
+    const auto uses_risk_distance = self.profile_.position_sizing().mode() ==
+                                    PositionSizing::Mode::RiskDistance;
+    if(position.stop_loss_enabled() && !uses_risk_distance &&
+       !std::isfinite(stop_price)) {
+      throw std::runtime_error{"Invalid stop price for stop-loss exit"};
+    }
+
+    open_position.stop_price(stop_price);
+    open_position.target_price(target_price);
+    open_position.stop_loss_price(position.stop_loss_enabled() ? stop_price
+                                                               : NAN);
+    open_position.stop_loss_trailing_enabled(
+     position.stop_loss_trailing_enabled());
+    open_position.take_profit_price(
+     position.take_profit_enabled() ? target_price : NAN);
   }
 
   auto entry_long_trade(this const BacktestRunner& self,
