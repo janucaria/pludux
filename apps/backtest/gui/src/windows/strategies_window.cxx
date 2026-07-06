@@ -39,12 +39,17 @@ namespace pludux::apps {
 
 using pludux::backtest::AnyPlotMethod;
 using pludux::backtest::AnyPlotSourceMethod;
+using pludux::backtest::AveragePriceNode;
 using pludux::backtest::EquityNode;
 using pludux::backtest::EquityPercentNode;
 using pludux::backtest::HLinePlotMethod;
+using pludux::backtest::InitialEntryPriceNode;
+using pludux::backtest::LatestEntryPriceNode;
+using pludux::backtest::PositionDirectionNode;
 using pludux::backtest::SlAmountNode;
 using pludux::backtest::SlAtrNode;
 using pludux::backtest::SlPercentNode;
+using pludux::backtest::StopTargetRefPriceNode;
 using pludux::backtest::TpAmountNode;
 using pludux::backtest::TpAtrNode;
 using pludux::backtest::TpPercentNode;
@@ -184,6 +189,16 @@ auto get_default_series_node(const std::string& series_id) -> ErasedNode
     return TpAtrNode{14.0, 4.0};
   } else if(series_id == "TP_R_MULTIPLE") {
     return TpRMultipleNode{2.0};
+  } else if(series_id == "INITIAL_ENTRY_PRICE") {
+    return InitialEntryPriceNode{};
+  } else if(series_id == "LATEST_ENTRY_PRICE") {
+    return LatestEntryPriceNode{};
+  } else if(series_id == "AVERAGE_PRICE") {
+    return AveragePriceNode{};
+  } else if(series_id == "STOP_TARGET_REF_PRICE") {
+    return StopTargetRefPriceNode{};
+  } else if(series_id == "POSITION_DIRECTION") {
+    return PositionDirectionNode{};
   } else if(series_id == "ABS_DIFF") {
     return AbsDiffNode{CloseNode{}, CloseNode{}};
   } else if(series_id == "SELECT_OUTPUT") {
@@ -288,6 +303,16 @@ auto get_series_node_id(const ErasedNode& node) -> std::string
     return "TP_ATR";
   } else if(node_cast<TpRMultipleNode>(node)) {
     return "TP_R_MULTIPLE";
+  } else if(node_cast<InitialEntryPriceNode>(node)) {
+    return "INITIAL_ENTRY_PRICE";
+  } else if(node_cast<LatestEntryPriceNode>(node)) {
+    return "LATEST_ENTRY_PRICE";
+  } else if(node_cast<AveragePriceNode>(node)) {
+    return "AVERAGE_PRICE";
+  } else if(node_cast<StopTargetRefPriceNode>(node)) {
+    return "STOP_TARGET_REF_PRICE";
+  } else if(node_cast<PositionDirectionNode>(node)) {
+    return "POSITION_DIRECTION";
   } else if(node_cast<AbsDiffNode>(node)) {
     return "ABS_DIFF";
   } else if(node_cast<LookbackNode>(node)) {
@@ -459,6 +484,16 @@ auto get_series_node_title(const std::string& series_id) -> std::string
     return "Take Profit ATR";
   } else if(series_id == "TP_R_MULTIPLE") {
     return "Take Profit R Multiple";
+  } else if(series_id == "INITIAL_ENTRY_PRICE") {
+    return "Initial Entry Price";
+  } else if(series_id == "LATEST_ENTRY_PRICE") {
+    return "Latest Entry Price";
+  } else if(series_id == "AVERAGE_PRICE") {
+    return "Average Price";
+  } else if(series_id == "STOP_TARGET_REF_PRICE") {
+    return "Stop/Target Reference Price";
+  } else if(series_id == "POSITION_DIRECTION") {
+    return "Position Direction";
   } else if(series_id == "ABS_DIFF") {
     return "Absolute Difference";
   } else if(series_id == "SELECT_OUTPUT") {
@@ -1434,6 +1469,11 @@ private:
                                                         "SL_ATR",
                                                         "TP_ATR",
                                                         "TP_R_MULTIPLE",
+                                                        "INITIAL_ENTRY_PRICE",
+                                                        "LATEST_ENTRY_PRICE",
+                                                        "AVERAGE_PRICE",
+                                                        "STOP_TARGET_REF_PRICE",
+                                                        "POSITION_DIRECTION",
                                                         "ABS_DIFF",
                                                         "DATA",
                                                         "PREV_EQUITY",
@@ -1594,6 +1634,11 @@ private:
                           SlAtrNode,
                           TpAtrNode,
                           TpRMultipleNode,
+                          InitialEntryPriceNode,
+                          LatestEntryPriceNode,
+                          AveragePriceNode,
+                          StopTargetRefPriceNode,
+                          PositionDirectionNode,
                           AbsDiffNode,
                           NegateNode,
                           SqrtNode,
@@ -2171,6 +2216,30 @@ private:
                                  WindowContext& context)
   {
     self.render_stop_target_value_node_params(node, context, "Multiple");
+  }
+
+  void
+  render_series_node_params(this auto&, InitialEntryPriceNode&, WindowContext&)
+  {
+  }
+
+  void
+  render_series_node_params(this auto&, LatestEntryPriceNode&, WindowContext&)
+  {
+  }
+
+  void render_series_node_params(this auto&, AveragePriceNode&, WindowContext&)
+  {
+  }
+
+  void
+  render_series_node_params(this auto&, StopTargetRefPriceNode&, WindowContext&)
+  {
+  }
+
+  void
+  render_series_node_params(this auto&, PositionDirectionNode&, WindowContext&)
+  {
   }
 
   void render_series_node_params(this auto& self,

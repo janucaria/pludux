@@ -2522,6 +2522,32 @@
       "title": "Take Profit R Multiple",
       "description": "Calculates an absolute take-profit price from entry price and the evaluated stop risk distance."
     },
+    "positionContextPriceMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "INITIAL_ENTRY_PRICE",
+                "LATEST_ENTRY_PRICE",
+                "AVERAGE_PRICE",
+                "STOP_TARGET_REF_PRICE",
+                "POSITION_DIRECTION"
+              ]
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false
+            }
+          }
+        }
+      ],
+      "title": "Position Context Price",
+      "description": "Reads a scoped backtest position value during stop-loss and take-profit price evaluation. Outside active position-price context, the value is NaN."
+    },
     "stopTargetReferencePrice": {
       "type": "string",
       "enum": [
@@ -2649,6 +2675,9 @@
         },
         {
           "$ref": "#/$defs/takeProfitRMultipleMethod"
+        },
+        {
+          "$ref": "#/$defs/positionContextPriceMethod"
         },
         {
           "$ref": "#/$defs/crossMethod"

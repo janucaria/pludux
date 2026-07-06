@@ -1446,6 +1446,25 @@ auto make_default_registered_config_parser() -> ConfigParser
    });
 
   config_parser.register_node_parser(
+   "INITIAL_ENTRY_PRICE",
+   serialize_ohlcv_node<InitialEntryPriceNode>,
+   parse_ohlcv_node<InitialEntryPriceNode>);
+  config_parser.register_node_parser("LATEST_ENTRY_PRICE",
+                                     serialize_ohlcv_node<LatestEntryPriceNode>,
+                                     parse_ohlcv_node<LatestEntryPriceNode>);
+  config_parser.register_node_parser("AVERAGE_PRICE",
+                                     serialize_ohlcv_node<AveragePriceNode>,
+                                     parse_ohlcv_node<AveragePriceNode>);
+  config_parser.register_node_parser(
+   "STOP_TARGET_REF_PRICE",
+   serialize_ohlcv_node<StopTargetRefPriceNode>,
+   parse_ohlcv_node<StopTargetRefPriceNode>);
+  config_parser.register_node_parser(
+   "POSITION_DIRECTION",
+   serialize_ohlcv_node<PositionDirectionNode>,
+   parse_ohlcv_node<PositionDirectionNode>);
+
+  config_parser.register_node_parser(
    "SQRT",
    [](const ConfigParser& config_parser, const ErasedNode& node) {
      return serialize_unary_operator_node<SqrtNode>(

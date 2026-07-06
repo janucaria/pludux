@@ -263,6 +263,35 @@ private:
   TMultipleMethod multiple_;
 };
 
+class InitialEntryPriceMethod {
+public:
+  auto operator==(const InitialEntryPriceMethod&) const noexcept
+   -> bool = default;
+};
+
+class LatestEntryPriceMethod {
+public:
+  auto operator==(const LatestEntryPriceMethod&) const noexcept
+   -> bool = default;
+};
+
+class AveragePriceMethod {
+public:
+  auto operator==(const AveragePriceMethod&) const noexcept -> bool = default;
+};
+
+class StopTargetRefPriceMethod {
+public:
+  auto operator==(const StopTargetRefPriceMethod&) const noexcept
+   -> bool = default;
+};
+
+class PositionDirectionMethod {
+public:
+  auto operator==(const PositionDirectionMethod&) const noexcept
+   -> bool = default;
+};
+
 template<typename TMethod>
 auto hash_series_method(const SlAmountMethod<TMethod>& method) noexcept
  -> std::size_t
@@ -323,6 +352,92 @@ auto hash_series_method(const TpRMultipleMethod<TMethod>& method) noexcept
 {
   return std::hash<std::string_view>{}("pludux.backtest.TpRMultipleMethod") ^
          hash_series_method(method.multiple());
+}
+
+auto hash_series_method(const InitialEntryPriceMethod&) noexcept -> std::size_t
+{
+  return std::hash<std::string_view>{}(
+   "pludux.backtest.InitialEntryPriceMethod");
+}
+
+auto hash_series_method(const LatestEntryPriceMethod&) noexcept -> std::size_t
+{
+  return std::hash<std::string_view>{}(
+   "pludux.backtest.LatestEntryPriceMethod");
+}
+
+auto hash_series_method(const AveragePriceMethod&) noexcept -> std::size_t
+{
+  return std::hash<std::string_view>{}("pludux.backtest.AveragePriceMethod");
+}
+
+auto hash_series_method(const StopTargetRefPriceMethod&) noexcept -> std::size_t
+{
+  return std::hash<std::string_view>{}(
+   "pludux.backtest.StopTargetRefPriceMethod");
+}
+
+auto hash_series_method(const PositionDirectionMethod&) noexcept -> std::size_t
+{
+  return std::hash<std::string_view>{}(
+   "pludux.backtest.PositionDirectionMethod");
+}
+
+auto backtest_position_initial_entry_price(
+ MethodContextable auto context) noexcept -> double
+{
+  if constexpr(std::is_same_v<std::monostate, decltype(context)>) {
+    return std::numeric_limits<double>::quiet_NaN();
+  } else if constexpr(std::is_same_v<std::remove_cvref_t<decltype(context)>,
+                                     BacktestMethodContext>) {
+    return context.position_initial_entry_price();
+  } else if constexpr(std::is_same_v<std::remove_cvref_t<decltype(context)>,
+                                     AnySeriesMethodContext>) {
+    const auto* backtest_context =
+     series_method_context_cast<BacktestMethodContext>(context);
+    return backtest_context ? backtest_context->position_initial_entry_price()
+                            : std::numeric_limits<double>::quiet_NaN();
+  } else {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+}
+
+auto backtest_position_latest_entry_price(
+ MethodContextable auto context) noexcept -> double
+{
+  if constexpr(std::is_same_v<std::monostate, decltype(context)>) {
+    return std::numeric_limits<double>::quiet_NaN();
+  } else if constexpr(std::is_same_v<std::remove_cvref_t<decltype(context)>,
+                                     BacktestMethodContext>) {
+    return context.position_latest_entry_price();
+  } else if constexpr(std::is_same_v<std::remove_cvref_t<decltype(context)>,
+                                     AnySeriesMethodContext>) {
+    const auto* backtest_context =
+     series_method_context_cast<BacktestMethodContext>(context);
+    return backtest_context ? backtest_context->position_latest_entry_price()
+                            : std::numeric_limits<double>::quiet_NaN();
+  } else {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+}
+
+auto backtest_position_average_price(MethodContextable auto context) noexcept
+ -> double
+{
+  if constexpr(std::is_same_v<std::monostate, decltype(context)>) {
+    return std::numeric_limits<double>::quiet_NaN();
+  } else if constexpr(std::is_same_v<std::remove_cvref_t<decltype(context)>,
+                                     BacktestMethodContext>) {
+    return context.position_average_price();
+  } else if constexpr(std::is_same_v<std::remove_cvref_t<decltype(context)>,
+                                     AnySeriesMethodContext>) {
+    const auto* backtest_context =
+     series_method_context_cast<BacktestMethodContext>(context);
+    return backtest_context ? backtest_context->position_average_price()
+                            : std::numeric_limits<double>::quiet_NaN();
+  } else {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
 }
 
 auto backtest_position_reference_price(MethodContextable auto context) noexcept
@@ -504,6 +619,46 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
                            std::abs(reference_price - stop_price) * multiple,
                            1.0,
                            backtest_position_direction(context));
+}
+
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const InitialEntryPriceMethod&,
+                       AssetSnapshot,
+                       MethodContextable auto context) noexcept -> double
+{
+  return backtest_position_initial_entry_price(context);
+}
+
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const LatestEntryPriceMethod&,
+                       AssetSnapshot,
+                       MethodContextable auto context) noexcept -> double
+{
+  return backtest_position_latest_entry_price(context);
+}
+
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const AveragePriceMethod&,
+                       AssetSnapshot,
+                       MethodContextable auto context) noexcept -> double
+{
+  return backtest_position_average_price(context);
+}
+
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const StopTargetRefPriceMethod&,
+                       AssetSnapshot,
+                       MethodContextable auto context) noexcept -> double
+{
+  return backtest_position_reference_price(context);
+}
+
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const PositionDirectionMethod&,
+                       AssetSnapshot,
+                       MethodContextable auto context) noexcept -> double
+{
+  return backtest_position_direction(context);
 }
 
 } // namespace pludux::backtest

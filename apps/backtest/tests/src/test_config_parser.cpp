@@ -1444,6 +1444,23 @@ TEST_F(ConfigParserTest, ParseStopTargetPriceMethods)
   }
 }
 
+TEST_F(ConfigParserTest, ParsePositionContextPriceMethods)
+{
+  const auto configs =
+   std::vector<json>{json::parse(R"({"method":"INITIAL_ENTRY_PRICE"})"),
+                     json::parse(R"({"method":"LATEST_ENTRY_PRICE"})"),
+                     json::parse(R"({"method":"AVERAGE_PRICE"})"),
+                     json::parse(R"({"method":"STOP_TARGET_REF_PRICE"})"),
+                     json::parse(R"({"method":"POSITION_DIRECTION"})")};
+
+  for(const auto& config : configs) {
+    const auto method = parse_node_method(config);
+    const auto serialized_config = serialize_node_method(method);
+    const auto deserialized_config = parse_node_method(serialized_config);
+    EXPECT_EQ(method, deserialized_config);
+  }
+}
+
 TEST_F(ConfigParserTest, ParseScreenerInvalidMethod)
 {
   const auto config = json::parse(R"(

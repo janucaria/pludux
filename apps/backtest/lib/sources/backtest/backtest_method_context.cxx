@@ -127,7 +127,24 @@ public:
                                double direction) noexcept
    -> BacktestMethodContext
   {
+    return self.with_position_prices(reference_price,
+                                     reference_price,
+                                     reference_price,
+                                     reference_price,
+                                     direction);
+  }
+
+  auto with_position_prices(this const BacktestMethodContext& self,
+                            double initial_entry_price,
+                            double latest_entry_price,
+                            double average_price,
+                            double reference_price,
+                            double direction) noexcept -> BacktestMethodContext
+  {
     auto context = self;
+    context.position_initial_entry_price_ = initial_entry_price;
+    context.position_latest_entry_price_ = latest_entry_price;
+    context.position_average_price_ = average_price;
     context.position_reference_price_ = reference_price;
     context.position_direction_ = direction;
     context.position_stop_price_ = std::numeric_limits<double>::quiet_NaN();
@@ -149,6 +166,26 @@ public:
     return self.position_reference_price_;
   }
 
+  auto
+  position_initial_entry_price(this const BacktestMethodContext& self) noexcept
+   -> double
+  {
+    return self.position_initial_entry_price_;
+  }
+
+  auto
+  position_latest_entry_price(this const BacktestMethodContext& self) noexcept
+   -> double
+  {
+    return self.position_latest_entry_price_;
+  }
+
+  auto position_average_price(this const BacktestMethodContext& self) noexcept
+   -> double
+  {
+    return self.position_average_price_;
+  }
+
   auto position_direction(this const BacktestMethodContext& self) noexcept
    -> double
   {
@@ -165,6 +202,10 @@ private:
   DefaultMethodContext default_context_;
   const OrderedNamedRegistry<AnySeriesMethod>& series_methods_;
   const BacktestTimeline& timeline_;
+  double position_initial_entry_price_{
+   std::numeric_limits<double>::quiet_NaN()};
+  double position_latest_entry_price_{std::numeric_limits<double>::quiet_NaN()};
+  double position_average_price_{std::numeric_limits<double>::quiet_NaN()};
   double position_reference_price_{std::numeric_limits<double>::quiet_NaN()};
   double position_direction_{std::numeric_limits<double>::quiet_NaN()};
   double position_stop_price_{std::numeric_limits<double>::quiet_NaN()};

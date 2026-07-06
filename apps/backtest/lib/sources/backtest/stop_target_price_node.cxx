@@ -86,6 +86,34 @@ public:
   auto operator==(const TpRMultipleNode&) const noexcept -> bool = default;
 };
 
+class InitialEntryPriceNode {
+public:
+  auto operator==(const InitialEntryPriceNode&) const noexcept
+   -> bool = default;
+};
+
+class LatestEntryPriceNode {
+public:
+  auto operator==(const LatestEntryPriceNode&) const noexcept -> bool = default;
+};
+
+class AveragePriceNode {
+public:
+  auto operator==(const AveragePriceNode&) const noexcept -> bool = default;
+};
+
+class StopTargetRefPriceNode {
+public:
+  auto operator==(const StopTargetRefPriceNode&) const noexcept
+   -> bool = default;
+};
+
+class PositionDirectionNode {
+public:
+  auto operator==(const PositionDirectionNode&) const noexcept
+   -> bool = default;
+};
+
 class SlAtrNode {
 public:
   SlAtrNode()
@@ -266,6 +294,41 @@ auto pludux_tag_invoke(NodeToErasedMethod,
 {
   return AnySeriesMethod{
    TpRMultipleMethod{node_to_erased_method(node.value(), context)}};
+}
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const InitialEntryPriceNode&,
+                       NodeToErasedMethodContext&) -> AnySeriesMethod
+{
+  return AnySeriesMethod{InitialEntryPriceMethod{}};
+}
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const LatestEntryPriceNode&,
+                       NodeToErasedMethodContext&) -> AnySeriesMethod
+{
+  return AnySeriesMethod{LatestEntryPriceMethod{}};
+}
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const AveragePriceNode&,
+                       NodeToErasedMethodContext&) -> AnySeriesMethod
+{
+  return AnySeriesMethod{AveragePriceMethod{}};
+}
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const StopTargetRefPriceNode&,
+                       NodeToErasedMethodContext&) -> AnySeriesMethod
+{
+  return AnySeriesMethod{StopTargetRefPriceMethod{}};
+}
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const PositionDirectionNode&,
+                       NodeToErasedMethodContext&) -> AnySeriesMethod
+{
+  return AnySeriesMethod{PositionDirectionMethod{}};
 }
 
 } // namespace pludux::backtest

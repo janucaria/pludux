@@ -508,15 +508,28 @@ private:
       const auto adjusted_position_quantity = self.apply_drawdown_adjustment(
        position_quantity, current_drawdown_ratio);
       const auto position_size = direction * adjusted_position_quantity;
+      auto initial_entry_price = entry_price;
+      auto latest_entry_price = entry_price;
+      auto average_price = entry_price;
       auto reference_price = entry_price;
 
       if(is_pyramiding) {
+        const auto& open_position = self.trade_session_.open_position();
+        if(open_position) {
+          initial_entry_price = open_position->entry_price();
+          average_price =
+           self.pyramiding_average_price(entry_price, position_size);
+        }
         reference_price = self.pyramiding_reference_price(
-         position, is_long, entry_price, position_size);
+         position, is_long, entry_price, average_price);
       }
 
       const auto stop_context =
-       context.with_position_reference(reference_price, direction);
+       context.with_position_prices(initial_entry_price,
+                                    latest_entry_price,
+                                    average_price,
+                                    reference_price,
+                                    direction);
       stop_price = evaluate_series_method(
        position.stop_price_method(), asset_snapshot, stop_context);
       const auto target_context =
@@ -615,11 +628,30 @@ private:
     return 0.0;
   }
 
+  auto pyramiding_average_price(this const BacktestRunner& self,
+                                double entry_price,
+                                double position_size) -> double
+  {
+    const auto& open_position = self.trade_session_.open_position();
+    if(!open_position) {
+      return entry_price;
+    }
+
+    const auto projected_position_size =
+     open_position->position_size() + position_size;
+    if(projected_position_size == 0.0) {
+      return entry_price;
+    }
+    const auto projected_investment =
+     open_position->investment() + position_size * entry_price;
+    return projected_investment / projected_position_size;
+  }
+
   auto pyramiding_reference_price(this const BacktestRunner& self,
                                   const PositionRule& position,
                                   bool is_long,
                                   double entry_price,
-                                  double position_size) -> double
+                                  double average_price) -> double
   {
     const auto& open_position = self.trade_session_.open_position();
     if(!open_position) {
@@ -636,16 +668,8 @@ private:
     switch(reference) {
     case StopTargetReferencePrice::LatestEntryPrice:
       return entry_price;
-    case StopTargetReferencePrice::AveragePrice: {
-      const auto projected_position_size =
-       open_position->position_size() + position_size;
-      if(projected_position_size == 0.0) {
-        return entry_price;
-      }
-      const auto projected_investment =
-       open_position->investment() + position_size * entry_price;
-      return projected_investment / projected_position_size;
-    }
+    case StopTargetReferencePrice::AveragePrice:
+      return average_price;
     case StopTargetReferencePrice::InitialEntryPrice:
       return open_position->entry_price();
     }
