@@ -157,6 +157,41 @@ public:
                                     self.open_position_->take_profit_price());
   }
 
+  void reject_insufficient_cash(this TradeSession& self,
+                                const TradeEntry& entry)
+  {
+    const auto trade_id =
+     self.open_position_ ? self.open_position_->trade_id() : 0;
+    const auto trade_event_index =
+     self.open_position_ ? self.open_position_->trade_event_count() + 1 : 0;
+    const auto position_size_before =
+     self.open_position_ ? self.open_position_->position_size() : 0.0;
+    const auto investment_before =
+     self.open_position_ ? self.open_position_->investment() : 0.0;
+    const auto average_price_before =
+     self.open_position_ ? self.open_position_->average_price() : 0.0;
+
+    self.trade_events_.emplace_back(
+     trade_id,
+     self.next_event_id_++,
+     trade_event_index,
+     TradeEvent::Type::rejected_insufficient_cash,
+     self.market_timestamp_,
+     entry.price(),
+     entry.position_size(),
+     0.0,
+     position_size_before,
+     investment_before,
+     average_price_before,
+     position_size_before,
+     investment_before,
+     average_price_before,
+     entry.stop_price(),
+     entry.target_price(),
+     entry.stop_loss_price(),
+     entry.take_profit_price());
+  }
+
   void exit_position(this TradeSession& self, const TradeExit& exit)
   {
     self.exit_position(exit, 0.0);

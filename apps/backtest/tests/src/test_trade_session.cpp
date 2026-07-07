@@ -120,6 +120,42 @@ TEST(TradeSessionTest, ScaleInEmitsScaleInEvent)
   EXPECT_EQ(session.unrealized_duration(), 5);
 }
 
+TEST(TradeSessionTest, RejectInsufficientCashEmitsRejectedEventOnly)
+{
+  auto session = TradeSession{static_cast<std::time_t>(20), 100.0, 1};
+
+  session.reject_insufficient_cash(
+   TradeEntry{2.0, 100.0, 90.0, 120.0, 90.0, false, 120.0});
+
+  ASSERT_FALSE(session.open_position().has_value());
+  ASSERT_EQ(session.trade_events().size(), 1);
+  EXPECT_TRUE(session.closed_trades().empty());
+
+  const auto& rejected_event = session.trade_events().back();
+  EXPECT_TRUE(rejected_event.is_rejected());
+  EXPECT_FALSE(rejected_event.is_entry());
+  EXPECT_FALSE(rejected_event.is_scale_in());
+  EXPECT_FALSE(rejected_event.is_scale_out());
+  EXPECT_FALSE(rejected_event.is_exit());
+  EXPECT_EQ(rejected_event.trade_id(), std::size_t{0});
+  EXPECT_EQ(rejected_event.event_id(), std::size_t{1});
+  EXPECT_DOUBLE_EQ(rejected_event.position_size(), 2.0);
+  EXPECT_DOUBLE_EQ(rejected_event.price(), 100.0);
+  EXPECT_DOUBLE_EQ(rejected_event.fees(), 0.0);
+  EXPECT_DOUBLE_EQ(rejected_event.position_size_before(), 0.0);
+  EXPECT_DOUBLE_EQ(rejected_event.position_size_after(), 0.0);
+  EXPECT_DOUBLE_EQ(rejected_event.stop_loss_price(), 90.0);
+  EXPECT_DOUBLE_EQ(rejected_event.take_profit_price(), 120.0);
+
+  session.entry_position(TradeEntry{1.0, 100.0});
+
+  ASSERT_TRUE(session.open_position().has_value());
+  ASSERT_EQ(session.trade_events().size(), 2);
+  EXPECT_TRUE(session.trade_events().back().is_entry());
+  EXPECT_EQ(session.trade_events().back().trade_id(), std::size_t{1});
+  EXPECT_EQ(session.trade_events().back().event_id(), std::size_t{2});
+}
+
 TEST(TradeSessionTest, PartialScaleOutEmitsRecordAndKeepsPositionOpen)
 {
   auto session = TradeSession{static_cast<std::time_t>(20), 100.0, 1};

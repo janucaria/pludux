@@ -229,6 +229,51 @@ struct json_conv_traits<Json, pludux::backtest::DrawdownAdjustment> {
 };
 
 template<typename Json>
+struct json_conv_traits<Json, pludux::backtest::InsufficientCashPolicy> {
+  using value_type = pludux::backtest::InsufficientCashPolicy;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_string();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      const auto value = json.template as<std::string>();
+      if(value == "Reject") {
+        return result_type{value_type::Reject};
+      }
+      if(value == "CapToAvailableCash") {
+        return result_type{value_type::CapToAvailableCash};
+      }
+      return conversion_failed<value_type>();
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                      const value_type& policy)
+  {
+    switch(policy) {
+    case value_type::Reject:
+      return Json{"Reject"};
+    case value_type::CapToAvailableCash:
+      return Json{"CapToAvailableCash"};
+    }
+
+    return Json{"Reject"};
+  }
+};
+
+template<typename Json>
 struct json_conv_traits<Json, pludux::backtest::Profile> {
   using value_type = pludux::backtest::Profile;
   using result_type = jsoncons::conversion_result<value_type>;
@@ -248,8 +293,10 @@ struct json_conv_traits<Json, pludux::backtest::Profile> {
       return result_type{value_type{
        required_as<std::string>(json, "name"),
        required_as<pludux::backtest::PositionSizing>(json, "positionSizing"),
-       required_as<pludux::backtest::DrawdownAdjustment>(
-        json, "drawdownAdjustment")}};
+       required_as<pludux::backtest::DrawdownAdjustment>(json,
+                                                         "drawdownAdjustment"),
+       required_as<pludux::backtest::InsufficientCashPolicy>(
+        json, "insufficientCashPolicy")}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -263,6 +310,8 @@ struct json_conv_traits<Json, pludux::backtest::Profile> {
     json["name"] = profile.name();
     set_json(json, aset, "positionSizing", profile.position_sizing());
     set_json(json, aset, "drawdownAdjustment", profile.drawdown_adjustment());
+    set_json(
+     json, aset, "insufficientCashPolicy", profile.insufficient_cash_policy());
     return json;
   }
 };

@@ -659,6 +659,27 @@ private:
       for(auto i = std::size_t{0}; i < timeline_size; ++i) {
         const auto snapshot = asset.get_snapshot(i);
         for(const auto& event : backtest_timelines.trade_events(i)) {
+          if(event.is_rejected()) {
+            const auto entry_low = snapshot.low();
+            auto rejected_pos = ImPlot::PlotToPixels(i, entry_low);
+            rejected_pos.y += marker_offset;
+            const auto rejected_color = ImGui::GetColorU32(self.bearish_color_);
+            constexpr auto rejected_marker_size = 6.0f;
+
+            draw_list->AddLine(ImVec2{rejected_pos.x - rejected_marker_size,
+                                      rejected_pos.y - rejected_marker_size},
+                               ImVec2{rejected_pos.x + rejected_marker_size,
+                                      rejected_pos.y + rejected_marker_size},
+                               rejected_color,
+                               2.0f);
+            draw_list->AddLine(ImVec2{rejected_pos.x - rejected_marker_size,
+                                      rejected_pos.y + rejected_marker_size},
+                               ImVec2{rejected_pos.x + rejected_marker_size,
+                                      rejected_pos.y - rejected_marker_size},
+                               rejected_color,
+                               2.0f);
+          }
+
           if(event.is_entry() || event.is_scale_in()) {
             const auto entry_low = snapshot.low();
 

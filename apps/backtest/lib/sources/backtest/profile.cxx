@@ -9,6 +9,8 @@ import pludux;
 
 export namespace pludux::backtest {
 
+enum class InsufficientCashPolicy { Reject, CapToAvailableCash };
+
 class PositionSizing {
 public:
   enum class Mode { RiskDistance, FixedQuantity, FixedNotional, EquityPercent };
@@ -119,16 +121,31 @@ public:
   }
 
   Profile(std::string name, PositionSizing position_sizing)
-  : Profile{std::move(name), position_sizing, DrawdownAdjustment{}}
+  : Profile{std::move(name),
+            position_sizing,
+            DrawdownAdjustment{},
+            InsufficientCashPolicy::Reject}
   {
   }
 
   Profile(std::string name,
           PositionSizing position_sizing,
           DrawdownAdjustment drawdown_adjustment)
+  : Profile{std::move(name),
+            position_sizing,
+            drawdown_adjustment,
+            InsufficientCashPolicy::Reject}
+  {
+  }
+
+  Profile(std::string name,
+          PositionSizing position_sizing,
+          DrawdownAdjustment drawdown_adjustment,
+          InsufficientCashPolicy insufficient_cash_policy)
   : name_{std::move(name)}
   , position_sizing_{position_sizing}
   , drawdown_adjustment_{drawdown_adjustment}
+  , insufficient_cash_policy_{insufficient_cash_policy}
   {
   }
 
@@ -168,17 +185,31 @@ public:
     self.drawdown_adjustment_ = drawdown_adjustment;
   }
 
+  auto insufficient_cash_policy(this const Profile& self) noexcept
+   -> InsufficientCashPolicy
+  {
+    return self.insufficient_cash_policy_;
+  }
+
+  void insufficient_cash_policy(
+   this Profile& self, InsufficientCashPolicy insufficient_cash_policy) noexcept
+  {
+    self.insufficient_cash_policy_ = insufficient_cash_policy;
+  }
+
   auto equivalent_rules(this const Profile& self, const Profile& other) noexcept
    -> bool
   {
     return self.position_sizing_ == other.position_sizing_ &&
-           self.drawdown_adjustment_ == other.drawdown_adjustment_;
+           self.drawdown_adjustment_ == other.drawdown_adjustment_ &&
+           self.insufficient_cash_policy_ == other.insufficient_cash_policy_;
   }
 
 private:
   std::string name_;
   PositionSizing position_sizing_;
   DrawdownAdjustment drawdown_adjustment_;
+  InsufficientCashPolicy insufficient_cash_policy_;
 };
 
 } // namespace pludux::backtest

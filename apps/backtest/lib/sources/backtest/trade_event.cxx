@@ -15,7 +15,8 @@ public:
     scale_out,
     exit_signal,
     stop_loss,
-    take_profit
+    take_profit,
+    rejected_insufficient_cash
   };
 
   TradeEvent() = default;
@@ -188,6 +189,11 @@ public:
   {
     return self.type_ == Type::exit_signal || self.type_ == Type::stop_loss ||
            self.type_ == Type::take_profit;
+  }
+
+  auto is_rejected(this const TradeEvent& self) noexcept -> bool
+  {
+    return self.type_ == Type::rejected_insufficient_cash;
   }
 
 private:

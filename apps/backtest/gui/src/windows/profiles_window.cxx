@@ -315,6 +315,42 @@ private:
       self.editing_profile_ptr_->position_sizing(position_sizing);
     }
     {
+      auto insufficient_cash_policy =
+       self.editing_profile_ptr_->insufficient_cash_policy();
+      const auto policy_label = [](backtest::InsufficientCashPolicy policy) {
+        switch(policy) {
+        case backtest::InsufficientCashPolicy::Reject:
+          return "Reject Order";
+        case backtest::InsufficientCashPolicy::CapToAvailableCash:
+          return "Cap To Available Cash";
+        }
+
+        return "Reject Order";
+      };
+
+      constexpr auto insufficient_cash_policies =
+       std::array{backtest::InsufficientCashPolicy::Reject,
+                  backtest::InsufficientCashPolicy::CapToAvailableCash};
+
+      if(ImGui::BeginCombo("Insufficient Cash",
+                           policy_label(insufficient_cash_policy))) {
+        for(const auto& policy : insufficient_cash_policies) {
+          const auto selected = insufficient_cash_policy == policy;
+          if(ImGui::Selectable(policy_label(policy), selected)) {
+            insufficient_cash_policy = policy;
+          }
+          if(selected) {
+            ImGui::SetItemDefaultFocus();
+          }
+        }
+
+        ImGui::EndCombo();
+      }
+
+      self.editing_profile_ptr_->insufficient_cash_policy(
+       insufficient_cash_policy);
+    }
+    {
       auto drawdown_adjustment =
        self.editing_profile_ptr_->drawdown_adjustment();
       auto enabled = drawdown_adjustment.enabled();

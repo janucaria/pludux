@@ -288,12 +288,30 @@ public:
     auto closed_position_is_long = std::optional<bool>{};
 
     if(auto& open_position = self.trade_session_.open_position()) {
-      {
+      auto exit_was_triggered = false;
+      const auto exit_trade =
+       self.exit_trade(asset_snapshot, *open_position, context);
+
+      if(exit_trade) {
+        const auto fee = self.broker_.calculate_fee(*exit_trade);
+        const auto closing_position_is_long =
+         open_position->is_long_direction();
+        self.trade_session_.exit_position(*exit_trade, fee);
+
+        if(!self.trade_session_.is_open()) {
+          closed_position_is_long = closing_position_is_long;
+        }
+
+        self.pyramiding_layers_ = 0;
+        exit_was_triggered = true;
+      }
+
+      if(!exit_was_triggered) {
         const auto is_long_direction = open_position->is_long_direction();
         if(is_long_direction) {
           auto pyramiding_trade = self.pyramiding_long_trade(
            asset_snapshot, context, current_drawdown_ratio);
-          if(pyramiding_trade) {
+          if(pyramiding_trade && self.prepare_entry_order(*pyramiding_trade)) {
             const auto fee = self.broker_.calculate_fee(*pyramiding_trade);
             self.trade_session_.entry_position(*pyramiding_trade, fee);
             if(auto& updated_open_position =
@@ -311,7 +329,7 @@ public:
         } else {
           auto pyramiding_trade = self.pyramiding_short_trade(
            asset_snapshot, context, current_drawdown_ratio);
-          if(pyramiding_trade) {
+          if(pyramiding_trade && self.prepare_entry_order(*pyramiding_trade)) {
             const auto fee = self.broker_.calculate_fee(*pyramiding_trade);
             self.trade_session_.entry_position(*pyramiding_trade, fee);
             if(auto& updated_open_position =
@@ -328,24 +346,6 @@ public:
           }
         }
       }
-
-      if(auto& updated_open_position = self.trade_session_.open_position()) {
-        const auto exit_trade =
-         self.exit_trade(asset_snapshot, *updated_open_position, context);
-
-        if(exit_trade) {
-          const auto fee = self.broker_.calculate_fee(*exit_trade);
-          const auto closing_position_is_long =
-           updated_open_position->is_long_direction();
-          self.trade_session_.exit_position(*exit_trade, fee);
-
-          if(!self.trade_session_.is_open()) {
-            closed_position_is_long = closing_position_is_long;
-          }
-
-          self.pyramiding_layers_ = 0;
-        }
-      }
     }
 
     if(self.trade_session_.is_flat()) {
@@ -353,28 +353,7 @@ public:
                                           context,
                                           current_drawdown_ratio,
                                           closed_position_is_long);
-      if(entry_trade) {
-        {
-          const auto quantity_step = self.market_.quantity_step();
-          const auto min_order_quantity = self.market_.min_order_quantity();
-
-          auto position_size = entry_trade->position_size();
-          if(quantity_step > 0.0 &&
-             std::fmod(position_size, quantity_step) != 0.0) {
-            position_size =
-             quantity_step * std::round(position_size / quantity_step);
-          }
-
-          if(position_size > 0.0 && position_size < min_order_quantity) {
-            position_size = min_order_quantity;
-          } else if(position_size < 0.0 &&
-                    position_size > -min_order_quantity) {
-            position_size = -min_order_quantity;
-          }
-
-          entry_trade->position_size(position_size);
-        }
-
+      if(entry_trade && self.prepare_entry_order(*entry_trade)) {
         const auto fee = self.broker_.calculate_fee(*entry_trade);
         self.trade_session_.entry_position(*entry_trade, fee);
         if(auto& open_position = self.trade_session_.open_position()) {
@@ -466,6 +445,114 @@ private:
     return self.peak_equity_ ? (self.peak_equity_ - self.current_equity()) /
                                 self.peak_equity_ * 100.0
                              : 0.0;
+  }
+
+  auto available_cash(this const BacktestRunner& self) noexcept -> double
+  {
+    return std::max(self.capital_ -
+                     std::abs(self.trade_session_.unrealized_investment()),
+                    0.0);
+  }
+
+  auto required_cash(this const BacktestRunner&,
+                     const TradeEntry& entry,
+                     double fee) noexcept -> double
+  {
+    return std::abs(entry.position_size() * entry.price()) + fee;
+  }
+
+  void normalize_order_size(this const BacktestRunner& self,
+                            TradeEntry& entry) noexcept
+  {
+    const auto quantity_step = self.market_.quantity_step();
+    const auto min_order_quantity = self.market_.min_order_quantity();
+
+    auto position_size = entry.position_size();
+    if(quantity_step > 0.0 && std::fmod(position_size, quantity_step) != 0.0) {
+      position_size = quantity_step * std::round(position_size / quantity_step);
+    }
+
+    if(position_size > 0.0 && position_size < min_order_quantity) {
+      position_size = min_order_quantity;
+    } else if(position_size < 0.0 && position_size > -min_order_quantity) {
+      position_size = -min_order_quantity;
+    }
+
+    entry.position_size(position_size);
+  }
+
+  auto cap_order_to_available_cash(this const BacktestRunner& self,
+                                   const TradeEntry& entry,
+                                   double available_cash)
+   -> std::optional<TradeEntry>
+  {
+    const auto direction = entry.position_size() >= 0.0 ? 1.0 : -1.0;
+    const auto intended_quantity = std::abs(entry.position_size());
+    const auto min_order_quantity = self.market_.min_order_quantity();
+    const auto quantity_step = self.market_.quantity_step();
+
+    if(intended_quantity <= 0.0 || available_cash <= 0.0) {
+      return std::nullopt;
+    }
+
+    auto low = 0.0;
+    auto high = intended_quantity;
+    for(auto i = 0; i < 64; ++i) {
+      const auto mid = (low + high) / 2.0;
+      auto candidate = entry;
+      candidate.position_size(direction * mid);
+      const auto fee = self.broker_.calculate_fee(candidate);
+      if(self.required_cash(candidate, fee) <= available_cash) {
+        low = mid;
+      } else {
+        high = mid;
+      }
+    }
+
+    auto capped_quantity = low;
+    if(quantity_step > 0.0) {
+      capped_quantity =
+       quantity_step * std::floor(capped_quantity / quantity_step);
+    }
+
+    if(capped_quantity <= 0.0 ||
+       (min_order_quantity > 0.0 && capped_quantity < min_order_quantity)) {
+      return std::nullopt;
+    }
+
+    auto capped_entry = entry;
+    capped_entry.position_size(direction * capped_quantity);
+    const auto capped_fee = self.broker_.calculate_fee(capped_entry);
+    if(self.required_cash(capped_entry, capped_fee) > available_cash) {
+      return std::nullopt;
+    }
+
+    return capped_entry;
+  }
+
+  auto prepare_entry_order(this BacktestRunner& self, TradeEntry& entry) -> bool
+  {
+    self.normalize_order_size(entry);
+
+    const auto fee = self.broker_.calculate_fee(entry);
+    const auto cash = self.available_cash();
+    if(self.required_cash(entry, fee) <= cash) {
+      return true;
+    }
+
+    switch(self.profile_.insufficient_cash_policy()) {
+    case InsufficientCashPolicy::Reject:
+      self.trade_session_.reject_insufficient_cash(entry);
+      return false;
+    case InsufficientCashPolicy::CapToAvailableCash:
+      if(auto capped_entry = self.cap_order_to_available_cash(entry, cash)) {
+        entry = *capped_entry;
+        return true;
+      }
+      return false;
+    }
+
+    return false;
   }
 
   void update_accounting(this BacktestRunner& self) noexcept
