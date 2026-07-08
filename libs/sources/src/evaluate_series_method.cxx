@@ -40,8 +40,7 @@ import :methods.sma_method;
 import :methods.wma_method;
 import :methods.rma_method;
 import :methods.select_output_method;
-import :methods.series_node_method;
-import :methods.series_result_method;
+import :methods.series_method;
 import :methods.stddev_method;
 import :methods.stoch_method;
 import :methods.stoch_rsi_method;
@@ -849,20 +848,25 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
 // SeriesNode
 
 auto pludux_tag_invoke(EvaluateSeriesMethod,
-                       const SeriesNodeMethod& method,
+                       const SeriesMethod& method,
                        AssetSnapshot asset_snapshot,
                        MethodContextable auto context) noexcept -> double
 {
   if constexpr(std::is_same_v<std::monostate, decltype(context)>) {
     return std::numeric_limits<double>::quiet_NaN();
   } else {
-    return context.call_series_method(method.name(), asset_snapshot);
+    const auto result_index = asset_snapshot.index();
+    if(result_index == context.index()) {
+      return context.call_series_method(method.name(), asset_snapshot);
+    }
+
+    return context.get_series_result(method.name(), result_index);
   }
 }
 
 auto pludux_tag_invoke(EvaluateSeriesMethod,
                        MethodOutput output,
-                       const SeriesNodeMethod& method,
+                       const SeriesMethod& method,
                        AssetSnapshot asset_snapshot,
                        MethodContextable auto context) noexcept -> double
 {
@@ -871,25 +875,6 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
   } else {
     return context.call_series_method(method.name(), asset_snapshot, output);
   }
-}
-
-// SeriesResult
-
-auto pludux_tag_invoke(EvaluateSeriesMethod,
-                       const SeriesResultMethod& method,
-                       AssetSnapshot asset_snapshot,
-                       MethodContextable auto context) noexcept -> double
-{
-  if constexpr(std::is_same_v<std::monostate, decltype(context)>) {
-    return std::numeric_limits<double>::quiet_NaN();
-  }
-
-  const auto result_index = asset_snapshot.index();
-  if(result_index == context.index()) {
-    return context.call_series_method(method.name(), asset_snapshot);
-  }
-
-  return context.get_series_result(method.name(), result_index);
 }
 
 // Stddev

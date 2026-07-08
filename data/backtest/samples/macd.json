@@ -41,7 +41,7 @@
       "params": {
         "output": "signal-line",
         "source": {
-          "method": "SERIES_NODE",
+          "method": "SERIES",
           "params": {
             "name": "macd_histogram"
           }
@@ -53,7 +53,7 @@
       "params": {
         "output": "macd-line",
         "source": {
-          "method": "SERIES_NODE",
+          "method": "SERIES",
           "params": {
             "name": "macd_histogram"
           }
@@ -70,7 +70,7 @@
           "method": "CROSSOVER",
           "params": {
             "value": {
-              "method": "SERIES_RESULT",
+              "method": "SERIES",
               "params": {
                 "name": "macd_histogram"
               }
@@ -86,7 +86,7 @@
           "method": "CROSSUNDER",
           "params": {
             "value": {
-              "method": "SERIES_RESULT",
+              "method": "SERIES",
               "params": {
                 "name": "macd_histogram"
               }
@@ -135,7 +135,7 @@
           "method": "HISTOGRAM",
           "params": {
             "source": {
-              "method": "SERIES_RESULT",
+              "method": "SERIES",
               "params": {
                 "name": "macd_histogram"
               }
@@ -147,7 +147,7 @@
           "method": "LINE",
           "params": {
             "source": {
-              "method": "SERIES_RESULT",
+              "method": "SERIES",
               "params": {
                 "name": "macd_signal"
               }
@@ -159,7 +159,7 @@
           "method": "LINE",
           "params": {
             "source": {
-              "method": "SERIES_RESULT",
+              "method": "SERIES",
               "params": {
                 "name": "macd_line"
               }

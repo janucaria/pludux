@@ -39,13 +39,13 @@
           "method": "CROSSOVER",
           "params": {
             "value": {
-              "method": "SERIES_RESULT",
+              "method": "SERIES",
               "params": {
                 "name": "ma_fast"
               }
             },
             "baseline": {
-              "method": "SERIES_RESULT",
+              "method": "SERIES",
               "params": {
                 "name": "ma_slow"
               }
@@ -60,13 +60,13 @@
           "method": "CROSSUNDER",
           "params": {
             "value": {
-              "method": "SERIES_RESULT",
+              "method": "SERIES",
               "params": {
                 "name": "ma_fast"
               }
             },
             "baseline": {
-              "method": "SERIES_RESULT",
+              "method": "SERIES",
               "params": {
                 "name": "ma_slow"
               }
@@ -121,7 +121,7 @@
           "method": "LINE",
           "params": {
             "source": {
-              "method": "SERIES_RESULT",
+              "method": "SERIES",
               "params": {
                 "name": "ma_fast"
               }
@@ -133,7 +133,7 @@
           "method": "LINE",
           "params": {
             "source": {
-              "method": "SERIES_RESULT",
+              "method": "SERIES",
               "params": {
                 "name": "ma_slow"
               }

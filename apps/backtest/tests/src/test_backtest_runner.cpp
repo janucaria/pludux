@@ -1387,7 +1387,7 @@ auto make_three_bar_asset(double first_open,
                             {"Volume", {0.0, 0.0, 0.0}}}};
 }
 
-TEST(BacktestRunnerTest, SeriesResultDelayedSignalUsesCompletedResultsOnly)
+TEST(BacktestRunnerTest, SeriesDelayedSignalUsesCompletedResultsOnly)
 {
   const auto asset = make_three_bar_asset(100.0,
                                           100.0,
@@ -1412,7 +1412,7 @@ TEST(BacktestRunnerTest, SeriesResultDelayedSignalUsesCompletedResultsOnly)
   series_methods.set("close", CloseMethod{});
 
   const auto entry_signal =
-   EqualMethod{SeriesResultMethod{"close"}, ValueMethod{20.0}};
+   EqualMethod{SeriesMethod{"close"}, ValueMethod{20.0}};
 
   auto runner =
    BacktestRunner{asset,
@@ -1460,7 +1460,7 @@ TEST(BacktestRunnerTest, SeriesResultDelayedSignalUsesCompletedResultsOnly)
   EXPECT_DOUBLE_EQ(close_results->get()[2], 30.0);
 }
 
-TEST(BacktestRunnerTest, SeriesResultDelayZeroSignalEvaluatesCurrentBar)
+TEST(BacktestRunnerTest, SeriesDelayZeroSignalEvaluatesCurrentBar)
 {
   const auto asset = make_single_bar_asset_with_close(100.0, 125.0);
   const auto market = Market{"Test", 0.0, 0.0};
@@ -1474,7 +1474,7 @@ TEST(BacktestRunnerTest, SeriesResultDelayZeroSignalEvaluatesCurrentBar)
   series_methods.set("close", CloseMethod{});
 
   const auto entry_signal =
-   EqualMethod{SeriesResultMethod{"close"}, ValueMethod{125.0}};
+   EqualMethod{SeriesMethod{"close"}, ValueMethod{125.0}};
 
   auto runner =
    BacktestRunner{asset,

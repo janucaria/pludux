@@ -327,7 +327,6 @@ void collect_numeric_inputs_from_node(const ErasedNode& node,
   PLUDUX_COLLECT_IF_NODE(LookbackNode)
   PLUDUX_COLLECT_IF_NODE(SelectOutputNode)
   PLUDUX_COLLECT_IF_NODE(SeriesNode)
-  PLUDUX_COLLECT_IF_NODE(SeriesResultNode)
   PLUDUX_COLLECT_IF_NODE(HighestNode)
   PLUDUX_COLLECT_IF_NODE(LowestNode)
   PLUDUX_COLLECT_IF_NODE(PercentageNode)

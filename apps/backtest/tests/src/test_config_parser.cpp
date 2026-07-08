@@ -140,11 +140,11 @@ protected:
   }
 };
 
-TEST_F(ConfigParserTest, ParseScreenerSeriesNodeMethod)
+TEST_F(ConfigParserTest, ParseScreenerSeriesMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "SERIES_NODE",
+      "method": "SERIES",
       "params": {
         "name": "close"
       }
@@ -153,34 +153,10 @@ TEST_F(ConfigParserTest, ParseScreenerSeriesNodeMethod)
 
   const auto method = parse_node_method(config);
 
-  const auto series_node_method = series_method_cast<SeriesNodeMethod>(method);
-  ASSERT_NE(series_node_method, nullptr);
+  const auto series_method = series_method_cast<SeriesMethod>(method);
+  ASSERT_NE(series_method, nullptr);
 
-  EXPECT_EQ(series_node_method->name(), "close");
-
-  const auto serialized_config = serialize_node_method(method);
-  const auto deserialized_config = parse_node_method(serialized_config);
-  EXPECT_EQ(method, deserialized_config);
-}
-
-TEST_F(ConfigParserTest, ParseScreenerSeriesResultMethod)
-{
-  const auto config = json::parse(R"(
-    {
-      "method": "SERIES_RESULT",
-      "params": {
-        "name": "close"
-      }
-    }
-  )");
-
-  const auto method = parse_node_method(config);
-
-  const auto series_result_method =
-   series_method_cast<SeriesResultMethod>(method);
-  ASSERT_NE(series_result_method, nullptr);
-
-  EXPECT_EQ(series_result_method->name(), "close");
+  EXPECT_EQ(series_method->name(), "close");
 
   const auto serialized_config = serialize_node_method(method);
   const auto deserialized_config = parse_node_method(serialized_config);

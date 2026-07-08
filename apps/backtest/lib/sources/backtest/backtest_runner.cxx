@@ -398,9 +398,9 @@ public:
      .unrealized_duration = self.trade_session_.unrealized_duration()});
 
     for(const auto& [series_name, series_method] : series_methods) {
-      const auto series_result =
+      const auto series_value =
        evaluate_series_method(series_method, asset_snapshot, context);
-      series_evaluation_results.put(series_method, series_result);
+      series_evaluation_results.put(series_method, series_value);
       series_evaluation_results.alias(series_name, series_method);
     }
   }

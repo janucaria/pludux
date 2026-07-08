@@ -122,10 +122,8 @@ auto get_default_series_node(const std::string& series_id) -> ErasedNode
     return StochNode{14, 3, 3};
   } else if(series_id == "STOCH_RSI") {
     return StochRsiNode{CloseNode{}, 14, 14, 3, 3};
-  } else if(series_id == "SERIES_REFERENCE") {
+  } else if(series_id == "SERIES") {
     return SeriesNode{""};
-  } else if(series_id == "SERIES_RESULT") {
-    return SeriesResultNode{""};
   } else if(series_id == "VALUE") {
     return ValueNode{0.0};
   } else if(series_id == "LOOKBACK") {
@@ -217,9 +215,7 @@ auto get_series_node_id(const ErasedNode& node) -> std::string
   if(node_cast<SelectOutputNode>(node)) {
     return "SELECT_OUTPUT";
   } else if(node_cast<SeriesNode>(node)) {
-    return "SERIES_REFERENCE";
-  } else if(node_cast<SeriesResultNode>(node)) {
-    return "SERIES_RESULT";
+    return "SERIES";
   } else if(node_cast<CloseNode>(node)) {
     return "CLOSE";
   } else if(node_cast<OpenNode>(node)) {
@@ -421,10 +417,8 @@ auto get_series_node_title(const std::string& series_id) -> std::string
     return "Stochastic Oscillator";
   } else if(series_id == "STOCH_RSI") {
     return "Stochastic RSI";
-  } else if(series_id == "SERIES_REFERENCE") {
-    return "Series Node";
-  } else if(series_id == "SERIES_RESULT") {
-    return "Series Result";
+  } else if(series_id == "SERIES") {
+    return "Series";
   } else if(series_id == "VALUE") {
     return "Value";
   } else if(series_id == "LOOKBACK") {
@@ -681,7 +675,7 @@ auto get_plot_source_method_id(const AnyPlotSourceMethod& method) -> std::string
   if(plot_source_method_cast<ConstantPlotSourceMethod>(method)) {
     return "CONSTANT";
   } else if(plot_source_method_cast<SeriesPlotSourceMethod>(method)) {
-    return "SERIES_RESULT";
+    return "SERIES";
   }
 
   return "UNKNOWN";
@@ -694,8 +688,8 @@ auto get_plot_source_method_title(const std::string& plot_source_id)
     return "Constant Value";
   }
 
-  if(plot_source_id == "SERIES_RESULT") {
-    return "Series Result";
+  if(plot_source_id == "SERIES") {
+    return "Series";
   }
 
   return "Unknown";
@@ -708,7 +702,7 @@ auto get_default_plot_source_method(const std::string& plot_source_id)
     return ConstantPlotSourceMethod{0.0};
   }
 
-  if(plot_source_id == "SERIES_RESULT") {
+  if(plot_source_id == "SERIES") {
     return SeriesPlotSourceMethod{""};
   }
 
@@ -1506,8 +1500,7 @@ private:
                                                         "STOCH",
                                                         "STOCH_RSI",
                                                         "SELECT_OUTPUT",
-                                                        "SERIES_REFERENCE",
-                                                        "SERIES_RESULT",
+                                                        "SERIES",
                                                         "VALUE",
                                                         "LOOKBACK",
                                                         "ALL_OF",
@@ -1546,15 +1539,13 @@ private:
 
           if(filter.PassFilter(series_title.c_str())) {
             if(ImGui::Selectable(series_title.c_str(), is_selected)) {
-              if((series_id == "SERIES_REFERENCE" ||
-                  series_id == "SERIES_RESULT") &&
+              if(series_id == "SERIES" &&
                  self.available_series_names_.empty()) {
-                const auto series_reference_node_title =
-                 get_series_node_title(series_id);
+                const auto series_node_title = get_series_node_title(series_id);
                 const auto error_message =
                  std::format("Cannot select '{}' when there are no available "
                              "series other than the current one.",
-                             series_reference_node_title);
+                             series_node_title);
                 context.alert(error_message);
               } else {
                 series_node = get_default_series_node(series_id);
@@ -1587,7 +1578,6 @@ private:
       }() || ...);
     }.template operator()<SelectOutputNode,
                           SeriesNode,
-                          SeriesResultNode,
                           DataNode,
                           LookbackNode,
                           NumericInputNode,
@@ -1708,37 +1698,6 @@ private:
 
   void render_series_node_params(this auto& self,
                                  SeriesNode& node,
-                                 WindowContext& context)
-  {
-    if(self.changed_series_names_.contains(node.name())) {
-      const auto new_name = self.changed_series_names_.at(node.name());
-      node.name(new_name);
-    } else if(std::ranges::find(self.available_series_names_, node.name()) ==
-              self.available_series_names_.end()) {
-      node.name("");
-    }
-
-    ImGui::Text("Name:");
-    ImGui::SameLine();
-
-    const auto display_name = node.name();
-    if(ImGui::BeginCombo("##named_series", display_name.c_str())) {
-      for(const auto& name_option : self.available_series_names_) {
-        ImGui::PushID(name_option.c_str());
-
-        const bool is_selected = display_name == name_option;
-        if(ImGui::Selectable(name_option.c_str(), is_selected)) {
-          node.name(name_option);
-        }
-
-        ImGui::PopID();
-      }
-      ImGui::EndCombo();
-    }
-  }
-
-  void render_series_node_params(this auto& self,
-                                 SeriesResultNode& node,
                                  WindowContext& context)
   {
     if(self.changed_series_names_.contains(node.name())) {
@@ -3072,7 +3031,7 @@ private:
                           WindowContext& context)
   {
     static const auto source_ids =
-     std::vector<std::string>{"SERIES_RESULT", "CONSTANT"};
+     std::vector<std::string>{"SERIES", "CONSTANT"};
 
     ImGui::Text("Source:");
     ImGui::SameLine();
@@ -3096,7 +3055,7 @@ private:
 
           if(filter.PassFilter(source_title.c_str())) {
             if(ImGui::Selectable(source_title.c_str(), is_selected)) {
-              if(source_id == "SERIES_RESULT" &&
+              if(source_id == "SERIES" &&
                  self.available_series_names_.empty()) {
                 const auto source_method_title =
                  get_plot_source_method_title(source_id);
@@ -3108,7 +3067,7 @@ private:
               } else {
                 auto source = get_default_plot_source_method(source_id);
 
-                if(source_id == "SERIES_RESULT") {
+                if(source_id == "SERIES") {
                   if(auto* series_source_ptr =
                       plot_source_method_cast<SeriesPlotSourceMethod>(source)) {
                     const auto first_available_series_name =

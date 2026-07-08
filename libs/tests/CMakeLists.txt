@@ -19,7 +19,7 @@ set(PLUDUX_TEST_SOURCES
   src/test_lookback_method.cpp
   src/test_lowest_method.cpp
   src/test_macd_method.cpp
-  src/test_series_node_method.cpp
+  src/test_series_method.cpp
   src/test_ohlcv_method.cpp
   src/test_operators_methods.cpp
   src/test_percentage_method.cpp

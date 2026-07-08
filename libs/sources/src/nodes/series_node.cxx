@@ -5,7 +5,7 @@ module;
 
 export module pludux:nodes.series_node;
 
-import :methods.series_node_method;
+import :methods.series_method;
 import :node_to_erased_method;
 
 export namespace pludux {
@@ -37,7 +37,7 @@ auto pludux_tag_invoke(NodeToErasedMethod,
                        const SeriesNode& node,
                        NodeToErasedMethodContext&) -> AnySeriesMethod
 {
-  return AnySeriesMethod{SeriesNodeMethod{node.name()}};
+  return AnySeriesMethod{SeriesMethod{node.name()}};
 }
 
 } // namespace pludux

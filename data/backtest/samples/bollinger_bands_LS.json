@@ -27,7 +27,7 @@
       "params": {
         "output": "upper-band",
         "source": {
-          "method": "SERIES_NODE",
+          "method": "SERIES",
           "params": {
             "name": "bbands"
           }
@@ -39,7 +39,7 @@
       "params": {
         "output": "lower-band",
         "source": {
-          "method": "SERIES_NODE",
+          "method": "SERIES",
           "params": {
             "name": "bbands"
           }
@@ -57,7 +57,7 @@
           "params": {
             "value": "CLOSE",
             "baseline": {
-              "method": "SERIES_RESULT",
+              "method": "SERIES",
               "params": {
                 "name": "bb_upper"
               }
@@ -73,7 +73,7 @@
           "params": {
             "value": "CLOSE",
             "baseline": {
-              "method": "SERIES_RESULT",
+              "method": "SERIES",
               "params": {
                 "name": "bb_lower"
               }
@@ -113,7 +113,7 @@
           "params": {
             "value": "CLOSE",
             "baseline": {
-              "method": "SERIES_RESULT",
+              "method": "SERIES",
               "params": {
                 "name": "bb_lower"
               }
@@ -129,7 +129,7 @@
           "params": {
             "value": "CLOSE",
             "baseline": {
-              "method": "SERIES_RESULT",
+              "method": "SERIES",
               "params": {
                 "name": "bb_upper"
               }
@@ -170,7 +170,7 @@
           "method": "LINE",
           "params": {
             "source": {
-              "method": "SERIES_RESULT",
+              "method": "SERIES",
               "params": {
                 "name": "bb_upper"
               }
@@ -182,7 +182,7 @@
           "method": "LINE",
           "params": {
             "source": {
-              "method": "SERIES_RESULT",
+              "method": "SERIES",
               "params": {
                 "name": "bb_lower"
               }

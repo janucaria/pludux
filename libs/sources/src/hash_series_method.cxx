@@ -42,8 +42,7 @@ import :methods.sma_method;
 import :methods.wma_method;
 import :methods.rma_method;
 import :methods.select_output_method;
-import :methods.series_node_method;
-import :methods.series_result_method;
+import :methods.series_method;
 import :methods.stddev_method;
 import :methods.stoch_method;
 import :methods.stoch_rsi_method;
@@ -95,8 +94,7 @@ using MethodRegistry = mp11::mp_list<mp11::mp_quote<AbsDiffMethod>,
                                      mp11::mp_quote<RsiMethod>,
                                      mp11::mp_quote<RvolMethod>,
                                      mp11::mp_quote<SelectOutputMethod>,
-                                     SeriesNodeMethod,
-                                     SeriesResultMethod,
+                                     SeriesMethod,
                                      mp11::mp_quote<SmaMethod>,
                                      mp11::mp_quote<SqrtMethod>,
                                      mp11::mp_quote<StddevMethod>,
@@ -491,19 +489,9 @@ auto hash_series_method(const AdaptiveMaMethod<TSourceMethod>& method) noexcept
   return merge_hashes(type_hash, source_hash, period_hash);
 }
 
-// SeriesNode
+// Series
 
-auto hash_series_method(const SeriesNodeMethod& method) noexcept -> std::size_t
-{
-  const auto type_hash = series_type_hash_id_of(method);
-  const auto name_hash = hash_series_method_or_std_hash(method.name());
-  return merge_hashes(type_hash, name_hash);
-}
-
-// SeriesResult
-
-auto hash_series_method(const SeriesResultMethod& method) noexcept
- -> std::size_t
+auto hash_series_method(const SeriesMethod& method) noexcept -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);
   const auto name_hash = hash_series_method_or_std_hash(method.name());
