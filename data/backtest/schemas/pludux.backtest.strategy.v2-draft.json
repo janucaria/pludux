@@ -341,11 +341,11 @@
         {
           "type": "string",
           "enum": [
-            "PREV_EQUITY",
-            "PREV_EQUITY_PERCENT",
-            "PREV_DRAWDOWN"
+            "EQUITY",
+            "EQUITY_PERCENT",
+            "DRAWDOWN"
           ],
-          "description": "Backtest account-state shorthand. PREV_EQUITY reads the latest completed timeline row equity before the current signal evaluation. PREV_EQUITY_PERCENT reads that equity as a percentage of initial capital. PREV_DRAWDOWN reads the latest completed timeline row drawdown before the current signal evaluation."
+          "description": "Backtest account-state shorthand. EQUITY reads the account equity available at the current evaluation moment. EQUITY_PERCENT reads that equity as a percentage of initial capital. DRAWDOWN reads the account drawdown available at the current evaluation moment."
         },
         {
           "$ref": "#/$defs/series",
@@ -760,7 +760,7 @@
       "title": "Data Field",
       "description": "Reads a custom data field from the input dataset, such as a user-provided column in the historical data file."
     },
-    "prevEquityMethod": {
+    "equityMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -768,7 +768,7 @@
         {
           "properties": {
             "method": {
-              "const": "PREV_EQUITY"
+              "const": "EQUITY"
             },
             "params": {
               "type": "object",
@@ -777,15 +777,15 @@
           }
         }
       ],
-      "title": "Previous Equity",
-      "description": "Reads the equity from the latest completed backtest timeline row before the current signal evaluation. On the first bar, the value is NaN.",
+      "title": "Equity",
+      "description": "Reads the account equity available at the current evaluation moment.",
       "examples": [
         {
-          "method": "PREV_EQUITY"
+          "method": "EQUITY"
         }
       ]
     },
-    "prevEquityPercentMethod": {
+    "equityPercentMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -793,7 +793,7 @@
         {
           "properties": {
             "method": {
-              "const": "PREV_EQUITY_PERCENT"
+              "const": "EQUITY_PERCENT"
             },
             "params": {
               "type": "object",
@@ -802,15 +802,15 @@
           }
         }
       ],
-      "title": "Previous Equity Percent",
-      "description": "Reads previous equity as a percentage of initial capital from the latest completed backtest timeline row before the current signal evaluation. On the first bar, the value is NaN.",
+      "title": "Equity Percent",
+      "description": "Reads account equity available at the current evaluation moment as a percentage of initial capital.",
       "examples": [
         {
-          "method": "PREV_EQUITY_PERCENT"
+          "method": "EQUITY_PERCENT"
         }
       ]
     },
-    "prevDrawdownMethod": {
+    "drawdownMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -818,7 +818,7 @@
         {
           "properties": {
             "method": {
-              "const": "PREV_DRAWDOWN"
+              "const": "DRAWDOWN"
             },
             "params": {
               "type": "object",
@@ -827,11 +827,11 @@
           }
         }
       ],
-      "title": "Previous Drawdown",
-      "description": "Reads the drawdown from the latest completed backtest timeline row before the current signal evaluation. On the first bar, the value is NaN.",
+      "title": "Drawdown",
+      "description": "Reads the account drawdown available at the current evaluation moment.",
       "examples": [
         {
-          "method": "PREV_DRAWDOWN"
+          "method": "DRAWDOWN"
         }
       ]
     },
@@ -2584,13 +2584,13 @@
           "$ref": "#/$defs/dataMethod"
         },
         {
-          "$ref": "#/$defs/prevEquityMethod"
+          "$ref": "#/$defs/equityMethod"
         },
         {
-          "$ref": "#/$defs/prevEquityPercentMethod"
+          "$ref": "#/$defs/equityPercentMethod"
         },
         {
-          "$ref": "#/$defs/prevDrawdownMethod"
+          "$ref": "#/$defs/drawdownMethod"
         },
         {
           "$ref": "#/$defs/maMethod"

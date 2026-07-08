@@ -39,12 +39,12 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
     return std::numeric_limits<double>::quiet_NaN();
   } else if constexpr(std::is_same_v<std::remove_cvref_t<decltype(context)>,
                                      BacktestMethodContext>) {
-    return context.previous_drawdown();
+    return context.drawdown();
   } else if constexpr(std::is_same_v<std::remove_cvref_t<decltype(context)>,
                                      AnySeriesMethodContext>) {
     const auto* backtest_context =
      series_method_context_cast<BacktestMethodContext>(context);
-    return backtest_context ? backtest_context->previous_drawdown()
+    return backtest_context ? backtest_context->drawdown()
                             : std::numeric_limits<double>::quiet_NaN();
   } else {
     return std::numeric_limits<double>::quiet_NaN();

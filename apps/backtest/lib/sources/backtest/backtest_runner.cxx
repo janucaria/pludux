@@ -219,9 +219,10 @@ public:
   , market_{market}
   , broker_{broker}
   , profile_{profile}
-  , total_equity_{total_equity}
-  , capital_{total_equity}
-  , peak_equity_{std::isnan(peak_equity) ? total_equity : peak_equity}
+  , current_account_state_{total_equity,
+                           0.0,
+                           std::isnan(peak_equity) ? total_equity : peak_equity,
+                           total_equity}
   , max_drawdown_{0.0}
   , sum_of_durations_{}
   , cumulative_investments_{0.0}
@@ -266,17 +267,23 @@ public:
     const auto asset_snapshot = self.asset_.get_snapshot(timeline_size);
 
     const auto& series_methods = self.series_methods_;
-    auto default_context = DefaultMethodContext{
-     series_methods, series_evaluation_results, timeline.size()};
-    auto context =
-     BacktestMethodContext{default_context, series_methods, timeline};
-
-    const auto current_drawdown_ratio = self.current_drawdown() / 100.0;
 
     self.trade_session_.begin_market_bar(
      static_cast<std::time_t>(asset_snapshot.datetime()),
      asset_snapshot.close(),
      asset_snapshot.lookback());
+
+    self.current_account_state_.unrealized_pnl(
+     self.trade_session_.unrealized_pnl());
+
+    auto default_context = DefaultMethodContext{
+     series_methods, series_evaluation_results, timeline_size};
+
+    auto context = BacktestMethodContext{
+     std::move(default_context), series_methods, self.current_account_state_};
+
+    const auto current_drawdown_ratio =
+     self.current_account_state_.drawdown_ratio();
 
     auto closed_position_is_long = std::optional<bool>{};
 
@@ -365,7 +372,6 @@ public:
     }
 
     self.update_accounting();
-    self.total_equity_ = self.current_equity();
 
     timeline.append(BacktestTimeline::Row{
      .market_timestamp = self.trade_session_.market_timestamp(),
@@ -374,10 +380,10 @@ public:
      .trade_events = self.trade_session_.trade_events(),
      .closed_trades = self.trade_session_.closed_trades(),
      .open_position = self.trade_session_.open_position_snapshot(),
-     .capital = self.capital_,
-     .equity = self.current_equity(),
-     .peak_equity = self.peak_equity_,
-     .drawdown = self.current_drawdown(),
+     .capital = self.current_account_state_.capital(),
+     .equity = self.current_account_state_.equity(),
+     .peak_equity = self.current_account_state_.peak_equity(),
+     .drawdown = self.current_account_state_.drawdown(),
      .max_drawdown = self.max_drawdown_,
      .cumulative_duration = self.sum_of_durations_,
      .cumulative_investment = self.cumulative_investments_,
@@ -401,16 +407,11 @@ public:
 
 private:
   const Asset& asset_;
-
   const Market& market_;
-
   const Broker& broker_;
-
   const Profile& profile_;
 
-  double total_equity_;
-  double capital_;
-  double peak_equity_;
+  BacktestAccountState current_account_state_;
   double max_drawdown_;
 
   std::time_t sum_of_durations_;
@@ -437,19 +438,17 @@ private:
 
   auto current_equity(this const BacktestRunner& self) noexcept -> double
   {
-    return self.capital_ + self.trade_session_.unrealized_pnl();
+    return self.current_account_state_.equity();
   }
 
   auto current_drawdown(this const BacktestRunner& self) noexcept -> double
   {
-    return self.peak_equity_ ? (self.peak_equity_ - self.current_equity()) /
-                                self.peak_equity_ * 100.0
-                             : 0.0;
+    return self.current_account_state_.drawdown();
   }
 
   auto available_cash(this const BacktestRunner& self) noexcept -> double
   {
-    return std::max(self.capital_ -
+    return std::max(self.current_account_state_.capital() -
                      std::abs(self.trade_session_.unrealized_investment()),
                     0.0);
   }
@@ -573,10 +572,13 @@ private:
         self.break_even_count_++;
       }
 
-      self.capital_ += pnl;
+      self.current_account_state_.capital(
+       self.current_account_state_.capital() + pnl);
     }
 
-    self.peak_equity_ = std::max(self.peak_equity_, self.current_equity());
+    self.current_account_state_.unrealized_pnl(
+     self.trade_session_.unrealized_pnl());
+    self.current_account_state_.update_peak_to_current_equity();
     self.max_drawdown_ = std::max(self.max_drawdown_, self.current_drawdown());
   }
 
@@ -678,7 +680,7 @@ private:
          "Invalid stop price for risk-based position sizing"};
       }
 
-      const auto risk_value = value * self.total_equity_;
+      const auto risk_value = value * self.current_account_state_.equity();
       return std::abs(risk_value / risk_distance);
     }
     case PositionSizing::Mode::FixedQuantity:
@@ -694,7 +696,8 @@ private:
         throw std::runtime_error{
          "Invalid entry price for equity-percent position sizing"};
       }
-      return std::abs(self.total_equity_ * value / entry_price);
+      return std::abs(self.current_account_state_.equity() * value /
+                      entry_price);
     }
 
     return 0.0;

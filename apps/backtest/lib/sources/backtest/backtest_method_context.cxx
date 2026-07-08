@@ -1,5 +1,6 @@
 module;
 
+#include <algorithm>
 #include <cstddef>
 #include <limits>
 #include <string>
@@ -10,19 +11,115 @@ export module pludux.backtest:backtest_method_context;
 
 import pludux;
 
-import :backtest_timeline;
-
 export namespace pludux::backtest {
+
+class BacktestAccountState {
+public:
+  BacktestAccountState() = default;
+
+  BacktestAccountState(double capital,
+                       double unrealized_pnl,
+                       double peak_equity,
+                       double initial_capital) noexcept
+  : capital_{capital}
+  , unrealized_pnl_{unrealized_pnl}
+  , peak_equity_{peak_equity}
+  , initial_capital_{initial_capital}
+  {
+  }
+
+  auto capital(this const BacktestAccountState& self) noexcept -> double
+  {
+    return self.capital_;
+  }
+
+  auto unrealized_pnl(this const BacktestAccountState& self) noexcept -> double
+  {
+    return self.unrealized_pnl_;
+  }
+
+  auto equity(this const BacktestAccountState& self) noexcept -> double
+  {
+    return self.capital_ + self.unrealized_pnl_;
+  }
+
+  auto peak_equity(this const BacktestAccountState& self) noexcept -> double
+  {
+    return self.peak_equity_;
+  }
+
+  auto effective_peak_equity(this const BacktestAccountState& self) noexcept
+   -> double
+  {
+    return std::max(self.peak_equity_, self.equity());
+  }
+
+  auto initial_capital(this const BacktestAccountState& self) noexcept -> double
+  {
+    return self.initial_capital_;
+  }
+
+  void capital(this BacktestAccountState& self, double capital) noexcept
+  {
+    self.capital_ = capital;
+  }
+
+  void unrealized_pnl(this BacktestAccountState& self,
+                      double unrealized_pnl) noexcept
+  {
+    self.unrealized_pnl_ = unrealized_pnl;
+  }
+
+  void peak_equity(this BacktestAccountState& self, double peak_equity) noexcept
+  {
+    self.peak_equity_ = peak_equity;
+  }
+
+  void update_peak_to_current_equity(this BacktestAccountState& self) noexcept
+  {
+    self.peak_equity(self.effective_peak_equity());
+  }
+
+  auto equity_percent(this const BacktestAccountState& self) noexcept -> double
+  {
+    if(self.initial_capital_ == 0.0) {
+      return std::numeric_limits<double>::quiet_NaN();
+    }
+
+    return self.equity() / self.initial_capital_ * 100.0;
+  }
+
+  auto drawdown(this const BacktestAccountState& self) noexcept -> double
+  {
+    const auto peak_equity = self.effective_peak_equity();
+    return peak_equity ? (peak_equity - self.equity()) / peak_equity * 100.0
+                       : 0.0;
+  }
+
+  auto drawdown_ratio(this const BacktestAccountState& self) noexcept -> double
+  {
+    return self.drawdown() / 100.0;
+  }
+
+  auto operator==(const BacktestAccountState& other) const noexcept
+   -> bool = default;
+
+private:
+  double capital_{std::numeric_limits<double>::quiet_NaN()};
+  double unrealized_pnl_{std::numeric_limits<double>::quiet_NaN()};
+  double peak_equity_{std::numeric_limits<double>::quiet_NaN()};
+  double initial_capital_{std::numeric_limits<double>::quiet_NaN()};
+};
 
 class BacktestMethodContext {
 public:
   BacktestMethodContext(
    DefaultMethodContext default_context,
    const OrderedNamedRegistry<AnySeriesMethod>& series_methods,
-   const BacktestTimeline& timeline) noexcept
+   const BacktestAccountState& account_state) noexcept
   : default_context_{std::move(default_context)}
   , series_methods_{series_methods}
-  , timeline_{timeline}
+  , account_state_{account_state}
   {
   }
 
@@ -69,57 +166,19 @@ public:
     return self.default_context_.index();
   }
 
-  auto previous_equity(this const BacktestMethodContext& self) noexcept
-   -> double
+  auto equity(this const BacktestMethodContext& self) noexcept -> double
   {
-    const auto index = self.index();
-    if(index == 0 || self.timeline_.empty()) {
-      return std::numeric_limits<double>::quiet_NaN();
-    }
-
-    const auto previous_index = index - 1;
-    if(previous_index >= self.timeline_.size()) {
-      return std::numeric_limits<double>::quiet_NaN();
-    }
-
-    return self.timeline_.equity(previous_index);
+    return self.account_state_.equity();
   }
 
-  auto previous_equity_percent(this const BacktestMethodContext& self) noexcept
-   -> double
+  auto equity_percent(this const BacktestMethodContext& self) noexcept -> double
   {
-    const auto index = self.index();
-    if(index == 0 || self.timeline_.empty()) {
-      return std::numeric_limits<double>::quiet_NaN();
-    }
-
-    const auto previous_index = index - 1;
-    if(previous_index >= self.timeline_.size()) {
-      return std::numeric_limits<double>::quiet_NaN();
-    }
-
-    const auto initial_capital = self.timeline_.initial_capital(previous_index);
-    if(initial_capital == 0.0) {
-      return std::numeric_limits<double>::quiet_NaN();
-    }
-
-    return self.timeline_.equity(previous_index) / initial_capital * 100.0;
+    return self.account_state_.equity_percent();
   }
 
-  auto previous_drawdown(this const BacktestMethodContext& self) noexcept
-   -> double
+  auto drawdown(this const BacktestMethodContext& self) noexcept -> double
   {
-    const auto index = self.index();
-    if(index == 0 || self.timeline_.empty()) {
-      return std::numeric_limits<double>::quiet_NaN();
-    }
-
-    const auto previous_index = index - 1;
-    if(previous_index >= self.timeline_.size()) {
-      return std::numeric_limits<double>::quiet_NaN();
-    }
-
-    return self.timeline_.drawdown(previous_index);
+    return self.account_state_.drawdown();
   }
 
   auto with_position_reference(this const BacktestMethodContext& self,
@@ -201,7 +260,7 @@ public:
 private:
   DefaultMethodContext default_context_;
   const OrderedNamedRegistry<AnySeriesMethod>& series_methods_;
-  const BacktestTimeline& timeline_;
+  const BacktestAccountState& account_state_;
   double position_initial_entry_price_{
    std::numeric_limits<double>::quiet_NaN()};
   double position_latest_entry_price_{std::numeric_limits<double>::quiet_NaN()};

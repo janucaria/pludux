@@ -700,11 +700,11 @@ TEST_F(ConfigParserTest, ParseScreenerDataMethod)
   EXPECT_EQ(method, deserialized_config);
 }
 
-TEST_F(ConfigParserTest, ParsePrevEquityMethod)
+TEST_F(ConfigParserTest, ParseEquityMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "PREV_EQUITY"
+      "method": "EQUITY"
     }
   )");
 
@@ -719,11 +719,11 @@ TEST_F(ConfigParserTest, ParsePrevEquityMethod)
   EXPECT_EQ(method, deserialized_config);
 }
 
-TEST_F(ConfigParserTest, ParsePrevEquityPercentMethod)
+TEST_F(ConfigParserTest, ParseEquityPercentMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "PREV_EQUITY_PERCENT"
+      "method": "EQUITY_PERCENT"
     }
   )");
 
@@ -738,11 +738,11 @@ TEST_F(ConfigParserTest, ParsePrevEquityPercentMethod)
   EXPECT_EQ(method, deserialized_config);
 }
 
-TEST_F(ConfigParserTest, ParsePrevDrawdownMethod)
+TEST_F(ConfigParserTest, ParseDrawdownMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "PREV_DRAWDOWN"
+      "method": "DRAWDOWN"
     }
   )");
 

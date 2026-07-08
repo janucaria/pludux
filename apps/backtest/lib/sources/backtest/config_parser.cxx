@@ -843,14 +843,13 @@ auto make_default_registered_config_parser() -> ConfigParser
    "DATA", serialize_data_node, parse_data_node);
 
   config_parser.register_node_parser(
-   "PREV_EQUITY", serialize_equity_node, parse_equity_node);
-
-  config_parser.register_node_parser("PREV_EQUITY_PERCENT",
-                                     serialize_equity_percent_node,
-                                     parse_equity_percent_node);
+   "EQUITY", serialize_equity_node, parse_equity_node);
 
   config_parser.register_node_parser(
-   "PREV_DRAWDOWN", serialize_drawdown_node, parse_drawdown_node);
+   "EQUITY_PERCENT", serialize_equity_percent_node, parse_equity_percent_node);
+
+  config_parser.register_node_parser(
+   "DRAWDOWN", serialize_drawdown_node, parse_drawdown_node);
 
   config_parser.register_node_parser(
    "OPEN", serialize_ohlcv_node<OpenNode>, parse_ohlcv_node<OpenNode>);

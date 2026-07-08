@@ -459,7 +459,7 @@ TEST(BacktestRunnerTest, RejectedPyramidingDoesNotChangePosition)
   EXPECT_EQ(timeline.trade_count(1), 0);
 }
 
-TEST(BacktestRunnerTest, PrevEquitySignalUsesLatestCompletedTimelineRow)
+TEST(BacktestRunnerTest, EquitySignalUsesCurrentAccountState)
 {
   const auto asset = Asset{"Test",
                            AssetHistory{{"Datetime", {1.0, 2.0}},
@@ -476,7 +476,7 @@ TEST(BacktestRunnerTest, PrevEquitySignalUsesLatestCompletedTimelineRow)
   auto timeline = BacktestTimeline{};
 
   auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
-  series_methods.set("prev_equity", EquityMethod{});
+  series_methods.set("equity", EquityMethod{});
 
   const auto entry_signal = EqualMethod{EquityMethod{}, ValueMethod{1000.0}};
 
@@ -503,24 +503,23 @@ TEST(BacktestRunnerTest, PrevEquitySignalUsesLatestCompletedTimelineRow)
   runner.run(series_results, timeline);
 
   ASSERT_EQ(timeline.size(), 1);
-  EXPECT_EQ(timeline.open_trade_count(last_timeline_index(timeline)), 0);
-  const auto first_results = series_results.results(std::string{"prev_equity"});
+  EXPECT_EQ(timeline.open_trade_count(last_timeline_index(timeline)), 1);
+  const auto first_results = series_results.results(std::string{"equity"});
   ASSERT_TRUE(first_results.has_value());
   ASSERT_EQ(first_results->get().size(), 1);
-  EXPECT_TRUE(std::isnan(first_results->get()[0]));
+  EXPECT_DOUBLE_EQ(first_results->get()[0], 1000.0);
 
   runner.run(series_results, timeline);
 
   ASSERT_EQ(timeline.size(), 2);
   EXPECT_EQ(timeline.open_trade_count(last_timeline_index(timeline)), 1);
-  const auto second_results =
-   series_results.results(std::string{"prev_equity"});
+  const auto second_results = series_results.results(std::string{"equity"});
   ASSERT_TRUE(second_results.has_value());
   ASSERT_EQ(second_results->get().size(), 2);
-  EXPECT_DOUBLE_EQ(second_results->get()[1], 1000.0);
+  EXPECT_DOUBLE_EQ(second_results->get()[1], 1010.0);
 }
 
-TEST(BacktestRunnerTest, PrevEquityPercentUsesLatestCompletedTimelineRow)
+TEST(BacktestRunnerTest, EquityPercentUsesCurrentAccountState)
 {
   const auto asset = Asset{"Test",
                            AssetHistory{{"Datetime", {1.0, 2.0, 3.0}},
@@ -537,7 +536,7 @@ TEST(BacktestRunnerTest, PrevEquityPercentUsesLatestCompletedTimelineRow)
   auto timeline = BacktestTimeline{};
 
   auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
-  series_methods.set("prev_equity_percent", EquityPercentMethod{});
+  series_methods.set("equity_percent", EquityPercentMethod{});
 
   const auto entry_signal =
    EqualMethod{EquityPercentMethod{}, ValueMethod{100.0}};
@@ -566,32 +565,32 @@ TEST(BacktestRunnerTest, PrevEquityPercentUsesLatestCompletedTimelineRow)
 
   ASSERT_EQ(timeline.size(), 1);
   const auto first_results =
-   series_results.results(std::string{"prev_equity_percent"});
+   series_results.results(std::string{"equity_percent"});
   ASSERT_TRUE(first_results.has_value());
   ASSERT_EQ(first_results->get().size(), 1);
-  EXPECT_TRUE(std::isnan(first_results->get()[0]));
+  EXPECT_DOUBLE_EQ(first_results->get()[0], 100.0);
 
   runner.run(series_results, timeline);
 
   ASSERT_EQ(timeline.size(), 2);
   const auto second_results =
-   series_results.results(std::string{"prev_equity_percent"});
+   series_results.results(std::string{"equity_percent"});
   ASSERT_TRUE(second_results.has_value());
   ASSERT_EQ(second_results->get().size(), 2);
-  EXPECT_DOUBLE_EQ(second_results->get()[1], 100.0);
+  EXPECT_DOUBLE_EQ(second_results->get()[1], 110.0);
   EXPECT_DOUBLE_EQ(timeline.equity(last_timeline_index(timeline)), 1100.0);
 
   runner.run(series_results, timeline);
 
   ASSERT_EQ(timeline.size(), 3);
   const auto third_results =
-   series_results.results(std::string{"prev_equity_percent"});
+   series_results.results(std::string{"equity_percent"});
   ASSERT_TRUE(third_results.has_value());
   ASSERT_EQ(third_results->get().size(), 3);
-  EXPECT_DOUBLE_EQ(third_results->get()[2], 110.0);
+  EXPECT_DOUBLE_EQ(third_results->get()[2], 101.0);
 }
 
-TEST(BacktestRunnerTest, PrevDrawdownSignalUsesLatestCompletedTimelineRow)
+TEST(BacktestRunnerTest, DrawdownSignalUsesCurrentAccountState)
 {
   const auto asset = Asset{"Test",
                            AssetHistory{{"Datetime", {1.0, 2.0, 3.0, 4.0}},
@@ -608,7 +607,7 @@ TEST(BacktestRunnerTest, PrevDrawdownSignalUsesLatestCompletedTimelineRow)
   auto timeline = BacktestTimeline{};
 
   auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
-  series_methods.set("prev_drawdown", DrawdownMethod{});
+  series_methods.set("drawdown", DrawdownMethod{});
 
   const auto entry_signal = EqualMethod{CloseMethod{}, ValueMethod{100.0}};
   const auto exit_signal = EqualMethod{CloseMethod{}, ValueMethod{90.0}};
@@ -650,27 +649,51 @@ TEST(BacktestRunnerTest, PrevDrawdownSignalUsesLatestCompletedTimelineRow)
   runner.run(series_results, timeline);
 
   ASSERT_EQ(timeline.size(), 1);
-  const auto first_results =
-   series_results.results(std::string{"prev_drawdown"});
+  const auto first_results = series_results.results(std::string{"drawdown"});
   ASSERT_TRUE(first_results.has_value());
   ASSERT_EQ(first_results->get().size(), 1);
-  EXPECT_TRUE(std::isnan(first_results->get()[0]));
+  EXPECT_DOUBLE_EQ(first_results->get()[0], 0.0);
 
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
 
   ASSERT_EQ(timeline.size(), 3);
   EXPECT_DOUBLE_EQ(timeline.drawdown(2), 1.0);
-
-  runner.run(series_results, timeline);
-
-  ASSERT_EQ(timeline.size(), 4);
   EXPECT_EQ(timeline.open_trade_count(last_timeline_index(timeline)), 1);
-  const auto last_results =
-   series_results.results(std::string{"prev_drawdown"});
+  const auto last_results = series_results.results(std::string{"drawdown"});
   ASSERT_TRUE(last_results.has_value());
-  ASSERT_EQ(last_results->get().size(), 4);
-  EXPECT_DOUBLE_EQ(last_results->get()[3], 1.0);
+  ASSERT_EQ(last_results->get().size(), 3);
+  EXPECT_DOUBLE_EQ(last_results->get()[2], 1.0);
+}
+
+TEST(BacktestRunnerTest, AccountStateDrawdownUsesEffectiveCurrentPeak)
+{
+  const auto account_state =
+   BacktestAccountState{1000.0, 100.0, 1000.0, 1000.0};
+
+  EXPECT_DOUBLE_EQ(account_state.equity(), 1100.0);
+  EXPECT_DOUBLE_EQ(account_state.effective_peak_equity(), 1100.0);
+  EXPECT_DOUBLE_EQ(account_state.drawdown(), 0.0);
+  EXPECT_DOUBLE_EQ(account_state.drawdown_ratio(), 0.0);
+}
+
+TEST(BacktestRunnerTest, MethodContextObservesMutatedAccountState)
+{
+  const auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  auto series_results = SeriesEvaluationResults{};
+  auto default_context = DefaultMethodContext{series_methods, series_results};
+  auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
+  const auto context =
+   BacktestMethodContext{default_context, series_methods, account_state};
+
+  EXPECT_DOUBLE_EQ(context.equity(), 1000.0);
+  EXPECT_DOUBLE_EQ(context.drawdown(), 0.0);
+
+  account_state.unrealized_pnl(-100.0);
+
+  EXPECT_DOUBLE_EQ(context.equity(), 900.0);
+  EXPECT_DOUBLE_EQ(context.equity_percent(), 90.0);
+  EXPECT_DOUBLE_EQ(context.drawdown(), 10.0);
 }
 
 TEST(BacktestRunnerTest, FixedQuantitySizingUsesExactQuantity)
@@ -840,10 +863,10 @@ TEST(BacktestRunnerTest, ScopedStopTargetAmountMethodsEvaluateDirectly)
   const auto snapshot = asset.get_snapshot(0);
   const auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
   auto series_results = SeriesEvaluationResults{};
-  const auto timeline = BacktestTimeline{};
   auto default_context = DefaultMethodContext{series_methods, series_results};
+  const auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
   auto context =
-   BacktestMethodContext{default_context, series_methods, timeline};
+   BacktestMethodContext{default_context, series_methods, account_state};
 
   const auto long_context = context.with_position_reference(100.0, 1.0);
   const auto short_context = context.with_position_reference(100.0, -1.0);
@@ -865,10 +888,10 @@ TEST(BacktestRunnerTest, PositionContextMethodsEvaluateDirectly)
   const auto snapshot = asset.get_snapshot(0);
   const auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
   auto series_results = SeriesEvaluationResults{};
-  const auto timeline = BacktestTimeline{};
   auto default_context = DefaultMethodContext{series_methods, series_results};
+  const auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
   auto context =
-   BacktestMethodContext{default_context, series_methods, timeline};
+   BacktestMethodContext{default_context, series_methods, account_state};
   const auto scoped_context =
    context.with_position_prices(90.0, 120.0, 105.0, 110.0, -1.0);
 
@@ -984,10 +1007,10 @@ TEST(BacktestRunnerTest, ScopedStopTargetPercentMethodsEvaluateDirectly)
   const auto snapshot = asset.get_snapshot(0);
   const auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
   auto series_results = SeriesEvaluationResults{};
-  const auto timeline = BacktestTimeline{};
   auto default_context = DefaultMethodContext{series_methods, series_results};
+  const auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
   const auto context =
-   BacktestMethodContext{default_context, series_methods, timeline}
+   BacktestMethodContext{default_context, series_methods, account_state}
     .with_position_reference(200.0, 1.0);
 
   EXPECT_DOUBLE_EQ(
@@ -1240,10 +1263,10 @@ TEST(BacktestRunnerTest, ScopedAtrStopAndRMultipleTargetEvaluateDirectly)
   const auto snapshot = asset.get_snapshot(0);
   const auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
   auto series_results = SeriesEvaluationResults{};
-  const auto timeline = BacktestTimeline{};
   auto default_context = DefaultMethodContext{series_methods, series_results};
+  const auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
   auto context =
-   BacktestMethodContext{default_context, series_methods, timeline};
+   BacktestMethodContext{default_context, series_methods, account_state};
   const auto stop_context = context.with_position_reference(100.0, 1.0);
   const auto stop_price =
    evaluate_series_method(SlAtrMethod{1.0, 2.0}, snapshot, stop_context);
