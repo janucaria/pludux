@@ -67,7 +67,7 @@
           "method": "GREATER_THAN",
           "params": {
             "target": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES_RESULT",
               "params": {
                 "name": "dc_upper20"
               }
@@ -77,7 +77,7 @@
               "params": {
                 "period": 1,
                 "source": {
-                  "method": "SERIES_VALUE",
+                  "method": "SERIES_RESULT",
                   "params": {
                     "name": "dc_upper20"
                   }
@@ -94,7 +94,7 @@
           "method": "LESS_THAN",
           "params": {
             "target": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES_RESULT",
               "params": {
                 "name": "dc_upper10"
               }
@@ -104,7 +104,7 @@
               "params": {
                 "period": 1,
                 "source": {
-                  "method": "SERIES_VALUE",
+                  "method": "SERIES_RESULT",
                   "params": {
                     "name": "dc_upper10"
                   }
@@ -147,7 +147,7 @@
           "method": "LINE",
           "params": {
             "source": {
-              "method": "SERIES",
+              "method": "SERIES_RESULT",
               "params": {
                 "name": "dc_upper20"
               }
@@ -159,7 +159,7 @@
           "method": "LINE",
           "params": {
             "source": {
-              "method": "SERIES",
+              "method": "SERIES_RESULT",
               "params": {
                 "name": "dc_lower20"
               }
@@ -171,7 +171,7 @@
           "method": "LINE",
           "params": {
             "source": {
-              "method": "SERIES",
+              "method": "SERIES_RESULT",
               "params": {
                 "name": "dc_upper10"
               }

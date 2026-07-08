@@ -49,7 +49,7 @@ TEST(AnyConditionMethodTest, NotEqualOperator)
   EXPECT_FALSE(condition_method1 == condition_method2);
 }
 
-TEST(AnyConditionMethodTest, SignalMethodsAreCoercedToNumericSeriesValues)
+TEST(AnyConditionMethodTest, SignalMethodsAreCoercedToNumericSeriesResults)
 {
   const auto asset_data = AssetHistory{{"close", {1.0}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};

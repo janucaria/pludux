@@ -34,7 +34,7 @@ auto make_default_registered_plot_source_method_parser()
   auto method_parser = PlotSourceMethodParser{};
 
   method_parser.register_method_parser(
-   "SERIES",
+   "SERIES_RESULT",
    [](const PlotSourceMethodParser& method_parser,
       const AnyPlotSourceMethod any_plot_source_method) -> jsoncons::ojson {
      auto serialized_method = jsoncons::ojson::null();

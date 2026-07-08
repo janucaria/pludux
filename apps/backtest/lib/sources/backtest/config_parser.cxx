@@ -984,19 +984,19 @@ auto make_default_registered_config_parser() -> ConfigParser
    });
 
   config_parser.register_node_parser(
-   "SERIES_VALUE",
+   "SERIES_RESULT",
    [](const ConfigParser&, const ErasedNode& node) {
-     const auto series_value_node = node_cast<SeriesValueNode>(node);
-     if(!series_value_node) {
+     const auto series_result_node = node_cast<SeriesResultNode>(node);
+     if(!series_result_node) {
        return jsoncons::ojson::null();
      }
      auto serialized_node = jsoncons::ojson{};
-     serialized_node["name"] = series_value_node->name();
+     serialized_node["name"] = series_result_node->name();
      return serialized_node;
    },
    [](ConfigParser::Parser, const jsoncons::ojson& params) {
      const auto name = get_param_or<std::string>(params, "name", "");
-     return ErasedNode{SeriesValueNode{name}};
+     return ErasedNode{SeriesResultNode{name}};
    });
 
   config_parser.register_node_parser(

@@ -164,9 +164,9 @@ TEST_F(HashSeriesMethodSimpleTest, SeriesNodeMethodHashProducesValidHash)
   EXPECT_NE(hash, 0);
 }
 
-TEST_F(HashSeriesMethodSimpleTest, SeriesValueMethodHashProducesValidHash)
+TEST_F(HashSeriesMethodSimpleTest, SeriesResultMethodHashProducesValidHash)
 {
-  SeriesValueMethod value{"my_value"};
+  SeriesResultMethod value{"my_value"};
   const auto hash = hash_series_method(value);
   EXPECT_NE(hash, 0);
 }
@@ -661,10 +661,10 @@ TEST_F(HashSeriesMethodEdgeCaseTest,
 }
 
 TEST_F(HashSeriesMethodEdgeCaseTest,
-       SeriesValueMethodWithDifferentNamesDifferentHash)
+       SeriesResultMethodWithDifferentNamesDifferentHash)
 {
-  SeriesValueMethod value1{"value_a"};
-  SeriesValueMethod value2{"value_b"};
+  SeriesResultMethod value1{"value_a"};
+  SeriesResultMethod value2{"value_b"};
   EXPECT_NE(hash_series_method(value1), hash_series_method(value2));
 }
 

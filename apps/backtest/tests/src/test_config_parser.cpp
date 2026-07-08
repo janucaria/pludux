@@ -163,11 +163,11 @@ TEST_F(ConfigParserTest, ParseScreenerSeriesNodeMethod)
   EXPECT_EQ(method, deserialized_config);
 }
 
-TEST_F(ConfigParserTest, ParseScreenerSeriesValueMethod)
+TEST_F(ConfigParserTest, ParseScreenerSeriesResultMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "SERIES_VALUE",
+      "method": "SERIES_RESULT",
       "params": {
         "name": "close"
       }
@@ -176,11 +176,11 @@ TEST_F(ConfigParserTest, ParseScreenerSeriesValueMethod)
 
   const auto method = parse_node_method(config);
 
-  const auto series_value_method =
-   series_method_cast<SeriesValueMethod>(method);
-  ASSERT_NE(series_value_method, nullptr);
+  const auto series_result_method =
+   series_method_cast<SeriesResultMethod>(method);
+  ASSERT_NE(series_result_method, nullptr);
 
-  EXPECT_EQ(series_value_method->name(), "close");
+  EXPECT_EQ(series_result_method->name(), "close");
 
   const auto serialized_config = serialize_node_method(method);
   const auto deserialized_config = parse_node_method(serialized_config);

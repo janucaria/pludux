@@ -7,7 +7,7 @@ export import :methods.change_method;
 export import :methods.lookback_method;
 export import :methods.select_output_method;
 export import :methods.series_node_method;
-export import :methods.series_value_method;
+export import :methods.series_result_method;
 
 export import :methods.operators_method;
 export import :methods.highest_method;

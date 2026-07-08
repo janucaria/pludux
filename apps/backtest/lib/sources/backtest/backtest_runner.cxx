@@ -271,13 +271,6 @@ public:
     auto context =
      BacktestMethodContext{default_context, series_methods, timeline};
 
-    for(const auto& [series_name, series_method] : series_methods) {
-      const auto series_value =
-       evaluate_series_method(series_method, asset_snapshot, context);
-      series_evaluation_results.put(series_method, series_value);
-      series_evaluation_results.alias(series_name, series_method);
-    }
-
     const auto current_drawdown_ratio = self.current_drawdown() / 100.0;
 
     self.trade_session_.begin_market_bar(
@@ -397,6 +390,13 @@ public:
      .unrealized_pnl = self.trade_session_.unrealized_pnl(),
      .unrealized_investment = self.trade_session_.unrealized_investment(),
      .unrealized_duration = self.trade_session_.unrealized_duration()});
+
+    for(const auto& [series_name, series_method] : series_methods) {
+      const auto series_result =
+       evaluate_series_method(series_method, asset_snapshot, context);
+      series_evaluation_results.put(series_method, series_result);
+      series_evaluation_results.alias(series_name, series_method);
+    }
   }
 
 private:

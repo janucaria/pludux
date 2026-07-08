@@ -42,7 +42,7 @@ target_sources(${PROJECT_NAME}
         src/methods/lookback_method.cxx
         src/methods/select_output_method.cxx
         src/methods/series_node_method.cxx
-        src/methods/series_value_method.cxx
+        src/methods/series_result_method.cxx
 
         src/methods/operators_method.cxx
         src/methods/highest_method.cxx
@@ -103,7 +103,7 @@ target_sources(${PROJECT_NAME}
         src/nodes/lookback_node.cxx
         src/nodes/select_output_node.cxx
         src/nodes/series_node.cxx
-        src/nodes/series_value_node.cxx
+        src/nodes/series_result_node.cxx
 
         src/nodes/operators_node.cxx
         src/nodes/highest_node.cxx

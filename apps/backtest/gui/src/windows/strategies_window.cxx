@@ -122,7 +122,7 @@ auto get_default_series_node(const std::string& series_id) -> ErasedNode
   } else if(series_id == "SERIES_REFERENCE") {
     return SeriesNode{""};
   } else if(series_id == "SERIES_RESULT") {
-    return SeriesValueNode{""};
+    return SeriesResultNode{""};
   } else if(series_id == "VALUE") {
     return ValueNode{0.0};
   } else if(series_id == "LOOKBACK") {
@@ -215,7 +215,7 @@ auto get_series_node_id(const ErasedNode& node) -> std::string
     return "SELECT_OUTPUT";
   } else if(node_cast<SeriesNode>(node)) {
     return "SERIES_REFERENCE";
-  } else if(node_cast<SeriesValueNode>(node)) {
+  } else if(node_cast<SeriesResultNode>(node)) {
     return "SERIES_RESULT";
   } else if(node_cast<CloseNode>(node)) {
     return "CLOSE";
@@ -417,7 +417,7 @@ auto get_series_node_title(const std::string& series_id) -> std::string
   } else if(series_id == "SERIES_REFERENCE") {
     return "Series Node";
   } else if(series_id == "SERIES_RESULT") {
-    return "Series Value";
+    return "Series Result";
   } else if(series_id == "VALUE") {
     return "Value";
   } else if(series_id == "LOOKBACK") {
@@ -674,7 +674,7 @@ auto get_plot_source_method_id(const AnyPlotSourceMethod& method) -> std::string
   if(plot_source_method_cast<ConstantPlotSourceMethod>(method)) {
     return "CONSTANT";
   } else if(plot_source_method_cast<SeriesPlotSourceMethod>(method)) {
-    return "SERIES";
+    return "SERIES_RESULT";
   }
 
   return "UNKNOWN";
@@ -687,8 +687,8 @@ auto get_plot_source_method_title(const std::string& plot_source_id)
     return "Constant Value";
   }
 
-  if(plot_source_id == "SERIES") {
-    return "Series Name";
+  if(plot_source_id == "SERIES_RESULT") {
+    return "Series Result";
   }
 
   return "Unknown";
@@ -701,7 +701,7 @@ auto get_default_plot_source_method(const std::string& plot_source_id)
     return ConstantPlotSourceMethod{0.0};
   }
 
-  if(plot_source_id == "SERIES") {
+  if(plot_source_id == "SERIES_RESULT") {
     return SeriesPlotSourceMethod{""};
   }
 
@@ -1579,7 +1579,7 @@ private:
       }() || ...);
     }.template operator()<SelectOutputNode,
                           SeriesNode,
-                          SeriesValueNode,
+                          SeriesResultNode,
                           DataNode,
                           LookbackNode,
                           NumericInputNode,
@@ -1730,7 +1730,7 @@ private:
   }
 
   void render_series_node_params(this auto& self,
-                                 SeriesValueNode& node,
+                                 SeriesResultNode& node,
                                  WindowContext& context)
   {
     if(self.changed_series_names_.contains(node.name())) {
@@ -3064,7 +3064,7 @@ private:
                           WindowContext& context)
   {
     static const auto source_ids =
-     std::vector<std::string>{"SERIES", "CONSTANT"};
+     std::vector<std::string>{"SERIES_RESULT", "CONSTANT"};
 
     ImGui::Text("Source:");
     ImGui::SameLine();
@@ -3088,7 +3088,7 @@ private:
 
           if(filter.PassFilter(source_title.c_str())) {
             if(ImGui::Selectable(source_title.c_str(), is_selected)) {
-              if(source_id == "SERIES" &&
+              if(source_id == "SERIES_RESULT" &&
                  self.available_series_names_.empty()) {
                 const auto source_method_title =
                  get_plot_source_method_title(source_id);
@@ -3100,7 +3100,7 @@ private:
               } else {
                 auto source = get_default_plot_source_method(source_id);
 
-                if(source_id == "SERIES") {
+                if(source_id == "SERIES_RESULT") {
                   if(auto* series_source_ptr =
                       plot_source_method_cast<SeriesPlotSourceMethod>(source)) {
                     const auto first_available_series_name =

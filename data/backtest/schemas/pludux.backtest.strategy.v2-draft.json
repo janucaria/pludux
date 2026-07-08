@@ -20,7 +20,7 @@
         }
       },
       "title": "Named Series",
-      "description": "A dictionary of reusable named series. Each key must be lower_snake_case. Define indicators, transformed price series, and intermediate calculations here so positions, signals, and plots can reference them consistently. When one named series needs the numeric output of another named series, use SERIES_VALUE. When a method needs the named series definition itself, use SERIES_NODE.",
+      "description": "A dictionary of reusable named series. Each key must be lower_snake_case. Define indicators, transformed price series, and intermediate calculations here so positions, signals, and plots can reference them consistently. When one named series needs the numeric output of another named series, use SERIES_RESULT. When a method needs the named series definition itself, use SERIES_NODE.",
       "examples": [
         {
           "fast_ema": {
@@ -321,7 +321,7 @@
     },
     "seriesAsParameter": {
       "title": "Series Input (Flexible Expression)",
-      "description": "Represents an input that can be a constant, a raw price series, a previously defined named series, or an inline series expression.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer using SERIES_VALUE to reference a named series defined in top-level 'series'.\n2. Prefer full method objects (e.g., EMA, RSI) when parameters are customized.\n3. Use quote shorthand (e.g., \"CLOSE\") only for raw OHLCV inputs.\n4. Use indicator shorthand (e.g., \"EMA\") ONLY when the default parameters are intended exactly.\n5. Use plain numbers only for constant values.\n\nConsistency rule:\n- Prefer defining reusable logic in top-level 'series' and referencing it via SERIES_VALUE instead of repeating inline expressions.\n\nDiscouraged but valid:\n- Mixing multiple styles in the same strategy (e.g., sometimes using shorthand, sometimes full objects).\n- Using indicator shorthand when custom parameters are needed.\n\nThis flexibility exists for convenience, but AI-generated strategies should follow a consistent style using named series and explicit method definitions.",
+      "description": "Represents an input that can be a constant, a raw price series, a previously defined named series, or an inline series expression.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer using SERIES_RESULT to reference a named series defined in top-level 'series'.\n2. Prefer full method objects (e.g., EMA, RSI) when parameters are customized.\n3. Use quote shorthand (e.g., \"CLOSE\") only for raw OHLCV inputs.\n4. Use indicator shorthand (e.g., \"EMA\") ONLY when the default parameters are intended exactly.\n5. Use plain numbers only for constant values.\n\nConsistency rule:\n- Prefer defining reusable logic in top-level 'series' and referencing it via SERIES_RESULT instead of repeating inline expressions.\n\nDiscouraged but valid:\n- Mixing multiple styles in the same strategy (e.g., sometimes using shorthand, sometimes full objects).\n- Using indicator shorthand when custom parameters are needed.\n\nThis flexibility exists for convenience, but AI-generated strategies should follow a consistent style using named series and explicit method definitions.",
       "oneOf": [
         {
           "type": "number",
@@ -378,7 +378,7 @@
         },
         {
           "value": {
-            "method": "SERIES_VALUE",
+            "method": "SERIES_RESULT",
             "params": {
               "name": "fast_ema"
             }
@@ -504,9 +504,9 @@
         {
           "properties": {
             "method": {
-              "const": "SERIES_VALUE",
+              "const": "SERIES_RESULT",
               "title": "Method",
-              "description": "Always use SERIES_VALUE to read the numeric output of a named series."
+              "description": "Always use SERIES_RESULT to read the numeric output of a named series."
             },
             "params": {
               "type": "object",
@@ -523,7 +523,7 @@
                 "name"
               ],
               "title": "Parameters",
-              "description": "Parameters for the SERIES_VALUE method.",
+              "description": "Parameters for the SERIES_RESULT method.",
               "examples": [
                 {
                   "name": "fast_ema"
@@ -536,11 +536,11 @@
           ]
         }
       ],
-      "title": "Series Value",
-      "description": "References the evaluated output value of a previously defined named series at the current bar. Use SERIES_VALUE when a method needs a numeric series value, such as comparisons, arithmetic, and crossover signals.",
+      "title": "Series Result",
+      "description": "References the evaluated output value of a previously defined named series at the current bar. Use SERIES_RESULT when a method needs a numeric series result, such as comparisons, arithmetic, and crossover signals.",
       "examples": [
         {
-          "method": "SERIES_VALUE",
+          "method": "SERIES_RESULT",
           "params": {
             "name": "fast_ema"
           }
@@ -579,7 +579,7 @@
                 "source": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Source Series",
-                  "description": "Source multi-output series node. Use a multi-output indicator directly, or use SERIES_NODE to refer to a named multi-output series. Do not use SERIES_VALUE here because SELECT_OUTPUT needs the series node, not its evaluated numeric value."
+                  "description": "Source multi-output series node. Use a multi-output indicator directly, or use SERIES_NODE to refer to a named multi-output series. Do not use SERIES_RESULT here because SELECT_OUTPUT needs the series node, not its evaluated numeric value."
                 }
               },
               "required": [
@@ -1894,12 +1894,12 @@
                 "augend": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Augend",
-                  "description": "First numeric input to add. Prefer SERIES_VALUE for named series and plain numbers for constants."
+                  "description": "First numeric input to add. Prefer SERIES_RESULT for named series and plain numbers for constants."
                 },
                 "addend": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Addend",
-                  "description": "Second numeric input to add. Prefer SERIES_VALUE for named series and plain numbers for constants."
+                  "description": "Second numeric input to add. Prefer SERIES_RESULT for named series and plain numbers for constants."
                 }
               },
               "required": [
@@ -1907,7 +1907,7 @@
                 "addend"
               ],
               "title": "Parameters",
-              "description": "Parameters for addition.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer SERIES_VALUE for named series inputs.\n2. Prefer plain numbers for constants.\n3. Prefer naming reusable arithmetic expressions in top-level 'series' instead of repeating them inline."
+              "description": "Parameters for addition.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer SERIES_RESULT for named series inputs.\n2. Prefer plain numbers for constants.\n3. Prefer naming reusable arithmetic expressions in top-level 'series' instead of repeating them inline."
             }
           },
           "required": [
@@ -1922,7 +1922,7 @@
           "method": "ADD",
           "params": {
             "augend": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES_RESULT",
               "params": {
                 "name": "fast_ema"
               }
@@ -1949,12 +1949,12 @@
                 "minuend": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Minuend",
-                  "description": "Value to subtract from. Prefer SERIES_VALUE for named series."
+                  "description": "Value to subtract from. Prefer SERIES_RESULT for named series."
                 },
                 "subtrahend": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Subtrahend",
-                  "description": "Value to subtract. Prefer SERIES_VALUE for named series and numbers for constants."
+                  "description": "Value to subtract. Prefer SERIES_RESULT for named series and numbers for constants."
                 }
               },
               "required": [
@@ -1978,7 +1978,7 @@
           "params": {
             "minuend": "CLOSE",
             "subtrahend": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES_RESULT",
               "params": {
                 "name": "slow_ema"
               }
@@ -2017,7 +2017,7 @@
                 "multiplier"
               ],
               "title": "Parameters",
-              "description": "Parameters for multiplication. Prefer SERIES_VALUE for named series and plain numbers for constants such as 2, 0.5, or 100."
+              "description": "Parameters for multiplication. Prefer SERIES_RESULT for named series and plain numbers for constants such as 2, 0.5, or 100."
             }
           },
           "required": [
@@ -2032,7 +2032,7 @@
           "method": "MULTIPLY",
           "params": {
             "multiplicand": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES_RESULT",
               "params": {
                 "name": "atr_14"
               }
@@ -2072,7 +2072,7 @@
                 "divisor"
               ],
               "title": "Parameters",
-              "description": "Parameters for division. Prefer SERIES_VALUE for named series and plain numbers for constants."
+              "description": "Parameters for division. Prefer SERIES_RESULT for named series and plain numbers for constants."
             }
           },
           "required": [
@@ -2087,7 +2087,7 @@
           "method": "DIVIDE",
           "params": {
             "dividend": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES_RESULT",
               "params": {
                 "name": "price_spread"
               }
@@ -2114,7 +2114,7 @@
                 "operand": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Operand",
-                  "description": "Numeric value to multiply by -1. Prefer SERIES_VALUE for named series."
+                  "description": "Numeric value to multiply by -1. Prefer SERIES_RESULT for named series."
                 }
               },
               "required": [
@@ -2136,7 +2136,7 @@
           "method": "NEGATE",
           "params": {
             "operand": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES_RESULT",
               "params": {
                 "name": "momentum"
               }
@@ -2184,7 +2184,7 @@
           "method": "SQRT",
           "params": {
             "operand": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES_RESULT",
               "params": {
                 "name": "variance_like_series"
               }
@@ -2210,7 +2210,7 @@
                 "source": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Source",
-                  "description": "Numeric source whose bar-to-bar change is calculated. Prefer SERIES_VALUE for named series and quote shorthand for raw OHLCV inputs."
+                  "description": "Numeric source whose bar-to-bar change is calculated. Prefer SERIES_RESULT for named series and quote shorthand for raw OHLCV inputs."
                 }
               },
               "title": "Parameters",
@@ -2232,7 +2232,7 @@
           "method": "CHANGE",
           "params": {
             "source": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES_RESULT",
               "params": {
                 "name": "fast_ema"
               }
@@ -2271,7 +2271,7 @@
                 "subtrahend"
               ],
               "title": "Parameters",
-              "description": "Parameters for absolute difference. Prefer SERIES_VALUE for named series and numbers for constants."
+              "description": "Parameters for absolute difference. Prefer SERIES_RESULT for named series and numbers for constants."
             }
           },
           "required": [
@@ -2287,7 +2287,7 @@
           "params": {
             "minuend": "CLOSE",
             "subtrahend": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES_RESULT",
               "params": {
                 "name": "slow_ema"
               }
@@ -2320,7 +2320,7 @@
                     }
                   ],
                   "title": "Base",
-                  "description": "Base numeric input that the percentage is applied to. Prefer quote shorthand for direct OHLCV input and SERIES_VALUE for named series."
+                  "description": "Base numeric input that the percentage is applied to. Prefer quote shorthand for direct OHLCV input and SERIES_RESULT for named series."
                 },
                 "percent": {
                   "type": "number",
@@ -2354,7 +2354,7 @@
           "method": "PERCENTAGE",
           "params": {
             "base": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES_RESULT",
               "params": {
                 "name": "atr_14"
               }
@@ -2699,7 +2699,7 @@
         }
       ],
       "title": "Series Definition",
-      "description": "Any valid Pludux series definition. This can be a raw market series, indicator, transformation, arithmetic series, SELECT_OUTPUT chain, SERIES_NODE reference, SERIES_VALUE reference, or a signal method used as a numeric series. When a signal method is used in series context, true is coerced to 1 and false is coerced to 0."
+      "description": "Any valid Pludux series definition. This can be a raw market series, indicator, transformation, arithmetic series, SELECT_OUTPUT chain, SERIES_NODE reference, SERIES_RESULT reference, or a signal method used as a numeric series. When a signal method is used in series context, true is coerced to 1 and false is coerced to 0."
     },
     "signalAsParameter": {
       "oneOf": [
@@ -2779,12 +2779,12 @@
                 "target": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Target",
-                  "description": "Left-hand numeric input being compared. For AI-generated strategies, prefer SERIES_VALUE when referring to a previously defined named series. Raw quote shorthand like \"CLOSE\" is fine for direct market inputs. Avoid repeating complex inline indicator expressions here if they can be defined once in top-level 'series' and reused."
+                  "description": "Left-hand numeric input being compared. For AI-generated strategies, prefer SERIES_RESULT when referring to a previously defined named series. Raw quote shorthand like \"CLOSE\" is fine for direct market inputs. Avoid repeating complex inline indicator expressions here if they can be defined once in top-level 'series' and reused."
                 },
                 "threshold": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Threshold",
-                  "description": "Right-hand numeric input used as the comparison reference. This can be a constant number, raw quote shorthand, another indicator output, or SERIES_VALUE. Prefer constants for fixed thresholds such as 30, 50, or 70. Prefer SERIES_VALUE when the threshold comes from another named series."
+                  "description": "Right-hand numeric input used as the comparison reference. This can be a constant number, raw quote shorthand, another indicator output, or SERIES_RESULT. Prefer constants for fixed thresholds such as 30, 50, or 70. Prefer SERIES_RESULT when the threshold comes from another named series."
                 }
               },
               "required": [
@@ -2792,7 +2792,7 @@
                 "threshold"
               ],
               "title": "Parameters",
-              "description": "Parameters for a numeric comparison signal.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer SERIES_VALUE when either side refers to a named series.\n2. Prefer plain numbers for fixed thresholds.\n3. Prefer quote shorthand only for direct OHLCV inputs.\n4. Prefer reusing named series instead of repeating inline indicator expressions.\n\nDiscouraged but valid:\n- Comparing a complex inline indicator on one side when the same logic is reused elsewhere.\n- Mixing shorthand and nested styles inconsistently across the same strategy."
+              "description": "Parameters for a numeric comparison signal.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer SERIES_RESULT when either side refers to a named series.\n2. Prefer plain numbers for fixed thresholds.\n3. Prefer quote shorthand only for direct OHLCV inputs.\n4. Prefer reusing named series instead of repeating inline indicator expressions.\n\nDiscouraged but valid:\n- Comparing a complex inline indicator on one side when the same logic is reused elsewhere.\n- Mixing shorthand and nested styles inconsistently across the same strategy."
             }
           },
           "required": [
@@ -2807,7 +2807,7 @@
           "method": "LESS_EQUAL",
           "params": {
             "target": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES_RESULT",
               "params": {
                 "name": "rsi_14"
               }
@@ -2820,7 +2820,7 @@
           "params": {
             "target": "CLOSE",
             "threshold": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES_RESULT",
               "params": {
                 "name": "fast_ema"
               }
@@ -2851,12 +2851,12 @@
                 "value": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Value",
-                  "description": "The changing numeric series being tested for a cross. For AI-generated strategies, this should usually be a price source, an indicator output, or SERIES_VALUE referring to a named series."
+                  "description": "The changing numeric series being tested for a cross. For AI-generated strategies, this should usually be a price source, an indicator output, or SERIES_RESULT referring to a named series."
                 },
                 "baseline": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Baseline",
-                  "description": "The numeric reference that 'value' is checked against. This is commonly another named indicator output via SERIES_VALUE, a raw quote series, or a constant threshold."
+                  "description": "The numeric reference that 'value' is checked against. This is commonly another named indicator output via SERIES_RESULT, a raw quote series, or a constant threshold."
                 }
               },
               "required": [
@@ -2864,7 +2864,7 @@
                 "baseline"
               ],
               "title": "Parameters",
-              "description": "Parameters for a cross signal.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer SERIES_VALUE when crossing one named series against another named series.\n2. Prefer quote shorthand only for direct OHLCV inputs.\n3. Prefer defining reusable indicators in top-level 'series' and then crossing their SERIES_VALUE outputs.\n4. Use constants only when intentionally crossing against a fixed level.\n\nDiscouraged but valid:\n- Repeating inline indicator expressions inside CROSSOVER or CROSSUNDER when they could be named once and reused.\n- Using SERIES_NODE here. Cross signals operate on numeric values, not series definitions."
+              "description": "Parameters for a cross signal.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer SERIES_RESULT when crossing one named series against another named series.\n2. Prefer quote shorthand only for direct OHLCV inputs.\n3. Prefer defining reusable indicators in top-level 'series' and then crossing their SERIES_RESULT outputs.\n4. Use constants only when intentionally crossing against a fixed level.\n\nDiscouraged but valid:\n- Repeating inline indicator expressions inside CROSSOVER or CROSSUNDER when they could be named once and reused.\n- Using SERIES_NODE here. Cross signals operate on numeric values, not series definitions."
             }
           },
           "required": [
@@ -2879,13 +2879,13 @@
           "method": "CROSSOVER",
           "params": {
             "value": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES_RESULT",
               "params": {
                 "name": "fast_ema"
               }
             },
             "baseline": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES_RESULT",
               "params": {
                 "name": "slow_ema"
               }
@@ -2897,7 +2897,7 @@
           "params": {
             "value": "CLOSE",
             "baseline": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES_RESULT",
               "params": {
                 "name": "bb_upper"
               }
@@ -3242,7 +3242,7 @@
         {
           "properties": {
             "method": {
-              "const": "SERIES"
+              "const": "SERIES_RESULT"
             },
             "params": {
               "type": "object",
@@ -3265,7 +3265,7 @@
           ]
         }
       ],
-      "title": "Series Plot Source",
+      "title": "Series Result Plot Source",
       "description": "Plot source that reads the output of a named series by name."
     },
     "constantPlotSource": {
@@ -3462,7 +3462,7 @@
       "description": "A group of one or more plot items, optionally overlaid on price."
     }
   },
-  "description": "Schema for a Pludux backtest strategy file. This schema is designed to be machine-validatable and AI-friendly so an AI can generate complete strategy JSON files with named series, inline numeric inputs, signals, trading rules, and optional chart plots. Important rule: use SERIES_NODE when another method needs a named series definition itself, and use SERIES_VALUE when another method needs the evaluated numeric output of a named series. For numeric inputs, specify representation (Decimal, SignedInteger, or UnsignedInteger) to constrain how values are formatted and displayed.",
+  "description": "Schema for a Pludux backtest strategy file. This schema is designed to be machine-validatable and AI-friendly so an AI can generate complete strategy JSON files with named series, inline numeric inputs, signals, trading rules, and optional chart plots. Important rule: use SERIES_NODE when another method needs a named series definition itself, and use SERIES_RESULT when another method needs the evaluated numeric output of a named series. For numeric inputs, specify representation (Decimal, SignedInteger, or UnsignedInteger) to constrain how values are formatted and displayed.",
   "examples": [
     {
       "version": 2,
@@ -3537,13 +3537,13 @@
               "method": "CROSSOVER",
               "params": {
                 "value": {
-                  "method": "SERIES_VALUE",
+                  "method": "SERIES_RESULT",
                   "params": {
                     "name": "fast_ema"
                   }
                 },
                 "baseline": {
-                  "method": "SERIES_VALUE",
+                  "method": "SERIES_RESULT",
                   "params": {
                     "name": "slow_ema"
                   }
@@ -3558,13 +3558,13 @@
               "method": "CROSSUNDER",
               "params": {
                 "value": {
-                  "method": "SERIES_VALUE",
+                  "method": "SERIES_RESULT",
                   "params": {
                     "name": "fast_ema"
                   }
                 },
                 "baseline": {
-                  "method": "SERIES_VALUE",
+                  "method": "SERIES_RESULT",
                   "params": {
                     "name": "slow_ema"
                   }

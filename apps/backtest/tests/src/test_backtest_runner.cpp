@@ -1364,6 +1364,125 @@ auto make_three_bar_asset(double first_open,
                             {"Volume", {0.0, 0.0, 0.0}}}};
 }
 
+TEST(BacktestRunnerTest, SeriesResultDelayedSignalUsesCompletedResultsOnly)
+{
+  const auto asset = make_three_bar_asset(100.0,
+                                          100.0,
+                                          100.0,
+                                          10.0,
+                                          100.0,
+                                          100.0,
+                                          100.0,
+                                          20.0,
+                                          100.0,
+                                          100.0,
+                                          100.0,
+                                          30.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  series_methods.set("close", CloseMethod{});
+
+  const auto entry_signal =
+   EqualMethod{SeriesResultMethod{"close"}, ValueMethod{20.0}};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  std::move(series_methods),
+                  BacktestRunner::PositionRule{entry_signal,
+                                               BooleanMethod<false>{},
+                                               BooleanMethod<false>{},
+                                               1,
+                                               OpenMethod{},
+                                               false,
+                                               false,
+                                               OpenMethod{},
+                                               false},
+                  BacktestRunner::PositionRule{},
+                  1000.0};
+
+  runner.run(series_results, timeline);
+
+  ASSERT_EQ(timeline.size(), 1);
+  EXPECT_EQ(timeline.open_trade_count(last_timeline_index(timeline)), 0);
+  auto close_results = series_results.results(std::string{"close"});
+  ASSERT_TRUE(close_results.has_value());
+  ASSERT_EQ(close_results->get().size(), 1);
+  EXPECT_DOUBLE_EQ(close_results->get()[0], 10.0);
+
+  runner.run(series_results, timeline);
+
+  ASSERT_EQ(timeline.size(), 2);
+  EXPECT_EQ(timeline.open_trade_count(last_timeline_index(timeline)), 0);
+  close_results = series_results.results(std::string{"close"});
+  ASSERT_TRUE(close_results.has_value());
+  ASSERT_EQ(close_results->get().size(), 2);
+  EXPECT_DOUBLE_EQ(close_results->get()[1], 20.0);
+
+  runner.run(series_results, timeline);
+
+  ASSERT_EQ(timeline.size(), 3);
+  EXPECT_EQ(timeline.open_trade_count(last_timeline_index(timeline)), 1);
+  close_results = series_results.results(std::string{"close"});
+  ASSERT_TRUE(close_results.has_value());
+  ASSERT_EQ(close_results->get().size(), 3);
+  EXPECT_DOUBLE_EQ(close_results->get()[2], 30.0);
+}
+
+TEST(BacktestRunnerTest, SeriesResultDelayZeroSignalEvaluatesCurrentBar)
+{
+  const auto asset = make_single_bar_asset_with_close(100.0, 125.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  series_methods.set("close", CloseMethod{});
+
+  const auto entry_signal =
+   EqualMethod{SeriesResultMethod{"close"}, ValueMethod{125.0}};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  std::move(series_methods),
+                  BacktestRunner::PositionRule{entry_signal,
+                                               BooleanMethod<false>{},
+                                               BooleanMethod<false>{},
+                                               1,
+                                               OpenMethod{},
+                                               false,
+                                               false,
+                                               OpenMethod{},
+                                               false,
+                                               0,
+                                               OpenMethod{}},
+                  BacktestRunner::PositionRule{},
+                  1000.0};
+
+  runner.run(series_results, timeline);
+
+  ASSERT_EQ(timeline.size(), 1);
+  EXPECT_EQ(timeline.open_trade_count(last_timeline_index(timeline)), 1);
+  const auto close_results = series_results.results(std::string{"close"});
+  ASSERT_TRUE(close_results.has_value());
+  ASSERT_EQ(close_results->get().size(), 1);
+  EXPECT_DOUBLE_EQ(close_results->get()[0], 125.0);
+}
+
 TEST(BacktestRunnerTest,
      SignalDelayZeroCloseEntryUsesCurrentSignalAndClosePrice)
 {

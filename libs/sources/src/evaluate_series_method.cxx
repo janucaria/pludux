@@ -41,7 +41,7 @@ import :methods.wma_method;
 import :methods.rma_method;
 import :methods.select_output_method;
 import :methods.series_node_method;
-import :methods.series_value_method;
+import :methods.series_result_method;
 import :methods.stddev_method;
 import :methods.stoch_method;
 import :methods.stoch_rsi_method;
@@ -873,10 +873,10 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
   }
 }
 
-// SeriesValue
+// SeriesResult
 
 auto pludux_tag_invoke(EvaluateSeriesMethod,
-                       const SeriesValueMethod& method,
+                       const SeriesResultMethod& method,
                        AssetSnapshot asset_snapshot,
                        MethodContextable auto context) noexcept -> double
 {
@@ -885,6 +885,10 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
   }
 
   const auto result_index = asset_snapshot.index();
+  if(result_index == context.index()) {
+    return context.call_series_method(method.name(), asset_snapshot);
+  }
+
   return context.get_series_result(method.name(), result_index);
 }
 
