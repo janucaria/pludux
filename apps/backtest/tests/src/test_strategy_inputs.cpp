@@ -99,16 +99,19 @@ TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
         "exit": {
           "signalDelay": 0,
           "price": "CLOSE",
-          "signal": false
+          "signal": false,
+          "reduce": 0.25
         },
         "stopLoss": {
           "enabled": true,
           "trailing": true,
-          "stopPrice": "OPEN"
+          "stopPrice": "OPEN",
+          "reduce": 0.5
         },
         "takeProfit": {
           "enabled": true,
-          "targetPrice": 120
+          "targetPrice": 120,
+          "reduce": 0.75
         },
         "pyramiding": {
           "signalDelay": 0,
@@ -132,6 +135,7 @@ TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
   EXPECT_TRUE(node_cast<CloseNode>(strategy.long_position().entry().price()));
   EXPECT_EQ(strategy.long_position().exit().signal_delay(), 0);
   EXPECT_TRUE(node_cast<CloseNode>(strategy.long_position().exit().price()));
+  EXPECT_DOUBLE_EQ(strategy.long_position().exit().reduce(), 0.25);
   EXPECT_EQ(strategy.long_position().pyramiding().signal_delay(), 0);
   EXPECT_TRUE(
    node_cast<CloseNode>(strategy.long_position().pyramiding().price()));
@@ -142,9 +146,11 @@ TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
    strategy.long_position().pyramiding().unfavorable_stop_target_reference(),
    StopTargetReferencePrice::LatestEntryPrice);
   EXPECT_TRUE(strategy.long_position().stop_loss().trailing());
+  EXPECT_DOUBLE_EQ(strategy.long_position().stop_loss().reduce(), 0.5);
   EXPECT_TRUE(
    node_cast<OpenNode>(strategy.long_position().stop_loss().stop_price()));
   EXPECT_TRUE(strategy.long_position().take_profit().enabled());
+  EXPECT_DOUBLE_EQ(strategy.long_position().take_profit().reduce(), 0.75);
   EXPECT_TRUE(
    node_cast<ValueNode>(strategy.long_position().take_profit().target_price()));
   EXPECT_FALSE(strategy.short_position().entry().signal() ==
@@ -155,7 +161,10 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
 {
   auto long_position = Strategy::Position{};
   long_position.entry(Strategy::Entry{TrueNode{}, 0, CloseNode{}});
-  long_position.exit(Strategy::Exit{FalseNode{}, 0, CloseNode{}});
+  long_position.exit(Strategy::Exit{FalseNode{},
+                                    0,
+                                    CloseNode{},
+                                    0.25});
   auto pyramiding = Strategy::Pyramiding{};
   pyramiding.signal_delay(0);
   pyramiding.price(CloseNode{});
@@ -164,8 +173,14 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
   pyramiding.unfavorable_stop_target_reference(
    StopTargetReferencePrice::LatestEntryPrice);
   long_position.pyramiding(pyramiding);
-  long_position.stop_loss(Strategy::StopLoss{true, OpenNode{}, false});
-  long_position.take_profit(Strategy::TakeProfit{true, ValueNode{120.0}});
+  long_position.stop_loss(Strategy::StopLoss{true,
+                                             OpenNode{},
+                                             false,
+                                             0.5});
+  long_position.take_profit(
+   Strategy::TakeProfit{true,
+                        ValueNode{120.0},
+                        0.75});
 
   const auto strategy =
    Strategy{"Test", {}, std::move(long_position), Strategy::Position{}, {}};
@@ -196,6 +211,36 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
              .at("method")
              .as<std::string>(),
             "CLOSE");
+  EXPECT_DOUBLE_EQ(strategy_json.at("positions")
+                    .at("long")
+                    .at("exit")
+                    .at("reduce")
+                    .as<double>(),
+                   0.25);
+  EXPECT_DOUBLE_EQ(strategy_json.at("positions")
+                    .at("long")
+                    .at("stopLoss")
+                    .at("reduce")
+                    .as<double>(),
+                   0.5);
+  EXPECT_DOUBLE_EQ(strategy_json.at("positions")
+                    .at("long")
+                    .at("takeProfit")
+                    .at("reduce")
+                    .as<double>(),
+                   0.75);
+  EXPECT_FALSE(strategy_json.at("positions")
+                .at("long")
+                .at("exit")
+                .contains("reduceRounding"));
+  EXPECT_FALSE(strategy_json.at("positions")
+                .at("long")
+                .at("stopLoss")
+                .contains("reduceRounding"));
+  EXPECT_FALSE(strategy_json.at("positions")
+                .at("long")
+                .at("takeProfit")
+                .contains("reduceRounding"));
   EXPECT_EQ(strategy_json.at("positions")
              .at("long")
              .at("exit")

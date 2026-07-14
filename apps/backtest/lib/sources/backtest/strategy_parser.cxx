@@ -1,6 +1,7 @@
 module;
 
 #include <cctype>
+#include <cmath>
 #include <cstdint>
 #include <istream>
 #include <memory>
@@ -53,6 +54,15 @@ auto serialize_stop_target_reference_price(StopTargetReferencePrice reference)
   return "AVERAGE_PRICE";
 }
 
+auto parse_reduce(const jsoncons::ojson& config) -> double
+{
+  const auto reduce = config.get_value_or<double>("reduce", 1.0);
+  if(!std::isfinite(reduce) || reduce <= 0.0 || reduce > 1.0) {
+    throw std::runtime_error{"Invalid exit reduce value: expected (0, 1]"};
+  }
+  return reduce;
+}
+
 auto parse_strategy_position(const jsoncons::ojson& position_json,
                              auto& config_parser) -> Strategy::Position
 {
@@ -87,7 +97,8 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
     position.exit(
      Strategy::Exit{config_parser.parse_node(exit_json.at("signal")),
                     exit_json.at("signalDelay").as<std::size_t>(),
-                    config_parser.parse_node(exit_json.at("price"))});
+                    config_parser.parse_node(exit_json.at("price")),
+                    parse_reduce(exit_json)});
   }
 
   if(position_json.contains("pyramiding")) {
@@ -130,7 +141,8 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
   position.stop_loss(
    Strategy::StopLoss{stop_loss_json.get_value_or<bool>("enabled", false),
                       config_parser.parse_node(stop_loss_json.at("stopPrice")),
-                      stop_loss_json.get_value_or<bool>("trailing", false)});
+                      stop_loss_json.get_value_or<bool>("trailing", false),
+                      parse_reduce(stop_loss_json)});
 
   if(position_json.contains("takeProfit")) {
     const auto& take_profit_json = position_json.at("takeProfit");
@@ -142,7 +154,8 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
 
     position.take_profit(Strategy::TakeProfit{
      take_profit_json.get_value_or<bool>("enabled", false),
-     config_parser.parse_node(take_profit_json.at("targetPrice"))});
+     config_parser.parse_node(take_profit_json.at("targetPrice")),
+     parse_reduce(take_profit_json)});
   }
 
   return position;
@@ -166,6 +179,7 @@ auto serialize_strategy_position(const Strategy::Position& position,
   position_json["exit"]["signalDelay"] = position.exit().signal_delay();
   position_json["exit"]["price"] =
    config_parser.serialize_node(position.exit().price());
+  position_json["exit"]["reduce"] = position.exit().reduce();
 
   position_json["pyramiding"] = jsoncons::ojson{};
   position_json["pyramiding"]["signal"] =
@@ -188,12 +202,14 @@ auto serialize_strategy_position(const Strategy::Position& position,
   position_json["stopLoss"]["trailing"] = position.stop_loss().trailing();
   position_json["stopLoss"]["stopPrice"] =
    config_parser.serialize_node(position.stop_loss().stop_price());
+  position_json["stopLoss"]["reduce"] = position.stop_loss().reduce();
 
   if(position.take_profit().enabled()) {
     position_json["takeProfit"] = jsoncons::ojson{};
     position_json["takeProfit"]["enabled"] = true;
     position_json["takeProfit"]["targetPrice"] =
      config_parser.serialize_node(position.take_profit().target_price());
+    position_json["takeProfit"]["reduce"] = position.take_profit().reduce();
   }
 
   return position_json;

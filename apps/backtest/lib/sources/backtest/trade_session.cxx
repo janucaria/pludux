@@ -43,6 +43,7 @@ public:
   , open_position_{std::move(open_position)}
   , trade_events_{}
   , closed_trades_{}
+  , realized_exits_{}
   , next_trade_id_{1}
   , next_event_id_{1}
   {
@@ -89,6 +90,12 @@ public:
     return self.closed_trades_;
   }
 
+  auto realized_exits(this const TradeSession& self) noexcept
+   -> const std::vector<ClosedTrade>&
+  {
+    return self.realized_exits_;
+  }
+
   void begin_market_bar(this TradeSession& self,
                         std::time_t timestamp,
                         double price,
@@ -99,6 +106,7 @@ public:
     self.market_lookback_ = lookback;
     self.trade_events_.clear();
     self.closed_trades_.clear();
+    self.realized_exits_.clear();
   }
 
   void entry_position(this TradeSession& self, const TradeEntry& entry)
@@ -229,6 +237,7 @@ public:
                                        total_fees,
                                        closed_position_size,
                                        closed_investment);
+    self.realized_exits_.push_back(closed_trade);
     auto event = self.open_position_->scaled_out(exit_event_id,
                                                  exit.position_size(),
                                                  self.market_timestamp_,
@@ -310,6 +319,7 @@ private:
   std::optional<TradePosition> open_position_;
   std::vector<TradeEvent> trade_events_;
   std::vector<ClosedTrade> closed_trades_;
+  std::vector<ClosedTrade> realized_exits_;
   std::size_t next_trade_id_;
   std::size_t next_event_id_;
 };

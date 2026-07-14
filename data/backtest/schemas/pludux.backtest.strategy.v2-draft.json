@@ -166,6 +166,9 @@
                   "default": "OPEN",
                   "title": "Exit Price",
                   "description": "Price expression evaluated on the action bar and used as the signal-exit execution price."
+                },
+                "reduce": {
+                  "$ref": "#/$defs/exitReduce"
                 }
               },
               "required": [
@@ -289,6 +292,9 @@
           "$ref": "#/$defs/seriesAsParameter",
           "title": "Stop Price",
           "description": "Required price expression for the stop side of the trade. The evaluated stop price is always used to calculate risk-based position size; when enabled is true, it is also used as the stop-loss exit level."
+        },
+        "reduce": {
+          "$ref": "#/$defs/exitReduce"
         }
       },
       "required": [
@@ -311,6 +317,9 @@
           "$ref": "#/$defs/seriesAsParameter",
           "title": "Target Price",
           "description": "Price expression for the profit target. It can be a constant, a raw price series, a named series, or an inline series expression."
+        },
+        "reduce": {
+          "$ref": "#/$defs/exitReduce"
         }
       },
       "required": [
@@ -318,6 +327,14 @@
       ],
       "title": "Take Profit",
       "description": "Profit-side configuration for a position. When enabled is true, the evaluated target price is used as the take-profit exit level."
+    },
+    "exitReduce": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 1,
+      "default": 1,
+      "title": "Position Reduction",
+      "description": "Fraction of the remaining position to close when this exit triggers. A value of 1 closes the full remaining position."
     },
     "seriesAsParameter": {
       "title": "Series Input (Flexible Expression)",

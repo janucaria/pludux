@@ -84,6 +84,7 @@ export class PlotDataWindow {
 public:
   PlotDataWindow()
   : last_selected_backtest_opt_{}
+  , last_timeline_size_opt_{}
   , bullish_color_{0.5, 1, 0, 1}
   , bearish_color_{1, 0, 0.5, 1}
   , risk_color_{1, 0, 0, 0.25}
@@ -115,7 +116,6 @@ public:
     const auto& backtest_series_results =
      app_state.get_series_results(backtest_handle);
     const auto timeline_size = backtest_timelines.size();
-    const auto is_backtest_should_run = timeline_size < asset.size();
 
     const auto startegy_handle = backtest.strategy_handle();
     const auto& strategy = app_state.get_strategy(startegy_handle);
@@ -142,17 +142,21 @@ public:
       self.row_ratios_.resize(total_row_count, 1);
     }
 
+    const auto timeline_size_changed =
+     !self.last_timeline_size_opt_ ||
+     self.last_timeline_size_opt_.value() != timeline_size;
     const auto reset_chart_view =
-     is_backtest_should_run ||
+     timeline_size_changed ||
      self.is_selected_backtest_changed(backtest_handle) ||
      must_resize_row_ratios;
 
     if(reset_chart_view) {
       axis_x_flags |= ImPlotAxisFlags_AutoFit;
       axis_y_flags |= ImPlotAxisFlags_AutoFit;
-
-      self.last_selected_backtest_opt_ = backtest_handle;
     }
+
+    self.last_selected_backtest_opt_ = backtest_handle;
+    self.last_timeline_size_opt_ = timeline_size;
 
     if(ImPlot::BeginSubplots("##MainPlots",
                              static_cast<int>(self.row_ratios_.size()),
@@ -189,9 +193,10 @@ public:
         ImPlot::SetupAxis(ImAxis_Y1, "Price", axis_y_flags);
         ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
 
-        self.draw_trades("Trades", backtest_timelines, asset);
+        self.plot_position("Trade Positions", backtest_timelines);
         self.plot_ohlc("OHLC", asset, timeline_size);
         self.overlays_plots(context);
+        self.plot_signal("Trade Signals", backtest_timelines, asset);
 
         ImPlot::EndPlot();
       }
@@ -257,6 +262,7 @@ public:
 
 private:
   std::optional<backtest::BacktestStoreHandle> last_selected_backtest_opt_;
+  std::optional<std::size_t> last_timeline_size_opt_;
 
   ImVec4 bullish_color_;
   ImVec4 bearish_color_;
@@ -520,17 +526,6 @@ private:
     }
   }
 
-  void draw_trades(this const PlotDataWindow& self,
-                   const char* label_id,
-                   const backtest::BacktestTimeline& backtest_timelines,
-                   const backtest::Asset& asset)
-  {
-    static_cast<void>(label_id);
-
-    self.plot_position("Trade Positions", backtest_timelines);
-    self.plot_signal("Trade Signals", backtest_timelines, asset);
-  }
-
   void plot_position(this const PlotDataWindow& self,
                      const char* label_id,
                      const backtest::BacktestTimeline& backtest_timelines)
@@ -655,6 +650,19 @@ private:
 
     if(ImPlot::BeginItem(label_id)) {
       const auto timeline_size = backtest_timelines.size();
+      const auto plot_top = ImPlot::GetPlotPos().y;
+      const auto plot_bottom = plot_top + ImPlot::GetPlotSize().y;
+      const auto clamp_marker_y = [&](float y,
+                                      float top_padding,
+                                      float bottom_padding) {
+        const auto minimum = plot_top + top_padding;
+        const auto maximum = plot_bottom - bottom_padding;
+        if(minimum > maximum) {
+          return (minimum + maximum) * 0.5f;
+        }
+
+        return std::clamp(y, minimum, maximum);
+      };
 
       for(auto i = std::size_t{0}; i < timeline_size; ++i) {
         const auto snapshot = asset.get_snapshot(i);
@@ -665,6 +673,9 @@ private:
             rejected_pos.y += marker_offset;
             const auto rejected_color = ImGui::GetColorU32(self.bearish_color_);
             constexpr auto rejected_marker_size = 6.0f;
+            rejected_pos.y = clamp_marker_y(rejected_pos.y,
+                                             rejected_marker_size,
+                                             rejected_marker_size);
 
             draw_list->AddLine(ImVec2{rejected_pos.x - rejected_marker_size,
                                       rejected_pos.y - rejected_marker_size},
@@ -685,11 +696,15 @@ private:
 
             auto entry_pos = ImPlot::PlotToPixels(i, entry_low);
             entry_pos.y += marker_offset;
+            constexpr auto entry_marker_height = 10.0f;
+            entry_pos.y = clamp_marker_y(entry_pos.y,
+                                          entry_marker_height,
+                                          ImGui::GetTextLineHeight());
 
             draw_list->AddTriangleFilled(
              ImVec2{entry_pos.x - 5, entry_pos.y},
              ImVec2{entry_pos.x + 5, entry_pos.y},
-             ImVec2{entry_pos.x, entry_pos.y - 10},
+             ImVec2{entry_pos.x, entry_pos.y - entry_marker_height},
              ImGui::GetColorU32(self.bullish_color_));
 
             const auto trade_count_str = std::format("#{}", event.trade_id());
@@ -705,6 +720,11 @@ private:
 
             auto exit_pos = ImPlot::PlotToPixels(i, exit_high);
             exit_pos.y -= marker_offset;
+            constexpr auto exit_label_offset = 13.0f;
+            constexpr auto full_exit_marker_height = 10.0f;
+            exit_pos.y = clamp_marker_y(exit_pos.y,
+                                         exit_label_offset,
+                                         full_exit_marker_height);
 
             const auto exit_color = [&]() {
               if(event.type() == backtest::TradeEvent::Type::stop_loss) {
@@ -720,10 +740,22 @@ private:
               return ImGui::GetColorU32(self.bearish_color_);
             }();
 
-            draw_list->AddTriangleFilled(ImVec2{exit_pos.x - 5, exit_pos.y},
-                                         ImVec2{exit_pos.x + 5, exit_pos.y},
-                                         ImVec2{exit_pos.x, exit_pos.y + 10},
-                                         exit_color);
+            if(event.is_scale_out()) {
+              constexpr auto scale_out_half_width = 4.0f;
+              constexpr auto scale_out_height = 8.0f;
+              draw_list->AddTriangle(
+               ImVec2{exit_pos.x - scale_out_half_width, exit_pos.y},
+               ImVec2{exit_pos.x + scale_out_half_width, exit_pos.y},
+               ImVec2{exit_pos.x, exit_pos.y + scale_out_height},
+               exit_color,
+               2.0f);
+            } else {
+              draw_list->AddTriangleFilled(
+               ImVec2{exit_pos.x - 5, exit_pos.y},
+               ImVec2{exit_pos.x + 5, exit_pos.y},
+               ImVec2{exit_pos.x, exit_pos.y + full_exit_marker_height},
+               exit_color);
+            }
 
             const auto trade_count_str = std::format("#{}", event.trade_id());
             const auto text_size = ImGui::CalcTextSize(trade_count_str.c_str());

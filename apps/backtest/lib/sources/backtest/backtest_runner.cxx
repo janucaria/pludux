@@ -60,7 +60,10 @@ public:
                  StopTargetReferencePrice favorable_stop_target_reference =
                   StopTargetReferencePrice::AveragePrice,
                  StopTargetReferencePrice unfavorable_stop_target_reference =
-                  StopTargetReferencePrice::AveragePrice)
+                  StopTargetReferencePrice::AveragePrice,
+                 double signal_exit_reduce = 1.0,
+                 double stop_loss_reduce = 1.0,
+                 double take_profit_reduce = 1.0)
     : entry_method_{std::move(entry_method)}
     , exit_method_{std::move(exit_method)}
     , pyramiding_signal_{std::move(pyramiding_signal)}
@@ -78,6 +81,9 @@ public:
     , pyramiding_price_method_{std::move(pyramiding_price_method)}
     , favorable_stop_target_reference_{favorable_stop_target_reference}
     , unfavorable_stop_target_reference_{unfavorable_stop_target_reference}
+    , signal_exit_reduce_{signal_exit_reduce}
+    , stop_loss_reduce_{stop_loss_reduce}
+    , take_profit_reduce_{take_profit_reduce}
     {
     }
 
@@ -182,6 +188,21 @@ public:
       return self.unfavorable_stop_target_reference_;
     }
 
+    auto signal_exit_reduce(this const PositionRule& self) noexcept -> double
+    {
+      return self.signal_exit_reduce_;
+    }
+
+    auto stop_loss_reduce(this const PositionRule& self) noexcept -> double
+    {
+      return self.stop_loss_reduce_;
+    }
+
+    auto take_profit_reduce(this const PositionRule& self) noexcept -> double
+    {
+      return self.take_profit_reduce_;
+    }
+
   private:
     AnySeriesMethod entry_method_{BooleanMethod<false>{}};
     AnySeriesMethod exit_method_{BooleanMethod<false>{}};
@@ -202,6 +223,9 @@ public:
      StopTargetReferencePrice::AveragePrice};
     StopTargetReferencePrice unfavorable_stop_target_reference_{
      StopTargetReferencePrice::AveragePrice};
+    double signal_exit_reduce_{1.0};
+    double stop_loss_reduce_{1.0};
+    double take_profit_reduce_{1.0};
   };
 
   BacktestRunner(const Asset& asset,
@@ -297,12 +321,12 @@ public:
         const auto closing_position_is_long =
          open_position->is_long_direction();
         self.trade_session_.exit_position(*exit_trade, fee);
+        self.mark_exit_consumed(exit_trade->reason());
 
         if(!self.trade_session_.is_open()) {
           closed_position_is_long = closing_position_is_long;
+          self.pyramiding_layers_ = 0;
         }
-
-        self.pyramiding_layers_ = 0;
         exit_was_triggered = true;
       }
 
@@ -368,6 +392,7 @@ public:
           self.trade_session_.sync_latest_event_with_open_position();
         }
         self.pyramiding_layers_ = 1;
+        self.reset_consumed_exits();
       }
     }
 
@@ -435,6 +460,32 @@ private:
   std::size_t pyramiding_layers_;
 
   bool is_failed_;
+  bool signal_exit_consumed_{};
+  bool stop_loss_consumed_{};
+  bool take_profit_consumed_{};
+
+  void reset_consumed_exits(this BacktestRunner& self) noexcept
+  {
+    self.signal_exit_consumed_ = false;
+    self.stop_loss_consumed_ = false;
+    self.take_profit_consumed_ = false;
+  }
+
+  void mark_exit_consumed(this BacktestRunner& self,
+                          TradeExit::Reason reason) noexcept
+  {
+    switch(reason) {
+    case TradeExit::Reason::signal:
+      self.signal_exit_consumed_ = true;
+      break;
+    case TradeExit::Reason::stop_loss:
+      self.stop_loss_consumed_ = true;
+      break;
+    case TradeExit::Reason::take_profit:
+      self.take_profit_consumed_ = true;
+      break;
+    }
+  }
 
   auto current_equity(this const BacktestRunner& self) noexcept -> double
   {
@@ -556,6 +607,11 @@ private:
 
   void update_accounting(this BacktestRunner& self) noexcept
   {
+    for(const auto& realized_exit : self.trade_session_.realized_exits()) {
+      self.current_account_state_.capital(
+       self.current_account_state_.capital() + realized_exit.pnl());
+    }
+
     for(const auto& closed_trade : self.trade_session_.closed_trades()) {
       const auto pnl = closed_trade.pnl();
 
@@ -571,9 +627,6 @@ private:
       } else {
         self.break_even_count_++;
       }
-
-      self.current_account_state_.capital(
-       self.current_account_state_.capital() + pnl);
     }
 
     self.current_account_state_.unrealized_pnl(
@@ -861,58 +914,138 @@ private:
     return std::nullopt;
   }
 
+  auto make_exit_trade(this const BacktestRunner& self,
+                       double remaining_position_size,
+                       double exit_price,
+                       TradeExit::Reason reason,
+                       double reduce)
+   -> std::optional<TradeExit>
+  {
+    if(!std::isfinite(reduce) || reduce <= 0.0 || reduce > 1.0) {
+      throw std::runtime_error{"Invalid exit reduce value: expected (0, 1]"};
+    }
+
+    const auto remaining_quantity = std::abs(remaining_position_size);
+    if(remaining_quantity == 0.0) {
+      return std::nullopt;
+    }
+
+    auto exit_quantity = remaining_quantity;
+    if(reduce < 1.0) {
+      const auto quantity_step = self.market_.quantity_step();
+      const auto minimum_quantity = self.market_.min_order_quantity();
+      const auto snap_to_integer = [](double value) noexcept {
+        const auto nearest_integer = std::round(value);
+        const auto tolerance = 1e-12 * std::max(1.0, std::abs(value));
+        return std::abs(value - nearest_integer) <= tolerance ? nearest_integer
+                                                              : value;
+      };
+      const auto minimum_valid_quantity = quantity_step > 0.0
+                                            ? std::max(
+                                               quantity_step,
+                                               quantity_step * std::ceil(
+                                                snap_to_integer(
+                                                 minimum_quantity /
+                                                 quantity_step)))
+                                            : minimum_quantity;
+
+      exit_quantity = remaining_quantity * reduce;
+      if(quantity_step > 0.0) {
+        const auto step_ratio =
+         snap_to_integer(exit_quantity / quantity_step);
+
+        exit_quantity = quantity_step * std::floor(step_ratio + 0.5);
+      }
+
+      exit_quantity = std::max(exit_quantity, minimum_valid_quantity);
+      exit_quantity = std::min(exit_quantity, remaining_quantity);
+
+      const auto remaining_after_exit = remaining_quantity - exit_quantity;
+      if(remaining_after_exit > 0.0 &&
+         remaining_after_exit < minimum_valid_quantity) {
+        exit_quantity = remaining_quantity;
+      }
+    }
+
+    exit_quantity = std::min(exit_quantity, remaining_quantity);
+    const auto direction = remaining_position_size > 0.0 ? 1.0 : -1.0;
+    return TradeExit{direction * exit_quantity, exit_price, reason};
+  }
+
   auto exit_trade(this BacktestRunner& self,
                   const AssetSnapshot& asset_snapshot,
                   TradePosition& position,
-                  MethodContextable auto context) noexcept
+                  MethodContextable auto context)
    -> std::optional<TradeExit>
   {
     const auto position_size = position.unrealized_position_size();
     const auto is_long_direction = position_size > 0;
     const auto is_short_direction = position_size < 0;
+    const auto& position_rule =
+     is_long_direction ? self.long_position_ : self.short_position_;
     const auto open_exit_price = asset_snapshot.open();
 
     const auto prev_snapshot = asset_snapshot[1];
 
     position.update_trailing_stop(prev_snapshot.close());
 
-    if(position.is_stop_loss_triggered(asset_snapshot.high(),
+    if(!self.stop_loss_consumed_ &&
+       position.is_stop_loss_triggered(asset_snapshot.high(),
                                        asset_snapshot.low())) {
       const auto stop_price = position.stop_loss_price();
       const auto stop_exit_price = is_long_direction
                                     ? std::min(open_exit_price, stop_price)
                                     : std::max(open_exit_price, stop_price);
-      return TradeExit{
-       position_size, stop_exit_price, TradeExit::Reason::stop_loss};
+      if(auto exit = self.make_exit_trade(
+          position_size,
+          stop_exit_price,
+          TradeExit::Reason::stop_loss,
+          position_rule.stop_loss_reduce())) {
+        return exit;
+      }
     }
 
-    if(position.is_take_profit_triggered(asset_snapshot.high(),
+    if(!self.take_profit_consumed_ &&
+       position.is_take_profit_triggered(asset_snapshot.high(),
                                          asset_snapshot.low())) {
       const auto target_price = position.take_profit_price();
       const auto target_exit_price = is_long_direction
                                       ? std::max(open_exit_price, target_price)
                                       : std::min(open_exit_price, target_price);
-      return TradeExit{
-       position_size, target_exit_price, TradeExit::Reason::take_profit};
+      if(auto exit = self.make_exit_trade(
+          position_size,
+          target_exit_price,
+          TradeExit::Reason::take_profit,
+          position_rule.take_profit_reduce())) {
+        return exit;
+      }
     }
 
-    if(is_long_direction) {
+    if(!self.signal_exit_consumed_ && is_long_direction) {
       const auto signal_snapshot =
        asset_snapshot[self.long_position_.exit_signal_delay()];
       if(static_cast<bool>(evaluate_series_method(
           self.long_position_.exit_method(), signal_snapshot, context))) {
         const auto exit_price = evaluate_series_method(
          self.long_position_.exit_price_method(), asset_snapshot, context);
-        return TradeExit{position_size, exit_price, TradeExit::Reason::signal};
+        return self.make_exit_trade(
+         position_size,
+         exit_price,
+         TradeExit::Reason::signal,
+         self.long_position_.signal_exit_reduce());
       }
-    } else if(is_short_direction) {
+    } else if(!self.signal_exit_consumed_ && is_short_direction) {
       const auto signal_snapshot =
        asset_snapshot[self.short_position_.exit_signal_delay()];
       if(static_cast<bool>(evaluate_series_method(
           self.short_position_.exit_method(), signal_snapshot, context))) {
         const auto exit_price = evaluate_series_method(
          self.short_position_.exit_price_method(), asset_snapshot, context);
-        return TradeExit{position_size, exit_price, TradeExit::Reason::signal};
+        return self.make_exit_trade(
+         position_size,
+         exit_price,
+         TradeExit::Reason::signal,
+         self.short_position_.signal_exit_reduce());
       }
     }
 

@@ -14,6 +14,7 @@ TEST(TradeSessionTest, DefaultConstructor)
   EXPECT_FALSE(session.open_position().has_value());
   EXPECT_TRUE(session.trade_events().empty());
   EXPECT_TRUE(session.closed_trades().empty());
+  EXPECT_TRUE(session.realized_exits().empty());
   EXPECT_EQ(session.market_timestamp(), std::time_t{0});
   EXPECT_TRUE(std::isnan(session.market_price()));
   EXPECT_EQ(session.market_lookback(), std::size_t{0});
@@ -167,10 +168,15 @@ TEST(TradeSessionTest, PartialScaleOutEmitsRecordAndKeepsPositionOpen)
   ASSERT_TRUE(session.open_position().has_value());
   ASSERT_EQ(session.trade_events().size(), 1);
   EXPECT_TRUE(session.closed_trades().empty());
+  ASSERT_EQ(session.realized_exits().size(), 1);
+  EXPECT_DOUBLE_EQ(session.realized_exits().front().pnl(), 30.0);
 
   const auto& event = session.trade_events().back();
   EXPECT_TRUE(event.is_exit());
+  EXPECT_TRUE(event.is_scale_out());
+  EXPECT_EQ(event.type(), TradeEvent::Type::exit_signal);
   EXPECT_DOUBLE_EQ(event.position_size(), 1.0);
+  EXPECT_DOUBLE_EQ(event.position_size_after(), 2.0);
   EXPECT_DOUBLE_EQ(event.investment_before(), 300.0);
 
   EXPECT_DOUBLE_EQ(session.unrealized_pnl(), 40.0);
@@ -191,7 +197,10 @@ TEST(TradeSessionTest, FullExitEmitsRecordAndClearsOpenPosition)
 
   const auto& event = session.trade_events().back();
   EXPECT_TRUE(event.is_exit());
+  EXPECT_FALSE(event.is_scale_out());
+  EXPECT_EQ(event.type(), TradeEvent::Type::exit_signal);
   EXPECT_DOUBLE_EQ(event.position_size(), 2.0);
+  EXPECT_DOUBLE_EQ(event.position_size_after(), 0.0);
 
   const auto& trade = session.closed_trades().back();
   EXPECT_EQ(trade.trade_id(), std::size_t{1});

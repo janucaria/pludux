@@ -86,10 +86,12 @@ public:
 
     Exit(ErasedNode signal,
          std::size_t signal_delay = 1,
-         ErasedNode price = OpenNode{})
+         ErasedNode price = OpenNode{},
+         double reduce = 1.0)
     : signal_{std::move(signal)}
     , signal_delay_{signal_delay}
     , price_{std::move(price)}
+    , reduce_{reduce}
     {
     }
 
@@ -125,10 +127,21 @@ public:
       self.price_ = std::move(price);
     }
 
+    auto reduce(this const Exit& self) noexcept -> double
+    {
+      return self.reduce_;
+    }
+
+    void reduce(this Exit& self, double reduce) noexcept
+    {
+      self.reduce_ = reduce;
+    }
+
   private:
     ErasedNode signal_;
     std::size_t signal_delay_;
     ErasedNode price_;
+    double reduce_;
   };
 
   class Pyramiding {
@@ -216,9 +229,11 @@ public:
   class TakeProfit {
   public:
     TakeProfit(bool enabled = false,
-               ErasedNode target_price = TpRMultipleNode{2.0})
+               ErasedNode target_price = TpRMultipleNode{2.0},
+               double reduce = 1.0)
     : enabled_{enabled}
     , target_price_{std::move(target_price)}
+    , reduce_{reduce}
     {
     }
 
@@ -244,19 +259,32 @@ public:
       self.target_price_ = std::move(target_price);
     }
 
+    auto reduce(this const TakeProfit& self) noexcept -> double
+    {
+      return self.reduce_;
+    }
+
+    void reduce(this TakeProfit& self, double reduce) noexcept
+    {
+      self.reduce_ = reduce;
+    }
+
   private:
     bool enabled_;
     ErasedNode target_price_;
+    double reduce_;
   };
 
   class StopLoss {
   public:
     StopLoss(bool enabled = false,
              ErasedNode stop_price = SlAtrNode{14.0, 2.0},
-             bool trailing = false)
+             bool trailing = false,
+             double reduce = 1.0)
     : enabled_{enabled}
     , stop_price_{std::move(stop_price)}
     , trailing_{trailing}
+    , reduce_{reduce}
     {
     }
 
@@ -292,10 +320,21 @@ public:
       self.stop_price_ = std::move(stop_price);
     }
 
+    auto reduce(this const StopLoss& self) noexcept -> double
+    {
+      return self.reduce_;
+    }
+
+    void reduce(this StopLoss& self, double reduce) noexcept
+    {
+      self.reduce_ = reduce;
+    }
+
   private:
     bool enabled_;
     bool trailing_;
     ErasedNode stop_price_;
+    double reduce_;
   };
 
   class Position {

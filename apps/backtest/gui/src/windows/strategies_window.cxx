@@ -1,4 +1,5 @@
 module;
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <expected>
@@ -1306,6 +1307,11 @@ private:
       self.render_series_node(price, context);
       ImGui::PopID();
       exit.price(std::move(price));
+
+      ImGui::PushID("reduce");
+      const auto reduce = self.render_position_reduction(exit.reduce());
+      ImGui::PopID();
+      exit.reduce(reduce);
       position.exit(std::move(exit));
       ImGui::PopID();
     }
@@ -1412,6 +1418,13 @@ private:
       stop_loss.enabled(stop_loss_enabled);
       stop_loss.trailing(stop_loss_trailing);
 
+      ImGui::BeginDisabled(!stop_loss_enabled);
+      ImGui::PushID("reduce");
+      const auto reduce = self.render_position_reduction(stop_loss.reduce());
+      ImGui::PopID();
+      stop_loss.reduce(reduce);
+      ImGui::EndDisabled();
+
       ImGui::Text("Stop Price:");
       ImGui::SameLine();
       auto stop_price = stop_loss.stop_price();
@@ -1432,6 +1445,13 @@ private:
       ImGui::Checkbox("Enable Take Profit", &take_profit_enabled);
       take_profit.enabled(take_profit_enabled);
 
+      ImGui::BeginDisabled(!take_profit_enabled);
+      ImGui::PushID("reduce");
+      const auto reduce = self.render_position_reduction(take_profit.reduce());
+      ImGui::PopID();
+      take_profit.reduce(reduce);
+      ImGui::EndDisabled();
+
       ImGui::Text("Target Price:");
       ImGui::SameLine();
       auto target_price = take_profit.target_price();
@@ -1443,6 +1463,26 @@ private:
       position.take_profit(std::move(take_profit));
       ImGui::PopID();
     }
+  }
+
+  auto render_position_reduction(this auto&, double reduce) -> double
+  {
+    constexpr auto minimum_percent = 0.01;
+    constexpr auto maximum_percent = 100.0;
+    auto reduce_percent =
+     std::clamp(reduce * 100.0, minimum_percent, maximum_percent);
+
+    ImGui::Text("Position Reduction (%%):");
+    ImGui::SameLine();
+    ImGui::SliderScalar("##position_reduction",
+                        ImGuiDataType_Double,
+                        &reduce_percent,
+                        &minimum_percent,
+                        &maximum_percent,
+                        "%.2f%%",
+                        ImGuiSliderFlags_AlwaysClamp);
+
+    return reduce_percent / 100.0;
   }
 
   void render_series_node(this auto& self,

@@ -389,7 +389,10 @@ private:
         position.pyramiding().signal_delay(),
         node_to_erased_method(position.pyramiding().price(), input_context),
         position.pyramiding().favorable_stop_target_reference(),
-        position.pyramiding().unfavorable_stop_target_reference()};
+        position.pyramiding().unfavorable_stop_target_reference(),
+        position.exit().reduce(),
+        position.stop_loss().reduce(),
+        position.take_profit().reduce()};
      };
 
     self.running_backtests_.emplace(

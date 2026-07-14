@@ -182,7 +182,12 @@ public:
 
   auto is_scale_out(this const TradeEvent& self) noexcept -> bool
   {
-    return self.type_ == Type::scale_out;
+    const auto is_reason_specific_exit =
+     self.type_ == Type::exit_signal || self.type_ == Type::stop_loss ||
+     self.type_ == Type::take_profit;
+
+    return self.type_ == Type::scale_out ||
+           (is_reason_specific_exit && self.position_size_after_ != 0.0);
   }
 
   auto is_exit(this const TradeEvent& self) noexcept -> bool
