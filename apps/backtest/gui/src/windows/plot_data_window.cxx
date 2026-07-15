@@ -567,9 +567,10 @@ private:
           continue;
         }
 
-        const auto stop_price = open_position->stop_price();
         const auto stop_loss_price = open_position->stop_loss_price();
         const auto avg_price = open_position->average_price();
+        const auto risk_reference_price = open_position->risk_reference_price();
+        const auto risk_boundary_price = open_position->risk_boundary_price();
         const auto& take_profit_levels = open_position->take_profit_levels();
         for(auto index = take_profit_levels.size();
             index < take_profit_line_points.size();
@@ -628,7 +629,8 @@ private:
            line_points.push_back(right_pos);
          };
 
-        draw_price_band(avg_price, stop_price, self.risk_color_);
+        draw_price_band(
+         risk_reference_price, risk_boundary_price, self.risk_color_);
         for(const auto& level : take_profit_levels) {
           if(level.active()) {
             draw_price_band(avg_price, level.price(), self.reward_color_);

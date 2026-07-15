@@ -55,6 +55,8 @@ TEST(StrategyInputsTest, CollectsNumericInputsInStrategyTraversalOrder)
    NumericInputNode{
     "Exit Price", NumericInputNode::ValueRepresentation::Decimal, 110.0}}});
   long_position.pyramiding(std::move(long_pyramiding));
+  long_position.risk_distance(RiskDistanceAmountNode{NumericInputNode{
+   "Risk Distance", NumericInputNode::ValueRepresentation::Decimal, 10.0}});
   long_position.stop_loss(Strategy::StopLoss{
    false,
    NumericInputNode{
@@ -73,7 +75,7 @@ TEST(StrategyInputsTest, CollectsNumericInputsInStrategyTraversalOrder)
 
   const auto inputs = collect_numeric_inputs(strategy);
 
-  ASSERT_EQ(inputs.size(), 12);
+  ASSERT_EQ(inputs.size(), 13);
   EXPECT_EQ(inputs[0].label(), "Duplicate");
   EXPECT_DOUBLE_EQ(inputs[0].value(), 1.5);
   EXPECT_EQ(inputs[1].label(), "Duplicate");
@@ -94,10 +96,12 @@ TEST(StrategyInputsTest, CollectsNumericInputsInStrategyTraversalOrder)
   EXPECT_DOUBLE_EQ(inputs[8].value(), 110.0);
   EXPECT_EQ(inputs[9].label(), "Long Pyramid");
   EXPECT_DOUBLE_EQ(inputs[9].value(), 3.5);
-  EXPECT_EQ(inputs[10].label(), "Stop Price");
-  EXPECT_DOUBLE_EQ(inputs[10].value(), 95.0);
-  EXPECT_EQ(inputs[11].label(), "Target Price");
-  EXPECT_DOUBLE_EQ(inputs[11].value(), 120.0);
+  EXPECT_EQ(inputs[10].label(), "Risk Distance");
+  EXPECT_DOUBLE_EQ(inputs[10].value(), 10.0);
+  EXPECT_EQ(inputs[11].label(), "Stop Price");
+  EXPECT_DOUBLE_EQ(inputs[11].value(), 95.0);
+  EXPECT_EQ(inputs[12].label(), "Target Price");
+  EXPECT_DOUBLE_EQ(inputs[12].value(), 120.0);
 }
 
 TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
@@ -127,6 +131,10 @@ TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
             "reduce": 0.5
           }
         ],
+        "riskDistance": {
+          "method": "R_DISTANCE_PERCENTAGE",
+          "params": { "percentage": 5 }
+        },
         "stopLoss": {
           "enabled": true,
           "trailing": true,
@@ -163,6 +171,8 @@ TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
   const auto strategy = parse_backtest_strategy_json("Test", strategy_json);
 
   EXPECT_TRUE(strategy.long_position().stop_loss().enabled());
+  EXPECT_TRUE(node_cast<RiskDistancePercentNode>(
+   strategy.long_position().risk_distance()));
   EXPECT_EQ(strategy.long_position().entry().signal_delay(), 0);
   EXPECT_TRUE(node_cast<CloseNode>(strategy.long_position().entry().price()));
   ASSERT_EQ(strategy.long_position().exits().size(), 2);
@@ -209,6 +219,7 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
   pyramiding.unfavorable_stop_target_reference(
    StopTargetReferencePrice::LatestEntryPrice);
   long_position.pyramiding(pyramiding);
+  long_position.risk_distance(RiskDistanceAmountNode{10.0});
   long_position.stop_loss(Strategy::StopLoss{true, OpenNode{}, false, 0.5});
   long_position.take_profits(
    {Strategy::TakeProfit{true, ValueNode{120.0}, 0.75}});
@@ -221,6 +232,11 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
 
   EXPECT_TRUE(strategy_json.at("positions").at("long").is_object());
   EXPECT_TRUE(strategy_json.at("positions").at("short").is_object());
+  EXPECT_TRUE(strategy_json.at("positions")
+               .at("long")
+               .at("riskDistance")
+               .at("method")
+               .as<std::string>() == "R_DISTANCE_AMOUNT");
   EXPECT_TRUE(strategy_json.at("positions")
                .at("long")
                .at("stopLoss")
@@ -351,11 +367,16 @@ TEST(StrategyParserTest, DefaultStopLossAndEmptyExitCollections)
   const auto strategy = Strategy{};
 
   const auto* stop_price =
-   node_cast<SlAtrNode>(strategy.long_position().stop_loss().stop_price());
+   node_cast<Sl1RNode>(strategy.long_position().stop_loss().stop_price());
   ASSERT_NE(stop_price, nullptr);
-  const auto* stop_multiplier = node_cast<ValueNode>(stop_price->multiplier());
-  ASSERT_NE(stop_multiplier, nullptr);
-  EXPECT_DOUBLE_EQ(stop_multiplier->value(), 2.0);
+
+  const auto* risk_distance =
+   node_cast<RiskDistanceAtrNode>(strategy.long_position().risk_distance());
+  ASSERT_NE(risk_distance, nullptr);
+  const auto* risk_multiplier =
+   node_cast<ValueNode>(risk_distance->multiplier());
+  ASSERT_NE(risk_multiplier, nullptr);
+  EXPECT_DOUBLE_EQ(risk_multiplier->value(), 2.0);
 
   EXPECT_TRUE(strategy.long_position().take_profits().empty());
   EXPECT_TRUE(strategy.long_position().exits().empty());
@@ -375,8 +396,48 @@ TEST(StrategyParserTest, RejectsLegacySingularTakeProfit)
   EXPECT_THROW(
    parse_backtest_strategy_json(
     "Legacy",
-    R"({"version":2,"positions":{"long":{"stopLoss":{"stopPrice":"OPEN"},"takeProfit":{"enabled":true,"targetPrice":120}},"short":false}})"),
+    R"({"version":2,"positions":{"long":{"riskDistance":{"method":"R_DISTANCE_AMOUNT","params":{"amount":10}},"stopLoss":{"stopPrice":"OPEN"},"takeProfit":{"enabled":true,"targetPrice":120}},"short":false}})"),
    std::runtime_error);
+}
+
+TEST(StrategyParserTest, RejectsMissingOrImplicitRiskDistance)
+{
+  EXPECT_THROW(
+   parse_backtest_strategy_json(
+    "Missing",
+    R"({"version":2,"positions":{"long":{"stopLoss":{"stopPrice":"OPEN"}},"short":false}})"),
+   std::runtime_error);
+  EXPECT_THROW(
+   parse_backtest_strategy_json(
+    "Numeric",
+    R"({"version":2,"positions":{"long":{"riskDistance":10,"stopLoss":{"stopPrice":"OPEN"}},"short":false}})"),
+   std::runtime_error);
+  EXPECT_THROW(
+   parse_backtest_strategy_json(
+    "WrongMethod",
+    R"({"version":2,"positions":{"long":{"riskDistance":{"method":"VALUE","params":{"value":10}},"stopLoss":{"stopPrice":"OPEN"}},"short":false}})"),
+   std::runtime_error);
+}
+
+TEST(ConfigParserTest, RoundTripsExplicitRiskDistanceAndStop1RMethods)
+{
+  auto parser = make_default_registered_config_parser();
+  const auto configurations = std::vector<std::string>{
+   R"({"method":"R_DISTANCE_AMOUNT","params":{"amount":{"method":"VALUE","params":{"value":10.0}}}})",
+   R"({"method":"R_DISTANCE_PERCENTAGE","params":{"percentage":{"method":"VALUE","params":{"value":5.0}}}})",
+   R"({"method":"R_DISTANCE_ATR","params":{"period":{"method":"VALUE","params":{"value":14.0}},"multiplier":{"method":"VALUE","params":{"value":2.0}},"maSmoothingType":"RMA"}})",
+   R"({"method":"SL_1R"})"};
+
+  for(const auto& configuration : configurations) {
+    const auto expected = jsoncons::ojson::parse(configuration);
+    const auto node = parser.parse_node(expected);
+    EXPECT_EQ(parser.serialize_node(node), expected);
+  }
+
+  EXPECT_THROW(
+   parser.parse_node(jsoncons::ojson::parse(
+    R"({"method":"SL_R_MULTIPLE","params":{"multiple":{"method":"VALUE","params":{"value":1}}}})")),
+   std::invalid_argument);
 }
 
 TEST(StrategyParserTest, LoadsEveryBundledStrategySample)

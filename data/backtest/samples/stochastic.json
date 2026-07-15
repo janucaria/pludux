@@ -166,26 +166,29 @@
           }
         }
       ],
+      "riskDistance": {
+        "method": "R_DISTANCE_ATR",
+        "params": {
+          "period": {
+            "method": "VALUE",
+            "params": {
+              "value": 14
+            }
+          },
+          "multiplier": {
+            "method": "VALUE",
+            "params": {
+              "value": 2
+            }
+          },
+          "maSmoothingType": "RMA"
+        }
+      },
       "stopLoss": {
         "enabled": true,
         "trailing": false,
         "stopPrice": {
-          "method": "SL_ATR",
-          "params": {
-            "period": {
-              "method": "VALUE",
-              "params": {
-                "value": 14
-              }
-            },
-            "multiplier": {
-              "method": "VALUE",
-              "params": {
-                "value": 2
-              }
-            },
-            "maSmoothingType": "RMA"
-          }
+          "method": "SL_1R"
         }
       },
       "takeProfits": [

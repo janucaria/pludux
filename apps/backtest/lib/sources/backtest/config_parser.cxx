@@ -17,6 +17,7 @@ import pludux;
 
 import :drawdown_node;
 import :equity_node;
+import :risk_distance_node;
 import :stop_target_price_node;
 
 export namespace pludux::backtest {
@@ -1416,6 +1417,36 @@ auto make_default_registered_config_parser() -> ConfigParser
   config_parser.register_node_parser("TP_ATR",
                                      serialize_stop_target_atr_node<TpAtrNode>,
                                      parse_stop_target_atr_node<TpAtrNode>);
+
+  config_parser.register_node_parser(
+   "R_DISTANCE_AMOUNT",
+   [](const ConfigParser& config_parser, const ErasedNode& node) {
+     return serialize_stop_target_value_node<RiskDistanceAmountNode>(
+      config_parser, node, "amount");
+   },
+   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
+     return parse_stop_target_value_node<RiskDistanceAmountNode>(
+      config_parser, params, "amount", 1.0);
+   });
+
+  config_parser.register_node_parser(
+   "R_DISTANCE_PERCENTAGE",
+   [](const ConfigParser& config_parser, const ErasedNode& node) {
+     return serialize_stop_target_value_node<RiskDistancePercentNode>(
+      config_parser, node, "percentage");
+   },
+   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
+     return parse_stop_target_value_node<RiskDistancePercentNode>(
+      config_parser, params, "percentage", 1.0);
+   });
+
+  config_parser.register_node_parser(
+   "R_DISTANCE_ATR",
+   serialize_stop_target_atr_node<RiskDistanceAtrNode>,
+   parse_stop_target_atr_node<RiskDistanceAtrNode>);
+
+  config_parser.register_node_parser(
+   "SL_1R", serialize_ohlcv_node<Sl1RNode>, parse_ohlcv_node<Sl1RNode>);
 
   config_parser.register_node_parser(
    "TP_R_MULTIPLE",

@@ -32,7 +32,10 @@ public:
               double stop_price,
               double stop_loss_price,
               std::vector<TakeProfitLevel> take_profit_levels = {},
-              std::vector<SignalExitState> signal_exit_states = {})
+              std::vector<SignalExitState> signal_exit_states = {},
+              double risk_distance = NAN,
+              double risk_reference_price = NAN,
+              double risk_boundary_price = NAN)
   : trade_id_{trade_id}
   , exit_event_id_{exit_event_id}
   , exit_type_{exit_type}
@@ -48,6 +51,9 @@ public:
   , stop_loss_price_{stop_loss_price}
   , take_profit_levels_{std::move(take_profit_levels)}
   , signal_exit_states_{std::move(signal_exit_states)}
+  , risk_distance_{risk_distance}
+  , risk_reference_price_{risk_reference_price}
+  , risk_boundary_price_{risk_boundary_price}
   {
   }
 
@@ -130,6 +136,21 @@ public:
     return self.signal_exit_states_;
   }
 
+  auto risk_distance(this const ClosedTrade& self) noexcept -> double
+  {
+    return self.risk_distance_;
+  }
+
+  auto risk_reference_price(this const ClosedTrade& self) noexcept -> double
+  {
+    return self.risk_reference_price_;
+  }
+
+  auto risk_boundary_price(this const ClosedTrade& self) noexcept -> double
+  {
+    return self.risk_boundary_price_;
+  }
+
   auto average_price(this const ClosedTrade& self) noexcept -> double
   {
     return self.position_size_ ? self.investment_ / self.position_size_ : 0.0;
@@ -169,6 +190,9 @@ private:
   double stop_loss_price_{};
   std::vector<TakeProfitLevel> take_profit_levels_;
   std::vector<SignalExitState> signal_exit_states_;
+  double risk_distance_{NAN};
+  double risk_reference_price_{NAN};
+  double risk_boundary_price_{NAN};
 };
 
 } // namespace pludux::backtest

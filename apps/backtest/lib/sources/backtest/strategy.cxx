@@ -11,6 +11,7 @@ import pludux;
 import :trade_entry;
 import :trade_exit;
 import :plot_group;
+import :risk_distance_node;
 import :stop_target_price_node;
 
 export namespace pludux::backtest {
@@ -291,7 +292,7 @@ public:
   class StopLoss {
   public:
     StopLoss(bool enabled = false,
-             ErasedNode stop_price = SlAtrNode{14.0, 2.0},
+             ErasedNode stop_price = Sl1RNode{},
              bool trailing = false,
              double reduce = 1.0)
     : enabled_{enabled}
@@ -408,6 +409,16 @@ public:
       self.take_profits_ = std::move(take_profits);
     }
 
+    auto risk_distance(this const Position& self) noexcept -> const ErasedNode&
+    {
+      return self.risk_distance_;
+    }
+
+    void risk_distance(this Position& self, ErasedNode risk_distance) noexcept
+    {
+      self.risk_distance_ = std::move(risk_distance);
+    }
+
     auto stop_loss(this const Position& self) noexcept -> const StopLoss&
     {
       return self.stop_loss_;
@@ -422,6 +433,7 @@ public:
     Entry entry_;
     std::vector<Exit> exits_;
     Pyramiding pyramiding_;
+    ErasedNode risk_distance_{RiskDistanceAtrNode{}};
     std::vector<TakeProfit> take_profits_;
     StopLoss stop_loss_;
   };

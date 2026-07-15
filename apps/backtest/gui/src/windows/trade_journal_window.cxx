@@ -39,6 +39,8 @@ public:
                                           "Signal Exits",
                                           "Take Profit",
                                           "Stop Loss",
+                                          "Risk Distance",
+                                          "1R Boundary",
                                           "Avg Price",
                                           "Investment (Size)",
                                           "P&L",
@@ -156,6 +158,10 @@ private:
     ImGui::TableNextColumn();
     ImGui::Text("%s", format_currency(trade.stop_loss_price()).c_str());
     ImGui::TableNextColumn();
+    ImGui::Text("%s", format_currency(trade.risk_distance()).c_str());
+    ImGui::TableNextColumn();
+    ImGui::Text("%s", format_currency(trade.risk_boundary_price()).c_str());
+    ImGui::TableNextColumn();
     ImGui::Text("%s", format_currency(trade.average_price()).c_str());
     ImGui::TableNextColumn();
     const auto investment = trade.investment();
@@ -196,6 +202,10 @@ private:
     ImGui::Text("%s", format_take_profits(trade.take_profit_levels()).c_str());
     ImGui::TableNextColumn();
     ImGui::Text("%s", format_currency(trade.stop_loss_price()).c_str());
+    ImGui::TableNextColumn();
+    ImGui::Text("%s", format_currency(trade.risk_distance()).c_str());
+    ImGui::TableNextColumn();
+    ImGui::Text("%s", format_currency(trade.risk_boundary_price()).c_str());
     ImGui::TableNextColumn();
     ImGui::Text("%s", format_currency(trade.average_price()).c_str());
     ImGui::TableNextColumn();

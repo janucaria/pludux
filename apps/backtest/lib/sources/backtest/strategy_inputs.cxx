@@ -7,6 +7,7 @@ export module pludux.backtest:strategy_inputs;
 
 import pludux;
 
+import :risk_distance_node;
 import :strategy;
 import :stop_target_price_node;
 
@@ -68,6 +69,25 @@ void collect_numeric_inputs_from_node(const SlAmountNode& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.value(), inputs);
+}
+
+void collect_numeric_inputs_from_node(const RiskDistanceAmountNode& node,
+                                      std::vector<NumericInputNode>& inputs)
+{
+  collect_numeric_inputs_from_node(node.value(), inputs);
+}
+
+void collect_numeric_inputs_from_node(const RiskDistancePercentNode& node,
+                                      std::vector<NumericInputNode>& inputs)
+{
+  collect_numeric_inputs_from_node(node.value(), inputs);
+}
+
+void collect_numeric_inputs_from_node(const RiskDistanceAtrNode& node,
+                                      std::vector<NumericInputNode>& inputs)
+{
+  collect_numeric_inputs_from_node(node.period(), inputs);
+  collect_numeric_inputs_from_node(node.multiplier(), inputs);
 }
 
 void collect_numeric_inputs_from_node(const TpAmountNode& node,
@@ -375,6 +395,9 @@ void collect_numeric_inputs_from_node(const ErasedNode& node,
   PLUDUX_COLLECT_IF_NODE(MinNode)
   PLUDUX_COLLECT_IF_NODE(PositivePartNode)
   PLUDUX_COLLECT_IF_NODE(NegativePartNode)
+  PLUDUX_COLLECT_IF_NODE(RiskDistanceAmountNode)
+  PLUDUX_COLLECT_IF_NODE(RiskDistancePercentNode)
+  PLUDUX_COLLECT_IF_NODE(RiskDistanceAtrNode)
   PLUDUX_COLLECT_IF_NODE(SlAmountNode)
   PLUDUX_COLLECT_IF_NODE(TpAmountNode)
   PLUDUX_COLLECT_IF_NODE(SlPercentNode)
@@ -407,6 +430,7 @@ auto collect_numeric_inputs(const Strategy& strategy)
     }
     collect_numeric_inputs_from_node(position.pyramiding().signal(), inputs);
     collect_numeric_inputs_from_node(position.pyramiding().price(), inputs);
+    collect_numeric_inputs_from_node(position.risk_distance(), inputs);
     collect_numeric_inputs_from_node(position.stop_loss().stop_price(), inputs);
     for(const auto& take_profit : position.take_profits()) {
       if(take_profit.enabled()) {

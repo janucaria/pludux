@@ -44,7 +44,10 @@ public:
              double stop_price,
              double stop_loss_price,
              std::vector<TakeProfitLevel> take_profit_levels = {},
-             std::vector<SignalExitState> signal_exit_states = {})
+             std::vector<SignalExitState> signal_exit_states = {},
+             double risk_distance = NAN,
+             double risk_reference_price = NAN,
+             double risk_boundary_price = NAN)
   : trade_id_{trade_id}
   , event_id_{event_id}
   , trade_event_index_{trade_event_index}
@@ -63,6 +66,9 @@ public:
   , stop_loss_price_{stop_loss_price}
   , take_profit_levels_{std::move(take_profit_levels)}
   , signal_exit_states_{std::move(signal_exit_states)}
+  , risk_distance_{risk_distance}
+  , risk_reference_price_{risk_reference_price}
+  , risk_boundary_price_{risk_boundary_price}
   {
   }
 
@@ -160,15 +166,32 @@ public:
     return self.signal_exit_states_;
   }
 
-  void
-  after_state(this TradeEvent& self,
-              double position_size,
-              double investment,
-              double average_price,
-              double stop_price,
-              double stop_loss_price,
-              std::vector<TakeProfitLevel> take_profit_levels = {},
-              std::vector<SignalExitState> signal_exit_states = {}) noexcept
+  auto risk_distance(this const TradeEvent& self) noexcept -> double
+  {
+    return self.risk_distance_;
+  }
+
+  auto risk_reference_price(this const TradeEvent& self) noexcept -> double
+  {
+    return self.risk_reference_price_;
+  }
+
+  auto risk_boundary_price(this const TradeEvent& self) noexcept -> double
+  {
+    return self.risk_boundary_price_;
+  }
+
+  void after_state(this TradeEvent& self,
+                   double position_size,
+                   double investment,
+                   double average_price,
+                   double stop_price,
+                   double stop_loss_price,
+                   std::vector<TakeProfitLevel> take_profit_levels = {},
+                   std::vector<SignalExitState> signal_exit_states = {},
+                   double risk_distance = NAN,
+                   double risk_reference_price = NAN,
+                   double risk_boundary_price = NAN) noexcept
   {
     self.position_size_after_ = position_size;
     self.investment_after_ = investment;
@@ -177,6 +200,9 @@ public:
     self.stop_loss_price_ = stop_loss_price;
     self.take_profit_levels_ = std::move(take_profit_levels);
     self.signal_exit_states_ = std::move(signal_exit_states);
+    self.risk_distance_ = risk_distance;
+    self.risk_reference_price_ = risk_reference_price;
+    self.risk_boundary_price_ = risk_boundary_price;
   }
 
   auto is_entry(this const TradeEvent& self) noexcept -> bool
@@ -233,6 +259,9 @@ private:
   double stop_loss_price_{};
   std::vector<TakeProfitLevel> take_profit_levels_;
   std::vector<SignalExitState> signal_exit_states_;
+  double risk_distance_{NAN};
+  double risk_reference_price_{NAN};
+  double risk_boundary_price_{NAN};
 };
 
 } // namespace pludux::backtest

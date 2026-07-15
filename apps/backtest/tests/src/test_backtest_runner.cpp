@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <limits>
 #include <utility>
@@ -77,7 +78,8 @@ auto make_position_rule(
   StopTargetReferencePrice::AveragePrice,
  double signal_exit_reduce = 1.0,
  double stop_loss_reduce = 1.0,
- std::vector<BacktestRunner::PositionRule::TakeProfitRule> take_profits = {})
+ std::vector<BacktestRunner::PositionRule::TakeProfitRule> take_profits = {},
+ AnySeriesMethod risk_distance_method = ValueMethod{10.0})
  -> BacktestRunner::PositionRule;
 
 auto run_single_entry(
@@ -124,7 +126,8 @@ auto run_single_close_price_entry(
  double open_price = 100.0,
  double close_price = 125.0,
  double stop_price = std::numeric_limits<double>::quiet_NaN(),
- Broker broker = Broker{"Test"}) -> BacktestTimeline
+ Broker broker = Broker{"Test"},
+ double risk_distance = 10.0) -> BacktestTimeline
 {
   const auto asset = make_single_bar_asset_with_close(open_price, close_price);
   const auto market = Market{"Test", 0.0, 0.0};
@@ -132,22 +135,33 @@ auto run_single_close_price_entry(
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto runner = BacktestRunner{asset,
-                               market,
-                               broker,
-                               profile,
-                               {},
-                               make_position_rule(BooleanMethod<true>{},
-                                                  BooleanMethod<false>{},
-                                                  BooleanMethod<false>{},
-                                                  1,
-                                                  ValueMethod{stop_price},
-                                                  false,
-                                                  false,
-                                                  0,
-                                                  CloseMethod{}),
-                               BacktestRunner::PositionRule{},
-                               1000.0};
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  make_position_rule(BooleanMethod<true>{},
+                                     BooleanMethod<false>{},
+                                     BooleanMethod<false>{},
+                                     1,
+                                     ValueMethod{stop_price},
+                                     false,
+                                     false,
+                                     0,
+                                     CloseMethod{},
+                                     1,
+                                     OpenMethod{},
+                                     1,
+                                     OpenMethod{},
+                                     StopTargetReferencePrice::AveragePrice,
+                                     StopTargetReferencePrice::AveragePrice,
+                                     1.0,
+                                     1.0,
+                                     {},
+                                     ValueMethod{risk_distance}),
+                  BacktestRunner::PositionRule{},
+                  1000.0};
 
   runner.run(series_results, timeline);
 
@@ -201,8 +215,8 @@ auto make_position_rule(
  StopTargetReferencePrice unfavorable_stop_target_reference,
  double signal_exit_reduce,
  double stop_loss_reduce,
- std::vector<BacktestRunner::PositionRule::TakeProfitRule> take_profits)
- -> BacktestRunner::PositionRule
+ std::vector<BacktestRunner::PositionRule::TakeProfitRule> take_profits,
+ AnySeriesMethod risk_distance_method) -> BacktestRunner::PositionRule
 {
   auto signal_exits =
    std::vector<BacktestRunner::PositionRule::SignalExitRule>{};
@@ -215,6 +229,7 @@ auto make_position_rule(
                                       std::move(signal_exits),
                                       std::move(pyramiding_signal),
                                       pyramiding_max_layers,
+                                      std::move(risk_distance_method),
                                       std::move(stop_price_method),
                                       stop_loss_enabled,
                                       stop_loss_trailing_enabled,
@@ -226,6 +241,37 @@ auto make_position_rule(
                                       unfavorable_stop_target_reference,
                                       stop_loss_reduce,
                                       std::move(take_profits)};
+}
+
+auto make_position_rule_with_risk_distance(AnySeriesMethod entry_method,
+                                           AnySeriesMethod exit_method,
+                                           AnySeriesMethod pyramiding_signal,
+                                           std::size_t pyramiding_max_layers,
+                                           AnySeriesMethod risk_distance_method,
+                                           AnySeriesMethod stop_price_method,
+                                           bool stop_loss_enabled,
+                                           bool stop_loss_trailing_enabled)
+ -> BacktestRunner::PositionRule
+{
+  return make_position_rule(std::move(entry_method),
+                            std::move(exit_method),
+                            std::move(pyramiding_signal),
+                            pyramiding_max_layers,
+                            std::move(stop_price_method),
+                            stop_loss_enabled,
+                            stop_loss_trailing_enabled,
+                            1,
+                            OpenMethod{},
+                            1,
+                            OpenMethod{},
+                            1,
+                            OpenMethod{},
+                            StopTargetReferencePrice::AveragePrice,
+                            StopTargetReferencePrice::AveragePrice,
+                            1.0,
+                            1.0,
+                            {},
+                            std::move(risk_distance_method));
 }
 
 auto latest_event(const BacktestTimeline& timeline) -> const TradeEvent&
@@ -317,13 +363,15 @@ TEST(BacktestRunnerTest, RiskSizingUsesCurrentEquityAfterClosedTrade)
                                broker,
                                profile,
                                {},
-                               make_position_rule(entry_signal,
-                                                  BooleanMethod<true>{},
-                                                  BooleanMethod<false>{},
-                                                  1,
-                                                  ValueMethod{90.0},
-                                                  false,
-                                                  false),
+                               make_position_rule_with_risk_distance(
+                                entry_signal,
+                                BooleanMethod<true>{},
+                                BooleanMethod<false>{},
+                                1,
+                                AbsDiffMethod{OpenMethod{}, ValueMethod{90.0}},
+                                ValueMethod{90.0},
+                                false,
+                                false),
                                BacktestRunner::PositionRule{},
                                1000.0};
 
@@ -817,13 +865,18 @@ TEST(BacktestRunnerTest, RiskDistanceSizingUsesSelectedEntryPrice)
    PositionSizing{PositionSizing::Mode::RiskDistance, 0.10},
    100.0,
    125.0,
-   75.0);
+   80.0,
+   Broker{"Test"},
+   50.0);
 
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).entry_price(), 125.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 75.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 80.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).risk_distance(), 50.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).risk_reference_price(), 125.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).risk_boundary_price(), 75.0);
   EXPECT_TRUE(std::isnan(latest_position(timeline).stop_loss_price()));
 }
 
@@ -1078,7 +1131,8 @@ TEST(BacktestRunnerTest, StopTargetPercentageMethodsUseFeeAdjustedAveragePrice)
                       StopTargetReferencePrice::AveragePrice,
                       1.0,
                       1.0,
-                      single_take_profit(TpRMultipleMethod{2.0}, false)),
+                      single_take_profit(TpRMultipleMethod{2.0}, false),
+                      RiskDistancePercentMethod{10.0}),
    BacktestRunner::PositionRule{},
    1000.0};
 
@@ -1144,7 +1198,8 @@ TEST(BacktestRunnerTest, AtrStopAndRMultipleTargetUseScopedContext)
                       StopTargetReferencePrice::AveragePrice,
                       1.0,
                       1.0,
-                      single_take_profit(TpRMultipleMethod{2.0}, true)),
+                      single_take_profit(TpRMultipleMethod{2.0}, true),
+                      RiskDistanceAtrMethod{1.0, 2.0}),
    BacktestRunner::PositionRule{},
    1000.0};
 
@@ -1399,7 +1454,7 @@ TEST(BacktestRunnerTest, CustomStopTargetFormulasUseReferenceAndDirection)
    latest_position(timeline).take_profit_levels().front().price(), 120.0);
 }
 
-TEST(BacktestRunnerTest, ScopedAtrStopAndRMultipleTargetEvaluateDirectly)
+TEST(BacktestRunnerTest, ExplicitRiskDistanceAndRPricesEvaluateDirectly)
 {
   const auto asset =
    make_single_bar_asset_with_range(100.0, 110.0, 90.0, 100.0);
@@ -1410,15 +1465,132 @@ TEST(BacktestRunnerTest, ScopedAtrStopAndRMultipleTargetEvaluateDirectly)
   const auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
   auto context =
    BacktestMethodContext{default_context, series_methods, account_state};
-  const auto stop_context = context.with_position_reference(100.0, 1.0);
-  const auto stop_price =
-   evaluate_series_method(SlAtrMethod{1.0, 2.0}, snapshot, stop_context);
-  const auto target_context = stop_context.with_position_stop_price(stop_price);
+  const auto long_context = context.with_position_reference(100.0, 1.0);
+  const auto risk_distance = evaluate_series_method(
+   RiskDistanceAtrMethod{1.0, 2.0}, snapshot, long_context);
+  const auto long_r_context =
+   long_context.with_position_risk_distance(risk_distance);
 
-  EXPECT_DOUBLE_EQ(stop_price, 60.0);
+  EXPECT_DOUBLE_EQ(risk_distance, 40.0);
+  EXPECT_DOUBLE_EQ(evaluate_series_method(
+                    RiskDistanceAmountMethod{10.0}, snapshot, long_context),
+                   10.0);
+  EXPECT_DOUBLE_EQ(evaluate_series_method(
+                    RiskDistancePercentMethod{5.0}, snapshot, long_context),
+                   5.0);
   EXPECT_DOUBLE_EQ(
-   evaluate_series_method(TpRMultipleMethod{2.0}, snapshot, target_context),
+   evaluate_series_method(Sl1RMethod{}, snapshot, long_r_context), 60.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(TpRMultipleMethod{2.0}, snapshot, long_r_context),
    180.0);
+
+  const auto short_r_context = context.with_position_reference(100.0, -1.0)
+                                .with_position_risk_distance(risk_distance);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(Sl1RMethod{}, snapshot, short_r_context), 140.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(TpRMultipleMethod{2.0}, snapshot, short_r_context),
+   20.0);
+
+  EXPECT_TRUE(std::isnan(
+   evaluate_series_method(TpRMultipleMethod{-1.0}, snapshot, long_r_context)));
+  EXPECT_TRUE(std::isnan(evaluate_series_method(
+   Sl1RMethod{}, snapshot, long_context.with_position_risk_distance(0.0))));
+  EXPECT_TRUE(std::isnan(
+   evaluate_series_method(TpRMultipleMethod{1.0},
+                          snapshot,
+                          long_context.with_position_risk_distance(0.0))));
+}
+
+TEST(BacktestRunnerTest, RejectsInvalidExplicitRiskDistanceForEverySizingMode)
+{
+  const auto invalid_distances =
+   std::array{0.0,
+              -1.0,
+              std::numeric_limits<double>::quiet_NaN(),
+              std::numeric_limits<double>::infinity()};
+
+  for(const auto invalid_distance : invalid_distances) {
+    const auto asset = make_single_bar_asset(100.0);
+    const auto market = Market{"Test", 0.0, 0.0};
+    const auto broker = Broker{"Test"};
+    const auto profile =
+     Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+    auto series_results = SeriesEvaluationResults{};
+    auto timeline = BacktestTimeline{};
+    auto runner = BacktestRunner{
+     asset,
+     market,
+     broker,
+     profile,
+     {},
+     make_position_rule_with_risk_distance(BooleanMethod<true>{},
+                                           BooleanMethod<false>{},
+                                           BooleanMethod<false>{},
+                                           1,
+                                           ValueMethod{invalid_distance},
+                                           ValueMethod{90.0},
+                                           false,
+                                           false),
+     BacktestRunner::PositionRule{},
+     1000.0};
+
+    EXPECT_THROW(runner.run(series_results, timeline), std::runtime_error);
+  }
+}
+
+TEST(BacktestRunnerTest, PyramidingSizesOnlyNewLayerFromNewRiskDistance)
+{
+  const auto asset =
+   make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 200.0, 200.0, 200.0, 200.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::RiskDistance, 0.01}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  make_position_rule(BooleanMethod<true>{},
+                                     BooleanMethod<false>{},
+                                     BooleanMethod<true>{},
+                                     2,
+                                     ValueMethod{90.0},
+                                     false,
+                                     false,
+                                     1,
+                                     OpenMethod{},
+                                     1,
+                                     OpenMethod{},
+                                     1,
+                                     OpenMethod{},
+                                     StopTargetReferencePrice::AveragePrice,
+                                     StopTargetReferencePrice::AveragePrice,
+                                     1.0,
+                                     1.0,
+                                     {},
+                                     RiskDistancePercentMethod{10.0}),
+                  BacktestRunner::PositionRule{},
+                  10000.0};
+
+  runner.run(series_results, timeline);
+  ASSERT_TRUE(timeline.open_position(0));
+  EXPECT_DOUBLE_EQ(timeline.open_position(0)->position_size(), 10.0);
+  EXPECT_DOUBLE_EQ(timeline.open_position(0)->risk_distance(), 10.0);
+
+  runner.run(series_results, timeline);
+  ASSERT_TRUE(timeline.open_position(1));
+  EXPECT_DOUBLE_EQ(timeline.trade_events(1).front().position_size(), 5.5);
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 15.5);
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->risk_reference_price(),
+                   timeline.open_position(1)->average_price());
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->risk_distance(),
+                   timeline.open_position(1)->average_price() * 0.1);
 }
 
 TEST(BacktestRunnerTest, DisabledDrawdownAdjustmentLeavesSizingUnchanged)
@@ -1895,7 +2067,8 @@ TEST(BacktestRunnerTest,
                       StopTargetReferencePrice::AveragePrice,
                       1.0,
                       1.0,
-                      single_take_profit(TpRMultipleMethod{2.0}, false)),
+                      single_take_profit(TpRMultipleMethod{2.0}, false),
+                      RiskDistancePercentMethod{10.0}),
    BacktestRunner::PositionRule{},
    1000.0};
 
@@ -1950,7 +2123,8 @@ TEST(BacktestRunnerTest, PyramidingUsesPostScaleInFeeAdjustedAverageReference)
                       StopTargetReferencePrice::AveragePrice,
                       1.0,
                       1.0,
-                      single_take_profit(TpRMultipleMethod{2.0}, false)),
+                      single_take_profit(TpRMultipleMethod{2.0}, false),
+                      RiskDistancePercentMethod{10.0}),
    BacktestRunner::PositionRule{},
    1000.0};
 
@@ -2001,7 +2175,8 @@ TEST(BacktestRunnerTest,
                       StopTargetReferencePrice::AveragePrice,
                       1.0,
                       1.0,
-                      single_take_profit(TpRMultipleMethod{2.0}, false)),
+                      single_take_profit(TpRMultipleMethod{2.0}, false),
+                      RiskDistancePercentMethod{10.0}),
    BacktestRunner::PositionRule{},
    1000.0};
 
@@ -2053,7 +2228,8 @@ TEST(BacktestRunnerTest,
                       StopTargetReferencePrice::AveragePrice,
                       1.0,
                       1.0,
-                      single_take_profit(TpRMultipleMethod{2.0}, false)),
+                      single_take_profit(TpRMultipleMethod{2.0}, false),
+                      RiskDistancePercentMethod{10.0}),
    1000.0};
 
   runner.run(series_results, timeline);
@@ -2102,7 +2278,8 @@ TEST(BacktestRunnerTest, PyramidingCanUseLatestEntryReference)
                       StopTargetReferencePrice::AveragePrice,
                       1.0,
                       1.0,
-                      single_take_profit(TpRMultipleMethod{2.0}, false)),
+                      single_take_profit(TpRMultipleMethod{2.0}, false),
+                      RiskDistancePercentMethod{10.0}),
    BacktestRunner::PositionRule{},
    1000.0};
 
@@ -2154,7 +2331,8 @@ TEST(BacktestRunnerTest,
                       StopTargetReferencePrice::AveragePrice,
                       1.0,
                       1.0,
-                      single_take_profit(TpRMultipleMethod{2.0}, false)),
+                      single_take_profit(TpRMultipleMethod{2.0}, false),
+                      RiskDistancePercentMethod{10.0}),
    1000.0};
 
   runner.run(series_results, timeline);
@@ -2203,7 +2381,8 @@ TEST(BacktestRunnerTest, PyramidingCanUseInitialEntryReference)
                       StopTargetReferencePrice::InitialEntryPrice,
                       1.0,
                       1.0,
-                      single_take_profit(TpRMultipleMethod{2.0}, false)),
+                      single_take_profit(TpRMultipleMethod{2.0}, false),
+                      RiskDistancePercentMethod{10.0}),
    BacktestRunner::PositionRule{},
    1000.0};
 
@@ -2564,6 +2743,7 @@ TEST(BacktestRunnerTest, OrderedSignalExitsExecuteOnceAndResetAfterFullClosure)
                                                std::move(signal_exits),
                                                BooleanMethod<false>{},
                                                1,
+                                               ValueMethod{10.0},
                                                ValueMethod{90.0},
                                                false,
                                                false},
@@ -2592,6 +2772,12 @@ TEST(BacktestRunnerTest, OrderedSignalExitsExecuteOnceAndResetAfterFullClosure)
   ASSERT_EQ(timeline.trade_events(2).size(), 1);
   ASSERT_EQ(timeline.closed_trades(2).size(), 1);
   ASSERT_EQ(timeline.closed_trades(2).front().signal_exit_states().size(), 3);
+  EXPECT_DOUBLE_EQ(timeline.closed_trades(2).front().risk_distance(), 10.0);
+  EXPECT_DOUBLE_EQ(timeline.closed_trades(2).front().risk_reference_price(),
+                   100.0);
+  EXPECT_DOUBLE_EQ(timeline.closed_trades(2).front().risk_boundary_price(),
+                   90.0);
+  EXPECT_DOUBLE_EQ(timeline.trade_events(2).front().risk_distance(), 10.0);
   EXPECT_TRUE(
    timeline.closed_trades(2).front().signal_exit_states()[1].consumed());
   EXPECT_TRUE(
@@ -2640,6 +2826,7 @@ TEST(BacktestRunnerTest, PyramidingPreservesConsumedSignalExitStates)
                                                std::move(signal_exits),
                                                BooleanMethod<true>{},
                                                2,
+                                               ValueMethod{10.0},
                                                ValueMethod{90.0},
                                                false,
                                                false},
@@ -2689,6 +2876,7 @@ TEST(BacktestRunnerTest, StopLossAndTakeProfitHavePriorityOverSignalExits)
                    std::move(signal_exits),
                    BooleanMethod<false>{},
                    1,
+                   ValueMethod{10.0},
                    ValueMethod{90.0},
                    true,
                    false,

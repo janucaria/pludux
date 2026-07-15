@@ -74,6 +74,11 @@ public:
   auto operator==(const TpPercentNode&) const noexcept -> bool = default;
 };
 
+class Sl1RNode {
+public:
+  auto operator==(const Sl1RNode&) const noexcept -> bool = default;
+};
+
 class TpRMultipleNode : public StopTargetDistanceNode<TpRMultipleNode> {
 public:
   TpRMultipleNode()
@@ -286,6 +291,13 @@ auto pludux_tag_invoke(NodeToErasedMethod,
    TpAtrMethod{node_to_erased_method(node.period(), context),
                node_to_erased_method(node.multiplier(), context),
                static_cast<MaMethodType>(node.ma_smoothing_type())}};
+}
+
+auto pludux_tag_invoke(NodeToErasedMethod,
+                       const Sl1RNode&,
+                       NodeToErasedMethodContext&) -> AnySeriesMethod
+{
+  return AnySeriesMethod{Sl1RMethod{}};
 }
 
 auto pludux_tag_invoke(NodeToErasedMethod,

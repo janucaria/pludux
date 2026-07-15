@@ -49,6 +49,10 @@ using pludux::backtest::HLinePlotMethod;
 using pludux::backtest::InitialEntryPriceNode;
 using pludux::backtest::LatestEntryPriceNode;
 using pludux::backtest::PositionDirectionNode;
+using pludux::backtest::RiskDistanceAmountNode;
+using pludux::backtest::RiskDistanceAtrNode;
+using pludux::backtest::RiskDistancePercentNode;
+using pludux::backtest::Sl1RNode;
 using pludux::backtest::SlAmountNode;
 using pludux::backtest::SlAtrNode;
 using pludux::backtest::SlPercentNode;
@@ -178,6 +182,12 @@ auto get_default_series_node(const std::string& series_id) -> ErasedNode
     return SqrtNode{CloseNode{}};
   } else if(series_id == "PERCENTAGE") {
     return PercentageNode{CloseNode{}, 100.0};
+  } else if(series_id == "R_DISTANCE_AMOUNT") {
+    return RiskDistanceAmountNode{1000.0};
+  } else if(series_id == "R_DISTANCE_PERCENTAGE") {
+    return RiskDistancePercentNode{1.0};
+  } else if(series_id == "R_DISTANCE_ATR") {
+    return RiskDistanceAtrNode{14.0, 2.0};
   } else if(series_id == "SL_AMOUNT") {
     return SlAmountNode{1000.0};
   } else if(series_id == "TP_AMOUNT") {
@@ -190,6 +200,8 @@ auto get_default_series_node(const std::string& series_id) -> ErasedNode
     return SlAtrNode{14.0, 2.0};
   } else if(series_id == "TP_ATR") {
     return TpAtrNode{14.0, 4.0};
+  } else if(series_id == "SL_1R") {
+    return Sl1RNode{};
   } else if(series_id == "TP_R_MULTIPLE") {
     return TpRMultipleNode{2.0};
   } else if(series_id == "INITIAL_ENTRY_PRICE") {
@@ -292,6 +304,12 @@ auto get_series_node_id(const ErasedNode& node) -> std::string
     return "SQRT";
   } else if(node_cast<PercentageNode>(node)) {
     return "PERCENTAGE";
+  } else if(node_cast<RiskDistanceAmountNode>(node)) {
+    return "R_DISTANCE_AMOUNT";
+  } else if(node_cast<RiskDistancePercentNode>(node)) {
+    return "R_DISTANCE_PERCENTAGE";
+  } else if(node_cast<RiskDistanceAtrNode>(node)) {
+    return "R_DISTANCE_ATR";
   } else if(node_cast<SlAmountNode>(node)) {
     return "SL_AMOUNT";
   } else if(node_cast<TpAmountNode>(node)) {
@@ -304,6 +322,8 @@ auto get_series_node_id(const ErasedNode& node) -> std::string
     return "SL_ATR";
   } else if(node_cast<TpAtrNode>(node)) {
     return "TP_ATR";
+  } else if(node_cast<Sl1RNode>(node)) {
+    return "SL_1R";
   } else if(node_cast<TpRMultipleNode>(node)) {
     return "TP_R_MULTIPLE";
   } else if(node_cast<InitialEntryPriceNode>(node)) {
@@ -473,6 +493,12 @@ auto get_series_node_title(const std::string& series_id) -> std::string
     return "Square Root";
   } else if(series_id == "PERCENTAGE") {
     return "Percentage";
+  } else if(series_id == "R_DISTANCE_AMOUNT") {
+    return "1R Amount Distance";
+  } else if(series_id == "R_DISTANCE_PERCENTAGE") {
+    return "1R Percentage Distance";
+  } else if(series_id == "R_DISTANCE_ATR") {
+    return "1R ATR Distance";
   } else if(series_id == "SL_AMOUNT") {
     return "Stop Loss Amount";
   } else if(series_id == "TP_AMOUNT") {
@@ -485,6 +511,8 @@ auto get_series_node_title(const std::string& series_id) -> std::string
     return "Stop Loss ATR";
   } else if(series_id == "TP_ATR") {
     return "Take Profit ATR";
+  } else if(series_id == "SL_1R") {
+    return "Stop Loss 1R";
   } else if(series_id == "TP_R_MULTIPLE") {
     return "Take Profit R Multiple";
   } else if(series_id == "INITIAL_ENTRY_PRICE") {
@@ -1442,6 +1470,32 @@ private:
       ImGui::PopID();
     }
     {
+      ImGui::SeparatorText("1R Risk Distance");
+      ImGui::PushID("risk_distance");
+      auto risk_distance = position.risk_distance();
+      auto risk_distance_id = get_series_node_id(risk_distance);
+      const auto risk_distance_ids = std::array{
+       "R_DISTANCE_AMOUNT", "R_DISTANCE_PERCENTAGE", "R_DISTANCE_ATR"};
+      if(ImGui::BeginCombo("Method",
+                           get_series_node_title(risk_distance_id).c_str())) {
+        for(const auto* id : risk_distance_ids) {
+          const auto is_selected = risk_distance_id == id;
+          if(ImGui::Selectable(get_series_node_title(id).c_str(),
+                               is_selected)) {
+            risk_distance = get_default_series_node(id);
+            risk_distance_id = id;
+          }
+          if(is_selected) {
+            ImGui::SetItemDefaultFocus();
+          }
+        }
+        ImGui::EndCombo();
+      }
+      self.render_series_node_params(risk_distance, context);
+      position.risk_distance(std::move(risk_distance));
+      ImGui::PopID();
+    }
+    {
       ImGui::SeparatorText("Stop Loss");
       ImGui::PushID("stop_loss");
 
@@ -1576,6 +1630,7 @@ private:
                                                         "TP_PERCENT",
                                                         "SL_ATR",
                                                         "TP_ATR",
+                                                        "SL_1R",
                                                         "TP_R_MULTIPLE",
                                                         "INITIAL_ENTRY_PRICE",
                                                         "LATEST_ENTRY_PRICE",
@@ -1732,12 +1787,16 @@ private:
                           MultiplyNode,
                           DivideNode,
                           PercentageNode,
+                          RiskDistanceAmountNode,
+                          RiskDistancePercentNode,
+                          RiskDistanceAtrNode,
                           SlAmountNode,
                           TpAmountNode,
                           SlPercentNode,
                           TpPercentNode,
                           SlAtrNode,
                           TpAtrNode,
+                          Sl1RNode,
                           TpRMultipleNode,
                           InitialEntryPriceNode,
                           LatestEntryPriceNode,
@@ -2258,6 +2317,20 @@ private:
   }
 
   void render_series_node_params(this auto& self,
+                                 RiskDistanceAmountNode& node,
+                                 WindowContext& context)
+  {
+    self.render_stop_target_value_node_params(node, context, "Amount");
+  }
+
+  void render_series_node_params(this auto& self,
+                                 RiskDistancePercentNode& node,
+                                 WindowContext& context)
+  {
+    self.render_stop_target_value_node_params(node, context, "Percentage");
+  }
+
+  void render_series_node_params(this auto& self,
                                  SlAmountNode& node,
                                  WindowContext& context)
   {
@@ -2283,6 +2356,10 @@ private:
                                  WindowContext& context)
   {
     self.render_stop_target_value_node_params(node, context, "Percent");
+  }
+
+  void render_series_node_params(this auto&, Sl1RNode&, WindowContext&)
+  {
   }
 
   void render_series_node_params(this auto& self,
@@ -2459,6 +2536,13 @@ private:
       }
       ImGui::EndCombo();
     }
+  }
+
+  void render_series_node_params(this auto& self,
+                                 RiskDistanceAtrNode& node,
+                                 WindowContext& context)
+  {
+    self.render_stop_target_atr_node_params(node, context);
   }
 
   void render_series_node_params(this auto& self,

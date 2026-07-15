@@ -131,6 +131,7 @@ public:
                  std::vector<SignalExitRule> signal_exits,
                  AnySeriesMethod pyramiding_signal,
                  std::size_t pyramiding_max_layers,
+                 AnySeriesMethod risk_distance_method,
                  AnySeriesMethod stop_price_method,
                  bool stop_loss_enabled,
                  bool stop_loss_trailing_enabled,
@@ -148,6 +149,7 @@ public:
     , signal_exits_{std::move(signal_exits)}
     , pyramiding_signal_{std::move(pyramiding_signal)}
     , pyramiding_max_layers_{pyramiding_max_layers}
+    , risk_distance_method_{std::move(risk_distance_method)}
     , stop_price_method_{std::move(stop_price_method)}
     , stop_loss_enabled_{stop_loss_enabled}
     , stop_loss_trailing_enabled_{stop_loss_trailing_enabled}
@@ -190,6 +192,12 @@ public:
      -> const AnySeriesMethod&
     {
       return self.stop_price_method_;
+    }
+
+    auto risk_distance_method(this const PositionRule& self) noexcept
+     -> const AnySeriesMethod&
+    {
+      return self.risk_distance_method_;
     }
 
     auto stop_loss_enabled(this const PositionRule& self) noexcept -> bool
@@ -256,6 +264,7 @@ public:
     std::vector<SignalExitRule> signal_exits_;
     AnySeriesMethod pyramiding_signal_{BooleanMethod<false>{}};
     std::size_t pyramiding_max_layers_{1};
+    AnySeriesMethod risk_distance_method_{ValueMethod{1.0}};
     AnySeriesMethod stop_price_method_{OpenMethod{}};
     bool stop_loss_enabled_{false};
     bool stop_loss_trailing_enabled_{false};
@@ -705,14 +714,14 @@ private:
       const auto position_sizing = self.profile_.position_sizing();
       const auto uses_risk_distance =
        position_sizing.mode() == PositionSizing::Mode::RiskDistance;
-      auto stop_price = evaluate_series_method(
-       position.stop_price_method(), asset_snapshot, initial_price_context);
-      if(position.stop_loss_enabled() && !uses_risk_distance &&
-         !std::isfinite(stop_price)) {
-        throw std::runtime_error{"Invalid stop price for stop-loss exit"};
+      const auto risk_distance = evaluate_series_method(
+       position.risk_distance_method(), asset_snapshot, initial_price_context);
+      if(!std::isfinite(risk_distance) || risk_distance <= 0.0) {
+        throw std::runtime_error{
+         "Invalid risk distance: expected a finite positive value"};
       }
       const auto position_quantity = self.calculate_position_quantity(
-       position_sizing, is_long, entry_price, stop_price);
+       position_sizing, entry_price, risk_distance);
       const auto adjusted_position_quantity = self.apply_drawdown_adjustment(
        position_quantity, current_drawdown_ratio);
       const auto position_size = direction * adjusted_position_quantity;
@@ -749,9 +758,8 @@ private:
 
   auto calculate_position_quantity(this const BacktestRunner& self,
                                    const PositionSizing& position_sizing,
-                                   bool is_long,
                                    double entry_price,
-                                   double stop_price) -> double
+                                   double risk_distance) -> double
   {
     const auto value = position_sizing.value();
 
@@ -761,13 +769,9 @@ private:
 
     switch(position_sizing.mode()) {
     case PositionSizing::Mode::RiskDistance: {
-      const auto risk_distance =
-       is_long ? entry_price - stop_price : stop_price - entry_price;
-
-      if(std::isnan(stop_price) || !std::isfinite(risk_distance) ||
-         risk_distance <= 0.0) {
+      if(!std::isfinite(risk_distance) || risk_distance <= 0.0) {
         throw std::runtime_error{
-         "Invalid stop price for risk-based position sizing"};
+         "Invalid risk distance for risk-based position sizing"};
       }
 
       const auto risk_value = value * self.current_account_state_.equity();
@@ -843,14 +847,19 @@ private:
                                                            average_price,
                                                            reference_price,
                                                            direction);
+    const auto risk_distance = evaluate_series_method(
+     position.risk_distance_method(), asset_snapshot, stop_context);
+    if(!std::isfinite(risk_distance) || risk_distance <= 0.0) {
+      throw std::runtime_error{
+       "Invalid risk distance: expected a finite positive value"};
+    }
     const auto stop_price = evaluate_series_method(
-     position.stop_price_method(), asset_snapshot, stop_context);
+     position.stop_price_method(),
+     asset_snapshot,
+     stop_context.with_position_risk_distance(risk_distance));
     const auto target_context =
-     stop_context.with_position_stop_price(stop_price);
-    const auto uses_risk_distance = self.profile_.position_sizing().mode() ==
-                                    PositionSizing::Mode::RiskDistance;
-    if(position.stop_loss_enabled() && !uses_risk_distance &&
-       !std::isfinite(stop_price)) {
+     stop_context.with_position_risk_distance(risk_distance);
+    if(position.stop_loss_enabled() && !std::isfinite(stop_price)) {
       throw std::runtime_error{"Invalid stop price for stop-loss exit"};
     }
 
@@ -884,6 +893,10 @@ private:
     }
 
     open_position.stop_price(stop_price);
+    open_position.risk_distance(risk_distance);
+    open_position.risk_reference_price(reference_price);
+    open_position.risk_boundary_price(reference_price -
+                                      direction * risk_distance);
     open_position.stop_loss_price(position.stop_loss_enabled() ? stop_price
                                                                : NAN);
     open_position.stop_loss_trailing_enabled(

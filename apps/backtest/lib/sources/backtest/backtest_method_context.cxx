@@ -206,16 +206,16 @@ public:
     context.position_average_price_ = average_price;
     context.position_reference_price_ = reference_price;
     context.position_direction_ = direction;
-    context.position_stop_price_ = std::numeric_limits<double>::quiet_NaN();
+    context.position_risk_distance_ = std::numeric_limits<double>::quiet_NaN();
     return context;
   }
 
-  auto with_position_stop_price(this const BacktestMethodContext& self,
-                                double stop_price) noexcept
+  auto with_position_risk_distance(this const BacktestMethodContext& self,
+                                   double risk_distance) noexcept
    -> BacktestMethodContext
   {
     auto context = self;
-    context.position_stop_price_ = stop_price;
+    context.position_risk_distance_ = risk_distance;
     return context;
   }
 
@@ -251,10 +251,10 @@ public:
     return self.position_direction_;
   }
 
-  auto position_stop_price(this const BacktestMethodContext& self) noexcept
+  auto position_risk_distance(this const BacktestMethodContext& self) noexcept
    -> double
   {
-    return self.position_stop_price_;
+    return self.position_risk_distance_;
   }
 
 private:
@@ -267,7 +267,7 @@ private:
   double position_average_price_{std::numeric_limits<double>::quiet_NaN()};
   double position_reference_price_{std::numeric_limits<double>::quiet_NaN()};
   double position_direction_{std::numeric_limits<double>::quiet_NaN()};
-  double position_stop_price_{std::numeric_limits<double>::quiet_NaN()};
+  double position_risk_distance_{std::numeric_limits<double>::quiet_NaN()};
 };
 
 } // namespace pludux::backtest

@@ -261,7 +261,10 @@ public:
                       self.open_position_->stop_price(),
                       self.open_position_->stop_loss_price(),
                       self.open_position_->take_profit_levels(),
-                      self.open_position_->signal_exit_states());
+                      self.open_position_->signal_exit_states(),
+                      self.open_position_->risk_distance(),
+                      self.open_position_->risk_reference_price(),
+                      self.open_position_->risk_boundary_price());
     const auto closed_trade =
      self.open_position_->closed_trade(exit_event_id,
                                        event_type,
@@ -304,7 +307,10 @@ public:
                       position.stop_price(),
                       position.stop_loss_price(),
                       position.take_profit_levels(),
-                      position.signal_exit_states());
+                      position.signal_exit_states(),
+                      position.risk_distance(),
+                      position.risk_reference_price(),
+                      position.risk_boundary_price());
   }
 
   auto unrealized_pnl(this const TradeSession& self) noexcept -> double

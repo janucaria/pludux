@@ -19,6 +19,7 @@ export module pludux.backtest:strategy_parser;
 
 import pludux;
 
+import :risk_distance_node;
 import :strategy;
 import :plot_method_parser;
 import :config_parser;
@@ -148,6 +149,27 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
     position.pyramiding(std::move(pyramiding));
   }
 
+  if(!position_json.contains("riskDistance")) {
+    throw std::runtime_error{
+     "Invalid position configuration in strategy JSON: missing "
+     "riskDistance"};
+  }
+  const auto& risk_distance_json = position_json.at("riskDistance");
+  if(!risk_distance_json.is_object()) {
+    throw std::runtime_error{
+     "Invalid riskDistance configuration in strategy JSON: expected an "
+     "explicit method object"};
+  }
+  auto risk_distance = config_parser.parse_node(risk_distance_json);
+  if(!node_cast<RiskDistanceAmountNode>(risk_distance) &&
+     !node_cast<RiskDistancePercentNode>(risk_distance) &&
+     !node_cast<RiskDistanceAtrNode>(risk_distance)) {
+    throw std::runtime_error{
+     "Invalid riskDistance configuration in strategy JSON: expected an "
+     "R_DISTANCE_* method"};
+  }
+  position.risk_distance(std::move(risk_distance));
+
   if(!position_json.contains("stopLoss")) {
     throw std::runtime_error{
      "Invalid position configuration in strategy JSON: missing stopLoss"};
@@ -234,6 +256,9 @@ auto serialize_strategy_position(const Strategy::Position& position,
   position_json["pyramiding"]["stopTargetReference"]["unfavorable"] =
    serialize_stop_target_reference_price(
     position.pyramiding().unfavorable_stop_target_reference());
+
+  position_json["riskDistance"] =
+   config_parser.serialize_node(position.risk_distance());
 
   position_json["stopLoss"] = jsoncons::ojson{};
   position_json["stopLoss"]["enabled"] = position.stop_loss().enabled();

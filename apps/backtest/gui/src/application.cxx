@@ -396,6 +396,7 @@ private:
         std::move(signal_exits),
         node_to_erased_method(position.pyramiding().signal(), input_context),
         position.pyramiding().max_layers(),
+        node_to_erased_method(position.risk_distance(), input_context),
         node_to_erased_method(position.stop_loss().stop_price(), input_context),
         position.stop_loss().enabled(),
         position.stop_loss().trailing(),

@@ -80,7 +80,7 @@
         }
       },
       "title": "Positions",
-      "description": "Trading rules for long and short positions. Each side can be disabled with false, or configured with entry rules, a required stop price for risk sizing, and optional exit or take-profit rules."
+      "description": "Trading rules for long and short positions. Each side can be disabled with false, or configured with entry rules, an explicit risk distance, and optional executable exits."
     },
     "plots": {
       "type": "array",
@@ -226,6 +226,11 @@
                 }
               }
             },
+            "riskDistance": {
+              "$ref": "#/$defs/riskDistance",
+              "title": "1R Risk Distance",
+              "description": "Required positive distance expression used for risk-based sizing and R-multiple stop/target prices. This value does not execute a stop-loss order."
+            },
             "stopLoss": {
               "$ref": "#/$defs/stopLoss"
             },
@@ -241,6 +246,7 @@
           },
           "required": [
             "entry",
+            "riskDistance",
             "stopLoss"
           ]
         },
@@ -251,7 +257,22 @@
       ],
       "default": false,
       "title": "Position Side",
-      "description": "Configuration for one trading direction, such as long or short. Use false to disable the side, or provide entry rules plus a required stop price used for risk sizing."
+      "description": "Configuration for one trading direction, such as long or short. Use false to disable the side, or provide entry rules plus a required explicit 1R risk distance."
+    },
+    "riskDistance": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/riskDistanceAmountMethod"
+        },
+        {
+          "$ref": "#/$defs/riskDistancePercentageMethod"
+        },
+        {
+          "$ref": "#/$defs/riskDistanceAtrMethod"
+        }
+      ],
+      "title": "1R Risk Distance",
+      "description": "An explicit method object that evaluates to a finite positive 1R price distance."
     },
     "stopLoss": {
       "type": "object",
@@ -272,7 +293,7 @@
         "stopPrice": {
           "$ref": "#/$defs/seriesAsParameter",
           "title": "Stop Price",
-          "description": "Required price expression for the stop side of the trade. The evaluated stop price is always used to calculate risk-based position size; when enabled is true, it is also used as the stop-loss exit level."
+          "description": "Required executable stop-price expression. It is independent from the position's riskDistance."
         },
         "reduce": {
           "$ref": "#/$defs/exitReduce"
@@ -282,7 +303,7 @@
         "stopPrice"
       ],
       "title": "Stop Loss",
-      "description": "Stop-side configuration for a position. The stop price is required because its price gap from entry is used for position sizing, even when automatic stop-loss exits are disabled."
+      "description": "Singular executable stop-loss configuration. Position sizing and R-multiple prices use riskDistance instead."
     },
     "signalExit": {
       "type": "object",
@@ -445,7 +466,7 @@
       "properties": {
         "method": {
           "type": "string",
-          "pattern": "^[A-Z_]+$",
+          "pattern": "^[A-Z][A-Z0-9_]*$",
           "title": "Method",
           "description": "Uppercase method name that identifies what this object does, such as SMA, RSI, CROSSOVER, or LINE."
         },
@@ -2476,6 +2497,130 @@
       "title": "Stop/Target ATR",
       "description": "Calculates an absolute stop-loss or take-profit price from entry price and ATR distance."
     },
+    "riskDistanceAmountMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "R_DISTANCE_AMOUNT"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "amount": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Amount",
+                  "description": "Positive absolute 1R price distance."
+                }
+              },
+              "required": [
+                "amount"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Risk Distance Amount"
+    },
+    "riskDistancePercentageMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "R_DISTANCE_PERCENTAGE"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "percentage": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Percentage",
+                  "description": "Positive percentage of the active position reference price."
+                }
+              },
+              "required": [
+                "percentage"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Risk Distance Percentage"
+    },
+    "riskDistanceAtrMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "R_DISTANCE_ATR"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                },
+                "multiplier": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                },
+                "maSmoothingType": {
+                  "enum": [
+                    "SMA",
+                    "EMA",
+                    "RMA",
+                    "WMA",
+                    "HMA"
+                  ]
+                }
+              },
+              "required": [
+                "period",
+                "multiplier"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Risk Distance ATR"
+    },
+    "stopLoss1RMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "SL_1R"
+            },
+            "params": false
+          }
+        }
+      ],
+      "title": "Stop Loss 1R",
+      "description": "Stop price exactly one explicit riskDistance from the configured reference price."
+    },
     "takeProfitRMultipleMethod": {
       "allOf": [
         {
@@ -2493,7 +2638,7 @@
                 "multiple": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Multiple",
-                  "description": "Reward multiple of the evaluated entry-to-stop risk distance."
+                  "description": "Positive reward multiple of the explicit riskDistance."
                 }
               },
               "required": [
@@ -2507,7 +2652,7 @@
         }
       ],
       "title": "Take Profit R Multiple",
-      "description": "Calculates an absolute take-profit price from entry price and the evaluated stop risk distance."
+      "description": "Calculates an absolute take-profit price from the active reference price and explicit riskDistance."
     },
     "positionContextPriceMethod": {
       "allOf": [
@@ -2656,6 +2801,9 @@
         },
         {
           "$ref": "#/$defs/stopTargetAtrMethod"
+        },
+        {
+          "$ref": "#/$defs/stopLoss1RMethod"
         },
         {
           "$ref": "#/$defs/takeProfitRMultipleMethod"
@@ -3561,26 +3709,29 @@
               "price": "OPEN"
             }
           ],
+          "riskDistance": {
+            "method": "R_DISTANCE_ATR",
+            "params": {
+              "period": {
+                "method": "VALUE",
+                "params": {
+                  "value": 14
+                }
+              },
+              "multiplier": {
+                "method": "VALUE",
+                "params": {
+                  "value": 2
+                }
+              },
+              "maSmoothingType": "RMA"
+            }
+          },
           "stopLoss": {
             "enabled": true,
             "trailing": false,
             "stopPrice": {
-              "method": "SL_ATR",
-              "params": {
-                "period": {
-                  "method": "VALUE",
-                  "params": {
-                    "value": 14
-                  }
-                },
-                "multiplier": {
-                  "method": "VALUE",
-                  "params": {
-                    "value": 2
-                  }
-                },
-                "maSmoothingType": "RMA"
-              }
+              "method": "SL_1R"
             }
           },
           "takeProfits": [

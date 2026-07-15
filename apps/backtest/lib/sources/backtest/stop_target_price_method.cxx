@@ -233,6 +233,11 @@ private:
   MaMethodType ma_smoothing_type_;
 };
 
+class Sl1RMethod {
+public:
+  auto operator==(const Sl1RMethod&) const noexcept -> bool = default;
+};
+
 template<typename TMultipleMethod = ValueMethod>
 class TpRMultipleMethod {
 public:
@@ -344,6 +349,11 @@ auto hash_series_method(
          hash_series_method(method.period()) ^
          hash_series_method(method.multiplier()) ^
          std::hash<int>{}(static_cast<int>(method.ma_smoothing_type()));
+}
+
+auto hash_series_method(const Sl1RMethod&) noexcept -> std::size_t
+{
+  return std::hash<std::string_view>{}("pludux.backtest.Sl1RMethod");
 }
 
 template<typename TMethod>
@@ -478,19 +488,19 @@ auto backtest_position_direction(MethodContextable auto context) noexcept
   }
 }
 
-auto backtest_position_stop_price(MethodContextable auto context) noexcept
+auto backtest_position_risk_distance(MethodContextable auto context) noexcept
  -> double
 {
   if constexpr(std::is_same_v<std::monostate, decltype(context)>) {
     return std::numeric_limits<double>::quiet_NaN();
   } else if constexpr(std::is_same_v<std::remove_cvref_t<decltype(context)>,
                                      BacktestMethodContext>) {
-    return context.position_stop_price();
+    return context.position_risk_distance();
   } else if constexpr(std::is_same_v<std::remove_cvref_t<decltype(context)>,
                                      AnySeriesMethodContext>) {
     const auto* backtest_context =
      series_method_context_cast<BacktestMethodContext>(context);
-    return backtest_context ? backtest_context->position_stop_price()
+    return backtest_context ? backtest_context->position_risk_distance()
                             : std::numeric_limits<double>::quiet_NaN();
   } else {
     return std::numeric_limits<double>::quiet_NaN();
@@ -605,18 +615,36 @@ auto pludux_tag_invoke(
                            backtest_position_direction(context));
 }
 
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const Sl1RMethod&,
+                       AssetSnapshot,
+                       MethodContextable auto context) noexcept -> double
+{
+  const auto risk_distance = backtest_position_risk_distance(context);
+  if(!std::isfinite(risk_distance) || risk_distance <= 0.0) {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+  return stop_target_price(backtest_position_reference_price(context),
+                           risk_distance,
+                           -1.0,
+                           backtest_position_direction(context));
+}
+
 template<typename TMethod>
 auto pludux_tag_invoke(EvaluateSeriesMethod,
                        const TpRMultipleMethod<TMethod>& method,
                        AssetSnapshot asset_snapshot,
                        MethodContextable auto context) noexcept -> double
 {
-  const auto reference_price = backtest_position_reference_price(context);
-  const auto stop_price = backtest_position_stop_price(context);
+  const auto risk_distance = backtest_position_risk_distance(context);
   const auto multiple =
    evaluate_series_method(method.multiple(), asset_snapshot, context);
-  return stop_target_price(reference_price,
-                           std::abs(reference_price - stop_price) * multiple,
+  if(!std::isfinite(risk_distance) || risk_distance <= 0.0 ||
+     !std::isfinite(multiple) || multiple <= 0.0) {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+  return stop_target_price(backtest_position_reference_price(context),
+                           risk_distance * multiple,
                            1.0,
                            backtest_position_direction(context));
 }
