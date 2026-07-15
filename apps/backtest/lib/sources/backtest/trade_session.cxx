@@ -18,6 +18,7 @@ import :trade_exit;
 import :trade_position;
 import :take_profit_level;
 import :signal_exit_state;
+import :stop_loss_level;
 
 export namespace pludux::backtest {
 
@@ -121,15 +122,11 @@ public:
                       double total_fees)
   {
     if(self.open_position_) {
-      auto event =
-       self.open_position_->scaled_in(self.next_event_id_++,
-                                      entry.position_size(),
-                                      self.market_timestamp_,
-                                      entry.price(),
-                                      total_fees,
-                                      entry.stop_price(),
-                                      entry.stop_loss_price(),
-                                      entry.stop_loss_trailing_enabled());
+      auto event = self.open_position_->scaled_in(self.next_event_id_++,
+                                                  entry.position_size(),
+                                                  self.market_timestamp_,
+                                                  entry.price(),
+                                                  total_fees);
       self.trade_events_.push_back(std::move(event));
       return;
     }
@@ -139,10 +136,7 @@ public:
                                         entry.position_size(),
                                         self.market_timestamp_,
                                         entry.price(),
-                                        total_fees,
-                                        entry.stop_price(),
-                                        entry.stop_loss_price(),
-                                        entry.stop_loss_trailing_enabled()};
+                                        total_fees};
     self.trade_events_.emplace_back(trade_id,
                                     self.next_event_id_++,
                                     1,
@@ -157,8 +151,7 @@ public:
                                     self.open_position_->position_size(),
                                     self.open_position_->investment(),
                                     self.open_position_->average_price(),
-                                    self.open_position_->stop_price(),
-                                    self.open_position_->stop_loss_price(),
+                                    self.open_position_->stop_loss_levels(),
                                     self.open_position_->take_profit_levels(),
                                     self.open_position_->signal_exit_states());
   }
@@ -192,8 +185,8 @@ public:
      position_size_before,
      investment_before,
      average_price_before,
-     entry.stop_price(),
-     entry.stop_loss_price(),
+     self.open_position_ ? self.open_position_->stop_loss_levels()
+                         : std::vector<StopLossLevel>{},
      self.open_position_ ? self.open_position_->take_profit_levels()
                          : std::vector<TakeProfitLevel>{},
      self.open_position_ ? self.open_position_->signal_exit_states()
@@ -235,6 +228,12 @@ public:
       throw std::runtime_error{
        "Take-profit exit requires a valid target index."};
     }
+    if(exit.reason() == TradeExit::Reason::stop_loss &&
+       (!exit.stop_loss_index() ||
+        *exit.stop_loss_index() >=
+         self.open_position_->stop_loss_levels().size())) {
+      throw std::runtime_error{"Stop-loss exit requires a valid stop index."};
+    }
     if(exit.signal_exit_index() &&
        *exit.signal_exit_index() >=
         self.open_position_->signal_exit_states().size()) {
@@ -251,6 +250,9 @@ public:
       self.open_position_->take_profit_levels()[*take_profit_index].consumed(
        true);
     }
+    if(const auto stop_loss_index = exit.stop_loss_index()) {
+      self.open_position_->stop_loss_levels()[*stop_loss_index].consumed(true);
+    }
     if(const auto signal_exit_index = exit.signal_exit_index()) {
       self.open_position_->signal_exit_states()[*signal_exit_index].consumed(
        true);
@@ -258,8 +260,7 @@ public:
     event.after_state(self.open_position_->position_size(),
                       self.open_position_->investment(),
                       self.open_position_->average_price(),
-                      self.open_position_->stop_price(),
-                      self.open_position_->stop_loss_price(),
+                      self.open_position_->stop_loss_levels(),
                       self.open_position_->take_profit_levels(),
                       self.open_position_->signal_exit_states(),
                       self.open_position_->risk_distance(),
@@ -304,8 +305,7 @@ public:
     event.after_state(position.position_size(),
                       position.investment(),
                       position.average_price(),
-                      position.stop_price(),
-                      position.stop_loss_price(),
+                      position.stop_loss_levels(),
                       position.take_profit_levels(),
                       position.signal_exit_states(),
                       position.risk_distance(),

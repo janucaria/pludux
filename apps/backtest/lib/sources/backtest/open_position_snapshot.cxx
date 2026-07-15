@@ -10,6 +10,7 @@ export module pludux.backtest:open_position_snapshot;
 
 import :take_profit_level;
 import :signal_exit_state;
+import :stop_loss_level;
 
 export namespace pludux::backtest {
 
@@ -25,8 +26,7 @@ public:
                        double investment,
                        double entry_price,
                        double total_entry_fees,
-                       double stop_price,
-                       double stop_loss_price,
+                       std::vector<StopLossLevel> stop_loss_levels = {},
                        std::vector<TakeProfitLevel> take_profit_levels = {},
                        std::vector<SignalExitState> signal_exit_states = {},
                        double risk_distance = NAN,
@@ -40,8 +40,7 @@ public:
   , investment_{investment}
   , entry_price_{entry_price}
   , total_entry_fees_{total_entry_fees}
-  , stop_price_{stop_price}
-  , stop_loss_price_{stop_loss_price}
+  , stop_loss_levels_{std::move(stop_loss_levels)}
   , take_profit_levels_{std::move(take_profit_levels)}
   , signal_exit_states_{std::move(signal_exit_states)}
   , risk_distance_{risk_distance}
@@ -95,14 +94,10 @@ public:
     return self.total_entry_fees_;
   }
 
-  auto stop_price(this const OpenPositionSnapshot& self) noexcept -> double
+  auto stop_loss_levels(this const OpenPositionSnapshot& self) noexcept
+   -> const std::vector<StopLossLevel>&
   {
-    return self.stop_price_;
-  }
-
-  auto stop_loss_price(this const OpenPositionSnapshot& self) noexcept -> double
-  {
-    return self.stop_loss_price_;
+    return self.stop_loss_levels_;
   }
 
   auto take_profit_levels(this const OpenPositionSnapshot& self) noexcept
@@ -158,8 +153,7 @@ private:
   double investment_{};
   double entry_price_{};
   double total_entry_fees_{};
-  double stop_price_{};
-  double stop_loss_price_{};
+  std::vector<StopLossLevel> stop_loss_levels_;
   std::vector<TakeProfitLevel> take_profit_levels_;
   std::vector<SignalExitState> signal_exit_states_;
   double risk_distance_{NAN};

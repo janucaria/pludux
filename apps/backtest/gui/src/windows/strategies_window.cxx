@@ -1496,34 +1496,63 @@ private:
       ImGui::PopID();
     }
     {
-      ImGui::SeparatorText("Stop Loss");
-      ImGui::PushID("stop_loss");
+      ImGui::SeparatorText("Stop Losses");
+      ImGui::PushID("stop_losses");
 
-      auto stop_loss = position.stop_loss();
-      auto stop_loss_enabled = stop_loss.enabled();
-      auto stop_loss_trailing = stop_loss.trailing();
+      auto stop_losses = position.stop_losses();
+      if(ImGui::Button("Add Stop Loss")) {
+        stop_losses.emplace_back();
+      }
 
-      ImGui::Checkbox("Enable Stop Loss", &stop_loss_enabled);
-      ImGui::Checkbox("Enable Trailing Stop Loss", &stop_loss_trailing);
-      stop_loss.enabled(stop_loss_enabled);
-      stop_loss.trailing(stop_loss_trailing);
+      for(auto index = std::size_t{0}; index < stop_losses.size(); ++index) {
+        ImGui::PushID(static_cast<int>(index));
+        ImGui::Separator();
+        ImGui::Text("Stop Loss %zu", index + 1);
 
-      ImGui::BeginDisabled(!stop_loss_enabled);
-      ImGui::PushID("reduce");
-      const auto reduce = self.render_position_reduction(stop_loss.reduce());
-      ImGui::PopID();
-      stop_loss.reduce(reduce);
-      ImGui::EndDisabled();
+        if(ImGui::Button("Move Up") && index > 0) {
+          std::swap(stop_losses[index], stop_losses[index - 1]);
+          ImGui::PopID();
+          break;
+        }
+        ImGui::SameLine();
+        if(ImGui::Button("Move Down") && index + 1 < stop_losses.size()) {
+          std::swap(stop_losses[index], stop_losses[index + 1]);
+          ImGui::PopID();
+          break;
+        }
+        ImGui::SameLine();
+        if(ImGui::Button("Remove")) {
+          stop_losses.erase(stop_losses.begin() +
+                            static_cast<std::ptrdiff_t>(index));
+          ImGui::PopID();
+          break;
+        }
 
-      ImGui::Text("Stop Price:");
-      ImGui::SameLine();
-      auto stop_price = stop_loss.stop_price();
-      ImGui::PushID("stop_price");
-      self.render_series_node(stop_price, context);
-      ImGui::PopID();
-      stop_loss.stop_price(std::move(stop_price));
+        auto& stop_loss = stop_losses[index];
+        auto enabled = stop_loss.enabled();
+        auto trailing = stop_loss.trailing();
+        ImGui::Checkbox("Enabled", &enabled);
+        ImGui::Checkbox("Trailing", &trailing);
+        stop_loss.enabled(enabled);
+        stop_loss.trailing(trailing);
 
-      position.stop_loss(std::move(stop_loss));
+        ImGui::BeginDisabled(!enabled);
+        ImGui::PushID("reduce");
+        stop_loss.reduce(self.render_position_reduction(stop_loss.reduce()));
+        ImGui::PopID();
+        ImGui::EndDisabled();
+
+        ImGui::Text("Stop Price:");
+        ImGui::SameLine();
+        auto stop_price = stop_loss.stop_price();
+        ImGui::PushID("stop_price");
+        self.render_series_node(stop_price, context);
+        ImGui::PopID();
+        stop_loss.stop_price(std::move(stop_price));
+        ImGui::PopID();
+      }
+
+      position.stop_losses(std::move(stop_losses));
       ImGui::PopID();
     }
     {

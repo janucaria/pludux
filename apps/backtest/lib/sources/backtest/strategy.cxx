@@ -291,7 +291,7 @@ public:
 
   class StopLoss {
   public:
-    StopLoss(bool enabled = false,
+    StopLoss(bool enabled = true,
              ErasedNode stop_price = Sl1RNode{},
              bool trailing = false,
              double reduce = 1.0)
@@ -419,14 +419,16 @@ public:
       self.risk_distance_ = std::move(risk_distance);
     }
 
-    auto stop_loss(this const Position& self) noexcept -> const StopLoss&
+    auto stop_losses(this const Position& self) noexcept
+     -> const std::vector<StopLoss>&
     {
-      return self.stop_loss_;
+      return self.stop_losses_;
     }
 
-    void stop_loss(this Position& self, StopLoss stop_loss) noexcept
+    void stop_losses(this Position& self,
+                     std::vector<StopLoss> stop_losses) noexcept
     {
-      self.stop_loss_ = std::move(stop_loss);
+      self.stop_losses_ = std::move(stop_losses);
     }
 
   private:
@@ -435,7 +437,7 @@ public:
     Pyramiding pyramiding_;
     ErasedNode risk_distance_{RiskDistanceAtrNode{}};
     std::vector<TakeProfit> take_profits_;
-    StopLoss stop_loss_;
+    std::vector<StopLoss> stop_losses_{StopLoss{}};
   };
 
   Strategy()

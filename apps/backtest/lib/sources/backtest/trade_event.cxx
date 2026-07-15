@@ -10,6 +10,7 @@ export module pludux.backtest:trade_event;
 
 import :take_profit_level;
 import :signal_exit_state;
+import :stop_loss_level;
 
 export namespace pludux::backtest {
 
@@ -41,8 +42,7 @@ public:
              double position_size_after,
              double investment_after,
              double average_price_after,
-             double stop_price,
-             double stop_loss_price,
+             std::vector<StopLossLevel> stop_loss_levels = {},
              std::vector<TakeProfitLevel> take_profit_levels = {},
              std::vector<SignalExitState> signal_exit_states = {},
              double risk_distance = NAN,
@@ -62,8 +62,7 @@ public:
   , position_size_after_{position_size_after}
   , investment_after_{investment_after}
   , average_price_after_{average_price_after}
-  , stop_price_{stop_price}
-  , stop_loss_price_{stop_loss_price}
+  , stop_loss_levels_{std::move(stop_loss_levels)}
   , take_profit_levels_{std::move(take_profit_levels)}
   , signal_exit_states_{std::move(signal_exit_states)}
   , risk_distance_{risk_distance}
@@ -144,14 +143,10 @@ public:
     return self.average_price_after_;
   }
 
-  auto stop_price(this const TradeEvent& self) noexcept -> double
+  auto stop_loss_levels(this const TradeEvent& self) noexcept
+   -> const std::vector<StopLossLevel>&
   {
-    return self.stop_price_;
-  }
-
-  auto stop_loss_price(this const TradeEvent& self) noexcept -> double
-  {
-    return self.stop_loss_price_;
+    return self.stop_loss_levels_;
   }
 
   auto take_profit_levels(this const TradeEvent& self) noexcept
@@ -185,8 +180,7 @@ public:
                    double position_size,
                    double investment,
                    double average_price,
-                   double stop_price,
-                   double stop_loss_price,
+                   std::vector<StopLossLevel> stop_loss_levels = {},
                    std::vector<TakeProfitLevel> take_profit_levels = {},
                    std::vector<SignalExitState> signal_exit_states = {},
                    double risk_distance = NAN,
@@ -196,8 +190,7 @@ public:
     self.position_size_after_ = position_size;
     self.investment_after_ = investment;
     self.average_price_after_ = average_price;
-    self.stop_price_ = stop_price;
-    self.stop_loss_price_ = stop_loss_price;
+    self.stop_loss_levels_ = std::move(stop_loss_levels);
     self.take_profit_levels_ = std::move(take_profit_levels);
     self.signal_exit_states_ = std::move(signal_exit_states);
     self.risk_distance_ = risk_distance;
@@ -255,8 +248,7 @@ private:
   double investment_after_{};
   double average_price_after_{};
 
-  double stop_price_{};
-  double stop_loss_price_{};
+  std::vector<StopLossLevel> stop_loss_levels_;
   std::vector<TakeProfitLevel> take_profit_levels_;
   std::vector<SignalExitState> signal_exit_states_;
   double risk_distance_{NAN};

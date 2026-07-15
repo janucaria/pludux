@@ -180,6 +180,12 @@ auto latest_position(const BacktestTimeline& timeline)
   return *timeline.open_position(timeline_i);
 }
 
+auto stop_level(const auto& state, std::size_t index = 0)
+ -> const StopLossLevel&
+{
+  return state.stop_loss_levels().at(index);
+}
+
 auto latest_closed_trade(const BacktestTimeline& timeline) -> const ClosedTrade&
 {
   const auto timeline_i = last_timeline_index(timeline);
@@ -195,6 +201,17 @@ auto single_take_profit(AnySeriesMethod target_price,
    std::vector<BacktestRunner::PositionRule::TakeProfitRule>{};
   take_profits.emplace_back(std::move(target_price), enabled, reduce);
   return take_profits;
+}
+
+auto single_stop_loss(AnySeriesMethod stop_price,
+                      bool enabled,
+                      bool trailing = false,
+                      double reduce = 1.0)
+ -> std::vector<BacktestRunner::PositionRule::StopLossRule>
+{
+  auto stop_losses = std::vector<BacktestRunner::PositionRule::StopLossRule>{};
+  stop_losses.emplace_back(std::move(stop_price), enabled, trailing, reduce);
+  return stop_losses;
 }
 
 auto make_position_rule(
@@ -225,21 +242,22 @@ auto make_position_rule(
                             exit_signal_delay,
                             std::move(exit_price_method),
                             signal_exit_reduce);
+  auto stop_losses = single_stop_loss(std::move(stop_price_method),
+                                      stop_loss_enabled,
+                                      stop_loss_trailing_enabled,
+                                      stop_loss_reduce);
   return BacktestRunner::PositionRule{std::move(entry_method),
                                       std::move(signal_exits),
                                       std::move(pyramiding_signal),
                                       pyramiding_max_layers,
                                       std::move(risk_distance_method),
-                                      std::move(stop_price_method),
-                                      stop_loss_enabled,
-                                      stop_loss_trailing_enabled,
+                                      std::move(stop_losses),
                                       entry_signal_delay,
                                       std::move(entry_price_method),
                                       pyramiding_signal_delay,
                                       std::move(pyramiding_price_method),
                                       favorable_stop_target_reference,
                                       unfavorable_stop_target_reference,
-                                      stop_loss_reduce,
                                       std::move(take_profits)};
 }
 
@@ -873,11 +891,14 @@ TEST(BacktestRunnerTest, RiskDistanceSizingUsesSelectedEntryPrice)
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).entry_price(), 125.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 80.0);
+  EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
+                   80.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).risk_distance(), 50.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).risk_reference_price(), 125.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).risk_boundary_price(), 75.0);
-  EXPECT_TRUE(std::isnan(latest_position(timeline).stop_loss_price()));
+  EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).effective_price(),
+                   80.0);
+  EXPECT_FALSE(stop_level(latest_position(timeline)).active());
 }
 
 TEST(BacktestRunnerTest, DisabledTakeProfitKeepsTargetReferencePrice)
@@ -921,11 +942,14 @@ TEST(BacktestRunnerTest, DisabledTakeProfitKeepsTargetReferencePrice)
 
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
-  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 90.0);
+  EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
+                   90.0);
   ASSERT_EQ(latest_position(timeline).take_profit_levels().size(), 1);
   EXPECT_DOUBLE_EQ(
    latest_position(timeline).take_profit_levels().front().price(), 120.0);
-  EXPECT_TRUE(std::isnan(latest_position(timeline).stop_loss_price()));
+  EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).effective_price(),
+                   90.0);
+  EXPECT_FALSE(stop_level(latest_position(timeline)).active());
   EXPECT_FALSE(
    latest_position(timeline).take_profit_levels().front().enabled());
 }
@@ -973,11 +997,13 @@ TEST(BacktestRunnerTest, StopTargetAmountMethodsUseEntryDirection)
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).entry_price(), 100.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), -1.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 110.0);
+  EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
+                   110.0);
   ASSERT_EQ(latest_position(timeline).take_profit_levels().size(), 1);
   EXPECT_DOUBLE_EQ(
    latest_position(timeline).take_profit_levels().front().price(), 80.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_loss_price(), 110.0);
+  EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).effective_price(),
+                   110.0);
   EXPECT_TRUE(latest_position(timeline).take_profit_levels().front().active());
 }
 
@@ -1088,7 +1114,8 @@ TEST(BacktestRunnerTest, StopTargetPercentageMethodsUseEntryPrice)
 
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
-  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 180.0);
+  EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
+                   180.0);
   EXPECT_DOUBLE_EQ(
    latest_position(timeline).take_profit_levels().front().price(), 240.0);
 }
@@ -1141,7 +1168,8 @@ TEST(BacktestRunnerTest, StopTargetPercentageMethodsUseFeeAdjustedAveragePrice)
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 110.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 99.0);
+  EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
+                   99.0);
   EXPECT_DOUBLE_EQ(
    latest_position(timeline).take_profit_levels().front().price(), 132.0);
 }
@@ -1208,7 +1236,8 @@ TEST(BacktestRunnerTest, AtrStopAndRMultipleTargetUseScopedContext)
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).entry_price(), 100.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 60.0);
+  EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
+                   60.0);
   EXPECT_DOUBLE_EQ(
    latest_position(timeline).take_profit_levels().front().price(), 180.0);
 }
@@ -1254,7 +1283,8 @@ TEST(BacktestRunnerTest, PositionContextMethodsUseNormalLongEntryContext)
 
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
-  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 100.0);
+  EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
+                   100.0);
   EXPECT_DOUBLE_EQ(
    latest_position(timeline).take_profit_levels().front().price(), 1.0);
 }
@@ -1300,7 +1330,8 @@ TEST(BacktestRunnerTest, PositionContextMethodsUseNormalShortEntryContext)
 
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
-  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 100.0);
+  EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
+                   100.0);
   EXPECT_DOUBLE_EQ(
    latest_position(timeline).take_profit_levels().front().price(), -1.0);
 }
@@ -1349,7 +1380,8 @@ TEST(BacktestRunnerTest, PositionContextMethodsUsePyramidingPriceContext)
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 110.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 110.0);
+  EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
+                   110.0);
   EXPECT_DOUBLE_EQ(
    latest_position(timeline).take_profit_levels().front().price(), 120.0);
 }
@@ -1397,7 +1429,8 @@ TEST(BacktestRunnerTest, PositionContextMethodsUseConfiguredReferenceContext)
 
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
-  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 100.0);
+  EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
+                   100.0);
   EXPECT_DOUBLE_EQ(
    latest_position(timeline).take_profit_levels().front().price(), 120.0);
 }
@@ -1449,7 +1482,8 @@ TEST(BacktestRunnerTest, CustomStopTargetFormulasUseReferenceAndDirection)
 
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
-  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 90.0);
+  EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
+                   90.0);
   EXPECT_DOUBLE_EQ(
    latest_position(timeline).take_profit_levels().front().price(), 120.0);
 }
@@ -2079,7 +2113,8 @@ TEST(BacktestRunnerTest,
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 110.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 99.0);
+  EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
+                   99.0);
   EXPECT_DOUBLE_EQ(
    latest_position(timeline).take_profit_levels().front().price(), 132.0);
 }
@@ -2135,7 +2170,8 @@ TEST(BacktestRunnerTest, PyramidingUsesPostScaleInFeeAdjustedAverageReference)
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 120.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 108.0);
+  EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
+                   108.0);
   EXPECT_DOUBLE_EQ(
    latest_position(timeline).take_profit_levels().front().price(), 144.0);
 }
@@ -2187,7 +2223,8 @@ TEST(BacktestRunnerTest,
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 90.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 81.0);
+  EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
+                   81.0);
   EXPECT_DOUBLE_EQ(
    latest_position(timeline).take_profit_levels().front().price(), 108.0);
 }
@@ -2239,7 +2276,8 @@ TEST(BacktestRunnerTest,
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), -2.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 90.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 99.0);
+  EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
+                   99.0);
   EXPECT_DOUBLE_EQ(
    latest_position(timeline).take_profit_levels().front().price(), 72.0);
 }
@@ -2290,7 +2328,8 @@ TEST(BacktestRunnerTest, PyramidingCanUseLatestEntryReference)
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 110.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 108.0);
+  EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
+                   108.0);
   EXPECT_DOUBLE_EQ(
    latest_position(timeline).take_profit_levels().front().price(), 144.0);
 }
@@ -2342,7 +2381,8 @@ TEST(BacktestRunnerTest,
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), -2.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 110.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 121.0);
+  EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
+                   121.0);
   EXPECT_DOUBLE_EQ(
    latest_position(timeline).take_profit_levels().front().price(), 88.0);
 }
@@ -2393,7 +2433,8 @@ TEST(BacktestRunnerTest, PyramidingCanUseInitialEntryReference)
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 110.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 90.0);
+  EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
+                   90.0);
   EXPECT_DOUBLE_EQ(
    latest_position(timeline).take_profit_levels().front().price(), 120.0);
 }
@@ -2552,8 +2593,10 @@ TEST(BacktestRunnerTest, StopLossExitIsDecidedByRunner)
   ASSERT_EQ(timeline.closed_trades(last_timeline_index(timeline)).size(), 1);
   EXPECT_EQ(latest_closed_trade(timeline).exit_type(),
             TradeEvent::Type::stop_loss);
-  EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).stop_price(), 90.0);
-  EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).stop_loss_price(), 90.0);
+  EXPECT_DOUBLE_EQ(stop_level(latest_closed_trade(timeline)).evaluated_price(),
+                   90.0);
+  EXPECT_DOUBLE_EQ(stop_level(latest_closed_trade(timeline)).effective_price(),
+                   90.0);
   EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).exit_price(), 90.0);
 }
 
@@ -2590,9 +2633,260 @@ TEST(BacktestRunnerTest, TrailingStopMutationUsesTradePositionState)
   ASSERT_EQ(timeline.closed_trades(last_timeline_index(timeline)).size(), 1);
   EXPECT_EQ(latest_closed_trade(timeline).exit_type(),
             TradeEvent::Type::stop_loss);
-  EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).stop_price(), 90.0);
-  EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).stop_loss_price(), 105.0);
+  EXPECT_DOUBLE_EQ(stop_level(latest_closed_trade(timeline)).evaluated_price(),
+                   90.0);
+  EXPECT_DOUBLE_EQ(stop_level(latest_closed_trade(timeline)).effective_price(),
+                   105.0);
   EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).exit_price(), 105.0);
+}
+
+TEST(BacktestRunnerTest,
+     OrderedStopLossesTriggerOnceReduceRemainingAndResetAfterClosure)
+{
+  const auto asset = Asset{"Test",
+                           AssetHistory{{"Datetime", {1.0, 2.0, 3.0, 4.0}},
+                                        {"Open", {100.0, 85.0, 75.0, 100.0}},
+                                        {"High", {100.0, 100.0, 80.0, 100.0}},
+                                        {"Low", {100.0, 75.0, 70.0, 100.0}},
+                                        {"Close", {100.0, 85.0, 75.0, 100.0}},
+                                        {"Volume", {0.0, 0.0, 0.0, 0.0}}}};
+  const auto market = Market{"Test", 1.0, 1.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 8.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+  auto stop_losses = std::vector<BacktestRunner::PositionRule::StopLossRule>{};
+  stop_losses.emplace_back(ValueMethod{95.0}, false, false, 1.0);
+  stop_losses.emplace_back(ValueMethod{90.0}, true, false, 0.5);
+  stop_losses.emplace_back(ValueMethod{80.0}, true, false, 1.0);
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                               {},
+                                               BooleanMethod<false>{},
+                                               1,
+                                               ValueMethod{10.0},
+                                               std::move(stop_losses)},
+                  BacktestRunner::PositionRule{},
+                  5000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+
+  ASSERT_TRUE(timeline.open_position(1));
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 4.0);
+  ASSERT_EQ(timeline.open_position(1)->stop_loss_levels().size(), 3);
+  EXPECT_FALSE(timeline.open_position(1)->stop_loss_levels()[0].consumed());
+  EXPECT_TRUE(timeline.open_position(1)->stop_loss_levels()[1].consumed());
+  EXPECT_FALSE(timeline.open_position(1)->stop_loss_levels()[2].consumed());
+  ASSERT_EQ(timeline.trade_events(1).size(), 1);
+  EXPECT_EQ(timeline.trade_events(1).front().type(),
+            TradeEvent::Type::stop_loss);
+  EXPECT_DOUBLE_EQ(timeline.trade_events(1).front().price(), 85.0);
+
+  runner.run(series_results, timeline);
+
+  EXPECT_FALSE(timeline.open_position(2));
+  ASSERT_EQ(timeline.closed_trades(2).size(), 1);
+  EXPECT_TRUE(
+   timeline.closed_trades(2).front().stop_loss_levels()[1].consumed());
+  EXPECT_TRUE(
+   timeline.closed_trades(2).front().stop_loss_levels()[2].consumed());
+  EXPECT_DOUBLE_EQ(timeline.closed_trades(2).front().exit_price(), 75.0);
+
+  runner.run(series_results, timeline);
+
+  ASSERT_TRUE(timeline.open_position(3));
+  EXPECT_FALSE(timeline.open_position(3)->stop_loss_levels()[1].consumed());
+  EXPECT_FALSE(timeline.open_position(3)->stop_loss_levels()[2].consumed());
+}
+
+TEST(BacktestRunnerTest, OrderedShortStopLossUsesGapPrice)
+{
+  const auto asset =
+   make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 115.0, 125.0, 100.0, 115.0);
+  const auto market = Market{"Test", 1.0, 1.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 8.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+  auto stop_losses = std::vector<BacktestRunner::PositionRule::StopLossRule>{};
+  stop_losses.emplace_back(ValueMethod{110.0}, true, false, 0.5);
+  stop_losses.emplace_back(ValueMethod{120.0}, true, false, 1.0);
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  BacktestRunner::PositionRule{},
+                  BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                               {},
+                                               BooleanMethod<false>{},
+                                               1,
+                                               ValueMethod{10.0},
+                                               std::move(stop_losses)},
+                  5000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+
+  ASSERT_TRUE(timeline.open_position(1));
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), -4.0);
+  EXPECT_TRUE(timeline.open_position(1)->stop_loss_levels()[0].consumed());
+  EXPECT_FALSE(timeline.open_position(1)->stop_loss_levels()[1].consumed());
+  ASSERT_EQ(timeline.trade_events(1).size(), 1);
+  EXPECT_DOUBLE_EQ(timeline.trade_events(1).front().price(), 115.0);
+}
+
+TEST(BacktestRunnerTest, PyramidingPreservesConsumedStopLossLevels)
+{
+  const auto asset = Asset{"Test",
+                           AssetHistory{{"Datetime", {1.0, 2.0, 3.0}},
+                                        {"Open", {100.0, 95.0, 120.0}},
+                                        {"High", {100.0, 100.0, 120.0}},
+                                        {"Low", {100.0, 89.0, 100.0}},
+                                        {"Close", {100.0, 95.0, 120.0}},
+                                        {"Volume", {0.0, 0.0, 0.0}}}};
+  const auto market = Market{"Test", 1.0, 1.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 8.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+  auto stop_losses = std::vector<BacktestRunner::PositionRule::StopLossRule>{};
+  stop_losses.emplace_back(ValueMethod{90.0}, true, false, 0.5);
+  stop_losses.emplace_back(ValueMethod{80.0}, true, false, 1.0);
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                               {},
+                                               BooleanMethod<true>{},
+                                               2,
+                                               ValueMethod{10.0},
+                                               std::move(stop_losses)},
+                  BacktestRunner::PositionRule{},
+                  5000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+  ASSERT_TRUE(timeline.open_position(1));
+  EXPECT_TRUE(timeline.open_position(1)->stop_loss_levels()[0].consumed());
+
+  runner.run(series_results, timeline);
+  ASSERT_TRUE(timeline.open_position(2));
+  EXPECT_DOUBLE_EQ(timeline.open_position(2)->position_size(), 12.0);
+  EXPECT_TRUE(timeline.open_position(2)->stop_loss_levels()[0].consumed());
+  EXPECT_FALSE(timeline.open_position(2)->stop_loss_levels()[1].consumed());
+}
+
+TEST(BacktestRunnerTest, PyramidingNeverLoosensTrailingStopEffectivePrice)
+{
+  const auto asset = Asset{"Test",
+                           AssetHistory{{"Datetime", {1.0, 2.0, 3.0}},
+                                        {"Open", {100.0, 100.0, 120.0}},
+                                        {"High", {100.0, 121.0, 120.0}},
+                                        {"Low", {100.0, 100.0, 115.0}},
+                                        {"Close", {100.0, 120.0, 120.0}},
+                                        {"Volume", {0.0, 0.0, 0.0}}}};
+  const auto market = Market{"Test", 1.0, 1.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 8.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   {},
+   make_position_rule(BooleanMethod<true>{},
+                      BooleanMethod<false>{},
+                      BooleanMethod<true>{},
+                      2,
+                      SlAmountMethod{10.0},
+                      true,
+                      true,
+                      1,
+                      OpenMethod{},
+                      1,
+                      OpenMethod{},
+                      1,
+                      OpenMethod{},
+                      StopTargetReferencePrice::AveragePrice,
+                      StopTargetReferencePrice::AveragePrice,
+                      1.0,
+                      1.0,
+                      single_take_profit(ValueMethod{110.0}, true, 0.5)),
+   BacktestRunner::PositionRule{},
+   5000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+  ASSERT_TRUE(timeline.open_position(1));
+  EXPECT_TRUE(timeline.open_position(1)->take_profit_levels()[0].consumed());
+
+  runner.run(series_results, timeline);
+  ASSERT_TRUE(timeline.open_position(2));
+  ASSERT_EQ(timeline.open_position(2)->stop_loss_levels().size(), 1);
+  EXPECT_NEAR(
+   timeline.open_position(2)->stop_loss_levels()[0].evaluated_price(),
+   103.33333333333333,
+   1e-12);
+  EXPECT_DOUBLE_EQ(
+   timeline.open_position(2)->stop_loss_levels()[0].effective_price(), 110.0);
+}
+
+TEST(BacktestRunnerTest, PyramidingAcceptsSaferTrailingStopBasePrice)
+{
+  const auto asset =
+   make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 140.0, 140.0, 120.0, 140.0);
+  const auto market = Market{"Test", 1.0, 1.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 8.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto runner = BacktestRunner{asset,
+                               market,
+                               broker,
+                               profile,
+                               {},
+                               make_position_rule(BooleanMethod<true>{},
+                                                  BooleanMethod<false>{},
+                                                  BooleanMethod<true>{},
+                                                  2,
+                                                  SlAmountMethod{10.0},
+                                                  true,
+                                                  true),
+                               BacktestRunner::PositionRule{},
+                               5000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+
+  ASSERT_TRUE(timeline.open_position(1));
+  ASSERT_EQ(timeline.open_position(1)->stop_loss_levels().size(), 1);
+  EXPECT_DOUBLE_EQ(
+   timeline.open_position(1)->stop_loss_levels()[0].evaluated_price(), 110.0);
+  EXPECT_DOUBLE_EQ(
+   timeline.open_position(1)->stop_loss_levels()[0].effective_price(), 110.0);
 }
 
 TEST(BacktestRunnerTest, TakeProfitExitIsDecidedByRunner)
@@ -2733,22 +3027,20 @@ TEST(BacktestRunnerTest, OrderedSignalExitsExecuteOnceAndResetAfterFullClosure)
   signal_exits.emplace_back(true, BooleanMethod<true>{}, 1, OpenMethod{}, 0.5);
   signal_exits.emplace_back(true, BooleanMethod<true>{}, 1, OpenMethod{}, 1.0);
 
-  auto runner =
-   BacktestRunner{asset,
-                  market,
-                  broker,
-                  profile,
-                  {},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               std::move(signal_exits),
-                                               BooleanMethod<false>{},
-                                               1,
-                                               ValueMethod{10.0},
-                                               ValueMethod{90.0},
-                                               false,
-                                               false},
-                  BacktestRunner::PositionRule{},
-                  5000.0};
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   {},
+   BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                std::move(signal_exits),
+                                BooleanMethod<false>{},
+                                1,
+                                ValueMethod{10.0},
+                                single_stop_loss(ValueMethod{90.0}, false)},
+   BacktestRunner::PositionRule{},
+   5000.0};
 
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
@@ -2816,22 +3108,20 @@ TEST(BacktestRunnerTest, PyramidingPreservesConsumedSignalExitStates)
   signal_exits.emplace_back(true, BooleanMethod<true>{}, 1, OpenMethod{}, 0.5);
   signal_exits.emplace_back(true, BooleanMethod<false>{}, 1, OpenMethod{}, 1.0);
 
-  auto runner =
-   BacktestRunner{asset,
-                  market,
-                  broker,
-                  profile,
-                  {},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               std::move(signal_exits),
-                                               BooleanMethod<true>{},
-                                               2,
-                                               ValueMethod{10.0},
-                                               ValueMethod{90.0},
-                                               false,
-                                               false},
-                  BacktestRunner::PositionRule{},
-                  5000.0};
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   {},
+   BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                std::move(signal_exits),
+                                BooleanMethod<true>{},
+                                2,
+                                ValueMethod{10.0},
+                                single_stop_loss(ValueMethod{90.0}, false)},
+   BacktestRunner::PositionRule{},
+   5000.0};
 
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
@@ -2877,16 +3167,13 @@ TEST(BacktestRunnerTest, StopLossAndTakeProfitHavePriorityOverSignalExits)
                    BooleanMethod<false>{},
                    1,
                    ValueMethod{10.0},
-                   ValueMethod{90.0},
-                   true,
-                   false,
+                   single_stop_loss(ValueMethod{90.0}, true, false, 0.25),
                    1,
                    OpenMethod{},
                    1,
                    OpenMethod{},
                    StopTargetReferencePrice::AveragePrice,
                    StopTargetReferencePrice::AveragePrice,
-                   0.25,
                    single_take_profit(ValueMethod{120.0}, true, 0.5)},
                   BacktestRunner::PositionRule{},
                   5000.0};

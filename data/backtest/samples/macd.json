@@ -116,13 +116,15 @@
           "maSmoothingType": "RMA"
         }
       },
-      "stopLoss": {
-        "enabled": false,
-        "trailing": false,
-        "stopPrice": {
-          "method": "SL_1R"
+      "stopLosses": [
+        {
+          "enabled": false,
+          "trailing": false,
+          "stopPrice": {
+            "method": "SL_1R"
+          }
         }
-      }
+      ]
     }
   },
   "plots": [

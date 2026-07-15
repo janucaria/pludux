@@ -57,11 +57,11 @@ TEST(StrategyInputsTest, CollectsNumericInputsInStrategyTraversalOrder)
   long_position.pyramiding(std::move(long_pyramiding));
   long_position.risk_distance(RiskDistanceAmountNode{NumericInputNode{
    "Risk Distance", NumericInputNode::ValueRepresentation::Decimal, 10.0}});
-  long_position.stop_loss(Strategy::StopLoss{
-   false,
+  long_position.stop_losses({Strategy::StopLoss{
+   true,
    NumericInputNode{
     "Stop Price", NumericInputNode::ValueRepresentation::Decimal, 95.0},
-   false});
+   false}});
   long_position.take_profits({Strategy::TakeProfit{
    true,
    NumericInputNode{
@@ -135,12 +135,20 @@ TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
           "method": "R_DISTANCE_PERCENTAGE",
           "params": { "percentage": 5 }
         },
-        "stopLoss": {
-          "enabled": true,
-          "trailing": true,
-          "stopPrice": "OPEN",
-          "reduce": 0.5
-        },
+        "stopLosses": [
+          {
+            "enabled": true,
+            "trailing": true,
+            "stopPrice": "OPEN",
+            "reduce": 0.5
+          },
+          {
+            "enabled": false,
+            "trailing": false,
+            "stopPrice": 80,
+            "reduce": 0.25
+          }
+        ],
         "takeProfits": [
           {
             "enabled": true,
@@ -170,7 +178,8 @@ TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
 
   const auto strategy = parse_backtest_strategy_json("Test", strategy_json);
 
-  EXPECT_TRUE(strategy.long_position().stop_loss().enabled());
+  ASSERT_EQ(strategy.long_position().stop_losses().size(), 2);
+  EXPECT_TRUE(strategy.long_position().stop_losses()[0].enabled());
   EXPECT_TRUE(node_cast<RiskDistancePercentNode>(
    strategy.long_position().risk_distance()));
   EXPECT_EQ(strategy.long_position().entry().signal_delay(), 0);
@@ -191,10 +200,12 @@ TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
   EXPECT_EQ(
    strategy.long_position().pyramiding().unfavorable_stop_target_reference(),
    StopTargetReferencePrice::LatestEntryPrice);
-  EXPECT_TRUE(strategy.long_position().stop_loss().trailing());
-  EXPECT_DOUBLE_EQ(strategy.long_position().stop_loss().reduce(), 0.5);
+  EXPECT_TRUE(strategy.long_position().stop_losses()[0].trailing());
+  EXPECT_DOUBLE_EQ(strategy.long_position().stop_losses()[0].reduce(), 0.5);
   EXPECT_TRUE(
-   node_cast<OpenNode>(strategy.long_position().stop_loss().stop_price()));
+   node_cast<OpenNode>(strategy.long_position().stop_losses()[0].stop_price()));
+  EXPECT_FALSE(strategy.long_position().stop_losses()[1].enabled());
+  EXPECT_DOUBLE_EQ(strategy.long_position().stop_losses()[1].reduce(), 0.25);
   ASSERT_EQ(strategy.long_position().take_profits().size(), 2);
   EXPECT_TRUE(strategy.long_position().take_profits()[0].enabled());
   EXPECT_DOUBLE_EQ(strategy.long_position().take_profits()[0].reduce(), 0.75);
@@ -203,6 +214,10 @@ TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
    strategy.long_position().take_profits()[0].target_price()));
   EXPECT_FALSE(strategy.short_position().entry().signal() ==
                strategy.long_position().entry().signal());
+
+  const auto round_tripped = parse_backtest_strategy_json(
+   "Round Trip", stringify_backtest_strategy(strategy));
+  EXPECT_TRUE(round_tripped.equivalent_rules(strategy));
 }
 
 TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
@@ -220,7 +235,7 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
    StopTargetReferencePrice::LatestEntryPrice);
   long_position.pyramiding(pyramiding);
   long_position.risk_distance(RiskDistanceAmountNode{10.0});
-  long_position.stop_loss(Strategy::StopLoss{true, OpenNode{}, false, 0.5});
+  long_position.stop_losses({Strategy::StopLoss{true, OpenNode{}, false, 0.5}});
   long_position.take_profits(
    {Strategy::TakeProfit{true, ValueNode{120.0}, 0.75}});
 
@@ -239,7 +254,8 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
                .as<std::string>() == "R_DISTANCE_AMOUNT");
   EXPECT_TRUE(strategy_json.at("positions")
                .at("long")
-               .at("stopLoss")
+               .at("stopLosses")
+               .at(0)
                .contains("stopPrice"));
   EXPECT_TRUE(strategy_json.at("positions")
                .at("long")
@@ -268,7 +284,8 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
                    0.25);
   EXPECT_DOUBLE_EQ(strategy_json.at("positions")
                     .at("long")
-                    .at("stopLoss")
+                    .at("stopLosses")
+                    .at(0)
                     .at("reduce")
                     .as<double>(),
                    0.5);
@@ -286,7 +303,8 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
                 .contains("reduceRounding"));
   EXPECT_FALSE(strategy_json.at("positions")
                 .at("long")
-                .at("stopLoss")
+                .at("stopLosses")
+                .at(0)
                 .contains("reduceRounding"));
   EXPECT_FALSE(strategy_json.at("positions")
                 .at("long")
@@ -343,7 +361,7 @@ TEST(StrategyParserTest, JsonconsConvTraitsRoundTripSchemaConfig)
 {
   auto long_position = Strategy::Position{};
   long_position.entry(Strategy::Entry{TrueNode{}, 0, CloseNode{}});
-  long_position.stop_loss(Strategy::StopLoss{true, OpenNode{}, false});
+  long_position.stop_losses({Strategy::StopLoss{true, OpenNode{}, false}});
 
   const auto strategy = Strategy{
    "Config Name", {}, std::move(long_position), Strategy::Position{}, {}};
@@ -366,8 +384,10 @@ TEST(StrategyParserTest, DefaultStopLossAndEmptyExitCollections)
 {
   const auto strategy = Strategy{};
 
+  ASSERT_EQ(strategy.long_position().stop_losses().size(), 1);
+  EXPECT_TRUE(strategy.long_position().stop_losses()[0].enabled());
   const auto* stop_price =
-   node_cast<Sl1RNode>(strategy.long_position().stop_loss().stop_price());
+   node_cast<Sl1RNode>(strategy.long_position().stop_losses()[0].stop_price());
   ASSERT_NE(stop_price, nullptr);
 
   const auto* risk_distance =
@@ -380,6 +400,39 @@ TEST(StrategyParserTest, DefaultStopLossAndEmptyExitCollections)
 
   EXPECT_TRUE(strategy.long_position().take_profits().empty());
   EXPECT_TRUE(strategy.long_position().exits().empty());
+}
+
+TEST(StrategyParserTest, MissingAndEmptyStopLossesDisableExecutableStops)
+{
+  const auto risk_distance =
+   R"("riskDistance":{"method":"R_DISTANCE_AMOUNT","params":{"amount":10}})";
+  const auto missing = parse_backtest_strategy_json(
+   "Missing",
+   std::string{R"({"version":2,"positions":{"long":{)"} + risk_distance +
+    R"(},"short":false}})");
+  const auto empty = parse_backtest_strategy_json(
+   "Empty",
+   std::string{R"({"version":2,"positions":{"long":{)"} + risk_distance +
+    R"(,"stopLosses":[]},"short":false}})");
+
+  EXPECT_TRUE(missing.long_position().stop_losses().empty());
+  EXPECT_TRUE(empty.long_position().stop_losses().empty());
+}
+
+TEST(StrategyParserTest, RejectsInvalidStopLosses)
+{
+  const auto risk_distance =
+   R"("riskDistance":{"method":"R_DISTANCE_AMOUNT","params":{"amount":10}})";
+  EXPECT_THROW(parse_backtest_strategy_json(
+                "Not Array",
+                std::string{R"({"version":2,"positions":{"long":{)"} +
+                 risk_distance + R"(,"stopLosses":{}},"short":false}})"),
+               std::runtime_error);
+  EXPECT_THROW(parse_backtest_strategy_json(
+                "Bad Item",
+                std::string{R"({"version":2,"positions":{"long":{)"} +
+                 risk_distance + R"(,"stopLosses":[{}]},"short":false}})"),
+               std::runtime_error);
 }
 
 TEST(StrategyParserTest, RejectsLegacySingularExit)

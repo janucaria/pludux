@@ -102,13 +102,6 @@
           "maSmoothingType": "RMA"
         }
       },
-      "stopLoss": {
-        "enabled": true,
-        "trailing": true,
-        "stopPrice": {
-          "method": "SL_1R"
-        }
-      },
       "takeProfits": [
         {
           "enabled": true,
@@ -122,6 +115,15 @@
                 }
               }
             }
+          }
+        }
+      ],
+      "stopLosses": [
+        {
+          "enabled": true,
+          "trailing": true,
+          "stopPrice": {
+            "method": "SL_1R"
           }
         }
       ]

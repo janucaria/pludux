@@ -391,22 +391,29 @@ private:
           take_profit.enabled(),
           take_profit.reduce());
        }
+       auto stop_losses =
+        std::vector<backtest::BacktestRunner::PositionRule::StopLossRule>{};
+       stop_losses.reserve(position.stop_losses().size());
+       for(const auto& stop_loss : position.stop_losses()) {
+         stop_losses.emplace_back(
+          node_to_erased_method(stop_loss.stop_price(), input_context),
+          stop_loss.enabled(),
+          stop_loss.trailing(),
+          stop_loss.reduce());
+       }
        return backtest::BacktestRunner::PositionRule{
         node_to_erased_method(position.entry().signal(), input_context),
         std::move(signal_exits),
         node_to_erased_method(position.pyramiding().signal(), input_context),
         position.pyramiding().max_layers(),
         node_to_erased_method(position.risk_distance(), input_context),
-        node_to_erased_method(position.stop_loss().stop_price(), input_context),
-        position.stop_loss().enabled(),
-        position.stop_loss().trailing(),
+        std::move(stop_losses),
         position.entry().signal_delay(),
         node_to_erased_method(position.entry().price(), input_context),
         position.pyramiding().signal_delay(),
         node_to_erased_method(position.pyramiding().price(), input_context),
         position.pyramiding().favorable_stop_target_reference(),
         position.pyramiding().unfavorable_stop_target_reference(),
-        position.stop_loss().reduce(),
         std::move(take_profits)};
      };
 

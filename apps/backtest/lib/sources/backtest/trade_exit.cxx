@@ -16,11 +16,13 @@ public:
   TradeExit(double position_size,
             double price,
             Reason reason,
+            std::optional<std::size_t> stop_loss_index = std::nullopt,
             std::optional<std::size_t> take_profit_index = std::nullopt,
             std::optional<std::size_t> signal_exit_index = std::nullopt)
   : reason_(reason)
   , position_size_(position_size)
   , price_(price)
+  , stop_loss_index_{stop_loss_index}
   , take_profit_index_{take_profit_index}
   , signal_exit_index_{signal_exit_index}
   {
@@ -41,6 +43,12 @@ public:
   auto reason(this const TradeExit& self) noexcept -> Reason
   {
     return self.reason_;
+  }
+
+  auto stop_loss_index(this const TradeExit& self) noexcept
+   -> std::optional<std::size_t>
+  {
+    return self.stop_loss_index_;
   }
 
   auto take_profit_index(this const TradeExit& self) noexcept
@@ -85,6 +93,7 @@ private:
 
   double position_size_;
   double price_;
+  std::optional<std::size_t> stop_loss_index_;
   std::optional<std::size_t> take_profit_index_;
   std::optional<std::size_t> signal_exit_index_;
 };

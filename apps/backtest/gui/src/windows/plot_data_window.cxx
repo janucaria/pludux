@@ -540,9 +540,8 @@ private:
       auto take_profit_line_color = self.reward_color_;
       take_profit_line_color.w = 0.9f;
       const auto target_line_color = ImGui::GetColorU32(take_profit_line_color);
-      auto stop_loss_line_points = std::vector<ImVec2>{};
+      auto stop_loss_line_points = std::vector<std::vector<ImVec2>>{};
       auto take_profit_line_points = std::vector<std::vector<ImVec2>>{};
-      stop_loss_line_points.reserve(timeline_size * 3);
 
       const auto flush_price_line = [&](std::vector<ImVec2>& line_points,
                                         ImU32 color) {
@@ -560,17 +559,25 @@ private:
       for(auto i = std::size_t{0}; i < timeline_size; ++i) {
         const auto& open_position = backtest_timelines.open_position(i);
         if(!open_position) {
-          flush_price_line(stop_loss_line_points, stop_line_color);
+          for(auto& points : stop_loss_line_points) {
+            flush_price_line(points, stop_line_color);
+          }
           for(auto& points : take_profit_line_points) {
             flush_price_line(points, target_line_color);
           }
           continue;
         }
 
-        const auto stop_loss_price = open_position->stop_loss_price();
         const auto avg_price = open_position->average_price();
         const auto risk_reference_price = open_position->risk_reference_price();
         const auto risk_boundary_price = open_position->risk_boundary_price();
+        const auto& stop_loss_levels = open_position->stop_loss_levels();
+        for(auto index = stop_loss_levels.size();
+            index < stop_loss_line_points.size();
+            ++index) {
+          flush_price_line(stop_loss_line_points[index], stop_line_color);
+        }
+        stop_loss_line_points.resize(stop_loss_levels.size());
         const auto& take_profit_levels = open_position->take_profit_levels();
         for(auto index = take_profit_levels.size();
             index < take_profit_line_points.size();
@@ -637,8 +644,14 @@ private:
           }
         }
 
-        append_price_line(
-         stop_loss_line_points, stop_loss_price, stop_line_color);
+        for(auto index = std::size_t{0}; index < stop_loss_levels.size();
+            ++index) {
+          append_price_line(stop_loss_line_points[index],
+                            stop_loss_levels[index].active()
+                             ? stop_loss_levels[index].effective_price()
+                             : NAN,
+                            stop_line_color);
+        }
         for(auto index = std::size_t{0}; index < take_profit_levels.size();
             ++index) {
           append_price_line(take_profit_line_points[index],
@@ -649,7 +662,9 @@ private:
         }
       }
 
-      flush_price_line(stop_loss_line_points, stop_line_color);
+      for(auto& points : stop_loss_line_points) {
+        flush_price_line(points, stop_line_color);
+      }
       for(auto& points : take_profit_line_points) {
         flush_price_line(points, target_line_color);
       }

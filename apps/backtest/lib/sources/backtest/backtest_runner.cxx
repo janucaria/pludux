@@ -25,6 +25,7 @@ import :trade_entry;
 import :trade_exit;
 import :take_profit_level;
 import :signal_exit_state;
+import :stop_loss_level;
 import :closed_trade;
 import :open_position_snapshot;
 import :trade_event;
@@ -125,6 +126,47 @@ public:
       double reduce_;
     };
 
+    class StopLossRule {
+    public:
+      StopLossRule(AnySeriesMethod price_method = Sl1RMethod{},
+                   bool enabled = true,
+                   bool trailing = false,
+                   double reduce = 1.0)
+      : price_method_{std::move(price_method)}
+      , enabled_{enabled}
+      , trailing_{trailing}
+      , reduce_{reduce}
+      {
+      }
+
+      auto price_method(this const StopLossRule& self) noexcept
+       -> const AnySeriesMethod&
+      {
+        return self.price_method_;
+      }
+
+      auto enabled(this const StopLossRule& self) noexcept -> bool
+      {
+        return self.enabled_;
+      }
+
+      auto trailing(this const StopLossRule& self) noexcept -> bool
+      {
+        return self.trailing_;
+      }
+
+      auto reduce(this const StopLossRule& self) noexcept -> double
+      {
+        return self.reduce_;
+      }
+
+    private:
+      AnySeriesMethod price_method_;
+      bool enabled_;
+      bool trailing_;
+      double reduce_;
+    };
+
     PositionRule() = default;
 
     PositionRule(AnySeriesMethod entry_method,
@@ -132,9 +174,7 @@ public:
                  AnySeriesMethod pyramiding_signal,
                  std::size_t pyramiding_max_layers,
                  AnySeriesMethod risk_distance_method,
-                 AnySeriesMethod stop_price_method,
-                 bool stop_loss_enabled,
-                 bool stop_loss_trailing_enabled,
+                 std::vector<StopLossRule> stop_losses,
                  std::size_t entry_signal_delay = 1,
                  AnySeriesMethod entry_price_method = OpenMethod{},
                  std::size_t pyramiding_signal_delay = 1,
@@ -143,23 +183,19 @@ public:
                   StopTargetReferencePrice::AveragePrice,
                  StopTargetReferencePrice unfavorable_stop_target_reference =
                   StopTargetReferencePrice::AveragePrice,
-                 double stop_loss_reduce = 1.0,
                  std::vector<TakeProfitRule> take_profits = {})
     : entry_method_{std::move(entry_method)}
     , signal_exits_{std::move(signal_exits)}
     , pyramiding_signal_{std::move(pyramiding_signal)}
     , pyramiding_max_layers_{pyramiding_max_layers}
     , risk_distance_method_{std::move(risk_distance_method)}
-    , stop_price_method_{std::move(stop_price_method)}
-    , stop_loss_enabled_{stop_loss_enabled}
-    , stop_loss_trailing_enabled_{stop_loss_trailing_enabled}
+    , stop_losses_{std::move(stop_losses)}
     , entry_signal_delay_{entry_signal_delay}
     , entry_price_method_{std::move(entry_price_method)}
     , pyramiding_signal_delay_{pyramiding_signal_delay}
     , pyramiding_price_method_{std::move(pyramiding_price_method)}
     , favorable_stop_target_reference_{favorable_stop_target_reference}
     , unfavorable_stop_target_reference_{unfavorable_stop_target_reference}
-    , stop_loss_reduce_{stop_loss_reduce}
     , take_profits_{std::move(take_profits)}
     {
     }
@@ -188,27 +224,16 @@ public:
       return self.pyramiding_max_layers_;
     }
 
-    auto stop_price_method(this const PositionRule& self) noexcept
-     -> const AnySeriesMethod&
-    {
-      return self.stop_price_method_;
-    }
-
     auto risk_distance_method(this const PositionRule& self) noexcept
      -> const AnySeriesMethod&
     {
       return self.risk_distance_method_;
     }
 
-    auto stop_loss_enabled(this const PositionRule& self) noexcept -> bool
+    auto stop_losses(this const PositionRule& self) noexcept
+     -> const std::vector<StopLossRule>&
     {
-      return self.stop_loss_enabled_;
-    }
-
-    auto stop_loss_trailing_enabled(this const PositionRule& self) noexcept
-     -> bool
-    {
-      return self.stop_loss_trailing_enabled_;
+      return self.stop_losses_;
     }
 
     auto entry_signal_delay(this const PositionRule& self) noexcept
@@ -248,11 +273,6 @@ public:
       return self.unfavorable_stop_target_reference_;
     }
 
-    auto stop_loss_reduce(this const PositionRule& self) noexcept -> double
-    {
-      return self.stop_loss_reduce_;
-    }
-
     auto take_profits(this const PositionRule& self) noexcept
      -> const std::vector<TakeProfitRule>&
     {
@@ -265,9 +285,7 @@ public:
     AnySeriesMethod pyramiding_signal_{BooleanMethod<false>{}};
     std::size_t pyramiding_max_layers_{1};
     AnySeriesMethod risk_distance_method_{ValueMethod{1.0}};
-    AnySeriesMethod stop_price_method_{OpenMethod{}};
-    bool stop_loss_enabled_{false};
-    bool stop_loss_trailing_enabled_{false};
+    std::vector<StopLossRule> stop_losses_;
     std::size_t entry_signal_delay_{1};
     AnySeriesMethod entry_price_method_{OpenMethod{}};
     std::size_t pyramiding_signal_delay_{1};
@@ -276,7 +294,6 @@ public:
      StopTargetReferencePrice::AveragePrice};
     StopTargetReferencePrice unfavorable_stop_target_reference_{
      StopTargetReferencePrice::AveragePrice};
-    double stop_loss_reduce_{1.0};
     std::vector<TakeProfitRule> take_profits_;
   };
 
@@ -373,7 +390,6 @@ public:
         const auto closing_position_is_long =
          open_position->is_long_direction();
         self.trade_session_.exit_position(*exit_trade, fee);
-        self.mark_exit_consumed(exit_trade->reason());
 
         if(!self.trade_session_.is_open()) {
           closed_position_is_long = closing_position_is_long;
@@ -444,7 +460,6 @@ public:
           self.trade_session_.sync_latest_event_with_open_position();
         }
         self.pyramiding_layers_ = 1;
-        self.reset_consumed_exits();
       }
     }
 
@@ -512,27 +527,6 @@ private:
   std::size_t pyramiding_layers_;
 
   bool is_failed_;
-  bool stop_loss_consumed_{};
-
-  void reset_consumed_exits(this BacktestRunner& self) noexcept
-  {
-    self.stop_loss_consumed_ = false;
-  }
-
-  void mark_exit_consumed(this BacktestRunner& self,
-                          TradeExit::Reason reason) noexcept
-  {
-    switch(reason) {
-    case TradeExit::Reason::signal:
-      break;
-    case TradeExit::Reason::stop_loss:
-      self.stop_loss_consumed_ = true;
-      break;
-    case TradeExit::Reason::take_profit:
-      break;
-    }
-  }
-
   auto current_equity(this const BacktestRunner& self) noexcept -> double
   {
     return self.current_account_state_.equity();
@@ -853,14 +847,38 @@ private:
       throw std::runtime_error{
        "Invalid risk distance: expected a finite positive value"};
     }
-    const auto stop_price = evaluate_series_method(
-     position.stop_price_method(),
-     asset_snapshot,
-     stop_context.with_position_risk_distance(risk_distance));
     const auto target_context =
      stop_context.with_position_risk_distance(risk_distance);
-    if(position.stop_loss_enabled() && !std::isfinite(stop_price)) {
-      throw std::runtime_error{"Invalid stop price for stop-loss exit"};
+
+    const auto previous_stop_levels = open_position.stop_loss_levels();
+    auto stop_levels = std::vector<StopLossLevel>{};
+    stop_levels.reserve(position.stop_losses().size());
+    for(auto index = std::size_t{0}; index < position.stop_losses().size();
+        ++index) {
+      const auto& stop_loss = position.stop_losses()[index];
+      const auto evaluated_price = evaluate_series_method(
+       stop_loss.price_method(), asset_snapshot, target_context);
+      if(stop_loss.enabled() && !std::isfinite(evaluated_price)) {
+        throw std::runtime_error{"Invalid stop price for stop-loss exit"};
+      }
+      const auto has_previous = index < previous_stop_levels.size();
+      const auto consumed =
+       has_previous ? previous_stop_levels[index].consumed() : false;
+      auto effective_price = evaluated_price;
+      if(is_pyramiding && stop_loss.trailing() && has_previous &&
+         std::isfinite(previous_stop_levels[index].effective_price())) {
+        effective_price =
+         open_position.is_long_direction()
+          ? std::max(evaluated_price,
+                     previous_stop_levels[index].effective_price())
+          : std::min(evaluated_price,
+                     previous_stop_levels[index].effective_price());
+      }
+      stop_levels.emplace_back(evaluated_price,
+                               effective_price,
+                               stop_loss.enabled(),
+                               stop_loss.trailing(),
+                               consumed);
     }
 
     const auto previous_levels = open_position.take_profit_levels();
@@ -892,15 +910,11 @@ private:
                                consumed);
     }
 
-    open_position.stop_price(stop_price);
+    open_position.stop_loss_levels(std::move(stop_levels));
     open_position.risk_distance(risk_distance);
     open_position.risk_reference_price(reference_price);
     open_position.risk_boundary_price(reference_price -
                                       direction * risk_distance);
-    open_position.stop_loss_price(position.stop_loss_enabled() ? stop_price
-                                                               : NAN);
-    open_position.stop_loss_trailing_enabled(
-     position.stop_loss_trailing_enabled());
     open_position.take_profit_levels(std::move(levels));
     open_position.signal_exit_states(std::move(exit_states));
   }
@@ -995,6 +1009,7 @@ private:
                   double exit_price,
                   TradeExit::Reason reason,
                   double reduce,
+                  std::optional<std::size_t> stop_loss_index = std::nullopt,
                   std::optional<std::size_t> take_profit_index = std::nullopt,
                   std::optional<std::size_t> signal_exit_index = std::nullopt)
    -> std::optional<TradeExit>
@@ -1047,6 +1062,7 @@ private:
     return TradeExit{direction * exit_quantity,
                      exit_price,
                      reason,
+                     stop_loss_index,
                      take_profit_index,
                      signal_exit_index};
   }
@@ -1064,19 +1080,25 @@ private:
 
     const auto prev_snapshot = asset_snapshot[1];
 
-    position.update_trailing_stop(prev_snapshot.close());
+    position.update_trailing_stops(prev_snapshot.close());
 
-    if(!self.stop_loss_consumed_ &&
-       position.is_stop_loss_triggered(asset_snapshot.high(),
-                                       asset_snapshot.low())) {
-      const auto stop_price = position.stop_loss_price();
+    for(auto index = std::size_t{0}; index < position_rule.stop_losses().size();
+        ++index) {
+      if(!position.is_stop_loss_triggered(
+          index, asset_snapshot.high(), asset_snapshot.low())) {
+        continue;
+      }
+      const auto stop_price =
+       position.stop_loss_levels()[index].effective_price();
       const auto stop_exit_price = is_long_direction
                                     ? std::min(open_exit_price, stop_price)
                                     : std::max(open_exit_price, stop_price);
-      if(auto exit = self.make_exit_trade(position_size,
-                                          stop_exit_price,
-                                          TradeExit::Reason::stop_loss,
-                                          position_rule.stop_loss_reduce())) {
+      if(auto exit =
+          self.make_exit_trade(position_size,
+                               stop_exit_price,
+                               TradeExit::Reason::stop_loss,
+                               position_rule.stop_losses()[index].reduce(),
+                               index)) {
         return exit;
       }
     }
@@ -1097,6 +1119,7 @@ private:
                                target_exit_price,
                                TradeExit::Reason::take_profit,
                                position_rule.take_profits()[index].reduce(),
+                               std::nullopt,
                                index)) {
         return exit;
       }
@@ -1121,6 +1144,7 @@ private:
                                           exit_price,
                                           TradeExit::Reason::signal,
                                           signal_exit.reduce(),
+                                          std::nullopt,
                                           std::nullopt,
                                           index)) {
         return exit;

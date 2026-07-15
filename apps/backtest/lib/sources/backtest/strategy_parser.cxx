@@ -170,21 +170,27 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
   }
   position.risk_distance(std::move(risk_distance));
 
-  if(!position_json.contains("stopLoss")) {
-    throw std::runtime_error{
-     "Invalid position configuration in strategy JSON: missing stopLoss"};
+  auto stop_losses = std::vector<Strategy::StopLoss>{};
+  if(position_json.contains("stopLosses")) {
+    const auto& stop_losses_json = position_json.at("stopLosses");
+    if(!stop_losses_json.is_array()) {
+      throw std::runtime_error{
+       "Invalid stopLosses configuration in strategy JSON: expected an "
+       "array"};
+    }
+    stop_losses.reserve(stop_losses_json.size());
+    for(const auto& stop_loss_json : stop_losses_json.array_range()) {
+      if(!stop_loss_json.is_object() || !stop_loss_json.contains("stopPrice")) {
+        throw std::runtime_error{"Invalid stopLosses item in strategy JSON"};
+      }
+      stop_losses.emplace_back(
+       stop_loss_json.get_value_or<bool>("enabled", false),
+       config_parser.parse_node(stop_loss_json.at("stopPrice")),
+       stop_loss_json.get_value_or<bool>("trailing", false),
+       parse_reduce(stop_loss_json));
+    }
   }
-
-  const auto& stop_loss_json = position_json.at("stopLoss");
-  if(!stop_loss_json.is_object() || !stop_loss_json.contains("stopPrice")) {
-    throw std::runtime_error{"Invalid stopLoss configuration in strategy JSON"};
-  }
-
-  position.stop_loss(
-   Strategy::StopLoss{stop_loss_json.get_value_or<bool>("enabled", false),
-                      config_parser.parse_node(stop_loss_json.at("stopPrice")),
-                      stop_loss_json.get_value_or<bool>("trailing", false),
-                      parse_reduce(stop_loss_json)});
+  position.stop_losses(std::move(stop_losses));
 
   if(position_json.contains("takeProfit")) {
     throw std::runtime_error{
@@ -260,12 +266,16 @@ auto serialize_strategy_position(const Strategy::Position& position,
   position_json["riskDistance"] =
    config_parser.serialize_node(position.risk_distance());
 
-  position_json["stopLoss"] = jsoncons::ojson{};
-  position_json["stopLoss"]["enabled"] = position.stop_loss().enabled();
-  position_json["stopLoss"]["trailing"] = position.stop_loss().trailing();
-  position_json["stopLoss"]["stopPrice"] =
-   config_parser.serialize_node(position.stop_loss().stop_price());
-  position_json["stopLoss"]["reduce"] = position.stop_loss().reduce();
+  position_json["stopLosses"] = jsoncons::ojson::array();
+  for(const auto& stop_loss : position.stop_losses()) {
+    auto stop_loss_json = jsoncons::ojson{};
+    stop_loss_json["enabled"] = stop_loss.enabled();
+    stop_loss_json["trailing"] = stop_loss.trailing();
+    stop_loss_json["stopPrice"] =
+     config_parser.serialize_node(stop_loss.stop_price());
+    stop_loss_json["reduce"] = stop_loss.reduce();
+    position_json["stopLosses"].push_back(std::move(stop_loss_json));
+  }
 
   position_json["takeProfits"] = jsoncons::ojson::array();
   for(const auto& take_profit : position.take_profits()) {

@@ -231,8 +231,14 @@
               "title": "1R Risk Distance",
               "description": "Required positive distance expression used for risk-based sizing and R-multiple stop/target prices. This value does not execute a stop-loss order."
             },
-            "stopLoss": {
-              "$ref": "#/$defs/stopLoss"
+            "stopLosses": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/stopLoss"
+              },
+              "default": [],
+              "title": "Stop Losses",
+              "description": "Ordered executable stop-loss rules. At most one stop executes per bar, in array order."
             },
             "takeProfits": {
               "type": "array",
@@ -246,8 +252,7 @@
           },
           "required": [
             "entry",
-            "riskDistance",
-            "stopLoss"
+            "riskDistance"
           ]
         },
         {
@@ -303,7 +308,7 @@
         "stopPrice"
       ],
       "title": "Stop Loss",
-      "description": "Singular executable stop-loss configuration. Position sizing and R-multiple prices use riskDistance instead."
+      "description": "One executable stop-loss rule in the ordered stopLosses collection. Position sizing and R-multiple prices use riskDistance instead."
     },
     "signalExit": {
       "type": "object",
@@ -3727,13 +3732,16 @@
               "maSmoothingType": "RMA"
             }
           },
-          "stopLoss": {
-            "enabled": true,
-            "trailing": false,
-            "stopPrice": {
-              "method": "SL_1R"
+          "stopLosses": [
+            {
+              "enabled": true,
+              "trailing": false,
+              "stopPrice": {
+                "method": "SL_1R"
+              },
+              "reduce": 1
             }
-          },
+          ],
           "takeProfits": [
             {
               "enabled": true,

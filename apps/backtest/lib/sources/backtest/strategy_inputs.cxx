@@ -418,26 +418,30 @@ auto collect_numeric_inputs(const Strategy& strategy)
     collect_numeric_inputs_from_node(series_node, inputs);
   }
 
-  const auto collect_from_position = [&inputs](
-                                      const Strategy::Position& position) {
-    collect_numeric_inputs_from_node(position.entry().signal(), inputs);
-    collect_numeric_inputs_from_node(position.entry().price(), inputs);
-    for(const auto& exit : position.exits()) {
-      if(exit.enabled()) {
-        collect_numeric_inputs_from_node(exit.signal(), inputs);
-        collect_numeric_inputs_from_node(exit.price(), inputs);
-      }
-    }
-    collect_numeric_inputs_from_node(position.pyramiding().signal(), inputs);
-    collect_numeric_inputs_from_node(position.pyramiding().price(), inputs);
-    collect_numeric_inputs_from_node(position.risk_distance(), inputs);
-    collect_numeric_inputs_from_node(position.stop_loss().stop_price(), inputs);
-    for(const auto& take_profit : position.take_profits()) {
-      if(take_profit.enabled()) {
-        collect_numeric_inputs_from_node(take_profit.target_price(), inputs);
-      }
-    }
-  };
+  const auto collect_from_position =
+   [&inputs](const Strategy::Position& position) {
+     collect_numeric_inputs_from_node(position.entry().signal(), inputs);
+     collect_numeric_inputs_from_node(position.entry().price(), inputs);
+     for(const auto& exit : position.exits()) {
+       if(exit.enabled()) {
+         collect_numeric_inputs_from_node(exit.signal(), inputs);
+         collect_numeric_inputs_from_node(exit.price(), inputs);
+       }
+     }
+     collect_numeric_inputs_from_node(position.pyramiding().signal(), inputs);
+     collect_numeric_inputs_from_node(position.pyramiding().price(), inputs);
+     collect_numeric_inputs_from_node(position.risk_distance(), inputs);
+     for(const auto& stop_loss : position.stop_losses()) {
+       if(stop_loss.enabled()) {
+         collect_numeric_inputs_from_node(stop_loss.stop_price(), inputs);
+       }
+     }
+     for(const auto& take_profit : position.take_profits()) {
+       if(take_profit.enabled()) {
+         collect_numeric_inputs_from_node(take_profit.target_price(), inputs);
+       }
+     }
+   };
 
   collect_from_position(strategy.long_position());
   collect_from_position(strategy.short_position());
