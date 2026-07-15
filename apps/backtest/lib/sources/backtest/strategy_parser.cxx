@@ -20,11 +20,72 @@ export module pludux.backtest:strategy_parser;
 import pludux;
 
 import :risk_distance_node;
+import :execution_model;
 import :strategy;
 import :plot_method_parser;
 import :config_parser;
 
 export namespace pludux::backtest {
+
+auto parse_intrabar_path(std::string_view value) -> IntrabarPath
+{
+  if(value == "LOW_FIRST") {
+    return IntrabarPath::LowFirst;
+  }
+  if(value == "HIGH_FIRST") {
+    return IntrabarPath::HighFirst;
+  }
+  if(value == "CANDLE_DIRECTION") {
+    return IntrabarPath::CandleDirection;
+  }
+  throw std::runtime_error{"Invalid intrabar path"};
+}
+
+auto serialize_intrabar_path(IntrabarPath path) -> std::string
+{
+  switch(path) {
+  case IntrabarPath::LowFirst:
+    return "LOW_FIRST";
+  case IntrabarPath::HighFirst:
+    return "HIGH_FIRST";
+  case IntrabarPath::CandleDirection:
+    return "CANDLE_DIRECTION";
+  }
+  return "CANDLE_DIRECTION";
+}
+
+auto parse_exit_activation(std::string_view value) -> ExitActivation
+{
+  if(value == "SIMULTANEOUS") {
+    return ExitActivation::Simultaneous;
+  }
+  if(value == "AFTER_PREVIOUS") {
+    return ExitActivation::AfterPrevious;
+  }
+  throw std::runtime_error{"Invalid exit activation"};
+}
+
+auto serialize_exit_activation(ExitActivation activation) -> std::string
+{
+  return activation == ExitActivation::AfterPrevious ? "AFTER_PREVIOUS"
+                                                     : "SIMULTANEOUS";
+}
+
+auto parse_signal_timing(std::string_view value) -> SignalTiming
+{
+  if(value == "CURRENT_CLOSE") {
+    return SignalTiming::CurrentClose;
+  }
+  if(value == "NEXT_OPEN") {
+    return SignalTiming::NextOpen;
+  }
+  throw std::runtime_error{"Invalid signal timing"};
+}
+
+auto serialize_signal_timing(SignalTiming timing) -> std::string
+{
+  return timing == SignalTiming::CurrentClose ? "CURRENT_CLOSE" : "NEXT_OPEN";
+}
 
 auto parse_stop_target_reference_price(std::string_view value)
  -> StopTargetReferencePrice
@@ -87,37 +148,33 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
 
   if(position_json.contains("entry")) {
     const auto& entry_json = position_json.at("entry");
-    position.entry(
-     Strategy::Entry{config_parser.parse_node(entry_json.at("signal")),
-                     entry_json.at("signalDelay").as<std::size_t>(),
-                     config_parser.parse_node(entry_json.at("price"))});
-  }
-
-  if(position_json.contains("exit")) {
-    throw std::runtime_error{
-     "Invalid position configuration in strategy JSON: 'exit' was replaced "
-     "by the 'exits' array"};
+    position.entry(Strategy::Entry{
+     config_parser.parse_node(entry_json.at("signal")),
+     parse_signal_timing(entry_json.at("timing").as<std::string>())});
   }
 
   if(position_json.contains("exits")) {
     const auto& exits_json = position_json.at("exits");
-    if(!exits_json.is_array()) {
-      throw std::runtime_error{
-       "Invalid exits configuration in strategy JSON: expected an array"};
+    if(!exits_json.is_object() || !exits_json.contains("activation") ||
+       !exits_json.contains("rules") || !exits_json.at("rules").is_array()) {
+      throw std::runtime_error{"Invalid exits configuration in strategy JSON"};
     }
 
+    position.exits_activation(
+     parse_exit_activation(exits_json.at("activation").as<std::string>()));
     auto exits = std::vector<Strategy::Exit>{};
-    exits.reserve(exits_json.size());
-    for(const auto& exit_json : exits_json.array_range()) {
+    const auto& exit_rules_json = exits_json.at("rules");
+    exits.reserve(exit_rules_json.size());
+    for(const auto& exit_json : exit_rules_json.array_range()) {
       if(!exit_json.is_object() || !exit_json.contains("signal") ||
-         !exit_json.contains("signalDelay") || !exit_json.contains("price")) {
+         !exit_json.contains("timing")) {
         throw std::runtime_error{"Invalid exits item in strategy JSON"};
       }
-      exits.emplace_back(exit_json.get_value_or<bool>("enabled", false),
-                         config_parser.parse_node(exit_json.at("signal")),
-                         exit_json.at("signalDelay").as<std::size_t>(),
-                         config_parser.parse_node(exit_json.at("price")),
-                         parse_reduce(exit_json));
+      exits.emplace_back(
+       exit_json.get_value_or<bool>("enabled", false),
+       config_parser.parse_node(exit_json.at("signal")),
+       parse_signal_timing(exit_json.at("timing").as<std::string>()),
+       parse_reduce(exit_json));
     }
     position.exits(std::move(exits));
   }
@@ -128,9 +185,8 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
     if(pyramiding_json.contains("signal")) {
       pyramiding.signal(config_parser.parse_node(pyramiding_json.at("signal")));
     }
-    pyramiding.signal_delay(
-     pyramiding_json.at("signalDelay").as<std::size_t>());
-    pyramiding.price(config_parser.parse_node(pyramiding_json.at("price")));
+    pyramiding.timing(
+     parse_signal_timing(pyramiding_json.at("timing").as<std::string>()));
     if(pyramiding_json.contains("maxLayers")) {
       pyramiding.max_layers(pyramiding_json.at("maxLayers").as<std::size_t>());
     }
@@ -173,13 +229,18 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
   auto stop_losses = std::vector<Strategy::StopLoss>{};
   if(position_json.contains("stopLosses")) {
     const auto& stop_losses_json = position_json.at("stopLosses");
-    if(!stop_losses_json.is_array()) {
+    if(!stop_losses_json.is_object() ||
+       !stop_losses_json.contains("activation") ||
+       !stop_losses_json.contains("rules") ||
+       !stop_losses_json.at("rules").is_array()) {
       throw std::runtime_error{
-       "Invalid stopLosses configuration in strategy JSON: expected an "
-       "array"};
+       "Invalid stopLosses configuration in strategy JSON"};
     }
-    stop_losses.reserve(stop_losses_json.size());
-    for(const auto& stop_loss_json : stop_losses_json.array_range()) {
+    position.stop_losses_activation(parse_exit_activation(
+     stop_losses_json.at("activation").as<std::string>()));
+    const auto& stop_loss_rules_json = stop_losses_json.at("rules");
+    stop_losses.reserve(stop_loss_rules_json.size());
+    for(const auto& stop_loss_json : stop_loss_rules_json.array_range()) {
       if(!stop_loss_json.is_object() || !stop_loss_json.contains("stopPrice")) {
         throw std::runtime_error{"Invalid stopLosses item in strategy JSON"};
       }
@@ -192,23 +253,22 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
   }
   position.stop_losses(std::move(stop_losses));
 
-  if(position_json.contains("takeProfit")) {
-    throw std::runtime_error{
-     "Invalid position configuration in strategy JSON: 'takeProfit' was "
-     "replaced by the 'takeProfits' array"};
-  }
-
   if(position_json.contains("takeProfits")) {
     const auto& take_profits_json = position_json.at("takeProfits");
-    if(!take_profits_json.is_array()) {
+    if(!take_profits_json.is_object() ||
+       !take_profits_json.contains("activation") ||
+       !take_profits_json.contains("rules") ||
+       !take_profits_json.at("rules").is_array()) {
       throw std::runtime_error{
-       "Invalid takeProfits configuration in strategy JSON: expected an "
-       "array"};
+       "Invalid takeProfits configuration in strategy JSON"};
     }
 
+    position.take_profits_activation(parse_exit_activation(
+     take_profits_json.at("activation").as<std::string>()));
     auto take_profits = std::vector<Strategy::TakeProfit>{};
-    take_profits.reserve(take_profits_json.size());
-    for(const auto& take_profit_json : take_profits_json.array_range()) {
+    const auto& take_profit_rules_json = take_profits_json.at("rules");
+    take_profits.reserve(take_profit_rules_json.size());
+    for(const auto& take_profit_json : take_profit_rules_json.array_range()) {
       if(!take_profit_json.is_object() ||
          !take_profit_json.contains("targetPrice")) {
         throw std::runtime_error{"Invalid takeProfits item in strategy JSON"};
@@ -232,28 +292,27 @@ auto serialize_strategy_position(const Strategy::Position& position,
   position_json["entry"] = jsoncons::ojson{};
   position_json["entry"]["signal"] =
    config_parser.serialize_node(position.entry().signal());
-  position_json["entry"]["signalDelay"] = position.entry().signal_delay();
-  position_json["entry"]["price"] =
-   config_parser.serialize_node(position.entry().price());
+  position_json["entry"]["timing"] =
+   serialize_signal_timing(position.entry().timing());
 
-  position_json["exits"] = jsoncons::ojson::array();
+  position_json["exits"] = jsoncons::ojson{};
+  position_json["exits"]["activation"] =
+   serialize_exit_activation(position.exits_activation());
+  position_json["exits"]["rules"] = jsoncons::ojson::array();
   for(const auto& exit : position.exits()) {
     auto exit_json = jsoncons::ojson{};
     exit_json["enabled"] = exit.enabled();
     exit_json["signal"] = config_parser.serialize_node(exit.signal());
-    exit_json["signalDelay"] = exit.signal_delay();
-    exit_json["price"] = config_parser.serialize_node(exit.price());
+    exit_json["timing"] = serialize_signal_timing(exit.timing());
     exit_json["reduce"] = exit.reduce();
-    position_json["exits"].push_back(std::move(exit_json));
+    position_json["exits"]["rules"].push_back(std::move(exit_json));
   }
 
   position_json["pyramiding"] = jsoncons::ojson{};
   position_json["pyramiding"]["signal"] =
    config_parser.serialize_node(position.pyramiding().signal());
-  position_json["pyramiding"]["signalDelay"] =
-   position.pyramiding().signal_delay();
-  position_json["pyramiding"]["price"] =
-   config_parser.serialize_node(position.pyramiding().price());
+  position_json["pyramiding"]["timing"] =
+   serialize_signal_timing(position.pyramiding().timing());
   position_json["pyramiding"]["maxLayers"] = position.pyramiding().max_layers();
   position_json["pyramiding"]["stopTargetReference"] = jsoncons::ojson{};
   position_json["pyramiding"]["stopTargetReference"]["favorable"] =
@@ -266,7 +325,10 @@ auto serialize_strategy_position(const Strategy::Position& position,
   position_json["riskDistance"] =
    config_parser.serialize_node(position.risk_distance());
 
-  position_json["stopLosses"] = jsoncons::ojson::array();
+  position_json["stopLosses"] = jsoncons::ojson{};
+  position_json["stopLosses"]["activation"] =
+   serialize_exit_activation(position.stop_losses_activation());
+  position_json["stopLosses"]["rules"] = jsoncons::ojson::array();
   for(const auto& stop_loss : position.stop_losses()) {
     auto stop_loss_json = jsoncons::ojson{};
     stop_loss_json["enabled"] = stop_loss.enabled();
@@ -274,17 +336,21 @@ auto serialize_strategy_position(const Strategy::Position& position,
     stop_loss_json["stopPrice"] =
      config_parser.serialize_node(stop_loss.stop_price());
     stop_loss_json["reduce"] = stop_loss.reduce();
-    position_json["stopLosses"].push_back(std::move(stop_loss_json));
+    position_json["stopLosses"]["rules"].push_back(std::move(stop_loss_json));
   }
 
-  position_json["takeProfits"] = jsoncons::ojson::array();
+  position_json["takeProfits"] = jsoncons::ojson{};
+  position_json["takeProfits"]["activation"] =
+   serialize_exit_activation(position.take_profits_activation());
+  position_json["takeProfits"]["rules"] = jsoncons::ojson::array();
   for(const auto& take_profit : position.take_profits()) {
     auto take_profit_json = jsoncons::ojson{};
     take_profit_json["enabled"] = take_profit.enabled();
     take_profit_json["targetPrice"] =
      config_parser.serialize_node(take_profit.target_price());
     take_profit_json["reduce"] = take_profit.reduce();
-    position_json["takeProfits"].push_back(std::move(take_profit_json));
+    position_json["takeProfits"]["rules"].push_back(
+     std::move(take_profit_json));
   }
 
   return position_json;
@@ -308,6 +374,15 @@ auto parse_backtest_strategy_config_json(std::string_view strategy_name,
                                std::to_string(version));
     }
   }
+
+  if(!strategy_json.contains("execution") ||
+     !strategy_json.at("execution").is_object() ||
+     !strategy_json.at("execution").contains("intrabarPath")) {
+    throw std::runtime_error{
+     "Invalid strategy JSON: missing execution.intrabarPath"};
+  }
+  const auto intrabar_path = parse_intrabar_path(
+   strategy_json.at("execution").at("intrabarPath").as<std::string>());
 
   auto series_nodes = OrderedNamedRegistry<ErasedNode>{};
   if(strategy_json.contains("series")) {
@@ -361,7 +436,8 @@ auto parse_backtest_strategy_config_json(std::string_view strategy_name,
                   std::move(series_nodes),
                   std::move(long_position),
                   std::move(short_position),
-                  plots};
+                  plots,
+                  intrabar_path};
 }
 
 auto parse_backtest_strategy_json(std::string_view strategy_name,
@@ -390,6 +466,9 @@ auto serialize_backtest_strategy_config_json(const backtest::Strategy& strategy)
   auto strategy_json = jsoncons::ojson{};
 
   strategy_json["version"] = 2;
+  strategy_json["execution"] = jsoncons::ojson{};
+  strategy_json["execution"]["intrabarPath"] =
+   serialize_intrabar_path(strategy.intrabar_path());
 
   auto series_json = jsoncons::ojson{};
   for(const auto& [series_name, series_node] : strategy.series_nodes()) {

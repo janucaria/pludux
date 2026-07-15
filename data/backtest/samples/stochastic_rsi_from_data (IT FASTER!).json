@@ -29,8 +29,6 @@
   "positions": {
     "long": {
       "entry": {
-        "signalDelay": 1,
-        "price": "OPEN",
         "signal": {
           "method": "ALL_OF",
           "params": {
@@ -71,56 +69,59 @@
               }
             ]
           }
-        }
+        },
+        "timing": "NEXT_OPEN"
       },
-      "exits": [
-        {
-          "enabled": true,
-          "signalDelay": 1,
-          "price": "OPEN",
-          "signal": {
-            "method": "ALL_OF",
-            "params": {
-              "items": [
-                {
-                  "method": "CROSSUNDER",
-                  "params": {
-                    "value": {
-                      "method": "SERIES",
-                      "params": {
-                        "name": "stoch_rsi_k"
+      "exits": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "signal": {
+              "method": "ALL_OF",
+              "params": {
+                "items": [
+                  {
+                    "method": "CROSSUNDER",
+                    "params": {
+                      "value": {
+                        "method": "SERIES",
+                        "params": {
+                          "name": "stoch_rsi_k"
+                        }
+                      },
+                      "baseline": {
+                        "method": "SERIES",
+                        "params": {
+                          "name": "stoch_rsi_d"
+                        }
                       }
-                    },
-                    "baseline": {
-                      "method": "SERIES",
-                      "params": {
-                        "name": "stoch_rsi_d"
+                    }
+                  },
+                  {
+                    "method": "GREATER_THAN",
+                    "params": {
+                      "target": {
+                        "method": "SERIES",
+                        "params": {
+                          "name": "stoch_rsi_k"
+                        }
+                      },
+                      "threshold": {
+                        "method": "SERIES",
+                        "params": {
+                          "name": "overbought"
+                        }
                       }
                     }
                   }
-                },
-                {
-                  "method": "GREATER_THAN",
-                  "params": {
-                    "target": {
-                      "method": "SERIES",
-                      "params": {
-                        "name": "stoch_rsi_k"
-                      }
-                    },
-                    "threshold": {
-                      "method": "SERIES",
-                      "params": {
-                        "name": "overbought"
-                      }
-                    }
-                  }
-                }
-              ]
-            }
+                ]
+              }
+            },
+            "timing": "NEXT_OPEN"
           }
-        }
-      ],
+        ]
+      },
       "riskDistance": {
         "method": "R_DISTANCE_ATR",
         "params": {
@@ -139,31 +140,37 @@
           "maSmoothingType": "RMA"
         }
       },
-      "takeProfits": [
-        {
-          "enabled": true,
-          "targetPrice": {
-            "method": "TP_R_MULTIPLE",
-            "params": {
-              "multiple": {
-                "method": "VALUE",
-                "params": {
-                  "value": 2
+      "takeProfits": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "targetPrice": {
+              "method": "TP_R_MULTIPLE",
+              "params": {
+                "multiple": {
+                  "method": "VALUE",
+                  "params": {
+                    "value": 2
+                  }
                 }
               }
             }
           }
-        }
-      ],
-      "stopLosses": [
-        {
-          "enabled": true,
-          "trailing": false,
-          "stopPrice": {
-            "method": "SL_1R"
+        ]
+      },
+      "stopLosses": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "trailing": false,
+            "stopPrice": {
+              "method": "SL_1R"
+            }
           }
-        }
-      ]
+        ]
+      }
     }
   },
   "plots": [
@@ -211,5 +218,8 @@
         }
       ]
     }
-  ]
+  ],
+  "execution": {
+    "intrabarPath": "CANDLE_DIRECTION"
+  }
 }

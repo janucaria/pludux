@@ -18,8 +18,6 @@
   "positions": {
     "long": {
       "entry": {
-        "signalDelay": 1,
-        "price": "OPEN",
         "signal": {
           "method": "CROSSOVER",
           "params": {
@@ -31,27 +29,30 @@
               }
             }
           }
-        }
+        },
+        "timing": "NEXT_OPEN"
       },
-      "exits": [
-        {
-          "enabled": true,
-          "signalDelay": 1,
-          "price": "OPEN",
-          "signal": {
-            "method": "CROSSUNDER",
-            "params": {
-              "value": "CLOSE",
-              "baseline": {
-                "method": "SERIES",
-                "params": {
-                  "name": "ma"
+      "exits": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "signal": {
+              "method": "CROSSUNDER",
+              "params": {
+                "value": "CLOSE",
+                "baseline": {
+                  "method": "SERIES",
+                  "params": {
+                    "name": "ma"
+                  }
                 }
               }
-            }
+            },
+            "timing": "NEXT_OPEN"
           }
-        }
-      ],
+        ]
+      },
       "riskDistance": {
         "method": "R_DISTANCE_ATR",
         "params": {
@@ -70,31 +71,37 @@
           "maSmoothingType": "RMA"
         }
       },
-      "takeProfits": [
-        {
-          "enabled": true,
-          "targetPrice": {
-            "method": "TP_R_MULTIPLE",
-            "params": {
-              "multiple": {
-                "method": "VALUE",
-                "params": {
-                  "value": 2
+      "takeProfits": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "targetPrice": {
+              "method": "TP_R_MULTIPLE",
+              "params": {
+                "multiple": {
+                  "method": "VALUE",
+                  "params": {
+                    "value": 2
+                  }
                 }
               }
             }
           }
-        }
-      ],
-      "stopLosses": [
-        {
-          "enabled": true,
-          "trailing": false,
-          "stopPrice": {
-            "method": "SL_1R"
+        ]
+      },
+      "stopLosses": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "trailing": false,
+            "stopPrice": {
+              "method": "SL_1R"
+            }
           }
-        }
-      ]
+        ]
+      }
     }
   },
   "plots": [
@@ -115,5 +122,8 @@
         }
       ]
     }
-  ]
+  ],
+  "execution": {
+    "intrabarPath": "CANDLE_DIRECTION"
+  }
 }

@@ -407,28 +407,38 @@ public:
                        self.risk_boundary_price()};
   }
 
-  void update_trailing_stops(this TradePosition& self,
-                             double prev_close) noexcept
+  void update_trailing_stop(this TradePosition& self,
+                            std::size_t index,
+                            double favorable_price) noexcept
   {
-    if(self.is_closed()) {
+    if(self.is_closed() || index >= self.stop_loss_levels_.size()) {
       return;
     }
 
-    for(auto& level : self.stop_loss_levels_) {
-      if(!level.active() || !level.trailing() ||
-         !std::isfinite(level.evaluated_price())) {
-        continue;
-      }
+    auto& level = self.stop_loss_levels_[index];
+    if(!level.active() || !level.trailing() ||
+       !std::isfinite(level.trail_distance()) || level.trail_distance() < 0.0 ||
+       !std::isfinite(favorable_price)) {
+      return;
+    }
 
-      const auto risk = self.average_price() - level.evaluated_price();
-      const auto new_stop_price = prev_close - risk;
-      if(self.is_short_direction()) {
-        level.effective_price(
-         std::min(level.effective_price(), new_stop_price));
-      } else {
-        level.effective_price(
-         std::max(level.effective_price(), new_stop_price));
-      }
+    if(!std::isfinite(level.favorable_anchor())) {
+      level.favorable_anchor(favorable_price);
+    } else if(self.is_short_direction()) {
+      level.favorable_anchor(
+       std::min(level.favorable_anchor(), favorable_price));
+    } else {
+      level.favorable_anchor(
+       std::max(level.favorable_anchor(), favorable_price));
+    }
+
+    const auto candidate = self.is_short_direction()
+                            ? level.favorable_anchor() + level.trail_distance()
+                            : level.favorable_anchor() - level.trail_distance();
+    if(self.is_short_direction()) {
+      level.effective_price(std::min(level.effective_price(), candidate));
+    } else {
+      level.effective_price(std::max(level.effective_price(), candidate));
     }
   }
 

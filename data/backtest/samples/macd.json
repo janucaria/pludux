@@ -64,8 +64,6 @@
   "positions": {
     "long": {
       "entry": {
-        "signalDelay": 1,
-        "price": "OPEN",
         "signal": {
           "method": "CROSSOVER",
           "params": {
@@ -77,27 +75,30 @@
             },
             "baseline": 0
           }
-        }
+        },
+        "timing": "NEXT_OPEN"
       },
-      "exits": [
-        {
-          "enabled": true,
-          "signalDelay": 1,
-          "price": "OPEN",
-          "signal": {
-            "method": "CROSSUNDER",
-            "params": {
-              "value": {
-                "method": "SERIES",
-                "params": {
-                  "name": "macd_histogram"
-                }
-              },
-              "baseline": 0
-            }
+      "exits": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "signal": {
+              "method": "CROSSUNDER",
+              "params": {
+                "value": {
+                  "method": "SERIES",
+                  "params": {
+                    "name": "macd_histogram"
+                  }
+                },
+                "baseline": 0
+              }
+            },
+            "timing": "NEXT_OPEN"
           }
-        }
-      ],
+        ]
+      },
       "riskDistance": {
         "method": "R_DISTANCE_ATR",
         "params": {
@@ -116,15 +117,18 @@
           "maSmoothingType": "RMA"
         }
       },
-      "stopLosses": [
-        {
-          "enabled": false,
-          "trailing": false,
-          "stopPrice": {
-            "method": "SL_1R"
+      "stopLosses": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": false,
+            "trailing": false,
+            "stopPrice": {
+              "method": "SL_1R"
+            }
           }
-        }
-      ]
+        ]
+      }
     }
   },
   "plots": [
@@ -177,5 +181,8 @@
         }
       ]
     }
-  ]
+  ],
+  "execution": {
+    "intrabarPath": "CANDLE_DIRECTION"
+  }
 }

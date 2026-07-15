@@ -14,12 +14,16 @@ public:
                 double effective_price,
                 bool enabled,
                 bool trailing,
-                bool consumed = false) noexcept
+                bool consumed = false,
+                double trail_distance = NAN,
+                double favorable_anchor = NAN) noexcept
   : evaluated_price_{evaluated_price}
   , effective_price_{effective_price}
   , enabled_{enabled}
   , trailing_{trailing}
   , consumed_{consumed}
+  , trail_distance_{trail_distance}
+  , favorable_anchor_{favorable_anchor}
   {
   }
 
@@ -71,12 +75,34 @@ public:
            std::isfinite(self.effective_price_);
   }
 
+  auto trail_distance(this const StopLossLevel& self) noexcept -> double
+  {
+    return self.trail_distance_;
+  }
+
+  void trail_distance(this StopLossLevel& self, double distance) noexcept
+  {
+    self.trail_distance_ = distance;
+  }
+
+  auto favorable_anchor(this const StopLossLevel& self) noexcept -> double
+  {
+    return self.favorable_anchor_;
+  }
+
+  void favorable_anchor(this StopLossLevel& self, double price) noexcept
+  {
+    self.favorable_anchor_ = price;
+  }
+
 private:
   double evaluated_price_{};
   double effective_price_{};
   bool enabled_{};
   bool trailing_{};
   bool consumed_{};
+  double trail_distance_{NAN};
+  double favorable_anchor_{NAN};
 };
 
 } // namespace pludux::backtest

@@ -58,6 +58,32 @@ auto make_two_bar_asset(double first_open,
                         double second_low,
                         double second_close) -> Asset;
 
+TEST(IntrabarPathTest, UsesConfiguredAndCandleDirectionPaths)
+{
+  EXPECT_EQ(
+   make_intrabar_prices(IntrabarPath::LowFirst, 100.0, 120.0, 80.0, 110.0),
+   (IntrabarPrices{100.0, 80.0, 120.0, 110.0}));
+  EXPECT_EQ(
+   make_intrabar_prices(IntrabarPath::HighFirst, 100.0, 120.0, 80.0, 90.0),
+   (IntrabarPrices{100.0, 120.0, 80.0, 90.0}));
+  EXPECT_EQ(make_intrabar_prices(
+             IntrabarPath::CandleDirection, 100.0, 120.0, 80.0, 110.0),
+            (IntrabarPrices{100.0, 80.0, 120.0, 110.0}));
+  EXPECT_EQ(make_intrabar_prices(
+             IntrabarPath::CandleDirection, 100.0, 120.0, 80.0, 90.0),
+            (IntrabarPrices{100.0, 120.0, 80.0, 90.0}));
+}
+
+TEST(IntrabarPathTest, DojiVisitsNearestExtremeAndBreaksTieLowFirst)
+{
+  EXPECT_EQ(make_intrabar_prices(
+             IntrabarPath::CandleDirection, 100.0, 130.0, 90.0, 100.0),
+            (IntrabarPrices{100.0, 90.0, 130.0, 100.0}));
+  EXPECT_EQ(make_intrabar_prices(
+             IntrabarPath::CandleDirection, 100.0, 120.0, 80.0, 100.0),
+            (IntrabarPrices{100.0, 80.0, 120.0, 100.0}));
+}
+
 auto make_position_rule(
  AnySeriesMethod entry_method,
  AnySeriesMethod exit_method,
@@ -239,8 +265,8 @@ auto make_position_rule(
    std::vector<BacktestRunner::PositionRule::SignalExitRule>{};
   signal_exits.emplace_back(true,
                             std::move(exit_method),
-                            exit_signal_delay,
-                            std::move(exit_price_method),
+                            exit_signal_delay == 0 ? SignalTiming::CurrentClose
+                                                   : SignalTiming::NextOpen,
                             signal_exit_reduce);
   auto stop_losses = single_stop_loss(std::move(stop_price_method),
                                       stop_loss_enabled,
@@ -252,10 +278,10 @@ auto make_position_rule(
                                       pyramiding_max_layers,
                                       std::move(risk_distance_method),
                                       std::move(stop_losses),
-                                      entry_signal_delay,
-                                      std::move(entry_price_method),
-                                      pyramiding_signal_delay,
-                                      std::move(pyramiding_price_method),
+                                      SignalTiming::CurrentClose,
+                                      pyramiding_signal_delay == 0
+                                       ? SignalTiming::CurrentClose
+                                       : SignalTiming::NextOpen,
                                       favorable_stop_target_reference,
                                       unfavorable_stop_target_reference,
                                       std::move(take_profits)};
@@ -278,10 +304,10 @@ auto make_position_rule_with_risk_distance(AnySeriesMethod entry_method,
                             std::move(stop_price_method),
                             stop_loss_enabled,
                             stop_loss_trailing_enabled,
-                            1,
-                            OpenMethod{},
-                            1,
-                            OpenMethod{},
+                            0,
+                            CloseMethod{},
+                            0,
+                            CloseMethod{},
                             1,
                             OpenMethod{},
                             StopTargetReferencePrice::AveragePrice,
@@ -383,7 +409,7 @@ TEST(BacktestRunnerTest, RiskSizingUsesCurrentEquityAfterClosedTrade)
                                {},
                                make_position_rule_with_risk_distance(
                                 entry_signal,
-                                BooleanMethod<true>{},
+                                EqualMethod{CloseMethod{}, ValueMethod{110.0}},
                                 BooleanMethod<false>{},
                                 1,
                                 AbsDiffMethod{OpenMethod{}, ValueMethod{90.0}},
@@ -400,14 +426,13 @@ TEST(BacktestRunnerTest, RiskSizingUsesCurrentEquityAfterClosedTrade)
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(
-   timeline.open_position(last_timeline_index(timeline))->position_size(),
-   10.0);
+   timeline.open_position(last_timeline_index(timeline))->position_size(), 2.5);
 
   runner.run(series_results, timeline);
 
   ASSERT_EQ(timeline.size(), 3);
   EXPECT_EQ(timeline.open_trade_count(last_timeline_index(timeline)), 0);
-  EXPECT_DOUBLE_EQ(timeline.equity(last_timeline_index(timeline)), 1100.0);
+  EXPECT_DOUBLE_EQ(timeline.equity(last_timeline_index(timeline)), 1150.0);
 
   runner.run(series_results, timeline);
 
@@ -416,7 +441,8 @@ TEST(BacktestRunnerTest, RiskSizingUsesCurrentEquityAfterClosedTrade)
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(
-   timeline.open_position(last_timeline_index(timeline))->position_size(), 5.5);
+   timeline.open_position(last_timeline_index(timeline))->position_size(),
+   5.75);
 }
 
 TEST(BacktestRunnerTest,
@@ -1763,20 +1789,21 @@ TEST(BacktestRunnerTest, SeriesDelayedSignalUsesCompletedResultsOnly)
   const auto entry_signal =
    EqualMethod{SeriesMethod{"close"}, ValueMethod{20.0}};
 
-  auto runner = BacktestRunner{asset,
-                               market,
-                               broker,
-                               profile,
-                               std::move(series_methods),
-                               make_position_rule(entry_signal,
-                                                  BooleanMethod<false>{},
-                                                  BooleanMethod<false>{},
-                                                  1,
-                                                  OpenMethod{},
-                                                  false,
-                                                  false),
-                               BacktestRunner::PositionRule{},
-                               1000.0};
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  std::move(series_methods),
+                  BacktestRunner::PositionRule{entry_signal,
+                                               {},
+                                               BooleanMethod<false>{},
+                                               1,
+                                               ValueMethod{10.0},
+                                               {},
+                                               SignalTiming::NextOpen},
+                  BacktestRunner::PositionRule{},
+                  1000.0};
 
   runner.run(series_results, timeline);
 
@@ -1907,20 +1934,21 @@ TEST(BacktestRunnerTest, NextOpenEntryUsesPreviousSignalAndOpenPrice)
   auto timeline = BacktestTimeline{};
   const auto entry_signal = EqualMethod{CloseMethod{}, ValueMethod{75.0}};
 
-  auto runner = BacktestRunner{asset,
-                               market,
-                               broker,
-                               profile,
-                               {},
-                               make_position_rule(entry_signal,
-                                                  BooleanMethod<false>{},
-                                                  BooleanMethod<false>{},
-                                                  1,
-                                                  OpenMethod{},
-                                                  false,
-                                                  false),
-                               BacktestRunner::PositionRule{},
-                               1000.0};
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  BacktestRunner::PositionRule{entry_signal,
+                                               {},
+                                               BooleanMethod<false>{},
+                                               1,
+                                               ValueMethod{10.0},
+                                               {},
+                                               SignalTiming::NextOpen},
+                  BacktestRunner::PositionRule{},
+                  1000.0};
 
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
@@ -2603,7 +2631,7 @@ TEST(BacktestRunnerTest, StopLossExitIsDecidedByRunner)
 TEST(BacktestRunnerTest, TrailingStopMutationUsesTradePositionState)
 {
   const auto asset =
-   make_two_bar_asset(100.0, 115.0, 100.0, 115.0, 110.0, 112.0, 104.0, 110.0);
+   make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 100.0, 120.0, 105.0, 110.0);
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
@@ -2624,7 +2652,11 @@ TEST(BacktestRunnerTest, TrailingStopMutationUsesTradePositionState)
                                                   true,
                                                   true),
                                BacktestRunner::PositionRule{},
-                               1000.0};
+                               1000.0,
+                               0,
+                               false,
+                               NAN,
+                               IntrabarPath::HighFirst};
 
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
@@ -2636,12 +2668,12 @@ TEST(BacktestRunnerTest, TrailingStopMutationUsesTradePositionState)
   EXPECT_DOUBLE_EQ(stop_level(latest_closed_trade(timeline)).evaluated_price(),
                    90.0);
   EXPECT_DOUBLE_EQ(stop_level(latest_closed_trade(timeline)).effective_price(),
-                   105.0);
-  EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).exit_price(), 105.0);
+                   110.0);
+  EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).exit_price(), 110.0);
 }
 
 TEST(BacktestRunnerTest,
-     OrderedStopLossesTriggerOnceReduceRemainingAndResetAfterClosure)
+     SimultaneousStopLossesFillInPathOrderAndResetAfterClosure)
 {
   const auto asset = Asset{"Test",
                            AssetHistory{{"Datetime", {1.0, 2.0, 3.0, 4.0}},
@@ -2672,42 +2704,36 @@ TEST(BacktestRunnerTest,
                                                BooleanMethod<false>{},
                                                1,
                                                ValueMethod{10.0},
-                                               std::move(stop_losses)},
+                                               std::move(stop_losses),
+                                               SignalTiming::CurrentClose,
+                                               SignalTiming::CurrentClose},
                   BacktestRunner::PositionRule{},
                   5000.0};
 
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
 
-  ASSERT_TRUE(timeline.open_position(1));
-  EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 4.0);
-  ASSERT_EQ(timeline.open_position(1)->stop_loss_levels().size(), 3);
-  EXPECT_FALSE(timeline.open_position(1)->stop_loss_levels()[0].consumed());
-  EXPECT_TRUE(timeline.open_position(1)->stop_loss_levels()[1].consumed());
-  EXPECT_FALSE(timeline.open_position(1)->stop_loss_levels()[2].consumed());
-  ASSERT_EQ(timeline.trade_events(1).size(), 1);
+  EXPECT_FALSE(timeline.open_position(1));
+  ASSERT_EQ(timeline.trade_events(1).size(), 2);
   EXPECT_EQ(timeline.trade_events(1).front().type(),
             TradeEvent::Type::stop_loss);
   EXPECT_DOUBLE_EQ(timeline.trade_events(1).front().price(), 85.0);
+  EXPECT_DOUBLE_EQ(timeline.trade_events(1).back().price(), 80.0);
+  ASSERT_EQ(timeline.closed_trades(1).size(), 1);
+  EXPECT_TRUE(
+   timeline.closed_trades(1).front().stop_loss_levels()[1].consumed());
+  EXPECT_TRUE(
+   timeline.closed_trades(1).front().stop_loss_levels()[2].consumed());
+  EXPECT_DOUBLE_EQ(timeline.closed_trades(1).front().exit_price(), 80.0);
 
   runner.run(series_results, timeline);
 
-  EXPECT_FALSE(timeline.open_position(2));
-  ASSERT_EQ(timeline.closed_trades(2).size(), 1);
-  EXPECT_TRUE(
-   timeline.closed_trades(2).front().stop_loss_levels()[1].consumed());
-  EXPECT_TRUE(
-   timeline.closed_trades(2).front().stop_loss_levels()[2].consumed());
-  EXPECT_DOUBLE_EQ(timeline.closed_trades(2).front().exit_price(), 75.0);
-
-  runner.run(series_results, timeline);
-
-  ASSERT_TRUE(timeline.open_position(3));
-  EXPECT_FALSE(timeline.open_position(3)->stop_loss_levels()[1].consumed());
-  EXPECT_FALSE(timeline.open_position(3)->stop_loss_levels()[2].consumed());
+  ASSERT_TRUE(timeline.open_position(2));
+  EXPECT_FALSE(timeline.open_position(2)->stop_loss_levels()[1].consumed());
+  EXPECT_FALSE(timeline.open_position(2)->stop_loss_levels()[2].consumed());
 }
 
-TEST(BacktestRunnerTest, OrderedShortStopLossUsesGapPrice)
+TEST(BacktestRunnerTest, SimultaneousShortStopsUseGapThenPathPrices)
 {
   const auto asset =
    make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 115.0, 125.0, 100.0, 115.0);
@@ -2739,12 +2765,10 @@ TEST(BacktestRunnerTest, OrderedShortStopLossUsesGapPrice)
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
 
-  ASSERT_TRUE(timeline.open_position(1));
-  EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), -4.0);
-  EXPECT_TRUE(timeline.open_position(1)->stop_loss_levels()[0].consumed());
-  EXPECT_FALSE(timeline.open_position(1)->stop_loss_levels()[1].consumed());
-  ASSERT_EQ(timeline.trade_events(1).size(), 1);
+  EXPECT_FALSE(timeline.open_position(1));
+  ASSERT_EQ(timeline.trade_events(1).size(), 2);
   EXPECT_DOUBLE_EQ(timeline.trade_events(1).front().price(), 115.0);
+  EXPECT_DOUBLE_EQ(timeline.trade_events(1).back().price(), 120.0);
 }
 
 TEST(BacktestRunnerTest, PyramidingPreservesConsumedStopLossLevels)
@@ -2777,7 +2801,9 @@ TEST(BacktestRunnerTest, PyramidingPreservesConsumedStopLossLevels)
                                                BooleanMethod<true>{},
                                                2,
                                                ValueMethod{10.0},
-                                               std::move(stop_losses)},
+                                               std::move(stop_losses),
+                                               SignalTiming::CurrentClose,
+                                               SignalTiming::CurrentClose},
                   BacktestRunner::PositionRule{},
                   5000.0};
 
@@ -2844,12 +2870,10 @@ TEST(BacktestRunnerTest, PyramidingNeverLoosensTrailingStopEffectivePrice)
   runner.run(series_results, timeline);
   ASSERT_TRUE(timeline.open_position(2));
   ASSERT_EQ(timeline.open_position(2)->stop_loss_levels().size(), 1);
-  EXPECT_NEAR(
-   timeline.open_position(2)->stop_loss_levels()[0].evaluated_price(),
-   103.33333333333333,
-   1e-12);
   EXPECT_DOUBLE_EQ(
-   timeline.open_position(2)->stop_loss_levels()[0].effective_price(), 110.0);
+   timeline.open_position(2)->stop_loss_levels()[0].evaluated_price(), 90.0);
+  EXPECT_DOUBLE_EQ(
+   timeline.open_position(2)->stop_loss_levels()[0].effective_price(), 111.0);
 }
 
 TEST(BacktestRunnerTest, PyramidingAcceptsSaferTrailingStopBasePrice)
@@ -2881,12 +2905,11 @@ TEST(BacktestRunnerTest, PyramidingAcceptsSaferTrailingStopBasePrice)
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
 
-  ASSERT_TRUE(timeline.open_position(1));
-  ASSERT_EQ(timeline.open_position(1)->stop_loss_levels().size(), 1);
-  EXPECT_DOUBLE_EQ(
-   timeline.open_position(1)->stop_loss_levels()[0].evaluated_price(), 110.0);
-  EXPECT_DOUBLE_EQ(
-   timeline.open_position(1)->stop_loss_levels()[0].effective_price(), 110.0);
+  EXPECT_FALSE(timeline.open_position(1));
+  ASSERT_EQ(timeline.trade_events(1).size(), 2);
+  EXPECT_EQ(timeline.trade_events(1).back().type(),
+            TradeEvent::Type::stop_loss);
+  EXPECT_DOUBLE_EQ(timeline.trade_events(1).back().price(), 130.0);
 }
 
 TEST(BacktestRunnerTest, TakeProfitExitIsDecidedByRunner)
@@ -2978,7 +3001,7 @@ TEST(BacktestRunnerTest, SignalExitReducesRemainingPositionOnlyOnce)
                                      OpenMethod{},
                                      1,
                                      OpenMethod{},
-                                     1,
+                                     0,
                                      OpenMethod{},
                                      StopTargetReferencePrice::AveragePrice,
                                      StopTargetReferencePrice::AveragePrice,
@@ -3023,9 +3046,12 @@ TEST(BacktestRunnerTest, OrderedSignalExitsExecuteOnceAndResetAfterFullClosure)
   auto timeline = BacktestTimeline{};
   auto signal_exits =
    std::vector<BacktestRunner::PositionRule::SignalExitRule>{};
-  signal_exits.emplace_back(false, BooleanMethod<true>{}, 1, OpenMethod{}, 1.0);
-  signal_exits.emplace_back(true, BooleanMethod<true>{}, 1, OpenMethod{}, 0.5);
-  signal_exits.emplace_back(true, BooleanMethod<true>{}, 1, OpenMethod{}, 1.0);
+  signal_exits.emplace_back(
+   false, BooleanMethod<true>{}, SignalTiming::NextOpen, 1.0);
+  signal_exits.emplace_back(
+   true, BooleanMethod<true>{}, SignalTiming::NextOpen, 0.5);
+  signal_exits.emplace_back(
+   true, BooleanMethod<true>{}, SignalTiming::NextOpen, 1.0);
 
   auto runner = BacktestRunner{
    asset,
@@ -3045,42 +3071,76 @@ TEST(BacktestRunnerTest, OrderedSignalExitsExecuteOnceAndResetAfterFullClosure)
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
 
-  ASSERT_TRUE(timeline.open_position(1));
-  EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 4.0);
-  ASSERT_EQ(timeline.open_position(1)->signal_exit_states().size(), 3);
-  EXPECT_FALSE(timeline.open_position(1)->signal_exit_states()[0].enabled());
-  EXPECT_FALSE(timeline.open_position(1)->signal_exit_states()[0].consumed());
-  EXPECT_TRUE(timeline.open_position(1)->signal_exit_states()[1].consumed());
-  EXPECT_FALSE(timeline.open_position(1)->signal_exit_states()[2].consumed());
-  ASSERT_EQ(timeline.trade_events(1).size(), 1);
-  EXPECT_EQ(timeline.trade_events(1).front().type(),
-            TradeEvent::Type::exit_signal);
-  EXPECT_EQ(timeline.trade_events(1).front().signal_exit_states(),
-            timeline.open_position(1)->signal_exit_states());
-
-  runner.run(series_results, timeline);
-
-  EXPECT_FALSE(timeline.open_position(2));
-  ASSERT_EQ(timeline.trade_events(2).size(), 1);
-  ASSERT_EQ(timeline.closed_trades(2).size(), 1);
-  ASSERT_EQ(timeline.closed_trades(2).front().signal_exit_states().size(), 3);
-  EXPECT_DOUBLE_EQ(timeline.closed_trades(2).front().risk_distance(), 10.0);
-  EXPECT_DOUBLE_EQ(timeline.closed_trades(2).front().risk_reference_price(),
+  EXPECT_FALSE(timeline.open_position(1));
+  ASSERT_EQ(timeline.trade_events(1).size(), 2);
+  ASSERT_EQ(timeline.closed_trades(1).size(), 1);
+  ASSERT_EQ(timeline.closed_trades(1).front().signal_exit_states().size(), 3);
+  EXPECT_DOUBLE_EQ(timeline.closed_trades(1).front().risk_distance(), 10.0);
+  EXPECT_DOUBLE_EQ(timeline.closed_trades(1).front().risk_reference_price(),
                    100.0);
-  EXPECT_DOUBLE_EQ(timeline.closed_trades(2).front().risk_boundary_price(),
+  EXPECT_DOUBLE_EQ(timeline.closed_trades(1).front().risk_boundary_price(),
                    90.0);
-  EXPECT_DOUBLE_EQ(timeline.trade_events(2).front().risk_distance(), 10.0);
+  EXPECT_DOUBLE_EQ(timeline.trade_events(1).front().risk_distance(), 10.0);
   EXPECT_TRUE(
-   timeline.closed_trades(2).front().signal_exit_states()[1].consumed());
+   timeline.closed_trades(1).front().signal_exit_states()[1].consumed());
   EXPECT_TRUE(
-   timeline.closed_trades(2).front().signal_exit_states()[2].consumed());
+   timeline.closed_trades(1).front().signal_exit_states()[2].consumed());
 
   runner.run(series_results, timeline);
 
-  ASSERT_TRUE(timeline.open_position(3));
-  ASSERT_EQ(timeline.open_position(3)->signal_exit_states().size(), 3);
-  EXPECT_FALSE(timeline.open_position(3)->signal_exit_states()[1].consumed());
-  EXPECT_FALSE(timeline.open_position(3)->signal_exit_states()[2].consumed());
+  ASSERT_TRUE(timeline.open_position(2));
+  ASSERT_EQ(timeline.open_position(2)->signal_exit_states().size(), 3);
+  EXPECT_FALSE(timeline.open_position(2)->signal_exit_states()[1].consumed());
+  EXPECT_FALSE(timeline.open_position(2)->signal_exit_states()[2].consumed());
+}
+
+TEST(BacktestRunnerTest, AfterPreviousSignalExitsAdvanceAtTheSameCurrentClose)
+{
+  const auto asset =
+   make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 110.0, 110.0, 110.0, 110.0);
+  const auto market = Market{"Test", 1.0, 1.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 8.0}};
+  auto signal_exits =
+   std::vector<BacktestRunner::PositionRule::SignalExitRule>{};
+  signal_exits.emplace_back(
+   true, BooleanMethod<true>{}, SignalTiming::CurrentClose, 0.5);
+  signal_exits.emplace_back(
+   true, BooleanMethod<true>{}, SignalTiming::CurrentClose, 1.0);
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   {},
+   BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                std::move(signal_exits),
+                                BooleanMethod<false>{},
+                                1,
+                                ValueMethod{10.0},
+                                {},
+                                SignalTiming::CurrentClose,
+                                SignalTiming::NextOpen,
+                                StopTargetReferencePrice::AveragePrice,
+                                StopTargetReferencePrice::AveragePrice,
+                                {},
+                                ExitActivation::AfterPrevious},
+   BacktestRunner::PositionRule{},
+   5000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+
+  EXPECT_FALSE(timeline.open_position(1));
+  ASSERT_EQ(timeline.trade_events(1).size(), 2);
+  EXPECT_EQ(timeline.trade_events(1)[0].type(), TradeEvent::Type::exit_signal);
+  EXPECT_EQ(timeline.trade_events(1)[1].type(), TradeEvent::Type::exit_signal);
+  EXPECT_DOUBLE_EQ(timeline.trade_events(1)[0].price(), 110.0);
+  EXPECT_DOUBLE_EQ(timeline.trade_events(1)[1].price(), 110.0);
 }
 
 TEST(BacktestRunnerTest, PyramidingPreservesConsumedSignalExitStates)
@@ -3105,8 +3165,10 @@ TEST(BacktestRunnerTest, PyramidingPreservesConsumedSignalExitStates)
   auto timeline = BacktestTimeline{};
   auto signal_exits =
    std::vector<BacktestRunner::PositionRule::SignalExitRule>{};
-  signal_exits.emplace_back(true, BooleanMethod<true>{}, 1, OpenMethod{}, 0.5);
-  signal_exits.emplace_back(true, BooleanMethod<false>{}, 1, OpenMethod{}, 1.0);
+  signal_exits.emplace_back(
+   true, BooleanMethod<true>{}, SignalTiming::NextOpen, 0.5);
+  signal_exits.emplace_back(
+   true, BooleanMethod<false>{}, SignalTiming::NextOpen, 1.0);
 
   auto runner = BacktestRunner{
    asset,
@@ -3126,7 +3188,7 @@ TEST(BacktestRunnerTest, PyramidingPreservesConsumedSignalExitStates)
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
   ASSERT_TRUE(timeline.open_position(1));
-  EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 4.0);
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 12.0);
   EXPECT_TRUE(timeline.open_position(1)->signal_exit_states()[0].consumed());
 
   runner.run(series_results, timeline);
@@ -3153,7 +3215,8 @@ TEST(BacktestRunnerTest, StopLossAndTakeProfitHavePriorityOverSignalExits)
   auto timeline = BacktestTimeline{};
   auto signal_exits =
    std::vector<BacktestRunner::PositionRule::SignalExitRule>{};
-  signal_exits.emplace_back(true, BooleanMethod<true>{}, 1, OpenMethod{}, 0.5);
+  signal_exits.emplace_back(
+   true, BooleanMethod<true>{}, SignalTiming::NextOpen, 0.5);
 
   auto runner =
    BacktestRunner{asset,
@@ -3168,10 +3231,8 @@ TEST(BacktestRunnerTest, StopLossAndTakeProfitHavePriorityOverSignalExits)
                    1,
                    ValueMethod{10.0},
                    single_stop_loss(ValueMethod{90.0}, true, false, 0.25),
-                   1,
-                   OpenMethod{},
-                   1,
-                   OpenMethod{},
+                   SignalTiming::NextOpen,
+                   SignalTiming::NextOpen,
                    StopTargetReferencePrice::AveragePrice,
                    StopTargetReferencePrice::AveragePrice,
                    single_take_profit(ValueMethod{120.0}, true, 0.5)},
@@ -3180,22 +3241,20 @@ TEST(BacktestRunnerTest, StopLossAndTakeProfitHavePriorityOverSignalExits)
 
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
-  ASSERT_EQ(timeline.trade_events(1).size(), 1);
-  EXPECT_EQ(timeline.trade_events(1).front().type(),
-            TradeEvent::Type::stop_loss);
+  ASSERT_EQ(timeline.trade_events(1).size(), 3);
+  EXPECT_EQ(timeline.trade_events(1)[1].type(), TradeEvent::Type::stop_loss);
+  EXPECT_EQ(timeline.trade_events(1)[2].type(), TradeEvent::Type::take_profit);
   EXPECT_FALSE(timeline.open_position(1)->signal_exit_states()[0].consumed());
-  EXPECT_FALSE(timeline.open_position(1)->take_profit_levels()[0].consumed());
+  EXPECT_TRUE(timeline.open_position(1)->take_profit_levels()[0].consumed());
 
   runner.run(series_results, timeline);
   ASSERT_EQ(timeline.trade_events(2).size(), 1);
   EXPECT_EQ(timeline.trade_events(2).front().type(),
-            TradeEvent::Type::take_profit);
-  EXPECT_FALSE(timeline.open_position(2)->signal_exit_states()[0].consumed());
+            TradeEvent::Type::exit_signal);
+  EXPECT_TRUE(timeline.open_position(2)->signal_exit_states()[0].consumed());
 
   runner.run(series_results, timeline);
-  ASSERT_EQ(timeline.trade_events(3).size(), 1);
-  EXPECT_EQ(timeline.trade_events(3).front().type(),
-            TradeEvent::Type::exit_signal);
+  EXPECT_TRUE(timeline.trade_events(3).empty());
   EXPECT_TRUE(timeline.open_position(3)->signal_exit_states()[0].consumed());
 }
 
@@ -3231,7 +3290,7 @@ auto run_signal_reduction(double reduce,
                                      OpenMethod{},
                                      1,
                                      OpenMethod{},
-                                     1,
+                                     0,
                                      OpenMethod{},
                                      StopTargetReferencePrice::AveragePrice,
                                      StopTargetReferencePrice::AveragePrice,
@@ -3388,25 +3447,24 @@ TEST(BacktestRunnerTest,
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
   ASSERT_TRUE(timeline.open_position(1));
-  EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 4.0);
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 2.0);
   ASSERT_EQ(timeline.open_position(1)->take_profit_levels().size(), 3);
   EXPECT_FALSE(timeline.open_position(1)->take_profit_levels()[0].enabled());
   EXPECT_TRUE(timeline.open_position(1)->take_profit_levels()[1].consumed());
-  EXPECT_FALSE(timeline.open_position(1)->take_profit_levels()[2].consumed());
-  ASSERT_EQ(timeline.trade_events(1).size(), 1);
+  EXPECT_TRUE(timeline.open_position(1)->take_profit_levels()[2].consumed());
+  ASSERT_EQ(timeline.trade_events(1).size(), 2);
   EXPECT_DOUBLE_EQ(timeline.trade_events(1).front().price(), 120.0);
+  EXPECT_DOUBLE_EQ(timeline.trade_events(1).back().price(), 130.0);
 
   runner.run(series_results, timeline);
   EXPECT_TRUE(timeline.trade_events(2).empty());
-  EXPECT_DOUBLE_EQ(timeline.open_position(2)->position_size(), 4.0);
+  EXPECT_DOUBLE_EQ(timeline.open_position(2)->position_size(), 2.0);
 
   runner.run(series_results, timeline);
   ASSERT_TRUE(timeline.open_position(3));
   EXPECT_DOUBLE_EQ(timeline.open_position(3)->position_size(), 2.0);
   EXPECT_TRUE(timeline.open_position(3)->take_profit_levels()[2].consumed());
-  ASSERT_EQ(timeline.trade_events(3).size(), 1);
-  EXPECT_EQ(timeline.trade_events(3).front().type(),
-            TradeEvent::Type::take_profit);
+  EXPECT_TRUE(timeline.trade_events(3).empty());
 }
 
 TEST(BacktestRunnerTest,
@@ -3443,11 +3501,11 @@ TEST(BacktestRunnerTest,
                                      ValueMethod{90.0},
                                      false,
                                      false,
-                                     1,
+                                     0,
                                      OpenMethod{},
                                      1,
                                      OpenMethod{},
-                                     1,
+                                     0,
                                      OpenMethod{},
                                      StopTargetReferencePrice::AveragePrice,
                                      StopTargetReferencePrice::AveragePrice,
@@ -3460,10 +3518,9 @@ TEST(BacktestRunnerTest,
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
   ASSERT_TRUE(timeline.open_position(1));
-  EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 4.0);
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 12.0);
   EXPECT_TRUE(timeline.open_position(1)->take_profit_levels()[0].consumed());
-  EXPECT_DOUBLE_EQ(timeline.open_position(1)->take_profit_levels()[0].price(),
-                   110.0);
+  EXPECT_NE(timeline.open_position(1)->take_profit_levels()[0].price(), 110.0);
 
   runner.run(series_results, timeline);
   ASSERT_TRUE(timeline.open_position(2));
@@ -3471,6 +3528,64 @@ TEST(BacktestRunnerTest,
   EXPECT_TRUE(timeline.open_position(2)->take_profit_levels()[0].consumed());
   EXPECT_NE(timeline.open_position(2)->take_profit_levels()[0].price(), 110.0);
   EXPECT_FALSE(timeline.open_position(2)->take_profit_levels()[1].consumed());
+}
+
+TEST(BacktestRunnerTest,
+     AfterPreviousActivatesMarketableTakeProfitImmediatelyAndSkipsDisabledRules)
+{
+  const auto asset =
+   make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 100.0, 130.0, 100.0, 125.0);
+  const auto market = Market{"Test", 1.0, 1.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 8.0}};
+  auto take_profits =
+   std::vector<BacktestRunner::PositionRule::TakeProfitRule>{};
+  take_profits.emplace_back(ValueMethod{200.0}, false, 1.0);
+  take_profits.emplace_back(ValueMethod{120.0}, true, 0.5);
+  take_profits.emplace_back(ValueMethod{110.0}, true, 0.5);
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   {},
+   BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                {},
+                                BooleanMethod<false>{},
+                                1,
+                                ValueMethod{10.0},
+                                {},
+                                SignalTiming::CurrentClose,
+                                SignalTiming::NextOpen,
+                                StopTargetReferencePrice::AveragePrice,
+                                StopTargetReferencePrice::AveragePrice,
+                                std::move(take_profits),
+                                ExitActivation::Simultaneous,
+                                ExitActivation::Simultaneous,
+                                ExitActivation::AfterPrevious},
+   BacktestRunner::PositionRule{},
+   5000.0,
+   0,
+   false,
+   NAN,
+   IntrabarPath::LowFirst};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+
+  ASSERT_TRUE(timeline.open_position(1));
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 2.0);
+  ASSERT_EQ(timeline.open_position(1)->take_profit_levels().size(), 3);
+  EXPECT_FALSE(timeline.open_position(1)->take_profit_levels()[0].consumed());
+  EXPECT_TRUE(timeline.open_position(1)->take_profit_levels()[1].consumed());
+  EXPECT_TRUE(timeline.open_position(1)->take_profit_levels()[2].consumed());
+  ASSERT_EQ(timeline.trade_events(1).size(), 2);
+  EXPECT_DOUBLE_EQ(timeline.trade_events(1)[0].price(), 120.0);
+  EXPECT_DOUBLE_EQ(timeline.trade_events(1)[1].price(), 120.0);
 }
 
 TEST(BacktestRunnerTest, ReductionIsRaisedToMarketMinimum)

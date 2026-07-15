@@ -10,6 +10,7 @@ import pludux;
 
 import :trade_entry;
 import :trade_exit;
+import :execution_model;
 import :plot_group;
 import :risk_distance_node;
 import :stop_target_price_node;
@@ -27,16 +28,13 @@ public:
   class Entry {
   public:
     Entry()
-    : Entry(FalseNode{}, 1, OpenNode{})
+    : Entry(FalseNode{}, SignalTiming::NextOpen)
     {
     }
 
-    Entry(ErasedNode signal,
-          std::size_t signal_delay = 1,
-          ErasedNode price = OpenNode{})
+    Entry(ErasedNode signal, SignalTiming timing = SignalTiming::NextOpen)
     : signal_{std::move(signal)}
-    , signal_delay_{signal_delay}
-    , price_{std::move(price)}
+    , timing_{timing}
     {
     }
 
@@ -52,48 +50,35 @@ public:
       self.signal_ = std::move(signal);
     }
 
-    auto signal_delay(this const Entry& self) noexcept -> std::size_t
+    auto timing(this const Entry& self) noexcept -> SignalTiming
     {
-      return self.signal_delay_;
+      return self.timing_;
     }
 
-    void signal_delay(this Entry& self, std::size_t signal_delay) noexcept
+    void timing(this Entry& self, SignalTiming timing) noexcept
     {
-      self.signal_delay_ = signal_delay;
-    }
-
-    auto price(this const Entry& self) noexcept -> const ErasedNode&
-    {
-      return self.price_;
-    }
-
-    void price(this Entry& self, ErasedNode price) noexcept
-    {
-      self.price_ = std::move(price);
+      self.timing_ = timing;
     }
 
   private:
     ErasedNode signal_;
-    std::size_t signal_delay_;
-    ErasedNode price_;
+    SignalTiming timing_;
   };
 
   class Exit {
   public:
     Exit()
-    : Exit(false, FalseNode{}, 1, OpenNode{})
+    : Exit(false, FalseNode{}, SignalTiming::NextOpen)
     {
     }
 
     Exit(bool enabled,
          ErasedNode signal,
-         std::size_t signal_delay = 1,
-         ErasedNode price = OpenNode{},
+         SignalTiming timing = SignalTiming::NextOpen,
          double reduce = 1.0)
     : enabled_{enabled}
     , signal_{std::move(signal)}
-    , signal_delay_{signal_delay}
-    , price_{std::move(price)}
+    , timing_{timing}
     , reduce_{reduce}
     {
     }
@@ -120,24 +105,14 @@ public:
       self.signal_ = std::move(signal);
     }
 
-    auto signal_delay(this const Exit& self) noexcept -> std::size_t
+    auto timing(this const Exit& self) noexcept -> SignalTiming
     {
-      return self.signal_delay_;
+      return self.timing_;
     }
 
-    void signal_delay(this Exit& self, std::size_t signal_delay) noexcept
+    void timing(this Exit& self, SignalTiming timing) noexcept
     {
-      self.signal_delay_ = signal_delay;
-    }
-
-    auto price(this const Exit& self) noexcept -> const ErasedNode&
-    {
-      return self.price_;
-    }
-
-    void price(this Exit& self, ErasedNode price) noexcept
-    {
-      self.price_ = std::move(price);
+      self.timing_ = timing;
     }
 
     auto reduce(this const Exit& self) noexcept -> double
@@ -153,8 +128,7 @@ public:
   private:
     bool enabled_;
     ErasedNode signal_;
-    std::size_t signal_delay_;
-    ErasedNode price_;
+    SignalTiming timing_;
     double reduce_;
   };
 
@@ -174,24 +148,14 @@ public:
       self.signal_ = std::move(signal);
     }
 
-    auto signal_delay(this const Pyramiding& self) noexcept -> std::size_t
+    auto timing(this const Pyramiding& self) noexcept -> SignalTiming
     {
-      return self.signal_delay_;
+      return self.timing_;
     }
 
-    void signal_delay(this Pyramiding& self, std::size_t signal_delay) noexcept
+    void timing(this Pyramiding& self, SignalTiming timing) noexcept
     {
-      self.signal_delay_ = signal_delay;
-    }
-
-    auto price(this const Pyramiding& self) noexcept -> const ErasedNode&
-    {
-      return self.price_;
-    }
-
-    void price(this Pyramiding& self, ErasedNode price) noexcept
-    {
-      self.price_ = std::move(price);
+      self.timing_ = timing;
     }
 
     auto max_layers(this const Pyramiding& self) noexcept -> std::size_t
@@ -231,8 +195,7 @@ public:
 
   private:
     ErasedNode signal_{FalseNode{}};
-    std::size_t signal_delay_{1};
-    ErasedNode price_{OpenNode{}};
+    SignalTiming timing_{SignalTiming::NextOpen};
     std::size_t max_layers_{1};
     StopTargetReferencePrice favorable_stop_target_reference_{
      StopTargetReferencePrice::AveragePrice};
@@ -382,6 +345,17 @@ public:
       self.exits_ = std::move(exits);
     }
 
+    auto exits_activation(this const Position& self) noexcept -> ExitActivation
+    {
+      return self.exits_activation_;
+    }
+
+    void exits_activation(this Position& self,
+                          ExitActivation activation) noexcept
+    {
+      self.exits_activation_ = activation;
+    }
+
     auto pyramiding(this const Position& self) noexcept -> const Pyramiding&
     {
       return self.pyramiding_;
@@ -409,6 +383,18 @@ public:
       self.take_profits_ = std::move(take_profits);
     }
 
+    auto take_profits_activation(this const Position& self) noexcept
+     -> ExitActivation
+    {
+      return self.take_profits_activation_;
+    }
+
+    void take_profits_activation(this Position& self,
+                                 ExitActivation activation) noexcept
+    {
+      self.take_profits_activation_ = activation;
+    }
+
     auto risk_distance(this const Position& self) noexcept -> const ErasedNode&
     {
       return self.risk_distance_;
@@ -431,13 +417,28 @@ public:
       self.stop_losses_ = std::move(stop_losses);
     }
 
+    auto stop_losses_activation(this const Position& self) noexcept
+     -> ExitActivation
+    {
+      return self.stop_losses_activation_;
+    }
+
+    void stop_losses_activation(this Position& self,
+                                ExitActivation activation) noexcept
+    {
+      self.stop_losses_activation_ = activation;
+    }
+
   private:
     Entry entry_;
     std::vector<Exit> exits_;
+    ExitActivation exits_activation_{ExitActivation::Simultaneous};
     Pyramiding pyramiding_;
     ErasedNode risk_distance_{RiskDistanceAtrNode{}};
     std::vector<TakeProfit> take_profits_;
+    ExitActivation take_profits_activation_{ExitActivation::Simultaneous};
     std::vector<StopLoss> stop_losses_{StopLoss{}};
+    ExitActivation stop_losses_activation_{ExitActivation::Simultaneous};
   };
 
   Strategy()
@@ -445,7 +446,8 @@ public:
              OrderedNamedRegistry<ErasedNode>{},
              Position{},
              Position{},
-             std::vector<PlotGroup>{})
+             std::vector<PlotGroup>{},
+             IntrabarPath::CandleDirection)
   {
   }
 
@@ -453,12 +455,14 @@ public:
            OrderedNamedRegistry<ErasedNode> series_nodes,
            Position long_position,
            Position short_position,
-           std::vector<PlotGroup> plots)
+           std::vector<PlotGroup> plots,
+           IntrabarPath intrabar_path = IntrabarPath::CandleDirection)
   : name_{std::move(name)}
   , series_nodes_{std::move(series_nodes)}
   , long_position_{std::move(long_position)}
   , short_position_{std::move(short_position)}
   , plots_{std::move(plots)}
+  , intrabar_path_{intrabar_path}
   {
   }
 
@@ -523,12 +527,23 @@ public:
     self.plots_ = std::move(plots);
   }
 
+  auto intrabar_path(this const Strategy& self) noexcept -> IntrabarPath
+  {
+    return self.intrabar_path_;
+  }
+
+  void intrabar_path(this Strategy& self, IntrabarPath path) noexcept
+  {
+    self.intrabar_path_ = path;
+  }
+
   auto equivalent_rules(this const Strategy& self,
                         const Strategy& other) noexcept -> bool
   {
     return self.series_nodes_ == other.series_nodes_ &&
            self.long_position_ == other.long_position_ &&
-           self.short_position_ == other.short_position_;
+           self.short_position_ == other.short_position_ &&
+           self.intrabar_path_ == other.intrabar_path_;
   }
 
 private:
@@ -540,6 +555,7 @@ private:
   Position short_position_;
 
   std::vector<PlotGroup> plots_;
+  IntrabarPath intrabar_path_;
 };
 
 } // namespace pludux::backtest

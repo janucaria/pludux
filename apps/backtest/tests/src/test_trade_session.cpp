@@ -250,17 +250,18 @@ TEST(TradeSessionTest,
 
 TEST(TradePositionTest, UpdatesTrailingStopAndChecksTriggers)
 {
-  auto position = TradePosition{1,
-                                2.0,
-                                static_cast<std::time_t>(20),
-                                100.0,
-                                0.0,
-                                {StopLossLevel{90.0, 90.0, true, true},
-                                 StopLossLevel{80.0, 80.0, true, false},
-                                 StopLossLevel{85.0, 85.0, true, true, true}}};
+  auto position =
+   TradePosition{1,
+                 2.0,
+                 static_cast<std::time_t>(20),
+                 100.0,
+                 0.0,
+                 {StopLossLevel{90.0, 90.0, true, true, false, 10.0, 100.0},
+                  StopLossLevel{80.0, 80.0, true, false},
+                  StopLossLevel{85.0, 85.0, true, true, true}}};
   position.take_profit_levels({TakeProfitLevel{120.0, true}});
 
-  position.update_trailing_stops(115.0);
+  position.update_trailing_stop(0, 115.0);
 
   ASSERT_EQ(position.stop_loss_levels().size(), 3);
   EXPECT_DOUBLE_EQ(position.stop_loss_levels()[0].evaluated_price(), 90.0);

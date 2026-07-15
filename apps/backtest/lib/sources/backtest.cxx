@@ -26,6 +26,8 @@ export import :store_data_resolver;
 export import :store_descriptor;
 export import :store_arena;
 export import :store;
+export import :execution_model;
+export import :intrabar_path;
 export import :asset;
 export import :strategy;
 export import :strategy_inputs;

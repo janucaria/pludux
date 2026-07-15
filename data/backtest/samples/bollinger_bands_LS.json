@@ -50,8 +50,6 @@
   "positions": {
     "long": {
       "entry": {
-        "signalDelay": 1,
-        "price": "OPEN",
         "signal": {
           "method": "CROSSUNDER",
           "params": {
@@ -63,27 +61,30 @@
               }
             }
           }
-        }
+        },
+        "timing": "NEXT_OPEN"
       },
-      "exits": [
-        {
-          "enabled": true,
-          "signalDelay": 1,
-          "price": "OPEN",
-          "signal": {
-            "method": "CROSSOVER",
-            "params": {
-              "value": "CLOSE",
-              "baseline": {
-                "method": "SERIES",
-                "params": {
-                  "name": "bb_lower"
+      "exits": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "signal": {
+              "method": "CROSSOVER",
+              "params": {
+                "value": "CLOSE",
+                "baseline": {
+                  "method": "SERIES",
+                  "params": {
+                    "name": "bb_lower"
+                  }
                 }
               }
-            }
+            },
+            "timing": "NEXT_OPEN"
           }
-        }
-      ],
+        ]
+      },
       "riskDistance": {
         "method": "R_DISTANCE_ATR",
         "params": {
@@ -102,20 +103,21 @@
           "maSmoothingType": "RMA"
         }
       },
-      "stopLosses": [
-        {
-          "enabled": false,
-          "trailing": false,
-          "stopPrice": {
-            "method": "SL_1R"
+      "stopLosses": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": false,
+            "trailing": false,
+            "stopPrice": {
+              "method": "SL_1R"
+            }
           }
-        }
-      ]
+        ]
+      }
     },
     "short": {
       "entry": {
-        "signalDelay": 1,
-        "price": "OPEN",
         "signal": {
           "method": "CROSSOVER",
           "params": {
@@ -127,27 +129,30 @@
               }
             }
           }
-        }
+        },
+        "timing": "NEXT_OPEN"
       },
-      "exits": [
-        {
-          "enabled": true,
-          "signalDelay": 1,
-          "price": "OPEN",
-          "signal": {
-            "method": "CROSSUNDER",
-            "params": {
-              "value": "CLOSE",
-              "baseline": {
-                "method": "SERIES",
-                "params": {
-                  "name": "bb_upper"
+      "exits": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "signal": {
+              "method": "CROSSUNDER",
+              "params": {
+                "value": "CLOSE",
+                "baseline": {
+                  "method": "SERIES",
+                  "params": {
+                    "name": "bb_upper"
+                  }
                 }
               }
-            }
+            },
+            "timing": "NEXT_OPEN"
           }
-        }
-      ],
+        ]
+      },
       "riskDistance": {
         "method": "R_DISTANCE_ATR",
         "params": {
@@ -166,15 +171,18 @@
           "maSmoothingType": "RMA"
         }
       },
-      "stopLosses": [
-        {
-          "enabled": false,
-          "trailing": false,
-          "stopPrice": {
-            "method": "SL_1R"
+      "stopLosses": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": false,
+            "trailing": false,
+            "stopPrice": {
+              "method": "SL_1R"
+            }
           }
-        }
-      ]
+        ]
+      }
     }
   },
   "plots": [
@@ -208,5 +216,8 @@
         }
       ]
     }
-  ]
+  ],
+  "execution": {
+    "intrabarPath": "CANDLE_DIRECTION"
+  }
 }

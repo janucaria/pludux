@@ -61,8 +61,6 @@
   "positions": {
     "long": {
       "entry": {
-        "signalDelay": 1,
-        "price": "OPEN",
         "signal": {
           "method": "GREATER_THAN",
           "params": {
@@ -85,38 +83,41 @@
               }
             }
           }
-        }
+        },
+        "timing": "NEXT_OPEN"
       },
-      "exits": [
-        {
-          "enabled": true,
-          "signalDelay": 1,
-          "price": "OPEN",
-          "signal": {
-            "method": "LESS_THAN",
-            "params": {
-              "target": {
-                "method": "SERIES",
-                "params": {
-                  "name": "dc_upper10"
-                }
-              },
-              "threshold": {
-                "method": "LOOKBACK",
-                "params": {
-                  "period": 1,
-                  "source": {
-                    "method": "SERIES",
-                    "params": {
-                      "name": "dc_upper10"
+      "exits": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "signal": {
+              "method": "LESS_THAN",
+              "params": {
+                "target": {
+                  "method": "SERIES",
+                  "params": {
+                    "name": "dc_upper10"
+                  }
+                },
+                "threshold": {
+                  "method": "LOOKBACK",
+                  "params": {
+                    "period": 1,
+                    "source": {
+                      "method": "SERIES",
+                      "params": {
+                        "name": "dc_upper10"
+                      }
                     }
                   }
                 }
               }
-            }
+            },
+            "timing": "NEXT_OPEN"
           }
-        }
-      ],
+        ]
+      },
       "riskDistance": {
         "method": "R_DISTANCE_ATR",
         "params": {
@@ -135,15 +136,18 @@
           "maSmoothingType": "RMA"
         }
       },
-      "stopLosses": [
-        {
-          "enabled": false,
-          "trailing": false,
-          "stopPrice": {
-            "method": "SL_1R"
+      "stopLosses": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": false,
+            "trailing": false,
+            "stopPrice": {
+              "method": "SL_1R"
+            }
           }
-        }
-      ]
+        ]
+      }
     }
   },
   "plots": [
@@ -189,5 +193,8 @@
         }
       ]
     }
-  ]
+  ],
+  "execution": {
+    "intrabarPath": "CANDLE_DIRECTION"
+  }
 }

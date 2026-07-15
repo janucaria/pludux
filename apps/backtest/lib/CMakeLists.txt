@@ -58,6 +58,9 @@ target_sources(${PROJECT_NAME}
 
     sources/backtest/method_serializer_mixin.cxx
 
+    sources/backtest/execution_model.cxx
+    sources/backtest/intrabar_path.cxx
+
     sources/backtest/plots/plot_method_contextable.cxx
     sources/backtest/plots/any_plot_method_context.cxx
     

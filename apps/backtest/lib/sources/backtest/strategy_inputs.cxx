@@ -421,15 +421,12 @@ auto collect_numeric_inputs(const Strategy& strategy)
   const auto collect_from_position =
    [&inputs](const Strategy::Position& position) {
      collect_numeric_inputs_from_node(position.entry().signal(), inputs);
-     collect_numeric_inputs_from_node(position.entry().price(), inputs);
      for(const auto& exit : position.exits()) {
        if(exit.enabled()) {
          collect_numeric_inputs_from_node(exit.signal(), inputs);
-         collect_numeric_inputs_from_node(exit.price(), inputs);
        }
      }
      collect_numeric_inputs_from_node(position.pyramiding().signal(), inputs);
-     collect_numeric_inputs_from_node(position.pyramiding().price(), inputs);
      collect_numeric_inputs_from_node(position.risk_distance(), inputs);
      for(const auto& stop_loss : position.stop_losses()) {
        if(stop_loss.enabled()) {

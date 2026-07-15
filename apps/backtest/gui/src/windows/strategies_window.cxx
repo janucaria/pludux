@@ -1088,6 +1088,13 @@ private:
     }
 
     {
+      ImGui::SeparatorText("Execution");
+      self.editing_strategy_ptr_->intrabar_path(
+       self.render_intrabar_path(self.editing_strategy_ptr_->intrabar_path()));
+      ImGui::Text("");
+    }
+
+    {
       ImGui::SeparatorText("Series Nodes");
 
       auto& series_nodes = self.editing_strategy_ptr_->series_nodes();
@@ -1284,6 +1291,92 @@ private:
     ImGui::EndChild();
   }
 
+  auto render_intrabar_path(this const auto&, backtest::IntrabarPath path)
+   -> backtest::IntrabarPath
+  {
+    ImGui::Text("Intrabar Path:");
+    ImGui::SameLine();
+    auto preview = "Candle Direction";
+    if(path == backtest::IntrabarPath::LowFirst) {
+      preview = "Low First";
+    } else if(path == backtest::IntrabarPath::HighFirst) {
+      preview = "High First";
+    }
+    if(ImGui::BeginCombo("##intrabar_path", preview)) {
+      for(const auto [value, title] :
+          {std::pair{backtest::IntrabarPath::LowFirst, "Low First"},
+           std::pair{backtest::IntrabarPath::HighFirst, "High First"},
+           std::pair{backtest::IntrabarPath::CandleDirection,
+                     "Candle Direction"}}) {
+        const auto selected = path == value;
+        if(ImGui::Selectable(title, selected)) {
+          path = value;
+        }
+        if(selected) {
+          ImGui::SetItemDefaultFocus();
+        }
+      }
+      ImGui::EndCombo();
+    }
+    return path;
+  }
+
+  auto render_signal_timing(this const auto&,
+                            const char* label,
+                            const char* id,
+                            backtest::SignalTiming timing)
+   -> backtest::SignalTiming
+  {
+    ImGui::Text("%s", label);
+    ImGui::SameLine();
+    const auto preview = timing == backtest::SignalTiming::CurrentClose
+                          ? "Current Close"
+                          : "Next Open";
+    if(ImGui::BeginCombo(id, preview)) {
+      for(const auto [value, title] :
+          {std::pair{backtest::SignalTiming::CurrentClose, "Current Close"},
+           std::pair{backtest::SignalTiming::NextOpen, "Next Open"}}) {
+        const auto selected = timing == value;
+        if(ImGui::Selectable(title, selected)) {
+          timing = value;
+        }
+        if(selected) {
+          ImGui::SetItemDefaultFocus();
+        }
+      }
+      ImGui::EndCombo();
+    }
+    return timing;
+  }
+
+  auto render_exit_activation(this const auto&,
+                              const char* id,
+                              backtest::ExitActivation activation)
+   -> backtest::ExitActivation
+  {
+    ImGui::Text("Activation:");
+    ImGui::SameLine();
+    const auto preview = activation == backtest::ExitActivation::Simultaneous
+                          ? "Simultaneous"
+                          : "After Previous";
+    if(ImGui::BeginCombo(id, preview)) {
+      for(const auto [value, title] :
+          {std::pair{backtest::ExitActivation::Simultaneous, "Simultaneous"},
+           std::pair{backtest::ExitActivation::AfterPrevious,
+                     "After Previous"}}) {
+        const auto selected = activation == value;
+        if(ImGui::Selectable(title, selected)) {
+          activation = value;
+        }
+        if(selected) {
+          ImGui::SetItemDefaultFocus();
+        }
+      }
+      ImGui::EndCombo();
+    }
+    return activation;
+  }
+
   void render_position_form(this auto& self,
                             backtest::Strategy::Position& position,
                             WindowContext& context)
@@ -1294,22 +1387,8 @@ private:
       auto entry = position.entry();
       auto changed_node = self.render_condition_node(entry.signal(), context);
       entry.signal(std::move(changed_node));
-      auto signal_delay = static_cast<int>(entry.signal_delay());
-      ImGui::Text("Signal Delay:");
-      ImGui::SameLine();
-      if(ImGui::InputInt("##signal_delay", &signal_delay)) {
-        if(signal_delay < 0) {
-          signal_delay = 0;
-        }
-        entry.signal_delay(static_cast<std::size_t>(signal_delay));
-      }
-      ImGui::Text("Entry Price:");
-      ImGui::SameLine();
-      auto price = entry.price();
-      ImGui::PushID("price");
-      self.render_series_node(price, context);
-      ImGui::PopID();
-      entry.price(std::move(price));
+      entry.timing(
+       self.render_signal_timing("Timing:", "##timing", entry.timing()));
       position.entry(std::move(entry));
       ImGui::PopID();
     }
@@ -1317,6 +1396,8 @@ private:
       ImGui::SeparatorText("Signal Exits");
       ImGui::PushID("signal_exits");
       auto exits = position.exits();
+      position.exits_activation(self.render_exit_activation(
+       "##activation", position.exits_activation()));
       if(ImGui::Button("Add Signal Exit")) {
         exits.emplace_back();
       }
@@ -1352,22 +1433,8 @@ private:
         ImGui::BeginDisabled(!enabled);
         auto changed_node = self.render_condition_node(exit.signal(), context);
         exit.signal(std::move(changed_node));
-        auto signal_delay = static_cast<int>(exit.signal_delay());
-        ImGui::Text("Signal Delay:");
-        ImGui::SameLine();
-        if(ImGui::InputInt("##signal_delay", &signal_delay)) {
-          if(signal_delay < 0) {
-            signal_delay = 0;
-          }
-          exit.signal_delay(static_cast<std::size_t>(signal_delay));
-        }
-        ImGui::Text("Exit Price:");
-        ImGui::SameLine();
-        auto price = exit.price();
-        ImGui::PushID("price");
-        self.render_series_node(price, context);
-        ImGui::PopID();
-        exit.price(std::move(price));
+        exit.timing(
+         self.render_signal_timing("Timing:", "##timing", exit.timing()));
 
         ImGui::PushID("reduce");
         exit.reduce(self.render_position_reduction(exit.reduce()));
@@ -1390,23 +1457,8 @@ private:
        self.render_condition_node(pyramiding.signal(), context);
       pyramiding.signal(std::move(changed_node));
 
-      auto signal_delay = static_cast<int>(pyramiding.signal_delay());
-      ImGui::Text("Signal Delay:");
-      ImGui::SameLine();
-      if(ImGui::InputInt("##signal_delay", &signal_delay)) {
-        if(signal_delay < 0) {
-          signal_delay = 0;
-        }
-        pyramiding.signal_delay(static_cast<std::size_t>(signal_delay));
-      }
-
-      ImGui::Text("Pyramiding Price:");
-      ImGui::SameLine();
-      auto price = pyramiding.price();
-      ImGui::PushID("price");
-      self.render_series_node(price, context);
-      ImGui::PopID();
-      pyramiding.price(std::move(price));
+      pyramiding.timing(
+       self.render_signal_timing("Timing:", "##timing", pyramiding.timing()));
 
       auto pyramiding_max_layers = static_cast<int>(pyramiding.max_layers());
       ImGui::Text("Max Layers:");
@@ -1500,6 +1552,8 @@ private:
       ImGui::PushID("stop_losses");
 
       auto stop_losses = position.stop_losses();
+      position.stop_losses_activation(self.render_exit_activation(
+       "##activation", position.stop_losses_activation()));
       if(ImGui::Button("Add Stop Loss")) {
         stop_losses.emplace_back();
       }
@@ -1560,6 +1614,8 @@ private:
       ImGui::PushID("take_profits");
 
       auto take_profits = position.take_profits();
+      position.take_profits_activation(self.render_exit_activation(
+       "##activation", position.take_profits_activation()));
       if(ImGui::Button("Add Take Profit")) {
         take_profits.emplace_back();
       }

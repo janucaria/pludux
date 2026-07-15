@@ -1,6 +1,7 @@
 module;
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
@@ -19,6 +20,8 @@ export module pludux.backtest:backtest_runner;
 import pludux;
 
 import :store;
+import :execution_model;
+import :intrabar_path;
 import :asset;
 import :profile;
 import :trade_entry;
@@ -47,13 +50,11 @@ public:
     public:
       SignalExitRule(bool enabled = false,
                      AnySeriesMethod signal_method = BooleanMethod<false>{},
-                     std::size_t signal_delay = 1,
-                     AnySeriesMethod price_method = OpenMethod{},
+                     SignalTiming timing = SignalTiming::NextOpen,
                      double reduce = 1.0)
       : enabled_{enabled}
       , signal_method_{std::move(signal_method)}
-      , signal_delay_{signal_delay}
-      , price_method_{std::move(price_method)}
+      , timing_{timing}
       , reduce_{reduce}
       {
       }
@@ -69,15 +70,9 @@ public:
         return self.signal_method_;
       }
 
-      auto signal_delay(this const SignalExitRule& self) noexcept -> std::size_t
+      auto timing(this const SignalExitRule& self) noexcept -> SignalTiming
       {
-        return self.signal_delay_;
-      }
-
-      auto price_method(this const SignalExitRule& self) noexcept
-       -> const AnySeriesMethod&
-      {
-        return self.price_method_;
+        return self.timing_;
       }
 
       auto reduce(this const SignalExitRule& self) noexcept -> double
@@ -88,8 +83,7 @@ public:
     private:
       bool enabled_;
       AnySeriesMethod signal_method_;
-      std::size_t signal_delay_;
-      AnySeriesMethod price_method_;
+      SignalTiming timing_;
       double reduce_;
     };
 
@@ -169,34 +163,37 @@ public:
 
     PositionRule() = default;
 
-    PositionRule(AnySeriesMethod entry_method,
-                 std::vector<SignalExitRule> signal_exits,
-                 AnySeriesMethod pyramiding_signal,
-                 std::size_t pyramiding_max_layers,
-                 AnySeriesMethod risk_distance_method,
-                 std::vector<StopLossRule> stop_losses,
-                 std::size_t entry_signal_delay = 1,
-                 AnySeriesMethod entry_price_method = OpenMethod{},
-                 std::size_t pyramiding_signal_delay = 1,
-                 AnySeriesMethod pyramiding_price_method = OpenMethod{},
-                 StopTargetReferencePrice favorable_stop_target_reference =
-                  StopTargetReferencePrice::AveragePrice,
-                 StopTargetReferencePrice unfavorable_stop_target_reference =
-                  StopTargetReferencePrice::AveragePrice,
-                 std::vector<TakeProfitRule> take_profits = {})
+    PositionRule(
+     AnySeriesMethod entry_method,
+     std::vector<SignalExitRule> signal_exits,
+     AnySeriesMethod pyramiding_signal,
+     std::size_t pyramiding_max_layers,
+     AnySeriesMethod risk_distance_method,
+     std::vector<StopLossRule> stop_losses,
+     SignalTiming entry_timing = SignalTiming::CurrentClose,
+     SignalTiming pyramiding_timing = SignalTiming::NextOpen,
+     StopTargetReferencePrice favorable_stop_target_reference =
+      StopTargetReferencePrice::AveragePrice,
+     StopTargetReferencePrice unfavorable_stop_target_reference =
+      StopTargetReferencePrice::AveragePrice,
+     std::vector<TakeProfitRule> take_profits = {},
+     ExitActivation signal_exits_activation = ExitActivation::Simultaneous,
+     ExitActivation stop_losses_activation = ExitActivation::Simultaneous,
+     ExitActivation take_profits_activation = ExitActivation::Simultaneous)
     : entry_method_{std::move(entry_method)}
     , signal_exits_{std::move(signal_exits)}
     , pyramiding_signal_{std::move(pyramiding_signal)}
     , pyramiding_max_layers_{pyramiding_max_layers}
     , risk_distance_method_{std::move(risk_distance_method)}
     , stop_losses_{std::move(stop_losses)}
-    , entry_signal_delay_{entry_signal_delay}
-    , entry_price_method_{std::move(entry_price_method)}
-    , pyramiding_signal_delay_{pyramiding_signal_delay}
-    , pyramiding_price_method_{std::move(pyramiding_price_method)}
+    , entry_timing_{entry_timing}
+    , pyramiding_timing_{pyramiding_timing}
     , favorable_stop_target_reference_{favorable_stop_target_reference}
     , unfavorable_stop_target_reference_{unfavorable_stop_target_reference}
     , take_profits_{std::move(take_profits)}
+    , signal_exits_activation_{signal_exits_activation}
+    , stop_losses_activation_{stop_losses_activation}
+    , take_profits_activation_{take_profits_activation}
     {
     }
 
@@ -236,28 +233,15 @@ public:
       return self.stop_losses_;
     }
 
-    auto entry_signal_delay(this const PositionRule& self) noexcept
-     -> std::size_t
+    auto entry_timing(this const PositionRule& self) noexcept -> SignalTiming
     {
-      return self.entry_signal_delay_;
+      return self.entry_timing_;
     }
 
-    auto entry_price_method(this const PositionRule& self) noexcept
-     -> const AnySeriesMethod&
+    auto pyramiding_timing(this const PositionRule& self) noexcept
+     -> SignalTiming
     {
-      return self.entry_price_method_;
-    }
-
-    auto pyramiding_signal_delay(this const PositionRule& self) noexcept
-     -> std::size_t
-    {
-      return self.pyramiding_signal_delay_;
-    }
-
-    auto pyramiding_price_method(this const PositionRule& self) noexcept
-     -> const AnySeriesMethod&
-    {
-      return self.pyramiding_price_method_;
+      return self.pyramiding_timing_;
     }
 
     auto favorable_stop_target_reference(this const PositionRule& self) noexcept
@@ -279,6 +263,24 @@ public:
       return self.take_profits_;
     }
 
+    auto signal_exits_activation(this const PositionRule& self) noexcept
+     -> ExitActivation
+    {
+      return self.signal_exits_activation_;
+    }
+
+    auto stop_losses_activation(this const PositionRule& self) noexcept
+     -> ExitActivation
+    {
+      return self.stop_losses_activation_;
+    }
+
+    auto take_profits_activation(this const PositionRule& self) noexcept
+     -> ExitActivation
+    {
+      return self.take_profits_activation_;
+    }
+
   private:
     AnySeriesMethod entry_method_{BooleanMethod<false>{}};
     std::vector<SignalExitRule> signal_exits_;
@@ -286,15 +288,16 @@ public:
     std::size_t pyramiding_max_layers_{1};
     AnySeriesMethod risk_distance_method_{ValueMethod{1.0}};
     std::vector<StopLossRule> stop_losses_;
-    std::size_t entry_signal_delay_{1};
-    AnySeriesMethod entry_price_method_{OpenMethod{}};
-    std::size_t pyramiding_signal_delay_{1};
-    AnySeriesMethod pyramiding_price_method_{OpenMethod{}};
+    SignalTiming entry_timing_{SignalTiming::CurrentClose};
+    SignalTiming pyramiding_timing_{SignalTiming::NextOpen};
     StopTargetReferencePrice favorable_stop_target_reference_{
      StopTargetReferencePrice::AveragePrice};
     StopTargetReferencePrice unfavorable_stop_target_reference_{
      StopTargetReferencePrice::AveragePrice};
     std::vector<TakeProfitRule> take_profits_;
+    ExitActivation signal_exits_activation_{ExitActivation::Simultaneous};
+    ExitActivation stop_losses_activation_{ExitActivation::Simultaneous};
+    ExitActivation take_profits_activation_{ExitActivation::Simultaneous};
   };
 
   BacktestRunner(const Asset& asset,
@@ -307,7 +310,8 @@ public:
                  double total_equity = 0.0,
                  std::size_t pyramiding_layers = 0,
                  bool is_failed = false,
-                 double peak_equity = NAN)
+                 double peak_equity = NAN,
+                 IntrabarPath intrabar_path = IntrabarPath::CandleDirection)
   : asset_{asset}
   , market_{market}
   , broker_{broker}
@@ -330,6 +334,7 @@ public:
   , short_position_{std::move(short_position)}
   , pyramiding_layers_{pyramiding_layers}
   , is_failed_{is_failed}
+  , intrabar_path_{intrabar_path}
   {
   }
 
@@ -379,88 +384,75 @@ public:
      self.current_account_state_.drawdown_ratio();
 
     auto closed_position_is_long = std::optional<bool>{};
+    const auto decision_snapshot =
+     timeline_size > 0 ? asset_snapshot[1] : asset_snapshot;
 
-    if(auto& open_position = self.trade_session_.open_position()) {
-      auto exit_was_triggered = false;
-      const auto exit_trade =
-       self.exit_trade(asset_snapshot, *open_position, context);
+    self.process_open_price(asset_snapshot.open(), closed_position_is_long);
+    self.execute_pending_signal_exits(asset_snapshot.open(),
+                                      closed_position_is_long);
 
-      if(exit_trade) {
-        const auto fee = self.broker_.calculate_fee(*exit_trade);
-        const auto closing_position_is_long =
-         open_position->is_long_direction();
-        self.trade_session_.exit_position(*exit_trade, fee);
+    if(self.trade_session_.is_open() && self.pending_pyramiding_) {
+      self.execute_pyramiding_action(asset_snapshot.open(),
+                                     decision_snapshot,
+                                     context,
+                                     current_drawdown_ratio);
+    }
+    self.pending_pyramiding_ = false;
 
-        if(!self.trade_session_.is_open()) {
-          closed_position_is_long = closing_position_is_long;
-          self.pyramiding_layers_ = 0;
-        }
-        exit_was_triggered = true;
-      }
+    if(self.trade_session_.is_flat()) {
+      self.execute_pending_entry(asset_snapshot.open(),
+                                 decision_snapshot,
+                                 context,
+                                 current_drawdown_ratio,
+                                 closed_position_is_long);
+    }
+    self.pending_entries_.fill(false);
 
-      if(!exit_was_triggered) {
-        const auto is_long_direction = open_position->is_long_direction();
-        if(is_long_direction) {
-          auto pyramiding_trade = self.pyramiding_long_trade(
-           asset_snapshot, context, current_drawdown_ratio);
-          if(pyramiding_trade && self.prepare_entry_order(*pyramiding_trade)) {
-            const auto fee = self.broker_.calculate_fee(*pyramiding_trade);
-            self.trade_session_.entry_position(*pyramiding_trade, fee);
-            if(auto& updated_open_position =
-                self.trade_session_.open_position()) {
-              self.update_stop_target_prices(*updated_open_position,
-                                             *pyramiding_trade,
-                                             self.long_position_,
-                                             true,
-                                             asset_snapshot,
-                                             context);
-              self.trade_session_.sync_latest_event_with_open_position();
-            }
-            self.pyramiding_layers_++;
-          }
-        } else {
-          auto pyramiding_trade = self.pyramiding_short_trade(
-           asset_snapshot, context, current_drawdown_ratio);
-          if(pyramiding_trade && self.prepare_entry_order(*pyramiding_trade)) {
-            const auto fee = self.broker_.calculate_fee(*pyramiding_trade);
-            self.trade_session_.entry_position(*pyramiding_trade, fee);
-            if(auto& updated_open_position =
-                self.trade_session_.open_position()) {
-              self.update_stop_target_prices(*updated_open_position,
-                                             *pyramiding_trade,
-                                             self.short_position_,
-                                             true,
-                                             asset_snapshot,
-                                             context);
-              self.trade_session_.sync_latest_event_with_open_position();
-            }
-            self.pyramiding_layers_++;
-          }
-        }
+    const auto prices = make_intrabar_prices(self.intrabar_path_,
+                                             asset_snapshot.open(),
+                                             asset_snapshot.high(),
+                                             asset_snapshot.low(),
+                                             asset_snapshot.close());
+    for(auto index = std::size_t{1}; index < prices.size(); ++index) {
+      self.process_price_segment(
+       prices[index - 1], prices[index], closed_position_is_long);
+    }
+
+    self.execute_signal_exits(SignalTiming::CurrentClose,
+                              asset_snapshot.close(),
+                              asset_snapshot,
+                              context,
+                              closed_position_is_long);
+
+    if(self.trade_session_.is_open()) {
+      const auto& position = *self.trade_session_.open_position();
+      const auto& rule = position.is_long_direction() ? self.long_position_
+                                                      : self.short_position_;
+      if(rule.pyramiding_timing() == SignalTiming::CurrentClose &&
+         static_cast<bool>(evaluate_series_method(
+          rule.pyramiding_signal(), asset_snapshot, context))) {
+        self.execute_pyramiding_action(asset_snapshot.close(),
+                                       asset_snapshot,
+                                       context,
+                                       current_drawdown_ratio);
       }
     }
 
     if(self.trade_session_.is_flat()) {
-      auto entry_trade = self.entry_trade(asset_snapshot,
-                                          context,
-                                          current_drawdown_ratio,
-                                          closed_position_is_long);
-      if(entry_trade && self.prepare_entry_order(*entry_trade)) {
-        const auto fee = self.broker_.calculate_fee(*entry_trade);
-        self.trade_session_.entry_position(*entry_trade, fee);
-        if(auto& open_position = self.trade_session_.open_position()) {
-          self.update_stop_target_prices(*open_position,
-                                         *entry_trade,
-                                         entry_trade->is_long_direction()
-                                          ? self.long_position_
-                                          : self.short_position_,
-                                         false,
-                                         asset_snapshot,
-                                         context);
-          self.trade_session_.sync_latest_event_with_open_position();
-        }
-        self.pyramiding_layers_ = 1;
-      }
+      self.execute_current_close_entry(asset_snapshot.close(),
+                                       asset_snapshot,
+                                       context,
+                                       current_drawdown_ratio,
+                                       closed_position_is_long);
+    }
+
+    if(timeline_size + 1 < asset_size) {
+      self.schedule_next_open_actions(asset_snapshot, context);
+    } else {
+      self.pending_entries_.fill(false);
+      self.pending_pyramiding_ = false;
+      self.pending_signal_exit_indices_.clear();
+      self.pending_signal_exit_trade_id_.reset();
     }
 
     self.update_accounting();
@@ -527,6 +519,18 @@ private:
   std::size_t pyramiding_layers_;
 
   bool is_failed_;
+  IntrabarPath intrabar_path_;
+  std::array<bool, 2> pending_entries_{};
+  bool pending_pyramiding_{};
+  std::vector<std::size_t> pending_signal_exit_indices_;
+  std::optional<std::size_t> pending_signal_exit_trade_id_;
+
+  struct PriceExitCandidate {
+    TradeExit::Reason reason;
+    std::size_t index;
+    double price;
+    int priority;
+  };
   auto current_equity(this const BacktestRunner& self) noexcept -> double
   {
     return self.current_account_state_.equity();
@@ -679,37 +683,26 @@ private:
                     const PositionRule& position,
                     bool is_long,
                     bool is_pyramiding,
-                    const AssetSnapshot& asset_snapshot,
+                    double entry_price,
+                    const AssetSnapshot& evaluation_snapshot,
                     MethodContextable auto context,
                     double current_drawdown_ratio) -> std::optional<TradeEntry>
   {
-    auto result = std::optional<TradeEntry>{};
-
-    const auto& signal =
-     is_pyramiding ? position.pyramiding_signal() : position.entry_method();
-    const auto signal_delay = is_pyramiding ? position.pyramiding_signal_delay()
-                                            : position.entry_signal_delay();
-    const auto& price_method = is_pyramiding
-                                ? position.pyramiding_price_method()
-                                : position.entry_price_method();
-    const auto signal_snapshot = asset_snapshot[signal_delay];
-    const auto can_enter = static_cast<bool>(
-     evaluate_series_method(signal, signal_snapshot, context));
     const auto can_pyramid =
      !is_pyramiding ||
      self.pyramiding_layers_ < position.pyramiding_max_layers();
 
-    if(can_enter && can_pyramid) {
-      const auto entry_price =
-       evaluate_series_method(price_method, asset_snapshot, context);
+    if(can_pyramid) {
       const auto direction = is_long ? 1.0 : -1.0;
       const auto initial_price_context =
        context.with_position_reference(entry_price, direction);
       const auto position_sizing = self.profile_.position_sizing();
       const auto uses_risk_distance =
        position_sizing.mode() == PositionSizing::Mode::RiskDistance;
-      const auto risk_distance = evaluate_series_method(
-       position.risk_distance_method(), asset_snapshot, initial_price_context);
+      const auto risk_distance =
+       evaluate_series_method(position.risk_distance_method(),
+                              evaluation_snapshot,
+                              initial_price_context);
       if(!std::isfinite(risk_distance) || risk_distance <= 0.0) {
         throw std::runtime_error{
          "Invalid risk distance: expected a finite positive value"};
@@ -720,10 +713,10 @@ private:
        position_quantity, current_drawdown_ratio);
       const auto position_size = direction * adjusted_position_quantity;
 
-      result = TradeEntry{position_size, entry_price};
+      return TradeEntry{position_size, entry_price};
     }
 
-    return result;
+    return std::nullopt;
   }
 
   auto apply_drawdown_adjustment(this const BacktestRunner& self,
@@ -851,6 +844,23 @@ private:
      stop_context.with_position_risk_distance(risk_distance);
 
     const auto previous_stop_levels = open_position.stop_loss_levels();
+    const auto stop_is_eligible = [&](std::size_t target_index) {
+      if(position.stop_losses_activation() == ExitActivation::Simultaneous) {
+        return true;
+      }
+      for(auto index = std::size_t{0}; index < position.stop_losses().size();
+          ++index) {
+        if(!position.stop_losses()[index].enabled()) {
+          continue;
+        }
+        const auto consumed = index < previous_stop_levels.size() &&
+                              previous_stop_levels[index].consumed();
+        if(!consumed) {
+          return index == target_index;
+        }
+      }
+      return false;
+    };
     auto stop_levels = std::vector<StopLossLevel>{};
     stop_levels.reserve(position.stop_losses().size());
     for(auto index = std::size_t{0}; index < position.stop_losses().size();
@@ -865,20 +875,45 @@ private:
       const auto consumed =
        has_previous ? previous_stop_levels[index].consumed() : false;
       auto effective_price = evaluated_price;
-      if(is_pyramiding && stop_loss.trailing() && has_previous &&
+      auto trail_distance = NAN;
+      auto favorable_anchor = NAN;
+      if(stop_loss.trailing()) {
+        trail_distance = direction * (reference_price - evaluated_price);
+        if(stop_loss.enabled() &&
+           (!std::isfinite(trail_distance) || trail_distance < 0.0)) {
+          throw std::runtime_error{
+           "Invalid trailing stop: expected a non-negative directional "
+           "distance"};
+        }
+        if(has_previous &&
+           std::isfinite(previous_stop_levels[index].favorable_anchor())) {
+          favorable_anchor = previous_stop_levels[index].favorable_anchor();
+        } else if(stop_is_eligible(index) && !consumed) {
+          favorable_anchor = entry.price();
+        }
+        if(std::isfinite(favorable_anchor)) {
+          const auto candidate = favorable_anchor - direction * trail_distance;
+          effective_price = open_position.is_long_direction()
+                             ? std::max(effective_price, candidate)
+                             : std::min(effective_price, candidate);
+        }
+      }
+      if(is_pyramiding && has_previous &&
          std::isfinite(previous_stop_levels[index].effective_price())) {
         effective_price =
          open_position.is_long_direction()
-          ? std::max(evaluated_price,
+          ? std::max(effective_price,
                      previous_stop_levels[index].effective_price())
-          : std::min(evaluated_price,
+          : std::min(effective_price,
                      previous_stop_levels[index].effective_price());
       }
       stop_levels.emplace_back(evaluated_price,
                                effective_price,
                                stop_loss.enabled(),
                                stop_loss.trailing(),
-                               consumed);
+                               consumed,
+                               trail_distance,
+                               favorable_anchor);
     }
 
     const auto previous_levels = open_position.take_profit_levels();
@@ -917,90 +952,6 @@ private:
                                       direction * risk_distance);
     open_position.take_profit_levels(std::move(levels));
     open_position.signal_exit_states(std::move(exit_states));
-  }
-
-  auto entry_long_trade(this const BacktestRunner& self,
-                        const AssetSnapshot& asset_snapshot,
-                        MethodContextable auto context,
-                        double current_drawdown_ratio)
-   -> std::optional<TradeEntry>
-  {
-    return self.create_trade(self.long_position_,
-                             true,
-                             false,
-                             asset_snapshot,
-                             context,
-                             current_drawdown_ratio);
-  }
-
-  auto entry_short_trade(this const BacktestRunner& self,
-                         const AssetSnapshot& asset_snapshot,
-                         MethodContextable auto context,
-                         double current_drawdown_ratio)
-   -> std::optional<TradeEntry>
-  {
-    return self.create_trade(self.short_position_,
-                             false,
-                             false,
-                             asset_snapshot,
-                             context,
-                             current_drawdown_ratio);
-  }
-
-  auto pyramiding_long_trade(this const BacktestRunner& self,
-                             const AssetSnapshot& asset_snapshot,
-                             MethodContextable auto context,
-                             double current_drawdown_ratio)
-   -> std::optional<TradeEntry>
-  {
-    return self.create_trade(self.long_position_,
-                             true,
-                             true,
-                             asset_snapshot,
-                             context,
-                             current_drawdown_ratio);
-  }
-
-  auto pyramiding_short_trade(this const BacktestRunner& self,
-                              const AssetSnapshot& asset_snapshot,
-                              MethodContextable auto context,
-                              double current_drawdown_ratio)
-   -> std::optional<TradeEntry>
-  {
-    return self.create_trade(self.short_position_,
-                             false,
-                             true,
-                             asset_snapshot,
-                             context,
-                             current_drawdown_ratio);
-  }
-
-  auto entry_trade(this const BacktestRunner& self,
-                   const AssetSnapshot& asset_snapshot,
-                   MethodContextable auto context,
-                   double current_drawdown_ratio,
-                   std::optional<bool> closed_position_is_long = std::nullopt)
-   -> std::optional<TradeEntry>
-  {
-    const auto can_enter_long =
-     !closed_position_is_long || !*closed_position_is_long;
-    const auto can_enter_short =
-     !closed_position_is_long || *closed_position_is_long;
-
-    if(can_enter_long) {
-      auto entry_trade =
-       self.entry_long_trade(asset_snapshot, context, current_drawdown_ratio);
-      if(entry_trade) {
-        return entry_trade;
-      }
-    }
-
-    if(can_enter_short) {
-      return self.entry_short_trade(
-       asset_snapshot, context, current_drawdown_ratio);
-    }
-
-    return std::nullopt;
   }
 
   auto
@@ -1067,91 +1018,504 @@ private:
                      signal_exit_index};
   }
 
-  auto exit_trade(this BacktestRunner& self,
-                  const AssetSnapshot& asset_snapshot,
-                  TradePosition& position,
-                  MethodContextable auto context) -> std::optional<TradeExit>
+  auto stop_is_eligible(this const BacktestRunner& self,
+                        const TradePosition& position,
+                        const PositionRule& rule,
+                        std::size_t target) noexcept -> bool
   {
-    const auto position_size = position.unrealized_position_size();
-    const auto is_long_direction = position_size > 0;
-    const auto& position_rule =
-     is_long_direction ? self.long_position_ : self.short_position_;
-    const auto open_exit_price = asset_snapshot.open();
-
-    const auto prev_snapshot = asset_snapshot[1];
-
-    position.update_trailing_stops(prev_snapshot.close());
-
-    for(auto index = std::size_t{0}; index < position_rule.stop_losses().size();
+    if(target >= position.stop_loss_levels().size() ||
+       !position.stop_loss_levels()[target].active()) {
+      return false;
+    }
+    if(rule.stop_losses_activation() == ExitActivation::Simultaneous) {
+      return true;
+    }
+    for(auto index = std::size_t{0}; index < rule.stop_losses().size();
         ++index) {
-      if(!position.is_stop_loss_triggered(
-          index, asset_snapshot.high(), asset_snapshot.low())) {
-        continue;
-      }
-      const auto stop_price =
-       position.stop_loss_levels()[index].effective_price();
-      const auto stop_exit_price = is_long_direction
-                                    ? std::min(open_exit_price, stop_price)
-                                    : std::max(open_exit_price, stop_price);
-      if(auto exit =
-          self.make_exit_trade(position_size,
-                               stop_exit_price,
-                               TradeExit::Reason::stop_loss,
-                               position_rule.stop_losses()[index].reduce(),
-                               index)) {
-        return exit;
+      if(index < position.stop_loss_levels().size() &&
+         position.stop_loss_levels()[index].active()) {
+        return index == target;
       }
     }
+    return false;
+  }
 
-    for(auto index = std::size_t{0};
-        index < position_rule.take_profits().size();
+  auto take_profit_is_eligible(this const BacktestRunner& self,
+                               const TradePosition& position,
+                               const PositionRule& rule,
+                               std::size_t target) noexcept -> bool
+  {
+    if(target >= position.take_profit_levels().size() ||
+       !position.take_profit_levels()[target].active()) {
+      return false;
+    }
+    if(rule.take_profits_activation() == ExitActivation::Simultaneous) {
+      return true;
+    }
+    for(auto index = std::size_t{0}; index < rule.take_profits().size();
         ++index) {
-      if(!position.is_take_profit_triggered(
-          index, asset_snapshot.high(), asset_snapshot.low())) {
-        continue;
-      }
-      const auto target_price = position.take_profit_levels()[index].price();
-      const auto target_exit_price = is_long_direction
-                                      ? std::max(open_exit_price, target_price)
-                                      : std::min(open_exit_price, target_price);
-      if(auto exit =
-          self.make_exit_trade(position_size,
-                               target_exit_price,
-                               TradeExit::Reason::take_profit,
-                               position_rule.take_profits()[index].reduce(),
-                               std::nullopt,
-                               index)) {
-        return exit;
+      if(index < position.take_profit_levels().size() &&
+         position.take_profit_levels()[index].active()) {
+        return index == target;
       }
     }
+    return false;
+  }
 
-    for(auto index = std::size_t{0};
-        index < position_rule.signal_exits().size();
+  auto signal_exit_is_eligible(this const BacktestRunner& self,
+                               const TradePosition& position,
+                               const PositionRule& rule,
+                               std::size_t target) noexcept -> bool
+  {
+    if(target >= position.signal_exit_states().size() ||
+       !position.signal_exit_states()[target].active()) {
+      return false;
+    }
+    if(rule.signal_exits_activation() == ExitActivation::Simultaneous) {
+      return true;
+    }
+    for(auto index = std::size_t{0}; index < rule.signal_exits().size();
         ++index) {
-      if(index >= position.signal_exit_states().size() ||
-         !position.signal_exit_states()[index].active()) {
-        continue;
-      }
-      const auto& signal_exit = position_rule.signal_exits()[index];
-      const auto signal_snapshot = asset_snapshot[signal_exit.signal_delay()];
-      if(!static_cast<bool>(evaluate_series_method(
-          signal_exit.signal_method(), signal_snapshot, context))) {
-        continue;
-      }
-      const auto exit_price = evaluate_series_method(
-       signal_exit.price_method(), asset_snapshot, context);
-      if(auto exit = self.make_exit_trade(position_size,
-                                          exit_price,
-                                          TradeExit::Reason::signal,
-                                          signal_exit.reduce(),
-                                          std::nullopt,
-                                          std::nullopt,
-                                          index)) {
-        return exit;
+      if(index < position.signal_exit_states().size() &&
+         position.signal_exit_states()[index].active()) {
+        return index == target;
       }
     }
+    return false;
+  }
 
-    return std::nullopt;
+  void activate_trailing_stops(this BacktestRunner& self,
+                               double current_price) noexcept
+  {
+    if(!self.trade_session_.open_position()) {
+      return;
+    }
+    auto& position = *self.trade_session_.open_position();
+    const auto& rule =
+     position.is_long_direction() ? self.long_position_ : self.short_position_;
+    for(auto index = std::size_t{0}; index < rule.stop_losses().size();
+        ++index) {
+      if(self.stop_is_eligible(position, rule, index) &&
+         rule.stop_losses()[index].trailing()) {
+        position.update_trailing_stop(index, current_price);
+      }
+    }
+  }
+
+  auto immediate_price_exit(this const BacktestRunner& self,
+                            double current_price)
+   -> std::optional<PriceExitCandidate>
+  {
+    if(!self.trade_session_.open_position()) {
+      return std::nullopt;
+    }
+    const auto& position = *self.trade_session_.open_position();
+    const auto& rule =
+     position.is_long_direction() ? self.long_position_ : self.short_position_;
+    auto result = std::optional<PriceExitCandidate>{};
+    const auto consider = [&](PriceExitCandidate candidate) {
+      if(!result || candidate.priority < result->priority ||
+         (candidate.priority == result->priority &&
+          candidate.index < result->index)) {
+        result = candidate;
+      }
+    };
+
+    for(auto index = std::size_t{0}; index < rule.stop_losses().size();
+        ++index) {
+      if(!self.stop_is_eligible(position, rule, index)) {
+        continue;
+      }
+      const auto price = position.stop_loss_levels()[index].effective_price();
+      const auto marketable = position.is_long_direction()
+                               ? current_price <= price
+                               : current_price >= price;
+      if(marketable) {
+        consider({TradeExit::Reason::stop_loss, index, current_price, 0});
+      }
+    }
+    for(auto index = std::size_t{0}; index < rule.take_profits().size();
+        ++index) {
+      if(!self.take_profit_is_eligible(position, rule, index)) {
+        continue;
+      }
+      const auto price = position.take_profit_levels()[index].price();
+      const auto marketable = position.is_long_direction()
+                               ? current_price >= price
+                               : current_price <= price;
+      if(marketable) {
+        consider({TradeExit::Reason::take_profit, index, current_price, 1});
+      }
+    }
+    return result;
+  }
+
+  auto next_segment_exit(this const BacktestRunner& self,
+                         double start,
+                         double end) -> std::optional<PriceExitCandidate>
+  {
+    if(!self.trade_session_.open_position() || start == end) {
+      return std::nullopt;
+    }
+    const auto& position = *self.trade_session_.open_position();
+    const auto& rule =
+     position.is_long_direction() ? self.long_position_ : self.short_position_;
+    const auto rising = end > start;
+    auto result = std::optional<PriceExitCandidate>{};
+    const auto consider = [&](PriceExitCandidate candidate) {
+      const auto distance = std::abs(candidate.price - start);
+      const auto result_distance = result
+                                    ? std::abs(result->price - start)
+                                    : std::numeric_limits<double>::infinity();
+      if(!result || distance < result_distance ||
+         (distance == result_distance &&
+          (candidate.priority < result->priority ||
+           (candidate.priority == result->priority &&
+            candidate.index < result->index)))) {
+        result = candidate;
+      }
+    };
+
+    for(auto index = std::size_t{0}; index < rule.stop_losses().size();
+        ++index) {
+      if(!self.stop_is_eligible(position, rule, index)) {
+        continue;
+      }
+      const auto price = position.stop_loss_levels()[index].effective_price();
+      const auto direction_matches =
+       position.is_long_direction() ? !rising : rising;
+      if(direction_matches && price >= std::min(start, end) &&
+         price <= std::max(start, end)) {
+        consider({TradeExit::Reason::stop_loss, index, price, 0});
+      }
+    }
+    for(auto index = std::size_t{0}; index < rule.take_profits().size();
+        ++index) {
+      if(!self.take_profit_is_eligible(position, rule, index)) {
+        continue;
+      }
+      const auto price = position.take_profit_levels()[index].price();
+      const auto direction_matches =
+       position.is_long_direction() ? rising : !rising;
+      if(direction_matches && price >= std::min(start, end) &&
+         price <= std::max(start, end)) {
+        consider({TradeExit::Reason::take_profit, index, price, 1});
+      }
+    }
+    return result;
+  }
+
+  auto execute_price_exit(this BacktestRunner& self,
+                          const PriceExitCandidate& candidate,
+                          std::optional<bool>& closed_position_is_long) -> bool
+  {
+    if(!self.trade_session_.open_position()) {
+      return false;
+    }
+    const auto& position = *self.trade_session_.open_position();
+    const auto was_long = position.is_long_direction();
+    const auto& rule = was_long ? self.long_position_ : self.short_position_;
+    const auto reduce = candidate.reason == TradeExit::Reason::stop_loss
+                         ? rule.stop_losses()[candidate.index].reduce()
+                         : rule.take_profits()[candidate.index].reduce();
+    auto exit =
+     self.make_exit_trade(position.position_size(),
+                          candidate.price,
+                          candidate.reason,
+                          reduce,
+                          candidate.reason == TradeExit::Reason::stop_loss
+                           ? std::optional{candidate.index}
+                           : std::nullopt,
+                          candidate.reason == TradeExit::Reason::take_profit
+                           ? std::optional{candidate.index}
+                           : std::nullopt);
+    if(!exit) {
+      return false;
+    }
+    const auto fee = self.broker_.calculate_fee(*exit);
+    self.trade_session_.exit_position(*exit, fee);
+    if(self.trade_session_.is_flat()) {
+      closed_position_is_long = was_long;
+      self.pyramiding_layers_ = 0;
+    }
+    return true;
+  }
+
+  auto process_open_price(this BacktestRunner& self,
+                          double open,
+                          std::optional<bool>& closed_position_is_long) -> bool
+  {
+    auto filled = false;
+    while(const auto candidate = self.immediate_price_exit(open)) {
+      filled =
+       self.execute_price_exit(*candidate, closed_position_is_long) || filled;
+      if(self.trade_session_.is_flat()) {
+        return filled;
+      }
+    }
+    self.activate_trailing_stops(open);
+    return filled;
+  }
+
+  void process_price_segment(this BacktestRunner& self,
+                             double start,
+                             double end,
+                             std::optional<bool>& closed_position_is_long)
+  {
+    auto current = start;
+    while(self.trade_session_.is_open()) {
+      self.activate_trailing_stops(current);
+      if(const auto immediate = self.immediate_price_exit(current)) {
+        self.execute_price_exit(*immediate, closed_position_is_long);
+        continue;
+      }
+      const auto candidate = self.next_segment_exit(current, end);
+      if(!candidate) {
+        self.activate_trailing_stops(end);
+        return;
+      }
+      self.activate_trailing_stops(candidate->price);
+      current = candidate->price;
+      self.execute_price_exit(*candidate, closed_position_is_long);
+    }
+  }
+
+  auto execute_signal_exit_indices(this BacktestRunner& self,
+                                   const std::vector<std::size_t>& indices,
+                                   double price,
+                                   std::optional<bool>& closed_position_is_long)
+   -> bool
+  {
+    auto filled = false;
+    for(const auto index : indices) {
+      if(!self.trade_session_.open_position()) {
+        break;
+      }
+      const auto& position = *self.trade_session_.open_position();
+      const auto was_long = position.is_long_direction();
+      const auto& rule = was_long ? self.long_position_ : self.short_position_;
+      if(index >= rule.signal_exits().size() ||
+         !self.signal_exit_is_eligible(position, rule, index)) {
+        continue;
+      }
+      auto exit = self.make_exit_trade(position.position_size(),
+                                       price,
+                                       TradeExit::Reason::signal,
+                                       rule.signal_exits()[index].reduce(),
+                                       std::nullopt,
+                                       std::nullopt,
+                                       index);
+      if(!exit) {
+        continue;
+      }
+      const auto fee = self.broker_.calculate_fee(*exit);
+      self.trade_session_.exit_position(*exit, fee);
+      filled = true;
+      if(self.trade_session_.is_flat()) {
+        closed_position_is_long = was_long;
+        self.pyramiding_layers_ = 0;
+      }
+    }
+    return filled;
+  }
+
+  auto
+  execute_pending_signal_exits(this BacktestRunner& self,
+                               double price,
+                               std::optional<bool>& closed_position_is_long)
+   -> bool
+  {
+    auto valid = self.trade_session_.open_position() &&
+                 self.pending_signal_exit_trade_id_ &&
+                 self.trade_session_.open_position()->trade_id() ==
+                  *self.pending_signal_exit_trade_id_;
+    auto filled = false;
+    if(valid) {
+      filled = self.execute_signal_exit_indices(
+       self.pending_signal_exit_indices_, price, closed_position_is_long);
+    }
+    self.pending_signal_exit_indices_.clear();
+    self.pending_signal_exit_trade_id_.reset();
+    return filled;
+  }
+
+  auto execute_signal_exits(this BacktestRunner& self,
+                            SignalTiming timing,
+                            double price,
+                            const AssetSnapshot& snapshot,
+                            MethodContextable auto context,
+                            std::optional<bool>& closed_position_is_long)
+   -> bool
+  {
+    if(!self.trade_session_.open_position()) {
+      return false;
+    }
+    const auto& position = *self.trade_session_.open_position();
+    const auto& rule =
+     position.is_long_direction() ? self.long_position_ : self.short_position_;
+    auto indices = std::vector<std::size_t>{};
+    for(auto index = std::size_t{0}; index < rule.signal_exits().size();
+        ++index) {
+      const auto& signal_exit = rule.signal_exits()[index];
+      if(signal_exit.timing() == timing &&
+         index < position.signal_exit_states().size() &&
+         position.signal_exit_states()[index].enabled() &&
+         !position.signal_exit_states()[index].consumed() &&
+         static_cast<bool>(evaluate_series_method(
+          signal_exit.signal_method(), snapshot, context))) {
+        indices.push_back(index);
+      }
+    }
+    return self.execute_signal_exit_indices(
+     indices, price, closed_position_is_long);
+  }
+
+  auto execute_entry_action(this BacktestRunner& self,
+                            bool is_long,
+                            double price,
+                            const AssetSnapshot& evaluation_snapshot,
+                            MethodContextable auto context,
+                            double current_drawdown_ratio) -> bool
+  {
+    const auto& rule = is_long ? self.long_position_ : self.short_position_;
+    auto entry = self.create_trade(rule,
+                                   is_long,
+                                   false,
+                                   price,
+                                   evaluation_snapshot,
+                                   context,
+                                   current_drawdown_ratio);
+    if(!entry || !self.prepare_entry_order(*entry)) {
+      return false;
+    }
+    const auto fee = self.broker_.calculate_fee(*entry);
+    self.trade_session_.entry_position(*entry, fee);
+    auto& position = *self.trade_session_.open_position();
+    self.update_stop_target_prices(
+     position, *entry, rule, false, evaluation_snapshot, context);
+    self.trade_session_.sync_latest_event_with_open_position();
+    self.pyramiding_layers_ = 1;
+    return true;
+  }
+
+  auto execute_pyramiding_action(this BacktestRunner& self,
+                                 double price,
+                                 const AssetSnapshot& evaluation_snapshot,
+                                 MethodContextable auto context,
+                                 double current_drawdown_ratio) -> bool
+  {
+    if(!self.trade_session_.open_position()) {
+      return false;
+    }
+    const auto is_long =
+     self.trade_session_.open_position()->is_long_direction();
+    const auto& rule = is_long ? self.long_position_ : self.short_position_;
+    auto entry = self.create_trade(rule,
+                                   is_long,
+                                   true,
+                                   price,
+                                   evaluation_snapshot,
+                                   context,
+                                   current_drawdown_ratio);
+    if(!entry || !self.prepare_entry_order(*entry)) {
+      return false;
+    }
+    const auto fee = self.broker_.calculate_fee(*entry);
+    self.trade_session_.entry_position(*entry, fee);
+    auto& position = *self.trade_session_.open_position();
+    self.update_stop_target_prices(
+     position, *entry, rule, true, evaluation_snapshot, context);
+    self.trade_session_.sync_latest_event_with_open_position();
+    self.pyramiding_layers_++;
+    return true;
+  }
+
+  void execute_pending_entry(this BacktestRunner& self,
+                             double price,
+                             const AssetSnapshot& evaluation_snapshot,
+                             MethodContextable auto context,
+                             double current_drawdown_ratio,
+                             std::optional<bool> closed_position_is_long)
+  {
+    if(self.pending_entries_[0] &&
+       (!closed_position_is_long || !*closed_position_is_long) &&
+       self.execute_entry_action(
+        true, price, evaluation_snapshot, context, current_drawdown_ratio)) {
+      return;
+    }
+    if(self.pending_entries_[1] &&
+       (!closed_position_is_long || *closed_position_is_long)) {
+      self.execute_entry_action(
+       false, price, evaluation_snapshot, context, current_drawdown_ratio);
+    }
+  }
+
+  void execute_current_close_entry(this BacktestRunner& self,
+                                   double price,
+                                   const AssetSnapshot& snapshot,
+                                   MethodContextable auto context,
+                                   double current_drawdown_ratio,
+                                   std::optional<bool> closed_position_is_long)
+  {
+    const auto can_enter = [&](const PositionRule& rule) {
+      return rule.entry_timing() == SignalTiming::CurrentClose &&
+             static_cast<bool>(
+              evaluate_series_method(rule.entry_method(), snapshot, context));
+    };
+    if((!closed_position_is_long || !*closed_position_is_long) &&
+       can_enter(self.long_position_) &&
+       self.execute_entry_action(
+        true, price, snapshot, context, current_drawdown_ratio)) {
+      return;
+    }
+    if((!closed_position_is_long || *closed_position_is_long) &&
+       can_enter(self.short_position_)) {
+      self.execute_entry_action(
+       false, price, snapshot, context, current_drawdown_ratio);
+    }
+  }
+
+  void schedule_next_open_actions(this BacktestRunner& self,
+                                  const AssetSnapshot& snapshot,
+                                  MethodContextable auto context)
+  {
+    self.pending_entries_[0] =
+     self.long_position_.entry_timing() == SignalTiming::NextOpen &&
+     static_cast<bool>(evaluate_series_method(
+      self.long_position_.entry_method(), snapshot, context));
+    self.pending_entries_[1] =
+     self.short_position_.entry_timing() == SignalTiming::NextOpen &&
+     static_cast<bool>(evaluate_series_method(
+      self.short_position_.entry_method(), snapshot, context));
+
+    self.pending_pyramiding_ = false;
+    self.pending_signal_exit_indices_.clear();
+    self.pending_signal_exit_trade_id_.reset();
+    if(!self.trade_session_.open_position()) {
+      return;
+    }
+    const auto& position = *self.trade_session_.open_position();
+    const auto& rule =
+     position.is_long_direction() ? self.long_position_ : self.short_position_;
+    self.pending_pyramiding_ =
+     rule.pyramiding_timing() == SignalTiming::NextOpen &&
+     static_cast<bool>(
+      evaluate_series_method(rule.pyramiding_signal(), snapshot, context));
+    for(auto index = std::size_t{0}; index < rule.signal_exits().size();
+        ++index) {
+      const auto& signal_exit = rule.signal_exits()[index];
+      if(signal_exit.timing() == SignalTiming::NextOpen &&
+         index < position.signal_exit_states().size() &&
+         position.signal_exit_states()[index].enabled() &&
+         !position.signal_exit_states()[index].consumed() &&
+         static_cast<bool>(evaluate_series_method(
+          signal_exit.signal_method(), snapshot, context))) {
+        self.pending_signal_exit_indices_.push_back(index);
+      }
+    }
+    if(!self.pending_signal_exit_indices_.empty()) {
+      self.pending_signal_exit_trade_id_ = position.trade_id();
+    }
   }
 };
 

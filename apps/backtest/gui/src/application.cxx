@@ -378,8 +378,7 @@ private:
          signal_exits.emplace_back(
           exit.enabled(),
           node_to_erased_method(exit.signal(), input_context),
-          exit.signal_delay(),
-          node_to_erased_method(exit.price(), input_context),
+          exit.timing(),
           exit.reduce());
        }
        auto take_profits =
@@ -408,13 +407,14 @@ private:
         position.pyramiding().max_layers(),
         node_to_erased_method(position.risk_distance(), input_context),
         std::move(stop_losses),
-        position.entry().signal_delay(),
-        node_to_erased_method(position.entry().price(), input_context),
-        position.pyramiding().signal_delay(),
-        node_to_erased_method(position.pyramiding().price(), input_context),
+        position.entry().timing(),
+        position.pyramiding().timing(),
         position.pyramiding().favorable_stop_target_reference(),
         position.pyramiding().unfavorable_stop_target_reference(),
-        std::move(take_profits)};
+        std::move(take_profits),
+        position.exits_activation(),
+        position.stop_losses_activation(),
+        position.take_profits_activation()};
      };
 
     self.running_backtests_.emplace(
@@ -427,7 +427,11 @@ private:
       std::move(series_methods),
       make_position_rule(strategy_ptr->long_position()),
       make_position_rule(strategy_ptr->short_position()),
-      backtest.initial_capital()});
+      backtest.initial_capital(),
+      0,
+      false,
+      NAN,
+      strategy_ptr->intrabar_path()});
   }
 
   ImVec2 window_size_;
