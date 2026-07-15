@@ -371,6 +371,15 @@ private:
 
     const auto make_position_rule =
      [&input_context](const backtest::Strategy::Position& position) {
+       auto take_profits =
+        std::vector<backtest::BacktestRunner::PositionRule::TakeProfitRule>{};
+       take_profits.reserve(position.take_profits().size());
+       for(const auto& take_profit : position.take_profits()) {
+         take_profits.emplace_back(
+          node_to_erased_method(take_profit.target_price(), input_context),
+          take_profit.enabled(),
+          take_profit.reduce());
+       }
        return backtest::BacktestRunner::PositionRule{
         node_to_erased_method(position.entry().signal(), input_context),
         node_to_erased_method(position.exit().signal(), input_context),
@@ -379,9 +388,6 @@ private:
         node_to_erased_method(position.stop_loss().stop_price(), input_context),
         position.stop_loss().enabled(),
         position.stop_loss().trailing(),
-        node_to_erased_method(position.take_profit().target_price(),
-                              input_context),
-        position.take_profit().enabled(),
         position.entry().signal_delay(),
         node_to_erased_method(position.entry().price(), input_context),
         position.exit().signal_delay(),
@@ -392,7 +398,7 @@ private:
         position.pyramiding().unfavorable_stop_target_reference(),
         position.exit().reduce(),
         position.stop_loss().reduce(),
-        position.take_profit().reduce()};
+        std::move(take_profits)};
      };
 
     self.running_backtests_.emplace(

@@ -185,20 +185,22 @@
           }
         }
       },
-      "takeProfit": {
-        "enabled": true,
-        "targetPrice": {
-          "method": "TP_R_MULTIPLE",
-          "params": {
-            "multiple": {
-              "method": "VALUE",
-              "params": {
-                "value": 2
+      "takeProfits": [
+        {
+          "enabled": true,
+          "targetPrice": {
+            "method": "TP_R_MULTIPLE",
+            "params": {
+              "multiple": {
+                "method": "VALUE",
+                "params": {
+                  "value": 2
+                }
               }
             }
           }
         }
-      }
+      ]
     }
   },
   "plots": [

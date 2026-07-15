@@ -5,19 +5,22 @@ module;
 #include <cstddef>
 #include <ctime>
 #include <stdexcept>
+#include <utility>
+#include <vector>
 
 export module pludux.backtest:trade_position;
 
 import :closed_trade;
 import :open_position_snapshot;
 import :trade_event;
+import :take_profit_level;
 
 export namespace pludux::backtest {
 
 class TradePosition {
 public:
   TradePosition()
-  : TradePosition{0, 0.0, 0, std::time_t{}, 0.0, 0.0, 0.0, 0.0, false, 0.0}
+  : TradePosition{0, 0.0, 0, std::time_t{}, 0.0, 0.0, 0.0, false}
   {
   }
 
@@ -27,10 +30,8 @@ public:
                 double entry_price,
                 double total_entry_fees,
                 double stop_price,
-                double target_price,
                 double stop_loss_price,
-                bool stop_loss_trailing_enabled,
-                double take_profit_price)
+                bool stop_loss_trailing_enabled)
   : TradePosition{trade_id,
                   position_size,
                   entry_price * position_size + total_entry_fees,
@@ -38,10 +39,8 @@ public:
                   entry_price,
                   total_entry_fees,
                   stop_price,
-                  target_price,
                   stop_loss_price,
-                  stop_loss_trailing_enabled,
-                  take_profit_price}
+                  stop_loss_trailing_enabled}
   {
   }
 
@@ -52,10 +51,8 @@ public:
                 double entry_price,
                 double total_entry_fees,
                 double stop_price,
-                double target_price,
                 double stop_loss_price,
-                bool stop_loss_trailing_enabled,
-                double take_profit_price)
+                bool stop_loss_trailing_enabled)
   : trade_id_{trade_id}
   , trade_event_count_{1}
   , position_size_{position_size}
@@ -63,9 +60,7 @@ public:
   , entry_price_{entry_price}
   , total_entry_fees_{total_entry_fees}
   , stop_price_{stop_price}
-  , target_price_{target_price}
   , stop_loss_price_{stop_loss_price}
-  , take_profit_price_{take_profit_price}
   , stop_loss_trailing_enabled_{stop_loss_trailing_enabled}
   , entry_timestamp_{entry_timestamp}
   {
@@ -133,16 +128,6 @@ public:
     self.stop_price_ = price;
   }
 
-  auto target_price(this const TradePosition& self) noexcept -> double
-  {
-    return self.target_price_;
-  }
-
-  void target_price(this TradePosition& self, double price) noexcept
-  {
-    self.target_price_ = price;
-  }
-
   auto stop_loss_price(this const TradePosition& self) noexcept -> double
   {
     return self.stop_loss_price_;
@@ -165,14 +150,22 @@ public:
     self.stop_loss_trailing_enabled_ = enabled;
   }
 
-  auto take_profit_price(this const TradePosition& self) noexcept -> double
+  auto take_profit_levels(this const TradePosition& self) noexcept
+   -> const std::vector<TakeProfitLevel>&
   {
-    return self.take_profit_price_;
+    return self.take_profit_levels_;
   }
 
-  void take_profit_price(this TradePosition& self, double price) noexcept
+  auto take_profit_levels(this TradePosition& self) noexcept
+   -> std::vector<TakeProfitLevel>&
   {
-    self.take_profit_price_ = price;
+    return self.take_profit_levels_;
+  }
+
+  void take_profit_levels(this TradePosition& self,
+                          std::vector<TakeProfitLevel> levels) noexcept
+  {
+    self.take_profit_levels_ = std::move(levels);
   }
 
   auto entry_timestamp(this const TradePosition& self) noexcept -> std::time_t
@@ -243,9 +236,8 @@ public:
                                 self.entry_price(),
                                 self.total_entry_fees(),
                                 self.stop_price(),
-                                self.target_price(),
                                 self.stop_loss_price(),
-                                self.take_profit_price()};
+                                self.take_profit_levels()};
   }
 
   auto scaled_in(this TradePosition& self,
@@ -255,10 +247,8 @@ public:
                  double action_price,
                  double action_total_fees,
                  double stop_price,
-                 double target_price,
                  double stop_loss_price,
-                 bool stop_loss_trailing_enabled,
-                 double take_profit_price) -> TradeEvent
+                 bool stop_loss_trailing_enabled) -> TradeEvent
   {
     if(self.is_closed()) {
       throw std::runtime_error("Cannot scaled in to a closed trade.");
@@ -278,10 +268,8 @@ public:
     self.investment(updated_investment);
 
     self.stop_price(stop_price);
-    self.target_price(target_price);
     self.stop_loss_price(stop_loss_price);
     self.stop_loss_trailing_enabled(stop_loss_trailing_enabled);
-    self.take_profit_price(take_profit_price);
     self.trade_event_count_++;
 
     return TradeEvent{self.trade_id(),
@@ -299,9 +287,8 @@ public:
                       self.investment(),
                       self.average_price(),
                       self.stop_price(),
-                      self.target_price(),
                       self.stop_loss_price(),
-                      self.take_profit_price()};
+                      self.take_profit_levels()};
   }
 
   auto scaled_out(this TradePosition& self,
@@ -357,9 +344,8 @@ public:
                       self.investment(),
                       self.average_price(),
                       self.stop_price(),
-                      self.target_price(),
                       self.stop_loss_price(),
-                      self.take_profit_price()};
+                      self.take_profit_levels()};
   }
 
   auto closed_trade(this const TradePosition& self,
@@ -383,9 +369,8 @@ public:
                        self.total_entry_fees(),
                        total_exit_fees,
                        self.stop_price(),
-                       self.target_price(),
                        self.stop_loss_price(),
-                       self.take_profit_price()};
+                       self.take_profit_levels()};
   }
 
   void update_trailing_stop(this TradePosition& self,
@@ -428,17 +413,19 @@ public:
   }
 
   auto is_take_profit_triggered(this const TradePosition& self,
+                                std::size_t index,
                                 double high,
                                 double low) noexcept -> bool
   {
-    const auto reference_price = self.take_profit_price();
-
-    if(self.is_closed() || std::isnan(reference_price)) {
+    if(self.is_closed() || index >= self.take_profit_levels_.size()) {
       return false;
     }
-
-    return self.is_long_direction() ? reference_price < high
-                                    : reference_price > low;
+    const auto& level = self.take_profit_levels_[index];
+    if(!level.active()) {
+      return false;
+    }
+    return self.is_long_direction() ? level.price() < high
+                                    : level.price() > low;
   }
 
 private:
@@ -452,9 +439,8 @@ private:
   double total_entry_fees_;
 
   double stop_price_;
-  double target_price_;
   double stop_loss_price_;
-  double take_profit_price_;
+  std::vector<TakeProfitLevel> take_profit_levels_;
   bool stop_loss_trailing_enabled_;
 
   std::time_t entry_timestamp_;

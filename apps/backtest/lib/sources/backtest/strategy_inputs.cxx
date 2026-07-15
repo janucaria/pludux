@@ -404,9 +404,10 @@ auto collect_numeric_inputs(const Strategy& strategy)
     collect_numeric_inputs_from_node(position.pyramiding().signal(), inputs);
     collect_numeric_inputs_from_node(position.pyramiding().price(), inputs);
     collect_numeric_inputs_from_node(position.stop_loss().stop_price(), inputs);
-    if(position.take_profit().enabled()) {
-      collect_numeric_inputs_from_node(position.take_profit().target_price(),
-                                       inputs);
+    for(const auto& take_profit : position.take_profits()) {
+      if(take_profit.enabled()) {
+        collect_numeric_inputs_from_node(take_profit.target_price(), inputs);
+      }
     }
   };
 

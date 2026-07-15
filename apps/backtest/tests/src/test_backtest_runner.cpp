@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <utility>
 #include <vector>
 
 import pludux.backtest;
@@ -84,8 +85,6 @@ auto run_single_entry(
                    1,
                    ValueMethod{std::numeric_limits<double>::quiet_NaN()},
                    false,
-                   false,
-                   OpenMethod{},
                    false},
                   BacktestRunner::PositionRule{},
                   initial_capital,
@@ -124,8 +123,6 @@ auto run_single_close_price_entry(
                                                ValueMethod{stop_price},
                                                false,
                                                false,
-                                               OpenMethod{},
-                                               false,
                                                0,
                                                CloseMethod{}},
                   BacktestRunner::PositionRule{},
@@ -152,6 +149,17 @@ auto latest_closed_trade(const BacktestTimeline& timeline) -> const ClosedTrade&
 {
   const auto timeline_i = last_timeline_index(timeline);
   return timeline.closed_trades(timeline_i).back();
+}
+
+auto single_take_profit(AnySeriesMethod target_price,
+                        bool enabled,
+                        double reduce = 1.0)
+ -> std::vector<BacktestRunner::PositionRule::TakeProfitRule>
+{
+  auto take_profits =
+   std::vector<BacktestRunner::PositionRule::TakeProfitRule>{};
+  take_profits.emplace_back(std::move(target_price), enabled, reduce);
+  return take_profits;
 }
 
 auto latest_event(const BacktestTimeline& timeline) -> const TradeEvent&
@@ -250,8 +258,6 @@ TEST(BacktestRunnerTest, RiskSizingUsesCurrentEquityAfterClosedTrade)
                                                1,
                                                ValueMethod{90.0},
                                                false,
-                                               false,
-                                               OpenMethod{},
                                                false},
                   BacktestRunner::PositionRule{},
                   1000.0};
@@ -306,8 +312,8 @@ TEST(BacktestRunnerTest,
                                                OpenMethod{},
                                                false,
                                                false,
+                                               0,
                                                OpenMethod{},
-                                               false,
                                                0,
                                                OpenMethod{}},
                   BacktestRunner::PositionRule{},
@@ -356,8 +362,6 @@ TEST(BacktestRunnerTest, CapToAvailableCashOpensLargestAffordableOrder)
                                                OpenMethod{},
                                                false,
                                                false,
-                                               OpenMethod{},
-                                               false,
                                                0,
                                                OpenMethod{}},
                   BacktestRunner::PositionRule{},
@@ -398,8 +402,6 @@ TEST(BacktestRunnerTest, CapToAvailableCashSkipsWhenBelowMarketMinimum)
                                                OpenMethod{},
                                                false,
                                                false,
-                                               OpenMethod{},
-                                               false,
                                                0,
                                                OpenMethod{}},
                   BacktestRunner::PositionRule{},
@@ -424,23 +426,22 @@ TEST(BacktestRunnerTest, RejectedPyramidingDoesNotChangePosition)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto runner =
-   BacktestRunner{asset,
-                  market,
-                  broker,
-                  profile,
-                  {},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               BooleanMethod<false>{},
-                                               BooleanMethod<true>{},
-                                               2,
-                                               OpenMethod{},
-                                               false,
-                                               false,
-                                               OpenMethod{},
-                                               false},
-                  BacktestRunner::PositionRule{},
-                  1000.0};
+  auto runner = BacktestRunner{asset,
+                               market,
+                               broker,
+                               profile,
+                               {},
+                               BacktestRunner::PositionRule{
+                                BooleanMethod<true>{},
+                                BooleanMethod<false>{},
+                                BooleanMethod<true>{},
+                                2,
+                                OpenMethod{},
+                                false,
+                                false,
+                               },
+                               BacktestRunner::PositionRule{},
+                               1000.0};
 
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
@@ -492,8 +493,6 @@ TEST(BacktestRunnerTest, EquitySignalUsesCurrentAccountState)
                                                1,
                                                OpenMethod{},
                                                false,
-                                               false,
-                                               OpenMethod{},
                                                false,
                                                0,
                                                OpenMethod{}},
@@ -553,8 +552,6 @@ TEST(BacktestRunnerTest, EquityPercentUsesCurrentAccountState)
                                                1,
                                                OpenMethod{},
                                                false,
-                                               false,
-                                               OpenMethod{},
                                                false,
                                                0,
                                                OpenMethod{}},
@@ -627,10 +624,6 @@ TEST(BacktestRunnerTest, DrawdownSignalUsesCurrentAccountState)
                                                OpenMethod{},
                                                false,
                                                false,
-                                               OpenMethod{},
-                                               false,
-                                               0,
-                                               OpenMethod{},
                                                0,
                                                OpenMethod{}},
                   BacktestRunner::PositionRule{short_entry_signal,
@@ -639,8 +632,6 @@ TEST(BacktestRunnerTest, DrawdownSignalUsesCurrentAccountState)
                                                1,
                                                OpenMethod{},
                                                false,
-                                               false,
-                                               OpenMethod{},
                                                false,
                                                0,
                                                OpenMethod{}},
@@ -789,32 +780,44 @@ TEST(BacktestRunnerTest, DisabledTakeProfitKeepsTargetReferencePrice)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto runner =
-   BacktestRunner{asset,
-                  market,
-                  broker,
-                  profile,
-                  {},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               BooleanMethod<false>{},
-                                               BooleanMethod<false>{},
-                                               1,
-                                               ValueMethod{90.0},
-                                               false,
-                                               false,
-                                               ValueMethod{120.0},
-                                               false},
-                  BacktestRunner::PositionRule{},
-                  1000.0};
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   {},
+   BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                BooleanMethod<false>{},
+                                BooleanMethod<false>{},
+                                1,
+                                ValueMethod{90.0},
+                                false,
+                                false,
+                                1,
+                                OpenMethod{},
+                                1,
+                                OpenMethod{},
+                                1,
+                                OpenMethod{},
+                                StopTargetReferencePrice::AveragePrice,
+                                StopTargetReferencePrice::AveragePrice,
+                                1.0,
+                                1.0,
+                                single_take_profit(ValueMethod{120.0}, false)},
+   BacktestRunner::PositionRule{},
+   1000.0};
 
   runner.run(series_results, timeline);
 
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 90.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 120.0);
+  ASSERT_EQ(latest_position(timeline).take_profit_levels().size(), 1);
+  EXPECT_DOUBLE_EQ(
+   latest_position(timeline).take_profit_levels().front().price(), 120.0);
   EXPECT_TRUE(std::isnan(latest_position(timeline).stop_loss_price()));
-  EXPECT_TRUE(std::isnan(latest_position(timeline).take_profit_price()));
+  EXPECT_FALSE(
+   latest_position(timeline).take_profit_levels().front().enabled());
 }
 
 TEST(BacktestRunnerTest, StopTargetAmountMethodsUseEntryDirection)
@@ -827,23 +830,32 @@ TEST(BacktestRunnerTest, StopTargetAmountMethodsUseEntryDirection)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto runner =
-   BacktestRunner{asset,
-                  market,
-                  broker,
-                  profile,
-                  {},
-                  BacktestRunner::PositionRule{},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               BooleanMethod<false>{},
-                                               BooleanMethod<false>{},
-                                               1,
-                                               SlAmountMethod{10.0},
-                                               true,
-                                               false,
-                                               TpAmountMethod{20.0},
-                                               true},
-                  1000.0};
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   {},
+   BacktestRunner::PositionRule{},
+   BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                BooleanMethod<false>{},
+                                BooleanMethod<false>{},
+                                1,
+                                SlAmountMethod{10.0},
+                                true,
+                                false,
+                                1,
+                                OpenMethod{},
+                                1,
+                                OpenMethod{},
+                                1,
+                                OpenMethod{},
+                                StopTargetReferencePrice::AveragePrice,
+                                StopTargetReferencePrice::AveragePrice,
+                                1.0,
+                                1.0,
+                                single_take_profit(TpAmountMethod{20.0}, true)},
+   1000.0};
 
   runner.run(series_results, timeline);
 
@@ -852,9 +864,11 @@ TEST(BacktestRunnerTest, StopTargetAmountMethodsUseEntryDirection)
   EXPECT_DOUBLE_EQ(latest_position(timeline).entry_price(), 100.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), -1.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 110.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 80.0);
+  ASSERT_EQ(latest_position(timeline).take_profit_levels().size(), 1);
+  EXPECT_DOUBLE_EQ(
+   latest_position(timeline).take_profit_levels().front().price(), 80.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).stop_loss_price(), 110.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).take_profit_price(), 80.0);
+  EXPECT_TRUE(latest_position(timeline).take_profit_levels().front().active());
 }
 
 TEST(BacktestRunnerTest, ScopedStopTargetAmountMethodsEvaluateDirectly)
@@ -939,15 +953,25 @@ TEST(BacktestRunnerTest, StopTargetPercentageMethodsUseEntryPrice)
                   broker,
                   profile,
                   {},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               BooleanMethod<false>{},
-                                               BooleanMethod<false>{},
-                                               1,
-                                               SlPercentMethod{10.0},
-                                               true,
-                                               false,
-                                               TpPercentMethod{20.0},
-                                               true},
+                  BacktestRunner::PositionRule{
+                   BooleanMethod<true>{},
+                   BooleanMethod<false>{},
+                   BooleanMethod<false>{},
+                   1,
+                   SlPercentMethod{10.0},
+                   true,
+                   false,
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   StopTargetReferencePrice::AveragePrice,
+                   StopTargetReferencePrice::AveragePrice,
+                   1.0,
+                   1.0,
+                   single_take_profit(TpPercentMethod{20.0}, true)},
                   BacktestRunner::PositionRule{},
                   1000.0};
 
@@ -956,7 +980,8 @@ TEST(BacktestRunnerTest, StopTargetPercentageMethodsUseEntryPrice)
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 180.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 240.0);
+  EXPECT_DOUBLE_EQ(
+   latest_position(timeline).take_profit_levels().front().price(), 240.0);
 }
 
 TEST(BacktestRunnerTest, StopTargetPercentageMethodsUseFeeAdjustedAveragePrice)
@@ -980,15 +1005,25 @@ TEST(BacktestRunnerTest, StopTargetPercentageMethodsUseFeeAdjustedAveragePrice)
                   broker,
                   profile,
                   {},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               BooleanMethod<false>{},
-                                               BooleanMethod<false>{},
-                                               1,
-                                               SlPercentMethod{10.0},
-                                               false,
-                                               false,
-                                               TpRMultipleMethod{2.0},
-                                               false},
+                  BacktestRunner::PositionRule{
+                   BooleanMethod<true>{},
+                   BooleanMethod<false>{},
+                   BooleanMethod<false>{},
+                   1,
+                   SlPercentMethod{10.0},
+                   false,
+                   false,
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   StopTargetReferencePrice::AveragePrice,
+                   StopTargetReferencePrice::AveragePrice,
+                   1.0,
+                   1.0,
+                   single_take_profit(TpRMultipleMethod{2.0}, false)},
                   BacktestRunner::PositionRule{},
                   1000.0};
 
@@ -998,7 +1033,8 @@ TEST(BacktestRunnerTest, StopTargetPercentageMethodsUseFeeAdjustedAveragePrice)
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 110.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 99.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 132.0);
+  EXPECT_DOUBLE_EQ(
+   latest_position(timeline).take_profit_levels().front().price(), 132.0);
 }
 
 TEST(BacktestRunnerTest, ScopedStopTargetPercentMethodsEvaluateDirectly)
@@ -1036,15 +1072,25 @@ TEST(BacktestRunnerTest, AtrStopAndRMultipleTargetUseScopedContext)
                   broker,
                   profile,
                   {},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               BooleanMethod<false>{},
-                                               BooleanMethod<false>{},
-                                               1,
-                                               SlAtrMethod{1.0, 2.0},
-                                               true,
-                                               false,
-                                               TpRMultipleMethod{2.0},
-                                               true},
+                  BacktestRunner::PositionRule{
+                   BooleanMethod<true>{},
+                   BooleanMethod<false>{},
+                   BooleanMethod<false>{},
+                   1,
+                   SlAtrMethod{1.0, 2.0},
+                   true,
+                   false,
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   StopTargetReferencePrice::AveragePrice,
+                   StopTargetReferencePrice::AveragePrice,
+                   1.0,
+                   1.0,
+                   single_take_profit(TpRMultipleMethod{2.0}, true)},
                   BacktestRunner::PositionRule{},
                   1000.0};
 
@@ -1054,7 +1100,8 @@ TEST(BacktestRunnerTest, AtrStopAndRMultipleTargetUseScopedContext)
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).entry_price(), 100.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 60.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 180.0);
+  EXPECT_DOUBLE_EQ(
+   latest_position(timeline).take_profit_levels().front().price(), 180.0);
 }
 
 TEST(BacktestRunnerTest, PositionContextMethodsUseNormalLongEntryContext)
@@ -1073,15 +1120,25 @@ TEST(BacktestRunnerTest, PositionContextMethodsUseNormalLongEntryContext)
                   broker,
                   profile,
                   {},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               BooleanMethod<false>{},
-                                               BooleanMethod<false>{},
-                                               1,
-                                               InitialEntryPriceMethod{},
-                                               false,
-                                               false,
-                                               PositionDirectionMethod{},
-                                               false},
+                  BacktestRunner::PositionRule{
+                   BooleanMethod<true>{},
+                   BooleanMethod<false>{},
+                   BooleanMethod<false>{},
+                   1,
+                   InitialEntryPriceMethod{},
+                   false,
+                   false,
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   StopTargetReferencePrice::AveragePrice,
+                   StopTargetReferencePrice::AveragePrice,
+                   1.0,
+                   1.0,
+                   single_take_profit(PositionDirectionMethod{}, false)},
                   BacktestRunner::PositionRule{},
                   1000.0};
 
@@ -1090,7 +1147,8 @@ TEST(BacktestRunnerTest, PositionContextMethodsUseNormalLongEntryContext)
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 100.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 1.0);
+  EXPECT_DOUBLE_EQ(
+   latest_position(timeline).take_profit_levels().front().price(), 1.0);
 }
 
 TEST(BacktestRunnerTest, PositionContextMethodsUseNormalShortEntryContext)
@@ -1110,15 +1168,25 @@ TEST(BacktestRunnerTest, PositionContextMethodsUseNormalShortEntryContext)
                   profile,
                   {},
                   BacktestRunner::PositionRule{},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               BooleanMethod<false>{},
-                                               BooleanMethod<false>{},
-                                               1,
-                                               LatestEntryPriceMethod{},
-                                               false,
-                                               false,
-                                               PositionDirectionMethod{},
-                                               false},
+                  BacktestRunner::PositionRule{
+                   BooleanMethod<true>{},
+                   BooleanMethod<false>{},
+                   BooleanMethod<false>{},
+                   1,
+                   LatestEntryPriceMethod{},
+                   false,
+                   false,
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   StopTargetReferencePrice::AveragePrice,
+                   StopTargetReferencePrice::AveragePrice,
+                   1.0,
+                   1.0,
+                   single_take_profit(PositionDirectionMethod{}, false)},
                   1000.0};
 
   runner.run(series_results, timeline);
@@ -1126,7 +1194,8 @@ TEST(BacktestRunnerTest, PositionContextMethodsUseNormalShortEntryContext)
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 100.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), -1.0);
+  EXPECT_DOUBLE_EQ(
+   latest_position(timeline).take_profit_levels().front().price(), -1.0);
 }
 
 TEST(BacktestRunnerTest, PositionContextMethodsUsePyramidingPriceContext)
@@ -1146,15 +1215,25 @@ TEST(BacktestRunnerTest, PositionContextMethodsUsePyramidingPriceContext)
                   broker,
                   profile,
                   {},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               BooleanMethod<false>{},
-                                               BooleanMethod<true>{},
-                                               2,
-                                               AveragePriceMethod{},
-                                               false,
-                                               false,
-                                               LatestEntryPriceMethod{},
-                                               false},
+                  BacktestRunner::PositionRule{
+                   BooleanMethod<true>{},
+                   BooleanMethod<false>{},
+                   BooleanMethod<true>{},
+                   2,
+                   AveragePriceMethod{},
+                   false,
+                   false,
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   StopTargetReferencePrice::AveragePrice,
+                   StopTargetReferencePrice::AveragePrice,
+                   1.0,
+                   1.0,
+                   single_take_profit(LatestEntryPriceMethod{}, false)},
                   BacktestRunner::PositionRule{},
                   1000.0};
 
@@ -1165,7 +1244,8 @@ TEST(BacktestRunnerTest, PositionContextMethodsUsePyramidingPriceContext)
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 110.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 110.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 120.0);
+  EXPECT_DOUBLE_EQ(
+   latest_position(timeline).take_profit_levels().front().price(), 120.0);
 }
 
 TEST(BacktestRunnerTest, PositionContextMethodsUseConfiguredReferenceContext)
@@ -1179,31 +1259,33 @@ TEST(BacktestRunnerTest, PositionContextMethodsUseConfiguredReferenceContext)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto runner = BacktestRunner{
-   asset,
-   market,
-   broker,
-   profile,
-   {},
-   BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                BooleanMethod<false>{},
-                                BooleanMethod<true>{},
-                                2,
-                                InitialEntryPriceMethod{},
-                                false,
-                                false,
-                                StopTargetRefPriceMethod{},
-                                false,
-                                1,
-                                OpenMethod{},
-                                1,
-                                OpenMethod{},
-                                1,
-                                OpenMethod{},
-                                StopTargetReferencePrice::LatestEntryPrice,
-                                StopTargetReferencePrice::AveragePrice},
-   BacktestRunner::PositionRule{},
-   1000.0};
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  BacktestRunner::PositionRule{
+                   BooleanMethod<true>{},
+                   BooleanMethod<false>{},
+                   BooleanMethod<true>{},
+                   2,
+                   InitialEntryPriceMethod{},
+                   false,
+                   false,
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   StopTargetReferencePrice::LatestEntryPrice,
+                   StopTargetReferencePrice::AveragePrice,
+                   1.0,
+                   1.0,
+                   single_take_profit(StopTargetRefPriceMethod{}, false)},
+                  BacktestRunner::PositionRule{},
+                  1000.0};
 
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
@@ -1211,7 +1293,8 @@ TEST(BacktestRunnerTest, PositionContextMethodsUseConfiguredReferenceContext)
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 100.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 120.0);
+  EXPECT_DOUBLE_EQ(
+   latest_position(timeline).take_profit_levels().front().price(), 120.0);
 }
 
 TEST(BacktestRunnerTest, CustomStopTargetFormulasUseReferenceAndDirection)
@@ -1230,30 +1313,40 @@ TEST(BacktestRunnerTest, CustomStopTargetFormulasUseReferenceAndDirection)
    AddMethod{StopTargetRefPriceMethod{},
              MultiplyMethod{PositionDirectionMethod{}, ValueMethod{20.0}}};
 
-  auto runner =
-   BacktestRunner{asset,
-                  market,
-                  broker,
-                  profile,
-                  {},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               BooleanMethod<false>{},
-                                               BooleanMethod<false>{},
-                                               1,
-                                               stop_method,
-                                               false,
-                                               false,
-                                               target_method,
-                                               false},
-                  BacktestRunner::PositionRule{},
-                  1000.0};
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   {},
+   BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                BooleanMethod<false>{},
+                                BooleanMethod<false>{},
+                                1,
+                                stop_method,
+                                false,
+                                false,
+                                1,
+                                OpenMethod{},
+                                1,
+                                OpenMethod{},
+                                1,
+                                OpenMethod{},
+                                StopTargetReferencePrice::AveragePrice,
+                                StopTargetReferencePrice::AveragePrice,
+                                1.0,
+                                1.0,
+                                single_take_profit(target_method, false)},
+   BacktestRunner::PositionRule{},
+   1000.0};
 
   runner.run(series_results, timeline);
 
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 90.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 120.0);
+  EXPECT_DOUBLE_EQ(
+   latest_position(timeline).take_profit_levels().front().price(), 120.0);
 }
 
 TEST(BacktestRunnerTest, ScopedAtrStopAndRMultipleTargetEvaluateDirectly)
@@ -1414,23 +1507,22 @@ TEST(BacktestRunnerTest, SeriesDelayedSignalUsesCompletedResultsOnly)
   const auto entry_signal =
    EqualMethod{SeriesMethod{"close"}, ValueMethod{20.0}};
 
-  auto runner =
-   BacktestRunner{asset,
-                  market,
-                  broker,
-                  profile,
-                  std::move(series_methods),
-                  BacktestRunner::PositionRule{entry_signal,
-                                               BooleanMethod<false>{},
-                                               BooleanMethod<false>{},
-                                               1,
-                                               OpenMethod{},
-                                               false,
-                                               false,
-                                               OpenMethod{},
-                                               false},
-                  BacktestRunner::PositionRule{},
-                  1000.0};
+  auto runner = BacktestRunner{asset,
+                               market,
+                               broker,
+                               profile,
+                               std::move(series_methods),
+                               BacktestRunner::PositionRule{
+                                entry_signal,
+                                BooleanMethod<false>{},
+                                BooleanMethod<false>{},
+                                1,
+                                OpenMethod{},
+                                false,
+                                false,
+                               },
+                               BacktestRunner::PositionRule{},
+                               1000.0};
 
   runner.run(series_results, timeline);
 
@@ -1489,8 +1581,6 @@ TEST(BacktestRunnerTest, SeriesDelayZeroSignalEvaluatesCurrentBar)
                                                OpenMethod{},
                                                false,
                                                false,
-                                               OpenMethod{},
-                                               false,
                                                0,
                                                OpenMethod{}},
                   BacktestRunner::PositionRule{},
@@ -1530,8 +1620,6 @@ TEST(BacktestRunnerTest,
                                                OpenMethod{},
                                                false,
                                                false,
-                                               OpenMethod{},
-                                               false,
                                                0,
                                                CloseMethod{}},
                   BacktestRunner::PositionRule{},
@@ -1567,23 +1655,22 @@ TEST(BacktestRunnerTest, NextOpenEntryUsesPreviousSignalAndOpenPrice)
   auto timeline = BacktestTimeline{};
   const auto entry_signal = EqualMethod{CloseMethod{}, ValueMethod{75.0}};
 
-  auto runner =
-   BacktestRunner{asset,
-                  market,
-                  broker,
-                  profile,
-                  {},
-                  BacktestRunner::PositionRule{entry_signal,
-                                               BooleanMethod<false>{},
-                                               BooleanMethod<false>{},
-                                               1,
-                                               OpenMethod{},
-                                               false,
-                                               false,
-                                               OpenMethod{},
-                                               false},
-                  BacktestRunner::PositionRule{},
-                  1000.0};
+  auto runner = BacktestRunner{asset,
+                               market,
+                               broker,
+                               profile,
+                               {},
+                               BacktestRunner::PositionRule{
+                                entry_signal,
+                                BooleanMethod<false>{},
+                                BooleanMethod<false>{},
+                                1,
+                                OpenMethod{},
+                                false,
+                                false,
+                               },
+                               BacktestRunner::PositionRule{},
+                               1000.0};
 
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
@@ -1632,8 +1719,6 @@ TEST(BacktestRunnerTest, SignalDelayZeroEntryUsesCurrentSignal)
                                                OpenMethod{},
                                                false,
                                                false,
-                                               OpenMethod{},
-                                               false,
                                                0,
                                                CloseMethod{}},
                   BacktestRunner::PositionRule{},
@@ -1674,8 +1759,6 @@ TEST(BacktestRunnerTest, SignalDelayZeroCloseExitUsesCurrentSignalAndClosePrice)
                                                1,
                                                OpenMethod{},
                                                false,
-                                               false,
-                                               OpenMethod{},
                                                false,
                                                1,
                                                OpenMethod{},
@@ -1718,8 +1801,6 @@ TEST(BacktestRunnerTest, SignalDelayZeroClosePyramidingUsesOwnTimingAndPrice)
                                                OpenMethod{},
                                                false,
                                                false,
-                                               OpenMethod{},
-                                               false,
                                                1,
                                                OpenMethod{},
                                                1,
@@ -1756,15 +1837,25 @@ TEST(BacktestRunnerTest,
                   broker,
                   profile,
                   {},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               BooleanMethod<false>{},
-                                               BooleanMethod<true>{},
-                                               2,
-                                               SlPercentMethod{10.0},
-                                               false,
-                                               false,
-                                               TpRMultipleMethod{2.0},
-                                               false},
+                  BacktestRunner::PositionRule{
+                   BooleanMethod<true>{},
+                   BooleanMethod<false>{},
+                   BooleanMethod<true>{},
+                   2,
+                   SlPercentMethod{10.0},
+                   false,
+                   false,
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   StopTargetReferencePrice::AveragePrice,
+                   StopTargetReferencePrice::AveragePrice,
+                   1.0,
+                   1.0,
+                   single_take_profit(TpRMultipleMethod{2.0}, false)},
                   BacktestRunner::PositionRule{},
                   1000.0};
 
@@ -1776,7 +1867,8 @@ TEST(BacktestRunnerTest,
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 110.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 99.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 132.0);
+  EXPECT_DOUBLE_EQ(
+   latest_position(timeline).take_profit_levels().front().price(), 132.0);
 }
 
 TEST(BacktestRunnerTest, PyramidingUsesPostScaleInFeeAdjustedAverageReference)
@@ -1801,15 +1893,25 @@ TEST(BacktestRunnerTest, PyramidingUsesPostScaleInFeeAdjustedAverageReference)
                   broker,
                   profile,
                   {},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               BooleanMethod<false>{},
-                                               BooleanMethod<true>{},
-                                               2,
-                                               SlPercentMethod{10.0},
-                                               false,
-                                               false,
-                                               TpRMultipleMethod{2.0},
-                                               false},
+                  BacktestRunner::PositionRule{
+                   BooleanMethod<true>{},
+                   BooleanMethod<false>{},
+                   BooleanMethod<true>{},
+                   2,
+                   SlPercentMethod{10.0},
+                   false,
+                   false,
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   StopTargetReferencePrice::AveragePrice,
+                   StopTargetReferencePrice::AveragePrice,
+                   1.0,
+                   1.0,
+                   single_take_profit(TpRMultipleMethod{2.0}, false)},
                   BacktestRunner::PositionRule{},
                   1000.0};
 
@@ -1821,7 +1923,8 @@ TEST(BacktestRunnerTest, PyramidingUsesPostScaleInFeeAdjustedAverageReference)
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 120.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 108.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 144.0);
+  EXPECT_DOUBLE_EQ(
+   latest_position(timeline).take_profit_levels().front().price(), 144.0);
 }
 
 TEST(BacktestRunnerTest,
@@ -1842,15 +1945,25 @@ TEST(BacktestRunnerTest,
                   broker,
                   profile,
                   {},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               BooleanMethod<false>{},
-                                               BooleanMethod<true>{},
-                                               2,
-                                               SlPercentMethod{10.0},
-                                               false,
-                                               false,
-                                               TpRMultipleMethod{2.0},
-                                               false},
+                  BacktestRunner::PositionRule{
+                   BooleanMethod<true>{},
+                   BooleanMethod<false>{},
+                   BooleanMethod<true>{},
+                   2,
+                   SlPercentMethod{10.0},
+                   false,
+                   false,
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   StopTargetReferencePrice::AveragePrice,
+                   StopTargetReferencePrice::AveragePrice,
+                   1.0,
+                   1.0,
+                   single_take_profit(TpRMultipleMethod{2.0}, false)},
                   BacktestRunner::PositionRule{},
                   1000.0};
 
@@ -1862,7 +1975,8 @@ TEST(BacktestRunnerTest,
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 90.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 81.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 108.0);
+  EXPECT_DOUBLE_EQ(
+   latest_position(timeline).take_profit_levels().front().price(), 108.0);
 }
 
 TEST(BacktestRunnerTest,
@@ -1884,15 +1998,25 @@ TEST(BacktestRunnerTest,
                   profile,
                   {},
                   BacktestRunner::PositionRule{},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               BooleanMethod<false>{},
-                                               BooleanMethod<true>{},
-                                               2,
-                                               SlPercentMethod{10.0},
-                                               false,
-                                               false,
-                                               TpRMultipleMethod{2.0},
-                                               false},
+                  BacktestRunner::PositionRule{
+                   BooleanMethod<true>{},
+                   BooleanMethod<false>{},
+                   BooleanMethod<true>{},
+                   2,
+                   SlPercentMethod{10.0},
+                   false,
+                   false,
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   StopTargetReferencePrice::AveragePrice,
+                   StopTargetReferencePrice::AveragePrice,
+                   1.0,
+                   1.0,
+                   single_take_profit(TpRMultipleMethod{2.0}, false)},
                   1000.0};
 
   runner.run(series_results, timeline);
@@ -1903,7 +2027,8 @@ TEST(BacktestRunnerTest,
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), -2.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 90.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 99.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 72.0);
+  EXPECT_DOUBLE_EQ(
+   latest_position(timeline).take_profit_levels().front().price(), 72.0);
 }
 
 TEST(BacktestRunnerTest, PyramidingCanUseLatestEntryReference)
@@ -1917,31 +2042,33 @@ TEST(BacktestRunnerTest, PyramidingCanUseLatestEntryReference)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto runner = BacktestRunner{
-   asset,
-   market,
-   broker,
-   profile,
-   {},
-   BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                BooleanMethod<false>{},
-                                BooleanMethod<true>{},
-                                2,
-                                SlPercentMethod{10.0},
-                                false,
-                                false,
-                                TpRMultipleMethod{2.0},
-                                false,
-                                1,
-                                OpenMethod{},
-                                1,
-                                OpenMethod{},
-                                1,
-                                OpenMethod{},
-                                StopTargetReferencePrice::LatestEntryPrice,
-                                StopTargetReferencePrice::AveragePrice},
-   BacktestRunner::PositionRule{},
-   1000.0};
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  BacktestRunner::PositionRule{
+                   BooleanMethod<true>{},
+                   BooleanMethod<false>{},
+                   BooleanMethod<true>{},
+                   2,
+                   SlPercentMethod{10.0},
+                   false,
+                   false,
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   StopTargetReferencePrice::LatestEntryPrice,
+                   StopTargetReferencePrice::AveragePrice,
+                   1.0,
+                   1.0,
+                   single_take_profit(TpRMultipleMethod{2.0}, false)},
+                  BacktestRunner::PositionRule{},
+                  1000.0};
 
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
@@ -1951,7 +2078,8 @@ TEST(BacktestRunnerTest, PyramidingCanUseLatestEntryReference)
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 110.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 108.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 144.0);
+  EXPECT_DOUBLE_EQ(
+   latest_position(timeline).take_profit_levels().front().price(), 144.0);
 }
 
 TEST(BacktestRunnerTest,
@@ -1973,15 +2101,25 @@ TEST(BacktestRunnerTest,
                   profile,
                   {},
                   BacktestRunner::PositionRule{},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               BooleanMethod<false>{},
-                                               BooleanMethod<true>{},
-                                               2,
-                                               SlPercentMethod{10.0},
-                                               false,
-                                               false,
-                                               TpRMultipleMethod{2.0},
-                                               false},
+                  BacktestRunner::PositionRule{
+                   BooleanMethod<true>{},
+                   BooleanMethod<false>{},
+                   BooleanMethod<true>{},
+                   2,
+                   SlPercentMethod{10.0},
+                   false,
+                   false,
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   StopTargetReferencePrice::AveragePrice,
+                   StopTargetReferencePrice::AveragePrice,
+                   1.0,
+                   1.0,
+                   single_take_profit(TpRMultipleMethod{2.0}, false)},
                   1000.0};
 
   runner.run(series_results, timeline);
@@ -1992,7 +2130,8 @@ TEST(BacktestRunnerTest,
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), -2.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 110.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 121.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 88.0);
+  EXPECT_DOUBLE_EQ(
+   latest_position(timeline).take_profit_levels().front().price(), 88.0);
 }
 
 TEST(BacktestRunnerTest, PyramidingCanUseInitialEntryReference)
@@ -2006,31 +2145,33 @@ TEST(BacktestRunnerTest, PyramidingCanUseInitialEntryReference)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto runner = BacktestRunner{
-   asset,
-   market,
-   broker,
-   profile,
-   {},
-   BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                BooleanMethod<false>{},
-                                BooleanMethod<true>{},
-                                2,
-                                SlPercentMethod{10.0},
-                                false,
-                                false,
-                                TpRMultipleMethod{2.0},
-                                false,
-                                1,
-                                OpenMethod{},
-                                1,
-                                OpenMethod{},
-                                1,
-                                OpenMethod{},
-                                StopTargetReferencePrice::InitialEntryPrice,
-                                StopTargetReferencePrice::InitialEntryPrice},
-   BacktestRunner::PositionRule{},
-   1000.0};
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  BacktestRunner::PositionRule{
+                   BooleanMethod<true>{},
+                   BooleanMethod<false>{},
+                   BooleanMethod<true>{},
+                   2,
+                   SlPercentMethod{10.0},
+                   false,
+                   false,
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   StopTargetReferencePrice::InitialEntryPrice,
+                   StopTargetReferencePrice::InitialEntryPrice,
+                   1.0,
+                   1.0,
+                   single_take_profit(TpRMultipleMethod{2.0}, false)},
+                  BacktestRunner::PositionRule{},
+                  1000.0};
 
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
@@ -2040,7 +2181,8 @@ TEST(BacktestRunnerTest, PyramidingCanUseInitialEntryReference)
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 110.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).stop_price(), 90.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).target_price(), 120.0);
+  EXPECT_DOUBLE_EQ(
+   latest_position(timeline).take_profit_levels().front().price(), 120.0);
 }
 
 TEST(BacktestRunnerTest, SameBarSameDirectionReentryIsBlockedAfterExit)
@@ -2054,23 +2196,22 @@ TEST(BacktestRunnerTest, SameBarSameDirectionReentryIsBlockedAfterExit)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto runner =
-   BacktestRunner{asset,
-                  market,
-                  broker,
-                  profile,
-                  {},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               BooleanMethod<true>{},
-                                               BooleanMethod<false>{},
-                                               1,
-                                               OpenMethod{},
-                                               false,
-                                               false,
-                                               OpenMethod{},
-                                               false},
-                  BacktestRunner::PositionRule{},
-                  1000.0};
+  auto runner = BacktestRunner{asset,
+                               market,
+                               broker,
+                               profile,
+                               {},
+                               BacktestRunner::PositionRule{
+                                BooleanMethod<true>{},
+                                BooleanMethod<true>{},
+                                BooleanMethod<false>{},
+                                1,
+                                OpenMethod{},
+                                false,
+                                false,
+                               },
+                               BacktestRunner::PositionRule{},
+                               1000.0};
 
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
@@ -2093,23 +2234,22 @@ TEST(BacktestRunnerTest, PyramidingIsSkippedOnExitBar)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto runner =
-   BacktestRunner{asset,
-                  market,
-                  broker,
-                  profile,
-                  {},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               BooleanMethod<true>{},
-                                               BooleanMethod<true>{},
-                                               2,
-                                               OpenMethod{},
-                                               false,
-                                               false,
-                                               OpenMethod{},
-                                               false},
-                  BacktestRunner::PositionRule{},
-                  1000.0};
+  auto runner = BacktestRunner{asset,
+                               market,
+                               broker,
+                               profile,
+                               {},
+                               BacktestRunner::PositionRule{
+                                BooleanMethod<true>{},
+                                BooleanMethod<true>{},
+                                BooleanMethod<true>{},
+                                2,
+                                OpenMethod{},
+                                false,
+                                false,
+                               },
+                               BacktestRunner::PositionRule{},
+                               1000.0};
 
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
@@ -2135,31 +2275,30 @@ TEST(BacktestRunnerTest, SameBarOppositeDirectionReversalIsAllowedAfterExit)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto runner =
-   BacktestRunner{asset,
-                  market,
-                  broker,
-                  profile,
-                  {},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               BooleanMethod<true>{},
-                                               BooleanMethod<false>{},
-                                               1,
-                                               OpenMethod{},
-                                               false,
-                                               false,
-                                               OpenMethod{},
-                                               false},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               BooleanMethod<false>{},
-                                               BooleanMethod<false>{},
-                                               1,
-                                               OpenMethod{},
-                                               false,
-                                               false,
-                                               OpenMethod{},
-                                               false},
-                  1000.0};
+  auto runner = BacktestRunner{asset,
+                               market,
+                               broker,
+                               profile,
+                               {},
+                               BacktestRunner::PositionRule{
+                                BooleanMethod<true>{},
+                                BooleanMethod<true>{},
+                                BooleanMethod<false>{},
+                                1,
+                                OpenMethod{},
+                                false,
+                                false,
+                               },
+                               BacktestRunner::PositionRule{
+                                BooleanMethod<true>{},
+                                BooleanMethod<false>{},
+                                BooleanMethod<false>{},
+                                1,
+                                OpenMethod{},
+                                false,
+                                false,
+                               },
+                               1000.0};
 
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
@@ -2186,23 +2325,22 @@ TEST(BacktestRunnerTest, StopLossExitIsDecidedByRunner)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto runner =
-   BacktestRunner{asset,
-                  market,
-                  broker,
-                  profile,
-                  {},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               BooleanMethod<false>{},
-                                               BooleanMethod<false>{},
-                                               1,
-                                               ValueMethod{90.0},
-                                               true,
-                                               false,
-                                               OpenMethod{},
-                                               false},
-                  BacktestRunner::PositionRule{},
-                  1000.0};
+  auto runner = BacktestRunner{asset,
+                               market,
+                               broker,
+                               profile,
+                               {},
+                               BacktestRunner::PositionRule{
+                                BooleanMethod<true>{},
+                                BooleanMethod<false>{},
+                                BooleanMethod<false>{},
+                                1,
+                                ValueMethod{90.0},
+                                true,
+                                false,
+                               },
+                               BacktestRunner::PositionRule{},
+                               1000.0};
 
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
@@ -2227,23 +2365,22 @@ TEST(BacktestRunnerTest, TrailingStopMutationUsesTradePositionState)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto runner =
-   BacktestRunner{asset,
-                  market,
-                  broker,
-                  profile,
-                  {},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               BooleanMethod<false>{},
-                                               BooleanMethod<false>{},
-                                               1,
-                                               ValueMethod{90.0},
-                                               true,
-                                               true,
-                                               OpenMethod{},
-                                               false},
-                  BacktestRunner::PositionRule{},
-                  1000.0};
+  auto runner = BacktestRunner{asset,
+                               market,
+                               broker,
+                               profile,
+                               {},
+                               BacktestRunner::PositionRule{
+                                BooleanMethod<true>{},
+                                BooleanMethod<false>{},
+                                BooleanMethod<false>{},
+                                1,
+                                ValueMethod{90.0},
+                                true,
+                                true,
+                               },
+                               BacktestRunner::PositionRule{},
+                               1000.0};
 
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
@@ -2268,23 +2405,32 @@ TEST(BacktestRunnerTest, TakeProfitExitIsDecidedByRunner)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto runner =
-   BacktestRunner{asset,
-                  market,
-                  broker,
-                  profile,
-                  {},
-                  BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                               BooleanMethod<false>{},
-                                               BooleanMethod<false>{},
-                                               1,
-                                               OpenMethod{},
-                                               false,
-                                               false,
-                                               ValueMethod{120.0},
-                                               true},
-                  BacktestRunner::PositionRule{},
-                  1000.0};
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   {},
+   BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                BooleanMethod<false>{},
+                                BooleanMethod<false>{},
+                                1,
+                                OpenMethod{},
+                                false,
+                                false,
+                                1,
+                                OpenMethod{},
+                                1,
+                                OpenMethod{},
+                                1,
+                                OpenMethod{},
+                                StopTargetReferencePrice::AveragePrice,
+                                StopTargetReferencePrice::AveragePrice,
+                                1.0,
+                                1.0,
+                                single_take_profit(ValueMethod{120.0}, true)},
+   BacktestRunner::PositionRule{},
+   1000.0};
 
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
@@ -2293,8 +2439,9 @@ TEST(BacktestRunnerTest, TakeProfitExitIsDecidedByRunner)
   ASSERT_EQ(timeline.closed_trades(last_timeline_index(timeline)).size(), 1);
   EXPECT_EQ(latest_closed_trade(timeline).exit_type(),
             TradeEvent::Type::take_profit);
-  EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).target_price(), 120.0);
-  EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).take_profit_price(), 120.0);
+  ASSERT_EQ(latest_closed_trade(timeline).take_profit_levels().size(), 1);
+  EXPECT_DOUBLE_EQ(
+   latest_closed_trade(timeline).take_profit_levels().front().price(), 120.0);
   EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).exit_price(), 120.0);
 }
 
@@ -2332,8 +2479,6 @@ TEST(BacktestRunnerTest, SignalExitReducesRemainingPositionOnlyOnce)
                                 OpenMethod{},
                                 false,
                                 false,
-                                OpenMethod{},
-                                false,
                                 1,
                                 OpenMethod{},
                                 1,
@@ -2369,13 +2514,11 @@ TEST(BacktestRunnerTest, SignalExitReducesRemainingPositionOnlyOnce)
 auto run_signal_reduction(double reduce,
                           double position_quantity = 10.0,
                           double minimum_quantity = 1.0,
-                          double quantity_step = 1.0)
- -> BacktestTimeline
+                          double quantity_step = 1.0) -> BacktestTimeline
 {
-  const auto asset = make_two_bar_asset(
-   100.0, 100.0, 100.0, 100.0, 110.0, 110.0, 110.0, 110.0);
-  const auto market =
-   Market{"Test", minimum_quantity, quantity_step};
+  const auto asset =
+   make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 110.0, 110.0, 110.0, 110.0);
+  const auto market = Market{"Test", minimum_quantity, quantity_step};
   const auto broker = Broker{"Test"};
   const auto profile = Profile{
    "Test",
@@ -2395,8 +2538,6 @@ auto run_signal_reduction(double reduce,
                                 1,
                                 OpenMethod{},
                                 false,
-                                false,
-                                OpenMethod{},
                                 false,
                                 1,
                                 OpenMethod{},
@@ -2463,34 +2604,33 @@ TEST(BacktestRunnerTest, StopLossAndTakeProfitSupportIndependentReductions)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto runner = BacktestRunner{
-   asset,
-   market,
-   broker,
-   profile,
-   {},
-   BacktestRunner::PositionRule{BooleanMethod<true>{},
-                                BooleanMethod<false>{},
-                                BooleanMethod<false>{},
-                                1,
-                                ValueMethod{90.0},
-                                true,
-                                false,
-                                ValueMethod{120.0},
-                                true,
-                                1,
-                                OpenMethod{},
-                                1,
-                                OpenMethod{},
-                                1,
-                                OpenMethod{},
-                                StopTargetReferencePrice::AveragePrice,
-                                StopTargetReferencePrice::AveragePrice,
-                                1.0,
-                                0.26,
-                                0.5},
-   BacktestRunner::PositionRule{},
-   1000.0};
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  BacktestRunner::PositionRule{
+                   BooleanMethod<true>{},
+                   BooleanMethod<false>{},
+                   BooleanMethod<false>{},
+                   1,
+                   ValueMethod{90.0},
+                   true,
+                   false,
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   1,
+                   OpenMethod{},
+                   StopTargetReferencePrice::AveragePrice,
+                   StopTargetReferencePrice::AveragePrice,
+                   1.0,
+                   0.26,
+                   single_take_profit(ValueMethod{120.0}, true, 0.5)},
+                  BacktestRunner::PositionRule{},
+                  1000.0};
 
   runner.run(series_results, timeline);
   runner.run(series_results, timeline);
@@ -2509,10 +2649,147 @@ TEST(BacktestRunnerTest, StopLossAndTakeProfitSupportIndependentReductions)
   EXPECT_TRUE(timeline.closed_trades(2).empty());
 }
 
+TEST(BacktestRunnerTest,
+     OrderedTakeProfitsTriggerOnceAndReduceRemainingPosition)
+{
+  const auto asset = Asset{"Test",
+                           AssetHistory{{"Datetime", {1.0, 2.0, 3.0, 4.0}},
+                                        {"Open", {100.0, 100.0, 100.0, 100.0}},
+                                        {"High", {100.0, 131.0, 121.0, 131.0}},
+                                        {"Low", {100.0, 100.0, 100.0, 100.0}},
+                                        {"Close", {100.0, 120.0, 120.0, 130.0}},
+                                        {"Volume", {0.0, 0.0, 0.0, 0.0}}}};
+  const auto market = Market{"Test", 1.0, 1.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 8.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+  auto take_profits =
+   std::vector<BacktestRunner::PositionRule::TakeProfitRule>{};
+  take_profits.emplace_back(ValueMethod{110.0}, false, 1.0);
+  take_profits.emplace_back(ValueMethod{120.0}, true, 0.5);
+  take_profits.emplace_back(ValueMethod{130.0}, true, 0.5);
+
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   {},
+   BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                BooleanMethod<false>{},
+                                BooleanMethod<false>{},
+                                1,
+                                ValueMethod{90.0},
+                                false,
+                                false,
+                                1,
+                                OpenMethod{},
+                                1,
+                                OpenMethod{},
+                                1,
+                                OpenMethod{},
+                                StopTargetReferencePrice::AveragePrice,
+                                StopTargetReferencePrice::AveragePrice,
+                                1.0,
+                                1.0,
+                                std::move(take_profits)},
+   BacktestRunner::PositionRule{},
+   1000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+  ASSERT_TRUE(timeline.open_position(1));
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 4.0);
+  ASSERT_EQ(timeline.open_position(1)->take_profit_levels().size(), 3);
+  EXPECT_FALSE(timeline.open_position(1)->take_profit_levels()[0].enabled());
+  EXPECT_TRUE(timeline.open_position(1)->take_profit_levels()[1].consumed());
+  EXPECT_FALSE(timeline.open_position(1)->take_profit_levels()[2].consumed());
+  ASSERT_EQ(timeline.trade_events(1).size(), 1);
+  EXPECT_DOUBLE_EQ(timeline.trade_events(1).front().price(), 120.0);
+
+  runner.run(series_results, timeline);
+  EXPECT_TRUE(timeline.trade_events(2).empty());
+  EXPECT_DOUBLE_EQ(timeline.open_position(2)->position_size(), 4.0);
+
+  runner.run(series_results, timeline);
+  ASSERT_TRUE(timeline.open_position(3));
+  EXPECT_DOUBLE_EQ(timeline.open_position(3)->position_size(), 2.0);
+  EXPECT_TRUE(timeline.open_position(3)->take_profit_levels()[2].consumed());
+  ASSERT_EQ(timeline.trade_events(3).size(), 1);
+  EXPECT_EQ(timeline.trade_events(3).front().type(),
+            TradeEvent::Type::take_profit);
+}
+
+TEST(BacktestRunnerTest,
+     PyramidingRecalculatesTargetsWithoutRearmingConsumedLevels)
+{
+  const auto asset = Asset{"Test",
+                           AssetHistory{{"Datetime", {1.0, 2.0, 3.0}},
+                                        {"Open", {100.0, 100.0, 120.0}},
+                                        {"High", {100.0, 111.0, 120.0}},
+                                        {"Low", {100.0, 100.0, 120.0}},
+                                        {"Close", {100.0, 110.0, 120.0}},
+                                        {"Volume", {0.0, 0.0, 0.0}}}};
+  const auto market = Market{"Test", 1.0, 1.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 8.0}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+  auto take_profits =
+   std::vector<BacktestRunner::PositionRule::TakeProfitRule>{};
+  take_profits.emplace_back(TpAmountMethod{10.0}, true, 0.5);
+  take_profits.emplace_back(TpAmountMethod{30.0}, true, 0.5);
+
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   {},
+   BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                BooleanMethod<false>{},
+                                BooleanMethod<true>{},
+                                2,
+                                ValueMethod{90.0},
+                                false,
+                                false,
+                                1,
+                                OpenMethod{},
+                                1,
+                                OpenMethod{},
+                                1,
+                                OpenMethod{},
+                                StopTargetReferencePrice::AveragePrice,
+                                StopTargetReferencePrice::AveragePrice,
+                                1.0,
+                                1.0,
+                                std::move(take_profits)},
+   BacktestRunner::PositionRule{},
+   5000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+  ASSERT_TRUE(timeline.open_position(1));
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 4.0);
+  EXPECT_TRUE(timeline.open_position(1)->take_profit_levels()[0].consumed());
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->take_profit_levels()[0].price(),
+                   110.0);
+
+  runner.run(series_results, timeline);
+  ASSERT_TRUE(timeline.open_position(2));
+  EXPECT_DOUBLE_EQ(timeline.open_position(2)->position_size(), 12.0);
+  EXPECT_TRUE(timeline.open_position(2)->take_profit_levels()[0].consumed());
+  EXPECT_NE(timeline.open_position(2)->take_profit_levels()[0].price(), 110.0);
+  EXPECT_FALSE(timeline.open_position(2)->take_profit_levels()[1].consumed());
+}
+
 TEST(BacktestRunnerTest, ReductionIsRaisedToMarketMinimum)
 {
-  const auto asset = make_two_bar_asset(
-   100.0, 100.0, 100.0, 100.0, 110.0, 110.0, 110.0, 110.0);
+  const auto asset =
+   make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 110.0, 110.0, 110.0, 110.0);
   const auto market = Market{"Test", 1.5, 1.0};
   const auto broker = Broker{"Test"};
   const auto profile =
@@ -2532,8 +2809,6 @@ TEST(BacktestRunnerTest, ReductionIsRaisedToMarketMinimum)
                                 1,
                                 OpenMethod{},
                                 false,
-                                false,
-                                OpenMethod{},
                                 false,
                                 1,
                                 OpenMethod{},
@@ -2557,14 +2832,13 @@ TEST(BacktestRunnerTest, ReductionIsRaisedToMarketMinimum)
 
 TEST(BacktestRunnerTest, PartialExitKeepsPyramidingLayersUsed)
 {
-  const auto asset = Asset{
-   "Test",
-   AssetHistory{{"Datetime", {1.0, 2.0, 3.0, 4.0}},
-                {"Open", {100.0, 110.0, 120.0, 130.0}},
-                {"High", {100.0, 110.0, 120.0, 130.0}},
-                {"Low", {100.0, 110.0, 120.0, 130.0}},
-                {"Close", {100.0, 110.0, 120.0, 130.0}},
-                {"Volume", {0.0, 0.0, 0.0, 0.0}}}};
+  const auto asset = Asset{"Test",
+                           AssetHistory{{"Datetime", {1.0, 2.0, 3.0, 4.0}},
+                                        {"Open", {100.0, 110.0, 120.0, 130.0}},
+                                        {"High", {100.0, 110.0, 120.0, 130.0}},
+                                        {"Low", {100.0, 110.0, 120.0, 130.0}},
+                                        {"Close", {100.0, 110.0, 120.0, 130.0}},
+                                        {"Volume", {0.0, 0.0, 0.0, 0.0}}}};
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
@@ -2578,25 +2852,22 @@ TEST(BacktestRunnerTest, PartialExitKeepsPyramidingLayersUsed)
    broker,
    profile,
    {},
-   BacktestRunner::PositionRule{
-    BooleanMethod<true>{},
-    EqualMethod{CloseMethod{}, ValueMethod{120.0}},
-    BooleanMethod<true>{},
-    2,
-    OpenMethod{},
-    false,
-    false,
-    OpenMethod{},
-    false,
-    1,
-    OpenMethod{},
-    0,
-    OpenMethod{},
-    1,
-    OpenMethod{},
-    StopTargetReferencePrice::AveragePrice,
-    StopTargetReferencePrice::AveragePrice,
-    0.5},
+   BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                EqualMethod{CloseMethod{}, ValueMethod{120.0}},
+                                BooleanMethod<true>{},
+                                2,
+                                OpenMethod{},
+                                false,
+                                false,
+                                1,
+                                OpenMethod{},
+                                0,
+                                OpenMethod{},
+                                1,
+                                OpenMethod{},
+                                StopTargetReferencePrice::AveragePrice,
+                                StopTargetReferencePrice::AveragePrice,
+                                0.5},
    BacktestRunner::PositionRule{},
    1000.0};
 

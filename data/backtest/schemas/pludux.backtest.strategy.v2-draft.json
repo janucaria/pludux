@@ -254,8 +254,14 @@
             "stopLoss": {
               "$ref": "#/$defs/stopLoss"
             },
-            "takeProfit": {
-              "$ref": "#/$defs/takeProfit"
+            "takeProfits": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/takeProfit"
+              },
+              "default": [],
+              "title": "Take Profits",
+              "description": "Ordered take-profit rules. At most one target executes per bar, in array order."
             }
           },
           "required": [
@@ -3559,20 +3565,22 @@
               }
             }
           },
-          "takeProfit": {
-            "enabled": true,
-            "targetPrice": {
-              "method": "TP_R_MULTIPLE",
-              "params": {
-                "multiple": {
-                  "method": "VALUE",
-                  "params": {
-                    "value": 2
+          "takeProfits": [
+            {
+              "enabled": true,
+              "targetPrice": {
+                "method": "TP_R_MULTIPLE",
+                "params": {
+                  "multiple": {
+                    "method": "VALUE",
+                    "params": {
+                      "value": 2
+                    }
                   }
                 }
               }
             }
-          }
+          ]
         },
         "short": false
       }

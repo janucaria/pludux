@@ -1,11 +1,15 @@
 module;
 
+#include <cmath>
 #include <cstddef>
 #include <ctime>
+#include <utility>
+#include <vector>
 
 export module pludux.backtest:closed_trade;
 
 import :trade_event;
+import :take_profit_level;
 
 export namespace pludux::backtest {
 
@@ -25,9 +29,8 @@ public:
               double total_entry_fees,
               double total_exit_fees,
               double stop_price,
-              double target_price,
               double stop_loss_price,
-              double take_profit_price)
+              std::vector<TakeProfitLevel> take_profit_levels = {})
   : trade_id_{trade_id}
   , exit_event_id_{exit_event_id}
   , exit_type_{exit_type}
@@ -40,9 +43,8 @@ public:
   , total_entry_fees_{total_entry_fees}
   , total_exit_fees_{total_exit_fees}
   , stop_price_{stop_price}
-  , target_price_{target_price}
   , stop_loss_price_{stop_loss_price}
-  , take_profit_price_{take_profit_price}
+  , take_profit_levels_{std::move(take_profit_levels)}
   {
   }
 
@@ -108,19 +110,15 @@ public:
     return self.stop_price_;
   }
 
-  auto target_price(this const ClosedTrade& self) noexcept -> double
-  {
-    return self.target_price_;
-  }
-
   auto stop_loss_price(this const ClosedTrade& self) noexcept -> double
   {
     return self.stop_loss_price_;
   }
 
-  auto take_profit_price(this const ClosedTrade& self) noexcept -> double
+  auto take_profit_levels(this const ClosedTrade& self) noexcept
+   -> const std::vector<TakeProfitLevel>&
   {
-    return self.take_profit_price_;
+    return self.take_profit_levels_;
   }
 
   auto average_price(this const ClosedTrade& self) noexcept -> double
@@ -159,9 +157,8 @@ private:
   double total_entry_fees_{};
   double total_exit_fees_{};
   double stop_price_{};
-  double target_price_{};
   double stop_loss_price_{};
-  double take_profit_price_{};
+  std::vector<TakeProfitLevel> take_profit_levels_;
 };
 
 } // namespace pludux::backtest

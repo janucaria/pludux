@@ -1,6 +1,7 @@
 module;
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <expected>
 #include <filesystem>
@@ -1437,30 +1438,61 @@ private:
       ImGui::PopID();
     }
     {
-      ImGui::SeparatorText("Take Profit");
-      ImGui::PushID("take_profit");
+      ImGui::SeparatorText("Take Profits");
+      ImGui::PushID("take_profits");
 
-      auto take_profit = position.take_profit();
-      auto take_profit_enabled = take_profit.enabled();
-      ImGui::Checkbox("Enable Take Profit", &take_profit_enabled);
-      take_profit.enabled(take_profit_enabled);
+      auto take_profits = position.take_profits();
+      if(ImGui::Button("Add Take Profit")) {
+        take_profits.emplace_back();
+      }
 
-      ImGui::BeginDisabled(!take_profit_enabled);
-      ImGui::PushID("reduce");
-      const auto reduce = self.render_position_reduction(take_profit.reduce());
-      ImGui::PopID();
-      take_profit.reduce(reduce);
-      ImGui::EndDisabled();
+      for(auto index = std::size_t{0}; index < take_profits.size(); ++index) {
+        ImGui::PushID(static_cast<int>(index));
+        ImGui::Separator();
+        ImGui::Text("Take Profit %zu", index + 1);
 
-      ImGui::Text("Target Price:");
-      ImGui::SameLine();
-      auto target_price = take_profit.target_price();
-      ImGui::PushID("target_price");
-      self.render_series_node(target_price, context);
-      ImGui::PopID();
-      take_profit.target_price(std::move(target_price));
+        if(ImGui::Button("Move Up") && index > 0) {
+          std::swap(take_profits[index], take_profits[index - 1]);
+          ImGui::PopID();
+          break;
+        }
+        ImGui::SameLine();
+        if(ImGui::Button("Move Down") && index + 1 < take_profits.size()) {
+          std::swap(take_profits[index], take_profits[index + 1]);
+          ImGui::PopID();
+          break;
+        }
+        ImGui::SameLine();
+        if(ImGui::Button("Remove")) {
+          take_profits.erase(take_profits.begin() +
+                             static_cast<std::ptrdiff_t>(index));
+          ImGui::PopID();
+          break;
+        }
 
-      position.take_profit(std::move(take_profit));
+        auto& take_profit = take_profits[index];
+        auto enabled = take_profit.enabled();
+        ImGui::Checkbox("Enabled", &enabled);
+        take_profit.enabled(enabled);
+
+        ImGui::BeginDisabled(!enabled);
+        ImGui::PushID("reduce");
+        take_profit.reduce(
+         self.render_position_reduction(take_profit.reduce()));
+        ImGui::PopID();
+        ImGui::EndDisabled();
+
+        ImGui::Text("Target Price:");
+        ImGui::SameLine();
+        auto target_price = take_profit.target_price();
+        ImGui::PushID("target_price");
+        self.render_series_node(target_price, context);
+        ImGui::PopID();
+        take_profit.target_price(std::move(target_price));
+        ImGui::PopID();
+      }
+
+      position.take_profits(std::move(take_profits));
       ImGui::PopID();
     }
   }

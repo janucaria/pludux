@@ -1,9 +1,14 @@
 module;
 
+#include <cmath>
 #include <cstddef>
 #include <ctime>
+#include <utility>
+#include <vector>
 
 export module pludux.backtest:trade_event;
+
+import :take_profit_level;
 
 export namespace pludux::backtest {
 
@@ -36,9 +41,8 @@ public:
              double investment_after,
              double average_price_after,
              double stop_price,
-             double target_price,
              double stop_loss_price,
-             double take_profit_price)
+             std::vector<TakeProfitLevel> take_profit_levels = {})
   : trade_id_{trade_id}
   , event_id_{event_id}
   , trade_event_index_{trade_event_index}
@@ -54,9 +58,8 @@ public:
   , investment_after_{investment_after}
   , average_price_after_{average_price_after}
   , stop_price_{stop_price}
-  , target_price_{target_price}
   , stop_loss_price_{stop_loss_price}
-  , take_profit_price_{take_profit_price}
+  , take_profit_levels_{std::move(take_profit_levels)}
   {
   }
 
@@ -137,37 +140,32 @@ public:
     return self.stop_price_;
   }
 
-  auto target_price(this const TradeEvent& self) noexcept -> double
-  {
-    return self.target_price_;
-  }
-
   auto stop_loss_price(this const TradeEvent& self) noexcept -> double
   {
     return self.stop_loss_price_;
   }
 
-  auto take_profit_price(this const TradeEvent& self) noexcept -> double
+  auto take_profit_levels(this const TradeEvent& self) noexcept
+   -> const std::vector<TakeProfitLevel>&
   {
-    return self.take_profit_price_;
+    return self.take_profit_levels_;
   }
 
-  void after_state(this TradeEvent& self,
-                   double position_size,
-                   double investment,
-                   double average_price,
-                   double stop_price,
-                   double target_price,
-                   double stop_loss_price,
-                   double take_profit_price) noexcept
+  void
+  after_state(this TradeEvent& self,
+              double position_size,
+              double investment,
+              double average_price,
+              double stop_price,
+              double stop_loss_price,
+              std::vector<TakeProfitLevel> take_profit_levels = {}) noexcept
   {
     self.position_size_after_ = position_size;
     self.investment_after_ = investment;
     self.average_price_after_ = average_price;
     self.stop_price_ = stop_price;
-    self.target_price_ = target_price;
     self.stop_loss_price_ = stop_loss_price;
-    self.take_profit_price_ = take_profit_price;
+    self.take_profit_levels_ = std::move(take_profit_levels);
   }
 
   auto is_entry(this const TradeEvent& self) noexcept -> bool
@@ -182,9 +180,9 @@ public:
 
   auto is_scale_out(this const TradeEvent& self) noexcept -> bool
   {
-    const auto is_reason_specific_exit =
-     self.type_ == Type::exit_signal || self.type_ == Type::stop_loss ||
-     self.type_ == Type::take_profit;
+    const auto is_reason_specific_exit = self.type_ == Type::exit_signal ||
+                                         self.type_ == Type::stop_loss ||
+                                         self.type_ == Type::take_profit;
 
     return self.type_ == Type::scale_out ||
            (is_reason_specific_exit && self.position_size_after_ != 0.0);
@@ -221,9 +219,8 @@ private:
   double average_price_after_{};
 
   double stop_price_{};
-  double target_price_{};
   double stop_loss_price_{};
-  double take_profit_price_{};
+  std::vector<TakeProfitLevel> take_profit_levels_;
 };
 
 } // namespace pludux::backtest

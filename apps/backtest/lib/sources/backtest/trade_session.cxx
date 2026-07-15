@@ -126,10 +126,8 @@ public:
                                       entry.price(),
                                       total_fees,
                                       entry.stop_price(),
-                                      entry.target_price(),
                                       entry.stop_loss_price(),
-                                      entry.stop_loss_trailing_enabled(),
-                                      entry.take_profit_price());
+                                      entry.stop_loss_trailing_enabled());
       self.trade_events_.push_back(std::move(event));
       return;
     }
@@ -141,10 +139,8 @@ public:
                                         entry.price(),
                                         total_fees,
                                         entry.stop_price(),
-                                        entry.target_price(),
                                         entry.stop_loss_price(),
-                                        entry.stop_loss_trailing_enabled(),
-                                        entry.take_profit_price()};
+                                        entry.stop_loss_trailing_enabled()};
     self.trade_events_.emplace_back(trade_id,
                                     self.next_event_id_++,
                                     1,
@@ -160,9 +156,8 @@ public:
                                     self.open_position_->investment(),
                                     self.open_position_->average_price(),
                                     self.open_position_->stop_price(),
-                                    self.open_position_->target_price(),
                                     self.open_position_->stop_loss_price(),
-                                    self.open_position_->take_profit_price());
+                                    self.open_position_->take_profit_levels());
   }
 
   void reject_insufficient_cash(this TradeSession& self,
@@ -195,9 +190,7 @@ public:
      investment_before,
      average_price_before,
      entry.stop_price(),
-     entry.target_price(),
-     entry.stop_loss_price(),
-     entry.take_profit_price());
+     entry.stop_loss_price());
   }
 
   void exit_position(this TradeSession& self, const TradeExit& exit)
@@ -228,7 +221,30 @@ public:
     const auto closed_position_size = exit.position_size();
     const auto closed_investment =
      closed_position_size * self.open_position_->average_price();
+    if(exit.reason() == TradeExit::Reason::take_profit &&
+       (!exit.take_profit_index() ||
+        *exit.take_profit_index() >=
+         self.open_position_->take_profit_levels().size())) {
+      throw std::runtime_error{
+       "Take-profit exit requires a valid target index."};
+    }
     const auto exit_event_id = self.next_event_id_++;
+    auto event = self.open_position_->scaled_out(exit_event_id,
+                                                 exit.position_size(),
+                                                 self.market_timestamp_,
+                                                 exit.price(),
+                                                 total_fees,
+                                                 event_type);
+    if(const auto take_profit_index = exit.take_profit_index()) {
+      self.open_position_->take_profit_levels()[*take_profit_index].consumed(
+       true);
+      event.after_state(self.open_position_->position_size(),
+                        self.open_position_->investment(),
+                        self.open_position_->average_price(),
+                        self.open_position_->stop_price(),
+                        self.open_position_->stop_loss_price(),
+                        self.open_position_->take_profit_levels());
+    }
     const auto closed_trade =
      self.open_position_->closed_trade(exit_event_id,
                                        event_type,
@@ -238,12 +254,6 @@ public:
                                        closed_position_size,
                                        closed_investment);
     self.realized_exits_.push_back(closed_trade);
-    auto event = self.open_position_->scaled_out(exit_event_id,
-                                                 exit.position_size(),
-                                                 self.market_timestamp_,
-                                                 exit.price(),
-                                                 total_fees,
-                                                 event_type);
     self.trade_events_.push_back(std::move(event));
 
     if(self.open_position_->is_closed()) {
@@ -275,9 +285,8 @@ public:
                       position.investment(),
                       position.average_price(),
                       position.stop_price(),
-                      position.target_price(),
                       position.stop_loss_price(),
-                      position.take_profit_price());
+                      position.take_profit_levels());
   }
 
   auto unrealized_pnl(this const TradeSession& self) noexcept -> double

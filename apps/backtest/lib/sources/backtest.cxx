@@ -34,6 +34,7 @@ export import :broker;
 export import :profile;
 export import :trade_entry;
 export import :trade_exit;
+export import :take_profit_level;
 export import :trade_event;
 export import :open_position_snapshot;
 export import :closed_trade;

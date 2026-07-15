@@ -1,7 +1,11 @@
 #include <gtest/gtest.h>
 
 #include <jsoncons/json.hpp>
+#include <jsoncons_ext/jsonschema/jsonschema.hpp>
 
+#include <filesystem>
+#include <fstream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -49,10 +53,10 @@ TEST(StrategyInputsTest, CollectsNumericInputsInStrategyTraversalOrder)
    NumericInputNode{
     "Stop Price", NumericInputNode::ValueRepresentation::Decimal, 95.0},
    false});
-  long_position.take_profit(Strategy::TakeProfit{
+  long_position.take_profits({Strategy::TakeProfit{
    true,
    NumericInputNode{
-    "Target Price", NumericInputNode::ValueRepresentation::Decimal, 120.0}});
+    "Target Price", NumericInputNode::ValueRepresentation::Decimal, 120.0}}});
 
   const auto strategy = Strategy{"Test",
                                  std::move(series_nodes),
@@ -108,11 +112,18 @@ TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
           "stopPrice": "OPEN",
           "reduce": 0.5
         },
-        "takeProfit": {
-          "enabled": true,
-          "targetPrice": 120,
-          "reduce": 0.75
-        },
+        "takeProfits": [
+          {
+            "enabled": true,
+            "targetPrice": 120,
+            "reduce": 0.75
+          },
+          {
+            "enabled": false,
+            "targetPrice": 140,
+            "reduce": 0.5
+          }
+        ],
         "pyramiding": {
           "signalDelay": 0,
           "price": "CLOSE",
@@ -149,10 +160,12 @@ TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
   EXPECT_DOUBLE_EQ(strategy.long_position().stop_loss().reduce(), 0.5);
   EXPECT_TRUE(
    node_cast<OpenNode>(strategy.long_position().stop_loss().stop_price()));
-  EXPECT_TRUE(strategy.long_position().take_profit().enabled());
-  EXPECT_DOUBLE_EQ(strategy.long_position().take_profit().reduce(), 0.75);
-  EXPECT_TRUE(
-   node_cast<ValueNode>(strategy.long_position().take_profit().target_price()));
+  ASSERT_EQ(strategy.long_position().take_profits().size(), 2);
+  EXPECT_TRUE(strategy.long_position().take_profits()[0].enabled());
+  EXPECT_DOUBLE_EQ(strategy.long_position().take_profits()[0].reduce(), 0.75);
+  EXPECT_FALSE(strategy.long_position().take_profits()[1].enabled());
+  EXPECT_TRUE(node_cast<ValueNode>(
+   strategy.long_position().take_profits()[0].target_price()));
   EXPECT_FALSE(strategy.short_position().entry().signal() ==
                strategy.long_position().entry().signal());
 }
@@ -161,10 +174,7 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
 {
   auto long_position = Strategy::Position{};
   long_position.entry(Strategy::Entry{TrueNode{}, 0, CloseNode{}});
-  long_position.exit(Strategy::Exit{FalseNode{},
-                                    0,
-                                    CloseNode{},
-                                    0.25});
+  long_position.exit(Strategy::Exit{FalseNode{}, 0, CloseNode{}, 0.25});
   auto pyramiding = Strategy::Pyramiding{};
   pyramiding.signal_delay(0);
   pyramiding.price(CloseNode{});
@@ -173,14 +183,9 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
   pyramiding.unfavorable_stop_target_reference(
    StopTargetReferencePrice::LatestEntryPrice);
   long_position.pyramiding(pyramiding);
-  long_position.stop_loss(Strategy::StopLoss{true,
-                                             OpenNode{},
-                                             false,
-                                             0.5});
-  long_position.take_profit(
-   Strategy::TakeProfit{true,
-                        ValueNode{120.0},
-                        0.75});
+  long_position.stop_loss(Strategy::StopLoss{true, OpenNode{}, false, 0.5});
+  long_position.take_profits(
+   {Strategy::TakeProfit{true, ValueNode{120.0}, 0.75}});
 
   const auto strategy =
    Strategy{"Test", {}, std::move(long_position), Strategy::Position{}, {}};
@@ -196,7 +201,8 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
                .contains("stopPrice"));
   EXPECT_TRUE(strategy_json.at("positions")
                .at("long")
-               .at("takeProfit")
+               .at("takeProfits")
+               .at(0)
                .contains("targetPrice"));
   EXPECT_EQ(strategy_json.at("positions")
              .at("long")
@@ -225,7 +231,8 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
                    0.5);
   EXPECT_DOUBLE_EQ(strategy_json.at("positions")
                     .at("long")
-                    .at("takeProfit")
+                    .at("takeProfits")
+                    .at(0)
                     .at("reduce")
                     .as<double>(),
                    0.75);
@@ -239,7 +246,8 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
                 .contains("reduceRounding"));
   EXPECT_FALSE(strategy_json.at("positions")
                 .at("long")
-                .at("takeProfit")
+                .at("takeProfits")
+                .at(0)
                 .contains("reduceRounding"));
   EXPECT_EQ(strategy_json.at("positions")
              .at("long")
@@ -308,7 +316,7 @@ TEST(StrategyParserTest, JsonconsConvTraitsRoundTripSchemaConfig)
   EXPECT_TRUE(decoded_strategy.equivalent_rules(strategy));
 }
 
-TEST(StrategyParserTest, DefaultStopLossAndTakeProfitUseRiskNodes)
+TEST(StrategyParserTest, DefaultStopLossAndEmptyTakeProfits)
 {
   const auto strategy = Strategy{};
 
@@ -319,10 +327,44 @@ TEST(StrategyParserTest, DefaultStopLossAndTakeProfitUseRiskNodes)
   ASSERT_NE(stop_multiplier, nullptr);
   EXPECT_DOUBLE_EQ(stop_multiplier->value(), 2.0);
 
-  const auto* target_price = node_cast<TpRMultipleNode>(
-   strategy.long_position().take_profit().target_price());
-  ASSERT_NE(target_price, nullptr);
-  const auto* target_multiple = node_cast<ValueNode>(target_price->value());
-  ASSERT_NE(target_multiple, nullptr);
-  EXPECT_DOUBLE_EQ(target_multiple->value(), 2.0);
+  EXPECT_TRUE(strategy.long_position().take_profits().empty());
+}
+
+TEST(StrategyParserTest, RejectsLegacySingularTakeProfit)
+{
+  EXPECT_THROW(
+   parse_backtest_strategy_json(
+    "Legacy",
+    R"({"version":2,"positions":{"long":{"stopLoss":{"stopPrice":"OPEN"},"takeProfit":{"enabled":true,"targetPrice":120}},"short":false}})"),
+   std::runtime_error);
+}
+
+TEST(StrategyParserTest, LoadsEveryBundledStrategySample)
+{
+  const auto sample_directory =
+   std::filesystem::path{PLUDUX_BACKTEST_SAMPLE_DIR};
+  auto schema_stream =
+   std::ifstream{sample_directory.parent_path() / "schemas" /
+                 "pludux.backtest.strategy.v2-draft.json"};
+  auto schema = jsoncons::ojson::parse(schema_stream);
+  const auto compiled_schema =
+   jsoncons::jsonschema::make_json_schema(std::move(schema));
+  auto sample_count = std::size_t{0};
+  for(const auto& entry :
+      std::filesystem::directory_iterator{sample_directory}) {
+    if(entry.path().extension() != ".json") {
+      continue;
+    }
+    auto stream = std::ifstream{entry.path()};
+    auto json = std::ostringstream{};
+    json << stream.rdbuf();
+    const auto document = jsoncons::ojson::parse(json.str());
+    EXPECT_NO_THROW(compiled_schema.validate(document))
+     << entry.path().string();
+    EXPECT_NO_THROW(
+     parse_backtest_strategy_json(entry.path().stem().string(), json.str()))
+     << entry.path().string();
+    ++sample_count;
+  }
+  EXPECT_GT(sample_count, 0);
 }

@@ -3,6 +3,7 @@ module;
 #include <cmath>
 #include <cstddef>
 #include <ctime>
+#include <optional>
 
 export module pludux.backtest:trade_exit;
 
@@ -12,10 +13,14 @@ class TradeExit {
 public:
   enum class Reason { signal, stop_loss, take_profit };
 
-  TradeExit(double position_size, double price, Reason reason)
+  TradeExit(double position_size,
+            double price,
+            Reason reason,
+            std::optional<std::size_t> take_profit_index = std::nullopt)
   : reason_(reason)
   , position_size_(position_size)
   , price_(price)
+  , take_profit_index_{take_profit_index}
   {
   }
 
@@ -34,6 +39,12 @@ public:
   auto reason(this const TradeExit& self) noexcept -> Reason
   {
     return self.reason_;
+  }
+
+  auto take_profit_index(this const TradeExit& self) noexcept
+   -> std::optional<std::size_t>
+  {
+    return self.take_profit_index_;
   }
 
   auto is_long_direction(this const TradeExit& self) noexcept -> bool
@@ -66,6 +77,7 @@ private:
 
   double position_size_;
   double price_;
+  std::optional<std::size_t> take_profit_index_;
 };
 
 } // namespace pludux::backtest

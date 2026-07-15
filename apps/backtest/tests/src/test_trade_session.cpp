@@ -91,11 +91,9 @@ TEST(TradeSessionTest, ScaleInEmitsScaleInEvent)
 {
   auto session = TradeSession{static_cast<std::time_t>(20), 100.0, 1};
 
-  session.entry_position(
-   TradeEntry{2.0, 100.0, 90.0, 120.0, 90.0, false, 120.0});
+  session.entry_position(TradeEntry{2.0, 100.0, 90.0, 90.0, false});
   session.begin_market_bar(static_cast<std::time_t>(25), 130.0, 5);
-  session.entry_position(
-   TradeEntry{1.0, 130.0, 95.0, 150.0, 95.0, false, 150.0});
+  session.entry_position(TradeEntry{1.0, 130.0, 95.0, 95.0, false});
 
   ASSERT_TRUE(session.open_position().has_value());
   ASSERT_EQ(session.trade_events().size(), 1);
@@ -114,7 +112,6 @@ TEST(TradeSessionTest, ScaleInEmitsScaleInEvent)
   EXPECT_DOUBLE_EQ(event.investment_after(), 330.0);
 
   EXPECT_DOUBLE_EQ(session.open_position()->stop_price(), 95.0);
-  EXPECT_DOUBLE_EQ(session.open_position()->target_price(), 150.0);
 
   EXPECT_DOUBLE_EQ(session.unrealized_pnl(), 60.0);
   EXPECT_DOUBLE_EQ(session.unrealized_investment(), 330.0);
@@ -125,8 +122,7 @@ TEST(TradeSessionTest, RejectInsufficientCashEmitsRejectedEventOnly)
 {
   auto session = TradeSession{static_cast<std::time_t>(20), 100.0, 1};
 
-  session.reject_insufficient_cash(
-   TradeEntry{2.0, 100.0, 90.0, 120.0, 90.0, false, 120.0});
+  session.reject_insufficient_cash(TradeEntry{2.0, 100.0, 90.0, 90.0, false});
 
   ASSERT_FALSE(session.open_position().has_value());
   ASSERT_EQ(session.trade_events().size(), 1);
@@ -146,7 +142,6 @@ TEST(TradeSessionTest, RejectInsufficientCashEmitsRejectedEventOnly)
   EXPECT_DOUBLE_EQ(rejected_event.position_size_before(), 0.0);
   EXPECT_DOUBLE_EQ(rejected_event.position_size_after(), 0.0);
   EXPECT_DOUBLE_EQ(rejected_event.stop_loss_price(), 90.0);
-  EXPECT_DOUBLE_EQ(rejected_event.take_profit_price(), 120.0);
 
   session.entry_position(TradeEntry{1.0, 100.0});
 
@@ -216,21 +211,14 @@ TEST(TradeSessionTest, FullExitEmitsRecordAndClearsOpenPosition)
 
 TEST(TradePositionTest, UpdatesTrailingStopAndChecksTriggers)
 {
-  auto position = TradePosition{1,
-                                2.0,
-                                static_cast<std::time_t>(20),
-                                100.0,
-                                0.0,
-                                90.0,
-                                120.0,
-                                90.0,
-                                true,
-                                120.0};
+  auto position = TradePosition{
+   1, 2.0, static_cast<std::time_t>(20), 100.0, 0.0, 90.0, 90.0, true};
+  position.take_profit_levels({TakeProfitLevel{120.0, true}});
 
   position.update_trailing_stop(115.0);
 
   EXPECT_DOUBLE_EQ(position.stop_price(), 90.0);
   EXPECT_DOUBLE_EQ(position.stop_loss_price(), 105.0);
   EXPECT_TRUE(position.is_stop_loss_triggered(110.0, 104.0));
-  EXPECT_TRUE(position.is_take_profit_triggered(121.0, 110.0));
+  EXPECT_TRUE(position.is_take_profit_triggered(0, 121.0, 110.0));
 }

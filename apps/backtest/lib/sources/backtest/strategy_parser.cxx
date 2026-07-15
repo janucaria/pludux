@@ -145,17 +145,32 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
                       parse_reduce(stop_loss_json)});
 
   if(position_json.contains("takeProfit")) {
-    const auto& take_profit_json = position_json.at("takeProfit");
-    if(!take_profit_json.is_object() ||
-       !take_profit_json.contains("targetPrice")) {
+    throw std::runtime_error{
+     "Invalid position configuration in strategy JSON: 'takeProfit' was "
+     "replaced by the 'takeProfits' array"};
+  }
+
+  if(position_json.contains("takeProfits")) {
+    const auto& take_profits_json = position_json.at("takeProfits");
+    if(!take_profits_json.is_array()) {
       throw std::runtime_error{
-       "Invalid takeProfit configuration in strategy JSON"};
+       "Invalid takeProfits configuration in strategy JSON: expected an "
+       "array"};
     }
 
-    position.take_profit(Strategy::TakeProfit{
-     take_profit_json.get_value_or<bool>("enabled", false),
-     config_parser.parse_node(take_profit_json.at("targetPrice")),
-     parse_reduce(take_profit_json)});
+    auto take_profits = std::vector<Strategy::TakeProfit>{};
+    take_profits.reserve(take_profits_json.size());
+    for(const auto& take_profit_json : take_profits_json.array_range()) {
+      if(!take_profit_json.is_object() ||
+         !take_profit_json.contains("targetPrice")) {
+        throw std::runtime_error{"Invalid takeProfits item in strategy JSON"};
+      }
+      take_profits.emplace_back(
+       take_profit_json.get_value_or<bool>("enabled", false),
+       config_parser.parse_node(take_profit_json.at("targetPrice")),
+       parse_reduce(take_profit_json));
+    }
+    position.take_profits(std::move(take_profits));
   }
 
   return position;
@@ -204,12 +219,14 @@ auto serialize_strategy_position(const Strategy::Position& position,
    config_parser.serialize_node(position.stop_loss().stop_price());
   position_json["stopLoss"]["reduce"] = position.stop_loss().reduce();
 
-  if(position.take_profit().enabled()) {
-    position_json["takeProfit"] = jsoncons::ojson{};
-    position_json["takeProfit"]["enabled"] = true;
-    position_json["takeProfit"]["targetPrice"] =
-     config_parser.serialize_node(position.take_profit().target_price());
-    position_json["takeProfit"]["reduce"] = position.take_profit().reduce();
+  position_json["takeProfits"] = jsoncons::ojson::array();
+  for(const auto& take_profit : position.take_profits()) {
+    auto take_profit_json = jsoncons::ojson{};
+    take_profit_json["enabled"] = take_profit.enabled();
+    take_profit_json["targetPrice"] =
+     config_parser.serialize_node(take_profit.target_price());
+    take_profit_json["reduce"] = take_profit.reduce();
+    position_json["takeProfits"].push_back(std::move(take_profit_json));
   }
 
   return position_json;

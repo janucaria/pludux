@@ -93,6 +93,23 @@ public:
   }
 
 private:
+  static auto format_take_profits(const auto& levels) -> std::string
+  {
+    auto result = std::string{};
+    for(const auto& level : levels) {
+      if(!result.empty()) {
+        result += ", ";
+      }
+      result += format_currency(level.price());
+      if(!level.enabled()) {
+        result += " (disabled)";
+      } else if(level.consumed()) {
+        result += " (used)";
+      }
+    }
+    return result.empty() ? "N/A" : result;
+  }
+
   static void draw_closed_trade_row(const backtest::ClosedTrade& trade)
   {
     ImGui::TableNextRow();
@@ -114,7 +131,7 @@ private:
     ImGui::TableNextColumn();
     ImGui::Text("%s", format_currency(trade.exit_price()).c_str());
     ImGui::TableNextColumn();
-    ImGui::Text("%s", format_currency(trade.take_profit_price()).c_str());
+    ImGui::Text("%s", format_take_profits(trade.take_profit_levels()).c_str());
     ImGui::TableNextColumn();
     ImGui::Text("%s", format_currency(trade.stop_loss_price()).c_str());
     ImGui::TableNextColumn();
@@ -153,7 +170,7 @@ private:
     ImGui::TableNextColumn();
     ImGui::Text("N/A");
     ImGui::TableNextColumn();
-    ImGui::Text("%s", format_currency(trade.take_profit_price()).c_str());
+    ImGui::Text("%s", format_take_profits(trade.take_profit_levels()).c_str());
     ImGui::TableNextColumn();
     ImGui::Text("%s", format_currency(trade.stop_loss_price()).c_str());
     ImGui::TableNextColumn();

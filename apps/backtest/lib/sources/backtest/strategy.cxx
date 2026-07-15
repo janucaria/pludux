@@ -373,14 +373,21 @@ public:
       self.pyramiding_ = std::move(pyramiding);
     }
 
-    auto take_profit(this const Position& self) noexcept -> const TakeProfit&
+    auto take_profits(this const Position& self) noexcept
+     -> const std::vector<TakeProfit>&
     {
-      return self.take_profit_;
+      return self.take_profits_;
     }
 
-    void take_profit(this Position& self, TakeProfit take_profit) noexcept
+    auto take_profits(this Position& self) noexcept -> std::vector<TakeProfit>&
     {
-      self.take_profit_ = std::move(take_profit);
+      return self.take_profits_;
+    }
+
+    void take_profits(this Position& self,
+                      std::vector<TakeProfit> take_profits) noexcept
+    {
+      self.take_profits_ = std::move(take_profits);
     }
 
     auto stop_loss(this const Position& self) noexcept -> const StopLoss&
@@ -397,7 +404,7 @@ public:
     Entry entry_;
     Exit exit_;
     Pyramiding pyramiding_;
-    TakeProfit take_profit_;
+    std::vector<TakeProfit> take_profits_;
     StopLoss stop_loss_;
   };
 
