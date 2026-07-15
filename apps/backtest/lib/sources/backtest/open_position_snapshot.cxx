@@ -9,6 +9,7 @@ module;
 export module pludux.backtest:open_position_snapshot;
 
 import :take_profit_level;
+import :signal_exit_state;
 
 export namespace pludux::backtest {
 
@@ -26,7 +27,8 @@ public:
                        double total_entry_fees,
                        double stop_price,
                        double stop_loss_price,
-                       std::vector<TakeProfitLevel> take_profit_levels = {})
+                       std::vector<TakeProfitLevel> take_profit_levels = {},
+                       std::vector<SignalExitState> signal_exit_states = {})
   : trade_id_{trade_id}
   , entry_timestamp_{entry_timestamp}
   , market_timestamp_{market_timestamp}
@@ -38,6 +40,7 @@ public:
   , stop_price_{stop_price}
   , stop_loss_price_{stop_loss_price}
   , take_profit_levels_{std::move(take_profit_levels)}
+  , signal_exit_states_{std::move(signal_exit_states)}
   {
   }
 
@@ -102,6 +105,12 @@ public:
     return self.take_profit_levels_;
   }
 
+  auto signal_exit_states(this const OpenPositionSnapshot& self) noexcept
+   -> const std::vector<SignalExitState>&
+  {
+    return self.signal_exit_states_;
+  }
+
   auto average_price(this const OpenPositionSnapshot& self) noexcept -> double
   {
     return self.position_size_ ? self.investment_ / self.position_size_ : 0.0;
@@ -129,6 +138,7 @@ private:
   double stop_price_{};
   double stop_loss_price_{};
   std::vector<TakeProfitLevel> take_profit_levels_;
+  std::vector<SignalExitState> signal_exit_states_;
 };
 
 } // namespace pludux::backtest

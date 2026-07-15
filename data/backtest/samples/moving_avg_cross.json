@@ -33,22 +33,25 @@
           }
         }
       },
-      "exit": {
-        "signalDelay": 1,
-        "price": "OPEN",
-        "signal": {
-          "method": "CROSSUNDER",
-          "params": {
-            "value": "CLOSE",
-            "baseline": {
-              "method": "SERIES",
-              "params": {
-                "name": "ma"
+      "exits": [
+        {
+          "enabled": true,
+          "signalDelay": 1,
+          "price": "OPEN",
+          "signal": {
+            "method": "CROSSUNDER",
+            "params": {
+              "value": "CLOSE",
+              "baseline": {
+                "method": "SERIES",
+                "params": {
+                  "name": "ma"
+                }
               }
             }
           }
         }
-      },
+      ],
       "stopLoss": {
         "enabled": true,
         "trailing": false,

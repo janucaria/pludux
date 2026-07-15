@@ -16,11 +16,13 @@ public:
   TradeExit(double position_size,
             double price,
             Reason reason,
-            std::optional<std::size_t> take_profit_index = std::nullopt)
+            std::optional<std::size_t> take_profit_index = std::nullopt,
+            std::optional<std::size_t> signal_exit_index = std::nullopt)
   : reason_(reason)
   , position_size_(position_size)
   , price_(price)
   , take_profit_index_{take_profit_index}
+  , signal_exit_index_{signal_exit_index}
   {
   }
 
@@ -45,6 +47,12 @@ public:
    -> std::optional<std::size_t>
   {
     return self.take_profit_index_;
+  }
+
+  auto signal_exit_index(this const TradeExit& self) noexcept
+   -> std::optional<std::size_t>
+  {
+    return self.signal_exit_index_;
   }
 
   auto is_long_direction(this const TradeExit& self) noexcept -> bool
@@ -78,6 +86,7 @@ private:
   double position_size_;
   double price_;
   std::optional<std::size_t> take_profit_index_;
+  std::optional<std::size_t> signal_exit_index_;
 };
 
 } // namespace pludux::backtest

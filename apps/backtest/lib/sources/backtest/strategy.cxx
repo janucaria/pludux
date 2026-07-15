@@ -80,15 +80,17 @@ public:
   class Exit {
   public:
     Exit()
-    : Exit(FalseNode{}, 1, OpenNode{})
+    : Exit(false, FalseNode{}, 1, OpenNode{})
     {
     }
 
-    Exit(ErasedNode signal,
+    Exit(bool enabled,
+         ErasedNode signal,
          std::size_t signal_delay = 1,
          ErasedNode price = OpenNode{},
          double reduce = 1.0)
-    : signal_{std::move(signal)}
+    : enabled_{enabled}
+    , signal_{std::move(signal)}
     , signal_delay_{signal_delay}
     , price_{std::move(price)}
     , reduce_{reduce}
@@ -96,6 +98,16 @@ public:
     }
 
     auto operator==(const Exit&) const noexcept -> bool = default;
+
+    auto enabled(this const Exit& self) noexcept -> bool
+    {
+      return self.enabled_;
+    }
+
+    void enabled(this Exit& self, bool enabled) noexcept
+    {
+      self.enabled_ = enabled;
+    }
 
     auto signal(this const Exit& self) noexcept -> const ErasedNode&
     {
@@ -138,6 +150,7 @@ public:
     }
 
   private:
+    bool enabled_;
     ErasedNode signal_;
     std::size_t signal_delay_;
     ErasedNode price_;
@@ -353,14 +366,19 @@ public:
       self.entry_ = std::move(entry);
     }
 
-    auto exit(this const Position& self) noexcept -> const Exit&
+    auto exits(this const Position& self) noexcept -> const std::vector<Exit>&
     {
-      return self.exit_;
+      return self.exits_;
     }
 
-    void exit(this Position& self, Exit exit) noexcept
+    auto exits(this Position& self) noexcept -> std::vector<Exit>&
     {
-      self.exit_ = std::move(exit);
+      return self.exits_;
+    }
+
+    void exits(this Position& self, std::vector<Exit> exits) noexcept
+    {
+      self.exits_ = std::move(exits);
     }
 
     auto pyramiding(this const Position& self) noexcept -> const Pyramiding&
@@ -402,7 +420,7 @@ public:
 
   private:
     Entry entry_;
-    Exit exit_;
+    std::vector<Exit> exits_;
     Pyramiding pyramiding_;
     std::vector<TakeProfit> take_profits_;
     StopLoss stop_loss_;

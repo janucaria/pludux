@@ -1286,34 +1286,69 @@ private:
       ImGui::PopID();
     }
     {
-      ImGui::Separator();
-      ImGui::Text("Exit:");
-      ImGui::PushID("exit");
-      auto exit = position.exit();
-      auto changed_node = self.render_condition_node(exit.signal(), context);
-      exit.signal(std::move(changed_node));
-      auto signal_delay = static_cast<int>(exit.signal_delay());
-      ImGui::Text("Signal Delay:");
-      ImGui::SameLine();
-      if(ImGui::InputInt("##signal_delay", &signal_delay)) {
-        if(signal_delay < 0) {
-          signal_delay = 0;
-        }
-        exit.signal_delay(static_cast<std::size_t>(signal_delay));
+      ImGui::SeparatorText("Signal Exits");
+      ImGui::PushID("signal_exits");
+      auto exits = position.exits();
+      if(ImGui::Button("Add Signal Exit")) {
+        exits.emplace_back();
       }
-      ImGui::Text("Exit Price:");
-      ImGui::SameLine();
-      auto price = exit.price();
-      ImGui::PushID("price");
-      self.render_series_node(price, context);
-      ImGui::PopID();
-      exit.price(std::move(price));
 
-      ImGui::PushID("reduce");
-      const auto reduce = self.render_position_reduction(exit.reduce());
-      ImGui::PopID();
-      exit.reduce(reduce);
-      position.exit(std::move(exit));
+      for(auto index = std::size_t{0}; index < exits.size(); ++index) {
+        ImGui::PushID(static_cast<int>(index));
+        ImGui::Separator();
+        ImGui::Text("Signal Exit %zu", index + 1);
+
+        if(ImGui::Button("Move Up") && index > 0) {
+          std::swap(exits[index], exits[index - 1]);
+          ImGui::PopID();
+          break;
+        }
+        ImGui::SameLine();
+        if(ImGui::Button("Move Down") && index + 1 < exits.size()) {
+          std::swap(exits[index], exits[index + 1]);
+          ImGui::PopID();
+          break;
+        }
+        ImGui::SameLine();
+        if(ImGui::Button("Remove")) {
+          exits.erase(exits.begin() + static_cast<std::ptrdiff_t>(index));
+          ImGui::PopID();
+          break;
+        }
+
+        auto& exit = exits[index];
+        auto enabled = exit.enabled();
+        ImGui::Checkbox("Enabled", &enabled);
+        exit.enabled(enabled);
+
+        ImGui::BeginDisabled(!enabled);
+        auto changed_node = self.render_condition_node(exit.signal(), context);
+        exit.signal(std::move(changed_node));
+        auto signal_delay = static_cast<int>(exit.signal_delay());
+        ImGui::Text("Signal Delay:");
+        ImGui::SameLine();
+        if(ImGui::InputInt("##signal_delay", &signal_delay)) {
+          if(signal_delay < 0) {
+            signal_delay = 0;
+          }
+          exit.signal_delay(static_cast<std::size_t>(signal_delay));
+        }
+        ImGui::Text("Exit Price:");
+        ImGui::SameLine();
+        auto price = exit.price();
+        ImGui::PushID("price");
+        self.render_series_node(price, context);
+        ImGui::PopID();
+        exit.price(std::move(price));
+
+        ImGui::PushID("reduce");
+        exit.reduce(self.render_position_reduction(exit.reduce()));
+        ImGui::PopID();
+        ImGui::EndDisabled();
+        ImGui::PopID();
+      }
+
+      position.exits(std::move(exits));
       ImGui::PopID();
     }
     {

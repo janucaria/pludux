@@ -73,51 +73,54 @@
           }
         }
       },
-      "exit": {
-        "signalDelay": 1,
-        "price": "OPEN",
-        "signal": {
-          "method": "ALL_OF",
-          "params": {
-            "items": [
-              {
-                "method": "CROSSUNDER",
-                "params": {
-                  "value": {
-                    "method": "SERIES",
-                    "params": {
-                      "name": "stoch_rsi_k"
+      "exits": [
+        {
+          "enabled": true,
+          "signalDelay": 1,
+          "price": "OPEN",
+          "signal": {
+            "method": "ALL_OF",
+            "params": {
+              "items": [
+                {
+                  "method": "CROSSUNDER",
+                  "params": {
+                    "value": {
+                      "method": "SERIES",
+                      "params": {
+                        "name": "stoch_rsi_k"
+                      }
+                    },
+                    "baseline": {
+                      "method": "SERIES",
+                      "params": {
+                        "name": "stoch_rsi_d"
+                      }
                     }
-                  },
-                  "baseline": {
-                    "method": "SERIES",
-                    "params": {
-                      "name": "stoch_rsi_d"
+                  }
+                },
+                {
+                  "method": "GREATER_THAN",
+                  "params": {
+                    "target": {
+                      "method": "SERIES",
+                      "params": {
+                        "name": "stoch_rsi_k"
+                      }
+                    },
+                    "threshold": {
+                      "method": "SERIES",
+                      "params": {
+                        "name": "overbought"
+                      }
                     }
                   }
                 }
-              },
-              {
-                "method": "GREATER_THAN",
-                "params": {
-                  "target": {
-                    "method": "SERIES",
-                    "params": {
-                      "name": "stoch_rsi_k"
-                    }
-                  },
-                  "threshold": {
-                    "method": "SERIES",
-                    "params": {
-                      "name": "overbought"
-                    }
-                  }
-                }
-              }
-            ]
+              ]
+            }
           }
         }
-      },
+      ],
       "stopLoss": {
         "enabled": true,
         "trailing": false,

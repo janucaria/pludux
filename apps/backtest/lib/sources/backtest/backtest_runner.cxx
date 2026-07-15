@@ -24,6 +24,7 @@ import :profile;
 import :trade_entry;
 import :trade_exit;
 import :take_profit_level;
+import :signal_exit_state;
 import :closed_trade;
 import :open_position_snapshot;
 import :trade_event;
@@ -41,6 +42,56 @@ class BacktestRunner {
 public:
   class PositionRule {
   public:
+    class SignalExitRule {
+    public:
+      SignalExitRule(bool enabled = false,
+                     AnySeriesMethod signal_method = BooleanMethod<false>{},
+                     std::size_t signal_delay = 1,
+                     AnySeriesMethod price_method = OpenMethod{},
+                     double reduce = 1.0)
+      : enabled_{enabled}
+      , signal_method_{std::move(signal_method)}
+      , signal_delay_{signal_delay}
+      , price_method_{std::move(price_method)}
+      , reduce_{reduce}
+      {
+      }
+
+      auto enabled(this const SignalExitRule& self) noexcept -> bool
+      {
+        return self.enabled_;
+      }
+
+      auto signal_method(this const SignalExitRule& self) noexcept
+       -> const AnySeriesMethod&
+      {
+        return self.signal_method_;
+      }
+
+      auto signal_delay(this const SignalExitRule& self) noexcept -> std::size_t
+      {
+        return self.signal_delay_;
+      }
+
+      auto price_method(this const SignalExitRule& self) noexcept
+       -> const AnySeriesMethod&
+      {
+        return self.price_method_;
+      }
+
+      auto reduce(this const SignalExitRule& self) noexcept -> double
+      {
+        return self.reduce_;
+      }
+
+    private:
+      bool enabled_;
+      AnySeriesMethod signal_method_;
+      std::size_t signal_delay_;
+      AnySeriesMethod price_method_;
+      double reduce_;
+    };
+
     class TakeProfitRule {
     public:
       TakeProfitRule(AnySeriesMethod price_method = OpenMethod{},
@@ -77,7 +128,7 @@ public:
     PositionRule() = default;
 
     PositionRule(AnySeriesMethod entry_method,
-                 AnySeriesMethod exit_method,
+                 std::vector<SignalExitRule> signal_exits,
                  AnySeriesMethod pyramiding_signal,
                  std::size_t pyramiding_max_layers,
                  AnySeriesMethod stop_price_method,
@@ -85,19 +136,16 @@ public:
                  bool stop_loss_trailing_enabled,
                  std::size_t entry_signal_delay = 1,
                  AnySeriesMethod entry_price_method = OpenMethod{},
-                 std::size_t exit_signal_delay = 1,
-                 AnySeriesMethod exit_price_method = OpenMethod{},
                  std::size_t pyramiding_signal_delay = 1,
                  AnySeriesMethod pyramiding_price_method = OpenMethod{},
                  StopTargetReferencePrice favorable_stop_target_reference =
                   StopTargetReferencePrice::AveragePrice,
                  StopTargetReferencePrice unfavorable_stop_target_reference =
                   StopTargetReferencePrice::AveragePrice,
-                 double signal_exit_reduce = 1.0,
                  double stop_loss_reduce = 1.0,
                  std::vector<TakeProfitRule> take_profits = {})
     : entry_method_{std::move(entry_method)}
-    , exit_method_{std::move(exit_method)}
+    , signal_exits_{std::move(signal_exits)}
     , pyramiding_signal_{std::move(pyramiding_signal)}
     , pyramiding_max_layers_{pyramiding_max_layers}
     , stop_price_method_{std::move(stop_price_method)}
@@ -105,13 +153,10 @@ public:
     , stop_loss_trailing_enabled_{stop_loss_trailing_enabled}
     , entry_signal_delay_{entry_signal_delay}
     , entry_price_method_{std::move(entry_price_method)}
-    , exit_signal_delay_{exit_signal_delay}
-    , exit_price_method_{std::move(exit_price_method)}
     , pyramiding_signal_delay_{pyramiding_signal_delay}
     , pyramiding_price_method_{std::move(pyramiding_price_method)}
     , favorable_stop_target_reference_{favorable_stop_target_reference}
     , unfavorable_stop_target_reference_{unfavorable_stop_target_reference}
-    , signal_exit_reduce_{signal_exit_reduce}
     , stop_loss_reduce_{stop_loss_reduce}
     , take_profits_{std::move(take_profits)}
     {
@@ -123,10 +168,10 @@ public:
       return self.entry_method_;
     }
 
-    auto exit_method(this const PositionRule& self) noexcept
-     -> const AnySeriesMethod&
+    auto signal_exits(this const PositionRule& self) noexcept
+     -> const std::vector<SignalExitRule>&
     {
-      return self.exit_method_;
+      return self.signal_exits_;
     }
 
     auto pyramiding_signal(this const PositionRule& self) noexcept
@@ -170,18 +215,6 @@ public:
       return self.entry_price_method_;
     }
 
-    auto exit_signal_delay(this const PositionRule& self) noexcept
-     -> std::size_t
-    {
-      return self.exit_signal_delay_;
-    }
-
-    auto exit_price_method(this const PositionRule& self) noexcept
-     -> const AnySeriesMethod&
-    {
-      return self.exit_price_method_;
-    }
-
     auto pyramiding_signal_delay(this const PositionRule& self) noexcept
      -> std::size_t
     {
@@ -207,11 +240,6 @@ public:
       return self.unfavorable_stop_target_reference_;
     }
 
-    auto signal_exit_reduce(this const PositionRule& self) noexcept -> double
-    {
-      return self.signal_exit_reduce_;
-    }
-
     auto stop_loss_reduce(this const PositionRule& self) noexcept -> double
     {
       return self.stop_loss_reduce_;
@@ -225,7 +253,7 @@ public:
 
   private:
     AnySeriesMethod entry_method_{BooleanMethod<false>{}};
-    AnySeriesMethod exit_method_{BooleanMethod<false>{}};
+    std::vector<SignalExitRule> signal_exits_;
     AnySeriesMethod pyramiding_signal_{BooleanMethod<false>{}};
     std::size_t pyramiding_max_layers_{1};
     AnySeriesMethod stop_price_method_{OpenMethod{}};
@@ -233,15 +261,12 @@ public:
     bool stop_loss_trailing_enabled_{false};
     std::size_t entry_signal_delay_{1};
     AnySeriesMethod entry_price_method_{OpenMethod{}};
-    std::size_t exit_signal_delay_{1};
-    AnySeriesMethod exit_price_method_{OpenMethod{}};
     std::size_t pyramiding_signal_delay_{1};
     AnySeriesMethod pyramiding_price_method_{OpenMethod{}};
     StopTargetReferencePrice favorable_stop_target_reference_{
      StopTargetReferencePrice::AveragePrice};
     StopTargetReferencePrice unfavorable_stop_target_reference_{
      StopTargetReferencePrice::AveragePrice};
-    double signal_exit_reduce_{1.0};
     double stop_loss_reduce_{1.0};
     std::vector<TakeProfitRule> take_profits_;
   };
@@ -478,12 +503,10 @@ private:
   std::size_t pyramiding_layers_;
 
   bool is_failed_;
-  bool signal_exit_consumed_{};
   bool stop_loss_consumed_{};
 
   void reset_consumed_exits(this BacktestRunner& self) noexcept
   {
-    self.signal_exit_consumed_ = false;
     self.stop_loss_consumed_ = false;
   }
 
@@ -492,7 +515,6 @@ private:
   {
     switch(reason) {
     case TradeExit::Reason::signal:
-      self.signal_exit_consumed_ = true;
       break;
     case TradeExit::Reason::stop_loss:
       self.stop_loss_consumed_ = true;
@@ -849,12 +871,25 @@ private:
       levels.emplace_back(target_price, take_profit.enabled(), consumed);
     }
 
+    const auto previous_exit_states = open_position.signal_exit_states();
+    auto exit_states = std::vector<SignalExitState>{};
+    exit_states.reserve(position.signal_exits().size());
+    for(auto index = std::size_t{0}; index < position.signal_exits().size();
+        ++index) {
+      const auto consumed = index < previous_exit_states.size()
+                             ? previous_exit_states[index].consumed()
+                             : false;
+      exit_states.emplace_back(position.signal_exits()[index].enabled(),
+                               consumed);
+    }
+
     open_position.stop_price(stop_price);
     open_position.stop_loss_price(position.stop_loss_enabled() ? stop_price
                                                                : NAN);
     open_position.stop_loss_trailing_enabled(
      position.stop_loss_trailing_enabled());
     open_position.take_profit_levels(std::move(levels));
+    open_position.signal_exit_states(std::move(exit_states));
   }
 
   auto entry_long_trade(this const BacktestRunner& self,
@@ -947,7 +982,8 @@ private:
                   double exit_price,
                   TradeExit::Reason reason,
                   double reduce,
-                  std::optional<std::size_t> take_profit_index = std::nullopt)
+                  std::optional<std::size_t> take_profit_index = std::nullopt,
+                  std::optional<std::size_t> signal_exit_index = std::nullopt)
    -> std::optional<TradeExit>
   {
     if(!std::isfinite(reduce) || reduce <= 0.0 || reduce > 1.0) {
@@ -995,8 +1031,11 @@ private:
 
     exit_quantity = std::min(exit_quantity, remaining_quantity);
     const auto direction = remaining_position_size > 0.0 ? 1.0 : -1.0;
-    return TradeExit{
-     direction * exit_quantity, exit_price, reason, take_profit_index};
+    return TradeExit{direction * exit_quantity,
+                     exit_price,
+                     reason,
+                     take_profit_index,
+                     signal_exit_index};
   }
 
   auto exit_trade(this BacktestRunner& self,
@@ -1006,7 +1045,6 @@ private:
   {
     const auto position_size = position.unrealized_position_size();
     const auto is_long_direction = position_size > 0;
-    const auto is_short_direction = position_size < 0;
     const auto& position_rule =
      is_long_direction ? self.long_position_ : self.short_position_;
     const auto open_exit_price = asset_snapshot.open();
@@ -1051,29 +1089,28 @@ private:
       }
     }
 
-    if(!self.signal_exit_consumed_ && is_long_direction) {
-      const auto signal_snapshot =
-       asset_snapshot[self.long_position_.exit_signal_delay()];
-      if(static_cast<bool>(evaluate_series_method(
-          self.long_position_.exit_method(), signal_snapshot, context))) {
-        const auto exit_price = evaluate_series_method(
-         self.long_position_.exit_price_method(), asset_snapshot, context);
-        return self.make_exit_trade(position_size,
-                                    exit_price,
-                                    TradeExit::Reason::signal,
-                                    self.long_position_.signal_exit_reduce());
+    for(auto index = std::size_t{0};
+        index < position_rule.signal_exits().size();
+        ++index) {
+      if(index >= position.signal_exit_states().size() ||
+         !position.signal_exit_states()[index].active()) {
+        continue;
       }
-    } else if(!self.signal_exit_consumed_ && is_short_direction) {
-      const auto signal_snapshot =
-       asset_snapshot[self.short_position_.exit_signal_delay()];
-      if(static_cast<bool>(evaluate_series_method(
-          self.short_position_.exit_method(), signal_snapshot, context))) {
-        const auto exit_price = evaluate_series_method(
-         self.short_position_.exit_price_method(), asset_snapshot, context);
-        return self.make_exit_trade(position_size,
-                                    exit_price,
-                                    TradeExit::Reason::signal,
-                                    self.short_position_.signal_exit_reduce());
+      const auto& signal_exit = position_rule.signal_exits()[index];
+      const auto signal_snapshot = asset_snapshot[signal_exit.signal_delay()];
+      if(!static_cast<bool>(evaluate_series_method(
+          signal_exit.signal_method(), signal_snapshot, context))) {
+        continue;
+      }
+      const auto exit_price = evaluate_series_method(
+       signal_exit.price_method(), asset_snapshot, context);
+      if(auto exit = self.make_exit_trade(position_size,
+                                          exit_price,
+                                          TradeExit::Reason::signal,
+                                          signal_exit.reduce(),
+                                          std::nullopt,
+                                          index)) {
+        return exit;
       }
     }
 

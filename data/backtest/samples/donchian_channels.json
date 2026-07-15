@@ -87,33 +87,36 @@
           }
         }
       },
-      "exit": {
-        "signalDelay": 1,
-        "price": "OPEN",
-        "signal": {
-          "method": "LESS_THAN",
-          "params": {
-            "target": {
-              "method": "SERIES",
-              "params": {
-                "name": "dc_upper10"
-              }
-            },
-            "threshold": {
-              "method": "LOOKBACK",
-              "params": {
-                "period": 1,
-                "source": {
-                  "method": "SERIES",
-                  "params": {
-                    "name": "dc_upper10"
+      "exits": [
+        {
+          "enabled": true,
+          "signalDelay": 1,
+          "price": "OPEN",
+          "signal": {
+            "method": "LESS_THAN",
+            "params": {
+              "target": {
+                "method": "SERIES",
+                "params": {
+                  "name": "dc_upper10"
+                }
+              },
+              "threshold": {
+                "method": "LOOKBACK",
+                "params": {
+                  "period": 1,
+                  "source": {
+                    "method": "SERIES",
+                    "params": {
+                      "name": "dc_upper10"
+                    }
                   }
                 }
               }
             }
           }
         }
-      },
+      ],
       "stopLoss": {
         "enabled": false,
         "trailing": false,

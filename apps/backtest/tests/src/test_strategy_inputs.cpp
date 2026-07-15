@@ -47,6 +47,13 @@ TEST(StrategyInputsTest, CollectsNumericInputsInStrategyTraversalOrder)
    1,
    NumericInputNode{
     "Entry Price", NumericInputNode::ValueRepresentation::Decimal, 101.0}});
+  long_position.exits({Strategy::Exit{
+   true,
+   NumericInputNode{
+    "Exit Signal", NumericInputNode::ValueRepresentation::Decimal, 6.0},
+   1,
+   NumericInputNode{
+    "Exit Price", NumericInputNode::ValueRepresentation::Decimal, 110.0}}});
   long_position.pyramiding(std::move(long_pyramiding));
   long_position.stop_loss(Strategy::StopLoss{
    false,
@@ -66,7 +73,7 @@ TEST(StrategyInputsTest, CollectsNumericInputsInStrategyTraversalOrder)
 
   const auto inputs = collect_numeric_inputs(strategy);
 
-  ASSERT_EQ(inputs.size(), 10);
+  ASSERT_EQ(inputs.size(), 12);
   EXPECT_EQ(inputs[0].label(), "Duplicate");
   EXPECT_DOUBLE_EQ(inputs[0].value(), 1.5);
   EXPECT_EQ(inputs[1].label(), "Duplicate");
@@ -81,12 +88,16 @@ TEST(StrategyInputsTest, CollectsNumericInputsInStrategyTraversalOrder)
   EXPECT_DOUBLE_EQ(inputs[5].value(), 4.8);
   EXPECT_EQ(inputs[6].label(), "Entry Price");
   EXPECT_DOUBLE_EQ(inputs[6].value(), 101.0);
-  EXPECT_EQ(inputs[7].label(), "Long Pyramid");
-  EXPECT_DOUBLE_EQ(inputs[7].value(), 3.5);
-  EXPECT_EQ(inputs[8].label(), "Stop Price");
-  EXPECT_DOUBLE_EQ(inputs[8].value(), 95.0);
-  EXPECT_EQ(inputs[9].label(), "Target Price");
-  EXPECT_DOUBLE_EQ(inputs[9].value(), 120.0);
+  EXPECT_EQ(inputs[7].label(), "Exit Signal");
+  EXPECT_DOUBLE_EQ(inputs[7].value(), 6.0);
+  EXPECT_EQ(inputs[8].label(), "Exit Price");
+  EXPECT_DOUBLE_EQ(inputs[8].value(), 110.0);
+  EXPECT_EQ(inputs[9].label(), "Long Pyramid");
+  EXPECT_DOUBLE_EQ(inputs[9].value(), 3.5);
+  EXPECT_EQ(inputs[10].label(), "Stop Price");
+  EXPECT_DOUBLE_EQ(inputs[10].value(), 95.0);
+  EXPECT_EQ(inputs[11].label(), "Target Price");
+  EXPECT_DOUBLE_EQ(inputs[11].value(), 120.0);
 }
 
 TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
@@ -100,12 +111,22 @@ TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
           "price": "CLOSE",
           "signal": true
         },
-        "exit": {
-          "signalDelay": 0,
-          "price": "CLOSE",
-          "signal": false,
-          "reduce": 0.25
-        },
+        "exits": [
+          {
+            "enabled": true,
+            "signalDelay": 0,
+            "price": "CLOSE",
+            "signal": false,
+            "reduce": 0.25
+          },
+          {
+            "enabled": false,
+            "signalDelay": 1,
+            "price": "OPEN",
+            "signal": true,
+            "reduce": 0.5
+          }
+        ],
         "stopLoss": {
           "enabled": true,
           "trailing": true,
@@ -144,9 +165,13 @@ TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
   EXPECT_TRUE(strategy.long_position().stop_loss().enabled());
   EXPECT_EQ(strategy.long_position().entry().signal_delay(), 0);
   EXPECT_TRUE(node_cast<CloseNode>(strategy.long_position().entry().price()));
-  EXPECT_EQ(strategy.long_position().exit().signal_delay(), 0);
-  EXPECT_TRUE(node_cast<CloseNode>(strategy.long_position().exit().price()));
-  EXPECT_DOUBLE_EQ(strategy.long_position().exit().reduce(), 0.25);
+  ASSERT_EQ(strategy.long_position().exits().size(), 2);
+  EXPECT_TRUE(strategy.long_position().exits()[0].enabled());
+  EXPECT_EQ(strategy.long_position().exits()[0].signal_delay(), 0);
+  EXPECT_TRUE(
+   node_cast<CloseNode>(strategy.long_position().exits()[0].price()));
+  EXPECT_DOUBLE_EQ(strategy.long_position().exits()[0].reduce(), 0.25);
+  EXPECT_FALSE(strategy.long_position().exits()[1].enabled());
   EXPECT_EQ(strategy.long_position().pyramiding().signal_delay(), 0);
   EXPECT_TRUE(
    node_cast<CloseNode>(strategy.long_position().pyramiding().price()));
@@ -174,7 +199,8 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
 {
   auto long_position = Strategy::Position{};
   long_position.entry(Strategy::Entry{TrueNode{}, 0, CloseNode{}});
-  long_position.exit(Strategy::Exit{FalseNode{}, 0, CloseNode{}, 0.25});
+  long_position.exits(
+   {Strategy::Exit{true, FalseNode{}, 0, CloseNode{}, 0.25}});
   auto pyramiding = Strategy::Pyramiding{};
   pyramiding.signal_delay(0);
   pyramiding.price(CloseNode{});
@@ -219,7 +245,8 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
             "CLOSE");
   EXPECT_DOUBLE_EQ(strategy_json.at("positions")
                     .at("long")
-                    .at("exit")
+                    .at("exits")
+                    .at(0)
                     .at("reduce")
                     .as<double>(),
                    0.25);
@@ -238,7 +265,8 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
                    0.75);
   EXPECT_FALSE(strategy_json.at("positions")
                 .at("long")
-                .at("exit")
+                .at("exits")
+                .at(0)
                 .contains("reduceRounding"));
   EXPECT_FALSE(strategy_json.at("positions")
                 .at("long")
@@ -251,13 +279,15 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
                 .contains("reduceRounding"));
   EXPECT_EQ(strategy_json.at("positions")
              .at("long")
-             .at("exit")
+             .at("exits")
+             .at(0)
              .at("signalDelay")
              .as<std::size_t>(),
             0);
   EXPECT_EQ(strategy_json.at("positions")
              .at("long")
-             .at("exit")
+             .at("exits")
+             .at(0)
              .at("price")
              .at("method")
              .as<std::string>(),
@@ -316,7 +346,7 @@ TEST(StrategyParserTest, JsonconsConvTraitsRoundTripSchemaConfig)
   EXPECT_TRUE(decoded_strategy.equivalent_rules(strategy));
 }
 
-TEST(StrategyParserTest, DefaultStopLossAndEmptyTakeProfits)
+TEST(StrategyParserTest, DefaultStopLossAndEmptyExitCollections)
 {
   const auto strategy = Strategy{};
 
@@ -328,6 +358,16 @@ TEST(StrategyParserTest, DefaultStopLossAndEmptyTakeProfits)
   EXPECT_DOUBLE_EQ(stop_multiplier->value(), 2.0);
 
   EXPECT_TRUE(strategy.long_position().take_profits().empty());
+  EXPECT_TRUE(strategy.long_position().exits().empty());
+}
+
+TEST(StrategyParserTest, RejectsLegacySingularExit)
+{
+  EXPECT_THROW(
+   parse_backtest_strategy_json(
+    "Legacy",
+    R"({"version":2,"positions":{"long":{"exit":{"signal":false,"signalDelay":1,"price":"OPEN"},"stopLoss":{"stopPrice":"OPEN"}},"short":false}})"),
+   std::runtime_error);
 }
 
 TEST(StrategyParserTest, RejectsLegacySingularTakeProfit)

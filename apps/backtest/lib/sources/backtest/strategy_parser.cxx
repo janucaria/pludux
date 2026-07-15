@@ -93,12 +93,32 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
   }
 
   if(position_json.contains("exit")) {
-    const auto& exit_json = position_json.at("exit");
-    position.exit(
-     Strategy::Exit{config_parser.parse_node(exit_json.at("signal")),
-                    exit_json.at("signalDelay").as<std::size_t>(),
-                    config_parser.parse_node(exit_json.at("price")),
-                    parse_reduce(exit_json)});
+    throw std::runtime_error{
+     "Invalid position configuration in strategy JSON: 'exit' was replaced "
+     "by the 'exits' array"};
+  }
+
+  if(position_json.contains("exits")) {
+    const auto& exits_json = position_json.at("exits");
+    if(!exits_json.is_array()) {
+      throw std::runtime_error{
+       "Invalid exits configuration in strategy JSON: expected an array"};
+    }
+
+    auto exits = std::vector<Strategy::Exit>{};
+    exits.reserve(exits_json.size());
+    for(const auto& exit_json : exits_json.array_range()) {
+      if(!exit_json.is_object() || !exit_json.contains("signal") ||
+         !exit_json.contains("signalDelay") || !exit_json.contains("price")) {
+        throw std::runtime_error{"Invalid exits item in strategy JSON"};
+      }
+      exits.emplace_back(exit_json.get_value_or<bool>("enabled", false),
+                         config_parser.parse_node(exit_json.at("signal")),
+                         exit_json.at("signalDelay").as<std::size_t>(),
+                         config_parser.parse_node(exit_json.at("price")),
+                         parse_reduce(exit_json));
+    }
+    position.exits(std::move(exits));
   }
 
   if(position_json.contains("pyramiding")) {
@@ -188,13 +208,16 @@ auto serialize_strategy_position(const Strategy::Position& position,
   position_json["entry"]["price"] =
    config_parser.serialize_node(position.entry().price());
 
-  position_json["exit"] = jsoncons::ojson{};
-  position_json["exit"]["signal"] =
-   config_parser.serialize_node(position.exit().signal());
-  position_json["exit"]["signalDelay"] = position.exit().signal_delay();
-  position_json["exit"]["price"] =
-   config_parser.serialize_node(position.exit().price());
-  position_json["exit"]["reduce"] = position.exit().reduce();
+  position_json["exits"] = jsoncons::ojson::array();
+  for(const auto& exit : position.exits()) {
+    auto exit_json = jsoncons::ojson{};
+    exit_json["enabled"] = exit.enabled();
+    exit_json["signal"] = config_parser.serialize_node(exit.signal());
+    exit_json["signalDelay"] = exit.signal_delay();
+    exit_json["price"] = config_parser.serialize_node(exit.price());
+    exit_json["reduce"] = exit.reduce();
+    position_json["exits"].push_back(std::move(exit_json));
+  }
 
   position_json["pyramiding"] = jsoncons::ojson{};
   position_json["pyramiding"]["signal"] =

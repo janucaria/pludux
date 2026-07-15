@@ -209,6 +209,46 @@ TEST(TradeSessionTest, FullExitEmitsRecordAndClearsOpenPosition)
   EXPECT_EQ(session.unrealized_duration(), 0);
 }
 
+TEST(TradeSessionTest,
+     IndexedSignalExitStatePropagatesOnlyAfterSuccessfulExecution)
+{
+  auto session = TradeSession{static_cast<std::time_t>(20), 100.0, 1};
+
+  session.entry_position(TradeEntry{3.0, 100.0});
+  session.open_position()->signal_exit_states(
+   {SignalExitState{false}, SignalExitState{true}});
+  session.sync_latest_event_with_open_position();
+  session.begin_market_bar(static_cast<std::time_t>(25), 120.0, 5);
+
+  EXPECT_THROW(session.exit_position(TradeExit{
+                1.0, 130.0, TradeExit::Reason::signal, std::nullopt, 2}),
+               std::runtime_error);
+  ASSERT_TRUE(session.open_position());
+  EXPECT_DOUBLE_EQ(session.open_position()->position_size(), 3.0);
+  EXPECT_FALSE(session.open_position()->signal_exit_states()[1].consumed());
+  EXPECT_TRUE(session.trade_events().empty());
+
+  session.exit_position(
+   TradeExit{1.0, 130.0, TradeExit::Reason::signal, std::nullopt, 1});
+
+  ASSERT_TRUE(session.open_position());
+  EXPECT_TRUE(session.open_position()->signal_exit_states()[1].consumed());
+  ASSERT_EQ(session.trade_events().size(), 1);
+  EXPECT_TRUE(
+   session.trade_events().front().signal_exit_states()[1].consumed());
+  const auto snapshot = session.open_position_snapshot();
+  ASSERT_TRUE(snapshot);
+  EXPECT_TRUE(snapshot->signal_exit_states()[1].consumed());
+
+  session.begin_market_bar(static_cast<std::time_t>(30), 140.0, 6);
+  session.exit_position(TradeExit{2.0, 140.0, TradeExit::Reason::signal});
+
+  ASSERT_EQ(session.closed_trades().size(), 1);
+  ASSERT_EQ(session.closed_trades().front().signal_exit_states().size(), 2);
+  EXPECT_TRUE(
+   session.closed_trades().front().signal_exit_states()[1].consumed());
+}
+
 TEST(TradePositionTest, UpdatesTrailingStopAndChecksTriggers)
 {
   auto position = TradePosition{

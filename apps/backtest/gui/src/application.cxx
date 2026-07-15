@@ -371,6 +371,17 @@ private:
 
     const auto make_position_rule =
      [&input_context](const backtest::Strategy::Position& position) {
+       auto signal_exits =
+        std::vector<backtest::BacktestRunner::PositionRule::SignalExitRule>{};
+       signal_exits.reserve(position.exits().size());
+       for(const auto& exit : position.exits()) {
+         signal_exits.emplace_back(
+          exit.enabled(),
+          node_to_erased_method(exit.signal(), input_context),
+          exit.signal_delay(),
+          node_to_erased_method(exit.price(), input_context),
+          exit.reduce());
+       }
        auto take_profits =
         std::vector<backtest::BacktestRunner::PositionRule::TakeProfitRule>{};
        take_profits.reserve(position.take_profits().size());
@@ -382,7 +393,7 @@ private:
        }
        return backtest::BacktestRunner::PositionRule{
         node_to_erased_method(position.entry().signal(), input_context),
-        node_to_erased_method(position.exit().signal(), input_context),
+        std::move(signal_exits),
         node_to_erased_method(position.pyramiding().signal(), input_context),
         position.pyramiding().max_layers(),
         node_to_erased_method(position.stop_loss().stop_price(), input_context),
@@ -390,13 +401,10 @@ private:
         position.stop_loss().trailing(),
         position.entry().signal_delay(),
         node_to_erased_method(position.entry().price(), input_context),
-        position.exit().signal_delay(),
-        node_to_erased_method(position.exit().price(), input_context),
         position.pyramiding().signal_delay(),
         node_to_erased_method(position.pyramiding().price(), input_context),
         position.pyramiding().favorable_stop_target_reference(),
         position.pyramiding().unfavorable_stop_target_reference(),
-        position.exit().reduce(),
         position.stop_loss().reduce(),
         std::move(take_profits)};
      };

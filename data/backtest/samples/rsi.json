@@ -54,27 +54,30 @@
           }
         }
       },
-      "exit": {
-        "signalDelay": 1,
-        "price": "OPEN",
-        "signal": {
-          "method": "CROSSOVER",
-          "params": {
-            "value": {
-              "method": "SERIES",
-              "params": {
-                "name": "rsi"
-              }
-            },
-            "baseline": {
-              "method": "SERIES",
-              "params": {
-                "name": "overbought"
+      "exits": [
+        {
+          "enabled": true,
+          "signalDelay": 1,
+          "price": "OPEN",
+          "signal": {
+            "method": "CROSSOVER",
+            "params": {
+              "value": {
+                "method": "SERIES",
+                "params": {
+                  "name": "rsi"
+                }
+              },
+              "baseline": {
+                "method": "SERIES",
+                "params": {
+                  "name": "overbought"
+                }
               }
             }
           }
         }
-      },
+      ],
       "stopLoss": {
         "enabled": false,
         "trailing": false,

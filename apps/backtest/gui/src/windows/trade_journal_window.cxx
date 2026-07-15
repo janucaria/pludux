@@ -1,6 +1,7 @@
 module;
 
 #include <array>
+#include <cstddef>
 #include <string>
 
 #include <imgui.h>
@@ -35,6 +36,7 @@ public:
                                           "Exit Date",
                                           "Entry Price",
                                           "Exit Price",
+                                          "Signal Exits",
                                           "Take Profit",
                                           "Stop Loss",
                                           "Avg Price",
@@ -110,6 +112,23 @@ private:
     return result.empty() ? "N/A" : result;
   }
 
+  static auto format_signal_exits(const auto& states) -> std::string
+  {
+    auto result = std::string{};
+    for(auto index = std::size_t{0}; index < states.size(); ++index) {
+      if(!result.empty()) {
+        result += ", ";
+      }
+      result += std::to_string(index + 1);
+      if(!states[index].enabled()) {
+        result += " (disabled)";
+      } else if(states[index].consumed()) {
+        result += " (used)";
+      }
+    }
+    return result.empty() ? "N/A" : result;
+  }
+
   static void draw_closed_trade_row(const backtest::ClosedTrade& trade)
   {
     ImGui::TableNextRow();
@@ -130,6 +149,8 @@ private:
     ImGui::Text("%s", format_currency(trade.entry_price()).c_str());
     ImGui::TableNextColumn();
     ImGui::Text("%s", format_currency(trade.exit_price()).c_str());
+    ImGui::TableNextColumn();
+    ImGui::Text("%s", format_signal_exits(trade.signal_exit_states()).c_str());
     ImGui::TableNextColumn();
     ImGui::Text("%s", format_take_profits(trade.take_profit_levels()).c_str());
     ImGui::TableNextColumn();
@@ -169,6 +190,8 @@ private:
     ImGui::Text("%s", format_currency(trade.entry_price()).c_str());
     ImGui::TableNextColumn();
     ImGui::Text("N/A");
+    ImGui::TableNextColumn();
+    ImGui::Text("%s", format_signal_exits(trade.signal_exit_states()).c_str());
     ImGui::TableNextColumn();
     ImGui::Text("%s", format_take_profits(trade.take_profit_levels()).c_str());
     ImGui::TableNextColumn();

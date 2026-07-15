@@ -53,27 +53,30 @@
           }
         }
       },
-      "exit": {
-        "signalDelay": 1,
-        "price": "OPEN",
-        "signal": {
-          "method": "CROSSUNDER",
-          "params": {
-            "value": {
-              "method": "SERIES",
-              "params": {
-                "name": "ma_fast"
-              }
-            },
-            "baseline": {
-              "method": "SERIES",
-              "params": {
-                "name": "ma_slow"
+      "exits": [
+        {
+          "enabled": true,
+          "signalDelay": 1,
+          "price": "OPEN",
+          "signal": {
+            "method": "CROSSUNDER",
+            "params": {
+              "value": {
+                "method": "SERIES",
+                "params": {
+                  "name": "ma_fast"
+                }
+              },
+              "baseline": {
+                "method": "SERIES",
+                "params": {
+                  "name": "ma_slow"
+                }
               }
             }
           }
         }
-      },
+      ],
       "stopLoss": {
         "enabled": true,
         "trailing": false,

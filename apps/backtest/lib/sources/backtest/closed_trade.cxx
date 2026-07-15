@@ -10,6 +10,7 @@ export module pludux.backtest:closed_trade;
 
 import :trade_event;
 import :take_profit_level;
+import :signal_exit_state;
 
 export namespace pludux::backtest {
 
@@ -30,7 +31,8 @@ public:
               double total_exit_fees,
               double stop_price,
               double stop_loss_price,
-              std::vector<TakeProfitLevel> take_profit_levels = {})
+              std::vector<TakeProfitLevel> take_profit_levels = {},
+              std::vector<SignalExitState> signal_exit_states = {})
   : trade_id_{trade_id}
   , exit_event_id_{exit_event_id}
   , exit_type_{exit_type}
@@ -45,6 +47,7 @@ public:
   , stop_price_{stop_price}
   , stop_loss_price_{stop_loss_price}
   , take_profit_levels_{std::move(take_profit_levels)}
+  , signal_exit_states_{std::move(signal_exit_states)}
   {
   }
 
@@ -121,6 +124,12 @@ public:
     return self.take_profit_levels_;
   }
 
+  auto signal_exit_states(this const ClosedTrade& self) noexcept
+   -> const std::vector<SignalExitState>&
+  {
+    return self.signal_exit_states_;
+  }
+
   auto average_price(this const ClosedTrade& self) noexcept -> double
   {
     return self.position_size_ ? self.investment_ / self.position_size_ : 0.0;
@@ -159,6 +168,7 @@ private:
   double stop_price_{};
   double stop_loss_price_{};
   std::vector<TakeProfitLevel> take_profit_levels_;
+  std::vector<SignalExitState> signal_exit_states_;
 };
 
 } // namespace pludux::backtest

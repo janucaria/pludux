@@ -14,6 +14,7 @@ import :closed_trade;
 import :open_position_snapshot;
 import :trade_event;
 import :take_profit_level;
+import :signal_exit_state;
 
 export namespace pludux::backtest {
 
@@ -168,6 +169,24 @@ public:
     self.take_profit_levels_ = std::move(levels);
   }
 
+  auto signal_exit_states(this const TradePosition& self) noexcept
+   -> const std::vector<SignalExitState>&
+  {
+    return self.signal_exit_states_;
+  }
+
+  auto signal_exit_states(this TradePosition& self) noexcept
+   -> std::vector<SignalExitState>&
+  {
+    return self.signal_exit_states_;
+  }
+
+  void signal_exit_states(this TradePosition& self,
+                          std::vector<SignalExitState> states) noexcept
+  {
+    self.signal_exit_states_ = std::move(states);
+  }
+
   auto entry_timestamp(this const TradePosition& self) noexcept -> std::time_t
   {
     return self.entry_timestamp_;
@@ -237,7 +256,8 @@ public:
                                 self.total_entry_fees(),
                                 self.stop_price(),
                                 self.stop_loss_price(),
-                                self.take_profit_levels()};
+                                self.take_profit_levels(),
+                                self.signal_exit_states()};
   }
 
   auto scaled_in(this TradePosition& self,
@@ -288,7 +308,8 @@ public:
                       self.average_price(),
                       self.stop_price(),
                       self.stop_loss_price(),
-                      self.take_profit_levels()};
+                      self.take_profit_levels(),
+                      self.signal_exit_states()};
   }
 
   auto scaled_out(this TradePosition& self,
@@ -345,7 +366,8 @@ public:
                       self.average_price(),
                       self.stop_price(),
                       self.stop_loss_price(),
-                      self.take_profit_levels()};
+                      self.take_profit_levels(),
+                      self.signal_exit_states()};
   }
 
   auto closed_trade(this const TradePosition& self,
@@ -370,7 +392,8 @@ public:
                        total_exit_fees,
                        self.stop_price(),
                        self.stop_loss_price(),
-                       self.take_profit_levels()};
+                       self.take_profit_levels(),
+                       self.signal_exit_states()};
   }
 
   void update_trailing_stop(this TradePosition& self,
@@ -441,6 +464,7 @@ private:
   double stop_price_;
   double stop_loss_price_;
   std::vector<TakeProfitLevel> take_profit_levels_;
+  std::vector<SignalExitState> signal_exit_states_;
   bool stop_loss_trailing_enabled_;
 
   std::time_t entry_timestamp_;

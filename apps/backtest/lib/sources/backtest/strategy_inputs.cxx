@@ -399,8 +399,12 @@ auto collect_numeric_inputs(const Strategy& strategy)
                                       const Strategy::Position& position) {
     collect_numeric_inputs_from_node(position.entry().signal(), inputs);
     collect_numeric_inputs_from_node(position.entry().price(), inputs);
-    collect_numeric_inputs_from_node(position.exit().signal(), inputs);
-    collect_numeric_inputs_from_node(position.exit().price(), inputs);
+    for(const auto& exit : position.exits()) {
+      if(exit.enabled()) {
+        collect_numeric_inputs_from_node(exit.signal(), inputs);
+        collect_numeric_inputs_from_node(exit.price(), inputs);
+      }
+    }
     collect_numeric_inputs_from_node(position.pyramiding().signal(), inputs);
     collect_numeric_inputs_from_node(position.pyramiding().price(), inputs);
     collect_numeric_inputs_from_node(position.stop_loss().stop_price(), inputs);

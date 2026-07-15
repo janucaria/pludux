@@ -145,39 +145,14 @@
               "title": "Entry",
               "description": "Entry rule for this side. The entry signal decides when to open a position."
             },
-            "exit": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "signal": {
-                  "$ref": "#/$defs/signalAsParameter",
-                  "title": "Signal",
-                  "description": "Boolean signal definition for this exit rule. It can be an inline signal object or a literal true/false value."
-                },
-                "signalDelay": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "default": 1,
-                  "title": "Signal Delay",
-                  "description": "Number of bars between the signal bar and the exit action bar. Use 1 with price OPEN for next-open exit behavior."
-                },
-                "price": {
-                  "$ref": "#/$defs/seriesAsParameter",
-                  "default": "OPEN",
-                  "title": "Exit Price",
-                  "description": "Price expression evaluated on the action bar and used as the signal-exit execution price."
-                },
-                "reduce": {
-                  "$ref": "#/$defs/exitReduce"
-                }
+            "exits": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/signalExit"
               },
-              "required": [
-                "signal",
-                "signalDelay",
-                "price"
-              ],
-              "title": "Exit",
-              "description": "Optional exit rule for this side. The exit signal decides when to close a position before stop-loss or take-profit rules."
+              "default": [],
+              "title": "Signal Exits",
+              "description": "Ordered signal-exit rules evaluated after stop-loss and take-profit rules. At most one exit executes per bar, in array order."
             },
             "pyramiding": {
               "type": "object",
@@ -308,6 +283,46 @@
       ],
       "title": "Stop Loss",
       "description": "Stop-side configuration for a position. The stop price is required because its price gap from entry is used for position sizing, even when automatic stop-loss exits are disabled."
+    },
+    "signalExit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "title": "Enabled",
+          "description": "Whether this signal-exit rule may execute."
+        },
+        "signal": {
+          "$ref": "#/$defs/signalAsParameter",
+          "title": "Signal",
+          "description": "Boolean signal definition for this exit rule."
+        },
+        "signalDelay": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 1,
+          "title": "Signal Delay",
+          "description": "Number of bars between the signal bar and the exit action bar. Use 1 with price OPEN for next-open exit behavior."
+        },
+        "price": {
+          "$ref": "#/$defs/seriesAsParameter",
+          "default": "OPEN",
+          "title": "Exit Price",
+          "description": "Price expression evaluated on the action bar and used as the signal-exit execution price."
+        },
+        "reduce": {
+          "$ref": "#/$defs/exitReduce"
+        }
+      },
+      "required": [
+        "signal",
+        "signalDelay",
+        "price"
+      ],
+      "title": "Signal Exit",
+      "description": "A signal-driven partial or full exit that may execute once per open position."
     },
     "takeProfit": {
       "type": "object",
@@ -3522,27 +3537,30 @@
             "signalDelay": 1,
             "price": "OPEN"
           },
-          "exit": {
-            "signal": {
-              "method": "CROSSUNDER",
-              "params": {
-                "value": {
-                  "method": "SERIES",
-                  "params": {
-                    "name": "fast_ema"
-                  }
-                },
-                "baseline": {
-                  "method": "SERIES",
-                  "params": {
-                    "name": "slow_ema"
+          "exits": [
+            {
+              "enabled": true,
+              "signal": {
+                "method": "CROSSUNDER",
+                "params": {
+                  "value": {
+                    "method": "SERIES",
+                    "params": {
+                      "name": "fast_ema"
+                    }
+                  },
+                  "baseline": {
+                    "method": "SERIES",
+                    "params": {
+                      "name": "slow_ema"
+                    }
                   }
                 }
-              }
-            },
-            "signalDelay": 1,
-            "price": "OPEN"
-          },
+              },
+              "signalDelay": 1,
+              "price": "OPEN"
+            }
+          ],
           "stopLoss": {
             "enabled": true,
             "trailing": false,

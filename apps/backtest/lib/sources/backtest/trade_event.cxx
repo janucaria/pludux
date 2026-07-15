@@ -9,6 +9,7 @@ module;
 export module pludux.backtest:trade_event;
 
 import :take_profit_level;
+import :signal_exit_state;
 
 export namespace pludux::backtest {
 
@@ -42,7 +43,8 @@ public:
              double average_price_after,
              double stop_price,
              double stop_loss_price,
-             std::vector<TakeProfitLevel> take_profit_levels = {})
+             std::vector<TakeProfitLevel> take_profit_levels = {},
+             std::vector<SignalExitState> signal_exit_states = {})
   : trade_id_{trade_id}
   , event_id_{event_id}
   , trade_event_index_{trade_event_index}
@@ -60,6 +62,7 @@ public:
   , stop_price_{stop_price}
   , stop_loss_price_{stop_loss_price}
   , take_profit_levels_{std::move(take_profit_levels)}
+  , signal_exit_states_{std::move(signal_exit_states)}
   {
   }
 
@@ -151,6 +154,12 @@ public:
     return self.take_profit_levels_;
   }
 
+  auto signal_exit_states(this const TradeEvent& self) noexcept
+   -> const std::vector<SignalExitState>&
+  {
+    return self.signal_exit_states_;
+  }
+
   void
   after_state(this TradeEvent& self,
               double position_size,
@@ -158,7 +167,8 @@ public:
               double average_price,
               double stop_price,
               double stop_loss_price,
-              std::vector<TakeProfitLevel> take_profit_levels = {}) noexcept
+              std::vector<TakeProfitLevel> take_profit_levels = {},
+              std::vector<SignalExitState> signal_exit_states = {}) noexcept
   {
     self.position_size_after_ = position_size;
     self.investment_after_ = investment;
@@ -166,6 +176,7 @@ public:
     self.stop_price_ = stop_price;
     self.stop_loss_price_ = stop_loss_price;
     self.take_profit_levels_ = std::move(take_profit_levels);
+    self.signal_exit_states_ = std::move(signal_exit_states);
   }
 
   auto is_entry(this const TradeEvent& self) noexcept -> bool
@@ -221,6 +232,7 @@ private:
   double stop_price_{};
   double stop_loss_price_{};
   std::vector<TakeProfitLevel> take_profit_levels_;
+  std::vector<SignalExitState> signal_exit_states_;
 };
 
 } // namespace pludux::backtest

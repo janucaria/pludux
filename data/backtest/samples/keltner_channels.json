@@ -75,22 +75,25 @@
           }
         }
       },
-      "exit": {
-        "signalDelay": 1,
-        "price": "OPEN",
-        "signal": {
-          "method": "CROSSUNDER",
-          "params": {
-            "value": "CLOSE",
-            "baseline": {
-              "method": "SERIES",
-              "params": {
-                "name": "kc_upper"
+      "exits": [
+        {
+          "enabled": true,
+          "signalDelay": 1,
+          "price": "OPEN",
+          "signal": {
+            "method": "CROSSUNDER",
+            "params": {
+              "value": "CLOSE",
+              "baseline": {
+                "method": "SERIES",
+                "params": {
+                  "name": "kc_upper"
+                }
               }
             }
           }
         }
-      },
+      ],
       "stopLoss": {
         "enabled": true,
         "trailing": false,

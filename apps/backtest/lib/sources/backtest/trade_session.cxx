@@ -16,6 +16,8 @@ import :trade_entry;
 import :trade_event;
 import :trade_exit;
 import :trade_position;
+import :take_profit_level;
+import :signal_exit_state;
 
 export namespace pludux::backtest {
 
@@ -157,7 +159,8 @@ public:
                                     self.open_position_->average_price(),
                                     self.open_position_->stop_price(),
                                     self.open_position_->stop_loss_price(),
-                                    self.open_position_->take_profit_levels());
+                                    self.open_position_->take_profit_levels(),
+                                    self.open_position_->signal_exit_states());
   }
 
   void reject_insufficient_cash(this TradeSession& self,
@@ -190,7 +193,11 @@ public:
      investment_before,
      average_price_before,
      entry.stop_price(),
-     entry.stop_loss_price());
+     entry.stop_loss_price(),
+     self.open_position_ ? self.open_position_->take_profit_levels()
+                         : std::vector<TakeProfitLevel>{},
+     self.open_position_ ? self.open_position_->signal_exit_states()
+                         : std::vector<SignalExitState>{});
   }
 
   void exit_position(this TradeSession& self, const TradeExit& exit)
@@ -228,6 +235,11 @@ public:
       throw std::runtime_error{
        "Take-profit exit requires a valid target index."};
     }
+    if(exit.signal_exit_index() &&
+       *exit.signal_exit_index() >=
+        self.open_position_->signal_exit_states().size()) {
+      throw std::runtime_error{"Signal exit requires a valid exit index."};
+    }
     const auto exit_event_id = self.next_event_id_++;
     auto event = self.open_position_->scaled_out(exit_event_id,
                                                  exit.position_size(),
@@ -238,13 +250,18 @@ public:
     if(const auto take_profit_index = exit.take_profit_index()) {
       self.open_position_->take_profit_levels()[*take_profit_index].consumed(
        true);
-      event.after_state(self.open_position_->position_size(),
-                        self.open_position_->investment(),
-                        self.open_position_->average_price(),
-                        self.open_position_->stop_price(),
-                        self.open_position_->stop_loss_price(),
-                        self.open_position_->take_profit_levels());
     }
+    if(const auto signal_exit_index = exit.signal_exit_index()) {
+      self.open_position_->signal_exit_states()[*signal_exit_index].consumed(
+       true);
+    }
+    event.after_state(self.open_position_->position_size(),
+                      self.open_position_->investment(),
+                      self.open_position_->average_price(),
+                      self.open_position_->stop_price(),
+                      self.open_position_->stop_loss_price(),
+                      self.open_position_->take_profit_levels(),
+                      self.open_position_->signal_exit_states());
     const auto closed_trade =
      self.open_position_->closed_trade(exit_event_id,
                                        event_type,
@@ -286,7 +303,8 @@ public:
                       position.average_price(),
                       position.stop_price(),
                       position.stop_loss_price(),
-                      position.take_profit_levels());
+                      position.take_profit_levels(),
+                      position.signal_exit_states());
   }
 
   auto unrealized_pnl(this const TradeSession& self) noexcept -> double

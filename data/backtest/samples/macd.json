@@ -79,22 +79,25 @@
           }
         }
       },
-      "exit": {
-        "signalDelay": 1,
-        "price": "OPEN",
-        "signal": {
-          "method": "CROSSUNDER",
-          "params": {
-            "value": {
-              "method": "SERIES",
-              "params": {
-                "name": "macd_histogram"
-              }
-            },
-            "baseline": 0
+      "exits": [
+        {
+          "enabled": true,
+          "signalDelay": 1,
+          "price": "OPEN",
+          "signal": {
+            "method": "CROSSUNDER",
+            "params": {
+              "value": {
+                "method": "SERIES",
+                "params": {
+                  "name": "macd_histogram"
+                }
+              },
+              "baseline": 0
+            }
           }
         }
-      },
+      ],
       "stopLoss": {
         "enabled": false,
         "trailing": false,

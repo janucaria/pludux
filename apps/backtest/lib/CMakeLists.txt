@@ -78,6 +78,7 @@ target_sources(${PROJECT_NAME}
     sources/backtest/trade_entry.cxx
     sources/backtest/trade_exit.cxx
     sources/backtest/take_profit_level.cxx
+    sources/backtest/signal_exit_state.cxx
     sources/backtest/trade_event.cxx
     sources/backtest/open_position_snapshot.cxx
     sources/backtest/closed_trade.cxx
