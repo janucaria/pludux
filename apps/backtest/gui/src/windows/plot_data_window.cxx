@@ -142,6 +142,8 @@ public:
       self.row_ratios_.resize(total_row_count, 1);
     }
 
+    auto crosshair_state = CrosshairState{};
+
     const auto timeline_size_changed =
      !self.last_timeline_size_opt_ ||
      self.last_timeline_size_opt_.value() != timeline_size;
@@ -166,7 +168,7 @@ public:
                              self.row_ratios_.data())) {
       constexpr auto plot_size = ImVec2{-1, 0};
       constexpr auto plot_flags =
-       ImPlotFlags_NoLegend | ImPlotFlags_Crosshairs | ImPlotFlags_NoBoxSelect;
+       ImPlotFlags_NoLegend | ImPlotFlags_NoBoxSelect;
 
       if(ImPlot::BeginPlot("##EquityPlot", plot_size, plot_flags)) {
         ImPlot::SetupAxis(ImAxis_X1,
@@ -179,6 +181,8 @@ public:
         ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
 
         self.plot_equity(backtest_timelines);
+
+        self.record_crosshair_plot(crosshair_state);
 
         ImPlot::EndPlot();
       }
@@ -197,6 +201,8 @@ public:
         self.plot_ohlc("OHLC", asset, timeline_size);
         self.overlays_plots(context);
         self.plot_signal("Trade Signals", backtest_timelines, asset);
+
+        self.record_crosshair_plot(crosshair_state);
 
         ImPlot::EndPlot();
       }
@@ -217,6 +223,8 @@ public:
         ImPlot::SetupAxisFormat(ImAxis_Y1, volume_formatter);
 
         self.plot_volume("Volume", asset, timeline_size);
+
+        self.record_crosshair_plot(crosshair_state);
 
         ImPlot::EndPlot();
       }
@@ -249,6 +257,8 @@ public:
             }
           }
 
+          self.record_crosshair_plot(crosshair_state);
+
           ImPlot::EndPlot();
         }
 
@@ -256,11 +266,107 @@ public:
       }
 
       ImPlot::EndSubplots();
+      self.render_crosshair(crosshair_state);
     }
     ImGui::End();
   }
 
 private:
+  struct CrosshairState {
+    std::vector<ImRect> plot_rects;
+    std::optional<std::size_t> hovered_plot_index;
+  };
+
+  void record_crosshair_plot(this const PlotDataWindow&, CrosshairState& state)
+  {
+    const auto plot_position = ImPlot::GetPlotPos();
+    const auto plot_size = ImPlot::GetPlotSize();
+    state.plot_rects.emplace_back(
+     plot_position,
+     ImVec2{plot_position.x + plot_size.x, plot_position.y + plot_size.y});
+
+    auto* plot = ImPlot::GetCurrentPlot();
+    const auto any_x_axis_held =
+     plot->Held ||
+     ImPlot::AnyAxesHeld(&plot->Axes[ImAxis_X1], IMPLOT_NUM_X_AXES);
+    const auto any_y_axis_held =
+     plot->Held ||
+     ImPlot::AnyAxesHeld(&plot->Axes[ImAxis_Y1], IMPLOT_NUM_Y_AXES);
+    const auto crosshair_visible =
+     plot->Hovered && !(any_x_axis_held || any_y_axis_held) &&
+     !plot->Selecting && !plot->Items.Legend.Hovered;
+
+    if(crosshair_visible) {
+      state.hovered_plot_index = state.plot_rects.size() - 1;
+    }
+  }
+
+  void render_crosshair(this const PlotDataWindow&, const CrosshairState& state)
+  {
+    if(!state.hovered_plot_index) {
+      return;
+    }
+
+    constexpr auto cursor_gap = 5.0f;
+    const auto mouse_position = ImGui::GetIO().MousePos;
+    const auto crosshair_color = ImPlot::GetStyleColorU32(ImPlotCol_Crosshairs);
+    auto* draw_list = ImGui::GetWindowDrawList();
+    const auto draw_dashed_line = [&](ImVec2 start, ImVec2 end) {
+      constexpr auto dash_length = 4.0f;
+      constexpr auto gap_length = 4.0f;
+      const auto delta = ImVec2{end.x - start.x, end.y - start.y};
+      const auto line_length = std::hypot(delta.x, delta.y);
+      if(line_length <= 0.0f) {
+        return;
+      }
+
+      const auto direction =
+       ImVec2{delta.x / line_length, delta.y / line_length};
+      for(auto offset = 0.0f; offset < line_length;
+          offset += dash_length + gap_length) {
+        const auto dash_end_offset =
+         std::min(offset + dash_length, line_length);
+        draw_list->AddLine(
+         ImVec2{start.x + direction.x * offset, start.y + direction.y * offset},
+         ImVec2{start.x + direction.x * dash_end_offset,
+                start.y + direction.y * dash_end_offset},
+         crosshair_color);
+      }
+    };
+
+    ImGui::SetMouseCursor(ImGuiMouseCursor_None);
+
+    for(auto i = std::size_t{0}; i < state.plot_rects.size(); ++i) {
+      const auto& plot_rect = state.plot_rects[i];
+      if(mouse_position.x < plot_rect.Min.x ||
+         mouse_position.x > plot_rect.Max.x) {
+        continue;
+      }
+
+      draw_list->PushClipRect(plot_rect.Min, plot_rect.Max, true);
+
+      if(i == *state.hovered_plot_index) {
+        draw_dashed_line(
+         ImVec2{plot_rect.Min.x, mouse_position.y},
+         ImVec2{mouse_position.x - cursor_gap, mouse_position.y});
+        draw_dashed_line(
+         ImVec2{mouse_position.x + cursor_gap, mouse_position.y},
+         ImVec2{plot_rect.Max.x, mouse_position.y});
+        draw_dashed_line(
+         ImVec2{mouse_position.x, plot_rect.Min.y},
+         ImVec2{mouse_position.x, mouse_position.y - cursor_gap});
+        draw_dashed_line(
+         ImVec2{mouse_position.x, mouse_position.y + cursor_gap},
+         ImVec2{mouse_position.x, plot_rect.Max.y});
+      } else {
+        draw_dashed_line(ImVec2{mouse_position.x, plot_rect.Min.y},
+                         ImVec2{mouse_position.x, plot_rect.Max.y});
+      }
+
+      draw_list->PopClipRect();
+    }
+  }
+
   std::optional<backtest::BacktestStoreHandle> last_selected_backtest_opt_;
   std::optional<std::size_t> last_timeline_size_opt_;
 
@@ -821,19 +927,8 @@ private:
     auto equity_i = timeline_size_i > 0 ? timeline_size_i - 1 : -1;
 
     if(ImPlot::IsSubplotsHovered() || ImPlot::IsPlotHovered()) {
-      constexpr auto half_width = 0.5;
-      auto* draw_list = ImPlot::GetPlotDrawList();
       ImPlotPoint mouse = ImPlot::GetPlotMousePos();
       mouse.x = std::round(mouse.x);
-      float tool_l = ImPlot::PlotToPixels(mouse.x - half_width, mouse.y).x;
-      float tool_r = ImPlot::PlotToPixels(mouse.x + half_width, mouse.y).x;
-      float tool_t = ImPlot::GetPlotPos().y;
-      float tool_b = tool_t + ImPlot::GetPlotSize().y;
-      ImPlot::PushPlotClipRect();
-      draw_list->AddRectFilled(ImVec2(tool_l, tool_t),
-                               ImVec2(tool_r, tool_b),
-                               IM_COL32(128, 128, 128, 64));
-      ImPlot::PopPlotClipRect();
 
       const auto plot_idx = static_cast<int>(mouse.x);
       if(plot_idx > -1 && plot_idx < timeline_size_i) {
