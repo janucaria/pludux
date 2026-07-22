@@ -15,4 +15,4 @@ export import :windows.backtest_overview_window;
 export import :windows.backtests_window;
 export import :windows.dockspace_window;
 export import :windows.plot_data_window;
-export import :windows.trade_journal_window;
+export import :windows.trade_list_window;

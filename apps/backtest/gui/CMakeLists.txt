@@ -176,7 +176,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/windows/backtest_overview_window.cxx
     src/windows/dockspace_window.cxx
     src/windows/plot_data_window.cxx
-    src/windows/trade_journal_window.cxx
+    src/windows/trade_list_window.cxx
     src/windows.cxx
 
     src/application.cxx

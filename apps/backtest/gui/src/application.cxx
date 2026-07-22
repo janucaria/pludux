@@ -267,8 +267,7 @@ public:
       self.markets_window_.render(window_context);
       self.brokers_window_.render(window_context);
       self.profiles_window_.render(window_context);
-      auto trade_journal = TradeJournalWindow{};
-      trade_journal.render(window_context);
+      self.trade_list_window_.render(window_context);
 
     } catch(const std::exception& e) {
       const auto error_message = std::format("Error: {}", e.what());
@@ -450,6 +449,7 @@ private:
   MarketsWindow markets_window_;
   BrokersWindow brokers_window_;
   ProfilesWindow profiles_window_;
+  TradeListWindow trade_list_window_;
 
   ApplicationState app_state_;
   std::unordered_map<backtest::BacktestStoreHandle, backtest::BacktestRunner>
