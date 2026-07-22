@@ -317,7 +317,11 @@ private:
 
       if(!edit_strategy_ptr) {
         if(!self.selected_backtest_handle_opt_ && !strategy_handles.empty()) {
-          edit_backtest_ptr->strategy_handle(strategy_handles.front());
+          const auto strategy_handle = strategy_handles.front();
+          backtest::assign_backtest_strategy(
+           *edit_backtest_ptr,
+           strategy_handle,
+           app_state.get_strategy(strategy_handle));
         }
       }
 
@@ -335,8 +339,10 @@ private:
 
           ImGui::PushID(i);
 
-          if(ImGui::Selectable(strategy_name.c_str(), is_selected)) {
-            edit_backtest_ptr->strategy_handle(strategy_handle);
+          if(ImGui::Selectable(strategy_name.c_str(), is_selected) &&
+             !is_selected) {
+            backtest::assign_backtest_strategy(
+             *edit_backtest_ptr, strategy_handle, strategy);
           }
 
           if(is_selected) {

@@ -1,12 +1,14 @@
 module;
 
 #include <string>
+#include <utility>
 #include <vector>
 
 export module pludux.backtest:strategy_inputs;
 
 import pludux;
 
+import :backtest;
 import :risk_distance_node;
 import :strategy;
 import :stop_target_price_node;
@@ -444,6 +446,15 @@ auto collect_numeric_inputs(const Strategy& strategy)
   collect_from_position(strategy.short_position());
 
   return inputs;
+}
+
+void assign_backtest_strategy(Backtest& backtest,
+                              StrategyStoreHandle strategy_handle,
+                              const Strategy& strategy)
+{
+  auto inputs = collect_numeric_inputs(strategy);
+  backtest.strategy_handle(std::move(strategy_handle));
+  backtest.inputs(std::move(inputs));
 }
 
 } // namespace pludux::backtest

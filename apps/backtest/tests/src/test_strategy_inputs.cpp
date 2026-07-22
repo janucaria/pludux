@@ -96,6 +96,57 @@ TEST(StrategyInputsTest, CollectsNumericInputsInStrategyTraversalOrder)
   EXPECT_DOUBLE_EQ(inputs[10].value(), 120.0);
 }
 
+TEST(StrategyInputsTest, AssigningStrategyReplacesBacktestInputsWithDefaults)
+{
+  auto series_nodes = OrderedNamedRegistry<ErasedNode>{};
+  series_nodes.set(
+   "replacement",
+   AddNode{
+    NumericInputNode{"Replacement Decimal",
+                     NumericInputNode::ValueRepresentation::Decimal,
+                     1.25},
+    NumericInputNode{"Replacement Integer",
+                     NumericInputNode::ValueRepresentation::SignedInteger,
+                     -3.0}});
+  const auto strategy = Strategy{"Replacement",
+                                 std::move(series_nodes),
+                                 Strategy::Position{},
+                                 Strategy::Position{},
+                                 {}};
+  const auto strategy_handle = StrategyStoreHandle{4, 2};
+
+  auto backtest = Backtest{};
+  backtest.strategy_handle(StrategyStoreHandle{1, 1});
+  backtest.inputs({NumericInputNode{
+   "Old Input", NumericInputNode::ValueRepresentation::UnsignedInteger, 99.0}});
+
+  assign_backtest_strategy(backtest, strategy_handle, strategy);
+
+  EXPECT_EQ(backtest.strategy_handle(), strategy_handle);
+  ASSERT_EQ(backtest.inputs().size(), 2);
+  EXPECT_EQ(backtest.inputs()[0].label(), "Replacement Decimal");
+  EXPECT_EQ(backtest.inputs()[0].representation(),
+            NumericInputNode::ValueRepresentation::Decimal);
+  EXPECT_DOUBLE_EQ(backtest.inputs()[0].value(), 1.25);
+  EXPECT_EQ(backtest.inputs()[1].label(), "Replacement Integer");
+  EXPECT_EQ(backtest.inputs()[1].representation(),
+            NumericInputNode::ValueRepresentation::SignedInteger);
+  EXPECT_DOUBLE_EQ(backtest.inputs()[1].value(), -3.0);
+}
+
+TEST(StrategyInputsTest, AssigningStrategyWithoutInputsClearsBacktestInputs)
+{
+  auto backtest = Backtest{};
+  backtest.inputs({NumericInputNode{
+   "Old Input", NumericInputNode::ValueRepresentation::Decimal, 99.0}});
+  const auto strategy_handle = StrategyStoreHandle{5, 3};
+
+  assign_backtest_strategy(backtest, strategy_handle, Strategy{});
+
+  EXPECT_EQ(backtest.strategy_handle(), strategy_handle);
+  EXPECT_TRUE(backtest.inputs().empty());
+}
+
 TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
 {
   const auto strategy_json = std::string{R"({
