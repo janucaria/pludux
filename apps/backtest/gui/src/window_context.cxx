@@ -21,10 +21,12 @@ class WindowContext {
 public:
   WindowContext(ApplicationState& app_state,
                 std::list<std::string>& alert_messages,
-                CommandExecutor& command_executor)
+                CommandExecutor& command_executor,
+                bool& discard_all_drafts_requested)
   : app_state_{app_state}
   , alert_messages_{alert_messages}
   , command_executor_{command_executor}
+  , discard_all_drafts_requested_{discard_all_drafts_requested}
   {
   }
 
@@ -51,6 +53,11 @@ public:
     auto ini_size = std::size_t{0};
     const auto ini_data = ImGui::SaveIniSettingsToMemory(&ini_size);
     self.app_state_.imgui_ini_settings(std::string(ini_data, ini_size));
+  }
+
+  void request_discard_all_drafts(this WindowContext& self) noexcept
+  {
+    self.discard_all_drafts_requested_ = true;
   }
 
   void alert(this WindowContext& self, std::string alert_message)
@@ -82,6 +89,7 @@ private:
   ApplicationState& app_state_;
   std::list<std::string>& alert_messages_;
   CommandExecutor& command_executor_;
+  bool& discard_all_drafts_requested_;
 };
 
 } // namespace pludux::apps

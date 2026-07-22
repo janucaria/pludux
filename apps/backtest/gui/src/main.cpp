@@ -1,3 +1,4 @@
+#include <array>
 #include <cstdio>
 #include <exception>
 #include <filesystem>
@@ -28,6 +29,9 @@
 #include <implot_internal.h>
 
 #include <jsoncons/json.hpp>
+
+#include "pludux_icon_font_data.h"
+#include "ui/pludux_icons.hpp"
 
 import pludux.apps.backtest;
 
@@ -292,6 +296,31 @@ public:
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     // ImGui::StyleColorsLight();
+
+    // Base font, then merge in the Lucide icon font so icon glyphs can be
+    // used inline with regular text (e.g. PLUDUX_ICON_DELETE " Delete").
+    // Loaded from an in-memory byte array (see CMakeLists.txt) rather than
+    // AddFontFromFileTTF because the Emscripten build disables ImGui's
+    // file-based font loading (IMGUI_DISABLE_FILE_FUNCTIONS).
+    io.Fonts->AddFontDefault();
+
+    const auto icon_font_size = 13.0f;
+    auto icon_font_config = ImFontConfig{};
+    icon_font_config.MergeMode = true;
+    icon_font_config.PixelSnapH = true;
+    icon_font_config.FontDataOwnedByAtlas = false;
+    icon_font_config.GlyphMinAdvanceX = icon_font_size;
+    icon_font_config.GlyphOffset = ImVec2{0.0f, 3.0f};
+
+    static const auto icon_font_ranges =
+     std::array<ImWchar, 3>{PLUDUX_ICON_MIN, PLUDUX_ICON_MAX_16, 0};
+
+    io.Fonts->AddFontFromMemoryTTF(
+     const_cast<unsigned char*>(pludux_icon_font_data),
+     static_cast<int>(pludux_icon_font_data_size),
+     icon_font_size,
+     &icon_font_config,
+     icon_font_ranges.data());
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOther(window_, true);

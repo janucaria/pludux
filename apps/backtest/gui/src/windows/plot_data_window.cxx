@@ -820,7 +820,7 @@ private:
 
     auto equity_i = timeline_size_i > 0 ? timeline_size_i - 1 : -1;
 
-    if(ImPlot::IsSubplotsHovered()) {
+    if(ImPlot::IsSubplotsHovered() || ImPlot::IsPlotHovered()) {
       constexpr auto half_width = 0.5;
       auto* draw_list = ImPlot::GetPlotDrawList();
       ImPlotPoint mouse = ImPlot::GetPlotMousePos();

@@ -24,6 +24,7 @@ export import :window_context;
 export import :serialization;
 export import :actions;
 export import :command_executor;
+import :ui.theme;
 import :windows;
 
 export namespace std {
@@ -239,28 +240,33 @@ public:
       } while(time_diff < 1000 / 60);
     }
 
-    auto window_context =
-     WindowContext{app_state, alert_messages, self.command_executor_};
+    ui::apply_dark_theme();
+
+    auto window_context = WindowContext{app_state,
+                                        alert_messages,
+                                        self.command_executor_,
+                                        self.discard_all_drafts_requested_};
 
     try {
       self.dockspace_window_.render(window_context);
+      if(self.discard_all_drafts_requested_) {
+        self.backtests_window_.discard_draft();
+        self.assets_window_.discard_draft();
+        self.strategies_window_.discard_draft();
+        self.markets_window_.discard_draft();
+        self.brokers_window_.discard_draft();
+        self.profiles_window_.discard_draft();
+        self.discard_all_drafts_requested_ = false;
+      }
       self.plot_data_window_.render(window_context);
-
       auto backtesting_summary = BacktestSummaryWindow{};
       backtesting_summary.render(window_context);
-
       self.backtests_window_.render(window_context);
-
       self.assets_window_.render(window_context);
-
       self.strategies_window_.render(window_context);
-
       self.markets_window_.render(window_context);
-
       self.brokers_window_.render(window_context);
-
       self.profiles_window_.render(window_context);
-
       auto trade_journal = TradeJournalWindow{};
       trade_journal.render(window_context);
 
@@ -450,6 +456,7 @@ private:
    running_backtests_;
   std::list<std::string> alert_messages_;
   CommandExecutor command_executor_{};
+  bool discard_all_drafts_requested_{false};
 };
 
 } // namespace pludux::apps

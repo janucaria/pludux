@@ -80,7 +80,8 @@ public:
                                std::size_t to_index) noexcept
   {
     auto& backtest_handles = self.backtest_handles_;
-    if(from_index < backtest_handles.size() && to_index < backtest_handles.size()) {
+    if(from_index < backtest_handles.size() &&
+       to_index < backtest_handles.size()) {
       const auto handle = backtest_handles[from_index];
       backtest_handles.erase(backtest_handles.begin() + from_index);
       backtest_handles.insert(backtest_handles.begin() + to_index, handle);
@@ -150,7 +151,8 @@ public:
                                std::size_t to_index) noexcept
   {
     auto& strategy_handles = self.strategy_handles_;
-    if(from_index < strategy_handles.size() && to_index < strategy_handles.size()) {
+    if(from_index < strategy_handles.size() &&
+       to_index < strategy_handles.size()) {
       const auto handle = strategy_handles[from_index];
       strategy_handles.erase(strategy_handles.begin() + from_index);
       strategy_handles.insert(strategy_handles.begin() + to_index, handle);
@@ -281,7 +283,6 @@ public:
 
 private:
   std::string imgui_ini_settings_;
-
   backtest::BacktestStoreHandle selected_backtest_handle_;
 
   std::vector<backtest::BacktestStoreHandle> backtest_handles_;
