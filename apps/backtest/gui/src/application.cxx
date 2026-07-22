@@ -259,8 +259,8 @@ public:
         self.discard_all_drafts_requested_ = false;
       }
       self.plot_data_window_.render(window_context);
-      auto backtesting_summary = BacktestSummaryWindow{};
-      backtesting_summary.render(window_context);
+      auto backtest_overview = BacktestOverviewWindow{};
+      backtest_overview.render(window_context);
       self.backtests_window_.render(window_context);
       self.assets_window_.render(window_context);
       self.strategies_window_.render(window_context);

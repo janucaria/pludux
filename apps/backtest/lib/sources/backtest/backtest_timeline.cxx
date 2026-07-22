@@ -1,5 +1,6 @@
 module;
 
+#include <algorithm>
 #include <ctime>
 #include <limits>
 #include <numeric>
@@ -86,6 +87,10 @@ public:
     self.unrealized_pnls_.clear();
     self.unrealized_investments_.clear();
     self.unrealized_durations_.clear();
+    self.current_winning_streak_ = 0;
+    self.current_losing_streak_ = 0;
+    self.maximum_winning_streak_ = 0;
+    self.maximum_losing_streak_ = 0;
   }
 
   void reserve(this BacktestTimeline& self, std::size_t size)
@@ -116,6 +121,7 @@ public:
 
   void append(this BacktestTimeline& self, Row row)
   {
+    self.update_streaks(row.closed_trades);
     self.market_timestamps_.push_back(row.market_timestamp);
     self.market_prices_.push_back(row.market_price);
     self.market_lookbacks_.push_back(row.market_lookback);
@@ -358,6 +364,30 @@ public:
             : 0.0;
   }
 
+  auto current_winning_streak(this const BacktestTimeline& self) noexcept
+   -> std::size_t
+  {
+    return self.current_winning_streak_;
+  }
+
+  auto current_losing_streak(this const BacktestTimeline& self) noexcept
+   -> std::size_t
+  {
+    return self.current_losing_streak_;
+  }
+
+  auto maximum_winning_streak(this const BacktestTimeline& self) noexcept
+   -> std::size_t
+  {
+    return self.maximum_winning_streak_;
+  }
+
+  auto maximum_losing_streak(this const BacktestTimeline& self) noexcept
+   -> std::size_t
+  {
+    return self.maximum_losing_streak_;
+  }
+
   auto profit_factor(this const BacktestTimeline& self,
                      std::size_t index) noexcept -> double
   {
@@ -404,6 +434,28 @@ public:
   }
 
 private:
+  void update_streaks(this BacktestTimeline& self,
+                      const std::vector<ClosedTrade>& closed_trades) noexcept
+  {
+    for(const auto& trade : closed_trades) {
+      const auto pnl = trade.pnl();
+      if(pnl > 0.0) {
+        ++self.current_winning_streak_;
+        self.current_losing_streak_ = 0;
+        self.maximum_winning_streak_ =
+         std::max(self.maximum_winning_streak_, self.current_winning_streak_);
+      } else if(pnl < 0.0) {
+        self.current_winning_streak_ = 0;
+        ++self.current_losing_streak_;
+        self.maximum_losing_streak_ =
+         std::max(self.maximum_losing_streak_, self.current_losing_streak_);
+      } else {
+        self.current_winning_streak_ = 0;
+        self.current_losing_streak_ = 0;
+      }
+    }
+  }
+
   std::vector<std::time_t> market_timestamps_;
   std::vector<double> market_prices_;
   std::vector<std::size_t> market_lookbacks_;
@@ -432,6 +484,11 @@ private:
   std::vector<double> unrealized_pnls_;
   std::vector<double> unrealized_investments_;
   std::vector<std::time_t> unrealized_durations_;
+
+  std::size_t current_winning_streak_{};
+  std::size_t current_losing_streak_{};
+  std::size_t maximum_winning_streak_{};
+  std::size_t maximum_losing_streak_{};
 };
 
 } // namespace pludux::backtest

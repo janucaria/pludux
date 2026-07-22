@@ -382,6 +382,39 @@ TEST(BacktestTimelineTest, CalculatesDerivedMetricsByIndex)
   EXPECT_DOUBLE_EQ(timeline.initial_capital(0), 1000.0);
 }
 
+TEST(BacktestTimelineTest, TracksCurrentAndMaximumOutcomeStreaks)
+{
+  const auto make_trade = [](double pnl) {
+    return ClosedTrade{0,
+                       0,
+                       TradeEvent::Type::exit_signal,
+                       0,
+                       1,
+                       1.0,
+                       100.0,
+                       100.0,
+                       100.0 + pnl,
+                       0.0,
+                       0.0};
+  };
+
+  auto timeline = BacktestTimeline{};
+  for(const auto pnl : {10.0, 20.0, -5.0, -10.0, -15.0, 0.0, 5.0}) {
+    timeline.append(BacktestTimeline::Row{.closed_trades = {make_trade(pnl)}});
+  }
+
+  EXPECT_EQ(timeline.current_winning_streak(), 1);
+  EXPECT_EQ(timeline.current_losing_streak(), 0);
+  EXPECT_EQ(timeline.maximum_winning_streak(), 2);
+  EXPECT_EQ(timeline.maximum_losing_streak(), 3);
+
+  timeline.clear();
+  EXPECT_EQ(timeline.current_winning_streak(), 0);
+  EXPECT_EQ(timeline.current_losing_streak(), 0);
+  EXPECT_EQ(timeline.maximum_winning_streak(), 0);
+  EXPECT_EQ(timeline.maximum_losing_streak(), 0);
+}
+
 TEST(BacktestRunnerTest, RiskSizingUsesCurrentEquityAfterClosedTrade)
 {
   const auto asset = Asset{"Test",
