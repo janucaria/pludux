@@ -38,6 +38,7 @@ module;
 export module pludux.apps.backtest:windows.strategies_window;
 
 import pludux.backtest;
+import :built_in_strategies;
 import :window_context;
 import :ui.widgets;
 
@@ -993,6 +994,9 @@ public:
     ImGui::Begin("Strategies");
 
     switch(self.current_page_) {
+    case Page::BuiltIn:
+      self.render_built_in_strategies(context);
+      break;
     case Page::AddNew:
       self.render_add_new_strategy(context);
       break;
@@ -1014,13 +1018,14 @@ public:
   }
 
 private:
-  enum class Page { List, AddNew, Edit } current_page_{Page::List};
+  enum class Page { List, BuiltIn, AddNew, Edit } current_page_{Page::List};
 
   std::optional<backtest::StrategyStoreHandle> selected_strategy_handle_opt_;
   std::shared_ptr<backtest::Strategy> editing_strategy_ptr_;
   std::shared_ptr<backtest::Strategy> editor_baseline_ptr_;
 
   ImGuiTextFilter strategy_filter_;
+  ImGuiTextFilter built_in_strategy_filter_;
   ui::DraftAction selected_draft_action_{ui::DraftAction::Apply};
 
   std::vector<std::string> available_series_names_;
@@ -1042,6 +1047,16 @@ private:
       self.editor_baseline_ptr_ =
        std::make_shared<backtest::Strategy>(*self.editing_strategy_ptr_);
     }
+  }
+
+  void begin_add_strategy(this auto& self, backtest::Strategy strategy)
+  {
+    self.current_page_ = Page::AddNew;
+    self.selected_strategy_handle_opt_ = std::nullopt;
+    self.editing_strategy_ptr_ =
+     std::make_shared<backtest::Strategy>(std::move(strategy));
+    self.editor_baseline_ptr_ =
+     std::make_shared<backtest::Strategy>(*self.editing_strategy_ptr_);
   }
 
   void begin_edit_strategy(this auto& self,
@@ -1168,6 +1183,10 @@ private:
     ImGui::SameLine();
     if(ImGui::Button(PLUDUX_ICON_IMPORT " Import")) {
       self.import_strategies(context);
+    }
+    ImGui::SameLine();
+    if(ImGui::Button("Built-in Strategies")) {
+      self.current_page_ = Page::BuiltIn;
     }
     ImGui::Spacing();
     ui::search_filter(self.strategy_filter_, "##strategy_search");
@@ -1300,6 +1319,72 @@ private:
 
       ImGui::PopID();
       ImGui::Separator();
+    }
+
+    ImGui::EndChild();
+    ImGui::EndGroup();
+  }
+
+  void render_built_in_strategies(this auto& self, WindowContext& context)
+  {
+    ImGui::BeginGroup();
+    if(ui::icon_button(PLUDUX_ICON_BACK "##back_to_strategies",
+                       "Back to strategies")) {
+      self.current_page_ = Page::List;
+    }
+    ImGui::SameLine();
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted("Built-in Strategies");
+    ImGui::Separator();
+
+    ui::search_filter(self.built_in_strategy_filter_,
+                      "##built_in_strategy_search");
+    if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
+      ImGui::SetTooltip("Filter built-in strategies by name or description");
+    }
+    ImGui::Separator();
+
+    const auto strategies = built_in_strategies();
+    const auto visible_strategy_count =
+     std::ranges::count_if(strategies, [&](const auto& strategy) {
+       const auto searchable_text =
+        std::format("{}\n{}", strategy.name, strategy.description);
+       return self.built_in_strategy_filter_.PassFilter(
+        searchable_text.c_str());
+     });
+
+    ImGui::BeginChild("built_in_strategy_list", ImVec2(0, 0));
+    if(visible_strategy_count == 0) {
+      ImGui::Spacing();
+      ImGui::TextDisabled("No built-in strategies match this search.");
+    }
+
+    for(const auto& strategy : strategies) {
+      const auto searchable_text =
+       std::format("{}\n{}", strategy.name, strategy.description);
+      if(!self.built_in_strategy_filter_.PassFilter(searchable_text.c_str())) {
+        continue;
+      }
+
+      ImGui::PushID(strategy.name.data());
+      ImGui::TextUnformatted(strategy.name.data(),
+                             strategy.name.data() + strategy.name.size());
+      ImGui::TextDisabled("%.*s",
+                          static_cast<int>(strategy.description.size()),
+                          strategy.description.data());
+      if(ImGui::Button("Use Strategy")) {
+        try {
+          self.begin_add_strategy(backtest::parse_backtest_strategy_json(
+           strategy.name, std::string{strategy.json}));
+        } catch(const std::exception& ex) {
+          context.alert(
+           std::format("Failed to load built-in strategy '{}':\n{}",
+                       strategy.name,
+                       ex.what()));
+        }
+      }
+      ImGui::Separator();
+      ImGui::PopID();
     }
 
     ImGui::EndChild();
