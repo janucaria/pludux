@@ -85,11 +85,8 @@ private:
     const auto backtest_ptr = app_state.selected_backtest_if_present();
 
     ImGui::BeginGroup();
-    const auto has_new_asset_draft =
-     !self.selected_asset_handle_opt_ && self.editing_asset_ptr_;
     const auto add_asset_requested =
-     ImGui::Button(has_new_asset_draft ? PLUDUX_ICON_EDIT " Resume New Asset"
-                                       : PLUDUX_ICON_ADD " New Asset");
+     ImGui::Button(PLUDUX_ICON_ADD " New Asset");
     ImGui::SameLine();
     const auto load_assets_requested =
      ImGui::Button(PLUDUX_ICON_IMPORT " Import");
@@ -159,10 +156,8 @@ private:
     ImGui::EndChild();
     if(add_asset_requested) {
       self.current_page_ = AssetPage::AddNewAsset;
-      if(self.selected_asset_handle_opt_ || !self.editing_asset_ptr_) {
-        self.selected_asset_handle_opt_ = std::nullopt;
-        self.editing_asset_ptr_ = std::make_shared<backtest::Asset>();
-      }
+      self.selected_asset_handle_opt_ = std::nullopt;
+      self.editing_asset_ptr_ = std::make_shared<backtest::Asset>();
     }
 
     if(load_assets_requested) {
@@ -250,7 +245,7 @@ private:
 
     ImGui::SameLine();
     if(ImGui::Button("Cancel")) {
-      self.leave_editor();
+      self.reset();
     }
 
     ImGui::EndGroup();

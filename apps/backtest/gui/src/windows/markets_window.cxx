@@ -69,16 +69,10 @@ private:
     const auto backtest_ptr = app_state.selected_backtest_if_present();
 
     ImGui::BeginGroup();
-    const auto has_new_market_draft =
-     !self.selected_market_handle_opt_ && self.editing_market_ptr_;
-    if(ImGui::Button(has_new_market_draft ? PLUDUX_ICON_EDIT
-                      " Resume New Market"
-                                          : PLUDUX_ICON_ADD " New Market")) {
+    if(ImGui::Button(PLUDUX_ICON_ADD " New Market")) {
       self.current_page_ = MarketPage::AddNew;
-      if(self.selected_market_handle_opt_ || !self.editing_market_ptr_) {
-        self.selected_market_handle_opt_ = std::nullopt;
-        self.editing_market_ptr_ = std::make_shared<backtest::Market>();
-      }
+      self.selected_market_handle_opt_ = std::nullopt;
+      self.editing_market_ptr_ = std::make_shared<backtest::Market>();
     }
     ImGui::Spacing();
     ui::search_filter(self.market_filter_, "##markets_search");
@@ -167,7 +161,7 @@ private:
 
     ImGui::SameLine();
     if(ImGui::Button("Cancel")) {
-      self.leave_editor();
+      self.reset();
     }
 
     ImGui::EndGroup();

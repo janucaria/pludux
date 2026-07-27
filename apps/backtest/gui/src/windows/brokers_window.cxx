@@ -71,16 +71,10 @@ private:
     const auto backtest_ptr = app_state.selected_backtest_if_present();
 
     ImGui::BeginGroup();
-    const auto has_new_broker_draft =
-     !self.selected_broker_handle_opt_ && self.editing_broker_ptr_;
-    if(ImGui::Button(has_new_broker_draft ? PLUDUX_ICON_EDIT
-                      " Resume New Broker"
-                                          : PLUDUX_ICON_ADD " New Broker")) {
+    if(ImGui::Button(PLUDUX_ICON_ADD " New Broker")) {
       self.current_page_ = BrokerPage::AddNewBroker;
-      if(self.selected_broker_handle_opt_ || !self.editing_broker_ptr_) {
-        self.selected_broker_handle_opt_ = std::nullopt;
-        self.editing_broker_ptr_ = std::make_shared<backtest::Broker>("");
-      }
+      self.selected_broker_handle_opt_ = std::nullopt;
+      self.editing_broker_ptr_ = std::make_shared<backtest::Broker>("");
     }
     ImGui::Spacing();
     ui::search_filter(self.broker_filter_, "##brokers_search");
@@ -168,7 +162,7 @@ private:
 
     ImGui::SameLine();
     if(ImGui::Button("Cancel")) {
-      self.leave_editor();
+      self.reset();
     }
 
     ImGui::EndGroup();

@@ -1040,13 +1040,10 @@ private:
   void begin_add_strategy(this auto& self)
   {
     self.current_page_ = Page::AddNew;
-    if(self.selected_strategy_handle_opt_ || !self.editing_strategy_ptr_ ||
-       !self.editor_baseline_ptr_) {
-      self.selected_strategy_handle_opt_ = std::nullopt;
-      self.editing_strategy_ptr_ = std::make_shared<backtest::Strategy>();
-      self.editor_baseline_ptr_ =
-       std::make_shared<backtest::Strategy>(*self.editing_strategy_ptr_);
-    }
+    self.selected_strategy_handle_opt_ = std::nullopt;
+    self.editing_strategy_ptr_ = std::make_shared<backtest::Strategy>();
+    self.editor_baseline_ptr_ =
+     std::make_shared<backtest::Strategy>(*self.editing_strategy_ptr_);
   }
 
   void begin_add_strategy(this auto& self, backtest::Strategy strategy)
@@ -1173,11 +1170,7 @@ private:
     const auto backtest_ptr = app_state.selected_backtest_if_present();
 
     ImGui::BeginGroup();
-    const auto has_new_strategy_draft =
-     !self.selected_strategy_handle_opt_ && self.editing_strategy_ptr_;
-    if(ImGui::Button(has_new_strategy_draft
-                      ? PLUDUX_ICON_EDIT " Resume New Strategy"
-                      : PLUDUX_ICON_ADD " New Strategy")) {
+    if(ImGui::Button(PLUDUX_ICON_ADD " New Strategy")) {
       self.begin_add_strategy();
     }
     ImGui::SameLine();
@@ -1396,7 +1389,7 @@ private:
     ImGui::BeginGroup();
     if(ui::icon_button(PLUDUX_ICON_BACK "##back_to_strategies",
                        "Back to strategies")) {
-      self.request_leave_editor();
+      self.reset();
     }
     ImGui::SameLine();
     ImGui::AlignTextToFramePadding();
@@ -1419,7 +1412,7 @@ private:
 
     ImGui::SameLine();
     if(ImGui::Button("Cancel")) {
-      self.request_leave_editor();
+      self.reset();
     }
 
     ImGui::EndGroup();

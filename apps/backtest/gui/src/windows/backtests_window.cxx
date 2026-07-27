@@ -74,16 +74,10 @@ private:
     const auto& backtest_handles = app_state.get_backtest_handles();
 
     ImGui::BeginGroup();
-    const auto has_new_backtest_draft =
-     !self.selected_backtest_handle_opt_ && self.editing_backtest_ptr_;
-    if(ImGui::Button(has_new_backtest_draft
-                      ? PLUDUX_ICON_EDIT " Resume New Backtest"
-                      : PLUDUX_ICON_ADD " New Backtest")) {
+    if(ImGui::Button(PLUDUX_ICON_ADD " New Backtest")) {
       self.backtest_panel_mode_ = BacktestPanelMode::AddNew;
-      if(self.selected_backtest_handle_opt_ || !self.editing_backtest_ptr_) {
-        self.selected_backtest_handle_opt_ = std::nullopt;
-        self.editing_backtest_ptr_ = std::make_shared<backtest::Backtest>();
-      }
+      self.selected_backtest_handle_opt_ = std::nullopt;
+      self.editing_backtest_ptr_ = std::make_shared<backtest::Backtest>();
     }
     ImGui::Spacing();
     ui::search_filter(self.backtest_filter_, "##backtests_search");
@@ -186,7 +180,7 @@ private:
 
     ImGui::SameLine();
     if(ImGui::Button("Cancel")) {
-      self.leave_editor();
+      self.reset();
     }
 
     ImGui::EndGroup();

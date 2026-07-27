@@ -79,18 +79,12 @@ private:
     const auto backtest_ptr = app_state.selected_backtest_if_present();
 
     ImGui::BeginGroup();
-    const auto has_new_profile_draft =
-     !self.selected_profile_handle_opt_ && self.editing_profile_ptr_;
-    if(ImGui::Button(has_new_profile_draft ? PLUDUX_ICON_EDIT
-                      " Resume New Profile"
-                                           : PLUDUX_ICON_ADD " New Profile")) {
+    if(ImGui::Button(PLUDUX_ICON_ADD " New Profile")) {
       self.current_page_ = ProfilePage::AddNewProfile;
-      if(self.selected_profile_handle_opt_ || !self.editing_profile_ptr_) {
-        self.selected_profile_handle_opt_ = std::nullopt;
-        self.editing_profile_ptr_ = std::make_shared<backtest::Profile>();
-        self.editing_profile_ptr_->position_sizing(backtest::PositionSizing{
-         backtest::PositionSizing::Mode::RiskDistance, 0.01});
-      }
+      self.selected_profile_handle_opt_ = std::nullopt;
+      self.editing_profile_ptr_ = std::make_shared<backtest::Profile>();
+      self.editing_profile_ptr_->position_sizing(backtest::PositionSizing{
+       backtest::PositionSizing::Mode::RiskDistance, 0.01});
     }
     ImGui::Spacing();
     ui::search_filter(self.profile_filter_, "##profiles_search");
@@ -179,7 +173,7 @@ private:
 
     ImGui::SameLine();
     if(ImGui::Button("Cancel")) {
-      self.leave_editor();
+      self.reset();
     }
 
     ImGui::EndGroup();
