@@ -10,3 +10,4 @@ export import :plots.any_plot_method;
 export import :plots.hline_plot_method;
 export import :plots.line_plot_method;
 export import :plots.histogram_plot_method;
+export import :plots.momentum_histogram_plot_method;

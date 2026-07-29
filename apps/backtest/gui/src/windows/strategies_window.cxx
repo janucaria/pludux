@@ -69,6 +69,8 @@ using pludux::backtest::TpRMultipleNode;
 using LinePlotMethod = pludux::backtest::LinePlotMethod<AnyPlotSourceMethod>;
 using HistogramPlotMethod =
  pludux::backtest::HistogramPlotMethod<AnyPlotSourceMethod>;
+using MomentumHistogramPlotMethod =
+ pludux::backtest::MomentumHistogramPlotMethod<AnyPlotSourceMethod>;
 using pludux::backtest::ConstantPlotSourceMethod;
 using pludux::backtest::SeriesPlotSourceMethod;
 
@@ -909,6 +911,10 @@ auto get_plot_method_id(const AnyPlotMethod& method) -> std::string
     return "HISTOGRAM";
   }
 
+  if(plot_method_cast<MomentumHistogramPlotMethod>(method)) {
+    return "MOMENTUM_HISTOGRAM";
+  }
+
   return "UNKNOWN";
 }
 
@@ -920,6 +926,8 @@ auto get_plot_method_title(const std::string& plot_id) -> std::string
     return "Horizontal Line";
   } else if(plot_id == "HISTOGRAM") {
     return "Histogram";
+  } else if(plot_id == "MOMENTUM_HISTOGRAM") {
+    return "Momentum Histogram";
   }
 
   return "Unknown";
@@ -936,7 +944,11 @@ auto get_default_plot_method(const std::string& plot_id) -> AnyPlotMethod
   }
 
   if(plot_id == "HISTOGRAM") {
-    return HistogramPlotMethod{ConstantPlotSourceMethod{0.0}, 0xFFFFFFFF};
+    return HistogramPlotMethod{ConstantPlotSourceMethod{0.0}};
+  }
+
+  if(plot_id == "MOMENTUM_HISTOGRAM") {
+    return MomentumHistogramPlotMethod{ConstantPlotSourceMethod{0.0}};
   }
 
   throw std::invalid_argument{
@@ -3497,7 +3509,8 @@ private:
   {
     static const auto entries = [] {
       auto result = std::vector<ui::ComboEntry>{};
-      for(const auto& id : {"LINE", "HLINE", "HISTOGRAM"}) {
+      for(const auto& id :
+          {"LINE", "HLINE", "HISTOGRAM", "MOMENTUM_HISTOGRAM"}) {
         result.push_back(ui::ComboEntry{
          .id = id, .title = get_plot_method_title(id), .category = ""});
       }
@@ -3520,6 +3533,9 @@ private:
         self.render_plot_method(*method_ptr, context);
       } else if(auto* method_ptr =
                  plot_method_cast<HistogramPlotMethod>(plot_method)) {
+        self.render_plot_method(*method_ptr, context);
+      } else if(auto* method_ptr =
+                 plot_method_cast<MomentumHistogramPlotMethod>(plot_method)) {
         self.render_plot_method(*method_ptr, context);
       }
       ImGui::Unindent();
@@ -3547,7 +3563,8 @@ private:
 
   template<typename TPlotMethod>
     requires std::same_as<TPlotMethod, LinePlotMethod> ||
-             std::same_as<TPlotMethod, HistogramPlotMethod>
+             std::same_as<TPlotMethod, HistogramPlotMethod> ||
+             std::same_as<TPlotMethod, MomentumHistogramPlotMethod>
   void render_plot_method(this auto& self,
                           TPlotMethod& plot_method,
                           WindowContext& context)
@@ -3598,12 +3615,51 @@ private:
     plot_method.source(std::move(source));
     ImGui::Unindent();
 
-    ui::field_label("Color");
-    const auto color_vec = ImGui::ColorConvertU32ToFloat4(plot_method.color());
-    auto color = std::array{color_vec.x, color_vec.y, color_vec.z, color_vec.w};
-    if(ImGui::ColorEdit4("##line_color", color.data())) {
-      plot_method.color(ImGui::ColorConvertFloat4ToU32(
-       {color[0], color[1], color[2], color[3]}));
+    if constexpr(!std::same_as<TPlotMethod, MomentumHistogramPlotMethod>) {
+      ui::field_label("Color");
+      const auto color_vec =
+       ImGui::ColorConvertU32ToFloat4(plot_method.color());
+      auto color =
+       std::array{color_vec.x, color_vec.y, color_vec.z, color_vec.w};
+      if(ImGui::ColorEdit4("##line_color", color.data())) {
+        plot_method.color(ImGui::ColorConvertFloat4ToU32(
+         {color[0], color[1], color[2], color[3]}));
+      }
+    } else {
+      const auto render_color = [&](const char* label,
+                                    const char* id,
+                                    std::uint32_t current_color,
+                                    auto set_color) {
+        ui::field_label(label);
+        const auto color_vec = ImGui::ColorConvertU32ToFloat4(current_color);
+        auto color =
+         std::array{color_vec.x, color_vec.y, color_vec.z, color_vec.w};
+        if(ImGui::ColorEdit4(id, color.data())) {
+          set_color(ImGui::ColorConvertFloat4ToU32(
+           {color[0], color[1], color[2], color[3]}));
+        }
+      };
+
+      render_color(
+       "Positive rising",
+       "##momentum_histogram_positive_rising_color",
+       plot_method.positive_rising_color(),
+       [&](std::uint32_t color) { plot_method.positive_rising_color(color); });
+      render_color(
+       "Positive falling",
+       "##momentum_histogram_positive_falling_color",
+       plot_method.positive_falling_color(),
+       [&](std::uint32_t color) { plot_method.positive_falling_color(color); });
+      render_color(
+       "Negative falling",
+       "##momentum_histogram_negative_falling_color",
+       plot_method.negative_falling_color(),
+       [&](std::uint32_t color) { plot_method.negative_falling_color(color); });
+      render_color(
+       "Negative rising",
+       "##momentum_histogram_negative_rising_color",
+       plot_method.negative_rising_color(),
+       [&](std::uint32_t color) { plot_method.negative_rising_color(color); });
     }
   }
 

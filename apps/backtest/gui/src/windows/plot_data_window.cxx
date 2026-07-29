@@ -7,6 +7,7 @@ module;
 #include <cstdio>
 #include <format>
 #include <iomanip>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <ranges>
@@ -56,6 +57,44 @@ public:
      ImPlotSpec{ImPlotProp_FillColor,
                 ImGui::ColorConvertU32ToFloat4(static_cast<ImU32>(color))};
     ImPlot::PlotBars("", data.data(), data.size(), 0.8, 0.0, plot_spec);
+  }
+
+  void render_plot_momentum_histogram(this const PlotContext& self,
+                                      const std::vector<double>& data,
+                                      const std::vector<std::uint32_t>& colors)
+  {
+    auto unique_colors = std::vector<std::uint32_t>{};
+    for(const auto color : colors) {
+      if(std::ranges::find(unique_colors, color) == unique_colors.end()) {
+        unique_colors.push_back(color);
+      }
+    }
+
+    ImGui::PushID(data.data());
+    for(auto color_index = std::size_t{0}; color_index < unique_colors.size();
+        ++color_index) {
+      const auto color = unique_colors[color_index];
+      auto color_data = std::vector<double>(
+       data.size(), std::numeric_limits<double>::quiet_NaN());
+      for(auto i = std::size_t{0}; i < data.size() && i < colors.size(); ++i) {
+        if(colors[i] == color) {
+          color_data[i] = data[i];
+        }
+      }
+
+      const auto plot_spec =
+       ImPlotSpec{ImPlotProp_FillColor,
+                  ImGui::ColorConvertU32ToFloat4(static_cast<ImU32>(color))};
+      const auto label =
+       std::format("##momentum_histogram_color_{}", color_index);
+      ImPlot::PlotBars(label.c_str(),
+                       color_data.data(),
+                       color_data.size(),
+                       0.8,
+                       0.0,
+                       plot_spec);
+    }
+    ImGui::PopID();
   }
 
   auto series_results(this const PlotContext& self, const std::string& name)

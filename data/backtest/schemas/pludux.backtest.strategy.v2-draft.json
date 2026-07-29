@@ -3606,6 +3606,63 @@
       "title": "Histogram Plot",
       "description": "Plots a source as histogram bars."
     },
+    "momentumHistogramPlot": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "MOMENTUM_HISTOGRAM"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "source": {
+                  "$ref": "#/$defs/plotSource",
+                  "title": "Source",
+                  "description": "Series or signal source to render."
+                },
+                "positiveRisingColor": {
+                  "$ref": "#/$defs/plotColor",
+                  "title": "Positive Rising Color",
+                  "description": "Color for non-negative bars whose value is rising."
+                },
+                "positiveFallingColor": {
+                  "$ref": "#/$defs/plotColor",
+                  "title": "Positive Falling Color",
+                  "description": "Color for non-negative bars whose value is falling."
+                },
+                "negativeFallingColor": {
+                  "$ref": "#/$defs/plotColor",
+                  "title": "Negative Falling Color",
+                  "description": "Color for negative bars whose value is falling."
+                },
+                "negativeRisingColor": {
+                  "$ref": "#/$defs/plotColor",
+                  "title": "Negative Rising Color",
+                  "description": "Color for negative bars whose value is rising."
+                }
+              },
+              "required": [
+                "source",
+                "positiveRisingColor",
+                "positiveFallingColor",
+                "negativeFallingColor",
+                "negativeRisingColor"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Momentum Histogram Plot",
+      "description": "Plots a source as histogram bars colored by sign and direction."
+    },
     "plotItem": {
       "oneOf": [
         {
@@ -3616,6 +3673,9 @@
         },
         {
           "$ref": "#/$defs/histogramPlot"
+        },
+        {
+          "$ref": "#/$defs/momentumHistogramPlot"
         }
       ],
       "title": "Plot Item",

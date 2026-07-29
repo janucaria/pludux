@@ -144,7 +144,7 @@
           }
         },
         {
-          "method": "HISTOGRAM",
+          "method": "MOMENTUM_HISTOGRAM",
           "params": {
             "source": {
               "method": "SERIES",
@@ -152,7 +152,10 @@
                 "name": "macd_histogram"
               }
             },
-            "color": "yellow"
+            "positiveRisingColor": "#26a69a",
+            "positiveFallingColor": "#b2dfdb",
+            "negativeFallingColor": "#ef5350",
+            "negativeRisingColor": "#ffcdd2"
           }
         },
         {

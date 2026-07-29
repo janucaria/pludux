@@ -72,6 +72,7 @@ target_sources(${PROJECT_NAME}
     sources/backtest/plots/hline_plot_method.cxx
     sources/backtest/plots/line_plot_method.cxx
     sources/backtest/plots/histogram_plot_method.cxx
+    sources/backtest/plots/momentum_histogram_plot_method.cxx
 
     sources/backtest/plots.cxx
     sources/backtest/plot_group.cxx

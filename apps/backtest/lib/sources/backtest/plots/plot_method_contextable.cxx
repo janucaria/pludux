@@ -16,10 +16,13 @@ template<typename TContext>
 concept PlotMethodContextable = requires(TContext context,
                                          std::vector<double> data,
                                          std::string series_name,
-                                         std::uint32_t color) {
+                                         std::uint32_t color,
+                                         std::vector<std::uint32_t> colors) {
   context.render_plot_line(data, color);
 
   context.render_plot_histogram(data, color);
+
+  context.render_plot_momentum_histogram(data, colors);
 
   {
     context.series_results(series_name)

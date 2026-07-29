@@ -1,5 +1,12 @@
 #include <gtest/gtest.h>
 
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <optional>
+#include <stdexcept>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -30,6 +37,49 @@ using SignalOrNode = pludux::LogicalOrNode;
 using SignalXorNode = pludux::LogicalXorNode;
 
 auto node_context = NodeToErasedMethodContext{};
+
+struct HistogramRenderCapture {
+  std::vector<std::uint32_t> colors;
+};
+
+class PlotMethodTestContext {
+public:
+  PlotMethodTestContext(std::vector<double> data,
+                        std::shared_ptr<HistogramRenderCapture> capture)
+  : data_{std::make_shared<std::vector<double>>(std::move(data))}
+  , capture_{std::move(capture)}
+  {
+  }
+
+  void render_plot_line(const std::vector<double>&, std::uint32_t)
+  {
+  }
+
+  void render_plot_histogram(const std::vector<double>&, std::uint32_t)
+  {
+  }
+
+  void render_plot_momentum_histogram(const std::vector<double>&,
+                                      const std::vector<std::uint32_t>& colors)
+  {
+    capture_->colors = colors;
+  }
+
+  auto series_results(const std::string&) const
+   -> std::optional<std::reference_wrapper<const std::vector<double>>>
+  {
+    return std::cref(*data_);
+  }
+
+  auto results_size() const -> std::size_t
+  {
+    return data_->size();
+  }
+
+private:
+  std::shared_ptr<std::vector<double>> data_;
+  std::shared_ptr<HistogramRenderCapture> capture_;
+};
 
 class ParsedConfigNodeMethod {
 public:
@@ -139,6 +189,98 @@ protected:
     )"));
   }
 };
+
+TEST(PlotMethodParserTest, ParseAndSerializeMomentumHistogram)
+{
+  const auto config = json::parse(R"(
+    {
+      "version": 2,
+      "plots": [{
+        "items": [{
+          "method": "MOMENTUM_HISTOGRAM",
+          "params": {
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "histogram"
+              }
+            },
+            "positiveRisingColor": "#26a69a",
+            "positiveFallingColor": "#b2dfdb",
+            "negativeFallingColor": "#ef5350",
+            "negativeRisingColor": "#ffcdd2"
+          }
+        }]
+      }],
+      "execution": {
+        "intrabarPath": "CANDLE_DIRECTION"
+      }
+    }
+  )");
+
+  const auto strategy =
+   backtest::parse_backtest_strategy_config_json("Test", config);
+  const auto& method = strategy.plots().at(0).items().at(0);
+  using MomentumHistogram =
+   backtest::MomentumHistogramPlotMethod<backtest::AnyPlotSourceMethod>;
+  const auto* histogram = plot_method_cast<MomentumHistogram>(method);
+  ASSERT_NE(histogram, nullptr);
+  EXPECT_EQ(histogram->positive_rising_color(), 0xFF9AA626);
+  EXPECT_EQ(histogram->positive_falling_color(), 0xFFDBDFB2);
+  EXPECT_EQ(histogram->negative_falling_color(), 0xFF5053EF);
+  EXPECT_EQ(histogram->negative_rising_color(), 0xFFD2CDFF);
+
+  const auto capture = std::make_shared<HistogramRenderCapture>();
+  method(PlotMethodTestContext{{1.0, 2.0, 1.0, -1.0, -2.0, -1.0}, capture});
+  EXPECT_EQ(
+   capture->colors,
+   (std::vector<std::uint32_t>{
+    0xFF9AA626, 0xFF9AA626, 0xFFDBDFB2, 0xFF5053EF, 0xFF5053EF, 0xFFD2CDFF}));
+
+  const auto serialized =
+   backtest::serialize_backtest_strategy_config_json(strategy);
+  const auto& serialized_params =
+   serialized.at("plots").at(0).at("items").at(0).at("params");
+  EXPECT_TRUE(serialized_params.contains("positiveRisingColor"));
+  EXPECT_TRUE(serialized_params.contains("positiveFallingColor"));
+  EXPECT_TRUE(serialized_params.contains("negativeFallingColor"));
+  EXPECT_TRUE(serialized_params.contains("negativeRisingColor"));
+
+  const auto round_trip =
+   backtest::parse_backtest_strategy_config_json("Test", serialized);
+  EXPECT_EQ(method, round_trip.plots().at(0).items().at(0));
+}
+
+TEST(PlotMethodParserTest, RejectMomentumHistogramWithMissingColor)
+{
+  const auto config = json::parse(R"(
+    {
+      "version": 2,
+      "plots": [{
+        "items": [{
+          "method": "MOMENTUM_HISTOGRAM",
+          "params": {
+            "source": {
+              "method": "CONSTANT",
+              "params": {
+                "value": 1
+              }
+            },
+            "positiveRisingColor": "#26a69a",
+            "positiveFallingColor": "#b2dfdb",
+            "negativeFallingColor": "#ef5350"
+          }
+        }]
+      }],
+      "execution": {
+        "intrabarPath": "CANDLE_DIRECTION"
+      }
+    }
+  )");
+
+  EXPECT_THROW(backtest::parse_backtest_strategy_config_json("Test", config),
+               std::invalid_argument);
+}
 
 TEST_F(ConfigParserTest, ParseScreenerSeriesMethod)
 {

@@ -31,6 +31,13 @@ public:
                               std::uint32_t color) {
     std::any_cast<TPlotMethodContext>(impl).render_plot_histogram(data, color);
   }}
+  , render_plot_momentum_histogram_{[](
+                                     const std::any& impl,
+                                     const std::vector<double>& data,
+                                     const std::vector<std::uint32_t>& colors) {
+    std::any_cast<TPlotMethodContext>(impl).render_plot_momentum_histogram(
+     data, colors);
+  }}
   , series_results_{[](const std::any& impl, const std::string& series_name)
                      -> std::optional<
                       std::reference_wrapper<const std::vector<double>>> {
@@ -62,6 +69,13 @@ public:
                              std::uint32_t color)
   {
     self.render_plot_histogram_(self.impl_, data, color);
+  }
+
+  void render_plot_momentum_histogram(this const AnyPlotMethodContext& self,
+                                      const std::vector<double>& data,
+                                      const std::vector<std::uint32_t>& colors)
+  {
+    self.render_plot_momentum_histogram_(self.impl_, data, colors);
   }
 
   auto series_results(this const AnyPlotMethodContext& self,
@@ -102,6 +116,11 @@ private:
   std::function<void(
    const std::any&, const std::vector<double>&, std::uint32_t)>
    render_plot_histogram_;
+
+  std::function<void(const std::any&,
+                     const std::vector<double>&,
+                     const std::vector<std::uint32_t>&)>
+   render_plot_momentum_histogram_;
 
   std::function<
    auto(const std::any&, const std::string&)

@@ -1,5 +1,6 @@
 module;
 
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <optional>
@@ -434,7 +435,8 @@ auto make_default_registered_plot_method_parser() -> PlotMethodParser
      auto serialized_method = jsoncons::ojson::null();
 
      auto plot_method =
-      plot_method_cast<HistogramPlotMethod<AnyPlotSourceMethod>>(any_plot_method);
+      plot_method_cast<HistogramPlotMethod<AnyPlotSourceMethod>>(
+       any_plot_method);
      if(plot_method) {
        serialized_method = jsoncons::ojson{};
        serialized_method["source"] =
@@ -464,6 +466,60 @@ auto make_default_registered_plot_method_parser() -> PlotMethodParser
      }
 
      return HistogramPlotMethod<AnyPlotSourceMethod>{source, color};
+   });
+
+  method_parser.register_method_parser(
+   "MOMENTUM_HISTOGRAM",
+   [](const PlotMethodParser& method_parser,
+      const AnyPlotMethod any_plot_method) -> jsoncons::ojson {
+     auto serialized_method = jsoncons::ojson::null();
+
+     auto plot_method =
+      plot_method_cast<MomentumHistogramPlotMethod<AnyPlotSourceMethod>>(
+       any_plot_method);
+     if(plot_method) {
+       serialized_method = jsoncons::ojson{};
+       serialized_method["source"] =
+        method_parser.serialize_plot_source_method(plot_method->source());
+       serialized_method["positiveRisingColor"] =
+        plot_method->positive_rising_color();
+       serialized_method["positiveFallingColor"] =
+        plot_method->positive_falling_color();
+       serialized_method["negativeFallingColor"] =
+        plot_method->negative_falling_color();
+       serialized_method["negativeRisingColor"] =
+        plot_method->negative_rising_color();
+     }
+
+     return serialized_method;
+   },
+   [](const PlotMethodParser& method_parser,
+      const jsoncons::ojson& parameters) {
+     const auto source =
+      method_parser.plot_source_method_parser().parse_method_from_param_or(
+       method_parser.plot_source_method_parser(),
+       parameters,
+       "source",
+       SeriesPlotSourceMethod{});
+
+     const auto parse_color = [&](std::string_view name) {
+       const auto& color_param = parameters.at(name);
+       if(color_param.is_string()) {
+         return string_color_to_u32(color_param.as_string());
+       }
+       if(color_param.is_number()) {
+         return color_param.as<std::uint32_t>();
+       }
+       throw std::invalid_argument{
+        "Momentum histogram colors must be strings or unsigned integers"};
+     };
+
+     return MomentumHistogramPlotMethod<AnyPlotSourceMethod>{
+      source,
+      parse_color("positiveRisingColor"),
+      parse_color("positiveFallingColor"),
+      parse_color("negativeFallingColor"),
+      parse_color("negativeRisingColor")};
    });
 
   return method_parser;
