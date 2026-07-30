@@ -12,7 +12,10 @@
   <style>
     body {
       margin: 0;
-      background-color: black
+      background-color: #0e1014;
+      color: #eef1f7;
+      font-family: Arial, Helvetica, sans-serif;
+      overflow: hidden;
     }
 
     .emscripten {
@@ -34,11 +37,70 @@
       image-rendering: pixelated;
       -ms-interpolation-mode: nearest-neighbor;
     }
+
+    #loading-overlay {
+      align-items: center;
+      background: #0e1014;
+      display: flex;
+      inset: 0;
+      justify-content: center;
+      opacity: 1;
+      pointer-events: none;
+      position: fixed;
+      transition: opacity 180ms ease-out;
+      z-index: 1;
+    }
+
+    #loading-overlay.loading-overlay-hidden {
+      opacity: 0;
+    }
+
+    .loading-content {
+      align-items: center;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .loading-title {
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      margin-bottom: 27px;
+    }
+
+    .loading-spinner {
+      animation: loading-spin 850ms linear infinite;
+      border: 3px solid #303642;
+      border-radius: 50%;
+      border-top-color: #5e81f4;
+      box-sizing: border-box;
+      height: 25px;
+      margin-bottom: 22px;
+      width: 25px;
+    }
+
+    .loading-detail {
+      color: #97a0b0;
+      font-size: 13px;
+    }
+
+    @keyframes loading-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
   </style>
 </head>
 
 <body>
   <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+  <div id="loading-overlay" role="status" aria-live="polite">
+    <div class="loading-content">
+      <div class="loading-title">PLUDUX</div>
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <div class="loading-detail">Preparing your workspace...</div>
+    </div>
+  </div>
   <script type='text/javascript'>
     var Module;
     (async () => {
