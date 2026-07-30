@@ -4,7 +4,7 @@ SET(JSONCONS_BUILD_TESTS OFF)
 FetchContent_Declare(
   jsoncons
   GIT_REPOSITORY https://github.com/danielaparker/jsoncons.git
-  GIT_TAG        v1.6.0
+  GIT_TAG        v1.8.1
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
   OVERRIDE_FIND_PACKAGE
@@ -14,7 +14,7 @@ FetchContent_Declare(
 FetchContent_Declare(
   rapidcsv
   GIT_REPOSITORY https://github.com/d99kris/rapidcsv.git
-  GIT_TAG        v8.92
+  GIT_TAG        v8.99
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
   OVERRIDE_FIND_PACKAGE
@@ -23,7 +23,7 @@ FetchContent_Declare(
 FetchContent_Declare(
   ctre
   GIT_REPOSITORY https://github.com/hanickadot/compile-time-regular-expressions.git
-  GIT_TAG        v3.10.0
+  GIT_TAG        v3.11.0
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
   OVERRIDE_FIND_PACKAGE

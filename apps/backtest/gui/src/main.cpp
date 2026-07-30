@@ -347,12 +347,15 @@ private:
 
     // Base font, then merge in the Lucide icon font so icon glyphs can be
     // used inline with regular text (e.g. PLUDUX_ICON_DELETE " Delete").
+    // Both fonts need an explicit matching reference size for MergeMode.
     // Loaded from an in-memory byte array (see CMakeLists.txt) rather than
     // AddFontFromFileTTF because the Emscripten build disables ImGui's
     // file-based font loading (IMGUI_DISABLE_FILE_FUNCTIONS).
-    io.Fonts->AddFontDefault();
-
     const auto icon_font_size = 13.0f;
+    auto default_font_config = ImFontConfig{};
+    default_font_config.SizePixels = icon_font_size;
+    io.Fonts->AddFontDefaultBitmap(&default_font_config);
+
     auto icon_font_config = ImFontConfig{};
     icon_font_config.MergeMode = true;
     icon_font_config.PixelSnapH = true;
