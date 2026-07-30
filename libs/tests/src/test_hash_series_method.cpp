@@ -689,22 +689,23 @@ TEST_F(HashSeriesMethodStabilityTest, OperatorMethodHashesAreStable)
 }
 
 // ============================================================================
-// Hash AnySeriesMethod Tests - Should produce valid hashes for any method type
+// ErasedSeriesMethod hashing should match the underlying method hash.
 // ============================================================================
 
-class HashSeriesMethodAnyTest : public ::testing::Test {};
+class HashErasedSeriesMethodTest : public ::testing::Test {};
 
-TEST_F(HashSeriesMethodAnyTest, HashAnySeriesMethodProducesValidHash)
+TEST_F(HashErasedSeriesMethodTest, ProducesValidHash)
 {
   const auto method =
    MultiplyMethod{SmaMethod<CloseMethod>{20}, EmaMethod<CloseMethod>{12}};
 
-  const auto any_method =
-   AnySeriesMethod{MultiplyMethod{AnySeriesMethod{SmaMethod<CloseMethod>{20}},
-                                  AnySeriesMethod{EmaMethod<CloseMethod>{12}}}};
+  const auto erased_method =
+   ErasedSeriesMethod<ErasedSeriesMethodContext>{MultiplyMethod{
+    ErasedSeriesMethod<ErasedSeriesMethodContext>{SmaMethod<CloseMethod>{20}},
+    ErasedSeriesMethod<ErasedSeriesMethodContext>{EmaMethod<CloseMethod>{12}}}};
 
   const auto hash1 = hash_series_method(method);
-  const auto hash2 = hash_series_method(any_method);
+  const auto hash2 = hash_series_method(erased_method);
 
   EXPECT_EQ(hash1, hash2);
 }

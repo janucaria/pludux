@@ -126,22 +126,27 @@ using NegativePartNode = UnaryOperatorNode<NegativePart<>>;
 template<typename TBinaryFn>
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const BinaryOperatorNode<TBinaryFn>& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
   auto operand1 = node_to_erased_method(node.operand1(), context);
   auto operand2 = node_to_erased_method(node.operand2(), context);
-  return AnySeriesMethod{
-   BinaryOperatorMethod<TBinaryFn, AnySeriesMethod, AnySeriesMethod>{
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
+   BinaryOperatorMethod<TBinaryFn,
+                        ErasedSeriesMethod<ErasedSeriesMethodContext>,
+                        ErasedSeriesMethod<ErasedSeriesMethodContext>>{
     std::move(operand1), std::move(operand2)}};
 }
 
 template<typename TUnaryFn>
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const UnaryOperatorNode<TUnaryFn>& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{UnaryOperatorMethod<TUnaryFn, AnySeriesMethod>{
-   node_to_erased_method(node.operand(), context)}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
+   UnaryOperatorMethod<TUnaryFn, ErasedSeriesMethod<ErasedSeriesMethodContext>>{
+    node_to_erased_method(node.operand(), context)}};
 }
 
 } // namespace pludux

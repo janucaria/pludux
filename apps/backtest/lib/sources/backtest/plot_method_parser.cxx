@@ -22,13 +22,16 @@ import :plot_source_method_parser;
 export namespace pludux::backtest {
 
 class PlotMethodParser
-: public MethodSerializerMixin<PlotMethodParser, AnyPlotMethod> {
+: public MethodSerializerMixin<PlotMethodParser,
+                               ErasedPlotMethod<ErasedPlotMethodContext>> {
 public:
-  using MethodSerializerMixin<PlotMethodParser,
-                              AnyPlotMethod>::MethodSerializerMixin;
+  using MethodSerializerMixin<
+   PlotMethodParser,
+   ErasedPlotMethod<ErasedPlotMethodContext>>::MethodSerializerMixin;
 
   PlotMethodParser(PlotSourceMethodParser plot_source_method_parser)
-  : MethodSerializerMixin<PlotMethodParser, AnyPlotMethod>{}
+  : MethodSerializerMixin<PlotMethodParser,
+                          ErasedPlotMethod<ErasedPlotMethodContext>>{}
   , plot_source_method_parser_{std::move(plot_source_method_parser)}
   {
   }
@@ -46,8 +49,9 @@ public:
     self.plot_source_method_parser_ = std::move(new_plot_source_method_parser);
   }
 
-  auto serialize_plot_source_method(this const PlotMethodParser& self,
-                                    const AnyPlotSourceMethod& method)
+  auto serialize_plot_source_method(
+   this const PlotMethodParser& self,
+   const ErasedPlotSourceMethod<ErasedPlotMethodContext>& method)
    -> jsoncons::ojson
   {
     return self.plot_source_method_parser_.serialize_method(method);
@@ -359,7 +363,8 @@ auto make_default_registered_plot_method_parser() -> PlotMethodParser
   method_parser.register_method_parser(
    "HLINE",
    [](const PlotMethodParser& method_parser,
-      const AnyPlotMethod any_plot_method) -> jsoncons::ojson {
+      const ErasedPlotMethod<ErasedPlotMethodContext> any_plot_method)
+    -> jsoncons::ojson {
      auto serialized_method = jsoncons::ojson::null();
 
      auto plot_method = plot_method_cast<HLinePlotMethod>(any_plot_method);
@@ -392,11 +397,13 @@ auto make_default_registered_plot_method_parser() -> PlotMethodParser
   method_parser.register_method_parser(
    "LINE",
    [](const PlotMethodParser& method_parser,
-      const AnyPlotMethod any_plot_method) -> jsoncons::ojson {
+      const ErasedPlotMethod<ErasedPlotMethodContext> any_plot_method)
+    -> jsoncons::ojson {
      auto serialized_method = jsoncons::ojson::null();
 
-     auto plot_method =
-      plot_method_cast<LinePlotMethod<AnyPlotSourceMethod>>(any_plot_method);
+     auto plot_method = plot_method_cast<
+      LinePlotMethod<ErasedPlotSourceMethod<ErasedPlotMethodContext>>>(
+      any_plot_method);
      if(plot_method) {
        serialized_method = jsoncons::ojson{};
        serialized_method["source"] =
@@ -425,18 +432,20 @@ auto make_default_registered_plot_method_parser() -> PlotMethodParser
        }
      }
 
-     return LinePlotMethod<AnyPlotSourceMethod>{source, color};
+     return LinePlotMethod<ErasedPlotSourceMethod<ErasedPlotMethodContext>>{
+      source, color};
    });
 
   method_parser.register_method_parser(
    "HISTOGRAM",
    [](const PlotMethodParser& method_parser,
-      const AnyPlotMethod any_plot_method) -> jsoncons::ojson {
+      const ErasedPlotMethod<ErasedPlotMethodContext> any_plot_method)
+    -> jsoncons::ojson {
      auto serialized_method = jsoncons::ojson::null();
 
-     auto plot_method =
-      plot_method_cast<HistogramPlotMethod<AnyPlotSourceMethod>>(
-       any_plot_method);
+     auto plot_method = plot_method_cast<
+      HistogramPlotMethod<ErasedPlotSourceMethod<ErasedPlotMethodContext>>>(
+      any_plot_method);
      if(plot_method) {
        serialized_method = jsoncons::ojson{};
        serialized_method["source"] =
@@ -465,18 +474,19 @@ auto make_default_registered_plot_method_parser() -> PlotMethodParser
        }
      }
 
-     return HistogramPlotMethod<AnyPlotSourceMethod>{source, color};
+     return HistogramPlotMethod<
+      ErasedPlotSourceMethod<ErasedPlotMethodContext>>{source, color};
    });
 
   method_parser.register_method_parser(
    "MOMENTUM_HISTOGRAM",
    [](const PlotMethodParser& method_parser,
-      const AnyPlotMethod any_plot_method) -> jsoncons::ojson {
+      const ErasedPlotMethod<ErasedPlotMethodContext> any_plot_method)
+    -> jsoncons::ojson {
      auto serialized_method = jsoncons::ojson::null();
 
-     auto plot_method =
-      plot_method_cast<MomentumHistogramPlotMethod<AnyPlotSourceMethod>>(
-       any_plot_method);
+     auto plot_method = plot_method_cast<MomentumHistogramPlotMethod<
+      ErasedPlotSourceMethod<ErasedPlotMethodContext>>>(any_plot_method);
      if(plot_method) {
        serialized_method = jsoncons::ojson{};
        serialized_method["source"] =
@@ -514,7 +524,8 @@ auto make_default_registered_plot_method_parser() -> PlotMethodParser
         "Momentum histogram colors must be strings or unsigned integers"};
      };
 
-     return MomentumHistogramPlotMethod<AnyPlotSourceMethod>{
+     return MomentumHistogramPlotMethod<
+      ErasedPlotSourceMethod<ErasedPlotMethodContext>>{
       source,
       parse_color("positiveRisingColor"),
       parse_color("positiveFallingColor"),

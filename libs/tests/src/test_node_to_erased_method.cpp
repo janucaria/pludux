@@ -6,7 +6,8 @@ import pludux;
 
 using namespace pludux;
 
-auto value_method_value(const AnySeriesMethod& method) noexcept -> double
+auto value_method_value(
+ const ErasedSeriesMethod<ErasedSeriesMethodContext>& method) noexcept -> double
 {
   const auto* value_method = series_method_cast<ValueMethod>(method);
   EXPECT_NE(value_method, nullptr);
@@ -39,7 +40,9 @@ TEST(NodeToErasedMethodTest, NumericInputNodeConsumesContextByTraversalOrder)
 
   const auto method = node_to_erased_method(node, input_context);
   const auto* add_method =
-   series_method_cast<AddMethod<AnySeriesMethod, AnySeriesMethod>>(method);
+   series_method_cast<AddMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
+                                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+    method);
 
   ASSERT_NE(add_method, nullptr);
 
@@ -67,7 +70,9 @@ TEST(NodeToErasedMethodTest, MovingAveragePeriodConsumesContextInput)
 
   const auto method = node_to_erased_method(node, input_context);
   const auto* sma_method =
-   series_method_cast<SmaMethod<AnySeriesMethod, AnySeriesMethod>>(method);
+   series_method_cast<SmaMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
+                                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+    method);
 
   ASSERT_NE(sma_method, nullptr);
   EXPECT_EQ(value_method_value(sma_method->period()), 7);
@@ -82,7 +87,9 @@ TEST(NodeToErasedMethodTest, PrimitiveMovingAveragePeriodBecomesValueMethod)
 
   const auto method = node_to_erased_method(node, input_context);
   const auto* sma_method =
-   series_method_cast<SmaMethod<AnySeriesMethod, AnySeriesMethod>>(method);
+   series_method_cast<SmaMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
+                                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+    method);
 
   ASSERT_NE(sma_method, nullptr);
   EXPECT_EQ(value_method_value(sma_method->period()), 20);
@@ -103,7 +110,9 @@ TEST(NodeToErasedMethodTest, BollingerBandInputsConsumeContextInOrder)
 
   const auto method = node_to_erased_method(node, input_context);
   const auto* bb_method =
-   series_method_cast<BbMethod<AnySeriesMethod, AnySeriesMethod>>(method);
+   series_method_cast<BbMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
+                               ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+    method);
 
   ASSERT_NE(bb_method, nullptr);
   EXPECT_EQ(value_method_value(bb_method->period()), 7);
@@ -128,7 +137,9 @@ TEST(NodeToErasedMethodTest, KeltnerChannelInputsConsumeContextInOrder)
 
   const auto method = node_to_erased_method(node, input_context);
   const auto* kc_method =
-   series_method_cast<KcMethod<AnySeriesMethod, AnySeriesMethod>>(method);
+   series_method_cast<KcMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
+                               ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+    method);
 
   ASSERT_NE(kc_method, nullptr);
   EXPECT_EQ(value_method_value(kc_method->period()), 9);
@@ -155,8 +166,9 @@ TEST(NodeToErasedMethodTest, MacdInputsConsumeContextInOrder)
   auto input_context = NodeToErasedMethodContext{inputs};
 
   const auto method = node_to_erased_method(node, input_context);
-  const auto* macd_method =
-   series_method_cast<MacdMethod<AnySeriesMethod, AnySeriesMethod>>(method);
+  const auto* macd_method = series_method_cast<
+   MacdMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
+              ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
 
   ASSERT_NE(macd_method, nullptr);
   EXPECT_EQ(value_method_value(macd_method->fast_period()), 5);
@@ -182,8 +194,9 @@ TEST(NodeToErasedMethodTest, StochRsiInputsConsumeContextInOrder)
   auto input_context = NodeToErasedMethodContext{inputs};
 
   const auto method = node_to_erased_method(node, input_context);
-  const auto* stoch_rsi_method =
-   series_method_cast<StochRsiMethod<AnySeriesMethod, AnySeriesMethod>>(method);
+  const auto* stoch_rsi_method = series_method_cast<
+   StochRsiMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
+                  ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
 
   ASSERT_NE(stoch_rsi_method, nullptr);
   EXPECT_EQ(value_method_value(stoch_rsi_method->rsi_period()), 21);

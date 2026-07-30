@@ -60,9 +60,10 @@ private:
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const LookbackNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{LookbackMethod{
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{LookbackMethod{
    node_to_erased_method(node.source(), context), node.period()}};
 }
 

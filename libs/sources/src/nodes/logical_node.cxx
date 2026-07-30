@@ -84,23 +84,28 @@ using LogicalXorNode = BinaryLogicalNode<LogicalXor<>>;
 template<typename TOperator>
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const BinaryLogicalNode<TOperator>& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
   auto first_condition = node_to_erased_method(node.first_condition(), context);
   auto second_condition =
    node_to_erased_method(node.second_condition(), context);
-  return AnySeriesMethod{
-   BinaryLogicalMethod<TOperator, AnySeriesMethod, AnySeriesMethod>{
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
+   BinaryLogicalMethod<TOperator,
+                       ErasedSeriesMethod<ErasedSeriesMethodContext>,
+                       ErasedSeriesMethod<ErasedSeriesMethodContext>>{
     std::move(first_condition), std::move(second_condition)}};
 }
 
 template<typename TOperator>
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const UnaryLogicalNode<TOperator>& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{UnaryLogicalMethod<TOperator, AnySeriesMethod>{
-   node_to_erased_method(node.other_condition(), context)}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
+   UnaryLogicalMethod<TOperator, ErasedSeriesMethod<ErasedSeriesMethodContext>>{
+    node_to_erased_method(node.other_condition(), context)}};
 }
 
 } // namespace pludux

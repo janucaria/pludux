@@ -418,7 +418,8 @@ auto parse_backtest_strategy_config_json(std::string_view strategy_name,
       const auto label =
        plot_group_json.get_value_or<std::string>("label", "Unnamed");
       const auto overlay = plot_group_json.get_value_or<bool>("overlay", true);
-      auto plot_items = std::vector<AnyPlotMethod>{};
+      auto plot_items =
+       std::vector<ErasedPlotMethod<ErasedPlotMethodContext>>{};
 
       if(plot_group_json.contains("items")) {
         const auto& items_json = plot_group_json.at("items");

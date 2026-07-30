@@ -53,11 +53,13 @@ private:
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const DonchianChannelNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
   const auto period = node_to_erased_method(node.period(), context);
 
-  return AnySeriesMethod{DonchianChannelMethod{period}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
+   DonchianChannelMethod{period}};
 }
 
 } // namespace pludux

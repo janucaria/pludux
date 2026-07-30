@@ -622,7 +622,8 @@ private:
 
   ImVec4 trailing_stop_color_;
 
-  static auto plot_source_label(const backtest::AnyPlotSourceMethod& source,
+  static auto plot_source_label(const backtest::ErasedPlotSourceMethod<
+                                 backtest::ErasedPlotMethodContext>& source,
                                 std::string_view fallback,
                                 std::size_t index) -> std::string
   {
@@ -637,10 +638,12 @@ private:
     return std::format("{} {}", fallback, index + 1);
   }
 
-  static auto plot_item_label(const backtest::AnyPlotMethod& method,
-                              std::size_t index) -> std::string
+  static auto plot_item_label(
+   const backtest::ErasedPlotMethod<backtest::ErasedPlotMethodContext>& method,
+   std::size_t index) -> std::string
   {
-    using PlotSource = backtest::AnyPlotSourceMethod;
+    using PlotSource =
+     backtest::ErasedPlotSourceMethod<backtest::ErasedPlotMethodContext>;
     if(plot_method_cast<backtest::HLinePlotMethod>(method)) {
       return std::format("Level {}", index + 1);
     }

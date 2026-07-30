@@ -44,12 +44,13 @@ import :ui.widgets;
 
 namespace pludux::apps {
 
-using pludux::backtest::AnyPlotMethod;
-using pludux::backtest::AnyPlotSourceMethod;
 using pludux::backtest::AveragePriceNode;
 using pludux::backtest::DrawdownNode;
 using pludux::backtest::EquityNode;
 using pludux::backtest::EquityPercentNode;
+using pludux::backtest::ErasedPlotMethod;
+using pludux::backtest::ErasedPlotMethodContext;
+using pludux::backtest::ErasedPlotSourceMethod;
 using pludux::backtest::HLinePlotMethod;
 using pludux::backtest::InitialEntryPriceNode;
 using pludux::backtest::LatestEntryPriceNode;
@@ -66,11 +67,13 @@ using pludux::backtest::TpAmountNode;
 using pludux::backtest::TpAtrNode;
 using pludux::backtest::TpPercentNode;
 using pludux::backtest::TpRMultipleNode;
-using LinePlotMethod = pludux::backtest::LinePlotMethod<AnyPlotSourceMethod>;
-using HistogramPlotMethod =
- pludux::backtest::HistogramPlotMethod<AnyPlotSourceMethod>;
+using LinePlotMethod = pludux::backtest::LinePlotMethod<
+ ErasedPlotSourceMethod<ErasedPlotMethodContext>>;
+using HistogramPlotMethod = pludux::backtest::HistogramPlotMethod<
+ ErasedPlotSourceMethod<ErasedPlotMethodContext>>;
 using MomentumHistogramPlotMethod =
- pludux::backtest::MomentumHistogramPlotMethod<AnyPlotSourceMethod>;
+ pludux::backtest::MomentumHistogramPlotMethod<
+  ErasedPlotSourceMethod<ErasedPlotMethodContext>>;
 using pludux::backtest::ConstantPlotSourceMethod;
 using pludux::backtest::SeriesPlotSourceMethod;
 
@@ -897,7 +900,8 @@ auto get_default_condition_node(const std::string& condition_id) -> ErasedNode
    std::format("Unknown condition node id: {}", condition_id)};
 }
 
-auto get_plot_method_id(const AnyPlotMethod& method) -> std::string
+auto get_plot_method_id(const ErasedPlotMethod<ErasedPlotMethodContext>& method)
+ -> std::string
 {
   if(plot_method_cast<HLinePlotMethod>(method)) {
     return "HLINE";
@@ -933,7 +937,8 @@ auto get_plot_method_title(const std::string& plot_id) -> std::string
   return "Unknown";
 }
 
-auto get_default_plot_method(const std::string& plot_id) -> AnyPlotMethod
+auto get_default_plot_method(const std::string& plot_id)
+ -> ErasedPlotMethod<ErasedPlotMethodContext>
 {
   if(plot_id == "LINE") {
     return LinePlotMethod{ConstantPlotSourceMethod{0.0}, 0xFFFFFFFF};
@@ -955,7 +960,8 @@ auto get_default_plot_method(const std::string& plot_id) -> AnyPlotMethod
    std::format("Unknown plot method id: {}", plot_id)};
 }
 
-auto get_plot_source_method_id(const AnyPlotSourceMethod& method) -> std::string
+auto get_plot_source_method_id(
+ const ErasedPlotSourceMethod<ErasedPlotMethodContext>& method) -> std::string
 {
   if(plot_source_method_cast<ConstantPlotSourceMethod>(method)) {
     return "CONSTANT";
@@ -981,7 +987,7 @@ auto get_plot_source_method_title(const std::string& plot_source_id)
 }
 
 auto get_default_plot_source_method(const std::string& plot_source_id)
- -> AnyPlotSourceMethod
+ -> ErasedPlotSourceMethod<ErasedPlotMethodContext>
 {
   if(plot_source_id == "CONSTANT") {
     return ConstantPlotSourceMethod{0.0};
@@ -3503,9 +3509,10 @@ private:
     return changed_node;
   }
 
-  void render_plot_method(this auto& self,
-                          AnyPlotMethod& plot_method,
-                          WindowContext& context)
+  void
+  render_plot_method(this auto& self,
+                     ErasedPlotMethod<ErasedPlotMethodContext>& plot_method,
+                     WindowContext& context)
   {
     static const auto entries = [] {
       auto result = std::vector<ui::ComboEntry>{};
@@ -3702,9 +3709,10 @@ private:
     }
   }
 
-  void render_plot_source_method(this auto& self,
-                                 AnyPlotSourceMethod& plot_source_method,
-                                 WindowContext& context)
+  void render_plot_source_method(
+   this auto& self,
+   ErasedPlotSourceMethod<ErasedPlotMethodContext>& plot_source_method,
+   WindowContext& context)
   {
     if(auto* method_ptr =
         plot_source_method_cast<SeriesPlotSourceMethod>(plot_source_method)) {

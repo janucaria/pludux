@@ -133,25 +133,28 @@ private:
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const RiskDistanceAmountNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
    RiskDistanceAmountMethod{node_to_erased_method(node.value(), context)}};
 }
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const RiskDistancePercentNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
    RiskDistancePercentMethod{node_to_erased_method(node.value(), context)}};
 }
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const RiskDistanceAtrNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
    RiskDistanceAtrMethod{node_to_erased_method(node.period(), context),
                          node_to_erased_method(node.multiplier(), context),
                          static_cast<MaMethodType>(node.ma_smoothing_type())}};

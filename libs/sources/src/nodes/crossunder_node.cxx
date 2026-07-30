@@ -47,12 +47,15 @@ private:
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const CrossunderNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
   auto source = node_to_erased_method(node.source(), context);
   auto reference = node_to_erased_method(node.reference(), context);
-  return AnySeriesMethod{CrossunderMethod<AnySeriesMethod, AnySeriesMethod>{
-   std::move(source), std::move(reference)}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
+   CrossunderMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
+                    ErasedSeriesMethod<ErasedSeriesMethodContext>>{
+    std::move(source), std::move(reference)}};
 }
 
 } // namespace pludux

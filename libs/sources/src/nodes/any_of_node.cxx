@@ -44,15 +44,19 @@ private:
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const AnyOfNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  auto conditions = std::vector<AnySeriesMethod>{};
+  auto conditions =
+   std::vector<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
   conditions.reserve(node.conditions().size());
   for(const auto& condition : node.conditions()) {
     conditions.emplace_back(node_to_erased_method(condition, context));
   }
 
-  return AnySeriesMethod{AnyOfMethod<AnySeriesMethod>{std::move(conditions)}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
+   AnyOfMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>{
+    std::move(conditions)}};
 }
 
 } // namespace pludux

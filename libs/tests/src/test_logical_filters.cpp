@@ -7,14 +7,18 @@ using namespace pludux;
 using SignalAlwaysMethod = pludux::TrueMethod;
 using SignalNeverMethod = pludux::FalseMethod;
 using SignalAndMethod =
- pludux::LogicalAndMethod<AnySeriesMethod, AnySeriesMethod>;
+ pludux::LogicalAndMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
+                          ErasedSeriesMethod<ErasedSeriesMethodContext>>;
 using SignalOrMethod =
- pludux::LogicalOrMethod<AnySeriesMethod, AnySeriesMethod>;
-using SignalNotMethod = pludux::LogicalNotMethod<AnySeriesMethod>;
+ pludux::LogicalOrMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
+                         ErasedSeriesMethod<ErasedSeriesMethodContext>>;
+using SignalNotMethod =
+ pludux::LogicalNotMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>;
 using SignalXorMethod =
- pludux::LogicalXorMethod<AnySeriesMethod, AnySeriesMethod>;
+ pludux::LogicalXorMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
+                          ErasedSeriesMethod<ErasedSeriesMethodContext>>;
 
-const auto context = AnySeriesMethodContext{};
+const auto context = ErasedSeriesMethodContext{};
 
 static auto make_asset_snapshot() -> AssetSnapshot
 {

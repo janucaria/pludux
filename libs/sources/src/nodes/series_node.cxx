@@ -35,9 +35,11 @@ private:
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const SeriesNode& node,
-                       NodeToErasedMethodContext&) -> AnySeriesMethod
+                       NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{SeriesMethod{node.name()}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
+   SeriesMethod{node.name()}};
 }
 
 } // namespace pludux

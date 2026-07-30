@@ -38,37 +38,42 @@ export struct VolumeNode : OhlcvNode<VolumeNode> {};
 
 export auto pludux_tag_invoke(NodeToErasedMethod,
                               const OpenNode&,
-                              NodeToErasedMethodContext&) -> AnySeriesMethod
+                              NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{OpenMethod{}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{OpenMethod{}};
 }
 
 export auto pludux_tag_invoke(NodeToErasedMethod,
                               const HighNode&,
-                              NodeToErasedMethodContext&) -> AnySeriesMethod
+                              NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{HighMethod{}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{HighMethod{}};
 }
 
 export auto pludux_tag_invoke(NodeToErasedMethod,
                               const LowNode&,
-                              NodeToErasedMethodContext&) -> AnySeriesMethod
+                              NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{LowMethod{}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{LowMethod{}};
 }
 
 export auto pludux_tag_invoke(NodeToErasedMethod,
                               const CloseNode&,
-                              NodeToErasedMethodContext&) -> AnySeriesMethod
+                              NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{CloseMethod{}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{CloseMethod{}};
 }
 
 export auto pludux_tag_invoke(NodeToErasedMethod,
                               const VolumeNode&,
-                              NodeToErasedMethodContext&) -> AnySeriesMethod
+                              NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{VolumeMethod{}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{VolumeMethod{}};
 }
 
 } // namespace pludux

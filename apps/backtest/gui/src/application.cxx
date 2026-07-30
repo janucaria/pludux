@@ -349,7 +349,8 @@ private:
     }
 
     auto input_context = NodeToErasedMethodContext{input_values};
-    auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+    auto series_methods =
+     OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
     for(const auto& [series_name, series_node] : strategy_ptr->series_nodes()) {
       series_methods.set(series_name,
                          node_to_erased_method(series_node, input_context));

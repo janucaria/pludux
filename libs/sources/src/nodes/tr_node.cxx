@@ -24,9 +24,10 @@ public:
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const TrNode&,
-                       NodeToErasedMethodContext&) -> AnySeriesMethod
+                       NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{TrMethod{}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{TrMethod{}};
 }
 
 } // namespace pludux

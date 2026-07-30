@@ -76,12 +76,14 @@ private:
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const LowestNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
   const auto source_method = node_to_erased_method(node.source(), context);
   const auto period = node_to_erased_method(node.period(), context);
 
-  return AnySeriesMethod{LowestMethod{source_method, period}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
+   LowestMethod{source_method, period}};
 }
 
 } // namespace pludux

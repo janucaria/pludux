@@ -49,7 +49,8 @@ public:
     class SignalExitRule {
     public:
       SignalExitRule(bool enabled = false,
-                     AnySeriesMethod signal_method = BooleanMethod<false>{},
+                     ErasedSeriesMethod<ErasedSeriesMethodContext>
+                      signal_method = BooleanMethod<false>{},
                      SignalTiming timing = SignalTiming::NextOpen,
                      double reduce = 1.0)
       : enabled_{enabled}
@@ -65,7 +66,7 @@ public:
       }
 
       auto signal_method(this const SignalExitRule& self) noexcept
-       -> const AnySeriesMethod&
+       -> const ErasedSeriesMethod<ErasedSeriesMethodContext>&
       {
         return self.signal_method_;
       }
@@ -82,14 +83,15 @@ public:
 
     private:
       bool enabled_;
-      AnySeriesMethod signal_method_;
+      ErasedSeriesMethod<ErasedSeriesMethodContext> signal_method_;
       SignalTiming timing_;
       double reduce_;
     };
 
     class TakeProfitRule {
     public:
-      TakeProfitRule(AnySeriesMethod price_method = OpenMethod{},
+      TakeProfitRule(ErasedSeriesMethod<ErasedSeriesMethodContext>
+                      price_method = OpenMethod{},
                      bool enabled = false,
                      double reduce = 1.0)
       : price_method_{std::move(price_method)}
@@ -99,7 +101,7 @@ public:
       }
 
       auto price_method(this const TakeProfitRule& self) noexcept
-       -> const AnySeriesMethod&
+       -> const ErasedSeriesMethod<ErasedSeriesMethodContext>&
       {
         return self.price_method_;
       }
@@ -115,14 +117,15 @@ public:
       }
 
     private:
-      AnySeriesMethod price_method_;
+      ErasedSeriesMethod<ErasedSeriesMethodContext> price_method_;
       bool enabled_;
       double reduce_;
     };
 
     class StopLossRule {
     public:
-      StopLossRule(AnySeriesMethod price_method = Sl1RMethod{},
+      StopLossRule(ErasedSeriesMethod<ErasedSeriesMethodContext> price_method =
+                    Sl1RMethod{},
                    bool enabled = true,
                    bool trailing = false,
                    double reduce = 1.0)
@@ -134,7 +137,7 @@ public:
       }
 
       auto price_method(this const StopLossRule& self) noexcept
-       -> const AnySeriesMethod&
+       -> const ErasedSeriesMethod<ErasedSeriesMethodContext>&
       {
         return self.price_method_;
       }
@@ -155,7 +158,7 @@ public:
       }
 
     private:
-      AnySeriesMethod price_method_;
+      ErasedSeriesMethod<ErasedSeriesMethodContext> price_method_;
       bool enabled_;
       bool trailing_;
       double reduce_;
@@ -164,11 +167,11 @@ public:
     PositionRule() = default;
 
     PositionRule(
-     AnySeriesMethod entry_method,
+     ErasedSeriesMethod<ErasedSeriesMethodContext> entry_method,
      std::vector<SignalExitRule> signal_exits,
-     AnySeriesMethod pyramiding_signal,
+     ErasedSeriesMethod<ErasedSeriesMethodContext> pyramiding_signal,
      std::size_t pyramiding_max_layers,
-     AnySeriesMethod risk_distance_method,
+     ErasedSeriesMethod<ErasedSeriesMethodContext> risk_distance_method,
      std::vector<StopLossRule> stop_losses,
      SignalTiming entry_timing = SignalTiming::CurrentClose,
      SignalTiming pyramiding_timing = SignalTiming::NextOpen,
@@ -198,7 +201,7 @@ public:
     }
 
     auto entry_method(this const PositionRule& self) noexcept
-     -> const AnySeriesMethod&
+     -> const ErasedSeriesMethod<ErasedSeriesMethodContext>&
     {
       return self.entry_method_;
     }
@@ -210,7 +213,7 @@ public:
     }
 
     auto pyramiding_signal(this const PositionRule& self) noexcept
-     -> const AnySeriesMethod&
+     -> const ErasedSeriesMethod<ErasedSeriesMethodContext>&
     {
       return self.pyramiding_signal_;
     }
@@ -222,7 +225,7 @@ public:
     }
 
     auto risk_distance_method(this const PositionRule& self) noexcept
-     -> const AnySeriesMethod&
+     -> const ErasedSeriesMethod<ErasedSeriesMethodContext>&
     {
       return self.risk_distance_method_;
     }
@@ -282,11 +285,14 @@ public:
     }
 
   private:
-    AnySeriesMethod entry_method_{BooleanMethod<false>{}};
+    ErasedSeriesMethod<ErasedSeriesMethodContext> entry_method_{
+     BooleanMethod<false>{}};
     std::vector<SignalExitRule> signal_exits_;
-    AnySeriesMethod pyramiding_signal_{BooleanMethod<false>{}};
+    ErasedSeriesMethod<ErasedSeriesMethodContext> pyramiding_signal_{
+     BooleanMethod<false>{}};
     std::size_t pyramiding_max_layers_{1};
-    AnySeriesMethod risk_distance_method_{ValueMethod{1.0}};
+    ErasedSeriesMethod<ErasedSeriesMethodContext> risk_distance_method_{
+     ValueMethod{1.0}};
     std::vector<StopLossRule> stop_losses_;
     SignalTiming entry_timing_{SignalTiming::CurrentClose};
     SignalTiming pyramiding_timing_{SignalTiming::NextOpen};
@@ -300,18 +306,20 @@ public:
     ExitActivation take_profits_activation_{ExitActivation::Simultaneous};
   };
 
-  BacktestRunner(const Asset& asset,
-                 const Market& market,
-                 const Broker& broker,
-                 const Profile& profile,
-                 OrderedNamedRegistry<AnySeriesMethod> series_methods,
-                 PositionRule long_position,
-                 PositionRule short_position,
-                 double total_equity = 0.0,
-                 std::size_t pyramiding_layers = 0,
-                 bool is_failed = false,
-                 double peak_equity = NAN,
-                 IntrabarPath intrabar_path = IntrabarPath::CandleDirection)
+  BacktestRunner(
+   const Asset& asset,
+   const Market& market,
+   const Broker& broker,
+   const Profile& profile,
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>
+    series_methods,
+   PositionRule long_position,
+   PositionRule short_position,
+   double total_equity = 0.0,
+   std::size_t pyramiding_layers = 0,
+   bool is_failed = false,
+   double peak_equity = NAN,
+   IntrabarPath intrabar_path = IntrabarPath::CandleDirection)
   : asset_{asset}
   , market_{market}
   , broker_{broker}
@@ -511,7 +519,8 @@ private:
 
   TradeSession trade_session_;
 
-  OrderedNamedRegistry<AnySeriesMethod> series_methods_;
+  OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>
+   series_methods_;
 
   PositionRule long_position_;
   PositionRule short_position_;

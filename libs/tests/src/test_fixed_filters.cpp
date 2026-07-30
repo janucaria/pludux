@@ -7,7 +7,7 @@ using namespace pludux;
 using SignalAlwaysMethod = pludux::TrueMethod;
 using SignalNeverMethod = pludux::FalseMethod;
 
-const auto context = AnySeriesMethodContext{};
+const auto context = ErasedSeriesMethodContext{};
 
 TEST(FixedMethodTest, AlwaysMethod)
 {

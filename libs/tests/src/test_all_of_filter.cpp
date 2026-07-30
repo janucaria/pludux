@@ -5,12 +5,15 @@ import pludux;
 using namespace pludux;
 
 using SignalGreaterThanMethod =
- pludux::GreaterThanMethod<AnySeriesMethod, AnySeriesMethod>;
+ pludux::GreaterThanMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
+                           ErasedSeriesMethod<ErasedSeriesMethodContext>>;
 using SignalLessThanMethod =
- pludux::LessThanMethod<AnySeriesMethod, AnySeriesMethod>;
-using SignalAllOfMethod = pludux::AllOfMethod<AnySeriesMethod>;
+ pludux::LessThanMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
+                        ErasedSeriesMethod<ErasedSeriesMethodContext>>;
+using SignalAllOfMethod =
+ pludux::AllOfMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>;
 
-const auto context = AnySeriesMethodContext{};
+const auto context = ErasedSeriesMethodContext{};
 
 static auto make_asset_snapshot() -> AssetSnapshot
 {

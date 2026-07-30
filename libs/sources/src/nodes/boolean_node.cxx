@@ -16,9 +16,11 @@ using FalseNode = BooleanNode<false>;
 template<bool boolean_value>
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const BooleanNode<boolean_value>&,
-                       NodeToErasedMethodContext&) -> AnySeriesMethod
+                       NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{BooleanMethod<boolean_value>{}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
+   BooleanMethod<boolean_value>{}};
 }
 
 } // namespace pludux

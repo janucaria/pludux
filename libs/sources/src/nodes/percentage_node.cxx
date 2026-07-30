@@ -58,9 +58,10 @@ private:
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const PercentageNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{PercentageMethod{
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{PercentageMethod{
    node_to_erased_method(node.base(), context), node.percent()}};
 }
 

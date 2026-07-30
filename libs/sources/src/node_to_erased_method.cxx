@@ -5,7 +5,8 @@ module;
 
 export module pludux:node_to_erased_method;
 
-export import :methods.any_series_method;
+export import :erased_series_method_context;
+export import :methods.erased_series_method;
 
 export namespace pludux {
 
@@ -48,7 +49,7 @@ struct NodeToErasedMethod {
    const TNode& node,
    NodeToErasedMethodContext&
     context) noexcept(noexcept(pludux_tag_invoke(self, node, context)))
-   -> AnySeriesMethod
+   -> ErasedSeriesMethod<ErasedSeriesMethodContext>
   {
     return pludux_tag_invoke(self, node, context);
   }

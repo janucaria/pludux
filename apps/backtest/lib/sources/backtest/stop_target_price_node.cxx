@@ -243,41 +243,46 @@ private:
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const SlAmountNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
    SlAmountMethod{node_to_erased_method(node.value(), context)}};
 }
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const TpAmountNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
    TpAmountMethod{node_to_erased_method(node.value(), context)}};
 }
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const SlPercentNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
    SlPercentMethod{node_to_erased_method(node.value(), context)}};
 }
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const TpPercentNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
    TpPercentMethod{node_to_erased_method(node.value(), context)}};
 }
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const SlAtrNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
    SlAtrMethod{node_to_erased_method(node.period(), context),
                node_to_erased_method(node.multiplier(), context),
                static_cast<MaMethodType>(node.ma_smoothing_type())}};
@@ -285,9 +290,10 @@ auto pludux_tag_invoke(NodeToErasedMethod,
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const TpAtrNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
    TpAtrMethod{node_to_erased_method(node.period(), context),
                node_to_erased_method(node.multiplier(), context),
                static_cast<MaMethodType>(node.ma_smoothing_type())}};
@@ -295,52 +301,63 @@ auto pludux_tag_invoke(NodeToErasedMethod,
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const Sl1RNode&,
-                       NodeToErasedMethodContext&) -> AnySeriesMethod
+                       NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{Sl1RMethod{}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{Sl1RMethod{}};
 }
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const TpRMultipleNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
    TpRMultipleMethod{node_to_erased_method(node.value(), context)}};
 }
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const InitialEntryPriceNode&,
-                       NodeToErasedMethodContext&) -> AnySeriesMethod
+                       NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{InitialEntryPriceMethod{}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
+   InitialEntryPriceMethod{}};
 }
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const LatestEntryPriceNode&,
-                       NodeToErasedMethodContext&) -> AnySeriesMethod
+                       NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{LatestEntryPriceMethod{}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
+   LatestEntryPriceMethod{}};
 }
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const AveragePriceNode&,
-                       NodeToErasedMethodContext&) -> AnySeriesMethod
+                       NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{AveragePriceMethod{}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{AveragePriceMethod{}};
 }
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const StopTargetRefPriceNode&,
-                       NodeToErasedMethodContext&) -> AnySeriesMethod
+                       NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{StopTargetRefPriceMethod{}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
+   StopTargetRefPriceMethod{}};
 }
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const PositionDirectionNode&,
-                       NodeToErasedMethodContext&) -> AnySeriesMethod
+                       NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{PositionDirectionMethod{}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
+   PositionDirectionMethod{}};
 }
 
 } // namespace pludux::backtest

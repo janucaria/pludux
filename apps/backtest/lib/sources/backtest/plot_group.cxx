@@ -22,7 +22,9 @@ public:
   {
   }
 
-  PlotGroup(std::string name, bool is_overlay, std::vector<AnyPlotMethod> items)
+  PlotGroup(std::string name,
+            bool is_overlay,
+            std::vector<ErasedPlotMethod<ErasedPlotMethodContext>> items)
   : name_{std::move(name)}
   , is_overlay_{is_overlay}
   , items_{std::move(items)}
@@ -52,12 +54,14 @@ public:
   }
 
   auto items(this const PlotGroup& self) noexcept
-   -> const std::vector<AnyPlotMethod>&
+   -> const std::vector<ErasedPlotMethod<ErasedPlotMethodContext>>&
   {
     return self.items_;
   }
 
-  void items(this PlotGroup& self, std::vector<AnyPlotMethod> items) noexcept
+  void
+  items(this PlotGroup& self,
+        std::vector<ErasedPlotMethod<ErasedPlotMethodContext>> items) noexcept
   {
     self.items_ = std::move(items);
   }
@@ -67,7 +71,7 @@ private:
 
   bool is_overlay_;
 
-  std::vector<AnyPlotMethod> items_;
+  std::vector<ErasedPlotMethod<ErasedPlotMethodContext>> items_;
 };
 
 } // namespace pludux::backtest

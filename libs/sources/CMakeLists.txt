@@ -84,9 +84,9 @@ target_sources(${PROJECT_NAME}
         src/method_contextable.cxx
         src/evaluate_series_method.cxx
         src/hash_series_method.cxx
-        src/any_method_context.cxx
+        src/erased_series_method_context.cxx
 
-        src/methods/any_series_method.cxx
+        src/methods/erased_series_method.cxx
 
         src/methods.cxx
 

@@ -16,7 +16,8 @@ TEST(SeriesMethodTest, RunAllMethodClose)
    AssetHistory{{"Open", {4.2, 4.1, 4.0}}, {"Close", {1.2, 1.1, 1.0}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
   series_methods.set("open", open_method);
   series_methods.set("close", close_method);
 
@@ -57,7 +58,8 @@ TEST(SeriesMethodTest, InvalidField)
   const auto asset_data = AssetHistory{{"Close", {4.2, 4.1, 4.0}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
-  auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
   series_methods.set("close", close_method);
 
   auto results_collector = SeriesEvaluationResults{};

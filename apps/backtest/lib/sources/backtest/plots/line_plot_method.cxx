@@ -7,14 +7,10 @@ module;
 export module pludux.backtest:plots.line_plot_method;
 
 import :plots.plot_method_contextable;
-import :plots.any_plot_method_context;
 
 export namespace pludux::backtest {
 
 template<typename TPlotSourceMethod>
-  requires requires(TPlotSourceMethod method, AnyPlotMethodContext context) {
-    { method(context) };
-  }
 class LinePlotMethod {
 public:
   LinePlotMethod(TPlotSourceMethod source)

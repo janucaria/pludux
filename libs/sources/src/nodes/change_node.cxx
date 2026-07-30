@@ -41,9 +41,10 @@ private:
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const ChangeNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
    ChangeMethod{node_to_erased_method(node.source(), context)}};
 }
 

@@ -146,7 +146,8 @@ private:
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const MacdNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
   const auto source_method = node_to_erased_method(node.source(), context);
   const auto fast_period = node_to_erased_method(node.fast_period(), context);

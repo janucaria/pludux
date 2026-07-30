@@ -27,7 +27,8 @@ public:
   : impl_{std::make_any<UNode>(std::move(impl))}
   , convert_to_erased_method_{[](const std::any& impl,
                                  NodeToErasedMethodContext& context)
-                               -> AnySeriesMethod {
+                               -> ErasedSeriesMethod<
+                                ErasedSeriesMethodContext> {
     const auto& node = *std::any_cast<UNode>(&impl);
     return node_to_erased_method(node, context);
   }}
@@ -64,7 +65,7 @@ public:
   friend auto pludux_tag_invoke(NodeToErasedMethod,
                                 const ErasedNode& node,
                                 NodeToErasedMethodContext& context)
-   -> AnySeriesMethod;
+   -> ErasedSeriesMethod<ErasedSeriesMethodContext>;
 
   template<typename UNode>
   friend auto node_cast(const ErasedNode& node) noexcept -> const UNode*
@@ -81,8 +82,8 @@ public:
 private:
   std::any impl_;
 
-  std::function<
-   auto(const std::any&, NodeToErasedMethodContext&)->AnySeriesMethod>
+  std::function<auto(const std::any&, NodeToErasedMethodContext&)
+                 ->ErasedSeriesMethod<ErasedSeriesMethodContext>>
    convert_to_erased_method_;
 
   std::function<auto(const std::any&, const ErasedNode&)->bool> equals_;
@@ -92,7 +93,8 @@ private:
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const ErasedNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
   return node.convert_to_erased_method_(node.impl_, context);
 }

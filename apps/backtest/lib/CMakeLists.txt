@@ -62,13 +62,13 @@ target_sources(${PROJECT_NAME}
     sources/backtest/intrabar_path.cxx
 
     sources/backtest/plots/plot_method_contextable.cxx
-    sources/backtest/plots/any_plot_method_context.cxx
+    sources/backtest/plots/erased_plot_method_context.cxx
     
-    sources/backtest/plots/source/any_plot_source_method.cxx
+    sources/backtest/plots/source/erased_plot_source_method.cxx
     sources/backtest/plots/source/constant_plot_source_method.cxx
     sources/backtest/plots/source/series_plot_source_method.cxx
 
-    sources/backtest/plots/any_plot_method.cxx
+    sources/backtest/plots/erased_plot_method.cxx
     sources/backtest/plots/hline_plot_method.cxx
     sources/backtest/plots/line_plot_method.cxx
     sources/backtest/plots/histogram_plot_method.cxx

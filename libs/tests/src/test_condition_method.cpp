@@ -6,16 +6,19 @@ using namespace pludux;
 
 using SignalAlwaysMethod = pludux::TrueMethod;
 using SignalNeverMethod = pludux::FalseMethod;
-using SignalEqualMethod = pludux::EqualMethod<AnySeriesMethod, AnySeriesMethod>;
+using SignalEqualMethod =
+ pludux::EqualMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
+                     ErasedSeriesMethod<ErasedSeriesMethodContext>>;
 
 TEST(AnyConditionMethodTest, RunOneMethod)
 {
   const auto equal_condition =
    SignalEqualMethod{ValueMethod{1.0}, ValueMethod{1.0}};
-  const auto condition_method = AnySeriesMethod{equal_condition};
+  const auto condition_method =
+   ErasedSeriesMethod<ErasedSeriesMethodContext>{equal_condition};
   const auto asset_data = AssetHistory{{"close", {0}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
-  const auto context = AnySeriesMethodContext{};
+  const auto context = ErasedSeriesMethodContext{};
 
   const auto result =
    evaluate_series_method(condition_method, asset_snapshot[0], context);
@@ -30,8 +33,10 @@ TEST(AnyConditionMethodTest, EqualityOperator)
 {
   const auto condition1 = SignalAlwaysMethod{};
   const auto condition2 = SignalAlwaysMethod{};
-  const auto condition_method1 = AnySeriesMethod{condition1};
-  const auto condition_method2 = AnySeriesMethod{condition2};
+  const auto condition_method1 =
+   ErasedSeriesMethod<ErasedSeriesMethodContext>{condition1};
+  const auto condition_method2 =
+   ErasedSeriesMethod<ErasedSeriesMethodContext>{condition2};
 
   EXPECT_TRUE(condition_method1 == condition_method2);
   EXPECT_FALSE(condition_method1 != condition_method2);
@@ -42,8 +47,10 @@ TEST(AnyConditionMethodTest, NotEqualOperator)
 {
   const auto condition1 = SignalAlwaysMethod{};
   const auto condition2 = SignalNeverMethod{};
-  const auto condition_method1 = AnySeriesMethod{condition1};
-  const auto condition_method2 = AnySeriesMethod{condition2};
+  const auto condition_method1 =
+   ErasedSeriesMethod<ErasedSeriesMethodContext>{condition1};
+  const auto condition_method2 =
+   ErasedSeriesMethod<ErasedSeriesMethodContext>{condition2};
 
   EXPECT_TRUE(condition_method1 != condition_method2);
   EXPECT_FALSE(condition_method1 == condition_method2);
@@ -53,14 +60,16 @@ TEST(AnyConditionMethodTest, SignalMethodsAreCoercedToNumericSeriesResults)
 {
   const auto asset_data = AssetHistory{{"close", {1.0}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
-  const auto context = AnySeriesMethodContext{};
+  const auto context = ErasedSeriesMethodContext{};
 
-  const auto always = AnySeriesMethod{SignalAlwaysMethod{}};
-  const auto never = AnySeriesMethod{SignalNeverMethod{}};
-  const auto and_condition =
-   AnySeriesMethod{LogicalAndMethod{SignalAlwaysMethod{}, SignalNeverMethod{}}};
-  const auto or_condition =
-   AnySeriesMethod{LogicalOrMethod{SignalAlwaysMethod{}, SignalNeverMethod{}}};
+  const auto always =
+   ErasedSeriesMethod<ErasedSeriesMethodContext>{SignalAlwaysMethod{}};
+  const auto never =
+   ErasedSeriesMethod<ErasedSeriesMethodContext>{SignalNeverMethod{}};
+  const auto and_condition = ErasedSeriesMethod<ErasedSeriesMethodContext>{
+   LogicalAndMethod{SignalAlwaysMethod{}, SignalNeverMethod{}}};
+  const auto or_condition = ErasedSeriesMethod<ErasedSeriesMethodContext>{
+   LogicalOrMethod{SignalAlwaysMethod{}, SignalNeverMethod{}}};
 
   EXPECT_DOUBLE_EQ(evaluate_series_method(always, asset_snapshot[0], context),
                    1.0);

@@ -9,7 +9,7 @@ module;
 #include <variant>
 #include <vector>
 
-export module pludux:any_method_context;
+export module pludux:erased_series_method_context;
 
 import :asset_snapshot;
 import :method_key;
@@ -18,14 +18,14 @@ import :methods.select_output_method;
 
 export namespace pludux {
 
-class AnySeriesMethodContext {
+class ErasedSeriesMethodContext {
 public:
   using DispatchResultType = double;
 
-  AnySeriesMethodContext() = default;
+  ErasedSeriesMethodContext() = default;
 
   template<typename UImpl>
-  AnySeriesMethodContext(UImpl impl)
+  ErasedSeriesMethodContext(UImpl impl)
   : impl_{std::move(impl)}
   , get_series_result_{[](const std::any& impl,
                           const std::string& name,
@@ -58,7 +58,7 @@ public:
   {
   }
 
-  auto call_series_method(this const AnySeriesMethodContext& self,
+  auto call_series_method(this const ErasedSeriesMethodContext& self,
                           const std::string& name,
                           AssetSnapshot asset_snapshot) noexcept
    -> DispatchResultType
@@ -67,7 +67,7 @@ public:
      self.impl_, name, std::move(asset_snapshot));
   }
 
-  auto call_series_method(this const AnySeriesMethodContext& self,
+  auto call_series_method(this const ErasedSeriesMethodContext& self,
                           const std::string& name,
                           AssetSnapshot asset_snapshot,
                           MethodOutput output_name) noexcept
@@ -77,7 +77,7 @@ public:
      self.impl_, name, std::move(asset_snapshot), output_name);
   }
 
-  auto get_series_result(this const AnySeriesMethodContext& self,
+  auto get_series_result(this const ErasedSeriesMethodContext& self,
                          const std::string& name,
                          std::size_t result_index) noexcept
    -> DispatchResultType
@@ -85,20 +85,20 @@ public:
     return self.get_series_result_(self.impl_, name, result_index);
   }
 
-  auto get_series_results(this AnySeriesMethodContext& self,
+  auto get_series_results(this ErasedSeriesMethodContext& self,
                           MethodKey method_key) noexcept -> std::vector<double>&
   {
     return self.get_series_results_(self.impl_, method_key);
   }
 
-  auto index(this const AnySeriesMethodContext& self) noexcept -> std::size_t
+  auto index(this const ErasedSeriesMethodContext& self) noexcept -> std::size_t
   {
     return self.get_index_func_(self.impl_);
   }
 
   template<typename UImpl>
   friend auto
-  series_method_context_cast(const AnySeriesMethodContext& method) noexcept
+  series_method_context_cast(const ErasedSeriesMethodContext& method) noexcept
    -> const UImpl*
   {
     return std::any_cast<const UImpl>(&method.impl_);
@@ -106,7 +106,8 @@ public:
 
   template<typename UImpl>
   friend auto
-  series_method_context_cast(AnySeriesMethodContext& method) noexcept -> UImpl*
+  series_method_context_cast(ErasedSeriesMethodContext& method) noexcept
+   -> UImpl*
   {
     return std::any_cast<UImpl>(&method.impl_);
   }
@@ -131,7 +132,6 @@ private:
    call_series_method_with_output_;
 
   std::function<auto(const std::any&)->std::size_t> get_index_func_;
-
 };
 
 } // namespace pludux

@@ -24,21 +24,21 @@ public:
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const EquityNode& node,
                        NodeToErasedMethodContext& context) noexcept
- -> AnySeriesMethod
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
   static_cast<void>(node);
   static_cast<void>(context);
-  return AnySeriesMethod{EquityMethod{}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{EquityMethod{}};
 }
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const EquityPercentNode& node,
                        NodeToErasedMethodContext& context) noexcept
- -> AnySeriesMethod
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
   static_cast<void>(node);
   static_cast<void>(context);
-  return AnySeriesMethod{EquityPercentMethod{}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{EquityPercentMethod{}};
 }
 
 } // namespace pludux::backtest

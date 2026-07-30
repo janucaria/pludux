@@ -64,9 +64,10 @@ private:
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const SelectOutputNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
    SelectOutputMethod{node_to_erased_method(node.source(), context),
                       static_cast<MethodOutput>(node.output())}};
 }

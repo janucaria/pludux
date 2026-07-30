@@ -62,12 +62,15 @@ using NotEqualNode = ComparisonNode<std::not_equal_to<>>;
 template<typename TComparator>
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const ComparisonNode<TComparator>& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
   auto target = node_to_erased_method(node.target(), context);
   auto threshold = node_to_erased_method(node.threshold(), context);
-  return AnySeriesMethod{
-   ComparisonMethod<TComparator, AnySeriesMethod, AnySeriesMethod>{
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
+   ComparisonMethod<TComparator,
+                    ErasedSeriesMethod<ErasedSeriesMethodContext>,
+                    ErasedSeriesMethod<ErasedSeriesMethodContext>>{
     std::move(target), std::move(threshold)}};
 }
 

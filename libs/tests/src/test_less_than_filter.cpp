@@ -4,7 +4,7 @@ import pludux;
 
 using namespace pludux;
 
-const auto context = AnySeriesMethodContext{};
+const auto context = ErasedSeriesMethodContext{};
 
 TEST(LessThanMethodTest, TargetLessThanThreshold)
 {

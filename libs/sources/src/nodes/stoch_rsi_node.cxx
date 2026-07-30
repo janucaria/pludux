@@ -136,7 +136,8 @@ private:
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const StochRsiNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
   const auto rsi_source_method =
    node_to_erased_method(node.rsi_source(), context);

@@ -101,10 +101,11 @@ auto resolve_numeric_input_value(
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const NumericInputNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
   const auto value = context.consume(node.value());
-  return AnySeriesMethod{
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
    ValueMethod{resolve_numeric_input_value(value, node.representation())}};
 }
 

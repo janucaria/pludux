@@ -71,7 +71,8 @@ private:
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const EmaNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
   const auto source_method = node_to_erased_method(node.source(), context);
   const auto period = node_to_erased_method(node.period(), context);

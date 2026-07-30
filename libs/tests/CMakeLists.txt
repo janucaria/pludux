@@ -6,7 +6,7 @@ set(PLUDUX_TEST_SOURCES
   src/test_asset_snapshot.cpp
 
   src/test_abs_diff_method.cpp
-  src/test_any_series_method.cpp
+    src/test_erased_series_method.cpp
   src/test_atr_method.cpp
   src/test_bb_method.cpp
   src/test_change_method.cpp

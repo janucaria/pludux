@@ -86,7 +86,8 @@ private:
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const StochNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
   const auto k_period = node_to_erased_method(node.k_period(), context);
   const auto k_smooth = node_to_erased_method(node.k_smooth(), context);

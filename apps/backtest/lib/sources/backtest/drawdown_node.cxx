@@ -16,11 +16,11 @@ public:
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const DrawdownNode& node,
                        NodeToErasedMethodContext& context) noexcept
- -> AnySeriesMethod
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
   static_cast<void>(node);
   static_cast<void>(context);
-  return AnySeriesMethod{DrawdownMethod{}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{DrawdownMethod{}};
 }
 
 } // namespace pludux::backtest

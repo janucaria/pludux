@@ -70,11 +70,12 @@ private:
 
 auto pludux_tag_invoke(NodeToErasedMethod,
                        const AtrNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
   const auto period = node_to_erased_method(node.period(), context);
 
-  return AnySeriesMethod{
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
    AtrMethod{period, static_cast<MaMethodType>(node.ma_smoothing_type())}};
 }
 

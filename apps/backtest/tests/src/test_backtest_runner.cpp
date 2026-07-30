@@ -85,19 +85,21 @@ TEST(IntrabarPathTest, DojiVisitsNearestExtremeAndBreaksTieLowFirst)
 }
 
 auto make_position_rule(
- AnySeriesMethod entry_method,
- AnySeriesMethod exit_method,
- AnySeriesMethod pyramiding_signal,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> entry_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> exit_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> pyramiding_signal,
  std::size_t pyramiding_max_layers,
- AnySeriesMethod stop_price_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> stop_price_method,
  bool stop_loss_enabled,
  bool stop_loss_trailing_enabled,
  std::size_t entry_signal_delay = 1,
- AnySeriesMethod entry_price_method = OpenMethod{},
+ ErasedSeriesMethod<ErasedSeriesMethodContext> entry_price_method =
+  OpenMethod{},
  std::size_t exit_signal_delay = 1,
- AnySeriesMethod exit_price_method = OpenMethod{},
+ ErasedSeriesMethod<ErasedSeriesMethodContext> exit_price_method = OpenMethod{},
  std::size_t pyramiding_signal_delay = 1,
- AnySeriesMethod pyramiding_price_method = OpenMethod{},
+ ErasedSeriesMethod<ErasedSeriesMethodContext> pyramiding_price_method =
+  OpenMethod{},
  StopTargetReferencePrice favorable_stop_target_reference =
   StopTargetReferencePrice::AveragePrice,
  StopTargetReferencePrice unfavorable_stop_target_reference =
@@ -105,8 +107,8 @@ auto make_position_rule(
  double signal_exit_reduce = 1.0,
  double stop_loss_reduce = 1.0,
  std::vector<BacktestRunner::PositionRule::TakeProfitRule> take_profits = {},
- AnySeriesMethod risk_distance_method = ValueMethod{10.0})
- -> BacktestRunner::PositionRule;
+ ErasedSeriesMethod<ErasedSeriesMethodContext> risk_distance_method =
+  ValueMethod{10.0}) -> BacktestRunner::PositionRule;
 
 auto run_single_entry(
  PositionSizing position_sizing,
@@ -218,9 +220,10 @@ auto latest_closed_trade(const BacktestTimeline& timeline) -> const ClosedTrade&
   return timeline.closed_trades(timeline_i).back();
 }
 
-auto single_take_profit(AnySeriesMethod target_price,
-                        bool enabled,
-                        double reduce = 1.0)
+auto single_take_profit(
+ ErasedSeriesMethod<ErasedSeriesMethodContext> target_price,
+ bool enabled,
+ double reduce = 1.0)
  -> std::vector<BacktestRunner::PositionRule::TakeProfitRule>
 {
   auto take_profits =
@@ -229,7 +232,7 @@ auto single_take_profit(AnySeriesMethod target_price,
   return take_profits;
 }
 
-auto single_stop_loss(AnySeriesMethod stop_price,
+auto single_stop_loss(ErasedSeriesMethod<ErasedSeriesMethodContext> stop_price,
                       bool enabled,
                       bool trailing = false,
                       double reduce = 1.0)
@@ -241,25 +244,26 @@ auto single_stop_loss(AnySeriesMethod stop_price,
 }
 
 auto make_position_rule(
- AnySeriesMethod entry_method,
- AnySeriesMethod exit_method,
- AnySeriesMethod pyramiding_signal,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> entry_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> exit_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> pyramiding_signal,
  std::size_t pyramiding_max_layers,
- AnySeriesMethod stop_price_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> stop_price_method,
  bool stop_loss_enabled,
  bool stop_loss_trailing_enabled,
  std::size_t entry_signal_delay,
- AnySeriesMethod entry_price_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> entry_price_method,
  std::size_t exit_signal_delay,
- AnySeriesMethod exit_price_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> exit_price_method,
  std::size_t pyramiding_signal_delay,
- AnySeriesMethod pyramiding_price_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> pyramiding_price_method,
  StopTargetReferencePrice favorable_stop_target_reference,
  StopTargetReferencePrice unfavorable_stop_target_reference,
  double signal_exit_reduce,
  double stop_loss_reduce,
  std::vector<BacktestRunner::PositionRule::TakeProfitRule> take_profits,
- AnySeriesMethod risk_distance_method) -> BacktestRunner::PositionRule
+ ErasedSeriesMethod<ErasedSeriesMethodContext> risk_distance_method)
+ -> BacktestRunner::PositionRule
 {
   auto signal_exits =
    std::vector<BacktestRunner::PositionRule::SignalExitRule>{};
@@ -287,15 +291,15 @@ auto make_position_rule(
                                       std::move(take_profits)};
 }
 
-auto make_position_rule_with_risk_distance(AnySeriesMethod entry_method,
-                                           AnySeriesMethod exit_method,
-                                           AnySeriesMethod pyramiding_signal,
-                                           std::size_t pyramiding_max_layers,
-                                           AnySeriesMethod risk_distance_method,
-                                           AnySeriesMethod stop_price_method,
-                                           bool stop_loss_enabled,
-                                           bool stop_loss_trailing_enabled)
- -> BacktestRunner::PositionRule
+auto make_position_rule_with_risk_distance(
+ ErasedSeriesMethod<ErasedSeriesMethodContext> entry_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> exit_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> pyramiding_signal,
+ std::size_t pyramiding_max_layers,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> risk_distance_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> stop_price_method,
+ bool stop_loss_enabled,
+ bool stop_loss_trailing_enabled) -> BacktestRunner::PositionRule
 {
   return make_position_rule(std::move(entry_method),
                             std::move(exit_method),
@@ -661,7 +665,8 @@ TEST(BacktestRunnerTest, EquitySignalUsesCurrentAccountState)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
   series_methods.set("equity", EquityMethod{});
 
   const auto entry_signal = EqualMethod{EquityMethod{}, ValueMethod{1000.0}};
@@ -718,7 +723,8 @@ TEST(BacktestRunnerTest, EquityPercentUsesCurrentAccountState)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
   series_methods.set("equity_percent", EquityPercentMethod{});
 
   const auto entry_signal =
@@ -786,7 +792,8 @@ TEST(BacktestRunnerTest, DrawdownSignalUsesCurrentAccountState)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
   series_methods.set("drawdown", DrawdownMethod{});
 
   const auto entry_signal = EqualMethod{CloseMethod{}, ValueMethod{100.0}};
@@ -852,7 +859,8 @@ TEST(BacktestRunnerTest, AccountStateDrawdownUsesEffectiveCurrentPeak)
 
 TEST(BacktestRunnerTest, MethodContextObservesMutatedAccountState)
 {
-  const auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  const auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
   auto series_results = SeriesEvaluationResults{};
   auto default_context = DefaultMethodContext{series_methods, series_results};
   auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
@@ -1070,7 +1078,8 @@ TEST(BacktestRunnerTest, ScopedStopTargetAmountMethodsEvaluateDirectly)
 {
   const auto asset = make_single_bar_asset(100.0);
   const auto snapshot = asset.get_snapshot(0);
-  const auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  const auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
   auto series_results = SeriesEvaluationResults{};
   auto default_context = DefaultMethodContext{series_methods, series_results};
   const auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
@@ -1095,7 +1104,8 @@ TEST(BacktestRunnerTest, PositionContextMethodsEvaluateDirectly)
 {
   const auto asset = make_single_bar_asset(100.0);
   const auto snapshot = asset.get_snapshot(0);
-  const auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  const auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
   auto series_results = SeriesEvaluationResults{};
   auto default_context = DefaultMethodContext{series_methods, series_results};
   const auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
@@ -1237,7 +1247,8 @@ TEST(BacktestRunnerTest, ScopedStopTargetPercentMethodsEvaluateDirectly)
 {
   const auto asset = make_single_bar_asset(200.0);
   const auto snapshot = asset.get_snapshot(0);
-  const auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  const auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
   auto series_results = SeriesEvaluationResults{};
   auto default_context = DefaultMethodContext{series_methods, series_results};
   const auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
@@ -1552,7 +1563,8 @@ TEST(BacktestRunnerTest, ExplicitRiskDistanceAndRPricesEvaluateDirectly)
   const auto asset =
    make_single_bar_asset_with_range(100.0, 110.0, 90.0, 100.0);
   const auto snapshot = asset.get_snapshot(0);
-  const auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  const auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
   auto series_results = SeriesEvaluationResults{};
   auto default_context = DefaultMethodContext{series_methods, series_results};
   const auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
@@ -1816,7 +1828,8 @@ TEST(BacktestRunnerTest, SeriesDelayedSignalUsesCompletedResultsOnly)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
   series_methods.set("close", CloseMethod{});
 
   const auto entry_signal =
@@ -1876,7 +1889,8 @@ TEST(BacktestRunnerTest, SeriesDelayZeroSignalEvaluatesCurrentBar)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
   series_methods.set("close", CloseMethod{});
 
   const auto entry_signal =
