@@ -153,6 +153,7 @@ target_sources(${PROJECT_NAME} PRIVATE
 
     src/ui_state.cxx
     src/application_state.cxx
+    src/backtest_execution_status.cxx
     src/state_diff.cxx
     src/built_in_strategies.cxx
 
@@ -167,6 +168,8 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/ui/ui_widgets.cxx
     src/ui/summary_widgets.cxx
 
+    src/charts/backtest_chart_state.cxx
+
     src/window_context.cxx
     src/windows/assets_window.cxx
     src/windows/strategies_window.cxx
@@ -176,7 +179,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/windows/backtests_window.cxx
     src/windows/backtest_overview_window.cxx
     src/windows/dockspace_window.cxx
-    src/windows/plot_data_window.cxx
+    src/windows/backtest_chart_window.cxx
     src/windows/trade_list_window.cxx
     src/windows.cxx
 

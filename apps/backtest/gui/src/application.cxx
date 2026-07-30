@@ -23,6 +23,7 @@ export import :state_diff;
 export import :window_context;
 export import :serialization;
 export import :actions;
+export import :backtest_execution_status;
 export import :command_executor;
 import :ui.theme;
 import :windows;
@@ -142,6 +143,7 @@ public:
 
       if(std::ranges::find(backtest_handles, backtest_handle) ==
          backtest_handles.end()) {
+        self.backtest_execution_statuses_.erase(backtest_handle);
         it = self.running_backtests_.erase(it);
       } else {
         ++it;
@@ -170,11 +172,33 @@ public:
            store.get_or_create_series_results(backtest_handle);
 
           auto& backtest_runner = self.running_backtests_.at(backtest_handle);
+          if(backtest_runner.is_failed()) {
+            continue;
+          }
+          const auto& asset = app_state.get_asset(backtest.asset_handle());
+          auto& execution_status =
+           self.backtest_execution_statuses_[backtest_handle];
 
           try {
+            execution_status = BacktestExecutionStatus{
+             asset.size() == 0 ? BacktestExecutionPhase::Completed
+                               : BacktestExecutionPhase::Running,
+             timelines.size(),
+             asset.size()};
             backtest_runner.run(series_evaluation_results, timelines);
+            execution_status =
+             BacktestExecutionStatus{timelines.size() >= asset.size()
+                                      ? BacktestExecutionPhase::Completed
+                                      : BacktestExecutionPhase::Running,
+                                     timelines.size(),
+                                     asset.size()};
           } catch(const std::exception& e) {
             backtest_runner.is_failed(true);
+            execution_status =
+             BacktestExecutionStatus{BacktestExecutionPhase::Failed,
+                                     timelines.size(),
+                                     asset.size(),
+                                     e.what()};
 
             const auto error_message =
              std::format("Backtest '{}' failed: {}", backtest.name(), e.what());
@@ -191,10 +215,16 @@ public:
 
     ui::apply_dark_theme();
 
-    auto window_context = WindowContext{app_state,
-                                        alert_messages,
-                                        self.command_executor_,
-                                        self.discard_all_drafts_requested_};
+    auto window_context = WindowContext{
+     app_state,
+     alert_messages,
+     self.command_executor_,
+     self.discard_all_drafts_requested_,
+     [&self](const auto& handle) {
+       const auto it = self.backtest_execution_statuses_.find(handle);
+       return it == self.backtest_execution_statuses_.end() ? nullptr
+                                                            : &it->second;
+     }};
 
     try {
       self.dockspace_window_.render(window_context);
@@ -207,7 +237,7 @@ public:
         self.profiles_window_.discard_draft();
         self.discard_all_drafts_requested_ = false;
       }
-      self.plot_data_window_.render(window_context);
+      self.backtest_chart_window_.render(window_context);
       auto backtest_overview = BacktestOverviewWindow{};
       backtest_overview.render(window_context);
       self.backtests_window_.render(window_context);
@@ -242,6 +272,7 @@ public:
           }
 
           self.running_backtests_.erase(backtest_handle);
+          self.backtest_execution_statuses_.erase(backtest_handle);
           self.recreate_backtest_runner(app_state, backtest_handle);
         }
       }
@@ -307,6 +338,7 @@ private:
 
     if(!asset_ptr || !strategy_ptr || !market_ptr || !broker_ptr ||
        !profile_ptr) {
+      self.backtest_execution_statuses_.erase(backtest_handle);
       return;
     }
 
@@ -386,12 +418,19 @@ private:
       false,
       NAN,
       strategy_ptr->intrabar_path()});
+    self.backtest_execution_statuses_.insert_or_assign(
+     backtest_handle,
+     BacktestExecutionStatus{asset_ptr->size() == 0
+                              ? BacktestExecutionPhase::Completed
+                              : BacktestExecutionPhase::Waiting,
+                             0,
+                             asset_ptr->size()});
   }
 
   ImVec2 window_size_;
 
   DockspaceWindow dockspace_window_;
-  PlotDataWindow plot_data_window_;
+  BacktestChartWindow backtest_chart_window_;
   BacktestsWindow backtests_window_;
   AssetsWindow assets_window_;
   StrategiesWindow strategies_window_;
@@ -403,6 +442,8 @@ private:
   ApplicationState app_state_;
   std::unordered_map<backtest::BacktestStoreHandle, backtest::BacktestRunner>
    running_backtests_;
+  std::unordered_map<backtest::BacktestStoreHandle, BacktestExecutionStatus>
+   backtest_execution_statuses_;
   std::list<std::string> alert_messages_;
   CommandExecutor command_executor_{};
   bool discard_all_drafts_requested_{false};
