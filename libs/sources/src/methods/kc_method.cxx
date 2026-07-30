@@ -11,12 +11,14 @@ export module pludux:methods.kc_method;
 
 import :methods.ohlcv_method;
 import :methods.adaptive_ma_method;
+import :methods.value_method;
 
 export namespace pludux {
 
 enum class KcBandMethodType { Atr, Tr, RangeHighLow };
 
-template<typename TSourceMethod = CloseMethod>
+template<typename TSourceMethod = CloseMethod,
+         typename TParameterMethod = ValueMethod>
 class KcMethod {
 public:
   KcMethod()
@@ -49,10 +51,26 @@ public:
            std::size_t band_atr_period,
            KcBandMethodType band_method_type = KcBandMethodType::Atr,
            MaMethodType ma_method_type = MaMethodType::Ema)
+  : KcMethod{std::move(source),
+             ValueMethod{static_cast<double>(period)},
+             ValueMethod{multiplier},
+             ValueMethod{static_cast<double>(band_atr_period)},
+             band_method_type,
+             ma_method_type}
+  {
+  }
+
+  KcMethod(TSourceMethod source,
+           TParameterMethod period,
+           TParameterMethod multiplier,
+           TParameterMethod band_atr_period,
+           KcBandMethodType band_method_type = KcBandMethodType::Atr,
+           MaMethodType ma_method_type = MaMethodType::Ema)
+    requires(!std::is_arithmetic_v<TParameterMethod>)
   : source_{std::move(source)}
-  , period_{period}
-  , multiplier_{multiplier}
-  , band_atr_period_{band_atr_period}
+  , period_{std::move(period)}
+  , multiplier_{std::move(multiplier)}
+  , band_atr_period_{std::move(band_atr_period)}
   , band_method_type_{band_method_type}
   , ma_method_type_{ma_method_type}
   {
@@ -80,14 +98,14 @@ public:
     self.ma_method_type_ = ma_method_type;
   }
 
-  auto period(this const KcMethod& self) noexcept -> std::size_t
+  auto period(this const KcMethod& self) noexcept -> const TParameterMethod&
   {
     return self.period_;
   }
 
-  void period(this KcMethod& self, std::size_t period) noexcept
+  void period(this KcMethod& self, TParameterMethod period) noexcept
   {
-    self.period_ = period;
+    self.period_ = std::move(period);
   }
 
   auto band_method_type(this const KcMethod& self) noexcept -> KcBandMethodType
@@ -101,33 +119,34 @@ public:
     self.band_method_type_ = band_method_type;
   }
 
-  auto band_atr_period(this const KcMethod& self) noexcept -> std::size_t
+  auto band_atr_period(this const KcMethod& self) noexcept
+   -> const TParameterMethod&
   {
     return self.band_atr_period_;
   }
 
   void band_atr_period(this KcMethod& self,
-                       std::size_t band_atr_period) noexcept
+                       TParameterMethod band_atr_period) noexcept
   {
-    self.band_atr_period_ = band_atr_period;
+    self.band_atr_period_ = std::move(band_atr_period);
   }
 
-  auto multiplier(this const KcMethod& self) noexcept -> double
+  auto multiplier(this const KcMethod& self) noexcept -> const TParameterMethod&
   {
     return self.multiplier_;
   }
 
-  void multiplier(this KcMethod& self, double multiplier) noexcept
+  void multiplier(this KcMethod& self, TParameterMethod multiplier) noexcept
   {
-    self.multiplier_ = multiplier;
+    self.multiplier_ = std::move(multiplier);
   }
 
 private:
   TSourceMethod source_;
-  std::size_t period_;
-  double multiplier_;
+  TParameterMethod period_;
+  TParameterMethod multiplier_;
 
-  std::size_t band_atr_period_;
+  TParameterMethod band_atr_period_;
   KcBandMethodType band_method_type_;
   MaMethodType ma_method_type_;
 };

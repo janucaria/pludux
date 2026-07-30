@@ -157,17 +157,10 @@ TEST_F(HashSeriesMethodSimpleTest, OhlcvMethodsProduceValidHashes)
   EXPECT_NE(volume_hash, 0);
 }
 
-TEST_F(HashSeriesMethodSimpleTest, SeriesNodeMethodHashProducesValidHash)
+TEST_F(HashSeriesMethodSimpleTest, SeriesMethodHashProducesValidHash)
 {
-  SeriesNodeMethod node{"my_series"};
-  const auto hash = hash_series_method(node);
-  EXPECT_NE(hash, 0);
-}
-
-TEST_F(HashSeriesMethodSimpleTest, SeriesValueMethodHashProducesValidHash)
-{
-  SeriesValueMethod value{"my_value"};
-  const auto hash = hash_series_method(value);
+  SeriesMethod series{"my_series"};
+  const auto hash = hash_series_method(series);
   EXPECT_NE(hash, 0);
 }
 
@@ -653,19 +646,11 @@ TEST_F(HashSeriesMethodEdgeCaseTest,
 }
 
 TEST_F(HashSeriesMethodEdgeCaseTest,
-       SeriesNodeMethodWithDifferentNamesDifferentHash)
+       SeriesMethodWithDifferentNamesDifferentHash)
 {
-  SeriesNodeMethod node1{"series_a"};
-  SeriesNodeMethod node2{"series_b"};
-  EXPECT_NE(hash_series_method(node1), hash_series_method(node2));
-}
-
-TEST_F(HashSeriesMethodEdgeCaseTest,
-       SeriesValueMethodWithDifferentNamesDifferentHash)
-{
-  SeriesValueMethod value1{"value_a"};
-  SeriesValueMethod value2{"value_b"};
-  EXPECT_NE(hash_series_method(value1), hash_series_method(value2));
+  SeriesMethod series1{"series_a"};
+  SeriesMethod series2{"series_b"};
+  EXPECT_NE(hash_series_method(series1), hash_series_method(series2));
 }
 
 // ============================================================================

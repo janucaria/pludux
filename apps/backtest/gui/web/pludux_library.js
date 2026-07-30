@@ -192,6 +192,20 @@ mergeInto(LibraryManager.library, {
     document.body.style.cursor = isPointer ? 'pointer' : 'default';
   },
 
+  pludux_js_hide_loading_overlay: function () {
+    var overlay = document.getElementById('loading-overlay');
+    if (!overlay) {
+      return;
+    }
+
+    requestAnimationFrame(function () {
+      overlay.classList.add('loading-overlay-hidden');
+      overlay.addEventListener('transitionend', function () {
+        overlay.remove();
+      }, { once: true });
+    });
+  },
+
   pludux_js_open_url__deps: ['$UTF8ToString'],
   pludux_js_open_url: function (urlPtr) {
     window.open(UTF8ToString(urlPtr), '_blank');

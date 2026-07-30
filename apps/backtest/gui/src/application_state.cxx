@@ -124,7 +124,7 @@ public:
   {
     const auto handle_opt = self.store_.add_backtest(std::move(backtest));
     if(handle_opt) {
-      self.add_backtest_summaries(*handle_opt, {});
+      self.add_backtest_timelines(*handle_opt, {});
       self.add_series_results(*handle_opt, {});
       self.ui_state_.add_backtest_handle(*handle_opt);
     }
@@ -182,7 +182,7 @@ public:
       }
 
       self.store_.remove_backtest(handle);
-      self.store_.remove_backtest_summaries(handle);
+      self.store_.remove_backtest_timelines(handle);
       self.store_.remove_series_results(handle);
 
       return true;
@@ -614,56 +614,53 @@ public:
     return false;
   }
 
-  auto add_backtest_summaries(this ApplicationState& self,
+  auto add_backtest_timelines(this ApplicationState& self,
                               backtest::BacktestStoreHandle handle,
-                              std::vector<backtest::BacktestSummary> summaries)
-   -> bool
+                              backtest::BacktestTimeline timeline) -> bool
   {
-    return self.store_.add_backtest_summaries(handle, std::move(summaries));
+    return self.store_.add_backtest_timelines(handle, std::move(timeline));
   }
 
-  auto get_backtest_summaries(this const ApplicationState& self,
+  auto get_backtest_timelines(this const ApplicationState& self,
                               backtest::BacktestStoreHandle handle) noexcept
-   -> const std::vector<backtest::BacktestSummary>&
+   -> const backtest::BacktestTimeline&
   {
-    return self.store_.get_backtest_summaries(handle);
+    return self.store_.get_backtest_timelines(handle);
   }
 
-  auto get_backtest_summaries(this ApplicationState& self,
+  auto get_backtest_timelines(this ApplicationState& self,
                               backtest::BacktestStoreHandle handle) noexcept
-   -> std::vector<backtest::BacktestSummary>&
+   -> backtest::BacktestTimeline&
   {
-    return self.store_.get_backtest_summaries(handle);
+    return self.store_.get_backtest_timelines(handle);
   }
 
-  auto get_backtest_summaries_if_present(
+  auto get_backtest_timelines_if_present(
    this const ApplicationState& self,
    backtest::BacktestStoreHandle handle) noexcept
-   -> const std::vector<backtest::BacktestSummary>*
+   -> const backtest::BacktestTimeline*
   {
-    return self.store_.get_backtest_summaries_if_present(handle);
+    return self.store_.get_backtest_timelines_if_present(handle);
   }
 
-  auto get_backtest_summaries_if_present(
+  auto get_backtest_timelines_if_present(
    this ApplicationState& self, backtest::BacktestStoreHandle handle) noexcept
-   -> std::vector<backtest::BacktestSummary>*
+   -> backtest::BacktestTimeline*
   {
-    return self.store_.get_backtest_summaries_if_present(handle);
+    return self.store_.get_backtest_timelines_if_present(handle);
   }
 
-  auto
-  update_backtest_summaries(this ApplicationState& self,
-                            backtest::BacktestStoreHandle handle,
-                            std::vector<backtest::BacktestSummary> summaries)
-   -> bool
+  auto update_backtest_timelines(this ApplicationState& self,
+                                 backtest::BacktestStoreHandle handle,
+                                 backtest::BacktestTimeline timeline) -> bool
   {
-    return self.store_.update_backtest_summaries(handle, std::move(summaries));
+    return self.store_.update_backtest_timelines(handle, std::move(timeline));
   }
 
-  auto remove_backtest_summaries(this ApplicationState& self,
+  auto remove_backtest_timelines(this ApplicationState& self,
                                  backtest::BacktestStoreHandle handle) -> bool
   {
-    return self.store_.remove_backtest_summaries(handle);
+    return self.store_.remove_backtest_timelines(handle);
   }
 
   auto add_series_results(this ApplicationState& self,
@@ -779,11 +776,11 @@ private:
   void reset_backtest(this ApplicationState& self,
                       backtest::BacktestStoreHandle handle)
   {
-    const auto summaries = self.store_.update_backtest_summaries(handle, {});
+    const auto timelines = self.store_.update_backtest_timelines(handle, {});
     const auto series_results = self.store_.update_series_results(handle, {});
 
-    if(!summaries || !series_results) {
-      // TODO: Handle error case where summaries or series results fail to
+    if(!timelines || !series_results) {
+      // TODO: Handle error case where timelines or series results fail to
       // update after backtest reset
     }
   }

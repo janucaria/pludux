@@ -1,9 +1,5 @@
 module;
 
-#include <algorithm>
-#include <cstddef>
-#include <cstdint>
-#include <limits>
 #include <string>
 #include <utility>
 
@@ -13,32 +9,143 @@ import pludux;
 
 export namespace pludux::backtest {
 
+enum class InsufficientCashPolicy { Reject, CapToAvailableCash };
+
+class PositionSizing {
+public:
+  enum class Mode { RiskDistance, FixedQuantity, FixedNotional, EquityPercent };
+
+  PositionSizing()
+  : PositionSizing{Mode::RiskDistance, 0.0}
+  {
+  }
+
+  PositionSizing(Mode mode, double value)
+  : mode_{mode}
+  , value_{value}
+  {
+  }
+
+  auto operator==(const PositionSizing&) const noexcept -> bool = default;
+
+  auto mode(this const PositionSizing& self) noexcept -> Mode
+  {
+    return self.mode_;
+  }
+
+  void mode(this PositionSizing& self, Mode mode) noexcept
+  {
+    self.mode_ = mode;
+  }
+
+  auto value(this const PositionSizing& self) noexcept -> double
+  {
+    return self.value_;
+  }
+
+  void value(this PositionSizing& self, double value) noexcept
+  {
+    self.value_ = value;
+  }
+
+private:
+  Mode mode_;
+  double value_;
+};
+
+class DrawdownAdjustment {
+public:
+  DrawdownAdjustment()
+  : DrawdownAdjustment{false, 0.10, 0.20}
+  {
+  }
+
+  DrawdownAdjustment(bool enabled, double drawdown_step, double size_reduction)
+  : enabled_{enabled}
+  , drawdown_step_{drawdown_step}
+  , size_reduction_{size_reduction}
+  {
+  }
+
+  auto operator==(const DrawdownAdjustment&) const noexcept -> bool = default;
+
+  auto enabled(this const DrawdownAdjustment& self) noexcept -> bool
+  {
+    return self.enabled_;
+  }
+
+  void enabled(this DrawdownAdjustment& self, bool enabled) noexcept
+  {
+    self.enabled_ = enabled;
+  }
+
+  auto drawdown_step(this const DrawdownAdjustment& self) noexcept -> double
+  {
+    return self.drawdown_step_;
+  }
+
+  void drawdown_step(this DrawdownAdjustment& self,
+                     double drawdown_step) noexcept
+  {
+    self.drawdown_step_ = drawdown_step;
+  }
+
+  auto size_reduction(this const DrawdownAdjustment& self) noexcept -> double
+  {
+    return self.size_reduction_;
+  }
+
+  void size_reduction(this DrawdownAdjustment& self,
+                      double size_reduction) noexcept
+  {
+    self.size_reduction_ = size_reduction;
+  }
+
+private:
+  bool enabled_;
+  double drawdown_step_;
+  double size_reduction_;
+};
+
 class Profile {
 public:
-  enum class RDistance : int { Atr, Percentage, Price };
-
   Profile()
   : Profile{""}
   {
   }
 
   Profile(std::string name)
-  : Profile{std::move(name), 0.0}
+  : Profile{std::move(name),
+            PositionSizing{PositionSizing::Mode::RiskDistance, 0.0}}
+  {
+  }
+
+  Profile(std::string name, PositionSizing position_sizing)
+  : Profile{std::move(name),
+            position_sizing,
+            DrawdownAdjustment{},
+            InsufficientCashPolicy::Reject}
   {
   }
 
   Profile(std::string name,
-          double capital_risk,
-          RDistance r_distance_mode = RDistance::Atr,
-          std::pair<std::size_t, double> r_mode_atr = {14, 2.0},
-          double r_mode_percentage = 10.0,
-          double r_mode_price = 1000.0)
+          PositionSizing position_sizing,
+          DrawdownAdjustment drawdown_adjustment)
+  : Profile{std::move(name),
+            position_sizing,
+            drawdown_adjustment,
+            InsufficientCashPolicy::Reject}
+  {
+  }
+
+  Profile(std::string name,
+          PositionSizing position_sizing,
+          DrawdownAdjustment drawdown_adjustment,
+          InsufficientCashPolicy insufficient_cash_policy)
   : name_{std::move(name)}
-  , capital_risk_{capital_risk}
-  , r_distance_mode_{r_distance_mode}
-  , r_mode_atr_{r_mode_atr}
-  , r_mode_percentage_{r_mode_percentage}
-  , r_mode_price_{r_mode_price}
+  , position_sizing_{position_sizing}
+  , drawdown_adjustment_{drawdown_adjustment}
+  , insufficient_cash_policy_{insufficient_cash_policy}
   {
   }
 
@@ -54,108 +161,55 @@ public:
     self.name_ = std::move(name);
   }
 
-  auto capital_risk(this const Profile& self) noexcept -> double
+  auto position_sizing(this const Profile& self) noexcept
+   -> const PositionSizing&
   {
-    return self.capital_risk_;
+    return self.position_sizing_;
   }
 
-  void capital_risk(this Profile& self, double capital_risk) noexcept
+  void position_sizing(this Profile& self,
+                       PositionSizing position_sizing) noexcept
   {
-    self.capital_risk_ = capital_risk;
+    self.position_sizing_ = position_sizing;
   }
 
-  auto r_distance_mode(this const Profile& self) noexcept -> RDistance
+  auto drawdown_adjustment(this const Profile& self) noexcept
+   -> const DrawdownAdjustment&
   {
-    return self.r_distance_mode_;
+    return self.drawdown_adjustment_;
   }
 
-  void r_distance_mode(this Profile& self, RDistance r_distance_mode) noexcept
+  void drawdown_adjustment(this Profile& self,
+                           DrawdownAdjustment drawdown_adjustment) noexcept
   {
-    self.r_distance_mode_ = r_distance_mode;
+    self.drawdown_adjustment_ = drawdown_adjustment;
   }
 
-  auto r_mode_atr(this const Profile& self) noexcept
-   -> const std::pair<std::size_t, double>&
+  auto insufficient_cash_policy(this const Profile& self) noexcept
+   -> InsufficientCashPolicy
   {
-    return self.r_mode_atr_;
+    return self.insufficient_cash_policy_;
   }
 
-  void r_mode_atr(this Profile& self,
-                  std::pair<std::size_t, double> r_mode_atr) noexcept
+  void insufficient_cash_policy(
+   this Profile& self, InsufficientCashPolicy insufficient_cash_policy) noexcept
   {
-    self.r_mode_atr_ = std::move(r_mode_atr);
-  }
-
-  auto r_mode_percentage(this const Profile& self) noexcept -> double
-  {
-    return self.r_mode_percentage_;
-  }
-
-  void r_mode_percentage(this Profile& self, double r_mode_percentage) noexcept
-  {
-    self.r_mode_percentage_ = r_mode_percentage;
-  }
-
-  auto r_mode_price(this const Profile& self) noexcept -> double
-  {
-    return self.r_mode_price_;
-  }
-
-  void r_mode_price(this Profile& self, double r_mode_price) noexcept
-  {
-    self.r_mode_price_ = r_mode_price;
-  }
-
-  auto get_r_distance(this const Profile& self,
-                      double entry_price,
-                      const AssetSnapshot& prev_snapshot,
-                      MethodContextable auto context) noexcept -> double
-  {
-    switch(self.r_distance_mode_) {
-    case RDistance::Atr: {
-      const auto atr_period =
-       std::min(static_cast<std::size_t>(self.r_mode_atr_.first),
-                prev_snapshot.index() + 1);
-      return self.r_mode_atr_.second *
-             evaluate_series_method(
-              AtrMethod{atr_period}, prev_snapshot, context);
-    }
-    case RDistance::Percentage:
-      return entry_price * (self.r_mode_percentage_ / 100.0);
-    case RDistance::Price:
-      return self.r_mode_price_;
-    }
-
-    return std::numeric_limits<double>::quiet_NaN();
+    self.insufficient_cash_policy_ = insufficient_cash_policy;
   }
 
   auto equivalent_rules(this const Profile& self, const Profile& other) noexcept
    -> bool
   {
-    if(self.capital_risk_ == other.capital_risk_ &&
-       self.r_distance_mode_ == other.r_distance_mode_) {
-      switch(self.r_distance_mode_) {
-      case RDistance::Atr:
-        return self.r_mode_atr_ == other.r_mode_atr_;
-      case RDistance::Percentage:
-        return self.r_mode_percentage_ == other.r_mode_percentage_;
-      case RDistance::Price:
-        return self.r_mode_price_ == other.r_mode_price_;
-      }
-    }
-
-    return false;
+    return self.position_sizing_ == other.position_sizing_ &&
+           self.drawdown_adjustment_ == other.drawdown_adjustment_ &&
+           self.insufficient_cash_policy_ == other.insufficient_cash_policy_;
   }
 
 private:
   std::string name_;
-  double capital_risk_;
-
-  RDistance r_distance_mode_;
-
-  std::pair<std::size_t, double> r_mode_atr_;
-  double r_mode_percentage_;
-  double r_mode_price_;
+  PositionSizing position_sizing_;
+  DrawdownAdjustment drawdown_adjustment_;
+  InsufficientCashPolicy insufficient_cash_policy_;
 };
 
 } // namespace pludux::backtest

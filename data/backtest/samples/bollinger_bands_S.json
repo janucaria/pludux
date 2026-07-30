@@ -4,8 +4,22 @@
     "bbands": {
       "method": "BB",
       "params": {
-        "period": 20,
-        "stddev": 2
+        "period": {
+          "method": "INPUT",
+          "params": {
+            "label": "Period",
+            "representation": "UnsignedInteger",
+            "value": 20
+          }
+        },
+        "stddev": {
+          "method": "INPUT",
+          "params": {
+            "label": "StdDev",
+            "representation": "Decimal",
+            "value": 2
+          }
+        }
       }
     },
     "bb_upper": {
@@ -13,7 +27,7 @@
       "params": {
         "output": "upper-band",
         "source": {
-          "method": "SERIES_NODE",
+          "method": "SERIES",
           "params": {
             "name": "bbands"
           }
@@ -25,19 +39,13 @@
       "params": {
         "output": "lower-band",
         "source": {
-          "method": "SERIES_NODE",
+          "method": "SERIES",
           "params": {
             "name": "bbands"
           }
         }
       }
     }
-  },
-  "stopLoss": {
-    "trailing": true
-  },
-  "takeProfit": {
-    "rMultiple": 2
   },
   "positions": {
     "short": {
@@ -47,27 +55,84 @@
           "params": {
             "value": "CLOSE",
             "baseline": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES",
               "params": {
                 "name": "bb_lower"
               }
             }
           }
+        },
+        "timing": "NEXT_OPEN"
+      },
+      "exits": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "signal": {
+              "method": "CROSSUNDER",
+              "params": {
+                "value": "CLOSE",
+                "baseline": {
+                  "method": "SERIES",
+                  "params": {
+                    "name": "bb_upper"
+                  }
+                }
+              }
+            },
+            "timing": "NEXT_OPEN"
+          }
+        ]
+      },
+      "riskDistance": {
+        "method": "R_DISTANCE_ATR",
+        "params": {
+          "period": {
+            "method": "VALUE",
+            "params": {
+              "value": 14
+            }
+          },
+          "multiplier": {
+            "method": "VALUE",
+            "params": {
+              "value": 2
+            }
+          },
+          "maSmoothingType": "RMA"
         }
       },
-      "exit": {
-        "signal": {
-          "method": "CROSSUNDER",
-          "params": {
-            "value": "CLOSE",
-            "baseline": {
-              "method": "SERIES_VALUE",
+      "takeProfits": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "targetPrice": {
+              "method": "TP_R_MULTIPLE",
               "params": {
-                "name": "bb_upper"
+                "multiple": {
+                  "method": "VALUE",
+                  "params": {
+                    "value": 2
+                  }
+                }
               }
             }
           }
-        }
+        ]
+      },
+      "stopLosses": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "trailing": true,
+            "stopPrice": {
+              "method": "SL_1R"
+            }
+          }
+        ]
       }
     }
   },
@@ -102,5 +167,8 @@
         }
       ]
     }
-  ]
+  ],
+  "execution": {
+    "intrabarPath": "CANDLE_DIRECTION"
+  }
 }

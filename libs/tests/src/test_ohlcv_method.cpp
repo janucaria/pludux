@@ -29,11 +29,11 @@ TEST(OhlcvMethodTest, OpenHighLowCloseVolumeMethods)
     auto close_val = evaluate_series_method(close, snap, context);
     auto volume_val = evaluate_series_method(volume, snap, context);
 
-    EXPECT_EQ(open_val, 10);
-    EXPECT_EQ(high_val, 15);
-    EXPECT_EQ(low_val, 5);
-    EXPECT_EQ(close_val, 12);
-    EXPECT_EQ(volume_val, 100);
+    EXPECT_EQ(open_val, 30);
+    EXPECT_EQ(high_val, 35);
+    EXPECT_EQ(low_val, 25);
+    EXPECT_EQ(close_val, 32);
+    EXPECT_EQ(volume_val, 300);
   }
 
   {
@@ -57,11 +57,11 @@ TEST(OhlcvMethodTest, OpenHighLowCloseVolumeMethods)
     auto close_val = evaluate_series_method(close, snap[2], context);
     auto volume_val = evaluate_series_method(volume, snap[2], context);
 
-    EXPECT_EQ(open_val, 30);
-    EXPECT_EQ(high_val, 35);
-    EXPECT_EQ(low_val, 25);
-    EXPECT_EQ(close_val, 32);
-    EXPECT_EQ(volume_val, 300);
+    EXPECT_EQ(open_val, 10);
+    EXPECT_EQ(high_val, 15);
+    EXPECT_EQ(low_val, 5);
+    EXPECT_EQ(close_val, 12);
+    EXPECT_EQ(volume_val, 100);
   }
 
   {
@@ -105,8 +105,8 @@ TEST(OhlcvMethodTest, InsertAfterConstruction)
   auto high_val_0 = evaluate_series_method(high, snap, context);
   auto high_val_1 = evaluate_series_method(high, snap[1], context);
   auto high_val_2 = evaluate_series_method(high, snap[2], context);
-  EXPECT_EQ(high_val_0, 15);
-  EXPECT_EQ(high_val_1, 25);
+  EXPECT_EQ(high_val_0, 25);
+  EXPECT_EQ(high_val_1, 15);
   EXPECT_TRUE(std::isnan(high_val_2));
 }
 
@@ -122,7 +122,7 @@ TEST(OhlcvMethodTest, ChangeKeyMapping)
   auto open_val_0 = evaluate_series_method(open, snap, context);
   auto open_val_2 = evaluate_series_method(open, snap[2], context);
   auto open_val_3 = evaluate_series_method(open, snap[3], context);
-  EXPECT_EQ(open_val_0, 1);
-  EXPECT_EQ(open_val_2, 3);
+  EXPECT_EQ(open_val_0, 3);
+  EXPECT_EQ(open_val_2, 1);
   EXPECT_TRUE(std::isnan(open_val_3));
 }

@@ -1,6 +1,8 @@
 module;
 
 #include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <functional>
 #include <iterator>
@@ -9,7 +11,10 @@ module;
 #include <ranges>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
+
+#include "../ui/pludux_icons.hpp"
 
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
@@ -18,6 +23,7 @@ export module pludux.apps.backtest:windows.backtests_window;
 
 import pludux.backtest;
 import :window_context;
+import :ui.widgets;
 
 export namespace pludux::apps {
 
@@ -32,7 +38,7 @@ public:
 
   void render(this auto& self, WindowContext& context)
   {
-    ImGui::Begin("Backtests", nullptr);
+    ImGui::Begin("Backtests");
 
     switch(self.backtest_panel_mode_) {
     case BacktestPanelMode::List:
@@ -49,11 +55,18 @@ public:
     ImGui::End();
   }
 
+  void discard_draft(this BacktestsWindow& self) noexcept
+  {
+    self.reset();
+  }
+
 private:
   enum class BacktestPanelMode { List, Edit, AddNew } backtest_panel_mode_;
 
   std::optional<backtest::BacktestStoreHandle> selected_backtest_handle_opt_;
   std::shared_ptr<backtest::Backtest> editing_backtest_ptr_;
+  ImGuiTextFilter backtest_filter_;
+  ui::DraftAction selected_draft_action_{ui::DraftAction::Apply};
 
   void render_backtests_list(this auto& self, WindowContext& context)
   {
@@ -61,112 +74,85 @@ private:
     const auto& backtest_handles = app_state.get_backtest_handles();
 
     ImGui::BeginGroup();
-    ImGui::BeginChild(
-     "item view",
-     ImVec2(
-      0,
-      -ImGui::GetFrameHeightWithSpacing())); // Leave room for 1 line below us
+    if(ImGui::Button(PLUDUX_ICON_ADD " New Backtest")) {
+      self.backtest_panel_mode_ = BacktestPanelMode::AddNew;
+      self.selected_backtest_handle_opt_ = std::nullopt;
+      self.editing_backtest_ptr_ = std::make_shared<backtest::Backtest>();
+    }
+    ImGui::Spacing();
+    ui::search_filter(self.backtest_filter_, "##backtests_search");
+    ImGui::BeginChild("item view", ImVec2(0, 0));
 
+    auto visible_backtest_count = std::size_t{0};
     if(!backtest_handles.empty()) {
       for(std::size_t i = 0; i < backtest_handles.size(); ++i) {
         const auto backtest_handle = backtest_handles[i];
         const auto& backtest = app_state.get_backtest(backtest_handle);
         const auto& backtest_name = backtest.name();
+        if(!self.backtest_filter_.PassFilter(backtest_name.c_str())) {
+          continue;
+        }
+        ++visible_backtest_count;
         auto is_selected =
          app_state.selected_backtest_handle() == backtest_handle;
 
         ImGui::PushID(i);
 
-        ImGui::SetNextItemAllowOverlap();
-        const auto row_start = ImGui::GetCursorScreenPos();
-        const auto row_width = ImGui::GetContentRegionAvail().x;
-        const auto row_height = ImGui::GetFrameHeight();
-
-        if(ImGui::Selectable("##backtest_row",
-                             &is_selected,
-                             ImGuiSelectableFlags_AllowOverlap,
-                             ImVec2(row_width, row_height))) {
-          context.push_action([backtest_handle](ApplicationState& app_state) {
-            app_state.select_backtest(backtest_handle);
-          });
-        }
-
-        ImGui::SetCursorScreenPos(row_start);
-        ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted(backtest_name.c_str());
-
-        const auto spacing = ImGui::GetStyle().ItemSpacing.x;
-        const auto frame_padding_x = ImGui::GetStyle().FramePadding.x;
-        const auto edit_width =
-         ImGui::CalcTextSize("Edit").x + (2.0f * frame_padding_x);
-        const auto delete_width =
-         ImGui::CalcTextSize("Delete").x + (2.0f * frame_padding_x);
-        const auto more_width =
-         ImGui::CalcTextSize("More...").x + (2.0f * frame_padding_x);
-        const auto buttons_width = edit_width + spacing + delete_width + spacing + more_width;
-        const auto buttons_start_x = row_start.x + row_width - buttons_width;
-
-        ImGui::SetCursorScreenPos(ImVec2(buttons_start_x, row_start.y));
-        if(ImGui::Button("Edit")) {
-          self.backtest_panel_mode_ = BacktestPanelMode::Edit;
-          self.selected_backtest_handle_opt_ = backtest_handle;
-          self.editing_backtest_ptr_ =
-           std::make_shared<backtest::Backtest>(backtest);
-        }
-
-        ImGui::SameLine();
-
-        if(ImGui::Button("Delete")) {
-          context.push_action([backtest_handle](ApplicationState& app_state) {
-            app_state.remove_backtest(backtest_handle);
-          });
-        }
-
-        ImGui::SameLine();
-        if(ImGui::Button("More...")) {
-          ImGui::OpenPopup("backtest_menu_more");
-        }
-
-        if(ImGui::BeginPopup("backtest_menu_more")) {
-          if(ImGui::MenuItem("Duplicate")) {
+        {
+          const auto has_draft =
+           self.selected_backtest_handle_opt_ == backtest_handle &&
+           self.editing_backtest_ptr_ &&
+           *self.editing_backtest_ptr_ != backtest;
+          const auto display_name =
+           has_draft ? backtest_name + " (Unsaved)" : backtest_name;
+          const auto action = ui::resource_row(
+           display_name.c_str(), is_selected, i, backtest_handles.size());
+          if(action == ui::ResourceRowAction::Select) {
             context.push_action([backtest_handle](ApplicationState& app_state) {
-              const auto& backtest = app_state.get_backtest(backtest_handle);
-              auto duplicate_backtest = backtest;
-              duplicate_backtest.name(backtest.name() + " Copy");
-              app_state.add_backtest(std::move(duplicate_backtest));
+              app_state.select_backtest(backtest_handle);
+            });
+          } else if(action == ui::ResourceRowAction::Edit) {
+            self.backtest_panel_mode_ = BacktestPanelMode::Edit;
+            if(self.selected_backtest_handle_opt_ != backtest_handle ||
+               !self.editing_backtest_ptr_) {
+              self.selected_backtest_handle_opt_ = backtest_handle;
+              self.editing_backtest_ptr_ =
+               std::make_shared<backtest::Backtest>(backtest);
+            }
+          } else if(action == ui::ResourceRowAction::Duplicate) {
+            context.push_action([backtest_handle](ApplicationState& app_state) {
+              const auto& value = app_state.get_backtest(backtest_handle);
+              auto copy = value;
+              copy.name(value.name() + " Copy");
+              app_state.add_backtest(std::move(copy));
+            });
+          } else if(action == ui::ResourceRowAction::MoveUp) {
+            context.push_action([from = i](ApplicationState& app_state) {
+              app_state.reorder_list_backtest(from, from - 1);
+            });
+          } else if(action == ui::ResourceRowAction::MoveDown) {
+            context.push_action([from = i](ApplicationState& app_state) {
+              app_state.reorder_list_backtest(from, from + 1);
+            });
+          } else if(action == ui::ResourceRowAction::Delete) {
+            context.push_action([backtest_handle](ApplicationState& app_state) {
+              app_state.remove_backtest(backtest_handle);
             });
           }
-
-          const auto move_up_disabled = i == 0;
-          if(ImGui::MenuItem("Move Up", nullptr, false, !move_up_disabled)) {
-            context.push_action(
-             [from_index = i, to_index = i - 1](ApplicationState& app_state) {
-               app_state.reorder_list_backtest(from_index, to_index);
-             });
-          }
-
-          const auto move_down_disabled = i == backtest_handles.size() - 1;
-          if(ImGui::MenuItem("Move Down", nullptr, false, !move_down_disabled)) {
-            context.push_action(
-             [from_index = i, to_index = i + 1](ApplicationState& app_state) {
-               app_state.reorder_list_backtest(from_index, to_index);
-             });
-          }
-
-          ImGui::EndPopup();
+          ImGui::PopID();
+          continue;
         }
-
-        ImGui::PopID();
       }
+    }
+
+    if(backtest_handles.empty()) {
+      ImGui::TextDisabled("No backtests yet. Create one to get started.");
+    } else if(visible_backtest_count == 0) {
+      ImGui::TextDisabled("No backtests match this search.");
     }
 
     ImGui::EndChild();
 
-    if(ImGui::Button("Add New Backtest")) {
-      self.backtest_panel_mode_ = BacktestPanelMode::AddNew;
-      self.selected_backtest_handle_opt_ = std::nullopt;
-      self.editing_backtest_ptr_ = std::make_shared<backtest::Backtest>();
-    }
     ImGui::EndGroup();
   }
 
@@ -184,9 +170,13 @@ private:
 
     ImGui::EndChild();
 
+    const auto valid =
+     context.app_state().is_backtest_ready(*self.editing_backtest_ptr_);
+    ImGui::BeginDisabled(!valid);
     if(ImGui::Button("Create Backtest")) {
       self.submit_backtest_changes(context, true);
     }
+    ImGui::EndDisabled();
 
     ImGui::SameLine();
     if(ImGui::Button("Cancel")) {
@@ -215,22 +205,29 @@ private:
     const auto& selected_backtest =
      context.app_state().get_backtest(selected_backtest_handle);
     const auto same_backtest = selected_backtest == *self.editing_backtest_ptr_;
+    const auto valid =
+     context.app_state().is_backtest_ready(*self.editing_backtest_ptr_);
 
-    if(ImGui::Button("OK")) {
+    ImGui::BeginDisabled(!valid || same_backtest);
+    if(ImGui::Button("Save Backtest")) {
       self.submit_backtest_changes(context, true);
     }
+    ImGui::EndDisabled();
 
     ImGui::SameLine();
     if(ImGui::Button("Cancel")) {
-      self.reset();
+      self.leave_editor();
     }
 
     ImGui::SameLine();
-    ImGui::BeginDisabled(same_backtest);
-    if(ImGui::Button("Apply")) {
+    const auto draft_action =
+     ui::apply_reset_button(self.selected_draft_action_, !same_backtest, valid);
+    if(draft_action == ui::DraftAction::Apply) {
       self.submit_backtest_changes(context, false);
+    } else if(draft_action == ui::DraftAction::Reset) {
+      self.editing_backtest_ptr_ =
+       std::make_shared<backtest::Backtest>(selected_backtest);
     }
-    ImGui::EndDisabled();
 
     ImGui::EndGroup();
   }
@@ -240,16 +237,22 @@ private:
     const auto& app_state = context.app_state();
 
     auto& edit_backtest_ptr = self.editing_backtest_ptr_;
+    ui::form_section(
+     "Backtest Details",
+     "Give this simulation a recognizable name and starting balance. A blank "
+     "name is saved as 'Unnamed'.");
     {
-      ImGui::Text("Name:");
+      ui::field_label("Name");
 
       auto backtest_name = edit_backtest_ptr->name();
-      ImGui::InputText("##NewBacktestName", &backtest_name);
+      ImGui::InputTextWithHint("##NewBacktestName", "Unnamed", &backtest_name);
       edit_backtest_ptr->name(std::move(backtest_name));
     }
 
     {
-      ImGui::Text("Initial Capital:");
+      ui::field_label(
+       "Initial Capital",
+       "Starting cash balance used to size positions and calculate returns.");
 
       auto initial_capital = edit_backtest_ptr->initial_capital();
       ImGui::InputDouble(
@@ -257,6 +260,10 @@ private:
       edit_backtest_ptr->initial_capital(initial_capital);
     }
 
+    ui::form_section(
+     "Backtest Components",
+     "Choose the data, trading rules, execution constraints, fees, and "
+     "position-sizing profile used by this run.");
     {
       const auto& asset_handles = app_state.get_asset_handles();
       const auto edit_asset_handle = edit_backtest_ptr->asset_handle();
@@ -269,9 +276,9 @@ private:
         }
       }
 
-      ImGui::Text("Asset:");
+      ui::field_label("Asset");
       auto asset_preview =
-       edit_asset_ptr ? edit_asset_ptr->name() : std::string{""};
+       edit_asset_ptr ? edit_asset_ptr->name() : std::string{"Select an asset"};
       if(ImGui::BeginCombo("##AssetCombo", asset_preview.c_str())) {
         for(auto i = 0; i < asset_handles.size(); ++i) {
           const auto& asset_handle = asset_handles[i];
@@ -304,13 +311,18 @@ private:
 
       if(!edit_strategy_ptr) {
         if(!self.selected_backtest_handle_opt_ && !strategy_handles.empty()) {
-          edit_backtest_ptr->strategy_handle(strategy_handles.front());
+          const auto strategy_handle = strategy_handles.front();
+          backtest::assign_backtest_strategy(
+           *edit_backtest_ptr,
+           strategy_handle,
+           app_state.get_strategy(strategy_handle));
         }
       }
 
-      ImGui::Text("Strategy:");
-      auto strategy_preview =
-       edit_strategy_ptr ? edit_strategy_ptr->name() : std::string{""};
+      ui::field_label("Strategy");
+      auto strategy_preview = edit_strategy_ptr
+                               ? edit_strategy_ptr->name()
+                               : std::string{"Select a strategy"};
       if(ImGui::BeginCombo("##StrategyCombo", strategy_preview.c_str())) {
         for(auto i = 0; i < strategy_handles.size(); ++i) {
           const auto& strategy_handle = strategy_handles[i];
@@ -321,8 +333,10 @@ private:
 
           ImGui::PushID(i);
 
-          if(ImGui::Selectable(strategy_name.c_str(), is_selected)) {
-            edit_backtest_ptr->strategy_handle(strategy_handle);
+          if(ImGui::Selectable(strategy_name.c_str(), is_selected) &&
+             !is_selected) {
+            backtest::assign_backtest_strategy(
+             *edit_backtest_ptr, strategy_handle, strategy);
           }
 
           if(is_selected) {
@@ -332,6 +346,58 @@ private:
           ImGui::PopID();
         }
         ImGui::EndCombo();
+      }
+
+      auto backtest_inputs = edit_backtest_ptr->inputs();
+      if(!backtest_inputs.empty()) {
+        ImGui::Indent();
+
+        ImGui::SeparatorText("Strategy Inputs");
+        ImGui::TextDisabled(
+         "Override the named values exposed by the selected strategy.");
+
+        for(auto id_counter = 0; auto& backtest_input : backtest_inputs) {
+          ImGui::PushID(id_counter++);
+
+          ui::field_label(backtest_input.label().c_str());
+
+          auto input_value = backtest_input.value();
+          switch(backtest_input.representation()) {
+          case pludux::NumericInputNode::ValueRepresentation::Decimal: {
+            auto editable = input_value;
+            if(ImGui::InputScalar(
+                "##input_value", ImGuiDataType_Double, &editable)) {
+              input_value = editable;
+            }
+            break;
+          }
+          case pludux::NumericInputNode::ValueRepresentation::SignedInteger: {
+            auto editable = static_cast<std::int64_t>(input_value);
+            if(ImGui::InputScalar(
+                "##input_value", ImGuiDataType_S64, &editable)) {
+              input_value = static_cast<double>(editable);
+            }
+            break;
+          }
+          case pludux::NumericInputNode::ValueRepresentation::UnsignedInteger: {
+            auto editable = static_cast<std::uint64_t>(input_value);
+            if(ImGui::InputScalar(
+                "##input_value", ImGuiDataType_U64, &editable)) {
+              input_value = static_cast<double>(editable);
+            }
+            break;
+          }
+          }
+
+          backtest_input.value(input_value);
+
+          ImGui::Separator();
+          ImGui::PopID();
+        }
+
+        edit_backtest_ptr->inputs(std::move(backtest_inputs));
+
+        ImGui::Unindent();
       }
     }
 
@@ -347,9 +413,9 @@ private:
         }
       }
 
-      ImGui::Text("Market:");
-      auto market_preview =
-       edit_market_ptr ? edit_market_ptr->name() : std::string{""};
+      ui::field_label("Market");
+      auto market_preview = edit_market_ptr ? edit_market_ptr->name()
+                                            : std::string{"Select a market"};
       if(ImGui::BeginCombo("##MarketCombo", market_preview.c_str())) {
         for(auto i = 0; i < market_handles.size(); ++i) {
           const auto& market_handle = market_handles[i];
@@ -386,9 +452,9 @@ private:
         }
       }
 
-      ImGui::Text("Broker:");
-      auto broker_preview =
-       edit_broker_ptr ? edit_broker_ptr->name() : std::string{""};
+      ui::field_label("Broker");
+      auto broker_preview = edit_broker_ptr ? edit_broker_ptr->name()
+                                            : std::string{"Select a broker"};
       if(ImGui::BeginCombo("##BrokerCombo", broker_preview.c_str())) {
         for(auto i = 0; i < broker_handles.size(); ++i) {
           const auto& broker_handle = broker_handles[i];
@@ -425,9 +491,9 @@ private:
         }
       }
 
-      ImGui::Text("Profile:");
-      auto profile_preview =
-       edit_profile_ptr ? edit_profile_ptr->name() : std::string{""};
+      ui::field_label("Profile");
+      auto profile_preview = edit_profile_ptr ? edit_profile_ptr->name()
+                                              : std::string{"Select a profile"};
       if(ImGui::BeginCombo("##ProfileCombo", profile_preview.c_str())) {
         for(auto i = 0; i < profile_handles.size(); ++i) {
           const auto profile_handle = profile_handles[i];
@@ -450,6 +516,12 @@ private:
         }
         ImGui::EndCombo();
       }
+    }
+
+    if(!app_state.is_backtest_ready(*edit_backtest_ptr)) {
+      ImGui::Spacing();
+      ui::validation_message(
+       "Select an asset, strategy, market, broker, and profile before saving.");
     }
   }
 
@@ -497,6 +569,11 @@ private:
     self.backtest_panel_mode_ = BacktestPanelMode::List;
     self.selected_backtest_handle_opt_ = std::nullopt;
     self.editing_backtest_ptr_ = nullptr;
+  }
+
+  void leave_editor(this BacktestsWindow& self) noexcept
+  {
+    self.backtest_panel_mode_ = BacktestPanelMode::List;
   }
 };
 

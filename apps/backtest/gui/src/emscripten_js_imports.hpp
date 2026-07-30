@@ -25,6 +25,8 @@ int pludux_js_is_file_system_access_supported();
 
 void pludux_js_set_body_cursor(int is_pointer);
 
+void pludux_js_hide_loading_overlay();
+
 void pludux_js_open_url(const char* url);
 }
 #endif

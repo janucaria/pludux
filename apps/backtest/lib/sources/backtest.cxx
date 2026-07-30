@@ -26,22 +26,40 @@ export import :store_data_resolver;
 export import :store_descriptor;
 export import :store_arena;
 export import :store;
+export import :execution_model;
+export import :intrabar_path;
 export import :asset;
 export import :strategy;
+export import :strategy_inputs;
 export import :market;
 export import :broker;
 export import :profile;
 export import :trade_entry;
 export import :trade_exit;
-export import :trade_record;
+export import :take_profit_level;
+export import :signal_exit_state;
+export import :stop_loss_level;
+export import :trade_event;
+export import :open_position_snapshot;
+export import :closed_trade;
 export import :trade_position;
 export import :trade_session;
 export import :backtest;
-export import :backtest_summary;
+export import :backtest_timeline;
+export import :backtest_method_context;
+export import :drawdown_method;
+export import :drawdown_node;
+export import :equity_method;
+export import :equity_node;
+export import :risk_distance_method;
+export import :risk_distance_node;
+export import :stop_target_price_method;
+export import :stop_target_price_node;
 export import :backtest_runner;
 export import :plot_group;
 export import :plots;
 
+export import :config_parser;
 export import :strategy_parser;
 
 export namespace pludux {
@@ -109,7 +127,7 @@ void update_asset_from_csv(backtest::Asset& asset, std::istream& csv_stream)
      return static_cast<double>(timestamp);
    });
 
-  const auto should_reverse = date_records.front() < date_records.back();
+  const auto should_reverse = date_records.back() < date_records.front();
   if(should_reverse) {
     std::reverse(date_records.begin(), date_records.end());
   }

@@ -4,11 +4,32 @@
     "kchannel": {
       "method": "KC",
       "params": {
-        "maPeriod": 20,
+        "period": {
+          "method": "INPUT",
+          "params": {
+            "label": "MA Period",
+            "representation": "UnsignedInteger",
+            "value": 20
+          }
+        },
         "maMethodType": "EMA",
         "bandMethodType": "ATR",
-        "bandAtrPeriod": 10,
-        "multiplier": 2
+        "bandAtrPeriod": {
+          "method": "INPUT",
+          "params": {
+            "label": "Band ATR Period",
+            "representation": "UnsignedInteger",
+            "value": 10
+          }
+        },
+        "multiplier": {
+          "method": "INPUT",
+          "params": {
+            "label": "ATR Multiplier",
+            "representation": "Decimal",
+            "value": 2
+          }
+        }
       }
     },
     "kc_upper": {
@@ -16,7 +37,7 @@
       "params": {
         "output": "upper-band",
         "source": {
-          "method": "SERIES_NODE",
+          "method": "SERIES",
           "params": {
             "name": "kchannel"
           }
@@ -28,17 +49,13 @@
       "params": {
         "output": "lower-band",
         "source": {
-          "method": "SERIES_NODE",
+          "method": "SERIES",
           "params": {
             "name": "kchannel"
           }
         }
       }
     }
-  },
-  "stopLoss": true,
-  "takeProfit": {
-    "rMultiple": 5
   },
   "positions": {
     "long": {
@@ -48,27 +65,84 @@
           "params": {
             "value": "CLOSE",
             "baseline": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES",
               "params": {
                 "name": "kc_lower"
               }
             }
           }
+        },
+        "timing": "NEXT_OPEN"
+      },
+      "exits": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "signal": {
+              "method": "CROSSUNDER",
+              "params": {
+                "value": "CLOSE",
+                "baseline": {
+                  "method": "SERIES",
+                  "params": {
+                    "name": "kc_upper"
+                  }
+                }
+              }
+            },
+            "timing": "NEXT_OPEN"
+          }
+        ]
+      },
+      "riskDistance": {
+        "method": "R_DISTANCE_ATR",
+        "params": {
+          "period": {
+            "method": "VALUE",
+            "params": {
+              "value": 14
+            }
+          },
+          "multiplier": {
+            "method": "VALUE",
+            "params": {
+              "value": 2
+            }
+          },
+          "maSmoothingType": "RMA"
         }
       },
-      "exit": {
-        "signal": {
-          "method": "CROSSUNDER",
-          "params": {
-            "value": "CLOSE",
-            "baseline": {
-              "method": "SERIES_VALUE",
+      "takeProfits": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "targetPrice": {
+              "method": "TP_R_MULTIPLE",
               "params": {
-                "name": "kc_upper"
+                "multiple": {
+                  "method": "VALUE",
+                  "params": {
+                    "value": 2
+                  }
+                }
               }
             }
           }
-        }
+        ]
+      },
+      "stopLosses": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "trailing": false,
+            "stopPrice": {
+              "method": "SL_1R"
+            }
+          }
+        ]
       }
     }
   },
@@ -103,5 +177,8 @@
         }
       ]
     }
-  ]
+  ],
+  "execution": {
+    "intrabarPath": "CANDLE_DIRECTION"
+  }
 }

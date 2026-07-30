@@ -48,3 +48,26 @@ TEST(AnyConditionMethodTest, NotEqualOperator)
   EXPECT_TRUE(condition_method1 != condition_method2);
   EXPECT_FALSE(condition_method1 == condition_method2);
 }
+
+TEST(AnyConditionMethodTest, SignalMethodsAreCoercedToNumericSeriesResults)
+{
+  const auto asset_data = AssetHistory{{"close", {1.0}}};
+  const auto asset_snapshot = AssetSnapshot{asset_data};
+  const auto context = AnySeriesMethodContext{};
+
+  const auto always = AnySeriesMethod{SignalAlwaysMethod{}};
+  const auto never = AnySeriesMethod{SignalNeverMethod{}};
+  const auto and_condition =
+   AnySeriesMethod{LogicalAndMethod{SignalAlwaysMethod{}, SignalNeverMethod{}}};
+  const auto or_condition =
+   AnySeriesMethod{LogicalOrMethod{SignalAlwaysMethod{}, SignalNeverMethod{}}};
+
+  EXPECT_DOUBLE_EQ(evaluate_series_method(always, asset_snapshot[0], context),
+                   1.0);
+  EXPECT_DOUBLE_EQ(evaluate_series_method(never, asset_snapshot[0], context),
+                   0.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(and_condition, asset_snapshot[0], context), 0.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(or_condition, asset_snapshot[0], context), 1.0);
+}

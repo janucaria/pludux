@@ -20,9 +20,9 @@ TEST(AssetSnapshotTest, BasicAccessAndOffset)
   EXPECT_FALSE(snap.contains("foo"));
 
   // operator[] by key
-  EXPECT_EQ(snap["close"], 10);
-  EXPECT_EQ(snap["open"], 11);
-  EXPECT_EQ(snap["Datetime"], 1);
+  EXPECT_EQ(snap["close"], 50);
+  EXPECT_EQ(snap["open"], 51);
+  EXPECT_EQ(snap["Datetime"], 5);
 
   // Offset snapshot
   auto snap2 = snap[2];
@@ -42,12 +42,12 @@ TEST(AssetSnapshotTest, GettersForOHLCV)
                   {"Volume", {100, 200, 300}}};
 
   auto snap = AssetSnapshot{ah};
-  EXPECT_EQ(snap.datetime(), 1);
-  EXPECT_EQ(snap.open(), 10);
-  EXPECT_EQ(snap.high(), 15);
-  EXPECT_EQ(snap.low(), 5);
-  EXPECT_EQ(snap.close(), 12);
-  EXPECT_EQ(snap.volume(), 100);
+  EXPECT_EQ(snap.datetime(), 3);
+  EXPECT_EQ(snap.open(), 30);
+  EXPECT_EQ(snap.high(), 35);
+  EXPECT_EQ(snap.low(), 25);
+  EXPECT_EQ(snap.close(), 32);
+  EXPECT_EQ(snap.volume(), 300);
 
   auto snap2 = snap[1];
   EXPECT_EQ(snap2.datetime(), 2);
@@ -58,12 +58,12 @@ TEST(AssetSnapshotTest, GettersForOHLCV)
   EXPECT_EQ(snap2.volume(), 200);
 
   auto snap3 = snap[2];
-  EXPECT_EQ(snap3.datetime(), 3);
-  EXPECT_EQ(snap3.open(), 30);
-  EXPECT_EQ(snap3.high(), 35);
-  EXPECT_EQ(snap3.low(), 25);
-  EXPECT_EQ(snap3.close(), 32);
-  EXPECT_EQ(snap3.volume(), 300);
+  EXPECT_EQ(snap3.datetime(), 1);
+  EXPECT_EQ(snap3.open(), 10);
+  EXPECT_EQ(snap3.high(), 15);
+  EXPECT_EQ(snap3.low(), 5);
+  EXPECT_EQ(snap3.close(), 12);
+  EXPECT_EQ(snap3.volume(), 100);
 }
 
 TEST(AssetSnapshotTest, OutOfBoundsAccess)

@@ -41,21 +41,21 @@ TEST(MacdMethodTest, RunAllMethod)
   const auto slow_period = 10;
   const auto signal_period = 3;
   const auto asset_data = AssetHistory{{"Close",
-                                        {790,
-                                         810,
-                                         825,
-                                         840,
+                                        {875,
+                                         830,
+                                         800,
+                                         835,
+                                         870,
+                                         875,
+                                         860,
+                                         860,
                                          860,
                                          855,
                                          860,
-                                         860,
-                                         860,
-                                         875,
-                                         870,
-                                         835,
-                                         800,
-                                         830,
-                                         875}}};
+                                         840,
+                                         825,
+                                         810,
+                                         790}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 

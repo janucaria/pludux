@@ -4,7 +4,6 @@ set(PLUDUX_TEST_SOURCES
   src/test_asset_history.cpp
   src/test_asset_quote_field_resolver.cpp
   src/test_asset_snapshot.cpp
-  src/test_config_parser.cpp
 
   src/test_abs_diff_method.cpp
   src/test_any_series_method.cpp
@@ -15,10 +14,12 @@ set(PLUDUX_TEST_SOURCES
   src/test_donchian_channel_method.cpp
   src/test_ema_method.cpp
   src/test_hma_method.cpp
+  src/test_highest_method.cpp
   src/test_kc_method.cpp
   src/test_lookback_method.cpp
+  src/test_lowest_method.cpp
   src/test_macd_method.cpp
-  src/test_series_node_method.cpp
+  src/test_series_method.cpp
   src/test_ohlcv_method.cpp
   src/test_operators_methods.cpp
   src/test_percentage_method.cpp
@@ -50,6 +51,7 @@ set(PLUDUX_TEST_SOURCES
   src/test_not_equal_filter.cpp
 
   src/test_hash_series_method.cpp
+  src/test_node_to_erased_method.cpp
 )
 
 foreach(PLUDUX_TEST_SOURCE ${PLUDUX_TEST_SOURCES})

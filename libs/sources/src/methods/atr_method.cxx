@@ -9,9 +9,11 @@ module;
 export module pludux:methods.atr_method;
 
 import :methods.adaptive_ma_method;
+import :methods.value_method;
 
 export namespace pludux {
 
+template<typename TPeriodMethod = ValueMethod>
 class AtrMethod {
 public:
   AtrMethod()
@@ -21,21 +23,28 @@ public:
 
   explicit AtrMethod(std::size_t period,
                      MaMethodType ma_smoothing_type = MaMethodType::Rma)
-  : period_{period}
+  : AtrMethod{ValueMethod{static_cast<double>(period)}, ma_smoothing_type}
+  {
+  }
+
+  explicit AtrMethod(TPeriodMethod period,
+                     MaMethodType ma_smoothing_type = MaMethodType::Rma)
+    requires(!std::is_arithmetic_v<TPeriodMethod>)
+  : period_{std::move(period)}
   , ma_smoothing_type_{ma_smoothing_type}
   {
   }
 
   auto operator==(const AtrMethod& other) const noexcept -> bool = default;
 
-  auto period(this AtrMethod self) noexcept -> std::size_t
+  auto period(this const AtrMethod& self) noexcept -> const TPeriodMethod&
   {
     return self.period_;
   }
 
-  void period(this AtrMethod& self, std::size_t new_period) noexcept
+  void period(this AtrMethod& self, TPeriodMethod new_period) noexcept
   {
-    self.period_ = new_period;
+    self.period_ = std::move(new_period);
   }
 
   auto ma_smoothing_type(this const AtrMethod& self) noexcept -> MaMethodType
@@ -49,7 +58,7 @@ public:
   }
 
 private:
-  std::size_t period_;
+  TPeriodMethod period_;
   MaMethodType ma_smoothing_type_;
 };
 

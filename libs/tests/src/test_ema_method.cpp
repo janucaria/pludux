@@ -33,7 +33,7 @@ TEST(EmaMethodTest, RunAllMethod)
 {
   const auto ema_method = EmaMethod{CloseMethod{}, 5};
   const auto asset_data =
-   AssetHistory{{"Close", {855, 860, 860, 860, 875, 870, 835, 800, 830, 875}}};
+   AssetHistory{{"Close", {875, 830, 800, 835, 870, 875, 860, 860, 860, 855}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 

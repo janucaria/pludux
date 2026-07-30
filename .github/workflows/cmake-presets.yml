@@ -65,6 +65,22 @@ jobs:
       - name: Build (${{ matrix.build_preset }})
         run: cmake --build --preset "${{ matrix.build_preset }}" --parallel
 
+      - name: Stage Emscripten release
+        if: matrix.configure_preset == 'emscripten-release'
+        run: |
+          cmake --install \
+            ".out/build/${{ runner.os }}/${{ matrix.configure_preset }}" \
+            --prefix .out/webroot
+
+      - name: Upload Emscripten release
+        if: matrix.configure_preset == 'emscripten-release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pludux-web-${{ github.sha }}
+          path: .out/webroot/
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Test (clang-debug only)
         if: matrix.run_tests
         run: ctest --test-dir ".out/build/${{ runner.os }}/${{ matrix.configure_preset }}" --output-on-failure -C Debug

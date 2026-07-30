@@ -8,9 +8,30 @@
         "source": {
           "method": "MACD",
           "params": {
-            "fast": 12,
-            "slow": 26,
-            "signal": 9
+            "fastPeriod": {
+              "method": "INPUT",
+              "params": {
+                "label": "Fast Period",
+                "representation": "UnsignedInteger",
+                "value": 12
+              }
+            },
+            "slowPeriod": {
+              "method": "INPUT",
+              "params": {
+                "label": "Slow Period",
+                "representation": "UnsignedInteger",
+                "value": 26
+              }
+            },
+            "signalPeriod": {
+              "method": "INPUT",
+              "params": {
+                "label": "Signal Period",
+                "representation": "UnsignedInteger",
+                "value": 9
+              }
+            }
           }
         }
       }
@@ -20,7 +41,7 @@
       "params": {
         "output": "signal-line",
         "source": {
-          "method": "SERIES_NODE",
+          "method": "SERIES",
           "params": {
             "name": "macd_histogram"
           }
@@ -32,7 +53,7 @@
       "params": {
         "output": "macd-line",
         "source": {
-          "method": "SERIES_NODE",
+          "method": "SERIES",
           "params": {
             "name": "macd_histogram"
           }
@@ -47,28 +68,66 @@
           "method": "CROSSOVER",
           "params": {
             "value": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES",
               "params": {
                 "name": "macd_histogram"
               }
             },
             "baseline": 0
           }
+        },
+        "timing": "NEXT_OPEN"
+      },
+      "exits": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "signal": {
+              "method": "CROSSUNDER",
+              "params": {
+                "value": {
+                  "method": "SERIES",
+                  "params": {
+                    "name": "macd_histogram"
+                  }
+                },
+                "baseline": 0
+              }
+            },
+            "timing": "NEXT_OPEN"
+          }
+        ]
+      },
+      "riskDistance": {
+        "method": "R_DISTANCE_ATR",
+        "params": {
+          "period": {
+            "method": "VALUE",
+            "params": {
+              "value": 14
+            }
+          },
+          "multiplier": {
+            "method": "VALUE",
+            "params": {
+              "value": 2
+            }
+          },
+          "maSmoothingType": "RMA"
         }
       },
-      "exit": {
-        "signal": {
-          "method": "CROSSUNDER",
-          "params": {
-            "value": {
-              "method": "SERIES_VALUE",
-              "params": {
-                "name": "macd_histogram"
-              }
-            },
-            "baseline": 0
+      "stopLosses": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": false,
+            "trailing": false,
+            "stopPrice": {
+              "method": "SL_1R"
+            }
           }
-        }
+        ]
       }
     }
   },
@@ -85,7 +144,7 @@
           }
         },
         {
-          "method": "HISTOGRAM",
+          "method": "MOMENTUM_HISTOGRAM",
           "params": {
             "source": {
               "method": "SERIES",
@@ -93,7 +152,10 @@
                 "name": "macd_histogram"
               }
             },
-            "color": "yellow"
+            "positiveRisingColor": "#26a69a",
+            "positiveFallingColor": "#b2dfdb",
+            "negativeFallingColor": "#ef5350",
+            "negativeRisingColor": "#ffcdd2"
           }
         },
         {
@@ -122,5 +184,8 @@
         }
       ]
     }
-  ]
+  ],
+  "execution": {
+    "intrabarPath": "CANDLE_DIRECTION"
+  }
 }

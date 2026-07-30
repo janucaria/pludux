@@ -4,25 +4,31 @@
     "ma_fast": {
       "method": "SMA",
       "params": {
-        "period": 9,
+        "period": {
+          "method": "INPUT",
+          "params": {
+            "label": "MA Fast Period",
+            "representation": "UnsignedInteger",
+            "value": 9
+          }
+        },
         "source": "CLOSE"
       }
     },
     "ma_slow": {
       "method": "SMA",
       "params": {
-        "period": 18,
+        "period": {
+          "method": "INPUT",
+          "params": {
+            "label": "MA Slow Period",
+            "representation": "UnsignedInteger",
+            "value": 18
+          }
+        },
         "source": "CLOSE"
       }
     }
-  },
-  "stopLoss": {
-    "enabled": true,
-    "trailing": false
-  },
-  "takeProfit": {
-    "enabled": true,
-    "rMultiple": 3
   },
   "positions": {
     "long": {
@@ -31,38 +37,95 @@
           "method": "CROSSOVER",
           "params": {
             "value": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES",
               "params": {
                 "name": "ma_fast"
               }
             },
             "baseline": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES",
               "params": {
                 "name": "ma_slow"
               }
             }
           }
+        },
+        "timing": "NEXT_OPEN"
+      },
+      "exits": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "signal": {
+              "method": "CROSSUNDER",
+              "params": {
+                "value": {
+                  "method": "SERIES",
+                  "params": {
+                    "name": "ma_fast"
+                  }
+                },
+                "baseline": {
+                  "method": "SERIES",
+                  "params": {
+                    "name": "ma_slow"
+                  }
+                }
+              }
+            },
+            "timing": "NEXT_OPEN"
+          }
+        ]
+      },
+      "riskDistance": {
+        "method": "R_DISTANCE_ATR",
+        "params": {
+          "period": {
+            "method": "VALUE",
+            "params": {
+              "value": 14
+            }
+          },
+          "multiplier": {
+            "method": "VALUE",
+            "params": {
+              "value": 2
+            }
+          },
+          "maSmoothingType": "RMA"
         }
       },
-      "exit": {
-        "signal": {
-          "method": "CROSSUNDER",
-          "params": {
-            "value": {
-              "method": "SERIES_VALUE",
+      "takeProfits": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "targetPrice": {
+              "method": "TP_R_MULTIPLE",
               "params": {
-                "name": "ma_fast"
-              }
-            },
-            "baseline": {
-              "method": "SERIES_VALUE",
-              "params": {
-                "name": "ma_slow"
+                "multiple": {
+                  "method": "VALUE",
+                  "params": {
+                    "value": 2
+                  }
+                }
               }
             }
           }
-        }
+        ]
+      },
+      "stopLosses": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "trailing": false,
+            "stopPrice": {
+              "method": "SL_1R"
+            }
+          }
+        ]
       }
     }
   },
@@ -97,5 +160,8 @@
         }
       ]
     }
-  ]
+  ],
+  "execution": {
+    "intrabarPath": "CANDLE_DIRECTION"
+  }
 }

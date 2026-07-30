@@ -16,6 +16,11 @@ public:
     return self.value_;
   }
 
+  operator double() const noexcept
+  {
+    return value_;
+  }
+
   void value(this ValueMethod& self, double new_value) noexcept
   {
     self.value_ = new_value;

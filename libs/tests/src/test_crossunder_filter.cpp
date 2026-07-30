@@ -44,7 +44,7 @@ TEST(CrossunderMethodTest, CrossunderConditionMet)
   auto reference_method = ValueMethod{50.0};
   const auto crossunder_condition =
    CrossunderMethod{std::move(signal_method), std::move(reference_method)};
-  const auto asset_data = AssetHistory{{"close", {40, 60}}};
+  const auto asset_data = AssetHistory{{"close", {60, 40}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
   EXPECT_TRUE(
@@ -57,7 +57,7 @@ TEST(CrossunderMethodTest, CrossunderConditionNotMet)
   auto reference_method = ValueMethod{50.0};
   const auto crossunder_condition =
    CrossunderMethod{std::move(signal_method), std::move(reference_method)};
-  const auto asset_data = AssetHistory{{"close", {50, 40}}};
+  const auto asset_data = AssetHistory{{"close", {40, 50}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
   EXPECT_FALSE(

@@ -10,10 +10,12 @@ export module pludux:methods.bb_method;
 
 import :methods.ohlcv_method;
 import :methods.adaptive_ma_method;
+import :methods.value_method;
 
 export namespace pludux {
 
-template<typename TSourceMethod = CloseMethod>
+template<typename TSourceMethod = CloseMethod,
+         typename TParameterMethod = ValueMethod>
 class BbMethod {
 public:
   BbMethod()
@@ -30,9 +32,21 @@ public:
            std::size_t period,
            double stddev,
            MaMethodType ma_method_type = MaMethodType::Sma)
+  : BbMethod{std::move(source),
+             ValueMethod{static_cast<double>(period)},
+             ValueMethod{stddev},
+             ma_method_type}
+  {
+  }
+
+  BbMethod(TSourceMethod source,
+           TParameterMethod period,
+           TParameterMethod stddev,
+           MaMethodType ma_method_type = MaMethodType::Sma)
+    requires(!std::is_arithmetic_v<TParameterMethod>)
   : source_{std::move(source)}
-  , period_{period}
-  , stddev_{stddev}
+  , period_{std::move(period)}
+  , stddev_{std::move(stddev)}
   , ma_method_type_{ma_method_type}
   {
   }
@@ -59,30 +73,30 @@ public:
     self.ma_method_type_ = ma_method_type;
   }
 
-  auto period(this const BbMethod& self) noexcept -> std::size_t
+  auto period(this const BbMethod& self) noexcept -> const TParameterMethod&
   {
     return self.period_;
   }
 
-  void period(this BbMethod& self, std::size_t new_period) noexcept
+  void period(this BbMethod& self, TParameterMethod new_period) noexcept
   {
-    self.period_ = new_period;
+    self.period_ = std::move(new_period);
   }
 
-  auto stddev(this const BbMethod& self) noexcept -> double
+  auto stddev(this const BbMethod& self) noexcept -> const TParameterMethod&
   {
     return self.stddev_;
   }
 
-  void stddev(this BbMethod& self, double new_stddev) noexcept
+  void stddev(this BbMethod& self, TParameterMethod new_stddev) noexcept
   {
-    self.stddev_ = new_stddev;
+    self.stddev_ = std::move(new_stddev);
   }
 
 private:
   TSourceMethod source_;
-  std::size_t period_;
-  double stddev_;
+  TParameterMethod period_;
+  TParameterMethod stddev_;
   MaMethodType ma_method_type_;
 };
 

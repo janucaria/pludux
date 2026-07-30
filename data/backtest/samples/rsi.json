@@ -4,16 +4,32 @@
     "rsi": {
       "method": "RSI",
       "params": {
-        "period": 14
+        "period": {
+          "method": "INPUT",
+          "params": {
+            "label": "RSI Period",
+            "representation": "UnsignedInteger",
+            "value": 14
+          }
+        }
+      }
+    },
+    "overbought": {
+      "method": "INPUT",
+      "params": {
+        "label": "Overbought",
+        "representation": "Decimal",
+        "value": 70
+      }
+    },
+    "oversold": {
+      "method": "INPUT",
+      "params": {
+        "label": "Oversold",
+        "representation": "Decimal",
+        "value": 30
       }
     }
-  },
-  "stopLoss": {
-    "enabled": false
-  },
-  "takeProfit": {
-    "enabled": true,
-    "rMultiple": 3
   },
   "positions": {
     "long": {
@@ -22,28 +38,95 @@
           "method": "CROSSUNDER",
           "params": {
             "value": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES",
               "params": {
                 "name": "rsi"
               }
             },
-            "baseline": 30
+            "baseline": {
+              "method": "SERIES",
+              "params": {
+                "name": "oversold"
+              }
+            }
           }
+        },
+        "timing": "NEXT_OPEN"
+      },
+      "exits": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "signal": {
+              "method": "CROSSOVER",
+              "params": {
+                "value": {
+                  "method": "SERIES",
+                  "params": {
+                    "name": "rsi"
+                  }
+                },
+                "baseline": {
+                  "method": "SERIES",
+                  "params": {
+                    "name": "overbought"
+                  }
+                }
+              }
+            },
+            "timing": "NEXT_OPEN"
+          }
+        ]
+      },
+      "riskDistance": {
+        "method": "R_DISTANCE_ATR",
+        "params": {
+          "period": {
+            "method": "VALUE",
+            "params": {
+              "value": 14
+            }
+          },
+          "multiplier": {
+            "method": "VALUE",
+            "params": {
+              "value": 2
+            }
+          },
+          "maSmoothingType": "RMA"
         }
       },
-      "exit": {
-        "signal": {
-          "method": "CROSSOVER",
-          "params": {
-            "value": {
-              "method": "SERIES_VALUE",
+      "takeProfits": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "targetPrice": {
+              "method": "TP_R_MULTIPLE",
               "params": {
-                "name": "rsi"
+                "multiple": {
+                  "method": "VALUE",
+                  "params": {
+                    "value": 2
+                  }
+                }
               }
-            },
-            "baseline": 70
+            }
           }
-        }
+        ]
+      },
+      "stopLosses": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": false,
+            "trailing": false,
+            "stopPrice": {
+              "method": "SL_1R"
+            }
+          }
+        ]
       }
     }
   },
@@ -65,20 +148,33 @@
           }
         },
         {
-          "method": "HLINE",
+          "method": "LINE",
           "params": {
-            "level": 30,
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "oversold"
+              }
+            },
             "color": 4278190079
           }
         },
         {
-          "method": "HLINE",
+          "method": "LINE",
           "params": {
-            "level": 70,
+            "source": {
+              "method": "SERIES",
+              "params": {
+                "name": "overbought"
+              }
+            },
             "color": 4278190079
           }
         }
       ]
     }
-  ]
+  ],
+  "execution": {
+    "intrabarPath": "CANDLE_DIRECTION"
+  }
 }

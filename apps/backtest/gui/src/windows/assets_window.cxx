@@ -18,12 +18,15 @@ module;
 #include <nfd.hpp>
 #endif
 
+#include "../ui/pludux_icons.hpp"
+
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
 
 export module pludux.apps.backtest:windows.assets_window;
 
 import :window_context;
+import :ui.widgets;
 
 export namespace pludux::apps {
 
@@ -41,7 +44,7 @@ public:
 
   void render(this auto& self, WindowContext& context)
   {
-    ImGui::Begin("Assets", nullptr);
+    ImGui::Begin("Assets");
 
     switch(self.current_page_) {
     case AssetPage::AddNewAsset:
@@ -59,6 +62,11 @@ public:
     ImGui::End();
   }
 
+  void discard_draft(this AssetsWindow& self) noexcept
+  {
+    self.reset();
+  }
+
 private:
   static constexpr auto input_element_id_ =
    "pludux-backtest-gui-input-asset-file";
@@ -67,6 +75,8 @@ private:
 
   std::optional<backtest::AssetStoreHandle> selected_asset_handle_opt_;
   std::shared_ptr<backtest::Asset> editing_asset_ptr_;
+  ImGuiTextFilter asset_filter_;
+  ui::DraftAction selected_draft_action_{ui::DraftAction::Apply};
 
   void render_assets_list(this auto& self, WindowContext& context)
   {
@@ -75,110 +85,82 @@ private:
     const auto backtest_ptr = app_state.selected_backtest_if_present();
 
     ImGui::BeginGroup();
-    ImGui::BeginChild(
-     "item view",
-     ImVec2(
-      0,
-      -ImGui::GetFrameHeightWithSpacing())); // Leave room for 1 line below us
+    const auto add_asset_requested =
+     ImGui::Button(PLUDUX_ICON_ADD " New Asset");
+    ImGui::SameLine();
+    const auto load_assets_requested =
+     ImGui::Button(PLUDUX_ICON_IMPORT " Import");
+    ImGui::Spacing();
+    ui::search_filter(self.asset_filter_, "##assets_search");
+    ImGui::BeginChild("item view", ImVec2(0, 0));
 
+    auto visible_asset_count = std::size_t{0};
     for(std::size_t i = 0; i < asset_handles.size(); ++i) {
       const auto asset_handle = asset_handles[i];
       const auto& asset = app_state.get_asset(asset_handle);
+      if(!self.asset_filter_.PassFilter(asset.name().c_str())) {
+        continue;
+      }
+      ++visible_asset_count;
 
       ImGui::PushID(i);
 
-      ImGui::SetNextItemAllowOverlap();
-
-      auto is_selected =
-       backtest_ptr && backtest_ptr->asset_handle() == asset_handle;
-      const auto row_start = ImGui::GetCursorScreenPos();
-      const auto row_width = ImGui::GetContentRegionAvail().x;
-      const auto row_height = ImGui::GetFrameHeight();
-
-      ImGui::Selectable("##asset_row",
-                        &is_selected,
-                        ImGuiSelectableFlags_AllowOverlap,
-                        ImVec2(row_width, row_height));
-
-      ImGui::SetCursorScreenPos(row_start);
-      ImGui::AlignTextToFramePadding();
-      ImGui::TextUnformatted(asset.name().c_str());
-
-      const auto spacing = ImGui::GetStyle().ItemSpacing.x;
-      const auto frame_padding_x = ImGui::GetStyle().FramePadding.x;
-      const auto edit_width =
-       ImGui::CalcTextSize("Edit").x + (2.0f * frame_padding_x);
-      const auto delete_width =
-       ImGui::CalcTextSize("Delete").x + (2.0f * frame_padding_x);
-      const auto more_width =
-       ImGui::CalcTextSize("More...").x + (2.0f * frame_padding_x);
-      const auto buttons_width =
-       edit_width + spacing + delete_width + spacing + more_width;
-      const auto buttons_start_x = row_start.x + row_width - buttons_width;
-
-      ImGui::SetCursorScreenPos(ImVec2(buttons_start_x, row_start.y));
-      if(ImGui::Button("Edit")) {
-        self.current_page_ = AssetPage::EditAsset;
-        self.selected_asset_handle_opt_ = asset_handle;
-        self.editing_asset_ptr_ = std::make_shared<backtest::Asset>(asset);
-      }
-
-      ImGui::SameLine();
-
-      if(ImGui::Button("Delete")) {
-        context.push_action([asset_handle](ApplicationState& app_state) {
-          app_state.remove_asset(asset_handle);
-        });
-      }
-
-      ImGui::SameLine();
-      if(ImGui::Button("More...")) {
-        ImGui::OpenPopup("asset_menu_more");
-      }
-
-      if(ImGui::BeginPopup("asset_menu_more")) {
-        if(ImGui::MenuItem("Duplicate")) {
+      {
+        const auto selected =
+         backtest_ptr && backtest_ptr->asset_handle() == asset_handle;
+        const auto has_draft =
+         self.selected_asset_handle_opt_ == asset_handle &&
+         self.editing_asset_ptr_ && *self.editing_asset_ptr_ != asset;
+        const auto display_name =
+         has_draft ? asset.name() + " (Unsaved)" : asset.name();
+        const auto action = ui::resource_row(
+         display_name.c_str(), selected, i, asset_handles.size());
+        if(action == ui::ResourceRowAction::Edit) {
+          self.current_page_ = AssetPage::EditAsset;
+          if(self.selected_asset_handle_opt_ != asset_handle ||
+             !self.editing_asset_ptr_) {
+            self.selected_asset_handle_opt_ = asset_handle;
+            self.editing_asset_ptr_ = std::make_shared<backtest::Asset>(asset);
+          }
+        } else if(action == ui::ResourceRowAction::Duplicate) {
           context.push_action([asset_handle](ApplicationState& app_state) {
-            const auto& asset = app_state.get_asset(asset_handle);
-            auto duplicate_asset = asset;
-            duplicate_asset.name(asset.name() + " Copy");
-            app_state.add_asset(std::move(duplicate_asset));
+            const auto& value = app_state.get_asset(asset_handle);
+            auto copy = value;
+            copy.name(value.name() + " Copy");
+            app_state.add_asset(std::move(copy));
+          });
+        } else if(action == ui::ResourceRowAction::MoveUp) {
+          context.push_action([from = i](ApplicationState& app_state) {
+            app_state.reorder_list_asset(from, from - 1);
+          });
+        } else if(action == ui::ResourceRowAction::MoveDown) {
+          context.push_action([from = i](ApplicationState& app_state) {
+            app_state.reorder_list_asset(from, from + 1);
+          });
+        } else if(action == ui::ResourceRowAction::Delete) {
+          context.push_action([asset_handle](ApplicationState& app_state) {
+            app_state.remove_asset(asset_handle);
           });
         }
-
-        const auto move_up_disabled = i == 0;
-        if(ImGui::MenuItem("Move Up", nullptr, false, !move_up_disabled)) {
-          context.push_action(
-           [from_index = i, to_index = i - 1](ApplicationState& app_state) {
-             app_state.reorder_list_asset(from_index, to_index);
-           });
-        }
-
-        const auto move_down_disabled = i == asset_handles.size() - 1;
-        if(ImGui::MenuItem("Move Down", nullptr, false, !move_down_disabled)) {
-          context.push_action(
-           [from_index = i, to_index = i + 1](ApplicationState& app_state) {
-             app_state.reorder_list_asset(from_index, to_index);
-           });
-        }
-
-        ImGui::EndPopup();
+        ImGui::PopID();
+        continue;
       }
+    }
 
-      ImGui::PopID();
+    if(asset_handles.empty()) {
+      ImGui::TextDisabled("No assets yet. Add or import one to get started.");
+    } else if(visible_asset_count == 0) {
+      ImGui::TextDisabled("No assets match this search.");
     }
 
     ImGui::EndChild();
-    if(ImGui::Button("Add New Asset")) {
+    if(add_asset_requested) {
       self.current_page_ = AssetPage::AddNewAsset;
-
       self.selected_asset_handle_opt_ = std::nullopt;
       self.editing_asset_ptr_ = std::make_shared<backtest::Asset>();
     }
 
-    ImGui::SameLine();
-
-    if(ImGui::Button("Load Assets")) {
+    if(load_assets_requested) {
 #ifdef __EMSCRIPTEN__
 
       using JsOnOpenedFileContentReady =
@@ -294,57 +276,78 @@ private:
 
     ImGui::SameLine();
     if(ImGui::Button("Cancel")) {
-      self.reset();
+      self.leave_editor();
     }
 
     ImGui::SameLine();
-    ImGui::BeginDisabled(same_asset);
-    if(ImGui::Button("Apply")) {
+    const auto draft_action =
+     ui::apply_reset_button(self.selected_draft_action_, !same_asset);
+    if(draft_action == ui::DraftAction::Apply) {
       self.submit_asset_changes(context);
+    } else if(draft_action == ui::DraftAction::Reset) {
+      self.editing_asset_ptr_ =
+       std::make_shared<backtest::Asset>(selected_asset);
     }
-    ImGui::EndDisabled();
 
     ImGui::EndGroup();
   }
 
   void edit_asset_form(this auto& self)
   {
+    ui::form_section(
+     "Asset Details",
+     "Name this price history so it is easy to identify in a backtest. A "
+     "blank name is saved as 'Unnamed'.");
     {
       auto asset_name = self.editing_asset_ptr_->name();
-      ImGui::InputText("Name", &asset_name);
+      ui::field_label("Name");
+      ImGui::InputTextWithHint("##asset_name", "Unnamed", &asset_name);
       self.editing_asset_ptr_->name(asset_name);
     }
 
+    ui::form_section(
+     "CSV Column Mapping",
+     "Enter the exact column headers that contain each OHLCV value. Header "
+     "matching is case-sensitive.");
     auto field_resolver = self.editing_asset_ptr_->field_resolver();
     {
       auto open_field = field_resolver.open_field();
-      ImGui::InputText("Open Field", &open_field);
+      ui::field_label("Open price");
+      ImGui::InputTextWithHint("##open_field", "open", &open_field);
       field_resolver.open_field(open_field);
     }
     {
       auto high_field = field_resolver.high_field();
-      ImGui::InputText("High Field", &high_field);
+      ui::field_label("High price");
+      ImGui::InputTextWithHint("##high_field", "high", &high_field);
       field_resolver.high_field(high_field);
     }
     {
       auto low_field = field_resolver.low_field();
-      ImGui::InputText("Low Field", &low_field);
+      ui::field_label("Low price");
+      ImGui::InputTextWithHint("##low_field", "low", &low_field);
       field_resolver.low_field(low_field);
     }
     {
       auto close_field = field_resolver.close_field();
-      ImGui::InputText("Close Field", &close_field);
+      ui::field_label("Close price");
+      ImGui::InputTextWithHint("##close_field", "close", &close_field);
       field_resolver.close_field(close_field);
     }
     {
       auto volume_field = field_resolver.volume_field();
-      ImGui::InputText("Volume Field", &volume_field);
+      ui::field_label("Volume");
+      ImGui::InputTextWithHint("##volume_field", "volume", &volume_field);
       field_resolver.volume_field(volume_field);
     }
 
     self.editing_asset_ptr_->field_resolver(field_resolver);
 
     {
+      ui::form_section(
+       "Price History",
+       "Choose a CSV file to load or replace the asset's price history using "
+       "the column mapping above.");
       if(ImGui::Button("Select CSV File")) {
 #ifdef __EMSCRIPTEN__
         pludux_js_open_managed_text_file_input(
@@ -424,6 +427,11 @@ private:
     self.current_page_ = AssetPage::List;
     self.selected_asset_handle_opt_ = std::nullopt;
     self.editing_asset_ptr_ = nullptr;
+  }
+
+  void leave_editor(this auto& self) noexcept
+  {
+    self.current_page_ = AssetPage::List;
   }
 };
 

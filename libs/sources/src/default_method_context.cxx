@@ -2,16 +2,16 @@ module;
 
 #include <cstddef>
 #include <limits>
-#include <optional>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 export module pludux:default_method_context;
 
-import :series_method_registry;
+import :asset_snapshot;
 import :series_evaluation_results;
 import :method_key;
+import :methods;
+import :ordered_named_registry;
 
 export namespace pludux {
 
@@ -20,10 +20,10 @@ public:
   using DispatchResultType = double;
 
   explicit DefaultMethodContext(
-   const SeriesMethodRegistry& methods,
+   const OrderedNamedRegistry<AnySeriesMethod>& series_methods,
    SeriesEvaluationResults& series_evaluation_results,
    std::size_t current_index = 0) noexcept
-  : methods_{methods}
+  : series_methods_{series_methods}
   , series_evaluation_results_{series_evaluation_results}
   , current_index_{current_index}
   {
@@ -34,10 +34,9 @@ public:
                           AssetSnapshot asset_snapshot) noexcept
    -> DispatchResultType
   {
-    if(const auto method_opt = self.methods_.get(name);
+    if(const auto method_opt = self.series_methods_.get(name);
        method_opt.has_value()) {
-      const auto& method = method_opt.value();
-      return evaluate_series_method(method, asset_snapshot, self);
+      return evaluate_series_method(method_opt.value(), asset_snapshot, self);
     }
     return std::numeric_limits<DispatchResultType>::quiet_NaN();
   }
@@ -47,10 +46,10 @@ public:
                           AssetSnapshot asset_snapshot,
                           MethodOutput output) noexcept -> DispatchResultType
   {
-    if(const auto method_opt = self.methods_.get(name);
+    if(const auto method_opt = self.series_methods_.get(name);
        method_opt.has_value()) {
-      const auto& method = method_opt.value();
-      return evaluate_series_method(output, method, asset_snapshot, self);
+      return evaluate_series_method(
+       output, method_opt.value(), asset_snapshot, self);
     }
     return std::numeric_limits<DispatchResultType>::quiet_NaN();
   }
@@ -60,9 +59,18 @@ public:
                          std::size_t result_index) noexcept
    -> DispatchResultType
   {
-    const auto& method_opt = self.methods_.get(name);
+    const auto& method_opt = self.series_methods_.get(name);
     if(!method_opt.has_value()) {
       return std::numeric_limits<DispatchResultType>::quiet_NaN();
+    }
+
+    if(const auto results_opt =
+        self.series_evaluation_results_.results(name);
+       results_opt.has_value()) {
+      const auto& results = results_opt.value().get();
+      if(result_index < results.size()) {
+        return results[result_index];
+      }
     }
 
     if(const auto results_opt =
@@ -99,7 +107,7 @@ public:
   }
 
 private:
-  const SeriesMethodRegistry& methods_;
+  const OrderedNamedRegistry<AnySeriesMethod>& series_methods_;
   SeriesEvaluationResults& series_evaluation_results_;
   std::size_t current_index_;
 };

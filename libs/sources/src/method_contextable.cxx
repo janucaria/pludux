@@ -36,7 +36,6 @@ concept MethodContextable =
    {
      context.get_series_results(std::declval<MethodKey>())
    } -> std::convertible_to<std::vector<double>&>;
-
    { context.index() } -> std::convertible_to<std::size_t>;
  };
 

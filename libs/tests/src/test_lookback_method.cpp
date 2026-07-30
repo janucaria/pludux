@@ -26,7 +26,7 @@ TEST(LookbackMethodTest, ConstructorInitialization)
 
 TEST(LookbackMethodTest, RunAllMethodClose)
 {
-  const auto asset_data = AssetHistory{{"Close", {4.0, 4.1, 4.2}}};
+  const auto asset_data = AssetHistory{{"Close", {4.2, 4.1, 4.0}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto lookback_method = LookbackMethod{CloseMethod{}, 1};
 

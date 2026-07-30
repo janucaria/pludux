@@ -11,20 +11,8 @@ export namespace pludux::backtest {
 class TradeEntry {
 public:
   TradeEntry(double position_size, double price)
-  : TradeEntry{position_size, price, NAN, false, NAN}
-  {
-  }
-
-  TradeEntry(double position_size,
-             double price,
-             double stop_loss_price,
-             bool stop_loss_trailing_enabled,
-             double take_profit_price)
   : position_size_(position_size)
   , price_(price)
-  , stop_loss_price_(stop_loss_price)
-  , take_profit_price_(take_profit_price)
-  , stop_loss_trailing_enabled_(stop_loss_trailing_enabled)
   {
   }
 
@@ -43,26 +31,6 @@ public:
   auto price(this const TradeEntry& self) noexcept -> double
   {
     return self.price_;
-  }
-
-  auto stop_loss_price(this const TradeEntry& self) noexcept -> double
-  {
-    return self.stop_loss_price_;
-  }
-
-  auto stop_loss_trailing_enabled(this const TradeEntry& self) noexcept -> bool
-  {
-    return self.stop_loss_trailing_enabled_;
-  }
-
-  auto stop_loss_trailing_price(this const TradeEntry& self) noexcept -> double
-  {
-    return self.stop_loss_trailing_enabled_ ? self.stop_loss_price_ : NAN;
-  }
-
-  auto take_profit_price(this const TradeEntry& self) noexcept -> double
-  {
-    return self.take_profit_price_;
   }
 
   auto is_long_direction(this const TradeEntry& self) noexcept -> bool
@@ -93,11 +61,6 @@ public:
 private:
   double position_size_;
   double price_;
-
-  double stop_loss_price_;
-  double take_profit_price_;
-
-  bool stop_loss_trailing_enabled_;
 };
 
 } // namespace pludux::backtest

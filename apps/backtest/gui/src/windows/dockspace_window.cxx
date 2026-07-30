@@ -1,14 +1,15 @@
 module;
 
+#include <algorithm>
 #include <array>
 #include <ctime>
-#include <filesystem>
 #include <format>
 #include <fstream>
-#include <memory>
-#include <ranges>
+#include <functional>
+#include <sstream>
+#include <stdexcept>
+#include <stop_token>
 #include <string>
-#include <istream>
 
 #ifdef __EMSCRIPTEN__
 #include "../emscripten_js_imports.hpp"
@@ -16,303 +17,271 @@ module;
 #include <nfd.hpp>
 #endif
 
+#include "../ui/pludux_icons.hpp"
+
 #include <imgui.h>
 #include <imgui_internal.h>
-
-#include <cereal/cereal.hpp>
-#include <rapidcsv.h>
-
-#include <cereal/archives/json.hpp>
-#include <cereal/types/deque.hpp>
-#include <cereal/types/memory.hpp>
-#include <cereal/types/optional.hpp>
-#include <cereal/types/queue.hpp>
-#include <cereal/types/string.hpp>
-#include <cereal/types/unordered_map.hpp>
-#include <cereal/types/vector.hpp>
 
 export module pludux.apps.backtest:windows.dockspace_window;
 
 import :application_state;
-import :window_context;
 import :serialization;
+import :window_context;
 
 export namespace pludux::apps {
 
 class DockspaceWindow {
 public:
-  DockspaceWindow()
-  : open_about_popup_{false}
-  {
-  }
-
   void render(this DockspaceWindow& self, WindowContext& context)
   {
-    auto& open_about_popup = self.open_about_popup_;
-
-    const auto& app_state = context.app_state();
-
-    static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
-
     const auto* viewport = ImGui::GetMainViewport();
+    const auto window_flags =
+     ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
+     ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+     ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
+     ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground;
+
     ImGui::SetNextWindowPos(viewport->WorkPos);
     ImGui::SetNextWindowSize(viewport->WorkSize);
-    ImGui::SetNextWindowViewport(viewport->ID);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{});
+    ImGui::Begin("Pludux Workspace", nullptr, window_flags);
+    ImGui::PopStyleVar(3);
 
-    auto window_flags =
-     ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking |
-     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
-     ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-     ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-
-    if(dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode) {
-      window_flags |= ImGuiWindowFlags_NoBackground;
-    }
-
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-    ImGui::Begin("DockSpace Demo", nullptr, window_flags);
-    ImGui::PopStyleVar();
-
-    ImGui::PopStyleVar(2);
-
-    // Submit the DockSpace
-    const auto dockspace_id = ImGui::GetID("MainDockSpace");
-    ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
-
-    static auto first_time = true;
-    if(first_time) {
-      first_time = false;
-      ImGui::DockBuilderRemoveNode(dockspace_id);
-      ImGui::DockBuilderAddNode(dockspace_id,
-                                dockspace_flags | ImGuiDockNodeFlags_DockSpace);
-      ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->Size);
-
-      auto dock_left_id = dockspace_id;
-      auto dock_right_id = ImGui::DockBuilderSplitNode(
-       dock_left_id, ImGuiDir_Right, 0.3f, nullptr, &dock_left_id);
-      auto dock_left_down_id = ImGui::DockBuilderSplitNode(
-       dock_left_id, ImGuiDir_Down, 0.3f, nullptr, &dock_left_id);
-      auto dock_right_down_id = ImGui::DockBuilderSplitNode(
-       dock_right_id, ImGuiDir_Down, 0.3f, nullptr, &dock_right_id);
-
-      ImGui::DockBuilderDockWindow("Plots", dock_left_id);
-      ImGui::DockBuilderDockWindow("Trades", dock_left_down_id);
-      ImGui::DockBuilderDockWindow("Summary", dock_right_id);
-      ImGui::DockBuilderDockWindow("Backtests", dock_right_down_id);
-      ImGui::DockBuilderDockWindow("Assets", dock_right_down_id);
-      ImGui::DockBuilderDockWindow("Strategies", dock_right_down_id);
-      ImGui::DockBuilderDockWindow("Markets", dock_right_down_id);
-      ImGui::DockBuilderDockWindow("Brokers", dock_right_down_id);
-      ImGui::DockBuilderDockWindow("Profiles", dock_right_down_id);
-
-      ImGui::DockBuilderFinish(dockspace_id);
-    }
-
-    if(ImGui::BeginMenuBar()) {
-      if(ImGui::BeginMenu("File")) {
-        {
-          constexpr auto menu_item_open = "Open";
-          if(ImGui::MenuItem(menu_item_open)) {
-#ifdef __EMSCRIPTEN__
-
-            using JsOnPushOpenedFileAction =
-             std::function<void(const std::string&, ApplicationState&)>;
-
-            static const auto callback = JsOnPushOpenedFileAction{
-             [](const std::string& file_data, ApplicationState& app_state) {
-               auto in_stream = std::istringstream{file_data};
-               if(!in_stream.good()) {
-                 const auto error_message =
-                  std::format("Failed to open data stream for reading.");
-                 throw std::runtime_error(error_message);
-               }
-
-               auto in_archive = cereal::JSONInputArchive(in_stream);
-
-               auto loaded_state = ApplicationState{};
-               in_archive(cereal::make_nvp("pludux", loaded_state));
-               app_state = std::move(loaded_state);
-
-               reload_imgui_ini_settings(app_state.imgui_ini_settings());
-             }};
-
-            pludux_js_open_single_text_file(".pludux", &callback, &context);
-
-#else
-            auto nfd_guard = NFD::Guard{};
-            auto in_path = NFD::UniquePath{};
-            const auto filter_item =
-             std::array<nfdfilteritem_t, 1>{{"Pludux Files", "pludux"}};
-            auto result =
-             NFD::OpenDialog(in_path, filter_item.data(), filter_item.size());
-            if(result == NFD_OKAY) {
-              const auto selected_path = std::string(in_path.get());
-              context.push_action([selected_path](ApplicationState& app_state) {
-                auto in_stream = std::ifstream{selected_path};
-
-                if(!in_stream.is_open()) {
-                  const auto error_message = std::format(
-                   "Failed to open '{}' for reading.", selected_path);
-                  throw std::runtime_error(error_message);
-                }
-
-                auto in_archive = cereal::JSONInputArchive(in_stream);
-
-                auto loaded_state = ApplicationState{};
-                in_archive(cereal::make_nvp("pludux", loaded_state));
-                app_state = std::move(loaded_state);
-
-                reload_imgui_ini_settings(app_state.imgui_ini_settings());
-              });
-            } else if(result == NFD_CANCEL) {
-              // User cancelled the open dialog
-            } else {
-              const auto error_message =
-               std::format("Error '{}': {}", menu_item_open, NFD::GetError());
-              throw std::runtime_error(error_message);
-            }
-#endif
-          }
-        }
-
-        {
-#ifdef __EMSCRIPTEN__
-          const auto menu_item_save_as =
-           pludux_js_is_file_system_access_supported() ? "Save As..."
-                                                       : "Download";
-          if(ImGui::MenuItem(menu_item_save_as)) {
-            context.update_imgui_ini_settings();
-
-            auto out_stream = std::ostringstream{};
-            auto out_archive = cereal::JSONOutputArchive(
-             out_stream, cereal::JSONOutputArchive::Options::NoIndent());
-
-            out_archive(cereal::make_nvp("pludux", context.app_state()));
-
-            // TODO: bug in Cereal not adding the close object at the end when
-            // using stringstream
-            out_stream << "}\n";
-
-            const auto out_str = out_stream.str();
-            const auto file_name = "pludux-backtest-" +
-                                   std::to_string(std::time(nullptr)) +
-                                   ".pludux";
-            pludux_js_save_file(
-             file_name.c_str(), out_str.c_str(), "application/json");
-          }
-#else
-          constexpr auto menu_item_save_as = "Save As...";
-          if(ImGui::MenuItem(menu_item_save_as)) {
-            auto nfd_guard = NFD::Guard{};
-            auto out_path = NFD::UniquePath{};
-
-            const auto filter_item =
-             std::array<nfdfilteritem_t, 1>{{"Pludux Files", "pludux"}};
-
-            auto result =
-             NFD::SaveDialog(out_path, filter_item.data(), filter_item.size());
-
-            if(result == NFD_OKAY) {
-              context.update_imgui_ini_settings();
-
-              const auto saved_path = std::string(out_path.get());
-              context.push_action([saved_path](ApplicationState& app_state) {
-                auto out_stream = std::ofstream{saved_path};
-
-                if(!out_stream.is_open()) {
-                  const auto error_message =
-                   std::format("Failed to open '{}' for writing.", saved_path);
-                  throw std::runtime_error(error_message);
-                }
-
-                auto out_archive = cereal::JSONOutputArchive(
-                 out_stream, cereal::JSONOutputArchive::Options::NoIndent());
-
-                out_archive(cereal::make_nvp("pludux", app_state));
-              });
-            } else if(result == NFD_CANCEL) {
-              // User cancelled the save dialog
-            } else {
-              const auto error_message = std::format(
-               "Error '{}': {}", menu_item_save_as, NFD::GetError());
-              throw std::runtime_error(error_message);
-            }
-          }
-#endif
-        }
-
-        ImGui::EndMenu();
-      }
-
-      if(ImGui::BeginMenu("Edit")) {
-        const auto has_undo = context.has_undo();
-        if(ImGui::MenuItem("Undo", nullptr, false, has_undo)) {
-          context.push_undo();
-        }
-
-        const auto has_redo = context.has_redo();
-        if(ImGui::MenuItem("Redo", nullptr, false, has_redo)) {
-          context.push_redo();
-        }
-
-        ImGui::EndMenu();
-      }
-
-      if(ImGui::BeginMenu("Help")) {
-        if(ImGui::MenuItem("About")) {
-          open_about_popup = true;
-        }
-
-        ImGui::EndMenu();
-      }
-
-      ImGui::EndMenuBar();
-    }
+    self.render_toolbar(context);
+    constexpr auto workspace_gap = 2.0f;
+    const auto current_y = ImGui::GetCursorPosY();
+    const auto default_gap = ImGui::GetStyle().ItemSpacing.y;
+    ImGui::SetCursorPosY(current_y - default_gap + workspace_gap);
+    self.render_dockspace(ImGui::GetContentRegionAvail());
 
     ImGui::End();
-
-    if(open_about_popup) {
-      ImGui::OpenPopup("About");
-      if(ImGui::BeginPopupModal(
-          "About", &open_about_popup, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::Text("%s", "Pludux Backtest");
-        ImGui::Separator();
-        ImGui::Text("%s", std::format("Version: {}", PLUDUX_VERSION).c_str());
-        ImGui::Text("%s", "Source Code: ");
-        ImGui::SameLine();
-        ImGui::TextColored(ImVec4(0, 1, 1, 1), "%s", PLUDUX_SOURCE_CODE_URL);
-
-#ifdef __EMSCRIPTEN__
-        pludux_js_set_body_cursor(ImGui::IsItemHovered());
-        if(ImGui::IsItemClicked()) {
-          ImGui::CloseCurrentPopup();
-          pludux_js_open_url(PLUDUX_SOURCE_CODE_URL);
-        }
-#endif
-
-        ImGui::Separator();
-        ImGui::Text("%s", "This software is licensed under the AGPL License.");
-        ImGui::Text("%s", "Copyright (c) 2026 Januar Andaria");
-        ImGui::Text("%s",
-                    "Full licence text included in the LICENSE.txt file.");
-
-        if(ImGui::Button("OK")) {
-          ImGui::CloseCurrentPopup();
-          open_about_popup = false;
-        }
-        ImGui::EndPopup();
-      }
-    }
+    self.render_about_popup();
   }
 
 private:
-  bool open_about_popup_;
+  bool open_about_popup_{false};
+  bool desktop_layout_initialized_{false};
 
-  static void reload_imgui_ini_settings(const std::string& ini_settings)
+  static auto toolbar_label(const char* icon, const char* text, const char* id)
+   -> std::string
   {
-    ImGui::LoadIniSettingsFromMemory(ini_settings.c_str(), ini_settings.size());
+    return std::format("{} {}##{}", icon, text, id);
+  }
+
+  void render_toolbar(this DockspaceWindow& self, WindowContext& context)
+  {
+    const auto toolbar_padding = ImVec2{12.0f, 8.0f};
+    const auto toolbar_height =
+     ImGui::GetFrameHeight() + (2.0f * toolbar_padding.y);
+
+    ImGui::PushStyleColor(ImGuiCol_ChildBg,
+                          ImGui::GetStyleColorVec4(ImGuiCol_MenuBarBg));
+    ImGui::PushStyleColor(ImGuiCol_Border,
+                          ImGui::GetStyleColorVec4(ImGuiCol_Separator));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, toolbar_padding);
+    ImGui::BeginChild(
+     "Workspace Toolbar",
+     ImVec2{0.0f, toolbar_height},
+     ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding,
+     ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted(PLUDUX_ICON_CATEGORY_PRICE_VOLUME
+                           "  Pludux Backtest");
+    ImGui::SameLine(0.0f, 18.0f);
+
+    if(ImGui::Button(
+        toolbar_label(PLUDUX_ICON_IMPORT, "Open", "open").c_str())) {
+      self.open_application(context);
+    }
+    ImGui::SameLine();
+    if(ImGui::Button(toolbar_label(PLUDUX_ICON_SAVE, "Save", "save").c_str())) {
+      self.save_application(context);
+    }
+
+    ImGui::SameLine(0.0f, 18.0f);
+    ImGui::BeginDisabled(!context.has_undo());
+    if(ImGui::Button(toolbar_label(PLUDUX_ICON_UNDO, "Undo", "undo").c_str())) {
+      context.push_undo();
+    }
+    ImGui::EndDisabled();
+
+    ImGui::SameLine();
+    ImGui::BeginDisabled(!context.has_redo());
+    if(ImGui::Button(toolbar_label(PLUDUX_ICON_REDO, "Redo", "redo").c_str())) {
+      context.push_redo();
+    }
+    ImGui::EndDisabled();
+
+    const auto about_label = PLUDUX_ICON_INFO " About";
+    const auto about_width = ImGui::CalcTextSize(about_label).x +
+                             (2.0f * ImGui::GetStyle().FramePadding.x);
+    ImGui::SameLine();
+    const auto about_x =
+     ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - about_width;
+    ImGui::SetCursorPosX(std::max(ImGui::GetCursorPosX(), about_x));
+    if(ImGui::Button(about_label)) {
+      self.open_about_popup_ = true;
+    }
+
+    ImGui::EndChild();
+    ImGui::PopStyleVar();
+    ImGui::PopStyleColor(2);
+  }
+
+  void render_dockspace(this DockspaceWindow& self, ImVec2 size)
+  {
+    static constexpr auto dockspace_flags = ImGuiDockNodeFlags_None;
+    const auto dockspace_id = ImGui::GetID("MainDockSpace");
+    ImGui::DockSpace(dockspace_id, size, dockspace_flags);
+
+    if(self.desktop_layout_initialized_) {
+      return;
+    }
+    self.desktop_layout_initialized_ = true;
+    ImGui::DockBuilderRemoveNode(dockspace_id);
+    ImGui::DockBuilderAddNode(dockspace_id,
+                              dockspace_flags | ImGuiDockNodeFlags_DockSpace);
+    ImGui::DockBuilderSetNodeSize(dockspace_id, size);
+
+    auto dock_left_id = dockspace_id;
+    auto dock_right_id = ImGui::DockBuilderSplitNode(
+     dock_left_id, ImGuiDir_Right, 0.3f, nullptr, &dock_left_id);
+    auto dock_left_down_id = ImGui::DockBuilderSplitNode(
+     dock_left_id, ImGuiDir_Down, 0.3f, nullptr, &dock_left_id);
+    auto dock_right_down_id = ImGui::DockBuilderSplitNode(
+     dock_right_id, ImGuiDir_Down, 0.3f, nullptr, &dock_right_id);
+
+    ImGui::DockBuilderDockWindow("Chart", dock_left_id);
+    ImGui::DockBuilderDockWindow("Trades", dock_left_down_id);
+    ImGui::DockBuilderDockWindow("Overview", dock_right_id);
+    for(const auto* window : {"Backtests",
+                              "Assets",
+                              "Strategies",
+                              "Markets",
+                              "Brokers",
+                              "Profiles"}) {
+      ImGui::DockBuilderDockWindow(window, dock_right_down_id);
+    }
+    ImGui::DockBuilderFinish(dockspace_id);
+  }
+
+  void open_application(this DockspaceWindow&, WindowContext& context)
+  {
+#ifdef __EMSCRIPTEN__
+    context.request_discard_all_drafts();
+    using Callback = std::function<void(const std::string&, ApplicationState&)>;
+    static const auto callback =
+     Callback{[](const std::string& file_data, ApplicationState& app_state) {
+       auto in_stream = std::istringstream{file_data};
+       if(!in_stream.good()) {
+         throw std::runtime_error("Failed to open data stream for reading.");
+       }
+       app_state = load_application_state_json(in_stream);
+     }};
+    pludux_js_open_single_text_file(".pludux", &callback, &context);
+#else
+    auto nfd_guard = NFD::Guard{};
+    auto in_path = NFD::UniquePath{};
+    const auto filter_item =
+     std::array<nfdfilteritem_t, 1>{{"Pludux Files", "pludux"}};
+    const auto result =
+     NFD::OpenDialog(in_path, filter_item.data(), filter_item.size());
+    if(result == NFD_OKAY) {
+      context.request_discard_all_drafts();
+      const auto selected_path = std::string{in_path.get()};
+      context.push_action([selected_path](ApplicationState& app_state) {
+        auto in_stream = std::ifstream{selected_path};
+        if(!in_stream.is_open()) {
+          throw std::runtime_error(
+           std::format("Failed to open '{}' for reading.", selected_path));
+        }
+        app_state = load_application_state_json(in_stream);
+        const auto& settings = app_state.imgui_ini_settings();
+        ImGui::LoadIniSettingsFromMemory(settings.c_str(), settings.size());
+      });
+    } else if(result == NFD_ERROR) {
+      throw std::runtime_error(
+       std::format("Error '{}': {}", "Open", NFD::GetError()));
+    }
+#endif
+  }
+
+  void save_application(this DockspaceWindow&, WindowContext& context)
+  {
+    context.update_imgui_ini_settings();
+    auto out_stream = std::ostringstream{};
+    save_application_state_json(out_stream, context.app_state());
+    const auto content = out_stream.str();
+    const auto file_name =
+     "pludux-backtest-" + std::to_string(std::time(nullptr)) + ".pludux";
+#ifdef __EMSCRIPTEN__
+    pludux_js_save_file(file_name.c_str(), content.c_str(), "application/json");
+#else
+    auto nfd_guard = NFD::Guard{};
+    auto out_path = NFD::UniquePath{};
+    const auto filter_item =
+     std::array<nfdfilteritem_t, 1>{{"Pludux Files", "pludux"}};
+    const auto result =
+     NFD::SaveDialog(out_path, filter_item.data(), filter_item.size());
+    if(result == NFD_OKAY) {
+      const auto saved_path = std::string{out_path.get()};
+      context.push_action([saved_path, content](ApplicationState&) {
+        auto file = std::ofstream{saved_path};
+        if(!file.is_open()) {
+          throw std::runtime_error(
+           std::format("Failed to open '{}' for writing.", saved_path));
+        }
+        file << content;
+      });
+    } else if(result == NFD_ERROR) {
+      throw std::runtime_error(
+       std::format("Error '{}': {}", "Save", NFD::GetError()));
+    }
+#endif
+  }
+
+  void render_about_popup(this DockspaceWindow& self)
+  {
+    if(self.open_about_popup_) {
+      ImGui::OpenPopup("About");
+    }
+
+    const auto* viewport = ImGui::GetMainViewport();
+    const auto popup_width = std::min(480.0f, viewport->WorkSize.x - 40.0f);
+    const auto popup_center =
+     ImVec2{viewport->WorkPos.x + (viewport->WorkSize.x * 0.5f),
+            viewport->WorkPos.y + (viewport->WorkSize.y * 0.5f)};
+    ImGui::SetNextWindowPos(
+     popup_center, ImGuiCond_Appearing, ImVec2{0.5f, 0.5f});
+    ImGui::SetNextWindowSizeConstraints(
+     ImVec2{popup_width, 0.0f},
+     ImVec2{popup_width, viewport->WorkSize.y - 40.0f});
+
+    if(ImGui::BeginPopupModal(
+        "About", &self.open_about_popup_, ImGuiWindowFlags_AlwaysAutoResize)) {
+      ImGui::TextUnformatted("Pludux Backtest");
+      ImGui::Separator();
+      ImGui::Text("Version: %s", PLUDUX_VERSION);
+      ImGui::TextWrapped("Source: %s", PLUDUX_SOURCE_CODE_URL);
+
+#ifdef __EMSCRIPTEN__
+      pludux_js_set_body_cursor(ImGui::IsItemHovered());
+      if(ImGui::IsItemClicked()) {
+        ImGui::CloseCurrentPopup();
+        pludux_js_open_url(PLUDUX_SOURCE_CODE_URL);
+      }
+#endif
+      ImGui::TextWrapped("AGPL licensed. Copyright (c) 2026 Januar Andaria.");
+      ImGui::TextWrapped("Full licence text included in the LICENSE.txt file.");
+      if(ImGui::Button("Close")) {
+        self.open_about_popup_ = false;
+        ImGui::CloseCurrentPopup();
+      }
+      ImGui::EndPopup();
+    }
   }
 };
 

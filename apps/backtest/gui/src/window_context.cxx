@@ -1,5 +1,6 @@
 module;
 
+#include <functional>
 #include <list>
 #include <memory>
 #include <queue>
@@ -13,18 +14,26 @@ export module pludux.apps.backtest:window_context;
 
 import :application_state;
 import :actions;
+import :backtest_execution_status;
 import :command_executor;
 
 export namespace pludux::apps {
 
 class WindowContext {
 public:
-  WindowContext(ApplicationState& app_state,
-                std::list<std::string>& alert_messages,
-                CommandExecutor& command_executor)
+  WindowContext(
+   ApplicationState& app_state,
+   std::list<std::string>& alert_messages,
+   CommandExecutor& command_executor,
+   bool& discard_all_drafts_requested,
+   std::function<const BacktestExecutionStatus*(
+    const backtest::BacktestStoreHandle&)> backtest_execution_status_lookup)
   : app_state_{app_state}
   , alert_messages_{alert_messages}
   , command_executor_{command_executor}
+  , discard_all_drafts_requested_{discard_all_drafts_requested}
+  , backtest_execution_status_lookup_{
+     std::move(backtest_execution_status_lookup)}
   {
   }
 
@@ -53,6 +62,11 @@ public:
     self.app_state_.imgui_ini_settings(std::string(ini_data, ini_size));
   }
 
+  void request_discard_all_drafts(this WindowContext& self) noexcept
+  {
+    self.discard_all_drafts_requested_ = true;
+  }
+
   void alert(this WindowContext& self, std::string alert_message)
   {
     self.alert_messages_.push_back(std::move(alert_message));
@@ -78,10 +92,22 @@ public:
     return self.command_executor_.can_redo();
   }
 
+  auto backtest_execution_status(
+   this const WindowContext& self,
+   const backtest::BacktestStoreHandle& handle) noexcept
+   -> const BacktestExecutionStatus*
+  {
+    return self.backtest_execution_status_lookup_(handle);
+  }
+
 private:
   ApplicationState& app_state_;
   std::list<std::string>& alert_messages_;
   CommandExecutor& command_executor_;
+  bool& discard_all_drafts_requested_;
+  std::function<const BacktestExecutionStatus*(
+   const backtest::BacktestStoreHandle&)>
+   backtest_execution_status_lookup_;
 };
 
 } // namespace pludux::apps

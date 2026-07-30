@@ -25,22 +25,17 @@ export namespace pludux {
 
 class AnySeriesMethod {
 public:
-  template<typename UMethod = CloseMethod>
+  AnySeriesMethod()
+  : AnySeriesMethod{CloseMethod{}}
+  {
+  }
+
+  template<typename UMethod>
     requires(!std::same_as<std::remove_cvref_t<UMethod>, AnySeriesMethod>) &&
              (!std::same_as<std::remove_cvref_t<UMethod>,
                             std::vector<AnySeriesMethod>>) &&
-             requires(UMethod method,
-                      AssetSnapshot asset_snapshot,
-                      MethodOutput output,
-                      AnySeriesMethodContext context) {
-               // TODO: compile error on clang and emscripten
-               //  {
-               //    evaluate_series_method(method, asset_snapshot, context)
-               //  } -> std::convertible_to<double>;
-               { method == method } -> std::convertible_to<bool>;
-               { method != method } -> std::convertible_to<bool>;
-             }
-  AnySeriesMethod(UMethod impl = UMethod{})
+             std::equality_comparable<UMethod>
+  AnySeriesMethod(UMethod impl)
   : impl_{std::make_any<UMethod>(std::move(impl))}
   , evaluate_{[](const std::any& impl,
                  AssetSnapshot asset_snapshot,
@@ -53,8 +48,7 @@ public:
                              AssetSnapshot asset_snapshot,
                              AnySeriesMethodContext context) static -> double {
     const auto& method = *std::any_cast<UMethod>(&impl);
-    return evaluate_selected_output_series_or_nan(
-     method, output, asset_snapshot, context);
+    return evaluate_series_method(output, method, asset_snapshot, context);
   }}
   , hash_series_method_{[](const std::any& impl) static -> std::size_t {
     const auto& method = *std::any_cast<UMethod>(&impl);
@@ -79,17 +73,19 @@ public:
   {
   }
 
-  friend auto evaluate_series_method(const AnySeriesMethod& method,
-                                     AssetSnapshot asset_snapshot,
-                                     MethodContextable auto context) -> double
+  friend auto pludux_tag_invoke(EvaluateSeriesMethod,
+                                const AnySeriesMethod& method,
+                                AssetSnapshot asset_snapshot,
+                                MethodContextable auto context) -> double
   {
     return method.evaluate_(method.impl_, asset_snapshot, context);
   }
 
-  friend auto evaluate_series_method(MethodOutput output,
-                                     const AnySeriesMethod& method,
-                                     AssetSnapshot asset_snapshot,
-                                     MethodContextable auto context) -> double
+  friend auto pludux_tag_invoke(EvaluateSeriesMethod,
+                                MethodOutput output,
+                                const AnySeriesMethod& method,
+                                AssetSnapshot asset_snapshot,
+                                MethodContextable auto context) -> double
   {
     return method.evaluate_with_output_(
      method.impl_, output, asset_snapshot, context);

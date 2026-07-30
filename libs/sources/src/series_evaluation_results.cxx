@@ -3,7 +3,6 @@ module;
 #include <functional>
 #include <optional>
 #include <string>
-#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -53,6 +52,18 @@ public:
     return std::nullopt;
   }
 
+  auto results(this const SeriesEvaluationResults& self,
+               const std::string& name) noexcept
+   -> std::optional<std::reference_wrapper<const std::vector<double>>>
+  {
+    const auto it = self.aliases_.find(name);
+    if(it == self.aliases_.end()) {
+      return std::nullopt;
+    }
+
+    return self.results(it->second);
+  }
+
   auto results(this SeriesEvaluationResults& self,
                const MethodKey& method_key) noexcept
    -> std::optional<std::reference_wrapper<std::vector<double>>>
@@ -65,11 +76,30 @@ public:
     return std::nullopt;
   }
 
+  auto results(this SeriesEvaluationResults& self,
+               const std::string& name) noexcept
+   -> std::optional<std::reference_wrapper<std::vector<double>>>
+  {
+    const auto it = self.aliases_.find(name);
+    if(it == self.aliases_.end()) {
+      return std::nullopt;
+    }
+
+    return self.results(it->second);
+  }
+
   void results(this SeriesEvaluationResults& self,
                const MethodKey& method_key,
                std::vector<double> new_results) noexcept
   {
     self.results_[method_key] = std::move(new_results);
+  }
+
+  void alias(this SeriesEvaluationResults& self,
+             const std::string& name,
+             const MethodKey& method_key)
+  {
+    self.aliases_.insert_or_assign(name, method_key);
   }
 
   void put(const MethodKey& method_key, double value)
@@ -80,6 +110,7 @@ public:
   void clear(this SeriesEvaluationResults& self) noexcept
   {
     self.results_.clear();
+    self.aliases_.clear();
   }
 
   auto empty(this const SeriesEvaluationResults& self) noexcept -> bool
@@ -89,6 +120,7 @@ public:
 
 private:
   std::unordered_map<MethodKey, std::vector<double>> results_;
+  std::unordered_map<std::string, MethodKey> aliases_;
 };
 
 } // namespace pludux

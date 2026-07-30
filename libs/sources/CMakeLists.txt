@@ -1,14 +1,3 @@
-SET(JSONCONS_BUILD_TESTS OFF)
-FetchContent_Declare(
-  jsoncons
-  GIT_REPOSITORY https://github.com/danielaparker/jsoncons.git
-  GIT_TAG        v1.6.0
-  GIT_SHALLOW    TRUE
-  GIT_PROGRESS   TRUE
-  OVERRIDE_FIND_PACKAGE
-  EXCLUDE_FROM_ALL
-)
-
 FetchContent_Declare(
   boost_mp11
   GIT_REPOSITORY https://github.com/boostorg/mp11.git
@@ -23,7 +12,6 @@ FetchContent_Declare(
       <SOURCE_DIR>/
 )
 
-find_package(jsoncons REQUIRED)
 find_package(boost_mp11 REQUIRED)
 
 add_library(${PROJECT_NAME})
@@ -47,15 +35,13 @@ target_sources(${PROJECT_NAME}
         src/asset_history.cxx
         src/asset_quote_field_resolver.cxx
         src/asset_snapshot.cxx
-        
         src/methods/value_method.cxx
         src/methods/data_method.cxx
         src/methods/ohlcv_method.cxx
         src/methods/change_method.cxx
         src/methods/lookback_method.cxx
         src/methods/select_output_method.cxx
-        src/methods/series_node_method.cxx
-        src/methods/series_value_method.cxx
+        src/methods/series_method.cxx
 
         src/methods/operators_method.cxx
         src/methods/highest_method.cxx
@@ -94,19 +80,68 @@ target_sources(${PROJECT_NAME}
         src/methods/crossunder_method.cxx
         
         src/method_key.cxx
-        src/series_method_registry.cxx
+        src/ordered_named_registry.cxx
         src/method_contextable.cxx
         src/evaluate_series_method.cxx
         src/hash_series_method.cxx
         src/any_method_context.cxx
 
         src/methods/any_series_method.cxx
-        
+
         src/methods.cxx
+
+        src/ma_node_type.cxx
+        
+        src/nodes/numeric_input_node.cxx
+        src/node_to_erased_method.cxx
+        src/nodes/value_node.cxx
+        src/nodes/data_node.cxx
+        src/nodes/ohlcv_node.cxx
+        src/nodes/erased_node.cxx
+        src/nodes/change_node.cxx
+        src/nodes/lookback_node.cxx
+        src/nodes/select_output_node.cxx
+        src/nodes/series_node.cxx
+
+        src/nodes/operators_node.cxx
+        src/nodes/highest_node.cxx
+        src/nodes/lowest_node.cxx
+        src/nodes/percentage_node.cxx
+        src/nodes/stddev_node.cxx
+
+        src/nodes/sma_node.cxx
+        src/nodes/ema_node.cxx
+        src/nodes/rma_node.cxx
+        src/nodes/wma_node.cxx
+        src/nodes/hma_node.cxx
+        src/nodes/macd_node.cxx
+        
+        src/nodes/tr_node.cxx
+        src/nodes/atr_node.cxx
+
+        src/nodes/roc_node.cxx
+        src/nodes/rsi_node.cxx
+        src/nodes/rvol_node.cxx
+
+        src/nodes/bb_node.cxx
+        src/nodes/kc_node.cxx
+        src/nodes/donchian_channel_node.cxx
+
+        src/nodes/stoch_node.cxx
+        src/nodes/stoch_rsi_node.cxx
+        
+        src/nodes/all_of_node.cxx
+        src/nodes/any_of_node.cxx
+        src/nodes/comparison_node.cxx
+        src/nodes/boolean_node.cxx
+        src/nodes/logical_node.cxx
+        src/nodes/crossover_node.cxx
+        src/nodes/crossunder_node.cxx
+
+        src/nodes.cxx
 
         src/series_evaluation_results.cxx
         src/default_method_context.cxx
-        src/config_parser.cxx
 
         src/pludux.cxx
 )
@@ -118,7 +153,6 @@ target_compile_features(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
-    jsoncons
     Boost::mp11
 )
 

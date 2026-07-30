@@ -131,6 +131,7 @@ private:
    call_series_method_with_output_;
 
   std::function<auto(const std::any&)->std::size_t> get_index_func_;
+
 };
 
 } // namespace pludux

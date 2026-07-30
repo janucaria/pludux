@@ -3,6 +3,7 @@ module;
 #include <algorithm>
 #include <array>
 #include <cstring>
+#include <format>
 #include <iterator>
 #include <memory>
 #include <ranges>
@@ -11,6 +12,8 @@ module;
 #include <utility>
 #include <vector>
 
+#include "../ui/pludux_icons.hpp"
+
 #include <imgui.h>
 #include <misc/cpp/imgui_stdlib.h>
 
@@ -18,6 +21,7 @@ export module pludux.apps.backtest:windows.brokers_window;
 
 import pludux.backtest;
 import :window_context;
+import :ui.widgets;
 
 export namespace pludux::apps {
 
@@ -30,7 +34,7 @@ public:
 
   void render(this auto& self, WindowContext& context)
   {
-    ImGui::Begin("Brokers", nullptr);
+    ImGui::Begin("Brokers");
     switch(self.current_page_) {
     case BrokerPage::AddNewBroker:
       self.render_add_new_broker(context);
@@ -47,12 +51,18 @@ public:
     ImGui::End();
   }
 
+  void discard_draft(this BrokersWindow& self) noexcept
+  {
+    self.reset();
+  }
+
 private:
   enum class BrokerPage { List, AddNewBroker, EditBroker } current_page_;
 
-  std::optional<backtest::BrokerStoreHandle>
-   selected_broker_handle_opt_;
+  std::optional<backtest::BrokerStoreHandle> selected_broker_handle_opt_;
   std::shared_ptr<backtest::Broker> editing_broker_ptr_;
+  ImGuiTextFilter broker_filter_;
+  ui::DraftAction selected_draft_action_{ui::DraftAction::Apply};
 
   void render_brokers_list(this auto& self, WindowContext& context)
   {
@@ -61,107 +71,75 @@ private:
     const auto backtest_ptr = app_state.selected_backtest_if_present();
 
     ImGui::BeginGroup();
-    ImGui::BeginChild(
-     "item view",
-     ImVec2(
-      0,
-      -ImGui::GetFrameHeightWithSpacing())); // Leave room for 1 line below us
-
-    for(std::size_t i = 0; i < broker_handles.size(); ++i) {
-      const auto broker_handle = broker_handles[i];
-      const auto& broker = app_state.get_broker(broker_handle);
-      const auto& broker_name = broker.name();
-
-      ImGui::PushID(i);
-
-      ImGui::SetNextItemAllowOverlap();
-      auto is_selected =
-       backtest_ptr && backtest_ptr->broker_handle() == broker_handle;
-      const auto row_start = ImGui::GetCursorScreenPos();
-      const auto row_width = ImGui::GetContentRegionAvail().x;
-      const auto row_height = ImGui::GetFrameHeight();
-
-      ImGui::Selectable("##broker_row",
-                        &is_selected,
-                        ImGuiSelectableFlags_AllowOverlap,
-                        ImVec2(row_width, row_height));
-
-      ImGui::SetCursorScreenPos(row_start);
-      ImGui::AlignTextToFramePadding();
-      ImGui::TextUnformatted(broker_name.c_str());
-
-      const auto spacing = ImGui::GetStyle().ItemSpacing.x;
-      const auto frame_padding_x = ImGui::GetStyle().FramePadding.x;
-      const auto edit_width =
-       ImGui::CalcTextSize("Edit").x + (2.0f * frame_padding_x);
-      const auto delete_width =
-       ImGui::CalcTextSize("Delete").x + (2.0f * frame_padding_x);
-      const auto more_width =
-       ImGui::CalcTextSize("More...").x + (2.0f * frame_padding_x);
-      const auto buttons_width =
-       edit_width + spacing + delete_width + spacing + more_width;
-      const auto buttons_start_x = row_start.x + row_width - buttons_width;
-
-      ImGui::SetCursorScreenPos(ImVec2(buttons_start_x, row_start.y));
-      if(ImGui::Button("Edit")) {
-        self.current_page_ = BrokerPage::EditBroker;
-        self.selected_broker_handle_opt_ = broker_handle;
-        self.editing_broker_ptr_ = std::make_shared<backtest::Broker>(broker);
-      }
-
-      ImGui::SameLine();
-
-      if(ImGui::Button("Delete")) {
-        context.push_action([broker_handle](ApplicationState& app_state) {
-          app_state.remove_broker(broker_handle);
-        });
-      }
-
-      ImGui::SameLine();
-      if(ImGui::Button("More...")) {
-        ImGui::OpenPopup("broker_menu_more");
-      }
-
-      if(ImGui::BeginPopup("broker_menu_more")) {
-        if(ImGui::MenuItem("Duplicate")) {
-          context.push_action([broker_handle](ApplicationState& app_state) {
-            const auto& broker = app_state.get_broker(broker_handle);
-            auto duplicate_broker = broker;
-            duplicate_broker.name(broker.name() + " Copy");
-            app_state.add_broker(std::move(duplicate_broker));
-          });
-        }
-
-        const auto move_up_disabled = i == 0;
-        if(ImGui::MenuItem("Move Up", nullptr, false, !move_up_disabled)) {
-          context.push_action(
-           [from_index = i, to_index = i - 1](ApplicationState& app_state) {
-             app_state.reorder_list_broker(from_index, to_index);
-           });
-        }
-
-        const auto move_down_disabled = i == broker_handles.size() - 1;
-        if(ImGui::MenuItem("Move Down", nullptr, false, !move_down_disabled)) {
-          context.push_action(
-           [from_index = i, to_index = i + 1](ApplicationState& app_state) {
-             app_state.reorder_list_broker(from_index, to_index);
-           });
-        }
-
-        ImGui::EndPopup();
-      }
-
-      ImGui::PopID();
-    }
-
-    ImGui::EndChild();
-    if(ImGui::Button("Add New Broker")) {
+    if(ImGui::Button(PLUDUX_ICON_ADD " New Broker")) {
       self.current_page_ = BrokerPage::AddNewBroker;
-
       self.selected_broker_handle_opt_ = std::nullopt;
       self.editing_broker_ptr_ = std::make_shared<backtest::Broker>("");
     }
+    ImGui::Spacing();
+    ui::search_filter(self.broker_filter_, "##brokers_search");
+    ImGui::BeginChild("item view", ImVec2(0, 0));
 
+    auto visible_broker_count = std::size_t{0};
+    for(std::size_t i = 0; i < broker_handles.size(); ++i) {
+      const auto broker_handle = broker_handles[i];
+      const auto& broker = app_state.get_broker(broker_handle);
+      if(!self.broker_filter_.PassFilter(broker.name().c_str())) {
+        continue;
+      }
+      ++visible_broker_count;
+      ImGui::PushID(i);
+
+      {
+        const auto selected =
+         backtest_ptr && backtest_ptr->broker_handle() == broker_handle;
+        const auto has_draft =
+         self.selected_broker_handle_opt_ == broker_handle &&
+         self.editing_broker_ptr_ && *self.editing_broker_ptr_ != broker;
+        const auto display_name =
+         has_draft ? broker.name() + " (Unsaved)" : broker.name();
+        const auto action = ui::resource_row(
+         display_name.c_str(), selected, i, broker_handles.size());
+        if(action == ui::ResourceRowAction::Edit) {
+          self.current_page_ = BrokerPage::EditBroker;
+          if(self.selected_broker_handle_opt_ != broker_handle ||
+             !self.editing_broker_ptr_) {
+            self.selected_broker_handle_opt_ = broker_handle;
+            self.editing_broker_ptr_ =
+             std::make_shared<backtest::Broker>(broker);
+          }
+        } else if(action == ui::ResourceRowAction::Duplicate) {
+          context.push_action([broker_handle](ApplicationState& app_state) {
+            const auto& value = app_state.get_broker(broker_handle);
+            auto copy = value;
+            copy.name(value.name() + " Copy");
+            app_state.add_broker(std::move(copy));
+          });
+        } else if(action == ui::ResourceRowAction::MoveUp) {
+          context.push_action([from = i](ApplicationState& app_state) {
+            app_state.reorder_list_broker(from, from - 1);
+          });
+        } else if(action == ui::ResourceRowAction::MoveDown) {
+          context.push_action([from = i](ApplicationState& app_state) {
+            app_state.reorder_list_broker(from, from + 1);
+          });
+        } else if(action == ui::ResourceRowAction::Delete) {
+          context.push_action([broker_handle](ApplicationState& app_state) {
+            app_state.remove_broker(broker_handle);
+          });
+        }
+        ImGui::PopID();
+        continue;
+      }
+    }
+
+    if(broker_handles.empty()) {
+      ImGui::TextDisabled("No brokers yet. Add one to get started.");
+    } else if(visible_broker_count == 0) {
+      ImGui::TextDisabled("No brokers match this search.");
+    }
+
+    ImGui::EndChild();
     ImGui::EndGroup();
   }
 
@@ -216,44 +194,66 @@ private:
 
     ImGui::SameLine();
     if(ImGui::Button("Cancel")) {
-      self.reset();
+      self.leave_editor();
     }
 
-    ImGui::BeginDisabled(same_broker);
     ImGui::SameLine();
-    if(ImGui::Button("Apply")) {
+    const auto draft_action =
+     ui::apply_reset_button(self.selected_draft_action_, !same_broker);
+    if(draft_action == ui::DraftAction::Apply) {
       self.submit_broker_changes(context);
+    } else if(draft_action == ui::DraftAction::Reset) {
+      self.editing_broker_ptr_ =
+       std::make_shared<backtest::Broker>(selected_broker);
     }
-    ImGui::EndDisabled();
 
     ImGui::EndGroup();
   }
 
   void edit_broker_form(this BrokersWindow& self)
   {
+    ui::form_section(
+     "Broker Details",
+     "Configure the transaction costs applied during simulation. A blank "
+     "name is saved as 'Unnamed'.");
     {
       auto broker_name = self.editing_broker_ptr_->name();
-      ImGui::InputText("Name", &broker_name);
+      ui::field_label("Name");
+      ImGui::InputTextWithHint("##broker_name", "Unnamed", &broker_name);
       self.editing_broker_ptr_->name(broker_name);
     }
     {
-      ImGui::SeparatorText("Fees");
+      ui::form_section(
+       "Fee Rules",
+       "Each rule can target a trade direction and a specific order event. "
+       "All matching rules are added together.");
       auto fees = self.editing_broker_ptr_->fees();
       if(fees.empty()) {
-        ImGui::Text("No fees added.");
+        ImGui::TextDisabled("No fee rules. This broker currently has no "
+                            "transaction costs.");
       } else {
         for(auto i = 0; i < fees.size(); ++i) {
           auto& fee = fees[i];
           ImGui::PushID(i);
 
+          const auto fee_heading = std::format(
+           "Fee {}: {}", i + 1, fee.name().empty() ? "Unnamed" : fee.name());
+          ImGui::SeparatorText(fee_heading.c_str());
+
           {
             auto fee_name = fee.name();
-            ImGui::InputText("Fee Name", &fee_name);
+            ui::field_label("Name");
+            ImGui::InputTextWithHint(
+             "##fee_name", "e.g. Commission", &fee_name);
             fee.name(std::move(fee_name));
           }
           {
             auto fee_value = fee.value();
-            ImGui::InputDouble("Fee Value", &fee_value, 0.01, 1.0, "%.4f");
+            ui::field_label(
+             "Value",
+             "Percentage fees use this value as a percent of order notional; "
+             "fixed fees use it as a currency amount.");
+            ImGui::InputDouble("##fee_value", &fee_value, 0.01, 1.0, "%.4f");
             fee.value(fee_value);
           }
           {
@@ -268,7 +268,11 @@ private:
                "Percentage"},
               {pludux::backtest::BrokerFee::FeeType::Fixed, "Fixed"}};
 
-            if(ImGui::BeginCombo("Fee Type",
+            ui::field_label(
+             "Calculation",
+             "Percentage scales with order value. Fixed charges the same "
+             "amount for every matching event.");
+            if(ImGui::BeginCombo("##fee_type",
                                  fee_type_names.at(fee.fee_type()).c_str())) {
               for(const auto& type_option : fee_type_options) {
                 const auto is_selected = fee.fee_type() == type_option;
@@ -299,8 +303,12 @@ private:
               {pludux::backtest::BrokerFee::FeePosition::LongAndShort,
                "Long and Short"}};
 
+            ui::field_label(
+             "Position side",
+             "Choose whether this rule applies to long trades, short trades, "
+             "or both.");
             if(ImGui::BeginCombo(
-                "Fee Position",
+                "##fee_position",
                 fee_position_names.at(fee.fee_position()).c_str())) {
               for(const auto& position_option : fee_position_options) {
                 const auto is_selected = fee.fee_position() == position_option;
@@ -335,8 +343,13 @@ private:
               {pludux::backtest::BrokerFee::FeeTrigger::Sell, "Sell"},
               {pludux::backtest::BrokerFee::FeeTrigger::All, "All"}};
 
+            ui::field_label(
+             "Order event",
+             "Entry and Exit follow trade lifecycle; Buy and Sell follow the "
+             "actual order direction.");
             if(ImGui::BeginCombo(
-                "Apply On", fee_trigger_names.at(fee.fee_trigger()).c_str())) {
+                "##apply_on",
+                fee_trigger_names.at(fee.fee_trigger()).c_str())) {
               for(const auto& trigger_option : fee_trigger_options) {
                 const auto is_selected = fee.fee_trigger() == trigger_option;
 
@@ -354,18 +367,16 @@ private:
             }
           }
 
-          if(ImGui::Button("Remove")) {
+          if(ImGui::Button(PLUDUX_ICON_DELETE " Remove Fee")) {
             fees.erase(std::next(fees.begin(), i));
+            --i;
           }
           ImGui::PopID();
-
-          ImGui::Separator();
         }
       }
 
-      ImGui::Text("");
-
-      if(ImGui::Button("Add Fee")) {
+      ImGui::Spacing();
+      if(ImGui::Button(PLUDUX_ICON_ADD " Add Fee Rule")) {
         fees.push_back(
          backtest::BrokerFee{"New Fee",
                              backtest::BrokerFee::FeeType::PercentageNotional,
@@ -403,6 +414,11 @@ private:
     self.current_page_ = BrokerPage::List;
     self.selected_broker_handle_opt_ = std::nullopt;
     self.editing_broker_ptr_ = nullptr;
+  }
+
+  void leave_editor(this BrokersWindow& self) noexcept
+  {
+    self.current_page_ = BrokerPage::List;
   }
 };
 

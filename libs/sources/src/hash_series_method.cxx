@@ -42,8 +42,7 @@ import :methods.sma_method;
 import :methods.wma_method;
 import :methods.rma_method;
 import :methods.select_output_method;
-import :methods.series_node_method;
-import :methods.series_value_method;
+import :methods.series_method;
 import :methods.stddev_method;
 import :methods.stoch_method;
 import :methods.stoch_rsi_method;
@@ -67,7 +66,7 @@ using MethodRegistry = mp11::mp_list<mp11::mp_quote<AbsDiffMethod>,
                                      mp11::mp_quote<AbsMethod>,
                                      mp11::mp_quote<AdaptiveMaMethod>,
                                      mp11::mp_quote<AddMethod>,
-                                     AtrMethod,
+                                     mp11::mp_quote<AtrMethod>,
                                      mp11::mp_quote<BbMethod>,
                                      mp11::mp_quote<ChangeMethod>,
                                      CloseMethod,
@@ -93,14 +92,13 @@ using MethodRegistry = mp11::mp_list<mp11::mp_quote<AbsDiffMethod>,
                                      mp11::mp_quote<RmaMethod>,
                                      mp11::mp_quote<RocMethod>,
                                      mp11::mp_quote<RsiMethod>,
-                                     RvolMethod,
+                                     mp11::mp_quote<RvolMethod>,
                                      mp11::mp_quote<SelectOutputMethod>,
-                                     SeriesNodeMethod,
-                                     SeriesValueMethod,
+                                     SeriesMethod,
                                      mp11::mp_quote<SmaMethod>,
                                      mp11::mp_quote<SqrtMethod>,
                                      mp11::mp_quote<StddevMethod>,
-                                     StochMethod,
+                                     mp11::mp_quote<StochMethod>,
                                      mp11::mp_quote<StochRsiMethod>,
                                      mp11::mp_quote<SubtractMethod>,
                                      TrMethod,
@@ -123,7 +121,7 @@ using MethodRegistry = mp11::mp_list<mp11::mp_quote<AbsDiffMethod>,
                                      mp11::mp_quote<GreaterEqualMethod>,
                                      mp11::mp_quote<LessThanMethod>,
                                      mp11::mp_quote<LessEqualMethod>,
-                                     DonchianChannelMethod>;
+                                     mp11::mp_quote<DonchianChannelMethod>>;
 
 template<typename TMethod>
 consteval auto series_type_hash_id_of(const TMethod&) -> std::size_t
@@ -169,7 +167,9 @@ constexpr auto hash_series_method_or_std_hash(const T& value) noexcept
 }
 
 // ATR
-auto hash_series_method(const AtrMethod& method) noexcept -> std::size_t
+template<typename TPeriodMethod>
+auto hash_series_method(const AtrMethod<TPeriodMethod>& method) noexcept
+ -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);
   const auto period_hash = hash_series_method_or_std_hash(method.period());
@@ -184,8 +184,9 @@ auto hash_series_method(const TrMethod& method) noexcept -> std::size_t
 }
 
 // BB
-template<typename TSourceMethod>
-auto hash_series_method(const BbMethod<TSourceMethod>& method) noexcept
+template<typename TSourceMethod, typename TParameterMethod>
+auto hash_series_method(
+ const BbMethod<TSourceMethod, TParameterMethod>& method) noexcept
  -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);
@@ -230,9 +231,9 @@ auto hash_series_method(const PercentageMethod<TMethod>& method) noexcept
 }
 
 // SMA
-template<typename TSourceMethod>
-auto hash_series_method(const SmaMethod<TSourceMethod>& method) noexcept
- -> std::size_t
+template<typename TSourceMethod, typename TPeriodMethod>
+auto hash_series_method(
+ const SmaMethod<TSourceMethod, TPeriodMethod>& method) noexcept -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);
   const auto source_hash = hash_series_method_or_std_hash(method.source());
@@ -241,9 +242,9 @@ auto hash_series_method(const SmaMethod<TSourceMethod>& method) noexcept
 }
 
 // EMA
-template<typename TSourceMethod>
-auto hash_series_method(const EmaMethod<TSourceMethod>& method) noexcept
- -> std::size_t
+template<typename TSourceMethod, typename TPeriodMethod>
+auto hash_series_method(
+ const EmaMethod<TSourceMethod, TPeriodMethod>& method) noexcept -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);
   const auto source_hash = hash_series_method_or_std_hash(method.source());
@@ -252,9 +253,9 @@ auto hash_series_method(const EmaMethod<TSourceMethod>& method) noexcept
 }
 
 // RMA
-template<typename TSourceMethod>
-auto hash_series_method(const RmaMethod<TSourceMethod>& method) noexcept
- -> std::size_t
+template<typename TSourceMethod, typename TPeriodMethod>
+auto hash_series_method(
+ const RmaMethod<TSourceMethod, TPeriodMethod>& method) noexcept -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);
   const auto source_hash = hash_series_method_or_std_hash(method.source());
@@ -263,9 +264,9 @@ auto hash_series_method(const RmaMethod<TSourceMethod>& method) noexcept
 }
 
 // WMA
-template<typename TSourceMethod>
-auto hash_series_method(const WmaMethod<TSourceMethod>& method) noexcept
- -> std::size_t
+template<typename TSourceMethod, typename TPeriodMethod>
+auto hash_series_method(
+ const WmaMethod<TSourceMethod, TPeriodMethod>& method) noexcept -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);
   const auto source_hash = hash_series_method_or_std_hash(method.source());
@@ -274,9 +275,9 @@ auto hash_series_method(const WmaMethod<TSourceMethod>& method) noexcept
 }
 
 // HMA
-template<typename TSourceMethod>
-auto hash_series_method(const HmaMethod<TSourceMethod>& method) noexcept
- -> std::size_t
+template<typename TSourceMethod, typename TPeriodMethod>
+auto hash_series_method(
+ const HmaMethod<TSourceMethod, TPeriodMethod>& method) noexcept -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);
   const auto source_hash = hash_series_method_or_std_hash(method.source());
@@ -285,9 +286,9 @@ auto hash_series_method(const HmaMethod<TSourceMethod>& method) noexcept
 }
 
 // RSI
-template<typename TSourceMethod>
-auto hash_series_method(const RsiMethod<TSourceMethod>& method) noexcept
- -> std::size_t
+template<typename TSourceMethod, typename TPeriodMethod>
+auto hash_series_method(
+ const RsiMethod<TSourceMethod, TPeriodMethod>& method) noexcept -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);
   const auto source_hash = hash_series_method_or_std_hash(method.source());
@@ -296,9 +297,9 @@ auto hash_series_method(const RsiMethod<TSourceMethod>& method) noexcept
 }
 
 // ROC
-template<typename TSourceMethod>
-auto hash_series_method(const RocMethod<TSourceMethod>& method) noexcept
- -> std::size_t
+template<typename TSourceMethod, typename TPeriodMethod>
+auto hash_series_method(
+ const RocMethod<TSourceMethod, TPeriodMethod>& method) noexcept -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);
   const auto source_hash = hash_series_method_or_std_hash(method.source());
@@ -307,7 +308,9 @@ auto hash_series_method(const RocMethod<TSourceMethod>& method) noexcept
 }
 
 // RVOL
-auto hash_series_method(const RvolMethod& method) noexcept -> std::size_t
+template<typename TPeriodMethod>
+auto hash_series_method(const RvolMethod<TPeriodMethod>& method) noexcept
+ -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);
   const auto period_hash = hash_series_method_or_std_hash(method.period());
@@ -315,8 +318,9 @@ auto hash_series_method(const RvolMethod& method) noexcept -> std::size_t
 }
 
 // Highest
-template<typename TSourceMethod>
-auto hash_series_method(const HighestMethod<TSourceMethod>& method) noexcept
+template<typename TSourceMethod, typename TPeriodMethod>
+auto hash_series_method(
+ const HighestMethod<TSourceMethod, TPeriodMethod>& method) noexcept
  -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);
@@ -326,8 +330,9 @@ auto hash_series_method(const HighestMethod<TSourceMethod>& method) noexcept
 }
 
 // KC
-template<typename TMaSourceMethod>
-auto hash_series_method(const KcMethod<TMaSourceMethod>& method) noexcept
+template<typename TMaSourceMethod, typename TParameterMethod>
+auto hash_series_method(
+ const KcMethod<TMaSourceMethod, TParameterMethod>& method) noexcept
  -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);
@@ -351,8 +356,9 @@ auto hash_series_method(const KcMethod<TMaSourceMethod>& method) noexcept
 }
 
 // DONCHIAN CHANNEL
-auto hash_series_method(const DonchianChannelMethod& method) noexcept
- -> std::size_t
+template<typename TPeriodMethod>
+auto hash_series_method(
+ const DonchianChannelMethod<TPeriodMethod>& method) noexcept -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);
   const auto period_hash = hash_series_method_or_std_hash(method.period());
@@ -384,8 +390,9 @@ auto hash_series_method(
 
 // Lowest
 
-template<typename TSourceMethod>
-auto hash_series_method(const LowestMethod<TSourceMethod>& method) noexcept
+template<typename TSourceMethod, typename TPeriodMethod>
+auto hash_series_method(
+ const LowestMethod<TSourceMethod, TPeriodMethod>& method) noexcept
  -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);
@@ -396,8 +403,9 @@ auto hash_series_method(const LowestMethod<TSourceMethod>& method) noexcept
 
 // MACD
 
-template<typename TSourceMethod>
-auto hash_series_method(const MacdMethod<TSourceMethod>& method) noexcept
+template<typename TSourceMethod, typename TParameterMethod>
+auto hash_series_method(
+ const MacdMethod<TSourceMethod, TParameterMethod>& method) noexcept
  -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);
@@ -481,18 +489,9 @@ auto hash_series_method(const AdaptiveMaMethod<TSourceMethod>& method) noexcept
   return merge_hashes(type_hash, source_hash, period_hash);
 }
 
-// SeriesNode
+// Series
 
-auto hash_series_method(const SeriesNodeMethod& method) noexcept -> std::size_t
-{
-  const auto type_hash = series_type_hash_id_of(method);
-  const auto name_hash = hash_series_method_or_std_hash(method.name());
-  return merge_hashes(type_hash, name_hash);
-}
-
-// SeriesValue
-
-auto hash_series_method(const SeriesValueMethod& method) noexcept -> std::size_t
+auto hash_series_method(const SeriesMethod& method) noexcept -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);
   const auto name_hash = hash_series_method_or_std_hash(method.name());
@@ -501,8 +500,9 @@ auto hash_series_method(const SeriesValueMethod& method) noexcept -> std::size_t
 
 // Stddev
 
-template<typename TSourceMethod>
-auto hash_series_method(const StddevMethod<TSourceMethod>& method) noexcept
+template<typename TSourceMethod, typename TPeriodMethod>
+auto hash_series_method(
+ const StddevMethod<TSourceMethod, TPeriodMethod>& method) noexcept
  -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);
@@ -512,7 +512,9 @@ auto hash_series_method(const StddevMethod<TSourceMethod>& method) noexcept
 }
 
 // Stochastic
-auto hash_series_method(const StochMethod& method) noexcept -> std::size_t
+template<typename TParameterMethod>
+auto hash_series_method(const StochMethod<TParameterMethod>& method) noexcept
+ -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);
   const auto k_period_hash = hash_series_method_or_std_hash(method.k_period());
@@ -522,8 +524,9 @@ auto hash_series_method(const StochMethod& method) noexcept -> std::size_t
 }
 
 // Stochastic RSI
-template<typename TRsiSourceMethod>
-auto hash_series_method(const StochRsiMethod<TRsiSourceMethod>& method) noexcept
+template<typename TRsiSourceMethod, typename TParameterMethod>
+auto hash_series_method(
+ const StochRsiMethod<TRsiSourceMethod, TParameterMethod>& method) noexcept
  -> std::size_t
 {
   const auto type_hash = series_type_hash_id_of(method);

@@ -4,8 +4,22 @@
     "bbands": {
       "method": "BB",
       "params": {
-        "period": 20,
-        "stddev": 2
+        "period": {
+          "method": "INPUT",
+          "params": {
+            "label": "Period",
+            "representation": "UnsignedInteger",
+            "value": 20
+          }
+        },
+        "stddev": {
+          "method": "INPUT",
+          "params": {
+            "label": "StdDev",
+            "representation": "Decimal",
+            "value": 2
+          }
+        }
       }
     },
     "bb_upper": {
@@ -13,7 +27,7 @@
       "params": {
         "output": "upper-band",
         "source": {
-          "method": "SERIES_NODE",
+          "method": "SERIES",
           "params": {
             "name": "bbands"
           }
@@ -25,7 +39,7 @@
       "params": {
         "output": "lower-band",
         "source": {
-          "method": "SERIES_NODE",
+          "method": "SERIES",
           "params": {
             "name": "bbands"
           }
@@ -33,8 +47,6 @@
       }
     }
   },
-  "stopLoss": false,
-  "takeProfit": false,
   "positions": {
     "long": {
       "entry": {
@@ -43,27 +55,65 @@
           "params": {
             "value": "CLOSE",
             "baseline": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES",
               "params": {
                 "name": "bb_upper"
               }
             }
           }
+        },
+        "timing": "NEXT_OPEN"
+      },
+      "exits": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "signal": {
+              "method": "CROSSOVER",
+              "params": {
+                "value": "CLOSE",
+                "baseline": {
+                  "method": "SERIES",
+                  "params": {
+                    "name": "bb_lower"
+                  }
+                }
+              }
+            },
+            "timing": "NEXT_OPEN"
+          }
+        ]
+      },
+      "riskDistance": {
+        "method": "R_DISTANCE_ATR",
+        "params": {
+          "period": {
+            "method": "VALUE",
+            "params": {
+              "value": 14
+            }
+          },
+          "multiplier": {
+            "method": "VALUE",
+            "params": {
+              "value": 2
+            }
+          },
+          "maSmoothingType": "RMA"
         }
       },
-      "exit": {
-        "signal": {
-          "method": "CROSSOVER",
-          "params": {
-            "value": "CLOSE",
-            "baseline": {
-              "method": "SERIES_VALUE",
-              "params": {
-                "name": "bb_lower"
-              }
+      "stopLosses": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": false,
+            "trailing": false,
+            "stopPrice": {
+              "method": "SL_1R"
             }
           }
-        }
+        ]
       }
     },
     "short": {
@@ -73,27 +123,65 @@
           "params": {
             "value": "CLOSE",
             "baseline": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES",
               "params": {
                 "name": "bb_lower"
               }
             }
           }
+        },
+        "timing": "NEXT_OPEN"
+      },
+      "exits": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": true,
+            "signal": {
+              "method": "CROSSUNDER",
+              "params": {
+                "value": "CLOSE",
+                "baseline": {
+                  "method": "SERIES",
+                  "params": {
+                    "name": "bb_upper"
+                  }
+                }
+              }
+            },
+            "timing": "NEXT_OPEN"
+          }
+        ]
+      },
+      "riskDistance": {
+        "method": "R_DISTANCE_ATR",
+        "params": {
+          "period": {
+            "method": "VALUE",
+            "params": {
+              "value": 14
+            }
+          },
+          "multiplier": {
+            "method": "VALUE",
+            "params": {
+              "value": 2
+            }
+          },
+          "maSmoothingType": "RMA"
         }
       },
-      "exit": {
-        "signal": {
-          "method": "CROSSUNDER",
-          "params": {
-            "value": "CLOSE",
-            "baseline": {
-              "method": "SERIES_VALUE",
-              "params": {
-                "name": "bb_upper"
-              }
+      "stopLosses": {
+        "activation": "SIMULTANEOUS",
+        "rules": [
+          {
+            "enabled": false,
+            "trailing": false,
+            "stopPrice": {
+              "method": "SL_1R"
             }
           }
-        }
+        ]
       }
     }
   },
@@ -128,5 +216,8 @@
         }
       ]
     }
-  ]
+  ],
+  "execution": {
+    "intrabarPath": "CANDLE_DIRECTION"
+  }
 }

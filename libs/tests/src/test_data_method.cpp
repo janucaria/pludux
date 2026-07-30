@@ -10,7 +10,7 @@ using namespace pludux;
 TEST(DataMethodTest, RunAllMethodClose)
 {
   const auto data_method = DataMethod{"close"};
-  const auto asset_data = AssetHistory{{"close", {4.0, 4.1, 4.2}}};
+  const auto asset_data = AssetHistory{{"close", {4.2, 4.1, 4.0}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 
@@ -32,7 +32,7 @@ TEST(DataMethodTest, RunAllMethodClose)
 TEST(DataMethodTest, InvalidField)
 {
   const auto data_method = DataMethod{"invalid"};
-  const auto asset_data = AssetHistory{{"close", {4.0, 4.1, 4.2}}};
+  const auto asset_data = AssetHistory{{"close", {4.2, 4.1, 4.0}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
   const auto context = std::monostate{};
 

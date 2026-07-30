@@ -1,11 +1,15 @@
 module;
 
 #include <cstddef>
+#include <utility>
 
 export module pludux:methods.donchian_channel_method;
 
+import :methods.value_method;
+
 export namespace pludux {
 
+template<typename TPeriodMethod = ValueMethod>
 class DonchianChannelMethod {
 public:
   DonchianChannelMethod()
@@ -14,25 +18,32 @@ public:
   }
 
   DonchianChannelMethod(std::size_t period)
-  : period_{period}
+  : DonchianChannelMethod{ValueMethod{static_cast<double>(period)}}
+  {
+  }
+
+  explicit DonchianChannelMethod(TPeriodMethod period)
+  requires(!std::is_arithmetic_v<TPeriodMethod>)
+  : period_{std::move(period)}
   {
   }
 
   auto operator==(const DonchianChannelMethod&) const noexcept
    -> bool = default;
 
-  auto period(this const DonchianChannelMethod& self) noexcept -> std::size_t
+  auto period(this const DonchianChannelMethod& self) noexcept
+   -> const TPeriodMethod&
   {
     return self.period_;
   }
 
-  void period(this DonchianChannelMethod& self, std::size_t period) noexcept
+  void period(this DonchianChannelMethod& self, TPeriodMethod period) noexcept
   {
-    self.period_ = period;
+    self.period_ = std::move(period);
   }
 
 private:
-  std::size_t period_;
+  TPeriodMethod period_;
 };
 
 } // namespace pludux

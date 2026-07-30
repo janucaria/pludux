@@ -44,7 +44,7 @@ TEST(CrossoverMethodTest, CrossoverConditionMet)
   auto reference_method = ValueMethod{50.0};
   const auto crossover_condition =
    CrossoverMethod{std::move(signal_method), std::move(reference_method)};
-  const auto asset_data = AssetHistory{{"close", {60, 50}}};
+  const auto asset_data = AssetHistory{{"close", {50, 60}}};
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
   EXPECT_TRUE(

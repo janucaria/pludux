@@ -1,5 +1,16 @@
 project(pludux-backtest-lib)
 
+SET(JSONCONS_BUILD_TESTS OFF)
+FetchContent_Declare(
+  jsoncons
+  GIT_REPOSITORY https://github.com/danielaparker/jsoncons.git
+  GIT_TAG        v1.6.0
+  GIT_SHALLOW    TRUE
+  GIT_PROGRESS   TRUE
+  OVERRIDE_FIND_PACKAGE
+  EXCLUDE_FROM_ALL
+)
+
 FetchContent_Declare(
   rapidcsv
   GIT_REPOSITORY https://github.com/d99kris/rapidcsv.git
@@ -22,6 +33,7 @@ FetchContent_Declare(
       <SOURCE_DIR>/
 )
 
+find_package(jsoncons REQUIRED)
 find_package(rapidcsv REQUIRED)
 find_package(ctre REQUIRED)
 
@@ -46,6 +58,9 @@ target_sources(${PROJECT_NAME}
 
     sources/backtest/method_serializer_mixin.cxx
 
+    sources/backtest/execution_model.cxx
+    sources/backtest/intrabar_path.cxx
+
     sources/backtest/plots/plot_method_contextable.cxx
     sources/backtest/plots/any_plot_method_context.cxx
     
@@ -57,6 +72,7 @@ target_sources(${PROJECT_NAME}
     sources/backtest/plots/hline_plot_method.cxx
     sources/backtest/plots/line_plot_method.cxx
     sources/backtest/plots/histogram_plot_method.cxx
+    sources/backtest/plots/momentum_histogram_plot_method.cxx
 
     sources/backtest/plots.cxx
     sources/backtest/plot_group.cxx
@@ -65,16 +81,31 @@ target_sources(${PROJECT_NAME}
     
     sources/backtest/trade_entry.cxx
     sources/backtest/trade_exit.cxx
-    sources/backtest/trade_record.cxx
+    sources/backtest/take_profit_level.cxx
+    sources/backtest/signal_exit_state.cxx
+    sources/backtest/stop_loss_level.cxx
+    sources/backtest/trade_event.cxx
+    sources/backtest/open_position_snapshot.cxx
+    sources/backtest/closed_trade.cxx
     sources/backtest/trade_position.cxx
     sources/backtest/trade_session.cxx
     
     sources/backtest/asset.cxx
     sources/backtest/strategy.cxx
+    sources/backtest/strategy_inputs.cxx
     sources/backtest/market.cxx
     sources/backtest/broker.cxx
     sources/backtest/profile.cxx
-    sources/backtest/backtest_summary.cxx
+    sources/backtest/backtest_timeline.cxx
+    sources/backtest/backtest_method_context.cxx
+    sources/backtest/drawdown_method.cxx
+    sources/backtest/drawdown_node.cxx
+    sources/backtest/equity_method.cxx
+    sources/backtest/equity_node.cxx
+    sources/backtest/risk_distance_method.cxx
+    sources/backtest/risk_distance_node.cxx
+    sources/backtest/stop_target_price_method.cxx
+    sources/backtest/stop_target_price_node.cxx
     sources/backtest/backtest.cxx
     
     sources/backtest/store_descriptor.cxx
@@ -83,6 +114,7 @@ target_sources(${PROJECT_NAME}
 
     sources/backtest/backtest_runner.cxx
 
+    sources/backtest/config_parser.cxx
     sources/backtest/strategy_parser.cxx
 
     sources/backtest.cxx
@@ -91,6 +123,7 @@ target_sources(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
     pludux::pludux-lib
+    jsoncons
     rapidcsv
     ctre::ctre
 )

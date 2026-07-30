@@ -11,6 +11,20 @@
       "title": "Schema Version",
       "description": "Version of the Pludux strategy schema. Must be 2 for this draft."
     },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "intrabarPath": {
+          "$ref": "#/$defs/intrabarPath"
+        }
+      },
+      "required": [
+        "intrabarPath"
+      ],
+      "title": "Execution",
+      "description": "Backtest execution assumptions shared by both position sides."
+    },
     "series": {
       "type": "object",
       "additionalProperties": false,
@@ -20,22 +34,43 @@
         }
       },
       "title": "Named Series",
-      "description": "A dictionary of reusable named series. Each key must be lower_snake_case. Define indicators, transformed price series, and intermediate calculations here so positions, signals, and plots can reference them consistently. When one named series needs the numeric output of another named series, use SERIES_VALUE. When a method needs the named series definition itself, use SERIES_NODE.",
+      "description": "A dictionary of reusable named series. Each key must be lower_snake_case. Define indicators, transformed price series, and intermediate calculations here so positions, signals, and plots can reference them consistently. When one named series needs the numeric output of another named series, use SERIES. When a method needs the named series definition itself, use SERIES.",
       "examples": [
         {
           "fast_ema": {
             "method": "EMA",
             "params": {
-              "period": 20,
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 20
+                }
+              },
               "source": "CLOSE"
             }
           },
           "bbands": {
             "method": "BB",
             "params": {
-              "period": 20,
-              "stddev": 2,
-              "source": "CLOSE"
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 20
+                }
+              },
+              "stddev": {
+                "method": "INPUT",
+                "params": {
+                  "label": "StdDev",
+                  "representation": "Decimal",
+                  "value": 2
+                }
+              },
+              "maSource": "CLOSE"
             }
           }
         }
@@ -49,82 +84,17 @@
           "$ref": "#/$defs/positionSide",
           "default": false,
           "title": "Long Side",
-          "description": "Rules for opening and closing long positions. Set to false to disable long trading."
+          "description": "Rules for opening, sizing, and closing long positions. Set to false to disable long trading."
         },
         "short": {
           "$ref": "#/$defs/positionSide",
           "default": false,
           "title": "Short Side",
-          "description": "Rules for opening and closing short positions. Set to false to disable short trading."
+          "description": "Rules for opening, sizing, and closing short positions. Set to false to disable short trading."
         }
       },
       "title": "Positions",
-      "description": "Trading rules for long and short positions. Each side can be disabled with false, or configured with entry and optional exit signals."
-    },
-    "stopLoss": {
-      "oneOf": [
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "title": "Enabled",
-              "description": "Whether stop-loss logic is enabled."
-            },
-            "trailing": {
-              "type": "boolean",
-              "title": "Trailing",
-              "description": "When true, the stop loss trails favorable price movement instead of staying fixed."
-            }
-          },
-          "default": {
-            "enabled": true,
-            "trailing": false
-          },
-          "title": "Stop Loss Settings",
-          "description": "Object form of the global stop-loss configuration."
-        },
-        {
-          "type": "boolean"
-        }
-      ],
-      "default": false,
-      "title": "Stop Loss",
-      "description": "Global stop-loss behavior for the strategy. Use false to disable it, or provide an object to enable it and optionally make it trailing."
-    },
-    "takeProfit": {
-      "oneOf": [
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "title": "Enabled",
-              "description": "Whether take-profit logic is enabled."
-            },
-            "rMultiple": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "title": "R Multiple",
-              "description": "Profit target measured in multiples of 1R, where 1R is the strategy's risk distance."
-            }
-          },
-          "default": {
-            "enabled": true,
-            "rMultiple": 2.0
-          },
-          "title": "Take Profit Settings",
-          "description": "Object form of the global take-profit configuration."
-        },
-        {
-          "type": "boolean"
-        }
-      ],
-      "default": false,
-      "title": "Take Profit",
-      "description": "Global take-profit behavior for the strategy. Use false to disable it, or provide an object to enable it and define the target in R-multiples."
+      "description": "Trading rules for long and short positions. Each side can be disabled with false, or configured with entry rules, an explicit risk distance, and optional executable exits."
     },
     "plots": {
       "type": "array",
@@ -136,7 +106,51 @@
       "description": "Optional visual plot groups for chart rendering. Plot groups can be overlaid on price or rendered in their own pane."
     }
   },
+  "required": [
+    "version",
+    "execution"
+  ],
   "$defs": {
+    "intrabarPath": {
+      "type": "string",
+      "enum": [
+        "LOW_FIRST",
+        "HIGH_FIRST",
+        "CANDLE_DIRECTION"
+      ],
+      "title": "Intrabar Path"
+    },
+    "signalTiming": {
+      "type": "string",
+      "enum": [
+        "CURRENT_CLOSE",
+        "NEXT_OPEN"
+      ],
+      "title": "Signal Timing"
+    },
+    "exitActivation": {
+      "type": "string",
+      "enum": [
+        "SIMULTANEOUS",
+        "AFTER_PREVIOUS"
+      ],
+      "title": "Exit Activation"
+    },
+    "valueRepresentation": {
+      "type": "string",
+      "enum": [
+        "Decimal",
+        "SignedInteger",
+        "UnsignedInteger"
+      ],
+      "title": "Value Representation",
+      "description": "Numeric representation format for a numeric input. Decimal allows floating-point values. SignedInteger restricts to integer values including negative. UnsignedInteger restricts to non-negative integer values.",
+      "examples": [
+        "Decimal",
+        "SignedInteger",
+        "UnsignedInteger"
+      ]
+    },
     "positionSide": {
       "oneOf": [
         {
@@ -151,29 +165,22 @@
                   "$ref": "#/$defs/signalAsParameter",
                   "title": "Signal",
                   "description": "Boolean signal definition for this entry rule. It can be an inline signal object or a literal true/false value."
+                },
+                "timing": {
+                  "$ref": "#/$defs/signalTiming"
                 }
               },
               "required": [
-                "signal"
+                "signal",
+                "timing"
               ],
               "title": "Entry",
               "description": "Entry rule for this side. The entry signal decides when to open a position."
             },
-            "exit": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "signal": {
-                  "$ref": "#/$defs/signalAsParameter",
-                  "title": "Signal",
-                  "description": "Boolean signal definition for this exit rule. It can be an inline signal object or a literal true/false value."
-                }
-              },
-              "required": [
-                "signal"
-              ],
-              "title": "Exit",
-              "description": "Optional exit rule for this side. The exit signal decides when to close a position before stop-loss or take-profit rules."
+            "exits": {
+              "$ref": "#/$defs/signalExitCollection",
+              "title": "Signal Exits",
+              "description": "Timed signal-exit rules with configurable activation semantics."
             },
             "pyramiding": {
               "type": "object",
@@ -184,34 +191,255 @@
                   "title": "Signal",
                   "description": "Boolean signal definition for this pyramiding rule. It can be an inline signal object or a literal true/false value."
                 },
+                "timing": {
+                  "$ref": "#/$defs/signalTiming"
+                },
                 "maxLayers": {
                   "type": "integer",
                   "minimum": 1,
                   "title": "Max Layers",
                   "description": "Maximum number of pyramiding layers allowed. For example, maxLayers 3 means the initial position plus 2 additional layers."
+                },
+                "stopTargetReference": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "favorable": {
+                      "$ref": "#/$defs/stopTargetReferencePrice",
+                      "default": "AVERAGE_PRICE",
+                      "title": "Favorable SL/TP Reference",
+                      "description": "Reference price used by stop/target methods when the pyramiding entry is favorable relative to the current average and position direction."
+                    },
+                    "unfavorable": {
+                      "$ref": "#/$defs/stopTargetReferencePrice",
+                      "default": "AVERAGE_PRICE",
+                      "title": "Unfavorable SL/TP Reference",
+                      "description": "Reference price used by stop/target methods when the pyramiding entry is unfavorable relative to the current average and position direction."
+                    }
+                  },
+                  "required": [
+                    "favorable",
+                    "unfavorable"
+                  ],
+                  "default": {
+                    "favorable": "AVERAGE_PRICE",
+                    "unfavorable": "AVERAGE_PRICE"
+                  }
                 }
               },
+              "required": [
+                "signal",
+                "timing",
+                "maxLayers"
+              ],
               "default": {
                 "signal": false,
-                "maxLayers": 1
+                "timing": "NEXT_OPEN",
+                "maxLayers": 1,
+                "stopTargetReference": {
+                  "favorable": "AVERAGE_PRICE",
+                  "unfavorable": "AVERAGE_PRICE"
+                }
               }
+            },
+            "riskDistance": {
+              "$ref": "#/$defs/riskDistance",
+              "title": "1R Risk Distance",
+              "description": "Required positive distance expression used for risk-based sizing and R-multiple stop/target prices. This value does not execute a stop-loss order."
+            },
+            "stopLosses": {
+              "$ref": "#/$defs/stopLossCollection",
+              "title": "Stop Losses",
+              "description": "Executable stop-loss rules with configurable activation semantics."
+            },
+            "takeProfits": {
+              "$ref": "#/$defs/takeProfitCollection",
+              "title": "Take Profits",
+              "description": "Take-profit rules with configurable activation semantics."
             }
           },
           "required": [
-            "entry"
+            "entry",
+            "riskDistance"
           ]
         },
         {
-          "type": "boolean"
+          "type": "boolean",
+          "const": false
         }
       ],
       "default": false,
       "title": "Position Side",
-      "description": "Configuration for one trading direction, such as long or short. Use false to disable the side, or provide entry and optional exit signal rules."
+      "description": "Configuration for one trading direction, such as long or short. Use false to disable the side, or provide entry rules plus a required explicit 1R risk distance."
+    },
+    "riskDistance": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/riskDistanceAmountMethod"
+        },
+        {
+          "$ref": "#/$defs/riskDistancePercentageMethod"
+        },
+        {
+          "$ref": "#/$defs/riskDistanceAtrMethod"
+        }
+      ],
+      "title": "1R Risk Distance",
+      "description": "An explicit method object that evaluates to a finite positive 1R price distance."
+    },
+    "signalExitCollection": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "activation": {
+          "$ref": "#/$defs/exitActivation"
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/signalExit"
+          }
+        }
+      },
+      "required": [
+        "activation",
+        "rules"
+      ]
+    },
+    "stopLossCollection": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "activation": {
+          "$ref": "#/$defs/exitActivation"
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/stopLoss"
+          }
+        }
+      },
+      "required": [
+        "activation",
+        "rules"
+      ]
+    },
+    "takeProfitCollection": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "activation": {
+          "$ref": "#/$defs/exitActivation"
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/takeProfit"
+          }
+        }
+      },
+      "required": [
+        "activation",
+        "rules"
+      ]
+    },
+    "stopLoss": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "title": "Enabled",
+          "description": "Whether the strategy exits the position when price reaches the stop price."
+        },
+        "trailing": {
+          "type": "boolean",
+          "default": false,
+          "title": "Trailing",
+          "description": "When true, the stop-loss exit trails favorable price movement instead of staying fixed."
+        },
+        "stopPrice": {
+          "$ref": "#/$defs/seriesAsParameter",
+          "title": "Stop Price",
+          "description": "Required executable stop-price expression. It is independent from the position\u0027s riskDistance."
+        },
+        "reduce": {
+          "$ref": "#/$defs/exitReduce"
+        }
+      },
+      "required": [
+        "stopPrice"
+      ],
+      "title": "Stop Loss",
+      "description": "One executable stop-loss rule in the ordered stopLosses collection. Position sizing and R-multiple prices use riskDistance instead."
+    },
+    "signalExit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "title": "Enabled",
+          "description": "Whether this signal-exit rule may execute."
+        },
+        "signal": {
+          "$ref": "#/$defs/signalAsParameter",
+          "title": "Signal",
+          "description": "Boolean signal definition for this exit rule."
+        },
+        "timing": {
+          "$ref": "#/$defs/signalTiming"
+        },
+        "reduce": {
+          "$ref": "#/$defs/exitReduce"
+        }
+      },
+      "required": [
+        "signal",
+        "timing"
+      ],
+      "title": "Signal Exit",
+      "description": "A signal-driven partial or full exit that may execute once per open position."
+    },
+    "takeProfit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "title": "Enabled",
+          "description": "Whether the strategy exits the position when price reaches the target price."
+        },
+        "targetPrice": {
+          "$ref": "#/$defs/seriesAsParameter",
+          "title": "Target Price",
+          "description": "Price expression for the profit target. It can be a constant, a raw price series, a named series, or an inline series expression."
+        },
+        "reduce": {
+          "$ref": "#/$defs/exitReduce"
+        }
+      },
+      "required": [
+        "targetPrice"
+      ],
+      "title": "Take Profit",
+      "description": "Profit-side configuration for a position. When enabled is true, the evaluated target price is used as the take-profit exit level."
+    },
+    "exitReduce": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 1,
+      "default": 1,
+      "title": "Position Reduction",
+      "description": "Fraction of the remaining position to close when this exit triggers. A value of 1 closes the full remaining position."
     },
     "seriesAsParameter": {
       "title": "Series Input (Flexible Expression)",
-      "description": "Represents an input that can be a constant, a raw price series, a previously defined named series, or an inline series expression.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer using SERIES_VALUE to reference a named series defined in top-level 'series'.\n2. Prefer full method objects (e.g., EMA, RSI) when parameters are customized.\n3. Use quote shorthand (e.g., \"CLOSE\") only for raw OHLCV inputs.\n4. Use indicator shorthand (e.g., \"EMA\") ONLY when the default parameters are intended exactly.\n5. Use plain numbers only for constant values.\n\nConsistency rule:\n- Prefer defining reusable logic in top-level 'series' and referencing it via SERIES_VALUE instead of repeating inline expressions.\n\nDiscouraged but valid:\n- Mixing multiple styles in the same strategy (e.g., sometimes using shorthand, sometimes full objects).\n- Using indicator shorthand when custom parameters are needed.\n\nThis flexibility exists for convenience, but AI-generated strategies should follow a consistent style using named series and explicit method definitions.",
+      "description": "Represents an input that can be a constant, a raw price series, a previously defined named series, or an inline series expression.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer using SERIES to reference a named series defined in top-level \u0027series\u0027.\n2. Prefer full method objects (e.g., EMA, RSI) when parameters are customized.\n3. Use quote shorthand (e.g., \"CLOSE\") only for raw OHLCV inputs.\n4. Use indicator shorthand (e.g., \"EMA\") ONLY when the default parameters are intended exactly.\n5. Use plain numbers only for constant values.\n\nConsistency rule:\n- Prefer defining reusable logic in top-level \u0027series\u0027 and referencing it via SERIES instead of repeating inline expressions.\n\nDiscouraged but valid:\n- Mixing multiple styles in the same strategy (e.g., sometimes using shorthand, sometimes full objects).\n- Using indicator shorthand when custom parameters are needed.\n\nThis flexibility exists for convenience, but AI-generated strategies should follow a consistent style using named series and explicit method definitions.",
       "oneOf": [
         {
           "type": "number",
@@ -227,6 +455,15 @@
             "VOLUME"
           ],
           "description": "Quote shorthand representing raw market data. Preferred only for direct price/volume inputs."
+        },
+        {
+          "type": "string",
+          "enum": [
+            "EQUITY",
+            "EQUITY_PERCENT",
+            "DRAWDOWN"
+          ],
+          "description": "Backtest account-state shorthand. EQUITY reads the account equity available at the current evaluation moment. EQUITY_PERCENT reads that equity as a percentage of initial capital. DRAWDOWN reads the account drawdown available at the current evaluation moment."
         },
         {
           "$ref": "#/$defs/series",
@@ -259,7 +496,7 @@
         },
         {
           "value": {
-            "method": "SERIES_VALUE",
+            "method": "SERIES",
             "params": {
               "name": "fast_ema"
             }
@@ -288,7 +525,7 @@
       "properties": {
         "method": {
           "type": "string",
-          "pattern": "^[A-Z_]+$",
+          "pattern": "^[A-Z][A-Z0-9_]*$",
           "title": "Method",
           "description": "Uppercase method name that identifies what this object does, such as SMA, RSI, CROSSOVER, or LINE."
         },
@@ -304,7 +541,7 @@
       "title": "Base Method Object",
       "description": "Base shape shared by Pludux method objects. Most series, signals, and plots are expressed as an object with a UPPERCASE method name and an optional params object."
     },
-    "quoteSeries": {
+    "quoteMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -326,7 +563,7 @@
       "title": "Quote Series",
       "description": "Built-in market data series from the current bar, such as OPEN, HIGH, LOW, CLOSE, or VOLUME."
     },
-    "seriesNodeSeries": {
+    "seriesMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -334,9 +571,9 @@
         {
           "properties": {
             "method": {
-              "const": "SERIES_NODE",
+              "const": "SERIES",
               "title": "Method",
-              "description": "Always use SERIES_NODE to refer to a named series definition itself."
+              "description": "Always use SERIES to reference a named series."
             },
             "params": {
               "type": "object",
@@ -353,7 +590,7 @@
                 "name"
               ],
               "title": "Parameters",
-              "description": "Parameters for the SERIES_NODE method.",
+              "description": "Parameters for the SERIES method.",
               "examples": [
                 {
                   "name": "bbands"
@@ -366,69 +603,18 @@
           ]
         }
       ],
-      "title": "Series Node",
-      "description": "References a previously defined named series as a series node. Use SERIES_NODE when another method needs the named series definition itself, such as selecting one output from a multi-output indicator. Do not use SERIES_NODE where a numeric value is expected.",
+      "title": "Series",
+      "description": "References a previously defined named series. At the current bar it evaluates the named series; for historical bars it reads the cached completed result.",
       "examples": [
         {
-          "method": "SERIES_NODE",
+          "method": "SERIES",
           "params": {
             "name": "bbands"
           }
         }
       ]
     },
-    "seriesValueSeries": {
-      "allOf": [
-        {
-          "$ref": "#/$defs/baseMethod"
-        },
-        {
-          "properties": {
-            "method": {
-              "const": "SERIES_VALUE",
-              "title": "Method",
-              "description": "Always use SERIES_VALUE to read the numeric output of a named series."
-            },
-            "params": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "name": {
-                  "type": "string",
-                  "pattern": "^[a-z][a-z0-9_]*$",
-                  "title": "Series Name",
-                  "description": "Name of a previously defined series in the top-level series object."
-                }
-              },
-              "required": [
-                "name"
-              ],
-              "title": "Parameters",
-              "description": "Parameters for the SERIES_VALUE method.",
-              "examples": [
-                {
-                  "name": "fast_ema"
-                }
-              ]
-            }
-          },
-          "required": [
-            "params"
-          ]
-        }
-      ],
-      "title": "Series Value",
-      "description": "References the evaluated output value of a previously defined named series at the current bar. Use SERIES_VALUE when a method needs a numeric series value, such as comparisons, arithmetic, and crossover signals.",
-      "examples": [
-        {
-          "method": "SERIES_VALUE",
-          "params": {
-            "name": "fast_ema"
-          }
-        }
-      ]
-    },
-    "selectOutputSeries": {
+    "selectOutputMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -460,7 +646,7 @@
                 "source": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Source Series",
-                  "description": "Source multi-output series node. Use a multi-output indicator directly, or use SERIES_NODE to refer to a named multi-output series. Do not use SERIES_VALUE here because SELECT_OUTPUT needs the series node, not its evaluated numeric value."
+                  "description": "Source multi-output series. Use a multi-output indicator directly, or use SERIES to refer to a named multi-output series."
                 }
               },
               "required": [
@@ -475,14 +661,14 @@
         }
       ],
       "title": "Select Output",
-      "description": "Selects one named output from a multi-output series node, such as Bollinger Bands, MACD, STOCH, or STOCH_RSI. The source should usually be a multi-output indicator definition directly, or a SERIES_NODE reference to a named multi-output series.",
+      "description": "Selects one named output from a multi-output series, such as Bollinger Bands, MACD, STOCH, or STOCH_RSI. The source should usually be a multi-output indicator definition directly, or a SERIES reference to a named multi-output series.",
       "examples": [
         {
           "method": "SELECT_OUTPUT",
           "params": {
             "output": "upper-band",
             "source": {
-              "method": "SERIES_NODE",
+              "method": "SERIES",
               "params": {
                 "name": "bbands"
               }
@@ -491,7 +677,7 @@
         }
       ]
     },
-    "lookbackSeries": {
+    "lookbackMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -531,7 +717,51 @@
       "title": "Lookback",
       "description": "Returns the value of a source series from a previous bar. For example, period 1 means one bar ago."
     },
-    "valueSeries": {
+    "inputMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "INPUT"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "title": "Label",
+                  "description": "Human-readable label for the input parameter, shown in the UI."
+                },
+                "representation": {
+                  "$ref": "#/$defs/valueRepresentation",
+                  "default": "Decimal",
+                  "title": "Representation",
+                  "description": "Value format constraint. Decimal (default) allows any floating-point number. SignedInteger restricts values to whole numbers including negative. UnsignedInteger restricts to non-negative whole numbers."
+                },
+                "value": {
+                  "type": "number",
+                  "title": "Value",
+                  "description": "The numeric value of the input. When representation is SignedInteger or UnsignedInteger, this value is normalized by the system (truncated toward zero, or clamped to zero for unsigned)."
+                }
+              },
+              "required": [
+                "value"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Strategy Input",
+      "description": "Defines an inline numeric input parameter. Backtests collect INPUT nodes from series and signals in traversal order and may override their values."
+    },
+    "valueMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -564,7 +794,7 @@
       "title": "Value",
       "description": "Wraps a constant number as a series object."
     },
-    "dataSeries": {
+    "dataMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -597,7 +827,82 @@
       "title": "Data Field",
       "description": "Reads a custom data field from the input dataset, such as a user-provided column in the historical data file."
     },
-    "smaSeries": {
+    "equityMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "EQUITY"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false
+            }
+          }
+        }
+      ],
+      "title": "Equity",
+      "description": "Reads the account equity available at the current evaluation moment.",
+      "examples": [
+        {
+          "method": "EQUITY"
+        }
+      ]
+    },
+    "equityPercentMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "EQUITY_PERCENT"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false
+            }
+          }
+        }
+      ],
+      "title": "Equity Percent",
+      "description": "Reads account equity available at the current evaluation moment as a percentage of initial capital.",
+      "examples": [
+        {
+          "method": "EQUITY_PERCENT"
+        }
+      ]
+    },
+    "drawdownMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "DRAWDOWN"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false
+            }
+          }
+        }
+      ],
+      "title": "Drawdown",
+      "description": "Reads the account drawdown available at the current evaluation moment.",
+      "examples": [
+        {
+          "method": "DRAWDOWN"
+        }
+      ]
+    },
+    "smaMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -612,7 +917,7 @@
               "additionalProperties": false,
               "properties": {
                 "period": {
-                  "type": "integer",
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Period",
                   "description": "Lookback period used by the indicator."
                 },
@@ -627,7 +932,14 @@
           "default": {
             "method": "SMA",
             "params": {
-              "period": 14,
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
               "source": "CLOSE"
             }
           }
@@ -636,7 +948,7 @@
       "title": "Simple Moving Average",
       "description": "Calculates the simple moving average of a source series over a lookback period."
     },
-    "emaSeries": {
+    "emaMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -651,7 +963,7 @@
               "additionalProperties": false,
               "properties": {
                 "period": {
-                  "type": "integer",
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Period",
                   "description": "Lookback period used by the indicator."
                 },
@@ -666,7 +978,14 @@
           "default": {
             "method": "EMA",
             "params": {
-              "period": 14,
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
               "source": "CLOSE"
             }
           }
@@ -675,7 +994,7 @@
       "title": "Exponential Moving Average",
       "description": "Calculates the exponential moving average of a source series over a lookback period."
     },
-    "rmaSeries": {
+    "rmaMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -690,7 +1009,7 @@
               "additionalProperties": false,
               "properties": {
                 "period": {
-                  "type": "integer",
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Period",
                   "description": "Lookback period used by the indicator."
                 },
@@ -705,16 +1024,23 @@
           "default": {
             "method": "RMA",
             "params": {
-              "period": 14,
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
               "source": "CLOSE"
             }
           }
         }
       ],
       "title": "Running Moving Average",
-      "description": "Calculates Wilder's running moving average of a source series over a lookback period."
+      "description": "Calculates Wilder\u0027s running moving average of a source series over a lookback period."
     },
-    "wmaSeries": {
+    "wmaMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -729,7 +1055,7 @@
               "additionalProperties": false,
               "properties": {
                 "period": {
-                  "type": "integer",
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Period",
                   "description": "Lookback period used by the indicator."
                 },
@@ -744,7 +1070,14 @@
           "default": {
             "method": "WMA",
             "params": {
-              "period": 14,
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
               "source": "CLOSE"
             }
           }
@@ -753,7 +1086,7 @@
       "title": "Weighted Moving Average",
       "description": "Calculates the weighted moving average of a source series over a lookback period."
     },
-    "hmaSeries": {
+    "hmaMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -768,7 +1101,7 @@
               "additionalProperties": false,
               "properties": {
                 "period": {
-                  "type": "integer",
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Period",
                   "description": "Lookback period used by the indicator."
                 },
@@ -783,7 +1116,14 @@
           "default": {
             "method": "HMA",
             "params": {
-              "period": 14,
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
               "source": "CLOSE"
             }
           }
@@ -792,28 +1132,28 @@
       "title": "Hull Moving Average",
       "description": "Calculates the Hull moving average of a source series over a lookback period."
     },
-    "maSeries": {
+    "maMethod": {
       "oneOf": [
         {
-          "$ref": "#/$defs/smaSeries"
+          "$ref": "#/$defs/smaMethod"
         },
         {
-          "$ref": "#/$defs/emaSeries"
+          "$ref": "#/$defs/emaMethod"
         },
         {
-          "$ref": "#/$defs/rmaSeries"
+          "$ref": "#/$defs/rmaMethod"
         },
         {
-          "$ref": "#/$defs/wmaSeries"
+          "$ref": "#/$defs/wmaMethod"
         },
         {
-          "$ref": "#/$defs/hmaSeries"
+          "$ref": "#/$defs/hmaMethod"
         }
       ],
       "title": "Moving Average Series",
       "description": "Union of supported moving-average method objects."
     },
-    "rsiSeries": {
+    "rsiMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -828,7 +1168,7 @@
               "additionalProperties": false,
               "properties": {
                 "period": {
-                  "type": "integer",
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Period",
                   "description": "Lookback period used by the indicator."
                 },
@@ -843,7 +1183,14 @@
           "default": {
             "method": "RSI",
             "params": {
-              "period": 14,
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
               "source": "CLOSE"
             }
           }
@@ -852,7 +1199,7 @@
       "title": "Relative Strength Index",
       "description": "Calculates the RSI oscillator from a source series."
     },
-    "atrSeries": {
+    "atrMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -867,7 +1214,7 @@
               "additionalProperties": false,
               "properties": {
                 "period": {
-                  "type": "integer",
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Period",
                   "description": "Lookback period used for ATR."
                 },
@@ -888,7 +1235,14 @@
           "default": {
             "method": "ATR",
             "params": {
-              "period": 14,
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
               "maSmoothingType": "RMA"
             }
           }
@@ -897,7 +1251,7 @@
       "title": "Average True Range",
       "description": "Calculates ATR as a volatility measure using a chosen smoothing method."
     },
-    "stddevSeries": {
+    "stddevMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -912,7 +1266,7 @@
               "additionalProperties": false,
               "properties": {
                 "period": {
-                  "type": "integer",
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Period",
                   "description": "Rolling window length for the standard deviation calculation."
                 },
@@ -928,21 +1282,223 @@
                   "title": "Source",
                   "description": "Source series whose dispersion is measured."
                 }
-              },
-              "required": [
-                "period"
-              ]
+              }
             }
           },
-          "required": [
-            "params"
-          ]
+          "default": {
+            "method": "STDDEV",
+            "params": {
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 20
+                }
+              },
+              "source": "CLOSE"
+            }
+          }
         }
       ],
       "title": "Standard Deviation",
       "description": "Calculates rolling standard deviation of a source series."
     },
-    "bbSeries": {
+    "highestMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "HIGHEST"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Period",
+                  "description": "Lookback period used to compute the highest value."
+                },
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Source",
+                  "description": "Source series used as input."
+                }
+              }
+            }
+          },
+          "default": {
+            "method": "HIGHEST",
+            "params": {
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
+              "source": "CLOSE"
+            }
+          }
+        }
+      ],
+      "title": "Highest",
+      "description": "Calculates the highest value of a source series over a lookback period."
+    },
+    "lowestMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "LOWEST"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Period",
+                  "description": "Lookback period used to compute the lowest value."
+                },
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Source",
+                  "description": "Source series used as input."
+                }
+              }
+            }
+          },
+          "default": {
+            "method": "LOWEST",
+            "params": {
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
+              "source": "CLOSE"
+            }
+          }
+        }
+      ],
+      "title": "Lowest",
+      "description": "Calculates the lowest value of a source series over a lookback period."
+    },
+    "rocMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "ROC"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Period",
+                  "description": "Lookback period used for the rate-of-change calculation."
+                },
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Source",
+                  "description": "Source series used as input."
+                }
+              }
+            }
+          },
+          "default": {
+            "method": "ROC",
+            "params": {
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
+              "source": "CLOSE"
+            }
+          }
+        }
+      ],
+      "title": "Rate of Change",
+      "description": "Calculates percentage rate of change for a source series over a lookback period."
+    },
+    "rvolMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "RVOL"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Period",
+                  "description": "Lookback period used to compute relative volume."
+                }
+              }
+            }
+          },
+          "default": {
+            "method": "RVOL",
+            "params": {
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              }
+            }
+          }
+        }
+      ],
+      "title": "Relative Volume",
+      "description": "Calculates relative volume by comparing current volume to average volume over a lookback period."
+    },
+    "trMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "TR"
+            }
+          }
+        }
+      ],
+      "title": "True Range",
+      "description": "Calculates true range for the current bar."
+    },
+    "bbMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -968,12 +1524,12 @@
                   "description": "Moving average method used for the Bollinger Bands middle line."
                 },
                 "period": {
-                  "type": "integer",
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Period",
                   "description": "Lookback period for the middle band and standard deviation."
                 },
                 "stddev": {
-                  "type": "number",
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Standard Deviation Multiplier",
                   "description": "Number of standard deviations used to place the upper and lower bands."
                 },
@@ -988,8 +1544,22 @@
           "default": {
             "method": "BB",
             "params": {
-              "period": 20,
-              "stddev": 2.0,
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 20
+                }
+              },
+              "stddev": {
+                "method": "INPUT",
+                "params": {
+                  "label": "StdDev",
+                  "representation": "Decimal",
+                  "value": 2
+                }
+              },
               "maType": "SMA",
               "maSource": "CLOSE"
             }
@@ -999,7 +1569,7 @@
       "title": "Bollinger Bands",
       "description": "Calculates a multi-output Bollinger Bands series with upper, middle, and lower bands."
     },
-    "kcSeries": {
+    "kcMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1018,9 +1588,9 @@
                   "title": "maSource",
                   "description": "Source series used for the Keltner Channel center line."
                 },
-                "maPeriod": {
-                  "type": "integer",
-                  "title": "maPeriod",
+                "period": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Period",
                   "description": "Lookback period for the center-line moving average."
                 },
                 "maMethodType": {
@@ -1044,13 +1614,13 @@
                   "description": "Volatility method used for the channel width. ATR uses average true range, TR uses true range, and RangeHighLow uses raw high-low range."
                 },
                 "bandAtrPeriod": {
-                  "type": "integer",
-                  "title": "bandAtrPeriod",
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Band ATR Period",
                   "description": "ATR period used when bandMethodType is ATR."
                 },
                 "multiplier": {
-                  "type": "number",
-                  "title": "multiplier",
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Multiplier",
                   "description": "Multiplier applied to the band width."
                 }
               }
@@ -1060,11 +1630,32 @@
             "method": "KC",
             "params": {
               "maSource": "CLOSE",
-              "maPeriod": 20,
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 20
+                }
+              },
               "maMethodType": "SMA",
               "bandMethodType": "ATR",
-              "bandAtrPeriod": 14,
-              "multiplier": 1.5
+              "bandAtrPeriod": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Band ATR Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
+              "multiplier": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Multiplier",
+                  "representation": "Decimal",
+                  "value": 1.5
+                }
+              }
             }
           }
         }
@@ -1072,7 +1663,7 @@
       "title": "Keltner Channel",
       "description": "Calculates a multi-output Keltner Channel series using a moving average center line and a volatility band method."
     },
-    "donchianChannelSeries": {
+    "donchianChannelMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1087,7 +1678,7 @@
               "additionalProperties": false,
               "properties": {
                 "period": {
-                  "type": "integer",
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Period",
                   "description": "Lookback period used to calculate the Donchian Channel."
                 }
@@ -1097,7 +1688,14 @@
           "default": {
             "method": "DC",
             "params": {
-              "period": 20
+              "period": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Period",
+                  "representation": "UnsignedInteger",
+                  "value": 20
+                }
+              }
             }
           }
         }
@@ -1105,7 +1703,7 @@
       "title": "Donchian Channel",
       "description": "Calculates a multi-output Donchian Channel series with upper and lower bands based on the highest high and lowest low over a lookback period."
     },
-    "macdSeries": {
+    "macdMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1119,18 +1717,18 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
-                "fast": {
-                  "type": "integer",
+                "fastPeriod": {
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Fast",
                   "description": "Fast moving-average period."
                 },
-                "slow": {
-                  "type": "integer",
+                "slowPeriod": {
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Slow",
                   "description": "Slow moving-average period."
                 },
-                "signal": {
-                  "type": "integer",
+                "signalPeriod": {
+                  "$ref": "#/$defs/seriesAsParameter",
                   "title": "Signal Period",
                   "description": "Signal-line period."
                 },
@@ -1145,9 +1743,30 @@
           "default": {
             "method": "MACD",
             "params": {
-              "fast": 12,
-              "slow": 26,
-              "signal": 9,
+              "fastPeriod": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Fast Period",
+                  "representation": "UnsignedInteger",
+                  "value": 12
+                }
+              },
+              "slowPeriod": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Slow Period",
+                  "representation": "UnsignedInteger",
+                  "value": 26
+                }
+              },
+              "signalPeriod": {
+                "method": "INPUT",
+                "params": {
+                  "label": "Signal Period",
+                  "representation": "UnsignedInteger",
+                  "value": 9
+                }
+              },
               "source": "CLOSE"
             }
           }
@@ -1156,7 +1775,7 @@
       "title": "MACD",
       "description": "Calculates a multi-output MACD series with MACD line, signal line, and histogram."
     },
-    "stochSeries": {
+    "stochMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1171,18 +1790,18 @@
               "additionalProperties": false,
               "properties": {
                 "kPeriod": {
-                  "type": "integer",
-                  "title": "kPeriod",
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "K Period",
                   "description": "Lookback period used to compute raw %K."
                 },
                 "kSmooth": {
-                  "type": "integer",
-                  "title": "kSmooth",
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "K Smooth",
                   "description": "Smoothing period applied to %K."
                 },
                 "dPeriod": {
-                  "type": "integer",
-                  "title": "dPeriod",
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "D Period",
                   "description": "Smoothing period used to compute %D."
                 },
                 "high": {
@@ -1206,9 +1825,30 @@
           "default": {
             "method": "STOCH",
             "params": {
-              "kPeriod": 14,
-              "kSmooth": 3,
-              "dPeriod": 3,
+              "kPeriod": {
+                "method": "INPUT",
+                "params": {
+                  "label": "K Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
+              "kSmooth": {
+                "method": "INPUT",
+                "params": {
+                  "label": "K Smooth",
+                  "representation": "UnsignedInteger",
+                  "value": 3
+                }
+              },
+              "dPeriod": {
+                "method": "INPUT",
+                "params": {
+                  "label": "D Period",
+                  "representation": "UnsignedInteger",
+                  "value": 3
+                }
+              },
               "high": "HIGH",
               "low": "LOW",
               "close": "CLOSE"
@@ -1219,7 +1859,7 @@
       "title": "Stochastic Oscillator",
       "description": "Calculates a multi-output stochastic oscillator with %K and %D outputs."
     },
-    "stochRsiSeries": {
+    "stochRsiMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1234,28 +1874,28 @@
               "additionalProperties": false,
               "properties": {
                 "kPeriod": {
-                  "type": "integer",
-                  "title": "kPeriod",
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "K Period",
                   "description": "Lookback period used to compute raw stochastic values on RSI."
                 },
                 "kSmooth": {
-                  "type": "integer",
-                  "title": "kSmooth",
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "K Smooth",
                   "description": "Smoothing period applied to %K."
                 },
                 "dPeriod": {
-                  "type": "integer",
-                  "title": "dPeriod",
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "D Period",
                   "description": "Smoothing period used to compute %D."
                 },
-                "rsiInput": {
+                "rsiSource": {
                   "$ref": "#/$defs/seriesAsParameter",
-                  "title": "rsiInput",
+                  "title": "rsiSource",
                   "description": "Source series used to calculate RSI before applying stochastic."
                 },
                 "rsiPeriod": {
-                  "type": "integer",
-                  "title": "rsiPeriod",
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "RSI Period",
                   "description": "RSI lookback period."
                 }
               }
@@ -1264,11 +1904,39 @@
           "default": {
             "method": "STOCH_RSI",
             "params": {
-              "kPeriod": 14,
-              "kSmooth": 3,
-              "dPeriod": 3,
-              "rsiInput": "CLOSE",
-              "rsiPeriod": 14
+              "kPeriod": {
+                "method": "INPUT",
+                "params": {
+                  "label": "K Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              },
+              "kSmooth": {
+                "method": "INPUT",
+                "params": {
+                  "label": "K Smooth",
+                  "representation": "UnsignedInteger",
+                  "value": 3
+                }
+              },
+              "dPeriod": {
+                "method": "INPUT",
+                "params": {
+                  "label": "D Period",
+                  "representation": "UnsignedInteger",
+                  "value": 3
+                }
+              },
+              "rsiSource": "CLOSE",
+              "rsiPeriod": {
+                "method": "INPUT",
+                "params": {
+                  "label": "RSI Period",
+                  "representation": "UnsignedInteger",
+                  "value": 14
+                }
+              }
             }
           }
         }
@@ -1276,7 +1944,7 @@
       "title": "Stochastic RSI",
       "description": "Calculates a multi-output stochastic RSI oscillator with %K and %D outputs."
     },
-    "addSeries": {
+    "addMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1293,12 +1961,12 @@
                 "augend": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Augend",
-                  "description": "First numeric input to add. Prefer SERIES_VALUE for named series and plain numbers for constants."
+                  "description": "First numeric input to add. Prefer SERIES for named series and plain numbers for constants."
                 },
                 "addend": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Addend",
-                  "description": "Second numeric input to add. Prefer SERIES_VALUE for named series and plain numbers for constants."
+                  "description": "Second numeric input to add. Prefer SERIES for named series and plain numbers for constants."
                 }
               },
               "required": [
@@ -1306,7 +1974,7 @@
                 "addend"
               ],
               "title": "Parameters",
-              "description": "Parameters for addition.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer SERIES_VALUE for named series inputs.\n2. Prefer plain numbers for constants.\n3. Prefer naming reusable arithmetic expressions in top-level 'series' instead of repeating them inline."
+              "description": "Parameters for addition.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer SERIES for named series inputs.\n2. Prefer plain numbers for constants.\n3. Prefer naming reusable arithmetic expressions in top-level \u0027series\u0027 instead of repeating them inline."
             }
           },
           "required": [
@@ -1321,7 +1989,7 @@
           "method": "ADD",
           "params": {
             "augend": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES",
               "params": {
                 "name": "fast_ema"
               }
@@ -1331,7 +1999,7 @@
         }
       ]
     },
-    "subtractSeries": {
+    "subtractMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1348,12 +2016,12 @@
                 "minuend": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Minuend",
-                  "description": "Value to subtract from. Prefer SERIES_VALUE for named series."
+                  "description": "Value to subtract from. Prefer SERIES for named series."
                 },
                 "subtrahend": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Subtrahend",
-                  "description": "Value to subtract. Prefer SERIES_VALUE for named series and numbers for constants."
+                  "description": "Value to subtract. Prefer SERIES for named series and numbers for constants."
                 }
               },
               "required": [
@@ -1377,7 +2045,7 @@
           "params": {
             "minuend": "CLOSE",
             "subtrahend": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES",
               "params": {
                 "name": "slow_ema"
               }
@@ -1386,7 +2054,7 @@
         }
       ]
     },
-    "multiplySeries": {
+    "multiplyMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1416,7 +2084,7 @@
                 "multiplier"
               ],
               "title": "Parameters",
-              "description": "Parameters for multiplication. Prefer SERIES_VALUE for named series and plain numbers for constants such as 2, 0.5, or 100."
+              "description": "Parameters for multiplication. Prefer SERIES for named series and plain numbers for constants such as 2, 0.5, or 100."
             }
           },
           "required": [
@@ -1431,7 +2099,7 @@
           "method": "MULTIPLY",
           "params": {
             "multiplicand": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES",
               "params": {
                 "name": "atr_14"
               }
@@ -1441,7 +2109,7 @@
         }
       ]
     },
-    "divideSeries": {
+    "divideMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1471,7 +2139,7 @@
                 "divisor"
               ],
               "title": "Parameters",
-              "description": "Parameters for division. Prefer SERIES_VALUE for named series and plain numbers for constants."
+              "description": "Parameters for division. Prefer SERIES for named series and plain numbers for constants."
             }
           },
           "required": [
@@ -1486,7 +2154,7 @@
           "method": "DIVIDE",
           "params": {
             "dividend": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES",
               "params": {
                 "name": "price_spread"
               }
@@ -1496,7 +2164,7 @@
         }
       ]
     },
-    "negateSeries": {
+    "negateMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1513,7 +2181,7 @@
                 "operand": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Operand",
-                  "description": "Numeric value to multiply by -1. Prefer SERIES_VALUE for named series."
+                  "description": "Numeric value to multiply by -1. Prefer SERIES for named series."
                 }
               },
               "required": [
@@ -1535,7 +2203,7 @@
           "method": "NEGATE",
           "params": {
             "operand": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES",
               "params": {
                 "name": "momentum"
               }
@@ -1544,7 +2212,7 @@
         }
       ]
     },
-    "sqrtSeries": {
+    "sqrtMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1583,7 +2251,7 @@
           "method": "SQRT",
           "params": {
             "operand": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES",
               "params": {
                 "name": "variance_like_series"
               }
@@ -1592,7 +2260,7 @@
         }
       ]
     },
-    "changeSeries": {
+    "changeMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1609,11 +2277,11 @@
                 "source": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Source",
-                  "description": "Numeric source whose bar-to-bar change is calculated. Prefer SERIES_VALUE for named series and quote shorthand for raw OHLCV inputs."
+                  "description": "Numeric source whose bar-to-bar change is calculated. Prefer SERIES for named series and quote shorthand for raw OHLCV inputs."
                 }
               },
               "title": "Parameters",
-              "description": "Parameters for bar-to-bar change. Prefer defining reusable source logic in top-level 'series' when the same source is used in multiple places."
+              "description": "Parameters for bar-to-bar change. Prefer defining reusable source logic in top-level \u0027series\u0027 when the same source is used in multiple places."
             }
           }
         }
@@ -1631,7 +2299,7 @@
           "method": "CHANGE",
           "params": {
             "source": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES",
               "params": {
                 "name": "fast_ema"
               }
@@ -1640,7 +2308,7 @@
         }
       ]
     },
-    "absDiffSeries": {
+    "absDiffMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1670,7 +2338,7 @@
                 "subtrahend"
               ],
               "title": "Parameters",
-              "description": "Parameters for absolute difference. Prefer SERIES_VALUE for named series and numbers for constants."
+              "description": "Parameters for absolute difference. Prefer SERIES for named series and numbers for constants."
             }
           },
           "required": [
@@ -1686,7 +2354,7 @@
           "params": {
             "minuend": "CLOSE",
             "subtrahend": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES",
               "params": {
                 "name": "slow_ema"
               }
@@ -1695,7 +2363,7 @@
         }
       ]
     },
-    "percentageSeries": {
+    "percentageMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1719,16 +2387,16 @@
                     }
                   ],
                   "title": "Base",
-                  "description": "Base numeric input that the percentage is applied to. Prefer quote shorthand for direct OHLCV input and SERIES_VALUE for named series."
+                  "description": "Base numeric input that the percentage is applied to. Prefer quote shorthand for direct OHLCV input and SERIES for named series."
                 },
-                "percentage": {
+                "percent": {
                   "type": "number",
-                  "title": "Percentage",
+                  "title": "Percent",
                   "description": "Percentage amount to apply, such as 2 for 2%."
                 }
               },
               "required": [
-                "percentage"
+                "percent"
               ],
               "title": "Parameters",
               "description": "Parameters for percentage-of-base calculation. This is commonly used for offsets, thresholds, and derived levels."
@@ -1746,106 +2414,483 @@
           "method": "PERCENTAGE",
           "params": {
             "base": "CLOSE",
-            "percentage": 2
+            "percent": 2
           }
         },
         {
           "method": "PERCENTAGE",
           "params": {
             "base": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES",
               "params": {
                 "name": "atr_14"
               }
             },
-            "percentage": 50
+            "percent": 50
           }
         }
       ]
     },
+    "stopTargetAmountMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "SL_AMOUNT",
+                "TP_AMOUNT"
+              ]
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "amount": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Amount",
+                  "description": "Absolute price distance from the entry price."
+                }
+              },
+              "required": [
+                "amount"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Stop/Target Amount",
+      "description": "Calculates an absolute stop-loss or take-profit price from entry price and fixed amount."
+    },
+    "stopTargetPercentageMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "SL_PERCENT",
+                "TP_PERCENT"
+              ]
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "percent": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Percent",
+                  "description": "Percentage distance from the entry price, such as 10 for 10%."
+                }
+              },
+              "required": [
+                "percent"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Stop/Target Percentage",
+      "description": "Calculates an absolute stop-loss or take-profit price from entry price and percentage distance."
+    },
+    "stopTargetAtrMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "SL_ATR",
+                "TP_ATR"
+              ]
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Period",
+                  "description": "Lookback period used for ATR."
+                },
+                "multiplier": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Multiplier",
+                  "description": "ATR distance multiplier."
+                },
+                "maSmoothingType": {
+                  "enum": [
+                    "SMA",
+                    "EMA",
+                    "RMA",
+                    "WMA",
+                    "HMA"
+                  ],
+                  "title": "Smoothing Type",
+                  "description": "Moving-average smoothing method used to smooth true range into ATR."
+                }
+              },
+              "required": [
+                "period",
+                "multiplier"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Stop/Target ATR",
+      "description": "Calculates an absolute stop-loss or take-profit price from entry price and ATR distance."
+    },
+    "riskDistanceAmountMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "R_DISTANCE_AMOUNT"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "amount": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Amount",
+                  "description": "Positive absolute 1R price distance."
+                }
+              },
+              "required": [
+                "amount"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Risk Distance Amount"
+    },
+    "riskDistancePercentageMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "R_DISTANCE_PERCENTAGE"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "percentage": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Percentage",
+                  "description": "Positive percentage of the active position reference price."
+                }
+              },
+              "required": [
+                "percentage"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Risk Distance Percentage"
+    },
+    "riskDistanceAtrMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "R_DISTANCE_ATR"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                },
+                "multiplier": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                },
+                "maSmoothingType": {
+                  "enum": [
+                    "SMA",
+                    "EMA",
+                    "RMA",
+                    "WMA",
+                    "HMA"
+                  ]
+                }
+              },
+              "required": [
+                "period",
+                "multiplier"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Risk Distance ATR"
+    },
+    "stopLoss1RMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "SL_1R"
+            },
+            "params": false
+          }
+        }
+      ],
+      "title": "Stop Loss 1R",
+      "description": "Stop price exactly one explicit riskDistance from the configured reference price."
+    },
+    "takeProfitRMultipleMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "TP_R_MULTIPLE"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "multiple": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Multiple",
+                  "description": "Positive reward multiple of the explicit riskDistance."
+                }
+              },
+              "required": [
+                "multiple"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Take Profit R Multiple",
+      "description": "Calculates an absolute take-profit price from the active reference price and explicit riskDistance."
+    },
+    "positionContextPriceMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "INITIAL_ENTRY_PRICE",
+                "LATEST_ENTRY_PRICE",
+                "AVERAGE_PRICE",
+                "STOP_TARGET_REF_PRICE",
+                "POSITION_DIRECTION"
+              ]
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false
+            }
+          }
+        }
+      ],
+      "title": "Position Context Price",
+      "description": "Reads a scoped backtest position value during stop-loss and take-profit price evaluation. Outside active position-price context, the value is NaN."
+    },
+    "stopTargetReferencePrice": {
+      "type": "string",
+      "enum": [
+        "LATEST_ENTRY_PRICE",
+        "AVERAGE_PRICE",
+        "INITIAL_ENTRY_PRICE"
+      ],
+      "description": "Reference price used when evaluating stop-loss and take-profit methods during pyramiding."
+    },
     "series": {
       "oneOf": [
         {
-          "$ref": "#/$defs/seriesNodeSeries"
+          "$ref": "#/$defs/seriesMethod"
         },
         {
-          "$ref": "#/$defs/seriesValueSeries"
+          "$ref": "#/$defs/selectOutputMethod"
         },
         {
-          "$ref": "#/$defs/selectOutputSeries"
+          "$ref": "#/$defs/lookbackMethod"
         },
         {
-          "$ref": "#/$defs/lookbackSeries"
+          "$ref": "#/$defs/inputMethod"
         },
         {
-          "$ref": "#/$defs/quoteSeries"
+          "$ref": "#/$defs/quoteMethod"
         },
         {
-          "$ref": "#/$defs/valueSeries"
+          "$ref": "#/$defs/valueMethod"
         },
         {
-          "$ref": "#/$defs/dataSeries"
+          "$ref": "#/$defs/dataMethod"
         },
         {
-          "$ref": "#/$defs/maSeries"
+          "$ref": "#/$defs/equityMethod"
         },
         {
-          "$ref": "#/$defs/rsiSeries"
+          "$ref": "#/$defs/equityPercentMethod"
         },
         {
-          "$ref": "#/$defs/atrSeries"
+          "$ref": "#/$defs/drawdownMethod"
         },
         {
-          "$ref": "#/$defs/stddevSeries"
+          "$ref": "#/$defs/maMethod"
         },
         {
-          "$ref": "#/$defs/bbSeries"
+          "$ref": "#/$defs/rsiMethod"
         },
         {
-          "$ref": "#/$defs/kcSeries"
+          "$ref": "#/$defs/atrMethod"
         },
         {
-          "$ref": "#/$defs/donchianChannelSeries"
+          "$ref": "#/$defs/stddevMethod"
         },
         {
-          "$ref": "#/$defs/macdSeries"
+          "$ref": "#/$defs/highestMethod"
         },
         {
-          "$ref": "#/$defs/stochSeries"
+          "$ref": "#/$defs/lowestMethod"
         },
         {
-          "$ref": "#/$defs/stochRsiSeries"
+          "$ref": "#/$defs/rocMethod"
         },
         {
-          "$ref": "#/$defs/addSeries"
+          "$ref": "#/$defs/rvolMethod"
         },
         {
-          "$ref": "#/$defs/subtractSeries"
+          "$ref": "#/$defs/trMethod"
         },
         {
-          "$ref": "#/$defs/multiplySeries"
+          "$ref": "#/$defs/bbMethod"
         },
         {
-          "$ref": "#/$defs/divideSeries"
+          "$ref": "#/$defs/kcMethod"
         },
         {
-          "$ref": "#/$defs/negateSeries"
+          "$ref": "#/$defs/donchianChannelMethod"
         },
         {
-          "$ref": "#/$defs/sqrtSeries"
+          "$ref": "#/$defs/macdMethod"
         },
         {
-          "$ref": "#/$defs/changeSeries"
+          "$ref": "#/$defs/stochMethod"
         },
         {
-          "$ref": "#/$defs/absDiffSeries"
+          "$ref": "#/$defs/stochRsiMethod"
         },
         {
-          "$ref": "#/$defs/percentageSeries"
+          "$ref": "#/$defs/addMethod"
+        },
+        {
+          "$ref": "#/$defs/subtractMethod"
+        },
+        {
+          "$ref": "#/$defs/multiplyMethod"
+        },
+        {
+          "$ref": "#/$defs/divideMethod"
+        },
+        {
+          "$ref": "#/$defs/negateMethod"
+        },
+        {
+          "$ref": "#/$defs/sqrtMethod"
+        },
+        {
+          "$ref": "#/$defs/changeMethod"
+        },
+        {
+          "$ref": "#/$defs/absDiffMethod"
+        },
+        {
+          "$ref": "#/$defs/percentageMethod"
+        },
+        {
+          "$ref": "#/$defs/stopTargetAmountMethod"
+        },
+        {
+          "$ref": "#/$defs/stopTargetPercentageMethod"
+        },
+        {
+          "$ref": "#/$defs/stopTargetAtrMethod"
+        },
+        {
+          "$ref": "#/$defs/stopLoss1RMethod"
+        },
+        {
+          "$ref": "#/$defs/takeProfitRMultipleMethod"
+        },
+        {
+          "$ref": "#/$defs/positionContextPriceMethod"
+        },
+        {
+          "$ref": "#/$defs/crossMethod"
+        },
+        {
+          "$ref": "#/$defs/compositeConditionMethod"
+        },
+        {
+          "$ref": "#/$defs/comparisonMethod"
+        },
+        {
+          "$ref": "#/$defs/fixedMethod"
+        },
+        {
+          "$ref": "#/$defs/binaryLogicalMethod"
+        },
+        {
+          "$ref": "#/$defs/unaryLogicalMethod"
         }
       ],
       "title": "Series Definition",
-      "description": "Any valid Pludux series definition. This can be a raw market series, indicator, transformation, arithmetic series, SELECT_OUTPUT chain, SERIES_NODE reference, or SERIES_VALUE reference."
+      "description": "Any valid Pludux series definition. This can be a raw market series, indicator, transformation, arithmetic series, SELECT_OUTPUT chain, SERIES reference, or a signal method used as a numeric series. When a signal method is used in series context, true is coerced to 1 and false is coerced to 0."
     },
     "signalAsParameter": {
       "oneOf": [
@@ -1859,7 +2904,7 @@
       "title": "Signal Parameter",
       "description": "A boolean input accepted by entry, exit, and logical signal methods. It can be a signal object or a literal true or false."
     },
-    "compositeConditionSignal": {
+    "compositeConditionMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1899,7 +2944,7 @@
       "title": "Composite Signal",
       "description": "Combines one or more signals into a grouped condition using ALL_OF or ANY_OF."
     },
-    "comparisonSignal": {
+    "comparisonMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1925,12 +2970,12 @@
                 "target": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Target",
-                  "description": "Left-hand numeric input being compared. For AI-generated strategies, prefer SERIES_VALUE when referring to a previously defined named series. Raw quote shorthand like \"CLOSE\" is fine for direct market inputs. Avoid repeating complex inline indicator expressions here if they can be defined once in top-level 'series' and reused."
+                  "description": "Left-hand numeric input being compared. For AI-generated strategies, prefer SERIES when referring to a previously defined named series. Raw quote shorthand like \"CLOSE\" is fine for direct market inputs. Avoid repeating complex inline indicator expressions here if they can be defined once in top-level \u0027series\u0027 and reused."
                 },
                 "threshold": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Threshold",
-                  "description": "Right-hand numeric input used as the comparison reference. This can be a constant number, raw quote shorthand, another indicator output, or SERIES_VALUE. Prefer constants for fixed thresholds such as 30, 50, or 70. Prefer SERIES_VALUE when the threshold comes from another named series."
+                  "description": "Right-hand numeric input used as the comparison reference. This can be a constant number, raw quote shorthand, another indicator output, or SERIES. Prefer constants for fixed thresholds such as 30, 50, or 70. Prefer SERIES when the threshold comes from another named series."
                 }
               },
               "required": [
@@ -1938,7 +2983,7 @@
                 "threshold"
               ],
               "title": "Parameters",
-              "description": "Parameters for a numeric comparison signal.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer SERIES_VALUE when either side refers to a named series.\n2. Prefer plain numbers for fixed thresholds.\n3. Prefer quote shorthand only for direct OHLCV inputs.\n4. Prefer reusing named series instead of repeating inline indicator expressions.\n\nDiscouraged but valid:\n- Comparing a complex inline indicator on one side when the same logic is reused elsewhere.\n- Mixing shorthand and nested styles inconsistently across the same strategy."
+              "description": "Parameters for a numeric comparison signal.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer SERIES when either side refers to a named series.\n2. Prefer plain numbers for fixed thresholds.\n3. Prefer quote shorthand only for direct OHLCV inputs.\n4. Prefer reusing named series instead of repeating inline indicator expressions.\n\nDiscouraged but valid:\n- Comparing a complex inline indicator on one side when the same logic is reused elsewhere.\n- Mixing shorthand and nested styles inconsistently across the same strategy."
             }
           },
           "required": [
@@ -1947,13 +2992,13 @@
         }
       ],
       "title": "Comparison Signal",
-      "description": "Boolean signal that compares two numeric values or series over time. Use this for threshold logic such as RSI < 30, CLOSE > EMA, or one named series compared to another.",
+      "description": "Boolean signal that compares two numeric values or series over time. Use this for threshold logic such as RSI \u003c 30, CLOSE \u003e EMA, or one named series compared to another.",
       "examples": [
         {
           "method": "LESS_EQUAL",
           "params": {
             "target": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES",
               "params": {
                 "name": "rsi_14"
               }
@@ -1966,7 +3011,7 @@
           "params": {
             "target": "CLOSE",
             "threshold": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES",
               "params": {
                 "name": "fast_ema"
               }
@@ -1975,7 +3020,7 @@
         }
       ]
     },
-    "crossSignal": {
+    "crossMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -1997,12 +3042,12 @@
                 "value": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Value",
-                  "description": "The changing numeric series being tested for a cross. For AI-generated strategies, this should usually be a price source, an indicator output, or SERIES_VALUE referring to a named series."
+                  "description": "The changing numeric series being tested for a cross. For AI-generated strategies, this should usually be a price source, an indicator output, or SERIES referring to a named series."
                 },
                 "baseline": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Baseline",
-                  "description": "The numeric reference that 'value' is checked against. This is commonly another named indicator output via SERIES_VALUE, a raw quote series, or a constant threshold."
+                  "description": "The numeric reference that \u0027value\u0027 is checked against. This is commonly another named indicator output via SERIES, a raw quote series, or a constant threshold."
                 }
               },
               "required": [
@@ -2010,7 +3055,7 @@
                 "baseline"
               ],
               "title": "Parameters",
-              "description": "Parameters for a cross signal.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer SERIES_VALUE when crossing one named series against another named series.\n2. Prefer quote shorthand only for direct OHLCV inputs.\n3. Prefer defining reusable indicators in top-level 'series' and then crossing their SERIES_VALUE outputs.\n4. Use constants only when intentionally crossing against a fixed level.\n\nDiscouraged but valid:\n- Repeating inline indicator expressions inside CROSSOVER or CROSSUNDER when they could be named once and reused.\n- Using SERIES_NODE here. Cross signals operate on numeric values, not series definitions."
+              "description": "Parameters for a cross signal.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer SERIES when crossing one named series against another named series.\n2. Prefer quote shorthand only for direct OHLCV inputs.\n3. Prefer defining reusable indicators in top-level \u0027series\u0027 and then crossing their SERIES outputs.\n4. Use constants only when intentionally crossing against a fixed level.\n\nDiscouraged but valid:\n- Repeating inline indicator expressions inside CROSSOVER or CROSSUNDER when they could be named once and reused."
             }
           },
           "required": [
@@ -2025,13 +3070,13 @@
           "method": "CROSSOVER",
           "params": {
             "value": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES",
               "params": {
                 "name": "fast_ema"
               }
             },
             "baseline": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES",
               "params": {
                 "name": "slow_ema"
               }
@@ -2043,7 +3088,7 @@
           "params": {
             "value": "CLOSE",
             "baseline": {
-              "method": "SERIES_VALUE",
+              "method": "SERIES",
               "params": {
                 "name": "bb_upper"
               }
@@ -2052,7 +3097,7 @@
         }
       ]
     },
-    "fixedSignal": {
+    "fixedMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -2071,7 +3116,7 @@
       "title": "Fixed Signal",
       "description": "Always-true or always-false signal."
     },
-    "binaryLogicalSignal": {
+    "binaryLogicalMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -2114,7 +3159,7 @@
       "title": "Binary Logical Signal",
       "description": "Combines two signals with AND, OR, or XOR."
     },
-    "unaryLogicalSignal": {
+    "unaryLogicalMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -2152,22 +3197,22 @@
     "signals": {
       "oneOf": [
         {
-          "$ref": "#/$defs/crossSignal"
+          "$ref": "#/$defs/crossMethod"
         },
         {
-          "$ref": "#/$defs/compositeConditionSignal"
+          "$ref": "#/$defs/compositeConditionMethod"
         },
         {
-          "$ref": "#/$defs/comparisonSignal"
+          "$ref": "#/$defs/comparisonMethod"
         },
         {
-          "$ref": "#/$defs/fixedSignal"
+          "$ref": "#/$defs/fixedMethod"
         },
         {
-          "$ref": "#/$defs/binaryLogicalSignal"
+          "$ref": "#/$defs/binaryLogicalMethod"
         },
         {
-          "$ref": "#/$defs/unaryLogicalSignal"
+          "$ref": "#/$defs/unaryLogicalMethod"
         }
       ],
       "title": "Signals",
@@ -2561,6 +3606,63 @@
       "title": "Histogram Plot",
       "description": "Plots a source as histogram bars."
     },
+    "momentumHistogramPlot": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "MOMENTUM_HISTOGRAM"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "source": {
+                  "$ref": "#/$defs/plotSource",
+                  "title": "Source",
+                  "description": "Series or signal source to render."
+                },
+                "positiveRisingColor": {
+                  "$ref": "#/$defs/plotColor",
+                  "title": "Positive Rising Color",
+                  "description": "Color for non-negative bars whose value is rising."
+                },
+                "positiveFallingColor": {
+                  "$ref": "#/$defs/plotColor",
+                  "title": "Positive Falling Color",
+                  "description": "Color for non-negative bars whose value is falling."
+                },
+                "negativeFallingColor": {
+                  "$ref": "#/$defs/plotColor",
+                  "title": "Negative Falling Color",
+                  "description": "Color for negative bars whose value is falling."
+                },
+                "negativeRisingColor": {
+                  "$ref": "#/$defs/plotColor",
+                  "title": "Negative Rising Color",
+                  "description": "Color for negative bars whose value is rising."
+                }
+              },
+              "required": [
+                "source",
+                "positiveRisingColor",
+                "positiveFallingColor",
+                "negativeFallingColor",
+                "negativeRisingColor"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Momentum Histogram Plot",
+      "description": "Plots a source as histogram bars colored by sign and direction."
+    },
     "plotItem": {
       "oneOf": [
         {
@@ -2571,6 +3673,9 @@
         },
         {
           "$ref": "#/$defs/histogramPlot"
+        },
+        {
+          "$ref": "#/$defs/momentumHistogramPlot"
         }
       ],
       "title": "Plot Item",
@@ -2608,31 +3713,62 @@
       "description": "A group of one or more plot items, optionally overlaid on price."
     }
   },
-  "description": "Schema for a Pludux backtest strategy file. This schema is designed to be machine-validatable and AI-friendly so an AI can generate complete strategy JSON files with named series, signals, trading rules, and optional chart plots. Important rule: use SERIES_NODE when another method needs a named series definition itself, and use SERIES_VALUE when another method needs the evaluated numeric output of a named series.",
+  "description": "Schema for a Pludux backtest strategy file. This schema is designed to be machine-validatable and AI-friendly so an AI can generate complete strategy JSON files with named series, inline numeric inputs, signals, trading rules, and optional chart plots. Use SERIES to reference a named series. For numeric inputs, specify representation (Decimal, SignedInteger, or UnsignedInteger) to constrain how values are formatted and displayed.",
   "examples": [
     {
       "version": 2,
+      "execution": {
+        "intrabarPath": "CANDLE_DIRECTION"
+      },
       "series": {
         "fast_ema": {
           "method": "EMA",
           "params": {
-            "period": 20,
+            "period": {
+              "method": "INPUT",
+              "params": {
+                "label": "Period",
+                "representation": "UnsignedInteger",
+                "value": 20
+              }
+            },
             "source": "CLOSE"
           }
         },
         "slow_ema": {
           "method": "EMA",
           "params": {
-            "period": 50,
+            "period": {
+              "method": "INPUT",
+              "params": {
+                "label": "Period",
+                "representation": "UnsignedInteger",
+                "value": 50
+              }
+            },
             "source": "CLOSE"
           }
         },
         "bbands": {
           "method": "BB",
           "params": {
-            "period": 20,
-            "stddev": 2,
-            "source": "CLOSE"
+            "period": {
+              "method": "INPUT",
+              "params": {
+                "label": "Period",
+                "representation": "UnsignedInteger",
+                "value": 20
+              }
+            },
+            "stddev": {
+              "method": "INPUT",
+              "params": {
+                "label": "StdDev",
+                "representation": "Decimal",
+                "value": 2
+              }
+            },
+            "maSource": "CLOSE"
           }
         },
         "bb_upper": {
@@ -2640,7 +3776,7 @@
           "params": {
             "output": "upper-band",
             "source": {
-              "method": "SERIES_NODE",
+              "method": "SERIES",
               "params": {
                 "name": "bbands"
               }
@@ -2655,49 +3791,99 @@
               "method": "CROSSOVER",
               "params": {
                 "value": {
-                  "method": "SERIES_VALUE",
+                  "method": "SERIES",
                   "params": {
                     "name": "fast_ema"
                   }
                 },
                 "baseline": {
-                  "method": "SERIES_VALUE",
+                  "method": "SERIES",
                   "params": {
                     "name": "slow_ema"
                   }
                 }
               }
+            },
+            "timing": "NEXT_OPEN"
+          },
+          "exits": {
+            "activation": "SIMULTANEOUS",
+            "rules": [
+              {
+                "enabled": true,
+                "signal": {
+                  "method": "CROSSUNDER",
+                  "params": {
+                    "value": {
+                      "method": "SERIES",
+                      "params": {
+                        "name": "fast_ema"
+                      }
+                    },
+                    "baseline": {
+                      "method": "SERIES",
+                      "params": {
+                        "name": "slow_ema"
+                      }
+                    }
+                  }
+                },
+                "timing": "NEXT_OPEN"
+              }
+            ]
+          },
+          "riskDistance": {
+            "method": "R_DISTANCE_ATR",
+            "params": {
+              "period": {
+                "method": "VALUE",
+                "params": {
+                  "value": 14
+                }
+              },
+              "multiplier": {
+                "method": "VALUE",
+                "params": {
+                  "value": 2
+                }
+              },
+              "maSmoothingType": "RMA"
             }
           },
-          "exit": {
-            "signal": {
-              "method": "CROSSUNDER",
-              "params": {
-                "value": {
-                  "method": "SERIES_VALUE",
-                  "params": {
-                    "name": "fast_ema"
-                  }
+          "stopLosses": {
+            "activation": "SIMULTANEOUS",
+            "rules": [
+              {
+                "enabled": true,
+                "trailing": false,
+                "stopPrice": {
+                  "method": "SL_1R"
                 },
-                "baseline": {
-                  "method": "SERIES_VALUE",
+                "reduce": 1
+              }
+            ]
+          },
+          "takeProfits": {
+            "activation": "SIMULTANEOUS",
+            "rules": [
+              {
+                "enabled": true,
+                "targetPrice": {
+                  "method": "TP_R_MULTIPLE",
                   "params": {
-                    "name": "slow_ema"
+                    "multiple": {
+                      "method": "VALUE",
+                      "params": {
+                        "value": 2
+                      }
+                    }
                   }
                 }
               }
-            }
+            ]
           }
         },
         "short": false
-      },
-      "stopLoss": {
-        "enabled": true,
-        "trailing": false
-      },
-      "takeProfit": {
-        "enabled": true,
-        "rMultiple": 2.0
       }
     }
   ]
