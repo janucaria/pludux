@@ -1189,7 +1189,7 @@ TEST(BacktestRunnerTest, StopTargetPercentageMethodsUseEntryPrice)
    latest_position(timeline).take_profit_levels().front().price(), 240.0);
 }
 
-TEST(BacktestRunnerTest, StopTargetPercentageMethodsUseFeeAdjustedAveragePrice)
+TEST(BacktestRunnerTest, StopTargetPercentageMethodsUseRawShadowAveragePrice)
 {
   const auto asset = make_single_bar_asset(100.0);
   const auto market = Market{"Test", 0.0, 0.0};
@@ -1238,9 +1238,9 @@ TEST(BacktestRunnerTest, StopTargetPercentageMethodsUseFeeAdjustedAveragePrice)
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 110.0);
   EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
-                   99.0);
+                   90.0);
   EXPECT_DOUBLE_EQ(
-   latest_position(timeline).take_profit_levels().front().price(), 132.0);
+   latest_position(timeline).take_profit_levels().front().price(), 120.0);
 }
 
 TEST(BacktestRunnerTest, ScopedStopTargetPercentMethodsEvaluateDirectly)
@@ -1644,7 +1644,8 @@ TEST(BacktestRunnerTest, RejectsInvalidExplicitRiskDistanceForEverySizingMode)
   }
 }
 
-TEST(BacktestRunnerTest, PyramidingSizesOnlyNewLayerFromNewRiskDistance)
+TEST(BacktestRunnerTest,
+     PyramidingSizesNewLayerFromNormalizedShadowRiskDistance)
 {
   const auto asset =
    make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 200.0, 200.0, 200.0, 200.0);
@@ -1692,10 +1693,8 @@ TEST(BacktestRunnerTest, PyramidingSizesOnlyNewLayerFromNewRiskDistance)
   ASSERT_TRUE(timeline.open_position(1));
   EXPECT_DOUBLE_EQ(timeline.trade_events(1).front().position_size(), 5.5);
   EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 15.5);
-  EXPECT_DOUBLE_EQ(timeline.open_position(1)->risk_reference_price(),
-                   timeline.open_position(1)->average_price());
-  EXPECT_DOUBLE_EQ(timeline.open_position(1)->risk_distance(),
-                   timeline.open_position(1)->average_price() * 0.1);
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->risk_reference_price(), 150.0);
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->risk_distance(), 15.0);
 }
 
 TEST(BacktestRunnerTest, DisabledDrawdownAdjustmentLeavesSizingUnchanged)
@@ -2194,7 +2193,8 @@ TEST(BacktestRunnerTest,
    latest_position(timeline).take_profit_levels().front().price(), 132.0);
 }
 
-TEST(BacktestRunnerTest, PyramidingUsesPostScaleInFeeAdjustedAverageReference)
+TEST(BacktestRunnerTest,
+     PyramidingUsesPostScaleNormalizedShadowAverageReference)
 {
   const auto asset =
    make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 120.0, 120.0, 120.0, 120.0);
@@ -2246,9 +2246,9 @@ TEST(BacktestRunnerTest, PyramidingUsesPostScaleInFeeAdjustedAverageReference)
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 120.0);
   EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
-                   108.0);
+                   99.0);
   EXPECT_DOUBLE_EQ(
-   latest_position(timeline).take_profit_levels().front().price(), 144.0);
+   latest_position(timeline).take_profit_levels().front().price(), 132.0);
 }
 
 TEST(BacktestRunnerTest,

@@ -16,7 +16,8 @@ using namespace pludux::backtest;
 
 TEST(StrategyInputsTest, CollectsNumericInputsInStrategyTraversalOrder)
 {
-  auto series_nodes = OrderedNamedRegistry<ErasedNode>{};
+  auto series_nodes =
+   OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>{};
   series_nodes.set(
    "spread",
    AddNode{
@@ -98,7 +99,8 @@ TEST(StrategyInputsTest, CollectsNumericInputsInStrategyTraversalOrder)
 
 TEST(StrategyInputsTest, AssigningStrategyReplacesBacktestInputsWithDefaults)
 {
-  auto series_nodes = OrderedNamedRegistry<ErasedNode>{};
+  auto series_nodes =
+   OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>{};
   series_nodes.set(
    "replacement",
    AddNode{

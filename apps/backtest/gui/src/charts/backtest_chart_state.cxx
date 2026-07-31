@@ -115,6 +115,12 @@ public:
     return self.show_indicators_;
   }
 
+  auto show_strategy_performance(this const BacktestChartState& self) noexcept
+   -> bool
+  {
+    return self.show_strategy_performance_;
+  }
+
   auto show_equity(this BacktestChartState& self) noexcept -> bool&
   {
     return self.show_equity_;
@@ -138,6 +144,12 @@ public:
   auto show_indicators(this BacktestChartState& self) noexcept -> bool&
   {
     return self.show_indicators_;
+  }
+
+  auto show_strategy_performance(this BacktestChartState& self) noexcept
+   -> bool&
+  {
+    return self.show_strategy_performance_;
   }
 
   auto row_ratios(this BacktestChartState& self, std::size_t row_count)
@@ -176,6 +188,7 @@ private:
   bool show_trades_{true};
   bool show_risk_{true};
   bool show_indicators_{true};
+  bool show_strategy_performance_{false};
 };
 
 } // namespace pludux::apps

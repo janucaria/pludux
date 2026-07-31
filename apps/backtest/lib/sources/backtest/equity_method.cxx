@@ -50,8 +50,7 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
 
   if constexpr(std::is_same_v<std::monostate, decltype(context)>) {
     return std::numeric_limits<double>::quiet_NaN();
-  } else if constexpr(std::is_same_v<std::remove_cvref_t<decltype(context)>,
-                                     BacktestMethodContext>) {
+  } else if constexpr(requires { context.equity(); }) {
     return context.equity();
   } else if constexpr(std::is_same_v<std::remove_cvref_t<decltype(context)>,
                                      ErasedSeriesMethodContext>) {
@@ -74,8 +73,7 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
 
   if constexpr(std::is_same_v<std::monostate, decltype(context)>) {
     return std::numeric_limits<double>::quiet_NaN();
-  } else if constexpr(std::is_same_v<std::remove_cvref_t<decltype(context)>,
-                                     BacktestMethodContext>) {
+  } else if constexpr(requires { context.equity_percent(); }) {
     return context.equity_percent();
   } else if constexpr(std::is_same_v<std::remove_cvref_t<decltype(context)>,
                                      ErasedSeriesMethodContext>) {

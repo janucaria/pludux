@@ -36,44 +36,49 @@ export struct CloseNode : OhlcvNode<CloseNode> {};
 
 export struct VolumeNode : OhlcvNode<VolumeNode> {};
 
-export auto pludux_tag_invoke(NodeToErasedMethod,
-                              const OpenNode&,
-                              NodeToErasedMethodContext&)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+export template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                       const OpenNode&,
+                       NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{OpenMethod{}};
+  return ErasedSeriesMethod<TContext>{OpenMethod{}};
 }
 
-export auto pludux_tag_invoke(NodeToErasedMethod,
-                              const HighNode&,
-                              NodeToErasedMethodContext&)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+export template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                       const HighNode&,
+                       NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{HighMethod{}};
+  return ErasedSeriesMethod<TContext>{HighMethod{}};
 }
 
-export auto pludux_tag_invoke(NodeToErasedMethod,
-                              const LowNode&,
-                              NodeToErasedMethodContext&)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+export template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                       const LowNode&,
+                       NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{LowMethod{}};
+  return ErasedSeriesMethod<TContext>{LowMethod{}};
 }
 
-export auto pludux_tag_invoke(NodeToErasedMethod,
-                              const CloseNode&,
-                              NodeToErasedMethodContext&)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+export template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                       const CloseNode&,
+                       NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{CloseMethod{}};
+  return ErasedSeriesMethod<TContext>{CloseMethod{}};
 }
 
-export auto pludux_tag_invoke(NodeToErasedMethod,
-                              const VolumeNode&,
-                              NodeToErasedMethodContext&)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+export template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                       const VolumeNode&,
+                       NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{VolumeMethod{}};
+  return ErasedSeriesMethod<TContext>{VolumeMethod{}};
 }
 
 } // namespace pludux

@@ -3,6 +3,9 @@ set(PLUDUX_TEST_SOURCES
   src/test_config_parser.cpp
   src/test_erased_plot_method.cpp
   src/test_strategy_inputs.cpp
+  src/test_strategy_performance.cpp
+  src/test_strategy_session.cpp
+  src/test_execution_filter.cpp
   src/test_trade_session.cpp
 )
 

@@ -4,11 +4,13 @@ module;
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <format>
 #include <functional>
 #include <iterator>
 #include <memory>
 #include <optional>
 #include <ranges>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <variant>
@@ -67,6 +69,7 @@ private:
   std::shared_ptr<backtest::Backtest> editing_backtest_ptr_;
   ImGuiTextFilter backtest_filter_;
   ui::DraftAction selected_draft_action_{ui::DraftAction::Apply};
+  std::string configuration_error_;
 
   void render_backtests_list(this auto& self, WindowContext& context)
   {
@@ -518,6 +521,148 @@ private:
       }
     }
 
+    ui::form_section(
+     "Strategy Performance Calculation",
+     "Configure how Strategy Performance is calculated from completed "
+     "theoretical positions. These Bayesian models estimate win probability "
+     "and payoff magnitudes; they do not control Strategy signals, execution, "
+     "or position sizing.");
+    {
+      const auto& config = edit_backtest_ptr->strategy_performance();
+      const auto* win_model =
+       bayesian_model_node_cast<backtest::BetaBernoulliModelNode>(
+        config.bayesian().win_probability_model());
+      const auto* winning_payoff_model =
+       bayesian_model_node_cast<backtest::GammaPayoffModelNode>(
+        config.bayesian().winning_payoff_model());
+      const auto* losing_payoff_model =
+       bayesian_model_node_cast<backtest::GammaPayoffModelNode>(
+        config.bayesian().losing_payoff_model());
+      if(win_model == nullptr || winning_payoff_model == nullptr ||
+         losing_payoff_model == nullptr) {
+        ui::validation_message(
+         "The selected Bayesian model is not supported by this editor.");
+        return;
+      }
+
+      auto history_mode = static_cast<int>(config.history().mode());
+      auto rolling_window = static_cast<int>(config.history().rolling_window());
+      auto exponential_decay = config.history().exponential_decay();
+      auto prior_win_probability = win_model->prior_probability();
+      auto prior_win_strength = win_model->prior_strength();
+      auto winning_prior_mean = winning_payoff_model->prior_mean_magnitude();
+      auto winning_prior_strength = winning_payoff_model->prior_strength();
+      auto winning_cv = winning_payoff_model->coefficient_of_variation();
+      auto losing_prior_mean = losing_payoff_model->prior_mean_magnitude();
+      auto losing_prior_strength = losing_payoff_model->prior_strength();
+      auto losing_cv = losing_payoff_model->coefficient_of_variation();
+
+      constexpr const char* history_modes[] = {
+       "All history", "Rolling window", "Exponential decay"};
+      auto changed = false;
+      ui::field_label("History mode");
+      changed |= ImGui::Combo("##strategy_history_mode",
+                              &history_mode,
+                              history_modes,
+                              IM_ARRAYSIZE(history_modes));
+      if(history_mode ==
+         static_cast<int>(
+          backtest::StrategyPerformanceHistoryMode::RollingWindow)) {
+        ui::field_label("Rolling window");
+        changed |=
+         ImGui::InputInt("##strategy_history_window", &rolling_window);
+      } else if(history_mode ==
+                static_cast<int>(
+                 backtest::StrategyPerformanceHistoryMode::ExponentialDecay)) {
+        ui::field_label("Evidence decay");
+        changed |= ImGui::InputDouble(
+         "##strategy_history_decay", &exponential_decay, 0.001, 0.01, "%.4f");
+      }
+
+      ImGui::SeparatorText("Strategy Performance: Bayesian win probability");
+      constexpr const char* win_models[] = {"Beta-Bernoulli"};
+      auto win_model_index = 0;
+      ui::field_label("Model");
+      changed |= ImGui::Combo("##bayesian_win_model",
+                              &win_model_index,
+                              win_models,
+                              IM_ARRAYSIZE(win_models));
+      ui::field_label("Prior win probability");
+      changed |= ImGui::InputDouble(
+       "##prior_win_probability", &prior_win_probability, 0.01, 0.1, "%.4f");
+      ui::field_label("Prior strength");
+      changed |= ImGui::InputDouble(
+       "##prior_win_strength", &prior_win_strength, 0.1, 1.0, "%.4f");
+
+      const auto edit_payoff_model =
+       [&changed](const char* heading,
+                  const char* id_suffix,
+                  double& prior_mean,
+                  double& prior_strength,
+                  double& coefficient_of_variation) {
+         ImGui::SeparatorText(heading);
+         ui::field_label("Model");
+         ImGui::TextUnformatted("Gamma / Inverse-Gamma");
+         ui::field_label("Prior mean magnitude");
+         changed |=
+          ImGui::InputDouble(std::format("##prior_mean_{}", id_suffix).c_str(),
+                             &prior_mean,
+                             0.001,
+                             0.01,
+                             "%.4f");
+         ui::field_label("Prior strength");
+         changed |= ImGui::InputDouble(
+          std::format("##prior_strength_{}", id_suffix).c_str(),
+          &prior_strength,
+          0.001,
+          0.01,
+          "%.4f");
+         ui::field_label("Coefficient of variation");
+         changed |= ImGui::InputDouble(
+          std::format("##coefficient_of_variation_{}", id_suffix).c_str(),
+          &coefficient_of_variation,
+          0.01,
+          0.1,
+          "%.4f");
+       };
+      edit_payoff_model("Strategy Performance: Bayesian winning payoff",
+                        "winning_payoff",
+                        winning_prior_mean,
+                        winning_prior_strength,
+                        winning_cv);
+      edit_payoff_model("Strategy Performance: Bayesian losing payoff",
+                        "losing_payoff",
+                        losing_prior_mean,
+                        losing_prior_strength,
+                        losing_cv);
+
+      if(changed) {
+        try {
+          edit_backtest_ptr->strategy_performance(
+           backtest::StrategyPerformanceConfig{
+            backtest::StrategyPerformanceHistoryPolicy{
+             static_cast<backtest::StrategyPerformanceHistoryMode>(
+              history_mode),
+             static_cast<std::size_t>(std::max(rolling_window, 0)),
+             exponential_decay},
+            backtest::StrategyPerformanceBayesianConfig{
+             backtest::BayesianWinModelNode{backtest::BetaBernoulliModelNode{
+              prior_win_probability, prior_win_strength}},
+             backtest::BayesianPayoffModelNode{backtest::GammaPayoffModelNode{
+              winning_prior_mean, winning_prior_strength, winning_cv}},
+             backtest::BayesianPayoffModelNode{backtest::GammaPayoffModelNode{
+              losing_prior_mean, losing_prior_strength, losing_cv}}}});
+          self.configuration_error_.clear();
+        } catch(const std::exception& error) {
+          self.configuration_error_ = error.what();
+        }
+      }
+    }
+
+    if(!self.configuration_error_.empty()) {
+      ui::validation_message(self.configuration_error_.c_str());
+    }
+
     if(!app_state.is_backtest_ready(*edit_backtest_ptr)) {
       ImGui::Spacing();
       ui::validation_message(
@@ -569,6 +714,7 @@ private:
     self.backtest_panel_mode_ = BacktestPanelMode::List;
     self.selected_backtest_handle_opt_ = std::nullopt;
     self.editing_backtest_ptr_ = nullptr;
+    self.configuration_error_.clear();
   }
 
   void leave_editor(this BacktestsWindow& self) noexcept

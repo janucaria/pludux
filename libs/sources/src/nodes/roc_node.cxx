@@ -26,17 +26,18 @@ public:
   {
   }
 
-  explicit RocNode(ErasedNode source)
+  explicit RocNode(ErasedNode<ErasedSeriesMethodContext> source)
   : RocNode{std::move(source), 14}
   {
   }
 
-  RocNode(ErasedNode source, std::size_t period)
+  RocNode(ErasedNode<ErasedSeriesMethodContext> source, std::size_t period)
   : RocNode{std::move(source), ValueNode{static_cast<double>(period)}}
   {
   }
 
-  RocNode(ErasedNode source, ErasedNode period)
+  RocNode(ErasedNode<ErasedSeriesMethodContext> source,
+          ErasedNode<ErasedSeriesMethodContext> period)
   : source_{std::move(source)}
   , period_{std::move(period)}
   {
@@ -44,22 +45,26 @@ public:
 
   auto operator==(const RocNode& other) const noexcept -> bool = default;
 
-  auto source(this const RocNode& self) noexcept -> const ErasedNode&
+  auto source(this const RocNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.source_;
   }
 
-  void source(this RocNode& self, ErasedNode source) noexcept
+  void source(this RocNode& self,
+              ErasedNode<ErasedSeriesMethodContext> source) noexcept
   {
     self.source_ = std::move(source);
   }
 
-  auto period(this const RocNode& self) noexcept -> const ErasedNode&
+  auto period(this const RocNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.period_;
   }
 
-  void period(this RocNode& self, ErasedNode period) noexcept
+  void period(this RocNode& self,
+              ErasedNode<ErasedSeriesMethodContext> period) noexcept
   {
     self.period_ = std::move(period);
   }
@@ -70,17 +75,19 @@ public:
   }
 
 private:
-  ErasedNode source_;
-  ErasedNode period_;
+  ErasedNode<ErasedSeriesMethodContext> source_;
+  ErasedNode<ErasedSeriesMethodContext> period_;
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const RocNode& node,
                        NodeToErasedMethodContext& context)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+ -> ErasedSeriesMethod<TContext>
 {
-  const auto source_method = node_to_erased_method(node.source(), context);
-  const auto period = node_to_erased_method(node.period(), context);
+  const auto source_method =
+   node_to_erased_method<TContext>(node.source(), context);
+  const auto period = node_to_erased_method<TContext>(node.period(), context);
 
   return RocMethod{source_method, period};
 }

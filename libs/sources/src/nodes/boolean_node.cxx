@@ -13,14 +13,13 @@ struct BooleanNode {
 using TrueNode = BooleanNode<true>;
 using FalseNode = BooleanNode<false>;
 
-template<bool boolean_value>
-auto pludux_tag_invoke(NodeToErasedMethod,
+template<bool boolean_value, MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const BooleanNode<boolean_value>&,
                        NodeToErasedMethodContext&)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
-   BooleanMethod<boolean_value>{}};
+  return ErasedSeriesMethod<TContext>{BooleanMethod<boolean_value>{}};
 }
 
 } // namespace pludux

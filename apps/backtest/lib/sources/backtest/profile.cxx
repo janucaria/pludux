@@ -7,6 +7,8 @@ export module pludux.backtest:profile;
 
 import pludux;
 
+import :execution_filter_method_context;
+
 export namespace pludux::backtest {
 
 enum class InsufficientCashPolicy { Reject, CapToAvailableCash };
@@ -138,14 +140,17 @@ public:
   {
   }
 
-  Profile(std::string name,
-          PositionSizing position_sizing,
-          DrawdownAdjustment drawdown_adjustment,
-          InsufficientCashPolicy insufficient_cash_policy)
+  Profile(
+   std::string name,
+   PositionSizing position_sizing,
+   DrawdownAdjustment drawdown_adjustment,
+   InsufficientCashPolicy insufficient_cash_policy,
+   ErasedNode<ExecutionFilterMethodContext> execution_filter = TrueNode{})
   : name_{std::move(name)}
   , position_sizing_{position_sizing}
   , drawdown_adjustment_{drawdown_adjustment}
   , insufficient_cash_policy_{insufficient_cash_policy}
+  , execution_filter_{std::move(execution_filter)}
   {
   }
 
@@ -197,12 +202,26 @@ public:
     self.insufficient_cash_policy_ = insufficient_cash_policy;
   }
 
+  auto execution_filter(this const Profile& self) noexcept
+   -> const ErasedNode<ExecutionFilterMethodContext>&
+  {
+    return self.execution_filter_;
+  }
+
+  void execution_filter(
+   this Profile& self,
+   ErasedNode<ExecutionFilterMethodContext> execution_filter) noexcept
+  {
+    self.execution_filter_ = std::move(execution_filter);
+  }
+
   auto equivalent_rules(this const Profile& self, const Profile& other) noexcept
    -> bool
   {
     return self.position_sizing_ == other.position_sizing_ &&
            self.drawdown_adjustment_ == other.drawdown_adjustment_ &&
-           self.insufficient_cash_policy_ == other.insufficient_cash_policy_;
+           self.insufficient_cash_policy_ == other.insufficient_cash_policy_ &&
+           self.execution_filter_ == other.execution_filter_;
   }
 
 private:
@@ -210,6 +229,7 @@ private:
   PositionSizing position_sizing_;
   DrawdownAdjustment drawdown_adjustment_;
   InsufficientCashPolicy insufficient_cash_policy_;
+  ErasedNode<ExecutionFilterMethodContext> execution_filter_;
 };
 
 } // namespace pludux::backtest

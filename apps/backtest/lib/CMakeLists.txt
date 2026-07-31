@@ -33,9 +33,20 @@ FetchContent_Declare(
       <SOURCE_DIR>/
 )
 
+FetchContent_Declare(
+  boost_math
+  GIT_REPOSITORY https://github.com/boostorg/math.git
+  GIT_TAG        boost-1.91.0
+  GIT_SHALLOW    TRUE
+  GIT_PROGRESS   TRUE
+  EXCLUDE_FROM_ALL
+  SOURCE_SUBDIR  _pludux_header_only
+)
+
 find_package(jsoncons REQUIRED)
 find_package(rapidcsv REQUIRED)
 find_package(ctre REQUIRED)
+FetchContent_MakeAvailable(boost_math)
 
 
 add_library(${PROJECT_NAME})
@@ -45,6 +56,10 @@ set_target_properties(${PROJECT_NAME}
   PROPERTIES
     CXX_SCAN_FOR_MODULES OFF
 )
+
+if(MSVC)
+  target_compile_options(${PROJECT_NAME} PRIVATE /bigobj)
+endif()
 
 target_sources(${PROJECT_NAME}
   PUBLIC
@@ -89,6 +104,15 @@ target_sources(${PROJECT_NAME}
     sources/backtest/closed_trade.cxx
     sources/backtest/trade_position.cxx
     sources/backtest/trade_session.cxx
+
+    sources/backtest/strategy_intent.cxx
+    sources/backtest/strategy_closed_position.cxx
+    sources/backtest/strategy_session.cxx
+    sources/backtest/strategy_performance_model.cxx
+    sources/backtest/strategy_performance.cxx
+    sources/backtest/execution_filter_method_context.cxx
+    sources/backtest/strategy_performance_method.cxx
+    sources/backtest/strategy_performance_node.cxx
     
     sources/backtest/asset.cxx
     sources/backtest/strategy.cxx
@@ -126,4 +150,14 @@ target_link_libraries(${PROJECT_NAME}
     jsoncons
     rapidcsv
     ctre::ctre
+)
+
+target_include_directories(${PROJECT_NAME}
+  PUBLIC
+    ${boost_math_SOURCE_DIR}/include
+)
+
+target_compile_definitions(${PROJECT_NAME}
+  PUBLIC
+    BOOST_MATH_STANDALONE
 )

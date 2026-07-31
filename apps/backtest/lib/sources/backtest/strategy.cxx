@@ -32,7 +32,8 @@ public:
     {
     }
 
-    Entry(ErasedNode signal, SignalTiming timing = SignalTiming::NextOpen)
+    Entry(ErasedNode<ErasedSeriesMethodContext> signal,
+          SignalTiming timing = SignalTiming::NextOpen)
     : signal_{std::move(signal)}
     , timing_{timing}
     {
@@ -40,12 +41,14 @@ public:
 
     auto operator==(const Entry&) const noexcept -> bool = default;
 
-    auto signal(this const Entry& self) noexcept -> const ErasedNode&
+    auto signal(this const Entry& self) noexcept
+     -> const ErasedNode<ErasedSeriesMethodContext>&
     {
       return self.signal_;
     }
 
-    void signal(this Entry& self, ErasedNode signal) noexcept
+    void signal(this Entry& self,
+                ErasedNode<ErasedSeriesMethodContext> signal) noexcept
     {
       self.signal_ = std::move(signal);
     }
@@ -61,7 +64,7 @@ public:
     }
 
   private:
-    ErasedNode signal_;
+    ErasedNode<ErasedSeriesMethodContext> signal_;
     SignalTiming timing_;
   };
 
@@ -73,7 +76,7 @@ public:
     }
 
     Exit(bool enabled,
-         ErasedNode signal,
+         ErasedNode<ErasedSeriesMethodContext> signal,
          SignalTiming timing = SignalTiming::NextOpen,
          double reduce = 1.0)
     : enabled_{enabled}
@@ -95,12 +98,14 @@ public:
       self.enabled_ = enabled;
     }
 
-    auto signal(this const Exit& self) noexcept -> const ErasedNode&
+    auto signal(this const Exit& self) noexcept
+     -> const ErasedNode<ErasedSeriesMethodContext>&
     {
       return self.signal_;
     }
 
-    void signal(this Exit& self, ErasedNode signal) noexcept
+    void signal(this Exit& self,
+                ErasedNode<ErasedSeriesMethodContext> signal) noexcept
     {
       self.signal_ = std::move(signal);
     }
@@ -127,7 +132,7 @@ public:
 
   private:
     bool enabled_;
-    ErasedNode signal_;
+    ErasedNode<ErasedSeriesMethodContext> signal_;
     SignalTiming timing_;
     double reduce_;
   };
@@ -138,12 +143,14 @@ public:
 
     auto operator==(const Pyramiding&) const noexcept -> bool = default;
 
-    auto signal(this const Pyramiding& self) noexcept -> const ErasedNode&
+    auto signal(this const Pyramiding& self) noexcept
+     -> const ErasedNode<ErasedSeriesMethodContext>&
     {
       return self.signal_;
     }
 
-    void signal(this Pyramiding& self, ErasedNode signal) noexcept
+    void signal(this Pyramiding& self,
+                ErasedNode<ErasedSeriesMethodContext> signal) noexcept
     {
       self.signal_ = std::move(signal);
     }
@@ -194,7 +201,7 @@ public:
     }
 
   private:
-    ErasedNode signal_{FalseNode{}};
+    ErasedNode<ErasedSeriesMethodContext> signal_{FalseNode{}};
     SignalTiming timing_{SignalTiming::NextOpen};
     std::size_t max_layers_{1};
     StopTargetReferencePrice favorable_stop_target_reference_{
@@ -205,9 +212,10 @@ public:
 
   class TakeProfit {
   public:
-    TakeProfit(bool enabled = false,
-               ErasedNode target_price = TpRMultipleNode{2.0},
-               double reduce = 1.0)
+    TakeProfit(
+     bool enabled = false,
+     ErasedNode<ErasedSeriesMethodContext> target_price = TpRMultipleNode{2.0},
+     double reduce = 1.0)
     : enabled_{enabled}
     , target_price_{std::move(target_price)}
     , reduce_{reduce}
@@ -226,12 +234,15 @@ public:
       self.enabled_ = enabled;
     }
 
-    auto target_price(this const TakeProfit& self) noexcept -> const ErasedNode&
+    auto target_price(this const TakeProfit& self) noexcept
+     -> const ErasedNode<ErasedSeriesMethodContext>&
     {
       return self.target_price_;
     }
 
-    void target_price(this TakeProfit& self, ErasedNode target_price) noexcept
+    void
+    target_price(this TakeProfit& self,
+                 ErasedNode<ErasedSeriesMethodContext> target_price) noexcept
     {
       self.target_price_ = std::move(target_price);
     }
@@ -248,14 +259,14 @@ public:
 
   private:
     bool enabled_;
-    ErasedNode target_price_;
+    ErasedNode<ErasedSeriesMethodContext> target_price_;
     double reduce_;
   };
 
   class StopLoss {
   public:
     StopLoss(bool enabled = true,
-             ErasedNode stop_price = Sl1RNode{},
+             ErasedNode<ErasedSeriesMethodContext> stop_price = Sl1RNode{},
              bool trailing = false,
              double reduce = 1.0)
     : enabled_{enabled}
@@ -287,12 +298,14 @@ public:
       self.trailing_ = trailing;
     }
 
-    auto stop_price(this const StopLoss& self) noexcept -> const ErasedNode&
+    auto stop_price(this const StopLoss& self) noexcept
+     -> const ErasedNode<ErasedSeriesMethodContext>&
     {
       return self.stop_price_;
     }
 
-    void stop_price(this StopLoss& self, ErasedNode stop_price) noexcept
+    void stop_price(this StopLoss& self,
+                    ErasedNode<ErasedSeriesMethodContext> stop_price) noexcept
     {
       self.stop_price_ = std::move(stop_price);
     }
@@ -310,7 +323,7 @@ public:
   private:
     bool enabled_;
     bool trailing_;
-    ErasedNode stop_price_;
+    ErasedNode<ErasedSeriesMethodContext> stop_price_;
     double reduce_;
   };
 
@@ -395,12 +408,15 @@ public:
       self.take_profits_activation_ = activation;
     }
 
-    auto risk_distance(this const Position& self) noexcept -> const ErasedNode&
+    auto risk_distance(this const Position& self) noexcept
+     -> const ErasedNode<ErasedSeriesMethodContext>&
     {
       return self.risk_distance_;
     }
 
-    void risk_distance(this Position& self, ErasedNode risk_distance) noexcept
+    void
+    risk_distance(this Position& self,
+                  ErasedNode<ErasedSeriesMethodContext> risk_distance) noexcept
     {
       self.risk_distance_ = std::move(risk_distance);
     }
@@ -434,7 +450,7 @@ public:
     std::vector<Exit> exits_;
     ExitActivation exits_activation_{ExitActivation::Simultaneous};
     Pyramiding pyramiding_;
-    ErasedNode risk_distance_{RiskDistanceAtrNode{}};
+    ErasedNode<ErasedSeriesMethodContext> risk_distance_{RiskDistanceAtrNode{}};
     std::vector<TakeProfit> take_profits_;
     ExitActivation take_profits_activation_{ExitActivation::Simultaneous};
     std::vector<StopLoss> stop_losses_{StopLoss{}};
@@ -443,7 +459,7 @@ public:
 
   Strategy()
   : Strategy("",
-             OrderedNamedRegistry<ErasedNode>{},
+             OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>{},
              Position{},
              Position{},
              std::vector<PlotGroup>{},
@@ -451,12 +467,13 @@ public:
   {
   }
 
-  Strategy(std::string name,
-           OrderedNamedRegistry<ErasedNode> series_nodes,
-           Position long_position,
-           Position short_position,
-           std::vector<PlotGroup> plots,
-           IntrabarPath intrabar_path = IntrabarPath::CandleDirection)
+  Strategy(
+   std::string name,
+   OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>> series_nodes,
+   Position long_position,
+   Position short_position,
+   std::vector<PlotGroup> plots,
+   IntrabarPath intrabar_path = IntrabarPath::CandleDirection)
   : name_{std::move(name)}
   , series_nodes_{std::move(series_nodes)}
   , long_position_{std::move(long_position)}
@@ -479,19 +496,20 @@ public:
   }
 
   auto series_nodes(this const Strategy& self) noexcept
-   -> const OrderedNamedRegistry<ErasedNode>&
+   -> const OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>&
   {
     return self.series_nodes_;
   }
 
   auto series_nodes(this Strategy& self) noexcept
-   -> OrderedNamedRegistry<ErasedNode>&
+   -> OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>&
   {
     return self.series_nodes_;
   }
 
   void series_nodes(this Strategy& self,
-                    OrderedNamedRegistry<ErasedNode> series_nodes) noexcept
+                    OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>
+                     series_nodes) noexcept
   {
     self.series_nodes_ = std::move(series_nodes);
   }
@@ -549,7 +567,7 @@ public:
 private:
   std::string name_;
 
-  OrderedNamedRegistry<ErasedNode> series_nodes_;
+  OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>> series_nodes_;
 
   Position long_position_;
   Position short_position_;

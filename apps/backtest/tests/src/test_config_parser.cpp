@@ -23,18 +23,20 @@ using SignalAllOfNode = pludux::AllOfNode;
 using SignalAnyOfNode = pludux::AnyOfNode;
 using SignalAlwaysNode = pludux::TrueNode;
 using SignalNeverNode = pludux::FalseNode;
-using SignalEqualNode = pludux::EqualNode;
-using SignalNotEqualNode = pludux::NotEqualNode;
-using SignalGreaterThanNode = pludux::GreaterThanNode;
-using SignalGreaterEqualNode = pludux::GreaterEqualNode;
-using SignalLessThanNode = pludux::LessThanNode;
-using SignalLessEqualNode = pludux::LessEqualNode;
+using SignalEqualNode = pludux::EqualNode<ErasedSeriesMethodContext>;
+using SignalNotEqualNode = pludux::NotEqualNode<ErasedSeriesMethodContext>;
+using SignalGreaterThanNode =
+ pludux::GreaterThanNode<ErasedSeriesMethodContext>;
+using SignalGreaterEqualNode =
+ pludux::GreaterEqualNode<ErasedSeriesMethodContext>;
+using SignalLessThanNode = pludux::LessThanNode<ErasedSeriesMethodContext>;
+using SignalLessEqualNode = pludux::LessEqualNode<ErasedSeriesMethodContext>;
 using SignalCrossoverNode = pludux::CrossoverNode;
 using SignalCrossunderNode = pludux::CrossunderNode;
-using SignalNotNode = pludux::LogicalNotNode;
-using SignalAndNode = pludux::LogicalAndNode;
-using SignalOrNode = pludux::LogicalOrNode;
-using SignalXorNode = pludux::LogicalXorNode;
+using SignalNotNode = pludux::LogicalNotNode<ErasedSeriesMethodContext>;
+using SignalAndNode = pludux::LogicalAndNode<ErasedSeriesMethodContext>;
+using SignalOrNode = pludux::LogicalOrNode<ErasedSeriesMethodContext>;
+using SignalXorNode = pludux::LogicalXorNode<ErasedSeriesMethodContext>;
 
 auto node_context = NodeToErasedMethodContext{};
 
@@ -83,9 +85,10 @@ private:
 
 class ParsedConfigNodeMethod {
 public:
-  ParsedConfigNodeMethod(ErasedNode node)
+  ParsedConfigNodeMethod(ErasedNode<ErasedSeriesMethodContext> node)
   : node_{std::move(node)}
-  , method_{node_to_erased_method(node_, node_context)}
+  , method_{
+     node_to_erased_method<ErasedSeriesMethodContext>(node_, node_context)}
   {
   }
 
@@ -96,7 +99,7 @@ public:
   }
 
   auto node(this const ParsedConfigNodeMethod& self) noexcept
-   -> const ErasedNode&
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.node_;
   }
@@ -108,7 +111,7 @@ public:
   }
 
 private:
-  ErasedNode node_;
+  ErasedNode<ErasedSeriesMethodContext> node_;
   ErasedSeriesMethod<ErasedSeriesMethodContext> method_;
 };
 
@@ -2380,12 +2383,14 @@ TEST_F(ConfigParserTest, SeriesNodeRegistrySerializationDeserialization)
     }
   )");
 
-  auto series_nodes = OrderedNamedRegistry<ErasedNode>{};
+  auto series_nodes =
+   OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>{};
   series_nodes.set("name1", DataNode{"close"});
   series_nodes.set("name2", ValueNode{100});
 
   auto serialize_series_nodes =
-   [this](const OrderedNamedRegistry<ErasedNode>& series_nodes) {
+   [this](const OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>&
+           series_nodes) {
      auto series_nodes_config = jsoncons::ojson{};
      for(const auto& [series_name, series_node] : series_nodes) {
        series_nodes_config[series_name] =
@@ -2394,7 +2399,8 @@ TEST_F(ConfigParserTest, SeriesNodeRegistrySerializationDeserialization)
      return series_nodes_config;
    };
   auto parse_series_nodes = [this](const jsoncons::ojson& series_nodes_config) {
-    auto parsed_series_nodes = OrderedNamedRegistry<ErasedNode>{};
+    auto parsed_series_nodes =
+     OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>{};
     for(const auto& [series_name, series_config] :
         series_nodes_config.object_range()) {
       parsed_series_nodes.set(series_name,
@@ -2409,4 +2415,66 @@ TEST_F(ConfigParserTest, SeriesNodeRegistrySerializationDeserialization)
   const auto deserialized_config = parse_series_nodes(config);
   EXPECT_EQ(deserialized_config, deserialized_series_nodes);
   EXPECT_EQ(series_nodes, deserialized_series_nodes);
+}
+
+TEST_F(ConfigParserTest, ExecutionFilterRoundTripsLimitedNodeCatalog)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "AND",
+      "firstCondition": {
+        "method": "GREATER_EQUAL",
+        "target": {
+          "method": "STRATEGY_PERFORMANCE",
+          "metric": 0
+        },
+        "threshold": {
+          "method": "VALUE",
+          "value": 25
+        }
+      },
+      "secondCondition": {
+        "method": "LESS_EQUAL",
+        "target": {
+          "method": "DRAWDOWN"
+        },
+        "threshold": {
+          "method": "VALUE",
+          "value": 10
+        }
+      }
+    }
+  )");
+
+  const auto node = backtest::parse_execution_filter_node(config);
+  const auto serialized = backtest::serialize_execution_filter_node(node);
+  EXPECT_EQ(node, backtest::parse_execution_filter_node(serialized));
+}
+
+TEST_F(ConfigParserTest, ExecutionFilterRejectsMarketDataNodes)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "GREATER_THAN",
+      "target": {
+        "method": "CLOSE"
+      },
+      "threshold": {
+        "method": "VALUE",
+        "value": 100
+      }
+    }
+  )");
+
+  EXPECT_THROW(backtest::parse_execution_filter_node(config),
+               std::invalid_argument);
+}
+
+TEST_F(ConfigParserTest, ExecutionFilterRejectsNonBooleanRoot)
+{
+  const auto config =
+   json::parse(R"({"method":"STRATEGY_PERFORMANCE","metric":2})");
+
+  EXPECT_THROW(backtest::parse_execution_filter_node(config),
+               std::invalid_argument);
 }

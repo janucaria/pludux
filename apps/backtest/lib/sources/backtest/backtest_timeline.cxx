@@ -12,6 +12,10 @@ export module pludux.backtest:backtest_timeline;
 
 import :closed_trade;
 import :open_position_snapshot;
+import :strategy_closed_position;
+import :strategy_intent;
+import :strategy_performance;
+import :strategy_session;
 import :trade_event;
 
 export namespace pludux::backtest {
@@ -27,6 +31,11 @@ public:
     std::vector<TradeEvent> trade_events{};
     std::vector<ClosedTrade> closed_trades{};
     std::optional<OpenPositionSnapshot> open_position{};
+    std::vector<StrategyIntent> strategy_intents{};
+    std::vector<StrategyClosedPosition> strategy_closed_positions{};
+    std::optional<StrategyOpenPositionSnapshot> strategy_open_position{};
+    std::vector<ExecutionFilterDecision> execution_filter_decisions{};
+    StrategyPerformanceSnapshot strategy_performance{};
 
     double capital{};
     double equity{};
@@ -71,6 +80,11 @@ public:
     self.trade_events_.clear();
     self.closed_trades_.clear();
     self.open_positions_.clear();
+    self.strategy_intents_.clear();
+    self.strategy_closed_positions_.clear();
+    self.strategy_open_positions_.clear();
+    self.execution_filter_decisions_.clear();
+    self.strategy_performance_snapshots_.clear();
     self.capitals_.clear();
     self.equities_.clear();
     self.peak_equities_.clear();
@@ -101,6 +115,11 @@ public:
     self.trade_events_.reserve(size);
     self.closed_trades_.reserve(size);
     self.open_positions_.reserve(size);
+    self.strategy_intents_.reserve(size);
+    self.strategy_closed_positions_.reserve(size);
+    self.strategy_open_positions_.reserve(size);
+    self.execution_filter_decisions_.reserve(size);
+    self.strategy_performance_snapshots_.reserve(size);
     self.capitals_.reserve(size);
     self.equities_.reserve(size);
     self.peak_equities_.reserve(size);
@@ -128,6 +147,15 @@ public:
     self.trade_events_.push_back(std::move(row.trade_events));
     self.closed_trades_.push_back(std::move(row.closed_trades));
     self.open_positions_.push_back(std::move(row.open_position));
+    self.strategy_intents_.push_back(std::move(row.strategy_intents));
+    self.strategy_closed_positions_.push_back(
+     std::move(row.strategy_closed_positions));
+    self.strategy_open_positions_.push_back(
+     std::move(row.strategy_open_position));
+    self.execution_filter_decisions_.push_back(
+     std::move(row.execution_filter_decisions));
+    self.strategy_performance_snapshots_.push_back(
+     std::move(row.strategy_performance));
     self.capitals_.push_back(row.capital);
     self.equities_.push_back(row.equity);
     self.peak_equities_.push_back(row.peak_equity);
@@ -183,6 +211,41 @@ public:
    -> const std::optional<OpenPositionSnapshot>&
   {
     return self.open_positions_[index];
+  }
+
+  auto strategy_intents(this const BacktestTimeline& self,
+                        std::size_t index) noexcept
+   -> const std::vector<StrategyIntent>&
+  {
+    return self.strategy_intents_[index];
+  }
+
+  auto strategy_closed_positions(this const BacktestTimeline& self,
+                                 std::size_t index) noexcept
+   -> const std::vector<StrategyClosedPosition>&
+  {
+    return self.strategy_closed_positions_[index];
+  }
+
+  auto strategy_open_position(this const BacktestTimeline& self,
+                              std::size_t index) noexcept
+   -> const std::optional<StrategyOpenPositionSnapshot>&
+  {
+    return self.strategy_open_positions_[index];
+  }
+
+  auto execution_filter_decisions(this const BacktestTimeline& self,
+                                  std::size_t index) noexcept
+   -> const std::vector<ExecutionFilterDecision>&
+  {
+    return self.execution_filter_decisions_[index];
+  }
+
+  auto strategy_performance(this const BacktestTimeline& self,
+                            std::size_t index) noexcept
+   -> const StrategyPerformanceSnapshot&
+  {
+    return self.strategy_performance_snapshots_[index];
   }
 
   auto capital(this const BacktestTimeline& self, std::size_t index) noexcept
@@ -462,6 +525,12 @@ private:
   std::vector<std::vector<TradeEvent>> trade_events_;
   std::vector<std::vector<ClosedTrade>> closed_trades_;
   std::vector<std::optional<OpenPositionSnapshot>> open_positions_;
+  std::vector<std::vector<StrategyIntent>> strategy_intents_;
+  std::vector<std::vector<StrategyClosedPosition>> strategy_closed_positions_;
+  std::vector<std::optional<StrategyOpenPositionSnapshot>>
+   strategy_open_positions_;
+  std::vector<std::vector<ExecutionFilterDecision>> execution_filter_decisions_;
+  std::vector<StrategyPerformanceSnapshot> strategy_performance_snapshots_;
 
   std::vector<double> capitals_;
   std::vector<double> equities_;

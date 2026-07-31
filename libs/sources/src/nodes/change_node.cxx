@@ -18,34 +18,37 @@ public:
   {
   }
 
-  explicit ChangeNode(ErasedNode source)
+  explicit ChangeNode(ErasedNode<ErasedSeriesMethodContext> source)
   : source_{std::move(source)}
   {
   }
 
   auto operator==(const ChangeNode& other) const noexcept -> bool = default;
 
-  auto source(this const ChangeNode& self) noexcept -> const ErasedNode&
+  auto source(this const ChangeNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.source_;
   }
 
-  void source(this ChangeNode& self, ErasedNode source) noexcept
+  void source(this ChangeNode& self,
+              ErasedNode<ErasedSeriesMethodContext> source) noexcept
   {
     self.source_ = std::move(source);
   }
 
 private:
-  ErasedNode source_;
+  ErasedNode<ErasedSeriesMethodContext> source_;
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const ChangeNode& node,
                        NodeToErasedMethodContext& context)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
-   ChangeMethod{node_to_erased_method(node.source(), context)}};
+  return ErasedSeriesMethod<TContext>{
+   ChangeMethod{node_to_erased_method<TContext>(node.source(), context)}};
 }
 
 } // namespace pludux

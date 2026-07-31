@@ -15,8 +15,9 @@ import :stop_target_price_node;
 
 export namespace pludux::backtest {
 
-void collect_numeric_inputs_from_node(const ErasedNode& node,
-                                      std::vector<NumericInputNode>& inputs);
+void collect_numeric_inputs_from_node(
+ const ErasedNode<ErasedSeriesMethodContext>& node,
+ std::vector<NumericInputNode>& inputs);
 
 void collect_numeric_inputs_from_node(const NumericInputNode& node,
                                       std::vector<NumericInputNode>& inputs)
@@ -264,25 +265,28 @@ void collect_numeric_inputs_from_node(const AnyOfNode& node,
   }
 }
 
-template<typename TComparator>
-void collect_numeric_inputs_from_node(const ComparisonNode<TComparator>& node,
-                                      std::vector<NumericInputNode>& inputs)
+template<typename TComparator, MethodContextable TContext>
+void collect_numeric_inputs_from_node(
+ const ComparisonNode<TComparator, TContext>& node,
+ std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.target(), inputs);
   collect_numeric_inputs_from_node(node.threshold(), inputs);
 }
 
-template<typename TOperator>
-void collect_numeric_inputs_from_node(const BinaryLogicalNode<TOperator>& node,
-                                      std::vector<NumericInputNode>& inputs)
+template<typename TOperator, MethodContextable TContext>
+void collect_numeric_inputs_from_node(
+ const BinaryLogicalNode<TOperator, TContext>& node,
+ std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.first_condition(), inputs);
   collect_numeric_inputs_from_node(node.second_condition(), inputs);
 }
 
-template<typename TOperator>
-void collect_numeric_inputs_from_node(const UnaryLogicalNode<TOperator>& node,
-                                      std::vector<NumericInputNode>& inputs)
+template<typename TOperator, MethodContextable TContext>
+void collect_numeric_inputs_from_node(
+ const UnaryLogicalNode<TOperator, TContext>& node,
+ std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.other_condition(), inputs);
 }
@@ -317,7 +321,7 @@ void collect_numeric_inputs_from_node(const UnaryOperatorNode<TUnaryFn>& node,
 }
 
 template<typename TNode>
-auto collect_if_node(const ErasedNode& node,
+auto collect_if_node(const ErasedNode<ErasedSeriesMethodContext>& node,
                      std::vector<NumericInputNode>& inputs) -> bool
 {
   const auto* typed_node = node_cast<TNode>(node);
@@ -329,8 +333,9 @@ auto collect_if_node(const ErasedNode& node,
   return true;
 }
 
-void collect_numeric_inputs_from_node(const ErasedNode& node,
-                                      std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(
+ const ErasedNode<ErasedSeriesMethodContext>& node,
+ std::vector<NumericInputNode>& inputs)
 {
 #define PLUDUX_COLLECT_IF_NODE(TNode)        \
   if(collect_if_node<TNode>(node, inputs)) { \
@@ -371,18 +376,18 @@ void collect_numeric_inputs_from_node(const ErasedNode& node,
   PLUDUX_COLLECT_IF_NODE(StochRsiNode)
   PLUDUX_COLLECT_IF_NODE(AllOfNode)
   PLUDUX_COLLECT_IF_NODE(AnyOfNode)
-  PLUDUX_COLLECT_IF_NODE(GreaterEqualNode)
-  PLUDUX_COLLECT_IF_NODE(GreaterThanNode)
-  PLUDUX_COLLECT_IF_NODE(LessThanNode)
-  PLUDUX_COLLECT_IF_NODE(LessEqualNode)
-  PLUDUX_COLLECT_IF_NODE(EqualNode)
-  PLUDUX_COLLECT_IF_NODE(NotEqualNode)
+  PLUDUX_COLLECT_IF_NODE(GreaterEqualNode<ErasedSeriesMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(GreaterThanNode<ErasedSeriesMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(LessThanNode<ErasedSeriesMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(LessEqualNode<ErasedSeriesMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(EqualNode<ErasedSeriesMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(NotEqualNode<ErasedSeriesMethodContext>)
   PLUDUX_COLLECT_IF_NODE(TrueNode)
   PLUDUX_COLLECT_IF_NODE(FalseNode)
-  PLUDUX_COLLECT_IF_NODE(LogicalAndNode)
-  PLUDUX_COLLECT_IF_NODE(LogicalOrNode)
-  PLUDUX_COLLECT_IF_NODE(LogicalNotNode)
-  PLUDUX_COLLECT_IF_NODE(LogicalXorNode)
+  PLUDUX_COLLECT_IF_NODE(LogicalAndNode<ErasedSeriesMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(LogicalOrNode<ErasedSeriesMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(LogicalNotNode<ErasedSeriesMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(LogicalXorNode<ErasedSeriesMethodContext>)
   PLUDUX_COLLECT_IF_NODE(CrossoverNode)
   PLUDUX_COLLECT_IF_NODE(CrossunderNode)
   PLUDUX_COLLECT_IF_NODE(MultiplyNode)

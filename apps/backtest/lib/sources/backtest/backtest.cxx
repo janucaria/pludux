@@ -10,6 +10,7 @@ export module pludux.backtest:backtest;
 import pludux;
 
 import :store_handle;
+import :strategy_performance;
 
 export namespace pludux::backtest {
 
@@ -23,7 +24,8 @@ public:
              MarketStoreHandle{},
              BrokerStoreHandle{},
              ProfileStoreHandle{},
-             {}}
+             {},
+             StrategyPerformanceConfig{}}
   {
   }
 
@@ -34,7 +36,8 @@ public:
            MarketStoreHandle market_handle,
            BrokerStoreHandle broker_handle,
            ProfileStoreHandle profile_handle,
-           std::vector<NumericInputNode> inputs = {})
+           std::vector<NumericInputNode> inputs = {},
+           StrategyPerformanceConfig strategy_performance = {})
   : name_{std::move(name)}
   , initial_capital_{initial_capital}
   , asset_handle_{std::move(asset_handle)}
@@ -43,6 +46,7 @@ public:
   , broker_handle_{std::move(broker_handle)}
   , profile_handle_{std::move(profile_handle)}
   , inputs_{std::move(inputs)}
+  , strategy_performance_{std::move(strategy_performance)}
   {
   }
 
@@ -136,6 +140,19 @@ public:
     self.inputs_ = std::move(new_inputs);
   }
 
+  auto strategy_performance(this const Backtest& self) noexcept
+   -> const StrategyPerformanceConfig&
+  {
+    return self.strategy_performance_;
+  }
+
+  void strategy_performance(this Backtest& self,
+                            StrategyPerformanceConfig strategy_performance)
+  {
+    strategy_performance.validate();
+    self.strategy_performance_ = std::move(strategy_performance);
+  }
+
   auto equivalent_rules(this const Backtest& self,
                         const Backtest& other) noexcept -> bool
   {
@@ -145,7 +162,8 @@ public:
            self.market_handle() == other.market_handle() &&
            self.broker_handle() == other.broker_handle() &&
            self.profile_handle() == other.profile_handle() &&
-           self.inputs_ == other.inputs_;
+           self.inputs_ == other.inputs_ &&
+           self.strategy_performance_ == other.strategy_performance_;
   }
 
 private:
@@ -159,6 +177,7 @@ private:
   ProfileStoreHandle profile_handle_;
 
   std::vector<NumericInputNode> inputs_;
+  StrategyPerformanceConfig strategy_performance_;
 };
 
 } // namespace pludux::backtest

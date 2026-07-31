@@ -42,6 +42,7 @@ private:
 
 void pludux_tag_invoke();
 
+template<MethodContextable TContext>
 struct NodeToErasedMethod {
   template<typename TNode>
   auto operator()(
@@ -49,12 +50,13 @@ struct NodeToErasedMethod {
    const TNode& node,
    NodeToErasedMethodContext&
     context) noexcept(noexcept(pludux_tag_invoke(self, node, context)))
-   -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+   -> ErasedSeriesMethod<TContext>
   {
     return pludux_tag_invoke(self, node, context);
   }
 };
 
-inline constexpr auto node_to_erased_method = NodeToErasedMethod{};
+template<MethodContextable TContext>
+inline constexpr auto node_to_erased_method = NodeToErasedMethod<TContext>{};
 
 } // namespace pludux

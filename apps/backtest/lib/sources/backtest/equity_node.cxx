@@ -21,24 +21,26 @@ public:
    -> bool = default;
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const EquityNode& node,
                        NodeToErasedMethodContext& context) noexcept
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+ -> ErasedSeriesMethod<TContext>
 {
   static_cast<void>(node);
   static_cast<void>(context);
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{EquityMethod{}};
+  return ErasedSeriesMethod<TContext>{EquityMethod{}};
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const EquityPercentNode& node,
                        NodeToErasedMethodContext& context) noexcept
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+ -> ErasedSeriesMethod<TContext>
 {
   static_cast<void>(node);
   static_cast<void>(context);
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{EquityPercentMethod{}};
+  return ErasedSeriesMethod<TContext>{EquityPercentMethod{}};
 }
 
 } // namespace pludux::backtest

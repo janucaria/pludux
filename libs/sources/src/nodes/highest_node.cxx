@@ -26,17 +26,18 @@ public:
   {
   }
 
-  explicit HighestNode(ErasedNode source)
+  explicit HighestNode(ErasedNode<ErasedSeriesMethodContext> source)
   : HighestNode{std::move(source), 14}
   {
   }
 
-  HighestNode(ErasedNode source, std::size_t period)
+  HighestNode(ErasedNode<ErasedSeriesMethodContext> source, std::size_t period)
   : HighestNode{std::move(source), ValueNode{static_cast<double>(period)}}
   {
   }
 
-  HighestNode(ErasedNode source, ErasedNode period)
+  HighestNode(ErasedNode<ErasedSeriesMethodContext> source,
+              ErasedNode<ErasedSeriesMethodContext> period)
   : source_{std::move(source)}
   , period_{std::move(period)}
   {
@@ -44,22 +45,26 @@ public:
 
   auto operator==(const HighestNode& other) const noexcept -> bool = default;
 
-  auto source(this const HighestNode& self) noexcept -> const ErasedNode&
+  auto source(this const HighestNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.source_;
   }
 
-  void source(this HighestNode& self, ErasedNode source) noexcept
+  void source(this HighestNode& self,
+              ErasedNode<ErasedSeriesMethodContext> source) noexcept
   {
     self.source_ = std::move(source);
   }
 
-  auto period(this const HighestNode& self) noexcept -> const ErasedNode&
+  auto period(this const HighestNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.period_;
   }
 
-  void period(this HighestNode& self, ErasedNode period) noexcept
+  void period(this HighestNode& self,
+              ErasedNode<ErasedSeriesMethodContext> period) noexcept
   {
     self.period_ = std::move(period);
   }
@@ -70,20 +75,21 @@ public:
   }
 
 private:
-  ErasedNode source_;
-  ErasedNode period_;
+  ErasedNode<ErasedSeriesMethodContext> source_;
+  ErasedNode<ErasedSeriesMethodContext> period_;
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const HighestNode& node,
                        NodeToErasedMethodContext& context)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+ -> ErasedSeriesMethod<TContext>
 {
-  const auto source_method = node_to_erased_method(node.source(), context);
-  const auto period = node_to_erased_method(node.period(), context);
+  const auto source_method =
+   node_to_erased_method<TContext>(node.source(), context);
+  const auto period = node_to_erased_method<TContext>(node.period(), context);
 
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
-   HighestMethod{source_method, period}};
+  return ErasedSeriesMethod<TContext>{HighestMethod{source_method, period}};
 }
 
 } // namespace pludux

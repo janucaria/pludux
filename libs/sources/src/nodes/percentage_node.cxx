@@ -23,7 +23,7 @@ public:
   {
   }
 
-  PercentageNode(ErasedNode base, double percent)
+  PercentageNode(ErasedNode<ErasedSeriesMethodContext> base, double percent)
   : base_{std::move(base)}
   , percent_{percent}
   {
@@ -31,12 +31,14 @@ public:
 
   auto operator==(const PercentageNode& other) const noexcept -> bool = default;
 
-  auto base(this const PercentageNode& self) noexcept -> const ErasedNode&
+  auto base(this const PercentageNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.base_;
   }
 
-  void base(this PercentageNode& self, ErasedNode new_base) noexcept
+  void base(this PercentageNode& self,
+            ErasedNode<ErasedSeriesMethodContext> new_base) noexcept
   {
     self.base_ = std::move(new_base);
   }
@@ -52,17 +54,18 @@ public:
   }
 
 private:
-  ErasedNode base_;
+  ErasedNode<ErasedSeriesMethodContext> base_;
   double percent_;
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const PercentageNode& node,
                        NodeToErasedMethodContext& context)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{PercentageMethod{
-   node_to_erased_method(node.base(), context), node.percent()}};
+  return ErasedSeriesMethod<TContext>{PercentageMethod{
+   node_to_erased_method<TContext>(node.base(), context), node.percent()}};
 }
 
 } // namespace pludux

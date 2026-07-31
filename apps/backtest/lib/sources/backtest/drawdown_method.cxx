@@ -37,8 +37,7 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
 
   if constexpr(std::is_same_v<std::monostate, decltype(context)>) {
     return std::numeric_limits<double>::quiet_NaN();
-  } else if constexpr(std::is_same_v<std::remove_cvref_t<decltype(context)>,
-                                     BacktestMethodContext>) {
+  } else if constexpr(requires { context.drawdown(); }) {
     return context.drawdown();
   } else if constexpr(std::is_same_v<std::remove_cvref_t<decltype(context)>,
                                      ErasedSeriesMethodContext>) {

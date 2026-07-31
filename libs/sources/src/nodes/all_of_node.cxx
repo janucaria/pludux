@@ -16,12 +16,14 @@ class AllOfNode {
 public:
   AllOfNode() = default;
 
-  AllOfNode(std::initializer_list<ErasedNode> conditions)
+  AllOfNode(
+   std::initializer_list<ErasedNode<ErasedSeriesMethodContext>> conditions)
   : conditions_{conditions}
   {
   }
 
-  explicit AllOfNode(std::vector<ErasedNode> conditions)
+  explicit AllOfNode(
+   std::vector<ErasedNode<ErasedSeriesMethodContext>> conditions)
   : conditions_{std::move(conditions)}
   {
   }
@@ -29,36 +31,37 @@ public:
   auto operator==(const AllOfNode& other) const noexcept -> bool = default;
 
   auto conditions(this const AllOfNode& self) noexcept
-   -> const std::vector<ErasedNode>&
+   -> const std::vector<ErasedNode<ErasedSeriesMethodContext>>&
   {
     return self.conditions_;
   }
 
-  void conditions(this AllOfNode& self,
-                  std::vector<ErasedNode> conditions) noexcept
+  void conditions(
+   this AllOfNode& self,
+   std::vector<ErasedNode<ErasedSeriesMethodContext>> conditions) noexcept
   {
     self.conditions_ = std::move(conditions);
   }
 
 private:
-  std::vector<ErasedNode> conditions_;
+  std::vector<ErasedNode<ErasedSeriesMethodContext>> conditions_;
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const AllOfNode& node,
                        NodeToErasedMethodContext& context)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+ -> ErasedSeriesMethod<TContext>
 {
-  auto conditions =
-   std::vector<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+  auto conditions = std::vector<ErasedSeriesMethod<TContext>>{};
   conditions.reserve(node.conditions().size());
   for(const auto& condition : node.conditions()) {
-    conditions.emplace_back(node_to_erased_method(condition, context));
+    conditions.emplace_back(
+     node_to_erased_method<TContext>(condition, context));
   }
 
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
-   AllOfMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>{
-    std::move(conditions)}};
+  return ErasedSeriesMethod<TContext>{
+   AllOfMethod<ErasedSeriesMethod<TContext>>{std::move(conditions)}};
 }
 
 } // namespace pludux

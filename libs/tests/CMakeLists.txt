@@ -52,6 +52,7 @@ set(PLUDUX_TEST_SOURCES
 
   src/test_hash_series_method.cpp
   src/test_node_to_erased_method.cpp
+  src/test_typed_erased_node.cpp
 )
 
 foreach(PLUDUX_TEST_SOURCE ${PLUDUX_TEST_SOURCES})

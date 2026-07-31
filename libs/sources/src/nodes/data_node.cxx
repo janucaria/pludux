@@ -35,13 +35,13 @@ private:
   std::string field_{};
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const DataNode& node,
                        NodeToErasedMethodContext&)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
-   DataMethod{node.field()}};
+  return ErasedSeriesMethod<TContext>{DataMethod{node.field()}};
 }
 
 } // namespace pludux

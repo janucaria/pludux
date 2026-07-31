@@ -28,13 +28,13 @@ private:
   double value_;
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const ValueNode& node,
                        NodeToErasedMethodContext&)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
-   ValueMethod{node.value()}};
+  return ErasedSeriesMethod<TContext>{ValueMethod{node.value()}};
 }
 
 } // namespace pludux

@@ -23,7 +23,8 @@ enum class NodeOutput {
 
 class SelectOutputNode {
 public:
-  SelectOutputNode(ErasedNode source, NodeOutput output)
+  SelectOutputNode(ErasedNode<ErasedSeriesMethodContext> source,
+                   NodeOutput output)
   : source_{std::move(source)}
   , output_{output}
   {
@@ -37,12 +38,14 @@ public:
   auto operator==(const SelectOutputNode& other) const noexcept
    -> bool = default;
 
-  auto source(this const SelectOutputNode& self) noexcept -> const ErasedNode&
+  auto source(this const SelectOutputNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.source_;
   }
 
-  void source(this SelectOutputNode& self, ErasedNode source) noexcept
+  void source(this SelectOutputNode& self,
+              ErasedNode<ErasedSeriesMethodContext> source) noexcept
   {
     self.source_ = std::move(source);
   }
@@ -58,17 +61,18 @@ public:
   }
 
 private:
-  ErasedNode source_;
+  ErasedNode<ErasedSeriesMethodContext> source_;
   NodeOutput output_;
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const SelectOutputNode& node,
                        NodeToErasedMethodContext& context)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
-   SelectOutputMethod{node_to_erased_method(node.source(), context),
+  return ErasedSeriesMethod<TContext>{
+   SelectOutputMethod{node_to_erased_method<TContext>(node.source(), context),
                       static_cast<MethodOutput>(node.output())}};
 }
 

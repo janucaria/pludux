@@ -384,7 +384,8 @@ auto parse_backtest_strategy_config_json(std::string_view strategy_name,
   const auto intrabar_path = parse_intrabar_path(
    strategy_json.at("execution").at("intrabarPath").as<std::string>());
 
-  auto series_nodes = OrderedNamedRegistry<ErasedNode>{};
+  auto series_nodes =
+   OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>{};
   if(strategy_json.contains("series")) {
     const auto& series_json = strategy_json.at("series");
     for(const auto& [series_name, series_config] : series_json.object_range()) {
