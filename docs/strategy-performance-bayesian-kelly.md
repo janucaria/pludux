@@ -34,17 +34,32 @@ change the statistical payoff observation.
 
 ## Observations
 
-For a closed theoretical position, let the normalized return be (r). It is a
+For a closed theoretical position, let the normalized return be \(r\). It is a
 ratio such as `0.02` for a 2% return, not account profit and loss.
 
-| Return | Win evidence | Winning magnitude | Losing magnitude |
+| Return | Binary evidence | Winning magnitude | Losing magnitude |
 | --- | ---: | ---: | ---: |
-| (r>0) | win | (r) | none |
-| (r<0) | loss | none | (|r|) |
-| (r=0) | none | none | none |
+| \(r>0\) | win | \(r\) | none |
+| \(r<0\) | loss | none | \(|r|\) |
+| \(r=0\) | configured break-even treatment | none | none |
 
-Zero returns still contribute to lifetime count and frequentist return
-statistics. They do not change the Beta-Bernoulli or payoff-magnitude evidence.
+The break-even treatment is `SKIP`, `COUNT_AS_WIN`, or `COUNT_AS_LOSS`.
+`COUNT_AS_LOSS` is the default. This setting changes only Beta-Bernoulli
+evidence. Frequentist outcomes preserve wins, break-even results, and losses as
+three separate categories. Zero returns always contribute to the lifetime count
+and frequentist return statistics, and they never contribute a zero magnitude
+to either positive-support payoff model.
+
+For history-weighted positive, zero, and negative counts \(W\), \(E\), and
+\(L\), respectively, the frequentist rates are:
+
+\[
+\text{win rate}=\frac{W}{W+E+L},\qquad
+\text{break-even rate}=\frac{E}{W+E+L},\qquad
+\text{loss rate}=\frac{L}{W+E+L}
+\]
+
+They sum to one whenever at least one observation has effective weight.
 
 Winning and losing magnitudes are modeled separately because their distributions
 need not have the same scale or shape. Losses use absolute magnitude so both
@@ -55,19 +70,21 @@ payoff models have positive support.
 Priors are never removed or decayed. Only observational evidence is weighted.
 
 - **All history:** every closed theoretical position retains weight 1.
-- **Rolling window:** only the latest (N) total closed positions remain. A
-  zero return occupies a window slot even though it contributes no Bayesian
-  win/loss or magnitude evidence.
+- **Rolling window:** only the latest \(N\) total closed positions remain. A
+  zero return occupies a window slot regardless of its break-even treatment.
 - **Exponential decay:** before each new closed position is added, all existing
   observational sufficient statistics are multiplied by the configured decay
-  factor. The new observation then receives weight 1. A zero return therefore
-  ages earlier Bayesian evidence even though it adds none itself.
+  factor. The new observation then receives weight 1 where applicable. A zero
+  return therefore ages earlier evidence before its configured binary
+  classification is applied.
 
 Effective counts may be fractional under exponential decay.
 
 ## Win Probability Model
 
-Let (p) be the probability that a non-zero theoretical return is positive.
+Let \(p\) be the probability of a binary win under the configured classification.
+Positive returns are wins, negative returns are losses, and zero returns are
+skipped or classified as wins or losses according to the break-even treatment.
 The likelihood is Bernoulli and the prior is Beta:
 
 \[
@@ -289,6 +306,10 @@ Performance evidence.
 
 | Configuration or diagnostic | Symbol or meaning |
 | --- | --- |
+| `breakEvenTreatment` | Zero-return binary classification; defaults to `COUNT_AS_LOSS` |
+| `winRate` | History-weighted positive-return rate, independent of break-even treatment |
+| `breakEvenRate` | History-weighted zero-return rate, independent of break-even treatment |
+| `lossRate` | History-weighted negative-return rate, independent of break-even treatment |
 | `estimate` | Posterior Mean or Adverse Quantiles input selection |
 | `centralCredibleMass` | Central credible mass \(C\), used only for Adverse Quantiles |
 | `kellyMultiplier` | (m\in[0,1]) |
@@ -340,3 +361,7 @@ reasons.
   return distribution.
 - The formula assumes the estimated binary process is relevant to the next
   theoretical position. Backtest evidence alone cannot establish that premise.
+- Counting break-even positions as wins or losses changes event probability but
+  not either conditional payoff distribution. This is an intentional
+  classification policy rather than a claim that a zero payoff has positive or
+  negative magnitude.

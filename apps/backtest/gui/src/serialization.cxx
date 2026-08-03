@@ -115,6 +115,20 @@ auto strategy_performance_from_json(const Json& json)
  -> pludux::backtest::StrategyPerformanceConfig
 {
   using namespace pludux::backtest;
+  const auto break_even_value =
+   required_as<std::string>(json, "breakEvenTreatment");
+  const auto break_even_treatment = [&] {
+    if(break_even_value == "SKIP") {
+      return StrategyPerformanceBreakEvenTreatment::Skip;
+    }
+    if(break_even_value == "COUNT_AS_WIN") {
+      return StrategyPerformanceBreakEvenTreatment::CountAsWin;
+    }
+    if(break_even_value == "COUNT_AS_LOSS") {
+      return StrategyPerformanceBreakEvenTreatment::CountAsLoss;
+    }
+    throw std::invalid_argument{"Invalid break-even treatment"};
+  }();
   const auto& history = json.at("history");
   const auto mode_value = required_as<int>(history, "mode");
   if(mode_value < static_cast<int>(StrategyPerformanceHistoryMode::All) ||
@@ -148,7 +162,8 @@ auto strategy_performance_from_json(const Json& json)
      required_as<double>(win_params, "priorWinProbability"),
      required_as<double>(win_params, "priorStrength")}},
     parse_payoff(bayesian.at("winningPayoff")),
-    parse_payoff(bayesian.at("losingPayoff"))}};
+    parse_payoff(bayesian.at("losingPayoff"))},
+   break_even_treatment};
 }
 
 template<typename Json>
@@ -156,6 +171,17 @@ auto strategy_performance_to_json(
  const pludux::backtest::StrategyPerformanceConfig& config) -> Json
 {
   auto json = Json{};
+  switch(config.break_even_treatment()) {
+  case pludux::backtest::StrategyPerformanceBreakEvenTreatment::Skip:
+    json["breakEvenTreatment"] = "SKIP";
+    break;
+  case pludux::backtest::StrategyPerformanceBreakEvenTreatment::CountAsWin:
+    json["breakEvenTreatment"] = "COUNT_AS_WIN";
+    break;
+  case pludux::backtest::StrategyPerformanceBreakEvenTreatment::CountAsLoss:
+    json["breakEvenTreatment"] = "COUNT_AS_LOSS";
+    break;
+  }
   json["history"]["mode"] = static_cast<int>(config.history().mode());
   json["history"]["rollingWindow"] = config.history().rolling_window();
   json["history"]["exponentialDecay"] = config.history().exponential_decay();

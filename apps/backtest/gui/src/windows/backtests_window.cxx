@@ -546,6 +546,8 @@ private:
       }
 
       auto history_mode = static_cast<int>(config.history().mode());
+      auto break_even_treatment =
+       static_cast<int>(config.break_even_treatment());
       auto rolling_window = static_cast<int>(config.history().rolling_window());
       auto exponential_decay = config.history().exponential_decay();
       auto prior_win_probability = win_model->prior_probability();
@@ -587,6 +589,17 @@ private:
                               &win_model_index,
                               win_models,
                               IM_ARRAYSIZE(win_models));
+      constexpr const char* break_even_treatments[] = {
+       "Skip", "Count as win", "Count as loss"};
+      ui::field_label(
+       "Break-even treatment",
+       "Controls how an exactly zero theoretical return contributes to the "
+       "Bayesian win-probability model. Frequentist outcome rates preserve "
+       "break-even as its own category, and payoff magnitudes are unchanged.");
+      changed |= ImGui::Combo("##strategy_break_even_treatment",
+                              &break_even_treatment,
+                              break_even_treatments,
+                              IM_ARRAYSIZE(break_even_treatments));
       ui::field_label("Prior win probability");
       changed |= ImGui::InputDouble(
        "##prior_win_probability", &prior_win_probability, 0.01, 0.1, "%.4f");
@@ -651,7 +664,9 @@ private:
              backtest::BayesianPayoffModelNode{backtest::GammaPayoffModelNode{
               winning_prior_mean, winning_prior_strength, winning_cv}},
              backtest::BayesianPayoffModelNode{backtest::GammaPayoffModelNode{
-              losing_prior_mean, losing_prior_strength, losing_cv}}}});
+              losing_prior_mean, losing_prior_strength, losing_cv}}},
+            static_cast<backtest::StrategyPerformanceBreakEvenTreatment>(
+             break_even_treatment)});
           self.configuration_error_.clear();
         } catch(const std::exception& error) {
           self.configuration_error_ = error.what();

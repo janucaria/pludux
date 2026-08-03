@@ -1496,14 +1496,21 @@ private:
   {
     auto xs = std::vector<double>(timeline.size());
     auto win_rate = std::vector<double>(timeline.size());
+    auto break_even_rate = std::vector<double>(timeline.size());
+    auto loss_rate = std::vector<double>(timeline.size());
     auto mean_return = std::vector<double>(timeline.size());
     for(auto index = std::size_t{0}; index < timeline.size(); ++index) {
       xs[index] = static_cast<double>(index);
       const auto& performance = timeline.strategy_performance(index);
       win_rate[index] = performance.win_rate();
+      break_even_rate[index] = performance.break_even_rate();
+      loss_rate[index] = performance.loss_rate();
       mean_return[index] = performance.mean_return();
     }
     ImPlot::PlotLine("Win rate", xs.data(), win_rate.data(), xs.size());
+    ImPlot::PlotLine(
+     "Break-even rate", xs.data(), break_even_rate.data(), xs.size());
+    ImPlot::PlotLine("Loss rate", xs.data(), loss_rate.data(), xs.size());
     ImPlot::PlotLine("Mean return", xs.data(), mean_return.data(), xs.size());
   }
 

@@ -17,6 +17,8 @@ enum class StrategyPerformanceMetric {
   LifetimeCount,
   EffectiveCount,
   WinRate,
+  BreakEvenRate,
+  LossRate,
   MeanReturn,
   ReturnStandardDeviation,
   BayesianWinProbability,
@@ -73,6 +75,10 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
     return performance.effective_count();
   case StrategyPerformanceMetric::WinRate:
     return performance.win_rate();
+  case StrategyPerformanceMetric::BreakEvenRate:
+    return performance.break_even_rate();
+  case StrategyPerformanceMetric::LossRate:
+    return performance.loss_rate();
   case StrategyPerformanceMetric::MeanReturn:
     return performance.mean_return();
   case StrategyPerformanceMetric::ReturnStandardDeviation:

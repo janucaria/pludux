@@ -20,6 +20,12 @@ enum class StrategyPerformanceHistoryMode {
   ExponentialDecay
 };
 
+enum class StrategyPerformanceBreakEvenTreatment {
+  Skip,
+  CountAsWin,
+  CountAsLoss
+};
+
 class StrategyPerformanceHistoryPolicy {
 public:
   StrategyPerformanceHistoryPolicy(
@@ -149,10 +155,14 @@ private:
 
 class StrategyPerformanceConfig {
 public:
-  StrategyPerformanceConfig(StrategyPerformanceHistoryPolicy history = {},
-                            StrategyPerformanceBayesianConfig bayesian = {})
+  StrategyPerformanceConfig(
+   StrategyPerformanceHistoryPolicy history = {},
+   StrategyPerformanceBayesianConfig bayesian = {},
+   StrategyPerformanceBreakEvenTreatment break_even_treatment =
+    StrategyPerformanceBreakEvenTreatment::CountAsLoss)
   : history_{std::move(history)}
   , bayesian_{std::move(bayesian)}
+  , break_even_treatment_{break_even_treatment}
   {
     validate();
   }
@@ -186,15 +196,44 @@ public:
     self.bayesian_ = std::move(bayesian);
   }
 
+  auto break_even_treatment(this const StrategyPerformanceConfig& self) noexcept
+   -> StrategyPerformanceBreakEvenTreatment
+  {
+    return self.break_even_treatment_;
+  }
+
+  void break_even_treatment(
+   this StrategyPerformanceConfig& self,
+   StrategyPerformanceBreakEvenTreatment break_even_treatment)
+  {
+    validate_break_even_treatment(break_even_treatment);
+    self.break_even_treatment_ = break_even_treatment;
+  }
+
   void validate(this const StrategyPerformanceConfig& self)
   {
     self.history_.validate();
     self.bayesian_.validate();
+    validate_break_even_treatment(self.break_even_treatment_);
   }
 
 private:
   StrategyPerformanceHistoryPolicy history_{};
   StrategyPerformanceBayesianConfig bayesian_{};
+  StrategyPerformanceBreakEvenTreatment break_even_treatment_{
+   StrategyPerformanceBreakEvenTreatment::CountAsLoss};
+
+  static void validate_break_even_treatment(
+   StrategyPerformanceBreakEvenTreatment break_even_treatment)
+  {
+    switch(break_even_treatment) {
+    case StrategyPerformanceBreakEvenTreatment::Skip:
+    case StrategyPerformanceBreakEvenTreatment::CountAsWin:
+    case StrategyPerformanceBreakEvenTreatment::CountAsLoss:
+      return;
+    }
+    throw std::invalid_argument{"Invalid break-even treatment"};
+  }
 };
 
 class StrategyPerformanceSnapshot {
@@ -205,6 +244,8 @@ public:
    std::size_t lifetime_count,
    double effective_count,
    double win_rate,
+   double break_even_rate,
+   double loss_rate,
    double mean_return,
    double return_standard_deviation,
    BayesianWinSnapshot win_probability_posterior,
@@ -213,6 +254,8 @@ public:
   : lifetime_count_{lifetime_count}
   , effective_count_{effective_count}
   , win_rate_{win_rate}
+  , break_even_rate_{break_even_rate}
+  , loss_rate_{loss_rate}
   , mean_return_{mean_return}
   , return_standard_deviation_{return_standard_deviation}
   , win_probability_posterior_{std::move(win_probability_posterior)}
@@ -239,6 +282,18 @@ public:
   auto win_rate(this const StrategyPerformanceSnapshot& self) noexcept -> double
   {
     return self.win_rate_;
+  }
+
+  auto break_even_rate(this const StrategyPerformanceSnapshot& self) noexcept
+   -> double
+  {
+    return self.break_even_rate_;
+  }
+
+  auto loss_rate(this const StrategyPerformanceSnapshot& self) noexcept
+   -> double
+  {
+    return self.loss_rate_;
   }
 
   auto mean_return(this const StrategyPerformanceSnapshot& self) noexcept
@@ -278,6 +333,8 @@ private:
   std::size_t lifetime_count_{};
   double effective_count_{};
   double win_rate_{};
+  double break_even_rate_{};
+  double loss_rate_{};
   double mean_return_{};
   double return_standard_deviation_{};
   BayesianWinSnapshot win_probability_posterior_{};
@@ -335,11 +392,19 @@ public:
   auto snapshot(this const StrategyPerformance& self)
    -> StrategyPerformanceSnapshot
   {
-    const auto resolved_weight =
-     self.binary_evidence_.win_weight + self.binary_evidence_.loss_weight;
-    const auto win_rate = resolved_weight > 0.0
-                           ? self.binary_evidence_.win_weight / resolved_weight
+    const auto outcome_weight = self.outcome_evidence_.win_weight +
+                                self.outcome_evidence_.break_even_weight +
+                                self.outcome_evidence_.loss_weight;
+    const auto win_rate = outcome_weight > 0.0
+                           ? self.outcome_evidence_.win_weight / outcome_weight
                            : 0.0;
+    const auto break_even_rate =
+     outcome_weight > 0.0
+      ? self.outcome_evidence_.break_even_weight / outcome_weight
+      : 0.0;
+    const auto loss_rate =
+     outcome_weight > 0.0 ? self.outcome_evidence_.loss_weight / outcome_weight
+                          : 0.0;
     const auto standard_deviation =
      self.return_evidence_.effective_count > 1.0
       ? std::sqrt(self.return_evidence_.squared_deviation_sum /
@@ -350,6 +415,8 @@ public:
      self.lifetime_count_,
      self.return_evidence_.effective_count,
      win_rate,
+     break_even_rate,
+     loss_rate,
      self.return_evidence_.mean,
      standard_deviation,
      self.win_probability_model_.evaluate(self.binary_evidence_),
@@ -364,6 +431,12 @@ private:
     double squared_deviation_sum{};
   };
 
+  struct WeightedOutcomeEvidence {
+    double win_weight{};
+    double break_even_weight{};
+    double loss_weight{};
+  };
+
   StrategyPerformanceConfig config_;
   BayesianWinModelMethod win_probability_model_;
   BayesianPayoffModelMethod winning_payoff_model_;
@@ -371,6 +444,7 @@ private:
   std::size_t lifetime_count_{};
   std::deque<double> observations_{};
   WeightedReturnEvidence return_evidence_{};
+  WeightedOutcomeEvidence outcome_evidence_{};
   WeightedBinaryEvidence binary_evidence_{};
   WeightedPayoffEvidence winning_payoff_evidence_{};
   WeightedPayoffEvidence losing_payoff_evidence_{};
@@ -386,13 +460,27 @@ private:
     self.return_evidence_.effective_count = new_weight;
 
     if(value > 0.0) {
+      self.outcome_evidence_.win_weight += 1.0;
       self.binary_evidence_.win_weight += 1.0;
       self.winning_payoff_evidence_.effective_count += 1.0;
       self.winning_payoff_evidence_.sum += value;
     } else if(value < 0.0) {
+      self.outcome_evidence_.loss_weight += 1.0;
       self.binary_evidence_.loss_weight += 1.0;
       self.losing_payoff_evidence_.effective_count += 1.0;
       self.losing_payoff_evidence_.sum -= value;
+    } else {
+      self.outcome_evidence_.break_even_weight += 1.0;
+      switch(self.config_.break_even_treatment()) {
+      case StrategyPerformanceBreakEvenTreatment::Skip:
+        break;
+      case StrategyPerformanceBreakEvenTreatment::CountAsWin:
+        self.binary_evidence_.win_weight += 1.0;
+        break;
+      case StrategyPerformanceBreakEvenTreatment::CountAsLoss:
+        self.binary_evidence_.loss_weight += 1.0;
+        break;
+      }
     }
   }
 
@@ -400,6 +488,9 @@ private:
   {
     self.return_evidence_.effective_count *= factor;
     self.return_evidence_.squared_deviation_sum *= factor;
+    self.outcome_evidence_.win_weight *= factor;
+    self.outcome_evidence_.break_even_weight *= factor;
+    self.outcome_evidence_.loss_weight *= factor;
     self.binary_evidence_.win_weight *= factor;
     self.binary_evidence_.loss_weight *= factor;
     self.winning_payoff_evidence_.effective_count *= factor;
@@ -410,6 +501,7 @@ private:
     if(self.return_evidence_.effective_count <=
        std::numeric_limits<double>::epsilon()) {
       self.return_evidence_ = {};
+      self.outcome_evidence_ = {};
       self.binary_evidence_ = {};
       self.winning_payoff_evidence_ = {};
       self.losing_payoff_evidence_ = {};
@@ -419,6 +511,7 @@ private:
   void rebuild(this StrategyPerformance& self) noexcept
   {
     self.return_evidence_ = {};
+    self.outcome_evidence_ = {};
     self.binary_evidence_ = {};
     self.winning_payoff_evidence_ = {};
     self.losing_payoff_evidence_ = {};

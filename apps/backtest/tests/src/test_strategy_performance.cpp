@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <array>
 #include <cmath>
 #include <stdexcept>
 
@@ -122,6 +123,8 @@ TEST(StrategyPerformanceTest, AggregatesMixedDirectionsIntoOneHistory)
   EXPECT_DOUBLE_EQ(snapshot.effective_count(), 2.0);
   EXPECT_DOUBLE_EQ(snapshot.mean_return(), 0.025);
   EXPECT_DOUBLE_EQ(snapshot.win_rate(), 0.5);
+  EXPECT_DOUBLE_EQ(snapshot.break_even_rate(), 0.0);
+  EXPECT_DOUBLE_EQ(snapshot.loss_rate(), 0.5);
   EXPECT_DOUBLE_EQ(snapshot.winning_payoff_posterior().effective_count, 1.0);
   EXPECT_DOUBLE_EQ(snapshot.losing_payoff_posterior().effective_count, 1.0);
 }
@@ -141,6 +144,8 @@ TEST(StrategyPerformanceTest, RollingWindowUsesRecentStrategyOutputs)
   EXPECT_DOUBLE_EQ(snapshot.effective_count(), 2.0);
   EXPECT_NEAR(snapshot.mean_return(), 0.05, 1e-12);
   EXPECT_DOUBLE_EQ(snapshot.win_rate(), 0.5);
+  EXPECT_DOUBLE_EQ(snapshot.break_even_rate(), 0.0);
+  EXPECT_DOUBLE_EQ(snapshot.loss_rate(), 0.5);
   EXPECT_DOUBLE_EQ(snapshot.winning_payoff_posterior().effective_count, 1.0);
   EXPECT_DOUBLE_EQ(snapshot.losing_payoff_posterior().effective_count, 1.0);
 }
@@ -206,6 +211,8 @@ TEST(StrategyPerformanceTest, ExponentialDecayAgesEveryEvidenceStream)
   EXPECT_EQ(snapshot.lifetime_count(), 2);
   EXPECT_DOUBLE_EQ(snapshot.effective_count(), 1.5);
   EXPECT_NEAR(snapshot.win_rate(), 1.0 / 3.0, 1e-12);
+  EXPECT_DOUBLE_EQ(snapshot.break_even_rate(), 0.0);
+  EXPECT_NEAR(snapshot.loss_rate(), 2.0 / 3.0, 1e-12);
   EXPECT_NEAR(snapshot.mean_return(), -1.0 / 30.0, 1e-12);
   EXPECT_NEAR(
    snapshot.win_probability_posterior().probability, 3.0 / 7.0, 1e-12);
@@ -215,7 +222,7 @@ TEST(StrategyPerformanceTest, ExponentialDecayAgesEveryEvidenceStream)
   EXPECT_NEAR(snapshot.losing_payoff_posterior().mean, 0.1001 / 1.01, 1e-12);
 }
 
-TEST(StrategyPerformanceTest, ZeroReturnIsOnlyFrequentistEvidence)
+TEST(StrategyPerformanceTest, BreakEvenDefaultsToLossClassification)
 {
   auto performance = StrategyPerformance{};
   performance.observe(closed_position(1, StrategyDirection::Long, 0.0));
@@ -224,11 +231,118 @@ TEST(StrategyPerformanceTest, ZeroReturnIsOnlyFrequentistEvidence)
   EXPECT_EQ(snapshot.lifetime_count(), 1);
   EXPECT_DOUBLE_EQ(snapshot.effective_count(), 1.0);
   EXPECT_DOUBLE_EQ(snapshot.win_rate(), 0.0);
-  EXPECT_DOUBLE_EQ(snapshot.win_probability_posterior().probability, 0.5);
+  EXPECT_DOUBLE_EQ(snapshot.break_even_rate(), 1.0);
+  EXPECT_DOUBLE_EQ(snapshot.loss_rate(), 0.0);
+  EXPECT_DOUBLE_EQ(snapshot.mean_return(), 0.0);
+  EXPECT_DOUBLE_EQ(snapshot.return_standard_deviation(), 0.0);
+  EXPECT_DOUBLE_EQ(snapshot.win_probability_posterior().probability, 1.0 / 3.0);
   EXPECT_DOUBLE_EQ(snapshot.winning_payoff_posterior().effective_count, 0.0);
   EXPECT_DOUBLE_EQ(snapshot.losing_payoff_posterior().effective_count, 0.0);
   EXPECT_NEAR(snapshot.winning_payoff_posterior().mean, 0.01, 1e-12);
   EXPECT_NEAR(snapshot.losing_payoff_posterior().mean, 0.01, 1e-12);
+}
+
+TEST(StrategyPerformanceTest, BreakEvenTreatmentOnlyChangesBinaryEvidence)
+{
+  struct Expected {
+    StrategyPerformanceBreakEvenTreatment treatment;
+    double posterior_probability;
+  };
+  constexpr auto cases = std::array{
+   Expected{StrategyPerformanceBreakEvenTreatment::Skip, 0.5},
+   Expected{StrategyPerformanceBreakEvenTreatment::CountAsWin, 2.0 / 3.0},
+   Expected{StrategyPerformanceBreakEvenTreatment::CountAsLoss, 1.0 / 3.0}};
+
+  for(const auto& expected : cases) {
+    SCOPED_TRACE(static_cast<int>(expected.treatment));
+    auto performance =
+     StrategyPerformance{StrategyPerformanceConfig{{}, {}, expected.treatment}};
+    performance.observe(closed_position(1, StrategyDirection::Long, 0.0));
+
+    const auto snapshot = performance.snapshot();
+    EXPECT_EQ(snapshot.lifetime_count(), 1);
+    EXPECT_DOUBLE_EQ(snapshot.effective_count(), 1.0);
+    EXPECT_DOUBLE_EQ(snapshot.mean_return(), 0.0);
+    EXPECT_DOUBLE_EQ(snapshot.win_rate(), 0.0);
+    EXPECT_DOUBLE_EQ(snapshot.break_even_rate(), 1.0);
+    EXPECT_DOUBLE_EQ(snapshot.loss_rate(), 0.0);
+    EXPECT_DOUBLE_EQ(snapshot.win_probability_posterior().probability,
+                     expected.posterior_probability);
+    EXPECT_DOUBLE_EQ(snapshot.winning_payoff_posterior().effective_count, 0.0);
+    EXPECT_DOUBLE_EQ(snapshot.losing_payoff_posterior().effective_count, 0.0);
+  }
+}
+
+TEST(StrategyPerformanceTest, BreakEvenOccupiesRollingWindow)
+{
+  struct Expected {
+    StrategyPerformanceBreakEvenTreatment treatment;
+    double posterior_probability;
+  };
+  constexpr auto cases = std::array{
+   Expected{StrategyPerformanceBreakEvenTreatment::Skip, 1.0 / 3.0},
+   Expected{StrategyPerformanceBreakEvenTreatment::CountAsWin, 0.5},
+   Expected{StrategyPerformanceBreakEvenTreatment::CountAsLoss, 0.25}};
+
+  for(const auto& expected : cases) {
+    SCOPED_TRACE(static_cast<int>(expected.treatment));
+    auto performance = StrategyPerformance{StrategyPerformanceConfig{
+     StrategyPerformanceHistoryPolicy{
+      StrategyPerformanceHistoryMode::RollingWindow, 2, 0.99},
+     {},
+     expected.treatment}};
+    performance.observe(closed_position(1, StrategyDirection::Long, 0.10));
+    performance.observe(closed_position(2, StrategyDirection::Long, 0.0));
+    performance.observe(closed_position(3, StrategyDirection::Long, -0.10));
+
+    const auto snapshot = performance.snapshot();
+    EXPECT_EQ(snapshot.lifetime_count(), 3);
+    EXPECT_DOUBLE_EQ(snapshot.effective_count(), 2.0);
+    EXPECT_NEAR(snapshot.mean_return(), -0.05, 1e-12);
+    EXPECT_DOUBLE_EQ(snapshot.win_rate(), 0.0);
+    EXPECT_DOUBLE_EQ(snapshot.break_even_rate(), 0.5);
+    EXPECT_DOUBLE_EQ(snapshot.loss_rate(), 0.5);
+    EXPECT_DOUBLE_EQ(snapshot.win_probability_posterior().probability,
+                     expected.posterior_probability);
+    EXPECT_DOUBLE_EQ(snapshot.winning_payoff_posterior().effective_count, 0.0);
+    EXPECT_DOUBLE_EQ(snapshot.losing_payoff_posterior().effective_count, 1.0);
+  }
+}
+
+TEST(StrategyPerformanceTest, BreakEvenAgesExponentialEvidence)
+{
+  auto performance = StrategyPerformance{StrategyPerformanceConfig{
+   StrategyPerformanceHistoryPolicy{
+    StrategyPerformanceHistoryMode::ExponentialDecay, 100, 0.5},
+   {},
+   StrategyPerformanceBreakEvenTreatment::CountAsLoss}};
+  performance.observe(closed_position(1, StrategyDirection::Long, 0.10));
+  performance.observe(closed_position(2, StrategyDirection::Long, 0.0));
+
+  const auto snapshot = performance.snapshot();
+  EXPECT_DOUBLE_EQ(snapshot.effective_count(), 1.5);
+  EXPECT_NEAR(snapshot.win_rate(), 1.0 / 3.0, 1e-12);
+  EXPECT_NEAR(snapshot.break_even_rate(), 2.0 / 3.0, 1e-12);
+  EXPECT_DOUBLE_EQ(snapshot.loss_rate(), 0.0);
+  EXPECT_NEAR(
+   snapshot.win_probability_posterior().probability, 3.0 / 7.0, 1e-12);
+  EXPECT_DOUBLE_EQ(snapshot.winning_payoff_posterior().effective_count, 0.5);
+  EXPECT_DOUBLE_EQ(snapshot.losing_payoff_posterior().effective_count, 0.0);
+}
+
+TEST(StrategyPerformanceTest, BreakEvenTreatmentHasValueSemantics)
+{
+  const auto skipped = StrategyPerformanceConfig{
+   {}, {}, StrategyPerformanceBreakEvenTreatment::Skip};
+  auto counted_as_loss = StrategyPerformanceConfig{};
+
+  EXPECT_NE(skipped, counted_as_loss);
+  counted_as_loss.break_even_treatment(
+   StrategyPerformanceBreakEvenTreatment::Skip);
+  EXPECT_EQ(skipped, counted_as_loss);
+  EXPECT_THROW(counted_as_loss.break_even_treatment(
+                static_cast<StrategyPerformanceBreakEvenTreatment>(-1)),
+               std::invalid_argument);
 }
 
 TEST(StrategyPerformanceTest, AlternativeModelsUseCommonSnapshotContracts)

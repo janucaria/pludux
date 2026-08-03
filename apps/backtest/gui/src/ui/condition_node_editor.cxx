@@ -114,6 +114,8 @@ inline constexpr auto performance_metric_labels =
  std::array{"Lifetime completed positions",
             "Effective completed positions",
             "Frequentist win rate",
+            "Frequentist break-even rate",
+            "Frequentist loss rate",
             "Frequentist mean return",
             "Frequentist return standard deviation",
             "Bayesian win probability",
