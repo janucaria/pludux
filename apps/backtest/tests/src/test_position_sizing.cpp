@@ -37,6 +37,10 @@ auto performance_snapshot(double probability,
 {
   return StrategyPerformanceSnapshot{
    0,
+   0,
+   0,
+   0,
+   0,
    0.0,
    0.0,
    0.0,

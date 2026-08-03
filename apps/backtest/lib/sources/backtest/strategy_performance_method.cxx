@@ -19,6 +19,10 @@ enum class StrategyPerformanceMetric {
   WinRate,
   BreakEvenRate,
   LossRate,
+  CurrentWinningStreak,
+  CurrentLosingStreak,
+  MaximumWinningStreak,
+  MaximumLosingStreak,
   MeanReturn,
   ReturnStandardDeviation,
   BayesianWinProbability,
@@ -79,6 +83,14 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
     return performance.break_even_rate();
   case StrategyPerformanceMetric::LossRate:
     return performance.loss_rate();
+  case StrategyPerformanceMetric::CurrentWinningStreak:
+    return static_cast<double>(performance.current_winning_streak());
+  case StrategyPerformanceMetric::CurrentLosingStreak:
+    return static_cast<double>(performance.current_losing_streak());
+  case StrategyPerformanceMetric::MaximumWinningStreak:
+    return static_cast<double>(performance.maximum_winning_streak());
+  case StrategyPerformanceMetric::MaximumLosingStreak:
+    return static_cast<double>(performance.maximum_losing_streak());
   case StrategyPerformanceMetric::MeanReturn:
     return performance.mean_return();
   case StrategyPerformanceMetric::ReturnStandardDeviation:

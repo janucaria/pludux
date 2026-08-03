@@ -173,6 +173,60 @@ TEST(ExecutionFilterTest, LaterInitialEntryCanUseCompletedShadowPerformance)
   EXPECT_DOUBLE_EQ(timeline.open_position(3)->entry_price(), 130.0);
 }
 
+TEST(ExecutionFilterTest, StrategyPerformanceMethodsExposeAllStreaks)
+{
+  const auto performance =
+   StrategyPerformanceSnapshot{0,
+                               1,
+                               2,
+                               3,
+                               4,
+                               0.0,
+                               0.0,
+                               0.0,
+                               0.0,
+                               0.0,
+                               0.0,
+                               BayesianWinSnapshot{},
+                               BayesianPayoffSnapshot{},
+                               BayesianPayoffSnapshot{}};
+  const auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+  auto series_results = SeriesEvaluationResults{};
+  auto default_context = DefaultMethodContext{series_methods, series_results};
+  const auto account_state = BacktestAccountState{};
+  const auto base_context =
+   BacktestMethodContext{default_context, series_methods, account_state};
+  const auto context = ExecutionFilterMethodContext{base_context, performance};
+  const auto asset = make_filter_test_asset();
+  const auto snapshot = asset.get_snapshot(0);
+
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(
+    StrategyPerformanceMethod{StrategyPerformanceMetric::CurrentWinningStreak},
+    snapshot,
+    context),
+   1.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(
+    StrategyPerformanceMethod{StrategyPerformanceMetric::CurrentLosingStreak},
+    snapshot,
+    context),
+   2.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(
+    StrategyPerformanceMethod{StrategyPerformanceMetric::MaximumWinningStreak},
+    snapshot,
+    context),
+   3.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(
+    StrategyPerformanceMethod{StrategyPerformanceMetric::MaximumLosingStreak},
+    snapshot,
+    context),
+   4.0);
+}
+
 TEST(ExecutionFilterTest,
      BayesianKellyUsesCompletedTheoreticalPerformanceForLaterEntry)
 {

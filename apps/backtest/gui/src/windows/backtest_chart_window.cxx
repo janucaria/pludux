@@ -274,7 +274,7 @@ public:
     const auto base_row_count =
      1 + (self.chart_state_.show_equity() ? 1 : 0) +
      (self.chart_state_.show_volume() ? 1 : 0) +
-     (self.chart_state_.show_strategy_performance() ? 4 : 0);
+     (self.chart_state_.show_strategy_performance() ? 5 : 0);
     const auto total_row_count =
      static_cast<std::size_t>(additional_plots_count) + base_row_count;
     auto& row_ratios = self.chart_state_.row_ratios(total_row_count);
@@ -356,6 +356,15 @@ public:
           ImPlot::SetupAxis(ImAxis_Y1, "Win / mean", axis_y_flags);
           ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
           self.plot_frequentist_performance(backtest_timelines);
+          self.record_crosshair_plot(
+           crosshair_state, timeline_size, self.chart_state_.pinned_bar());
+          ImPlot::EndPlot();
+        }
+        if(ImPlot::BeginPlot("##StrategyStreakPlot", plot_size, plot_flags)) {
+          setup_x_axis(++current_row == total_row_count);
+          ImPlot::SetupAxis(ImAxis_Y1, "Current streak", axis_y_flags);
+          ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
+          self.plot_strategy_streaks(backtest_timelines);
           self.record_crosshair_plot(
            crosshair_state, timeline_size, self.chart_state_.pinned_bar());
           ImPlot::EndPlot();
@@ -1512,6 +1521,23 @@ private:
      "Break-even rate", xs.data(), break_even_rate.data(), xs.size());
     ImPlot::PlotLine("Loss rate", xs.data(), loss_rate.data(), xs.size());
     ImPlot::PlotLine("Mean return", xs.data(), mean_return.data(), xs.size());
+  }
+
+  void plot_strategy_streaks(this const BacktestChartWindow&,
+                             const backtest::BacktestTimeline& timeline)
+  {
+    auto xs = std::vector<double>(timeline.size());
+    auto winning = std::vector<double>(timeline.size());
+    auto losing = std::vector<double>(timeline.size());
+    for(auto index = std::size_t{0}; index < timeline.size(); ++index) {
+      xs[index] = static_cast<double>(index);
+      const auto& performance = timeline.strategy_performance(index);
+      winning[index] =
+       static_cast<double>(performance.current_winning_streak());
+      losing[index] = static_cast<double>(performance.current_losing_streak());
+    }
+    ImPlot::PlotLine("Winning streak", xs.data(), winning.data(), xs.size());
+    ImPlot::PlotLine("Losing streak", xs.data(), losing.data(), xs.size());
   }
 
   void plot_bayesian_win(this const BacktestChartWindow&,

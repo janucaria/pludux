@@ -1,5 +1,6 @@
 module;
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <deque>
@@ -242,6 +243,10 @@ public:
 
   StrategyPerformanceSnapshot(
    std::size_t lifetime_count,
+   std::size_t current_winning_streak,
+   std::size_t current_losing_streak,
+   std::size_t maximum_winning_streak,
+   std::size_t maximum_losing_streak,
    double effective_count,
    double win_rate,
    double break_even_rate,
@@ -252,6 +257,10 @@ public:
    BayesianPayoffSnapshot winning_payoff_posterior,
    BayesianPayoffSnapshot losing_payoff_posterior) noexcept
   : lifetime_count_{lifetime_count}
+  , current_winning_streak_{current_winning_streak}
+  , current_losing_streak_{current_losing_streak}
+  , maximum_winning_streak_{maximum_winning_streak}
+  , maximum_losing_streak_{maximum_losing_streak}
   , effective_count_{effective_count}
   , win_rate_{win_rate}
   , break_even_rate_{break_even_rate}
@@ -271,6 +280,34 @@ public:
    -> std::size_t
   {
     return self.lifetime_count_;
+  }
+
+  auto
+  current_winning_streak(this const StrategyPerformanceSnapshot& self) noexcept
+   -> std::size_t
+  {
+    return self.current_winning_streak_;
+  }
+
+  auto
+  current_losing_streak(this const StrategyPerformanceSnapshot& self) noexcept
+   -> std::size_t
+  {
+    return self.current_losing_streak_;
+  }
+
+  auto
+  maximum_winning_streak(this const StrategyPerformanceSnapshot& self) noexcept
+   -> std::size_t
+  {
+    return self.maximum_winning_streak_;
+  }
+
+  auto
+  maximum_losing_streak(this const StrategyPerformanceSnapshot& self) noexcept
+   -> std::size_t
+  {
+    return self.maximum_losing_streak_;
   }
 
   auto effective_count(this const StrategyPerformanceSnapshot& self) noexcept
@@ -331,6 +368,10 @@ public:
 
 private:
   std::size_t lifetime_count_{};
+  std::size_t current_winning_streak_{};
+  std::size_t current_losing_streak_{};
+  std::size_t maximum_winning_streak_{};
+  std::size_t maximum_losing_streak_{};
   double effective_count_{};
   double win_rate_{};
   double break_even_rate_{};
@@ -370,6 +411,7 @@ public:
     }
 
     ++self.lifetime_count_;
+    self.update_streaks(return_ratio);
     switch(self.config_.history().mode()) {
     case StrategyPerformanceHistoryMode::All:
       self.add(return_ratio);
@@ -413,6 +455,10 @@ public:
 
     return StrategyPerformanceSnapshot{
      self.lifetime_count_,
+     self.current_winning_streak_,
+     self.current_losing_streak_,
+     self.maximum_winning_streak_,
+     self.maximum_losing_streak_,
      self.return_evidence_.effective_count,
      win_rate,
      break_even_rate,
@@ -442,12 +488,34 @@ private:
   BayesianPayoffModelMethod winning_payoff_model_;
   BayesianPayoffModelMethod losing_payoff_model_;
   std::size_t lifetime_count_{};
+  std::size_t current_winning_streak_{};
+  std::size_t current_losing_streak_{};
+  std::size_t maximum_winning_streak_{};
+  std::size_t maximum_losing_streak_{};
   std::deque<double> observations_{};
   WeightedReturnEvidence return_evidence_{};
   WeightedOutcomeEvidence outcome_evidence_{};
   WeightedBinaryEvidence binary_evidence_{};
   WeightedPayoffEvidence winning_payoff_evidence_{};
   WeightedPayoffEvidence losing_payoff_evidence_{};
+
+  void update_streaks(this StrategyPerformance& self, double value) noexcept
+  {
+    if(value > 0.0) {
+      ++self.current_winning_streak_;
+      self.current_losing_streak_ = 0;
+      self.maximum_winning_streak_ =
+       std::max(self.maximum_winning_streak_, self.current_winning_streak_);
+    } else if(value < 0.0) {
+      self.current_winning_streak_ = 0;
+      ++self.current_losing_streak_;
+      self.maximum_losing_streak_ =
+       std::max(self.maximum_losing_streak_, self.current_losing_streak_);
+    } else {
+      self.current_winning_streak_ = 0;
+      self.current_losing_streak_ = 0;
+    }
+  }
 
   void add(this StrategyPerformance& self, double value) noexcept
   {

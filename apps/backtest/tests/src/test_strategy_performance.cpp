@@ -125,8 +125,81 @@ TEST(StrategyPerformanceTest, AggregatesMixedDirectionsIntoOneHistory)
   EXPECT_DOUBLE_EQ(snapshot.win_rate(), 0.5);
   EXPECT_DOUBLE_EQ(snapshot.break_even_rate(), 0.0);
   EXPECT_DOUBLE_EQ(snapshot.loss_rate(), 0.5);
+  EXPECT_EQ(snapshot.current_winning_streak(), 0);
+  EXPECT_EQ(snapshot.current_losing_streak(), 1);
+  EXPECT_EQ(snapshot.maximum_winning_streak(), 1);
+  EXPECT_EQ(snapshot.maximum_losing_streak(), 1);
   EXPECT_DOUBLE_EQ(snapshot.winning_payoff_posterior().effective_count, 1.0);
   EXPECT_DOUBLE_EQ(snapshot.losing_payoff_posterior().effective_count, 1.0);
+}
+
+TEST(StrategyPerformanceTest, TracksLifetimeWinningAndLosingStreaks)
+{
+  auto performance = StrategyPerformance{};
+  performance.observe(closed_position(1, StrategyDirection::Long, 0.10));
+  performance.observe(closed_position(2, StrategyDirection::Short, 0.20));
+  performance.observe(closed_position(3, StrategyDirection::Long, -0.10));
+  performance.observe(closed_position(4, StrategyDirection::Short, -0.20));
+  performance.observe(closed_position(5, StrategyDirection::Long, -0.30));
+  performance.observe(closed_position(6, StrategyDirection::Short, 0.0));
+  performance.observe(closed_position(7, StrategyDirection::Long, 0.10));
+
+  const auto snapshot = performance.snapshot();
+  EXPECT_EQ(snapshot.current_winning_streak(), 1);
+  EXPECT_EQ(snapshot.current_losing_streak(), 0);
+  EXPECT_EQ(snapshot.maximum_winning_streak(), 2);
+  EXPECT_EQ(snapshot.maximum_losing_streak(), 3);
+}
+
+TEST(StrategyPerformanceTest, StreaksIgnoreStatisticalHistoryMode)
+{
+  const auto histories =
+   std::array{StrategyPerformanceHistoryPolicy{
+               StrategyPerformanceHistoryMode::All, 100, 0.99},
+              StrategyPerformanceHistoryPolicy{
+               StrategyPerformanceHistoryMode::RollingWindow, 2, 0.99},
+              StrategyPerformanceHistoryPolicy{
+               StrategyPerformanceHistoryMode::ExponentialDecay, 100, 0.5}};
+
+  for(const auto& history : histories) {
+    SCOPED_TRACE(static_cast<int>(history.mode()));
+    auto performance = StrategyPerformance{StrategyPerformanceConfig{history}};
+    performance.observe(closed_position(1, StrategyDirection::Long, 0.10));
+    performance.observe(closed_position(2, StrategyDirection::Short, 0.20));
+    performance.observe(closed_position(3, StrategyDirection::Long, -0.10));
+    performance.observe(closed_position(4, StrategyDirection::Short, -0.20));
+    performance.observe(closed_position(5, StrategyDirection::Long, -0.30));
+
+    const auto snapshot = performance.snapshot();
+    EXPECT_EQ(snapshot.current_winning_streak(), 0);
+    EXPECT_EQ(snapshot.current_losing_streak(), 3);
+    EXPECT_EQ(snapshot.maximum_winning_streak(), 2);
+    EXPECT_EQ(snapshot.maximum_losing_streak(), 3);
+  }
+}
+
+TEST(StrategyPerformanceTest,
+     BreakEvenResetsStreaksRegardlessOfBayesianTreatment)
+{
+  constexpr auto treatments =
+   std::array{StrategyPerformanceBreakEvenTreatment::Skip,
+              StrategyPerformanceBreakEvenTreatment::CountAsWin,
+              StrategyPerformanceBreakEvenTreatment::CountAsLoss};
+
+  for(const auto treatment : treatments) {
+    SCOPED_TRACE(static_cast<int>(treatment));
+    auto performance =
+     StrategyPerformance{StrategyPerformanceConfig{{}, {}, treatment}};
+    performance.observe(closed_position(1, StrategyDirection::Long, 0.10));
+    performance.observe(closed_position(2, StrategyDirection::Short, 0.20));
+    performance.observe(closed_position(3, StrategyDirection::Long, 0.0));
+
+    const auto snapshot = performance.snapshot();
+    EXPECT_EQ(snapshot.current_winning_streak(), 0);
+    EXPECT_EQ(snapshot.current_losing_streak(), 0);
+    EXPECT_EQ(snapshot.maximum_winning_streak(), 2);
+    EXPECT_EQ(snapshot.maximum_losing_streak(), 0);
+  }
 }
 
 TEST(StrategyPerformanceTest, RollingWindowUsesRecentStrategyOutputs)

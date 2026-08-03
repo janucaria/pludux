@@ -80,6 +80,25 @@ Priors are never removed or decayed. Only observational evidence is weighted.
 
 Effective counts may be fractional under exponential decay.
 
+## Winning and Losing Streaks
+
+Strategy Performance also records chronological streaks from theoretical
+position returns:
+
+- A positive return increments the current winning streak, resets the current
+  losing streak, and may increase the maximum winning streak.
+- A negative return increments the current losing streak, resets the current
+  winning streak, and may increase the maximum losing streak.
+- An exactly zero return resets both current streaks. Its Bayesian break-even
+  treatment does not change this frequentist behavior.
+
+Current and maximum streaks always use the complete lifetime sequence. They are
+integer counts and are not rolled out or decayed by the statistical history
+policy. Consequently, a rolling window or exponential decay changes the
+frequentist evidence summaries and Bayesian posteriors but not the streaks.
+Streaks use theoretical Strategy positions only and are independent of realized
+execution.
+
 ## Win Probability Model
 
 Let \(p\) be the probability of a binary win under the configured classification.
