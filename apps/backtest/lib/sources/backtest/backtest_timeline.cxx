@@ -12,6 +12,7 @@ export module pludux.backtest:backtest_timeline;
 
 import :closed_trade;
 import :open_position_snapshot;
+import :position_sizing;
 import :strategy_closed_position;
 import :strategy_intent;
 import :strategy_performance;
@@ -35,6 +36,7 @@ public:
     std::vector<StrategyClosedPosition> strategy_closed_positions{};
     std::optional<StrategyOpenPositionSnapshot> strategy_open_position{};
     std::vector<ExecutionFilterDecision> execution_filter_decisions{};
+    std::vector<PositionSizingDecision> position_sizing_decisions{};
     StrategyPerformanceSnapshot strategy_performance{};
 
     double capital{};
@@ -84,6 +86,7 @@ public:
     self.strategy_closed_positions_.clear();
     self.strategy_open_positions_.clear();
     self.execution_filter_decisions_.clear();
+    self.position_sizing_decisions_.clear();
     self.strategy_performance_snapshots_.clear();
     self.capitals_.clear();
     self.equities_.clear();
@@ -119,6 +122,7 @@ public:
     self.strategy_closed_positions_.reserve(size);
     self.strategy_open_positions_.reserve(size);
     self.execution_filter_decisions_.reserve(size);
+    self.position_sizing_decisions_.reserve(size);
     self.strategy_performance_snapshots_.reserve(size);
     self.capitals_.reserve(size);
     self.equities_.reserve(size);
@@ -154,6 +158,8 @@ public:
      std::move(row.strategy_open_position));
     self.execution_filter_decisions_.push_back(
      std::move(row.execution_filter_decisions));
+    self.position_sizing_decisions_.push_back(
+     std::move(row.position_sizing_decisions));
     self.strategy_performance_snapshots_.push_back(
      std::move(row.strategy_performance));
     self.capitals_.push_back(row.capital);
@@ -246,6 +252,13 @@ public:
    -> const StrategyPerformanceSnapshot&
   {
     return self.strategy_performance_snapshots_[index];
+  }
+
+  auto position_sizing_decisions(this const BacktestTimeline& self,
+                                 std::size_t index) noexcept
+   -> const std::vector<PositionSizingDecision>&
+  {
+    return self.position_sizing_decisions_[index];
   }
 
   auto capital(this const BacktestTimeline& self, std::size_t index) noexcept
@@ -530,6 +543,7 @@ private:
   std::vector<std::optional<StrategyOpenPositionSnapshot>>
    strategy_open_positions_;
   std::vector<std::vector<ExecutionFilterDecision>> execution_filter_decisions_;
+  std::vector<std::vector<PositionSizingDecision>> position_sizing_decisions_;
   std::vector<StrategyPerformanceSnapshot> strategy_performance_snapshots_;
 
   std::vector<double> capitals_;

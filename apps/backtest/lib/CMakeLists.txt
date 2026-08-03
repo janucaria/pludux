@@ -119,6 +119,7 @@ target_sources(${PROJECT_NAME}
     sources/backtest/strategy_inputs.cxx
     sources/backtest/market.cxx
     sources/backtest/broker.cxx
+    sources/backtest/position_sizing.cxx
     sources/backtest/profile.cxx
     sources/backtest/backtest_timeline.cxx
     sources/backtest/backtest_method_context.cxx

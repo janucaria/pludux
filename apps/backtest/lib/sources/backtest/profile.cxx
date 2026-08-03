@@ -8,52 +8,11 @@ export module pludux.backtest:profile;
 import pludux;
 
 import :execution_filter_method_context;
+import :position_sizing;
 
 export namespace pludux::backtest {
 
 enum class InsufficientCashPolicy { Reject, CapToAvailableCash };
-
-class PositionSizing {
-public:
-  enum class Mode { RiskDistance, FixedQuantity, FixedNotional, EquityPercent };
-
-  PositionSizing()
-  : PositionSizing{Mode::RiskDistance, 0.0}
-  {
-  }
-
-  PositionSizing(Mode mode, double value)
-  : mode_{mode}
-  , value_{value}
-  {
-  }
-
-  auto operator==(const PositionSizing&) const noexcept -> bool = default;
-
-  auto mode(this const PositionSizing& self) noexcept -> Mode
-  {
-    return self.mode_;
-  }
-
-  void mode(this PositionSizing& self, Mode mode) noexcept
-  {
-    self.mode_ = mode;
-  }
-
-  auto value(this const PositionSizing& self) noexcept -> double
-  {
-    return self.value_;
-  }
-
-  void value(this PositionSizing& self, double value) noexcept
-  {
-    self.value_ = value;
-  }
-
-private:
-  Mode mode_;
-  double value_;
-};
 
 class DrawdownAdjustment {
 public:
@@ -117,12 +76,11 @@ public:
   }
 
   Profile(std::string name)
-  : Profile{std::move(name),
-            PositionSizing{PositionSizing::Mode::RiskDistance, 0.0}}
+  : Profile{std::move(name), PositionSizingNode{RiskDistancePositionSizing{}}}
   {
   }
 
-  Profile(std::string name, PositionSizing position_sizing)
+  Profile(std::string name, PositionSizingNode position_sizing)
   : Profile{std::move(name),
             position_sizing,
             DrawdownAdjustment{},
@@ -131,7 +89,7 @@ public:
   }
 
   Profile(std::string name,
-          PositionSizing position_sizing,
+          PositionSizingNode position_sizing,
           DrawdownAdjustment drawdown_adjustment)
   : Profile{std::move(name),
             position_sizing,
@@ -142,7 +100,7 @@ public:
 
   Profile(
    std::string name,
-   PositionSizing position_sizing,
+   PositionSizingNode position_sizing,
    DrawdownAdjustment drawdown_adjustment,
    InsufficientCashPolicy insufficient_cash_policy,
    ErasedNode<ExecutionFilterMethodContext> execution_filter = TrueNode{})
@@ -152,6 +110,7 @@ public:
   , insufficient_cash_policy_{insufficient_cash_policy}
   , execution_filter_{std::move(execution_filter)}
   {
+    static_cast<void>(position_sizing_.make_method());
   }
 
   auto operator==(const Profile&) const noexcept -> bool = default;
@@ -167,15 +126,15 @@ public:
   }
 
   auto position_sizing(this const Profile& self) noexcept
-   -> const PositionSizing&
+   -> const PositionSizingNode&
   {
     return self.position_sizing_;
   }
 
-  void position_sizing(this Profile& self,
-                       PositionSizing position_sizing) noexcept
+  void position_sizing(this Profile& self, PositionSizingNode position_sizing)
   {
-    self.position_sizing_ = position_sizing;
+    static_cast<void>(position_sizing.make_method());
+    self.position_sizing_ = std::move(position_sizing);
   }
 
   auto drawdown_adjustment(this const Profile& self) noexcept
@@ -226,7 +185,7 @@ public:
 
 private:
   std::string name_;
-  PositionSizing position_sizing_;
+  PositionSizingNode position_sizing_;
   DrawdownAdjustment drawdown_adjustment_;
   InsufficientCashPolicy insufficient_cash_policy_;
   ErasedNode<ExecutionFilterMethodContext> execution_filter_;

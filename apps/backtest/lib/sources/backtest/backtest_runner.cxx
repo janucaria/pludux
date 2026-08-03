@@ -11,6 +11,7 @@ module;
 #include <memory>
 #include <optional>
 #include <stdexcept>
+#include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -24,6 +25,7 @@ import :execution_model;
 import :intrabar_path;
 import :asset;
 import :profile;
+import :position_sizing;
 import :trade_entry;
 import :trade_exit;
 import :take_profit_level;
@@ -348,6 +350,7 @@ public:
   , strategy_session_{}
   , strategy_performance_{std::move(strategy_performance_config)}
   , execution_filter_{std::move(execution_filter)}
+  , position_sizing_{profile.position_sizing().make_method()}
   , series_methods_{std::move(series_methods)}
   , long_position_{std::move(long_position)}
   , short_position_{std::move(short_position)}
@@ -394,6 +397,7 @@ public:
     self.strategy_session_.begin_market_bar(market_timestamp,
                                             asset_snapshot.close());
     self.execution_filter_decisions_.clear();
+    self.position_sizing_decisions_.clear();
 
     self.current_account_state_.unrealized_pnl(
      self.execution_session_.unrealized_pnl());
@@ -492,6 +496,7 @@ public:
      .strategy_closed_positions = self.strategy_session_.closed_positions(),
      .strategy_open_position = self.strategy_session_.position(),
      .execution_filter_decisions = self.execution_filter_decisions_,
+     .position_sizing_decisions = self.position_sizing_decisions_,
      .strategy_performance = self.strategy_performance_.snapshot(),
      .capital = self.current_account_state_.capital(),
      .equity = self.current_account_state_.equity(),
@@ -544,6 +549,8 @@ private:
   StrategyPerformance strategy_performance_;
   ErasedSeriesMethod<ExecutionFilterMethodContext> execution_filter_;
   std::vector<ExecutionFilterDecision> execution_filter_decisions_;
+  PositionSizingMethod position_sizing_;
+  std::vector<PositionSizingDecision> position_sizing_decisions_;
   std::optional<std::size_t> execution_strategy_trade_id_;
 
   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>
@@ -660,25 +667,39 @@ private:
     return capped_entry;
   }
 
-  auto prepare_entry_order(this BacktestRunner& self, TradeEntry& entry) -> bool
+  auto prepare_entry_order(this BacktestRunner& self,
+                           TradeEntry& entry,
+                           PositionSizingDecision& decision) -> bool
   {
     self.normalize_order_size(entry);
+    decision.broker_normalized_quantity = std::abs(entry.position_size());
+    if(*decision.broker_normalized_quantity <= 0.0) {
+      decision.outcome = PositionSizingDecisionOutcome::NoPositiveSize;
+      return false;
+    }
 
     const auto fee = self.broker_.calculate_fee(entry);
     const auto cash = self.available_cash();
     if(self.required_cash(entry, fee) <= cash) {
+      decision.final_quantity = std::abs(entry.position_size());
+      decision.outcome = PositionSizingDecisionOutcome::Executed;
       return true;
     }
 
     switch(self.profile_.insufficient_cash_policy()) {
     case InsufficientCashPolicy::Reject:
       self.execution_session_.reject_insufficient_cash(entry);
+      decision.outcome = PositionSizingDecisionOutcome::InsufficientCash;
       return false;
     case InsufficientCashPolicy::CapToAvailableCash:
       if(auto capped_entry = self.cap_order_to_available_cash(entry, cash)) {
         entry = *capped_entry;
+        decision.cash_capped = true;
+        decision.final_quantity = std::abs(entry.position_size());
+        decision.outcome = PositionSizingDecisionOutcome::Executed;
         return true;
       }
+      decision.outcome = PositionSizingDecisionOutcome::InsufficientCash;
       return false;
     }
 
@@ -718,41 +739,47 @@ private:
   auto create_trade(this const BacktestRunner& self,
                     const PositionRule& position,
                     bool is_long,
-                    bool is_pyramiding,
                     double entry_price,
                     const AssetSnapshot& evaluation_snapshot,
                     MethodContextable auto context,
-                    double current_drawdown_ratio) -> std::optional<TradeEntry>
+                    double current_drawdown_ratio,
+                    const StrategyPerformanceSnapshot& performance_snapshot,
+                    PositionSizingDecision& decision)
+   -> std::optional<TradeEntry>
   {
-    const auto can_pyramid =
-     !is_pyramiding ||
-     self.pyramiding_layers_ < position.pyramiding_max_layers();
-
-    if(can_pyramid) {
-      const auto direction = is_long ? 1.0 : -1.0;
-      const auto initial_price_context =
-       context.with_position_reference(entry_price, direction);
-      const auto position_sizing = self.profile_.position_sizing();
-      const auto uses_risk_distance =
-       position_sizing.mode() == PositionSizing::Mode::RiskDistance;
-      const auto risk_distance =
-       evaluate_series_method(position.risk_distance_method(),
-                              evaluation_snapshot,
-                              initial_price_context);
-      if(!std::isfinite(risk_distance) || risk_distance <= 0.0) {
-        throw std::runtime_error{
-         "Invalid risk distance: expected a finite positive value"};
-      }
-      const auto position_quantity = self.calculate_position_quantity(
-       position_sizing, entry_price, risk_distance);
-      const auto adjusted_position_quantity = self.apply_drawdown_adjustment(
-       position_quantity, current_drawdown_ratio);
-      const auto position_size = direction * adjusted_position_quantity;
-
-      return TradeEntry{position_size, entry_price};
+    const auto direction = is_long ? 1.0 : -1.0;
+    const auto initial_price_context =
+     context.with_position_reference(entry_price, direction);
+    const auto sizing_context = PositionSizingContext{
+     self.current_account_state_.equity(),
+     entry_price,
+     performance_snapshot,
+     [&position, &evaluation_snapshot, &initial_price_context] {
+       return evaluate_series_method(position.risk_distance_method(),
+                                     evaluation_snapshot,
+                                     initial_price_context);
+     }};
+    const auto evaluation = self.position_sizing_.evaluate(sizing_context);
+    if(!std::isfinite(evaluation.requested_quantity) ||
+       evaluation.requested_quantity < 0.0) {
+      throw std::runtime_error{"Invalid position sizing quantity"};
+    }
+    decision.primary_quantity = evaluation.requested_quantity;
+    decision.bayesian_kelly = evaluation.bayesian_kelly;
+    if(evaluation.requested_quantity <= 0.0) {
+      decision.outcome = PositionSizingDecisionOutcome::NoPositiveSize;
+      return std::nullopt;
     }
 
-    return std::nullopt;
+    const auto adjusted_position_quantity = self.apply_drawdown_adjustment(
+     evaluation.requested_quantity, current_drawdown_ratio);
+    decision.drawdown_adjusted_quantity = adjusted_position_quantity;
+    if(adjusted_position_quantity <= 0.0) {
+      decision.outcome = PositionSizingDecisionOutcome::DrawdownSuppressed;
+      return std::nullopt;
+    }
+
+    return TradeEntry{direction * adjusted_position_quantity, entry_price};
   }
 
   auto apply_drawdown_adjustment(this const BacktestRunner& self,
@@ -777,47 +804,6 @@ private:
      std::floor(std::max(current_drawdown_ratio, 0.0) / drawdown_step);
     const auto multiplier = std::max(1.0 - steps * size_reduction, 0.0);
     return position_quantity * multiplier;
-  }
-
-  auto calculate_position_quantity(this const BacktestRunner& self,
-                                   const PositionSizing& position_sizing,
-                                   double entry_price,
-                                   double risk_distance) -> double
-  {
-    const auto value = position_sizing.value();
-
-    if(!std::isfinite(value)) {
-      throw std::runtime_error{"Invalid position sizing value"};
-    }
-
-    switch(position_sizing.mode()) {
-    case PositionSizing::Mode::RiskDistance: {
-      if(!std::isfinite(risk_distance) || risk_distance <= 0.0) {
-        throw std::runtime_error{
-         "Invalid risk distance for risk-based position sizing"};
-      }
-
-      const auto risk_value = value * self.current_account_state_.equity();
-      return std::abs(risk_value / risk_distance);
-    }
-    case PositionSizing::Mode::FixedQuantity:
-      return std::abs(value);
-    case PositionSizing::Mode::FixedNotional:
-      if(!std::isfinite(entry_price) || entry_price <= 0.0) {
-        throw std::runtime_error{
-         "Invalid entry price for fixed-notional position sizing"};
-      }
-      return std::abs(value / entry_price);
-    case PositionSizing::Mode::EquityPercent:
-      if(!std::isfinite(entry_price) || entry_price <= 0.0) {
-        throw std::runtime_error{
-         "Invalid entry price for equity-percent position sizing"};
-      }
-      return std::abs(self.current_account_state_.equity() * value /
-                      entry_price);
-    }
-
-    return 0.0;
   }
 
   auto stop_target_reference_price(this const BacktestRunner&,
@@ -1541,6 +1527,14 @@ private:
      is_long ? StrategyDirection::Long : StrategyDirection::Short;
     const auto& intent = self.strategy_session_.enter(direction, price, false);
     const auto performance_snapshot = self.strategy_performance_.snapshot();
+    auto sizing_decision =
+     PositionSizingDecision{.intent_id = intent.intent_id(),
+                            .strategy_trade_id = intent.strategy_trade_id(),
+                            .direction = direction,
+                            .pyramiding = false,
+                            .method = std::string{self.position_sizing_.name()},
+                            .entry_price = price,
+                            .outcome = PositionSizingDecisionOutcome::Filtered};
     auto filter_context =
      ExecutionFilterMethodContext{context, performance_snapshot};
     const auto allowed = static_cast<bool>(evaluate_series_method(
@@ -1548,24 +1542,28 @@ private:
     self.execution_filter_decisions_.emplace_back(intent.intent_id(), allowed);
     if(!allowed) {
       self.execution_strategy_trade_id_.reset();
+      self.position_sizing_decisions_.push_back(std::move(sizing_decision));
       return true;
     }
 
     auto entry = self.create_trade(rule,
                                    is_long,
-                                   false,
                                    price,
                                    evaluation_snapshot,
                                    context,
-                                   current_drawdown_ratio);
-    if(!entry || !self.prepare_entry_order(*entry)) {
+                                   current_drawdown_ratio,
+                                   performance_snapshot,
+                                   sizing_decision);
+    if(!entry || !self.prepare_entry_order(*entry, sizing_decision)) {
       self.execution_strategy_trade_id_.reset();
+      self.position_sizing_decisions_.push_back(std::move(sizing_decision));
       return true;
     }
     const auto fee = self.broker_.calculate_fee(*entry);
     self.execution_session_.entry_position(*entry, fee);
     self.execution_strategy_trade_id_ = intent.strategy_trade_id();
     self.sync_execution_position_state();
+    self.position_sizing_decisions_.push_back(std::move(sizing_decision));
     return true;
   }
 
@@ -1594,28 +1592,42 @@ private:
                                    evaluation_snapshot,
                                    context);
     self.strategy_trade_session_.sync_latest_event_with_open_position();
-    self.strategy_session_.enter(
-     is_long ? StrategyDirection::Long : StrategyDirection::Short, price, true);
+    const auto direction =
+     is_long ? StrategyDirection::Long : StrategyDirection::Short;
+    const auto& intent = self.strategy_session_.enter(direction, price, true);
+    const auto performance_snapshot = self.strategy_performance_.snapshot();
+    auto sizing_decision = PositionSizingDecision{
+     .intent_id = intent.intent_id(),
+     .strategy_trade_id = intent.strategy_trade_id(),
+     .direction = direction,
+     .pyramiding = true,
+     .method = std::string{self.position_sizing_.name()},
+     .entry_price = price,
+     .outcome = PositionSizingDecisionOutcome::ShadowOnly};
 
     if(!self.execution_strategy_trade_id_ ||
        !self.execution_session_.open_position()) {
+      self.position_sizing_decisions_.push_back(std::move(sizing_decision));
       ++self.pyramiding_layers_;
       return true;
     }
     auto entry = self.create_trade(rule,
                                    is_long,
-                                   true,
                                    price,
                                    evaluation_snapshot,
                                    context,
-                                   current_drawdown_ratio);
-    if(!entry || !self.prepare_entry_order(*entry)) {
+                                   current_drawdown_ratio,
+                                   performance_snapshot,
+                                   sizing_decision);
+    if(!entry || !self.prepare_entry_order(*entry, sizing_decision)) {
+      self.position_sizing_decisions_.push_back(std::move(sizing_decision));
       ++self.pyramiding_layers_;
       return true;
     }
     const auto fee = self.broker_.calculate_fee(*entry);
     self.execution_session_.entry_position(*entry, fee);
     self.sync_execution_position_state();
+    self.position_sizing_decisions_.push_back(std::move(sizing_decision));
     ++self.pyramiding_layers_;
     return true;
   }

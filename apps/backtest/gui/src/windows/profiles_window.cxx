@@ -2,12 +2,12 @@ module;
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstring>
 #include <iterator>
 #include <memory>
 #include <optional>
 #include <string>
-#include <unordered_map>
 #include <utility>
 
 #include "../ui/pludux_icons.hpp"
@@ -30,11 +30,6 @@ public:
   : current_page_(ProfilePage::List)
   , selected_profile_handle_opt_{}
   , editing_profile_ptr_{nullptr}
-  , last_position_sizing_values_{
-     {backtest::PositionSizing::Mode::RiskDistance, 0.01},
-     {backtest::PositionSizing::Mode::FixedQuantity, 1.0},
-     {backtest::PositionSizing::Mode::FixedNotional, 1000.0},
-     {backtest::PositionSizing::Mode::EquityPercent, 1.0}}
   {
   }
 
@@ -70,9 +65,6 @@ private:
   ImGuiTextFilter profile_filter_;
   ui::DraftAction selected_draft_action_{ui::DraftAction::Apply};
 
-  std::unordered_map<backtest::PositionSizing::Mode, double>
-   last_position_sizing_values_;
-
   void render_profiles_list(this auto& self, WindowContext& context)
   {
     const auto& app_state = context.app_state();
@@ -84,8 +76,8 @@ private:
       self.current_page_ = ProfilePage::AddNewProfile;
       self.selected_profile_handle_opt_ = std::nullopt;
       self.editing_profile_ptr_ = std::make_shared<backtest::Profile>();
-      self.editing_profile_ptr_->position_sizing(backtest::PositionSizing{
-       backtest::PositionSizing::Mode::RiskDistance, 0.01});
+      self.editing_profile_ptr_->position_sizing(
+       backtest::PositionSizingNode{backtest::RiskDistancePositionSizing{}});
     }
     ImGui::Spacing();
     ui::search_filter(self.profile_filter_, "##profiles_search");
@@ -240,41 +232,90 @@ private:
      "Choose how much capital each new position receives. Only the value for "
      "the selected method is used.");
     {
-      auto position_sizing = self.editing_profile_ptr_->position_sizing();
-      const auto mode_label = [](backtest::PositionSizing::Mode mode) {
-        switch(mode) {
-        case backtest::PositionSizing::Mode::RiskDistance:
+      enum class SizingKind {
+        RiskDistance,
+        FixedQuantity,
+        FixedNotional,
+        EquityFraction,
+        BayesianKelly
+      };
+      constexpr auto kinds = std::array{SizingKind::RiskDistance,
+                                        SizingKind::FixedQuantity,
+                                        SizingKind::FixedNotional,
+                                        SizingKind::EquityFraction,
+                                        SizingKind::BayesianKelly};
+      const auto kind_label = [](SizingKind kind) {
+        switch(kind) {
+        case SizingKind::RiskDistance:
           return "Risk Distance";
-        case backtest::PositionSizing::Mode::FixedQuantity:
+        case SizingKind::FixedQuantity:
           return "Fixed Quantity";
-        case backtest::PositionSizing::Mode::FixedNotional:
+        case SizingKind::FixedNotional:
           return "Fixed Notional";
-        case backtest::PositionSizing::Mode::EquityPercent:
-          return "Equity Percent";
+        case SizingKind::EquityFraction:
+          return "Equity Fraction";
+        case SizingKind::BayesianKelly:
+          return "Bayesian Kelly (Strategy Performance)";
         }
-
         return "Risk Distance";
       };
 
-      constexpr auto position_sizing_modes =
-       std::array{backtest::PositionSizing::Mode::RiskDistance,
-                  backtest::PositionSizing::Mode::FixedQuantity,
-                  backtest::PositionSizing::Mode::FixedNotional,
-                  backtest::PositionSizing::Mode::EquityPercent};
+      const auto& position_sizing =
+       self.editing_profile_ptr_->position_sizing();
+      auto kind = SizingKind::RiskDistance;
+      if(position_sizing_node_cast<backtest::FixedQuantityPositionSizing>(
+          position_sizing)) {
+        kind = SizingKind::FixedQuantity;
+      } else if(position_sizing_node_cast<
+                 backtest::FixedNotionalPositionSizing>(position_sizing)) {
+        kind = SizingKind::FixedNotional;
+      } else if(position_sizing_node_cast<
+                 backtest::EquityFractionPositionSizing>(position_sizing)) {
+        kind = SizingKind::EquityFraction;
+      } else if(position_sizing_node_cast<
+                 backtest::StrategyPerformanceBayesianKellySizing>(
+                 position_sizing)) {
+        kind = SizingKind::BayesianKelly;
+      }
 
-      auto mode = position_sizing.mode();
       ui::field_label(
        "Position Sizing",
        "Risk Distance limits capital at risk for a 1R move. Fixed Quantity "
-       "uses asset units, Fixed Notional uses a currency amount, and Equity "
-       "Percent allocates a share of current equity.");
-      if(ImGui::BeginCombo("##position_sizing", mode_label(mode))) {
-        for(const auto& position_sizing_mode : position_sizing_modes) {
-          const auto selected = mode == position_sizing_mode;
-          if(ImGui::Selectable(mode_label(position_sizing_mode), selected)) {
-            mode = position_sizing_mode;
-            const auto value = self.last_position_sizing_values_[mode];
-            position_sizing = backtest::PositionSizing{mode, value};
+       "uses asset units, Fixed Notional uses a currency amount, Equity "
+       "Fraction allocates current equity, and Bayesian Kelly uses the "
+       "Bayesian Strategy Performance model.");
+      if(ImGui::BeginCombo("##position_sizing", kind_label(kind))) {
+        for(const auto candidate : kinds) {
+          const auto selected = kind == candidate;
+          if(ImGui::Selectable(kind_label(candidate), selected)) {
+            kind = candidate;
+            switch(kind) {
+            case SizingKind::RiskDistance:
+              self.editing_profile_ptr_->position_sizing(
+               backtest::PositionSizingNode{
+                backtest::RiskDistancePositionSizing{}});
+              break;
+            case SizingKind::FixedQuantity:
+              self.editing_profile_ptr_->position_sizing(
+               backtest::PositionSizingNode{
+                backtest::FixedQuantityPositionSizing{}});
+              break;
+            case SizingKind::FixedNotional:
+              self.editing_profile_ptr_->position_sizing(
+               backtest::PositionSizingNode{
+                backtest::FixedNotionalPositionSizing{}});
+              break;
+            case SizingKind::EquityFraction:
+              self.editing_profile_ptr_->position_sizing(
+               backtest::PositionSizingNode{
+                backtest::EquityFractionPositionSizing{}});
+              break;
+            case SizingKind::BayesianKelly:
+              self.editing_profile_ptr_->position_sizing(
+               backtest::PositionSizingNode{
+                backtest::StrategyPerformanceBayesianKellySizing{}});
+              break;
+            }
           }
           if(selected) {
             ImGui::SetItemDefaultFocus();
@@ -284,38 +325,144 @@ private:
         ImGui::EndCombo();
       }
 
-      auto value = position_sizing.value();
-      switch(mode) {
-      case backtest::PositionSizing::Mode::RiskDistance: {
+      const auto assign_if = [&self](bool valid, auto sizing) {
+        if(valid) {
+          self.editing_profile_ptr_->position_sizing(
+           backtest::PositionSizingNode{std::move(sizing)});
+        } else {
+          ImGui::TextColored(ImVec4{1.0f, 0.4f, 0.4f, 1.0f},
+                             "Value is outside the valid range.");
+        }
+      };
+      const auto& current = self.editing_profile_ptr_->position_sizing();
+      switch(kind) {
+      case SizingKind::RiskDistance: {
+        auto value =
+         position_sizing_node_cast<backtest::RiskDistancePositionSizing>(
+          current)
+          ->risk_fraction();
         auto percentage = value * 100.0;
         ui::field_label("Capital Risk (%)",
                         "Percent of current capital at risk for a 1R loss.");
-        ImGui::InputDouble("##capital_risk", &percentage, 1.0, 10.0, "%.2f");
-        value = percentage / 100.0;
+        if(ImGui::InputDouble(
+            "##capital_risk", &percentage, 1.0, 10.0, "%.2f")) {
+          value = percentage / 100.0;
+          assign_if(std::isfinite(value) && value > 0.0,
+                    backtest::RiskDistancePositionSizing{
+                     std::isfinite(value) && value > 0.0 ? value : 0.01});
+        }
         break;
       }
-      case backtest::PositionSizing::Mode::FixedQuantity:
+      case SizingKind::FixedQuantity: {
+        auto value =
+         position_sizing_node_cast<backtest::FixedQuantityPositionSizing>(
+          current)
+          ->quantity();
         ui::field_label("Quantity", "Number of asset units opened per entry.");
-        ImGui::InputDouble("##quantity", &value, 1.0, 10.0, "%.8f");
+        if(ImGui::InputDouble("##quantity", &value, 1.0, 10.0, "%.8f")) {
+          assign_if(std::isfinite(value) && value > 0.0,
+                    backtest::FixedQuantityPositionSizing{
+                     std::isfinite(value) && value > 0.0 ? value : 1.0});
+        }
         break;
-      case backtest::PositionSizing::Mode::FixedNotional:
+      }
+      case SizingKind::FixedNotional: {
+        auto value =
+         position_sizing_node_cast<backtest::FixedNotionalPositionSizing>(
+          current)
+          ->notional();
         ui::field_label("Notional", "Currency value allocated to each entry.");
-        ImGui::InputDouble("##notional", &value, 100.0, 1000.0, "%.2f");
+        if(ImGui::InputDouble("##notional", &value, 100.0, 1000.0, "%.2f")) {
+          assign_if(std::isfinite(value) && value > 0.0,
+                    backtest::FixedNotionalPositionSizing{
+                     std::isfinite(value) && value > 0.0 ? value : 1000.0});
+        }
         break;
-      case backtest::PositionSizing::Mode::EquityPercent: {
+      }
+      case SizingKind::EquityFraction: {
+        auto value =
+         position_sizing_node_cast<backtest::EquityFractionPositionSizing>(
+          current)
+          ->equity_fraction();
         auto percentage = value * 100.0;
         ui::field_label("Equity (%)",
                         "Percent of current equity allocated to each entry.");
-        ImGui::InputDouble("##equity_percent", &percentage, 1.0, 10.0, "%.2f");
-        value = percentage / 100.0;
+        if(ImGui::InputDouble(
+            "##equity_fraction", &percentage, 1.0, 10.0, "%.2f")) {
+          value = percentage / 100.0;
+          assign_if(std::isfinite(value) && value > 0.0,
+                    backtest::EquityFractionPositionSizing{
+                     std::isfinite(value) && value > 0.0 ? value : 0.01});
+        }
+        break;
+      }
+      case SizingKind::BayesianKelly: {
+        const auto& value = *position_sizing_node_cast<
+         backtest::StrategyPerformanceBayesianKellySizing>(current);
+        auto estimate = value.estimate();
+        ui::field_label(
+         "Posterior Estimate",
+         "Adverse Quantiles selects cautious marginal posterior values. "
+         "Posterior "
+         "Mean uses each model's posterior mean.");
+        const auto estimate_label =
+         estimate ==
+           backtest::StrategyPerformanceBayesianKellyEstimate::PosteriorMean
+          ? "Posterior Mean"
+          : "Adverse Quantiles";
+        if(ImGui::BeginCombo("##kelly_estimate", estimate_label)) {
+          if(ImGui::Selectable(
+              "Adverse Quantiles",
+              estimate == backtest::StrategyPerformanceBayesianKellyEstimate::
+                           AdverseQuantiles)) {
+            estimate = backtest::StrategyPerformanceBayesianKellyEstimate::
+             AdverseQuantiles;
+          }
+          if(ImGui::Selectable(
+              "Posterior Mean",
+              estimate == backtest::StrategyPerformanceBayesianKellyEstimate::
+                           PosteriorMean)) {
+            estimate =
+             backtest::StrategyPerformanceBayesianKellyEstimate::PosteriorMean;
+          }
+          ImGui::EndCombo();
+        }
+        auto credible_percent = value.central_credible_mass() * 100.0;
+        auto multiplier = value.kelly_multiplier();
+        auto maximum_percent = value.maximum_equity_fraction() * 100.0;
+        ui::field_label(
+         "Central Credible Mass (%)",
+         "Used by Adverse Quantiles to choose cautious posterior values. For "
+         "example, 80% selects the lower 10th percentile for win probability "
+         "and winning payoff, and the upper 90th percentile for losing "
+         "payoff.");
+        ImGui::InputDouble(
+         "##kelly_credible", &credible_percent, 1.0, 5.0, "%.2f");
+        ui::field_label("Kelly Multiplier", "0 disables execution sizing.");
+        ImGui::InputDouble(
+         "##kelly_multiplier", &multiplier, 0.05, 0.10, "%.3f");
+        ui::field_label("Maximum Equity Per Entry (%)",
+                        "May exceed 100%; cash policy still applies.");
+        ImGui::InputDouble(
+         "##kelly_maximum", &maximum_percent, 5.0, 25.0, "%.2f");
+        const auto credible = credible_percent / 100.0;
+        const auto maximum = maximum_percent / 100.0;
+        const auto valid = std::isfinite(credible) && credible > 0.0 &&
+                           credible < 1.0 && std::isfinite(multiplier) &&
+                           multiplier >= 0.0 && multiplier <= 1.0 &&
+                           std::isfinite(maximum) && maximum > 0.0;
+        assign_if(valid,
+                  backtest::StrategyPerformanceBayesianKellySizing{
+                   estimate,
+                   valid ? credible : 0.80,
+                   valid ? multiplier : 0.50,
+                   valid ? maximum : 1.0});
+        ImGui::TextWrapped(
+         "Uses theoretical Strategy Performance: Bayesian win probability, "
+         "winning payoff magnitude, and losing payoff magnitude.");
         break;
       }
       }
-
-      position_sizing.mode(mode);
-      position_sizing.value(value);
-      self.last_position_sizing_values_[mode] = value;
-      self.editing_profile_ptr_->position_sizing(position_sizing);
     }
 
     ui::form_section(

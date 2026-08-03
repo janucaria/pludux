@@ -235,8 +235,8 @@ struct json_conv_traits<Json, pludux::NumericInputNode> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::PositionSizing> {
-  using value_type = pludux::backtest::PositionSizing;
+struct json_conv_traits<Json, pludux::backtest::PositionSizingNode> {
+  using value_type = pludux::backtest::PositionSizingNode;
   using result_type = jsoncons::conversion_result<value_type>;
 
   static constexpr bool is_compatible = true;
@@ -251,10 +251,40 @@ struct json_conv_traits<Json, pludux::backtest::PositionSizing> {
                             const Json& json)
   {
     try {
-      return result_type{value_type{
-       static_cast<value_type::Mode>(
-        required_as<std::underlying_type_t<value_type::Mode>>(json, "mode")),
-       required_as<double>(json, "value")}};
+      using namespace pludux::backtest;
+      const auto method = required_as<std::string>(json, "method");
+      const auto& params = json.at("params");
+      if(method == "RISK_DISTANCE") {
+        return result_type{value_type{RiskDistancePositionSizing{
+         required_as<double>(params, "riskFraction")}}};
+      }
+      if(method == "FIXED_QUANTITY") {
+        return result_type{value_type{
+         FixedQuantityPositionSizing{required_as<double>(params, "quantity")}}};
+      }
+      if(method == "FIXED_NOTIONAL") {
+        return result_type{value_type{
+         FixedNotionalPositionSizing{required_as<double>(params, "notional")}}};
+      }
+      if(method == "EQUITY_FRACTION") {
+        return result_type{value_type{EquityFractionPositionSizing{
+         required_as<double>(params, "equityFraction")}}};
+      }
+      if(method == "STRATEGY_PERFORMANCE_BAYESIAN_KELLY") {
+        const auto estimate_name = required_as<std::string>(params, "estimate");
+        const auto estimate =
+         estimate_name == "POSTERIOR_MEAN"
+          ? StrategyPerformanceBayesianKellyEstimate::PosteriorMean
+         : estimate_name == "ADVERSE_QUANTILES"
+           ? StrategyPerformanceBayesianKellyEstimate::AdverseQuantiles
+           : throw std::invalid_argument{"Invalid Bayesian Kelly estimate"};
+        return result_type{value_type{StrategyPerformanceBayesianKellySizing{
+         estimate,
+         required_as<double>(params, "centralCredibleMass"),
+         required_as<double>(params, "kellyMultiplier"),
+         required_as<double>(params, "maxEquityFraction")}}};
+      }
+      throw std::invalid_argument{"Unsupported position sizing method"};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -262,12 +292,40 @@ struct json_conv_traits<Json, pludux::backtest::PositionSizing> {
 
   template<typename Alloc, typename TempAlloc>
   static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>&,
-                      const value_type& position_sizing)
+                      const value_type& node)
   {
+    using namespace pludux::backtest;
     auto json = Json{};
-    json["mode"] = static_cast<std::underlying_type_t<value_type::Mode>>(
-     position_sizing.mode());
-    json["value"] = position_sizing.value();
+    if(const auto* value =
+        position_sizing_node_cast<RiskDistancePositionSizing>(node)) {
+      json["method"] = "RISK_DISTANCE";
+      json["params"]["riskFraction"] = value->risk_fraction();
+    } else if(const auto* value =
+               position_sizing_node_cast<FixedQuantityPositionSizing>(node)) {
+      json["method"] = "FIXED_QUANTITY";
+      json["params"]["quantity"] = value->quantity();
+    } else if(const auto* value =
+               position_sizing_node_cast<FixedNotionalPositionSizing>(node)) {
+      json["method"] = "FIXED_NOTIONAL";
+      json["params"]["notional"] = value->notional();
+    } else if(const auto* value =
+               position_sizing_node_cast<EquityFractionPositionSizing>(node)) {
+      json["method"] = "EQUITY_FRACTION";
+      json["params"]["equityFraction"] = value->equity_fraction();
+    } else if(const auto* value = position_sizing_node_cast<
+               StrategyPerformanceBayesianKellySizing>(node)) {
+      json["method"] = "STRATEGY_PERFORMANCE_BAYESIAN_KELLY";
+      json["params"]["estimate"] =
+       value->estimate() ==
+         StrategyPerformanceBayesianKellyEstimate::PosteriorMean
+        ? "POSTERIOR_MEAN"
+        : "ADVERSE_QUANTILES";
+      json["params"]["centralCredibleMass"] = value->central_credible_mass();
+      json["params"]["kellyMultiplier"] = value->kelly_multiplier();
+      json["params"]["maxEquityFraction"] = value->maximum_equity_fraction();
+    } else {
+      throw std::invalid_argument{"Unsupported position sizing method"};
+    }
     return json;
   }
 };
@@ -374,7 +432,8 @@ struct json_conv_traits<Json, pludux::backtest::Profile> {
     try {
       return result_type{value_type{
        required_as<std::string>(json, "name"),
-       required_as<pludux::backtest::PositionSizing>(json, "positionSizing"),
+       required_as<pludux::backtest::PositionSizingNode>(json,
+                                                         "positionSizing"),
        required_as<pludux::backtest::DrawdownAdjustment>(json,
                                                          "drawdownAdjustment"),
        required_as<pludux::backtest::InsufficientCashPolicy>(
