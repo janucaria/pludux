@@ -76,7 +76,6 @@ private:
   std::optional<backtest::AssetStoreHandle> selected_asset_handle_opt_;
   std::shared_ptr<backtest::Asset> editing_asset_ptr_;
   ImGuiTextFilter asset_filter_;
-  ui::DraftAction selected_draft_action_{ui::DraftAction::Apply};
 
   void render_assets_list(this auto& self, WindowContext& context)
   {
@@ -280,8 +279,7 @@ private:
     }
 
     ImGui::SameLine();
-    const auto draft_action =
-     ui::apply_reset_button(self.selected_draft_action_, !same_asset);
+    const auto draft_action = ui::apply_reset_button(!same_asset);
     if(draft_action == ui::DraftAction::Apply) {
       self.submit_asset_changes(context);
     } else if(draft_action == ui::DraftAction::Reset) {

@@ -47,18 +47,11 @@ export auto icon_button(const char* label, const char* description) -> bool
 
 export enum class DraftAction { None, Apply, Reset };
 
-export auto apply_reset_button(DraftAction& selected_action,
-                               bool changed,
+export auto apply_reset_button(bool changed,
                                bool can_apply = true) -> DraftAction
 {
-  if(selected_action == DraftAction::None) {
-    selected_action = DraftAction::Apply;
-  }
-
   auto action = DraftAction::None;
-  const auto apply_selected = selected_action == DraftAction::Apply;
-  const auto* primary_label =
-   apply_selected ? PLUDUX_ICON_SAVE " Apply" : PLUDUX_ICON_RESET " Reset";
+  const auto* primary_label = PLUDUX_ICON_SAVE " Apply";
   const auto& style = ImGui::GetStyle();
   const auto primary_size = ImGui::CalcTextSize(primary_label);
   const auto arrow_size = ImGui::CalcTextSize(PLUDUX_ICON_CHEVRON_DOWN);
@@ -82,7 +75,7 @@ export auto apply_reset_button(DraftAction& selected_action,
   draw_list->AddRectFilled(
    button_min, button_max, background_color, style.FrameRounding);
 
-  const auto primary_enabled = changed && (!apply_selected || can_apply);
+  const auto primary_enabled = changed && can_apply;
   const auto text_color =
    ImGui::GetColorU32(primary_enabled ? ImGuiCol_Text : ImGuiCol_TextDisabled);
   const auto primary_position =
@@ -102,40 +95,23 @@ export auto apply_reset_button(DraftAction& selected_action,
      ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
     ImGui::OpenPopup("apply_or_reset_draft");
   } else if(pressed && primary_enabled) {
-    action = selected_action;
+    action = DraftAction::Apply;
   }
 
   if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
     if(arrow_hovered) {
       ImGui::SetTooltip("Choose the draft action");
     } else if(primary_enabled) {
-      ImGui::SetTooltip("%s the current draft",
-                        apply_selected ? "Apply" : "Reset");
-    } else if(apply_selected && changed && !can_apply) {
+      ImGui::SetTooltip("Apply the current draft");
+    } else if(changed && !can_apply) {
       ImGui::SetTooltip("Complete the required fields before applying");
     }
   }
 
   if(ImGui::BeginPopup("apply_or_reset_draft")) {
-    if(ImGui::MenuItem(PLUDUX_ICON_SAVE " Apply",
-                       nullptr,
-                       selected_action == DraftAction::Apply)) {
-      const auto selection_changed =
-       selected_action != DraftAction::Apply;
-      selected_action = DraftAction::Apply;
-      if(selection_changed && changed && can_apply) {
-        action = DraftAction::Apply;
-      }
-    }
-    if(ImGui::MenuItem(PLUDUX_ICON_RESET " Reset",
-                       nullptr,
-                       selected_action == DraftAction::Reset)) {
-      const auto selection_changed =
-       selected_action != DraftAction::Reset;
-      selected_action = DraftAction::Reset;
-      if(selection_changed && changed) {
-        action = DraftAction::Reset;
-      }
+    if(ImGui::MenuItem(
+        PLUDUX_ICON_RESET " Reset", nullptr, false, changed)) {
+      action = DraftAction::Reset;
     }
     ImGui::EndPopup();
   }

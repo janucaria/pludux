@@ -1050,7 +1050,6 @@ private:
 
   ImGuiTextFilter strategy_filter_;
   ImGuiTextFilter built_in_strategy_filter_;
-  ui::DraftAction selected_draft_action_{ui::DraftAction::Apply};
 
   std::vector<std::string> available_series_names_;
   std::unordered_map<std::string, std::string> changed_series_names_;
@@ -1464,12 +1463,10 @@ private:
     ImGui::EndChild();
 
     const auto changed = self.has_unsaved_changes();
-    ImGui::BeginDisabled(!changed);
-    if(ImGui::Button(PLUDUX_ICON_SAVE " Save")) {
+    if(ImGui::Button("OK")) {
       self.submit_strategy_changes(context);
       self.reset();
     }
-    ImGui::EndDisabled();
 
     ImGui::SameLine();
     if(ImGui::Button("Cancel")) {
@@ -1477,8 +1474,7 @@ private:
     }
 
     ImGui::SameLine();
-    const auto draft_action =
-     ui::apply_reset_button(self.selected_draft_action_, changed);
+    const auto draft_action = ui::apply_reset_button(changed);
     if(draft_action == ui::DraftAction::Apply) {
       self.submit_strategy_changes(context);
       self.editor_baseline_ptr_ =

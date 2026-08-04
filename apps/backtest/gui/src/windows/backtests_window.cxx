@@ -68,7 +68,6 @@ private:
   std::optional<backtest::BacktestStoreHandle> selected_backtest_handle_opt_;
   std::shared_ptr<backtest::Backtest> editing_backtest_ptr_;
   ImGuiTextFilter backtest_filter_;
-  ui::DraftAction selected_draft_action_{ui::DraftAction::Apply};
   std::string configuration_error_;
 
   void render_backtests_list(this auto& self, WindowContext& context)
@@ -211,8 +210,8 @@ private:
     const auto valid =
      context.app_state().is_backtest_ready(*self.editing_backtest_ptr_);
 
-    ImGui::BeginDisabled(!valid || same_backtest);
-    if(ImGui::Button("Save Backtest")) {
+    ImGui::BeginDisabled(!valid);
+    if(ImGui::Button("OK")) {
       self.submit_backtest_changes(context, true);
     }
     ImGui::EndDisabled();
@@ -224,7 +223,7 @@ private:
 
     ImGui::SameLine();
     const auto draft_action =
-     ui::apply_reset_button(self.selected_draft_action_, !same_backtest, valid);
+     ui::apply_reset_button(!same_backtest, valid);
     if(draft_action == ui::DraftAction::Apply) {
       self.submit_backtest_changes(context, false);
     } else if(draft_action == ui::DraftAction::Reset) {

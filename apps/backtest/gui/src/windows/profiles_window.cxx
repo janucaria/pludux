@@ -63,7 +63,6 @@ private:
   std::optional<backtest::ProfileStoreHandle> selected_profile_handle_opt_;
   std::shared_ptr<backtest::Profile> editing_profile_ptr_;
   ImGuiTextFilter profile_filter_;
-  ui::DraftAction selected_draft_action_{ui::DraftAction::Apply};
 
   void render_profiles_list(this auto& self, WindowContext& context)
   {
@@ -202,8 +201,7 @@ private:
     }
 
     ImGui::SameLine();
-    const auto draft_action =
-     ui::apply_reset_button(self.selected_draft_action_, !same_profile);
+    const auto draft_action = ui::apply_reset_button(!same_profile);
     if(draft_action == ui::DraftAction::Apply) {
       self.submit_profile_changes(context);
     } else if(draft_action == ui::DraftAction::Reset) {
