@@ -272,9 +272,7 @@ public:
     auto crosshair_state = CrosshairState{};
     self.legend_hovered_ = false;
     const auto base_row_count =
-     1 + (self.chart_state_.show_equity() ? 1 : 0) +
-     (self.chart_state_.show_volume() ? 1 : 0) +
-     (self.chart_state_.show_strategy_performance() ? 5 : 0);
+     2 + (self.chart_state_.show_volume() ? 1 : 0);
     const auto total_row_count =
      static_cast<std::size_t>(additional_plots_count) + base_row_count;
     auto& row_ratios = self.chart_state_.row_ratios(total_row_count);
@@ -325,68 +323,46 @@ public:
         }
       };
 
-      if(self.chart_state_.show_equity() &&
-         ImPlot::BeginPlot("##EquityPlot", plot_size, plot_flags)) {
+      if(ImPlot::BeginPlot("##TopPlot", plot_size, plot_flags)) {
         setup_x_axis(++current_row == total_row_count);
 
-        ImPlot::SetupAxis(ImAxis_Y1, "% Equity", axis_y_flags);
-        ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
-
-        self.plot_equity(backtest_timelines);
-        self.render_equity_legend(backtest_timelines, inspected_index);
-        self.record_crosshair_plot(
-         crosshair_state, timeline_size, self.chart_state_.pinned_bar());
-
-        ImPlot::EndPlot();
-      }
-
-      if(self.chart_state_.show_strategy_performance()) {
-        if(ImPlot::BeginPlot("##ShadowReturnPlot", plot_size, plot_flags)) {
-          setup_x_axis(++current_row == total_row_count);
+        switch(self.chart_state_.top_plot()) {
+        case BacktestTopPlot::Equity:
+          ImPlot::SetupAxis(ImAxis_Y1, "% Equity", axis_y_flags);
+          ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
+          self.plot_equity(backtest_timelines);
+          self.render_equity_legend(backtest_timelines, inspected_index);
+          break;
+        case BacktestTopPlot::ShadowReturn:
           ImPlot::SetupAxis(ImAxis_Y1, "Shadow return", axis_y_flags);
           ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
           self.plot_shadow_return(backtest_timelines);
-          self.record_crosshair_plot(
-           crosshair_state, timeline_size, self.chart_state_.pinned_bar());
-          ImPlot::EndPlot();
-        }
-        if(ImPlot::BeginPlot(
-            "##FrequentistPerformancePlot", plot_size, plot_flags)) {
-          setup_x_axis(++current_row == total_row_count);
+          break;
+        case BacktestTopPlot::FrequentistPerformance:
           ImPlot::SetupAxis(ImAxis_Y1, "Win / mean", axis_y_flags);
           ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
           self.plot_frequentist_performance(backtest_timelines);
-          self.record_crosshair_plot(
-           crosshair_state, timeline_size, self.chart_state_.pinned_bar());
-          ImPlot::EndPlot();
-        }
-        if(ImPlot::BeginPlot("##StrategyStreakPlot", plot_size, plot_flags)) {
-          setup_x_axis(++current_row == total_row_count);
+          break;
+        case BacktestTopPlot::CurrentStreaks:
           ImPlot::SetupAxis(ImAxis_Y1, "Current streak", axis_y_flags);
           ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
           self.plot_strategy_streaks(backtest_timelines);
-          self.record_crosshair_plot(
-           crosshair_state, timeline_size, self.chart_state_.pinned_bar());
-          ImPlot::EndPlot();
-        }
-        if(ImPlot::BeginPlot("##BayesianWinPlot", plot_size, plot_flags)) {
-          setup_x_axis(++current_row == total_row_count);
+          break;
+        case BacktestTopPlot::BayesianWin:
           ImPlot::SetupAxis(ImAxis_Y1, "Bayesian win", axis_y_flags);
           ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
           self.plot_bayesian_win(backtest_timelines);
-          self.record_crosshair_plot(
-           crosshair_state, timeline_size, self.chart_state_.pinned_bar());
-          ImPlot::EndPlot();
-        }
-        if(ImPlot::BeginPlot("##BayesianPayoffPlot", plot_size, plot_flags)) {
-          setup_x_axis(++current_row == total_row_count);
+          break;
+        case BacktestTopPlot::BayesianPayoff:
           ImPlot::SetupAxis(ImAxis_Y1, "Bayesian payoff", axis_y_flags);
           ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
           self.plot_bayesian_payoff(backtest_timelines);
-          self.record_crosshair_plot(
-           crosshair_state, timeline_size, self.chart_state_.pinned_bar());
-          ImPlot::EndPlot();
+          break;
         }
+
+        self.record_crosshair_plot(
+         crosshair_state, timeline_size, self.chart_state_.pinned_bar());
+        ImPlot::EndPlot();
       }
 
       if(ImPlot::BeginPlot("##main_plots", plot_size, plot_flags)) {
@@ -958,9 +934,27 @@ private:
     }
 
     ImGui::Separator();
+    if(ImGui::BeginMenu("Top subplot")) {
+      const auto top_plot = self.chart_state_.top_plot();
+      const auto menu_item = [&self, top_plot](const char* label,
+                                               BacktestTopPlot plot) {
+        if(ImGui::MenuItem(label, nullptr, top_plot == plot) &&
+           top_plot != plot) {
+          self.chart_state_.top_plot(plot);
+        }
+      };
+      menu_item("Equity", BacktestTopPlot::Equity);
+      menu_item("Shadow return", BacktestTopPlot::ShadowReturn);
+      menu_item("Frequentist performance",
+                BacktestTopPlot::FrequentistPerformance);
+      menu_item("Current streaks", BacktestTopPlot::CurrentStreaks);
+      menu_item("Bayesian win", BacktestTopPlot::BayesianWin);
+      menu_item("Bayesian payoff", BacktestTopPlot::BayesianPayoff);
+      ImGui::EndMenu();
+    }
+
+    ImGui::Separator();
     auto layers_changed = false;
-    layers_changed |=
-     ImGui::MenuItem("Equity", nullptr, &self.chart_state_.show_equity());
     layers_changed |=
      ImGui::MenuItem("Volume", nullptr, &self.chart_state_.show_volume());
     layers_changed |=
@@ -969,10 +963,6 @@ private:
      "Risk and targets", nullptr, &self.chart_state_.show_risk());
     layers_changed |= ImGui::MenuItem(
      "Strategy plots", nullptr, &self.chart_state_.show_indicators());
-    layers_changed |=
-     ImGui::MenuItem("Strategy performance",
-                     nullptr,
-                     &self.chart_state_.show_strategy_performance());
     if(layers_changed) {
       self.chart_state_.request_fit();
     }
