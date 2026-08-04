@@ -97,6 +97,27 @@ TEST(StrategyInputsTest, CollectsNumericInputsInStrategyTraversalOrder)
   EXPECT_DOUBLE_EQ(inputs[10].value(), 120.0);
 }
 
+TEST(StrategyInputsTest, CollectsInputFromPositionRMultipleSource)
+{
+  auto series_nodes =
+   OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>{};
+  series_nodes.set(
+   "current_r",
+   PositionRMultipleNode{NumericInputNode{
+    "R Source", NumericInputNode::ValueRepresentation::Decimal, 125.0}});
+  const auto strategy = Strategy{"Test",
+                                 std::move(series_nodes),
+                                 Strategy::Position{},
+                                 Strategy::Position{},
+                                 {}};
+
+  const auto inputs = collect_numeric_inputs(strategy);
+
+  ASSERT_EQ(inputs.size(), 1U);
+  EXPECT_EQ(inputs.front().label(), "R Source");
+  EXPECT_DOUBLE_EQ(inputs.front().value(), 125.0);
+}
+
 TEST(StrategyInputsTest, AssigningStrategyReplacesBacktestInputsWithDefaults)
 {
   auto series_nodes =
@@ -556,6 +577,42 @@ TEST(StrategyParserTest, LoadsEveryBundledStrategySample)
      << entry.path().string();
     ++sample_count;
   }
+
+  const auto r_multiple_strategy = jsoncons::ojson::parse(R"({
+    "version": 2,
+    "execution": { "intrabarPath": "CANDLE_DIRECTION" },
+    "positions": {
+      "long": {
+        "entry": { "signal": true, "timing": "CURRENT_CLOSE" },
+        "exits": {
+          "activation": "SIMULTANEOUS",
+          "rules": [{
+            "enabled": true,
+            "signal": {
+              "method": "GREATER_EQUAL",
+              "params": {
+                "target": {
+                  "method": "POSITION_R_MULTIPLE",
+                  "params": { "source": "CLOSE" }
+                },
+                "threshold": 2
+              }
+            },
+            "timing": "CURRENT_CLOSE",
+            "reduce": 1
+          }]
+        },
+        "riskDistance": {
+          "method": "R_DISTANCE_AMOUNT",
+          "params": { "amount": 10 }
+        }
+      },
+      "short": false
+    }
+  })");
+  EXPECT_NO_THROW(compiled_schema.validate(r_multiple_strategy));
+  EXPECT_NO_THROW(parse_backtest_strategy_json(
+   "Position R-Multiple", r_multiple_strategy.to_string()));
 
   const auto legacy_signal_fields = jsoncons::ojson::parse(R"({
     "version": 2,

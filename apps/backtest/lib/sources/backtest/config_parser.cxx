@@ -17,6 +17,7 @@ import pludux;
 
 import :drawdown_node;
 import :equity_node;
+import :position_node;
 import :risk_distance_node;
 import :stop_target_price_node;
 import :strategy_performance_node;
@@ -1806,6 +1807,21 @@ auto make_default_registered_config_parser() -> ConfigParser
    "POSITION_DIRECTION",
    serialize_ohlcv_node<PositionDirectionNode>,
    parse_ohlcv_node<PositionDirectionNode>);
+  config_parser.register_node_parser(
+   "POSITION_R_MULTIPLE",
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) -> jsoncons::ojson {
+     const auto* r_multiple_node = node_cast<PositionRMultipleNode>(node);
+     if(!r_multiple_node) {
+       return jsoncons::ojson::null();
+     }
+     return jsoncons::ojson::object{
+      {"source", config_parser.serialize_node(r_multiple_node->source())}};
+   },
+   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
+     return PositionRMultipleNode{
+      parse_node_from_param_or(config_parser, params, "source", CloseNode{})};
+   });
 
   config_parser.register_node_parser(
    "SQRT",

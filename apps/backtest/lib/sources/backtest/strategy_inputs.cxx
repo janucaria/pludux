@@ -10,6 +10,7 @@ import pludux;
 
 import :backtest;
 import :risk_distance_node;
+import :position_node;
 import :strategy;
 import :stop_target_price_node;
 
@@ -129,6 +130,12 @@ void collect_numeric_inputs_from_node(const TpRMultipleNode& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.value(), inputs);
+}
+
+void collect_numeric_inputs_from_node(const PositionRMultipleNode& node,
+                                      std::vector<NumericInputNode>& inputs)
+{
+  collect_numeric_inputs_from_node(node.source(), inputs);
 }
 
 void collect_numeric_inputs_from_node(const StddevNode& node,
@@ -412,6 +419,7 @@ void collect_numeric_inputs_from_node(
   PLUDUX_COLLECT_IF_NODE(SlAtrNode)
   PLUDUX_COLLECT_IF_NODE(TpAtrNode)
   PLUDUX_COLLECT_IF_NODE(TpRMultipleNode)
+  PLUDUX_COLLECT_IF_NODE(PositionRMultipleNode)
 
 #undef PLUDUX_COLLECT_IF_NODE
 }

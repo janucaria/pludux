@@ -456,9 +456,11 @@ public:
       const auto& position = *self.strategy_trade_session_.open_position();
       const auto& rule = position.is_long_direction() ? self.long_position_
                                                       : self.short_position_;
+      const auto position_context =
+       self.with_open_position_context(context, position);
       if(rule.pyramiding_timing() == SignalTiming::CurrentClose &&
          static_cast<bool>(evaluate_series_method(
-          rule.pyramiding_signal(), asset_snapshot, context))) {
+          rule.pyramiding_signal(), asset_snapshot, position_context))) {
         self.execute_pyramiding_action(asset_snapshot.close(),
                                        asset_snapshot,
                                        context,
@@ -515,9 +517,10 @@ public:
      .unrealized_investment = self.execution_session_.unrealized_investment(),
      .unrealized_duration = self.execution_session_.unrealized_duration()});
 
+    const auto series_context = self.with_open_position_context(context);
     for(const auto& [series_name, series_method] : series_methods) {
       const auto series_value =
-       evaluate_series_method(series_method, asset_snapshot, context);
+       evaluate_series_method(series_method, asset_snapshot, series_context);
       series_evaluation_results.put(series_method, series_value);
       series_evaluation_results.alias(series_name, series_method);
     }
@@ -563,6 +566,7 @@ private:
 
   bool is_failed_;
   IntrabarPath intrabar_path_;
+
   std::array<bool, 2> pending_entries_{};
   bool pending_pyramiding_{};
   std::vector<std::size_t> pending_signal_exit_indices_;
@@ -574,6 +578,33 @@ private:
     double price;
     int priority;
   };
+
+  auto with_open_position_context(this const BacktestRunner& self,
+                                  BacktestMethodContext context,
+                                  const TradePosition& position) noexcept
+   -> BacktestMethodContext
+  {
+    const auto direction = position.is_long_direction() ? 1.0 : -1.0;
+    return context
+     .with_position_prices(position.entry_price(),
+                           position.latest_entry_price(),
+                           position.average_price(),
+                           position.risk_reference_price(),
+                           direction)
+     .with_position_risk_distance(position.risk_distance());
+  }
+
+  auto with_open_position_context(this const BacktestRunner& self,
+                                  BacktestMethodContext context) noexcept
+   -> BacktestMethodContext
+  {
+    if(!self.strategy_trade_session_.open_position()) {
+      return context;
+    }
+    return self.with_open_position_context(
+     std::move(context), *self.strategy_trade_session_.open_position());
+  }
+
   auto current_equity(this const BacktestRunner& self) noexcept -> double
   {
     return self.current_account_state_.equity();
@@ -1490,6 +1521,8 @@ private:
     const auto& position = *self.strategy_trade_session_.open_position();
     const auto& rule =
      position.is_long_direction() ? self.long_position_ : self.short_position_;
+    const auto position_context =
+     self.with_open_position_context(context, position);
     auto indices = std::vector<std::size_t>{};
     for(auto index = std::size_t{0}; index < rule.signal_exits().size();
         ++index) {
@@ -1499,7 +1532,7 @@ private:
          position.signal_exit_states()[index].enabled() &&
          !position.signal_exit_states()[index].consumed() &&
          static_cast<bool>(evaluate_series_method(
-          signal_exit.signal_method(), snapshot, context))) {
+          signal_exit.signal_method(), snapshot, position_context))) {
         indices.push_back(index);
       }
     }
@@ -1699,10 +1732,12 @@ private:
     const auto& position = *self.strategy_trade_session_.open_position();
     const auto& rule =
      position.is_long_direction() ? self.long_position_ : self.short_position_;
+    const auto position_context =
+     self.with_open_position_context(context, position);
     self.pending_pyramiding_ =
      rule.pyramiding_timing() == SignalTiming::NextOpen &&
-     static_cast<bool>(
-      evaluate_series_method(rule.pyramiding_signal(), snapshot, context));
+     static_cast<bool>(evaluate_series_method(
+      rule.pyramiding_signal(), snapshot, position_context));
     for(auto index = std::size_t{0}; index < rule.signal_exits().size();
         ++index) {
       const auto& signal_exit = rule.signal_exits()[index];
@@ -1711,7 +1746,7 @@ private:
          position.signal_exit_states()[index].enabled() &&
          !position.signal_exit_states()[index].consumed() &&
          static_cast<bool>(evaluate_series_method(
-          signal_exit.signal_method(), snapshot, context))) {
+          signal_exit.signal_method(), snapshot, position_context))) {
         self.pending_signal_exit_indices_.push_back(index);
       }
     }

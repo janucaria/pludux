@@ -129,6 +129,8 @@ target_sources(${PROJECT_NAME}
     sources/backtest/equity_node.cxx
     sources/backtest/risk_distance_method.cxx
     sources/backtest/risk_distance_node.cxx
+    sources/backtest/position_method.cxx
+    sources/backtest/position_node.cxx
     sources/backtest/stop_target_price_method.cxx
     sources/backtest/stop_target_price_node.cxx
     sources/backtest/backtest.cxx

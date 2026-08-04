@@ -62,6 +62,8 @@ export import :equity_method;
 export import :equity_node;
 export import :risk_distance_method;
 export import :risk_distance_node;
+export import :position_method;
+export import :position_node;
 export import :stop_target_price_method;
 export import :stop_target_price_node;
 export import :backtest_runner;

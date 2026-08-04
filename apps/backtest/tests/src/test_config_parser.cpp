@@ -1611,6 +1611,35 @@ TEST_F(ConfigParserTest, ParsePositionContextPriceMethods)
   }
 }
 
+TEST_F(ConfigParserTest, ParsePositionRMultipleMethod)
+{
+  const auto default_method =
+   parse_node_method(json::parse(R"("POSITION_R_MULTIPLE")"));
+  const auto custom_method = parse_node_method(json::parse(
+   R"({"method":"POSITION_R_MULTIPLE","params":{"source":"OPEN"}})"));
+
+  const auto* default_r_multiple =
+   series_method_cast<pludux::backtest::PositionRMultipleMethod<
+    ErasedSeriesMethod<ErasedSeriesMethodContext>>>(default_method);
+  ASSERT_NE(default_r_multiple, nullptr);
+  EXPECT_NE(series_method_cast<CloseMethod>(default_r_multiple->source()),
+            nullptr);
+
+  const auto* custom_r_multiple =
+   series_method_cast<pludux::backtest::PositionRMultipleMethod<
+    ErasedSeriesMethod<ErasedSeriesMethodContext>>>(custom_method);
+  ASSERT_NE(custom_r_multiple, nullptr);
+  EXPECT_NE(series_method_cast<OpenMethod>(custom_r_multiple->source()),
+            nullptr);
+
+  for(const auto& method : {default_method, custom_method}) {
+    const auto serialized_config = serialize_node_method(method);
+    EXPECT_EQ(serialized_config.at("method"), "POSITION_R_MULTIPLE");
+    EXPECT_TRUE(serialized_config.at("params").contains("source"));
+    EXPECT_EQ(method, parse_node_method(serialized_config));
+  }
+}
+
 TEST_F(ConfigParserTest, ParseScreenerInvalidMethod)
 {
   const auto config = json::parse(R"(

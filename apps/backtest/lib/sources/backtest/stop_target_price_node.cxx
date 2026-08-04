@@ -92,34 +92,6 @@ public:
   auto operator==(const TpRMultipleNode&) const noexcept -> bool = default;
 };
 
-class InitialEntryPriceNode {
-public:
-  auto operator==(const InitialEntryPriceNode&) const noexcept
-   -> bool = default;
-};
-
-class LatestEntryPriceNode {
-public:
-  auto operator==(const LatestEntryPriceNode&) const noexcept -> bool = default;
-};
-
-class AveragePriceNode {
-public:
-  auto operator==(const AveragePriceNode&) const noexcept -> bool = default;
-};
-
-class StopTargetRefPriceNode {
-public:
-  auto operator==(const StopTargetRefPriceNode&) const noexcept
-   -> bool = default;
-};
-
-class PositionDirectionNode {
-public:
-  auto operator==(const PositionDirectionNode&) const noexcept
-   -> bool = default;
-};
-
 class SlAtrNode {
 public:
   SlAtrNode()
@@ -323,50 +295,6 @@ auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
 {
   return ErasedSeriesMethod<ErasedSeriesMethodContext>{TpRMultipleMethod{
    node_to_erased_method<ErasedSeriesMethodContext>(node.value(), context)}};
-}
-
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const InitialEntryPriceNode&,
-                       NodeToErasedMethodContext&)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
-{
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
-   InitialEntryPriceMethod{}};
-}
-
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const LatestEntryPriceNode&,
-                       NodeToErasedMethodContext&)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
-{
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
-   LatestEntryPriceMethod{}};
-}
-
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const AveragePriceNode&,
-                       NodeToErasedMethodContext&)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
-{
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{AveragePriceMethod{}};
-}
-
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const StopTargetRefPriceNode&,
-                       NodeToErasedMethodContext&)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
-{
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
-   StopTargetRefPriceMethod{}};
-}
-
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const PositionDirectionNode&,
-                       NodeToErasedMethodContext&)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
-{
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
-   PositionDirectionMethod{}};
 }
 
 } // namespace pludux::backtest

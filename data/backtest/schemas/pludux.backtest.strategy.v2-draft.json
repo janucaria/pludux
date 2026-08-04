@@ -461,7 +461,8 @@
           "enum": [
             "EQUITY",
             "EQUITY_PERCENT",
-            "DRAWDOWN"
+            "DRAWDOWN",
+            "POSITION_R_MULTIPLE"
           ],
           "description": "Backtest account-state shorthand. EQUITY reads the account equity available at the current evaluation moment. EQUITY_PERCENT reads that equity as a percentage of initial capital. DRAWDOWN reads the account drawdown available at the current evaluation moment."
         },
@@ -2736,8 +2737,35 @@
           }
         }
       ],
-      "title": "Position Context Price",
-      "description": "Reads a scoped backtest position value during stop-loss and take-profit price evaluation. Outside active position-price context, the value is NaN."
+      "title": "Position Context Value",
+      "description": "Reads a scoped backtest position value while an open position is being evaluated. Outside active position context, the value is NaN."
+    },
+    "positionRMultipleMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "POSITION_R_MULTIPLE"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "source": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Source",
+                  "description": "Price or numeric series compared with the position risk reference price. Defaults to CLOSE."
+                }
+              }
+            }
+          }
+        }
+      ],
+      "title": "Current Position R-Multiple",
+      "description": "Returns direction times the difference between the source and active risk reference price, divided by the active positive risk distance. Returns NaN outside active position context."
     },
     "stopTargetReferencePrice": {
       "type": "string",
@@ -2869,6 +2897,9 @@
         },
         {
           "$ref": "#/$defs/positionContextPriceMethod"
+        },
+        {
+          "$ref": "#/$defs/positionRMultipleMethod"
         },
         {
           "$ref": "#/$defs/crossMethod"
