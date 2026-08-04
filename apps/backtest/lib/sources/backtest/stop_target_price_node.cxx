@@ -23,7 +23,7 @@ public:
   {
   }
 
-  explicit StopTargetDistanceNode(ErasedNode value)
+  explicit StopTargetDistanceNode(ErasedNode<ErasedSeriesMethodContext> value)
   : value_{std::move(value)}
   {
   }
@@ -32,18 +32,19 @@ public:
    -> bool = default;
 
   auto value(this const StopTargetDistanceNode& self) noexcept
-   -> const ErasedNode&
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.value_;
   }
 
-  void value(this StopTargetDistanceNode& self, ErasedNode value) noexcept
+  void value(this StopTargetDistanceNode& self,
+             ErasedNode<ErasedSeriesMethodContext> value) noexcept
   {
     self.value_ = std::move(value);
   }
 
 private:
-  ErasedNode value_;
+  ErasedNode<ErasedSeriesMethodContext> value_;
 };
 
 class SlAmountNode : public StopTargetDistanceNode<SlAmountNode> {
@@ -91,34 +92,6 @@ public:
   auto operator==(const TpRMultipleNode&) const noexcept -> bool = default;
 };
 
-class InitialEntryPriceNode {
-public:
-  auto operator==(const InitialEntryPriceNode&) const noexcept
-   -> bool = default;
-};
-
-class LatestEntryPriceNode {
-public:
-  auto operator==(const LatestEntryPriceNode&) const noexcept -> bool = default;
-};
-
-class AveragePriceNode {
-public:
-  auto operator==(const AveragePriceNode&) const noexcept -> bool = default;
-};
-
-class StopTargetRefPriceNode {
-public:
-  auto operator==(const StopTargetRefPriceNode&) const noexcept
-   -> bool = default;
-};
-
-class PositionDirectionNode {
-public:
-  auto operator==(const PositionDirectionNode&) const noexcept
-   -> bool = default;
-};
-
 class SlAtrNode {
 public:
   SlAtrNode()
@@ -133,8 +106,8 @@ public:
   {
   }
 
-  SlAtrNode(ErasedNode period,
-            ErasedNode multiplier,
+  SlAtrNode(ErasedNode<ErasedSeriesMethodContext> period,
+            ErasedNode<ErasedSeriesMethodContext> multiplier,
             MaNodeType ma_smoothing_type = MaNodeType::Rma)
   : period_{std::move(period)}
   , multiplier_{std::move(multiplier)}
@@ -144,22 +117,26 @@ public:
 
   auto operator==(const SlAtrNode&) const noexcept -> bool = default;
 
-  auto period(this const SlAtrNode& self) noexcept -> const ErasedNode&
+  auto period(this const SlAtrNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.period_;
   }
 
-  void period(this SlAtrNode& self, ErasedNode period) noexcept
+  void period(this SlAtrNode& self,
+              ErasedNode<ErasedSeriesMethodContext> period) noexcept
   {
     self.period_ = std::move(period);
   }
 
-  auto multiplier(this const SlAtrNode& self) noexcept -> const ErasedNode&
+  auto multiplier(this const SlAtrNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.multiplier_;
   }
 
-  void multiplier(this SlAtrNode& self, ErasedNode multiplier) noexcept
+  void multiplier(this SlAtrNode& self,
+                  ErasedNode<ErasedSeriesMethodContext> multiplier) noexcept
   {
     self.multiplier_ = std::move(multiplier);
   }
@@ -175,8 +152,8 @@ public:
   }
 
 private:
-  ErasedNode period_;
-  ErasedNode multiplier_;
+  ErasedNode<ErasedSeriesMethodContext> period_;
+  ErasedNode<ErasedSeriesMethodContext> multiplier_;
   MaNodeType ma_smoothing_type_;
 };
 
@@ -194,8 +171,8 @@ public:
   {
   }
 
-  TpAtrNode(ErasedNode period,
-            ErasedNode multiplier,
+  TpAtrNode(ErasedNode<ErasedSeriesMethodContext> period,
+            ErasedNode<ErasedSeriesMethodContext> multiplier,
             MaNodeType ma_smoothing_type = MaNodeType::Rma)
   : period_{std::move(period)}
   , multiplier_{std::move(multiplier)}
@@ -205,22 +182,26 @@ public:
 
   auto operator==(const TpAtrNode&) const noexcept -> bool = default;
 
-  auto period(this const TpAtrNode& self) noexcept -> const ErasedNode&
+  auto period(this const TpAtrNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.period_;
   }
 
-  void period(this TpAtrNode& self, ErasedNode period) noexcept
+  void period(this TpAtrNode& self,
+              ErasedNode<ErasedSeriesMethodContext> period) noexcept
   {
     self.period_ = std::move(period);
   }
 
-  auto multiplier(this const TpAtrNode& self) noexcept -> const ErasedNode&
+  auto multiplier(this const TpAtrNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.multiplier_;
   }
 
-  void multiplier(this TpAtrNode& self, ErasedNode multiplier) noexcept
+  void multiplier(this TpAtrNode& self,
+                  ErasedNode<ErasedSeriesMethodContext> multiplier) noexcept
   {
     self.multiplier_ = std::move(multiplier);
   }
@@ -236,111 +217,84 @@ public:
   }
 
 private:
-  ErasedNode period_;
-  ErasedNode multiplier_;
+  ErasedNode<ErasedSeriesMethodContext> period_;
+  ErasedNode<ErasedSeriesMethodContext> multiplier_;
   MaNodeType ma_smoothing_type_;
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
                        const SlAmountNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{
-   SlAmountMethod{node_to_erased_method(node.value(), context)}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{SlAmountMethod{
+   node_to_erased_method<ErasedSeriesMethodContext>(node.value(), context)}};
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
                        const TpAmountNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{
-   TpAmountMethod{node_to_erased_method(node.value(), context)}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{TpAmountMethod{
+   node_to_erased_method<ErasedSeriesMethodContext>(node.value(), context)}};
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
                        const SlPercentNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{
-   SlPercentMethod{node_to_erased_method(node.value(), context)}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{SlPercentMethod{
+   node_to_erased_method<ErasedSeriesMethodContext>(node.value(), context)}};
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
                        const TpPercentNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{
-   TpPercentMethod{node_to_erased_method(node.value(), context)}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{TpPercentMethod{
+   node_to_erased_method<ErasedSeriesMethodContext>(node.value(), context)}};
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
                        const SlAtrNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{
-   SlAtrMethod{node_to_erased_method(node.period(), context),
-               node_to_erased_method(node.multiplier(), context),
-               static_cast<MaMethodType>(node.ma_smoothing_type())}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{SlAtrMethod{
+   node_to_erased_method<ErasedSeriesMethodContext>(node.period(), context),
+   node_to_erased_method<ErasedSeriesMethodContext>(node.multiplier(), context),
+   static_cast<MaMethodType>(node.ma_smoothing_type())}};
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
                        const TpAtrNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{
-   TpAtrMethod{node_to_erased_method(node.period(), context),
-               node_to_erased_method(node.multiplier(), context),
-               static_cast<MaMethodType>(node.ma_smoothing_type())}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{TpAtrMethod{
+   node_to_erased_method<ErasedSeriesMethodContext>(node.period(), context),
+   node_to_erased_method<ErasedSeriesMethodContext>(node.multiplier(), context),
+   static_cast<MaMethodType>(node.ma_smoothing_type())}};
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
                        const Sl1RNode&,
-                       NodeToErasedMethodContext&) -> AnySeriesMethod
+                       NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{Sl1RMethod{}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{Sl1RMethod{}};
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
                        const TpRMultipleNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return AnySeriesMethod{
-   TpRMultipleMethod{node_to_erased_method(node.value(), context)}};
-}
-
-auto pludux_tag_invoke(NodeToErasedMethod,
-                       const InitialEntryPriceNode&,
-                       NodeToErasedMethodContext&) -> AnySeriesMethod
-{
-  return AnySeriesMethod{InitialEntryPriceMethod{}};
-}
-
-auto pludux_tag_invoke(NodeToErasedMethod,
-                       const LatestEntryPriceNode&,
-                       NodeToErasedMethodContext&) -> AnySeriesMethod
-{
-  return AnySeriesMethod{LatestEntryPriceMethod{}};
-}
-
-auto pludux_tag_invoke(NodeToErasedMethod,
-                       const AveragePriceNode&,
-                       NodeToErasedMethodContext&) -> AnySeriesMethod
-{
-  return AnySeriesMethod{AveragePriceMethod{}};
-}
-
-auto pludux_tag_invoke(NodeToErasedMethod,
-                       const StopTargetRefPriceNode&,
-                       NodeToErasedMethodContext&) -> AnySeriesMethod
-{
-  return AnySeriesMethod{StopTargetRefPriceMethod{}};
-}
-
-auto pludux_tag_invoke(NodeToErasedMethod,
-                       const PositionDirectionNode&,
-                       NodeToErasedMethodContext&) -> AnySeriesMethod
-{
-  return AnySeriesMethod{PositionDirectionMethod{}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{TpRMultipleMethod{
+   node_to_erased_method<ErasedSeriesMethodContext>(node.value(), context)}};
 }
 
 } // namespace pludux::backtest

@@ -21,14 +21,15 @@ public:
   {
   }
 
-  explicit RvolNode(ErasedNode period)
+  explicit RvolNode(ErasedNode<ErasedSeriesMethodContext> period)
   : period_{std::move(period)}
   {
   }
 
   auto operator==(const RvolNode& other) const noexcept -> bool = default;
 
-  auto period(this const RvolNode& self) noexcept -> const ErasedNode&
+  auto period(this const RvolNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.period_;
   }
@@ -38,22 +39,25 @@ public:
     self.period_ = ValueNode{static_cast<double>(period)};
   }
 
-  void period(this RvolNode& self, ErasedNode period) noexcept
+  void period(this RvolNode& self,
+              ErasedNode<ErasedSeriesMethodContext> period) noexcept
   {
     self.period_ = std::move(period);
   }
 
 private:
-  ErasedNode period_;
+  ErasedNode<ErasedSeriesMethodContext> period_;
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const RvolNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<TContext>
 {
-  const auto period = node_to_erased_method(node.period(), context);
+  const auto period = node_to_erased_method<TContext>(node.period(), context);
 
-  return AnySeriesMethod{RvolMethod{period}};
+  return ErasedSeriesMethod<TContext>{RvolMethod{period}};
 }
 
 } // namespace pludux

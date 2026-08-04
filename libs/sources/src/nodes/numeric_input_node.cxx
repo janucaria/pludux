@@ -99,12 +99,14 @@ auto resolve_numeric_input_value(
   }
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const NumericInputNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<TContext>
 {
   const auto value = context.consume(node.value());
-  return AnySeriesMethod{
+  return ErasedSeriesMethod<TContext>{
    ValueMethod{resolve_numeric_input_value(value, node.representation())}};
 }
 

@@ -44,4 +44,4 @@ export import :methods.logical_method;
 export import :methods.boolean_method;
 export import :methods.comparison_method;
 
-export import :methods.any_series_method;
+export import :methods.erased_series_method;

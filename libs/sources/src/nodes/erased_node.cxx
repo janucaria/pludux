@@ -15,6 +15,7 @@ import :node_to_erased_method;
 
 export namespace pludux {
 
+template<MethodContextable TContext>
 class ErasedNode {
 public:
   template<typename UNode>
@@ -27,9 +28,9 @@ public:
   : impl_{std::make_any<UNode>(std::move(impl))}
   , convert_to_erased_method_{[](const std::any& impl,
                                  NodeToErasedMethodContext& context)
-                               -> AnySeriesMethod {
+                               -> ErasedSeriesMethod<TContext> {
     const auto& node = *std::any_cast<UNode>(&impl);
-    return node_to_erased_method(node, context);
+    return node_to_erased_method<TContext>(node, context);
   }}
   , equals_{[](const std::any& impl, const ErasedNode& other) static -> bool {
     if(auto other_node = std::any_cast<UNode>(&other.impl_)) {
@@ -61,10 +62,13 @@ public:
     return self.not_equals_(self.impl_, other);
   }
 
-  friend auto pludux_tag_invoke(NodeToErasedMethod,
+  friend auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                                 const ErasedNode& node,
                                 NodeToErasedMethodContext& context)
-   -> AnySeriesMethod;
+   -> ErasedSeriesMethod<TContext>
+  {
+    return node.convert_to_erased_method_(node.impl_, context);
+  }
 
   template<typename UNode>
   friend auto node_cast(const ErasedNode& node) noexcept -> const UNode*
@@ -81,20 +85,13 @@ public:
 private:
   std::any impl_;
 
-  std::function<
-   auto(const std::any&, NodeToErasedMethodContext&)->AnySeriesMethod>
+  std::function<auto(const std::any&, NodeToErasedMethodContext&)
+                 ->ErasedSeriesMethod<TContext>>
    convert_to_erased_method_;
 
   std::function<auto(const std::any&, const ErasedNode&)->bool> equals_;
 
   std::function<auto(const std::any&, const ErasedNode&)->bool> not_equals_;
 };
-
-auto pludux_tag_invoke(NodeToErasedMethod,
-                       const ErasedNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
-{
-  return node.convert_to_erased_method_(node.impl_, context);
-}
 
 } // namespace pludux

@@ -9,17 +9,17 @@ module;
 #include <utility>
 #include <vector>
 
-export module pludux.backtest:plots.any_plot_method_context;
+export module pludux.backtest:plots.erased_plot_method_context;
 
 import :plots.plot_method_contextable;
 
 export namespace pludux::backtest {
 
-class AnyPlotMethodContext {
+class ErasedPlotMethodContext {
 public:
   template<typename TPlotMethodContext>
     requires PlotMethodContextable<TPlotMethodContext>
-  AnyPlotMethodContext(TPlotMethodContext plot_method_context)
+  ErasedPlotMethodContext(TPlotMethodContext plot_method_context)
   : impl_{std::move(plot_method_context)}
   , render_plot_line_{[](const std::any& impl,
                          const std::vector<double>& data,
@@ -57,42 +57,42 @@ public:
   {
   }
 
-  void render_plot_line(this const AnyPlotMethodContext& self,
+  void render_plot_line(this const ErasedPlotMethodContext& self,
                         const std::vector<double>& data,
                         std::uint32_t color)
   {
     self.render_plot_line_(self.impl_, data, color);
   }
 
-  void render_plot_histogram(this const AnyPlotMethodContext& self,
+  void render_plot_histogram(this const ErasedPlotMethodContext& self,
                              const std::vector<double>& data,
                              std::uint32_t color)
   {
     self.render_plot_histogram_(self.impl_, data, color);
   }
 
-  void render_plot_momentum_histogram(this const AnyPlotMethodContext& self,
+  void render_plot_momentum_histogram(this const ErasedPlotMethodContext& self,
                                       const std::vector<double>& data,
                                       const std::vector<std::uint32_t>& colors)
   {
     self.render_plot_momentum_histogram_(self.impl_, data, colors);
   }
 
-  auto series_results(this const AnyPlotMethodContext& self,
+  auto series_results(this const ErasedPlotMethodContext& self,
                       const std::string& series_name)
    -> std::optional<std::reference_wrapper<const std::vector<double>>>
   {
     return self.series_results_(self.impl_, series_name);
   }
 
-  auto results_size(this const AnyPlotMethodContext& self) -> std::size_t
+  auto results_size(this const ErasedPlotMethodContext& self) -> std::size_t
   {
     return self.results_size_(self.impl_);
   }
 
   template<typename TPlotMethodContext>
     requires PlotMethodContextable<TPlotMethodContext>
-  friend auto plot_method_context_cast(const AnyPlotMethodContext& self)
+  friend auto plot_method_context_cast(const ErasedPlotMethodContext& self)
    -> const TPlotMethodContext*
   {
     return std::any_cast<TPlotMethodContext>(&self.impl_);
@@ -100,7 +100,7 @@ public:
 
   template<typename TPlotMethodContext>
     requires PlotMethodContextable<TPlotMethodContext>
-  friend auto plot_method_context_cast(AnyPlotMethodContext& self)
+  friend auto plot_method_context_cast(ErasedPlotMethodContext& self)
    -> TPlotMethodContext*
   {
     return std::any_cast<TPlotMethodContext>(&self.impl_);
@@ -130,6 +130,6 @@ private:
   std::function<auto(const std::any&)->std::size_t> results_size_;
 };
 
-static_assert(PlotMethodContextable<AnyPlotMethodContext>);
+static_assert(PlotMethodContextable<ErasedPlotMethodContext>);
 
 } // namespace pludux::backtest

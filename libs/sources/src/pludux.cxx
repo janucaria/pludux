@@ -11,7 +11,7 @@ export import :ma_node_type;
 export import :nodes;
 export import :node_to_erased_method;
 export import :method_contextable;
-export import :any_method_context;
+export import :erased_series_method_context;
 export import :evaluate_series_method;
 export import :ordered_named_registry;
 export import :default_method_context;

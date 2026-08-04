@@ -170,7 +170,7 @@ auto risk_distance_reference_price(MethodContextable auto context) noexcept
                                      BacktestMethodContext>) {
     return context.position_reference_price();
   } else if constexpr(std::is_same_v<std::remove_cvref_t<decltype(context)>,
-                                     AnySeriesMethodContext>) {
+                                     ErasedSeriesMethodContext>) {
     const auto* backtest_context =
      series_method_context_cast<BacktestMethodContext>(context);
     return backtest_context ? backtest_context->position_reference_price()

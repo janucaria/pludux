@@ -271,8 +271,8 @@ public:
 
     auto crosshair_state = CrosshairState{};
     self.legend_hovered_ = false;
-    const auto base_row_count = 1 + (self.chart_state_.show_equity() ? 1 : 0) +
-                                (self.chart_state_.show_volume() ? 1 : 0);
+    const auto base_row_count =
+     2 + (self.chart_state_.show_volume() ? 1 : 0);
     const auto total_row_count =
      static_cast<std::size_t>(additional_plots_count) + base_row_count;
     auto& row_ratios = self.chart_state_.row_ratios(total_row_count);
@@ -323,18 +323,45 @@ public:
         }
       };
 
-      if(self.chart_state_.show_equity() &&
-         ImPlot::BeginPlot("##EquityPlot", plot_size, plot_flags)) {
+      if(ImPlot::BeginPlot("##TopPlot", plot_size, plot_flags)) {
         setup_x_axis(++current_row == total_row_count);
 
-        ImPlot::SetupAxis(ImAxis_Y1, "% Equity", axis_y_flags);
-        ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
+        switch(self.chart_state_.top_plot()) {
+        case BacktestTopPlot::Equity:
+          ImPlot::SetupAxis(ImAxis_Y1, "% Equity", axis_y_flags);
+          ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
+          self.plot_equity(backtest_timelines);
+          self.render_equity_legend(backtest_timelines, inspected_index);
+          break;
+        case BacktestTopPlot::ShadowReturn:
+          ImPlot::SetupAxis(ImAxis_Y1, "Shadow return", axis_y_flags);
+          ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
+          self.plot_shadow_return(backtest_timelines);
+          break;
+        case BacktestTopPlot::FrequentistPerformance:
+          ImPlot::SetupAxis(ImAxis_Y1, "Win / mean", axis_y_flags);
+          ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
+          self.plot_frequentist_performance(backtest_timelines);
+          break;
+        case BacktestTopPlot::CurrentStreaks:
+          ImPlot::SetupAxis(ImAxis_Y1, "Current streak", axis_y_flags);
+          ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
+          self.plot_strategy_streaks(backtest_timelines);
+          break;
+        case BacktestTopPlot::BayesianWin:
+          ImPlot::SetupAxis(ImAxis_Y1, "Bayesian win", axis_y_flags);
+          ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
+          self.plot_bayesian_win(backtest_timelines);
+          break;
+        case BacktestTopPlot::BayesianPayoff:
+          ImPlot::SetupAxis(ImAxis_Y1, "Bayesian payoff", axis_y_flags);
+          ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
+          self.plot_bayesian_payoff(backtest_timelines);
+          break;
+        }
 
-        self.plot_equity(backtest_timelines);
-        self.render_equity_legend(backtest_timelines, inspected_index);
         self.record_crosshair_plot(
          crosshair_state, timeline_size, self.chart_state_.pinned_bar());
-
         ImPlot::EndPlot();
       }
 
@@ -622,7 +649,8 @@ private:
 
   ImVec4 trailing_stop_color_;
 
-  static auto plot_source_label(const backtest::AnyPlotSourceMethod& source,
+  static auto plot_source_label(const backtest::ErasedPlotSourceMethod<
+                                 backtest::ErasedPlotMethodContext>& source,
                                 std::string_view fallback,
                                 std::size_t index) -> std::string
   {
@@ -637,10 +665,12 @@ private:
     return std::format("{} {}", fallback, index + 1);
   }
 
-  static auto plot_item_label(const backtest::AnyPlotMethod& method,
-                              std::size_t index) -> std::string
+  static auto plot_item_label(
+   const backtest::ErasedPlotMethod<backtest::ErasedPlotMethodContext>& method,
+   std::size_t index) -> std::string
   {
-    using PlotSource = backtest::AnyPlotSourceMethod;
+    using PlotSource =
+     backtest::ErasedPlotSourceMethod<backtest::ErasedPlotMethodContext>;
     if(plot_method_cast<backtest::HLinePlotMethod>(method)) {
       return std::format("Level {}", index + 1);
     }
@@ -904,9 +934,27 @@ private:
     }
 
     ImGui::Separator();
+    if(ImGui::BeginMenu("Top subplot")) {
+      const auto top_plot = self.chart_state_.top_plot();
+      const auto menu_item = [&self, top_plot](const char* label,
+                                               BacktestTopPlot plot) {
+        if(ImGui::MenuItem(label, nullptr, top_plot == plot) &&
+           top_plot != plot) {
+          self.chart_state_.top_plot(plot);
+        }
+      };
+      menu_item("Equity", BacktestTopPlot::Equity);
+      menu_item("Shadow return", BacktestTopPlot::ShadowReturn);
+      menu_item("Frequentist performance",
+                BacktestTopPlot::FrequentistPerformance);
+      menu_item("Current streaks", BacktestTopPlot::CurrentStreaks);
+      menu_item("Bayesian win", BacktestTopPlot::BayesianWin);
+      menu_item("Bayesian payoff", BacktestTopPlot::BayesianPayoff);
+      ImGui::EndMenu();
+    }
+
+    ImGui::Separator();
     auto layers_changed = false;
-    layers_changed |=
-     ImGui::MenuItem("Equity", nullptr, &self.chart_state_.show_equity());
     layers_changed |=
      ImGui::MenuItem("Volume", nullptr, &self.chart_state_.show_volume());
     layers_changed |=
@@ -1418,6 +1466,125 @@ private:
 
       ImPlot::EndItem();
     }
+  }
+
+  void plot_shadow_return(this const BacktestChartWindow&,
+                          const backtest::BacktestTimeline& timeline)
+  {
+    auto xs = std::vector<double>(timeline.size());
+    auto returns = std::vector<double>(
+     timeline.size(), std::numeric_limits<double>::quiet_NaN());
+    for(auto index = std::size_t{0}; index < timeline.size(); ++index) {
+      xs[index] = static_cast<double>(index);
+      const auto& closed = timeline.strategy_closed_positions(index);
+      if(!closed.empty()) {
+        returns[index] = closed.back().return_ratio();
+      }
+      if(std::isnan(returns[index])) {
+        const auto& open = timeline.strategy_open_position(index);
+        if(open) {
+          returns[index] = open->unrealized_return_ratio();
+        }
+      }
+    }
+    ImPlot::PlotLine("Shadow return", xs.data(), returns.data(), xs.size());
+  }
+
+  void plot_frequentist_performance(this const BacktestChartWindow&,
+                                    const backtest::BacktestTimeline& timeline)
+  {
+    auto xs = std::vector<double>(timeline.size());
+    auto win_rate = std::vector<double>(timeline.size());
+    auto break_even_rate = std::vector<double>(timeline.size());
+    auto loss_rate = std::vector<double>(timeline.size());
+    auto mean_return = std::vector<double>(timeline.size());
+    for(auto index = std::size_t{0}; index < timeline.size(); ++index) {
+      xs[index] = static_cast<double>(index);
+      const auto& performance = timeline.strategy_performance(index);
+      win_rate[index] = performance.win_rate();
+      break_even_rate[index] = performance.break_even_rate();
+      loss_rate[index] = performance.loss_rate();
+      mean_return[index] = performance.mean_return();
+    }
+    ImPlot::PlotLine("Win rate", xs.data(), win_rate.data(), xs.size());
+    ImPlot::PlotLine(
+     "Break-even rate", xs.data(), break_even_rate.data(), xs.size());
+    ImPlot::PlotLine("Loss rate", xs.data(), loss_rate.data(), xs.size());
+    ImPlot::PlotLine("Mean return", xs.data(), mean_return.data(), xs.size());
+  }
+
+  void plot_strategy_streaks(this const BacktestChartWindow&,
+                             const backtest::BacktestTimeline& timeline)
+  {
+    auto xs = std::vector<double>(timeline.size());
+    auto winning = std::vector<double>(timeline.size());
+    auto losing = std::vector<double>(timeline.size());
+    for(auto index = std::size_t{0}; index < timeline.size(); ++index) {
+      xs[index] = static_cast<double>(index);
+      const auto& performance = timeline.strategy_performance(index);
+      winning[index] =
+       static_cast<double>(performance.current_winning_streak());
+      losing[index] = static_cast<double>(performance.current_losing_streak());
+    }
+    ImPlot::PlotLine("Winning streak", xs.data(), winning.data(), xs.size());
+    ImPlot::PlotLine("Losing streak", xs.data(), losing.data(), xs.size());
+  }
+
+  void plot_bayesian_win(this const BacktestChartWindow&,
+                         const backtest::BacktestTimeline& timeline)
+  {
+    auto xs = std::vector<double>(timeline.size());
+    auto mean = std::vector<double>(timeline.size());
+    auto lower = std::vector<double>(timeline.size());
+    auto upper = std::vector<double>(timeline.size());
+    for(auto index = std::size_t{0}; index < timeline.size(); ++index) {
+      xs[index] = static_cast<double>(index);
+      const auto& posterior =
+       timeline.strategy_performance(index).win_probability_posterior();
+      mean[index] = posterior.probability;
+      lower[index] = posterior.lower_95;
+      upper[index] = posterior.upper_95;
+    }
+    ImPlot::PlotShaded(
+     "95% credible", xs.data(), lower.data(), upper.data(), xs.size());
+    ImPlot::PlotLine("Posterior win", xs.data(), mean.data(), xs.size());
+  }
+
+  void plot_bayesian_payoff(this const BacktestChartWindow&,
+                            const backtest::BacktestTimeline& timeline)
+  {
+    auto xs = std::vector<double>(timeline.size());
+    auto winning_mean = std::vector<double>(timeline.size());
+    auto winning_lower = std::vector<double>(timeline.size());
+    auto winning_upper = std::vector<double>(timeline.size());
+    auto losing_mean = std::vector<double>(timeline.size());
+    auto losing_lower = std::vector<double>(timeline.size());
+    auto losing_upper = std::vector<double>(timeline.size());
+    for(auto index = std::size_t{0}; index < timeline.size(); ++index) {
+      xs[index] = static_cast<double>(index);
+      const auto& performance = timeline.strategy_performance(index);
+      const auto& winning = performance.winning_payoff_posterior();
+      const auto& losing = performance.losing_payoff_posterior();
+      winning_mean[index] = winning.mean;
+      winning_lower[index] = winning.lower_95;
+      winning_upper[index] = winning.upper_95;
+      losing_mean[index] = losing.mean;
+      losing_lower[index] = losing.lower_95;
+      losing_upper[index] = losing.upper_95;
+    }
+    ImPlot::PlotShaded("Winning 95% credible",
+                       xs.data(),
+                       winning_lower.data(),
+                       winning_upper.data(),
+                       xs.size());
+    ImPlot::PlotLine(
+     "Winning payoff", xs.data(), winning_mean.data(), xs.size());
+    ImPlot::PlotShaded("Losing 95% credible",
+                       xs.data(),
+                       losing_lower.data(),
+                       losing_upper.data(),
+                       xs.size());
+    ImPlot::PlotLine("Losing payoff", xs.data(), losing_mean.data(), xs.size());
   }
 
   void plot_equity(this const BacktestChartWindow& self,

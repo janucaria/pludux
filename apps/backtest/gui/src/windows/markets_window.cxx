@@ -60,7 +60,6 @@ private:
   std::optional<backtest::MarketStoreHandle> selected_market_handle_opt_;
   std::shared_ptr<backtest::Market> editing_market_ptr_;
   ImGuiTextFilter market_filter_;
-  ui::DraftAction selected_draft_action_{ui::DraftAction::Apply};
 
   void render_markets_list(this auto& self, WindowContext& context)
   {
@@ -198,8 +197,7 @@ private:
     }
 
     ImGui::SameLine();
-    const auto draft_action =
-     ui::apply_reset_button(self.selected_draft_action_, !same_market);
+    const auto draft_action = ui::apply_reset_button(!same_market);
     if(draft_action == ui::DraftAction::Apply) {
       self.submit_market_changes(context);
     } else if(draft_action == ui::DraftAction::Reset) {

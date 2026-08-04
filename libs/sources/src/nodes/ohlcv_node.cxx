@@ -36,39 +36,49 @@ export struct CloseNode : OhlcvNode<CloseNode> {};
 
 export struct VolumeNode : OhlcvNode<VolumeNode> {};
 
-export auto pludux_tag_invoke(NodeToErasedMethod,
-                              const OpenNode&,
-                              NodeToErasedMethodContext&) -> AnySeriesMethod
+export template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                       const OpenNode&,
+                       NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<TContext>
 {
-  return AnySeriesMethod{OpenMethod{}};
+  return ErasedSeriesMethod<TContext>{OpenMethod{}};
 }
 
-export auto pludux_tag_invoke(NodeToErasedMethod,
-                              const HighNode&,
-                              NodeToErasedMethodContext&) -> AnySeriesMethod
+export template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                       const HighNode&,
+                       NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<TContext>
 {
-  return AnySeriesMethod{HighMethod{}};
+  return ErasedSeriesMethod<TContext>{HighMethod{}};
 }
 
-export auto pludux_tag_invoke(NodeToErasedMethod,
-                              const LowNode&,
-                              NodeToErasedMethodContext&) -> AnySeriesMethod
+export template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                       const LowNode&,
+                       NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<TContext>
 {
-  return AnySeriesMethod{LowMethod{}};
+  return ErasedSeriesMethod<TContext>{LowMethod{}};
 }
 
-export auto pludux_tag_invoke(NodeToErasedMethod,
-                              const CloseNode&,
-                              NodeToErasedMethodContext&) -> AnySeriesMethod
+export template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                       const CloseNode&,
+                       NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<TContext>
 {
-  return AnySeriesMethod{CloseMethod{}};
+  return ErasedSeriesMethod<TContext>{CloseMethod{}};
 }
 
-export auto pludux_tag_invoke(NodeToErasedMethod,
-                              const VolumeNode&,
-                              NodeToErasedMethodContext&) -> AnySeriesMethod
+export template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                       const VolumeNode&,
+                       NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<TContext>
 {
-  return AnySeriesMethod{VolumeMethod{}};
+  return ErasedSeriesMethod<TContext>{VolumeMethod{}};
 }
 
 } // namespace pludux

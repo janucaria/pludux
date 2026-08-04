@@ -62,7 +62,6 @@ private:
   std::optional<backtest::BrokerStoreHandle> selected_broker_handle_opt_;
   std::shared_ptr<backtest::Broker> editing_broker_ptr_;
   ImGuiTextFilter broker_filter_;
-  ui::DraftAction selected_draft_action_{ui::DraftAction::Apply};
 
   void render_brokers_list(this auto& self, WindowContext& context)
   {
@@ -198,8 +197,7 @@ private:
     }
 
     ImGui::SameLine();
-    const auto draft_action =
-     ui::apply_reset_button(self.selected_draft_action_, !same_broker);
+    const auto draft_action = ui::apply_reset_button(!same_broker);
     if(draft_action == ui::DraftAction::Apply) {
       self.submit_broker_changes(context);
     } else if(draft_action == ui::DraftAction::Reset) {

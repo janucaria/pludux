@@ -17,8 +17,10 @@ import pludux;
 
 import :drawdown_node;
 import :equity_node;
+import :position_node;
 import :risk_distance_node;
 import :stop_target_price_node;
+import :strategy_performance_node;
 
 export namespace pludux::backtest {
 
@@ -32,7 +34,7 @@ public:
     }
 
     auto parse_node(this Parser& self, const jsoncons::ojson& config)
-     -> ErasedNode
+     -> ErasedNode<ErasedSeriesMethodContext>
     {
       return self.config_parser_.parse_node(config);
     }
@@ -44,10 +46,13 @@ public:
   friend Parser;
 
   using NodeSerialize =
-   std::function<auto(const ConfigParser&, const ErasedNode&)->jsoncons::ojson>;
+   std::function<auto(const ConfigParser&,
+                      const ErasedNode<ErasedSeriesMethodContext>&)
+                  ->jsoncons::ojson>;
 
-  using NodeDeserialize = std::function<
-   auto(ConfigParser::Parser, const jsoncons::ojson&)->ErasedNode>;
+  using NodeDeserialize =
+   std::function<auto(ConfigParser::Parser, const jsoncons::ojson&)
+                  ->ErasedNode<ErasedSeriesMethodContext>>;
 
   ConfigParser() = default;
 
@@ -77,21 +82,22 @@ public:
   }
 
   auto parse_node(this ConfigParser& self, const std::string& config_node_str)
-   -> ErasedNode
+   -> ErasedNode<ErasedSeriesMethodContext>
   {
     return self.parse_node(jsoncons::ojson::parse(config_node_str));
   }
 
   auto parse_node(this ConfigParser& self, const jsoncons::ojson& config_node)
-   -> ErasedNode
+   -> ErasedNode<ErasedSeriesMethodContext>
   {
     if(config_node.is_number()) {
       return ValueNode{config_node.as_double()};
     }
 
     if(config_node.is_bool()) {
-      return config_node.as_bool() ? ErasedNode{TrueNode{}}
-                                   : ErasedNode{FalseNode{}};
+      return config_node.as_bool()
+              ? ErasedNode<ErasedSeriesMethodContext>{TrueNode{}}
+              : ErasedNode<ErasedSeriesMethodContext>{FalseNode{}};
     }
 
     if(config_node.is_string()) {
@@ -131,7 +137,8 @@ public:
     }
   }
 
-  auto serialize_node(this const ConfigParser& self, const ErasedNode& node)
+  auto serialize_node(this const ConfigParser& self,
+                      const ErasedNode<ErasedSeriesMethodContext>& node)
    -> jsoncons::ojson
   {
     for(const auto& [node_name, node_parser] : self.node_parsers_) {
@@ -165,6 +172,12 @@ private:
 
 auto make_default_registered_config_parser() -> ConfigParser;
 
+auto parse_execution_filter_node(const jsoncons::ojson& config)
+ -> ErasedNode<ExecutionFilterMethodContext>;
+
+auto serialize_execution_filter_node(
+ const ErasedNode<ExecutionFilterMethodContext>& node) -> jsoncons::ojson;
+
 } // namespace pludux::backtest
 
 namespace pludux::backtest {
@@ -177,11 +190,12 @@ static auto get_param_or(const jsoncons::ojson& parameters,
   return parameters.contains(key) ? parameters.at(key).as<T>() : default_value;
 }
 
-static auto parse_node_from_param_or(ConfigParser::Parser config_parser,
-                                     const jsoncons::ojson& parameters,
-                                     const std::string& key,
-                                     const ErasedNode& default_value)
- -> ErasedNode
+static auto parse_node_from_param_or(
+ ConfigParser::Parser config_parser,
+ const jsoncons::ojson& parameters,
+ const std::string& key,
+ const ErasedNode<ErasedSeriesMethodContext>& default_value)
+ -> ErasedNode<ErasedSeriesMethodContext>
 {
   if(!parameters.contains(key)) {
     return default_value;
@@ -191,7 +205,8 @@ static auto parse_node_from_param_or(ConfigParser::Parser config_parser,
 }
 
 template<typename TNode>
-static auto serialize_node_as(const ErasedNode& node) -> const TNode*
+static auto serialize_node_as(const ErasedNode<ErasedSeriesMethodContext>& node)
+ -> const TNode*
 {
   return node_cast<TNode>(node);
 }
@@ -199,7 +214,7 @@ static auto serialize_node_as(const ErasedNode& node) -> const TNode*
 template<typename TNode, std::size_t default_period>
 static auto parse_ta_with_erased_period_node(ConfigParser::Parser config_parser,
                                              const jsoncons::ojson& parameters)
- -> ErasedNode
+ -> ErasedNode<ErasedSeriesMethodContext>
 {
   auto period = parse_node_from_param_or(
    config_parser,
@@ -216,9 +231,9 @@ static auto parse_ta_with_erased_period_node(ConfigParser::Parser config_parser,
 }
 
 template<typename TNode>
-static auto
-serialize_ta_with_erased_period_node(const ConfigParser& config_parser,
-                                     const ErasedNode& node) -> jsoncons::ojson
+static auto serialize_ta_with_erased_period_node(
+ const ConfigParser& config_parser,
+ const ErasedNode<ErasedSeriesMethodContext>& node) -> jsoncons::ojson
 {
   const auto ta_node = serialize_node_as<TNode>(node);
   if(!ta_node) {
@@ -232,7 +247,9 @@ serialize_ta_with_erased_period_node(const ConfigParser& config_parser,
 }
 
 template<typename TNode>
-static auto serialize_ohlcv_node(const ConfigParser&, const ErasedNode& node)
+static auto
+serialize_ohlcv_node(const ConfigParser&,
+                     const ErasedNode<ErasedSeriesMethodContext>& node)
  -> jsoncons::ojson
 {
   return node_cast<TNode>(node) ? jsoncons::ojson{} : jsoncons::ojson::null();
@@ -240,12 +257,14 @@ static auto serialize_ohlcv_node(const ConfigParser&, const ErasedNode& node)
 
 template<typename TNode>
 static auto parse_ohlcv_node(ConfigParser::Parser, const jsoncons::ojson&)
- -> ErasedNode
+ -> ErasedNode<ErasedSeriesMethodContext>
 {
   return TNode{};
 }
 
-static auto serialize_value_node(const ConfigParser&, const ErasedNode& node)
+static auto
+serialize_value_node(const ConfigParser&,
+                     const ErasedNode<ErasedSeriesMethodContext>& node)
  -> jsoncons::ojson
 {
   const auto value_node = node_cast<ValueNode>(node);
@@ -259,12 +278,15 @@ static auto serialize_value_node(const ConfigParser&, const ErasedNode& node)
 }
 
 static auto parse_value_node(ConfigParser::Parser,
-                             const jsoncons::ojson& params) -> ErasedNode
+                             const jsoncons::ojson& params)
+ -> ErasedNode<ErasedSeriesMethodContext>
 {
   return ValueNode{params.at("value").as_double()};
 }
 
-static auto serialize_data_node(const ConfigParser&, const ErasedNode& node)
+static auto
+serialize_data_node(const ConfigParser&,
+                    const ErasedNode<ErasedSeriesMethodContext>& node)
  -> jsoncons::ojson
 {
   const auto data_node = node_cast<DataNode>(node);
@@ -278,12 +300,14 @@ static auto serialize_data_node(const ConfigParser&, const ErasedNode& node)
 }
 
 static auto parse_data_node(ConfigParser::Parser, const jsoncons::ojson& params)
- -> ErasedNode
+ -> ErasedNode<ErasedSeriesMethodContext>
 {
   return DataNode{params.at("field").as_string()};
 }
 
-static auto serialize_equity_node(const ConfigParser&, const ErasedNode& node)
+static auto
+serialize_equity_node(const ConfigParser&,
+                      const ErasedNode<ErasedSeriesMethodContext>& node)
  -> jsoncons::ojson
 {
   return node_cast<EquityNode>(node) ? jsoncons::ojson{}
@@ -291,13 +315,14 @@ static auto serialize_equity_node(const ConfigParser&, const ErasedNode& node)
 }
 
 static auto parse_equity_node(ConfigParser::Parser, const jsoncons::ojson&)
- -> ErasedNode
+ -> ErasedNode<ErasedSeriesMethodContext>
 {
   return EquityNode{};
 }
 
-static auto serialize_equity_percent_node(const ConfigParser&,
-                                          const ErasedNode& node)
+static auto
+serialize_equity_percent_node(const ConfigParser&,
+                              const ErasedNode<ErasedSeriesMethodContext>& node)
  -> jsoncons::ojson
 {
   return node_cast<EquityPercentNode>(node) ? jsoncons::ojson{}
@@ -305,12 +330,15 @@ static auto serialize_equity_percent_node(const ConfigParser&,
 }
 
 static auto parse_equity_percent_node(ConfigParser::Parser,
-                                      const jsoncons::ojson&) -> ErasedNode
+                                      const jsoncons::ojson&)
+ -> ErasedNode<ErasedSeriesMethodContext>
 {
   return EquityPercentNode{};
 }
 
-static auto serialize_drawdown_node(const ConfigParser&, const ErasedNode& node)
+static auto
+serialize_drawdown_node(const ConfigParser&,
+                        const ErasedNode<ErasedSeriesMethodContext>& node)
  -> jsoncons::ojson
 {
   return node_cast<DrawdownNode>(node) ? jsoncons::ojson{}
@@ -318,7 +346,7 @@ static auto serialize_drawdown_node(const ConfigParser&, const ErasedNode& node)
 }
 
 static auto parse_drawdown_node(ConfigParser::Parser, const jsoncons::ojson&)
- -> ErasedNode
+ -> ErasedNode<ErasedSeriesMethodContext>
 {
   return DrawdownNode{};
 }
@@ -366,7 +394,8 @@ static auto serialize_ma_node_type(MaNodeType ma_type,
 }
 
 static auto parse_atr_node(ConfigParser::Parser config_parser,
-                           const jsoncons::ojson& params) -> ErasedNode
+                           const jsoncons::ojson& params)
+ -> ErasedNode<ErasedSeriesMethodContext>
 {
   auto atr_node = AtrNode{parse_node_from_param_or(
    config_parser,
@@ -383,8 +412,10 @@ static auto parse_atr_node(ConfigParser::Parser config_parser,
   return atr_node;
 }
 
-static auto serialize_atr_node(const ConfigParser& config_parser,
-                               const ErasedNode& node) -> jsoncons::ojson
+static auto
+serialize_atr_node(const ConfigParser& config_parser,
+                   const ErasedNode<ErasedSeriesMethodContext>& node)
+ -> jsoncons::ojson
 {
   const auto atr_node = node_cast<AtrNode>(node);
   if(!atr_node) {
@@ -402,17 +433,18 @@ template<typename TNode>
 static auto parse_stop_target_value_node(ConfigParser::Parser config_parser,
                                          const jsoncons::ojson& params,
                                          const std::string& key,
-                                         double fallback) -> ErasedNode
+                                         double fallback)
+ -> ErasedNode<ErasedSeriesMethodContext>
 {
   return TNode{
    parse_node_from_param_or(config_parser, params, key, ValueNode{fallback})};
 }
 
 template<typename TNode>
-static auto serialize_stop_target_value_node(const ConfigParser& config_parser,
-                                             const ErasedNode& node,
-                                             const std::string& key)
- -> jsoncons::ojson
+static auto serialize_stop_target_value_node(
+ const ConfigParser& config_parser,
+ const ErasedNode<ErasedSeriesMethodContext>& node,
+ const std::string& key) -> jsoncons::ojson
 {
   const auto value_node = node_cast<TNode>(node);
   if(!value_node) {
@@ -427,7 +459,7 @@ static auto serialize_stop_target_value_node(const ConfigParser& config_parser,
 template<typename TNode>
 static auto parse_stop_target_atr_node(ConfigParser::Parser config_parser,
                                        const jsoncons::ojson& params)
- -> ErasedNode
+ -> ErasedNode<ErasedSeriesMethodContext>
 {
   auto period =
    parse_node_from_param_or(config_parser, params, "period", ValueNode{14.0});
@@ -441,9 +473,9 @@ static auto parse_stop_target_atr_node(ConfigParser::Parser config_parser,
 }
 
 template<typename TNode>
-static auto serialize_stop_target_atr_node(const ConfigParser& config_parser,
-                                           const ErasedNode& node)
- -> jsoncons::ojson
+static auto serialize_stop_target_atr_node(
+ const ConfigParser& config_parser,
+ const ErasedNode<ErasedSeriesMethodContext>& node) -> jsoncons::ojson
 {
   const auto atr_node = node_cast<TNode>(node);
   if(!atr_node) {
@@ -490,7 +522,8 @@ static auto serialize_kc_band_node_type(KcBandNodeType band_type) -> std::string
 }
 
 static auto serialize_kc_node(const ConfigParser& config_parser,
-                              const ErasedNode& node) -> jsoncons::ojson
+                              const ErasedNode<ErasedSeriesMethodContext>& node)
+ -> jsoncons::ojson
 {
   const auto kc_node = node_cast<KcNode>(node);
   if(!kc_node) {
@@ -512,7 +545,8 @@ static auto serialize_kc_node(const ConfigParser& config_parser,
 }
 
 static auto parse_kc_node(ConfigParser::Parser config_parser,
-                          const jsoncons::ojson& params) -> ErasedNode
+                          const jsoncons::ojson& params)
+ -> ErasedNode<ErasedSeriesMethodContext>
 {
   const auto ma_node_type = parse_ma_node_type(
    get_param_or<std::string>(params, "maMethodType", "EMA"), MaNodeType::Ema);
@@ -555,7 +589,7 @@ static auto parse_binary_operator_node(ConfigParser::Parser config_parser,
                                        const jsoncons::ojson& params,
                                        const std::string& first_operand_key,
                                        const std::string& second_operand_key)
- -> ErasedNode
+ -> ErasedNode<ErasedSeriesMethodContext>
 {
   const auto first_operand =
    config_parser.parse_node(params.at(first_operand_key));
@@ -566,12 +600,11 @@ static auto parse_binary_operator_node(ConfigParser::Parser config_parser,
 }
 
 template<typename TNode>
-static auto
-serialize_binary_operator_node(const ConfigParser& config_parser,
-                               const ErasedNode& node,
-                               const std::string& first_operand_key,
-                               const std::string& second_operand_key)
- -> jsoncons::ojson
+static auto serialize_binary_operator_node(
+ const ConfigParser& config_parser,
+ const ErasedNode<ErasedSeriesMethodContext>& node,
+ const std::string& first_operand_key,
+ const std::string& second_operand_key) -> jsoncons::ojson
 {
   const auto binary_operator_node = node_cast<TNode>(node);
   if(!binary_operator_node) {
@@ -590,16 +623,16 @@ template<typename TNode>
 static auto parse_unary_operator_node(ConfigParser::Parser config_parser,
                                       const jsoncons::ojson& params,
                                       const std::string& operand_key)
- -> ErasedNode
+ -> ErasedNode<ErasedSeriesMethodContext>
 {
   return TNode{config_parser.parse_node(params.at(operand_key))};
 }
 
 template<typename TNode>
-static auto serialize_unary_operator_node(const ConfigParser& config_parser,
-                                          const ErasedNode& node,
-                                          const std::string& operand_key)
- -> jsoncons::ojson
+static auto
+serialize_unary_operator_node(const ConfigParser& config_parser,
+                              const ErasedNode<ErasedSeriesMethodContext>& node,
+                              const std::string& operand_key) -> jsoncons::ojson
 {
   const auto unary_operator_node = node_cast<TNode>(node);
   if(!unary_operator_node) {
@@ -617,7 +650,7 @@ static auto parse_binary_logical_node(ConfigParser::Parser config_parser,
                                       const jsoncons::ojson& params,
                                       const std::string& first_operand_key,
                                       const std::string& second_operand_key)
- -> ErasedNode
+ -> ErasedNode<ErasedSeriesMethodContext>
 {
   const auto first_operand =
    config_parser.parse_node(params.at(first_operand_key));
@@ -628,10 +661,11 @@ static auto parse_binary_logical_node(ConfigParser::Parser config_parser,
 }
 
 template<typename TNode>
-static auto serialize_binary_logical_node(const ConfigParser& config_parser,
-                                          const ErasedNode& node,
-                                          const std::string& first_operand_key,
-                                          const std::string& second_operand_key)
+static auto
+serialize_binary_logical_node(const ConfigParser& config_parser,
+                              const ErasedNode<ErasedSeriesMethodContext>& node,
+                              const std::string& first_operand_key,
+                              const std::string& second_operand_key)
  -> jsoncons::ojson
 {
   const auto binary_logical_node = node_cast<TNode>(node);
@@ -651,16 +685,16 @@ template<typename TNode>
 static auto parse_unary_logical_node(ConfigParser::Parser config_parser,
                                      const jsoncons::ojson& params,
                                      const std::string& operand_key)
- -> ErasedNode
+ -> ErasedNode<ErasedSeriesMethodContext>
 {
   return TNode{config_parser.parse_node(params.at(operand_key))};
 }
 
 template<typename TNode>
-static auto serialize_unary_logical_node(const ConfigParser& config_parser,
-                                         const ErasedNode& node,
-                                         const std::string& operand_key)
- -> jsoncons::ojson
+static auto
+serialize_unary_logical_node(const ConfigParser& config_parser,
+                             const ErasedNode<ErasedSeriesMethodContext>& node,
+                             const std::string& operand_key) -> jsoncons::ojson
 {
   const auto unary_logical_node = node_cast<TNode>(node);
   if(!unary_logical_node) {
@@ -675,7 +709,8 @@ static auto serialize_unary_logical_node(const ConfigParser& config_parser,
 
 template<typename TNode>
 static auto parse_comparison_node(ConfigParser::Parser config_parser,
-                                  const jsoncons::ojson& params) -> ErasedNode
+                                  const jsoncons::ojson& params)
+ -> ErasedNode<ErasedSeriesMethodContext>
 {
   auto target = config_parser.parse_node(params.at("target"));
   auto threshold = config_parser.parse_node(params.at("threshold"));
@@ -683,8 +718,10 @@ static auto parse_comparison_node(ConfigParser::Parser config_parser,
 }
 
 template<typename TNode>
-static auto serialize_comparison_node(const ConfigParser& config_parser,
-                                      const ErasedNode& node) -> jsoncons::ojson
+static auto
+serialize_comparison_node(const ConfigParser& config_parser,
+                          const ErasedNode<ErasedSeriesMethodContext>& node)
+ -> jsoncons::ojson
 {
   const auto comparison_node = node_cast<TNode>(node);
   if(!comparison_node) {
@@ -700,7 +737,8 @@ static auto serialize_comparison_node(const ConfigParser& config_parser,
 }
 
 static auto parse_all_of_node(ConfigParser::Parser config_parser,
-                              const jsoncons::ojson& params) -> ErasedNode
+                              const jsoncons::ojson& params)
+ -> ErasedNode<ErasedSeriesMethodContext>
 {
   if(!params.contains("items")) {
     throw std::invalid_argument{"ALL_OF: 'items' is not found"};
@@ -711,7 +749,7 @@ static auto parse_all_of_node(ConfigParser::Parser config_parser,
     throw std::invalid_argument{"ALL_OF: 'items' must be an array"};
   }
 
-  auto conditions = std::vector<ErasedNode>{};
+  auto conditions = std::vector<ErasedNode<ErasedSeriesMethodContext>>{};
   conditions.reserve(items.size());
   for(const auto& item : items.array_range()) {
     conditions.push_back(config_parser.parse_node(item));
@@ -719,8 +757,10 @@ static auto parse_all_of_node(ConfigParser::Parser config_parser,
   return AllOfNode{std::move(conditions)};
 }
 
-static auto serialize_all_of_node(const ConfigParser& config_parser,
-                                  const ErasedNode& node) -> jsoncons::ojson
+static auto
+serialize_all_of_node(const ConfigParser& config_parser,
+                      const ErasedNode<ErasedSeriesMethodContext>& node)
+ -> jsoncons::ojson
 {
   const auto all_of_node = node_cast<AllOfNode>(node);
   if(!all_of_node) {
@@ -737,7 +777,8 @@ static auto serialize_all_of_node(const ConfigParser& config_parser,
 }
 
 static auto parse_any_of_node(ConfigParser::Parser config_parser,
-                              const jsoncons::ojson& params) -> ErasedNode
+                              const jsoncons::ojson& params)
+ -> ErasedNode<ErasedSeriesMethodContext>
 {
   if(!params.contains("items")) {
     throw std::invalid_argument{"ANY_OF: 'items' is not found"};
@@ -748,7 +789,7 @@ static auto parse_any_of_node(ConfigParser::Parser config_parser,
     throw std::invalid_argument{"ANY_OF: 'items' must be an array"};
   }
 
-  auto conditions = std::vector<ErasedNode>{};
+  auto conditions = std::vector<ErasedNode<ErasedSeriesMethodContext>>{};
   conditions.reserve(items.size());
   for(const auto& item : items.array_range()) {
     conditions.push_back(config_parser.parse_node(item));
@@ -756,8 +797,10 @@ static auto parse_any_of_node(ConfigParser::Parser config_parser,
   return AnyOfNode{std::move(conditions)};
 }
 
-static auto serialize_any_of_node(const ConfigParser& config_parser,
-                                  const ErasedNode& node) -> jsoncons::ojson
+static auto
+serialize_any_of_node(const ConfigParser& config_parser,
+                      const ErasedNode<ErasedSeriesMethodContext>& node)
+ -> jsoncons::ojson
 {
   const auto any_of_node = node_cast<AnyOfNode>(node);
   if(!any_of_node) {
@@ -774,15 +817,18 @@ static auto serialize_any_of_node(const ConfigParser& config_parser,
 }
 
 static auto parse_crossunder_node(ConfigParser::Parser config_parser,
-                                  const jsoncons::ojson& params) -> ErasedNode
+                                  const jsoncons::ojson& params)
+ -> ErasedNode<ErasedSeriesMethodContext>
 {
   auto signal = config_parser.parse_node(params.at("value"));
   auto reference = config_parser.parse_node(params.at("baseline"));
   return CrossunderNode{signal, reference};
 }
 
-static auto serialize_crossunder_node(const ConfigParser& config_parser,
-                                      const ErasedNode& node) -> jsoncons::ojson
+static auto
+serialize_crossunder_node(const ConfigParser& config_parser,
+                          const ErasedNode<ErasedSeriesMethodContext>& node)
+ -> jsoncons::ojson
 {
   const auto crossunder_node = node_cast<CrossunderNode>(node);
   if(!crossunder_node) {
@@ -798,15 +844,18 @@ static auto serialize_crossunder_node(const ConfigParser& config_parser,
 }
 
 static auto parse_crossover_node(ConfigParser::Parser config_parser,
-                                 const jsoncons::ojson& params) -> ErasedNode
+                                 const jsoncons::ojson& params)
+ -> ErasedNode<ErasedSeriesMethodContext>
 {
   auto signal = config_parser.parse_node(params.at("value"));
   auto reference = config_parser.parse_node(params.at("baseline"));
   return CrossoverNode{signal, reference};
 }
 
-static auto serialize_crossover_node(const ConfigParser& config_parser,
-                                     const ErasedNode& node) -> jsoncons::ojson
+static auto
+serialize_crossover_node(const ConfigParser& config_parser,
+                         const ErasedNode<ErasedSeriesMethodContext>& node)
+ -> jsoncons::ojson
 {
   const auto crossover_node = node_cast<CrossoverNode>(node);
   if(!crossover_node) {
@@ -821,8 +870,9 @@ static auto serialize_crossover_node(const ConfigParser& config_parser,
   return serialized_node;
 }
 
-static auto serialize_boolean_node(const ErasedNode& node, bool expected)
- -> jsoncons::ojson
+static auto
+serialize_boolean_node(const ErasedNode<ErasedSeriesMethodContext>& node,
+                       bool expected) -> jsoncons::ojson
 {
   if(expected && node_cast<TrueNode>(node)) {
     return jsoncons::ojson{};
@@ -831,6 +881,257 @@ static auto serialize_boolean_node(const ErasedNode& node, bool expected)
     return jsoncons::ojson{};
   }
   return jsoncons::ojson::null();
+}
+
+enum class ExecutionFilterNodeKind { Scalar, Boolean };
+
+struct ParsedExecutionFilterNode {
+  ErasedNode<ExecutionFilterMethodContext> node;
+  ExecutionFilterNodeKind kind;
+};
+
+static auto parse_execution_filter_child(const jsoncons::ojson& config)
+ -> ParsedExecutionFilterNode
+{
+  using Context = ExecutionFilterMethodContext;
+
+  if(config.is_bool()) {
+    return {config.as_bool() ? ErasedNode<Context>{TrueNode{}}
+                             : ErasedNode<Context>{FalseNode{}},
+            ExecutionFilterNodeKind::Boolean};
+  }
+  if(config.is_number()) {
+    return {ErasedNode<Context>{ValueNode{config.as_double()}},
+            ExecutionFilterNodeKind::Scalar};
+  }
+  if(!config.is_object() || !config.contains("method")) {
+    throw std::invalid_argument{
+     "ExecutionFilter node must be a boolean, number, or method object"};
+  }
+
+  const auto method = config.at("method").as_string();
+  if(method == "ALWAYS") {
+    return {ErasedNode<Context>{TrueNode{}}, ExecutionFilterNodeKind::Boolean};
+  }
+  if(method == "NEVER") {
+    return {ErasedNode<Context>{FalseNode{}}, ExecutionFilterNodeKind::Boolean};
+  }
+  if(method == "VALUE") {
+    return {ErasedNode<Context>{ValueNode{config.at("value").as_double()}},
+            ExecutionFilterNodeKind::Scalar};
+  }
+  if(method == "EQUITY") {
+    return {ErasedNode<Context>{EquityNode{}}, ExecutionFilterNodeKind::Scalar};
+  }
+  if(method == "EQUITY_PERCENT") {
+    return {ErasedNode<Context>{EquityPercentNode{}},
+            ExecutionFilterNodeKind::Scalar};
+  }
+  if(method == "DRAWDOWN") {
+    return {ErasedNode<Context>{DrawdownNode{}},
+            ExecutionFilterNodeKind::Scalar};
+  }
+  if(method == "STRATEGY_PERFORMANCE") {
+    const auto metric_value = config.at("metric").as<int>();
+    if(metric_value <
+        static_cast<int>(StrategyPerformanceMetric::LifetimeCount) ||
+       metric_value >
+        static_cast<int>(
+         StrategyPerformanceMetric::BayesianLosingPayoffUpper95)) {
+      throw std::invalid_argument{
+       "ExecutionFilter strategy-performance metric is invalid"};
+    }
+    return {ErasedNode<Context>{StrategyPerformanceNode{
+             static_cast<StrategyPerformanceMetric>(metric_value)}},
+            ExecutionFilterNodeKind::Scalar};
+  }
+
+  const auto parse_scalar = [&](const char* key) {
+    auto parsed = parse_execution_filter_child(config.at(key));
+    if(parsed.kind != ExecutionFilterNodeKind::Scalar) {
+      throw std::invalid_argument{
+       std::format("ExecutionFilter '{}' must be scalar", key)};
+    }
+    return parsed.node;
+  };
+  const auto parse_boolean = [&](const char* key) {
+    auto parsed = parse_execution_filter_child(config.at(key));
+    if(parsed.kind != ExecutionFilterNodeKind::Boolean) {
+      throw std::invalid_argument{
+       std::format("ExecutionFilter '{}' must be boolean", key)};
+    }
+    return parsed.node;
+  };
+
+  if(method == "GREATER_THAN") {
+    return {ErasedNode<Context>{GreaterThanNode<Context>{
+             parse_scalar("target"), parse_scalar("threshold")}},
+            ExecutionFilterNodeKind::Boolean};
+  }
+  if(method == "GREATER_EQUAL") {
+    return {ErasedNode<Context>{GreaterEqualNode<Context>{
+             parse_scalar("target"), parse_scalar("threshold")}},
+            ExecutionFilterNodeKind::Boolean};
+  }
+  if(method == "LESS_THAN") {
+    return {ErasedNode<Context>{LessThanNode<Context>{
+             parse_scalar("target"), parse_scalar("threshold")}},
+            ExecutionFilterNodeKind::Boolean};
+  }
+  if(method == "LESS_EQUAL") {
+    return {ErasedNode<Context>{LessEqualNode<Context>{
+             parse_scalar("target"), parse_scalar("threshold")}},
+            ExecutionFilterNodeKind::Boolean};
+  }
+  if(method == "EQUAL") {
+    return {ErasedNode<Context>{EqualNode<Context>{parse_scalar("target"),
+                                                   parse_scalar("threshold")}},
+            ExecutionFilterNodeKind::Boolean};
+  }
+  if(method == "NOT_EQUAL") {
+    return {ErasedNode<Context>{NotEqualNode<Context>{
+             parse_scalar("target"), parse_scalar("threshold")}},
+            ExecutionFilterNodeKind::Boolean};
+  }
+  if(method == "AND") {
+    return {
+     ErasedNode<Context>{LogicalAndNode<Context>{
+      parse_boolean("firstCondition"), parse_boolean("secondCondition")}},
+     ExecutionFilterNodeKind::Boolean};
+  }
+  if(method == "OR") {
+    return {
+     ErasedNode<Context>{LogicalOrNode<Context>{
+      parse_boolean("firstCondition"), parse_boolean("secondCondition")}},
+     ExecutionFilterNodeKind::Boolean};
+  }
+  if(method == "XOR") {
+    return {
+     ErasedNode<Context>{LogicalXorNode<Context>{
+      parse_boolean("firstCondition"), parse_boolean("secondCondition")}},
+     ExecutionFilterNodeKind::Boolean};
+  }
+  if(method == "NOT") {
+    return {
+     ErasedNode<Context>{LogicalNotNode<Context>{parse_boolean("condition")}},
+     ExecutionFilterNodeKind::Boolean};
+  }
+
+  throw std::invalid_argument{
+   std::format("Node '{}' is not allowed in ExecutionFilter", method)};
+}
+
+static auto serialize_execution_filter_child(
+ const ErasedNode<ExecutionFilterMethodContext>& node)
+ -> std::pair<jsoncons::ojson, ExecutionFilterNodeKind>
+{
+  using Context = ExecutionFilterMethodContext;
+  const auto object = [](std::string method) -> jsoncons::ojson {
+    auto config = jsoncons::ojson{};
+    config["method"] = std::move(method);
+    return config;
+  };
+  if(node_cast<TrueNode>(node)) {
+    return {object("ALWAYS"), ExecutionFilterNodeKind::Boolean};
+  }
+  if(node_cast<FalseNode>(node)) {
+    return {object("NEVER"), ExecutionFilterNodeKind::Boolean};
+  }
+  if(const auto* value = node_cast<ValueNode>(node)) {
+    auto config = object("VALUE");
+    config["value"] = value->value();
+    return {std::move(config), ExecutionFilterNodeKind::Scalar};
+  }
+  if(node_cast<EquityNode>(node)) {
+    return {object("EQUITY"), ExecutionFilterNodeKind::Scalar};
+  }
+  if(node_cast<EquityPercentNode>(node)) {
+    return {object("EQUITY_PERCENT"), ExecutionFilterNodeKind::Scalar};
+  }
+  if(node_cast<DrawdownNode>(node)) {
+    return {object("DRAWDOWN"), ExecutionFilterNodeKind::Scalar};
+  }
+  if(const auto* performance = node_cast<StrategyPerformanceNode>(node)) {
+    auto config = object("STRATEGY_PERFORMANCE");
+    config["metric"] = static_cast<int>(performance->metric());
+    return {std::move(config), ExecutionFilterNodeKind::Scalar};
+  }
+
+  const auto serialize_comparison = [&](const auto* comparison,
+                                        std::string method)
+   -> std::optional<std::pair<jsoncons::ojson, ExecutionFilterNodeKind>> {
+    if(!comparison) {
+      return std::nullopt;
+    }
+    auto config = object(std::move(method));
+    config["target"] =
+     serialize_execution_filter_child(comparison->target()).first;
+    config["threshold"] =
+     serialize_execution_filter_child(comparison->threshold()).first;
+    return std::pair{std::move(config), ExecutionFilterNodeKind::Boolean};
+  };
+#define PLUDUX_SERIALIZE_FILTER_COMPARISON(Type, Name)              \
+  if(auto result =                                                  \
+      serialize_comparison(node_cast<Type<Context>>(node), Name)) { \
+    return *std::move(result);                                      \
+  }
+  PLUDUX_SERIALIZE_FILTER_COMPARISON(GreaterThanNode, "GREATER_THAN")
+  PLUDUX_SERIALIZE_FILTER_COMPARISON(GreaterEqualNode, "GREATER_EQUAL")
+  PLUDUX_SERIALIZE_FILTER_COMPARISON(LessThanNode, "LESS_THAN")
+  PLUDUX_SERIALIZE_FILTER_COMPARISON(LessEqualNode, "LESS_EQUAL")
+  PLUDUX_SERIALIZE_FILTER_COMPARISON(EqualNode, "EQUAL")
+  PLUDUX_SERIALIZE_FILTER_COMPARISON(NotEqualNode, "NOT_EQUAL")
+#undef PLUDUX_SERIALIZE_FILTER_COMPARISON
+
+  const auto serialize_binary = [&](const auto* logical, std::string method)
+   -> std::optional<std::pair<jsoncons::ojson, ExecutionFilterNodeKind>> {
+    if(!logical) {
+      return std::nullopt;
+    }
+    auto config = object(std::move(method));
+    config["firstCondition"] =
+     serialize_execution_filter_child(logical->first_condition()).first;
+    config["secondCondition"] =
+     serialize_execution_filter_child(logical->second_condition()).first;
+    return std::pair{std::move(config), ExecutionFilterNodeKind::Boolean};
+  };
+#define PLUDUX_SERIALIZE_FILTER_BINARY(Type, Name)                           \
+  if(auto result = serialize_binary(node_cast<Type<Context>>(node), Name)) { \
+    return *std::move(result);                                               \
+  }
+  PLUDUX_SERIALIZE_FILTER_BINARY(LogicalAndNode, "AND")
+  PLUDUX_SERIALIZE_FILTER_BINARY(LogicalOrNode, "OR")
+  PLUDUX_SERIALIZE_FILTER_BINARY(LogicalXorNode, "XOR")
+#undef PLUDUX_SERIALIZE_FILTER_BINARY
+
+  if(const auto* logical = node_cast<LogicalNotNode<Context>>(node)) {
+    auto config = object("NOT");
+    config["condition"] =
+     serialize_execution_filter_child(logical->other_condition()).first;
+    return {std::move(config), ExecutionFilterNodeKind::Boolean};
+  }
+
+  throw std::invalid_argument{"ExecutionFilter contains an unsupported node"};
+}
+
+auto parse_execution_filter_node(const jsoncons::ojson& config)
+ -> ErasedNode<ExecutionFilterMethodContext>
+{
+  auto parsed = parse_execution_filter_child(config);
+  if(parsed.kind != ExecutionFilterNodeKind::Boolean) {
+    throw std::invalid_argument{"ExecutionFilter root must be boolean"};
+  }
+  return std::move(parsed.node);
+}
+
+auto serialize_execution_filter_node(
+ const ErasedNode<ExecutionFilterMethodContext>& node) -> jsoncons::ojson
+{
+  auto [config, kind] = serialize_execution_filter_child(node);
+  if(kind != ExecutionFilterNodeKind::Boolean) {
+    throw std::invalid_argument{"ExecutionFilter root must be boolean"};
+  }
+  return config;
 }
 
 auto make_default_registered_config_parser() -> ConfigParser
@@ -865,7 +1166,8 @@ auto make_default_registered_config_parser() -> ConfigParser
 
   config_parser.register_node_parser(
    "CHANGE",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      const auto change_node = node_cast<ChangeNode>(node);
      if(!change_node) {
        return jsoncons::ojson::null();
@@ -878,7 +1180,7 @@ auto make_default_registered_config_parser() -> ConfigParser
    [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
      const auto source =
       parse_node_from_param_or(config_parser, params, "source", CloseNode{});
-     return ErasedNode{ChangeNode{source}};
+     return ErasedNode<ErasedSeriesMethodContext>{ChangeNode{source}};
    });
 
   config_parser.register_node_parser(
@@ -920,7 +1222,8 @@ auto make_default_registered_config_parser() -> ConfigParser
 
   config_parser.register_node_parser(
    "RVOL",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      const auto rvol_node = node_cast<RvolNode>(node);
      if(!rvol_node) {
        return jsoncons::ojson::null();
@@ -931,13 +1234,14 @@ auto make_default_registered_config_parser() -> ConfigParser
      return serialized_node;
    },
    [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return ErasedNode{RvolNode{parse_node_from_param_or(
-      config_parser,
-      params,
-      "period",
-      NumericInputNode{"Period",
-                       NumericInputNode::ValueRepresentation::UnsignedInteger,
-                       14.0})}};
+     return ErasedNode<ErasedSeriesMethodContext>{
+      RvolNode{parse_node_from_param_or(
+       config_parser,
+       params,
+       "period",
+       NumericInputNode{"Period",
+                        NumericInputNode::ValueRepresentation::UnsignedInteger,
+                        14.0})}};
    });
 
   config_parser.register_node_parser("ATR", serialize_atr_node, parse_atr_node);
@@ -947,7 +1251,8 @@ auto make_default_registered_config_parser() -> ConfigParser
 
   config_parser.register_node_parser(
    "DC",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      const auto dc_node = node_cast<DonchianChannelNode>(node);
      if(!dc_node) {
        return jsoncons::ojson::null();
@@ -958,18 +1263,19 @@ auto make_default_registered_config_parser() -> ConfigParser
      return serialized_node;
    },
    [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return ErasedNode{DonchianChannelNode{parse_node_from_param_or(
-      config_parser,
-      params,
-      "period",
-      NumericInputNode{"Period",
-                       NumericInputNode::ValueRepresentation::UnsignedInteger,
-                       20.0})}};
+     return ErasedNode<ErasedSeriesMethodContext>{
+      DonchianChannelNode{parse_node_from_param_or(
+       config_parser,
+       params,
+       "period",
+       NumericInputNode{"Period",
+                        NumericInputNode::ValueRepresentation::UnsignedInteger,
+                        20.0})}};
    });
 
   config_parser.register_node_parser(
    "SERIES",
-   [](const ConfigParser&, const ErasedNode& node) {
+   [](const ConfigParser&, const ErasedNode<ErasedSeriesMethodContext>& node) {
      const auto series_node = node_cast<SeriesNode>(node);
      if(!series_node) {
        return jsoncons::ojson::null();
@@ -980,12 +1286,13 @@ auto make_default_registered_config_parser() -> ConfigParser
    },
    [](ConfigParser::Parser, const jsoncons::ojson& params) {
      const auto name = get_param_or<std::string>(params, "name", "");
-     return ErasedNode{SeriesNode{name}};
+     return ErasedNode<ErasedSeriesMethodContext>{SeriesNode{name}};
    });
 
   config_parser.register_node_parser(
    "LOOKBACK",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      const auto lookback_node = node_cast<LookbackNode>(node);
      if(!lookback_node) {
        return jsoncons::ojson::null();
@@ -1000,12 +1307,12 @@ auto make_default_registered_config_parser() -> ConfigParser
      const auto period = params.at("period").as<std::size_t>();
      const auto source =
       parse_node_from_param_or(config_parser, params, "source", CloseNode{});
-     return ErasedNode{LookbackNode{source, period}};
+     return ErasedNode<ErasedSeriesMethodContext>{LookbackNode{source, period}};
    });
 
   config_parser.register_node_parser(
    "INPUT",
-   [](const ConfigParser&, const ErasedNode& node) {
+   [](const ConfigParser&, const ErasedNode<ErasedSeriesMethodContext>& node) {
      const auto input_node = node_cast<NumericInputNode>(node);
      if(!input_node) {
        return jsoncons::ojson::null();
@@ -1037,12 +1344,14 @@ auto make_default_registered_config_parser() -> ConfigParser
       : representation_str == "UnsignedInteger"
         ? NumericInputNode::ValueRepresentation::UnsignedInteger
         : NumericInputNode::ValueRepresentation::Decimal;
-     return ErasedNode{NumericInputNode{label, representation, value}};
+     return ErasedNode<ErasedSeriesMethodContext>{
+      NumericInputNode{label, representation, value}};
    });
 
   config_parser.register_node_parser(
    "SELECT_OUTPUT",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      const auto select_output_node = node_cast<SelectOutputNode>(node);
      if(!select_output_node) {
        return jsoncons::ojson::null();
@@ -1099,12 +1408,14 @@ auto make_default_registered_config_parser() -> ConfigParser
      }();
      const auto source =
       parse_node_from_param_or(config_parser, params, "source", CloseNode{});
-     return ErasedNode{SelectOutputNode{source, output}};
+     return ErasedNode<ErasedSeriesMethodContext>{
+      SelectOutputNode{source, output}};
    });
 
   config_parser.register_node_parser(
    "ABS_DIFF",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      return serialize_binary_operator_node<AbsDiffNode>(
       config_parser, node, "minuend", "subtrahend");
    },
@@ -1115,7 +1426,8 @@ auto make_default_registered_config_parser() -> ConfigParser
 
   config_parser.register_node_parser(
    "BB",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      const auto bb_node = node_cast<BbNode>(node);
      if(!bb_node) {
        return jsoncons::ojson::null();
@@ -1155,7 +1467,8 @@ auto make_default_registered_config_parser() -> ConfigParser
 
   config_parser.register_node_parser(
    "MACD",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      const auto macd_node = node_cast<MacdNode>(node);
      if(!macd_node) {
        return jsoncons::ojson::null();
@@ -1195,13 +1508,14 @@ auto make_default_registered_config_parser() -> ConfigParser
                        9.0});
      const auto source =
       parse_node_from_param_or(config_parser, params, "source", CloseNode{});
-     return ErasedNode{
+     return ErasedNode<ErasedSeriesMethodContext>{
       MacdNode{source, fast_period, slow_period, signal_period}};
    });
 
   config_parser.register_node_parser(
    "STOCH",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      const auto stoch_node = node_cast<StochNode>(node);
      if(!stoch_node) {
        return jsoncons::ojson::null();
@@ -1237,12 +1551,14 @@ auto make_default_registered_config_parser() -> ConfigParser
       NumericInputNode{"D Period",
                        NumericInputNode::ValueRepresentation::UnsignedInteger,
                        3.0});
-     return ErasedNode{StochNode{k_period, k_smooth, d_period}};
+     return ErasedNode<ErasedSeriesMethodContext>{
+      StochNode{k_period, k_smooth, d_period}};
    });
 
   config_parser.register_node_parser(
    "STOCH_RSI",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      const auto stoch_rsi_node = node_cast<StochRsiNode>(node);
      if(!stoch_rsi_node) {
        return jsoncons::ojson::null();
@@ -1291,13 +1607,14 @@ auto make_default_registered_config_parser() -> ConfigParser
       NumericInputNode{"D Period",
                        NumericInputNode::ValueRepresentation::UnsignedInteger,
                        3.0});
-     return ErasedNode{
+     return ErasedNode<ErasedSeriesMethodContext>{
       StochRsiNode{rsi_source, rsi_period, k_period, k_smooth, d_period}};
    });
 
   config_parser.register_node_parser(
    "ADD",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      return serialize_binary_operator_node<AddNode>(
       config_parser, node, "augend", "addend");
    },
@@ -1307,7 +1624,8 @@ auto make_default_registered_config_parser() -> ConfigParser
    });
   config_parser.register_node_parser(
    "SUBTRACT",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      return serialize_binary_operator_node<SubtractNode>(
       config_parser, node, "minuend", "subtrahend");
    },
@@ -1317,7 +1635,8 @@ auto make_default_registered_config_parser() -> ConfigParser
    });
   config_parser.register_node_parser(
    "MULTIPLY",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      return serialize_binary_operator_node<MultiplyNode>(
       config_parser, node, "multiplicand", "multiplier");
    },
@@ -1327,7 +1646,8 @@ auto make_default_registered_config_parser() -> ConfigParser
    });
   config_parser.register_node_parser(
    "DIVIDE",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      return serialize_binary_operator_node<DivideNode>(
       config_parser, node, "dividend", "divisor");
    },
@@ -1337,7 +1657,8 @@ auto make_default_registered_config_parser() -> ConfigParser
    });
   config_parser.register_node_parser(
    "NEGATE",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      return serialize_unary_operator_node<NegateNode>(
       config_parser, node, "operand");
    },
@@ -1348,7 +1669,8 @@ auto make_default_registered_config_parser() -> ConfigParser
 
   config_parser.register_node_parser(
    "PERCENTAGE",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      const auto percentage_node = node_cast<PercentageNode>(node);
      if(!percentage_node) {
        return jsoncons::ojson::null();
@@ -1363,12 +1685,14 @@ auto make_default_registered_config_parser() -> ConfigParser
      auto base =
       parse_node_from_param_or(config_parser, params, "base", CloseNode{});
      auto percent = get_param_or<double>(params, "percent", 100.0);
-     return ErasedNode{PercentageNode{base, percent}};
+     return ErasedNode<ErasedSeriesMethodContext>{
+      PercentageNode{base, percent}};
    });
 
   config_parser.register_node_parser(
    "SL_AMOUNT",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      return serialize_stop_target_value_node<SlAmountNode>(
       config_parser, node, "amount");
    },
@@ -1379,7 +1703,8 @@ auto make_default_registered_config_parser() -> ConfigParser
 
   config_parser.register_node_parser(
    "TP_AMOUNT",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      return serialize_stop_target_value_node<TpAmountNode>(
       config_parser, node, "amount");
    },
@@ -1390,7 +1715,8 @@ auto make_default_registered_config_parser() -> ConfigParser
 
   config_parser.register_node_parser(
    "SL_PERCENT",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      return serialize_stop_target_value_node<SlPercentNode>(
       config_parser, node, "percent");
    },
@@ -1401,7 +1727,8 @@ auto make_default_registered_config_parser() -> ConfigParser
 
   config_parser.register_node_parser(
    "TP_PERCENT",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      return serialize_stop_target_value_node<TpPercentNode>(
       config_parser, node, "percent");
    },
@@ -1420,7 +1747,8 @@ auto make_default_registered_config_parser() -> ConfigParser
 
   config_parser.register_node_parser(
    "R_DISTANCE_AMOUNT",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      return serialize_stop_target_value_node<RiskDistanceAmountNode>(
       config_parser, node, "amount");
    },
@@ -1431,7 +1759,8 @@ auto make_default_registered_config_parser() -> ConfigParser
 
   config_parser.register_node_parser(
    "R_DISTANCE_PERCENTAGE",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      return serialize_stop_target_value_node<RiskDistancePercentNode>(
       config_parser, node, "percentage");
    },
@@ -1450,7 +1779,8 @@ auto make_default_registered_config_parser() -> ConfigParser
 
   config_parser.register_node_parser(
    "TP_R_MULTIPLE",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      return serialize_stop_target_value_node<TpRMultipleNode>(
       config_parser, node, "multiple");
    },
@@ -1477,10 +1807,26 @@ auto make_default_registered_config_parser() -> ConfigParser
    "POSITION_DIRECTION",
    serialize_ohlcv_node<PositionDirectionNode>,
    parse_ohlcv_node<PositionDirectionNode>);
+  config_parser.register_node_parser(
+   "POSITION_R_MULTIPLE",
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) -> jsoncons::ojson {
+     const auto* r_multiple_node = node_cast<PositionRMultipleNode>(node);
+     if(!r_multiple_node) {
+       return jsoncons::ojson::null();
+     }
+     return jsoncons::ojson::object{
+      {"source", config_parser.serialize_node(r_multiple_node->source())}};
+   },
+   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
+     return PositionRMultipleNode{
+      parse_node_from_param_or(config_parser, params, "source", CloseNode{})};
+   });
 
   config_parser.register_node_parser(
    "SQRT",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
      return serialize_unary_operator_node<SqrtNode>(
       config_parser, node, "operand");
    },
@@ -1501,80 +1847,95 @@ auto make_default_registered_config_parser() -> ConfigParser
    "CROSSUNDER", serialize_crossunder_node, parse_crossunder_node);
   config_parser.register_node_parser(
    "CROSSOVER", serialize_crossover_node, parse_crossover_node);
-  config_parser.register_node_parser("GREATER_THAN",
-                                     serialize_comparison_node<GreaterThanNode>,
-                                     parse_comparison_node<GreaterThanNode>);
-  config_parser.register_node_parser("LESS_THAN",
-                                     serialize_comparison_node<LessThanNode>,
-                                     parse_comparison_node<LessThanNode>);
+  config_parser.register_node_parser(
+   "GREATER_THAN",
+   serialize_comparison_node<GreaterThanNode<ErasedSeriesMethodContext>>,
+   parse_comparison_node<GreaterThanNode<ErasedSeriesMethodContext>>);
+  config_parser.register_node_parser(
+   "LESS_THAN",
+   serialize_comparison_node<LessThanNode<ErasedSeriesMethodContext>>,
+   parse_comparison_node<LessThanNode<ErasedSeriesMethodContext>>);
   config_parser.register_node_parser(
    "GREATER_EQUAL",
-   serialize_comparison_node<GreaterEqualNode>,
-   parse_comparison_node<GreaterEqualNode>);
-  config_parser.register_node_parser("LESS_EQUAL",
-                                     serialize_comparison_node<LessEqualNode>,
-                                     parse_comparison_node<LessEqualNode>);
-  config_parser.register_node_parser("EQUAL",
-                                     serialize_comparison_node<EqualNode>,
-                                     parse_comparison_node<EqualNode>);
-  config_parser.register_node_parser("NOT_EQUAL",
-                                     serialize_comparison_node<NotEqualNode>,
-                                     parse_comparison_node<NotEqualNode>);
+   serialize_comparison_node<GreaterEqualNode<ErasedSeriesMethodContext>>,
+   parse_comparison_node<GreaterEqualNode<ErasedSeriesMethodContext>>);
+  config_parser.register_node_parser(
+   "LESS_EQUAL",
+   serialize_comparison_node<LessEqualNode<ErasedSeriesMethodContext>>,
+   parse_comparison_node<LessEqualNode<ErasedSeriesMethodContext>>);
+  config_parser.register_node_parser(
+   "EQUAL",
+   serialize_comparison_node<EqualNode<ErasedSeriesMethodContext>>,
+   parse_comparison_node<EqualNode<ErasedSeriesMethodContext>>);
+  config_parser.register_node_parser(
+   "NOT_EQUAL",
+   serialize_comparison_node<NotEqualNode<ErasedSeriesMethodContext>>,
+   parse_comparison_node<NotEqualNode<ErasedSeriesMethodContext>>);
 
   config_parser.register_node_parser(
    "ALWAYS",
-   [](const ConfigParser&, const ErasedNode& node) {
+   [](const ConfigParser&, const ErasedNode<ErasedSeriesMethodContext>& node) {
      return serialize_boolean_node(node, true);
    },
    [](ConfigParser::Parser, const jsoncons::ojson&) {
-     return ErasedNode{TrueNode{}};
+     return ErasedNode<ErasedSeriesMethodContext>{TrueNode{}};
    });
   config_parser.register_node_parser(
    "NEVER",
-   [](const ConfigParser&, const ErasedNode& node) {
+   [](const ConfigParser&, const ErasedNode<ErasedSeriesMethodContext>& node) {
      return serialize_boolean_node(node, false);
    },
    [](ConfigParser::Parser, const jsoncons::ojson&) {
-     return ErasedNode{FalseNode{}};
+     return ErasedNode<ErasedSeriesMethodContext>{FalseNode{}};
    });
   config_parser.register_node_parser(
    "AND",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
-     return serialize_binary_logical_node<LogicalAndNode>(
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
+     return serialize_binary_logical_node<
+      LogicalAndNode<ErasedSeriesMethodContext>>(
       config_parser, node, "firstCondition", "secondCondition");
    },
    [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return parse_binary_logical_node<LogicalAndNode>(
+     return parse_binary_logical_node<
+      LogicalAndNode<ErasedSeriesMethodContext>>(
       config_parser, params, "firstCondition", "secondCondition");
    });
   config_parser.register_node_parser(
    "OR",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
-     return serialize_binary_logical_node<LogicalOrNode>(
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
+     return serialize_binary_logical_node<
+      LogicalOrNode<ErasedSeriesMethodContext>>(
       config_parser, node, "firstCondition", "secondCondition");
    },
    [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return parse_binary_logical_node<LogicalOrNode>(
+     return parse_binary_logical_node<LogicalOrNode<ErasedSeriesMethodContext>>(
       config_parser, params, "firstCondition", "secondCondition");
    });
   config_parser.register_node_parser(
    "NOT",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
-     return serialize_unary_logical_node<LogicalNotNode>(
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
+     return serialize_unary_logical_node<
+      LogicalNotNode<ErasedSeriesMethodContext>>(
       config_parser, node, "condition");
    },
    [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return parse_unary_logical_node<LogicalNotNode>(
+     return parse_unary_logical_node<LogicalNotNode<ErasedSeriesMethodContext>>(
       config_parser, params, "condition");
    });
   config_parser.register_node_parser(
    "XOR",
-   [](const ConfigParser& config_parser, const ErasedNode& node) {
-     return serialize_binary_logical_node<LogicalXorNode>(
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
+     return serialize_binary_logical_node<
+      LogicalXorNode<ErasedSeriesMethodContext>>(
       config_parser, node, "firstCondition", "secondCondition");
    },
    [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return parse_binary_logical_node<LogicalXorNode>(
+     return parse_binary_logical_node<
+      LogicalXorNode<ErasedSeriesMethodContext>>(
       config_parser, params, "firstCondition", "secondCondition");
    });
 

@@ -33,11 +33,13 @@ private:
   std::string name_{};
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const SeriesNode& node,
-                       NodeToErasedMethodContext&) -> AnySeriesMethod
+                       NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<TContext>
 {
-  return AnySeriesMethod{SeriesMethod{node.name()}};
+  return ErasedSeriesMethod<TContext>{SeriesMethod{node.name()}};
 }
 
 } // namespace pludux

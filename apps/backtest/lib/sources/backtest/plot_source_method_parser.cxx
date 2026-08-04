@@ -15,10 +15,13 @@ import :method_serializer_mixin;
 export namespace pludux::backtest {
 
 class PlotSourceMethodParser
-: public MethodSerializerMixin<PlotSourceMethodParser, AnyPlotSourceMethod> {
+: public MethodSerializerMixin<
+   PlotSourceMethodParser,
+   ErasedPlotSourceMethod<ErasedPlotMethodContext>> {
 public:
-  using MethodSerializerMixin<PlotSourceMethodParser,
-                              AnyPlotSourceMethod>::MethodSerializerMixin;
+  using MethodSerializerMixin<
+   PlotSourceMethodParser,
+   ErasedPlotSourceMethod<ErasedPlotMethodContext>>::MethodSerializerMixin;
 };
 
 auto make_default_registered_plot_source_method_parser()
@@ -36,7 +39,8 @@ auto make_default_registered_plot_source_method_parser()
   method_parser.register_method_parser(
    "SERIES",
    [](const PlotSourceMethodParser& method_parser,
-      const AnyPlotSourceMethod any_plot_source_method) -> jsoncons::ojson {
+      const ErasedPlotSourceMethod<ErasedPlotMethodContext>
+       any_plot_source_method) -> jsoncons::ojson {
      auto serialized_method = jsoncons::ojson::null();
 
      auto plot_source_method =
@@ -59,7 +63,8 @@ auto make_default_registered_plot_source_method_parser()
   method_parser.register_method_parser(
    "CONSTANT",
    [](const PlotSourceMethodParser& method_parser,
-      const AnyPlotSourceMethod any_plot_source_method) -> jsoncons::ojson {
+      const ErasedPlotSourceMethod<ErasedPlotMethodContext>
+       any_plot_source_method) -> jsoncons::ojson {
      auto serialized_method = jsoncons::ojson::null();
 
      auto plot_source_method =

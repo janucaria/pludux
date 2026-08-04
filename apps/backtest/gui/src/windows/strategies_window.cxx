@@ -44,16 +44,18 @@ import :ui.widgets;
 
 namespace pludux::apps {
 
-using pludux::backtest::AnyPlotMethod;
-using pludux::backtest::AnyPlotSourceMethod;
 using pludux::backtest::AveragePriceNode;
 using pludux::backtest::DrawdownNode;
 using pludux::backtest::EquityNode;
 using pludux::backtest::EquityPercentNode;
+using pludux::backtest::ErasedPlotMethod;
+using pludux::backtest::ErasedPlotMethodContext;
+using pludux::backtest::ErasedPlotSourceMethod;
 using pludux::backtest::HLinePlotMethod;
 using pludux::backtest::InitialEntryPriceNode;
 using pludux::backtest::LatestEntryPriceNode;
 using pludux::backtest::PositionDirectionNode;
+using pludux::backtest::PositionRMultipleNode;
 using pludux::backtest::RiskDistanceAmountNode;
 using pludux::backtest::RiskDistanceAtrNode;
 using pludux::backtest::RiskDistancePercentNode;
@@ -66,15 +68,18 @@ using pludux::backtest::TpAmountNode;
 using pludux::backtest::TpAtrNode;
 using pludux::backtest::TpPercentNode;
 using pludux::backtest::TpRMultipleNode;
-using LinePlotMethod = pludux::backtest::LinePlotMethod<AnyPlotSourceMethod>;
-using HistogramPlotMethod =
- pludux::backtest::HistogramPlotMethod<AnyPlotSourceMethod>;
+using LinePlotMethod = pludux::backtest::LinePlotMethod<
+ ErasedPlotSourceMethod<ErasedPlotMethodContext>>;
+using HistogramPlotMethod = pludux::backtest::HistogramPlotMethod<
+ ErasedPlotSourceMethod<ErasedPlotMethodContext>>;
 using MomentumHistogramPlotMethod =
- pludux::backtest::MomentumHistogramPlotMethod<AnyPlotSourceMethod>;
+ pludux::backtest::MomentumHistogramPlotMethod<
+  ErasedPlotSourceMethod<ErasedPlotMethodContext>>;
 using pludux::backtest::ConstantPlotSourceMethod;
 using pludux::backtest::SeriesPlotSourceMethod;
 
-auto get_default_series_node(const std::string& series_id) -> ErasedNode
+auto get_default_series_node(const std::string& series_id)
+ -> ErasedNode<ErasedSeriesMethodContext>
 {
   if(series_id == "OPEN") {
     return OpenNode{};
@@ -150,29 +155,30 @@ auto get_default_series_node(const std::string& series_id) -> ErasedNode
   } else if(series_id == "NEVER") {
     return FalseNode{};
   } else if(series_id == "LESS_THAN") {
-    return LessThanNode{CloseNode{}, CloseNode{}};
+    return LessThanNode<ErasedSeriesMethodContext>{CloseNode{}, CloseNode{}};
   } else if(series_id == "GREATER_THAN") {
-    return GreaterThanNode{CloseNode{}, CloseNode{}};
+    return GreaterThanNode<ErasedSeriesMethodContext>{CloseNode{}, CloseNode{}};
   } else if(series_id == "LESS_EQUAL") {
-    return LessEqualNode{CloseNode{}, CloseNode{}};
+    return LessEqualNode<ErasedSeriesMethodContext>{CloseNode{}, CloseNode{}};
   } else if(series_id == "GREATER_EQUAL") {
-    return GreaterEqualNode{CloseNode{}, CloseNode{}};
+    return GreaterEqualNode<ErasedSeriesMethodContext>{CloseNode{},
+                                                       CloseNode{}};
   } else if(series_id == "EQUAL") {
-    return EqualNode{CloseNode{}, CloseNode{}};
+    return EqualNode<ErasedSeriesMethodContext>{CloseNode{}, CloseNode{}};
   } else if(series_id == "NOT_EQUAL") {
-    return NotEqualNode{CloseNode{}, CloseNode{}};
+    return NotEqualNode<ErasedSeriesMethodContext>{CloseNode{}, CloseNode{}};
   } else if(series_id == "CROSSOVER") {
     return CrossoverNode{CloseNode{}, CloseNode{}};
   } else if(series_id == "CROSSUNDER") {
     return CrossunderNode{CloseNode{}, CloseNode{}};
   } else if(series_id == "NOT") {
-    return LogicalNotNode{FalseNode{}};
+    return LogicalNotNode<ErasedSeriesMethodContext>{FalseNode{}};
   } else if(series_id == "AND") {
-    return LogicalAndNode{FalseNode{}, FalseNode{}};
+    return LogicalAndNode<ErasedSeriesMethodContext>{FalseNode{}, FalseNode{}};
   } else if(series_id == "OR") {
-    return LogicalOrNode{FalseNode{}, FalseNode{}};
+    return LogicalOrNode<ErasedSeriesMethodContext>{FalseNode{}, FalseNode{}};
   } else if(series_id == "XOR") {
-    return LogicalXorNode{FalseNode{}, FalseNode{}};
+    return LogicalXorNode<ErasedSeriesMethodContext>{FalseNode{}, FalseNode{}};
   } else if(series_id == "INPUT") {
     return NumericInputNode{"Input"};
   } else if(series_id == "ADD") {
@@ -221,6 +227,8 @@ auto get_default_series_node(const std::string& series_id) -> ErasedNode
     return StopTargetRefPriceNode{};
   } else if(series_id == "POSITION_DIRECTION") {
     return PositionDirectionNode{};
+  } else if(series_id == "POSITION_R_MULTIPLE") {
+    return PositionRMultipleNode{};
   } else if(series_id == "ABS_DIFF") {
     return AbsDiffNode{CloseNode{}, CloseNode{}};
   } else if(series_id == "SELECT_OUTPUT") {
@@ -231,7 +239,8 @@ auto get_default_series_node(const std::string& series_id) -> ErasedNode
    std::format("Unknown series node id: {}", series_id)};
 }
 
-auto get_series_node_id(const ErasedNode& node) -> std::string
+auto get_series_node_id(const ErasedNode<ErasedSeriesMethodContext>& node)
+ -> std::string
 {
   if(node_cast<SelectOutputNode>(node)) {
     return "SELECT_OUTPUT";
@@ -343,6 +352,8 @@ auto get_series_node_id(const ErasedNode& node) -> std::string
     return "STOP_TARGET_REF_PRICE";
   } else if(node_cast<PositionDirectionNode>(node)) {
     return "POSITION_DIRECTION";
+  } else if(node_cast<PositionRMultipleNode>(node)) {
+    return "POSITION_R_MULTIPLE";
   } else if(node_cast<AbsDiffNode>(node)) {
     return "ABS_DIFF";
   } else if(node_cast<LookbackNode>(node)) {
@@ -357,29 +368,29 @@ auto get_series_node_id(const ErasedNode& node) -> std::string
     return "ALWAYS";
   } else if(node_cast<FalseNode>(node)) {
     return "NEVER";
-  } else if(node_cast<LessThanNode>(node)) {
+  } else if(node_cast<LessThanNode<ErasedSeriesMethodContext>>(node)) {
     return "LESS_THAN";
-  } else if(node_cast<GreaterThanNode>(node)) {
+  } else if(node_cast<GreaterThanNode<ErasedSeriesMethodContext>>(node)) {
     return "GREATER_THAN";
-  } else if(node_cast<LessEqualNode>(node)) {
+  } else if(node_cast<LessEqualNode<ErasedSeriesMethodContext>>(node)) {
     return "LESS_EQUAL";
-  } else if(node_cast<GreaterEqualNode>(node)) {
+  } else if(node_cast<GreaterEqualNode<ErasedSeriesMethodContext>>(node)) {
     return "GREATER_EQUAL";
-  } else if(node_cast<EqualNode>(node)) {
+  } else if(node_cast<EqualNode<ErasedSeriesMethodContext>>(node)) {
     return "EQUAL";
-  } else if(node_cast<NotEqualNode>(node)) {
+  } else if(node_cast<NotEqualNode<ErasedSeriesMethodContext>>(node)) {
     return "NOT_EQUAL";
   } else if(node_cast<CrossoverNode>(node)) {
     return "CROSSOVER";
   } else if(node_cast<CrossunderNode>(node)) {
     return "CROSSUNDER";
-  } else if(node_cast<LogicalNotNode>(node)) {
+  } else if(node_cast<LogicalNotNode<ErasedSeriesMethodContext>>(node)) {
     return "NOT";
-  } else if(node_cast<LogicalAndNode>(node)) {
+  } else if(node_cast<LogicalAndNode<ErasedSeriesMethodContext>>(node)) {
     return "AND";
-  } else if(node_cast<LogicalOrNode>(node)) {
+  } else if(node_cast<LogicalOrNode<ErasedSeriesMethodContext>>(node)) {
     return "OR";
-  } else if(node_cast<LogicalXorNode>(node)) {
+  } else if(node_cast<LogicalXorNode<ErasedSeriesMethodContext>>(node)) {
     return "XOR";
   }
 
@@ -521,7 +532,7 @@ auto get_series_node_title(const std::string& series_id) -> std::string
   } else if(series_id == "SL_1R") {
     return "Stop Loss 1R";
   } else if(series_id == "TP_R_MULTIPLE") {
-    return "Take Profit R Multiple";
+    return "Take Profit R-Multiple";
   } else if(series_id == "INITIAL_ENTRY_PRICE") {
     return "Initial Entry Price";
   } else if(series_id == "LATEST_ENTRY_PRICE") {
@@ -532,6 +543,8 @@ auto get_series_node_title(const std::string& series_id) -> std::string
     return "Stop/Target Reference Price";
   } else if(series_id == "POSITION_DIRECTION") {
     return "Position Direction";
+  } else if(series_id == "POSITION_R_MULTIPLE") {
+    return "Position R-Multiple";
   } else if(series_id == "ABS_DIFF") {
     return "Absolute Difference";
   } else if(series_id == "SELECT_OUTPUT") {
@@ -597,6 +610,7 @@ auto get_series_node_category(const std::string& series_id) -> std::string
     {"AVERAGE_PRICE", "Position & Risk"},
     {"STOP_TARGET_REF_PRICE", "Position & Risk"},
     {"POSITION_DIRECTION", "Position & Risk"},
+    {"POSITION_R_MULTIPLE", "Position & Risk"},
     {"ALL_OF", "Logic & Comparison"},
     {"ANY_OF", "Logic & Comparison"},
     {"ALWAYS", "Logic & Comparison"},
@@ -680,6 +694,7 @@ auto get_series_node_combo_entries() -> const std::vector<ui::ComboEntry>&
      "AVERAGE_PRICE",
      "STOP_TARGET_REF_PRICE",
      "POSITION_DIRECTION",
+     "POSITION_R_MULTIPLE",
      "ALL_OF",
      "ANY_OF",
      "ALWAYS",
@@ -717,7 +732,8 @@ auto get_series_node_combo_entries() -> const std::vector<ui::ComboEntry>&
   return entries;
 }
 
-auto get_condition_node_id(const ErasedNode& node) -> std::string
+auto get_condition_node_id(const ErasedNode<ErasedSeriesMethodContext>& node)
+ -> std::string
 {
   if(node_cast<AllOfNode>(node)) {
     return "ALL_OF";
@@ -727,29 +743,29 @@ auto get_condition_node_id(const ErasedNode& node) -> std::string
     return "ALWAYS";
   } else if(node_cast<FalseNode>(node)) {
     return "NEVER";
-  } else if(node_cast<LessThanNode>(node)) {
+  } else if(node_cast<LessThanNode<ErasedSeriesMethodContext>>(node)) {
     return "LESS_THAN";
-  } else if(node_cast<GreaterThanNode>(node)) {
+  } else if(node_cast<GreaterThanNode<ErasedSeriesMethodContext>>(node)) {
     return "GREATER_THAN";
-  } else if(node_cast<LessEqualNode>(node)) {
+  } else if(node_cast<LessEqualNode<ErasedSeriesMethodContext>>(node)) {
     return "LESS_EQUAL";
-  } else if(node_cast<GreaterEqualNode>(node)) {
+  } else if(node_cast<GreaterEqualNode<ErasedSeriesMethodContext>>(node)) {
     return "GREATER_EQUAL";
-  } else if(node_cast<EqualNode>(node)) {
+  } else if(node_cast<EqualNode<ErasedSeriesMethodContext>>(node)) {
     return "EQUAL";
-  } else if(node_cast<NotEqualNode>(node)) {
+  } else if(node_cast<NotEqualNode<ErasedSeriesMethodContext>>(node)) {
     return "NOT_EQUAL";
   } else if(node_cast<CrossoverNode>(node)) {
     return "CROSSOVER";
   } else if(node_cast<CrossunderNode>(node)) {
     return "CROSSUNDER";
-  } else if(node_cast<LogicalNotNode>(node)) {
+  } else if(node_cast<LogicalNotNode<ErasedSeriesMethodContext>>(node)) {
     return "NOT";
-  } else if(node_cast<LogicalAndNode>(node)) {
+  } else if(node_cast<LogicalAndNode<ErasedSeriesMethodContext>>(node)) {
     return "AND";
-  } else if(node_cast<LogicalOrNode>(node)) {
+  } else if(node_cast<LogicalOrNode<ErasedSeriesMethodContext>>(node)) {
     return "OR";
-  } else if(node_cast<LogicalXorNode>(node)) {
+  } else if(node_cast<LogicalXorNode<ErasedSeriesMethodContext>>(node)) {
     return "XOR";
   }
 
@@ -857,7 +873,8 @@ auto get_condition_node_combo_entries() -> const std::vector<ui::ComboEntry>&
   return entries;
 }
 
-auto get_default_condition_node(const std::string& condition_id) -> ErasedNode
+auto get_default_condition_node(const std::string& condition_id)
+ -> ErasedNode<ErasedSeriesMethodContext>
 {
   if(condition_id == "ALL_OF") {
     return AllOfNode{};
@@ -868,36 +885,38 @@ auto get_default_condition_node(const std::string& condition_id) -> ErasedNode
   } else if(condition_id == "NEVER") {
     return FalseNode{};
   } else if(condition_id == "LESS_THAN") {
-    return LessThanNode{CloseNode{}, CloseNode{}};
+    return LessThanNode<ErasedSeriesMethodContext>{CloseNode{}, CloseNode{}};
   } else if(condition_id == "GREATER_THAN") {
-    return GreaterThanNode{CloseNode{}, CloseNode{}};
+    return GreaterThanNode<ErasedSeriesMethodContext>{CloseNode{}, CloseNode{}};
   } else if(condition_id == "LESS_EQUAL") {
-    return LessEqualNode{CloseNode{}, CloseNode{}};
+    return LessEqualNode<ErasedSeriesMethodContext>{CloseNode{}, CloseNode{}};
   } else if(condition_id == "GREATER_EQUAL") {
-    return GreaterEqualNode{CloseNode{}, CloseNode{}};
+    return GreaterEqualNode<ErasedSeriesMethodContext>{CloseNode{},
+                                                       CloseNode{}};
   } else if(condition_id == "EQUAL") {
-    return EqualNode{CloseNode{}, CloseNode{}};
+    return EqualNode<ErasedSeriesMethodContext>{CloseNode{}, CloseNode{}};
   } else if(condition_id == "NOT_EQUAL") {
-    return NotEqualNode{CloseNode{}, CloseNode{}};
+    return NotEqualNode<ErasedSeriesMethodContext>{CloseNode{}, CloseNode{}};
   } else if(condition_id == "CROSSOVER") {
     return CrossoverNode{CloseNode{}, CloseNode{}};
   } else if(condition_id == "CROSSUNDER") {
     return CrossunderNode{CloseNode{}, CloseNode{}};
   } else if(condition_id == "NOT") {
-    return LogicalNotNode{FalseNode{}};
+    return LogicalNotNode<ErasedSeriesMethodContext>{FalseNode{}};
   } else if(condition_id == "AND") {
-    return LogicalAndNode{FalseNode{}, FalseNode{}};
+    return LogicalAndNode<ErasedSeriesMethodContext>{FalseNode{}, FalseNode{}};
   } else if(condition_id == "OR") {
-    return LogicalOrNode{FalseNode{}, FalseNode{}};
+    return LogicalOrNode<ErasedSeriesMethodContext>{FalseNode{}, FalseNode{}};
   } else if(condition_id == "XOR") {
-    return LogicalXorNode{FalseNode{}, FalseNode{}};
+    return LogicalXorNode<ErasedSeriesMethodContext>{FalseNode{}, FalseNode{}};
   }
 
   throw std::invalid_argument{
    std::format("Unknown condition node id: {}", condition_id)};
 }
 
-auto get_plot_method_id(const AnyPlotMethod& method) -> std::string
+auto get_plot_method_id(const ErasedPlotMethod<ErasedPlotMethodContext>& method)
+ -> std::string
 {
   if(plot_method_cast<HLinePlotMethod>(method)) {
     return "HLINE";
@@ -933,7 +952,8 @@ auto get_plot_method_title(const std::string& plot_id) -> std::string
   return "Unknown";
 }
 
-auto get_default_plot_method(const std::string& plot_id) -> AnyPlotMethod
+auto get_default_plot_method(const std::string& plot_id)
+ -> ErasedPlotMethod<ErasedPlotMethodContext>
 {
   if(plot_id == "LINE") {
     return LinePlotMethod{ConstantPlotSourceMethod{0.0}, 0xFFFFFFFF};
@@ -955,7 +975,8 @@ auto get_default_plot_method(const std::string& plot_id) -> AnyPlotMethod
    std::format("Unknown plot method id: {}", plot_id)};
 }
 
-auto get_plot_source_method_id(const AnyPlotSourceMethod& method) -> std::string
+auto get_plot_source_method_id(
+ const ErasedPlotSourceMethod<ErasedPlotMethodContext>& method) -> std::string
 {
   if(plot_source_method_cast<ConstantPlotSourceMethod>(method)) {
     return "CONSTANT";
@@ -981,7 +1002,7 @@ auto get_plot_source_method_title(const std::string& plot_source_id)
 }
 
 auto get_default_plot_source_method(const std::string& plot_source_id)
- -> AnyPlotSourceMethod
+ -> ErasedPlotSourceMethod<ErasedPlotMethodContext>
 {
   if(plot_source_id == "CONSTANT") {
     return ConstantPlotSourceMethod{0.0};
@@ -1038,7 +1059,6 @@ private:
 
   ImGuiTextFilter strategy_filter_;
   ImGuiTextFilter built_in_strategy_filter_;
-  ui::DraftAction selected_draft_action_{ui::DraftAction::Apply};
 
   std::vector<std::string> available_series_names_;
   std::unordered_map<std::string, std::string> changed_series_names_;
@@ -1452,12 +1472,10 @@ private:
     ImGui::EndChild();
 
     const auto changed = self.has_unsaved_changes();
-    ImGui::BeginDisabled(!changed);
-    if(ImGui::Button(PLUDUX_ICON_SAVE " Save")) {
+    if(ImGui::Button("OK")) {
       self.submit_strategy_changes(context);
       self.reset();
     }
-    ImGui::EndDisabled();
 
     ImGui::SameLine();
     if(ImGui::Button("Cancel")) {
@@ -1465,8 +1483,7 @@ private:
     }
 
     ImGui::SameLine();
-    const auto draft_action =
-     ui::apply_reset_button(self.selected_draft_action_, changed);
+    const auto draft_action = ui::apply_reset_button(changed);
     if(draft_action == ui::DraftAction::Apply) {
       self.submit_strategy_changes(context);
       self.editor_baseline_ptr_ =
@@ -2121,7 +2138,7 @@ private:
   }
 
   void render_series_node(this auto& self,
-                          ErasedNode& series_node,
+                          ErasedNode<ErasedSeriesMethodContext>& series_node,
                           WindowContext& context)
   {
     auto series_node_id = get_series_node_id(series_node);
@@ -2152,7 +2169,7 @@ private:
   }
 
   void render_series_node_params(this auto& self,
-                                 ErasedNode& node,
+                                 ErasedNode<ErasedSeriesMethodContext>& node,
                                  WindowContext& context)
   {
     ([&]<typename... Ts>() mutable {
@@ -2174,18 +2191,18 @@ private:
                           AnyOfNode,
                           TrueNode,
                           FalseNode,
-                          LessThanNode,
-                          GreaterThanNode,
-                          LessEqualNode,
-                          GreaterEqualNode,
-                          EqualNode,
-                          NotEqualNode,
+                          LessThanNode<ErasedSeriesMethodContext>,
+                          GreaterThanNode<ErasedSeriesMethodContext>,
+                          LessEqualNode<ErasedSeriesMethodContext>,
+                          GreaterEqualNode<ErasedSeriesMethodContext>,
+                          EqualNode<ErasedSeriesMethodContext>,
+                          NotEqualNode<ErasedSeriesMethodContext>,
                           CrossoverNode,
                           CrossunderNode,
-                          LogicalNotNode,
-                          LogicalAndNode,
-                          LogicalOrNode,
-                          LogicalXorNode,
+                          LogicalNotNode<ErasedSeriesMethodContext>,
+                          LogicalAndNode<ErasedSeriesMethodContext>,
+                          LogicalOrNode<ErasedSeriesMethodContext>,
+                          LogicalXorNode<ErasedSeriesMethodContext>,
 
                           BbNode,
                           KcNode,
@@ -2571,23 +2588,34 @@ private:
              std::same_as<TConditionNode, AnyOfNode> ||
              std::same_as<TConditionNode, TrueNode> ||
              std::same_as<TConditionNode, FalseNode> ||
-             std::same_as<TConditionNode, LessThanNode> ||
-             std::same_as<TConditionNode, GreaterThanNode> ||
-             std::same_as<TConditionNode, LessEqualNode> ||
-             std::same_as<TConditionNode, GreaterEqualNode> ||
-             std::same_as<TConditionNode, EqualNode> ||
-             std::same_as<TConditionNode, NotEqualNode> ||
+             std::same_as<TConditionNode,
+                          LessThanNode<ErasedSeriesMethodContext>> ||
+             std::same_as<TConditionNode,
+                          GreaterThanNode<ErasedSeriesMethodContext>> ||
+             std::same_as<TConditionNode,
+                          LessEqualNode<ErasedSeriesMethodContext>> ||
+             std::same_as<TConditionNode,
+                          GreaterEqualNode<ErasedSeriesMethodContext>> ||
+             std::same_as<TConditionNode,
+                          EqualNode<ErasedSeriesMethodContext>> ||
+             std::same_as<TConditionNode,
+                          NotEqualNode<ErasedSeriesMethodContext>> ||
              std::same_as<TConditionNode, CrossoverNode> ||
              std::same_as<TConditionNode, CrossunderNode> ||
-             std::same_as<TConditionNode, LogicalNotNode> ||
-             std::same_as<TConditionNode, LogicalAndNode> ||
-             std::same_as<TConditionNode, LogicalOrNode> ||
-             std::same_as<TConditionNode, LogicalXorNode>
+             std::same_as<TConditionNode,
+                          LogicalNotNode<ErasedSeriesMethodContext>> ||
+             std::same_as<TConditionNode,
+                          LogicalAndNode<ErasedSeriesMethodContext>> ||
+             std::same_as<TConditionNode,
+                          LogicalOrNode<ErasedSeriesMethodContext>> ||
+             std::same_as<TConditionNode,
+                          LogicalXorNode<ErasedSeriesMethodContext>>
   void render_series_node_params(this auto& self,
                                  TConditionNode& node,
                                  WindowContext& context)
   {
-    auto changed_node = self.render_condition_node(ErasedNode{node}, context);
+    auto changed_node = self.render_condition_node(
+     ErasedNode<ErasedSeriesMethodContext>{node}, context);
     if(const auto* updated = node_cast<TConditionNode>(changed_node)) {
       node = *updated;
     }
@@ -2786,6 +2814,18 @@ private:
   void
   render_series_node_params(this auto&, PositionDirectionNode&, WindowContext&)
   {
+  }
+
+  void render_series_node_params(this auto& self,
+                                 PositionRMultipleNode& node,
+                                 WindowContext& context)
+  {
+    ui::field_label("Source");
+    auto source = node.source();
+    ImGui::PushID("source");
+    self.render_series_node(source, context);
+    ImGui::PopID();
+    node.source(std::move(source));
   }
 
   void render_series_node_params(this auto& self,
@@ -3042,7 +3082,8 @@ private:
     }
   }
 
-  auto draw_condition_node_combo(this auto& self, const ErasedNode& condition)
+  auto draw_condition_node_combo(
+   this auto& self, const ErasedNode<ErasedSeriesMethodContext>& condition)
    -> std::string
   {
     auto result_condition_id = get_condition_node_id(condition);
@@ -3067,23 +3108,33 @@ private:
 
   auto make_condition_node_from_other(this auto& self,
                                       const std::string& condition_id,
-                                      auto other_condition) -> ErasedNode
+                                      auto other_condition)
+   -> ErasedNode<ErasedSeriesMethodContext>
   {
     const auto get_condition_series_params =
      []<typename TNode>(
-      const TNode& node) -> std::pair<ErasedNode, ErasedNode> {
+      const TNode& node) -> std::pair<ErasedNode<ErasedSeriesMethodContext>,
+                                      ErasedNode<ErasedSeriesMethodContext>> {
       if constexpr(requires {
-                     { node.source() } -> std::convertible_to<ErasedNode>;
-                     { node.reference() } -> std::convertible_to<ErasedNode>;
+                     {
+                       node.source()
+                     } -> std::convertible_to<
+                      ErasedNode<ErasedSeriesMethodContext>>;
+                     {
+                       node.reference()
+                     } -> std::convertible_to<
+                      ErasedNode<ErasedSeriesMethodContext>>;
                    }) {
         return {node.source(), node.reference()};
       } else if constexpr(requires {
                             {
                               node.target()
-                            } -> std::convertible_to<ErasedNode>;
+                            } -> std::convertible_to<
+                             ErasedNode<ErasedSeriesMethodContext>>;
                             {
                               node.threshold()
-                            } -> std::convertible_to<ErasedNode>;
+                            } -> std::convertible_to<
+                             ErasedNode<ErasedSeriesMethodContext>>;
                           }) {
         return {node.target(), node.threshold()};
       } else {
@@ -3094,43 +3145,43 @@ private:
     if(condition_id == "EQUAL") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
-      return EqualNode{std::move(lhs_series_param),
-                       std::move(rhs_series_param)};
+      return EqualNode<ErasedSeriesMethodContext>{std::move(lhs_series_param),
+                                                  std::move(rhs_series_param)};
     }
 
     if(condition_id == "NOT_EQUAL") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
-      return NotEqualNode{std::move(lhs_series_param),
-                          std::move(rhs_series_param)};
+      return NotEqualNode<ErasedSeriesMethodContext>{
+       std::move(lhs_series_param), std::move(rhs_series_param)};
     }
 
     if(condition_id == "GREATER_THAN") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
-      return GreaterThanNode{std::move(lhs_series_param),
-                             std::move(rhs_series_param)};
+      return GreaterThanNode<ErasedSeriesMethodContext>{
+       std::move(lhs_series_param), std::move(rhs_series_param)};
     }
 
     if(condition_id == "LESS_THAN") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
-      return LessThanNode{std::move(lhs_series_param),
-                          std::move(rhs_series_param)};
+      return LessThanNode<ErasedSeriesMethodContext>{
+       std::move(lhs_series_param), std::move(rhs_series_param)};
     }
 
     if(condition_id == "GREATER_EQUAL") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
-      return GreaterEqualNode{std::move(lhs_series_param),
-                              std::move(rhs_series_param)};
+      return GreaterEqualNode<ErasedSeriesMethodContext>{
+       std::move(lhs_series_param), std::move(rhs_series_param)};
     }
 
     if(condition_id == "LESS_EQUAL") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
-      return LessEqualNode{std::move(lhs_series_param),
-                           std::move(rhs_series_param)};
+      return LessEqualNode<ErasedSeriesMethodContext>{
+       std::move(lhs_series_param), std::move(rhs_series_param)};
     }
 
     if(condition_id == "CROSSOVER") {
@@ -3148,26 +3199,31 @@ private:
     }
 
     const auto get_conditions_param =
-     []<typename TNode>(const TNode& node) -> std::vector<ErasedNode> {
+     []<typename TNode>(
+      const TNode& node) -> std::vector<ErasedNode<ErasedSeriesMethodContext>> {
       if constexpr(requires {
                      {
                        node.conditions()
-                     } -> std::convertible_to<std::vector<ErasedNode>>;
+                     } -> std::convertible_to<
+                      std::vector<ErasedNode<ErasedSeriesMethodContext>>>;
                    }) {
         return node.conditions();
       } else if constexpr(requires {
                             {
                               node.other_condition()
-                            } -> std::convertible_to<ErasedNode>;
+                            } -> std::convertible_to<
+                             ErasedNode<ErasedSeriesMethodContext>>;
                           }) {
         return {node.other_condition()};
       } else if constexpr(requires {
                             {
                               node.first_condition()
-                            } -> std::convertible_to<ErasedNode>;
+                            } -> std::convertible_to<
+                             ErasedNode<ErasedSeriesMethodContext>>;
                             {
                               node.second_condition()
-                            } -> std::convertible_to<ErasedNode>;
+                            } -> std::convertible_to<
+                             ErasedNode<ErasedSeriesMethodContext>>;
                           }) {
         return {node.first_condition(), node.second_condition()};
       } else {
@@ -3186,21 +3242,27 @@ private:
     }
 
     const auto get_first_condition_param =
-     []<typename TNode>(const TNode& node) -> ErasedNode {
+     []<typename TNode>(
+      const TNode& node) -> ErasedNode<ErasedSeriesMethodContext> {
       if constexpr(requires {
-                     { node.condition() } -> std::convertible_to<ErasedNode>;
+                     {
+                       node.condition()
+                     } -> std::convertible_to<
+                      ErasedNode<ErasedSeriesMethodContext>>;
                    }) {
         return node.condition();
       } else if constexpr(requires {
                             {
                               node.first_condition()
-                            } -> std::convertible_to<ErasedNode>;
+                            } -> std::convertible_to<
+                             ErasedNode<ErasedSeriesMethodContext>>;
                           }) {
         return node.first_condition();
       } else if constexpr(requires {
                             {
                               node.conditions()
-                            } -> std::convertible_to<std::vector<ErasedNode>>;
+                            } -> std::convertible_to<std::vector<
+                             ErasedNode<ErasedSeriesMethodContext>>>;
                           }) {
         const auto conditions = node.conditions();
         if(!conditions.empty()) {
@@ -3211,7 +3273,8 @@ private:
       } else if constexpr(requires {
                             {
                               node.other_condition()
-                            } -> std::convertible_to<ErasedNode>;
+                            } -> std::convertible_to<
+                             ErasedNode<ErasedSeriesMethodContext>>;
                           }) {
         return node.other_condition();
       } else {
@@ -3220,17 +3283,20 @@ private:
     };
 
     const auto get_second_condition_param =
-     []<typename TNode>(const TNode& node) -> ErasedNode {
+     []<typename TNode>(
+      const TNode& node) -> ErasedNode<ErasedSeriesMethodContext> {
       if constexpr(requires {
                      {
                        node.other_condition()
-                     } -> std::convertible_to<ErasedNode>;
+                     } -> std::convertible_to<
+                      ErasedNode<ErasedSeriesMethodContext>>;
                    }) {
         return node.other_condition();
       } else if constexpr(requires {
                             {
                               node.second_condition()
-                            } -> std::convertible_to<ErasedNode>;
+                            } -> std::convertible_to<
+                             ErasedNode<ErasedSeriesMethodContext>>;
                           }) {
         return node.second_condition();
       } else {
@@ -3239,22 +3305,26 @@ private:
     };
 
     if(condition_id == "NOT") {
-      return LogicalNotNode{get_first_condition_param(other_condition)};
+      return LogicalNotNode<ErasedSeriesMethodContext>{
+       get_first_condition_param(other_condition)};
     }
 
     if(condition_id == "AND") {
-      return LogicalAndNode{get_first_condition_param(other_condition),
-                            get_second_condition_param(other_condition)};
+      return LogicalAndNode<ErasedSeriesMethodContext>{
+       get_first_condition_param(other_condition),
+       get_second_condition_param(other_condition)};
     }
 
     if(condition_id == "OR") {
-      return LogicalOrNode{get_first_condition_param(other_condition),
-                           get_second_condition_param(other_condition)};
+      return LogicalOrNode<ErasedSeriesMethodContext>{
+       get_first_condition_param(other_condition),
+       get_second_condition_param(other_condition)};
     }
 
     if(condition_id == "XOR") {
-      return LogicalXorNode{get_first_condition_param(other_condition),
-                            get_second_condition_param(other_condition)};
+      return LogicalXorNode<ErasedSeriesMethodContext>{
+       get_first_condition_param(other_condition),
+       get_second_condition_param(other_condition)};
     }
 
     if(condition_id == "ALWAYS") {
@@ -3268,9 +3338,10 @@ private:
     return FalseNode{};
   }
 
-  auto render_condition_node(this auto& self,
-                             const ErasedNode& any_condition,
-                             WindowContext& context) -> ErasedNode
+  auto render_condition_node(
+   this auto& self,
+   const ErasedNode<ErasedSeriesMethodContext>& any_condition,
+   WindowContext& context) -> ErasedNode<ErasedSeriesMethodContext>
   {
     if(auto* condition_ptr = node_cast<AllOfNode>(any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
@@ -3280,30 +3351,48 @@ private:
       return self.render_condition_node(*condition_ptr, context);
     } else if(auto* condition_ptr = node_cast<FalseNode>(any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
-    } else if(auto* condition_ptr = node_cast<LessThanNode>(any_condition)) {
-      return self.render_condition_node(*condition_ptr, context);
-    } else if(auto* condition_ptr = node_cast<GreaterThanNode>(any_condition)) {
-      return self.render_condition_node(*condition_ptr, context);
-    } else if(auto* condition_ptr = node_cast<LessEqualNode>(any_condition)) {
+    } else if(auto* condition_ptr =
+               node_cast<LessThanNode<ErasedSeriesMethodContext>>(
+                any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               node_cast<GreaterEqualNode>(any_condition)) {
+               node_cast<GreaterThanNode<ErasedSeriesMethodContext>>(
+                any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
-    } else if(auto* condition_ptr = node_cast<EqualNode>(any_condition)) {
+    } else if(auto* condition_ptr =
+               node_cast<LessEqualNode<ErasedSeriesMethodContext>>(
+                any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
-    } else if(auto* condition_ptr = node_cast<NotEqualNode>(any_condition)) {
+    } else if(auto* condition_ptr =
+               node_cast<GreaterEqualNode<ErasedSeriesMethodContext>>(
+                any_condition)) {
+      return self.render_condition_node(*condition_ptr, context);
+    } else if(auto* condition_ptr =
+               node_cast<EqualNode<ErasedSeriesMethodContext>>(any_condition)) {
+      return self.render_condition_node(*condition_ptr, context);
+    } else if(auto* condition_ptr =
+               node_cast<NotEqualNode<ErasedSeriesMethodContext>>(
+                any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
     } else if(auto* condition_ptr = node_cast<CrossoverNode>(any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
     } else if(auto* condition_ptr = node_cast<CrossunderNode>(any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
-    } else if(auto* condition_ptr = node_cast<LogicalNotNode>(any_condition)) {
+    } else if(auto* condition_ptr =
+               node_cast<LogicalNotNode<ErasedSeriesMethodContext>>(
+                any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
-    } else if(auto* condition_ptr = node_cast<LogicalAndNode>(any_condition)) {
+    } else if(auto* condition_ptr =
+               node_cast<LogicalAndNode<ErasedSeriesMethodContext>>(
+                any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
-    } else if(auto* condition_ptr = node_cast<LogicalOrNode>(any_condition)) {
+    } else if(auto* condition_ptr =
+               node_cast<LogicalOrNode<ErasedSeriesMethodContext>>(
+                any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
-    } else if(auto* condition_ptr = node_cast<LogicalXorNode>(any_condition)) {
+    } else if(auto* condition_ptr =
+               node_cast<LogicalXorNode<ErasedSeriesMethodContext>>(
+                any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
     } else {
       return any_condition;
@@ -3311,15 +3400,20 @@ private:
   }
 
   template<typename TCondition>
-    requires std::same_as<TCondition, EqualNode> ||
-             std::same_as<TCondition, NotEqualNode> ||
-             std::same_as<TCondition, GreaterThanNode> ||
-             std::same_as<TCondition, LessThanNode> ||
-             std::same_as<TCondition, GreaterEqualNode> ||
-             std::same_as<TCondition, LessEqualNode>
+    requires std::same_as<TCondition, EqualNode<ErasedSeriesMethodContext>> ||
+             std::same_as<TCondition,
+                          NotEqualNode<ErasedSeriesMethodContext>> ||
+             std::same_as<TCondition,
+                          GreaterThanNode<ErasedSeriesMethodContext>> ||
+             std::same_as<TCondition,
+                          LessThanNode<ErasedSeriesMethodContext>> ||
+             std::same_as<TCondition,
+                          GreaterEqualNode<ErasedSeriesMethodContext>> ||
+             std::same_as<TCondition, LessEqualNode<ErasedSeriesMethodContext>>
   auto render_condition_node(this auto& self,
                              const TCondition& condition,
-                             WindowContext& context) -> ErasedNode
+                             WindowContext& context)
+   -> ErasedNode<ErasedSeriesMethodContext>
   {
     auto new_condition = condition;
 
@@ -3353,7 +3447,8 @@ private:
              std::same_as<TCondition, CrossunderNode>
   auto render_condition_node(this auto& self,
                              const TCondition& condition,
-                             WindowContext& context) -> ErasedNode
+                             WindowContext& context)
+   -> ErasedNode<ErasedSeriesMethodContext>
   {
     auto new_condition = condition;
 
@@ -3387,7 +3482,8 @@ private:
              std::same_as<TCondition, FalseNode>
   auto render_condition_node(this auto& self,
                              const TCondition& condition,
-                             WindowContext& context) -> ErasedNode
+                             WindowContext& context)
+   -> ErasedNode<ErasedSeriesMethodContext>
   {
     auto new_condition = condition;
     ui::field_label("Condition");
@@ -3405,7 +3501,8 @@ private:
              std::same_as<TCondition, AnyOfNode>
   auto render_condition_node(this auto& self,
                              const TCondition& condition,
-                             WindowContext& context) -> ErasedNode
+                             WindowContext& context)
+   -> ErasedNode<ErasedSeriesMethodContext>
   {
     auto new_condition = condition;
     ui::field_label("Condition group");
@@ -3445,10 +3542,11 @@ private:
   }
 
   template<typename TCondition>
-    requires std::same_as<TCondition, LogicalNotNode>
+    requires std::same_as<TCondition, LogicalNotNode<ErasedSeriesMethodContext>>
   auto render_condition_node(this auto& self,
                              const TCondition& condition,
-                             WindowContext& context) -> ErasedNode
+                             WindowContext& context)
+   -> ErasedNode<ErasedSeriesMethodContext>
   {
     auto new_condition = condition;
     ui::field_label("Condition");
@@ -3466,12 +3564,15 @@ private:
   }
 
   template<typename TCondition>
-    requires std::same_as<TCondition, LogicalAndNode> ||
-             std::same_as<TCondition, LogicalOrNode> ||
-             std::same_as<TCondition, LogicalXorNode>
+    requires std::same_as<TCondition,
+                          LogicalAndNode<ErasedSeriesMethodContext>> ||
+             std::same_as<TCondition,
+                          LogicalOrNode<ErasedSeriesMethodContext>> ||
+             std::same_as<TCondition, LogicalXorNode<ErasedSeriesMethodContext>>
   auto render_condition_node(this auto& self,
                              const TCondition& condition,
-                             WindowContext& context) -> ErasedNode
+                             WindowContext& context)
+   -> ErasedNode<ErasedSeriesMethodContext>
   {
     auto new_condition = condition;
     auto first_condition = new_condition.first_condition();
@@ -3503,9 +3604,10 @@ private:
     return changed_node;
   }
 
-  void render_plot_method(this auto& self,
-                          AnyPlotMethod& plot_method,
-                          WindowContext& context)
+  void
+  render_plot_method(this auto& self,
+                     ErasedPlotMethod<ErasedPlotMethodContext>& plot_method,
+                     WindowContext& context)
   {
     static const auto entries = [] {
       auto result = std::vector<ui::ComboEntry>{};
@@ -3702,9 +3804,10 @@ private:
     }
   }
 
-  void render_plot_source_method(this auto& self,
-                                 AnyPlotSourceMethod& plot_source_method,
-                                 WindowContext& context)
+  void render_plot_source_method(
+   this auto& self,
+   ErasedPlotSourceMethod<ErasedPlotMethodContext>& plot_source_method,
+   WindowContext& context)
   {
     if(auto* method_ptr =
         plot_source_method_cast<SeriesPlotSourceMethod>(plot_source_method)) {

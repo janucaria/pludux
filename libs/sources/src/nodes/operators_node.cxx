@@ -18,7 +18,8 @@ export namespace pludux {
 template<typename TBinaryFn>
 class BinaryOperatorNode {
 public:
-  BinaryOperatorNode(ErasedNode operand1, ErasedNode operand2)
+  BinaryOperatorNode(ErasedNode<ErasedSeriesMethodContext> operand1,
+                     ErasedNode<ErasedSeriesMethodContext> operand2)
   : operand1_{std::move(operand1)}
   , operand2_{std::move(operand2)}
   {
@@ -28,56 +29,62 @@ public:
    -> bool = default;
 
   auto operand1(this const BinaryOperatorNode& self) noexcept
-   -> const ErasedNode&
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.operand1_;
   }
 
-  void operand1(this BinaryOperatorNode& self, ErasedNode operand1) noexcept
+  void operand1(this BinaryOperatorNode& self,
+                ErasedNode<ErasedSeriesMethodContext> operand1) noexcept
   {
     self.operand1_ = std::move(operand1);
   }
 
-  auto left(this const BinaryOperatorNode& self) noexcept -> const ErasedNode&
+  auto left(this const BinaryOperatorNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.operand1();
   }
 
-  void left(this BinaryOperatorNode& self, ErasedNode left) noexcept
+  void left(this BinaryOperatorNode& self,
+            ErasedNode<ErasedSeriesMethodContext> left) noexcept
   {
     self.operand1(std::move(left));
   }
 
   auto operand2(this const BinaryOperatorNode& self) noexcept
-   -> const ErasedNode&
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.operand2_;
   }
 
-  void operand2(this BinaryOperatorNode& self, ErasedNode operand2) noexcept
+  void operand2(this BinaryOperatorNode& self,
+                ErasedNode<ErasedSeriesMethodContext> operand2) noexcept
   {
     self.operand2_ = std::move(operand2);
   }
 
-  auto right(this const BinaryOperatorNode& self) noexcept -> const ErasedNode&
+  auto right(this const BinaryOperatorNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.operand2();
   }
 
-  void right(this BinaryOperatorNode& self, ErasedNode right) noexcept
+  void right(this BinaryOperatorNode& self,
+             ErasedNode<ErasedSeriesMethodContext> right) noexcept
   {
     self.operand2(std::move(right));
   }
 
 private:
-  ErasedNode operand1_;
-  ErasedNode operand2_;
+  ErasedNode<ErasedSeriesMethodContext> operand1_;
+  ErasedNode<ErasedSeriesMethodContext> operand2_;
 };
 
 template<typename TUnaryFn>
 class UnaryOperatorNode {
 public:
-  explicit UnaryOperatorNode(ErasedNode operand)
+  explicit UnaryOperatorNode(ErasedNode<ErasedSeriesMethodContext> operand)
   : operand_{std::move(operand)}
   {
   }
@@ -85,18 +92,20 @@ public:
   auto operator==(const UnaryOperatorNode& other) const noexcept
    -> bool = default;
 
-  auto operand(this const UnaryOperatorNode& self) noexcept -> const ErasedNode&
+  auto operand(this const UnaryOperatorNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.operand_;
   }
 
-  void operand(this UnaryOperatorNode& self, ErasedNode operand) noexcept
+  void operand(this UnaryOperatorNode& self,
+               ErasedNode<ErasedSeriesMethodContext> operand) noexcept
   {
     self.operand_ = std::move(operand);
   }
 
 private:
-  ErasedNode operand_;
+  ErasedNode<ErasedSeriesMethodContext> operand_;
 };
 
 using MultiplyNode = BinaryOperatorNode<std::multiplies<>>;
@@ -123,25 +132,30 @@ using PositivePartNode = UnaryOperatorNode<PositivePart<>>;
 
 using NegativePartNode = UnaryOperatorNode<NegativePart<>>;
 
-template<typename TBinaryFn>
-auto pludux_tag_invoke(NodeToErasedMethod,
+template<typename TBinaryFn, MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const BinaryOperatorNode<TBinaryFn>& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<TContext>
 {
-  auto operand1 = node_to_erased_method(node.operand1(), context);
-  auto operand2 = node_to_erased_method(node.operand2(), context);
-  return AnySeriesMethod{
-   BinaryOperatorMethod<TBinaryFn, AnySeriesMethod, AnySeriesMethod>{
-    std::move(operand1), std::move(operand2)}};
+  auto operand1 = node_to_erased_method<TContext>(node.operand1(), context);
+  auto operand2 = node_to_erased_method<TContext>(node.operand2(), context);
+  return ErasedSeriesMethod<TContext>{
+   BinaryOperatorMethod<TBinaryFn,
+                        ErasedSeriesMethod<TContext>,
+                        ErasedSeriesMethod<TContext>>{std::move(operand1),
+                                                      std::move(operand2)}};
 }
 
-template<typename TUnaryFn>
-auto pludux_tag_invoke(NodeToErasedMethod,
+template<typename TUnaryFn, MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const UnaryOperatorNode<TUnaryFn>& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<TContext>
 {
-  return AnySeriesMethod{UnaryOperatorMethod<TUnaryFn, AnySeriesMethod>{
-   node_to_erased_method(node.operand(), context)}};
+  return ErasedSeriesMethod<TContext>{
+   UnaryOperatorMethod<TUnaryFn, ErasedSeriesMethod<TContext>>{
+    node_to_erased_method<TContext>(node.operand(), context)}};
 }
 
 } // namespace pludux

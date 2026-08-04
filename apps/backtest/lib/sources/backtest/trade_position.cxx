@@ -54,6 +54,7 @@ public:
   , position_size_{position_size}
   , investment_{investment}
   , entry_price_{entry_price}
+  , latest_entry_price_{entry_price}
   , total_entry_fees_{total_entry_fees}
   , stop_loss_levels_{std::move(stop_loss_levels)}
   , entry_timestamp_{entry_timestamp}
@@ -100,6 +101,16 @@ public:
   void entry_price(this TradePosition& self, double price) noexcept
   {
     self.entry_price_ = price;
+  }
+
+  auto latest_entry_price(this const TradePosition& self) noexcept -> double
+  {
+    return self.latest_entry_price_;
+  }
+
+  void latest_entry_price(this TradePosition& self, double price) noexcept
+  {
+    self.latest_entry_price_ = price;
   }
 
   auto total_entry_fees(this const TradePosition& self) noexcept -> double
@@ -294,6 +305,7 @@ public:
 
     self.position_size(updated_position_size);
     self.investment(updated_investment);
+    self.latest_entry_price(action_price);
 
     self.trade_event_count_++;
 
@@ -482,6 +494,7 @@ private:
   double investment_;
 
   double entry_price_;
+  double latest_entry_price_;
   double total_entry_fees_;
 
   std::vector<StopLossLevel> stop_loss_levels_;

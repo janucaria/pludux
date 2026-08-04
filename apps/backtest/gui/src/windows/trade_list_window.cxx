@@ -60,7 +60,7 @@ public:
       return;
     }
 
-    auto trades = collect_trades(timeline);
+    auto trades = collect_trades(timeline, self.trade_source_);
     self.synchronize_selection(trades);
 
     const auto visible_trades = self.filter_trades(trades);
@@ -96,6 +96,7 @@ public:
 
 private:
   enum class TradeFilter { All, Open, Winners, Losers };
+  enum class TradeSource { Actual, Hypothetical };
 
   struct TradeKey {
     std::size_t id{};
@@ -127,11 +128,12 @@ private:
   };
 
   TradeFilter filter_{TradeFilter::All};
+  TradeSource trade_source_{TradeSource::Actual};
   ImGuiTextFilter search_filter_{};
   std::optional<TradeKey> selected_trade_{};
 
-  static auto collect_trades(const backtest::BacktestTimeline& timeline)
-   -> std::vector<TradeView>
+  static auto collect_trades(const backtest::BacktestTimeline& timeline,
+                             TradeSource source) -> std::vector<TradeView>
   {
     auto trades = std::vector<TradeView>{};
     if(timeline.empty()) {
@@ -139,6 +141,22 @@ private:
     }
 
     const auto last_index = timeline.size() - 1;
+    if(source == TradeSource::Hypothetical) {
+      if(const auto& open_position =
+          timeline.strategy_open_position(last_index)) {
+        trades.push_back(make_trade_view(
+         *open_position, timeline.market_timestamp(last_index)));
+      }
+      for(auto index = timeline.size(); index-- > 0;) {
+        const auto& closed = timeline.strategy_closed_positions(index);
+        for(auto position = closed.rbegin(); position != closed.rend();
+            ++position) {
+          trades.push_back(make_trade_view(*position));
+        }
+      }
+      return trades;
+    }
+
     if(const auto& open_position = timeline.open_position(last_index)) {
       trades.push_back(make_trade_view(*open_position));
     }
@@ -151,6 +169,64 @@ private:
       }
     }
     return trades;
+  }
+
+  static auto make_trade_view(const backtest::StrategyClosedPosition& position)
+   -> TradeView
+  {
+    const auto average_entry = position.normalized_entry_quantity() > 0.0
+                                ? position.normalized_entry_notional() /
+                                   position.normalized_entry_quantity()
+                                : 0.0;
+    const auto exit_price = position.intents().empty()
+                             ? average_entry
+                             : position.intents().back().price();
+    return TradeView{.key = TradeKey{position.strategy_trade_id(), false},
+                     .long_position =
+                      position.direction() == backtest::StrategyDirection::Long,
+                     .status = "Hypothetical",
+                     .entry_timestamp = position.entry_timestamp(),
+                     .exit_timestamp = position.exit_timestamp(),
+                     .entry_price = average_entry,
+                     .last_price = exit_price,
+                     .average_price = average_entry,
+                     .quantity = position.normalized_entry_quantity(),
+                     .investment = position.normalized_entry_notional(),
+                     .pnl = position.directional_price_pnl(),
+                     .fees = 0.0,
+                     .duration = position.duration(),
+                     .risk_distance = NAN,
+                     .risk_reference_price = NAN,
+                     .risk_boundary_price = NAN,
+                     .signal_exits = "See ordered strategy intents",
+                     .take_profits = "See ordered strategy intents",
+                     .stop_losses = "See ordered strategy intents"};
+  }
+
+  static auto
+  make_trade_view(const backtest::StrategyOpenPositionSnapshot& position,
+                  std::time_t market_timestamp) -> TradeView
+  {
+    return TradeView{.key = TradeKey{position.strategy_trade_id(), true},
+                     .long_position =
+                      position.direction() == backtest::StrategyDirection::Long,
+                     .status = "Hypothetical open",
+                     .entry_timestamp = position.entry_timestamp(),
+                     .exit_timestamp = std::nullopt,
+                     .entry_price = position.average_price(),
+                     .last_price = position.market_price(),
+                     .average_price = position.average_price(),
+                     .quantity = position.normalized_quantity(),
+                     .investment = position.normalized_investment(),
+                     .pnl = position.unrealized_price_pnl(),
+                     .fees = 0.0,
+                     .duration = position.duration(market_timestamp),
+                     .risk_distance = NAN,
+                     .risk_reference_price = NAN,
+                     .risk_boundary_price = NAN,
+                     .signal_exits = "Unrealized shadow position",
+                     .take_profits = "Unrealized shadow position",
+                     .stop_losses = "Unrealized shadow position"};
   }
 
   static auto make_trade_view(const backtest::ClosedTrade& trade) -> TradeView
@@ -264,14 +340,37 @@ private:
                          std::size_t total_count)
   {
     const auto flags = ImGuiTableFlags_SizingStretchProp;
-    if(ImGui::BeginTable("##trade_filters", 3, flags)) {
+    if(ImGui::BeginTable("##trade_filters", 4, flags)) {
       ImGui::TableSetupColumn("Search", ImGuiTableColumnFlags_WidthStretch);
+      ImGui::TableSetupColumn(
+       "Source", ImGuiTableColumnFlags_WidthFixed, 130.0f);
       ImGui::TableSetupColumn(
        "Filter", ImGuiTableColumnFlags_WidthFixed, 150.0f);
       ImGui::TableSetupColumn("Count", ImGuiTableColumnFlags_WidthFixed, 90.0f);
       ImGui::TableNextRow();
       ImGui::TableNextColumn();
       ui::search_filter(self.search_filter_, "##trade_search");
+      ImGui::TableNextColumn();
+      ImGui::SetNextItemWidth(-1.0f);
+      if(ImGui::BeginCombo("##trade_source",
+                           self.trade_source_ == TradeSource::Actual
+                            ? "Actual"
+                            : "Hypothetical")) {
+        for(const auto option :
+            {TradeSource::Actual, TradeSource::Hypothetical}) {
+          const auto selected = self.trade_source_ == option;
+          if(ImGui::Selectable(option == TradeSource::Actual ? "Actual"
+                                                             : "Hypothetical",
+                               selected)) {
+            self.trade_source_ = option;
+            self.selected_trade_.reset();
+          }
+          if(selected) {
+            ImGui::SetItemDefaultFocus();
+          }
+        }
+        ImGui::EndCombo();
+      }
       ImGui::TableNextColumn();
       ImGui::SetNextItemWidth(-1.0f);
       if(ImGui::BeginCombo("##trade_filter", filter_label(self.filter_))) {

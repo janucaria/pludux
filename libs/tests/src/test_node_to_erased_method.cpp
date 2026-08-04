@@ -6,7 +6,8 @@ import pludux;
 
 using namespace pludux;
 
-auto value_method_value(const AnySeriesMethod& method) noexcept -> double
+auto value_method_value(
+ const ErasedSeriesMethod<ErasedSeriesMethodContext>& method) noexcept -> double
 {
   const auto* value_method = series_method_cast<ValueMethod>(method);
   EXPECT_NE(value_method, nullptr);
@@ -15,11 +16,12 @@ auto value_method_value(const AnySeriesMethod& method) noexcept -> double
 
 TEST(NodeToErasedMethodTest, NumericInputNodeConvertsToValueMethod)
 {
-  const auto node = ErasedNode{NumericInputNode{
+  const auto node = ErasedNode<ErasedSeriesMethodContext>{NumericInputNode{
    "Length", NumericInputNode::ValueRepresentation::SignedInteger, 14.9}};
 
   auto input_context = NodeToErasedMethodContext{};
-  const auto method = node_to_erased_method(node, input_context);
+  const auto method =
+   node_to_erased_method<ErasedSeriesMethodContext>(node, input_context);
   const auto* value_method = series_method_cast<ValueMethod>(method);
 
   ASSERT_NE(value_method, nullptr);
@@ -28,7 +30,7 @@ TEST(NodeToErasedMethodTest, NumericInputNodeConvertsToValueMethod)
 
 TEST(NodeToErasedMethodTest, NumericInputNodeConsumesContextByTraversalOrder)
 {
-  const auto node = ErasedNode{AddNode{
+  const auto node = ErasedNode<ErasedSeriesMethodContext>{AddNode{
    NumericInputNode{
     "Duplicate", NumericInputNode::ValueRepresentation::Decimal, 1.0},
    NumericInputNode{
@@ -37,9 +39,12 @@ TEST(NodeToErasedMethodTest, NumericInputNodeConsumesContextByTraversalOrder)
   const auto inputs = std::vector<double>{10.5, -4.8};
   auto input_context = NodeToErasedMethodContext{inputs};
 
-  const auto method = node_to_erased_method(node, input_context);
+  const auto method =
+   node_to_erased_method<ErasedSeriesMethodContext>(node, input_context);
   const auto* add_method =
-   series_method_cast<AddMethod<AnySeriesMethod, AnySeriesMethod>>(method);
+   series_method_cast<AddMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
+                                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+    method);
 
   ASSERT_NE(add_method, nullptr);
 
@@ -57,7 +62,7 @@ TEST(NodeToErasedMethodTest, NumericInputNodeConsumesContextByTraversalOrder)
 
 TEST(NodeToErasedMethodTest, MovingAveragePeriodConsumesContextInput)
 {
-  const auto node = ErasedNode{SmaNode{
+  const auto node = ErasedNode<ErasedSeriesMethodContext>{SmaNode{
    CloseNode{},
    NumericInputNode{
     "Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 20.0}}};
@@ -65,9 +70,12 @@ TEST(NodeToErasedMethodTest, MovingAveragePeriodConsumesContextInput)
   const auto inputs = std::vector<double>{7.0};
   auto input_context = NodeToErasedMethodContext{inputs};
 
-  const auto method = node_to_erased_method(node, input_context);
+  const auto method =
+   node_to_erased_method<ErasedSeriesMethodContext>(node, input_context);
   const auto* sma_method =
-   series_method_cast<SmaMethod<AnySeriesMethod, AnySeriesMethod>>(method);
+   series_method_cast<SmaMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
+                                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+    method);
 
   ASSERT_NE(sma_method, nullptr);
   EXPECT_EQ(value_method_value(sma_method->period()), 7);
@@ -76,13 +84,17 @@ TEST(NodeToErasedMethodTest, MovingAveragePeriodConsumesContextInput)
 
 TEST(NodeToErasedMethodTest, PrimitiveMovingAveragePeriodBecomesValueMethod)
 {
-  const auto node = ErasedNode{SmaNode{CloseNode{}, 20}};
+  const auto node =
+   ErasedNode<ErasedSeriesMethodContext>{SmaNode{CloseNode{}, 20}};
 
   auto input_context = NodeToErasedMethodContext{};
 
-  const auto method = node_to_erased_method(node, input_context);
+  const auto method =
+   node_to_erased_method<ErasedSeriesMethodContext>(node, input_context);
   const auto* sma_method =
-   series_method_cast<SmaMethod<AnySeriesMethod, AnySeriesMethod>>(method);
+   series_method_cast<SmaMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
+                                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+    method);
 
   ASSERT_NE(sma_method, nullptr);
   EXPECT_EQ(value_method_value(sma_method->period()), 20);
@@ -91,7 +103,7 @@ TEST(NodeToErasedMethodTest, PrimitiveMovingAveragePeriodBecomesValueMethod)
 
 TEST(NodeToErasedMethodTest, BollingerBandInputsConsumeContextInOrder)
 {
-  const auto node = ErasedNode{BbNode{
+  const auto node = ErasedNode<ErasedSeriesMethodContext>{BbNode{
    CloseNode{},
    NumericInputNode{
     "Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 20.0},
@@ -101,9 +113,12 @@ TEST(NodeToErasedMethodTest, BollingerBandInputsConsumeContextInOrder)
   const auto inputs = std::vector<double>{7.0, 1.25};
   auto input_context = NodeToErasedMethodContext{inputs};
 
-  const auto method = node_to_erased_method(node, input_context);
+  const auto method =
+   node_to_erased_method<ErasedSeriesMethodContext>(node, input_context);
   const auto* bb_method =
-   series_method_cast<BbMethod<AnySeriesMethod, AnySeriesMethod>>(method);
+   series_method_cast<BbMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
+                               ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+    method);
 
   ASSERT_NE(bb_method, nullptr);
   EXPECT_EQ(value_method_value(bb_method->period()), 7);
@@ -113,7 +128,7 @@ TEST(NodeToErasedMethodTest, BollingerBandInputsConsumeContextInOrder)
 
 TEST(NodeToErasedMethodTest, KeltnerChannelInputsConsumeContextInOrder)
 {
-  const auto node = ErasedNode{KcNode{
+  const auto node = ErasedNode<ErasedSeriesMethodContext>{KcNode{
    CloseNode{},
    NumericInputNode{
     "Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 20.0},
@@ -126,9 +141,12 @@ TEST(NodeToErasedMethodTest, KeltnerChannelInputsConsumeContextInOrder)
   const auto inputs = std::vector<double>{9.0, 2.25, 6.0};
   auto input_context = NodeToErasedMethodContext{inputs};
 
-  const auto method = node_to_erased_method(node, input_context);
+  const auto method =
+   node_to_erased_method<ErasedSeriesMethodContext>(node, input_context);
   const auto* kc_method =
-   series_method_cast<KcMethod<AnySeriesMethod, AnySeriesMethod>>(method);
+   series_method_cast<KcMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
+                               ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+    method);
 
   ASSERT_NE(kc_method, nullptr);
   EXPECT_EQ(value_method_value(kc_method->period()), 9);
@@ -139,7 +157,7 @@ TEST(NodeToErasedMethodTest, KeltnerChannelInputsConsumeContextInOrder)
 
 TEST(NodeToErasedMethodTest, MacdInputsConsumeContextInOrder)
 {
-  const auto node = ErasedNode{MacdNode{
+  const auto node = ErasedNode<ErasedSeriesMethodContext>{MacdNode{
    CloseNode{},
    NumericInputNode{"Fast Period",
                     NumericInputNode::ValueRepresentation::UnsignedInteger,
@@ -154,9 +172,11 @@ TEST(NodeToErasedMethodTest, MacdInputsConsumeContextInOrder)
   const auto inputs = std::vector<double>{5.0, 13.0, 3.0};
   auto input_context = NodeToErasedMethodContext{inputs};
 
-  const auto method = node_to_erased_method(node, input_context);
-  const auto* macd_method =
-   series_method_cast<MacdMethod<AnySeriesMethod, AnySeriesMethod>>(method);
+  const auto method =
+   node_to_erased_method<ErasedSeriesMethodContext>(node, input_context);
+  const auto* macd_method = series_method_cast<
+   MacdMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
+              ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
 
   ASSERT_NE(macd_method, nullptr);
   EXPECT_EQ(value_method_value(macd_method->fast_period()), 5);
@@ -167,7 +187,7 @@ TEST(NodeToErasedMethodTest, MacdInputsConsumeContextInOrder)
 
 TEST(NodeToErasedMethodTest, StochRsiInputsConsumeContextInOrder)
 {
-  const auto node = ErasedNode{StochRsiNode{
+  const auto node = ErasedNode<ErasedSeriesMethodContext>{StochRsiNode{
    CloseNode{},
    NumericInputNode{
     "RSI Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 14.0},
@@ -181,9 +201,11 @@ TEST(NodeToErasedMethodTest, StochRsiInputsConsumeContextInOrder)
   const auto inputs = std::vector<double>{21.0, 8.0, 4.0, 2.0};
   auto input_context = NodeToErasedMethodContext{inputs};
 
-  const auto method = node_to_erased_method(node, input_context);
-  const auto* stoch_rsi_method =
-   series_method_cast<StochRsiMethod<AnySeriesMethod, AnySeriesMethod>>(method);
+  const auto method =
+   node_to_erased_method<ErasedSeriesMethodContext>(node, input_context);
+  const auto* stoch_rsi_method = series_method_cast<
+   StochRsiMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
+                  ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
 
   ASSERT_NE(stoch_rsi_method, nullptr);
   EXPECT_EQ(value_method_value(stoch_rsi_method->rsi_period()), 21);

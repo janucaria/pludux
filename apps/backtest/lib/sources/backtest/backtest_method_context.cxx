@@ -115,7 +115,8 @@ class BacktestMethodContext {
 public:
   BacktestMethodContext(
    DefaultMethodContext default_context,
-   const OrderedNamedRegistry<AnySeriesMethod>& series_methods,
+   const OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>&
+    series_methods,
    const BacktestAccountState& account_state) noexcept
   : default_context_{std::move(default_context)}
   , series_methods_{series_methods}
@@ -259,7 +260,8 @@ public:
 
 private:
   DefaultMethodContext default_context_;
-  const OrderedNamedRegistry<AnySeriesMethod>& series_methods_;
+  const OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>&
+   series_methods_;
   const BacktestAccountState& account_state_;
   double position_initial_entry_price_{
    std::numeric_limits<double>::quiet_NaN()};

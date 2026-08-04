@@ -23,7 +23,7 @@ if(NOT EMSCRIPTEN)
   FetchContent_Declare(
     wgpu_native
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-    URL "https://github.com/gfx-rs/wgpu-native/releases/download/v29.0.0.0/${PLUDUX_WEBGPU_DOWNLOAD}.zip"
+    URL "https://github.com/gfx-rs/wgpu-native/releases/download/v29.0.1.1/${PLUDUX_WEBGPU_DOWNLOAD}.zip"
   )
   
   FetchContent_MakeAvailable(wgpu_native)
@@ -90,7 +90,7 @@ endif()
 FetchContent_Declare(
   imgui
   GIT_REPOSITORY "https://github.com/ocornut/imgui.git"
-  GIT_TAG        "v1.92.7-docking"
+  GIT_TAG        "v1.92.9-docking"
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
 )
@@ -167,6 +167,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/ui/ui_theme.cxx
     src/ui/ui_widgets.cxx
     src/ui/summary_widgets.cxx
+    src/ui/condition_node_editor.cxx
 
     src/charts/backtest_chart_state.cxx
 
@@ -257,6 +258,10 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   ${implot_SOURCE_DIR}
   ${PLUDUX_ICON_FONT_DIR}
 )
+
+if(MSVC)
+  target_compile_options(${PROJECT_NAME} PRIVATE /bigobj)
+endif()
 
 target_link_libraries(${PROJECT_NAME}
   PUBLIC

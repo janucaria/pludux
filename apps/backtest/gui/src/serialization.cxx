@@ -3,6 +3,7 @@ module;
 #include <cstddef>
 #include <istream>
 #include <ostream>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -109,6 +110,113 @@ auto strategies_from_json(const Json& json)
   return values;
 }
 
+template<typename Json>
+auto strategy_performance_from_json(const Json& json)
+ -> pludux::backtest::StrategyPerformanceConfig
+{
+  using namespace pludux::backtest;
+  const auto break_even_value =
+   required_as<std::string>(json, "breakEvenTreatment");
+  const auto break_even_treatment = [&] {
+    if(break_even_value == "SKIP") {
+      return StrategyPerformanceBreakEvenTreatment::Skip;
+    }
+    if(break_even_value == "COUNT_AS_WIN") {
+      return StrategyPerformanceBreakEvenTreatment::CountAsWin;
+    }
+    if(break_even_value == "COUNT_AS_LOSS") {
+      return StrategyPerformanceBreakEvenTreatment::CountAsLoss;
+    }
+    throw std::invalid_argument{"Invalid break-even treatment"};
+  }();
+  const auto& history = json.at("history");
+  const auto mode_value = required_as<int>(history, "mode");
+  if(mode_value < static_cast<int>(StrategyPerformanceHistoryMode::All) ||
+     mode_value >
+      static_cast<int>(StrategyPerformanceHistoryMode::ExponentialDecay)) {
+    throw std::invalid_argument{"Invalid strategy-performance history mode"};
+  }
+  const auto& bayesian = json.at("bayesian");
+  const auto& win = bayesian.at("winProbability");
+  if(required_as<std::string>(win, "method") != "BETA_BERNOULLI") {
+    throw std::invalid_argument{"Unsupported Bayesian win model"};
+  }
+  const auto& win_params = win.at("params");
+  const auto parse_payoff = [](const auto& payoff) {
+    if(required_as<std::string>(payoff, "method") != "GAMMA_INVERSE_GAMMA") {
+      throw std::invalid_argument{"Unsupported Bayesian payoff model"};
+    }
+    const auto& params = payoff.at("params");
+    return BayesianPayoffModelNode{GammaPayoffModelNode{
+     required_as<double>(params, "priorMeanMagnitude"),
+     required_as<double>(params, "priorStrength"),
+     required_as<double>(params, "coefficientOfVariation")}};
+  };
+  return StrategyPerformanceConfig{
+   StrategyPerformanceHistoryPolicy{
+    static_cast<StrategyPerformanceHistoryMode>(mode_value),
+    required_as<std::size_t>(history, "rollingWindow"),
+    required_as<double>(history, "exponentialDecay")},
+   StrategyPerformanceBayesianConfig{
+    BayesianWinModelNode{BetaBernoulliModelNode{
+     required_as<double>(win_params, "priorWinProbability"),
+     required_as<double>(win_params, "priorStrength")}},
+    parse_payoff(bayesian.at("winningPayoff")),
+    parse_payoff(bayesian.at("losingPayoff"))},
+   break_even_treatment};
+}
+
+template<typename Json>
+auto strategy_performance_to_json(
+ const pludux::backtest::StrategyPerformanceConfig& config) -> Json
+{
+  auto json = Json{};
+  switch(config.break_even_treatment()) {
+  case pludux::backtest::StrategyPerformanceBreakEvenTreatment::Skip:
+    json["breakEvenTreatment"] = "SKIP";
+    break;
+  case pludux::backtest::StrategyPerformanceBreakEvenTreatment::CountAsWin:
+    json["breakEvenTreatment"] = "COUNT_AS_WIN";
+    break;
+  case pludux::backtest::StrategyPerformanceBreakEvenTreatment::CountAsLoss:
+    json["breakEvenTreatment"] = "COUNT_AS_LOSS";
+    break;
+  }
+  json["history"]["mode"] = static_cast<int>(config.history().mode());
+  json["history"]["rollingWindow"] = config.history().rolling_window();
+  json["history"]["exponentialDecay"] = config.history().exponential_decay();
+  const auto* win_model =
+   bayesian_model_node_cast<pludux::backtest::BetaBernoulliModelNode>(
+    config.bayesian().win_probability_model());
+  if(win_model == nullptr) {
+    throw std::invalid_argument{"Unsupported Bayesian win model"};
+  }
+  json["bayesian"]["winProbability"]["method"] = "BETA_BERNOULLI";
+  json["bayesian"]["winProbability"]["params"]["priorWinProbability"] =
+   win_model->prior_probability();
+  json["bayesian"]["winProbability"]["params"]["priorStrength"] =
+   win_model->prior_strength();
+
+  const auto serialize_payoff = [&json](const char* name,
+                                        const auto& model_node) {
+    const auto* model =
+     bayesian_model_node_cast<pludux::backtest::GammaPayoffModelNode>(
+      model_node);
+    if(model == nullptr) {
+      throw std::invalid_argument{"Unsupported Bayesian payoff model"};
+    }
+    json["bayesian"][name]["method"] = "GAMMA_INVERSE_GAMMA";
+    json["bayesian"][name]["params"]["priorMeanMagnitude"] =
+     model->prior_mean_magnitude();
+    json["bayesian"][name]["params"]["priorStrength"] = model->prior_strength();
+    json["bayesian"][name]["params"]["coefficientOfVariation"] =
+     model->coefficient_of_variation();
+  };
+  serialize_payoff("winningPayoff", config.bayesian().winning_payoff_model());
+  serialize_payoff("losingPayoff", config.bayesian().losing_payoff_model());
+  return json;
+}
+
 } // namespace
 
 export namespace jsoncons::reflect {
@@ -153,8 +261,8 @@ struct json_conv_traits<Json, pludux::NumericInputNode> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::PositionSizing> {
-  using value_type = pludux::backtest::PositionSizing;
+struct json_conv_traits<Json, pludux::backtest::PositionSizingNode> {
+  using value_type = pludux::backtest::PositionSizingNode;
   using result_type = jsoncons::conversion_result<value_type>;
 
   static constexpr bool is_compatible = true;
@@ -169,10 +277,40 @@ struct json_conv_traits<Json, pludux::backtest::PositionSizing> {
                             const Json& json)
   {
     try {
-      return result_type{value_type{
-       static_cast<value_type::Mode>(
-        required_as<std::underlying_type_t<value_type::Mode>>(json, "mode")),
-       required_as<double>(json, "value")}};
+      using namespace pludux::backtest;
+      const auto method = required_as<std::string>(json, "method");
+      const auto& params = json.at("params");
+      if(method == "RISK_DISTANCE") {
+        return result_type{value_type{RiskDistancePositionSizing{
+         required_as<double>(params, "riskFraction")}}};
+      }
+      if(method == "FIXED_QUANTITY") {
+        return result_type{value_type{
+         FixedQuantityPositionSizing{required_as<double>(params, "quantity")}}};
+      }
+      if(method == "FIXED_NOTIONAL") {
+        return result_type{value_type{
+         FixedNotionalPositionSizing{required_as<double>(params, "notional")}}};
+      }
+      if(method == "EQUITY_FRACTION") {
+        return result_type{value_type{EquityFractionPositionSizing{
+         required_as<double>(params, "equityFraction")}}};
+      }
+      if(method == "STRATEGY_PERFORMANCE_BAYESIAN_KELLY") {
+        const auto estimate_name = required_as<std::string>(params, "estimate");
+        const auto estimate =
+         estimate_name == "POSTERIOR_MEAN"
+          ? StrategyPerformanceBayesianKellyEstimate::PosteriorMean
+         : estimate_name == "ADVERSE_QUANTILES"
+           ? StrategyPerformanceBayesianKellyEstimate::AdverseQuantiles
+           : throw std::invalid_argument{"Invalid Bayesian Kelly estimate"};
+        return result_type{value_type{StrategyPerformanceBayesianKellySizing{
+         estimate,
+         required_as<double>(params, "centralCredibleMass"),
+         required_as<double>(params, "kellyMultiplier"),
+         required_as<double>(params, "maxEquityFraction")}}};
+      }
+      throw std::invalid_argument{"Unsupported position sizing method"};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -180,12 +318,40 @@ struct json_conv_traits<Json, pludux::backtest::PositionSizing> {
 
   template<typename Alloc, typename TempAlloc>
   static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>&,
-                      const value_type& position_sizing)
+                      const value_type& node)
   {
+    using namespace pludux::backtest;
     auto json = Json{};
-    json["mode"] = static_cast<std::underlying_type_t<value_type::Mode>>(
-     position_sizing.mode());
-    json["value"] = position_sizing.value();
+    if(const auto* value =
+        position_sizing_node_cast<RiskDistancePositionSizing>(node)) {
+      json["method"] = "RISK_DISTANCE";
+      json["params"]["riskFraction"] = value->risk_fraction();
+    } else if(const auto* value =
+               position_sizing_node_cast<FixedQuantityPositionSizing>(node)) {
+      json["method"] = "FIXED_QUANTITY";
+      json["params"]["quantity"] = value->quantity();
+    } else if(const auto* value =
+               position_sizing_node_cast<FixedNotionalPositionSizing>(node)) {
+      json["method"] = "FIXED_NOTIONAL";
+      json["params"]["notional"] = value->notional();
+    } else if(const auto* value =
+               position_sizing_node_cast<EquityFractionPositionSizing>(node)) {
+      json["method"] = "EQUITY_FRACTION";
+      json["params"]["equityFraction"] = value->equity_fraction();
+    } else if(const auto* value = position_sizing_node_cast<
+               StrategyPerformanceBayesianKellySizing>(node)) {
+      json["method"] = "STRATEGY_PERFORMANCE_BAYESIAN_KELLY";
+      json["params"]["estimate"] =
+       value->estimate() ==
+         StrategyPerformanceBayesianKellyEstimate::PosteriorMean
+        ? "POSTERIOR_MEAN"
+        : "ADVERSE_QUANTILES";
+      json["params"]["centralCredibleMass"] = value->central_credible_mass();
+      json["params"]["kellyMultiplier"] = value->kelly_multiplier();
+      json["params"]["maxEquityFraction"] = value->maximum_equity_fraction();
+    } else {
+      throw std::invalid_argument{"Unsupported position sizing method"};
+    }
     return json;
   }
 };
@@ -292,11 +458,14 @@ struct json_conv_traits<Json, pludux::backtest::Profile> {
     try {
       return result_type{value_type{
        required_as<std::string>(json, "name"),
-       required_as<pludux::backtest::PositionSizing>(json, "positionSizing"),
+       required_as<pludux::backtest::PositionSizingNode>(json,
+                                                         "positionSizing"),
        required_as<pludux::backtest::DrawdownAdjustment>(json,
                                                          "drawdownAdjustment"),
        required_as<pludux::backtest::InsufficientCashPolicy>(
-        json, "insufficientCashPolicy")}};
+        json, "insufficientCashPolicy"),
+       pludux::backtest::parse_execution_filter_node(
+        json.at("executionFilter"))}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -312,6 +481,8 @@ struct json_conv_traits<Json, pludux::backtest::Profile> {
     set_json(json, aset, "drawdownAdjustment", profile.drawdown_adjustment());
     set_json(
      json, aset, "insufficientCashPolicy", profile.insufficient_cash_policy());
+    json["executionFilter"] = pludux::backtest::serialize_execution_filter_node(
+     profile.execution_filter());
     return json;
   }
 };
@@ -743,7 +914,8 @@ struct json_conv_traits<Json, pludux::backtest::Backtest> {
        required_as<pludux::backtest::MarketStoreHandle>(json, "market"),
        required_as<pludux::backtest::BrokerStoreHandle>(json, "broker"),
        required_as<pludux::backtest::ProfileStoreHandle>(json, "profile"),
-       vector_from_json<pludux::NumericInputNode>(json.at("inputs"))}};
+       vector_from_json<pludux::NumericInputNode>(json.at("inputs")),
+       strategy_performance_from_json(json.at("strategyPerformance"))}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -762,6 +934,8 @@ struct json_conv_traits<Json, pludux::backtest::Backtest> {
     set_json(json, aset, "broker", backtest.broker_handle());
     set_json(json, aset, "profile", backtest.profile_handle());
     json["inputs"] = vector_to_json<Json>(aset, backtest.inputs());
+    json["strategyPerformance"] =
+     strategy_performance_to_json<Json>(backtest.strategy_performance());
     return json;
   }
 };

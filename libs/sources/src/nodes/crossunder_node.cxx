@@ -12,7 +12,8 @@ export namespace pludux {
 
 class CrossunderNode {
 public:
-  CrossunderNode(ErasedNode source, ErasedNode reference)
+  CrossunderNode(ErasedNode<ErasedSeriesMethodContext> source,
+                 ErasedNode<ErasedSeriesMethodContext> reference)
   : source_{std::move(source)}
   , reference_{std::move(reference)}
   {
@@ -20,39 +21,46 @@ public:
 
   auto operator==(const CrossunderNode& other) const noexcept -> bool = default;
 
-  auto source(this const CrossunderNode& self) noexcept -> const ErasedNode&
+  auto source(this const CrossunderNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.source_;
   }
 
-  void source(this CrossunderNode& self, ErasedNode source) noexcept
+  void source(this CrossunderNode& self,
+              ErasedNode<ErasedSeriesMethodContext> source) noexcept
   {
     self.source_ = std::move(source);
   }
 
-  auto reference(this const CrossunderNode& self) noexcept -> const ErasedNode&
+  auto reference(this const CrossunderNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.reference_;
   }
 
-  void reference(this CrossunderNode& self, ErasedNode reference) noexcept
+  void reference(this CrossunderNode& self,
+                 ErasedNode<ErasedSeriesMethodContext> reference) noexcept
   {
     self.reference_ = std::move(reference);
   }
 
 private:
-  ErasedNode source_;
-  ErasedNode reference_;
+  ErasedNode<ErasedSeriesMethodContext> source_;
+  ErasedNode<ErasedSeriesMethodContext> reference_;
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const CrossunderNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<TContext>
 {
-  auto source = node_to_erased_method(node.source(), context);
-  auto reference = node_to_erased_method(node.reference(), context);
-  return AnySeriesMethod{CrossunderMethod<AnySeriesMethod, AnySeriesMethod>{
-   std::move(source), std::move(reference)}};
+  auto source = node_to_erased_method<TContext>(node.source(), context);
+  auto reference = node_to_erased_method<TContext>(node.reference(), context);
+  return ErasedSeriesMethod<TContext>{
+   CrossunderMethod<ErasedSeriesMethod<TContext>, ErasedSeriesMethod<TContext>>{
+    std::move(source), std::move(reference)}};
 }
 
 } // namespace pludux

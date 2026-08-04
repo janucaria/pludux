@@ -92,6 +92,8 @@ TEST(TradeSessionTest, ScaleInEmitsScaleInEvent)
   auto session = TradeSession{static_cast<std::time_t>(20), 100.0, 1};
 
   session.entry_position(TradeEntry{2.0, 100.0});
+  ASSERT_TRUE(session.open_position().has_value());
+  EXPECT_DOUBLE_EQ(session.open_position()->latest_entry_price(), 100.0);
   session.begin_market_bar(static_cast<std::time_t>(25), 130.0, 5);
   session.entry_position(TradeEntry{1.0, 130.0});
 
@@ -110,6 +112,7 @@ TEST(TradeSessionTest, ScaleInEmitsScaleInEvent)
   EXPECT_DOUBLE_EQ(event.price(), 130.0);
   EXPECT_DOUBLE_EQ(event.position_size_after(), 3.0);
   EXPECT_DOUBLE_EQ(event.investment_after(), 330.0);
+  EXPECT_DOUBLE_EQ(session.open_position()->latest_entry_price(), 130.0);
 
   EXPECT_DOUBLE_EQ(session.unrealized_pnl(), 60.0);
   EXPECT_DOUBLE_EQ(session.unrealized_investment(), 330.0);

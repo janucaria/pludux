@@ -29,7 +29,7 @@ public:
   {
   }
 
-  BbNode(ErasedNode source,
+  BbNode(ErasedNode<ErasedSeriesMethodContext> source,
          std::size_t period,
          double stddev,
          MaNodeType ma_node_type = MaNodeType::Sma)
@@ -40,9 +40,9 @@ public:
   {
   }
 
-  BbNode(ErasedNode source,
-         ErasedNode period,
-         ErasedNode stddev,
+  BbNode(ErasedNode<ErasedSeriesMethodContext> source,
+         ErasedNode<ErasedSeriesMethodContext> period,
+         ErasedNode<ErasedSeriesMethodContext> stddev,
          MaNodeType ma_node_type = MaNodeType::Sma)
   : source_{std::move(source)}
   , period_{std::move(period)}
@@ -53,12 +53,14 @@ public:
 
   auto operator==(const BbNode& other) const noexcept -> bool = default;
 
-  auto source(this const BbNode& self) noexcept -> const ErasedNode&
+  auto source(this const BbNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.source_;
   }
 
-  void source(this BbNode& self, ErasedNode source) noexcept
+  void source(this BbNode& self,
+              ErasedNode<ErasedSeriesMethodContext> source) noexcept
   {
     self.source_ = std::move(source);
   }
@@ -73,7 +75,8 @@ public:
     self.ma_node_type_ = ma_node_type;
   }
 
-  auto period(this const BbNode& self) noexcept -> const ErasedNode&
+  auto period(this const BbNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.period_;
   }
@@ -83,12 +86,14 @@ public:
     self.period_ = ValueNode{static_cast<double>(new_period)};
   }
 
-  void period(this BbNode& self, ErasedNode period) noexcept
+  void period(this BbNode& self,
+              ErasedNode<ErasedSeriesMethodContext> period) noexcept
   {
     self.period_ = std::move(period);
   }
 
-  auto stddev(this const BbNode& self) noexcept -> const ErasedNode&
+  auto stddev(this const BbNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.stddev_;
   }
@@ -98,25 +103,29 @@ public:
     self.stddev_ = ValueNode{new_stddev};
   }
 
-  void stddev(this BbNode& self, ErasedNode stddev) noexcept
+  void stddev(this BbNode& self,
+              ErasedNode<ErasedSeriesMethodContext> stddev) noexcept
   {
     self.stddev_ = std::move(stddev);
   }
 
 private:
-  ErasedNode source_;
-  ErasedNode period_;
-  ErasedNode stddev_;
+  ErasedNode<ErasedSeriesMethodContext> source_;
+  ErasedNode<ErasedSeriesMethodContext> period_;
+  ErasedNode<ErasedSeriesMethodContext> stddev_;
   MaNodeType ma_node_type_;
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const BbNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<TContext>
 {
-  const auto source_method = node_to_erased_method(node.source(), context);
-  const auto period = node_to_erased_method(node.period(), context);
-  const auto stddev = node_to_erased_method(node.stddev(), context);
+  const auto source_method =
+   node_to_erased_method<TContext>(node.source(), context);
+  const auto period = node_to_erased_method<TContext>(node.period(), context);
+  const auto stddev = node_to_erased_method<TContext>(node.stddev(), context);
 
   return BbMethod{source_method,
                   period,

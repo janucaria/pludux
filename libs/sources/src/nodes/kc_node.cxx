@@ -46,7 +46,7 @@ public:
   {
   }
 
-  KcNode(ErasedNode source,
+  KcNode(ErasedNode<ErasedSeriesMethodContext> source,
          std::size_t period,
          double multiplier,
          std::size_t band_atr_period,
@@ -61,10 +61,10 @@ public:
   {
   }
 
-  KcNode(ErasedNode source,
-         ErasedNode period,
-         ErasedNode multiplier,
-         ErasedNode band_atr_period,
+  KcNode(ErasedNode<ErasedSeriesMethodContext> source,
+         ErasedNode<ErasedSeriesMethodContext> period,
+         ErasedNode<ErasedSeriesMethodContext> multiplier,
+         ErasedNode<ErasedSeriesMethodContext> band_atr_period,
          KcBandNodeType band_node_type = KcBandNodeType::Atr,
          MaNodeType ma_node_type = MaNodeType::Ema)
   : source_{std::move(source)}
@@ -78,12 +78,14 @@ public:
 
   auto operator==(const KcNode& other) const noexcept -> bool = default;
 
-  auto source(this const KcNode& self) noexcept -> const ErasedNode&
+  auto source(this const KcNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.source_;
   }
 
-  void source(this KcNode& self, ErasedNode source) noexcept
+  void source(this KcNode& self,
+              ErasedNode<ErasedSeriesMethodContext> source) noexcept
   {
     self.source_ = std::move(source);
   }
@@ -98,7 +100,8 @@ public:
     self.ma_node_type_ = ma_node_type;
   }
 
-  auto period(this const KcNode& self) noexcept -> const ErasedNode&
+  auto period(this const KcNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.period_;
   }
@@ -108,7 +111,8 @@ public:
     self.period_ = ValueNode{static_cast<double>(period)};
   }
 
-  void period(this KcNode& self, ErasedNode period) noexcept
+  void period(this KcNode& self,
+              ErasedNode<ErasedSeriesMethodContext> period) noexcept
   {
     self.period_ = std::move(period);
   }
@@ -123,7 +127,8 @@ public:
     self.band_node_type_ = band_node_type;
   }
 
-  auto band_atr_period(this const KcNode& self) noexcept -> const ErasedNode&
+  auto band_atr_period(this const KcNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.band_atr_period_;
   }
@@ -133,12 +138,15 @@ public:
     self.band_atr_period_ = ValueNode{static_cast<double>(band_atr_period)};
   }
 
-  void band_atr_period(this KcNode& self, ErasedNode band_atr_period) noexcept
+  void band_atr_period(
+   this KcNode& self,
+   ErasedNode<ErasedSeriesMethodContext> band_atr_period) noexcept
   {
     self.band_atr_period_ = std::move(band_atr_period);
   }
 
-  auto multiplier(this const KcNode& self) noexcept -> const ErasedNode&
+  auto multiplier(this const KcNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.multiplier_;
   }
@@ -148,29 +156,34 @@ public:
     self.multiplier_ = ValueNode{multiplier};
   }
 
-  void multiplier(this KcNode& self, ErasedNode multiplier) noexcept
+  void multiplier(this KcNode& self,
+                  ErasedNode<ErasedSeriesMethodContext> multiplier) noexcept
   {
     self.multiplier_ = std::move(multiplier);
   }
 
 private:
-  ErasedNode source_;
-  ErasedNode period_;
-  ErasedNode multiplier_;
-  ErasedNode band_atr_period_;
+  ErasedNode<ErasedSeriesMethodContext> source_;
+  ErasedNode<ErasedSeriesMethodContext> period_;
+  ErasedNode<ErasedSeriesMethodContext> multiplier_;
+  ErasedNode<ErasedSeriesMethodContext> band_atr_period_;
   KcBandNodeType band_node_type_;
   MaNodeType ma_node_type_;
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const KcNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<TContext>
 {
-  const auto source_method = node_to_erased_method(node.source(), context);
-  const auto period = node_to_erased_method(node.period(), context);
-  const auto multiplier = node_to_erased_method(node.multiplier(), context);
+  const auto source_method =
+   node_to_erased_method<TContext>(node.source(), context);
+  const auto period = node_to_erased_method<TContext>(node.period(), context);
+  const auto multiplier =
+   node_to_erased_method<TContext>(node.multiplier(), context);
   const auto band_atr_period =
-   node_to_erased_method(node.band_atr_period(), context);
+   node_to_erased_method<TContext>(node.band_atr_period(), context);
 
   return KcMethod{source_method,
                   period,

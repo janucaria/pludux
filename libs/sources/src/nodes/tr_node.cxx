@@ -22,11 +22,13 @@ public:
   auto operator==(const TrNode& other) const noexcept -> bool = default;
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const TrNode&,
-                       NodeToErasedMethodContext&) -> AnySeriesMethod
+                       NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<TContext>
 {
-  return AnySeriesMethod{TrMethod{}};
+  return ErasedSeriesMethod<TContext>{TrMethod{}};
 }
 
 } // namespace pludux

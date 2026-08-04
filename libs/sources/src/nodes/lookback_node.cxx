@@ -20,7 +20,7 @@ public:
   {
   }
 
-  LookbackNode(ErasedNode source, std::size_t period)
+  LookbackNode(ErasedNode<ErasedSeriesMethodContext> source, std::size_t period)
   : source_{std::move(source)}
   , period_{period}
   {
@@ -33,12 +33,14 @@ public:
 
   auto operator==(const LookbackNode& other) const noexcept -> bool = default;
 
-  auto source(this const LookbackNode& self) noexcept -> const ErasedNode&
+  auto source(this const LookbackNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.source_;
   }
 
-  void source(this LookbackNode& self, ErasedNode source) noexcept
+  void source(this LookbackNode& self,
+              ErasedNode<ErasedSeriesMethodContext> source) noexcept
   {
     self.source_ = std::move(source);
   }
@@ -54,16 +56,18 @@ public:
   }
 
 private:
-  ErasedNode source_;
+  ErasedNode<ErasedSeriesMethodContext> source_;
   std::size_t period_;
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const LookbackNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<TContext>
 {
-  return AnySeriesMethod{LookbackMethod{
-   node_to_erased_method(node.source(), context), node.period()}};
+  return ErasedSeriesMethod<TContext>{LookbackMethod{
+   node_to_erased_method<TContext>(node.source(), context), node.period()}};
 }
 
 } // namespace pludux

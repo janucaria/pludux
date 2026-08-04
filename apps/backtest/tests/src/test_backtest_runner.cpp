@@ -85,19 +85,21 @@ TEST(IntrabarPathTest, DojiVisitsNearestExtremeAndBreaksTieLowFirst)
 }
 
 auto make_position_rule(
- AnySeriesMethod entry_method,
- AnySeriesMethod exit_method,
- AnySeriesMethod pyramiding_signal,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> entry_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> exit_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> pyramiding_signal,
  std::size_t pyramiding_max_layers,
- AnySeriesMethod stop_price_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> stop_price_method,
  bool stop_loss_enabled,
  bool stop_loss_trailing_enabled,
  std::size_t entry_signal_delay = 1,
- AnySeriesMethod entry_price_method = OpenMethod{},
+ ErasedSeriesMethod<ErasedSeriesMethodContext> entry_price_method =
+  OpenMethod{},
  std::size_t exit_signal_delay = 1,
- AnySeriesMethod exit_price_method = OpenMethod{},
+ ErasedSeriesMethod<ErasedSeriesMethodContext> exit_price_method = OpenMethod{},
  std::size_t pyramiding_signal_delay = 1,
- AnySeriesMethod pyramiding_price_method = OpenMethod{},
+ ErasedSeriesMethod<ErasedSeriesMethodContext> pyramiding_price_method =
+  OpenMethod{},
  StopTargetReferencePrice favorable_stop_target_reference =
   StopTargetReferencePrice::AveragePrice,
  StopTargetReferencePrice unfavorable_stop_target_reference =
@@ -105,11 +107,11 @@ auto make_position_rule(
  double signal_exit_reduce = 1.0,
  double stop_loss_reduce = 1.0,
  std::vector<BacktestRunner::PositionRule::TakeProfitRule> take_profits = {},
- AnySeriesMethod risk_distance_method = ValueMethod{10.0})
- -> BacktestRunner::PositionRule;
+ ErasedSeriesMethod<ErasedSeriesMethodContext> risk_distance_method =
+  ValueMethod{10.0}) -> BacktestRunner::PositionRule;
 
 auto run_single_entry(
- PositionSizing position_sizing,
+ PositionSizingNode position_sizing,
  double entry_price = 100.0,
  DrawdownAdjustment drawdown_adjustment = {},
  double initial_capital = 1000.0,
@@ -148,7 +150,7 @@ auto run_single_entry(
 }
 
 auto run_single_close_price_entry(
- PositionSizing position_sizing,
+ PositionSizingNode position_sizing,
  double open_price = 100.0,
  double close_price = 125.0,
  double stop_price = std::numeric_limits<double>::quiet_NaN(),
@@ -218,9 +220,10 @@ auto latest_closed_trade(const BacktestTimeline& timeline) -> const ClosedTrade&
   return timeline.closed_trades(timeline_i).back();
 }
 
-auto single_take_profit(AnySeriesMethod target_price,
-                        bool enabled,
-                        double reduce = 1.0)
+auto single_take_profit(
+ ErasedSeriesMethod<ErasedSeriesMethodContext> target_price,
+ bool enabled,
+ double reduce = 1.0)
  -> std::vector<BacktestRunner::PositionRule::TakeProfitRule>
 {
   auto take_profits =
@@ -229,7 +232,7 @@ auto single_take_profit(AnySeriesMethod target_price,
   return take_profits;
 }
 
-auto single_stop_loss(AnySeriesMethod stop_price,
+auto single_stop_loss(ErasedSeriesMethod<ErasedSeriesMethodContext> stop_price,
                       bool enabled,
                       bool trailing = false,
                       double reduce = 1.0)
@@ -241,25 +244,26 @@ auto single_stop_loss(AnySeriesMethod stop_price,
 }
 
 auto make_position_rule(
- AnySeriesMethod entry_method,
- AnySeriesMethod exit_method,
- AnySeriesMethod pyramiding_signal,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> entry_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> exit_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> pyramiding_signal,
  std::size_t pyramiding_max_layers,
- AnySeriesMethod stop_price_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> stop_price_method,
  bool stop_loss_enabled,
  bool stop_loss_trailing_enabled,
  std::size_t entry_signal_delay,
- AnySeriesMethod entry_price_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> entry_price_method,
  std::size_t exit_signal_delay,
- AnySeriesMethod exit_price_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> exit_price_method,
  std::size_t pyramiding_signal_delay,
- AnySeriesMethod pyramiding_price_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> pyramiding_price_method,
  StopTargetReferencePrice favorable_stop_target_reference,
  StopTargetReferencePrice unfavorable_stop_target_reference,
  double signal_exit_reduce,
  double stop_loss_reduce,
  std::vector<BacktestRunner::PositionRule::TakeProfitRule> take_profits,
- AnySeriesMethod risk_distance_method) -> BacktestRunner::PositionRule
+ ErasedSeriesMethod<ErasedSeriesMethodContext> risk_distance_method)
+ -> BacktestRunner::PositionRule
 {
   auto signal_exits =
    std::vector<BacktestRunner::PositionRule::SignalExitRule>{};
@@ -287,15 +291,15 @@ auto make_position_rule(
                                       std::move(take_profits)};
 }
 
-auto make_position_rule_with_risk_distance(AnySeriesMethod entry_method,
-                                           AnySeriesMethod exit_method,
-                                           AnySeriesMethod pyramiding_signal,
-                                           std::size_t pyramiding_max_layers,
-                                           AnySeriesMethod risk_distance_method,
-                                           AnySeriesMethod stop_price_method,
-                                           bool stop_loss_enabled,
-                                           bool stop_loss_trailing_enabled)
- -> BacktestRunner::PositionRule
+auto make_position_rule_with_risk_distance(
+ ErasedSeriesMethod<ErasedSeriesMethodContext> entry_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> exit_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> pyramiding_signal,
+ std::size_t pyramiding_max_layers,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> risk_distance_method,
+ ErasedSeriesMethod<ErasedSeriesMethodContext> stop_price_method,
+ bool stop_loss_enabled,
+ bool stop_loss_trailing_enabled) -> BacktestRunner::PositionRule
 {
   return make_position_rule(std::move(entry_method),
                             std::move(exit_method),
@@ -428,7 +432,7 @@ TEST(BacktestRunnerTest, RiskSizingUsesCurrentEquityAfterClosedTrade)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::RiskDistance, 0.10}};
+   Profile{"Test", PositionSizingNode{RiskDistancePositionSizing{0.10}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   const auto entry_signal =
@@ -485,7 +489,7 @@ TEST(BacktestRunnerTest,
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 20.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{20.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -523,6 +527,12 @@ TEST(BacktestRunnerTest,
   EXPECT_DOUBLE_EQ(timeline.equity(0), 1000.0);
   EXPECT_EQ(timeline.trade_count(0), 0);
   EXPECT_EQ(timeline.open_trade_count(0), 0);
+  ASSERT_EQ(timeline.position_sizing_decisions(0).size(), 1U);
+  const auto& sizing = timeline.position_sizing_decisions(0).front();
+  EXPECT_EQ(sizing.outcome, PositionSizingDecisionOutcome::InsufficientCash);
+  EXPECT_DOUBLE_EQ(*sizing.primary_quantity, 20.0);
+  EXPECT_DOUBLE_EQ(*sizing.broker_normalized_quantity, 20.0);
+  EXPECT_FALSE(sizing.final_quantity);
 }
 
 TEST(BacktestRunnerTest, CapToAvailableCashOpensLargestAffordableOrder)
@@ -532,7 +542,7 @@ TEST(BacktestRunnerTest, CapToAvailableCashOpensLargestAffordableOrder)
   const auto broker = Broker{"Test"};
   const auto profile =
    Profile{"Test",
-           PositionSizing{PositionSizing::Mode::FixedQuantity, 20.0},
+           PositionSizingNode{FixedQuantityPositionSizing{20.0}},
            DrawdownAdjustment{},
            InsufficientCashPolicy::CapToAvailableCash};
   auto series_results = SeriesEvaluationResults{};
@@ -562,6 +572,12 @@ TEST(BacktestRunnerTest, CapToAvailableCashOpensLargestAffordableOrder)
   EXPECT_DOUBLE_EQ(timeline.open_position(0)->position_size(), 10.0);
   ASSERT_EQ(timeline.trade_events(0).size(), 1);
   EXPECT_TRUE(timeline.trade_events(0).front().is_entry());
+  ASSERT_EQ(timeline.position_sizing_decisions(0).size(), 1U);
+  const auto& sizing = timeline.position_sizing_decisions(0).front();
+  EXPECT_EQ(sizing.outcome, PositionSizingDecisionOutcome::Executed);
+  EXPECT_TRUE(sizing.cash_capped);
+  EXPECT_DOUBLE_EQ(*sizing.primary_quantity, 20.0);
+  EXPECT_DOUBLE_EQ(*sizing.final_quantity, 10.0);
 }
 
 TEST(BacktestRunnerTest, CapToAvailableCashSkipsWhenBelowMarketMinimum)
@@ -571,7 +587,7 @@ TEST(BacktestRunnerTest, CapToAvailableCashSkipsWhenBelowMarketMinimum)
   const auto broker = Broker{"Test"};
   const auto profile =
    Profile{"Test",
-           PositionSizing{PositionSizing::Mode::FixedQuantity, 20.0},
+           PositionSizingNode{FixedQuantityPositionSizing{20.0}},
            DrawdownAdjustment{},
            InsufficientCashPolicy::CapToAvailableCash};
   auto series_results = SeriesEvaluationResults{};
@@ -600,6 +616,9 @@ TEST(BacktestRunnerTest, CapToAvailableCashSkipsWhenBelowMarketMinimum)
   EXPECT_FALSE(timeline.open_position(0).has_value());
   EXPECT_TRUE(timeline.trade_events(0).empty());
   EXPECT_EQ(timeline.trade_count(0), 0);
+  ASSERT_EQ(timeline.position_sizing_decisions(0).size(), 1U);
+  EXPECT_EQ(timeline.position_sizing_decisions(0).front().outcome,
+            PositionSizingDecisionOutcome::InsufficientCash);
 }
 
 TEST(BacktestRunnerTest, RejectedPyramidingDoesNotChangePosition)
@@ -609,7 +628,7 @@ TEST(BacktestRunnerTest, RejectedPyramidingDoesNotChangePosition)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 6.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{6.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -657,11 +676,12 @@ TEST(BacktestRunnerTest, EquitySignalUsesCurrentAccountState)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
   series_methods.set("equity", EquityMethod{});
 
   const auto entry_signal = EqualMethod{EquityMethod{}, ValueMethod{1000.0}};
@@ -714,11 +734,12 @@ TEST(BacktestRunnerTest, EquityPercentUsesCurrentAccountState)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
   series_methods.set("equity_percent", EquityPercentMethod{});
 
   const auto entry_signal =
@@ -782,11 +803,12 @@ TEST(BacktestRunnerTest, DrawdownSignalUsesCurrentAccountState)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
   series_methods.set("drawdown", DrawdownMethod{});
 
   const auto entry_signal = EqualMethod{CloseMethod{}, ValueMethod{100.0}};
@@ -852,7 +874,8 @@ TEST(BacktestRunnerTest, AccountStateDrawdownUsesEffectiveCurrentPeak)
 
 TEST(BacktestRunnerTest, MethodContextObservesMutatedAccountState)
 {
-  const auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  const auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
   auto series_results = SeriesEvaluationResults{};
   auto default_context = DefaultMethodContext{series_methods, series_results};
   auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
@@ -872,7 +895,7 @@ TEST(BacktestRunnerTest, MethodContextObservesMutatedAccountState)
 TEST(BacktestRunnerTest, FixedQuantitySizingUsesExactQuantity)
 {
   const auto timeline =
-   run_single_entry(PositionSizing{PositionSizing::Mode::FixedQuantity, 12.5},
+   run_single_entry(PositionSizingNode{FixedQuantityPositionSizing{12.5}},
                     100.0,
                     DrawdownAdjustment{},
                     2000.0);
@@ -885,7 +908,7 @@ TEST(BacktestRunnerTest, FixedQuantitySizingUsesExactQuantity)
 TEST(BacktestRunnerTest, FixedNotionalSizingConvertsByEntryPrice)
 {
   const auto timeline =
-   run_single_entry(PositionSizing{PositionSizing::Mode::FixedNotional, 250.0});
+   run_single_entry(PositionSizingNode{FixedNotionalPositionSizing{250.0}});
 
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
@@ -901,7 +924,7 @@ TEST(BacktestRunnerTest, FixedNotionalSizingConvertsBySelectedEntryPrice)
                                         BrokerFee::FeeTrigger::Entry,
                                         1.0}}};
   const auto timeline = run_single_close_price_entry(
-   PositionSizing{PositionSizing::Mode::FixedNotional, 250.0},
+   PositionSizingNode{FixedNotionalPositionSizing{250.0}},
    100.0,
    125.0,
    std::numeric_limits<double>::quiet_NaN(),
@@ -915,20 +938,20 @@ TEST(BacktestRunnerTest, FixedNotionalSizingConvertsBySelectedEntryPrice)
   EXPECT_DOUBLE_EQ(latest_position(timeline).total_entry_fees(), 2.5);
 }
 
-TEST(BacktestRunnerTest, EquityPercentSizingConvertsByCurrentEquity)
+TEST(BacktestRunnerTest, EquityFractionSizingConvertsByCurrentEquity)
 {
   const auto timeline =
-   run_single_entry(PositionSizing{PositionSizing::Mode::EquityPercent, 0.25});
+   run_single_entry(PositionSizingNode{EquityFractionPositionSizing{0.25}});
 
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.5);
 }
 
-TEST(BacktestRunnerTest, EquityPercentSizingConvertsBySelectedEntryPrice)
+TEST(BacktestRunnerTest, EquityFractionSizingConvertsBySelectedEntryPrice)
 {
   const auto timeline = run_single_close_price_entry(
-   PositionSizing{PositionSizing::Mode::EquityPercent, 0.25});
+   PositionSizingNode{EquityFractionPositionSizing{0.25}});
 
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
@@ -939,7 +962,7 @@ TEST(BacktestRunnerTest, EquityPercentSizingConvertsBySelectedEntryPrice)
 TEST(BacktestRunnerTest, RiskDistanceSizingUsesSelectedEntryPrice)
 {
   const auto timeline = run_single_close_price_entry(
-   PositionSizing{PositionSizing::Mode::RiskDistance, 0.10},
+   PositionSizingNode{RiskDistancePositionSizing{0.10}},
    100.0,
    125.0,
    80.0,
@@ -966,7 +989,7 @@ TEST(BacktestRunnerTest, DisabledTakeProfitKeepsTargetReferencePrice)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -1019,7 +1042,7 @@ TEST(BacktestRunnerTest, StopTargetAmountMethodsUseEntryDirection)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -1070,7 +1093,8 @@ TEST(BacktestRunnerTest, ScopedStopTargetAmountMethodsEvaluateDirectly)
 {
   const auto asset = make_single_bar_asset(100.0);
   const auto snapshot = asset.get_snapshot(0);
-  const auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  const auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
   auto series_results = SeriesEvaluationResults{};
   auto default_context = DefaultMethodContext{series_methods, series_results};
   const auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
@@ -1095,7 +1119,8 @@ TEST(BacktestRunnerTest, PositionContextMethodsEvaluateDirectly)
 {
   const auto asset = make_single_bar_asset(100.0);
   const auto snapshot = asset.get_snapshot(0);
-  const auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  const auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
   auto series_results = SeriesEvaluationResults{};
   auto default_context = DefaultMethodContext{series_methods, series_results};
   const auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
@@ -1103,6 +1128,10 @@ TEST(BacktestRunnerTest, PositionContextMethodsEvaluateDirectly)
    BacktestMethodContext{default_context, series_methods, account_state};
   const auto scoped_context =
    context.with_position_prices(90.0, 120.0, 105.0, 110.0, -1.0);
+  const auto risk_context = scoped_context.with_position_risk_distance(10.0);
+  const auto long_risk_context =
+   context.with_position_prices(100.0, 100.0, 100.0, 100.0, 1.0)
+    .with_position_risk_distance(10.0);
 
   EXPECT_TRUE(std::isnan(
    evaluate_series_method(InitialEntryPriceMethod{}, snapshot, context)));
@@ -1130,6 +1159,21 @@ TEST(BacktestRunnerTest, PositionContextMethodsEvaluateDirectly)
   EXPECT_DOUBLE_EQ(
    evaluate_series_method(PositionDirectionMethod{}, snapshot, scoped_context),
    -1.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(PositionRMultipleMethod{}, snapshot, risk_context),
+   1.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(
+    PositionRMultipleMethod{ValueMethod{125.0}}, snapshot, long_risk_context),
+   2.5);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(
+    PositionRMultipleMethod{ValueMethod{95.0}}, snapshot, long_risk_context),
+   -0.5);
+  EXPECT_TRUE(std::isnan(evaluate_series_method(
+   PositionRMultipleMethod{}, snapshot, scoped_context)));
+  EXPECT_TRUE(std::isnan(
+   evaluate_series_method(PositionRMultipleMethod{}, snapshot, context)));
 }
 
 TEST(BacktestRunnerTest, StopTargetPercentageMethodsUseEntryPrice)
@@ -1138,7 +1182,7 @@ TEST(BacktestRunnerTest, StopTargetPercentageMethodsUseEntryPrice)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -1179,7 +1223,7 @@ TEST(BacktestRunnerTest, StopTargetPercentageMethodsUseEntryPrice)
    latest_position(timeline).take_profit_levels().front().price(), 240.0);
 }
 
-TEST(BacktestRunnerTest, StopTargetPercentageMethodsUseFeeAdjustedAveragePrice)
+TEST(BacktestRunnerTest, StopTargetPercentageMethodsUseRawShadowAveragePrice)
 {
   const auto asset = make_single_bar_asset(100.0);
   const auto market = Market{"Test", 0.0, 0.0};
@@ -1190,7 +1234,7 @@ TEST(BacktestRunnerTest, StopTargetPercentageMethodsUseFeeAdjustedAveragePrice)
                                         BrokerFee::FeeTrigger::Entry,
                                         10.0}}};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -1228,16 +1272,17 @@ TEST(BacktestRunnerTest, StopTargetPercentageMethodsUseFeeAdjustedAveragePrice)
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 110.0);
   EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
-                   99.0);
+                   90.0);
   EXPECT_DOUBLE_EQ(
-   latest_position(timeline).take_profit_levels().front().price(), 132.0);
+   latest_position(timeline).take_profit_levels().front().price(), 120.0);
 }
 
 TEST(BacktestRunnerTest, ScopedStopTargetPercentMethodsEvaluateDirectly)
 {
   const auto asset = make_single_bar_asset(200.0);
   const auto snapshot = asset.get_snapshot(0);
-  const auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  const auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
   auto series_results = SeriesEvaluationResults{};
   auto default_context = DefaultMethodContext{series_methods, series_results};
   const auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
@@ -1258,7 +1303,7 @@ TEST(BacktestRunnerTest, AtrStopAndRMultipleTargetUseScopedContext)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -1307,7 +1352,7 @@ TEST(BacktestRunnerTest, PositionContextMethodsUseNormalLongEntryContext)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -1354,7 +1399,7 @@ TEST(BacktestRunnerTest, PositionContextMethodsUseNormalShortEntryContext)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -1402,7 +1447,7 @@ TEST(BacktestRunnerTest, PositionContextMethodsUsePyramidingPriceContext)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -1452,7 +1497,7 @@ TEST(BacktestRunnerTest, PositionContextMethodsUseConfiguredReferenceContext)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -1500,7 +1545,7 @@ TEST(BacktestRunnerTest, CustomStopTargetFormulasUseReferenceAndDirection)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   const auto stop_method =
@@ -1552,7 +1597,8 @@ TEST(BacktestRunnerTest, ExplicitRiskDistanceAndRPricesEvaluateDirectly)
   const auto asset =
    make_single_bar_asset_with_range(100.0, 110.0, 90.0, 100.0);
   const auto snapshot = asset.get_snapshot(0);
-  const auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  const auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
   auto series_results = SeriesEvaluationResults{};
   auto default_context = DefaultMethodContext{series_methods, series_results};
   const auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
@@ -1608,7 +1654,7 @@ TEST(BacktestRunnerTest, RejectsInvalidExplicitRiskDistanceForEverySizingMode)
     const auto market = Market{"Test", 0.0, 0.0};
     const auto broker = Broker{"Test"};
     const auto profile =
-     Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+     Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
     auto series_results = SeriesEvaluationResults{};
     auto timeline = BacktestTimeline{};
     auto runner = BacktestRunner{
@@ -1632,14 +1678,15 @@ TEST(BacktestRunnerTest, RejectsInvalidExplicitRiskDistanceForEverySizingMode)
   }
 }
 
-TEST(BacktestRunnerTest, PyramidingSizesOnlyNewLayerFromNewRiskDistance)
+TEST(BacktestRunnerTest,
+     PyramidingSizesNewLayerFromNormalizedShadowRiskDistance)
 {
   const auto asset =
    make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 200.0, 200.0, 200.0, 200.0);
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::RiskDistance, 0.01}};
+   Profile{"Test", PositionSizingNode{RiskDistancePositionSizing{0.01}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -1680,16 +1727,14 @@ TEST(BacktestRunnerTest, PyramidingSizesOnlyNewLayerFromNewRiskDistance)
   ASSERT_TRUE(timeline.open_position(1));
   EXPECT_DOUBLE_EQ(timeline.trade_events(1).front().position_size(), 5.5);
   EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 15.5);
-  EXPECT_DOUBLE_EQ(timeline.open_position(1)->risk_reference_price(),
-                   timeline.open_position(1)->average_price());
-  EXPECT_DOUBLE_EQ(timeline.open_position(1)->risk_distance(),
-                   timeline.open_position(1)->average_price() * 0.1);
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->risk_reference_price(), 150.0);
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->risk_distance(), 15.0);
 }
 
 TEST(BacktestRunnerTest, DisabledDrawdownAdjustmentLeavesSizingUnchanged)
 {
   const auto timeline =
-   run_single_entry(PositionSizing{PositionSizing::Mode::FixedQuantity, 100.0},
+   run_single_entry(PositionSizingNode{FixedQuantityPositionSizing{100.0}},
                     100.0,
                     DrawdownAdjustment{false, 0.10, 0.20},
                     90000.0,
@@ -1703,7 +1748,7 @@ TEST(BacktestRunnerTest, DisabledDrawdownAdjustmentLeavesSizingUnchanged)
 TEST(BacktestRunnerTest, DrawdownAdjustmentLeavesSizeUnchangedAtZeroDrawdown)
 {
   const auto timeline =
-   run_single_entry(PositionSizing{PositionSizing::Mode::FixedQuantity, 100.0},
+   run_single_entry(PositionSizingNode{FixedQuantityPositionSizing{100.0}},
                     100.0,
                     DrawdownAdjustment{true, 0.10, 0.20},
                     10000.0);
@@ -1716,7 +1761,7 @@ TEST(BacktestRunnerTest, DrawdownAdjustmentLeavesSizeUnchangedAtZeroDrawdown)
 TEST(BacktestRunnerTest, DrawdownAdjustmentReducesSizeAtTenPercentDrawdown)
 {
   const auto timeline =
-   run_single_entry(PositionSizing{PositionSizing::Mode::FixedQuantity, 100.0},
+   run_single_entry(PositionSizingNode{FixedQuantityPositionSizing{100.0}},
                     100.0,
                     DrawdownAdjustment{true, 0.10, 0.20},
                     9000.0,
@@ -1730,7 +1775,7 @@ TEST(BacktestRunnerTest, DrawdownAdjustmentReducesSizeAtTenPercentDrawdown)
 TEST(BacktestRunnerTest, DrawdownAdjustmentReducesSizeAtTwentyPercentDrawdown)
 {
   const auto timeline =
-   run_single_entry(PositionSizing{PositionSizing::Mode::FixedQuantity, 100.0},
+   run_single_entry(PositionSizingNode{FixedQuantityPositionSizing{100.0}},
                     100.0,
                     DrawdownAdjustment{true, 0.10, 0.20},
                     8000.0,
@@ -1741,18 +1786,23 @@ TEST(BacktestRunnerTest, DrawdownAdjustmentReducesSizeAtTwentyPercentDrawdown)
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 60.0);
 }
 
-TEST(BacktestRunnerTest, DrawdownAdjustmentClampsSizeAtZero)
+TEST(BacktestRunnerTest, DrawdownAdjustmentAtZeroSkipsExecution)
 {
   const auto timeline =
-   run_single_entry(PositionSizing{PositionSizing::Mode::FixedQuantity, 100.0},
+   run_single_entry(PositionSizingNode{FixedQuantityPositionSizing{100.0}},
                     100.0,
                     DrawdownAdjustment{true, 0.10, 0.20},
                     400.0,
                     1000.0);
 
-  ASSERT_TRUE(
-   timeline.open_position(last_timeline_index(timeline)).has_value());
-  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 0.0);
+  const auto index = last_timeline_index(timeline);
+  EXPECT_FALSE(timeline.open_position(index).has_value());
+  ASSERT_EQ(timeline.position_sizing_decisions(index).size(), 1U);
+  const auto& decision = timeline.position_sizing_decisions(index).front();
+  EXPECT_EQ(decision.outcome,
+            PositionSizingDecisionOutcome::DrawdownSuppressed);
+  EXPECT_DOUBLE_EQ(*decision.primary_quantity, 100.0);
+  EXPECT_DOUBLE_EQ(*decision.drawdown_adjusted_quantity, 0.0);
 }
 
 auto make_two_bar_asset(double first_open,
@@ -1795,6 +1845,215 @@ auto make_three_bar_asset(double first_open,
                             {"Volume", {0.0, 0.0, 0.0}}}};
 }
 
+TEST(BacktestRunnerTest, PositionRMultipleTriggersCurrentCloseSignalExit)
+{
+  const auto asset =
+   make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 125.0, 125.0, 125.0, 125.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+  const auto exit_signal =
+   GreaterEqualMethod{PositionRMultipleMethod{}, ValueMethod{2.0}};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  make_position_rule(BooleanMethod<true>{},
+                                     exit_signal,
+                                     BooleanMethod<false>{},
+                                     1,
+                                     OpenMethod{},
+                                     false,
+                                     false,
+                                     1,
+                                     OpenMethod{},
+                                     0,
+                                     OpenMethod{},
+                                     1,
+                                     OpenMethod{},
+                                     StopTargetReferencePrice::AveragePrice,
+                                     StopTargetReferencePrice::AveragePrice,
+                                     1.0,
+                                     1.0,
+                                     {},
+                                     ValueMethod{10.0}),
+                  BacktestRunner::PositionRule{},
+                  1000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+
+  ASSERT_EQ(timeline.closed_trades(1).size(), 1U);
+  EXPECT_DOUBLE_EQ(timeline.closed_trades(1).front().exit_price(), 125.0);
+}
+
+TEST(BacktestRunnerTest, PositionRMultipleSchedulesNextOpenSignalExit)
+{
+  const auto asset = make_three_bar_asset(100.0,
+                                          100.0,
+                                          100.0,
+                                          100.0,
+                                          125.0,
+                                          125.0,
+                                          125.0,
+                                          125.0,
+                                          130.0,
+                                          130.0,
+                                          130.0,
+                                          130.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+  const auto exit_signal =
+   GreaterEqualMethod{PositionRMultipleMethod{}, ValueMethod{2.0}};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  make_position_rule(BooleanMethod<true>{},
+                                     exit_signal,
+                                     BooleanMethod<false>{},
+                                     1,
+                                     OpenMethod{},
+                                     false,
+                                     false,
+                                     1,
+                                     OpenMethod{},
+                                     1,
+                                     OpenMethod{},
+                                     1,
+                                     OpenMethod{},
+                                     StopTargetReferencePrice::AveragePrice,
+                                     StopTargetReferencePrice::AveragePrice,
+                                     1.0,
+                                     1.0,
+                                     {},
+                                     ValueMethod{10.0}),
+                  BacktestRunner::PositionRule{},
+                  1000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+
+  ASSERT_EQ(timeline.closed_trades(2).size(), 1U);
+  EXPECT_DOUBLE_EQ(timeline.closed_trades(2).front().exit_price(), 130.0);
+}
+
+TEST(BacktestRunnerTest, PositionRMultipleDrivesCurrentClosePyramiding)
+{
+  const auto asset =
+   make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 125.0, 125.0, 125.0, 125.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+  const auto pyramiding_signal =
+   GreaterEqualMethod{PositionRMultipleMethod{}, ValueMethod{2.0}};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  make_position_rule(BooleanMethod<true>{},
+                                     BooleanMethod<false>{},
+                                     pyramiding_signal,
+                                     2,
+                                     OpenMethod{},
+                                     false,
+                                     false,
+                                     1,
+                                     OpenMethod{},
+                                     1,
+                                     OpenMethod{},
+                                     0,
+                                     OpenMethod{},
+                                     StopTargetReferencePrice::AveragePrice,
+                                     StopTargetReferencePrice::AveragePrice,
+                                     1.0,
+                                     1.0,
+                                     {},
+                                     ValueMethod{10.0}),
+                  BacktestRunner::PositionRule{},
+                  1000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+
+  ASSERT_TRUE(timeline.open_position(1).has_value());
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 2.0);
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->average_price(), 112.5);
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->risk_reference_price(), 112.5);
+}
+
+TEST(BacktestRunnerTest, PositionRMultipleIsCachedForNamedSeriesAndPlots)
+{
+  const auto asset =
+   make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 125.0, 125.0, 125.0, 125.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+  series_methods.set("current_r", PositionRMultipleMethod{});
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  std::move(series_methods),
+                  make_position_rule(BooleanMethod<true>{},
+                                     BooleanMethod<false>{},
+                                     BooleanMethod<false>{},
+                                     1,
+                                     OpenMethod{},
+                                     false,
+                                     false,
+                                     1,
+                                     OpenMethod{},
+                                     1,
+                                     OpenMethod{},
+                                     1,
+                                     OpenMethod{},
+                                     StopTargetReferencePrice::AveragePrice,
+                                     StopTargetReferencePrice::AveragePrice,
+                                     1.0,
+                                     1.0,
+                                     {},
+                                     ValueMethod{10.0}),
+                  BacktestRunner::PositionRule{},
+                  1000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+
+  const auto values = series_results.results(std::string{"current_r"});
+  ASSERT_TRUE(values.has_value());
+  ASSERT_EQ(values->get().size(), 2U);
+  EXPECT_DOUBLE_EQ(values->get()[0], 0.0);
+  EXPECT_DOUBLE_EQ(values->get()[1], 2.5);
+}
+
 TEST(BacktestRunnerTest, SeriesDelayedSignalUsesCompletedResultsOnly)
 {
   const auto asset = make_three_bar_asset(100.0,
@@ -1812,11 +2071,12 @@ TEST(BacktestRunnerTest, SeriesDelayedSignalUsesCompletedResultsOnly)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
   series_methods.set("close", CloseMethod{});
 
   const auto entry_signal =
@@ -1872,11 +2132,12 @@ TEST(BacktestRunnerTest, SeriesDelayZeroSignalEvaluatesCurrentBar)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
-  auto series_methods = OrderedNamedRegistry<AnySeriesMethod>{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
   series_methods.set("close", CloseMethod{});
 
   const auto entry_signal =
@@ -1916,7 +2177,7 @@ TEST(BacktestRunnerTest,
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedNotional, 250.0}};
+   Profile{"Test", PositionSizingNode{FixedNotionalPositionSizing{250.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -1962,7 +2223,7 @@ TEST(BacktestRunnerTest, NextOpenEntryUsesPreviousSignalAndOpenPrice)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   const auto entry_signal = EqualMethod{CloseMethod{}, ValueMethod{75.0}};
@@ -2012,7 +2273,7 @@ TEST(BacktestRunnerTest, SignalDelayZeroEntryUsesCurrentSignal)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   const auto entry_signal = EqualMethod{CloseMethod{}, ValueMethod{75.0}};
@@ -2052,7 +2313,7 @@ TEST(BacktestRunnerTest, SignalDelayZeroCloseExitUsesCurrentSignalAndClosePrice)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   const auto exit_signal = EqualMethod{CloseMethod{}, ValueMethod{120.0}};
@@ -2092,7 +2353,7 @@ TEST(BacktestRunnerTest, SignalDelayZeroClosePyramidingUsesOwnTimingAndPrice)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   const auto pyramiding_signal = EqualMethod{CloseMethod{}, ValueMethod{120.0}};
@@ -2135,7 +2396,7 @@ TEST(BacktestRunnerTest,
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -2180,7 +2441,8 @@ TEST(BacktestRunnerTest,
    latest_position(timeline).take_profit_levels().front().price(), 132.0);
 }
 
-TEST(BacktestRunnerTest, PyramidingUsesPostScaleInFeeAdjustedAverageReference)
+TEST(BacktestRunnerTest,
+     PyramidingUsesPostScaleNormalizedShadowAverageReference)
 {
   const auto asset =
    make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 120.0, 120.0, 120.0, 120.0);
@@ -2192,7 +2454,7 @@ TEST(BacktestRunnerTest, PyramidingUsesPostScaleInFeeAdjustedAverageReference)
                                         BrokerFee::FeeTrigger::Entry,
                                         10.0}}};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -2232,9 +2494,9 @@ TEST(BacktestRunnerTest, PyramidingUsesPostScaleInFeeAdjustedAverageReference)
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
   EXPECT_DOUBLE_EQ(latest_position(timeline).average_price(), 120.0);
   EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
-                   108.0);
+                   99.0);
   EXPECT_DOUBLE_EQ(
-   latest_position(timeline).take_profit_levels().front().price(), 144.0);
+   latest_position(timeline).take_profit_levels().front().price(), 132.0);
 }
 
 TEST(BacktestRunnerTest,
@@ -2245,7 +2507,7 @@ TEST(BacktestRunnerTest,
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -2298,7 +2560,7 @@ TEST(BacktestRunnerTest,
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -2350,7 +2612,7 @@ TEST(BacktestRunnerTest, PyramidingCanUseLatestEntryReference)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -2403,7 +2665,7 @@ TEST(BacktestRunnerTest,
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -2455,7 +2717,7 @@ TEST(BacktestRunnerTest, PyramidingCanUseInitialEntryReference)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -2507,7 +2769,7 @@ TEST(BacktestRunnerTest, SameBarSameDirectionReentryIsBlockedAfterExit)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -2543,7 +2805,7 @@ TEST(BacktestRunnerTest, PyramidingIsSkippedOnExitBar)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -2582,7 +2844,7 @@ TEST(BacktestRunnerTest, SameBarOppositeDirectionReversalIsAllowedAfterExit)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -2628,7 +2890,7 @@ TEST(BacktestRunnerTest, StopLossExitIsDecidedByRunner)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -2668,7 +2930,7 @@ TEST(BacktestRunnerTest, TrailingStopMutationUsesTradePositionState)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -2718,7 +2980,7 @@ TEST(BacktestRunnerTest,
   const auto market = Market{"Test", 1.0, 1.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 8.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{8.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   auto stop_losses = std::vector<BacktestRunner::PositionRule::StopLossRule>{};
@@ -2773,7 +3035,7 @@ TEST(BacktestRunnerTest, SimultaneousShortStopsUseGapThenPathPrices)
   const auto market = Market{"Test", 1.0, 1.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 8.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{8.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   auto stop_losses = std::vector<BacktestRunner::PositionRule::StopLossRule>{};
@@ -2816,7 +3078,7 @@ TEST(BacktestRunnerTest, PyramidingPreservesConsumedStopLossLevels)
   const auto market = Market{"Test", 1.0, 1.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 8.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{8.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   auto stop_losses = std::vector<BacktestRunner::PositionRule::StopLossRule>{};
@@ -2864,7 +3126,7 @@ TEST(BacktestRunnerTest, PyramidingNeverLoosensTrailingStopEffectivePrice)
   const auto market = Market{"Test", 1.0, 1.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 8.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{8.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -2916,7 +3178,7 @@ TEST(BacktestRunnerTest, PyramidingAcceptsSaferTrailingStopBasePrice)
   const auto market = Market{"Test", 1.0, 1.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 8.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{8.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -2952,7 +3214,7 @@ TEST(BacktestRunnerTest, TakeProfitExitIsDecidedByRunner)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 1.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -3013,7 +3275,7 @@ TEST(BacktestRunnerTest, SignalExitReducesRemainingPositionOnlyOnce)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 4.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{4.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -3074,7 +3336,7 @@ TEST(BacktestRunnerTest, OrderedSignalExitsExecuteOnceAndResetAfterFullClosure)
   const auto market = Market{"Test", 1.0, 1.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 8.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{8.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   auto signal_exits =
@@ -3134,7 +3396,7 @@ TEST(BacktestRunnerTest, AfterPreviousSignalExitsAdvanceAtTheSameCurrentClose)
   const auto market = Market{"Test", 1.0, 1.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 8.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{8.0}}};
   auto signal_exits =
    std::vector<BacktestRunner::PositionRule::SignalExitRule>{};
   signal_exits.emplace_back(
@@ -3193,7 +3455,7 @@ TEST(BacktestRunnerTest, PyramidingPreservesConsumedSignalExitStates)
   const auto market = Market{"Test", 1.0, 1.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 8.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{8.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   auto signal_exits =
@@ -3243,7 +3505,7 @@ TEST(BacktestRunnerTest, StopLossAndTakeProfitHavePriorityOverSignalExits)
   const auto market = Market{"Test", 1.0, 1.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 8.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{8.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   auto signal_exits =
@@ -3301,8 +3563,7 @@ auto run_signal_reduction(double reduce,
   const auto market = Market{"Test", minimum_quantity, quantity_step};
   const auto broker = Broker{"Test"};
   const auto profile = Profile{
-   "Test",
-   PositionSizing{PositionSizing::Mode::FixedQuantity, position_quantity}};
+   "Test", PositionSizingNode{FixedQuantityPositionSizing{position_quantity}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -3380,7 +3641,7 @@ TEST(BacktestRunnerTest, StopLossAndTakeProfitSupportIndependentReductions)
   const auto market = Market{"Test", 1.0, 1.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 8.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{8.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -3441,7 +3702,7 @@ TEST(BacktestRunnerTest,
   const auto market = Market{"Test", 1.0, 1.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 8.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{8.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   auto take_profits =
@@ -3513,7 +3774,7 @@ TEST(BacktestRunnerTest,
   const auto market = Market{"Test", 1.0, 1.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 8.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{8.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   auto take_profits =
@@ -3571,7 +3832,7 @@ TEST(BacktestRunnerTest,
   const auto market = Market{"Test", 1.0, 1.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 8.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{8.0}}};
   auto take_profits =
    std::vector<BacktestRunner::PositionRule::TakeProfitRule>{};
   take_profits.emplace_back(ValueMethod{200.0}, false, 1.0);
@@ -3628,7 +3889,7 @@ TEST(BacktestRunnerTest, ReductionIsRaisedToMarketMinimum)
   const auto market = Market{"Test", 1.5, 1.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 4.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{4.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -3677,7 +3938,7 @@ TEST(BacktestRunnerTest, PartialExitKeepsPyramidingLayersUsed)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizing{PositionSizing::Mode::FixedQuantity, 4.0}};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{4.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 

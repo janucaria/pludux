@@ -17,6 +17,15 @@ enum class BacktestChartViewportMode {
   FollowLatest,
 };
 
+enum class BacktestTopPlot {
+  Equity,
+  ShadowReturn,
+  FrequentistPerformance,
+  CurrentStreaks,
+  BayesianWin,
+  BayesianPayoff,
+};
+
 class BacktestChartState {
 public:
   void select_backtest(
@@ -90,9 +99,20 @@ public:
     return std::exchange(self.fit_requested_, false);
   }
 
-  auto show_equity(this const BacktestChartState& self) noexcept -> bool
+  auto top_plot(this const BacktestChartState& self) noexcept
+   -> BacktestTopPlot
   {
-    return self.show_equity_;
+    return self.top_plot_;
+  }
+
+  void top_plot(this BacktestChartState& self, BacktestTopPlot plot) noexcept
+  {
+    if(self.top_plot_ == plot) {
+      return;
+    }
+
+    self.top_plot_ = plot;
+    self.fit_requested_ = true;
   }
 
   auto show_volume(this const BacktestChartState& self) noexcept -> bool
@@ -113,11 +133,6 @@ public:
   auto show_indicators(this const BacktestChartState& self) noexcept -> bool
   {
     return self.show_indicators_;
-  }
-
-  auto show_equity(this BacktestChartState& self) noexcept -> bool&
-  {
-    return self.show_equity_;
   }
 
   auto show_volume(this BacktestChartState& self) noexcept -> bool&
@@ -145,12 +160,8 @@ public:
   {
     if(self.row_ratios_.size() != row_count) {
       self.row_ratios_.assign(row_count, 1.0f);
-      auto row = std::size_t{0};
-      if(self.show_equity_ && row < row_count) {
-        self.row_ratios_[row++] = 1.0f;
-      }
-      if(row < row_count) {
-        self.row_ratios_[row] = 4.0f;
+      if(row_count > 1) {
+        self.row_ratios_[1] = 4.0f;
       }
       self.fit_requested_ = true;
     }
@@ -169,9 +180,9 @@ private:
   std::optional<std::size_t> pinned_bar_{};
   std::vector<float> row_ratios_{};
   BacktestChartViewportMode viewport_mode_{BacktestChartViewportMode::FitAll};
+  BacktestTopPlot top_plot_{BacktestTopPlot::Equity};
   std::size_t follow_bar_count_{150};
   bool fit_requested_{true};
-  bool show_equity_{true};
   bool show_volume_{true};
   bool show_trades_{true};
   bool show_risk_{true};

@@ -13,14 +13,15 @@ public:
   auto operator==(const DrawdownNode& other) const noexcept -> bool = default;
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const DrawdownNode& node,
                        NodeToErasedMethodContext& context) noexcept
- -> AnySeriesMethod
+ -> ErasedSeriesMethod<TContext>
 {
   static_cast<void>(node);
   static_cast<void>(context);
-  return AnySeriesMethod{DrawdownMethod{}};
+  return ErasedSeriesMethod<TContext>{DrawdownMethod{}};
 }
 
 } // namespace pludux::backtest

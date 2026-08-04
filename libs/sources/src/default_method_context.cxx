@@ -8,6 +8,7 @@ module;
 export module pludux:default_method_context;
 
 import :asset_snapshot;
+import :erased_series_method_context;
 import :series_evaluation_results;
 import :method_key;
 import :methods;
@@ -20,7 +21,8 @@ public:
   using DispatchResultType = double;
 
   explicit DefaultMethodContext(
-   const OrderedNamedRegistry<AnySeriesMethod>& series_methods,
+   const OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>&
+    series_methods,
    SeriesEvaluationResults& series_evaluation_results,
    std::size_t current_index = 0) noexcept
   : series_methods_{series_methods}
@@ -64,8 +66,7 @@ public:
       return std::numeric_limits<DispatchResultType>::quiet_NaN();
     }
 
-    if(const auto results_opt =
-        self.series_evaluation_results_.results(name);
+    if(const auto results_opt = self.series_evaluation_results_.results(name);
        results_opt.has_value()) {
       const auto& results = results_opt.value().get();
       if(result_index < results.size()) {
@@ -107,7 +108,8 @@ public:
   }
 
 private:
-  const OrderedNamedRegistry<AnySeriesMethod>& series_methods_;
+  const OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>&
+   series_methods_;
   SeriesEvaluationResults& series_evaluation_results_;
   std::size_t current_index_;
 };

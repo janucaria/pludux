@@ -6,7 +6,7 @@ set(PLUDUX_TEST_SOURCES
   src/test_asset_snapshot.cpp
 
   src/test_abs_diff_method.cpp
-  src/test_any_series_method.cpp
+    src/test_erased_series_method.cpp
   src/test_atr_method.cpp
   src/test_bb_method.cpp
   src/test_change_method.cpp
@@ -52,6 +52,7 @@ set(PLUDUX_TEST_SOURCES
 
   src/test_hash_series_method.cpp
   src/test_node_to_erased_method.cpp
+  src/test_typed_erased_node.cpp
 )
 
 foreach(PLUDUX_TEST_SOURCE ${PLUDUX_TEST_SOURCES})

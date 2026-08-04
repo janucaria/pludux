@@ -29,7 +29,7 @@ public:
   {
   }
 
-  explicit AtrNode(ErasedNode period,
+  explicit AtrNode(ErasedNode<ErasedSeriesMethodContext> period,
                    MaNodeType ma_smoothing_type = MaNodeType::Rma)
   : period_{std::move(period)}
   , ma_smoothing_type_{ma_smoothing_type}
@@ -38,7 +38,8 @@ public:
 
   auto operator==(const AtrNode& other) const noexcept -> bool = default;
 
-  auto period(this const AtrNode& self) noexcept -> const ErasedNode&
+  auto period(this const AtrNode& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
   {
     return self.period_;
   }
@@ -48,7 +49,8 @@ public:
     self.period_ = ValueNode{static_cast<double>(new_period)};
   }
 
-  void period(this AtrNode& self, ErasedNode period) noexcept
+  void period(this AtrNode& self,
+              ErasedNode<ErasedSeriesMethodContext> period) noexcept
   {
     self.period_ = std::move(period);
   }
@@ -64,17 +66,19 @@ public:
   }
 
 private:
-  ErasedNode period_;
+  ErasedNode<ErasedSeriesMethodContext> period_;
   MaNodeType ma_smoothing_type_;
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod,
+template<MethodContextable TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const AtrNode& node,
-                       NodeToErasedMethodContext& context) -> AnySeriesMethod
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<TContext>
 {
-  const auto period = node_to_erased_method(node.period(), context);
+  const auto period = node_to_erased_method<TContext>(node.period(), context);
 
-  return AnySeriesMethod{
+  return ErasedSeriesMethod<TContext>{
    AtrMethod{period, static_cast<MaMethodType>(node.ma_smoothing_type())}};
 }
 
