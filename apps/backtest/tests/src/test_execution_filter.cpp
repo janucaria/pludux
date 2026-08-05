@@ -33,6 +33,7 @@ auto make_filter_test_rule() -> BacktestRunner::PositionRule
                                       std::move(signal_exits),
                                       BooleanMethod<true>{},
                                       2,
+                                      0,
                                       ValueMethod{10.0},
                                       {},
                                       SignalTiming::CurrentClose,

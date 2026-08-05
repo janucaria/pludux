@@ -1932,6 +1932,18 @@ private:
       pyramiding.retrigger(
        self.render_pyramiding_retrigger(pyramiding.retrigger()));
 
+      auto pyramiding_cooldown = static_cast<int>(pyramiding.cooldown());
+      ui::field_label(
+       "Cooldown Bars",
+       "Pause all pyramiding processing for this many complete bars after "
+       "each accepted entry.");
+      if(ImGui::InputInt("##cooldown", &pyramiding_cooldown)) {
+        if(pyramiding_cooldown < 0) {
+          pyramiding_cooldown = 0;
+        }
+        pyramiding.cooldown(static_cast<std::size_t>(pyramiding_cooldown));
+      }
+
       auto pyramiding_max_layers = static_cast<int>(pyramiding.max_layers());
       ui::field_label(
        "Max Layers",

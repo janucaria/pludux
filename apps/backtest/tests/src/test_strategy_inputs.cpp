@@ -29,6 +29,17 @@ TEST(PyramidingRetriggerTest, ParsesSerializesAndRejectsInvalidValues)
   EXPECT_THROW(parse_pyramiding_retrigger("ALWAYS"), std::runtime_error);
   EXPECT_EQ(Strategy::Pyramiding{}.retrigger(),
             PyramidingRetrigger::EveryEvaluation);
+  EXPECT_EQ(Strategy::Pyramiding{}.cooldown(), 0);
+}
+
+TEST(PyramidingCooldownTest, IsRequiredWhenPyramidingIsPresent)
+{
+  auto strategy_json =
+   jsoncons::ojson::parse(stringify_backtest_strategy(Strategy{}));
+  strategy_json.at("positions").at("long").at("pyramiding").erase("cooldown");
+
+  EXPECT_THROW(parse_backtest_strategy_json("Test", strategy_json.to_string()),
+               std::exception);
 }
 
 TEST(StrategyInputsTest, CollectsNumericInputsInStrategyTraversalOrder)
@@ -254,6 +265,7 @@ TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
         "pyramiding": {
           "timing": "CURRENT_CLOSE",
           "retrigger": "AFTER_FALSE",
+          "cooldown": 3,
           "signal": false,
           "maxLayers": 2,
           "stopTargetReference": {
@@ -287,6 +299,7 @@ TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
             SignalTiming::CurrentClose);
   EXPECT_EQ(strategy.long_position().pyramiding().retrigger(),
             PyramidingRetrigger::AfterFalse);
+  EXPECT_EQ(strategy.long_position().pyramiding().cooldown(), 3);
   EXPECT_EQ(
    strategy.long_position().pyramiding().favorable_stop_target_reference(),
    StopTargetReferencePrice::InitialEntryPrice);
@@ -323,6 +336,7 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
   auto pyramiding = Strategy::Pyramiding{};
   pyramiding.timing(SignalTiming::CurrentClose);
   pyramiding.retrigger(PyramidingRetrigger::AfterFalse);
+  pyramiding.cooldown(4);
   pyramiding.favorable_stop_target_reference(
    StopTargetReferencePrice::InitialEntryPrice);
   pyramiding.unfavorable_stop_target_reference(
@@ -427,6 +441,12 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
              .at("retrigger")
              .as<std::string>(),
             "AFTER_FALSE");
+  EXPECT_EQ(strategy_json.at("positions")
+             .at("long")
+             .at("pyramiding")
+             .at("cooldown")
+             .as<std::size_t>(),
+            4);
   EXPECT_EQ(strategy_json.at("positions")
              .at("long")
              .at("pyramiding")

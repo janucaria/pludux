@@ -176,6 +176,16 @@ public:
       self.retrigger_ = retrigger;
     }
 
+    auto cooldown(this const Pyramiding& self) noexcept -> std::size_t
+    {
+      return self.cooldown_;
+    }
+
+    void cooldown(this Pyramiding& self, std::size_t cooldown) noexcept
+    {
+      self.cooldown_ = cooldown;
+    }
+
     auto max_layers(this const Pyramiding& self) noexcept -> std::size_t
     {
       return self.max_layers_;
@@ -215,6 +225,7 @@ public:
     ErasedNode<ErasedSeriesMethodContext> signal_{FalseNode{}};
     SignalTiming timing_{SignalTiming::NextOpen};
     PyramidingRetrigger retrigger_{PyramidingRetrigger::EveryEvaluation};
+    std::size_t cooldown_{};
     std::size_t max_layers_{1};
     StopTargetReferencePrice favorable_stop_target_reference_{
      StopTargetReferencePrice::AveragePrice};

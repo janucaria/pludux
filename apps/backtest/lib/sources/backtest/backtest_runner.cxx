@@ -178,6 +178,7 @@ public:
      std::vector<SignalExitRule> signal_exits,
      ErasedSeriesMethod<ErasedSeriesMethodContext> pyramiding_signal,
      std::size_t pyramiding_max_layers,
+     std::size_t pyramiding_cooldown,
      ErasedSeriesMethod<ErasedSeriesMethodContext> risk_distance_method,
      std::vector<StopLossRule> stop_losses,
      SignalTiming entry_timing = SignalTiming::CurrentClose,
@@ -196,6 +197,7 @@ public:
     , signal_exits_{std::move(signal_exits)}
     , pyramiding_signal_{std::move(pyramiding_signal)}
     , pyramiding_max_layers_{pyramiding_max_layers}
+    , pyramiding_cooldown_{pyramiding_cooldown}
     , risk_distance_method_{std::move(risk_distance_method)}
     , stop_losses_{std::move(stop_losses)}
     , entry_timing_{entry_timing}
@@ -232,6 +234,12 @@ public:
      -> std::size_t
     {
       return self.pyramiding_max_layers_;
+    }
+
+    auto pyramiding_cooldown(this const PositionRule& self) noexcept
+     -> std::size_t
+    {
+      return self.pyramiding_cooldown_;
     }
 
     auto risk_distance_method(this const PositionRule& self) noexcept
@@ -307,6 +315,7 @@ public:
     ErasedSeriesMethod<ErasedSeriesMethodContext> pyramiding_signal_{
      BooleanMethod<false>{}};
     std::size_t pyramiding_max_layers_{1};
+    std::size_t pyramiding_cooldown_{};
     ErasedSeriesMethod<ErasedSeriesMethodContext> risk_distance_method_{
      ValueMethod{1.0}};
     std::vector<StopLossRule> stop_losses_;
@@ -555,6 +564,7 @@ public:
       const auto position_context =
        self.with_open_position_context(context, position);
       if(rule.pyramiding_timing() == SignalTiming::CurrentClose &&
+         !self.pyramiding_is_paused() &&
          self.pyramiding_signal_triggered(
           rule, asset_snapshot, position_context)) {
         self.execute_pyramiding_action(asset_snapshot.close(),
@@ -688,6 +698,7 @@ private:
   std::array<bool, 2> pending_entries_{};
   bool pending_pyramiding_{};
   bool pyramiding_signal_ready_{true};
+  std::optional<std::size_t> pyramiding_resume_index_;
   std::vector<std::size_t> pending_signal_exit_indices_;
   std::optional<std::size_t> pending_signal_exit_trade_id_;
 
@@ -756,6 +767,27 @@ private:
     }
     self.pyramiding_signal_ready_ = false;
     return true;
+  }
+
+  auto pyramiding_is_paused(this const BacktestRunner& self) noexcept -> bool
+  {
+    return self.pyramiding_resume_index_ &&
+           self.active_timeline_index_ < *self.pyramiding_resume_index_;
+  }
+
+  void restart_pyramiding_cooldown(this BacktestRunner& self,
+                                   const PositionRule& rule) noexcept
+  {
+    if(rule.pyramiding_cooldown() == 0) {
+      self.pyramiding_resume_index_.reset();
+      return;
+    }
+    const auto remaining_indices =
+     std::numeric_limits<std::size_t>::max() - self.active_timeline_index_;
+    self.pyramiding_resume_index_ =
+     rule.pyramiding_cooldown() >= remaining_indices
+      ? std::numeric_limits<std::size_t>::max()
+      : self.active_timeline_index_ + rule.pyramiding_cooldown() + 1;
   }
 
   auto current_equity(this const BacktestRunner& self) noexcept -> double
@@ -1561,6 +1593,7 @@ private:
       closed_position_is_long = was_long;
       self.pyramiding_layers_ = 0;
       self.pyramiding_signal_ready_ = true;
+      self.pyramiding_resume_index_.reset();
       self.execution_strategy_trade_id_.reset();
     }
     return true;
@@ -1648,6 +1681,7 @@ private:
         closed_position_is_long = was_long;
         self.pyramiding_layers_ = 0;
         self.pyramiding_signal_ready_ = true;
+        self.pyramiding_resume_index_.reset();
         self.execution_strategy_trade_id_.reset();
       }
     }
@@ -1723,6 +1757,7 @@ private:
      position, strategy_entry, rule, false, evaluation_snapshot, context);
     self.strategy_trade_session_.sync_latest_event_with_open_position();
     self.pyramiding_layers_ = 1;
+    self.restart_pyramiding_cooldown(rule);
 
     const auto direction =
      is_long ? StrategyDirection::Long : StrategyDirection::Short;
@@ -1806,10 +1841,12 @@ private:
      .entry_price = price,
      .outcome = PositionSizingDecisionOutcome::ShadowOnly};
 
+    ++self.pyramiding_layers_;
+    self.restart_pyramiding_cooldown(rule);
+
     if(!self.execution_strategy_trade_id_ ||
        !self.execution_session_.open_position()) {
       self.position_sizing_decisions_.push_back(std::move(sizing_decision));
-      ++self.pyramiding_layers_;
       return true;
     }
     auto entry = self.create_trade(rule,
@@ -1822,14 +1859,12 @@ private:
                                    sizing_decision);
     if(!entry || !self.prepare_entry_order(*entry, sizing_decision)) {
       self.position_sizing_decisions_.push_back(std::move(sizing_decision));
-      ++self.pyramiding_layers_;
       return true;
     }
     const auto fee = self.broker_.calculate_fee(*entry);
     self.execution_session_.entry_position(*entry, fee);
     self.sync_execution_position_state();
     self.position_sizing_decisions_.push_back(std::move(sizing_decision));
-    ++self.pyramiding_layers_;
     return true;
   }
 
@@ -1896,6 +1931,7 @@ private:
     self.pending_signal_exit_trade_id_.reset();
     if(!self.strategy_trade_session_.open_position()) {
       self.pyramiding_signal_ready_ = true;
+      self.pyramiding_resume_index_.reset();
       return;
     }
     const auto& position = *self.strategy_trade_session_.open_position();
@@ -1905,6 +1941,7 @@ private:
      self.with_open_position_context(context, position);
     self.pending_pyramiding_ =
      rule.pyramiding_timing() == SignalTiming::NextOpen &&
+     !self.pyramiding_is_paused() &&
      self.pyramiding_signal_triggered(rule, snapshot, position_context);
     for(auto index = std::size_t{0}; index < rule.signal_exits().size();
         ++index) {

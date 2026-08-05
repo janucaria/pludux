@@ -206,6 +206,12 @@
                 "retrigger": {
                   "$ref": "#/$defs/pyramidingRetrigger"
                 },
+                "cooldown": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "title": "Cooldown Bars",
+                  "description": "Number of complete bars after each accepted entry during which all pyramiding processing is paused. Zero disables the cooldown."
+                },
                 "maxLayers": {
                   "type": "integer",
                   "minimum": 1,
@@ -243,12 +249,14 @@
                 "signal",
                 "timing",
                 "retrigger",
+                "cooldown",
                 "maxLayers"
               ],
               "default": {
                 "signal": false,
                 "timing": "NEXT_OPEN",
                 "retrigger": "EVERY_EVALUATION",
+                "cooldown": 0,
                 "maxLayers": 1,
                 "stopTargetReference": {
                   "favorable": "AVERAGE_PRICE",

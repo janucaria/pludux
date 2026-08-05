@@ -110,7 +110,8 @@ auto make_position_rule(
  ErasedSeriesMethod<ErasedSeriesMethodContext> risk_distance_method =
   ValueMethod{10.0},
  PyramidingRetrigger pyramiding_retrigger =
-  PyramidingRetrigger::EveryEvaluation) -> BacktestRunner::PositionRule;
+  PyramidingRetrigger::EveryEvaluation,
+ std::size_t pyramiding_cooldown = 0) -> BacktestRunner::PositionRule;
 
 auto run_single_entry(
  PositionSizingNode position_sizing,
@@ -269,7 +270,8 @@ auto make_position_rule(
  double stop_loss_reduce,
  std::vector<BacktestRunner::PositionRule::TakeProfitRule> take_profits,
  ErasedSeriesMethod<ErasedSeriesMethodContext> risk_distance_method,
- PyramidingRetrigger pyramiding_retrigger) -> BacktestRunner::PositionRule
+ PyramidingRetrigger pyramiding_retrigger,
+ std::size_t pyramiding_cooldown) -> BacktestRunner::PositionRule
 {
   auto signal_exits =
    std::vector<BacktestRunner::PositionRule::SignalExitRule>{};
@@ -286,6 +288,7 @@ auto make_position_rule(
                                       std::move(signal_exits),
                                       std::move(pyramiding_signal),
                                       pyramiding_max_layers,
+                                      pyramiding_cooldown,
                                       std::move(risk_distance_method),
                                       std::move(stop_losses),
                                       SignalTiming::CurrentClose,
@@ -912,12 +915,12 @@ TEST(BacktestRunnerTest, AfterFalseRetriggerResetsWithClosedPosition)
 {
   const auto asset =
    Asset{"Test",
-         AssetHistory{{"Datetime", {1.0, 2.0, 3.0, 4.0, 5.0}},
-                      {"Open", {100.0, 110.0, 120.0, 130.0, 140.0}},
-                      {"High", {100.0, 110.0, 120.0, 130.0, 140.0}},
-                      {"Low", {100.0, 110.0, 120.0, 130.0, 140.0}},
-                      {"Close", {100.0, 110.0, 120.0, 130.0, 140.0}},
-                      {"Volume", {0.0, 0.0, 0.0, 0.0, 0.0}}}};
+         AssetHistory{{"Datetime", {1.0, 2.0, 3.0, 4.0, 5.0, 6.0}},
+                      {"Open", {100.0, 110.0, 120.0, 130.0, 140.0, 150.0}},
+                      {"High", {100.0, 110.0, 120.0, 130.0, 140.0, 150.0}},
+                      {"Low", {100.0, 110.0, 120.0, 130.0, 140.0, 150.0}},
+                      {"Close", {100.0, 110.0, 120.0, 130.0, 140.0, 150.0}},
+                      {"Volume", {0.0, 0.0, 0.0, 0.0, 0.0, 0.0}}}};
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
@@ -956,17 +959,266 @@ TEST(BacktestRunnerTest, AfterFalseRetriggerResetsWithClosedPosition)
                       1.0,
                       {},
                       ValueMethod{10.0},
-                      PyramidingRetrigger::AfterFalse),
+                      PyramidingRetrigger::AfterFalse,
+                      1),
    BacktestRunner::PositionRule{},
    1000.0};
 
-  for(auto index = 0; index < 5; ++index) {
+  for(auto index = 0; index < 6; ++index) {
     runner.run(series_results, timeline);
   }
 
   const auto layers = series_results.results(std::string{"pyramiding_layer"});
   ASSERT_TRUE(layers.has_value());
-  EXPECT_EQ(layers->get(), (std::vector<double>{1.0, 2.0, 0.0, 1.0, 2.0}));
+  EXPECT_EQ(layers->get(), (std::vector<double>{1.0, 1.0, 0.0, 1.0, 1.0, 2.0}));
+}
+
+TEST(BacktestRunnerTest,
+     CurrentCloseCooldownSkipsBarsAndRestartsAfterAcceptedLayers)
+{
+  const auto asset = Asset{
+   "Test",
+   AssetHistory{{"Datetime", {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0}},
+                {"Open", {100.0, 110.0, 110.0, 110.0, 110.0, 110.0, 110.0}},
+                {"High", {100.0, 110.0, 110.0, 110.0, 110.0, 110.0, 110.0}},
+                {"Low", {100.0, 110.0, 110.0, 110.0, 110.0, 110.0, 110.0}},
+                {"Close", {100.0, 110.0, 110.0, 110.0, 110.0, 110.0, 110.0}},
+                {"Volume", {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}}}};
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+  series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
+
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   std::move(series_methods),
+   make_position_rule(EqualMethod{CloseMethod{}, ValueMethod{100.0}},
+                      BooleanMethod<false>{},
+                      BooleanMethod<true>{},
+                      4,
+                      OpenMethod{},
+                      false,
+                      false,
+                      1,
+                      OpenMethod{},
+                      1,
+                      OpenMethod{},
+                      0,
+                      OpenMethod{},
+                      StopTargetReferencePrice::AveragePrice,
+                      StopTargetReferencePrice::AveragePrice,
+                      1.0,
+                      1.0,
+                      {},
+                      ValueMethod{10.0},
+                      PyramidingRetrigger::EveryEvaluation,
+                      2),
+   BacktestRunner::PositionRule{},
+   1000.0};
+
+  for(auto index = 0; index < 7; ++index) {
+    runner.run(series_results, timeline);
+  }
+
+  const auto layers = series_results.results(std::string{"pyramiding_layer"});
+  ASSERT_TRUE(layers.has_value());
+  EXPECT_EQ(layers->get(),
+            (std::vector<double>{1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 3.0}));
+  EXPECT_TRUE(timeline.strategy_intents(1).empty());
+  EXPECT_TRUE(timeline.strategy_intents(2).empty());
+  EXPECT_TRUE(timeline.position_sizing_decisions(1).empty());
+  EXPECT_TRUE(timeline.position_sizing_decisions(2).empty());
+  EXPECT_EQ(timeline.strategy_intents(3).size(), 1U);
+  EXPECT_EQ(timeline.position_sizing_decisions(3).size(), 1U);
+}
+
+TEST(BacktestRunnerTest, NextOpenCooldownResumesEvaluationAfterSkippedBars)
+{
+  const auto asset = Asset{
+   "Test",
+   AssetHistory{
+    {"Datetime", {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0}},
+    {"Open", {100.0, 110.0, 110.0, 110.0, 110.0, 110.0, 110.0, 110.0, 110.0}},
+    {"High", {100.0, 110.0, 110.0, 110.0, 110.0, 110.0, 110.0, 110.0, 110.0}},
+    {"Low", {100.0, 110.0, 110.0, 110.0, 110.0, 110.0, 110.0, 110.0, 110.0}},
+    {"Close", {100.0, 110.0, 110.0, 110.0, 110.0, 110.0, 110.0, 110.0, 110.0}},
+    {"Volume", {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}}}};
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+  series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
+
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   std::move(series_methods),
+   make_position_rule(EqualMethod{CloseMethod{}, ValueMethod{100.0}},
+                      BooleanMethod<false>{},
+                      BooleanMethod<true>{},
+                      4,
+                      OpenMethod{},
+                      false,
+                      false,
+                      1,
+                      OpenMethod{},
+                      1,
+                      OpenMethod{},
+                      1,
+                      OpenMethod{},
+                      StopTargetReferencePrice::AveragePrice,
+                      StopTargetReferencePrice::AveragePrice,
+                      1.0,
+                      1.0,
+                      {},
+                      ValueMethod{10.0},
+                      PyramidingRetrigger::EveryEvaluation,
+                      2),
+   BacktestRunner::PositionRule{},
+   1000.0};
+
+  for(auto index = 0; index < 9; ++index) {
+    runner.run(series_results, timeline);
+  }
+
+  const auto layers = series_results.results(std::string{"pyramiding_layer"});
+  ASSERT_TRUE(layers.has_value());
+  EXPECT_EQ(layers->get(),
+            (std::vector<double>{1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0}));
+}
+
+TEST(BacktestRunnerTest, AfterFalseStateIsFrozenDuringCooldown)
+{
+  const auto asset = Asset{
+   "Test",
+   AssetHistory{{"Datetime", {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0}},
+                {"Open", {100.0, 110.0, 110.0, 100.0, 110.0, 100.0, 110.0}},
+                {"High", {100.0, 110.0, 110.0, 100.0, 110.0, 100.0, 110.0}},
+                {"Low", {100.0, 110.0, 110.0, 100.0, 110.0, 100.0, 110.0}},
+                {"Close", {100.0, 110.0, 110.0, 100.0, 110.0, 100.0, 110.0}},
+                {"Volume", {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}}}};
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+  series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
+
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   std::move(series_methods),
+   make_position_rule(EqualMethod{CloseMethod{}, ValueMethod{100.0}},
+                      BooleanMethod<false>{},
+                      EqualMethod{CloseMethod{}, ValueMethod{110.0}},
+                      4,
+                      OpenMethod{},
+                      false,
+                      false,
+                      1,
+                      OpenMethod{},
+                      1,
+                      OpenMethod{},
+                      0,
+                      OpenMethod{},
+                      StopTargetReferencePrice::AveragePrice,
+                      StopTargetReferencePrice::AveragePrice,
+                      1.0,
+                      1.0,
+                      {},
+                      ValueMethod{10.0},
+                      PyramidingRetrigger::AfterFalse,
+                      1),
+   BacktestRunner::PositionRule{},
+   1000.0};
+
+  for(auto index = 0; index < 7; ++index) {
+    runner.run(series_results, timeline);
+  }
+
+  const auto layers = series_results.results(std::string{"pyramiding_layer"});
+  ASSERT_TRUE(layers.has_value());
+  EXPECT_EQ(layers->get(),
+            (std::vector<double>{1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0}));
+}
+
+TEST(BacktestRunnerTest, PartialExitPreservesPyramidingCooldown)
+{
+  const auto asset = Asset{"Test",
+                           AssetHistory{{"Datetime", {1.0, 2.0, 3.0, 4.0}},
+                                        {"Open", {100.0, 110.0, 120.0, 130.0}},
+                                        {"High", {100.0, 110.0, 120.0, 130.0}},
+                                        {"Low", {100.0, 110.0, 120.0, 130.0}},
+                                        {"Close", {100.0, 110.0, 120.0, 130.0}},
+                                        {"Volume", {0.0, 0.0, 0.0, 0.0}}}};
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{2.0}}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+  series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
+
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   std::move(series_methods),
+   make_position_rule(EqualMethod{CloseMethod{}, ValueMethod{100.0}},
+                      EqualMethod{CloseMethod{}, ValueMethod{110.0}},
+                      BooleanMethod<true>{},
+                      3,
+                      OpenMethod{},
+                      false,
+                      false,
+                      1,
+                      OpenMethod{},
+                      0,
+                      OpenMethod{},
+                      0,
+                      OpenMethod{},
+                      StopTargetReferencePrice::AveragePrice,
+                      StopTargetReferencePrice::AveragePrice,
+                      0.5,
+                      1.0,
+                      {},
+                      ValueMethod{10.0},
+                      PyramidingRetrigger::EveryEvaluation,
+                      2),
+   BacktestRunner::PositionRule{},
+   1000.0};
+
+  for(auto index = 0; index < 4; ++index) {
+    runner.run(series_results, timeline);
+  }
+
+  const auto layers = series_results.results(std::string{"pyramiding_layer"});
+  ASSERT_TRUE(layers.has_value());
+  EXPECT_EQ(layers->get(), (std::vector<double>{1.0, 1.0, 1.0, 2.0}));
+  ASSERT_TRUE(timeline.open_position(1));
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 1.0);
 }
 
 TEST(BacktestRunnerTest, EquitySignalUsesCurrentAccountState)
@@ -2397,6 +2649,7 @@ TEST(BacktestRunnerTest, SeriesDelayedSignalUsesCompletedResultsOnly)
                                                {},
                                                BooleanMethod<false>{},
                                                1,
+                                               0,
                                                ValueMethod{10.0},
                                                {},
                                                SignalTiming::NextOpen},
@@ -2543,6 +2796,7 @@ TEST(BacktestRunnerTest, NextOpenEntryUsesPreviousSignalAndOpenPrice)
                                                {},
                                                BooleanMethod<false>{},
                                                1,
+                                               0,
                                                ValueMethod{10.0},
                                                {},
                                                SignalTiming::NextOpen},
@@ -3303,6 +3557,7 @@ TEST(BacktestRunnerTest,
                                                {},
                                                BooleanMethod<false>{},
                                                1,
+                                               0,
                                                ValueMethod{10.0},
                                                std::move(stop_losses),
                                                SignalTiming::CurrentClose,
@@ -3358,6 +3613,7 @@ TEST(BacktestRunnerTest, SimultaneousShortStopsUseGapThenPathPrices)
                                                {},
                                                BooleanMethod<false>{},
                                                1,
+                                               0,
                                                ValueMethod{10.0},
                                                std::move(stop_losses)},
                   5000.0};
@@ -3400,6 +3656,7 @@ TEST(BacktestRunnerTest, PyramidingPreservesConsumedStopLossLevels)
                                                {},
                                                BooleanMethod<true>{},
                                                2,
+                                               0,
                                                ValueMethod{10.0},
                                                std::move(stop_losses),
                                                SignalTiming::CurrentClose,
@@ -3663,6 +3920,7 @@ TEST(BacktestRunnerTest, OrderedSignalExitsExecuteOnceAndResetAfterFullClosure)
                                 std::move(signal_exits),
                                 BooleanMethod<false>{},
                                 1,
+                                0,
                                 ValueMethod{10.0},
                                 single_stop_loss(ValueMethod{90.0}, false)},
    BacktestRunner::PositionRule{},
@@ -3721,6 +3979,7 @@ TEST(BacktestRunnerTest, AfterPreviousSignalExitsAdvanceAtTheSameCurrentClose)
                                 std::move(signal_exits),
                                 BooleanMethod<false>{},
                                 1,
+                                0,
                                 ValueMethod{10.0},
                                 {},
                                 SignalTiming::CurrentClose,
@@ -3780,6 +4039,7 @@ TEST(BacktestRunnerTest, PyramidingPreservesConsumedSignalExitStates)
                                 std::move(signal_exits),
                                 BooleanMethod<true>{},
                                 2,
+                                0,
                                 ValueMethod{10.0},
                                 single_stop_loss(ValueMethod{90.0}, false)},
    BacktestRunner::PositionRule{},
@@ -3829,6 +4089,7 @@ TEST(BacktestRunnerTest, StopLossAndTakeProfitHavePriorityOverSignalExits)
                    std::move(signal_exits),
                    BooleanMethod<false>{},
                    1,
+                   0,
                    ValueMethod{10.0},
                    single_stop_loss(ValueMethod{90.0}, true, false, 0.25),
                    SignalTiming::NextOpen,
@@ -4156,6 +4417,7 @@ TEST(BacktestRunnerTest,
                                 {},
                                 BooleanMethod<false>{},
                                 1,
+                                0,
                                 ValueMethod{10.0},
                                 {},
                                 SignalTiming::CurrentClose,

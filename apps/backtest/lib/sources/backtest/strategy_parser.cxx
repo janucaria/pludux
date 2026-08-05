@@ -207,6 +207,7 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
      parse_signal_timing(pyramiding_json.at("timing").as<std::string>()));
     pyramiding.retrigger(parse_pyramiding_retrigger(
      pyramiding_json.at("retrigger").as<std::string>()));
+    pyramiding.cooldown(pyramiding_json.at("cooldown").as<std::size_t>());
     if(pyramiding_json.contains("maxLayers")) {
       pyramiding.max_layers(pyramiding_json.at("maxLayers").as<std::size_t>());
     }
@@ -335,6 +336,7 @@ auto serialize_strategy_position(const Strategy::Position& position,
    serialize_signal_timing(position.pyramiding().timing());
   position_json["pyramiding"]["retrigger"] =
    serialize_pyramiding_retrigger(position.pyramiding().retrigger());
+  position_json["pyramiding"]["cooldown"] = position.pyramiding().cooldown();
   position_json["pyramiding"]["maxLayers"] = position.pyramiding().max_layers();
   position_json["pyramiding"]["stopTargetReference"] = jsoncons::ojson{};
   position_json["pyramiding"]["stopTargetReference"]["favorable"] =

@@ -55,6 +55,7 @@ auto make_entry_runner(const Asset& asset,
                                                     {},
                                                     BooleanMethod<false>{},
                                                     0,
+                                                    0,
                                                     ValueMethod{10.0},
                                                     {},
                                                     SignalTiming::CurrentClose};

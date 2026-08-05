@@ -399,6 +399,7 @@ private:
         node_to_erased_method<ErasedSeriesMethodContext>(
          position.pyramiding().signal(), input_context),
         position.pyramiding().max_layers(),
+        position.pyramiding().cooldown(),
         node_to_erased_method<ErasedSeriesMethodContext>(
          position.risk_distance(), input_context),
         std::move(stop_losses),
