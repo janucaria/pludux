@@ -39,7 +39,17 @@ Portfolio
 Position sizing and execution filters read the current Portfolio equity and
 drawdown. Strategy Performance remains backtest-specific, so Bayesian or Kelly
 sizing uses only the theoretical history of that Backtest within the current
-Portfolio run.
+Portfolio run. Shared reservations do not change a Profile's sizing intent;
+they constrain the later cash decision.
+
+Sizing methods express different limits:
+
+- Fixed Quantity requests explicit asset units and uses nearest-step Market
+  normalization.
+- Fixed Budget, Equity Fraction, and Bayesian Kelly cap entry notional plus
+  applicable Broker entry fees.
+- Risk Distance caps loss at the risk boundary plus estimated entry and
+  boundary-exit fees.
 
 ## Shared-Capital Arbitration
 
@@ -50,11 +60,12 @@ deterministic capital priority.
 
 For each risk-increasing request, Pludux performs these steps:
 
-1. Evaluate the backtest Profile's execution filter and requested size.
-2. Apply the Portfolio drawdown adjustment.
-3. Normalize quantity using the shared Market rules.
-4. Calculate fees using the shared Broker.
-5. Compare required capital with remaining shared capital.
+1. Evaluate the Backtest Profile's execution filter and sizing constraint.
+2. Apply the Portfolio drawdown adjustment to its quantity and limit.
+3. Use the shared Market and Broker to find the largest valid quantity within
+   the sizing constraint.
+4. Calculate remaining shared cash after existing reservations.
+5. Compare the fee-inclusive entry cost with that available cash.
 6. Reject the request or cap it to the largest affordable valid quantity,
    according to the Portfolio policy.
 

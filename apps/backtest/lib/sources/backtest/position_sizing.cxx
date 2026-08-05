@@ -20,6 +20,7 @@ export module pludux.backtest:position_sizing;
 
 import :strategy_intent;
 import :strategy_performance;
+import :entry_order_sizing;
 
 export namespace pludux::backtest {
 
@@ -48,6 +49,7 @@ struct StrategyPerformanceBayesianKellyEvaluation {
 
 struct PositionSizingEvaluation {
   double requested_quantity{};
+  EntryOrderSizingConstraint constraint{NearestQuantityConstraint{}};
   std::optional<StrategyPerformanceBayesianKellyEvaluation> bayesian_kelly{};
 
   auto operator==(const PositionSizingEvaluation&) const noexcept
@@ -58,13 +60,18 @@ class PositionSizingContext {
 public:
   PositionSizingContext(double equity,
                         double entry_price,
+                        double direction,
                         const StrategyPerformanceSnapshot& strategy_performance,
                         std::function<double()> risk_distance_resolver)
   : equity_{equity}
   , entry_price_{entry_price}
+  , direction_{direction}
   , strategy_performance_{&strategy_performance}
   , risk_distance_resolver_{std::move(risk_distance_resolver)}
   {
+    if(direction_ != 1.0 && direction_ != -1.0) {
+      throw std::invalid_argument{"Invalid position direction"};
+    }
   }
 
   auto equity(this const PositionSizingContext& self) noexcept -> double
@@ -75,6 +82,11 @@ public:
   auto entry_price(this const PositionSizingContext& self) noexcept -> double
   {
     return self.entry_price_;
+  }
+
+  auto direction(this const PositionSizingContext& self) noexcept -> double
+  {
+    return self.direction_;
   }
 
   auto strategy_performance(this const PositionSizingContext& self) noexcept
@@ -94,6 +106,7 @@ public:
 private:
   double equity_{};
   double entry_price_{};
+  double direction_{};
   const StrategyPerformanceSnapshot* strategy_performance_{};
   std::function<double()> risk_distance_resolver_{};
 };
@@ -202,26 +215,26 @@ private:
   double quantity_{1.0};
 };
 
-class FixedNotionalPositionSizing {
+class FixedBudgetPositionSizing {
 public:
-  explicit FixedNotionalPositionSizing(double notional = 1000.0)
-  : notional_{notional}
+  explicit FixedBudgetPositionSizing(double budget = 1000.0)
+  : budget_{budget}
   {
-    if(!std::isfinite(notional_) || notional_ <= 0.0) {
-      throw std::invalid_argument{"Invalid fixed notional"};
+    if(!std::isfinite(budget_) || budget_ <= 0.0) {
+      throw std::invalid_argument{"Invalid fixed budget"};
     }
   }
 
-  auto operator==(const FixedNotionalPositionSizing&) const noexcept
+  auto operator==(const FixedBudgetPositionSizing&) const noexcept
    -> bool = default;
 
-  auto notional(this const FixedNotionalPositionSizing& self) noexcept -> double
+  auto budget(this const FixedBudgetPositionSizing& self) noexcept -> double
   {
-    return self.notional_;
+    return self.budget_;
   }
 
 private:
-  double notional_{1000.0};
+  double budget_{1000.0};
 };
 
 class EquityFractionPositionSizing {
@@ -346,8 +359,12 @@ public:
     validate_context_value(context.equity(), "equity");
     const auto risk_distance = context.risk_distance();
     validate_context_value(risk_distance, "risk distance");
-    return {.requested_quantity =
-             context.equity() * node_.risk_fraction() / risk_distance};
+    const auto risk_budget = context.equity() * node_.risk_fraction();
+    const auto boundary_price =
+     context.entry_price() - context.direction() * risk_distance;
+    validate_context_value(boundary_price, "risk boundary price");
+    return {.requested_quantity = risk_budget / risk_distance,
+            .constraint = RiskBudgetConstraint{risk_budget, boundary_price}};
   }
 
 private:
@@ -369,35 +386,37 @@ public:
   }
   auto evaluate(const PositionSizingContext&) const -> PositionSizingEvaluation
   {
-    return {.requested_quantity = node_.quantity()};
+    return {.requested_quantity = node_.quantity(),
+            .constraint = NearestQuantityConstraint{}};
   }
 
 private:
   FixedQuantityPositionSizing node_;
 };
 
-class FixedNotionalPositionSizingMethod {
+class FixedBudgetPositionSizingMethod {
 public:
-  explicit FixedNotionalPositionSizingMethod(FixedNotionalPositionSizing node)
+  explicit FixedBudgetPositionSizingMethod(FixedBudgetPositionSizing node)
   : node_{std::move(node)}
   {
   }
 
-  auto operator==(const FixedNotionalPositionSizingMethod&) const noexcept
+  auto operator==(const FixedBudgetPositionSizingMethod&) const noexcept
    -> bool = default;
   auto name() const noexcept -> std::string_view
   {
-    return "FIXED_NOTIONAL";
+    return "FIXED_BUDGET";
   }
   auto evaluate(const PositionSizingContext& context) const
    -> PositionSizingEvaluation
   {
     validate_context_value(context.entry_price(), "entry price");
-    return {.requested_quantity = node_.notional() / context.entry_price()};
+    return {.requested_quantity = node_.budget() / context.entry_price(),
+            .constraint = EntryCostBudgetConstraint{node_.budget()}};
   }
 
 private:
-  FixedNotionalPositionSizing node_;
+  FixedBudgetPositionSizing node_;
 };
 
 class EquityFractionPositionSizingMethod {
@@ -418,8 +437,9 @@ public:
   {
     validate_context_value(context.equity(), "equity");
     validate_context_value(context.entry_price(), "entry price");
-    return {.requested_quantity = context.equity() * node_.equity_fraction() /
-                                  context.entry_price()};
+    const auto budget = context.equity() * node_.equity_fraction();
+    return {.requested_quantity = budget / context.entry_price(),
+            .constraint = EntryCostBudgetConstraint{budget}};
   }
 
 private:
@@ -501,8 +521,9 @@ public:
      .scaled_kelly_fraction = scaled_fraction,
      .maximum_equity_fraction = node_.maximum_equity_fraction(),
      .allocation_fraction = allocation_fraction};
-    return {.requested_quantity =
-             allocation_fraction * context.equity() / context.entry_price(),
+    const auto budget = allocation_fraction * context.equity();
+    return {.requested_quantity = budget / context.entry_price(),
+            .constraint = EntryCostBudgetConstraint{budget},
             .bayesian_kelly = diagnostic};
   }
 
@@ -524,10 +545,10 @@ inline auto make_position_sizing_method(const FixedQuantityPositionSizing& node)
   return PositionSizingMethod{detail::FixedQuantityPositionSizingMethod{node}};
 }
 
-inline auto make_position_sizing_method(const FixedNotionalPositionSizing& node)
+inline auto make_position_sizing_method(const FixedBudgetPositionSizing& node)
  -> PositionSizingMethod
 {
-  return PositionSizingMethod{detail::FixedNotionalPositionSizingMethod{node}};
+  return PositionSizingMethod{detail::FixedBudgetPositionSizingMethod{node}};
 }
 
 inline auto
@@ -601,6 +622,7 @@ enum class PositionSizingDecisionOutcome {
   ShadowOnly,
   NoPositiveSize,
   DrawdownSuppressed,
+  SizingLimitTooSmall,
   InsufficientCash,
   Executed
 };
@@ -614,11 +636,18 @@ struct PositionSizingDecision {
   double entry_price{};
   PositionSizingDecisionOutcome outcome{
    PositionSizingDecisionOutcome::Filtered};
-  std::optional<double> primary_quantity{};
+  std::optional<double> requested_quantity{};
+  std::optional<double> requested_limit{};
   std::optional<double> drawdown_adjusted_quantity{};
-  std::optional<double> broker_normalized_quantity{};
+  std::optional<double> drawdown_adjusted_limit{};
+  std::optional<double> sizing_normalized_quantity{};
+  std::optional<double> entry_cost{};
+  std::optional<double> estimated_loss{};
+  std::optional<double> cash_required{};
+  std::optional<double> cash_available{};
   std::optional<double> final_quantity{};
-  bool cash_capped{};
+  std::optional<double> final_entry_cost{};
+  bool cash_adjusted{};
   std::optional<StrategyPerformanceBayesianKellyEvaluation> bayesian_kelly{};
 
   auto operator==(const PositionSizingDecision&) const noexcept

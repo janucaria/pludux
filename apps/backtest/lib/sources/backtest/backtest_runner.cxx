@@ -27,6 +27,7 @@ import :asset;
 import :profile;
 import :portfolio;
 import :position_sizing;
+import :entry_order_sizing;
 import :trade_entry;
 import :trade_exit;
 import :take_profit_level;
@@ -808,121 +809,58 @@ private:
                     0.0);
   }
 
-  auto required_cash(this const BacktestRunner&,
-                     const TradeEntry& entry,
-                     double fee) noexcept -> double
-  {
-    return std::abs(entry.position_size() * entry.price()) + fee;
-  }
-
-  void normalize_order_size(this const BacktestRunner& self,
-                            TradeEntry& entry) noexcept
-  {
-    const auto quantity_step = self.market_.quantity_step();
-    const auto min_order_quantity = self.market_.min_order_quantity();
-
-    auto position_size = entry.position_size();
-    if(quantity_step > 0.0 && std::fmod(position_size, quantity_step) != 0.0) {
-      position_size = quantity_step * std::round(position_size / quantity_step);
-    }
-
-    if(position_size > 0.0 && position_size < min_order_quantity) {
-      position_size = min_order_quantity;
-    } else if(position_size < 0.0 && position_size > -min_order_quantity) {
-      position_size = -min_order_quantity;
-    }
-
-    entry.position_size(position_size);
-  }
-
-  auto cap_order_to_available_cash(this const BacktestRunner& self,
-                                   const TradeEntry& entry,
-                                   double available_cash)
+  auto prepare_entry_order(this BacktestRunner& self,
+                           const EntryOrderSizingRequest& request,
+                           PositionSizingDecision& decision)
    -> std::optional<TradeEntry>
   {
-    const auto direction = entry.position_size() >= 0.0 ? 1.0 : -1.0;
-    const auto intended_quantity = std::abs(entry.position_size());
-    const auto min_order_quantity = self.market_.min_order_quantity();
-    const auto quantity_step = self.market_.quantity_step();
-
-    if(intended_quantity <= 0.0 || available_cash <= 0.0) {
+    const auto sized = size_entry_order(request, self.market_, self.broker_);
+    if(!sized) {
+      decision.outcome = PositionSizingDecisionOutcome::SizingLimitTooSmall;
       return std::nullopt;
     }
 
-    auto low = 0.0;
-    auto high = intended_quantity;
-    for(auto i = 0; i < 64; ++i) {
-      const auto mid = (low + high) / 2.0;
-      auto candidate = entry;
-      candidate.position_size(direction * mid);
-      const auto fee = self.broker_.calculate_fee(candidate);
-      if(self.required_cash(candidate, fee) <= available_cash) {
-        low = mid;
-      } else {
-        high = mid;
-      }
-    }
-
-    auto capped_quantity = low;
-    if(quantity_step > 0.0) {
-      capped_quantity =
-       quantity_step * std::floor(capped_quantity / quantity_step);
-    }
-
-    if(capped_quantity <= 0.0 ||
-       (min_order_quantity > 0.0 && capped_quantity < min_order_quantity)) {
-      return std::nullopt;
-    }
-
-    auto capped_entry = entry;
-    capped_entry.position_size(direction * capped_quantity);
-    const auto capped_fee = self.broker_.calculate_fee(capped_entry);
-    if(self.required_cash(capped_entry, capped_fee) > available_cash) {
-      return std::nullopt;
-    }
-
-    return capped_entry;
-  }
-
-  auto prepare_entry_order(this BacktestRunner& self,
-                           TradeEntry& entry,
-                           PositionSizingDecision& decision) -> bool
-  {
-    self.normalize_order_size(entry);
-    decision.broker_normalized_quantity = std::abs(entry.position_size());
-    if(*decision.broker_normalized_quantity <= 0.0) {
-      decision.outcome = PositionSizingDecisionOutcome::NoPositiveSize;
-      return false;
-    }
-
-    const auto fee = self.broker_.calculate_fee(entry);
+    decision.sizing_normalized_quantity =
+     std::abs(sized->entry.position_size());
+    decision.entry_cost = sized->entry_cost;
+    decision.estimated_loss = sized->estimated_loss;
     const auto cash = self.available_cash();
-    const auto cash_required = self.required_cash(entry, fee);
-    if(cash_required <= cash) {
-      decision.final_quantity = std::abs(entry.position_size());
+    decision.cash_required = sized->entry_cost;
+    decision.cash_available = cash;
+    if(sized->entry_cost <= cash) {
+      decision.final_quantity = std::abs(sized->entry.position_size());
+      decision.final_entry_cost = sized->entry_cost;
       decision.outcome = PositionSizingDecisionOutcome::Executed;
-      return true;
+      return sized->entry;
     }
 
     switch(self.insufficient_cash_policy_) {
     case InsufficientCashPolicy::Reject:
       self.execution_session_.reject_insufficient_cash(
-       entry, cash, cash_required);
+       sized->entry, cash, sized->entry_cost);
       decision.outcome = PositionSizingDecisionOutcome::InsufficientCash;
-      return false;
+      return std::nullopt;
     case InsufficientCashPolicy::CapToAvailableCash:
-      if(auto capped_entry = self.cap_order_to_available_cash(entry, cash)) {
-        entry = *capped_entry;
-        decision.cash_capped = true;
-        decision.final_quantity = std::abs(entry.position_size());
-        decision.outcome = PositionSizingDecisionOutcome::Executed;
-        return true;
+      if(cash > 0.0) {
+        const auto capped = size_entry_order(
+         EntryOrderSizingRequest{sized->entry.position_size(),
+                                 sized->entry.price(),
+                                 EntryCostBudgetConstraint{cash}},
+         self.market_,
+         self.broker_);
+        if(capped) {
+          decision.cash_adjusted = true;
+          decision.final_quantity = std::abs(capped->entry.position_size());
+          decision.final_entry_cost = capped->entry_cost;
+          decision.outcome = PositionSizingDecisionOutcome::Executed;
+          return capped->entry;
+        }
       }
       decision.outcome = PositionSizingDecisionOutcome::InsufficientCash;
-      return false;
+      return std::nullopt;
     }
 
-    return false;
+    return std::nullopt;
   }
 
   void update_accounting(this BacktestRunner& self) noexcept
@@ -975,7 +913,7 @@ private:
                     double current_drawdown_ratio,
                     const StrategyPerformanceSnapshot& performance_snapshot,
                     PositionSizingDecision& decision)
-   -> std::optional<TradeEntry>
+   -> std::optional<EntryOrderSizingRequest>
   {
     const auto direction = is_long ? 1.0 : -1.0;
     const auto initial_price_context =
@@ -983,6 +921,7 @@ private:
     const auto sizing_context = PositionSizingContext{
      self.current_account_state_.equity(),
      entry_price,
+     direction,
      performance_snapshot,
      [&position, &evaluation_snapshot, &initial_price_context] {
        return evaluate_series_method(position.risk_distance_method(),
@@ -994,7 +933,8 @@ private:
        evaluation.requested_quantity < 0.0) {
       throw std::runtime_error{"Invalid position sizing quantity"};
     }
-    decision.primary_quantity = evaluation.requested_quantity;
+    decision.requested_quantity = evaluation.requested_quantity;
+    decision.requested_limit = entry_order_sizing_limit(evaluation.constraint);
     decision.bayesian_kelly = evaluation.bayesian_kelly;
     if(evaluation.requested_quantity <= 0.0) {
       decision.outcome = PositionSizingDecisionOutcome::NoPositiveSize;
@@ -1003,13 +943,20 @@ private:
 
     const auto adjusted_position_quantity = self.apply_drawdown_adjustment(
      evaluation.requested_quantity, current_drawdown_ratio);
+    const auto adjustment_multiplier =
+     adjusted_position_quantity / evaluation.requested_quantity;
+    const auto adjusted_constraint = scale_entry_order_sizing_constraint(
+     evaluation.constraint, adjustment_multiplier);
     decision.drawdown_adjusted_quantity = adjusted_position_quantity;
+    decision.drawdown_adjusted_limit =
+     entry_order_sizing_limit(adjusted_constraint);
     if(adjusted_position_quantity <= 0.0) {
       decision.outcome = PositionSizingDecisionOutcome::DrawdownSuppressed;
       return std::nullopt;
     }
 
-    return TradeEntry{direction * adjusted_position_quantity, entry_price};
+    return EntryOrderSizingRequest{
+     direction * adjusted_position_quantity, entry_price, adjusted_constraint};
   }
 
   auto apply_drawdown_adjustment(this const BacktestRunner& self,
@@ -1784,15 +1731,18 @@ private:
       return true;
     }
 
-    auto entry = self.create_trade(rule,
-                                   is_long,
-                                   price,
-                                   evaluation_snapshot,
-                                   context,
-                                   current_drawdown_ratio,
-                                   performance_snapshot,
-                                   sizing_decision);
-    if(!entry || !self.prepare_entry_order(*entry, sizing_decision)) {
+    const auto sizing_request = self.create_trade(rule,
+                                                  is_long,
+                                                  price,
+                                                  evaluation_snapshot,
+                                                  context,
+                                                  current_drawdown_ratio,
+                                                  performance_snapshot,
+                                                  sizing_decision);
+    const auto entry =
+     sizing_request ? self.prepare_entry_order(*sizing_request, sizing_decision)
+                    : std::nullopt;
+    if(!entry) {
       self.execution_strategy_trade_id_.reset();
       self.position_sizing_decisions_.push_back(std::move(sizing_decision));
       return true;
@@ -1851,15 +1801,18 @@ private:
       self.position_sizing_decisions_.push_back(std::move(sizing_decision));
       return true;
     }
-    auto entry = self.create_trade(rule,
-                                   is_long,
-                                   price,
-                                   evaluation_snapshot,
-                                   context,
-                                   current_drawdown_ratio,
-                                   performance_snapshot,
-                                   sizing_decision);
-    if(!entry || !self.prepare_entry_order(*entry, sizing_decision)) {
+    const auto sizing_request = self.create_trade(rule,
+                                                  is_long,
+                                                  price,
+                                                  evaluation_snapshot,
+                                                  context,
+                                                  current_drawdown_ratio,
+                                                  performance_snapshot,
+                                                  sizing_decision);
+    const auto entry =
+     sizing_request ? self.prepare_entry_order(*sizing_request, sizing_decision)
+                    : std::nullopt;
+    if(!entry) {
       self.position_sizing_decisions_.push_back(std::move(sizing_decision));
       return true;
     }

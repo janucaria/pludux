@@ -290,9 +290,9 @@ struct json_conv_traits<Json, pludux::backtest::PositionSizingNode> {
         return result_type{value_type{
          FixedQuantityPositionSizing{required_as<double>(params, "quantity")}}};
       }
-      if(method == "FIXED_NOTIONAL") {
+      if(method == "FIXED_BUDGET") {
         return result_type{value_type{
-         FixedNotionalPositionSizing{required_as<double>(params, "notional")}}};
+         FixedBudgetPositionSizing{required_as<double>(params, "budget")}}};
       }
       if(method == "EQUITY_FRACTION") {
         return result_type{value_type{EquityFractionPositionSizing{
@@ -333,9 +333,9 @@ struct json_conv_traits<Json, pludux::backtest::PositionSizingNode> {
       json["method"] = "FIXED_QUANTITY";
       json["params"]["quantity"] = value->quantity();
     } else if(const auto* value =
-               position_sizing_node_cast<FixedNotionalPositionSizing>(node)) {
-      json["method"] = "FIXED_NOTIONAL";
-      json["params"]["notional"] = value->notional();
+               position_sizing_node_cast<FixedBudgetPositionSizing>(node)) {
+      json["method"] = "FIXED_BUDGET";
+      json["params"]["budget"] = value->budget();
     } else if(const auto* value =
                position_sizing_node_cast<EquityFractionPositionSizing>(node)) {
       json["method"] = "EQUITY_FRACTION";

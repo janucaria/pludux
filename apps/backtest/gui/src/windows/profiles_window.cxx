@@ -237,13 +237,13 @@ private:
       enum class SizingKind {
         RiskDistance,
         FixedQuantity,
-        FixedNotional,
+        FixedBudget,
         EquityFraction,
         BayesianKelly
       };
       constexpr auto kinds = std::array{SizingKind::RiskDistance,
                                         SizingKind::FixedQuantity,
-                                        SizingKind::FixedNotional,
+                                        SizingKind::FixedBudget,
                                         SizingKind::EquityFraction,
                                         SizingKind::BayesianKelly};
       const auto kind_label = [](SizingKind kind) {
@@ -252,8 +252,8 @@ private:
           return "Risk Distance";
         case SizingKind::FixedQuantity:
           return "Fixed Quantity";
-        case SizingKind::FixedNotional:
-          return "Fixed Notional";
+        case SizingKind::FixedBudget:
+          return "Fixed Budget";
         case SizingKind::EquityFraction:
           return "Equity Fraction";
         case SizingKind::BayesianKelly:
@@ -268,9 +268,9 @@ private:
       if(position_sizing_node_cast<backtest::FixedQuantityPositionSizing>(
           position_sizing)) {
         kind = SizingKind::FixedQuantity;
-      } else if(position_sizing_node_cast<
-                 backtest::FixedNotionalPositionSizing>(position_sizing)) {
-        kind = SizingKind::FixedNotional;
+      } else if(position_sizing_node_cast<backtest::FixedBudgetPositionSizing>(
+                 position_sizing)) {
+        kind = SizingKind::FixedBudget;
       } else if(position_sizing_node_cast<
                  backtest::EquityFractionPositionSizing>(position_sizing)) {
         kind = SizingKind::EquityFraction;
@@ -282,10 +282,10 @@ private:
 
       ui::field_label(
        "Position Sizing",
-       "Risk Distance limits capital at risk for a 1R move. Fixed Quantity "
-       "uses asset units, Fixed Notional uses a currency amount, Equity "
-       "Fraction allocates current equity, and Bayesian Kelly uses the "
-       "Bayesian Strategy Performance model.");
+       "Risk Distance limits loss including estimated round-trip fees for a "
+       "1R move. Fixed Quantity uses asset units, Fixed Budget limits entry "
+       "notional plus fees, Equity Fraction allocates current equity, and "
+       "Bayesian Kelly uses the Bayesian Strategy Performance model.");
       if(ImGui::BeginCombo("##position_sizing", kind_label(kind))) {
         for(const auto candidate : kinds) {
           const auto selected = kind == candidate;
@@ -302,10 +302,10 @@ private:
                backtest::PositionSizingNode{
                 backtest::FixedQuantityPositionSizing{}});
               break;
-            case SizingKind::FixedNotional:
+            case SizingKind::FixedBudget:
               self.editing_profile_ptr_->position_sizing(
                backtest::PositionSizingNode{
-                backtest::FixedNotionalPositionSizing{}});
+                backtest::FixedBudgetPositionSizing{}});
               break;
             case SizingKind::EquityFraction:
               self.editing_profile_ptr_->position_sizing(
@@ -344,8 +344,10 @@ private:
           current)
           ->risk_fraction();
         auto percentage = value * 100.0;
-        ui::field_label("Capital Risk (%)",
-                        "Percent of current capital at risk for a 1R loss.");
+        ui::field_label(
+         "Equity Risk (%)",
+         "Maximum percent of current equity lost at the risk boundary, "
+         "including estimated entry and exit fees.");
         if(ImGui::InputDouble(
             "##capital_risk", &percentage, 1.0, 10.0, "%.2f")) {
           value = percentage / 100.0;
@@ -368,15 +370,15 @@ private:
         }
         break;
       }
-      case SizingKind::FixedNotional: {
+      case SizingKind::FixedBudget: {
         auto value =
-         position_sizing_node_cast<backtest::FixedNotionalPositionSizing>(
-          current)
-          ->notional();
-        ui::field_label("Notional", "Currency value allocated to each entry.");
-        if(ImGui::InputDouble("##notional", &value, 100.0, 1000.0, "%.2f")) {
+         position_sizing_node_cast<backtest::FixedBudgetPositionSizing>(current)
+          ->budget();
+        ui::field_label("Budget",
+                        "Maximum entry notional plus applicable broker fees.");
+        if(ImGui::InputDouble("##budget", &value, 100.0, 1000.0, "%.2f")) {
           assign_if(std::isfinite(value) && value > 0.0,
-                    backtest::FixedNotionalPositionSizing{
+                    backtest::FixedBudgetPositionSizing{
                      std::isfinite(value) && value > 0.0 ? value : 1000.0});
         }
         break;
@@ -387,8 +389,9 @@ private:
           current)
           ->equity_fraction();
         auto percentage = value * 100.0;
-        ui::field_label("Equity (%)",
-                        "Percent of current equity allocated to each entry.");
+        ui::field_label(
+         "Equity (%)",
+         "Maximum percent of current equity used by entry notional and fees.");
         if(ImGui::InputDouble(
             "##equity_fraction", &percentage, 1.0, 10.0, "%.2f")) {
           value = percentage / 100.0;
@@ -443,8 +446,10 @@ private:
         ui::field_label("Kelly Multiplier", "0 disables execution sizing.");
         ImGui::InputDouble(
          "##kelly_multiplier", &multiplier, 0.05, 0.10, "%.3f");
-        ui::field_label("Maximum Equity Per Entry (%)",
-                        "May exceed 100%; cash policy still applies.");
+        ui::field_label(
+         "Maximum Equity Per Entry (%)",
+         "Caps entry notional plus fees. May exceed 100%; cash policy still "
+         "applies.");
         ImGui::InputDouble(
          "##kelly_maximum", &maximum_percent, 5.0, 25.0, "%.2f");
         const auto credible = credible_percent / 100.0;

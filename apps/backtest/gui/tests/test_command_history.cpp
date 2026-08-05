@@ -23,9 +23,12 @@ using pludux::apps::save_application_state_json;
 using pludux::apps::UndoCommand;
 using pludux::apps::ViewCommand;
 using pludux::backtest::Backtest;
+using pludux::backtest::FixedBudgetPositionSizing;
 using pludux::backtest::Portfolio;
 using pludux::backtest::PortfolioResults;
 using pludux::backtest::PortfolioTimeline;
+using pludux::backtest::PositionSizingNode;
+using pludux::backtest::Profile;
 
 auto add_backtest(ApplicationState& state, std::string name)
 {
@@ -290,6 +293,36 @@ TEST(ApplicationStateSerialization, RejectsRemovedUiStateSchema)
   serialized.replace(
    key, std::string{"\"documentState\""}.size(), "\"uiState\"");
   auto legacy = std::stringstream{serialized};
+  EXPECT_THROW(load_application_state_json(legacy), std::exception);
+}
+
+TEST(ApplicationStateSerialization, UsesFixedBudgetWithoutLegacyAlias)
+{
+  auto state = ApplicationState{};
+  state.add_profile(
+   Profile{"Budget", PositionSizingNode{FixedBudgetPositionSizing{750.0}}});
+  auto stream = std::stringstream{};
+  save_application_state_json(stream, state);
+  const auto serialized = stream.str();
+  EXPECT_NE(serialized.find("\"FIXED_BUDGET\""), std::string::npos);
+  EXPECT_NE(serialized.find("\"budget\":750.0"), std::string::npos);
+  EXPECT_EQ(serialized.find("FIXED_NOTIONAL"), std::string::npos);
+
+  auto input = std::stringstream{serialized};
+  const auto loaded = load_application_state_json(input);
+  ASSERT_EQ(loaded.get_profile_handles().size(), 1U);
+  const auto profile = loaded.get_profile(loaded.get_profile_handles().front());
+  const auto* budget = position_sizing_node_cast<FixedBudgetPositionSizing>(
+   profile.position_sizing());
+  ASSERT_NE(budget, nullptr);
+  EXPECT_DOUBLE_EQ(budget->budget(), 750.0);
+
+  auto legacy_json = serialized;
+  const auto method = legacy_json.find("FIXED_BUDGET");
+  ASSERT_NE(method, std::string::npos);
+  legacy_json.replace(
+   method, std::string{"FIXED_BUDGET"}.size(), "FIXED_NOTIONAL");
+  auto legacy = std::stringstream{legacy_json};
   EXPECT_THROW(load_application_state_json(legacy), std::exception);
 }
 

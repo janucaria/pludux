@@ -34,6 +34,7 @@ export import :strategy_inputs;
 export import :market;
 export import :broker;
 export import :position_sizing;
+export import :entry_order_sizing;
 export import :profile;
 export import :portfolio;
 export import :trade_entry;

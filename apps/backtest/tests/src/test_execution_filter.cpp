@@ -248,5 +248,5 @@ TEST(ExecutionFilterTest,
   EXPECT_EQ(decision.outcome, PositionSizingDecisionOutcome::Executed);
   ASSERT_TRUE(decision.bayesian_kelly);
   EXPECT_GT(decision.bayesian_kelly->raw_kelly_fraction, 0.0);
-  EXPECT_NEAR(*decision.primary_quantity, 1'000.0 / 130.0, 1e-12);
+  EXPECT_NEAR(*decision.requested_quantity, 1'000.0 / 130.0, 1e-12);
 }

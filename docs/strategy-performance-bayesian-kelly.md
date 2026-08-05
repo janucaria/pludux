@@ -24,8 +24,9 @@ The backtest has four relevant layers:
 2. Strategy Performance observes only closed theoretical positions and updates
    its frequentist and Bayesian evidence.
 3. Position Sizing reads the current Strategy Performance posterior at an entry
-   intent and requests an execution quantity.
-4. The execution layer applies drawdown adjustment, broker quantity rules, and
+   intent and produces an equity-allocation constraint.
+4. The execution layer applies drawdown adjustment, finds a Market-valid
+   quantity whose notional and entry fees fit that allocation, and then applies
    the selected insufficient-cash policy.
 
 Consequently, a filtered or unaffordable entry still belongs to the theoretical
@@ -213,8 +214,10 @@ Q=\frac{f_{\mathrm{entry}}\times\text{current equity}}
 \]
 
 The defaults are half Kelly, (m=0.5), and a maximum equity fraction of 1.0.
-The maximum may be configured above 1.0, although cash policy can still reduce
-or reject an unaffordable order.
+The corresponding allocation is an entry-cost budget, so the submitted
+quantity may be smaller than (Q) when Broker entry fees apply or Market rules
+require discrete quantity steps. The maximum may be configured above 1.0,
+although cash policy can still reduce or reject an unaffordable order.
 
 ## Posterior Estimate Modes
 
@@ -314,12 +317,13 @@ be reproduced without inferring them from displayed 95% intervals.
 
 ### Cash capping
 
-If primary sizing requests 100 units at price 100 but fees and available cash
-support only 97 units, the pipeline first applies any drawdown adjustment and
-market normalization, then the `CapToAvailableCash` policy searches for the
-largest affordable quantity. The timeline retains both the requested stages and
-the final 97-unit quantity. This execution reduction does not alter Strategy
-Performance evidence.
+If the Kelly allocation is 10,000 at price 100, allocation sizing first finds
+the largest Market-valid quantity whose notional and entry fees do not exceed
+10,000. The pipeline then compares that fee-inclusive entry cost with shared
+cash after reservations. If shared cash supports only 97 units, the
+`CapToAvailableCash` policy searches for the largest affordable quantity without
+exceeding the Kelly allocation. This execution reduction does not alter
+Strategy Performance evidence.
 
 ## Configuration and Diagnostic Mapping
 
@@ -339,10 +343,16 @@ Performance evidence.
 | `rawKellyFraction` | (f_{raw}) |
 | `scaledKellyFraction` | (m\max(f_{raw},0)) |
 | `allocationFraction` | (f_{entry}) |
-| `primaryQuantity` | (Q) before execution overlays |
+| `requestedQuantity` | (Q) before execution overlays |
+| `requestedLimit` | equity-allocation entry-cost budget |
 | `drawdownAdjustedQuantity` | quantity after drawdown adjustment |
-| `brokerNormalizedQuantity` | quantity after market step/minimum rules |
+| `drawdownAdjustedLimit` | allocation after drawdown adjustment |
+| `sizingNormalizedQuantity` | Market-valid, fee-aware allocation quantity |
+| `entryCost` | submitted notional plus entry fees |
+| `cashRequired` | entry cost compared with shared cash |
+| `cashAvailable` | shared cash after existing reservations |
 | `finalQuantity` | quantity submitted after cash policy |
+| `finalEntryCost` | submitted notional plus fees after cash policy |
 
 ## Validation and Reproduction
 

@@ -150,6 +150,10 @@ TEST(PortfolioRunnerTest, BacktestOrderHasDeterministicSharedCashPriority)
   ASSERT_EQ(results.backtests()[1].timeline().trade_events(0).size(), 1);
   EXPECT_TRUE(
    results.backtests()[1].timeline().trade_events(0).front().is_rejected());
+  const auto& second_decision =
+   results.backtests()[1].timeline().position_sizing_decisions(0).front();
+  EXPECT_DOUBLE_EQ(*second_decision.requested_quantity, 8.0);
+  EXPECT_DOUBLE_EQ(*second_decision.cash_available, 200.0);
   EXPECT_DOUBLE_EQ(results.timeline().row(0).reserved_notional, 800.0);
   EXPECT_DOUBLE_EQ(results.timeline().row(0).available_capital, 200.0);
 }

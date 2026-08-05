@@ -1,6 +1,7 @@
 #include <cmath>
 #include <limits>
 #include <stdexcept>
+#include <variant>
 
 #include <gtest/gtest.h>
 
@@ -15,7 +16,9 @@ auto context(double equity = 10'000.0,
 {
   static const auto performance = StrategyPerformance{}.snapshot();
   return PositionSizingContext{
-   equity, entry_price, performance, [risk_distance] { return risk_distance; }};
+   equity, entry_price, 1.0, performance, [risk_distance] {
+     return risk_distance;
+   }};
 }
 
 auto context_with(const StrategyPerformanceSnapshot& performance,
@@ -23,7 +26,7 @@ auto context_with(const StrategyPerformanceSnapshot& performance,
                   double entry_price = 100.0) -> PositionSizingContext
 {
   return PositionSizingContext{
-   equity, entry_price, performance, [] { return 5.0; }};
+   equity, entry_price, 1.0, performance, [] { return 5.0; }};
 }
 
 auto performance_snapshot(double probability,
@@ -70,7 +73,7 @@ TEST(PositionSizing, EvaluatesExistingMethods)
                     .evaluate(context())
                     .requested_quantity,
                    3.0);
-  EXPECT_DOUBLE_EQ(PositionSizingNode{FixedNotionalPositionSizing{1'000.0}}
+  EXPECT_DOUBLE_EQ(PositionSizingNode{FixedBudgetPositionSizing{1'000.0}}
                     .make_method()
                     .evaluate(context())
                     .requested_quantity,
@@ -88,7 +91,7 @@ TEST(PositionSizing, IsValueSemanticAndTypeAware)
   const auto copy = first;
   const auto different = PositionSizingNode{FixedQuantityPositionSizing{4.0}};
   const auto different_type =
-   PositionSizingNode{FixedNotionalPositionSizing{3.0}};
+   PositionSizingNode{FixedBudgetPositionSizing{3.0}};
 
   EXPECT_EQ(first, copy);
   EXPECT_NE(first, different);
@@ -97,12 +100,43 @@ TEST(PositionSizing, IsValueSemanticAndTypeAware)
             nullptr);
 }
 
+TEST(PositionSizing, ProducesMethodSpecificConstraints)
+{
+  const auto risk =
+   PositionSizingNode{RiskDistancePositionSizing{0.01}}.make_method().evaluate(
+    context());
+  const auto fixed_quantity =
+   PositionSizingNode{FixedQuantityPositionSizing{3.0}}.make_method().evaluate(
+    context());
+  const auto fixed_budget =
+   PositionSizingNode{FixedBudgetPositionSizing{750.0}}.make_method().evaluate(
+    context());
+  const auto equity = PositionSizingNode{EquityFractionPositionSizing{0.10}}
+                       .make_method()
+                       .evaluate(context());
+
+  const auto* risk_limit = std::get_if<RiskBudgetConstraint>(&risk.constraint);
+  ASSERT_NE(risk_limit, nullptr);
+  EXPECT_DOUBLE_EQ(risk_limit->budget, 100.0);
+  EXPECT_DOUBLE_EQ(risk_limit->boundary_price, 95.0);
+  EXPECT_TRUE(std::holds_alternative<NearestQuantityConstraint>(
+   fixed_quantity.constraint));
+  const auto* fixed_limit =
+   std::get_if<EntryCostBudgetConstraint>(&fixed_budget.constraint);
+  ASSERT_NE(fixed_limit, nullptr);
+  EXPECT_DOUBLE_EQ(fixed_limit->budget, 750.0);
+  const auto* equity_limit =
+   std::get_if<EntryCostBudgetConstraint>(&equity.constraint);
+  ASSERT_NE(equity_limit, nullptr);
+  EXPECT_DOUBLE_EQ(equity_limit->budget, 1'000.0);
+}
+
 TEST(PositionSizing, RejectsInvalidConfiguration)
 {
   EXPECT_THROW(RiskDistancePositionSizing{0.0}, std::invalid_argument);
   EXPECT_THROW(FixedQuantityPositionSizing{-1.0}, std::invalid_argument);
   EXPECT_THROW(
-   FixedNotionalPositionSizing{std::numeric_limits<double>::infinity()},
+   FixedBudgetPositionSizing{std::numeric_limits<double>::infinity()},
    std::invalid_argument);
   EXPECT_THROW(EquityFractionPositionSizing{0.0}, std::invalid_argument);
   EXPECT_THROW(
@@ -148,6 +182,10 @@ TEST(PositionSizing, PosteriorMeanAppliesMultiplierAndAllocationCap)
   EXPECT_NEAR(result.bayesian_kelly->scaled_kelly_fraction, 20.0, 1e-12);
   EXPECT_NEAR(result.bayesian_kelly->allocation_fraction, 2.0, 1e-12);
   EXPECT_NEAR(result.requested_quantity, 200.0, 1e-12);
+  const auto* budget =
+   std::get_if<EntryCostBudgetConstraint>(&result.constraint);
+  ASSERT_NE(budget, nullptr);
+  EXPECT_NEAR(budget->budget, 20'000.0, 1e-12);
 }
 
 TEST(PositionSizing, NegativeEdgeAndZeroMultiplierProduceNoPosition)

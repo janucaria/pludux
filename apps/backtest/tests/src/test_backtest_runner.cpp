@@ -118,12 +118,11 @@ auto run_single_entry(
  double entry_price = 100.0,
  DrawdownAdjustment drawdown_adjustment = {},
  double initial_capital = 1000.0,
- double peak_equity = std::numeric_limits<double>::quiet_NaN())
- -> BacktestTimeline
+ double peak_equity = std::numeric_limits<double>::quiet_NaN(),
+ Market market = Market{"Test", 0.0, 0.0},
+ Broker broker = Broker{"Test"}) -> BacktestTimeline
 {
   const auto asset = make_single_bar_asset(entry_price);
-  const auto market = Market{"Test", 0.0, 0.0};
-  const auto broker = Broker{"Test"};
   const auto profile = Profile{"Test", position_sizing};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
@@ -548,12 +547,12 @@ TEST(BacktestRunnerTest,
   ASSERT_EQ(timeline.position_sizing_decisions(0).size(), 1U);
   const auto& sizing = timeline.position_sizing_decisions(0).front();
   EXPECT_EQ(sizing.outcome, PositionSizingDecisionOutcome::InsufficientCash);
-  EXPECT_DOUBLE_EQ(*sizing.primary_quantity, 20.0);
+  EXPECT_DOUBLE_EQ(*sizing.requested_quantity, 20.0);
   const auto layer_results =
    series_results.results(std::string{"pyramiding_layer"});
   ASSERT_TRUE(layer_results.has_value());
   EXPECT_EQ(layer_results->get(), (std::vector<double>{1.0}));
-  EXPECT_DOUBLE_EQ(*sizing.broker_normalized_quantity, 20.0);
+  EXPECT_DOUBLE_EQ(*sizing.sizing_normalized_quantity, 20.0);
   EXPECT_FALSE(sizing.final_quantity);
 }
 
@@ -602,9 +601,11 @@ TEST(BacktestRunnerTest, CapToAvailableCashOpensLargestAffordableOrder)
   ASSERT_EQ(timeline.position_sizing_decisions(0).size(), 1U);
   const auto& sizing = timeline.position_sizing_decisions(0).front();
   EXPECT_EQ(sizing.outcome, PositionSizingDecisionOutcome::Executed);
-  EXPECT_TRUE(sizing.cash_capped);
-  EXPECT_DOUBLE_EQ(*sizing.primary_quantity, 20.0);
+  EXPECT_TRUE(sizing.cash_adjusted);
+  EXPECT_DOUBLE_EQ(*sizing.requested_quantity, 20.0);
+  EXPECT_DOUBLE_EQ(*sizing.cash_required, 2000.0);
   EXPECT_DOUBLE_EQ(*sizing.final_quantity, 10.0);
+  EXPECT_DOUBLE_EQ(*sizing.final_entry_cost, 1000.0);
 }
 
 TEST(BacktestRunnerTest, CapToAvailableCashSkipsWhenBelowMarketMinimum)
@@ -1464,17 +1465,17 @@ TEST(BacktestRunnerTest, FixedQuantitySizingUsesExactQuantity)
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 12.5);
 }
 
-TEST(BacktestRunnerTest, FixedNotionalSizingConvertsByEntryPrice)
+TEST(BacktestRunnerTest, FixedBudgetSizingConvertsByEntryPrice)
 {
   const auto timeline =
-   run_single_entry(PositionSizingNode{FixedNotionalPositionSizing{250.0}});
+   run_single_entry(PositionSizingNode{FixedBudgetPositionSizing{250.0}});
 
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.5);
 }
 
-TEST(BacktestRunnerTest, FixedNotionalSizingConvertsBySelectedEntryPrice)
+TEST(BacktestRunnerTest, FixedBudgetSizingConvertsBySelectedEntryPrice)
 {
   const auto broker = Broker{"Test",
                              {BrokerFee{"Entry Fee",
@@ -1483,7 +1484,7 @@ TEST(BacktestRunnerTest, FixedNotionalSizingConvertsBySelectedEntryPrice)
                                         BrokerFee::FeeTrigger::Entry,
                                         1.0}}};
   const auto timeline = run_single_close_price_entry(
-   PositionSizingNode{FixedNotionalPositionSizing{250.0}},
+   PositionSizingNode{FixedBudgetPositionSizing{250.0}},
    100.0,
    125.0,
    std::numeric_limits<double>::quiet_NaN(),
@@ -1492,9 +1493,10 @@ TEST(BacktestRunnerTest, FixedNotionalSizingConvertsBySelectedEntryPrice)
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).entry_price(), 125.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.0);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).investment(), 252.5);
-  EXPECT_DOUBLE_EQ(latest_position(timeline).total_entry_fees(), 2.5);
+  EXPECT_NEAR(latest_position(timeline).position_size(), 250.0 / 126.25, 1e-12);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).investment(), 250.0);
+  EXPECT_NEAR(
+   latest_position(timeline).total_entry_fees(), 250.0 / 101.0, 1e-12);
 }
 
 TEST(BacktestRunnerTest, EquityFractionSizingConvertsByCurrentEquity)
@@ -1505,6 +1507,91 @@ TEST(BacktestRunnerTest, EquityFractionSizingConvertsByCurrentEquity)
   ASSERT_TRUE(
    timeline.open_position(last_timeline_index(timeline)).has_value());
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 2.5);
+}
+
+TEST(BacktestRunnerTest, EquityFractionWholeUnitSizingStaysWithinEquityBudget)
+{
+  const auto timeline =
+   run_single_entry(PositionSizingNode{EquityFractionPositionSizing{1.0}},
+                    8'375.0,
+                    DrawdownAdjustment{},
+                    886'925.0,
+                    std::numeric_limits<double>::quiet_NaN(),
+                    Market{"Whole units", 1.0, 1.0});
+
+  ASSERT_TRUE(timeline.open_position(0));
+  EXPECT_DOUBLE_EQ(timeline.open_position(0)->position_size(), 105.0);
+  EXPECT_DOUBLE_EQ(timeline.open_position(0)->investment(), 879'375.0);
+  ASSERT_EQ(timeline.position_sizing_decisions(0).size(), 1U);
+  const auto& decision = timeline.position_sizing_decisions(0).front();
+  EXPECT_EQ(decision.outcome, PositionSizingDecisionOutcome::Executed);
+  EXPECT_DOUBLE_EQ(*decision.requested_limit, 886'925.0);
+  EXPECT_DOUBLE_EQ(*decision.sizing_normalized_quantity, 105.0);
+  EXPECT_FALSE(decision.cash_adjusted);
+}
+
+TEST(BacktestRunnerTest, EquityFractionBudgetIncludesEntryFee)
+{
+  const auto broker = Broker{"Test",
+                             {BrokerFee{"Entry Fee",
+                                        BrokerFee::FeeType::PercentageNotional,
+                                        BrokerFee::FeePosition::LongAndShort,
+                                        BrokerFee::FeeTrigger::Entry,
+                                        1.0}}};
+  const auto timeline =
+   run_single_entry(PositionSizingNode{EquityFractionPositionSizing{1.0}},
+                    100.0,
+                    DrawdownAdjustment{},
+                    1000.0,
+                    std::numeric_limits<double>::quiet_NaN(),
+                    Market{"Fractional", 0.0, 0.0},
+                    broker);
+
+  ASSERT_TRUE(timeline.open_position(0));
+  EXPECT_NEAR(
+   timeline.open_position(0)->position_size(), 1000.0 / 101.0, 1e-12);
+  EXPECT_DOUBLE_EQ(timeline.open_position(0)->investment(), 1000.0);
+}
+
+TEST(BacktestRunnerTest, RiskDistanceBudgetIncludesRoundTripFees)
+{
+  const auto broker = Broker{"Test",
+                             {BrokerFee{"All Fee",
+                                        BrokerFee::FeeType::Fixed,
+                                        BrokerFee::FeePosition::LongAndShort,
+                                        BrokerFee::FeeTrigger::All,
+                                        5.0}}};
+  const auto timeline =
+   run_single_entry(PositionSizingNode{RiskDistancePositionSizing{0.10}},
+                    100.0,
+                    DrawdownAdjustment{},
+                    1000.0,
+                    std::numeric_limits<double>::quiet_NaN(),
+                    Market{"Whole units", 1.0, 1.0},
+                    broker);
+
+  ASSERT_TRUE(timeline.open_position(0));
+  EXPECT_DOUBLE_EQ(timeline.open_position(0)->position_size(), 9.0);
+  const auto& decision = timeline.position_sizing_decisions(0).front();
+  EXPECT_DOUBLE_EQ(*decision.requested_limit, 100.0);
+  EXPECT_DOUBLE_EQ(*decision.estimated_loss, 100.0);
+}
+
+TEST(BacktestRunnerTest, BudgetBelowMarketMinimumIsSizingFailure)
+{
+  const auto timeline =
+   run_single_entry(PositionSizingNode{FixedBudgetPositionSizing{150.0}},
+                    100.0,
+                    DrawdownAdjustment{},
+                    1000.0,
+                    std::numeric_limits<double>::quiet_NaN(),
+                    Market{"Two minimum", 2.0, 1.0});
+
+  EXPECT_FALSE(timeline.open_position(0));
+  EXPECT_TRUE(timeline.trade_events(0).empty());
+  ASSERT_EQ(timeline.position_sizing_decisions(0).size(), 1U);
+  EXPECT_EQ(timeline.position_sizing_decisions(0).front().outcome,
+            PositionSizingDecisionOutcome::SizingLimitTooSmall);
 }
 
 TEST(BacktestRunnerTest, EquityFractionSizingConvertsBySelectedEntryPrice)
@@ -2331,6 +2418,23 @@ TEST(BacktestRunnerTest, DrawdownAdjustmentReducesSizeAtTenPercentDrawdown)
   EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 80.0);
 }
 
+TEST(BacktestRunnerTest, DrawdownAdjustmentScalesEntryBudget)
+{
+  const auto timeline =
+   run_single_entry(PositionSizingNode{FixedBudgetPositionSizing{1000.0}},
+                    100.0,
+                    DrawdownAdjustment{true, 0.10, 0.20},
+                    9000.0,
+                    10000.0);
+
+  ASSERT_TRUE(timeline.open_position(0));
+  EXPECT_DOUBLE_EQ(timeline.open_position(0)->position_size(), 8.0);
+  const auto& decision = timeline.position_sizing_decisions(0).front();
+  EXPECT_DOUBLE_EQ(*decision.requested_limit, 1000.0);
+  EXPECT_DOUBLE_EQ(*decision.drawdown_adjusted_limit, 800.0);
+  EXPECT_DOUBLE_EQ(*decision.entry_cost, 800.0);
+}
+
 TEST(BacktestRunnerTest, DrawdownAdjustmentReducesSizeAtTwentyPercentDrawdown)
 {
   const auto timeline =
@@ -2360,7 +2464,7 @@ TEST(BacktestRunnerTest, DrawdownAdjustmentAtZeroSkipsExecution)
   const auto& decision = timeline.position_sizing_decisions(index).front();
   EXPECT_EQ(decision.outcome,
             PositionSizingDecisionOutcome::DrawdownSuppressed);
-  EXPECT_DOUBLE_EQ(*decision.primary_quantity, 100.0);
+  EXPECT_DOUBLE_EQ(*decision.requested_quantity, 100.0);
   EXPECT_DOUBLE_EQ(*decision.drawdown_adjusted_quantity, 0.0);
 }
 
@@ -2737,7 +2841,7 @@ TEST(BacktestRunnerTest,
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test", PositionSizingNode{FixedNotionalPositionSizing{250.0}}};
+   Profile{"Test", PositionSizingNode{FixedBudgetPositionSizing{250.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
