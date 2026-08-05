@@ -200,6 +200,26 @@ public:
      required_cash);
   }
 
+  void reject_maximum_open_trades(this TradeSession& self,
+                                  const TradeEntry& entry)
+  {
+    self.trade_events_.emplace_back(
+     0,
+     self.next_event_id_++,
+     0,
+     TradeEvent::Type::rejected_maximum_open_trades,
+     self.market_timestamp_,
+     entry.price(),
+     entry.position_size(),
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0);
+  }
+
   void exit_position(this TradeSession& self, const TradeExit& exit)
   {
     self.exit_position(exit, 0.0);

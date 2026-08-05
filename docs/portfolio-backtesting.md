@@ -9,7 +9,8 @@ Backtests.
 - A Backtest selects an Asset, Strategy, and Profile. It also stores strategy
   input overrides and the Strategy Performance model configuration.
 - A Portfolio owns initial capital, one Market, one Broker, drawdown adjustment,
-  insufficient-cash handling, and an ordered collection of Backtests.
+  a maximum-open-trades limit, insufficient-cash handling, and an ordered
+  collection of Backtests.
 - Running a Portfolio simulates all of its Backtests. A single-asset simulation
   is a Portfolio containing one Backtest.
 
@@ -29,6 +30,7 @@ Portfolio
 |- Market rules
 |- Broker fees
 |- Drawdown adjustment
+|- Maximum open trades
 |- Insufficient-cash policy
 `- Ordered Backtests
    |- Asset + Strategy + Profile
@@ -64,13 +66,20 @@ For each risk-increasing request, Pludux performs these steps:
 2. Apply the Portfolio drawdown adjustment to its quantity and limit.
 3. Use the shared Market and Broker to find the largest valid quantity within
    the sizing constraint.
-4. Calculate remaining shared cash after existing reservations.
-5. Compare the fee-inclusive entry cost with that available cash.
-6. Reject the request or cap it to the largest affordable valid quantity,
+4. Reject an initial entry if the Portfolio already has its maximum number of
+   open trades.
+5. Calculate remaining shared cash after existing reservations.
+6. Compare the fee-inclusive entry cost with that available cash.
+7. Reject the request or cap it to the largest affordable valid quantity,
    according to the Portfolio policy.
 
 An accepted order reserves its notional before the next backtest request is
-considered.
+considered. Pyramiding an existing trade does not consume another slot. Closing
+a trade releases its slot before later entry phases and backtests are processed.
+
+New Portfolios allow at most 10 open trades by default. The Portfolio editor
+accepts values of 1 or greater. The underlying configuration also permits 0,
+which rejects every initial entry and can be useful for programmatic scenarios.
 
 ## Synchronized Execution
 

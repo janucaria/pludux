@@ -463,6 +463,7 @@ private:
         app_state, app_state.get_backtest(backtest_handle), *portfolio));
     }
     auto runner = backtest::PortfolioRunner{portfolio->initial_capital(),
+                                            portfolio->maximum_open_trades(),
                                             std::move(backtests)};
     const auto total = runner.total_timestamps();
     self.running_portfolios_.insert_or_assign(portfolio_handle,

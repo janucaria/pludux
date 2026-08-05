@@ -283,6 +283,43 @@ TEST(ApplicationStateSerialization, RoundTripsDocumentAndViewSeparately)
   EXPECT_EQ(loaded.imgui_ini_settings(), "layout-data");
 }
 
+TEST(ApplicationStateSerialization, RoundTripsMaximumOpenTradesIncludingZero)
+{
+  auto state = ApplicationState{};
+  auto portfolio = Portfolio{};
+  portfolio.maximum_open_trades(0);
+  ASSERT_TRUE(state.add_portfolio(std::move(portfolio)));
+  auto stream = std::stringstream{};
+
+  save_application_state_json(stream, state);
+
+  const auto serialized = stream.str();
+  EXPECT_NE(serialized.find("\"maximumOpenTrades\":0"), std::string::npos);
+  auto input = std::stringstream{serialized};
+  const auto loaded = load_application_state_json(input);
+  ASSERT_EQ(loaded.get_portfolio_handles().size(), 1U);
+  EXPECT_EQ(loaded.get_portfolio(loaded.get_portfolio_handles().front())
+             .maximum_open_trades(),
+            0);
+}
+
+TEST(ApplicationStateSerialization, RejectsMissingMaximumOpenTrades)
+{
+  auto state = ApplicationState{};
+  ASSERT_TRUE(state.add_portfolio(Portfolio{}));
+  auto stream = std::stringstream{};
+  save_application_state_json(stream, state);
+  auto serialized = stream.str();
+  const auto key = serialized.find("\"maximumOpenTrades\"");
+  ASSERT_NE(key, std::string::npos);
+  serialized.replace(key,
+                     std::string{"\"maximumOpenTrades\""}.size(),
+                     "\"removedMaximumOpenTrades\"");
+  auto input = std::stringstream{serialized};
+
+  EXPECT_THROW(load_application_state_json(input), std::exception);
+}
+
 TEST(ApplicationStateSerialization, RejectsRemovedUiStateSchema)
 {
   auto stream = std::stringstream{};

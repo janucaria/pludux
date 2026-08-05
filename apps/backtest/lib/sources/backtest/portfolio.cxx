@@ -75,6 +75,7 @@ public:
               1'000'000.0,
               MarketStoreHandle{},
               BrokerStoreHandle{},
+              10,
               {},
               InsufficientCashPolicy::Reject,
               {}}
@@ -85,6 +86,7 @@ public:
             double initial_capital,
             MarketStoreHandle market_handle,
             BrokerStoreHandle broker_handle,
+            std::size_t maximum_open_trades,
             DrawdownAdjustment drawdown_adjustment,
             InsufficientCashPolicy insufficient_cash_policy,
             std::vector<BacktestStoreHandle> backtest_handles)
@@ -92,6 +94,7 @@ public:
   , initial_capital_{initial_capital}
   , market_handle_{market_handle}
   , broker_handle_{broker_handle}
+  , maximum_open_trades_{maximum_open_trades}
   , drawdown_adjustment_{drawdown_adjustment}
   , insufficient_cash_policy_{insufficient_cash_policy}
   , backtest_handles_{std::move(backtest_handles)}
@@ -145,6 +148,16 @@ public:
     self.broker_handle_ = value;
   }
 
+  auto maximum_open_trades(this const Portfolio& self) noexcept -> std::size_t
+  {
+    return self.maximum_open_trades_;
+  }
+
+  void maximum_open_trades(this Portfolio& self, std::size_t value) noexcept
+  {
+    self.maximum_open_trades_ = value;
+  }
+
   auto drawdown_adjustment(this const Portfolio& self) noexcept
    -> const DrawdownAdjustment&
   {
@@ -191,6 +204,7 @@ public:
     return self.initial_capital_ == other.initial_capital_ &&
            self.market_handle_ == other.market_handle_ &&
            self.broker_handle_ == other.broker_handle_ &&
+           self.maximum_open_trades_ == other.maximum_open_trades_ &&
            self.drawdown_adjustment_ == other.drawdown_adjustment_ &&
            self.insufficient_cash_policy_ == other.insufficient_cash_policy_ &&
            self.backtest_handles_ == other.backtest_handles_;
@@ -226,6 +240,7 @@ private:
   double initial_capital_;
   MarketStoreHandle market_handle_;
   BrokerStoreHandle broker_handle_;
+  std::size_t maximum_open_trades_;
   DrawdownAdjustment drawdown_adjustment_;
   InsufficientCashPolicy insufficient_cash_policy_;
   std::vector<BacktestStoreHandle> backtest_handles_;

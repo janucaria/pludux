@@ -443,6 +443,12 @@ public:
     return self.execution_session_.is_open();
   }
 
+  void portfolio_entry_capacity_available(this BacktestRunner& self,
+                                          bool value) noexcept
+  {
+    self.portfolio_entry_capacity_available_ = value;
+  }
+
   void run(this BacktestRunner& self,
            SeriesEvaluationResults& series_evaluation_results,
            BacktestTimeline& timeline)
@@ -653,6 +659,7 @@ private:
   const Profile& profile_;
   DrawdownAdjustment drawdown_adjustment_;
   InsufficientCashPolicy insufficient_cash_policy_;
+  bool portfolio_entry_capacity_available_{true};
 
   BacktestAccountState current_account_state_;
   double other_backtests_reserved_notional_{};
@@ -811,8 +818,8 @@ private:
 
   auto prepare_entry_order(this BacktestRunner& self,
                            const EntryOrderSizingRequest& request,
-                           PositionSizingDecision& decision)
-   -> std::optional<TradeEntry>
+                           PositionSizingDecision& decision,
+                           bool is_pyramiding) -> std::optional<TradeEntry>
   {
     const auto sized = size_entry_order(request, self.market_, self.broker_);
     if(!sized) {
@@ -824,6 +831,11 @@ private:
      std::abs(sized->entry.position_size());
     decision.entry_cost = sized->entry_cost;
     decision.estimated_loss = sized->estimated_loss;
+    if(!is_pyramiding && !self.portfolio_entry_capacity_available_) {
+      self.execution_session_.reject_maximum_open_trades(sized->entry);
+      decision.outcome = PositionSizingDecisionOutcome::MaximumOpenTrades;
+      return std::nullopt;
+    }
     const auto cash = self.available_cash();
     decision.cash_required = sized->entry_cost;
     decision.cash_available = cash;
@@ -1740,8 +1752,9 @@ private:
                                                   performance_snapshot,
                                                   sizing_decision);
     const auto entry =
-     sizing_request ? self.prepare_entry_order(*sizing_request, sizing_decision)
-                    : std::nullopt;
+     sizing_request
+      ? self.prepare_entry_order(*sizing_request, sizing_decision, false)
+      : std::nullopt;
     if(!entry) {
       self.execution_strategy_trade_id_.reset();
       self.position_sizing_decisions_.push_back(std::move(sizing_decision));
@@ -1810,8 +1823,9 @@ private:
                                                   performance_snapshot,
                                                   sizing_decision);
     const auto entry =
-     sizing_request ? self.prepare_entry_order(*sizing_request, sizing_decision)
-                    : std::nullopt;
+     sizing_request
+      ? self.prepare_entry_order(*sizing_request, sizing_decision, true)
+      : std::nullopt;
     if(!entry) {
       self.position_sizing_decisions_.push_back(std::move(sizing_decision));
       return true;

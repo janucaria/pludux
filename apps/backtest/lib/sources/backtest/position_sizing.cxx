@@ -623,6 +623,7 @@ enum class PositionSizingDecisionOutcome {
   NoPositiveSize,
   DrawdownSuppressed,
   SizingLimitTooSmall,
+  MaximumOpenTrades,
   InsufficientCash,
   Executed
 };

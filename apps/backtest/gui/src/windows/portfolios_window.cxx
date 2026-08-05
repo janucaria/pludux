@@ -4,6 +4,7 @@ module;
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -50,6 +51,15 @@ private:
   ImGuiTextFilter backtest_picker_filter_;
   bool editor_open_{};
 
+  static auto make_editable_portfolio(backtest::Portfolio portfolio)
+   -> std::shared_ptr<backtest::Portfolio>
+  {
+    if(portfolio.maximum_open_trades() == 0) {
+      portfolio.maximum_open_trades(1);
+    }
+    return std::make_shared<backtest::Portfolio>(std::move(portfolio));
+  }
+
   void render_list(this PortfoliosWindow& self, WindowContext& context)
   {
     auto& app_state = context.app_state();
@@ -62,7 +72,7 @@ private:
         portfolio.broker_handle(app_state.get_broker_handles().front());
       }
       self.editing_handle_.reset();
-      self.editing_ = std::make_shared<backtest::Portfolio>(portfolio);
+      self.editing_ = self.make_editable_portfolio(std::move(portfolio));
       self.editor_open_ = true;
       return;
     }
@@ -144,7 +154,7 @@ private:
       if(action == ui::ResourceRowAction::Edit) {
         if(self.editing_handle_ != handle || !self.editing_) {
           self.editing_handle_ = handle;
-          self.editing_ = std::make_shared<backtest::Portfolio>(*portfolio);
+          self.editing_ = self.make_editable_portfolio(*portfolio);
         }
         self.editor_open_ = true;
       } else if(action == ui::ResourceRowAction::Duplicate) {
@@ -251,6 +261,20 @@ private:
 
     self.market_combo(app_state, portfolio);
     self.broker_combo(app_state, portfolio);
+
+    auto maximum_open_trades = portfolio.maximum_open_trades();
+    ui::field_label("Maximum open trades");
+    constexpr auto size_type = sizeof(std::size_t) == sizeof(std::uint64_t)
+                                ? ImGuiDataType_U64
+                                : ImGuiDataType_U32;
+    constexpr auto step = std::size_t{1};
+    if(ImGui::InputScalar("##portfolio_maximum_open_trades",
+                          size_type,
+                          &maximum_open_trades,
+                          &step)) {
+      portfolio.maximum_open_trades(
+       std::max(maximum_open_trades, std::size_t{1}));
+    }
 
     auto cash_policy = portfolio.insufficient_cash_policy();
     ui::field_label("Insufficient cash");
@@ -361,7 +385,7 @@ private:
       if(draft_action == ui::DraftAction::Apply) {
         self.submit_changes(context, false);
       } else if(draft_action == ui::DraftAction::Reset && stored) {
-        self.editing_ = std::make_shared<backtest::Portfolio>(*stored);
+        self.editing_ = self.make_editable_portfolio(*stored);
       }
     } else {
       if(ImGui::Button("Create Portfolio")) {

@@ -411,9 +411,8 @@ public:
           self.plot_bayesian_payoff(backtest_timelines);
           break;
         }
-        self.render_top_plot_legend(portfolio_results.timeline(),
-                                    backtest_timelines,
-                                    inspected_index);
+        self.render_top_plot_legend(
+         portfolio_results.timeline(), backtest_timelines, inspected_index);
 
         self.record_crosshair_plot(
          crosshair_state, timeline_size, self.chart_state_.pinned_bar());
@@ -899,19 +898,18 @@ private:
     return item ? item->Color : IM_COL32_WHITE;
   }
 
-  void render_top_plot_legend(
-   this const BacktestChartWindow& self,
-   const backtest::PortfolioTimeline& portfolio_timeline,
-   const backtest::BacktestTimeline& backtest_timeline,
-   std::size_t index)
+  void
+  render_top_plot_legend(this const BacktestChartWindow& self,
+                         const backtest::PortfolioTimeline& portfolio_timeline,
+                         const backtest::BacktestTimeline& backtest_timeline,
+                         std::size_t index)
   {
     if(index >= backtest_timeline.size()) {
       return;
     }
 
-    const auto value_segment = [](std::string_view label,
-                                  double value,
-                                  ImU32 color) -> LegendSegment {
+    const auto value_segment =
+     [](std::string_view label, double value, ImU32 color) -> LegendSegment {
       return {std::format("{} {}", label, format_plot_value(value)), color};
     };
     const auto& performance = backtest_timeline.strategy_performance(index);
@@ -944,8 +942,8 @@ private:
         value = open->unrealized_return_ratio();
       }
       line.emplace_back("Shadow return", IM_COL32_WHITE);
-      line.push_back(value_segment(
-       "Return", value, plot_item_color("Shadow return")));
+      line.push_back(
+       value_segment("Return", value, plot_item_color("Shadow return")));
       break;
     }
     case BacktestTopPlot::FrequentistPerformance:
@@ -963,14 +961,14 @@ private:
       break;
     case BacktestTopPlot::CurrentStreaks:
       line.emplace_back("Current streaks", IM_COL32_WHITE);
-      line.push_back(value_segment(
-       "Winning",
-       static_cast<double>(performance.current_winning_streak()),
-       plot_item_color("Winning streak")));
-      line.push_back(value_segment(
-       "Losing",
-       static_cast<double>(performance.current_losing_streak()),
-       plot_item_color("Losing streak")));
+      line.push_back(
+       value_segment("Winning",
+                     static_cast<double>(performance.current_winning_streak()),
+                     plot_item_color("Winning streak")));
+      line.push_back(
+       value_segment("Losing",
+                     static_cast<double>(performance.current_losing_streak()),
+                     plot_item_color("Losing streak")));
       break;
     case BacktestTopPlot::BayesianWin: {
       const auto& posterior = performance.win_probability_posterior();
@@ -989,16 +987,14 @@ private:
       line.emplace_back("Bayesian payoff", IM_COL32_WHITE);
       line.push_back(value_segment(
        "Winning", winning.mean, plot_item_color("Winning payoff")));
-      line.push_back(value_segment("95%",
-                                   winning.lower_95,
-                                   plot_item_color("Winning 95% credible")));
+      line.push_back(value_segment(
+       "95%", winning.lower_95, plot_item_color("Winning 95% credible")));
       line.push_back(value_segment(
        "to", winning.upper_95, plot_item_color("Winning 95% credible")));
+      line.push_back(
+       value_segment("Losing", losing.mean, plot_item_color("Losing payoff")));
       line.push_back(value_segment(
-       "Losing", losing.mean, plot_item_color("Losing payoff")));
-      line.push_back(value_segment("95%",
-                                   losing.lower_95,
-                                   plot_item_color("Losing 95% credible")));
+       "95%", losing.lower_95, plot_item_color("Losing 95% credible")));
       line.push_back(value_segment(
        "to", losing.upper_95, plot_item_color("Losing 95% credible")));
       break;
@@ -1559,15 +1555,16 @@ private:
             if(ImGui::IsMouseHoveringRect(hover_minimum, hover_maximum)) {
               const auto requested_quantity = std::abs(event.position_size());
               const auto order_value = requested_quantity * event.price();
-              const auto available_cash = event.rejection_available_cash();
-              const auto required_cash = event.rejection_required_cash();
-              const auto estimated_fees = required_cash - order_value;
-              const auto cash_shortfall = required_cash - available_cash;
 
               ImGui::BeginTooltip();
               ImGui::TextColored(self.bearish_color_, "Order rejected");
               ImGui::Separator();
-              ImGui::TextUnformatted("Reason: Insufficient cash");
+              if(event.type() ==
+                 backtest::TradeEvent::Type::rejected_maximum_open_trades) {
+                ImGui::TextUnformatted("Reason: Maximum open trades reached");
+              } else {
+                ImGui::TextUnformatted("Reason: Insufficient cash");
+              }
               ImGui::Text("Time: %s",
                           format_datetime(event.timestamp()).c_str());
               ImGui::Text("Requested quantity: %.6g", requested_quantity);
@@ -1575,17 +1572,23 @@ private:
                           format_currency(event.price()).c_str());
               ImGui::Text("Order value: %s",
                           format_currency(order_value).c_str());
-              ImGui::Text("Estimated fees: %s",
-                          format_currency(estimated_fees).c_str());
-              ImGui::Separator();
-              ImGui::Text("Cash required: %s",
-                          format_currency(required_cash).c_str());
-              ImGui::Text("Cash available: %s",
-                          format_currency(available_cash).c_str());
-              ImGui::TextColored(
-               self.bearish_color_,
-               "Cash shortfall: %s",
-               format_currency(cash_shortfall).c_str());
+              if(event.type() ==
+                 backtest::TradeEvent::Type::rejected_insufficient_cash) {
+                const auto available_cash = event.rejection_available_cash();
+                const auto required_cash = event.rejection_required_cash();
+                const auto estimated_fees = required_cash - order_value;
+                const auto cash_shortfall = required_cash - available_cash;
+                ImGui::Text("Estimated fees: %s",
+                            format_currency(estimated_fees).c_str());
+                ImGui::Separator();
+                ImGui::Text("Cash required: %s",
+                            format_currency(required_cash).c_str());
+                ImGui::Text("Cash available: %s",
+                            format_currency(available_cash).c_str());
+                ImGui::TextColored(self.bearish_color_,
+                                   "Cash shortfall: %s",
+                                   format_currency(cash_shortfall).c_str());
+              }
               ImGui::EndTooltip();
             }
           }

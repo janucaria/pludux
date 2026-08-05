@@ -50,9 +50,12 @@ public:
     BacktestRunner runner_;
   };
 
-  PortfolioRunner(double initial_capital, std::vector<BacktestRun> backtests)
+  PortfolioRunner(double initial_capital,
+                  std::size_t maximum_open_trades,
+                  std::vector<BacktestRun> backtests)
   : initial_capital_{initial_capital}
   , account_{initial_capital, 0.0, initial_capital, initial_capital}
+  , maximum_open_trades_{maximum_open_trades}
   , backtests_{std::move(backtests)}
   {
     if(!std::isfinite(initial_capital) || initial_capital < 0.0) {
@@ -217,6 +220,7 @@ public:
 private:
   double initial_capital_{};
   BacktestAccountState account_;
+  std::size_t maximum_open_trades_{};
   std::vector<BacktestRun> backtests_;
   double max_drawdown_{};
   std::size_t total_timestamps_{};
@@ -270,6 +274,8 @@ private:
     self.refresh_unrealized();
     self.account_.update_peak_to_current_equity();
     runner.portfolio_account(self.account_, self.reserved_notional());
+    runner.portfolio_entry_capacity_available(self.open_position_count() <
+                                              self.maximum_open_trades_);
   }
 
   auto reserved_notional(this const PortfolioRunner& self) noexcept -> double

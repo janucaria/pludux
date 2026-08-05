@@ -14,6 +14,7 @@ TEST(PortfolioTest, StoresSharedAccountConfigurationAndOrderedBacktests)
                                    100'000.0,
                                    MarketStoreHandle{5, 6},
                                    BrokerStoreHandle{7, 8},
+                                   4,
                                    DrawdownAdjustment{true, 0.10, 0.25},
                                    InsufficientCashPolicy::CapToAvailableCash,
                                    {first, second}};
@@ -22,6 +23,7 @@ TEST(PortfolioTest, StoresSharedAccountConfigurationAndOrderedBacktests)
   EXPECT_DOUBLE_EQ(portfolio.initial_capital(), 100'000.0);
   EXPECT_EQ(portfolio.backtest_handles(),
             (std::vector<BacktestStoreHandle>{first, second}));
+  EXPECT_EQ(portfolio.maximum_open_trades(), 4);
   EXPECT_TRUE(portfolio.drawdown_adjustment().enabled());
   EXPECT_EQ(portfolio.insufficient_cash_policy(),
             InsufficientCashPolicy::CapToAvailableCash);
@@ -34,6 +36,7 @@ TEST(PortfolioTest, RejectsDuplicateBacktestHandles)
                           1'000.0,
                           {},
                           {},
+                          10,
                           {},
                           InsufficientCashPolicy::Reject,
                           {handle, handle}}),
@@ -43,12 +46,22 @@ TEST(PortfolioTest, RejectsDuplicateBacktestHandles)
 TEST(PortfolioTest, AllowsIncompleteConfigurationWithoutBacktests)
 {
   const auto portfolio =
-   Portfolio{"", 1'000.0, {}, {}, {}, InsufficientCashPolicy::Reject, {}};
+   Portfolio{"", 1'000.0, {}, {}, 0, {}, InsufficientCashPolicy::Reject, {}};
 
   EXPECT_TRUE(portfolio.name().empty());
   EXPECT_EQ(portfolio.market_handle(), MarketStoreHandle{});
   EXPECT_EQ(portfolio.broker_handle(), BrokerStoreHandle{});
+  EXPECT_EQ(portfolio.maximum_open_trades(), 0);
   EXPECT_TRUE(portfolio.backtest_handles().empty());
+}
+
+TEST(PortfolioTest, DefaultsMaximumOpenTradesToTen)
+{
+  auto portfolio = Portfolio{};
+
+  EXPECT_EQ(portfolio.maximum_open_trades(), 10);
+  portfolio.maximum_open_trades(0);
+  EXPECT_EQ(portfolio.maximum_open_trades(), 0);
 }
 
 TEST(PortfolioTest, BacktestContainsOnlyReusableBacktestConfiguration)

@@ -952,6 +952,7 @@ struct json_conv_traits<Json, pludux::backtest::Portfolio> {
        required_as<double>(json, "initialCapital"),
        required_as<pludux::backtest::MarketStoreHandle>(json, "market"),
        required_as<pludux::backtest::BrokerStoreHandle>(json, "broker"),
+       required_as<std::size_t>(json, "maximumOpenTrades"),
        required_as<pludux::backtest::DrawdownAdjustment>(json,
                                                          "drawdownAdjustment"),
        required_as<pludux::backtest::InsufficientCashPolicy>(
@@ -972,6 +973,7 @@ struct json_conv_traits<Json, pludux::backtest::Portfolio> {
     json["initialCapital"] = portfolio.initial_capital();
     set_json(json, aset, "market", portfolio.market_handle());
     set_json(json, aset, "broker", portfolio.broker_handle());
+    json["maximumOpenTrades"] = portfolio.maximum_open_trades();
     set_json(json, aset, "drawdownAdjustment", portfolio.drawdown_adjustment());
     set_json(json,
              aset,
