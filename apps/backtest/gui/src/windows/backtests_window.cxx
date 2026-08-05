@@ -222,8 +222,7 @@ private:
     }
 
     ImGui::SameLine();
-    const auto draft_action =
-     ui::apply_reset_button(!same_backtest, valid);
+    const auto draft_action = ui::apply_reset_button(!same_backtest, valid);
     if(draft_action == ui::DraftAction::Apply) {
       self.submit_backtest_changes(context, false);
     } else if(draft_action == ui::DraftAction::Reset) {
@@ -241,8 +240,8 @@ private:
     auto& edit_backtest_ptr = self.editing_backtest_ptr_;
     ui::form_section(
      "Backtest Details",
-     "Give this simulation a recognizable name and starting balance. A blank "
-     "name is saved as 'Unnamed'.");
+     "Give this reusable Asset + Strategy + Profile setup a recognizable "
+     "name. A blank name is saved as 'Unnamed'.");
     {
       ui::field_label("Name");
 
@@ -251,21 +250,10 @@ private:
       edit_backtest_ptr->name(std::move(backtest_name));
     }
 
-    {
-      ui::field_label(
-       "Initial Capital",
-       "Starting cash balance used to size positions and calculate returns.");
-
-      auto initial_capital = edit_backtest_ptr->initial_capital();
-      ImGui::InputDouble(
-       "##NewInitialCapital", &initial_capital, 100.0, 1000.0, "%.0f");
-      edit_backtest_ptr->initial_capital(initial_capital);
-    }
-
     ui::form_section(
-     "Backtest Components",
-     "Choose the data, trading rules, execution constraints, fees, and "
-     "position-sizing profile used by this run.");
+     "Backtest Setup",
+     "Choose the data, trading rules, and position-sizing profile used by "
+     "this reusable backtest.");
     {
       const auto& asset_handles = app_state.get_asset_handles();
       const auto edit_asset_handle = edit_backtest_ptr->asset_handle();
@@ -400,84 +388,6 @@ private:
         edit_backtest_ptr->inputs(std::move(backtest_inputs));
 
         ImGui::Unindent();
-      }
-    }
-
-    {
-      const auto& market_handles = app_state.get_market_handles();
-      const auto edit_market_handle = edit_backtest_ptr->market_handle();
-      const auto& edit_market_ptr =
-       app_state.get_market_if_present(edit_market_handle);
-
-      if(!edit_market_ptr) {
-        if(!self.selected_backtest_handle_opt_ && !market_handles.empty()) {
-          edit_backtest_ptr->market_handle(market_handles.front());
-        }
-      }
-
-      ui::field_label("Market");
-      auto market_preview = edit_market_ptr ? edit_market_ptr->name()
-                                            : std::string{"Select a market"};
-      if(ImGui::BeginCombo("##MarketCombo", market_preview.c_str())) {
-        for(auto i = 0; i < market_handles.size(); ++i) {
-          const auto& market_handle = market_handles[i];
-          const auto& market = app_state.get_market(market_handle);
-          const auto& market_name = market.name();
-          const auto is_selected =
-           edit_backtest_ptr->market_handle() == market_handle;
-
-          ImGui::PushID(i);
-
-          if(ImGui::Selectable(market_name.c_str(), is_selected)) {
-            edit_backtest_ptr->market_handle(market_handle);
-          }
-
-          if(is_selected) {
-            ImGui::SetItemDefaultFocus();
-          }
-
-          ImGui::PopID();
-        }
-        ImGui::EndCombo();
-      }
-    }
-
-    {
-      const auto& broker_handles = app_state.get_broker_handles();
-      const auto edit_broker_handle = edit_backtest_ptr->broker_handle();
-      const auto& edit_broker_ptr =
-       app_state.get_broker_if_present(edit_broker_handle);
-
-      if(!edit_broker_ptr) {
-        if(!self.selected_backtest_handle_opt_ && !broker_handles.empty()) {
-          edit_backtest_ptr->broker_handle(broker_handles.front());
-        }
-      }
-
-      ui::field_label("Broker");
-      auto broker_preview = edit_broker_ptr ? edit_broker_ptr->name()
-                                            : std::string{"Select a broker"};
-      if(ImGui::BeginCombo("##BrokerCombo", broker_preview.c_str())) {
-        for(auto i = 0; i < broker_handles.size(); ++i) {
-          const auto& broker_handle = broker_handles[i];
-          const auto& broker = app_state.get_broker(broker_handle);
-          const auto& broker_name = broker.name();
-          const auto is_selected =
-           edit_backtest_ptr->broker_handle() == broker_handle;
-
-          ImGui::PushID(i);
-
-          if(ImGui::Selectable(broker_name.c_str(), is_selected)) {
-            edit_backtest_ptr->broker_handle(broker_handle);
-          }
-
-          if(is_selected) {
-            ImGui::SetItemDefaultFocus();
-          }
-
-          ImGui::PopID();
-        }
-        ImGui::EndCombo();
       }
     }
 
@@ -680,7 +590,7 @@ private:
     if(!app_state.is_backtest_ready(*edit_backtest_ptr)) {
       ImGui::Spacing();
       ui::validation_message(
-       "Select an asset, strategy, market, broker, and profile before saving.");
+       "Select an asset, strategy, and profile before saving.");
     }
   }
 
@@ -700,7 +610,9 @@ private:
         if(!backtest_handle_opt) {
           const auto edit_handle_opt =
            app_state.add_backtest(*edit_backtest_ptr);
-          app_state.select_backtest(edit_handle_opt.value());
+          if(edit_handle_opt) {
+            app_state.select_backtest(*edit_handle_opt);
+          }
         } else {
           const auto backtest_handle = backtest_handle_opt.value();
           auto& backtest = app_state.get_backtest(backtest_handle);
@@ -718,8 +630,7 @@ private:
         self.reset();
       }
     } else {
-      context.alert("Please select an asset, a strategy, a "
-                    "market, a broker, and a profile.");
+      context.alert("Please select an asset, a strategy, and a profile.");
     }
   }
 

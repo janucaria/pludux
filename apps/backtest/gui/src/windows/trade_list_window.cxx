@@ -30,37 +30,64 @@ public:
     ImGui::Begin("Trades", nullptr);
 
     const auto& app_state = context.app_state();
-    const auto backtest_handle = app_state.selected_backtest_handle();
-    const auto* backtest = app_state.get_backtest_if_present(backtest_handle);
-    if(!backtest) {
+    const auto portfolio_handle = app_state.selected_portfolio_handle();
+    const auto* portfolio =
+     app_state.get_portfolio_if_present(portfolio_handle);
+    if(!portfolio) {
       ui::summary_status(PLUDUX_ICON_TRADES,
-                         "No backtest selected",
-                         "Select a backtest to inspect its open and closed "
+                         "No portfolio selected",
+                         "Select a portfolio to inspect its open and closed "
                          "trades.");
       ImGui::End();
       return;
     }
 
-    if(!app_state.is_backtest_ready(*backtest)) {
+    const auto selected_backtest_handle =
+     app_state.selected_portfolio_backtest_handle();
+    if(!selected_backtest_handle) {
+      ui::summary_status(PLUDUX_ICON_TRADES,
+                         "No Backtest selected",
+                         "Select a Backtest from the active Portfolio to "
+                         "inspect its trades.");
+      ImGui::End();
+      return;
+    }
+
+    if(!app_state.is_portfolio_ready(*portfolio)) {
       ui::summary_status(PLUDUX_ICON_WARNING,
-                         "Backtest setup is incomplete",
-                         "Complete the backtest configuration before trade "
+                         "Portfolio setup is incomplete",
+                         "Complete the portfolio configuration before trade "
                          "results can be shown.");
       ImGui::End();
       return;
     }
 
-    const auto& timeline = app_state.get_backtest_timelines(backtest_handle);
-    if(timeline.empty()) {
+    const auto& results = app_state.get_portfolio_results(portfolio_handle);
+    const auto* backtest_results = results.backtest(*selected_backtest_handle);
+    if(!backtest_results || backtest_results->timeline().empty()) {
       ui::summary_status(PLUDUX_ICON_TRADES,
                          "No trade results yet",
-                         "Trades will appear here as soon as the backtest "
-                         "produces timeline results.");
+                         "Trades will appear here as soon as the selected "
+                         "Backtest produces timeline results.");
       ImGui::End();
       return;
     }
 
-    auto trades = collect_trades(timeline, self.trade_source_);
+    const auto backtest_iterator =
+     std::ranges::find(results.backtests(),
+                       *selected_backtest_handle,
+                       &backtest::BacktestResults::backtest_handle);
+    const auto backtest_index = static_cast<std::size_t>(
+     std::ranges::distance(results.backtests().begin(), backtest_iterator));
+    const auto* backtest_config =
+     app_state.get_backtest_if_present(*selected_backtest_handle);
+    auto trades = collect_trades(backtest_results->timeline(),
+                                 self.trade_source_,
+                                 backtest_index,
+                                 backtest_config ? backtest_config->name()
+                                                 : "Missing Backtest");
+    std::ranges::sort(trades, {}, &TradeView::entry_timestamp);
+    std::ranges::reverse(trades);
     self.synchronize_selection(trades);
 
     const auto visible_trades = self.filter_trades(trades);
@@ -70,8 +97,9 @@ public:
     if(trades.empty()) {
       ui::summary_status(PLUDUX_ICON_TRADES,
                          "No trades were generated",
-                         "This backtest completed without opening a position. "
-                         "Review the strategy signals or tested date range.");
+                         "The selected Backtest completed without opening a "
+                         "position. Review its strategy signals or tested "
+                         "date range.");
       ImGui::End();
       return;
     }
@@ -101,12 +129,14 @@ private:
   struct TradeKey {
     std::size_t id{};
     bool open{};
+    std::size_t backtest_index{};
 
     auto operator==(const TradeKey&) const noexcept -> bool = default;
   };
 
   struct TradeView {
     TradeKey key;
+    std::string backtest_name;
     bool long_position{};
     std::string status;
     std::time_t entry_timestamp{};
@@ -133,7 +163,10 @@ private:
   std::optional<TradeKey> selected_trade_{};
 
   static auto collect_trades(const backtest::BacktestTimeline& timeline,
-                             TradeSource source) -> std::vector<TradeView>
+                             TradeSource source,
+                             std::size_t backtest_index,
+                             std::string backtest_name)
+   -> std::vector<TradeView>
   {
     auto trades = std::vector<TradeView>{};
     if(timeline.empty()) {
@@ -154,6 +187,10 @@ private:
           trades.push_back(make_trade_view(*position));
         }
       }
+      for(auto& trade : trades) {
+        trade.key.backtest_index = backtest_index;
+        trade.backtest_name = backtest_name;
+      }
       return trades;
     }
 
@@ -167,6 +204,10 @@ private:
           ++trade) {
         trades.push_back(make_trade_view(*trade));
       }
+    }
+    for(auto& trade : trades) {
+      trade.key.backtest_index = backtest_index;
+      trade.backtest_name = backtest_name;
     }
     return trades;
   }
@@ -308,8 +349,9 @@ private:
       }
 
       const auto searchable_text =
-       std::format("#{} {} {}",
+       std::format("#{} {} {} {}",
                    trade.key.id,
+                   trade.backtest_name,
                    trade.long_position ? "Long" : "Short",
                    trade.status);
       if(self.search_filter_.PassFilter(searchable_text.c_str())) {
@@ -412,9 +454,11 @@ private:
     const auto flags = ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_RowBg |
                        ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollX |
                        ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit;
-    if(ImGui::BeginTable("##trade_table", 9, flags)) {
+    if(ImGui::BeginTable("##trade_table", 10, flags)) {
       ImGui::TableSetupScrollFreeze(2, 1);
       ImGui::TableSetupColumn("Trade", ImGuiTableColumnFlags_WidthFixed, 64.0f);
+      ImGui::TableSetupColumn(
+       "Backtest", ImGuiTableColumnFlags_WidthFixed, 130.0f);
       ImGui::TableSetupColumn("Side", ImGuiTableColumnFlags_WidthFixed, 58.0f);
       ImGui::TableSetupColumn(
        "Status", ImGuiTableColumnFlags_WidthFixed, 92.0f);
@@ -446,6 +490,7 @@ private:
 
   void render_trade_row(this TradeListWindow& self, const TradeView& trade)
   {
+    ImGui::PushID(static_cast<int>(trade.key.backtest_index));
     ImGui::PushID(static_cast<int>(trade.key.id));
     ImGui::PushID(trade.key.open ? 1 : 0);
     ImGui::TableNextRow();
@@ -460,6 +505,8 @@ private:
       self.selected_trade_ = trade.key;
     }
 
+    ImGui::TableNextColumn();
+    ImGui::TextUnformatted(trade.backtest_name.c_str());
     ImGui::TableNextColumn();
     ImGui::TextColored(direction_color(trade.long_position),
                        "%s",
@@ -481,6 +528,7 @@ private:
      outcome_color(trade.pnl), "%s", format_return(trade).c_str());
     ImGui::TableNextColumn();
     ImGui::TextUnformatted(format_duration(trade.duration).c_str());
+    ImGui::PopID();
     ImGui::PopID();
     ImGui::PopID();
   }

@@ -13,6 +13,7 @@ module;
 export module pludux.apps.backtest:application_state;
 
 import pludux.backtest;
+import pludux.apps.backtest.portfolio_backtest_selections;
 
 import :ui_state;
 
@@ -26,6 +27,7 @@ public:
   : store_{std::move(store)}
   , ui_state_{std::move(ui_state)}
   {
+    normalize_portfolio_backtest_selections();
   }
 
   auto store(this const ApplicationState& self) noexcept
@@ -60,6 +62,156 @@ public:
                        backtest::BacktestStoreHandle backtest_handle)
   {
     self.ui_state_.selected_backtest_handle(backtest_handle);
+  }
+
+  void select_portfolio(this ApplicationState& self,
+                        backtest::PortfolioStoreHandle handle)
+  {
+    self.ui_state_.selected_portfolio_handle(handle);
+    self.normalize_portfolio_backtest_selection(handle);
+  }
+
+  auto
+  select_portfolio_backtest(this ApplicationState& self,
+                            backtest::PortfolioStoreHandle portfolio_handle,
+                            backtest::BacktestStoreHandle backtest_handle)
+   -> bool
+  {
+    const auto* portfolio =
+     self.store_.get_portfolio_if_present(portfolio_handle);
+    if(!portfolio || !self.store_.get_backtest_if_present(backtest_handle) ||
+       std::ranges::find(portfolio->backtest_handles(), backtest_handle) ==
+        portfolio->backtest_handles().end()) {
+      return false;
+    }
+
+    self.ui_state_.selected_portfolio_handle(portfolio_handle);
+    self.ui_state_.portfolio_backtest_selections().remember(portfolio_handle,
+                                                            backtest_handle);
+    return true;
+  }
+
+  auto
+  selected_portfolio_backtest_handle(this const ApplicationState& self) noexcept
+   -> std::optional<backtest::BacktestStoreHandle>
+  {
+    return self.ui_state_.portfolio_backtest_selections().lookup(
+     self.ui_state_.selected_portfolio_handle());
+  }
+
+  auto selected_portfolio_handle(this const ApplicationState& self) noexcept
+   -> backtest::PortfolioStoreHandle
+  {
+    return self.ui_state_.selected_portfolio_handle();
+  }
+
+  auto selected_portfolio_if_present(this ApplicationState& self) noexcept
+   -> backtest::Portfolio*
+  {
+    return self.store_.get_portfolio_if_present(
+     self.ui_state_.selected_portfolio_handle());
+  }
+
+  auto selected_portfolio_if_present(this const ApplicationState& self) noexcept
+   -> const backtest::Portfolio*
+  {
+    return self.store_.get_portfolio_if_present(
+     self.ui_state_.selected_portfolio_handle());
+  }
+
+  auto get_portfolio_handles(this const ApplicationState& self) noexcept
+   -> const std::vector<backtest::PortfolioStoreHandle>&
+  {
+    return self.ui_state_.portfolio_handles();
+  }
+
+  auto get_portfolio_handles(this ApplicationState& self) noexcept
+   -> std::vector<backtest::PortfolioStoreHandle>&
+  {
+    return self.ui_state_.portfolio_handles();
+  }
+
+  void reorder_list_portfolio(this ApplicationState& self,
+                              std::size_t from_index,
+                              std::size_t to_index) noexcept
+  {
+    self.ui_state_.reorder_portfolio_handle(from_index, to_index);
+  }
+
+  auto add_portfolio(this ApplicationState& self, backtest::Portfolio portfolio)
+   -> std::optional<backtest::PortfolioStoreHandle>
+  {
+    const auto handle = self.store_.add_portfolio(std::move(portfolio));
+    if(handle) {
+      self.ui_state_.add_portfolio_handle(*handle);
+      self.store_.add_portfolio_results(*handle, {});
+    }
+    return handle;
+  }
+
+  auto get_portfolio(this const ApplicationState& self,
+                     backtest::PortfolioStoreHandle handle) noexcept
+   -> const backtest::Portfolio&
+  {
+    return self.store_.get_portfolio(handle);
+  }
+
+  auto get_portfolio(this ApplicationState& self,
+                     backtest::PortfolioStoreHandle handle) noexcept
+   -> backtest::Portfolio&
+  {
+    return self.store_.get_portfolio(handle);
+  }
+
+  auto get_portfolio_if_present(this const ApplicationState& self,
+                                backtest::PortfolioStoreHandle handle) noexcept
+   -> const backtest::Portfolio*
+  {
+    return self.store_.get_portfolio_if_present(handle);
+  }
+
+  auto get_portfolio_if_present(this ApplicationState& self,
+                                backtest::PortfolioStoreHandle handle) noexcept
+   -> backtest::Portfolio*
+  {
+    return self.store_.get_portfolio_if_present(handle);
+  }
+
+  auto update_portfolio(this ApplicationState& self,
+                        backtest::PortfolioStoreHandle handle,
+                        backtest::Portfolio portfolio) -> bool
+  {
+    if(!self.store_.update_portfolio(handle, std::move(portfolio))) {
+      return false;
+    }
+    self.normalize_portfolio_backtest_selection(handle);
+    self.reset_portfolio(handle);
+    return true;
+  }
+
+  auto rerun_portfolio(this ApplicationState& self,
+                       backtest::PortfolioStoreHandle handle) -> bool
+  {
+    if(!self.store_.get_portfolio_if_present(handle)) {
+      return false;
+    }
+    self.reset_portfolio(handle);
+    return true;
+  }
+
+  auto remove_portfolio(this ApplicationState& self,
+                        backtest::PortfolioStoreHandle handle) -> bool
+  {
+    if(!self.store_.remove_portfolio(handle)) {
+      return false;
+    }
+    self.ui_state_.remove_portfolio_handle(handle);
+    self.ui_state_.portfolio_backtest_selections().remove_portfolio(handle);
+    if(self.ui_state_.selected_portfolio_handle() == handle) {
+      self.ui_state_.selected_portfolio_handle({});
+    }
+    self.store_.remove_portfolio_results(handle);
+    return true;
   }
 
   auto selected_backtest_handle(this const ApplicationState& self) noexcept
@@ -124,8 +276,6 @@ public:
   {
     const auto handle_opt = self.store_.add_backtest(std::move(backtest));
     if(handle_opt) {
-      self.add_backtest_timelines(*handle_opt, {});
-      self.add_series_results(*handle_opt, {});
       self.ui_state_.add_backtest_handle(*handle_opt);
     }
     return handle_opt;
@@ -176,14 +326,13 @@ public:
   {
     if(self.store_.remove_backtest(handle)) {
       self.ui_state_.remove_backtest_handle(handle);
+      self.ui_state_.portfolio_backtest_selections().remove_backtest(handle);
 
       if(self.ui_state_.selected_backtest_handle() == handle) {
         self.ui_state_.selected_backtest_handle({});
       }
 
-      self.store_.remove_backtest(handle);
-      self.store_.remove_backtest_timelines(handle);
-      self.store_.remove_series_results(handle);
+      self.normalize_portfolio_backtest_selections();
 
       return true;
     }
@@ -404,16 +553,15 @@ public:
       return false;
     }
 
-    const auto reset_backtests = !market->equivalent_rules(edit_market);
+    const auto reset_portfolios = !market->equivalent_rules(edit_market);
 
     if(self.store_.update_market(handle, std::move(edit_market))) {
-      if(reset_backtests) {
-        const auto& backtest_handles = self.ui_state_.backtest_handles();
-        for(const auto& backtest_handle : backtest_handles) {
-          auto backtest_ptr =
-           self.store_.get_backtest_if_present(backtest_handle);
-          if(backtest_ptr && backtest_ptr->market_handle() == handle) {
-            self.reset_backtest(backtest_handle);
+      if(reset_portfolios) {
+        for(const auto portfolio_handle : self.ui_state_.portfolio_handles()) {
+          const auto* portfolio =
+           self.store_.get_portfolio_if_present(portfolio_handle);
+          if(portfolio && portfolio->market_handle() == handle) {
+            self.reset_portfolio(portfolio_handle);
           }
         }
       }
@@ -430,12 +578,11 @@ public:
     if(self.store_.remove_market(handle)) {
       self.ui_state_.remove_market_handle(handle);
 
-      const auto& backtest_handles = self.ui_state_.backtest_handles();
-      for(const auto& backtest_handle : backtest_handles) {
-        const auto backtest_ptr =
-         self.store_.get_backtest_if_present(backtest_handle);
-        if(backtest_ptr && backtest_ptr->market_handle() == handle) {
-          self.reset_backtest(backtest_handle);
+      for(const auto portfolio_handle : self.ui_state_.portfolio_handles()) {
+        const auto* portfolio =
+         self.store_.get_portfolio_if_present(portfolio_handle);
+        if(portfolio && portfolio->market_handle() == handle) {
+          self.reset_portfolio(portfolio_handle);
         }
       }
 
@@ -489,16 +636,15 @@ public:
       return false;
     }
 
-    const auto reset_backtests = !broker->equivalent_rules(edit_broker);
+    const auto reset_portfolios = !broker->equivalent_rules(edit_broker);
 
     if(self.store_.update_broker(handle, std::move(edit_broker))) {
-      if(reset_backtests) {
-        const auto& backtest_handles = self.ui_state_.backtest_handles();
-        for(const auto& backtest_handle : backtest_handles) {
-          auto backtest_ptr =
-           self.store_.get_backtest_if_present(backtest_handle);
-          if(backtest_ptr && backtest_ptr->broker_handle() == handle) {
-            self.reset_backtest(backtest_handle);
+      if(reset_portfolios) {
+        for(const auto portfolio_handle : self.ui_state_.portfolio_handles()) {
+          const auto* portfolio =
+           self.store_.get_portfolio_if_present(portfolio_handle);
+          if(portfolio && portfolio->broker_handle() == handle) {
+            self.reset_portfolio(portfolio_handle);
           }
         }
       }
@@ -515,12 +661,11 @@ public:
     if(self.store_.remove_broker(handle)) {
       self.ui_state_.remove_broker_handle(handle);
 
-      const auto& backtest_handles = self.ui_state_.backtest_handles();
-      for(const auto& backtest_handle : backtest_handles) {
-        const auto backtest_ptr =
-         self.store_.get_backtest_if_present(backtest_handle);
-        if(backtest_ptr && backtest_ptr->broker_handle() == handle) {
-          self.reset_backtest(backtest_handle);
+      for(const auto portfolio_handle : self.ui_state_.portfolio_handles()) {
+        const auto* portfolio =
+         self.store_.get_portfolio_if_present(portfolio_handle);
+        if(portfolio && portfolio->broker_handle() == handle) {
+          self.reset_portfolio(portfolio_handle);
         }
       }
 
@@ -614,110 +759,46 @@ public:
     return false;
   }
 
-  auto add_backtest_timelines(this ApplicationState& self,
-                              backtest::BacktestStoreHandle handle,
-                              backtest::BacktestTimeline timeline) -> bool
+  auto get_portfolio_results(this const ApplicationState& self,
+                             backtest::PortfolioStoreHandle handle) noexcept
+   -> const backtest::PortfolioResults&
   {
-    return self.store_.add_backtest_timelines(handle, std::move(timeline));
+    return self.store_.get_portfolio_results(handle);
   }
 
-  auto get_backtest_timelines(this const ApplicationState& self,
-                              backtest::BacktestStoreHandle handle) noexcept
-   -> const backtest::BacktestTimeline&
+  auto get_portfolio_results(this ApplicationState& self,
+                             backtest::PortfolioStoreHandle handle) noexcept
+   -> backtest::PortfolioResults&
   {
-    return self.store_.get_backtest_timelines(handle);
+    return self.store_.get_portfolio_results(handle);
   }
 
-  auto get_backtest_timelines(this ApplicationState& self,
-                              backtest::BacktestStoreHandle handle) noexcept
-   -> backtest::BacktestTimeline&
-  {
-    return self.store_.get_backtest_timelines(handle);
-  }
-
-  auto get_backtest_timelines_if_present(
+  auto get_portfolio_results_if_present(
    this const ApplicationState& self,
-   backtest::BacktestStoreHandle handle) noexcept
-   -> const backtest::BacktestTimeline*
+   backtest::PortfolioStoreHandle handle) noexcept
+   -> const backtest::PortfolioResults*
   {
-    return self.store_.get_backtest_timelines_if_present(handle);
+    return self.store_.get_portfolio_results_if_present(handle);
   }
 
-  auto get_backtest_timelines_if_present(
-   this ApplicationState& self, backtest::BacktestStoreHandle handle) noexcept
-   -> backtest::BacktestTimeline*
+  auto get_portfolio_results_if_present(
+   this ApplicationState& self, backtest::PortfolioStoreHandle handle) noexcept
+   -> backtest::PortfolioResults*
   {
-    return self.store_.get_backtest_timelines_if_present(handle);
+    return self.store_.get_portfolio_results_if_present(handle);
   }
 
-  auto update_backtest_timelines(this ApplicationState& self,
-                                 backtest::BacktestStoreHandle handle,
-                                 backtest::BacktestTimeline timeline) -> bool
+  auto update_portfolio_results(this ApplicationState& self,
+                                backtest::PortfolioStoreHandle handle,
+                                backtest::PortfolioResults results) -> bool
   {
-    return self.store_.update_backtest_timelines(handle, std::move(timeline));
+    return self.store_.update_portfolio_results(handle, std::move(results));
   }
 
-  auto remove_backtest_timelines(this ApplicationState& self,
-                                 backtest::BacktestStoreHandle handle) -> bool
+  void reset_all_portfolios(this ApplicationState& self)
   {
-    return self.store_.remove_backtest_timelines(handle);
-  }
-
-  auto add_series_results(this ApplicationState& self,
-                          backtest::BacktestStoreHandle handle,
-                          SeriesEvaluationResults series_results) -> bool
-  {
-    return self.store_.add_series_results(handle, std::move(series_results));
-  }
-
-  auto get_series_results(this const ApplicationState& self,
-                          backtest::BacktestStoreHandle handle) noexcept
-   -> const SeriesEvaluationResults&
-  {
-    return self.store_.get_series_results(handle);
-  }
-
-  auto get_series_results(this ApplicationState& self,
-                          backtest::BacktestStoreHandle handle) noexcept
-   -> SeriesEvaluationResults&
-  {
-    return self.store_.get_series_results(handle);
-  }
-
-  auto
-  get_series_results_if_present(this const ApplicationState& self,
-                                backtest::BacktestStoreHandle handle) noexcept
-   -> const SeriesEvaluationResults*
-  {
-    return self.store_.get_series_results_if_present(handle);
-  }
-
-  auto
-  get_series_results_if_present(this ApplicationState& self,
-                                backtest::BacktestStoreHandle handle) noexcept
-   -> SeriesEvaluationResults*
-  {
-    return self.store_.get_series_results_if_present(handle);
-  }
-
-  auto update_series_results(this ApplicationState& self,
-                             backtest::BacktestStoreHandle handle,
-                             SeriesEvaluationResults series_results) -> bool
-  {
-    return self.store_.update_series_results(handle, std::move(series_results));
-  }
-
-  auto remove_series_results(this ApplicationState& self,
-                             backtest::BacktestStoreHandle handle) -> bool
-  {
-    return self.store_.remove_series_results(handle);
-  }
-
-  void reset_all_backtests(this ApplicationState& self)
-  {
-    const auto& backtest_handles = self.ui_state_.backtest_handles();
-    for(const auto& backtest_handle : backtest_handles) {
-      self.reset_backtest(backtest_handle);
+    for(const auto handle : self.ui_state_.portfolio_handles()) {
+      self.reset_portfolio(handle);
     }
   }
 
@@ -742,22 +823,6 @@ public:
       }
     }
     {
-      const auto broker_handle = ready_backtest.broker_handle();
-      const auto broker_ptr = self.get_broker_if_present(broker_handle);
-
-      if(!broker_ptr) {
-        return false;
-      }
-    }
-    {
-      const auto market_handle = ready_backtest.market_handle();
-      const auto market_ptr = self.get_market_if_present(market_handle);
-
-      if(!market_ptr) {
-        return false;
-      }
-    }
-    {
       const auto profile_handle = ready_backtest.profile_handle();
       const auto profile_ptr = self.get_profile_if_present(profile_handle);
 
@@ -769,20 +834,81 @@ public:
     return true;
   }
 
+  auto is_portfolio_ready(this const ApplicationState& self,
+                          const backtest::Portfolio& portfolio) noexcept -> bool
+  {
+    if(!self.get_market_if_present(portfolio.market_handle()) ||
+       !self.get_broker_if_present(portfolio.broker_handle()) ||
+       portfolio.backtest_handles().empty()) {
+      return false;
+    }
+    for(const auto handle : portfolio.backtest_handles()) {
+      const auto* backtest = self.get_backtest_if_present(handle);
+      if(!backtest || !self.is_backtest_ready(*backtest)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
 private:
-  UiState ui_state_{};
   backtest::Store store_{};
+  UiState ui_state_{};
+
+  void normalize_portfolio_backtest_selection(
+   this ApplicationState& self, backtest::PortfolioStoreHandle portfolio_handle)
+  {
+    auto& selections = self.ui_state_.portfolio_backtest_selections();
+    const auto* portfolio =
+     self.store_.get_portfolio_if_present(portfolio_handle);
+    if(!portfolio) {
+      selections.remove_portfolio(portfolio_handle);
+      return;
+    }
+
+    selections.normalize(
+     portfolio_handle, portfolio->backtest_handles(), [&](const auto handle) {
+       return self.store_.get_backtest_if_present(handle) != nullptr;
+     });
+  }
+
+  void normalize_portfolio_backtest_selections(this ApplicationState& self)
+  {
+    const auto known_selections =
+     self.ui_state_.portfolio_backtest_selections().selections();
+    for(const auto& selection : known_selections) {
+      if(std::ranges::find(self.ui_state_.portfolio_handles(),
+                           selection.portfolio_handle) ==
+          self.ui_state_.portfolio_handles().end() ||
+         !self.store_.get_portfolio_if_present(selection.portfolio_handle)) {
+        self.ui_state_.portfolio_backtest_selections().remove_portfolio(
+         selection.portfolio_handle);
+      }
+    }
+
+    for(const auto portfolio_handle : self.ui_state_.portfolio_handles()) {
+      self.normalize_portfolio_backtest_selection(portfolio_handle);
+    }
+  }
 
   void reset_backtest(this ApplicationState& self,
                       backtest::BacktestStoreHandle handle)
   {
-    const auto timelines = self.store_.update_backtest_timelines(handle, {});
-    const auto series_results = self.store_.update_series_results(handle, {});
-
-    if(!timelines || !series_results) {
-      // TODO: Handle error case where timelines or series results fail to
-      // update after backtest reset
+    for(const auto portfolio_handle : self.ui_state_.portfolio_handles()) {
+      const auto* portfolio =
+       self.store_.get_portfolio_if_present(portfolio_handle);
+      if(portfolio &&
+         std::ranges::find(portfolio->backtest_handles(), handle) !=
+          portfolio->backtest_handles().end()) {
+        self.reset_portfolio(portfolio_handle);
+      }
     }
+  }
+
+  void reset_portfolio(this ApplicationState& self,
+                       backtest::PortfolioStoreHandle handle)
+  {
+    self.store_.update_portfolio_results(handle, {});
   }
 };
 

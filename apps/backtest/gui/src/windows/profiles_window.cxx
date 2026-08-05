@@ -464,51 +464,6 @@ private:
     }
 
     ui::form_section(
-     "Cash Handling",
-     "Choose what happens when the requested position costs more than the "
-     "available cash.");
-    {
-      auto insufficient_cash_policy =
-       self.editing_profile_ptr_->insufficient_cash_policy();
-      const auto policy_label = [](backtest::InsufficientCashPolicy policy) {
-        switch(policy) {
-        case backtest::InsufficientCashPolicy::Reject:
-          return "Reject Order";
-        case backtest::InsufficientCashPolicy::CapToAvailableCash:
-          return "Cap To Available Cash";
-        }
-
-        return "Reject Order";
-      };
-
-      constexpr auto insufficient_cash_policies =
-       std::array{backtest::InsufficientCashPolicy::Reject,
-                  backtest::InsufficientCashPolicy::CapToAvailableCash};
-
-      ui::field_label(
-       "Insufficient Cash",
-       "Reject Order skips an unaffordable entry. Cap To Available Cash "
-       "reduces its size to the largest affordable order.");
-      if(ImGui::BeginCombo("##insufficient_cash",
-                           policy_label(insufficient_cash_policy))) {
-        for(const auto& policy : insufficient_cash_policies) {
-          const auto selected = insufficient_cash_policy == policy;
-          if(ImGui::Selectable(policy_label(policy), selected)) {
-            insufficient_cash_policy = policy;
-          }
-          if(selected) {
-            ImGui::SetItemDefaultFocus();
-          }
-        }
-
-        ImGui::EndCombo();
-      }
-
-      self.editing_profile_ptr_->insufficient_cash_policy(
-       insufficient_cash_policy);
-    }
-
-    ui::form_section(
      "Execution Filter",
      "Decide whether each initial strategy entry should become a real "
      "position. Accepted positions automatically mirror later pyramiding and "
@@ -519,42 +474,6 @@ private:
       if(backtest::gui::execution_filter_node_editor(filter)) {
         self.editing_profile_ptr_->execution_filter(std::move(filter));
       }
-    }
-
-    ui::form_section(
-     "Drawdown Adjustment",
-     "Optionally reduce new position sizes as account drawdown deepens. The "
-     "reduction is applied once for each completed drawdown step.");
-    {
-      auto drawdown_adjustment =
-       self.editing_profile_ptr_->drawdown_adjustment();
-      auto enabled = drawdown_adjustment.enabled();
-      ui::field_label(
-       "Drawdown Adjustment",
-       "When enabled, new positions become smaller as drawdown passes each "
-       "configured step.");
-      ImGui::Checkbox("##drawdown_adjustment", &enabled);
-      drawdown_adjustment.enabled(enabled);
-
-      ImGui::BeginDisabled(!enabled);
-      auto drawdown_step = drawdown_adjustment.drawdown_step() * 100.0;
-      ui::field_label(
-       "Drawdown step (%)",
-       "Drawdown interval that triggers another size reduction.");
-      ImGui::InputDouble("##drawdown_step", &drawdown_step, 1.0, 10.0, "%.2f");
-      drawdown_adjustment.drawdown_step(drawdown_step / 100.0);
-
-      auto size_reduction = drawdown_adjustment.size_reduction() * 100.0;
-      ui::field_label(
-       "Size reduction (%)",
-       "Amount removed from the base position size per completed drawdown "
-       "step.");
-      ImGui::InputDouble(
-       "##size_reduction", &size_reduction, 1.0, 10.0, "%.2f");
-      drawdown_adjustment.size_reduction(size_reduction / 100.0);
-      ImGui::EndDisabled();
-
-      self.editing_profile_ptr_->drawdown_adjustment(drawdown_adjustment);
     }
   }
 

@@ -25,6 +25,7 @@ import :execution_model;
 import :intrabar_path;
 import :asset;
 import :profile;
+import :portfolio;
 import :position_sizing;
 import :trade_entry;
 import :trade_exit;
@@ -328,11 +329,16 @@ public:
    IntrabarPath intrabar_path = IntrabarPath::CandleDirection,
    StrategyPerformanceConfig strategy_performance_config = {},
    ErasedSeriesMethod<ExecutionFilterMethodContext> execution_filter =
-    BooleanMethod<true>{})
+    BooleanMethod<true>{},
+   DrawdownAdjustment drawdown_adjustment = {},
+   InsufficientCashPolicy insufficient_cash_policy =
+    InsufficientCashPolicy::Reject)
   : asset_{asset}
   , market_{market}
   , broker_{broker}
   , profile_{profile}
+  , drawdown_adjustment_{drawdown_adjustment}
+  , insufficient_cash_policy_{insufficient_cash_policy}
   , current_account_state_{total_equity,
                            0.0,
                            std::isnan(peak_equity) ? total_equity : peak_equity,
@@ -370,24 +376,78 @@ public:
     self.is_failed_ = is_failed;
   }
 
+  auto asset(this const BacktestRunner& self) noexcept -> const Asset&
+  {
+    return self.asset_;
+  }
+
+  void portfolio_account(this BacktestRunner& self,
+                         BacktestAccountState account,
+                         double reserved_notional) noexcept
+  {
+    self.other_backtests_unrealized_pnl_ =
+     account.unrealized_pnl() - self.execution_session_.unrealized_pnl();
+    self.current_account_state_ = account;
+    self.other_backtests_reserved_notional_ =
+     std::max(reserved_notional - self.reserved_notional(), 0.0);
+  }
+
+  auto account_state(this const BacktestRunner& self) noexcept
+   -> const BacktestAccountState&
+  {
+    return self.current_account_state_;
+  }
+
+  auto unrealized_pnl(this const BacktestRunner& self) noexcept -> double
+  {
+    return self.execution_session_.unrealized_pnl();
+  }
+
+  auto reserved_notional(this const BacktestRunner& self) noexcept -> double
+  {
+    return std::abs(self.execution_session_.unrealized_investment());
+  }
+
+  auto net_exposure(this const BacktestRunner& self) noexcept -> double
+  {
+    const auto& position = self.execution_session_.open_position();
+    if(!position) {
+      return 0.0;
+    }
+    return position->position_size() * self.execution_session_.market_price();
+  }
+
+  auto has_open_position(this const BacktestRunner& self) noexcept -> bool
+  {
+    return self.execution_session_.is_open();
+  }
+
   void run(this BacktestRunner& self,
            SeriesEvaluationResults& series_evaluation_results,
            BacktestTimeline& timeline)
   {
-    if(self.is_failed()) {
+    if(!self.begin_bar(timeline)) {
       return;
     }
+    self.run_open_exits();
+    self.run_open_entries(series_evaluation_results);
+    self.run_intrabar();
+    self.run_close_exits(series_evaluation_results);
+    self.run_close_entries(series_evaluation_results);
+    self.finish_bar(series_evaluation_results, timeline);
+  }
 
-    const auto timeline_size = timeline.size();
-    const auto asset_size = self.asset_.size();
-    if(timeline_size >= asset_size) {
-      return;
+  auto begin_bar(this BacktestRunner& self, const BacktestTimeline& timeline)
+   -> bool
+  {
+    if(self.is_failed() || self.active_snapshot_ ||
+       timeline.size() >= self.asset_.size()) {
+      return false;
     }
-
-    const auto asset_snapshot = self.asset_.get_snapshot(timeline_size);
-
-    const auto& series_methods = self.series_methods_;
-
+    self.active_timeline_index_ = timeline.size();
+    self.active_snapshot_.emplace(
+     self.asset_.get_snapshot(self.active_timeline_index_));
+    const auto& asset_snapshot = *self.active_snapshot_;
     const auto market_timestamp =
      static_cast<std::time_t>(asset_snapshot.datetime());
     self.strategy_trade_session_.begin_market_bar(
@@ -398,27 +458,34 @@ public:
                                             asset_snapshot.close());
     self.execution_filter_decisions_.clear();
     self.position_sizing_decisions_.clear();
+    self.closed_position_is_long_.reset();
+    self.settled_realized_exit_count_ = 0;
+    self.settled_closed_trade_count_ = 0;
 
     self.current_account_state_.unrealized_pnl(
+     self.other_backtests_unrealized_pnl_ +
      self.execution_session_.unrealized_pnl());
+    return true;
+  }
 
-    auto default_context = DefaultMethodContext{
-     series_methods, series_evaluation_results, timeline_size};
+  void run_open_exits(this BacktestRunner& self)
+  {
+    const auto& asset_snapshot = *self.active_snapshot_;
+    self.process_open_price(asset_snapshot.open(),
+                            self.closed_position_is_long_);
+    self.execute_pending_signal_exits(asset_snapshot.open(),
+                                      self.closed_position_is_long_);
+  }
 
-    auto context = BacktestMethodContext{
-     std::move(default_context), series_methods, self.current_account_state_};
-
+  void run_open_entries(this BacktestRunner& self,
+                        SeriesEvaluationResults& series_evaluation_results)
+  {
+    const auto asset_snapshot = *self.active_snapshot_;
+    auto context = self.make_context(series_evaluation_results);
+    const auto decision_snapshot =
+     self.active_timeline_index_ > 0 ? asset_snapshot[1] : asset_snapshot;
     const auto current_drawdown_ratio =
      self.current_account_state_.drawdown_ratio();
-
-    auto closed_position_is_long = std::optional<bool>{};
-    const auto decision_snapshot =
-     timeline_size > 0 ? asset_snapshot[1] : asset_snapshot;
-
-    self.process_open_price(asset_snapshot.open(), closed_position_is_long);
-    self.execute_pending_signal_exits(asset_snapshot.open(),
-                                      closed_position_is_long);
-
     if(self.strategy_trade_session_.is_open() && self.pending_pyramiding_) {
       self.execute_pyramiding_action(asset_snapshot.open(),
                                      decision_snapshot,
@@ -432,10 +499,14 @@ public:
                                  decision_snapshot,
                                  context,
                                  current_drawdown_ratio,
-                                 closed_position_is_long);
+                                 self.closed_position_is_long_);
     }
     self.pending_entries_.fill(false);
+  }
 
+  void run_intrabar(this BacktestRunner& self)
+  {
+    const auto& asset_snapshot = *self.active_snapshot_;
     const auto prices = make_intrabar_prices(self.intrabar_path_,
                                              asset_snapshot.open(),
                                              asset_snapshot.high(),
@@ -443,15 +514,29 @@ public:
                                              asset_snapshot.close());
     for(auto index = std::size_t{1}; index < prices.size(); ++index) {
       self.process_price_segment(
-       prices[index - 1], prices[index], closed_position_is_long);
+       prices[index - 1], prices[index], self.closed_position_is_long_);
     }
+  }
 
+  void run_close_exits(this BacktestRunner& self,
+                       SeriesEvaluationResults& series_evaluation_results)
+  {
+    const auto asset_snapshot = *self.active_snapshot_;
+    auto context = self.make_context(series_evaluation_results);
     self.execute_signal_exits(SignalTiming::CurrentClose,
                               asset_snapshot.close(),
                               asset_snapshot,
                               context,
-                              closed_position_is_long);
+                              self.closed_position_is_long_);
+  }
 
+  void run_close_entries(this BacktestRunner& self,
+                         SeriesEvaluationResults& series_evaluation_results)
+  {
+    const auto asset_snapshot = *self.active_snapshot_;
+    auto context = self.make_context(series_evaluation_results);
+    const auto current_drawdown_ratio =
+     self.current_account_state_.drawdown_ratio();
     if(self.strategy_trade_session_.is_open()) {
       const auto& position = *self.strategy_trade_session_.open_position();
       const auto& rule = position.is_long_direction() ? self.long_position_
@@ -473,10 +558,22 @@ public:
                                        asset_snapshot,
                                        context,
                                        current_drawdown_ratio,
-                                       closed_position_is_long);
+                                       self.closed_position_is_long_);
     }
+  }
 
-    if(timeline_size + 1 < asset_size) {
+  void settle_portfolio_account(this BacktestRunner& self) noexcept
+  {
+    self.update_accounting();
+  }
+
+  void finish_bar(this BacktestRunner& self,
+                  SeriesEvaluationResults& series_evaluation_results,
+                  BacktestTimeline& timeline)
+  {
+    const auto asset_snapshot = *self.active_snapshot_;
+    auto context = self.make_context(series_evaluation_results);
+    if(self.active_timeline_index_ + 1 < self.asset_.size()) {
       self.schedule_next_open_actions(asset_snapshot, context);
     } else {
       self.pending_entries_.fill(false);
@@ -518,12 +615,13 @@ public:
      .unrealized_duration = self.execution_session_.unrealized_duration()});
 
     const auto series_context = self.with_open_position_context(context);
-    for(const auto& [series_name, series_method] : series_methods) {
+    for(const auto& [series_name, series_method] : self.series_methods_) {
       const auto series_value =
        evaluate_series_method(series_method, asset_snapshot, series_context);
       series_evaluation_results.put(series_method, series_value);
       series_evaluation_results.alias(series_name, series_method);
     }
+    self.active_snapshot_.reset();
   }
 
 private:
@@ -531,8 +629,17 @@ private:
   const Market& market_;
   const Broker& broker_;
   const Profile& profile_;
+  DrawdownAdjustment drawdown_adjustment_;
+  InsufficientCashPolicy insufficient_cash_policy_;
 
   BacktestAccountState current_account_state_;
+  double other_backtests_reserved_notional_{};
+  double other_backtests_unrealized_pnl_{};
+  std::optional<AssetSnapshot> active_snapshot_;
+  std::size_t active_timeline_index_{};
+  std::optional<bool> closed_position_is_long_;
+  std::size_t settled_realized_exit_count_{};
+  std::size_t settled_closed_trade_count_{};
   double max_drawdown_;
 
   std::time_t sum_of_durations_;
@@ -579,6 +686,18 @@ private:
     int priority;
   };
 
+  auto make_context(this BacktestRunner& self,
+                    SeriesEvaluationResults& series_evaluation_results)
+   -> BacktestMethodContext
+  {
+    auto default_context = DefaultMethodContext{self.series_methods_,
+                                                series_evaluation_results,
+                                                self.active_timeline_index_};
+    return BacktestMethodContext{std::move(default_context),
+                                 self.series_methods_,
+                                 self.current_account_state_};
+  }
+
   auto with_open_position_context(this const BacktestRunner& self,
                                   BacktestMethodContext context,
                                   const TradePosition& position) noexcept
@@ -618,7 +737,8 @@ private:
   auto available_cash(this const BacktestRunner& self) noexcept -> double
   {
     return std::max(self.current_account_state_.capital() -
-                     std::abs(self.execution_session_.unrealized_investment()),
+                     self.other_backtests_reserved_notional_ -
+                     self.reserved_notional(),
                     0.0);
   }
 
@@ -717,7 +837,7 @@ private:
       return true;
     }
 
-    switch(self.profile_.insufficient_cash_policy()) {
+    switch(self.insufficient_cash_policy_) {
     case InsufficientCashPolicy::Reject:
       self.execution_session_.reject_insufficient_cash(entry);
       decision.outcome = PositionSizingDecisionOutcome::InsufficientCash;
@@ -739,12 +859,21 @@ private:
 
   void update_accounting(this BacktestRunner& self) noexcept
   {
-    for(const auto& realized_exit : self.execution_session_.realized_exits()) {
+    const auto& realized_exits = self.execution_session_.realized_exits();
+    for(auto index = self.settled_realized_exit_count_;
+        index < realized_exits.size();
+        ++index) {
+      const auto& realized_exit = realized_exits[index];
       self.current_account_state_.capital(
        self.current_account_state_.capital() + realized_exit.pnl());
     }
+    self.settled_realized_exit_count_ = realized_exits.size();
 
-    for(const auto& closed_trade : self.execution_session_.closed_trades()) {
+    const auto& closed_trades = self.execution_session_.closed_trades();
+    for(auto index = self.settled_closed_trade_count_;
+        index < closed_trades.size();
+        ++index) {
+      const auto& closed_trade = closed_trades[index];
       const auto pnl = closed_trade.pnl();
 
       self.sum_of_durations_ += closed_trade.duration();
@@ -760,8 +889,10 @@ private:
         self.break_even_count_++;
       }
     }
+    self.settled_closed_trade_count_ = closed_trades.size();
 
     self.current_account_state_.unrealized_pnl(
+     self.other_backtests_unrealized_pnl_ +
      self.execution_session_.unrealized_pnl());
     self.current_account_state_.update_peak_to_current_equity();
     self.max_drawdown_ = std::max(self.max_drawdown_, self.current_drawdown());
@@ -817,7 +948,7 @@ private:
                                  double position_quantity,
                                  double current_drawdown_ratio) -> double
   {
-    const auto& drawdown_adjustment = self.profile_.drawdown_adjustment();
+    const auto& drawdown_adjustment = self.drawdown_adjustment_;
 
     if(!drawdown_adjustment.enabled()) {
       return position_quantity;

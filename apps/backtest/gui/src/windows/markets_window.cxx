@@ -65,7 +65,7 @@ private:
   {
     const auto& app_state = context.app_state();
     const auto& market_handles = app_state.get_market_handles();
-    const auto backtest_ptr = app_state.selected_backtest_if_present();
+    const auto portfolio_ptr = app_state.selected_portfolio_if_present();
 
     ImGui::BeginGroup();
     if(ImGui::Button(PLUDUX_ICON_ADD " New Market")) {
@@ -90,7 +90,7 @@ private:
 
       {
         const auto selected =
-         backtest_ptr && backtest_ptr->market_handle() == market_handle;
+         portfolio_ptr && portfolio_ptr->market_handle() == market_handle;
         const auto has_draft =
          self.selected_market_handle_opt_ == market_handle &&
          self.editing_market_ptr_ && *self.editing_market_ptr_ != market;

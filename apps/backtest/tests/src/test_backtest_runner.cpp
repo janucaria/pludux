@@ -121,7 +121,7 @@ auto run_single_entry(
   const auto asset = make_single_bar_asset(entry_price);
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
-  const auto profile = Profile{"Test", position_sizing, drawdown_adjustment};
+  const auto profile = Profile{"Test", position_sizing};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -142,7 +142,11 @@ auto run_single_entry(
    initial_capital,
    0,
    false,
-   peak_equity};
+   peak_equity,
+   IntrabarPath::CandleDirection,
+   {},
+   BooleanMethod<true>{},
+   drawdown_adjustment};
 
   runner.run(series_results, timeline);
 
@@ -541,10 +545,7 @@ TEST(BacktestRunnerTest, CapToAvailableCashOpensLargestAffordableOrder)
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test",
-           PositionSizingNode{FixedQuantityPositionSizing{20.0}},
-           DrawdownAdjustment{},
-           InsufficientCashPolicy::CapToAvailableCash};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{20.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -563,7 +564,15 @@ TEST(BacktestRunnerTest, CapToAvailableCashOpensLargestAffordableOrder)
                                                   0,
                                                   OpenMethod{}),
                                BacktestRunner::PositionRule{},
-                               1000.0};
+                               1000.0,
+                               0,
+                               false,
+                               NAN,
+                               IntrabarPath::CandleDirection,
+                               {},
+                               BooleanMethod<true>{},
+                               DrawdownAdjustment{},
+                               InsufficientCashPolicy::CapToAvailableCash};
 
   runner.run(series_results, timeline);
 
@@ -586,10 +595,7 @@ TEST(BacktestRunnerTest, CapToAvailableCashSkipsWhenBelowMarketMinimum)
   const auto market = Market{"Test", 11.0, 0.0};
   const auto broker = Broker{"Test"};
   const auto profile =
-   Profile{"Test",
-           PositionSizingNode{FixedQuantityPositionSizing{20.0}},
-           DrawdownAdjustment{},
-           InsufficientCashPolicy::CapToAvailableCash};
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{20.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -608,7 +614,15 @@ TEST(BacktestRunnerTest, CapToAvailableCashSkipsWhenBelowMarketMinimum)
                                                   0,
                                                   OpenMethod{}),
                                BacktestRunner::PositionRule{},
-                               1000.0};
+                               1000.0,
+                               0,
+                               false,
+                               NAN,
+                               IntrabarPath::CandleDirection,
+                               {},
+                               BooleanMethod<true>{},
+                               DrawdownAdjustment{},
+                               InsufficientCashPolicy::CapToAvailableCash};
 
   runner.run(series_results, timeline);
 

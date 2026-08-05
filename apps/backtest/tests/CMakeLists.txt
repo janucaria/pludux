@@ -1,5 +1,7 @@
 set(PLUDUX_TEST_SOURCES
   src/test_backtest_runner.cpp
+  src/test_portfolio.cpp
+  src/test_portfolio_runner.cpp
   src/test_config_parser.cpp
   src/test_erased_plot_method.cpp
   src/test_strategy_inputs.cpp

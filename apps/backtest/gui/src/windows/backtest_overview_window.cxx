@@ -1,8 +1,10 @@
 module;
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <ctime>
 #include <format>
 #include <limits>
 #include <optional>
@@ -29,62 +31,105 @@ public:
     ImGui::Begin("Overview", nullptr);
 
     const auto& app_state = context.app_state();
-    const auto backtest_handle = app_state.selected_backtest_handle();
-    const auto backtest_ptr =
-     app_state.get_backtest_if_present(backtest_handle);
+    const auto portfolio_handle = app_state.selected_portfolio_handle();
+    const auto portfolio_ptr =
+     app_state.get_portfolio_if_present(portfolio_handle);
 
-    if(!backtest_ptr) {
+    if(!portfolio_ptr) {
       ui::summary_status(PLUDUX_ICON_SUMMARY,
-                         "No backtest selected",
-                         "Select a backtest to review its performance, trade "
+                         "No portfolio selected",
+                         "Select a portfolio to review its performance, trade "
                          "quality, capital, and risk metrics.");
       ImGui::End();
       return;
     }
 
-    const auto& backtest = *backtest_ptr;
-    if(!app_state.is_backtest_ready(backtest)) {
+    const auto& portfolio = *portfolio_ptr;
+    if(!app_state.is_portfolio_ready(portfolio)) {
       ui::summary_status(PLUDUX_ICON_WARNING,
-                         "Backtest setup is incomplete",
-                         "Complete the asset, strategy, market, broker, and "
-                         "profile selections before results can be shown.");
+                         "Portfolio setup is incomplete",
+                         "Complete the shared market, broker, and backtest "
+                         "backtests before results can be shown.");
       ImGui::End();
       return;
     }
 
-    const auto& timeline = app_state.get_backtest_timelines(backtest_handle);
-    if(timeline.empty()) {
+    const auto& results = app_state.get_portfolio_results(portfolio_handle);
+    if(results.timeline().empty() || results.backtests().empty()) {
       ui::summary_status(PLUDUX_ICON_PERFORMANCE,
                          "Results are not available yet",
-                         "The summary will populate when this backtest has "
+                         "The summary will populate when this portfolio has "
                          "produced its first timeline result.");
       ImGui::End();
       return;
     }
 
-    const auto& asset = app_state.get_asset(backtest.asset_handle());
-    const auto& strategy = app_state.get_strategy(backtest.strategy_handle());
-    const auto& market = app_state.get_market(backtest.market_handle());
-    const auto& broker = app_state.get_broker(backtest.broker_handle());
-    const auto& profile = app_state.get_profile(backtest.profile_handle());
-    const auto timeline_index = timeline.size() - 1;
+    const auto& market = app_state.get_market(portfolio.market_handle());
+    const auto& broker = app_state.get_broker(portfolio.broker_handle());
+    const auto& portfolio_row =
+     results.timeline().row(results.timeline().size() - 1);
+    auto trade_count = std::size_t{};
+    auto profit_count = std::size_t{};
+    auto loss_count = std::size_t{};
+    auto break_even_count = std::size_t{};
+    auto open_trade_count = std::size_t{};
+    auto cumulative_profit = 0.0;
+    auto cumulative_loss = 0.0;
+    auto cumulative_investment = 0.0;
+    auto open_investment = 0.0;
+    auto open_pnl = 0.0;
+    auto cumulative_duration = std::time_t{};
+    auto open_duration = std::time_t{};
+    auto current_winning_streak = std::size_t{};
+    auto current_losing_streak = std::size_t{};
+    auto maximum_winning_streak = std::size_t{};
+    auto maximum_losing_streak = std::size_t{};
+    for(const auto& backtest : results.backtests()) {
+      const auto& backtest_timeline = backtest.timeline();
+      if(backtest_timeline.empty()) {
+        continue;
+      }
+      const auto index = backtest_timeline.size() - 1;
+      trade_count += backtest_timeline.trade_count(index);
+      profit_count += backtest_timeline.profit_count(index);
+      loss_count += backtest_timeline.loss_count(index);
+      break_even_count += backtest_timeline.break_even_count(index);
+      open_trade_count += backtest_timeline.open_trade_count(index);
+      cumulative_profit += backtest_timeline.cumulative_profits(index);
+      cumulative_loss += backtest_timeline.cumulative_losses(index);
+      cumulative_investment += backtest_timeline.cumulative_investments(index);
+      open_investment += backtest_timeline.unrealized_investment(index);
+      open_pnl += backtest_timeline.unrealized_pnl(index);
+      cumulative_duration += backtest_timeline.cumulative_durations(index);
+      open_duration += backtest_timeline.unrealized_duration(index);
+      current_winning_streak = std::max(
+       current_winning_streak, backtest_timeline.current_winning_streak());
+      current_losing_streak = std::max(
+       current_losing_streak, backtest_timeline.current_losing_streak());
+      maximum_winning_streak = std::max(
+       maximum_winning_streak, backtest_timeline.maximum_winning_streak());
+      maximum_losing_streak = std::max(
+       maximum_losing_streak, backtest_timeline.maximum_losing_streak());
+    }
 
     ImGui::PushTextWrapPos(ImGui::GetCursorPosX() +
                            ImGui::GetContentRegionAvail().x);
     ImGui::SetWindowFontScale(1.18f);
-    ImGui::TextUnformatted(backtest.name().c_str());
+    ImGui::TextUnformatted(portfolio.name().c_str());
     ImGui::SetWindowFontScale(1.0f);
     ImGui::PopTextWrapPos();
     ImGui::TextDisabled("Latest timeline result | %zu closed trades",
-                        timeline.trade_count(timeline_index));
+                        trade_count);
     ImGui::Spacing();
 
-    const auto metadata =
-     std::array{ui::SummaryMetric{"Asset", asset.name(), {}, {}, {}},
-                ui::SummaryMetric{"Strategy", strategy.name(), {}, {}, {}},
-                ui::SummaryMetric{"Market", market.name(), {}, {}, {}},
-                ui::SummaryMetric{"Broker", broker.name(), {}, {}, {}},
-                ui::SummaryMetric{"Profile", profile.name(), {}, {}, {}}};
+    const auto metadata = std::array{
+     ui::SummaryMetric{"Backtests",
+                       std::to_string(results.backtests().size()),
+                       {},
+                       "Backtests share capital in their displayed order.",
+                       {}},
+     ui::SummaryMetric{"Market", market.name(), {}, {}, {}},
+     ui::SummaryMetric{"Broker", broker.name(), {}, {}, {}}};
     ui::summary_metric_section("##summary_setup",
                                PLUDUX_ICON_SUMMARY,
                                "Configuration",
@@ -92,10 +137,12 @@ public:
                                metadata);
     ImGui::Spacing();
 
-    const auto initial_capital = timeline.initial_capital(timeline_index);
-    const auto net_pnl = timeline.cumulative_pnls(timeline_index);
-    const auto trade_count = timeline.trade_count(timeline_index);
-    const auto win_rate = timeline.profit_rate(timeline_index) * 100.0;
+    const auto initial_capital = portfolio.initial_capital();
+    const auto net_pnl = portfolio_row.realized_pnl;
+    const auto win_rate = trade_count > 0
+                           ? static_cast<double>(profit_count) /
+                              static_cast<double>(trade_count) * 100.0
+                           : 0.0;
     const auto net_return = percentage_of(net_pnl, initial_capital);
 
     const auto available_width = ImGui::GetContentRegionAvail().x;
@@ -115,7 +162,7 @@ public:
     }
     ui::summary_kpi_card("##ending_capital_card",
                          "ENDING CAPITAL",
-                         format_currency(timeline.capital(timeline_index)),
+                         format_currency(portfolio_row.capital),
                          "Realized balance",
                          outcome_tone(net_pnl),
                          card_width);
@@ -134,24 +181,30 @@ public:
     }
     ui::summary_kpi_card("##max_drawdown_card",
                          "MAX DRAWDOWN",
-                         format_percent(timeline.max_drawdown(timeline_index)),
+                         format_percent(portfolio_row.max_drawdown),
                          "Peak-to-trough risk",
-                         timeline.max_drawdown(timeline_index) > 0.0
+                         portfolio_row.max_drawdown > 0.0
                           ? ui::MetricTone::Warning
                           : ui::MetricTone::Neutral,
                          card_width);
     ImGui::Spacing();
 
-    const auto average_investment = timeline.average_investment(timeline_index);
-    const auto average_profit = timeline.average_profit(timeline_index);
-    const auto average_loss = timeline.average_loss(timeline_index);
-    const auto profit_factor = timeline.profit_factor(timeline_index);
-    const auto payoff = payoff_ratio(average_profit,
-                                     average_loss,
-                                     timeline.profit_count(timeline_index),
-                                     timeline.loss_count(timeline_index));
+    const auto average_investment =
+     trade_count > 0 ? cumulative_investment / trade_count : 0.0;
+    const auto average_profit =
+     profit_count > 0 ? cumulative_profit / profit_count : 0.0;
+    const auto average_loss =
+     loss_count > 0 ? cumulative_loss / loss_count : 0.0;
+    const auto average_pnl =
+     trade_count > 0 ? (cumulative_profit + cumulative_loss) / trade_count
+                     : 0.0;
+    const auto profit_factor = cumulative_loss != 0.0
+                                ? cumulative_profit / std::abs(cumulative_loss)
+                                : 0.0;
+    const auto payoff =
+     payoff_ratio(average_profit, average_loss, profit_count, loss_count);
     const auto return_to_drawdown =
-     recovery_ratio(net_return, timeline.max_drawdown(timeline_index));
+     recovery_ratio(net_return, portfolio_row.max_drawdown);
     const auto performance_metrics = std::array{
      ui::SummaryMetric{"Total return",
                        format_optional_percent(net_return),
@@ -160,7 +213,7 @@ public:
                        outcome_tone(net_pnl)},
      ui::SummaryMetric{
       "Profit factor",
-      trade_count > 0 ? format_ratio(profit_factor) : "—",
+      trade_count > 0 ? format_ratio(profit_factor) : "â€”",
       {},
       "Gross profit divided by the absolute value of gross loss.",
       trade_count > 0 && profit_factor >= 1.0
@@ -185,31 +238,29 @@ public:
        : ui::MetricTone::Neutral},
      ui::SummaryMetric{
       "Expectancy",
-      format_currency(timeline.expected_value(timeline_index)),
-      format_percent(timeline.expected_return(timeline_index)),
+      format_currency(average_pnl),
+      format_optional_percent(percentage_of(average_pnl, average_investment)),
       "Average expected P&L per closed trade and its return on average "
       "investment.",
-      outcome_tone(timeline.expected_value(timeline_index))},
+      outcome_tone(average_pnl)},
      ui::SummaryMetric{
       "Average P&L",
-      format_currency(timeline.average_pnl(timeline_index)),
-      format_optional_percent(
-       percentage_of(timeline.average_pnl(timeline_index), average_investment)),
+      format_currency(average_pnl),
+      format_optional_percent(percentage_of(average_pnl, average_investment)),
       "Average realized P&L per closed trade.",
-      outcome_tone(timeline.average_pnl(timeline_index))},
+      outcome_tone(average_pnl)},
      ui::SummaryMetric{
       "Gross profit",
-      format_currency(timeline.cumulative_profits(timeline_index)),
-      format_optional_percent(percentage_of(
-       timeline.cumulative_profits(timeline_index), initial_capital)),
+      format_currency(cumulative_profit),
+      format_optional_percent(
+       percentage_of(cumulative_profit, initial_capital)),
       "Sum of profitable trades; the percentage is relative to initial "
       "capital.",
       ui::MetricTone::Positive},
      ui::SummaryMetric{
       "Gross loss",
-      format_currency(timeline.cumulative_losses(timeline_index)),
-      format_optional_percent(percentage_of(
-       timeline.cumulative_losses(timeline_index), initial_capital)),
+      format_currency(cumulative_loss),
+      format_optional_percent(percentage_of(cumulative_loss, initial_capital)),
       "Sum of losing trades; the percentage is relative to initial capital.",
       ui::MetricTone::Negative}};
     ui::summary_metric_section("##performance",
@@ -219,14 +270,12 @@ public:
                                performance_metrics);
     ImGui::Spacing();
 
-    const auto current_winning_streak = timeline.current_winning_streak();
-    const auto current_losing_streak = timeline.current_losing_streak();
     const auto current_streak_value =
      current_winning_streak > 0
       ? format_streak(current_winning_streak, "win")
       : (current_losing_streak > 0
           ? format_streak(current_losing_streak, "loss", "losses")
-          : std::string{"—"});
+          : std::string{"â€”"});
     const auto current_streak_tone =
      current_winning_streak > 0
       ? ui::MetricTone::Positive
@@ -239,22 +288,26 @@ public:
                        "Completed winning, losing, and break-even trades.",
                        {}},
      ui::SummaryMetric{"Winners",
-                       std::to_string(timeline.profit_count(timeline_index)),
+                       std::to_string(profit_count),
                        format_percent(win_rate),
                        {},
                        ui::MetricTone::Positive},
      ui::SummaryMetric{
       "Losers",
-      std::to_string(timeline.loss_count(timeline_index)),
-      format_percent(timeline.loss_rate(timeline_index) * 100.0),
+      std::to_string(loss_count),
+      format_percent(trade_count > 0
+                      ? static_cast<double>(loss_count) / trade_count * 100.0
+                      : 0.0),
       {},
       ui::MetricTone::Negative},
-     ui::SummaryMetric{
-      "Break-even",
-      std::to_string(timeline.break_even_count(timeline_index)),
-      format_percent(timeline.break_even_rate(timeline_index) * 100.0),
-      {},
-      {}},
+     ui::SummaryMetric{"Break-even",
+                       std::to_string(break_even_count),
+                       format_percent(trade_count > 0
+                                       ? static_cast<double>(break_even_count) /
+                                          trade_count * 100.0
+                                       : 0.0),
+                       {},
+                       {}},
      ui::SummaryMetric{
       "Current streak",
       current_streak_value,
@@ -263,26 +316,25 @@ public:
       "break-even trade resets the streak.",
       current_streak_tone},
      ui::SummaryMetric{"Maximum winning streak",
-                       format_streak(timeline.maximum_winning_streak(), "win"),
+                       format_streak(maximum_winning_streak, "win"),
                        {},
                        "Largest number of consecutive profitable trades.",
                        ui::MetricTone::Positive},
-     ui::SummaryMetric{
-      "Maximum losing streak",
-      format_streak(timeline.maximum_losing_streak(), "loss", "losses"),
-      {},
-      "Largest number of consecutive losing trades.",
-      timeline.maximum_losing_streak() > 0 ? ui::MetricTone::Negative
-                                           : ui::MetricTone::Neutral},
+     ui::SummaryMetric{"Maximum losing streak",
+                       format_streak(maximum_losing_streak, "loss", "losses"),
+                       {},
+                       "Largest number of consecutive losing trades.",
+                       maximum_losing_streak > 0 ? ui::MetricTone::Negative
+                                                 : ui::MetricTone::Neutral},
      ui::SummaryMetric{"Average winner",
-                       format_currency(timeline.average_profit(timeline_index)),
+                       format_currency(average_profit),
                        format_optional_percent(
                         percentage_of(average_profit, average_investment)),
                        "Average P&L among profitable trades.",
                        ui::MetricTone::Positive},
      ui::SummaryMetric{
       "Average loser",
-      format_currency(timeline.average_loss(timeline_index)),
+      format_currency(average_loss),
       format_optional_percent(percentage_of(average_loss, average_investment)),
       "Average P&L among losing trades.",
       ui::MetricTone::Negative},
@@ -293,24 +345,25 @@ public:
                        {}},
      ui::SummaryMetric{
       "Total invested capital",
-      format_currency(timeline.cumulative_investments(timeline_index)),
-      format_optional_multiple(division_of(
-       timeline.cumulative_investments(timeline_index), initial_capital)),
+      format_currency(cumulative_investment),
+      format_optional_multiple(
+       division_of(cumulative_investment, initial_capital)),
       "Capital committed across all closed trades; the multiple is relative "
       "to initial capital.",
       {}},
-     ui::SummaryMetric{
-      "Total trade duration",
-      format_duration(timeline.cumulative_durations(timeline_index)),
-      {},
-      "Combined duration of all closed trades.",
-      {}},
-     ui::SummaryMetric{
-      "Average trade duration",
-      format_duration(timeline.average_duration(timeline_index)),
-      {},
-      {},
-      {}}};
+     ui::SummaryMetric{"Total trade duration",
+                       format_duration(cumulative_duration),
+                       {},
+                       "Combined duration of all closed trades.",
+                       {}},
+     ui::SummaryMetric{"Average trade duration",
+                       format_duration(trade_count > 0
+                                        ? cumulative_duration /
+                                           static_cast<std::time_t>(trade_count)
+                                        : std::time_t{}),
+                       {},
+                       {},
+                       {}}};
     ui::summary_metric_section("##trades",
                                PLUDUX_ICON_TRADES,
                                "Trades",
@@ -322,36 +375,35 @@ public:
      ui::SummaryMetric{
       "Initial capital", format_currency(initial_capital), {}, {}, {}},
      ui::SummaryMetric{"Ending capital",
-                       format_currency(timeline.capital(timeline_index)),
+                       format_currency(portfolio_row.capital),
                        format_optional_percent(net_return),
                        "Realized balance after closed trades.",
                        outcome_tone(net_pnl)},
      ui::SummaryMetric{
       "Equity",
-      format_currency(timeline.equity(timeline_index)),
-      format_optional_percent(percentage_of(
-       timeline.equity(timeline_index) - initial_capital, initial_capital)),
+      format_currency(portfolio_row.equity),
+      format_optional_percent(
+       percentage_of(portfolio_row.equity - initial_capital, initial_capital)),
       "Current balance including unrealized P&L.",
-      outcome_tone(timeline.equity(timeline_index) - initial_capital)},
-     ui::SummaryMetric{"Peak equity",
-                       format_currency(timeline.peak_equity(timeline_index)),
-                       format_optional_percent(percentage_of(
-                        timeline.peak_equity(timeline_index) - initial_capital,
-                        initial_capital)),
-                       "Highest equity reached during the backtest.",
-                       ui::MetricTone::Positive},
+      outcome_tone(portfolio_row.equity - initial_capital)},
+     ui::SummaryMetric{
+      "Peak equity",
+      format_currency(portfolio_row.peak_equity),
+      format_optional_percent(percentage_of(
+       portfolio_row.peak_equity - initial_capital, initial_capital)),
+      "Highest equity reached during the backtest.",
+      ui::MetricTone::Positive},
      ui::SummaryMetric{"Current drawdown",
-                       format_percent(timeline.drawdown(timeline_index)),
+                       format_percent(portfolio_row.drawdown),
                        {},
                        "Current decline from peak equity.",
-                       timeline.drawdown(timeline_index) > 0.0
-                        ? ui::MetricTone::Warning
-                        : ui::MetricTone::Neutral},
+                       portfolio_row.drawdown > 0.0 ? ui::MetricTone::Warning
+                                                    : ui::MetricTone::Neutral},
      ui::SummaryMetric{"Maximum drawdown",
-                       format_percent(timeline.max_drawdown(timeline_index)),
+                       format_percent(portfolio_row.max_drawdown),
                        {},
                        "Largest peak-to-trough decline during the backtest.",
-                       timeline.max_drawdown(timeline_index) > 0.0
+                       portfolio_row.max_drawdown > 0.0
                         ? ui::MetricTone::Warning
                         : ui::MetricTone::Neutral}};
     ui::summary_metric_section("##capital_risk",
@@ -361,17 +413,16 @@ public:
                                capital_metrics);
     ImGui::Spacing();
 
-    const auto open_investment = timeline.unrealized_investment(timeline_index);
-    const auto open_pnl = timeline.unrealized_pnl(timeline_index);
-    const auto equity = timeline.equity(timeline_index);
+    open_investment = portfolio_row.reserved_notional;
+    open_pnl = portfolio_row.unrealized_pnl;
+    const auto equity = portfolio_row.equity;
     const auto exposure_metrics = std::array{
-     ui::SummaryMetric{
-      "Open trades",
-      std::to_string(timeline.open_trade_count(timeline_index)),
-      {},
-      "Trades that remain open at the latest timeline result.",
-      timeline.open_trade_count(timeline_index) > 0 ? ui::MetricTone::Warning
-                                                    : ui::MetricTone::Neutral},
+     ui::SummaryMetric{"Open trades",
+                       std::to_string(open_trade_count),
+                       {},
+                       "Trades that remain open at the latest timeline result.",
+                       open_trade_count > 0 ? ui::MetricTone::Warning
+                                            : ui::MetricTone::Neutral},
      ui::SummaryMetric{
       "Open investment",
       format_currency(open_investment),
@@ -386,15 +437,11 @@ public:
       "Open-position P&L and return on currently invested capital.",
       outcome_tone(open_pnl)},
      ui::SummaryMetric{
-      "Open trade duration",
-      format_duration(timeline.unrealized_duration(timeline_index)),
-      {},
-      {},
-      {}}};
+      "Open trade duration", format_duration(open_duration), {}, {}, {}}};
     ui::summary_metric_section("##open_exposure",
                                PLUDUX_ICON_EXPOSURE,
                                "Open exposure",
-                               timeline.open_trade_count(timeline_index) > 0
+                               open_trade_count > 0
                                 ? "Current open-position status."
                                 : "No trade is open at the latest result.",
                                exposure_metrics);
@@ -449,32 +496,32 @@ private:
 
   static auto format_percent(double value) -> std::string
   {
-    return std::isfinite(value) ? std::format("{:.2f}%", value) : "—";
+    return std::isfinite(value) ? std::format("{:.2f}%", value) : "â€”";
   }
 
   static auto format_optional_percent(std::optional<double> value)
    -> std::string
   {
-    return value ? format_percent(*value) : "—";
+    return value ? format_percent(*value) : "â€”";
   }
 
   static auto format_ratio(double value) -> std::string
   {
     if(std::isinf(value) && value > 0.0) {
-      return "∞";
+      return "âˆž";
     }
-    return std::isfinite(value) ? std::format("{:.2f}", value) : "—";
+    return std::isfinite(value) ? std::format("{:.2f}", value) : "â€”";
   }
 
   static auto format_optional_ratio(std::optional<double> value) -> std::string
   {
-    return value ? format_ratio(*value) : "—";
+    return value ? format_ratio(*value) : "â€”";
   }
 
   static auto format_optional_multiple(std::optional<double> value)
    -> std::string
   {
-    return value ? std::format("{}x", format_ratio(*value)) : "—";
+    return value ? std::format("{}x", format_ratio(*value)) : "â€”";
   }
 
   static auto format_streak(std::size_t count,

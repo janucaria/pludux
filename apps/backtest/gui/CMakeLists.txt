@@ -151,6 +151,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src
     FILES
 
+    src/portfolio_backtest_selections.cxx
     src/ui_state.cxx
     src/application_state.cxx
     src/backtest_execution_status.cxx
@@ -178,6 +179,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/windows/brokers_window.cxx
     src/windows/profiles_window.cxx
     src/windows/backtests_window.cxx
+    src/windows/portfolios_window.cxx
     src/windows/backtest_overview_window.cxx
     src/windows/dockspace_window.cxx
     src/windows/backtest_chart_window.cxx
@@ -261,6 +263,28 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 
 if(MSVC)
   target_compile_options(${PROJECT_NAME} PRIVATE /bigobj)
+endif()
+
+if(NOT EMSCRIPTEN AND BUILD_TESTING)
+  add_executable(pludux-backtest-test_portfolio_backtest_selection
+    tests/test_portfolio_backtest_selections.cpp
+  )
+  target_sources(pludux-backtest-test_portfolio_backtest_selection PRIVATE
+    FILE_SET
+      CXX_MODULES
+      BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src
+      FILES
+        src/portfolio_backtest_selections.cxx
+  )
+  target_link_libraries(pludux-backtest-test_portfolio_backtest_selection
+    PRIVATE
+      GTest::gtest_main
+      pludux::backtest-lib
+  )
+  add_test(
+    NAME pludux-backtest-test_portfolio_backtest_selection
+    COMMAND pludux-backtest-test_portfolio_backtest_selection
+  )
 endif()
 
 target_link_libraries(${PROJECT_NAME}

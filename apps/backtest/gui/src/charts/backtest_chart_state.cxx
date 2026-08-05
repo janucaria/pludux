@@ -19,6 +19,7 @@ enum class BacktestChartViewportMode {
 
 enum class BacktestTopPlot {
   Equity,
+  Drawdown,
   ShadowReturn,
   FrequentistPerformance,
   CurrentStreaks,
@@ -28,25 +29,27 @@ enum class BacktestTopPlot {
 
 class BacktestChartState {
 public:
-  void select_backtest(
-   this BacktestChartState& self,
-   const backtest::BacktestStoreHandle& selected_backtest) noexcept
+  void display_backtest(this BacktestChartState& self,
+                        backtest::PortfolioStoreHandle portfolio_handle,
+                        backtest::BacktestStoreHandle backtest_handle) noexcept
   {
-    if(self.selected_backtest_ &&
-       *self.selected_backtest_ == selected_backtest) {
+    if(self.displayed_portfolio_ == portfolio_handle &&
+       self.displayed_backtest_ == backtest_handle) {
       return;
     }
 
-    self.selected_backtest_ = selected_backtest;
+    self.displayed_portfolio_ = portfolio_handle;
+    self.displayed_backtest_ = backtest_handle;
     self.pinned_bar_.reset();
     self.viewport_mode_ = BacktestChartViewportMode::FitAll;
     self.follow_bar_count_ = 150;
     self.fit_requested_ = true;
   }
 
-  void clear_selection(this BacktestChartState& self) noexcept
+  void clear_display_backtest(this BacktestChartState& self) noexcept
   {
-    self.selected_backtest_.reset();
+    self.displayed_portfolio_.reset();
+    self.displayed_backtest_.reset();
     self.pinned_bar_.reset();
     self.viewport_mode_ = BacktestChartViewportMode::FitAll;
     self.follow_bar_count_ = 150;
@@ -99,8 +102,7 @@ public:
     return std::exchange(self.fit_requested_, false);
   }
 
-  auto top_plot(this const BacktestChartState& self) noexcept
-   -> BacktestTopPlot
+  auto top_plot(this const BacktestChartState& self) noexcept -> BacktestTopPlot
   {
     return self.top_plot_;
   }
@@ -176,7 +178,8 @@ public:
   }
 
 private:
-  std::optional<backtest::BacktestStoreHandle> selected_backtest_{};
+  std::optional<backtest::PortfolioStoreHandle> displayed_portfolio_{};
+  std::optional<backtest::BacktestStoreHandle> displayed_backtest_{};
   std::optional<std::size_t> pinned_bar_{};
   std::vector<float> row_ratios_{};
   BacktestChartViewportMode viewport_mode_{BacktestChartViewportMode::FitAll};

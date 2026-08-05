@@ -27,7 +27,7 @@ public:
    CommandExecutor& command_executor,
    bool& discard_all_drafts_requested,
    std::function<const BacktestExecutionStatus*(
-    const backtest::BacktestStoreHandle&)> backtest_execution_status_lookup)
+    const backtest::PortfolioStoreHandle&)> backtest_execution_status_lookup)
   : app_state_{app_state}
   , alert_messages_{alert_messages}
   , command_executor_{command_executor}
@@ -94,7 +94,7 @@ public:
 
   auto backtest_execution_status(
    this const WindowContext& self,
-   const backtest::BacktestStoreHandle& handle) noexcept
+   const backtest::PortfolioStoreHandle& handle) noexcept
    -> const BacktestExecutionStatus*
   {
     return self.backtest_execution_status_lookup_(handle);
@@ -106,7 +106,7 @@ private:
   CommandExecutor& command_executor_;
   bool& discard_all_drafts_requested_;
   std::function<const BacktestExecutionStatus*(
-   const backtest::BacktestStoreHandle&)>
+   const backtest::PortfolioStoreHandle&)>
    backtest_execution_status_lookup_;
 };
 

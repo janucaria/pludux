@@ -13,6 +13,7 @@ module;
 export module pludux.apps.backtest:ui_state;
 
 import pludux.backtest;
+import pludux.apps.backtest.portfolio_backtest_selections;
 
 export namespace pludux::apps {
 
@@ -21,6 +22,9 @@ public:
   UiState() = default;
 
   UiState(std::string imgui_ini_settings,
+          backtest::PortfolioStoreHandle selected_portfolio_handle,
+          std::vector<backtest::PortfolioStoreHandle> portfolio_handles,
+          PortfolioBacktestSelections portfolio_backtest_selections,
           backtest::BacktestStoreHandle selected_backtest_handle,
           std::vector<backtest::BacktestStoreHandle> backtest_handles,
           std::vector<backtest::AssetStoreHandle> asset_handles,
@@ -29,6 +33,9 @@ public:
           std::vector<backtest::BrokerStoreHandle> broker_handles,
           std::vector<backtest::ProfileStoreHandle> profile_handles)
   : imgui_ini_settings_{std::move(imgui_ini_settings)}
+  , selected_portfolio_handle_{selected_portfolio_handle}
+  , portfolio_handles_{std::move(portfolio_handles)}
+  , portfolio_backtest_selections_{std::move(portfolio_backtest_selections)}
   , selected_backtest_handle_{std::move(selected_backtest_handle)}
   , backtest_handles_{std::move(backtest_handles)}
   , asset_handles_{std::move(asset_handles)}
@@ -37,6 +44,71 @@ public:
   , broker_handles_{std::move(broker_handles)}
   , profile_handles_{std::move(profile_handles)}
   {
+  }
+
+  auto selected_portfolio_handle(this const UiState& self) noexcept
+   -> backtest::PortfolioStoreHandle
+  {
+    return self.selected_portfolio_handle_;
+  }
+
+  void selected_portfolio_handle(this UiState& self,
+                                 backtest::PortfolioStoreHandle handle) noexcept
+  {
+    self.selected_portfolio_handle_ = handle;
+  }
+
+  auto portfolio_handles(this const UiState& self) noexcept
+   -> const std::vector<backtest::PortfolioStoreHandle>&
+  {
+    return self.portfolio_handles_;
+  }
+
+  auto portfolio_handles(this UiState& self) noexcept
+   -> std::vector<backtest::PortfolioStoreHandle>&
+  {
+    return self.portfolio_handles_;
+  }
+
+  auto portfolio_backtest_selections(this const UiState& self) noexcept
+   -> const PortfolioBacktestSelections&
+  {
+    return self.portfolio_backtest_selections_;
+  }
+
+  auto portfolio_backtest_selections(this UiState& self) noexcept
+   -> PortfolioBacktestSelections&
+  {
+    return self.portfolio_backtest_selections_;
+  }
+
+  void reorder_portfolio_handle(this UiState& self,
+                                std::size_t from_index,
+                                std::size_t to_index) noexcept
+  {
+    if(from_index >= self.portfolio_handles_.size() ||
+       to_index >= self.portfolio_handles_.size()) {
+      return;
+    }
+    const auto handle = self.portfolio_handles_[from_index];
+    self.portfolio_handles_.erase(self.portfolio_handles_.begin() + from_index);
+    self.portfolio_handles_.insert(self.portfolio_handles_.begin() + to_index,
+                                   handle);
+  }
+
+  void add_portfolio_handle(this UiState& self,
+                            backtest::PortfolioStoreHandle handle) noexcept
+  {
+    self.portfolio_handles_.push_back(handle);
+  }
+
+  void remove_portfolio_handle(this UiState& self,
+                               backtest::PortfolioStoreHandle handle) noexcept
+  {
+    const auto found = std::ranges::find(self.portfolio_handles_, handle);
+    if(found != self.portfolio_handles_.end()) {
+      self.portfolio_handles_.erase(found);
+    }
   }
 
   auto imgui_ini_settings(this const UiState& self) noexcept
@@ -283,6 +355,9 @@ public:
 
 private:
   std::string imgui_ini_settings_;
+  backtest::PortfolioStoreHandle selected_portfolio_handle_;
+  std::vector<backtest::PortfolioStoreHandle> portfolio_handles_;
+  PortfolioBacktestSelections portfolio_backtest_selections_;
   backtest::BacktestStoreHandle selected_backtest_handle_;
 
   std::vector<backtest::BacktestStoreHandle> backtest_handles_;

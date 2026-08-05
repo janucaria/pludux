@@ -41,6 +41,10 @@ struct BacktestStoreHandle : StoreHandle<BacktestStoreHandle> {
   using StoreHandle<BacktestStoreHandle>::StoreHandle;
 };
 
+struct PortfolioStoreHandle : StoreHandle<PortfolioStoreHandle> {
+  using StoreHandle<PortfolioStoreHandle>::StoreHandle;
+};
+
 struct AssetStoreHandle : StoreHandle<AssetStoreHandle> {
   using StoreHandle<AssetStoreHandle>::StoreHandle;
 };

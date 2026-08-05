@@ -8,12 +8,13 @@ export module pludux.backtest:store_descriptor;
 import pludux;
 
 import :backtest;
+import :portfolio;
+import :portfolio_results;
 import :asset;
 import :strategy;
 import :market;
 import :broker;
 import :profile;
-import :backtest_timeline;
 
 import :store_handle;
 import :store_data_resolver;
@@ -27,26 +28,25 @@ public:
   StoreDescriptor(
    StoreDataResolver<Backtest, BacktestStoreHandle>
     backtest_store_data_resolver,
+   StoreDataResolver<Portfolio, PortfolioStoreHandle>
+    portfolio_store_data_resolver,
    StoreDataResolver<Asset, AssetStoreHandle> asset_store_data_resolver,
    StoreDataResolver<Strategy, StrategyStoreHandle>
     strategy_store_data_resolver,
    StoreDataResolver<Market, MarketStoreHandle> market_store_data_resolver,
    StoreDataResolver<Broker, BrokerStoreHandle> broker_store_data_resolver,
    StoreDataResolver<Profile, ProfileStoreHandle> profile_store_data_resolver,
-   StoreDataResolver<BacktestTimeline, BacktestStoreHandle>
-    backtest_timelines_store_data_resolver,
-   StoreDataResolver<SeriesEvaluationResults, BacktestStoreHandle>
-    series_results_store_data_resolver)
+   StoreDataResolver<PortfolioResults, PortfolioStoreHandle>
+    portfolio_results_store_data_resolver)
   : backtest_store_data_resolver_{std::move(backtest_store_data_resolver)}
+  , portfolio_store_data_resolver_{std::move(portfolio_store_data_resolver)}
   , asset_store_data_resolver_{std::move(asset_store_data_resolver)}
   , strategy_store_data_resolver_{std::move(strategy_store_data_resolver)}
   , market_store_data_resolver_{std::move(market_store_data_resolver)}
   , broker_store_data_resolver_{std::move(broker_store_data_resolver)}
   , profile_store_data_resolver_{std::move(profile_store_data_resolver)}
-  , backtest_timelines_store_data_resolver_{std::move(
-     backtest_timelines_store_data_resolver)}
-  , series_results_store_data_resolver_{
-     std::move(series_results_store_data_resolver)}
+  , portfolio_results_store_data_resolver_{
+     std::move(portfolio_results_store_data_resolver)}
   {
   }
 
@@ -60,6 +60,18 @@ public:
    -> StoreDataResolver<Backtest, BacktestStoreHandle>&
   {
     return self.backtest_store_data_resolver_;
+  }
+
+  auto portfolio_store_data_resolver(this const StoreDescriptor& self) noexcept
+   -> const StoreDataResolver<Portfolio, PortfolioStoreHandle>&
+  {
+    return self.portfolio_store_data_resolver_;
+  }
+
+  auto portfolio_store_data_resolver(this StoreDescriptor& self) noexcept
+   -> StoreDataResolver<Portfolio, PortfolioStoreHandle>&
+  {
+    return self.portfolio_store_data_resolver_;
   }
 
   auto asset_store_data_resolver(this const StoreDescriptor& self) noexcept
@@ -122,36 +134,25 @@ public:
     return self.profile_store_data_resolver_;
   }
 
-  auto backtest_timelines_store_data_resolver(
-   this const StoreDescriptor& self) noexcept -> const
-   StoreDataResolver<BacktestTimeline, BacktestStoreHandle>&
+  auto portfolio_results_store_data_resolver(
+   this const StoreDescriptor& self) noexcept
+   -> const StoreDataResolver<PortfolioResults, PortfolioStoreHandle>&
   {
-    return self.backtest_timelines_store_data_resolver_;
+    return self.portfolio_results_store_data_resolver_;
   }
 
   auto
-  backtest_timelines_store_data_resolver(this StoreDescriptor& self) noexcept
-   -> StoreDataResolver<BacktestTimeline, BacktestStoreHandle>&
+  portfolio_results_store_data_resolver(this StoreDescriptor& self) noexcept
+   -> StoreDataResolver<PortfolioResults, PortfolioStoreHandle>&
   {
-    return self.backtest_timelines_store_data_resolver_;
-  }
-
-  auto
-  series_results_store_data_resolver(this const StoreDescriptor& self) noexcept
-   -> const StoreDataResolver<SeriesEvaluationResults, BacktestStoreHandle>&
-  {
-    return self.series_results_store_data_resolver_;
-  }
-
-  auto series_results_store_data_resolver(this StoreDescriptor& self) noexcept
-   -> StoreDataResolver<SeriesEvaluationResults, BacktestStoreHandle>&
-  {
-    return self.series_results_store_data_resolver_;
+    return self.portfolio_results_store_data_resolver_;
   }
 
 private:
   StoreDataResolver<Backtest, BacktestStoreHandle>
    backtest_store_data_resolver_;
+  StoreDataResolver<Portfolio, PortfolioStoreHandle>
+   portfolio_store_data_resolver_;
   StoreDataResolver<Asset, AssetStoreHandle> asset_store_data_resolver_;
   StoreDataResolver<Strategy, StrategyStoreHandle>
    strategy_store_data_resolver_;
@@ -159,11 +160,8 @@ private:
   StoreDataResolver<Broker, BrokerStoreHandle> broker_store_data_resolver_;
   StoreDataResolver<Profile, ProfileStoreHandle> profile_store_data_resolver_;
 
-  StoreDataResolver<BacktestTimeline, BacktestStoreHandle>
-   backtest_timelines_store_data_resolver_;
-
-  StoreDataResolver<SeriesEvaluationResults, BacktestStoreHandle>
-   series_results_store_data_resolver_;
+  StoreDataResolver<PortfolioResults, PortfolioStoreHandle>
+   portfolio_results_store_data_resolver_;
 };
 
 } // namespace pludux::backtest

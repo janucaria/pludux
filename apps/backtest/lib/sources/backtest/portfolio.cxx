@@ -1,0 +1,234 @@
+module;
+
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
+
+export module pludux.backtest:portfolio;
+
+import :store_handle;
+
+export namespace pludux::backtest {
+
+enum class InsufficientCashPolicy { Reject, CapToAvailableCash };
+
+class DrawdownAdjustment {
+public:
+  DrawdownAdjustment()
+  : DrawdownAdjustment{false, 0.10, 0.20}
+  {
+  }
+
+  DrawdownAdjustment(bool enabled, double drawdown_step, double size_reduction)
+  : enabled_{enabled}
+  , drawdown_step_{drawdown_step}
+  , size_reduction_{size_reduction}
+  {
+  }
+
+  auto operator==(const DrawdownAdjustment&) const noexcept -> bool = default;
+
+  auto enabled(this const DrawdownAdjustment& self) noexcept -> bool
+  {
+    return self.enabled_;
+  }
+
+  void enabled(this DrawdownAdjustment& self, bool value) noexcept
+  {
+    self.enabled_ = value;
+  }
+
+  auto drawdown_step(this const DrawdownAdjustment& self) noexcept -> double
+  {
+    return self.drawdown_step_;
+  }
+
+  void drawdown_step(this DrawdownAdjustment& self, double value) noexcept
+  {
+    self.drawdown_step_ = value;
+  }
+
+  auto size_reduction(this const DrawdownAdjustment& self) noexcept -> double
+  {
+    return self.size_reduction_;
+  }
+
+  void size_reduction(this DrawdownAdjustment& self, double value) noexcept
+  {
+    self.size_reduction_ = value;
+  }
+
+private:
+  bool enabled_;
+  double drawdown_step_;
+  double size_reduction_;
+};
+
+class Portfolio {
+public:
+  Portfolio()
+  : Portfolio{"",
+              1'000'000.0,
+              MarketStoreHandle{},
+              BrokerStoreHandle{},
+              {},
+              InsufficientCashPolicy::Reject,
+              {}}
+  {
+  }
+
+  Portfolio(std::string name,
+            double initial_capital,
+            MarketStoreHandle market_handle,
+            BrokerStoreHandle broker_handle,
+            DrawdownAdjustment drawdown_adjustment,
+            InsufficientCashPolicy insufficient_cash_policy,
+            std::vector<BacktestStoreHandle> backtest_handles)
+  : name_{std::move(name)}
+  , initial_capital_{initial_capital}
+  , market_handle_{market_handle}
+  , broker_handle_{broker_handle}
+  , drawdown_adjustment_{drawdown_adjustment}
+  , insufficient_cash_policy_{insufficient_cash_policy}
+  , backtest_handles_{std::move(backtest_handles)}
+  {
+    self_validate();
+  }
+
+  auto operator==(const Portfolio&) const noexcept -> bool = default;
+
+  auto name(this const Portfolio& self) noexcept -> const std::string&
+  {
+    return self.name_;
+  }
+
+  void name(this Portfolio& self, std::string value) noexcept
+  {
+    self.name_ = std::move(value);
+  }
+
+  auto initial_capital(this const Portfolio& self) noexcept -> double
+  {
+    return self.initial_capital_;
+  }
+
+  void initial_capital(this Portfolio& self, double value)
+  {
+    if(!std::isfinite(value) || value < 0.0) {
+      throw std::invalid_argument{
+       "Portfolio initial capital must be finite and non-negative"};
+    }
+    self.initial_capital_ = value;
+  }
+
+  auto market_handle(this const Portfolio& self) noexcept -> MarketStoreHandle
+  {
+    return self.market_handle_;
+  }
+
+  void market_handle(this Portfolio& self, MarketStoreHandle value) noexcept
+  {
+    self.market_handle_ = value;
+  }
+
+  auto broker_handle(this const Portfolio& self) noexcept -> BrokerStoreHandle
+  {
+    return self.broker_handle_;
+  }
+
+  void broker_handle(this Portfolio& self, BrokerStoreHandle value) noexcept
+  {
+    self.broker_handle_ = value;
+  }
+
+  auto drawdown_adjustment(this const Portfolio& self) noexcept
+   -> const DrawdownAdjustment&
+  {
+    return self.drawdown_adjustment_;
+  }
+
+  void drawdown_adjustment(this Portfolio& self,
+                           DrawdownAdjustment value) noexcept
+  {
+    self.drawdown_adjustment_ = value;
+  }
+
+  auto insufficient_cash_policy(this const Portfolio& self) noexcept
+   -> InsufficientCashPolicy
+  {
+    return self.insufficient_cash_policy_;
+  }
+
+  void insufficient_cash_policy(this Portfolio& self,
+                                InsufficientCashPolicy value) noexcept
+  {
+    self.insufficient_cash_policy_ = value;
+  }
+
+  auto backtest_handles(this const Portfolio& self) noexcept
+   -> const std::vector<BacktestStoreHandle>&
+  {
+    return self.backtest_handles_;
+  }
+
+  void backtest_handles(this Portfolio& self,
+                        std::vector<BacktestStoreHandle> value)
+  {
+    if(has_duplicates(value)) {
+      throw std::invalid_argument{
+       "Portfolio cannot contain duplicate backtests"};
+    }
+    self.backtest_handles_ = std::move(value);
+  }
+
+  auto equivalent_rules(this const Portfolio& self,
+                        const Portfolio& other) noexcept -> bool
+  {
+    return self.initial_capital_ == other.initial_capital_ &&
+           self.market_handle_ == other.market_handle_ &&
+           self.broker_handle_ == other.broker_handle_ &&
+           self.drawdown_adjustment_ == other.drawdown_adjustment_ &&
+           self.insufficient_cash_policy_ == other.insufficient_cash_policy_ &&
+           self.backtest_handles_ == other.backtest_handles_;
+  }
+
+private:
+  static auto has_duplicates(const std::vector<BacktestStoreHandle>& handles)
+   -> bool
+  {
+    for(auto index = std::size_t{}; index < handles.size(); ++index) {
+      if(std::find(handles.begin() + static_cast<std::ptrdiff_t>(index + 1),
+                   handles.end(),
+                   handles[index]) != handles.end()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void self_validate() const
+  {
+    if(!std::isfinite(initial_capital_) || initial_capital_ < 0.0) {
+      throw std::invalid_argument{
+       "Portfolio initial capital must be finite and non-negative"};
+    }
+    if(has_duplicates(backtest_handles_)) {
+      throw std::invalid_argument{
+       "Portfolio cannot contain duplicate backtests"};
+    }
+  }
+
+  std::string name_;
+  double initial_capital_;
+  MarketStoreHandle market_handle_;
+  BrokerStoreHandle broker_handle_;
+  DrawdownAdjustment drawdown_adjustment_;
+  InsufficientCashPolicy insufficient_cash_policy_;
+  std::vector<BacktestStoreHandle> backtest_handles_;
+};
+
+} // namespace pludux::backtest

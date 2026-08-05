@@ -180,32 +180,57 @@ public:
   void render(this BacktestChartWindow& self, WindowContext& context)
   {
     const auto& app_state = context.app_state();
-    const auto backtest_handle = app_state.selected_backtest_handle();
-    const auto backtest_ptr =
-     app_state.get_backtest_if_present(backtest_handle);
+    const auto portfolio_handle = app_state.selected_portfolio_handle();
+    const auto portfolio_ptr =
+     app_state.get_portfolio_if_present(portfolio_handle);
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{2.0f, 2.0f});
     ImGui::Begin("Chart", nullptr);
     ImGui::PopStyleVar();
 
-    if(!backtest_ptr) {
-      self.chart_state_.clear_selection();
-      self.render_status_panel(PLUDUX_ICON_CHART,
-                               "No backtest selected",
-                               "Select a backtest to inspect its execution and "
-                               "market data.");
+    if(!portfolio_ptr) {
+      self.chart_state_.clear_display_backtest();
+      self.render_status_panel(
+       PLUDUX_ICON_CHART,
+       "No portfolio selected",
+       "Select a portfolio to inspect its execution and "
+       "market data.");
       ImGui::End();
       return;
     }
 
+    const auto& portfolio = *portfolio_ptr;
+    const auto selected_backtest =
+     app_state.selected_portfolio_backtest_handle();
+    if(!selected_backtest) {
+      self.chart_state_.clear_display_backtest();
+      self.render_status_panel(
+       PLUDUX_ICON_WARNING,
+       "No portfolio backtests",
+       "Add or select a valid backtest in this portfolio.");
+      ImGui::End();
+      return;
+    }
+    const auto backtest_handle = *selected_backtest;
+    const auto* backtest_ptr =
+     app_state.get_backtest_if_present(backtest_handle);
+    if(!backtest_ptr) {
+      self.chart_state_.clear_display_backtest();
+      self.render_status_panel(
+       PLUDUX_ICON_WARNING,
+       "Missing portfolio backtest",
+       "Select an available backtest in the portfolio tree.");
+      ImGui::End();
+      return;
+    }
     const auto& backtest = *backtest_ptr;
-    self.chart_state_.select_backtest(backtest_handle);
+    self.chart_state_.display_backtest(portfolio_handle, backtest_handle);
 
     const auto execution_status =
-     context.backtest_execution_status(backtest_handle);
+     context.backtest_execution_status(portfolio_handle);
 
-    if(!app_state.is_backtest_ready(backtest)) {
-      self.render_incomplete_status(app_state, backtest);
+    if(!app_state.is_portfolio_ready(portfolio)) {
+      self.render_incomplete_status(app_state, portfolio);
       ImGui::End();
       return;
     }
@@ -223,11 +248,24 @@ public:
       return;
     }
 
-    const auto& backtest_timelines =
-     app_state.get_backtest_timelines(backtest_handle);
-    const auto& backtest_series_results =
-     app_state.get_series_results(backtest_handle);
+    const auto& portfolio_results =
+     app_state.get_portfolio_results(portfolio_handle);
+    const auto* backtest_results = portfolio_results.backtest(backtest_handle);
+    if(!backtest_results) {
+      self.render_status_panel(PLUDUX_ICON_WAITING,
+                               "Waiting for results",
+                               "The backtest result is not available yet.");
+      ImGui::End();
+      return;
+    }
+    const auto& backtest_timelines = backtest_results->timeline();
+    const auto& backtest_series_results = backtest_results->series_results();
     const auto timeline_size = backtest_timelines.size();
+    auto backtest_timestamps = std::vector<double>(timeline_size);
+    for(auto index = std::size_t{}; index < timeline_size; ++index) {
+      backtest_timestamps[index] =
+       static_cast<double>(backtest_timelines.market_timestamp(index));
+    }
 
     if(timeline_size == 0) {
       const auto failed = execution_status && execution_status->phase() ==
@@ -241,6 +279,14 @@ public:
                 "processed.");
       ImGui::End();
       return;
+    }
+
+    const auto& union_timeline = portfolio_results.timeline();
+    if(!union_timeline.empty() &&
+       backtest_timelines.market_timestamp(timeline_size - 1) <
+        union_timeline.row(union_timeline.size() - 1).timestamp) {
+      ImGui::SameLine();
+      ImGui::TextDisabled("Stale price: valued at the backtest's last close");
     }
 
     const auto inspected_index =
@@ -271,8 +317,7 @@ public:
 
     auto crosshair_state = CrosshairState{};
     self.legend_hovered_ = false;
-    const auto base_row_count =
-     2 + (self.chart_state_.show_volume() ? 1 : 0);
+    const auto base_row_count = 2 + (self.chart_state_.show_volume() ? 1 : 0);
     const auto total_row_count =
      static_cast<std::size_t>(additional_plots_count) + base_row_count;
     auto& row_ratios = self.chart_state_.row_ratios(total_row_count);
@@ -300,7 +345,8 @@ public:
          ImAxis_X1,
          nullptr,
          axis_x_flags | (last_row ? ImPlotAxisFlags_None : not_last_x_flags));
-        ImPlot::SetupAxisFormat(ImAxis_X1, date_formatter, &context);
+        ImPlot::SetupAxisFormat(
+         ImAxis_X1, date_formatter, &backtest_timestamps);
         if(!update_automatic_view) {
           return;
         }
@@ -330,8 +376,15 @@ public:
         case BacktestTopPlot::Equity:
           ImPlot::SetupAxis(ImAxis_Y1, "% Equity", axis_y_flags);
           ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
-          self.plot_equity(backtest_timelines);
+          self.plot_equity(portfolio_results.timeline(),
+                           backtest_timestamps,
+                           portfolio.initial_capital());
           self.render_equity_legend(backtest_timelines, inspected_index);
+          break;
+        case BacktestTopPlot::Drawdown:
+          ImPlot::SetupAxis(ImAxis_Y1, "% Drawdown", axis_y_flags);
+          ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
+          self.plot_drawdown(portfolio_results.timeline(), backtest_timestamps);
           break;
         case BacktestTopPlot::ShadowReturn:
           ImPlot::SetupAxis(ImAxis_Y1, "Shadow return", axis_y_flags);
@@ -377,7 +430,8 @@ public:
         self.plot_ohlc("OHLC", asset, timeline_size);
         auto overlay_value_groups = std::vector<PlotValueGroup>{};
         if(self.chart_state_.show_indicators()) {
-          self.overlays_plots(context, inspected_index, overlay_value_groups);
+          self.overlays_plots(
+           context, backtest_handle, inspected_index, overlay_value_groups);
         }
         if(self.chart_state_.show_trades()) {
           self.plot_signal("Trade Signals", backtest_timelines, asset);
@@ -693,7 +747,7 @@ private:
   static auto format_plot_value(double value) -> std::string
   {
     return std::isfinite(value) ? std::format("{:.6g}", value)
-                                : std::string{"—"};
+                                : std::string{"â€”"};
   }
 
   void draw_plot_legend(this const BacktestChartWindow& self,
@@ -833,7 +887,7 @@ private:
      {{{"Equity", IM_COL32_WHITE},
        {format_currency(equity), color},
        {std::isfinite(percentage) ? std::format("{:.2f}%", percentage)
-                                  : std::string{"—"},
+                                  : std::string{"â€”"},
         color}}});
   }
 
@@ -944,6 +998,7 @@ private:
         }
       };
       menu_item("Equity", BacktestTopPlot::Equity);
+      menu_item("Drawdown", BacktestTopPlot::Drawdown);
       menu_item("Shadow return", BacktestTopPlot::ShadowReturn);
       menu_item("Frequentist performance",
                 BacktestTopPlot::FrequentistPerformance);
@@ -996,23 +1051,21 @@ private:
 
   void render_incomplete_status(this const BacktestChartWindow& self,
                                 const ApplicationState& app_state,
-                                const backtest::Backtest& backtest)
+                                const backtest::Portfolio& portfolio)
   {
     auto missing = std::vector<std::string_view>{};
-    if(!app_state.get_asset_if_present(backtest.asset_handle())) {
-      missing.emplace_back("asset");
-    }
-    if(!app_state.get_strategy_if_present(backtest.strategy_handle())) {
-      missing.emplace_back("strategy");
-    }
-    if(!app_state.get_market_if_present(backtest.market_handle())) {
+    if(!app_state.get_market_if_present(portfolio.market_handle())) {
       missing.emplace_back("market");
     }
-    if(!app_state.get_broker_if_present(backtest.broker_handle())) {
+    if(!app_state.get_broker_if_present(portfolio.broker_handle())) {
       missing.emplace_back("broker");
     }
-    if(!app_state.get_profile_if_present(backtest.profile_handle())) {
-      missing.emplace_back("profile");
+    for(const auto handle : portfolio.backtest_handles()) {
+      const auto* backtest = app_state.get_backtest_if_present(handle);
+      if(!backtest || !app_state.is_backtest_ready(*backtest)) {
+        missing.emplace_back("Backtest");
+        break;
+      }
     }
 
     auto missing_text = std::string{};
@@ -1025,7 +1078,7 @@ private:
 
     self.render_status_panel(
      PLUDUX_ICON_WARNING,
-     "Backtest setup is incomplete",
+     "Portfolio setup is incomplete",
      std::format("Choose the missing {} before results can be charted.",
                  missing_text));
   }
@@ -1054,26 +1107,15 @@ private:
   static auto
   date_formatter(double value, char* buff, int size, void* user_data) -> int
   {
-    auto& context = *reinterpret_cast<WindowContext*>(user_data);
-    const auto& app_state = context.app_state();
-    const auto backtest_handle = app_state.selected_backtest_handle();
-    const auto& backtest = app_state.get_backtest(backtest_handle);
-    const auto& timeline = app_state.get_backtest_timelines(backtest_handle);
-
-    const auto idx = static_cast<std::ptrdiff_t>(value);
-    if(idx < 0 || idx >= timeline.size()) {
+    const auto& timestamps =
+     *reinterpret_cast<const std::vector<double>*>(user_data);
+    const auto index = static_cast<std::ptrdiff_t>(std::llround(value));
+    if(index < 0 || index >= static_cast<std::ptrdiff_t>(timestamps.size())) {
       return std::snprintf(buff, size, "");
     }
-
-    const auto& asset_handle = backtest.asset_handle();
-    const auto& asset = app_state.get_asset(asset_handle);
-    const auto& snapshot = asset.get_snapshot(idx);
-
-    const auto datetime = snapshot.datetime();
-    const auto timestamp = static_cast<std::time_t>(datetime);
-
-    const auto formated_datetime = format_datetime(timestamp);
-    return std::snprintf(buff, size, "%s", formated_datetime.c_str());
+    const auto formatted_datetime =
+     format_datetime(static_cast<std::time_t>(timestamps[index]));
+    return std::snprintf(buff, size, "%s", formatted_datetime.c_str());
   }
 
   void plot_ohlc(this const BacktestChartWindow& self,
@@ -1194,7 +1236,6 @@ private:
   {
     auto* draw_list = ImPlot::GetPlotDrawList();
 
-    constexpr float half_width = 0.5f;
     if(ImPlot::BeginItem(label_id)) {
       const auto timeline_size = backtest_timelines.size();
       const auto stop_line_color =
@@ -1250,6 +1291,7 @@ private:
         }
         take_profit_line_points.resize(take_profit_levels.size());
 
+        constexpr auto half_width = 0.5;
         const auto left_x = static_cast<double>(i) - half_width;
         const auto right_x =
          static_cast<double>(i) + (i == timeline_size - 1 ? 10.0 : half_width);
@@ -1588,17 +1630,29 @@ private:
   }
 
   void plot_equity(this const BacktestChartWindow& self,
-                   const backtest::BacktestTimeline& backtest_timelines)
+                   const backtest::PortfolioTimeline& timeline,
+                   const std::vector<double>& backtest_timestamps,
+                   double initial_capital)
   {
-    const auto timeline_size = backtest_timelines.size();
     auto xs = std::vector<double>{};
     auto ys = std::vector<double>{};
-    for(auto timeline_i = 0; timeline_i < timeline_size; ++timeline_i) {
-      const auto equity = backtest_timelines.equity(timeline_i);
-      const auto equity_percentage =
-       equity / backtest_timelines.initial_capital(timeline_i) * 100.0;
-      const auto plot_idx = timeline_i;
-      xs.push_back(plot_idx);
+    auto portfolio_index = std::size_t{};
+    for(auto backtest_index = std::size_t{};
+        backtest_index < backtest_timestamps.size();
+        ++backtest_index) {
+      const auto timestamp =
+       static_cast<std::time_t>(backtest_timestamps[backtest_index]);
+      while(portfolio_index < timeline.size() &&
+            timeline.row(portfolio_index).timestamp < timestamp) {
+        ++portfolio_index;
+      }
+      if(portfolio_index >= timeline.size() ||
+         timeline.row(portfolio_index).timestamp != timestamp) {
+        continue;
+      }
+      const auto& row = timeline.row(portfolio_index);
+      const auto equity_percentage = row.equity / initial_capital * 100.0;
+      xs.push_back(static_cast<double>(backtest_index));
       ys.push_back(equity_percentage);
     }
 
@@ -1613,19 +1667,49 @@ private:
     }
   }
 
+  void plot_drawdown(this const BacktestChartWindow&,
+                     const backtest::PortfolioTimeline& timeline,
+                     const std::vector<double>& backtest_timestamps)
+  {
+    auto xs = std::vector<double>{};
+    auto values = std::vector<double>{};
+    auto portfolio_index = std::size_t{};
+    for(auto backtest_index = std::size_t{};
+        backtest_index < backtest_timestamps.size();
+        ++backtest_index) {
+      const auto timestamp =
+       static_cast<std::time_t>(backtest_timestamps[backtest_index]);
+      while(portfolio_index < timeline.size() &&
+            timeline.row(portfolio_index).timestamp < timestamp) {
+        ++portfolio_index;
+      }
+      if(portfolio_index >= timeline.size() ||
+         timeline.row(portfolio_index).timestamp != timestamp) {
+        continue;
+      }
+      xs.push_back(static_cast<double>(backtest_index));
+      values.push_back(timeline.row(portfolio_index).drawdown);
+    }
+    ImPlot::PlotShaded(
+     "Drawdown", xs.data(), values.data(), values.size(), 0.0);
+    ImPlot::PlotLine("Drawdown", xs.data(), values.data(), values.size());
+  }
+
   void overlays_plots(this const BacktestChartWindow& self,
                       WindowContext& context,
+                      backtest::BacktestStoreHandle backtest_handle,
                       std::size_t inspected_index,
                       std::vector<PlotValueGroup>& value_groups)
   {
     const auto& app_state = context.app_state();
-    const auto backtest_handle = app_state.selected_backtest_handle();
-    const auto& backtest = app_state.selected_backtest();
-    const auto& strategy_handle = backtest.strategy_handle();
+    const auto portfolio_handle = app_state.selected_portfolio_handle();
+    const auto& backtest_config = app_state.get_backtest(backtest_handle);
+    const auto& strategy_handle = backtest_config.strategy_handle();
     const auto& strategy = app_state.get_strategy(strategy_handle);
-    const auto& backtest_timelines =
-     app_state.get_backtest_timelines(backtest_handle);
-    const auto& series_results = app_state.get_series_results(backtest_handle);
+    const auto& results = app_state.get_portfolio_results(portfolio_handle);
+    const auto& backtest_results = *results.backtest(backtest_handle);
+    const auto& backtest_timeline = backtest_results.timeline();
+    const auto& series_results = backtest_results.series_results();
     const auto& plots = strategy.plots();
 
     auto group_index = std::size_t{0};
@@ -1641,7 +1725,7 @@ private:
         const auto item_label = self.plot_item_label(plot_method, item_index);
         const auto context_for_plot =
          StrategyPlotContext{series_results,
-                             backtest_timelines.size(),
+                             backtest_timeline.size(),
                              item_id,
                              item_label,
                              inspected_index,

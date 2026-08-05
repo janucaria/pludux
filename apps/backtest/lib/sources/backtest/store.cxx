@@ -103,6 +103,58 @@ public:
     return backtest_resolver.remove(backtests, handle);
   }
 
+  auto add_portfolio(this Store& self, Portfolio portfolio)
+   -> std::optional<PortfolioStoreHandle>
+  {
+    auto& portfolios = self.arena_.portfolios();
+    auto& resolver = self.descriptor_.portfolio_store_data_resolver();
+    return resolver.add(portfolios, std::move(portfolio));
+  }
+
+  auto get_portfolio(this const Store& self,
+                     PortfolioStoreHandle handle) noexcept -> const Portfolio&
+  {
+    return self.descriptor_.portfolio_store_data_resolver().get(
+     self.arena_.portfolios(), handle);
+  }
+
+  auto get_portfolio(this Store& self, PortfolioStoreHandle handle) noexcept
+   -> Portfolio&
+  {
+    return self.descriptor_.portfolio_store_data_resolver().get(
+     self.arena_.portfolios(), handle);
+  }
+
+  auto get_portfolio_if_present(this const Store& self,
+                                PortfolioStoreHandle handle) noexcept
+   -> const Portfolio*
+  {
+    return self.descriptor_.portfolio_store_data_resolver().get_if_present(
+     self.arena_.portfolios(), handle);
+  }
+
+  auto get_portfolio_if_present(this Store& self,
+                                PortfolioStoreHandle handle) noexcept
+   -> Portfolio*
+  {
+    return self.descriptor_.portfolio_store_data_resolver().get_if_present(
+     self.arena_.portfolios(), handle);
+  }
+
+  auto update_portfolio(this Store& self,
+                        PortfolioStoreHandle handle,
+                        Portfolio portfolio) -> bool
+  {
+    return self.descriptor_.portfolio_store_data_resolver().update(
+     self.arena_.portfolios(), handle, std::move(portfolio));
+  }
+
+  auto remove_portfolio(this Store& self, PortfolioStoreHandle handle) -> bool
+  {
+    return self.descriptor_.portfolio_store_data_resolver().remove(
+     self.arena_.portfolios(), handle);
+  }
+
   auto add_asset(this Store& self, Asset asset)
    -> std::optional<AssetStoreHandle>
   {
@@ -390,187 +442,71 @@ public:
     return profile_resolver.remove(profiles, handle);
   }
 
-  auto add_backtest_timelines(this Store& self,
-                              BacktestStoreHandle handle,
-                              BacktestTimeline timeline) -> bool
+  auto add_portfolio_results(this Store& self,
+                             PortfolioStoreHandle handle,
+                             PortfolioResults results) -> bool
   {
-    auto& backtest_timelines = self.arena_.backtest_timelines();
-    auto& backtest_timelines_resolver =
-     self.descriptor_.backtest_timelines_store_data_resolver();
-
-    return backtest_timelines_resolver.add(
-     backtest_timelines, handle, std::move(timeline));
+    return self.descriptor_.portfolio_results_store_data_resolver().add(
+     self.arena_.portfolio_results(), handle, std::move(results));
   }
 
-  auto get_backtest_timelines(this const Store& self,
-                              BacktestStoreHandle handle) noexcept
-   -> const BacktestTimeline&
+  auto get_portfolio_results(this const Store& self,
+                             PortfolioStoreHandle handle) noexcept
+   -> const PortfolioResults&
   {
-    const auto& backtest_timelines = self.arena_.backtest_timelines();
-    const auto& backtest_timelines_resolver =
-     self.descriptor_.backtest_timelines_store_data_resolver();
-
-    return backtest_timelines_resolver.get(backtest_timelines, handle);
+    return self.descriptor_.portfolio_results_store_data_resolver().get(
+     self.arena_.portfolio_results(), handle);
   }
 
-  auto get_backtest_timelines(this Store& self,
-                              BacktestStoreHandle handle) noexcept
-   -> BacktestTimeline&
+  auto get_portfolio_results(this Store& self,
+                             PortfolioStoreHandle handle) noexcept
+   -> PortfolioResults&
   {
-    auto& backtest_timelines = self.arena_.backtest_timelines();
-    auto& backtest_timelines_resolver =
-     self.descriptor_.backtest_timelines_store_data_resolver();
-
-    return backtest_timelines_resolver.get(backtest_timelines, handle);
+    return self.descriptor_.portfolio_results_store_data_resolver().get(
+     self.arena_.portfolio_results(), handle);
   }
 
-  auto get_backtest_timelines_if_present(this const Store& self,
-                                         BacktestStoreHandle handle) noexcept
-   -> const BacktestTimeline*
+  auto get_portfolio_results_if_present(this const Store& self,
+                                        PortfolioStoreHandle handle) noexcept
+   -> const PortfolioResults*
   {
-    const auto& backtest_timelines = self.arena_.backtest_timelines();
-    const auto& backtest_timelines_resolver =
-     self.descriptor_.backtest_timelines_store_data_resolver();
-
-    return backtest_timelines_resolver.get_if_present(backtest_timelines,
-                                                      handle);
+    return self.descriptor_.portfolio_results_store_data_resolver()
+     .get_if_present(self.arena_.portfolio_results(), handle);
   }
 
-  auto get_backtest_timelines_if_present(this Store& self,
-                                         BacktestStoreHandle handle) noexcept
-   -> BacktestTimeline*
+  auto get_portfolio_results_if_present(this Store& self,
+                                        PortfolioStoreHandle handle) noexcept
+   -> PortfolioResults*
   {
-    auto& backtest_timelines = self.arena_.backtest_timelines();
-    auto& backtest_timelines_resolver =
-     self.descriptor_.backtest_timelines_store_data_resolver();
-
-    return backtest_timelines_resolver.get_if_present(backtest_timelines,
-                                                      handle);
+    return self.descriptor_.portfolio_results_store_data_resolver()
+     .get_if_present(self.arena_.portfolio_results(), handle);
   }
 
-  auto get_or_create_backtest_timelines(this Store& self,
-                                        BacktestStoreHandle handle)
-   -> BacktestTimeline&
+  auto get_or_create_portfolio_results(this Store& self,
+                                       PortfolioStoreHandle handle)
+   -> PortfolioResults&
   {
-    auto* timeline_ptr = self.get_backtest_timelines_if_present(handle);
-    if(!timeline_ptr) {
-      self.add_backtest_timelines(handle, BacktestTimeline{});
-      timeline_ptr = self.get_backtest_timelines_if_present(handle);
+    auto* results = self.get_portfolio_results_if_present(handle);
+    if(!results) {
+      self.add_portfolio_results(handle, PortfolioResults{});
+      results = self.get_portfolio_results_if_present(handle);
     }
-
-    return *timeline_ptr;
+    return *results;
   }
 
-  auto update_backtest_timelines(this Store& self,
-                                 BacktestStoreHandle handle,
-                                 BacktestTimeline timeline) -> bool
+  auto update_portfolio_results(this Store& self,
+                                PortfolioStoreHandle handle,
+                                PortfolioResults results) -> bool
   {
-    auto& backtest_timelines = self.arena_.backtest_timelines();
-    auto& backtest_timelines_resolver =
-     self.descriptor_.backtest_timelines_store_data_resolver();
-
-    return backtest_timelines_resolver.update(
-     backtest_timelines, handle, std::move(timeline));
+    return self.descriptor_.portfolio_results_store_data_resolver().update(
+     self.arena_.portfolio_results(), handle, std::move(results));
   }
 
-  auto remove_backtest_timelines(this Store& self, BacktestStoreHandle handle)
+  auto remove_portfolio_results(this Store& self, PortfolioStoreHandle handle)
    -> bool
   {
-    auto& backtest_timelines = self.arena_.backtest_timelines();
-    auto& backtest_timelines_resolver =
-     self.descriptor_.backtest_timelines_store_data_resolver();
-
-    return backtest_timelines_resolver.remove(backtest_timelines, handle);
-  }
-
-  auto add_series_results(this Store& self,
-                          BacktestStoreHandle handle,
-                          SeriesEvaluationResults series_result) -> bool
-  {
-    auto& series_results = self.arena_.series_results();
-    auto& series_results_resolver =
-     self.descriptor_.series_results_store_data_resolver();
-
-    return series_results_resolver.add(
-     series_results, handle, std::move(series_result));
-  }
-
-  auto get_series_results(this const Store& self,
-                          BacktestStoreHandle handle) noexcept
-   -> const SeriesEvaluationResults&
-  {
-    const auto& series_results = self.arena_.series_results();
-    const auto& series_results_resolver =
-     self.descriptor_.series_results_store_data_resolver();
-
-    return series_results_resolver.get(series_results, handle);
-  }
-
-  auto get_series_results(this Store& self, BacktestStoreHandle handle) noexcept
-   -> SeriesEvaluationResults&
-  {
-    auto& series_results = self.arena_.series_results();
-    auto& series_results_resolver =
-     self.descriptor_.series_results_store_data_resolver();
-
-    return series_results_resolver.get(series_results, handle);
-  }
-
-  auto get_series_results_if_present(this const Store& self,
-                                     BacktestStoreHandle handle) noexcept
-   -> const SeriesEvaluationResults*
-  {
-    const auto& series_results = self.arena_.series_results();
-    const auto& series_results_resolver =
-     self.descriptor_.series_results_store_data_resolver();
-
-    return series_results_resolver.get_if_present(series_results, handle);
-  }
-
-  auto get_series_results_if_present(this Store& self,
-                                     BacktestStoreHandle handle) noexcept
-   -> SeriesEvaluationResults*
-  {
-    auto& series_results = self.arena_.series_results();
-    auto& series_results_resolver =
-     self.descriptor_.series_results_store_data_resolver();
-
-    return series_results_resolver.get_if_present(series_results, handle);
-  }
-
-  auto get_or_create_series_results(this Store& self,
-                                    BacktestStoreHandle handle)
-   -> SeriesEvaluationResults&
-  {
-    auto* series_results_ptr = self.get_series_results_if_present(handle);
-    if(!series_results_ptr) {
-      self.add_series_results(handle, SeriesEvaluationResults{});
-      series_results_ptr = self.get_series_results_if_present(handle);
-    }
-
-    return *series_results_ptr;
-  }
-
-  auto update_series_results(this Store& self,
-                             BacktestStoreHandle handle,
-                             SeriesEvaluationResults series_result) -> bool
-  {
-    auto& series_results = self.arena_.series_results();
-    auto& series_results_resolver =
-     self.descriptor_.series_results_store_data_resolver();
-
-    return series_results_resolver.update(
-     series_results, handle, std::move(series_result));
-  }
-
-  auto remove_series_results(this Store& self, BacktestStoreHandle handle)
-   -> bool
-  {
-    auto& series_results = self.arena_.series_results();
-    auto& series_results_resolver =
-     self.descriptor_.series_results_store_data_resolver();
-
-    return series_results_resolver.remove(series_results, handle);
+    return self.descriptor_.portfolio_results_store_data_resolver().remove(
+     self.arena_.portfolio_results(), handle);
   }
 
 private:

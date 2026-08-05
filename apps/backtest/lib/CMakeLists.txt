@@ -134,12 +134,16 @@ target_sources(${PROJECT_NAME}
     sources/backtest/stop_target_price_method.cxx
     sources/backtest/stop_target_price_node.cxx
     sources/backtest/backtest.cxx
+    sources/backtest/portfolio.cxx
+    sources/backtest/portfolio_timeline.cxx
+    sources/backtest/portfolio_results.cxx
     
     sources/backtest/store_descriptor.cxx
     sources/backtest/store_arena.cxx
     sources/backtest/store.cxx
 
     sources/backtest/backtest_runner.cxx
+    sources/backtest/portfolio_runner.cxx
 
     sources/backtest/config_parser.cxx
     sources/backtest/strategy_parser.cxx

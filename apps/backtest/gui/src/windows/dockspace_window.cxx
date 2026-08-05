@@ -152,12 +152,13 @@ private:
     auto dock_left_down_id = ImGui::DockBuilderSplitNode(
      dock_left_id, ImGuiDir_Down, 0.3f, nullptr, &dock_left_id);
     auto dock_right_down_id = ImGui::DockBuilderSplitNode(
-     dock_right_id, ImGuiDir_Down, 0.3f, nullptr, &dock_right_id);
+     dock_right_id, ImGuiDir_Down, 0.5f, nullptr, &dock_right_id);
 
     ImGui::DockBuilderDockWindow("Chart", dock_left_id);
     ImGui::DockBuilderDockWindow("Trades", dock_left_down_id);
     ImGui::DockBuilderDockWindow("Overview", dock_right_id);
-    for(const auto* window : {"Backtests",
+    for(const auto* window : {"Portfolios",
+                              "Backtests",
                               "Assets",
                               "Strategies",
                               "Markets",

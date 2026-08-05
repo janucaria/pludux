@@ -67,7 +67,7 @@ private:
   {
     const auto& app_state = context.app_state();
     const auto& broker_handles = app_state.get_broker_handles();
-    const auto backtest_ptr = app_state.selected_backtest_if_present();
+    const auto portfolio_ptr = app_state.selected_portfolio_if_present();
 
     ImGui::BeginGroup();
     if(ImGui::Button(PLUDUX_ICON_ADD " New Broker")) {
@@ -91,7 +91,7 @@ private:
 
       {
         const auto selected =
-         backtest_ptr && backtest_ptr->broker_handle() == broker_handle;
+         portfolio_ptr && portfolio_ptr->broker_handle() == broker_handle;
         const auto has_draft =
          self.selected_broker_handle_opt_ == broker_handle &&
          self.editing_broker_ptr_ && *self.editing_broker_ptr_ != broker;

@@ -1,108 +1,112 @@
 # Pludux
 
-[![License](https://img.shields.io/badge/license-AGPL-blue.svg)](LICENSE.txt)  
-**Pludux** is a free and open-source backtesting application built around a clean, modular architecture.
+[![License](https://img.shields.io/badge/license-AGPL-blue.svg)](LICENSE.txt)
 
-It allows traders to simulate single-asset strategies using historical data, configurable risk rules, exchange constraints, and broker fees — all through a structured GUI workflow.
+**Pludux** is a free and open-source portfolio backtesting application built
+around a clean, modular architecture.
 
-Pludux is currently in its early public phase, focused on providing a stable and extensible foundation. The core architecture is solid, while more advanced features will evolve over time.
+It combines reusable Asset + Strategy + Profile Backtest configurations in a
+Portfolio with shared capital, market constraints, broker fees, and risk rules.
 
----
-
-## ✨ Design Philosophy
-
-Pludux separates a backtest into independent rulesets:
-
-- **Asset** — historical data source  
-- **Strategy** — trading logic (GUI-based, JSON import/export)  
-- **Profile** — capital and risk configuration  
-- **Market** — exchange constraints (minimum quantity, quantity step)  
-- **Broker** — execution costs (fees)
-
-This modular structure keeps the engine predictable, transparent, and extensible.
-
-Instead of hardcoding everything inside a single engine layer, each component can evolve independently.
+Pludux is currently in its early public phase, focused on providing a stable and
+extensible foundation. The core architecture is solid, while more advanced
+features will evolve over time.
 
 ---
 
-## 🚀 Current Capabilities
+## Design Philosophy
+
+Pludux separates portfolio simulation into independent rulesets:
+
+- **Asset** - historical data source
+- **Strategy** - trading logic created in the GUI or imported from JSON
+- **Profile** - backtest position sizing and execution filtering
+- **Backtest** - reusable Asset + Strategy + Profile configuration
+- **Portfolio** - shared capital and ordered Backtests
+- **Market** - shared exchange constraints
+- **Broker** - shared execution costs
+
+This modular structure keeps the engine predictable, transparent, and
+extensible. Each backtest can evolve without hardcoding every concern into one
+engine layer.
+
+---
+
+## Current Capabilities
+
+### Portfolio
+
+- Shared capital across ordered Backtests
+- Portfolio-level drawdown size adjustment
+- Deterministic insufficient-cash handling
+- Union timelines for assets with different calendars
+- Last-known-price valuation without synthetic candles
 
 ### Strategy
+
 - GUI-based strategy creation and editing
-- Import/export strategies as JSON
-- Long/short configuration
-- Entry and exit conditions
-- Stop Loss (SL)
-- Take Profit (TP)
-- Trailing Stop Loss (TSL)
-- Risk distance modes:
-  - ATR-based
-  - Percentage-based
-  - Fixed value
+- Import and export strategies as JSON
+- Long and short configuration
+- Entry, pyramiding, and partial exit conditions
+- Stop loss, take profit, and trailing stop loss
+- ATR, percentage, and fixed-value risk distances
 
-### Market Rules
-- Minimum quantity size
-- Quantity step size
+### Market and Broker Rules
 
-### Broker Rules
-- Fee simulation
+- Minimum quantity and quantity-step constraints
+- Percentage-notional and fixed fee simulation
 
 ### Data
-- Load historical OHLCV data from CSV
-- Use additional CSV fields within strategy logic
 
-### Reporting & Visualization
-- Trade journal
-- Summary metrics
-- Candlestick chart with entry/exit markers
-- Equity curve visualization
+- Historical OHLCV data loaded from CSV
+- Additional CSV fields available to strategy logic
+
+### Reporting and Visualization
+
+- Trade journal for the selected Backtest
+- Portfolio and backtest summary metrics
+- Candlestick charts with entry and exit markers
+- Portfolio equity and drawdown visualization
 
 ---
 
-## 📌 Scope
+## Scope
 
 Pludux currently focuses on:
 
-- Single-asset backtesting  
-- Deterministic bar-based execution  
-- Clear trade lifecycle management  
+- Portfolio backtesting with shared capital
+- Reusable per-asset Backtest configurations
+- Deterministic bar-based execution
+- Clear trade lifecycle management
 
-More advanced simulation features — such as portfolio-level backtesting, pyramiding, intrabar modeling, and slippage simulation — are part of the long-term roadmap.
-
-The current direction prioritizes stability and clean architecture.
+Portfolio backtests may have different timestamps. Pludux processes their
+union timeline without manufacturing candles and carries last-known prices only
+for valuation. See [Portfolio Backtesting](docs/portfolio-backtesting.md).
 
 ---
 
-## 🛣 Roadmap Direction
+## Roadmap Direction
 
-Pludux is designed as a foundation-first project. Future iterations aim to expand:
+Future iterations aim to expand:
 
-- Advanced exit management
-- Position scaling and pyramiding
-- Enhanced broker models
-- Portfolio engine
+- Advanced portfolio allocation and exposure policies
+- Enhanced broker and market models
+- Slippage and deeper intrabar simulation
 - Strategy editor improvements
 - Data integrations
 
-The architecture is intentionally modular to support these extensions cleanly.
+---
+
+## Contributing
+
+Feedback, ideas, and contributions are welcome. Contributions should align with
+the project style and include appropriate tests or examples.
 
 ---
 
-## 🤝 Contributing
+## License
 
-Feedback, ideas, and contributions are welcome.
+Pludux is released under the **AGPL license**. See [LICENSE.txt](LICENSE.txt) for
+more information.
 
-Please ensure your contributions align with the project’s coding style and include appropriate tests or examples.
-
-Pludux is evolving — and the architecture is designed to grow thoughtfully rather than quickly.
-
----
-
-## 📜 License
-
-Pludux is released under the **AGPL license**. See [LICENSE.txt](LICENSE.txt) for more information.
-
----
-
-**Happy Backtesting!** Enjoy exploring and testing your trading strategies with Pludux!
-
+Happy backtesting!
