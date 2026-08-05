@@ -87,6 +87,24 @@ auto serialize_signal_timing(SignalTiming timing) -> std::string
   return timing == SignalTiming::CurrentClose ? "CURRENT_CLOSE" : "NEXT_OPEN";
 }
 
+auto parse_pyramiding_retrigger(std::string_view value) -> PyramidingRetrigger
+{
+  if(value == "EVERY_EVALUATION") {
+    return PyramidingRetrigger::EveryEvaluation;
+  }
+  if(value == "AFTER_FALSE") {
+    return PyramidingRetrigger::AfterFalse;
+  }
+  throw std::runtime_error{"Invalid pyramiding retrigger"};
+}
+
+auto serialize_pyramiding_retrigger(PyramidingRetrigger retrigger)
+ -> std::string
+{
+  return retrigger == PyramidingRetrigger::AfterFalse ? "AFTER_FALSE"
+                                                      : "EVERY_EVALUATION";
+}
+
 auto parse_stop_target_reference_price(std::string_view value)
  -> StopTargetReferencePrice
 {
@@ -187,6 +205,8 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
     }
     pyramiding.timing(
      parse_signal_timing(pyramiding_json.at("timing").as<std::string>()));
+    pyramiding.retrigger(parse_pyramiding_retrigger(
+     pyramiding_json.at("retrigger").as<std::string>()));
     if(pyramiding_json.contains("maxLayers")) {
       pyramiding.max_layers(pyramiding_json.at("maxLayers").as<std::size_t>());
     }
@@ -313,6 +333,8 @@ auto serialize_strategy_position(const Strategy::Position& position,
    config_parser.serialize_node(position.pyramiding().signal());
   position_json["pyramiding"]["timing"] =
    serialize_signal_timing(position.pyramiding().timing());
+  position_json["pyramiding"]["retrigger"] =
+   serialize_pyramiding_retrigger(position.pyramiding().retrigger());
   position_json["pyramiding"]["maxLayers"] = position.pyramiding().max_layers();
   position_json["pyramiding"]["stopTargetReference"] = jsoncons::ojson{};
   position_json["pyramiding"]["stopTargetReference"]["favorable"] =

@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -13,6 +14,22 @@ import pludux.backtest;
 
 using namespace pludux;
 using namespace pludux::backtest;
+
+TEST(PyramidingRetriggerTest, ParsesSerializesAndRejectsInvalidValues)
+{
+  EXPECT_EQ(parse_pyramiding_retrigger("EVERY_EVALUATION"),
+            PyramidingRetrigger::EveryEvaluation);
+  EXPECT_EQ(parse_pyramiding_retrigger("AFTER_FALSE"),
+            PyramidingRetrigger::AfterFalse);
+  EXPECT_EQ(
+   serialize_pyramiding_retrigger(PyramidingRetrigger::EveryEvaluation),
+   "EVERY_EVALUATION");
+  EXPECT_EQ(serialize_pyramiding_retrigger(PyramidingRetrigger::AfterFalse),
+            "AFTER_FALSE");
+  EXPECT_THROW(parse_pyramiding_retrigger("ALWAYS"), std::runtime_error);
+  EXPECT_EQ(Strategy::Pyramiding{}.retrigger(),
+            PyramidingRetrigger::EveryEvaluation);
+}
 
 TEST(StrategyInputsTest, CollectsNumericInputsInStrategyTraversalOrder)
 {
@@ -236,6 +253,7 @@ TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
         },
         "pyramiding": {
           "timing": "CURRENT_CLOSE",
+          "retrigger": "AFTER_FALSE",
           "signal": false,
           "maxLayers": 2,
           "stopTargetReference": {
@@ -267,6 +285,8 @@ TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
   EXPECT_FALSE(strategy.long_position().exits()[1].enabled());
   EXPECT_EQ(strategy.long_position().pyramiding().timing(),
             SignalTiming::CurrentClose);
+  EXPECT_EQ(strategy.long_position().pyramiding().retrigger(),
+            PyramidingRetrigger::AfterFalse);
   EXPECT_EQ(
    strategy.long_position().pyramiding().favorable_stop_target_reference(),
    StopTargetReferencePrice::InitialEntryPrice);
@@ -302,6 +322,7 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
   long_position.exits_activation(ExitActivation::AfterPrevious);
   auto pyramiding = Strategy::Pyramiding{};
   pyramiding.timing(SignalTiming::CurrentClose);
+  pyramiding.retrigger(PyramidingRetrigger::AfterFalse);
   pyramiding.favorable_stop_target_reference(
    StopTargetReferencePrice::InitialEntryPrice);
   pyramiding.unfavorable_stop_target_reference(
@@ -400,6 +421,12 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
              .at("timing")
              .as<std::string>(),
             "CURRENT_CLOSE");
+  EXPECT_EQ(strategy_json.at("positions")
+             .at("long")
+             .at("pyramiding")
+             .at("retrigger")
+             .as<std::string>(),
+            "AFTER_FALSE");
   EXPECT_EQ(strategy_json.at("positions")
              .at("long")
              .at("pyramiding")

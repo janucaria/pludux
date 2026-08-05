@@ -8,4 +8,6 @@ enum class ExitActivation { Simultaneous, AfterPrevious };
 
 enum class SignalTiming { CurrentClose, NextOpen };
 
+enum class PyramidingRetrigger { EveryEvaluation, AfterFalse };
+
 } // namespace pludux::backtest

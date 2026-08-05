@@ -108,7 +108,9 @@ auto make_position_rule(
  double stop_loss_reduce = 1.0,
  std::vector<BacktestRunner::PositionRule::TakeProfitRule> take_profits = {},
  ErasedSeriesMethod<ErasedSeriesMethodContext> risk_distance_method =
-  ValueMethod{10.0}) -> BacktestRunner::PositionRule;
+  ValueMethod{10.0},
+ PyramidingRetrigger pyramiding_retrigger =
+  PyramidingRetrigger::EveryEvaluation) -> BacktestRunner::PositionRule;
 
 auto run_single_entry(
  PositionSizingNode position_sizing,
@@ -266,8 +268,8 @@ auto make_position_rule(
  double signal_exit_reduce,
  double stop_loss_reduce,
  std::vector<BacktestRunner::PositionRule::TakeProfitRule> take_profits,
- ErasedSeriesMethod<ErasedSeriesMethodContext> risk_distance_method)
- -> BacktestRunner::PositionRule
+ ErasedSeriesMethod<ErasedSeriesMethodContext> risk_distance_method,
+ PyramidingRetrigger pyramiding_retrigger) -> BacktestRunner::PositionRule
 {
   auto signal_exits =
    std::vector<BacktestRunner::PositionRule::SignalExitRule>{};
@@ -292,7 +294,11 @@ auto make_position_rule(
                                        : SignalTiming::NextOpen,
                                       favorable_stop_target_reference,
                                       unfavorable_stop_target_reference,
-                                      std::move(take_profits)};
+                                      std::move(take_profits),
+                                      ExitActivation::Simultaneous,
+                                      ExitActivation::Simultaneous,
+                                      ExitActivation::Simultaneous,
+                                      pyramiding_retrigger};
 }
 
 auto make_position_rule_with_risk_distance(
@@ -785,6 +791,182 @@ TEST(BacktestRunnerTest,
   EXPECT_EQ(layer_results->get(), (std::vector<double>{1.0, 2.0}));
   ASSERT_TRUE(timeline.open_position(1).has_value());
   EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 2.0);
+}
+
+TEST(BacktestRunnerTest,
+     AfterFalseRetriggerRequiresFalseBeforeAnotherCurrentCloseEntry)
+{
+  const auto asset = Asset{"Test",
+                           AssetHistory{{"Datetime", {1.0, 2.0, 3.0, 4.0}},
+                                        {"Open", {100.0, 110.0, 100.0, 110.0}},
+                                        {"High", {100.0, 110.0, 100.0, 110.0}},
+                                        {"Low", {100.0, 110.0, 100.0, 110.0}},
+                                        {"Close", {100.0, 110.0, 100.0, 110.0}},
+                                        {"Volume", {0.0, 0.0, 0.0, 0.0}}}};
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+  series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
+
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   std::move(series_methods),
+   make_position_rule(EqualMethod{CloseMethod{}, ValueMethod{100.0}},
+                      BooleanMethod<false>{},
+                      EqualMethod{CloseMethod{}, ValueMethod{110.0}},
+                      4,
+                      OpenMethod{},
+                      false,
+                      false,
+                      1,
+                      OpenMethod{},
+                      1,
+                      OpenMethod{},
+                      0,
+                      OpenMethod{},
+                      StopTargetReferencePrice::AveragePrice,
+                      StopTargetReferencePrice::AveragePrice,
+                      1.0,
+                      1.0,
+                      {},
+                      ValueMethod{10.0},
+                      PyramidingRetrigger::AfterFalse),
+   BacktestRunner::PositionRule{},
+   1000.0};
+
+  for(auto index = 0; index < 4; ++index) {
+    runner.run(series_results, timeline);
+  }
+
+  const auto layers = series_results.results(std::string{"pyramiding_layer"});
+  ASSERT_TRUE(layers.has_value());
+  EXPECT_EQ(layers->get(), (std::vector<double>{1.0, 2.0, 2.0, 3.0}));
+}
+
+TEST(BacktestRunnerTest, AfterFalseRetriggerSuppressesHeldNextOpenSignal)
+{
+  const auto asset = Asset{"Test",
+                           AssetHistory{{"Datetime", {1.0, 2.0, 3.0, 4.0}},
+                                        {"Open", {100.0, 110.0, 110.0, 110.0}},
+                                        {"High", {100.0, 110.0, 110.0, 110.0}},
+                                        {"Low", {100.0, 110.0, 110.0, 110.0}},
+                                        {"Close", {100.0, 110.0, 110.0, 110.0}},
+                                        {"Volume", {0.0, 0.0, 0.0, 0.0}}}};
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+  series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
+
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   std::move(series_methods),
+   make_position_rule(EqualMethod{CloseMethod{}, ValueMethod{100.0}},
+                      BooleanMethod<false>{},
+                      EqualMethod{CloseMethod{}, ValueMethod{110.0}},
+                      4,
+                      OpenMethod{},
+                      false,
+                      false,
+                      1,
+                      OpenMethod{},
+                      1,
+                      OpenMethod{},
+                      1,
+                      OpenMethod{},
+                      StopTargetReferencePrice::AveragePrice,
+                      StopTargetReferencePrice::AveragePrice,
+                      1.0,
+                      1.0,
+                      {},
+                      ValueMethod{10.0},
+                      PyramidingRetrigger::AfterFalse),
+   BacktestRunner::PositionRule{},
+   1000.0};
+
+  for(auto index = 0; index < 4; ++index) {
+    runner.run(series_results, timeline);
+  }
+
+  const auto layers = series_results.results(std::string{"pyramiding_layer"});
+  ASSERT_TRUE(layers.has_value());
+  EXPECT_EQ(layers->get(), (std::vector<double>{1.0, 1.0, 2.0, 2.0}));
+}
+
+TEST(BacktestRunnerTest, AfterFalseRetriggerResetsWithClosedPosition)
+{
+  const auto asset =
+   Asset{"Test",
+         AssetHistory{{"Datetime", {1.0, 2.0, 3.0, 4.0, 5.0}},
+                      {"Open", {100.0, 110.0, 120.0, 130.0, 140.0}},
+                      {"High", {100.0, 110.0, 120.0, 130.0, 140.0}},
+                      {"Low", {100.0, 110.0, 120.0, 130.0, 140.0}},
+                      {"Close", {100.0, 110.0, 120.0, 130.0, 140.0}},
+                      {"Volume", {0.0, 0.0, 0.0, 0.0, 0.0}}}};
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+  series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
+  const auto entry_signal =
+   LogicalOrMethod{EqualMethod{CloseMethod{}, ValueMethod{100.0}},
+                   EqualMethod{CloseMethod{}, ValueMethod{130.0}}};
+
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   std::move(series_methods),
+   make_position_rule(entry_signal,
+                      EqualMethod{CloseMethod{}, ValueMethod{120.0}},
+                      GreaterEqualMethod{CloseMethod{}, ValueMethod{110.0}},
+                      3,
+                      OpenMethod{},
+                      false,
+                      false,
+                      1,
+                      OpenMethod{},
+                      0,
+                      OpenMethod{},
+                      0,
+                      OpenMethod{},
+                      StopTargetReferencePrice::AveragePrice,
+                      StopTargetReferencePrice::AveragePrice,
+                      1.0,
+                      1.0,
+                      {},
+                      ValueMethod{10.0},
+                      PyramidingRetrigger::AfterFalse),
+   BacktestRunner::PositionRule{},
+   1000.0};
+
+  for(auto index = 0; index < 5; ++index) {
+    runner.run(series_results, timeline);
+  }
+
+  const auto layers = series_results.results(std::string{"pyramiding_layer"});
+  ASSERT_TRUE(layers.has_value());
+  EXPECT_EQ(layers->get(), (std::vector<double>{1.0, 2.0, 0.0, 1.0, 2.0}));
 }
 
 TEST(BacktestRunnerTest, EquitySignalUsesCurrentAccountState)

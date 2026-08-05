@@ -1803,6 +1803,38 @@ private:
     return activation;
   }
 
+  auto render_pyramiding_retrigger(this const auto&,
+                                   backtest::PyramidingRetrigger retrigger)
+   -> backtest::PyramidingRetrigger
+  {
+    ui::field_label(
+     "Retrigger",
+     "Every Evaluation can add another layer while the signal remains true. "
+     "After False requires the signal to become false before it can trigger "
+     "again.");
+    const auto preview =
+     retrigger == backtest::PyramidingRetrigger::EveryEvaluation
+      ? "Every Evaluation"
+      : "After False";
+    if(ImGui::BeginCombo("##retrigger", preview)) {
+      for(const auto [value, title] :
+          {std::pair{backtest::PyramidingRetrigger::EveryEvaluation,
+                     "Every Evaluation"},
+           std::pair{backtest::PyramidingRetrigger::AfterFalse,
+                     "After False"}}) {
+        const auto selected = retrigger == value;
+        if(ImGui::Selectable(title, selected)) {
+          retrigger = value;
+        }
+        if(selected) {
+          ImGui::SetItemDefaultFocus();
+        }
+      }
+      ImGui::EndCombo();
+    }
+    return retrigger;
+  }
+
   void render_position_form(this auto& self,
                             backtest::Strategy::Position& position,
                             WindowContext& context)
@@ -1897,6 +1929,8 @@ private:
 
       pyramiding.timing(
        self.render_signal_timing("Timing", "##timing", pyramiding.timing()));
+      pyramiding.retrigger(
+       self.render_pyramiding_retrigger(pyramiding.retrigger()));
 
       auto pyramiding_max_layers = static_cast<int>(pyramiding.max_layers());
       ui::field_label(

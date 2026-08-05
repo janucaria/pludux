@@ -409,7 +409,8 @@ private:
         std::move(take_profits),
         position.exits_activation(),
         position.stop_losses_activation(),
-        position.take_profits_activation()};
+        position.take_profits_activation(),
+        position.pyramiding().retrigger()};
      };
 
     auto execution_filter_conversion_context = NodeToErasedMethodContext{};

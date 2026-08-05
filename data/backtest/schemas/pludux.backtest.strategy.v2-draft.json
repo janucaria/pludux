@@ -128,6 +128,15 @@
       ],
       "title": "Signal Timing"
     },
+    "pyramidingRetrigger": {
+      "type": "string",
+      "enum": [
+        "EVERY_EVALUATION",
+        "AFTER_FALSE"
+      ],
+      "title": "Pyramiding Retrigger",
+      "description": "EVERY_EVALUATION allows another pyramiding entry whenever the signal is true at an eligible evaluation. AFTER_FALSE allows one entry per true period and requires a false evaluation before the signal can trigger again."
+    },
     "exitActivation": {
       "type": "string",
       "enum": [
@@ -194,6 +203,9 @@
                 "timing": {
                   "$ref": "#/$defs/signalTiming"
                 },
+                "retrigger": {
+                  "$ref": "#/$defs/pyramidingRetrigger"
+                },
                 "maxLayers": {
                   "type": "integer",
                   "minimum": 1,
@@ -230,11 +242,13 @@
               "required": [
                 "signal",
                 "timing",
+                "retrigger",
                 "maxLayers"
               ],
               "default": {
                 "signal": false,
                 "timing": "NEXT_OPEN",
+                "retrigger": "EVERY_EVALUATION",
                 "maxLayers": 1,
                 "stopTargetReference": {
                   "favorable": "AVERAGE_PRICE",

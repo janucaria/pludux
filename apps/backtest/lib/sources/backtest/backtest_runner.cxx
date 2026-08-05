@@ -189,7 +189,9 @@ public:
      std::vector<TakeProfitRule> take_profits = {},
      ExitActivation signal_exits_activation = ExitActivation::Simultaneous,
      ExitActivation stop_losses_activation = ExitActivation::Simultaneous,
-     ExitActivation take_profits_activation = ExitActivation::Simultaneous)
+     ExitActivation take_profits_activation = ExitActivation::Simultaneous,
+     PyramidingRetrigger pyramiding_retrigger =
+      PyramidingRetrigger::EveryEvaluation)
     : entry_method_{std::move(entry_method)}
     , signal_exits_{std::move(signal_exits)}
     , pyramiding_signal_{std::move(pyramiding_signal)}
@@ -204,6 +206,7 @@ public:
     , signal_exits_activation_{signal_exits_activation}
     , stop_losses_activation_{stop_losses_activation}
     , take_profits_activation_{take_profits_activation}
+    , pyramiding_retrigger_{pyramiding_retrigger}
     {
     }
 
@@ -252,6 +255,12 @@ public:
      -> SignalTiming
     {
       return self.pyramiding_timing_;
+    }
+
+    auto pyramiding_retrigger(this const PositionRule& self) noexcept
+     -> PyramidingRetrigger
+    {
+      return self.pyramiding_retrigger_;
     }
 
     auto favorable_stop_target_reference(this const PositionRule& self) noexcept
@@ -311,6 +320,8 @@ public:
     ExitActivation signal_exits_activation_{ExitActivation::Simultaneous};
     ExitActivation stop_losses_activation_{ExitActivation::Simultaneous};
     ExitActivation take_profits_activation_{ExitActivation::Simultaneous};
+    PyramidingRetrigger pyramiding_retrigger_{
+     PyramidingRetrigger::EveryEvaluation};
   };
 
   BacktestRunner(
@@ -544,8 +555,8 @@ public:
       const auto position_context =
        self.with_open_position_context(context, position);
       if(rule.pyramiding_timing() == SignalTiming::CurrentClose &&
-         static_cast<bool>(evaluate_series_method(
-          rule.pyramiding_signal(), asset_snapshot, position_context))) {
+         self.pyramiding_signal_triggered(
+          rule, asset_snapshot, position_context)) {
         self.execute_pyramiding_action(asset_snapshot.close(),
                                        asset_snapshot,
                                        context,
@@ -676,6 +687,7 @@ private:
 
   std::array<bool, 2> pending_entries_{};
   bool pending_pyramiding_{};
+  bool pyramiding_signal_ready_{true};
   std::vector<std::size_t> pending_signal_exit_indices_;
   std::optional<std::size_t> pending_signal_exit_trade_id_;
 
@@ -723,6 +735,27 @@ private:
     }
     return self.with_open_position_context(
      std::move(context), *self.strategy_trade_session_.open_position());
+  }
+
+  auto pyramiding_signal_triggered(this BacktestRunner& self,
+                                   const PositionRule& rule,
+                                   const AssetSnapshot& snapshot,
+                                   MethodContextable auto context) -> bool
+  {
+    const auto signal = static_cast<bool>(
+     evaluate_series_method(rule.pyramiding_signal(), snapshot, context));
+    if(rule.pyramiding_retrigger() == PyramidingRetrigger::EveryEvaluation) {
+      return signal;
+    }
+    if(!signal) {
+      self.pyramiding_signal_ready_ = true;
+      return false;
+    }
+    if(!self.pyramiding_signal_ready_) {
+      return false;
+    }
+    self.pyramiding_signal_ready_ = false;
+    return true;
   }
 
   auto current_equity(this const BacktestRunner& self) noexcept -> double
@@ -1527,6 +1560,7 @@ private:
     if(self.strategy_trade_session_.is_flat()) {
       closed_position_is_long = was_long;
       self.pyramiding_layers_ = 0;
+      self.pyramiding_signal_ready_ = true;
       self.execution_strategy_trade_id_.reset();
     }
     return true;
@@ -1613,6 +1647,7 @@ private:
       if(self.strategy_trade_session_.is_flat()) {
         closed_position_is_long = was_long;
         self.pyramiding_layers_ = 0;
+        self.pyramiding_signal_ready_ = true;
         self.execution_strategy_trade_id_.reset();
       }
     }
@@ -1680,6 +1715,7 @@ private:
                             double current_drawdown_ratio) -> bool
   {
     const auto& rule = is_long ? self.long_position_ : self.short_position_;
+    self.pyramiding_signal_ready_ = true;
     const auto strategy_entry = TradeEntry{is_long ? 1.0 : -1.0, price};
     self.strategy_trade_session_.entry_position(strategy_entry);
     auto& position = *self.strategy_trade_session_.open_position();
@@ -1859,6 +1895,7 @@ private:
     self.pending_signal_exit_indices_.clear();
     self.pending_signal_exit_trade_id_.reset();
     if(!self.strategy_trade_session_.open_position()) {
+      self.pyramiding_signal_ready_ = true;
       return;
     }
     const auto& position = *self.strategy_trade_session_.open_position();
@@ -1868,8 +1905,7 @@ private:
      self.with_open_position_context(context, position);
     self.pending_pyramiding_ =
      rule.pyramiding_timing() == SignalTiming::NextOpen &&
-     static_cast<bool>(evaluate_series_method(
-      rule.pyramiding_signal(), snapshot, position_context));
+     self.pyramiding_signal_triggered(rule, snapshot, position_context);
     for(auto index = std::size_t{0}; index < rule.signal_exits().size();
         ++index) {
       const auto& signal_exit = rule.signal_exits()[index];
