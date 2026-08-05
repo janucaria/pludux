@@ -379,7 +379,6 @@ public:
           self.plot_equity(portfolio_results.timeline(),
                            backtest_timestamps,
                            portfolio.initial_capital());
-          self.render_equity_legend(backtest_timelines, inspected_index);
           break;
         case BacktestTopPlot::Drawdown:
           ImPlot::SetupAxis(ImAxis_Y1, "% Drawdown", axis_y_flags);
@@ -412,6 +411,9 @@ public:
           self.plot_bayesian_payoff(backtest_timelines);
           break;
         }
+        self.render_top_plot_legend(portfolio_results.timeline(),
+                                    backtest_timelines,
+                                    inspected_index);
 
         self.record_crosshair_plot(
          crosshair_state, timeline_size, self.chart_state_.pinned_bar());
@@ -889,6 +891,121 @@ private:
        {std::isfinite(percentage) ? std::format("{:.2f}%", percentage)
                                   : std::string{"â€”"},
         color}}});
+  }
+
+  static auto plot_item_color(const char* label) -> ImU32
+  {
+    const auto* item = ImPlot::GetItem(label);
+    return item ? item->Color : IM_COL32_WHITE;
+  }
+
+  void render_top_plot_legend(
+   this const BacktestChartWindow& self,
+   const backtest::PortfolioTimeline& portfolio_timeline,
+   const backtest::BacktestTimeline& backtest_timeline,
+   std::size_t index)
+  {
+    if(index >= backtest_timeline.size()) {
+      return;
+    }
+
+    const auto value_segment = [](std::string_view label,
+                                  double value,
+                                  ImU32 color) -> LegendSegment {
+      return {std::format("{} {}", label, format_plot_value(value)), color};
+    };
+    const auto& performance = backtest_timeline.strategy_performance(index);
+    auto line = LegendLine{};
+
+    switch(self.chart_state_.top_plot()) {
+    case BacktestTopPlot::Equity:
+      self.render_equity_legend(backtest_timeline, index);
+      return;
+    case BacktestTopPlot::Drawdown: {
+      line.emplace_back("Drawdown", IM_COL32_WHITE);
+      const auto timestamp = backtest_timeline.market_timestamp(index);
+      const auto& rows = portfolio_timeline.rows();
+      const auto row = std::ranges::lower_bound(
+       rows, timestamp, {}, &backtest::PortfolioTimeline::Row::timestamp);
+      const auto value = row != rows.end() && row->timestamp == timestamp
+                          ? row->drawdown
+                          : std::numeric_limits<double>::quiet_NaN();
+      line.push_back(
+       value_segment("Drawdown", value, plot_item_color("Drawdown")));
+      break;
+    }
+    case BacktestTopPlot::ShadowReturn: {
+      auto value = std::numeric_limits<double>::quiet_NaN();
+      const auto& closed = backtest_timeline.strategy_closed_positions(index);
+      if(!closed.empty()) {
+        value = closed.back().return_ratio();
+      } else if(const auto& open =
+                 backtest_timeline.strategy_open_position(index)) {
+        value = open->unrealized_return_ratio();
+      }
+      line.emplace_back("Shadow return", IM_COL32_WHITE);
+      line.push_back(value_segment(
+       "Return", value, plot_item_color("Shadow return")));
+      break;
+    }
+    case BacktestTopPlot::FrequentistPerformance:
+      line.emplace_back("Frequentist performance", IM_COL32_WHITE);
+      line.push_back(value_segment(
+       "Win", performance.win_rate(), plot_item_color("Win rate")));
+      line.push_back(value_segment("Break-even",
+                                   performance.break_even_rate(),
+                                   plot_item_color("Break-even rate")));
+      line.push_back(value_segment(
+       "Loss", performance.loss_rate(), plot_item_color("Loss rate")));
+      line.push_back(value_segment("Mean return",
+                                   performance.mean_return(),
+                                   plot_item_color("Mean return")));
+      break;
+    case BacktestTopPlot::CurrentStreaks:
+      line.emplace_back("Current streaks", IM_COL32_WHITE);
+      line.push_back(value_segment(
+       "Winning",
+       static_cast<double>(performance.current_winning_streak()),
+       plot_item_color("Winning streak")));
+      line.push_back(value_segment(
+       "Losing",
+       static_cast<double>(performance.current_losing_streak()),
+       plot_item_color("Losing streak")));
+      break;
+    case BacktestTopPlot::BayesianWin: {
+      const auto& posterior = performance.win_probability_posterior();
+      line.emplace_back("Bayesian win", IM_COL32_WHITE);
+      line.push_back(value_segment(
+       "Posterior", posterior.probability, plot_item_color("Posterior win")));
+      line.push_back(value_segment(
+       "95% lower", posterior.lower_95, plot_item_color("95% credible")));
+      line.push_back(value_segment(
+       "upper", posterior.upper_95, plot_item_color("95% credible")));
+      break;
+    }
+    case BacktestTopPlot::BayesianPayoff: {
+      const auto& winning = performance.winning_payoff_posterior();
+      const auto& losing = performance.losing_payoff_posterior();
+      line.emplace_back("Bayesian payoff", IM_COL32_WHITE);
+      line.push_back(value_segment(
+       "Winning", winning.mean, plot_item_color("Winning payoff")));
+      line.push_back(value_segment("95%",
+                                   winning.lower_95,
+                                   plot_item_color("Winning 95% credible")));
+      line.push_back(value_segment(
+       "to", winning.upper_95, plot_item_color("Winning 95% credible")));
+      line.push_back(value_segment(
+       "Losing", losing.mean, plot_item_color("Losing payoff")));
+      line.push_back(value_segment("95%",
+                                   losing.lower_95,
+                                   plot_item_color("Losing 95% credible")));
+      line.push_back(value_segment(
+       "to", losing.upper_95, plot_item_color("Losing 95% credible")));
+      break;
+    }
+    }
+
+    self.draw_plot_legend({std::move(line)});
   }
 
   void render_volume_legend(this const BacktestChartWindow& self,
