@@ -17,7 +17,11 @@ struct PortfolioBacktestSelection {
   backtest::PortfolioStoreHandle portfolio_handle;
   backtest::BacktestStoreHandle backtest_handle;
 
-  auto operator==(const PortfolioBacktestSelection&) const -> bool = default;
+  auto operator==(const PortfolioBacktestSelection& other) const -> bool
+  {
+    return portfolio_handle == other.portfolio_handle &&
+           backtest_handle == other.backtest_handle;
+  }
 };
 
 class PortfolioBacktestSelections {
@@ -109,7 +113,12 @@ public:
     return std::nullopt;
   }
 
-  auto operator==(const PortfolioBacktestSelections&) const -> bool = default;
+  auto operator==(this const PortfolioBacktestSelections& self,
+                  const PortfolioBacktestSelections& other) -> bool
+  {
+    return self.selections_.size() == other.selections_.size() &&
+           std::ranges::equal(self.selections_, other.selections_);
+  }
 
 private:
   std::vector<PortfolioBacktestSelection> selections_;

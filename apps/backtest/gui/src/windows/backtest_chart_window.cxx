@@ -24,7 +24,7 @@ module;
 export module pludux.apps.backtest:windows.backtest_chart_window;
 
 import pludux.backtest;
-import :application_state;
+import pludux.apps.backtest.application_state;
 import :backtest_execution_status;
 import :charts.backtest_chart_state;
 import :window_context;

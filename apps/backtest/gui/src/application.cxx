@@ -18,13 +18,13 @@ module;
 
 export module pludux.apps.backtest;
 
-export import :application_state;
-export import :state_diff;
+export import pludux.apps.backtest.application_state;
+export import pludux.apps.backtest.state_diff;
 export import :window_context;
-export import :serialization;
+export import pludux.apps.backtest.serialization;
 export import :actions;
 export import :backtest_execution_status;
-export import :command_executor;
+export import pludux.apps.backtest.command_executor;
 import :ui.theme;
 import :windows;
 
@@ -254,8 +254,13 @@ public:
     }
 
     try {
-      const auto command_executed = self.command_executor_.execute(app_state);
-      if(command_executed) {
+      const auto effect = self.command_executor_.execute(app_state);
+      if(effect == ExecutionEffect::ApplicationReplaced) {
+        const auto& settings = app_state.imgui_ini_settings();
+        ImGui::LoadIniSettingsFromMemory(settings.c_str(), settings.size());
+      }
+      if(effect == ExecutionEffect::DocumentChanged ||
+         effect == ExecutionEffect::ApplicationReplaced) {
         // Resolve and sync backtest inputs with strategy template inputs after
         // each command execution, then recreate runners for updated state.
         for(auto&& backtest_handle : app_state.get_backtest_handles()) {

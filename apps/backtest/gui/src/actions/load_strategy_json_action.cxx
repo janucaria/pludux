@@ -12,7 +12,8 @@ module;
 
 export module pludux.apps.backtest:actions.load_strategy_json_action;
 
-import :application_state;
+import pludux.backtest;
+import pludux.apps.backtest.application_state;
 
 export namespace pludux::apps {
 

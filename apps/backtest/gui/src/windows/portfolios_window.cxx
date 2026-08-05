@@ -148,28 +148,33 @@ private:
         }
         self.editor_open_ = true;
       } else if(action == ui::ResourceRowAction::Duplicate) {
-        context.push_action([handle](ApplicationState& state) {
-          auto copy = state.get_portfolio(handle);
-          copy.name(copy.name() + " Copy");
-          state.add_portfolio(std::move(copy));
-        });
+        context.push_edit("Duplicate Portfolio",
+                          [handle](ApplicationState& state) {
+                            auto copy = state.get_portfolio(handle);
+                            copy.name(copy.name() + " Copy");
+                            state.add_portfolio(std::move(copy));
+                          });
       } else if(action == ui::ResourceRowAction::Rerun) {
-        context.push_action(
-         [handle](ApplicationState& state) { state.rerun_portfolio(handle); });
+        context.push_edit("Rerun Portfolio", [handle](ApplicationState& state) {
+          state.rerun_portfolio(handle);
+        });
       } else if(action == ui::ResourceRowAction::MoveUp) {
-        context.push_action([index](ApplicationState& state) {
-          state.reorder_list_portfolio(index, index - 1);
-        });
+        context.push_edit("Move Portfolio Up",
+                          [index](ApplicationState& state) {
+                            state.reorder_list_portfolio(index, index - 1);
+                          });
       } else if(action == ui::ResourceRowAction::MoveDown) {
-        context.push_action([index](ApplicationState& state) {
-          state.reorder_list_portfolio(index, index + 1);
-        });
+        context.push_edit("Move Portfolio Down",
+                          [index](ApplicationState& state) {
+                            state.reorder_list_portfolio(index, index + 1);
+                          });
       } else if(action == ui::ResourceRowAction::Delete) {
-        context.push_action(
+        context.push_edit(
+         "Delete Portfolio",
          [handle](ApplicationState& state) { state.remove_portfolio(handle); });
       } else if(row_clicked && !arrow_toggled) {
         self.open_requested_ = handle;
-        context.push_action(
+        context.push_view_action(
          [handle](ApplicationState& state) { state.select_portfolio(handle); });
       }
       if(open) {
@@ -188,7 +193,7 @@ private:
            selected_backtest && *selected_backtest == backtest_handle;
           if(backtest) {
             if(ImGui::Selectable(name, child_selected)) {
-              context.push_action(
+              context.push_view_action(
                [handle, backtest_handle](ApplicationState& state) {
                  state.select_portfolio_backtest(handle, backtest_handle);
                });
@@ -376,14 +381,16 @@ private:
   {
     const auto handle = self.editing_handle_;
     const auto value = *self.editing_;
-    context.push_action([handle, value](ApplicationState& state) {
-      if(handle) {
-        state.update_portfolio(*handle, value);
-        state.select_portfolio(*handle);
-      } else if(const auto created = state.add_portfolio(value)) {
-        state.select_portfolio(*created);
-      }
-    });
+    context.push_edit(handle ? "Edit Portfolio" : "Add Portfolio",
+                      [handle, value](ApplicationState& state) {
+                        if(handle) {
+                          state.update_portfolio(*handle, value);
+                          state.select_portfolio(*handle);
+                        } else if(const auto created =
+                                   state.add_portfolio(value)) {
+                          state.select_portfolio(*created);
+                        }
+                      });
     if(close_editor) {
       self.discard_draft();
     }

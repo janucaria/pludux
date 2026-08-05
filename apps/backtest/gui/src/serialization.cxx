@@ -12,13 +12,14 @@ module;
 #include <jsoncons/json.hpp>
 #include <jsoncons/reflect/json_conv_traits.hpp>
 
-export module pludux.apps.backtest:serialization;
+export module pludux.apps.backtest.serialization;
 
 import pludux.backtest;
 import pludux.apps.backtest.portfolio_backtest_selections;
 
-import :ui_state;
-import :application_state;
+import pludux.apps.backtest.document_state;
+import pludux.apps.backtest.view_state;
+import pludux.apps.backtest.application_state;
 
 namespace {
 
@@ -1224,8 +1225,8 @@ struct json_conv_traits<Json, pludux::apps::PortfolioBacktestSelections> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::apps::UiState> {
-  using value_type = pludux::apps::UiState;
+struct json_conv_traits<Json, pludux::apps::DocumentState> {
+  using value_type = pludux::apps::DocumentState;
   using result_type = jsoncons::conversion_result<value_type>;
 
   static constexpr bool is_compatible = true;
@@ -1241,15 +1242,8 @@ struct json_conv_traits<Json, pludux::apps::UiState> {
   {
     try {
       return result_type{
-       value_type{required_as<std::string>(json, "imguiIniSettings"),
-                  required_as<pludux::backtest::PortfolioStoreHandle>(
-                   json, "selectedPortfolioHandle"),
-                  vector_from_json<pludux::backtest::PortfolioStoreHandle>(
+       value_type{vector_from_json<pludux::backtest::PortfolioStoreHandle>(
                    json.at("portfolioHandles")),
-                  required_as<pludux::apps::PortfolioBacktestSelections>(
-                   json, "portfolioBacktestSelections"),
-                  required_as<pludux::backtest::BacktestStoreHandle>(
-                   json, "selectedBacktestHandle"),
                   vector_from_json<pludux::backtest::BacktestStoreHandle>(
                    json.at("backtestHandles")),
                   vector_from_json<pludux::backtest::AssetStoreHandle>(
@@ -1269,33 +1263,75 @@ struct json_conv_traits<Json, pludux::apps::UiState> {
 
   template<typename Alloc, typename TempAlloc>
   static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>& aset,
-                      const value_type& ui_state)
+                      const value_type& document_state)
   {
     auto json = Json{};
-    json["imguiIniSettings"] = ui_state.imgui_ini_settings();
+    json["portfolioHandles"] =
+     vector_to_json<Json>(aset, document_state.portfolio_handles());
+    json["backtestHandles"] =
+     vector_to_json<Json>(aset, document_state.backtest_handles());
+    json["assetHandles"] =
+     vector_to_json<Json>(aset, document_state.asset_handles());
+    json["strategyHandles"] =
+     vector_to_json<Json>(aset, document_state.strategy_handles());
+    json["marketHandles"] =
+     vector_to_json<Json>(aset, document_state.market_handles());
+    json["brokerHandles"] =
+     vector_to_json<Json>(aset, document_state.broker_handles());
+    json["profileHandles"] =
+     vector_to_json<Json>(aset, document_state.profile_handles());
+    return json;
+  }
+};
+
+template<typename Json>
+struct json_conv_traits<Json, pludux::apps::ViewState> {
+  using value_type = pludux::apps::ViewState;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      return result_type{
+       value_type{required_as<std::string>(json, "imguiIniSettings"),
+                  required_as<pludux::backtest::PortfolioStoreHandle>(
+                   json, "selectedPortfolioHandle"),
+                  required_as<pludux::apps::PortfolioBacktestSelections>(
+                   json, "portfolioBacktestSelections"),
+                  required_as<pludux::backtest::BacktestStoreHandle>(
+                   json, "selectedBacktestHandle")}};
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>& aset,
+                      const value_type& view_state)
+  {
+    auto json = Json{};
+    json["imguiIniSettings"] = view_state.imgui_ini_settings();
     set_json(json,
              aset,
              "selectedPortfolioHandle",
-             ui_state.selected_portfolio_handle());
-    json["portfolioHandles"] =
-     vector_to_json<Json>(aset, ui_state.portfolio_handles());
+             view_state.selected_portfolio_handle());
     set_json(json,
              aset,
              "portfolioBacktestSelections",
-             ui_state.portfolio_backtest_selections());
-    set_json(
-     json, aset, "selectedBacktestHandle", ui_state.selected_backtest_handle());
-    json["backtestHandles"] =
-     vector_to_json<Json>(aset, ui_state.backtest_handles());
-    json["assetHandles"] = vector_to_json<Json>(aset, ui_state.asset_handles());
-    json["strategyHandles"] =
-     vector_to_json<Json>(aset, ui_state.strategy_handles());
-    json["marketHandles"] =
-     vector_to_json<Json>(aset, ui_state.market_handles());
-    json["brokerHandles"] =
-     vector_to_json<Json>(aset, ui_state.broker_handles());
-    json["profileHandles"] =
-     vector_to_json<Json>(aset, ui_state.profile_handles());
+             view_state.portfolio_backtest_selections());
+    set_json(json,
+             aset,
+             "selectedBacktestHandle",
+             view_state.selected_backtest_handle());
     return json;
   }
 };
@@ -1317,9 +1353,10 @@ struct json_conv_traits<Json, pludux::apps::ApplicationState> {
                             const Json& json)
   {
     try {
-      auto app_state =
-       value_type{required_as<pludux::backtest::Store>(json, "store"),
-                  required_as<pludux::apps::UiState>(json, "uiState")};
+      auto app_state = value_type{
+       required_as<pludux::backtest::Store>(json, "store"),
+       required_as<pludux::apps::DocumentState>(json, "documentState"),
+       required_as<pludux::apps::ViewState>(json, "viewState")};
 
       if(required_as<std::string>(json, "$version") != PLUDUX_VERSION) {
         app_state.reset_all_portfolios();
@@ -1338,7 +1375,8 @@ struct json_conv_traits<Json, pludux::apps::ApplicationState> {
     auto json = Json{};
     json["$version"] = std::string{PLUDUX_VERSION};
     set_json(json, aset, "store", app_state.store());
-    set_json(json, aset, "uiState", app_state.ui_state());
+    set_json(json, aset, "documentState", app_state.document_state());
+    set_json(json, aset, "viewState", app_state.view_state());
     return json;
   }
 };

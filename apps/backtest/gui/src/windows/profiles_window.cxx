@@ -112,24 +112,28 @@ private:
              std::make_shared<backtest::Profile>(profile);
           }
         } else if(action == ui::ResourceRowAction::Duplicate) {
-          context.push_action([profile_handle](ApplicationState& app_state) {
-            const auto& value = app_state.get_profile(profile_handle);
-            auto copy = value;
-            copy.name(value.name() + " Copy");
-            app_state.add_profile(std::move(copy));
-          });
+          context.push_edit(
+           "Duplicate Profile", [profile_handle](ApplicationState& app_state) {
+             const auto& value = app_state.get_profile(profile_handle);
+             auto copy = value;
+             copy.name(value.name() + " Copy");
+             app_state.add_profile(std::move(copy));
+           });
         } else if(action == ui::ResourceRowAction::MoveUp) {
-          context.push_action([from = i](ApplicationState& app_state) {
-            app_state.reorder_list_profile(from, from - 1);
-          });
+          context.push_edit("Move Profile Up",
+                            [from = i](ApplicationState& app_state) {
+                              app_state.reorder_list_profile(from, from - 1);
+                            });
         } else if(action == ui::ResourceRowAction::MoveDown) {
-          context.push_action([from = i](ApplicationState& app_state) {
-            app_state.reorder_list_profile(from, from + 1);
-          });
+          context.push_edit("Move Profile Down",
+                            [from = i](ApplicationState& app_state) {
+                              app_state.reorder_list_profile(from, from + 1);
+                            });
         } else if(action == ui::ResourceRowAction::Delete) {
-          context.push_action([profile_handle](ApplicationState& app_state) {
-            app_state.remove_profile(profile_handle);
-          });
+          context.push_edit("Delete Profile",
+                            [profile_handle](ApplicationState& app_state) {
+                              app_state.remove_profile(profile_handle);
+                            });
         }
         ImGui::PopID();
         continue;
@@ -479,20 +483,22 @@ private:
 
   void submit_profile_changes(this auto& self, WindowContext& context)
   {
-    context.push_action([profile_handle_opt = self.selected_profile_handle_opt_,
-                         edit_profile_ptr = self.editing_profile_ptr_](
-                         ApplicationState& app_state) {
-      if(edit_profile_ptr->name().empty()) {
-        edit_profile_ptr->name("Unnamed");
-      }
+    context.push_edit(
+     self.selected_profile_handle_opt_ ? "Edit Profile" : "Add Profile",
+     [profile_handle_opt = self.selected_profile_handle_opt_,
+      edit_profile_ptr =
+       self.editing_profile_ptr_](ApplicationState& app_state) {
+       if(edit_profile_ptr->name().empty()) {
+         edit_profile_ptr->name("Unnamed");
+       }
 
-      if(!profile_handle_opt.has_value()) {
-        app_state.add_profile(*edit_profile_ptr);
-        return;
-      }
+       if(!profile_handle_opt.has_value()) {
+         app_state.add_profile(*edit_profile_ptr);
+         return;
+       }
 
-      app_state.update_profile(profile_handle_opt.value(), *edit_profile_ptr);
-    });
+       app_state.update_profile(profile_handle_opt.value(), *edit_profile_ptr);
+     });
   }
 
   void reset(this ProfilesWindow& self) noexcept

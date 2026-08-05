@@ -152,7 +152,8 @@ target_sources(${PROJECT_NAME} PRIVATE
     FILES
 
     src/portfolio_backtest_selections.cxx
-    src/ui_state.cxx
+    src/document_state.cxx
+    src/view_state.cxx
     src/application_state.cxx
     src/backtest_execution_status.cxx
     src/state_diff.cxx
@@ -284,6 +285,35 @@ if(NOT EMSCRIPTEN AND BUILD_TESTING)
   add_test(
     NAME pludux-backtest-test_portfolio_backtest_selection
     COMMAND pludux-backtest-test_portfolio_backtest_selection
+  )
+
+  add_executable(pludux-backtest-test_command_history
+    tests/test_command_history.cpp
+  )
+  target_sources(pludux-backtest-test_command_history PRIVATE
+    FILE_SET
+      CXX_MODULES
+      BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src
+      FILES
+        src/portfolio_backtest_selections.cxx
+        src/document_state.cxx
+        src/view_state.cxx
+        src/application_state.cxx
+        src/state_diff.cxx
+        src/command_executor.cxx
+        src/serialization.cxx
+  )
+  target_compile_definitions(pludux-backtest-test_command_history PRIVATE
+    PLUDUX_VERSION="${CMAKE_PROJECT_VERSION}"
+  )
+  target_link_libraries(pludux-backtest-test_command_history
+    PRIVATE
+      GTest::gtest_main
+      pludux::backtest-lib
+  )
+  add_test(
+    NAME pludux-backtest-test_command_history
+    COMMAND pludux-backtest-test_command_history
   )
 endif()
 

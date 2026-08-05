@@ -1136,15 +1136,12 @@ private:
 
     if(result == NFD_OKAY) {
       const auto saved_path = std::string(out_path.get());
-      context.push_action(
-       [saved_path, serialized_strategy](ApplicationState& app_state) {
-         auto out_stream = std::ofstream{saved_path};
-         if(!out_stream.is_open()) {
-           throw std::runtime_error(
-            std::format("Failed to open '{}' for writing.", saved_path));
-         }
-         out_stream << serialized_strategy;
-       });
+      auto out_stream = std::ofstream{saved_path};
+      if(!out_stream.is_open()) {
+        throw std::runtime_error(
+         std::format("Failed to open '{}' for writing.", saved_path));
+      }
+      out_stream << serialized_strategy;
     } else if(result == NFD_ERROR) {
       throw std::runtime_error(
        std::format("Error '{}': {}", "Export", NFD::GetError()));
@@ -1163,8 +1160,8 @@ private:
                                    const std::string& file_data,
                                    void* user_data) {
        auto& callback_context = *reinterpret_cast<WindowContext*>(user_data);
-       callback_context.push_action(
-        LoadStrategyJsonAction{file_name, file_data});
+       callback_context.push_edit("Import Strategy",
+                                  LoadStrategyJsonAction{file_name, file_data});
      }};
     pludux_js_open_multiple_text_files(".json", &callback, &context);
 #else
@@ -1191,8 +1188,8 @@ private:
             throw std::runtime_error(
              std::format("Error '{}': {}", "Import", NFD::GetError()));
           }
-          context.push_action(
-           LoadStrategyJsonAction{std::string{in_path.get()}});
+          context.push_edit("Import Strategy",
+                            LoadStrategyJsonAction{std::string{in_path.get()}});
         }
       } else if(result == NFD_ERROR) {
         throw std::runtime_error(
@@ -1308,12 +1305,14 @@ private:
           self.begin_edit_strategy(strategy_handle, strategy);
         }
         if(ImGui::MenuItem(PLUDUX_ICON_COPY " Duplicate")) {
-          context.push_action([strategy_handle](ApplicationState& app_state) {
-            const auto& strategy = app_state.get_strategy(strategy_handle);
-            auto duplicate_strategy = strategy;
-            duplicate_strategy.name(strategy.name() + " Copy");
-            app_state.add_strategy(std::move(duplicate_strategy));
-          });
+          context.push_edit(
+           "Duplicate Strategy",
+           [strategy_handle](ApplicationState& app_state) {
+             const auto& strategy = app_state.get_strategy(strategy_handle);
+             auto duplicate_strategy = strategy;
+             duplicate_strategy.name(strategy.name() + " Copy");
+             app_state.add_strategy(std::move(duplicate_strategy));
+           });
         }
         if(ImGui::MenuItem(PLUDUX_ICON_EXPORT " Export")) {
           self.export_strategy(strategy, context);
@@ -1325,7 +1324,8 @@ private:
                            nullptr,
                            false,
                            !move_up_disabled)) {
-          context.push_action(
+          context.push_edit(
+           "Move Strategy Up",
            [from_index = i, to_index = i - 1](ApplicationState& app_state) {
              app_state.reorder_list_strategy(from_index, to_index);
            });
@@ -1336,16 +1336,18 @@ private:
                            nullptr,
                            false,
                            !move_down_disabled)) {
-          context.push_action(
+          context.push_edit(
+           "Move Strategy Down",
            [from_index = i, to_index = i + 1](ApplicationState& app_state) {
              app_state.reorder_list_strategy(from_index, to_index);
            });
         }
         ImGui::Separator();
         if(ImGui::MenuItem(PLUDUX_ICON_DELETE " Delete")) {
-          context.push_action([strategy_handle](ApplicationState& app_state) {
-            app_state.remove_strategy(strategy_handle);
-          });
+          context.push_edit("Delete Strategy",
+                            [strategy_handle](ApplicationState& app_state) {
+                              app_state.remove_strategy(strategy_handle);
+                            });
         }
 
         ImGui::EndPopup();
@@ -3884,7 +3886,8 @@ private:
 
   void submit_strategy_changes(this auto& self, WindowContext& context)
   {
-    context.push_action(
+    context.push_edit(
+     self.selected_strategy_handle_opt_ ? "Edit Strategy" : "Add Strategy",
      [strategy_handle_opt = self.selected_strategy_handle_opt_,
       edit_strategy_ptr =
        self.editing_strategy_ptr_](ApplicationState& app_state) {

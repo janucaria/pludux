@@ -108,24 +108,28 @@ private:
              std::make_shared<backtest::Broker>(broker);
           }
         } else if(action == ui::ResourceRowAction::Duplicate) {
-          context.push_action([broker_handle](ApplicationState& app_state) {
-            const auto& value = app_state.get_broker(broker_handle);
-            auto copy = value;
-            copy.name(value.name() + " Copy");
-            app_state.add_broker(std::move(copy));
-          });
+          context.push_edit(
+           "Duplicate Broker", [broker_handle](ApplicationState& app_state) {
+             const auto& value = app_state.get_broker(broker_handle);
+             auto copy = value;
+             copy.name(value.name() + " Copy");
+             app_state.add_broker(std::move(copy));
+           });
         } else if(action == ui::ResourceRowAction::MoveUp) {
-          context.push_action([from = i](ApplicationState& app_state) {
-            app_state.reorder_list_broker(from, from - 1);
-          });
+          context.push_edit("Move Broker Up",
+                            [from = i](ApplicationState& app_state) {
+                              app_state.reorder_list_broker(from, from - 1);
+                            });
         } else if(action == ui::ResourceRowAction::MoveDown) {
-          context.push_action([from = i](ApplicationState& app_state) {
-            app_state.reorder_list_broker(from, from + 1);
-          });
+          context.push_edit("Move Broker Down",
+                            [from = i](ApplicationState& app_state) {
+                              app_state.reorder_list_broker(from, from + 1);
+                            });
         } else if(action == ui::ResourceRowAction::Delete) {
-          context.push_action([broker_handle](ApplicationState& app_state) {
-            app_state.remove_broker(broker_handle);
-          });
+          context.push_edit("Delete Broker",
+                            [broker_handle](ApplicationState& app_state) {
+                              app_state.remove_broker(broker_handle);
+                            });
         }
         ImGui::PopID();
         continue;
@@ -391,7 +395,8 @@ private:
 
   void submit_broker_changes(this auto& self, WindowContext& context)
   {
-    context.push_action(
+    context.push_edit(
+     self.selected_broker_handle_opt_ ? "Edit Broker" : "Add Broker",
      [broker_handle_opt = self.selected_broker_handle_opt_,
       edit_broker_ptr = self.editing_broker_ptr_](ApplicationState& app_state) {
        if(edit_broker_ptr->name().empty()) {

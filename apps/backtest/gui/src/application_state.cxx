@@ -10,12 +10,13 @@ module;
 #include <unordered_map>
 #include <vector>
 
-export module pludux.apps.backtest:application_state;
+export module pludux.apps.backtest.application_state;
 
 import pludux.backtest;
 import pludux.apps.backtest.portfolio_backtest_selections;
 
-import :ui_state;
+import pludux.apps.backtest.document_state;
+import pludux.apps.backtest.view_state;
 
 export namespace pludux::apps {
 
@@ -23,9 +24,12 @@ class ApplicationState {
 public:
   ApplicationState() = default;
 
-  ApplicationState(backtest::Store store, UiState ui_state)
+  ApplicationState(backtest::Store store,
+                   DocumentState document_state,
+                   ViewState view_state)
   : store_{std::move(store)}
-  , ui_state_{std::move(ui_state)}
+  , document_state_{std::move(document_state)}
+  , view_state_{std::move(view_state)}
   {
     normalize_portfolio_backtest_selections();
   }
@@ -41,33 +45,40 @@ public:
     return self.store_;
   }
 
-  auto ui_state(this const ApplicationState& self) noexcept -> const UiState&
+  auto document_state(this const ApplicationState& self) noexcept
+   -> const DocumentState&
   {
-    return self.ui_state_;
+    return self.document_state_;
+  }
+
+  auto view_state(this const ApplicationState& self) noexcept
+   -> const ViewState&
+  {
+    return self.view_state_;
   }
 
   auto imgui_ini_settings(this const ApplicationState& self) noexcept
    -> const std::string&
   {
-    return self.ui_state_.imgui_ini_settings();
+    return self.view_state_.imgui_ini_settings();
   }
 
   void imgui_ini_settings(this ApplicationState& self,
                           std::string settings) noexcept
   {
-    self.ui_state_.imgui_ini_settings(std::move(settings));
+    self.view_state_.imgui_ini_settings(std::move(settings));
   }
 
   void select_backtest(this ApplicationState& self,
                        backtest::BacktestStoreHandle backtest_handle)
   {
-    self.ui_state_.selected_backtest_handle(backtest_handle);
+    self.view_state_.selected_backtest_handle(backtest_handle);
   }
 
   void select_portfolio(this ApplicationState& self,
                         backtest::PortfolioStoreHandle handle)
   {
-    self.ui_state_.selected_portfolio_handle(handle);
+    self.view_state_.selected_portfolio_handle(handle);
     self.normalize_portfolio_backtest_selection(handle);
   }
 
@@ -85,9 +96,9 @@ public:
       return false;
     }
 
-    self.ui_state_.selected_portfolio_handle(portfolio_handle);
-    self.ui_state_.portfolio_backtest_selections().remember(portfolio_handle,
-                                                            backtest_handle);
+    self.view_state_.selected_portfolio_handle(portfolio_handle);
+    self.view_state_.portfolio_backtest_selections().remember(portfolio_handle,
+                                                              backtest_handle);
     return true;
   }
 
@@ -95,47 +106,47 @@ public:
   selected_portfolio_backtest_handle(this const ApplicationState& self) noexcept
    -> std::optional<backtest::BacktestStoreHandle>
   {
-    return self.ui_state_.portfolio_backtest_selections().lookup(
-     self.ui_state_.selected_portfolio_handle());
+    return self.view_state_.portfolio_backtest_selections().lookup(
+     self.view_state_.selected_portfolio_handle());
   }
 
   auto selected_portfolio_handle(this const ApplicationState& self) noexcept
    -> backtest::PortfolioStoreHandle
   {
-    return self.ui_state_.selected_portfolio_handle();
+    return self.view_state_.selected_portfolio_handle();
   }
 
   auto selected_portfolio_if_present(this ApplicationState& self) noexcept
    -> backtest::Portfolio*
   {
     return self.store_.get_portfolio_if_present(
-     self.ui_state_.selected_portfolio_handle());
+     self.view_state_.selected_portfolio_handle());
   }
 
   auto selected_portfolio_if_present(this const ApplicationState& self) noexcept
    -> const backtest::Portfolio*
   {
     return self.store_.get_portfolio_if_present(
-     self.ui_state_.selected_portfolio_handle());
+     self.view_state_.selected_portfolio_handle());
   }
 
   auto get_portfolio_handles(this const ApplicationState& self) noexcept
    -> const std::vector<backtest::PortfolioStoreHandle>&
   {
-    return self.ui_state_.portfolio_handles();
+    return self.document_state_.portfolio_handles();
   }
 
   auto get_portfolio_handles(this ApplicationState& self) noexcept
    -> std::vector<backtest::PortfolioStoreHandle>&
   {
-    return self.ui_state_.portfolio_handles();
+    return self.document_state_.portfolio_handles();
   }
 
   void reorder_list_portfolio(this ApplicationState& self,
                               std::size_t from_index,
                               std::size_t to_index) noexcept
   {
-    self.ui_state_.reorder_portfolio_handle(from_index, to_index);
+    self.document_state_.reorder_portfolio_handle(from_index, to_index);
   }
 
   auto add_portfolio(this ApplicationState& self, backtest::Portfolio portfolio)
@@ -143,7 +154,7 @@ public:
   {
     const auto handle = self.store_.add_portfolio(std::move(portfolio));
     if(handle) {
-      self.ui_state_.add_portfolio_handle(*handle);
+      self.document_state_.add_portfolio_handle(*handle);
       self.store_.add_portfolio_results(*handle, {});
     }
     return handle;
@@ -205,10 +216,10 @@ public:
     if(!self.store_.remove_portfolio(handle)) {
       return false;
     }
-    self.ui_state_.remove_portfolio_handle(handle);
-    self.ui_state_.portfolio_backtest_selections().remove_portfolio(handle);
-    if(self.ui_state_.selected_portfolio_handle() == handle) {
-      self.ui_state_.selected_portfolio_handle({});
+    self.document_state_.remove_portfolio_handle(handle);
+    self.view_state_.portfolio_backtest_selections().remove_portfolio(handle);
+    if(self.view_state_.selected_portfolio_handle() == handle) {
+      self.view_state_.selected_portfolio_handle({});
     }
     self.store_.remove_portfolio_results(handle);
     return true;
@@ -217,14 +228,14 @@ public:
   auto selected_backtest_handle(this const ApplicationState& self) noexcept
    -> backtest::BacktestStoreHandle
   {
-    return self.ui_state_.selected_backtest_handle();
+    return self.view_state_.selected_backtest_handle();
   }
 
   auto selected_backtest(this const ApplicationState& self) noexcept
    -> const backtest::Backtest&
   {
     const auto selected_backtest_handle =
-     self.ui_state_.selected_backtest_handle();
+     self.view_state_.selected_backtest_handle();
     return self.store_.get_backtest(selected_backtest_handle);
   }
 
@@ -232,7 +243,7 @@ public:
    -> backtest::Backtest&
   {
     const auto selected_backtest_handle =
-     self.ui_state_.selected_backtest_handle();
+     self.view_state_.selected_backtest_handle();
     return self.store_.get_backtest(selected_backtest_handle);
   }
 
@@ -240,7 +251,7 @@ public:
    -> backtest::Backtest*
   {
     const auto selected_backtest_handle =
-     self.ui_state_.selected_backtest_handle();
+     self.view_state_.selected_backtest_handle();
     return self.store_.get_backtest_if_present(selected_backtest_handle);
   }
 
@@ -248,27 +259,27 @@ public:
    -> const backtest::Backtest*
   {
     const auto selected_backtest_handle =
-     self.ui_state_.selected_backtest_handle();
+     self.view_state_.selected_backtest_handle();
     return self.store_.get_backtest_if_present(selected_backtest_handle);
   }
 
   auto get_backtest_handles(this const ApplicationState& self) noexcept
    -> const std::vector<backtest::BacktestStoreHandle>&
   {
-    return self.ui_state_.backtest_handles();
+    return self.document_state_.backtest_handles();
   }
 
   auto get_backtest_handles(this ApplicationState& self) noexcept
    -> std::vector<backtest::BacktestStoreHandle>&
   {
-    return self.ui_state_.backtest_handles();
+    return self.document_state_.backtest_handles();
   }
 
   void reorder_list_backtest(this ApplicationState& self,
                              std::size_t from_index,
                              std::size_t to_index)
   {
-    self.ui_state_.reorder_backtest_handle(from_index, to_index);
+    self.document_state_.reorder_backtest_handle(from_index, to_index);
   }
 
   auto add_backtest(this ApplicationState& self, backtest::Backtest backtest)
@@ -276,7 +287,7 @@ public:
   {
     const auto handle_opt = self.store_.add_backtest(std::move(backtest));
     if(handle_opt) {
-      self.ui_state_.add_backtest_handle(*handle_opt);
+      self.document_state_.add_backtest_handle(*handle_opt);
     }
     return handle_opt;
   }
@@ -325,11 +336,11 @@ public:
                        backtest::BacktestStoreHandle handle) -> bool
   {
     if(self.store_.remove_backtest(handle)) {
-      self.ui_state_.remove_backtest_handle(handle);
-      self.ui_state_.portfolio_backtest_selections().remove_backtest(handle);
+      self.document_state_.remove_backtest_handle(handle);
+      self.view_state_.portfolio_backtest_selections().remove_backtest(handle);
 
-      if(self.ui_state_.selected_backtest_handle() == handle) {
-        self.ui_state_.selected_backtest_handle({});
+      if(self.view_state_.selected_backtest_handle() == handle) {
+        self.view_state_.selected_backtest_handle({});
       }
 
       self.normalize_portfolio_backtest_selections();
@@ -342,21 +353,21 @@ public:
   auto get_asset_handles(this const ApplicationState& self) noexcept
    -> const std::vector<backtest::AssetStoreHandle>&
   {
-    return self.ui_state_.asset_handles();
+    return self.document_state_.asset_handles();
   }
 
   void reorder_list_asset(this ApplicationState& self,
                           std::size_t from_index,
                           std::size_t to_index)
   {
-    self.ui_state_.reorder_asset_handle(from_index, to_index);
+    self.document_state_.reorder_asset_handle(from_index, to_index);
   }
 
   void add_asset(this ApplicationState& self, backtest::Asset asset)
   {
     const auto handle_opt = self.store_.add_asset(std::move(asset));
     if(handle_opt) {
-      self.ui_state_.add_asset_handle(*handle_opt);
+      self.document_state_.add_asset_handle(*handle_opt);
     }
   }
 
@@ -387,7 +398,7 @@ public:
 
     if(self.store_.update_asset(handle, std::move(edit_asset))) {
       if(reset_backtests) {
-        const auto& backtest_handles = self.ui_state_.backtest_handles();
+        const auto& backtest_handles = self.document_state_.backtest_handles();
         for(const auto& backtest_handle : backtest_handles) {
           auto backtest_ptr =
            self.store_.get_backtest_if_present(backtest_handle);
@@ -407,9 +418,9 @@ public:
                     backtest::AssetStoreHandle handle) -> bool
   {
     if(self.store_.remove_asset(handle)) {
-      self.ui_state_.remove_asset_handle(handle);
+      self.document_state_.remove_asset_handle(handle);
 
-      const auto& backtest_handles = self.ui_state_.backtest_handles();
+      const auto& backtest_handles = self.document_state_.backtest_handles();
       for(const auto& backtest_handle : backtest_handles) {
         const auto backtest_ptr =
          self.store_.get_backtest_if_present(backtest_handle);
@@ -427,21 +438,21 @@ public:
   auto get_strategy_handles(this const ApplicationState& self) noexcept
    -> const std::vector<backtest::StrategyStoreHandle>&
   {
-    return self.ui_state_.strategy_handles();
+    return self.document_state_.strategy_handles();
   }
 
   void reorder_list_strategy(this ApplicationState& self,
                              std::size_t from_index,
                              std::size_t to_index)
   {
-    self.ui_state_.reorder_strategy_handle(from_index, to_index);
+    self.document_state_.reorder_strategy_handle(from_index, to_index);
   }
 
   void add_strategy(this ApplicationState& self, backtest::Strategy strategy)
   {
     const auto handle_opt = self.store_.add_strategy(std::move(strategy));
     if(handle_opt) {
-      self.ui_state_.add_strategy_handle(*handle_opt);
+      self.document_state_.add_strategy_handle(*handle_opt);
     }
   }
 
@@ -472,7 +483,7 @@ public:
 
     if(self.store_.update_strategy(handle, std::move(edit_strategy))) {
       if(reset_backtests) {
-        const auto& backtest_handles = self.ui_state_.backtest_handles();
+        const auto& backtest_handles = self.document_state_.backtest_handles();
         for(const auto& backtest_handle : backtest_handles) {
           auto backtest_ptr =
            self.store_.get_backtest_if_present(backtest_handle);
@@ -492,9 +503,9 @@ public:
                        backtest::StrategyStoreHandle handle) -> bool
   {
     if(self.store_.remove_strategy(handle)) {
-      self.ui_state_.remove_strategy_handle(handle);
+      self.document_state_.remove_strategy_handle(handle);
 
-      const auto& backtest_handles = self.ui_state_.backtest_handles();
+      const auto& backtest_handles = self.document_state_.backtest_handles();
       for(const auto& backtest_handle : backtest_handles) {
         const auto backtest_ptr =
          self.store_.get_backtest_if_present(backtest_handle);
@@ -512,21 +523,21 @@ public:
   auto get_market_handles(this const ApplicationState& self) noexcept
    -> const std::vector<backtest::MarketStoreHandle>&
   {
-    return self.ui_state_.market_handles();
+    return self.document_state_.market_handles();
   }
 
   void reorder_list_market(this ApplicationState& self,
                            std::size_t from_index,
                            std::size_t to_index)
   {
-    self.ui_state_.reorder_market_handle(from_index, to_index);
+    self.document_state_.reorder_market_handle(from_index, to_index);
   }
 
   void add_market(this ApplicationState& self, backtest::Market market)
   {
     const auto handle_opt = self.store_.add_market(std::move(market));
     if(handle_opt) {
-      self.ui_state_.add_market_handle(*handle_opt);
+      self.document_state_.add_market_handle(*handle_opt);
     }
   }
 
@@ -557,7 +568,8 @@ public:
 
     if(self.store_.update_market(handle, std::move(edit_market))) {
       if(reset_portfolios) {
-        for(const auto portfolio_handle : self.ui_state_.portfolio_handles()) {
+        for(const auto portfolio_handle :
+            self.document_state_.portfolio_handles()) {
           const auto* portfolio =
            self.store_.get_portfolio_if_present(portfolio_handle);
           if(portfolio && portfolio->market_handle() == handle) {
@@ -576,9 +588,10 @@ public:
                      backtest::MarketStoreHandle handle) -> bool
   {
     if(self.store_.remove_market(handle)) {
-      self.ui_state_.remove_market_handle(handle);
+      self.document_state_.remove_market_handle(handle);
 
-      for(const auto portfolio_handle : self.ui_state_.portfolio_handles()) {
+      for(const auto portfolio_handle :
+          self.document_state_.portfolio_handles()) {
         const auto* portfolio =
          self.store_.get_portfolio_if_present(portfolio_handle);
         if(portfolio && portfolio->market_handle() == handle) {
@@ -595,21 +608,21 @@ public:
   auto get_broker_handles(this const ApplicationState& self) noexcept
    -> const std::vector<backtest::BrokerStoreHandle>&
   {
-    return self.ui_state_.broker_handles();
+    return self.document_state_.broker_handles();
   }
 
   void reorder_list_broker(this ApplicationState& self,
                            std::size_t from_index,
                            std::size_t to_index)
   {
-    self.ui_state_.reorder_broker_handle(from_index, to_index);
+    self.document_state_.reorder_broker_handle(from_index, to_index);
   }
 
   void add_broker(this ApplicationState& self, backtest::Broker broker)
   {
     const auto handle_opt = self.store_.add_broker(std::move(broker));
     if(handle_opt) {
-      self.ui_state_.add_broker_handle(*handle_opt);
+      self.document_state_.add_broker_handle(*handle_opt);
     }
   }
 
@@ -640,7 +653,8 @@ public:
 
     if(self.store_.update_broker(handle, std::move(edit_broker))) {
       if(reset_portfolios) {
-        for(const auto portfolio_handle : self.ui_state_.portfolio_handles()) {
+        for(const auto portfolio_handle :
+            self.document_state_.portfolio_handles()) {
           const auto* portfolio =
            self.store_.get_portfolio_if_present(portfolio_handle);
           if(portfolio && portfolio->broker_handle() == handle) {
@@ -659,9 +673,10 @@ public:
                      backtest::BrokerStoreHandle handle) -> bool
   {
     if(self.store_.remove_broker(handle)) {
-      self.ui_state_.remove_broker_handle(handle);
+      self.document_state_.remove_broker_handle(handle);
 
-      for(const auto portfolio_handle : self.ui_state_.portfolio_handles()) {
+      for(const auto portfolio_handle :
+          self.document_state_.portfolio_handles()) {
         const auto* portfolio =
          self.store_.get_portfolio_if_present(portfolio_handle);
         if(portfolio && portfolio->broker_handle() == handle) {
@@ -678,21 +693,21 @@ public:
   auto get_profile_handles(this const ApplicationState& self) noexcept
    -> const std::vector<backtest::ProfileStoreHandle>&
   {
-    return self.ui_state_.profile_handles();
+    return self.document_state_.profile_handles();
   }
 
   void reorder_list_profile(this ApplicationState& self,
                             std::size_t from_index,
                             std::size_t to_index)
   {
-    self.ui_state_.reorder_profile_handle(from_index, to_index);
+    self.document_state_.reorder_profile_handle(from_index, to_index);
   }
 
   void add_profile(this ApplicationState& self, backtest::Profile profile)
   {
     const auto handle_opt = self.store_.add_profile(std::move(profile));
     if(handle_opt) {
-      self.ui_state_.add_profile_handle(*handle_opt);
+      self.document_state_.add_profile_handle(*handle_opt);
     }
   }
 
@@ -722,7 +737,7 @@ public:
     const auto reset_backtests = !profile->equivalent_rules(edit_profile);
     if(self.store_.update_profile(handle, std::move(edit_profile))) {
       if(reset_backtests) {
-        const auto& backtest_handles = self.ui_state_.backtest_handles();
+        const auto& backtest_handles = self.document_state_.backtest_handles();
         for(const auto& backtest_handle : backtest_handles) {
           auto backtest_ptr =
            self.store_.get_backtest_if_present(backtest_handle);
@@ -742,9 +757,9 @@ public:
                       backtest::ProfileStoreHandle handle) -> bool
   {
     if(self.store_.remove_profile(handle)) {
-      self.ui_state_.remove_profile_handle(handle);
+      self.document_state_.remove_profile_handle(handle);
 
-      const auto& backtest_handles = self.ui_state_.backtest_handles();
+      const auto& backtest_handles = self.document_state_.backtest_handles();
       for(const auto& backtest_handle : backtest_handles) {
         const auto backtest_ptr =
          self.store_.get_backtest_if_present(backtest_handle);
@@ -797,7 +812,7 @@ public:
 
   void reset_all_portfolios(this ApplicationState& self)
   {
-    for(const auto handle : self.ui_state_.portfolio_handles()) {
+    for(const auto handle : self.document_state_.portfolio_handles()) {
       self.reset_portfolio(handle);
     }
   }
@@ -853,12 +868,13 @@ public:
 
 private:
   backtest::Store store_{};
-  UiState ui_state_{};
+  DocumentState document_state_{};
+  ViewState view_state_{};
 
   void normalize_portfolio_backtest_selection(
    this ApplicationState& self, backtest::PortfolioStoreHandle portfolio_handle)
   {
-    auto& selections = self.ui_state_.portfolio_backtest_selections();
+    auto& selections = self.view_state_.portfolio_backtest_selections();
     const auto* portfolio =
      self.store_.get_portfolio_if_present(portfolio_handle);
     if(!portfolio) {
@@ -874,19 +890,37 @@ private:
 
   void normalize_portfolio_backtest_selections(this ApplicationState& self)
   {
+    const auto selected_portfolio =
+     self.view_state_.selected_portfolio_handle();
+    if(std::ranges::find(self.document_state_.portfolio_handles(),
+                         selected_portfolio) ==
+        self.document_state_.portfolio_handles().end() ||
+       !self.store_.get_portfolio_if_present(selected_portfolio)) {
+      self.view_state_.selected_portfolio_handle({});
+    }
+
+    const auto selected_backtest = self.view_state_.selected_backtest_handle();
+    if(std::ranges::find(self.document_state_.backtest_handles(),
+                         selected_backtest) ==
+        self.document_state_.backtest_handles().end() ||
+       !self.store_.get_backtest_if_present(selected_backtest)) {
+      self.view_state_.selected_backtest_handle({});
+    }
+
     const auto known_selections =
-     self.ui_state_.portfolio_backtest_selections().selections();
+     self.view_state_.portfolio_backtest_selections().selections();
     for(const auto& selection : known_selections) {
-      if(std::ranges::find(self.ui_state_.portfolio_handles(),
+      if(std::ranges::find(self.document_state_.portfolio_handles(),
                            selection.portfolio_handle) ==
-          self.ui_state_.portfolio_handles().end() ||
+          self.document_state_.portfolio_handles().end() ||
          !self.store_.get_portfolio_if_present(selection.portfolio_handle)) {
-        self.ui_state_.portfolio_backtest_selections().remove_portfolio(
+        self.view_state_.portfolio_backtest_selections().remove_portfolio(
          selection.portfolio_handle);
       }
     }
 
-    for(const auto portfolio_handle : self.ui_state_.portfolio_handles()) {
+    for(const auto portfolio_handle :
+        self.document_state_.portfolio_handles()) {
       self.normalize_portfolio_backtest_selection(portfolio_handle);
     }
   }
@@ -894,7 +928,8 @@ private:
   void reset_backtest(this ApplicationState& self,
                       backtest::BacktestStoreHandle handle)
   {
-    for(const auto portfolio_handle : self.ui_state_.portfolio_handles()) {
+    for(const auto portfolio_handle :
+        self.document_state_.portfolio_handles()) {
       const auto* portfolio =
        self.store_.get_portfolio_if_present(portfolio_handle);
       if(portfolio &&

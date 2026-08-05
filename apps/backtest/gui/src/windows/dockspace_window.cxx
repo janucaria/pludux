@@ -24,8 +24,8 @@ module;
 
 export module pludux.apps.backtest:windows.dockspace_window;
 
-import :application_state;
-import :serialization;
+import pludux.apps.backtest.application_state;
+import pludux.apps.backtest.serialization;
 import :window_context;
 
 export namespace pludux::apps {
@@ -106,12 +106,18 @@ private:
     if(ImGui::Button(toolbar_label(PLUDUX_ICON_UNDO, "Undo", "undo").c_str())) {
       context.push_undo();
     }
+    if(ImGui::IsItemHovered() && context.undo_label()) {
+      ImGui::SetTooltip("Undo %s", context.undo_label()->c_str());
+    }
     ImGui::EndDisabled();
 
     ImGui::SameLine();
     ImGui::BeginDisabled(!context.has_redo());
     if(ImGui::Button(toolbar_label(PLUDUX_ICON_REDO, "Redo", "redo").c_str())) {
       context.push_redo();
+    }
+    if(ImGui::IsItemHovered() && context.redo_label()) {
+      ImGui::SetTooltip("Redo %s", context.redo_label()->c_str());
     }
     ImGui::EndDisabled();
 
@@ -173,14 +179,16 @@ private:
   {
 #ifdef __EMSCRIPTEN__
     context.request_discard_all_drafts();
-    using Callback = std::function<void(const std::string&, ApplicationState&)>;
-    static const auto callback =
-     Callback{[](const std::string& file_data, ApplicationState& app_state) {
-       auto in_stream = std::istringstream{file_data};
-       if(!in_stream.good()) {
-         throw std::runtime_error("Failed to open data stream for reading.");
-       }
-       app_state = load_application_state_json(in_stream);
+    using Callback = std::function<void(const std::string&, WindowContext&)>;
+    static const auto callback = Callback{
+     [](const std::string& file_data, WindowContext& callback_context) {
+       callback_context.replace_application_state([file_data] {
+         auto in_stream = std::istringstream{file_data};
+         if(!in_stream.good()) {
+           throw std::runtime_error("Failed to open data stream for reading.");
+         }
+         return load_application_state_json(in_stream);
+       });
      }};
     pludux_js_open_single_text_file(".pludux", &callback, &context);
 #else
@@ -193,15 +201,13 @@ private:
     if(result == NFD_OKAY) {
       context.request_discard_all_drafts();
       const auto selected_path = std::string{in_path.get()};
-      context.push_action([selected_path](ApplicationState& app_state) {
+      context.replace_application_state([selected_path] {
         auto in_stream = std::ifstream{selected_path};
         if(!in_stream.is_open()) {
           throw std::runtime_error(
            std::format("Failed to open '{}' for reading.", selected_path));
         }
-        app_state = load_application_state_json(in_stream);
-        const auto& settings = app_state.imgui_ini_settings();
-        ImGui::LoadIniSettingsFromMemory(settings.c_str(), settings.size());
+        return load_application_state_json(in_stream);
       });
     } else if(result == NFD_ERROR) {
       throw std::runtime_error(
@@ -229,14 +235,12 @@ private:
      NFD::SaveDialog(out_path, filter_item.data(), filter_item.size());
     if(result == NFD_OKAY) {
       const auto saved_path = std::string{out_path.get()};
-      context.push_action([saved_path, content](ApplicationState&) {
-        auto file = std::ofstream{saved_path};
-        if(!file.is_open()) {
-          throw std::runtime_error(
-           std::format("Failed to open '{}' for writing.", saved_path));
-        }
-        file << content;
-      });
+      auto file = std::ofstream{saved_path};
+      if(!file.is_open()) {
+        throw std::runtime_error(
+         std::format("Failed to open '{}' for writing.", saved_path));
+      }
+      file << content;
     } else if(result == NFD_ERROR) {
       throw std::runtime_error(
        std::format("Error '{}': {}", "Save", NFD::GetError()));

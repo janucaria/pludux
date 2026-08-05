@@ -3,6 +3,7 @@ module;
 #include <functional>
 #include <list>
 #include <memory>
+#include <optional>
 #include <queue>
 #include <string>
 #include <utility>
@@ -12,10 +13,10 @@ module;
 
 export module pludux.apps.backtest:window_context;
 
-import :application_state;
+import pludux.apps.backtest.application_state;
 import :actions;
 import :backtest_execution_status;
-import :command_executor;
+import pludux.apps.backtest.command_executor;
 
 export namespace pludux::apps {
 
@@ -43,16 +44,26 @@ public:
     return self.app_state_;
   }
 
-  template<typename TAppAction, typename... Args>
-  void emplace_action(this WindowContext& self, Args&&... args)
+  template<typename TAppAction>
+  void push_edit(this WindowContext& self,
+                 std::string label,
+                 TAppAction action,
+                 std::optional<std::string> merge_key = std::nullopt)
   {
-    self.command_executor_.push(TAppAction{std::forward<Args>(args)...});
+    self.command_executor_.push(
+     EditCommand{std::move(label), std::move(action), std::move(merge_key)});
   }
 
   template<typename TAppAction>
-  void push_action(this WindowContext& self, TAppAction action)
+  void push_view_action(this WindowContext& self, TAppAction action)
   {
-    self.command_executor_.push(std::move(action));
+    self.command_executor_.push(ViewCommand{std::move(action)});
+  }
+
+  template<typename TLoader>
+  void replace_application_state(this WindowContext& self, TLoader loader)
+  {
+    self.command_executor_.push(ReplaceApplicationCommand{std::move(loader)});
   }
 
   void update_imgui_ini_settings(this WindowContext& self)
@@ -82,6 +93,11 @@ public:
     return self.command_executor_.can_undo();
   }
 
+  auto undo_label(this const WindowContext& self) noexcept -> const std::string*
+  {
+    return self.command_executor_.undo_label();
+  }
+
   void push_redo(this WindowContext& self)
   {
     self.command_executor_.push(RedoCommand{});
@@ -90,6 +106,11 @@ public:
   auto has_redo(this const WindowContext& self) -> bool
   {
     return self.command_executor_.can_redo();
+  }
+
+  auto redo_label(this const WindowContext& self) noexcept -> const std::string*
+  {
+    return self.command_executor_.redo_label();
   }
 
   auto backtest_execution_status(

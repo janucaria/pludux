@@ -110,9 +110,10 @@ private:
           const auto action = ui::resource_row(
            display_name.c_str(), is_selected, i, backtest_handles.size());
           if(action == ui::ResourceRowAction::Select) {
-            context.push_action([backtest_handle](ApplicationState& app_state) {
-              app_state.select_backtest(backtest_handle);
-            });
+            context.push_view_action(
+             [backtest_handle](ApplicationState& app_state) {
+               app_state.select_backtest(backtest_handle);
+             });
           } else if(action == ui::ResourceRowAction::Edit) {
             self.backtest_panel_mode_ = BacktestPanelMode::Edit;
             if(self.selected_backtest_handle_opt_ != backtest_handle ||
@@ -122,24 +123,29 @@ private:
                std::make_shared<backtest::Backtest>(backtest);
             }
           } else if(action == ui::ResourceRowAction::Duplicate) {
-            context.push_action([backtest_handle](ApplicationState& app_state) {
-              const auto& value = app_state.get_backtest(backtest_handle);
-              auto copy = value;
-              copy.name(value.name() + " Copy");
-              app_state.add_backtest(std::move(copy));
-            });
+            context.push_edit("Duplicate Backtest",
+                              [backtest_handle](ApplicationState& app_state) {
+                                const auto& value =
+                                 app_state.get_backtest(backtest_handle);
+                                auto copy = value;
+                                copy.name(value.name() + " Copy");
+                                app_state.add_backtest(std::move(copy));
+                              });
           } else if(action == ui::ResourceRowAction::MoveUp) {
-            context.push_action([from = i](ApplicationState& app_state) {
-              app_state.reorder_list_backtest(from, from - 1);
-            });
+            context.push_edit("Move Backtest Up",
+                              [from = i](ApplicationState& app_state) {
+                                app_state.reorder_list_backtest(from, from - 1);
+                              });
           } else if(action == ui::ResourceRowAction::MoveDown) {
-            context.push_action([from = i](ApplicationState& app_state) {
-              app_state.reorder_list_backtest(from, from + 1);
-            });
+            context.push_edit("Move Backtest Down",
+                              [from = i](ApplicationState& app_state) {
+                                app_state.reorder_list_backtest(from, from + 1);
+                              });
           } else if(action == ui::ResourceRowAction::Delete) {
-            context.push_action([backtest_handle](ApplicationState& app_state) {
-              app_state.remove_backtest(backtest_handle);
-            });
+            context.push_edit("Delete Backtest",
+                              [backtest_handle](ApplicationState& app_state) {
+                                app_state.remove_backtest(backtest_handle);
+                              });
           }
           ImGui::PopID();
           continue;
@@ -600,31 +606,33 @@ private:
   {
     auto& edit_backtest_ptr = self.editing_backtest_ptr_;
     if(context.app_state().is_backtest_ready(*edit_backtest_ptr)) {
-      context.push_action([backtest_handle_opt =
-                            self.selected_backtest_handle_opt_,
-                           edit_backtest_ptr](ApplicationState& app_state) {
-        if(edit_backtest_ptr->name().empty()) {
-          edit_backtest_ptr->name("Unnamed");
-        }
+      context.push_edit(
+       self.selected_backtest_handle_opt_ ? "Edit Backtest" : "Add Backtest",
+       [backtest_handle_opt = self.selected_backtest_handle_opt_,
+        edit_backtest_ptr](ApplicationState& app_state) {
+         if(edit_backtest_ptr->name().empty()) {
+           edit_backtest_ptr->name("Unnamed");
+         }
 
-        if(!backtest_handle_opt) {
-          const auto edit_handle_opt =
-           app_state.add_backtest(*edit_backtest_ptr);
-          if(edit_handle_opt) {
-            app_state.select_backtest(*edit_handle_opt);
-          }
-        } else {
-          const auto backtest_handle = backtest_handle_opt.value();
-          auto& backtest = app_state.get_backtest(backtest_handle);
-          const auto rule_changed =
-           !backtest.equivalent_rules(*edit_backtest_ptr);
-          if(rule_changed) {
-            app_state.update_backtest(*backtest_handle_opt, *edit_backtest_ptr);
-          } else {
-            backtest.name(edit_backtest_ptr->name());
-          }
-        }
-      });
+         if(!backtest_handle_opt) {
+           const auto edit_handle_opt =
+            app_state.add_backtest(*edit_backtest_ptr);
+           if(edit_handle_opt) {
+             app_state.select_backtest(*edit_handle_opt);
+           }
+         } else {
+           const auto backtest_handle = backtest_handle_opt.value();
+           auto& backtest = app_state.get_backtest(backtest_handle);
+           const auto rule_changed =
+            !backtest.equivalent_rules(*edit_backtest_ptr);
+           if(rule_changed) {
+             app_state.update_backtest(*backtest_handle_opt,
+                                       *edit_backtest_ptr);
+           } else {
+             backtest.name(edit_backtest_ptr->name());
+           }
+         }
+       });
 
       if(reset_on_success) {
         self.reset();
