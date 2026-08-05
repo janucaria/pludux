@@ -67,6 +67,8 @@ export import :risk_distance_method;
 export import :risk_distance_node;
 export import :position_method;
 export import :position_node;
+export import :pyramiding_layer_method;
+export import :pyramiding_layer_node;
 export import :stop_target_price_method;
 export import :stop_target_price_node;
 export import :backtest_runner;

@@ -117,10 +117,12 @@ public:
    DefaultMethodContext default_context,
    const OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>&
     series_methods,
-   const BacktestAccountState& account_state) noexcept
+   const BacktestAccountState& account_state,
+   std::size_t pyramiding_layer) noexcept
   : default_context_{std::move(default_context)}
   , series_methods_{series_methods}
   , account_state_{account_state}
+  , pyramiding_layer_{pyramiding_layer}
   {
   }
 
@@ -180,6 +182,12 @@ public:
   auto drawdown(this const BacktestMethodContext& self) noexcept -> double
   {
     return self.account_state_.drawdown();
+  }
+
+  auto pyramiding_layer(this const BacktestMethodContext& self) noexcept
+   -> std::size_t
+  {
+    return self.pyramiding_layer_;
   }
 
   auto with_position_reference(this const BacktestMethodContext& self,
@@ -263,6 +271,7 @@ private:
   const OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>&
    series_methods_;
   const BacktestAccountState& account_state_;
+  std::size_t pyramiding_layer_;
   double position_initial_entry_price_{
    std::numeric_limits<double>::quiet_NaN()};
   double position_latest_entry_price_{std::numeric_limits<double>::quiet_NaN()};

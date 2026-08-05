@@ -1594,14 +1594,15 @@ TEST_F(ConfigParserTest, ParseStopTargetPriceMethods)
   }
 }
 
-TEST_F(ConfigParserTest, ParsePositionContextPriceMethods)
+TEST_F(ConfigParserTest, ParsePositionContextValueMethods)
 {
   const auto configs =
    std::vector<json>{json::parse(R"({"method":"INITIAL_ENTRY_PRICE"})"),
                      json::parse(R"({"method":"LATEST_ENTRY_PRICE"})"),
                      json::parse(R"({"method":"AVERAGE_PRICE"})"),
                      json::parse(R"({"method":"STOP_TARGET_REF_PRICE"})"),
-                     json::parse(R"({"method":"POSITION_DIRECTION"})")};
+                     json::parse(R"({"method":"POSITION_DIRECTION"})"),
+                     json::parse(R"({"method":"PYRAMIDING_LAYER"})")};
 
   for(const auto& config : configs) {
     const auto method = parse_node_method(config);

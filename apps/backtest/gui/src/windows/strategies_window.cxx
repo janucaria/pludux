@@ -56,6 +56,7 @@ using pludux::backtest::InitialEntryPriceNode;
 using pludux::backtest::LatestEntryPriceNode;
 using pludux::backtest::PositionDirectionNode;
 using pludux::backtest::PositionRMultipleNode;
+using pludux::backtest::PyramidingLayerNode;
 using pludux::backtest::RiskDistanceAmountNode;
 using pludux::backtest::RiskDistanceAtrNode;
 using pludux::backtest::RiskDistancePercentNode;
@@ -227,6 +228,8 @@ auto get_default_series_node(const std::string& series_id)
     return StopTargetRefPriceNode{};
   } else if(series_id == "POSITION_DIRECTION") {
     return PositionDirectionNode{};
+  } else if(series_id == "PYRAMIDING_LAYER") {
+    return PyramidingLayerNode{};
   } else if(series_id == "POSITION_R_MULTIPLE") {
     return PositionRMultipleNode{};
   } else if(series_id == "ABS_DIFF") {
@@ -352,6 +355,8 @@ auto get_series_node_id(const ErasedNode<ErasedSeriesMethodContext>& node)
     return "STOP_TARGET_REF_PRICE";
   } else if(node_cast<PositionDirectionNode>(node)) {
     return "POSITION_DIRECTION";
+  } else if(node_cast<PyramidingLayerNode>(node)) {
+    return "PYRAMIDING_LAYER";
   } else if(node_cast<PositionRMultipleNode>(node)) {
     return "POSITION_R_MULTIPLE";
   } else if(node_cast<AbsDiffNode>(node)) {
@@ -543,6 +548,8 @@ auto get_series_node_title(const std::string& series_id) -> std::string
     return "Stop/Target Reference Price";
   } else if(series_id == "POSITION_DIRECTION") {
     return "Position Direction";
+  } else if(series_id == "PYRAMIDING_LAYER") {
+    return "Pyramiding Layer";
   } else if(series_id == "POSITION_R_MULTIPLE") {
     return "Position R-Multiple";
   } else if(series_id == "ABS_DIFF") {
@@ -610,6 +617,7 @@ auto get_series_node_category(const std::string& series_id) -> std::string
     {"AVERAGE_PRICE", "Position & Risk"},
     {"STOP_TARGET_REF_PRICE", "Position & Risk"},
     {"POSITION_DIRECTION", "Position & Risk"},
+    {"PYRAMIDING_LAYER", "Position & Risk"},
     {"POSITION_R_MULTIPLE", "Position & Risk"},
     {"ALL_OF", "Logic & Comparison"},
     {"ANY_OF", "Logic & Comparison"},
@@ -694,6 +702,7 @@ auto get_series_node_combo_entries() -> const std::vector<ui::ComboEntry>&
      "AVERAGE_PRICE",
      "STOP_TARGET_REF_PRICE",
      "POSITION_DIRECTION",
+     "PYRAMIDING_LAYER",
      "POSITION_R_MULTIPLE",
      "ALL_OF",
      "ANY_OF",
@@ -2246,6 +2255,7 @@ private:
                           AveragePriceNode,
                           StopTargetRefPriceNode,
                           PositionDirectionNode,
+                          PyramidingLayerNode,
                           AbsDiffNode,
                           NegateNode,
                           SqrtNode,
@@ -2813,6 +2823,11 @@ private:
 
   void
   render_series_node_params(this auto&, PositionDirectionNode&, WindowContext&)
+  {
+  }
+
+  void
+  render_series_node_params(this auto&, PyramidingLayerNode&, WindowContext&)
   {
   }
 

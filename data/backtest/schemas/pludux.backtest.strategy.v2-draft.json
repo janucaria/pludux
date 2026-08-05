@@ -462,9 +462,10 @@
             "EQUITY",
             "EQUITY_PERCENT",
             "DRAWDOWN",
+            "PYRAMIDING_LAYER",
             "POSITION_R_MULTIPLE"
           ],
-          "description": "Backtest account-state shorthand. EQUITY reads the account equity available at the current evaluation moment. EQUITY_PERCENT reads that equity as a percentage of initial capital. DRAWDOWN reads the account drawdown available at the current evaluation moment."
+          "description": "Backtest-state shorthand. EQUITY reads the account equity available at the current evaluation moment. EQUITY_PERCENT reads that equity as a percentage of initial capital. DRAWDOWN reads the account drawdown available at the current evaluation moment. PYRAMIDING_LAYER reads the accepted position layer count, using 0 while flat."
         },
         {
           "$ref": "#/$defs/series",
@@ -2714,7 +2715,7 @@
       "title": "Take Profit R Multiple",
       "description": "Calculates an absolute take-profit price from the active reference price and explicit riskDistance."
     },
-    "positionContextPriceMethod": {
+    "positionContextValueMethod": {
       "allOf": [
         {
           "$ref": "#/$defs/baseMethod"
@@ -2727,7 +2728,8 @@
                 "LATEST_ENTRY_PRICE",
                 "AVERAGE_PRICE",
                 "STOP_TARGET_REF_PRICE",
-                "POSITION_DIRECTION"
+                "POSITION_DIRECTION",
+                "PYRAMIDING_LAYER"
               ]
             },
             "params": {
@@ -2738,7 +2740,7 @@
         }
       ],
       "title": "Position Context Value",
-      "description": "Reads a scoped backtest position value while an open position is being evaluated. Outside active position context, the value is NaN."
+      "description": "Reads a backtest position-context value. Price and direction methods return NaN outside an active position; PYRAMIDING_LAYER returns 0 while flat and the accepted layer count while open."
     },
     "positionRMultipleMethod": {
       "allOf": [
@@ -2896,7 +2898,7 @@
           "$ref": "#/$defs/takeProfitRMultipleMethod"
         },
         {
-          "$ref": "#/$defs/positionContextPriceMethod"
+          "$ref": "#/$defs/positionContextValueMethod"
         },
         {
           "$ref": "#/$defs/positionRMultipleMethod"

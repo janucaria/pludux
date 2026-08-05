@@ -196,7 +196,7 @@ TEST(ExecutionFilterTest, StrategyPerformanceMethodsExposeAllStreaks)
   auto default_context = DefaultMethodContext{series_methods, series_results};
   const auto account_state = BacktestAccountState{};
   const auto base_context =
-   BacktestMethodContext{default_context, series_methods, account_state};
+   BacktestMethodContext{default_context, series_methods, account_state, 0};
   const auto context = ExecutionFilterMethodContext{base_context, performance};
   const auto asset = make_filter_test_asset();
   const auto snapshot = asset.get_snapshot(0);

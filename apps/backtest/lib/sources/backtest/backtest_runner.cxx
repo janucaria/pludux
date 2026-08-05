@@ -695,7 +695,8 @@ private:
                                                 self.active_timeline_index_};
     return BacktestMethodContext{std::move(default_context),
                                  self.series_methods_,
-                                 self.current_account_state_};
+                                 self.current_account_state_,
+                                 self.pyramiding_layers_};
   }
 
   auto with_open_position_context(this const BacktestRunner& self,

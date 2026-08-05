@@ -496,12 +496,15 @@ TEST(BacktestRunnerTest,
    Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{20.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+  series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
 
   auto runner = BacktestRunner{asset,
                                market,
                                broker,
                                profile,
-                               {},
+                               std::move(series_methods),
                                make_position_rule(BooleanMethod<true>{},
                                                   BooleanMethod<false>{},
                                                   BooleanMethod<false>{},
@@ -535,6 +538,10 @@ TEST(BacktestRunnerTest,
   const auto& sizing = timeline.position_sizing_decisions(0).front();
   EXPECT_EQ(sizing.outcome, PositionSizingDecisionOutcome::InsufficientCash);
   EXPECT_DOUBLE_EQ(*sizing.primary_quantity, 20.0);
+  const auto layer_results =
+   series_results.results(std::string{"pyramiding_layer"});
+  ASSERT_TRUE(layer_results.has_value());
+  EXPECT_EQ(layer_results->get(), (std::vector<double>{1.0}));
   EXPECT_DOUBLE_EQ(*sizing.broker_normalized_quantity, 20.0);
   EXPECT_FALSE(sizing.final_quantity);
 }
@@ -645,12 +652,15 @@ TEST(BacktestRunnerTest, RejectedPyramidingDoesNotChangePosition)
    Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{6.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+  series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
 
   auto runner = BacktestRunner{asset,
                                market,
                                broker,
                                profile,
-                               {},
+                               std::move(series_methods),
                                make_position_rule(BooleanMethod<true>{},
                                                   BooleanMethod<false>{},
                                                   BooleanMethod<true>{},
@@ -676,6 +686,105 @@ TEST(BacktestRunnerTest, RejectedPyramidingDoesNotChangePosition)
   EXPECT_DOUBLE_EQ(rejected_event.position_size_after(), 6.0);
   EXPECT_EQ(timeline.open_trade_count(1), 1);
   EXPECT_EQ(timeline.trade_count(1), 0);
+  const auto layer_results =
+   series_results.results(std::string{"pyramiding_layer"});
+  ASSERT_TRUE(layer_results.has_value());
+  ASSERT_EQ(layer_results->get().size(), 2U);
+  EXPECT_EQ(layer_results->get(), (std::vector<double>{1.0, 2.0}));
+}
+
+TEST(BacktestRunnerTest,
+     PyramidingLayerTracksNextOpenEntriesAndResetsAfterFullExit)
+{
+  const auto asset = Asset{"Test",
+                           AssetHistory{{"Datetime", {1.0, 2.0, 3.0, 4.0}},
+                                        {"Open", {100.0, 110.0, 120.0, 130.0}},
+                                        {"High", {100.0, 110.0, 120.0, 130.0}},
+                                        {"Low", {100.0, 110.0, 120.0, 130.0}},
+                                        {"Close", {100.0, 110.0, 120.0, 130.0}},
+                                        {"Volume", {0.0, 0.0, 0.0, 0.0}}}};
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+  series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
+
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   std::move(series_methods),
+   make_position_rule(EqualMethod{CloseMethod{}, ValueMethod{100.0}},
+                      EqualMethod{PyramidingLayerMethod{}, ValueMethod{3.0}},
+                      LessThanMethod{PyramidingLayerMethod{}, ValueMethod{3.0}},
+                      3,
+                      OpenMethod{},
+                      false,
+                      false),
+   BacktestRunner::PositionRule{},
+   1000.0};
+
+  for(auto index = 0; index < 4; ++index) {
+    runner.run(series_results, timeline);
+  }
+
+  const auto layer_results =
+   series_results.results(std::string{"pyramiding_layer"});
+  ASSERT_TRUE(layer_results.has_value());
+  EXPECT_EQ(layer_results->get(), (std::vector<double>{1.0, 2.0, 3.0, 0.0}));
+  EXPECT_FALSE(timeline.open_position(3).has_value());
+}
+
+TEST(BacktestRunnerTest,
+     CurrentClosePyramidingSignalSeesLayerBeforeAcceptedEntry)
+{
+  const auto asset =
+   make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 110.0, 110.0, 110.0, 110.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+  series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
+
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   std::move(series_methods),
+   make_position_rule(EqualMethod{CloseMethod{}, ValueMethod{100.0}},
+                      BooleanMethod<false>{},
+                      EqualMethod{PyramidingLayerMethod{}, ValueMethod{1.0}},
+                      3,
+                      OpenMethod{},
+                      false,
+                      false,
+                      1,
+                      OpenMethod{},
+                      1,
+                      OpenMethod{},
+                      0),
+   BacktestRunner::PositionRule{},
+   1000.0};
+
+  runner.run(series_results, timeline);
+  runner.run(series_results, timeline);
+
+  const auto layer_results =
+   series_results.results(std::string{"pyramiding_layer"});
+  ASSERT_TRUE(layer_results.has_value());
+  EXPECT_EQ(layer_results->get(), (std::vector<double>{1.0, 2.0}));
+  ASSERT_TRUE(timeline.open_position(1).has_value());
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 2.0);
 }
 
 TEST(BacktestRunnerTest, EquitySignalUsesCurrentAccountState)
@@ -894,7 +1003,7 @@ TEST(BacktestRunnerTest, MethodContextObservesMutatedAccountState)
   auto default_context = DefaultMethodContext{series_methods, series_results};
   auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
   const auto context =
-   BacktestMethodContext{default_context, series_methods, account_state};
+   BacktestMethodContext{default_context, series_methods, account_state, 0};
 
   EXPECT_DOUBLE_EQ(context.equity(), 1000.0);
   EXPECT_DOUBLE_EQ(context.drawdown(), 0.0);
@@ -1113,7 +1222,7 @@ TEST(BacktestRunnerTest, ScopedStopTargetAmountMethodsEvaluateDirectly)
   auto default_context = DefaultMethodContext{series_methods, series_results};
   const auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
   auto context =
-   BacktestMethodContext{default_context, series_methods, account_state};
+   BacktestMethodContext{default_context, series_methods, account_state, 0};
 
   const auto long_context = context.with_position_reference(100.0, 1.0);
   const auto short_context = context.with_position_reference(100.0, -1.0);
@@ -1139,7 +1248,7 @@ TEST(BacktestRunnerTest, PositionContextMethodsEvaluateDirectly)
   auto default_context = DefaultMethodContext{series_methods, series_results};
   const auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
   auto context =
-   BacktestMethodContext{default_context, series_methods, account_state};
+   BacktestMethodContext{default_context, series_methods, account_state, 0};
   const auto scoped_context =
    context.with_position_prices(90.0, 120.0, 105.0, 110.0, -1.0);
   const auto risk_context = scoped_context.with_position_risk_distance(10.0);
@@ -1301,7 +1410,7 @@ TEST(BacktestRunnerTest, ScopedStopTargetPercentMethodsEvaluateDirectly)
   auto default_context = DefaultMethodContext{series_methods, series_results};
   const auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
   const auto context =
-   BacktestMethodContext{default_context, series_methods, account_state}
+   BacktestMethodContext{default_context, series_methods, account_state, 0}
     .with_position_reference(200.0, 1.0);
 
   EXPECT_DOUBLE_EQ(
@@ -1617,7 +1726,7 @@ TEST(BacktestRunnerTest, ExplicitRiskDistanceAndRPricesEvaluateDirectly)
   auto default_context = DefaultMethodContext{series_methods, series_results};
   const auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
   auto context =
-   BacktestMethodContext{default_context, series_methods, account_state};
+   BacktestMethodContext{default_context, series_methods, account_state, 0};
   const auto long_context = context.with_position_reference(100.0, 1.0);
   const auto risk_distance = evaluate_series_method(
    RiskDistanceAtrMethod{1.0, 2.0}, snapshot, long_context);
@@ -3955,13 +4064,16 @@ TEST(BacktestRunnerTest, PartialExitKeepsPyramidingLayersUsed)
    Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{4.0}}};
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
+  auto series_methods =
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+  series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
 
   auto runner = BacktestRunner{
    asset,
    market,
    broker,
    profile,
-   {},
+   std::move(series_methods),
    make_position_rule(BooleanMethod<true>{},
                       EqualMethod{CloseMethod{}, ValueMethod{120.0}},
                       BooleanMethod<true>{},
@@ -3994,4 +4106,8 @@ TEST(BacktestRunnerTest, PartialExitKeepsPyramidingLayersUsed)
   ASSERT_TRUE(timeline.open_position(3).has_value());
   EXPECT_DOUBLE_EQ(timeline.open_position(3)->position_size(), 4.0);
   EXPECT_TRUE(timeline.trade_events(3).empty());
+  const auto layer_results =
+   series_results.results(std::string{"pyramiding_layer"});
+  ASSERT_TRUE(layer_results.has_value());
+  EXPECT_EQ(layer_results->get(), (std::vector<double>{1.0, 2.0, 2.0, 2.0}));
 }

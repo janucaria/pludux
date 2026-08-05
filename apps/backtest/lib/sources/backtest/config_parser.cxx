@@ -18,6 +18,7 @@ import pludux;
 import :drawdown_node;
 import :equity_node;
 import :position_node;
+import :pyramiding_layer_node;
 import :risk_distance_node;
 import :stop_target_price_node;
 import :strategy_performance_node;
@@ -248,15 +249,16 @@ static auto serialize_ta_with_erased_period_node(
 
 template<typename TNode>
 static auto
-serialize_ohlcv_node(const ConfigParser&,
-                     const ErasedNode<ErasedSeriesMethodContext>& node)
+serialize_parameterless_node(const ConfigParser&,
+                             const ErasedNode<ErasedSeriesMethodContext>& node)
  -> jsoncons::ojson
 {
   return node_cast<TNode>(node) ? jsoncons::ojson{} : jsoncons::ojson::null();
 }
 
 template<typename TNode>
-static auto parse_ohlcv_node(ConfigParser::Parser, const jsoncons::ojson&)
+static auto parse_parameterless_node(ConfigParser::Parser,
+                                     const jsoncons::ojson&)
  -> ErasedNode<ErasedSeriesMethodContext>
 {
   return TNode{};
@@ -1153,16 +1155,21 @@ auto make_default_registered_config_parser() -> ConfigParser
   config_parser.register_node_parser(
    "DRAWDOWN", serialize_drawdown_node, parse_drawdown_node);
 
-  config_parser.register_node_parser(
-   "OPEN", serialize_ohlcv_node<OpenNode>, parse_ohlcv_node<OpenNode>);
-  config_parser.register_node_parser(
-   "HIGH", serialize_ohlcv_node<HighNode>, parse_ohlcv_node<HighNode>);
-  config_parser.register_node_parser(
-   "LOW", serialize_ohlcv_node<LowNode>, parse_ohlcv_node<LowNode>);
-  config_parser.register_node_parser(
-   "CLOSE", serialize_ohlcv_node<CloseNode>, parse_ohlcv_node<CloseNode>);
-  config_parser.register_node_parser(
-   "VOLUME", serialize_ohlcv_node<VolumeNode>, parse_ohlcv_node<VolumeNode>);
+  config_parser.register_node_parser("OPEN",
+                                     serialize_parameterless_node<OpenNode>,
+                                     parse_parameterless_node<OpenNode>);
+  config_parser.register_node_parser("HIGH",
+                                     serialize_parameterless_node<HighNode>,
+                                     parse_parameterless_node<HighNode>);
+  config_parser.register_node_parser("LOW",
+                                     serialize_parameterless_node<LowNode>,
+                                     parse_parameterless_node<LowNode>);
+  config_parser.register_node_parser("CLOSE",
+                                     serialize_parameterless_node<CloseNode>,
+                                     parse_parameterless_node<CloseNode>);
+  config_parser.register_node_parser("VOLUME",
+                                     serialize_parameterless_node<VolumeNode>,
+                                     parse_parameterless_node<VolumeNode>);
 
   config_parser.register_node_parser(
    "CHANGE",
@@ -1245,8 +1252,9 @@ auto make_default_registered_config_parser() -> ConfigParser
    });
 
   config_parser.register_node_parser("ATR", serialize_atr_node, parse_atr_node);
-  config_parser.register_node_parser(
-   "TR", serialize_ohlcv_node<TrNode>, parse_ohlcv_node<TrNode>);
+  config_parser.register_node_parser("TR",
+                                     serialize_parameterless_node<TrNode>,
+                                     parse_parameterless_node<TrNode>);
   config_parser.register_node_parser("KC", serialize_kc_node, parse_kc_node);
 
   config_parser.register_node_parser(
@@ -1774,8 +1782,9 @@ auto make_default_registered_config_parser() -> ConfigParser
    serialize_stop_target_atr_node<RiskDistanceAtrNode>,
    parse_stop_target_atr_node<RiskDistanceAtrNode>);
 
-  config_parser.register_node_parser(
-   "SL_1R", serialize_ohlcv_node<Sl1RNode>, parse_ohlcv_node<Sl1RNode>);
+  config_parser.register_node_parser("SL_1R",
+                                     serialize_parameterless_node<Sl1RNode>,
+                                     parse_parameterless_node<Sl1RNode>);
 
   config_parser.register_node_parser(
    "TP_R_MULTIPLE",
@@ -1791,22 +1800,28 @@ auto make_default_registered_config_parser() -> ConfigParser
 
   config_parser.register_node_parser(
    "INITIAL_ENTRY_PRICE",
-   serialize_ohlcv_node<InitialEntryPriceNode>,
-   parse_ohlcv_node<InitialEntryPriceNode>);
-  config_parser.register_node_parser("LATEST_ENTRY_PRICE",
-                                     serialize_ohlcv_node<LatestEntryPriceNode>,
-                                     parse_ohlcv_node<LatestEntryPriceNode>);
-  config_parser.register_node_parser("AVERAGE_PRICE",
-                                     serialize_ohlcv_node<AveragePriceNode>,
-                                     parse_ohlcv_node<AveragePriceNode>);
+   serialize_parameterless_node<InitialEntryPriceNode>,
+   parse_parameterless_node<InitialEntryPriceNode>);
+  config_parser.register_node_parser(
+   "LATEST_ENTRY_PRICE",
+   serialize_parameterless_node<LatestEntryPriceNode>,
+   parse_parameterless_node<LatestEntryPriceNode>);
+  config_parser.register_node_parser(
+   "AVERAGE_PRICE",
+   serialize_parameterless_node<AveragePriceNode>,
+   parse_parameterless_node<AveragePriceNode>);
   config_parser.register_node_parser(
    "STOP_TARGET_REF_PRICE",
-   serialize_ohlcv_node<StopTargetRefPriceNode>,
-   parse_ohlcv_node<StopTargetRefPriceNode>);
+   serialize_parameterless_node<StopTargetRefPriceNode>,
+   parse_parameterless_node<StopTargetRefPriceNode>);
   config_parser.register_node_parser(
    "POSITION_DIRECTION",
-   serialize_ohlcv_node<PositionDirectionNode>,
-   parse_ohlcv_node<PositionDirectionNode>);
+   serialize_parameterless_node<PositionDirectionNode>,
+   parse_parameterless_node<PositionDirectionNode>);
+  config_parser.register_node_parser(
+   "PYRAMIDING_LAYER",
+   serialize_parameterless_node<PyramidingLayerNode>,
+   parse_parameterless_node<PyramidingLayerNode>);
   config_parser.register_node_parser(
    "POSITION_R_MULTIPLE",
    [](const ConfigParser& config_parser,
