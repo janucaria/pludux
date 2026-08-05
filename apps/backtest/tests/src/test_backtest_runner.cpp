@@ -539,6 +539,8 @@ TEST(BacktestRunnerTest,
   EXPECT_EQ(rejected_event.event_id(), std::size_t{1});
   EXPECT_DOUBLE_EQ(rejected_event.position_size(), 20.0);
   EXPECT_DOUBLE_EQ(rejected_event.price(), 100.0);
+  EXPECT_DOUBLE_EQ(rejected_event.rejection_available_cash(), 1000.0);
+  EXPECT_GE(rejected_event.rejection_required_cash(), 2000.0);
   EXPECT_DOUBLE_EQ(timeline.capital(0), 1000.0);
   EXPECT_DOUBLE_EQ(timeline.equity(0), 1000.0);
   EXPECT_EQ(timeline.trade_count(0), 0);

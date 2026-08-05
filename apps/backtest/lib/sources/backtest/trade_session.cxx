@@ -157,7 +157,9 @@ public:
   }
 
   void reject_insufficient_cash(this TradeSession& self,
-                                const TradeEntry& entry)
+                                const TradeEntry& entry,
+                                double available_cash,
+                                double required_cash)
   {
     const auto trade_id =
      self.open_position_ ? self.open_position_->trade_id() : 0;
@@ -190,7 +192,12 @@ public:
      self.open_position_ ? self.open_position_->take_profit_levels()
                          : std::vector<TakeProfitLevel>{},
      self.open_position_ ? self.open_position_->signal_exit_states()
-                         : std::vector<SignalExitState>{});
+                         : std::vector<SignalExitState>{},
+     NAN,
+     NAN,
+     NAN,
+     available_cash,
+     required_cash);
   }
 
   void exit_position(this TradeSession& self, const TradeExit& exit)

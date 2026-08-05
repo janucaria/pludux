@@ -1414,22 +1414,63 @@ private:
             auto rejected_pos = ImPlot::PlotToPixels(i, entry_low);
             rejected_pos.y += marker_offset;
             const auto rejected_color = ImGui::GetColorU32(self.bearish_color_);
-            constexpr auto rejected_marker_size = 6.0f;
+            constexpr auto rejected_marker_size = 5.0f;
+            constexpr auto rejected_marker_thickness = 4.0f;
+            constexpr auto rejected_hover_radius = 12.0f;
             rejected_pos.y = clamp_marker_y(
-             rejected_pos.y, rejected_marker_size, rejected_marker_size);
+             rejected_pos.y, rejected_hover_radius, rejected_hover_radius);
 
             draw_list->AddLine(ImVec2{rejected_pos.x - rejected_marker_size,
                                       rejected_pos.y - rejected_marker_size},
                                ImVec2{rejected_pos.x + rejected_marker_size,
                                       rejected_pos.y + rejected_marker_size},
                                rejected_color,
-                               2.0f);
+                               rejected_marker_thickness);
             draw_list->AddLine(ImVec2{rejected_pos.x - rejected_marker_size,
                                       rejected_pos.y + rejected_marker_size},
                                ImVec2{rejected_pos.x + rejected_marker_size,
                                       rejected_pos.y - rejected_marker_size},
                                rejected_color,
-                               2.0f);
+                               rejected_marker_thickness);
+
+            const auto hover_minimum =
+             ImVec2{rejected_pos.x - rejected_hover_radius,
+                    rejected_pos.y - rejected_hover_radius};
+            const auto hover_maximum =
+             ImVec2{rejected_pos.x + rejected_hover_radius,
+                    rejected_pos.y + rejected_hover_radius};
+            if(ImGui::IsMouseHoveringRect(hover_minimum, hover_maximum)) {
+              const auto requested_quantity = std::abs(event.position_size());
+              const auto order_value = requested_quantity * event.price();
+              const auto available_cash = event.rejection_available_cash();
+              const auto required_cash = event.rejection_required_cash();
+              const auto estimated_fees = required_cash - order_value;
+              const auto cash_shortfall = required_cash - available_cash;
+
+              ImGui::BeginTooltip();
+              ImGui::TextColored(self.bearish_color_, "Order rejected");
+              ImGui::Separator();
+              ImGui::TextUnformatted("Reason: Insufficient cash");
+              ImGui::Text("Time: %s",
+                          format_datetime(event.timestamp()).c_str());
+              ImGui::Text("Requested quantity: %.6g", requested_quantity);
+              ImGui::Text("Order price: %s",
+                          format_currency(event.price()).c_str());
+              ImGui::Text("Order value: %s",
+                          format_currency(order_value).c_str());
+              ImGui::Text("Estimated fees: %s",
+                          format_currency(estimated_fees).c_str());
+              ImGui::Separator();
+              ImGui::Text("Cash required: %s",
+                          format_currency(required_cash).c_str());
+              ImGui::Text("Cash available: %s",
+                          format_currency(available_cash).c_str());
+              ImGui::TextColored(
+               self.bearish_color_,
+               "Cash shortfall: %s",
+               format_currency(cash_shortfall).c_str());
+              ImGui::EndTooltip();
+            }
           }
 
           if(event.is_entry() || event.is_scale_in()) {

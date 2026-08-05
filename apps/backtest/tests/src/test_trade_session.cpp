@@ -123,7 +123,7 @@ TEST(TradeSessionTest, RejectInsufficientCashEmitsRejectedEventOnly)
 {
   auto session = TradeSession{static_cast<std::time_t>(20), 100.0, 1};
 
-  session.reject_insufficient_cash(TradeEntry{2.0, 100.0});
+  session.reject_insufficient_cash(TradeEntry{2.0, 100.0}, 125.0, 200.0);
 
   ASSERT_FALSE(session.open_position().has_value());
   ASSERT_EQ(session.trade_events().size(), 1);
@@ -142,6 +142,8 @@ TEST(TradeSessionTest, RejectInsufficientCashEmitsRejectedEventOnly)
   EXPECT_DOUBLE_EQ(rejected_event.fees(), 0.0);
   EXPECT_DOUBLE_EQ(rejected_event.position_size_before(), 0.0);
   EXPECT_DOUBLE_EQ(rejected_event.position_size_after(), 0.0);
+  EXPECT_DOUBLE_EQ(rejected_event.rejection_available_cash(), 125.0);
+  EXPECT_DOUBLE_EQ(rejected_event.rejection_required_cash(), 200.0);
   EXPECT_TRUE(rejected_event.stop_loss_levels().empty());
 
   session.entry_position(TradeEntry{1.0, 100.0});

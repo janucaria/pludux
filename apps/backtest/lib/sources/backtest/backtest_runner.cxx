@@ -897,7 +897,8 @@ private:
 
     const auto fee = self.broker_.calculate_fee(entry);
     const auto cash = self.available_cash();
-    if(self.required_cash(entry, fee) <= cash) {
+    const auto cash_required = self.required_cash(entry, fee);
+    if(cash_required <= cash) {
       decision.final_quantity = std::abs(entry.position_size());
       decision.outcome = PositionSizingDecisionOutcome::Executed;
       return true;
@@ -905,7 +906,8 @@ private:
 
     switch(self.insufficient_cash_policy_) {
     case InsufficientCashPolicy::Reject:
-      self.execution_session_.reject_insufficient_cash(entry);
+      self.execution_session_.reject_insufficient_cash(
+       entry, cash, cash_required);
       decision.outcome = PositionSizingDecisionOutcome::InsufficientCash;
       return false;
     case InsufficientCashPolicy::CapToAvailableCash:
