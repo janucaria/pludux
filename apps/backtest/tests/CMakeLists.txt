@@ -7,6 +7,7 @@ set(PLUDUX_TEST_SOURCES
   src/test_strategy_inputs.cpp
   src/test_strategy_performance.cpp
   src/test_strategy_session.cpp
+  src/test_stop_target_price.cpp
   src/test_execution_filter.cpp
   src/test_entry_order_sizing.cpp
   src/test_position_sizing.cpp

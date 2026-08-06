@@ -1584,6 +1584,8 @@ TEST_F(ConfigParserTest, ParseStopTargetPriceMethods)
    json::parse(
     R"({"method":"TP_ATR","params":{"period":{"method":"VALUE","params":{"value":14}},"multiplier":{"method":"VALUE","params":{"value":2}},"maSmoothingType":"RMA"}})"),
    json::parse(
+    R"({"method":"SL_R_MULTIPLE","params":{"multiple":{"method":"VALUE","params":{"value":1}}}})"),
+   json::parse(
     R"({"method":"TP_R_MULTIPLE","params":{"multiple":{"method":"VALUE","params":{"value":2}}}})")};
 
   for(const auto& config : configs) {

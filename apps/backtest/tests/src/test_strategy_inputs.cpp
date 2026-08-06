@@ -576,25 +576,21 @@ TEST(StrategyParserTest, RejectsMissingOrImplicitRiskDistance)
    std::runtime_error);
 }
 
-TEST(ConfigParserTest, RoundTripsExplicitRiskDistanceAndStop1RMethods)
+TEST(ConfigParserTest, RoundTripsExplicitRiskDistanceAndRStopMethods)
 {
   auto parser = make_default_registered_config_parser();
   const auto configurations = std::vector<std::string>{
    R"({"method":"R_DISTANCE_AMOUNT","params":{"amount":{"method":"VALUE","params":{"value":10.0}}}})",
    R"({"method":"R_DISTANCE_PERCENTAGE","params":{"percentage":{"method":"VALUE","params":{"value":5.0}}}})",
    R"({"method":"R_DISTANCE_ATR","params":{"period":{"method":"VALUE","params":{"value":14.0}},"multiplier":{"method":"VALUE","params":{"value":2.0}},"maSmoothingType":"RMA"}})",
-   R"({"method":"SL_1R"})"};
+   R"({"method":"SL_1R"})",
+   R"({"method":"SL_R_MULTIPLE","params":{"multiple":{"method":"VALUE","params":{"value":2.0}}}})"};
 
   for(const auto& configuration : configurations) {
     const auto expected = jsoncons::ojson::parse(configuration);
     const auto node = parser.parse_node(expected);
     EXPECT_EQ(parser.serialize_node(node), expected);
   }
-
-  EXPECT_THROW(
-   parser.parse_node(jsoncons::ojson::parse(
-    R"({"method":"SL_R_MULTIPLE","params":{"multiple":{"method":"VALUE","params":{"value":1}}}})")),
-   std::invalid_argument);
 }
 
 TEST(StrategyParserTest, LoadsEveryBundledStrategySample)
@@ -652,6 +648,18 @@ TEST(StrategyParserTest, LoadsEveryBundledStrategySample)
         "riskDistance": {
           "method": "R_DISTANCE_AMOUNT",
           "params": { "amount": 10 }
+        },
+        "stopLosses": {
+          "activation": "SIMULTANEOUS",
+          "rules": [{
+            "enabled": true,
+            "trailing": false,
+            "stopPrice": {
+              "method": "SL_R_MULTIPLE",
+              "params": { "multiple": 2 }
+            },
+            "reduce": 1
+          }]
         }
       },
       "short": false

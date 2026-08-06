@@ -50,6 +50,8 @@ jobs:
 
       - name: Setup Emscripten SDK
         uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 6.0.5
 
       - name: Cache FetchContent sources
         uses: actions/cache@v4

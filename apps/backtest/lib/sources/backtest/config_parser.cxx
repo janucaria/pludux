@@ -1787,6 +1787,18 @@ auto make_default_registered_config_parser() -> ConfigParser
                                      parse_parameterless_node<Sl1RNode>);
 
   config_parser.register_node_parser(
+   "SL_R_MULTIPLE",
+   [](const ConfigParser& config_parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
+     return serialize_stop_target_value_node<SlRMultipleNode>(
+      config_parser, node, "multiple");
+   },
+   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
+     return parse_stop_target_value_node<SlRMultipleNode>(
+      config_parser, params, "multiple", 1.0);
+   });
+
+  config_parser.register_node_parser(
    "TP_R_MULTIPLE",
    [](const ConfigParser& config_parser,
       const ErasedNode<ErasedSeriesMethodContext>& node) {

@@ -133,7 +133,7 @@ public:
     class StopLossRule {
     public:
       StopLossRule(ErasedSeriesMethod<ErasedSeriesMethodContext> price_method =
-                    Sl1RMethod{},
+                    SlRMultipleMethod{1.0},
                    bool enabled = true,
                    bool trailing = false,
                    double reduce = 1.0)

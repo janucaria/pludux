@@ -2264,7 +2264,8 @@ TEST(BacktestRunnerTest, ExplicitRiskDistanceAndRPricesEvaluateDirectly)
                     RiskDistancePercentMethod{5.0}, snapshot, long_context),
                    5.0);
   EXPECT_DOUBLE_EQ(
-   evaluate_series_method(Sl1RMethod{}, snapshot, long_r_context), 60.0);
+   evaluate_series_method(SlRMultipleMethod{1.0}, snapshot, long_r_context),
+   60.0);
   EXPECT_DOUBLE_EQ(
    evaluate_series_method(TpRMultipleMethod{2.0}, snapshot, long_r_context),
    180.0);
@@ -2272,15 +2273,18 @@ TEST(BacktestRunnerTest, ExplicitRiskDistanceAndRPricesEvaluateDirectly)
   const auto short_r_context = context.with_position_reference(100.0, -1.0)
                                 .with_position_risk_distance(risk_distance);
   EXPECT_DOUBLE_EQ(
-   evaluate_series_method(Sl1RMethod{}, snapshot, short_r_context), 140.0);
+   evaluate_series_method(SlRMultipleMethod{1.0}, snapshot, short_r_context),
+   140.0);
   EXPECT_DOUBLE_EQ(
    evaluate_series_method(TpRMultipleMethod{2.0}, snapshot, short_r_context),
    20.0);
 
   EXPECT_TRUE(std::isnan(
    evaluate_series_method(TpRMultipleMethod{-1.0}, snapshot, long_r_context)));
-  EXPECT_TRUE(std::isnan(evaluate_series_method(
-   Sl1RMethod{}, snapshot, long_context.with_position_risk_distance(0.0))));
+  EXPECT_TRUE(std::isnan(
+   evaluate_series_method(SlRMultipleMethod{1.0},
+                          snapshot,
+                          long_context.with_position_risk_distance(0.0))));
   EXPECT_TRUE(std::isnan(
    evaluate_series_method(TpRMultipleMethod{1.0},
                           snapshot,
@@ -2322,6 +2326,45 @@ TEST(BacktestRunnerTest, RejectsInvalidExplicitRiskDistanceForEverySizingMode)
 
     EXPECT_THROW(runner.run(series_results, timeline), std::runtime_error);
   }
+}
+
+TEST(BacktestRunnerTest, ExecutesStopLossAtTwoR)
+{
+  const auto asset =
+   make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 80.0, 90.0);
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  make_position_rule_with_risk_distance(BooleanMethod<true>{},
+                                                        BooleanMethod<false>{},
+                                                        BooleanMethod<false>{},
+                                                        1,
+                                                        ValueMethod{10.0},
+                                                        SlRMultipleMethod{2.0},
+                                                        true,
+                                                        false),
+                  BacktestRunner::PositionRule{},
+                  1000.0};
+
+  runner.run(series_results, timeline);
+  ASSERT_TRUE(timeline.open_position(0));
+  EXPECT_DOUBLE_EQ(stop_level(*timeline.open_position(0)).evaluated_price(),
+                   80.0);
+
+  runner.run(series_results, timeline);
+  ASSERT_EQ(timeline.closed_trades(1).size(), 1);
+  EXPECT_EQ(latest_closed_trade(timeline).exit_type(),
+            TradeEvent::Type::stop_loss);
+  EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).exit_price(), 80.0);
 }
 
 TEST(BacktestRunnerTest,

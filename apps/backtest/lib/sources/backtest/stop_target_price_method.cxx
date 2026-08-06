@@ -231,9 +231,34 @@ private:
   MaMethodType ma_smoothing_type_;
 };
 
-class Sl1RMethod {
+template<typename TMultipleMethod = ValueMethod>
+class SlRMultipleMethod {
 public:
-  auto operator==(const Sl1RMethod&) const noexcept -> bool = default;
+  SlRMultipleMethod()
+  : SlRMultipleMethod{1.0}
+  {
+  }
+
+  explicit SlRMultipleMethod(double multiple)
+  : SlRMultipleMethod{ValueMethod{multiple}}
+  {
+  }
+
+  explicit SlRMultipleMethod(TMultipleMethod multiple)
+  : multiple_{std::move(multiple)}
+  {
+  }
+
+  auto operator==(const SlRMultipleMethod&) const noexcept -> bool = default;
+
+  auto multiple(this const SlRMultipleMethod& self) noexcept
+   -> const TMultipleMethod&
+  {
+    return self.multiple_;
+  }
+
+private:
+  TMultipleMethod multiple_;
 };
 
 template<typename TMultipleMethod = ValueMethod>
@@ -320,9 +345,12 @@ auto hash_series_method(
          std::hash<int>{}(static_cast<int>(method.ma_smoothing_type()));
 }
 
-auto hash_series_method(const Sl1RMethod&) noexcept -> std::size_t
+template<typename TMethod>
+auto hash_series_method(const SlRMultipleMethod<TMethod>& method) noexcept
+ -> std::size_t
 {
-  return std::hash<std::string_view>{}("pludux.backtest.Sl1RMethod");
+  return std::hash<std::string_view>{}("pludux.backtest.SlRMultipleMethod") ^
+         hash_series_method(method.multiple());
 }
 
 template<typename TMethod>
@@ -441,17 +469,21 @@ auto pludux_tag_invoke(
                            backtest_position_direction(context));
 }
 
+template<typename TMethod>
 auto pludux_tag_invoke(EvaluateSeriesMethod,
-                       const Sl1RMethod&,
-                       AssetSnapshot,
+                       const SlRMultipleMethod<TMethod>& method,
+                       AssetSnapshot asset_snapshot,
                        MethodContextable auto context) noexcept -> double
 {
   const auto risk_distance = backtest_position_risk_distance(context);
-  if(!std::isfinite(risk_distance) || risk_distance <= 0.0) {
+  const auto multiple =
+   evaluate_series_method(method.multiple(), asset_snapshot, context);
+  if(!std::isfinite(risk_distance) || risk_distance <= 0.0 ||
+     !std::isfinite(multiple) || multiple <= 0.0) {
     return std::numeric_limits<double>::quiet_NaN();
   }
   return stop_target_price(backtest_position_reference_price(context),
-                           risk_distance,
+                           risk_distance * multiple,
                            -1.0,
                            backtest_position_direction(context));
 }

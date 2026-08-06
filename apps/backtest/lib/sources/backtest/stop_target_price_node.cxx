@@ -75,6 +75,18 @@ public:
   auto operator==(const TpPercentNode&) const noexcept -> bool = default;
 };
 
+class SlRMultipleNode : public StopTargetDistanceNode<SlRMultipleNode> {
+public:
+  SlRMultipleNode()
+  : StopTargetDistanceNode{1.0}
+  {
+  }
+
+  using StopTargetDistanceNode::StopTargetDistanceNode;
+
+  auto operator==(const SlRMultipleNode&) const noexcept -> bool = default;
+};
+
 class Sl1RNode {
 public:
   auto operator==(const Sl1RNode&) const noexcept -> bool = default;
@@ -281,11 +293,21 @@ auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
 }
 
 auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const Sl1RNode&,
-                       NodeToErasedMethodContext&)
+                       const SlRMultipleNode& node,
+                       NodeToErasedMethodContext& context)
  -> ErasedSeriesMethod<ErasedSeriesMethodContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{Sl1RMethod{}};
+  return ErasedSeriesMethod<ErasedSeriesMethodContext>{SlRMultipleMethod{
+   node_to_erased_method<ErasedSeriesMethodContext>(node.value(), context)}};
+}
+
+auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
+                       const Sl1RNode&,
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+{
+  return node_to_erased_method<ErasedSeriesMethodContext>(SlRMultipleNode{1.0},
+                                                          context);
 }
 
 auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,

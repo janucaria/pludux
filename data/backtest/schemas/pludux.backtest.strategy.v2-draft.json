@@ -2704,6 +2704,39 @@
       "title": "Stop Loss 1R",
       "description": "Stop price exactly one explicit riskDistance from the configured reference price."
     },
+    "stopLossRMultipleMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "SL_R_MULTIPLE"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "multiple": {
+                  "$ref": "#/$defs/seriesAsParameter",
+                  "title": "Multiple",
+                  "description": "Positive risk multiple of the explicit riskDistance."
+                }
+              },
+              "required": [
+                "multiple"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Stop Loss R Multiple",
+      "description": "Calculates an absolute stop-loss price from the active reference price and explicit riskDistance."
+    },
     "takeProfitRMultipleMethod": {
       "allOf": [
         {
@@ -2915,6 +2948,9 @@
         },
         {
           "$ref": "#/$defs/stopLoss1RMethod"
+        },
+        {
+          "$ref": "#/$defs/stopLossRMultipleMethod"
         },
         {
           "$ref": "#/$defs/takeProfitRMultipleMethod"

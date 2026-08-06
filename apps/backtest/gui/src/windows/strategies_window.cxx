@@ -64,6 +64,7 @@ using pludux::backtest::Sl1RNode;
 using pludux::backtest::SlAmountNode;
 using pludux::backtest::SlAtrNode;
 using pludux::backtest::SlPercentNode;
+using pludux::backtest::SlRMultipleNode;
 using pludux::backtest::StopTargetRefPriceNode;
 using pludux::backtest::TpAmountNode;
 using pludux::backtest::TpAtrNode;
@@ -216,6 +217,8 @@ auto get_default_series_node(const std::string& series_id)
     return TpAtrNode{14.0, 4.0};
   } else if(series_id == "SL_1R") {
     return Sl1RNode{};
+  } else if(series_id == "SL_R_MULTIPLE") {
+    return SlRMultipleNode{1.0};
   } else if(series_id == "TP_R_MULTIPLE") {
     return TpRMultipleNode{2.0};
   } else if(series_id == "INITIAL_ENTRY_PRICE") {
@@ -343,6 +346,8 @@ auto get_series_node_id(const ErasedNode<ErasedSeriesMethodContext>& node)
     return "TP_ATR";
   } else if(node_cast<Sl1RNode>(node)) {
     return "SL_1R";
+  } else if(node_cast<SlRMultipleNode>(node)) {
+    return "SL_R_MULTIPLE";
   } else if(node_cast<TpRMultipleNode>(node)) {
     return "TP_R_MULTIPLE";
   } else if(node_cast<InitialEntryPriceNode>(node)) {
@@ -536,6 +541,8 @@ auto get_series_node_title(const std::string& series_id) -> std::string
     return "Take Profit ATR";
   } else if(series_id == "SL_1R") {
     return "Stop Loss 1R";
+  } else if(series_id == "SL_R_MULTIPLE") {
+    return "Stop Loss R-Multiple";
   } else if(series_id == "TP_R_MULTIPLE") {
     return "Take Profit R-Multiple";
   } else if(series_id == "INITIAL_ENTRY_PRICE") {
@@ -611,6 +618,7 @@ auto get_series_node_category(const std::string& series_id) -> std::string
     {"SL_ATR", "Position & Risk"},
     {"TP_ATR", "Position & Risk"},
     {"SL_1R", "Position & Risk"},
+    {"SL_R_MULTIPLE", "Position & Risk"},
     {"TP_R_MULTIPLE", "Position & Risk"},
     {"INITIAL_ENTRY_PRICE", "Position & Risk"},
     {"LATEST_ENTRY_PRICE", "Position & Risk"},
@@ -696,6 +704,7 @@ auto get_series_node_combo_entries() -> const std::vector<ui::ComboEntry>&
      "SL_ATR",
      "TP_ATR",
      "SL_1R",
+     "SL_R_MULTIPLE",
      "TP_R_MULTIPLE",
      "INITIAL_ENTRY_PRICE",
      "LATEST_ENTRY_PRICE",
@@ -2297,6 +2306,7 @@ private:
                           SlAtrNode,
                           TpAtrNode,
                           Sl1RNode,
+                          SlRMultipleNode,
                           TpRMultipleNode,
                           InitialEntryPriceNode,
                           LatestEntryPriceNode,
@@ -2841,6 +2851,13 @@ private:
 
   void render_series_node_params(this auto&, Sl1RNode&, WindowContext&)
   {
+  }
+
+  void render_series_node_params(this auto& self,
+                                 SlRMultipleNode& node,
+                                 WindowContext& context)
+  {
+    self.render_stop_target_value_node_params(node, context, "Multiple");
   }
 
   void render_series_node_params(this auto& self,
