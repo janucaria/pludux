@@ -514,10 +514,8 @@ public:
     const auto current_drawdown_ratio =
      self.current_account_state_.drawdown_ratio();
     if(self.strategy_trade_session_.is_open() && self.pending_pyramiding_) {
-      self.execute_pyramiding_action(asset_snapshot.open(),
-                                     decision_snapshot,
-                                     context,
-                                     current_drawdown_ratio);
+      self.execute_pyramiding_action(
+       asset_snapshot.open(), decision_snapshot, context);
     }
     self.pending_pyramiding_ = false;
 
@@ -574,10 +572,8 @@ public:
          !self.pyramiding_is_paused() &&
          self.pyramiding_signal_triggered(
           rule, asset_snapshot, position_context)) {
-        self.execute_pyramiding_action(asset_snapshot.close(),
-                                       asset_snapshot,
-                                       context,
-                                       current_drawdown_ratio);
+        self.execute_pyramiding_action(
+         asset_snapshot.close(), asset_snapshot, context);
       }
     }
 
@@ -691,6 +687,7 @@ private:
   PositionSizingMethod position_sizing_;
   std::vector<PositionSizingDecision> position_sizing_decisions_;
   std::optional<std::size_t> execution_strategy_trade_id_;
+  std::optional<double> campaign_unit_quantity_;
 
   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>
    series_methods_;
@@ -916,16 +913,16 @@ private:
     self.max_drawdown_ = std::max(self.max_drawdown_, self.current_drawdown());
   }
 
-  auto create_trade(this const BacktestRunner& self,
-                    const PositionRule& position,
-                    bool is_long,
-                    double entry_price,
-                    const AssetSnapshot& evaluation_snapshot,
-                    MethodContextable auto context,
-                    double current_drawdown_ratio,
-                    const StrategyPerformanceSnapshot& performance_snapshot,
-                    PositionSizingDecision& decision)
-   -> std::optional<EntryOrderSizingRequest>
+  auto create_initial_entry_sizing_request(
+   this const BacktestRunner& self,
+   const PositionRule& position,
+   bool is_long,
+   double entry_price,
+   const AssetSnapshot& evaluation_snapshot,
+   MethodContextable auto context,
+   double current_drawdown_ratio,
+   const StrategyPerformanceSnapshot& performance_snapshot,
+   PositionSizingDecision& decision) -> std::optional<EntryOrderSizingRequest>
   {
     const auto direction = is_long ? 1.0 : -1.0;
     const auto initial_price_context =
@@ -969,6 +966,26 @@ private:
 
     return EntryOrderSizingRequest{
      direction * adjusted_position_quantity, entry_price, adjusted_constraint};
+  }
+
+  auto create_pyramiding_entry_sizing_request(this const BacktestRunner& self,
+                                              bool is_long,
+                                              double entry_price,
+                                              PositionSizingDecision& decision)
+   -> EntryOrderSizingRequest
+  {
+    if(!self.campaign_unit_quantity_ ||
+       !std::isfinite(*self.campaign_unit_quantity_) ||
+       *self.campaign_unit_quantity_ <= 0.0) {
+      throw std::runtime_error{
+       "Missing initial executed quantity for pyramiding entry"};
+    }
+
+    decision.requested_quantity = *self.campaign_unit_quantity_;
+    const auto direction = is_long ? 1.0 : -1.0;
+    return EntryOrderSizingRequest{direction * *self.campaign_unit_quantity_,
+                                   entry_price,
+                                   MaximumQuantityConstraint{}};
   }
 
   auto apply_drawdown_adjustment(this const BacktestRunner& self,
@@ -1045,8 +1062,11 @@ private:
                                                            average_price,
                                                            reference_price,
                                                            direction);
-    const auto risk_distance = evaluate_series_method(
-     position.risk_distance_method(), asset_snapshot, stop_context);
+    const auto risk_distance =
+     is_pyramiding ? open_position.risk_distance()
+                   : evaluate_series_method(position.risk_distance_method(),
+                                            asset_snapshot,
+                                            stop_context);
     if(!std::isfinite(risk_distance) || risk_distance <= 0.0) {
       throw std::runtime_error{
        "Invalid risk distance: expected a finite positive value"};
@@ -1279,6 +1299,15 @@ private:
       self.strategy_performance_.observe(
        self.strategy_session_.closed_positions().back());
     }
+  }
+
+  void reset_pyramiding_campaign(this BacktestRunner& self) noexcept
+  {
+    self.pyramiding_layers_ = 0;
+    self.pyramiding_signal_ready_ = true;
+    self.pyramiding_resume_index_.reset();
+    self.execution_strategy_trade_id_.reset();
+    self.campaign_unit_quantity_.reset();
   }
 
   void record_strategy_exit(this BacktestRunner& self,
@@ -1552,10 +1581,7 @@ private:
      candidate.price, candidate.reason, reduce, stop_index, target_index);
     if(self.strategy_trade_session_.is_flat()) {
       closed_position_is_long = was_long;
-      self.pyramiding_layers_ = 0;
-      self.pyramiding_signal_ready_ = true;
-      self.pyramiding_resume_index_.reset();
-      self.execution_strategy_trade_id_.reset();
+      self.reset_pyramiding_campaign();
     }
     return true;
   }
@@ -1640,10 +1666,7 @@ private:
       filled = true;
       if(self.strategy_trade_session_.is_flat()) {
         closed_position_is_long = was_long;
-        self.pyramiding_layers_ = 0;
-        self.pyramiding_signal_ready_ = true;
-        self.pyramiding_resume_index_.reset();
-        self.execution_strategy_trade_id_.reset();
+        self.reset_pyramiding_campaign();
       }
     }
     return filled;
@@ -1710,6 +1733,7 @@ private:
                             double current_drawdown_ratio) -> bool
   {
     const auto& rule = is_long ? self.long_position_ : self.short_position_;
+    self.campaign_unit_quantity_.reset();
     self.pyramiding_signal_ready_ = true;
     const auto strategy_entry = TradeEntry{is_long ? 1.0 : -1.0, price};
     self.strategy_trade_session_.entry_position(strategy_entry);
@@ -1743,14 +1767,15 @@ private:
       return true;
     }
 
-    const auto sizing_request = self.create_trade(rule,
-                                                  is_long,
-                                                  price,
-                                                  evaluation_snapshot,
-                                                  context,
-                                                  current_drawdown_ratio,
-                                                  performance_snapshot,
-                                                  sizing_decision);
+    const auto sizing_request =
+     self.create_initial_entry_sizing_request(rule,
+                                              is_long,
+                                              price,
+                                              evaluation_snapshot,
+                                              context,
+                                              current_drawdown_ratio,
+                                              performance_snapshot,
+                                              sizing_decision);
     const auto entry =
      sizing_request
       ? self.prepare_entry_order(*sizing_request, sizing_decision, false)
@@ -1762,6 +1787,7 @@ private:
     }
     const auto fee = self.broker_.calculate_fee(*entry);
     self.execution_session_.entry_position(*entry, fee);
+    self.campaign_unit_quantity_ = std::abs(entry->position_size());
     self.execution_strategy_trade_id_ = intent.strategy_trade_id();
     self.sync_execution_position_state();
     self.position_sizing_decisions_.push_back(std::move(sizing_decision));
@@ -1771,8 +1797,7 @@ private:
   auto execute_pyramiding_action(this BacktestRunner& self,
                                  double price,
                                  const AssetSnapshot& evaluation_snapshot,
-                                 MethodContextable auto context,
-                                 double current_drawdown_ratio) -> bool
+                                 MethodContextable auto context) -> bool
   {
     if(!self.strategy_trade_session_.open_position()) {
       return false;
@@ -1796,7 +1821,6 @@ private:
     const auto direction =
      is_long ? StrategyDirection::Long : StrategyDirection::Short;
     const auto& intent = self.strategy_session_.enter(direction, price, true);
-    const auto performance_snapshot = self.strategy_performance_.snapshot();
     auto sizing_decision = PositionSizingDecision{
      .intent_id = intent.intent_id(),
      .strategy_trade_id = intent.strategy_trade_id(),
@@ -1814,18 +1838,10 @@ private:
       self.position_sizing_decisions_.push_back(std::move(sizing_decision));
       return true;
     }
-    const auto sizing_request = self.create_trade(rule,
-                                                  is_long,
-                                                  price,
-                                                  evaluation_snapshot,
-                                                  context,
-                                                  current_drawdown_ratio,
-                                                  performance_snapshot,
-                                                  sizing_decision);
+    const auto sizing_request = self.create_pyramiding_entry_sizing_request(
+     is_long, price, sizing_decision);
     const auto entry =
-     sizing_request
-      ? self.prepare_entry_order(*sizing_request, sizing_decision, true)
-      : std::nullopt;
+     self.prepare_entry_order(sizing_request, sizing_decision, true);
     if(!entry) {
       self.position_sizing_decisions_.push_back(std::move(sizing_decision));
       return true;

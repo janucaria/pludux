@@ -698,6 +698,11 @@ TEST(BacktestRunnerTest, RejectedPyramidingDoesNotChangePosition)
   EXPECT_DOUBLE_EQ(rejected_event.position_size_after(), 6.0);
   EXPECT_EQ(timeline.open_trade_count(1), 1);
   EXPECT_EQ(timeline.trade_count(1), 0);
+  ASSERT_EQ(timeline.position_sizing_decisions(1).size(), 1U);
+  const auto& sizing = timeline.position_sizing_decisions(1).front();
+  EXPECT_EQ(sizing.outcome, PositionSizingDecisionOutcome::InsufficientCash);
+  EXPECT_DOUBLE_EQ(*sizing.requested_quantity, 6.0);
+  EXPECT_FALSE(sizing.final_quantity);
   const auto layer_results =
    series_results.results(std::string{"pyramiding_layer"});
   ASSERT_TRUE(layer_results.has_value());
@@ -2367,12 +2372,11 @@ TEST(BacktestRunnerTest, ExecutesStopLossAtTwoR)
   EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).exit_price(), 80.0);
 }
 
-TEST(BacktestRunnerTest,
-     PyramidingSizesNewLayerFromNormalizedShadowRiskDistance)
+TEST(BacktestRunnerTest, PyramidingReusesInitialExecutedUnitAndRiskDistance)
 {
   const auto asset =
    make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 200.0, 200.0, 200.0, 200.0);
-  const auto market = Market{"Test", 0.0, 0.0};
+  const auto market = Market{"Test", 0.0, 3.0};
   const auto broker = Broker{"Test"};
   const auto profile =
    Profile{"Test", PositionSizingNode{RiskDistancePositionSizing{0.01}}};
@@ -2409,15 +2413,148 @@ TEST(BacktestRunnerTest,
 
   runner.run(series_results, timeline);
   ASSERT_TRUE(timeline.open_position(0));
-  EXPECT_DOUBLE_EQ(timeline.open_position(0)->position_size(), 10.0);
+  EXPECT_DOUBLE_EQ(timeline.open_position(0)->position_size(), 9.0);
   EXPECT_DOUBLE_EQ(timeline.open_position(0)->risk_distance(), 10.0);
 
   runner.run(series_results, timeline);
   ASSERT_TRUE(timeline.open_position(1));
-  EXPECT_DOUBLE_EQ(timeline.trade_events(1).front().position_size(), 5.5);
-  EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 15.5);
+  EXPECT_DOUBLE_EQ(timeline.trade_events(1).front().position_size(), 9.0);
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 18.0);
   EXPECT_DOUBLE_EQ(timeline.open_position(1)->risk_reference_price(), 150.0);
-  EXPECT_DOUBLE_EQ(timeline.open_position(1)->risk_distance(), 15.0);
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->risk_distance(), 10.0);
+  ASSERT_EQ(timeline.position_sizing_decisions(1).size(), 1U);
+  const auto& sizing = timeline.position_sizing_decisions(1).front();
+  EXPECT_DOUBLE_EQ(*sizing.requested_quantity, 9.0);
+  EXPECT_FALSE(sizing.requested_limit);
+  EXPECT_FALSE(sizing.drawdown_adjusted_quantity);
+  EXPECT_FALSE(sizing.drawdown_adjusted_limit);
+  EXPECT_FALSE(sizing.bayesian_kelly);
+}
+
+TEST(BacktestRunnerTest, CashCappedPyramidingKeepsInitialUnitForLaterLayers)
+{
+  const auto asset = Asset{"Test",
+                           AssetHistory{{"Datetime", {1.0, 2.0, 3.0, 4.0}},
+                                        {"Open", {100.0, 110.0, 120.0, 100.0}},
+                                        {"High", {100.0, 110.0, 120.0, 100.0}},
+                                        {"Low", {100.0, 110.0, 120.0, 100.0}},
+                                        {"Close", {100.0, 110.0, 120.0, 100.0}},
+                                        {"Volume", {0.0, 0.0, 0.0, 0.0}}}};
+  const auto market = Market{"Test", 0.0, 1.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{6.0}}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   {},
+   make_position_rule(
+    BooleanMethod<true>{},
+    EqualMethod{CloseMethod{}, ValueMethod{120.0}},
+    LogicalOrMethod{EqualMethod{CloseMethod{}, ValueMethod{110.0}},
+                    EqualMethod{CloseMethod{}, ValueMethod{100.0}}},
+    3,
+    OpenMethod{},
+    false,
+    false,
+    1,
+    OpenMethod{},
+    0,
+    OpenMethod{},
+    0,
+    CloseMethod{},
+    StopTargetReferencePrice::AveragePrice,
+    StopTargetReferencePrice::AveragePrice,
+    0.5),
+   BacktestRunner::PositionRule{},
+   1000.0,
+   0,
+   false,
+   NAN,
+   IntrabarPath::CandleDirection,
+   {},
+   BooleanMethod<true>{},
+   DrawdownAdjustment{},
+   InsufficientCashPolicy::CapToAvailableCash};
+
+  for(auto index = 0; index < 4; ++index) {
+    runner.run(series_results, timeline);
+  }
+
+  ASSERT_EQ(timeline.position_sizing_decisions(1).size(), 1U);
+  const auto& capped = timeline.position_sizing_decisions(1).front();
+  EXPECT_DOUBLE_EQ(*capped.requested_quantity, 6.0);
+  EXPECT_DOUBLE_EQ(*capped.final_quantity, 3.0);
+  EXPECT_TRUE(capped.cash_adjusted);
+
+  ASSERT_EQ(timeline.position_sizing_decisions(3).size(), 1U);
+  const auto& restored = timeline.position_sizing_decisions(3).front();
+  EXPECT_DOUBLE_EQ(*restored.requested_quantity, 6.0);
+  EXPECT_DOUBLE_EQ(*restored.final_quantity, 6.0);
+  EXPECT_FALSE(restored.cash_adjusted);
+}
+
+TEST(BacktestRunnerTest, FullClosureCapturesFreshUnitAndRiskDistance)
+{
+  const auto asset = Asset{"Test",
+                           AssetHistory{{"Datetime", {1.0, 2.0, 3.0, 4.0}},
+                                        {"Open", {100.0, 110.0, 200.0, 220.0}},
+                                        {"High", {100.0, 110.0, 200.0, 220.0}},
+                                        {"Low", {100.0, 110.0, 200.0, 220.0}},
+                                        {"Close", {100.0, 110.0, 200.0, 220.0}},
+                                        {"Volume", {0.0, 0.0, 0.0, 0.0}}}};
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizingNode{RiskDistancePositionSizing{0.01}}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+  const auto entry_signal =
+   LogicalOrMethod{EqualMethod{CloseMethod{}, ValueMethod{100.0}},
+                   EqualMethod{CloseMethod{}, ValueMethod{200.0}}};
+
+  auto runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   {},
+   make_position_rule(entry_signal,
+                      EqualMethod{CloseMethod{}, ValueMethod{110.0}},
+                      EqualMethod{CloseMethod{}, ValueMethod{220.0}},
+                      2,
+                      OpenMethod{},
+                      false,
+                      false,
+                      1,
+                      OpenMethod{},
+                      0,
+                      OpenMethod{},
+                      0,
+                      CloseMethod{},
+                      StopTargetReferencePrice::AveragePrice,
+                      StopTargetReferencePrice::AveragePrice,
+                      1.0,
+                      1.0,
+                      {},
+                      RiskDistancePercentMethod{10.0}),
+   BacktestRunner::PositionRule{},
+   10000.0};
+
+  for(auto index = 0; index < 4; ++index) {
+    runner.run(series_results, timeline);
+  }
+
+  ASSERT_TRUE(timeline.open_position(3));
+  EXPECT_DOUBLE_EQ(timeline.trade_events(2).front().position_size(), 5.05);
+  EXPECT_DOUBLE_EQ(timeline.trade_events(3).front().position_size(), 5.05);
+  EXPECT_DOUBLE_EQ(timeline.open_position(3)->position_size(), 10.1);
+  EXPECT_DOUBLE_EQ(timeline.open_position(3)->risk_distance(), 20.0);
 }
 
 TEST(BacktestRunnerTest, DisabledDrawdownAdjustmentLeavesSizingUnchanged)
@@ -2706,6 +2843,122 @@ TEST(BacktestRunnerTest, PositionRMultipleDrivesCurrentClosePyramiding)
   EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 2.0);
   EXPECT_DOUBLE_EQ(timeline.open_position(1)->average_price(), 112.5);
   EXPECT_DOUBLE_EQ(timeline.open_position(1)->risk_reference_price(), 112.5);
+}
+
+TEST(BacktestRunnerTest, LongPyramidingUsesFrozenRThroughThreeLayers)
+{
+  const auto asset = Asset{"Test",
+                           AssetHistory{{"Datetime", {1.0, 2.0, 3.0}},
+                                        {"Open", {100.0, 110.0, 121.0}},
+                                        {"High", {100.0, 110.0, 121.0}},
+                                        {"Low", {100.0, 110.0, 121.0}},
+                                        {"Close", {100.0, 110.0, 121.0}},
+                                        {"Volume", {0.0, 0.0, 0.0}}}};
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{2.0}}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+  const auto pyramiding_signal =
+   GreaterEqualMethod{PositionRMultipleMethod{}, ValueMethod{1.0}};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  make_position_rule(BooleanMethod<true>{},
+                                     BooleanMethod<false>{},
+                                     pyramiding_signal,
+                                     3,
+                                     SlRMultipleMethod{2.0},
+                                     true,
+                                     false,
+                                     1,
+                                     OpenMethod{},
+                                     1,
+                                     OpenMethod{},
+                                     0,
+                                     CloseMethod{},
+                                     StopTargetReferencePrice::LatestEntryPrice,
+                                     StopTargetReferencePrice::LatestEntryPrice,
+                                     1.0,
+                                     1.0,
+                                     {},
+                                     RiskDistancePercentMethod{10.0}),
+                  BacktestRunner::PositionRule{},
+                  10000.0};
+
+  for(auto index = 0; index < 3; ++index) {
+    runner.run(series_results, timeline);
+  }
+
+  ASSERT_TRUE(timeline.open_position(2));
+  EXPECT_DOUBLE_EQ(timeline.open_position(2)->position_size(), 6.0);
+  EXPECT_DOUBLE_EQ(timeline.open_position(2)->risk_distance(), 10.0);
+  EXPECT_DOUBLE_EQ(timeline.open_position(2)->risk_reference_price(), 121.0);
+  EXPECT_DOUBLE_EQ(stop_level(*timeline.open_position(2)).evaluated_price(),
+                   101.0);
+}
+
+TEST(BacktestRunnerTest, ShortPyramidingUsesFrozenRThroughThreeLayers)
+{
+  const auto asset = Asset{"Test",
+                           AssetHistory{{"Datetime", {1.0, 2.0, 3.0}},
+                                        {"Open", {100.0, 90.0, 79.0}},
+                                        {"High", {100.0, 90.0, 79.0}},
+                                        {"Low", {100.0, 90.0, 79.0}},
+                                        {"Close", {100.0, 90.0, 79.0}},
+                                        {"Volume", {0.0, 0.0, 0.0}}}};
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto profile =
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{2.0}}};
+  auto series_results = SeriesEvaluationResults{};
+  auto timeline = BacktestTimeline{};
+  const auto pyramiding_signal =
+   GreaterEqualMethod{PositionRMultipleMethod{}, ValueMethod{1.0}};
+
+  auto runner =
+   BacktestRunner{asset,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  BacktestRunner::PositionRule{},
+                  make_position_rule(BooleanMethod<true>{},
+                                     BooleanMethod<false>{},
+                                     pyramiding_signal,
+                                     3,
+                                     SlRMultipleMethod{2.0},
+                                     true,
+                                     false,
+                                     1,
+                                     OpenMethod{},
+                                     1,
+                                     OpenMethod{},
+                                     0,
+                                     CloseMethod{},
+                                     StopTargetReferencePrice::LatestEntryPrice,
+                                     StopTargetReferencePrice::LatestEntryPrice,
+                                     1.0,
+                                     1.0,
+                                     {},
+                                     RiskDistancePercentMethod{10.0}),
+                  10000.0};
+
+  for(auto index = 0; index < 3; ++index) {
+    runner.run(series_results, timeline);
+  }
+
+  ASSERT_TRUE(timeline.open_position(2));
+  EXPECT_DOUBLE_EQ(timeline.open_position(2)->position_size(), -6.0);
+  EXPECT_DOUBLE_EQ(timeline.open_position(2)->risk_distance(), 10.0);
+  EXPECT_DOUBLE_EQ(timeline.open_position(2)->risk_reference_price(), 79.0);
+  EXPECT_DOUBLE_EQ(stop_level(*timeline.open_position(2)).evaluated_price(),
+                   99.0);
 }
 
 TEST(BacktestRunnerTest, PositionRMultipleIsCachedForNamedSeriesAndPlots)
@@ -3146,7 +3399,8 @@ TEST(BacktestRunnerTest,
   EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
                    99.0);
   EXPECT_DOUBLE_EQ(
-   latest_position(timeline).take_profit_levels().front().price(), 132.0);
+   latest_position(timeline).take_profit_levels().front().price(), 130.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).risk_distance(), 10.0);
 }
 
 TEST(BacktestRunnerTest,
@@ -3204,7 +3458,8 @@ TEST(BacktestRunnerTest,
   EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
                    99.0);
   EXPECT_DOUBLE_EQ(
-   latest_position(timeline).take_profit_levels().front().price(), 132.0);
+   latest_position(timeline).take_profit_levels().front().price(), 130.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).risk_distance(), 10.0);
 }
 
 TEST(BacktestRunnerTest,
@@ -3257,7 +3512,8 @@ TEST(BacktestRunnerTest,
   EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
                    81.0);
   EXPECT_DOUBLE_EQ(
-   latest_position(timeline).take_profit_levels().front().price(), 108.0);
+   latest_position(timeline).take_profit_levels().front().price(), 110.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).risk_distance(), 10.0);
 }
 
 TEST(BacktestRunnerTest,
@@ -3310,7 +3566,8 @@ TEST(BacktestRunnerTest,
   EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
                    99.0);
   EXPECT_DOUBLE_EQ(
-   latest_position(timeline).take_profit_levels().front().price(), 72.0);
+   latest_position(timeline).take_profit_levels().front().price(), 70.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).risk_distance(), 10.0);
 }
 
 TEST(BacktestRunnerTest, PyramidingCanUseLatestEntryReference)
@@ -3362,7 +3619,8 @@ TEST(BacktestRunnerTest, PyramidingCanUseLatestEntryReference)
   EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
                    108.0);
   EXPECT_DOUBLE_EQ(
-   latest_position(timeline).take_profit_levels().front().price(), 144.0);
+   latest_position(timeline).take_profit_levels().front().price(), 140.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).risk_distance(), 10.0);
 }
 
 TEST(BacktestRunnerTest,
@@ -3415,7 +3673,8 @@ TEST(BacktestRunnerTest,
   EXPECT_DOUBLE_EQ(stop_level(latest_position(timeline)).evaluated_price(),
                    121.0);
   EXPECT_DOUBLE_EQ(
-   latest_position(timeline).take_profit_levels().front().price(), 88.0);
+   latest_position(timeline).take_profit_levels().front().price(), 90.0);
+  EXPECT_DOUBLE_EQ(latest_position(timeline).risk_distance(), 10.0);
 }
 
 TEST(BacktestRunnerTest, PyramidingCanUseInitialEntryReference)
@@ -4642,7 +4901,7 @@ TEST(BacktestRunnerTest, ReductionIsRaisedToMarketMinimum)
   EXPECT_DOUBLE_EQ(timeline.trade_events(1).front().position_size(), 2.0);
 }
 
-TEST(BacktestRunnerTest, PartialExitKeepsPyramidingLayersUsed)
+TEST(BacktestRunnerTest, PartialExitPreservesCampaignUnitAndLayersUsed)
 {
   const auto asset = Asset{"Test",
                            AssetHistory{{"Datetime", {1.0, 2.0, 3.0, 4.0}},
@@ -4667,22 +4926,24 @@ TEST(BacktestRunnerTest, PartialExitKeepsPyramidingLayersUsed)
    broker,
    profile,
    std::move(series_methods),
-   make_position_rule(BooleanMethod<true>{},
-                      EqualMethod{CloseMethod{}, ValueMethod{120.0}},
-                      BooleanMethod<true>{},
-                      2,
-                      OpenMethod{},
-                      false,
-                      false,
-                      1,
-                      OpenMethod{},
-                      0,
-                      OpenMethod{},
-                      1,
-                      OpenMethod{},
-                      StopTargetReferencePrice::AveragePrice,
-                      StopTargetReferencePrice::AveragePrice,
-                      0.5),
+   make_position_rule(
+    BooleanMethod<true>{},
+    EqualMethod{CloseMethod{}, ValueMethod{120.0}},
+    LogicalOrMethod{EqualMethod{CloseMethod{}, ValueMethod{110.0}},
+                    EqualMethod{CloseMethod{}, ValueMethod{130.0}}},
+    3,
+    OpenMethod{},
+    false,
+    false,
+    1,
+    OpenMethod{},
+    0,
+    OpenMethod{},
+    0,
+    CloseMethod{},
+    StopTargetReferencePrice::AveragePrice,
+    StopTargetReferencePrice::AveragePrice,
+    0.5),
    BacktestRunner::PositionRule{},
    1000.0};
 
@@ -4697,10 +4958,14 @@ TEST(BacktestRunnerTest, PartialExitKeepsPyramidingLayersUsed)
 
   runner.run(series_results, timeline);
   ASSERT_TRUE(timeline.open_position(3).has_value());
-  EXPECT_DOUBLE_EQ(timeline.open_position(3)->position_size(), 4.0);
-  EXPECT_TRUE(timeline.trade_events(3).empty());
+  EXPECT_DOUBLE_EQ(timeline.open_position(3)->position_size(), 8.0);
+  ASSERT_EQ(timeline.trade_events(3).size(), 1U);
+  EXPECT_DOUBLE_EQ(timeline.trade_events(3).front().position_size(), 4.0);
+  ASSERT_EQ(timeline.position_sizing_decisions(3).size(), 1U);
+  EXPECT_DOUBLE_EQ(
+   *timeline.position_sizing_decisions(3).front().requested_quantity, 4.0);
   const auto layer_results =
    series_results.results(std::string{"pyramiding_layer"});
   ASSERT_TRUE(layer_results.has_value());
-  EXPECT_EQ(layer_results->get(), (std::vector<double>{1.0, 2.0, 2.0, 2.0}));
+  EXPECT_EQ(layer_results->get(), (std::vector<double>{1.0, 2.0, 2.0, 3.0}));
 }
