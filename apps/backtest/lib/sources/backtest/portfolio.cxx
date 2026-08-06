@@ -76,6 +76,7 @@ public:
               MarketStoreHandle{},
               BrokerStoreHandle{},
               10,
+              10,
               {},
               InsufficientCashPolicy::Reject,
               {}}
@@ -87,6 +88,7 @@ public:
             MarketStoreHandle market_handle,
             BrokerStoreHandle broker_handle,
             std::size_t maximum_open_trades,
+            std::size_t maximum_combined_layers,
             DrawdownAdjustment drawdown_adjustment,
             InsufficientCashPolicy insufficient_cash_policy,
             std::vector<BacktestStoreHandle> backtest_handles)
@@ -95,6 +97,7 @@ public:
   , market_handle_{market_handle}
   , broker_handle_{broker_handle}
   , maximum_open_trades_{maximum_open_trades}
+  , maximum_combined_layers_{maximum_combined_layers}
   , drawdown_adjustment_{drawdown_adjustment}
   , insufficient_cash_policy_{insufficient_cash_policy}
   , backtest_handles_{std::move(backtest_handles)}
@@ -158,6 +161,17 @@ public:
     self.maximum_open_trades_ = value;
   }
 
+  auto maximum_combined_layers(this const Portfolio& self) noexcept
+   -> std::size_t
+  {
+    return self.maximum_combined_layers_;
+  }
+
+  void maximum_combined_layers(this Portfolio& self, std::size_t value) noexcept
+  {
+    self.maximum_combined_layers_ = value;
+  }
+
   auto drawdown_adjustment(this const Portfolio& self) noexcept
    -> const DrawdownAdjustment&
   {
@@ -205,6 +219,7 @@ public:
            self.market_handle_ == other.market_handle_ &&
            self.broker_handle_ == other.broker_handle_ &&
            self.maximum_open_trades_ == other.maximum_open_trades_ &&
+           self.maximum_combined_layers_ == other.maximum_combined_layers_ &&
            self.drawdown_adjustment_ == other.drawdown_adjustment_ &&
            self.insufficient_cash_policy_ == other.insufficient_cash_policy_ &&
            self.backtest_handles_ == other.backtest_handles_;
@@ -241,6 +256,7 @@ private:
   MarketStoreHandle market_handle_;
   BrokerStoreHandle broker_handle_;
   std::size_t maximum_open_trades_;
+  std::size_t maximum_combined_layers_;
   DrawdownAdjustment drawdown_adjustment_;
   InsufficientCashPolicy insufficient_cash_policy_;
   std::vector<BacktestStoreHandle> backtest_handles_;

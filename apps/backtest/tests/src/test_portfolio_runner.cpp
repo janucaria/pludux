@@ -80,6 +80,30 @@ auto make_entry_runner(const Asset& asset,
                         cash_policy};
 }
 
+auto make_short_entry_runner(const Asset& asset,
+                             const Market& market,
+                             const Broker& broker,
+                             const Profile& profile) -> BacktestRunner
+{
+  auto short_position =
+   BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                {},
+                                BooleanMethod<false>{},
+                                0,
+                                0,
+                                ValueMethod{10.0},
+                                {},
+                                SignalTiming::CurrentClose};
+  return BacktestRunner{asset,
+                        market,
+                        broker,
+                        profile,
+                        {},
+                        BacktestRunner::PositionRule{},
+                        std::move(short_position),
+                        1'000.0};
+}
+
 TEST(PortfolioRunnerTest, UsesUnionTimelineAndMarksMissingBarsStale)
 {
   const auto first = make_asset("First", {1.0, 2.0, 4.0});
@@ -89,6 +113,7 @@ TEST(PortfolioRunnerTest, UsesUnionTimelineAndMarksMissingBarsStale)
   const auto profile = Profile{"Profile"};
   auto runner = PortfolioRunner{
    1'000.0,
+   10,
    10,
    {PortfolioRunner::BacktestRun{BacktestStoreHandle{1, 1},
                                  make_runner(first, market, broker, profile)},
@@ -121,6 +146,7 @@ TEST(PortfolioRunnerTest, RejectsNonIncreasingAssetTimestamps)
    (PortfolioRunner{
     1'000.0,
     10,
+    10,
     {PortfolioRunner::BacktestRun{
      BacktestStoreHandle{1, 1}, make_runner(asset, market, broker, profile)}}}),
    std::invalid_argument);
@@ -136,6 +162,7 @@ TEST(PortfolioRunnerTest, BacktestOrderHasDeterministicSharedCashPriority)
    Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{8.0}}};
   auto runner = PortfolioRunner{
    1'000.0,
+   10,
    10,
    {PortfolioRunner::BacktestRun{
      BacktestStoreHandle{1, 1},
@@ -175,6 +202,7 @@ TEST(PortfolioRunnerTest, CapPolicyUsesOnlySharedAvailableCash)
   auto runner = PortfolioRunner{
    1'000.0,
    10,
+   10,
    {PortfolioRunner::BacktestRun{
      BacktestStoreHandle{1, 1},
      make_entry_runner(first,
@@ -210,6 +238,7 @@ TEST(PortfolioRunnerTest, ZeroLimitRejectsInitialEntryBeforeCashAdmission)
   auto runner = PortfolioRunner{
    1'000.0,
    0,
+   10,
    {PortfolioRunner::BacktestRun{
     BacktestStoreHandle{1, 1},
     make_entry_runner(
@@ -245,6 +274,7 @@ TEST(PortfolioRunnerTest, OrderedEntriesStopAtMaximumOpenTrades)
   auto runner = PortfolioRunner{
    1'000.0,
    1,
+   10,
    {PortfolioRunner::BacktestRun{
      BacktestStoreHandle{1, 1},
      make_entry_runner(
@@ -275,6 +305,7 @@ TEST(PortfolioRunnerTest, FilteredEntryDoesNotConsumeOpenTradeSlot)
    Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
   auto runner = PortfolioRunner{
    1'000.0,
+   1,
    1,
    {PortfolioRunner::BacktestRun{
      BacktestStoreHandle{1, 1},
@@ -328,6 +359,7 @@ TEST(PortfolioRunnerTest, ClosingTradeReleasesSlotAtSameTimestamp)
   auto runner = PortfolioRunner{
    1'000.0,
    1,
+   10,
    {PortfolioRunner::BacktestRun{BacktestStoreHandle{1, 1},
                                  std::move(exiting_runner)},
     PortfolioRunner::BacktestRun{
@@ -371,6 +403,7 @@ TEST(PortfolioRunnerTest, PyramidingRemainsAllowedAtOpenTradeLimit)
   auto runner =
    PortfolioRunner{1'000.0,
                    1,
+                   10,
                    {PortfolioRunner::BacktestRun{
                     BacktestStoreHandle{1, 1}, std::move(pyramiding_runner)}}};
   auto results = PortfolioResults{};
@@ -384,4 +417,182 @@ TEST(PortfolioRunnerTest, PyramidingRemainsAllowedAtOpenTradeLimit)
   ASSERT_EQ(results.backtests()[0].timeline().trade_events(1).size(), 1);
   EXPECT_EQ(results.backtests()[0].timeline().trade_events(1).front().type(),
             TradeEvent::Type::scale_in);
+}
+
+TEST(PortfolioRunnerTest, CombinedLayerLimitUsesDeterministicBacktestPriority)
+{
+  const auto first = make_asset("First", {1.0});
+  const auto second = make_asset("Second", {1.0});
+  const auto market = Market{"Market", 0.0, 0.0};
+  const auto broker = Broker{"Broker"};
+  const auto profile =
+   Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  auto runner = PortfolioRunner{
+   1'000.0,
+   10,
+   1,
+   {PortfolioRunner::BacktestRun{
+     BacktestStoreHandle{1, 1},
+     make_entry_runner(
+      first, market, broker, profile, InsufficientCashPolicy::Reject)},
+    PortfolioRunner::BacktestRun{
+     BacktestStoreHandle{2, 1},
+     make_short_entry_runner(second, market, broker, profile)}}};
+  auto results = PortfolioResults{};
+
+  runner.run(results);
+
+  EXPECT_TRUE(results.backtests()[0].timeline().open_position(0));
+  EXPECT_FALSE(results.backtests()[1].timeline().open_position(0));
+  EXPECT_TRUE(results.backtests()[1].timeline().strategy_intents(0).empty());
+  ASSERT_EQ(results.backtests()[1].timeline().trade_events(0).size(), 1U);
+  EXPECT_EQ(results.backtests()[1].timeline().trade_events(0).front().type(),
+            TradeEvent::Type::rejected_maximum_combined_layers);
+  ASSERT_EQ(
+   results.backtests()[1].timeline().position_sizing_decisions(0).size(), 1U);
+  const auto& decision =
+   results.backtests()[1].timeline().position_sizing_decisions(0).front();
+  EXPECT_EQ(decision.outcome,
+            PositionSizingDecisionOutcome::MaximumCombinedLayers);
+  EXPECT_EQ(decision.intent_id, 0U);
+  EXPECT_EQ(decision.strategy_trade_id, 0U);
+}
+
+TEST(PortfolioRunnerTest, CombinedLayerLimitBlocksPyramidWithoutAdvancingState)
+{
+  const auto asset = Asset{"Pyramid",
+                           AssetHistory{{"Datetime", {1.0, 2.0}},
+                                        {"Open", {100.0, 110.0}},
+                                        {"High", {100.0, 110.0}},
+                                        {"Low", {100.0, 110.0}},
+                                        {"Close", {100.0, 110.0}},
+                                        {"Volume", {0.0, 0.0}}}};
+  const auto market = Market{"Market", 0.0, 0.0};
+  const auto broker = Broker{"Broker"};
+  const auto profile =
+   Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  auto stop_losses = std::vector<BacktestRunner::PositionRule::StopLossRule>{};
+  stop_losses.emplace_back(
+   SubtractMethod{StopTargetRefPriceMethod{}, ValueMethod{50.0}}, true, false);
+  auto pyramiding_runner = BacktestRunner{
+   asset,
+   market,
+   broker,
+   profile,
+   {},
+   BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                {},
+                                BooleanMethod<true>{},
+                                3,
+                                0,
+                                ValueMethod{10.0},
+                                std::move(stop_losses),
+                                SignalTiming::CurrentClose,
+                                SignalTiming::CurrentClose,
+                                StopTargetReferencePrice::LatestEntryPrice,
+                                StopTargetReferencePrice::LatestEntryPrice},
+   BacktestRunner::PositionRule{},
+   1'000.0};
+  auto runner =
+   PortfolioRunner{1'000.0,
+                   10,
+                   1,
+                   {PortfolioRunner::BacktestRun{
+                    BacktestStoreHandle{1, 1}, std::move(pyramiding_runner)}}};
+  auto results = PortfolioResults{};
+
+  runner.run(results);
+  runner.run(results);
+
+  const auto& timeline = results.backtests()[0].timeline();
+  ASSERT_TRUE(timeline.open_position(1));
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 1.0);
+  EXPECT_DOUBLE_EQ(timeline.open_position(1)->risk_reference_price(), 100.0);
+  ASSERT_EQ(timeline.open_position(1)->stop_loss_levels().size(), 1U);
+  EXPECT_DOUBLE_EQ(
+   timeline.open_position(1)->stop_loss_levels().front().evaluated_price(),
+   50.0);
+  EXPECT_DOUBLE_EQ(
+   timeline.open_position(1)->stop_loss_levels().front().effective_price(),
+   50.0);
+  EXPECT_TRUE(timeline.strategy_intents(1).empty());
+  ASSERT_EQ(timeline.trade_events(1).size(), 1U);
+  EXPECT_EQ(timeline.trade_events(1).front().type(),
+            TradeEvent::Type::rejected_maximum_combined_layers);
+  ASSERT_EQ(timeline.position_sizing_decisions(1).size(), 1U);
+  EXPECT_EQ(timeline.position_sizing_decisions(1).front().outcome,
+            PositionSizingDecisionOutcome::MaximumCombinedLayers);
+}
+
+TEST(PortfolioRunnerTest, ZeroCombinedLayerLimitRejectsInitialEntry)
+{
+  const auto asset = make_asset("Blocked", {1.0});
+  const auto market = Market{"Market", 0.0, 0.0};
+  const auto broker = Broker{"Broker"};
+  const auto profile =
+   Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  auto runner = PortfolioRunner{
+   1'000.0,
+   10,
+   0,
+   {PortfolioRunner::BacktestRun{
+    BacktestStoreHandle{1, 1},
+    make_entry_runner(
+     asset, market, broker, profile, InsufficientCashPolicy::Reject)}}};
+  auto results = PortfolioResults{};
+
+  runner.run(results);
+
+  const auto& timeline = results.backtests()[0].timeline();
+  EXPECT_FALSE(timeline.open_position(0));
+  EXPECT_TRUE(timeline.strategy_intents(0).empty());
+  ASSERT_EQ(timeline.trade_events(0).size(), 1U);
+  EXPECT_EQ(timeline.trade_events(0).front().type(),
+            TradeEvent::Type::rejected_maximum_combined_layers);
+}
+
+TEST(PortfolioRunnerTest, FullClosureReleasesCombinedLayerAtSameTimestamp)
+{
+  const auto exiting = make_asset("Exiting", {1.0, 2.0});
+  const auto entering = make_asset("Entering", {2.0});
+  const auto market = Market{"Market", 0.0, 0.0};
+  const auto broker = Broker{"Broker"};
+  const auto profile =
+   Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  auto signal_exits =
+   std::vector<BacktestRunner::PositionRule::SignalExitRule>{};
+  signal_exits.emplace_back(
+   true, BooleanMethod<true>{}, SignalTiming::NextOpen, 1.0);
+  auto exiting_runner =
+   BacktestRunner{exiting,
+                  market,
+                  broker,
+                  profile,
+                  {},
+                  BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                               std::move(signal_exits),
+                                               BooleanMethod<false>{},
+                                               1,
+                                               0,
+                                               ValueMethod{10.0},
+                                               {}},
+                  BacktestRunner::PositionRule{},
+                  1'000.0};
+  auto runner = PortfolioRunner{
+   1'000.0,
+   10,
+   1,
+   {PortfolioRunner::BacktestRun{BacktestStoreHandle{1, 1},
+                                 std::move(exiting_runner)},
+    PortfolioRunner::BacktestRun{
+     BacktestStoreHandle{2, 1},
+     make_entry_runner(
+      entering, market, broker, profile, InsufficientCashPolicy::Reject)}}};
+  auto results = PortfolioResults{};
+
+  runner.run(results);
+  runner.run(results);
+
+  EXPECT_FALSE(results.backtests()[0].timeline().open_position(1));
+  EXPECT_TRUE(results.backtests()[1].timeline().open_position(0));
 }

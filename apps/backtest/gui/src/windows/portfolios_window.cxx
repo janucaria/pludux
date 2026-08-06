@@ -276,6 +276,16 @@ private:
        std::max(maximum_open_trades, std::size_t{1}));
     }
 
+    auto maximum_combined_layers = portfolio.maximum_combined_layers();
+    ui::field_label("Maximum combined layers");
+    if(ImGui::InputScalar("##portfolio_maximum_combined_layers",
+                          size_type,
+                          &maximum_combined_layers,
+                          &step)) {
+      portfolio.maximum_combined_layers(
+       std::max(maximum_combined_layers, std::size_t{1}));
+    }
+
     auto cash_policy = portfolio.insufficient_cash_policy();
     ui::field_label("Insufficient cash");
     const auto cash_label =

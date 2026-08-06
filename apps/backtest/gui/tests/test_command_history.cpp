@@ -320,6 +320,44 @@ TEST(ApplicationStateSerialization, RejectsMissingMaximumOpenTrades)
   EXPECT_THROW(load_application_state_json(input), std::exception);
 }
 
+TEST(ApplicationStateSerialization,
+     RoundTripsMaximumCombinedLayersIncludingZero)
+{
+  auto state = ApplicationState{};
+  auto portfolio = Portfolio{};
+  portfolio.maximum_combined_layers(0);
+  ASSERT_TRUE(state.add_portfolio(std::move(portfolio)));
+  auto stream = std::stringstream{};
+
+  save_application_state_json(stream, state);
+
+  const auto serialized = stream.str();
+  EXPECT_NE(serialized.find("\"maximumCombinedLayers\":0"), std::string::npos);
+  auto input = std::stringstream{serialized};
+  const auto loaded = load_application_state_json(input);
+  ASSERT_EQ(loaded.get_portfolio_handles().size(), 1U);
+  EXPECT_EQ(loaded.get_portfolio(loaded.get_portfolio_handles().front())
+             .maximum_combined_layers(),
+            0);
+}
+
+TEST(ApplicationStateSerialization, RejectsMissingMaximumCombinedLayers)
+{
+  auto state = ApplicationState{};
+  ASSERT_TRUE(state.add_portfolio(Portfolio{}));
+  auto stream = std::stringstream{};
+  save_application_state_json(stream, state);
+  auto serialized = stream.str();
+  const auto key = serialized.find("\"maximumCombinedLayers\"");
+  ASSERT_NE(key, std::string::npos);
+  serialized.replace(key,
+                     std::string{"\"maximumCombinedLayers\""}.size(),
+                     "\"removedMaximumCombinedLayers\"");
+  auto input = std::stringstream{serialized};
+
+  EXPECT_THROW(load_application_state_json(input), std::exception);
+}
+
 TEST(ApplicationStateSerialization, RejectsRemovedUiStateSchema)
 {
   auto stream = std::stringstream{};

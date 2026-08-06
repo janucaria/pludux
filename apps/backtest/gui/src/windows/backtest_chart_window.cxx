@@ -1562,6 +1562,10 @@ private:
               if(event.type() ==
                  backtest::TradeEvent::Type::rejected_maximum_open_trades) {
                 ImGui::TextUnformatted("Reason: Maximum open trades reached");
+              } else if(event.type() == backtest::TradeEvent::Type::
+                                         rejected_maximum_combined_layers) {
+                ImGui::TextUnformatted(
+                 "Reason: Maximum combined layers reached");
               } else {
                 ImGui::TextUnformatted("Reason: Insufficient cash");
               }

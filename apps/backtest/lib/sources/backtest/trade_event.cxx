@@ -24,6 +24,7 @@ public:
     stop_loss,
     take_profit,
     rejected_maximum_open_trades,
+    rejected_maximum_combined_layers,
     rejected_insufficient_cash
   };
 
@@ -242,6 +243,7 @@ public:
   auto is_rejected(this const TradeEvent& self) noexcept -> bool
   {
     return self.type_ == Type::rejected_maximum_open_trades ||
+           self.type_ == Type::rejected_maximum_combined_layers ||
            self.type_ == Type::rejected_insufficient_cash;
   }
 

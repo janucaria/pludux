@@ -220,6 +220,43 @@ public:
      0.0);
   }
 
+  void reject_maximum_combined_layers(this TradeSession& self,
+                                      const TradeEntry& entry)
+  {
+    const auto trade_id =
+     self.open_position_ ? self.open_position_->trade_id() : 0;
+    const auto trade_event_index =
+     self.open_position_ ? self.open_position_->trade_event_count() + 1 : 0;
+    const auto position_size =
+     self.open_position_ ? self.open_position_->position_size() : 0.0;
+    const auto investment =
+     self.open_position_ ? self.open_position_->investment() : 0.0;
+    const auto average_price =
+     self.open_position_ ? self.open_position_->average_price() : 0.0;
+
+    self.trade_events_.emplace_back(
+     trade_id,
+     self.next_event_id_++,
+     trade_event_index,
+     TradeEvent::Type::rejected_maximum_combined_layers,
+     self.market_timestamp_,
+     entry.price(),
+     entry.position_size(),
+     0.0,
+     position_size,
+     investment,
+     average_price,
+     position_size,
+     investment,
+     average_price,
+     self.open_position_ ? self.open_position_->stop_loss_levels()
+                         : std::vector<StopLossLevel>{},
+     self.open_position_ ? self.open_position_->take_profit_levels()
+                         : std::vector<TakeProfitLevel>{},
+     self.open_position_ ? self.open_position_->signal_exit_states()
+                         : std::vector<SignalExitState>{});
+  }
+
   void exit_position(this TradeSession& self, const TradeExit& exit)
   {
     self.exit_position(exit, 0.0);

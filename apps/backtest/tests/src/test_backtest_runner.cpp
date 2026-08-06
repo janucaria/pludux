@@ -703,6 +703,7 @@ TEST(BacktestRunnerTest, RejectedPyramidingDoesNotChangePosition)
   EXPECT_EQ(sizing.outcome, PositionSizingDecisionOutcome::InsufficientCash);
   EXPECT_DOUBLE_EQ(*sizing.requested_quantity, 6.0);
   EXPECT_FALSE(sizing.final_quantity);
+  EXPECT_EQ(runner.executed_layer_count(), 1U);
   const auto layer_results =
    series_results.results(std::string{"pyramiding_layer"});
   ASSERT_TRUE(layer_results.has_value());
@@ -749,6 +750,8 @@ TEST(BacktestRunnerTest,
   for(auto index = 0; index < 4; ++index) {
     runner.run(series_results, timeline);
   }
+
+  EXPECT_EQ(runner.executed_layer_count(), 0U);
 
   const auto layer_results =
    series_results.results(std::string{"pyramiding_layer"});
@@ -857,6 +860,8 @@ TEST(BacktestRunnerTest,
     runner.run(series_results, timeline);
   }
 
+  EXPECT_EQ(runner.executed_layer_count(), 3U);
+
   const auto layers = series_results.results(std::string{"pyramiding_layer"});
   ASSERT_TRUE(layers.has_value());
   EXPECT_EQ(layers->get(), (std::vector<double>{1.0, 2.0, 2.0, 3.0}));
@@ -913,6 +918,8 @@ TEST(BacktestRunnerTest, AfterFalseRetriggerSuppressesHeldNextOpenSignal)
   for(auto index = 0; index < 4; ++index) {
     runner.run(series_results, timeline);
   }
+
+  EXPECT_EQ(runner.executed_layer_count(), 2U);
 
   const auto layers = series_results.results(std::string{"pyramiding_layer"});
   ASSERT_TRUE(layers.has_value());
@@ -1218,9 +1225,14 @@ TEST(BacktestRunnerTest, PartialExitPreservesPyramidingCooldown)
    BacktestRunner::PositionRule{},
    1000.0};
 
-  for(auto index = 0; index < 4; ++index) {
-    runner.run(series_results, timeline);
-  }
+  runner.run(series_results, timeline);
+  EXPECT_EQ(runner.executed_layer_count(), 1U);
+  runner.run(series_results, timeline);
+  EXPECT_EQ(runner.executed_layer_count(), 1U);
+  runner.run(series_results, timeline);
+  EXPECT_EQ(runner.executed_layer_count(), 1U);
+  runner.run(series_results, timeline);
+  EXPECT_EQ(runner.executed_layer_count(), 2U);
 
   const auto layers = series_results.results(std::string{"pyramiding_layer"});
   ASSERT_TRUE(layers.has_value());
@@ -2486,6 +2498,8 @@ TEST(BacktestRunnerTest, CashCappedPyramidingKeepsInitialUnitForLaterLayers)
     runner.run(series_results, timeline);
   }
 
+  EXPECT_EQ(runner.executed_layer_count(), 3U);
+
   ASSERT_EQ(timeline.position_sizing_decisions(1).size(), 1U);
   const auto& capped = timeline.position_sizing_decisions(1).front();
   EXPECT_DOUBLE_EQ(*capped.requested_quantity, 6.0);
@@ -2546,9 +2560,14 @@ TEST(BacktestRunnerTest, FullClosureCapturesFreshUnitAndRiskDistance)
    BacktestRunner::PositionRule{},
    10000.0};
 
-  for(auto index = 0; index < 4; ++index) {
-    runner.run(series_results, timeline);
-  }
+  runner.run(series_results, timeline);
+  EXPECT_EQ(runner.executed_layer_count(), 1U);
+  runner.run(series_results, timeline);
+  EXPECT_EQ(runner.executed_layer_count(), 0U);
+  runner.run(series_results, timeline);
+  EXPECT_EQ(runner.executed_layer_count(), 1U);
+  runner.run(series_results, timeline);
+  EXPECT_EQ(runner.executed_layer_count(), 2U);
 
   ASSERT_TRUE(timeline.open_position(3));
   EXPECT_DOUBLE_EQ(timeline.trade_events(2).front().position_size(), 5.05);
@@ -4951,14 +4970,17 @@ TEST(BacktestRunnerTest, PartialExitPreservesCampaignUnitAndLayersUsed)
   runner.run(series_results, timeline);
   ASSERT_TRUE(timeline.open_position(1).has_value());
   EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 8.0);
+  EXPECT_EQ(runner.executed_layer_count(), 2U);
 
   runner.run(series_results, timeline);
   ASSERT_TRUE(timeline.open_position(2).has_value());
   EXPECT_DOUBLE_EQ(timeline.open_position(2)->position_size(), 4.0);
+  EXPECT_EQ(runner.executed_layer_count(), 2U);
 
   runner.run(series_results, timeline);
   ASSERT_TRUE(timeline.open_position(3).has_value());
   EXPECT_DOUBLE_EQ(timeline.open_position(3)->position_size(), 8.0);
+  EXPECT_EQ(runner.executed_layer_count(), 3U);
   ASSERT_EQ(timeline.trade_events(3).size(), 1U);
   EXPECT_DOUBLE_EQ(timeline.trade_events(3).front().position_size(), 4.0);
   ASSERT_EQ(timeline.position_sizing_decisions(3).size(), 1U);

@@ -52,10 +52,12 @@ public:
 
   PortfolioRunner(double initial_capital,
                   std::size_t maximum_open_trades,
+                  std::size_t maximum_combined_layers,
                   std::vector<BacktestRun> backtests)
   : initial_capital_{initial_capital}
   , account_{initial_capital, 0.0, initial_capital, initial_capital}
   , maximum_open_trades_{maximum_open_trades}
+  , maximum_combined_layers_{maximum_combined_layers}
   , backtests_{std::move(backtests)}
   {
     if(!std::isfinite(initial_capital) || initial_capital < 0.0) {
@@ -221,6 +223,7 @@ private:
   double initial_capital_{};
   BacktestAccountState account_;
   std::size_t maximum_open_trades_{};
+  std::size_t maximum_combined_layers_{};
   std::vector<BacktestRun> backtests_;
   double max_drawdown_{};
   std::size_t total_timestamps_{};
@@ -274,8 +277,10 @@ private:
     self.refresh_unrealized();
     self.account_.update_peak_to_current_equity();
     runner.portfolio_account(self.account_, self.reserved_notional());
-    runner.portfolio_entry_capacity_available(self.open_position_count() <
-                                              self.maximum_open_trades_);
+    runner.portfolio_open_trade_capacity_available(self.open_position_count() <
+                                                   self.maximum_open_trades_);
+    runner.portfolio_combined_layer_capacity_available(
+     self.executed_layer_count() < self.maximum_combined_layers_);
   }
 
   auto reserved_notional(this const PortfolioRunner& self) noexcept -> double
@@ -303,6 +308,16 @@ private:
      std::ranges::count_if(self.backtests_, [](const BacktestRun& value) {
        return value.runner().has_open_position();
      }));
+  }
+
+  auto executed_layer_count(this const PortfolioRunner& self) noexcept
+   -> std::size_t
+  {
+    auto result = std::size_t{};
+    for(const auto& backtest : self.backtests_) {
+      result += backtest.runner().executed_layer_count();
+    }
+    return result;
   }
 };
 
