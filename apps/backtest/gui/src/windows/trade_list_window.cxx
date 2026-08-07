@@ -42,9 +42,8 @@ public:
       return;
     }
 
-    const auto selected_backtest_handle =
-     app_state.selected_portfolio_backtest_handle();
-    if(!selected_backtest_handle) {
+    const auto selected_run = app_state.selected_portfolio_backtest();
+    if(!selected_run) {
       ui::summary_status(PLUDUX_ICON_TRADES,
                          "No Backtest selected",
                          "Select a Backtest from the active Portfolio to "
@@ -63,7 +62,7 @@ public:
     }
 
     const auto& results = app_state.get_portfolio_results(portfolio_handle);
-    const auto* backtest_results = results.backtest(*selected_backtest_handle);
+    const auto* backtest_results = results.backtest(*selected_run);
     if(!backtest_results || backtest_results->timeline().empty()) {
       ui::summary_status(PLUDUX_ICON_TRADES,
                          "No trade results yet",
@@ -73,19 +72,19 @@ public:
       return;
     }
 
-    const auto backtest_iterator =
-     std::ranges::find(results.backtests(),
-                       *selected_backtest_handle,
-                       &backtest::BacktestResults::backtest_handle);
+    const auto backtest_iterator = std::ranges::find(
+     results.backtests(), *selected_run, &backtest::BacktestResults::key);
     const auto backtest_index = static_cast<std::size_t>(
      std::ranges::distance(results.backtests().begin(), backtest_iterator));
     const auto* backtest_config =
-     app_state.get_backtest_if_present(*selected_backtest_handle);
-    auto trades = collect_trades(backtest_results->timeline(),
-                                 self.trade_source_,
-                                 backtest_index,
-                                 backtest_config ? backtest_config->name()
-                                                 : "Missing Backtest");
+     app_state.get_backtest_if_present(selected_run->backtest_handle);
+    const auto* asset =
+     app_state.get_asset_if_present(selected_run->asset_handle);
+    const auto label = backtest_config && asset
+                        ? backtest_config->name() + " — " + asset->name()
+                        : std::string{"Missing Backtest Asset"};
+    auto trades = collect_trades(
+     backtest_results->timeline(), self.trade_source_, backtest_index, label);
     std::ranges::sort(trades, {}, &TradeView::entry_timestamp);
     std::ranges::reverse(trades);
     self.synchronize_selection(trades);

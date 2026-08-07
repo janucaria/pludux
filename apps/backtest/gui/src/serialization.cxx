@@ -765,8 +765,45 @@ struct json_conv_traits<Json, pludux::backtest::Asset> {
   }
 };
 
+template<typename Json>
+struct json_conv_traits<Json, pludux::backtest::Watchlist> {
+  using value_type = pludux::backtest::Watchlist;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      return result_type{
+       value_type{required_as<std::string>(json, "name"),
+                  vector_from_json<pludux::backtest::AssetStoreHandle>(
+                   json.at("assets"))}};
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>& aset,
+                      const value_type& watchlist)
+  {
+    auto json = Json{};
+    json["name"] = watchlist.name();
+    json["assets"] = vector_to_json<Json>(aset, watchlist.asset_handles());
+    return json;
+  }
+};
+
 template<typename Json, typename THandle>
   requires std::same_as<THandle, pludux::backtest::AssetStoreHandle> ||
+           std::same_as<THandle, pludux::backtest::WatchlistStoreHandle> ||
            std::same_as<THandle, pludux::backtest::StrategyStoreHandle> ||
            std::same_as<THandle, pludux::backtest::MarketStoreHandle> ||
            std::same_as<THandle, pludux::backtest::BrokerStoreHandle> ||
@@ -904,7 +941,7 @@ struct json_conv_traits<Json, pludux::backtest::Backtest> {
     try {
       return result_type{value_type{
        required_as<std::string>(json, "name"),
-       required_as<pludux::backtest::AssetStoreHandle>(json, "asset"),
+       required_as<pludux::backtest::WatchlistStoreHandle>(json, "watchlist"),
        required_as<pludux::backtest::StrategyStoreHandle>(json, "strategy"),
        required_as<pludux::backtest::ProfileStoreHandle>(json, "profile"),
        vector_from_json<pludux::NumericInputNode>(json.at("inputs")),
@@ -920,7 +957,7 @@ struct json_conv_traits<Json, pludux::backtest::Backtest> {
   {
     auto json = Json{};
     json["name"] = backtest.name();
-    set_json(json, aset, "asset", backtest.asset_handle());
+    set_json(json, aset, "watchlist", backtest.watchlist_handle());
     set_json(json, aset, "strategy", backtest.strategy_handle());
     set_json(json, aset, "profile", backtest.profile_handle());
     json["inputs"] = vector_to_json<Json>(aset, backtest.inputs());
@@ -1021,6 +1058,10 @@ struct json_conv_traits<Json, pludux::backtest::StoreDescriptor> {
         pludux::backtest::Asset,
         pludux::backtest::AssetStoreHandle>>(json, "assetStoreDataResolver"),
        required_as<pludux::backtest::StoreDataResolver<
+        pludux::backtest::Watchlist,
+        pludux::backtest::WatchlistStoreHandle>>(json,
+                                                 "watchlistStoreDataResolver"),
+       required_as<pludux::backtest::StoreDataResolver<
         pludux::backtest::Strategy,
         pludux::backtest::StrategyStoreHandle>>(json,
                                                 "strategyStoreDataResolver"),
@@ -1057,6 +1098,10 @@ struct json_conv_traits<Json, pludux::backtest::StoreDescriptor> {
              aset,
              "assetStoreDataResolver",
              descriptor.asset_store_data_resolver());
+    set_json(json,
+             aset,
+             "watchlistStoreDataResolver",
+             descriptor.watchlist_store_data_resolver());
     set_json(json,
              aset,
              "strategyStoreDataResolver",
@@ -1098,6 +1143,7 @@ struct json_conv_traits<Json, pludux::backtest::StoreArena> {
        vector_from_json<pludux::backtest::Backtest>(json.at("backtests")),
        vector_from_json<pludux::backtest::Portfolio>(json.at("portfolios")),
        vector_from_json<pludux::backtest::Asset>(json.at("assets")),
+       vector_from_json<pludux::backtest::Watchlist>(json.at("watchlists")),
        strategies_from_json(json.at("strategies")),
        vector_from_json<pludux::backtest::Market>(json.at("markets")),
        vector_from_json<pludux::backtest::Broker>(json.at("brokers")),
@@ -1116,6 +1162,7 @@ struct json_conv_traits<Json, pludux::backtest::StoreArena> {
     json["backtests"] = vector_to_json<Json>(aset, arena.backtests());
     json["portfolios"] = vector_to_json<Json>(aset, arena.portfolios());
     json["assets"] = vector_to_json<Json>(aset, arena.assets());
+    json["watchlists"] = vector_to_json<Json>(aset, arena.watchlists());
     json["strategies"] = strategies_to_json<Json>(aset, arena.strategies());
     json["markets"] = vector_to_json<Json>(aset, arena.markets());
     json["brokers"] = vector_to_json<Json>(aset, arena.brokers());
@@ -1179,7 +1226,8 @@ struct json_conv_traits<Json, pludux::apps::PortfolioBacktestSelection> {
     try {
       return result_type{value_type{
        required_as<pludux::backtest::PortfolioStoreHandle>(json, "portfolio"),
-       required_as<pludux::backtest::BacktestStoreHandle>(json, "backtest")}};
+       {required_as<pludux::backtest::BacktestStoreHandle>(json, "backtest"),
+        required_as<pludux::backtest::AssetStoreHandle>(json, "asset")}}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -1191,7 +1239,8 @@ struct json_conv_traits<Json, pludux::apps::PortfolioBacktestSelection> {
   {
     auto json = Json{};
     set_json(json, aset, "portfolio", selection.portfolio_handle);
-    set_json(json, aset, "backtest", selection.backtest_handle);
+    set_json(json, aset, "backtest", selection.run.backtest_handle);
+    set_json(json, aset, "asset", selection.run.asset_handle);
     return json;
   }
 };
@@ -1252,6 +1301,8 @@ struct json_conv_traits<Json, pludux::apps::DocumentState> {
                    json.at("backtestHandles")),
                   vector_from_json<pludux::backtest::AssetStoreHandle>(
                    json.at("assetHandles")),
+                  vector_from_json<pludux::backtest::WatchlistStoreHandle>(
+                   json.at("watchlistHandles")),
                   vector_from_json<pludux::backtest::StrategyStoreHandle>(
                    json.at("strategyHandles")),
                   vector_from_json<pludux::backtest::MarketStoreHandle>(
@@ -1276,6 +1327,8 @@ struct json_conv_traits<Json, pludux::apps::DocumentState> {
      vector_to_json<Json>(aset, document_state.backtest_handles());
     json["assetHandles"] =
      vector_to_json<Json>(aset, document_state.asset_handles());
+    json["watchlistHandles"] =
+     vector_to_json<Json>(aset, document_state.watchlist_handles());
     json["strategyHandles"] =
      vector_to_json<Json>(aset, document_state.strategy_handles());
     json["marketHandles"] =

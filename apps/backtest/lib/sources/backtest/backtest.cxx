@@ -18,7 +18,7 @@ class Backtest {
 public:
   Backtest()
   : Backtest{"",
-             AssetStoreHandle{},
+             WatchlistStoreHandle{},
              StrategyStoreHandle{},
              ProfileStoreHandle{},
              {},
@@ -27,13 +27,13 @@ public:
   }
 
   Backtest(std::string name,
-           AssetStoreHandle asset_handle,
+           WatchlistStoreHandle watchlist_handle,
            StrategyStoreHandle strategy_handle,
            ProfileStoreHandle profile_handle,
            std::vector<NumericInputNode> inputs = {},
            StrategyPerformanceConfig strategy_performance = {})
   : name_{std::move(name)}
-  , asset_handle_{std::move(asset_handle)}
+  , watchlist_handle_{std::move(watchlist_handle)}
   , strategy_handle_{std::move(strategy_handle)}
   , profile_handle_{std::move(profile_handle)}
   , inputs_{std::move(inputs)}
@@ -53,15 +53,16 @@ public:
     self.name_ = std::move(new_name);
   }
 
-  auto asset_handle(this const Backtest& self) noexcept -> AssetStoreHandle
+  auto watchlist_handle(this const Backtest& self) noexcept
+   -> WatchlistStoreHandle
   {
-    return self.asset_handle_;
+    return self.watchlist_handle_;
   }
 
-  void asset_handle(this Backtest& self,
-                    AssetStoreHandle new_asset_handle) noexcept
+  void watchlist_handle(this Backtest& self,
+                        WatchlistStoreHandle new_watchlist_handle) noexcept
   {
-    self.asset_handle_ = std::move(new_asset_handle);
+    self.watchlist_handle_ = std::move(new_watchlist_handle);
   }
 
   auto strategy_handle(this const Backtest& self) noexcept
@@ -115,7 +116,7 @@ public:
   auto equivalent_rules(this const Backtest& self,
                         const Backtest& other) noexcept -> bool
   {
-    return self.asset_handle() == other.asset_handle() &&
+    return self.watchlist_handle() == other.watchlist_handle() &&
            self.strategy_handle() == other.strategy_handle() &&
            self.profile_handle() == other.profile_handle() &&
            self.inputs_ == other.inputs_ &&
@@ -125,7 +126,7 @@ public:
 private:
   std::string name_;
 
-  AssetStoreHandle asset_handle_;
+  WatchlistStoreHandle watchlist_handle_;
   StrategyStoreHandle strategy_handle_;
   ProfileStoreHandle profile_handle_;
 

@@ -29,6 +29,7 @@ export import :store;
 export import :execution_model;
 export import :intrabar_path;
 export import :asset;
+export import :watchlist;
 export import :strategy;
 export import :strategy_inputs;
 export import :market;

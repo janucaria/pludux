@@ -166,6 +166,7 @@ private:
     for(const auto* window : {"Portfolios",
                               "Backtests",
                               "Assets",
+                              "Watchlists",
                               "Strategies",
                               "Markets",
                               "Brokers",

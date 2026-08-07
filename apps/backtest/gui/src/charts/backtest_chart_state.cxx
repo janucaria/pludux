@@ -31,15 +31,15 @@ class BacktestChartState {
 public:
   void display_backtest(this BacktestChartState& self,
                         backtest::PortfolioStoreHandle portfolio_handle,
-                        backtest::BacktestStoreHandle backtest_handle) noexcept
+                        backtest::BacktestRunKey run) noexcept
   {
     if(self.displayed_portfolio_ == portfolio_handle &&
-       self.displayed_backtest_ == backtest_handle) {
+       self.displayed_run_ == run) {
       return;
     }
 
     self.displayed_portfolio_ = portfolio_handle;
-    self.displayed_backtest_ = backtest_handle;
+    self.displayed_run_ = run;
     self.pinned_bar_.reset();
     self.viewport_mode_ = BacktestChartViewportMode::FitAll;
     self.follow_bar_count_ = 150;
@@ -49,7 +49,7 @@ public:
   void clear_display_backtest(this BacktestChartState& self) noexcept
   {
     self.displayed_portfolio_.reset();
-    self.displayed_backtest_.reset();
+    self.displayed_run_.reset();
     self.pinned_bar_.reset();
     self.viewport_mode_ = BacktestChartViewportMode::FitAll;
     self.follow_bar_count_ = 150;
@@ -179,7 +179,7 @@ public:
 
 private:
   std::optional<backtest::PortfolioStoreHandle> displayed_portfolio_{};
-  std::optional<backtest::BacktestStoreHandle> displayed_backtest_{};
+  std::optional<backtest::BacktestRunKey> displayed_run_{};
   std::optional<std::size_t> pinned_bar_{};
   std::vector<float> row_ratios_{};
   BacktestChartViewportMode viewport_mode_{BacktestChartViewportMode::FitAll};

@@ -11,6 +11,7 @@ import :backtest;
 import :portfolio;
 import :portfolio_results;
 import :asset;
+import :watchlist;
 import :strategy;
 import :market;
 import :broker;
@@ -25,6 +26,7 @@ public:
   StoreArena(std::vector<Backtest> backtests,
              std::vector<Portfolio> portfolios,
              std::vector<Asset> assets,
+             std::vector<Watchlist> watchlists,
              std::vector<Strategy> strategies,
              std::vector<Market> markets,
              std::vector<Broker> brokers,
@@ -33,6 +35,7 @@ public:
   : backtests_{std::move(backtests)}
   , portfolios_{std::move(portfolios)}
   , assets_{std::move(assets)}
+  , watchlists_{std::move(watchlists)}
   , strategies_{std::move(strategies)}
   , markets_{std::move(markets)}
   , brokers_{std::move(brokers)}
@@ -71,6 +74,17 @@ public:
   auto assets(this StoreArena& self) noexcept -> std::vector<Asset>&
   {
     return self.assets_;
+  }
+
+  auto watchlists(this const StoreArena& self) noexcept
+   -> const std::vector<Watchlist>&
+  {
+    return self.watchlists_;
+  }
+
+  auto watchlists(this StoreArena& self) noexcept -> std::vector<Watchlist>&
+  {
+    return self.watchlists_;
   }
 
   auto strategies(this const StoreArena& self) noexcept
@@ -133,6 +147,7 @@ private:
   std::vector<Backtest> backtests_;
   std::vector<Portfolio> portfolios_;
   std::vector<Asset> assets_;
+  std::vector<Watchlist> watchlists_;
   std::vector<Strategy> strategies_;
   std::vector<Market> markets_;
   std::vector<Broker> brokers_;

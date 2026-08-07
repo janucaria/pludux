@@ -175,6 +175,7 @@ target_sources(${PROJECT_NAME} PRIVATE
 
     src/window_context.cxx
     src/windows/assets_window.cxx
+    src/windows/watchlists_window.cxx
     src/windows/strategies_window.cxx
     src/windows/markets_window.cxx
     src/windows/brokers_window.cxx
@@ -289,6 +290,7 @@ if(NOT EMSCRIPTEN AND BUILD_TESTING)
 
   add_executable(pludux-backtest-test_command_history
     tests/test_command_history.cpp
+    tests/test_watchlist_state.cpp
   )
   target_sources(pludux-backtest-test_command_history PRIVATE
     FILE_SET

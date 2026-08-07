@@ -85,29 +85,54 @@ public:
   auto
   select_portfolio_backtest(this ApplicationState& self,
                             backtest::PortfolioStoreHandle portfolio_handle,
-                            backtest::BacktestStoreHandle backtest_handle)
-   -> bool
+                            backtest::BacktestRunKey run) -> bool
   {
     const auto* portfolio =
      self.store_.get_portfolio_if_present(portfolio_handle);
-    if(!portfolio || !self.store_.get_backtest_if_present(backtest_handle) ||
-       std::ranges::find(portfolio->backtest_handles(), backtest_handle) ==
-        portfolio->backtest_handles().end()) {
+    if(!portfolio) {
+      return false;
+    }
+    const auto runs = self.expanded_backtest_runs(*portfolio);
+    if(std::ranges::find(runs, run) == runs.end()) {
       return false;
     }
 
     self.view_state_.selected_portfolio_handle(portfolio_handle);
     self.view_state_.portfolio_backtest_selections().remember(portfolio_handle,
-                                                              backtest_handle);
+                                                              run);
     return true;
   }
 
-  auto
-  selected_portfolio_backtest_handle(this const ApplicationState& self) noexcept
-   -> std::optional<backtest::BacktestStoreHandle>
+  auto selected_portfolio_backtest(this const ApplicationState& self) noexcept
+   -> std::optional<backtest::BacktestRunKey>
   {
     return self.view_state_.portfolio_backtest_selections().lookup(
      self.view_state_.selected_portfolio_handle());
+  }
+
+  auto expanded_backtest_runs(this const ApplicationState& self,
+                              const backtest::Portfolio& portfolio)
+   -> std::vector<backtest::BacktestRunKey>
+  {
+    auto runs = std::vector<backtest::BacktestRunKey>{};
+    for(const auto backtest_handle : portfolio.backtest_handles()) {
+      const auto* configured_backtest =
+       self.store_.get_backtest_if_present(backtest_handle);
+      if(!configured_backtest) {
+        continue;
+      }
+      const auto* watchlist = self.store_.get_watchlist_if_present(
+       configured_backtest->watchlist_handle());
+      if(!watchlist) {
+        continue;
+      }
+      for(const auto asset_handle : watchlist->asset_handles()) {
+        if(self.store_.get_asset_if_present(asset_handle)) {
+          runs.push_back({backtest_handle, asset_handle});
+        }
+      }
+    }
+    return runs;
   }
 
   auto selected_portfolio_handle(this const ApplicationState& self) noexcept
@@ -398,12 +423,14 @@ public:
 
     if(self.store_.update_asset(handle, std::move(edit_asset))) {
       if(reset_backtests) {
-        const auto& backtest_handles = self.document_state_.backtest_handles();
-        for(const auto& backtest_handle : backtest_handles) {
-          auto backtest_ptr =
-           self.store_.get_backtest_if_present(backtest_handle);
-          if(backtest_ptr && backtest_ptr->asset_handle() == handle) {
-            self.reset_backtest(backtest_handle);
+        for(const auto watchlist_handle :
+            self.document_state_.watchlist_handles()) {
+          const auto* watchlist =
+           self.store_.get_watchlist_if_present(watchlist_handle);
+          if(watchlist &&
+             std::ranges::find(watchlist->asset_handles(), handle) !=
+              watchlist->asset_handles().end()) {
+            self.reset_watchlist(watchlist_handle);
           }
         }
       }
@@ -420,19 +447,97 @@ public:
     if(self.store_.remove_asset(handle)) {
       self.document_state_.remove_asset_handle(handle);
 
-      const auto& backtest_handles = self.document_state_.backtest_handles();
-      for(const auto& backtest_handle : backtest_handles) {
-        const auto backtest_ptr =
-         self.store_.get_backtest_if_present(backtest_handle);
-        if(backtest_ptr && backtest_ptr->asset_handle() == handle) {
-          self.reset_backtest(backtest_handle);
+      for(const auto watchlist_handle :
+          self.document_state_.watchlist_handles()) {
+        const auto* stored =
+         self.store_.get_watchlist_if_present(watchlist_handle);
+        if(!stored) {
+          continue;
+        }
+        auto assets = stored->asset_handles();
+        const auto removed = std::erase(assets, handle);
+        if(removed != 0) {
+          auto updated = *stored;
+          updated.asset_handles(std::move(assets));
+          self.store_.update_watchlist(watchlist_handle, std::move(updated));
+          self.reset_watchlist(watchlist_handle);
         }
       }
+      self.view_state_.portfolio_backtest_selections().remove_asset(handle);
+      self.normalize_portfolio_backtest_selections();
 
       return true;
     }
 
     return false;
+  }
+
+  auto get_watchlist_handles(this const ApplicationState& self) noexcept
+   -> const std::vector<backtest::WatchlistStoreHandle>&
+  {
+    return self.document_state_.watchlist_handles();
+  }
+
+  void reorder_list_watchlist(this ApplicationState& self,
+                              std::size_t from_index,
+                              std::size_t to_index)
+  {
+    self.document_state_.reorder_watchlist_handle(from_index, to_index);
+  }
+
+  auto add_watchlist(this ApplicationState& self, backtest::Watchlist watchlist)
+   -> std::optional<backtest::WatchlistStoreHandle>
+  {
+    const auto handle = self.store_.add_watchlist(std::move(watchlist));
+    if(handle) {
+      self.document_state_.add_watchlist_handle(*handle);
+    }
+    return handle;
+  }
+
+  auto get_watchlist(this const ApplicationState& self,
+                     backtest::WatchlistStoreHandle handle) noexcept
+   -> const backtest::Watchlist&
+  {
+    return self.store_.get_watchlist(handle);
+  }
+
+  auto get_watchlist_if_present(this const ApplicationState& self,
+                                backtest::WatchlistStoreHandle handle) noexcept
+   -> const backtest::Watchlist*
+  {
+    return self.store_.get_watchlist_if_present(handle);
+  }
+
+  auto update_watchlist(this ApplicationState& self,
+                        backtest::WatchlistStoreHandle handle,
+                        backtest::Watchlist watchlist) -> bool
+  {
+    const auto* existing = self.store_.get_watchlist_if_present(handle);
+    if(!existing) {
+      return false;
+    }
+    const auto rules_changed = !existing->equivalent_rules(watchlist);
+    if(!self.store_.update_watchlist(handle, std::move(watchlist))) {
+      return false;
+    }
+    if(rules_changed) {
+      self.reset_watchlist(handle);
+      self.normalize_portfolio_backtest_selections();
+    }
+    return true;
+  }
+
+  auto remove_watchlist(this ApplicationState& self,
+                        backtest::WatchlistStoreHandle handle) -> bool
+  {
+    if(!self.store_.remove_watchlist(handle)) {
+      return false;
+    }
+    self.document_state_.remove_watchlist_handle(handle);
+    self.reset_watchlist(handle);
+    self.normalize_portfolio_backtest_selections();
+    return true;
   }
 
   auto get_strategy_handles(this const ApplicationState& self) noexcept
@@ -822,11 +927,15 @@ public:
    -> bool
   {
     {
-      const auto asset_handle = ready_backtest.asset_handle();
-      const auto asset_ptr = self.get_asset_if_present(asset_handle);
-
-      if(!asset_ptr) {
+      const auto* watchlist =
+       self.get_watchlist_if_present(ready_backtest.watchlist_handle());
+      if(!watchlist || watchlist->asset_handles().empty()) {
         return false;
+      }
+      for(const auto asset_handle : watchlist->asset_handles()) {
+        if(!self.get_asset_if_present(asset_handle)) {
+          return false;
+        }
       }
     }
     {
@@ -882,10 +991,12 @@ private:
       return;
     }
 
-    selections.normalize(
-     portfolio_handle, portfolio->backtest_handles(), [&](const auto handle) {
-       return self.store_.get_backtest_if_present(handle) != nullptr;
-     });
+    const auto runs = self.expanded_backtest_runs(*portfolio);
+    selections.normalize(portfolio_handle, runs, [&](const auto run) {
+      return self.store_.get_backtest_if_present(run.backtest_handle) !=
+              nullptr &&
+             self.store_.get_asset_if_present(run.asset_handle) != nullptr;
+    });
   }
 
   void normalize_portfolio_backtest_selections(this ApplicationState& self)
@@ -936,6 +1047,19 @@ private:
          std::ranges::find(portfolio->backtest_handles(), handle) !=
           portfolio->backtest_handles().end()) {
         self.reset_portfolio(portfolio_handle);
+      }
+    }
+  }
+
+  void reset_watchlist(this ApplicationState& self,
+                       backtest::WatchlistStoreHandle handle)
+  {
+    for(const auto backtest_handle : self.document_state_.backtest_handles()) {
+      const auto* configured_backtest =
+       self.store_.get_backtest_if_present(backtest_handle);
+      if(configured_backtest &&
+         configured_backtest->watchlist_handle() == handle) {
+        self.reset_backtest(backtest_handle);
       }
     }
   }

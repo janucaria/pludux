@@ -24,15 +24,17 @@ class PortfolioRunner {
 public:
   class BacktestRun {
   public:
-    BacktestRun(BacktestStoreHandle handle, BacktestRunner runner)
-    : handle_{handle}
+    BacktestRun(BacktestStoreHandle backtest_handle,
+                AssetStoreHandle asset_handle,
+                BacktestRunner runner)
+    : key_{backtest_handle, asset_handle}
     , runner_{std::move(runner)}
     {
     }
 
-    auto handle(this const BacktestRun& self) noexcept -> BacktestStoreHandle
+    auto key(this const BacktestRun& self) noexcept -> BacktestRunKey
     {
-      return self.handle_;
+      return self.key_;
     }
 
     auto runner(this BacktestRun& self) noexcept -> BacktestRunner&
@@ -46,7 +48,7 @@ public:
     }
 
   private:
-    BacktestStoreHandle handle_;
+    BacktestRunKey key_;
     BacktestRunner runner_;
   };
 
@@ -92,7 +94,8 @@ public:
     }
     results.backtests().reserve(self.backtests_.size());
     for(const auto& backtest : self.backtests_) {
-      results.backtests().emplace_back(backtest.handle());
+      results.backtests().emplace_back(backtest.key().backtest_handle,
+                                       backtest.key().asset_handle);
     }
     results.timeline().reserve(self.total_timestamps_);
   }

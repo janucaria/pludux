@@ -7,6 +7,7 @@ module;
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <ranges>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -105,8 +106,14 @@ private:
       ImGui::PushID(i);
 
       {
+        const auto* selected_watchlist =
+         backtest_ptr
+          ? app_state.get_watchlist_if_present(backtest_ptr->watchlist_handle())
+          : nullptr;
         const auto selected =
-         backtest_ptr && backtest_ptr->asset_handle() == asset_handle;
+         selected_watchlist &&
+         std::ranges::find(selected_watchlist->asset_handles(), asset_handle) !=
+          selected_watchlist->asset_handles().end();
         const auto has_draft =
          self.selected_asset_handle_opt_ == asset_handle &&
          self.editing_asset_ptr_ && *self.editing_asset_ptr_ != asset;

@@ -15,12 +15,11 @@ export namespace pludux::apps {
 
 struct PortfolioBacktestSelection {
   backtest::PortfolioStoreHandle portfolio_handle;
-  backtest::BacktestStoreHandle backtest_handle;
+  backtest::BacktestRunKey run;
 
   auto operator==(const PortfolioBacktestSelection& other) const -> bool
   {
-    return portfolio_handle == other.portfolio_handle &&
-           backtest_handle == other.backtest_handle;
+    return portfolio_handle == other.portfolio_handle && run == other.run;
   }
 };
 
@@ -32,7 +31,7 @@ public:
    std::vector<PortfolioBacktestSelection> selections)
   {
     for(const auto& selection : selections) {
-      remember(selection.portfolio_handle, selection.backtest_handle);
+      remember(selection.portfolio_handle, selection.run);
     }
   }
 
@@ -44,7 +43,7 @@ public:
 
   auto lookup(this const PortfolioBacktestSelections& self,
               backtest::PortfolioStoreHandle portfolio_handle) noexcept
-   -> std::optional<backtest::BacktestStoreHandle>
+   -> std::optional<backtest::BacktestRunKey>
   {
     const auto found =
      std::ranges::find(self.selections_,
@@ -53,22 +52,22 @@ public:
     if(found == self.selections_.end()) {
       return std::nullopt;
     }
-    return found->backtest_handle;
+    return found->run;
   }
 
   void remember(this PortfolioBacktestSelections& self,
                 backtest::PortfolioStoreHandle portfolio_handle,
-                backtest::BacktestStoreHandle backtest_handle)
+                backtest::BacktestRunKey run)
   {
     const auto found =
      std::ranges::find(self.selections_,
                        portfolio_handle,
                        &PortfolioBacktestSelection::portfolio_handle);
     if(found == self.selections_.end()) {
-      self.selections_.push_back({portfolio_handle, backtest_handle});
+      self.selections_.push_back({portfolio_handle, run});
       return;
     }
-    found->backtest_handle = backtest_handle;
+    found->run = run;
   }
 
   void remove_portfolio(this PortfolioBacktestSelections& self,
@@ -83,29 +82,35 @@ public:
                        backtest::BacktestStoreHandle backtest_handle)
   {
     std::erase_if(self.selections_, [&](const auto& selection) {
-      return selection.backtest_handle == backtest_handle;
+      return selection.run.backtest_handle == backtest_handle;
+    });
+  }
+
+  void remove_asset(this PortfolioBacktestSelections& self,
+                    backtest::AssetStoreHandle asset_handle)
+  {
+    std::erase_if(self.selections_, [&](const auto& selection) {
+      return selection.run.asset_handle == asset_handle;
     });
   }
 
   template<typename IsValid>
-  auto
-  normalize(this PortfolioBacktestSelections& self,
-            backtest::PortfolioStoreHandle portfolio_handle,
-            std::span<const backtest::BacktestStoreHandle> ordered_backtests,
-            IsValid&& is_valid) -> std::optional<backtest::BacktestStoreHandle>
+  auto normalize(this PortfolioBacktestSelections& self,
+                 backtest::PortfolioStoreHandle portfolio_handle,
+                 std::span<const backtest::BacktestRunKey> ordered_runs,
+                 IsValid&& is_valid) -> std::optional<backtest::BacktestRunKey>
   {
     const auto remembered = self.lookup(portfolio_handle);
     if(remembered &&
-       std::ranges::find(ordered_backtests, *remembered) !=
-        ordered_backtests.end() &&
+       std::ranges::find(ordered_runs, *remembered) != ordered_runs.end() &&
        is_valid(*remembered)) {
       return remembered;
     }
 
-    for(const auto backtest_handle : ordered_backtests) {
-      if(is_valid(backtest_handle)) {
-        self.remember(portfolio_handle, backtest_handle);
-        return backtest_handle;
+    for(const auto run : ordered_runs) {
+      if(is_valid(run)) {
+        self.remember(portfolio_handle, run);
+        return run;
       }
     }
 

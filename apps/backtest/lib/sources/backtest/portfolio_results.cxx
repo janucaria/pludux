@@ -14,14 +14,23 @@ import :store_handle;
 
 export namespace pludux::backtest {
 
+struct BacktestRunKey {
+  BacktestStoreHandle backtest_handle;
+  AssetStoreHandle asset_handle;
+
+  auto operator==(const BacktestRunKey&) const noexcept -> bool = default;
+};
+
 class BacktestResults {
 public:
   BacktestResults() = default;
 
   BacktestResults(BacktestStoreHandle backtest_handle,
+                  AssetStoreHandle asset_handle,
                   BacktestTimeline timeline = {},
                   SeriesEvaluationResults series_results = {})
   : backtest_handle_{backtest_handle}
+  , asset_handle_{asset_handle}
   , timeline_{std::move(timeline)}
   , series_results_{std::move(series_results)}
   {
@@ -34,6 +43,7 @@ public:
             other.backtest_handle_.slot_index() &&
            self.backtest_handle_.generation() ==
             other.backtest_handle_.generation() &&
+           self.asset_handle_ == other.asset_handle_ &&
            self.timeline_.size() == other.timeline_.size() &&
            self.series_results_.results().size() ==
             other.series_results_.results().size();
@@ -43,6 +53,17 @@ public:
    -> BacktestStoreHandle
   {
     return self.backtest_handle_;
+  }
+
+  auto asset_handle(this const BacktestResults& self) noexcept
+   -> AssetStoreHandle
+  {
+    return self.asset_handle_;
+  }
+
+  auto key(this const BacktestResults& self) noexcept -> BacktestRunKey
+  {
+    return {self.backtest_handle_, self.asset_handle_};
   }
 
   auto timeline(this const BacktestResults& self) noexcept
@@ -70,6 +91,7 @@ public:
 
 private:
   BacktestStoreHandle backtest_handle_;
+  AssetStoreHandle asset_handle_;
   BacktestTimeline timeline_;
   SeriesEvaluationResults series_results_;
 };
@@ -110,22 +132,22 @@ public:
     return self.backtests_;
   }
 
-  auto backtest(this PortfolioResults& self,
-                BacktestStoreHandle handle) noexcept -> BacktestResults*
+  auto backtest(this PortfolioResults& self, BacktestRunKey key) noexcept
+   -> BacktestResults*
   {
     for(auto& result : self.backtests_) {
-      if(result.backtest_handle() == handle) {
+      if(result.key() == key) {
         return &result;
       }
     }
     return nullptr;
   }
 
-  auto backtest(this const PortfolioResults& self,
-                BacktestStoreHandle handle) noexcept -> const BacktestResults*
+  auto backtest(this const PortfolioResults& self, BacktestRunKey key) noexcept
+   -> const BacktestResults*
   {
     for(const auto& result : self.backtests_) {
-      if(result.backtest_handle() == handle) {
+      if(result.key() == key) {
         return &result;
       }
     }

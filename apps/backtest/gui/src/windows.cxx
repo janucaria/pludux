@@ -7,6 +7,7 @@ module;
 export module pludux.apps.backtest:windows;
 
 export import :windows.assets_window;
+export import :windows.watchlists_window;
 export import :windows.strategies_window;
 export import :windows.markets_window;
 export import :windows.brokers_window;

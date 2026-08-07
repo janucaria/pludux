@@ -200,9 +200,8 @@ public:
     }
 
     const auto& portfolio = *portfolio_ptr;
-    const auto selected_backtest =
-     app_state.selected_portfolio_backtest_handle();
-    if(!selected_backtest) {
+    const auto selected_run = app_state.selected_portfolio_backtest();
+    if(!selected_run) {
       self.chart_state_.clear_display_backtest();
       self.render_status_panel(
        PLUDUX_ICON_WARNING,
@@ -211,7 +210,8 @@ public:
       ImGui::End();
       return;
     }
-    const auto backtest_handle = *selected_backtest;
+    const auto run = *selected_run;
+    const auto backtest_handle = run.backtest_handle;
     const auto* backtest_ptr =
      app_state.get_backtest_if_present(backtest_handle);
     if(!backtest_ptr) {
@@ -224,7 +224,7 @@ public:
       return;
     }
     const auto& backtest = *backtest_ptr;
-    self.chart_state_.display_backtest(portfolio_handle, backtest_handle);
+    self.chart_state_.display_backtest(portfolio_handle, run);
 
     const auto execution_status =
      context.backtest_execution_status(portfolio_handle);
@@ -235,7 +235,7 @@ public:
       return;
     }
 
-    const auto asset_handle = backtest.asset_handle();
+    const auto asset_handle = run.asset_handle;
     const auto& asset = app_state.get_asset(asset_handle);
     const auto& strategy = app_state.get_strategy(backtest.strategy_handle());
 
@@ -250,7 +250,7 @@ public:
 
     const auto& portfolio_results =
      app_state.get_portfolio_results(portfolio_handle);
-    const auto* backtest_results = portfolio_results.backtest(backtest_handle);
+    const auto* backtest_results = portfolio_results.backtest(run);
     if(!backtest_results) {
       self.render_status_panel(PLUDUX_ICON_WAITING,
                                "Waiting for results",
@@ -432,7 +432,7 @@ public:
         auto overlay_value_groups = std::vector<PlotValueGroup>{};
         if(self.chart_state_.show_indicators()) {
           self.overlays_plots(
-           context, backtest_handle, inspected_index, overlay_value_groups);
+           context, run, inspected_index, overlay_value_groups);
         }
         if(self.chart_state_.show_trades()) {
           self.plot_signal("Trade Signals", backtest_timelines, asset);
@@ -1862,17 +1862,17 @@ private:
 
   void overlays_plots(this const BacktestChartWindow& self,
                       WindowContext& context,
-                      backtest::BacktestStoreHandle backtest_handle,
+                      backtest::BacktestRunKey run,
                       std::size_t inspected_index,
                       std::vector<PlotValueGroup>& value_groups)
   {
     const auto& app_state = context.app_state();
     const auto portfolio_handle = app_state.selected_portfolio_handle();
-    const auto& backtest_config = app_state.get_backtest(backtest_handle);
+    const auto& backtest_config = app_state.get_backtest(run.backtest_handle);
     const auto& strategy_handle = backtest_config.strategy_handle();
     const auto& strategy = app_state.get_strategy(strategy_handle);
     const auto& results = app_state.get_portfolio_results(portfolio_handle);
-    const auto& backtest_results = *results.backtest(backtest_handle);
+    const auto& backtest_results = *results.backtest(run);
     const auto& backtest_timeline = backtest_results.timeline();
     const auto& series_results = backtest_results.series_results();
     const auto& plots = strategy.plots();

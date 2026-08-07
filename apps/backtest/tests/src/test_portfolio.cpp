@@ -80,11 +80,27 @@ TEST(PortfolioTest, DefaultsMaximumCombinedLayersToTen)
 TEST(PortfolioTest, BacktestContainsOnlyReusableBacktestConfiguration)
 {
   const auto backtest = Backtest{"BTC trend",
-                                 AssetStoreHandle{1, 1},
+                                 WatchlistStoreHandle{1, 1},
                                  StrategyStoreHandle{2, 1},
                                  ProfileStoreHandle{3, 1}};
   EXPECT_EQ(backtest.name(), "BTC trend");
-  EXPECT_EQ(backtest.asset_handle(), (AssetStoreHandle{1, 1}));
+  EXPECT_EQ(backtest.watchlist_handle(), (WatchlistStoreHandle{1, 1}));
   EXPECT_EQ(backtest.strategy_handle(), (StrategyStoreHandle{2, 1}));
   EXPECT_EQ(backtest.profile_handle(), (ProfileStoreHandle{3, 1}));
+}
+
+TEST(PortfolioTest, ResultsAreIdentifiedByBacktestAndAsset)
+{
+  const auto backtest_handle = BacktestStoreHandle{1, 1};
+  const auto first_asset = AssetStoreHandle{2, 1};
+  const auto second_asset = AssetStoreHandle{3, 1};
+  auto results =
+   PortfolioResults{{},
+                    {BacktestResults{backtest_handle, first_asset},
+                     BacktestResults{backtest_handle, second_asset}}};
+
+  ASSERT_NE(results.backtest({backtest_handle, first_asset}), nullptr);
+  ASSERT_NE(results.backtest({backtest_handle, second_asset}), nullptr);
+  EXPECT_NE(results.backtest({backtest_handle, first_asset}),
+            results.backtest({backtest_handle, second_asset}));
 }

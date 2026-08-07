@@ -210,6 +210,57 @@ public:
     return asset_resolver.remove(assets, handle);
   }
 
+  auto add_watchlist(this Store& self, Watchlist watchlist)
+   -> std::optional<WatchlistStoreHandle>
+  {
+    return self.descriptor_.watchlist_store_data_resolver().add(
+     self.arena_.watchlists(), std::move(watchlist));
+  }
+
+  auto get_watchlist(this const Store& self,
+                     WatchlistStoreHandle handle) noexcept -> const Watchlist&
+  {
+    return self.descriptor_.watchlist_store_data_resolver().get(
+     self.arena_.watchlists(), handle);
+  }
+
+  auto get_watchlist(this Store& self, WatchlistStoreHandle handle) noexcept
+   -> Watchlist&
+  {
+    return self.descriptor_.watchlist_store_data_resolver().get(
+     self.arena_.watchlists(), handle);
+  }
+
+  auto get_watchlist_if_present(this const Store& self,
+                                WatchlistStoreHandle handle) noexcept
+   -> const Watchlist*
+  {
+    return self.descriptor_.watchlist_store_data_resolver().get_if_present(
+     self.arena_.watchlists(), handle);
+  }
+
+  auto get_watchlist_if_present(this Store& self,
+                                WatchlistStoreHandle handle) noexcept
+   -> Watchlist*
+  {
+    return self.descriptor_.watchlist_store_data_resolver().get_if_present(
+     self.arena_.watchlists(), handle);
+  }
+
+  auto update_watchlist(this Store& self,
+                        WatchlistStoreHandle handle,
+                        Watchlist watchlist) -> bool
+  {
+    return self.descriptor_.watchlist_store_data_resolver().update(
+     self.arena_.watchlists(), handle, std::move(watchlist));
+  }
+
+  auto remove_watchlist(this Store& self, WatchlistStoreHandle handle) -> bool
+  {
+    return self.descriptor_.watchlist_store_data_resolver().remove(
+     self.arena_.watchlists(), handle);
+  }
+
   auto add_strategy(this Store& self, Strategy strategy)
    -> std::optional<StrategyStoreHandle>
   {

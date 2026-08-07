@@ -11,6 +11,7 @@ import :backtest;
 import :portfolio;
 import :portfolio_results;
 import :asset;
+import :watchlist;
 import :strategy;
 import :market;
 import :broker;
@@ -31,6 +32,8 @@ public:
    StoreDataResolver<Portfolio, PortfolioStoreHandle>
     portfolio_store_data_resolver,
    StoreDataResolver<Asset, AssetStoreHandle> asset_store_data_resolver,
+   StoreDataResolver<Watchlist, WatchlistStoreHandle>
+    watchlist_store_data_resolver,
    StoreDataResolver<Strategy, StrategyStoreHandle>
     strategy_store_data_resolver,
    StoreDataResolver<Market, MarketStoreHandle> market_store_data_resolver,
@@ -41,6 +44,7 @@ public:
   : backtest_store_data_resolver_{std::move(backtest_store_data_resolver)}
   , portfolio_store_data_resolver_{std::move(portfolio_store_data_resolver)}
   , asset_store_data_resolver_{std::move(asset_store_data_resolver)}
+  , watchlist_store_data_resolver_{std::move(watchlist_store_data_resolver)}
   , strategy_store_data_resolver_{std::move(strategy_store_data_resolver)}
   , market_store_data_resolver_{std::move(market_store_data_resolver)}
   , broker_store_data_resolver_{std::move(broker_store_data_resolver)}
@@ -84,6 +88,18 @@ public:
    -> StoreDataResolver<Asset, AssetStoreHandle>&
   {
     return self.asset_store_data_resolver_;
+  }
+
+  auto watchlist_store_data_resolver(this const StoreDescriptor& self) noexcept
+   -> const StoreDataResolver<Watchlist, WatchlistStoreHandle>&
+  {
+    return self.watchlist_store_data_resolver_;
+  }
+
+  auto watchlist_store_data_resolver(this StoreDescriptor& self) noexcept
+   -> StoreDataResolver<Watchlist, WatchlistStoreHandle>&
+  {
+    return self.watchlist_store_data_resolver_;
   }
 
   auto strategy_store_data_resolver(this const StoreDescriptor& self) noexcept
@@ -154,6 +170,8 @@ private:
   StoreDataResolver<Portfolio, PortfolioStoreHandle>
    portfolio_store_data_resolver_;
   StoreDataResolver<Asset, AssetStoreHandle> asset_store_data_resolver_;
+  StoreDataResolver<Watchlist, WatchlistStoreHandle>
+   watchlist_store_data_resolver_;
   StoreDataResolver<Strategy, StrategyStoreHandle>
    strategy_store_data_resolver_;
   StoreDataResolver<Market, MarketStoreHandle> market_store_data_resolver_;

@@ -115,6 +115,7 @@ target_sources(${PROJECT_NAME}
     sources/backtest/strategy_performance_node.cxx
     
     sources/backtest/asset.cxx
+    sources/backtest/watchlist.cxx
     sources/backtest/strategy.cxx
     sources/backtest/strategy_inputs.cxx
     sources/backtest/market.cxx

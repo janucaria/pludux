@@ -93,12 +93,15 @@ private:
       const auto portfolio_matches =
        self.filter_.PassFilter(portfolio->name().c_str());
       auto child_matches = false;
-      for(const auto backtest_handle : portfolio->backtest_handles()) {
+      const auto runs = app_state.expanded_backtest_runs(*portfolio);
+      for(const auto run : runs) {
         const auto* backtest =
-         app_state.get_backtest_if_present(backtest_handle);
-        const auto* name =
-         backtest ? backtest->name().c_str() : "Missing Backtest";
-        child_matches = child_matches || self.filter_.PassFilter(name);
+         app_state.get_backtest_if_present(run.backtest_handle);
+        const auto* asset = app_state.get_asset_if_present(run.asset_handle);
+        child_matches =
+         child_matches ||
+         (backtest && self.filter_.PassFilter(backtest->name().c_str())) ||
+         (asset && self.filter_.PassFilter(asset->name().c_str()));
       }
       if(!portfolio_matches && !child_matches) {
         continue;
@@ -109,8 +112,8 @@ private:
       ImGui::PushID(static_cast<int>(handle.generation()));
       const auto selected = app_state.selected_portfolio_handle() == handle;
       const auto selected_backtest =
-       selected ? app_state.selected_portfolio_backtest_handle()
-                : std::optional<backtest::BacktestStoreHandle>{};
+       selected ? app_state.selected_portfolio_backtest()
+                : std::optional<backtest::BacktestRunKey>{};
       const auto force_open_for_filter =
        self.filter_.IsActive() && child_matches;
       if(force_open_for_filter || self.open_requested_ == handle) {
@@ -188,31 +191,38 @@ private:
          [handle](ApplicationState& state) { state.select_portfolio(handle); });
       }
       if(open) {
-        for(const auto backtest_handle : portfolio->backtest_handles()) {
+        for(const auto run : runs) {
           const auto* backtest =
-           app_state.get_backtest_if_present(backtest_handle);
-          const auto* name =
-           backtest ? backtest->name().c_str() : "Missing Backtest";
-          if(!portfolio_matches && !self.filter_.PassFilter(name)) {
+           app_state.get_backtest_if_present(run.backtest_handle);
+          const auto* asset = app_state.get_asset_if_present(run.asset_handle);
+          const auto name = backtest && asset
+                             ? backtest->name() + " — " + asset->name()
+                             : std::string{"Missing Backtest Asset"};
+          if(!portfolio_matches &&
+             !(backtest && self.filter_.PassFilter(backtest->name().c_str())) &&
+             !(asset && self.filter_.PassFilter(asset->name().c_str()))) {
             continue;
           }
 
-          ImGui::PushID(static_cast<int>(backtest_handle.slot_index()));
-          ImGui::PushID(static_cast<int>(backtest_handle.generation()));
+          ImGui::PushID(static_cast<int>(run.backtest_handle.slot_index()));
+          ImGui::PushID(static_cast<int>(run.backtest_handle.generation()));
+          ImGui::PushID(static_cast<int>(run.asset_handle.slot_index()));
+          ImGui::PushID(static_cast<int>(run.asset_handle.generation()));
           const auto child_selected =
-           selected_backtest && *selected_backtest == backtest_handle;
-          if(backtest) {
-            if(ImGui::Selectable(name, child_selected)) {
-              context.push_view_action(
-               [handle, backtest_handle](ApplicationState& state) {
-                 state.select_portfolio_backtest(handle, backtest_handle);
-               });
+           selected_backtest && *selected_backtest == run;
+          if(backtest && asset) {
+            if(ImGui::Selectable(name.c_str(), child_selected)) {
+              context.push_view_action([handle, run](ApplicationState& state) {
+                state.select_portfolio_backtest(handle, run);
+              });
             }
           } else {
             ImGui::BeginDisabled();
             ImGui::Selectable("Missing Backtest", false);
             ImGui::EndDisabled();
           }
+          ImGui::PopID();
+          ImGui::PopID();
           ImGui::PopID();
           ImGui::PopID();
         }

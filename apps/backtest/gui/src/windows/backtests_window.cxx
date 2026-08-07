@@ -246,7 +246,7 @@ private:
     auto& edit_backtest_ptr = self.editing_backtest_ptr_;
     ui::form_section(
      "Backtest Details",
-     "Give this reusable Asset + Strategy + Profile setup a recognizable "
+     "Give this reusable Watchlist + Strategy + Profile setup a recognizable "
      "name. A blank name is saved as 'Unnamed'.");
     {
       ui::field_label("Name");
@@ -261,32 +261,32 @@ private:
      "Choose the data, trading rules, and position-sizing profile used by "
      "this reusable backtest.");
     {
-      const auto& asset_handles = app_state.get_asset_handles();
-      const auto edit_asset_handle = edit_backtest_ptr->asset_handle();
-      const auto& edit_asset_ptr =
-       app_state.get_asset_if_present(edit_asset_handle);
+      const auto& watchlist_handles = app_state.get_watchlist_handles();
+      const auto edit_watchlist_handle = edit_backtest_ptr->watchlist_handle();
+      const auto* edit_watchlist =
+       app_state.get_watchlist_if_present(edit_watchlist_handle);
 
-      if(!edit_asset_ptr) {
-        if(!self.selected_backtest_handle_opt_ && !asset_handles.empty()) {
-          edit_backtest_ptr->asset_handle(asset_handles.front());
+      if(!edit_watchlist) {
+        if(!self.selected_backtest_handle_opt_ && !watchlist_handles.empty()) {
+          edit_backtest_ptr->watchlist_handle(watchlist_handles.front());
         }
       }
 
-      ui::field_label("Asset");
-      auto asset_preview =
-       edit_asset_ptr ? edit_asset_ptr->name() : std::string{"Select an asset"};
-      if(ImGui::BeginCombo("##AssetCombo", asset_preview.c_str())) {
-        for(auto i = 0; i < asset_handles.size(); ++i) {
-          const auto& asset_handle = asset_handles[i];
-          const auto& asset = app_state.get_asset(asset_handle);
-          const auto& asset_name = asset.name();
+      ui::field_label("Watchlist");
+      auto watchlist_preview = edit_watchlist
+                                ? edit_watchlist->name()
+                                : std::string{"Select a watchlist"};
+      if(ImGui::BeginCombo("##WatchlistCombo", watchlist_preview.c_str())) {
+        for(auto i = 0; i < watchlist_handles.size(); ++i) {
+          const auto watchlist_handle = watchlist_handles[i];
+          const auto& watchlist = app_state.get_watchlist(watchlist_handle);
           const auto is_selected =
-           edit_backtest_ptr->asset_handle() == asset_handle;
+           edit_backtest_ptr->watchlist_handle() == watchlist_handle;
 
           ImGui::PushID(i);
 
-          if(ImGui::Selectable(asset_name.c_str(), is_selected)) {
-            edit_backtest_ptr->asset_handle(asset_handle);
+          if(ImGui::Selectable(watchlist.name().c_str(), is_selected)) {
+            edit_backtest_ptr->watchlist_handle(watchlist_handle);
           }
 
           if(is_selected) {
@@ -596,7 +596,7 @@ private:
     if(!app_state.is_backtest_ready(*edit_backtest_ptr)) {
       ImGui::Spacing();
       ui::validation_message(
-       "Select an asset, strategy, and profile before saving.");
+       "Select a non-empty watchlist, strategy, and profile before saving.");
     }
   }
 
@@ -638,7 +638,8 @@ private:
         self.reset();
       }
     } else {
-      context.alert("Please select an asset, a strategy, and a profile.");
+      context.alert(
+       "Please select a non-empty watchlist, a strategy, and a profile.");
     }
   }
 

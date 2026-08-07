@@ -230,6 +230,7 @@ public:
         self.backtests_window_.discard_draft();
         self.portfolios_window_.discard_draft();
         self.assets_window_.discard_draft();
+        self.watchlists_window_.discard_draft();
         self.strategies_window_.discard_draft();
         self.markets_window_.discard_draft();
         self.brokers_window_.discard_draft();
@@ -242,6 +243,7 @@ public:
       self.portfolios_window_.render(window_context);
       self.backtests_window_.render(window_context);
       self.assets_window_.render(window_context);
+      self.watchlists_window_.render(window_context);
       self.strategies_window_.render(window_context);
       self.markets_window_.render(window_context);
       self.brokers_window_.render(window_context);
@@ -329,11 +331,11 @@ private:
   auto make_backtest_runner(this Application& self,
                             ApplicationState& app_state,
                             const backtest::Backtest& backtest,
+                            backtest::AssetStoreHandle asset_handle,
                             const backtest::Portfolio& portfolio)
    -> backtest::BacktestRunner
   {
-    const auto* asset_ptr =
-     app_state.get_asset_if_present(backtest.asset_handle());
+    const auto* asset_ptr = app_state.get_asset_if_present(asset_handle);
     const auto* strategy_ptr =
      app_state.get_strategy_if_present(backtest.strategy_handle());
     const auto* market_ptr =
@@ -455,12 +457,19 @@ private:
       return;
     }
     auto backtests = std::vector<backtest::PortfolioRunner::BacktestRun>{};
-    backtests.reserve(portfolio->backtest_handles().size());
+    const auto runs = app_state.expanded_backtest_runs(*portfolio);
+    backtests.reserve(runs.size());
     for(const auto backtest_handle : portfolio->backtest_handles()) {
-      backtests.emplace_back(
-       backtest_handle,
-       self.make_backtest_runner(
-        app_state, app_state.get_backtest(backtest_handle), *portfolio));
+      const auto& configured_backtest = app_state.get_backtest(backtest_handle);
+      const auto& watchlist =
+       app_state.get_watchlist(configured_backtest.watchlist_handle());
+      for(const auto asset_handle : watchlist.asset_handles()) {
+        backtests.emplace_back(
+         backtest_handle,
+         asset_handle,
+         self.make_backtest_runner(
+          app_state, configured_backtest, asset_handle, *portfolio));
+      }
     }
     auto runner =
      backtest::PortfolioRunner{portfolio->initial_capital(),
@@ -485,6 +494,7 @@ private:
   PortfoliosWindow portfolios_window_;
   BacktestsWindow backtests_window_;
   AssetsWindow assets_window_;
+  WatchlistsWindow watchlists_window_;
   StrategiesWindow strategies_window_;
   MarketsWindow markets_window_;
   BrokersWindow brokers_window_;
