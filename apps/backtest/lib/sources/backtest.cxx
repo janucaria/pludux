@@ -56,6 +56,7 @@ export import :strategy_performance;
 export import :execution_filter_method_context;
 export import :strategy_performance_method;
 export import :strategy_performance_node;
+export import :backtest_setup;
 export import :backtest;
 export import :backtest_timeline;
 export import :portfolio_timeline;

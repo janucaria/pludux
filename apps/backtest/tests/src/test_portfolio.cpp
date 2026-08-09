@@ -79,14 +79,16 @@ TEST(PortfolioTest, DefaultsMaximumCombinedLayersToTen)
 
 TEST(PortfolioTest, BacktestContainsOnlyReusableBacktestConfiguration)
 {
-  const auto backtest = Backtest{"BTC trend",
-                                 WatchlistStoreHandle{1, 1},
-                                 StrategyStoreHandle{2, 1},
-                                 ProfileStoreHandle{3, 1}};
+  const auto backtest =
+   Backtest{"BTC trend",
+            WatchlistStoreHandle{1, 1},
+            StrategyPerformanceConfig{},
+            BacktestSetup{StrategyStoreHandle{2, 1}, ProfileStoreHandle{3, 1}}};
   EXPECT_EQ(backtest.name(), "BTC trend");
   EXPECT_EQ(backtest.watchlist_handle(), (WatchlistStoreHandle{1, 1}));
-  EXPECT_EQ(backtest.strategy_handle(), (StrategyStoreHandle{2, 1}));
-  EXPECT_EQ(backtest.profile_handle(), (ProfileStoreHandle{3, 1}));
+  EXPECT_EQ(backtest.main_setup().strategy_handle(),
+            (StrategyStoreHandle{2, 1}));
+  EXPECT_EQ(backtest.main_setup().profile_handle(), (ProfileStoreHandle{3, 1}));
 }
 
 TEST(PortfolioTest, ResultsAreIdentifiedByBacktestAndAsset)

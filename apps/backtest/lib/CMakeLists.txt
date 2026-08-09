@@ -137,6 +137,7 @@ target_sources(${PROJECT_NAME}
     sources/backtest/position_node.cxx
     sources/backtest/stop_target_price_method.cxx
     sources/backtest/stop_target_price_node.cxx
+    sources/backtest/backtest_setup.cxx
     sources/backtest/backtest.cxx
     sources/backtest/portfolio.cxx
     sources/backtest/portfolio_timeline.cxx

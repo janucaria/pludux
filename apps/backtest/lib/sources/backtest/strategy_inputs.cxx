@@ -8,7 +8,7 @@ export module pludux.backtest:strategy_inputs;
 
 import pludux;
 
-import :backtest;
+import :backtest_setup;
 import :risk_distance_node;
 import :position_node;
 import :strategy;
@@ -461,13 +461,13 @@ auto collect_numeric_inputs(const Strategy& strategy)
   return inputs;
 }
 
-void assign_backtest_strategy(Backtest& backtest,
-                              StrategyStoreHandle strategy_handle,
-                              const Strategy& strategy)
+void assign_backtest_setup_strategy(BacktestSetup& setup,
+                                    StrategyStoreHandle strategy_handle,
+                                    const Strategy& strategy)
 {
   auto inputs = collect_numeric_inputs(strategy);
-  backtest.strategy_handle(std::move(strategy_handle));
-  backtest.inputs(std::move(inputs));
+  setup.strategy_handle(std::move(strategy_handle));
+  setup.inputs(std::move(inputs));
 }
 
 } // namespace pludux::backtest

@@ -105,10 +105,14 @@ public:
     for(const auto& backtest_handle : app_state.get_backtest_handles()) {
       auto* backtest_ptr = app_state.get_backtest_if_present(backtest_handle);
       if(backtest_ptr) {
-        const auto* strategy_ptr =
-         app_state.get_strategy_if_present(backtest_ptr->strategy_handle());
-        if(strategy_ptr) {
-          self.resolve_and_sync_backtest_inputs(*backtest_ptr, *strategy_ptr);
+        for(auto index = std::size_t{}; index < backtest_ptr->setup_count();
+            ++index) {
+          auto& setup = backtest_ptr->setup(index);
+          const auto* strategy_ptr =
+           app_state.get_strategy_if_present(setup.strategy_handle());
+          if(strategy_ptr) {
+            self.resolve_and_sync_setup_inputs(setup, *strategy_ptr);
+          }
         }
       }
     }
@@ -272,10 +276,14 @@ public:
             continue;
           }
 
-          const auto* strategy_ptr =
-           app_state.get_strategy_if_present(backtest_ptr->strategy_handle());
-          if(strategy_ptr) {
-            self.resolve_and_sync_backtest_inputs(*backtest_ptr, *strategy_ptr);
+          for(auto index = std::size_t{}; index < backtest_ptr->setup_count();
+              ++index) {
+            auto& setup = backtest_ptr->setup(index);
+            const auto* strategy_ptr =
+             app_state.get_strategy_if_present(setup.strategy_handle());
+            if(strategy_ptr) {
+              self.resolve_and_sync_setup_inputs(setup, *strategy_ptr);
+            }
           }
         }
         self.running_portfolios_.clear();
@@ -310,12 +318,12 @@ public:
 
 private:
   void
-  resolve_and_sync_backtest_inputs(this Application& self,
-                                   backtest::Backtest& backtest,
-                                   const backtest::Strategy& strategy) noexcept
+  resolve_and_sync_setup_inputs(this Application& self,
+                                backtest::BacktestSetup& setup,
+                                const backtest::Strategy& strategy) noexcept
   {
     auto synced_inputs = backtest::collect_numeric_inputs(strategy);
-    const auto& previous_inputs = backtest.inputs();
+    const auto& previous_inputs = setup.inputs();
 
     for(auto index = std::size_t{0}; index < synced_inputs.size(); ++index) {
       if(index >= previous_inputs.size()) {
@@ -325,7 +333,7 @@ private:
       synced_inputs[index].value(previous_inputs[index].value());
     }
 
-    backtest.inputs(std::move(synced_inputs));
+    setup.inputs(std::move(synced_inputs));
   }
 
   auto make_backtest_runner(this Application& self,
@@ -336,113 +344,128 @@ private:
    -> backtest::BacktestRunner
   {
     const auto* asset_ptr = app_state.get_asset_if_present(asset_handle);
-    const auto* strategy_ptr =
-     app_state.get_strategy_if_present(backtest.strategy_handle());
     const auto* market_ptr =
      app_state.get_market_if_present(portfolio.market_handle());
     const auto* broker_ptr =
      app_state.get_broker_if_present(portfolio.broker_handle());
-    const auto* profile_ptr =
-     app_state.get_profile_if_present(backtest.profile_handle());
 
-    if(!asset_ptr || !strategy_ptr || !market_ptr || !broker_ptr ||
-       !profile_ptr) {
+    if(!asset_ptr || !market_ptr || !broker_ptr) {
       throw std::invalid_argument{"Incomplete Backtest in Portfolio"};
     }
 
-    auto input_values = std::vector<double>{};
-    input_values.reserve(backtest.inputs().size());
-    for(const auto& input : backtest.inputs()) {
-      input_values.emplace_back(input.value());
+    auto runner_setups = std::vector<backtest::BacktestRunner::Setup>{};
+    runner_setups.reserve(backtest.setup_count());
+    for(auto setup_index = std::size_t{}; setup_index < backtest.setup_count();
+        ++setup_index) {
+      const auto& configured_setup = backtest.setup(setup_index);
+      const auto* strategy_ptr =
+       app_state.get_strategy_if_present(configured_setup.strategy_handle());
+      const auto* profile_ptr =
+       app_state.get_profile_if_present(configured_setup.profile_handle());
+      if(!strategy_ptr || !profile_ptr) {
+        throw std::invalid_argument{"Incomplete Backtest setup in Portfolio"};
+      }
+
+      auto input_values = std::vector<double>{};
+      input_values.reserve(configured_setup.inputs().size());
+      for(const auto& input : configured_setup.inputs()) {
+        input_values.emplace_back(input.value());
+      }
+
+      auto input_context = NodeToErasedMethodContext{input_values};
+      auto series_methods =
+       OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+      for(const auto& [series_name, series_node] :
+          strategy_ptr->series_nodes()) {
+        series_methods.set(series_name,
+                           node_to_erased_method<ErasedSeriesMethodContext>(
+                            series_node, input_context));
+      }
+
+      const auto make_position_rule =
+       [&input_context](const backtest::Strategy::Position& position) {
+         auto signal_exits =
+          std::vector<backtest::BacktestRunner::PositionRule::SignalExitRule>{};
+         signal_exits.reserve(position.exits().size());
+         for(const auto& exit : position.exits()) {
+           signal_exits.emplace_back(
+            exit.enabled(),
+            node_to_erased_method<ErasedSeriesMethodContext>(exit.signal(),
+                                                             input_context),
+            exit.timing(),
+            exit.reduce());
+         }
+         auto take_profits =
+          std::vector<backtest::BacktestRunner::PositionRule::TakeProfitRule>{};
+         take_profits.reserve(position.take_profits().size());
+         for(const auto& take_profit : position.take_profits()) {
+           take_profits.emplace_back(
+            node_to_erased_method<ErasedSeriesMethodContext>(
+             take_profit.target_price(), input_context),
+            take_profit.enabled(),
+            take_profit.reduce());
+         }
+         auto stop_losses =
+          std::vector<backtest::BacktestRunner::PositionRule::StopLossRule>{};
+         stop_losses.reserve(position.stop_losses().size());
+         for(const auto& stop_loss : position.stop_losses()) {
+           stop_losses.emplace_back(
+            node_to_erased_method<ErasedSeriesMethodContext>(
+             stop_loss.stop_price(), input_context),
+            stop_loss.enabled(),
+            stop_loss.trailing(),
+            stop_loss.reduce());
+         }
+         return backtest::BacktestRunner::PositionRule{
+          node_to_erased_method<ErasedSeriesMethodContext>(
+           position.entry().signal(), input_context),
+          std::move(signal_exits),
+          node_to_erased_method<ErasedSeriesMethodContext>(
+           position.pyramiding().signal(), input_context),
+          position.pyramiding().max_layers(),
+          position.pyramiding().cooldown(),
+          node_to_erased_method<ErasedSeriesMethodContext>(
+           position.risk_distance(), input_context),
+          std::move(stop_losses),
+          position.entry().timing(),
+          position.pyramiding().timing(),
+          position.pyramiding().favorable_stop_target_reference(),
+          position.pyramiding().unfavorable_stop_target_reference(),
+          std::move(take_profits),
+          position.exits_activation(),
+          position.stop_losses_activation(),
+          position.take_profits_activation(),
+          position.pyramiding().retrigger()};
+       };
+
+      auto execution_filter_conversion_context = NodeToErasedMethodContext{};
+      auto execution_filter =
+       node_to_erased_method<backtest::ExecutionFilterMethodContext>(
+        profile_ptr->execution_filter(), execution_filter_conversion_context);
+      const auto failsafe_activation =
+       setup_index == 0
+        ? backtest::FailsafeActivation::Always
+        : backtest.failsafe_setups()[setup_index - 1].activation();
+      runner_setups.emplace_back(
+       *profile_ptr,
+       std::move(series_methods),
+       make_position_rule(strategy_ptr->long_position()),
+       make_position_rule(strategy_ptr->short_position()),
+       strategy_ptr->intrabar_path(),
+       backtest.strategy_performance(),
+       std::move(execution_filter),
+       failsafe_activation);
     }
 
-    auto input_context = NodeToErasedMethodContext{input_values};
-    auto series_methods =
-     OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
-    for(const auto& [series_name, series_node] : strategy_ptr->series_nodes()) {
-      series_methods.set(series_name,
-                         node_to_erased_method<ErasedSeriesMethodContext>(
-                          series_node, input_context));
-    }
-
-    const auto make_position_rule =
-     [&input_context](const backtest::Strategy::Position& position) {
-       auto signal_exits =
-        std::vector<backtest::BacktestRunner::PositionRule::SignalExitRule>{};
-       signal_exits.reserve(position.exits().size());
-       for(const auto& exit : position.exits()) {
-         signal_exits.emplace_back(
-          exit.enabled(),
-          node_to_erased_method<ErasedSeriesMethodContext>(exit.signal(),
-                                                           input_context),
-          exit.timing(),
-          exit.reduce());
-       }
-       auto take_profits =
-        std::vector<backtest::BacktestRunner::PositionRule::TakeProfitRule>{};
-       take_profits.reserve(position.take_profits().size());
-       for(const auto& take_profit : position.take_profits()) {
-         take_profits.emplace_back(
-          node_to_erased_method<ErasedSeriesMethodContext>(
-           take_profit.target_price(), input_context),
-          take_profit.enabled(),
-          take_profit.reduce());
-       }
-       auto stop_losses =
-        std::vector<backtest::BacktestRunner::PositionRule::StopLossRule>{};
-       stop_losses.reserve(position.stop_losses().size());
-       for(const auto& stop_loss : position.stop_losses()) {
-         stop_losses.emplace_back(
-          node_to_erased_method<ErasedSeriesMethodContext>(
-           stop_loss.stop_price(), input_context),
-          stop_loss.enabled(),
-          stop_loss.trailing(),
-          stop_loss.reduce());
-       }
-       return backtest::BacktestRunner::PositionRule{
-        node_to_erased_method<ErasedSeriesMethodContext>(
-         position.entry().signal(), input_context),
-        std::move(signal_exits),
-        node_to_erased_method<ErasedSeriesMethodContext>(
-         position.pyramiding().signal(), input_context),
-        position.pyramiding().max_layers(),
-        position.pyramiding().cooldown(),
-        node_to_erased_method<ErasedSeriesMethodContext>(
-         position.risk_distance(), input_context),
-        std::move(stop_losses),
-        position.entry().timing(),
-        position.pyramiding().timing(),
-        position.pyramiding().favorable_stop_target_reference(),
-        position.pyramiding().unfavorable_stop_target_reference(),
-        std::move(take_profits),
-        position.exits_activation(),
-        position.stop_losses_activation(),
-        position.take_profits_activation(),
-        position.pyramiding().retrigger()};
-     };
-
-    auto execution_filter_conversion_context = NodeToErasedMethodContext{};
-    auto execution_filter =
-     node_to_erased_method<backtest::ExecutionFilterMethodContext>(
-      profile_ptr->execution_filter(), execution_filter_conversion_context);
-
-    return backtest::BacktestRunner{
-     *asset_ptr,
-     *market_ptr,
-     *broker_ptr,
-     *profile_ptr,
-     std::move(series_methods),
-     make_position_rule(strategy_ptr->long_position()),
-     make_position_rule(strategy_ptr->short_position()),
-     portfolio.initial_capital(),
-     0,
-     false,
-     NAN,
-     strategy_ptr->intrabar_path(),
-     backtest.strategy_performance(),
-     std::move(execution_filter),
-     portfolio.drawdown_adjustment(),
-     portfolio.insufficient_cash_policy()};
+    return backtest::BacktestRunner{*asset_ptr,
+                                    *market_ptr,
+                                    *broker_ptr,
+                                    std::move(runner_setups),
+                                    portfolio.initial_capital(),
+                                    false,
+                                    NAN,
+                                    portfolio.drawdown_adjustment(),
+                                    portfolio.insufficient_cash_policy()};
   }
 
   void

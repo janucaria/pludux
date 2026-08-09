@@ -1,4 +1,5 @@
 set(PLUDUX_TEST_SOURCES
+  src/test_backtest_setup.cpp
   src/test_backtest_runner.cpp
   src/test_portfolio.cpp
   src/test_portfolio_runner.cpp

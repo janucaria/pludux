@@ -95,7 +95,7 @@ private:
 
       {
         const auto selected =
-         backtest_ptr && backtest_ptr->profile_handle() == profile_handle;
+         backtest_ptr && backtest_ptr->references_profile(profile_handle);
         const auto has_draft =
          self.selected_profile_handle_opt_ == profile_handle &&
          self.editing_profile_ptr_ && *self.editing_profile_ptr_ != profile;

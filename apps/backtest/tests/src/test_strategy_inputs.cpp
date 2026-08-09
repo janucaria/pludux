@@ -166,36 +166,36 @@ TEST(StrategyInputsTest, AssigningStrategyReplacesBacktestInputsWithDefaults)
                                  {}};
   const auto strategy_handle = StrategyStoreHandle{4, 2};
 
-  auto backtest = Backtest{};
-  backtest.strategy_handle(StrategyStoreHandle{1, 1});
-  backtest.inputs({NumericInputNode{
+  auto setup = BacktestSetup{};
+  setup.strategy_handle(StrategyStoreHandle{1, 1});
+  setup.inputs({NumericInputNode{
    "Old Input", NumericInputNode::ValueRepresentation::UnsignedInteger, 99.0}});
 
-  assign_backtest_strategy(backtest, strategy_handle, strategy);
+  assign_backtest_setup_strategy(setup, strategy_handle, strategy);
 
-  EXPECT_EQ(backtest.strategy_handle(), strategy_handle);
-  ASSERT_EQ(backtest.inputs().size(), 2);
-  EXPECT_EQ(backtest.inputs()[0].label(), "Replacement Decimal");
-  EXPECT_EQ(backtest.inputs()[0].representation(),
+  EXPECT_EQ(setup.strategy_handle(), strategy_handle);
+  ASSERT_EQ(setup.inputs().size(), 2);
+  EXPECT_EQ(setup.inputs()[0].label(), "Replacement Decimal");
+  EXPECT_EQ(setup.inputs()[0].representation(),
             NumericInputNode::ValueRepresentation::Decimal);
-  EXPECT_DOUBLE_EQ(backtest.inputs()[0].value(), 1.25);
-  EXPECT_EQ(backtest.inputs()[1].label(), "Replacement Integer");
-  EXPECT_EQ(backtest.inputs()[1].representation(),
+  EXPECT_DOUBLE_EQ(setup.inputs()[0].value(), 1.25);
+  EXPECT_EQ(setup.inputs()[1].label(), "Replacement Integer");
+  EXPECT_EQ(setup.inputs()[1].representation(),
             NumericInputNode::ValueRepresentation::SignedInteger);
-  EXPECT_DOUBLE_EQ(backtest.inputs()[1].value(), -3.0);
+  EXPECT_DOUBLE_EQ(setup.inputs()[1].value(), -3.0);
 }
 
 TEST(StrategyInputsTest, AssigningStrategyWithoutInputsClearsBacktestInputs)
 {
-  auto backtest = Backtest{};
-  backtest.inputs({NumericInputNode{
+  auto setup = BacktestSetup{};
+  setup.inputs({NumericInputNode{
    "Old Input", NumericInputNode::ValueRepresentation::Decimal, 99.0}});
   const auto strategy_handle = StrategyStoreHandle{5, 3};
 
-  assign_backtest_strategy(backtest, strategy_handle, Strategy{});
+  assign_backtest_setup_strategy(setup, strategy_handle, Strategy{});
 
-  EXPECT_EQ(backtest.strategy_handle(), strategy_handle);
-  EXPECT_TRUE(backtest.inputs().empty());
+  EXPECT_EQ(setup.strategy_handle(), strategy_handle);
+  EXPECT_TRUE(setup.inputs().empty());
 }
 
 TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)

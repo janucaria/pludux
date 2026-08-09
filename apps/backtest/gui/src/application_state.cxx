@@ -592,7 +592,7 @@ public:
         for(const auto& backtest_handle : backtest_handles) {
           auto backtest_ptr =
            self.store_.get_backtest_if_present(backtest_handle);
-          if(backtest_ptr && backtest_ptr->strategy_handle() == handle) {
+          if(backtest_ptr && backtest_ptr->references_strategy(handle)) {
             self.reset_backtest(backtest_handle);
           }
         }
@@ -614,7 +614,7 @@ public:
       for(const auto& backtest_handle : backtest_handles) {
         const auto backtest_ptr =
          self.store_.get_backtest_if_present(backtest_handle);
-        if(backtest_ptr && backtest_ptr->strategy_handle() == handle) {
+        if(backtest_ptr && backtest_ptr->references_strategy(handle)) {
           self.reset_backtest(backtest_handle);
         }
       }
@@ -846,7 +846,7 @@ public:
         for(const auto& backtest_handle : backtest_handles) {
           auto backtest_ptr =
            self.store_.get_backtest_if_present(backtest_handle);
-          if(backtest_ptr && backtest_ptr->profile_handle() == handle) {
+          if(backtest_ptr && backtest_ptr->references_profile(handle)) {
             self.reset_backtest(backtest_handle);
           }
         }
@@ -868,7 +868,7 @@ public:
       for(const auto& backtest_handle : backtest_handles) {
         const auto backtest_ptr =
          self.store_.get_backtest_if_present(backtest_handle);
-        if(backtest_ptr && backtest_ptr->profile_handle() == handle) {
+        if(backtest_ptr && backtest_ptr->references_profile(handle)) {
           self.reset_backtest(backtest_handle);
         }
       }
@@ -938,19 +938,11 @@ public:
         }
       }
     }
-    {
-      const auto strategy_handle = ready_backtest.strategy_handle();
-      const auto strategy_ptr = self.get_strategy_if_present(strategy_handle);
-
-      if(!strategy_ptr) {
-        return false;
-      }
-    }
-    {
-      const auto profile_handle = ready_backtest.profile_handle();
-      const auto profile_ptr = self.get_profile_if_present(profile_handle);
-
-      if(!profile_ptr) {
+    for(auto index = std::size_t{}; index < ready_backtest.setup_count();
+        ++index) {
+      const auto& setup = ready_backtest.setup(index);
+      if(!self.get_strategy_if_present(setup.strategy_handle()) ||
+         !self.get_profile_if_present(setup.profile_handle())) {
         return false;
       }
     }

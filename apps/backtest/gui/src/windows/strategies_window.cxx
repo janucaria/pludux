@@ -1265,7 +1265,7 @@ private:
 
       ImGui::SetNextItemAllowOverlap();
       const auto is_selected =
-       backtest_ptr && backtest_ptr->strategy_handle() == strategy_handle;
+       backtest_ptr && backtest_ptr->references_strategy(strategy_handle);
       const auto has_draft =
        self.selected_strategy_handle_opt_ == strategy_handle &&
        self.has_unsaved_changes();

@@ -21,6 +21,17 @@ import :trade_event;
 
 export namespace pludux::backtest {
 
+struct BacktestSetupTimelineState {
+  std::vector<StrategyIntent> strategy_intents{};
+  std::vector<StrategyClosedPosition> strategy_closed_positions{};
+  std::optional<StrategyOpenPositionSnapshot> strategy_open_position{};
+  StrategyPerformanceSnapshot strategy_performance{};
+  bool filtered_entry_position{};
+
+  auto operator==(const BacktestSetupTimelineState&) const noexcept
+   -> bool = default;
+};
+
 class BacktestTimeline {
 public:
   BacktestTimeline() = default;
@@ -38,6 +49,7 @@ public:
     std::vector<ExecutionFilterDecision> execution_filter_decisions{};
     std::vector<PositionSizingDecision> position_sizing_decisions{};
     StrategyPerformanceSnapshot strategy_performance{};
+    std::vector<BacktestSetupTimelineState> setup_states{};
 
     double capital{};
     double equity{};
@@ -88,6 +100,7 @@ public:
     self.execution_filter_decisions_.clear();
     self.position_sizing_decisions_.clear();
     self.strategy_performance_snapshots_.clear();
+    self.setup_states_.clear();
     self.capitals_.clear();
     self.equities_.clear();
     self.peak_equities_.clear();
@@ -124,6 +137,7 @@ public:
     self.execution_filter_decisions_.reserve(size);
     self.position_sizing_decisions_.reserve(size);
     self.strategy_performance_snapshots_.reserve(size);
+    self.setup_states_.reserve(size);
     self.capitals_.reserve(size);
     self.equities_.reserve(size);
     self.peak_equities_.reserve(size);
@@ -162,6 +176,14 @@ public:
      std::move(row.position_sizing_decisions));
     self.strategy_performance_snapshots_.push_back(
      std::move(row.strategy_performance));
+    if(row.setup_states.empty()) {
+      row.setup_states.push_back(
+       BacktestSetupTimelineState{self.strategy_intents_.back(),
+                                  self.strategy_closed_positions_.back(),
+                                  self.strategy_open_positions_.back(),
+                                  self.strategy_performance_snapshots_.back()});
+    }
+    self.setup_states_.push_back(std::move(row.setup_states));
     self.capitals_.push_back(row.capital);
     self.equities_.push_back(row.equity);
     self.peak_equities_.push_back(row.peak_equity);
@@ -252,6 +274,19 @@ public:
    -> const StrategyPerformanceSnapshot&
   {
     return self.strategy_performance_snapshots_[index];
+  }
+
+  auto setup_state(this const BacktestTimeline& self,
+                   std::size_t timeline_index,
+                   std::size_t setup_index) -> const BacktestSetupTimelineState&
+  {
+    return self.setup_states_.at(timeline_index).at(setup_index);
+  }
+
+  auto setup_count(this const BacktestTimeline& self,
+                   std::size_t timeline_index) -> std::size_t
+  {
+    return self.setup_states_.at(timeline_index).size();
   }
 
   auto position_sizing_decisions(this const BacktestTimeline& self,
@@ -545,6 +580,7 @@ private:
   std::vector<std::vector<ExecutionFilterDecision>> execution_filter_decisions_;
   std::vector<std::vector<PositionSizingDecision>> position_sizing_decisions_;
   std::vector<StrategyPerformanceSnapshot> strategy_performance_snapshots_;
+  std::vector<std::vector<BacktestSetupTimelineState>> setup_states_;
 
   std::vector<double> capitals_;
   std::vector<double> equities_;

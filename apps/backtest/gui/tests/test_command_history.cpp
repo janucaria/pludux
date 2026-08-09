@@ -4,6 +4,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <vector>
 
 import pludux.apps.backtest.application_state;
 import pludux.apps.backtest.command_executor;
@@ -23,6 +24,7 @@ using pludux::apps::save_application_state_json;
 using pludux::apps::UndoCommand;
 using pludux::apps::ViewCommand;
 using pludux::backtest::Backtest;
+using pludux::backtest::BacktestSetup;
 using pludux::backtest::FixedBudgetPositionSizing;
 using pludux::backtest::Portfolio;
 using pludux::backtest::PortfolioResults;
@@ -281,6 +283,105 @@ TEST(ApplicationStateSerialization, RoundTripsDocumentAndViewSeparately)
   EXPECT_EQ(loaded.selected_backtest_handle(),
             loaded.get_backtest_handles().front());
   EXPECT_EQ(loaded.imgui_ini_settings(), "layout-data");
+}
+
+TEST(ApplicationStateSerialization, RoundTripsOrderedBacktestSetups)
+{
+  auto state = ApplicationState{};
+  const auto performance = pludux::backtest::StrategyPerformanceConfig{
+   pludux::backtest::StrategyPerformanceHistoryPolicy{
+    pludux::backtest::StrategyPerformanceHistoryMode::RollingWindow, 25, 0.99}};
+  const auto main = BacktestSetup{pludux::backtest::StrategyStoreHandle{1, 1},
+                                  pludux::backtest::ProfileStoreHandle{2, 1}};
+  const auto failsafe = pludux::backtest::BacktestFailsafeSetup{
+   BacktestSetup{pludux::backtest::StrategyStoreHandle{3, 1},
+                 pludux::backtest::ProfileStoreHandle{4, 1}},
+   pludux::backtest::FailsafeActivation::PreviousSetupFilteredPosition};
+  ASSERT_TRUE(state.add_backtest(
+   Backtest{"Ordered",
+            {},
+            performance,
+            main,
+            std::vector<pludux::backtest::BacktestFailsafeSetup>{failsafe}}));
+  auto stream = std::stringstream{};
+
+  save_application_state_json(stream, state);
+
+  const auto serialized = stream.str();
+  EXPECT_NE(serialized.find("\"mainSetup\""), std::string::npos);
+  EXPECT_NE(serialized.find("\"failsafeSetups\""), std::string::npos);
+  EXPECT_NE(serialized.find("\"PREVIOUS_SETUP_FILTERED_POSITION\""),
+            std::string::npos);
+  const auto performance_key = serialized.find("\"strategyPerformance\"");
+  ASSERT_NE(performance_key, std::string::npos);
+  EXPECT_EQ(serialized.find("\"strategyPerformance\"", performance_key + 1),
+            std::string::npos);
+  auto input = std::stringstream{serialized};
+  const auto loaded = load_application_state_json(input);
+  const auto& backtest =
+   loaded.get_backtest(loaded.get_backtest_handles().front());
+  EXPECT_EQ(backtest.main_setup(), main);
+  EXPECT_EQ(backtest.failsafe_setups(),
+            (std::vector<pludux::backtest::BacktestFailsafeSetup>{failsafe}));
+  EXPECT_EQ(backtest.strategy_performance(), performance);
+}
+
+TEST(ApplicationStateSerialization, RejectsFailsafeWithoutActivation)
+{
+  auto state = ApplicationState{};
+  auto backtest = Backtest{};
+  backtest.failsafe_setups().emplace_back(BacktestSetup{});
+  ASSERT_TRUE(state.add_backtest(std::move(backtest)));
+  auto stream = std::stringstream{};
+  save_application_state_json(stream, state);
+  auto serialized = stream.str();
+
+  const auto activation = serialized.find("\"activation\"");
+  ASSERT_NE(activation, std::string::npos);
+  serialized.replace(
+   activation, std::string{"\"activation\""}.size(), "\"removedActivation\"");
+  auto input = std::stringstream{serialized};
+
+  EXPECT_THROW(load_application_state_json(input), std::exception);
+}
+
+TEST(ApplicationStateSerialization,
+     RejectsPreviousPerSetupStrategyPerformanceShape)
+{
+  auto state = ApplicationState{};
+  ASSERT_TRUE(state.add_backtest(Backtest{}));
+  auto stream = std::stringstream{};
+  save_application_state_json(stream, state);
+  auto serialized = stream.str();
+
+  const auto root_key = serialized.find("\"strategyPerformance\"");
+  ASSERT_NE(root_key, std::string::npos);
+  serialized.replace(root_key,
+                     std::string{"\"strategyPerformance\""}.size(),
+                     "\"legacyStrategyPerformance\"");
+  const auto main_setup = serialized.find("\"mainSetup\":{");
+  ASSERT_NE(main_setup, std::string::npos);
+  serialized.insert(main_setup + std::string{"\"mainSetup\":{"}.size(),
+                    "\"strategyPerformance\":{},");
+  auto input = std::stringstream{serialized};
+
+  EXPECT_THROW(load_application_state_json(input), std::exception);
+}
+
+TEST(ApplicationStateSerialization, RejectsMissingRequiredBacktestSetupFields)
+{
+  auto state = ApplicationState{};
+  ASSERT_TRUE(state.add_backtest(Backtest{}));
+  auto stream = std::stringstream{};
+  save_application_state_json(stream, state);
+  auto serialized = stream.str();
+  const auto key = serialized.find("\"mainSetup\"");
+  ASSERT_NE(key, std::string::npos);
+  serialized.replace(
+   key, std::string{"\"mainSetup\""}.size(), "\"removedMainSetup\"");
+  auto input = std::stringstream{serialized};
+
+  EXPECT_THROW(load_application_state_json(input), std::exception);
 }
 
 TEST(ApplicationStateSerialization, RoundTripsMaximumOpenTradesIncludingZero)

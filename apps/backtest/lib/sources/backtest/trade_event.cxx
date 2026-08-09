@@ -192,6 +192,16 @@ public:
     return self.rejection_required_cash_;
   }
 
+  auto setup_index(this const TradeEvent& self) noexcept -> std::size_t
+  {
+    return self.setup_index_;
+  }
+
+  void setup_index(this TradeEvent& self, std::size_t value) noexcept
+  {
+    self.setup_index_ = value;
+  }
+
   void after_state(this TradeEvent& self,
                    double position_size,
                    double investment,
@@ -274,6 +284,7 @@ private:
   double risk_boundary_price_{NAN};
   double rejection_available_cash_{NAN};
   double rejection_required_cash_{NAN};
+  std::size_t setup_index_{};
 };
 
 } // namespace pludux::backtest

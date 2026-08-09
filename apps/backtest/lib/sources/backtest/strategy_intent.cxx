@@ -29,7 +29,8 @@ public:
                  std::time_t timestamp,
                  double price,
                  double reduce = 1.0,
-                 std::optional<std::size_t> rule_index = std::nullopt) noexcept
+                 std::optional<std::size_t> rule_index = std::nullopt,
+                 std::size_t setup_index = 0) noexcept
   : intent_id_{intent_id}
   , strategy_trade_id_{strategy_trade_id}
   , type_{type}
@@ -38,6 +39,7 @@ public:
   , price_{price}
   , reduce_{reduce}
   , rule_index_{rule_index}
+  , setup_index_{setup_index}
   {
   }
 
@@ -90,6 +92,11 @@ public:
     return self.type_ == StrategyIntentType::InitialEntry;
   }
 
+  auto setup_index(this const StrategyIntent& self) noexcept -> std::size_t
+  {
+    return self.setup_index_;
+  }
+
   auto is_entry(this const StrategyIntent& self) noexcept -> bool
   {
     return self.type_ == StrategyIntentType::InitialEntry ||
@@ -105,15 +112,19 @@ private:
   double price_{};
   double reduce_{1.0};
   std::optional<std::size_t> rule_index_{};
+  std::size_t setup_index_{};
 };
 
 class ExecutionFilterDecision {
 public:
   ExecutionFilterDecision() = default;
 
-  ExecutionFilterDecision(std::size_t intent_id, bool allowed) noexcept
+  ExecutionFilterDecision(std::size_t intent_id,
+                          bool allowed,
+                          std::size_t setup_index = 0) noexcept
   : intent_id_{intent_id}
   , allowed_{allowed}
+  , setup_index_{setup_index}
   {
   }
 
@@ -131,9 +142,16 @@ public:
     return self.allowed_;
   }
 
+  auto setup_index(this const ExecutionFilterDecision& self) noexcept
+   -> std::size_t
+  {
+    return self.setup_index_;
+  }
+
 private:
   std::size_t intent_id_{};
   bool allowed_{true};
+  std::size_t setup_index_{};
 };
 
 } // namespace pludux::backtest

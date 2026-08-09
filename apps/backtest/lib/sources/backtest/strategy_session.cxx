@@ -126,6 +126,11 @@ class StrategySession {
 public:
   StrategySession() = default;
 
+  void setup_index(this StrategySession& self, std::size_t value) noexcept
+  {
+    self.setup_index_ = value;
+  }
+
   void begin_market_bar(this StrategySession& self,
                         std::time_t timestamp,
                         double market_price) noexcept
@@ -209,7 +214,10 @@ public:
                                type,
                                direction,
                                self.market_timestamp_,
-                               price);
+                               price,
+                               1.0,
+                               std::nullopt,
+                               self.setup_index_);
     position.intents.push_back(self.intents_.back());
     return self.intents_.back();
   }
@@ -252,7 +260,8 @@ public:
                                self.market_timestamp_,
                                price,
                                reduce,
-                               rule_index);
+                               rule_index,
+                               self.setup_index_);
     position.intents.push_back(self.intents_.back());
 
     if(position.normalized_quantity <= std::numeric_limits<double>::epsilon()) {
@@ -290,6 +299,7 @@ private:
   std::vector<StrategyClosedPosition> closed_positions_{};
   std::size_t next_strategy_trade_id_{1};
   std::size_t next_intent_id_{1};
+  std::size_t setup_index_{};
 };
 
 } // namespace pludux::backtest

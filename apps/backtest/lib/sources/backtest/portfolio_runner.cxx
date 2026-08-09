@@ -95,7 +95,9 @@ public:
     results.backtests().reserve(self.backtests_.size());
     for(const auto& backtest : self.backtests_) {
       results.backtests().emplace_back(backtest.key().backtest_handle,
-                                       backtest.key().asset_handle);
+                                       backtest.key().asset_handle,
+                                       BacktestTimeline{},
+                                       backtest.runner().setup_count());
     }
     results.timeline().reserve(self.total_timestamps_);
   }
@@ -166,21 +168,21 @@ public:
     run_exit_phase(
      [](BacktestRunner& runner, BacktestResults&) { runner.run_open_exits(); });
     run_entry_phase([](BacktestRunner& runner, BacktestResults& result) {
-      runner.run_open_entries(result.series_results());
+      runner.run_open_entries(result.setup_series_results());
     });
     run_exit_phase(
      [](BacktestRunner& runner, BacktestResults&) { runner.run_intrabar(); });
     run_exit_phase([](BacktestRunner& runner, BacktestResults& result) {
-      runner.run_close_exits(result.series_results());
+      runner.run_close_exits(result.setup_series_results());
     });
     run_entry_phase([](BacktestRunner& runner, BacktestResults& result) {
-      runner.run_close_entries(result.series_results());
+      runner.run_close_entries(result.setup_series_results());
     });
     for(const auto index : active) {
       auto& runner = self.backtests_[index].runner();
       auto& result = results.backtests()[index];
       self.sync_backtest(runner);
-      runner.finish_bar(result.series_results(), result.timeline());
+      runner.finish_bar(result.setup_series_results(), result.timeline());
       self.refresh_unrealized();
     }
 

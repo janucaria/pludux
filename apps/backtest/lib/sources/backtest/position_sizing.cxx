@@ -619,6 +619,7 @@ private:
 
 enum class PositionSizingDecisionOutcome {
   Filtered,
+  FailsafeInactive,
   ShadowOnly,
   NoPositiveSize,
   DrawdownSuppressed,
@@ -632,6 +633,7 @@ enum class PositionSizingDecisionOutcome {
 struct PositionSizingDecision {
   std::size_t intent_id{};
   std::size_t strategy_trade_id{};
+  std::size_t setup_index{};
   StrategyDirection direction{StrategyDirection::Long};
   bool pyramiding{};
   std::string method{};

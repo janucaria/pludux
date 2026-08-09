@@ -299,294 +299,399 @@ private:
       }
     }
 
-    {
+    std::optional<std::size_t> remove_failsafe_index;
+    std::optional<std::pair<std::size_t, std::size_t>> reorder_failsafe;
+    for(auto setup_index = std::size_t{};
+        setup_index < edit_backtest_ptr->setup_count();
+        ++setup_index) {
+      ImGui::PushID(static_cast<int>(setup_index));
+      auto& edit_setup = edit_backtest_ptr->setup(setup_index);
+      const auto render_setup = [&] {
+        const auto setup_label = setup_index == 0
+                                  ? std::string{"Main setup"}
+                                  : std::format("Failsafe {}", setup_index);
+        ImGui::SeparatorText(setup_label.c_str());
+
+        if(setup_index > 0) {
+          auto& failsafe =
+           edit_backtest_ptr->failsafe_setups()[setup_index - 1];
+          auto activation = static_cast<int>(failsafe.activation());
+          constexpr const char* activation_modes[] = {
+           "Always", "Previous setup has filtered theoretical position"};
+          ui::field_label(
+           "Activation",
+           "A filtered theoretical position remains active until the "
+           "previous setup fully closes it. The failsafe still requires its "
+           "own fresh initial-entry signal.");
+          if(ImGui::Combo("##FailsafeActivation",
+                          &activation,
+                          activation_modes,
+                          IM_ARRAYSIZE(activation_modes))) {
+            failsafe.activation(
+             static_cast<backtest::FailsafeActivation>(activation));
+          }
+        }
+
+        {
+          const auto& strategy_handles = app_state.get_strategy_handles();
+          const auto edit_strategy_handle = edit_setup.strategy_handle();
+          const auto& edit_strategy_ptr =
+           app_state.get_strategy_if_present(edit_strategy_handle);
+
+          if(!edit_strategy_ptr) {
+            if(!self.selected_backtest_handle_opt_ &&
+               !strategy_handles.empty()) {
+              const auto strategy_handle = strategy_handles.front();
+              backtest::assign_backtest_setup_strategy(
+               edit_setup,
+               strategy_handle,
+               app_state.get_strategy(strategy_handle));
+            }
+          }
+
+          ui::field_label("Strategy");
+          auto strategy_preview = edit_strategy_ptr
+                                   ? edit_strategy_ptr->name()
+                                   : std::string{"Select a strategy"};
+          if(ImGui::BeginCombo("##StrategyCombo", strategy_preview.c_str())) {
+            for(auto i = 0; i < strategy_handles.size(); ++i) {
+              const auto& strategy_handle = strategy_handles[i];
+              const auto& strategy = app_state.get_strategy(strategy_handle);
+              const auto& strategy_name = strategy.name();
+              const auto is_selected =
+               edit_setup.strategy_handle() == strategy_handle;
+
+              ImGui::PushID(i);
+
+              if(ImGui::Selectable(strategy_name.c_str(), is_selected) &&
+                 !is_selected) {
+                backtest::assign_backtest_setup_strategy(
+                 edit_setup, strategy_handle, strategy);
+              }
+
+              if(is_selected) {
+                ImGui::SetItemDefaultFocus();
+              }
+
+              ImGui::PopID();
+            }
+            ImGui::EndCombo();
+          }
+
+          auto backtest_inputs = edit_setup.inputs();
+          if(!backtest_inputs.empty()) {
+            ImGui::Indent();
+
+            ImGui::SeparatorText("Strategy Inputs");
+            ImGui::TextDisabled(
+             "Override the named values exposed by the selected strategy.");
+
+            for(auto id_counter = 0; auto& backtest_input : backtest_inputs) {
+              ImGui::PushID(id_counter++);
+
+              ui::field_label(backtest_input.label().c_str());
+
+              auto input_value = backtest_input.value();
+              switch(backtest_input.representation()) {
+              case pludux::NumericInputNode::ValueRepresentation::Decimal: {
+                auto editable = input_value;
+                if(ImGui::InputScalar(
+                    "##input_value", ImGuiDataType_Double, &editable)) {
+                  input_value = editable;
+                }
+                break;
+              }
+              case pludux::NumericInputNode::ValueRepresentation::
+               SignedInteger: {
+                auto editable = static_cast<std::int64_t>(input_value);
+                if(ImGui::InputScalar(
+                    "##input_value", ImGuiDataType_S64, &editable)) {
+                  input_value = static_cast<double>(editable);
+                }
+                break;
+              }
+              case pludux::NumericInputNode::ValueRepresentation::
+               UnsignedInteger: {
+                auto editable = static_cast<std::uint64_t>(input_value);
+                if(ImGui::InputScalar(
+                    "##input_value", ImGuiDataType_U64, &editable)) {
+                  input_value = static_cast<double>(editable);
+                }
+                break;
+              }
+              }
+
+              backtest_input.value(input_value);
+
+              ImGui::Separator();
+              ImGui::PopID();
+            }
+
+            edit_setup.inputs(std::move(backtest_inputs));
+
+            ImGui::Unindent();
+          }
+        }
+
+        {
+          const auto& profile_handles = app_state.get_profile_handles();
+          const auto edit_profile_handle = edit_setup.profile_handle();
+          const auto& edit_profile_ptr =
+           app_state.get_profile_if_present(edit_profile_handle);
+
+          if(!edit_profile_ptr) {
+            if(!self.selected_backtest_handle_opt_ &&
+               !profile_handles.empty()) {
+              edit_setup.profile_handle(profile_handles.front());
+            }
+          }
+
+          ui::field_label("Profile");
+          auto profile_preview = edit_profile_ptr
+                                  ? edit_profile_ptr->name()
+                                  : std::string{"Select a profile"};
+          if(ImGui::BeginCombo("##ProfileCombo", profile_preview.c_str())) {
+            for(auto i = 0; i < profile_handles.size(); ++i) {
+              const auto profile_handle = profile_handles[i];
+              const auto& profile = app_state.get_profile(profile_handle);
+              const auto& profile_name = profile.name();
+              const auto is_selected =
+               edit_setup.profile_handle() == profile_handle;
+
+              ImGui::PushID(i);
+
+              if(ImGui::Selectable(profile_name.c_str(), is_selected)) {
+                edit_setup.profile_handle(profile_handle);
+              }
+
+              if(is_selected) {
+                ImGui::SetItemDefaultFocus();
+              }
+
+              ImGui::PopID();
+            }
+            ImGui::EndCombo();
+          }
+        }
+      };
+
+      if(setup_index == 0) {
+        ui::form_section(
+         "Strategy Performance Calculation",
+         "Configure how Strategy Performance is calculated from completed "
+         "theoretical positions. These Bayesian models estimate win "
+         "probability "
+         "and payoff magnitudes; they do not control Strategy signals, "
+         "execution, "
+         "or position sizing.");
+        {
+          const auto& config = edit_backtest_ptr->strategy_performance();
+          const auto* win_model =
+           bayesian_model_node_cast<backtest::BetaBernoulliModelNode>(
+            config.bayesian().win_probability_model());
+          const auto* winning_payoff_model =
+           bayesian_model_node_cast<backtest::GammaPayoffModelNode>(
+            config.bayesian().winning_payoff_model());
+          const auto* losing_payoff_model =
+           bayesian_model_node_cast<backtest::GammaPayoffModelNode>(
+            config.bayesian().losing_payoff_model());
+          if(win_model == nullptr || winning_payoff_model == nullptr ||
+             losing_payoff_model == nullptr) {
+            ui::validation_message(
+             "The selected Bayesian model is not supported by this editor.");
+            ImGui::PopID();
+            return;
+          }
+
+          auto history_mode = static_cast<int>(config.history().mode());
+          auto break_even_treatment =
+           static_cast<int>(config.break_even_treatment());
+          auto rolling_window =
+           static_cast<int>(config.history().rolling_window());
+          auto exponential_decay = config.history().exponential_decay();
+          auto prior_win_probability = win_model->prior_probability();
+          auto prior_win_strength = win_model->prior_strength();
+          auto winning_prior_mean =
+           winning_payoff_model->prior_mean_magnitude();
+          auto winning_prior_strength = winning_payoff_model->prior_strength();
+          auto winning_cv = winning_payoff_model->coefficient_of_variation();
+          auto losing_prior_mean = losing_payoff_model->prior_mean_magnitude();
+          auto losing_prior_strength = losing_payoff_model->prior_strength();
+          auto losing_cv = losing_payoff_model->coefficient_of_variation();
+
+          constexpr const char* history_modes[] = {
+           "All history", "Rolling window", "Exponential decay"};
+          auto changed = false;
+          ui::field_label("History mode");
+          changed |= ImGui::Combo("##strategy_history_mode",
+                                  &history_mode,
+                                  history_modes,
+                                  IM_ARRAYSIZE(history_modes));
+          if(history_mode ==
+             static_cast<int>(
+              backtest::StrategyPerformanceHistoryMode::RollingWindow)) {
+            ui::field_label("Rolling window");
+            changed |=
+             ImGui::InputInt("##strategy_history_window", &rolling_window);
+          } else if(history_mode ==
+                    static_cast<int>(backtest::StrategyPerformanceHistoryMode::
+                                      ExponentialDecay)) {
+            ui::field_label("Evidence decay");
+            changed |= ImGui::InputDouble("##strategy_history_decay",
+                                          &exponential_decay,
+                                          0.001,
+                                          0.01,
+                                          "%.4f");
+          }
+
+          ImGui::SeparatorText(
+           "Strategy Performance: Bayesian win probability");
+          constexpr const char* win_models[] = {"Beta-Bernoulli"};
+          auto win_model_index = 0;
+          ui::field_label("Model");
+          changed |= ImGui::Combo("##bayesian_win_model",
+                                  &win_model_index,
+                                  win_models,
+                                  IM_ARRAYSIZE(win_models));
+          constexpr const char* break_even_treatments[] = {
+           "Skip", "Count as win", "Count as loss"};
+          ui::field_label(
+           "Break-even treatment",
+           "Controls how an exactly zero theoretical return contributes to the "
+           "Bayesian win-probability model. Frequentist outcome rates preserve "
+           "break-even as its own category, and payoff magnitudes are "
+           "unchanged.");
+          changed |= ImGui::Combo("##strategy_break_even_treatment",
+                                  &break_even_treatment,
+                                  break_even_treatments,
+                                  IM_ARRAYSIZE(break_even_treatments));
+          ui::field_label("Prior win probability");
+          changed |= ImGui::InputDouble("##prior_win_probability",
+                                        &prior_win_probability,
+                                        0.01,
+                                        0.1,
+                                        "%.4f");
+          ui::field_label("Prior strength");
+          changed |= ImGui::InputDouble(
+           "##prior_win_strength", &prior_win_strength, 0.1, 1.0, "%.4f");
+
+          const auto edit_payoff_model =
+           [&changed](const char* heading,
+                      const char* id_suffix,
+                      double& prior_mean,
+                      double& prior_strength,
+                      double& coefficient_of_variation) {
+             ImGui::SeparatorText(heading);
+             ui::field_label("Model");
+             ImGui::TextUnformatted("Gamma / Inverse-Gamma");
+             ui::field_label("Prior mean magnitude");
+             changed |= ImGui::InputDouble(
+              std::format("##prior_mean_{}", id_suffix).c_str(),
+              &prior_mean,
+              0.001,
+              0.01,
+              "%.4f");
+             ui::field_label("Prior strength");
+             changed |= ImGui::InputDouble(
+              std::format("##prior_strength_{}", id_suffix).c_str(),
+              &prior_strength,
+              0.001,
+              0.01,
+              "%.4f");
+             ui::field_label("Coefficient of variation");
+             changed |= ImGui::InputDouble(
+              std::format("##coefficient_of_variation_{}", id_suffix).c_str(),
+              &coefficient_of_variation,
+              0.01,
+              0.1,
+              "%.4f");
+           };
+          edit_payoff_model("Strategy Performance: Bayesian winning payoff",
+                            "winning_payoff",
+                            winning_prior_mean,
+                            winning_prior_strength,
+                            winning_cv);
+          edit_payoff_model("Strategy Performance: Bayesian losing payoff",
+                            "losing_payoff",
+                            losing_prior_mean,
+                            losing_prior_strength,
+                            losing_cv);
+
+          if(changed) {
+            try {
+              edit_backtest_ptr->strategy_performance(
+               backtest::StrategyPerformanceConfig{
+                backtest::StrategyPerformanceHistoryPolicy{
+                 static_cast<backtest::StrategyPerformanceHistoryMode>(
+                  history_mode),
+                 static_cast<std::size_t>(std::max(rolling_window, 0)),
+                 exponential_decay},
+                backtest::StrategyPerformanceBayesianConfig{
+                 backtest::BayesianWinModelNode{
+                  backtest::BetaBernoulliModelNode{prior_win_probability,
+                                                   prior_win_strength}},
+                 backtest::BayesianPayoffModelNode{
+                  backtest::GammaPayoffModelNode{
+                   winning_prior_mean, winning_prior_strength, winning_cv}},
+                 backtest::BayesianPayoffModelNode{
+                  backtest::GammaPayoffModelNode{
+                   losing_prior_mean, losing_prior_strength, losing_cv}}},
+                static_cast<backtest::StrategyPerformanceBreakEvenTreatment>(
+                 break_even_treatment)});
+              self.configuration_error_.clear();
+            } catch(const std::exception& error) {
+              self.configuration_error_ = error.what();
+            }
+          }
+        }
+      }
+
+      render_setup();
+
+      if(setup_index > 0) {
+        if(setup_index > 1 && ImGui::Button("Move up")) {
+          reorder_failsafe = std::pair{setup_index - 1, setup_index - 2};
+        }
+        if(setup_index > 1) {
+          ImGui::SameLine();
+        }
+        if(setup_index + 1 < edit_backtest_ptr->setup_count() &&
+           ImGui::Button("Move down")) {
+          reorder_failsafe = std::pair{setup_index - 1, setup_index};
+        }
+        if(setup_index + 1 < edit_backtest_ptr->setup_count()) {
+          ImGui::SameLine();
+        }
+        if(ImGui::Button("Remove failsafe")) {
+          remove_failsafe_index = setup_index - 1;
+        }
+      }
+      ImGui::PopID();
+    }
+
+    if(reorder_failsafe) {
+      auto& failsafes = edit_backtest_ptr->failsafe_setups();
+      std::swap(failsafes[reorder_failsafe->first],
+                failsafes[reorder_failsafe->second]);
+    } else if(remove_failsafe_index) {
+      auto& failsafes = edit_backtest_ptr->failsafe_setups();
+      failsafes.erase(failsafes.begin() +
+                      static_cast<std::ptrdiff_t>(*remove_failsafe_index));
+    }
+
+    if(ImGui::Button("Add failsafe setup")) {
+      auto setup = backtest::BacktestSetup{};
       const auto& strategy_handles = app_state.get_strategy_handles();
-      const auto edit_strategy_handle = edit_backtest_ptr->strategy_handle();
-      const auto& edit_strategy_ptr =
-       app_state.get_strategy_if_present(edit_strategy_handle);
-
-      if(!edit_strategy_ptr) {
-        if(!self.selected_backtest_handle_opt_ && !strategy_handles.empty()) {
-          const auto strategy_handle = strategy_handles.front();
-          backtest::assign_backtest_strategy(
-           *edit_backtest_ptr,
-           strategy_handle,
-           app_state.get_strategy(strategy_handle));
-        }
+      if(!strategy_handles.empty()) {
+        const auto handle = strategy_handles.front();
+        backtest::assign_backtest_setup_strategy(
+         setup, handle, app_state.get_strategy(handle));
       }
-
-      ui::field_label("Strategy");
-      auto strategy_preview = edit_strategy_ptr
-                               ? edit_strategy_ptr->name()
-                               : std::string{"Select a strategy"};
-      if(ImGui::BeginCombo("##StrategyCombo", strategy_preview.c_str())) {
-        for(auto i = 0; i < strategy_handles.size(); ++i) {
-          const auto& strategy_handle = strategy_handles[i];
-          const auto& strategy = app_state.get_strategy(strategy_handle);
-          const auto& strategy_name = strategy.name();
-          const auto is_selected =
-           edit_backtest_ptr->strategy_handle() == strategy_handle;
-
-          ImGui::PushID(i);
-
-          if(ImGui::Selectable(strategy_name.c_str(), is_selected) &&
-             !is_selected) {
-            backtest::assign_backtest_strategy(
-             *edit_backtest_ptr, strategy_handle, strategy);
-          }
-
-          if(is_selected) {
-            ImGui::SetItemDefaultFocus();
-          }
-
-          ImGui::PopID();
-        }
-        ImGui::EndCombo();
-      }
-
-      auto backtest_inputs = edit_backtest_ptr->inputs();
-      if(!backtest_inputs.empty()) {
-        ImGui::Indent();
-
-        ImGui::SeparatorText("Strategy Inputs");
-        ImGui::TextDisabled(
-         "Override the named values exposed by the selected strategy.");
-
-        for(auto id_counter = 0; auto& backtest_input : backtest_inputs) {
-          ImGui::PushID(id_counter++);
-
-          ui::field_label(backtest_input.label().c_str());
-
-          auto input_value = backtest_input.value();
-          switch(backtest_input.representation()) {
-          case pludux::NumericInputNode::ValueRepresentation::Decimal: {
-            auto editable = input_value;
-            if(ImGui::InputScalar(
-                "##input_value", ImGuiDataType_Double, &editable)) {
-              input_value = editable;
-            }
-            break;
-          }
-          case pludux::NumericInputNode::ValueRepresentation::SignedInteger: {
-            auto editable = static_cast<std::int64_t>(input_value);
-            if(ImGui::InputScalar(
-                "##input_value", ImGuiDataType_S64, &editable)) {
-              input_value = static_cast<double>(editable);
-            }
-            break;
-          }
-          case pludux::NumericInputNode::ValueRepresentation::UnsignedInteger: {
-            auto editable = static_cast<std::uint64_t>(input_value);
-            if(ImGui::InputScalar(
-                "##input_value", ImGuiDataType_U64, &editable)) {
-              input_value = static_cast<double>(editable);
-            }
-            break;
-          }
-          }
-
-          backtest_input.value(input_value);
-
-          ImGui::Separator();
-          ImGui::PopID();
-        }
-
-        edit_backtest_ptr->inputs(std::move(backtest_inputs));
-
-        ImGui::Unindent();
-      }
-    }
-
-    {
       const auto& profile_handles = app_state.get_profile_handles();
-      const auto edit_profile_handle = edit_backtest_ptr->profile_handle();
-      const auto& edit_profile_ptr =
-       app_state.get_profile_if_present(edit_profile_handle);
-
-      if(!edit_profile_ptr) {
-        if(!self.selected_backtest_handle_opt_ && !profile_handles.empty()) {
-          edit_backtest_ptr->profile_handle(profile_handles.front());
-        }
+      if(!profile_handles.empty()) {
+        setup.profile_handle(profile_handles.front());
       }
-
-      ui::field_label("Profile");
-      auto profile_preview = edit_profile_ptr ? edit_profile_ptr->name()
-                                              : std::string{"Select a profile"};
-      if(ImGui::BeginCombo("##ProfileCombo", profile_preview.c_str())) {
-        for(auto i = 0; i < profile_handles.size(); ++i) {
-          const auto profile_handle = profile_handles[i];
-          const auto& profile = app_state.get_profile(profile_handle);
-          const auto& profile_name = profile.name();
-          const auto is_selected =
-           edit_backtest_ptr->profile_handle() == profile_handle;
-
-          ImGui::PushID(i);
-
-          if(ImGui::Selectable(profile_name.c_str(), is_selected)) {
-            edit_backtest_ptr->profile_handle(profile_handle);
-          }
-
-          if(is_selected) {
-            ImGui::SetItemDefaultFocus();
-          }
-
-          ImGui::PopID();
-        }
-        ImGui::EndCombo();
-      }
-    }
-
-    ui::form_section(
-     "Strategy Performance Calculation",
-     "Configure how Strategy Performance is calculated from completed "
-     "theoretical positions. These Bayesian models estimate win probability "
-     "and payoff magnitudes; they do not control Strategy signals, execution, "
-     "or position sizing.");
-    {
-      const auto& config = edit_backtest_ptr->strategy_performance();
-      const auto* win_model =
-       bayesian_model_node_cast<backtest::BetaBernoulliModelNode>(
-        config.bayesian().win_probability_model());
-      const auto* winning_payoff_model =
-       bayesian_model_node_cast<backtest::GammaPayoffModelNode>(
-        config.bayesian().winning_payoff_model());
-      const auto* losing_payoff_model =
-       bayesian_model_node_cast<backtest::GammaPayoffModelNode>(
-        config.bayesian().losing_payoff_model());
-      if(win_model == nullptr || winning_payoff_model == nullptr ||
-         losing_payoff_model == nullptr) {
-        ui::validation_message(
-         "The selected Bayesian model is not supported by this editor.");
-        return;
-      }
-
-      auto history_mode = static_cast<int>(config.history().mode());
-      auto break_even_treatment =
-       static_cast<int>(config.break_even_treatment());
-      auto rolling_window = static_cast<int>(config.history().rolling_window());
-      auto exponential_decay = config.history().exponential_decay();
-      auto prior_win_probability = win_model->prior_probability();
-      auto prior_win_strength = win_model->prior_strength();
-      auto winning_prior_mean = winning_payoff_model->prior_mean_magnitude();
-      auto winning_prior_strength = winning_payoff_model->prior_strength();
-      auto winning_cv = winning_payoff_model->coefficient_of_variation();
-      auto losing_prior_mean = losing_payoff_model->prior_mean_magnitude();
-      auto losing_prior_strength = losing_payoff_model->prior_strength();
-      auto losing_cv = losing_payoff_model->coefficient_of_variation();
-
-      constexpr const char* history_modes[] = {
-       "All history", "Rolling window", "Exponential decay"};
-      auto changed = false;
-      ui::field_label("History mode");
-      changed |= ImGui::Combo("##strategy_history_mode",
-                              &history_mode,
-                              history_modes,
-                              IM_ARRAYSIZE(history_modes));
-      if(history_mode ==
-         static_cast<int>(
-          backtest::StrategyPerformanceHistoryMode::RollingWindow)) {
-        ui::field_label("Rolling window");
-        changed |=
-         ImGui::InputInt("##strategy_history_window", &rolling_window);
-      } else if(history_mode ==
-                static_cast<int>(
-                 backtest::StrategyPerformanceHistoryMode::ExponentialDecay)) {
-        ui::field_label("Evidence decay");
-        changed |= ImGui::InputDouble(
-         "##strategy_history_decay", &exponential_decay, 0.001, 0.01, "%.4f");
-      }
-
-      ImGui::SeparatorText("Strategy Performance: Bayesian win probability");
-      constexpr const char* win_models[] = {"Beta-Bernoulli"};
-      auto win_model_index = 0;
-      ui::field_label("Model");
-      changed |= ImGui::Combo("##bayesian_win_model",
-                              &win_model_index,
-                              win_models,
-                              IM_ARRAYSIZE(win_models));
-      constexpr const char* break_even_treatments[] = {
-       "Skip", "Count as win", "Count as loss"};
-      ui::field_label(
-       "Break-even treatment",
-       "Controls how an exactly zero theoretical return contributes to the "
-       "Bayesian win-probability model. Frequentist outcome rates preserve "
-       "break-even as its own category, and payoff magnitudes are unchanged.");
-      changed |= ImGui::Combo("##strategy_break_even_treatment",
-                              &break_even_treatment,
-                              break_even_treatments,
-                              IM_ARRAYSIZE(break_even_treatments));
-      ui::field_label("Prior win probability");
-      changed |= ImGui::InputDouble(
-       "##prior_win_probability", &prior_win_probability, 0.01, 0.1, "%.4f");
-      ui::field_label("Prior strength");
-      changed |= ImGui::InputDouble(
-       "##prior_win_strength", &prior_win_strength, 0.1, 1.0, "%.4f");
-
-      const auto edit_payoff_model =
-       [&changed](const char* heading,
-                  const char* id_suffix,
-                  double& prior_mean,
-                  double& prior_strength,
-                  double& coefficient_of_variation) {
-         ImGui::SeparatorText(heading);
-         ui::field_label("Model");
-         ImGui::TextUnformatted("Gamma / Inverse-Gamma");
-         ui::field_label("Prior mean magnitude");
-         changed |=
-          ImGui::InputDouble(std::format("##prior_mean_{}", id_suffix).c_str(),
-                             &prior_mean,
-                             0.001,
-                             0.01,
-                             "%.4f");
-         ui::field_label("Prior strength");
-         changed |= ImGui::InputDouble(
-          std::format("##prior_strength_{}", id_suffix).c_str(),
-          &prior_strength,
-          0.001,
-          0.01,
-          "%.4f");
-         ui::field_label("Coefficient of variation");
-         changed |= ImGui::InputDouble(
-          std::format("##coefficient_of_variation_{}", id_suffix).c_str(),
-          &coefficient_of_variation,
-          0.01,
-          0.1,
-          "%.4f");
-       };
-      edit_payoff_model("Strategy Performance: Bayesian winning payoff",
-                        "winning_payoff",
-                        winning_prior_mean,
-                        winning_prior_strength,
-                        winning_cv);
-      edit_payoff_model("Strategy Performance: Bayesian losing payoff",
-                        "losing_payoff",
-                        losing_prior_mean,
-                        losing_prior_strength,
-                        losing_cv);
-
-      if(changed) {
-        try {
-          edit_backtest_ptr->strategy_performance(
-           backtest::StrategyPerformanceConfig{
-            backtest::StrategyPerformanceHistoryPolicy{
-             static_cast<backtest::StrategyPerformanceHistoryMode>(
-              history_mode),
-             static_cast<std::size_t>(std::max(rolling_window, 0)),
-             exponential_decay},
-            backtest::StrategyPerformanceBayesianConfig{
-             backtest::BayesianWinModelNode{backtest::BetaBernoulliModelNode{
-              prior_win_probability, prior_win_strength}},
-             backtest::BayesianPayoffModelNode{backtest::GammaPayoffModelNode{
-              winning_prior_mean, winning_prior_strength, winning_cv}},
-             backtest::BayesianPayoffModelNode{backtest::GammaPayoffModelNode{
-              losing_prior_mean, losing_prior_strength, losing_cv}}},
-            static_cast<backtest::StrategyPerformanceBreakEvenTreatment>(
-             break_even_treatment)});
-          self.configuration_error_.clear();
-        } catch(const std::exception& error) {
-          self.configuration_error_ = error.what();
-        }
-      }
+      edit_backtest_ptr->failsafe_setups().emplace_back(std::move(setup));
     }
 
     if(!self.configuration_error_.empty()) {

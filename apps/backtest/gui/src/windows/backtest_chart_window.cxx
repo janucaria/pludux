@@ -237,7 +237,8 @@ public:
 
     const auto asset_handle = run.asset_handle;
     const auto& asset = app_state.get_asset(asset_handle);
-    const auto& strategy = app_state.get_strategy(backtest.strategy_handle());
+    const auto& strategy =
+     app_state.get_strategy(backtest.main_setup().strategy_handle());
 
     if(asset.size() == 0) {
       self.render_status_panel(
@@ -259,7 +260,7 @@ public:
       return;
     }
     const auto& backtest_timelines = backtest_results->timeline();
-    const auto& backtest_series_results = backtest_results->series_results();
+    const auto& backtest_series_results = backtest_results->series_results(0);
     const auto timeline_size = backtest_timelines.size();
     auto backtest_timestamps = std::vector<double>(timeline_size);
     for(auto index = std::size_t{}; index < timeline_size; ++index) {
@@ -1559,6 +1560,11 @@ private:
               ImGui::BeginTooltip();
               ImGui::TextColored(self.bearish_color_, "Order rejected");
               ImGui::Separator();
+              const auto setup_label =
+               event.setup_index() == 0
+                ? std::string{"Main"}
+                : std::format("Failsafe {}", event.setup_index());
+              ImGui::Text("Setup: %s", setup_label.c_str());
               if(event.type() ==
                  backtest::TradeEvent::Type::rejected_maximum_open_trades) {
                 ImGui::TextUnformatted("Reason: Maximum open trades reached");
@@ -1618,6 +1624,27 @@ private:
              ImVec2{entry_pos.x - text_size.x * 0.5f, entry_pos.y},
              marker_text_color,
              trade_count_str.c_str());
+            constexpr auto entry_hover_radius = 12.0f;
+            if(ImGui::IsMouseHoveringRect(
+                ImVec2{entry_pos.x - entry_hover_radius,
+                       entry_pos.y - entry_hover_radius},
+                ImVec2{entry_pos.x + entry_hover_radius,
+                       entry_pos.y + entry_hover_radius})) {
+              const auto setup_label =
+               event.setup_index() == 0
+                ? std::string{"Main"}
+                : std::format("Failsafe {}", event.setup_index());
+              ImGui::BeginTooltip();
+              ImGui::TextUnformatted(event.is_scale_in() ? "Scale in"
+                                                         : "Entry");
+              ImGui::Separator();
+              ImGui::Text("Setup: %s", setup_label.c_str());
+              ImGui::Text("Time: %s",
+                          format_datetime(event.timestamp()).c_str());
+              ImGui::Text("Quantity: %.6g", std::abs(event.position_size()));
+              ImGui::Text("Price: %s", format_currency(event.price()).c_str());
+              ImGui::EndTooltip();
+            }
           }
 
           if(event.is_exit() || event.is_scale_out()) {
@@ -1869,12 +1896,13 @@ private:
     const auto& app_state = context.app_state();
     const auto portfolio_handle = app_state.selected_portfolio_handle();
     const auto& backtest_config = app_state.get_backtest(run.backtest_handle);
-    const auto& strategy_handle = backtest_config.strategy_handle();
+    const auto& strategy_handle =
+     backtest_config.main_setup().strategy_handle();
     const auto& strategy = app_state.get_strategy(strategy_handle);
     const auto& results = app_state.get_portfolio_results(portfolio_handle);
     const auto& backtest_results = *results.backtest(run);
     const auto& backtest_timeline = backtest_results.timeline();
-    const auto& series_results = backtest_results.series_results();
+    const auto& series_results = backtest_results.series_results(0);
     const auto& plots = strategy.plots();
 
     auto group_index = std::size_t{0};

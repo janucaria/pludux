@@ -334,6 +334,40 @@ public:
      PyramidingRetrigger::EveryEvaluation};
   };
 
+  class Setup {
+  public:
+    Setup(const Profile& profile,
+          OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>
+           series_methods,
+          PositionRule long_position,
+          PositionRule short_position,
+          IntrabarPath intrabar_path = IntrabarPath::CandleDirection,
+          StrategyPerformanceConfig strategy_performance_config = {},
+          ErasedSeriesMethod<ExecutionFilterMethodContext> execution_filter =
+           BooleanMethod<true>{},
+          FailsafeActivation failsafe_activation = FailsafeActivation::Always)
+    : strategy_performance{std::move(strategy_performance_config)}
+    , execution_filter{std::move(execution_filter)}
+    , position_sizing{profile.position_sizing().make_method()}
+    , series_methods{std::move(series_methods)}
+    , long_position{std::move(long_position)}
+    , short_position{std::move(short_position)}
+    , intrabar_path{intrabar_path}
+    , failsafe_activation{failsafe_activation}
+    {
+    }
+
+    StrategyPerformance strategy_performance;
+    ErasedSeriesMethod<ExecutionFilterMethodContext> execution_filter;
+    PositionSizingMethod position_sizing;
+    OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>
+     series_methods;
+    PositionRule long_position;
+    PositionRule short_position;
+    IntrabarPath intrabar_path;
+    FailsafeActivation failsafe_activation;
+  };
+
   BacktestRunner(
    const Asset& asset,
    const Market& market,
@@ -357,7 +391,6 @@ public:
   : asset_{asset}
   , market_{market}
   , broker_{broker}
-  , profile_{profile}
   , drawdown_adjustment_{drawdown_adjustment}
   , insufficient_cash_policy_{insufficient_cash_policy}
   , current_account_state_{total_equity,
@@ -385,6 +418,54 @@ public:
   , is_failed_{is_failed}
   , intrabar_path_{intrabar_path}
   {
+  }
+
+  BacktestRunner(const Asset& asset,
+                 const Market& market,
+                 const Broker& broker,
+                 std::vector<Setup> setups,
+                 double total_equity = 0.0,
+                 bool is_failed = false,
+                 double peak_equity = NAN,
+                 DrawdownAdjustment drawdown_adjustment = {},
+                 InsufficientCashPolicy insufficient_cash_policy =
+                  InsufficientCashPolicy::Reject)
+  : asset_{asset}
+  , market_{market}
+  , broker_{broker}
+  , drawdown_adjustment_{drawdown_adjustment}
+  , insufficient_cash_policy_{insufficient_cash_policy}
+  , current_account_state_{total_equity,
+                           0.0,
+                           std::isnan(peak_equity) ? total_equity : peak_equity,
+                           total_equity}
+  , max_drawdown_{0.0}
+  , sum_of_durations_{}
+  , cumulative_investments_{0.0}
+  , profit_count_{0}
+  , cumulative_profits_{0.0}
+  , loss_count_{0}
+  , cumulative_losses_{0.0}
+  , break_even_count_{0}
+  , is_failed_{is_failed}
+  {
+    if(setups.empty()) {
+      throw std::invalid_argument{"BacktestRunner requires a main setup"};
+    }
+    setup_states_.reserve(setups.size());
+    for(auto& setup : setups) {
+      setup_states_.emplace_back(std::move(setup));
+    }
+    if(setup_states_.front().failsafe_activation !=
+       FailsafeActivation::Always) {
+      throw std::invalid_argument{"Main setup must always be active"};
+    }
+    activate_setup(0);
+  }
+
+  auto setup_count(this const BacktestRunner& self) noexcept -> std::size_t
+  {
+    return self.setup_states_.empty() ? 1 : self.setup_states_.size();
   }
 
   auto is_failed(this const BacktestRunner& self) noexcept -> bool
@@ -476,6 +557,21 @@ public:
     self.finish_bar(series_evaluation_results, timeline);
   }
 
+  void run(this BacktestRunner& self,
+           std::vector<SeriesEvaluationResults>& setup_series_results,
+           BacktestTimeline& timeline)
+  {
+    if(!self.begin_bar(timeline)) {
+      return;
+    }
+    self.run_open_exits();
+    self.run_open_entries(setup_series_results);
+    self.run_intrabar();
+    self.run_close_exits(setup_series_results);
+    self.run_close_entries(setup_series_results);
+    self.finish_bar(setup_series_results, timeline);
+  }
+
   auto begin_bar(this BacktestRunner& self, const BacktestTimeline& timeline)
    -> bool
   {
@@ -489,15 +585,18 @@ public:
     const auto& asset_snapshot = *self.active_snapshot_;
     const auto market_timestamp =
      static_cast<std::time_t>(asset_snapshot.datetime());
-    self.strategy_trade_session_.begin_market_bar(
-     market_timestamp, asset_snapshot.close(), asset_snapshot.lookback());
     self.execution_session_.begin_market_bar(
      market_timestamp, asset_snapshot.close(), asset_snapshot.lookback());
-    self.strategy_session_.begin_market_bar(market_timestamp,
-                                            asset_snapshot.close());
+    for(auto index = std::size_t{}; index < self.setup_count(); ++index) {
+      self.activate_setup(index);
+      self.strategy_trade_session_.begin_market_bar(
+       market_timestamp, asset_snapshot.close(), asset_snapshot.lookback());
+      self.strategy_session_.begin_market_bar(market_timestamp,
+                                              asset_snapshot.close());
+      self.closed_position_is_long_.reset();
+    }
     self.execution_filter_decisions_.clear();
     self.position_sizing_decisions_.clear();
-    self.closed_position_is_long_.reset();
     self.settled_realized_exit_count_ = 0;
     self.settled_closed_trade_count_ = 0;
 
@@ -508,6 +607,14 @@ public:
   }
 
   void run_open_exits(this BacktestRunner& self)
+  {
+    for(auto index = std::size_t{}; index < self.setup_count(); ++index) {
+      self.activate_setup(index);
+      self.run_open_exits_active();
+    }
+  }
+
+  void run_open_exits_active(this BacktestRunner& self)
   {
     const auto& asset_snapshot = *self.active_snapshot_;
     self.process_open_price(asset_snapshot.open(),
@@ -541,7 +648,29 @@ public:
     self.pending_entries_.fill(false);
   }
 
+  void
+  run_open_entries(this BacktestRunner& self,
+                   std::vector<SeriesEvaluationResults>& setup_series_results)
+  {
+    if(setup_series_results.size() != self.setup_count()) {
+      throw std::invalid_argument{"Backtest setup result count mismatch"};
+    }
+    self.entry_admission_open_ = self.execution_session_.is_flat();
+    for(auto index = std::size_t{}; index < self.setup_count(); ++index) {
+      self.activate_setup(index);
+      self.run_open_entries(setup_series_results[index]);
+    }
+  }
+
   void run_intrabar(this BacktestRunner& self)
+  {
+    for(auto index = std::size_t{}; index < self.setup_count(); ++index) {
+      self.activate_setup(index);
+      self.run_intrabar_active();
+    }
+  }
+
+  void run_intrabar_active(this BacktestRunner& self)
   {
     const auto& asset_snapshot = *self.active_snapshot_;
     const auto prices = make_intrabar_prices(self.intrabar_path_,
@@ -565,6 +694,19 @@ public:
                               asset_snapshot,
                               context,
                               self.closed_position_is_long_);
+  }
+
+  void
+  run_close_exits(this BacktestRunner& self,
+                  std::vector<SeriesEvaluationResults>& setup_series_results)
+  {
+    if(setup_series_results.size() != self.setup_count()) {
+      throw std::invalid_argument{"Backtest setup result count mismatch"};
+    }
+    for(auto index = std::size_t{}; index < self.setup_count(); ++index) {
+      self.activate_setup(index);
+      self.run_close_exits(setup_series_results[index]);
+    }
   }
 
   void run_close_entries(this BacktestRunner& self,
@@ -598,6 +740,20 @@ public:
     }
   }
 
+  void
+  run_close_entries(this BacktestRunner& self,
+                    std::vector<SeriesEvaluationResults>& setup_series_results)
+  {
+    if(setup_series_results.size() != self.setup_count()) {
+      throw std::invalid_argument{"Backtest setup result count mismatch"};
+    }
+    self.entry_admission_open_ = self.execution_session_.is_flat();
+    for(auto index = std::size_t{}; index < self.setup_count(); ++index) {
+      self.activate_setup(index);
+      self.run_close_entries(setup_series_results[index]);
+    }
+  }
+
   void settle_portfolio_account(this BacktestRunner& self) noexcept
   {
     self.update_accounting();
@@ -618,6 +774,15 @@ public:
       self.pending_signal_exit_trade_id_.reset();
     }
 
+    if(!self.current_setup_timeline_states_.empty()) {
+      self.current_setup_timeline_states_[0] =
+       BacktestSetupTimelineState{self.strategy_session_.intents(),
+                                  self.strategy_session_.closed_positions(),
+                                  self.strategy_session_.position(),
+                                  self.strategy_performance_.snapshot(),
+                                  self.active_filtered_entry_position()};
+    }
+
     self.update_accounting();
 
     timeline.append(BacktestTimeline::Row{
@@ -633,6 +798,7 @@ public:
      .execution_filter_decisions = self.execution_filter_decisions_,
      .position_sizing_decisions = self.position_sizing_decisions_,
      .strategy_performance = self.strategy_performance_.snapshot(),
+     .setup_states = self.current_setup_timeline_states_,
      .capital = self.current_account_state_.capital(),
      .equity = self.current_account_state_.equity(),
      .peak_equity = self.current_account_state_.peak_equity(),
@@ -658,13 +824,135 @@ public:
       series_evaluation_results.alias(series_name, series_method);
     }
     self.active_snapshot_.reset();
+    self.current_setup_timeline_states_.clear();
+  }
+
+  void finish_bar(this BacktestRunner& self,
+                  std::vector<SeriesEvaluationResults>& setup_series_results,
+                  BacktestTimeline& timeline)
+  {
+    if(setup_series_results.size() != self.setup_count()) {
+      throw std::invalid_argument{"Backtest setup result count mismatch"};
+    }
+    const auto asset_snapshot = *self.active_snapshot_;
+    self.current_setup_timeline_states_.resize(self.setup_count());
+    for(auto index = std::size_t{1}; index < self.setup_count(); ++index) {
+      self.activate_setup(index);
+      auto context = self.make_context(setup_series_results[index]);
+      if(self.active_timeline_index_ + 1 < self.asset_.size()) {
+        self.schedule_next_open_actions(asset_snapshot, context);
+      } else {
+        self.pending_entries_.fill(false);
+        self.pending_pyramiding_ = false;
+        self.pending_signal_exit_indices_.clear();
+        self.pending_signal_exit_trade_id_.reset();
+      }
+      const auto series_context = self.with_open_position_context(context);
+      for(const auto& [series_name, series_method] : self.series_methods_) {
+        const auto series_value =
+         evaluate_series_method(series_method, asset_snapshot, series_context);
+        setup_series_results[index].put(series_method, series_value);
+        setup_series_results[index].alias(series_name, series_method);
+      }
+      self.current_setup_timeline_states_[index] =
+       BacktestSetupTimelineState{self.strategy_session_.intents(),
+                                  self.strategy_session_.closed_positions(),
+                                  self.strategy_session_.position(),
+                                  self.strategy_performance_.snapshot(),
+                                  self.active_filtered_entry_position()};
+    }
+    self.activate_setup(0);
+    self.finish_bar(setup_series_results[0], timeline);
   }
 
 private:
+  struct SetupState {
+    explicit SetupState(Setup setup)
+    : strategy_performance{std::move(setup.strategy_performance)}
+    , execution_filter{std::move(setup.execution_filter)}
+    , position_sizing{std::move(setup.position_sizing)}
+    , series_methods{std::move(setup.series_methods)}
+    , long_position{std::move(setup.long_position)}
+    , short_position{std::move(setup.short_position)}
+    , intrabar_path{setup.intrabar_path}
+    , failsafe_activation{setup.failsafe_activation}
+    {
+    }
+
+    TradeSession strategy_trade_session;
+    StrategySession strategy_session;
+    StrategyPerformance strategy_performance;
+    ErasedSeriesMethod<ExecutionFilterMethodContext> execution_filter;
+    PositionSizingMethod position_sizing;
+    OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>
+     series_methods;
+    PositionRule long_position;
+    PositionRule short_position;
+    std::size_t pyramiding_layers{};
+    IntrabarPath intrabar_path{IntrabarPath::CandleDirection};
+    FailsafeActivation failsafe_activation{FailsafeActivation::Always};
+    std::array<bool, 2> pending_entries{};
+    bool pending_pyramiding{};
+    bool pyramiding_signal_ready{true};
+    std::optional<std::size_t> pyramiding_resume_index;
+    std::vector<std::size_t> pending_signal_exit_indices;
+    std::optional<std::size_t> pending_signal_exit_trade_id;
+    std::optional<std::size_t> execution_strategy_trade_id;
+    std::optional<std::size_t> filtered_entry_strategy_trade_id;
+    std::optional<bool> closed_position_is_long;
+  };
+
+  void swap_active_setup(this BacktestRunner& self, SetupState& state) noexcept
+  {
+    using std::swap;
+    swap(self.strategy_trade_session_, state.strategy_trade_session);
+    swap(self.strategy_session_, state.strategy_session);
+    swap(self.strategy_performance_, state.strategy_performance);
+    swap(self.execution_filter_, state.execution_filter);
+    swap(self.position_sizing_, state.position_sizing);
+    swap(self.series_methods_, state.series_methods);
+    swap(self.long_position_, state.long_position);
+    swap(self.short_position_, state.short_position);
+    swap(self.pyramiding_layers_, state.pyramiding_layers);
+    swap(self.intrabar_path_, state.intrabar_path);
+    swap(self.pending_entries_, state.pending_entries);
+    swap(self.pending_pyramiding_, state.pending_pyramiding);
+    swap(self.pyramiding_signal_ready_, state.pyramiding_signal_ready);
+    swap(self.pyramiding_resume_index_, state.pyramiding_resume_index);
+    swap(self.pending_signal_exit_indices_, state.pending_signal_exit_indices);
+    swap(self.pending_signal_exit_trade_id_,
+         state.pending_signal_exit_trade_id);
+    swap(self.execution_strategy_trade_id_, state.execution_strategy_trade_id);
+    swap(self.filtered_entry_strategy_trade_id_,
+         state.filtered_entry_strategy_trade_id);
+    swap(self.closed_position_is_long_, state.closed_position_is_long);
+  }
+
+  void activate_setup(this BacktestRunner& self, std::size_t index)
+  {
+    if(self.setup_states_.empty()) {
+      self.strategy_session_.setup_index(0);
+      self.execution_session_.setup_index(0);
+      return;
+    }
+    if(index >= self.setup_states_.size()) {
+      throw std::out_of_range{"Backtest setup index is out of range"};
+    }
+    if(self.active_setup_index_ == index) {
+      return;
+    }
+    if(self.active_setup_index_) {
+      self.swap_active_setup(self.setup_states_[*self.active_setup_index_]);
+    }
+    self.swap_active_setup(self.setup_states_[index]);
+    self.active_setup_index_ = index;
+    self.strategy_session_.setup_index(index);
+    self.execution_session_.setup_index(index);
+  }
+
   const Asset& asset_;
   const Market& market_;
   const Broker& broker_;
-  const Profile& profile_;
   DrawdownAdjustment drawdown_adjustment_;
   InsufficientCashPolicy insufficient_cash_policy_;
   bool portfolio_open_trade_capacity_available_{true};
@@ -697,10 +985,16 @@ private:
   StrategyPerformance strategy_performance_;
   ErasedSeriesMethod<ExecutionFilterMethodContext> execution_filter_;
   std::vector<ExecutionFilterDecision> execution_filter_decisions_;
-  PositionSizingMethod position_sizing_;
+  PositionSizingMethod position_sizing_{PositionSizingNode{}.make_method()};
   std::vector<PositionSizingDecision> position_sizing_decisions_;
   std::optional<std::size_t> execution_strategy_trade_id_;
+  std::optional<std::size_t> filtered_entry_strategy_trade_id_;
   std::optional<double> campaign_unit_quantity_;
+  std::optional<std::size_t> execution_owner_setup_index_;
+  std::optional<std::size_t> active_setup_index_;
+  std::vector<SetupState> setup_states_;
+  bool entry_admission_open_{};
+  std::vector<BacktestSetupTimelineState> current_setup_timeline_states_;
 
   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>
    series_methods_;
@@ -1297,7 +1591,8 @@ private:
 
   void sync_execution_position_state(this BacktestRunner& self)
   {
-    if(!self.strategy_trade_session_.open_position() ||
+    if(!self.execution_strategy_trade_id_ ||
+       !self.strategy_trade_session_.open_position() ||
        !self.execution_session_.open_position()) {
       return;
     }
@@ -1326,8 +1621,14 @@ private:
     self.pyramiding_signal_ready_ = true;
     self.pyramiding_resume_index_.reset();
     self.execution_strategy_trade_id_.reset();
-    self.campaign_unit_quantity_.reset();
-    self.executed_layer_count_ = 0;
+    self.filtered_entry_strategy_trade_id_.reset();
+    const auto active_index = self.active_setup_index_.value_or(0);
+    if(!self.execution_owner_setup_index_ ||
+       *self.execution_owner_setup_index_ == active_index) {
+      self.campaign_unit_quantity_.reset();
+      self.executed_layer_count_ = 0;
+      self.execution_owner_setup_index_.reset();
+    }
   }
 
   void record_strategy_exit(this BacktestRunner& self,
@@ -1755,7 +2056,6 @@ private:
    -> const StrategyIntent&
   {
     if(!is_pyramiding) {
-      self.campaign_unit_quantity_.reset();
       self.pyramiding_signal_ready_ = true;
     }
     const auto strategy_entry = TradeEntry{is_long ? 1.0 : -1.0, price};
@@ -1779,6 +2079,34 @@ private:
     return self.strategy_session_.enter(direction, price, is_pyramiding);
   }
 
+  auto active_filtered_entry_position(this const BacktestRunner& self) noexcept
+   -> bool
+  {
+    const auto position = self.strategy_session_.position();
+    return position && self.filtered_entry_strategy_trade_id_ &&
+           position->strategy_trade_id() ==
+            *self.filtered_entry_strategy_trade_id_;
+  }
+
+  auto active_setup_execution_eligible(this const BacktestRunner& self) noexcept
+   -> bool
+  {
+    if(self.setup_states_.empty() || !self.active_setup_index_ ||
+       *self.active_setup_index_ == 0) {
+      return true;
+    }
+    const auto index = *self.active_setup_index_;
+    if(self.setup_states_[index].failsafe_activation ==
+       FailsafeActivation::Always) {
+      return true;
+    }
+    const auto& previous = self.setup_states_[index - 1];
+    const auto previous_position = previous.strategy_session.position();
+    return previous_position && previous.filtered_entry_strategy_trade_id &&
+           previous_position->strategy_trade_id() ==
+            *previous.filtered_entry_strategy_trade_id;
+  }
+
   auto execute_entry_action(this BacktestRunner& self,
                             bool is_long,
                             double price,
@@ -1791,11 +2119,27 @@ private:
      is_long ? StrategyDirection::Long : StrategyDirection::Short;
     const auto performance_snapshot = self.strategy_performance_.snapshot();
     auto sizing_decision =
-     PositionSizingDecision{.direction = direction,
+     PositionSizingDecision{.setup_index = self.active_setup_index_.value_or(0),
+                            .direction = direction,
                             .pyramiding = false,
                             .method = std::string{self.position_sizing_.name()},
                             .entry_price = price,
                             .outcome = PositionSizingDecisionOutcome::Filtered};
+    const auto execution_blocked =
+     !self.entry_admission_open_ || self.execution_session_.is_open();
+    const auto failsafe_inactive = !self.active_setup_execution_eligible();
+    if(!self.setup_states_.empty() &&
+       (execution_blocked || failsafe_inactive)) {
+      sizing_decision.outcome =
+       execution_blocked ? PositionSizingDecisionOutcome::ShadowOnly
+                         : PositionSizingDecisionOutcome::FailsafeInactive;
+      const auto& intent = self.commit_strategy_entry(
+       is_long, price, rule, false, evaluation_snapshot, context);
+      sizing_decision.intent_id = intent.intent_id();
+      sizing_decision.strategy_trade_id = intent.strategy_trade_id();
+      self.position_sizing_decisions_.push_back(std::move(sizing_decision));
+      return true;
+    }
     auto filter_context =
      ExecutionFilterMethodContext{context, performance_snapshot};
     const auto allowed = static_cast<bool>(evaluate_series_method(
@@ -1805,10 +2149,16 @@ private:
        is_long, price, rule, false, evaluation_snapshot, context);
       sizing_decision.intent_id = intent.intent_id();
       sizing_decision.strategy_trade_id = intent.strategy_trade_id();
-      self.execution_filter_decisions_.emplace_back(intent.intent_id(), false);
+      self.execution_filter_decisions_.emplace_back(
+       intent.intent_id(), false, self.active_setup_index_.value_or(0));
+      self.filtered_entry_strategy_trade_id_ = intent.strategy_trade_id();
       self.execution_strategy_trade_id_.reset();
       self.position_sizing_decisions_.push_back(std::move(sizing_decision));
       return true;
+    }
+
+    if(!self.setup_states_.empty()) {
+      self.entry_admission_open_ = false;
     }
 
     const auto sizing_request =
@@ -1833,7 +2183,8 @@ private:
      is_long, price, rule, false, evaluation_snapshot, context);
     sizing_decision.intent_id = intent.intent_id();
     sizing_decision.strategy_trade_id = intent.strategy_trade_id();
-    self.execution_filter_decisions_.emplace_back(intent.intent_id(), true);
+    self.execution_filter_decisions_.emplace_back(
+     intent.intent_id(), true, self.active_setup_index_.value_or(0));
     if(!entry) {
       self.execution_strategy_trade_id_.reset();
       self.position_sizing_decisions_.push_back(std::move(sizing_decision));
@@ -1844,6 +2195,7 @@ private:
     self.campaign_unit_quantity_ = std::abs(entry->position_size());
     self.executed_layer_count_ = 1;
     self.execution_strategy_trade_id_ = intent.strategy_trade_id();
+    self.execution_owner_setup_index_ = self.active_setup_index_.value_or(0);
     self.sync_execution_position_state();
     self.position_sizing_decisions_.push_back(std::move(sizing_decision));
     return true;
@@ -1869,6 +2221,7 @@ private:
     auto sizing_decision = PositionSizingDecision{
      .strategy_trade_id =
       strategy_position ? strategy_position->strategy_trade_id() : 0,
+     .setup_index = self.active_setup_index_.value_or(0),
      .direction = direction,
      .pyramiding = true,
      .method = std::string{self.position_sizing_.name()},

@@ -18,10 +18,12 @@ TEST(WatchlistStateTest, EmptyWatchlistIsSaveableButBacktestIsNotReady)
   state.add_strategy(Strategy{});
   state.add_profile(Profile{});
 
-  const auto configured = Backtest{"Test",
-                                   watchlist_handle,
-                                   state.get_strategy_handles().front(),
-                                   state.get_profile_handles().front()};
+  const auto configured =
+   Backtest{"Test",
+            watchlist_handle,
+            StrategyPerformanceConfig{},
+            BacktestSetup{state.get_strategy_handles().front(),
+                          state.get_profile_handles().front()}};
   EXPECT_FALSE(state.is_backtest_ready(configured));
 }
 
@@ -35,10 +37,12 @@ TEST(WatchlistStateTest, BacktestIsReadyWhenEveryWatchlistAssetExists)
   state.add_strategy(Strategy{});
   state.add_profile(Profile{});
 
-  const auto configured = Backtest{"Test",
-                                   watchlist_handle,
-                                   state.get_strategy_handles().front(),
-                                   state.get_profile_handles().front()};
+  const auto configured =
+   Backtest{"Test",
+            watchlist_handle,
+            StrategyPerformanceConfig{},
+            BacktestSetup{state.get_strategy_handles().front(),
+                          state.get_profile_handles().front()}};
   EXPECT_TRUE(state.is_backtest_ready(configured));
 }
 
@@ -69,9 +73,13 @@ TEST(WatchlistStateTest, ExpandsBacktestsThenOrderedAssets)
   const auto second_watchlist =
    *state.add_watchlist(Watchlist{"Second", {second_asset}});
   const auto first_backtest =
-   *state.add_backtest(Backtest{"First", first_watchlist, {}, {}});
-  const auto second_backtest =
-   *state.add_backtest(Backtest{"Second", second_watchlist, {}, {}});
+   *state.add_backtest(Backtest{"First",
+                                first_watchlist,
+                                StrategyPerformanceConfig{},
+                                BacktestSetup{},
+                                {BacktestSetup{}, BacktestSetup{}}});
+  const auto second_backtest = *state.add_backtest(Backtest{
+   "Second", second_watchlist, StrategyPerformanceConfig{}, BacktestSetup{}});
   const auto portfolio = Portfolio{"Portfolio",
                                    1'000.0,
                                    {},

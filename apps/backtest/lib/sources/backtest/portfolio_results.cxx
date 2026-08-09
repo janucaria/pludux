@@ -28,11 +28,11 @@ public:
   BacktestResults(BacktestStoreHandle backtest_handle,
                   AssetStoreHandle asset_handle,
                   BacktestTimeline timeline = {},
-                  SeriesEvaluationResults series_results = {})
+                  std::size_t setup_count = 1)
   : backtest_handle_{backtest_handle}
   , asset_handle_{asset_handle}
   , timeline_{std::move(timeline)}
-  , series_results_{std::move(series_results)}
+  , setup_series_results_(setup_count)
   {
   }
 
@@ -45,8 +45,8 @@ public:
             other.backtest_handle_.generation() &&
            self.asset_handle_ == other.asset_handle_ &&
            self.timeline_.size() == other.timeline_.size() &&
-           self.series_results_.results().size() ==
-            other.series_results_.results().size();
+           self.setup_series_results_.size() ==
+            other.setup_series_results_.size();
   }
 
   auto backtest_handle(this const BacktestResults& self) noexcept
@@ -77,23 +77,35 @@ public:
     return self.timeline_;
   }
 
-  auto series_results(this const BacktestResults& self) noexcept
+  auto series_results(this const BacktestResults& self, std::size_t setup_index)
    -> const SeriesEvaluationResults&
   {
-    return self.series_results_;
+    return self.setup_series_results_.at(setup_index);
   }
 
-  auto series_results(this BacktestResults& self) noexcept
+  auto series_results(this BacktestResults& self, std::size_t setup_index)
    -> SeriesEvaluationResults&
   {
-    return self.series_results_;
+    return self.setup_series_results_.at(setup_index);
+  }
+
+  auto setup_series_results(this BacktestResults& self) noexcept
+   -> std::vector<SeriesEvaluationResults>&
+  {
+    return self.setup_series_results_;
+  }
+
+  auto setup_series_results(this const BacktestResults& self) noexcept
+   -> const std::vector<SeriesEvaluationResults>&
+  {
+    return self.setup_series_results_;
   }
 
 private:
   BacktestStoreHandle backtest_handle_;
   AssetStoreHandle asset_handle_;
   BacktestTimeline timeline_;
-  SeriesEvaluationResults series_results_;
+  std::vector<SeriesEvaluationResults> setup_series_results_;
 };
 
 class PortfolioResults {
