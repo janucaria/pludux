@@ -18,6 +18,7 @@ module;
 export module pludux.apps.backtest:windows.portfolios_window;
 
 import pludux.backtest;
+import :series_node_editor;
 import :ui.widgets;
 import :window_context;
 
@@ -49,6 +50,8 @@ private:
   std::shared_ptr<backtest::Portfolio> editing_;
   ImGuiTextFilter filter_;
   ImGuiTextFilter backtest_picker_filter_;
+  ui::SeriesNodeEditor series_node_editor_{
+   ui::SeriesNodeCatalog::RequestedOrder};
   bool editor_open_{};
 
   static auto make_editable_portfolio(backtest::Portfolio portfolio)
@@ -336,9 +339,73 @@ private:
     portfolio.drawdown_adjustment(adjustment);
 
     ui::form_section(
+     "Entry Comparators",
+     "Compare prepared requested orders in sequence. The first unequal value "
+     "determines priority; complete ties use the ordered Backtest and "
+     "Watchlist order.");
+    auto& comparators = portfolio.entry_comparators();
+    auto comparator_index = std::size_t{};
+    while(comparator_index < comparators.size()) {
+      ImGui::PushID(static_cast<int>(comparator_index));
+      ImGui::Text("Comparator %zu", comparator_index + 1);
+      auto order = comparators[comparator_index].order();
+      ui::field_label("Order");
+      const auto* order_label =
+       order == backtest::PortfolioEntryComparatorOrder::HigherFirst
+        ? "Higher first"
+        : "Lower first";
+      if(ImGui::BeginCombo("##comparator_order", order_label)) {
+        if(ImGui::Selectable(
+            "Higher first",
+            order == backtest::PortfolioEntryComparatorOrder::HigherFirst)) {
+          order = backtest::PortfolioEntryComparatorOrder::HigherFirst;
+        }
+        if(ImGui::Selectable(
+            "Lower first",
+            order == backtest::PortfolioEntryComparatorOrder::LowerFirst)) {
+          order = backtest::PortfolioEntryComparatorOrder::LowerFirst;
+        }
+        ImGui::EndCombo();
+      }
+      comparators[comparator_index].order(order);
+
+      ui::field_label("Expression");
+      auto expression = comparators[comparator_index].expression();
+      self.series_node_editor_.render(expression, context);
+      comparators[comparator_index].expression(std::move(expression));
+
+      auto erased = false;
+      if(comparator_index > 0 && ImGui::Button("Move up")) {
+        std::swap(comparators[comparator_index],
+                  comparators[comparator_index - 1]);
+      }
+      if(comparator_index + 1 < comparators.size()) {
+        ImGui::SameLine();
+        if(ImGui::Button("Move down")) {
+          std::swap(comparators[comparator_index],
+                    comparators[comparator_index + 1]);
+        }
+      }
+      ImGui::SameLine();
+      if(ImGui::Button(PLUDUX_ICON_DELETE " Remove")) {
+        comparators.erase(comparators.begin() +
+                          static_cast<std::ptrdiff_t>(comparator_index));
+        erased = true;
+      }
+      ImGui::Separator();
+      ImGui::PopID();
+      if(!erased) {
+        ++comparator_index;
+      }
+    }
+    if(ImGui::Button(PLUDUX_ICON_ADD " Add comparator")) {
+      comparators.emplace_back();
+    }
+
+    ui::form_section(
      "Ordered Backtests",
-     "Order is the deterministic priority when backtests compete for "
-     "shared capital.");
+     "Order is the final deterministic tie-breaker when entries compare "
+     "equally.");
     auto handles = portfolio.backtest_handles();
     const auto visible_rows = std::clamp<std::size_t>(handles.size(), 1, 6);
     const auto list_height =

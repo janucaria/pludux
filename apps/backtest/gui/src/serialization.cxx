@@ -1060,6 +1060,84 @@ struct json_conv_traits<Json, pludux::backtest::Backtest> {
 };
 
 template<typename Json>
+struct json_conv_traits<Json, pludux::backtest::PortfolioEntryComparatorOrder> {
+  using value_type = pludux::backtest::PortfolioEntryComparatorOrder;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_string();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      const auto value = json.as_string();
+      if(value == "HIGHER_FIRST") {
+        return result_type{value_type::HigherFirst};
+      }
+      if(value == "LOWER_FIRST") {
+        return result_type{value_type::LowerFirst};
+      }
+      return conversion_failed<value_type>();
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                      const value_type& value)
+  {
+    return Json{value == value_type::HigherFirst ? "HIGHER_FIRST"
+                                                 : "LOWER_FIRST"};
+  }
+};
+
+template<typename Json>
+struct json_conv_traits<Json, pludux::backtest::PortfolioEntryComparator> {
+  using value_type = pludux::backtest::PortfolioEntryComparator;
+  using result_type = jsoncons::conversion_result<value_type>;
+
+  static constexpr bool is_compatible = true;
+
+  static constexpr bool is(const Json& json) noexcept
+  {
+    return json.is_object();
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static result_type try_as(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                            const Json& json)
+  {
+    try {
+      auto parser = pludux::backtest::make_requested_order_config_parser();
+      return result_type{
+       value_type{parser.parse_node(jsoncons::ojson{json.at("expression")}),
+                  required_as<pludux::backtest::PortfolioEntryComparatorOrder>(
+                   json, "order")}};
+    } catch(...) {
+      return conversion_failed<value_type>();
+    }
+  }
+
+  template<typename Alloc, typename TempAlloc>
+  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>& aset,
+                      const value_type& value)
+  {
+    auto parser = pludux::backtest::make_requested_order_config_parser();
+    auto json = Json{};
+    json["expression"] = parser.serialize_node(value.expression());
+    set_json(json, aset, "order", value.order());
+    return json;
+  }
+};
+
+template<typename Json>
 struct json_conv_traits<Json, pludux::backtest::Portfolio> {
   using value_type = pludux::backtest::Portfolio;
   using result_type = jsoncons::conversion_result<value_type>;
@@ -1087,6 +1165,8 @@ struct json_conv_traits<Json, pludux::backtest::Portfolio> {
                                                          "drawdownAdjustment"),
        required_as<pludux::backtest::InsufficientCashPolicy>(
         json, "insufficientCashPolicy"),
+       vector_from_json<pludux::backtest::PortfolioEntryComparator>(
+        json.at("entryComparators")),
        vector_from_json<pludux::backtest::BacktestStoreHandle>(
         json.at("backtests"))}};
     } catch(...) {
@@ -1110,6 +1190,8 @@ struct json_conv_traits<Json, pludux::backtest::Portfolio> {
              aset,
              "insufficientCashPolicy",
              portfolio.insufficient_cash_policy());
+    json["entryComparators"] =
+     vector_to_json<Json>(aset, portfolio.entry_comparators());
     json["backtests"] =
      vector_to_json<Json>(aset, portfolio.backtest_handles());
     return json;

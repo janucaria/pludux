@@ -12,6 +12,7 @@ set(PLUDUX_TEST_SOURCES
   src/test_stop_target_price.cpp
   src/test_execution_filter.cpp
   src/test_entry_order_sizing.cpp
+  src/test_requested_order.cpp
   src/test_position_sizing.cpp
   src/test_pyramiding_layer.cpp
   src/test_trade_session.cpp

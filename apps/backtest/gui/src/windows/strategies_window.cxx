@@ -45,18 +45,34 @@ import :ui.widgets;
 namespace pludux::apps {
 
 using pludux::backtest::AveragePriceNode;
+using pludux::backtest::DrawdownAdjustedQuantityLimitNode;
+using pludux::backtest::DrawdownAdjustedQuantityNode;
 using pludux::backtest::DrawdownNode;
 using pludux::backtest::EquityNode;
 using pludux::backtest::EquityPercentNode;
 using pludux::backtest::ErasedPlotMethod;
 using pludux::backtest::ErasedPlotMethodContext;
 using pludux::backtest::ErasedPlotSourceMethod;
+using pludux::backtest::EstimatedEntryFeeNode;
+using pludux::backtest::EstimatedOneRExitFeeNode;
+using pludux::backtest::FrozenUnitQuantityNode;
 using pludux::backtest::HLinePlotMethod;
 using pludux::backtest::InitialEntryPriceNode;
+using pludux::backtest::IsPyramidingOrderNode;
 using pludux::backtest::LatestEntryPriceNode;
 using pludux::backtest::PositionDirectionNode;
 using pludux::backtest::PositionRMultipleNode;
 using pludux::backtest::PyramidingLayerNode;
+using pludux::backtest::RawRequestedQuantityLimitNode;
+using pludux::backtest::RawRequestedQuantityNode;
+using pludux::backtest::RequestedCostNode;
+using pludux::backtest::RequestedNotionalNode;
+using pludux::backtest::RequestedOrderDirectionNode;
+using pludux::backtest::RequestedOrderPriceNode;
+using pludux::backtest::RequestedOrderRiskDistanceNode;
+using pludux::backtest::RequestedPriceRiskNode;
+using pludux::backtest::RequestedQuantityNode;
+using pludux::backtest::RequestedRiskWithFeesNode;
 using pludux::backtest::RiskDistanceAmountNode;
 using pludux::backtest::RiskDistanceAtrNode;
 using pludux::backtest::RiskDistancePercentNode;
@@ -245,6 +261,77 @@ auto get_default_series_node(const std::string& series_id)
    std::format("Unknown series node id: {}", series_id)};
 }
 
+auto get_default_requested_order_node(const std::string& id)
+ -> ErasedNode<ErasedSeriesMethodContext>
+{
+  if(id == "VALUE") {
+    return ValueNode{0.0};
+  } else if(id == "REQUESTED_ORDER_PRICE") {
+    return RequestedOrderPriceNode{};
+  } else if(id == "REQUESTED_ORDER_DIRECTION") {
+    return RequestedOrderDirectionNode{};
+  } else if(id == "IS_PYRAMIDING_ORDER") {
+    return IsPyramidingOrderNode{};
+  } else if(id == "RAW_REQUESTED_QUANTITY") {
+    return RawRequestedQuantityNode{};
+  } else if(id == "RAW_REQUESTED_QUANTITY_LIMIT") {
+    return RawRequestedQuantityLimitNode{};
+  } else if(id == "DRAWDOWN_ADJUSTED_QUANTITY") {
+    return DrawdownAdjustedQuantityNode{};
+  } else if(id == "DRAWDOWN_ADJUSTED_QUANTITY_LIMIT") {
+    return DrawdownAdjustedQuantityLimitNode{};
+  } else if(id == "REQUESTED_QUANTITY") {
+    return RequestedQuantityNode{};
+  } else if(id == "REQUESTED_NOTIONAL") {
+    return RequestedNotionalNode{};
+  } else if(id == "REQUESTED_COST") {
+    return RequestedCostNode{};
+  } else if(id == "ESTIMATED_ENTRY_FEE") {
+    return EstimatedEntryFeeNode{};
+  } else if(id == "ESTIMATED_1R_EXIT_FEE") {
+    return EstimatedOneRExitFeeNode{};
+  } else if(id == "REQUESTED_ORDER_RISK_DISTANCE") {
+    return RequestedOrderRiskDistanceNode{};
+  } else if(id == "REQUESTED_PRICE_RISK") {
+    return RequestedPriceRiskNode{};
+  } else if(id == "REQUESTED_RISK_WITH_FEES") {
+    return RequestedRiskWithFeesNode{};
+  } else if(id == "FROZEN_UNIT_QUANTITY") {
+    return FrozenUnitQuantityNode{};
+  }
+
+  const auto value = ErasedNode<ErasedSeriesMethodContext>{ValueNode{0.0}};
+  const auto requested =
+   ErasedNode<ErasedSeriesMethodContext>{RequestedQuantityNode{}};
+  if(id == "ADD") {
+    return AddNode{requested, value};
+  } else if(id == "SUBTRACT") {
+    return SubtractNode{requested, value};
+  } else if(id == "MULTIPLY") {
+    return MultiplyNode{requested, ValueNode{1.0}};
+  } else if(id == "DIVIDE") {
+    return DivideNode{requested, ValueNode{1.0}};
+  } else if(id == "ABS_DIFF") {
+    return AbsDiffNode{requested, value};
+  } else if(id == "MAX") {
+    return MaxNode{requested, value};
+  } else if(id == "MIN") {
+    return MinNode{requested, value};
+  } else if(id == "NEGATE") {
+    return NegateNode{requested};
+  } else if(id == "ABS") {
+    return AbsNode{requested};
+  } else if(id == "SQRT") {
+    return SqrtNode{requested};
+  } else if(id == "POSITIVE_PART") {
+    return PositivePartNode{requested};
+  } else if(id == "NEGATIVE_PART") {
+    return NegativePartNode{requested};
+  }
+  throw std::invalid_argument{
+   std::format("Unknown requested order node id: {}", id)};
+}
+
 auto get_series_node_id(const ErasedNode<ErasedSeriesMethodContext>& node)
  -> std::string
 {
@@ -264,6 +351,38 @@ auto get_series_node_id(const ErasedNode<ErasedSeriesMethodContext>& node)
     return "VOLUME";
   } else if(node_cast<ChangeNode>(node)) {
     return "CHANGE";
+  } else if(node_cast<RequestedOrderPriceNode>(node)) {
+    return "REQUESTED_ORDER_PRICE";
+  } else if(node_cast<RequestedOrderDirectionNode>(node)) {
+    return "REQUESTED_ORDER_DIRECTION";
+  } else if(node_cast<IsPyramidingOrderNode>(node)) {
+    return "IS_PYRAMIDING_ORDER";
+  } else if(node_cast<RawRequestedQuantityNode>(node)) {
+    return "RAW_REQUESTED_QUANTITY";
+  } else if(node_cast<RawRequestedQuantityLimitNode>(node)) {
+    return "RAW_REQUESTED_QUANTITY_LIMIT";
+  } else if(node_cast<DrawdownAdjustedQuantityNode>(node)) {
+    return "DRAWDOWN_ADJUSTED_QUANTITY";
+  } else if(node_cast<DrawdownAdjustedQuantityLimitNode>(node)) {
+    return "DRAWDOWN_ADJUSTED_QUANTITY_LIMIT";
+  } else if(node_cast<RequestedQuantityNode>(node)) {
+    return "REQUESTED_QUANTITY";
+  } else if(node_cast<RequestedNotionalNode>(node)) {
+    return "REQUESTED_NOTIONAL";
+  } else if(node_cast<RequestedCostNode>(node)) {
+    return "REQUESTED_COST";
+  } else if(node_cast<EstimatedEntryFeeNode>(node)) {
+    return "ESTIMATED_ENTRY_FEE";
+  } else if(node_cast<EstimatedOneRExitFeeNode>(node)) {
+    return "ESTIMATED_1R_EXIT_FEE";
+  } else if(node_cast<RequestedOrderRiskDistanceNode>(node)) {
+    return "REQUESTED_ORDER_RISK_DISTANCE";
+  } else if(node_cast<RequestedPriceRiskNode>(node)) {
+    return "REQUESTED_PRICE_RISK";
+  } else if(node_cast<RequestedRiskWithFeesNode>(node)) {
+    return "REQUESTED_RISK_WITH_FEES";
+  } else if(node_cast<FrozenUnitQuantityNode>(node)) {
+    return "FROZEN_UNIT_QUANTITY";
   } else if(node_cast<DataNode>(node)) {
     return "DATA";
   } else if(node_cast<EquityNode>(node)) {
@@ -366,6 +485,16 @@ auto get_series_node_id(const ErasedNode<ErasedSeriesMethodContext>& node)
     return "POSITION_R_MULTIPLE";
   } else if(node_cast<AbsDiffNode>(node)) {
     return "ABS_DIFF";
+  } else if(node_cast<AbsNode>(node)) {
+    return "ABS";
+  } else if(node_cast<MaxNode>(node)) {
+    return "MAX";
+  } else if(node_cast<MinNode>(node)) {
+    return "MIN";
+  } else if(node_cast<PositivePartNode>(node)) {
+    return "POSITIVE_PART";
+  } else if(node_cast<NegativePartNode>(node)) {
+    return "NEGATIVE_PART";
   } else if(node_cast<LookbackNode>(node)) {
     return "LOOKBACK";
   } else if(node_cast<NumericInputNode>(node)) {
@@ -409,7 +538,49 @@ auto get_series_node_id(const ErasedNode<ErasedSeriesMethodContext>& node)
 
 auto get_series_node_title(const std::string& series_id) -> std::string
 {
-  if(series_id == "OPEN") {
+  if(series_id == "REQUESTED_ORDER_PRICE") {
+    return "Requested Order Price";
+  } else if(series_id == "REQUESTED_ORDER_DIRECTION") {
+    return "Requested Order Direction";
+  } else if(series_id == "IS_PYRAMIDING_ORDER") {
+    return "Is Pyramiding Order";
+  } else if(series_id == "RAW_REQUESTED_QUANTITY") {
+    return "Raw Requested Quantity";
+  } else if(series_id == "RAW_REQUESTED_QUANTITY_LIMIT") {
+    return "Raw Requested Quantity Limit";
+  } else if(series_id == "DRAWDOWN_ADJUSTED_QUANTITY") {
+    return "Drawdown-Adjusted Quantity";
+  } else if(series_id == "DRAWDOWN_ADJUSTED_QUANTITY_LIMIT") {
+    return "Drawdown-Adjusted Quantity Limit";
+  } else if(series_id == "REQUESTED_QUANTITY") {
+    return "Requested Quantity";
+  } else if(series_id == "REQUESTED_NOTIONAL") {
+    return "Requested Notional";
+  } else if(series_id == "REQUESTED_COST") {
+    return "Requested Cost";
+  } else if(series_id == "ESTIMATED_ENTRY_FEE") {
+    return "Estimated Entry Fee";
+  } else if(series_id == "ESTIMATED_1R_EXIT_FEE") {
+    return "Estimated 1R Exit Fee";
+  } else if(series_id == "REQUESTED_ORDER_RISK_DISTANCE") {
+    return "Risk Distance";
+  } else if(series_id == "REQUESTED_PRICE_RISK") {
+    return "Requested Price Risk";
+  } else if(series_id == "REQUESTED_RISK_WITH_FEES") {
+    return "Requested Risk With Fees";
+  } else if(series_id == "FROZEN_UNIT_QUANTITY") {
+    return "Frozen Unit Quantity";
+  } else if(series_id == "ABS") {
+    return "Absolute Value";
+  } else if(series_id == "MAX") {
+    return "Maximum";
+  } else if(series_id == "MIN") {
+    return "Minimum";
+  } else if(series_id == "POSITIVE_PART") {
+    return "Positive Part";
+  } else if(series_id == "NEGATIVE_PART") {
+    return "Negative Part";
+  } else if(series_id == "OPEN") {
     return "Open Price";
   } else if(series_id == "CLOSE") {
     return "Close Price";
@@ -566,6 +737,58 @@ auto get_series_node_title(const std::string& series_id) -> std::string
   }
 
   return "Unknown";
+}
+
+auto get_requested_order_node_combo_entries()
+ -> const std::vector<ui::ComboEntry>&
+{
+  static const auto entries = [] {
+    const auto ids =
+     std::vector<std::string>{"REQUESTED_ORDER_PRICE",
+                              "REQUESTED_ORDER_DIRECTION",
+                              "IS_PYRAMIDING_ORDER",
+                              "RAW_REQUESTED_QUANTITY",
+                              "RAW_REQUESTED_QUANTITY_LIMIT",
+                              "DRAWDOWN_ADJUSTED_QUANTITY",
+                              "DRAWDOWN_ADJUSTED_QUANTITY_LIMIT",
+                              "REQUESTED_QUANTITY",
+                              "REQUESTED_NOTIONAL",
+                              "REQUESTED_COST",
+                              "ESTIMATED_ENTRY_FEE",
+                              "ESTIMATED_1R_EXIT_FEE",
+                              "REQUESTED_ORDER_RISK_DISTANCE",
+                              "REQUESTED_PRICE_RISK",
+                              "REQUESTED_RISK_WITH_FEES",
+                              "FROZEN_UNIT_QUANTITY",
+                              "VALUE",
+                              "ADD",
+                              "SUBTRACT",
+                              "MULTIPLY",
+                              "DIVIDE",
+                              "NEGATE",
+                              "ABS",
+                              "ABS_DIFF",
+                              "SQRT",
+                              "MAX",
+                              "MIN",
+                              "POSITIVE_PART",
+                              "NEGATIVE_PART"};
+    auto result = std::vector<ui::ComboEntry>{};
+    result.reserve(ids.size());
+    for(const auto& id : ids) {
+      const auto category =
+       id == "VALUE" || id == "ADD" || id == "SUBTRACT" || id == "MULTIPLY" ||
+         id == "DIVIDE" || id == "NEGATE" || id == "ABS" || id == "ABS_DIFF" ||
+         id == "SQRT" || id == "MAX" || id == "MIN" || id == "POSITIVE_PART" ||
+         id == "NEGATIVE_PART"
+        ? "Math"
+        : "Requested Order";
+      result.push_back(ui::ComboEntry{
+       .id = id, .title = get_series_node_title(id), .category = category});
+    }
+    return result;
+  }();
+  return entries;
 }
 
 // Category taxonomy used to group the series node picker so the ~68 node
@@ -1068,6 +1291,33 @@ public:
     self.reset();
   }
 
+  void render_numeric_expression(
+   this StrategiesWindow& self,
+   ErasedNode<ErasedSeriesMethodContext>& expression,
+   WindowContext& context,
+   std::vector<std::string> available_series_names = {},
+   bool allow_unlisted_series_names = false)
+  {
+    const auto previous_names = std::move(self.available_series_names_);
+    const auto previous_allow_unlisted = self.allow_unlisted_series_names_;
+    self.available_series_names_ = std::move(available_series_names);
+    self.allow_unlisted_series_names_ = allow_unlisted_series_names;
+    self.render_series_node(expression, context);
+    self.available_series_names_ = std::move(previous_names);
+    self.allow_unlisted_series_names_ = previous_allow_unlisted;
+  }
+
+  void render_requested_order_expression(
+   this StrategiesWindow& self,
+   ErasedNode<ErasedSeriesMethodContext>& expression,
+   WindowContext& context)
+  {
+    const auto previous = self.requested_order_expression_;
+    self.requested_order_expression_ = true;
+    self.render_series_node(expression, context);
+    self.requested_order_expression_ = previous;
+  }
+
 private:
   enum class Page { List, BuiltIn, AddNew, Edit } current_page_{Page::List};
 
@@ -1079,6 +1329,8 @@ private:
   ImGuiTextFilter built_in_strategy_filter_;
 
   std::vector<std::string> available_series_names_;
+  bool allow_unlisted_series_names_{};
+  bool requested_order_expression_{};
   std::unordered_map<std::string, std::string> changed_series_names_;
 
   auto has_unsaved_changes(this const auto& self) -> bool
@@ -2214,16 +2466,21 @@ private:
        ui::searchable_combo("##Series",
                             series_node_id,
                             combo_preview_value,
-                            get_series_node_combo_entries());
+                            self.requested_order_expression_
+                             ? get_requested_order_node_combo_entries()
+                             : get_series_node_combo_entries());
       if(selected) {
-        if(*selected == "SERIES" && self.available_series_names_.empty()) {
+        if(*selected == "SERIES" && self.available_series_names_.empty() &&
+           !self.allow_unlisted_series_names_) {
           const auto error_message = std::format(
            "Cannot select '{}' when there are no available series other "
            "than the current one.",
            get_series_node_title(*selected));
           context.alert(error_message);
         } else {
-          series_node = get_default_series_node(*selected);
+          series_node = self.requested_order_expression_
+                         ? get_default_requested_order_node(*selected)
+                         : get_default_series_node(*selected);
         }
       }
     }
@@ -2314,7 +2571,28 @@ private:
                           StopTargetRefPriceNode,
                           PositionDirectionNode,
                           PyramidingLayerNode,
+                          RequestedOrderPriceNode,
+                          RequestedOrderDirectionNode,
+                          IsPyramidingOrderNode,
+                          RawRequestedQuantityNode,
+                          RawRequestedQuantityLimitNode,
+                          DrawdownAdjustedQuantityNode,
+                          DrawdownAdjustedQuantityLimitNode,
+                          RequestedQuantityNode,
+                          RequestedNotionalNode,
+                          RequestedCostNode,
+                          EstimatedEntryFeeNode,
+                          EstimatedOneRExitFeeNode,
+                          RequestedOrderRiskDistanceNode,
+                          RequestedPriceRiskNode,
+                          RequestedRiskWithFeesNode,
+                          FrozenUnitQuantityNode,
                           AbsDiffNode,
+                          AbsNode,
+                          MaxNode,
+                          MinNode,
+                          PositivePartNode,
+                          NegativePartNode,
                           NegateNode,
                           SqrtNode,
                           StddevNode>());
@@ -2375,6 +2653,15 @@ private:
                                  SeriesNode& node,
                                  WindowContext& context)
   {
+    if(self.allow_unlisted_series_names_) {
+      ui::field_label("Name");
+      auto name = node.name();
+      if(ImGui::InputTextWithHint(
+          "##named_series", "Strategy series name", &name)) {
+        node.name(std::move(name));
+      }
+      return;
+    }
     if(self.changed_series_names_.contains(node.name())) {
       const auto new_name = self.changed_series_names_.at(node.name());
       node.name(new_name);
@@ -2731,7 +3018,9 @@ private:
              std::same_as<TBinaryOpNode, SubtractNode> ||
              std::same_as<TBinaryOpNode, MultiplyNode> ||
              std::same_as<TBinaryOpNode, DivideNode> ||
-             std::same_as<TBinaryOpNode, AbsDiffNode>
+             std::same_as<TBinaryOpNode, AbsDiffNode> ||
+             std::same_as<TBinaryOpNode, MaxNode> ||
+             std::same_as<TBinaryOpNode, MinNode>
   void render_series_node_params(this auto& self,
                                  TBinaryOpNode& node,
                                  WindowContext& context)
@@ -2757,7 +3046,10 @@ private:
 
   template<typename TUnaryOpNode>
     requires std::same_as<TUnaryOpNode, NegateNode> ||
-             std::same_as<TUnaryOpNode, SqrtNode>
+             std::same_as<TUnaryOpNode, AbsNode> ||
+             std::same_as<TUnaryOpNode, SqrtNode> ||
+             std::same_as<TUnaryOpNode, PositivePartNode> ||
+             std::same_as<TUnaryOpNode, NegativePartNode>
   void render_series_node_params(this auto& self,
                                  TUnaryOpNode& node,
                                  WindowContext& context)
@@ -2893,6 +3185,27 @@ private:
 
   void
   render_series_node_params(this auto&, PyramidingLayerNode&, WindowContext&)
+  {
+  }
+
+  template<typename TNode>
+    requires std::same_as<TNode, RequestedOrderPriceNode> ||
+             std::same_as<TNode, RequestedOrderDirectionNode> ||
+             std::same_as<TNode, IsPyramidingOrderNode> ||
+             std::same_as<TNode, RawRequestedQuantityNode> ||
+             std::same_as<TNode, RawRequestedQuantityLimitNode> ||
+             std::same_as<TNode, DrawdownAdjustedQuantityNode> ||
+             std::same_as<TNode, DrawdownAdjustedQuantityLimitNode> ||
+             std::same_as<TNode, RequestedQuantityNode> ||
+             std::same_as<TNode, RequestedNotionalNode> ||
+             std::same_as<TNode, RequestedCostNode> ||
+             std::same_as<TNode, EstimatedEntryFeeNode> ||
+             std::same_as<TNode, EstimatedOneRExitFeeNode> ||
+             std::same_as<TNode, RequestedOrderRiskDistanceNode> ||
+             std::same_as<TNode, RequestedPriceRiskNode> ||
+             std::same_as<TNode, RequestedRiskWithFeesNode> ||
+             std::same_as<TNode, FrozenUnitQuantityNode>
+  void render_series_node_params(this auto&, TNode&, WindowContext&)
   {
   }
 

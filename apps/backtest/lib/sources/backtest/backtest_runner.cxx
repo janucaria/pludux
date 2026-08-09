@@ -28,6 +28,8 @@ import :profile;
 import :portfolio;
 import :position_sizing;
 import :entry_order_sizing;
+import :requested_order;
+import :requested_order_method_context;
 import :trade_entry;
 import :trade_exit;
 import :take_profit_level;
@@ -368,6 +370,83 @@ public:
     FailsafeActivation failsafe_activation;
   };
 
+  class RequestedOrderAction {
+  public:
+    RequestedOrderAction(std::size_t setup_index,
+                         RequestedOrder requested_order,
+                         std::size_t evaluation_lookback,
+                         PositionSizingDecision sizing_decision,
+                         std::size_t sizing_decision_index,
+                         std::size_t filter_decision_index) noexcept
+    : setup_index_{setup_index}
+    , requested_order_{std::move(requested_order)}
+    , evaluation_lookback_{evaluation_lookback}
+    , sizing_decision_{std::move(sizing_decision)}
+    , sizing_decision_index_{sizing_decision_index}
+    , filter_decision_index_{filter_decision_index}
+    {
+    }
+
+    auto setup_index(this const RequestedOrderAction& self) noexcept
+     -> std::size_t
+    {
+      return self.setup_index_;
+    }
+
+    auto requested_order(this const RequestedOrderAction& self) noexcept
+     -> const RequestedOrder&
+    {
+      return self.requested_order_;
+    }
+
+    auto is_long(this const RequestedOrderAction& self) noexcept -> bool
+    {
+      return self.requested_order_.direction() > 0.0;
+    }
+
+    auto pyramiding(this const RequestedOrderAction& self) noexcept -> bool
+    {
+      return self.requested_order_.pyramiding();
+    }
+
+    auto price(this const RequestedOrderAction& self) noexcept -> double
+    {
+      return self.requested_order_.price();
+    }
+
+    auto evaluation_lookback(this const RequestedOrderAction& self) noexcept
+     -> std::size_t
+    {
+      return self.evaluation_lookback_;
+    }
+
+    auto sizing_decision_index(this const RequestedOrderAction& self) noexcept
+     -> std::size_t
+    {
+      return self.sizing_decision_index_;
+    }
+
+    auto sizing_decision(this const RequestedOrderAction& self) noexcept
+     -> const PositionSizingDecision&
+    {
+      return self.sizing_decision_;
+    }
+
+    auto filter_decision_index(this const RequestedOrderAction& self) noexcept
+     -> std::size_t
+    {
+      return self.filter_decision_index_;
+    }
+
+  private:
+    std::size_t setup_index_;
+    RequestedOrder requested_order_;
+    std::size_t evaluation_lookback_;
+    PositionSizingDecision sizing_decision_;
+    std::size_t sizing_decision_index_;
+    std::size_t filter_decision_index_;
+  };
+
   BacktestRunner(
    const Asset& asset,
    const Market& market,
@@ -652,14 +731,27 @@ public:
   run_open_entries(this BacktestRunner& self,
                    std::vector<SeriesEvaluationResults>& setup_series_results)
   {
-    if(setup_series_results.size() != self.setup_count()) {
-      throw std::invalid_argument{"Backtest setup result count mismatch"};
+    if(auto requested_order =
+        self.discover_open_requested_order(setup_series_results)) {
+      self.execute_requested_order(*requested_order, setup_series_results);
     }
+  }
+
+  auto discover_open_requested_order(
+   this BacktestRunner& self,
+   std::vector<SeriesEvaluationResults>& setup_series_results)
+   -> std::optional<RequestedOrderAction>
+  {
+    self.validate_setup_result_count(setup_series_results);
     self.entry_admission_open_ = self.execution_session_.is_flat();
+    self.entry_discovery_mode_ = true;
+    self.discovered_requested_order_.reset();
     for(auto index = std::size_t{}; index < self.setup_count(); ++index) {
       self.activate_setup(index);
       self.run_open_entries(setup_series_results[index]);
     }
+    self.entry_discovery_mode_ = false;
+    return std::exchange(self.discovered_requested_order_, std::nullopt);
   }
 
   void run_intrabar(this BacktestRunner& self)
@@ -744,14 +836,82 @@ public:
   run_close_entries(this BacktestRunner& self,
                     std::vector<SeriesEvaluationResults>& setup_series_results)
   {
-    if(setup_series_results.size() != self.setup_count()) {
-      throw std::invalid_argument{"Backtest setup result count mismatch"};
+    if(auto requested_order =
+        self.discover_close_requested_order(setup_series_results)) {
+      self.execute_requested_order(*requested_order, setup_series_results);
     }
+  }
+
+  auto discover_close_requested_order(
+   this BacktestRunner& self,
+   std::vector<SeriesEvaluationResults>& setup_series_results)
+   -> std::optional<RequestedOrderAction>
+  {
+    self.validate_setup_result_count(setup_series_results);
     self.entry_admission_open_ = self.execution_session_.is_flat();
+    self.entry_discovery_mode_ = true;
+    self.discovered_requested_order_.reset();
     for(auto index = std::size_t{}; index < self.setup_count(); ++index) {
       self.activate_setup(index);
       self.run_close_entries(setup_series_results[index]);
     }
+    self.entry_discovery_mode_ = false;
+    return std::exchange(self.discovered_requested_order_, std::nullopt);
+  }
+
+  void execute_requested_order(
+   this BacktestRunner& self,
+   const RequestedOrderAction& action,
+   std::vector<SeriesEvaluationResults>& setup_series_results)
+  {
+    self.validate_setup_result_count(setup_series_results);
+    self.activate_setup(action.setup_index());
+    auto context =
+     self.make_context(setup_series_results[action.setup_index()]);
+    const auto evaluation_snapshot =
+     self.requested_order_evaluation_snapshot(action);
+    self.requested_order_preapproved_ = &action.requested_order();
+    self.requested_order_decision_preapproved_ = &action.sizing_decision();
+    self.entry_admission_open_ = true;
+    if(action.pyramiding()) {
+      self.execute_pyramiding_action(
+       action.price(), evaluation_snapshot, context);
+    } else {
+      self.execute_entry_action(action.is_long(),
+                                action.price(),
+                                evaluation_snapshot,
+                                context,
+                                self.current_account_state_.drawdown_ratio());
+    }
+    self.requested_order_preapproved_ = nullptr;
+    self.requested_order_decision_preapproved_ = nullptr;
+    if(action.sizing_decision_index() + 1 <
+       self.position_sizing_decisions_.size()) {
+      std::rotate(self.position_sizing_decisions_.begin() +
+                   static_cast<std::ptrdiff_t>(action.sizing_decision_index()),
+                  self.position_sizing_decisions_.end() - 1,
+                  self.position_sizing_decisions_.end());
+    }
+    if(action.filter_decision_index() + 1 <
+       self.execution_filter_decisions_.size()) {
+      std::rotate(self.execution_filter_decisions_.begin() +
+                   static_cast<std::ptrdiff_t>(action.filter_decision_index()),
+                  self.execution_filter_decisions_.end() - 1,
+                  self.execution_filter_decisions_.end());
+    }
+  }
+
+  auto evaluate_requested_order(
+   this const BacktestRunner& self,
+   const RequestedOrderAction& action,
+   const ErasedSeriesMethod<ErasedSeriesMethodContext>& method) noexcept
+   -> double
+  {
+    return evaluate_series_method(
+     method,
+     self.requested_order_evaluation_snapshot(action),
+     ErasedSeriesMethodContext{
+      RequestedOrderMethodContext{action.requested_order()}});
   }
 
   void settle_portfolio_account(this BacktestRunner& self) noexcept
@@ -994,6 +1154,10 @@ private:
   std::optional<std::size_t> active_setup_index_;
   std::vector<SetupState> setup_states_;
   bool entry_admission_open_{};
+  bool entry_discovery_mode_{};
+  const RequestedOrder* requested_order_preapproved_{};
+  const PositionSizingDecision* requested_order_decision_preapproved_{};
+  std::optional<RequestedOrderAction> discovered_requested_order_;
   std::vector<BacktestSetupTimelineState> current_setup_timeline_states_;
 
   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>
@@ -1015,12 +1179,30 @@ private:
   std::vector<std::size_t> pending_signal_exit_indices_;
   std::optional<std::size_t> pending_signal_exit_trade_id_;
 
-  struct PriceExitCandidate {
+  struct PriceExitTrigger {
     TradeExit::Reason reason;
     std::size_t index;
     double price;
     int priority;
   };
+
+  auto requested_order_evaluation_snapshot(
+   this const BacktestRunner& self, const RequestedOrderAction& action) noexcept
+   -> AssetSnapshot
+  {
+    return action.evaluation_lookback() == 0
+            ? *self.active_snapshot_
+            : (*self.active_snapshot_)[action.evaluation_lookback()];
+  }
+
+  void validate_setup_result_count(
+   this const BacktestRunner& self,
+   const std::vector<SeriesEvaluationResults>& setup_series_results)
+  {
+    if(setup_series_results.size() != self.setup_count()) {
+      throw std::invalid_argument{"Backtest setup result count mismatch"};
+    }
+  }
 
   auto make_context(this BacktestRunner& self,
                     SeriesEvaluationResults& series_evaluation_results)
@@ -1121,61 +1303,74 @@ private:
                     0.0);
   }
 
-  auto prepare_entry_order(this BacktestRunner& self,
-                           const EntryOrderSizingRequest& request,
-                           PositionSizingDecision& decision,
-                           bool is_pyramiding) -> std::optional<TradeEntry>
+  auto create_requested_order(this const BacktestRunner& self,
+                              const EntryOrderSizingRequest& request,
+                              PositionSizingDecision& decision)
+   -> std::optional<RequestedOrder>
   {
-    const auto sized = size_entry_order(request, self.market_, self.broker_);
-    if(!sized) {
+    const auto order = size_entry_order(request, self.market_, self.broker_);
+    if(!order) {
       decision.outcome = PositionSizingDecisionOutcome::SizingLimitTooSmall;
       return std::nullopt;
     }
 
-    decision.sizing_normalized_quantity =
-     std::abs(sized->entry.position_size());
-    decision.entry_cost = sized->entry_cost;
-    decision.estimated_loss = sized->estimated_loss;
+    decision.sizing_normalized_quantity = order->requested_quantity();
+    decision.entry_cost = order->requested_cost();
+    decision.estimated_loss = order->requested_risk_with_fees();
+    return order;
+  }
+
+  auto admit_requested_order(this BacktestRunner& self,
+                             const RequestedOrder& order,
+                             PositionSizingDecision& decision)
+   -> std::optional<TradeEntry>
+  {
+    const auto& entry = order.entry();
+    const auto is_pyramiding = order.pyramiding();
     if(!is_pyramiding && !self.portfolio_open_trade_capacity_available_) {
-      self.execution_session_.reject_maximum_open_trades(sized->entry);
+      self.execution_session_.reject_maximum_open_trades(entry);
       decision.outcome = PositionSizingDecisionOutcome::MaximumOpenTrades;
       return std::nullopt;
     }
     if(!self.portfolio_combined_layer_capacity_available_) {
-      self.execution_session_.reject_maximum_combined_layers(sized->entry);
+      self.execution_session_.reject_maximum_combined_layers(entry);
       decision.outcome = PositionSizingDecisionOutcome::MaximumCombinedLayers;
       return std::nullopt;
     }
     const auto cash = self.available_cash();
-    decision.cash_required = sized->entry_cost;
+    decision.cash_required = order.requested_cost();
     decision.cash_available = cash;
-    if(sized->entry_cost <= cash) {
-      decision.final_quantity = std::abs(sized->entry.position_size());
-      decision.final_entry_cost = sized->entry_cost;
+    if(order.requested_cost() <= cash) {
+      decision.final_quantity = order.requested_quantity();
+      decision.final_entry_cost = order.requested_cost();
       decision.outcome = PositionSizingDecisionOutcome::Executed;
-      return sized->entry;
+      return entry;
     }
 
     switch(self.insufficient_cash_policy_) {
     case InsufficientCashPolicy::Reject:
       self.execution_session_.reject_insufficient_cash(
-       sized->entry, cash, sized->entry_cost);
+       entry, cash, order.requested_cost());
       decision.outcome = PositionSizingDecisionOutcome::InsufficientCash;
       return std::nullopt;
     case InsufficientCashPolicy::CapToAvailableCash:
       if(cash > 0.0) {
         const auto capped = size_entry_order(
-         EntryOrderSizingRequest{sized->entry.position_size(),
-                                 sized->entry.price(),
-                                 EntryCostBudgetConstraint{cash}},
+         EntryOrderSizingRequest{.requested_quantity = entry.position_size(),
+                                 .entry_price = entry.price(),
+                                 .constraint = EntryCostBudgetConstraint{cash},
+                                 .pyramiding = order.pyramiding(),
+                                 .risk_distance = order.risk_distance(),
+                                 .frozen_unit_quantity =
+                                  order.frozen_unit_quantity()},
          self.market_,
          self.broker_);
         if(capped) {
           decision.cash_adjusted = true;
-          decision.final_quantity = std::abs(capped->entry.position_size());
-          decision.final_entry_cost = capped->entry_cost;
+          decision.final_quantity = capped->requested_quantity();
+          decision.final_entry_cost = capped->requested_cost();
           decision.outcome = PositionSizingDecisionOutcome::Executed;
-          return capped->entry;
+          return capped->entry();
         }
       }
       decision.outcome = PositionSizingDecisionOutcome::InsufficientCash;
@@ -1240,16 +1435,20 @@ private:
     const auto direction = is_long ? 1.0 : -1.0;
     const auto initial_price_context =
      context.with_position_reference(entry_price, direction);
-    const auto sizing_context = PositionSizingContext{
-     self.current_account_state_.equity(),
-     entry_price,
-     direction,
-     performance_snapshot,
-     [&position, &evaluation_snapshot, &initial_price_context] {
-       return evaluate_series_method(position.risk_distance_method(),
-                                     evaluation_snapshot,
-                                     initial_price_context);
-     }};
+    const auto risk_distance =
+     evaluate_series_method(position.risk_distance_method(),
+                            evaluation_snapshot,
+                            initial_price_context);
+    if(!std::isfinite(risk_distance) || risk_distance <= 0.0) {
+      throw std::runtime_error{
+       "Invalid risk distance: expected a finite positive value"};
+    }
+    const auto sizing_context =
+     PositionSizingContext{self.current_account_state_.equity(),
+                           entry_price,
+                           direction,
+                           performance_snapshot,
+                           [risk_distance] { return risk_distance; }};
     const auto evaluation = self.position_sizing_.evaluate(sizing_context);
     if(!std::isfinite(evaluation.requested_quantity) ||
        evaluation.requested_quantity < 0.0) {
@@ -1278,7 +1477,15 @@ private:
     }
 
     return EntryOrderSizingRequest{
-     direction * adjusted_position_quantity, entry_price, adjusted_constraint};
+     .requested_quantity = direction * adjusted_position_quantity,
+     .entry_price = entry_price,
+     .constraint = adjusted_constraint,
+     .pyramiding = false,
+     .raw_requested_quantity = evaluation.requested_quantity,
+     .raw_requested_limit = decision.requested_limit,
+     .drawdown_adjusted_quantity = adjusted_position_quantity,
+     .drawdown_adjusted_limit = decision.drawdown_adjusted_limit,
+     .risk_distance = risk_distance};
   }
 
   auto create_pyramiding_entry_sizing_request(this const BacktestRunner& self,
@@ -1294,11 +1501,24 @@ private:
        "Missing initial executed quantity for pyramiding entry"};
     }
 
+    if(!self.execution_session_.open_position()) {
+      throw std::runtime_error{
+       "Missing execution position for pyramiding requested order"};
+    }
+    const auto risk_distance =
+     self.execution_session_.open_position()->risk_distance();
+    if(!std::isfinite(risk_distance) || risk_distance <= 0.0) {
+      throw std::runtime_error{"Missing frozen risk distance for pyramiding"};
+    }
     decision.requested_quantity = *self.campaign_unit_quantity_;
     const auto direction = is_long ? 1.0 : -1.0;
-    return EntryOrderSizingRequest{direction * *self.campaign_unit_quantity_,
-                                   entry_price,
-                                   MaximumQuantityConstraint{}};
+    return EntryOrderSizingRequest{
+     .requested_quantity = direction * *self.campaign_unit_quantity_,
+     .entry_price = entry_price,
+     .constraint = MaximumQuantityConstraint{},
+     .pyramiding = true,
+     .risk_distance = risk_distance,
+     .frozen_unit_quantity = self.campaign_unit_quantity_};
   }
 
   auto apply_drawdown_adjustment(this const BacktestRunner& self,
@@ -1375,11 +1595,16 @@ private:
                                                            average_price,
                                                            reference_price,
                                                            direction);
-    const auto risk_distance =
-     is_pyramiding ? open_position.risk_distance()
-                   : evaluate_series_method(position.risk_distance_method(),
-                                            asset_snapshot,
-                                            stop_context);
+    const auto risk_distance = [&] {
+      if(is_pyramiding) {
+        return open_position.risk_distance();
+      }
+      if(self.requested_order_preapproved_) {
+        return self.requested_order_preapproved_->risk_distance();
+      }
+      return evaluate_series_method(
+       position.risk_distance_method(), asset_snapshot, stop_context);
+    }();
     if(!std::isfinite(risk_distance) || risk_distance <= 0.0) {
       throw std::runtime_error{
        "Invalid risk distance: expected a finite positive value"};
@@ -1436,10 +1661,11 @@ private:
           favorable_anchor = entry.price();
         }
         if(std::isfinite(favorable_anchor)) {
-          const auto candidate = favorable_anchor - direction * trail_distance;
+          const auto ratcheted_price =
+           favorable_anchor - direction * trail_distance;
           effective_price = open_position.is_long_direction()
-                             ? std::max(effective_price, candidate)
-                             : std::min(effective_price, candidate);
+                             ? std::max(effective_price, ratcheted_price)
+                             : std::min(effective_price, ratcheted_price);
         }
       }
       if(is_pyramiding && has_previous &&
@@ -1766,7 +1992,7 @@ private:
 
   auto immediate_price_exit(this const BacktestRunner& self,
                             double current_price)
-   -> std::optional<PriceExitCandidate>
+   -> std::optional<PriceExitTrigger>
   {
     if(!self.strategy_trade_session_.open_position()) {
       return std::nullopt;
@@ -1774,12 +2000,12 @@ private:
     const auto& position = *self.strategy_trade_session_.open_position();
     const auto& rule =
      position.is_long_direction() ? self.long_position_ : self.short_position_;
-    auto result = std::optional<PriceExitCandidate>{};
-    const auto consider = [&](PriceExitCandidate candidate) {
-      if(!result || candidate.priority < result->priority ||
-         (candidate.priority == result->priority &&
-          candidate.index < result->index)) {
-        result = candidate;
+    auto result = std::optional<PriceExitTrigger>{};
+    const auto consider = [&](PriceExitTrigger trigger) {
+      if(!result || trigger.priority < result->priority ||
+         (trigger.priority == result->priority &&
+          trigger.index < result->index)) {
+        result = trigger;
       }
     };
 
@@ -1814,7 +2040,7 @@ private:
 
   auto next_segment_exit(this const BacktestRunner& self,
                          double start,
-                         double end) -> std::optional<PriceExitCandidate>
+                         double end) -> std::optional<PriceExitTrigger>
   {
     if(!self.strategy_trade_session_.open_position() || start == end) {
       return std::nullopt;
@@ -1823,18 +2049,18 @@ private:
     const auto& rule =
      position.is_long_direction() ? self.long_position_ : self.short_position_;
     const auto rising = end > start;
-    auto result = std::optional<PriceExitCandidate>{};
-    const auto consider = [&](PriceExitCandidate candidate) {
-      const auto distance = std::abs(candidate.price - start);
+    auto result = std::optional<PriceExitTrigger>{};
+    const auto consider = [&](PriceExitTrigger trigger) {
+      const auto distance = std::abs(trigger.price - start);
       const auto result_distance = result
                                     ? std::abs(result->price - start)
                                     : std::numeric_limits<double>::infinity();
       if(!result || distance < result_distance ||
          (distance == result_distance &&
-          (candidate.priority < result->priority ||
-           (candidate.priority == result->priority &&
-            candidate.index < result->index)))) {
-        result = candidate;
+          (trigger.priority < result->priority ||
+           (trigger.priority == result->priority &&
+            trigger.index < result->index)))) {
+        result = trigger;
       }
     };
 
@@ -1868,7 +2094,7 @@ private:
   }
 
   auto execute_price_exit(this BacktestRunner& self,
-                          const PriceExitCandidate& candidate,
+                          const PriceExitTrigger& trigger,
                           std::optional<bool>& closed_position_is_long) -> bool
   {
     if(!self.strategy_trade_session_.open_position()) {
@@ -1877,18 +2103,18 @@ private:
     const auto& position = *self.strategy_trade_session_.open_position();
     const auto was_long = position.is_long_direction();
     const auto& rule = was_long ? self.long_position_ : self.short_position_;
-    const auto reduce = candidate.reason == TradeExit::Reason::stop_loss
-                         ? rule.stop_losses()[candidate.index].reduce()
-                         : rule.take_profits()[candidate.index].reduce();
-    const auto stop_index = candidate.reason == TradeExit::Reason::stop_loss
-                             ? std::optional{candidate.index}
+    const auto reduce = trigger.reason == TradeExit::Reason::stop_loss
+                         ? rule.stop_losses()[trigger.index].reduce()
+                         : rule.take_profits()[trigger.index].reduce();
+    const auto stop_index = trigger.reason == TradeExit::Reason::stop_loss
+                             ? std::optional{trigger.index}
                              : std::nullopt;
-    const auto target_index = candidate.reason == TradeExit::Reason::take_profit
-                               ? std::optional{candidate.index}
+    const auto target_index = trigger.reason == TradeExit::Reason::take_profit
+                               ? std::optional{trigger.index}
                                : std::nullopt;
     auto exit = self.make_strategy_exit_trade(position.position_size(),
-                                              candidate.price,
-                                              candidate.reason,
+                                              trigger.price,
+                                              trigger.reason,
                                               reduce,
                                               stop_index,
                                               target_index);
@@ -1897,9 +2123,9 @@ private:
     }
     self.strategy_trade_session_.exit_position(*exit);
     self.record_strategy_exit(
-     candidate.reason, candidate.price, reduce, candidate.index);
+     trigger.reason, trigger.price, reduce, trigger.index);
     self.mirror_execution_exit(
-     candidate.price, candidate.reason, reduce, stop_index, target_index);
+     trigger.price, trigger.reason, reduce, stop_index, target_index);
     if(self.strategy_trade_session_.is_flat()) {
       closed_position_is_long = was_long;
       self.reset_pyramiding_campaign();
@@ -1912,9 +2138,9 @@ private:
                           std::optional<bool>& closed_position_is_long) -> bool
   {
     auto filled = false;
-    while(const auto candidate = self.immediate_price_exit(open)) {
+    while(const auto trigger = self.immediate_price_exit(open)) {
       filled =
-       self.execute_price_exit(*candidate, closed_position_is_long) || filled;
+       self.execute_price_exit(*trigger, closed_position_is_long) || filled;
       if(self.strategy_trade_session_.is_flat()) {
         return filled;
       }
@@ -1935,14 +2161,14 @@ private:
         self.execute_price_exit(*immediate, closed_position_is_long);
         continue;
       }
-      const auto candidate = self.next_segment_exit(current, end);
-      if(!candidate) {
+      const auto trigger = self.next_segment_exit(current, end);
+      if(!trigger) {
         self.activate_trailing_stops(end);
         return;
       }
-      self.activate_trailing_stops(candidate->price);
-      current = candidate->price;
-      self.execute_price_exit(*candidate, closed_position_is_long);
+      self.activate_trailing_stops(trigger->price);
+      current = trigger->price;
+      self.execute_price_exit(*trigger, closed_position_is_long);
     }
   }
 
@@ -2119,16 +2345,22 @@ private:
      is_long ? StrategyDirection::Long : StrategyDirection::Short;
     const auto performance_snapshot = self.strategy_performance_.snapshot();
     auto sizing_decision =
-     PositionSizingDecision{.setup_index = self.active_setup_index_.value_or(0),
-                            .direction = direction,
-                            .pyramiding = false,
-                            .method = std::string{self.position_sizing_.name()},
-                            .entry_price = price,
-                            .outcome = PositionSizingDecisionOutcome::Filtered};
+     self.requested_order_decision_preapproved_
+      ? *self.requested_order_decision_preapproved_
+      : PositionSizingDecision{
+         .setup_index = self.active_setup_index_.value_or(0),
+         .direction = direction,
+         .pyramiding = false,
+         .method = std::string{self.position_sizing_.name()},
+         .entry_price = price,
+         .outcome = PositionSizingDecisionOutcome::Filtered};
+    const auto preapproved = self.requested_order_preapproved_ != nullptr;
     const auto execution_blocked =
-     !self.entry_admission_open_ || self.execution_session_.is_open();
-    const auto failsafe_inactive = !self.active_setup_execution_eligible();
-    if(!self.setup_states_.empty() &&
+     !preapproved &&
+     (!self.entry_admission_open_ || self.execution_session_.is_open());
+    const auto failsafe_inactive =
+     !preapproved && !self.active_setup_execution_eligible();
+    if(!preapproved && !self.setup_states_.empty() &&
        (execution_blocked || failsafe_inactive)) {
       sizing_decision.outcome =
        execution_blocked ? PositionSizingDecisionOutcome::ShadowOnly
@@ -2142,8 +2374,10 @@ private:
     }
     auto filter_context =
      ExecutionFilterMethodContext{context, performance_snapshot};
-    const auto allowed = static_cast<bool>(evaluate_series_method(
-     self.execution_filter_, evaluation_snapshot, filter_context));
+    const auto allowed =
+     preapproved ||
+     static_cast<bool>(evaluate_series_method(
+      self.execution_filter_, evaluation_snapshot, filter_context));
     if(!allowed) {
       const auto& intent = self.commit_strategy_entry(
        is_long, price, rule, false, evaluation_snapshot, context);
@@ -2161,18 +2395,37 @@ private:
       self.entry_admission_open_ = false;
     }
 
-    const auto sizing_request =
-     self.create_initial_entry_sizing_request(rule,
-                                              is_long,
-                                              price,
-                                              evaluation_snapshot,
-                                              context,
-                                              current_drawdown_ratio,
-                                              performance_snapshot,
-                                              sizing_decision);
+    auto requested_order = std::optional<RequestedOrder>{};
+    if(preapproved) {
+      requested_order = *self.requested_order_preapproved_;
+    } else if(const auto sizing_request =
+               self.create_initial_entry_sizing_request(rule,
+                                                        is_long,
+                                                        price,
+                                                        evaluation_snapshot,
+                                                        context,
+                                                        current_drawdown_ratio,
+                                                        performance_snapshot,
+                                                        sizing_decision)) {
+      requested_order =
+       self.create_requested_order(*sizing_request, sizing_decision);
+    }
+    if(self.entry_discovery_mode_ && requested_order) {
+      self.discovered_requested_order_.emplace(
+       self.active_setup_index_.value_or(0),
+       std::move(*requested_order),
+       self.active_timeline_index_ > 0 &&
+         evaluation_snapshot.datetime() != self.active_snapshot_->datetime()
+        ? 1U
+        : 0U,
+       std::move(sizing_decision),
+       self.position_sizing_decisions_.size(),
+       self.execution_filter_decisions_.size());
+      return true;
+    }
     const auto entry =
-     sizing_request
-      ? self.prepare_entry_order(*sizing_request, sizing_decision, false)
+     requested_order
+      ? self.admit_requested_order(*requested_order, sizing_decision)
       : std::nullopt;
     if(sizing_decision.outcome ==
        PositionSizingDecisionOutcome::MaximumCombinedLayers) {
@@ -2218,15 +2471,18 @@ private:
     const auto direction =
      is_long ? StrategyDirection::Long : StrategyDirection::Short;
     const auto strategy_position = self.strategy_session_.position();
-    auto sizing_decision = PositionSizingDecision{
-     .strategy_trade_id =
-      strategy_position ? strategy_position->strategy_trade_id() : 0,
-     .setup_index = self.active_setup_index_.value_or(0),
-     .direction = direction,
-     .pyramiding = true,
-     .method = std::string{self.position_sizing_.name()},
-     .entry_price = price,
-     .outcome = PositionSizingDecisionOutcome::ShadowOnly};
+    auto sizing_decision =
+     self.requested_order_decision_preapproved_
+      ? *self.requested_order_decision_preapproved_
+      : PositionSizingDecision{
+         .strategy_trade_id =
+          strategy_position ? strategy_position->strategy_trade_id() : 0,
+         .setup_index = self.active_setup_index_.value_or(0),
+         .direction = direction,
+         .pyramiding = true,
+         .method = std::string{self.position_sizing_.name()},
+         .entry_price = price,
+         .outcome = PositionSizingDecisionOutcome::ShadowOnly};
 
     if(!self.execution_strategy_trade_id_ ||
        !self.execution_session_.open_position()) {
@@ -2237,10 +2493,34 @@ private:
       self.position_sizing_decisions_.push_back(std::move(sizing_decision));
       return true;
     }
-    const auto sizing_request = self.create_pyramiding_entry_sizing_request(
-     is_long, price, sizing_decision);
+    auto requested_order = std::optional<RequestedOrder>{};
+    if(self.requested_order_preapproved_) {
+      requested_order = *self.requested_order_preapproved_;
+    } else {
+      const auto sizing_request = self.create_pyramiding_entry_sizing_request(
+       is_long, price, sizing_decision);
+      requested_order =
+       self.create_requested_order(sizing_request, sizing_decision);
+    }
+    if(self.entry_discovery_mode_ && requested_order) {
+      if(!self.discovered_requested_order_) {
+        self.discovered_requested_order_.emplace(
+         self.active_setup_index_.value_or(0),
+         std::move(*requested_order),
+         self.active_timeline_index_ > 0 &&
+           evaluation_snapshot.datetime() != self.active_snapshot_->datetime()
+          ? 1U
+          : 0U,
+         std::move(sizing_decision),
+         self.position_sizing_decisions_.size(),
+         self.execution_filter_decisions_.size());
+      }
+      return true;
+    }
     const auto entry =
-     self.prepare_entry_order(sizing_request, sizing_decision, true);
+     requested_order
+      ? self.admit_requested_order(*requested_order, sizing_decision)
+      : std::nullopt;
     if(sizing_decision.outcome ==
        PositionSizingDecisionOutcome::MaximumCombinedLayers) {
       self.position_sizing_decisions_.push_back(std::move(sizing_decision));

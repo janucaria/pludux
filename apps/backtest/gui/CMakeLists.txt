@@ -170,6 +170,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/ui/ui_widgets.cxx
     src/ui/summary_widgets.cxx
     src/ui/condition_node_editor.cxx
+    src/ui/series_node_editor.cxx
 
     src/charts/backtest_chart_state.cxx
 

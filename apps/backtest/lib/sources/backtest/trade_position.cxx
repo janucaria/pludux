@@ -444,13 +444,14 @@ public:
        std::max(level.favorable_anchor(), favorable_price));
     }
 
-    const auto candidate = self.is_short_direction()
-                            ? level.favorable_anchor() + level.trail_distance()
-                            : level.favorable_anchor() - level.trail_distance();
+    const auto ratcheted_price =
+     self.is_short_direction()
+      ? level.favorable_anchor() + level.trail_distance()
+      : level.favorable_anchor() - level.trail_distance();
     if(self.is_short_direction()) {
-      level.effective_price(std::min(level.effective_price(), candidate));
+      level.effective_price(std::min(level.effective_price(), ratcheted_price));
     } else {
-      level.effective_price(std::max(level.effective_price(), candidate));
+      level.effective_price(std::max(level.effective_price(), ratcheted_price));
     }
   }
 

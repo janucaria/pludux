@@ -19,6 +19,7 @@ import :drawdown_node;
 import :equity_node;
 import :position_node;
 import :pyramiding_layer_node;
+import :requested_order_node;
 import :risk_distance_node;
 import :stop_target_price_node;
 import :strategy_performance_node;
@@ -172,6 +173,8 @@ private:
 };
 
 auto make_default_registered_config_parser() -> ConfigParser;
+
+auto make_requested_order_config_parser() -> ConfigParser;
 
 auto parse_execution_filter_node(const jsoncons::ojson& config)
  -> ErasedNode<ExecutionFilterMethodContext>;
@@ -1966,6 +1969,96 @@ auto make_default_registered_config_parser() -> ConfigParser
       config_parser, params, "firstCondition", "secondCondition");
    });
 
+  return config_parser;
+}
+
+auto make_requested_order_config_parser() -> ConfigParser
+{
+  auto config_parser = ConfigParser{};
+  config_parser.register_node_parser(
+   "VALUE", serialize_value_node, parse_value_node);
+
+#define PLUDUX_REGISTER_REQUESTED_ORDER_NODE(Id, Type) \
+  config_parser.register_node_parser(                  \
+   Id, serialize_parameterless_node<Type>, parse_parameterless_node<Type>)
+
+  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("REQUESTED_ORDER_PRICE",
+                                       RequestedOrderPriceNode);
+  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("REQUESTED_ORDER_DIRECTION",
+                                       RequestedOrderDirectionNode);
+  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("IS_PYRAMIDING_ORDER",
+                                       IsPyramidingOrderNode);
+  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("RAW_REQUESTED_QUANTITY",
+                                       RawRequestedQuantityNode);
+  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("RAW_REQUESTED_QUANTITY_LIMIT",
+                                       RawRequestedQuantityLimitNode);
+  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("DRAWDOWN_ADJUSTED_QUANTITY",
+                                       DrawdownAdjustedQuantityNode);
+  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("DRAWDOWN_ADJUSTED_QUANTITY_LIMIT",
+                                       DrawdownAdjustedQuantityLimitNode);
+  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("REQUESTED_QUANTITY",
+                                       RequestedQuantityNode);
+  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("REQUESTED_NOTIONAL",
+                                       RequestedNotionalNode);
+  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("REQUESTED_COST", RequestedCostNode);
+  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("ESTIMATED_ENTRY_FEE",
+                                       EstimatedEntryFeeNode);
+  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("ESTIMATED_1R_EXIT_FEE",
+                                       EstimatedOneRExitFeeNode);
+  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("REQUESTED_ORDER_RISK_DISTANCE",
+                                       RequestedOrderRiskDistanceNode);
+  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("REQUESTED_PRICE_RISK",
+                                       RequestedPriceRiskNode);
+  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("REQUESTED_RISK_WITH_FEES",
+                                       RequestedRiskWithFeesNode);
+  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("FROZEN_UNIT_QUANTITY",
+                                       FrozenUnitQuantityNode);
+
+#undef PLUDUX_REGISTER_REQUESTED_ORDER_NODE
+
+  const auto register_binary = [&]<typename TNode>(const char* id,
+                                                   const char* left,
+                                                   const char* right) {
+    config_parser.register_node_parser(
+     id,
+     [left, right](const ConfigParser& parser,
+                   const ErasedNode<ErasedSeriesMethodContext>& node) {
+       return serialize_binary_operator_node<TNode>(parser, node, left, right);
+     },
+     [left, right](ConfigParser::Parser parser, const jsoncons::ojson& params) {
+       return parse_binary_operator_node<TNode>(parser, params, left, right);
+     });
+  };
+  const auto register_unary = [&]<typename TNode>(const char* id,
+                                                  const char* operand) {
+    config_parser.register_node_parser(
+     id,
+     [operand](const ConfigParser& parser,
+               const ErasedNode<ErasedSeriesMethodContext>& node) {
+       return serialize_unary_operator_node<TNode>(parser, node, operand);
+     },
+     [operand](ConfigParser::Parser parser, const jsoncons::ojson& params) {
+       return parse_unary_operator_node<TNode>(parser, params, operand);
+     });
+  };
+
+  register_binary.template operator()<AddNode>("ADD", "augend", "addend");
+  register_binary.template operator()<SubtractNode>(
+   "SUBTRACT", "minuend", "subtrahend");
+  register_binary.template operator()<MultiplyNode>(
+   "MULTIPLY", "multiplicand", "multiplier");
+  register_binary.template operator()<DivideNode>(
+   "DIVIDE", "dividend", "divisor");
+  register_binary.template operator()<AbsDiffNode>("ABS_DIFF", "left", "right");
+  register_binary.template operator()<MaxNode>("MAX", "left", "right");
+  register_binary.template operator()<MinNode>("MIN", "left", "right");
+  register_unary.template operator()<NegateNode>("NEGATE", "operand");
+  register_unary.template operator()<AbsNode>("ABS", "operand");
+  register_unary.template operator()<SqrtNode>("SQRT", "operand");
+  register_unary.template operator()<PositivePartNode>("POSITIVE_PART",
+                                                       "operand");
+  register_unary.template operator()<NegativePartNode>("NEGATIVE_PART",
+                                                       "operand");
   return config_parser;
 }
 

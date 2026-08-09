@@ -122,6 +122,10 @@ target_sources(${PROJECT_NAME}
     sources/backtest/broker.cxx
     sources/backtest/position_sizing.cxx
     sources/backtest/entry_order_sizing.cxx
+    sources/backtest/requested_order.cxx
+    sources/backtest/requested_order_method_context.cxx
+    sources/backtest/requested_order_method.cxx
+    sources/backtest/requested_order_node.cxx
     sources/backtest/profile.cxx
     sources/backtest/backtest_timeline.cxx
     sources/backtest/backtest_method_context.cxx

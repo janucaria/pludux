@@ -10,11 +10,74 @@ module;
 
 export module pludux.backtest:portfolio;
 
+import pludux;
+
+import :requested_order_node;
 import :store_handle;
 
 export namespace pludux::backtest {
 
 enum class InsufficientCashPolicy { Reject, CapToAvailableCash };
+
+enum class PortfolioEntryComparatorOrder { HigherFirst, LowerFirst };
+
+class PortfolioEntryComparator {
+public:
+  PortfolioEntryComparator()
+  : PortfolioEntryComparator{ValueNode{0.0},
+                             PortfolioEntryComparatorOrder::HigherFirst}
+  {
+  }
+
+  PortfolioEntryComparator(ErasedNode<ErasedSeriesMethodContext> expression,
+                           PortfolioEntryComparatorOrder order)
+  : expression_{std::move(expression)}
+  , order_{order}
+  {
+    validate_expression(expression_);
+  }
+
+  auto operator==(const PortfolioEntryComparator&) const noexcept
+   -> bool = default;
+
+  auto expression(this const PortfolioEntryComparator& self) noexcept
+   -> const ErasedNode<ErasedSeriesMethodContext>&
+  {
+    return self.expression_;
+  }
+
+  void expression(this PortfolioEntryComparator& self,
+                  ErasedNode<ErasedSeriesMethodContext> value)
+  {
+    validate_expression(value);
+    self.expression_ = std::move(value);
+  }
+
+  auto order(this const PortfolioEntryComparator& self) noexcept
+   -> PortfolioEntryComparatorOrder
+  {
+    return self.order_;
+  }
+
+  void order(this PortfolioEntryComparator& self,
+             PortfolioEntryComparatorOrder value) noexcept
+  {
+    self.order_ = value;
+  }
+
+private:
+  ErasedNode<ErasedSeriesMethodContext> expression_;
+  PortfolioEntryComparatorOrder order_;
+
+  static void
+  validate_expression(const ErasedNode<ErasedSeriesMethodContext>& expression)
+  {
+    if(!is_requested_order_expression(expression)) {
+      throw std::invalid_argument{
+       "Portfolio comparator requires a Requested Order expression"};
+    }
+  }
+};
 
 class DrawdownAdjustment {
 public:
@@ -79,6 +142,7 @@ public:
               10,
               {},
               InsufficientCashPolicy::Reject,
+              {},
               {}}
   {
   }
@@ -91,6 +155,7 @@ public:
             std::size_t maximum_combined_layers,
             DrawdownAdjustment drawdown_adjustment,
             InsufficientCashPolicy insufficient_cash_policy,
+            std::vector<PortfolioEntryComparator> entry_comparators,
             std::vector<BacktestStoreHandle> backtest_handles)
   : name_{std::move(name)}
   , initial_capital_{initial_capital}
@@ -100,6 +165,7 @@ public:
   , maximum_combined_layers_{maximum_combined_layers}
   , drawdown_adjustment_{drawdown_adjustment}
   , insufficient_cash_policy_{insufficient_cash_policy}
+  , entry_comparators_{std::move(entry_comparators)}
   , backtest_handles_{std::move(backtest_handles)}
   {
     self_validate();
@@ -196,6 +262,24 @@ public:
     self.insufficient_cash_policy_ = value;
   }
 
+  auto entry_comparators(this const Portfolio& self) noexcept
+   -> const std::vector<PortfolioEntryComparator>&
+  {
+    return self.entry_comparators_;
+  }
+
+  auto entry_comparators(this Portfolio& self) noexcept
+   -> std::vector<PortfolioEntryComparator>&
+  {
+    return self.entry_comparators_;
+  }
+
+  void entry_comparators(this Portfolio& self,
+                         std::vector<PortfolioEntryComparator> value) noexcept
+  {
+    self.entry_comparators_ = std::move(value);
+  }
+
   auto backtest_handles(this const Portfolio& self) noexcept
    -> const std::vector<BacktestStoreHandle>&
   {
@@ -222,6 +306,7 @@ public:
            self.maximum_combined_layers_ == other.maximum_combined_layers_ &&
            self.drawdown_adjustment_ == other.drawdown_adjustment_ &&
            self.insufficient_cash_policy_ == other.insufficient_cash_policy_ &&
+           self.entry_comparators_ == other.entry_comparators_ &&
            self.backtest_handles_ == other.backtest_handles_;
   }
 
@@ -259,6 +344,7 @@ private:
   std::size_t maximum_combined_layers_;
   DrawdownAdjustment drawdown_adjustment_;
   InsufficientCashPolicy insufficient_cash_policy_;
+  std::vector<PortfolioEntryComparator> entry_comparators_;
   std::vector<BacktestStoreHandle> backtest_handles_;
 };
 

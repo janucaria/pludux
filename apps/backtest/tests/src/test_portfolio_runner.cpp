@@ -30,6 +30,21 @@ auto make_asset(std::string name, std::vector<double> timestamps) -> Asset
   return Asset{std::move(name), AssetHistory{fields.begin(), fields.end()}};
 }
 
+auto make_priced_asset(std::string name, double price) -> Asset
+{
+  const auto scalar = [price] { return AssetData{&price, &price + 1}; };
+  const auto timestamp = 1.0;
+  const auto volume = 0.0;
+  const auto fields = std::array{
+   std::pair{std::string{"Datetime"}, AssetData{&timestamp, &timestamp + 1}},
+   std::pair{std::string{"Open"}, scalar()},
+   std::pair{std::string{"High"}, scalar()},
+   std::pair{std::string{"Low"}, scalar()},
+   std::pair{std::string{"Close"}, scalar()},
+   std::pair{std::string{"Volume"}, AssetData{&volume, &volume + 1}}};
+  return Asset{std::move(name), AssetHistory{fields.begin(), fields.end()}};
+}
+
 auto make_runner(const Asset& asset,
                  const Market& market,
                  const Broker& broker,
@@ -195,6 +210,283 @@ TEST(PortfolioRunnerTest, BacktestOrderHasDeterministicSharedCashPriority)
   EXPECT_DOUBLE_EQ(*second_decision.cash_available, 200.0);
   EXPECT_DOUBLE_EQ(results.timeline().row(0).reserved_notional, 800.0);
   EXPECT_DOUBLE_EQ(results.timeline().row(0).available_capital, 200.0);
+}
+
+TEST(PortfolioRunnerTest, HigherFirstComparatorOverridesBacktestOrder)
+{
+  const auto first = make_priced_asset("First", 90.0);
+  const auto second = make_priced_asset("Second", 110.0);
+  const auto market = Market{"Market", 0.0, 0.0};
+  const auto broker = Broker{"Broker"};
+  const auto profile =
+   Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{9.0}}};
+  auto runner = PortfolioRunner{
+   1'000.0,
+   1,
+   10,
+   {PortfolioRunner::BacktestRun{
+     BacktestStoreHandle{1, 1},
+     AssetStoreHandle{1, 1},
+     make_entry_runner(
+      first, market, broker, profile, InsufficientCashPolicy::Reject)},
+    PortfolioRunner::BacktestRun{
+     BacktestStoreHandle{2, 1},
+     AssetStoreHandle{2, 1},
+     make_entry_runner(
+      second, market, broker, profile, InsufficientCashPolicy::Reject)}},
+   {PortfolioEntryComparator{RequestedOrderPriceNode{},
+                             PortfolioEntryComparatorOrder::HigherFirst}}};
+  auto results = PortfolioResults{};
+
+  runner.run(results);
+
+  EXPECT_FALSE(results.backtests()[0].timeline().open_position(0));
+  EXPECT_TRUE(results.backtests()[1].timeline().open_position(0));
+}
+
+TEST(PortfolioRunnerTest, LowerRequestedNotionalExecutesFirst)
+{
+  const auto first = make_priced_asset("Larger", 100.0);
+  const auto second = make_priced_asset("Smaller", 100.0);
+  const auto market = Market{"Market", 0.0, 0.0};
+  const auto broker = Broker{"Broker"};
+  const auto larger =
+   Profile{"Larger", PositionSizingNode{FixedQuantityPositionSizing{8.0}}};
+  const auto smaller =
+   Profile{"Smaller", PositionSizingNode{FixedQuantityPositionSizing{2.0}}};
+  auto runner = PortfolioRunner{
+   1'000.0,
+   1,
+   10,
+   {PortfolioRunner::BacktestRun{
+     BacktestStoreHandle{1, 1},
+     AssetStoreHandle{1, 1},
+     make_entry_runner(
+      first, market, broker, larger, InsufficientCashPolicy::Reject)},
+    PortfolioRunner::BacktestRun{
+     BacktestStoreHandle{2, 1},
+     AssetStoreHandle{2, 1},
+     make_entry_runner(
+      second, market, broker, smaller, InsufficientCashPolicy::Reject)}},
+   {PortfolioEntryComparator{RequestedNotionalNode{},
+                             PortfolioEntryComparatorOrder::LowerFirst}}};
+  auto results = PortfolioResults{};
+
+  runner.run(results);
+
+  EXPECT_FALSE(results.backtests()[0].timeline().open_position(0));
+  ASSERT_TRUE(results.backtests()[1].timeline().open_position(0));
+  EXPECT_DOUBLE_EQ(
+   results.backtests()[1].timeline().open_position(0)->position_size(), 2.0);
+}
+
+TEST(PortfolioRunnerTest, RejectedRankedOrderDoesNotBlockLaterOrder)
+{
+  const auto first = make_priced_asset("Unaffordable", 110.0);
+  const auto second = make_priced_asset("Affordable", 100.0);
+  const auto market = Market{"Market", 0.0, 0.0};
+  const auto broker = Broker{"Broker"};
+  const auto unaffordable = Profile{
+   "Unaffordable", PositionSizingNode{FixedQuantityPositionSizing{20.0}}};
+  const auto affordable =
+   Profile{"Affordable", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  auto runner = PortfolioRunner{
+   1'000.0,
+   10,
+   10,
+   {PortfolioRunner::BacktestRun{
+     BacktestStoreHandle{1, 1},
+     AssetStoreHandle{1, 1},
+     make_entry_runner(
+      first, market, broker, unaffordable, InsufficientCashPolicy::Reject)},
+    PortfolioRunner::BacktestRun{
+     BacktestStoreHandle{2, 1},
+     AssetStoreHandle{2, 1},
+     make_entry_runner(
+      second, market, broker, affordable, InsufficientCashPolicy::Reject)}},
+   {PortfolioEntryComparator{RequestedOrderPriceNode{},
+                             PortfolioEntryComparatorOrder::HigherFirst}}};
+  auto results = PortfolioResults{};
+
+  runner.run(results);
+
+  EXPECT_FALSE(results.backtests()[0].timeline().open_position(0));
+  EXPECT_TRUE(results.backtests()[1].timeline().open_position(0));
+  ASSERT_EQ(
+   results.backtests()[0].timeline().position_sizing_decisions(0).size(), 1U);
+  EXPECT_EQ(results.backtests()[0]
+             .timeline()
+             .position_sizing_decisions(0)
+             .front()
+             .outcome,
+            PositionSizingDecisionOutcome::InsufficientCash);
+}
+
+TEST(PortfolioRunnerTest, ComparatorsFallThroughBeforePortfolioOrder)
+{
+  const auto first = make_priced_asset("First", 90.0);
+  const auto second = make_priced_asset("Second", 110.0);
+  const auto market = Market{"Market", 0.0, 0.0};
+  const auto broker = Broker{"Broker"};
+  const auto profile =
+   Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{9.0}}};
+  auto runner = PortfolioRunner{
+   1'000.0,
+   1,
+   10,
+   {PortfolioRunner::BacktestRun{
+     BacktestStoreHandle{1, 1},
+     AssetStoreHandle{1, 1},
+     make_entry_runner(
+      first, market, broker, profile, InsufficientCashPolicy::Reject)},
+    PortfolioRunner::BacktestRun{
+     BacktestStoreHandle{2, 1},
+     AssetStoreHandle{2, 1},
+     make_entry_runner(
+      second, market, broker, profile, InsufficientCashPolicy::Reject)}},
+   {PortfolioEntryComparator{ValueNode{1.0},
+                             PortfolioEntryComparatorOrder::HigherFirst},
+    PortfolioEntryComparator{RequestedOrderPriceNode{},
+                             PortfolioEntryComparatorOrder::LowerFirst}}};
+  auto results = PortfolioResults{};
+
+  runner.run(results);
+
+  EXPECT_TRUE(results.backtests()[0].timeline().open_position(0));
+  EXPECT_FALSE(results.backtests()[1].timeline().open_position(0));
+}
+
+TEST(PortfolioRunnerTest, FiniteComparatorScorePrecedesNonFiniteScore)
+{
+  const auto first = make_priced_asset("Non-finite", 100.0);
+  const auto second = make_priced_asset("Finite", 110.0);
+  const auto market = Market{"Market", 0.0, 0.0};
+  const auto broker = Broker{"Broker"};
+  const auto profile =
+   Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  auto runner = PortfolioRunner{
+   1'000.0,
+   1,
+   10,
+   {PortfolioRunner::BacktestRun{
+     BacktestStoreHandle{1, 1},
+     AssetStoreHandle{1, 1},
+     make_entry_runner(
+      first, market, broker, profile, InsufficientCashPolicy::Reject)},
+    PortfolioRunner::BacktestRun{
+     BacktestStoreHandle{2, 1},
+     AssetStoreHandle{2, 1},
+     make_entry_runner(
+      second, market, broker, profile, InsufficientCashPolicy::Reject)}},
+   {PortfolioEntryComparator{
+    DivideNode{ValueNode{1.0},
+               SubtractNode{RequestedOrderPriceNode{}, ValueNode{100.0}}},
+    PortfolioEntryComparatorOrder::HigherFirst}}};
+  auto results = PortfolioResults{};
+
+  runner.run(results);
+
+  EXPECT_FALSE(results.backtests()[0].timeline().open_position(0));
+  EXPECT_TRUE(results.backtests()[1].timeline().open_position(0));
+}
+
+TEST(PortfolioRunnerTest, RequestedOrderProvidesEntryDirection)
+{
+  const auto short_asset = make_priced_asset("Short", 100.0);
+  const auto long_asset = make_priced_asset("Long", 100.0);
+  const auto market = Market{"Market", 0.0, 0.0};
+  const auto broker = Broker{"Broker"};
+  const auto profile =
+   Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  auto runner = PortfolioRunner{
+   1'000.0,
+   1,
+   10,
+   {PortfolioRunner::BacktestRun{
+     BacktestStoreHandle{1, 1},
+     AssetStoreHandle{1, 1},
+     make_short_entry_runner(short_asset, market, broker, profile)},
+    PortfolioRunner::BacktestRun{
+     BacktestStoreHandle{2, 1},
+     AssetStoreHandle{2, 1},
+     make_entry_runner(
+      long_asset, market, broker, profile, InsufficientCashPolicy::Reject)}},
+   {PortfolioEntryComparator{RequestedOrderDirectionNode{},
+                             PortfolioEntryComparatorOrder::HigherFirst}}};
+  auto results = PortfolioResults{};
+
+  runner.run(results);
+
+  EXPECT_FALSE(results.backtests()[0].timeline().open_position(0));
+  ASSERT_TRUE(results.backtests()[1].timeline().open_position(0));
+  EXPECT_GT(results.backtests()[1].timeline().open_position(0)->position_size(),
+            0.0);
+}
+
+TEST(PortfolioRunnerTest, ComparatorRejectsNamedStrategySeries)
+{
+  EXPECT_THROW(
+   (PortfolioEntryComparator{SeriesNode{"priority"},
+                             PortfolioEntryComparatorOrder::HigherFirst}),
+   std::invalid_argument);
+}
+
+TEST(PortfolioRunnerTest, ComparatorRanksNextOpenOrdersAtOpenPhase)
+{
+  const auto first = Asset{"First",
+                           AssetHistory{{"Datetime", {1.0, 2.0}},
+                                        {"Open", {90.0, 90.0}},
+                                        {"High", {90.0, 90.0}},
+                                        {"Low", {90.0, 90.0}},
+                                        {"Close", {90.0, 90.0}},
+                                        {"Volume", {0.0, 0.0}}}};
+  const auto second = Asset{"Second",
+                            AssetHistory{{"Datetime", {1.0, 2.0}},
+                                         {"Open", {110.0, 110.0}},
+                                         {"High", {110.0, 110.0}},
+                                         {"Low", {110.0, 110.0}},
+                                         {"Close", {110.0, 110.0}},
+                                         {"Volume", {0.0, 0.0}}}};
+  const auto market = Market{"Market", 0.0, 0.0};
+  const auto broker = Broker{"Broker"};
+  const auto profile =
+   Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  const auto make_next_open_runner = [&](const Asset& asset) {
+    return BacktestRunner{asset,
+                          market,
+                          broker,
+                          profile,
+                          {},
+                          BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                                       {},
+                                                       BooleanMethod<false>{},
+                                                       0,
+                                                       0,
+                                                       ValueMethod{10.0},
+                                                       {},
+                                                       SignalTiming::NextOpen},
+                          BacktestRunner::PositionRule{},
+                          1'000.0};
+  };
+  auto runner = PortfolioRunner{
+   1'000.0,
+   1,
+   10,
+   {PortfolioRunner::BacktestRun{BacktestStoreHandle{1, 1},
+                                 AssetStoreHandle{1, 1},
+                                 make_next_open_runner(first)},
+    PortfolioRunner::BacktestRun{BacktestStoreHandle{2, 1},
+                                 AssetStoreHandle{2, 1},
+                                 make_next_open_runner(second)}},
+   {PortfolioEntryComparator{RequestedOrderPriceNode{},
+                             PortfolioEntryComparatorOrder::HigherFirst}}};
+  auto results = PortfolioResults{};
+
+  runner.run(results);
+  runner.run(results);
+
+  EXPECT_FALSE(results.backtests()[0].timeline().open_position(1));
+  EXPECT_TRUE(results.backtests()[1].timeline().open_position(1));
 }
 
 TEST(PortfolioRunnerTest, CapPolicyUsesOnlySharedAvailableCash)
@@ -433,6 +725,70 @@ TEST(PortfolioRunnerTest, PyramidingRemainsAllowedAtOpenTradeLimit)
   ASSERT_EQ(results.backtests()[0].timeline().trade_events(1).size(), 1);
   EXPECT_EQ(results.backtests()[0].timeline().trade_events(1).front().type(),
             TradeEvent::Type::scale_in);
+}
+
+TEST(PortfolioRunnerTest, ComparatorRanksPyramidingOrders)
+{
+  const auto first = Asset{"First",
+                           AssetHistory{{"Datetime", {1.0, 2.0}},
+                                        {"Open", {90.0, 90.0}},
+                                        {"High", {90.0, 90.0}},
+                                        {"Low", {90.0, 90.0}},
+                                        {"Close", {90.0, 90.0}},
+                                        {"Volume", {0.0, 0.0}}}};
+  const auto second = Asset{"Second",
+                            AssetHistory{{"Datetime", {1.0, 2.0}},
+                                         {"Open", {110.0, 110.0}},
+                                         {"High", {110.0, 110.0}},
+                                         {"Low", {110.0, 110.0}},
+                                         {"Close", {110.0, 110.0}},
+                                         {"Volume", {0.0, 0.0}}}};
+  const auto market = Market{"Market", 0.0, 0.0};
+  const auto broker = Broker{"Broker"};
+  const auto profile =
+   Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  const auto make_pyramiding_runner = [&](const Asset& asset) {
+    return BacktestRunner{
+     asset,
+     market,
+     broker,
+     profile,
+     {},
+     BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                  {},
+                                  BooleanMethod<true>{},
+                                  2,
+                                  0,
+                                  ValueMethod{10.0},
+                                  {},
+                                  SignalTiming::CurrentClose,
+                                  SignalTiming::CurrentClose},
+     BacktestRunner::PositionRule{},
+     1'000.0};
+  };
+  auto runner = PortfolioRunner{
+   1'000.0,
+   10,
+   3,
+   {PortfolioRunner::BacktestRun{BacktestStoreHandle{1, 1},
+                                 AssetStoreHandle{1, 1},
+                                 make_pyramiding_runner(first)},
+    PortfolioRunner::BacktestRun{BacktestStoreHandle{2, 1},
+                                 AssetStoreHandle{2, 1},
+                                 make_pyramiding_runner(second)}},
+   {PortfolioEntryComparator{RequestedOrderPriceNode{},
+                             PortfolioEntryComparatorOrder::HigherFirst}}};
+  auto results = PortfolioResults{};
+
+  runner.run(results);
+  runner.run(results);
+
+  ASSERT_TRUE(results.backtests()[0].timeline().open_position(1));
+  ASSERT_TRUE(results.backtests()[1].timeline().open_position(1));
+  EXPECT_DOUBLE_EQ(
+   results.backtests()[0].timeline().open_position(1)->position_size(), 1.0);
+  EXPECT_DOUBLE_EQ(
+   results.backtests()[1].timeline().open_position(1)->position_size(), 2.0);
 }
 
 TEST(PortfolioRunnerTest, CombinedLayerLimitUsesDeterministicBacktestPriority)

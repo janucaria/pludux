@@ -11,6 +11,7 @@ export module pludux.backtest:entry_order_sizing;
 
 import :broker;
 import :market;
+import :requested_order;
 import :trade_entry;
 import :trade_exit;
 
@@ -78,15 +79,13 @@ struct EntryOrderSizingRequest {
   double requested_quantity{};
   double entry_price{};
   EntryOrderSizingConstraint constraint{NearestQuantityConstraint{}};
-};
-
-struct EntryOrderSizingResult {
-  TradeEntry entry;
-  double entry_fee{};
-  double estimated_exit_fee{};
-  double entry_cost{};
-  std::optional<double> estimated_loss{};
-  bool limited{};
+  bool pyramiding{};
+  std::optional<double> raw_requested_quantity{};
+  std::optional<double> raw_requested_limit{};
+  std::optional<double> drawdown_adjusted_quantity{};
+  std::optional<double> drawdown_adjusted_limit{};
+  double risk_distance{};
+  std::optional<double> frozen_unit_quantity{};
 };
 
 namespace detail {
@@ -109,17 +108,17 @@ inline auto floor_to_step(double quantity, double step) noexcept -> double
   return step * std::floor(step_count);
 }
 
-struct CandidateCost {
+struct OrderCost {
   double entry_fee{};
   double estimated_exit_fee{};
   double entry_cost{};
   double estimated_loss{};
 };
 
-inline auto candidate_cost(double signed_quantity,
-                           double entry_price,
-                           std::optional<double> boundary_price,
-                           const Broker& broker) -> CandidateCost
+inline auto order_cost(double signed_quantity,
+                       double entry_price,
+                       std::optional<double> boundary_price,
+                       const Broker& broker) -> OrderCost
 {
   const auto entry = TradeEntry{signed_quantity, entry_price};
   const auto entry_fee = broker.calculate_fee(entry);
@@ -142,19 +141,20 @@ inline auto candidate_cost(double signed_quantity,
     throw std::runtime_error{"Invalid broker cost"};
   }
 
-  return CandidateCost{entry_fee, exit_fee, entry_cost, estimated_loss};
+  return OrderCost{entry_fee, exit_fee, entry_cost, estimated_loss};
 }
 
 } // namespace detail
 
 auto size_entry_order(const EntryOrderSizingRequest& request,
                       const Market& market,
-                      const Broker& broker)
- -> std::optional<EntryOrderSizingResult>
+                      const Broker& broker) -> std::optional<RequestedOrder>
 {
   detail::validate_positive_finite(std::abs(request.requested_quantity),
                                    "Invalid requested quantity");
   detail::validate_positive_finite(request.entry_price, "Invalid entry price");
+  detail::validate_positive_finite(request.risk_distance,
+                                   "Invalid risk distance");
 
   const auto direction = request.requested_quantity > 0.0 ? 1.0 : -1.0;
   const auto requested_quantity = std::abs(request.requested_quantity);
@@ -186,23 +186,23 @@ auto size_entry_order(const EntryOrderSizingRequest& request,
       quantity = minimum_quantity;
     }
   } else {
-    const auto fits = [&](double candidate_quantity) {
-      const auto signed_quantity = direction * candidate_quantity;
+    const auto fits = [&](double trial_quantity) {
+      const auto signed_quantity = direction * trial_quantity;
       if(const auto* budget =
           std::get_if<EntryCostBudgetConstraint>(&request.constraint)) {
-        return detail::candidate_cost(
+        return detail::order_cost(
                 signed_quantity, request.entry_price, std::nullopt, broker)
                 .entry_cost <= budget->budget;
       }
       if(const auto* risk =
           std::get_if<RiskBudgetConstraint>(&request.constraint)) {
-        return detail::candidate_cost(signed_quantity,
-                                      request.entry_price,
-                                      risk->boundary_price,
-                                      broker)
+        return detail::order_cost(signed_quantity,
+                                  request.entry_price,
+                                  risk->boundary_price,
+                                  broker)
                 .estimated_loss <= risk->budget;
       }
-      return candidate_quantity <= requested_quantity;
+      return trial_quantity <= requested_quantity;
     };
 
     if(!std::holds_alternative<MaximumQuantityConstraint>(request.constraint) &&
@@ -210,11 +210,11 @@ auto size_entry_order(const EntryOrderSizingRequest& request,
       auto low = 0.0;
       auto high = requested_quantity;
       for(auto iteration = 0; iteration < 64; ++iteration) {
-        const auto candidate = (low + high) * 0.5;
-        if(fits(candidate)) {
-          low = candidate;
+        const auto trial = (low + high) * 0.5;
+        if(fits(trial)) {
+          low = trial;
         } else {
-          high = candidate;
+          high = trial;
         }
       }
       quantity = low;
@@ -234,19 +234,22 @@ auto size_entry_order(const EntryOrderSizingRequest& request,
   }
 
   const auto signed_quantity = direction * quantity;
-  const auto risk = std::get_if<RiskBudgetConstraint>(&request.constraint);
-  const auto costs = detail::candidate_cost(
-   signed_quantity,
-   request.entry_price,
-   risk ? std::optional{risk->boundary_price} : std::nullopt,
-   broker);
-  return EntryOrderSizingResult{
-   TradeEntry{signed_quantity, request.entry_price},
-   costs.entry_fee,
-   costs.estimated_exit_fee,
-   costs.entry_cost,
-   risk ? std::optional{costs.estimated_loss} : std::nullopt,
-   quantity < requested_quantity};
+  const auto boundary_price =
+   request.entry_price - direction * request.risk_distance;
+  detail::validate_positive_finite(boundary_price,
+                                   "Invalid adverse 1R exit price");
+  const auto costs = detail::order_cost(
+   signed_quantity, request.entry_price, boundary_price, broker);
+  return RequestedOrder{TradeEntry{signed_quantity, request.entry_price},
+                        request.pyramiding,
+                        request.raw_requested_quantity,
+                        request.raw_requested_limit,
+                        request.drawdown_adjusted_quantity,
+                        request.drawdown_adjusted_limit,
+                        request.risk_distance,
+                        costs.entry_fee,
+                        costs.estimated_exit_fee,
+                        request.frozen_unit_quantity};
 }
 
 } // namespace pludux::backtest

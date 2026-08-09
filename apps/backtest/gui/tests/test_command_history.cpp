@@ -27,6 +27,8 @@ using pludux::backtest::Backtest;
 using pludux::backtest::BacktestSetup;
 using pludux::backtest::FixedBudgetPositionSizing;
 using pludux::backtest::Portfolio;
+using pludux::backtest::PortfolioEntryComparator;
+using pludux::backtest::PortfolioEntryComparatorOrder;
 using pludux::backtest::PortfolioResults;
 using pludux::backtest::PortfolioTimeline;
 using pludux::backtest::PositionSizingNode;
@@ -454,6 +456,76 @@ TEST(ApplicationStateSerialization, RejectsMissingMaximumCombinedLayers)
   serialized.replace(key,
                      std::string{"\"maximumCombinedLayers\""}.size(),
                      "\"removedMaximumCombinedLayers\"");
+  auto input = std::stringstream{serialized};
+
+  EXPECT_THROW(load_application_state_json(input), std::exception);
+}
+
+TEST(ApplicationStateSerialization, RoundTripsOrderedEntryComparators)
+{
+  auto state = ApplicationState{};
+  auto portfolio = Portfolio{};
+  portfolio.entry_comparators(
+   {PortfolioEntryComparator{pludux::backtest::RequestedNotionalNode{},
+                             PortfolioEntryComparatorOrder::HigherFirst},
+    PortfolioEntryComparator{
+     pludux::DivideNode{pludux::backtest::RequestedRiskWithFeesNode{},
+                        pludux::ValueNode{2.0}},
+     PortfolioEntryComparatorOrder::LowerFirst}});
+  ASSERT_TRUE(state.add_portfolio(std::move(portfolio)));
+  auto stream = std::stringstream{};
+
+  save_application_state_json(stream, state);
+
+  const auto serialized = stream.str();
+  EXPECT_NE(serialized.find("\"entryComparators\""), std::string::npos);
+  EXPECT_NE(serialized.find("\"HIGHER_FIRST\""), std::string::npos);
+  EXPECT_NE(serialized.find("\"LOWER_FIRST\""), std::string::npos);
+  EXPECT_NE(serialized.find("\"REQUESTED_NOTIONAL\""), std::string::npos);
+  EXPECT_NE(serialized.find("\"REQUESTED_RISK_WITH_FEES\""), std::string::npos);
+  auto input = std::stringstream{serialized};
+  const auto loaded = load_application_state_json(input);
+  const auto& loaded_portfolio =
+   loaded.get_portfolio(loaded.get_portfolio_handles().front());
+  ASSERT_EQ(loaded_portfolio.entry_comparators().size(), 2U);
+  EXPECT_EQ(loaded_portfolio.entry_comparators()[0].order(),
+            PortfolioEntryComparatorOrder::HigherFirst);
+  EXPECT_EQ(loaded_portfolio.entry_comparators()[1].order(),
+            PortfolioEntryComparatorOrder::LowerFirst);
+}
+
+TEST(ApplicationStateSerialization, RejectsMarketNodeInEntryComparator)
+{
+  auto state = ApplicationState{};
+  auto portfolio = Portfolio{};
+  portfolio.entry_comparators(
+   {PortfolioEntryComparator{pludux::backtest::RequestedOrderPriceNode{},
+                             PortfolioEntryComparatorOrder::HigherFirst}});
+  ASSERT_TRUE(state.add_portfolio(std::move(portfolio)));
+  auto stream = std::stringstream{};
+  save_application_state_json(stream, state);
+  auto serialized = stream.str();
+  const auto method = serialized.find("REQUESTED_ORDER_PRICE");
+  ASSERT_NE(method, std::string::npos);
+  serialized.replace(
+   method, std::string{"REQUESTED_ORDER_PRICE"}.size(), "CLOSE");
+  auto input = std::stringstream{serialized};
+
+  EXPECT_THROW(load_application_state_json(input), std::exception);
+}
+
+TEST(ApplicationStateSerialization, RejectsMissingEntryComparators)
+{
+  auto state = ApplicationState{};
+  ASSERT_TRUE(state.add_portfolio(Portfolio{}));
+  auto stream = std::stringstream{};
+  save_application_state_json(stream, state);
+  auto serialized = stream.str();
+  const auto key = serialized.find("\"entryComparators\"");
+  ASSERT_NE(key, std::string::npos);
+  serialized.replace(key,
+                     std::string{"\"entryComparators\""}.size(),
+                     "\"removedEntryComparators\"");
   auto input = std::stringstream{serialized};
 
   EXPECT_THROW(load_application_state_json(input), std::exception);

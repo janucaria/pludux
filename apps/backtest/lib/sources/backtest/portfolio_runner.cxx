@@ -5,6 +5,7 @@ module;
 #include <cstddef>
 #include <ctime>
 #include <limits>
+#include <optional>
 #include <ranges>
 #include <stdexcept>
 #include <utility>
@@ -12,10 +13,12 @@ module;
 
 export module pludux.backtest:portfolio_runner;
 
-import :backtest_method_context;
+import pludux;
+
 import :backtest_runner;
 import :portfolio;
 import :portfolio_results;
+import :requested_order_method_context;
 import :store_handle;
 
 export namespace pludux::backtest {
@@ -55,7 +58,8 @@ public:
   PortfolioRunner(double initial_capital,
                   std::size_t maximum_open_trades,
                   std::size_t maximum_combined_layers,
-                  std::vector<BacktestRun> backtests)
+                  std::vector<BacktestRun> backtests,
+                  std::vector<PortfolioEntryComparator> entry_comparators = {})
   : initial_capital_{initial_capital}
   , account_{initial_capital, 0.0, initial_capital, initial_capital}
   , maximum_open_trades_{maximum_open_trades}
@@ -65,6 +69,14 @@ public:
     if(!std::isfinite(initial_capital) || initial_capital < 0.0) {
       throw std::invalid_argument{
        "Portfolio initial capital must be finite and non-negative"};
+    }
+    auto conversion_context = NodeToErasedMethodContext{};
+    entry_comparators_.reserve(entry_comparators.size());
+    for(const auto& comparator : entry_comparators) {
+      entry_comparators_.push_back(
+       EntryComparator{comparator.order(),
+                       node_to_erased_method<ErasedSeriesMethodContext>(
+                        comparator.expression(), conversion_context)});
     }
     self_validate_assets();
     total_timestamps_ = collect_timestamps().size();
@@ -156,11 +168,35 @@ public:
         self.refresh_unrealized();
       }
     };
-    const auto run_entry_phase = [&](auto action) {
+    const auto run_entry_phase = [&](auto discover) {
+      auto requested_orders = std::vector<RankedRequestedOrder>{};
+      requested_orders.reserve(active.size());
       for(const auto index : active) {
         auto& runner = self.backtests_[index].runner();
         self.sync_backtest(runner);
-        action(runner, results.backtests()[index]);
+        auto& result = results.backtests()[index];
+        if(auto requested_order = discover(runner, result)) {
+          auto scores = std::vector<double>{};
+          scores.reserve(self.entry_comparators_.size());
+          for(const auto& comparator : self.entry_comparators_) {
+            scores.push_back(runner.evaluate_requested_order(
+             *requested_order, comparator.method));
+          }
+          requested_orders.push_back(RankedRequestedOrder{
+           index, std::move(*requested_order), std::move(scores)});
+        }
+      }
+      std::stable_sort(requested_orders.begin(),
+                       requested_orders.end(),
+                       [&](const auto& lhs, const auto& rhs) {
+                         return self.requested_order_precedes(lhs, rhs);
+                       });
+      for(const auto& requested_order : requested_orders) {
+        auto& runner = self.backtests_[requested_order.backtest_index].runner();
+        auto& result = results.backtests()[requested_order.backtest_index];
+        self.sync_backtest(runner);
+        runner.execute_requested_order(requested_order.action,
+                                       result.setup_series_results());
         self.refresh_unrealized();
       }
     };
@@ -168,7 +204,8 @@ public:
     run_exit_phase(
      [](BacktestRunner& runner, BacktestResults&) { runner.run_open_exits(); });
     run_entry_phase([](BacktestRunner& runner, BacktestResults& result) {
-      runner.run_open_entries(result.setup_series_results());
+      return runner.discover_open_requested_order(
+       result.setup_series_results());
     });
     run_exit_phase(
      [](BacktestRunner& runner, BacktestResults&) { runner.run_intrabar(); });
@@ -176,7 +213,8 @@ public:
       runner.run_close_exits(result.setup_series_results());
     });
     run_entry_phase([](BacktestRunner& runner, BacktestResults& result) {
-      runner.run_close_entries(result.setup_series_results());
+      return runner.discover_close_requested_order(
+       result.setup_series_results());
     });
     for(const auto index : active) {
       auto& runner = self.backtests_[index].runner();
@@ -225,14 +263,50 @@ public:
   }
 
 private:
+  struct EntryComparator {
+    PortfolioEntryComparatorOrder order;
+    ErasedSeriesMethod<ErasedSeriesMethodContext> method;
+  };
+
+  struct RankedRequestedOrder {
+    std::size_t backtest_index;
+    BacktestRunner::RequestedOrderAction action;
+    std::vector<double> scores;
+  };
+
   double initial_capital_{};
   BacktestAccountState account_;
   std::size_t maximum_open_trades_{};
   std::size_t maximum_combined_layers_{};
   std::vector<BacktestRun> backtests_;
+  std::vector<EntryComparator> entry_comparators_;
   double max_drawdown_{};
   std::size_t total_timestamps_{};
   bool is_failed_{};
+
+  auto requested_order_precedes(this const PortfolioRunner& self,
+                                const RankedRequestedOrder& lhs,
+                                const RankedRequestedOrder& rhs) noexcept
+   -> bool
+  {
+    for(auto index = std::size_t{}; index < self.entry_comparators_.size();
+        ++index) {
+      const auto lhs_finite = std::isfinite(lhs.scores[index]);
+      const auto rhs_finite = std::isfinite(rhs.scores[index]);
+      if(lhs_finite != rhs_finite) {
+        return lhs_finite;
+      }
+      if(!lhs_finite || lhs.scores[index] == rhs.scores[index]) {
+        continue;
+      }
+      if(self.entry_comparators_[index].order ==
+         PortfolioEntryComparatorOrder::HigherFirst) {
+        return lhs.scores[index] > rhs.scores[index];
+      }
+      return lhs.scores[index] < rhs.scores[index];
+    }
+    return lhs.backtest_index < rhs.backtest_index;
+  }
 
   void self_validate_assets(this const PortfolioRunner& self)
   {

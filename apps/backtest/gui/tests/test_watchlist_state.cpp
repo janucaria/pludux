@@ -88,6 +88,7 @@ TEST(WatchlistStateTest, ExpandsBacktestsThenOrderedAssets)
                                    10,
                                    {},
                                    InsufficientCashPolicy::Reject,
+                                   {},
                                    {first_backtest, second_backtest}};
 
   EXPECT_EQ(state.expanded_backtest_runs(portfolio),

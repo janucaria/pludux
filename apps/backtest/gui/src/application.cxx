@@ -498,7 +498,8 @@ private:
      backtest::PortfolioRunner{portfolio->initial_capital(),
                                portfolio->maximum_open_trades(),
                                portfolio->maximum_combined_layers(),
-                               std::move(backtests)};
+                               std::move(backtests),
+                               portfolio->entry_comparators()};
     const auto total = runner.total_timestamps();
     self.running_portfolios_.insert_or_assign(portfolio_handle,
                                               std::move(runner));
