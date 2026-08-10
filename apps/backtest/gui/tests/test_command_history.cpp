@@ -272,7 +272,7 @@ TEST(CommandHistory, HistoryKeepsNewestOneHundredEntries)
             "Backtest 0");
 }
 
-TEST(CommandHistory, LabelsFollowEntriesAndReplacementClearsHistory)
+TEST(CommandHistory, ApplicationReplacementIsUndoableAndRedoable)
 {
   auto state = ApplicationState{};
   auto executor = CommandExecutor{};
@@ -283,21 +283,46 @@ TEST(CommandHistory, LabelsFollowEntriesAndReplacementClearsHistory)
   executor.execute(state);
   ASSERT_NE(executor.undo_label(), nullptr);
   EXPECT_EQ(*executor.undo_label(), "Add Backtest");
-
-  executor.push(UndoCommand{});
-  executor.execute(state);
-  ASSERT_NE(executor.redo_label(), nullptr);
-  EXPECT_EQ(*executor.redo_label(), "Add Backtest");
+  state.select_backtest(state.get_backtest_handles().front());
+  state.imgui_ini_settings("original-layout");
 
   executor.push(ReplaceApplicationCommand{[] {
     auto replacement = ApplicationState{};
-    add_backtest(replacement, "Replacement");
+    const auto replacement_handle = add_backtest(replacement, "Replacement");
+    replacement.select_backtest(replacement_handle);
+    replacement.imgui_ini_settings("replacement-layout");
     return replacement;
   }});
   EXPECT_EQ(executor.execute(state), ExecutionEffect::ApplicationReplaced);
-  EXPECT_FALSE(executor.can_undo());
+  ASSERT_NE(executor.undo_label(), nullptr);
+  EXPECT_EQ(*executor.undo_label(), "Open Application");
   EXPECT_FALSE(executor.can_redo());
   EXPECT_EQ(state.get_backtest_handles().size(), 1U);
+  EXPECT_EQ(state.get_backtest(state.get_backtest_handles().front()).name(),
+            "Replacement");
+  EXPECT_EQ(state.imgui_ini_settings(), "replacement-layout");
+
+  executor.push(UndoCommand{});
+  EXPECT_EQ(executor.execute(state), ExecutionEffect::ApplicationReplaced);
+  ASSERT_EQ(state.get_backtest_handles().size(), 1U);
+  EXPECT_EQ(state.get_backtest(state.get_backtest_handles().front()).name(),
+            "Added");
+  EXPECT_EQ(state.selected_backtest_handle(),
+            state.get_backtest_handles().front());
+  EXPECT_EQ(state.imgui_ini_settings(), "original-layout");
+  ASSERT_NE(executor.undo_label(), nullptr);
+  EXPECT_EQ(*executor.undo_label(), "Add Backtest");
+  ASSERT_NE(executor.redo_label(), nullptr);
+  EXPECT_EQ(*executor.redo_label(), "Open Application");
+
+  executor.push(RedoCommand{});
+  EXPECT_EQ(executor.execute(state), ExecutionEffect::ApplicationReplaced);
+  ASSERT_EQ(state.get_backtest_handles().size(), 1U);
+  EXPECT_EQ(state.get_backtest(state.get_backtest_handles().front()).name(),
+            "Replacement");
+  EXPECT_EQ(state.selected_backtest_handle(),
+            state.get_backtest_handles().front());
+  EXPECT_EQ(state.imgui_ini_settings(), "replacement-layout");
 }
 
 TEST(ApplicationStateSerialization, RoundTripsDocumentAndViewSeparately)

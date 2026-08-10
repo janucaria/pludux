@@ -109,9 +109,11 @@ public:
   }
 
 private:
+  using HistoryState = std::variant<StateDiff, ApplicationState>;
+
   struct HistoryEntry {
     std::string label;
-    StateDiff diff;
+    HistoryState state;
     std::optional<std::string> merge_key;
   };
 
@@ -181,8 +183,11 @@ private:
                      ApplicationState& app_state) -> ExecutionEffect
   {
     auto replacement = command.loader();
+    push_bounded(self.undo_stack_,
+                 HistoryEntry{"Open Application",
+                              std::move(app_state),
+                              std::nullopt});
     app_state = std::move(replacement);
-    self.undo_stack_.clear();
     self.redo_stack_.clear();
     self.end_coalescing();
     return ExecutionEffect::ApplicationReplaced;
@@ -199,12 +204,23 @@ private:
 
     auto entry = std::move(self.undo_stack_.back());
     self.undo_stack_.pop_back();
+    if(auto* replacement = std::get_if<ApplicationState>(&entry.state)) {
+      auto inverse = std::move(app_state);
+      app_state = std::move(*replacement);
+      push_bounded(self.redo_stack_,
+                   HistoryEntry{std::move(entry.label),
+                                std::move(inverse),
+                                std::nullopt});
+      return ExecutionEffect::ApplicationReplaced;
+    }
+
     const auto previous = app_state;
-    app_state = entry.diff.apply(previous);
+    app_state = std::get<StateDiff>(entry.state).apply(previous);
     auto inverse = create_state_diff(app_state, previous);
-    push_bounded(
-     self.redo_stack_,
-     HistoryEntry{std::move(entry.label), std::move(inverse), std::nullopt});
+    push_bounded(self.redo_stack_,
+                 HistoryEntry{std::move(entry.label),
+                              std::move(inverse),
+                              std::nullopt});
     return ExecutionEffect::DocumentChanged;
   }
 
@@ -219,12 +235,23 @@ private:
 
     auto entry = std::move(self.redo_stack_.back());
     self.redo_stack_.pop_back();
+    if(auto* replacement = std::get_if<ApplicationState>(&entry.state)) {
+      auto inverse = std::move(app_state);
+      app_state = std::move(*replacement);
+      push_bounded(self.undo_stack_,
+                   HistoryEntry{std::move(entry.label),
+                                std::move(inverse),
+                                std::nullopt});
+      return ExecutionEffect::ApplicationReplaced;
+    }
+
     const auto previous = app_state;
-    app_state = entry.diff.apply(previous);
+    app_state = std::get<StateDiff>(entry.state).apply(previous);
     auto inverse = create_state_diff(app_state, previous);
-    push_bounded(
-     self.undo_stack_,
-     HistoryEntry{std::move(entry.label), std::move(inverse), std::nullopt});
+    push_bounded(self.undo_stack_,
+                 HistoryEntry{std::move(entry.label),
+                              std::move(inverse),
+                              std::nullopt});
     return ExecutionEffect::DocumentChanged;
   }
 };
