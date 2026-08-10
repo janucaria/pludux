@@ -626,7 +626,7 @@ private:
 };
 
 enum class PositionSizingDecisionOutcome {
-  Filtered,
+  EntryFiltered,
   FailsafeInactive,
   ShadowOnly,
   NoPositiveSize,
@@ -647,7 +647,7 @@ struct PositionSizingDecision {
   std::string method{};
   double entry_price{};
   PositionSizingDecisionOutcome outcome{
-   PositionSizingDecisionOutcome::Filtered};
+   PositionSizingDecisionOutcome::EntryFiltered};
   std::optional<double> requested_quantity{};
   std::optional<double> requested_limit{};
   std::optional<double> drawdown_adjusted_quantity{};

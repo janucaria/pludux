@@ -15,6 +15,7 @@ TEST(BacktestSetupTest, DefaultsToIncompleteConfiguration)
   EXPECT_EQ(setup.strategy_handle(), StrategyStoreHandle{});
   EXPECT_EQ(setup.profile_handle(), ProfileStoreHandle{});
   EXPECT_TRUE(setup.inputs().empty());
+  EXPECT_NE(node_cast<TrueNode>(setup.entry_filter()), nullptr);
   EXPECT_EQ(backtest.strategy_performance(), StrategyPerformanceConfig{});
   EXPECT_EQ(BacktestFailsafeSetup{}.activation(), FailsafeActivation::Always);
 }
@@ -25,11 +26,16 @@ TEST(BacktestSetupTest, StoresReusableSetupConfiguration)
   const auto profile = ProfileStoreHandle{3, 4};
   const auto inputs = std::vector<NumericInputNode>{NumericInputNode{
    "Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 20.0}};
-  const auto setup = BacktestSetup{strategy, profile, inputs};
+  const auto setup =
+   BacktestSetup{strategy,
+                 profile,
+                 inputs,
+                 ErasedNode<EntryFilterMethodContext>{FalseNode{}}};
 
   EXPECT_EQ(setup.strategy_handle(), strategy);
   EXPECT_EQ(setup.profile_handle(), profile);
   EXPECT_EQ(setup.inputs(), inputs);
+  EXPECT_NE(node_cast<FalseNode>(setup.entry_filter()), nullptr);
 }
 
 TEST(BacktestSetupTest, EqualityAndRuleEquivalenceIncludeAllFields)
@@ -48,6 +54,11 @@ TEST(BacktestSetupTest, EqualityAndRuleEquivalenceIncludeAllFields)
    "Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 55.0}});
   EXPECT_NE(original, changed);
   EXPECT_FALSE(original.equivalent_rules(changed));
+
+  changed = original;
+  changed.entry_filter(ErasedNode<EntryFilterMethodContext>{FalseNode{}});
+  EXPECT_NE(original, changed);
+  EXPECT_FALSE(original.equivalent_rules(changed));
 }
 
 TEST(BacktestSetupTest, BacktestStoresMainAndOrderedFailsafeSetups)
@@ -56,7 +67,7 @@ TEST(BacktestSetupTest, BacktestStoresMainAndOrderedFailsafeSetups)
    BacktestSetup{StrategyStoreHandle{1, 1}, ProfileStoreHandle{2, 1}};
   const auto first = BacktestFailsafeSetup{
    BacktestSetup{StrategyStoreHandle{3, 1}, ProfileStoreHandle{4, 1}},
-   FailsafeActivation::PreviousSetupFilteredPosition};
+   FailsafeActivation::PreviousSetupEntryFilteredPosition};
   const auto second = BacktestFailsafeSetup{
    BacktestSetup{StrategyStoreHandle{5, 1}, ProfileStoreHandle{6, 1}}};
   const auto backtest = Backtest{"Trend",
@@ -100,7 +111,7 @@ TEST(BacktestSetupTest, BacktestOwnsSharedStrategyPerformanceConfiguration)
 
   changed = original;
   changed.failsafe_setups().front().activation(
-   FailsafeActivation::PreviousSetupFilteredPosition);
+   FailsafeActivation::PreviousSetupEntryFilteredPosition);
   EXPECT_NE(original, changed);
   EXPECT_FALSE(original.equivalent_rules(changed));
 }

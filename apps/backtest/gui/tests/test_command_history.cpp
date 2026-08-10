@@ -326,12 +326,16 @@ TEST(ApplicationStateSerialization, RoundTripsOrderedBacktestSetups)
   const auto performance = pludux::backtest::StrategyPerformanceConfig{
    pludux::backtest::StrategyPerformanceHistoryPolicy{
     pludux::backtest::StrategyPerformanceHistoryMode::RollingWindow, 25, 0.99}};
-  const auto main = BacktestSetup{pludux::backtest::StrategyStoreHandle{1, 1},
-                                  pludux::backtest::ProfileStoreHandle{2, 1}};
+  const auto main =
+   BacktestSetup{pludux::backtest::StrategyStoreHandle{1, 1},
+                 pludux::backtest::ProfileStoreHandle{2, 1},
+                 {},
+                 pludux::ErasedNode<pludux::backtest::EntryFilterMethodContext>{
+                  pludux::FalseNode{}}};
   const auto failsafe = pludux::backtest::BacktestFailsafeSetup{
    BacktestSetup{pludux::backtest::StrategyStoreHandle{3, 1},
                  pludux::backtest::ProfileStoreHandle{4, 1}},
-   pludux::backtest::FailsafeActivation::PreviousSetupFilteredPosition};
+   pludux::backtest::FailsafeActivation::PreviousSetupEntryFilteredPosition};
   ASSERT_TRUE(state.add_backtest(
    Backtest{"Ordered",
             {},
@@ -345,7 +349,9 @@ TEST(ApplicationStateSerialization, RoundTripsOrderedBacktestSetups)
   const auto serialized = stream.str();
   EXPECT_NE(serialized.find("\"mainSetup\""), std::string::npos);
   EXPECT_NE(serialized.find("\"failsafeSetups\""), std::string::npos);
-  EXPECT_NE(serialized.find("\"PREVIOUS_SETUP_FILTERED_POSITION\""),
+  EXPECT_NE(serialized.find("\"entryFilter\""), std::string::npos);
+  EXPECT_EQ(serialized.find("\"executionFilter\""), std::string::npos);
+  EXPECT_NE(serialized.find("\"PREVIOUS_SETUP_ENTRY_FILTERED_POSITION\""),
             std::string::npos);
   const auto performance_key = serialized.find("\"strategyPerformance\"");
   ASSERT_NE(performance_key, std::string::npos);
@@ -414,6 +420,22 @@ TEST(ApplicationStateSerialization, RejectsMissingRequiredBacktestSetupFields)
   ASSERT_NE(key, std::string::npos);
   serialized.replace(
    key, std::string{"\"mainSetup\""}.size(), "\"removedMainSetup\"");
+  auto input = std::stringstream{serialized};
+
+  EXPECT_THROW(load_application_state_json(input), std::exception);
+}
+
+TEST(ApplicationStateSerialization, RejectsSetupWithoutEntryFilter)
+{
+  auto state = ApplicationState{};
+  ASSERT_TRUE(state.add_backtest(Backtest{}));
+  auto stream = std::stringstream{};
+  save_application_state_json(stream, state);
+  auto serialized = stream.str();
+  const auto key = serialized.find("\"entryFilter\"");
+  ASSERT_NE(key, std::string::npos);
+  serialized.replace(
+   key, std::string{"\"entryFilter\""}.size(), "\"executionFilter\"");
   auto input = std::stringstream{serialized};
 
   EXPECT_THROW(load_application_state_json(input), std::exception);
@@ -509,6 +531,8 @@ TEST(ApplicationStateSerialization, RoundTripsNotionalEquityReduction)
   const auto serialized = stream.str();
   EXPECT_NE(serialized.find("\"notionalEquityReduction\":0.2"),
             std::string::npos);
+  EXPECT_EQ(serialized.find("\"entryFilter\""), std::string::npos);
+  EXPECT_EQ(serialized.find("\"executionFilter\""), std::string::npos);
   auto input = std::stringstream{serialized};
   const auto loaded = load_application_state_json(input);
   const auto& loaded_profile =
@@ -531,6 +555,21 @@ TEST(ApplicationStateSerialization, RejectsMissingNotionalEquityReduction)
   serialized.replace(key,
                      std::string{"\"notionalEquityReduction\""}.size(),
                      "\"removedNotionalEquityReduction\"");
+  auto input = std::stringstream{serialized};
+
+  EXPECT_THROW(load_application_state_json(input), std::exception);
+}
+
+TEST(ApplicationStateSerialization, RejectsLegacyProfileFilterField)
+{
+  auto state = ApplicationState{};
+  state.add_profile(Profile{});
+  auto stream = std::stringstream{};
+  save_application_state_json(stream, state);
+  auto serialized = stream.str();
+  const auto key = serialized.find("\"positionSizing\"");
+  ASSERT_NE(key, std::string::npos);
+  serialized.insert(key, "\"executionFilter\":{\"method\":\"ALWAYS\"},");
   auto input = std::stringstream{serialized};
 
   EXPECT_THROW(load_application_state_json(input), std::exception);

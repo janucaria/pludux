@@ -41,7 +41,7 @@ import :trade_position;
 import :trade_session;
 import :backtest_timeline;
 import :backtest_method_context;
-import :execution_filter_method_context;
+import :entry_filter_method_context;
 import :broker;
 import :market;
 import :backtest;
@@ -344,11 +344,11 @@ public:
           PositionRule short_position,
           IntrabarPath intrabar_path = IntrabarPath::CandleDirection,
           StrategyPerformanceConfig strategy_performance_config = {},
-          ErasedSeriesMethod<ExecutionFilterMethodContext> execution_filter =
+          ErasedSeriesMethod<EntryFilterMethodContext> entry_filter =
            BooleanMethod<true>{},
           FailsafeActivation failsafe_activation = FailsafeActivation::Always)
     : strategy_performance{std::move(strategy_performance_config)}
-    , execution_filter{std::move(execution_filter)}
+    , entry_filter{std::move(entry_filter)}
     , position_sizing{profile.position_sizing().make_method()}
     , drawdown_adjustment{profile.drawdown_adjustment()}
     , insufficient_cash_policy{profile.insufficient_cash_policy()}
@@ -361,7 +361,7 @@ public:
     }
 
     StrategyPerformance strategy_performance;
-    ErasedSeriesMethod<ExecutionFilterMethodContext> execution_filter;
+    ErasedSeriesMethod<EntryFilterMethodContext> entry_filter;
     PositionSizingMethod position_sizing;
     DrawdownAdjustment drawdown_adjustment;
     InsufficientCashPolicy insufficient_cash_policy;
@@ -380,13 +380,13 @@ public:
                          std::size_t evaluation_lookback,
                          PositionSizingDecision sizing_decision,
                          std::size_t sizing_decision_index,
-                         std::size_t filter_decision_index) noexcept
+                         std::size_t entry_filter_decision_index) noexcept
     : setup_index_{setup_index}
     , requested_order_{std::move(requested_order)}
     , evaluation_lookback_{evaluation_lookback}
     , sizing_decision_{std::move(sizing_decision)}
     , sizing_decision_index_{sizing_decision_index}
-    , filter_decision_index_{filter_decision_index}
+    , entry_filter_decision_index_{entry_filter_decision_index}
     {
     }
 
@@ -435,10 +435,11 @@ public:
       return self.sizing_decision_;
     }
 
-    auto filter_decision_index(this const RequestedOrderAction& self) noexcept
+    auto
+    entry_filter_decision_index(this const RequestedOrderAction& self) noexcept
      -> std::size_t
     {
-      return self.filter_decision_index_;
+      return self.entry_filter_decision_index_;
     }
 
   private:
@@ -447,7 +448,7 @@ public:
     std::size_t evaluation_lookback_;
     PositionSizingDecision sizing_decision_;
     std::size_t sizing_decision_index_;
-    std::size_t filter_decision_index_;
+    std::size_t entry_filter_decision_index_;
   };
 
   BacktestRunner(
@@ -465,7 +466,7 @@ public:
    double peak_equity = NAN,
    IntrabarPath intrabar_path = IntrabarPath::CandleDirection,
    StrategyPerformanceConfig strategy_performance_config = {},
-   ErasedSeriesMethod<ExecutionFilterMethodContext> execution_filter =
+   ErasedSeriesMethod<EntryFilterMethodContext> entry_filter =
     BooleanMethod<true>{})
   : asset_{asset}
   , market_{market}
@@ -488,7 +489,7 @@ public:
   , execution_session_{}
   , strategy_session_{}
   , strategy_performance_{std::move(strategy_performance_config)}
-  , execution_filter_{std::move(execution_filter)}
+  , entry_filter_{std::move(entry_filter)}
   , position_sizing_{profile.position_sizing().make_method()}
   , series_methods_{std::move(series_methods)}
   , long_position_{std::move(long_position)}
@@ -669,7 +670,7 @@ public:
                                               asset_snapshot.close());
       self.closed_position_is_long_.reset();
     }
-    self.execution_filter_decisions_.clear();
+    self.entry_filter_decisions_.clear();
     self.position_sizing_decisions_.clear();
     self.settled_realized_exit_count_ = 0;
     self.settled_closed_trade_count_ = 0;
@@ -887,12 +888,13 @@ public:
                   self.position_sizing_decisions_.end() - 1,
                   self.position_sizing_decisions_.end());
     }
-    if(action.filter_decision_index() + 1 <
-       self.execution_filter_decisions_.size()) {
-      std::rotate(self.execution_filter_decisions_.begin() +
-                   static_cast<std::ptrdiff_t>(action.filter_decision_index()),
-                  self.execution_filter_decisions_.end() - 1,
-                  self.execution_filter_decisions_.end());
+    if(action.entry_filter_decision_index() + 1 <
+       self.entry_filter_decisions_.size()) {
+      std::rotate(
+       self.entry_filter_decisions_.begin() +
+        static_cast<std::ptrdiff_t>(action.entry_filter_decision_index()),
+       self.entry_filter_decisions_.end() - 1,
+       self.entry_filter_decisions_.end());
     }
   }
 
@@ -935,7 +937,7 @@ public:
                                   self.strategy_session_.closed_positions(),
                                   self.strategy_session_.position(),
                                   self.strategy_performance_.snapshot(),
-                                  self.active_filtered_entry_position()};
+                                  self.active_entry_filtered_position()};
     }
 
     self.update_accounting();
@@ -950,7 +952,7 @@ public:
      .strategy_intents = self.strategy_session_.intents(),
      .strategy_closed_positions = self.strategy_session_.closed_positions(),
      .strategy_open_position = self.strategy_session_.position(),
-     .execution_filter_decisions = self.execution_filter_decisions_,
+     .entry_filter_decisions = self.entry_filter_decisions_,
      .position_sizing_decisions = self.position_sizing_decisions_,
      .strategy_performance = self.strategy_performance_.snapshot(),
      .setup_states = self.current_setup_timeline_states_,
@@ -1014,7 +1016,7 @@ public:
                                   self.strategy_session_.closed_positions(),
                                   self.strategy_session_.position(),
                                   self.strategy_performance_.snapshot(),
-                                  self.active_filtered_entry_position()};
+                                  self.active_entry_filtered_position()};
     }
     self.activate_setup(0);
     self.finish_bar(setup_series_results[0], timeline);
@@ -1024,7 +1026,7 @@ private:
   struct SetupState {
     explicit SetupState(Setup setup)
     : strategy_performance{std::move(setup.strategy_performance)}
-    , execution_filter{std::move(setup.execution_filter)}
+    , entry_filter{std::move(setup.entry_filter)}
     , position_sizing{std::move(setup.position_sizing)}
     , drawdown_adjustment{setup.drawdown_adjustment}
     , insufficient_cash_policy{setup.insufficient_cash_policy}
@@ -1039,7 +1041,7 @@ private:
     TradeSession strategy_trade_session;
     StrategySession strategy_session;
     StrategyPerformance strategy_performance;
-    ErasedSeriesMethod<ExecutionFilterMethodContext> execution_filter;
+    ErasedSeriesMethod<EntryFilterMethodContext> entry_filter;
     PositionSizingMethod position_sizing;
     DrawdownAdjustment drawdown_adjustment;
     InsufficientCashPolicy insufficient_cash_policy;
@@ -1057,7 +1059,7 @@ private:
     std::vector<std::size_t> pending_signal_exit_indices;
     std::optional<std::size_t> pending_signal_exit_trade_id;
     std::optional<std::size_t> execution_strategy_trade_id;
-    std::optional<std::size_t> filtered_entry_strategy_trade_id;
+    std::optional<std::size_t> entry_filtered_strategy_trade_id;
     std::optional<bool> closed_position_is_long;
   };
 
@@ -1067,7 +1069,7 @@ private:
     swap(self.strategy_trade_session_, state.strategy_trade_session);
     swap(self.strategy_session_, state.strategy_session);
     swap(self.strategy_performance_, state.strategy_performance);
-    swap(self.execution_filter_, state.execution_filter);
+    swap(self.entry_filter_, state.entry_filter);
     swap(self.position_sizing_, state.position_sizing);
     swap(self.drawdown_adjustment_, state.drawdown_adjustment);
     swap(self.insufficient_cash_policy_, state.insufficient_cash_policy);
@@ -1084,8 +1086,8 @@ private:
     swap(self.pending_signal_exit_trade_id_,
          state.pending_signal_exit_trade_id);
     swap(self.execution_strategy_trade_id_, state.execution_strategy_trade_id);
-    swap(self.filtered_entry_strategy_trade_id_,
-         state.filtered_entry_strategy_trade_id);
+    swap(self.entry_filtered_strategy_trade_id_,
+         state.entry_filtered_strategy_trade_id);
     swap(self.closed_position_is_long_, state.closed_position_is_long);
   }
 
@@ -1145,12 +1147,12 @@ private:
   TradeSession execution_session_;
   StrategySession strategy_session_;
   StrategyPerformance strategy_performance_;
-  ErasedSeriesMethod<ExecutionFilterMethodContext> execution_filter_;
-  std::vector<ExecutionFilterDecision> execution_filter_decisions_;
+  ErasedSeriesMethod<EntryFilterMethodContext> entry_filter_;
+  std::vector<EntryFilterDecision> entry_filter_decisions_;
   PositionSizingMethod position_sizing_{PositionSizingNode{}.make_method()};
   std::vector<PositionSizingDecision> position_sizing_decisions_;
   std::optional<std::size_t> execution_strategy_trade_id_;
-  std::optional<std::size_t> filtered_entry_strategy_trade_id_;
+  std::optional<std::size_t> entry_filtered_strategy_trade_id_;
   std::optional<double> campaign_unit_quantity_;
   std::optional<std::size_t> execution_owner_setup_index_;
   std::optional<std::size_t> active_setup_index_;
@@ -1881,7 +1883,7 @@ private:
     self.pyramiding_signal_ready_ = true;
     self.pyramiding_resume_index_.reset();
     self.execution_strategy_trade_id_.reset();
-    self.filtered_entry_strategy_trade_id_.reset();
+    self.entry_filtered_strategy_trade_id_.reset();
     const auto active_index = self.active_setup_index_.value_or(0);
     if(!self.execution_owner_setup_index_ ||
        *self.execution_owner_setup_index_ == active_index) {
@@ -2339,13 +2341,13 @@ private:
     return self.strategy_session_.enter(direction, price, is_pyramiding);
   }
 
-  auto active_filtered_entry_position(this const BacktestRunner& self) noexcept
+  auto active_entry_filtered_position(this const BacktestRunner& self) noexcept
    -> bool
   {
     const auto position = self.strategy_session_.position();
-    return position && self.filtered_entry_strategy_trade_id_ &&
+    return position && self.entry_filtered_strategy_trade_id_ &&
            position->strategy_trade_id() ==
-            *self.filtered_entry_strategy_trade_id_;
+            *self.entry_filtered_strategy_trade_id_;
   }
 
   auto active_setup_execution_eligible(this const BacktestRunner& self) noexcept
@@ -2362,9 +2364,9 @@ private:
     }
     const auto& previous = self.setup_states_[index - 1];
     const auto previous_position = previous.strategy_session.position();
-    return previous_position && previous.filtered_entry_strategy_trade_id &&
+    return previous_position && previous.entry_filtered_strategy_trade_id &&
            previous_position->strategy_trade_id() ==
-            *previous.filtered_entry_strategy_trade_id;
+            *previous.entry_filtered_strategy_trade_id;
   }
 
   auto execute_entry_action(this BacktestRunner& self,
@@ -2387,7 +2389,7 @@ private:
          .pyramiding = false,
          .method = std::string{self.position_sizing_.name()},
          .entry_price = price,
-         .outcome = PositionSizingDecisionOutcome::Filtered};
+         .outcome = PositionSizingDecisionOutcome::EntryFiltered};
     const auto preapproved = self.requested_order_preapproved_ != nullptr;
     const auto execution_blocked =
      !preapproved &&
@@ -2406,26 +2408,7 @@ private:
       self.position_sizing_decisions_.push_back(std::move(sizing_decision));
       return true;
     }
-    auto filter_context =
-     ExecutionFilterMethodContext{context, performance_snapshot};
-    const auto allowed =
-     preapproved ||
-     static_cast<bool>(evaluate_series_method(
-      self.execution_filter_, evaluation_snapshot, filter_context));
-    if(!allowed) {
-      const auto& intent = self.commit_strategy_entry(
-       is_long, price, rule, false, evaluation_snapshot, context);
-      sizing_decision.intent_id = intent.intent_id();
-      sizing_decision.strategy_trade_id = intent.strategy_trade_id();
-      self.execution_filter_decisions_.emplace_back(
-       intent.intent_id(), false, self.active_setup_index_.value_or(0));
-      self.filtered_entry_strategy_trade_id_ = intent.strategy_trade_id();
-      self.execution_strategy_trade_id_.reset();
-      self.position_sizing_decisions_.push_back(std::move(sizing_decision));
-      return true;
-    }
-
-    if(!self.setup_states_.empty()) {
+    if(!preapproved && !self.setup_states_.empty()) {
       self.entry_admission_open_ = false;
     }
 
@@ -2444,6 +2427,39 @@ private:
       requested_order =
        self.create_requested_order(*sizing_request, sizing_decision);
     }
+    if(!requested_order) {
+      const auto& intent = self.commit_strategy_entry(
+       is_long, price, rule, false, evaluation_snapshot, context);
+      sizing_decision.intent_id = intent.intent_id();
+      sizing_decision.strategy_trade_id = intent.strategy_trade_id();
+      self.execution_strategy_trade_id_.reset();
+      self.position_sizing_decisions_.push_back(std::move(sizing_decision));
+      return true;
+    }
+
+    const auto allowed =
+     preapproved ||
+     static_cast<bool>(evaluate_series_method(
+      self.entry_filter_,
+      evaluation_snapshot,
+      EntryFilterMethodContext{
+       self.current_account_state_, performance_snapshot, *requested_order}));
+    if(!allowed) {
+      if(!self.setup_states_.empty()) {
+        self.entry_admission_open_ = true;
+      }
+      const auto& intent = self.commit_strategy_entry(
+       is_long, price, rule, false, evaluation_snapshot, context);
+      sizing_decision.intent_id = intent.intent_id();
+      sizing_decision.strategy_trade_id = intent.strategy_trade_id();
+      self.entry_filter_decisions_.emplace_back(
+       intent.intent_id(), false, self.active_setup_index_.value_or(0));
+      self.entry_filtered_strategy_trade_id_ = intent.strategy_trade_id();
+      self.execution_strategy_trade_id_.reset();
+      self.position_sizing_decisions_.push_back(std::move(sizing_decision));
+      return true;
+    }
+
     if(self.entry_discovery_mode_ && requested_order) {
       self.discovered_requested_order_.emplace(
        self.active_setup_index_.value_or(0),
@@ -2454,7 +2470,7 @@ private:
         : 0U,
        std::move(sizing_decision),
        self.position_sizing_decisions_.size(),
-       self.execution_filter_decisions_.size());
+       self.entry_filter_decisions_.size());
       return true;
     }
     const auto entry =
@@ -2470,7 +2486,7 @@ private:
      is_long, price, rule, false, evaluation_snapshot, context);
     sizing_decision.intent_id = intent.intent_id();
     sizing_decision.strategy_trade_id = intent.strategy_trade_id();
-    self.execution_filter_decisions_.emplace_back(
+    self.entry_filter_decisions_.emplace_back(
      intent.intent_id(), true, self.active_setup_index_.value_or(0));
     if(!entry) {
       self.execution_strategy_trade_id_.reset();
@@ -2547,7 +2563,7 @@ private:
           : 0U,
          std::move(sizing_decision),
          self.position_sizing_decisions_.size(),
-         self.execution_filter_decisions_.size());
+         self.entry_filter_decisions_.size());
       }
       return true;
     }

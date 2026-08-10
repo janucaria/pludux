@@ -24,6 +24,7 @@ module;
 export module pludux.apps.backtest:windows.backtests_window;
 
 import pludux.backtest;
+import :condition_node_editor;
 import :window_context;
 import :ui.widgets;
 
@@ -317,10 +318,10 @@ private:
            edit_backtest_ptr->failsafe_setups()[setup_index - 1];
           auto activation = static_cast<int>(failsafe.activation());
           constexpr const char* activation_modes[] = {
-           "Always", "Previous setup has filtered theoretical position"};
+           "Always", "Previous setup has entry-filtered theoretical position"};
           ui::field_label(
            "Activation",
-           "A filtered theoretical position remains active until the "
+           "An entry-filtered theoretical position remains active until the "
            "previous setup fully closes it. The failsafe still requires its "
            "own fresh initial-entry signal.");
           if(ImGui::Combo("##FailsafeActivation",
@@ -472,6 +473,16 @@ private:
             }
             ImGui::EndCombo();
           }
+        }
+
+        ui::field_label(
+         "Entry Filter",
+         "Decide whether a fresh initial Requested Order may enter Portfolio "
+         "ranking. The rule can inspect Strategy Performance, Requested "
+         "Order values, and current account metrics.");
+        auto entry_filter = edit_setup.entry_filter();
+        if(backtest::gui::entry_filter_node_editor(entry_filter)) {
+          edit_setup.entry_filter(std::move(entry_filter));
         }
       };
 

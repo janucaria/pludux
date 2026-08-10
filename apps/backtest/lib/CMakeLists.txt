@@ -110,7 +110,7 @@ target_sources(${PROJECT_NAME}
     sources/backtest/strategy_session.cxx
     sources/backtest/strategy_performance_model.cxx
     sources/backtest/strategy_performance.cxx
-    sources/backtest/execution_filter_method_context.cxx
+    sources/backtest/entry_filter_method_context.cxx
     sources/backtest/strategy_performance_method.cxx
     sources/backtest/strategy_performance_node.cxx
     

@@ -9,7 +9,6 @@ export module pludux.backtest:profile;
 
 import pludux;
 
-import :execution_filter_method_context;
 import :position_sizing;
 
 export namespace pludux::backtest {
@@ -122,21 +121,18 @@ public:
   : Profile{std::move(name),
             position_sizing,
             DrawdownAdjustment{},
-            InsufficientCashPolicy::Reject,
-            TrueNode{}}
+            InsufficientCashPolicy::Reject}
   {
   }
 
   Profile(std::string name,
           PositionSizingNode position_sizing,
           DrawdownAdjustment drawdown_adjustment,
-          InsufficientCashPolicy insufficient_cash_policy,
-          ErasedNode<ExecutionFilterMethodContext> execution_filter)
+          InsufficientCashPolicy insufficient_cash_policy)
   : name_{std::move(name)}
   , position_sizing_{position_sizing}
   , drawdown_adjustment_{drawdown_adjustment}
   , insufficient_cash_policy_{insufficient_cash_policy}
-  , execution_filter_{std::move(execution_filter)}
   {
     static_cast<void>(position_sizing_.make_method());
   }
@@ -189,26 +185,12 @@ public:
     self.insufficient_cash_policy_ = value;
   }
 
-  auto execution_filter(this const Profile& self) noexcept
-   -> const ErasedNode<ExecutionFilterMethodContext>&
-  {
-    return self.execution_filter_;
-  }
-
-  void execution_filter(
-   this Profile& self,
-   ErasedNode<ExecutionFilterMethodContext> execution_filter) noexcept
-  {
-    self.execution_filter_ = std::move(execution_filter);
-  }
-
   auto equivalent_rules(this const Profile& self, const Profile& other) noexcept
    -> bool
   {
     return self.position_sizing_ == other.position_sizing_ &&
            self.drawdown_adjustment_ == other.drawdown_adjustment_ &&
-           self.insufficient_cash_policy_ == other.insufficient_cash_policy_ &&
-           self.execution_filter_ == other.execution_filter_;
+           self.insufficient_cash_policy_ == other.insufficient_cash_policy_;
   }
 
 private:
@@ -216,7 +198,6 @@ private:
   PositionSizingNode position_sizing_;
   DrawdownAdjustment drawdown_adjustment_;
   InsufficientCashPolicy insufficient_cash_policy_;
-  ErasedNode<ExecutionFilterMethodContext> execution_filter_;
 };
 
 } // namespace pludux::backtest

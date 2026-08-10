@@ -40,10 +40,9 @@ auto make_filter_test_rule() -> BacktestRunner::PositionRule
                                       SignalTiming::CurrentClose};
 }
 
-auto run_with_filter(
- ErasedSeriesMethod<ExecutionFilterMethodContext> execution_filter,
- PositionSizingNode position_sizing = PositionSizingNode{
-  FixedQuantityPositionSizing{1.0}}) -> BacktestTimeline
+auto run_with_filter(ErasedSeriesMethod<EntryFilterMethodContext> entry_filter,
+                     PositionSizingNode position_sizing = PositionSizingNode{
+                      FixedQuantityPositionSizing{1.0}}) -> BacktestTimeline
 {
   const auto asset = make_filter_test_asset();
   const auto market = Market{"Test", 0.0, 0.0};
@@ -64,7 +63,7 @@ auto run_with_filter(
                                1'000.0,
                                IntrabarPath::CandleDirection,
                                StrategyPerformanceConfig{},
-                               std::move(execution_filter)};
+                               std::move(entry_filter)};
 
   while(timeline.size() < asset.size()) {
     runner.run(series_results, timeline);
@@ -74,29 +73,69 @@ auto run_with_filter(
 
 } // namespace
 
-TEST(ExecutionFilterTest, RecordsOnlyIntentAndBooleanDecision)
+TEST(EntryFilterTest, RecordsOnlyIntentAndBooleanDecision)
 {
-  const auto decision = ExecutionFilterDecision{42, false};
+  const auto decision = EntryFilterDecision{42, false};
   EXPECT_EQ(decision.intent_id(), 42);
   EXPECT_FALSE(decision.allowed());
 }
 
-TEST(ExecutionFilterTest, ProfileOwnsFilterAsAnExecutionRule)
+TEST(EntryFilterTest, BacktestSetupOwnsEntryFilter)
 {
-  auto permissive = Profile{"Permissive"};
-  auto restrictive = Profile{"Restrictive"};
-  restrictive.execution_filter(
-   ErasedNode<ExecutionFilterMethodContext>{FalseNode{}});
+  auto permissive = BacktestSetup{};
+  auto restrictive = BacktestSetup{};
+  restrictive.entry_filter(ErasedNode<EntryFilterMethodContext>{FalseNode{}});
 
-  EXPECT_NE(node_cast<TrueNode>(permissive.execution_filter()), nullptr);
-  EXPECT_NE(node_cast<FalseNode>(restrictive.execution_filter()), nullptr);
+  EXPECT_NE(node_cast<TrueNode>(permissive.entry_filter()), nullptr);
+  EXPECT_NE(node_cast<FalseNode>(restrictive.entry_filter()), nullptr);
   EXPECT_FALSE(permissive.equivalent_rules(restrictive));
 
-  permissive.execution_filter(restrictive.execution_filter());
+  permissive.entry_filter(restrictive.entry_filter());
   EXPECT_TRUE(permissive.equivalent_rules(restrictive));
 }
 
-TEST(ExecutionFilterTest,
+TEST(EntryFilterTest, CombinesStrategyProfileAndAccountResults)
+{
+  const auto filter = LogicalAndMethod{
+   GreaterEqualMethod{
+    StrategyPerformanceMethod{StrategyPerformanceMetric::LifetimeCount},
+    ValueMethod{0.0}},
+   LogicalAndMethod{GreaterEqualMethod{EquityMethod{}, ValueMethod{1'000.0}},
+                    LessEqualMethod{RequestedOrderValueMethod{
+                                     RequestedOrderValue::RequestedNotional},
+                                    ValueMethod{100.0}}}};
+
+  const auto timeline = run_with_filter(filter);
+
+  ASSERT_EQ(timeline.entry_filter_decisions(0).size(), 1U);
+  EXPECT_TRUE(timeline.entry_filter_decisions(0).front().allowed());
+  ASSERT_EQ(timeline.position_sizing_decisions(0).size(), 1U);
+  const auto& sizing = timeline.position_sizing_decisions(0).front();
+  EXPECT_DOUBLE_EQ(*sizing.requested_quantity, 1.0);
+  EXPECT_DOUBLE_EQ(*sizing.sizing_normalized_quantity, 1.0);
+  EXPECT_DOUBLE_EQ(*sizing.entry_cost, 100.0);
+}
+
+TEST(EntryFilterTest, RequestedOrderRejectionRetainsSizingDiagnostics)
+{
+  const auto filter = LessEqualMethod{
+   RequestedOrderValueMethod{RequestedOrderValue::RequestedNotional},
+   ValueMethod{99.0}};
+
+  const auto timeline = run_with_filter(filter);
+
+  ASSERT_EQ(timeline.entry_filter_decisions(0).size(), 1U);
+  EXPECT_FALSE(timeline.entry_filter_decisions(0).front().allowed());
+  ASSERT_EQ(timeline.position_sizing_decisions(0).size(), 1U);
+  const auto& sizing = timeline.position_sizing_decisions(0).front();
+  EXPECT_EQ(sizing.outcome, PositionSizingDecisionOutcome::EntryFiltered);
+  EXPECT_DOUBLE_EQ(*sizing.requested_quantity, 1.0);
+  EXPECT_DOUBLE_EQ(*sizing.sizing_normalized_quantity, 1.0);
+  EXPECT_DOUBLE_EQ(*sizing.entry_cost, 100.0);
+  EXPECT_DOUBLE_EQ(*sizing.estimated_loss, 10.0);
+}
+
+TEST(EntryFilterTest,
      RejectedInitialEntryStillCompletesShadowPositionAndStatistics)
 {
   const auto timeline = run_with_filter(BooleanMethod<false>{});
@@ -105,16 +144,16 @@ TEST(ExecutionFilterTest,
   ASSERT_EQ(timeline.strategy_intents(0).size(), 1);
   EXPECT_EQ(timeline.strategy_intents(0).front().type(),
             StrategyIntentType::InitialEntry);
-  ASSERT_EQ(timeline.execution_filter_decisions(0).size(), 1);
-  EXPECT_FALSE(timeline.execution_filter_decisions(0).front().allowed());
+  ASSERT_EQ(timeline.entry_filter_decisions(0).size(), 1);
+  EXPECT_FALSE(timeline.entry_filter_decisions(0).front().allowed());
   ASSERT_EQ(timeline.position_sizing_decisions(0).size(), 1);
   EXPECT_EQ(timeline.position_sizing_decisions(0).front().outcome,
-            PositionSizingDecisionOutcome::Filtered);
+            PositionSizingDecisionOutcome::EntryFiltered);
 
   ASSERT_EQ(timeline.strategy_intents(1).size(), 1);
   EXPECT_EQ(timeline.strategy_intents(1).front().type(),
             StrategyIntentType::PyramidingEntry);
-  EXPECT_TRUE(timeline.execution_filter_decisions(1).empty());
+  EXPECT_TRUE(timeline.entry_filter_decisions(1).empty());
   ASSERT_EQ(timeline.position_sizing_decisions(1).size(), 1);
   EXPECT_EQ(timeline.position_sizing_decisions(1).front().outcome,
             PositionSizingDecisionOutcome::ShadowOnly);
@@ -122,7 +161,7 @@ TEST(ExecutionFilterTest,
   ASSERT_EQ(timeline.strategy_intents(2).size(), 1);
   EXPECT_EQ(timeline.strategy_intents(2).front().type(),
             StrategyIntentType::SignalExit);
-  EXPECT_TRUE(timeline.execution_filter_decisions(2).empty());
+  EXPECT_TRUE(timeline.entry_filter_decisions(2).empty());
   EXPECT_TRUE(timeline.position_sizing_decisions(2).empty());
   ASSERT_EQ(timeline.strategy_closed_positions(2).size(), 1);
   EXPECT_NEAR(timeline.strategy_closed_positions(2).front().return_ratio(),
@@ -137,15 +176,15 @@ TEST(ExecutionFilterTest,
   }
 }
 
-TEST(ExecutionFilterTest,
+TEST(EntryFilterTest,
      AcceptedInitialEntryMirrorsPyramidingAndExitWithoutRefiltering)
 {
   const auto timeline = run_with_filter(BooleanMethod<true>{});
 
-  ASSERT_EQ(timeline.execution_filter_decisions(0).size(), 1);
-  EXPECT_TRUE(timeline.execution_filter_decisions(0).front().allowed());
-  EXPECT_TRUE(timeline.execution_filter_decisions(1).empty());
-  EXPECT_TRUE(timeline.execution_filter_decisions(2).empty());
+  ASSERT_EQ(timeline.entry_filter_decisions(0).size(), 1);
+  EXPECT_TRUE(timeline.entry_filter_decisions(0).front().allowed());
+  EXPECT_TRUE(timeline.entry_filter_decisions(1).empty());
+  EXPECT_TRUE(timeline.entry_filter_decisions(2).empty());
   ASSERT_EQ(timeline.position_sizing_decisions(0).size(), 1);
   EXPECT_EQ(timeline.position_sizing_decisions(0).front().outcome,
             PositionSizingDecisionOutcome::Executed);
@@ -159,22 +198,22 @@ TEST(ExecutionFilterTest,
   EXPECT_FALSE(timeline.open_position(2).has_value());
 }
 
-TEST(ExecutionFilterTest, LaterInitialEntryCanUseCompletedShadowPerformance)
+TEST(EntryFilterTest, LaterInitialEntryCanUseCompletedShadowPerformance)
 {
   const auto filter = GreaterEqualMethod{
    StrategyPerformanceMethod{StrategyPerformanceMetric::LifetimeCount},
    ValueMethod{1.0}};
   const auto timeline = run_with_filter(filter);
 
-  ASSERT_EQ(timeline.execution_filter_decisions(0).size(), 1);
-  EXPECT_FALSE(timeline.execution_filter_decisions(0).front().allowed());
-  ASSERT_EQ(timeline.execution_filter_decisions(3).size(), 1);
-  EXPECT_TRUE(timeline.execution_filter_decisions(3).front().allowed());
+  ASSERT_EQ(timeline.entry_filter_decisions(0).size(), 1);
+  EXPECT_FALSE(timeline.entry_filter_decisions(0).front().allowed());
+  ASSERT_EQ(timeline.entry_filter_decisions(3).size(), 1);
+  EXPECT_TRUE(timeline.entry_filter_decisions(3).front().allowed());
   ASSERT_TRUE(timeline.open_position(3).has_value());
   EXPECT_DOUBLE_EQ(timeline.open_position(3)->entry_price(), 130.0);
 }
 
-TEST(ExecutionFilterTest, StrategyPerformanceMethodsExposeAllStreaks)
+TEST(EntryFilterTest, StrategyPerformanceMethodsExposeAllStreaks)
 {
   const auto performance =
    StrategyPerformanceSnapshot{0,
@@ -191,14 +230,11 @@ TEST(ExecutionFilterTest, StrategyPerformanceMethodsExposeAllStreaks)
                                BayesianWinSnapshot{},
                                BayesianPayoffSnapshot{},
                                BayesianPayoffSnapshot{}};
-  const auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
-  auto series_results = SeriesEvaluationResults{};
-  auto default_context = DefaultMethodContext{series_methods, series_results};
   const auto account_state = BacktestAccountState{};
-  const auto base_context =
-   BacktestMethodContext{default_context, series_methods, account_state, 0};
-  const auto context = ExecutionFilterMethodContext{base_context, performance};
+  const auto requested_order = RequestedOrder{
+   TradeEntry{1.0, 100.0}, false, 1.0, {}, 1.0, {}, 10.0, 0.0, 0.0};
+  const auto context =
+   EntryFilterMethodContext{account_state, performance, requested_order};
   const auto asset = make_filter_test_asset();
   const auto snapshot = asset.get_snapshot(0);
 
@@ -228,7 +264,7 @@ TEST(ExecutionFilterTest, StrategyPerformanceMethodsExposeAllStreaks)
    4.0);
 }
 
-TEST(ExecutionFilterTest,
+TEST(EntryFilterTest,
      BayesianKellyUsesCompletedTheoreticalPerformanceForLaterEntry)
 {
   const auto timeline =
@@ -239,6 +275,7 @@ TEST(ExecutionFilterTest,
   ASSERT_EQ(timeline.position_sizing_decisions(0).size(), 1U);
   EXPECT_EQ(timeline.position_sizing_decisions(0).front().outcome,
             PositionSizingDecisionOutcome::NoPositiveSize);
+  EXPECT_TRUE(timeline.entry_filter_decisions(0).empty());
   ASSERT_EQ(timeline.position_sizing_decisions(1).size(), 1U);
   EXPECT_EQ(timeline.position_sizing_decisions(1).front().outcome,
             PositionSizingDecisionOutcome::ShadowOnly);

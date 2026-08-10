@@ -460,6 +460,9 @@ struct json_conv_traits<Json, pludux::backtest::Profile> {
                             const Json& json)
   {
     try {
+      if(json.contains("executionFilter")) {
+        throw std::invalid_argument{"Profile contains a legacy filter field"};
+      }
       return result_type{value_type{
        required_as<std::string>(json, "name"),
        required_as<pludux::backtest::PositionSizingNode>(json,
@@ -467,9 +470,7 @@ struct json_conv_traits<Json, pludux::backtest::Profile> {
        required_as<pludux::backtest::DrawdownAdjustment>(json,
                                                          "drawdownAdjustment"),
        required_as<pludux::backtest::InsufficientCashPolicy>(
-        json, "insufficientCashPolicy"),
-       pludux::backtest::parse_execution_filter_node(
-        json.at("executionFilter"))}};
+        json, "insufficientCashPolicy")}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -485,8 +486,6 @@ struct json_conv_traits<Json, pludux::backtest::Profile> {
     set_json(json, aset, "drawdownAdjustment", profile.drawdown_adjustment());
     set_json(
      json, aset, "insufficientCashPolicy", profile.insufficient_cash_policy());
-    json["executionFilter"] = pludux::backtest::serialize_execution_filter_node(
-     profile.execution_filter());
     return json;
   }
 };
@@ -951,7 +950,8 @@ struct json_conv_traits<Json, pludux::backtest::BacktestSetup> {
       return result_type{value_type{
        required_as<pludux::backtest::StrategyStoreHandle>(json, "strategy"),
        required_as<pludux::backtest::ProfileStoreHandle>(json, "profile"),
-       vector_from_json<pludux::NumericInputNode>(json.at("inputs"))}};
+       vector_from_json<pludux::NumericInputNode>(json.at("inputs")),
+       pludux::backtest::parse_entry_filter_node(json.at("entryFilter"))}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -965,6 +965,8 @@ struct json_conv_traits<Json, pludux::backtest::BacktestSetup> {
     set_json(json, aset, "strategy", setup.strategy_handle());
     set_json(json, aset, "profile", setup.profile_handle());
     json["inputs"] = vector_to_json<Json>(aset, setup.inputs());
+    json["entryFilter"] =
+     pludux::backtest::serialize_entry_filter_node(setup.entry_filter());
     return json;
   }
 };
@@ -988,9 +990,9 @@ struct json_conv_traits<Json, pludux::backtest::BacktestFailsafeSetup> {
     try {
       const auto activation = json.at("activation").template as<std::string>();
       auto activation_value = pludux::backtest::FailsafeActivation::Always;
-      if(activation == "PREVIOUS_SETUP_FILTERED_POSITION") {
-        activation_value =
-         pludux::backtest::FailsafeActivation::PreviousSetupFilteredPosition;
+      if(activation == "PREVIOUS_SETUP_ENTRY_FILTERED_POSITION") {
+        activation_value = pludux::backtest::FailsafeActivation::
+         PreviousSetupEntryFilteredPosition;
       } else if(activation != "ALWAYS") {
         throw std::invalid_argument{"Invalid failsafe activation"};
       }
@@ -998,7 +1000,8 @@ struct json_conv_traits<Json, pludux::backtest::BacktestFailsafeSetup> {
        pludux::backtest::BacktestSetup{
         required_as<pludux::backtest::StrategyStoreHandle>(json, "strategy"),
         required_as<pludux::backtest::ProfileStoreHandle>(json, "profile"),
-        vector_from_json<pludux::NumericInputNode>(json.at("inputs"))},
+        vector_from_json<pludux::NumericInputNode>(json.at("inputs")),
+        pludux::backtest::parse_entry_filter_node(json.at("entryFilter"))},
        activation_value}};
     } catch(...) {
       return conversion_failed<value_type>();
@@ -1013,12 +1016,14 @@ struct json_conv_traits<Json, pludux::backtest::BacktestFailsafeSetup> {
     auto json = Json{};
     json["activation"] =
      failsafe.activation() ==
-       pludux::backtest::FailsafeActivation::PreviousSetupFilteredPosition
-      ? "PREVIOUS_SETUP_FILTERED_POSITION"
+       pludux::backtest::FailsafeActivation::PreviousSetupEntryFilteredPosition
+      ? "PREVIOUS_SETUP_ENTRY_FILTERED_POSITION"
       : "ALWAYS";
     set_json(json, aset, "strategy", setup.strategy_handle());
     set_json(json, aset, "profile", setup.profile_handle());
     json["inputs"] = vector_to_json<Json>(aset, setup.inputs());
+    json["entryFilter"] =
+     pludux::backtest::serialize_entry_filter_node(setup.entry_filter());
     return json;
   }
 };

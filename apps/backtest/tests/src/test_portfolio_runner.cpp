@@ -65,9 +65,8 @@ auto make_entry_runner(const Asset& asset,
                        const Broker& broker,
                        const Profile& profile,
                        InsufficientCashPolicy cash_policy,
-                       ErasedSeriesMethod<ExecutionFilterMethodContext>
-                        execution_filter = BooleanMethod<true>{})
- -> BacktestRunner
+                       ErasedSeriesMethod<EntryFilterMethodContext>
+                        entry_filter = BooleanMethod<true>{}) -> BacktestRunner
 {
   auto configured_profile = profile;
   configured_profile.insufficient_cash_policy(cash_policy);
@@ -92,7 +91,7 @@ auto make_entry_runner(const Asset& asset,
                         NAN,
                         IntrabarPath::CandleDirection,
                         {},
-                        std::move(execution_filter)};
+                        std::move(entry_filter)};
 }
 
 auto make_short_entry_runner(const Asset& asset,
@@ -598,9 +597,9 @@ TEST(PortfolioRunnerTest, OrderedEntriesStopAtMaximumOpenTrades)
   EXPECT_EQ(results.timeline().row(0).open_position_count, 1);
 }
 
-TEST(PortfolioRunnerTest, FilteredEntryDoesNotConsumeOpenTradeSlot)
+TEST(PortfolioRunnerTest, EntryFilteredOrderDoesNotConsumeOpenTradeSlot)
 {
-  const auto first = make_asset("Filtered", {1.0});
+  const auto first = make_asset("Entry filtered", {1.0});
   const auto second = make_asset("Accepted", {1.0});
   const auto market = Market{"Market", 0.0, 0.0};
   const auto broker = Broker{"Broker"};

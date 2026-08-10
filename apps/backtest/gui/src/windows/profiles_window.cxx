@@ -18,7 +18,6 @@ module;
 export module pludux.apps.backtest:windows.profiles_window;
 
 import pludux.backtest;
-import :condition_node_editor;
 import :window_context;
 import :ui.widgets;
 
@@ -535,19 +534,6 @@ private:
         ImGui::EndCombo();
       }
       self.editing_profile_ptr_->insufficient_cash_policy(cash_policy);
-    }
-
-    ui::form_section(
-     "Execution Filter",
-     "Decide whether each initial strategy entry should become a real "
-     "position. Accepted positions automatically mirror later pyramiding and "
-     "exit intents.");
-    {
-      auto filter = self.editing_profile_ptr_->execution_filter();
-      ui::field_label("Decision rule");
-      if(backtest::gui::execution_filter_node_editor(filter)) {
-        self.editing_profile_ptr_->execution_filter(std::move(filter));
-      }
     }
   }
 

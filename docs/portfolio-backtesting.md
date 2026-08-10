@@ -2,7 +2,7 @@
 
 ## Terminology
 
-Pludux treats a **Backtest** as a reusable Asset + Strategy + Profile
+Pludux treats a **Backtest** as a reusable Watchlist plus ordered setup
 configuration and a **Portfolio** as the account that executes one or more
 Backtests.
 
@@ -37,16 +37,17 @@ Portfolio
 `- Ordered Backtests
    |- Watchlist
    `- Setups
+      |- Strategy and inputs
+      |- Entry filter
       `- Profile
          |- Position sizing
          |- Drawdown adjustment
-         |- Insufficient-cash policy
-         `- Execution filter
+         `- Insufficient-cash policy
 ```
 
-Position sizing and execution filters read the current Portfolio equity and
-drawdown. Strategy Performance remains backtest-specific, so Bayesian or Kelly
-sizing uses only the theoretical history of that Backtest within the current
+Position sizing and Entry Filters read the current Portfolio equity and
+drawdown. Each setup maintains independent theoretical Strategy Performance,
+so Bayesian or Kelly sizing uses only that setup's history within the current
 Portfolio run. Shared reservations do not change a Profile's sizing intent;
 they constrain the later cash decision.
 
@@ -62,27 +63,24 @@ Sizing methods express different limits:
 ## Shared-Capital Arbitration
 
 At a market timestamp, risk-reducing work is processed before risk-increasing
-work. Entry and pyramiding requests that occur in the same phase are processed
-in the Portfolio's displayed Backtest order. That order is therefore the
-deterministic capital priority.
+work. Entry and pyramiding Requested Orders that occur in the same phase are
+ranked by the Portfolio's ordered comparators. Portfolio, Backtest, and
+Watchlist expansion order resolves complete ties.
 
 For each risk-increasing request, Pludux performs these steps:
 
-1. Evaluate the Backtest Profile's execution filter and sizing constraint.
-2. Derive peak-based notional equity when the accepted setup Profile's
-   drawdown adjustment
-   configures a notional equity reduction, then reevaluate equity-dependent
-   sizing with that value.
-3. Apply the drawdown adjustment's size reduction to the resulting quantity and
-   limit.
-4. Use the shared Market and Broker to find the largest valid quantity within
-   the sizing constraint.
-5. Reject an initial entry if the Portfolio already has its maximum number of
-   open trades.
-6. Calculate remaining shared cash after existing reservations.
-7. Compare the fee-inclusive entry cost with that available cash.
-8. Reject the request or cap it to the largest affordable valid quantity,
-   according to the accepted setup Profile's policy.
+1. Capture the setup's theoretical Strategy Performance snapshot.
+2. Evaluate its Profile sizing constraint and drawdown adjustment.
+3. Use the shared Market and Broker to create an immutable Requested Order with
+   normalized quantity, notional, fees, and risk values.
+4. Evaluate the setup's Entry Filter against Strategy Performance, Requested
+   Order values, and current account metrics. An entry-filtered setup may allow
+   the next eligible Failsafe to produce its own fresh entry.
+5. Rank every accepted Requested Order using the Portfolio comparators.
+6. Enforce maximum-open-trade and maximum-combined-layer capacity.
+7. Compare the fee-inclusive requested cost with available shared cash.
+8. Reject the request or cap it to the largest affordable valid quantity using
+   the owning Profile's insufficient-cash policy.
 
 Both reductions use the completed step count from current drawdown relative to
 peak equity. Notional equity reduction changes only sizing methods that consume

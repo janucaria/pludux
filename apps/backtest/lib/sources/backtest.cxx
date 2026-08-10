@@ -57,7 +57,7 @@ export import :strategy_closed_position;
 export import :strategy_session;
 export import :strategy_performance_model;
 export import :strategy_performance;
-export import :execution_filter_method_context;
+export import :entry_filter_method_context;
 export import :strategy_performance_method;
 export import :strategy_performance_node;
 export import :backtest_setup;

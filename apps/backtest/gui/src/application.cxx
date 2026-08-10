@@ -438,10 +438,10 @@ private:
           position.pyramiding().retrigger()};
        };
 
-      auto execution_filter_conversion_context = NodeToErasedMethodContext{};
-      auto execution_filter =
-       node_to_erased_method<backtest::ExecutionFilterMethodContext>(
-        profile_ptr->execution_filter(), execution_filter_conversion_context);
+      auto entry_filter_conversion_context = NodeToErasedMethodContext{};
+      auto entry_filter =
+       node_to_erased_method<backtest::EntryFilterMethodContext>(
+        configured_setup.entry_filter(), entry_filter_conversion_context);
       const auto failsafe_activation =
        setup_index == 0
         ? backtest::FailsafeActivation::Always
@@ -453,7 +453,7 @@ private:
        make_position_rule(strategy_ptr->short_position()),
        strategy_ptr->intrabar_path(),
        backtest.strategy_performance(),
-       std::move(execution_filter),
+       std::move(entry_filter),
        failsafe_activation);
     }
 

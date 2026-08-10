@@ -2449,7 +2449,7 @@ TEST_F(ConfigParserTest, SeriesNodeRegistrySerializationDeserialization)
   EXPECT_EQ(series_nodes, deserialized_series_nodes);
 }
 
-TEST_F(ConfigParserTest, ExecutionFilterRoundTripsLimitedNodeCatalog)
+TEST_F(ConfigParserTest, EntryFilterRoundTripsResultAndAccountNodes)
 {
   const auto config = json::parse(R"(
     {
@@ -2468,22 +2468,21 @@ TEST_F(ConfigParserTest, ExecutionFilterRoundTripsLimitedNodeCatalog)
       "secondCondition": {
         "method": "LESS_EQUAL",
         "target": {
-          "method": "DRAWDOWN"
+          "method": "REQUESTED_RISK_WITH_FEES"
         },
         "threshold": {
-          "method": "VALUE",
-          "value": 10
+          "method": "EQUITY"
         }
       }
     }
   )");
 
-  const auto node = backtest::parse_execution_filter_node(config);
-  const auto serialized = backtest::serialize_execution_filter_node(node);
-  EXPECT_EQ(node, backtest::parse_execution_filter_node(serialized));
+  const auto node = backtest::parse_entry_filter_node(config);
+  const auto serialized = backtest::serialize_entry_filter_node(node);
+  EXPECT_EQ(node, backtest::parse_entry_filter_node(serialized));
 }
 
-TEST_F(ConfigParserTest, ExecutionFilterRejectsMarketDataNodes)
+TEST_F(ConfigParserTest, EntryFilterRejectsMarketDataNodes)
 {
   const auto config = json::parse(R"(
     {
@@ -2498,15 +2497,15 @@ TEST_F(ConfigParserTest, ExecutionFilterRejectsMarketDataNodes)
     }
   )");
 
-  EXPECT_THROW(backtest::parse_execution_filter_node(config),
+  EXPECT_THROW(backtest::parse_entry_filter_node(config),
                std::invalid_argument);
 }
 
-TEST_F(ConfigParserTest, ExecutionFilterRejectsNonBooleanRoot)
+TEST_F(ConfigParserTest, EntryFilterRejectsNonBooleanRoot)
 {
   const auto config =
    json::parse(R"({"method":"STRATEGY_PERFORMANCE","metric":2})");
 
-  EXPECT_THROW(backtest::parse_execution_filter_node(config),
+  EXPECT_THROW(backtest::parse_entry_filter_node(config),
                std::invalid_argument);
 }

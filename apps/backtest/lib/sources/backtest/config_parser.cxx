@@ -176,11 +176,11 @@ auto make_default_registered_config_parser() -> ConfigParser;
 
 auto make_requested_order_config_parser() -> ConfigParser;
 
-auto parse_execution_filter_node(const jsoncons::ojson& config)
- -> ErasedNode<ExecutionFilterMethodContext>;
+auto parse_entry_filter_node(const jsoncons::ojson& config)
+ -> ErasedNode<EntryFilterMethodContext>;
 
-auto serialize_execution_filter_node(
- const ErasedNode<ExecutionFilterMethodContext>& node) -> jsoncons::ojson;
+auto serialize_entry_filter_node(
+ const ErasedNode<EntryFilterMethodContext>& node) -> jsoncons::ojson;
 
 } // namespace pludux::backtest
 
@@ -888,53 +888,52 @@ serialize_boolean_node(const ErasedNode<ErasedSeriesMethodContext>& node,
   return jsoncons::ojson::null();
 }
 
-enum class ExecutionFilterNodeKind { Scalar, Boolean };
+enum class EntryFilterNodeKind { Scalar, Boolean };
 
-struct ParsedExecutionFilterNode {
-  ErasedNode<ExecutionFilterMethodContext> node;
-  ExecutionFilterNodeKind kind;
+struct ParsedEntryFilterNode {
+  ErasedNode<EntryFilterMethodContext> node;
+  EntryFilterNodeKind kind;
 };
 
-static auto parse_execution_filter_child(const jsoncons::ojson& config)
- -> ParsedExecutionFilterNode
+static auto parse_entry_filter_child(const jsoncons::ojson& config)
+ -> ParsedEntryFilterNode
 {
-  using Context = ExecutionFilterMethodContext;
+  using Context = EntryFilterMethodContext;
 
   if(config.is_bool()) {
     return {config.as_bool() ? ErasedNode<Context>{TrueNode{}}
                              : ErasedNode<Context>{FalseNode{}},
-            ExecutionFilterNodeKind::Boolean};
+            EntryFilterNodeKind::Boolean};
   }
   if(config.is_number()) {
     return {ErasedNode<Context>{ValueNode{config.as_double()}},
-            ExecutionFilterNodeKind::Scalar};
+            EntryFilterNodeKind::Scalar};
   }
   if(!config.is_object() || !config.contains("method")) {
     throw std::invalid_argument{
-     "ExecutionFilter node must be a boolean, number, or method object"};
+     "EntryFilter node must be a boolean, number, or method object"};
   }
 
   const auto method = config.at("method").as_string();
   if(method == "ALWAYS") {
-    return {ErasedNode<Context>{TrueNode{}}, ExecutionFilterNodeKind::Boolean};
+    return {ErasedNode<Context>{TrueNode{}}, EntryFilterNodeKind::Boolean};
   }
   if(method == "NEVER") {
-    return {ErasedNode<Context>{FalseNode{}}, ExecutionFilterNodeKind::Boolean};
+    return {ErasedNode<Context>{FalseNode{}}, EntryFilterNodeKind::Boolean};
   }
   if(method == "VALUE") {
     return {ErasedNode<Context>{ValueNode{config.at("value").as_double()}},
-            ExecutionFilterNodeKind::Scalar};
+            EntryFilterNodeKind::Scalar};
   }
   if(method == "EQUITY") {
-    return {ErasedNode<Context>{EquityNode{}}, ExecutionFilterNodeKind::Scalar};
+    return {ErasedNode<Context>{EquityNode{}}, EntryFilterNodeKind::Scalar};
   }
   if(method == "EQUITY_PERCENT") {
     return {ErasedNode<Context>{EquityPercentNode{}},
-            ExecutionFilterNodeKind::Scalar};
+            EntryFilterNodeKind::Scalar};
   }
   if(method == "DRAWDOWN") {
-    return {ErasedNode<Context>{DrawdownNode{}},
-            ExecutionFilterNodeKind::Scalar};
+    return {ErasedNode<Context>{DrawdownNode{}}, EntryFilterNodeKind::Scalar};
   }
   if(method == "STRATEGY_PERFORMANCE") {
     const auto metric_value = config.at("metric").as<int>();
@@ -944,26 +943,64 @@ static auto parse_execution_filter_child(const jsoncons::ojson& config)
         static_cast<int>(
          StrategyPerformanceMetric::BayesianLosingPayoffUpper95)) {
       throw std::invalid_argument{
-       "ExecutionFilter strategy-performance metric is invalid"};
+       "EntryFilter strategy-performance metric is invalid"};
     }
     return {ErasedNode<Context>{StrategyPerformanceNode{
              static_cast<StrategyPerformanceMetric>(metric_value)}},
-            ExecutionFilterNodeKind::Scalar};
+            EntryFilterNodeKind::Scalar};
   }
 
+#define PLUDUX_PARSE_ENTRY_FILTER_REQUESTED_ORDER_NODE(Id, Type)       \
+  if(method == Id) {                                                   \
+    return {ErasedNode<Context>{Type{}}, EntryFilterNodeKind::Scalar}; \
+  }
+  PLUDUX_PARSE_ENTRY_FILTER_REQUESTED_ORDER_NODE("REQUESTED_ORDER_PRICE",
+                                                 RequestedOrderPriceNode)
+  PLUDUX_PARSE_ENTRY_FILTER_REQUESTED_ORDER_NODE("REQUESTED_ORDER_DIRECTION",
+                                                 RequestedOrderDirectionNode)
+  PLUDUX_PARSE_ENTRY_FILTER_REQUESTED_ORDER_NODE("IS_PYRAMIDING_ORDER",
+                                                 IsPyramidingOrderNode)
+  PLUDUX_PARSE_ENTRY_FILTER_REQUESTED_ORDER_NODE("RAW_REQUESTED_QUANTITY",
+                                                 RawRequestedQuantityNode)
+  PLUDUX_PARSE_ENTRY_FILTER_REQUESTED_ORDER_NODE("RAW_REQUESTED_QUANTITY_LIMIT",
+                                                 RawRequestedQuantityLimitNode)
+  PLUDUX_PARSE_ENTRY_FILTER_REQUESTED_ORDER_NODE("DRAWDOWN_ADJUSTED_QUANTITY",
+                                                 DrawdownAdjustedQuantityNode)
+  PLUDUX_PARSE_ENTRY_FILTER_REQUESTED_ORDER_NODE(
+   "DRAWDOWN_ADJUSTED_QUANTITY_LIMIT", DrawdownAdjustedQuantityLimitNode)
+  PLUDUX_PARSE_ENTRY_FILTER_REQUESTED_ORDER_NODE("REQUESTED_QUANTITY",
+                                                 RequestedQuantityNode)
+  PLUDUX_PARSE_ENTRY_FILTER_REQUESTED_ORDER_NODE("REQUESTED_NOTIONAL",
+                                                 RequestedNotionalNode)
+  PLUDUX_PARSE_ENTRY_FILTER_REQUESTED_ORDER_NODE("REQUESTED_COST",
+                                                 RequestedCostNode)
+  PLUDUX_PARSE_ENTRY_FILTER_REQUESTED_ORDER_NODE("ESTIMATED_ENTRY_FEE",
+                                                 EstimatedEntryFeeNode)
+  PLUDUX_PARSE_ENTRY_FILTER_REQUESTED_ORDER_NODE("ESTIMATED_1R_EXIT_FEE",
+                                                 EstimatedOneRExitFeeNode)
+  PLUDUX_PARSE_ENTRY_FILTER_REQUESTED_ORDER_NODE(
+   "REQUESTED_ORDER_RISK_DISTANCE", RequestedOrderRiskDistanceNode)
+  PLUDUX_PARSE_ENTRY_FILTER_REQUESTED_ORDER_NODE("REQUESTED_PRICE_RISK",
+                                                 RequestedPriceRiskNode)
+  PLUDUX_PARSE_ENTRY_FILTER_REQUESTED_ORDER_NODE("REQUESTED_RISK_WITH_FEES",
+                                                 RequestedRiskWithFeesNode)
+  PLUDUX_PARSE_ENTRY_FILTER_REQUESTED_ORDER_NODE("FROZEN_UNIT_QUANTITY",
+                                                 FrozenUnitQuantityNode)
+#undef PLUDUX_PARSE_ENTRY_FILTER_REQUESTED_ORDER_NODE
+
   const auto parse_scalar = [&](const char* key) {
-    auto parsed = parse_execution_filter_child(config.at(key));
-    if(parsed.kind != ExecutionFilterNodeKind::Scalar) {
+    auto parsed = parse_entry_filter_child(config.at(key));
+    if(parsed.kind != EntryFilterNodeKind::Scalar) {
       throw std::invalid_argument{
-       std::format("ExecutionFilter '{}' must be scalar", key)};
+       std::format("EntryFilter '{}' must be scalar", key)};
     }
     return parsed.node;
   };
   const auto parse_boolean = [&](const char* key) {
-    auto parsed = parse_execution_filter_child(config.at(key));
-    if(parsed.kind != ExecutionFilterNodeKind::Boolean) {
+    auto parsed = parse_entry_filter_child(config.at(key));
+    if(parsed.kind != EntryFilterNodeKind::Boolean) {
       throw std::invalid_argument{
-       std::format("ExecutionFilter '{}' must be boolean", key)};
+       std::format("EntryFilter '{}' must be boolean", key)};
     }
     return parsed.node;
   };
@@ -971,109 +1008,146 @@ static auto parse_execution_filter_child(const jsoncons::ojson& config)
   if(method == "GREATER_THAN") {
     return {ErasedNode<Context>{GreaterThanNode<Context>{
              parse_scalar("target"), parse_scalar("threshold")}},
-            ExecutionFilterNodeKind::Boolean};
+            EntryFilterNodeKind::Boolean};
   }
   if(method == "GREATER_EQUAL") {
     return {ErasedNode<Context>{GreaterEqualNode<Context>{
              parse_scalar("target"), parse_scalar("threshold")}},
-            ExecutionFilterNodeKind::Boolean};
+            EntryFilterNodeKind::Boolean};
   }
   if(method == "LESS_THAN") {
     return {ErasedNode<Context>{LessThanNode<Context>{
              parse_scalar("target"), parse_scalar("threshold")}},
-            ExecutionFilterNodeKind::Boolean};
+            EntryFilterNodeKind::Boolean};
   }
   if(method == "LESS_EQUAL") {
     return {ErasedNode<Context>{LessEqualNode<Context>{
              parse_scalar("target"), parse_scalar("threshold")}},
-            ExecutionFilterNodeKind::Boolean};
+            EntryFilterNodeKind::Boolean};
   }
   if(method == "EQUAL") {
     return {ErasedNode<Context>{EqualNode<Context>{parse_scalar("target"),
                                                    parse_scalar("threshold")}},
-            ExecutionFilterNodeKind::Boolean};
+            EntryFilterNodeKind::Boolean};
   }
   if(method == "NOT_EQUAL") {
     return {ErasedNode<Context>{NotEqualNode<Context>{
              parse_scalar("target"), parse_scalar("threshold")}},
-            ExecutionFilterNodeKind::Boolean};
+            EntryFilterNodeKind::Boolean};
   }
   if(method == "AND") {
     return {
      ErasedNode<Context>{LogicalAndNode<Context>{
       parse_boolean("firstCondition"), parse_boolean("secondCondition")}},
-     ExecutionFilterNodeKind::Boolean};
+     EntryFilterNodeKind::Boolean};
   }
   if(method == "OR") {
     return {
      ErasedNode<Context>{LogicalOrNode<Context>{
       parse_boolean("firstCondition"), parse_boolean("secondCondition")}},
-     ExecutionFilterNodeKind::Boolean};
+     EntryFilterNodeKind::Boolean};
   }
   if(method == "XOR") {
     return {
      ErasedNode<Context>{LogicalXorNode<Context>{
       parse_boolean("firstCondition"), parse_boolean("secondCondition")}},
-     ExecutionFilterNodeKind::Boolean};
+     EntryFilterNodeKind::Boolean};
   }
   if(method == "NOT") {
     return {
      ErasedNode<Context>{LogicalNotNode<Context>{parse_boolean("condition")}},
-     ExecutionFilterNodeKind::Boolean};
+     EntryFilterNodeKind::Boolean};
   }
 
   throw std::invalid_argument{
-   std::format("Node '{}' is not allowed in ExecutionFilter", method)};
+   std::format("Node '{}' is not allowed in EntryFilter", method)};
 }
 
-static auto serialize_execution_filter_child(
- const ErasedNode<ExecutionFilterMethodContext>& node)
- -> std::pair<jsoncons::ojson, ExecutionFilterNodeKind>
+static auto
+serialize_entry_filter_child(const ErasedNode<EntryFilterMethodContext>& node)
+ -> std::pair<jsoncons::ojson, EntryFilterNodeKind>
 {
-  using Context = ExecutionFilterMethodContext;
+  using Context = EntryFilterMethodContext;
   const auto object = [](std::string method) -> jsoncons::ojson {
     auto config = jsoncons::ojson{};
     config["method"] = std::move(method);
     return config;
   };
   if(node_cast<TrueNode>(node)) {
-    return {object("ALWAYS"), ExecutionFilterNodeKind::Boolean};
+    return {object("ALWAYS"), EntryFilterNodeKind::Boolean};
   }
   if(node_cast<FalseNode>(node)) {
-    return {object("NEVER"), ExecutionFilterNodeKind::Boolean};
+    return {object("NEVER"), EntryFilterNodeKind::Boolean};
   }
   if(const auto* value = node_cast<ValueNode>(node)) {
     auto config = object("VALUE");
     config["value"] = value->value();
-    return {std::move(config), ExecutionFilterNodeKind::Scalar};
+    return {std::move(config), EntryFilterNodeKind::Scalar};
   }
   if(node_cast<EquityNode>(node)) {
-    return {object("EQUITY"), ExecutionFilterNodeKind::Scalar};
+    return {object("EQUITY"), EntryFilterNodeKind::Scalar};
   }
   if(node_cast<EquityPercentNode>(node)) {
-    return {object("EQUITY_PERCENT"), ExecutionFilterNodeKind::Scalar};
+    return {object("EQUITY_PERCENT"), EntryFilterNodeKind::Scalar};
   }
   if(node_cast<DrawdownNode>(node)) {
-    return {object("DRAWDOWN"), ExecutionFilterNodeKind::Scalar};
+    return {object("DRAWDOWN"), EntryFilterNodeKind::Scalar};
   }
   if(const auto* performance = node_cast<StrategyPerformanceNode>(node)) {
     auto config = object("STRATEGY_PERFORMANCE");
     config["metric"] = static_cast<int>(performance->metric());
-    return {std::move(config), ExecutionFilterNodeKind::Scalar};
+    return {std::move(config), EntryFilterNodeKind::Scalar};
   }
+
+#define PLUDUX_SERIALIZE_ENTRY_FILTER_REQUESTED_ORDER_NODE(Type, Id) \
+  if(node_cast<Type>(node)) {                                        \
+    return {object(Id), EntryFilterNodeKind::Scalar};                \
+  }
+  PLUDUX_SERIALIZE_ENTRY_FILTER_REQUESTED_ORDER_NODE(RequestedOrderPriceNode,
+                                                     "REQUESTED_ORDER_PRICE")
+  PLUDUX_SERIALIZE_ENTRY_FILTER_REQUESTED_ORDER_NODE(
+   RequestedOrderDirectionNode, "REQUESTED_ORDER_DIRECTION")
+  PLUDUX_SERIALIZE_ENTRY_FILTER_REQUESTED_ORDER_NODE(IsPyramidingOrderNode,
+                                                     "IS_PYRAMIDING_ORDER")
+  PLUDUX_SERIALIZE_ENTRY_FILTER_REQUESTED_ORDER_NODE(RawRequestedQuantityNode,
+                                                     "RAW_REQUESTED_QUANTITY")
+  PLUDUX_SERIALIZE_ENTRY_FILTER_REQUESTED_ORDER_NODE(
+   RawRequestedQuantityLimitNode, "RAW_REQUESTED_QUANTITY_LIMIT")
+  PLUDUX_SERIALIZE_ENTRY_FILTER_REQUESTED_ORDER_NODE(
+   DrawdownAdjustedQuantityNode, "DRAWDOWN_ADJUSTED_QUANTITY")
+  PLUDUX_SERIALIZE_ENTRY_FILTER_REQUESTED_ORDER_NODE(
+   DrawdownAdjustedQuantityLimitNode, "DRAWDOWN_ADJUSTED_QUANTITY_LIMIT")
+  PLUDUX_SERIALIZE_ENTRY_FILTER_REQUESTED_ORDER_NODE(RequestedQuantityNode,
+                                                     "REQUESTED_QUANTITY")
+  PLUDUX_SERIALIZE_ENTRY_FILTER_REQUESTED_ORDER_NODE(RequestedNotionalNode,
+                                                     "REQUESTED_NOTIONAL")
+  PLUDUX_SERIALIZE_ENTRY_FILTER_REQUESTED_ORDER_NODE(RequestedCostNode,
+                                                     "REQUESTED_COST")
+  PLUDUX_SERIALIZE_ENTRY_FILTER_REQUESTED_ORDER_NODE(EstimatedEntryFeeNode,
+                                                     "ESTIMATED_ENTRY_FEE")
+  PLUDUX_SERIALIZE_ENTRY_FILTER_REQUESTED_ORDER_NODE(EstimatedOneRExitFeeNode,
+                                                     "ESTIMATED_1R_EXIT_FEE")
+  PLUDUX_SERIALIZE_ENTRY_FILTER_REQUESTED_ORDER_NODE(
+   RequestedOrderRiskDistanceNode, "REQUESTED_ORDER_RISK_DISTANCE")
+  PLUDUX_SERIALIZE_ENTRY_FILTER_REQUESTED_ORDER_NODE(RequestedPriceRiskNode,
+                                                     "REQUESTED_PRICE_RISK")
+  PLUDUX_SERIALIZE_ENTRY_FILTER_REQUESTED_ORDER_NODE(RequestedRiskWithFeesNode,
+                                                     "REQUESTED_RISK_WITH_FEES")
+  PLUDUX_SERIALIZE_ENTRY_FILTER_REQUESTED_ORDER_NODE(FrozenUnitQuantityNode,
+                                                     "FROZEN_UNIT_QUANTITY")
+#undef PLUDUX_SERIALIZE_ENTRY_FILTER_REQUESTED_ORDER_NODE
 
   const auto serialize_comparison = [&](const auto* comparison,
                                         std::string method)
-   -> std::optional<std::pair<jsoncons::ojson, ExecutionFilterNodeKind>> {
+   -> std::optional<std::pair<jsoncons::ojson, EntryFilterNodeKind>> {
     if(!comparison) {
       return std::nullopt;
     }
     auto config = object(std::move(method));
-    config["target"] =
-     serialize_execution_filter_child(comparison->target()).first;
+    config["target"] = serialize_entry_filter_child(comparison->target()).first;
     config["threshold"] =
-     serialize_execution_filter_child(comparison->threshold()).first;
-    return std::pair{std::move(config), ExecutionFilterNodeKind::Boolean};
+     serialize_entry_filter_child(comparison->threshold()).first;
+    return std::pair{std::move(config), EntryFilterNodeKind::Boolean};
   };
 #define PLUDUX_SERIALIZE_FILTER_COMPARISON(Type, Name)              \
   if(auto result =                                                  \
@@ -1089,16 +1163,16 @@ static auto serialize_execution_filter_child(
 #undef PLUDUX_SERIALIZE_FILTER_COMPARISON
 
   const auto serialize_binary = [&](const auto* logical, std::string method)
-   -> std::optional<std::pair<jsoncons::ojson, ExecutionFilterNodeKind>> {
+   -> std::optional<std::pair<jsoncons::ojson, EntryFilterNodeKind>> {
     if(!logical) {
       return std::nullopt;
     }
     auto config = object(std::move(method));
     config["firstCondition"] =
-     serialize_execution_filter_child(logical->first_condition()).first;
+     serialize_entry_filter_child(logical->first_condition()).first;
     config["secondCondition"] =
-     serialize_execution_filter_child(logical->second_condition()).first;
-    return std::pair{std::move(config), ExecutionFilterNodeKind::Boolean};
+     serialize_entry_filter_child(logical->second_condition()).first;
+    return std::pair{std::move(config), EntryFilterNodeKind::Boolean};
   };
 #define PLUDUX_SERIALIZE_FILTER_BINARY(Type, Name)                           \
   if(auto result = serialize_binary(node_cast<Type<Context>>(node), Name)) { \
@@ -1112,29 +1186,29 @@ static auto serialize_execution_filter_child(
   if(const auto* logical = node_cast<LogicalNotNode<Context>>(node)) {
     auto config = object("NOT");
     config["condition"] =
-     serialize_execution_filter_child(logical->other_condition()).first;
-    return {std::move(config), ExecutionFilterNodeKind::Boolean};
+     serialize_entry_filter_child(logical->other_condition()).first;
+    return {std::move(config), EntryFilterNodeKind::Boolean};
   }
 
-  throw std::invalid_argument{"ExecutionFilter contains an unsupported node"};
+  throw std::invalid_argument{"EntryFilter contains an unsupported node"};
 }
 
-auto parse_execution_filter_node(const jsoncons::ojson& config)
- -> ErasedNode<ExecutionFilterMethodContext>
+auto parse_entry_filter_node(const jsoncons::ojson& config)
+ -> ErasedNode<EntryFilterMethodContext>
 {
-  auto parsed = parse_execution_filter_child(config);
-  if(parsed.kind != ExecutionFilterNodeKind::Boolean) {
-    throw std::invalid_argument{"ExecutionFilter root must be boolean"};
+  auto parsed = parse_entry_filter_child(config);
+  if(parsed.kind != EntryFilterNodeKind::Boolean) {
+    throw std::invalid_argument{"EntryFilter root must be boolean"};
   }
   return std::move(parsed.node);
 }
 
-auto serialize_execution_filter_node(
- const ErasedNode<ExecutionFilterMethodContext>& node) -> jsoncons::ojson
+auto serialize_entry_filter_node(
+ const ErasedNode<EntryFilterMethodContext>& node) -> jsoncons::ojson
 {
-  auto [config, kind] = serialize_execution_filter_child(node);
-  if(kind != ExecutionFilterNodeKind::Boolean) {
-    throw std::invalid_argument{"ExecutionFilter root must be boolean"};
+  auto [config, kind] = serialize_entry_filter_child(node);
+  if(kind != EntryFilterNodeKind::Boolean) {
+    throw std::invalid_argument{"EntryFilter root must be boolean"};
   }
   return config;
 }

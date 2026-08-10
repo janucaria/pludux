@@ -115,35 +115,32 @@ private:
   std::size_t setup_index_{};
 };
 
-class ExecutionFilterDecision {
+class EntryFilterDecision {
 public:
-  ExecutionFilterDecision() = default;
+  EntryFilterDecision() = default;
 
-  ExecutionFilterDecision(std::size_t intent_id,
-                          bool allowed,
-                          std::size_t setup_index = 0) noexcept
+  EntryFilterDecision(std::size_t intent_id,
+                      bool allowed,
+                      std::size_t setup_index = 0) noexcept
   : intent_id_{intent_id}
   , allowed_{allowed}
   , setup_index_{setup_index}
   {
   }
 
-  auto operator==(const ExecutionFilterDecision&) const noexcept
-   -> bool = default;
+  auto operator==(const EntryFilterDecision&) const noexcept -> bool = default;
 
-  auto intent_id(this const ExecutionFilterDecision& self) noexcept
-   -> std::size_t
+  auto intent_id(this const EntryFilterDecision& self) noexcept -> std::size_t
   {
     return self.intent_id_;
   }
 
-  auto allowed(this const ExecutionFilterDecision& self) noexcept -> bool
+  auto allowed(this const EntryFilterDecision& self) noexcept -> bool
   {
     return self.allowed_;
   }
 
-  auto setup_index(this const ExecutionFilterDecision& self) noexcept
-   -> std::size_t
+  auto setup_index(this const EntryFilterDecision& self) noexcept -> std::size_t
   {
     return self.setup_index_;
   }

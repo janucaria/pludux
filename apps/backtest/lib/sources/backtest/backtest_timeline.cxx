@@ -26,7 +26,7 @@ struct BacktestSetupTimelineState {
   std::vector<StrategyClosedPosition> strategy_closed_positions{};
   std::optional<StrategyOpenPositionSnapshot> strategy_open_position{};
   StrategyPerformanceSnapshot strategy_performance{};
-  bool filtered_entry_position{};
+  bool entry_filtered_position{};
 
   auto operator==(const BacktestSetupTimelineState&) const noexcept
    -> bool = default;
@@ -46,7 +46,7 @@ public:
     std::vector<StrategyIntent> strategy_intents{};
     std::vector<StrategyClosedPosition> strategy_closed_positions{};
     std::optional<StrategyOpenPositionSnapshot> strategy_open_position{};
-    std::vector<ExecutionFilterDecision> execution_filter_decisions{};
+    std::vector<EntryFilterDecision> entry_filter_decisions{};
     std::vector<PositionSizingDecision> position_sizing_decisions{};
     StrategyPerformanceSnapshot strategy_performance{};
     std::vector<BacktestSetupTimelineState> setup_states{};
@@ -97,7 +97,7 @@ public:
     self.strategy_intents_.clear();
     self.strategy_closed_positions_.clear();
     self.strategy_open_positions_.clear();
-    self.execution_filter_decisions_.clear();
+    self.entry_filter_decisions_.clear();
     self.position_sizing_decisions_.clear();
     self.strategy_performance_snapshots_.clear();
     self.setup_states_.clear();
@@ -134,7 +134,7 @@ public:
     self.strategy_intents_.reserve(size);
     self.strategy_closed_positions_.reserve(size);
     self.strategy_open_positions_.reserve(size);
-    self.execution_filter_decisions_.reserve(size);
+    self.entry_filter_decisions_.reserve(size);
     self.position_sizing_decisions_.reserve(size);
     self.strategy_performance_snapshots_.reserve(size);
     self.setup_states_.reserve(size);
@@ -170,8 +170,8 @@ public:
      std::move(row.strategy_closed_positions));
     self.strategy_open_positions_.push_back(
      std::move(row.strategy_open_position));
-    self.execution_filter_decisions_.push_back(
-     std::move(row.execution_filter_decisions));
+    self.entry_filter_decisions_.push_back(
+     std::move(row.entry_filter_decisions));
     self.position_sizing_decisions_.push_back(
      std::move(row.position_sizing_decisions));
     self.strategy_performance_snapshots_.push_back(
@@ -262,11 +262,11 @@ public:
     return self.strategy_open_positions_[index];
   }
 
-  auto execution_filter_decisions(this const BacktestTimeline& self,
-                                  std::size_t index) noexcept
-   -> const std::vector<ExecutionFilterDecision>&
+  auto entry_filter_decisions(this const BacktestTimeline& self,
+                              std::size_t index) noexcept
+   -> const std::vector<EntryFilterDecision>&
   {
-    return self.execution_filter_decisions_[index];
+    return self.entry_filter_decisions_[index];
   }
 
   auto strategy_performance(this const BacktestTimeline& self,
@@ -577,7 +577,7 @@ private:
   std::vector<std::vector<StrategyClosedPosition>> strategy_closed_positions_;
   std::vector<std::optional<StrategyOpenPositionSnapshot>>
    strategy_open_positions_;
-  std::vector<std::vector<ExecutionFilterDecision>> execution_filter_decisions_;
+  std::vector<std::vector<EntryFilterDecision>> entry_filter_decisions_;
   std::vector<std::vector<PositionSizingDecision>> position_sizing_decisions_;
   std::vector<StrategyPerformanceSnapshot> strategy_performance_snapshots_;
   std::vector<std::vector<BacktestSetupTimelineState>> setup_states_;

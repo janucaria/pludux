@@ -8,7 +8,7 @@ export module pludux.backtest:strategy_performance_method;
 
 import pludux;
 
-import :execution_filter_method_context;
+import :entry_filter_method_context;
 import :strategy_performance;
 
 export namespace pludux::backtest {
@@ -69,7 +69,7 @@ auto hash_series_method(const StrategyPerformanceMethod& method) noexcept
 auto pludux_tag_invoke(EvaluateSeriesMethod,
                        const StrategyPerformanceMethod& method,
                        AssetSnapshot,
-                       ExecutionFilterMethodContext context) noexcept -> double
+                       EntryFilterMethodContext context) noexcept -> double
 {
   const auto& performance = context.performance();
   switch(method.metric()) {

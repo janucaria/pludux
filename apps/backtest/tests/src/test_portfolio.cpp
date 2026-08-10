@@ -97,8 +97,7 @@ TEST(ProfileTest, StoresCapitalProtectionPolicies)
    Profile{"Aggressive",
            PositionSizingNode{FixedQuantityPositionSizing{2.0}},
            DrawdownAdjustment{true, 0.10, 0.25, 0.15},
-           InsufficientCashPolicy::CapToAvailableCash,
-           pludux::TrueNode{}};
+           InsufficientCashPolicy::CapToAvailableCash};
 
   EXPECT_TRUE(profile.drawdown_adjustment().enabled());
   EXPECT_DOUBLE_EQ(profile.drawdown_adjustment().size_reduction(), 0.25);

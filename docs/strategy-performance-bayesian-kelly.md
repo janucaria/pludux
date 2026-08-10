@@ -17,7 +17,7 @@ and does not claim that the resulting leverage is optimal in live markets.
 
 ## Separation of Responsibilities
 
-The backtest has four relevant layers:
+The backtest has five relevant layers:
 
 1. The Strategy emits entry, pyramid, and exit intents and maintains a
    theoretical position with unit-sized entries.
@@ -25,14 +25,16 @@ The backtest has four relevant layers:
    its frequentist and Bayesian evidence.
 3. Position Sizing reads the current Strategy Performance posterior at an entry
    intent and produces an equity-allocation constraint.
-4. The execution layer may reevaluate sizing with peak-based notional equity,
-   applies any final-quantity drawdown reduction, finds a Market-valid quantity
-   whose notional and entry fees fit that allocation, and then applies the
-   selected Profile's insufficient-cash policy.
+4. The Profile may reevaluate sizing with peak-based notional equity, applies
+   any final-quantity drawdown reduction, and produces a Market-valid immutable
+   Requested Order with fee and risk estimates.
+5. The setup's Entry Filter decides whether that order may enter Portfolio
+   ranking. Portfolio admission then applies capacity and the selected
+   Profile's insufficient-cash policy.
 
-Consequently, a filtered or unaffordable entry still belongs to the theoretical
-Strategy history. Conversely, its absent or reduced execution result does not
-change the statistical payoff observation.
+Consequently, an entry-filtered or unaffordable entry still belongs to the
+theoretical Strategy history. Conversely, its absent or reduced execution
+result does not change the statistical payoff observation.
 
 ## Observations
 

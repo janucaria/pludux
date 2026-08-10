@@ -27,12 +27,12 @@ private:
   StrategyPerformanceMetric metric_{StrategyPerformanceMetric::LifetimeCount};
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod<ExecutionFilterMethodContext>,
+auto pludux_tag_invoke(NodeToErasedMethod<EntryFilterMethodContext>,
                        const StrategyPerformanceNode& node,
                        NodeToErasedMethodContext&) noexcept
- -> ErasedSeriesMethod<ExecutionFilterMethodContext>
+ -> ErasedSeriesMethod<EntryFilterMethodContext>
 {
-  return ErasedSeriesMethod<ExecutionFilterMethodContext>{
+  return ErasedSeriesMethod<EntryFilterMethodContext>{
    StrategyPerformanceMethod{node.metric()}};
 }
 
