@@ -81,6 +81,16 @@ private:
       self.backtest_panel_mode_ = BacktestPanelMode::AddNew;
       self.selected_backtest_handle_opt_ = std::nullopt;
       self.editing_backtest_ptr_ = std::make_shared<backtest::Backtest>();
+
+      const auto& app_state = context.app_state();
+      const auto& strategy_handles = app_state.get_strategy_handles();
+      if(!strategy_handles.empty()) {
+        const auto strategy_handle = strategy_handles.front();
+        backtest::assign_backtest_setup_strategy(
+         self.editing_backtest_ptr_->main_setup(),
+         strategy_handle,
+         app_state.get_strategy(strategy_handle));
+      }
     }
     ImGui::Spacing();
     ui::search_filter(self.backtest_filter_, "##backtests_search");
