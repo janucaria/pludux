@@ -280,7 +280,9 @@ private:
     const auto same_asset = selected_asset == *self.editing_asset_ptr_;
 
     if(ImGui::Button("OK")) {
-      self.submit_asset_changes(context);
+      if(!same_asset) {
+        self.submit_asset_changes(context);
+      }
       self.reset();
     }
 

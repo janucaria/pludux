@@ -194,7 +194,9 @@ private:
     const auto same_profile = selected_profile == *(self.editing_profile_ptr_);
 
     if(ImGui::Button("OK")) {
-      self.submit_profile_changes(context);
+      if(!same_profile) {
+        self.submit_profile_changes(context);
+      }
       self.reset();
     }
 

@@ -191,7 +191,9 @@ private:
     const auto same_market = selected_market == *(self.editing_market_ptr_);
 
     if(ImGui::Button("OK")) {
-      self.submit_market_changes(context);
+      if(!same_market) {
+        self.submit_market_changes(context);
+      }
       self.reset();
     }
 

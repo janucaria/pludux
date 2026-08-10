@@ -424,7 +424,11 @@ private:
        app_state.get_portfolio_if_present(*self.editing_handle_);
       const auto changed = stored && !self.same_portfolio(*stored, portfolio);
       if(ImGui::Button("OK")) {
-        self.submit_changes(context, true);
+        if(changed) {
+          self.submit_changes(context, true);
+        } else {
+          self.discard_draft();
+        }
       }
       ImGui::SameLine();
       if(ImGui::Button("Cancel")) {

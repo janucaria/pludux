@@ -1769,7 +1769,9 @@ private:
 
     const auto changed = self.has_unsaved_changes();
     if(ImGui::Button("OK")) {
-      self.submit_strategy_changes(context);
+      if(changed) {
+        self.submit_strategy_changes(context);
+      }
       self.reset();
     }
 

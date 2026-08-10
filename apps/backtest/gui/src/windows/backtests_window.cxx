@@ -219,7 +219,11 @@ private:
 
     ImGui::BeginDisabled(!valid);
     if(ImGui::Button("OK")) {
-      self.submit_backtest_changes(context, true);
+      if(same_backtest) {
+        self.reset();
+      } else {
+        self.submit_backtest_changes(context, true);
+      }
     }
     ImGui::EndDisabled();
 

@@ -191,7 +191,9 @@ private:
     const auto same_broker = selected_broker == *(self.editing_broker_ptr_);
 
     if(ImGui::Button("OK")) {
-      self.submit_broker_changes(context);
+      if(!same_broker) {
+        self.submit_broker_changes(context);
+      }
       self.reset();
     }
 
