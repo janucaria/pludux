@@ -141,8 +141,8 @@ TEST(EntryFilterTest,
   const auto timeline = run_with_filter(BooleanMethod<false>{});
 
   ASSERT_EQ(timeline.size(), 4);
-  ASSERT_EQ(timeline.strategy_intents(0).size(), 1);
-  EXPECT_EQ(timeline.strategy_intents(0).front().type(),
+  ASSERT_EQ(timeline.setup_state(0, 0).strategy_intents.size(), 1);
+  EXPECT_EQ(timeline.setup_state(0, 0).strategy_intents.front().type(),
             StrategyIntentType::InitialEntry);
   ASSERT_EQ(timeline.entry_filter_decisions(0).size(), 1);
   EXPECT_FALSE(timeline.entry_filter_decisions(0).front().allowed());
@@ -150,24 +150,26 @@ TEST(EntryFilterTest,
   EXPECT_EQ(timeline.position_sizing_decisions(0).front().outcome,
             PositionSizingDecisionOutcome::EntryFiltered);
 
-  ASSERT_EQ(timeline.strategy_intents(1).size(), 1);
-  EXPECT_EQ(timeline.strategy_intents(1).front().type(),
+  ASSERT_EQ(timeline.setup_state(1, 0).strategy_intents.size(), 1);
+  EXPECT_EQ(timeline.setup_state(1, 0).strategy_intents.front().type(),
             StrategyIntentType::PyramidingEntry);
   EXPECT_TRUE(timeline.entry_filter_decisions(1).empty());
   ASSERT_EQ(timeline.position_sizing_decisions(1).size(), 1);
   EXPECT_EQ(timeline.position_sizing_decisions(1).front().outcome,
             PositionSizingDecisionOutcome::ShadowOnly);
 
-  ASSERT_EQ(timeline.strategy_intents(2).size(), 1);
-  EXPECT_EQ(timeline.strategy_intents(2).front().type(),
+  ASSERT_EQ(timeline.setup_state(2, 0).strategy_intents.size(), 1);
+  EXPECT_EQ(timeline.setup_state(2, 0).strategy_intents.front().type(),
             StrategyIntentType::SignalExit);
   EXPECT_TRUE(timeline.entry_filter_decisions(2).empty());
   EXPECT_TRUE(timeline.position_sizing_decisions(2).empty());
-  ASSERT_EQ(timeline.strategy_closed_positions(2).size(), 1);
-  EXPECT_NEAR(timeline.strategy_closed_positions(2).front().return_ratio(),
-              30.0 / 210.0,
-              1e-12);
-  EXPECT_EQ(timeline.strategy_performance(2).lifetime_count(), 1);
+  ASSERT_EQ(timeline.setup_state(2, 0).strategy_closed_positions.size(), 1);
+  EXPECT_NEAR(
+   timeline.setup_state(2, 0).strategy_closed_positions.front().return_ratio(),
+   30.0 / 210.0,
+   1e-12);
+  EXPECT_EQ(timeline.setup_state(2, 0).strategy_performance.lifetime_count(),
+            1);
 
   for(auto index = std::size_t{0}; index < timeline.size(); ++index) {
     EXPECT_TRUE(timeline.trade_events(index).empty());
@@ -279,7 +281,8 @@ TEST(EntryFilterTest,
   ASSERT_EQ(timeline.position_sizing_decisions(1).size(), 1U);
   EXPECT_EQ(timeline.position_sizing_decisions(1).front().outcome,
             PositionSizingDecisionOutcome::ShadowOnly);
-  ASSERT_EQ(timeline.strategy_performance(2).lifetime_count(), 1U);
+  ASSERT_EQ(timeline.setup_state(2, 0).strategy_performance.lifetime_count(),
+            1U);
   ASSERT_EQ(timeline.position_sizing_decisions(3).size(), 1U);
   const auto& decision = timeline.position_sizing_decisions(3).front();
   EXPECT_EQ(decision.outcome, PositionSizingDecisionOutcome::Executed);

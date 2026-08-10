@@ -5,10 +5,12 @@ module;
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <format>
 #include <memory>
 #include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "../ui/pludux_icons.hpp"
 
@@ -18,6 +20,7 @@ module;
 export module pludux.apps.backtest:windows.portfolios_window;
 
 import pludux.backtest;
+import pludux.apps.backtest.portfolio_backtest_setup_selections;
 import :series_node_editor;
 import :ui.widgets;
 import :window_context;
@@ -54,6 +57,12 @@ private:
    ui::SeriesNodeCatalog::PortfolioComparator};
   bool editor_open_{};
 
+  struct SetupRow {
+    PortfolioBacktestSetupKey key;
+    std::string label;
+    bool valid{};
+  };
+
   static auto make_editable_portfolio(backtest::Portfolio portfolio)
    -> std::shared_ptr<backtest::Portfolio>
   {
@@ -61,6 +70,45 @@ private:
       portfolio.maximum_open_trades(1);
     }
     return std::make_shared<backtest::Portfolio>(std::move(portfolio));
+  }
+
+  static auto setup_rows(const ApplicationState& app_state,
+                         const backtest::Portfolio& portfolio)
+   -> std::vector<SetupRow>
+  {
+    auto rows = std::vector<SetupRow>{};
+    for(const auto key : app_state.expanded_backtest_setups(portfolio)) {
+      const auto* backtest =
+       app_state.get_backtest_if_present(key.run.backtest_handle);
+      if(!backtest) {
+        rows.push_back({key, "Missing Backtest", false});
+        continue;
+      }
+
+      const auto setup_label = key.setup_index == 0
+                                ? std::string{"Main setup"}
+                                : std::format("Failsafe {}", key.setup_index);
+      const auto* asset = app_state.get_asset_if_present(key.run.asset_handle);
+      const auto* setup = key.setup_index < backtest->setup_count()
+                           ? &backtest->setup(key.setup_index)
+                           : nullptr;
+      const auto* strategy =
+       setup ? app_state.get_strategy_if_present(setup->strategy_handle())
+             : nullptr;
+      const auto* profile =
+       setup ? app_state.get_profile_if_present(setup->profile_handle())
+             : nullptr;
+      rows.push_back(
+       {key,
+        std::format("{} — {} — {}: {} / {}",
+                    backtest->name().empty() ? "Unnamed" : backtest->name(),
+                    asset ? asset->name() : "Missing Asset",
+                    setup_label,
+                    strategy ? strategy->name() : "Missing Strategy",
+                    profile ? profile->name() : "Missing Profile"),
+        asset && setup && strategy && profile});
+    }
+    return rows;
   }
 
   void render_list(this PortfoliosWindow& self, WindowContext& context)
@@ -95,16 +143,11 @@ private:
 
       const auto portfolio_matches =
        self.filter_.PassFilter(portfolio->name().c_str());
+      const auto rows = self.setup_rows(app_state, *portfolio);
       auto child_matches = false;
-      const auto runs = app_state.expanded_backtest_runs(*portfolio);
-      for(const auto run : runs) {
-        const auto* backtest =
-         app_state.get_backtest_if_present(run.backtest_handle);
-        const auto* asset = app_state.get_asset_if_present(run.asset_handle);
+      for(const auto& row : rows) {
         child_matches =
-         child_matches ||
-         (backtest && self.filter_.PassFilter(backtest->name().c_str())) ||
-         (asset && self.filter_.PassFilter(asset->name().c_str()));
+         child_matches || self.filter_.PassFilter(row.label.c_str());
       }
       if(!portfolio_matches && !child_matches) {
         continue;
@@ -114,9 +157,9 @@ private:
       ImGui::PushID(static_cast<int>(handle.slot_index()));
       ImGui::PushID(static_cast<int>(handle.generation()));
       const auto selected = app_state.selected_portfolio_handle() == handle;
-      const auto selected_backtest =
-       selected ? app_state.selected_portfolio_backtest()
-                : std::optional<backtest::BacktestRunKey>{};
+      const auto selected_setup =
+       selected ? app_state.selected_portfolio_backtest_setup()
+                : std::optional<PortfolioBacktestSetupKey>{};
       const auto force_open_for_filter =
        self.filter_.IsActive() && child_matches;
       if(force_open_for_filter || self.open_requested_ == handle) {
@@ -194,36 +237,36 @@ private:
          [handle](ApplicationState& state) { state.select_portfolio(handle); });
       }
       if(open) {
-        for(const auto run : runs) {
-          const auto* backtest =
-           app_state.get_backtest_if_present(run.backtest_handle);
-          const auto* asset = app_state.get_asset_if_present(run.asset_handle);
-          const auto name = backtest && asset
-                             ? backtest->name() + " — " + asset->name()
-                             : std::string{"Missing Backtest Asset"};
+        for(const auto& row : rows) {
           if(!portfolio_matches &&
-             !(backtest && self.filter_.PassFilter(backtest->name().c_str())) &&
-             !(asset && self.filter_.PassFilter(asset->name().c_str()))) {
+             !self.filter_.PassFilter(row.label.c_str())) {
             continue;
           }
 
-          ImGui::PushID(static_cast<int>(run.backtest_handle.slot_index()));
-          ImGui::PushID(static_cast<int>(run.backtest_handle.generation()));
-          ImGui::PushID(static_cast<int>(run.asset_handle.slot_index()));
-          ImGui::PushID(static_cast<int>(run.asset_handle.generation()));
+          ImGui::PushID(
+           static_cast<int>(row.key.run.backtest_handle.slot_index()));
+          ImGui::PushID(
+           static_cast<int>(row.key.run.backtest_handle.generation()));
+          ImGui::PushID(
+           static_cast<int>(row.key.run.asset_handle.slot_index()));
+          ImGui::PushID(
+           static_cast<int>(row.key.run.asset_handle.generation()));
+          ImGui::PushID(static_cast<int>(row.key.setup_index));
           const auto child_selected =
-           selected_backtest && *selected_backtest == run;
-          if(backtest && asset) {
-            if(ImGui::Selectable(name.c_str(), child_selected)) {
-              context.push_view_action([handle, run](ApplicationState& state) {
-                state.select_portfolio_backtest(handle, run);
-              });
+           selected_setup && *selected_setup == row.key;
+          if(row.valid) {
+            if(ImGui::Selectable(row.label.c_str(), child_selected)) {
+              context.push_view_action(
+               [handle, key = row.key](ApplicationState& state) {
+                 state.select_portfolio_backtest_setup(handle, key);
+               });
             }
           } else {
             ImGui::BeginDisabled();
-            ImGui::Selectable("Missing Backtest", false);
+            ImGui::Selectable(row.label.c_str(), false);
             ImGui::EndDisabled();
           }
+          ImGui::PopID();
           ImGui::PopID();
           ImGui::PopID();
           ImGui::PopID();

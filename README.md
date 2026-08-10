@@ -63,9 +63,10 @@ engine layer.
 
 ### Reporting and Visualization
 
-- Trade journal for the selected Backtest
+- Setup-filtered actual and hypothetical trade journal
 - Portfolio and backtest summary metrics
-- Candlestick charts with entry and exit markers
+- Candlestick charts with setup-filtered indicators, positions, and trade
+  markers
 - Portfolio equity and drawdown visualization
 
 ---

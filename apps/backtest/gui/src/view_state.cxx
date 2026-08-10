@@ -6,7 +6,7 @@ module;
 export module pludux.apps.backtest.view_state;
 
 import pludux.backtest;
-import pludux.apps.backtest.portfolio_backtest_selections;
+import pludux.apps.backtest.portfolio_backtest_setup_selections;
 
 export namespace pludux::apps {
 
@@ -14,13 +14,15 @@ class ViewState {
 public:
   ViewState() = default;
 
-  ViewState(std::string imgui_ini_settings,
-            backtest::PortfolioStoreHandle selected_portfolio_handle,
-            PortfolioBacktestSelections portfolio_backtest_selections,
-            backtest::BacktestStoreHandle selected_backtest_handle)
+  ViewState(
+   std::string imgui_ini_settings,
+   backtest::PortfolioStoreHandle selected_portfolio_handle,
+   PortfolioBacktestSetupSelections portfolio_backtest_setup_selections,
+   backtest::BacktestStoreHandle selected_backtest_handle)
   : imgui_ini_settings_{std::move(imgui_ini_settings)}
   , selected_portfolio_handle_{selected_portfolio_handle}
-  , portfolio_backtest_selections_{std::move(portfolio_backtest_selections)}
+  , portfolio_backtest_setup_selections_{std::move(
+     portfolio_backtest_setup_selections)}
   , selected_backtest_handle_{selected_backtest_handle}
   {
   }
@@ -29,8 +31,8 @@ public:
   {
     return imgui_ini_settings_ == other.imgui_ini_settings_ &&
            selected_portfolio_handle_ == other.selected_portfolio_handle_ &&
-           portfolio_backtest_selections_ ==
-            other.portfolio_backtest_selections_ &&
+           portfolio_backtest_setup_selections_ ==
+            other.portfolio_backtest_setup_selections_ &&
            selected_backtest_handle_ == other.selected_backtest_handle_;
   }
 
@@ -57,16 +59,16 @@ public:
     self.selected_portfolio_handle_ = handle;
   }
 
-  auto portfolio_backtest_selections(this const ViewState& self) noexcept
-   -> const PortfolioBacktestSelections&
+  auto portfolio_backtest_setup_selections(this const ViewState& self) noexcept
+   -> const PortfolioBacktestSetupSelections&
   {
-    return self.portfolio_backtest_selections_;
+    return self.portfolio_backtest_setup_selections_;
   }
 
-  auto portfolio_backtest_selections(this ViewState& self) noexcept
-   -> PortfolioBacktestSelections&
+  auto portfolio_backtest_setup_selections(this ViewState& self) noexcept
+   -> PortfolioBacktestSetupSelections&
   {
-    return self.portfolio_backtest_selections_;
+    return self.portfolio_backtest_setup_selections_;
   }
 
   auto selected_backtest_handle(this const ViewState& self) noexcept
@@ -84,7 +86,7 @@ public:
 private:
   std::string imgui_ini_settings_;
   backtest::PortfolioStoreHandle selected_portfolio_handle_;
-  PortfolioBacktestSelections portfolio_backtest_selections_;
+  PortfolioBacktestSetupSelections portfolio_backtest_setup_selections_;
   backtest::BacktestStoreHandle selected_backtest_handle_;
 };
 

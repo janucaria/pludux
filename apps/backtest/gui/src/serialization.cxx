@@ -15,7 +15,7 @@ module;
 export module pludux.apps.backtest.serialization;
 
 import pludux.backtest;
-import pludux.apps.backtest.portfolio_backtest_selections;
+import pludux.apps.backtest.portfolio_backtest_setup_selections;
 
 import pludux.apps.backtest.document_state;
 import pludux.apps.backtest.view_state;
@@ -1389,8 +1389,8 @@ struct json_conv_traits<Json, pludux::backtest::Store> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::apps::PortfolioBacktestSelection> {
-  using value_type = pludux::apps::PortfolioBacktestSelection;
+struct json_conv_traits<Json, pludux::apps::PortfolioBacktestSetupSelection> {
+  using value_type = pludux::apps::PortfolioBacktestSetupSelection;
   using result_type = jsoncons::conversion_result<value_type>;
 
   static constexpr bool is_compatible = true;
@@ -1407,8 +1407,9 @@ struct json_conv_traits<Json, pludux::apps::PortfolioBacktestSelection> {
     try {
       return result_type{value_type{
        required_as<pludux::backtest::PortfolioStoreHandle>(json, "portfolio"),
-       {required_as<pludux::backtest::BacktestStoreHandle>(json, "backtest"),
-        required_as<pludux::backtest::AssetStoreHandle>(json, "asset")}}};
+       {{required_as<pludux::backtest::BacktestStoreHandle>(json, "backtest"),
+         required_as<pludux::backtest::AssetStoreHandle>(json, "asset")},
+        required_as<std::size_t>(json, "setup")}}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -1420,15 +1421,16 @@ struct json_conv_traits<Json, pludux::apps::PortfolioBacktestSelection> {
   {
     auto json = Json{};
     set_json(json, aset, "portfolio", selection.portfolio_handle);
-    set_json(json, aset, "backtest", selection.run.backtest_handle);
-    set_json(json, aset, "asset", selection.run.asset_handle);
+    set_json(json, aset, "backtest", selection.setup.run.backtest_handle);
+    set_json(json, aset, "asset", selection.setup.run.asset_handle);
+    json["setup"] = selection.setup.setup_index;
     return json;
   }
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::apps::PortfolioBacktestSelections> {
-  using value_type = pludux::apps::PortfolioBacktestSelections;
+struct json_conv_traits<Json, pludux::apps::PortfolioBacktestSetupSelections> {
+  using value_type = pludux::apps::PortfolioBacktestSetupSelections;
   using result_type = jsoncons::conversion_result<value_type>;
 
   static constexpr bool is_compatible = true;
@@ -1444,7 +1446,7 @@ struct json_conv_traits<Json, pludux::apps::PortfolioBacktestSelections> {
   {
     try {
       return result_type{value_type{
-       vector_from_json<pludux::apps::PortfolioBacktestSelection>(json)}};
+       vector_from_json<pludux::apps::PortfolioBacktestSetupSelection>(json)}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -1543,8 +1545,8 @@ struct json_conv_traits<Json, pludux::apps::ViewState> {
        value_type{required_as<std::string>(json, "imguiIniSettings"),
                   required_as<pludux::backtest::PortfolioStoreHandle>(
                    json, "selectedPortfolioHandle"),
-                  required_as<pludux::apps::PortfolioBacktestSelections>(
-                   json, "portfolioBacktestSelections"),
+                  required_as<pludux::apps::PortfolioBacktestSetupSelections>(
+                   json, "portfolioBacktestSetupSelections"),
                   required_as<pludux::backtest::BacktestStoreHandle>(
                    json, "selectedBacktestHandle")}};
     } catch(...) {
@@ -1564,8 +1566,8 @@ struct json_conv_traits<Json, pludux::apps::ViewState> {
              view_state.selected_portfolio_handle());
     set_json(json,
              aset,
-             "portfolioBacktestSelections",
-             view_state.portfolio_backtest_selections());
+             "portfolioBacktestSetupSelections",
+             view_state.portfolio_backtest_setup_selections());
     set_json(json,
              aset,
              "selectedBacktestHandle",

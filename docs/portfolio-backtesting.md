@@ -54,6 +54,12 @@ so Bayesian or Kelly sizing uses only that setup's history within the current
 Portfolio run. Shared reservations do not change a Profile's sizing intent;
 they constrain the later cash decision.
 
+When an accepted initial order opens a real position, that position permanently
+belongs to the requesting setup. Pyramids, partial exits, snapshots, the final
+closed trade, and position-related execution events retain that owner even if a
+different setup is active later. A rejected initial order is attributed to the
+setup that requested it.
+
 Sizing methods express different limits:
 
 - Fixed Quantity requests explicit asset units and uses nearest-step Market
@@ -168,11 +174,12 @@ Pludux never manufactures candles to fill missing timestamps.
 equity, drawdown, realized and unrealized P&L, reserved notional, gross and net
 exposure, open-position count, and backtest freshness on the union clock.
 
-Each backtest retains a sparse `BacktestTimeline` and its own series-evaluation
-results. The chart projects the selected Backtest onto a compact axis:
+Each backtest retains a sparse `BacktestTimeline` and separate
+series-evaluation results for every setup. The chart projects the selected
+Setup × Asset row onto a compact axis:
 
-- Every X index represents one real bar from the selected Backtest, so its
-  candles, volume, indicators, signals, and trades are consecutive.
+- Every X index represents one real bar from the selected Backtest × Asset run,
+  so its candles and volume remain consecutive.
 - Portfolio equity and drawdown are sampled from the union timeline only at
   those backtest timestamps and plotted at the corresponding backtest index.
 - Portfolio-only timestamps are omitted from this chart view. They remain in
@@ -181,30 +188,45 @@ results. The chart projects the selected Backtest onto a compact axis:
 - Axis labels and inspection still report each backtest bar's real UTC
   timestamp.
 - No candles or portfolio values are synthesized to fill missing data.
-- The Trades view shows only trades from the selected Backtest.
+- Strategy plots, named series, shadow returns, streaks, and strategy
+  performance come from the selected setup.
+- Entry, pyramid, rejection, and exit markers are shown only when attributed to
+  the selected setup. Position and risk overlays are shown only for positions
+  owned by that setup.
+- The Trades view filters actual open and closed trades by their permanent setup
+  owner. Its Hypothetical source reads only the selected setup's theoretical
+  positions.
+- Portfolio equity, drawdown, account metrics, execution status, and Overview
+  remain aggregate because main and failsafe setups still execute together with
+  shared Portfolio capital.
 
 ## Portfolio Hierarchy and Chart Selection
 
 The Portfolios window is an expandable tree. Each top-level Portfolio contains
-its referenced Backtests in execution-priority order. Selecting a Portfolio
-opens it and restores that Portfolio's last valid backtest selection. If the
-remembered Backtest was removed or is no longer referenced, Pludux selects the
-first available Backtest in portfolio order. An empty Portfolio has no active
-backtest.
+a flat Setup × Asset list. Rows are ordered by Portfolio Backtest order, then
+Watchlist asset order, then Main setup followed by its ordered Failsafes. Each
+row identifies the Backtest, Asset, setup role, Strategy, and Profile.
 
-Selecting a Backtest child selects both its parent Portfolio and that backtest
-for the Chart. Each Portfolio remembers this choice independently, including
-when two Portfolios reuse the same Backtest. Missing Backtest references remain
-visible as disabled `Missing Backtest` children so broken configurations can be
-identified without silently changing their order.
+Selecting a Portfolio opens it and restores that Portfolio's last valid setup
+selection. If the remembered setup was removed or is no longer valid, Pludux
+selects the first valid row in display order. An empty or incomplete Portfolio
+may have no active setup. Each Portfolio remembers its choice independently,
+including when two Portfolios reuse the same Backtest.
+
+Selecting a Setup × Asset child selects its parent Portfolio and filters the
+Chart and Trades inspection to that setup. Candles provide the shared market
+context, while Portfolio accounting, execution status, and Overview remain
+aggregate across the Backtest × Asset run. Missing Backtest, Asset, Strategy,
+or Profile references remain visible as disabled rows so broken configurations
+can be identified without silently changing their order.
 
 Portfolio search covers both levels. A Portfolio-name match shows all of its
-children; a Backtest-name match shows its parent and only matching children,
-while preserving their original priority order.
+children. Child matching includes Backtest, Asset, setup role, Strategy, and
+Profile names while preserving the original display order.
 
 The Backtests editor selection is separate: it chooses which reusable Backtest
 configuration is being edited and never changes the Chart. The Portfolios tree
-is the only Chart backtest selector.
+is the only Chart setup selector.
 
 This first portfolio engine intentionally excludes margin, leverage models,
 currency conversion, correlation limits, risk parity, and other advanced

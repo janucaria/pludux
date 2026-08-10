@@ -817,7 +817,10 @@ TEST(PortfolioRunnerTest, CombinedLayerLimitUsesDeterministicBacktestPriority)
 
   EXPECT_TRUE(results.backtests()[0].timeline().open_position(0));
   EXPECT_FALSE(results.backtests()[1].timeline().open_position(0));
-  EXPECT_TRUE(results.backtests()[1].timeline().strategy_intents(0).empty());
+  EXPECT_TRUE(results.backtests()[1]
+               .timeline()
+               .setup_state(0, 0)
+               .strategy_intents.empty());
   ASSERT_EQ(results.backtests()[1].timeline().trade_events(0).size(), 1U);
   EXPECT_EQ(results.backtests()[1].timeline().trade_events(0).front().type(),
             TradeEvent::Type::rejected_maximum_combined_layers);
@@ -889,7 +892,7 @@ TEST(PortfolioRunnerTest, CombinedLayerLimitBlocksPyramidWithoutAdvancingState)
   EXPECT_DOUBLE_EQ(
    timeline.open_position(1)->stop_loss_levels().front().effective_price(),
    50.0);
-  EXPECT_TRUE(timeline.strategy_intents(1).empty());
+  EXPECT_TRUE(timeline.setup_state(1, 0).strategy_intents.empty());
   ASSERT_EQ(timeline.trade_events(1).size(), 1U);
   EXPECT_EQ(timeline.trade_events(1).front().type(),
             TradeEvent::Type::rejected_maximum_combined_layers);
@@ -920,7 +923,7 @@ TEST(PortfolioRunnerTest, ZeroCombinedLayerLimitRejectsInitialEntry)
 
   const auto& timeline = results.backtests()[0].timeline();
   EXPECT_FALSE(timeline.open_position(0));
-  EXPECT_TRUE(timeline.strategy_intents(0).empty());
+  EXPECT_TRUE(timeline.setup_state(0, 0).strategy_intents.empty());
   ASSERT_EQ(timeline.trade_events(0).size(), 1U);
   EXPECT_EQ(timeline.trade_events(0).front().type(),
             TradeEvent::Type::rejected_maximum_combined_layers);

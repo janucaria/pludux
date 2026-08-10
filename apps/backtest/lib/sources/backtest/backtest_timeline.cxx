@@ -43,12 +43,8 @@ public:
     std::vector<TradeEvent> trade_events{};
     std::vector<ClosedTrade> closed_trades{};
     std::optional<OpenPositionSnapshot> open_position{};
-    std::vector<StrategyIntent> strategy_intents{};
-    std::vector<StrategyClosedPosition> strategy_closed_positions{};
-    std::optional<StrategyOpenPositionSnapshot> strategy_open_position{};
     std::vector<EntryFilterDecision> entry_filter_decisions{};
     std::vector<PositionSizingDecision> position_sizing_decisions{};
-    StrategyPerformanceSnapshot strategy_performance{};
     std::vector<BacktestSetupTimelineState> setup_states{};
 
     double capital{};
@@ -94,12 +90,8 @@ public:
     self.trade_events_.clear();
     self.closed_trades_.clear();
     self.open_positions_.clear();
-    self.strategy_intents_.clear();
-    self.strategy_closed_positions_.clear();
-    self.strategy_open_positions_.clear();
     self.entry_filter_decisions_.clear();
     self.position_sizing_decisions_.clear();
-    self.strategy_performance_snapshots_.clear();
     self.setup_states_.clear();
     self.capitals_.clear();
     self.equities_.clear();
@@ -131,12 +123,8 @@ public:
     self.trade_events_.reserve(size);
     self.closed_trades_.reserve(size);
     self.open_positions_.reserve(size);
-    self.strategy_intents_.reserve(size);
-    self.strategy_closed_positions_.reserve(size);
-    self.strategy_open_positions_.reserve(size);
     self.entry_filter_decisions_.reserve(size);
     self.position_sizing_decisions_.reserve(size);
-    self.strategy_performance_snapshots_.reserve(size);
     self.setup_states_.reserve(size);
     self.capitals_.reserve(size);
     self.equities_.reserve(size);
@@ -165,24 +153,10 @@ public:
     self.trade_events_.push_back(std::move(row.trade_events));
     self.closed_trades_.push_back(std::move(row.closed_trades));
     self.open_positions_.push_back(std::move(row.open_position));
-    self.strategy_intents_.push_back(std::move(row.strategy_intents));
-    self.strategy_closed_positions_.push_back(
-     std::move(row.strategy_closed_positions));
-    self.strategy_open_positions_.push_back(
-     std::move(row.strategy_open_position));
     self.entry_filter_decisions_.push_back(
      std::move(row.entry_filter_decisions));
     self.position_sizing_decisions_.push_back(
      std::move(row.position_sizing_decisions));
-    self.strategy_performance_snapshots_.push_back(
-     std::move(row.strategy_performance));
-    if(row.setup_states.empty()) {
-      row.setup_states.push_back(
-       BacktestSetupTimelineState{self.strategy_intents_.back(),
-                                  self.strategy_closed_positions_.back(),
-                                  self.strategy_open_positions_.back(),
-                                  self.strategy_performance_snapshots_.back()});
-    }
     self.setup_states_.push_back(std::move(row.setup_states));
     self.capitals_.push_back(row.capital);
     self.equities_.push_back(row.equity);
@@ -241,39 +215,11 @@ public:
     return self.open_positions_[index];
   }
 
-  auto strategy_intents(this const BacktestTimeline& self,
-                        std::size_t index) noexcept
-   -> const std::vector<StrategyIntent>&
-  {
-    return self.strategy_intents_[index];
-  }
-
-  auto strategy_closed_positions(this const BacktestTimeline& self,
-                                 std::size_t index) noexcept
-   -> const std::vector<StrategyClosedPosition>&
-  {
-    return self.strategy_closed_positions_[index];
-  }
-
-  auto strategy_open_position(this const BacktestTimeline& self,
-                              std::size_t index) noexcept
-   -> const std::optional<StrategyOpenPositionSnapshot>&
-  {
-    return self.strategy_open_positions_[index];
-  }
-
   auto entry_filter_decisions(this const BacktestTimeline& self,
                               std::size_t index) noexcept
    -> const std::vector<EntryFilterDecision>&
   {
     return self.entry_filter_decisions_[index];
-  }
-
-  auto strategy_performance(this const BacktestTimeline& self,
-                            std::size_t index) noexcept
-   -> const StrategyPerformanceSnapshot&
-  {
-    return self.strategy_performance_snapshots_[index];
   }
 
   auto setup_state(this const BacktestTimeline& self,
@@ -573,13 +519,8 @@ private:
   std::vector<std::vector<TradeEvent>> trade_events_;
   std::vector<std::vector<ClosedTrade>> closed_trades_;
   std::vector<std::optional<OpenPositionSnapshot>> open_positions_;
-  std::vector<std::vector<StrategyIntent>> strategy_intents_;
-  std::vector<std::vector<StrategyClosedPosition>> strategy_closed_positions_;
-  std::vector<std::optional<StrategyOpenPositionSnapshot>>
-   strategy_open_positions_;
   std::vector<std::vector<EntryFilterDecision>> entry_filter_decisions_;
   std::vector<std::vector<PositionSizingDecision>> position_sizing_decisions_;
-  std::vector<StrategyPerformanceSnapshot> strategy_performance_snapshots_;
   std::vector<std::vector<BacktestSetupTimelineState>> setup_states_;
 
   std::vector<double> capitals_;

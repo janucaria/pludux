@@ -8,6 +8,7 @@
 
 import pludux.apps.backtest.application_state;
 import pludux.apps.backtest.command_executor;
+import pludux.apps.backtest.portfolio_backtest_setup_selections;
 import pludux.apps.backtest.serialization;
 import pludux.backtest;
 
@@ -318,6 +319,59 @@ TEST(ApplicationStateSerialization, RoundTripsDocumentAndViewSeparately)
   EXPECT_EQ(loaded.selected_backtest_handle(),
             loaded.get_backtest_handles().front());
   EXPECT_EQ(loaded.imgui_ini_settings(), "layout-data");
+}
+
+TEST(ApplicationStateSerialization, RoundTripsPortfolioBacktestSetupSelection)
+{
+  auto state = ApplicationState{};
+  state.add_asset(pludux::backtest::Asset{"Asset"});
+  const auto asset = state.get_asset_handles().front();
+  const auto watchlist =
+   *state.add_watchlist(pludux::backtest::Watchlist{"List", {asset}});
+  state.add_strategy(pludux::backtest::Strategy{});
+  state.add_profile(Profile{});
+  const auto setup = BacktestSetup{state.get_strategy_handles().front(),
+                                   state.get_profile_handles().front()};
+  const auto backtest = *state.add_backtest(
+   Backtest{"Backtest",
+            watchlist,
+            {},
+            setup,
+            {pludux::backtest::BacktestFailsafeSetup{
+             setup, pludux::backtest::FailsafeActivation::Always}}});
+  const auto portfolio = *state.add_portfolio(
+   Portfolio{"Portfolio", 1'000.0, {}, {}, 10, 10, {}, {backtest}});
+  const auto selected =
+   pludux::apps::PortfolioBacktestSetupKey{{backtest, asset}, 1};
+  ASSERT_TRUE(state.select_portfolio_backtest_setup(portfolio, selected));
+
+  auto output = std::stringstream{};
+  save_application_state_json(output, state);
+  const auto serialized = output.str();
+  EXPECT_NE(serialized.find("\"portfolioBacktestSetupSelections\""),
+            std::string::npos);
+  EXPECT_NE(serialized.find("\"setup\":1"), std::string::npos);
+  EXPECT_EQ(serialized.find("\"portfolioBacktestSelections\""),
+            std::string::npos);
+
+  auto input = std::stringstream{serialized};
+  const auto loaded = load_application_state_json(input);
+  EXPECT_EQ(loaded.selected_portfolio_backtest_setup(), selected);
+}
+
+TEST(ApplicationStateSerialization, RejectsLegacyPortfolioBacktestSelections)
+{
+  auto output = std::stringstream{};
+  save_application_state_json(output, ApplicationState{});
+  auto serialized = output.str();
+  const auto field = serialized.find("portfolioBacktestSetupSelections");
+  ASSERT_NE(field, std::string::npos);
+  serialized.replace(field,
+                     std::string{"portfolioBacktestSetupSelections"}.size(),
+                     "portfolioBacktestSelections");
+
+  auto input = std::stringstream{serialized};
+  EXPECT_THROW(load_application_state_json(input), std::exception);
 }
 
 TEST(ApplicationStateSerialization, RoundTripsOrderedBacktestSetups)

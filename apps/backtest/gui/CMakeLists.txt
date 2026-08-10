@@ -151,7 +151,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src
     FILES
 
-    src/portfolio_backtest_selections.cxx
+    src/portfolio_backtest_setup_selections.cxx
     src/document_state.cxx
     src/view_state.cxx
     src/application_state.cxx
@@ -269,24 +269,24 @@ if(MSVC)
 endif()
 
 if(NOT EMSCRIPTEN AND BUILD_TESTING)
-  add_executable(pludux-backtest-test_portfolio_backtest_selection
-    tests/test_portfolio_backtest_selections.cpp
+  add_executable(pludux-backtest-test_portfolio_backtest_setup_selection
+    tests/test_portfolio_backtest_setup_selections.cpp
   )
-  target_sources(pludux-backtest-test_portfolio_backtest_selection PRIVATE
+  target_sources(pludux-backtest-test_portfolio_backtest_setup_selection PRIVATE
     FILE_SET
       CXX_MODULES
       BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src
       FILES
-        src/portfolio_backtest_selections.cxx
+        src/portfolio_backtest_setup_selections.cxx
   )
-  target_link_libraries(pludux-backtest-test_portfolio_backtest_selection
+  target_link_libraries(pludux-backtest-test_portfolio_backtest_setup_selection
     PRIVATE
       GTest::gtest_main
       pludux::backtest-lib
   )
   add_test(
-    NAME pludux-backtest-test_portfolio_backtest_selection
-    COMMAND pludux-backtest-test_portfolio_backtest_selection
+    NAME pludux-backtest-test_portfolio_backtest_setup_selection
+    COMMAND pludux-backtest-test_portfolio_backtest_setup_selection
   )
 
   add_executable(pludux-backtest-test_command_history
@@ -298,7 +298,7 @@ if(NOT EMSCRIPTEN AND BUILD_TESTING)
       CXX_MODULES
       BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src
       FILES
-        src/portfolio_backtest_selections.cxx
+        src/portfolio_backtest_setup_selections.cxx
         src/document_state.cxx
         src/view_state.cxx
         src/application_state.cxx

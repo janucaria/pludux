@@ -22,17 +22,19 @@ export namespace pludux::backtest {
 class TradePosition {
 public:
   TradePosition()
-  : TradePosition{0, 0.0, std::time_t{}, 0.0, 0.0}
+  : TradePosition{0, 0, 0.0, std::time_t{}, 0.0, 0.0}
   {
   }
 
   TradePosition(std::size_t trade_id,
+                std::size_t setup_index,
                 double position_size,
                 std::time_t entry_timestamp,
                 double entry_price,
                 double total_entry_fees,
                 std::vector<StopLossLevel> stop_loss_levels = {})
   : TradePosition{trade_id,
+                  setup_index,
                   position_size,
                   entry_price * position_size + total_entry_fees,
                   entry_timestamp,
@@ -43,6 +45,7 @@ public:
   }
 
   TradePosition(std::size_t trade_id,
+                std::size_t setup_index,
                 double position_size,
                 double investment,
                 std::time_t entry_timestamp,
@@ -50,6 +53,7 @@ public:
                 double total_entry_fees,
                 std::vector<StopLossLevel> stop_loss_levels = {})
   : trade_id_{trade_id}
+  , setup_index_{setup_index}
   , trade_event_count_{1}
   , position_size_{position_size}
   , investment_{investment}
@@ -66,6 +70,11 @@ public:
   auto trade_id(this const TradePosition& self) noexcept -> std::size_t
   {
     return self.trade_id_;
+  }
+
+  auto setup_index(this const TradePosition& self) noexcept -> std::size_t
+  {
+    return self.setup_index_;
   }
 
   auto trade_event_count(this const TradePosition& self) noexcept -> std::size_t
@@ -267,6 +276,7 @@ public:
                 double market_price) noexcept -> OpenPositionSnapshot
   {
     return OpenPositionSnapshot{self.trade_id(),
+                                self.setup_index(),
                                 self.entry_timestamp(),
                                 market_timestamp,
                                 market_price,
@@ -401,6 +411,7 @@ public:
                     double closed_investment) noexcept -> ClosedTrade
   {
     return ClosedTrade{self.trade_id(),
+                       self.setup_index(),
                        exit_event_id,
                        exit_type,
                        self.entry_timestamp(),
@@ -489,6 +500,7 @@ public:
 
 private:
   std::size_t trade_id_;
+  std::size_t setup_index_;
   std::size_t trade_event_count_;
 
   double position_size_;

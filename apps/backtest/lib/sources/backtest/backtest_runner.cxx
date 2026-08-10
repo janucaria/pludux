@@ -920,6 +920,7 @@ public:
                   SeriesEvaluationResults& series_evaluation_results,
                   BacktestTimeline& timeline)
   {
+    self.current_setup_timeline_states_.resize(self.setup_count());
     const auto asset_snapshot = *self.active_snapshot_;
     auto context = self.make_context(series_evaluation_results);
     if(self.active_timeline_index_ + 1 < self.asset_.size()) {
@@ -931,14 +932,12 @@ public:
       self.pending_signal_exit_trade_id_.reset();
     }
 
-    if(!self.current_setup_timeline_states_.empty()) {
-      self.current_setup_timeline_states_[0] =
-       BacktestSetupTimelineState{self.strategy_session_.intents(),
-                                  self.strategy_session_.closed_positions(),
-                                  self.strategy_session_.position(),
-                                  self.strategy_performance_.snapshot(),
-                                  self.active_entry_filtered_position()};
-    }
+    self.current_setup_timeline_states_[0] =
+     BacktestSetupTimelineState{self.strategy_session_.intents(),
+                                self.strategy_session_.closed_positions(),
+                                self.strategy_session_.position(),
+                                self.strategy_performance_.snapshot(),
+                                self.active_entry_filtered_position()};
 
     self.update_accounting();
 
@@ -949,12 +948,8 @@ public:
      .trade_events = self.execution_session_.trade_events(),
      .closed_trades = self.execution_session_.closed_trades(),
      .open_position = self.execution_session_.open_position_snapshot(),
-     .strategy_intents = self.strategy_session_.intents(),
-     .strategy_closed_positions = self.strategy_session_.closed_positions(),
-     .strategy_open_position = self.strategy_session_.position(),
      .entry_filter_decisions = self.entry_filter_decisions_,
      .position_sizing_decisions = self.position_sizing_decisions_,
-     .strategy_performance = self.strategy_performance_.snapshot(),
      .setup_states = self.current_setup_timeline_states_,
      .capital = self.current_account_state_.capital(),
      .equity = self.current_account_state_.equity(),

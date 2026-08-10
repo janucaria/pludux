@@ -9,6 +9,7 @@ module;
 export module pludux.apps.backtest:charts.backtest_chart_state;
 
 import pludux.backtest;
+import pludux.apps.backtest.portfolio_backtest_setup_selections;
 
 export namespace pludux::apps {
 
@@ -29,27 +30,27 @@ enum class BacktestTopPlot {
 
 class BacktestChartState {
 public:
-  void display_backtest(this BacktestChartState& self,
-                        backtest::PortfolioStoreHandle portfolio_handle,
-                        backtest::BacktestRunKey run) noexcept
+  void display_backtest_setup(this BacktestChartState& self,
+                              backtest::PortfolioStoreHandle portfolio_handle,
+                              PortfolioBacktestSetupKey setup) noexcept
   {
     if(self.displayed_portfolio_ == portfolio_handle &&
-       self.displayed_run_ == run) {
+       self.displayed_setup_ == setup) {
       return;
     }
 
     self.displayed_portfolio_ = portfolio_handle;
-    self.displayed_run_ = run;
+    self.displayed_setup_ = setup;
     self.pinned_bar_.reset();
     self.viewport_mode_ = BacktestChartViewportMode::FitAll;
     self.follow_bar_count_ = 150;
     self.fit_requested_ = true;
   }
 
-  void clear_display_backtest(this BacktestChartState& self) noexcept
+  void clear_display_backtest_setup(this BacktestChartState& self) noexcept
   {
     self.displayed_portfolio_.reset();
-    self.displayed_run_.reset();
+    self.displayed_setup_.reset();
     self.pinned_bar_.reset();
     self.viewport_mode_ = BacktestChartViewportMode::FitAll;
     self.follow_bar_count_ = 150;
@@ -179,7 +180,7 @@ public:
 
 private:
   std::optional<backtest::PortfolioStoreHandle> displayed_portfolio_{};
-  std::optional<backtest::BacktestRunKey> displayed_run_{};
+  std::optional<PortfolioBacktestSetupKey> displayed_setup_{};
   std::optional<std::size_t> pinned_bar_{};
   std::vector<float> row_ratios_{};
   BacktestChartViewportMode viewport_mode_{BacktestChartViewportMode::FitAll};

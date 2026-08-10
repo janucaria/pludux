@@ -351,12 +351,14 @@ TEST(BacktestTimelineTest, DefaultConstructorCreatesEmptyTimeline)
 TEST(BacktestTimelineTest, AppendsRowsInIndexedColumns)
 {
   auto timeline = BacktestTimeline{};
-  timeline.append(BacktestTimeline::Row{.market_timestamp = 1,
-                                        .market_price = 100.0,
-                                        .market_lookback = 3,
-                                        .capital = 1000.0,
-                                        .equity = 1000.0,
-                                        .peak_equity = 1000.0});
+  timeline.append(
+   BacktestTimeline::Row{.market_timestamp = 1,
+                         .market_price = 100.0,
+                         .market_lookback = 3,
+                         .setup_states = {BacktestSetupTimelineState{}},
+                         .capital = 1000.0,
+                         .equity = 1000.0,
+                         .peak_equity = 1000.0});
   timeline.append(BacktestTimeline::Row{.market_timestamp = 2,
                                         .market_price = 125.0,
                                         .market_lookback = 2,
@@ -371,6 +373,8 @@ TEST(BacktestTimelineTest, AppendsRowsInIndexedColumns)
   EXPECT_DOUBLE_EQ(timeline.market_price(1), 125.0);
   EXPECT_EQ(timeline.market_lookback(0), 3);
   EXPECT_EQ(timeline.market_lookback(1), 2);
+  EXPECT_EQ(timeline.setup_count(0), 1U);
+  EXPECT_TRUE(timeline.setup_state(0, 0).strategy_intents.empty());
   EXPECT_DOUBLE_EQ(timeline.capital(0), 1000.0);
   EXPECT_DOUBLE_EQ(timeline.capital(1), 1250.0);
   EXPECT_DOUBLE_EQ(timeline.peak_equity(0), 1000.0);
@@ -402,6 +406,7 @@ TEST(BacktestTimelineTest, TracksCurrentAndMaximumOutcomeStreaks)
 {
   const auto make_trade = [](double pnl) {
     return ClosedTrade{0,
+                       0,
                        0,
                        TradeEvent::Type::exit_signal,
                        0,
@@ -477,6 +482,8 @@ TEST(BacktestRunnerSetupTest, EntryFilteredMainFallsThroughToFirstFailsafe)
   ASSERT_EQ(timeline.trade_events(0).size(), 1U);
   EXPECT_TRUE(timeline.trade_events(0).front().is_entry());
   EXPECT_EQ(timeline.trade_events(0).front().setup_index(), 1U);
+  ASSERT_TRUE(timeline.open_position(0));
+  EXPECT_EQ(timeline.open_position(0)->setup_index(), 1U);
   ASSERT_EQ(timeline.position_sizing_decisions(0).size(), 2U);
   EXPECT_EQ(timeline.position_sizing_decisions(0)[0].setup_index, 0U);
   EXPECT_EQ(timeline.position_sizing_decisions(0)[0].outcome,
@@ -1083,6 +1090,7 @@ TEST(BacktestRunnerSetupTest, OnlyOwningSetupCanExitSharedExecution)
 
   ASSERT_EQ(timeline.size(), 2U);
   EXPECT_TRUE(timeline.open_position(1).has_value());
+  EXPECT_EQ(timeline.open_position(1)->setup_index(), 1U);
   EXPECT_FALSE(timeline.setup_state(1, 0).strategy_open_position.has_value());
   EXPECT_TRUE(timeline.setup_state(1, 1).strategy_open_position.has_value());
   EXPECT_EQ(timeline.setup_state(1, 0).strategy_performance.lifetime_count(),
@@ -1752,11 +1760,11 @@ TEST(BacktestRunnerTest,
   ASSERT_TRUE(layers.has_value());
   EXPECT_EQ(layers->get(),
             (std::vector<double>{1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 3.0}));
-  EXPECT_TRUE(timeline.strategy_intents(1).empty());
-  EXPECT_TRUE(timeline.strategy_intents(2).empty());
+  EXPECT_TRUE(timeline.setup_state(1, 0).strategy_intents.empty());
+  EXPECT_TRUE(timeline.setup_state(2, 0).strategy_intents.empty());
   EXPECT_TRUE(timeline.position_sizing_decisions(1).empty());
   EXPECT_TRUE(timeline.position_sizing_decisions(2).empty());
-  EXPECT_EQ(timeline.strategy_intents(3).size(), 1U);
+  EXPECT_EQ(timeline.setup_state(3, 0).strategy_intents.size(), 1U);
   EXPECT_EQ(timeline.position_sizing_decisions(3).size(), 1U);
 }
 
@@ -3084,6 +3092,7 @@ TEST(BacktestRunnerTest, ExecutesStopLossAtTwoR)
 
   runner.run(series_results, timeline);
   ASSERT_EQ(timeline.closed_trades(1).size(), 1);
+  EXPECT_EQ(timeline.closed_trades(1).front().setup_index(), 0U);
   EXPECT_EQ(latest_closed_trade(timeline).exit_type(),
             TradeEvent::Type::stop_loss);
   EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).exit_price(), 80.0);

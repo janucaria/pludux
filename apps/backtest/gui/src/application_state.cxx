@@ -13,7 +13,7 @@ module;
 export module pludux.apps.backtest.application_state;
 
 import pludux.backtest;
-import pludux.apps.backtest.portfolio_backtest_selections;
+import pludux.apps.backtest.portfolio_backtest_setup_selections;
 
 import pludux.apps.backtest.document_state;
 import pludux.apps.backtest.view_state;
@@ -31,7 +31,7 @@ public:
   , document_state_{std::move(document_state)}
   , view_state_{std::move(view_state)}
   {
-    normalize_portfolio_backtest_selections();
+    normalize_portfolio_backtest_setup_selections();
   }
 
   auto store(this const ApplicationState& self) noexcept
@@ -79,35 +79,81 @@ public:
                         backtest::PortfolioStoreHandle handle)
   {
     self.view_state_.selected_portfolio_handle(handle);
-    self.normalize_portfolio_backtest_selection(handle);
+    self.normalize_portfolio_backtest_setup_selection(handle);
   }
 
-  auto
-  select_portfolio_backtest(this ApplicationState& self,
-                            backtest::PortfolioStoreHandle portfolio_handle,
-                            backtest::BacktestRunKey run) -> bool
+  auto select_portfolio_backtest_setup(
+   this ApplicationState& self,
+   backtest::PortfolioStoreHandle portfolio_handle,
+   PortfolioBacktestSetupKey setup) -> bool
   {
     const auto* portfolio =
      self.store_.get_portfolio_if_present(portfolio_handle);
     if(!portfolio) {
       return false;
     }
-    const auto runs = self.expanded_backtest_runs(*portfolio);
-    if(std::ranges::find(runs, run) == runs.end()) {
+    const auto setups = self.expanded_backtest_setups(*portfolio);
+    if(std::ranges::find(setups, setup) == setups.end()) {
+      return false;
+    }
+    const auto* backtest =
+     self.store_.get_backtest_if_present(setup.run.backtest_handle);
+    if(!backtest || setup.setup_index >= backtest->setup_count() ||
+       !self.store_.get_asset_if_present(setup.run.asset_handle)) {
+      return false;
+    }
+    const auto& configured_setup = backtest->setup(setup.setup_index);
+    if(!self.store_.get_strategy_if_present(
+        configured_setup.strategy_handle()) ||
+       !self.store_.get_profile_if_present(configured_setup.profile_handle())) {
       return false;
     }
 
     self.view_state_.selected_portfolio_handle(portfolio_handle);
-    self.view_state_.portfolio_backtest_selections().remember(portfolio_handle,
-                                                              run);
+    self.view_state_.portfolio_backtest_setup_selections().remember(
+     portfolio_handle, setup);
     return true;
   }
 
-  auto selected_portfolio_backtest(this const ApplicationState& self) noexcept
-   -> std::optional<backtest::BacktestRunKey>
+  auto
+  selected_portfolio_backtest_setup(this const ApplicationState& self) noexcept
+   -> std::optional<PortfolioBacktestSetupKey>
   {
-    return self.view_state_.portfolio_backtest_selections().lookup(
+    return self.view_state_.portfolio_backtest_setup_selections().lookup(
      self.view_state_.selected_portfolio_handle());
+  }
+
+  auto expanded_backtest_setups(this const ApplicationState& self,
+                                const backtest::Portfolio& portfolio)
+   -> std::vector<PortfolioBacktestSetupKey>
+  {
+    auto setups = std::vector<PortfolioBacktestSetupKey>{};
+    for(const auto backtest_handle : portfolio.backtest_handles()) {
+      const auto* configured_backtest =
+       self.store_.get_backtest_if_present(backtest_handle);
+      if(!configured_backtest) {
+        setups.push_back({{backtest_handle, {}}, 0});
+        continue;
+      }
+
+      const auto append_asset_setups = [&](const auto asset_handle) {
+        for(auto setup_index = std::size_t{};
+            setup_index < configured_backtest->setup_count();
+            ++setup_index) {
+          setups.push_back({{backtest_handle, asset_handle}, setup_index});
+        }
+      };
+      const auto* watchlist = self.store_.get_watchlist_if_present(
+       configured_backtest->watchlist_handle());
+      if(!watchlist) {
+        append_asset_setups(backtest::AssetStoreHandle{});
+        continue;
+      }
+      for(const auto asset_handle : watchlist->asset_handles()) {
+        append_asset_setups(asset_handle);
+      }
+    }
+    return setups;
   }
 
   auto expanded_backtest_runs(this const ApplicationState& self,
@@ -220,7 +266,7 @@ public:
     if(!self.store_.update_portfolio(handle, std::move(portfolio))) {
       return false;
     }
-    self.normalize_portfolio_backtest_selection(handle);
+    self.normalize_portfolio_backtest_setup_selection(handle);
     self.reset_portfolio(handle);
     return true;
   }
@@ -242,7 +288,8 @@ public:
       return false;
     }
     self.document_state_.remove_portfolio_handle(handle);
-    self.view_state_.portfolio_backtest_selections().remove_portfolio(handle);
+    self.view_state_.portfolio_backtest_setup_selections().remove_portfolio(
+     handle);
     if(self.view_state_.selected_portfolio_handle() == handle) {
       self.view_state_.selected_portfolio_handle({});
     }
@@ -351,6 +398,7 @@ public:
   {
     if(self.store_.update_backtest(handle, std::move(backtest))) {
       self.reset_backtest(handle);
+      self.normalize_portfolio_backtest_setup_selections();
       return true;
     }
 
@@ -362,13 +410,14 @@ public:
   {
     if(self.store_.remove_backtest(handle)) {
       self.document_state_.remove_backtest_handle(handle);
-      self.view_state_.portfolio_backtest_selections().remove_backtest(handle);
+      self.view_state_.portfolio_backtest_setup_selections().remove_backtest(
+       handle);
 
       if(self.view_state_.selected_backtest_handle() == handle) {
         self.view_state_.selected_backtest_handle({});
       }
 
-      self.normalize_portfolio_backtest_selections();
+      self.normalize_portfolio_backtest_setup_selections();
 
       return true;
     }
@@ -449,22 +498,16 @@ public:
 
       for(const auto watchlist_handle :
           self.document_state_.watchlist_handles()) {
-        const auto* stored =
+        const auto* watchlist =
          self.store_.get_watchlist_if_present(watchlist_handle);
-        if(!stored) {
-          continue;
-        }
-        auto assets = stored->asset_handles();
-        const auto removed = std::erase(assets, handle);
-        if(removed != 0) {
-          auto updated = *stored;
-          updated.asset_handles(std::move(assets));
-          self.store_.update_watchlist(watchlist_handle, std::move(updated));
+        if(watchlist && std::ranges::find(watchlist->asset_handles(), handle) !=
+                         watchlist->asset_handles().end()) {
           self.reset_watchlist(watchlist_handle);
         }
       }
-      self.view_state_.portfolio_backtest_selections().remove_asset(handle);
-      self.normalize_portfolio_backtest_selections();
+      self.view_state_.portfolio_backtest_setup_selections().remove_asset(
+       handle);
+      self.normalize_portfolio_backtest_setup_selections();
 
       return true;
     }
@@ -523,7 +566,7 @@ public:
     }
     if(rules_changed) {
       self.reset_watchlist(handle);
-      self.normalize_portfolio_backtest_selections();
+      self.normalize_portfolio_backtest_setup_selections();
     }
     return true;
   }
@@ -536,7 +579,7 @@ public:
     }
     self.document_state_.remove_watchlist_handle(handle);
     self.reset_watchlist(handle);
-    self.normalize_portfolio_backtest_selections();
+    self.normalize_portfolio_backtest_setup_selections();
     return true;
   }
 
@@ -618,6 +661,7 @@ public:
           self.reset_backtest(backtest_handle);
         }
       }
+      self.normalize_portfolio_backtest_setup_selections();
 
       return true;
     }
@@ -872,6 +916,7 @@ public:
           self.reset_backtest(backtest_handle);
         }
       }
+      self.normalize_portfolio_backtest_setup_selections();
 
       return true;
     }
@@ -972,10 +1017,10 @@ private:
   DocumentState document_state_{};
   ViewState view_state_{};
 
-  void normalize_portfolio_backtest_selection(
+  void normalize_portfolio_backtest_setup_selection(
    this ApplicationState& self, backtest::PortfolioStoreHandle portfolio_handle)
   {
-    auto& selections = self.view_state_.portfolio_backtest_selections();
+    auto& selections = self.view_state_.portfolio_backtest_setup_selections();
     const auto* portfolio =
      self.store_.get_portfolio_if_present(portfolio_handle);
     if(!portfolio) {
@@ -983,15 +1028,24 @@ private:
       return;
     }
 
-    const auto runs = self.expanded_backtest_runs(*portfolio);
-    selections.normalize(portfolio_handle, runs, [&](const auto run) {
-      return self.store_.get_backtest_if_present(run.backtest_handle) !=
-              nullptr &&
-             self.store_.get_asset_if_present(run.asset_handle) != nullptr;
+    const auto setups = self.expanded_backtest_setups(*portfolio);
+    selections.normalize(portfolio_handle, setups, [&](const auto setup) {
+      const auto* backtest =
+       self.store_.get_backtest_if_present(setup.run.backtest_handle);
+      if(!backtest || setup.setup_index >= backtest->setup_count() ||
+         !self.store_.get_asset_if_present(setup.run.asset_handle)) {
+        return false;
+      }
+      const auto& configured_setup = backtest->setup(setup.setup_index);
+      return self.store_.get_strategy_if_present(
+              configured_setup.strategy_handle()) &&
+             self.store_.get_profile_if_present(
+              configured_setup.profile_handle());
     });
   }
 
-  void normalize_portfolio_backtest_selections(this ApplicationState& self)
+  void
+  normalize_portfolio_backtest_setup_selections(this ApplicationState& self)
   {
     const auto selected_portfolio =
      self.view_state_.selected_portfolio_handle();
@@ -1011,20 +1065,20 @@ private:
     }
 
     const auto known_selections =
-     self.view_state_.portfolio_backtest_selections().selections();
+     self.view_state_.portfolio_backtest_setup_selections().selections();
     for(const auto& selection : known_selections) {
       if(std::ranges::find(self.document_state_.portfolio_handles(),
                            selection.portfolio_handle) ==
           self.document_state_.portfolio_handles().end() ||
          !self.store_.get_portfolio_if_present(selection.portfolio_handle)) {
-        self.view_state_.portfolio_backtest_selections().remove_portfolio(
+        self.view_state_.portfolio_backtest_setup_selections().remove_portfolio(
          selection.portfolio_handle);
       }
     }
 
     for(const auto portfolio_handle :
         self.document_state_.portfolio_handles()) {
-      self.normalize_portfolio_backtest_selection(portfolio_handle);
+      self.normalize_portfolio_backtest_setup_selection(portfolio_handle);
     }
   }
 

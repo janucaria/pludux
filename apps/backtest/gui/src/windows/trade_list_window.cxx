@@ -42,15 +42,17 @@ public:
       return;
     }
 
-    const auto selected_run = app_state.selected_portfolio_backtest();
-    if(!selected_run) {
+    const auto selected_setup = app_state.selected_portfolio_backtest_setup();
+    if(!selected_setup) {
       ui::summary_status(PLUDUX_ICON_TRADES,
-                         "No Backtest selected",
-                         "Select a Backtest from the active Portfolio to "
+                         "No Backtest setup selected",
+                         "Select a setup from the active Portfolio to "
                          "inspect its trades.");
       ImGui::End();
       return;
     }
+    const auto run = selected_setup->run;
+    const auto setup_index = selected_setup->setup_index;
 
     if(!app_state.is_portfolio_ready(*portfolio)) {
       ui::summary_status(PLUDUX_ICON_WARNING,
@@ -62,7 +64,7 @@ public:
     }
 
     const auto& results = app_state.get_portfolio_results(portfolio_handle);
-    const auto* backtest_results = results.backtest(*selected_run);
+    const auto* backtest_results = results.backtest(run);
     if(!backtest_results || backtest_results->timeline().empty()) {
       ui::summary_status(PLUDUX_ICON_TRADES,
                          "No trade results yet",
@@ -73,18 +75,25 @@ public:
     }
 
     const auto backtest_iterator = std::ranges::find(
-     results.backtests(), *selected_run, &backtest::BacktestResults::key);
+     results.backtests(), run, &backtest::BacktestResults::key);
     const auto backtest_index = static_cast<std::size_t>(
      std::ranges::distance(results.backtests().begin(), backtest_iterator));
     const auto* backtest_config =
-     app_state.get_backtest_if_present(selected_run->backtest_handle);
-    const auto* asset =
-     app_state.get_asset_if_present(selected_run->asset_handle);
-    const auto label = backtest_config && asset
-                        ? backtest_config->name() + " — " + asset->name()
-                        : std::string{"Missing Backtest Asset"};
-    auto trades = collect_trades(
-     backtest_results->timeline(), self.trade_source_, backtest_index, label);
+     app_state.get_backtest_if_present(run.backtest_handle);
+    const auto* asset = app_state.get_asset_if_present(run.asset_handle);
+    const auto setup_label = setup_index == 0
+                              ? std::string{"Main setup"}
+                              : std::format("Failsafe {}", setup_index);
+    const auto label =
+     backtest_config && asset
+      ? std::format(
+         "{} — {} — {}", backtest_config->name(), asset->name(), setup_label)
+      : std::format("Missing Backtest Asset — {}", setup_label);
+    auto trades = collect_trades(backtest_results->timeline(),
+                                 self.trade_source_,
+                                 backtest_index,
+                                 setup_index,
+                                 label);
     std::ranges::sort(trades, {}, &TradeView::entry_timestamp);
     std::ranges::reverse(trades);
     self.synchronize_selection(trades);
@@ -96,9 +105,8 @@ public:
     if(trades.empty()) {
       ui::summary_status(PLUDUX_ICON_TRADES,
                          "No trades were generated",
-                         "The selected Backtest completed without opening a "
-                         "position. Review its strategy signals or tested "
-                         "date range.");
+                         "The selected setup has no matching trade activity. "
+                         "Review its strategy signals or tested date range.");
       ImGui::End();
       return;
     }
@@ -129,9 +137,19 @@ private:
     std::size_t id{};
     bool open{};
     std::size_t backtest_index{};
+    std::size_t setup_index{};
 
     auto operator==(const TradeKey&) const noexcept -> bool = default;
   };
+
+  static_assert(TradeKey{.id = 1,
+                         .open = false,
+                         .backtest_index = 0,
+                         .setup_index = 0} !=
+                TradeKey{.id = 1,
+                         .open = false,
+                         .backtest_index = 0,
+                         .setup_index = 1});
 
   struct TradeView {
     TradeKey key;
@@ -164,6 +182,7 @@ private:
   static auto collect_trades(const backtest::BacktestTimeline& timeline,
                              TradeSource source,
                              std::size_t backtest_index,
+                             std::size_t setup_index,
                              std::string backtest_name)
    -> std::vector<TradeView>
   {
@@ -174,13 +193,15 @@ private:
 
     const auto last_index = timeline.size() - 1;
     if(source == TradeSource::Hypothetical) {
-      if(const auto& open_position =
-          timeline.strategy_open_position(last_index)) {
+      const auto& last_setup_state =
+       timeline.setup_state(last_index, setup_index);
+      if(const auto& open_position = last_setup_state.strategy_open_position) {
         trades.push_back(make_trade_view(
          *open_position, timeline.market_timestamp(last_index)));
       }
       for(auto index = timeline.size(); index-- > 0;) {
-        const auto& closed = timeline.strategy_closed_positions(index);
+        const auto& closed =
+         timeline.setup_state(index, setup_index).strategy_closed_positions;
         for(auto position = closed.rbegin(); position != closed.rend();
             ++position) {
           trades.push_back(make_trade_view(*position));
@@ -188,12 +209,14 @@ private:
       }
       for(auto& trade : trades) {
         trade.key.backtest_index = backtest_index;
+        trade.key.setup_index = setup_index;
         trade.backtest_name = backtest_name;
       }
       return trades;
     }
 
-    if(const auto& open_position = timeline.open_position(last_index)) {
+    if(const auto& open_position = timeline.open_position(last_index);
+       open_position && open_position->setup_index() == setup_index) {
       trades.push_back(make_trade_view(*open_position));
     }
 
@@ -201,11 +224,15 @@ private:
       const auto& closed_trades = timeline.closed_trades(index);
       for(auto trade = closed_trades.rbegin(); trade != closed_trades.rend();
           ++trade) {
+        if(trade->setup_index() != setup_index) {
+          continue;
+        }
         trades.push_back(make_trade_view(*trade));
       }
     }
     for(auto& trade : trades) {
       trade.key.backtest_index = backtest_index;
+      trade.key.setup_index = setup_index;
       trade.backtest_name = backtest_name;
     }
     return trades;
@@ -221,58 +248,60 @@ private:
     const auto exit_price = position.intents().empty()
                              ? average_entry
                              : position.intents().back().price();
-    return TradeView{.key = TradeKey{position.strategy_trade_id(), false},
-                     .long_position =
-                      position.direction() == backtest::StrategyDirection::Long,
-                     .status = "Hypothetical",
-                     .entry_timestamp = position.entry_timestamp(),
-                     .exit_timestamp = position.exit_timestamp(),
-                     .entry_price = average_entry,
-                     .last_price = exit_price,
-                     .average_price = average_entry,
-                     .quantity = position.normalized_entry_quantity(),
-                     .investment = position.normalized_entry_notional(),
-                     .pnl = position.directional_price_pnl(),
-                     .fees = 0.0,
-                     .duration = position.duration(),
-                     .risk_distance = NAN,
-                     .risk_reference_price = NAN,
-                     .risk_boundary_price = NAN,
-                     .signal_exits = "See ordered strategy intents",
-                     .take_profits = "See ordered strategy intents",
-                     .stop_losses = "See ordered strategy intents"};
+    return TradeView{
+     .key = TradeKey{.id = position.strategy_trade_id(), .open = false},
+     .long_position = position.direction() == backtest::StrategyDirection::Long,
+     .status = "Hypothetical",
+     .entry_timestamp = position.entry_timestamp(),
+     .exit_timestamp = position.exit_timestamp(),
+     .entry_price = average_entry,
+     .last_price = exit_price,
+     .average_price = average_entry,
+     .quantity = position.normalized_entry_quantity(),
+     .investment = position.normalized_entry_notional(),
+     .pnl = position.directional_price_pnl(),
+     .fees = 0.0,
+     .duration = position.duration(),
+     .risk_distance = NAN,
+     .risk_reference_price = NAN,
+     .risk_boundary_price = NAN,
+     .signal_exits = "See ordered strategy intents",
+     .take_profits = "See ordered strategy intents",
+     .stop_losses = "See ordered strategy intents"};
   }
 
   static auto
   make_trade_view(const backtest::StrategyOpenPositionSnapshot& position,
                   std::time_t market_timestamp) -> TradeView
   {
-    return TradeView{.key = TradeKey{position.strategy_trade_id(), true},
-                     .long_position =
-                      position.direction() == backtest::StrategyDirection::Long,
-                     .status = "Hypothetical open",
-                     .entry_timestamp = position.entry_timestamp(),
-                     .exit_timestamp = std::nullopt,
-                     .entry_price = position.average_price(),
-                     .last_price = position.market_price(),
-                     .average_price = position.average_price(),
-                     .quantity = position.normalized_quantity(),
-                     .investment = position.normalized_investment(),
-                     .pnl = position.unrealized_price_pnl(),
-                     .fees = 0.0,
-                     .duration = position.duration(market_timestamp),
-                     .risk_distance = NAN,
-                     .risk_reference_price = NAN,
-                     .risk_boundary_price = NAN,
-                     .signal_exits = "Unrealized shadow position",
-                     .take_profits = "Unrealized shadow position",
-                     .stop_losses = "Unrealized shadow position"};
+    return TradeView{
+     .key = TradeKey{.id = position.strategy_trade_id(), .open = true},
+     .long_position = position.direction() == backtest::StrategyDirection::Long,
+     .status = "Hypothetical open",
+     .entry_timestamp = position.entry_timestamp(),
+     .exit_timestamp = std::nullopt,
+     .entry_price = position.average_price(),
+     .last_price = position.market_price(),
+     .average_price = position.average_price(),
+     .quantity = position.normalized_quantity(),
+     .investment = position.normalized_investment(),
+     .pnl = position.unrealized_price_pnl(),
+     .fees = 0.0,
+     .duration = position.duration(market_timestamp),
+     .risk_distance = NAN,
+     .risk_reference_price = NAN,
+     .risk_boundary_price = NAN,
+     .signal_exits = "Unrealized shadow position",
+     .take_profits = "Unrealized shadow position",
+     .stop_losses = "Unrealized shadow position"};
   }
 
   static auto make_trade_view(const backtest::ClosedTrade& trade) -> TradeView
   {
     return TradeView{
-     .key = TradeKey{trade.trade_id(), false},
+     .key = TradeKey{.id = trade.trade_id(),
+                     .open = false,
+                     .setup_index = trade.setup_index()},
      .long_position = trade.position_size() > 0.0,
      .status = exit_status_label(trade.exit_type()),
      .entry_timestamp = trade.entry_timestamp(),
@@ -297,7 +326,9 @@ private:
    -> TradeView
   {
     return TradeView{
-     .key = TradeKey{trade.trade_id(), true},
+     .key = TradeKey{.id = trade.trade_id(),
+                     .open = true,
+                     .setup_index = trade.setup_index()},
      .long_position = trade.position_size() > 0.0,
      .status = "Open",
      .entry_timestamp = trade.entry_timestamp(),
@@ -490,6 +521,7 @@ private:
   void render_trade_row(this TradeListWindow& self, const TradeView& trade)
   {
     ImGui::PushID(static_cast<int>(trade.key.backtest_index));
+    ImGui::PushID(static_cast<int>(trade.key.setup_index));
     ImGui::PushID(static_cast<int>(trade.key.id));
     ImGui::PushID(trade.key.open ? 1 : 0);
     ImGui::TableNextRow();
@@ -527,6 +559,7 @@ private:
      outcome_color(trade.pnl), "%s", format_return(trade).c_str());
     ImGui::TableNextColumn();
     ImGui::TextUnformatted(format_duration(trade.duration).c_str());
+    ImGui::PopID();
     ImGui::PopID();
     ImGui::PopID();
     ImGui::PopID();
