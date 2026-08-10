@@ -378,7 +378,8 @@ struct json_conv_traits<Json, pludux::backtest::DrawdownAdjustment> {
       return result_type{
        value_type{required_as<bool>(json, "enabled"),
                   required_as<double>(json, "drawdownStep"),
-                  required_as<double>(json, "sizeReduction")}};
+                  required_as<double>(json, "sizeReduction"),
+                  required_as<double>(json, "notionalEquityReduction")}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -392,6 +393,7 @@ struct json_conv_traits<Json, pludux::backtest::DrawdownAdjustment> {
     json["enabled"] = adjustment.enabled();
     json["drawdownStep"] = adjustment.drawdown_step();
     json["sizeReduction"] = adjustment.size_reduction();
+    json["notionalEquityReduction"] = adjustment.notional_equity_reduction();
     return json;
   }
 };

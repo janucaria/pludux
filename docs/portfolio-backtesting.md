@@ -63,15 +63,25 @@ deterministic capital priority.
 For each risk-increasing request, Pludux performs these steps:
 
 1. Evaluate the Backtest Profile's execution filter and sizing constraint.
-2. Apply the Portfolio drawdown adjustment to its quantity and limit.
-3. Use the shared Market and Broker to find the largest valid quantity within
+2. Derive peak-based notional equity when the Portfolio's drawdown adjustment
+   configures a notional equity reduction, then reevaluate equity-dependent
+   sizing with that value.
+3. Apply the drawdown adjustment's size reduction to the resulting quantity and
+   limit.
+4. Use the shared Market and Broker to find the largest valid quantity within
    the sizing constraint.
-4. Reject an initial entry if the Portfolio already has its maximum number of
+5. Reject an initial entry if the Portfolio already has its maximum number of
    open trades.
-5. Calculate remaining shared cash after existing reservations.
-6. Compare the fee-inclusive entry cost with that available cash.
-7. Reject the request or cap it to the largest affordable valid quantity,
+6. Calculate remaining shared cash after existing reservations.
+7. Compare the fee-inclusive entry cost with that available cash.
+8. Reject the request or cap it to the largest affordable valid quantity,
    according to the Portfolio policy.
+
+Both reductions use the completed step count from current drawdown relative to
+peak equity. Notional equity reduction changes only sizing methods that consume
+equity; fixed quantity and fixed budget remain fixed unless Size Reduction is
+also configured. A Turtle-style setup uses a 10% drawdown step, 0% Size
+Reduction, and 20% Notional Equity Reduction.
 
 An accepted order reserves its notional before the next backtest request is
 considered. Pyramiding an existing trade does not consume another slot. Closing

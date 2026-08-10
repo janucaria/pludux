@@ -3126,7 +3126,7 @@ TEST(BacktestRunnerTest, DisabledDrawdownAdjustmentLeavesSizingUnchanged)
   const auto timeline =
    run_single_entry(PositionSizingNode{FixedQuantityPositionSizing{100.0}},
                     100.0,
-                    DrawdownAdjustment{false, 0.10, 0.20},
+                    DrawdownAdjustment{false, 0.10, 0.20, 0.0},
                     90000.0,
                     100000.0);
 
@@ -3140,7 +3140,7 @@ TEST(BacktestRunnerTest, DrawdownAdjustmentLeavesSizeUnchangedAtZeroDrawdown)
   const auto timeline =
    run_single_entry(PositionSizingNode{FixedQuantityPositionSizing{100.0}},
                     100.0,
-                    DrawdownAdjustment{true, 0.10, 0.20},
+                    DrawdownAdjustment{true, 0.10, 0.20, 0.0},
                     10000.0);
 
   ASSERT_TRUE(
@@ -3153,7 +3153,7 @@ TEST(BacktestRunnerTest, DrawdownAdjustmentReducesSizeAtTenPercentDrawdown)
   const auto timeline =
    run_single_entry(PositionSizingNode{FixedQuantityPositionSizing{100.0}},
                     100.0,
-                    DrawdownAdjustment{true, 0.10, 0.20},
+                    DrawdownAdjustment{true, 0.10, 0.20, 0.0},
                     9000.0,
                     10000.0);
 
@@ -3167,7 +3167,7 @@ TEST(BacktestRunnerTest, DrawdownAdjustmentScalesEntryBudget)
   const auto timeline =
    run_single_entry(PositionSizingNode{FixedBudgetPositionSizing{1000.0}},
                     100.0,
-                    DrawdownAdjustment{true, 0.10, 0.20},
+                    DrawdownAdjustment{true, 0.10, 0.20, 0.0},
                     9000.0,
                     10000.0);
 
@@ -3184,7 +3184,7 @@ TEST(BacktestRunnerTest, DrawdownAdjustmentReducesSizeAtTwentyPercentDrawdown)
   const auto timeline =
    run_single_entry(PositionSizingNode{FixedQuantityPositionSizing{100.0}},
                     100.0,
-                    DrawdownAdjustment{true, 0.10, 0.20},
+                    DrawdownAdjustment{true, 0.10, 0.20, 0.0},
                     8000.0,
                     10000.0);
 
@@ -3198,7 +3198,7 @@ TEST(BacktestRunnerTest, DrawdownAdjustmentAtZeroSkipsExecution)
   const auto timeline =
    run_single_entry(PositionSizingNode{FixedQuantityPositionSizing{100.0}},
                     100.0,
-                    DrawdownAdjustment{true, 0.10, 0.20},
+                    DrawdownAdjustment{true, 0.10, 0.20, 0.0},
                     400.0,
                     1000.0);
 
@@ -3209,6 +3209,99 @@ TEST(BacktestRunnerTest, DrawdownAdjustmentAtZeroSkipsExecution)
   EXPECT_EQ(decision.outcome,
             PositionSizingDecisionOutcome::DrawdownSuppressed);
   EXPECT_DOUBLE_EQ(*decision.requested_quantity, 100.0);
+  EXPECT_DOUBLE_EQ(*decision.drawdown_adjusted_quantity, 0.0);
+}
+
+TEST(BacktestRunnerTest, NotionalEquityReductionUsesPeakEquityBeforeFirstStep)
+{
+  const auto timeline =
+   run_single_entry(PositionSizingNode{RiskDistancePositionSizing{0.01}},
+                    100.0,
+                    DrawdownAdjustment{true, 0.10, 0.0, 0.20},
+                    950.0,
+                    1000.0);
+
+  ASSERT_TRUE(timeline.open_position(last_timeline_index(timeline)));
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 1.0);
+  const auto& decision = timeline.position_sizing_decisions(0).front();
+  EXPECT_DOUBLE_EQ(*decision.requested_quantity, 0.95);
+  EXPECT_DOUBLE_EQ(*decision.drawdown_adjusted_quantity, 1.0);
+}
+
+TEST(BacktestRunnerTest, TurtleNotionalEquityReductionUsesCurrentDrawdownSteps)
+{
+  const auto ten_percent =
+   run_single_entry(PositionSizingNode{RiskDistancePositionSizing{0.01}},
+                    100.0,
+                    DrawdownAdjustment{true, 0.10, 0.0, 0.20},
+                    900.0,
+                    1000.0);
+  const auto fifteen_percent =
+   run_single_entry(PositionSizingNode{RiskDistancePositionSizing{0.01}},
+                    100.0,
+                    DrawdownAdjustment{true, 0.10, 0.0, 0.20},
+                    850.0,
+                    1000.0);
+  const auto twenty_percent =
+   run_single_entry(PositionSizingNode{RiskDistancePositionSizing{0.01}},
+                    100.0,
+                    DrawdownAdjustment{true, 0.10, 0.0, 0.20},
+                    800.0,
+                    1000.0);
+
+  EXPECT_DOUBLE_EQ(latest_position(ten_percent).position_size(), 0.8);
+  EXPECT_DOUBLE_EQ(latest_position(fifteen_percent).position_size(), 0.8);
+  EXPECT_DOUBLE_EQ(latest_position(twenty_percent).position_size(), 0.6);
+}
+
+TEST(BacktestRunnerTest, NotionalAndSizeReductionsCompound)
+{
+  const auto timeline =
+   run_single_entry(PositionSizingNode{RiskDistancePositionSizing{0.01}},
+                    100.0,
+                    DrawdownAdjustment{true, 0.10, 0.20, 0.20},
+                    900.0,
+                    1000.0);
+
+  EXPECT_DOUBLE_EQ(latest_position(timeline).position_size(), 0.64);
+  const auto& decision = timeline.position_sizing_decisions(0).front();
+  EXPECT_DOUBLE_EQ(*decision.requested_quantity, 0.9);
+  EXPECT_DOUBLE_EQ(*decision.drawdown_adjusted_quantity, 0.64);
+}
+
+TEST(BacktestRunnerTest, NotionalEquityReductionDoesNotChangeFixedSizing)
+{
+  const auto fixed_quantity =
+   run_single_entry(PositionSizingNode{FixedQuantityPositionSizing{2.0}},
+                    100.0,
+                    DrawdownAdjustment{true, 0.10, 0.0, 0.20},
+                    900.0,
+                    1000.0);
+  const auto fixed_budget =
+   run_single_entry(PositionSizingNode{FixedBudgetPositionSizing{200.0}},
+                    100.0,
+                    DrawdownAdjustment{true, 0.10, 0.0, 0.20},
+                    900.0,
+                    1000.0);
+
+  EXPECT_DOUBLE_EQ(latest_position(fixed_quantity).position_size(), 2.0);
+  EXPECT_DOUBLE_EQ(latest_position(fixed_budget).position_size(), 2.0);
+}
+
+TEST(BacktestRunnerTest, ZeroNotionalEquitySuppressesEquityBasedSizing)
+{
+  const auto timeline =
+   run_single_entry(PositionSizingNode{RiskDistancePositionSizing{0.01}},
+                    100.0,
+                    DrawdownAdjustment{true, 0.10, 0.0, 0.20},
+                    500.0,
+                    1000.0);
+
+  EXPECT_FALSE(timeline.open_position(last_timeline_index(timeline)));
+  const auto& decision = timeline.position_sizing_decisions(0).front();
+  EXPECT_EQ(decision.outcome,
+            PositionSizingDecisionOutcome::DrawdownSuppressed);
+  EXPECT_DOUBLE_EQ(*decision.requested_quantity, 0.5);
   EXPECT_DOUBLE_EQ(*decision.drawdown_adjusted_quantity, 0.0);
 }
 

@@ -1443,36 +1443,47 @@ private:
       throw std::runtime_error{
        "Invalid risk distance: expected a finite positive value"};
     }
-    const auto sizing_context =
-     PositionSizingContext{self.current_account_state_.equity(),
-                           entry_price,
-                           direction,
-                           performance_snapshot,
-                           [risk_distance] { return risk_distance; }};
-    const auto evaluation = self.position_sizing_.evaluate(sizing_context);
-    if(!std::isfinite(evaluation.requested_quantity) ||
-       evaluation.requested_quantity < 0.0) {
+    const auto evaluate_sizing = [&](double equity) {
+      return self.position_sizing_.evaluate(PositionSizingContext{
+       equity, entry_price, direction, performance_snapshot, [risk_distance] {
+         return risk_distance;
+       }});
+    };
+    const auto raw_evaluation =
+     evaluate_sizing(self.current_account_state_.equity());
+    if(!std::isfinite(raw_evaluation.requested_quantity) ||
+       raw_evaluation.requested_quantity < 0.0) {
       throw std::runtime_error{"Invalid position sizing quantity"};
     }
-    decision.requested_quantity = evaluation.requested_quantity;
-    decision.requested_limit = entry_order_sizing_limit(evaluation.constraint);
-    decision.bayesian_kelly = evaluation.bayesian_kelly;
-    if(evaluation.requested_quantity <= 0.0) {
-      decision.outcome = PositionSizingDecisionOutcome::NoPositiveSize;
-      return std::nullopt;
+    decision.requested_quantity = raw_evaluation.requested_quantity;
+    decision.requested_limit =
+     entry_order_sizing_limit(raw_evaluation.constraint);
+
+    auto adjusted_evaluation = raw_evaluation;
+    const auto sizing_equity =
+     self.drawdown_adjusted_sizing_equity(current_drawdown_ratio);
+    if(sizing_equity != self.current_account_state_.equity()) {
+      adjusted_evaluation = evaluate_sizing(sizing_equity);
+      if(!std::isfinite(adjusted_evaluation.requested_quantity) ||
+         adjusted_evaluation.requested_quantity < 0.0) {
+        throw std::runtime_error{"Invalid drawdown-adjusted sizing quantity"};
+      }
     }
+    decision.bayesian_kelly = adjusted_evaluation.bayesian_kelly;
 
     const auto adjusted_position_quantity = self.apply_drawdown_adjustment(
-     evaluation.requested_quantity, current_drawdown_ratio);
+     adjusted_evaluation.requested_quantity, current_drawdown_ratio);
     const auto adjustment_multiplier =
-     adjusted_position_quantity / evaluation.requested_quantity;
+     self.drawdown_size_multiplier(current_drawdown_ratio);
     const auto adjusted_constraint = scale_entry_order_sizing_constraint(
-     evaluation.constraint, adjustment_multiplier);
+     adjusted_evaluation.constraint, adjustment_multiplier);
     decision.drawdown_adjusted_quantity = adjusted_position_quantity;
     decision.drawdown_adjusted_limit =
      entry_order_sizing_limit(adjusted_constraint);
     if(adjusted_position_quantity <= 0.0) {
-      decision.outcome = PositionSizingDecisionOutcome::DrawdownSuppressed;
+      decision.outcome = raw_evaluation.requested_quantity > 0.0
+                          ? PositionSizingDecisionOutcome::DrawdownSuppressed
+                          : PositionSizingDecisionOutcome::NoPositiveSize;
       return std::nullopt;
     }
 
@@ -1481,7 +1492,7 @@ private:
      .entry_price = entry_price,
      .constraint = adjusted_constraint,
      .pyramiding = false,
-     .raw_requested_quantity = evaluation.requested_quantity,
+     .raw_requested_quantity = raw_evaluation.requested_quantity,
      .raw_requested_limit = decision.requested_limit,
      .drawdown_adjusted_quantity = adjusted_position_quantity,
      .drawdown_adjusted_limit = decision.drawdown_adjusted_limit,
@@ -1525,24 +1536,45 @@ private:
                                  double position_quantity,
                                  double current_drawdown_ratio) -> double
   {
-    const auto& drawdown_adjustment = self.drawdown_adjustment_;
+    return position_quantity *
+           self.drawdown_size_multiplier(current_drawdown_ratio);
+  }
 
-    if(!drawdown_adjustment.enabled()) {
-      return position_quantity;
-    }
-
-    const auto drawdown_step = drawdown_adjustment.drawdown_step();
-    const auto size_reduction = drawdown_adjustment.size_reduction();
+  auto drawdown_steps(this const BacktestRunner& self,
+                      double current_drawdown_ratio) -> double
+  {
+    const auto drawdown_step = self.drawdown_adjustment_.drawdown_step();
     if(!std::isfinite(current_drawdown_ratio) ||
-       !std::isfinite(drawdown_step) || drawdown_step <= 0.0 ||
-       !std::isfinite(size_reduction) || size_reduction < 0.0) {
+       !std::isfinite(drawdown_step) || drawdown_step <= 0.0) {
       throw std::runtime_error{"Invalid drawdown adjustment"};
     }
+    return std::floor(std::max(current_drawdown_ratio, 0.0) / drawdown_step);
+  }
 
-    const auto steps =
-     std::floor(std::max(current_drawdown_ratio, 0.0) / drawdown_step);
-    const auto multiplier = std::max(1.0 - steps * size_reduction, 0.0);
-    return position_quantity * multiplier;
+  auto drawdown_size_multiplier(this const BacktestRunner& self,
+                                double current_drawdown_ratio) -> double
+  {
+    const auto& adjustment = self.drawdown_adjustment_;
+    if(!adjustment.enabled()) {
+      return 1.0;
+    }
+    return std::max(1.0 - self.drawdown_steps(current_drawdown_ratio) *
+                           adjustment.size_reduction(),
+                    0.0);
+  }
+
+  auto drawdown_adjusted_sizing_equity(this const BacktestRunner& self,
+                                       double current_drawdown_ratio) -> double
+  {
+    const auto& adjustment = self.drawdown_adjustment_;
+    if(!adjustment.enabled() || adjustment.notional_equity_reduction() == 0.0) {
+      return self.current_account_state_.equity();
+    }
+    const auto multiplier =
+     std::max(1.0 - self.drawdown_steps(current_drawdown_ratio) *
+                     adjustment.notional_equity_reduction(),
+              0.0);
+    return self.current_account_state_.effective_peak_equity() * multiplier;
   }
 
   auto stop_target_reference_price(this const BacktestRunner&,

@@ -340,6 +340,14 @@ inline void validate_context_value(double value, std::string_view label)
   }
 }
 
+inline void validate_non_negative_context_value(double value,
+                                                std::string_view label)
+{
+  if(!std::isfinite(value) || value < 0.0) {
+    throw std::runtime_error{std::string{"Invalid "} + std::string{label}};
+  }
+}
+
 class RiskDistancePositionSizingMethod {
 public:
   explicit RiskDistancePositionSizingMethod(RiskDistancePositionSizing node)
@@ -356,7 +364,7 @@ public:
   auto evaluate(const PositionSizingContext& context) const
    -> PositionSizingEvaluation
   {
-    validate_context_value(context.equity(), "equity");
+    validate_non_negative_context_value(context.equity(), "equity");
     const auto risk_distance = context.risk_distance();
     validate_context_value(risk_distance, "risk distance");
     const auto risk_budget = context.equity() * node_.risk_fraction();
@@ -435,7 +443,7 @@ public:
   auto evaluate(const PositionSizingContext& context) const
    -> PositionSizingEvaluation
   {
-    validate_context_value(context.equity(), "equity");
+    validate_non_negative_context_value(context.equity(), "equity");
     validate_context_value(context.entry_price(), "entry price");
     const auto budget = context.equity() * node_.equity_fraction();
     return {.requested_quantity = budget / context.entry_price(),
@@ -465,7 +473,7 @@ public:
   auto evaluate(const PositionSizingContext& context) const
    -> PositionSizingEvaluation
   {
-    validate_context_value(context.equity(), "equity");
+    validate_non_negative_context_value(context.equity(), "equity");
     validate_context_value(context.entry_price(), "entry price");
 
     const auto& performance = context.strategy_performance();

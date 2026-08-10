@@ -25,6 +25,7 @@ using pludux::apps::UndoCommand;
 using pludux::apps::ViewCommand;
 using pludux::backtest::Backtest;
 using pludux::backtest::BacktestSetup;
+using pludux::backtest::DrawdownAdjustment;
 using pludux::backtest::FixedBudgetPositionSizing;
 using pludux::backtest::Portfolio;
 using pludux::backtest::PortfolioEntryComparator;
@@ -456,6 +457,44 @@ TEST(ApplicationStateSerialization, RejectsMissingMaximumCombinedLayers)
   serialized.replace(key,
                      std::string{"\"maximumCombinedLayers\""}.size(),
                      "\"removedMaximumCombinedLayers\"");
+  auto input = std::stringstream{serialized};
+
+  EXPECT_THROW(load_application_state_json(input), std::exception);
+}
+
+TEST(ApplicationStateSerialization, RoundTripsNotionalEquityReduction)
+{
+  auto state = ApplicationState{};
+  auto portfolio = Portfolio{};
+  portfolio.drawdown_adjustment(DrawdownAdjustment{true, 0.10, 0.0, 0.20});
+  ASSERT_TRUE(state.add_portfolio(std::move(portfolio)));
+  auto stream = std::stringstream{};
+
+  save_application_state_json(stream, state);
+
+  const auto serialized = stream.str();
+  EXPECT_NE(serialized.find("\"notionalEquityReduction\":0.2"),
+            std::string::npos);
+  auto input = std::stringstream{serialized};
+  const auto loaded = load_application_state_json(input);
+  const auto& adjustment =
+   loaded.get_portfolio(loaded.get_portfolio_handles().front())
+    .drawdown_adjustment();
+  EXPECT_DOUBLE_EQ(adjustment.notional_equity_reduction(), 0.20);
+}
+
+TEST(ApplicationStateSerialization, RejectsMissingNotionalEquityReduction)
+{
+  auto state = ApplicationState{};
+  ASSERT_TRUE(state.add_portfolio(Portfolio{}));
+  auto stream = std::stringstream{};
+  save_application_state_json(stream, state);
+  auto serialized = stream.str();
+  const auto key = serialized.find("\"notionalEquityReduction\"");
+  ASSERT_NE(key, std::string::npos);
+  serialized.replace(key,
+                     std::string{"\"notionalEquityReduction\""}.size(),
+                     "\"removedNotionalEquityReduction\"");
   auto input = std::stringstream{serialized};
 
   EXPECT_THROW(load_application_state_json(input), std::exception);

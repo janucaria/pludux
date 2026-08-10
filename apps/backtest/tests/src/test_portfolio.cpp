@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <stdexcept>
 #include <vector>
 
 import pludux.backtest;
@@ -18,7 +19,7 @@ TEST(PortfolioTest, StoresSharedAccountConfigurationAndOrderedBacktests)
              BrokerStoreHandle{7, 8},
              4,
              6,
-             DrawdownAdjustment{true, 0.10, 0.25},
+             DrawdownAdjustment{true, 0.10, 0.25, 0.15},
              InsufficientCashPolicy::CapToAvailableCash,
              {PortfolioEntryComparator{
               ValueNode{42.0}, PortfolioEntryComparatorOrder::HigherFirst}},
@@ -31,6 +32,8 @@ TEST(PortfolioTest, StoresSharedAccountConfigurationAndOrderedBacktests)
   EXPECT_EQ(portfolio.maximum_open_trades(), 4);
   EXPECT_EQ(portfolio.maximum_combined_layers(), 6);
   EXPECT_TRUE(portfolio.drawdown_adjustment().enabled());
+  EXPECT_DOUBLE_EQ(portfolio.drawdown_adjustment().notional_equity_reduction(),
+                   0.15);
   EXPECT_EQ(portfolio.insufficient_cash_policy(),
             InsufficientCashPolicy::CapToAvailableCash);
   ASSERT_EQ(portfolio.entry_comparators().size(), 1U);
@@ -90,6 +93,29 @@ TEST(PortfolioTest, DefaultsToPortfolioOrderWithoutEntryComparators)
   const auto portfolio = Portfolio{};
 
   EXPECT_TRUE(portfolio.entry_comparators().empty());
+}
+
+TEST(PortfolioTest, DefaultsNotionalEquityReductionToZero)
+{
+  const auto adjustment = DrawdownAdjustment{};
+
+  EXPECT_DOUBLE_EQ(adjustment.notional_equity_reduction(), 0.0);
+}
+
+TEST(PortfolioTest, ValidatesDrawdownAdjustmentParameters)
+{
+  EXPECT_THROW((DrawdownAdjustment{true, 0.0, 0.20, 0.20}),
+               std::invalid_argument);
+  EXPECT_THROW((DrawdownAdjustment{true, 0.10, -0.20, 0.20}),
+               std::invalid_argument);
+  EXPECT_THROW((DrawdownAdjustment{true, 0.10, 0.20, -0.20}),
+               std::invalid_argument);
+
+  auto adjustment = DrawdownAdjustment{};
+  EXPECT_THROW(adjustment.drawdown_step(0.0), std::invalid_argument);
+  EXPECT_THROW(adjustment.size_reduction(-0.01), std::invalid_argument);
+  EXPECT_THROW(adjustment.notional_equity_reduction(-0.01),
+               std::invalid_argument);
 }
 
 TEST(PortfolioTest, EntryComparatorsParticipateInRuleEquivalence)

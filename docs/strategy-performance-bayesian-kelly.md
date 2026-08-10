@@ -25,9 +25,10 @@ The backtest has four relevant layers:
    its frequentist and Bayesian evidence.
 3. Position Sizing reads the current Strategy Performance posterior at an entry
    intent and produces an equity-allocation constraint.
-4. The execution layer applies drawdown adjustment, finds a Market-valid
-   quantity whose notional and entry fees fit that allocation, and then applies
-   the selected insufficient-cash policy.
+4. The execution layer may reevaluate sizing with peak-based notional equity,
+   applies any final-quantity drawdown reduction, finds a Market-valid quantity
+   whose notional and entry fees fit that allocation, and then applies the
+   selected insufficient-cash policy.
 
 Consequently, a filtered or unaffordable entry still belongs to the theoretical
 Strategy history. Conversely, its absent or reduced execution result does not

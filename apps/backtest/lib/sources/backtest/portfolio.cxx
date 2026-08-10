@@ -82,15 +82,22 @@ private:
 class DrawdownAdjustment {
 public:
   DrawdownAdjustment()
-  : DrawdownAdjustment{false, 0.10, 0.20}
+  : DrawdownAdjustment{false, 0.10, 0.20, 0.0}
   {
   }
 
-  DrawdownAdjustment(bool enabled, double drawdown_step, double size_reduction)
+  DrawdownAdjustment(bool enabled,
+                     double drawdown_step,
+                     double size_reduction,
+                     double notional_equity_reduction)
   : enabled_{enabled}
   , drawdown_step_{drawdown_step}
   , size_reduction_{size_reduction}
+  , notional_equity_reduction_{notional_equity_reduction}
   {
+    validate_drawdown_step(drawdown_step_);
+    validate_reduction(size_reduction_, "size reduction");
+    validate_reduction(notional_equity_reduction_, "notional equity reduction");
   }
 
   auto operator==(const DrawdownAdjustment&) const noexcept -> bool = default;
@@ -110,8 +117,9 @@ public:
     return self.drawdown_step_;
   }
 
-  void drawdown_step(this DrawdownAdjustment& self, double value) noexcept
+  void drawdown_step(this DrawdownAdjustment& self, double value)
   {
+    validate_drawdown_step(value);
     self.drawdown_step_ = value;
   }
 
@@ -120,15 +128,45 @@ public:
     return self.size_reduction_;
   }
 
-  void size_reduction(this DrawdownAdjustment& self, double value) noexcept
+  void size_reduction(this DrawdownAdjustment& self, double value)
   {
+    validate_reduction(value, "size reduction");
     self.size_reduction_ = value;
+  }
+
+  auto notional_equity_reduction(this const DrawdownAdjustment& self) noexcept
+   -> double
+  {
+    return self.notional_equity_reduction_;
+  }
+
+  void notional_equity_reduction(this DrawdownAdjustment& self, double value)
+  {
+    validate_reduction(value, "notional equity reduction");
+    self.notional_equity_reduction_ = value;
   }
 
 private:
   bool enabled_;
   double drawdown_step_;
   double size_reduction_;
+  double notional_equity_reduction_;
+
+  static void validate_drawdown_step(double value)
+  {
+    if(!std::isfinite(value) || value <= 0.0) {
+      throw std::invalid_argument{
+       "Drawdown adjustment step must be finite and positive"};
+    }
+  }
+
+  static void validate_reduction(double value, const char* label)
+  {
+    if(!std::isfinite(value) || value < 0.0) {
+      throw std::invalid_argument{std::string{"Drawdown adjustment "} + label +
+                                  " must be finite and non-negative"};
+    }
+  }
 };
 
 class Portfolio {
