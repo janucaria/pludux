@@ -170,6 +170,38 @@ TEST(CommandHistory, UndoRestoresCachedPortfolioResults)
    42.0);
 }
 
+TEST(ApplicationState, ProfileCapitalPolicyChangesResetDependentResults)
+{
+  auto state = ApplicationState{};
+  state.add_profile(Profile{});
+  const auto profile_handle = state.get_profile_handles().front();
+  auto backtest = Backtest{};
+  backtest.main_setup().profile_handle(profile_handle);
+  const auto backtest_handle = *state.add_backtest(std::move(backtest));
+  auto portfolio = Portfolio{};
+  portfolio.backtest_handles({backtest_handle});
+  const auto portfolio_handle = *state.add_portfolio(std::move(portfolio));
+  const auto cache_results = [&] {
+    auto timeline = PortfolioTimeline{};
+    timeline.append(PortfolioTimeline::Row{.timestamp = 1, .capital = 42.0});
+    ASSERT_TRUE(state.update_portfolio_results(
+     portfolio_handle, PortfolioResults{std::move(timeline), {}}));
+  };
+
+  cache_results();
+  auto edited_profile = state.get_profile(profile_handle);
+  edited_profile.drawdown_adjustment(DrawdownAdjustment{true, 0.10, 0.20, 0.0});
+  ASSERT_TRUE(state.update_profile(profile_handle, std::move(edited_profile)));
+  EXPECT_TRUE(state.get_portfolio_results(portfolio_handle).timeline().empty());
+
+  cache_results();
+  edited_profile = state.get_profile(profile_handle);
+  edited_profile.insufficient_cash_policy(
+   pludux::backtest::InsufficientCashPolicy::CapToAvailableCash);
+  ASSERT_TRUE(state.update_profile(profile_handle, std::move(edited_profile)));
+  EXPECT_TRUE(state.get_portfolio_results(portfolio_handle).timeline().empty());
+}
+
 TEST(CommandHistory, ExplicitMergeKeyCoalescesAdjacentEdits)
 {
   auto state = ApplicationState{};
@@ -465,9 +497,11 @@ TEST(ApplicationStateSerialization, RejectsMissingMaximumCombinedLayers)
 TEST(ApplicationStateSerialization, RoundTripsNotionalEquityReduction)
 {
   auto state = ApplicationState{};
-  auto portfolio = Portfolio{};
-  portfolio.drawdown_adjustment(DrawdownAdjustment{true, 0.10, 0.0, 0.20});
-  ASSERT_TRUE(state.add_portfolio(std::move(portfolio)));
+  auto profile = Profile{};
+  profile.drawdown_adjustment(DrawdownAdjustment{true, 0.10, 0.0, 0.20});
+  profile.insufficient_cash_policy(
+   pludux::backtest::InsufficientCashPolicy::CapToAvailableCash);
+  state.add_profile(std::move(profile));
   auto stream = std::stringstream{};
 
   save_application_state_json(stream, state);
@@ -477,16 +511,18 @@ TEST(ApplicationStateSerialization, RoundTripsNotionalEquityReduction)
             std::string::npos);
   auto input = std::stringstream{serialized};
   const auto loaded = load_application_state_json(input);
-  const auto& adjustment =
-   loaded.get_portfolio(loaded.get_portfolio_handles().front())
-    .drawdown_adjustment();
+  const auto& loaded_profile =
+   loaded.get_profile(loaded.get_profile_handles().front());
+  const auto& adjustment = loaded_profile.drawdown_adjustment();
   EXPECT_DOUBLE_EQ(adjustment.notional_equity_reduction(), 0.20);
+  EXPECT_EQ(loaded_profile.insufficient_cash_policy(),
+            pludux::backtest::InsufficientCashPolicy::CapToAvailableCash);
 }
 
 TEST(ApplicationStateSerialization, RejectsMissingNotionalEquityReduction)
 {
   auto state = ApplicationState{};
-  ASSERT_TRUE(state.add_portfolio(Portfolio{}));
+  state.add_profile(Profile{});
   auto stream = std::stringstream{};
   save_application_state_json(stream, state);
   auto serialized = stream.str();
@@ -498,6 +534,36 @@ TEST(ApplicationStateSerialization, RejectsMissingNotionalEquityReduction)
   auto input = std::stringstream{serialized};
 
   EXPECT_THROW(load_application_state_json(input), std::exception);
+}
+
+TEST(ApplicationStateSerialization, RejectsMissingProfileCashPolicy)
+{
+  auto state = ApplicationState{};
+  state.add_profile(Profile{});
+  auto stream = std::stringstream{};
+  save_application_state_json(stream, state);
+  auto serialized = stream.str();
+  const auto key = serialized.find("\"insufficientCashPolicy\"");
+  ASSERT_NE(key, std::string::npos);
+  serialized.replace(key,
+                     std::string{"\"insufficientCashPolicy\""}.size(),
+                     "\"removedInsufficientCashPolicy\"");
+  auto input = std::stringstream{serialized};
+
+  EXPECT_THROW(load_application_state_json(input), std::exception);
+}
+
+TEST(ApplicationStateSerialization, OmitsCapitalProtectionFromPortfolio)
+{
+  auto state = ApplicationState{};
+  ASSERT_TRUE(state.add_portfolio(Portfolio{}));
+  auto stream = std::stringstream{};
+
+  save_application_state_json(stream, state);
+
+  const auto serialized = stream.str();
+  EXPECT_EQ(serialized.find("\"drawdownAdjustment\""), std::string::npos);
+  EXPECT_EQ(serialized.find("\"insufficientCashPolicy\""), std::string::npos);
 }
 
 TEST(ApplicationStateSerialization, RoundTripsOrderedEntryComparators)

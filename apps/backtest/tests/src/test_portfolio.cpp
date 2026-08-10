@@ -19,8 +19,6 @@ TEST(PortfolioTest, StoresSharedAccountConfigurationAndOrderedBacktests)
              BrokerStoreHandle{7, 8},
              4,
              6,
-             DrawdownAdjustment{true, 0.10, 0.25, 0.15},
-             InsufficientCashPolicy::CapToAvailableCash,
              {PortfolioEntryComparator{
               ValueNode{42.0}, PortfolioEntryComparatorOrder::HigherFirst}},
              {first, second}};
@@ -31,11 +29,6 @@ TEST(PortfolioTest, StoresSharedAccountConfigurationAndOrderedBacktests)
             (std::vector<BacktestStoreHandle>{first, second}));
   EXPECT_EQ(portfolio.maximum_open_trades(), 4);
   EXPECT_EQ(portfolio.maximum_combined_layers(), 6);
-  EXPECT_TRUE(portfolio.drawdown_adjustment().enabled());
-  EXPECT_DOUBLE_EQ(portfolio.drawdown_adjustment().notional_equity_reduction(),
-                   0.15);
-  EXPECT_EQ(portfolio.insufficient_cash_policy(),
-            InsufficientCashPolicy::CapToAvailableCash);
   ASSERT_EQ(portfolio.entry_comparators().size(), 1U);
   EXPECT_EQ(portfolio.entry_comparators().front().order(),
             PortfolioEntryComparatorOrder::HigherFirst);
@@ -44,23 +37,14 @@ TEST(PortfolioTest, StoresSharedAccountConfigurationAndOrderedBacktests)
 TEST(PortfolioTest, RejectsDuplicateBacktestHandles)
 {
   const auto handle = BacktestStoreHandle{1, 1};
-  EXPECT_THROW((Portfolio{"Duplicate",
-                          1'000.0,
-                          {},
-                          {},
-                          10,
-                          10,
-                          {},
-                          InsufficientCashPolicy::Reject,
-                          {},
-                          {handle, handle}}),
-               std::invalid_argument);
+  EXPECT_THROW(
+   (Portfolio{"Duplicate", 1'000.0, {}, {}, 10, 10, {}, {handle, handle}}),
+   std::invalid_argument);
 }
 
 TEST(PortfolioTest, AllowsIncompleteConfigurationWithoutBacktests)
 {
-  const auto portfolio = Portfolio{
-   "", 1'000.0, {}, {}, 0, 0, {}, InsufficientCashPolicy::Reject, {}, {}};
+  const auto portfolio = Portfolio{"", 1'000.0, {}, {}, 0, 0, {}, {}};
 
   EXPECT_TRUE(portfolio.name().empty());
   EXPECT_EQ(portfolio.market_handle(), MarketStoreHandle{});
@@ -95,14 +79,48 @@ TEST(PortfolioTest, DefaultsToPortfolioOrderWithoutEntryComparators)
   EXPECT_TRUE(portfolio.entry_comparators().empty());
 }
 
-TEST(PortfolioTest, DefaultsNotionalEquityReductionToZero)
+TEST(ProfileTest, DefaultsCapitalProtectionPolicies)
 {
-  const auto adjustment = DrawdownAdjustment{};
+  const auto profile = Profile{};
+  const auto& adjustment = profile.drawdown_adjustment();
 
+  EXPECT_FALSE(adjustment.enabled());
+  EXPECT_DOUBLE_EQ(adjustment.drawdown_step(), 0.10);
+  EXPECT_DOUBLE_EQ(adjustment.size_reduction(), 0.20);
   EXPECT_DOUBLE_EQ(adjustment.notional_equity_reduction(), 0.0);
+  EXPECT_EQ(profile.insufficient_cash_policy(), InsufficientCashPolicy::Reject);
 }
 
-TEST(PortfolioTest, ValidatesDrawdownAdjustmentParameters)
+TEST(ProfileTest, StoresCapitalProtectionPolicies)
+{
+  const auto profile =
+   Profile{"Aggressive",
+           PositionSizingNode{FixedQuantityPositionSizing{2.0}},
+           DrawdownAdjustment{true, 0.10, 0.25, 0.15},
+           InsufficientCashPolicy::CapToAvailableCash,
+           pludux::TrueNode{}};
+
+  EXPECT_TRUE(profile.drawdown_adjustment().enabled());
+  EXPECT_DOUBLE_EQ(profile.drawdown_adjustment().size_reduction(), 0.25);
+  EXPECT_DOUBLE_EQ(profile.drawdown_adjustment().notional_equity_reduction(),
+                   0.15);
+  EXPECT_EQ(profile.insufficient_cash_policy(),
+            InsufficientCashPolicy::CapToAvailableCash);
+}
+
+TEST(ProfileTest, CapitalProtectionParticipatesInRuleEquivalence)
+{
+  auto baseline = Profile{};
+  auto drawdown = baseline;
+  drawdown.drawdown_adjustment(DrawdownAdjustment{true, 0.10, 0.0, 0.20});
+  auto cash = baseline;
+  cash.insufficient_cash_policy(InsufficientCashPolicy::CapToAvailableCash);
+
+  EXPECT_FALSE(baseline.equivalent_rules(drawdown));
+  EXPECT_FALSE(baseline.equivalent_rules(cash));
+}
+
+TEST(ProfileTest, ValidatesDrawdownAdjustmentParameters)
 {
   EXPECT_THROW((DrawdownAdjustment{true, 0.0, 0.20, 0.20}),
                std::invalid_argument);

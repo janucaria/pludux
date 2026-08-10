@@ -6,11 +6,13 @@ Pludux treats a **Backtest** as a reusable Asset + Strategy + Profile
 configuration and a **Portfolio** as the account that executes one or more
 Backtests.
 
-- A Backtest selects an Asset, Strategy, and Profile. It also stores strategy
-  input overrides and the Strategy Performance model configuration.
-- A Portfolio owns initial capital, one Market, one Broker, drawdown adjustment,
-  a maximum-open-trades limit, insufficient-cash handling, and an ordered
-  collection of Backtests.
+- A Backtest selects a Watchlist and contains a Main setup plus ordered
+  Failsafe setups. Each setup selects a Strategy and Profile and stores strategy
+  input overrides. The Backtest shares one Strategy Performance calculation
+  policy across its setups.
+- A Portfolio owns initial capital, one Market, one Broker, aggregate capacity
+  limits, and an ordered collection of Backtests. Each setup Profile owns its
+  drawdown adjustment and insufficient-cash response.
 - Running a Portfolio simulates all of its Backtests. A single-asset simulation
   is a Portfolio containing one Backtest.
 
@@ -29,13 +31,17 @@ Portfolio
 |- Initial capital and account equity
 |- Market rules
 |- Broker fees
-|- Drawdown adjustment
 |- Maximum open trades
-|- Insufficient-cash policy
+|- Maximum combined layers
+|- Entry comparators
 `- Ordered Backtests
-   |- Asset + Strategy + Profile
-   |- Asset + Strategy + Profile
-   `- Asset + Strategy + Profile
+   |- Watchlist
+   `- Setups
+      `- Profile
+         |- Position sizing
+         |- Drawdown adjustment
+         |- Insufficient-cash policy
+         `- Execution filter
 ```
 
 Position sizing and execution filters read the current Portfolio equity and
@@ -63,7 +69,8 @@ deterministic capital priority.
 For each risk-increasing request, Pludux performs these steps:
 
 1. Evaluate the Backtest Profile's execution filter and sizing constraint.
-2. Derive peak-based notional equity when the Portfolio's drawdown adjustment
+2. Derive peak-based notional equity when the accepted setup Profile's
+   drawdown adjustment
    configures a notional equity reduction, then reevaluate equity-dependent
    sizing with that value.
 3. Apply the drawdown adjustment's size reduction to the resulting quantity and
@@ -75,7 +82,7 @@ For each risk-increasing request, Pludux performs these steps:
 6. Calculate remaining shared cash after existing reservations.
 7. Compare the fee-inclusive entry cost with that available cash.
 8. Reject the request or cap it to the largest affordable valid quantity,
-   according to the Portfolio policy.
+   according to the accepted setup Profile's policy.
 
 Both reductions use the completed step count from current drawdown relative to
 peak equity. Notional equity reduction changes only sizing methods that consume

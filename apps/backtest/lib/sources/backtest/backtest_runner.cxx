@@ -25,7 +25,6 @@ import :execution_model;
 import :intrabar_path;
 import :asset;
 import :profile;
-import :portfolio;
 import :position_sizing;
 import :entry_order_sizing;
 import :requested_order;
@@ -351,6 +350,8 @@ public:
     : strategy_performance{std::move(strategy_performance_config)}
     , execution_filter{std::move(execution_filter)}
     , position_sizing{profile.position_sizing().make_method()}
+    , drawdown_adjustment{profile.drawdown_adjustment()}
+    , insufficient_cash_policy{profile.insufficient_cash_policy()}
     , series_methods{std::move(series_methods)}
     , long_position{std::move(long_position)}
     , short_position{std::move(short_position)}
@@ -362,6 +363,8 @@ public:
     StrategyPerformance strategy_performance;
     ErasedSeriesMethod<ExecutionFilterMethodContext> execution_filter;
     PositionSizingMethod position_sizing;
+    DrawdownAdjustment drawdown_adjustment;
+    InsufficientCashPolicy insufficient_cash_policy;
     OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>
      series_methods;
     PositionRule long_position;
@@ -463,15 +466,12 @@ public:
    IntrabarPath intrabar_path = IntrabarPath::CandleDirection,
    StrategyPerformanceConfig strategy_performance_config = {},
    ErasedSeriesMethod<ExecutionFilterMethodContext> execution_filter =
-    BooleanMethod<true>{},
-   DrawdownAdjustment drawdown_adjustment = {},
-   InsufficientCashPolicy insufficient_cash_policy =
-    InsufficientCashPolicy::Reject)
+    BooleanMethod<true>{})
   : asset_{asset}
   , market_{market}
   , broker_{broker}
-  , drawdown_adjustment_{drawdown_adjustment}
-  , insufficient_cash_policy_{insufficient_cash_policy}
+  , drawdown_adjustment_{profile.drawdown_adjustment()}
+  , insufficient_cash_policy_{profile.insufficient_cash_policy()}
   , current_account_state_{total_equity,
                            0.0,
                            std::isnan(peak_equity) ? total_equity : peak_equity,
@@ -505,15 +505,10 @@ public:
                  std::vector<Setup> setups,
                  double total_equity = 0.0,
                  bool is_failed = false,
-                 double peak_equity = NAN,
-                 DrawdownAdjustment drawdown_adjustment = {},
-                 InsufficientCashPolicy insufficient_cash_policy =
-                  InsufficientCashPolicy::Reject)
+                 double peak_equity = NAN)
   : asset_{asset}
   , market_{market}
   , broker_{broker}
-  , drawdown_adjustment_{drawdown_adjustment}
-  , insufficient_cash_policy_{insufficient_cash_policy}
   , current_account_state_{total_equity,
                            0.0,
                            std::isnan(peak_equity) ? total_equity : peak_equity,
@@ -1031,6 +1026,8 @@ private:
     : strategy_performance{std::move(setup.strategy_performance)}
     , execution_filter{std::move(setup.execution_filter)}
     , position_sizing{std::move(setup.position_sizing)}
+    , drawdown_adjustment{setup.drawdown_adjustment}
+    , insufficient_cash_policy{setup.insufficient_cash_policy}
     , series_methods{std::move(setup.series_methods)}
     , long_position{std::move(setup.long_position)}
     , short_position{std::move(setup.short_position)}
@@ -1044,6 +1041,8 @@ private:
     StrategyPerformance strategy_performance;
     ErasedSeriesMethod<ExecutionFilterMethodContext> execution_filter;
     PositionSizingMethod position_sizing;
+    DrawdownAdjustment drawdown_adjustment;
+    InsufficientCashPolicy insufficient_cash_policy;
     OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>
      series_methods;
     PositionRule long_position;
@@ -1070,6 +1069,8 @@ private:
     swap(self.strategy_performance_, state.strategy_performance);
     swap(self.execution_filter_, state.execution_filter);
     swap(self.position_sizing_, state.position_sizing);
+    swap(self.drawdown_adjustment_, state.drawdown_adjustment);
+    swap(self.insufficient_cash_policy_, state.insufficient_cash_policy);
     swap(self.series_methods_, state.series_methods);
     swap(self.long_position_, state.long_position);
     swap(self.short_position_, state.short_position);
@@ -1113,8 +1114,9 @@ private:
   const Asset& asset_;
   const Market& market_;
   const Broker& broker_;
-  DrawdownAdjustment drawdown_adjustment_;
-  InsufficientCashPolicy insufficient_cash_policy_;
+  DrawdownAdjustment drawdown_adjustment_{};
+  InsufficientCashPolicy insufficient_cash_policy_{
+   InsufficientCashPolicy::Reject};
   bool portfolio_open_trade_capacity_available_{true};
   bool portfolio_combined_layer_capacity_available_{true};
 

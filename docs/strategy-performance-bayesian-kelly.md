@@ -28,7 +28,7 @@ The backtest has four relevant layers:
 4. The execution layer may reevaluate sizing with peak-based notional equity,
    applies any final-quantity drawdown reduction, finds a Market-valid quantity
    whose notional and entry fees fit that allocation, and then applies the
-   selected insufficient-cash policy.
+   selected Profile's insufficient-cash policy.
 
 Consequently, a filtered or unaffordable entry still belongs to the theoretical
 Strategy history. Conversely, its absent or reduced execution result does not

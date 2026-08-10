@@ -123,7 +123,8 @@ auto run_single_entry(
  Broker broker = Broker{"Test"}) -> BacktestTimeline
 {
   const auto asset = make_single_bar_asset(entry_price);
-  const auto profile = Profile{"Test", position_sizing};
+  auto profile = Profile{"Test", position_sizing};
+  profile.drawdown_adjustment(drawdown_adjustment);
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -147,8 +148,7 @@ auto run_single_entry(
    peak_equity,
    IntrabarPath::CandleDirection,
    {},
-   BooleanMethod<true>{},
-   drawdown_adjustment};
+   BooleanMethod<true>{}};
 
   runner.run(series_results, timeline);
 
@@ -489,6 +489,114 @@ TEST(BacktestRunnerSetupTest, FilteredMainFallsThroughToFirstFailsafe)
   EXPECT_TRUE(timeline.setup_state(0, 1).strategy_open_position.has_value());
   EXPECT_TRUE(timeline.setup_state(0, 0).filtered_entry_position);
   EXPECT_FALSE(timeline.setup_state(0, 1).filtered_entry_position);
+}
+
+TEST(BacktestRunnerSetupTest, FailsafeUsesItsProfileDrawdownAdjustment)
+{
+  const auto asset = make_single_bar_asset();
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto main_profile =
+   Profile{"Main", PositionSizingNode{RiskDistancePositionSizing{0.01}}};
+  auto failsafe_profile =
+   Profile{"Failsafe", PositionSizingNode{RiskDistancePositionSizing{0.01}}};
+  failsafe_profile.drawdown_adjustment(
+   DrawdownAdjustment{true, 0.10, 0.0, 0.20});
+  const auto entry_rule = [] {
+    return make_position_rule(BooleanMethod<true>{},
+                              BooleanMethod<false>{},
+                              BooleanMethod<false>{},
+                              1,
+                              ValueMethod{NAN},
+                              false,
+                              false);
+  };
+  auto setups = std::vector<BacktestRunner::Setup>{};
+  setups.emplace_back(
+   main_profile,
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   entry_rule(),
+   BacktestRunner::PositionRule{},
+   IntrabarPath::CandleDirection,
+   StrategyPerformanceConfig{},
+   BooleanMethod<false>{});
+  setups.emplace_back(
+   failsafe_profile,
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   entry_rule(),
+   BacktestRunner::PositionRule{},
+   IntrabarPath::CandleDirection,
+   StrategyPerformanceConfig{},
+   BooleanMethod<true>{},
+   FailsafeActivation::PreviousSetupFilteredPosition);
+  auto runner = BacktestRunner{
+   asset, market, broker, std::move(setups), 900.0, false, 1000.0};
+  auto setup_results = std::vector<SeriesEvaluationResults>(2);
+  auto timeline = BacktestTimeline{};
+
+  runner.run(setup_results, timeline);
+
+  ASSERT_TRUE(timeline.open_position(0));
+  EXPECT_DOUBLE_EQ(timeline.open_position(0)->position_size(), 0.8);
+  ASSERT_EQ(timeline.position_sizing_decisions(0).size(), 2U);
+  const auto& sizing = timeline.position_sizing_decisions(0)[1];
+  EXPECT_EQ(sizing.setup_index, 1U);
+  EXPECT_DOUBLE_EQ(*sizing.requested_quantity, 0.9);
+  EXPECT_DOUBLE_EQ(*sizing.drawdown_adjusted_quantity, 0.8);
+}
+
+TEST(BacktestRunnerSetupTest, FailsafeUsesItsProfileCashPolicy)
+{
+  const auto asset = make_single_bar_asset();
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  const auto main_profile =
+   Profile{"Main", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  auto failsafe_profile =
+   Profile{"Failsafe", PositionSizingNode{FixedQuantityPositionSizing{20.0}}};
+  failsafe_profile.insufficient_cash_policy(
+   InsufficientCashPolicy::CapToAvailableCash);
+  const auto entry_rule = [] {
+    return make_position_rule(BooleanMethod<true>{},
+                              BooleanMethod<false>{},
+                              BooleanMethod<false>{},
+                              1,
+                              ValueMethod{NAN},
+                              false,
+                              false);
+  };
+  auto setups = std::vector<BacktestRunner::Setup>{};
+  setups.emplace_back(
+   main_profile,
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   entry_rule(),
+   BacktestRunner::PositionRule{},
+   IntrabarPath::CandleDirection,
+   StrategyPerformanceConfig{},
+   BooleanMethod<false>{});
+  setups.emplace_back(
+   failsafe_profile,
+   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   entry_rule(),
+   BacktestRunner::PositionRule{},
+   IntrabarPath::CandleDirection,
+   StrategyPerformanceConfig{},
+   BooleanMethod<true>{},
+   FailsafeActivation::PreviousSetupFilteredPosition);
+  auto runner =
+   BacktestRunner{asset, market, broker, std::move(setups), 1000.0};
+  auto setup_results = std::vector<SeriesEvaluationResults>(2);
+  auto timeline = BacktestTimeline{};
+
+  runner.run(setup_results, timeline);
+
+  ASSERT_TRUE(timeline.open_position(0));
+  EXPECT_DOUBLE_EQ(timeline.open_position(0)->position_size(), 10.0);
+  const auto& sizing = timeline.position_sizing_decisions(0)[1];
+  EXPECT_EQ(sizing.setup_index, 1U);
+  EXPECT_TRUE(sizing.cash_adjusted);
+  EXPECT_DOUBLE_EQ(*sizing.requested_quantity, 20.0);
+  EXPECT_DOUBLE_EQ(*sizing.final_quantity, 10.0);
 }
 
 TEST(BacktestRunnerSetupTest,
@@ -1106,8 +1214,9 @@ TEST(BacktestRunnerTest, CapToAvailableCashOpensLargestAffordableOrder)
   const auto asset = make_single_bar_asset(100.0);
   const auto market = Market{"Test", 0.0, 0.0};
   const auto broker = Broker{"Test"};
-  const auto profile =
+  auto profile =
    Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{20.0}}};
+  profile.insufficient_cash_policy(InsufficientCashPolicy::CapToAvailableCash);
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -1132,9 +1241,7 @@ TEST(BacktestRunnerTest, CapToAvailableCashOpensLargestAffordableOrder)
                                NAN,
                                IntrabarPath::CandleDirection,
                                {},
-                               BooleanMethod<true>{},
-                               DrawdownAdjustment{},
-                               InsufficientCashPolicy::CapToAvailableCash};
+                               BooleanMethod<true>{}};
 
   runner.run(series_results, timeline);
 
@@ -1158,8 +1265,9 @@ TEST(BacktestRunnerTest, CapToAvailableCashSkipsWhenBelowMarketMinimum)
   const auto asset = make_single_bar_asset(100.0);
   const auto market = Market{"Test", 11.0, 0.0};
   const auto broker = Broker{"Test"};
-  const auto profile =
+  auto profile =
    Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{20.0}}};
+  profile.insufficient_cash_policy(InsufficientCashPolicy::CapToAvailableCash);
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -1184,9 +1292,7 @@ TEST(BacktestRunnerTest, CapToAvailableCashSkipsWhenBelowMarketMinimum)
                                NAN,
                                IntrabarPath::CandleDirection,
                                {},
-                               BooleanMethod<true>{},
-                               DrawdownAdjustment{},
-                               InsufficientCashPolicy::CapToAvailableCash};
+                               BooleanMethod<true>{}};
 
   runner.run(series_results, timeline);
 
@@ -2999,8 +3105,9 @@ TEST(BacktestRunnerTest, CashCappedPyramidingKeepsInitialUnitForLaterLayers)
                                         {"Volume", {0.0, 0.0, 0.0, 0.0}}}};
   const auto market = Market{"Test", 0.0, 1.0};
   const auto broker = Broker{"Test"};
-  const auto profile =
+  auto profile =
    Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{6.0}}};
+  profile.insufficient_cash_policy(InsufficientCashPolicy::CapToAvailableCash);
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
 
@@ -3035,9 +3142,7 @@ TEST(BacktestRunnerTest, CashCappedPyramidingKeepsInitialUnitForLaterLayers)
    NAN,
    IntrabarPath::CandleDirection,
    {},
-   BooleanMethod<true>{},
-   DrawdownAdjustment{},
-   InsufficientCashPolicy::CapToAvailableCash};
+   BooleanMethod<true>{}};
 
   for(auto index = 0; index < 4; ++index) {
     runner.run(series_results, timeline);

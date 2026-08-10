@@ -299,62 +299,6 @@ private:
        std::max(maximum_combined_layers, std::size_t{1}));
     }
 
-    auto cash_policy = portfolio.insufficient_cash_policy();
-    ui::field_label("Insufficient cash");
-    const auto cash_label =
-     cash_policy == backtest::InsufficientCashPolicy::Reject
-      ? "Reject Order"
-      : "Cap To Available Cash";
-    if(ImGui::BeginCombo("##portfolio_cash", cash_label)) {
-      if(ImGui::Selectable("Reject Order",
-                           cash_policy ==
-                            backtest::InsufficientCashPolicy::Reject)) {
-        cash_policy = backtest::InsufficientCashPolicy::Reject;
-      }
-      if(ImGui::Selectable(
-          "Cap To Available Cash",
-          cash_policy ==
-           backtest::InsufficientCashPolicy::CapToAvailableCash)) {
-        cash_policy = backtest::InsufficientCashPolicy::CapToAvailableCash;
-      }
-      ImGui::EndCombo();
-    }
-    portfolio.insufficient_cash_policy(cash_policy);
-
-    auto adjustment = portfolio.drawdown_adjustment();
-    auto adjustment_enabled = adjustment.enabled();
-    ui::field_label("Drawdown adjustment");
-    ImGui::Checkbox("##portfolio_drawdown_enabled", &adjustment_enabled);
-    adjustment.enabled(adjustment_enabled);
-    ImGui::BeginDisabled(!adjustment_enabled);
-    auto step_percent = adjustment.drawdown_step() * 100.0;
-    auto reduction_percent = adjustment.size_reduction() * 100.0;
-    auto notional_equity_reduction_percent =
-     adjustment.notional_equity_reduction() * 100.0;
-    ui::field_label("Drawdown step (%)");
-    ImGui::InputDouble("##portfolio_drawdown_step", &step_percent);
-    ui::field_label("Size reduction (%)");
-    ImGui::InputDouble("##portfolio_size_reduction", &reduction_percent);
-    ui::field_label("Notional equity reduction (%)");
-    ImGui::InputDouble("##portfolio_notional_equity_reduction",
-                       &notional_equity_reduction_percent);
-    ImGui::TextWrapped(
-     "Reduces peak equity by this percentage per completed drawdown step "
-     "before equity-dependent position sizing is evaluated.");
-    ImGui::EndDisabled();
-    if(std::isfinite(step_percent) && step_percent > 0.0) {
-      adjustment.drawdown_step(step_percent / 100.0);
-    }
-    if(std::isfinite(reduction_percent) && reduction_percent >= 0.0) {
-      adjustment.size_reduction(reduction_percent / 100.0);
-    }
-    if(std::isfinite(notional_equity_reduction_percent) &&
-       notional_equity_reduction_percent >= 0.0) {
-      adjustment.notional_equity_reduction(notional_equity_reduction_percent /
-                                           100.0);
-    }
-    portfolio.drawdown_adjustment(adjustment);
-
     ui::form_section(
      "Entry Comparators",
      "Compare prepared requested orders in sequence. The first unequal value "

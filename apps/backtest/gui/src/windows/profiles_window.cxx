@@ -473,6 +473,71 @@ private:
     }
 
     ui::form_section(
+     "Capital Protection",
+     "Control how this Profile responds to portfolio drawdown and orders "
+     "that exceed currently available cash.");
+    {
+      auto adjustment = self.editing_profile_ptr_->drawdown_adjustment();
+      auto adjustment_enabled = adjustment.enabled();
+      ui::field_label("Drawdown adjustment");
+      ImGui::Checkbox("##profile_drawdown_enabled", &adjustment_enabled);
+      adjustment.enabled(adjustment_enabled);
+      ImGui::BeginDisabled(!adjustment_enabled);
+      auto step_percent = adjustment.drawdown_step() * 100.0;
+      auto reduction_percent = adjustment.size_reduction() * 100.0;
+      auto notional_equity_reduction_percent =
+       adjustment.notional_equity_reduction() * 100.0;
+      ui::field_label("Drawdown step (%)");
+      ImGui::InputDouble("##profile_drawdown_step", &step_percent);
+      ui::field_label("Size reduction (%)");
+      ImGui::InputDouble("##profile_size_reduction", &reduction_percent);
+      ui::field_label("Notional equity reduction (%)");
+      ImGui::InputDouble("##profile_notional_equity_reduction",
+                         &notional_equity_reduction_percent);
+      ImGui::TextWrapped(
+       "Reduces peak equity by this percentage per completed drawdown step "
+       "before equity-dependent position sizing is evaluated.");
+      ImGui::EndDisabled();
+      if(std::isfinite(step_percent) && step_percent > 0.0) {
+        adjustment.drawdown_step(step_percent / 100.0);
+      }
+      if(std::isfinite(reduction_percent) && reduction_percent >= 0.0) {
+        adjustment.size_reduction(reduction_percent / 100.0);
+      }
+      if(std::isfinite(notional_equity_reduction_percent) &&
+         notional_equity_reduction_percent >= 0.0) {
+        adjustment.notional_equity_reduction(notional_equity_reduction_percent /
+                                             100.0);
+      }
+      self.editing_profile_ptr_->drawdown_adjustment(adjustment);
+
+      auto cash_policy = self.editing_profile_ptr_->insufficient_cash_policy();
+      ui::field_label(
+       "Insufficient cash",
+       "Reject preserves the requested quantity. Cap submits the largest "
+       "Market-valid quantity affordable with available portfolio cash.");
+      const auto* cash_label =
+       cash_policy == backtest::InsufficientCashPolicy::Reject
+        ? "Reject Order"
+        : "Cap To Available Cash";
+      if(ImGui::BeginCombo("##profile_cash", cash_label)) {
+        if(ImGui::Selectable("Reject Order",
+                             cash_policy ==
+                              backtest::InsufficientCashPolicy::Reject)) {
+          cash_policy = backtest::InsufficientCashPolicy::Reject;
+        }
+        if(ImGui::Selectable(
+            "Cap To Available Cash",
+            cash_policy ==
+             backtest::InsufficientCashPolicy::CapToAvailableCash)) {
+          cash_policy = backtest::InsufficientCashPolicy::CapToAvailableCash;
+        }
+        ImGui::EndCombo();
+      }
+      self.editing_profile_ptr_->insufficient_cash_policy(cash_policy);
+    }
+
+    ui::form_section(
      "Execution Filter",
      "Decide whether each initial strategy entry should become a real "
      "position. Accepted positions automatically mirror later pyramiding and "

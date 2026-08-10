@@ -80,16 +80,8 @@ TEST(WatchlistStateTest, ExpandsBacktestsThenOrderedAssets)
                                 {BacktestSetup{}, BacktestSetup{}}});
   const auto second_backtest = *state.add_backtest(Backtest{
    "Second", second_watchlist, StrategyPerformanceConfig{}, BacktestSetup{}});
-  const auto portfolio = Portfolio{"Portfolio",
-                                   1'000.0,
-                                   {},
-                                   {},
-                                   10,
-                                   10,
-                                   {},
-                                   InsufficientCashPolicy::Reject,
-                                   {},
-                                   {first_backtest, second_backtest}};
+  const auto portfolio = Portfolio{
+   "Portfolio", 1'000.0, {}, {}, 10, 10, {}, {first_backtest, second_backtest}};
 
   EXPECT_EQ(state.expanded_backtest_runs(portfolio),
             (std::vector<BacktestRunKey>{{first_backtest, first_asset},

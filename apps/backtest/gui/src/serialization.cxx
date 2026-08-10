@@ -460,12 +460,16 @@ struct json_conv_traits<Json, pludux::backtest::Profile> {
                             const Json& json)
   {
     try {
-      return result_type{
-       value_type{required_as<std::string>(json, "name"),
-                  required_as<pludux::backtest::PositionSizingNode>(
-                   json, "positionSizing"),
-                  pludux::backtest::parse_execution_filter_node(
-                   json.at("executionFilter"))}};
+      return result_type{value_type{
+       required_as<std::string>(json, "name"),
+       required_as<pludux::backtest::PositionSizingNode>(json,
+                                                         "positionSizing"),
+       required_as<pludux::backtest::DrawdownAdjustment>(json,
+                                                         "drawdownAdjustment"),
+       required_as<pludux::backtest::InsufficientCashPolicy>(
+        json, "insufficientCashPolicy"),
+       pludux::backtest::parse_execution_filter_node(
+        json.at("executionFilter"))}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -478,6 +482,9 @@ struct json_conv_traits<Json, pludux::backtest::Profile> {
     auto json = Json{};
     json["name"] = profile.name();
     set_json(json, aset, "positionSizing", profile.position_sizing());
+    set_json(json, aset, "drawdownAdjustment", profile.drawdown_adjustment());
+    set_json(
+     json, aset, "insufficientCashPolicy", profile.insufficient_cash_policy());
     json["executionFilter"] = pludux::backtest::serialize_execution_filter_node(
      profile.execution_filter());
     return json;
@@ -1163,10 +1170,6 @@ struct json_conv_traits<Json, pludux::backtest::Portfolio> {
        required_as<pludux::backtest::BrokerStoreHandle>(json, "broker"),
        required_as<std::size_t>(json, "maximumOpenTrades"),
        required_as<std::size_t>(json, "maximumCombinedLayers"),
-       required_as<pludux::backtest::DrawdownAdjustment>(json,
-                                                         "drawdownAdjustment"),
-       required_as<pludux::backtest::InsufficientCashPolicy>(
-        json, "insufficientCashPolicy"),
        vector_from_json<pludux::backtest::PortfolioEntryComparator>(
         json.at("entryComparators")),
        vector_from_json<pludux::backtest::BacktestStoreHandle>(
@@ -1187,11 +1190,6 @@ struct json_conv_traits<Json, pludux::backtest::Portfolio> {
     set_json(json, aset, "broker", portfolio.broker_handle());
     json["maximumOpenTrades"] = portfolio.maximum_open_trades();
     json["maximumCombinedLayers"] = portfolio.maximum_combined_layers();
-    set_json(json, aset, "drawdownAdjustment", portfolio.drawdown_adjustment());
-    set_json(json,
-             aset,
-             "insufficientCashPolicy",
-             portfolio.insufficient_cash_policy());
     json["entryComparators"] =
      vector_to_json<Json>(aset, portfolio.entry_comparators());
     json["backtests"] =

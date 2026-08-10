@@ -17,8 +17,6 @@ import :store_handle;
 
 export namespace pludux::backtest {
 
-enum class InsufficientCashPolicy { Reject, CapToAvailableCash };
-
 enum class PortfolioEntryComparatorOrder { HigherFirst, LowerFirst };
 
 class PortfolioEntryComparator {
@@ -79,109 +77,11 @@ private:
   }
 };
 
-class DrawdownAdjustment {
-public:
-  DrawdownAdjustment()
-  : DrawdownAdjustment{false, 0.10, 0.20, 0.0}
-  {
-  }
-
-  DrawdownAdjustment(bool enabled,
-                     double drawdown_step,
-                     double size_reduction,
-                     double notional_equity_reduction)
-  : enabled_{enabled}
-  , drawdown_step_{drawdown_step}
-  , size_reduction_{size_reduction}
-  , notional_equity_reduction_{notional_equity_reduction}
-  {
-    validate_drawdown_step(drawdown_step_);
-    validate_reduction(size_reduction_, "size reduction");
-    validate_reduction(notional_equity_reduction_, "notional equity reduction");
-  }
-
-  auto operator==(const DrawdownAdjustment&) const noexcept -> bool = default;
-
-  auto enabled(this const DrawdownAdjustment& self) noexcept -> bool
-  {
-    return self.enabled_;
-  }
-
-  void enabled(this DrawdownAdjustment& self, bool value) noexcept
-  {
-    self.enabled_ = value;
-  }
-
-  auto drawdown_step(this const DrawdownAdjustment& self) noexcept -> double
-  {
-    return self.drawdown_step_;
-  }
-
-  void drawdown_step(this DrawdownAdjustment& self, double value)
-  {
-    validate_drawdown_step(value);
-    self.drawdown_step_ = value;
-  }
-
-  auto size_reduction(this const DrawdownAdjustment& self) noexcept -> double
-  {
-    return self.size_reduction_;
-  }
-
-  void size_reduction(this DrawdownAdjustment& self, double value)
-  {
-    validate_reduction(value, "size reduction");
-    self.size_reduction_ = value;
-  }
-
-  auto notional_equity_reduction(this const DrawdownAdjustment& self) noexcept
-   -> double
-  {
-    return self.notional_equity_reduction_;
-  }
-
-  void notional_equity_reduction(this DrawdownAdjustment& self, double value)
-  {
-    validate_reduction(value, "notional equity reduction");
-    self.notional_equity_reduction_ = value;
-  }
-
-private:
-  bool enabled_;
-  double drawdown_step_;
-  double size_reduction_;
-  double notional_equity_reduction_;
-
-  static void validate_drawdown_step(double value)
-  {
-    if(!std::isfinite(value) || value <= 0.0) {
-      throw std::invalid_argument{
-       "Drawdown adjustment step must be finite and positive"};
-    }
-  }
-
-  static void validate_reduction(double value, const char* label)
-  {
-    if(!std::isfinite(value) || value < 0.0) {
-      throw std::invalid_argument{std::string{"Drawdown adjustment "} + label +
-                                  " must be finite and non-negative"};
-    }
-  }
-};
-
 class Portfolio {
 public:
   Portfolio()
-  : Portfolio{"",
-              1'000'000.0,
-              MarketStoreHandle{},
-              BrokerStoreHandle{},
-              10,
-              10,
-              {},
-              InsufficientCashPolicy::Reject,
-              {},
-              {}}
+  : Portfolio{
+     "", 1'000'000.0, MarketStoreHandle{}, BrokerStoreHandle{}, 10, 10, {}, {}}
   {
   }
 
@@ -191,8 +91,6 @@ public:
             BrokerStoreHandle broker_handle,
             std::size_t maximum_open_trades,
             std::size_t maximum_combined_layers,
-            DrawdownAdjustment drawdown_adjustment,
-            InsufficientCashPolicy insufficient_cash_policy,
             std::vector<PortfolioEntryComparator> entry_comparators,
             std::vector<BacktestStoreHandle> backtest_handles)
   : name_{std::move(name)}
@@ -201,8 +99,6 @@ public:
   , broker_handle_{broker_handle}
   , maximum_open_trades_{maximum_open_trades}
   , maximum_combined_layers_{maximum_combined_layers}
-  , drawdown_adjustment_{drawdown_adjustment}
-  , insufficient_cash_policy_{insufficient_cash_policy}
   , entry_comparators_{std::move(entry_comparators)}
   , backtest_handles_{std::move(backtest_handles)}
   {
@@ -276,30 +172,6 @@ public:
     self.maximum_combined_layers_ = value;
   }
 
-  auto drawdown_adjustment(this const Portfolio& self) noexcept
-   -> const DrawdownAdjustment&
-  {
-    return self.drawdown_adjustment_;
-  }
-
-  void drawdown_adjustment(this Portfolio& self,
-                           DrawdownAdjustment value) noexcept
-  {
-    self.drawdown_adjustment_ = value;
-  }
-
-  auto insufficient_cash_policy(this const Portfolio& self) noexcept
-   -> InsufficientCashPolicy
-  {
-    return self.insufficient_cash_policy_;
-  }
-
-  void insufficient_cash_policy(this Portfolio& self,
-                                InsufficientCashPolicy value) noexcept
-  {
-    self.insufficient_cash_policy_ = value;
-  }
-
   auto entry_comparators(this const Portfolio& self) noexcept
    -> const std::vector<PortfolioEntryComparator>&
   {
@@ -342,8 +214,6 @@ public:
            self.broker_handle_ == other.broker_handle_ &&
            self.maximum_open_trades_ == other.maximum_open_trades_ &&
            self.maximum_combined_layers_ == other.maximum_combined_layers_ &&
-           self.drawdown_adjustment_ == other.drawdown_adjustment_ &&
-           self.insufficient_cash_policy_ == other.insufficient_cash_policy_ &&
            self.entry_comparators_ == other.entry_comparators_ &&
            self.backtest_handles_ == other.backtest_handles_;
   }
@@ -380,8 +250,6 @@ private:
   BrokerStoreHandle broker_handle_;
   std::size_t maximum_open_trades_;
   std::size_t maximum_combined_layers_;
-  DrawdownAdjustment drawdown_adjustment_;
-  InsufficientCashPolicy insufficient_cash_policy_;
   std::vector<PortfolioEntryComparator> entry_comparators_;
   std::vector<BacktestStoreHandle> backtest_handles_;
 };

@@ -463,9 +463,7 @@ private:
                                     std::move(runner_setups),
                                     portfolio.initial_capital(),
                                     false,
-                                    NAN,
-                                    portfolio.drawdown_adjustment(),
-                                    portfolio.insufficient_cash_policy()};
+                                    NAN};
   }
 
   void

@@ -69,6 +69,8 @@ auto make_entry_runner(const Asset& asset,
                         execution_filter = BooleanMethod<true>{})
  -> BacktestRunner
 {
+  auto configured_profile = profile;
+  configured_profile.insufficient_cash_policy(cash_policy);
   auto long_position = BacktestRunner::PositionRule{BooleanMethod<true>{},
                                                     {},
                                                     BooleanMethod<false>{},
@@ -80,7 +82,7 @@ auto make_entry_runner(const Asset& asset,
   return BacktestRunner{asset,
                         market,
                         broker,
-                        profile,
+                        configured_profile,
                         {},
                         std::move(long_position),
                         BacktestRunner::PositionRule{},
@@ -90,9 +92,7 @@ auto make_entry_runner(const Asset& asset,
                         NAN,
                         IntrabarPath::CandleDirection,
                         {},
-                        std::move(execution_filter),
-                        DrawdownAdjustment{},
-                        cash_policy};
+                        std::move(execution_filter)};
 }
 
 auto make_short_entry_runner(const Asset& asset,
