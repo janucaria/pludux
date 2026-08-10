@@ -635,6 +635,9 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
                        AssetSnapshot asset_snapshot,
                        MethodContextable auto context) noexcept -> double
 {
+  if(asset_snapshot.size() <= method.period()) {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
   return evaluate_series_method(
    method.source(), asset_snapshot[method.period()], context);
 }

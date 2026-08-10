@@ -51,7 +51,7 @@ private:
   ImGuiTextFilter filter_;
   ImGuiTextFilter backtest_picker_filter_;
   ui::SeriesNodeEditor series_node_editor_{
-   ui::SeriesNodeCatalog::RequestedOrder};
+   ui::SeriesNodeCatalog::PortfolioComparator};
   bool editor_open_{};
 
   static auto make_editable_portfolio(backtest::Portfolio portfolio)
@@ -301,9 +301,11 @@ private:
 
     ui::form_section(
      "Entry Comparators",
-     "Compare prepared requested orders in sequence. The first unequal value "
-     "determines priority; complete ties use the ordered Backtest and "
-     "Watchlist order.");
+     "Compare prepared requested orders in sequence using Requested Order "
+     "values and asset OHLCV or custom DATA. Current Close sees the completed "
+     "current bar. Next Open sees the previous completed bar; use Requested "
+     "Order Price for the executable open. The first unequal value determines "
+     "priority; complete ties use ordered Backtest and Watchlist order.");
     auto& comparators = portfolio.entry_comparators();
     auto comparator_index = std::size_t{};
     while(comparator_index < comparators.size()) {

@@ -82,6 +82,33 @@ For each risk-increasing request, Pludux performs these steps:
 8. Reject the request or cap it to the largest affordable valid quantity using
    the owning Profile's insufficient-cash policy.
 
+### Entry comparator data
+
+Portfolio Entry Comparators can combine immutable Requested Order values with
+the order's asset OHLCV fields and custom `DATA` fields. They support numeric
+constants, basic scalar math, and lookback. They intentionally do not expose
+Strategy named series or technical-indicator nodes: Strategy and Profile logic
+has already produced the Requested Order before Portfolio ranking begins.
+
+Asset data is phase-safe. A Current Close order sees the completed current bar.
+A Next Open order sees the previous completed bar, because the current bar's
+high, low, close, and volume do not yet exist. Use Requested Order Price when a
+Next Open comparison needs the executable open price.
+
+A direction-adjusted strength comparator can rank historical price movement in
+units of the order's risk distance:
+
+```text
+Requested Order Direction
+* (Requested Order Price - Lookback(Close, 63))
+/ Requested Order Risk Distance
+```
+
+Set the comparator to Higher First. Positive values rank favorable movement for
+both long and short orders in the same direction-aware list. If an asset lacks
+the requested history or data, the score is non-finite and ranks after every
+finite score.
+
 Both reductions use the completed step count from current drawdown relative to
 peak equity. Notional equity reduction changes only sizing methods that consume
 equity; fixed quantity and fixed budget remain fixed unless Size Reduction is

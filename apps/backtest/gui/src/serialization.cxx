@@ -1129,7 +1129,8 @@ struct json_conv_traits<Json, pludux::backtest::PortfolioEntryComparator> {
                             const Json& json)
   {
     try {
-      auto parser = pludux::backtest::make_requested_order_config_parser();
+      auto parser =
+       pludux::backtest::make_portfolio_entry_comparator_config_parser();
       return result_type{
        value_type{parser.parse_node(jsoncons::ojson{json.at("expression")}),
                   required_as<pludux::backtest::PortfolioEntryComparatorOrder>(
@@ -1143,7 +1144,8 @@ struct json_conv_traits<Json, pludux::backtest::PortfolioEntryComparator> {
   static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>& aset,
                       const value_type& value)
   {
-    auto parser = pludux::backtest::make_requested_order_config_parser();
+    auto parser =
+     pludux::backtest::make_portfolio_entry_comparator_config_parser();
     auto json = Json{};
     json["expression"] = parser.serialize_node(value.expression());
     set_json(json, aset, "order", value.order());

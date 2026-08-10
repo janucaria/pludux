@@ -12,7 +12,7 @@ import :windows.strategies_window;
 
 export namespace pludux::apps::ui {
 
-enum class SeriesNodeCatalog { Full, RequestedOrder };
+enum class SeriesNodeCatalog { Full, PortfolioComparator };
 
 class SeriesNodeEditor {
 public:
@@ -34,8 +34,8 @@ public:
               ErasedNode<ErasedSeriesMethodContext>& node,
               WindowContext& context)
   {
-    if(self.catalog_ == SeriesNodeCatalog::RequestedOrder) {
-      self.renderer_.render_requested_order_expression(node, context);
+    if(self.catalog_ == SeriesNodeCatalog::PortfolioComparator) {
+      self.renderer_.render_portfolio_comparator_expression(node, context);
     } else {
       self.renderer_.render_numeric_expression(
        node, context, self.available_series_names_, true);

@@ -261,11 +261,25 @@ auto get_default_series_node(const std::string& series_id)
    std::format("Unknown series node id: {}", series_id)};
 }
 
-auto get_default_requested_order_node(const std::string& id)
+auto get_default_portfolio_comparator_node(const std::string& id)
  -> ErasedNode<ErasedSeriesMethodContext>
 {
   if(id == "VALUE") {
     return ValueNode{0.0};
+  } else if(id == "OPEN") {
+    return OpenNode{};
+  } else if(id == "HIGH") {
+    return HighNode{};
+  } else if(id == "LOW") {
+    return LowNode{};
+  } else if(id == "CLOSE") {
+    return CloseNode{};
+  } else if(id == "VOLUME") {
+    return VolumeNode{};
+  } else if(id == "DATA") {
+    return DataNode{};
+  } else if(id == "LOOKBACK") {
+    return LookbackNode{CloseNode{}, 1};
   } else if(id == "REQUESTED_ORDER_PRICE") {
     return RequestedOrderPriceNode{};
   } else if(id == "REQUESTED_ORDER_DIRECTION") {
@@ -739,7 +753,7 @@ auto get_series_node_title(const std::string& series_id) -> std::string
   return "Unknown";
 }
 
-auto get_requested_order_node_combo_entries()
+auto get_portfolio_comparator_node_combo_entries()
  -> const std::vector<ui::ComboEntry>&
 {
   static const auto entries = [] {
@@ -760,6 +774,13 @@ auto get_requested_order_node_combo_entries()
                               "REQUESTED_PRICE_RISK",
                               "REQUESTED_RISK_WITH_FEES",
                               "FROZEN_UNIT_QUANTITY",
+                              "OPEN",
+                              "HIGH",
+                              "LOW",
+                              "CLOSE",
+                              "VOLUME",
+                              "DATA",
+                              "LOOKBACK",
                               "VALUE",
                               "ADD",
                               "SUBTRACT",
@@ -777,12 +798,15 @@ auto get_requested_order_node_combo_entries()
     result.reserve(ids.size());
     for(const auto& id : ids) {
       const auto category =
-       id == "VALUE" || id == "ADD" || id == "SUBTRACT" || id == "MULTIPLY" ||
-         id == "DIVIDE" || id == "NEGATE" || id == "ABS" || id == "ABS_DIFF" ||
-         id == "SQRT" || id == "MAX" || id == "MIN" || id == "POSITIVE_PART" ||
-         id == "NEGATIVE_PART"
-        ? "Math"
-        : "Requested Order";
+       id == "OPEN" || id == "HIGH" || id == "LOW" || id == "CLOSE" ||
+         id == "VOLUME" || id == "DATA" || id == "LOOKBACK"
+        ? "Asset Data"
+       : id == "VALUE" || id == "ADD" || id == "SUBTRACT" || id == "MULTIPLY" ||
+          id == "DIVIDE" || id == "NEGATE" || id == "ABS" || id == "ABS_DIFF" ||
+          id == "SQRT" || id == "MAX" || id == "MIN" || id == "POSITIVE_PART" ||
+          id == "NEGATIVE_PART"
+         ? "Math"
+         : "Requested Order";
       result.push_back(ui::ComboEntry{
        .id = id, .title = get_series_node_title(id), .category = category});
     }
@@ -1307,15 +1331,15 @@ public:
     self.allow_unlisted_series_names_ = previous_allow_unlisted;
   }
 
-  void render_requested_order_expression(
+  void render_portfolio_comparator_expression(
    this StrategiesWindow& self,
    ErasedNode<ErasedSeriesMethodContext>& expression,
    WindowContext& context)
   {
-    const auto previous = self.requested_order_expression_;
-    self.requested_order_expression_ = true;
+    const auto previous = self.portfolio_comparator_expression_;
+    self.portfolio_comparator_expression_ = true;
     self.render_series_node(expression, context);
-    self.requested_order_expression_ = previous;
+    self.portfolio_comparator_expression_ = previous;
   }
 
 private:
@@ -1330,7 +1354,7 @@ private:
 
   std::vector<std::string> available_series_names_;
   bool allow_unlisted_series_names_{};
-  bool requested_order_expression_{};
+  bool portfolio_comparator_expression_{};
   std::unordered_map<std::string, std::string> changed_series_names_;
 
   auto has_unsaved_changes(this const auto& self) -> bool
@@ -2466,8 +2490,8 @@ private:
        ui::searchable_combo("##Series",
                             series_node_id,
                             combo_preview_value,
-                            self.requested_order_expression_
-                             ? get_requested_order_node_combo_entries()
+                            self.portfolio_comparator_expression_
+                             ? get_portfolio_comparator_node_combo_entries()
                              : get_series_node_combo_entries());
       if(selected) {
         if(*selected == "SERIES" && self.available_series_names_.empty() &&
@@ -2478,8 +2502,8 @@ private:
            get_series_node_title(*selected));
           context.alert(error_message);
         } else {
-          series_node = self.requested_order_expression_
-                         ? get_default_requested_order_node(*selected)
+          series_node = self.portfolio_comparator_expression_
+                         ? get_default_portfolio_comparator_node(*selected)
                          : get_default_series_node(*selected);
         }
       }

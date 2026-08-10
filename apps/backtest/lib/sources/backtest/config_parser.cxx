@@ -174,7 +174,7 @@ private:
 
 auto make_default_registered_config_parser() -> ConfigParser;
 
-auto make_requested_order_config_parser() -> ConfigParser;
+auto make_portfolio_entry_comparator_config_parser() -> ConfigParser;
 
 auto parse_entry_filter_node(const jsoncons::ojson& config)
  -> ErasedNode<EntryFilterMethodContext>;
@@ -2046,11 +2046,47 @@ auto make_default_registered_config_parser() -> ConfigParser
   return config_parser;
 }
 
-auto make_requested_order_config_parser() -> ConfigParser
+auto make_portfolio_entry_comparator_config_parser() -> ConfigParser
 {
   auto config_parser = ConfigParser{};
   config_parser.register_node_parser(
    "VALUE", serialize_value_node, parse_value_node);
+  config_parser.register_node_parser(
+   "DATA", serialize_data_node, parse_data_node);
+  config_parser.register_node_parser("OPEN",
+                                     serialize_parameterless_node<OpenNode>,
+                                     parse_parameterless_node<OpenNode>);
+  config_parser.register_node_parser("HIGH",
+                                     serialize_parameterless_node<HighNode>,
+                                     parse_parameterless_node<HighNode>);
+  config_parser.register_node_parser("LOW",
+                                     serialize_parameterless_node<LowNode>,
+                                     parse_parameterless_node<LowNode>);
+  config_parser.register_node_parser("CLOSE",
+                                     serialize_parameterless_node<CloseNode>,
+                                     parse_parameterless_node<CloseNode>);
+  config_parser.register_node_parser("VOLUME",
+                                     serialize_parameterless_node<VolumeNode>,
+                                     parse_parameterless_node<VolumeNode>);
+  config_parser.register_node_parser(
+   "LOOKBACK",
+   [](const ConfigParser& parser,
+      const ErasedNode<ErasedSeriesMethodContext>& node) {
+     const auto* lookback = node_cast<LookbackNode>(node);
+     if(!lookback) {
+       return jsoncons::ojson::null();
+     }
+     auto result = jsoncons::ojson{};
+     result["period"] = lookback->period();
+     result["source"] = parser.serialize_node(lookback->source());
+     return result;
+   },
+   [](ConfigParser::Parser parser, const jsoncons::ojson& params) {
+     const auto period = params.at("period").as<std::size_t>();
+     const auto source =
+      parse_node_from_param_or(parser, params, "source", CloseNode{});
+     return ErasedNode<ErasedSeriesMethodContext>{LookbackNode{source, period}};
+   });
 
 #define PLUDUX_REGISTER_REQUESTED_ORDER_NODE(Id, Type) \
   config_parser.register_node_parser(                  \

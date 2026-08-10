@@ -22,6 +22,20 @@ auto make_snapshot() -> AssetSnapshot
   return asset.get_snapshot(0);
 }
 
+auto make_history_snapshot() -> AssetSnapshot
+{
+  static const auto asset =
+   Asset{"History",
+         AssetHistory{{"Datetime", {1.0, 2.0, 3.0}},
+                      {"Open", {70.0, 80.0, 100.0}},
+                      {"High", {71.0, 81.0, 101.0}},
+                      {"Low", {69.0, 79.0, 99.0}},
+                      {"Close", {70.0, 80.0, 100.0}},
+                      {"Volume", {10.0, 20.0, 30.0}},
+                      {"StrengthSource", {7.0, 8.0, 10.0}}}};
+  return asset.get_snapshot(2);
+}
+
 auto make_initial_order() -> RequestedOrder
 {
   return RequestedOrder{
@@ -149,9 +163,16 @@ TEST(RequestedOrderNode, CombinesOrderValuesWithBasicMath)
                    420.0);
 }
 
-TEST(RequestedOrderNode, DedicatedParserRoundTripsEveryLeaf)
+TEST(RequestedOrderNode, ComparatorParserRoundTripsAllowedNodes)
 {
   const auto nodes = std::vector<ErasedNode<ErasedSeriesMethodContext>>{
+   OpenNode{},
+   HighNode{},
+   LowNode{},
+   CloseNode{},
+   VolumeNode{},
+   DataNode{"StrengthSource"},
+   LookbackNode{CloseNode{}, 2},
    RequestedOrderPriceNode{},
    RequestedOrderDirectionNode{},
    IsPyramidingOrderNode{},
@@ -168,7 +189,7 @@ TEST(RequestedOrderNode, DedicatedParserRoundTripsEveryLeaf)
    RequestedPriceRiskNode{},
    RequestedRiskWithFeesNode{},
    FrozenUnitQuantityNode{}};
-  auto parser = make_requested_order_config_parser();
+  auto parser = make_portfolio_entry_comparator_config_parser();
 
   for(const auto& node : nodes) {
     const auto json = parser.serialize_node(node);
@@ -177,12 +198,49 @@ TEST(RequestedOrderNode, DedicatedParserRoundTripsEveryLeaf)
   }
 }
 
-TEST(RequestedOrderNode, RejectsNestedMarketExpression)
+TEST(RequestedOrderNode, CombinesRequestedOrderAndAssetHistory)
+{
+  const auto expression =
+   MultiplyNode{RequestedOrderDirectionNode{},
+                DivideNode{SubtractNode{RequestedOrderPriceNode{},
+                                        LookbackNode{CloseNode{}, 2}},
+                           RequestedOrderRiskDistanceNode{}}};
+  const auto comparator = PortfolioEntryComparator{
+   expression, PortfolioEntryComparatorOrder::HigherFirst};
+  auto conversion_context = NodeToErasedMethodContext{};
+  const auto method = node_to_erased_method<ErasedSeriesMethodContext>(
+   comparator.expression(), conversion_context);
+  const auto order = make_initial_order();
+
+  EXPECT_DOUBLE_EQ(evaluate_series_method(method,
+                                          make_history_snapshot(),
+                                          ErasedSeriesMethodContext{
+                                           RequestedOrderMethodContext{order}}),
+                   6.0);
+}
+
+TEST(RequestedOrderNode, MissingLookbackHistoryProducesNonFiniteScore)
+{
+  auto conversion_context = NodeToErasedMethodContext{};
+  const auto method = node_to_erased_method<ErasedSeriesMethodContext>(
+   LookbackNode{CloseNode{}, 1}, conversion_context);
+  const auto order = make_initial_order();
+
+  EXPECT_TRUE(std::isnan(evaluate_series_method(
+   method,
+   make_snapshot(),
+   ErasedSeriesMethodContext{RequestedOrderMethodContext{order}})));
+}
+
+TEST(RequestedOrderNode, RejectsNamedSeriesAndIndicatorExpressions)
 {
   EXPECT_THROW(
-   (PortfolioEntryComparator{AddNode{RequestedQuantityNode{}, CloseNode{}},
+   (PortfolioEntryComparator{SeriesNode{"Strength"},
                              PortfolioEntryComparatorOrder::HigherFirst}),
    std::invalid_argument);
+  EXPECT_THROW((PortfolioEntryComparator{
+                AtrNode{20}, PortfolioEntryComparatorOrder::HigherFirst}),
+               std::invalid_argument);
 }
 
 } // namespace pludux::backtest::tests

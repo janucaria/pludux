@@ -211,7 +211,7 @@ TEST(PortfolioRunnerTest, BacktestOrderHasDeterministicSharedCashPriority)
   EXPECT_DOUBLE_EQ(results.timeline().row(0).available_capital, 200.0);
 }
 
-TEST(PortfolioRunnerTest, HigherFirstComparatorOverridesBacktestOrder)
+TEST(PortfolioRunnerTest, CurrentCloseAssetComparatorOverridesBacktestOrder)
 {
   const auto first = make_priced_asset("First", 90.0);
   const auto second = make_priced_asset("Second", 110.0);
@@ -233,7 +233,7 @@ TEST(PortfolioRunnerTest, HigherFirstComparatorOverridesBacktestOrder)
      AssetStoreHandle{2, 1},
      make_entry_runner(
       second, market, broker, profile, InsufficientCashPolicy::Reject)}},
-   {PortfolioEntryComparator{RequestedOrderPriceNode{},
+   {PortfolioEntryComparator{CloseNode{},
                              PortfolioEntryComparatorOrder::HigherFirst}}};
   auto results = PortfolioResults{};
 
@@ -430,21 +430,21 @@ TEST(PortfolioRunnerTest, ComparatorRejectsNamedStrategySeries)
    std::invalid_argument);
 }
 
-TEST(PortfolioRunnerTest, ComparatorRanksNextOpenOrdersAtOpenPhase)
+TEST(PortfolioRunnerTest, NextOpenComparatorUsesPreviousCompletedAssetBar)
 {
   const auto first = Asset{"First",
                            AssetHistory{{"Datetime", {1.0, 2.0}},
-                                        {"Open", {90.0, 90.0}},
-                                        {"High", {90.0, 90.0}},
-                                        {"Low", {90.0, 90.0}},
-                                        {"Close", {90.0, 90.0}},
+                                        {"Open", {200.0, 100.0}},
+                                        {"High", {200.0, 100.0}},
+                                        {"Low", {200.0, 1.0}},
+                                        {"Close", {200.0, 1.0}},
                                         {"Volume", {0.0, 0.0}}}};
   const auto second = Asset{"Second",
                             AssetHistory{{"Datetime", {1.0, 2.0}},
-                                         {"Open", {110.0, 110.0}},
-                                         {"High", {110.0, 110.0}},
-                                         {"Low", {110.0, 110.0}},
-                                         {"Close", {110.0, 110.0}},
+                                         {"Open", {100.0, 100.0}},
+                                         {"High", {100.0, 1'000.0}},
+                                         {"Low", {100.0, 100.0}},
+                                         {"Close", {100.0, 1'000.0}},
                                          {"Volume", {0.0, 0.0}}}};
   const auto market = Market{"Market", 0.0, 0.0};
   const auto broker = Broker{"Broker"};
@@ -477,15 +477,15 @@ TEST(PortfolioRunnerTest, ComparatorRanksNextOpenOrdersAtOpenPhase)
     PortfolioRunner::BacktestRun{BacktestStoreHandle{2, 1},
                                  AssetStoreHandle{2, 1},
                                  make_next_open_runner(second)}},
-   {PortfolioEntryComparator{RequestedOrderPriceNode{},
+   {PortfolioEntryComparator{CloseNode{},
                              PortfolioEntryComparatorOrder::HigherFirst}}};
   auto results = PortfolioResults{};
 
   runner.run(results);
   runner.run(results);
 
-  EXPECT_FALSE(results.backtests()[0].timeline().open_position(1));
-  EXPECT_TRUE(results.backtests()[1].timeline().open_position(1));
+  EXPECT_TRUE(results.backtests()[0].timeline().open_position(1));
+  EXPECT_FALSE(results.backtests()[1].timeline().open_position(1));
 }
 
 TEST(PortfolioRunnerTest, CapPolicyUsesOnlySharedAvailableCash)

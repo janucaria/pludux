@@ -70,9 +70,10 @@ private:
   static void
   validate_expression(const ErasedNode<ErasedSeriesMethodContext>& expression)
   {
-    if(!is_requested_order_expression(expression)) {
+    if(!is_portfolio_entry_comparator_expression(expression)) {
       throw std::invalid_argument{
-       "Portfolio comparator requires a Requested Order expression"};
+       "Portfolio comparator requires a Requested Order or asset-data "
+       "expression"};
     }
   }
 };

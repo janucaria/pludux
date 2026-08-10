@@ -610,8 +610,14 @@ TEST(ApplicationStateSerialization, RoundTripsOrderedEntryComparators)
   auto state = ApplicationState{};
   auto portfolio = Portfolio{};
   portfolio.entry_comparators(
-   {PortfolioEntryComparator{pludux::backtest::RequestedNotionalNode{},
-                             PortfolioEntryComparatorOrder::HigherFirst},
+   {PortfolioEntryComparator{
+     pludux::MultiplyNode{
+      pludux::backtest::RequestedOrderDirectionNode{},
+      pludux::DivideNode{
+       pludux::SubtractNode{pludux::backtest::RequestedOrderPriceNode{},
+                            pludux::LookbackNode{pludux::CloseNode{}, 63}},
+       pludux::backtest::RequestedOrderRiskDistanceNode{}}},
+     PortfolioEntryComparatorOrder::HigherFirst},
     PortfolioEntryComparator{
      pludux::DivideNode{pludux::backtest::RequestedRiskWithFeesNode{},
                         pludux::ValueNode{2.0}},
@@ -625,7 +631,8 @@ TEST(ApplicationStateSerialization, RoundTripsOrderedEntryComparators)
   EXPECT_NE(serialized.find("\"entryComparators\""), std::string::npos);
   EXPECT_NE(serialized.find("\"HIGHER_FIRST\""), std::string::npos);
   EXPECT_NE(serialized.find("\"LOWER_FIRST\""), std::string::npos);
-  EXPECT_NE(serialized.find("\"REQUESTED_NOTIONAL\""), std::string::npos);
+  EXPECT_NE(serialized.find("\"LOOKBACK\""), std::string::npos);
+  EXPECT_NE(serialized.find("\"CLOSE\""), std::string::npos);
   EXPECT_NE(serialized.find("\"REQUESTED_RISK_WITH_FEES\""), std::string::npos);
   auto input = std::stringstream{serialized};
   const auto loaded = load_application_state_json(input);
@@ -638,7 +645,7 @@ TEST(ApplicationStateSerialization, RoundTripsOrderedEntryComparators)
             PortfolioEntryComparatorOrder::LowerFirst);
 }
 
-TEST(ApplicationStateSerialization, RejectsMarketNodeInEntryComparator)
+TEST(ApplicationStateSerialization, RejectsNamedSeriesInEntryComparator)
 {
   auto state = ApplicationState{};
   auto portfolio = Portfolio{};
@@ -652,7 +659,7 @@ TEST(ApplicationStateSerialization, RejectsMarketNodeInEntryComparator)
   const auto method = serialized.find("REQUESTED_ORDER_PRICE");
   ASSERT_NE(method, std::string::npos);
   serialized.replace(
-   method, std::string{"REQUESTED_ORDER_PRICE"}.size(), "CLOSE");
+   method, std::string{"REQUESTED_ORDER_PRICE"}.size(), "SERIES");
   auto input = std::stringstream{serialized};
 
   EXPECT_THROW(load_application_state_json(input), std::exception);

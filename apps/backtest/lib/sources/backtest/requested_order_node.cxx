@@ -58,10 +58,13 @@ PLUDUX_REQUESTED_ORDER_NODE(FrozenUnitQuantityNode,
 
 #undef PLUDUX_REQUESTED_ORDER_NODE
 
-auto is_requested_order_expression(
+auto is_portfolio_entry_comparator_expression(
  const ErasedNode<ErasedSeriesMethodContext>& node) noexcept -> bool
 {
-  if(node_cast<ValueNode>(node) || node_cast<RequestedOrderPriceNode>(node) ||
+  if(node_cast<ValueNode>(node) || node_cast<OpenNode>(node) ||
+     node_cast<HighNode>(node) || node_cast<LowNode>(node) ||
+     node_cast<CloseNode>(node) || node_cast<VolumeNode>(node) ||
+     node_cast<DataNode>(node) || node_cast<RequestedOrderPriceNode>(node) ||
      node_cast<RequestedOrderDirectionNode>(node) ||
      node_cast<IsPyramidingOrderNode>(node) ||
      node_cast<RawRequestedQuantityNode>(node) ||
@@ -79,10 +82,13 @@ auto is_requested_order_expression(
      node_cast<FrozenUnitQuantityNode>(node)) {
     return true;
   }
+  if(const auto* lookback = node_cast<LookbackNode>(node)) {
+    return is_portfolio_entry_comparator_expression(lookback->source());
+  }
   const auto binary_valid = [&]<typename TNode> {
     if(const auto* binary = node_cast<TNode>(node)) {
-      return is_requested_order_expression(binary->left()) &&
-             is_requested_order_expression(binary->right());
+      return is_portfolio_entry_comparator_expression(binary->left()) &&
+             is_portfolio_entry_comparator_expression(binary->right());
     }
     return false;
   };
@@ -97,7 +103,7 @@ auto is_requested_order_expression(
   }
   const auto unary_valid = [&]<typename TNode> {
     if(const auto* unary = node_cast<TNode>(node)) {
-      return is_requested_order_expression(unary->operand());
+      return is_portfolio_entry_comparator_expression(unary->operand());
     }
     return false;
   };
