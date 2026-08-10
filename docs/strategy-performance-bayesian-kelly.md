@@ -264,9 +264,10 @@ they are not a joint 80% credible region.
 At an entry intent, sizing reads the Strategy Performance snapshot available at
 that instant. A theoretical position contributes evidence only after it closes.
 Therefore, neither its future outcome nor any later bar can influence its entry
-size. Pyramid layers are independently sized with current equity and the latest
-available posterior. If no theoretical position closes between layers, they use
-the same posterior.
+size. The initial executed entry freezes its final quantity as the position's
+Unit and freezes its risk distance. Pyramid layers request that Unit and do not
+reevaluate equity, drawdown adjustment, Bayesian Kelly, or the risk-distance
+expression. A new position starts with a fresh posterior and sizing evaluation.
 
 No warm-up count is imposed. Under untouched symmetric defaults, Posterior Mean
 has \(p=0.5\), \(a=b=0.01\), and therefore \(f_{raw}=0\). Adverse Quantiles

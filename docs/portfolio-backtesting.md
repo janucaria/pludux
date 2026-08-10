@@ -1,5 +1,8 @@
 # Portfolio Backtesting
 
+For a complete multi-market configuration example, see
+[Turtle Trading Guidelines for Pludux](turtle-trading.md).
+
 ## Terminology
 
 Pludux treats a **Backtest** as a reusable Watchlist plus ordered setup
@@ -116,8 +119,10 @@ also configured. A Turtle-style setup uses a 10% drawdown step, 0% Size
 Reduction, and 20% Notional Equity Reduction.
 
 An accepted order reserves its notional before the next backtest request is
-considered. Pyramiding an existing trade does not consume another slot. Closing
-a trade releases its slot before later entry phases and backtests are processed.
+considered. Pyramiding an existing trade does not consume another open-trade
+slot, but every successful layer consumes combined-layer capacity. Closing a
+trade releases its open-trade slot and all of its combined layers before later
+entry phases and backtests are processed.
 
 New Portfolios allow at most 10 open trades by default. The Portfolio editor
 accepts values of 1 or greater. The underlying configuration also permits 0,
