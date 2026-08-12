@@ -17,10 +17,9 @@ if(NOT EMSCRIPTEN)
     GIT_TAG        v1.17.0
     GIT_SHALLOW    TRUE
     GIT_PROGRESS   TRUE
-    OVERRIDE_FIND_PACKAGE
   )
 
-  find_package(googletest REQUIRED)
+  FetchContent_MakeAvailable(googletest)
 endif()
 
 add_subdirectory(libs)

@@ -7,7 +7,6 @@ FetchContent_Declare(
   GIT_TAG        v1.8.1
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
-  OVERRIDE_FIND_PACKAGE
   EXCLUDE_FROM_ALL
 )
 
@@ -17,7 +16,6 @@ FetchContent_Declare(
   GIT_TAG        v8.99
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
-  OVERRIDE_FIND_PACKAGE
 )
 
 FetchContent_Declare(
@@ -26,7 +24,6 @@ FetchContent_Declare(
   GIT_TAG        v3.11.0
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
-  OVERRIDE_FIND_PACKAGE
   PATCH_COMMAND 
     ${CMAKE_COMMAND} -E copy_directory
       ${CMAKE_CURRENT_SOURCE_DIR}/patch/ctre/
@@ -43,10 +40,7 @@ FetchContent_Declare(
   SOURCE_SUBDIR  _pludux_header_only
 )
 
-find_package(jsoncons REQUIRED)
-find_package(rapidcsv REQUIRED)
-find_package(ctre REQUIRED)
-FetchContent_MakeAvailable(boost_math)
+FetchContent_MakeAvailable(jsoncons rapidcsv ctre boost_math)
 
 
 add_library(${PROJECT_NAME})
