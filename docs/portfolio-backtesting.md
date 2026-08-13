@@ -14,7 +14,11 @@ Backtests.
   input overrides. The Backtest shares one Strategy Performance calculation
   policy across its setups.
 - A Portfolio owns initial capital, one Market, one Broker, aggregate capacity
-  limits, and an ordered collection of Backtests. Each setup Profile owns its
+  limits, and an ordered collection of Backtests. The Market is the trading
+  venue or market context and provides venue-specific rules such as minimum
+  order quantity and quantity step. The Broker represents the Market's broker
+  or execution provider and provides its fee and execution-cost rules. Each
+  setup Profile owns its
   drawdown adjustment and insufficient-cash response.
 - Running a Portfolio simulates all of its Backtests. A single-asset simulation
   is a Portfolio containing one Backtest.
