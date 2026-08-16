@@ -15,7 +15,7 @@ module;
 export module pludux.apps.backtest.serialization;
 
 import pludux.backtest;
-import pludux.apps.backtest.portfolio_backtest_setup_selections;
+import pludux.apps.backtest.portfolio_strategy_selections;
 
 import pludux.apps.backtest.document_state;
 import pludux.apps.backtest.view_state;
@@ -69,74 +69,74 @@ auto vector_from_json(const Json& json) -> std::vector<TValue>
 }
 
 template<typename Json>
-auto strategy_entry_to_json(const auto& aset,
-                            const pludux::backtest::Strategy& strategy) -> Json
+auto model_entry_to_json(const auto& aset,
+                         const pludux::backtest::Model& model) -> Json
 {
   auto json = Json{};
-  json["name"] = strategy.name();
+  json["name"] = model.name();
   json["config"] = jsoncons::reflect::
-   json_conv_traits<Json, pludux::backtest::Strategy>::to_json(aset, strategy);
+    json_conv_traits<Json, pludux::backtest::Model>::to_json(aset, model);
   return json;
 }
 
-template<typename TStrategy, typename Json>
-auto strategy_entry_from_json(const Json& json) -> TStrategy
+template<typename TModel, typename Json>
+auto model_entry_from_json(const Json& json) -> TModel
 {
-  auto strategy = json.at("config").template as<TStrategy>();
-  strategy.name(required_as<std::string>(json, "name"));
-  return strategy;
+  auto model = json.at("config").template as<TModel>();
+  model.name(required_as<std::string>(json, "name"));
+  return model;
 }
 
 template<typename Json>
-auto strategies_to_json(const auto& aset,
-                        const std::vector<pludux::backtest::Strategy>& values)
+auto models_to_json(const auto& aset,
+                    const std::vector<pludux::backtest::Model>& values)
  -> Json
 {
   auto json = typename Json::array();
   for(const auto& value : values) {
-    json.push_back(strategy_entry_to_json<Json>(aset, value));
+    json.push_back(model_entry_to_json<Json>(aset, value));
   }
   return json;
 }
 
 template<typename Json>
-auto strategies_from_json(const Json& json)
- -> std::vector<pludux::backtest::Strategy>
+auto models_from_json(const Json& json)
+  -> std::vector<pludux::backtest::Model>
 {
-  auto values = std::vector<pludux::backtest::Strategy>{};
+   auto values = std::vector<pludux::backtest::Model>{};
   values.reserve(json.size());
   for(const auto& item : json.array_range()) {
     values.push_back(
-     strategy_entry_from_json<pludux::backtest::Strategy>(item));
+       model_entry_from_json<pludux::backtest::Model>(item));
   }
   return values;
 }
 
 template<typename Json>
-auto strategy_performance_from_json(const Json& json)
- -> pludux::backtest::StrategyPerformanceConfig
+auto model_performance_from_json(const Json& json)
+ -> pludux::backtest::ModelPerformanceConfig
 {
   using namespace pludux::backtest;
   const auto break_even_value =
    required_as<std::string>(json, "breakEvenTreatment");
   const auto break_even_treatment = [&] {
     if(break_even_value == "SKIP") {
-      return StrategyPerformanceBreakEvenTreatment::Skip;
+       return ModelPerformanceBreakEvenTreatment::Skip;
     }
     if(break_even_value == "COUNT_AS_WIN") {
-      return StrategyPerformanceBreakEvenTreatment::CountAsWin;
+       return ModelPerformanceBreakEvenTreatment::CountAsWin;
     }
     if(break_even_value == "COUNT_AS_LOSS") {
-      return StrategyPerformanceBreakEvenTreatment::CountAsLoss;
+       return ModelPerformanceBreakEvenTreatment::CountAsLoss;
     }
     throw std::invalid_argument{"Invalid break-even treatment"};
   }();
   const auto& history = json.at("history");
   const auto mode_value = required_as<int>(history, "mode");
-  if(mode_value < static_cast<int>(StrategyPerformanceHistoryMode::All) ||
+   if(mode_value < static_cast<int>(ModelPerformanceHistoryMode::All) ||
      mode_value >
-      static_cast<int>(StrategyPerformanceHistoryMode::ExponentialDecay)) {
-    throw std::invalid_argument{"Invalid strategy-performance history mode"};
+       static_cast<int>(ModelPerformanceHistoryMode::ExponentialDecay)) {
+     throw std::invalid_argument{"Invalid model-performance history mode"};
   }
   const auto& bayesian = json.at("bayesian");
   const auto& win = bayesian.at("winProbability");
@@ -154,12 +154,12 @@ auto strategy_performance_from_json(const Json& json)
      required_as<double>(params, "priorStrength"),
      required_as<double>(params, "coefficientOfVariation")}};
   };
-  return StrategyPerformanceConfig{
-   StrategyPerformanceHistoryPolicy{
-    static_cast<StrategyPerformanceHistoryMode>(mode_value),
+   return ModelPerformanceConfig{
+    ModelPerformanceHistoryPolicy{
+     static_cast<ModelPerformanceHistoryMode>(mode_value),
     required_as<std::size_t>(history, "rollingWindow"),
     required_as<double>(history, "exponentialDecay")},
-   StrategyPerformanceBayesianConfig{
+    ModelPerformanceBayesianConfig{
     BayesianWinModelNode{BetaBernoulliModelNode{
      required_as<double>(win_params, "priorWinProbability"),
      required_as<double>(win_params, "priorStrength")}},
@@ -169,18 +169,18 @@ auto strategy_performance_from_json(const Json& json)
 }
 
 template<typename Json>
-auto strategy_performance_to_json(
- const pludux::backtest::StrategyPerformanceConfig& config) -> Json
+auto model_performance_to_json(
+ const pludux::backtest::ModelPerformanceConfig& config) -> Json
 {
   auto json = Json{};
   switch(config.break_even_treatment()) {
-  case pludux::backtest::StrategyPerformanceBreakEvenTreatment::Skip:
+   case pludux::backtest::ModelPerformanceBreakEvenTreatment::Skip:
     json["breakEvenTreatment"] = "SKIP";
     break;
-  case pludux::backtest::StrategyPerformanceBreakEvenTreatment::CountAsWin:
+   case pludux::backtest::ModelPerformanceBreakEvenTreatment::CountAsWin:
     json["breakEvenTreatment"] = "COUNT_AS_WIN";
     break;
-  case pludux::backtest::StrategyPerformanceBreakEvenTreatment::CountAsLoss:
+   case pludux::backtest::ModelPerformanceBreakEvenTreatment::CountAsLoss:
     json["breakEvenTreatment"] = "COUNT_AS_LOSS";
     break;
   }
@@ -298,15 +298,15 @@ struct json_conv_traits<Json, pludux::backtest::PositionSizingNode> {
         return result_type{value_type{EquityFractionPositionSizing{
          required_as<double>(params, "equityFraction")}}};
       }
-      if(method == "STRATEGY_PERFORMANCE_BAYESIAN_KELLY") {
+      if(method == "MODEL_PERFORMANCE_BAYESIAN_KELLY") {
         const auto estimate_name = required_as<std::string>(params, "estimate");
         const auto estimate =
          estimate_name == "POSTERIOR_MEAN"
-          ? StrategyPerformanceBayesianKellyEstimate::PosteriorMean
+           ? ModelPerformanceBayesianKellyEstimate::PosteriorMean
          : estimate_name == "ADVERSE_QUANTILES"
-           ? StrategyPerformanceBayesianKellyEstimate::AdverseQuantiles
+            ? ModelPerformanceBayesianKellyEstimate::AdverseQuantiles
            : throw std::invalid_argument{"Invalid Bayesian Kelly estimate"};
-        return result_type{value_type{StrategyPerformanceBayesianKellySizing{
+         return result_type{value_type{ModelPerformanceBayesianKellySizing{
          estimate,
          required_as<double>(params, "centralCredibleMass"),
          required_as<double>(params, "kellyMultiplier"),
@@ -341,11 +341,11 @@ struct json_conv_traits<Json, pludux::backtest::PositionSizingNode> {
       json["method"] = "EQUITY_FRACTION";
       json["params"]["equityFraction"] = value->equity_fraction();
     } else if(const auto* value = position_sizing_node_cast<
-               StrategyPerformanceBayesianKellySizing>(node)) {
-      json["method"] = "STRATEGY_PERFORMANCE_BAYESIAN_KELLY";
+                ModelPerformanceBayesianKellySizing>(node)) {
+       json["method"] = "MODEL_PERFORMANCE_BAYESIAN_KELLY";
       json["params"]["estimate"] =
        value->estimate() ==
-         StrategyPerformanceBayesianKellyEstimate::PosteriorMean
+          ModelPerformanceBayesianKellyEstimate::PosteriorMean
         ? "POSTERIOR_MEAN"
         : "ADVERSE_QUANTILES";
       json["params"]["centralCredibleMass"] = value->central_credible_mass();
@@ -812,11 +812,12 @@ struct json_conv_traits<Json, pludux::backtest::Watchlist> {
 template<typename Json, typename THandle>
   requires std::same_as<THandle, pludux::backtest::AssetStoreHandle> ||
            std::same_as<THandle, pludux::backtest::WatchlistStoreHandle> ||
-           std::same_as<THandle, pludux::backtest::StrategyStoreHandle> ||
+            std::same_as<THandle, pludux::backtest::ModelStoreHandle> ||
            std::same_as<THandle, pludux::backtest::MarketStoreHandle> ||
            std::same_as<THandle, pludux::backtest::BrokerStoreHandle> ||
-           std::same_as<THandle, pludux::backtest::ProfileStoreHandle> ||
-           std::same_as<THandle, pludux::backtest::BacktestStoreHandle> ||
+            std::same_as<THandle, pludux::backtest::ProfileStoreHandle> ||
+            std::same_as<THandle, pludux::backtest::StrategyStoreHandle> ||
+             std::same_as<THandle, pludux::backtest::SystemStoreHandle> ||
            std::same_as<THandle, pludux::backtest::PortfolioStoreHandle>
 struct json_conv_traits<Json, THandle> {
   using value_type = THandle;
@@ -931,8 +932,8 @@ struct json_conv_traits<Json,
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::BacktestSetup> {
-  using value_type = pludux::backtest::BacktestSetup;
+struct json_conv_traits<Json, pludux::backtest::Strategy> {
+  using value_type = pludux::backtest::Strategy;
   using result_type = jsoncons::conversion_result<value_type>;
 
   static constexpr bool is_compatible = true;
@@ -947,8 +948,9 @@ struct json_conv_traits<Json, pludux::backtest::BacktestSetup> {
                             const Json& json)
   {
     try {
-      return result_type{value_type{
-       required_as<pludux::backtest::StrategyStoreHandle>(json, "strategy"),
+       return result_type{value_type{
+        required_as<std::string>(json, "name"),
+        required_as<pludux::backtest::ModelStoreHandle>(json, "model"),
        required_as<pludux::backtest::ProfileStoreHandle>(json, "profile"),
        vector_from_json<pludux::NumericInputNode>(json.at("inputs")),
        pludux::backtest::parse_entry_filter_node(json.at("entryFilter"))}};
@@ -961,8 +963,9 @@ struct json_conv_traits<Json, pludux::backtest::BacktestSetup> {
   static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>& aset,
                       const value_type& setup)
   {
-    auto json = Json{};
-    set_json(json, aset, "strategy", setup.strategy_handle());
+     auto json = Json{};
+     json["name"] = setup.name();
+     set_json(json, aset, "model", setup.model_handle());
     set_json(json, aset, "profile", setup.profile_handle());
     json["inputs"] = vector_to_json<Json>(aset, setup.inputs());
     json["entryFilter"] =
@@ -972,8 +975,8 @@ struct json_conv_traits<Json, pludux::backtest::BacktestSetup> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::BacktestFailsafeSetup> {
-  using value_type = pludux::backtest::BacktestFailsafeSetup;
+struct json_conv_traits<Json, pludux::backtest::SystemFailsafeStrategy> {
+  using value_type = pludux::backtest::SystemFailsafeStrategy;
   using result_type = jsoncons::conversion_result<value_type>;
 
   static constexpr bool is_compatible = true;
@@ -989,20 +992,17 @@ struct json_conv_traits<Json, pludux::backtest::BacktestFailsafeSetup> {
   {
     try {
       const auto activation = json.at("activation").template as<std::string>();
-      auto activation_value = pludux::backtest::FailsafeActivation::Always;
-      if(activation == "PREVIOUS_SETUP_ENTRY_FILTERED_POSITION") {
-        activation_value = pludux::backtest::FailsafeActivation::
-         PreviousSetupEntryFilteredPosition;
+      auto activation_value =
+       pludux::backtest::FailsafeStrategyActivation::Always;
+       if(activation == "PREVIOUS_STRATEGY_ENTRY_FILTERED_POSITION") {
+         activation_value = pludux::backtest::FailsafeStrategyActivation::
+          PreviousStrategyEntryFilteredPosition;
       } else if(activation != "ALWAYS") {
         throw std::invalid_argument{"Invalid failsafe activation"};
       }
-      return result_type{value_type{
-       pludux::backtest::BacktestSetup{
+       return result_type{value_type{
         required_as<pludux::backtest::StrategyStoreHandle>(json, "strategy"),
-        required_as<pludux::backtest::ProfileStoreHandle>(json, "profile"),
-        vector_from_json<pludux::NumericInputNode>(json.at("inputs")),
-        pludux::backtest::parse_entry_filter_node(json.at("entryFilter"))},
-       activation_value}};
+        activation_value}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -1012,25 +1012,20 @@ struct json_conv_traits<Json, pludux::backtest::BacktestFailsafeSetup> {
   static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>& aset,
                       const value_type& failsafe)
   {
-    const auto& setup = failsafe.setup();
-    auto json = Json{};
+     auto json = Json{};
     json["activation"] =
      failsafe.activation() ==
-       pludux::backtest::FailsafeActivation::PreviousSetupEntryFilteredPosition
-      ? "PREVIOUS_SETUP_ENTRY_FILTERED_POSITION"
+        pludux::backtest::FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition
+       ? "PREVIOUS_STRATEGY_ENTRY_FILTERED_POSITION"
       : "ALWAYS";
-    set_json(json, aset, "strategy", setup.strategy_handle());
-    set_json(json, aset, "profile", setup.profile_handle());
-    json["inputs"] = vector_to_json<Json>(aset, setup.inputs());
-    json["entryFilter"] =
-     pludux::backtest::serialize_entry_filter_node(setup.entry_filter());
+     set_json(json, aset, "strategy", failsafe.strategy_handle());
     return json;
   }
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::Backtest> {
-  using value_type = pludux::backtest::Backtest;
+struct json_conv_traits<Json, pludux::backtest::System> {
+  using value_type = pludux::backtest::System;
   using result_type = jsoncons::conversion_result<value_type>;
 
   static constexpr bool is_compatible = true;
@@ -1048,10 +1043,10 @@ struct json_conv_traits<Json, pludux::backtest::Backtest> {
       return result_type{value_type{
        required_as<std::string>(json, "name"),
        required_as<pludux::backtest::WatchlistStoreHandle>(json, "watchlist"),
-       strategy_performance_from_json(json.at("strategyPerformance")),
-       required_as<pludux::backtest::BacktestSetup>(json, "mainSetup"),
-       vector_from_json<pludux::backtest::BacktestFailsafeSetup>(
-        json.at("failsafeSetups"))}};
+         model_performance_from_json(json.at("modelPerformance")),
+          required_as<pludux::backtest::StrategyStoreHandle>(json, "mainStrategy"),
+         vector_from_json<pludux::backtest::SystemFailsafeStrategy>(
+         json.at("failsafeStrategies"))}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -1059,16 +1054,16 @@ struct json_conv_traits<Json, pludux::backtest::Backtest> {
 
   template<typename Alloc, typename TempAlloc>
   static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>& aset,
-                      const value_type& backtest)
+                       const value_type& system)
   {
     auto json = Json{};
-    json["name"] = backtest.name();
-    set_json(json, aset, "watchlist", backtest.watchlist_handle());
-    json["strategyPerformance"] =
-     strategy_performance_to_json<Json>(backtest.strategy_performance());
-    set_json(json, aset, "mainSetup", backtest.main_setup());
-    json["failsafeSetups"] =
-     vector_to_json<Json>(aset, backtest.failsafe_setups());
+    json["name"] = system.name();
+    set_json(json, aset, "watchlist", system.watchlist_handle());
+    json["modelPerformance"] =
+        model_performance_to_json<Json>(system.model_performance());
+     set_json(json, aset, "mainStrategy", system.main_strategy_handle());
+    json["failsafeStrategies"] =
+       vector_to_json<Json>(aset, system.failsafe_strategies());
     return json;
   }
 };
@@ -1179,8 +1174,8 @@ struct json_conv_traits<Json, pludux::backtest::Portfolio> {
        required_as<std::size_t>(json, "maximumCombinedLayers"),
        vector_from_json<pludux::backtest::PortfolioEntryComparator>(
         json.at("entryComparators")),
-       vector_from_json<pludux::backtest::BacktestStoreHandle>(
-        json.at("backtests"))}};
+         vector_from_json<pludux::backtest::SystemStoreHandle>(
+          json.at("systems"))}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -1199,8 +1194,8 @@ struct json_conv_traits<Json, pludux::backtest::Portfolio> {
     json["maximumCombinedLayers"] = portfolio.maximum_combined_layers();
     json["entryComparators"] =
      vector_to_json<Json>(aset, portfolio.entry_comparators());
-    json["backtests"] =
-     vector_to_json<Json>(aset, portfolio.backtest_handles());
+     json["systems"] =
+        vector_to_json<Json>(aset, portfolio.system_handles());
     return json;
   }
 };
@@ -1228,9 +1223,9 @@ struct json_conv_traits<Json, pludux::backtest::StoreDescriptor> {
 
       return result_type{value_type{
        required_as<pludux::backtest::StoreDataResolver<
-        pludux::backtest::Backtest,
-        pludux::backtest::BacktestStoreHandle>>(json,
-                                                "backtestStoreDataResolver"),
+          pludux::backtest::System,
+          pludux::backtest::SystemStoreHandle>>(json,
+                                                  "systemStoreDataResolver"),
        required_as<pludux::backtest::StoreDataResolver<
         pludux::backtest::Portfolio,
         pludux::backtest::PortfolioStoreHandle>>(json,
@@ -1243,20 +1238,24 @@ struct json_conv_traits<Json, pludux::backtest::StoreDescriptor> {
         pludux::backtest::WatchlistStoreHandle>>(json,
                                                  "watchlistStoreDataResolver"),
        required_as<pludux::backtest::StoreDataResolver<
-        pludux::backtest::Strategy,
-        pludux::backtest::StrategyStoreHandle>>(json,
-                                                "strategyStoreDataResolver"),
+         pludux::backtest::Model,
+         pludux::backtest::ModelStoreHandle>>(json,
+                                                 "modelStoreDataResolver"),
        required_as<pludux::backtest::StoreDataResolver<
         pludux::backtest::Market,
         pludux::backtest::MarketStoreHandle>>(json, "marketStoreDataResolver"),
        required_as<pludux::backtest::StoreDataResolver<
         pludux::backtest::Broker,
         pludux::backtest::BrokerStoreHandle>>(json, "brokerStoreDataResolver"),
-       required_as<pludux::backtest::StoreDataResolver<
-        pludux::backtest::Profile,
-        pludux::backtest::ProfileStoreHandle>>(json,
-                                               "profileStoreDataResolver"),
-       std::move(portfolio_results_resolver)}};
+        required_as<pludux::backtest::StoreDataResolver<
+         pludux::backtest::Profile,
+         pludux::backtest::ProfileStoreHandle>>(json,
+                                                "profileStoreDataResolver"),
+        required_as<pludux::backtest::StoreDataResolver<
+         pludux::backtest::Strategy,
+         pludux::backtest::StrategyStoreHandle>>(json,
+                                                  "strategyStoreDataResolver"),
+        std::move(portfolio_results_resolver)}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -1269,8 +1268,8 @@ struct json_conv_traits<Json, pludux::backtest::StoreDescriptor> {
     auto json = Json{};
     set_json(json,
              aset,
-             "backtestStoreDataResolver",
-             descriptor.backtest_store_data_resolver());
+               "systemStoreDataResolver",
+               descriptor.system_store_data_resolver());
     set_json(json,
              aset,
              "portfolioStoreDataResolver",
@@ -1285,8 +1284,8 @@ struct json_conv_traits<Json, pludux::backtest::StoreDescriptor> {
              descriptor.watchlist_store_data_resolver());
     set_json(json,
              aset,
-             "strategyStoreDataResolver",
-             descriptor.strategy_store_data_resolver());
+              "modelStoreDataResolver",
+              descriptor.model_store_data_resolver());
     set_json(json,
              aset,
              "marketStoreDataResolver",
@@ -1297,8 +1296,12 @@ struct json_conv_traits<Json, pludux::backtest::StoreDescriptor> {
              descriptor.broker_store_data_resolver());
     set_json(json,
              aset,
-             "profileStoreDataResolver",
-             descriptor.profile_store_data_resolver());
+              "profileStoreDataResolver",
+              descriptor.profile_store_data_resolver());
+    set_json(json,
+             aset,
+             "strategyStoreDataResolver",
+             descriptor.strategy_store_data_resolver());
     return json;
   }
 };
@@ -1321,15 +1324,16 @@ struct json_conv_traits<Json, pludux::backtest::StoreArena> {
   {
     try {
       return result_type{value_type{
-       vector_from_json<pludux::backtest::Backtest>(json.at("backtests")),
+         vector_from_json<pludux::backtest::System>(json.at("systems")),
        vector_from_json<pludux::backtest::Portfolio>(json.at("portfolios")),
        vector_from_json<pludux::backtest::Asset>(json.at("assets")),
        vector_from_json<pludux::backtest::Watchlist>(json.at("watchlists")),
-       strategies_from_json(json.at("strategies")),
+         models_from_json(json.at("models")),
        vector_from_json<pludux::backtest::Market>(json.at("markets")),
        vector_from_json<pludux::backtest::Broker>(json.at("brokers")),
-       vector_from_json<pludux::backtest::Profile>(json.at("profiles")),
-       {}}};
+        vector_from_json<pludux::backtest::Profile>(json.at("profiles")),
+        vector_from_json<pludux::backtest::Strategy>(json.at("strategies")),
+        {}}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -1340,14 +1344,15 @@ struct json_conv_traits<Json, pludux::backtest::StoreArena> {
                       const value_type& arena)
   {
     auto json = Json{};
-    json["backtests"] = vector_to_json<Json>(aset, arena.backtests());
+     json["systems"] = vector_to_json<Json>(aset, arena.systems());
     json["portfolios"] = vector_to_json<Json>(aset, arena.portfolios());
     json["assets"] = vector_to_json<Json>(aset, arena.assets());
     json["watchlists"] = vector_to_json<Json>(aset, arena.watchlists());
-    json["strategies"] = strategies_to_json<Json>(aset, arena.strategies());
+    json["models"] = models_to_json<Json>(aset, arena.models());
     json["markets"] = vector_to_json<Json>(aset, arena.markets());
     json["brokers"] = vector_to_json<Json>(aset, arena.brokers());
     json["profiles"] = vector_to_json<Json>(aset, arena.profiles());
+    json["strategies"] = vector_to_json<Json>(aset, arena.strategies());
     return json;
   }
 };
@@ -1389,8 +1394,8 @@ struct json_conv_traits<Json, pludux::backtest::Store> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::apps::PortfolioBacktestSetupSelection> {
-  using value_type = pludux::apps::PortfolioBacktestSetupSelection;
+struct json_conv_traits<Json, pludux::apps::PortfolioStrategySelection> {
+  using value_type = pludux::apps::PortfolioStrategySelection;
   using result_type = jsoncons::conversion_result<value_type>;
 
   static constexpr bool is_compatible = true;
@@ -1407,9 +1412,9 @@ struct json_conv_traits<Json, pludux::apps::PortfolioBacktestSetupSelection> {
     try {
       return result_type{value_type{
        required_as<pludux::backtest::PortfolioStoreHandle>(json, "portfolio"),
-       {{required_as<pludux::backtest::BacktestStoreHandle>(json, "backtest"),
-         required_as<pludux::backtest::AssetStoreHandle>(json, "asset")},
-        required_as<std::size_t>(json, "setup")}}};
+         {{required_as<pludux::backtest::SystemStoreHandle>(json, "system"),
+          required_as<pludux::backtest::AssetStoreHandle>(json, "asset")},
+         required_as<std::size_t>(json, "strategy")}}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -1421,16 +1426,16 @@ struct json_conv_traits<Json, pludux::apps::PortfolioBacktestSetupSelection> {
   {
     auto json = Json{};
     set_json(json, aset, "portfolio", selection.portfolio_handle);
-    set_json(json, aset, "backtest", selection.setup.run.backtest_handle);
-    set_json(json, aset, "asset", selection.setup.run.asset_handle);
-    json["setup"] = selection.setup.setup_index;
+      set_json(json, aset, "system", selection.strategy.run.system_handle);
+     set_json(json, aset, "asset", selection.strategy.run.asset_handle);
+     json["strategy"] = selection.strategy.strategy_index;
     return json;
   }
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::apps::PortfolioBacktestSetupSelections> {
-  using value_type = pludux::apps::PortfolioBacktestSetupSelections;
+struct json_conv_traits<Json, pludux::apps::PortfolioStrategySelections> {
+  using value_type = pludux::apps::PortfolioStrategySelections;
   using result_type = jsoncons::conversion_result<value_type>;
 
   static constexpr bool is_compatible = true;
@@ -1446,7 +1451,7 @@ struct json_conv_traits<Json, pludux::apps::PortfolioBacktestSetupSelections> {
   {
     try {
       return result_type{value_type{
-       vector_from_json<pludux::apps::PortfolioBacktestSetupSelection>(json)}};
+         vector_from_json<pludux::apps::PortfolioStrategySelection>(json)}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -1480,20 +1485,22 @@ struct json_conv_traits<Json, pludux::apps::DocumentState> {
       return result_type{
        value_type{vector_from_json<pludux::backtest::PortfolioStoreHandle>(
                    json.at("portfolioHandles")),
-                  vector_from_json<pludux::backtest::BacktestStoreHandle>(
-                   json.at("backtestHandles")),
+                   vector_from_json<pludux::backtest::SystemStoreHandle>(
+                     json.at("systemHandles")),
                   vector_from_json<pludux::backtest::AssetStoreHandle>(
                    json.at("assetHandles")),
                   vector_from_json<pludux::backtest::WatchlistStoreHandle>(
                    json.at("watchlistHandles")),
-                  vector_from_json<pludux::backtest::StrategyStoreHandle>(
-                   json.at("strategyHandles")),
+                   vector_from_json<pludux::backtest::ModelStoreHandle>(
+                    json.at("modelHandles")),
                   vector_from_json<pludux::backtest::MarketStoreHandle>(
                    json.at("marketHandles")),
                   vector_from_json<pludux::backtest::BrokerStoreHandle>(
                    json.at("brokerHandles")),
-                  vector_from_json<pludux::backtest::ProfileStoreHandle>(
-                   json.at("profileHandles"))}};
+                   vector_from_json<pludux::backtest::ProfileStoreHandle>(
+                    json.at("profileHandles")),
+                   vector_from_json<pludux::backtest::StrategyStoreHandle>(
+                    json.at("strategyHandles"))}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -1506,20 +1513,22 @@ struct json_conv_traits<Json, pludux::apps::DocumentState> {
     auto json = Json{};
     json["portfolioHandles"] =
      vector_to_json<Json>(aset, document_state.portfolio_handles());
-    json["backtestHandles"] =
-     vector_to_json<Json>(aset, document_state.backtest_handles());
+    json["systemHandles"] =
+       vector_to_json<Json>(aset, document_state.system_handles());
     json["assetHandles"] =
      vector_to_json<Json>(aset, document_state.asset_handles());
     json["watchlistHandles"] =
      vector_to_json<Json>(aset, document_state.watchlist_handles());
-    json["strategyHandles"] =
-     vector_to_json<Json>(aset, document_state.strategy_handles());
+    json["modelHandles"] =
+      vector_to_json<Json>(aset, document_state.model_handles());
     json["marketHandles"] =
      vector_to_json<Json>(aset, document_state.market_handles());
     json["brokerHandles"] =
      vector_to_json<Json>(aset, document_state.broker_handles());
     json["profileHandles"] =
-     vector_to_json<Json>(aset, document_state.profile_handles());
+      vector_to_json<Json>(aset, document_state.profile_handles());
+    json["strategyHandles"] =
+      vector_to_json<Json>(aset, document_state.strategy_handles());
     return json;
   }
 };
@@ -1545,10 +1554,12 @@ struct json_conv_traits<Json, pludux::apps::ViewState> {
        value_type{required_as<std::string>(json, "imguiIniSettings"),
                   required_as<pludux::backtest::PortfolioStoreHandle>(
                    json, "selectedPortfolioHandle"),
-                  required_as<pludux::apps::PortfolioBacktestSetupSelections>(
-                   json, "portfolioBacktestSetupSelections"),
-                  required_as<pludux::backtest::BacktestStoreHandle>(
-                   json, "selectedBacktestHandle")}};
+                    required_as<pludux::apps::PortfolioStrategySelections>(
+                      json, "portfolioStrategySelections"),
+                    required_as<pludux::backtest::SystemStoreHandle>(
+                      json, "selectedSystemHandle"),
+                    required_as<pludux::backtest::StrategyStoreHandle>(
+                      json, "selectedStrategyHandle")}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -1566,12 +1577,16 @@ struct json_conv_traits<Json, pludux::apps::ViewState> {
              view_state.selected_portfolio_handle());
     set_json(json,
              aset,
-             "portfolioBacktestSetupSelections",
-             view_state.portfolio_backtest_setup_selections());
+               "portfolioStrategySelections",
+               view_state.portfolio_strategy_selections());
+    set_json(json,
+              aset,
+                "selectedSystemHandle",
+                view_state.selected_system_handle());
     set_json(json,
              aset,
-             "selectedBacktestHandle",
-             view_state.selected_backtest_handle());
+             "selectedStrategyHandle",
+             view_state.selected_strategy_handle());
     return json;
   }
 };

@@ -102,20 +102,7 @@ public:
 
 #endif
 
-    for(const auto& backtest_handle : app_state.get_backtest_handles()) {
-      auto* backtest_ptr = app_state.get_backtest_if_present(backtest_handle);
-      if(backtest_ptr) {
-        for(auto index = std::size_t{}; index < backtest_ptr->setup_count();
-            ++index) {
-          auto& setup = backtest_ptr->setup(index);
-          const auto* strategy_ptr =
-           app_state.get_strategy_if_present(setup.strategy_handle());
-          if(strategy_ptr) {
-            self.resolve_and_sync_setup_inputs(setup, *strategy_ptr);
-          }
-        }
-      }
-    }
+    self.sync_stored_strategy_inputs(app_state);
     for(const auto portfolio_handle : app_state.get_portfolio_handles()) {
       self.recreate_portfolio_runner(app_state, portfolio_handle);
     }
@@ -155,51 +142,46 @@ public:
     }
 
     if(!portfolio_handles.empty()) {
-      // create a loop with timeout 60 fps
-      auto last_update_time = std::chrono::high_resolution_clock::now();
-      auto current_time = std::chrono::high_resolution_clock::now();
-      auto time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        current_time - last_update_time)
-                        .count();
+      // Advance as many union timestamps as the frame budget permits.
+      // A PortfolioRunner timestamp is atomic, so check the deadline before
+      // every one-timestamp batch rather than after a larger batch.
+      const auto update_deadline =
+       std::chrono::steady_clock::now() + std::chrono::milliseconds{1000 / 60};
 
-      do {
+      auto made_progress = true;
+      while(made_progress && std::chrono::steady_clock::now() < update_deadline) {
+        made_progress = false;
         for(const auto portfolio_handle : portfolio_handles) {
+          if(std::chrono::steady_clock::now() >= update_deadline) {
+            break;
+          }
+
           auto& portfolio = app_state.get_portfolio(portfolio_handle);
 
-          if(!self.running_portfolios_.contains(portfolio_handle)) {
+          const auto runner_it = self.running_portfolios_.find(portfolio_handle);
+          if(runner_it == self.running_portfolios_.end()) {
             continue;
           }
 
           auto& results =
-           store.get_or_create_portfolio_results(portfolio_handle);
-          auto& portfolio_runner =
-           self.running_portfolios_.at(portfolio_handle);
+            store.get_or_create_portfolio_results(portfolio_handle);
+          auto& portfolio_runner = runner_it->second;
           if(portfolio_runner.is_failed()) {
             continue;
           }
-          auto& execution_status =
-           self.portfolio_execution_statuses_[portfolio_handle];
           const auto total = portfolio_runner.total_timestamps();
+          if(results.timeline().size() >= total) {
+            continue;
+          }
 
           try {
-            execution_status = BacktestExecutionStatus{
-             total == 0 ? BacktestExecutionPhase::Completed
-                        : BacktestExecutionPhase::Running,
-             results.timeline().size(),
-             total};
-            portfolio_runner.run(results);
-            execution_status =
-             BacktestExecutionStatus{results.timeline().size() >= total
-                                      ? BacktestExecutionPhase::Completed
-                                      : BacktestExecutionPhase::Running,
-                                     results.timeline().size(),
-                                     total};
+            made_progress |= portfolio_runner.run_batch(results, 1) != 0;
           } catch(const std::exception& e) {
             portfolio_runner.is_failed(true);
-            execution_status =
+            self.portfolio_execution_statuses_[portfolio_handle] =
              BacktestExecutionStatus{BacktestExecutionPhase::Failed,
-                                     results.timeline().size(),
-                                     total,
+                                      results.timeline().size(),
+                                      total,
                                      e.what()};
 
             const auto error_message = std::format(
@@ -208,11 +190,26 @@ public:
           }
         }
 
-        current_time = std::chrono::high_resolution_clock::now();
-        time_diff = std::chrono::duration_cast<std::chrono::milliseconds>(
-                     current_time - last_update_time)
-                     .count();
-      } while(time_diff < 1000 / 60);
+      }
+
+      // Publish progress once per portfolio after scheduling. This keeps the
+      // hot loop focused on executing individual timestamps.
+      for(const auto portfolio_handle : portfolio_handles) {
+        const auto runner_it = self.running_portfolios_.find(portfolio_handle);
+        if(runner_it == self.running_portfolios_.end() ||
+           runner_it->second.is_failed()) {
+          continue;
+        }
+
+        const auto& results = store.get_or_create_portfolio_results(portfolio_handle);
+        const auto total = runner_it->second.total_timestamps();
+        self.portfolio_execution_statuses_[portfolio_handle] =
+         BacktestExecutionStatus{results.timeline().size() >= total
+                                  ? BacktestExecutionPhase::Completed
+                                  : BacktestExecutionPhase::Running,
+                                 results.timeline().size(),
+                                 total};
+      }
     }
 
     ui::apply_dark_theme();
@@ -231,29 +228,30 @@ public:
     try {
       self.dockspace_window_.render(window_context);
       if(self.discard_all_drafts_requested_) {
-        self.backtests_window_.discard_draft();
+         self.systems_window_.discard_draft();
         self.portfolios_window_.discard_draft();
         self.assets_window_.discard_draft();
         self.watchlists_window_.discard_draft();
-        self.strategies_window_.discard_draft();
+         self.models_window_.discard_draft();
         self.markets_window_.discard_draft();
         self.brokers_window_.discard_draft();
-        self.profiles_window_.discard_draft();
+         self.profiles_window_.discard_draft();
+         self.strategies_window_.discard_draft();
         self.discard_all_drafts_requested_ = false;
       }
       self.backtest_chart_window_.render(window_context);
       auto backtest_overview = BacktestOverviewWindow{};
       backtest_overview.render(window_context);
+      self.trade_list_window_.render(window_context);
       self.portfolios_window_.render(window_context);
-      self.backtests_window_.render(window_context);
+       self.systems_window_.render(window_context);
       self.assets_window_.render(window_context);
       self.watchlists_window_.render(window_context);
-      self.strategies_window_.render(window_context);
+       self.models_window_.render(window_context);
       self.markets_window_.render(window_context);
       self.brokers_window_.render(window_context);
-      self.profiles_window_.render(window_context);
-      self.trade_list_window_.render(window_context);
-
+       self.profiles_window_.render(window_context);
+       self.strategies_window_.render(window_context);
     } catch(const std::exception& e) {
       const auto error_message = std::format("Error: {}", e.what());
       alert_messages.push_back(error_message);
@@ -266,26 +264,11 @@ public:
         ImGui::LoadIniSettingsFromMemory(settings.c_str(), settings.size());
       }
       if(effect == ExecutionEffect::DocumentChanged ||
-         effect == ExecutionEffect::ApplicationReplaced) {
-        // Resolve and sync backtest inputs with strategy template inputs after
-        // each command execution, then recreate runners for updated state.
-        for(auto&& backtest_handle : app_state.get_backtest_handles()) {
-          auto* backtest_ptr =
-           app_state.get_backtest_if_present(backtest_handle);
-          if(!backtest_ptr) {
-            continue;
-          }
-
-          for(auto index = std::size_t{}; index < backtest_ptr->setup_count();
-              ++index) {
-            auto& setup = backtest_ptr->setup(index);
-            const auto* strategy_ptr =
-             app_state.get_strategy_if_present(setup.strategy_handle());
-            if(strategy_ptr) {
-              self.resolve_and_sync_setup_inputs(setup, *strategy_ptr);
-            }
-          }
-        }
+          effect == ExecutionEffect::ApplicationReplaced) {
+        // Every runner is replaced below.  Its result must be discarded before
+        // the replacement can consume it, otherwise a new runner resumes an
+        // old, partial timeline.
+        app_state.reset_all_portfolios();
         self.running_portfolios_.clear();
         self.portfolio_execution_statuses_.clear();
         for(const auto portfolio_handle : app_state.get_portfolio_handles()) {
@@ -318,12 +301,12 @@ public:
 
 private:
   void
-  resolve_and_sync_setup_inputs(this Application& self,
-                                backtest::BacktestSetup& setup,
-                                const backtest::Strategy& strategy) noexcept
+   resolve_and_sync_strategy_inputs(this Application& self,
+                                  backtest::Strategy& strategy,
+                                 const backtest::Model& model) noexcept
   {
-    auto synced_inputs = backtest::collect_numeric_inputs(strategy);
-    const auto& previous_inputs = setup.inputs();
+      auto synced_inputs = backtest::collect_model_inputs(model);
+    const auto& previous_inputs = strategy.inputs();
 
     for(auto index = std::size_t{0}; index < synced_inputs.size(); ++index) {
       if(index >= previous_inputs.size()) {
@@ -333,12 +316,25 @@ private:
       synced_inputs[index].value(previous_inputs[index].value());
     }
 
-    setup.inputs(std::move(synced_inputs));
+    strategy.inputs(std::move(synced_inputs));
+  }
+
+  void sync_stored_strategy_inputs(this Application& self,
+                                   ApplicationState& app_state) noexcept
+  {
+    for(const auto strategy_handle : app_state.get_strategy_handles()) {
+      auto* strategy =
+       app_state.store().get_strategy_if_present(strategy_handle);
+      if(!strategy) continue;
+      const auto* model =
+       app_state.get_model_if_present(strategy->model_handle());
+      if(model) self.resolve_and_sync_strategy_inputs(*strategy, *model);
+    }
   }
 
   auto make_backtest_runner(this Application& self,
                             ApplicationState& app_state,
-                            const backtest::Backtest& backtest,
+                              const backtest::System& system,
                             backtest::AssetStoreHandle asset_handle,
                             const backtest::Portfolio& portfolio)
    -> backtest::BacktestRunner
@@ -350,25 +346,29 @@ private:
      app_state.get_broker_if_present(portfolio.broker_handle());
 
     if(!asset_ptr || !market_ptr || !broker_ptr) {
-      throw std::invalid_argument{"Incomplete Backtest in Portfolio"};
+      throw std::invalid_argument{"Incomplete Strategy in Portfolio"};
     }
 
-    auto runner_setups = std::vector<backtest::BacktestRunner::Setup>{};
-    runner_setups.reserve(backtest.setup_count());
-    for(auto setup_index = std::size_t{}; setup_index < backtest.setup_count();
-        ++setup_index) {
-      const auto& configured_setup = backtest.setup(setup_index);
-      const auto* strategy_ptr =
-       app_state.get_strategy_if_present(configured_setup.strategy_handle());
+    auto runner_setups = std::vector<backtest::BacktestRunner::CompiledStrategy>{};
+    runner_setups.reserve(system.strategy_count());
+    for(auto strategy_index = std::size_t{};
+        strategy_index < system.strategy_count(); ++strategy_index) {
+      const auto* configured_strategy = app_state.get_strategy_if_present(
+       system.strategy_handle(strategy_index));
+      if(!configured_strategy) {
+        throw std::invalid_argument{"Missing Strategy setup in Portfolio"};
+      }
+      const auto* model_ptr =
+       app_state.get_model_if_present(configured_strategy->model_handle());
       const auto* profile_ptr =
-       app_state.get_profile_if_present(configured_setup.profile_handle());
-      if(!strategy_ptr || !profile_ptr) {
-        throw std::invalid_argument{"Incomplete Backtest setup in Portfolio"};
+        app_state.get_profile_if_present(configured_strategy->profile_handle());
+      if(!model_ptr || !profile_ptr) {
+        throw std::invalid_argument{"Incomplete Strategy setup in Portfolio"};
       }
 
       auto input_values = std::vector<double>{};
-      input_values.reserve(configured_setup.inputs().size());
-      for(const auto& input : configured_setup.inputs()) {
+      input_values.reserve(configured_strategy->inputs().size());
+      for(const auto& input : configured_strategy->inputs()) {
         input_values.emplace_back(input.value());
       }
 
@@ -376,14 +376,14 @@ private:
       auto series_methods =
        OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
       for(const auto& [series_name, series_node] :
-          strategy_ptr->series_nodes()) {
+           model_ptr->series_nodes()) {
         series_methods.set(series_name,
                            node_to_erased_method<ErasedSeriesMethodContext>(
                             series_node, input_context));
       }
 
       const auto make_position_rule =
-       [&input_context](const backtest::Strategy::Position& position) {
+        [&input_context](const backtest::Model::Position& position) {
          auto signal_exits =
           std::vector<backtest::BacktestRunner::PositionRule::SignalExitRule>{};
          signal_exits.reserve(position.exits().size());
@@ -441,18 +441,18 @@ private:
       auto entry_filter_conversion_context = NodeToErasedMethodContext{};
       auto entry_filter =
        node_to_erased_method<backtest::EntryFilterMethodContext>(
-        configured_setup.entry_filter(), entry_filter_conversion_context);
+         configured_strategy->entry_filter(), entry_filter_conversion_context);
       const auto failsafe_activation =
-       setup_index == 0
-        ? backtest::FailsafeActivation::Always
-        : backtest.failsafe_setups()[setup_index - 1].activation();
+        strategy_index == 0
+         ? backtest::FailsafeStrategyActivation::Always
+         : system.failsafe_strategies()[strategy_index - 1].activation();
       runner_setups.emplace_back(
        *profile_ptr,
        std::move(series_methods),
-       make_position_rule(strategy_ptr->long_position()),
-       make_position_rule(strategy_ptr->short_position()),
-       strategy_ptr->intrabar_path(),
-       backtest.strategy_performance(),
+        make_position_rule(model_ptr->long_position()),
+        make_position_rule(model_ptr->short_position()),
+        model_ptr->intrabar_path(),
+         system.model_performance(),
        std::move(entry_filter),
        failsafe_activation);
     }
@@ -478,20 +478,21 @@ private:
       return;
     }
     auto backtests = std::vector<backtest::PortfolioRunner::BacktestRun>{};
-    const auto runs = app_state.expanded_backtest_runs(*portfolio);
+     const auto runs = app_state.expanded_strategy_runs(*portfolio);
     backtests.reserve(runs.size());
-    for(const auto backtest_handle : portfolio->backtest_handles()) {
-      const auto& configured_backtest = app_state.get_backtest(backtest_handle);
-      const auto& watchlist =
-       app_state.get_watchlist(configured_backtest.watchlist_handle());
-      for(const auto asset_handle : watchlist.asset_handles()) {
-        backtests.emplace_back(
-         backtest_handle,
-         asset_handle,
-         self.make_backtest_runner(
-          app_state, configured_backtest, asset_handle, *portfolio));
-      }
-    }
+      for(const backtest::SystemStoreHandle system_handle :
+          portfolio->system_handles()) {
+        const backtest::System& system = app_state.get_system(system_handle);
+       const auto& watchlist =
+        app_state.get_watchlist(system.watchlist_handle());
+       for(const auto asset_handle : watchlist.asset_handles()) {
+         backtests.emplace_back(
+           system_handle,
+          asset_handle,
+          self.make_backtest_runner(
+           app_state, system, asset_handle, *portfolio));
+       }
+     }
     auto runner =
      backtest::PortfolioRunner{portfolio->initial_capital(),
                                portfolio->maximum_open_trades(),
@@ -514,13 +515,14 @@ private:
   DockspaceWindow dockspace_window_;
   BacktestChartWindow backtest_chart_window_;
   PortfoliosWindow portfolios_window_;
-  BacktestsWindow backtests_window_;
+  SystemsWindow systems_window_;
   AssetsWindow assets_window_;
   WatchlistsWindow watchlists_window_;
-  StrategiesWindow strategies_window_;
+   ModelsWindow models_window_;
   MarketsWindow markets_window_;
   BrokersWindow brokers_window_;
-  ProfilesWindow profiles_window_;
+   ProfilesWindow profiles_window_;
+   StrategiesWindow strategies_window_;
   TradeListWindow trade_list_window_;
 
   ApplicationState app_state_;

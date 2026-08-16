@@ -27,10 +27,10 @@ class PortfolioRunner {
 public:
   class BacktestRun {
   public:
-    BacktestRun(BacktestStoreHandle backtest_handle,
+    BacktestRun(SystemStoreHandle system_handle,
                 AssetStoreHandle asset_handle,
                 BacktestRunner runner)
-    : key_{backtest_handle, asset_handle}
+      : key_{system_handle, asset_handle}
     , runner_{std::move(runner)}
     {
     }
@@ -106,10 +106,10 @@ public:
     }
     results.backtests().reserve(self.backtests_.size());
     for(const auto& backtest : self.backtests_) {
-      results.backtests().emplace_back(backtest.key().backtest_handle,
+        results.backtests().emplace_back(backtest.key().system_handle,
                                        backtest.key().asset_handle,
                                        BacktestTimeline{},
-                                       backtest.runner().setup_count());
+                                       backtest.runner().strategy_count());
     }
     results.timeline().reserve(self.total_timestamps_);
   }
@@ -196,7 +196,7 @@ public:
         auto& result = results.backtests()[requested_order.backtest_index];
         self.sync_backtest(runner);
         runner.execute_requested_order(requested_order.action,
-                                       result.setup_series_results());
+                                        result.strategy_series_results());
         self.refresh_unrealized();
       }
     };
@@ -205,22 +205,22 @@ public:
      [](BacktestRunner& runner, BacktestResults&) { runner.run_open_exits(); });
     run_entry_phase([](BacktestRunner& runner, BacktestResults& result) {
       return runner.discover_open_requested_order(
-       result.setup_series_results());
+        result.strategy_series_results());
     });
     run_exit_phase(
      [](BacktestRunner& runner, BacktestResults&) { runner.run_intrabar(); });
     run_exit_phase([](BacktestRunner& runner, BacktestResults& result) {
-      runner.run_close_exits(result.setup_series_results());
+       runner.run_close_exits(result.strategy_series_results());
     });
     run_entry_phase([](BacktestRunner& runner, BacktestResults& result) {
       return runner.discover_close_requested_order(
-       result.setup_series_results());
+        result.strategy_series_results());
     });
     for(const auto index : active) {
       auto& runner = self.backtests_[index].runner();
       auto& result = results.backtests()[index];
       self.sync_backtest(runner);
-      runner.finish_bar(result.setup_series_results(), result.timeline());
+      runner.finish_bar(result.strategy_series_results(), result.timeline());
       self.refresh_unrealized();
     }
 
@@ -260,6 +260,22 @@ public:
      .fresh_backtest_count = fresh_count,
      .stale_backtest_count = stale_count,
      .unavailable_backtest_count = unavailable_count});
+  }
+
+  auto run_batch(this PortfolioRunner& self,
+                 PortfolioResults& results,
+                 std::size_t maximum_timestamps) -> std::size_t
+  {
+    auto processed = std::size_t{};
+    while(processed < maximum_timestamps) {
+      const auto timeline_size = results.timeline().size();
+      self.run(results);
+      if(results.timeline().size() == timeline_size) {
+        break;
+      }
+      ++processed;
+    }
+    return processed;
   }
 
 private:

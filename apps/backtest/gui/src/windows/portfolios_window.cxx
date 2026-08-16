@@ -20,7 +20,7 @@ module;
 export module pludux.apps.backtest:windows.portfolios_window;
 
 import pludux.backtest;
-import pludux.apps.backtest.portfolio_backtest_setup_selections;
+import pludux.apps.backtest.portfolio_strategy_selections;
 import :series_node_editor;
 import :ui.widgets;
 import :window_context;
@@ -52,13 +52,13 @@ private:
   std::optional<backtest::PortfolioStoreHandle> open_requested_;
   std::shared_ptr<backtest::Portfolio> editing_;
   ImGuiTextFilter filter_;
-  ImGuiTextFilter backtest_picker_filter_;
+  ImGuiTextFilter strategy_picker_filter_;
   ui::SeriesNodeEditor series_node_editor_{
    ui::SeriesNodeCatalog::PortfolioComparator};
   bool editor_open_{};
 
-  struct SetupRow {
-    PortfolioBacktestSetupKey key;
+  struct StrategyRow {
+    PortfolioStrategyKey key;
     std::string label;
     bool valid{};
   };
@@ -74,39 +74,41 @@ private:
 
   static auto setup_rows(const ApplicationState& app_state,
                          const backtest::Portfolio& portfolio)
-   -> std::vector<SetupRow>
+    -> std::vector<StrategyRow>
   {
-    auto rows = std::vector<SetupRow>{};
-    for(const auto key : app_state.expanded_backtest_setups(portfolio)) {
-      const auto* backtest =
-       app_state.get_backtest_if_present(key.run.backtest_handle);
-      if(!backtest) {
-        rows.push_back({key, "Missing Backtest", false});
+    auto rows = std::vector<StrategyRow>{};
+    for(const auto key : app_state.expanded_system_strategies(portfolio)) {
+      const auto* system = app_state.get_system_if_present(key.run.system_handle);
+      if(!system) {
+        rows.push_back({key, "Missing System", false});
         continue;
       }
 
-      const auto setup_label = key.setup_index == 0
-                                ? std::string{"Main setup"}
-                                : std::format("Failsafe {}", key.setup_index);
+      const auto strategy_label = key.strategy_index == 0
+                                   ? std::string{"Main Strategy"}
+                                   : std::format("Failsafe Strategy {}", key.strategy_index);
       const auto* asset = app_state.get_asset_if_present(key.run.asset_handle);
-      const auto* setup = key.setup_index < backtest->setup_count()
-                           ? &backtest->setup(key.setup_index)
-                           : nullptr;
       const auto* strategy =
-       setup ? app_state.get_strategy_if_present(setup->strategy_handle())
+       key.strategy_index < system->strategy_count()
+        ? app_state.get_strategy_if_present(
+         system->strategy_handle(key.strategy_index))
+        : nullptr;
+      const auto* model =
+        strategy ? app_state.get_model_if_present(strategy->model_handle())
              : nullptr;
       const auto* profile =
-       setup ? app_state.get_profile_if_present(setup->profile_handle())
+       strategy ? app_state.get_profile_if_present(strategy->profile_handle())
              : nullptr;
       rows.push_back(
        {key,
-        std::format("{} — {} — {}: {} / {}",
-                    backtest->name().empty() ? "Unnamed" : backtest->name(),
+        std::format("{} — {} — {}: {} — {} / {}",
+                     system->name().empty() ? "Unnamed" : system->name(),
                     asset ? asset->name() : "Missing Asset",
-                    setup_label,
-                    strategy ? strategy->name() : "Missing Strategy",
+                     strategy_label,
+                     strategy ? strategy->name() : "Missing Strategy",
+                     model ? model->name() : "Missing Model",
                     profile ? profile->name() : "Missing Profile"),
-        asset && setup && strategy && profile});
+         asset && strategy && model && profile});
     }
     return rows;
   }
@@ -158,8 +160,8 @@ private:
       ImGui::PushID(static_cast<int>(handle.generation()));
       const auto selected = app_state.selected_portfolio_handle() == handle;
       const auto selected_setup =
-       selected ? app_state.selected_portfolio_backtest_setup()
-                : std::optional<PortfolioBacktestSetupKey>{};
+         selected ? app_state.selected_portfolio_strategy()
+                  : std::optional<PortfolioStrategyKey>{};
       const auto force_open_for_filter =
        self.filter_.IsActive() && child_matches;
       if(force_open_for_filter || self.open_requested_ == handle) {
@@ -244,21 +246,21 @@ private:
           }
 
           ImGui::PushID(
-           static_cast<int>(row.key.run.backtest_handle.slot_index()));
+             static_cast<int>(row.key.run.system_handle.slot_index()));
           ImGui::PushID(
-           static_cast<int>(row.key.run.backtest_handle.generation()));
+             static_cast<int>(row.key.run.system_handle.generation()));
           ImGui::PushID(
            static_cast<int>(row.key.run.asset_handle.slot_index()));
           ImGui::PushID(
            static_cast<int>(row.key.run.asset_handle.generation()));
-          ImGui::PushID(static_cast<int>(row.key.setup_index));
+           ImGui::PushID(static_cast<int>(row.key.strategy_index));
           const auto child_selected =
            selected_setup && *selected_setup == row.key;
           if(row.valid) {
             if(ImGui::Selectable(row.label.c_str(), child_selected)) {
               context.push_view_action(
                [handle, key = row.key](ApplicationState& state) {
-                 state.select_portfolio_backtest_setup(handle, key);
+                   state.select_portfolio_strategy(handle, key);
                });
             }
           } else {
@@ -348,7 +350,7 @@ private:
      "values and asset OHLCV or custom DATA. Current Close sees the completed "
      "current bar. Next Open sees the previous completed bar; use Requested "
      "Order Price for the executable open. The first unequal value determines "
-     "priority; complete ties use ordered Backtest and Watchlist order.");
+      "priority; complete ties use ordered Strategy and Watchlist order.");
     auto& comparators = portfolio.entry_comparators();
     auto comparator_index = std::size_t{};
     while(comparator_index < comparators.size()) {
@@ -409,27 +411,27 @@ private:
     }
 
     ui::form_section(
-     "Ordered Backtests",
+      "Ordered Systems",
      "Order is the final deterministic tie-breaker when entries compare "
      "equally.");
-    auto handles = portfolio.backtest_handles();
+     auto handles = portfolio.system_handles();
     const auto visible_rows = std::clamp<std::size_t>(handles.size(), 1, 6);
     const auto list_height =
      static_cast<float>(visible_rows) * ImGui::GetFrameHeightWithSpacing() +
      (2.0f * ImGui::GetStyle().WindowPadding.y);
     ImGui::BeginChild(
-     "ordered_backtests", ImVec2{0.0f, list_height}, ImGuiChildFlags_Borders);
+      "ordered_systems", ImVec2{0.0f, list_height}, ImGuiChildFlags_Borders);
     if(handles.empty()) {
-      ImGui::TextDisabled("No backtests selected.");
+       ImGui::TextDisabled("No systems selected.");
     }
     auto index = std::size_t{};
     while(index < handles.size()) {
-      const auto handle = handles[index];
-      const auto* backtest = app_state.get_backtest_if_present(handle);
-      ImGui::PushID(static_cast<int>(index));
-      const auto action = self.ordered_backtest_row(
-       backtest ? backtest->name().c_str() : "Missing Backtest",
-       !backtest,
+       const auto handle = handles[index];
+       const auto* system = app_state.get_system_if_present(handle);
+       ImGui::PushID(static_cast<int>(index));
+       const auto action = self.ordered_backtest_row(
+         system ? system->name().c_str() : "Missing System",
+         !system,
        index,
        handles.size());
       if(action == ui::ResourceRowAction::MoveUp) {
@@ -446,8 +448,8 @@ private:
     }
     ImGui::EndChild();
 
-    self.backtest_picker(app_state, handles);
-    portfolio.backtest_handles(std::move(handles));
+    self.strategy_picker(app_state, handles);
+     portfolio.system_handles(std::move(handles));
 
     if(!app_state.is_portfolio_ready(portfolio)) {
       ImGui::Spacing();
@@ -456,7 +458,7 @@ private:
       ImGui::TextDisabled(
        PLUDUX_ICON_WARNING
        " This Portfolio can be saved, but it cannot run until a Market, "
-       "Broker, and at least one complete Backtest are configured.");
+         "Broker, and at least one complete System is configured.");
       ImGui::PopTextWrapPos();
     }
 
@@ -574,32 +576,32 @@ private:
     return action;
   }
 
-  void backtest_picker(this PortfoliosWindow& self,
+  void strategy_picker(this PortfoliosWindow& self,
                        const ApplicationState& app_state,
-                       std::vector<backtest::BacktestStoreHandle>& selected)
+                        std::vector<backtest::SystemStoreHandle>& selected)
   {
     const auto button_width = ImGui::GetContentRegionAvail().x;
-    if(ImGui::Button(PLUDUX_ICON_ADD " Add Backtests...",
+     if(ImGui::Button(PLUDUX_ICON_ADD " Add Systems...",
                      ImVec2{button_width, 0.0f})) {
-      self.backtest_picker_filter_.Clear();
-      ImGui::OpenPopup("add_backtests");
+       self.strategy_picker_filter_.Clear();
+       ImGui::OpenPopup("add_systems");
     }
 
-    if(!ImGui::BeginPopup("add_backtests")) {
+     if(!ImGui::BeginPopup("add_systems")) {
       return;
     }
 
-    ImGui::TextUnformatted("Add Backtests");
-    ImGui::TextDisabled("Choose any number of backtests in priority order.");
-    ui::search_filter(self.backtest_picker_filter_,
-                      "##portfolio_backtest_search");
+     ImGui::TextUnformatted("Add Systems");
+     ImGui::TextDisabled("Choose any number of systems in priority order.");
+    ui::search_filter(self.strategy_picker_filter_,
+                       "##portfolio_strategy_search");
 
-    const auto& available = app_state.get_backtest_handles();
+      const auto& available = app_state.get_system_handles();
     auto addable_count = std::size_t{};
     for(const auto handle : available) {
-      const auto* backtest = app_state.get_backtest_if_present(handle);
-      if(backtest &&
-         self.backtest_picker_filter_.PassFilter(backtest->name().c_str()) &&
+       const auto* system = app_state.get_system_if_present(handle);
+       if(system &&
+           self.strategy_picker_filter_.PassFilter(system->name().c_str()) &&
          std::ranges::find(selected, handle) == selected.end()) {
         ++addable_count;
       }
@@ -608,9 +610,9 @@ private:
     ImGui::BeginDisabled(addable_count == 0);
     if(ImGui::Button("Add all matches")) {
       for(const auto handle : available) {
-        const auto* backtest = app_state.get_backtest_if_present(handle);
-        if(backtest &&
-           self.backtest_picker_filter_.PassFilter(backtest->name().c_str()) &&
+         const auto* system = app_state.get_system_if_present(handle);
+         if(system &&
+             self.strategy_picker_filter_.PassFilter(system->name().c_str()) &&
            std::ranges::find(selected, handle) == selected.end()) {
           selected.push_back(handle);
         }
@@ -624,18 +626,18 @@ private:
     ImGui::Separator();
 
     if(addable_count == 0) {
-      ImGui::TextDisabled("No matching Backtests available.");
+       ImGui::TextDisabled("No matching Systems available.");
     }
     for(const auto handle : available) {
-      const auto* backtest = app_state.get_backtest_if_present(handle);
-      if(!backtest ||
-         !self.backtest_picker_filter_.PassFilter(backtest->name().c_str()) ||
+       const auto* system = app_state.get_system_if_present(handle);
+       if(!system ||
+           !self.strategy_picker_filter_.PassFilter(system->name().c_str()) ||
          std::ranges::find(selected, handle) != selected.end()) {
         continue;
       }
       ImGui::PushID(static_cast<int>(handle.slot_index()));
       ImGui::PushID(static_cast<int>(handle.generation()));
-      if(ImGui::Selectable(backtest->name().c_str(),
+       if(ImGui::Selectable(system->name().c_str(),
                            false,
                            ImGuiSelectableFlags_NoAutoClosePopups)) {
         selected.push_back(handle);

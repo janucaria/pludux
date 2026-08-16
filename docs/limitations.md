@@ -4,7 +4,7 @@
 
 - Pludux is focused on portfolio backtesting, not live trading.
 - The current documentation revamp is centered on the desktop GUI workflow.
-- Strategy JSON import/export is the primary documented interchange format.
+- Model JSON import/export is the primary documented interchange format.
 
 ## Simulation boundaries
 
@@ -24,9 +24,12 @@
 
 ## Workflow boundaries
 
-- The first recommended flow is Asset -> Strategy -> Profile -> Backtest ->
-  Portfolio -> run.
-- Failsafe setups exist, but they are part of more advanced Backtest design.
+- The first recommended flow is Asset -> Model -> Profile -> System ->
+  Portfolio -> Backtest.
+- Failsafe Strategy bindings exist, but they are part of more advanced System
+  design.
+- Strategies are reusable stored resources; editing one affects every System
+  that references it.
 - Advanced Turtle and Bayesian Kelly docs are reference material, not required
   first-run setup.
 
@@ -34,4 +37,4 @@
 
 - [Portfolio Backtesting](portfolio-backtesting.md)
 - [Turtle Trading Guidelines for Pludux](turtle-trading.md)
-- [Strategy Performance Bayesian Kelly](strategy-performance-bayesian-kelly.md)
+- [Model Performance Bayesian Kelly](strategy-performance-bayesian-kelly.md)

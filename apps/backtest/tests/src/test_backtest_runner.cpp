@@ -355,7 +355,7 @@ TEST(BacktestTimelineTest, AppendsRowsInIndexedColumns)
    BacktestTimeline::Row{.market_timestamp = 1,
                          .market_price = 100.0,
                          .market_lookback = 3,
-                         .setup_states = {BacktestSetupTimelineState{}},
+                           .strategy_states = {StrategyTimelineState{}},
                          .capital = 1000.0,
                          .equity = 1000.0,
                          .peak_equity = 1000.0});
@@ -373,8 +373,8 @@ TEST(BacktestTimelineTest, AppendsRowsInIndexedColumns)
   EXPECT_DOUBLE_EQ(timeline.market_price(1), 125.0);
   EXPECT_EQ(timeline.market_lookback(0), 3);
   EXPECT_EQ(timeline.market_lookback(1), 2);
-  EXPECT_EQ(timeline.setup_count(0), 1U);
-  EXPECT_TRUE(timeline.setup_state(0, 0).strategy_intents.empty());
+   EXPECT_EQ(timeline.strategy_count(0), 1U);
+    EXPECT_TRUE(timeline.strategy_state(0, 0).model_intents.empty());
   EXPECT_DOUBLE_EQ(timeline.capital(0), 1000.0);
   EXPECT_DOUBLE_EQ(timeline.capital(1), 1250.0);
   EXPECT_DOUBLE_EQ(timeline.peak_equity(0), 1000.0);
@@ -454,14 +454,14 @@ TEST(BacktestRunnerSetupTest, EntryFilteredMainFallsThroughToFirstFailsafe)
                               false,
                               false);
   };
-  auto setups = std::vector<BacktestRunner::Setup>{};
+   auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    main_profile,
    OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
-   StrategyPerformanceConfig{},
+    ModelPerformanceConfig{},
    BooleanMethod<false>{});
   setups.emplace_back(
    failsafe_profile,
@@ -469,9 +469,9 @@ TEST(BacktestRunnerSetupTest, EntryFilteredMainFallsThroughToFirstFailsafe)
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
-   StrategyPerformanceConfig{},
+    ModelPerformanceConfig{},
    BooleanMethod<true>{},
-   FailsafeActivation::PreviousSetupEntryFilteredPosition);
+    FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
   auto runner =
    BacktestRunner{asset, market, broker, std::move(setups), 1'000.0};
   auto setup_results = std::vector<SeriesEvaluationResults>(2);
@@ -481,21 +481,21 @@ TEST(BacktestRunnerSetupTest, EntryFilteredMainFallsThroughToFirstFailsafe)
 
   ASSERT_EQ(timeline.trade_events(0).size(), 1U);
   EXPECT_TRUE(timeline.trade_events(0).front().is_entry());
-  EXPECT_EQ(timeline.trade_events(0).front().setup_index(), 1U);
+   EXPECT_EQ(timeline.trade_events(0).front().strategy_index(), 1U);
   ASSERT_TRUE(timeline.open_position(0));
-  EXPECT_EQ(timeline.open_position(0)->setup_index(), 1U);
+   EXPECT_EQ(timeline.open_position(0)->strategy_index(), 1U);
   ASSERT_EQ(timeline.position_sizing_decisions(0).size(), 2U);
-  EXPECT_EQ(timeline.position_sizing_decisions(0)[0].setup_index, 0U);
+   EXPECT_EQ(timeline.position_sizing_decisions(0)[0].strategy_index, 0U);
   EXPECT_EQ(timeline.position_sizing_decisions(0)[0].outcome,
             PositionSizingDecisionOutcome::EntryFiltered);
-  EXPECT_EQ(timeline.position_sizing_decisions(0)[1].setup_index, 1U);
+   EXPECT_EQ(timeline.position_sizing_decisions(0)[1].strategy_index, 1U);
   EXPECT_EQ(timeline.position_sizing_decisions(0)[1].outcome,
             PositionSizingDecisionOutcome::Executed);
-  EXPECT_EQ(timeline.setup_count(0), 2U);
-  EXPECT_TRUE(timeline.setup_state(0, 0).strategy_open_position.has_value());
-  EXPECT_TRUE(timeline.setup_state(0, 1).strategy_open_position.has_value());
-  EXPECT_TRUE(timeline.setup_state(0, 0).entry_filtered_position);
-  EXPECT_FALSE(timeline.setup_state(0, 1).entry_filtered_position);
+   EXPECT_EQ(timeline.strategy_count(0), 2U);
+    EXPECT_TRUE(timeline.strategy_state(0, 0).model_open_position.has_value());
+    EXPECT_TRUE(timeline.strategy_state(0, 1).model_open_position.has_value());
+   EXPECT_TRUE(timeline.strategy_state(0, 0).entry_filtered_position);
+   EXPECT_FALSE(timeline.strategy_state(0, 1).entry_filtered_position);
 }
 
 TEST(BacktestRunnerSetupTest, FailsafeUsesItsProfileDrawdownAdjustment)
@@ -518,14 +518,14 @@ TEST(BacktestRunnerSetupTest, FailsafeUsesItsProfileDrawdownAdjustment)
                               false,
                               false);
   };
-  auto setups = std::vector<BacktestRunner::Setup>{};
+   auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    main_profile,
    OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
-   StrategyPerformanceConfig{},
+    ModelPerformanceConfig{},
    BooleanMethod<false>{});
   setups.emplace_back(
    failsafe_profile,
@@ -533,9 +533,9 @@ TEST(BacktestRunnerSetupTest, FailsafeUsesItsProfileDrawdownAdjustment)
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
-   StrategyPerformanceConfig{},
+    ModelPerformanceConfig{},
    BooleanMethod<true>{},
-   FailsafeActivation::PreviousSetupEntryFilteredPosition);
+    FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
   auto runner = BacktestRunner{
    asset, market, broker, std::move(setups), 900.0, false, 1000.0};
   auto setup_results = std::vector<SeriesEvaluationResults>(2);
@@ -547,7 +547,7 @@ TEST(BacktestRunnerSetupTest, FailsafeUsesItsProfileDrawdownAdjustment)
   EXPECT_DOUBLE_EQ(timeline.open_position(0)->position_size(), 0.8);
   ASSERT_EQ(timeline.position_sizing_decisions(0).size(), 2U);
   const auto& sizing = timeline.position_sizing_decisions(0)[1];
-  EXPECT_EQ(sizing.setup_index, 1U);
+   EXPECT_EQ(sizing.strategy_index, 1U);
   EXPECT_DOUBLE_EQ(*sizing.requested_quantity, 0.9);
   EXPECT_DOUBLE_EQ(*sizing.drawdown_adjusted_quantity, 0.8);
 }
@@ -572,14 +572,14 @@ TEST(BacktestRunnerSetupTest, FailsafeUsesItsProfileCashPolicy)
                               false,
                               false);
   };
-  auto setups = std::vector<BacktestRunner::Setup>{};
+   auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    main_profile,
    OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
-   StrategyPerformanceConfig{},
+    ModelPerformanceConfig{},
    BooleanMethod<false>{});
   setups.emplace_back(
    failsafe_profile,
@@ -587,9 +587,9 @@ TEST(BacktestRunnerSetupTest, FailsafeUsesItsProfileCashPolicy)
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
-   StrategyPerformanceConfig{},
+    ModelPerformanceConfig{},
    BooleanMethod<true>{},
-   FailsafeActivation::PreviousSetupEntryFilteredPosition);
+    FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
   auto runner =
    BacktestRunner{asset, market, broker, std::move(setups), 1000.0};
   auto setup_results = std::vector<SeriesEvaluationResults>(2);
@@ -600,7 +600,7 @@ TEST(BacktestRunnerSetupTest, FailsafeUsesItsProfileCashPolicy)
   ASSERT_TRUE(timeline.open_position(0));
   EXPECT_DOUBLE_EQ(timeline.open_position(0)->position_size(), 10.0);
   const auto& sizing = timeline.position_sizing_decisions(0)[1];
-  EXPECT_EQ(sizing.setup_index, 1U);
+   EXPECT_EQ(sizing.strategy_index, 1U);
   EXPECT_TRUE(sizing.cash_adjusted);
   EXPECT_DOUBLE_EQ(*sizing.requested_quantity, 20.0);
   EXPECT_DOUBLE_EQ(*sizing.final_quantity, 10.0);
@@ -634,7 +634,7 @@ TEST(BacktestRunnerSetupTest,
                           EqualMethod{CloseMethod{}, ValueMethod{110.0}},
                           SignalTiming::CurrentClose,
                           0.5);
-  auto setups = std::vector<BacktestRunner::Setup>{};
+   auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    profile,
    OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
@@ -647,7 +647,7 @@ TEST(BacktestRunnerSetupTest,
                                 {}},
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
-   StrategyPerformanceConfig{},
+    ModelPerformanceConfig{},
    BooleanMethod<false>{});
   setups.emplace_back(
    profile,
@@ -655,9 +655,9 @@ TEST(BacktestRunnerSetupTest,
    make_entry_rule(120.0),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
-   StrategyPerformanceConfig{},
+    ModelPerformanceConfig{},
    BooleanMethod<true>{},
-   FailsafeActivation::PreviousSetupEntryFilteredPosition);
+    FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
   auto runner =
    BacktestRunner{asset, market, broker, std::move(setups), 1'000.0};
   auto setup_results = std::vector<SeriesEvaluationResults>(2);
@@ -667,12 +667,12 @@ TEST(BacktestRunnerSetupTest,
   runner.run(setup_results, timeline);
   runner.run(setup_results, timeline);
 
-  EXPECT_TRUE(timeline.setup_state(0, 0).entry_filtered_position);
-  EXPECT_TRUE(timeline.setup_state(1, 0).entry_filtered_position);
-  EXPECT_TRUE(timeline.setup_state(2, 0).entry_filtered_position);
+   EXPECT_TRUE(timeline.strategy_state(0, 0).entry_filtered_position);
+   EXPECT_TRUE(timeline.strategy_state(1, 0).entry_filtered_position);
+   EXPECT_TRUE(timeline.strategy_state(2, 0).entry_filtered_position);
   ASSERT_EQ(timeline.trade_events(2).size(), 1U);
   EXPECT_TRUE(timeline.trade_events(2).front().is_entry());
-  EXPECT_EQ(timeline.trade_events(2).front().setup_index(), 1U);
+   EXPECT_EQ(timeline.trade_events(2).front().strategy_index(), 1U);
   ASSERT_TRUE(timeline.open_position(2));
   EXPECT_DOUBLE_EQ(timeline.open_position(2)->position_size(), 1.0);
 }
@@ -691,7 +691,7 @@ TEST(BacktestRunnerSetupTest,
   const auto broker = Broker{"Test"};
   const auto profile =
    Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
-  auto setups = std::vector<BacktestRunner::Setup>{};
+   auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    profile,
    OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
@@ -706,7 +706,7 @@ TEST(BacktestRunnerSetupTest,
     false),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
-   StrategyPerformanceConfig{},
+    ModelPerformanceConfig{},
    BooleanMethod<false>{});
   setups.emplace_back(
    profile,
@@ -720,9 +720,9 @@ TEST(BacktestRunnerSetupTest,
                       false),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
-   StrategyPerformanceConfig{},
+    ModelPerformanceConfig{},
    BooleanMethod<true>{},
-   FailsafeActivation::PreviousSetupEntryFilteredPosition);
+    FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
   auto runner =
    BacktestRunner{asset, market, broker, std::move(setups), 1'000.0};
   auto setup_results = std::vector<SeriesEvaluationResults>(2);
@@ -732,14 +732,14 @@ TEST(BacktestRunnerSetupTest,
   runner.run(setup_results, timeline);
   runner.run(setup_results, timeline);
 
-  EXPECT_TRUE(timeline.setup_state(0, 0).entry_filtered_position);
-  EXPECT_FALSE(timeline.setup_state(1, 0).entry_filtered_position);
-  EXPECT_FALSE(timeline.setup_state(2, 0).entry_filtered_position);
+   EXPECT_TRUE(timeline.strategy_state(0, 0).entry_filtered_position);
+   EXPECT_FALSE(timeline.strategy_state(1, 0).entry_filtered_position);
+   EXPECT_FALSE(timeline.strategy_state(2, 0).entry_filtered_position);
   EXPECT_FALSE(timeline.open_position(2));
   ASSERT_EQ(timeline.position_sizing_decisions(2).size(), 1U);
   EXPECT_EQ(timeline.position_sizing_decisions(2).front().outcome,
             PositionSizingDecisionOutcome::FailsafeInactive);
-  EXPECT_TRUE(timeline.setup_state(2, 1).strategy_open_position.has_value());
+    EXPECT_TRUE(timeline.strategy_state(2, 1).model_open_position.has_value());
 }
 
 TEST(BacktestRunnerSetupTest,
@@ -760,14 +760,14 @@ TEST(BacktestRunnerSetupTest,
                               false,
                               false);
   };
-  auto setups = std::vector<BacktestRunner::Setup>{};
+   auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    profile,
    OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
    make_entry_rule(110.0),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
-   StrategyPerformanceConfig{},
+    ModelPerformanceConfig{},
    BooleanMethod<false>{});
   setups.emplace_back(
    profile,
@@ -775,9 +775,9 @@ TEST(BacktestRunnerSetupTest,
    make_entry_rule(100.0),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
-   StrategyPerformanceConfig{},
+    ModelPerformanceConfig{},
    BooleanMethod<true>{},
-   FailsafeActivation::PreviousSetupEntryFilteredPosition);
+    FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
   auto runner =
    BacktestRunner{asset, market, broker, std::move(setups), 1'000.0};
   auto setup_results = std::vector<SeriesEvaluationResults>(2);
@@ -789,8 +789,8 @@ TEST(BacktestRunnerSetupTest,
   ASSERT_EQ(timeline.position_sizing_decisions(0).size(), 1U);
   EXPECT_EQ(timeline.position_sizing_decisions(0).front().outcome,
             PositionSizingDecisionOutcome::FailsafeInactive);
-  EXPECT_TRUE(timeline.setup_state(1, 0).entry_filtered_position);
-  EXPECT_TRUE(timeline.setup_state(1, 1).strategy_open_position.has_value());
+   EXPECT_TRUE(timeline.strategy_state(1, 0).entry_filtered_position);
+    EXPECT_TRUE(timeline.strategy_state(1, 1).model_open_position.has_value());
   EXPECT_FALSE(timeline.open_position(1));
   EXPECT_TRUE(timeline.trade_events(1).empty());
 }
@@ -812,14 +812,14 @@ TEST(BacktestRunnerSetupTest,
                               false,
                               false);
   };
-  auto setups = std::vector<BacktestRunner::Setup>{};
+   auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    profile,
    OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
-   StrategyPerformanceConfig{},
+    ModelPerformanceConfig{},
    BooleanMethod<false>{});
   setups.emplace_back(
    profile,
@@ -827,18 +827,18 @@ TEST(BacktestRunnerSetupTest,
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
-   StrategyPerformanceConfig{},
+    ModelPerformanceConfig{},
    BooleanMethod<false>{},
-   FailsafeActivation::PreviousSetupEntryFilteredPosition);
+    FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
   setups.emplace_back(
    profile,
    OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
-   StrategyPerformanceConfig{},
+    ModelPerformanceConfig{},
    BooleanMethod<true>{},
-   FailsafeActivation::PreviousSetupEntryFilteredPosition);
+    FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
   auto runner =
    BacktestRunner{asset, market, broker, std::move(setups), 1'000.0};
   auto setup_results = std::vector<SeriesEvaluationResults>(3);
@@ -846,10 +846,10 @@ TEST(BacktestRunnerSetupTest,
 
   runner.run(setup_results, timeline);
 
-  EXPECT_TRUE(timeline.setup_state(0, 0).entry_filtered_position);
-  EXPECT_TRUE(timeline.setup_state(0, 1).entry_filtered_position);
+   EXPECT_TRUE(timeline.strategy_state(0, 0).entry_filtered_position);
+   EXPECT_TRUE(timeline.strategy_state(0, 1).entry_filtered_position);
   ASSERT_EQ(timeline.trade_events(0).size(), 1U);
-  EXPECT_EQ(timeline.trade_events(0).front().setup_index(), 2U);
+   EXPECT_EQ(timeline.trade_events(0).front().strategy_index(), 2U);
 }
 
 TEST(BacktestRunnerSetupTest,
@@ -871,14 +871,14 @@ TEST(BacktestRunnerSetupTest,
                                         {},
                                         SignalTiming::NextOpen};
   };
-  auto setups = std::vector<BacktestRunner::Setup>{};
+   auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    profile,
    OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
-   StrategyPerformanceConfig{},
+    ModelPerformanceConfig{},
    BooleanMethod<false>{});
   setups.emplace_back(
    profile,
@@ -886,9 +886,9 @@ TEST(BacktestRunnerSetupTest,
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
-   StrategyPerformanceConfig{},
+    ModelPerformanceConfig{},
    BooleanMethod<true>{},
-   FailsafeActivation::PreviousSetupEntryFilteredPosition);
+    FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
   auto runner =
    BacktestRunner{asset, market, broker, std::move(setups), 1'000.0};
   auto setup_results = std::vector<SeriesEvaluationResults>(2);
@@ -897,9 +897,9 @@ TEST(BacktestRunnerSetupTest,
   runner.run(setup_results, timeline);
   runner.run(setup_results, timeline);
 
-  EXPECT_TRUE(timeline.setup_state(1, 0).entry_filtered_position);
+   EXPECT_TRUE(timeline.strategy_state(1, 0).entry_filtered_position);
   ASSERT_EQ(timeline.trade_events(1).size(), 1U);
-  EXPECT_EQ(timeline.trade_events(1).front().setup_index(), 1U);
+   EXPECT_EQ(timeline.trade_events(1).front().strategy_index(), 1U);
 }
 
 TEST(BacktestRunnerSetupTest, MainWithoutSignalAllowsFailsafeEntry)
@@ -922,7 +922,7 @@ TEST(BacktestRunnerSetupTest, MainWithoutSignalAllowsFailsafeEntry)
                               false,
                               false);
   };
-  auto setups = std::vector<BacktestRunner::Setup>{};
+   auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    profile,
    OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
@@ -941,11 +941,11 @@ TEST(BacktestRunnerSetupTest, MainWithoutSignalAllowsFailsafeEntry)
   runner.run(setup_results, timeline);
 
   ASSERT_EQ(timeline.trade_events(0).size(), 1U);
-  EXPECT_EQ(timeline.trade_events(0).front().setup_index(), 1U);
+   EXPECT_EQ(timeline.trade_events(0).front().strategy_index(), 1U);
   ASSERT_EQ(timeline.position_sizing_decisions(0).size(), 1U);
-  EXPECT_EQ(timeline.position_sizing_decisions(0).front().setup_index, 1U);
-  EXPECT_FALSE(timeline.setup_state(0, 0).strategy_open_position.has_value());
-  EXPECT_TRUE(timeline.setup_state(0, 1).strategy_open_position.has_value());
+   EXPECT_EQ(timeline.position_sizing_decisions(0).front().strategy_index, 1U);
+    EXPECT_FALSE(timeline.strategy_state(0, 0).model_open_position.has_value());
+    EXPECT_TRUE(timeline.strategy_state(0, 1).model_open_position.has_value());
 }
 
 TEST(BacktestRunnerSetupTest, AcceptedSizingRejectionStopsFallbackChain)
@@ -966,7 +966,7 @@ TEST(BacktestRunnerSetupTest, AcceptedSizingRejectionStopsFallbackChain)
                               false,
                               false);
   };
-  auto setups = std::vector<BacktestRunner::Setup>{};
+   auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    main_profile,
    OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
@@ -986,7 +986,7 @@ TEST(BacktestRunnerSetupTest, AcceptedSizingRejectionStopsFallbackChain)
 
   ASSERT_EQ(timeline.trade_events(0).size(), 1U);
   EXPECT_TRUE(timeline.trade_events(0).front().is_rejected());
-  EXPECT_EQ(timeline.trade_events(0).front().setup_index(), 0U);
+   EXPECT_EQ(timeline.trade_events(0).front().strategy_index(), 0U);
   ASSERT_EQ(timeline.position_sizing_decisions(0).size(), 2U);
   EXPECT_EQ(timeline.position_sizing_decisions(0)[0].outcome,
             PositionSizingDecisionOutcome::InsufficientCash);
@@ -1013,7 +1013,7 @@ TEST(BacktestRunnerSetupTest, PreFilterSizingFailureStopsFallbackChain)
                               false,
                               false);
   };
-  auto setups = std::vector<BacktestRunner::Setup>{};
+   auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    main_profile,
    OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
@@ -1025,11 +1025,11 @@ TEST(BacktestRunnerSetupTest, PreFilterSizingFailureStopsFallbackChain)
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
-   StrategyPerformanceConfig{},
+    ModelPerformanceConfig{},
    LessEqualMethod{
     RequestedOrderValueMethod{RequestedOrderValue::RequestedQuantity},
     ValueMethod{0.8}},
-   FailsafeActivation::PreviousSetupEntryFilteredPosition);
+    FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
   auto runner =
    BacktestRunner{asset, market, broker, std::move(setups), 1'000.0};
   auto setup_results = std::vector<SeriesEvaluationResults>(2);
@@ -1044,9 +1044,9 @@ TEST(BacktestRunnerSetupTest, PreFilterSizingFailureStopsFallbackChain)
             PositionSizingDecisionOutcome::SizingLimitTooSmall);
   EXPECT_EQ(timeline.position_sizing_decisions(0)[1].outcome,
             PositionSizingDecisionOutcome::ShadowOnly);
-  EXPECT_TRUE(timeline.setup_state(0, 0).strategy_open_position.has_value());
-  EXPECT_FALSE(timeline.setup_state(0, 0).entry_filtered_position);
-  EXPECT_TRUE(timeline.setup_state(0, 1).strategy_open_position.has_value());
+    EXPECT_TRUE(timeline.strategy_state(0, 0).model_open_position.has_value());
+   EXPECT_FALSE(timeline.strategy_state(0, 0).entry_filtered_position);
+    EXPECT_TRUE(timeline.strategy_state(0, 1).model_open_position.has_value());
 }
 
 TEST(BacktestRunnerSetupTest, OnlyOwningSetupCanExitSharedExecution)
@@ -1066,14 +1066,14 @@ TEST(BacktestRunnerSetupTest, OnlyOwningSetupCanExitSharedExecution)
                               stop_enabled,
                               false);
   };
-  auto setups = std::vector<BacktestRunner::Setup>{};
+   auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    profile,
    OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
    make_rule(true),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
-   StrategyPerformanceConfig{},
+    ModelPerformanceConfig{},
    BooleanMethod<false>{});
   setups.emplace_back(
    profile,
@@ -1090,12 +1090,12 @@ TEST(BacktestRunnerSetupTest, OnlyOwningSetupCanExitSharedExecution)
 
   ASSERT_EQ(timeline.size(), 2U);
   EXPECT_TRUE(timeline.open_position(1).has_value());
-  EXPECT_EQ(timeline.open_position(1)->setup_index(), 1U);
-  EXPECT_FALSE(timeline.setup_state(1, 0).strategy_open_position.has_value());
-  EXPECT_TRUE(timeline.setup_state(1, 1).strategy_open_position.has_value());
-  EXPECT_EQ(timeline.setup_state(1, 0).strategy_performance.lifetime_count(),
+   EXPECT_EQ(timeline.open_position(1)->strategy_index(), 1U);
+    EXPECT_FALSE(timeline.strategy_state(1, 0).model_open_position.has_value());
+    EXPECT_TRUE(timeline.strategy_state(1, 1).model_open_position.has_value());
+    EXPECT_EQ(timeline.strategy_state(1, 0).model_performance.lifetime_count(),
             1U);
-  EXPECT_EQ(timeline.setup_state(1, 1).strategy_performance.lifetime_count(),
+    EXPECT_EQ(timeline.strategy_state(1, 1).model_performance.lifetime_count(),
             0U);
 }
 
@@ -1116,14 +1116,14 @@ TEST(BacktestRunnerSetupTest, OnlyOwningSetupCanPyramidSharedExecution)
                               false,
                               false);
   };
-  auto setups = std::vector<BacktestRunner::Setup>{};
+   auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    profile,
    OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
    make_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
-   StrategyPerformanceConfig{},
+    ModelPerformanceConfig{},
    BooleanMethod<false>{});
   setups.emplace_back(
    profile,
@@ -1140,7 +1140,7 @@ TEST(BacktestRunnerSetupTest, OnlyOwningSetupCanPyramidSharedExecution)
 
   ASSERT_EQ(timeline.trade_events(1).size(), 1U);
   EXPECT_TRUE(timeline.trade_events(1).front().is_scale_in());
-  EXPECT_EQ(timeline.trade_events(1).front().setup_index(), 1U);
+   EXPECT_EQ(timeline.trade_events(1).front().strategy_index(), 1U);
   EXPECT_EQ(runner.executed_layer_count(), 2U);
   ASSERT_TRUE(timeline.open_position(1));
   EXPECT_DOUBLE_EQ(timeline.open_position(1)->position_size(), 2.0);
@@ -1760,11 +1760,11 @@ TEST(BacktestRunnerTest,
   ASSERT_TRUE(layers.has_value());
   EXPECT_EQ(layers->get(),
             (std::vector<double>{1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 3.0}));
-  EXPECT_TRUE(timeline.setup_state(1, 0).strategy_intents.empty());
-  EXPECT_TRUE(timeline.setup_state(2, 0).strategy_intents.empty());
+    EXPECT_TRUE(timeline.strategy_state(1, 0).model_intents.empty());
+    EXPECT_TRUE(timeline.strategy_state(2, 0).model_intents.empty());
   EXPECT_TRUE(timeline.position_sizing_decisions(1).empty());
   EXPECT_TRUE(timeline.position_sizing_decisions(2).empty());
-  EXPECT_EQ(timeline.setup_state(3, 0).strategy_intents.size(), 1U);
+    EXPECT_EQ(timeline.strategy_state(3, 0).model_intents.size(), 1U);
   EXPECT_EQ(timeline.position_sizing_decisions(3).size(), 1U);
 }
 
@@ -3092,7 +3092,7 @@ TEST(BacktestRunnerTest, ExecutesStopLossAtTwoR)
 
   runner.run(series_results, timeline);
   ASSERT_EQ(timeline.closed_trades(1).size(), 1);
-  EXPECT_EQ(timeline.closed_trades(1).front().setup_index(), 0U);
+   EXPECT_EQ(timeline.closed_trades(1).front().strategy_index(), 0U);
   EXPECT_EQ(latest_closed_trade(timeline).exit_type(),
             TradeEvent::Type::stop_loss);
   EXPECT_DOUBLE_EQ(latest_closed_trade(timeline).exit_price(), 80.0);

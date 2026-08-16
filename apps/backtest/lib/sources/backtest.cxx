@@ -30,8 +30,8 @@ export import :execution_model;
 export import :intrabar_path;
 export import :asset;
 export import :watchlist;
-export import :strategy;
-export import :strategy_inputs;
+export import :model;
+export import :model_inputs;
 export import :market;
 export import :broker;
 export import :position_sizing;
@@ -52,16 +52,16 @@ export import :open_position_snapshot;
 export import :closed_trade;
 export import :trade_position;
 export import :trade_session;
-export import :strategy_intent;
-export import :strategy_closed_position;
-export import :strategy_session;
-export import :strategy_performance_model;
-export import :strategy_performance;
+export import :model_intent;
+export import :model_closed_position;
+export import :model_session;
+export import :model_performance_model;
+export import :model_performance;
 export import :entry_filter_method_context;
-export import :strategy_performance_method;
-export import :strategy_performance_node;
-export import :backtest_setup;
-export import :backtest;
+export import :model_performance_method;
+export import :model_performance_node;
+export import :strategy;
+export import :system;
 export import :backtest_timeline;
 export import :portfolio_timeline;
 export import :portfolio_results;
@@ -84,7 +84,7 @@ export import :plot_group;
 export import :plots;
 
 export import :config_parser;
-export import :strategy_parser;
+export import :model_parser;
 
 export namespace pludux {
 

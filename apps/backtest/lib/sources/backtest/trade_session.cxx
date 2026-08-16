@@ -87,9 +87,9 @@ public:
     return self.trade_events_;
   }
 
-  void setup_index(this TradeSession& self, std::size_t value) noexcept
+  void strategy_index(this TradeSession& self, std::size_t value) noexcept
   {
-    self.setup_index_ = value;
+    self.strategy_index_ = value;
   }
 
   auto closed_trades(this const TradeSession& self) noexcept
@@ -133,13 +133,14 @@ public:
                                                   entry.price(),
                                                   total_fees);
       self.trade_events_.push_back(std::move(event));
-      self.trade_events_.back().setup_index(self.open_position_->setup_index());
+      self.trade_events_.back().strategy_index(
+       self.open_position_->strategy_index());
       return;
     }
 
     const auto trade_id = self.next_trade_id_++;
     self.open_position_ = TradePosition{trade_id,
-                                        self.setup_index_,
+                                         self.strategy_index_,
                                         entry.position_size(),
                                         self.market_timestamp_,
                                         entry.price(),
@@ -161,9 +162,9 @@ public:
                                     self.open_position_->stop_loss_levels(),
                                     self.open_position_->take_profit_levels(),
                                     self.open_position_->signal_exit_states());
-    self.trade_events_.back().setup_index(self.open_position_
-                                           ? self.open_position_->setup_index()
-                                           : self.setup_index_);
+     self.trade_events_.back().strategy_index(
+      self.open_position_ ? self.open_position_->strategy_index()
+                          : self.strategy_index_);
   }
 
   void reject_insufficient_cash(this TradeSession& self,
@@ -208,9 +209,9 @@ public:
      NAN,
      available_cash,
      required_cash);
-    self.trade_events_.back().setup_index(self.open_position_
-                                           ? self.open_position_->setup_index()
-                                           : self.setup_index_);
+     self.trade_events_.back().strategy_index(
+      self.open_position_ ? self.open_position_->strategy_index()
+                          : self.strategy_index_);
   }
 
   void reject_maximum_open_trades(this TradeSession& self,
@@ -231,9 +232,9 @@ public:
      0.0,
      0.0,
      0.0);
-    self.trade_events_.back().setup_index(self.open_position_
-                                           ? self.open_position_->setup_index()
-                                           : self.setup_index_);
+     self.trade_events_.back().strategy_index(
+      self.open_position_ ? self.open_position_->strategy_index()
+                          : self.strategy_index_);
   }
 
   void reject_maximum_combined_layers(this TradeSession& self,
@@ -271,9 +272,9 @@ public:
                          : std::vector<TakeProfitLevel>{},
      self.open_position_ ? self.open_position_->signal_exit_states()
                          : std::vector<SignalExitState>{});
-    self.trade_events_.back().setup_index(self.open_position_
-                                           ? self.open_position_->setup_index()
-                                           : self.setup_index_);
+     self.trade_events_.back().strategy_index(
+      self.open_position_ ? self.open_position_->strategy_index()
+                          : self.strategy_index_);
   }
 
   void exit_position(this TradeSession& self, const TradeExit& exit)
@@ -323,7 +324,7 @@ public:
       throw std::runtime_error{"Signal exit requires a valid exit index."};
     }
     const auto exit_event_id = self.next_event_id_++;
-    const auto owner_setup_index = self.open_position_->setup_index();
+    const auto owner_strategy_index = self.open_position_->strategy_index();
     auto event = self.open_position_->scaled_out(exit_event_id,
                                                  exit.position_size(),
                                                  self.market_timestamp_,
@@ -360,7 +361,7 @@ public:
                                        closed_investment);
     self.realized_exits_.push_back(closed_trade);
     self.trade_events_.push_back(std::move(event));
-    self.trade_events_.back().setup_index(owner_setup_index);
+    self.trade_events_.back().strategy_index(owner_strategy_index);
 
     if(self.open_position_->is_closed()) {
       self.closed_trades_.push_back(closed_trade);
@@ -440,7 +441,7 @@ private:
   std::vector<ClosedTrade> realized_exits_;
   std::size_t next_trade_id_;
   std::size_t next_event_id_;
-  std::size_t setup_index_{};
+  std::size_t strategy_index_{};
 };
 
 } // namespace pludux::backtest

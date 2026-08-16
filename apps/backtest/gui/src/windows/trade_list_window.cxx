@@ -42,17 +42,17 @@ public:
       return;
     }
 
-    const auto selected_setup = app_state.selected_portfolio_backtest_setup();
-    if(!selected_setup) {
+    const auto selected_strategy = app_state.selected_portfolio_strategy();
+    if(!selected_strategy) {
       ui::summary_status(PLUDUX_ICON_TRADES,
-                         "No Backtest setup selected",
-                         "Select a setup from the active Portfolio to "
-                         "inspect its trades.");
+                          "No Backtest strategy selected",
+                          "Select a strategy from the active Portfolio to "
+                          "inspect its trades.");
       ImGui::End();
       return;
     }
-    const auto run = selected_setup->run;
-    const auto setup_index = selected_setup->setup_index;
+    const auto run = selected_strategy->run;
+    const auto strategy_index = selected_strategy->strategy_index;
 
     if(!app_state.is_portfolio_ready(*portfolio)) {
       ui::summary_status(PLUDUX_ICON_WARNING,
@@ -78,21 +78,20 @@ public:
      results.backtests(), run, &backtest::BacktestResults::key);
     const auto backtest_index = static_cast<std::size_t>(
      std::ranges::distance(results.backtests().begin(), backtest_iterator));
-    const auto* backtest_config =
-     app_state.get_backtest_if_present(run.backtest_handle);
+    const auto* system = app_state.get_system_if_present(run.system_handle);
     const auto* asset = app_state.get_asset_if_present(run.asset_handle);
-    const auto setup_label = setup_index == 0
-                              ? std::string{"Main setup"}
-                              : std::format("Failsafe {}", setup_index);
+    const auto strategy_label = strategy_index == 0
+                                 ? std::string{"Main strategy"}
+                                 : std::format("Failsafe strategy {}", strategy_index);
     const auto label =
-     backtest_config && asset
-      ? std::format(
-         "{} — {} — {}", backtest_config->name(), asset->name(), setup_label)
-      : std::format("Missing Backtest Asset — {}", setup_label);
+       system && asset
+        ? std::format(
+           "{} — {} — {}", system->name(), asset->name(), strategy_label)
+       : std::format("Missing Backtest Asset — {}", strategy_label);
     auto trades = collect_trades(backtest_results->timeline(),
                                  self.trade_source_,
                                  backtest_index,
-                                 setup_index,
+                                  strategy_index,
                                  label);
     std::ranges::sort(trades, {}, &TradeView::entry_timestamp);
     std::ranges::reverse(trades);
@@ -105,7 +104,7 @@ public:
     if(trades.empty()) {
       ui::summary_status(PLUDUX_ICON_TRADES,
                          "No trades were generated",
-                         "The selected setup has no matching trade activity. "
+                          "The selected strategy has no matching trade activity. "
                          "Review its strategy signals or tested date range.");
       ImGui::End();
       return;
@@ -137,7 +136,7 @@ private:
     std::size_t id{};
     bool open{};
     std::size_t backtest_index{};
-    std::size_t setup_index{};
+    std::size_t strategy_index{};
 
     auto operator==(const TradeKey&) const noexcept -> bool = default;
   };
@@ -145,11 +144,11 @@ private:
   static_assert(TradeKey{.id = 1,
                          .open = false,
                          .backtest_index = 0,
-                         .setup_index = 0} !=
+                          .strategy_index = 0} !=
                 TradeKey{.id = 1,
                          .open = false,
                          .backtest_index = 0,
-                         .setup_index = 1});
+                          .strategy_index = 1});
 
   struct TradeView {
     TradeKey key;
@@ -182,7 +181,7 @@ private:
   static auto collect_trades(const backtest::BacktestTimeline& timeline,
                              TradeSource source,
                              std::size_t backtest_index,
-                             std::size_t setup_index,
+                              std::size_t strategy_index,
                              std::string backtest_name)
    -> std::vector<TradeView>
   {
@@ -193,15 +192,15 @@ private:
 
     const auto last_index = timeline.size() - 1;
     if(source == TradeSource::Hypothetical) {
-      const auto& last_setup_state =
-       timeline.setup_state(last_index, setup_index);
-      if(const auto& open_position = last_setup_state.strategy_open_position) {
+      const auto& last_strategy_state =
+        timeline.strategy_state(last_index, strategy_index);
+        if(const auto& open_position = last_strategy_state.model_open_position) {
         trades.push_back(make_trade_view(
          *open_position, timeline.market_timestamp(last_index)));
       }
       for(auto index = timeline.size(); index-- > 0;) {
         const auto& closed =
-         timeline.setup_state(index, setup_index).strategy_closed_positions;
+           timeline.strategy_state(index, strategy_index).model_closed_positions;
         for(auto position = closed.rbegin(); position != closed.rend();
             ++position) {
           trades.push_back(make_trade_view(*position));
@@ -209,14 +208,14 @@ private:
       }
       for(auto& trade : trades) {
         trade.key.backtest_index = backtest_index;
-        trade.key.setup_index = setup_index;
+         trade.key.strategy_index = strategy_index;
         trade.backtest_name = backtest_name;
       }
       return trades;
     }
 
     if(const auto& open_position = timeline.open_position(last_index);
-       open_position && open_position->setup_index() == setup_index) {
+       open_position && open_position->strategy_index() == strategy_index) {
       trades.push_back(make_trade_view(*open_position));
     }
 
@@ -224,7 +223,7 @@ private:
       const auto& closed_trades = timeline.closed_trades(index);
       for(auto trade = closed_trades.rbegin(); trade != closed_trades.rend();
           ++trade) {
-        if(trade->setup_index() != setup_index) {
+        if(trade->strategy_index() != strategy_index) {
           continue;
         }
         trades.push_back(make_trade_view(*trade));
@@ -232,13 +231,13 @@ private:
     }
     for(auto& trade : trades) {
       trade.key.backtest_index = backtest_index;
-      trade.key.setup_index = setup_index;
+       trade.key.strategy_index = strategy_index;
       trade.backtest_name = backtest_name;
     }
     return trades;
   }
 
-  static auto make_trade_view(const backtest::StrategyClosedPosition& position)
+   static auto make_trade_view(const backtest::ModelClosedPosition& position)
    -> TradeView
   {
     const auto average_entry = position.normalized_entry_quantity() > 0.0
@@ -249,8 +248,8 @@ private:
                              ? average_entry
                              : position.intents().back().price();
     return TradeView{
-     .key = TradeKey{.id = position.strategy_trade_id(), .open = false},
-     .long_position = position.direction() == backtest::StrategyDirection::Long,
+      .key = TradeKey{.id = position.model_trade_id(), .open = false},
+      .long_position = position.direction() == backtest::ModelDirection::Long,
      .status = "Hypothetical",
      .entry_timestamp = position.entry_timestamp(),
      .exit_timestamp = position.exit_timestamp(),
@@ -271,12 +270,12 @@ private:
   }
 
   static auto
-  make_trade_view(const backtest::StrategyOpenPositionSnapshot& position,
+   make_trade_view(const backtest::ModelOpenPositionSnapshot& position,
                   std::time_t market_timestamp) -> TradeView
   {
     return TradeView{
-     .key = TradeKey{.id = position.strategy_trade_id(), .open = true},
-     .long_position = position.direction() == backtest::StrategyDirection::Long,
+      .key = TradeKey{.id = position.model_trade_id(), .open = true},
+      .long_position = position.direction() == backtest::ModelDirection::Long,
      .status = "Hypothetical open",
      .entry_timestamp = position.entry_timestamp(),
      .exit_timestamp = std::nullopt,
@@ -301,7 +300,7 @@ private:
     return TradeView{
      .key = TradeKey{.id = trade.trade_id(),
                      .open = false,
-                     .setup_index = trade.setup_index()},
+                      .strategy_index = trade.strategy_index()},
      .long_position = trade.position_size() > 0.0,
      .status = exit_status_label(trade.exit_type()),
      .entry_timestamp = trade.entry_timestamp(),
@@ -328,7 +327,7 @@ private:
     return TradeView{
      .key = TradeKey{.id = trade.trade_id(),
                      .open = true,
-                     .setup_index = trade.setup_index()},
+                      .strategy_index = trade.strategy_index()},
      .long_position = trade.position_size() > 0.0,
      .status = "Open",
      .entry_timestamp = trade.entry_timestamp(),
@@ -521,7 +520,7 @@ private:
   void render_trade_row(this TradeListWindow& self, const TradeView& trade)
   {
     ImGui::PushID(static_cast<int>(trade.key.backtest_index));
-    ImGui::PushID(static_cast<int>(trade.key.setup_index));
+    ImGui::PushID(static_cast<int>(trade.key.strategy_index));
     ImGui::PushID(static_cast<int>(trade.key.id));
     ImGui::PushID(trade.key.open ? 1 : 0);
     ImGui::TableNextRow();

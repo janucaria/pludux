@@ -17,21 +17,23 @@ public:
   DocumentState() = default;
 
   DocumentState(std::vector<backtest::PortfolioStoreHandle> portfolio_handles,
-                std::vector<backtest::BacktestStoreHandle> backtest_handles,
+                   std::vector<backtest::SystemStoreHandle> system_handles,
                 std::vector<backtest::AssetStoreHandle> asset_handles,
                 std::vector<backtest::WatchlistStoreHandle> watchlist_handles,
-                std::vector<backtest::StrategyStoreHandle> strategy_handles,
+                  std::vector<backtest::ModelStoreHandle> model_handles,
                 std::vector<backtest::MarketStoreHandle> market_handles,
                 std::vector<backtest::BrokerStoreHandle> broker_handles,
-                std::vector<backtest::ProfileStoreHandle> profile_handles)
+                 std::vector<backtest::ProfileStoreHandle> profile_handles,
+                 std::vector<backtest::StrategyStoreHandle> strategy_handles)
   : portfolio_handles_{std::move(portfolio_handles)}
-  , backtest_handles_{std::move(backtest_handles)}
+   , system_handles_{std::move(system_handles)}
   , asset_handles_{std::move(asset_handles)}
   , watchlist_handles_{std::move(watchlist_handles)}
-  , strategy_handles_{std::move(strategy_handles)}
+  , model_handles_{std::move(model_handles)}
   , market_handles_{std::move(market_handles)}
   , broker_handles_{std::move(broker_handles)}
-  , profile_handles_{std::move(profile_handles)}
+   , profile_handles_{std::move(profile_handles)}
+   , strategy_handles_{std::move(strategy_handles)}
   {
   }
 
@@ -80,25 +82,27 @@ public:
   }
 
   PLUDUX_DOCUMENT_STATE_HANDLES(Portfolio, portfolio)
-  PLUDUX_DOCUMENT_STATE_HANDLES(Backtest, backtest)
+  PLUDUX_DOCUMENT_STATE_HANDLES(System, system)
   PLUDUX_DOCUMENT_STATE_HANDLES(Asset, asset)
   PLUDUX_DOCUMENT_STATE_HANDLES(Watchlist, watchlist)
-  PLUDUX_DOCUMENT_STATE_HANDLES(Strategy, strategy)
+  PLUDUX_DOCUMENT_STATE_HANDLES(Model, model)
   PLUDUX_DOCUMENT_STATE_HANDLES(Market, market)
   PLUDUX_DOCUMENT_STATE_HANDLES(Broker, broker)
   PLUDUX_DOCUMENT_STATE_HANDLES(Profile, profile)
+  PLUDUX_DOCUMENT_STATE_HANDLES(Strategy, strategy)
 
 #undef PLUDUX_DOCUMENT_STATE_HANDLES
 
 private:
   std::vector<backtest::PortfolioStoreHandle> portfolio_handles_;
-  std::vector<backtest::BacktestStoreHandle> backtest_handles_;
+  std::vector<backtest::SystemStoreHandle> system_handles_;
   std::vector<backtest::AssetStoreHandle> asset_handles_;
   std::vector<backtest::WatchlistStoreHandle> watchlist_handles_;
-  std::vector<backtest::StrategyStoreHandle> strategy_handles_;
+  std::vector<backtest::ModelStoreHandle> model_handles_;
   std::vector<backtest::MarketStoreHandle> market_handles_;
   std::vector<backtest::BrokerStoreHandle> broker_handles_;
   std::vector<backtest::ProfileStoreHandle> profile_handles_;
+  std::vector<backtest::StrategyStoreHandle> strategy_handles_;
 };
 
 } // namespace pludux::apps

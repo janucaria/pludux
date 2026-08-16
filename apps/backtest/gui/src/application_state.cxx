@@ -13,7 +13,7 @@ module;
 export module pludux.apps.backtest.application_state;
 
 import pludux.backtest;
-import pludux.apps.backtest.portfolio_backtest_setup_selections;
+import pludux.apps.backtest.portfolio_strategy_selections;
 
 import pludux.apps.backtest.document_state;
 import pludux.apps.backtest.view_state;
@@ -31,7 +31,7 @@ public:
   , document_state_{std::move(document_state)}
   , view_state_{std::move(view_state)}
   {
-    normalize_portfolio_backtest_setup_selections();
+    normalize_portfolio_strategy_selections();
   }
 
   auto store(this const ApplicationState& self) noexcept
@@ -69,101 +69,108 @@ public:
     self.view_state_.imgui_ini_settings(std::move(settings));
   }
 
-  void select_backtest(this ApplicationState& self,
-                       backtest::BacktestStoreHandle backtest_handle)
+  void select_system(this ApplicationState& self,
+                     backtest::SystemStoreHandle system_handle)
   {
-    self.view_state_.selected_backtest_handle(backtest_handle);
+    self.view_state_.selected_system_handle(system_handle);
+  }
+
+  void select_strategy(this ApplicationState& self,
+                       backtest::StrategyStoreHandle strategy_handle)
+  {
+    self.view_state_.selected_strategy_handle(strategy_handle);
   }
 
   void select_portfolio(this ApplicationState& self,
                         backtest::PortfolioStoreHandle handle)
   {
     self.view_state_.selected_portfolio_handle(handle);
-    self.normalize_portfolio_backtest_setup_selection(handle);
+    self.normalize_portfolio_strategy_selection(handle);
   }
 
-  auto select_portfolio_backtest_setup(
+  auto select_portfolio_strategy(
    this ApplicationState& self,
    backtest::PortfolioStoreHandle portfolio_handle,
-   PortfolioBacktestSetupKey setup) -> bool
+    PortfolioStrategyKey strategy) -> bool
   {
     const auto* portfolio =
      self.store_.get_portfolio_if_present(portfolio_handle);
     if(!portfolio) {
       return false;
     }
-    const auto setups = self.expanded_backtest_setups(*portfolio);
-    if(std::ranges::find(setups, setup) == setups.end()) {
+    const auto strategies = self.expanded_system_strategies(*portfolio);
+    if(std::ranges::find(strategies, strategy) == strategies.end()) {
       return false;
     }
     const auto* backtest =
-     self.store_.get_backtest_if_present(setup.run.backtest_handle);
-    if(!backtest || setup.setup_index >= backtest->setup_count() ||
-       !self.store_.get_asset_if_present(setup.run.asset_handle)) {
+     self.store_.get_system_if_present(strategy.run.system_handle);
+    if(!backtest || strategy.strategy_index >= backtest->strategy_count() ||
+        !self.store_.get_asset_if_present(strategy.run.asset_handle)) {
       return false;
     }
-    const auto& configured_setup = backtest->setup(setup.setup_index);
-    if(!self.store_.get_strategy_if_present(
-        configured_setup.strategy_handle()) ||
-       !self.store_.get_profile_if_present(configured_setup.profile_handle())) {
+    const auto* configured_strategy = self.strategy_if_present(*backtest,
+                                                               strategy.strategy_index);
+    if(!configured_strategy ||
+       !self.store_.get_model_if_present(configured_strategy->model_handle()) ||
+       !self.store_.get_profile_if_present(configured_strategy->profile_handle())) {
       return false;
     }
 
     self.view_state_.selected_portfolio_handle(portfolio_handle);
-    self.view_state_.portfolio_backtest_setup_selections().remember(
-     portfolio_handle, setup);
+    self.view_state_.portfolio_strategy_selections().remember(
+      portfolio_handle, strategy);
     return true;
   }
 
   auto
-  selected_portfolio_backtest_setup(this const ApplicationState& self) noexcept
-   -> std::optional<PortfolioBacktestSetupKey>
+   selected_portfolio_strategy(this const ApplicationState& self) noexcept
+    -> std::optional<PortfolioStrategyKey>
   {
-    return self.view_state_.portfolio_backtest_setup_selections().lookup(
+    return self.view_state_.portfolio_strategy_selections().lookup(
      self.view_state_.selected_portfolio_handle());
   }
 
-  auto expanded_backtest_setups(this const ApplicationState& self,
+  auto expanded_system_strategies(this const ApplicationState& self,
                                 const backtest::Portfolio& portfolio)
-   -> std::vector<PortfolioBacktestSetupKey>
+    -> std::vector<PortfolioStrategyKey>
   {
-    auto setups = std::vector<PortfolioBacktestSetupKey>{};
-    for(const auto backtest_handle : portfolio.backtest_handles()) {
+    auto strategies = std::vector<PortfolioStrategyKey>{};
+      for(const auto system_handle : portfolio.system_handles()) {
       const auto* configured_backtest =
-       self.store_.get_backtest_if_present(backtest_handle);
+         self.store_.get_system_if_present(system_handle);
       if(!configured_backtest) {
-        setups.push_back({{backtest_handle, {}}, 0});
+         strategies.push_back({{system_handle, {}}, 0});
         continue;
       }
 
-      const auto append_asset_setups = [&](const auto asset_handle) {
-        for(auto setup_index = std::size_t{};
-            setup_index < configured_backtest->setup_count();
-            ++setup_index) {
-          setups.push_back({{backtest_handle, asset_handle}, setup_index});
+      const auto append_asset_strategies = [&](const auto asset_handle) {
+         for(auto strategy_index = std::size_t{};
+             strategy_index < configured_backtest->strategy_count();
+             ++strategy_index) {
+            strategies.push_back({{system_handle, asset_handle}, strategy_index});
         }
       };
       const auto* watchlist = self.store_.get_watchlist_if_present(
        configured_backtest->watchlist_handle());
       if(!watchlist) {
-        append_asset_setups(backtest::AssetStoreHandle{});
+         append_asset_strategies(backtest::AssetStoreHandle{});
         continue;
       }
       for(const auto asset_handle : watchlist->asset_handles()) {
-        append_asset_setups(asset_handle);
+         append_asset_strategies(asset_handle);
       }
     }
-    return setups;
+    return strategies;
   }
 
-  auto expanded_backtest_runs(this const ApplicationState& self,
+  auto expanded_strategy_runs(this const ApplicationState& self,
                               const backtest::Portfolio& portfolio)
    -> std::vector<backtest::BacktestRunKey>
   {
     auto runs = std::vector<backtest::BacktestRunKey>{};
-    for(const auto backtest_handle : portfolio.backtest_handles()) {
+      for(const auto system_handle : portfolio.system_handles()) {
       const auto* configured_backtest =
-       self.store_.get_backtest_if_present(backtest_handle);
+         self.store_.get_system_if_present(system_handle);
       if(!configured_backtest) {
         continue;
       }
@@ -174,7 +181,7 @@ public:
       }
       for(const auto asset_handle : watchlist->asset_handles()) {
         if(self.store_.get_asset_if_present(asset_handle)) {
-          runs.push_back({backtest_handle, asset_handle});
+            runs.push_back({system_handle, asset_handle});
         }
       }
     }
@@ -266,7 +273,7 @@ public:
     if(!self.store_.update_portfolio(handle, std::move(portfolio))) {
       return false;
     }
-    self.normalize_portfolio_backtest_setup_selection(handle);
+    self.normalize_portfolio_strategy_selection(handle);
     self.reset_portfolio(handle);
     return true;
   }
@@ -288,7 +295,7 @@ public:
       return false;
     }
     self.document_state_.remove_portfolio_handle(handle);
-    self.view_state_.portfolio_backtest_setup_selections().remove_portfolio(
+     self.view_state_.portfolio_strategy_selections().remove_portfolio(
      handle);
     if(self.view_state_.selected_portfolio_handle() == handle) {
       self.view_state_.selected_portfolio_handle({});
@@ -297,127 +304,126 @@ public:
     return true;
   }
 
-  auto selected_backtest_handle(this const ApplicationState& self) noexcept
-   -> backtest::BacktestStoreHandle
+  auto selected_system_handle(this const ApplicationState& self) noexcept
+     -> backtest::SystemStoreHandle
   {
-    return self.view_state_.selected_backtest_handle();
+    return self.view_state_.selected_system_handle();
   }
 
-  auto selected_backtest(this const ApplicationState& self) noexcept
-   -> const backtest::Backtest&
+  auto selected_system(this const ApplicationState& self) noexcept
+     -> const backtest::System&
   {
-    const auto selected_backtest_handle =
-     self.view_state_.selected_backtest_handle();
-    return self.store_.get_backtest(selected_backtest_handle);
+    const auto selected_system_handle = self.view_state_.selected_system_handle();
+    return self.store_.get_system(selected_system_handle);
   }
 
-  auto selected_backtest(this ApplicationState& self) noexcept
-   -> backtest::Backtest&
+  auto selected_system(this ApplicationState& self) noexcept
+     -> backtest::System&
   {
-    const auto selected_backtest_handle =
-     self.view_state_.selected_backtest_handle();
-    return self.store_.get_backtest(selected_backtest_handle);
+    const auto selected_system_handle = self.view_state_.selected_system_handle();
+    return self.store_.get_system(selected_system_handle);
   }
 
-  auto selected_backtest_if_present(this ApplicationState& self) noexcept
-   -> backtest::Backtest*
+  auto selected_system_if_present(this ApplicationState& self) noexcept
+     -> backtest::System*
   {
-    const auto selected_backtest_handle =
-     self.view_state_.selected_backtest_handle();
-    return self.store_.get_backtest_if_present(selected_backtest_handle);
+    const auto selected_system_handle = self.view_state_.selected_system_handle();
+    return self.store_.get_system_if_present(selected_system_handle);
   }
 
-  auto selected_backtest_if_present(this const ApplicationState& self) noexcept
-   -> const backtest::Backtest*
+  auto selected_system_if_present(this const ApplicationState& self) noexcept
+     -> const backtest::System*
   {
-    const auto selected_backtest_handle =
-     self.view_state_.selected_backtest_handle();
-    return self.store_.get_backtest_if_present(selected_backtest_handle);
+    const auto selected_system_handle = self.view_state_.selected_system_handle();
+    return self.store_.get_system_if_present(selected_system_handle);
   }
 
-  auto get_backtest_handles(this const ApplicationState& self) noexcept
-   -> const std::vector<backtest::BacktestStoreHandle>&
+  auto get_system_handles(this const ApplicationState& self) noexcept
+   -> const std::vector<backtest::SystemStoreHandle>&
   {
-    return self.document_state_.backtest_handles();
+    return self.document_state_.system_handles();
   }
 
-  auto get_backtest_handles(this ApplicationState& self) noexcept
-   -> std::vector<backtest::BacktestStoreHandle>&
+  auto get_system_handles(this ApplicationState& self) noexcept
+   -> std::vector<backtest::SystemStoreHandle>&
   {
-    return self.document_state_.backtest_handles();
+    return self.document_state_.system_handles();
   }
 
-  void reorder_list_backtest(this ApplicationState& self,
+  void reorder_list_system(this ApplicationState& self,
                              std::size_t from_index,
                              std::size_t to_index)
   {
-    self.document_state_.reorder_backtest_handle(from_index, to_index);
+    self.document_state_.reorder_system_handle(from_index, to_index);
   }
 
-  auto add_backtest(this ApplicationState& self, backtest::Backtest backtest)
-   -> std::optional<backtest::BacktestStoreHandle>
+  auto add_system(this ApplicationState& self, backtest::System system)
+    -> std::optional<backtest::SystemStoreHandle>
   {
-    const auto handle_opt = self.store_.add_backtest(std::move(backtest));
+    const auto handle_opt = self.store_.add_system(std::move(system));
     if(handle_opt) {
-      self.document_state_.add_backtest_handle(*handle_opt);
+      self.document_state_.add_system_handle(*handle_opt);
     }
     return handle_opt;
   }
 
-  auto get_backtest(this const ApplicationState& self,
-                    backtest::BacktestStoreHandle handle) noexcept
-   -> const backtest::Backtest&
+  auto get_system(this const ApplicationState& self,
+                      backtest::SystemStoreHandle handle) noexcept
+    -> const backtest::System&
   {
-    return self.store_.get_backtest(handle);
+    return self.store_.get_system(handle);
   }
 
-  auto get_backtest(this ApplicationState& self,
-                    backtest::BacktestStoreHandle handle) noexcept
-   -> backtest::Backtest&
+  auto get_system(this ApplicationState& self,
+                      backtest::SystemStoreHandle handle) noexcept
+    -> backtest::System&
   {
-    return self.store_.get_backtest(handle);
+    return self.store_.get_system(handle);
   }
 
-  auto get_backtest_if_present(this const ApplicationState& self,
-                               backtest::BacktestStoreHandle handle) noexcept
-   -> const backtest::Backtest*
+  auto get_system_if_present(this const ApplicationState& self,
+                                 backtest::SystemStoreHandle handle) noexcept
+    -> const backtest::System*
   {
-    return self.store_.get_backtest_if_present(handle);
+    return self.store_.get_system_if_present(handle);
   }
 
-  auto get_backtest_if_present(this ApplicationState& self,
-                               backtest::BacktestStoreHandle handle) noexcept
-   -> backtest::Backtest*
+  auto get_system_if_present(this ApplicationState& self,
+                                 backtest::SystemStoreHandle handle) noexcept
+    -> backtest::System*
   {
-    return self.store_.get_backtest_if_present(handle);
+    return self.store_.get_system_if_present(handle);
   }
 
-  auto update_backtest(this ApplicationState& self,
-                       backtest::BacktestStoreHandle handle,
-                       backtest::Backtest backtest) -> bool
+  auto update_system(this ApplicationState& self,
+                         backtest::SystemStoreHandle handle,
+                         backtest::System system) -> bool
   {
-    if(self.store_.update_backtest(handle, std::move(backtest))) {
-      self.reset_backtest(handle);
-      self.normalize_portfolio_backtest_setup_selections();
+    if(self.store_.update_system(handle, std::move(system))) {
+      self.reset_system(handle);
+      self.normalize_portfolio_strategy_selections();
       return true;
     }
 
     return false;
   }
 
-  auto remove_backtest(this ApplicationState& self,
-                       backtest::BacktestStoreHandle handle) -> bool
+  auto remove_system(this ApplicationState& self,
+                          backtest::SystemStoreHandle handle) -> bool
   {
-    if(self.store_.remove_backtest(handle)) {
-      self.document_state_.remove_backtest_handle(handle);
-      self.view_state_.portfolio_backtest_setup_selections().remove_backtest(
+    if(self.store_.remove_system(handle)) {
+      self.document_state_.remove_system_handle(handle);
+      self.view_state_.portfolio_strategy_selections().remove_system(
        handle);
 
-      if(self.view_state_.selected_backtest_handle() == handle) {
-        self.view_state_.selected_backtest_handle({});
+      if(self.view_state_.selected_system_handle() == handle) {
+        self.view_state_.selected_system_handle({});
       }
 
-      self.normalize_portfolio_backtest_setup_selections();
+      // Portfolios deliberately retain the missing handle for repair, but
+      // their results were produced with the removed System.
+      self.reset_system(handle);
+      self.normalize_portfolio_strategy_selections();
 
       return true;
     }
@@ -505,9 +511,9 @@ public:
           self.reset_watchlist(watchlist_handle);
         }
       }
-      self.view_state_.portfolio_backtest_setup_selections().remove_asset(
+      self.view_state_.portfolio_strategy_selections().remove_asset(
        handle);
-      self.normalize_portfolio_backtest_setup_selections();
+      self.normalize_portfolio_strategy_selections();
 
       return true;
     }
@@ -566,7 +572,7 @@ public:
     }
     if(rules_changed) {
       self.reset_watchlist(handle);
-      self.normalize_portfolio_backtest_setup_selections();
+      self.normalize_portfolio_strategy_selections();
     }
     return true;
   }
@@ -579,66 +585,63 @@ public:
     }
     self.document_state_.remove_watchlist_handle(handle);
     self.reset_watchlist(handle);
-    self.normalize_portfolio_backtest_setup_selections();
+    self.normalize_portfolio_strategy_selections();
     return true;
   }
 
-  auto get_strategy_handles(this const ApplicationState& self) noexcept
-   -> const std::vector<backtest::StrategyStoreHandle>&
+  auto get_model_handles(this const ApplicationState& self) noexcept
+   -> const std::vector<backtest::ModelStoreHandle>&
   {
-    return self.document_state_.strategy_handles();
+    return self.document_state_.model_handles();
   }
 
-  void reorder_list_strategy(this ApplicationState& self,
+  void reorder_list_model(this ApplicationState& self,
                              std::size_t from_index,
                              std::size_t to_index)
   {
-    self.document_state_.reorder_strategy_handle(from_index, to_index);
+    self.document_state_.reorder_model_handle(from_index, to_index);
   }
 
-  void add_strategy(this ApplicationState& self, backtest::Strategy strategy)
+  void add_model(this ApplicationState& self, backtest::Model model)
   {
-    const auto handle_opt = self.store_.add_strategy(std::move(strategy));
+    const auto handle_opt = self.store_.add_model(std::move(model));
     if(handle_opt) {
-      self.document_state_.add_strategy_handle(*handle_opt);
+      self.document_state_.add_model_handle(*handle_opt);
     }
   }
 
-  auto get_strategy(this const ApplicationState& self,
-                    backtest::StrategyStoreHandle handle) noexcept
-   -> const backtest::Strategy&
+  auto get_model(this const ApplicationState& self,
+                     backtest::ModelStoreHandle handle) noexcept
+   -> const backtest::Model&
   {
-    return self.store_.get_strategy(handle);
+    return self.store_.get_model(handle);
   }
 
-  auto get_strategy_if_present(this const ApplicationState& self,
-                               backtest::StrategyStoreHandle handle) noexcept
-   -> const backtest::Strategy*
+  auto get_model_if_present(this const ApplicationState& self,
+                                backtest::ModelStoreHandle handle) noexcept
+   -> const backtest::Model*
   {
-    return self.store_.get_strategy_if_present(handle);
+    return self.store_.get_model_if_present(handle);
   }
 
-  auto update_strategy(this ApplicationState& self,
-                       backtest::StrategyStoreHandle handle,
-                       backtest::Strategy edit_strategy) -> bool
+  auto update_model(this ApplicationState& self,
+                         backtest::ModelStoreHandle handle,
+                         backtest::Model edit_model) -> bool
   {
-    const auto& strategy = self.get_strategy_if_present(handle);
-    if(!strategy) {
+    const auto& model = self.get_model_if_present(handle);
+    if(!model) {
       return false;
     }
 
-    const auto reset_backtests = !strategy->equivalent_rules(edit_strategy);
+    const auto reset_strategies = !model->equivalent_rules(edit_model);
 
-    if(self.store_.update_strategy(handle, std::move(edit_strategy))) {
-      if(reset_backtests) {
-        const auto& backtest_handles = self.document_state_.backtest_handles();
-        for(const auto& backtest_handle : backtest_handles) {
-          auto backtest_ptr =
-           self.store_.get_backtest_if_present(backtest_handle);
-          if(backtest_ptr && backtest_ptr->references_strategy(handle)) {
-            self.reset_backtest(backtest_handle);
-          }
-        }
+    if(self.store_.update_model(handle, std::move(edit_model))) {
+      // This happens while an EditCommand is still working on its candidate
+      // state, so both the Model and dependent stored input values participate
+      // in the same StateDiff used by undo and redo.
+      self.sync_strategies_referencing_model(handle);
+      if(reset_strategies) {
+        self.reset_strategies_referencing_model(handle);
       }
 
       return true;
@@ -647,21 +650,14 @@ public:
     return false;
   }
 
-  auto remove_strategy(this ApplicationState& self,
-                       backtest::StrategyStoreHandle handle) -> bool
+  auto remove_model(this ApplicationState& self,
+                        backtest::ModelStoreHandle handle) -> bool
   {
-    if(self.store_.remove_strategy(handle)) {
-      self.document_state_.remove_strategy_handle(handle);
+    if(self.store_.remove_model(handle)) {
+      self.document_state_.remove_model_handle(handle);
 
-      const auto& backtest_handles = self.document_state_.backtest_handles();
-      for(const auto& backtest_handle : backtest_handles) {
-        const auto backtest_ptr =
-         self.store_.get_backtest_if_present(backtest_handle);
-        if(backtest_ptr && backtest_ptr->references_strategy(handle)) {
-          self.reset_backtest(backtest_handle);
-        }
-      }
-      self.normalize_portfolio_backtest_setup_selections();
+      self.reset_strategies_referencing_model(handle);
+      self.normalize_portfolio_strategy_selections();
 
       return true;
     }
@@ -886,14 +882,7 @@ public:
     const auto reset_backtests = !profile->equivalent_rules(edit_profile);
     if(self.store_.update_profile(handle, std::move(edit_profile))) {
       if(reset_backtests) {
-        const auto& backtest_handles = self.document_state_.backtest_handles();
-        for(const auto& backtest_handle : backtest_handles) {
-          auto backtest_ptr =
-           self.store_.get_backtest_if_present(backtest_handle);
-          if(backtest_ptr && backtest_ptr->references_profile(handle)) {
-            self.reset_backtest(backtest_handle);
-          }
-        }
+        self.reset_strategies_referencing_profile(handle);
       }
 
       return true;
@@ -908,20 +897,90 @@ public:
     if(self.store_.remove_profile(handle)) {
       self.document_state_.remove_profile_handle(handle);
 
-      const auto& backtest_handles = self.document_state_.backtest_handles();
-      for(const auto& backtest_handle : backtest_handles) {
-        const auto backtest_ptr =
-         self.store_.get_backtest_if_present(backtest_handle);
-        if(backtest_ptr && backtest_ptr->references_profile(handle)) {
-          self.reset_backtest(backtest_handle);
-        }
-      }
-      self.normalize_portfolio_backtest_setup_selections();
+      self.reset_strategies_referencing_profile(handle);
+      self.normalize_portfolio_strategy_selections();
 
       return true;
     }
 
     return false;
+  }
+
+  auto get_strategy_handles(this const ApplicationState& self) noexcept
+   -> const std::vector<backtest::StrategyStoreHandle>&
+  {
+    return self.document_state_.strategy_handles();
+  }
+
+  auto selected_strategy_handle(this const ApplicationState& self) noexcept
+   -> backtest::StrategyStoreHandle
+  {
+    return self.view_state_.selected_strategy_handle();
+  }
+
+  auto selected_strategy_if_present(this ApplicationState& self) noexcept
+   -> backtest::Strategy*
+  {
+    return self.store_.get_strategy_if_present(
+     self.view_state_.selected_strategy_handle());
+  }
+
+  auto selected_strategy_if_present(this const ApplicationState& self) noexcept
+   -> const backtest::Strategy*
+  {
+    return self.store_.get_strategy_if_present(
+     self.view_state_.selected_strategy_handle());
+  }
+
+  void reorder_list_strategy(this ApplicationState& self,
+                             std::size_t from_index,
+                             std::size_t to_index)
+  {
+    self.document_state_.reorder_strategy_handle(from_index, to_index);
+  }
+
+  void add_strategy(this ApplicationState& self, backtest::Strategy strategy)
+  {
+    if(const auto handle = self.store_.add_strategy(std::move(strategy))) {
+      self.document_state_.add_strategy_handle(*handle);
+    }
+  }
+
+  auto get_strategy(this const ApplicationState& self,
+                    backtest::StrategyStoreHandle handle) noexcept
+   -> const backtest::Strategy&
+  {
+    return self.store_.get_strategy(handle);
+  }
+
+  auto get_strategy_if_present(this const ApplicationState& self,
+                               backtest::StrategyStoreHandle handle) noexcept
+   -> const backtest::Strategy*
+  {
+    return self.store_.get_strategy_if_present(handle);
+  }
+
+  auto update_strategy(this ApplicationState& self,
+                       backtest::StrategyStoreHandle handle,
+                       backtest::Strategy strategy) -> bool
+  {
+    if(!self.store_.update_strategy(handle, std::move(strategy))) return false;
+    self.reset_strategy(handle);
+    self.normalize_portfolio_strategy_selections();
+    return true;
+  }
+
+  auto remove_strategy(this ApplicationState& self,
+                       backtest::StrategyStoreHandle handle) -> bool
+  {
+    if(!self.store_.remove_strategy(handle)) return false;
+    self.document_state_.remove_strategy_handle(handle);
+    if(self.view_state_.selected_strategy_handle() == handle)
+      self.view_state_.selected_strategy_handle({});
+    // Systems intentionally retain missing strategy handles for repair.
+    self.reset_strategy(handle);
+    self.normalize_portfolio_strategy_selections();
+    return true;
   }
 
   auto get_portfolio_results(this const ApplicationState& self,
@@ -967,13 +1026,13 @@ public:
     }
   }
 
-  auto is_backtest_ready(this const ApplicationState& self,
-                         const backtest::Backtest& ready_backtest) noexcept
+  auto is_system_ready(this const ApplicationState& self,
+                          const backtest::System& ready_system) noexcept
    -> bool
   {
     {
       const auto* watchlist =
-       self.get_watchlist_if_present(ready_backtest.watchlist_handle());
+         self.get_watchlist_if_present(ready_system.watchlist_handle());
       if(!watchlist || watchlist->asset_handles().empty()) {
         return false;
       }
@@ -983,11 +1042,11 @@ public:
         }
       }
     }
-    for(auto index = std::size_t{}; index < ready_backtest.setup_count();
+    for(auto index = std::size_t{}; index < ready_system.strategy_count();
         ++index) {
-      const auto& setup = ready_backtest.setup(index);
-      if(!self.get_strategy_if_present(setup.strategy_handle()) ||
-         !self.get_profile_if_present(setup.profile_handle())) {
+      const auto* strategy = self.strategy_if_present(ready_system, index);
+      if(!strategy || !self.get_model_if_present(strategy->model_handle()) ||
+          !self.get_profile_if_present(strategy->profile_handle())) {
         return false;
       }
     }
@@ -1000,12 +1059,12 @@ public:
   {
     if(!self.get_market_if_present(portfolio.market_handle()) ||
        !self.get_broker_if_present(portfolio.broker_handle()) ||
-       portfolio.backtest_handles().empty()) {
+         portfolio.system_handles().empty()) {
       return false;
     }
-    for(const auto handle : portfolio.backtest_handles()) {
-      const auto* backtest = self.get_backtest_if_present(handle);
-      if(!backtest || !self.is_backtest_ready(*backtest)) {
+    for(const auto handle : portfolio.system_handles()) {
+      const auto* system = self.get_system_if_present(handle);
+      if(!system || !self.is_system_ready(*system)) {
         return false;
       }
     }
@@ -1017,10 +1076,10 @@ private:
   DocumentState document_state_{};
   ViewState view_state_{};
 
-  void normalize_portfolio_backtest_setup_selection(
+  void normalize_portfolio_strategy_selection(
    this ApplicationState& self, backtest::PortfolioStoreHandle portfolio_handle)
   {
-    auto& selections = self.view_state_.portfolio_backtest_setup_selections();
+    auto& selections = self.view_state_.portfolio_strategy_selections();
     const auto* portfolio =
      self.store_.get_portfolio_if_present(portfolio_handle);
     if(!portfolio) {
@@ -1028,24 +1087,25 @@ private:
       return;
     }
 
-    const auto setups = self.expanded_backtest_setups(*portfolio);
-    selections.normalize(portfolio_handle, setups, [&](const auto setup) {
-      const auto* backtest =
-       self.store_.get_backtest_if_present(setup.run.backtest_handle);
-      if(!backtest || setup.setup_index >= backtest->setup_count() ||
-         !self.store_.get_asset_if_present(setup.run.asset_handle)) {
+    const auto strategies = self.expanded_system_strategies(*portfolio);
+    selections.normalize(portfolio_handle, strategies, [&](const auto strategy) {
+      const auto* system =
+          self.store_.get_system_if_present(strategy.run.system_handle);
+      if(!system || strategy.strategy_index >= system->strategy_count() ||
+          !self.store_.get_asset_if_present(strategy.run.asset_handle)) {
         return false;
       }
-      const auto& configured_setup = backtest->setup(setup.setup_index);
-      return self.store_.get_strategy_if_present(
-              configured_setup.strategy_handle()) &&
-             self.store_.get_profile_if_present(
-              configured_setup.profile_handle());
+      const auto* configured_strategy = self.strategy_if_present(*system,
+                                                                  strategy.strategy_index);
+      return configured_strategy &&
+             self.store_.get_model_if_present(configured_strategy->model_handle()) &&
+              self.store_.get_profile_if_present(
+                configured_strategy->profile_handle());
     });
   }
 
   void
-  normalize_portfolio_backtest_setup_selections(this ApplicationState& self)
+   normalize_portfolio_strategy_selections(this ApplicationState& self)
   {
     const auto selected_portfolio =
      self.view_state_.selected_portfolio_handle();
@@ -1056,56 +1116,126 @@ private:
       self.view_state_.selected_portfolio_handle({});
     }
 
-    const auto selected_backtest = self.view_state_.selected_backtest_handle();
-    if(std::ranges::find(self.document_state_.backtest_handles(),
-                         selected_backtest) ==
-        self.document_state_.backtest_handles().end() ||
-       !self.store_.get_backtest_if_present(selected_backtest)) {
-      self.view_state_.selected_backtest_handle({});
+    const auto selected_system = self.view_state_.selected_system_handle();
+    if(std::ranges::find(self.document_state_.system_handles(), selected_system) ==
+          self.document_state_.system_handles().end() ||
+        !self.store_.get_system_if_present(selected_system)) {
+       self.view_state_.selected_system_handle({});
+    }
+
+    const auto selected_strategy = self.view_state_.selected_strategy_handle();
+    if(std::ranges::find(self.document_state_.strategy_handles(), selected_strategy) ==
+         self.document_state_.strategy_handles().end() ||
+       !self.store_.get_strategy_if_present(selected_strategy)) {
+      self.view_state_.selected_strategy_handle({});
     }
 
     const auto known_selections =
-     self.view_state_.portfolio_backtest_setup_selections().selections();
+       self.view_state_.portfolio_strategy_selections().selections();
     for(const auto& selection : known_selections) {
       if(std::ranges::find(self.document_state_.portfolio_handles(),
                            selection.portfolio_handle) ==
           self.document_state_.portfolio_handles().end() ||
          !self.store_.get_portfolio_if_present(selection.portfolio_handle)) {
-        self.view_state_.portfolio_backtest_setup_selections().remove_portfolio(
+         self.view_state_.portfolio_strategy_selections().remove_portfolio(
          selection.portfolio_handle);
       }
     }
 
     for(const auto portfolio_handle :
         self.document_state_.portfolio_handles()) {
-      self.normalize_portfolio_backtest_setup_selection(portfolio_handle);
+       self.normalize_portfolio_strategy_selection(portfolio_handle);
     }
   }
 
-  void reset_backtest(this ApplicationState& self,
-                      backtest::BacktestStoreHandle handle)
+  void reset_system(this ApplicationState& self,
+                    backtest::SystemStoreHandle handle)
   {
     for(const auto portfolio_handle :
         self.document_state_.portfolio_handles()) {
       const auto* portfolio =
        self.store_.get_portfolio_if_present(portfolio_handle);
       if(portfolio &&
-         std::ranges::find(portfolio->backtest_handles(), handle) !=
-          portfolio->backtest_handles().end()) {
+           std::ranges::find(portfolio->system_handles(), handle) !=
+            portfolio->system_handles().end()) {
         self.reset_portfolio(portfolio_handle);
       }
+    }
+  }
+
+  auto strategy_if_present(this const ApplicationState& self,
+                           const backtest::System& system,
+                           std::size_t index) noexcept -> const backtest::Strategy*
+  {
+    return self.store_.get_strategy_if_present(system.strategy_handle(index));
+  }
+
+  void reset_strategy(this ApplicationState& self,
+                      backtest::StrategyStoreHandle handle)
+  {
+    for(const auto system_handle : self.document_state_.system_handles()) {
+      const auto* system = self.store_.get_system_if_present(system_handle);
+      if(!system) continue;
+      for(auto index = std::size_t{}; index < system->strategy_count(); ++index) {
+        if(system->strategy_handle(index) == handle) {
+          self.reset_system(system_handle);
+          break;
+        }
+      }
+    }
+  }
+
+  void reset_strategies_referencing_model(this ApplicationState& self,
+                                          backtest::ModelStoreHandle handle)
+  {
+    for(const auto strategy_handle : self.document_state_.strategy_handles()) {
+      const auto* strategy = self.store_.get_strategy_if_present(strategy_handle);
+      if(strategy && strategy->references_model(handle)) self.reset_strategy(strategy_handle);
+    }
+  }
+
+  void sync_strategies_referencing_model(this ApplicationState& self,
+                                         backtest::ModelStoreHandle handle)
+  {
+    const auto* model = self.store_.get_model_if_present(handle);
+    if(!model) {
+      return;
+    }
+
+    for(const auto strategy_handle : self.document_state_.strategy_handles()) {
+      auto* strategy = self.store_.get_strategy_if_present(strategy_handle);
+      if(!strategy || !strategy->references_model(handle)) {
+        continue;
+      }
+
+      auto synced_inputs = backtest::collect_model_inputs(*model);
+      const auto& previous_inputs = strategy->inputs();
+      for(auto index = std::size_t{}; index < synced_inputs.size() &&
+                                      index < previous_inputs.size();
+          ++index) {
+        synced_inputs[index].value(previous_inputs[index].value());
+      }
+      strategy->inputs(std::move(synced_inputs));
+    }
+  }
+
+  void reset_strategies_referencing_profile(this ApplicationState& self,
+                                            backtest::ProfileStoreHandle handle)
+  {
+    for(const auto strategy_handle : self.document_state_.strategy_handles()) {
+      const auto* strategy = self.store_.get_strategy_if_present(strategy_handle);
+      if(strategy && strategy->references_profile(handle)) self.reset_strategy(strategy_handle);
     }
   }
 
   void reset_watchlist(this ApplicationState& self,
                        backtest::WatchlistStoreHandle handle)
   {
-    for(const auto backtest_handle : self.document_state_.backtest_handles()) {
-      const auto* configured_backtest =
-       self.store_.get_backtest_if_present(backtest_handle);
-      if(configured_backtest &&
-         configured_backtest->watchlist_handle() == handle) {
-        self.reset_backtest(backtest_handle);
+    for(const auto system_handle : self.document_state_.system_handles()) {
+      const auto* configured_system =
+        self.store_.get_system_if_present(system_handle);
+      if(configured_system && configured_system->watchlist_handle() == handle) {
+         self.reset_system(system_handle);
       }
     }
   }

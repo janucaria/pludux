@@ -25,12 +25,12 @@ chronological order, Pludux reverses it. It does not repair arbitrary
 out-of-order timestamps, and portfolio timelines require finite, strictly
 increasing timestamps.
 
-### 2) Create a Strategy
+### 2) Create a Model
 
-Open **Strategies** and create a new Strategy, or import one from JSON. Strategy
-JSON import/export is the documented exchange format for strategies.
+Open **Strategies** and create a new Model, or import one from JSON. Model JSON
+import/export is the documented exchange format for models.
 
-For a first test, keep the logic simple. A Strategy can be built from the node
+For a first test, keep the logic simple. A Model can be built from the node
 editor and can use named series, conditions, and plots.
 
 ### 3) Create a Profile
@@ -42,24 +42,39 @@ setup, which matches the UI's initial behavior.
 Profiles control position sizing, drawdown adjustment, and insufficient-cash
 handling. You can name your own policies **Conservative**, **Moderate**, or
 **Aggressive**; these are not built-in presets. Profiles do not create trading
-signals on their own. Configure an **Entry Filter** in the Backtest setup when
+signals on their own. Configure an **Entry Filter** in the Strategy setup when
 you need to decide whether a fresh initial Requested Order may enter Portfolio
 ranking.
 
-### 4) Create a Backtest
+### 4) Create a Strategy
 
-Open **Backtests** and create a Backtest. The Backtest editor uses these fields:
+Open **Strategies** and create a reusable Strategy. The editor uses these
+fields:
+
+- Name
+- Model
+- Profile
+- Model Inputs
+- Entry Filter
+
+Duplicate the Strategy if you want a variant without changing Systems that
+already reference it.
+
+### 5) Create a System
+
+Open **Strategies** and create a System. The System editor uses these fields:
 
 - Name
 - Watchlist
-- Main setup: Strategy, Profile, Strategy Inputs, Entry Filter
-- Failsafe setups with activation rules
-- Shared Strategy Performance calculation
+- Main Strategy
+- Failsafe Strategies with activation rules
+- Shared Model Performance calculation
 
-For the first run, use one Asset in the Watchlist, one Strategy, and one Profile.
+For the first run, use one Asset in the Watchlist, one Model, one Profile, and
+one Strategy.
 Leave Failsafes out unless you need them.
 
-### 5) Add the Backtest to a Portfolio
+### 6) Add the System to a Portfolio
 
 Open **Portfolios** and create a Portfolio. The Portfolio editor includes:
 
@@ -72,9 +87,9 @@ Open **Portfolios** and create a Portfolio. The Portfolio editor includes:
 - Entry comparators
 - Ordered Backtests
 
-Add your Backtest to the Portfolio and keep the order stable.
+Add your System to the Portfolio and keep the order stable.
 
-### 6) Run and inspect
+### 7) Run and inspect
 
 Run the Portfolio, then inspect:
 
@@ -85,8 +100,8 @@ Run the Portfolio, then inspect:
 ## Practical notes
 
 - If a label or field is not listed here, use the current GUI prompt.
-- Strategy inputs come from the selected Strategy and can be overridden in the
-  Backtest.
+- Model inputs come from the selected Model and can be overridden in the
+  Strategy.
 - Portfolio backtests share capital and process the union of asset timelines.
 
 ## See also

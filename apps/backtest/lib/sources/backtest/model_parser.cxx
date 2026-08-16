@@ -15,13 +15,13 @@ module;
 #include <jsoncons/json.hpp>
 #include <jsoncons/reflect/json_conv_traits.hpp>
 
-export module pludux.backtest:strategy_parser;
+export module pludux.backtest:model_parser;
 
 import pludux;
 
 import :risk_distance_node;
 import :execution_model;
-import :strategy;
+import :model;
 import :plot_method_parser;
 import :config_parser;
 
@@ -143,10 +143,10 @@ auto parse_reduce(const jsoncons::ojson& config) -> double
   return reduce;
 }
 
-auto parse_strategy_position(const jsoncons::ojson& position_json,
-                             auto& config_parser) -> Strategy::Position
+auto parse_model_position(const jsoncons::ojson& position_json,
+                          auto& config_parser) -> Model::Position
 {
-  auto position = Strategy::Position{};
+  auto position = Model::Position{};
 
   if(position_json.is_bool()) {
     if(!position_json.as_bool()) {
@@ -166,7 +166,7 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
 
   if(position_json.contains("entry")) {
     const auto& entry_json = position_json.at("entry");
-    position.entry(Strategy::Entry{
+    position.entry(Model::Entry{
      config_parser.parse_node(entry_json.at("signal")),
      parse_signal_timing(entry_json.at("timing").as<std::string>())});
   }
@@ -180,7 +180,7 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
 
     position.exits_activation(
      parse_exit_activation(exits_json.at("activation").as<std::string>()));
-    auto exits = std::vector<Strategy::Exit>{};
+    auto exits = std::vector<Model::Exit>{};
     const auto& exit_rules_json = exits_json.at("rules");
     exits.reserve(exit_rules_json.size());
     for(const auto& exit_json : exit_rules_json.array_range()) {
@@ -199,7 +199,7 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
 
   if(position_json.contains("pyramiding")) {
     const auto& pyramiding_json = position_json.at("pyramiding");
-    auto pyramiding = Strategy::Pyramiding{};
+    auto pyramiding = Model::Pyramiding{};
     if(pyramiding_json.contains("signal")) {
       pyramiding.signal(config_parser.parse_node(pyramiding_json.at("signal")));
     }
@@ -247,7 +247,7 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
   }
   position.risk_distance(std::move(risk_distance));
 
-  auto stop_losses = std::vector<Strategy::StopLoss>{};
+  auto stop_losses = std::vector<Model::StopLoss>{};
   if(position_json.contains("stopLosses")) {
     const auto& stop_losses_json = position_json.at("stopLosses");
     if(!stop_losses_json.is_object() ||
@@ -286,7 +286,7 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
 
     position.take_profits_activation(parse_exit_activation(
      take_profits_json.at("activation").as<std::string>()));
-    auto take_profits = std::vector<Strategy::TakeProfit>{};
+    auto take_profits = std::vector<Model::TakeProfit>{};
     const auto& take_profit_rules_json = take_profits_json.at("rules");
     take_profits.reserve(take_profit_rules_json.size());
     for(const auto& take_profit_json : take_profit_rules_json.array_range()) {
@@ -305,8 +305,8 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
   return position;
 }
 
-auto serialize_strategy_position(const Strategy::Position& position,
-                                 auto& config_parser) -> jsoncons::ojson
+auto serialize_model_position(const Model::Position& position,
+                              auto& config_parser) -> jsoncons::ojson
 {
   auto position_json = jsoncons::ojson{};
 
@@ -380,63 +380,64 @@ auto serialize_strategy_position(const Strategy::Position& position,
   return position_json;
 }
 
-auto parse_backtest_strategy_config_json(std::string_view strategy_name,
-                                         const jsoncons::ojson& strategy_json)
- -> backtest::Strategy
+auto parse_model_config_json(std::string_view model_name,
+                             const jsoncons::ojson& model_json)
+ -> backtest::Model
 {
   auto config_parser = make_default_registered_config_parser();
 
-  if(!strategy_json.is_object()) {
+  if(!model_json.is_object()) {
     throw std::runtime_error(
      "Invalid strategy JSON: expected an object at the root");
   }
 
-  if(strategy_json.contains("version")) {
-    const auto version = strategy_json.at("version").as<int>();
-    if(version != 2) {
-      throw std::runtime_error("Unsupported strategy JSON version: " +
-                               std::to_string(version));
-    }
+  if(!model_json.contains("version")) {
+    throw std::runtime_error{"Invalid model JSON: missing version"};
+  }
+  const auto version = model_json.at("version").as<int>();
+  if(version != 1) {
+    throw std::runtime_error("Unsupported model JSON version: " +
+                             std::to_string(version));
   }
 
-  if(!strategy_json.contains("execution") ||
-     !strategy_json.at("execution").is_object() ||
-     !strategy_json.at("execution").contains("intrabarPath")) {
+  if(!model_json.contains("execution") ||
+     !model_json.at("execution").is_object() ||
+     !model_json.at("execution").contains("intrabarPath")) {
     throw std::runtime_error{
      "Invalid strategy JSON: missing execution.intrabarPath"};
   }
   const auto intrabar_path = parse_intrabar_path(
-   strategy_json.at("execution").at("intrabarPath").as<std::string>());
+    model_json.at("execution").at("intrabarPath").as<std::string>());
 
   auto series_nodes =
    OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>{};
-  if(strategy_json.contains("series")) {
-    const auto& series_json = strategy_json.at("series");
+  if(model_json.contains("series")) {
+    const auto& series_json = model_json.at("series");
     for(const auto& [series_name, series_config] : series_json.object_range()) {
       series_nodes.set(series_name, config_parser.parse_node(series_config));
     }
   }
 
-  auto long_position = Strategy::Position{};
-  auto short_position = Strategy::Position{};
+  auto long_position = Model::Position{};
+  auto short_position = Model::Position{};
 
-  if(strategy_json.contains("positions")) {
-    const auto positions_json = strategy_json.at("positions");
+  if(model_json.contains("positions")) {
+    const auto positions_json = model_json.at("positions");
 
     if(positions_json.contains("long")) {
       long_position =
-       parse_strategy_position(positions_json.at("long"), config_parser);
+        parse_model_position(positions_json.at("long"), config_parser);
     }
 
     if(positions_json.contains("short")) {
       short_position =
-       parse_strategy_position(positions_json.at("short"), config_parser);
+        parse_model_position(positions_json.at("short"), config_parser);
     }
   }
 
   auto plots = std::vector<PlotGroup>{};
-  if(strategy_json.contains("plots")) {
-    const auto& plots_json = strategy_json.at("plots");
+  if(model_json.contains("plots")) {
+    const auto& plots_json = model_json.at("plots");
     auto plot_method_parser = make_default_registered_plot_method_parser();
 
     for(const auto& plot_group_json : plots_json.array_range()) {
@@ -458,7 +459,7 @@ auto parse_backtest_strategy_config_json(std::string_view strategy_name,
     }
   }
 
-  return Strategy{std::string{strategy_name},
+  return Model{std::string{model_name},
                   std::move(series_nodes),
                   std::move(long_position),
                   std::move(short_position),
@@ -466,54 +467,52 @@ auto parse_backtest_strategy_config_json(std::string_view strategy_name,
                   intrabar_path};
 }
 
-auto parse_backtest_strategy_json(std::string_view strategy_name,
-                                  std::istream& json_strategy_stream)
- -> backtest::Strategy
+auto parse_model(std::string_view model_name, std::istream& json_model_stream)
+ -> backtest::Model
 {
-  auto strategy_json = jsoncons::ojson::parse(
-   json_strategy_stream, jsoncons::json_options{}.allow_comments(true));
+  auto model_json = jsoncons::ojson::parse(
+    json_model_stream, jsoncons::json_options{}.allow_comments(true));
 
-  return parse_backtest_strategy_config_json(strategy_name, strategy_json);
+  return parse_model_config_json(model_name, model_json);
 }
 
-auto parse_backtest_strategy_json(std::string_view strategy_name,
-                                  const std::string& json_strategy_str)
- -> backtest::Strategy
+auto parse_model(std::string_view model_name, const std::string& json_model)
+ -> backtest::Model
 {
-  auto json_strategy_stream = std::istringstream{json_strategy_str};
-  return parse_backtest_strategy_json(strategy_name, json_strategy_stream);
+  auto json_model_stream = std::istringstream{json_model};
+  return parse_model(model_name, json_model_stream);
 }
 
-auto serialize_backtest_strategy_config_json(const backtest::Strategy& strategy)
+auto serialize_model_config_json(const backtest::Model& model)
  -> jsoncons::ojson
 {
   auto config_parser = make_default_registered_config_parser();
 
-  auto strategy_json = jsoncons::ojson{};
+  auto model_json = jsoncons::ojson{};
 
-  strategy_json["version"] = 2;
-  strategy_json["execution"] = jsoncons::ojson{};
-  strategy_json["execution"]["intrabarPath"] =
-   serialize_intrabar_path(strategy.intrabar_path());
+  model_json["version"] = 1;
+  model_json["execution"] = jsoncons::ojson{};
+  model_json["execution"]["intrabarPath"] =
+   serialize_intrabar_path(model.intrabar_path());
 
   auto series_json = jsoncons::ojson{};
-  for(const auto& [series_name, series_node] : strategy.series_nodes()) {
+  for(const auto& [series_name, series_node] : model.series_nodes()) {
     series_json[series_name] = config_parser.serialize_node(series_node);
   }
-  strategy_json["series"] = std::move(series_json);
+  model_json["series"] = std::move(series_json);
 
   auto positions_json = jsoncons::ojson{};
 
   positions_json["long"] =
-   serialize_strategy_position(strategy.long_position(), config_parser);
+    serialize_model_position(model.long_position(), config_parser);
   positions_json["short"] =
-   serialize_strategy_position(strategy.short_position(), config_parser);
+    serialize_model_position(model.short_position(), config_parser);
 
-  strategy_json["positions"] = std::move(positions_json);
+  model_json["positions"] = std::move(positions_json);
 
   auto plot_method_parser = make_default_registered_plot_method_parser();
   auto plots_json = jsoncons::ojson::array();
-  for(const auto& plot_group : strategy.plots()) {
+  for(const auto& plot_group : model.plots()) {
     auto plot_group_json = jsoncons::ojson{};
     plot_group_json["label"] = plot_group.name();
     plot_group_json["overlay"] = plot_group.is_overlay();
@@ -526,16 +525,16 @@ auto serialize_backtest_strategy_config_json(const backtest::Strategy& strategy)
 
     plots_json.push_back(std::move(plot_group_json));
   }
-  strategy_json["plots"] = std::move(plots_json);
+  model_json["plots"] = std::move(plots_json);
 
-  return strategy_json;
+  return model_json;
 }
 
-auto stringify_backtest_strategy(const backtest::Strategy& strategy)
+auto stringify_model(const backtest::Model& model)
  -> std::string
 {
-  const auto strategy_json = serialize_backtest_strategy_config_json(strategy);
-  return strategy_json.to_string();
+  const auto model_json = serialize_model_config_json(model);
+  return model_json.to_string();
 }
 
 } // namespace pludux::backtest
@@ -543,8 +542,8 @@ auto stringify_backtest_strategy(const backtest::Strategy& strategy)
 export namespace jsoncons::reflect {
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::Strategy> {
-  using value_type = pludux::backtest::Strategy;
+struct json_conv_traits<Json, pludux::backtest::Model> {
+  using value_type = pludux::backtest::Model;
   using result_type = jsoncons::conversion_result<value_type>;
 
   static constexpr bool is_compatible = true;
@@ -559,9 +558,9 @@ struct json_conv_traits<Json, pludux::backtest::Strategy> {
                             const Json& json)
   {
     try {
-      const auto strategy_json = jsoncons::ojson::parse(json.to_string());
-      return result_type{pludux::backtest::parse_backtest_strategy_config_json(
-       "", strategy_json)};
+       const auto model_json = jsoncons::ojson::parse(json.to_string());
+       return result_type{
+        pludux::backtest::parse_model_config_json("", model_json)};
     } catch(...) {
       return result_type{jsoncons::unexpect,
                          jsoncons::conv_errc::conversion_failed};
@@ -569,12 +568,12 @@ struct json_conv_traits<Json, pludux::backtest::Strategy> {
   }
 
   template<typename Alloc, typename TempAlloc>
-  static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>&,
-                      const value_type& strategy)
+   static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>&,
+                       const value_type& model)
   {
-    const auto strategy_json =
-     pludux::backtest::serialize_backtest_strategy_config_json(strategy);
-    return Json::parse(strategy_json.to_string());
+     const auto model_json =
+      pludux::backtest::serialize_model_config_json(model);
+     return Json::parse(model_json.to_string());
   }
 };
 

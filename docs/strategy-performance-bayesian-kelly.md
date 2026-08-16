@@ -1,13 +1,13 @@
-# Strategy Performance Bayesian Kelly
+# Model Performance Bayesian Kelly
 
 ## Purpose
 
-Strategy Performance Bayesian Kelly is a position-sizing policy for backtesting
-research. It estimates the edge of the Strategy's theoretical positions and
+# Model Performance Bayesian Kelly is a position-sizing policy for backtesting
+research. It estimates the edge of the Model's theoretical positions and
 converts that estimate into a requested fraction of current execution equity.
 
-The word **Strategy** is important. The statistical observations come from the
-positions produced by the Strategy as a black box. They do not come from the
+The word **Model** is important. The statistical observations come from the
+positions produced by the Model as a black box. They do not come from the
 positions that happened to be executed after filtering, sizing, market rules,
 fees, or cash constraints.
 
@@ -21,9 +21,9 @@ The backtest has five relevant layers:
 
 1. The Strategy emits entry, pyramid, and exit intents and maintains a
    theoretical position with unit-sized entries.
-2. Strategy Performance observes only closed theoretical positions and updates
+2. Model Performance observes only closed theoretical positions and updates
    its frequentist and Bayesian evidence.
-3. Position Sizing reads the current Strategy Performance posterior at an entry
+3. Position Sizing reads the current Model Performance posterior at an entry
    intent and produces an equity-allocation constraint.
 4. The Profile may reevaluate sizing with peak-based notional equity, applies
    any final-quantity drawdown reduction, and produces a Market-valid immutable
@@ -86,7 +86,7 @@ Effective counts may be fractional under exponential decay.
 
 ## Winning and Losing Streaks
 
-Strategy Performance also records chronological streaks from theoretical
+Model Performance also records chronological streaks from theoretical
 position returns:
 
 - A positive return increments the current winning streak, resets the current
@@ -261,7 +261,7 @@ they are not a joint 80% credible region.
 
 ## Timing and Absence of Look-Ahead
 
-At an entry intent, sizing reads the Strategy Performance snapshot available at
+At an entry intent, sizing reads the Model Performance snapshot available at
 that instant. A theoretical position contributes evidence only after it closes.
 Therefore, neither its future outcome nor any later bar can influence its entry
 size. The initial executed entry freezes its final quantity as the position's
@@ -327,7 +327,7 @@ the largest Market-valid quantity whose notional and entry fees do not exceed
 cash after reservations. If shared cash supports only 97 units, the
 `CapToAvailableCash` policy searches for the largest affordable quantity without
 exceeding the Kelly allocation. This execution reduction does not alter
-Strategy Performance evidence.
+Model Performance evidence.
 
 ## Configuration and Diagnostic Mapping
 

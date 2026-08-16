@@ -29,10 +29,10 @@ from file paths and text input. The editor includes:
 
 The importer expects exact OHLCV column headers.
 
-## Strategies window
+## Models window
 
-Use this window to create Strategies, edit them, duplicate them, and import or
-export JSON. The UI also exposes built-in strategies and a node editor for
+Use this window to create Models, edit them, duplicate them, and import or
+export JSON. The UI also exposes built-in models and a node editor for
 numeric expressions, conditions, named series, and portfolio comparators.
 
 ## Profiles window
@@ -42,21 +42,27 @@ Profile can be named for a user-defined policy, such as **Conservative**,
 **Moderate**, or **Aggressive**; these are not built-in presets. The editor
 starts with risk-distance sizing and is where drawdown adjustment and
 insufficient-cash settings are configured. Entry Filters are configured in the
-Backtests window, not in Profiles.
+Strategies window, not in Profiles.
 
-## Backtests window
+## Systems window
 
-Use this window to bind a Watchlist, a Main setup, optional Failsafe setups, and
-shared Strategy Performance settings.
+Use this window to bind a Watchlist, a Main Strategy, optional Failsafe Strategy
+bindings, and shared Model Performance settings.
 
-The Backtest editor shows:
+The System editor shows:
 
 - Watchlist
-- Strategy
-- Strategy Inputs
+- Main Strategy
+- Failsafe Strategy bindings
+- Model
+- Model Inputs
 - Profile
 - Entry Filter
-- Shared Strategy Performance Calculation
+- Shared Model Performance Calculation
+
+Use the Strategies window to create, edit, duplicate, and inspect reusable
+Strategy resources. Editing a Strategy updates every System that references it.
+If you need a variant, duplicate the Strategy first.
 
 ## Portfolios window
 

@@ -11,11 +11,11 @@ using namespace pludux::backtest;
 namespace {
 
 auto closed_position(std::size_t id,
-                     StrategyDirection direction,
-                     double return_ratio) -> StrategyClosedPosition
+                      ModelDirection direction,
+                      double return_ratio) -> ModelClosedPosition
 {
   constexpr auto notional = 100.0;
-  return StrategyClosedPosition{
+  return ModelClosedPosition{
    id, direction, 10, 20, 1.0, notional, return_ratio * notional, {}};
 }
 
@@ -112,11 +112,11 @@ auto node_to_model_method(const FixedPayoffModelNode& node)
 
 } // namespace
 
-TEST(StrategyPerformanceTest, AggregatesMixedDirectionsIntoOneHistory)
+TEST(ModelPerformanceTest, AggregatesMixedDirectionsIntoOneHistory)
 {
-  auto performance = StrategyPerformance{};
-  performance.observe(closed_position(1, StrategyDirection::Long, 0.10));
-  performance.observe(closed_position(2, StrategyDirection::Short, -0.05));
+  auto performance = ModelPerformance{};
+  performance.observe(closed_position(1, ModelDirection::Long, 0.10));
+  performance.observe(closed_position(2, ModelDirection::Short, -0.05));
 
   const auto snapshot = performance.snapshot();
   EXPECT_EQ(snapshot.lifetime_count(), 2);
@@ -133,16 +133,16 @@ TEST(StrategyPerformanceTest, AggregatesMixedDirectionsIntoOneHistory)
   EXPECT_DOUBLE_EQ(snapshot.losing_payoff_posterior().effective_count, 1.0);
 }
 
-TEST(StrategyPerformanceTest, TracksLifetimeWinningAndLosingStreaks)
+TEST(ModelPerformanceTest, TracksLifetimeWinningAndLosingStreaks)
 {
-  auto performance = StrategyPerformance{};
-  performance.observe(closed_position(1, StrategyDirection::Long, 0.10));
-  performance.observe(closed_position(2, StrategyDirection::Short, 0.20));
-  performance.observe(closed_position(3, StrategyDirection::Long, -0.10));
-  performance.observe(closed_position(4, StrategyDirection::Short, -0.20));
-  performance.observe(closed_position(5, StrategyDirection::Long, -0.30));
-  performance.observe(closed_position(6, StrategyDirection::Short, 0.0));
-  performance.observe(closed_position(7, StrategyDirection::Long, 0.10));
+  auto performance = ModelPerformance{};
+  performance.observe(closed_position(1, ModelDirection::Long, 0.10));
+  performance.observe(closed_position(2, ModelDirection::Short, 0.20));
+  performance.observe(closed_position(3, ModelDirection::Long, -0.10));
+  performance.observe(closed_position(4, ModelDirection::Short, -0.20));
+  performance.observe(closed_position(5, ModelDirection::Long, -0.30));
+  performance.observe(closed_position(6, ModelDirection::Short, 0.0));
+  performance.observe(closed_position(7, ModelDirection::Long, 0.10));
 
   const auto snapshot = performance.snapshot();
   EXPECT_EQ(snapshot.current_winning_streak(), 1);
@@ -151,24 +151,24 @@ TEST(StrategyPerformanceTest, TracksLifetimeWinningAndLosingStreaks)
   EXPECT_EQ(snapshot.maximum_losing_streak(), 3);
 }
 
-TEST(StrategyPerformanceTest, StreaksIgnoreStatisticalHistoryMode)
+TEST(ModelPerformanceTest, StreaksIgnoreStatisticalHistoryMode)
 {
   const auto histories =
-   std::array{StrategyPerformanceHistoryPolicy{
-               StrategyPerformanceHistoryMode::All, 100, 0.99},
-              StrategyPerformanceHistoryPolicy{
-               StrategyPerformanceHistoryMode::RollingWindow, 2, 0.99},
-              StrategyPerformanceHistoryPolicy{
-               StrategyPerformanceHistoryMode::ExponentialDecay, 100, 0.5}};
+   std::array{ModelPerformanceHistoryPolicy{
+               ModelPerformanceHistoryMode::All, 100, 0.99},
+              ModelPerformanceHistoryPolicy{
+               ModelPerformanceHistoryMode::RollingWindow, 2, 0.99},
+              ModelPerformanceHistoryPolicy{
+               ModelPerformanceHistoryMode::ExponentialDecay, 100, 0.5}};
 
   for(const auto& history : histories) {
     SCOPED_TRACE(static_cast<int>(history.mode()));
-    auto performance = StrategyPerformance{StrategyPerformanceConfig{history}};
-    performance.observe(closed_position(1, StrategyDirection::Long, 0.10));
-    performance.observe(closed_position(2, StrategyDirection::Short, 0.20));
-    performance.observe(closed_position(3, StrategyDirection::Long, -0.10));
-    performance.observe(closed_position(4, StrategyDirection::Short, -0.20));
-    performance.observe(closed_position(5, StrategyDirection::Long, -0.30));
+    auto performance = ModelPerformance{ModelPerformanceConfig{history}};
+    performance.observe(closed_position(1, ModelDirection::Long, 0.10));
+    performance.observe(closed_position(2, ModelDirection::Short, 0.20));
+    performance.observe(closed_position(3, ModelDirection::Long, -0.10));
+    performance.observe(closed_position(4, ModelDirection::Short, -0.20));
+    performance.observe(closed_position(5, ModelDirection::Long, -0.30));
 
     const auto snapshot = performance.snapshot();
     EXPECT_EQ(snapshot.current_winning_streak(), 0);
@@ -178,21 +178,21 @@ TEST(StrategyPerformanceTest, StreaksIgnoreStatisticalHistoryMode)
   }
 }
 
-TEST(StrategyPerformanceTest,
+TEST(ModelPerformanceTest,
      BreakEvenResetsStreaksRegardlessOfBayesianTreatment)
 {
   constexpr auto treatments =
-   std::array{StrategyPerformanceBreakEvenTreatment::Skip,
-              StrategyPerformanceBreakEvenTreatment::CountAsWin,
-              StrategyPerformanceBreakEvenTreatment::CountAsLoss};
+   std::array{ModelPerformanceBreakEvenTreatment::Skip,
+              ModelPerformanceBreakEvenTreatment::CountAsWin,
+              ModelPerformanceBreakEvenTreatment::CountAsLoss};
 
   for(const auto treatment : treatments) {
     SCOPED_TRACE(static_cast<int>(treatment));
     auto performance =
-     StrategyPerformance{StrategyPerformanceConfig{{}, {}, treatment}};
-    performance.observe(closed_position(1, StrategyDirection::Long, 0.10));
-    performance.observe(closed_position(2, StrategyDirection::Short, 0.20));
-    performance.observe(closed_position(3, StrategyDirection::Long, 0.0));
+     ModelPerformance{ModelPerformanceConfig{{}, {}, treatment}};
+    performance.observe(closed_position(1, ModelDirection::Long, 0.10));
+    performance.observe(closed_position(2, ModelDirection::Short, 0.20));
+    performance.observe(closed_position(3, ModelDirection::Long, 0.0));
 
     const auto snapshot = performance.snapshot();
     EXPECT_EQ(snapshot.current_winning_streak(), 0);
@@ -202,15 +202,15 @@ TEST(StrategyPerformanceTest,
   }
 }
 
-TEST(StrategyPerformanceTest, RollingWindowUsesRecentStrategyOutputs)
+TEST(ModelPerformanceTest, RollingWindowUsesRecentModelOutputs)
 {
   const auto config =
-   StrategyPerformanceConfig{StrategyPerformanceHistoryPolicy{
-    StrategyPerformanceHistoryMode::RollingWindow, 2, 0.99}};
-  auto performance = StrategyPerformance{config};
-  performance.observe(closed_position(1, StrategyDirection::Long, 0.10));
-  performance.observe(closed_position(2, StrategyDirection::Short, 0.20));
-  performance.observe(closed_position(3, StrategyDirection::Long, -0.10));
+   ModelPerformanceConfig{ModelPerformanceHistoryPolicy{
+    ModelPerformanceHistoryMode::RollingWindow, 2, 0.99}};
+  auto performance = ModelPerformance{config};
+  performance.observe(closed_position(1, ModelDirection::Long, 0.10));
+  performance.observe(closed_position(2, ModelDirection::Short, 0.20));
+  performance.observe(closed_position(3, ModelDirection::Long, -0.10));
 
   const auto snapshot = performance.snapshot();
   EXPECT_EQ(snapshot.lifetime_count(), 3);
@@ -223,9 +223,9 @@ TEST(StrategyPerformanceTest, RollingWindowUsesRecentStrategyOutputs)
   EXPECT_DOUBLE_EQ(snapshot.losing_payoff_posterior().effective_count, 1.0);
 }
 
-TEST(StrategyPerformanceTest, DefaultBayesianPriorsAreWeakAndNeutral)
+TEST(ModelPerformanceTest, DefaultBayesianPriorsAreWeakAndNeutral)
 {
-  const auto snapshot = StrategyPerformance{}.snapshot();
+  const auto snapshot = ModelPerformance{}.snapshot();
   const auto& win = snapshot.win_probability_posterior();
   const auto& winning = snapshot.winning_payoff_posterior();
   const auto& losing = snapshot.losing_payoff_posterior();
@@ -243,12 +243,12 @@ TEST(StrategyPerformanceTest, DefaultBayesianPriorsAreWeakAndNeutral)
   EXPECT_LT(winning.lower_95, winning.upper_95);
 }
 
-TEST(StrategyPerformanceTest, BayesianPosteriorsMatchReferenceValues)
+TEST(ModelPerformanceTest, BayesianPosteriorsMatchReferenceValues)
 {
-  auto performance = StrategyPerformance{};
-  performance.observe(closed_position(1, StrategyDirection::Long, 0.10));
-  performance.observe(closed_position(2, StrategyDirection::Short, 0.20));
-  performance.observe(closed_position(3, StrategyDirection::Long, -0.10));
+  auto performance = ModelPerformance{};
+  performance.observe(closed_position(1, ModelDirection::Long, 0.10));
+  performance.observe(closed_position(2, ModelDirection::Short, 0.20));
+  performance.observe(closed_position(3, ModelDirection::Long, -0.10));
 
   const auto snapshot = performance.snapshot();
   const auto& win = snapshot.win_probability_posterior();
@@ -271,14 +271,14 @@ TEST(StrategyPerformanceTest, BayesianPosteriorsMatchReferenceValues)
   EXPECT_NEAR(losing.mean, 0.1001 / 1.01, 1e-12);
 }
 
-TEST(StrategyPerformanceTest, ExponentialDecayAgesEveryEvidenceStream)
+TEST(ModelPerformanceTest, ExponentialDecayAgesEveryEvidenceStream)
 {
   const auto config =
-   StrategyPerformanceConfig{StrategyPerformanceHistoryPolicy{
-    StrategyPerformanceHistoryMode::ExponentialDecay, 100, 0.5}};
-  auto performance = StrategyPerformance{config};
-  performance.observe(closed_position(1, StrategyDirection::Long, 0.10));
-  performance.observe(closed_position(2, StrategyDirection::Short, -0.10));
+   ModelPerformanceConfig{ModelPerformanceHistoryPolicy{
+    ModelPerformanceHistoryMode::ExponentialDecay, 100, 0.5}};
+  auto performance = ModelPerformance{config};
+  performance.observe(closed_position(1, ModelDirection::Long, 0.10));
+  performance.observe(closed_position(2, ModelDirection::Short, -0.10));
 
   const auto snapshot = performance.snapshot();
   EXPECT_EQ(snapshot.lifetime_count(), 2);
@@ -295,10 +295,10 @@ TEST(StrategyPerformanceTest, ExponentialDecayAgesEveryEvidenceStream)
   EXPECT_NEAR(snapshot.losing_payoff_posterior().mean, 0.1001 / 1.01, 1e-12);
 }
 
-TEST(StrategyPerformanceTest, BreakEvenDefaultsToLossClassification)
+TEST(ModelPerformanceTest, BreakEvenDefaultsToLossClassification)
 {
-  auto performance = StrategyPerformance{};
-  performance.observe(closed_position(1, StrategyDirection::Long, 0.0));
+  auto performance = ModelPerformance{};
+  performance.observe(closed_position(1, ModelDirection::Long, 0.0));
 
   const auto snapshot = performance.snapshot();
   EXPECT_EQ(snapshot.lifetime_count(), 1);
@@ -315,22 +315,22 @@ TEST(StrategyPerformanceTest, BreakEvenDefaultsToLossClassification)
   EXPECT_NEAR(snapshot.losing_payoff_posterior().mean, 0.01, 1e-12);
 }
 
-TEST(StrategyPerformanceTest, BreakEvenTreatmentOnlyChangesBinaryEvidence)
+TEST(ModelPerformanceTest, BreakEvenTreatmentOnlyChangesBinaryEvidence)
 {
   struct Expected {
-    StrategyPerformanceBreakEvenTreatment treatment;
+    ModelPerformanceBreakEvenTreatment treatment;
     double posterior_probability;
   };
   constexpr auto cases = std::array{
-   Expected{StrategyPerformanceBreakEvenTreatment::Skip, 0.5},
-   Expected{StrategyPerformanceBreakEvenTreatment::CountAsWin, 2.0 / 3.0},
-   Expected{StrategyPerformanceBreakEvenTreatment::CountAsLoss, 1.0 / 3.0}};
+   Expected{ModelPerformanceBreakEvenTreatment::Skip, 0.5},
+   Expected{ModelPerformanceBreakEvenTreatment::CountAsWin, 2.0 / 3.0},
+   Expected{ModelPerformanceBreakEvenTreatment::CountAsLoss, 1.0 / 3.0}};
 
   for(const auto& expected : cases) {
     SCOPED_TRACE(static_cast<int>(expected.treatment));
     auto performance =
-     StrategyPerformance{StrategyPerformanceConfig{{}, {}, expected.treatment}};
-    performance.observe(closed_position(1, StrategyDirection::Long, 0.0));
+     ModelPerformance{ModelPerformanceConfig{{}, {}, expected.treatment}};
+    performance.observe(closed_position(1, ModelDirection::Long, 0.0));
 
     const auto snapshot = performance.snapshot();
     EXPECT_EQ(snapshot.lifetime_count(), 1);
@@ -346,27 +346,27 @@ TEST(StrategyPerformanceTest, BreakEvenTreatmentOnlyChangesBinaryEvidence)
   }
 }
 
-TEST(StrategyPerformanceTest, BreakEvenOccupiesRollingWindow)
+TEST(ModelPerformanceTest, BreakEvenOccupiesRollingWindow)
 {
   struct Expected {
-    StrategyPerformanceBreakEvenTreatment treatment;
+    ModelPerformanceBreakEvenTreatment treatment;
     double posterior_probability;
   };
   constexpr auto cases = std::array{
-   Expected{StrategyPerformanceBreakEvenTreatment::Skip, 1.0 / 3.0},
-   Expected{StrategyPerformanceBreakEvenTreatment::CountAsWin, 0.5},
-   Expected{StrategyPerformanceBreakEvenTreatment::CountAsLoss, 0.25}};
+   Expected{ModelPerformanceBreakEvenTreatment::Skip, 1.0 / 3.0},
+   Expected{ModelPerformanceBreakEvenTreatment::CountAsWin, 0.5},
+   Expected{ModelPerformanceBreakEvenTreatment::CountAsLoss, 0.25}};
 
   for(const auto& expected : cases) {
     SCOPED_TRACE(static_cast<int>(expected.treatment));
-    auto performance = StrategyPerformance{StrategyPerformanceConfig{
-     StrategyPerformanceHistoryPolicy{
-      StrategyPerformanceHistoryMode::RollingWindow, 2, 0.99},
+    auto performance = ModelPerformance{ModelPerformanceConfig{
+     ModelPerformanceHistoryPolicy{
+      ModelPerformanceHistoryMode::RollingWindow, 2, 0.99},
      {},
      expected.treatment}};
-    performance.observe(closed_position(1, StrategyDirection::Long, 0.10));
-    performance.observe(closed_position(2, StrategyDirection::Long, 0.0));
-    performance.observe(closed_position(3, StrategyDirection::Long, -0.10));
+    performance.observe(closed_position(1, ModelDirection::Long, 0.10));
+    performance.observe(closed_position(2, ModelDirection::Long, 0.0));
+    performance.observe(closed_position(3, ModelDirection::Long, -0.10));
 
     const auto snapshot = performance.snapshot();
     EXPECT_EQ(snapshot.lifetime_count(), 3);
@@ -382,15 +382,15 @@ TEST(StrategyPerformanceTest, BreakEvenOccupiesRollingWindow)
   }
 }
 
-TEST(StrategyPerformanceTest, BreakEvenAgesExponentialEvidence)
+TEST(ModelPerformanceTest, BreakEvenAgesExponentialEvidence)
 {
-  auto performance = StrategyPerformance{StrategyPerformanceConfig{
-   StrategyPerformanceHistoryPolicy{
-    StrategyPerformanceHistoryMode::ExponentialDecay, 100, 0.5},
+  auto performance = ModelPerformance{ModelPerformanceConfig{
+   ModelPerformanceHistoryPolicy{
+    ModelPerformanceHistoryMode::ExponentialDecay, 100, 0.5},
    {},
-   StrategyPerformanceBreakEvenTreatment::CountAsLoss}};
-  performance.observe(closed_position(1, StrategyDirection::Long, 0.10));
-  performance.observe(closed_position(2, StrategyDirection::Long, 0.0));
+   ModelPerformanceBreakEvenTreatment::CountAsLoss}};
+  performance.observe(closed_position(1, ModelDirection::Long, 0.10));
+  performance.observe(closed_position(2, ModelDirection::Long, 0.0));
 
   const auto snapshot = performance.snapshot();
   EXPECT_DOUBLE_EQ(snapshot.effective_count(), 1.5);
@@ -403,30 +403,30 @@ TEST(StrategyPerformanceTest, BreakEvenAgesExponentialEvidence)
   EXPECT_DOUBLE_EQ(snapshot.losing_payoff_posterior().effective_count, 0.0);
 }
 
-TEST(StrategyPerformanceTest, BreakEvenTreatmentHasValueSemantics)
+TEST(ModelPerformanceTest, BreakEvenTreatmentHasValueSemantics)
 {
-  const auto skipped = StrategyPerformanceConfig{
-   {}, {}, StrategyPerformanceBreakEvenTreatment::Skip};
-  auto counted_as_loss = StrategyPerformanceConfig{};
+  const auto skipped = ModelPerformanceConfig{
+   {}, {}, ModelPerformanceBreakEvenTreatment::Skip};
+  auto counted_as_loss = ModelPerformanceConfig{};
 
   EXPECT_NE(skipped, counted_as_loss);
   counted_as_loss.break_even_treatment(
-   StrategyPerformanceBreakEvenTreatment::Skip);
+   ModelPerformanceBreakEvenTreatment::Skip);
   EXPECT_EQ(skipped, counted_as_loss);
   EXPECT_THROW(counted_as_loss.break_even_treatment(
-                static_cast<StrategyPerformanceBreakEvenTreatment>(-1)),
+                static_cast<ModelPerformanceBreakEvenTreatment>(-1)),
                std::invalid_argument);
 }
 
-TEST(StrategyPerformanceTest, AlternativeModelsUseCommonSnapshotContracts)
+TEST(ModelPerformanceTest, AlternativeModelsUseCommonSnapshotContracts)
 {
-  const auto config = StrategyPerformanceConfig{
+  const auto config = ModelPerformanceConfig{
    {},
-   StrategyPerformanceBayesianConfig{
+   ModelPerformanceBayesianConfig{
     BayesianWinModelNode{FixedWinModelNode{0.8}},
     BayesianPayoffModelNode{FixedPayoffModelNode{0.03}},
     BayesianPayoffModelNode{FixedPayoffModelNode{0.04}}}};
-  const auto snapshot = StrategyPerformance{config}.snapshot();
+  const auto snapshot = ModelPerformance{config}.snapshot();
 
   EXPECT_DOUBLE_EQ(snapshot.win_probability_posterior().probability, 0.8);
   EXPECT_DOUBLE_EQ(snapshot.winning_payoff_posterior().mean, 0.03);
@@ -442,23 +442,23 @@ TEST(StrategyPerformanceTest, AlternativeModelsUseCommonSnapshotContracts)
             nullptr);
 }
 
-TEST(StrategyPerformanceTest, RejectsInvalidHistoryAndPriors)
+TEST(ModelPerformanceTest, RejectsInvalidHistoryAndPriors)
 {
-  EXPECT_THROW((StrategyPerformanceConfig{StrategyPerformanceHistoryPolicy{
-                StrategyPerformanceHistoryMode::RollingWindow, 0, 0.99}}),
+  EXPECT_THROW((ModelPerformanceConfig{ModelPerformanceHistoryPolicy{
+                ModelPerformanceHistoryMode::RollingWindow, 0, 0.99}}),
                std::invalid_argument);
-  EXPECT_THROW((StrategyPerformanceBayesianConfig{
+  EXPECT_THROW((ModelPerformanceBayesianConfig{
                 BayesianWinModelNode{BetaBernoulliModelNode{1.0, 2.0}},
                 BayesianPayoffModelNode{GammaPayoffModelNode{}},
                 BayesianPayoffModelNode{GammaPayoffModelNode{}}}),
                std::invalid_argument);
-  EXPECT_THROW((StrategyPerformanceBayesianConfig{
+  EXPECT_THROW((ModelPerformanceBayesianConfig{
                 BayesianWinModelNode{BetaBernoulliModelNode{}},
                 BayesianPayoffModelNode{GammaPayoffModelNode{0.0, 0.01, 1.0}},
                 BayesianPayoffModelNode{GammaPayoffModelNode{}}}),
                std::invalid_argument);
   EXPECT_THROW(
-   (StrategyPerformanceBayesianConfig{
+   (ModelPerformanceBayesianConfig{
     BayesianWinModelNode{BetaBernoulliModelNode{}},
     BayesianPayoffModelNode{GammaPayoffModelNode{}},
     BayesianPayoffModelNode{GammaPayoffModelNode{0.01, 0.01, 0.0}}}),

@@ -7,41 +7,46 @@ import pludux.backtest;
 using namespace pludux;
 using namespace pludux::backtest;
 
-TEST(BacktestSetupTest, DefaultsToIncompleteConfiguration)
+TEST(StrategyTest, DefaultsToIncompleteConfiguration)
 {
-  const auto setup = BacktestSetup{};
-  const auto backtest = Backtest{};
+  const auto strategy = Strategy{};
+  const auto system = System{};
 
-  EXPECT_EQ(setup.strategy_handle(), StrategyStoreHandle{});
-  EXPECT_EQ(setup.profile_handle(), ProfileStoreHandle{});
-  EXPECT_TRUE(setup.inputs().empty());
-  EXPECT_NE(node_cast<TrueNode>(setup.entry_filter()), nullptr);
-  EXPECT_EQ(backtest.strategy_performance(), StrategyPerformanceConfig{});
-  EXPECT_EQ(BacktestFailsafeSetup{}.activation(), FailsafeActivation::Always);
+  EXPECT_TRUE(strategy.name().empty());
+  EXPECT_EQ(strategy.model_handle(), ModelStoreHandle{});
+  EXPECT_EQ(strategy.profile_handle(), ProfileStoreHandle{});
+  EXPECT_TRUE(strategy.inputs().empty());
+  EXPECT_NE(node_cast<TrueNode>(strategy.entry_filter()), nullptr);
+  EXPECT_EQ(system.model_performance(), ModelPerformanceConfig{});
+  EXPECT_EQ(SystemFailsafeStrategy{}.activation(),
+            FailsafeStrategyActivation::Always);
 }
 
-TEST(BacktestSetupTest, StoresReusableSetupConfiguration)
+TEST(StrategyTest, StoresReusableStrategyConfiguration)
 {
-  const auto strategy = StrategyStoreHandle{1, 2};
+  const auto model_handle = ModelStoreHandle{1, 2};
   const auto profile = ProfileStoreHandle{3, 4};
   const auto inputs = std::vector<NumericInputNode>{NumericInputNode{
    "Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 20.0}};
-  const auto setup =
-   BacktestSetup{strategy,
-                 profile,
-                 inputs,
-                 ErasedNode<EntryFilterMethodContext>{FalseNode{}}};
+  const auto strategy =
+   Strategy{"Breakout",
+             model_handle,
+             profile,
+             inputs,
+             ErasedNode<EntryFilterMethodContext>{FalseNode{}}};
 
-  EXPECT_EQ(setup.strategy_handle(), strategy);
-  EXPECT_EQ(setup.profile_handle(), profile);
-  EXPECT_EQ(setup.inputs(), inputs);
-  EXPECT_NE(node_cast<FalseNode>(setup.entry_filter()), nullptr);
+  EXPECT_EQ(strategy.name(), "Breakout");
+  EXPECT_EQ(strategy.model_handle(), model_handle);
+  EXPECT_EQ(strategy.profile_handle(), profile);
+  EXPECT_EQ(strategy.inputs(), inputs);
+  EXPECT_NE(node_cast<FalseNode>(strategy.entry_filter()), nullptr);
 }
 
-TEST(BacktestSetupTest, EqualityAndRuleEquivalenceIncludeAllFields)
+TEST(StrategyTest, EqualityAndRuleEquivalenceIncludeAllFields)
 {
-  const auto original = BacktestSetup{
-   StrategyStoreHandle{1, 1},
+  const auto original = Strategy{
+   "Original",
+   ModelStoreHandle{1, 1},
    ProfileStoreHandle{2, 1},
    {NumericInputNode{
     "Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 20.0}}};
@@ -49,6 +54,12 @@ TEST(BacktestSetupTest, EqualityAndRuleEquivalenceIncludeAllFields)
 
   EXPECT_EQ(original, changed);
   EXPECT_TRUE(original.equivalent_rules(changed));
+
+  changed.name("Renamed");
+  EXPECT_NE(original, changed);
+  EXPECT_TRUE(original.equivalent_rules(changed));
+
+  changed = original;
 
   changed.inputs({NumericInputNode{
    "Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 55.0}});
@@ -61,41 +72,41 @@ TEST(BacktestSetupTest, EqualityAndRuleEquivalenceIncludeAllFields)
   EXPECT_FALSE(original.equivalent_rules(changed));
 }
 
-TEST(BacktestSetupTest, BacktestStoresMainAndOrderedFailsafeSetups)
+TEST(SystemTest, StoresMainAndOrderedFailsafeStrategies)
 {
-  const auto main =
-   BacktestSetup{StrategyStoreHandle{1, 1}, ProfileStoreHandle{2, 1}};
-  const auto first = BacktestFailsafeSetup{
-   BacktestSetup{StrategyStoreHandle{3, 1}, ProfileStoreHandle{4, 1}},
-   FailsafeActivation::PreviousSetupEntryFilteredPosition};
-  const auto second = BacktestFailsafeSetup{
-   BacktestSetup{StrategyStoreHandle{5, 1}, ProfileStoreHandle{6, 1}}};
-  const auto backtest = Backtest{"Trend",
-                                 WatchlistStoreHandle{7, 1},
-                                 StrategyPerformanceConfig{},
-                                 main,
-                                 {first, second}};
+  const auto main = StrategyStoreHandle{1, 1};
+  const auto first = SystemFailsafeStrategy{
+   StrategyStoreHandle{3, 1},
+   FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition};
+  const auto second = SystemFailsafeStrategy{
+   main};
+  const auto system = System{"Trend",
+                              WatchlistStoreHandle{7, 1},
+                              ModelPerformanceConfig{},
+                              main,
+                              {first, second}};
 
-  EXPECT_EQ(backtest.main_setup(), main);
-  EXPECT_EQ(backtest.failsafe_setups(),
-            (std::vector<BacktestFailsafeSetup>{first, second}));
-  EXPECT_EQ(backtest.setup(1), first.setup());
-  EXPECT_EQ(backtest.setup(2), second.setup());
-  EXPECT_EQ(backtest.strategy_performance(), StrategyPerformanceConfig{});
+  EXPECT_EQ(system.main_strategy_handle(), main);
+  EXPECT_EQ(system.failsafe_strategies(),
+            (std::vector<SystemFailsafeStrategy>{first, second}));
+  EXPECT_EQ(system.strategy_handle(1), first.strategy_handle());
+  EXPECT_EQ(system.strategy_handle(2), main);
+  EXPECT_EQ(system.strategy_count(), 3U);
+  EXPECT_EQ(system.model_performance(), ModelPerformanceConfig{});
 }
 
-TEST(BacktestSetupTest, BacktestOwnsSharedStrategyPerformanceConfiguration)
+TEST(SystemTest, OwnsSharedModelPerformanceConfiguration)
 {
   const auto performance =
-   StrategyPerformanceConfig{StrategyPerformanceHistoryPolicy{
-    StrategyPerformanceHistoryMode::RollingWindow, 25, 0.99}};
-  const auto original = Backtest{"Trend",
-                                 WatchlistStoreHandle{7, 1},
-                                 performance,
-                                 BacktestSetup{},
-                                 {BacktestFailsafeSetup{}}};
+   ModelPerformanceConfig{ModelPerformanceHistoryPolicy{
+    ModelPerformanceHistoryMode::RollingWindow, 25, 0.99}};
+  const auto original = System{"Trend",
+                               WatchlistStoreHandle{7, 1},
+                               performance,
+                               StrategyStoreHandle{},
+                               {SystemFailsafeStrategy{}}};
 
-  EXPECT_EQ(original.strategy_performance(), performance);
+  EXPECT_EQ(original.model_performance(), performance);
 
   auto renamed = original;
   renamed.name("Renamed");
@@ -103,15 +114,50 @@ TEST(BacktestSetupTest, BacktestOwnsSharedStrategyPerformanceConfiguration)
   EXPECT_TRUE(original.equivalent_rules(renamed));
 
   auto changed = original;
-  changed.strategy_performance(
-   StrategyPerformanceConfig{StrategyPerformanceHistoryPolicy{
-    StrategyPerformanceHistoryMode::ExponentialDecay, 100, 0.75}});
+  changed.model_performance(
+   ModelPerformanceConfig{ModelPerformanceHistoryPolicy{
+    ModelPerformanceHistoryMode::ExponentialDecay, 100, 0.75}});
   EXPECT_NE(original, changed);
   EXPECT_FALSE(original.equivalent_rules(changed));
 
   changed = original;
-  changed.failsafe_setups().front().activation(
-   FailsafeActivation::PreviousSetupEntryFilteredPosition);
+  changed.failsafe_strategies().front().activation(
+   FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
   EXPECT_NE(original, changed);
   EXPECT_FALSE(original.equivalent_rules(changed));
+}
+
+TEST(StrategyTest, StoresReferencesAndSupportsStoreCrud)
+{
+  const auto model = ModelStoreHandle{1, 2};
+  const auto profile = ProfileStoreHandle{3, 4};
+  auto store = Store{};
+  const auto invalid = StrategyStoreHandle{};
+  auto resolver = StoreDataResolver<Strategy, StrategyStoreHandle>{};
+  auto strategies = std::vector<Strategy>{};
+
+  EXPECT_FALSE(invalid.valid());
+  EXPECT_FALSE(resolver.is_alive(invalid));
+  EXPECT_FALSE(resolver.add(strategies, invalid, Strategy{}));
+  EXPECT_EQ(store.get_strategy_if_present(invalid), nullptr);
+  EXPECT_FALSE(store.remove_strategy(invalid));
+
+  const auto handle = store.add_strategy(Strategy{"Trend", model, profile});
+  ASSERT_TRUE(handle.has_value());
+  EXPECT_EQ(*handle, (StrategyStoreHandle{0, 0}));
+  EXPECT_NE(*handle, invalid);
+  EXPECT_TRUE(handle->valid());
+
+  const auto* strategy = store.get_strategy_if_present(*handle);
+  ASSERT_NE(strategy, nullptr);
+  EXPECT_EQ(strategy->name(), "Trend");
+  EXPECT_TRUE(strategy->references_model(model));
+  EXPECT_TRUE(strategy->references_profile(profile));
+  EXPECT_FALSE(strategy->references_model(ModelStoreHandle{2, 1}));
+  EXPECT_FALSE(strategy->references_profile(ProfileStoreHandle{4, 1}));
+
+  EXPECT_TRUE(store.update_strategy(*handle, Strategy{"Revised", model, profile}));
+  EXPECT_EQ(store.get_strategy(*handle).name(), "Revised");
+  EXPECT_TRUE(store.remove_strategy(*handle));
+  EXPECT_EQ(store.get_strategy_if_present(*handle), nullptr);
 }

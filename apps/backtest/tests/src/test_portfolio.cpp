@@ -10,8 +10,8 @@ using pludux::ValueNode;
 
 TEST(PortfolioTest, StoresSharedAccountConfigurationAndOrderedBacktests)
 {
-  const auto first = BacktestStoreHandle{1, 2};
-  const auto second = BacktestStoreHandle{3, 4};
+  const auto first = SystemStoreHandle{1, 2};
+  const auto second = SystemStoreHandle{3, 4};
   const auto portfolio =
    Portfolio{"Balanced",
              100'000.0,
@@ -25,8 +25,8 @@ TEST(PortfolioTest, StoresSharedAccountConfigurationAndOrderedBacktests)
 
   EXPECT_EQ(portfolio.name(), "Balanced");
   EXPECT_DOUBLE_EQ(portfolio.initial_capital(), 100'000.0);
-  EXPECT_EQ(portfolio.backtest_handles(),
-            (std::vector<BacktestStoreHandle>{first, second}));
+  EXPECT_EQ(portfolio.system_handles(),
+            (std::vector<SystemStoreHandle>{first, second}));
   EXPECT_EQ(portfolio.maximum_open_trades(), 4);
   EXPECT_EQ(portfolio.maximum_combined_layers(), 6);
   ASSERT_EQ(portfolio.entry_comparators().size(), 1U);
@@ -36,7 +36,7 @@ TEST(PortfolioTest, StoresSharedAccountConfigurationAndOrderedBacktests)
 
 TEST(PortfolioTest, RejectsDuplicateBacktestHandles)
 {
-  const auto handle = BacktestStoreHandle{1, 1};
+  const auto handle = SystemStoreHandle{1, 1};
   EXPECT_THROW(
    (Portfolio{"Duplicate", 1'000.0, {}, {}, 10, 10, {}, {handle, handle}}),
    std::invalid_argument);
@@ -51,7 +51,7 @@ TEST(PortfolioTest, AllowsIncompleteConfigurationWithoutBacktests)
   EXPECT_EQ(portfolio.broker_handle(), BrokerStoreHandle{});
   EXPECT_EQ(portfolio.maximum_open_trades(), 0);
   EXPECT_EQ(portfolio.maximum_combined_layers(), 0);
-  EXPECT_TRUE(portfolio.backtest_handles().empty());
+  EXPECT_TRUE(portfolio.system_handles().empty());
 }
 
 TEST(PortfolioTest, DefaultsMaximumOpenTradesToTen)
@@ -146,32 +146,30 @@ TEST(PortfolioTest, EntryComparatorsParticipateInRuleEquivalence)
   EXPECT_FALSE(lhs.equivalent_rules(rhs));
 }
 
-TEST(PortfolioTest, BacktestContainsOnlyReusableBacktestConfiguration)
+TEST(SystemTest, ContainsOnlyReusableStrategyConfiguration)
 {
-  const auto backtest =
-   Backtest{"BTC trend",
-            WatchlistStoreHandle{1, 1},
-            StrategyPerformanceConfig{},
-            BacktestSetup{StrategyStoreHandle{2, 1}, ProfileStoreHandle{3, 1}}};
-  EXPECT_EQ(backtest.name(), "BTC trend");
-  EXPECT_EQ(backtest.watchlist_handle(), (WatchlistStoreHandle{1, 1}));
-  EXPECT_EQ(backtest.main_setup().strategy_handle(),
-            (StrategyStoreHandle{2, 1}));
-  EXPECT_EQ(backtest.main_setup().profile_handle(), (ProfileStoreHandle{3, 1}));
+  const auto system =
+   System{"BTC trend",
+          WatchlistStoreHandle{1, 1},
+          ModelPerformanceConfig{},
+          StrategyStoreHandle{2, 1}};
+  EXPECT_EQ(system.name(), "BTC trend");
+  EXPECT_EQ(system.watchlist_handle(), (WatchlistStoreHandle{1, 1}));
+  EXPECT_EQ(system.main_strategy_handle(), (StrategyStoreHandle{2, 1}));
 }
 
 TEST(PortfolioTest, ResultsAreIdentifiedByBacktestAndAsset)
 {
-  const auto backtest_handle = BacktestStoreHandle{1, 1};
+  const auto system_handle = SystemStoreHandle{1, 1};
   const auto first_asset = AssetStoreHandle{2, 1};
   const auto second_asset = AssetStoreHandle{3, 1};
   auto results =
    PortfolioResults{{},
-                    {BacktestResults{backtest_handle, first_asset},
-                     BacktestResults{backtest_handle, second_asset}}};
+                     {BacktestResults{system_handle, first_asset},
+                      BacktestResults{system_handle, second_asset}}};
 
-  ASSERT_NE(results.backtest({backtest_handle, first_asset}), nullptr);
-  ASSERT_NE(results.backtest({backtest_handle, second_asset}), nullptr);
-  EXPECT_NE(results.backtest({backtest_handle, first_asset}),
-            results.backtest({backtest_handle, second_asset}));
+  ASSERT_NE(results.backtest({system_handle, first_asset}), nullptr);
+  ASSERT_NE(results.backtest({system_handle, second_asset}), nullptr);
+  EXPECT_NE(results.backtest({system_handle, first_asset}),
+            results.backtest({system_handle, second_asset}));
 }

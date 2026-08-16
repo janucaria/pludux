@@ -8,8 +8,8 @@
 
 import pludux.apps.backtest.application_state;
 import pludux.apps.backtest.command_executor;
-import pludux.apps.backtest.portfolio_backtest_setup_selections;
 import pludux.apps.backtest.serialization;
+import pludux.apps.backtest.portfolio_strategy_selections;
 import pludux.backtest;
 
 namespace {
@@ -18,61 +18,46 @@ using pludux::apps::ApplicationState;
 using pludux::apps::CommandExecutor;
 using pludux::apps::EditCommand;
 using pludux::apps::ExecutionEffect;
-using pludux::apps::load_application_state_json;
 using pludux::apps::RedoCommand;
 using pludux::apps::ReplaceApplicationCommand;
-using pludux::apps::save_application_state_json;
 using pludux::apps::UndoCommand;
 using pludux::apps::ViewCommand;
-using pludux::backtest::Backtest;
-using pludux::backtest::BacktestSetup;
-using pludux::backtest::DrawdownAdjustment;
-using pludux::backtest::FixedBudgetPositionSizing;
 using pludux::backtest::Portfolio;
-using pludux::backtest::PortfolioEntryComparator;
-using pludux::backtest::PortfolioEntryComparatorOrder;
 using pludux::backtest::PortfolioResults;
 using pludux::backtest::PortfolioTimeline;
-using pludux::backtest::PositionSizingNode;
-using pludux::backtest::Profile;
 
-auto add_backtest(ApplicationState& state, std::string name)
+auto add_strategy(ApplicationState& state, std::string name)
 {
-  auto backtest = Backtest{};
-  backtest.name(std::move(name));
-  return *state.add_backtest(std::move(backtest));
+  state.add_strategy(pludux::backtest::Strategy{std::move(name)});
+  return state.get_strategy_handles().back();
 }
 
-void rename_backtest(ApplicationState& state,
-                     pludux::backtest::BacktestStoreHandle handle,
+void rename_strategy(ApplicationState& state,
+                     pludux::backtest::StrategyStoreHandle handle,
                      std::string name)
 {
-  auto backtest = state.get_backtest(handle);
-  backtest.name(std::move(name));
-  ASSERT_TRUE(state.update_backtest(handle, std::move(backtest)));
+  auto strategy = state.get_strategy(handle);
+  strategy.name(std::move(name));
+  ASSERT_TRUE(state.update_strategy(handle, std::move(strategy)));
 }
 
 TEST(CommandHistory, ViewSelectionPreservesRedoAndAvoidsDocumentEffect)
 {
   auto state = ApplicationState{};
-  const auto first = add_backtest(state, "First");
-  const auto second = add_backtest(state, "Second");
-  state.select_backtest(first);
+  const auto first = add_strategy(state, "First");
+  const auto second = add_strategy(state, "Second");
+  state.select_strategy(first);
   auto executor = CommandExecutor{};
-
-  executor.push(EditCommand{
-   "Rename Backtest",
-   [first](auto& candidate) { rename_backtest(candidate, first, "Changed"); },
-   std::nullopt});
+  executor.push(EditCommand{"Rename", [first](auto& candidate) {
+                               rename_strategy(candidate, first, "Changed");
+                             }, std::nullopt});
   EXPECT_EQ(executor.execute(state), ExecutionEffect::DocumentChanged);
   executor.push(UndoCommand{});
   EXPECT_EQ(executor.execute(state), ExecutionEffect::DocumentChanged);
   ASSERT_TRUE(executor.can_redo());
-
-  executor.push(ViewCommand{
-   [second](auto& candidate) { candidate.select_backtest(second); }});
+  executor.push(ViewCommand{[second](auto& candidate) { candidate.select_strategy(second); }});
   EXPECT_EQ(executor.execute(state), ExecutionEffect::ViewChanged);
-  EXPECT_EQ(state.selected_backtest_handle(), second);
+  EXPECT_EQ(state.selected_strategy_handle(), second);
   EXPECT_TRUE(executor.can_redo());
   EXPECT_FALSE(executor.can_undo());
 }
@@ -80,60 +65,49 @@ TEST(CommandHistory, ViewSelectionPreservesRedoAndAvoidsDocumentEffect)
 TEST(CommandHistory, UndoAndRedoPreserveCurrentSelection)
 {
   auto state = ApplicationState{};
-  const auto edited = add_backtest(state, "Original");
-  const auto selected = add_backtest(state, "Selected");
+  const auto edited = add_strategy(state, "Original");
+  const auto selected = add_strategy(state, "Selected");
   auto executor = CommandExecutor{};
-
-  executor.push(EditCommand{
-   "Rename Backtest",
-   [edited](auto& candidate) { rename_backtest(candidate, edited, "Changed"); },
-   std::nullopt});
+  executor.push(EditCommand{"Rename", [edited](auto& candidate) {
+                               rename_strategy(candidate, edited, "Changed");
+                             }, std::nullopt});
   executor.execute(state);
-  state.select_backtest(selected);
-
+  state.select_strategy(selected);
   executor.push(UndoCommand{});
   executor.execute(state);
-  EXPECT_EQ(state.get_backtest(edited).name(), "Original");
-  EXPECT_EQ(state.selected_backtest_handle(), selected);
-
+  EXPECT_EQ(state.get_strategy(edited).name(), "Original");
+  EXPECT_EQ(state.selected_strategy_handle(), selected);
   executor.push(RedoCommand{});
   executor.execute(state);
-  EXPECT_EQ(state.get_backtest(edited).name(), "Changed");
-  EXPECT_EQ(state.selected_backtest_handle(), selected);
+  EXPECT_EQ(state.get_strategy(edited).name(), "Changed");
+  EXPECT_EQ(state.selected_strategy_handle(), selected);
 }
 
 TEST(CommandHistory, UndoNormalizesSelectionWhenItsTargetDisappears)
 {
   auto state = ApplicationState{};
   auto executor = CommandExecutor{};
-  executor.push(
-   EditCommand{"Add Backtest",
-               [](auto& candidate) { add_backtest(candidate, "Added"); },
-               std::nullopt});
+  executor.push(EditCommand{"Add", [](auto& candidate) { add_strategy(candidate, "Added"); }, std::nullopt});
   executor.execute(state);
-  const auto added = state.get_backtest_handles().front();
-  state.select_backtest(added);
-
+  const auto added = state.get_strategy_handles().front();
+  state.select_strategy(added);
   executor.push(UndoCommand{});
   executor.execute(state);
-  EXPECT_EQ(state.selected_backtest_handle(),
-            pludux::backtest::BacktestStoreHandle{});
+  EXPECT_EQ(state.selected_strategy_handle(), pludux::backtest::StrategyStoreHandle{});
 }
 
 TEST(CommandHistory, NoOpDoesNotCreateHistoryOrClearRedo)
 {
   auto state = ApplicationState{};
-  const auto handle = add_backtest(state, "Original");
+  const auto strategy = add_strategy(state, "Original");
   auto executor = CommandExecutor{};
-  executor.push(EditCommand{
-   "Rename Backtest",
-   [handle](auto& candidate) { rename_backtest(candidate, handle, "Changed"); },
-   std::nullopt});
+  executor.push(EditCommand{"Rename", [strategy](auto& candidate) {
+                               rename_strategy(candidate, strategy, "Changed");
+                             }, std::nullopt});
   executor.execute(state);
   executor.push(UndoCommand{});
   executor.execute(state);
   ASSERT_TRUE(executor.can_redo());
-
   executor.push(EditCommand{"No-op", [](auto&) {}, std::nullopt});
   EXPECT_EQ(executor.execute(state), ExecutionEffect::None);
   EXPECT_TRUE(executor.can_redo());
@@ -143,108 +117,59 @@ TEST(CommandHistory, NoOpDoesNotCreateHistoryOrClearRedo)
 TEST(CommandHistory, UndoRestoresCachedPortfolioResults)
 {
   auto state = ApplicationState{};
-  const auto portfolio_handle = *state.add_portfolio(Portfolio{});
+  const auto portfolio = *state.add_portfolio(Portfolio{});
   auto timeline = PortfolioTimeline{};
-  timeline.append(PortfolioTimeline::Row{.timestamp = 1, .capital = 42.0});
-  ASSERT_TRUE(state.update_portfolio_results(
-   portfolio_handle, PortfolioResults{std::move(timeline), {}}));
+  timeline.append({.timestamp = 1, .capital = 42.0});
+  ASSERT_TRUE(state.update_portfolio_results(portfolio, PortfolioResults{std::move(timeline), {}}));
   auto executor = CommandExecutor{};
-
-  executor.push(EditCommand{"Edit Portfolio",
-                            [portfolio_handle](auto& candidate) {
-                              auto portfolio =
-                               candidate.get_portfolio(portfolio_handle);
-                              portfolio.name("Changed");
-                              candidate.update_portfolio(portfolio_handle,
-                                                         std::move(portfolio));
-                            },
-                            std::nullopt});
+  executor.push(EditCommand{"Edit Portfolio", [portfolio](auto& candidate) {
+                               auto value = candidate.get_portfolio(portfolio);
+                               value.name("Changed");
+                               ASSERT_TRUE(candidate.update_portfolio(portfolio, std::move(value)));
+                             }, std::nullopt});
   executor.execute(state);
-  EXPECT_TRUE(state.get_portfolio_results(portfolio_handle).timeline().empty());
-
+  EXPECT_TRUE(state.get_portfolio_results(portfolio).timeline().empty());
   executor.push(UndoCommand{});
   executor.execute(state);
-  ASSERT_EQ(state.get_portfolio_results(portfolio_handle).timeline().size(),
-            1U);
-  EXPECT_EQ(
-   state.get_portfolio_results(portfolio_handle).timeline().row(0).capital,
-   42.0);
-}
-
-TEST(ApplicationState, ProfileCapitalPolicyChangesResetDependentResults)
-{
-  auto state = ApplicationState{};
-  state.add_profile(Profile{});
-  const auto profile_handle = state.get_profile_handles().front();
-  auto backtest = Backtest{};
-  backtest.main_setup().profile_handle(profile_handle);
-  const auto backtest_handle = *state.add_backtest(std::move(backtest));
-  auto portfolio = Portfolio{};
-  portfolio.backtest_handles({backtest_handle});
-  const auto portfolio_handle = *state.add_portfolio(std::move(portfolio));
-  const auto cache_results = [&] {
-    auto timeline = PortfolioTimeline{};
-    timeline.append(PortfolioTimeline::Row{.timestamp = 1, .capital = 42.0});
-    ASSERT_TRUE(state.update_portfolio_results(
-     portfolio_handle, PortfolioResults{std::move(timeline), {}}));
-  };
-
-  cache_results();
-  auto edited_profile = state.get_profile(profile_handle);
-  edited_profile.drawdown_adjustment(DrawdownAdjustment{true, 0.10, 0.20, 0.0});
-  ASSERT_TRUE(state.update_profile(profile_handle, std::move(edited_profile)));
-  EXPECT_TRUE(state.get_portfolio_results(portfolio_handle).timeline().empty());
-
-  cache_results();
-  edited_profile = state.get_profile(profile_handle);
-  edited_profile.insufficient_cash_policy(
-   pludux::backtest::InsufficientCashPolicy::CapToAvailableCash);
-  ASSERT_TRUE(state.update_profile(profile_handle, std::move(edited_profile)));
-  EXPECT_TRUE(state.get_portfolio_results(portfolio_handle).timeline().empty());
+  ASSERT_EQ(state.get_portfolio_results(portfolio).timeline().size(), 1U);
+  EXPECT_DOUBLE_EQ(state.get_portfolio_results(portfolio).timeline().row(0).capital, 42.0);
 }
 
 TEST(CommandHistory, ExplicitMergeKeyCoalescesAdjacentEdits)
 {
   auto state = ApplicationState{};
-  const auto handle = add_backtest(state, "Original");
+  const auto strategy = add_strategy(state, "Original");
   auto executor = CommandExecutor{};
-
   for(const auto* name : {"First", "Second", "Final"}) {
-    executor.push(EditCommand{"Rename Backtest",
-                              [handle, name](auto& candidate) {
-                                rename_backtest(candidate, handle, name);
-                              },
-                              std::string{"backtest-name"}});
+    executor.push(EditCommand{"Rename", [strategy, name](auto& candidate) {
+                                 rename_strategy(candidate, strategy, name);
+                               }, std::string{"strategy-name"}});
     executor.execute(state);
   }
-
   EXPECT_EQ(executor.undo_size(), 1U);
   executor.push(UndoCommand{});
   executor.execute(state);
-  EXPECT_EQ(state.get_backtest(handle).name(), "Original");
+  EXPECT_EQ(state.get_strategy(strategy).name(), "Original");
   executor.push(RedoCommand{});
   executor.execute(state);
-  EXPECT_EQ(state.get_backtest(handle).name(), "Final");
+  EXPECT_EQ(state.get_strategy(strategy).name(), "Final");
 }
 
 TEST(CommandHistory, ViewCommandEndsCoalescingSequence)
 {
   auto state = ApplicationState{};
-  const auto handle = add_backtest(state, "Original");
+  const auto strategy = add_strategy(state, "Original");
   auto executor = CommandExecutor{};
-  executor.push(EditCommand{
-   "Rename Backtest",
-   [handle](auto& candidate) { rename_backtest(candidate, handle, "First"); },
-   std::string{"backtest-name"}});
-  executor.execute(state);
-  executor.push(ViewCommand{[](auto&) {}});
-  executor.execute(state);
-  executor.push(EditCommand{
-   "Rename Backtest",
-   [handle](auto& candidate) { rename_backtest(candidate, handle, "Second"); },
-   std::string{"backtest-name"}});
-  executor.execute(state);
-
+  for(const auto* name : {"First", "Second"}) {
+    executor.push(EditCommand{"Rename", [strategy, name](auto& candidate) {
+                                 rename_strategy(candidate, strategy, name);
+                               }, std::string{"strategy-name"}});
+    executor.execute(state);
+    if(std::string{name} == "First") {
+      executor.push(ViewCommand{[](auto&) {}});
+      executor.execute(state);
+    }
+  }
   EXPECT_EQ(executor.undo_size(), 2U);
 }
 
@@ -253,555 +178,494 @@ TEST(CommandHistory, HistoryKeepsNewestOneHundredEntries)
   auto state = ApplicationState{};
   auto executor = CommandExecutor{};
   for(auto index = 0; index < 101; ++index) {
-    executor.push(
-     EditCommand{"Add Backtest",
-                 [index](auto& candidate) {
-                   add_backtest(candidate, "Backtest " + std::to_string(index));
-                 },
-                 std::nullopt});
+    executor.push(EditCommand{"Add", [index](auto& candidate) {
+                                 add_strategy(candidate, "Strategy " + std::to_string(index));
+                               }, std::nullopt});
     executor.execute(state);
   }
   EXPECT_EQ(executor.undo_size(), CommandExecutor::history_limit);
-
   for(auto index = 0; index < 100; ++index) {
     executor.push(UndoCommand{});
     executor.execute(state);
   }
-  ASSERT_EQ(state.get_backtest_handles().size(), 1U);
-  EXPECT_EQ(state.get_backtest(state.get_backtest_handles().front()).name(),
-            "Backtest 0");
+  ASSERT_EQ(state.get_strategy_handles().size(), 1U);
+  EXPECT_EQ(state.get_strategy(state.get_strategy_handles().front()).name(), "Strategy 0");
 }
 
 TEST(CommandHistory, ApplicationReplacementIsUndoableAndRedoable)
 {
   auto state = ApplicationState{};
   auto executor = CommandExecutor{};
-  executor.push(
-   EditCommand{"Add Backtest",
-               [](auto& candidate) { add_backtest(candidate, "Added"); },
-               std::nullopt});
+  executor.push(EditCommand{"Add", [](auto& candidate) { add_strategy(candidate, "Added"); }, std::nullopt});
   executor.execute(state);
-  ASSERT_NE(executor.undo_label(), nullptr);
-  EXPECT_EQ(*executor.undo_label(), "Add Backtest");
-  state.select_backtest(state.get_backtest_handles().front());
+  state.select_strategy(state.get_strategy_handles().front());
   state.imgui_ini_settings("original-layout");
-
   executor.push(ReplaceApplicationCommand{[] {
     auto replacement = ApplicationState{};
-    const auto replacement_handle = add_backtest(replacement, "Replacement");
-    replacement.select_backtest(replacement_handle);
+    const auto strategy = add_strategy(replacement, "Replacement");
+    replacement.select_strategy(strategy);
     replacement.imgui_ini_settings("replacement-layout");
     return replacement;
   }});
   EXPECT_EQ(executor.execute(state), ExecutionEffect::ApplicationReplaced);
-  ASSERT_NE(executor.undo_label(), nullptr);
-  EXPECT_EQ(*executor.undo_label(), "Open Application");
-  EXPECT_FALSE(executor.can_redo());
-  EXPECT_EQ(state.get_backtest_handles().size(), 1U);
-  EXPECT_EQ(state.get_backtest(state.get_backtest_handles().front()).name(),
-            "Replacement");
-  EXPECT_EQ(state.imgui_ini_settings(), "replacement-layout");
-
+  EXPECT_EQ(state.get_strategy(state.get_strategy_handles().front()).name(), "Replacement");
   executor.push(UndoCommand{});
   EXPECT_EQ(executor.execute(state), ExecutionEffect::ApplicationReplaced);
-  ASSERT_EQ(state.get_backtest_handles().size(), 1U);
-  EXPECT_EQ(state.get_backtest(state.get_backtest_handles().front()).name(),
-            "Added");
-  EXPECT_EQ(state.selected_backtest_handle(),
-            state.get_backtest_handles().front());
+  EXPECT_EQ(state.get_strategy(state.get_strategy_handles().front()).name(), "Added");
   EXPECT_EQ(state.imgui_ini_settings(), "original-layout");
-  ASSERT_NE(executor.undo_label(), nullptr);
-  EXPECT_EQ(*executor.undo_label(), "Add Backtest");
-  ASSERT_NE(executor.redo_label(), nullptr);
-  EXPECT_EQ(*executor.redo_label(), "Open Application");
-
   executor.push(RedoCommand{});
   EXPECT_EQ(executor.execute(state), ExecutionEffect::ApplicationReplaced);
-  ASSERT_EQ(state.get_backtest_handles().size(), 1U);
-  EXPECT_EQ(state.get_backtest(state.get_backtest_handles().front()).name(),
-            "Replacement");
-  EXPECT_EQ(state.selected_backtest_handle(),
-            state.get_backtest_handles().front());
+  EXPECT_EQ(state.get_strategy(state.get_strategy_handles().front()).name(), "Replacement");
   EXPECT_EQ(state.imgui_ini_settings(), "replacement-layout");
+}
+
+TEST(CommandHistory, StrategyEditsInvalidateDependentPortfolioResults)
+{
+  auto state = pludux::apps::ApplicationState{};
+  state.add_model(pludux::backtest::Model{});
+  state.add_profile(pludux::backtest::Profile{});
+  state.add_asset(pludux::backtest::Asset{"Asset"});
+  const auto watchlist = *state.add_watchlist(
+   pludux::backtest::Watchlist{"List", {state.get_asset_handles().front()}});
+  state.add_strategy(pludux::backtest::Strategy{
+   "Original", state.get_model_handles().front(), state.get_profile_handles().front()});
+  const auto strategy = state.get_strategy_handles().front();
+  const auto system = *state.add_system(
+   pludux::backtest::System{"System", watchlist, {}, strategy});
+  const auto portfolio = *state.add_portfolio(pludux::backtest::Portfolio{
+   "Portfolio", 1'000.0, {}, {}, 10, 10, {}, {system}});
+  auto timeline = pludux::backtest::PortfolioTimeline{};
+  timeline.append({.timestamp = 1, .capital = 42.0});
+  ASSERT_TRUE(state.update_portfolio_results(
+   portfolio, pludux::backtest::PortfolioResults{std::move(timeline), {}}));
+
+  auto executor = pludux::apps::CommandExecutor{};
+  executor.push(pludux::apps::EditCommand{"Rename Strategy", [strategy](auto& candidate) {
+    auto value = candidate.get_strategy(strategy);
+    value.name("Edited");
+    ASSERT_TRUE(candidate.update_strategy(strategy, std::move(value)));
+  }, std::nullopt});
+  EXPECT_EQ(executor.execute(state), pludux::apps::ExecutionEffect::DocumentChanged);
+  EXPECT_EQ(state.get_portfolio_results(portfolio),
+            pludux::backtest::PortfolioResults{});
+}
+
+TEST(CommandHistory, UnrelatedEditClearsPartialResultsBeforeRunnerReplacement)
+{
+  auto state = pludux::apps::ApplicationState{};
+  const auto portfolio = *state.add_portfolio(pludux::backtest::Portfolio{});
+  auto timeline = pludux::backtest::PortfolioTimeline{};
+  timeline.append({.timestamp = 1, .capital = 42.0});
+  ASSERT_TRUE(state.update_portfolio_results(
+   portfolio, pludux::backtest::PortfolioResults{std::move(timeline), {}}));
+  ASSERT_EQ(state.get_portfolio_results(portfolio).timeline().size(), 1U);
+
+  auto executor = pludux::apps::CommandExecutor{};
+  executor.push(pludux::apps::EditCommand{"Add Unrelated Profile", [](auto& candidate) {
+    candidate.add_profile(pludux::backtest::Profile{"Unrelated"});
+  }, std::nullopt});
+
+  EXPECT_EQ(executor.execute(state), pludux::apps::ExecutionEffect::DocumentChanged);
+  EXPECT_EQ(state.get_portfolio_results(portfolio),
+            pludux::backtest::PortfolioResults{});
+}
+
+TEST(CommandHistory, ModelInputSynchronizationIsUndoable)
+{
+  auto original_series = pludux::OrderedNamedRegistry<pludux::ErasedNode<
+   pludux::ErasedSeriesMethodContext>>{};
+  original_series.set("input", pludux::NumericInputNode{
+   "Original", pludux::NumericInputNode::ValueRepresentation::Decimal, 2.5});
+  auto state = pludux::apps::ApplicationState{};
+  state.add_model(pludux::backtest::Model{
+   "Model", std::move(original_series), {}, {}, {}});
+  const auto model = state.get_model_handles().front();
+  state.add_profile(pludux::backtest::Profile{});
+  auto strategy = pludux::backtest::Strategy{};
+  pludux::backtest::assign_strategy_model(strategy, model, state.get_model(model));
+  auto inputs = strategy.inputs();
+  inputs.front().value(99.0);
+  strategy.inputs(std::move(inputs));
+  state.add_strategy(std::move(strategy));
+  const auto strategy_handle = state.get_strategy_handles().front();
+
+  auto executor = pludux::apps::CommandExecutor{};
+  executor.push(pludux::apps::EditCommand{"Remove Model Input", [model](auto& candidate) {
+    ASSERT_TRUE(candidate.update_model(
+     model, pludux::backtest::Model{"Model", {}, {}, {}, {}}));
+  }, std::nullopt});
+  EXPECT_EQ(executor.execute(state), pludux::apps::ExecutionEffect::DocumentChanged);
+  EXPECT_TRUE(state.get_strategy(strategy_handle).inputs().empty());
+
+  executor.push(pludux::apps::UndoCommand{});
+  EXPECT_EQ(executor.execute(state), pludux::apps::ExecutionEffect::DocumentChanged);
+  ASSERT_EQ(state.get_strategy(strategy_handle).inputs().size(), 1U);
+  EXPECT_EQ(state.get_strategy(strategy_handle).inputs().front().label(), "Original");
+  EXPECT_DOUBLE_EQ(state.get_strategy(strategy_handle).inputs().front().value(), 99.0);
+  EXPECT_EQ(pludux::backtest::collect_model_inputs(state.get_model(model)).size(), 1U);
+
+  executor.push(pludux::apps::RedoCommand{});
+  EXPECT_EQ(executor.execute(state), pludux::apps::ExecutionEffect::DocumentChanged);
+  EXPECT_TRUE(state.get_strategy(strategy_handle).inputs().empty());
+}
+
+TEST(ApplicationStateSerialization, RoundTripsStoredStrategyReferences)
+{
+  auto state = pludux::apps::ApplicationState{};
+  state.add_strategy(pludux::backtest::Strategy{"Stored"});
+  const auto strategy = state.get_strategy_handles().front();
+  ASSERT_TRUE(state.add_system(pludux::backtest::System{"System", {}, {}, strategy,
+                                                        {{strategy}}}));
+  auto json = std::stringstream{};
+  pludux::apps::save_application_state_json(json, state);
+  EXPECT_NE(json.str().find("\"strategies\""), std::string::npos);
+  EXPECT_NE(json.str().find("\"strategyStoreDataResolver\""), std::string::npos);
+  const auto loaded = pludux::apps::load_application_state_json(json);
+  ASSERT_EQ(loaded.get_strategy_handles().size(), 1U);
+  const auto& system = loaded.get_system(loaded.get_system_handles().front());
+  EXPECT_EQ(system.main_strategy_handle(), strategy);
+  EXPECT_EQ(system.failsafe_strategies().front().strategy_handle(), strategy);
+}
+
+TEST(ApplicationStateSerialization, RoundTripsStandaloneStrategySelection)
+{
+  auto state = pludux::apps::ApplicationState{};
+  state.add_strategy(pludux::backtest::Strategy{"Selected"});
+  const auto strategy = state.get_strategy_handles().front();
+  state.select_strategy(strategy);
+
+  auto json = std::stringstream{};
+  pludux::apps::save_application_state_json(json, state);
+
+  EXPECT_NE(json.str().find("\"selectedStrategyHandle\""), std::string::npos);
+  const auto loaded = pludux::apps::load_application_state_json(json);
+  EXPECT_EQ(loaded.selected_strategy_handle(), strategy);
 }
 
 TEST(ApplicationStateSerialization, RoundTripsDocumentAndViewSeparately)
 {
   auto state = ApplicationState{};
-  const auto handle = add_backtest(state, "Selected");
-  state.select_backtest(handle);
+  const auto strategy = add_strategy(state, "Selected");
+  state.select_strategy(strategy);
   state.imgui_ini_settings("layout-data");
   auto stream = std::stringstream{};
-  save_application_state_json(stream, state);
+  pludux::apps::save_application_state_json(stream, state);
   const auto serialized = stream.str();
   EXPECT_NE(serialized.find("\"documentState\""), std::string::npos);
   EXPECT_NE(serialized.find("\"viewState\""), std::string::npos);
   EXPECT_EQ(serialized.find("\"uiState\""), std::string::npos);
-
-  auto input = std::stringstream{serialized};
-  const auto loaded = load_application_state_json(input);
-  ASSERT_EQ(loaded.get_backtest_handles().size(), 1U);
-  EXPECT_EQ(loaded.selected_backtest_handle(),
-            loaded.get_backtest_handles().front());
+  const auto loaded = pludux::apps::load_application_state_json(stream);
+  ASSERT_EQ(loaded.get_strategy_handles().size(), 1U);
+  EXPECT_EQ(loaded.selected_strategy_handle(), loaded.get_strategy_handles().front());
   EXPECT_EQ(loaded.imgui_ini_settings(), "layout-data");
 }
 
-TEST(ApplicationStateSerialization, RoundTripsPortfolioBacktestSetupSelection)
+TEST(ApplicationStateSerialization, RoundTripsPortfolioStrategySelection)
 {
   auto state = ApplicationState{};
   state.add_asset(pludux::backtest::Asset{"Asset"});
   const auto asset = state.get_asset_handles().front();
-  const auto watchlist =
-   *state.add_watchlist(pludux::backtest::Watchlist{"List", {asset}});
-  state.add_strategy(pludux::backtest::Strategy{});
-  state.add_profile(Profile{});
-  const auto setup = BacktestSetup{state.get_strategy_handles().front(),
-                                   state.get_profile_handles().front()};
-  const auto backtest = *state.add_backtest(
-   Backtest{"Backtest",
-            watchlist,
-            {},
-            setup,
-            {pludux::backtest::BacktestFailsafeSetup{
-             setup, pludux::backtest::FailsafeActivation::Always}}});
-  const auto portfolio = *state.add_portfolio(
-   Portfolio{"Portfolio", 1'000.0, {}, {}, 10, 10, {}, {backtest}});
-  const auto selected =
-   pludux::apps::PortfolioBacktestSetupKey{{backtest, asset}, 1};
-  ASSERT_TRUE(state.select_portfolio_backtest_setup(portfolio, selected));
-
-  auto output = std::stringstream{};
-  save_application_state_json(output, state);
-  const auto serialized = output.str();
-  EXPECT_NE(serialized.find("\"portfolioBacktestSetupSelections\""),
-            std::string::npos);
-  EXPECT_NE(serialized.find("\"setup\":1"), std::string::npos);
-  EXPECT_EQ(serialized.find("\"portfolioBacktestSelections\""),
-            std::string::npos);
-
-  auto input = std::stringstream{serialized};
-  const auto loaded = load_application_state_json(input);
-  EXPECT_EQ(loaded.selected_portfolio_backtest_setup(), selected);
+  const auto watchlist = *state.add_watchlist(pludux::backtest::Watchlist{"List", {asset}});
+  state.add_model(pludux::backtest::Model{});
+  state.add_profile(pludux::backtest::Profile{});
+  const auto strategy = add_strategy(state, "Strategy");
+  auto value = state.get_strategy(strategy);
+  value.model_handle(state.get_model_handles().front());
+  value.profile_handle(state.get_profile_handles().front());
+  ASSERT_TRUE(state.update_strategy(strategy, std::move(value)));
+  const auto system = *state.add_system(pludux::backtest::System{"System", watchlist, {}, strategy});
+  const auto portfolio = *state.add_portfolio(Portfolio{"Portfolio", 1'000.0, {}, {}, 10, 10, {}, {system}});
+  const auto selected = pludux::apps::PortfolioStrategyKey{{system, asset}, 0};
+  ASSERT_TRUE(state.select_portfolio_strategy(portfolio, selected));
+  auto stream = std::stringstream{};
+  pludux::apps::save_application_state_json(stream, state);
+  const auto serialized = stream.str();
+  EXPECT_NE(serialized.find("\"portfolioStrategySelections\""), std::string::npos);
+  EXPECT_NE(serialized.find("\"strategy\":0"), std::string::npos);
+  EXPECT_EQ(serialized.find("portfolioStrategySetupSelections"), std::string::npos);
+  const auto loaded = pludux::apps::load_application_state_json(stream);
+  EXPECT_EQ(loaded.selected_portfolio_strategy(), selected);
 }
 
-TEST(ApplicationStateSerialization, RejectsLegacyPortfolioBacktestSelections)
+TEST(ApplicationStateSerialization, RejectsLegacyPortfolioStrategySelections)
 {
-  auto output = std::stringstream{};
-  save_application_state_json(output, ApplicationState{});
-  auto serialized = output.str();
-  const auto field = serialized.find("portfolioBacktestSetupSelections");
-  ASSERT_NE(field, std::string::npos);
-  serialized.replace(field,
-                     std::string{"portfolioBacktestSetupSelections"}.size(),
-                     "portfolioBacktestSelections");
-
-  auto input = std::stringstream{serialized};
-  EXPECT_THROW(load_application_state_json(input), std::exception);
+  auto stream = std::stringstream{};
+  pludux::apps::save_application_state_json(stream, ApplicationState{});
+  auto json = stream.str();
+  const auto key = json.find("portfolioStrategySelections");
+  ASSERT_NE(key, std::string::npos);
+  json.replace(key, std::string{"portfolioStrategySelections"}.size(), "portfolioStrategySetupSelections");
+  auto input = std::stringstream{json};
+  EXPECT_THROW(pludux::apps::load_application_state_json(input), std::exception);
 }
 
-TEST(ApplicationStateSerialization, RoundTripsOrderedBacktestSetups)
+TEST(ApplicationStateSerialization, RoundTripsOrderedSystemStrategies)
 {
   auto state = ApplicationState{};
-  const auto performance = pludux::backtest::StrategyPerformanceConfig{
-   pludux::backtest::StrategyPerformanceHistoryPolicy{
-    pludux::backtest::StrategyPerformanceHistoryMode::RollingWindow, 25, 0.99}};
-  const auto main =
-   BacktestSetup{pludux::backtest::StrategyStoreHandle{1, 1},
-                 pludux::backtest::ProfileStoreHandle{2, 1},
-                 {},
-                 pludux::ErasedNode<pludux::backtest::EntryFilterMethodContext>{
-                  pludux::FalseNode{}}};
-  const auto failsafe = pludux::backtest::BacktestFailsafeSetup{
-   BacktestSetup{pludux::backtest::StrategyStoreHandle{3, 1},
-                 pludux::backtest::ProfileStoreHandle{4, 1}},
-   pludux::backtest::FailsafeActivation::PreviousSetupEntryFilteredPosition};
-  ASSERT_TRUE(state.add_backtest(
-   Backtest{"Ordered",
-            {},
-            performance,
-            main,
-            std::vector<pludux::backtest::BacktestFailsafeSetup>{failsafe}}));
+  state.add_strategy(pludux::backtest::Strategy{"Main"});
+  state.add_strategy(pludux::backtest::Strategy{"Failsafe"});
+  const auto main = state.get_strategy_handles()[0];
+  const auto failsafe = state.get_strategy_handles()[1];
+  const auto performance = pludux::backtest::ModelPerformanceConfig{
+   pludux::backtest::ModelPerformanceHistoryPolicy{
+    pludux::backtest::ModelPerformanceHistoryMode::RollingWindow, 25, 0.99}};
+  ASSERT_TRUE(state.add_system(pludux::backtest::System{
+   "Ordered", {}, performance, main,
+   {{failsafe, pludux::backtest::FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition}}}));
   auto stream = std::stringstream{};
+  pludux::apps::save_application_state_json(stream, state);
+  const auto json = stream.str();
+  EXPECT_NE(json.find("\"mainStrategy\""), std::string::npos);
+  EXPECT_NE(json.find("\"failsafeStrategies\""), std::string::npos);
+  EXPECT_NE(json.find("PREVIOUS_STRATEGY_ENTRY_FILTERED_POSITION"), std::string::npos);
+  const auto loaded = pludux::apps::load_application_state_json(stream);
+  const auto& system = loaded.get_system(loaded.get_system_handles().front());
+  EXPECT_EQ(system.main_strategy_handle(), main);
+  EXPECT_EQ(system.failsafe_strategies().front().strategy_handle(), failsafe);
+  EXPECT_EQ(system.model_performance(), performance);
+}
 
-  save_application_state_json(stream, state);
-
-  const auto serialized = stream.str();
-  EXPECT_NE(serialized.find("\"mainSetup\""), std::string::npos);
-  EXPECT_NE(serialized.find("\"failsafeSetups\""), std::string::npos);
-  EXPECT_NE(serialized.find("\"entryFilter\""), std::string::npos);
-  EXPECT_EQ(serialized.find("\"executionFilter\""), std::string::npos);
-  EXPECT_NE(serialized.find("\"PREVIOUS_SETUP_ENTRY_FILTERED_POSITION\""),
-            std::string::npos);
-  const auto performance_key = serialized.find("\"strategyPerformance\"");
-  ASSERT_NE(performance_key, std::string::npos);
-  EXPECT_EQ(serialized.find("\"strategyPerformance\"", performance_key + 1),
-            std::string::npos);
-  auto input = std::stringstream{serialized};
-  const auto loaded = load_application_state_json(input);
-  const auto& backtest =
-   loaded.get_backtest(loaded.get_backtest_handles().front());
-  EXPECT_EQ(backtest.main_setup(), main);
-  EXPECT_EQ(backtest.failsafe_setups(),
-            (std::vector<pludux::backtest::BacktestFailsafeSetup>{failsafe}));
-  EXPECT_EQ(backtest.strategy_performance(), performance);
+TEST(ApplicationStateSerialization, RejectsMissingRequiredSystemFields)
+{
+  auto state = ApplicationState{};
+  ASSERT_TRUE(state.add_system(pludux::backtest::System{}));
+  auto stream = std::stringstream{};
+  pludux::apps::save_application_state_json(stream, state);
+  auto json = stream.str();
+  const auto key = json.find("\"mainStrategy\"");
+  ASSERT_NE(key, std::string::npos);
+  json.replace(key, std::string{"\"mainStrategy\""}.size(), "\"removedMainStrategy\"");
+  auto input = std::stringstream{json};
+  EXPECT_THROW(pludux::apps::load_application_state_json(input), std::exception);
 }
 
 TEST(ApplicationStateSerialization, RejectsFailsafeWithoutActivation)
 {
   auto state = ApplicationState{};
-  auto backtest = Backtest{};
-  backtest.failsafe_setups().emplace_back(BacktestSetup{});
-  ASSERT_TRUE(state.add_backtest(std::move(backtest)));
+  ASSERT_TRUE(state.add_system(pludux::backtest::System{"", {}, {}, {}, {{}}}));
   auto stream = std::stringstream{};
-  save_application_state_json(stream, state);
-  auto serialized = stream.str();
-
-  const auto activation = serialized.find("\"activation\"");
-  ASSERT_NE(activation, std::string::npos);
-  serialized.replace(
-   activation, std::string{"\"activation\""}.size(), "\"removedActivation\"");
-  auto input = std::stringstream{serialized};
-
-  EXPECT_THROW(load_application_state_json(input), std::exception);
-}
-
-TEST(ApplicationStateSerialization,
-     RejectsPreviousPerSetupStrategyPerformanceShape)
-{
-  auto state = ApplicationState{};
-  ASSERT_TRUE(state.add_backtest(Backtest{}));
-  auto stream = std::stringstream{};
-  save_application_state_json(stream, state);
-  auto serialized = stream.str();
-
-  const auto root_key = serialized.find("\"strategyPerformance\"");
-  ASSERT_NE(root_key, std::string::npos);
-  serialized.replace(root_key,
-                     std::string{"\"strategyPerformance\""}.size(),
-                     "\"legacyStrategyPerformance\"");
-  const auto main_setup = serialized.find("\"mainSetup\":{");
-  ASSERT_NE(main_setup, std::string::npos);
-  serialized.insert(main_setup + std::string{"\"mainSetup\":{"}.size(),
-                    "\"strategyPerformance\":{},");
-  auto input = std::stringstream{serialized};
-
-  EXPECT_THROW(load_application_state_json(input), std::exception);
-}
-
-TEST(ApplicationStateSerialization, RejectsMissingRequiredBacktestSetupFields)
-{
-  auto state = ApplicationState{};
-  ASSERT_TRUE(state.add_backtest(Backtest{}));
-  auto stream = std::stringstream{};
-  save_application_state_json(stream, state);
-  auto serialized = stream.str();
-  const auto key = serialized.find("\"mainSetup\"");
+  pludux::apps::save_application_state_json(stream, state);
+  auto json = stream.str();
+  const auto key = json.find("\"activation\"");
   ASSERT_NE(key, std::string::npos);
-  serialized.replace(
-   key, std::string{"\"mainSetup\""}.size(), "\"removedMainSetup\"");
-  auto input = std::stringstream{serialized};
-
-  EXPECT_THROW(load_application_state_json(input), std::exception);
+  json.replace(key, std::string{"\"activation\""}.size(), "\"removedActivation\"");
+  auto input = std::stringstream{json};
+  EXPECT_THROW(pludux::apps::load_application_state_json(input), std::exception);
 }
 
-TEST(ApplicationStateSerialization, RejectsSetupWithoutEntryFilter)
+TEST(CommandHistory, StandaloneStrategyCrudAndReorderAreUndoable)
 {
-  auto state = ApplicationState{};
-  ASSERT_TRUE(state.add_backtest(Backtest{}));
-  auto stream = std::stringstream{};
-  save_application_state_json(stream, state);
-  auto serialized = stream.str();
-  const auto key = serialized.find("\"entryFilter\"");
-  ASSERT_NE(key, std::string::npos);
-  serialized.replace(
-   key, std::string{"\"entryFilter\""}.size(), "\"executionFilter\"");
-  auto input = std::stringstream{serialized};
+  auto state = pludux::apps::ApplicationState{};
+  auto executor = pludux::apps::CommandExecutor{};
+  executor.push(pludux::apps::EditCommand{"Add Strategy", [](auto& candidate) {
+    candidate.add_strategy(pludux::backtest::Strategy{"First"});
+    candidate.add_strategy(pludux::backtest::Strategy{"Second"});
+  }, std::nullopt});
+  EXPECT_EQ(executor.execute(state), pludux::apps::ExecutionEffect::DocumentChanged);
+  ASSERT_EQ(state.get_strategy_handles().size(), 2U);
+  const auto first = state.get_strategy_handles().front();
 
-  EXPECT_THROW(load_application_state_json(input), std::exception);
+  executor.push(pludux::apps::EditCommand{"Move Strategy Down", [](auto& candidate) {
+    candidate.reorder_list_strategy(0, 1);
+  }, std::nullopt});
+  EXPECT_EQ(executor.execute(state), pludux::apps::ExecutionEffect::DocumentChanged);
+  EXPECT_EQ(state.get_strategy_handles().back(), first);
+
+  executor.push(pludux::apps::UndoCommand{});
+  EXPECT_EQ(executor.execute(state), pludux::apps::ExecutionEffect::DocumentChanged);
+  EXPECT_EQ(state.get_strategy_handles().front(), first);
 }
 
-TEST(ApplicationStateSerialization, RoundTripsMaximumOpenTradesIncludingZero)
+TEST(ApplicationStateSerialization, RoundTripsPortfolioLimitsIncludingZero)
 {
   auto state = ApplicationState{};
   auto portfolio = Portfolio{};
   portfolio.maximum_open_trades(0);
-  ASSERT_TRUE(state.add_portfolio(std::move(portfolio)));
-  auto stream = std::stringstream{};
-
-  save_application_state_json(stream, state);
-
-  const auto serialized = stream.str();
-  EXPECT_NE(serialized.find("\"maximumOpenTrades\":0"), std::string::npos);
-  auto input = std::stringstream{serialized};
-  const auto loaded = load_application_state_json(input);
-  ASSERT_EQ(loaded.get_portfolio_handles().size(), 1U);
-  EXPECT_EQ(loaded.get_portfolio(loaded.get_portfolio_handles().front())
-             .maximum_open_trades(),
-            0);
-}
-
-TEST(ApplicationStateSerialization, RejectsMissingMaximumOpenTrades)
-{
-  auto state = ApplicationState{};
-  ASSERT_TRUE(state.add_portfolio(Portfolio{}));
-  auto stream = std::stringstream{};
-  save_application_state_json(stream, state);
-  auto serialized = stream.str();
-  const auto key = serialized.find("\"maximumOpenTrades\"");
-  ASSERT_NE(key, std::string::npos);
-  serialized.replace(key,
-                     std::string{"\"maximumOpenTrades\""}.size(),
-                     "\"removedMaximumOpenTrades\"");
-  auto input = std::stringstream{serialized};
-
-  EXPECT_THROW(load_application_state_json(input), std::exception);
-}
-
-TEST(ApplicationStateSerialization,
-     RoundTripsMaximumCombinedLayersIncludingZero)
-{
-  auto state = ApplicationState{};
-  auto portfolio = Portfolio{};
   portfolio.maximum_combined_layers(0);
   ASSERT_TRUE(state.add_portfolio(std::move(portfolio)));
   auto stream = std::stringstream{};
-
-  save_application_state_json(stream, state);
-
-  const auto serialized = stream.str();
-  EXPECT_NE(serialized.find("\"maximumCombinedLayers\":0"), std::string::npos);
-  auto input = std::stringstream{serialized};
-  const auto loaded = load_application_state_json(input);
-  ASSERT_EQ(loaded.get_portfolio_handles().size(), 1U);
-  EXPECT_EQ(loaded.get_portfolio(loaded.get_portfolio_handles().front())
-             .maximum_combined_layers(),
-            0);
+  pludux::apps::save_application_state_json(stream, state);
+  const auto json = stream.str();
+  EXPECT_NE(json.find("\"maximumOpenTrades\":0"), std::string::npos);
+  EXPECT_NE(json.find("\"maximumCombinedLayers\":0"), std::string::npos);
+  const auto loaded = pludux::apps::load_application_state_json(stream);
+  const auto& value = loaded.get_portfolio(loaded.get_portfolio_handles().front());
+  EXPECT_EQ(value.maximum_open_trades(), 0);
+  EXPECT_EQ(value.maximum_combined_layers(), 0);
 }
 
-TEST(ApplicationStateSerialization, RejectsMissingMaximumCombinedLayers)
+TEST(ApplicationStateSerialization, RejectsMissingPortfolioLimits)
 {
   auto state = ApplicationState{};
   ASSERT_TRUE(state.add_portfolio(Portfolio{}));
   auto stream = std::stringstream{};
-  save_application_state_json(stream, state);
-  auto serialized = stream.str();
-  const auto key = serialized.find("\"maximumCombinedLayers\"");
-  ASSERT_NE(key, std::string::npos);
-  serialized.replace(key,
-                     std::string{"\"maximumCombinedLayers\""}.size(),
-                     "\"removedMaximumCombinedLayers\"");
-  auto input = std::stringstream{serialized};
-
-  EXPECT_THROW(load_application_state_json(input), std::exception);
+  pludux::apps::save_application_state_json(stream, state);
+  for(const auto* field : {"maximumOpenTrades", "maximumCombinedLayers"}) {
+    auto json = stream.str();
+    const auto key = json.find(field);
+    ASSERT_NE(key, std::string::npos);
+    json.replace(key, std::string{field}.size(), "removed");
+    auto input = std::stringstream{json};
+    EXPECT_THROW(pludux::apps::load_application_state_json(input), std::exception);
+  }
 }
 
-TEST(ApplicationStateSerialization, RoundTripsNotionalEquityReduction)
+TEST(ApplicationStateSerialization, RoundTripsProfileCapitalPolicy)
 {
   auto state = ApplicationState{};
-  auto profile = Profile{};
-  profile.drawdown_adjustment(DrawdownAdjustment{true, 0.10, 0.0, 0.20});
-  profile.insufficient_cash_policy(
-   pludux::backtest::InsufficientCashPolicy::CapToAvailableCash);
+  auto profile = pludux::backtest::Profile{};
+  profile.drawdown_adjustment(pludux::backtest::DrawdownAdjustment{true, 0.10, 0.0, 0.20});
+  profile.insufficient_cash_policy(pludux::backtest::InsufficientCashPolicy::CapToAvailableCash);
   state.add_profile(std::move(profile));
   auto stream = std::stringstream{};
-
-  save_application_state_json(stream, state);
-
-  const auto serialized = stream.str();
-  EXPECT_NE(serialized.find("\"notionalEquityReduction\":0.2"),
-            std::string::npos);
-  EXPECT_EQ(serialized.find("\"entryFilter\""), std::string::npos);
-  EXPECT_EQ(serialized.find("\"executionFilter\""), std::string::npos);
-  auto input = std::stringstream{serialized};
-  const auto loaded = load_application_state_json(input);
-  const auto& loaded_profile =
-   loaded.get_profile(loaded.get_profile_handles().front());
-  const auto& adjustment = loaded_profile.drawdown_adjustment();
-  EXPECT_DOUBLE_EQ(adjustment.notional_equity_reduction(), 0.20);
-  EXPECT_EQ(loaded_profile.insufficient_cash_policy(),
-            pludux::backtest::InsufficientCashPolicy::CapToAvailableCash);
+  pludux::apps::save_application_state_json(stream, state);
+  const auto json = stream.str();
+  EXPECT_NE(json.find("\"notionalEquityReduction\":0.2"), std::string::npos);
+  EXPECT_EQ(json.find("\"executionFilter\""), std::string::npos);
+  const auto loaded = pludux::apps::load_application_state_json(stream);
+  const auto& loaded_profile = loaded.get_profile(loaded.get_profile_handles().front());
+  EXPECT_DOUBLE_EQ(loaded_profile.drawdown_adjustment().notional_equity_reduction(), 0.20);
+  EXPECT_EQ(loaded_profile.insufficient_cash_policy(), pludux::backtest::InsufficientCashPolicy::CapToAvailableCash);
 }
 
-TEST(ApplicationStateSerialization, RejectsMissingNotionalEquityReduction)
+TEST(ApplicationStateSerialization, RejectsMissingProfileCapitalFieldsAndLegacyFilter)
 {
   auto state = ApplicationState{};
-  state.add_profile(Profile{});
+  state.add_profile(pludux::backtest::Profile{});
   auto stream = std::stringstream{};
-  save_application_state_json(stream, state);
-  auto serialized = stream.str();
-  const auto key = serialized.find("\"notionalEquityReduction\"");
+  pludux::apps::save_application_state_json(stream, state);
+  for(const auto* field : {"notionalEquityReduction", "insufficientCashPolicy"}) {
+    auto json = stream.str();
+    const auto key = json.find(field);
+    ASSERT_NE(key, std::string::npos);
+    json.replace(key, std::string{field}.size(), "removed");
+    auto input = std::stringstream{json};
+    EXPECT_THROW(pludux::apps::load_application_state_json(input), std::exception);
+  }
+  auto json = stream.str();
+  const auto key = json.find("\"positionSizing\"");
   ASSERT_NE(key, std::string::npos);
-  serialized.replace(key,
-                     std::string{"\"notionalEquityReduction\""}.size(),
-                     "\"removedNotionalEquityReduction\"");
-  auto input = std::stringstream{serialized};
-
-  EXPECT_THROW(load_application_state_json(input), std::exception);
+  json.insert(key, "\"executionFilter\":{\"method\":\"ALWAYS\"},");
+  auto input = std::stringstream{json};
+  EXPECT_THROW(pludux::apps::load_application_state_json(input), std::exception);
 }
 
-TEST(ApplicationStateSerialization, RejectsLegacyProfileFilterField)
-{
-  auto state = ApplicationState{};
-  state.add_profile(Profile{});
-  auto stream = std::stringstream{};
-  save_application_state_json(stream, state);
-  auto serialized = stream.str();
-  const auto key = serialized.find("\"positionSizing\"");
-  ASSERT_NE(key, std::string::npos);
-  serialized.insert(key, "\"executionFilter\":{\"method\":\"ALWAYS\"},");
-  auto input = std::stringstream{serialized};
-
-  EXPECT_THROW(load_application_state_json(input), std::exception);
-}
-
-TEST(ApplicationStateSerialization, RejectsMissingProfileCashPolicy)
-{
-  auto state = ApplicationState{};
-  state.add_profile(Profile{});
-  auto stream = std::stringstream{};
-  save_application_state_json(stream, state);
-  auto serialized = stream.str();
-  const auto key = serialized.find("\"insufficientCashPolicy\"");
-  ASSERT_NE(key, std::string::npos);
-  serialized.replace(key,
-                     std::string{"\"insufficientCashPolicy\""}.size(),
-                     "\"removedInsufficientCashPolicy\"");
-  auto input = std::stringstream{serialized};
-
-  EXPECT_THROW(load_application_state_json(input), std::exception);
-}
-
-TEST(ApplicationStateSerialization, OmitsCapitalProtectionFromPortfolio)
+TEST(ApplicationStateSerialization, OmitsProfileCapitalProtectionFromPortfolio)
 {
   auto state = ApplicationState{};
   ASSERT_TRUE(state.add_portfolio(Portfolio{}));
   auto stream = std::stringstream{};
+  pludux::apps::save_application_state_json(stream, state);
 
-  save_application_state_json(stream, state);
-
-  const auto serialized = stream.str();
-  EXPECT_EQ(serialized.find("\"drawdownAdjustment\""), std::string::npos);
-  EXPECT_EQ(serialized.find("\"insufficientCashPolicy\""), std::string::npos);
+  const auto json = stream.str();
+  EXPECT_EQ(json.find("\"drawdownAdjustment\""), std::string::npos);
+  EXPECT_EQ(json.find("\"insufficientCashPolicy\""), std::string::npos);
 }
 
-TEST(ApplicationStateSerialization, RoundTripsOrderedEntryComparators)
+TEST(ApplicationStateSerialization, RoundTripsOrderedPortfolioEntryComparators)
 {
   auto state = ApplicationState{};
-  auto portfolio = Portfolio{};
-  portfolio.entry_comparators(
-   {PortfolioEntryComparator{
-     pludux::MultiplyNode{
-      pludux::backtest::RequestedOrderDirectionNode{},
-      pludux::DivideNode{
-       pludux::SubtractNode{pludux::backtest::RequestedOrderPriceNode{},
-                            pludux::LookbackNode{pludux::CloseNode{}, 63}},
-       pludux::backtest::RequestedOrderRiskDistanceNode{}}},
-     PortfolioEntryComparatorOrder::HigherFirst},
-    PortfolioEntryComparator{
-     pludux::DivideNode{pludux::backtest::RequestedRiskWithFeesNode{},
+  const auto comparators = std::vector<pludux::backtest::PortfolioEntryComparator>{
+   {pludux::MultiplyNode{
+     pludux::backtest::RequestedOrderDirectionNode{},
+     pludux::DivideNode{
+      pludux::SubtractNode{pludux::backtest::RequestedOrderPriceNode{},
+                           pludux::LookbackNode{pludux::CloseNode{}, 63}},
+      pludux::backtest::RequestedOrderRiskDistanceNode{}}},
+    pludux::backtest::PortfolioEntryComparatorOrder::HigherFirst},
+   {pludux::DivideNode{pludux::backtest::RequestedRiskWithFeesNode{},
                         pludux::ValueNode{2.0}},
-     PortfolioEntryComparatorOrder::LowerFirst}});
+    pludux::backtest::PortfolioEntryComparatorOrder::LowerFirst}};
+  auto portfolio = Portfolio{};
+  portfolio.entry_comparators(comparators);
   ASSERT_TRUE(state.add_portfolio(std::move(portfolio)));
   auto stream = std::stringstream{};
+  pludux::apps::save_application_state_json(stream, state);
 
-  save_application_state_json(stream, state);
+  const auto json = stream.str();
+  EXPECT_NE(json.find("\"entryComparators\""), std::string::npos);
+  EXPECT_NE(json.find("\"HIGHER_FIRST\""), std::string::npos);
+  EXPECT_NE(json.find("\"LOWER_FIRST\""), std::string::npos);
+  EXPECT_NE(json.find("\"LOOKBACK\""), std::string::npos);
+  EXPECT_NE(json.find("\"CLOSE\""), std::string::npos);
+  EXPECT_NE(json.find("\"REQUESTED_RISK_WITH_FEES\""), std::string::npos);
 
-  const auto serialized = stream.str();
-  EXPECT_NE(serialized.find("\"entryComparators\""), std::string::npos);
-  EXPECT_NE(serialized.find("\"HIGHER_FIRST\""), std::string::npos);
-  EXPECT_NE(serialized.find("\"LOWER_FIRST\""), std::string::npos);
-  EXPECT_NE(serialized.find("\"LOOKBACK\""), std::string::npos);
-  EXPECT_NE(serialized.find("\"CLOSE\""), std::string::npos);
-  EXPECT_NE(serialized.find("\"REQUESTED_RISK_WITH_FEES\""), std::string::npos);
-  auto input = std::stringstream{serialized};
-  const auto loaded = load_application_state_json(input);
+  const auto loaded = pludux::apps::load_application_state_json(stream);
   const auto& loaded_portfolio =
    loaded.get_portfolio(loaded.get_portfolio_handles().front());
-  ASSERT_EQ(loaded_portfolio.entry_comparators().size(), 2U);
-  EXPECT_EQ(loaded_portfolio.entry_comparators()[0].order(),
-            PortfolioEntryComparatorOrder::HigherFirst);
-  EXPECT_EQ(loaded_portfolio.entry_comparators()[1].order(),
-            PortfolioEntryComparatorOrder::LowerFirst);
+  EXPECT_EQ(loaded_portfolio.entry_comparators(), comparators);
 }
 
-TEST(ApplicationStateSerialization, RejectsNamedSeriesInEntryComparator)
+TEST(ApplicationStateSerialization, RejectsMalformedPortfolioEntryComparator)
 {
   auto state = ApplicationState{};
   auto portfolio = Portfolio{};
   portfolio.entry_comparators(
-   {PortfolioEntryComparator{pludux::backtest::RequestedOrderPriceNode{},
-                             PortfolioEntryComparatorOrder::HigherFirst}});
+   {{pludux::backtest::RequestedOrderPriceNode{},
+     pludux::backtest::PortfolioEntryComparatorOrder::HigherFirst}});
   ASSERT_TRUE(state.add_portfolio(std::move(portfolio)));
   auto stream = std::stringstream{};
-  save_application_state_json(stream, state);
-  auto serialized = stream.str();
-  const auto method = serialized.find("REQUESTED_ORDER_PRICE");
+  pludux::apps::save_application_state_json(stream, state);
+  auto json = stream.str();
+  const auto method = json.find("REQUESTED_ORDER_PRICE");
   ASSERT_NE(method, std::string::npos);
-  serialized.replace(
-   method, std::string{"REQUESTED_ORDER_PRICE"}.size(), "SERIES");
-  auto input = std::stringstream{serialized};
+  json.replace(method, std::string{"REQUESTED_ORDER_PRICE"}.size(), "SERIES");
 
-  EXPECT_THROW(load_application_state_json(input), std::exception);
+  auto input = std::stringstream{json};
+  EXPECT_THROW(pludux::apps::load_application_state_json(input), std::exception);
 }
 
-TEST(ApplicationStateSerialization, RejectsMissingEntryComparators)
+TEST(ApplicationStateSerialization, RejectsMissingPortfolioEntryComparators)
 {
   auto state = ApplicationState{};
   ASSERT_TRUE(state.add_portfolio(Portfolio{}));
   auto stream = std::stringstream{};
-  save_application_state_json(stream, state);
-  auto serialized = stream.str();
-  const auto key = serialized.find("\"entryComparators\"");
+  pludux::apps::save_application_state_json(stream, state);
+  auto json = stream.str();
+  const auto key = json.find("\"entryComparators\"");
   ASSERT_NE(key, std::string::npos);
-  serialized.replace(key,
-                     std::string{"\"entryComparators\""}.size(),
-                     "\"removedEntryComparators\"");
-  auto input = std::stringstream{serialized};
+  json.replace(key, std::string{"\"entryComparators\""}.size(),
+               "\"removedEntryComparators\"");
 
-  EXPECT_THROW(load_application_state_json(input), std::exception);
+  auto input = std::stringstream{json};
+  EXPECT_THROW(pludux::apps::load_application_state_json(input), std::exception);
 }
 
 TEST(ApplicationStateSerialization, RejectsRemovedUiStateSchema)
 {
   auto stream = std::stringstream{};
-  save_application_state_json(stream, ApplicationState{});
-  auto serialized = stream.str();
-  const auto key = serialized.find("\"documentState\"");
+  pludux::apps::save_application_state_json(stream, ApplicationState{});
+  auto json = stream.str();
+  const auto key = json.find("\"documentState\"");
   ASSERT_NE(key, std::string::npos);
-  serialized.replace(
-   key, std::string{"\"documentState\""}.size(), "\"uiState\"");
-  auto legacy = std::stringstream{serialized};
-  EXPECT_THROW(load_application_state_json(legacy), std::exception);
+  json.replace(key, std::string{"\"documentState\""}.size(), "\"uiState\"");
+  auto input = std::stringstream{json};
+  EXPECT_THROW(pludux::apps::load_application_state_json(input), std::exception);
 }
 
 TEST(ApplicationStateSerialization, UsesFixedBudgetWithoutLegacyAlias)
 {
   auto state = ApplicationState{};
-  state.add_profile(
-   Profile{"Budget", PositionSizingNode{FixedBudgetPositionSizing{750.0}}});
+  state.add_profile(pludux::backtest::Profile{
+   "Budget", pludux::backtest::PositionSizingNode{pludux::backtest::FixedBudgetPositionSizing{750.0}}});
   auto stream = std::stringstream{};
-  save_application_state_json(stream, state);
-  const auto serialized = stream.str();
-  EXPECT_NE(serialized.find("\"FIXED_BUDGET\""), std::string::npos);
-  EXPECT_NE(serialized.find("\"budget\":750.0"), std::string::npos);
-  EXPECT_EQ(serialized.find("FIXED_NOTIONAL"), std::string::npos);
-
-  auto input = std::stringstream{serialized};
-  const auto loaded = load_application_state_json(input);
-  ASSERT_EQ(loaded.get_profile_handles().size(), 1U);
-  const auto profile = loaded.get_profile(loaded.get_profile_handles().front());
-  const auto* budget = position_sizing_node_cast<FixedBudgetPositionSizing>(
-   profile.position_sizing());
+  pludux::apps::save_application_state_json(stream, state);
+  const auto json = stream.str();
+  EXPECT_NE(json.find("\"FIXED_BUDGET\""), std::string::npos);
+  EXPECT_NE(json.find("\"budget\":750.0"), std::string::npos);
+  EXPECT_EQ(json.find("FIXED_NOTIONAL"), std::string::npos);
+  const auto loaded = pludux::apps::load_application_state_json(stream);
+  const auto* budget = position_sizing_node_cast<pludux::backtest::FixedBudgetPositionSizing>(
+   loaded.get_profile(loaded.get_profile_handles().front()).position_sizing());
   ASSERT_NE(budget, nullptr);
   EXPECT_DOUBLE_EQ(budget->budget(), 750.0);
 
-  auto legacy_json = serialized;
+  auto legacy_json = json;
   const auto method = legacy_json.find("FIXED_BUDGET");
   ASSERT_NE(method, std::string::npos);
-  legacy_json.replace(
-   method, std::string{"FIXED_BUDGET"}.size(), "FIXED_NOTIONAL");
+  legacy_json.replace(method, std::string{"FIXED_BUDGET"}.size(), "FIXED_NOTIONAL");
   auto legacy = std::stringstream{legacy_json};
-  EXPECT_THROW(load_application_state_json(legacy), std::exception);
+  EXPECT_THROW(pludux::apps::load_application_state_json(legacy), std::exception);
 }
 
 } // namespace

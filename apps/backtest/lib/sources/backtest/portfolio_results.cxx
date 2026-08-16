@@ -15,7 +15,7 @@ import :store_handle;
 export namespace pludux::backtest {
 
 struct BacktestRunKey {
-  BacktestStoreHandle backtest_handle;
+  SystemStoreHandle system_handle;
   AssetStoreHandle asset_handle;
 
   auto operator==(const BacktestRunKey&) const noexcept -> bool = default;
@@ -25,34 +25,32 @@ class BacktestResults {
 public:
   BacktestResults() = default;
 
-  BacktestResults(BacktestStoreHandle backtest_handle,
+  BacktestResults(SystemStoreHandle system_handle,
                   AssetStoreHandle asset_handle,
                   BacktestTimeline timeline = {},
-                  std::size_t setup_count = 1)
-  : backtest_handle_{backtest_handle}
+                   std::size_t strategy_count = 1)
+  : system_handle_{system_handle}
   , asset_handle_{asset_handle}
   , timeline_{std::move(timeline)}
-  , setup_series_results_(setup_count)
+   , strategy_series_results_(strategy_count)
   {
   }
 
   auto operator==(this const BacktestResults& self,
                   const BacktestResults& other) noexcept -> bool
   {
-    return self.backtest_handle_.slot_index() ==
-            other.backtest_handle_.slot_index() &&
-           self.backtest_handle_.generation() ==
-            other.backtest_handle_.generation() &&
+    return self.system_handle_.slot_index() == other.system_handle_.slot_index() &&
+            self.system_handle_.generation() == other.system_handle_.generation() &&
            self.asset_handle_ == other.asset_handle_ &&
            self.timeline_.size() == other.timeline_.size() &&
-           self.setup_series_results_.size() ==
-            other.setup_series_results_.size();
+            self.strategy_series_results_.size() ==
+             other.strategy_series_results_.size();
   }
 
-  auto backtest_handle(this const BacktestResults& self) noexcept
-   -> BacktestStoreHandle
+  auto system_handle(this const BacktestResults& self) noexcept
+     -> SystemStoreHandle
   {
-    return self.backtest_handle_;
+    return self.system_handle_;
   }
 
   auto asset_handle(this const BacktestResults& self) noexcept
@@ -63,7 +61,7 @@ public:
 
   auto key(this const BacktestResults& self) noexcept -> BacktestRunKey
   {
-    return {self.backtest_handle_, self.asset_handle_};
+    return {self.system_handle_, self.asset_handle_};
   }
 
   auto timeline(this const BacktestResults& self) noexcept
@@ -77,35 +75,36 @@ public:
     return self.timeline_;
   }
 
-  auto series_results(this const BacktestResults& self, std::size_t setup_index)
+  auto series_results(this const BacktestResults& self,
+                      std::size_t strategy_index)
    -> const SeriesEvaluationResults&
   {
-    return self.setup_series_results_.at(setup_index);
+    return self.strategy_series_results_.at(strategy_index);
   }
 
-  auto series_results(this BacktestResults& self, std::size_t setup_index)
+  auto series_results(this BacktestResults& self, std::size_t strategy_index)
    -> SeriesEvaluationResults&
   {
-    return self.setup_series_results_.at(setup_index);
+    return self.strategy_series_results_.at(strategy_index);
   }
 
-  auto setup_series_results(this BacktestResults& self) noexcept
+  auto strategy_series_results(this BacktestResults& self) noexcept
    -> std::vector<SeriesEvaluationResults>&
   {
-    return self.setup_series_results_;
+    return self.strategy_series_results_;
   }
 
-  auto setup_series_results(this const BacktestResults& self) noexcept
+  auto strategy_series_results(this const BacktestResults& self) noexcept
    -> const std::vector<SeriesEvaluationResults>&
   {
-    return self.setup_series_results_;
+    return self.strategy_series_results_;
   }
 
 private:
-  BacktestStoreHandle backtest_handle_;
+  SystemStoreHandle system_handle_;
   AssetStoreHandle asset_handle_;
   BacktestTimeline timeline_;
-  std::vector<SeriesEvaluationResults> setup_series_results_;
+  std::vector<SeriesEvaluationResults> strategy_series_results_;
 };
 
 class PortfolioResults {

@@ -67,7 +67,7 @@ private:
   {
     const auto& app_state = context.app_state();
     const auto& profile_handles = app_state.get_profile_handles();
-    const auto backtest_ptr = app_state.selected_backtest_if_present();
+    const auto system_ptr = app_state.selected_system_if_present();
 
     ImGui::BeginGroup();
     if(ImGui::Button(PLUDUX_ICON_ADD " New Profile")) {
@@ -93,8 +93,17 @@ private:
       ImGui::PushID(i);
 
       {
-        const auto selected =
-         backtest_ptr && backtest_ptr->references_profile(profile_handle);
+        const auto selected = system_ptr && [&] {
+          for(auto strategy_index = std::size_t{};
+              strategy_index < system_ptr->strategy_count(); ++strategy_index) {
+            const auto* strategy = app_state.get_strategy_if_present(
+             system_ptr->strategy_handle(strategy_index));
+            if(strategy && strategy->references_profile(profile_handle)) {
+              return true;
+            }
+          }
+          return false;
+        }();
         const auto has_draft =
          self.selected_profile_handle_opt_ == profile_handle &&
          self.editing_profile_ptr_ && *self.editing_profile_ptr_ != profile;
@@ -258,7 +267,7 @@ private:
         case SizingKind::EquityFraction:
           return "Equity Fraction";
         case SizingKind::BayesianKelly:
-          return "Bayesian Kelly (Strategy Performance)";
+          return "Bayesian Kelly (Model Performance)";
         }
         return "Risk Distance";
       };
@@ -276,7 +285,7 @@ private:
                  backtest::EquityFractionPositionSizing>(position_sizing)) {
         kind = SizingKind::EquityFraction;
       } else if(position_sizing_node_cast<
-                 backtest::StrategyPerformanceBayesianKellySizing>(
+                  backtest::ModelPerformanceBayesianKellySizing>(
                  position_sizing)) {
         kind = SizingKind::BayesianKelly;
       }
@@ -286,7 +295,7 @@ private:
        "Risk Distance limits loss including estimated round-trip fees for a "
        "1R move. Fixed Quantity uses asset units, Fixed Budget limits entry "
        "notional plus fees, Equity Fraction allocates current equity, and "
-       "Bayesian Kelly uses the Bayesian Strategy Performance model.");
+        "Bayesian Kelly uses the Bayesian Model Performance model.");
       if(ImGui::BeginCombo("##position_sizing", kind_label(kind))) {
         for(const auto candidate : kinds) {
           const auto selected = kind == candidate;
@@ -316,7 +325,7 @@ private:
             case SizingKind::BayesianKelly:
               self.editing_profile_ptr_->position_sizing(
                backtest::PositionSizingNode{
-                backtest::StrategyPerformanceBayesianKellySizing{}});
+                 backtest::ModelPerformanceBayesianKellySizing{}});
               break;
             }
           }
@@ -404,7 +413,7 @@ private:
       }
       case SizingKind::BayesianKelly: {
         const auto& value = *position_sizing_node_cast<
-         backtest::StrategyPerformanceBayesianKellySizing>(current);
+          backtest::ModelPerformanceBayesianKellySizing>(current);
         auto estimate = value.estimate();
         ui::field_label(
          "Posterior Estimate",
@@ -413,23 +422,23 @@ private:
          "Mean uses each model's posterior mean.");
         const auto estimate_label =
          estimate ==
-           backtest::StrategyPerformanceBayesianKellyEstimate::PosteriorMean
+            backtest::ModelPerformanceBayesianKellyEstimate::PosteriorMean
           ? "Posterior Mean"
           : "Adverse Quantiles";
         if(ImGui::BeginCombo("##kelly_estimate", estimate_label)) {
           if(ImGui::Selectable(
               "Adverse Quantiles",
-              estimate == backtest::StrategyPerformanceBayesianKellyEstimate::
+               estimate == backtest::ModelPerformanceBayesianKellyEstimate::
                            AdverseQuantiles)) {
-            estimate = backtest::StrategyPerformanceBayesianKellyEstimate::
+             estimate = backtest::ModelPerformanceBayesianKellyEstimate::
              AdverseQuantiles;
           }
           if(ImGui::Selectable(
               "Posterior Mean",
-              estimate == backtest::StrategyPerformanceBayesianKellyEstimate::
+               estimate == backtest::ModelPerformanceBayesianKellyEstimate::
                            PosteriorMean)) {
             estimate =
-             backtest::StrategyPerformanceBayesianKellyEstimate::PosteriorMean;
+              backtest::ModelPerformanceBayesianKellyEstimate::PosteriorMean;
           }
           ImGui::EndCombo();
         }
@@ -460,13 +469,13 @@ private:
                            multiplier >= 0.0 && multiplier <= 1.0 &&
                            std::isfinite(maximum) && maximum > 0.0;
         assign_if(valid,
-                  backtest::StrategyPerformanceBayesianKellySizing{
+                   backtest::ModelPerformanceBayesianKellySizing{
                    estimate,
                    valid ? credible : 0.80,
                    valid ? multiplier : 0.50,
                    valid ? maximum : 1.0});
         ImGui::TextWrapped(
-         "Uses theoretical Strategy Performance: Bayesian win probability, "
+          "Uses theoretical Model Performance: Bayesian win probability, "
          "winning payoff magnitude, and losing payoff magnitude.");
         break;
       }

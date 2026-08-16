@@ -19,7 +19,7 @@ export enum class ConditionNodeCapability {
   Comparison,
   Logical,
   Account,
-  StrategyPerformance,
+   ModelPerformance,
   RequestedOrder
 };
 
@@ -57,7 +57,7 @@ export inline constexpr auto entry_filter_capabilities =
             ConditionNodeCapability::Comparison,
             ConditionNodeCapability::Logical,
             ConditionNodeCapability::Account,
-            ConditionNodeCapability::StrategyPerformance,
+             ConditionNodeCapability::ModelPerformance,
             ConditionNodeCapability::RequestedOrder};
 
 export inline constexpr auto entry_filter_node_catalog =
@@ -88,7 +88,7 @@ enum class ScalarNodeType {
   Equity,
   EquityPercent,
   Drawdown,
-  StrategyPerformance,
+   ModelPerformance,
   RequestedOrderPrice,
   RequestedOrderDirection,
   IsPyramidingOrder,
@@ -126,7 +126,7 @@ inline constexpr auto scalar_node_labels =
             "Account equity",
             "Account equity percentage",
             "Account drawdown",
-            "Strategy performance",
+             "Model performance",
             "Requested order price",
             "Requested order direction",
             "Is pyramiding order",
@@ -215,8 +215,8 @@ auto scalar_node_type(const EntryNode& node) noexcept -> ScalarNodeType
   if(node_cast<DrawdownNode>(node)) {
     return ScalarNodeType::Drawdown;
   }
-  if(node_cast<StrategyPerformanceNode>(node)) {
-    return ScalarNodeType::StrategyPerformance;
+   if(node_cast<ModelPerformanceNode>(node)) {
+     return ScalarNodeType::ModelPerformance;
   }
 #define PLUDUX_ENTRY_FILTER_SCALAR_TYPE(Node, Type) \
   if(node_cast<Node>(node)) {                       \
@@ -294,9 +294,9 @@ auto make_scalar_node(ScalarNodeType type) -> EntryNode
     return EntryNode{EquityPercentNode{}};
   case ScalarNodeType::Drawdown:
     return EntryNode{DrawdownNode{}};
-  case ScalarNodeType::StrategyPerformance:
+   case ScalarNodeType::ModelPerformance:
     return EntryNode{
-     StrategyPerformanceNode{StrategyPerformanceMetric::LifetimeCount}};
+      ModelPerformanceNode{ModelPerformanceMetric::LifetimeCount}};
   case ScalarNodeType::RequestedOrderPrice:
     return EntryNode{RequestedOrderPriceNode{}};
   case ScalarNodeType::RequestedOrderDirection:
@@ -411,8 +411,8 @@ auto render_scalar_node(EntryNode& node, int& next_id) -> bool
     }
     break;
   }
-  case ScalarNodeType::StrategyPerformance: {
-    const auto* performance = node_cast<StrategyPerformanceNode>(node);
+   case ScalarNodeType::ModelPerformance: {
+     const auto* performance = node_cast<ModelPerformanceNode>(node);
     auto metric_index = static_cast<int>(performance->metric());
     const auto metric_changed =
      ImGui::Combo("Metric",
@@ -420,8 +420,8 @@ auto render_scalar_node(EntryNode& node, int& next_id) -> bool
                   performance_metric_labels.data(),
                   static_cast<int>(performance_metric_labels.size()));
     if(metric_changed) {
-      node = EntryNode{StrategyPerformanceNode{
-       static_cast<StrategyPerformanceMetric>(metric_index)}};
+       node = EntryNode{ModelPerformanceNode{
+        static_cast<ModelPerformanceMetric>(metric_index)}};
       changed = true;
     }
     break;

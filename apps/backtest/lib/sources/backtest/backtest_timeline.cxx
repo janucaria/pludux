@@ -13,22 +13,22 @@ export module pludux.backtest:backtest_timeline;
 import :closed_trade;
 import :open_position_snapshot;
 import :position_sizing;
-import :strategy_closed_position;
-import :strategy_intent;
-import :strategy_performance;
-import :strategy_session;
+import :model_closed_position;
+import :model_intent;
+import :model_performance;
+import :model_session;
 import :trade_event;
 
 export namespace pludux::backtest {
 
-struct BacktestSetupTimelineState {
-  std::vector<StrategyIntent> strategy_intents{};
-  std::vector<StrategyClosedPosition> strategy_closed_positions{};
-  std::optional<StrategyOpenPositionSnapshot> strategy_open_position{};
-  StrategyPerformanceSnapshot strategy_performance{};
+struct StrategyTimelineState {
+  std::vector<ModelIntent> model_intents{};
+  std::vector<ModelClosedPosition> model_closed_positions{};
+  std::optional<ModelOpenPositionSnapshot> model_open_position{};
+  ModelPerformanceSnapshot model_performance{};
   bool entry_filtered_position{};
 
-  auto operator==(const BacktestSetupTimelineState&) const noexcept
+  auto operator==(const StrategyTimelineState&) const noexcept
    -> bool = default;
 };
 
@@ -45,7 +45,7 @@ public:
     std::optional<OpenPositionSnapshot> open_position{};
     std::vector<EntryFilterDecision> entry_filter_decisions{};
     std::vector<PositionSizingDecision> position_sizing_decisions{};
-    std::vector<BacktestSetupTimelineState> setup_states{};
+    std::vector<StrategyTimelineState> strategy_states{};
 
     double capital{};
     double equity{};
@@ -92,7 +92,7 @@ public:
     self.open_positions_.clear();
     self.entry_filter_decisions_.clear();
     self.position_sizing_decisions_.clear();
-    self.setup_states_.clear();
+    self.strategy_states_.clear();
     self.capitals_.clear();
     self.equities_.clear();
     self.peak_equities_.clear();
@@ -125,7 +125,7 @@ public:
     self.open_positions_.reserve(size);
     self.entry_filter_decisions_.reserve(size);
     self.position_sizing_decisions_.reserve(size);
-    self.setup_states_.reserve(size);
+    self.strategy_states_.reserve(size);
     self.capitals_.reserve(size);
     self.equities_.reserve(size);
     self.peak_equities_.reserve(size);
@@ -157,7 +157,7 @@ public:
      std::move(row.entry_filter_decisions));
     self.position_sizing_decisions_.push_back(
      std::move(row.position_sizing_decisions));
-    self.setup_states_.push_back(std::move(row.setup_states));
+    self.strategy_states_.push_back(std::move(row.strategy_states));
     self.capitals_.push_back(row.capital);
     self.equities_.push_back(row.equity);
     self.peak_equities_.push_back(row.peak_equity);
@@ -222,17 +222,17 @@ public:
     return self.entry_filter_decisions_[index];
   }
 
-  auto setup_state(this const BacktestTimeline& self,
-                   std::size_t timeline_index,
-                   std::size_t setup_index) -> const BacktestSetupTimelineState&
+  auto strategy_state(this const BacktestTimeline& self,
+                      std::size_t timeline_index,
+                      std::size_t strategy_index) -> const StrategyTimelineState&
   {
-    return self.setup_states_.at(timeline_index).at(setup_index);
+    return self.strategy_states_.at(timeline_index).at(strategy_index);
   }
 
-  auto setup_count(this const BacktestTimeline& self,
-                   std::size_t timeline_index) -> std::size_t
+  auto strategy_count(this const BacktestTimeline& self,
+                      std::size_t timeline_index) -> std::size_t
   {
-    return self.setup_states_.at(timeline_index).size();
+    return self.strategy_states_.at(timeline_index).size();
   }
 
   auto position_sizing_decisions(this const BacktestTimeline& self,
@@ -521,7 +521,7 @@ private:
   std::vector<std::optional<OpenPositionSnapshot>> open_positions_;
   std::vector<std::vector<EntryFilterDecision>> entry_filter_decisions_;
   std::vector<std::vector<PositionSizingDecision>> position_sizing_decisions_;
-  std::vector<std::vector<BacktestSetupTimelineState>> setup_states_;
+  std::vector<std::vector<StrategyTimelineState>> strategy_states_;
 
   std::vector<double> capitals_;
   std::vector<double> equities_;

@@ -22,7 +22,7 @@ import :pyramiding_layer_node;
 import :requested_order_node;
 import :risk_distance_node;
 import :stop_target_price_node;
-import :strategy_performance_node;
+import :model_performance_node;
 
 export namespace pludux::backtest {
 
@@ -938,15 +938,15 @@ static auto parse_entry_filter_child(const jsoncons::ojson& config)
   if(method == "STRATEGY_PERFORMANCE") {
     const auto metric_value = config.at("metric").as<int>();
     if(metric_value <
-        static_cast<int>(StrategyPerformanceMetric::LifetimeCount) ||
+         static_cast<int>(ModelPerformanceMetric::LifetimeCount) ||
        metric_value >
         static_cast<int>(
-         StrategyPerformanceMetric::BayesianLosingPayoffUpper95)) {
+          ModelPerformanceMetric::BayesianLosingPayoffUpper95)) {
       throw std::invalid_argument{
        "EntryFilter strategy-performance metric is invalid"};
     }
-    return {ErasedNode<Context>{StrategyPerformanceNode{
-             static_cast<StrategyPerformanceMetric>(metric_value)}},
+     return {ErasedNode<Context>{ModelPerformanceNode{
+              static_cast<ModelPerformanceMetric>(metric_value)}},
             EntryFilterNodeKind::Scalar};
   }
 
@@ -1093,7 +1093,7 @@ serialize_entry_filter_child(const ErasedNode<EntryFilterMethodContext>& node)
   if(node_cast<DrawdownNode>(node)) {
     return {object("DRAWDOWN"), EntryFilterNodeKind::Scalar};
   }
-  if(const auto* performance = node_cast<StrategyPerformanceNode>(node)) {
+  if(const auto* performance = node_cast<ModelPerformanceNode>(node)) {
     auto config = object("STRATEGY_PERFORMANCE");
     config["metric"] = static_cast<int>(performance->metric());
     return {std::move(config), EntryFilterNodeKind::Scalar};

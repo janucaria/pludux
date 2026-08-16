@@ -8,7 +8,7 @@ export module pludux.apps.backtest:series_node_editor;
 
 import pludux.backtest;
 import :window_context;
-import :windows.strategies_window;
+import :windows.models_window;
 
 export namespace pludux::apps::ui {
 
@@ -45,7 +45,7 @@ public:
 private:
   SeriesNodeCatalog catalog_;
   std::vector<std::string> available_series_names_;
-  StrategiesWindow renderer_;
+  ModelsWindow renderer_;
 };
 
 } // namespace pludux::apps::ui

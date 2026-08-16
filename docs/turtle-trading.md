@@ -26,14 +26,14 @@ currency conversion, expiry, or rollover model.
 
 | Turtle component | Pludux representation | Fidelity |
 | --- | --- | --- |
-| Liquid market universe | Backtest Watchlist selected in advance | Manual |
+| Liquid market universe | System Watchlist selected in advance | Manual |
 | `N`: 20-day Wilder average of True Range | 1R ATR Distance, period 20, multiplier 1, RMA | Close |
 | One Unit has 1N dollar volatility equal to 1% of equity | Profile Risk Distance sizing at 1% equity risk | Close |
-| System 1: 20-day breakout | Main setup Strategy using Donchian 20 | Close on daily bars |
-| Skip System 1 after a winning theoretical breakout | Main Entry Filter using theoretical Strategy Performance | Close |
-| System 2 failsafe: 55-day breakout | Failsafe 1 with persistent filtered-position activation | Close |
+| Turtle System 1: 20-day breakout | Main Strategy using Donchian 20 | Close on daily bars |
+| Skip Turtle System 1 after a winning theoretical breakout | Main Strategy Entry Filter using theoretical Model Performance | Close |
+| Turtle System 2 failsafe: 55-day breakout | Failsafe Strategy binding with persistent filtered-position activation | Close |
 | Add one Unit every 0.5N | Position R-Multiple threshold of 0.5 | Close, one layer per bar |
-| Maximum four Units in one market | Strategy maximum pyramiding layers of 4 | Direct |
+| Maximum four Units in one market | Model maximum pyramiding layers of 4 | Direct |
 | Freeze Unit and N while building a position | Frozen initial executed quantity and risk distance | Direct |
 | Normal stop: 2N from the latest Unit | Stop Loss R-Multiple 2 using Latest Entry Price | Close |
 | System 1 exit: adverse 10-day breakout | Donchian 10 full exit | Close on daily bars |
@@ -47,7 +47,7 @@ currency conversion, expiry, or rollover model.
 configuration. The initial executed layer establishes both the frozen Unit
 quantity and frozen `R` for that open position.
 
-## Configuration Overview
+## Configuration Overview in One Pludux System
 
 Use four configuration levels:
 
@@ -55,25 +55,25 @@ Use four configuration levels:
 Portfolio
 |- Shared capital, Market, and Broker
 |- Portfolio capacity and entry ordering
-`- Backtest
-   |- Watchlist
-   |- Shared Strategy Performance calculation
-   |- Main setup: System 1
-   |  |- System 1 Strategy
-   |  |- Turtle Profile
-   |  `- Previous-breakout Entry Filter
-   `- Failsafe 1: System 2
-      |- Previous setup has an entry-filtered theoretical position
-      |- System 2 Strategy
-      |- Turtle Profile
-      `- Always-allow Entry Filter
+   `- Pludux System
+    |- Watchlist
+    |- Shared Model Performance calculation
+   |- Main Strategy: Turtle System 1
+   |  |- Turtle System 1 Model
+    |  |- Turtle Profile
+    |  `- Previous-breakout Entry Filter
+   `- Failsafe Strategy binding: Turtle System 2
+        |- Previous setup has an entry-filtered theoretical position
+       |- Turtle System 2 Model
+       |- Turtle Profile
+       `- Always-allow Entry Filter
 ```
 
-The Main and Failsafe setups keep independent theoretical positions and
-Strategy Performance histories. They share the Backtest's calculation policy,
+The Main and Failsafe Strategy bindings keep independent theoretical positions
+and Model Performance histories. They share the System's calculation policy,
 but not accumulated runtime state. The Portfolio executes at most one real
-position for each expanded Backtest and Watchlist asset, and records which setup
-owns it.
+position for each expanded Pludux System and Watchlist asset, and records which
+Strategy owns it.
 
 ## 1. Market Data and Watchlist
 
@@ -208,7 +208,7 @@ the current `N` whenever a new initial Requested Order is created. After a real
 initial fill, that `N` and the final executed Unit quantity remain frozen for
 the position.
 
-## 4. System 1 Strategy
+## 4. Turtle System 1 Strategy
 
 ### Entry
 
@@ -240,9 +240,9 @@ The System 1 setup must continue tracking every theoretical breakout even when
 real execution is filtered. Configure its Entry Filter as the equivalent of:
 
 ```text
-Strategy Performance Lifetime Count == 0
+Model Performance Lifetime Count == 0
 OR
-Strategy Performance Current Losing Streak >= 1
+Model Performance Current Losing Streak >= 1
 ```
 
 This allows the first theoretical breakout and allows later breakouts only when
@@ -250,7 +250,7 @@ the most recently completed theoretical System 1 position lost. A winning most
 recent position resets Current Losing Streak to zero, so the next System 1
 Requested Order is entry-filtered.
 
-Use `All History` for the Backtest Strategy Performance history policy. Current
+Use `All History` for the Pludux System Model Performance history policy. Current
 winning and losing streaks are lifetime chronological state in Pludux, so they
 do not decay or roll out under other history modes; `All History` nevertheless
 makes the intent of this configuration clearest.
@@ -276,9 +276,9 @@ Reduce: 100%
 Disable profit targets. Turtle trend exits deliberately allowed substantial
 open profit to be given back in exchange for remaining in large trends.
 
-## 5. System 2 Strategy and Failsafe
+## 5. Turtle System 2 Strategy and Failsafe
 
-Create System 2 with the same risk, stop, and pyramiding rules as System 1, but
+Create Turtle System 2 with the same risk, stop, and pyramiding rules as Turtle System 1, but
 use:
 
 ```text
@@ -287,27 +287,27 @@ Exit channel:  20 bars
 Entry Filter:  Always
 ```
 
-Add it as `Failsafe 1` in the same Backtest and select:
+Add it as `Failsafe 1` in the same System and select:
 
 ```text
 Activation: Previous setup has an entry-filtered theoretical position
 ```
 
-This activation is persistent. When System 1 produces a fresh breakout that is
-rejected by its Entry Filter, System 1 still opens its theoretical position and
-the marker remains active until that theoretical position fully closes. System
-2 may execute during that interval, but only when System 2 produces its own
-fresh 55-day entry signal. An old System 2 shadow position is never converted
+This activation is persistent. When Turtle System 1 produces a fresh breakout that is
+rejected by its Entry Filter, Turtle System 1 still opens its theoretical position and
+the marker remains active until that theoretical position fully closes. Turtle System
+2 may execute during that interval, but only when Turtle System 2 produces its own
+fresh 55-day entry signal. An old Turtle System 2 shadow position is never converted
 into a real position merely because activation changes.
 
-This is the closest Pludux representation of the System 1 failsafe rule. A
-Failsafe is internal to the Backtest; it does not create another Portfolio row
-or another simultaneous real position for that Backtest and asset.
+This is the closest Pludux representation of the Turtle System 1 failsafe rule. A
+Failsafe is internal to the Pludux System; it does not create another Portfolio row
+or another simultaneous real position for that Pludux System and asset.
 
-The original Turtles could also allocate capital to System 2 as an independent
-system rather than only as a System 1 failsafe. To study that behavior, add a
-separate Backtest whose Main setup uses the System 2 Strategy. If System 1 and
-System 2 are intended to split one risk allocation, reduce their Profile risk
+The original Turtles could also allocate capital to Turtle System 2 as an independent
+model rather than only as a Turtle System 1 failsafe. To study that behavior, add a
+separate Pludux System whose Main Strategy uses the Turtle System 2 Model. If Turtle System 1 and
+Turtle System 2 are intended to split one risk allocation, reduce their Profile risk
 fractions accordingly; otherwise each setup can independently request a full
 1% Unit from the same Portfolio equity.
 
@@ -353,7 +353,7 @@ requires another favorable 0.5N move from the preceding fill, which also
 incorporates slippage and opening gaps into later thresholds.
 
 Pludux executes no more than one pyramiding layer for an expanded
-Backtest-asset run in one bar. The original Turtles could add all remaining
+Pludux System-asset run in one bar. The original Turtles could add all remaining
 Units during a single fast-moving day. This can materially change exposure,
 average price, and stop behavior in fast trends.
 
@@ -421,7 +421,7 @@ The original limits were:
 | Loosely correlated markets, one direction | 10 Units |
 | All markets in one direction | 12 Units |
 
-Use Strategy maximum layers of 4 for the single-market rule.
+Use Pludux System maximum layers of 4 for the single-market rule.
 
 Use Portfolio `Maximum combined layers` as an explicit approximation for the
 desired aggregate scope. It counts every successful initial entry and pyramid
@@ -454,7 +454,7 @@ Pludux ranks immutable Requested Orders at each Next Open or Current Close
 phase. Portfolio comparators can combine Requested Order values with the
 order's asset OHLCV fields, custom `DATA` fields, lookbacks, constants, and
 basic scalar math. They cannot inspect technical-indicator nodes or named
-Strategy series.
+Model series.
 
 For a practical three-month strength ranking, add this Portfolio Entry
 Comparator and select **Higher First**:
@@ -473,7 +473,7 @@ different markets more comparable.
 
 Use sufficient warm-up history for the lookback. If a score is unavailable or
 non-finite, every finite score ranks ahead of it. Equal scores continue to the
-next configured comparator, and complete ties use Portfolio, Backtest, and
+next configured comparator, and complete ties use Portfolio, Pludux System, and
 Watchlist order.
 
 Asset visibility follows the execution phase:
@@ -532,7 +532,7 @@ frozen Unit requested by all later layers.
 ### Intraday breakout fills
 
 The Turtles entered and exited when the market traded through a channel level,
-including gap-open handling. Pludux Strategy signals are evaluated at Current
+including gap-open handling. Pludux Model signals are evaluated at Current
 Close or scheduled for Next Open. OHLC price stops can be processed inside a
 bar using the configured intrabar path, but Donchian entry and exit signals are
 not continuously evaluated and filled at their exact intraday threshold.
@@ -582,7 +582,7 @@ different stop levels or re-entry state for individual Units.
 
 ### Historical outcome sensitivity
 
-System 1 filtering uses Pludux's completed theoretical position return. Daily
+Turtle System 1 filtering uses Pludux's completed theoretical position return. Daily
 execution timing, pyramiding, shared stop behavior, and exact break-even cases
 can change whether a marginal theoretical position is classified as a winner
 or loser compared with an original tick-by-tick reconstruction.
@@ -597,9 +597,9 @@ Before treating a run as a Turtle-style result, verify:
 - Drawdown adjustment is either disabled for a pure sizing comparison or set to
   10% step, 0% Size Reduction, and 20% Notional Equity Reduction.
 - Insufficient Cash is Reject unless partial cash-only Units are intentional.
-- System 1 uses 20-day entry and 10-day exit channels.
-- System 1 Entry Filter allows the first trade or a current losing streak.
-- System 2 uses 55-day entry and 20-day exit channels.
+- Turtle System 1 uses 20-day entry and 10-day exit channels.
+- Turtle System 1 Entry Filter allows the first trade or a current losing streak.
+- Turtle System 2 uses 55-day entry and 20-day exit channels.
 - Failsafe 1 activation is Previous Setup Entry-Filtered Position.
 - Pyramiding uses 0.5 Position R-Multiple, Every Evaluation, no cooldown, and
   four maximum layers.
@@ -627,8 +627,8 @@ The setup above preserves the most important Turtle relationships:
 - additions at favorable 0.5N intervals;
 - a four-Unit single-market maximum;
 - 2N protective stops ratcheted from actual fills;
-- independent theoretical System 1 tracking;
-- persistent System 2 failsafe eligibility after a filtered System 1 entry;
+- independent theoretical Turtle System 1 tracking;
+- persistent Turtle System 2 failsafe eligibility after a filtered Turtle System 1 entry;
 - direction-adjusted strength ordering for simultaneous Requested Orders;
 - long-duration Donchian exits; and
 - shared Portfolio admission after orders are sized and filtered.

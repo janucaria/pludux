@@ -144,6 +144,14 @@ private:
     auto inverse = create_state_diff(candidate, app_state);
     const auto document_changed = !inverse.empty(candidate);
     const auto view_changed = candidate.view_state() != app_state.view_state();
+
+    if(document_changed) {
+      // Application replaces its runners for every document edit.  Include
+      // result invalidation in this same candidate transaction so a fresh
+      // runner can never resume a partial result from the previous snapshot.
+      candidate.reset_all_portfolios();
+      inverse = create_state_diff(candidate, app_state);
+    }
     app_state = std::move(candidate);
 
     if(!document_changed) {

@@ -93,7 +93,7 @@ public:
             std::size_t maximum_open_trades,
             std::size_t maximum_combined_layers,
             std::vector<PortfolioEntryComparator> entry_comparators,
-            std::vector<BacktestStoreHandle> backtest_handles)
+             std::vector<SystemStoreHandle> system_handles)
   : name_{std::move(name)}
   , initial_capital_{initial_capital}
   , market_handle_{market_handle}
@@ -101,7 +101,7 @@ public:
   , maximum_open_trades_{maximum_open_trades}
   , maximum_combined_layers_{maximum_combined_layers}
   , entry_comparators_{std::move(entry_comparators)}
-  , backtest_handles_{std::move(backtest_handles)}
+    , system_handles_{std::move(system_handles)}
   {
     self_validate();
   }
@@ -191,20 +191,20 @@ public:
     self.entry_comparators_ = std::move(value);
   }
 
-  auto backtest_handles(this const Portfolio& self) noexcept
-   -> const std::vector<BacktestStoreHandle>&
+  auto system_handles(this const Portfolio& self) noexcept
+     -> const std::vector<SystemStoreHandle>&
   {
-    return self.backtest_handles_;
+    return self.system_handles_;
   }
 
-  void backtest_handles(this Portfolio& self,
-                        std::vector<BacktestStoreHandle> value)
+  void system_handles(this Portfolio& self,
+                      std::vector<SystemStoreHandle> value)
   {
     if(has_duplicates(value)) {
       throw std::invalid_argument{
        "Portfolio cannot contain duplicate backtests"};
     }
-    self.backtest_handles_ = std::move(value);
+    self.system_handles_ = std::move(value);
   }
 
   auto equivalent_rules(this const Portfolio& self,
@@ -216,11 +216,11 @@ public:
            self.maximum_open_trades_ == other.maximum_open_trades_ &&
            self.maximum_combined_layers_ == other.maximum_combined_layers_ &&
            self.entry_comparators_ == other.entry_comparators_ &&
-           self.backtest_handles_ == other.backtest_handles_;
+            self.system_handles_ == other.system_handles_;
   }
 
 private:
-  static auto has_duplicates(const std::vector<BacktestStoreHandle>& handles)
+  static auto has_duplicates(const std::vector<SystemStoreHandle>& handles)
    -> bool
   {
     for(auto index = std::size_t{}; index < handles.size(); ++index) {
@@ -239,7 +239,7 @@ private:
       throw std::invalid_argument{
        "Portfolio initial capital must be finite and non-negative"};
     }
-    if(has_duplicates(backtest_handles_)) {
+    if(has_duplicates(system_handles_)) {
       throw std::invalid_argument{
        "Portfolio cannot contain duplicate backtests"};
     }
@@ -252,7 +252,7 @@ private:
   std::size_t maximum_open_trades_;
   std::size_t maximum_combined_layers_;
   std::vector<PortfolioEntryComparator> entry_comparators_;
-  std::vector<BacktestStoreHandle> backtest_handles_;
+  std::vector<SystemStoreHandle> system_handles_;
 };
 
 } // namespace pludux::backtest

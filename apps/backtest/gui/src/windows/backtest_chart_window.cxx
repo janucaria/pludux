@@ -25,7 +25,7 @@ export module pludux.apps.backtest:windows.backtest_chart_window;
 
 import pludux.backtest;
 import pludux.apps.backtest.application_state;
-import pludux.apps.backtest.portfolio_backtest_setup_selections;
+import pludux.apps.backtest.portfolio_strategy_selections;
 import :backtest_execution_status;
 import :charts.backtest_chart_state;
 import :window_context;
@@ -190,7 +190,7 @@ public:
     ImGui::PopStyleVar();
 
     if(!portfolio_ptr) {
-      self.chart_state_.clear_display_backtest_setup();
+       self.chart_state_.clear_display_backtest_strategy();
       self.render_status_panel(
        PLUDUX_ICON_CHART,
        "No portfolio selected",
@@ -201,41 +201,40 @@ public:
     }
 
     const auto& portfolio = *portfolio_ptr;
-    const auto selected_setup = app_state.selected_portfolio_backtest_setup();
-    if(!selected_setup) {
-      self.chart_state_.clear_display_backtest_setup();
+    const auto selected_strategy = app_state.selected_portfolio_strategy();
+    if(!selected_strategy) {
+       self.chart_state_.clear_display_backtest_strategy();
       self.render_status_panel(
        PLUDUX_ICON_WARNING,
-       "No portfolio backtest setups",
-       "Add or select a valid setup in this portfolio.");
+        "No portfolio backtest strategies",
+        "Add or select a valid strategy in this portfolio.");
       ImGui::End();
       return;
     }
-    const auto run = selected_setup->run;
-    const auto setup_index = selected_setup->setup_index;
-    const auto backtest_handle = run.backtest_handle;
-    const auto* backtest_ptr =
-     app_state.get_backtest_if_present(backtest_handle);
-    if(!backtest_ptr) {
-      self.chart_state_.clear_display_backtest_setup();
+    const auto run = selected_strategy->run;
+    const auto strategy_index = selected_strategy->strategy_index;
+     const auto system_handle = run.system_handle;
+    const auto* system_ptr = app_state.get_system_if_present(system_handle);
+    if(!system_ptr) {
+       self.chart_state_.clear_display_backtest_strategy();
       self.render_status_panel(
        PLUDUX_ICON_WARNING,
-       "Missing portfolio backtest",
-       "Select an available backtest in the portfolio tree.");
+        "Missing portfolio strategy",
+        "Select an available strategy in the portfolio tree.");
       ImGui::End();
       return;
     }
-    const auto& backtest = *backtest_ptr;
-    if(setup_index >= backtest.setup_count()) {
-      self.chart_state_.clear_display_backtest_setup();
+    const auto& system = *system_ptr;
+    if(strategy_index >= system.strategy_count()) {
+       self.chart_state_.clear_display_backtest_strategy();
       self.render_status_panel(PLUDUX_ICON_WARNING,
-                               "Missing backtest setup",
-                               "Select an available setup in the portfolio "
+                                "Missing backtest strategy",
+                                "Select an available strategy in the portfolio "
                                "tree.");
       ImGui::End();
       return;
     }
-    self.chart_state_.display_backtest_setup(portfolio_handle, *selected_setup);
+    self.chart_state_.display_backtest_strategy(portfolio_handle, *selected_strategy);
 
     const auto execution_status =
      context.backtest_execution_status(portfolio_handle);
@@ -248,8 +247,14 @@ public:
 
     const auto asset_handle = run.asset_handle;
     const auto& asset = app_state.get_asset(asset_handle);
-    const auto& strategy =
-     app_state.get_strategy(backtest.setup(setup_index).strategy_handle());
+    const auto* strategy = app_state.get_strategy_if_present(
+     system.strategy_handle(strategy_index));
+    if(!strategy) {
+      self.render_incomplete_status(app_state, portfolio);
+      ImGui::End();
+      return;
+    }
+    const auto& model = app_state.get_model(strategy->model_handle());
 
     if(asset.size() == 0) {
       self.render_status_panel(
@@ -272,7 +277,7 @@ public:
     }
     const auto& backtest_timelines = backtest_results->timeline();
     const auto& backtest_series_results =
-     backtest_results->series_results(setup_index);
+      backtest_results->series_results(strategy_index);
     const auto timeline_size = backtest_timelines.size();
     auto backtest_timestamps = std::vector<double>(timeline_size);
     for(auto index = std::size_t{}; index < timeline_size; ++index) {
@@ -309,7 +314,7 @@ public:
     const auto chart_position = ImGui::GetCursorScreenPos();
     const auto chart_size = ImGui::GetContentRegionAvail();
 
-    const auto& plots = strategy.plots();
+    const auto& plots = model.plots();
     const auto no_overlays_view = std::views::filter(
      [](const auto& plot_group) { return !plot_group.is_overlay(); });
     const auto additional_plots_count =
@@ -401,33 +406,33 @@ public:
         case BacktestTopPlot::ShadowReturn:
           ImPlot::SetupAxis(ImAxis_Y1, "Shadow return", axis_y_flags);
           ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
-          self.plot_shadow_return(backtest_timelines, setup_index);
+           self.plot_shadow_return(backtest_timelines, strategy_index);
           break;
         case BacktestTopPlot::FrequentistPerformance:
           ImPlot::SetupAxis(ImAxis_Y1, "Win / mean", axis_y_flags);
           ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
-          self.plot_frequentist_performance(backtest_timelines, setup_index);
+           self.plot_frequentist_performance(backtest_timelines, strategy_index);
           break;
         case BacktestTopPlot::CurrentStreaks:
           ImPlot::SetupAxis(ImAxis_Y1, "Current streak", axis_y_flags);
           ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
-          self.plot_strategy_streaks(backtest_timelines, setup_index);
+           self.plot_strategy_streaks(backtest_timelines, strategy_index);
           break;
         case BacktestTopPlot::BayesianWin:
           ImPlot::SetupAxis(ImAxis_Y1, "Bayesian win", axis_y_flags);
           ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
-          self.plot_bayesian_win(backtest_timelines, setup_index);
+           self.plot_bayesian_win(backtest_timelines, strategy_index);
           break;
         case BacktestTopPlot::BayesianPayoff:
           ImPlot::SetupAxis(ImAxis_Y1, "Bayesian payoff", axis_y_flags);
           ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
-          self.plot_bayesian_payoff(backtest_timelines, setup_index);
+           self.plot_bayesian_payoff(backtest_timelines, strategy_index);
           break;
         }
         self.render_top_plot_legend(portfolio_results.timeline(),
                                     backtest_timelines,
                                     inspected_index,
-                                    setup_index);
+                                     strategy_index);
 
         self.record_crosshair_plot(
          crosshair_state, timeline_size, self.chart_state_.pinned_bar());
@@ -442,17 +447,17 @@ public:
 
         if(self.chart_state_.show_risk()) {
           self.plot_position(
-           "Trade Positions", backtest_timelines, setup_index);
+            "Trade Positions", backtest_timelines, strategy_index);
         }
         self.plot_ohlc("OHLC", asset, timeline_size);
         auto overlay_value_groups = std::vector<PlotValueGroup>{};
         if(self.chart_state_.show_indicators()) {
           self.overlays_plots(
-           context, *selected_setup, inspected_index, overlay_value_groups);
+            context, *selected_strategy, inspected_index, overlay_value_groups);
         }
         if(self.chart_state_.show_trades()) {
           self.plot_signal(
-           "Trade Signals", backtest_timelines, asset, setup_index);
+            "Trade Signals", backtest_timelines, asset, strategy_index);
         }
         self.render_price_legend(asset, inspected_index, overlay_value_groups);
 
@@ -920,7 +925,7 @@ private:
                          const backtest::PortfolioTimeline& portfolio_timeline,
                          const backtest::BacktestTimeline& backtest_timeline,
                          std::size_t index,
-                         std::size_t setup_index)
+                      std::size_t strategy_index)
   {
     if(index >= backtest_timeline.size()) {
       return;
@@ -930,8 +935,8 @@ private:
      [](std::string_view label, double value, ImU32 color) -> LegendSegment {
       return {std::format("{} {}", label, format_plot_value(value)), color};
     };
-    const auto& setup_state = backtest_timeline.setup_state(index, setup_index);
-    const auto& performance = setup_state.strategy_performance;
+    const auto& strategy_state = backtest_timeline.strategy_state(index, strategy_index);
+     const auto& performance = strategy_state.model_performance;
     auto line = LegendLine{};
 
     switch(self.chart_state_.top_plot()) {
@@ -953,10 +958,10 @@ private:
     }
     case BacktestTopPlot::ShadowReturn: {
       auto value = std::numeric_limits<double>::quiet_NaN();
-      const auto& closed = setup_state.strategy_closed_positions;
+        const auto& closed = strategy_state.model_closed_positions;
       if(!closed.empty()) {
         value = closed.back().return_ratio();
-      } else if(const auto& open = setup_state.strategy_open_position) {
+       } else if(const auto& open = strategy_state.model_open_position) {
         value = open->unrealized_return_ratio();
       }
       line.emplace_back("Shadow return", IM_COL32_WHITE);
@@ -1191,10 +1196,10 @@ private:
     if(!app_state.get_broker_if_present(portfolio.broker_handle())) {
       missing.emplace_back("broker");
     }
-    for(const auto handle : portfolio.backtest_handles()) {
-      const auto* backtest = app_state.get_backtest_if_present(handle);
-      if(!backtest || !app_state.is_backtest_ready(*backtest)) {
-        missing.emplace_back("Backtest");
+    for(const auto handle : portfolio.system_handles()) {
+      const auto* system = app_state.get_system_if_present(handle);
+      if(!system || !app_state.is_system_ready(*system)) {
+        missing.emplace_back("Strategy");
         break;
       }
     }
@@ -1364,7 +1369,7 @@ private:
   void plot_position(this const BacktestChartWindow& self,
                      const char* label_id,
                      const backtest::BacktestTimeline& backtest_timelines,
-                     std::size_t setup_index)
+                           std::size_t strategy_index)
   {
     auto* draw_list = ImPlot::GetPlotDrawList();
 
@@ -1395,7 +1400,8 @@ private:
        visible_index_range(timeline_size);
       for(auto i = first_visible; i < last_visible; ++i) {
         const auto& open_position = backtest_timelines.open_position(i);
-        if(!open_position || open_position->setup_index() != setup_index) {
+        if(!open_position ||
+           open_position->strategy_index() != strategy_index) {
           for(auto& points : stop_loss_line_points) {
             flush_price_line(points, stop_line_color);
           }
@@ -1515,7 +1521,7 @@ private:
                    const char* label_id,
                    const backtest::BacktestTimeline& backtest_timelines,
                    const backtest::Asset& asset,
-                   std::size_t setup_index)
+                    std::size_t strategy_index)
   {
     constexpr auto marker_offset = 50.0f;
     const auto marker_text_color =
@@ -1542,7 +1548,7 @@ private:
       for(auto i = first_visible; i < last_visible; ++i) {
         const auto snapshot = asset.get_snapshot(i);
         for(const auto& event : backtest_timelines.trade_events(i)) {
-          if(event.setup_index() != setup_index) {
+          if(event.strategy_index() != strategy_index) {
             continue;
           }
 
@@ -1583,11 +1589,11 @@ private:
               ImGui::BeginTooltip();
               ImGui::TextColored(self.bearish_color_, "Order rejected");
               ImGui::Separator();
-              const auto setup_label =
-               event.setup_index() == 0
+              const auto strategy_label =
+               event.strategy_index() == 0
                 ? std::string{"Main"}
-                : std::format("Failsafe {}", event.setup_index());
-              ImGui::Text("Setup: %s", setup_label.c_str());
+                : std::format("Failsafe {}", event.strategy_index());
+              ImGui::Text("Strategy: %s", strategy_label.c_str());
               if(event.type() ==
                  backtest::TradeEvent::Type::rejected_maximum_open_trades) {
                 ImGui::TextUnformatted("Reason: Maximum open trades reached");
@@ -1653,15 +1659,15 @@ private:
                        entry_pos.y - entry_hover_radius},
                 ImVec2{entry_pos.x + entry_hover_radius,
                        entry_pos.y + entry_hover_radius})) {
-              const auto setup_label =
-               event.setup_index() == 0
+              const auto strategy_label =
+               event.strategy_index() == 0
                 ? std::string{"Main"}
-                : std::format("Failsafe {}", event.setup_index());
+                : std::format("Failsafe {}", event.strategy_index());
               ImGui::BeginTooltip();
               ImGui::TextUnformatted(event.is_scale_in() ? "Scale in"
                                                          : "Entry");
               ImGui::Separator();
-              ImGui::Text("Setup: %s", setup_label.c_str());
+              ImGui::Text("Strategy: %s", strategy_label.c_str());
               ImGui::Text("Time: %s",
                           format_datetime(event.timestamp()).c_str());
               ImGui::Text("Quantity: %.6g", std::abs(event.position_size()));
@@ -1727,20 +1733,21 @@ private:
 
   void plot_shadow_return(this const BacktestChartWindow&,
                           const backtest::BacktestTimeline& timeline,
-                          std::size_t setup_index)
+                          std::size_t strategy_index)
   {
     auto xs = std::vector<double>(timeline.size());
     auto returns = std::vector<double>(
      timeline.size(), std::numeric_limits<double>::quiet_NaN());
     for(auto index = std::size_t{0}; index < timeline.size(); ++index) {
       xs[index] = static_cast<double>(index);
-      const auto& setup_state = timeline.setup_state(index, setup_index);
-      const auto& closed = setup_state.strategy_closed_positions;
+      const auto& strategy_state =
+       timeline.strategy_state(index, strategy_index);
+       const auto& closed = strategy_state.model_closed_positions;
       if(!closed.empty()) {
         returns[index] = closed.back().return_ratio();
       }
       if(std::isnan(returns[index])) {
-        const auto& open = setup_state.strategy_open_position;
+         const auto& open = strategy_state.model_open_position;
         if(open) {
           returns[index] = open->unrealized_return_ratio();
         }
@@ -1751,7 +1758,7 @@ private:
 
   void plot_frequentist_performance(this const BacktestChartWindow&,
                                     const backtest::BacktestTimeline& timeline,
-                                    std::size_t setup_index)
+                                     std::size_t strategy_index)
   {
     auto xs = std::vector<double>(timeline.size());
     auto win_rate = std::vector<double>(timeline.size());
@@ -1761,7 +1768,7 @@ private:
     for(auto index = std::size_t{0}; index < timeline.size(); ++index) {
       xs[index] = static_cast<double>(index);
       const auto& performance =
-       timeline.setup_state(index, setup_index).strategy_performance;
+        timeline.strategy_state(index, strategy_index).model_performance;
       win_rate[index] = performance.win_rate();
       break_even_rate[index] = performance.break_even_rate();
       loss_rate[index] = performance.loss_rate();
@@ -1776,7 +1783,7 @@ private:
 
   void plot_strategy_streaks(this const BacktestChartWindow&,
                              const backtest::BacktestTimeline& timeline,
-                             std::size_t setup_index)
+                              std::size_t strategy_index)
   {
     auto xs = std::vector<double>(timeline.size());
     auto winning = std::vector<double>(timeline.size());
@@ -1784,7 +1791,7 @@ private:
     for(auto index = std::size_t{0}; index < timeline.size(); ++index) {
       xs[index] = static_cast<double>(index);
       const auto& performance =
-       timeline.setup_state(index, setup_index).strategy_performance;
+        timeline.strategy_state(index, strategy_index).model_performance;
       winning[index] =
        static_cast<double>(performance.current_winning_streak());
       losing[index] = static_cast<double>(performance.current_losing_streak());
@@ -1795,7 +1802,7 @@ private:
 
   void plot_bayesian_win(this const BacktestChartWindow&,
                          const backtest::BacktestTimeline& timeline,
-                         std::size_t setup_index)
+                          std::size_t strategy_index)
   {
     auto xs = std::vector<double>(timeline.size());
     auto mean = std::vector<double>(timeline.size());
@@ -1804,8 +1811,8 @@ private:
     for(auto index = std::size_t{0}; index < timeline.size(); ++index) {
       xs[index] = static_cast<double>(index);
       const auto& posterior =
-       timeline.setup_state(index, setup_index)
-        .strategy_performance.win_probability_posterior();
+       timeline.strategy_state(index, strategy_index)
+         .model_performance.win_probability_posterior();
       mean[index] = posterior.probability;
       lower[index] = posterior.lower_95;
       upper[index] = posterior.upper_95;
@@ -1817,7 +1824,7 @@ private:
 
   void plot_bayesian_payoff(this const BacktestChartWindow&,
                             const backtest::BacktestTimeline& timeline,
-                            std::size_t setup_index)
+                             std::size_t strategy_index)
   {
     auto xs = std::vector<double>(timeline.size());
     auto winning_mean = std::vector<double>(timeline.size());
@@ -1829,7 +1836,7 @@ private:
     for(auto index = std::size_t{0}; index < timeline.size(); ++index) {
       xs[index] = static_cast<double>(index);
       const auto& performance =
-       timeline.setup_state(index, setup_index).strategy_performance;
+        timeline.strategy_state(index, strategy_index).model_performance;
       const auto& winning = performance.winning_payoff_posterior();
       const auto& losing = performance.losing_payoff_posterior();
       winning_mean[index] = winning.mean;
@@ -1922,23 +1929,24 @@ private:
 
   void overlays_plots(this const BacktestChartWindow& self,
                       WindowContext& context,
-                      PortfolioBacktestSetupKey selected_setup,
+                        PortfolioStrategyKey selected_strategy,
                       std::size_t inspected_index,
                       std::vector<PlotValueGroup>& value_groups)
   {
     const auto& app_state = context.app_state();
     const auto portfolio_handle = app_state.selected_portfolio_handle();
-    const auto run = selected_setup.run;
-    const auto& backtest_config = app_state.get_backtest(run.backtest_handle);
-    const auto& strategy_handle =
-     backtest_config.setup(selected_setup.setup_index).strategy_handle();
-    const auto& strategy = app_state.get_strategy(strategy_handle);
+    const auto run = selected_strategy.run;
+    const auto& system = app_state.get_system(run.system_handle);
+    const auto* strategy = app_state.get_strategy_if_present(
+     system.strategy_handle(selected_strategy.strategy_index));
+    if(!strategy) return;
+    const auto& model = app_state.get_model(strategy->model_handle());
     const auto& results = app_state.get_portfolio_results(portfolio_handle);
     const auto& backtest_results = *results.backtest(run);
     const auto& backtest_timeline = backtest_results.timeline();
     const auto& series_results =
-     backtest_results.series_results(selected_setup.setup_index);
-    const auto& plots = strategy.plots();
+      backtest_results.series_results(selected_strategy.strategy_index);
+    const auto& plots = model.plots();
 
     auto group_index = std::size_t{0};
     for(const auto& plot_group :

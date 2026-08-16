@@ -82,7 +82,7 @@ private:
   {
     const auto& app_state = context.app_state();
     const auto& asset_handles = app_state.get_asset_handles();
-    const auto backtest_ptr = app_state.selected_backtest_if_present();
+    const auto system_ptr = app_state.selected_system_if_present();
 
     ImGui::BeginGroup();
     const auto add_asset_requested =
@@ -107,8 +107,8 @@ private:
 
       {
         const auto* selected_watchlist =
-         backtest_ptr
-          ? app_state.get_watchlist_if_present(backtest_ptr->watchlist_handle())
+          system_ptr
+           ? app_state.get_watchlist_if_present(system_ptr->watchlist_handle())
           : nullptr;
         const auto selected =
          selected_watchlist &&

@@ -11,14 +11,14 @@ import pludux;
 
 import :backtest_method_context;
 import :requested_order;
-import :strategy_performance;
+import :model_performance;
 
 export namespace pludux::backtest {
 
 class EntryFilterMethodContext {
 public:
   EntryFilterMethodContext(const BacktestAccountState& account,
-                           const StrategyPerformanceSnapshot& performance,
+                            const ModelPerformanceSnapshot& performance,
                            const RequestedOrder& requested_order) noexcept
   : account_{account}
   , performance_{performance}
@@ -76,7 +76,7 @@ public:
   }
 
   auto performance(this const EntryFilterMethodContext& self) noexcept
-   -> const StrategyPerformanceSnapshot&
+   -> const ModelPerformanceSnapshot&
   {
     return self.performance_;
   }
@@ -89,7 +89,7 @@ public:
 
 private:
   const BacktestAccountState& account_;
-  const StrategyPerformanceSnapshot& performance_;
+  const ModelPerformanceSnapshot& performance_;
   const RequestedOrder& requested_order_;
   std::vector<double> unused_series_results_;
 };

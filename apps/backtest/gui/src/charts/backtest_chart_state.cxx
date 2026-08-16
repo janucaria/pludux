@@ -9,7 +9,7 @@ module;
 export module pludux.apps.backtest:charts.backtest_chart_state;
 
 import pludux.backtest;
-import pludux.apps.backtest.portfolio_backtest_setup_selections;
+import pludux.apps.backtest.portfolio_strategy_selections;
 
 export namespace pludux::apps {
 
@@ -30,27 +30,27 @@ enum class BacktestTopPlot {
 
 class BacktestChartState {
 public:
-  void display_backtest_setup(this BacktestChartState& self,
-                              backtest::PortfolioStoreHandle portfolio_handle,
-                              PortfolioBacktestSetupKey setup) noexcept
+  void display_backtest_strategy(this BacktestChartState& self,
+                                 backtest::PortfolioStoreHandle portfolio_handle,
+                                 PortfolioStrategyKey strategy) noexcept
   {
     if(self.displayed_portfolio_ == portfolio_handle &&
-       self.displayed_setup_ == setup) {
+        self.displayed_strategy_ == strategy) {
       return;
     }
 
     self.displayed_portfolio_ = portfolio_handle;
-    self.displayed_setup_ = setup;
+    self.displayed_strategy_ = strategy;
     self.pinned_bar_.reset();
     self.viewport_mode_ = BacktestChartViewportMode::FitAll;
     self.follow_bar_count_ = 150;
     self.fit_requested_ = true;
   }
 
-  void clear_display_backtest_setup(this BacktestChartState& self) noexcept
+  void clear_display_backtest_strategy(this BacktestChartState& self) noexcept
   {
     self.displayed_portfolio_.reset();
-    self.displayed_setup_.reset();
+    self.displayed_strategy_.reset();
     self.pinned_bar_.reset();
     self.viewport_mode_ = BacktestChartViewportMode::FitAll;
     self.follow_bar_count_ = 150;
@@ -180,7 +180,7 @@ public:
 
 private:
   std::optional<backtest::PortfolioStoreHandle> displayed_portfolio_{};
-  std::optional<PortfolioBacktestSetupKey> displayed_setup_{};
+  std::optional<PortfolioStrategyKey> displayed_strategy_{};
   std::optional<std::size_t> pinned_bar_{};
   std::vector<float> row_ratios_{};
   BacktestChartViewportMode viewport_mode_{BacktestChartViewportMode::FitAll};

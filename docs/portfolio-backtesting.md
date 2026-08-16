@@ -5,31 +5,34 @@ For a complete multi-market configuration example, see
 
 ## Terminology
 
-Pludux treats a **Backtest** as a reusable Watchlist plus ordered setup
-configuration and a **Portfolio** as the account that executes one or more
-Backtests.
+Pludux treats a **Model** as deterministic entry/exit/indicator logic; a
+**Strategy** as a named, reusable stored resource of Model, Profile, model input
+overrides, and Entry Filter; a **System** as a reusable Watchlist, Main
+Strategy, ordered Failsafe Strategy bindings with activation, and one shared
+Model Performance config; and a **Portfolio** as the account that executes
+ordered Systems with shared capital.
 
-- A Backtest selects a Watchlist and contains a Main setup plus ordered
-  Failsafe setups. Each setup selects a Strategy and Profile and stores strategy
-  input overrides. The Backtest shares one Strategy Performance calculation
-  policy across its setups.
+- A Strategy contains one Model, one Profile, model input overrides, and an
+  Entry Filter. It is reusable across Systems.
+- A System selects a Watchlist and contains one Main Strategy plus ordered
+  Failsafe Strategy bindings and activation rules. It also shares one Model
+  Performance calculation policy across those Strategy references.
 - A Portfolio owns initial capital, one Market, one Broker, aggregate capacity
-  limits, and an ordered collection of Backtests. The Market is the trading
-  venue or market context and provides venue-specific rules such as minimum
-  order quantity and quantity step. The Broker represents the Market's broker
-  or execution provider and provides its fee and execution-cost rules. Each
-  setup Profile owns its
-  drawdown adjustment and insufficient-cash response.
-- Running a Portfolio simulates all of its Backtests. A single-asset simulation
-  is a Portfolio containing one Backtest.
+  limits, and an ordered collection of Systems. The Market is the trading venue
+  or market context and provides venue-specific rules such as minimum order
+  quantity and quantity step. The Broker represents the Market's broker or
+  execution provider and provides its fee and execution-cost rules. Each
+  Strategy Profile owns its drawdown adjustment and insufficient-cash response.
+- Running a Portfolio simulates all of its Systems. A single-asset simulation
+  is a Portfolio containing one System × Asset Backtest.
 
-The same Backtest configuration may be referenced by different Portfolios.
-Runtime positions, indicator results, and Strategy Performance evidence are
+The same System configuration may be referenced by different Portfolios.
+Runtime positions, indicator results, and Model Performance evidence are
 isolated within each Portfolio run.
 
 ## Ownership
 
-A Backtest decides when it wants to trade and how large its Profile wants the
+A Strategy decides when it wants to trade and how large its Profile wants the
 position to be. The Portfolio decides whether the shared account can execute
 that request.
 
@@ -41,28 +44,30 @@ Portfolio
 |- Maximum open trades
 |- Maximum combined layers
 |- Entry comparators
-`- Ordered Backtests
-   |- Watchlist
-   `- Setups
-      |- Strategy and inputs
-      |- Entry filter
-      `- Profile
-         |- Position sizing
-         |- Drawdown adjustment
-         `- Insufficient-cash policy
+`- Ordered Systems
+    |- Watchlist
+    `- Strategy references
+       |- Main Strategy
+       |- Failsafe Strategy bindings
+       |- Model and inputs
+       |- Entry filter
+       `- Profile
+           |- Position sizing
+           |- Drawdown adjustment
+           `- Insufficient-cash policy
 ```
 
 Position sizing and Entry Filters read the current Portfolio equity and
-drawdown. Each setup maintains independent theoretical Strategy Performance,
-so Bayesian or Kelly sizing uses only that setup's history within the current
+drawdown. Each Strategy maintains independent theoretical Model Performance,
+so Bayesian or Kelly sizing uses only that Strategy's history within the current
 Portfolio run. Shared reservations do not change a Profile's sizing intent;
 they constrain the later cash decision.
 
 When an accepted initial order opens a real position, that position permanently
-belongs to the requesting setup. Pyramids, partial exits, snapshots, the final
-closed trade, and position-related execution events retain that owner even if a
-different setup is active later. A rejected initial order is attributed to the
-setup that requested it.
+belongs to the requesting Strategy. Pyramids, partial exits, snapshots, the
+final closed trade, and position-related execution events retain that owner even
+if a different Strategy is active later. A rejected initial order is
+attributed to the Strategy that requested it.
 
 Sizing methods express different limits:
 
@@ -77,18 +82,18 @@ Sizing methods express different limits:
 
 At a market timestamp, risk-reducing work is processed before risk-increasing
 work. Entry and pyramiding Requested Orders that occur in the same phase are
-ranked by the Portfolio's ordered comparators. Portfolio, Backtest, and
+ranked by the Portfolio's ordered comparators. Portfolio, System, and
 Watchlist expansion order resolves complete ties.
 
 For each risk-increasing request, Pludux performs these steps:
 
-1. Capture the setup's theoretical Strategy Performance snapshot.
+1. Capture the setup's theoretical Model Performance snapshot.
 2. Evaluate its Profile sizing constraint and drawdown adjustment.
 3. Use the shared Market and Broker to create an immutable Requested Order with
    normalized quantity, notional, fees, and risk values.
-4. Evaluate the setup's Entry Filter against Strategy Performance, Requested
-   Order values, and current account metrics. An entry-filtered setup may allow
-   the next eligible Failsafe to produce its own fresh entry.
+4. Evaluate the setup's Entry Filter against Model Performance, Requested
+   Order values, and current account metrics. An entry-filtered Main Strategy
+   may allow the next eligible Failsafe binding to produce its own fresh entry.
 5. Rank every accepted Requested Order using the Portfolio comparators.
 6. Enforce maximum-open-trade and maximum-combined-layer capacity.
 7. Compare the fee-inclusive requested cost with available shared cash.
@@ -100,7 +105,7 @@ For each risk-increasing request, Pludux performs these steps:
 Portfolio Entry Comparators can combine immutable Requested Order values with
 the order's asset OHLCV fields and custom `DATA` fields. They support numeric
 constants, basic scalar math, and lookback. They intentionally do not expose
-Strategy named series or technical-indicator nodes: Strategy and Profile logic
+Strategy named series or technical-indicator nodes: Model and Profile logic
 has already produced the Requested Order before Portfolio ranking begins.
 
 Asset data is phase-safe. A Current Close order sees the completed current bar.
@@ -178,11 +183,11 @@ Pludux never manufactures candles to fill missing timestamps.
 equity, drawdown, realized and unrealized P&L, reserved notional, gross and net
 exposure, open-position count, and backtest freshness on the union clock.
 
-Each backtest retains a sparse `BacktestTimeline` and separate
+Each System retains a sparse `BacktestTimeline` and separate
 series-evaluation results for every setup. The chart projects the selected
 Setup × Asset row onto a compact axis:
 
-- Every X index represents one real bar from the selected Backtest × Asset run,
+- Every X index represents one real bar from the selected System × Asset run,
   so its candles and volume remain consecutive.
 - Portfolio equity and drawdown are sampled from the union timeline only at
   those backtest timestamps and plotted at the corresponding backtest index.
@@ -207,28 +212,28 @@ Setup × Asset row onto a compact axis:
 ## Portfolio Hierarchy and Chart Selection
 
 The Portfolios window is an expandable tree. Each top-level Portfolio contains
-a flat Setup × Asset list. Rows are ordered by Portfolio Backtest order, then
+a flat Setup × Asset list. Rows are ordered by Portfolio System order, then
 Watchlist asset order, then Main setup followed by its ordered Failsafes. Each
-row identifies the Backtest, Asset, setup role, Strategy, and Profile.
+row identifies the Strategy, Asset, setup role, Model, and Profile.
 
 Selecting a Portfolio opens it and restores that Portfolio's last valid setup
 selection. If the remembered setup was removed or is no longer valid, Pludux
 selects the first valid row in display order. An empty or incomplete Portfolio
 may have no active setup. Each Portfolio remembers its choice independently,
-including when two Portfolios reuse the same Backtest.
+including when two Portfolios reuse the same System.
 
 Selecting a Setup × Asset child selects its parent Portfolio and filters the
 Chart and Trades inspection to that setup. Candles provide the shared market
 context, while Portfolio accounting, execution status, and Overview remain
-aggregate across the Backtest × Asset run. Missing Backtest, Asset, Strategy,
-or Profile references remain visible as disabled rows so broken configurations
-can be identified without silently changing their order.
+aggregate across the System × Asset run. Missing Strategy, Asset, Model, or
+Profile references remain visible as disabled rows so broken configurations can
+be identified without silently changing their order.
 
 Portfolio search covers both levels. A Portfolio-name match shows all of its
-children. Child matching includes Backtest, Asset, setup role, Strategy, and
+children. Child matching includes Strategy, Asset, setup role, Model, and
 Profile names while preserving the original display order.
 
-The Backtests editor selection is separate: it chooses which reusable Backtest
+The Systems editor selection is separate: it chooses which reusable System
 configuration is being edited and never changes the Chart. The Portfolios tree
 is the only Chart setup selector.
 

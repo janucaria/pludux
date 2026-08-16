@@ -11,7 +11,7 @@ module;
 #include <boost/math/distributions/beta.hpp>
 #include <boost/math/distributions/inverse_gamma.hpp>
 
-export module pludux.backtest:strategy_performance_model;
+export module pludux.backtest:model_performance_model;
 
 export namespace pludux::backtest {
 

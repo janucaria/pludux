@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 1,
   "series": {
     "bb_upper": {
       "method": "SELECT_OUTPUT",

@@ -20,7 +20,7 @@ public:
   ClosedTrade() = default;
 
   ClosedTrade(std::size_t trade_id,
-              std::size_t setup_index,
+               std::size_t strategy_index,
               std::size_t exit_event_id,
               TradeEvent::Type exit_type,
               std::time_t entry_timestamp,
@@ -38,7 +38,7 @@ public:
               double risk_reference_price = NAN,
               double risk_boundary_price = NAN)
   : trade_id_{trade_id}
-  , setup_index_{setup_index}
+   , strategy_index_{strategy_index}
   , exit_event_id_{exit_event_id}
   , exit_type_{exit_type}
   , entry_timestamp_{entry_timestamp}
@@ -65,9 +65,9 @@ public:
     return self.trade_id_;
   }
 
-  auto setup_index(this const ClosedTrade& self) noexcept -> std::size_t
+  auto strategy_index(this const ClosedTrade& self) noexcept -> std::size_t
   {
-    return self.setup_index_;
+    return self.strategy_index_;
   }
 
   auto exit_event_id(this const ClosedTrade& self) noexcept -> std::size_t
@@ -177,7 +177,7 @@ public:
 
 private:
   std::size_t trade_id_{};
-  std::size_t setup_index_{};
+  std::size_t strategy_index_{};
   std::size_t exit_event_id_{};
   TradeEvent::Type exit_type_{TradeEvent::Type::exit_signal};
 

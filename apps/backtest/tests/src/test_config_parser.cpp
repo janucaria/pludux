@@ -198,7 +198,7 @@ TEST(PlotMethodParserTest, ParseAndSerializeMomentumHistogram)
 {
   const auto config = json::parse(R"(
     {
-      "version": 2,
+      "version": 1,
       "plots": [{
         "items": [{
           "method": "MOMENTUM_HISTOGRAM",
@@ -223,7 +223,7 @@ TEST(PlotMethodParserTest, ParseAndSerializeMomentumHistogram)
   )");
 
   const auto strategy =
-   backtest::parse_backtest_strategy_config_json("Test", config);
+    backtest::parse_model_config_json("Test", config);
   const auto& method = strategy.plots().at(0).items().at(0);
   using MomentumHistogram = backtest::MomentumHistogramPlotMethod<
    backtest::ErasedPlotSourceMethod<backtest::ErasedPlotMethodContext>>;
@@ -242,7 +242,7 @@ TEST(PlotMethodParserTest, ParseAndSerializeMomentumHistogram)
     0xFF9AA626, 0xFF9AA626, 0xFFDBDFB2, 0xFF5053EF, 0xFF5053EF, 0xFFD2CDFF}));
 
   const auto serialized =
-   backtest::serialize_backtest_strategy_config_json(strategy);
+    backtest::serialize_model_config_json(strategy);
   const auto& serialized_params =
    serialized.at("plots").at(0).at("items").at(0).at("params");
   EXPECT_TRUE(serialized_params.contains("positiveRisingColor"));
@@ -251,7 +251,7 @@ TEST(PlotMethodParserTest, ParseAndSerializeMomentumHistogram)
   EXPECT_TRUE(serialized_params.contains("negativeRisingColor"));
 
   const auto round_trip =
-   backtest::parse_backtest_strategy_config_json("Test", serialized);
+    backtest::parse_model_config_json("Test", serialized);
   EXPECT_EQ(method, round_trip.plots().at(0).items().at(0));
 }
 
@@ -259,7 +259,7 @@ TEST(PlotMethodParserTest, RejectMomentumHistogramWithMissingColor)
 {
   const auto config = json::parse(R"(
     {
-      "version": 2,
+      "version": 1,
       "plots": [{
         "items": [{
           "method": "MOMENTUM_HISTOGRAM",
@@ -282,7 +282,7 @@ TEST(PlotMethodParserTest, RejectMomentumHistogramWithMissingColor)
     }
   )");
 
-  EXPECT_THROW(backtest::parse_backtest_strategy_config_json("Test", config),
+   EXPECT_THROW(backtest::parse_model_config_json("Test", config),
                std::invalid_argument);
 }
 

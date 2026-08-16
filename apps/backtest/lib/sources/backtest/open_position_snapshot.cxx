@@ -19,7 +19,7 @@ public:
   OpenPositionSnapshot() = default;
 
   OpenPositionSnapshot(std::size_t trade_id,
-                       std::size_t setup_index,
+                        std::size_t strategy_index,
                        std::time_t entry_timestamp,
                        std::time_t market_timestamp,
                        double market_price,
@@ -34,7 +34,7 @@ public:
                        double risk_reference_price = NAN,
                        double risk_boundary_price = NAN)
   : trade_id_{trade_id}
-  , setup_index_{setup_index}
+   , strategy_index_{strategy_index}
   , entry_timestamp_{entry_timestamp}
   , market_timestamp_{market_timestamp}
   , market_price_{market_price}
@@ -58,10 +58,10 @@ public:
     return self.trade_id_;
   }
 
-  auto setup_index(this const OpenPositionSnapshot& self) noexcept
+  auto strategy_index(this const OpenPositionSnapshot& self) noexcept
    -> std::size_t
   {
-    return self.setup_index_;
+    return self.strategy_index_;
   }
 
   auto entry_timestamp(this const OpenPositionSnapshot& self) noexcept
@@ -154,7 +154,7 @@ public:
 
 private:
   std::size_t trade_id_{};
-  std::size_t setup_index_{};
+  std::size_t strategy_index_{};
   std::time_t entry_timestamp_{};
   std::time_t market_timestamp_{};
   double market_price_{};

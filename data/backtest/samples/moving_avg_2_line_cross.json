@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 1,
   "series": {
     "ma_fast": {
       "method": "SMA",

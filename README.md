@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/badge/license-AGPL-blue.svg)](LICENSE.txt)
 
 **Pludux** is a free and open-source desktop GUI application for deterministic
-portfolio backtesting.
+portfolio simulation.
 
 Start here:
 
@@ -14,14 +14,18 @@ Start here:
 
 Pludux separates simulation into these repository terms:
 
-- **Asset**: imported market data and field mapping
-- **Strategy**: trading logic, conditions, optional plots, and the node editor
-- **Profile**: reusable risk and capital-management policy for position sizing,
-  drawdown adjustment, and insufficient-cash handling
-- **Backtest**: reusable Watchlist plus ordered setups; each setup selects a
-  Strategy and Profile, can override strategy inputs, and owns the Entry Filter.
-  Backtests share one strategy-performance calculation policy.
-- **Portfolio**: shared capital plus an ordered list of Backtests
+- **Asset**: market data and field mapping
+- **Model**: deterministic trading rules, including indicators, conditions,
+  entries/exits, plots, and inputs
+- **Profile**: sizing and capital policy for position sizing, drawdown
+  adjustment, and insufficient-cash handling
+- **Strategy**: a named, reusable stored configuration of one Model, one
+  Profile, model input overrides, and an Entry Filter
+- **System**: a reusable Watchlist plus one Main Strategy, ordered Failsafe
+  Strategy bindings and activation rules, and one shared Model Performance
+  configuration
+- **Portfolio**: shared-capital account that runs ordered Systems
+- **Backtest**: an actual System × Asset simulation run and its result
 - **Market**: a trading venue or market context (for example, IDX, NASDAQ,
   forex, or crypto) that holds venue-specific rules such as minimum order
   quantity and quantity step
@@ -30,11 +34,16 @@ Pludux separates simulation into these repository terms:
 
 ## Verified capabilities
 
-- GUI-based Asset, Strategy, Profile, Backtest, Portfolio, Market, and Broker
-  management, plus Watchlists
-- Strategy creation/editing in the GUI, including node-based editing,
+- GUI-based Asset, Model, Strategy, Profile, Portfolio, Market, Broker, and
+  Watchlist management
+- Model creation/editing in the GUI, including node-based editing,
   duplicate, and JSON import/export
-- Portfolio backtests with shared capital across ordered Backtests
+- Strategy creation/editing in the GUI, including duplicate-and-reuse
+  workflows
+- System creation/editing in the GUI, including Watchlist binding, a Main
+  Strategy, ordered Failsafe Strategy bindings, activation rules, and shared
+  Model Performance settings
+- Portfolio simulations with shared capital across ordered Systems
 - Deterministic execution for identical inputs
 - Union processing of asset timelines in Portfolio backtests
 - Missing candles are not synthesized
@@ -44,7 +53,7 @@ Pludux separates simulation into these repository terms:
 
 ## Scope and non-goals
 
-- Focus: portfolio backtesting with shared capital, ordered Backtests, and
+- Focus: portfolio simulation with shared capital, ordered Systems, and
   deterministic execution.
 - Profile does not define execution filtering or built-in risk presets.
 - Not included: live trading, margin, leverage models, currency conversion,

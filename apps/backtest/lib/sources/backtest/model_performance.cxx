@@ -8,29 +8,29 @@ module;
 #include <stdexcept>
 #include <utility>
 
-export module pludux.backtest:strategy_performance;
+export module pludux.backtest:model_performance;
 
-import :strategy_closed_position;
-import :strategy_performance_model;
+import :model_closed_position;
+import :model_performance_model;
 
 export namespace pludux::backtest {
 
-enum class StrategyPerformanceHistoryMode {
+enum class ModelPerformanceHistoryMode {
   All,
   RollingWindow,
   ExponentialDecay
 };
 
-enum class StrategyPerformanceBreakEvenTreatment {
+enum class ModelPerformanceBreakEvenTreatment {
   Skip,
   CountAsWin,
   CountAsLoss
 };
 
-class StrategyPerformanceHistoryPolicy {
+class ModelPerformanceHistoryPolicy {
 public:
-  StrategyPerformanceHistoryPolicy(
-   StrategyPerformanceHistoryMode mode = StrategyPerformanceHistoryMode::All,
+  ModelPerformanceHistoryPolicy(
+   ModelPerformanceHistoryMode mode = ModelPerformanceHistoryMode::All,
    std::size_t rolling_window = 100,
    double exponential_decay = 0.99) noexcept
   : mode_{mode}
@@ -39,30 +39,30 @@ public:
   {
   }
 
-  auto operator==(const StrategyPerformanceHistoryPolicy&) const noexcept
+  auto operator==(const ModelPerformanceHistoryPolicy&) const noexcept
    -> bool = default;
 
-  auto mode(this const StrategyPerformanceHistoryPolicy& self) noexcept
-   -> StrategyPerformanceHistoryMode
+  auto mode(this const ModelPerformanceHistoryPolicy& self) noexcept
+   -> ModelPerformanceHistoryMode
   {
     return self.mode_;
   }
 
   auto
-  rolling_window(this const StrategyPerformanceHistoryPolicy& self) noexcept
+  rolling_window(this const ModelPerformanceHistoryPolicy& self) noexcept
    -> std::size_t
   {
     return self.rolling_window_;
   }
 
   auto
-  exponential_decay(this const StrategyPerformanceHistoryPolicy& self) noexcept
+  exponential_decay(this const ModelPerformanceHistoryPolicy& self) noexcept
    -> double
   {
     return self.exponential_decay_;
   }
 
-  void validate(this const StrategyPerformanceHistoryPolicy& self)
+  void validate(this const ModelPerformanceHistoryPolicy& self)
   {
     if(self.rolling_window_ == 0) {
       throw std::invalid_argument{"Rolling history window must be positive"};
@@ -75,14 +75,14 @@ public:
   }
 
 private:
-  StrategyPerformanceHistoryMode mode_{StrategyPerformanceHistoryMode::All};
+  ModelPerformanceHistoryMode mode_{ModelPerformanceHistoryMode::All};
   std::size_t rolling_window_{100};
   double exponential_decay_{0.99};
 };
 
-class StrategyPerformanceBayesianConfig {
+class ModelPerformanceBayesianConfig {
 public:
-  StrategyPerformanceBayesianConfig(
+  ModelPerformanceBayesianConfig(
    BayesianWinModelNode win_probability_model =
     BayesianWinModelNode{BetaBernoulliModelNode{}},
    BayesianPayoffModelNode winning_payoff_model =
@@ -96,17 +96,17 @@ public:
     validate();
   }
 
-  auto operator==(const StrategyPerformanceBayesianConfig&) const noexcept
+  auto operator==(const ModelPerformanceBayesianConfig&) const noexcept
    -> bool = default;
 
   auto win_probability_model(
-   this const StrategyPerformanceBayesianConfig& self) noexcept
+   this const ModelPerformanceBayesianConfig& self) noexcept
    -> const BayesianWinModelNode&
   {
     return self.win_probability_model_;
   }
 
-  void win_probability_model(this StrategyPerformanceBayesianConfig& self,
+  void win_probability_model(this ModelPerformanceBayesianConfig& self,
                              BayesianWinModelNode model)
   {
     static_cast<void>(node_to_model_method(model));
@@ -114,13 +114,13 @@ public:
   }
 
   auto winning_payoff_model(
-   this const StrategyPerformanceBayesianConfig& self) noexcept
+   this const ModelPerformanceBayesianConfig& self) noexcept
    -> const BayesianPayoffModelNode&
   {
     return self.winning_payoff_model_;
   }
 
-  void winning_payoff_model(this StrategyPerformanceBayesianConfig& self,
+  void winning_payoff_model(this ModelPerformanceBayesianConfig& self,
                             BayesianPayoffModelNode model)
   {
     static_cast<void>(node_to_model_method(model));
@@ -128,20 +128,20 @@ public:
   }
 
   auto losing_payoff_model(
-   this const StrategyPerformanceBayesianConfig& self) noexcept
+   this const ModelPerformanceBayesianConfig& self) noexcept
    -> const BayesianPayoffModelNode&
   {
     return self.losing_payoff_model_;
   }
 
-  void losing_payoff_model(this StrategyPerformanceBayesianConfig& self,
+  void losing_payoff_model(this ModelPerformanceBayesianConfig& self,
                            BayesianPayoffModelNode model)
   {
     static_cast<void>(node_to_model_method(model));
     self.losing_payoff_model_ = std::move(model);
   }
 
-  void validate(this const StrategyPerformanceBayesianConfig& self)
+  void validate(this const ModelPerformanceBayesianConfig& self)
   {
     static_cast<void>(node_to_model_method(self.win_probability_model_));
     static_cast<void>(node_to_model_method(self.winning_payoff_model_));
@@ -154,13 +154,13 @@ private:
   BayesianPayoffModelNode losing_payoff_model_{GammaPayoffModelNode{}};
 };
 
-class StrategyPerformanceConfig {
+class ModelPerformanceConfig {
 public:
-  StrategyPerformanceConfig(
-   StrategyPerformanceHistoryPolicy history = {},
-   StrategyPerformanceBayesianConfig bayesian = {},
-   StrategyPerformanceBreakEvenTreatment break_even_treatment =
-    StrategyPerformanceBreakEvenTreatment::CountAsLoss)
+  ModelPerformanceConfig(
+   ModelPerformanceHistoryPolicy history = {},
+   ModelPerformanceBayesianConfig bayesian = {},
+   ModelPerformanceBreakEvenTreatment break_even_treatment =
+     ModelPerformanceBreakEvenTreatment::CountAsLoss)
   : history_{std::move(history)}
   , bayesian_{std::move(bayesian)}
   , break_even_treatment_{break_even_treatment}
@@ -168,50 +168,50 @@ public:
     validate();
   }
 
-  auto operator==(const StrategyPerformanceConfig&) const noexcept
+  auto operator==(const ModelPerformanceConfig&) const noexcept
    -> bool = default;
 
-  auto history(this const StrategyPerformanceConfig& self) noexcept
-   -> const StrategyPerformanceHistoryPolicy&
+  auto history(this const ModelPerformanceConfig& self) noexcept
+   -> const ModelPerformanceHistoryPolicy&
   {
     return self.history_;
   }
 
-  void history(this StrategyPerformanceConfig& self,
-               StrategyPerformanceHistoryPolicy history)
+  void history(this ModelPerformanceConfig& self,
+                ModelPerformanceHistoryPolicy history)
   {
     history.validate();
     self.history_ = std::move(history);
   }
 
-  auto bayesian(this const StrategyPerformanceConfig& self) noexcept
-   -> const StrategyPerformanceBayesianConfig&
+  auto bayesian(this const ModelPerformanceConfig& self) noexcept
+   -> const ModelPerformanceBayesianConfig&
   {
     return self.bayesian_;
   }
 
-  void bayesian(this StrategyPerformanceConfig& self,
-                StrategyPerformanceBayesianConfig bayesian)
+  void bayesian(this ModelPerformanceConfig& self,
+                 ModelPerformanceBayesianConfig bayesian)
   {
     bayesian.validate();
     self.bayesian_ = std::move(bayesian);
   }
 
-  auto break_even_treatment(this const StrategyPerformanceConfig& self) noexcept
-   -> StrategyPerformanceBreakEvenTreatment
+  auto break_even_treatment(this const ModelPerformanceConfig& self) noexcept
+   -> ModelPerformanceBreakEvenTreatment
   {
     return self.break_even_treatment_;
   }
 
   void break_even_treatment(
-   this StrategyPerformanceConfig& self,
-   StrategyPerformanceBreakEvenTreatment break_even_treatment)
+    this ModelPerformanceConfig& self,
+    ModelPerformanceBreakEvenTreatment break_even_treatment)
   {
     validate_break_even_treatment(break_even_treatment);
     self.break_even_treatment_ = break_even_treatment;
   }
 
-  void validate(this const StrategyPerformanceConfig& self)
+  void validate(this const ModelPerformanceConfig& self)
   {
     self.history_.validate();
     self.bayesian_.validate();
@@ -219,29 +219,29 @@ public:
   }
 
 private:
-  StrategyPerformanceHistoryPolicy history_{};
-  StrategyPerformanceBayesianConfig bayesian_{};
-  StrategyPerformanceBreakEvenTreatment break_even_treatment_{
-   StrategyPerformanceBreakEvenTreatment::CountAsLoss};
+  ModelPerformanceHistoryPolicy history_{};
+  ModelPerformanceBayesianConfig bayesian_{};
+  ModelPerformanceBreakEvenTreatment break_even_treatment_{
+   ModelPerformanceBreakEvenTreatment::CountAsLoss};
 
   static void validate_break_even_treatment(
-   StrategyPerformanceBreakEvenTreatment break_even_treatment)
+   ModelPerformanceBreakEvenTreatment break_even_treatment)
   {
     switch(break_even_treatment) {
-    case StrategyPerformanceBreakEvenTreatment::Skip:
-    case StrategyPerformanceBreakEvenTreatment::CountAsWin:
-    case StrategyPerformanceBreakEvenTreatment::CountAsLoss:
+    case ModelPerformanceBreakEvenTreatment::Skip:
+    case ModelPerformanceBreakEvenTreatment::CountAsWin:
+    case ModelPerformanceBreakEvenTreatment::CountAsLoss:
       return;
     }
     throw std::invalid_argument{"Invalid break-even treatment"};
   }
 };
 
-class StrategyPerformanceSnapshot {
+class ModelPerformanceSnapshot {
 public:
-  StrategyPerformanceSnapshot() = default;
+  ModelPerformanceSnapshot() = default;
 
-  StrategyPerformanceSnapshot(
+  ModelPerformanceSnapshot(
    std::size_t lifetime_count,
    std::size_t current_winning_streak,
    std::size_t current_losing_streak,
@@ -273,94 +273,94 @@ public:
   {
   }
 
-  auto operator==(const StrategyPerformanceSnapshot&) const noexcept
+  auto operator==(const ModelPerformanceSnapshot&) const noexcept
    -> bool = default;
 
-  auto lifetime_count(this const StrategyPerformanceSnapshot& self) noexcept
+  auto lifetime_count(this const ModelPerformanceSnapshot& self) noexcept
    -> std::size_t
   {
     return self.lifetime_count_;
   }
 
   auto
-  current_winning_streak(this const StrategyPerformanceSnapshot& self) noexcept
+   current_winning_streak(this const ModelPerformanceSnapshot& self) noexcept
    -> std::size_t
   {
     return self.current_winning_streak_;
   }
 
   auto
-  current_losing_streak(this const StrategyPerformanceSnapshot& self) noexcept
+   current_losing_streak(this const ModelPerformanceSnapshot& self) noexcept
    -> std::size_t
   {
     return self.current_losing_streak_;
   }
 
   auto
-  maximum_winning_streak(this const StrategyPerformanceSnapshot& self) noexcept
+   maximum_winning_streak(this const ModelPerformanceSnapshot& self) noexcept
    -> std::size_t
   {
     return self.maximum_winning_streak_;
   }
 
   auto
-  maximum_losing_streak(this const StrategyPerformanceSnapshot& self) noexcept
+   maximum_losing_streak(this const ModelPerformanceSnapshot& self) noexcept
    -> std::size_t
   {
     return self.maximum_losing_streak_;
   }
 
-  auto effective_count(this const StrategyPerformanceSnapshot& self) noexcept
+  auto effective_count(this const ModelPerformanceSnapshot& self) noexcept
    -> double
   {
     return self.effective_count_;
   }
 
-  auto win_rate(this const StrategyPerformanceSnapshot& self) noexcept -> double
+  auto win_rate(this const ModelPerformanceSnapshot& self) noexcept -> double
   {
     return self.win_rate_;
   }
 
-  auto break_even_rate(this const StrategyPerformanceSnapshot& self) noexcept
+  auto break_even_rate(this const ModelPerformanceSnapshot& self) noexcept
    -> double
   {
     return self.break_even_rate_;
   }
 
-  auto loss_rate(this const StrategyPerformanceSnapshot& self) noexcept
+  auto loss_rate(this const ModelPerformanceSnapshot& self) noexcept
    -> double
   {
     return self.loss_rate_;
   }
 
-  auto mean_return(this const StrategyPerformanceSnapshot& self) noexcept
+  auto mean_return(this const ModelPerformanceSnapshot& self) noexcept
    -> double
   {
     return self.mean_return_;
   }
 
   auto return_standard_deviation(
-   this const StrategyPerformanceSnapshot& self) noexcept -> double
+   this const ModelPerformanceSnapshot& self) noexcept -> double
   {
     return self.return_standard_deviation_;
   }
 
   auto win_probability_posterior(
-   this const StrategyPerformanceSnapshot& self) noexcept
+   this const ModelPerformanceSnapshot& self) noexcept
    -> const BayesianWinSnapshot&
   {
     return self.win_probability_posterior_;
   }
 
   auto winning_payoff_posterior(
-   this const StrategyPerformanceSnapshot& self) noexcept
+   this const ModelPerformanceSnapshot& self) noexcept
    -> const BayesianPayoffSnapshot&
   {
     return self.winning_payoff_posterior_;
   }
 
   auto
-  losing_payoff_posterior(this const StrategyPerformanceSnapshot& self) noexcept
+   losing_payoff_posterior(this const ModelPerformanceSnapshot& self) noexcept
    -> const BayesianPayoffSnapshot&
   {
     return self.losing_payoff_posterior_;
@@ -383,9 +383,9 @@ private:
   BayesianPayoffSnapshot losing_payoff_posterior_{};
 };
 
-class StrategyPerformance {
+class ModelPerformance {
 public:
-  explicit StrategyPerformance(StrategyPerformanceConfig config = {})
+  explicit ModelPerformance(ModelPerformanceConfig config = {})
   : config_{std::move(config)}
   , win_probability_model_{node_to_model_method(
      config_.bayesian().win_probability_model())}
@@ -396,14 +396,14 @@ public:
   {
   }
 
-  auto config(this const StrategyPerformance& self) noexcept
-   -> const StrategyPerformanceConfig&
+  auto config(this const ModelPerformance& self) noexcept
+   -> const ModelPerformanceConfig&
   {
     return self.config_;
   }
 
-  void observe(this StrategyPerformance& self,
-               const StrategyClosedPosition& position)
+  void observe(this ModelPerformance& self,
+                const ModelClosedPosition& position)
   {
     const auto return_ratio = position.return_ratio();
     if(!std::isfinite(return_ratio)) {
@@ -413,10 +413,10 @@ public:
     ++self.lifetime_count_;
     self.update_streaks(return_ratio);
     switch(self.config_.history().mode()) {
-    case StrategyPerformanceHistoryMode::All:
+    case ModelPerformanceHistoryMode::All:
       self.add(return_ratio);
       break;
-    case StrategyPerformanceHistoryMode::RollingWindow:
+    case ModelPerformanceHistoryMode::RollingWindow:
       self.observations_.push_back(return_ratio);
       while(self.observations_.size() >
             self.config_.history().rolling_window()) {
@@ -424,15 +424,15 @@ public:
       }
       self.rebuild();
       break;
-    case StrategyPerformanceHistoryMode::ExponentialDecay:
+    case ModelPerformanceHistoryMode::ExponentialDecay:
       self.decay(self.config_.history().exponential_decay());
       self.add(return_ratio);
       break;
     }
   }
 
-  auto snapshot(this const StrategyPerformance& self)
-   -> StrategyPerformanceSnapshot
+  auto snapshot(this const ModelPerformance& self)
+   -> ModelPerformanceSnapshot
   {
     const auto outcome_weight = self.outcome_evidence_.win_weight +
                                 self.outcome_evidence_.break_even_weight +
@@ -453,7 +453,7 @@ public:
                   (self.return_evidence_.effective_count - 1.0))
       : 0.0;
 
-    return StrategyPerformanceSnapshot{
+    return ModelPerformanceSnapshot{
      self.lifetime_count_,
      self.current_winning_streak_,
      self.current_losing_streak_,
@@ -483,7 +483,7 @@ private:
     double loss_weight{};
   };
 
-  StrategyPerformanceConfig config_;
+  ModelPerformanceConfig config_;
   BayesianWinModelMethod win_probability_model_;
   BayesianPayoffModelMethod winning_payoff_model_;
   BayesianPayoffModelMethod losing_payoff_model_;
@@ -499,7 +499,7 @@ private:
   WeightedPayoffEvidence winning_payoff_evidence_{};
   WeightedPayoffEvidence losing_payoff_evidence_{};
 
-  void update_streaks(this StrategyPerformance& self, double value) noexcept
+  void update_streaks(this ModelPerformance& self, double value) noexcept
   {
     if(value > 0.0) {
       ++self.current_winning_streak_;
@@ -517,7 +517,7 @@ private:
     }
   }
 
-  void add(this StrategyPerformance& self, double value) noexcept
+  void add(this ModelPerformance& self, double value) noexcept
   {
     const auto previous_weight = self.return_evidence_.effective_count;
     const auto new_weight = previous_weight + 1.0;
@@ -540,19 +540,19 @@ private:
     } else {
       self.outcome_evidence_.break_even_weight += 1.0;
       switch(self.config_.break_even_treatment()) {
-      case StrategyPerformanceBreakEvenTreatment::Skip:
+      case ModelPerformanceBreakEvenTreatment::Skip:
         break;
-      case StrategyPerformanceBreakEvenTreatment::CountAsWin:
+      case ModelPerformanceBreakEvenTreatment::CountAsWin:
         self.binary_evidence_.win_weight += 1.0;
         break;
-      case StrategyPerformanceBreakEvenTreatment::CountAsLoss:
+      case ModelPerformanceBreakEvenTreatment::CountAsLoss:
         self.binary_evidence_.loss_weight += 1.0;
         break;
       }
     }
   }
 
-  void decay(this StrategyPerformance& self, double factor) noexcept
+  void decay(this ModelPerformance& self, double factor) noexcept
   {
     self.return_evidence_.effective_count *= factor;
     self.return_evidence_.squared_deviation_sum *= factor;
@@ -576,7 +576,7 @@ private:
     }
   }
 
-  void rebuild(this StrategyPerformance& self) noexcept
+  void rebuild(this ModelPerformance& self) noexcept
   {
     self.return_evidence_ = {};
     self.outcome_evidence_ = {};

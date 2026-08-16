@@ -129,11 +129,11 @@ TEST(PortfolioRunnerTest, UsesUnionTimelineAndMarksMissingBarsStale)
    1'000.0,
    10,
    10,
-   {PortfolioRunner::BacktestRun{BacktestStoreHandle{1, 1},
+    {PortfolioRunner::BacktestRun{SystemStoreHandle{1, 1},
                                  AssetStoreHandle{1, 1},
                                  make_runner(first, market, broker, profile)},
     PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{2, 1},
+      SystemStoreHandle{2, 1},
      AssetStoreHandle{2, 1},
      make_runner(second, market, broker, profile)}}};
   auto results = PortfolioResults{};
@@ -152,6 +152,122 @@ TEST(PortfolioRunnerTest, UsesUnionTimelineAndMarksMissingBarsStale)
   EXPECT_EQ(results.backtests()[1].timeline().size(), 3);
 }
 
+void expect_same_number(double batch_value, double single_value)
+{
+  if(std::isnan(batch_value) || std::isnan(single_value)) {
+    EXPECT_EQ(std::isnan(batch_value), std::isnan(single_value));
+    return;
+  }
+  EXPECT_DOUBLE_EQ(batch_value, single_value);
+}
+
+TEST(PortfolioRunnerTest, BatchRunMatchesSingleTimestampRun)
+{
+  const auto first = make_asset("First", {1.0, 2.0, 4.0, 6.0});
+  const auto second = make_asset("Second", {1.0, 3.0, 4.0, 5.0});
+  const auto market = Market{"Market", 0.0, 0.0};
+  const auto broker = Broker{"Broker"};
+  const auto profile =
+   Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  const auto make_portfolio_runner = [&] {
+    return PortfolioRunner{
+     1'000.0,
+     10,
+     10,
+     {PortfolioRunner::BacktestRun{
+       SystemStoreHandle{1, 1},
+       AssetStoreHandle{1, 1},
+       make_entry_runner(
+        first, market, broker, profile, InsufficientCashPolicy::Reject)},
+      PortfolioRunner::BacktestRun{
+       SystemStoreHandle{2, 1},
+       AssetStoreHandle{2, 1},
+       make_entry_runner(
+        second, market, broker, profile, InsufficientCashPolicy::Reject)}}};
+  };
+  auto single_runner = make_portfolio_runner();
+  auto batch_runner = make_portfolio_runner();
+  auto single_results = PortfolioResults{};
+  auto batch_results = PortfolioResults{};
+
+  while(single_results.timeline().size() < single_runner.total_timestamps()) {
+    single_runner.run(single_results);
+  }
+  while(batch_runner.run_batch(batch_results, 3) != 0) {
+  }
+
+  ASSERT_EQ(batch_results.timeline().size(), batch_runner.total_timestamps());
+  EXPECT_EQ(batch_results.timeline(), single_results.timeline());
+  ASSERT_EQ(batch_results.backtests().size(),
+            single_results.backtests().size());
+  for(auto index = std::size_t{}; index < batch_results.backtests().size();
+      ++index) {
+    EXPECT_EQ(batch_results.backtests()[index].key(),
+              single_results.backtests()[index].key());
+    const auto& batch_timeline = batch_results.backtests()[index].timeline();
+    const auto& single_timeline = single_results.backtests()[index].timeline();
+    ASSERT_EQ(batch_timeline.size(), single_timeline.size());
+    for(auto row = std::size_t{}; row < batch_timeline.size(); ++row) {
+      EXPECT_EQ(batch_timeline.market_timestamp(row),
+                single_timeline.market_timestamp(row));
+      expect_same_number(batch_timeline.market_price(row),
+                         single_timeline.market_price(row));
+      EXPECT_EQ(batch_timeline.market_lookback(row),
+                single_timeline.market_lookback(row));
+      expect_same_number(batch_timeline.capital(row),
+                         single_timeline.capital(row));
+      expect_same_number(batch_timeline.equity(row),
+                         single_timeline.equity(row));
+      expect_same_number(batch_timeline.peak_equity(row),
+                         single_timeline.peak_equity(row));
+      expect_same_number(batch_timeline.drawdown(row),
+                         single_timeline.drawdown(row));
+      expect_same_number(batch_timeline.max_drawdown(row),
+                         single_timeline.max_drawdown(row));
+      ASSERT_EQ(batch_timeline.trade_events(row).size(),
+                single_timeline.trade_events(row).size());
+      for(auto event = std::size_t{};
+          event < batch_timeline.trade_events(row).size();
+          ++event) {
+        const auto& batch_event = batch_timeline.trade_events(row)[event];
+        const auto& single_event = single_timeline.trade_events(row)[event];
+        EXPECT_EQ(batch_event.trade_id(), single_event.trade_id());
+        EXPECT_EQ(batch_event.event_id(), single_event.event_id());
+        EXPECT_EQ(batch_event.trade_event_index(),
+                  single_event.trade_event_index());
+        EXPECT_EQ(batch_event.type(), single_event.type());
+        EXPECT_EQ(batch_event.timestamp(), single_event.timestamp());
+        expect_same_number(batch_event.price(), single_event.price());
+        expect_same_number(batch_event.position_size(),
+                           single_event.position_size());
+        expect_same_number(batch_event.fees(), single_event.fees());
+        EXPECT_EQ(batch_event.strategy_index(), single_event.strategy_index());
+      }
+      EXPECT_EQ(batch_timeline.closed_trades(row).size(),
+                single_timeline.closed_trades(row).size());
+      ASSERT_EQ(batch_timeline.open_position(row).has_value(),
+                single_timeline.open_position(row).has_value());
+      if(batch_timeline.open_position(row)) {
+        const auto& batch_position = *batch_timeline.open_position(row);
+        const auto& single_position = *single_timeline.open_position(row);
+        EXPECT_EQ(batch_position.trade_id(), single_position.trade_id());
+        EXPECT_EQ(batch_position.strategy_index(),
+                  single_position.strategy_index());
+        EXPECT_EQ(batch_position.entry_timestamp(),
+                  single_position.entry_timestamp());
+        EXPECT_EQ(batch_position.market_timestamp(),
+                  single_position.market_timestamp());
+        expect_same_number(batch_position.market_price(),
+                           single_position.market_price());
+        expect_same_number(batch_position.position_size(),
+                           single_position.position_size());
+        expect_same_number(batch_position.investment(),
+                           single_position.investment());
+      }
+    }
+  }
+}
+
 TEST(PortfolioRunnerTest, RejectsNonIncreasingAssetTimestamps)
 {
   const auto asset = make_asset("Invalid", {1.0, 1.0});
@@ -164,7 +280,7 @@ TEST(PortfolioRunnerTest, RejectsNonIncreasingAssetTimestamps)
                     10,
                     10,
                     {PortfolioRunner::BacktestRun{
-                     BacktestStoreHandle{1, 1},
+                      SystemStoreHandle{1, 1},
                      AssetStoreHandle{1, 1},
                      make_runner(asset, market, broker, profile)}}}),
    std::invalid_argument);
@@ -183,12 +299,12 @@ TEST(PortfolioRunnerTest, BacktestOrderHasDeterministicSharedCashPriority)
    10,
    10,
    {PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{1, 1},
+      SystemStoreHandle{1, 1},
      AssetStoreHandle{1, 1},
      make_entry_runner(
       first, market, broker, profile, InsufficientCashPolicy::Reject)},
     PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{2, 1},
+      SystemStoreHandle{2, 1},
      AssetStoreHandle{2, 1},
      make_entry_runner(
       second, market, broker, profile, InsufficientCashPolicy::Reject)}}};
@@ -224,12 +340,12 @@ TEST(PortfolioRunnerTest, CurrentCloseAssetComparatorOverridesBacktestOrder)
    1,
    10,
    {PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{1, 1},
+      SystemStoreHandle{1, 1},
      AssetStoreHandle{1, 1},
      make_entry_runner(
       first, market, broker, profile, InsufficientCashPolicy::Reject)},
     PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{2, 1},
+      SystemStoreHandle{2, 1},
      AssetStoreHandle{2, 1},
      make_entry_runner(
       second, market, broker, profile, InsufficientCashPolicy::Reject)}},
@@ -258,12 +374,12 @@ TEST(PortfolioRunnerTest, LowerRequestedNotionalExecutesFirst)
    1,
    10,
    {PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{1, 1},
+      SystemStoreHandle{1, 1},
      AssetStoreHandle{1, 1},
      make_entry_runner(
       first, market, broker, larger, InsufficientCashPolicy::Reject)},
     PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{2, 1},
+      SystemStoreHandle{2, 1},
      AssetStoreHandle{2, 1},
      make_entry_runner(
       second, market, broker, smaller, InsufficientCashPolicy::Reject)}},
@@ -294,12 +410,12 @@ TEST(PortfolioRunnerTest, RejectedRankedOrderDoesNotBlockLaterOrder)
    10,
    10,
    {PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{1, 1},
+      SystemStoreHandle{1, 1},
      AssetStoreHandle{1, 1},
      make_entry_runner(
       first, market, broker, unaffordable, InsufficientCashPolicy::Reject)},
     PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{2, 1},
+      SystemStoreHandle{2, 1},
      AssetStoreHandle{2, 1},
      make_entry_runner(
       second, market, broker, affordable, InsufficientCashPolicy::Reject)}},
@@ -334,12 +450,12 @@ TEST(PortfolioRunnerTest, ComparatorsFallThroughBeforePortfolioOrder)
    1,
    10,
    {PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{1, 1},
+      SystemStoreHandle{1, 1},
      AssetStoreHandle{1, 1},
      make_entry_runner(
       first, market, broker, profile, InsufficientCashPolicy::Reject)},
     PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{2, 1},
+      SystemStoreHandle{2, 1},
      AssetStoreHandle{2, 1},
      make_entry_runner(
       second, market, broker, profile, InsufficientCashPolicy::Reject)}},
@@ -368,12 +484,12 @@ TEST(PortfolioRunnerTest, FiniteComparatorScorePrecedesNonFiniteScore)
    1,
    10,
    {PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{1, 1},
+      SystemStoreHandle{1, 1},
      AssetStoreHandle{1, 1},
      make_entry_runner(
       first, market, broker, profile, InsufficientCashPolicy::Reject)},
     PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{2, 1},
+      SystemStoreHandle{2, 1},
      AssetStoreHandle{2, 1},
      make_entry_runner(
       second, market, broker, profile, InsufficientCashPolicy::Reject)}},
@@ -402,11 +518,11 @@ TEST(PortfolioRunnerTest, RequestedOrderProvidesEntryDirection)
    1,
    10,
    {PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{1, 1},
+      SystemStoreHandle{1, 1},
      AssetStoreHandle{1, 1},
      make_short_entry_runner(short_asset, market, broker, profile)},
     PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{2, 1},
+      SystemStoreHandle{2, 1},
      AssetStoreHandle{2, 1},
      make_entry_runner(
       long_asset, market, broker, profile, InsufficientCashPolicy::Reject)}},
@@ -471,10 +587,10 @@ TEST(PortfolioRunnerTest, NextOpenComparatorUsesPreviousCompletedAssetBar)
    1'000.0,
    1,
    10,
-   {PortfolioRunner::BacktestRun{BacktestStoreHandle{1, 1},
+    {PortfolioRunner::BacktestRun{SystemStoreHandle{1, 1},
                                  AssetStoreHandle{1, 1},
                                  make_next_open_runner(first)},
-    PortfolioRunner::BacktestRun{BacktestStoreHandle{2, 1},
+     PortfolioRunner::BacktestRun{SystemStoreHandle{2, 1},
                                  AssetStoreHandle{2, 1},
                                  make_next_open_runner(second)}},
    {PortfolioEntryComparator{CloseNode{},
@@ -501,7 +617,7 @@ TEST(PortfolioRunnerTest, CapPolicyUsesOnlySharedAvailableCash)
    10,
    10,
    {PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{1, 1},
+      SystemStoreHandle{1, 1},
      AssetStoreHandle{1, 1},
      make_entry_runner(first,
                        market,
@@ -509,7 +625,7 @@ TEST(PortfolioRunnerTest, CapPolicyUsesOnlySharedAvailableCash)
                        profile,
                        InsufficientCashPolicy::CapToAvailableCash)},
     PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{2, 1},
+      SystemStoreHandle{2, 1},
      AssetStoreHandle{2, 1},
      make_entry_runner(second,
                        market,
@@ -539,7 +655,7 @@ TEST(PortfolioRunnerTest, ZeroLimitRejectsInitialEntryBeforeCashAdmission)
    0,
    10,
    {PortfolioRunner::BacktestRun{
-    BacktestStoreHandle{1, 1},
+     SystemStoreHandle{1, 1},
     AssetStoreHandle{1, 1},
     make_entry_runner(
      asset, market, broker, profile, InsufficientCashPolicy::Reject)}}};
@@ -576,12 +692,12 @@ TEST(PortfolioRunnerTest, OrderedEntriesStopAtMaximumOpenTrades)
    1,
    10,
    {PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{1, 1},
+     SystemStoreHandle{1, 1},
      AssetStoreHandle{1, 1},
      make_entry_runner(
       first, market, broker, profile, InsufficientCashPolicy::Reject)},
     PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{2, 1},
+      SystemStoreHandle{2, 1},
      AssetStoreHandle{2, 1},
      make_entry_runner(
       second, market, broker, profile, InsufficientCashPolicy::Reject)}}};
@@ -610,7 +726,7 @@ TEST(PortfolioRunnerTest, EntryFilteredOrderDoesNotConsumeOpenTradeSlot)
    1,
    1,
    {PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{1, 1},
+      SystemStoreHandle{1, 1},
      AssetStoreHandle{1, 1},
      make_entry_runner(first,
                        market,
@@ -619,7 +735,7 @@ TEST(PortfolioRunnerTest, EntryFilteredOrderDoesNotConsumeOpenTradeSlot)
                        InsufficientCashPolicy::Reject,
                        BooleanMethod<false>{})},
     PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{2, 1},
+      SystemStoreHandle{2, 1},
      AssetStoreHandle{2, 1},
      make_entry_runner(
       second, market, broker, profile, InsufficientCashPolicy::Reject)}}};
@@ -664,11 +780,11 @@ TEST(PortfolioRunnerTest, ClosingTradeReleasesSlotAtSameTimestamp)
    1'000.0,
    1,
    10,
-   {PortfolioRunner::BacktestRun{BacktestStoreHandle{1, 1},
+    {PortfolioRunner::BacktestRun{SystemStoreHandle{1, 1},
                                  AssetStoreHandle{1, 1},
                                  std::move(exiting_runner)},
     PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{2, 1},
+      SystemStoreHandle{2, 1},
      AssetStoreHandle{2, 1},
      make_entry_runner(
       entering, market, broker, profile, InsufficientCashPolicy::Reject)}}};
@@ -710,7 +826,7 @@ TEST(PortfolioRunnerTest, PyramidingRemainsAllowedAtOpenTradeLimit)
    1'000.0,
    1,
    10,
-   {PortfolioRunner::BacktestRun{BacktestStoreHandle{1, 1},
+    {PortfolioRunner::BacktestRun{SystemStoreHandle{1, 1},
                                  AssetStoreHandle{1, 1},
                                  std::move(pyramiding_runner)}}};
   auto results = PortfolioResults{};
@@ -769,10 +885,10 @@ TEST(PortfolioRunnerTest, ComparatorRanksPyramidingOrders)
    1'000.0,
    10,
    3,
-   {PortfolioRunner::BacktestRun{BacktestStoreHandle{1, 1},
+    {PortfolioRunner::BacktestRun{SystemStoreHandle{1, 1},
                                  AssetStoreHandle{1, 1},
                                  make_pyramiding_runner(first)},
-    PortfolioRunner::BacktestRun{BacktestStoreHandle{2, 1},
+     PortfolioRunner::BacktestRun{SystemStoreHandle{2, 1},
                                  AssetStoreHandle{2, 1},
                                  make_pyramiding_runner(second)}},
    {PortfolioEntryComparator{RequestedOrderPriceNode{},
@@ -803,12 +919,12 @@ TEST(PortfolioRunnerTest, CombinedLayerLimitUsesDeterministicBacktestPriority)
    10,
    1,
    {PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{1, 1},
+      SystemStoreHandle{1, 1},
      AssetStoreHandle{1, 1},
      make_entry_runner(
       first, market, broker, profile, InsufficientCashPolicy::Reject)},
     PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{2, 1},
+      SystemStoreHandle{2, 1},
      AssetStoreHandle{2, 1},
      make_short_entry_runner(second, market, broker, profile)}}};
   auto results = PortfolioResults{};
@@ -819,8 +935,8 @@ TEST(PortfolioRunnerTest, CombinedLayerLimitUsesDeterministicBacktestPriority)
   EXPECT_FALSE(results.backtests()[1].timeline().open_position(0));
   EXPECT_TRUE(results.backtests()[1]
                .timeline()
-               .setup_state(0, 0)
-               .strategy_intents.empty());
+                .strategy_state(0, 0)
+                .model_intents.empty());
   ASSERT_EQ(results.backtests()[1].timeline().trade_events(0).size(), 1U);
   EXPECT_EQ(results.backtests()[1].timeline().trade_events(0).front().type(),
             TradeEvent::Type::rejected_maximum_combined_layers);
@@ -831,7 +947,7 @@ TEST(PortfolioRunnerTest, CombinedLayerLimitUsesDeterministicBacktestPriority)
   EXPECT_EQ(decision.outcome,
             PositionSizingDecisionOutcome::MaximumCombinedLayers);
   EXPECT_EQ(decision.intent_id, 0U);
-  EXPECT_EQ(decision.strategy_trade_id, 0U);
+   EXPECT_EQ(decision.model_trade_id, 0U);
 }
 
 TEST(PortfolioRunnerTest, CombinedLayerLimitBlocksPyramidWithoutAdvancingState)
@@ -873,7 +989,7 @@ TEST(PortfolioRunnerTest, CombinedLayerLimitBlocksPyramidWithoutAdvancingState)
    1'000.0,
    10,
    1,
-   {PortfolioRunner::BacktestRun{BacktestStoreHandle{1, 1},
+    {PortfolioRunner::BacktestRun{SystemStoreHandle{1, 1},
                                  AssetStoreHandle{1, 1},
                                  std::move(pyramiding_runner)}}};
   auto results = PortfolioResults{};
@@ -892,7 +1008,7 @@ TEST(PortfolioRunnerTest, CombinedLayerLimitBlocksPyramidWithoutAdvancingState)
   EXPECT_DOUBLE_EQ(
    timeline.open_position(1)->stop_loss_levels().front().effective_price(),
    50.0);
-  EXPECT_TRUE(timeline.setup_state(1, 0).strategy_intents.empty());
+   EXPECT_TRUE(timeline.strategy_state(1, 0).model_intents.empty());
   ASSERT_EQ(timeline.trade_events(1).size(), 1U);
   EXPECT_EQ(timeline.trade_events(1).front().type(),
             TradeEvent::Type::rejected_maximum_combined_layers);
@@ -913,7 +1029,7 @@ TEST(PortfolioRunnerTest, ZeroCombinedLayerLimitRejectsInitialEntry)
    10,
    0,
    {PortfolioRunner::BacktestRun{
-    BacktestStoreHandle{1, 1},
+     SystemStoreHandle{1, 1},
     AssetStoreHandle{1, 1},
     make_entry_runner(
      asset, market, broker, profile, InsufficientCashPolicy::Reject)}}};
@@ -923,7 +1039,7 @@ TEST(PortfolioRunnerTest, ZeroCombinedLayerLimitRejectsInitialEntry)
 
   const auto& timeline = results.backtests()[0].timeline();
   EXPECT_FALSE(timeline.open_position(0));
-  EXPECT_TRUE(timeline.setup_state(0, 0).strategy_intents.empty());
+   EXPECT_TRUE(timeline.strategy_state(0, 0).model_intents.empty());
   ASSERT_EQ(timeline.trade_events(0).size(), 1U);
   EXPECT_EQ(timeline.trade_events(0).front().type(),
             TradeEvent::Type::rejected_maximum_combined_layers);
@@ -960,11 +1076,11 @@ TEST(PortfolioRunnerTest, FullClosureReleasesCombinedLayerAtSameTimestamp)
    1'000.0,
    10,
    1,
-   {PortfolioRunner::BacktestRun{BacktestStoreHandle{1, 1},
+    {PortfolioRunner::BacktestRun{SystemStoreHandle{1, 1},
                                  AssetStoreHandle{1, 1},
                                  std::move(exiting_runner)},
     PortfolioRunner::BacktestRun{
-     BacktestStoreHandle{2, 1},
+      SystemStoreHandle{2, 1},
      AssetStoreHandle{2, 1},
      make_entry_runner(
       entering, market, broker, profile, InsufficientCashPolicy::Reject)}}};

@@ -27,22 +27,20 @@ TEST(PyramidingRetriggerTest, ParsesSerializesAndRejectsInvalidValues)
   EXPECT_EQ(serialize_pyramiding_retrigger(PyramidingRetrigger::AfterFalse),
             "AFTER_FALSE");
   EXPECT_THROW(parse_pyramiding_retrigger("ALWAYS"), std::runtime_error);
-  EXPECT_EQ(Strategy::Pyramiding{}.retrigger(),
+  EXPECT_EQ(Model::Pyramiding{}.retrigger(),
             PyramidingRetrigger::EveryEvaluation);
-  EXPECT_EQ(Strategy::Pyramiding{}.cooldown(), 0);
+  EXPECT_EQ(Model::Pyramiding{}.cooldown(), 0);
 }
 
 TEST(PyramidingCooldownTest, IsRequiredWhenPyramidingIsPresent)
 {
-  auto strategy_json =
-   jsoncons::ojson::parse(stringify_backtest_strategy(Strategy{}));
+  auto strategy_json = jsoncons::ojson::parse(stringify_model(Model{}));
   strategy_json.at("positions").at("long").at("pyramiding").erase("cooldown");
 
-  EXPECT_THROW(parse_backtest_strategy_json("Test", strategy_json.to_string()),
-               std::exception);
+  EXPECT_THROW(parse_model("Test", strategy_json.to_string()), std::exception);
 }
 
-TEST(StrategyInputsTest, CollectsNumericInputsInStrategyTraversalOrder)
+TEST(ModelInputsTest, CollectsNumericInputsInModelTraversalOrder)
 {
   auto series_nodes =
    OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>{};
@@ -65,16 +63,16 @@ TEST(StrategyInputsTest, CollectsNumericInputsInStrategyTraversalOrder)
                      NumericInputNode::ValueRepresentation::UnsignedInteger,
                      14.0}});
 
-  auto long_pyramiding = Strategy::Pyramiding{};
+  auto long_pyramiding = Model::Pyramiding{};
   long_pyramiding.signal(NumericInputNode{
    "Long Pyramid", NumericInputNode::ValueRepresentation::Decimal, 3.5});
 
-  auto long_position = Strategy::Position{};
-  long_position.entry(Strategy::Entry{
+  auto long_position = Model::Position{};
+  long_position.entry(Model::Entry{
    NumericInputNode{
     "Long Entry", NumericInputNode::ValueRepresentation::UnsignedInteger, 4.8},
    SignalTiming::NextOpen});
-  long_position.exits({Strategy::Exit{
+  long_position.exits({Model::Exit{
    true,
    NumericInputNode{
     "Exit Signal", NumericInputNode::ValueRepresentation::Decimal, 6.0},
@@ -82,23 +80,23 @@ TEST(StrategyInputsTest, CollectsNumericInputsInStrategyTraversalOrder)
   long_position.pyramiding(std::move(long_pyramiding));
   long_position.risk_distance(RiskDistanceAmountNode{NumericInputNode{
    "Risk Distance", NumericInputNode::ValueRepresentation::Decimal, 10.0}});
-  long_position.stop_losses({Strategy::StopLoss{
+  long_position.stop_losses({Model::StopLoss{
    true,
    NumericInputNode{
     "Stop Price", NumericInputNode::ValueRepresentation::Decimal, 95.0},
    false}});
-  long_position.take_profits({Strategy::TakeProfit{
+  long_position.take_profits({Model::TakeProfit{
    true,
    NumericInputNode{
     "Target Price", NumericInputNode::ValueRepresentation::Decimal, 120.0}}});
 
-  const auto strategy = Strategy{"Test",
-                                 std::move(series_nodes),
-                                 std::move(long_position),
-                                 Strategy::Position{},
-                                 {}};
+  const auto strategy = Model{"Test",
+                              std::move(series_nodes),
+                              std::move(long_position),
+                              Model::Position{},
+                              {}};
 
-  const auto inputs = collect_numeric_inputs(strategy);
+  const auto inputs = collect_model_inputs(strategy);
 
   ASSERT_EQ(inputs.size(), 11);
   EXPECT_EQ(inputs[0].label(), "Duplicate");
@@ -125,7 +123,7 @@ TEST(StrategyInputsTest, CollectsNumericInputsInStrategyTraversalOrder)
   EXPECT_DOUBLE_EQ(inputs[10].value(), 120.0);
 }
 
-TEST(StrategyInputsTest, CollectsInputFromPositionRMultipleSource)
+TEST(ModelInputsTest, CollectsInputFromPositionRMultipleSource)
 {
   auto series_nodes =
    OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>{};
@@ -133,20 +131,17 @@ TEST(StrategyInputsTest, CollectsInputFromPositionRMultipleSource)
    "current_r",
    PositionRMultipleNode{NumericInputNode{
     "R Source", NumericInputNode::ValueRepresentation::Decimal, 125.0}});
-  const auto strategy = Strategy{"Test",
-                                 std::move(series_nodes),
-                                 Strategy::Position{},
-                                 Strategy::Position{},
-                                 {}};
+  const auto strategy = Model{
+   "Test", std::move(series_nodes), Model::Position{}, Model::Position{}, {}};
 
-  const auto inputs = collect_numeric_inputs(strategy);
+  const auto inputs = collect_model_inputs(strategy);
 
   ASSERT_EQ(inputs.size(), 1U);
   EXPECT_EQ(inputs.front().label(), "R Source");
   EXPECT_DOUBLE_EQ(inputs.front().value(), 125.0);
 }
 
-TEST(StrategyInputsTest, AssigningStrategyReplacesBacktestInputsWithDefaults)
+TEST(ModelInputsTest, AssigningModelReplacesStrategyInputsWithDefaults)
 {
   auto series_nodes =
    OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>{};
@@ -159,49 +154,49 @@ TEST(StrategyInputsTest, AssigningStrategyReplacesBacktestInputsWithDefaults)
     NumericInputNode{"Replacement Integer",
                      NumericInputNode::ValueRepresentation::SignedInteger,
                      -3.0}});
-  const auto strategy = Strategy{"Replacement",
-                                 std::move(series_nodes),
-                                 Strategy::Position{},
-                                 Strategy::Position{},
-                                 {}};
-  const auto strategy_handle = StrategyStoreHandle{4, 2};
+  const auto model = Model{"Replacement",
+                           std::move(series_nodes),
+                           Model::Position{},
+                           Model::Position{},
+                           {}};
+  const auto model_handle = ModelStoreHandle{4, 2};
 
-  auto setup = BacktestSetup{};
-  setup.strategy_handle(StrategyStoreHandle{1, 1});
-  setup.inputs({NumericInputNode{
+  auto strategy = Strategy{};
+  strategy.model_handle(ModelStoreHandle{1, 1});
+  strategy.inputs({NumericInputNode{
    "Old Input", NumericInputNode::ValueRepresentation::UnsignedInteger, 99.0}});
 
-  assign_backtest_setup_strategy(setup, strategy_handle, strategy);
+  assign_strategy_model(strategy, model_handle, model);
 
-  EXPECT_EQ(setup.strategy_handle(), strategy_handle);
-  ASSERT_EQ(setup.inputs().size(), 2);
-  EXPECT_EQ(setup.inputs()[0].label(), "Replacement Decimal");
-  EXPECT_EQ(setup.inputs()[0].representation(),
+  EXPECT_EQ(strategy.model_handle(), model_handle);
+  ASSERT_EQ(strategy.inputs().size(), 2);
+  EXPECT_EQ(strategy.inputs()[0].label(), "Replacement Decimal");
+  EXPECT_EQ(strategy.inputs()[0].representation(),
             NumericInputNode::ValueRepresentation::Decimal);
-  EXPECT_DOUBLE_EQ(setup.inputs()[0].value(), 1.25);
-  EXPECT_EQ(setup.inputs()[1].label(), "Replacement Integer");
-  EXPECT_EQ(setup.inputs()[1].representation(),
+  EXPECT_DOUBLE_EQ(strategy.inputs()[0].value(), 1.25);
+  EXPECT_EQ(strategy.inputs()[1].label(), "Replacement Integer");
+  EXPECT_EQ(strategy.inputs()[1].representation(),
             NumericInputNode::ValueRepresentation::SignedInteger);
-  EXPECT_DOUBLE_EQ(setup.inputs()[1].value(), -3.0);
+  EXPECT_DOUBLE_EQ(strategy.inputs()[1].value(), -3.0);
 }
 
-TEST(StrategyInputsTest, AssigningStrategyWithoutInputsClearsBacktestInputs)
+TEST(ModelInputsTest, AssigningModelWithoutInputsClearsStrategyInputs)
 {
-  auto setup = BacktestSetup{};
-  setup.inputs({NumericInputNode{
+  auto strategy = Strategy{};
+  strategy.inputs({NumericInputNode{
    "Old Input", NumericInputNode::ValueRepresentation::Decimal, 99.0}});
-  const auto strategy_handle = StrategyStoreHandle{5, 3};
+  const auto model_handle = ModelStoreHandle{5, 3};
 
-  assign_backtest_setup_strategy(setup, strategy_handle, Strategy{});
+  assign_strategy_model(strategy, model_handle, Model{});
 
-  EXPECT_EQ(setup.strategy_handle(), strategy_handle);
-  EXPECT_TRUE(setup.inputs().empty());
+  EXPECT_EQ(strategy.model_handle(), model_handle);
+  EXPECT_TRUE(strategy.inputs().empty());
 }
 
-TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
+TEST(ModelParserTest, ParsesPerSideStopLossAndTakeProfit)
 {
   const auto strategy_json = std::string{R"({
-    "version": 2,
+    "version": 1,
     "execution": { "intrabarPath": "HIGH_FIRST" },
     "positions": {
       "long": {
@@ -278,7 +273,7 @@ TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
     }
   })"};
 
-  const auto strategy = parse_backtest_strategy_json("Test", strategy_json);
+  const auto strategy = parse_model("Test", strategy_json);
 
   ASSERT_EQ(strategy.long_position().stop_losses().size(), 2);
   EXPECT_TRUE(strategy.long_position().stop_losses()[0].enabled());
@@ -321,19 +316,32 @@ TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
   EXPECT_FALSE(strategy.short_position().entry().signal() ==
                strategy.long_position().entry().signal());
 
-  const auto round_tripped = parse_backtest_strategy_json(
-   "Round Trip", stringify_backtest_strategy(strategy));
+  const auto round_tripped =
+   parse_model("Round Trip", stringify_model(strategy));
   EXPECT_TRUE(round_tripped.equivalent_rules(strategy));
 }
 
-TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
+TEST(ModelParserTest, RejectsMissingAndVersionTwoModelJson)
 {
-  auto long_position = Strategy::Position{};
-  long_position.entry(Strategy::Entry{TrueNode{}, SignalTiming::CurrentClose});
+  auto model_json = serialize_model_config_json(Model{});
+  model_json.erase("version");
+  EXPECT_THROW(parse_model_config_json("Missing Version", model_json),
+               std::runtime_error);
+
+  model_json = serialize_model_config_json(Model{});
+  model_json["version"] = 2;
+  EXPECT_THROW(parse_model_config_json("Version Two", model_json),
+               std::runtime_error);
+}
+
+TEST(ModelParserTest, StringifiesPositionObjectsWithPerSideLevels)
+{
+  auto long_position = Model::Position{};
+  long_position.entry(Model::Entry{TrueNode{}, SignalTiming::CurrentClose});
   long_position.exits(
-   {Strategy::Exit{true, FalseNode{}, SignalTiming::CurrentClose, 0.25}});
+   {Model::Exit{true, FalseNode{}, SignalTiming::CurrentClose, 0.25}});
   long_position.exits_activation(ExitActivation::AfterPrevious);
-  auto pyramiding = Strategy::Pyramiding{};
+  auto pyramiding = Model::Pyramiding{};
   pyramiding.timing(SignalTiming::CurrentClose);
   pyramiding.retrigger(PyramidingRetrigger::AfterFalse);
   pyramiding.cooldown(4);
@@ -343,16 +351,14 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
    StopTargetReferencePrice::LatestEntryPrice);
   long_position.pyramiding(pyramiding);
   long_position.risk_distance(RiskDistanceAmountNode{10.0});
-  long_position.stop_losses({Strategy::StopLoss{true, OpenNode{}, false, 0.5}});
+  long_position.stop_losses({Model::StopLoss{true, OpenNode{}, false, 0.5}});
   long_position.stop_losses_activation(ExitActivation::AfterPrevious);
-  long_position.take_profits(
-   {Strategy::TakeProfit{true, ValueNode{120.0}, 0.75}});
+  long_position.take_profits({Model::TakeProfit{true, ValueNode{120.0}, 0.75}});
 
   const auto strategy =
-   Strategy{"Test", {}, std::move(long_position), Strategy::Position{}, {}};
+   Model{"Test", {}, std::move(long_position), Model::Position{}, {}};
 
-  const auto strategy_json =
-   jsoncons::ojson::parse(stringify_backtest_strategy(strategy));
+  const auto strategy_json = jsoncons::ojson::parse(stringify_model(strategy));
 
   EXPECT_TRUE(strategy_json.at("positions").at("long").is_object());
   EXPECT_TRUE(strategy_json.at("positions").at("short").is_object());
@@ -471,32 +477,31 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
             "AFTER_PREVIOUS");
 }
 
-TEST(StrategyParserTest, JsonconsConvTraitsRoundTripSchemaConfig)
+TEST(ModelParserTest, JsonconsConvTraitsRoundTripSchemaConfig)
 {
-  auto long_position = Strategy::Position{};
-  long_position.entry(Strategy::Entry{TrueNode{}, SignalTiming::CurrentClose});
-  long_position.stop_losses({Strategy::StopLoss{true, OpenNode{}, false}});
+  auto long_position = Model::Position{};
+  long_position.entry(Model::Entry{TrueNode{}, SignalTiming::CurrentClose});
+  long_position.stop_losses({Model::StopLoss{true, OpenNode{}, false}});
 
-  const auto strategy = Strategy{
-   "Config Name", {}, std::move(long_position), Strategy::Position{}, {}};
+  const auto strategy =
+   Model{"Config Name", {}, std::move(long_position), Model::Position{}, {}};
 
   auto strategy_json_str = std::string{};
   jsoncons::encode_json(strategy, strategy_json_str);
 
   const auto strategy_json = jsoncons::ojson::parse(strategy_json_str);
-  EXPECT_EQ(strategy_json.at("version").as<int>(), 2);
+  EXPECT_EQ(strategy_json.at("version").as<int>(), 1);
   EXPECT_FALSE(strategy_json.contains("name"));
 
-  const auto decoded_strategy =
-   jsoncons::decode_json<Strategy>(strategy_json_str);
+  const auto decoded_strategy = jsoncons::decode_json<Model>(strategy_json_str);
 
   EXPECT_TRUE(decoded_strategy.name().empty());
   EXPECT_TRUE(decoded_strategy.equivalent_rules(strategy));
 }
 
-TEST(StrategyParserTest, DefaultStopLossAndEmptyExitCollections)
+TEST(ModelParserTest, DefaultStopLossAndEmptyExitCollections)
 {
-  const auto strategy = Strategy{};
+  const auto strategy = Model{};
 
   ASSERT_EQ(strategy.long_position().stop_losses().size(), 1);
   EXPECT_TRUE(strategy.long_position().stop_losses()[0].enabled());
@@ -516,19 +521,19 @@ TEST(StrategyParserTest, DefaultStopLossAndEmptyExitCollections)
   EXPECT_TRUE(strategy.long_position().exits().empty());
 }
 
-TEST(StrategyParserTest, MissingAndEmptyStopLossesDisableExecutableStops)
+TEST(ModelParserTest, MissingAndEmptyStopLossesDisableExecutableStops)
 {
   const auto risk_distance =
    R"("riskDistance":{"method":"R_DISTANCE_AMOUNT","params":{"amount":10}})";
-  const auto missing = parse_backtest_strategy_json(
+  const auto missing = parse_model(
    "Missing",
    std::string{
-    R"({"version":2,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{)"} +
+    R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{)"} +
     risk_distance + R"(},"short":false}})");
-  const auto empty = parse_backtest_strategy_json(
+  const auto empty = parse_model(
    "Empty",
    std::string{
-    R"({"version":2,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{)"} +
+    R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{)"} +
     risk_distance +
     R"(,"stopLosses":{"activation":"SIMULTANEOUS","rules":[]}},"short":false}})");
 
@@ -536,43 +541,43 @@ TEST(StrategyParserTest, MissingAndEmptyStopLossesDisableExecutableStops)
   EXPECT_TRUE(empty.long_position().stop_losses().empty());
 }
 
-TEST(StrategyParserTest, RejectsInvalidStopLosses)
+TEST(ModelParserTest, RejectsInvalidStopLosses)
 {
   const auto risk_distance =
    R"("riskDistance":{"method":"R_DISTANCE_AMOUNT","params":{"amount":10}})";
   EXPECT_THROW(
-   parse_backtest_strategy_json(
+   parse_model(
     "Not Array",
     std::string{
-     R"({"version":2,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{)"} +
+     R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{)"} +
      risk_distance + R"(,"stopLosses":{}},"short":false}})"),
    std::runtime_error);
   EXPECT_THROW(
-   parse_backtest_strategy_json(
+   parse_model(
     "Bad Item",
     std::string{
-     R"({"version":2,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{)"} +
+     R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{)"} +
      risk_distance +
      R"(,"stopLosses":{"activation":"SIMULTANEOUS","rules":[{}]}},"short":false}})"),
    std::runtime_error);
 }
 
-TEST(StrategyParserTest, RejectsMissingOrImplicitRiskDistance)
+TEST(ModelParserTest, RejectsMissingOrImplicitRiskDistance)
 {
   EXPECT_THROW(
-   parse_backtest_strategy_json(
+   parse_model(
     "Missing",
-    R"({"version":2,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{},"short":false}})"),
+    R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{},"short":false}})"),
    std::runtime_error);
   EXPECT_THROW(
-   parse_backtest_strategy_json(
+   parse_model(
     "Numeric",
-    R"({"version":2,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{"riskDistance":10},"short":false}})"),
+    R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{"riskDistance":10},"short":false}})"),
    std::runtime_error);
   EXPECT_THROW(
-   parse_backtest_strategy_json(
+   parse_model(
     "WrongMethod",
-    R"({"version":2,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{"riskDistance":{"method":"VALUE","params":{"value":10}}},"short":false}})"),
+    R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{"riskDistance":{"method":"VALUE","params":{"value":10}}},"short":false}})"),
    std::runtime_error);
 }
 
@@ -593,16 +598,28 @@ TEST(ConfigParserTest, RoundTripsExplicitRiskDistanceAndRStopMethods)
   }
 }
 
-TEST(StrategyParserTest, LoadsEveryBundledStrategySample)
+TEST(ModelParserTest, LoadsEveryBundledModelSample)
 {
   const auto sample_directory =
    std::filesystem::path{PLUDUX_BACKTEST_SAMPLE_DIR};
   auto schema_stream =
    std::ifstream{sample_directory.parent_path() / "schemas" /
-                 "pludux.backtest.strategy.v2-draft.json"};
+                 "pludux.backtest.model.v1-draft.json"};
   auto schema = jsoncons::ojson::parse(schema_stream);
+  EXPECT_EQ(schema.at("$id").as<std::string>(),
+            "https://pludux.com/schemas/pludux.backtest.model.v1-draft.json");
+  EXPECT_EQ(schema.at("title").as<std::string>(),
+            "Pludux Backtest Model Schema");
+  EXPECT_EQ(schema.at("properties").at("version").at("title").as<std::string>(),
+            "Model JSON format version 1");
+  EXPECT_EQ(
+   schema.at("properties").at("version").at("description").as<std::string>(),
+   "Version of the Pludux Model JSON format. Must be 1.");
+  EXPECT_EQ(schema.at("properties").at("version").at("const").as<int>(), 1);
   const auto compiled_schema =
    jsoncons::jsonschema::make_json_schema(std::move(schema));
+  EXPECT_NO_THROW(
+   compiled_schema.validate(jsoncons::ojson::parse(stringify_model(Model{}))));
   auto sample_count = std::size_t{0};
   for(const auto& entry :
       std::filesystem::directory_iterator{sample_directory}) {
@@ -615,14 +632,13 @@ TEST(StrategyParserTest, LoadsEveryBundledStrategySample)
     const auto document = jsoncons::ojson::parse(json.str());
     EXPECT_NO_THROW(compiled_schema.validate(document))
      << entry.path().string();
-    EXPECT_NO_THROW(
-     parse_backtest_strategy_json(entry.path().stem().string(), json.str()))
+    EXPECT_NO_THROW(parse_model(entry.path().stem().string(), json.str()))
      << entry.path().string();
     ++sample_count;
   }
 
   const auto r_multiple_strategy = jsoncons::ojson::parse(R"({
-    "version": 2,
+    "version": 1,
     "execution": { "intrabarPath": "CANDLE_DIRECTION" },
     "positions": {
       "long": {
@@ -666,11 +682,11 @@ TEST(StrategyParserTest, LoadsEveryBundledStrategySample)
     }
   })");
   EXPECT_NO_THROW(compiled_schema.validate(r_multiple_strategy));
-  EXPECT_NO_THROW(parse_backtest_strategy_json(
-   "Position R-Multiple", r_multiple_strategy.to_string()));
+  EXPECT_NO_THROW(
+   parse_model("Position R-Multiple", r_multiple_strategy.to_string()));
 
   const auto legacy_signal_fields = jsoncons::ojson::parse(R"({
-    "version": 2,
+    "version": 1,
     "execution": { "intrabarPath": "CANDLE_DIRECTION" },
     "positions": {
       "long": {
@@ -689,7 +705,7 @@ TEST(StrategyParserTest, LoadsEveryBundledStrategySample)
     }
   })");
   const auto legacy_exit_array = jsoncons::ojson::parse(R"({
-    "version": 2,
+    "version": 1,
     "execution": { "intrabarPath": "CANDLE_DIRECTION" },
     "positions": {
       "long": {

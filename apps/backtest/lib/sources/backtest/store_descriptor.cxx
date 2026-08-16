@@ -7,15 +7,16 @@ export module pludux.backtest:store_descriptor;
 
 import pludux;
 
-import :backtest;
+import :system;
 import :portfolio;
 import :portfolio_results;
 import :asset;
 import :watchlist;
-import :strategy;
+import :model;
 import :market;
 import :broker;
 import :profile;
+import :strategy;
 
 import :store_handle;
 import :store_data_resolver;
@@ -27,43 +28,57 @@ public:
   StoreDescriptor() = default;
 
   StoreDescriptor(
-   StoreDataResolver<Backtest, BacktestStoreHandle>
-    backtest_store_data_resolver,
+    StoreDataResolver<System, SystemStoreHandle>
+     system_store_data_resolver,
    StoreDataResolver<Portfolio, PortfolioStoreHandle>
     portfolio_store_data_resolver,
    StoreDataResolver<Asset, AssetStoreHandle> asset_store_data_resolver,
    StoreDataResolver<Watchlist, WatchlistStoreHandle>
     watchlist_store_data_resolver,
-   StoreDataResolver<Strategy, StrategyStoreHandle>
-    strategy_store_data_resolver,
+    StoreDataResolver<Model, ModelStoreHandle>
+     model_store_data_resolver,
    StoreDataResolver<Market, MarketStoreHandle> market_store_data_resolver,
    StoreDataResolver<Broker, BrokerStoreHandle> broker_store_data_resolver,
    StoreDataResolver<Profile, ProfileStoreHandle> profile_store_data_resolver,
+   StoreDataResolver<Strategy, StrategyStoreHandle> strategy_store_data_resolver,
    StoreDataResolver<PortfolioResults, PortfolioStoreHandle>
     portfolio_results_store_data_resolver)
-  : backtest_store_data_resolver_{std::move(backtest_store_data_resolver)}
+   : system_store_data_resolver_{std::move(system_store_data_resolver)}
   , portfolio_store_data_resolver_{std::move(portfolio_store_data_resolver)}
   , asset_store_data_resolver_{std::move(asset_store_data_resolver)}
   , watchlist_store_data_resolver_{std::move(watchlist_store_data_resolver)}
-  , strategy_store_data_resolver_{std::move(strategy_store_data_resolver)}
+  , model_store_data_resolver_{std::move(model_store_data_resolver)}
   , market_store_data_resolver_{std::move(market_store_data_resolver)}
   , broker_store_data_resolver_{std::move(broker_store_data_resolver)}
   , profile_store_data_resolver_{std::move(profile_store_data_resolver)}
+   , strategy_store_data_resolver_{std::move(strategy_store_data_resolver)}
   , portfolio_results_store_data_resolver_{
      std::move(portfolio_results_store_data_resolver)}
   {
   }
 
-  auto backtest_store_data_resolver(this const StoreDescriptor& self) noexcept
-   -> const StoreDataResolver<Backtest, BacktestStoreHandle>&
+  auto system_store_data_resolver(this const StoreDescriptor& self) noexcept
+     -> const StoreDataResolver<System, SystemStoreHandle>&
   {
-    return self.backtest_store_data_resolver_;
+    return self.system_store_data_resolver_;
   }
 
-  auto backtest_store_data_resolver(this StoreDescriptor& self) noexcept
-   -> StoreDataResolver<Backtest, BacktestStoreHandle>&
+  auto strategy_store_data_resolver(this const StoreDescriptor& self) noexcept
+   -> const StoreDataResolver<Strategy, StrategyStoreHandle>&
   {
-    return self.backtest_store_data_resolver_;
+    return self.strategy_store_data_resolver_;
+  }
+
+  auto strategy_store_data_resolver(this StoreDescriptor& self) noexcept
+   -> StoreDataResolver<Strategy, StrategyStoreHandle>&
+  {
+    return self.strategy_store_data_resolver_;
+  }
+
+  auto system_store_data_resolver(this StoreDescriptor& self) noexcept
+     -> StoreDataResolver<System, SystemStoreHandle>&
+  {
+    return self.system_store_data_resolver_;
   }
 
   auto portfolio_store_data_resolver(this const StoreDescriptor& self) noexcept
@@ -102,16 +117,16 @@ public:
     return self.watchlist_store_data_resolver_;
   }
 
-  auto strategy_store_data_resolver(this const StoreDescriptor& self) noexcept
-   -> const StoreDataResolver<Strategy, StrategyStoreHandle>&
+  auto model_store_data_resolver(this const StoreDescriptor& self) noexcept
+    -> const StoreDataResolver<Model, ModelStoreHandle>&
   {
-    return self.strategy_store_data_resolver_;
+    return self.model_store_data_resolver_;
   }
 
-  auto strategy_store_data_resolver(this StoreDescriptor& self) noexcept
-   -> StoreDataResolver<Strategy, StrategyStoreHandle>&
+  auto model_store_data_resolver(this StoreDescriptor& self) noexcept
+    -> StoreDataResolver<Model, ModelStoreHandle>&
   {
-    return self.strategy_store_data_resolver_;
+    return self.model_store_data_resolver_;
   }
 
   auto market_store_data_resolver(this const StoreDescriptor& self) noexcept
@@ -165,18 +180,20 @@ public:
   }
 
 private:
-  StoreDataResolver<Backtest, BacktestStoreHandle>
-   backtest_store_data_resolver_;
+  StoreDataResolver<System, SystemStoreHandle>
+   system_store_data_resolver_;
   StoreDataResolver<Portfolio, PortfolioStoreHandle>
    portfolio_store_data_resolver_;
   StoreDataResolver<Asset, AssetStoreHandle> asset_store_data_resolver_;
   StoreDataResolver<Watchlist, WatchlistStoreHandle>
    watchlist_store_data_resolver_;
-  StoreDataResolver<Strategy, StrategyStoreHandle>
-   strategy_store_data_resolver_;
+  StoreDataResolver<Model, ModelStoreHandle>
+   model_store_data_resolver_;
   StoreDataResolver<Market, MarketStoreHandle> market_store_data_resolver_;
   StoreDataResolver<Broker, BrokerStoreHandle> broker_store_data_resolver_;
   StoreDataResolver<Profile, ProfileStoreHandle> profile_store_data_resolver_;
+  StoreDataResolver<Strategy, StrategyStoreHandle>
+   strategy_store_data_resolver_;
 
   StoreDataResolver<PortfolioResults, PortfolioStoreHandle>
    portfolio_results_store_data_resolver_;
