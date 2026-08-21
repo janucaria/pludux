@@ -1,19 +1,21 @@
 #include <gtest/gtest.h>
 
+#include "test_method_context.hpp"
+
 import pludux;
 
 using namespace pludux;
 
 using SignalGreaterThanMethod =
- pludux::GreaterThanMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                           ErasedSeriesMethod<ErasedSeriesMethodContext>>;
+ pludux::GreaterThanMethod<ErasedSeriesMethod<StatelessMethodContext>,
+                           ErasedSeriesMethod<StatelessMethodContext>>;
 using SignalLessThanMethod =
- pludux::LessThanMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                        ErasedSeriesMethod<ErasedSeriesMethodContext>>;
+ pludux::LessThanMethod<ErasedSeriesMethod<StatelessMethodContext>,
+                        ErasedSeriesMethod<StatelessMethodContext>>;
 using SignalAnyOfMethod =
- pludux::AnyOfMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>;
+ pludux::AnyOfMethod<ErasedSeriesMethod<StatelessMethodContext>>;
 
-const auto context = ErasedSeriesMethodContext{};
+const auto context = StatelessMethodContext{};
 
 static auto make_asset_snapshot() -> AssetSnapshot
 {

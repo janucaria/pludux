@@ -12,6 +12,7 @@ import :trade_entry;
 import :trade_exit;
 import :execution_model;
 import :plot_group;
+import :backtest_method_context;
 import :risk_distance_node;
 import :stop_target_price_node;
 
@@ -32,7 +33,7 @@ public:
     {
     }
 
-    Entry(ErasedNode<ErasedSeriesMethodContext> signal,
+    Entry(ErasedNode<BacktestMethodContext> signal,
           SignalTiming timing = SignalTiming::NextOpen)
     : signal_{std::move(signal)}
     , timing_{timing}
@@ -42,13 +43,13 @@ public:
     auto operator==(const Entry&) const noexcept -> bool = default;
 
     auto signal(this const Entry& self) noexcept
-     -> const ErasedNode<ErasedSeriesMethodContext>&
+     -> const ErasedNode<BacktestMethodContext>&
     {
       return self.signal_;
     }
 
     void signal(this Entry& self,
-                ErasedNode<ErasedSeriesMethodContext> signal) noexcept
+                ErasedNode<BacktestMethodContext> signal) noexcept
     {
       self.signal_ = std::move(signal);
     }
@@ -64,7 +65,7 @@ public:
     }
 
   private:
-    ErasedNode<ErasedSeriesMethodContext> signal_;
+    ErasedNode<BacktestMethodContext> signal_;
     SignalTiming timing_;
   };
 
@@ -76,7 +77,7 @@ public:
     }
 
     Exit(bool enabled,
-         ErasedNode<ErasedSeriesMethodContext> signal,
+         ErasedNode<BacktestMethodContext> signal,
          SignalTiming timing = SignalTiming::NextOpen,
          double reduce = 1.0)
     : enabled_{enabled}
@@ -99,13 +100,13 @@ public:
     }
 
     auto signal(this const Exit& self) noexcept
-     -> const ErasedNode<ErasedSeriesMethodContext>&
+     -> const ErasedNode<BacktestMethodContext>&
     {
       return self.signal_;
     }
 
     void signal(this Exit& self,
-                ErasedNode<ErasedSeriesMethodContext> signal) noexcept
+                ErasedNode<BacktestMethodContext> signal) noexcept
     {
       self.signal_ = std::move(signal);
     }
@@ -132,7 +133,7 @@ public:
 
   private:
     bool enabled_;
-    ErasedNode<ErasedSeriesMethodContext> signal_;
+    ErasedNode<BacktestMethodContext> signal_;
     SignalTiming timing_;
     double reduce_;
   };
@@ -144,13 +145,13 @@ public:
     auto operator==(const Pyramiding&) const noexcept -> bool = default;
 
     auto signal(this const Pyramiding& self) noexcept
-     -> const ErasedNode<ErasedSeriesMethodContext>&
+     -> const ErasedNode<BacktestMethodContext>&
     {
       return self.signal_;
     }
 
     void signal(this Pyramiding& self,
-                ErasedNode<ErasedSeriesMethodContext> signal) noexcept
+                ErasedNode<BacktestMethodContext> signal) noexcept
     {
       self.signal_ = std::move(signal);
     }
@@ -222,7 +223,7 @@ public:
     }
 
   private:
-    ErasedNode<ErasedSeriesMethodContext> signal_{FalseNode{}};
+    ErasedNode<BacktestMethodContext> signal_{FalseNode{}};
     SignalTiming timing_{SignalTiming::NextOpen};
     PyramidingRetrigger retrigger_{PyramidingRetrigger::EveryEvaluation};
     std::size_t cooldown_{};
@@ -237,7 +238,8 @@ public:
   public:
     TakeProfit(
      bool enabled = false,
-     ErasedNode<ErasedSeriesMethodContext> target_price = TpRMultipleNode{2.0},
+     ErasedNode<BacktestMethodContext> target_price =
+      TpRMultipleNode<BacktestMethodContext>{2.0},
      double reduce = 1.0)
     : enabled_{enabled}
     , target_price_{std::move(target_price)}
@@ -258,14 +260,14 @@ public:
     }
 
     auto target_price(this const TakeProfit& self) noexcept
-     -> const ErasedNode<ErasedSeriesMethodContext>&
+     -> const ErasedNode<BacktestMethodContext>&
     {
       return self.target_price_;
     }
 
     void
     target_price(this TakeProfit& self,
-                 ErasedNode<ErasedSeriesMethodContext> target_price) noexcept
+                 ErasedNode<BacktestMethodContext> target_price) noexcept
     {
       self.target_price_ = std::move(target_price);
     }
@@ -282,14 +284,14 @@ public:
 
   private:
     bool enabled_;
-    ErasedNode<ErasedSeriesMethodContext> target_price_;
+    ErasedNode<BacktestMethodContext> target_price_;
     double reduce_;
   };
 
   class StopLoss {
   public:
     StopLoss(bool enabled = true,
-             ErasedNode<ErasedSeriesMethodContext> stop_price = Sl1RNode{},
+             ErasedNode<BacktestMethodContext> stop_price = Sl1RNode{},
              bool trailing = false,
              double reduce = 1.0)
     : enabled_{enabled}
@@ -322,13 +324,13 @@ public:
     }
 
     auto stop_price(this const StopLoss& self) noexcept
-     -> const ErasedNode<ErasedSeriesMethodContext>&
+     -> const ErasedNode<BacktestMethodContext>&
     {
       return self.stop_price_;
     }
 
     void stop_price(this StopLoss& self,
-                    ErasedNode<ErasedSeriesMethodContext> stop_price) noexcept
+                    ErasedNode<BacktestMethodContext> stop_price) noexcept
     {
       self.stop_price_ = std::move(stop_price);
     }
@@ -346,7 +348,7 @@ public:
   private:
     bool enabled_;
     bool trailing_;
-    ErasedNode<ErasedSeriesMethodContext> stop_price_;
+    ErasedNode<BacktestMethodContext> stop_price_;
     double reduce_;
   };
 
@@ -432,14 +434,14 @@ public:
     }
 
     auto risk_distance(this const Position& self) noexcept
-     -> const ErasedNode<ErasedSeriesMethodContext>&
+     -> const ErasedNode<BacktestMethodContext>&
     {
       return self.risk_distance_;
     }
 
     void
     risk_distance(this Position& self,
-                  ErasedNode<ErasedSeriesMethodContext> risk_distance) noexcept
+                  ErasedNode<BacktestMethodContext> risk_distance) noexcept
     {
       self.risk_distance_ = std::move(risk_distance);
     }
@@ -473,7 +475,8 @@ public:
     std::vector<Exit> exits_;
     ExitActivation exits_activation_{ExitActivation::Simultaneous};
     Pyramiding pyramiding_;
-    ErasedNode<ErasedSeriesMethodContext> risk_distance_{RiskDistanceAtrNode{}};
+    ErasedNode<BacktestMethodContext> risk_distance_{
+     RiskDistanceAtrNode<BacktestMethodContext>{}};
     std::vector<TakeProfit> take_profits_;
     ExitActivation take_profits_activation_{ExitActivation::Simultaneous};
     std::vector<StopLoss> stop_losses_{StopLoss{}};
@@ -482,7 +485,7 @@ public:
 
   Model()
   : Model("",
-             OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>{},
+             OrderedNamedRegistry<ErasedNode<BacktestMethodContext>>{},
              Position{},
              Position{},
              std::vector<PlotGroup>{},
@@ -492,7 +495,7 @@ public:
 
   Model(
    std::string name,
-   OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>> series_nodes,
+   OrderedNamedRegistry<ErasedNode<BacktestMethodContext>> series_nodes,
    Position long_position,
    Position short_position,
    std::vector<PlotGroup> plots,
@@ -519,19 +522,19 @@ public:
   }
 
   auto series_nodes(this const Model& self) noexcept
-   -> const OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>&
+   -> const OrderedNamedRegistry<ErasedNode<BacktestMethodContext>>&
   {
     return self.series_nodes_;
   }
 
   auto series_nodes(this Model& self) noexcept
-   -> OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>&
+   -> OrderedNamedRegistry<ErasedNode<BacktestMethodContext>>&
   {
     return self.series_nodes_;
   }
 
   void series_nodes(this Model& self,
-                    OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>
+                    OrderedNamedRegistry<ErasedNode<BacktestMethodContext>>
                      series_nodes) noexcept
   {
     self.series_nodes_ = std::move(series_nodes);
@@ -590,7 +593,7 @@ public:
 private:
   std::string name_;
 
-  OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>> series_nodes_;
+  OrderedNamedRegistry<ErasedNode<BacktestMethodContext>> series_nodes_;
 
   Position long_position_;
   Position short_position_;

@@ -12,7 +12,7 @@ export module pludux.backtest:portfolio;
 
 import pludux;
 
-import :requested_order_node;
+import :requested_order_method_context;
 import :store_handle;
 
 export namespace pludux::backtest {
@@ -27,27 +27,25 @@ public:
   {
   }
 
-  PortfolioEntryComparator(ErasedNode<ErasedSeriesMethodContext> expression,
+  PortfolioEntryComparator(ComparatorNode expression,
                            PortfolioEntryComparatorOrder order)
   : expression_{std::move(expression)}
   , order_{order}
   {
-    validate_expression(expression_);
   }
 
   auto operator==(const PortfolioEntryComparator&) const noexcept
    -> bool = default;
 
   auto expression(this const PortfolioEntryComparator& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ComparatorNode&
   {
     return self.expression_;
   }
 
   void expression(this PortfolioEntryComparator& self,
-                  ErasedNode<ErasedSeriesMethodContext> value)
+                  ComparatorNode value) noexcept
   {
-    validate_expression(value);
     self.expression_ = std::move(value);
   }
 
@@ -64,18 +62,8 @@ public:
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> expression_;
+  ComparatorNode expression_;
   PortfolioEntryComparatorOrder order_;
-
-  static void
-  validate_expression(const ErasedNode<ErasedSeriesMethodContext>& expression)
-  {
-    if(!is_portfolio_entry_comparator_expression(expression)) {
-      throw std::invalid_argument{
-       "Portfolio comparator requires a Requested Order or asset-data "
-       "expression"};
-    }
-  }
 };
 
 class Portfolio {

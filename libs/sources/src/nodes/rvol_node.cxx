@@ -4,6 +4,7 @@ module;
 #include <limits>
 #include <type_traits>
 #include <utility>
+#include <variant>
 
 export module pludux:nodes.rvol_node;
 
@@ -14,6 +15,7 @@ import :nodes.value_node;
 
 export namespace pludux {
 
+template<typename TContext = std::monostate>
 class RvolNode {
 public:
   explicit RvolNode(std::size_t period = 14)
@@ -21,7 +23,7 @@ public:
   {
   }
 
-  explicit RvolNode(ErasedNode<ErasedSeriesMethodContext> period)
+   explicit RvolNode(ErasedNode<TContext> period)
   : period_{std::move(period)}
   {
   }
@@ -29,7 +31,7 @@ public:
   auto operator==(const RvolNode& other) const noexcept -> bool = default;
 
   auto period(this const RvolNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+    -> const ErasedNode<TContext>&
   {
     return self.period_;
   }
@@ -40,18 +42,18 @@ public:
   }
 
   void period(this RvolNode& self,
-              ErasedNode<ErasedSeriesMethodContext> period) noexcept
+               ErasedNode<TContext> period) noexcept
   {
     self.period_ = std::move(period);
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> period_;
+   ErasedNode<TContext> period_;
 };
 
-template<MethodContextable TContext>
+template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
-                       const RvolNode& node,
+                        const RvolNode<TContext>& node,
                        NodeToErasedMethodContext& context)
  -> ErasedSeriesMethod<TContext>
 {

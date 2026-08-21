@@ -40,50 +40,24 @@ auto hash_series_method(const EquityPercentMethod&) noexcept -> std::size_t
   return std::hash<std::string_view>{}("pludux.backtest.EquityPercentMethod");
 }
 
+template<typename TContext>
+  requires requires(TContext context) { context.equity(); }
 auto pludux_tag_invoke(EvaluateSeriesMethod,
-                       const EquityMethod& method,
-                       AssetSnapshot asset_snapshot,
-                       MethodContextable auto context) noexcept -> double
+                       const EquityMethod&,
+                       AssetSnapshot,
+                       TContext context) noexcept -> double
 {
-  static_cast<void>(method);
-  static_cast<void>(asset_snapshot);
-
-  if constexpr(std::is_same_v<std::monostate, decltype(context)>) {
-    return std::numeric_limits<double>::quiet_NaN();
-  } else if constexpr(requires { context.equity(); }) {
-    return context.equity();
-  } else if constexpr(std::is_same_v<std::remove_cvref_t<decltype(context)>,
-                                     ErasedSeriesMethodContext>) {
-    const auto* backtest_context =
-     series_method_context_cast<BacktestMethodContext>(context);
-    return backtest_context ? backtest_context->equity()
-                            : std::numeric_limits<double>::quiet_NaN();
-  } else {
-    return std::numeric_limits<double>::quiet_NaN();
-  }
+  return context.equity();
 }
 
+template<typename TContext>
+  requires requires(TContext context) { context.equity_percent(); }
 auto pludux_tag_invoke(EvaluateSeriesMethod,
-                       const EquityPercentMethod& method,
-                       AssetSnapshot asset_snapshot,
-                       MethodContextable auto context) noexcept -> double
+                       const EquityPercentMethod&,
+                       AssetSnapshot,
+                       TContext context) noexcept -> double
 {
-  static_cast<void>(method);
-  static_cast<void>(asset_snapshot);
-
-  if constexpr(std::is_same_v<std::monostate, decltype(context)>) {
-    return std::numeric_limits<double>::quiet_NaN();
-  } else if constexpr(requires { context.equity_percent(); }) {
-    return context.equity_percent();
-  } else if constexpr(std::is_same_v<std::remove_cvref_t<decltype(context)>,
-                                     ErasedSeriesMethodContext>) {
-    const auto* backtest_context =
-     series_method_context_cast<BacktestMethodContext>(context);
-    return backtest_context ? backtest_context->equity_percent()
-                            : std::numeric_limits<double>::quiet_NaN();
-  } else {
-    return std::numeric_limits<double>::quiet_NaN();
-  }
+  return context.equity_percent();
 }
 
 } // namespace pludux::backtest

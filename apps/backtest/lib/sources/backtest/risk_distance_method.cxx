@@ -161,30 +161,17 @@ auto hash_series_method(
          std::hash<int>{}(static_cast<int>(method.ma_smoothing_type()));
 }
 
-auto risk_distance_reference_price(MethodContextable auto context) noexcept
+auto risk_distance_reference_price(BacktestMethodContext context) noexcept
  -> double
 {
-  if constexpr(std::is_same_v<std::monostate, decltype(context)>) {
-    return std::numeric_limits<double>::quiet_NaN();
-  } else if constexpr(std::is_same_v<std::remove_cvref_t<decltype(context)>,
-                                     BacktestMethodContext>) {
-    return context.position_reference_price();
-  } else if constexpr(std::is_same_v<std::remove_cvref_t<decltype(context)>,
-                                     ErasedSeriesMethodContext>) {
-    const auto* backtest_context =
-     series_method_context_cast<BacktestMethodContext>(context);
-    return backtest_context ? backtest_context->position_reference_price()
-                            : std::numeric_limits<double>::quiet_NaN();
-  } else {
-    return std::numeric_limits<double>::quiet_NaN();
-  }
+  return context.position_reference_price();
 }
 
 template<typename TMethod>
 auto pludux_tag_invoke(EvaluateSeriesMethod,
                        const RiskDistanceAmountMethod<TMethod>& method,
                        AssetSnapshot asset_snapshot,
-                       MethodContextable auto context) noexcept -> double
+                       BacktestMethodContext context) noexcept -> double
 {
   return evaluate_series_method(method.amount(), asset_snapshot, context);
 }
@@ -193,7 +180,7 @@ template<typename TMethod>
 auto pludux_tag_invoke(EvaluateSeriesMethod,
                        const RiskDistancePercentMethod<TMethod>& method,
                        AssetSnapshot asset_snapshot,
-                       MethodContextable auto context) noexcept -> double
+                       BacktestMethodContext context) noexcept -> double
 {
   const auto reference_price = risk_distance_reference_price(context);
   const auto percent =
@@ -206,7 +193,7 @@ auto pludux_tag_invoke(
  EvaluateSeriesMethod,
  const RiskDistanceAtrMethod<TPeriodMethod, TMultiplierMethod>& method,
  AssetSnapshot asset_snapshot,
- MethodContextable auto context) noexcept -> double
+ BacktestMethodContext context) noexcept -> double
 {
   const auto atr = evaluate_series_method(
    AtrMethod{method.period(), method.ma_smoothing_type()},

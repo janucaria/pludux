@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include "test_method_context.hpp"
+
 import pludux;
 
 using namespace pludux;
@@ -7,7 +9,7 @@ using namespace pludux;
 using SignalAlwaysMethod = pludux::TrueMethod;
 using SignalNeverMethod = pludux::FalseMethod;
 
-const auto context = ErasedSeriesMethodContext{};
+const auto context = StatelessMethodContext{};
 
 TEST(FixedMethodTest, AlwaysMethod)
 {

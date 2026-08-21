@@ -26,8 +26,20 @@ import :model_performance_node;
 
 export namespace pludux::backtest {
 
+auto parse_config_json(const std::string& config) -> jsoncons::ojson;
+auto config_number(const jsoncons::ojson& config) -> double;
+auto config_boolean(const jsoncons::ojson& config) -> bool;
+auto config_string(const jsoncons::ojson& config) -> std::string;
+
+} // namespace pludux::backtest
+
+export namespace pludux::backtest {
+
+template<typename TContext>
 class ConfigParser {
 public:
+  using Node = ErasedNode<TContext>;
+
   class Parser {
   public:
     Parser(ConfigParser& config_parser)
@@ -36,7 +48,7 @@ public:
     }
 
     auto parse_node(this Parser& self, const jsoncons::ojson& config)
-     -> ErasedNode<ErasedSeriesMethodContext>
+     -> Node
     {
       return self.config_parser_.parse_node(config);
     }
@@ -48,13 +60,11 @@ public:
   friend Parser;
 
   using NodeSerialize =
-   std::function<auto(const ConfigParser&,
-                      const ErasedNode<ErasedSeriesMethodContext>&)
-                  ->jsoncons::ojson>;
+   std::function<auto(const ConfigParser&, const Node&)
+                   ->jsoncons::ojson>;
 
   using NodeDeserialize =
-   std::function<auto(ConfigParser::Parser, const jsoncons::ojson&)
-                  ->ErasedNode<ErasedSeriesMethodContext>>;
+   std::function<auto(Parser, const jsoncons::ojson&)->Node>;
 
   ConfigParser() = default;
 
@@ -83,32 +93,37 @@ public:
     return Parser{self};
   }
 
-  auto parse_node(this ConfigParser& self, const std::string& config_node_str)
-   -> ErasedNode<ErasedSeriesMethodContext>
+  auto parse_node(this ConfigParser& self,
+                  const std::string& config_node_str) -> Node
   {
-    return self.parse_node(jsoncons::ojson::parse(config_node_str));
+    return self.parse_node(parse_config_json(config_node_str));
   }
 
-  auto parse_node(this ConfigParser& self, const jsoncons::ojson& config_node)
-   -> ErasedNode<ErasedSeriesMethodContext>
+  auto parse_node(this ConfigParser& self,
+                  const jsoncons::ojson& config_node) -> Node
   {
     if(config_node.is_number()) {
-      return ValueNode{config_node.as_double()};
+      return Node{ValueNode{config_number(config_node)}};
     }
 
     if(config_node.is_bool()) {
-      return config_node.as_bool()
-              ? ErasedNode<ErasedSeriesMethodContext>{TrueNode{}}
-              : ErasedNode<ErasedSeriesMethodContext>{FalseNode{}};
+      if constexpr(node_context_admissible<TContext, TrueNode>() &&
+                   node_context_admissible<TContext, FalseNode>()) {
+        return config_boolean(config_node) ? Node{TrueNode{}}
+                                           : Node{FalseNode{}};
+      } else {
+        throw std::invalid_argument{
+         "Boolean shorthand is not admissible for this expression context"};
+      }
     }
 
     if(config_node.is_string()) {
-      const auto node_name = config_node.as_string();
+      const auto node_name = config_string(config_node);
       const auto expanded_node = jsoncons::ojson::object{{"method", node_name}};
       return self.parse_node(expanded_node);
     }
 
-    const auto node_name = config_node.at("method").as_string();
+    const auto node_name = config_string(config_node.at("method"));
 
     auto& node_parsers = self.node_parsers_;
     if(!node_parsers.contains(node_name)) {
@@ -139,8 +154,7 @@ public:
     }
   }
 
-  auto serialize_node(this const ConfigParser& self,
-                      const ErasedNode<ErasedSeriesMethodContext>& node)
+  auto serialize_node(this const ConfigParser& self, const Node& node)
    -> jsoncons::ojson
   {
     for(const auto& [node_name, node_parser] : self.node_parsers_) {
@@ -172,9 +186,11 @@ private:
   bool use_series_params_{true};
 };
 
-auto make_default_registered_config_parser() -> ConfigParser;
+auto make_backtest_model_config_parser()
+ -> ConfigParser<BacktestMethodContext>;
 
-auto make_portfolio_entry_comparator_config_parser() -> ConfigParser;
+auto make_requested_order_comparator_config_parser()
+ -> ConfigParser<RequestedOrderMethodContext>;
 
 auto parse_entry_filter_node(const jsoncons::ojson& config)
  -> ErasedNode<EntryFilterMethodContext>;
@@ -186,6 +202,26 @@ auto serialize_entry_filter_node(
 
 namespace pludux::backtest {
 
+auto parse_config_json(const std::string& config) -> jsoncons::ojson
+{
+  return jsoncons::ojson::parse(config);
+}
+
+auto config_number(const jsoncons::ojson& config) -> double
+{
+  return config.as_double();
+}
+
+auto config_boolean(const jsoncons::ojson& config) -> bool
+{
+  return config.as_bool();
+}
+
+auto config_string(const jsoncons::ojson& config) -> std::string
+{
+  return config.as_string();
+}
+
 template<typename T>
 static auto get_param_or(const jsoncons::ojson& parameters,
                          const std::string& key,
@@ -194,701 +230,139 @@ static auto get_param_or(const jsoncons::ojson& parameters,
   return parameters.contains(key) ? parameters.at(key).as<T>() : default_value;
 }
 
-static auto parse_node_from_param_or(
- ConfigParser::Parser config_parser,
- const jsoncons::ojson& parameters,
- const std::string& key,
- const ErasedNode<ErasedSeriesMethodContext>& default_value)
- -> ErasedNode<ErasedSeriesMethodContext>
-{
-  if(!parameters.contains(key)) {
-    return default_value;
-  }
-
-  return config_parser.parse_node(parameters.at(key));
-}
-
-template<typename TNode>
-static auto serialize_node_as(const ErasedNode<ErasedSeriesMethodContext>& node)
- -> const TNode*
-{
-  return node_cast<TNode>(node);
-}
-
-template<typename TNode, std::size_t default_period>
-static auto parse_ta_with_erased_period_node(ConfigParser::Parser config_parser,
-                                             const jsoncons::ojson& parameters)
- -> ErasedNode<ErasedSeriesMethodContext>
-{
-  auto period = parse_node_from_param_or(
-   config_parser,
-   parameters,
-   "period",
-   NumericInputNode{"Period",
-                    NumericInputNode::ValueRepresentation::UnsignedInteger,
-                    static_cast<double>(default_period)});
-
-  const auto source =
-   parse_node_from_param_or(config_parser, parameters, "source", CloseNode{});
-
-  return TNode{source, period};
-}
-
-template<typename TNode>
-static auto serialize_ta_with_erased_period_node(
- const ConfigParser& config_parser,
- const ErasedNode<ErasedSeriesMethodContext>& node) -> jsoncons::ojson
-{
-  const auto ta_node = serialize_node_as<TNode>(node);
-  if(!ta_node) {
-    return jsoncons::ojson::null();
-  }
-
-  auto serialized_node = jsoncons::ojson{};
-  serialized_node["period"] = config_parser.serialize_node(ta_node->period());
-  serialized_node["source"] = config_parser.serialize_node(ta_node->source());
-  return serialized_node;
-}
-
-template<typename TNode>
-static auto
-serialize_parameterless_node(const ConfigParser&,
-                             const ErasedNode<ErasedSeriesMethodContext>& node)
- -> jsoncons::ojson
-{
-  return node_cast<TNode>(node) ? jsoncons::ojson{} : jsoncons::ojson::null();
-}
-
-template<typename TNode>
-static auto parse_parameterless_node(ConfigParser::Parser,
-                                     const jsoncons::ojson&)
- -> ErasedNode<ErasedSeriesMethodContext>
-{
-  return TNode{};
-}
-
-static auto
-serialize_value_node(const ConfigParser&,
-                     const ErasedNode<ErasedSeriesMethodContext>& node)
- -> jsoncons::ojson
-{
-  const auto value_node = node_cast<ValueNode>(node);
-  if(!value_node) {
-    return jsoncons::ojson::null();
-  }
-
-  auto serialized_node = jsoncons::ojson{};
-  serialized_node["value"] = value_node->value();
-  return serialized_node;
-}
-
-static auto parse_value_node(ConfigParser::Parser,
-                             const jsoncons::ojson& params)
- -> ErasedNode<ErasedSeriesMethodContext>
-{
-  return ValueNode{params.at("value").as_double()};
-}
-
-static auto
-serialize_data_node(const ConfigParser&,
-                    const ErasedNode<ErasedSeriesMethodContext>& node)
- -> jsoncons::ojson
-{
-  const auto data_node = node_cast<DataNode>(node);
-  if(!data_node) {
-    return jsoncons::ojson::null();
-  }
-
-  auto serialized_node = jsoncons::ojson{};
-  serialized_node["field"] = data_node->field();
-  return serialized_node;
-}
-
-static auto parse_data_node(ConfigParser::Parser, const jsoncons::ojson& params)
- -> ErasedNode<ErasedSeriesMethodContext>
-{
-  return DataNode{params.at("field").as_string()};
-}
-
-static auto
-serialize_equity_node(const ConfigParser&,
-                      const ErasedNode<ErasedSeriesMethodContext>& node)
- -> jsoncons::ojson
-{
-  return node_cast<EquityNode>(node) ? jsoncons::ojson{}
-                                     : jsoncons::ojson::null();
-}
-
-static auto parse_equity_node(ConfigParser::Parser, const jsoncons::ojson&)
- -> ErasedNode<ErasedSeriesMethodContext>
-{
-  return EquityNode{};
-}
-
-static auto
-serialize_equity_percent_node(const ConfigParser&,
-                              const ErasedNode<ErasedSeriesMethodContext>& node)
- -> jsoncons::ojson
-{
-  return node_cast<EquityPercentNode>(node) ? jsoncons::ojson{}
-                                            : jsoncons::ojson::null();
-}
-
-static auto parse_equity_percent_node(ConfigParser::Parser,
-                                      const jsoncons::ojson&)
- -> ErasedNode<ErasedSeriesMethodContext>
-{
-  return EquityPercentNode{};
-}
-
-static auto
-serialize_drawdown_node(const ConfigParser&,
-                        const ErasedNode<ErasedSeriesMethodContext>& node)
- -> jsoncons::ojson
-{
-  return node_cast<DrawdownNode>(node) ? jsoncons::ojson{}
-                                       : jsoncons::ojson::null();
-}
-
-static auto parse_drawdown_node(ConfigParser::Parser, const jsoncons::ojson&)
- -> ErasedNode<ErasedSeriesMethodContext>
-{
-  return DrawdownNode{};
-}
-
-static auto parse_ma_node_type(const std::string& ma_type_str,
+static auto parse_ma_node_type(const std::string& value,
                                MaNodeType fallback = MaNodeType::Rma)
  -> MaNodeType
 {
-  if(ma_type_str == "SMA") {
-    return MaNodeType::Sma;
-  }
-  if(ma_type_str == "EMA") {
-    return MaNodeType::Ema;
-  }
-  if(ma_type_str == "WMA") {
-    return MaNodeType::Wma;
-  }
-  if(ma_type_str == "HMA") {
-    return MaNodeType::Hma;
-  }
-  if(ma_type_str == "RMA") {
-    return MaNodeType::Rma;
-  }
-
+  if(value == "SMA") return MaNodeType::Sma;
+  if(value == "EMA") return MaNodeType::Ema;
+  if(value == "WMA") return MaNodeType::Wma;
+  if(value == "HMA") return MaNodeType::Hma;
+  if(value == "RMA") return MaNodeType::Rma;
   return fallback;
 }
 
-static auto serialize_ma_node_type(MaNodeType ma_type,
-                                   std::string fallback = "RMA") -> std::string
-{
-  switch(ma_type) {
-  case MaNodeType::Sma:
-    return "SMA";
-  case MaNodeType::Ema:
-    return "EMA";
-  case MaNodeType::Wma:
-    return "WMA";
-  case MaNodeType::Hma:
-    return "HMA";
-  case MaNodeType::Rma:
-    return "RMA";
-  }
-
-  return fallback;
-}
-
-static auto parse_atr_node(ConfigParser::Parser config_parser,
-                           const jsoncons::ojson& params)
- -> ErasedNode<ErasedSeriesMethodContext>
-{
-  auto atr_node = AtrNode{parse_node_from_param_or(
-   config_parser,
-   params,
-   "period",
-   NumericInputNode{
-    "Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 14.0})};
-
-  if(params.contains("maSmoothingType")) {
-    atr_node.ma_smoothing_type(parse_ma_node_type(
-     params.at("maSmoothingType").as_string(), MaNodeType::Rma));
-  }
-
-  return atr_node;
-}
-
-static auto
-serialize_atr_node(const ConfigParser& config_parser,
-                   const ErasedNode<ErasedSeriesMethodContext>& node)
- -> jsoncons::ojson
-{
-  const auto atr_node = node_cast<AtrNode>(node);
-  if(!atr_node) {
-    return jsoncons::ojson::null();
-  }
-
-  auto serialized_node = jsoncons::ojson{};
-  serialized_node["period"] = config_parser.serialize_node(atr_node->period());
-  serialized_node["maSmoothingType"] =
-   serialize_ma_node_type(atr_node->ma_smoothing_type());
-  return serialized_node;
-}
-
-template<typename TNode>
-static auto parse_stop_target_value_node(ConfigParser::Parser config_parser,
-                                         const jsoncons::ojson& params,
-                                         const std::string& key,
-                                         double fallback)
- -> ErasedNode<ErasedSeriesMethodContext>
-{
-  return TNode{
-   parse_node_from_param_or(config_parser, params, key, ValueNode{fallback})};
-}
-
-template<typename TNode>
-static auto serialize_stop_target_value_node(
- const ConfigParser& config_parser,
- const ErasedNode<ErasedSeriesMethodContext>& node,
- const std::string& key) -> jsoncons::ojson
-{
-  const auto value_node = node_cast<TNode>(node);
-  if(!value_node) {
-    return jsoncons::ojson::null();
-  }
-
-  auto serialized_node = jsoncons::ojson{};
-  serialized_node[key] = config_parser.serialize_node(value_node->value());
-  return serialized_node;
-}
-
-template<typename TNode>
-static auto parse_stop_target_atr_node(ConfigParser::Parser config_parser,
-                                       const jsoncons::ojson& params)
- -> ErasedNode<ErasedSeriesMethodContext>
-{
-  auto period =
-   parse_node_from_param_or(config_parser, params, "period", ValueNode{14.0});
-  auto multiplier = parse_node_from_param_or(
-   config_parser, params, "multiplier", ValueNode{2.0});
-  const auto ma_smoothing_type = parse_ma_node_type(
-   get_param_or<std::string>(params, "maSmoothingType", "RMA"),
-   MaNodeType::Rma);
-
-  return TNode{period, multiplier, ma_smoothing_type};
-}
-
-template<typename TNode>
-static auto serialize_stop_target_atr_node(
- const ConfigParser& config_parser,
- const ErasedNode<ErasedSeriesMethodContext>& node) -> jsoncons::ojson
-{
-  const auto atr_node = node_cast<TNode>(node);
-  if(!atr_node) {
-    return jsoncons::ojson::null();
-  }
-
-  auto serialized_node = jsoncons::ojson{};
-  serialized_node["period"] = config_parser.serialize_node(atr_node->period());
-  serialized_node["multiplier"] =
-   config_parser.serialize_node(atr_node->multiplier());
-  serialized_node["maSmoothingType"] =
-   serialize_ma_node_type(atr_node->ma_smoothing_type());
-  return serialized_node;
-}
-
-static auto parse_kc_band_node_type(const std::string& band_type_str)
+static auto parse_kc_band_node_type(const std::string& value)
  -> KcBandNodeType
 {
-  if(band_type_str == "ATR") {
-    return KcBandNodeType::Atr;
-  }
-  if(band_type_str == "TR") {
-    return KcBandNodeType::Tr;
-  }
-  if(band_type_str == "Range") {
-    return KcBandNodeType::RangeHighLow;
-  }
-
+  if(value == "TR") return KcBandNodeType::Tr;
+  if(value == "Range") return KcBandNodeType::RangeHighLow;
   return KcBandNodeType::Atr;
 }
 
-static auto serialize_kc_band_node_type(KcBandNodeType band_type) -> std::string
+static auto serialize_ma_node_type(MaNodeType value,
+                                   std::string fallback = "RMA") -> std::string
 {
-  switch(band_type) {
-  case KcBandNodeType::Atr:
-    return "ATR";
-  case KcBandNodeType::Tr:
-    return "TR";
-  case KcBandNodeType::RangeHighLow:
-    return "Range";
+  switch(value) {
+  case MaNodeType::Sma: return "SMA";
+  case MaNodeType::Ema: return "EMA";
+  case MaNodeType::Wma: return "WMA";
+  case MaNodeType::Hma: return "HMA";
+  case MaNodeType::Rma: return "RMA";
   }
+  return fallback;
+}
 
+static auto serialize_kc_band_node_type(KcBandNodeType value) -> std::string
+{
+  switch(value) {
+  case KcBandNodeType::Atr: return "ATR";
+  case KcBandNodeType::Tr: return "TR";
+  case KcBandNodeType::RangeHighLow: return "Range";
+  }
   return "ATR";
 }
 
-static auto serialize_kc_node(const ConfigParser& config_parser,
-                              const ErasedNode<ErasedSeriesMethodContext>& node)
- -> jsoncons::ojson
-{
-  const auto kc_node = node_cast<KcNode>(node);
-  if(!kc_node) {
-    return jsoncons::ojson::null();
-  }
-
-  auto serialized_node = jsoncons::ojson{};
-  serialized_node["maMethodType"] =
-   serialize_ma_node_type(kc_node->ma_node_type(), "EMA");
-  serialized_node["period"] = config_parser.serialize_node(kc_node->period());
-  serialized_node["maSource"] = config_parser.serialize_node(kc_node->source());
-  serialized_node["bandMethodType"] =
-   serialize_kc_band_node_type(kc_node->band_node_type());
-  serialized_node["bandAtrPeriod"] =
-   config_parser.serialize_node(kc_node->band_atr_period());
-  serialized_node["multiplier"] =
-   config_parser.serialize_node(kc_node->multiplier());
-  return serialized_node;
-}
-
-static auto parse_kc_node(ConfigParser::Parser config_parser,
-                          const jsoncons::ojson& params)
- -> ErasedNode<ErasedSeriesMethodContext>
-{
-  const auto ma_node_type = parse_ma_node_type(
-   get_param_or<std::string>(params, "maMethodType", "EMA"), MaNodeType::Ema);
-  const auto period = parse_node_from_param_or(
-   config_parser,
-   params,
-   "period",
-   NumericInputNode{
-    "Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 20.0});
-  const auto ma_source =
-   parse_node_from_param_or(config_parser, params, "maSource", CloseNode{});
-
-  const auto band_node_type = parse_kc_band_node_type(
-   get_param_or<std::string>(params, "bandMethodType", "ATR"));
-  const auto band_atr_period = parse_node_from_param_or(
-   config_parser,
-   params,
-   "bandAtrPeriod",
-   NumericInputNode{"Band ATR Period",
-                    NumericInputNode::ValueRepresentation::UnsignedInteger,
-                    14.0});
-
-  const auto multiplier = parse_node_from_param_or(
-   config_parser,
-   params,
-   "multiplier",
-   NumericInputNode{
-    "Multiplier", NumericInputNode::ValueRepresentation::Decimal, 1.5});
-
-  return KcNode{ma_source,
-                period,
-                multiplier,
-                band_atr_period,
-                band_node_type,
-                ma_node_type};
-}
-
-template<typename TNode>
-static auto parse_binary_operator_node(ConfigParser::Parser config_parser,
-                                       const jsoncons::ojson& params,
-                                       const std::string& first_operand_key,
-                                       const std::string& second_operand_key)
- -> ErasedNode<ErasedSeriesMethodContext>
-{
-  const auto first_operand =
-   config_parser.parse_node(params.at(first_operand_key));
-  const auto second_operand =
-   config_parser.parse_node(params.at(second_operand_key));
-
-  return TNode{first_operand, second_operand};
-}
-
-template<typename TNode>
-static auto serialize_binary_operator_node(
- const ConfigParser& config_parser,
- const ErasedNode<ErasedSeriesMethodContext>& node,
- const std::string& first_operand_key,
- const std::string& second_operand_key) -> jsoncons::ojson
-{
-  const auto binary_operator_node = node_cast<TNode>(node);
-  if(!binary_operator_node) {
-    return jsoncons::ojson::null();
-  }
-
-  auto serialized_node = jsoncons::ojson{};
-  serialized_node[first_operand_key] =
-   config_parser.serialize_node(binary_operator_node->operand1());
-  serialized_node[second_operand_key] =
-   config_parser.serialize_node(binary_operator_node->operand2());
-  return serialized_node;
-}
-
-template<typename TNode>
-static auto parse_unary_operator_node(ConfigParser::Parser config_parser,
-                                      const jsoncons::ojson& params,
-                                      const std::string& operand_key)
- -> ErasedNode<ErasedSeriesMethodContext>
-{
-  return TNode{config_parser.parse_node(params.at(operand_key))};
-}
-
-template<typename TNode>
-static auto
-serialize_unary_operator_node(const ConfigParser& config_parser,
-                              const ErasedNode<ErasedSeriesMethodContext>& node,
-                              const std::string& operand_key) -> jsoncons::ojson
-{
-  const auto unary_operator_node = node_cast<TNode>(node);
-  if(!unary_operator_node) {
-    return jsoncons::ojson::null();
-  }
-
-  auto serialized_node = jsoncons::ojson{};
-  serialized_node[operand_key] =
-   config_parser.serialize_node(unary_operator_node->operand());
-  return serialized_node;
-}
-
-template<typename TNode>
-static auto parse_binary_logical_node(ConfigParser::Parser config_parser,
-                                      const jsoncons::ojson& params,
-                                      const std::string& first_operand_key,
-                                      const std::string& second_operand_key)
- -> ErasedNode<ErasedSeriesMethodContext>
-{
-  const auto first_operand =
-   config_parser.parse_node(params.at(first_operand_key));
-  const auto second_operand =
-   config_parser.parse_node(params.at(second_operand_key));
-
-  return TNode{first_operand, second_operand};
-}
-
-template<typename TNode>
-static auto
-serialize_binary_logical_node(const ConfigParser& config_parser,
-                              const ErasedNode<ErasedSeriesMethodContext>& node,
-                              const std::string& first_operand_key,
-                              const std::string& second_operand_key)
- -> jsoncons::ojson
-{
-  const auto binary_logical_node = node_cast<TNode>(node);
-  if(!binary_logical_node) {
-    return jsoncons::ojson::null();
-  }
-
-  auto serialized_node = jsoncons::ojson{};
-  serialized_node[first_operand_key] =
-   config_parser.serialize_node(binary_logical_node->first_condition());
-  serialized_node[second_operand_key] =
-   config_parser.serialize_node(binary_logical_node->second_condition());
-  return serialized_node;
-}
-
-template<typename TNode>
-static auto parse_unary_logical_node(ConfigParser::Parser config_parser,
-                                     const jsoncons::ojson& params,
-                                     const std::string& operand_key)
- -> ErasedNode<ErasedSeriesMethodContext>
-{
-  return TNode{config_parser.parse_node(params.at(operand_key))};
-}
-
-template<typename TNode>
-static auto
-serialize_unary_logical_node(const ConfigParser& config_parser,
-                             const ErasedNode<ErasedSeriesMethodContext>& node,
-                             const std::string& operand_key) -> jsoncons::ojson
-{
-  const auto unary_logical_node = node_cast<TNode>(node);
-  if(!unary_logical_node) {
-    return jsoncons::ojson::null();
-  }
-
-  auto serialized_node = jsoncons::ojson{};
-  serialized_node[operand_key] =
-   config_parser.serialize_node(unary_logical_node->other_condition());
-  return serialized_node;
-}
-
-template<typename TNode>
-static auto parse_comparison_node(ConfigParser::Parser config_parser,
-                                  const jsoncons::ojson& params)
- -> ErasedNode<ErasedSeriesMethodContext>
-{
-  auto target = config_parser.parse_node(params.at("target"));
-  auto threshold = config_parser.parse_node(params.at("threshold"));
-  return TNode{target, threshold};
-}
-
-template<typename TNode>
-static auto
-serialize_comparison_node(const ConfigParser& config_parser,
-                          const ErasedNode<ErasedSeriesMethodContext>& node)
- -> jsoncons::ojson
-{
-  const auto comparison_node = node_cast<TNode>(node);
-  if(!comparison_node) {
-    return jsoncons::ojson::null();
-  }
-
-  auto serialized_node = jsoncons::ojson{};
-  serialized_node["target"] =
-   config_parser.serialize_node(comparison_node->target());
-  serialized_node["threshold"] =
-   config_parser.serialize_node(comparison_node->threshold());
-  return serialized_node;
-}
-
-static auto parse_all_of_node(ConfigParser::Parser config_parser,
-                              const jsoncons::ojson& params)
- -> ErasedNode<ErasedSeriesMethodContext>
-{
-  if(!params.contains("items")) {
-    throw std::invalid_argument{"ALL_OF: 'items' is not found"};
-  }
-
-  const auto& items = params.at("items");
-  if(!items.is_array()) {
-    throw std::invalid_argument{"ALL_OF: 'items' must be an array"};
-  }
-
-  auto conditions = std::vector<ErasedNode<ErasedSeriesMethodContext>>{};
-  conditions.reserve(items.size());
-  for(const auto& item : items.array_range()) {
-    conditions.push_back(config_parser.parse_node(item));
-  }
-  return AllOfNode{std::move(conditions)};
-}
-
-static auto
-serialize_all_of_node(const ConfigParser& config_parser,
-                      const ErasedNode<ErasedSeriesMethodContext>& node)
- -> jsoncons::ojson
-{
-  const auto all_of_node = node_cast<AllOfNode>(node);
-  if(!all_of_node) {
-    return jsoncons::ojson::null();
-  }
-
-  auto serialized_node = jsoncons::ojson{};
-  auto conditions = jsoncons::ojson::array();
-  for(const auto& condition : all_of_node->conditions()) {
-    conditions.push_back(config_parser.serialize_node(condition));
-  }
-  serialized_node["items"] = conditions;
-  return serialized_node;
-}
-
-static auto parse_any_of_node(ConfigParser::Parser config_parser,
-                              const jsoncons::ojson& params)
- -> ErasedNode<ErasedSeriesMethodContext>
-{
-  if(!params.contains("items")) {
-    throw std::invalid_argument{"ANY_OF: 'items' is not found"};
-  }
-
-  const auto& items = params.at("items");
-  if(!items.is_array()) {
-    throw std::invalid_argument{"ANY_OF: 'items' must be an array"};
-  }
-
-  auto conditions = std::vector<ErasedNode<ErasedSeriesMethodContext>>{};
-  conditions.reserve(items.size());
-  for(const auto& item : items.array_range()) {
-    conditions.push_back(config_parser.parse_node(item));
-  }
-  return AnyOfNode{std::move(conditions)};
-}
-
-static auto
-serialize_any_of_node(const ConfigParser& config_parser,
-                      const ErasedNode<ErasedSeriesMethodContext>& node)
- -> jsoncons::ojson
-{
-  const auto any_of_node = node_cast<AnyOfNode>(node);
-  if(!any_of_node) {
-    return jsoncons::ojson::null();
-  }
-
-  auto serialized_node = jsoncons::ojson{};
-  auto conditions = jsoncons::ojson::array();
-  for(const auto& condition : any_of_node->conditions()) {
-    conditions.push_back(config_parser.serialize_node(condition));
-  }
-  serialized_node["items"] = conditions;
-  return serialized_node;
-}
-
-static auto parse_crossunder_node(ConfigParser::Parser config_parser,
-                                  const jsoncons::ojson& params)
- -> ErasedNode<ErasedSeriesMethodContext>
-{
-  auto signal = config_parser.parse_node(params.at("value"));
-  auto reference = config_parser.parse_node(params.at("baseline"));
-  return CrossunderNode{signal, reference};
-}
-
-static auto
-serialize_crossunder_node(const ConfigParser& config_parser,
-                          const ErasedNode<ErasedSeriesMethodContext>& node)
- -> jsoncons::ojson
-{
-  const auto crossunder_node = node_cast<CrossunderNode>(node);
-  if(!crossunder_node) {
-    return jsoncons::ojson::null();
-  }
-
-  auto serialized_node = jsoncons::ojson{};
-  serialized_node["value"] =
-   config_parser.serialize_node(crossunder_node->source());
-  serialized_node["baseline"] =
-   config_parser.serialize_node(crossunder_node->reference());
-  return serialized_node;
-}
-
-static auto parse_crossover_node(ConfigParser::Parser config_parser,
-                                 const jsoncons::ojson& params)
- -> ErasedNode<ErasedSeriesMethodContext>
-{
-  auto signal = config_parser.parse_node(params.at("value"));
-  auto reference = config_parser.parse_node(params.at("baseline"));
-  return CrossoverNode{signal, reference};
-}
-
-static auto
-serialize_crossover_node(const ConfigParser& config_parser,
-                         const ErasedNode<ErasedSeriesMethodContext>& node)
- -> jsoncons::ojson
-{
-  const auto crossover_node = node_cast<CrossoverNode>(node);
-  if(!crossover_node) {
-    return jsoncons::ojson::null();
-  }
-
-  auto serialized_node = jsoncons::ojson{};
-  serialized_node["value"] =
-   config_parser.serialize_node(crossover_node->source());
-  serialized_node["baseline"] =
-   config_parser.serialize_node(crossover_node->reference());
-  return serialized_node;
-}
-
-static auto
-serialize_boolean_node(const ErasedNode<ErasedSeriesMethodContext>& node,
-                       bool expected) -> jsoncons::ojson
-{
-  if(expected && node_cast<TrueNode>(node)) {
-    return jsoncons::ojson{};
-  }
-  if(!expected && node_cast<FalseNode>(node)) {
-    return jsoncons::ojson{};
-  }
-  return jsoncons::ojson::null();
-}
-
 enum class EntryFilterNodeKind { Scalar, Boolean };
+
+static auto parse_model_performance_metric(const std::string& value)
+ -> ModelPerformanceMetric
+{
+  static const auto metrics = std::unordered_map<std::string,
+                                                 ModelPerformanceMetric>{
+   {"LIFETIME_COUNT", ModelPerformanceMetric::LifetimeCount},
+   {"EFFECTIVE_COUNT", ModelPerformanceMetric::EffectiveCount},
+   {"WIN_RATE", ModelPerformanceMetric::WinRate},
+   {"BREAK_EVEN_RATE", ModelPerformanceMetric::BreakEvenRate},
+   {"LOSS_RATE", ModelPerformanceMetric::LossRate},
+   {"CURRENT_WINNING_STREAK", ModelPerformanceMetric::CurrentWinningStreak},
+   {"CURRENT_LOSING_STREAK", ModelPerformanceMetric::CurrentLosingStreak},
+   {"MAXIMUM_WINNING_STREAK", ModelPerformanceMetric::MaximumWinningStreak},
+   {"MAXIMUM_LOSING_STREAK", ModelPerformanceMetric::MaximumLosingStreak},
+   {"MEAN_RETURN", ModelPerformanceMetric::MeanReturn},
+   {"RETURN_STANDARD_DEVIATION",
+    ModelPerformanceMetric::ReturnStandardDeviation},
+   {"BAYESIAN_WIN_PROBABILITY", ModelPerformanceMetric::BayesianWinProbability},
+   {"BAYESIAN_WIN_PROBABILITY_LOWER_95",
+    ModelPerformanceMetric::BayesianWinProbabilityLower95},
+   {"BAYESIAN_WIN_PROBABILITY_UPPER_95",
+    ModelPerformanceMetric::BayesianWinProbabilityUpper95},
+   {"BAYESIAN_WINNING_PAYOFF", ModelPerformanceMetric::BayesianWinningPayoff},
+   {"BAYESIAN_WINNING_PAYOFF_LOWER_95",
+    ModelPerformanceMetric::BayesianWinningPayoffLower95},
+   {"BAYESIAN_WINNING_PAYOFF_UPPER_95",
+    ModelPerformanceMetric::BayesianWinningPayoffUpper95},
+   {"BAYESIAN_LOSING_PAYOFF", ModelPerformanceMetric::BayesianLosingPayoff},
+   {"BAYESIAN_LOSING_PAYOFF_LOWER_95",
+    ModelPerformanceMetric::BayesianLosingPayoffLower95},
+   {"BAYESIAN_LOSING_PAYOFF_UPPER_95",
+    ModelPerformanceMetric::BayesianLosingPayoffUpper95}};
+
+  if(const auto metric = metrics.find(value); metric != metrics.end()) {
+    return metric->second;
+  }
+  throw std::invalid_argument{
+   "EntryFilter strategy-performance metric is invalid"};
+}
+
+static auto serialize_model_performance_metric(ModelPerformanceMetric metric)
+ -> std::string
+{
+  switch(metric) {
+  case ModelPerformanceMetric::LifetimeCount:
+    return "LIFETIME_COUNT";
+  case ModelPerformanceMetric::EffectiveCount:
+    return "EFFECTIVE_COUNT";
+  case ModelPerformanceMetric::WinRate:
+    return "WIN_RATE";
+  case ModelPerformanceMetric::BreakEvenRate:
+    return "BREAK_EVEN_RATE";
+  case ModelPerformanceMetric::LossRate:
+    return "LOSS_RATE";
+  case ModelPerformanceMetric::CurrentWinningStreak:
+    return "CURRENT_WINNING_STREAK";
+  case ModelPerformanceMetric::CurrentLosingStreak:
+    return "CURRENT_LOSING_STREAK";
+  case ModelPerformanceMetric::MaximumWinningStreak:
+    return "MAXIMUM_WINNING_STREAK";
+  case ModelPerformanceMetric::MaximumLosingStreak:
+    return "MAXIMUM_LOSING_STREAK";
+  case ModelPerformanceMetric::MeanReturn:
+    return "MEAN_RETURN";
+  case ModelPerformanceMetric::ReturnStandardDeviation:
+    return "RETURN_STANDARD_DEVIATION";
+  case ModelPerformanceMetric::BayesianWinProbability:
+    return "BAYESIAN_WIN_PROBABILITY";
+  case ModelPerformanceMetric::BayesianWinProbabilityLower95:
+    return "BAYESIAN_WIN_PROBABILITY_LOWER_95";
+  case ModelPerformanceMetric::BayesianWinProbabilityUpper95:
+    return "BAYESIAN_WIN_PROBABILITY_UPPER_95";
+  case ModelPerformanceMetric::BayesianWinningPayoff:
+    return "BAYESIAN_WINNING_PAYOFF";
+  case ModelPerformanceMetric::BayesianWinningPayoffLower95:
+    return "BAYESIAN_WINNING_PAYOFF_LOWER_95";
+  case ModelPerformanceMetric::BayesianWinningPayoffUpper95:
+    return "BAYESIAN_WINNING_PAYOFF_UPPER_95";
+  case ModelPerformanceMetric::BayesianLosingPayoff:
+    return "BAYESIAN_LOSING_PAYOFF";
+  case ModelPerformanceMetric::BayesianLosingPayoffLower95:
+    return "BAYESIAN_LOSING_PAYOFF_LOWER_95";
+  case ModelPerformanceMetric::BayesianLosingPayoffUpper95:
+    return "BAYESIAN_LOSING_PAYOFF_UPPER_95";
+  }
+  throw std::invalid_argument{
+   "EntryFilter strategy-performance metric is invalid"};
+}
 
 struct ParsedEntryFilterNode {
   ErasedNode<EntryFilterMethodContext> node;
@@ -935,19 +409,17 @@ static auto parse_entry_filter_child(const jsoncons::ojson& config)
   if(method == "DRAWDOWN") {
     return {ErasedNode<Context>{DrawdownNode{}}, EntryFilterNodeKind::Scalar};
   }
-  if(method == "STRATEGY_PERFORMANCE") {
-    const auto metric_value = config.at("metric").as<int>();
-    if(metric_value <
-         static_cast<int>(ModelPerformanceMetric::LifetimeCount) ||
-       metric_value >
-        static_cast<int>(
-          ModelPerformanceMetric::BayesianLosingPayoffUpper95)) {
+  if(method == "MODEL_PERFORMANCE") {
+    if(!config.contains("params") || !config.at("params").is_object() ||
+       !config.at("params").contains("metric") ||
+       !config.at("params").at("metric").is_string()) {
       throw std::invalid_argument{
        "EntryFilter strategy-performance metric is invalid"};
     }
-     return {ErasedNode<Context>{ModelPerformanceNode{
-              static_cast<ModelPerformanceMetric>(metric_value)}},
-            EntryFilterNodeKind::Scalar};
+    return {ErasedNode<Context>{ModelPerformanceNode{
+             parse_model_performance_metric(
+              config.at("params").at("metric").as<std::string>())}},
+             EntryFilterNodeKind::Scalar};
   }
 
 #define PLUDUX_PARSE_ENTRY_FILTER_REQUESTED_ORDER_NODE(Id, Type)       \
@@ -1094,8 +566,9 @@ serialize_entry_filter_child(const ErasedNode<EntryFilterMethodContext>& node)
     return {object("DRAWDOWN"), EntryFilterNodeKind::Scalar};
   }
   if(const auto* performance = node_cast<ModelPerformanceNode>(node)) {
-    auto config = object("STRATEGY_PERFORMANCE");
-    config["metric"] = static_cast<int>(performance->metric());
+    auto config = object("MODEL_PERFORMANCE");
+    config["params"]["metric"] =
+     serialize_model_performance_metric(performance->metric());
     return {std::move(config), EntryFilterNodeKind::Scalar};
   }
 
@@ -1213,963 +686,807 @@ auto serialize_entry_filter_node(
   return config;
 }
 
-auto make_default_registered_config_parser() -> ConfigParser
+
+template<typename TContext>
+auto make_model_config_parser_for() -> ConfigParser<TContext>
 {
-  auto config_parser = ConfigParser{};
+  using Parser = ConfigParser<TContext>;
+  using Node = ErasedNode<TContext>;
+  auto parser = Parser{};
 
-  config_parser.register_node_parser(
-   "VALUE", serialize_value_node, parse_value_node);
-
-  config_parser.register_node_parser(
-   "DATA", serialize_data_node, parse_data_node);
-
-  config_parser.register_node_parser(
-   "EQUITY", serialize_equity_node, parse_equity_node);
-
-  config_parser.register_node_parser(
-   "EQUITY_PERCENT", serialize_equity_percent_node, parse_equity_percent_node);
-
-  config_parser.register_node_parser(
-   "DRAWDOWN", serialize_drawdown_node, parse_drawdown_node);
-
-  config_parser.register_node_parser("OPEN",
-                                     serialize_parameterless_node<OpenNode>,
-                                     parse_parameterless_node<OpenNode>);
-  config_parser.register_node_parser("HIGH",
-                                     serialize_parameterless_node<HighNode>,
-                                     parse_parameterless_node<HighNode>);
-  config_parser.register_node_parser("LOW",
-                                     serialize_parameterless_node<LowNode>,
-                                     parse_parameterless_node<LowNode>);
-  config_parser.register_node_parser("CLOSE",
-                                     serialize_parameterless_node<CloseNode>,
-                                     parse_parameterless_node<CloseNode>);
-  config_parser.register_node_parser("VOLUME",
-                                     serialize_parameterless_node<VolumeNode>,
-                                     parse_parameterless_node<VolumeNode>);
-
-  config_parser.register_node_parser(
-   "CHANGE",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     const auto change_node = node_cast<ChangeNode>(node);
-     if(!change_node) {
-       return jsoncons::ojson::null();
-     }
-     auto serialized_node = jsoncons::ojson{};
-     serialized_node["source"] =
-      config_parser.serialize_node(change_node->source());
-     return serialized_node;
+  parser.register_node_parser(
+   "VALUE",
+   [](const Parser&, const Node& node) -> jsoncons::ojson {
+     const auto* value = node_cast<ValueNode>(node);
+     return value ? jsoncons::ojson::object{{"value", value->value()}}
+                  : jsoncons::ojson::null();
    },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     const auto source =
-      parse_node_from_param_or(config_parser, params, "source", CloseNode{});
-     return ErasedNode<ErasedSeriesMethodContext>{ChangeNode{source}};
+   [](typename Parser::Parser, const jsoncons::ojson& params) -> Node {
+     return ValueNode{params.at("value").as_double()};
+   });
+  parser.register_node_parser(
+   "DATA",
+   [](const Parser&, const Node& node) -> jsoncons::ojson {
+     const auto* data = node_cast<DataNode>(node);
+     return data ? jsoncons::ojson::object{{"field", data->field()}}
+                 : jsoncons::ojson::null();
+   },
+   [](typename Parser::Parser, const jsoncons::ojson& params) -> Node {
+     return DataNode{params.at("field").as_string()};
    });
 
-  config_parser.register_node_parser(
-   "SMA",
-   serialize_ta_with_erased_period_node<SmaNode>,
-   parse_ta_with_erased_period_node<SmaNode, 20>);
-  config_parser.register_node_parser(
-   "EMA",
-   serialize_ta_with_erased_period_node<EmaNode>,
-   parse_ta_with_erased_period_node<EmaNode, 20>);
-  config_parser.register_node_parser(
-   "WMA",
-   serialize_ta_with_erased_period_node<WmaNode>,
-   parse_ta_with_erased_period_node<WmaNode, 20>);
-  config_parser.register_node_parser(
-   "RMA",
-   serialize_ta_with_erased_period_node<RmaNode>,
-   parse_ta_with_erased_period_node<RmaNode, 20>);
-  config_parser.register_node_parser(
-   "HMA",
-   serialize_ta_with_erased_period_node<HmaNode>,
-   parse_ta_with_erased_period_node<HmaNode, 20>);
-  config_parser.register_node_parser(
-   "RSI",
-   serialize_ta_with_erased_period_node<RsiNode>,
-   parse_ta_with_erased_period_node<RsiNode, 14>);
-  config_parser.register_node_parser(
-   "HIGHEST",
-   serialize_ta_with_erased_period_node<HighestNode>,
-   parse_ta_with_erased_period_node<HighestNode, 14>);
-  config_parser.register_node_parser(
-   "LOWEST",
-   serialize_ta_with_erased_period_node<LowestNode>,
-   parse_ta_with_erased_period_node<LowestNode, 14>);
-  config_parser.register_node_parser(
-   "ROC",
-   serialize_ta_with_erased_period_node<RocNode>,
-   parse_ta_with_erased_period_node<RocNode, 14>);
+  const auto register_parameterless = [&]<typename TNode>(const char* name) {
+    parser.register_node_parser(
+     name,
+     [](const Parser&, const Node& node) -> jsoncons::ojson {
+       return node_cast<TNode>(node) ? jsoncons::ojson{}
+                                     : jsoncons::ojson::null();
+     },
+     [](typename Parser::Parser, const jsoncons::ojson&) -> Node {
+       return TNode{};
+     });
+  };
+  register_parameterless.template operator()<OpenNode>("OPEN");
+  register_parameterless.template operator()<HighNode>("HIGH");
+  register_parameterless.template operator()<LowNode>("LOW");
+  register_parameterless.template operator()<CloseNode>("CLOSE");
+  register_parameterless.template operator()<VolumeNode>("VOLUME");
+  register_parameterless.template operator()<PyramidingLayerNode>(
+   "PYRAMIDING_LAYER");
+  register_parameterless.template operator()<InitialEntryPriceNode>(
+   "INITIAL_ENTRY_PRICE");
+  register_parameterless.template operator()<LatestEntryPriceNode>(
+   "LATEST_ENTRY_PRICE");
+  register_parameterless.template operator()<AveragePriceNode>("AVERAGE_PRICE");
+  register_parameterless.template operator()<StopTargetRefPriceNode>(
+   "STOP_TARGET_REF_PRICE");
+  register_parameterless.template operator()<PositionDirectionNode>(
+   "POSITION_DIRECTION");
+  register_parameterless.template operator()<Sl1RNode>("SL_1R");
+  register_parameterless.template operator()<TrueNode>("ALWAYS");
+  register_parameterless.template operator()<FalseNode>("NEVER");
 
-  config_parser.register_node_parser(
-   "RVOL",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     const auto rvol_node = node_cast<RvolNode>(node);
-     if(!rvol_node) {
-       return jsoncons::ojson::null();
-     }
-     auto serialized_node = jsoncons::ojson{};
-     serialized_node["period"] =
-      config_parser.serialize_node(rvol_node->period());
-     return serialized_node;
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return ErasedNode<ErasedSeriesMethodContext>{
-      RvolNode{parse_node_from_param_or(
-       config_parser,
-       params,
-       "period",
-       NumericInputNode{"Period",
-                        NumericInputNode::ValueRepresentation::UnsignedInteger,
-                        14.0})}};
-   });
-
-  config_parser.register_node_parser("ATR", serialize_atr_node, parse_atr_node);
-  config_parser.register_node_parser("TR",
-                                     serialize_parameterless_node<TrNode>,
-                                     parse_parameterless_node<TrNode>);
-  config_parser.register_node_parser("KC", serialize_kc_node, parse_kc_node);
-
-  config_parser.register_node_parser(
-   "DC",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     const auto dc_node = node_cast<DonchianChannelNode>(node);
-     if(!dc_node) {
-       return jsoncons::ojson::null();
-     }
-     auto serialized_node = jsoncons::ojson{};
-     serialized_node["period"] =
-      config_parser.serialize_node(dc_node->period());
-     return serialized_node;
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return ErasedNode<ErasedSeriesMethodContext>{
-      DonchianChannelNode{parse_node_from_param_or(
-       config_parser,
-       params,
-       "period",
-       NumericInputNode{"Period",
-                        NumericInputNode::ValueRepresentation::UnsignedInteger,
-                        20.0})}};
-   });
-
-  config_parser.register_node_parser(
+  parser.register_node_parser(
    "SERIES",
-   [](const ConfigParser&, const ErasedNode<ErasedSeriesMethodContext>& node) {
-     const auto series_node = node_cast<SeriesNode>(node);
-     if(!series_node) {
-       return jsoncons::ojson::null();
-     }
-     auto serialized_node = jsoncons::ojson{};
-     serialized_node["name"] = series_node->name();
-     return serialized_node;
+   [](const Parser&, const Node& node) -> jsoncons::ojson {
+     const auto* series = node_cast<SeriesNode>(node);
+     return series ? jsoncons::ojson::object{{"name", series->name()}}
+                   : jsoncons::ojson::null();
    },
-   [](ConfigParser::Parser, const jsoncons::ojson& params) {
-     const auto name = get_param_or<std::string>(params, "name", "");
-     return ErasedNode<ErasedSeriesMethodContext>{SeriesNode{name}};
+   [](typename Parser::Parser, const jsoncons::ojson& params) -> Node {
+     return SeriesNode{get_param_or<std::string>(params, "name", "")};
    });
 
-  config_parser.register_node_parser(
-   "LOOKBACK",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     const auto lookback_node = node_cast<LookbackNode>(node);
-     if(!lookback_node) {
-       return jsoncons::ojson::null();
-     }
-     auto serialized_node = jsoncons::ojson{};
-     serialized_node["period"] = lookback_node->period();
-     serialized_node["source"] =
-      config_parser.serialize_node(lookback_node->source());
-     return serialized_node;
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     const auto period = params.at("period").as<std::size_t>();
-     const auto source =
-      parse_node_from_param_or(config_parser, params, "source", CloseNode{});
-     return ErasedNode<ErasedSeriesMethodContext>{LookbackNode{source, period}};
-   });
+  const auto register_binary = [&]<typename TNode>(const char* name,
+                                                    const char* first,
+                                                    const char* second) {
+    parser.register_node_parser(
+     name,
+     [first, second](const Parser& parser, const Node& node) -> jsoncons::ojson {
+       const auto* binary = node_cast<TNode>(node);
+       if(!binary) {
+         return jsoncons::ojson::null();
+       }
+       return jsoncons::ojson::object{
+        {first, parser.serialize_node(binary->operand1())},
+        {second, parser.serialize_node(binary->operand2())}};
+     },
+     [first, second](typename Parser::Parser parser,
+                     const jsoncons::ojson& params) -> Node {
+       return TNode{parser.parse_node(params.at(first)),
+                    parser.parse_node(params.at(second))};
+     });
+  };
+  register_binary.template operator()<BinaryOperatorNode<std::plus<>, TContext>>(
+   "ADD", "augend", "addend");
+  register_binary.template operator()<BinaryOperatorNode<std::minus<>, TContext>>(
+   "SUBTRACT", "minuend", "subtrahend");
+  register_binary.template operator()<BinaryOperatorNode<std::multiplies<>,
+                                                          TContext>>(
+   "MULTIPLY", "multiplicand", "multiplier");
+  register_binary.template operator()<BinaryOperatorNode<std::divides<>,
+                                                          TContext>>(
+   "DIVIDE", "dividend", "divisor");
+  register_binary.template operator()<BinaryOperatorNode<Maximum<>, TContext>>(
+   "MAX", "left", "right");
+  register_binary.template operator()<BinaryOperatorNode<Minimum<>, TContext>>(
+   "MIN", "left", "right");
 
-  config_parser.register_node_parser(
+  const auto register_comparison = [&]<typename TNode>(const char* name) {
+    parser.register_node_parser(
+     name,
+     [](const Parser& parser, const Node& node) -> jsoncons::ojson {
+       const auto* comparison = node_cast<TNode>(node);
+       if(!comparison) {
+         return jsoncons::ojson::null();
+       }
+       return jsoncons::ojson::object{
+        {"target", parser.serialize_node(comparison->target())},
+        {"threshold", parser.serialize_node(comparison->threshold())}};
+     },
+     [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+       return TNode{parser.parse_node(params.at("target")),
+                    parser.parse_node(params.at("threshold"))};
+     });
+  };
+  register_comparison.template operator()<GreaterThanNode<TContext>>(
+   "GREATER_THAN");
+  register_comparison.template operator()<GreaterEqualNode<TContext>>(
+   "GREATER_EQUAL");
+  register_comparison.template operator()<LessThanNode<TContext>>("LESS_THAN");
+  register_comparison.template operator()<LessEqualNode<TContext>>("LESS_EQUAL");
+  register_comparison.template operator()<EqualNode<TContext>>("EQUAL");
+  register_comparison.template operator()<NotEqualNode<TContext>>("NOT_EQUAL");
+
+  const auto register_cross = [&]<typename TNode>(const char* name) {
+    parser.register_node_parser(
+     name,
+     [](const Parser& parser, const Node& node) -> jsoncons::ojson {
+       const auto* cross = node_cast<TNode>(node);
+       if(!cross) {
+         return jsoncons::ojson::null();
+       }
+       return jsoncons::ojson::object{
+        {"value", parser.serialize_node(cross->source())},
+        {"baseline", parser.serialize_node(cross->reference())}};
+     },
+     [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+       return TNode{parser.parse_node(params.at("value")),
+                    parser.parse_node(params.at("baseline"))};
+     });
+  };
+  register_cross.template operator()<CrossoverNode<TContext>>("CROSSOVER");
+  register_cross.template operator()<CrossunderNode<TContext>>("CROSSUNDER");
+
+  parser.register_node_parser(
+   "CHANGE",
+   [](const Parser& parser, const Node& node) -> jsoncons::ojson {
+     const auto* change = node_cast<ChangeNode<TContext>>(node);
+     return change ? jsoncons::ojson::object{
+                       {"source", parser.serialize_node(change->source())}}
+                   : jsoncons::ojson::null();
+   },
+   [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+     return ChangeNode<TContext>{params.contains("source")
+                                       ? parser.parse_node(params.at("source"))
+                                        : Node{CloseNode{}}};
+    });
+
+  const auto register_distance = [&]<typename TNode>(const char* name,
+                                                      const char* value_key,
+                                                      double fallback) {
+    parser.register_node_parser(
+     name,
+     [value_key](const Parser& parser, const Node& node) -> jsoncons::ojson {
+       const auto* distance = node_cast<TNode>(node);
+       if(!distance) {
+         return jsoncons::ojson::null();
+       }
+       return jsoncons::ojson::object{
+        {value_key, parser.serialize_node(distance->value())}};
+     },
+     [value_key, fallback](typename Parser::Parser parser,
+                           const jsoncons::ojson& params) -> Node {
+       return TNode{params.contains(value_key)
+                     ? parser.parse_node(params.at(value_key))
+                     : Node{ValueNode{fallback}}};
+     });
+  };
+  register_distance.template operator()<RiskDistanceAmountNode<TContext>>(
+   "R_DISTANCE_AMOUNT", "amount", 1.0);
+  register_distance.template operator()<RiskDistancePercentNode<TContext>>(
+   "R_DISTANCE_PERCENTAGE", "percentage", 1.0);
+  register_distance.template operator()<SlAmountNode<TContext>>(
+   "SL_AMOUNT", "amount", 0.0);
+  register_distance.template operator()<TpAmountNode<TContext>>(
+   "TP_AMOUNT", "amount", 0.0);
+  register_distance.template operator()<SlPercentNode<TContext>>(
+   "SL_PERCENT", "percent", 0.0);
+  register_distance.template operator()<TpPercentNode<TContext>>(
+   "TP_PERCENT", "percent", 0.0);
+  register_distance.template operator()<SlRMultipleNode<TContext>>(
+   "SL_R_MULTIPLE", "multiple", 1.0);
+  register_distance.template operator()<TpRMultipleNode<TContext>>(
+   "TP_R_MULTIPLE", "multiple", 2.0);
+
+  const auto register_atr_distance = [&]<typename TNode>(const char* name) {
+    parser.register_node_parser(
+     name,
+     [](const Parser& parser, const Node& node) -> jsoncons::ojson {
+       const auto* distance = node_cast<TNode>(node);
+       if(!distance) {
+         return jsoncons::ojson::null();
+       }
+       return jsoncons::ojson::object{
+        {"period", parser.serialize_node(distance->period())},
+        {"multiplier", parser.serialize_node(distance->multiplier())},
+        {"maSmoothingType",
+         distance->ma_smoothing_type() == MaNodeType::Sma   ? "SMA"
+         : distance->ma_smoothing_type() == MaNodeType::Ema ? "EMA"
+         : distance->ma_smoothing_type() == MaNodeType::Wma ? "WMA"
+         : distance->ma_smoothing_type() == MaNodeType::Hma ? "HMA"
+                                                            : "RMA"}};
+     },
+     [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+       return TNode{
+        params.contains("period") ? parser.parse_node(params.at("period"))
+                                  : Node{ValueNode{14.0}},
+        params.contains("multiplier")
+         ? parser.parse_node(params.at("multiplier"))
+         : Node{ValueNode{2.0}},
+        [&] {
+          const auto type =
+           get_param_or<std::string>(params, "maSmoothingType", "RMA");
+          return type == "SMA"   ? MaNodeType::Sma
+               : type == "EMA" ? MaNodeType::Ema
+               : type == "WMA" ? MaNodeType::Wma
+               : type == "HMA" ? MaNodeType::Hma
+                               : MaNodeType::Rma;
+        }()};
+     });
+  };
+  register_atr_distance.template operator()<RiskDistanceAtrNode<TContext>>(
+   "R_DISTANCE_ATR");
+  register_atr_distance.template operator()<SlAtrNode<TContext>>("SL_ATR");
+  register_atr_distance.template operator()<TpAtrNode<TContext>>("TP_ATR");
+
+  parser.register_node_parser(
    "INPUT",
-   [](const ConfigParser&, const ErasedNode<ErasedSeriesMethodContext>& node) {
-     const auto input_node = node_cast<NumericInputNode>(node);
-     if(!input_node) {
+   [](const Parser&, const Node& node) -> jsoncons::ojson {
+     const auto* input = node_cast<NumericInputNode>(node);
+     if(!input) {
        return jsoncons::ojson::null();
      }
-     auto serialized_node = jsoncons::ojson{};
-     serialized_node["label"] = input_node->label();
-     serialized_node["representation"] = [&]() -> std::string {
-       switch(input_node->representation()) {
-       case NumericInputNode::ValueRepresentation::SignedInteger:
-         return "SignedInteger";
-       case NumericInputNode::ValueRepresentation::UnsignedInteger:
-         return "UnsignedInteger";
-       case NumericInputNode::ValueRepresentation::Decimal:
-       default:
-         return "Decimal";
-       }
-     }();
-     serialized_node["value"] = input_node->value();
-     return serialized_node;
+     const auto representation = input->representation() ==
+                                      NumericInputNode::ValueRepresentation::SignedInteger
+                                   ? "SignedInteger"
+                                   : input->representation() ==
+                                        NumericInputNode::ValueRepresentation::UnsignedInteger
+                                    ? "UnsignedInteger"
+                                    : "Decimal";
+     return jsoncons::ojson::object{{"label", input->label()},
+                                    {"representation", representation},
+                                    {"value", input->value()}};
    },
-   [](ConfigParser::Parser, const jsoncons::ojson& params) {
-     const auto label = get_param_or<std::string>(params, "label", "");
-     const auto representation_str =
-      get_param_or<std::string>(params, "representation", "Decimal");
-     const auto value = get_param_or<double>(params, "value", 0.0);
+   [](typename Parser::Parser, const jsoncons::ojson& params) -> Node {
      const auto representation =
-      representation_str == "SignedInteger"
+      get_param_or<std::string>(params, "representation", "Decimal");
+     return NumericInputNode{
+      get_param_or<std::string>(params, "label", ""),
+      representation == "SignedInteger"
        ? NumericInputNode::ValueRepresentation::SignedInteger
-      : representation_str == "UnsignedInteger"
+       : representation == "UnsignedInteger"
         ? NumericInputNode::ValueRepresentation::UnsignedInteger
-        : NumericInputNode::ValueRepresentation::Decimal;
-     return ErasedNode<ErasedSeriesMethodContext>{
-      NumericInputNode{label, representation, value}};
+        : NumericInputNode::ValueRepresentation::Decimal,
+      get_param_or<double>(params, "value", 0.0)};
    });
 
-  config_parser.register_node_parser(
-   "SELECT_OUTPUT",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     const auto select_output_node = node_cast<SelectOutputNode>(node);
-     if(!select_output_node) {
-       return jsoncons::ojson::null();
-     }
-     auto serialized_node = jsoncons::ojson{};
-     serialized_node["output"] = [&]() -> std::string {
-       switch(select_output_node->output()) {
-       case NodeOutput::MacdLine:
-         return "macd-line";
-       case NodeOutput::SignalLine:
-         return "signal-line";
-       case NodeOutput::Histogram:
-         return "histogram";
-       case NodeOutput::KPercent:
-         return "k-percent";
-       case NodeOutput::DPercent:
-         return "d-percent";
-       case NodeOutput::MiddleBand:
-         return "middle-band";
-       case NodeOutput::UpperBand:
-         return "upper-band";
-       case NodeOutput::LowerBand:
-         return "lower-band";
-       default:
-         return "default";
-       }
-     }();
-     serialized_node["source"] =
-      config_parser.serialize_node(select_output_node->source());
-     return serialized_node;
+  parser.register_node_parser(
+   "LOOKBACK",
+   [](const Parser& parser, const Node& node) -> jsoncons::ojson {
+     const auto* value = node_cast<LookbackNode<TContext>>(node);
+     return value ? jsoncons::ojson::object{{"period", value->period()},
+                                             {"source", parser.serialize_node(value->source())}}
+                  : jsoncons::ojson::null();
    },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     const auto output_name =
-      get_param_or<std::string>(params, "output", "default");
-     const auto output = [&]() -> NodeOutput {
-       if(output_name == "macd-line") {
-         return NodeOutput::MacdLine;
-       } else if(output_name == "signal-line") {
-         return NodeOutput::SignalLine;
-       } else if(output_name == "histogram") {
-         return NodeOutput::Histogram;
-       } else if(output_name == "k-percent") {
-         return NodeOutput::KPercent;
-       } else if(output_name == "d-percent") {
-         return NodeOutput::DPercent;
-       } else if(output_name == "middle-band") {
-         return NodeOutput::MiddleBand;
-       } else if(output_name == "upper-band") {
-         return NodeOutput::UpperBand;
-       } else if(output_name == "lower-band") {
-         return NodeOutput::LowerBand;
-       }
-       return static_cast<NodeOutput>(-1);
-     }();
-     const auto source =
-      parse_node_from_param_or(config_parser, params, "source", CloseNode{});
-     return ErasedNode<ErasedSeriesMethodContext>{
-      SelectOutputNode{source, output}};
+   [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+     return LookbackNode<TContext>{
+      params.contains("source") ? parser.parse_node(params.at("source"))
+                                : Node{CloseNode{}},
+      params.at("period").as<std::size_t>()};
    });
 
-  config_parser.register_node_parser(
-   "ABS_DIFF",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     return serialize_binary_operator_node<AbsDiffNode>(
-      config_parser, node, "minuend", "subtrahend");
+  const auto register_ta = [&]<typename TNode>(const char* name,
+                                                std::size_t default_period) {
+    parser.register_node_parser(
+     name,
+     [](const Parser& parser, const Node& node) -> jsoncons::ojson {
+       const auto* value = node_cast<TNode>(node);
+       return value ? jsoncons::ojson::object{{"period", parser.serialize_node(value->period())},
+                                               {"source", parser.serialize_node(value->source())}}
+                    : jsoncons::ojson::null();
+     },
+     [default_period](typename Parser::Parser parser,
+                      const jsoncons::ojson& params) -> Node {
+       return TNode{params.contains("source") ? parser.parse_node(params.at("source"))
+                                               : Node{CloseNode{}},
+                    params.contains("period") ? parser.parse_node(params.at("period"))
+                                               : Node{NumericInputNode{"Period", NumericInputNode::ValueRepresentation::UnsignedInteger, static_cast<double>(default_period)}}};
+     });
+  };
+  register_ta.template operator()<SmaNode<TContext>>("SMA", 20);
+  register_ta.template operator()<EmaNode<TContext>>("EMA", 20);
+  register_ta.template operator()<RmaNode<TContext>>("RMA", 20);
+  register_ta.template operator()<WmaNode<TContext>>("WMA", 20);
+  register_ta.template operator()<HmaNode<TContext>>("HMA", 20);
+  register_ta.template operator()<HighestNode<TContext>>("HIGHEST", 14);
+  register_ta.template operator()<LowestNode<TContext>>("LOWEST", 14);
+  register_ta.template operator()<RocNode<TContext>>("ROC", 14);
+  register_ta.template operator()<RsiNode<TContext>>("RSI", 14);
+  register_ta.template operator()<StddevNode<TContext>>("STDDEV", 20);
+
+  parser.register_node_parser(
+   "RVOL",
+   [](const Parser& parser, const Node& node) -> jsoncons::ojson {
+     const auto* value = node_cast<RvolNode<TContext>>(node);
+     return value ? jsoncons::ojson::object{{"period", parser.serialize_node(value->period())}}
+                  : jsoncons::ojson::null();
    },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return parse_binary_operator_node<AbsDiffNode>(
-      config_parser, params, "minuend", "subtrahend");
+   [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+     return RvolNode<TContext>{params.contains("period") ? parser.parse_node(params.at("period"))
+                                                          : Node{NumericInputNode{"Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 14.0}}};
+   });
+  parser.register_node_parser(
+   "TR",
+   [](const Parser&, const Node& node) -> jsoncons::ojson {
+      return node_cast<TrNode<TContext>>(node) ? jsoncons::ojson{} : jsoncons::ojson::null();
+   },
+    [](typename Parser::Parser, const jsoncons::ojson&) -> Node { return TrNode<TContext>{}; });
+  parser.register_node_parser(
+   "ATR",
+   [](const Parser& parser, const Node& node) -> jsoncons::ojson {
+     const auto* value = node_cast<AtrNode<TContext>>(node);
+     return value ? jsoncons::ojson::object{{"period", parser.serialize_node(value->period())},
+                                             {"maSmoothingType", serialize_ma_node_type(value->ma_smoothing_type())}}
+                  : jsoncons::ojson::null();
+   },
+   [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+     auto value = AtrNode<TContext>{params.contains("period") ? parser.parse_node(params.at("period"))
+                                                               : Node{NumericInputNode{"Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 14.0}}};
+     value.ma_smoothing_type(parse_ma_node_type(get_param_or<std::string>(params, "maSmoothingType", "RMA")));
+     return value;
    });
 
-  config_parser.register_node_parser(
-   "BB",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     const auto bb_node = node_cast<BbNode>(node);
-     if(!bb_node) {
-       return jsoncons::ojson::null();
-     }
-     auto serialized_node = jsoncons::ojson{};
-     serialized_node["maType"] =
-      serialize_ma_node_type(bb_node->ma_node_type(), "SMA");
-     serialized_node["maSource"] =
-      config_parser.serialize_node(bb_node->source());
-     serialized_node["period"] =
-      config_parser.serialize_node(bb_node->period());
-     serialized_node["stddev"] =
-      config_parser.serialize_node(bb_node->stddev());
-     return serialized_node;
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     const auto ma_type = parse_ma_node_type(
-      get_param_or<std::string>(params, "maType", "SMA"), MaNodeType::Sma);
-     const auto ma_source =
-      parse_node_from_param_or(config_parser, params, "maSource", CloseNode{});
-     const auto period = parse_node_from_param_or(
-      config_parser,
-      params,
-      "period",
-      NumericInputNode{
-       "Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 20.0});
+  const auto register_unary = [&]<typename TNode>(const char* name) {
+    parser.register_node_parser(
+     name,
+     [](const Parser& parser, const Node& node) -> jsoncons::ojson {
+       const auto* value = node_cast<TNode>(node);
+       return value ? jsoncons::ojson::object{{"operand", parser.serialize_node(value->operand())}}
+                    : jsoncons::ojson::null();
+     },
+     [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+       return TNode{parser.parse_node(params.at("operand"))};
+     });
+  };
+  register_binary.template operator()<BinaryOperatorNode<AbsoluteDifference<>, TContext>>(
+   "ABS_DIFF", "minuend", "subtrahend");
+  register_unary.template operator()<UnaryOperatorNode<std::negate<>, TContext>>(
+   "NEGATE");
+  register_unary.template operator()<UnaryOperatorNode<Absolute<>, TContext>>(
+   "ABS");
+  register_unary.template operator()<UnaryOperatorNode<SquareRoot<>, TContext>>(
+   "SQRT");
+  register_unary.template operator()<UnaryOperatorNode<PositivePart<>, TContext>>(
+   "POSITIVE_PART");
+  register_unary.template operator()<UnaryOperatorNode<NegativePart<>, TContext>>(
+   "NEGATIVE_PART");
 
-     const auto stddev = parse_node_from_param_or(
-      config_parser,
-      params,
-      "stddev",
-      NumericInputNode{
-       "StdDev", NumericInputNode::ValueRepresentation::Decimal, 2.0});
-
-     return BbNode{ma_source, period, stddev, ma_type};
-   });
-
-  config_parser.register_node_parser(
-   "MACD",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     const auto macd_node = node_cast<MacdNode>(node);
-     if(!macd_node) {
-       return jsoncons::ojson::null();
-     }
-     auto serialized_node = jsoncons::ojson{};
-     serialized_node["fastPeriod"] =
-      config_parser.serialize_node(macd_node->fast_period());
-     serialized_node["slowPeriod"] =
-      config_parser.serialize_node(macd_node->slow_period());
-     serialized_node["signalPeriod"] =
-      config_parser.serialize_node(macd_node->signal_period());
-     serialized_node["source"] =
-      config_parser.serialize_node(macd_node->source());
-     return serialized_node;
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     const auto fast_period = parse_node_from_param_or(
-      config_parser,
-      params,
-      "fastPeriod",
-      NumericInputNode{"Fast Period",
-                       NumericInputNode::ValueRepresentation::UnsignedInteger,
-                       12.0});
-     const auto slow_period = parse_node_from_param_or(
-      config_parser,
-      params,
-      "slowPeriod",
-      NumericInputNode{"Slow Period",
-                       NumericInputNode::ValueRepresentation::UnsignedInteger,
-                       26.0});
-     const auto signal_period = parse_node_from_param_or(
-      config_parser,
-      params,
-      "signalPeriod",
-      NumericInputNode{"Signal Period",
-                       NumericInputNode::ValueRepresentation::UnsignedInteger,
-                       9.0});
-     const auto source =
-      parse_node_from_param_or(config_parser, params, "source", CloseNode{});
-     return ErasedNode<ErasedSeriesMethodContext>{
-      MacdNode{source, fast_period, slow_period, signal_period}};
-   });
-
-  config_parser.register_node_parser(
-   "STOCH",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     const auto stoch_node = node_cast<StochNode>(node);
-     if(!stoch_node) {
-       return jsoncons::ojson::null();
-     }
-     auto serialized_node = jsoncons::ojson{};
-     serialized_node["kPeriod"] =
-      config_parser.serialize_node(stoch_node->k_period());
-     serialized_node["kSmooth"] =
-      config_parser.serialize_node(stoch_node->k_smooth());
-     serialized_node["dPeriod"] =
-      config_parser.serialize_node(stoch_node->d_period());
-     return serialized_node;
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     const auto k_period = parse_node_from_param_or(
-      config_parser,
-      params,
-      "kPeriod",
-      NumericInputNode{"K Period",
-                       NumericInputNode::ValueRepresentation::UnsignedInteger,
-                       5.0});
-     const auto k_smooth = parse_node_from_param_or(
-      config_parser,
-      params,
-      "kSmooth",
-      NumericInputNode{"K Smooth",
-                       NumericInputNode::ValueRepresentation::UnsignedInteger,
-                       3.0});
-     const auto d_period = parse_node_from_param_or(
-      config_parser,
-      params,
-      "dPeriod",
-      NumericInputNode{"D Period",
-                       NumericInputNode::ValueRepresentation::UnsignedInteger,
-                       3.0});
-     return ErasedNode<ErasedSeriesMethodContext>{
-      StochNode{k_period, k_smooth, d_period}};
-   });
-
-  config_parser.register_node_parser(
-   "STOCH_RSI",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     const auto stoch_rsi_node = node_cast<StochRsiNode>(node);
-     if(!stoch_rsi_node) {
-       return jsoncons::ojson::null();
-     }
-     auto serialized_node = jsoncons::ojson{};
-     serialized_node["rsiSource"] =
-      config_parser.serialize_node(stoch_rsi_node->rsi_source());
-     serialized_node["rsiPeriod"] =
-      config_parser.serialize_node(stoch_rsi_node->rsi_period());
-     serialized_node["kPeriod"] =
-      config_parser.serialize_node(stoch_rsi_node->k_period());
-     serialized_node["kSmooth"] =
-      config_parser.serialize_node(stoch_rsi_node->k_smooth());
-     serialized_node["dPeriod"] =
-      config_parser.serialize_node(stoch_rsi_node->d_period());
-     return serialized_node;
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     const auto rsi_source =
-      parse_node_from_param_or(config_parser, params, "rsiSource", CloseNode{});
-     const auto rsi_period = parse_node_from_param_or(
-      config_parser,
-      params,
-      "rsiPeriod",
-      NumericInputNode{"RSI Period",
-                       NumericInputNode::ValueRepresentation::UnsignedInteger,
-                       14.0});
-     const auto k_period = parse_node_from_param_or(
-      config_parser,
-      params,
-      "kPeriod",
-      NumericInputNode{"K Period",
-                       NumericInputNode::ValueRepresentation::UnsignedInteger,
-                       5.0});
-     const auto k_smooth = parse_node_from_param_or(
-      config_parser,
-      params,
-      "kSmooth",
-      NumericInputNode{"K Smooth",
-                       NumericInputNode::ValueRepresentation::UnsignedInteger,
-                       3.0});
-     const auto d_period = parse_node_from_param_or(
-      config_parser,
-      params,
-      "dPeriod",
-      NumericInputNode{"D Period",
-                       NumericInputNode::ValueRepresentation::UnsignedInteger,
-                       3.0});
-     return ErasedNode<ErasedSeriesMethodContext>{
-      StochRsiNode{rsi_source, rsi_period, k_period, k_smooth, d_period}};
-   });
-
-  config_parser.register_node_parser(
-   "ADD",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     return serialize_binary_operator_node<AddNode>(
-      config_parser, node, "augend", "addend");
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return parse_binary_operator_node<AddNode>(
-      config_parser, params, "augend", "addend");
-   });
-  config_parser.register_node_parser(
-   "SUBTRACT",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     return serialize_binary_operator_node<SubtractNode>(
-      config_parser, node, "minuend", "subtrahend");
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return parse_binary_operator_node<SubtractNode>(
-      config_parser, params, "minuend", "subtrahend");
-   });
-  config_parser.register_node_parser(
-   "MULTIPLY",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     return serialize_binary_operator_node<MultiplyNode>(
-      config_parser, node, "multiplicand", "multiplier");
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return parse_binary_operator_node<MultiplyNode>(
-      config_parser, params, "multiplicand", "multiplier");
-   });
-  config_parser.register_node_parser(
-   "DIVIDE",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     return serialize_binary_operator_node<DivideNode>(
-      config_parser, node, "dividend", "divisor");
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return parse_binary_operator_node<DivideNode>(
-      config_parser, params, "dividend", "divisor");
-   });
-  config_parser.register_node_parser(
-   "NEGATE",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     return serialize_unary_operator_node<NegateNode>(
-      config_parser, node, "operand");
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return parse_unary_operator_node<NegateNode>(
-      config_parser, params, "operand");
-   });
-
-  config_parser.register_node_parser(
-   "PERCENTAGE",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     const auto percentage_node = node_cast<PercentageNode>(node);
-     if(!percentage_node) {
-       return jsoncons::ojson::null();
-     }
-     auto serialized_node = jsoncons::ojson{};
-     serialized_node["base"] =
-      config_parser.serialize_node(percentage_node->base());
-     serialized_node["percent"] = percentage_node->percent();
-     return serialized_node;
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     auto base =
-      parse_node_from_param_or(config_parser, params, "base", CloseNode{});
-     auto percent = get_param_or<double>(params, "percent", 100.0);
-     return ErasedNode<ErasedSeriesMethodContext>{
-      PercentageNode{base, percent}};
-   });
-
-  config_parser.register_node_parser(
-   "SL_AMOUNT",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     return serialize_stop_target_value_node<SlAmountNode>(
-      config_parser, node, "amount");
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return parse_stop_target_value_node<SlAmountNode>(
-      config_parser, params, "amount", 0.0);
-   });
-
-  config_parser.register_node_parser(
-   "TP_AMOUNT",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     return serialize_stop_target_value_node<TpAmountNode>(
-      config_parser, node, "amount");
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return parse_stop_target_value_node<TpAmountNode>(
-      config_parser, params, "amount", 0.0);
-   });
-
-  config_parser.register_node_parser(
-   "SL_PERCENT",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     return serialize_stop_target_value_node<SlPercentNode>(
-      config_parser, node, "percent");
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return parse_stop_target_value_node<SlPercentNode>(
-      config_parser, params, "percent", 0.0);
-   });
-
-  config_parser.register_node_parser(
-   "TP_PERCENT",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     return serialize_stop_target_value_node<TpPercentNode>(
-      config_parser, node, "percent");
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return parse_stop_target_value_node<TpPercentNode>(
-      config_parser, params, "percent", 0.0);
-   });
-
-  config_parser.register_node_parser("SL_ATR",
-                                     serialize_stop_target_atr_node<SlAtrNode>,
-                                     parse_stop_target_atr_node<SlAtrNode>);
-
-  config_parser.register_node_parser("TP_ATR",
-                                     serialize_stop_target_atr_node<TpAtrNode>,
-                                     parse_stop_target_atr_node<TpAtrNode>);
-
-  config_parser.register_node_parser(
-   "R_DISTANCE_AMOUNT",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     return serialize_stop_target_value_node<RiskDistanceAmountNode>(
-      config_parser, node, "amount");
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return parse_stop_target_value_node<RiskDistanceAmountNode>(
-      config_parser, params, "amount", 1.0);
-   });
-
-  config_parser.register_node_parser(
-   "R_DISTANCE_PERCENTAGE",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     return serialize_stop_target_value_node<RiskDistancePercentNode>(
-      config_parser, node, "percentage");
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return parse_stop_target_value_node<RiskDistancePercentNode>(
-      config_parser, params, "percentage", 1.0);
-   });
-
-  config_parser.register_node_parser(
-   "R_DISTANCE_ATR",
-   serialize_stop_target_atr_node<RiskDistanceAtrNode>,
-   parse_stop_target_atr_node<RiskDistanceAtrNode>);
-
-  config_parser.register_node_parser("SL_1R",
-                                     serialize_parameterless_node<Sl1RNode>,
-                                     parse_parameterless_node<Sl1RNode>);
-
-  config_parser.register_node_parser(
-   "SL_R_MULTIPLE",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     return serialize_stop_target_value_node<SlRMultipleNode>(
-      config_parser, node, "multiple");
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return parse_stop_target_value_node<SlRMultipleNode>(
-      config_parser, params, "multiple", 1.0);
-   });
-
-  config_parser.register_node_parser(
-   "TP_R_MULTIPLE",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     return serialize_stop_target_value_node<TpRMultipleNode>(
-      config_parser, node, "multiple");
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return parse_stop_target_value_node<TpRMultipleNode>(
-      config_parser, params, "multiple", 2.0);
-   });
-
-  config_parser.register_node_parser(
-   "INITIAL_ENTRY_PRICE",
-   serialize_parameterless_node<InitialEntryPriceNode>,
-   parse_parameterless_node<InitialEntryPriceNode>);
-  config_parser.register_node_parser(
-   "LATEST_ENTRY_PRICE",
-   serialize_parameterless_node<LatestEntryPriceNode>,
-   parse_parameterless_node<LatestEntryPriceNode>);
-  config_parser.register_node_parser(
-   "AVERAGE_PRICE",
-   serialize_parameterless_node<AveragePriceNode>,
-   parse_parameterless_node<AveragePriceNode>);
-  config_parser.register_node_parser(
-   "STOP_TARGET_REF_PRICE",
-   serialize_parameterless_node<StopTargetRefPriceNode>,
-   parse_parameterless_node<StopTargetRefPriceNode>);
-  config_parser.register_node_parser(
-   "POSITION_DIRECTION",
-   serialize_parameterless_node<PositionDirectionNode>,
-   parse_parameterless_node<PositionDirectionNode>);
-  config_parser.register_node_parser(
-   "PYRAMIDING_LAYER",
-   serialize_parameterless_node<PyramidingLayerNode>,
-   parse_parameterless_node<PyramidingLayerNode>);
-  config_parser.register_node_parser(
-   "POSITION_R_MULTIPLE",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) -> jsoncons::ojson {
-     const auto* r_multiple_node = node_cast<PositionRMultipleNode>(node);
-     if(!r_multiple_node) {
-       return jsoncons::ojson::null();
-     }
-     return jsoncons::ojson::object{
-      {"source", config_parser.serialize_node(r_multiple_node->source())}};
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return PositionRMultipleNode{
-      parse_node_from_param_or(config_parser, params, "source", CloseNode{})};
-   });
-
-  config_parser.register_node_parser(
-   "SQRT",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     return serialize_unary_operator_node<SqrtNode>(
-      config_parser, node, "operand");
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return parse_unary_operator_node<SqrtNode>(
-      config_parser, params, "operand");
-   });
-  config_parser.register_node_parser(
-   "STDDEV",
-   serialize_ta_with_erased_period_node<StddevNode>,
-   parse_ta_with_erased_period_node<StddevNode, 20>);
-
-  config_parser.register_node_parser(
-   "ALL_OF", serialize_all_of_node, parse_all_of_node);
-  config_parser.register_node_parser(
-   "ANY_OF", serialize_any_of_node, parse_any_of_node);
-  config_parser.register_node_parser(
-   "CROSSUNDER", serialize_crossunder_node, parse_crossunder_node);
-  config_parser.register_node_parser(
-   "CROSSOVER", serialize_crossover_node, parse_crossover_node);
-  config_parser.register_node_parser(
-   "GREATER_THAN",
-   serialize_comparison_node<GreaterThanNode<ErasedSeriesMethodContext>>,
-   parse_comparison_node<GreaterThanNode<ErasedSeriesMethodContext>>);
-  config_parser.register_node_parser(
-   "LESS_THAN",
-   serialize_comparison_node<LessThanNode<ErasedSeriesMethodContext>>,
-   parse_comparison_node<LessThanNode<ErasedSeriesMethodContext>>);
-  config_parser.register_node_parser(
-   "GREATER_EQUAL",
-   serialize_comparison_node<GreaterEqualNode<ErasedSeriesMethodContext>>,
-   parse_comparison_node<GreaterEqualNode<ErasedSeriesMethodContext>>);
-  config_parser.register_node_parser(
-   "LESS_EQUAL",
-   serialize_comparison_node<LessEqualNode<ErasedSeriesMethodContext>>,
-   parse_comparison_node<LessEqualNode<ErasedSeriesMethodContext>>);
-  config_parser.register_node_parser(
-   "EQUAL",
-   serialize_comparison_node<EqualNode<ErasedSeriesMethodContext>>,
-   parse_comparison_node<EqualNode<ErasedSeriesMethodContext>>);
-  config_parser.register_node_parser(
-   "NOT_EQUAL",
-   serialize_comparison_node<NotEqualNode<ErasedSeriesMethodContext>>,
-   parse_comparison_node<NotEqualNode<ErasedSeriesMethodContext>>);
-
-  config_parser.register_node_parser(
-   "ALWAYS",
-   [](const ConfigParser&, const ErasedNode<ErasedSeriesMethodContext>& node) {
-     return serialize_boolean_node(node, true);
-   },
-   [](ConfigParser::Parser, const jsoncons::ojson&) {
-     return ErasedNode<ErasedSeriesMethodContext>{TrueNode{}};
-   });
-  config_parser.register_node_parser(
-   "NEVER",
-   [](const ConfigParser&, const ErasedNode<ErasedSeriesMethodContext>& node) {
-     return serialize_boolean_node(node, false);
-   },
-   [](ConfigParser::Parser, const jsoncons::ojson&) {
-     return ErasedNode<ErasedSeriesMethodContext>{FalseNode{}};
-   });
-  config_parser.register_node_parser(
-   "AND",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     return serialize_binary_logical_node<
-      LogicalAndNode<ErasedSeriesMethodContext>>(
-      config_parser, node, "firstCondition", "secondCondition");
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return parse_binary_logical_node<
-      LogicalAndNode<ErasedSeriesMethodContext>>(
-      config_parser, params, "firstCondition", "secondCondition");
-   });
-  config_parser.register_node_parser(
-   "OR",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     return serialize_binary_logical_node<
-      LogicalOrNode<ErasedSeriesMethodContext>>(
-      config_parser, node, "firstCondition", "secondCondition");
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return parse_binary_logical_node<LogicalOrNode<ErasedSeriesMethodContext>>(
-      config_parser, params, "firstCondition", "secondCondition");
-   });
-  config_parser.register_node_parser(
+  const auto register_logical = [&]<typename TNode>(const char* name) {
+    parser.register_node_parser(
+     name,
+     [](const Parser& parser, const Node& node) -> jsoncons::ojson {
+       const auto* value = node_cast<TNode>(node);
+       return value ? jsoncons::ojson::object{
+                        {"firstCondition", parser.serialize_node(value->first_condition())},
+                        {"secondCondition", parser.serialize_node(value->second_condition())}}
+                    : jsoncons::ojson::null();
+     },
+     [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+       return TNode{parser.parse_node(params.at("firstCondition")),
+                    parser.parse_node(params.at("secondCondition"))};
+     });
+  };
+  register_logical.template operator()<LogicalAndNode<TContext>>("AND");
+  register_logical.template operator()<LogicalOrNode<TContext>>("OR");
+  register_logical.template operator()<LogicalXorNode<TContext>>("XOR");
+  parser.register_node_parser(
    "NOT",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     return serialize_unary_logical_node<
-      LogicalNotNode<ErasedSeriesMethodContext>>(
-      config_parser, node, "condition");
+   [](const Parser& parser, const Node& node) -> jsoncons::ojson {
+     const auto* value = node_cast<LogicalNotNode<TContext>>(node);
+     return value ? jsoncons::ojson::object{{"condition", parser.serialize_node(value->other_condition())}}
+                  : jsoncons::ojson::null();
    },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return parse_unary_logical_node<LogicalNotNode<ErasedSeriesMethodContext>>(
-      config_parser, params, "condition");
-   });
-  config_parser.register_node_parser(
-   "XOR",
-   [](const ConfigParser& config_parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     return serialize_binary_logical_node<
-      LogicalXorNode<ErasedSeriesMethodContext>>(
-      config_parser, node, "firstCondition", "secondCondition");
-   },
-   [](ConfigParser::Parser config_parser, const jsoncons::ojson& params) {
-     return parse_binary_logical_node<
-      LogicalXorNode<ErasedSeriesMethodContext>>(
-      config_parser, params, "firstCondition", "secondCondition");
+   [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+     return LogicalNotNode<TContext>{parser.parse_node(params.at("condition"))};
    });
 
-  return config_parser;
+  const auto register_collection = [&]<typename TNode>(const char* name) {
+    parser.register_node_parser(
+     name,
+     [](const Parser& parser, const Node& node) -> jsoncons::ojson {
+       const auto* value = node_cast<TNode>(node);
+       if(!value) {
+         return jsoncons::ojson::null();
+       }
+       auto items = jsoncons::ojson::array();
+       for(const auto& item : value->conditions()) {
+         items.push_back(parser.serialize_node(item));
+       }
+       return jsoncons::ojson::object{{"items", std::move(items)}};
+     },
+     [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+       const auto& items = params.at("items");
+       if(!items.is_array()) {
+         throw std::invalid_argument{"'items' must be an array"};
+       }
+       auto conditions = std::vector<Node>{};
+       conditions.reserve(items.size());
+       for(const auto& item : items.array_range()) {
+         conditions.push_back(parser.parse_node(item));
+       }
+       return TNode{std::move(conditions)};
+     });
+  };
+  register_collection.template operator()<AllOfNode<TContext>>("ALL_OF");
+  register_collection.template operator()<AnyOfNode<TContext>>("ANY_OF");
+
+  parser.register_node_parser(
+   "POSITION_R_MULTIPLE",
+   [](const Parser& parser, const Node& node) -> jsoncons::ojson {
+     const auto* value = node_cast<PositionRMultipleNode<TContext>>(node);
+     return value ? jsoncons::ojson::object{{"source", parser.serialize_node(value->source())}}
+                  : jsoncons::ojson::null();
+   },
+   [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+      return PositionRMultipleNode<TContext>{
+       params.contains("source") ? parser.parse_node(params.at("source"))
+                                 : Node{CloseNode{}}};
+    });
+
+  const auto register_context_value = [&]<typename TNode>(const char* name) {
+    parser.register_node_parser(
+     name,
+     [](const Parser&, const Node& node) -> jsoncons::ojson {
+       return node_cast<TNode>(node) ? jsoncons::ojson{}
+                                     : jsoncons::ojson::null();
+     },
+     [](typename Parser::Parser, const jsoncons::ojson&) -> Node {
+       return TNode{};
+     });
+  };
+  register_context_value.template operator()<EquityNode>("EQUITY");
+  register_context_value.template operator()<EquityPercentNode>("EQUITY_PERCENT");
+  register_context_value.template operator()<DrawdownNode>("DRAWDOWN");
+
+  parser.register_node_parser(
+   "BB",
+   [](const Parser& parser, const Node& node) -> jsoncons::ojson {
+     const auto* bb = node_cast<BbNode<TContext>>(node);
+     return bb ? jsoncons::ojson::object{{"maType", serialize_ma_node_type(bb->ma_node_type(), "SMA")},
+                                          {"maSource", parser.serialize_node(bb->source())},
+                                          {"period", parser.serialize_node(bb->period())},
+                                          {"stddev", parser.serialize_node(bb->stddev())}}
+               : jsoncons::ojson::null();
+   },
+   [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+     return BbNode<TContext>{
+      params.contains("maSource") ? parser.parse_node(params.at("maSource")) : Node{CloseNode{}},
+      params.contains("period") ? parser.parse_node(params.at("period"))
+                                : Node{NumericInputNode{"Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 20.0}},
+      params.contains("stddev") ? parser.parse_node(params.at("stddev"))
+                                : Node{NumericInputNode{"StdDev", NumericInputNode::ValueRepresentation::Decimal, 2.0}},
+      parse_ma_node_type(get_param_or<std::string>(params, "maType", "SMA"), MaNodeType::Sma)};
+   });
+
+  parser.register_node_parser(
+   "MACD",
+   [](const Parser& parser, const Node& node) -> jsoncons::ojson {
+     const auto* macd = node_cast<MacdNode<TContext>>(node);
+     return macd ? jsoncons::ojson::object{{"fastPeriod", parser.serialize_node(macd->fast_period())},
+                                            {"slowPeriod", parser.serialize_node(macd->slow_period())},
+                                            {"signalPeriod", parser.serialize_node(macd->signal_period())},
+                                            {"source", parser.serialize_node(macd->source())}}
+                 : jsoncons::ojson::null();
+   },
+   [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+     const auto input = [&parser, &params](const char* key, const char* label, double value) {
+       return params.contains(key) ? parser.parse_node(params.at(key))
+                                   : Node{NumericInputNode{label, NumericInputNode::ValueRepresentation::UnsignedInteger, value}};
+     };
+     return MacdNode<TContext>{
+      params.contains("source") ? parser.parse_node(params.at("source")) : Node{CloseNode{}},
+      input("fastPeriod", "Fast Period", 12.0), input("slowPeriod", "Slow Period", 26.0),
+      input("signalPeriod", "Signal Period", 9.0)};
+   });
+
+  parser.register_node_parser(
+   "STOCH",
+   [](const Parser& parser, const Node& node) -> jsoncons::ojson {
+     const auto* stoch = node_cast<StochNode<TContext>>(node);
+     return stoch ? jsoncons::ojson::object{{"kPeriod", parser.serialize_node(stoch->k_period())},
+                                             {"kSmooth", parser.serialize_node(stoch->k_smooth())},
+                                             {"dPeriod", parser.serialize_node(stoch->d_period())}}
+                  : jsoncons::ojson::null();
+   },
+   [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+     const auto input = [&parser, &params](const char* key, const char* label, double value) {
+       return params.contains(key) ? parser.parse_node(params.at(key))
+                                   : Node{NumericInputNode{label, NumericInputNode::ValueRepresentation::UnsignedInteger, value}};
+     };
+     return StochNode<TContext>{input("kPeriod", "K Period", 5.0),
+                                input("kSmooth", "K Smooth", 3.0),
+                                input("dPeriod", "D Period", 3.0)};
+   });
+
+  parser.register_node_parser(
+   "STOCH_RSI",
+   [](const Parser& parser, const Node& node) -> jsoncons::ojson {
+     const auto* stoch = node_cast<StochRsiNode<TContext>>(node);
+     return stoch ? jsoncons::ojson::object{{"rsiSource", parser.serialize_node(stoch->rsi_source())},
+                                             {"rsiPeriod", parser.serialize_node(stoch->rsi_period())},
+                                             {"kPeriod", parser.serialize_node(stoch->k_period())},
+                                             {"kSmooth", parser.serialize_node(stoch->k_smooth())},
+                                             {"dPeriod", parser.serialize_node(stoch->d_period())}}
+                  : jsoncons::ojson::null();
+   },
+   [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+     const auto input = [&parser, &params](const char* key, const char* label, double value) {
+       return params.contains(key) ? parser.parse_node(params.at(key))
+                                   : Node{NumericInputNode{label, NumericInputNode::ValueRepresentation::UnsignedInteger, value}};
+     };
+     return StochRsiNode<TContext>{
+      params.contains("rsiSource") ? parser.parse_node(params.at("rsiSource")) : Node{CloseNode{}},
+      input("rsiPeriod", "RSI Period", 14.0), input("kPeriod", "K Period", 5.0),
+      input("kSmooth", "K Smooth", 3.0), input("dPeriod", "D Period", 3.0)};
+   });
+
+  parser.register_node_parser(
+   "DC",
+   [](const Parser& parser, const Node& node) -> jsoncons::ojson {
+     const auto* dc = node_cast<DonchianChannelNode<TContext>>(node);
+     return dc ? jsoncons::ojson::object{{"period", parser.serialize_node(dc->period())}}
+               : jsoncons::ojson::null();
+   },
+   [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+     return DonchianChannelNode<TContext>{
+       params.contains("period") ? parser.parse_node(params.at("period"))
+                                 : Node{NumericInputNode{"Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 20.0}}};
+   });
+
+  parser.register_node_parser(
+   "KC",
+   [](const Parser& parser, const Node& node) -> jsoncons::ojson {
+     const auto* kc = node_cast<KcNode<TContext>>(node);
+      return kc ? jsoncons::ojson::object{
+                  {"maMethodType", serialize_ma_node_type(kc->ma_node_type(), "EMA")},
+                  {"period", parser.serialize_node(kc->period())},
+                  {"maSource", parser.serialize_node(kc->source())},
+                  {"bandMethodType", serialize_kc_band_node_type(kc->band_node_type())},
+                  {"bandAtrPeriod", parser.serialize_node(kc->band_atr_period())},
+                  {"multiplier", parser.serialize_node(kc->multiplier())}}
+               : jsoncons::ojson::null();
+   },
+   [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+     return KcNode<TContext>{
+      params.contains("maSource") ? parser.parse_node(params.at("maSource"))
+                                  : Node{CloseNode{}},
+      params.contains("period")
+       ? parser.parse_node(params.at("period"))
+       : Node{NumericInputNode{"Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 20.0}},
+      params.contains("multiplier")
+       ? parser.parse_node(params.at("multiplier"))
+       : Node{NumericInputNode{"Multiplier", NumericInputNode::ValueRepresentation::Decimal, 1.5}},
+      params.contains("bandAtrPeriod")
+       ? parser.parse_node(params.at("bandAtrPeriod"))
+       : Node{NumericInputNode{"Band ATR Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 14.0}},
+      parse_kc_band_node_type(get_param_or<std::string>(params, "bandMethodType", "ATR")),
+      parse_ma_node_type(get_param_or<std::string>(params, "maMethodType", "EMA"), MaNodeType::Ema)};
+   });
+
+  parser.register_node_parser(
+   "SELECT_OUTPUT",
+   [](const Parser& parser, const Node& node) -> jsoncons::ojson {
+     const auto* select_output = node_cast<SelectOutputNode<TContext>>(node);
+     if(!select_output) {
+       return jsoncons::ojson::null();
+     }
+     const auto output = [&] -> std::string {
+       switch(select_output->output()) {
+       case NodeOutput::MacdLine: return "macd-line";
+       case NodeOutput::SignalLine: return "signal-line";
+       case NodeOutput::Histogram: return "histogram";
+       case NodeOutput::KPercent: return "k-percent";
+       case NodeOutput::DPercent: return "d-percent";
+       case NodeOutput::MiddleBand: return "middle-band";
+       case NodeOutput::UpperBand: return "upper-band";
+       case NodeOutput::LowerBand: return "lower-band";
+       }
+       return "default";
+     }();
+      return jsoncons::ojson::object{
+       {"output", output},
+       {"source", parser.serialize_node(select_output->source())}};
+   },
+   [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+     const auto output_name = get_param_or<std::string>(params, "output", "default");
+     const auto output = output_name == "macd-line"   ? NodeOutput::MacdLine
+                       : output_name == "signal-line" ? NodeOutput::SignalLine
+                       : output_name == "histogram"   ? NodeOutput::Histogram
+                       : output_name == "k-percent"   ? NodeOutput::KPercent
+                       : output_name == "d-percent"   ? NodeOutput::DPercent
+                       : output_name == "middle-band" ? NodeOutput::MiddleBand
+                       : output_name == "upper-band"  ? NodeOutput::UpperBand
+                       : output_name == "lower-band"  ? NodeOutput::LowerBand
+                                                        : static_cast<NodeOutput>(-1);
+     return SelectOutputNode<TContext>{
+      params.contains("source") ? parser.parse_node(params.at("source"))
+                                : Node{CloseNode{}},
+      output};
+   });
+
+  parser.register_node_parser(
+   "PERCENTAGE",
+   [](const Parser& parser, const Node& node) -> jsoncons::ojson {
+     const auto* percentage = node_cast<PercentageNode<TContext>>(node);
+      return percentage
+              ? jsoncons::ojson::object{{"base", parser.serialize_node(percentage->base())},
+                                         {"percent", percentage->percent()}}
+                       : jsoncons::ojson::null();
+   },
+   [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+     return PercentageNode<TContext>{
+      params.contains("base") ? parser.parse_node(params.at("base"))
+                              : Node{CloseNode{}},
+      get_param_or<double>(params, "percent", 100.0)};
+   });
+
+  return parser;
 }
 
-auto make_portfolio_entry_comparator_config_parser() -> ConfigParser
+auto make_backtest_model_config_parser()
+ -> ConfigParser<BacktestMethodContext>
 {
-  auto config_parser = ConfigParser{};
-  config_parser.register_node_parser(
-   "VALUE", serialize_value_node, parse_value_node);
-  config_parser.register_node_parser(
-   "DATA", serialize_data_node, parse_data_node);
-  config_parser.register_node_parser("OPEN",
-                                     serialize_parameterless_node<OpenNode>,
-                                     parse_parameterless_node<OpenNode>);
-  config_parser.register_node_parser("HIGH",
-                                     serialize_parameterless_node<HighNode>,
-                                     parse_parameterless_node<HighNode>);
-  config_parser.register_node_parser("LOW",
-                                     serialize_parameterless_node<LowNode>,
-                                     parse_parameterless_node<LowNode>);
-  config_parser.register_node_parser("CLOSE",
-                                     serialize_parameterless_node<CloseNode>,
-                                     parse_parameterless_node<CloseNode>);
-  config_parser.register_node_parser("VOLUME",
-                                     serialize_parameterless_node<VolumeNode>,
-                                     parse_parameterless_node<VolumeNode>);
-  config_parser.register_node_parser(
-   "LOOKBACK",
-   [](const ConfigParser& parser,
-      const ErasedNode<ErasedSeriesMethodContext>& node) {
-     const auto* lookback = node_cast<LookbackNode>(node);
-     if(!lookback) {
-       return jsoncons::ojson::null();
-     }
-     auto result = jsoncons::ojson{};
-     result["period"] = lookback->period();
-     result["source"] = parser.serialize_node(lookback->source());
-     return result;
+  return make_model_config_parser_for<BacktestMethodContext>();
+}
+
+auto make_requested_order_comparator_config_parser()
+ -> ConfigParser<RequestedOrderMethodContext>
+{
+  using Context = RequestedOrderMethodContext;
+  using Parser = ConfigParser<Context>;
+  using Node = ErasedNode<Context>;
+  auto parser = Parser{};
+
+  parser.register_node_parser(
+   "VALUE",
+   [](const Parser&, const Node& node) -> jsoncons::ojson {
+     const auto* value = node_cast<ValueNode>(node);
+     return value ? jsoncons::ojson::object{{"value", value->value()}}
+                  : jsoncons::ojson::null();
    },
-   [](ConfigParser::Parser parser, const jsoncons::ojson& params) {
-     const auto period = params.at("period").as<std::size_t>();
-     const auto source =
-      parse_node_from_param_or(parser, params, "source", CloseNode{});
-     return ErasedNode<ErasedSeriesMethodContext>{LookbackNode{source, period}};
+   [](Parser::Parser, const jsoncons::ojson& params) -> Node {
+     return ValueNode{params.at("value").as_double()};
+   });
+  parser.register_node_parser(
+   "DATA",
+   [](const Parser&, const Node& node) -> jsoncons::ojson {
+     const auto* data = node_cast<DataNode>(node);
+     return data ? jsoncons::ojson::object{{"field", data->field()}}
+                 : jsoncons::ojson::null();
+   },
+   [](Parser::Parser, const jsoncons::ojson& params) -> Node {
+     return DataNode{params.at("field").as_string()};
    });
 
-#define PLUDUX_REGISTER_REQUESTED_ORDER_NODE(Id, Type) \
-  config_parser.register_node_parser(                  \
-   Id, serialize_parameterless_node<Type>, parse_parameterless_node<Type>)
-
-  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("REQUESTED_ORDER_PRICE",
-                                       RequestedOrderPriceNode);
-  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("REQUESTED_ORDER_DIRECTION",
-                                       RequestedOrderDirectionNode);
-  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("IS_PYRAMIDING_ORDER",
-                                       IsPyramidingOrderNode);
-  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("RAW_REQUESTED_QUANTITY",
-                                       RawRequestedQuantityNode);
-  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("RAW_REQUESTED_QUANTITY_LIMIT",
-                                       RawRequestedQuantityLimitNode);
-  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("DRAWDOWN_ADJUSTED_QUANTITY",
-                                       DrawdownAdjustedQuantityNode);
-  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("DRAWDOWN_ADJUSTED_QUANTITY_LIMIT",
-                                       DrawdownAdjustedQuantityLimitNode);
-  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("REQUESTED_QUANTITY",
-                                       RequestedQuantityNode);
-  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("REQUESTED_NOTIONAL",
-                                       RequestedNotionalNode);
-  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("REQUESTED_COST", RequestedCostNode);
-  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("ESTIMATED_ENTRY_FEE",
-                                       EstimatedEntryFeeNode);
-  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("ESTIMATED_1R_EXIT_FEE",
-                                       EstimatedOneRExitFeeNode);
-  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("REQUESTED_ORDER_RISK_DISTANCE",
-                                       RequestedOrderRiskDistanceNode);
-  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("REQUESTED_PRICE_RISK",
-                                       RequestedPriceRiskNode);
-  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("REQUESTED_RISK_WITH_FEES",
-                                       RequestedRiskWithFeesNode);
-  PLUDUX_REGISTER_REQUESTED_ORDER_NODE("FROZEN_UNIT_QUANTITY",
-                                       FrozenUnitQuantityNode);
-
-#undef PLUDUX_REGISTER_REQUESTED_ORDER_NODE
-
-  const auto register_binary = [&]<typename TNode>(const char* id,
-                                                   const char* left,
-                                                   const char* right) {
-    config_parser.register_node_parser(
-     id,
-     [left, right](const ConfigParser& parser,
-                   const ErasedNode<ErasedSeriesMethodContext>& node) {
-       return serialize_binary_operator_node<TNode>(parser, node, left, right);
+  const auto register_parameterless = [&]<typename TNode>(const char* name) {
+    parser.register_node_parser(
+     name,
+     [](const Parser&, const Node& node) -> jsoncons::ojson {
+       return node_cast<TNode>(node) ? jsoncons::ojson{}
+                                     : jsoncons::ojson::null();
      },
-     [left, right](ConfigParser::Parser parser, const jsoncons::ojson& params) {
-       return parse_binary_operator_node<TNode>(parser, params, left, right);
+     [](Parser::Parser, const jsoncons::ojson&) -> Node { return TNode{}; });
+  };
+  register_parameterless.template operator()<OpenNode>("OPEN");
+  register_parameterless.template operator()<HighNode>("HIGH");
+  register_parameterless.template operator()<LowNode>("LOW");
+  register_parameterless.template operator()<CloseNode>("CLOSE");
+  register_parameterless.template operator()<VolumeNode>("VOLUME");
+  register_parameterless.template operator()<RequestedOrderPriceNode>(
+   "REQUESTED_ORDER_PRICE");
+  register_parameterless.template operator()<RequestedOrderDirectionNode>(
+   "REQUESTED_ORDER_DIRECTION");
+  register_parameterless.template operator()<IsPyramidingOrderNode>(
+   "IS_PYRAMIDING_ORDER");
+  register_parameterless.template operator()<RawRequestedQuantityNode>(
+   "RAW_REQUESTED_QUANTITY");
+  register_parameterless.template operator()<RawRequestedQuantityLimitNode>(
+   "RAW_REQUESTED_QUANTITY_LIMIT");
+  register_parameterless.template operator()<DrawdownAdjustedQuantityNode>(
+   "DRAWDOWN_ADJUSTED_QUANTITY");
+  register_parameterless.template operator()<DrawdownAdjustedQuantityLimitNode>(
+   "DRAWDOWN_ADJUSTED_QUANTITY_LIMIT");
+  register_parameterless.template operator()<RequestedQuantityNode>(
+   "REQUESTED_QUANTITY");
+  register_parameterless.template operator()<RequestedNotionalNode>(
+   "REQUESTED_NOTIONAL");
+  register_parameterless.template operator()<RequestedCostNode>(
+   "REQUESTED_COST");
+  register_parameterless.template operator()<EstimatedEntryFeeNode>(
+   "ESTIMATED_ENTRY_FEE");
+  register_parameterless.template operator()<EstimatedOneRExitFeeNode>(
+   "ESTIMATED_1R_EXIT_FEE");
+  register_parameterless.template operator()<RequestedOrderRiskDistanceNode>(
+   "REQUESTED_ORDER_RISK_DISTANCE");
+  register_parameterless.template operator()<RequestedPriceRiskNode>(
+   "REQUESTED_PRICE_RISK");
+  register_parameterless.template operator()<RequestedRiskWithFeesNode>(
+   "REQUESTED_RISK_WITH_FEES");
+  register_parameterless.template operator()<FrozenUnitQuantityNode>(
+   "FROZEN_UNIT_QUANTITY");
+
+  parser.register_node_parser(
+   "LOOKBACK",
+   [](const Parser& parser, const Node& node) -> jsoncons::ojson {
+     const auto* lookback = node_cast<LookbackNode<Context>>(node);
+     return lookback
+             ? jsoncons::ojson::object{{"period", lookback->period()},
+                                        {"source", parser.serialize_node(lookback->source())}}
+             : jsoncons::ojson::null();
+   },
+   [](Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+     return LookbackNode<Context>{
+      params.contains("source") ? parser.parse_node(params.at("source"))
+                                : Node{CloseNode{}},
+      params.at("period").as<std::size_t>()};
+   });
+
+  const auto register_binary = [&]<typename TNode>(const char* name,
+                                                    const char* first,
+                                                    const char* second) {
+    parser.register_node_parser(
+     name,
+     [first, second](const Parser& parser, const Node& node) -> jsoncons::ojson {
+       const auto* binary = node_cast<TNode>(node);
+       return binary
+               ? jsoncons::ojson::object{{first, parser.serialize_node(binary->operand1())},
+                                          {second, parser.serialize_node(binary->operand2())}}
+               : jsoncons::ojson::null();
+     },
+     [first, second](Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+       return TNode{parser.parse_node(params.at(first)),
+                    parser.parse_node(params.at(second))};
      });
   };
-  const auto register_unary = [&]<typename TNode>(const char* id,
-                                                  const char* operand) {
-    config_parser.register_node_parser(
-     id,
-     [operand](const ConfigParser& parser,
-               const ErasedNode<ErasedSeriesMethodContext>& node) {
-       return serialize_unary_operator_node<TNode>(parser, node, operand);
-     },
-     [operand](ConfigParser::Parser parser, const jsoncons::ojson& params) {
-       return parse_unary_operator_node<TNode>(parser, params, operand);
-     });
-  };
-
-  register_binary.template operator()<AddNode>("ADD", "augend", "addend");
-  register_binary.template operator()<SubtractNode>(
+  register_binary.template operator()<BinaryOperatorNode<std::plus<>, Context>>(
+   "ADD", "augend", "addend");
+  register_binary.template operator()<BinaryOperatorNode<std::minus<>, Context>>(
    "SUBTRACT", "minuend", "subtrahend");
-  register_binary.template operator()<MultiplyNode>(
+  register_binary.template operator()<BinaryOperatorNode<std::multiplies<>, Context>>(
    "MULTIPLY", "multiplicand", "multiplier");
-  register_binary.template operator()<DivideNode>(
+  register_binary.template operator()<BinaryOperatorNode<std::divides<>, Context>>(
    "DIVIDE", "dividend", "divisor");
-  register_binary.template operator()<AbsDiffNode>("ABS_DIFF", "left", "right");
-  register_binary.template operator()<MaxNode>("MAX", "left", "right");
-  register_binary.template operator()<MinNode>("MIN", "left", "right");
-  register_unary.template operator()<NegateNode>("NEGATE", "operand");
-  register_unary.template operator()<AbsNode>("ABS", "operand");
-  register_unary.template operator()<SqrtNode>("SQRT", "operand");
-  register_unary.template operator()<PositivePartNode>("POSITIVE_PART",
-                                                       "operand");
-  register_unary.template operator()<NegativePartNode>("NEGATIVE_PART",
-                                                       "operand");
-  return config_parser;
+  register_binary.template operator()<BinaryOperatorNode<AbsoluteDifference<>, Context>>(
+   "ABS_DIFF", "left", "right");
+  register_binary.template operator()<BinaryOperatorNode<Maximum<>, Context>>(
+   "MAX", "left", "right");
+  register_binary.template operator()<BinaryOperatorNode<Minimum<>, Context>>(
+   "MIN", "left", "right");
+
+  const auto register_unary = [&]<typename TNode>(const char* name) {
+    parser.register_node_parser(
+     name,
+     [](const Parser& parser, const Node& node) -> jsoncons::ojson {
+       const auto* unary = node_cast<TNode>(node);
+       return unary ? jsoncons::ojson::object{{"operand", parser.serialize_node(unary->operand())}}
+                    : jsoncons::ojson::null();
+     },
+     [](Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+       return TNode{parser.parse_node(params.at("operand"))};
+     });
+  };
+  register_unary.template operator()<UnaryOperatorNode<std::negate<>, Context>>(
+   "NEGATE");
+  register_unary.template operator()<UnaryOperatorNode<Absolute<>, Context>>(
+   "ABS");
+  register_unary.template operator()<UnaryOperatorNode<SquareRoot<>, Context>>(
+   "SQRT");
+  register_unary.template operator()<UnaryOperatorNode<PositivePart<>, Context>>(
+   "POSITIVE_PART");
+  register_unary.template operator()<UnaryOperatorNode<NegativePart<>, Context>>(
+   "NEGATIVE_PART");
+  return parser;
 }
 
 } // namespace pludux::backtest

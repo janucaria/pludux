@@ -17,7 +17,7 @@ import :stop_target_price_node;
 export namespace pludux::backtest {
 
 void collect_numeric_inputs_from_node(
- const ErasedNode<ErasedSeriesMethodContext>& node,
+ const ErasedNode<BacktestMethodContext>& node,
  std::vector<NumericInputNode>& inputs);
 
 void collect_numeric_inputs_from_node(const NumericInputNode& node,
@@ -31,156 +31,179 @@ void collect_numeric_inputs_from_node(const auto&,
 {
 }
 
-void collect_numeric_inputs_from_node(const ChangeNode& node,
+void collect_numeric_inputs_from_node(
+ const ChangeNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const LookbackNode& node,
+void collect_numeric_inputs_from_node(
+ const LookbackNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const SelectOutputNode& node,
+void collect_numeric_inputs_from_node(
+ const SelectOutputNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const HighestNode& node,
+void collect_numeric_inputs_from_node(
+ const HighestNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
   collect_numeric_inputs_from_node(node.period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const LowestNode& node,
+void collect_numeric_inputs_from_node(
+ const LowestNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
   collect_numeric_inputs_from_node(node.period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const PercentageNode& node,
+void collect_numeric_inputs_from_node(
+ const PercentageNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.base(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const SlAmountNode& node,
+void collect_numeric_inputs_from_node(
+ const SlAmountNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.value(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const RiskDistanceAmountNode& node,
+void collect_numeric_inputs_from_node(
+ const RiskDistanceAmountNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.value(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const RiskDistancePercentNode& node,
+void collect_numeric_inputs_from_node(
+ const RiskDistancePercentNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.value(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const RiskDistanceAtrNode& node,
+void collect_numeric_inputs_from_node(
+ const RiskDistanceAtrNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.period(), inputs);
   collect_numeric_inputs_from_node(node.multiplier(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const TpAmountNode& node,
+void collect_numeric_inputs_from_node(
+ const TpAmountNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.value(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const SlPercentNode& node,
+void collect_numeric_inputs_from_node(
+ const SlPercentNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.value(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const TpPercentNode& node,
+void collect_numeric_inputs_from_node(
+ const TpPercentNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.value(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const SlAtrNode& node,
+void collect_numeric_inputs_from_node(
+ const SlAtrNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.period(), inputs);
   collect_numeric_inputs_from_node(node.multiplier(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const TpAtrNode& node,
+void collect_numeric_inputs_from_node(
+ const TpAtrNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.period(), inputs);
   collect_numeric_inputs_from_node(node.multiplier(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const TpRMultipleNode& node,
+void collect_numeric_inputs_from_node(
+ const TpRMultipleNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.value(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const PositionRMultipleNode& node,
+void collect_numeric_inputs_from_node(
+ const PositionRMultipleNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const StddevNode& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.source(), inputs);
-  collect_numeric_inputs_from_node(node.period(), inputs);
-}
-
-void collect_numeric_inputs_from_node(const SmaNode& node,
+void collect_numeric_inputs_from_node(
+ const StddevNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
   collect_numeric_inputs_from_node(node.period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const EmaNode& node,
+void collect_numeric_inputs_from_node(
+ const SmaNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
   collect_numeric_inputs_from_node(node.period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const RmaNode& node,
+void collect_numeric_inputs_from_node(
+ const EmaNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
   collect_numeric_inputs_from_node(node.period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const WmaNode& node,
+void collect_numeric_inputs_from_node(
+ const RmaNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
   collect_numeric_inputs_from_node(node.period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const HmaNode& node,
+void collect_numeric_inputs_from_node(
+ const WmaNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
   collect_numeric_inputs_from_node(node.period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const MacdNode& node,
+void collect_numeric_inputs_from_node(
+ const HmaNode<BacktestMethodContext>& node,
+                                      std::vector<NumericInputNode>& inputs)
+{
+  collect_numeric_inputs_from_node(node.source(), inputs);
+  collect_numeric_inputs_from_node(node.period(), inputs);
+}
+
+void collect_numeric_inputs_from_node(const MacdNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
@@ -189,27 +212,29 @@ void collect_numeric_inputs_from_node(const MacdNode& node,
   collect_numeric_inputs_from_node(node.signal_period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const AtrNode& node,
+void collect_numeric_inputs_from_node(const AtrNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const RocNode& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.source(), inputs);
-  collect_numeric_inputs_from_node(node.period(), inputs);
-}
-
-void collect_numeric_inputs_from_node(const RsiNode& node,
+void collect_numeric_inputs_from_node(
+ const RocNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
   collect_numeric_inputs_from_node(node.period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const BbNode& node,
+void collect_numeric_inputs_from_node(
+ const RsiNode<BacktestMethodContext>& node,
+                                      std::vector<NumericInputNode>& inputs)
+{
+  collect_numeric_inputs_from_node(node.source(), inputs);
+  collect_numeric_inputs_from_node(node.period(), inputs);
+}
+
+void collect_numeric_inputs_from_node(const BbNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
@@ -217,7 +242,7 @@ void collect_numeric_inputs_from_node(const BbNode& node,
   collect_numeric_inputs_from_node(node.stddev(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const KcNode& node,
+void collect_numeric_inputs_from_node(const KcNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
@@ -226,19 +251,19 @@ void collect_numeric_inputs_from_node(const KcNode& node,
   collect_numeric_inputs_from_node(node.band_atr_period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const RvolNode& node,
+void collect_numeric_inputs_from_node(const RvolNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const DonchianChannelNode& node,
+void collect_numeric_inputs_from_node(const DonchianChannelNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const StochNode& node,
+void collect_numeric_inputs_from_node(const StochNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.k_period(), inputs);
@@ -246,7 +271,7 @@ void collect_numeric_inputs_from_node(const StochNode& node,
   collect_numeric_inputs_from_node(node.d_period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const StochRsiNode& node,
+void collect_numeric_inputs_from_node(const StochRsiNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.rsi_source(), inputs);
@@ -256,23 +281,25 @@ void collect_numeric_inputs_from_node(const StochRsiNode& node,
   collect_numeric_inputs_from_node(node.d_period(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const AllOfNode& node,
-                                      std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(
+ const AllOfNode<BacktestMethodContext>& node,
+ std::vector<NumericInputNode>& inputs)
 {
   for(const auto& condition : node.conditions()) {
     collect_numeric_inputs_from_node(condition, inputs);
   }
 }
 
-void collect_numeric_inputs_from_node(const AnyOfNode& node,
-                                      std::vector<NumericInputNode>& inputs)
+void collect_numeric_inputs_from_node(
+ const AnyOfNode<BacktestMethodContext>& node,
+ std::vector<NumericInputNode>& inputs)
 {
   for(const auto& condition : node.conditions()) {
     collect_numeric_inputs_from_node(condition, inputs);
   }
 }
 
-template<typename TComparator, MethodContextable TContext>
+template<typename TComparator, typename TContext>
 void collect_numeric_inputs_from_node(
  const ComparisonNode<TComparator, TContext>& node,
  std::vector<NumericInputNode>& inputs)
@@ -281,7 +308,7 @@ void collect_numeric_inputs_from_node(
   collect_numeric_inputs_from_node(node.threshold(), inputs);
 }
 
-template<typename TOperator, MethodContextable TContext>
+template<typename TOperator, typename TContext>
 void collect_numeric_inputs_from_node(
  const BinaryLogicalNode<TOperator, TContext>& node,
  std::vector<NumericInputNode>& inputs)
@@ -290,7 +317,7 @@ void collect_numeric_inputs_from_node(
   collect_numeric_inputs_from_node(node.second_condition(), inputs);
 }
 
-template<typename TOperator, MethodContextable TContext>
+template<typename TOperator, typename TContext>
 void collect_numeric_inputs_from_node(
  const UnaryLogicalNode<TOperator, TContext>& node,
  std::vector<NumericInputNode>& inputs)
@@ -298,37 +325,39 @@ void collect_numeric_inputs_from_node(
   collect_numeric_inputs_from_node(node.other_condition(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const CrossoverNode& node,
+void collect_numeric_inputs_from_node(
+ const CrossoverNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
   collect_numeric_inputs_from_node(node.reference(), inputs);
 }
 
-void collect_numeric_inputs_from_node(const CrossunderNode& node,
+void collect_numeric_inputs_from_node(
+ const CrossunderNode<BacktestMethodContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.source(), inputs);
   collect_numeric_inputs_from_node(node.reference(), inputs);
 }
 
-template<typename TBinaryFn>
-void collect_numeric_inputs_from_node(const BinaryOperatorNode<TBinaryFn>& node,
+template<typename TBinaryFn, typename TContext>
+void collect_numeric_inputs_from_node(const BinaryOperatorNode<TBinaryFn, TContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.operand1(), inputs);
   collect_numeric_inputs_from_node(node.operand2(), inputs);
 }
 
-template<typename TUnaryFn>
-void collect_numeric_inputs_from_node(const UnaryOperatorNode<TUnaryFn>& node,
+template<typename TUnaryFn, typename TContext>
+void collect_numeric_inputs_from_node(const UnaryOperatorNode<TUnaryFn, TContext>& node,
                                       std::vector<NumericInputNode>& inputs)
 {
   collect_numeric_inputs_from_node(node.operand(), inputs);
 }
 
 template<typename TNode>
-auto collect_if_node(const ErasedNode<ErasedSeriesMethodContext>& node,
+auto collect_if_node(const ErasedNode<BacktestMethodContext>& node,
                      std::vector<NumericInputNode>& inputs) -> bool
 {
   const auto* typed_node = node_cast<TNode>(node);
@@ -341,7 +370,7 @@ auto collect_if_node(const ErasedNode<ErasedSeriesMethodContext>& node,
 }
 
 void collect_numeric_inputs_from_node(
- const ErasedNode<ErasedSeriesMethodContext>& node,
+ const ErasedNode<BacktestMethodContext>& node,
  std::vector<NumericInputNode>& inputs)
 {
 #define PLUDUX_COLLECT_IF_NODE(TNode)        \
@@ -357,69 +386,69 @@ void collect_numeric_inputs_from_node(
   PLUDUX_COLLECT_IF_NODE(LowNode)
   PLUDUX_COLLECT_IF_NODE(CloseNode)
   PLUDUX_COLLECT_IF_NODE(VolumeNode)
-  PLUDUX_COLLECT_IF_NODE(ChangeNode)
-  PLUDUX_COLLECT_IF_NODE(LookbackNode)
-  PLUDUX_COLLECT_IF_NODE(SelectOutputNode)
+  PLUDUX_COLLECT_IF_NODE(ChangeNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(LookbackNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(SelectOutputNode<BacktestMethodContext>)
   PLUDUX_COLLECT_IF_NODE(SeriesNode)
-  PLUDUX_COLLECT_IF_NODE(HighestNode)
-  PLUDUX_COLLECT_IF_NODE(LowestNode)
-  PLUDUX_COLLECT_IF_NODE(PercentageNode)
-  PLUDUX_COLLECT_IF_NODE(StddevNode)
-  PLUDUX_COLLECT_IF_NODE(SmaNode)
-  PLUDUX_COLLECT_IF_NODE(EmaNode)
-  PLUDUX_COLLECT_IF_NODE(RmaNode)
-  PLUDUX_COLLECT_IF_NODE(WmaNode)
-  PLUDUX_COLLECT_IF_NODE(HmaNode)
-  PLUDUX_COLLECT_IF_NODE(MacdNode)
-  PLUDUX_COLLECT_IF_NODE(TrNode)
-  PLUDUX_COLLECT_IF_NODE(AtrNode)
-  PLUDUX_COLLECT_IF_NODE(RocNode)
-  PLUDUX_COLLECT_IF_NODE(RsiNode)
-  PLUDUX_COLLECT_IF_NODE(RvolNode)
-  PLUDUX_COLLECT_IF_NODE(BbNode)
-  PLUDUX_COLLECT_IF_NODE(KcNode)
-  PLUDUX_COLLECT_IF_NODE(DonchianChannelNode)
-  PLUDUX_COLLECT_IF_NODE(StochNode)
-  PLUDUX_COLLECT_IF_NODE(StochRsiNode)
-  PLUDUX_COLLECT_IF_NODE(AllOfNode)
-  PLUDUX_COLLECT_IF_NODE(AnyOfNode)
-  PLUDUX_COLLECT_IF_NODE(GreaterEqualNode<ErasedSeriesMethodContext>)
-  PLUDUX_COLLECT_IF_NODE(GreaterThanNode<ErasedSeriesMethodContext>)
-  PLUDUX_COLLECT_IF_NODE(LessThanNode<ErasedSeriesMethodContext>)
-  PLUDUX_COLLECT_IF_NODE(LessEqualNode<ErasedSeriesMethodContext>)
-  PLUDUX_COLLECT_IF_NODE(EqualNode<ErasedSeriesMethodContext>)
-  PLUDUX_COLLECT_IF_NODE(NotEqualNode<ErasedSeriesMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(HighestNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(LowestNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(PercentageNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(StddevNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(SmaNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(EmaNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(RmaNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(WmaNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(HmaNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(MacdNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(TrNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(AtrNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(RocNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(RsiNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(RvolNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(BbNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(KcNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(DonchianChannelNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(StochNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(StochRsiNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(AllOfNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(AnyOfNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(GreaterEqualNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(GreaterThanNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(LessThanNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(LessEqualNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(EqualNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(NotEqualNode<BacktestMethodContext>)
   PLUDUX_COLLECT_IF_NODE(TrueNode)
   PLUDUX_COLLECT_IF_NODE(FalseNode)
-  PLUDUX_COLLECT_IF_NODE(LogicalAndNode<ErasedSeriesMethodContext>)
-  PLUDUX_COLLECT_IF_NODE(LogicalOrNode<ErasedSeriesMethodContext>)
-  PLUDUX_COLLECT_IF_NODE(LogicalNotNode<ErasedSeriesMethodContext>)
-  PLUDUX_COLLECT_IF_NODE(LogicalXorNode<ErasedSeriesMethodContext>)
-  PLUDUX_COLLECT_IF_NODE(CrossoverNode)
-  PLUDUX_COLLECT_IF_NODE(CrossunderNode)
-  PLUDUX_COLLECT_IF_NODE(MultiplyNode)
-  PLUDUX_COLLECT_IF_NODE(DivideNode)
-  PLUDUX_COLLECT_IF_NODE(AddNode)
-  PLUDUX_COLLECT_IF_NODE(SubtractNode)
-  PLUDUX_COLLECT_IF_NODE(NegateNode)
-  PLUDUX_COLLECT_IF_NODE(AbsNode)
-  PLUDUX_COLLECT_IF_NODE(AbsDiffNode)
-  PLUDUX_COLLECT_IF_NODE(SqrtNode)
-  PLUDUX_COLLECT_IF_NODE(MaxNode)
-  PLUDUX_COLLECT_IF_NODE(MinNode)
-  PLUDUX_COLLECT_IF_NODE(PositivePartNode)
-  PLUDUX_COLLECT_IF_NODE(NegativePartNode)
-  PLUDUX_COLLECT_IF_NODE(RiskDistanceAmountNode)
-  PLUDUX_COLLECT_IF_NODE(RiskDistancePercentNode)
-  PLUDUX_COLLECT_IF_NODE(RiskDistanceAtrNode)
-  PLUDUX_COLLECT_IF_NODE(SlAmountNode)
-  PLUDUX_COLLECT_IF_NODE(TpAmountNode)
-  PLUDUX_COLLECT_IF_NODE(SlPercentNode)
-  PLUDUX_COLLECT_IF_NODE(TpPercentNode)
-  PLUDUX_COLLECT_IF_NODE(SlAtrNode)
-  PLUDUX_COLLECT_IF_NODE(TpAtrNode)
-  PLUDUX_COLLECT_IF_NODE(TpRMultipleNode)
-  PLUDUX_COLLECT_IF_NODE(PositionRMultipleNode)
+  PLUDUX_COLLECT_IF_NODE(LogicalAndNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(LogicalOrNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(LogicalNotNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(LogicalXorNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(CrossoverNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(CrossunderNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(MultiplyNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(DivideNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(AddNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(SubtractNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(NegateNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(AbsNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(AbsDiffNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(SqrtNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(MaxNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(MinNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(PositivePartNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(NegativePartNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(RiskDistanceAmountNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(RiskDistancePercentNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(RiskDistanceAtrNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(SlAmountNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(TpAmountNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(SlPercentNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(TpPercentNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(SlAtrNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(TpAtrNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(TpRMultipleNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(PositionRMultipleNode<BacktestMethodContext>)
 
 #undef PLUDUX_COLLECT_IF_NODE
 }

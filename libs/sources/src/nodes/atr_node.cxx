@@ -5,6 +5,7 @@ module;
 #include <limits>
 #include <type_traits>
 #include <utility>
+#include <variant>
 
 export module pludux:nodes.atr_node;
 
@@ -16,6 +17,7 @@ import :nodes.value_node;
 
 export namespace pludux {
 
+template<typename TContext = std::monostate>
 class AtrNode {
 public:
   AtrNode()
@@ -29,7 +31,7 @@ public:
   {
   }
 
-  explicit AtrNode(ErasedNode<ErasedSeriesMethodContext> period,
+   explicit AtrNode(ErasedNode<TContext> period,
                    MaNodeType ma_smoothing_type = MaNodeType::Rma)
   : period_{std::move(period)}
   , ma_smoothing_type_{ma_smoothing_type}
@@ -39,7 +41,7 @@ public:
   auto operator==(const AtrNode& other) const noexcept -> bool = default;
 
   auto period(this const AtrNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<TContext>&
   {
     return self.period_;
   }
@@ -50,7 +52,7 @@ public:
   }
 
   void period(this AtrNode& self,
-              ErasedNode<ErasedSeriesMethodContext> period) noexcept
+               ErasedNode<TContext> period) noexcept
   {
     self.period_ = std::move(period);
   }
@@ -66,13 +68,13 @@ public:
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> period_;
+   ErasedNode<TContext> period_;
   MaNodeType ma_smoothing_type_;
 };
 
-template<MethodContextable TContext>
+template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
-                       const AtrNode& node,
+                        const AtrNode<TContext>& node,
                        NodeToErasedMethodContext& context)
  -> ErasedSeriesMethod<TContext>
 {

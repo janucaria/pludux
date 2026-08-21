@@ -80,10 +80,8 @@ target_sources(${PROJECT_NAME}
         
         src/method_key.cxx
         src/ordered_named_registry.cxx
-        src/method_contextable.cxx
         src/evaluate_series_method.cxx
         src/hash_series_method.cxx
-        src/erased_series_method_context.cxx
 
         src/methods/erased_series_method.cxx
 
@@ -140,8 +138,6 @@ target_sources(${PROJECT_NAME}
         src/nodes.cxx
 
         src/series_evaluation_results.cxx
-        src/default_method_context.cxx
-
         src/pludux.cxx
 )
 

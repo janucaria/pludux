@@ -43,17 +43,17 @@ TEST(PyramidingCooldownTest, IsRequiredWhenPyramidingIsPresent)
 TEST(ModelInputsTest, CollectsNumericInputsInModelTraversalOrder)
 {
   auto series_nodes =
-   OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedNode<BacktestMethodContext>>{};
   series_nodes.set(
    "spread",
-   AddNode{
+   AddNode<BacktestMethodContext>{
     NumericInputNode{
      "Duplicate", NumericInputNode::ValueRepresentation::Decimal, 1.5},
     NumericInputNode{
      "Duplicate", NumericInputNode::ValueRepresentation::SignedInteger, 2.8}});
   series_nodes.set(
    "channel",
-   KcNode{
+    KcNode<BacktestMethodContext>{
     CloseNode{},
     NumericInputNode{
      "KC Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 20.0},
@@ -78,7 +78,8 @@ TEST(ModelInputsTest, CollectsNumericInputsInModelTraversalOrder)
     "Exit Signal", NumericInputNode::ValueRepresentation::Decimal, 6.0},
    SignalTiming::NextOpen}});
   long_position.pyramiding(std::move(long_pyramiding));
-  long_position.risk_distance(RiskDistanceAmountNode{NumericInputNode{
+  long_position.risk_distance(
+   RiskDistanceAmountNode<BacktestMethodContext>{NumericInputNode{
    "Risk Distance", NumericInputNode::ValueRepresentation::Decimal, 10.0}});
   long_position.stop_losses({Model::StopLoss{
    true,
@@ -126,10 +127,10 @@ TEST(ModelInputsTest, CollectsNumericInputsInModelTraversalOrder)
 TEST(ModelInputsTest, CollectsInputFromPositionRMultipleSource)
 {
   auto series_nodes =
-   OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedNode<BacktestMethodContext>>{};
   series_nodes.set(
    "current_r",
-   PositionRMultipleNode{NumericInputNode{
+   PositionRMultipleNode<BacktestMethodContext>{NumericInputNode{
     "R Source", NumericInputNode::ValueRepresentation::Decimal, 125.0}});
   const auto strategy = Model{
    "Test", std::move(series_nodes), Model::Position{}, Model::Position{}, {}};
@@ -144,10 +145,10 @@ TEST(ModelInputsTest, CollectsInputFromPositionRMultipleSource)
 TEST(ModelInputsTest, AssigningModelReplacesStrategyInputsWithDefaults)
 {
   auto series_nodes =
-   OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedNode<BacktestMethodContext>>{};
   series_nodes.set(
    "replacement",
-   AddNode{
+   AddNode<BacktestMethodContext>{
     NumericInputNode{"Replacement Decimal",
                      NumericInputNode::ValueRepresentation::Decimal,
                      1.25},
@@ -191,6 +192,57 @@ TEST(ModelInputsTest, AssigningModelWithoutInputsClearsStrategyInputs)
 
   EXPECT_EQ(strategy.model_handle(), model_handle);
   EXPECT_TRUE(strategy.inputs().empty());
+}
+
+TEST(ModelInputsTest,
+     SharedModelCompilesIndependentlyForStrategyInputsAndNamedSeriesResults)
+{
+  auto series_nodes = OrderedNamedRegistry<ModelNode>{};
+  series_nodes.set(
+   "configured",
+   NumericInputNode{"Configured",
+                    NumericInputNode::ValueRepresentation::Decimal,
+                    1.0});
+  const auto shared_model =
+   Model{"Shared", std::move(series_nodes), {}, {}, {}};
+
+  const auto compile_for_input = [&shared_model](double input) {
+    const auto inputs = std::vector{input};
+    auto conversion_context = NodeToErasedMethodContext{inputs};
+    auto methods = ModelMethodRegistry{};
+    for(const auto& [name, node] : shared_model.series_nodes()) {
+      methods.set(name,
+                  node_to_erased_method<BacktestMethodContext>(
+                   node, conversion_context));
+    }
+    return methods;
+  };
+
+  const auto first_methods = compile_for_input(2.0);
+  const auto second_methods = compile_for_input(7.0);
+  auto first_results = SeriesEvaluationResults{};
+  auto second_results = SeriesEvaluationResults{};
+  const auto account = BacktestAccountState{1'000.0, 0.0, 1'000.0, 1'000.0};
+  const auto first_context = BacktestMethodContext{
+   first_methods, first_results, 0, account, 0};
+  const auto second_context = BacktestMethodContext{
+   second_methods, second_results, 0, account, 0};
+  const auto snapshot =
+   AssetSnapshot{AssetHistory{{"Close", {100.0}}}};
+
+  EXPECT_DOUBLE_EQ(
+   first_context.call_series_method("configured", snapshot), 2.0);
+  EXPECT_DOUBLE_EQ(
+   second_context.call_series_method("configured", snapshot), 7.0);
+
+  first_results.alias("configured", first_methods.get("configured").value());
+  second_results.alias("configured", second_methods.get("configured").value());
+  first_results.put(first_methods.get("configured").value(), 2.0);
+  second_results.put(second_methods.get("configured").value(), 7.0);
+  EXPECT_DOUBLE_EQ(
+   first_results.results(std::string{"configured"})->get().front(), 2.0);
+  EXPECT_DOUBLE_EQ(
+   second_results.results(std::string{"configured"})->get().front(), 7.0);
 }
 
 TEST(ModelParserTest, ParsesPerSideStopLossAndTakeProfit)
@@ -277,7 +329,7 @@ TEST(ModelParserTest, ParsesPerSideStopLossAndTakeProfit)
 
   ASSERT_EQ(strategy.long_position().stop_losses().size(), 2);
   EXPECT_TRUE(strategy.long_position().stop_losses()[0].enabled());
-  EXPECT_TRUE(node_cast<RiskDistancePercentNode>(
+  EXPECT_TRUE(node_cast<RiskDistancePercentNode<BacktestMethodContext>>(
    strategy.long_position().risk_distance()));
   EXPECT_EQ(strategy.intrabar_path(), IntrabarPath::HighFirst);
   EXPECT_EQ(strategy.long_position().entry().timing(),
@@ -350,7 +402,8 @@ TEST(ModelParserTest, StringifiesPositionObjectsWithPerSideLevels)
   pyramiding.unfavorable_stop_target_reference(
    StopTargetReferencePrice::LatestEntryPrice);
   long_position.pyramiding(pyramiding);
-  long_position.risk_distance(RiskDistanceAmountNode{10.0});
+  long_position.risk_distance(
+   RiskDistanceAmountNode<BacktestMethodContext>{10.0});
   long_position.stop_losses({Model::StopLoss{true, OpenNode{}, false, 0.5}});
   long_position.stop_losses_activation(ExitActivation::AfterPrevious);
   long_position.take_profits({Model::TakeProfit{true, ValueNode{120.0}, 0.75}});
@@ -510,7 +563,8 @@ TEST(ModelParserTest, DefaultStopLossAndEmptyExitCollections)
   ASSERT_NE(stop_price, nullptr);
 
   const auto* risk_distance =
-   node_cast<RiskDistanceAtrNode>(strategy.long_position().risk_distance());
+   node_cast<RiskDistanceAtrNode<BacktestMethodContext>>(
+    strategy.long_position().risk_distance());
   ASSERT_NE(risk_distance, nullptr);
   const auto* risk_multiplier =
    node_cast<ValueNode>(risk_distance->multiplier());
@@ -583,7 +637,7 @@ TEST(ModelParserTest, RejectsMissingOrImplicitRiskDistance)
 
 TEST(ConfigParserTest, RoundTripsExplicitRiskDistanceAndRStopMethods)
 {
-  auto parser = make_default_registered_config_parser();
+  auto parser = make_backtest_model_config_parser();
   const auto configurations = std::vector<std::string>{
    R"({"method":"R_DISTANCE_AMOUNT","params":{"amount":{"method":"VALUE","params":{"value":10.0}}}})",
    R"({"method":"R_DISTANCE_PERCENTAGE","params":{"percentage":{"method":"VALUE","params":{"value":5.0}}}})",

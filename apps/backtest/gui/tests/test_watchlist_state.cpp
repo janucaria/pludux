@@ -139,12 +139,12 @@ TEST(ApplicationState, MissingSystemRemainsReferencedAndInvalidatesPortfolio)
 
 TEST(StrategyEditor, ChangingModelResetsInputsToNewModelDefaults)
 {
-  auto first_series = pludux::OrderedNamedRegistry<pludux::ErasedNode<
-   pludux::ErasedSeriesMethodContext>>{};
+  auto first_series =
+   pludux::OrderedNamedRegistry<pludux::backtest::ModelNode>{};
   first_series.set("first", pludux::NumericInputNode{
    "First", pludux::NumericInputNode::ValueRepresentation::Decimal, 2.5});
-  auto second_series = pludux::OrderedNamedRegistry<pludux::ErasedNode<
-   pludux::ErasedSeriesMethodContext>>{};
+  auto second_series =
+   pludux::OrderedNamedRegistry<pludux::backtest::ModelNode>{};
   second_series.set("second", pludux::NumericInputNode{
    "Second", pludux::NumericInputNode::ValueRepresentation::UnsignedInteger, 14.0});
   const auto first = pludux::backtest::Model{

@@ -61,7 +61,6 @@ using pludux::backtest::InitialEntryPriceNode;
 using pludux::backtest::IsPyramidingOrderNode;
 using pludux::backtest::LatestEntryPriceNode;
 using pludux::backtest::PositionDirectionNode;
-using pludux::backtest::PositionRMultipleNode;
 using pludux::backtest::PyramidingLayerNode;
 using pludux::backtest::RawRequestedQuantityLimitNode;
 using pludux::backtest::RawRequestedQuantityNode;
@@ -73,15 +72,16 @@ using pludux::backtest::RequestedOrderRiskDistanceNode;
 using pludux::backtest::RequestedPriceRiskNode;
 using pludux::backtest::RequestedQuantityNode;
 using pludux::backtest::RequestedRiskWithFeesNode;
+using pludux::backtest::Sl1RNode;
+using pludux::backtest::StopTargetRefPriceNode;
+using pludux::backtest::PositionRMultipleNode;
 using pludux::backtest::RiskDistanceAmountNode;
 using pludux::backtest::RiskDistanceAtrNode;
 using pludux::backtest::RiskDistancePercentNode;
-using pludux::backtest::Sl1RNode;
 using pludux::backtest::SlAmountNode;
 using pludux::backtest::SlAtrNode;
 using pludux::backtest::SlPercentNode;
 using pludux::backtest::SlRMultipleNode;
-using pludux::backtest::StopTargetRefPriceNode;
 using pludux::backtest::TpAmountNode;
 using pludux::backtest::TpAtrNode;
 using pludux::backtest::TpPercentNode;
@@ -97,7 +97,7 @@ using pludux::backtest::ConstantPlotSourceMethod;
 using pludux::backtest::SeriesPlotSourceMethod;
 
 auto get_default_series_node(const std::string& series_id)
- -> ErasedNode<ErasedSeriesMethodContext>
+ -> ErasedNode<backtest::BacktestMethodContext>
 {
   if(series_id == "OPEN") {
     return OpenNode{};
@@ -110,7 +110,7 @@ auto get_default_series_node(const std::string& series_id)
   } else if(series_id == "VOLUME") {
     return VolumeNode{};
   } else if(series_id == "CHANGE") {
-    return ChangeNode{CloseNode{}};
+    return ChangeNode<backtest::BacktestMethodContext>{CloseNode{}};
   } else if(series_id == "DATA") {
     return DataNode{};
   } else if(series_id == "EQUITY") {
@@ -120,123 +120,125 @@ auto get_default_series_node(const std::string& series_id)
   } else if(series_id == "DRAWDOWN") {
     return DrawdownNode{};
   } else if(series_id == "SMA") {
-    return SmaNode{CloseNode{}, 14};
+    return SmaNode<backtest::BacktestMethodContext>{CloseNode{}, 14};
   } else if(series_id == "EMA") {
-    return EmaNode{CloseNode{}, 14};
+    return EmaNode<backtest::BacktestMethodContext>{CloseNode{}, 14};
   } else if(series_id == "WMA") {
-    return WmaNode{CloseNode{}, 14};
+    return WmaNode<backtest::BacktestMethodContext>{CloseNode{}, 14};
   } else if(series_id == "HMA") {
-    return HmaNode{CloseNode{}, 14};
+    return HmaNode<backtest::BacktestMethodContext>{CloseNode{}, 14};
   } else if(series_id == "RMA") {
-    return RmaNode{CloseNode{}, 14};
+    return RmaNode<backtest::BacktestMethodContext>{CloseNode{}, 14};
   } else if(series_id == "RSI") {
-    return RsiNode{CloseNode{}, 14};
+    return RsiNode<backtest::BacktestMethodContext>{CloseNode{}, 14};
   } else if(series_id == "ROC") {
-    return RocNode{CloseNode{}, 14};
+    return RocNode<backtest::BacktestMethodContext>{CloseNode{}, 14};
   } else if(series_id == "RVOL") {
-    return RvolNode{14};
+    return RvolNode<backtest::BacktestMethodContext>{14};
   } else if(series_id == "HIGHEST") {
-    return HighestNode{CloseNode{}, 14};
+    return HighestNode<backtest::BacktestMethodContext>{CloseNode{}, 14};
   } else if(series_id == "LOWEST") {
-    return LowestNode{CloseNode{}, 14};
+    return LowestNode<backtest::BacktestMethodContext>{CloseNode{}, 14};
   } else if(series_id == "TR") {
-    return TrNode{};
+    return TrNode<backtest::BacktestMethodContext>{};
   } else if(series_id == "MACD") {
-    return MacdNode{CloseNode{}, 12, 26, 9};
+    return MacdNode<backtest::BacktestMethodContext>{CloseNode{}, 12, 26, 9};
   } else if(series_id == "ATR") {
-    return AtrNode{14};
+    return AtrNode<backtest::BacktestMethodContext>{14};
   } else if(series_id == "STDDEV") {
-    return StddevNode{CloseNode{}, 14};
+    return StddevNode<backtest::BacktestMethodContext>{CloseNode{}, 14};
   } else if(series_id == "BB") {
-    return BbNode{CloseNode{}, 20, 2.0, MaNodeType::Sma};
+    return BbNode<backtest::BacktestMethodContext>{CloseNode{}, 20, 2.0, MaNodeType::Sma};
   } else if(series_id == "KC") {
-    return KcNode{
+    return KcNode<backtest::BacktestMethodContext>{
      CloseNode{}, 20, 1.5, 14, KcBandNodeType::Atr, MaNodeType::Ema};
   } else if(series_id == "DC") {
-    return DonchianChannelNode{};
+    return DonchianChannelNode<backtest::BacktestMethodContext>{};
   } else if(series_id == "STOCH") {
-    return StochNode{14, 3, 3};
+    return StochNode<backtest::BacktestMethodContext>{14, 3, 3};
   } else if(series_id == "STOCH_RSI") {
-    return StochRsiNode{CloseNode{}, 14, 14, 3, 3};
+    return StochRsiNode<backtest::BacktestMethodContext>{CloseNode{}, 14, 14, 3, 3};
   } else if(series_id == "SERIES") {
     return SeriesNode{""};
   } else if(series_id == "VALUE") {
     return ValueNode{0.0};
   } else if(series_id == "LOOKBACK") {
-    return LookbackNode{CloseNode{}, 1};
+    return LookbackNode<backtest::BacktestMethodContext>{CloseNode{}, 1};
   } else if(series_id == "ALL_OF") {
-    return AllOfNode{};
+    return AllOfNode<backtest::BacktestMethodContext>{};
   } else if(series_id == "ANY_OF") {
-    return AnyOfNode{};
+    return AnyOfNode<backtest::BacktestMethodContext>{};
   } else if(series_id == "ALWAYS") {
     return TrueNode{};
   } else if(series_id == "NEVER") {
     return FalseNode{};
   } else if(series_id == "LESS_THAN") {
-    return LessThanNode<ErasedSeriesMethodContext>{CloseNode{}, CloseNode{}};
+    return LessThanNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
   } else if(series_id == "GREATER_THAN") {
-    return GreaterThanNode<ErasedSeriesMethodContext>{CloseNode{}, CloseNode{}};
+    return GreaterThanNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
   } else if(series_id == "LESS_EQUAL") {
-    return LessEqualNode<ErasedSeriesMethodContext>{CloseNode{}, CloseNode{}};
+    return LessEqualNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
   } else if(series_id == "GREATER_EQUAL") {
-    return GreaterEqualNode<ErasedSeriesMethodContext>{CloseNode{},
+   return GreaterEqualNode<backtest::BacktestMethodContext>{CloseNode{},
                                                        CloseNode{}};
   } else if(series_id == "EQUAL") {
-    return EqualNode<ErasedSeriesMethodContext>{CloseNode{}, CloseNode{}};
+    return EqualNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
   } else if(series_id == "NOT_EQUAL") {
-    return NotEqualNode<ErasedSeriesMethodContext>{CloseNode{}, CloseNode{}};
+    return NotEqualNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
   } else if(series_id == "CROSSOVER") {
-    return CrossoverNode{CloseNode{}, CloseNode{}};
+    return CrossoverNode<backtest::BacktestMethodContext>{CloseNode{},
+                                                         CloseNode{}};
   } else if(series_id == "CROSSUNDER") {
-    return CrossunderNode{CloseNode{}, CloseNode{}};
+    return CrossunderNode<backtest::BacktestMethodContext>{CloseNode{},
+                                                          CloseNode{}};
   } else if(series_id == "NOT") {
-    return LogicalNotNode<ErasedSeriesMethodContext>{FalseNode{}};
+    return LogicalNotNode<backtest::BacktestMethodContext>{FalseNode{}};
   } else if(series_id == "AND") {
-    return LogicalAndNode<ErasedSeriesMethodContext>{FalseNode{}, FalseNode{}};
+    return LogicalAndNode<backtest::BacktestMethodContext>{FalseNode{}, FalseNode{}};
   } else if(series_id == "OR") {
-    return LogicalOrNode<ErasedSeriesMethodContext>{FalseNode{}, FalseNode{}};
+    return LogicalOrNode<backtest::BacktestMethodContext>{FalseNode{}, FalseNode{}};
   } else if(series_id == "XOR") {
-    return LogicalXorNode<ErasedSeriesMethodContext>{FalseNode{}, FalseNode{}};
+    return LogicalXorNode<backtest::BacktestMethodContext>{FalseNode{}, FalseNode{}};
   } else if(series_id == "INPUT") {
     return NumericInputNode{"Input"};
   } else if(series_id == "ADD") {
-    return AddNode{CloseNode{}, CloseNode{}};
+     return AddNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
   } else if(series_id == "SUBTRACT") {
-    return SubtractNode{CloseNode{}, CloseNode{}};
+     return SubtractNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
   } else if(series_id == "MULTIPLY") {
-    return MultiplyNode{CloseNode{}, CloseNode{}};
+     return MultiplyNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
   } else if(series_id == "DIVIDE") {
-    return DivideNode{CloseNode{}, CloseNode{}};
+     return DivideNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
   } else if(series_id == "NEGATE") {
-    return NegateNode{CloseNode{}};
+     return NegateNode<backtest::BacktestMethodContext>{CloseNode{}};
   } else if(series_id == "SQRT") {
-    return SqrtNode{CloseNode{}};
+     return SqrtNode<backtest::BacktestMethodContext>{CloseNode{}};
   } else if(series_id == "PERCENTAGE") {
-    return PercentageNode{CloseNode{}, 100.0};
+     return PercentageNode<backtest::BacktestMethodContext>{CloseNode{}, 100.0};
   } else if(series_id == "R_DISTANCE_AMOUNT") {
-    return RiskDistanceAmountNode{1000.0};
+    return RiskDistanceAmountNode<backtest::BacktestMethodContext>{1000.0};
   } else if(series_id == "R_DISTANCE_PERCENTAGE") {
-    return RiskDistancePercentNode{1.0};
+    return RiskDistancePercentNode<backtest::BacktestMethodContext>{1.0};
   } else if(series_id == "R_DISTANCE_ATR") {
-    return RiskDistanceAtrNode{14.0, 2.0};
+    return RiskDistanceAtrNode<backtest::BacktestMethodContext>{14.0, 2.0};
   } else if(series_id == "SL_AMOUNT") {
-    return SlAmountNode{1000.0};
+    return SlAmountNode<backtest::BacktestMethodContext>{1000.0};
   } else if(series_id == "TP_AMOUNT") {
-    return TpAmountNode{2000.0};
+    return TpAmountNode<backtest::BacktestMethodContext>{2000.0};
   } else if(series_id == "SL_PERCENT") {
-    return SlPercentNode{10.0};
+    return SlPercentNode<backtest::BacktestMethodContext>{10.0};
   } else if(series_id == "TP_PERCENT") {
-    return TpPercentNode{20.0};
+    return TpPercentNode<backtest::BacktestMethodContext>{20.0};
   } else if(series_id == "SL_ATR") {
-    return SlAtrNode{14.0, 2.0};
+    return SlAtrNode<backtest::BacktestMethodContext>{14.0, 2.0};
   } else if(series_id == "TP_ATR") {
-    return TpAtrNode{14.0, 4.0};
+    return TpAtrNode<backtest::BacktestMethodContext>{14.0, 4.0};
   } else if(series_id == "SL_1R") {
     return Sl1RNode{};
   } else if(series_id == "SL_R_MULTIPLE") {
-    return SlRMultipleNode{1.0};
+    return SlRMultipleNode<backtest::BacktestMethodContext>{1.0};
   } else if(series_id == "TP_R_MULTIPLE") {
-    return TpRMultipleNode{2.0};
+    return TpRMultipleNode<backtest::BacktestMethodContext>{2.0};
   } else if(series_id == "INITIAL_ENTRY_PRICE") {
     return InitialEntryPriceNode{};
   } else if(series_id == "LATEST_ENTRY_PRICE") {
@@ -250,11 +252,12 @@ auto get_default_series_node(const std::string& series_id)
   } else if(series_id == "PYRAMIDING_LAYER") {
     return PyramidingLayerNode{};
   } else if(series_id == "POSITION_R_MULTIPLE") {
-    return PositionRMultipleNode{};
+    return PositionRMultipleNode<backtest::BacktestMethodContext>{};
   } else if(series_id == "ABS_DIFF") {
-    return AbsDiffNode{CloseNode{}, CloseNode{}};
+     return AbsDiffNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
   } else if(series_id == "SELECT_OUTPUT") {
-    return SelectOutputNode{CloseNode{}, NodeOutput::MiddleBand};
+    return SelectOutputNode<backtest::BacktestMethodContext>{
+     CloseNode{}, NodeOutput::MiddleBand};
   }
 
   throw std::invalid_argument{
@@ -262,7 +265,7 @@ auto get_default_series_node(const std::string& series_id)
 }
 
 auto get_default_portfolio_comparator_node(const std::string& id)
- -> ErasedNode<ErasedSeriesMethodContext>
+ -> ErasedNode<backtest::RequestedOrderMethodContext>
 {
   if(id == "VALUE") {
     return ValueNode{0.0};
@@ -279,7 +282,7 @@ auto get_default_portfolio_comparator_node(const std::string& id)
   } else if(id == "DATA") {
     return DataNode{};
   } else if(id == "LOOKBACK") {
-    return LookbackNode{CloseNode{}, 1};
+    return LookbackNode<backtest::RequestedOrderMethodContext>{CloseNode{}, 1};
   } else if(id == "REQUESTED_ORDER_PRICE") {
     return RequestedOrderPriceNode{};
   } else if(id == "REQUESTED_ORDER_DIRECTION") {
@@ -314,42 +317,49 @@ auto get_default_portfolio_comparator_node(const std::string& id)
     return FrozenUnitQuantityNode{};
   }
 
-  const auto value = ErasedNode<ErasedSeriesMethodContext>{ValueNode{0.0}};
+  const auto value = ErasedNode<backtest::RequestedOrderMethodContext>{ValueNode{0.0}};
   const auto requested =
-   ErasedNode<ErasedSeriesMethodContext>{RequestedQuantityNode{}};
+   ErasedNode<backtest::RequestedOrderMethodContext>{RequestedQuantityNode{}};
   if(id == "ADD") {
-    return AddNode{requested, value};
+      return AddNode<backtest::RequestedOrderMethodContext>{requested, value};
   } else if(id == "SUBTRACT") {
-    return SubtractNode{requested, value};
+      return SubtractNode<backtest::RequestedOrderMethodContext>{requested, value};
   } else if(id == "MULTIPLY") {
-    return MultiplyNode{requested, ValueNode{1.0}};
+      return MultiplyNode<backtest::RequestedOrderMethodContext>{requested, ValueNode{1.0}};
   } else if(id == "DIVIDE") {
-    return DivideNode{requested, ValueNode{1.0}};
+      return DivideNode<backtest::RequestedOrderMethodContext>{requested, ValueNode{1.0}};
   } else if(id == "ABS_DIFF") {
-    return AbsDiffNode{requested, value};
+      return AbsDiffNode<backtest::RequestedOrderMethodContext>{requested, value};
   } else if(id == "MAX") {
-    return MaxNode{requested, value};
+      return MaxNode<backtest::RequestedOrderMethodContext>{requested, value};
   } else if(id == "MIN") {
-    return MinNode{requested, value};
+      return MinNode<backtest::RequestedOrderMethodContext>{requested, value};
   } else if(id == "NEGATE") {
-    return NegateNode{requested};
+      return NegateNode<backtest::RequestedOrderMethodContext>{requested};
   } else if(id == "ABS") {
-    return AbsNode{requested};
+      return AbsNode<backtest::RequestedOrderMethodContext>{requested};
   } else if(id == "SQRT") {
-    return SqrtNode{requested};
+      return SqrtNode<backtest::RequestedOrderMethodContext>{requested};
   } else if(id == "POSITIVE_PART") {
-    return PositivePartNode{requested};
+      return PositivePartNode<backtest::RequestedOrderMethodContext>{requested};
   } else if(id == "NEGATIVE_PART") {
-    return NegativePartNode{requested};
+      return NegativePartNode<backtest::RequestedOrderMethodContext>{requested};
   }
   throw std::invalid_argument{
    std::format("Unknown requested order node id: {}", id)};
 }
 
-auto get_series_node_id(const ErasedNode<ErasedSeriesMethodContext>& node)
+auto get_portfolio_comparator_node_id(const backtest::ComparatorNode& node)
  -> std::string
 {
-  if(node_cast<SelectOutputNode>(node)) {
+  auto parser = backtest::make_requested_order_comparator_config_parser();
+  return backtest::config_string(parser.serialize_node(node).at("method"));
+}
+
+auto get_series_node_id(const ErasedNode<backtest::BacktestMethodContext>& node)
+ -> std::string
+{
+  if(node_cast<SelectOutputNode<backtest::BacktestMethodContext>>(node)) {
     return "SELECT_OUTPUT";
   } else if(node_cast<SeriesNode>(node)) {
     return "SERIES";
@@ -363,7 +373,7 @@ auto get_series_node_id(const ErasedNode<ErasedSeriesMethodContext>& node)
     return "LOW";
   } else if(node_cast<VolumeNode>(node)) {
     return "VOLUME";
-  } else if(node_cast<ChangeNode>(node)) {
+  } else if(node_cast<ChangeNode<backtest::BacktestMethodContext>>(node)) {
     return "CHANGE";
   } else if(node_cast<RequestedOrderPriceNode>(node)) {
     return "REQUESTED_ORDER_PRICE";
@@ -407,81 +417,84 @@ auto get_series_node_id(const ErasedNode<ErasedSeriesMethodContext>& node)
     return "DRAWDOWN";
   } else if(node_cast<ValueNode>(node)) {
     return "VALUE";
-  } else if(node_cast<StddevNode>(node)) {
+  } else if(node_cast<StddevNode<backtest::BacktestMethodContext>>(node)) {
     return "STDDEV";
-  } else if(node_cast<BbNode>(node)) {
+  } else if(node_cast<BbNode<backtest::BacktestMethodContext>>(node)) {
     return "BB";
-  } else if(node_cast<KcNode>(node)) {
+  } else if(node_cast<KcNode<backtest::BacktestMethodContext>>(node)) {
     return "KC";
-  } else if(node_cast<DonchianChannelNode>(node)) {
+  } else if(node_cast<DonchianChannelNode<backtest::BacktestMethodContext>>(node)) {
     return "DC";
-  } else if(node_cast<SmaNode>(node)) {
+  } else if(node_cast<SmaNode<backtest::BacktestMethodContext>>(node)) {
     return "SMA";
-  } else if(node_cast<EmaNode>(node)) {
+  } else if(node_cast<EmaNode<backtest::BacktestMethodContext>>(node)) {
     return "EMA";
-  } else if(node_cast<WmaNode>(node)) {
+  } else if(node_cast<WmaNode<backtest::BacktestMethodContext>>(node)) {
     return "WMA";
-  } else if(node_cast<HmaNode>(node)) {
+  } else if(node_cast<HmaNode<backtest::BacktestMethodContext>>(node)) {
     return "HMA";
-  } else if(node_cast<RmaNode>(node)) {
+  } else if(node_cast<RmaNode<backtest::BacktestMethodContext>>(node)) {
     return "RMA";
-  } else if(node_cast<RsiNode>(node)) {
+  } else if(node_cast<RsiNode<backtest::BacktestMethodContext>>(node)) {
     return "RSI";
-  } else if(node_cast<RocNode>(node)) {
+  } else if(node_cast<RocNode<backtest::BacktestMethodContext>>(node)) {
     return "ROC";
-  } else if(node_cast<RvolNode>(node)) {
+  } else if(node_cast<RvolNode<backtest::BacktestMethodContext>>(node)) {
     return "RVOL";
-  } else if(node_cast<HighestNode>(node)) {
+  } else if(node_cast<HighestNode<backtest::BacktestMethodContext>>(node)) {
     return "HIGHEST";
-  } else if(node_cast<LowestNode>(node)) {
+  } else if(node_cast<LowestNode<backtest::BacktestMethodContext>>(node)) {
     return "LOWEST";
-  } else if(node_cast<TrNode>(node)) {
+  } else if(node_cast<TrNode<backtest::BacktestMethodContext>>(node)) {
     return "TR";
-  } else if(node_cast<MacdNode>(node)) {
+  } else if(node_cast<MacdNode<backtest::BacktestMethodContext>>(node)) {
     return "MACD";
-  } else if(node_cast<AtrNode>(node)) {
+  } else if(node_cast<AtrNode<backtest::BacktestMethodContext>>(node)) {
     return "ATR";
-  } else if(node_cast<StochNode>(node)) {
+  } else if(node_cast<StochNode<backtest::BacktestMethodContext>>(node)) {
     return "STOCH";
-  } else if(node_cast<StochRsiNode>(node)) {
+  } else if(node_cast<StochRsiNode<backtest::BacktestMethodContext>>(node)) {
     return "STOCH_RSI";
-  } else if(node_cast<AddNode>(node)) {
+   } else if(node_cast<AddNode<backtest::BacktestMethodContext>>(node)) {
     return "ADD";
-  } else if(node_cast<SubtractNode>(node)) {
+   } else if(node_cast<SubtractNode<backtest::BacktestMethodContext>>(node)) {
     return "SUBTRACT";
-  } else if(node_cast<MultiplyNode>(node)) {
+   } else if(node_cast<MultiplyNode<backtest::BacktestMethodContext>>(node)) {
     return "MULTIPLY";
-  } else if(node_cast<DivideNode>(node)) {
+   } else if(node_cast<DivideNode<backtest::BacktestMethodContext>>(node)) {
     return "DIVIDE";
-  } else if(node_cast<NegateNode>(node)) {
+   } else if(node_cast<NegateNode<backtest::BacktestMethodContext>>(node)) {
     return "NEGATE";
-  } else if(node_cast<SqrtNode>(node)) {
+   } else if(node_cast<SqrtNode<backtest::BacktestMethodContext>>(node)) {
     return "SQRT";
-  } else if(node_cast<PercentageNode>(node)) {
+  } else if(node_cast<PercentageNode<backtest::BacktestMethodContext>>(node)) {
     return "PERCENTAGE";
-  } else if(node_cast<RiskDistanceAmountNode>(node)) {
+  } else if(node_cast<RiskDistanceAmountNode<
+              backtest::BacktestMethodContext>>(node)) {
     return "R_DISTANCE_AMOUNT";
-  } else if(node_cast<RiskDistancePercentNode>(node)) {
+  } else if(node_cast<RiskDistancePercentNode<
+              backtest::BacktestMethodContext>>(node)) {
     return "R_DISTANCE_PERCENTAGE";
-  } else if(node_cast<RiskDistanceAtrNode>(node)) {
+  } else if(node_cast<RiskDistanceAtrNode<backtest::BacktestMethodContext>>(
+              node)) {
     return "R_DISTANCE_ATR";
-  } else if(node_cast<SlAmountNode>(node)) {
+  } else if(node_cast<SlAmountNode<backtest::BacktestMethodContext>>(node)) {
     return "SL_AMOUNT";
-  } else if(node_cast<TpAmountNode>(node)) {
+  } else if(node_cast<TpAmountNode<backtest::BacktestMethodContext>>(node)) {
     return "TP_AMOUNT";
-  } else if(node_cast<SlPercentNode>(node)) {
+  } else if(node_cast<SlPercentNode<backtest::BacktestMethodContext>>(node)) {
     return "SL_PERCENT";
-  } else if(node_cast<TpPercentNode>(node)) {
+  } else if(node_cast<TpPercentNode<backtest::BacktestMethodContext>>(node)) {
     return "TP_PERCENT";
-  } else if(node_cast<SlAtrNode>(node)) {
+  } else if(node_cast<SlAtrNode<backtest::BacktestMethodContext>>(node)) {
     return "SL_ATR";
-  } else if(node_cast<TpAtrNode>(node)) {
+  } else if(node_cast<TpAtrNode<backtest::BacktestMethodContext>>(node)) {
     return "TP_ATR";
   } else if(node_cast<Sl1RNode>(node)) {
     return "SL_1R";
-  } else if(node_cast<SlRMultipleNode>(node)) {
+  } else if(node_cast<SlRMultipleNode<backtest::BacktestMethodContext>>(node)) {
     return "SL_R_MULTIPLE";
-  } else if(node_cast<TpRMultipleNode>(node)) {
+  } else if(node_cast<TpRMultipleNode<backtest::BacktestMethodContext>>(node)) {
     return "TP_R_MULTIPLE";
   } else if(node_cast<InitialEntryPriceNode>(node)) {
     return "INITIAL_ENTRY_PRICE";
@@ -495,55 +508,56 @@ auto get_series_node_id(const ErasedNode<ErasedSeriesMethodContext>& node)
     return "POSITION_DIRECTION";
   } else if(node_cast<PyramidingLayerNode>(node)) {
     return "PYRAMIDING_LAYER";
-  } else if(node_cast<PositionRMultipleNode>(node)) {
+  } else if(node_cast<PositionRMultipleNode<
+              backtest::BacktestMethodContext>>(node)) {
     return "POSITION_R_MULTIPLE";
-  } else if(node_cast<AbsDiffNode>(node)) {
+   } else if(node_cast<AbsDiffNode<backtest::BacktestMethodContext>>(node)) {
     return "ABS_DIFF";
-  } else if(node_cast<AbsNode>(node)) {
+   } else if(node_cast<AbsNode<backtest::BacktestMethodContext>>(node)) {
     return "ABS";
-  } else if(node_cast<MaxNode>(node)) {
+   } else if(node_cast<MaxNode<backtest::BacktestMethodContext>>(node)) {
     return "MAX";
-  } else if(node_cast<MinNode>(node)) {
+   } else if(node_cast<MinNode<backtest::BacktestMethodContext>>(node)) {
     return "MIN";
-  } else if(node_cast<PositivePartNode>(node)) {
+   } else if(node_cast<PositivePartNode<backtest::BacktestMethodContext>>(node)) {
     return "POSITIVE_PART";
-  } else if(node_cast<NegativePartNode>(node)) {
+   } else if(node_cast<NegativePartNode<backtest::BacktestMethodContext>>(node)) {
     return "NEGATIVE_PART";
-  } else if(node_cast<LookbackNode>(node)) {
+  } else if(node_cast<LookbackNode<backtest::BacktestMethodContext>>(node)) {
     return "LOOKBACK";
   } else if(node_cast<NumericInputNode>(node)) {
     return "INPUT";
-  } else if(node_cast<AllOfNode>(node)) {
+  } else if(node_cast<AllOfNode<backtest::BacktestMethodContext>>(node)) {
     return "ALL_OF";
-  } else if(node_cast<AnyOfNode>(node)) {
+  } else if(node_cast<AnyOfNode<backtest::BacktestMethodContext>>(node)) {
     return "ANY_OF";
   } else if(node_cast<TrueNode>(node)) {
     return "ALWAYS";
   } else if(node_cast<FalseNode>(node)) {
     return "NEVER";
-  } else if(node_cast<LessThanNode<ErasedSeriesMethodContext>>(node)) {
+  } else if(node_cast<LessThanNode<backtest::BacktestMethodContext>>(node)) {
     return "LESS_THAN";
-  } else if(node_cast<GreaterThanNode<ErasedSeriesMethodContext>>(node)) {
+  } else if(node_cast<GreaterThanNode<backtest::BacktestMethodContext>>(node)) {
     return "GREATER_THAN";
-  } else if(node_cast<LessEqualNode<ErasedSeriesMethodContext>>(node)) {
+  } else if(node_cast<LessEqualNode<backtest::BacktestMethodContext>>(node)) {
     return "LESS_EQUAL";
-  } else if(node_cast<GreaterEqualNode<ErasedSeriesMethodContext>>(node)) {
+  } else if(node_cast<GreaterEqualNode<backtest::BacktestMethodContext>>(node)) {
     return "GREATER_EQUAL";
-  } else if(node_cast<EqualNode<ErasedSeriesMethodContext>>(node)) {
+  } else if(node_cast<EqualNode<backtest::BacktestMethodContext>>(node)) {
     return "EQUAL";
-  } else if(node_cast<NotEqualNode<ErasedSeriesMethodContext>>(node)) {
+  } else if(node_cast<NotEqualNode<backtest::BacktestMethodContext>>(node)) {
     return "NOT_EQUAL";
-  } else if(node_cast<CrossoverNode>(node)) {
+  } else if(node_cast<CrossoverNode<backtest::BacktestMethodContext>>(node)) {
     return "CROSSOVER";
-  } else if(node_cast<CrossunderNode>(node)) {
+  } else if(node_cast<CrossunderNode<backtest::BacktestMethodContext>>(node)) {
     return "CROSSUNDER";
-  } else if(node_cast<LogicalNotNode<ErasedSeriesMethodContext>>(node)) {
+  } else if(node_cast<LogicalNotNode<backtest::BacktestMethodContext>>(node)) {
     return "NOT";
-  } else if(node_cast<LogicalAndNode<ErasedSeriesMethodContext>>(node)) {
+  } else if(node_cast<LogicalAndNode<backtest::BacktestMethodContext>>(node)) {
     return "AND";
-  } else if(node_cast<LogicalOrNode<ErasedSeriesMethodContext>>(node)) {
+  } else if(node_cast<LogicalOrNode<backtest::BacktestMethodContext>>(node)) {
     return "OR";
-  } else if(node_cast<LogicalXorNode<ErasedSeriesMethodContext>>(node)) {
+  } else if(node_cast<LogicalXorNode<backtest::BacktestMethodContext>>(node)) {
     return "XOR";
   }
 
@@ -997,40 +1011,40 @@ auto get_series_node_combo_entries() -> const std::vector<ui::ComboEntry>&
   return entries;
 }
 
-auto get_condition_node_id(const ErasedNode<ErasedSeriesMethodContext>& node)
+auto get_condition_node_id(const ErasedNode<backtest::BacktestMethodContext>& node)
  -> std::string
 {
-  if(node_cast<AllOfNode>(node)) {
+  if(node_cast<AllOfNode<backtest::BacktestMethodContext>>(node)) {
     return "ALL_OF";
-  } else if(node_cast<AnyOfNode>(node)) {
+  } else if(node_cast<AnyOfNode<backtest::BacktestMethodContext>>(node)) {
     return "ANY_OF";
   } else if(node_cast<TrueNode>(node)) {
     return "ALWAYS";
   } else if(node_cast<FalseNode>(node)) {
     return "NEVER";
-  } else if(node_cast<LessThanNode<ErasedSeriesMethodContext>>(node)) {
+  } else if(node_cast<LessThanNode<backtest::BacktestMethodContext>>(node)) {
     return "LESS_THAN";
-  } else if(node_cast<GreaterThanNode<ErasedSeriesMethodContext>>(node)) {
+  } else if(node_cast<GreaterThanNode<backtest::BacktestMethodContext>>(node)) {
     return "GREATER_THAN";
-  } else if(node_cast<LessEqualNode<ErasedSeriesMethodContext>>(node)) {
+  } else if(node_cast<LessEqualNode<backtest::BacktestMethodContext>>(node)) {
     return "LESS_EQUAL";
-  } else if(node_cast<GreaterEqualNode<ErasedSeriesMethodContext>>(node)) {
+  } else if(node_cast<GreaterEqualNode<backtest::BacktestMethodContext>>(node)) {
     return "GREATER_EQUAL";
-  } else if(node_cast<EqualNode<ErasedSeriesMethodContext>>(node)) {
+  } else if(node_cast<EqualNode<backtest::BacktestMethodContext>>(node)) {
     return "EQUAL";
-  } else if(node_cast<NotEqualNode<ErasedSeriesMethodContext>>(node)) {
+  } else if(node_cast<NotEqualNode<backtest::BacktestMethodContext>>(node)) {
     return "NOT_EQUAL";
-  } else if(node_cast<CrossoverNode>(node)) {
+  } else if(node_cast<CrossoverNode<backtest::BacktestMethodContext>>(node)) {
     return "CROSSOVER";
-  } else if(node_cast<CrossunderNode>(node)) {
+  } else if(node_cast<CrossunderNode<backtest::BacktestMethodContext>>(node)) {
     return "CROSSUNDER";
-  } else if(node_cast<LogicalNotNode<ErasedSeriesMethodContext>>(node)) {
+  } else if(node_cast<LogicalNotNode<backtest::BacktestMethodContext>>(node)) {
     return "NOT";
-  } else if(node_cast<LogicalAndNode<ErasedSeriesMethodContext>>(node)) {
+  } else if(node_cast<LogicalAndNode<backtest::BacktestMethodContext>>(node)) {
     return "AND";
-  } else if(node_cast<LogicalOrNode<ErasedSeriesMethodContext>>(node)) {
+  } else if(node_cast<LogicalOrNode<backtest::BacktestMethodContext>>(node)) {
     return "OR";
-  } else if(node_cast<LogicalXorNode<ErasedSeriesMethodContext>>(node)) {
+  } else if(node_cast<LogicalXorNode<backtest::BacktestMethodContext>>(node)) {
     return "XOR";
   }
 
@@ -1139,41 +1153,43 @@ auto get_condition_node_combo_entries() -> const std::vector<ui::ComboEntry>&
 }
 
 auto get_default_condition_node(const std::string& condition_id)
- -> ErasedNode<ErasedSeriesMethodContext>
+ -> ErasedNode<backtest::BacktestMethodContext>
 {
   if(condition_id == "ALL_OF") {
-    return AllOfNode{};
+    return AllOfNode<backtest::BacktestMethodContext>{};
   } else if(condition_id == "ANY_OF") {
-    return AnyOfNode{};
+    return AnyOfNode<backtest::BacktestMethodContext>{};
   } else if(condition_id == "ALWAYS") {
     return TrueNode{};
   } else if(condition_id == "NEVER") {
     return FalseNode{};
   } else if(condition_id == "LESS_THAN") {
-    return LessThanNode<ErasedSeriesMethodContext>{CloseNode{}, CloseNode{}};
+    return LessThanNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
   } else if(condition_id == "GREATER_THAN") {
-    return GreaterThanNode<ErasedSeriesMethodContext>{CloseNode{}, CloseNode{}};
+    return GreaterThanNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
   } else if(condition_id == "LESS_EQUAL") {
-    return LessEqualNode<ErasedSeriesMethodContext>{CloseNode{}, CloseNode{}};
+    return LessEqualNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
   } else if(condition_id == "GREATER_EQUAL") {
-    return GreaterEqualNode<ErasedSeriesMethodContext>{CloseNode{},
+    return GreaterEqualNode<backtest::BacktestMethodContext>{CloseNode{},
                                                        CloseNode{}};
   } else if(condition_id == "EQUAL") {
-    return EqualNode<ErasedSeriesMethodContext>{CloseNode{}, CloseNode{}};
+    return EqualNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
   } else if(condition_id == "NOT_EQUAL") {
-    return NotEqualNode<ErasedSeriesMethodContext>{CloseNode{}, CloseNode{}};
+    return NotEqualNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
   } else if(condition_id == "CROSSOVER") {
-    return CrossoverNode{CloseNode{}, CloseNode{}};
+    return CrossoverNode<backtest::BacktestMethodContext>{CloseNode{},
+                                                         CloseNode{}};
   } else if(condition_id == "CROSSUNDER") {
-    return CrossunderNode{CloseNode{}, CloseNode{}};
+    return CrossunderNode<backtest::BacktestMethodContext>{CloseNode{},
+                                                          CloseNode{}};
   } else if(condition_id == "NOT") {
-    return LogicalNotNode<ErasedSeriesMethodContext>{FalseNode{}};
+    return LogicalNotNode<backtest::BacktestMethodContext>{FalseNode{}};
   } else if(condition_id == "AND") {
-    return LogicalAndNode<ErasedSeriesMethodContext>{FalseNode{}, FalseNode{}};
+    return LogicalAndNode<backtest::BacktestMethodContext>{FalseNode{}, FalseNode{}};
   } else if(condition_id == "OR") {
-    return LogicalOrNode<ErasedSeriesMethodContext>{FalseNode{}, FalseNode{}};
+    return LogicalOrNode<backtest::BacktestMethodContext>{FalseNode{}, FalseNode{}};
   } else if(condition_id == "XOR") {
-    return LogicalXorNode<ErasedSeriesMethodContext>{FalseNode{}, FalseNode{}};
+    return LogicalXorNode<backtest::BacktestMethodContext>{FalseNode{}, FalseNode{}};
   }
 
   throw std::invalid_argument{
@@ -1317,7 +1333,7 @@ public:
 
   void render_numeric_expression(
     this ModelsWindow& self,
-   ErasedNode<ErasedSeriesMethodContext>& expression,
+   ErasedNode<backtest::BacktestMethodContext>& expression,
    WindowContext& context,
    std::vector<std::string> available_series_names = {},
    bool allow_unlisted_series_names = false)
@@ -1333,16 +1349,112 @@ public:
 
   void render_portfolio_comparator_expression(
     this ModelsWindow& self,
-   ErasedNode<ErasedSeriesMethodContext>& expression,
+   backtest::ComparatorNode& expression,
    WindowContext& context)
   {
-    const auto previous = self.portfolio_comparator_expression_;
-    self.portfolio_comparator_expression_ = true;
-    self.render_series_node(expression, context);
-    self.portfolio_comparator_expression_ = previous;
+    self.render_comparator_node(expression, context);
   }
 
 private:
+  void render_comparator_node(this ModelsWindow& self,
+                              backtest::ComparatorNode& node,
+                              WindowContext& context)
+  {
+    auto node_id = get_portfolio_comparator_node_id(node);
+    const auto selected = ui::searchable_combo(
+     "##Series",
+     node_id,
+     get_series_node_title(node_id),
+     get_portfolio_comparator_node_combo_entries());
+    if(selected) {
+      node = get_default_portfolio_comparator_node(*selected);
+    }
+
+    ImGui::Indent();
+    if(auto* value = node_cast<ValueNode>(node)) {
+      self.render_series_node_params(*value, context);
+    } else if(auto* data = node_cast<DataNode>(node)) {
+      self.render_series_node_params(*data, context);
+    } else if(auto* lookback =
+               node_cast<LookbackNode<backtest::RequestedOrderMethodContext>>(
+                node)) {
+      auto periods = static_cast<int>(lookback->period());
+      ui::field_label("Periods");
+      if(ImGui::InputInt("##lookback_periods", &periods)) {
+        lookback->period(static_cast<std::size_t>(std::max(periods, 1)));
+      }
+      ui::field_label("Source");
+      auto source = lookback->source();
+      ImGui::PushID("source");
+      self.render_comparator_node(source, context);
+      ImGui::PopID();
+      lookback->source(std::move(source));
+    } else if(!self.render_comparator_binary(node, context)) {
+      self.render_comparator_unary(node, context);
+    }
+    ImGui::Unindent();
+  }
+
+  auto render_comparator_binary(this ModelsWindow& self,
+                                backtest::ComparatorNode& node,
+                                WindowContext& context) -> bool
+  {
+    return [&]<typename... TNodes>() {
+      return ([&] {
+        auto* binary = node_cast<TNodes>(node);
+        if(!binary) {
+          return false;
+        }
+        ui::field_label("Left");
+        auto left = binary->left();
+        ImGui::PushID("left");
+        self.render_comparator_node(left, context);
+        ImGui::PopID();
+        binary->left(std::move(left));
+        ui::field_label("Right");
+        auto right = binary->right();
+        ImGui::PushID("right");
+        self.render_comparator_node(right, context);
+        ImGui::PopID();
+        binary->right(std::move(right));
+        return true;
+      }() || ...);
+    }.template operator()<
+     AddNode<backtest::RequestedOrderMethodContext>,
+     SubtractNode<backtest::RequestedOrderMethodContext>,
+     MultiplyNode<backtest::RequestedOrderMethodContext>,
+     DivideNode<backtest::RequestedOrderMethodContext>,
+     AbsDiffNode<backtest::RequestedOrderMethodContext>,
+     MaxNode<backtest::RequestedOrderMethodContext>,
+     MinNode<backtest::RequestedOrderMethodContext>>();
+  }
+
+  auto render_comparator_unary(this ModelsWindow& self,
+                               backtest::ComparatorNode& node,
+                               WindowContext& context) -> bool
+  {
+    return [&]<typename... TNodes>() {
+      return ([&] {
+        auto* unary = node_cast<TNodes>(node);
+        if(!unary) {
+          return false;
+        }
+        ui::field_label("Value");
+        auto value = unary->operand();
+        ImGui::PushID("value");
+        self.render_comparator_node(value, context);
+        ImGui::PopID();
+        unary->operand(std::move(value));
+        return true;
+      }() || ...);
+    }.template operator()<
+     NegateNode<backtest::RequestedOrderMethodContext>,
+     AbsNode<backtest::RequestedOrderMethodContext>,
+     SqrtNode<backtest::RequestedOrderMethodContext>,
+     PositivePartNode<backtest::RequestedOrderMethodContext>,
+     NegativePartNode<backtest::RequestedOrderMethodContext>>();
+  }
+
   enum class Page { List, BuiltIn, AddNew, Edit } current_page_{Page::List};
 
   std::optional<backtest::ModelStoreHandle> selected_model_handle_opt_;
@@ -1354,7 +1466,6 @@ private:
 
   std::vector<std::string> available_series_names_;
   bool allow_unlisted_series_names_{};
-  bool portfolio_comparator_expression_{};
   std::unordered_map<std::string, std::string> changed_series_names_;
 
   auto has_unsaved_changes(this const auto& self) -> bool
@@ -2491,7 +2602,7 @@ private:
   }
 
   void render_series_node(this auto& self,
-                          ErasedNode<ErasedSeriesMethodContext>& series_node,
+                          ErasedNode<backtest::BacktestMethodContext>& series_node,
                           WindowContext& context)
   {
     auto series_node_id = get_series_node_id(series_node);
@@ -2501,9 +2612,7 @@ private:
        ui::searchable_combo("##Series",
                             series_node_id,
                             combo_preview_value,
-                            self.portfolio_comparator_expression_
-                             ? get_portfolio_comparator_node_combo_entries()
-                             : get_series_node_combo_entries());
+                            get_series_node_combo_entries());
       if(selected) {
         if(*selected == "SERIES" && self.available_series_names_.empty() &&
            !self.allow_unlisted_series_names_) {
@@ -2513,9 +2622,7 @@ private:
            get_series_node_title(*selected));
           context.alert(error_message);
         } else {
-          series_node = self.portfolio_comparator_expression_
-                         ? get_default_portfolio_comparator_node(*selected)
-                         : get_default_series_node(*selected);
+          series_node = get_default_series_node(*selected);
         }
       }
     }
@@ -2527,7 +2634,7 @@ private:
   }
 
   void render_series_node_params(this auto& self,
-                                 ErasedNode<ErasedSeriesMethodContext>& node,
+                                 ErasedNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     ([&]<typename... Ts>() mutable {
@@ -2539,67 +2646,69 @@ private:
 
         return false;
       }() || ...);
-    }.template operator()<SelectOutputNode,
+    }.template operator()<SelectOutputNode<backtest::BacktestMethodContext>,
                           SeriesNode,
                           DataNode,
-                          LookbackNode,
+                          LookbackNode<backtest::BacktestMethodContext>,
                           NumericInputNode,
 
-                          AllOfNode,
-                          AnyOfNode,
+                          AllOfNode<backtest::BacktestMethodContext>,
+                          AnyOfNode<backtest::BacktestMethodContext>,
                           TrueNode,
                           FalseNode,
-                          LessThanNode<ErasedSeriesMethodContext>,
-                          GreaterThanNode<ErasedSeriesMethodContext>,
-                          LessEqualNode<ErasedSeriesMethodContext>,
-                          GreaterEqualNode<ErasedSeriesMethodContext>,
-                          EqualNode<ErasedSeriesMethodContext>,
-                          NotEqualNode<ErasedSeriesMethodContext>,
-                          CrossoverNode,
-                          CrossunderNode,
-                          LogicalNotNode<ErasedSeriesMethodContext>,
-                          LogicalAndNode<ErasedSeriesMethodContext>,
-                          LogicalOrNode<ErasedSeriesMethodContext>,
-                          LogicalXorNode<ErasedSeriesMethodContext>,
+                          LessThanNode<backtest::BacktestMethodContext>,
+                          GreaterThanNode<backtest::BacktestMethodContext>,
+                          LessEqualNode<backtest::BacktestMethodContext>,
+                          GreaterEqualNode<backtest::BacktestMethodContext>,
+                          EqualNode<backtest::BacktestMethodContext>,
+                          NotEqualNode<backtest::BacktestMethodContext>,
+                          CrossoverNode<backtest::BacktestMethodContext>,
+                          CrossunderNode<backtest::BacktestMethodContext>,
+                          LogicalNotNode<backtest::BacktestMethodContext>,
+                          LogicalAndNode<backtest::BacktestMethodContext>,
+                          LogicalOrNode<backtest::BacktestMethodContext>,
+                          LogicalXorNode<backtest::BacktestMethodContext>,
 
-                          BbNode,
-                          KcNode,
-                          DonchianChannelNode,
-                          StochNode,
-                          StochRsiNode,
-                          HighestNode,
-                          LowestNode,
-                          TrNode,
-                          SmaNode,
-                          EmaNode,
-                          RmaNode,
-                          WmaNode,
-                          HmaNode,
-                          RsiNode,
-                          RocNode,
-                          RvolNode,
+                           BbNode<backtest::BacktestMethodContext>,
+                           KcNode<backtest::BacktestMethodContext>,
+                           DonchianChannelNode<backtest::BacktestMethodContext>,
+                           StochNode<backtest::BacktestMethodContext>,
+                           StochRsiNode<backtest::BacktestMethodContext>,
+                          HighestNode<backtest::BacktestMethodContext>,
+                          LowestNode<backtest::BacktestMethodContext>,
+                           TrNode<backtest::BacktestMethodContext>,
+                          SmaNode<backtest::BacktestMethodContext>,
+                          EmaNode<backtest::BacktestMethodContext>,
+                          RmaNode<backtest::BacktestMethodContext>,
+                          WmaNode<backtest::BacktestMethodContext>,
+                          HmaNode<backtest::BacktestMethodContext>,
+                          RsiNode<backtest::BacktestMethodContext>,
+                          RocNode<backtest::BacktestMethodContext>,
+                           RvolNode<backtest::BacktestMethodContext>,
 
-                          MacdNode,
-                          AtrNode,
+                           MacdNode<backtest::BacktestMethodContext>,
+                           AtrNode<backtest::BacktestMethodContext>,
                           ValueNode,
-                          ChangeNode,
-                          AddNode,
-                          SubtractNode,
-                          MultiplyNode,
-                          DivideNode,
-                          PercentageNode,
-                          RiskDistanceAmountNode,
-                          RiskDistancePercentNode,
-                          RiskDistanceAtrNode,
-                          SlAmountNode,
-                          TpAmountNode,
-                          SlPercentNode,
-                          TpPercentNode,
-                          SlAtrNode,
-                          TpAtrNode,
+                          ChangeNode<backtest::BacktestMethodContext>,
+                          AddNode<backtest::BacktestMethodContext>,
+                          SubtractNode<backtest::BacktestMethodContext>,
+                          MultiplyNode<backtest::BacktestMethodContext>,
+                          DivideNode<backtest::BacktestMethodContext>,
+                           PercentageNode<backtest::BacktestMethodContext>,
+                          RiskDistanceAmountNode<
+                           backtest::BacktestMethodContext>,
+                          RiskDistancePercentNode<
+                           backtest::BacktestMethodContext>,
+                          RiskDistanceAtrNode<backtest::BacktestMethodContext>,
+                          SlAmountNode<backtest::BacktestMethodContext>,
+                          TpAmountNode<backtest::BacktestMethodContext>,
+                          SlPercentNode<backtest::BacktestMethodContext>,
+                          TpPercentNode<backtest::BacktestMethodContext>,
+                          SlAtrNode<backtest::BacktestMethodContext>,
+                          TpAtrNode<backtest::BacktestMethodContext>,
                           Sl1RNode,
-                          SlRMultipleNode,
-                          TpRMultipleNode,
+                          SlRMultipleNode<backtest::BacktestMethodContext>,
+                          TpRMultipleNode<backtest::BacktestMethodContext>,
                           InitialEntryPriceNode,
                           LatestEntryPriceNode,
                           AveragePriceNode,
@@ -2622,19 +2731,19 @@ private:
                           RequestedPriceRiskNode,
                           RequestedRiskWithFeesNode,
                           FrozenUnitQuantityNode,
-                          AbsDiffNode,
-                          AbsNode,
-                          MaxNode,
-                          MinNode,
-                          PositivePartNode,
-                          NegativePartNode,
-                          NegateNode,
-                          SqrtNode,
-                          StddevNode>());
+                          AbsDiffNode<backtest::BacktestMethodContext>,
+                          AbsNode<backtest::BacktestMethodContext>,
+                          MaxNode<backtest::BacktestMethodContext>,
+                          MinNode<backtest::BacktestMethodContext>,
+                          PositivePartNode<backtest::BacktestMethodContext>,
+                          NegativePartNode<backtest::BacktestMethodContext>,
+                          NegateNode<backtest::BacktestMethodContext>,
+                          SqrtNode<backtest::BacktestMethodContext>,
+                          StddevNode<backtest::BacktestMethodContext>>());
   }
 
   void render_series_node_params(this auto& self,
-                                 SelectOutputNode& node,
+                                  SelectOutputNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     {
@@ -2724,7 +2833,7 @@ private:
   }
 
   void render_series_node_params(this auto& self,
-                                 BbNode& node,
+                                  BbNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     ui::field_label("MA Type");
@@ -2789,7 +2898,7 @@ private:
   }
 
   void render_series_node_params(this auto& self,
-                                 KcNode& node,
+                                  KcNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     {
@@ -2872,7 +2981,7 @@ private:
   }
 
   void render_series_node_params(this auto& self,
-                                 DonchianChannelNode& node,
+                                  DonchianChannelNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     {
@@ -2886,7 +2995,7 @@ private:
   }
 
   void render_series_node_params(this auto& self,
-                                 StochNode& node,
+                                  StochNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     {
@@ -2916,7 +3025,7 @@ private:
   }
 
   void render_series_node_params(this auto& self,
-                                 StochRsiNode& node,
+                                  StochRsiNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     {
@@ -2962,7 +3071,7 @@ private:
   }
 
   void render_series_node_params(this auto& self,
-                                 RvolNode& node,
+                                  RvolNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     ui::field_label("Period");
@@ -2974,61 +3083,75 @@ private:
   }
 
   template<typename TConditionNode>
-    requires std::same_as<TConditionNode, AllOfNode> ||
-             std::same_as<TConditionNode, AnyOfNode> ||
+    requires std::same_as<TConditionNode,
+                          AllOfNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TConditionNode,
+                          AnyOfNode<backtest::BacktestMethodContext>> ||
              std::same_as<TConditionNode, TrueNode> ||
              std::same_as<TConditionNode, FalseNode> ||
              std::same_as<TConditionNode,
-                          LessThanNode<ErasedSeriesMethodContext>> ||
+                          LessThanNode<backtest::BacktestMethodContext>> ||
              std::same_as<TConditionNode,
-                          GreaterThanNode<ErasedSeriesMethodContext>> ||
+                          GreaterThanNode<backtest::BacktestMethodContext>> ||
              std::same_as<TConditionNode,
-                          LessEqualNode<ErasedSeriesMethodContext>> ||
+                          LessEqualNode<backtest::BacktestMethodContext>> ||
              std::same_as<TConditionNode,
-                          GreaterEqualNode<ErasedSeriesMethodContext>> ||
+                          GreaterEqualNode<backtest::BacktestMethodContext>> ||
              std::same_as<TConditionNode,
-                          EqualNode<ErasedSeriesMethodContext>> ||
+                          EqualNode<backtest::BacktestMethodContext>> ||
              std::same_as<TConditionNode,
-                          NotEqualNode<ErasedSeriesMethodContext>> ||
-             std::same_as<TConditionNode, CrossoverNode> ||
-             std::same_as<TConditionNode, CrossunderNode> ||
+                          NotEqualNode<backtest::BacktestMethodContext>> ||
+              std::same_as<TConditionNode,
+                           CrossoverNode<backtest::BacktestMethodContext>> ||
+              std::same_as<TConditionNode,
+                           CrossunderNode<backtest::BacktestMethodContext>> ||
              std::same_as<TConditionNode,
-                          LogicalNotNode<ErasedSeriesMethodContext>> ||
+                          LogicalNotNode<backtest::BacktestMethodContext>> ||
              std::same_as<TConditionNode,
-                          LogicalAndNode<ErasedSeriesMethodContext>> ||
+                          LogicalAndNode<backtest::BacktestMethodContext>> ||
              std::same_as<TConditionNode,
-                          LogicalOrNode<ErasedSeriesMethodContext>> ||
+                          LogicalOrNode<backtest::BacktestMethodContext>> ||
              std::same_as<TConditionNode,
-                          LogicalXorNode<ErasedSeriesMethodContext>>
+                          LogicalXorNode<backtest::BacktestMethodContext>>
   void render_series_node_params(this auto& self,
                                  TConditionNode& node,
                                  WindowContext& context)
   {
     auto changed_node = self.render_condition_node(
-     ErasedNode<ErasedSeriesMethodContext>{node}, context);
+     ErasedNode<backtest::BacktestMethodContext>{node}, context);
     if(const auto* updated = node_cast<TConditionNode>(changed_node)) {
       node = *updated;
     }
   }
 
   void render_series_node_params(this auto& self,
-                                 TrNode& node,
+                                  TrNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     ImGui::TextUnformatted("No parameters.");
   }
 
   template<typename TNodeWithPeriod>
-    requires std::same_as<TNodeWithPeriod, SmaNode> ||
-             std::same_as<TNodeWithPeriod, EmaNode> ||
-             std::same_as<TNodeWithPeriod, RmaNode> ||
-             std::same_as<TNodeWithPeriod, WmaNode> ||
-             std::same_as<TNodeWithPeriod, HmaNode> ||
-             std::same_as<TNodeWithPeriod, RsiNode> ||
-             std::same_as<TNodeWithPeriod, RocNode> ||
-             std::same_as<TNodeWithPeriod, HighestNode> ||
-             std::same_as<TNodeWithPeriod, LowestNode> ||
-             std::same_as<TNodeWithPeriod, StddevNode>
+    requires std::same_as<TNodeWithPeriod,
+                          SmaNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TNodeWithPeriod,
+                          EmaNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TNodeWithPeriod,
+                          RmaNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TNodeWithPeriod,
+                          WmaNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TNodeWithPeriod,
+                          HmaNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TNodeWithPeriod,
+                          RsiNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TNodeWithPeriod,
+                          RocNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TNodeWithPeriod,
+                          HighestNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TNodeWithPeriod,
+                          LowestNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TNodeWithPeriod,
+                          StddevNode<backtest::BacktestMethodContext>>
   void render_series_node_params(this auto& self,
                                  TNodeWithPeriod& node,
                                  WindowContext& context)
@@ -3049,13 +3172,13 @@ private:
   }
 
   template<typename TBinaryOpNode>
-    requires std::same_as<TBinaryOpNode, AddNode> ||
-             std::same_as<TBinaryOpNode, SubtractNode> ||
-             std::same_as<TBinaryOpNode, MultiplyNode> ||
-             std::same_as<TBinaryOpNode, DivideNode> ||
-             std::same_as<TBinaryOpNode, AbsDiffNode> ||
-             std::same_as<TBinaryOpNode, MaxNode> ||
-             std::same_as<TBinaryOpNode, MinNode>
+    requires std::same_as<TBinaryOpNode, AddNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TBinaryOpNode, SubtractNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TBinaryOpNode, MultiplyNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TBinaryOpNode, DivideNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TBinaryOpNode, AbsDiffNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TBinaryOpNode, MaxNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TBinaryOpNode, MinNode<backtest::BacktestMethodContext>>
   void render_series_node_params(this auto& self,
                                  TBinaryOpNode& node,
                                  WindowContext& context)
@@ -3080,11 +3203,11 @@ private:
   }
 
   template<typename TUnaryOpNode>
-    requires std::same_as<TUnaryOpNode, NegateNode> ||
-             std::same_as<TUnaryOpNode, AbsNode> ||
-             std::same_as<TUnaryOpNode, SqrtNode> ||
-             std::same_as<TUnaryOpNode, PositivePartNode> ||
-             std::same_as<TUnaryOpNode, NegativePartNode>
+    requires std::same_as<TUnaryOpNode, NegateNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TUnaryOpNode, AbsNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TUnaryOpNode, SqrtNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TUnaryOpNode, PositivePartNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TUnaryOpNode, NegativePartNode<backtest::BacktestMethodContext>>
   void render_series_node_params(this auto& self,
                                  TUnaryOpNode& node,
                                  WindowContext& context)
@@ -3098,7 +3221,7 @@ private:
   }
 
   void render_series_node_params(this auto& self,
-                                 PercentageNode& node,
+                                  PercentageNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     {
@@ -3135,42 +3258,44 @@ private:
   }
 
   void render_series_node_params(this auto& self,
-                                 RiskDistanceAmountNode& node,
+                                 RiskDistanceAmountNode<
+                                  backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     self.render_stop_target_value_node_params(node, context, "Amount");
   }
 
   void render_series_node_params(this auto& self,
-                                 RiskDistancePercentNode& node,
+                                 RiskDistancePercentNode<
+                                  backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     self.render_stop_target_value_node_params(node, context, "Percentage");
   }
 
   void render_series_node_params(this auto& self,
-                                 SlAmountNode& node,
+                                 SlAmountNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     self.render_stop_target_value_node_params(node, context, "Amount");
   }
 
   void render_series_node_params(this auto& self,
-                                 TpAmountNode& node,
+                                 TpAmountNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     self.render_stop_target_value_node_params(node, context, "Amount");
   }
 
   void render_series_node_params(this auto& self,
-                                 SlPercentNode& node,
+                                 SlPercentNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     self.render_stop_target_value_node_params(node, context, "Percent");
   }
 
   void render_series_node_params(this auto& self,
-                                 TpPercentNode& node,
+                                 TpPercentNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     self.render_stop_target_value_node_params(node, context, "Percent");
@@ -3181,14 +3306,16 @@ private:
   }
 
   void render_series_node_params(this auto& self,
-                                 SlRMultipleNode& node,
+                                 SlRMultipleNode<
+                                  backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     self.render_stop_target_value_node_params(node, context, "Multiple");
   }
 
   void render_series_node_params(this auto& self,
-                                 TpRMultipleNode& node,
+                                 TpRMultipleNode<
+                                  backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     self.render_stop_target_value_node_params(node, context, "Multiple");
@@ -3245,7 +3372,8 @@ private:
   }
 
   void render_series_node_params(this auto& self,
-                                 PositionRMultipleNode& node,
+                                 PositionRMultipleNode<
+                                  backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     ui::field_label("Source");
@@ -3257,7 +3385,7 @@ private:
   }
 
   void render_series_node_params(this auto& self,
-                                 ChangeNode& node,
+                                 ChangeNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     ui::field_label("Source");
@@ -3280,7 +3408,7 @@ private:
   }
 
   void render_series_node_params(this auto& self,
-                                 MacdNode& node,
+                                  MacdNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     {
@@ -3318,7 +3446,7 @@ private:
   }
 
   void render_series_node_params(this auto& self,
-                                 AtrNode& node,
+                                  AtrNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     ui::field_label("Period");
@@ -3391,21 +3519,22 @@ private:
   }
 
   void render_series_node_params(this auto& self,
-                                 RiskDistanceAtrNode& node,
+                                 RiskDistanceAtrNode<
+                                  backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     self.render_stop_target_atr_node_params(node, context);
   }
 
   void render_series_node_params(this auto& self,
-                                 SlAtrNode& node,
+                                 SlAtrNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     self.render_stop_target_atr_node_params(node, context);
   }
 
   void render_series_node_params(this auto& self,
-                                 TpAtrNode& node,
+                                 TpAtrNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     self.render_stop_target_atr_node_params(node, context);
@@ -3423,7 +3552,7 @@ private:
   }
 
   void render_series_node_params(this auto& self,
-                                 LookbackNode& node,
+                                 LookbackNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     ui::field_label("Periods");
@@ -3511,7 +3640,7 @@ private:
   }
 
   auto draw_condition_node_combo(
-   this auto& self, const ErasedNode<ErasedSeriesMethodContext>& condition)
+   this auto& self, const ErasedNode<backtest::BacktestMethodContext>& condition)
    -> std::string
   {
     auto result_condition_id = get_condition_node_id(condition);
@@ -3537,32 +3666,32 @@ private:
   auto make_condition_node_from_other(this auto& self,
                                       const std::string& condition_id,
                                       auto other_condition)
-   -> ErasedNode<ErasedSeriesMethodContext>
+ -> ErasedNode<backtest::BacktestMethodContext>
   {
     const auto get_condition_series_params =
      []<typename TNode>(
-      const TNode& node) -> std::pair<ErasedNode<ErasedSeriesMethodContext>,
-                                      ErasedNode<ErasedSeriesMethodContext>> {
+      const TNode& node) -> std::pair<ErasedNode<backtest::BacktestMethodContext>,
+                                      ErasedNode<backtest::BacktestMethodContext>> {
       if constexpr(requires {
                      {
                        node.source()
                      } -> std::convertible_to<
-                      ErasedNode<ErasedSeriesMethodContext>>;
+                      ErasedNode<backtest::BacktestMethodContext>>;
                      {
                        node.reference()
                      } -> std::convertible_to<
-                      ErasedNode<ErasedSeriesMethodContext>>;
+                      ErasedNode<backtest::BacktestMethodContext>>;
                    }) {
         return {node.source(), node.reference()};
       } else if constexpr(requires {
                             {
                               node.target()
                             } -> std::convertible_to<
-                             ErasedNode<ErasedSeriesMethodContext>>;
+                             ErasedNode<backtest::BacktestMethodContext>>;
                             {
                               node.threshold()
                             } -> std::convertible_to<
-                             ErasedNode<ErasedSeriesMethodContext>>;
+                             ErasedNode<backtest::BacktestMethodContext>>;
                           }) {
         return {node.target(), node.threshold()};
       } else {
@@ -3573,85 +3702,85 @@ private:
     if(condition_id == "EQUAL") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
-      return EqualNode<ErasedSeriesMethodContext>{std::move(lhs_series_param),
+      return EqualNode<backtest::BacktestMethodContext>{std::move(lhs_series_param),
                                                   std::move(rhs_series_param)};
     }
 
     if(condition_id == "NOT_EQUAL") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
-      return NotEqualNode<ErasedSeriesMethodContext>{
+      return NotEqualNode<backtest::BacktestMethodContext>{
        std::move(lhs_series_param), std::move(rhs_series_param)};
     }
 
     if(condition_id == "GREATER_THAN") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
-      return GreaterThanNode<ErasedSeriesMethodContext>{
+      return GreaterThanNode<backtest::BacktestMethodContext>{
        std::move(lhs_series_param), std::move(rhs_series_param)};
     }
 
     if(condition_id == "LESS_THAN") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
-      return LessThanNode<ErasedSeriesMethodContext>{
+      return LessThanNode<backtest::BacktestMethodContext>{
        std::move(lhs_series_param), std::move(rhs_series_param)};
     }
 
     if(condition_id == "GREATER_EQUAL") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
-      return GreaterEqualNode<ErasedSeriesMethodContext>{
+      return GreaterEqualNode<backtest::BacktestMethodContext>{
        std::move(lhs_series_param), std::move(rhs_series_param)};
     }
 
     if(condition_id == "LESS_EQUAL") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
-      return LessEqualNode<ErasedSeriesMethodContext>{
+      return LessEqualNode<backtest::BacktestMethodContext>{
        std::move(lhs_series_param), std::move(rhs_series_param)};
     }
 
     if(condition_id == "CROSSOVER") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
-      return CrossoverNode{std::move(lhs_series_param),
-                           std::move(rhs_series_param)};
+      return CrossoverNode<backtest::BacktestMethodContext>{
+       std::move(lhs_series_param), std::move(rhs_series_param)};
     }
 
     if(condition_id == "CROSSUNDER") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
-      return CrossunderNode{std::move(lhs_series_param),
-                            std::move(rhs_series_param)};
+      return CrossunderNode<backtest::BacktestMethodContext>{
+       std::move(lhs_series_param), std::move(rhs_series_param)};
     }
 
     const auto get_conditions_param =
      []<typename TNode>(
-      const TNode& node) -> std::vector<ErasedNode<ErasedSeriesMethodContext>> {
+      const TNode& node) -> std::vector<ErasedNode<backtest::BacktestMethodContext>> {
       if constexpr(requires {
                      {
                        node.conditions()
                      } -> std::convertible_to<
-                      std::vector<ErasedNode<ErasedSeriesMethodContext>>>;
+                      std::vector<ErasedNode<backtest::BacktestMethodContext>>>;
                    }) {
         return node.conditions();
       } else if constexpr(requires {
                             {
                               node.other_condition()
                             } -> std::convertible_to<
-                             ErasedNode<ErasedSeriesMethodContext>>;
+                             ErasedNode<backtest::BacktestMethodContext>>;
                           }) {
         return {node.other_condition()};
       } else if constexpr(requires {
                             {
                               node.first_condition()
                             } -> std::convertible_to<
-                             ErasedNode<ErasedSeriesMethodContext>>;
+                             ErasedNode<backtest::BacktestMethodContext>>;
                             {
                               node.second_condition()
                             } -> std::convertible_to<
-                             ErasedNode<ErasedSeriesMethodContext>>;
+                             ErasedNode<backtest::BacktestMethodContext>>;
                           }) {
         return {node.first_condition(), node.second_condition()};
       } else {
@@ -3661,36 +3790,36 @@ private:
 
     if(condition_id == "ALL_OF") {
       const auto conditions = get_conditions_param(other_condition);
-      return AllOfNode{conditions};
+      return AllOfNode<backtest::BacktestMethodContext>{conditions};
     }
 
     if(condition_id == "ANY_OF") {
       const auto conditions = get_conditions_param(other_condition);
-      return AnyOfNode{conditions};
+      return AnyOfNode<backtest::BacktestMethodContext>{conditions};
     }
 
     const auto get_first_condition_param =
      []<typename TNode>(
-      const TNode& node) -> ErasedNode<ErasedSeriesMethodContext> {
+      const TNode& node) -> ErasedNode<backtest::BacktestMethodContext> {
       if constexpr(requires {
                      {
                        node.condition()
                      } -> std::convertible_to<
-                      ErasedNode<ErasedSeriesMethodContext>>;
+                      ErasedNode<backtest::BacktestMethodContext>>;
                    }) {
         return node.condition();
       } else if constexpr(requires {
                             {
                               node.first_condition()
                             } -> std::convertible_to<
-                             ErasedNode<ErasedSeriesMethodContext>>;
+                             ErasedNode<backtest::BacktestMethodContext>>;
                           }) {
         return node.first_condition();
       } else if constexpr(requires {
                             {
                               node.conditions()
                             } -> std::convertible_to<std::vector<
-                             ErasedNode<ErasedSeriesMethodContext>>>;
+                             ErasedNode<backtest::BacktestMethodContext>>>;
                           }) {
         const auto conditions = node.conditions();
         if(!conditions.empty()) {
@@ -3702,7 +3831,7 @@ private:
                             {
                               node.other_condition()
                             } -> std::convertible_to<
-                             ErasedNode<ErasedSeriesMethodContext>>;
+                             ErasedNode<backtest::BacktestMethodContext>>;
                           }) {
         return node.other_condition();
       } else {
@@ -3712,19 +3841,19 @@ private:
 
     const auto get_second_condition_param =
      []<typename TNode>(
-      const TNode& node) -> ErasedNode<ErasedSeriesMethodContext> {
+      const TNode& node) -> ErasedNode<backtest::BacktestMethodContext> {
       if constexpr(requires {
                      {
                        node.other_condition()
                      } -> std::convertible_to<
-                      ErasedNode<ErasedSeriesMethodContext>>;
+                      ErasedNode<backtest::BacktestMethodContext>>;
                    }) {
         return node.other_condition();
       } else if constexpr(requires {
                             {
                               node.second_condition()
                             } -> std::convertible_to<
-                             ErasedNode<ErasedSeriesMethodContext>>;
+                             ErasedNode<backtest::BacktestMethodContext>>;
                           }) {
         return node.second_condition();
       } else {
@@ -3733,24 +3862,24 @@ private:
     };
 
     if(condition_id == "NOT") {
-      return LogicalNotNode<ErasedSeriesMethodContext>{
+      return LogicalNotNode<backtest::BacktestMethodContext>{
        get_first_condition_param(other_condition)};
     }
 
     if(condition_id == "AND") {
-      return LogicalAndNode<ErasedSeriesMethodContext>{
+      return LogicalAndNode<backtest::BacktestMethodContext>{
        get_first_condition_param(other_condition),
        get_second_condition_param(other_condition)};
     }
 
     if(condition_id == "OR") {
-      return LogicalOrNode<ErasedSeriesMethodContext>{
+      return LogicalOrNode<backtest::BacktestMethodContext>{
        get_first_condition_param(other_condition),
        get_second_condition_param(other_condition)};
     }
 
     if(condition_id == "XOR") {
-      return LogicalXorNode<ErasedSeriesMethodContext>{
+      return LogicalXorNode<backtest::BacktestMethodContext>{
        get_first_condition_param(other_condition),
        get_second_condition_param(other_condition)};
     }
@@ -3768,58 +3897,64 @@ private:
 
   auto render_condition_node(
    this auto& self,
-   const ErasedNode<ErasedSeriesMethodContext>& any_condition,
-   WindowContext& context) -> ErasedNode<ErasedSeriesMethodContext>
+   const ErasedNode<backtest::BacktestMethodContext>& any_condition,
+   WindowContext& context) -> ErasedNode<backtest::BacktestMethodContext>
   {
-    if(auto* condition_ptr = node_cast<AllOfNode>(any_condition)) {
+    if(auto* condition_ptr =
+         node_cast<AllOfNode<backtest::BacktestMethodContext>>(any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
-    } else if(auto* condition_ptr = node_cast<AnyOfNode>(any_condition)) {
+    } else if(auto* condition_ptr =
+      node_cast<AnyOfNode<backtest::BacktestMethodContext>>(any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
     } else if(auto* condition_ptr = node_cast<TrueNode>(any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
     } else if(auto* condition_ptr = node_cast<FalseNode>(any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               node_cast<LessThanNode<ErasedSeriesMethodContext>>(
+               node_cast<LessThanNode<backtest::BacktestMethodContext>>(
                 any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               node_cast<GreaterThanNode<ErasedSeriesMethodContext>>(
+               node_cast<GreaterThanNode<backtest::BacktestMethodContext>>(
                 any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               node_cast<LessEqualNode<ErasedSeriesMethodContext>>(
+               node_cast<LessEqualNode<backtest::BacktestMethodContext>>(
                 any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               node_cast<GreaterEqualNode<ErasedSeriesMethodContext>>(
+               node_cast<GreaterEqualNode<backtest::BacktestMethodContext>>(
                 any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               node_cast<EqualNode<ErasedSeriesMethodContext>>(any_condition)) {
+               node_cast<EqualNode<backtest::BacktestMethodContext>>(any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               node_cast<NotEqualNode<ErasedSeriesMethodContext>>(
-                any_condition)) {
-      return self.render_condition_node(*condition_ptr, context);
-    } else if(auto* condition_ptr = node_cast<CrossoverNode>(any_condition)) {
-      return self.render_condition_node(*condition_ptr, context);
-    } else if(auto* condition_ptr = node_cast<CrossunderNode>(any_condition)) {
-      return self.render_condition_node(*condition_ptr, context);
-    } else if(auto* condition_ptr =
-               node_cast<LogicalNotNode<ErasedSeriesMethodContext>>(
+               node_cast<NotEqualNode<backtest::BacktestMethodContext>>(
                 any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               node_cast<LogicalAndNode<ErasedSeriesMethodContext>>(
+               node_cast<CrossoverNode<backtest::BacktestMethodContext>>(
                 any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               node_cast<LogicalOrNode<ErasedSeriesMethodContext>>(
+               node_cast<CrossunderNode<backtest::BacktestMethodContext>>(
                 any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               node_cast<LogicalXorNode<ErasedSeriesMethodContext>>(
+               node_cast<LogicalNotNode<backtest::BacktestMethodContext>>(
+                any_condition)) {
+      return self.render_condition_node(*condition_ptr, context);
+    } else if(auto* condition_ptr =
+               node_cast<LogicalAndNode<backtest::BacktestMethodContext>>(
+                any_condition)) {
+      return self.render_condition_node(*condition_ptr, context);
+    } else if(auto* condition_ptr =
+               node_cast<LogicalOrNode<backtest::BacktestMethodContext>>(
+                any_condition)) {
+      return self.render_condition_node(*condition_ptr, context);
+    } else if(auto* condition_ptr =
+               node_cast<LogicalXorNode<backtest::BacktestMethodContext>>(
                 any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
     } else {
@@ -3828,20 +3963,20 @@ private:
   }
 
   template<typename TCondition>
-    requires std::same_as<TCondition, EqualNode<ErasedSeriesMethodContext>> ||
+    requires std::same_as<TCondition, EqualNode<backtest::BacktestMethodContext>> ||
              std::same_as<TCondition,
-                          NotEqualNode<ErasedSeriesMethodContext>> ||
+                          NotEqualNode<backtest::BacktestMethodContext>> ||
              std::same_as<TCondition,
-                          GreaterThanNode<ErasedSeriesMethodContext>> ||
+                          GreaterThanNode<backtest::BacktestMethodContext>> ||
              std::same_as<TCondition,
-                          LessThanNode<ErasedSeriesMethodContext>> ||
+                          LessThanNode<backtest::BacktestMethodContext>> ||
              std::same_as<TCondition,
-                          GreaterEqualNode<ErasedSeriesMethodContext>> ||
-             std::same_as<TCondition, LessEqualNode<ErasedSeriesMethodContext>>
+                          GreaterEqualNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TCondition, LessEqualNode<backtest::BacktestMethodContext>>
   auto render_condition_node(this auto& self,
                              const TCondition& condition,
                              WindowContext& context)
-   -> ErasedNode<ErasedSeriesMethodContext>
+ -> ErasedNode<backtest::BacktestMethodContext>
   {
     auto new_condition = condition;
 
@@ -3871,12 +4006,14 @@ private:
   }
 
   template<typename TCondition>
-    requires std::same_as<TCondition, CrossoverNode> ||
-             std::same_as<TCondition, CrossunderNode>
+    requires std::same_as<TCondition,
+                          CrossoverNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TCondition,
+                          CrossunderNode<backtest::BacktestMethodContext>>
   auto render_condition_node(this auto& self,
                              const TCondition& condition,
                              WindowContext& context)
-   -> ErasedNode<ErasedSeriesMethodContext>
+ -> ErasedNode<backtest::BacktestMethodContext>
   {
     auto new_condition = condition;
 
@@ -3911,7 +4048,7 @@ private:
   auto render_condition_node(this auto& self,
                              const TCondition& condition,
                              WindowContext& context)
-   -> ErasedNode<ErasedSeriesMethodContext>
+ -> ErasedNode<backtest::BacktestMethodContext>
   {
     auto new_condition = condition;
     ui::field_label("Condition");
@@ -3925,12 +4062,12 @@ private:
   }
 
   template<typename TCondition>
-    requires std::same_as<TCondition, AllOfNode> ||
-             std::same_as<TCondition, AnyOfNode>
+    requires std::same_as<TCondition, AllOfNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TCondition, AnyOfNode<backtest::BacktestMethodContext>>
   auto render_condition_node(this auto& self,
                              const TCondition& condition,
                              WindowContext& context)
-   -> ErasedNode<ErasedSeriesMethodContext>
+ -> ErasedNode<backtest::BacktestMethodContext>
   {
     auto new_condition = condition;
     ui::field_label("Condition group");
@@ -3970,11 +4107,11 @@ private:
   }
 
   template<typename TCondition>
-    requires std::same_as<TCondition, LogicalNotNode<ErasedSeriesMethodContext>>
+    requires std::same_as<TCondition, LogicalNotNode<backtest::BacktestMethodContext>>
   auto render_condition_node(this auto& self,
                              const TCondition& condition,
                              WindowContext& context)
-   -> ErasedNode<ErasedSeriesMethodContext>
+  -> ErasedNode<backtest::BacktestMethodContext>
   {
     auto new_condition = condition;
     ui::field_label("Condition");
@@ -3993,14 +4130,14 @@ private:
 
   template<typename TCondition>
     requires std::same_as<TCondition,
-                          LogicalAndNode<ErasedSeriesMethodContext>> ||
+                          LogicalAndNode<backtest::BacktestMethodContext>> ||
              std::same_as<TCondition,
-                          LogicalOrNode<ErasedSeriesMethodContext>> ||
-             std::same_as<TCondition, LogicalXorNode<ErasedSeriesMethodContext>>
+                          LogicalOrNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TCondition, LogicalXorNode<backtest::BacktestMethodContext>>
   auto render_condition_node(this auto& self,
                              const TCondition& condition,
                              WindowContext& context)
-   -> ErasedNode<ErasedSeriesMethodContext>
+  -> ErasedNode<backtest::BacktestMethodContext>
   {
     auto new_condition = condition;
     auto first_condition = new_condition.first_condition();

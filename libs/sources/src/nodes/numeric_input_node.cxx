@@ -99,7 +99,7 @@ auto resolve_numeric_input_value(
   }
 }
 
-template<MethodContextable TContext>
+template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const NumericInputNode& node,
                        NodeToErasedMethodContext& context)

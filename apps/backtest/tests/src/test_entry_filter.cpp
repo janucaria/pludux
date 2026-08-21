@@ -266,6 +266,30 @@ TEST(EntryFilterTest, ModelPerformanceMethodsExposeAllStreaks)
    4.0);
 }
 
+TEST(EntryFilterTest, ErasedMethodsAndNodesUseConcreteEntryFilterContext)
+{
+  const auto performance = ModelPerformanceSnapshot{};
+  const auto account_state = BacktestAccountState{};
+  const auto requested_order = RequestedOrder{
+   TradeEntry{1.0, 100.0}, false, 1.0, {}, 1.0, {}, 10.0, 0.0, 0.0};
+  const auto context =
+   EntryFilterMethodContext{account_state, performance, requested_order};
+  const auto snapshot = make_filter_test_asset().get_snapshot(0);
+  const auto method = ErasedSeriesMethod<EntryFilterMethodContext>{
+   BooleanMethod<true>{}};
+  const auto node = ErasedNode<EntryFilterMethodContext>{
+   ModelPerformanceNode{ModelPerformanceMetric::LifetimeCount}};
+  auto conversion_context = NodeToErasedMethodContext{};
+
+  EXPECT_DOUBLE_EQ(evaluate_series_method(method, snapshot, context), 1.0);
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(
+    node_to_erased_method<EntryFilterMethodContext>(node, conversion_context),
+    snapshot,
+    context),
+   0.0);
+}
+
 TEST(EntryFilterTest,
      BayesianKellyUsesCompletedTheoreticalPerformanceForLaterEntry)
 {

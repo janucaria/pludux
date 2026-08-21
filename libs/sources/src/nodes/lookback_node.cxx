@@ -13,6 +13,7 @@ import :nodes.ohlcv_node;
 
 export namespace pludux {
 
+template<typename TContext>
 class LookbackNode {
 public:
   explicit LookbackNode(std::size_t period = 1)
@@ -20,27 +21,28 @@ public:
   {
   }
 
-  LookbackNode(ErasedNode<ErasedSeriesMethodContext> source, std::size_t period)
+  LookbackNode(ErasedNode<TContext> source, std::size_t period)
   : source_{std::move(source)}
   , period_{period}
   {
   }
 
-  LookbackNode(const LookbackNode& other, std::size_t additional_period)
+  LookbackNode(const LookbackNode& other,
+                    std::size_t additional_period)
   : LookbackNode{other.source(), other.period() + additional_period}
   {
   }
 
-  auto operator==(const LookbackNode& other) const noexcept -> bool = default;
+  auto operator==(const LookbackNode& other) const noexcept -> bool =
+   default;
 
   auto source(this const LookbackNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<TContext>&
   {
     return self.source_;
   }
 
-  void source(this LookbackNode& self,
-              ErasedNode<ErasedSeriesMethodContext> source) noexcept
+  void source(this LookbackNode& self, ErasedNode<TContext> source) noexcept
   {
     self.source_ = std::move(source);
   }
@@ -56,13 +58,14 @@ public:
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> source_;
+  ErasedNode<TContext> source_;
   std::size_t period_;
 };
 
-template<MethodContextable TContext>
+
+template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
-                       const LookbackNode& node,
+                       const LookbackNode<TContext>& node,
                        NodeToErasedMethodContext& context)
  -> ErasedSeriesMethod<TContext>
 {

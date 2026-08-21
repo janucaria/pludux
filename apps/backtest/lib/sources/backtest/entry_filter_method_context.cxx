@@ -1,10 +1,5 @@
 module;
 
-#include <cstddef>
-#include <limits>
-#include <string>
-#include <vector>
-
 export module pludux.backtest:entry_filter_method_context;
 
 import pludux;
@@ -24,39 +19,6 @@ public:
   , performance_{performance}
   , requested_order_{requested_order}
   {
-  }
-
-  auto call_series_method(this const EntryFilterMethodContext&,
-                          const std::string&,
-                          AssetSnapshot) noexcept -> double
-  {
-    return std::numeric_limits<double>::quiet_NaN();
-  }
-
-  auto call_series_method(this const EntryFilterMethodContext&,
-                          const std::string&,
-                          AssetSnapshot,
-                          MethodOutput) noexcept -> double
-  {
-    return std::numeric_limits<double>::quiet_NaN();
-  }
-
-  auto get_series_result(this const EntryFilterMethodContext&,
-                         const std::string&,
-                         std::size_t) noexcept -> double
-  {
-    return std::numeric_limits<double>::quiet_NaN();
-  }
-
-  auto get_series_results(this EntryFilterMethodContext& self,
-                          const auto&) noexcept -> std::vector<double>&
-  {
-    return self.unused_series_results_;
-  }
-
-  auto index(this const EntryFilterMethodContext&) noexcept -> std::size_t
-  {
-    return 0;
   }
 
   auto equity(this const EntryFilterMethodContext& self) noexcept -> double
@@ -91,9 +53,9 @@ private:
   const BacktestAccountState& account_;
   const ModelPerformanceSnapshot& performance_;
   const RequestedOrder& requested_order_;
-  std::vector<double> unused_series_results_;
 };
 
-static_assert(MethodContextable<EntryFilterMethodContext>);
+using EntryFilterNode = ErasedNode<EntryFilterMethodContext>;
+using EntryFilterMethod = ErasedSeriesMethod<EntryFilterMethodContext>;
 
 } // namespace pludux::backtest

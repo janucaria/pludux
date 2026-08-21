@@ -11,6 +11,7 @@ set(PLUDUX_TEST_SOURCES
   src/test_model_session.cpp
   src/test_stop_target_price.cpp
   src/test_entry_filter.cpp
+  src/test_expression_roles.cpp
   src/test_entry_order_sizing.cpp
   src/test_requested_order.cpp
   src/test_position_sizing.cpp

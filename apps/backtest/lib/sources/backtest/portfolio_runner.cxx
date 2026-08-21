@@ -75,7 +75,7 @@ public:
     for(const auto& comparator : entry_comparators) {
       entry_comparators_.push_back(
        EntryComparator{comparator.order(),
-                       node_to_erased_method<ErasedSeriesMethodContext>(
+                       node_to_erased_method<RequestedOrderMethodContext>(
                         comparator.expression(), conversion_context)});
     }
     self_validate_assets();
@@ -281,7 +281,7 @@ public:
 private:
   struct EntryComparator {
     PortfolioEntryComparatorOrder order;
-    ErasedSeriesMethod<ErasedSeriesMethodContext> method;
+    ComparatorMethod method;
   };
 
   struct RankedRequestedOrder {

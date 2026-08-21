@@ -273,7 +273,7 @@ TEST(CommandHistory, UnrelatedEditClearsPartialResultsBeforeRunnerReplacement)
 TEST(CommandHistory, ModelInputSynchronizationIsUndoable)
 {
   auto original_series = pludux::OrderedNamedRegistry<pludux::ErasedNode<
-   pludux::ErasedSeriesMethodContext>>{};
+   pludux::backtest::BacktestMethodContext>>{};
   original_series.set("input", pludux::NumericInputNode{
    "Original", pludux::NumericInputNode::ValueRepresentation::Decimal, 2.5});
   auto state = pludux::apps::ApplicationState{};
@@ -566,15 +566,18 @@ TEST(ApplicationStateSerialization, RoundTripsOrderedPortfolioEntryComparators)
 {
   auto state = ApplicationState{};
   const auto comparators = std::vector<pludux::backtest::PortfolioEntryComparator>{
-   {pludux::MultiplyNode{
+   {pludux::MultiplyNode<pludux::backtest::RequestedOrderMethodContext>{
      pludux::backtest::RequestedOrderDirectionNode{},
-     pludux::DivideNode{
-      pludux::SubtractNode{pludux::backtest::RequestedOrderPriceNode{},
-                           pludux::LookbackNode{pludux::CloseNode{}, 63}},
+     pludux::DivideNode<pludux::backtest::RequestedOrderMethodContext>{
+      pludux::SubtractNode<pludux::backtest::RequestedOrderMethodContext>{
+       pludux::backtest::RequestedOrderPriceNode{},
+                           pludux::LookbackNode<
+                            pludux::backtest::RequestedOrderMethodContext>{
+                            pludux::CloseNode{}, 63}},
       pludux::backtest::RequestedOrderRiskDistanceNode{}}},
     pludux::backtest::PortfolioEntryComparatorOrder::HigherFirst},
-   {pludux::DivideNode{pludux::backtest::RequestedRiskWithFeesNode{},
-                        pludux::ValueNode{2.0}},
+   {pludux::DivideNode<pludux::backtest::RequestedOrderMethodContext>{
+     pludux::backtest::RequestedRiskWithFeesNode{}, pludux::ValueNode{2.0}},
     pludux::backtest::PortfolioEntryComparatorOrder::LowerFirst}};
   auto portfolio = Portfolio{};
   portfolio.entry_comparators(comparators);

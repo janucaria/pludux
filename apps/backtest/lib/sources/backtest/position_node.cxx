@@ -38,6 +38,7 @@ public:
    -> bool = default;
 };
 
+template<typename TContext>
 class PositionRMultipleNode {
 public:
   PositionRMultipleNode()
@@ -45,7 +46,7 @@ public:
   {
   }
 
-  explicit PositionRMultipleNode(ErasedNode<ErasedSeriesMethodContext> source)
+  explicit PositionRMultipleNode(ErasedNode<TContext> source)
   : source_{std::move(source)}
   {
   }
@@ -54,72 +55,74 @@ public:
    -> bool = default;
 
   auto source(this const PositionRMultipleNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<TContext>&
   {
     return self.source_;
   }
 
   void source(this PositionRMultipleNode& self,
-              ErasedNode<ErasedSeriesMethodContext> source) noexcept
+              ErasedNode<TContext> source) noexcept
   {
     self.source_ = std::move(source);
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> source_;
+  ErasedNode<TContext> source_;
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const InitialEntryPriceNode&,
-                       NodeToErasedMethodContext&)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+template<typename TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                        const InitialEntryPriceNode&,
+                        NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
-   InitialEntryPriceMethod{}};
+  return ErasedSeriesMethod<TContext>{InitialEntryPriceMethod{}};
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const LatestEntryPriceNode&,
-                       NodeToErasedMethodContext&)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+template<typename TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                        const LatestEntryPriceNode&,
+                        NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
-   LatestEntryPriceMethod{}};
+  return ErasedSeriesMethod<TContext>{LatestEntryPriceMethod{}};
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const AveragePriceNode&,
-                       NodeToErasedMethodContext&)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+template<typename TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                        const AveragePriceNode&,
+                        NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{AveragePriceMethod{}};
+  return ErasedSeriesMethod<TContext>{AveragePriceMethod{}};
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const StopTargetRefPriceNode&,
-                       NodeToErasedMethodContext&)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+template<typename TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                        const StopTargetRefPriceNode&,
+                        NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
-   StopTargetRefPriceMethod{}};
+  return ErasedSeriesMethod<TContext>{StopTargetRefPriceMethod{}};
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const PositionDirectionNode&,
-                       NodeToErasedMethodContext&)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+template<typename TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                        const PositionDirectionNode&,
+                        NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
-   PositionDirectionMethod{}};
+  return ErasedSeriesMethod<TContext>{PositionDirectionMethod{}};
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const PositionRMultipleNode& node,
-                       NodeToErasedMethodContext& context)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+template<typename TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                        const PositionRMultipleNode<TContext>& node,
+                        NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{PositionRMultipleMethod{
-   node_to_erased_method<ErasedSeriesMethodContext>(node.source(), context)}};
+  return ErasedSeriesMethod<TContext>{PositionRMultipleMethod{
+   node_to_erased_method<TContext>(node.source(), context)}};
 }
 
 } // namespace pludux::backtest

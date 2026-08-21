@@ -31,15 +31,10 @@ public:
   }
 
   void render(this SeriesNodeEditor& self,
-              ErasedNode<ErasedSeriesMethodContext>& node,
+              backtest::ComparatorNode& node,
               WindowContext& context)
   {
-    if(self.catalog_ == SeriesNodeCatalog::PortfolioComparator) {
-      self.renderer_.render_portfolio_comparator_expression(node, context);
-    } else {
-      self.renderer_.render_numeric_expression(
-       node, context, self.available_series_names_, true);
-    }
+    self.renderer_.render_portfolio_comparator_expression(node, context);
   }
 
 private:

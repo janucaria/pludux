@@ -58,7 +58,7 @@ public:
     class SignalExitRule {
     public:
       SignalExitRule(bool enabled = false,
-                     ErasedSeriesMethod<ErasedSeriesMethodContext>
+                     ErasedSeriesMethod<BacktestMethodContext>
                       signal_method = BooleanMethod<false>{},
                      SignalTiming timing = SignalTiming::NextOpen,
                      double reduce = 1.0)
@@ -75,7 +75,7 @@ public:
       }
 
       auto signal_method(this const SignalExitRule& self) noexcept
-       -> const ErasedSeriesMethod<ErasedSeriesMethodContext>&
+       -> const ErasedSeriesMethod<BacktestMethodContext>&
       {
         return self.signal_method_;
       }
@@ -92,14 +92,14 @@ public:
 
     private:
       bool enabled_;
-      ErasedSeriesMethod<ErasedSeriesMethodContext> signal_method_;
+      ErasedSeriesMethod<BacktestMethodContext> signal_method_;
       SignalTiming timing_;
       double reduce_;
     };
 
     class TakeProfitRule {
     public:
-      TakeProfitRule(ErasedSeriesMethod<ErasedSeriesMethodContext>
+      TakeProfitRule(ErasedSeriesMethod<BacktestMethodContext>
                       price_method = OpenMethod{},
                      bool enabled = false,
                      double reduce = 1.0)
@@ -110,7 +110,7 @@ public:
       }
 
       auto price_method(this const TakeProfitRule& self) noexcept
-       -> const ErasedSeriesMethod<ErasedSeriesMethodContext>&
+       -> const ErasedSeriesMethod<BacktestMethodContext>&
       {
         return self.price_method_;
       }
@@ -126,14 +126,14 @@ public:
       }
 
     private:
-      ErasedSeriesMethod<ErasedSeriesMethodContext> price_method_;
+      ErasedSeriesMethod<BacktestMethodContext> price_method_;
       bool enabled_;
       double reduce_;
     };
 
     class StopLossRule {
     public:
-      StopLossRule(ErasedSeriesMethod<ErasedSeriesMethodContext> price_method =
+      StopLossRule(ErasedSeriesMethod<BacktestMethodContext> price_method =
                     SlRMultipleMethod{1.0},
                    bool enabled = true,
                    bool trailing = false,
@@ -146,7 +146,7 @@ public:
       }
 
       auto price_method(this const StopLossRule& self) noexcept
-       -> const ErasedSeriesMethod<ErasedSeriesMethodContext>&
+       -> const ErasedSeriesMethod<BacktestMethodContext>&
       {
         return self.price_method_;
       }
@@ -167,7 +167,7 @@ public:
       }
 
     private:
-      ErasedSeriesMethod<ErasedSeriesMethodContext> price_method_;
+      ErasedSeriesMethod<BacktestMethodContext> price_method_;
       bool enabled_;
       bool trailing_;
       double reduce_;
@@ -176,12 +176,12 @@ public:
     PositionRule() = default;
 
     PositionRule(
-     ErasedSeriesMethod<ErasedSeriesMethodContext> entry_method,
+     ErasedSeriesMethod<BacktestMethodContext> entry_method,
      std::vector<SignalExitRule> signal_exits,
-     ErasedSeriesMethod<ErasedSeriesMethodContext> pyramiding_signal,
+     ErasedSeriesMethod<BacktestMethodContext> pyramiding_signal,
      std::size_t pyramiding_max_layers,
      std::size_t pyramiding_cooldown,
-     ErasedSeriesMethod<ErasedSeriesMethodContext> risk_distance_method,
+     ErasedSeriesMethod<BacktestMethodContext> risk_distance_method,
      std::vector<StopLossRule> stop_losses,
      SignalTiming entry_timing = SignalTiming::CurrentClose,
      SignalTiming pyramiding_timing = SignalTiming::NextOpen,
@@ -215,7 +215,7 @@ public:
     }
 
     auto entry_method(this const PositionRule& self) noexcept
-     -> const ErasedSeriesMethod<ErasedSeriesMethodContext>&
+     -> const ErasedSeriesMethod<BacktestMethodContext>&
     {
       return self.entry_method_;
     }
@@ -227,7 +227,7 @@ public:
     }
 
     auto pyramiding_signal(this const PositionRule& self) noexcept
-     -> const ErasedSeriesMethod<ErasedSeriesMethodContext>&
+     -> const ErasedSeriesMethod<BacktestMethodContext>&
     {
       return self.pyramiding_signal_;
     }
@@ -245,7 +245,7 @@ public:
     }
 
     auto risk_distance_method(this const PositionRule& self) noexcept
-     -> const ErasedSeriesMethod<ErasedSeriesMethodContext>&
+     -> const ErasedSeriesMethod<BacktestMethodContext>&
     {
       return self.risk_distance_method_;
     }
@@ -311,14 +311,14 @@ public:
     }
 
   private:
-    ErasedSeriesMethod<ErasedSeriesMethodContext> entry_method_{
+    ErasedSeriesMethod<BacktestMethodContext> entry_method_{
      BooleanMethod<false>{}};
     std::vector<SignalExitRule> signal_exits_;
-    ErasedSeriesMethod<ErasedSeriesMethodContext> pyramiding_signal_{
+    ErasedSeriesMethod<BacktestMethodContext> pyramiding_signal_{
      BooleanMethod<false>{}};
     std::size_t pyramiding_max_layers_{1};
     std::size_t pyramiding_cooldown_{};
-    ErasedSeriesMethod<ErasedSeriesMethodContext> risk_distance_method_{
+    ErasedSeriesMethod<BacktestMethodContext> risk_distance_method_{
      ValueMethod{1.0}};
     std::vector<StopLossRule> stop_losses_;
     SignalTiming entry_timing_{SignalTiming::CurrentClose};
@@ -338,7 +338,7 @@ public:
   class CompiledStrategy {
   public:
     CompiledStrategy(const Profile& profile,
-          OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>
+          OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>
            series_methods,
           PositionRule long_position,
           PositionRule short_position,
@@ -365,7 +365,7 @@ public:
     PositionSizingMethod position_sizing;
     DrawdownAdjustment drawdown_adjustment;
     InsufficientCashPolicy insufficient_cash_policy;
-    OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>
+    OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>
      series_methods;
     PositionRule long_position;
     PositionRule short_position;
@@ -456,7 +456,7 @@ public:
    const Market& market,
    const Broker& broker,
    const Profile& profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>
     series_methods,
    PositionRule long_position,
    PositionRule short_position,
@@ -901,14 +901,13 @@ public:
   auto evaluate_requested_order(
    this const BacktestRunner& self,
    const RequestedOrderAction& action,
-   const ErasedSeriesMethod<ErasedSeriesMethodContext>& method) noexcept
+   const ComparatorMethod& method) noexcept
    -> double
   {
     return evaluate_series_method(
      method,
      self.requested_order_evaluation_snapshot(action),
-     ErasedSeriesMethodContext{
-      RequestedOrderMethodContext{action.requested_order()}});
+     RequestedOrderMethodContext{action.requested_order()});
   }
 
   void settle_portfolio_account(this BacktestRunner& self) noexcept
@@ -1040,7 +1039,7 @@ private:
     PositionSizingMethod position_sizing;
     DrawdownAdjustment drawdown_adjustment;
     InsufficientCashPolicy insufficient_cash_policy;
-    OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>
+    OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>
      series_methods;
     PositionRule long_position;
     PositionRule short_position;
@@ -1161,7 +1160,7 @@ private:
   std::optional<RequestedOrderAction> discovered_requested_order_;
   std::vector<StrategyTimelineState> current_strategy_timeline_states_;
 
-  OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>
+  OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>
    series_methods_;
 
   PositionRule long_position_;
@@ -1209,11 +1208,9 @@ private:
                     SeriesEvaluationResults& series_evaluation_results)
    -> BacktestMethodContext
   {
-    auto default_context = DefaultMethodContext{self.series_methods_,
-                                                series_evaluation_results,
-                                                self.active_timeline_index_};
-    return BacktestMethodContext{std::move(default_context),
-                                 self.series_methods_,
+    return BacktestMethodContext{self.series_methods_,
+                                 series_evaluation_results,
+                                 self.active_timeline_index_,
                                  self.current_account_state_,
                                  self.pyramiding_layers_};
   }
@@ -1247,7 +1244,7 @@ private:
   auto pyramiding_signal_triggered(this BacktestRunner& self,
                                    const PositionRule& rule,
                                    const AssetSnapshot& snapshot,
-                                   MethodContextable auto context) -> bool
+                                   BacktestMethodContext context) -> bool
   {
     const auto signal = static_cast<bool>(
      evaluate_series_method(rule.pyramiding_signal(), snapshot, context));
@@ -1428,7 +1425,7 @@ private:
    bool is_long,
    double entry_price,
    const AssetSnapshot& evaluation_snapshot,
-   MethodContextable auto context,
+   BacktestMethodContext context,
    double current_drawdown_ratio,
     const ModelPerformanceSnapshot& performance_snapshot,
    PositionSizingDecision& decision) -> std::optional<EntryOrderSizingRequest>
@@ -1615,7 +1612,7 @@ private:
                                  const PositionRule& position,
                                  bool is_pyramiding,
                                  const AssetSnapshot& asset_snapshot,
-                                 MethodContextable auto context)
+                                 BacktestMethodContext context)
   {
     const auto direction = open_position.is_long_direction() ? 1.0 : -1.0;
     const auto initial_entry_price = open_position.entry_price();
@@ -2276,7 +2273,7 @@ private:
                             SignalTiming timing,
                             double price,
                             const AssetSnapshot& snapshot,
-                            MethodContextable auto context,
+                            BacktestMethodContext context,
                             std::optional<bool>& closed_position_is_long)
    -> bool
   {
@@ -2311,7 +2308,7 @@ private:
                              const PositionRule& rule,
                              bool is_pyramiding,
                              const AssetSnapshot& evaluation_snapshot,
-                             MethodContextable auto context)
+                             BacktestMethodContext context)
    -> const ModelIntent&
   {
     if(!is_pyramiding) {
@@ -2370,7 +2367,7 @@ private:
                             bool is_long,
                             double price,
                             const AssetSnapshot& evaluation_snapshot,
-                            MethodContextable auto context,
+                            BacktestMethodContext context,
                             double current_drawdown_ratio) -> bool
   {
     const auto& rule = is_long ? self.long_position_ : self.short_position_;
@@ -2505,7 +2502,7 @@ private:
   auto execute_pyramiding_action(this BacktestRunner& self,
                                  double price,
                                  const AssetSnapshot& evaluation_snapshot,
-                                 MethodContextable auto context) -> bool
+                                 BacktestMethodContext context) -> bool
   {
     if(!self.strategy_trade_session_.open_position()) {
       return false;
@@ -2593,7 +2590,7 @@ private:
   void execute_pending_entry(this BacktestRunner& self,
                              double price,
                              const AssetSnapshot& evaluation_snapshot,
-                             MethodContextable auto context,
+                             BacktestMethodContext context,
                              double current_drawdown_ratio,
                              std::optional<bool> closed_position_is_long)
   {
@@ -2613,7 +2610,7 @@ private:
   void execute_current_close_entry(this BacktestRunner& self,
                                    double price,
                                    const AssetSnapshot& snapshot,
-                                   MethodContextable auto context,
+                                   BacktestMethodContext context,
                                    double current_drawdown_ratio,
                                    std::optional<bool> closed_position_is_long)
   {
@@ -2637,7 +2634,7 @@ private:
 
   void schedule_next_open_actions(this BacktestRunner& self,
                                   const AssetSnapshot& snapshot,
-                                  MethodContextable auto context)
+                                  BacktestMethodContext context)
   {
     self.pending_entries_[0] =
      self.long_position_.entry_timing() == SignalTiming::NextOpen &&

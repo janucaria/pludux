@@ -238,9 +238,11 @@ auto parse_model_position(const jsoncons::ojson& position_json,
      "explicit method object"};
   }
   auto risk_distance = config_parser.parse_node(risk_distance_json);
-  if(!node_cast<RiskDistanceAmountNode>(risk_distance) &&
-     !node_cast<RiskDistancePercentNode>(risk_distance) &&
-     !node_cast<RiskDistanceAtrNode>(risk_distance)) {
+  if(!node_cast<RiskDistanceAmountNode<BacktestMethodContext>>(
+       risk_distance) &&
+     !node_cast<RiskDistancePercentNode<BacktestMethodContext>>(
+      risk_distance) &&
+     !node_cast<RiskDistanceAtrNode<BacktestMethodContext>>(risk_distance)) {
     throw std::runtime_error{
      "Invalid riskDistance configuration in strategy JSON: expected an "
      "R_DISTANCE_* method"};
@@ -384,7 +386,7 @@ auto parse_model_config_json(std::string_view model_name,
                              const jsoncons::ojson& model_json)
  -> backtest::Model
 {
-  auto config_parser = make_default_registered_config_parser();
+  auto config_parser = make_backtest_model_config_parser();
 
   if(!model_json.is_object()) {
     throw std::runtime_error(
@@ -409,8 +411,7 @@ auto parse_model_config_json(std::string_view model_name,
   const auto intrabar_path = parse_intrabar_path(
     model_json.at("execution").at("intrabarPath").as<std::string>());
 
-  auto series_nodes =
-   OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>{};
+  auto series_nodes = OrderedNamedRegistry<ModelNode>{};
   if(model_json.contains("series")) {
     const auto& series_json = model_json.at("series");
     for(const auto& [series_name, series_config] : series_json.object_range()) {
@@ -486,7 +487,7 @@ auto parse_model(std::string_view model_name, const std::string& json_model)
 auto serialize_model_config_json(const backtest::Model& model)
  -> jsoncons::ojson
 {
-  auto config_parser = make_default_registered_config_parser();
+  auto config_parser = make_backtest_model_config_parser();
 
   auto model_json = jsoncons::ojson{};
 

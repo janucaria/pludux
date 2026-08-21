@@ -374,11 +374,11 @@ private:
 
       auto input_context = NodeToErasedMethodContext{input_values};
       auto series_methods =
-       OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+       OrderedNamedRegistry<ErasedSeriesMethod<backtest::BacktestMethodContext>>{};
       for(const auto& [series_name, series_node] :
            model_ptr->series_nodes()) {
         series_methods.set(series_name,
-                           node_to_erased_method<ErasedSeriesMethodContext>(
+                           node_to_erased_method<backtest::BacktestMethodContext>(
                             series_node, input_context));
       }
 
@@ -390,7 +390,7 @@ private:
          for(const auto& exit : position.exits()) {
            signal_exits.emplace_back(
             exit.enabled(),
-            node_to_erased_method<ErasedSeriesMethodContext>(exit.signal(),
+            node_to_erased_method<backtest::BacktestMethodContext>(exit.signal(),
                                                              input_context),
             exit.timing(),
             exit.reduce());
@@ -400,7 +400,7 @@ private:
          take_profits.reserve(position.take_profits().size());
          for(const auto& take_profit : position.take_profits()) {
            take_profits.emplace_back(
-            node_to_erased_method<ErasedSeriesMethodContext>(
+            node_to_erased_method<backtest::BacktestMethodContext>(
              take_profit.target_price(), input_context),
             take_profit.enabled(),
             take_profit.reduce());
@@ -410,21 +410,21 @@ private:
          stop_losses.reserve(position.stop_losses().size());
          for(const auto& stop_loss : position.stop_losses()) {
            stop_losses.emplace_back(
-            node_to_erased_method<ErasedSeriesMethodContext>(
+            node_to_erased_method<backtest::BacktestMethodContext>(
              stop_loss.stop_price(), input_context),
             stop_loss.enabled(),
             stop_loss.trailing(),
             stop_loss.reduce());
          }
          return backtest::BacktestRunner::PositionRule{
-          node_to_erased_method<ErasedSeriesMethodContext>(
+          node_to_erased_method<backtest::BacktestMethodContext>(
            position.entry().signal(), input_context),
           std::move(signal_exits),
-          node_to_erased_method<ErasedSeriesMethodContext>(
+          node_to_erased_method<backtest::BacktestMethodContext>(
            position.pyramiding().signal(), input_context),
           position.pyramiding().max_layers(),
           position.pyramiding().cooldown(),
-          node_to_erased_method<ErasedSeriesMethodContext>(
+          node_to_erased_method<backtest::BacktestMethodContext>(
            position.risk_distance(), input_context),
           std::move(stop_losses),
           position.entry().timing(),

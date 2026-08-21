@@ -377,7 +377,7 @@ template<typename TMethod>
 auto pludux_tag_invoke(EvaluateSeriesMethod,
                        const SlAmountMethod<TMethod>& method,
                        AssetSnapshot asset_snapshot,
-                       MethodContextable auto context) noexcept -> double
+                       BacktestMethodContext context) noexcept -> double
 {
   const auto amount =
    evaluate_series_method(method.amount(), asset_snapshot, context);
@@ -391,7 +391,7 @@ template<typename TMethod>
 auto pludux_tag_invoke(EvaluateSeriesMethod,
                        const TpAmountMethod<TMethod>& method,
                        AssetSnapshot asset_snapshot,
-                       MethodContextable auto context) noexcept -> double
+                       BacktestMethodContext context) noexcept -> double
 {
   const auto amount =
    evaluate_series_method(method.amount(), asset_snapshot, context);
@@ -405,7 +405,7 @@ template<typename TMethod>
 auto pludux_tag_invoke(EvaluateSeriesMethod,
                        const SlPercentMethod<TMethod>& method,
                        AssetSnapshot asset_snapshot,
-                       MethodContextable auto context) noexcept -> double
+                       BacktestMethodContext context) noexcept -> double
 {
   const auto reference_price = backtest_position_reference_price(context);
   const auto percent =
@@ -420,7 +420,7 @@ template<typename TMethod>
 auto pludux_tag_invoke(EvaluateSeriesMethod,
                        const TpPercentMethod<TMethod>& method,
                        AssetSnapshot asset_snapshot,
-                       MethodContextable auto context) noexcept -> double
+                       BacktestMethodContext context) noexcept -> double
 {
   const auto reference_price = backtest_position_reference_price(context);
   const auto percent =
@@ -436,7 +436,7 @@ auto pludux_tag_invoke(
  EvaluateSeriesMethod,
  const SlAtrMethod<TPeriodMethod, TMultiplierMethod>& method,
  AssetSnapshot asset_snapshot,
- MethodContextable auto context) noexcept -> double
+ BacktestMethodContext context) noexcept -> double
 {
   const auto atr = evaluate_series_method(
    AtrMethod{method.period(), method.ma_smoothing_type()},
@@ -455,7 +455,7 @@ auto pludux_tag_invoke(
  EvaluateSeriesMethod,
  const TpAtrMethod<TPeriodMethod, TMultiplierMethod>& method,
  AssetSnapshot asset_snapshot,
- MethodContextable auto context) noexcept -> double
+ BacktestMethodContext context) noexcept -> double
 {
   const auto atr = evaluate_series_method(
    AtrMethod{method.period(), method.ma_smoothing_type()},
@@ -473,7 +473,7 @@ template<typename TMethod>
 auto pludux_tag_invoke(EvaluateSeriesMethod,
                        const SlRMultipleMethod<TMethod>& method,
                        AssetSnapshot asset_snapshot,
-                       MethodContextable auto context) noexcept -> double
+                       BacktestMethodContext context) noexcept -> double
 {
   const auto risk_distance = backtest_position_risk_distance(context);
   const auto multiple =
@@ -492,7 +492,7 @@ template<typename TMethod>
 auto pludux_tag_invoke(EvaluateSeriesMethod,
                        const TpRMultipleMethod<TMethod>& method,
                        AssetSnapshot asset_snapshot,
-                       MethodContextable auto context) noexcept -> double
+                       BacktestMethodContext context) noexcept -> double
 {
   const auto risk_distance = backtest_position_risk_distance(context);
   const auto multiple =

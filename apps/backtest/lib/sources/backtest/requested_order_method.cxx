@@ -63,31 +63,17 @@ auto hash_series_method(const RequestedOrderValueMethod& method) noexcept
   return seed;
 }
 
+template<typename TContext>
+  requires requires(TContext context) { context.requested_order(); }
 auto pludux_tag_invoke(EvaluateSeriesMethod,
                        const RequestedOrderValueMethod& method,
                        AssetSnapshot,
-                       MethodContextable auto context) noexcept -> double
+                       TContext context) noexcept -> double
 {
   const auto unavailable = [] {
     return std::numeric_limits<double>::quiet_NaN();
   };
-  const auto* order = [&] {
-    if constexpr(requires { context.requested_order(); }) {
-      return &context.requested_order();
-    } else if constexpr(std::is_same_v<std::remove_cvref_t<decltype(context)>,
-                                       ErasedSeriesMethodContext>) {
-      const auto* requested_order_context =
-       series_method_context_cast<RequestedOrderMethodContext>(context);
-      return requested_order_context
-              ? &requested_order_context->requested_order()
-              : static_cast<const RequestedOrder*>(nullptr);
-    } else {
-      return static_cast<const RequestedOrder*>(nullptr);
-    }
-  }();
-  if(!order) {
-    return unavailable();
-  }
+  const auto* order = &context.requested_order();
   switch(method.value()) {
   case RequestedOrderValue::Price:
     return order->price();

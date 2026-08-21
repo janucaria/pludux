@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <concepts>
 #include <optional>
 #include <stdexcept>
 #include <vector>
@@ -150,29 +151,31 @@ TEST(RequestedOrderNode, ConvertsForRequestedOrderContext)
 TEST(RequestedOrderNode, CombinesOrderValuesWithBasicMath)
 {
   auto conversion_context = NodeToErasedMethodContext{};
-  const auto method = node_to_erased_method<ErasedSeriesMethodContext>(
-   DivideNode{AddNode{RequestedNotionalNode{}, RequestedPriceRiskNode{}},
-              ValueNode{2.0}},
+  const auto method = node_to_erased_method<RequestedOrderMethodContext>(
+   DivideNode<RequestedOrderMethodContext>{
+    AddNode<RequestedOrderMethodContext>{RequestedNotionalNode{},
+                                         RequestedPriceRiskNode{}},
+    ValueNode{2.0}},
    conversion_context);
   const auto order = make_initial_order();
 
   EXPECT_DOUBLE_EQ(evaluate_series_method(method,
                                           make_snapshot(),
-                                          ErasedSeriesMethodContext{
+                                          RequestedOrderMethodContext{
                                            RequestedOrderMethodContext{order}}),
                    420.0);
 }
 
 TEST(RequestedOrderNode, ComparatorParserRoundTripsAllowedNodes)
 {
-  const auto nodes = std::vector<ErasedNode<ErasedSeriesMethodContext>>{
+  const auto nodes = std::vector<ErasedNode<RequestedOrderMethodContext>>{
    OpenNode{},
    HighNode{},
    LowNode{},
    CloseNode{},
    VolumeNode{},
    DataNode{"StrengthSource"},
-   LookbackNode{CloseNode{}, 2},
+    LookbackNode<RequestedOrderMethodContext>{CloseNode{}, 2},
    RequestedOrderPriceNode{},
    RequestedOrderDirectionNode{},
    IsPyramidingOrderNode{},
@@ -189,7 +192,7 @@ TEST(RequestedOrderNode, ComparatorParserRoundTripsAllowedNodes)
    RequestedPriceRiskNode{},
    RequestedRiskWithFeesNode{},
    FrozenUnitQuantityNode{}};
-  auto parser = make_portfolio_entry_comparator_config_parser();
+  auto parser = make_requested_order_comparator_config_parser();
 
   for(const auto& node : nodes) {
     const auto json = parser.serialize_node(node);
@@ -201,20 +204,23 @@ TEST(RequestedOrderNode, ComparatorParserRoundTripsAllowedNodes)
 TEST(RequestedOrderNode, CombinesRequestedOrderAndAssetHistory)
 {
   const auto expression =
-   MultiplyNode{RequestedOrderDirectionNode{},
-                DivideNode{SubtractNode{RequestedOrderPriceNode{},
-                                        LookbackNode{CloseNode{}, 2}},
-                           RequestedOrderRiskDistanceNode{}}};
+   MultiplyNode<RequestedOrderMethodContext>{
+    RequestedOrderDirectionNode{},
+    DivideNode<RequestedOrderMethodContext>{
+     SubtractNode<RequestedOrderMethodContext>{
+      RequestedOrderPriceNode{},
+      LookbackNode<RequestedOrderMethodContext>{CloseNode{}, 2}},
+     RequestedOrderRiskDistanceNode{}}};
   const auto comparator = PortfolioEntryComparator{
    expression, PortfolioEntryComparatorOrder::HigherFirst};
   auto conversion_context = NodeToErasedMethodContext{};
-  const auto method = node_to_erased_method<ErasedSeriesMethodContext>(
+  const auto method = node_to_erased_method<RequestedOrderMethodContext>(
    comparator.expression(), conversion_context);
   const auto order = make_initial_order();
 
   EXPECT_DOUBLE_EQ(evaluate_series_method(method,
                                           make_history_snapshot(),
-                                          ErasedSeriesMethodContext{
+                                          RequestedOrderMethodContext{
                                            RequestedOrderMethodContext{order}}),
                    6.0);
 }
@@ -222,25 +228,24 @@ TEST(RequestedOrderNode, CombinesRequestedOrderAndAssetHistory)
 TEST(RequestedOrderNode, MissingLookbackHistoryProducesNonFiniteScore)
 {
   auto conversion_context = NodeToErasedMethodContext{};
-  const auto method = node_to_erased_method<ErasedSeriesMethodContext>(
-   LookbackNode{CloseNode{}, 1}, conversion_context);
+  const auto method = node_to_erased_method<RequestedOrderMethodContext>(
+    LookbackNode<RequestedOrderMethodContext>{CloseNode{}, 1},
+    conversion_context);
   const auto order = make_initial_order();
 
   EXPECT_TRUE(std::isnan(evaluate_series_method(
    method,
    make_snapshot(),
-   ErasedSeriesMethodContext{RequestedOrderMethodContext{order}})));
+   RequestedOrderMethodContext{RequestedOrderMethodContext{order}})));
 }
 
 TEST(RequestedOrderNode, RejectsNamedSeriesAndIndicatorExpressions)
 {
-  EXPECT_THROW(
-   (PortfolioEntryComparator{SeriesNode{"Strength"},
-                             PortfolioEntryComparatorOrder::HigherFirst}),
-   std::invalid_argument);
-  EXPECT_THROW((PortfolioEntryComparator{
-                AtrNode{20}, PortfolioEntryComparatorOrder::HigherFirst}),
-               std::invalid_argument);
+  static_assert(!std::constructible_from<ComparatorNode, SeriesNode>);
+  static_assert(!std::constructible_from<
+                ComparatorNode,
+                AtrNode<RequestedOrderMethodContext>>);
+  SUCCEED();
 }
 
 } // namespace pludux::backtest::tests

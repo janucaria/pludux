@@ -5,6 +5,7 @@ module;
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <variant>
 
 export module pludux:nodes.bb_node;
 
@@ -17,6 +18,7 @@ import :ma_node_type;
 
 export namespace pludux {
 
+template<typename TContext = std::monostate>
 class BbNode {
 public:
   BbNode()
@@ -29,7 +31,7 @@ public:
   {
   }
 
-  BbNode(ErasedNode<ErasedSeriesMethodContext> source,
+   BbNode(ErasedNode<TContext> source,
          std::size_t period,
          double stddev,
          MaNodeType ma_node_type = MaNodeType::Sma)
@@ -40,9 +42,9 @@ public:
   {
   }
 
-  BbNode(ErasedNode<ErasedSeriesMethodContext> source,
-         ErasedNode<ErasedSeriesMethodContext> period,
-         ErasedNode<ErasedSeriesMethodContext> stddev,
+   BbNode(ErasedNode<TContext> source,
+          ErasedNode<TContext> period,
+          ErasedNode<TContext> stddev,
          MaNodeType ma_node_type = MaNodeType::Sma)
   : source_{std::move(source)}
   , period_{std::move(period)}
@@ -53,14 +55,13 @@ public:
 
   auto operator==(const BbNode& other) const noexcept -> bool = default;
 
-  auto source(this const BbNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   auto source(this const BbNode& self) noexcept
+    -> const ErasedNode<TContext>&
   {
     return self.source_;
   }
 
-  void source(this BbNode& self,
-              ErasedNode<ErasedSeriesMethodContext> source) noexcept
+   void source(this BbNode& self, ErasedNode<TContext> source) noexcept
   {
     self.source_ = std::move(source);
   }
@@ -75,8 +76,8 @@ public:
     self.ma_node_type_ = ma_node_type;
   }
 
-  auto period(this const BbNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   auto period(this const BbNode& self) noexcept
+    -> const ErasedNode<TContext>&
   {
     return self.period_;
   }
@@ -86,14 +87,13 @@ public:
     self.period_ = ValueNode{static_cast<double>(new_period)};
   }
 
-  void period(this BbNode& self,
-              ErasedNode<ErasedSeriesMethodContext> period) noexcept
+   void period(this BbNode& self, ErasedNode<TContext> period) noexcept
   {
     self.period_ = std::move(period);
   }
 
-  auto stddev(this const BbNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   auto stddev(this const BbNode& self) noexcept
+    -> const ErasedNode<TContext>&
   {
     return self.stddev_;
   }
@@ -103,22 +103,21 @@ public:
     self.stddev_ = ValueNode{new_stddev};
   }
 
-  void stddev(this BbNode& self,
-              ErasedNode<ErasedSeriesMethodContext> stddev) noexcept
+   void stddev(this BbNode& self, ErasedNode<TContext> stddev) noexcept
   {
     self.stddev_ = std::move(stddev);
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> source_;
-  ErasedNode<ErasedSeriesMethodContext> period_;
-  ErasedNode<ErasedSeriesMethodContext> stddev_;
+   ErasedNode<TContext> source_;
+   ErasedNode<TContext> period_;
+   ErasedNode<TContext> stddev_;
   MaNodeType ma_node_type_;
 };
 
-template<MethodContextable TContext>
+template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
-                       const BbNode& node,
+                        const BbNode<TContext>& node,
                        NodeToErasedMethodContext& context)
  -> ErasedSeriesMethod<TContext>
 {

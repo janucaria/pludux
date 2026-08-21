@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 #include <limits>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -85,20 +86,20 @@ TEST(IntrabarPathTest, DojiVisitsNearestExtremeAndBreaksTieLowFirst)
 }
 
 auto make_position_rule(
- ErasedSeriesMethod<ErasedSeriesMethodContext> entry_method,
- ErasedSeriesMethod<ErasedSeriesMethodContext> exit_method,
- ErasedSeriesMethod<ErasedSeriesMethodContext> pyramiding_signal,
+ ErasedSeriesMethod<BacktestMethodContext> entry_method,
+ ErasedSeriesMethod<BacktestMethodContext> exit_method,
+ ErasedSeriesMethod<BacktestMethodContext> pyramiding_signal,
  std::size_t pyramiding_max_layers,
- ErasedSeriesMethod<ErasedSeriesMethodContext> stop_price_method,
+ ErasedSeriesMethod<BacktestMethodContext> stop_price_method,
  bool stop_loss_enabled,
  bool stop_loss_trailing_enabled,
  std::size_t entry_signal_delay = 1,
- ErasedSeriesMethod<ErasedSeriesMethodContext> entry_price_method =
+ ErasedSeriesMethod<BacktestMethodContext> entry_price_method =
   OpenMethod{},
  std::size_t exit_signal_delay = 1,
- ErasedSeriesMethod<ErasedSeriesMethodContext> exit_price_method = OpenMethod{},
+ ErasedSeriesMethod<BacktestMethodContext> exit_price_method = OpenMethod{},
  std::size_t pyramiding_signal_delay = 1,
- ErasedSeriesMethod<ErasedSeriesMethodContext> pyramiding_price_method =
+ ErasedSeriesMethod<BacktestMethodContext> pyramiding_price_method =
   OpenMethod{},
  StopTargetReferencePrice favorable_stop_target_reference =
   StopTargetReferencePrice::AveragePrice,
@@ -107,7 +108,7 @@ auto make_position_rule(
  double signal_exit_reduce = 1.0,
  double stop_loss_reduce = 1.0,
  std::vector<BacktestRunner::PositionRule::TakeProfitRule> take_profits = {},
- ErasedSeriesMethod<ErasedSeriesMethodContext> risk_distance_method =
+ ErasedSeriesMethod<BacktestMethodContext> risk_distance_method =
   ValueMethod{10.0},
  PyramidingRetrigger pyramiding_retrigger =
   PyramidingRetrigger::EveryEvaluation,
@@ -227,7 +228,7 @@ auto latest_closed_trade(const BacktestTimeline& timeline) -> const ClosedTrade&
 }
 
 auto single_take_profit(
- ErasedSeriesMethod<ErasedSeriesMethodContext> target_price,
+ ErasedSeriesMethod<BacktestMethodContext> target_price,
  bool enabled,
  double reduce = 1.0)
  -> std::vector<BacktestRunner::PositionRule::TakeProfitRule>
@@ -238,7 +239,7 @@ auto single_take_profit(
   return take_profits;
 }
 
-auto single_stop_loss(ErasedSeriesMethod<ErasedSeriesMethodContext> stop_price,
+auto single_stop_loss(ErasedSeriesMethod<BacktestMethodContext> stop_price,
                       bool enabled,
                       bool trailing = false,
                       double reduce = 1.0)
@@ -250,25 +251,25 @@ auto single_stop_loss(ErasedSeriesMethod<ErasedSeriesMethodContext> stop_price,
 }
 
 auto make_position_rule(
- ErasedSeriesMethod<ErasedSeriesMethodContext> entry_method,
- ErasedSeriesMethod<ErasedSeriesMethodContext> exit_method,
- ErasedSeriesMethod<ErasedSeriesMethodContext> pyramiding_signal,
+ ErasedSeriesMethod<BacktestMethodContext> entry_method,
+ ErasedSeriesMethod<BacktestMethodContext> exit_method,
+ ErasedSeriesMethod<BacktestMethodContext> pyramiding_signal,
  std::size_t pyramiding_max_layers,
- ErasedSeriesMethod<ErasedSeriesMethodContext> stop_price_method,
+ ErasedSeriesMethod<BacktestMethodContext> stop_price_method,
  bool stop_loss_enabled,
  bool stop_loss_trailing_enabled,
  std::size_t entry_signal_delay,
- ErasedSeriesMethod<ErasedSeriesMethodContext> entry_price_method,
+ ErasedSeriesMethod<BacktestMethodContext> entry_price_method,
  std::size_t exit_signal_delay,
- ErasedSeriesMethod<ErasedSeriesMethodContext> exit_price_method,
+ ErasedSeriesMethod<BacktestMethodContext> exit_price_method,
  std::size_t pyramiding_signal_delay,
- ErasedSeriesMethod<ErasedSeriesMethodContext> pyramiding_price_method,
+ ErasedSeriesMethod<BacktestMethodContext> pyramiding_price_method,
  StopTargetReferencePrice favorable_stop_target_reference,
  StopTargetReferencePrice unfavorable_stop_target_reference,
  double signal_exit_reduce,
  double stop_loss_reduce,
  std::vector<BacktestRunner::PositionRule::TakeProfitRule> take_profits,
- ErasedSeriesMethod<ErasedSeriesMethodContext> risk_distance_method,
+ ErasedSeriesMethod<BacktestMethodContext> risk_distance_method,
  PyramidingRetrigger pyramiding_retrigger,
  std::size_t pyramiding_cooldown) -> BacktestRunner::PositionRule
 {
@@ -304,12 +305,12 @@ auto make_position_rule(
 }
 
 auto make_position_rule_with_risk_distance(
- ErasedSeriesMethod<ErasedSeriesMethodContext> entry_method,
- ErasedSeriesMethod<ErasedSeriesMethodContext> exit_method,
- ErasedSeriesMethod<ErasedSeriesMethodContext> pyramiding_signal,
+ ErasedSeriesMethod<BacktestMethodContext> entry_method,
+ ErasedSeriesMethod<BacktestMethodContext> exit_method,
+ ErasedSeriesMethod<BacktestMethodContext> pyramiding_signal,
  std::size_t pyramiding_max_layers,
- ErasedSeriesMethod<ErasedSeriesMethodContext> risk_distance_method,
- ErasedSeriesMethod<ErasedSeriesMethodContext> stop_price_method,
+ ErasedSeriesMethod<BacktestMethodContext> risk_distance_method,
+ ErasedSeriesMethod<BacktestMethodContext> stop_price_method,
  bool stop_loss_enabled,
  bool stop_loss_trailing_enabled) -> BacktestRunner::PositionRule
 {
@@ -457,7 +458,7 @@ TEST(BacktestRunnerSetupTest, EntryFilteredMainFallsThroughToFirstFailsafe)
    auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    main_profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
@@ -465,7 +466,7 @@ TEST(BacktestRunnerSetupTest, EntryFilteredMainFallsThroughToFirstFailsafe)
    BooleanMethod<false>{});
   setups.emplace_back(
    failsafe_profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
@@ -498,6 +499,93 @@ TEST(BacktestRunnerSetupTest, EntryFilteredMainFallsThroughToFirstFailsafe)
    EXPECT_FALSE(timeline.strategy_state(0, 1).entry_filtered_position);
 }
 
+TEST(BacktestRunnerSetupTest,
+     SharedModelCompilesPerStrategyWithIsolatedNestedSeriesHistories)
+{
+  using Context = BacktestMethodContext;
+  auto series_nodes = OrderedNamedRegistry<ModelNode>{};
+  series_nodes.set(
+   "base",
+   NumericInputNode{
+    "Base", NumericInputNode::ValueRepresentation::Decimal, 0.0});
+  series_nodes.set(
+   "nested",
+   AddNode<Context>{SeriesNode{"base"}, ValueNode{1.0}});
+  auto long_position = Model::Position{};
+  long_position.entry(Model::Entry{
+   GreaterThanNode<Context>{SeriesNode{"nested"}, ValueNode{5.0}},
+   SignalTiming::CurrentClose});
+  const auto shared_model = Model{"Shared",
+                                  std::move(series_nodes),
+                                  std::move(long_position),
+                                  Model::Position{},
+                                  {}};
+
+  const auto profile =
+   Profile{"Test", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  const auto compile_strategy = [&shared_model, &profile](double input) {
+    const auto inputs = std::vector{input};
+    auto conversion_context = NodeToErasedMethodContext{inputs};
+    auto series_methods = ModelMethodRegistry{};
+    for(const auto& [name, node] : shared_model.series_nodes()) {
+      series_methods.set(name,
+                         node_to_erased_method<Context>(node,
+                                                        conversion_context));
+    }
+    const auto entry_method = node_to_erased_method<Context>(
+     shared_model.long_position().entry().signal(), conversion_context);
+    return BacktestRunner::CompiledStrategy{
+     profile,
+     std::move(series_methods),
+     make_position_rule(entry_method,
+                        BooleanMethod<false>{},
+                        BooleanMethod<false>{},
+                        1,
+                        ValueMethod{NAN},
+                        false,
+                        false),
+     BacktestRunner::PositionRule{}};
+  };
+
+  const auto asset = Asset{
+   "Test",
+   AssetHistory{{"Datetime", {1.0, 2.0, 3.0}},
+                {"Open", {100.0, 100.0, 100.0}},
+                {"High", {100.0, 100.0, 100.0}},
+                {"Low", {100.0, 100.0, 100.0}},
+                {"Close", {100.0, 100.0, 100.0}},
+                {"Volume", {0.0, 0.0, 0.0}}}};
+  const auto market = Market{"Test", 0.0, 0.0};
+  const auto broker = Broker{"Test"};
+  auto strategies = std::vector<BacktestRunner::CompiledStrategy>{};
+  strategies.emplace_back(compile_strategy(2.0));
+  strategies.emplace_back(compile_strategy(7.0));
+  auto runner =
+   BacktestRunner{asset, market, broker, std::move(strategies), 1'000.0};
+  auto setup_results = std::vector<SeriesEvaluationResults>(2);
+  auto timeline = BacktestTimeline{};
+
+  runner.run(setup_results, timeline);
+  runner.run(setup_results, timeline);
+  runner.run(setup_results, timeline);
+
+  const auto first_base =
+   setup_results[0].results(std::string{"base"});
+  const auto first_nested =
+   setup_results[0].results(std::string{"nested"});
+  const auto second_base =
+   setup_results[1].results(std::string{"base"});
+  const auto second_nested =
+   setup_results[1].results(std::string{"nested"});
+  ASSERT_TRUE(first_base && first_nested && second_base && second_nested);
+  EXPECT_EQ(first_base->get(), (std::vector<double>{2.0, 2.0, 2.0}));
+  EXPECT_EQ(first_nested->get(), (std::vector<double>{3.0, 3.0, 3.0}));
+  EXPECT_EQ(second_base->get(), (std::vector<double>{7.0, 7.0, 7.0}));
+  EXPECT_EQ(second_nested->get(), (std::vector<double>{8.0, 8.0, 8.0}));
+  ASSERT_EQ(timeline.trade_events(0).size(), 1U);
+  EXPECT_EQ(timeline.trade_events(0).front().strategy_index(), 1U);
+}
+
 TEST(BacktestRunnerSetupTest, FailsafeUsesItsProfileDrawdownAdjustment)
 {
   const auto asset = make_single_bar_asset();
@@ -521,7 +609,7 @@ TEST(BacktestRunnerSetupTest, FailsafeUsesItsProfileDrawdownAdjustment)
    auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    main_profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
@@ -529,7 +617,7 @@ TEST(BacktestRunnerSetupTest, FailsafeUsesItsProfileDrawdownAdjustment)
    BooleanMethod<false>{});
   setups.emplace_back(
    failsafe_profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
@@ -575,7 +663,7 @@ TEST(BacktestRunnerSetupTest, FailsafeUsesItsProfileCashPolicy)
    auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    main_profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
@@ -583,7 +671,7 @@ TEST(BacktestRunnerSetupTest, FailsafeUsesItsProfileCashPolicy)
    BooleanMethod<false>{});
   setups.emplace_back(
    failsafe_profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
@@ -637,7 +725,7 @@ TEST(BacktestRunnerSetupTest,
    auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    BacktestRunner::PositionRule{EqualMethod{CloseMethod{}, ValueMethod{100.0}},
                                 std::move(main_exits),
                                 BooleanMethod<false>{},
@@ -651,7 +739,7 @@ TEST(BacktestRunnerSetupTest,
    BooleanMethod<false>{});
   setups.emplace_back(
    profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    make_entry_rule(120.0),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
@@ -694,7 +782,7 @@ TEST(BacktestRunnerSetupTest,
    auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    make_position_rule_with_risk_distance(
     EqualMethod{CloseMethod{}, ValueMethod{100.0}},
     EqualMethod{CloseMethod{}, ValueMethod{110.0}},
@@ -710,7 +798,7 @@ TEST(BacktestRunnerSetupTest,
    BooleanMethod<false>{});
   setups.emplace_back(
    profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    make_position_rule(EqualMethod{CloseMethod{}, ValueMethod{120.0}},
                       BooleanMethod<false>{},
                       BooleanMethod<false>{},
@@ -763,7 +851,7 @@ TEST(BacktestRunnerSetupTest,
    auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    make_entry_rule(110.0),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
@@ -771,7 +859,7 @@ TEST(BacktestRunnerSetupTest,
    BooleanMethod<false>{});
   setups.emplace_back(
    profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    make_entry_rule(100.0),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
@@ -815,7 +903,7 @@ TEST(BacktestRunnerSetupTest,
    auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
@@ -823,7 +911,7 @@ TEST(BacktestRunnerSetupTest,
    BooleanMethod<false>{});
   setups.emplace_back(
    profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
@@ -832,7 +920,7 @@ TEST(BacktestRunnerSetupTest,
     FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
   setups.emplace_back(
    profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
@@ -874,7 +962,7 @@ TEST(BacktestRunnerSetupTest,
    auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
@@ -882,7 +970,7 @@ TEST(BacktestRunnerSetupTest,
    BooleanMethod<false>{});
   setups.emplace_back(
    profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
@@ -912,8 +1000,8 @@ TEST(BacktestRunnerSetupTest, MainWithoutSignalAllowsFailsafeEntry)
   const auto make_rule = [](bool signal) {
     auto entry =
      signal
-      ? ErasedSeriesMethod<ErasedSeriesMethodContext>{BooleanMethod<true>{}}
-      : ErasedSeriesMethod<ErasedSeriesMethodContext>{BooleanMethod<false>{}};
+      ? ErasedSeriesMethod<BacktestMethodContext>{BooleanMethod<true>{}}
+      : ErasedSeriesMethod<BacktestMethodContext>{BooleanMethod<false>{}};
     return make_position_rule(std::move(entry),
                               BooleanMethod<false>{},
                               BooleanMethod<false>{},
@@ -925,12 +1013,12 @@ TEST(BacktestRunnerSetupTest, MainWithoutSignalAllowsFailsafeEntry)
    auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    make_rule(false),
    BacktestRunner::PositionRule{});
   setups.emplace_back(
    profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    make_rule(true),
    BacktestRunner::PositionRule{});
   auto runner =
@@ -969,12 +1057,12 @@ TEST(BacktestRunnerSetupTest, AcceptedSizingRejectionStopsFallbackChain)
    auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    main_profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{});
   setups.emplace_back(
    failsafe_profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{});
   auto runner =
@@ -1016,12 +1104,12 @@ TEST(BacktestRunnerSetupTest, PreFilterSizingFailureStopsFallbackChain)
    auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    main_profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{});
   setups.emplace_back(
    failsafe_profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
@@ -1069,7 +1157,7 @@ TEST(BacktestRunnerSetupTest, OnlyOwningSetupCanExitSharedExecution)
    auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    make_rule(true),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
@@ -1077,7 +1165,7 @@ TEST(BacktestRunnerSetupTest, OnlyOwningSetupCanExitSharedExecution)
    BooleanMethod<false>{});
   setups.emplace_back(
    profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    make_rule(false),
    BacktestRunner::PositionRule{});
   auto runner =
@@ -1119,7 +1207,7 @@ TEST(BacktestRunnerSetupTest, OnlyOwningSetupCanPyramidSharedExecution)
    auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
   setups.emplace_back(
    profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    make_rule(),
    BacktestRunner::PositionRule{},
    IntrabarPath::CandleDirection,
@@ -1127,7 +1215,7 @@ TEST(BacktestRunnerSetupTest, OnlyOwningSetupCanPyramidSharedExecution)
    BooleanMethod<false>{});
   setups.emplace_back(
    profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{},
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    make_rule(),
    BacktestRunner::PositionRule{});
   auto runner =
@@ -1220,7 +1308,7 @@ TEST(BacktestRunnerTest,
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
 
   auto runner = BacktestRunner{asset,
@@ -1378,7 +1466,7 @@ TEST(BacktestRunnerTest, RejectedPyramidingDoesNotChangePosition)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
 
   auto runner = BacktestRunner{asset,
@@ -1441,7 +1529,7 @@ TEST(BacktestRunnerTest,
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
 
   auto runner = BacktestRunner{
@@ -1485,7 +1573,7 @@ TEST(BacktestRunnerTest,
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
 
   auto runner = BacktestRunner{
@@ -1537,7 +1625,7 @@ TEST(BacktestRunnerTest,
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
 
   auto runner = BacktestRunner{
@@ -1596,7 +1684,7 @@ TEST(BacktestRunnerTest, AfterFalseRetriggerSuppressesHeldNextOpenSignal)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
 
   auto runner = BacktestRunner{
@@ -1656,7 +1744,7 @@ TEST(BacktestRunnerTest, AfterFalseRetriggerResetsWithClosedPosition)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
   const auto entry_signal =
    LogicalOrMethod{EqualMethod{CloseMethod{}, ValueMethod{100.0}},
@@ -1719,7 +1807,7 @@ TEST(BacktestRunnerTest,
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
 
   auto runner = BacktestRunner{
@@ -1786,7 +1874,7 @@ TEST(BacktestRunnerTest, NextOpenCooldownResumesEvaluationAfterSkippedBars)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
 
   auto runner = BacktestRunner{
@@ -1846,7 +1934,7 @@ TEST(BacktestRunnerTest, AfterFalseStateIsFrozenDuringCooldown)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
 
   auto runner = BacktestRunner{
@@ -1905,7 +1993,7 @@ TEST(BacktestRunnerTest, PartialExitPreservesPyramidingCooldown)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
 
   auto runner = BacktestRunner{
@@ -1971,7 +2059,7 @@ TEST(BacktestRunnerTest, EquitySignalUsesCurrentAccountState)
   auto timeline = BacktestTimeline{};
 
   auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   series_methods.set("equity", EquityMethod{});
 
   const auto entry_signal = EqualMethod{EquityMethod{}, ValueMethod{1000.0}};
@@ -2029,7 +2117,7 @@ TEST(BacktestRunnerTest, EquityPercentUsesCurrentAccountState)
   auto timeline = BacktestTimeline{};
 
   auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   series_methods.set("equity_percent", EquityPercentMethod{});
 
   const auto entry_signal =
@@ -2098,7 +2186,7 @@ TEST(BacktestRunnerTest, DrawdownSignalUsesCurrentAccountState)
   auto timeline = BacktestTimeline{};
 
   auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   series_methods.set("drawdown", DrawdownMethod{});
 
   const auto entry_signal = EqualMethod{CloseMethod{}, ValueMethod{100.0}};
@@ -2165,12 +2253,11 @@ TEST(BacktestRunnerTest, AccountStateDrawdownUsesEffectiveCurrentPeak)
 TEST(BacktestRunnerTest, MethodContextObservesMutatedAccountState)
 {
   const auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   auto series_results = SeriesEvaluationResults{};
-  auto default_context = DefaultMethodContext{series_methods, series_results};
   auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
   const auto context =
-   BacktestMethodContext{default_context, series_methods, account_state, 0};
+   BacktestMethodContext{series_methods, series_results, 0, account_state, 0};
 
   EXPECT_DOUBLE_EQ(context.equity(), 1000.0);
   EXPECT_DOUBLE_EQ(context.drawdown(), 0.0);
@@ -2470,12 +2557,11 @@ TEST(BacktestRunnerTest, ScopedStopTargetAmountMethodsEvaluateDirectly)
   const auto asset = make_single_bar_asset(100.0);
   const auto snapshot = asset.get_snapshot(0);
   const auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   auto series_results = SeriesEvaluationResults{};
-  auto default_context = DefaultMethodContext{series_methods, series_results};
   const auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
   auto context =
-   BacktestMethodContext{default_context, series_methods, account_state, 0};
+   BacktestMethodContext{series_methods, series_results, 0, account_state, 0};
 
   const auto long_context = context.with_position_reference(100.0, 1.0);
   const auto short_context = context.with_position_reference(100.0, -1.0);
@@ -2496,12 +2582,11 @@ TEST(BacktestRunnerTest, PositionContextMethodsEvaluateDirectly)
   const auto asset = make_single_bar_asset(100.0);
   const auto snapshot = asset.get_snapshot(0);
   const auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   auto series_results = SeriesEvaluationResults{};
-  auto default_context = DefaultMethodContext{series_methods, series_results};
   const auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
   auto context =
-   BacktestMethodContext{default_context, series_methods, account_state, 0};
+   BacktestMethodContext{series_methods, series_results, 0, account_state, 0};
   const auto scoped_context =
    context.with_position_prices(90.0, 120.0, 105.0, 110.0, -1.0);
   const auto risk_context = scoped_context.with_position_risk_distance(10.0);
@@ -2658,12 +2743,11 @@ TEST(BacktestRunnerTest, ScopedStopTargetPercentMethodsEvaluateDirectly)
   const auto asset = make_single_bar_asset(200.0);
   const auto snapshot = asset.get_snapshot(0);
   const auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   auto series_results = SeriesEvaluationResults{};
-  auto default_context = DefaultMethodContext{series_methods, series_results};
   const auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
   const auto context =
-   BacktestMethodContext{default_context, series_methods, account_state, 0}
+   BacktestMethodContext{series_methods, series_results, 0, account_state, 0}
     .with_position_reference(200.0, 1.0);
 
   EXPECT_DOUBLE_EQ(
@@ -2974,12 +3058,11 @@ TEST(BacktestRunnerTest, ExplicitRiskDistanceAndRPricesEvaluateDirectly)
    make_single_bar_asset_with_range(100.0, 110.0, 90.0, 100.0);
   const auto snapshot = asset.get_snapshot(0);
   const auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   auto series_results = SeriesEvaluationResults{};
-  auto default_context = DefaultMethodContext{series_methods, series_results};
   const auto account_state = BacktestAccountState{1000.0, 0.0, 1000.0, 1000.0};
   auto context =
-   BacktestMethodContext{default_context, series_methods, account_state, 0};
+   BacktestMethodContext{series_methods, series_results, 0, account_state, 0};
   const auto long_context = context.with_position_reference(100.0, 1.0);
   const auto risk_distance = evaluate_series_method(
    RiskDistanceAtrMethod{1.0, 2.0}, snapshot, long_context);
@@ -3797,7 +3880,7 @@ TEST(BacktestRunnerTest, PositionRMultipleIsCachedForNamedSeriesAndPlots)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   series_methods.set("current_r", PositionRMultipleMethod{});
 
   auto runner =
@@ -3860,7 +3943,7 @@ TEST(BacktestRunnerTest, SeriesDelayedSignalUsesCompletedResultsOnly)
   auto timeline = BacktestTimeline{};
 
   auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   series_methods.set("close", CloseMethod{});
 
   const auto entry_signal =
@@ -3922,7 +4005,7 @@ TEST(BacktestRunnerTest, SeriesDelayZeroSignalEvaluatesCurrentBar)
   auto timeline = BacktestTimeline{};
 
   auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   series_methods.set("close", CloseMethod{});
 
   const auto entry_signal =
@@ -5742,7 +5825,7 @@ TEST(BacktestRunnerTest, PartialExitPreservesCampaignUnitAndLayersUsed)
   auto series_results = SeriesEvaluationResults{};
   auto timeline = BacktestTimeline{};
   auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   series_methods.set("pyramiding_layer", PyramidingLayerMethod{});
 
   auto runner = BacktestRunner{

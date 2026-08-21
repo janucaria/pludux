@@ -5,6 +5,7 @@ module;
 #include <cstddef>
 #include <limits>
 #include <utility>
+#include <variant>
 
 export module pludux:nodes.stoch_node;
 
@@ -15,6 +16,7 @@ import :nodes.value_node;
 
 export namespace pludux {
 
+template<typename TContext = std::monostate>
 class StochNode {
 public:
   StochNode(std::size_t k_period, std::size_t k_smooth, std::size_t d_period)
@@ -24,9 +26,9 @@ public:
   {
   }
 
-  StochNode(ErasedNode<ErasedSeriesMethodContext> k_period,
-            ErasedNode<ErasedSeriesMethodContext> k_smooth,
-            ErasedNode<ErasedSeriesMethodContext> d_period)
+   StochNode(ErasedNode<TContext> k_period,
+             ErasedNode<TContext> k_smooth,
+             ErasedNode<TContext> d_period)
   : k_period_{std::move(k_period)}
   , k_smooth_{std::move(k_smooth)}
   , d_period_{std::move(d_period)}
@@ -36,7 +38,7 @@ public:
   auto operator==(const StochNode& other) const noexcept -> bool = default;
 
   auto k_period(this const StochNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+    -> const ErasedNode<TContext>&
   {
     return self.k_period_;
   }
@@ -47,13 +49,13 @@ public:
   }
 
   void k_period(this StochNode& self,
-                ErasedNode<ErasedSeriesMethodContext> k_period) noexcept
+                 ErasedNode<TContext> k_period) noexcept
   {
     self.k_period_ = std::move(k_period);
   }
 
   auto k_smooth(this const StochNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+    -> const ErasedNode<TContext>&
   {
     return self.k_smooth_;
   }
@@ -64,13 +66,13 @@ public:
   }
 
   void k_smooth(this StochNode& self,
-                ErasedNode<ErasedSeriesMethodContext> k_smooth) noexcept
+                 ErasedNode<TContext> k_smooth) noexcept
   {
     self.k_smooth_ = std::move(k_smooth);
   }
 
   auto d_period(this const StochNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+    -> const ErasedNode<TContext>&
   {
     return self.d_period_;
   }
@@ -81,20 +83,20 @@ public:
   }
 
   void d_period(this StochNode& self,
-                ErasedNode<ErasedSeriesMethodContext> d_period) noexcept
+                 ErasedNode<TContext> d_period) noexcept
   {
     self.d_period_ = std::move(d_period);
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> k_period_;
-  ErasedNode<ErasedSeriesMethodContext> k_smooth_;
-  ErasedNode<ErasedSeriesMethodContext> d_period_;
+   ErasedNode<TContext> k_period_;
+   ErasedNode<TContext> k_smooth_;
+   ErasedNode<TContext> d_period_;
 };
 
-template<MethodContextable TContext>
+template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
-                       const StochNode& node,
+                        const StochNode<TContext>& node,
                        NodeToErasedMethodContext& context)
  -> ErasedSeriesMethod<TContext>
 {

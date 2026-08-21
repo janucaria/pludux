@@ -494,8 +494,10 @@ TEST(PortfolioRunnerTest, FiniteComparatorScorePrecedesNonFiniteScore)
      make_entry_runner(
       second, market, broker, profile, InsufficientCashPolicy::Reject)}},
    {PortfolioEntryComparator{
-    DivideNode{ValueNode{1.0},
-               SubtractNode{RequestedOrderPriceNode{}, ValueNode{100.0}}},
+    DivideNode<RequestedOrderMethodContext>{
+     ValueNode{1.0},
+     SubtractNode<RequestedOrderMethodContext>{RequestedOrderPriceNode{},
+                                               ValueNode{100.0}}},
     PortfolioEntryComparatorOrder::HigherFirst}}};
   auto results = PortfolioResults{};
 
@@ -536,14 +538,6 @@ TEST(PortfolioRunnerTest, RequestedOrderProvidesEntryDirection)
   ASSERT_TRUE(results.backtests()[1].timeline().open_position(0));
   EXPECT_GT(results.backtests()[1].timeline().open_position(0)->position_size(),
             0.0);
-}
-
-TEST(PortfolioRunnerTest, ComparatorRejectsNamedStrategySeries)
-{
-  EXPECT_THROW(
-   (PortfolioEntryComparator{SeriesNode{"priority"},
-                             PortfolioEntryComparatorOrder::HigherFirst}),
-   std::invalid_argument);
 }
 
 TEST(PortfolioRunnerTest, NextOpenComparatorUsesPreviousCompletedAssetBar)

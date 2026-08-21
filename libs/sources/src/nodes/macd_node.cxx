@@ -3,6 +3,7 @@ module;
 #include <cstddef>
 #include <limits>
 #include <utility>
+#include <variant>
 
 export module pludux:nodes.macd_node;
 
@@ -14,6 +15,7 @@ import :nodes.value_node;
 
 export namespace pludux {
 
+template<typename TContext = std::monostate>
 class MacdNode {
 public:
   MacdNode()
@@ -28,7 +30,7 @@ public:
   {
   }
 
-  MacdNode(ErasedNode<ErasedSeriesMethodContext> source,
+   MacdNode(ErasedNode<TContext> source,
            std::size_t short_period,
            std::size_t long_period,
            std::size_t signal_period)
@@ -39,10 +41,10 @@ public:
   {
   }
 
-  MacdNode(ErasedNode<ErasedSeriesMethodContext> source,
-           ErasedNode<ErasedSeriesMethodContext> fast_period,
-           ErasedNode<ErasedSeriesMethodContext> slow_period,
-           ErasedNode<ErasedSeriesMethodContext> signal_period)
+   MacdNode(ErasedNode<TContext> source,
+            ErasedNode<TContext> fast_period,
+            ErasedNode<TContext> slow_period,
+            ErasedNode<TContext> signal_period)
   : source_{std::move(source)}
   , fast_period_{std::move(fast_period)}
   , slow_period_{std::move(slow_period)}
@@ -52,20 +54,19 @@ public:
 
   auto operator==(const MacdNode& other) const noexcept -> bool = default;
 
-  auto source(this const MacdNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   auto source(this const MacdNode& self) noexcept
+    -> const ErasedNode<TContext>&
   {
     return self.source_;
   }
 
-  void source(this MacdNode& self,
-              ErasedNode<ErasedSeriesMethodContext> source) noexcept
+   void source(this MacdNode& self, ErasedNode<TContext> source) noexcept
   {
     self.source_ = std::move(source);
   }
 
-  auto short_period(this const MacdNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   auto short_period(this const MacdNode& self) noexcept
+    -> const ErasedNode<TContext>&
   {
     return self.fast_period_;
   }
@@ -75,14 +76,13 @@ public:
     self.fast_period_ = ValueNode{static_cast<double>(period)};
   }
 
-  void short_period(this MacdNode& self,
-                    ErasedNode<ErasedSeriesMethodContext> period) noexcept
+   void short_period(this MacdNode& self, ErasedNode<TContext> period) noexcept
   {
     self.fast_period_ = std::move(period);
   }
 
-  auto fast_period(this const MacdNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   auto fast_period(this const MacdNode& self) noexcept
+    -> const ErasedNode<TContext>&
   {
     return self.short_period();
   }
@@ -92,14 +92,13 @@ public:
     self.short_period(period);
   }
 
-  void fast_period(this MacdNode& self,
-                   ErasedNode<ErasedSeriesMethodContext> period) noexcept
+   void fast_period(this MacdNode& self, ErasedNode<TContext> period) noexcept
   {
     self.short_period(std::move(period));
   }
 
-  auto long_period(this const MacdNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   auto long_period(this const MacdNode& self) noexcept
+    -> const ErasedNode<TContext>&
   {
     return self.slow_period_;
   }
@@ -109,14 +108,13 @@ public:
     self.slow_period_ = ValueNode{static_cast<double>(period)};
   }
 
-  void long_period(this MacdNode& self,
-                   ErasedNode<ErasedSeriesMethodContext> period) noexcept
+   void long_period(this MacdNode& self, ErasedNode<TContext> period) noexcept
   {
     self.slow_period_ = std::move(period);
   }
 
-  auto slow_period(this const MacdNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   auto slow_period(this const MacdNode& self) noexcept
+    -> const ErasedNode<TContext>&
   {
     return self.long_period();
   }
@@ -126,14 +124,13 @@ public:
     self.long_period(period);
   }
 
-  void slow_period(this MacdNode& self,
-                   ErasedNode<ErasedSeriesMethodContext> period) noexcept
+   void slow_period(this MacdNode& self, ErasedNode<TContext> period) noexcept
   {
     self.long_period(std::move(period));
   }
 
-  auto signal_period(this const MacdNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   auto signal_period(this const MacdNode& self) noexcept
+    -> const ErasedNode<TContext>&
   {
     return self.signal_period_;
   }
@@ -143,22 +140,21 @@ public:
     self.signal_period_ = ValueNode{static_cast<double>(period)};
   }
 
-  void signal_period(this MacdNode& self,
-                     ErasedNode<ErasedSeriesMethodContext> period) noexcept
+   void signal_period(this MacdNode& self, ErasedNode<TContext> period) noexcept
   {
     self.signal_period_ = std::move(period);
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> source_;
-  ErasedNode<ErasedSeriesMethodContext> fast_period_;
-  ErasedNode<ErasedSeriesMethodContext> slow_period_;
-  ErasedNode<ErasedSeriesMethodContext> signal_period_;
+   ErasedNode<TContext> source_;
+   ErasedNode<TContext> fast_period_;
+   ErasedNode<TContext> slow_period_;
+   ErasedNode<TContext> signal_period_;
 };
 
-template<MethodContextable TContext>
+template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
-                       const MacdNode& node,
+                        const MacdNode<TContext>& node,
                        NodeToErasedMethodContext& context)
  -> ErasedSeriesMethod<TContext>
 {

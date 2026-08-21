@@ -10,7 +10,7 @@ import :stop_target_price_method;
 
 export namespace pludux::backtest {
 
-template<typename TNode>
+template<typename TContext>
 class StopTargetDistanceNode {
 public:
   StopTargetDistanceNode()
@@ -23,7 +23,7 @@ public:
   {
   }
 
-  explicit StopTargetDistanceNode(ErasedNode<ErasedSeriesMethodContext> value)
+  explicit StopTargetDistanceNode(ErasedNode<TContext> value)
   : value_{std::move(value)}
   {
   }
@@ -32,57 +32,62 @@ public:
    -> bool = default;
 
   auto value(this const StopTargetDistanceNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<TContext>&
   {
     return self.value_;
   }
 
   void value(this StopTargetDistanceNode& self,
-             ErasedNode<ErasedSeriesMethodContext> value) noexcept
+             ErasedNode<TContext> value) noexcept
   {
     self.value_ = std::move(value);
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> value_;
+  ErasedNode<TContext> value_;
 };
 
-class SlAmountNode : public StopTargetDistanceNode<SlAmountNode> {
+template<typename TContext>
+class SlAmountNode : public StopTargetDistanceNode<TContext> {
 public:
-  using StopTargetDistanceNode::StopTargetDistanceNode;
+  using StopTargetDistanceNode<TContext>::StopTargetDistanceNode;
 
   auto operator==(const SlAmountNode&) const noexcept -> bool = default;
 };
 
-class TpAmountNode : public StopTargetDistanceNode<TpAmountNode> {
+template<typename TContext>
+class TpAmountNode : public StopTargetDistanceNode<TContext> {
 public:
-  using StopTargetDistanceNode::StopTargetDistanceNode;
+  using StopTargetDistanceNode<TContext>::StopTargetDistanceNode;
 
   auto operator==(const TpAmountNode&) const noexcept -> bool = default;
 };
 
-class SlPercentNode : public StopTargetDistanceNode<SlPercentNode> {
+template<typename TContext>
+class SlPercentNode : public StopTargetDistanceNode<TContext> {
 public:
-  using StopTargetDistanceNode::StopTargetDistanceNode;
+  using StopTargetDistanceNode<TContext>::StopTargetDistanceNode;
 
   auto operator==(const SlPercentNode&) const noexcept -> bool = default;
 };
 
-class TpPercentNode : public StopTargetDistanceNode<TpPercentNode> {
+template<typename TContext>
+class TpPercentNode : public StopTargetDistanceNode<TContext> {
 public:
-  using StopTargetDistanceNode::StopTargetDistanceNode;
+  using StopTargetDistanceNode<TContext>::StopTargetDistanceNode;
 
   auto operator==(const TpPercentNode&) const noexcept -> bool = default;
 };
 
-class SlRMultipleNode : public StopTargetDistanceNode<SlRMultipleNode> {
+template<typename TContext>
+class SlRMultipleNode : public StopTargetDistanceNode<TContext> {
 public:
   SlRMultipleNode()
-  : StopTargetDistanceNode{1.0}
+  : StopTargetDistanceNode<TContext>{1.0}
   {
   }
 
-  using StopTargetDistanceNode::StopTargetDistanceNode;
+  using StopTargetDistanceNode<TContext>::StopTargetDistanceNode;
 
   auto operator==(const SlRMultipleNode&) const noexcept -> bool = default;
 };
@@ -92,18 +97,20 @@ public:
   auto operator==(const Sl1RNode&) const noexcept -> bool = default;
 };
 
-class TpRMultipleNode : public StopTargetDistanceNode<TpRMultipleNode> {
+template<typename TContext>
+class TpRMultipleNode : public StopTargetDistanceNode<TContext> {
 public:
   TpRMultipleNode()
-  : StopTargetDistanceNode{2.0}
+  : StopTargetDistanceNode<TContext>{2.0}
   {
   }
 
-  using StopTargetDistanceNode::StopTargetDistanceNode;
+  using StopTargetDistanceNode<TContext>::StopTargetDistanceNode;
 
   auto operator==(const TpRMultipleNode&) const noexcept -> bool = default;
 };
 
+template<typename TContext>
 class SlAtrNode {
 public:
   SlAtrNode()
@@ -112,15 +119,15 @@ public:
   }
 
   SlAtrNode(double period,
-            double multiplier,
-            MaNodeType ma_smoothing_type = MaNodeType::Rma)
+                 double multiplier,
+                 MaNodeType ma_smoothing_type = MaNodeType::Rma)
   : SlAtrNode{ValueNode{period}, ValueNode{multiplier}, ma_smoothing_type}
   {
   }
 
-  SlAtrNode(ErasedNode<ErasedSeriesMethodContext> period,
-            ErasedNode<ErasedSeriesMethodContext> multiplier,
-            MaNodeType ma_smoothing_type = MaNodeType::Rma)
+  SlAtrNode(ErasedNode<TContext> period,
+                 ErasedNode<TContext> multiplier,
+                 MaNodeType ma_smoothing_type = MaNodeType::Rma)
   : period_{std::move(period)}
   , multiplier_{std::move(multiplier)}
   , ma_smoothing_type_{ma_smoothing_type}
@@ -130,25 +137,24 @@ public:
   auto operator==(const SlAtrNode&) const noexcept -> bool = default;
 
   auto period(this const SlAtrNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<TContext>&
   {
     return self.period_;
   }
 
-  void period(this SlAtrNode& self,
-              ErasedNode<ErasedSeriesMethodContext> period) noexcept
+  void period(this SlAtrNode& self, ErasedNode<TContext> period) noexcept
   {
     self.period_ = std::move(period);
   }
 
   auto multiplier(this const SlAtrNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<TContext>&
   {
     return self.multiplier_;
   }
 
   void multiplier(this SlAtrNode& self,
-                  ErasedNode<ErasedSeriesMethodContext> multiplier) noexcept
+                  ErasedNode<TContext> multiplier) noexcept
   {
     self.multiplier_ = std::move(multiplier);
   }
@@ -164,11 +170,12 @@ public:
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> period_;
-  ErasedNode<ErasedSeriesMethodContext> multiplier_;
+  ErasedNode<TContext> period_;
+  ErasedNode<TContext> multiplier_;
   MaNodeType ma_smoothing_type_;
 };
 
+template<typename TContext>
 class TpAtrNode {
 public:
   TpAtrNode()
@@ -177,15 +184,15 @@ public:
   }
 
   TpAtrNode(double period,
-            double multiplier,
-            MaNodeType ma_smoothing_type = MaNodeType::Rma)
+                 double multiplier,
+                 MaNodeType ma_smoothing_type = MaNodeType::Rma)
   : TpAtrNode{ValueNode{period}, ValueNode{multiplier}, ma_smoothing_type}
   {
   }
 
-  TpAtrNode(ErasedNode<ErasedSeriesMethodContext> period,
-            ErasedNode<ErasedSeriesMethodContext> multiplier,
-            MaNodeType ma_smoothing_type = MaNodeType::Rma)
+  TpAtrNode(ErasedNode<TContext> period,
+                 ErasedNode<TContext> multiplier,
+                 MaNodeType ma_smoothing_type = MaNodeType::Rma)
   : period_{std::move(period)}
   , multiplier_{std::move(multiplier)}
   , ma_smoothing_type_{ma_smoothing_type}
@@ -195,25 +202,24 @@ public:
   auto operator==(const TpAtrNode&) const noexcept -> bool = default;
 
   auto period(this const TpAtrNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<TContext>&
   {
     return self.period_;
   }
 
-  void period(this TpAtrNode& self,
-              ErasedNode<ErasedSeriesMethodContext> period) noexcept
+  void period(this TpAtrNode& self, ErasedNode<TContext> period) noexcept
   {
     self.period_ = std::move(period);
   }
 
   auto multiplier(this const TpAtrNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<TContext>&
   {
     return self.multiplier_;
   }
 
   void multiplier(this TpAtrNode& self,
-                  ErasedNode<ErasedSeriesMethodContext> multiplier) noexcept
+                  ErasedNode<TContext> multiplier) noexcept
   {
     self.multiplier_ = std::move(multiplier);
   }
@@ -229,94 +235,104 @@ public:
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> period_;
-  ErasedNode<ErasedSeriesMethodContext> multiplier_;
+  ErasedNode<TContext> period_;
+  ErasedNode<TContext> multiplier_;
   MaNodeType ma_smoothing_type_;
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const SlAmountNode& node,
-                       NodeToErasedMethodContext& context)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+
+template<typename TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                        const SlAmountNode<TContext>& node,
+                        NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{SlAmountMethod{
-   node_to_erased_method<ErasedSeriesMethodContext>(node.value(), context)}};
+  return ErasedSeriesMethod<TContext>{SlAmountMethod{
+   node_to_erased_method<TContext>(node.value(), context)}};
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const TpAmountNode& node,
-                       NodeToErasedMethodContext& context)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+template<typename TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                        const TpAmountNode<TContext>& node,
+                        NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{TpAmountMethod{
-   node_to_erased_method<ErasedSeriesMethodContext>(node.value(), context)}};
+  return ErasedSeriesMethod<TContext>{TpAmountMethod{
+   node_to_erased_method<TContext>(node.value(), context)}};
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const SlPercentNode& node,
-                       NodeToErasedMethodContext& context)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+template<typename TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                        const SlPercentNode<TContext>& node,
+                        NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{SlPercentMethod{
-   node_to_erased_method<ErasedSeriesMethodContext>(node.value(), context)}};
+  return ErasedSeriesMethod<TContext>{SlPercentMethod{
+   node_to_erased_method<TContext>(node.value(), context)}};
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const TpPercentNode& node,
-                       NodeToErasedMethodContext& context)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+template<typename TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                        const TpPercentNode<TContext>& node,
+                        NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{TpPercentMethod{
-   node_to_erased_method<ErasedSeriesMethodContext>(node.value(), context)}};
+  return ErasedSeriesMethod<TContext>{TpPercentMethod{
+   node_to_erased_method<TContext>(node.value(), context)}};
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const SlAtrNode& node,
-                       NodeToErasedMethodContext& context)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+template<typename TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                        const SlAtrNode<TContext>& node,
+                        NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{SlAtrMethod{
-   node_to_erased_method<ErasedSeriesMethodContext>(node.period(), context),
-   node_to_erased_method<ErasedSeriesMethodContext>(node.multiplier(), context),
+  return ErasedSeriesMethod<TContext>{SlAtrMethod{
+    node_to_erased_method<TContext>(node.period(), context),
+    node_to_erased_method<TContext>(node.multiplier(), context),
    static_cast<MaMethodType>(node.ma_smoothing_type())}};
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const TpAtrNode& node,
-                       NodeToErasedMethodContext& context)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+template<typename TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                        const TpAtrNode<TContext>& node,
+                        NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{TpAtrMethod{
-   node_to_erased_method<ErasedSeriesMethodContext>(node.period(), context),
-   node_to_erased_method<ErasedSeriesMethodContext>(node.multiplier(), context),
+  return ErasedSeriesMethod<TContext>{TpAtrMethod{
+    node_to_erased_method<TContext>(node.period(), context),
+    node_to_erased_method<TContext>(node.multiplier(), context),
    static_cast<MaMethodType>(node.ma_smoothing_type())}};
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const SlRMultipleNode& node,
-                       NodeToErasedMethodContext& context)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+template<typename TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                        const SlRMultipleNode<TContext>& node,
+                        NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{SlRMultipleMethod{
-   node_to_erased_method<ErasedSeriesMethodContext>(node.value(), context)}};
+  return ErasedSeriesMethod<TContext>{SlRMultipleMethod{
+   node_to_erased_method<TContext>(node.value(), context)}};
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const Sl1RNode&,
-                       NodeToErasedMethodContext& context)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+template<typename TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                        const Sl1RNode&,
+                        NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<TContext>
 {
-  return node_to_erased_method<ErasedSeriesMethodContext>(SlRMultipleNode{1.0},
-                                                          context);
+  return node_to_erased_method<TContext>(SlRMultipleNode<TContext>{1.0},
+                                         context);
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const TpRMultipleNode& node,
-                       NodeToErasedMethodContext& context)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+template<typename TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                        const TpRMultipleNode<TContext>& node,
+                        NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{TpRMultipleMethod{
-   node_to_erased_method<ErasedSeriesMethodContext>(node.value(), context)}};
+  return ErasedSeriesMethod<TContext>{TpRMultipleMethod{
+   node_to_erased_method<TContext>(node.value(), context)}};
 }
 
 } // namespace pludux::backtest

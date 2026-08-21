@@ -1,9 +1,11 @@
 module;
 
 #include <algorithm>
+#include <concepts>
 #include <cstddef>
 #include <limits>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -12,6 +14,23 @@ export module pludux.backtest:backtest_method_context;
 import pludux;
 
 export namespace pludux::backtest {
+
+class RequestedOrderPriceNode;
+class RequestedOrderDirectionNode;
+class IsPyramidingOrderNode;
+class RawRequestedQuantityNode;
+class RawRequestedQuantityLimitNode;
+class DrawdownAdjustedQuantityNode;
+class DrawdownAdjustedQuantityLimitNode;
+class RequestedQuantityNode;
+class RequestedNotionalNode;
+class RequestedCostNode;
+class EstimatedEntryFeeNode;
+class EstimatedOneRExitFeeNode;
+class RequestedOrderRiskDistanceNode;
+class RequestedPriceRiskNode;
+class RequestedRiskWithFeesNode;
+class FrozenUnitQuantityNode;
 
 class BacktestAccountState {
 public:
@@ -111,16 +130,43 @@ private:
   double initial_capital_{std::numeric_limits<double>::quiet_NaN()};
 };
 
+class BacktestMethodContext;
+using ModelNode = ErasedNode<BacktestMethodContext>;
+using ModelMethod = ErasedSeriesMethod<BacktestMethodContext>;
+using ModelMethodRegistry = OrderedNamedRegistry<ModelMethod>;
+
 class BacktestMethodContext {
 public:
-  BacktestMethodContext(
-   DefaultMethodContext default_context,
-   const OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>&
-    series_methods,
+  template<typename TNode>
+  static consteval auto node_admissible() -> bool
+  {
+    using Node = std::remove_cvref_t<TNode>;
+    return !(std::same_as<Node, RequestedOrderPriceNode> ||
+             std::same_as<Node, RequestedOrderDirectionNode> ||
+             std::same_as<Node, IsPyramidingOrderNode> ||
+             std::same_as<Node, RawRequestedQuantityNode> ||
+             std::same_as<Node, RawRequestedQuantityLimitNode> ||
+             std::same_as<Node, DrawdownAdjustedQuantityNode> ||
+             std::same_as<Node, DrawdownAdjustedQuantityLimitNode> ||
+             std::same_as<Node, RequestedQuantityNode> ||
+             std::same_as<Node, RequestedNotionalNode> ||
+             std::same_as<Node, RequestedCostNode> ||
+             std::same_as<Node, EstimatedEntryFeeNode> ||
+             std::same_as<Node, EstimatedOneRExitFeeNode> ||
+             std::same_as<Node, RequestedOrderRiskDistanceNode> ||
+             std::same_as<Node, RequestedPriceRiskNode> ||
+             std::same_as<Node, RequestedRiskWithFeesNode> ||
+             std::same_as<Node, FrozenUnitQuantityNode>);
+  }
+
+  BacktestMethodContext(const ModelMethodRegistry& series_methods,
+   SeriesEvaluationResults& series_evaluation_results,
+   std::size_t current_index,
    const BacktestAccountState& account_state,
    std::size_t pyramiding_layer) noexcept
-  : default_context_{std::move(default_context)}
-  , series_methods_{series_methods}
+  : series_methods_{series_methods}
+  , series_evaluation_results_{series_evaluation_results}
+  , current_index_{current_index}
   , account_state_{account_state}
   , pyramiding_layer_{pyramiding_layer}
   {
@@ -154,19 +200,43 @@ public:
                          const std::string& name,
                          std::size_t result_index) noexcept -> double
   {
-    return self.default_context_.get_series_result(name, result_index);
+    const auto& method_opt = self.series_methods_.get(name);
+    if(!method_opt.has_value()) {
+      return std::numeric_limits<double>::quiet_NaN();
+    }
+    if(const auto results_opt = self.series_evaluation_results_.results(name);
+       results_opt.has_value()) {
+      const auto& results = results_opt.value().get();
+      if(result_index < results.size()) {
+        return results[result_index];
+      }
+    }
+    if(const auto results_opt =
+        self.series_evaluation_results_.results(method_opt.value());
+       results_opt.has_value()) {
+      const auto& results = results_opt.value().get();
+      if(result_index < results.size()) {
+        return results[result_index];
+      }
+    }
+    return std::numeric_limits<double>::quiet_NaN();
   }
 
   auto get_series_results(this BacktestMethodContext& self,
                           const auto& method_key) noexcept
    -> std::vector<double>&
   {
-    return self.default_context_.get_series_results(method_key);
+    const auto results_opt =
+     self.series_evaluation_results_.results(method_key);
+    if(!results_opt.has_value()) {
+      self.series_evaluation_results_.results(method_key, {});
+    }
+    return self.series_evaluation_results_.results(method_key).value();
   }
 
   auto index(this const BacktestMethodContext& self) noexcept -> std::size_t
   {
-    return self.default_context_.index();
+    return self.current_index_;
   }
 
   auto equity(this const BacktestMethodContext& self) noexcept -> double
@@ -267,9 +337,9 @@ public:
   }
 
 private:
-  DefaultMethodContext default_context_;
-  const OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>&
-   series_methods_;
+  const ModelMethodRegistry& series_methods_;
+  SeriesEvaluationResults& series_evaluation_results_;
+  std::size_t current_index_;
   const BacktestAccountState& account_state_;
   std::size_t pyramiding_layer_;
   double position_initial_entry_price_{

@@ -12,18 +12,19 @@ import :nodes.erased_node;
 
 export namespace pludux {
 
-class AllOfNode {
+template<typename TContext>
+class AllOfNode final {
 public:
   AllOfNode() = default;
 
   AllOfNode(
-   std::initializer_list<ErasedNode<ErasedSeriesMethodContext>> conditions)
+    std::initializer_list<ErasedNode<TContext>> conditions)
   : conditions_{conditions}
   {
   }
 
   explicit AllOfNode(
-   std::vector<ErasedNode<ErasedSeriesMethodContext>> conditions)
+    std::vector<ErasedNode<TContext>> conditions)
   : conditions_{std::move(conditions)}
   {
   }
@@ -31,26 +32,26 @@ public:
   auto operator==(const AllOfNode& other) const noexcept -> bool = default;
 
   auto conditions(this const AllOfNode& self) noexcept
-   -> const std::vector<ErasedNode<ErasedSeriesMethodContext>>&
+    -> const std::vector<ErasedNode<TContext>>&
   {
     return self.conditions_;
   }
 
   void conditions(
    this AllOfNode& self,
-   std::vector<ErasedNode<ErasedSeriesMethodContext>> conditions) noexcept
+    std::vector<ErasedNode<TContext>> conditions) noexcept
   {
     self.conditions_ = std::move(conditions);
   }
 
 private:
-  std::vector<ErasedNode<ErasedSeriesMethodContext>> conditions_;
+   std::vector<ErasedNode<TContext>> conditions_;
 };
 
-template<MethodContextable TContext>
+template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
-                       const AllOfNode& node,
-                       NodeToErasedMethodContext& context)
+                         const AllOfNode<TContext>& node,
+                        NodeToErasedMethodContext& context)
  -> ErasedSeriesMethod<TContext>
 {
   auto conditions = std::vector<ErasedSeriesMethod<TContext>>{};

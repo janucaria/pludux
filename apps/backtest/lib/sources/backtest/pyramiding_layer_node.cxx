@@ -11,12 +11,13 @@ public:
   auto operator==(const PyramidingLayerNode&) const noexcept -> bool = default;
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const PyramidingLayerNode&,
-                       NodeToErasedMethodContext&)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+template<typename TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                        const PyramidingLayerNode&,
+                        NodeToErasedMethodContext&)
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{PyramidingLayerMethod{}};
+  return ErasedSeriesMethod<TContext>{PyramidingLayerMethod{}};
 }
 
 } // namespace pludux::backtest

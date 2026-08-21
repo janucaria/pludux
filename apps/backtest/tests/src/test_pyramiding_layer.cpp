@@ -30,15 +30,13 @@ auto make_snapshot() -> AssetSnapshot
 TEST(PyramidingLayerMethodTest, ReadsLayerFromBacktestContext)
 {
   const auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{};
   auto series_results = SeriesEvaluationResults{};
-  const auto default_context =
-   DefaultMethodContext{series_methods, series_results};
   const auto account_state = BacktestAccountState{};
   const auto flat_context =
-   BacktestMethodContext{default_context, series_methods, account_state, 0};
+   BacktestMethodContext{series_methods, series_results, 0, account_state, 0};
   const auto layered_context =
-   BacktestMethodContext{default_context, series_methods, account_state, 3};
+   BacktestMethodContext{series_methods, series_results, 0, account_state, 3};
   const auto snapshot = make_snapshot();
 
   EXPECT_DOUBLE_EQ(
@@ -48,18 +46,6 @@ TEST(PyramidingLayerMethodTest, ReadsLayerFromBacktestContext)
    evaluate_series_method(PyramidingLayerMethod{}, snapshot, layered_context),
    3.0);
 
-  const auto erased_context = ErasedSeriesMethodContext{layered_context};
-  EXPECT_DOUBLE_EQ(
-   evaluate_series_method(PyramidingLayerMethod{}, snapshot, erased_context),
-   3.0);
-}
-
-TEST(PyramidingLayerMethodTest, ReturnsNaNWithoutBacktestContext)
-{
-  const auto value = evaluate_series_method(
-   PyramidingLayerMethod{}, make_snapshot(), ErasedSeriesMethodContext{});
-
-  EXPECT_TRUE(std::isnan(value));
 }
 
 TEST(PyramidingLayerMethodTest, HasStableIdentity)
@@ -72,7 +58,7 @@ TEST(PyramidingLayerMethodTest, HasStableIdentity)
 TEST(PyramidingLayerNodeTest, ConvertsToPyramidingLayerMethod)
 {
   auto context = NodeToErasedMethodContext{};
-  const auto method = node_to_erased_method<ErasedSeriesMethodContext>(
+  const auto method = node_to_erased_method<BacktestMethodContext>(
    PyramidingLayerNode{}, context);
 
   EXPECT_NE(series_method_cast<PyramidingLayerMethod>(method), nullptr);
@@ -80,7 +66,7 @@ TEST(PyramidingLayerNodeTest, ConvertsToPyramidingLayerMethod)
 
 TEST(PyramidingLayerNodeTest, ParsesAndSerializesShorthandAndObjectForms)
 {
-  auto parser = make_default_registered_config_parser();
+  auto parser = make_backtest_model_config_parser();
   const auto shorthand = json::parse(R"("PYRAMIDING_LAYER")");
   const auto object =
    json::parse(R"({"method":"PYRAMIDING_LAYER","params":{}})");

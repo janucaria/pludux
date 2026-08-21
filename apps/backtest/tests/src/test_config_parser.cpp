@@ -15,28 +15,324 @@
 import pludux.backtest;
 
 using namespace pludux;
-using pludux::backtest::ConfigParser;
-using pludux::backtest::make_default_registered_config_parser;
+using namespace pludux::backtest;
+using ModelConfigParser = ConfigParser<BacktestMethodContext>;
+using pludux::backtest::make_backtest_model_config_parser;
+using pludux::backtest::make_requested_order_comparator_config_parser;
 using json = jsoncons::ojson;
 
-using SignalAllOfNode = pludux::AllOfNode;
-using SignalAnyOfNode = pludux::AnyOfNode;
+using SignalAllOfNode = pludux::AllOfNode<BacktestMethodContext>;
+using SignalAnyOfNode = pludux::AnyOfNode<BacktestMethodContext>;
 using SignalAlwaysNode = pludux::TrueNode;
 using SignalNeverNode = pludux::FalseNode;
-using SignalEqualNode = pludux::EqualNode<ErasedSeriesMethodContext>;
-using SignalNotEqualNode = pludux::NotEqualNode<ErasedSeriesMethodContext>;
+using SignalEqualNode = pludux::EqualNode<BacktestMethodContext>;
+using SignalNotEqualNode = pludux::NotEqualNode<BacktestMethodContext>;
 using SignalGreaterThanNode =
- pludux::GreaterThanNode<ErasedSeriesMethodContext>;
+ pludux::GreaterThanNode<BacktestMethodContext>;
 using SignalGreaterEqualNode =
- pludux::GreaterEqualNode<ErasedSeriesMethodContext>;
-using SignalLessThanNode = pludux::LessThanNode<ErasedSeriesMethodContext>;
-using SignalLessEqualNode = pludux::LessEqualNode<ErasedSeriesMethodContext>;
-using SignalCrossoverNode = pludux::CrossoverNode;
-using SignalCrossunderNode = pludux::CrossunderNode;
-using SignalNotNode = pludux::LogicalNotNode<ErasedSeriesMethodContext>;
-using SignalAndNode = pludux::LogicalAndNode<ErasedSeriesMethodContext>;
-using SignalOrNode = pludux::LogicalOrNode<ErasedSeriesMethodContext>;
-using SignalXorNode = pludux::LogicalXorNode<ErasedSeriesMethodContext>;
+ pludux::GreaterEqualNode<BacktestMethodContext>;
+using SignalLessThanNode = pludux::LessThanNode<BacktestMethodContext>;
+using SignalLessEqualNode = pludux::LessEqualNode<BacktestMethodContext>;
+using SignalCrossoverNode =
+ pludux::CrossoverNode<BacktestMethodContext>;
+using SignalCrossunderNode =
+ pludux::CrossunderNode<BacktestMethodContext>;
+using SignalNotNode = pludux::LogicalNotNode<BacktestMethodContext>;
+using SignalAndNode = pludux::LogicalAndNode<BacktestMethodContext>;
+using SignalOrNode = pludux::LogicalOrNode<BacktestMethodContext>;
+using SignalXorNode = pludux::LogicalXorNode<BacktestMethodContext>;
+
+TEST(ConfigParserInfrastructureTest,
+     TypedParserRegistersParsesAndSerializesValueAndBinaryOperator)
+{
+  using Context = pludux::backtest::BacktestMethodContext;
+  using Parser = pludux::backtest::ConfigParser<Context>;
+  using Node = ErasedNode<Context>;
+  using AddNode = BinaryOperatorNode<std::plus<>, Context>;
+
+  auto parser = Parser{};
+  parser.register_node_parser(
+   "VALUE",
+   [](const Parser&, const Node& node) -> json {
+     const auto* value = node_cast<ValueNode>(node);
+     return value ? json::object{{"value", value->value()}} : json::null();
+   },
+   [](Parser::Parser, const json& params) -> Node {
+     return ValueNode{params.at("value").as_double()};
+   });
+  parser.register_node_parser(
+   "ADD",
+   [](const Parser& parser, const Node& node) -> json {
+     const auto* add = node_cast<AddNode>(node);
+     return add ? json::object{{"augend", parser.serialize_node(add->left())},
+                               {"addend", parser.serialize_node(add->right())}}
+                : json::null();
+   },
+   [](Parser::Parser parser, const json& params) -> Node {
+     return AddNode{parser.parse_node(params.at("augend")),
+                    parser.parse_node(params.at("addend"))};
+   });
+
+  const auto config = json::parse(R"(
+    {"method":"ADD","params":{"augend":{"method":"VALUE","params":{"value":2}},"addend":{"method":"VALUE","params":{"value":3}}}}
+  )");
+  const auto node = parser.parse_node(config);
+  const auto* add = node_cast<AddNode>(node);
+  ASSERT_NE(add, nullptr);
+  const auto* augend = node_cast<ValueNode>(add->left());
+  const auto* addend = node_cast<ValueNode>(add->right());
+  ASSERT_NE(augend, nullptr);
+  ASSERT_NE(addend, nullptr);
+  EXPECT_EQ(augend->value(), 2.0);
+  EXPECT_EQ(addend->value(), 3.0);
+  EXPECT_EQ(parser.serialize_node(node), config);
+}
+
+TEST(ModelConfigParserTest, ParsesShorthandsDefaultsAndTypedNodes)
+{
+  auto parser = make_backtest_model_config_parser();
+  const auto config = json::parse(R"(
+    {"method":"SMA","params":{"source":{"method":"ADD","params":{"augend":"CLOSE","addend":2}}}}
+  )");
+
+  const auto node = parser.parse_node(config);
+  const auto* sma = node_cast<SmaNode<backtest::BacktestMethodContext>>(node);
+  ASSERT_NE(sma, nullptr);
+  EXPECT_NE(node_cast<NumericInputNode>(sma->period()), nullptr);
+  EXPECT_EQ(parser.parse_node(parser.serialize_node(node)), node);
+}
+
+TEST(ModelConfigParserTest, RejectsMethodsOutsideBacktestContext)
+{
+  auto parser = make_backtest_model_config_parser();
+  for(const auto* comparator_only : {
+       "REQUESTED_ORDER_PRICE", "REQUESTED_ORDER_DIRECTION",
+       "IS_PYRAMIDING_ORDER", "RAW_REQUESTED_QUANTITY",
+       "RAW_REQUESTED_QUANTITY_LIMIT", "DRAWDOWN_ADJUSTED_QUANTITY",
+       "DRAWDOWN_ADJUSTED_QUANTITY_LIMIT", "REQUESTED_QUANTITY",
+       "REQUESTED_NOTIONAL", "REQUESTED_COST", "ESTIMATED_ENTRY_FEE",
+       "ESTIMATED_1R_EXIT_FEE", "REQUESTED_ORDER_RISK_DISTANCE",
+       "REQUESTED_PRICE_RISK", "REQUESTED_RISK_WITH_FEES",
+       "FROZEN_UNIT_QUANTITY"}) {
+    SCOPED_TRACE(comparator_only);
+    EXPECT_THROW(parser.parse_node(json::parse(std::string{"{\"method\":\""} +
+                                               comparator_only + "\"}")),
+                 std::invalid_argument);
+  }
+  EXPECT_THROW(parser.parse_node(json::parse(
+                R"({"method":"MODEL_PERFORMANCE","params":{"metric":"WIN_RATE"}})")),
+               std::invalid_argument);
+}
+
+TEST(ModelConfigParserTest, PreservesCanonicalCompositeDefaults)
+{
+  auto parser = make_backtest_model_config_parser();
+  const auto config = json::parse(R"({"method":"MACD"})");
+
+  const auto node = parser.parse_node(config);
+  const auto* macd = node_cast<MacdNode<backtest::BacktestMethodContext>>(node);
+  ASSERT_NE(macd, nullptr);
+  EXPECT_NE(node_cast<CloseNode>(macd->source()), nullptr);
+  EXPECT_NE(node_cast<NumericInputNode>(macd->fast_period()), nullptr);
+  EXPECT_NE(node_cast<NumericInputNode>(macd->slow_period()), nullptr);
+  EXPECT_NE(node_cast<NumericInputNode>(macd->signal_period()), nullptr);
+  EXPECT_EQ(parser.parse_node(parser.serialize_node(node)), node);
+}
+
+TEST(ModelConfigParserTest, RoundTripsEveryCanonicalModelRegistration)
+{
+  auto parser = make_backtest_model_config_parser();
+  const auto configurations = std::vector<std::string>{
+   "0", "true", "false", "\"OPEN\"", "\"HIGH\"", "\"LOW\"",
+   "\"CLOSE\"", "\"VOLUME\"", "\"EQUITY\"", "\"EQUITY_PERCENT\"",
+   "\"DRAWDOWN\"", "\"PYRAMIDING_LAYER\"", "\"INITIAL_ENTRY_PRICE\"",
+   "\"LATEST_ENTRY_PRICE\"", "\"AVERAGE_PRICE\"", "\"STOP_TARGET_REF_PRICE\"",
+   "\"POSITION_DIRECTION\"", "\"SL_1R\"", "\"ALWAYS\"", "\"NEVER\"",
+   R"({"method":"VALUE","params":{"value":1.25}})",
+   R"({"method":"DATA","params":{"field":"custom"}})",
+   R"({"method":"SERIES","params":{"name":"basis"}})",
+   R"({"method":"INPUT","params":{"label":"Period","representation":"SignedInteger","value":-2}})",
+   R"({"method":"CHANGE"})",
+   R"({"method":"LOOKBACK","params":{"period":2}})",
+   R"({"method":"SMA"})", R"({"method":"EMA"})", R"({"method":"WMA"})",
+   R"({"method":"RMA"})", R"({"method":"HMA"})", R"({"method":"RSI"})",
+   R"({"method":"HIGHEST"})", R"({"method":"LOWEST"})", R"({"method":"ROC"})",
+   R"({"method":"STDDEV"})", R"({"method":"RVOL"})", R"({"method":"TR"})",
+   R"({"method":"ATR","params":{"maSmoothingType":"EMA"}})",
+   R"({"method":"KC"})", R"({"method":"DC"})",
+   R"({"method":"BB"})", R"({"method":"MACD"})", R"({"method":"STOCH"})",
+   R"({"method":"STOCH_RSI"})",
+   R"({"method":"SELECT_OUTPUT","params":{"output":"upper-band","source":"CLOSE"}})",
+   R"({"method":"PERCENTAGE"})", R"({"method":"POSITION_R_MULTIPLE"})",
+   R"({"method":"SL_AMOUNT"})", R"({"method":"TP_AMOUNT"})",
+   R"({"method":"SL_PERCENT"})", R"({"method":"TP_PERCENT"})",
+   R"({"method":"SL_ATR"})", R"({"method":"TP_ATR"})",
+   R"({"method":"R_DISTANCE_AMOUNT"})",
+   R"({"method":"R_DISTANCE_PERCENTAGE"})", R"({"method":"R_DISTANCE_ATR"})",
+   R"({"method":"SL_R_MULTIPLE"})", R"({"method":"TP_R_MULTIPLE"})",
+   R"({"method":"ADD","params":{"augend":1,"addend":2}})",
+   R"({"method":"SUBTRACT","params":{"minuend":1,"subtrahend":2}})",
+   R"({"method":"MULTIPLY","params":{"multiplicand":1,"multiplier":2}})",
+   R"({"method":"DIVIDE","params":{"dividend":1,"divisor":2}})",
+   R"({"method":"ABS_DIFF","params":{"minuend":1,"subtrahend":2}})",
+   R"({"method":"MAX","params":{"left":1,"right":2}})",
+   R"({"method":"MIN","params":{"left":1,"right":2}})",
+   R"({"method":"NEGATE","params":{"operand":1}})",
+   R"({"method":"ABS","params":{"operand":-1}})",
+   R"({"method":"SQRT","params":{"operand":4}})",
+   R"({"method":"POSITIVE_PART","params":{"operand":1}})",
+   R"({"method":"NEGATIVE_PART","params":{"operand":-1}})",
+   R"({"method":"GREATER_THAN","params":{"target":2,"threshold":1}})",
+   R"({"method":"GREATER_EQUAL","params":{"target":2,"threshold":1}})",
+   R"({"method":"LESS_THAN","params":{"target":1,"threshold":2}})",
+   R"({"method":"LESS_EQUAL","params":{"target":1,"threshold":2}})",
+   R"({"method":"EQUAL","params":{"target":1,"threshold":1}})",
+   R"({"method":"NOT_EQUAL","params":{"target":1,"threshold":2}})",
+   R"({"method":"CROSSOVER","params":{"value":"CLOSE","baseline":"OPEN"}})",
+   R"({"method":"CROSSUNDER","params":{"value":"CLOSE","baseline":"OPEN"}})",
+   R"({"method":"AND","params":{"firstCondition":true,"secondCondition":false}})",
+   R"({"method":"OR","params":{"firstCondition":true,"secondCondition":false}})",
+   R"({"method":"XOR","params":{"firstCondition":true,"secondCondition":false}})",
+   R"({"method":"NOT","params":{"condition":true}})",
+   R"({"method":"ALL_OF","params":{"items":[true,false]}})",
+   R"({"method":"ANY_OF","params":{"items":[true,false]}})"};
+
+  for(const auto& configuration : configurations) {
+    SCOPED_TRACE(configuration);
+    const auto config = json::parse(configuration);
+    const auto node = parser.parse_node(config);
+    EXPECT_EQ(parser.parse_node(parser.serialize_node(node)), node);
+  }
+}
+
+TEST(ModelConfigParserTest,
+     RoundTripsScalarOperationsUsingBacktestMethodContextNodes)
+{
+  auto parser = make_backtest_model_config_parser();
+
+  const auto absolute = parser.parse_node(
+   json::parse(R"({"method":"ABS","params":{"operand":-1}})"));
+  EXPECT_NE((node_cast<UnaryOperatorNode<Absolute<>, BacktestMethodContext>>(
+              absolute)),
+            nullptr);
+  EXPECT_EQ(parser.parse_node(parser.serialize_node(absolute)), absolute);
+
+  const auto maximum = parser.parse_node(
+   json::parse(R"({"method":"MAX","params":{"left":1,"right":2}})"));
+  EXPECT_NE((node_cast<BinaryOperatorNode<Maximum<>, BacktestMethodContext>>(
+              maximum)),
+            nullptr);
+  EXPECT_EQ(parser.parse_node(parser.serialize_node(maximum)), maximum);
+
+  const auto minimum = parser.parse_node(
+   json::parse(R"({"method":"MIN","params":{"left":1,"right":2}})"));
+  EXPECT_NE((node_cast<BinaryOperatorNode<Minimum<>, BacktestMethodContext>>(
+              minimum)),
+            nullptr);
+  EXPECT_EQ(parser.parse_node(parser.serialize_node(minimum)), minimum);
+
+  const auto positive_part = parser.parse_node(
+   json::parse(R"({"method":"POSITIVE_PART","params":{"operand":1}})"));
+  EXPECT_NE((node_cast<UnaryOperatorNode<PositivePart<>, BacktestMethodContext>>(
+              positive_part)),
+            nullptr);
+  EXPECT_EQ(parser.parse_node(parser.serialize_node(positive_part)),
+            positive_part);
+
+  const auto negative_part = parser.parse_node(
+   json::parse(R"({"method":"NEGATIVE_PART","params":{"operand":-1}})"));
+  EXPECT_NE((node_cast<UnaryOperatorNode<NegativePart<>, BacktestMethodContext>>(
+              negative_part)),
+            nullptr);
+  EXPECT_EQ(parser.parse_node(parser.serialize_node(negative_part)),
+            negative_part);
+}
+
+TEST(RequestedOrderComparatorConfigParserTest,
+     SupportsOnlyComparatorGrammarAndProducesTypedNodes)
+{
+  auto parser = make_requested_order_comparator_config_parser();
+  const auto config = json::parse(R"(
+    {"method":"DIVIDE","params":{"dividend":{"method":"REQUESTED_NOTIONAL"},"divisor":{"method":"LOOKBACK","params":{"period":2,"source":"CLOSE"}}}}
+  )");
+  const auto node = parser.parse_node(config);
+  const auto* divide =
+   node_cast<BinaryOperatorNode<std::divides<>,
+                                backtest::RequestedOrderMethodContext>>(node);
+  EXPECT_NE(divide, nullptr);
+  const auto serialized = parser.serialize_node(node);
+  EXPECT_EQ(parser.parse_node(serialized), node);
+  EXPECT_THROW(parser.parse_node(json::parse(R"({"method":"SERIES","params":{"name":"x"}})")),
+               std::invalid_argument);
+  EXPECT_THROW(parser.parse_node(json::parse(R"({"method":"ATR"})")), std::invalid_argument);
+  EXPECT_THROW(parser.parse_node(json::parse(R"({"method":"EQUITY"})")),
+               std::invalid_argument);
+  EXPECT_THROW(parser.parse_node(json::parse("true")), std::invalid_argument);
+  EXPECT_THROW(parser.parse_node(json::parse("false")), std::invalid_argument);
+}
+
+TEST(RequestedOrderComparatorConfigParserTest,
+     RoundTripsEveryCanonicalComparatorRegistrationAndRejectsModelOnlyNodes)
+{
+  auto parser = make_requested_order_comparator_config_parser();
+  const auto configurations = std::vector<std::string>{
+   "1", "\"OPEN\"", "\"HIGH\"", "\"LOW\"", "\"CLOSE\"", "\"VOLUME\"",
+   R"({"method":"VALUE","params":{"value":1.25}})",
+   R"({"method":"DATA","params":{"field":"custom"}})",
+   R"({"method":"LOOKBACK","params":{"period":2}})",
+   R"({"method":"REQUESTED_ORDER_PRICE"})",
+   R"({"method":"REQUESTED_ORDER_DIRECTION"})",
+   R"({"method":"IS_PYRAMIDING_ORDER"})",
+   R"({"method":"RAW_REQUESTED_QUANTITY"})",
+   R"({"method":"RAW_REQUESTED_QUANTITY_LIMIT"})",
+   R"({"method":"DRAWDOWN_ADJUSTED_QUANTITY"})",
+   R"({"method":"DRAWDOWN_ADJUSTED_QUANTITY_LIMIT"})",
+   R"({"method":"REQUESTED_QUANTITY"})", R"({"method":"REQUESTED_NOTIONAL"})",
+   R"({"method":"REQUESTED_COST"})", R"({"method":"ESTIMATED_ENTRY_FEE"})",
+   R"({"method":"ESTIMATED_1R_EXIT_FEE"})",
+   R"({"method":"REQUESTED_ORDER_RISK_DISTANCE"})",
+   R"({"method":"REQUESTED_PRICE_RISK"})",
+   R"({"method":"REQUESTED_RISK_WITH_FEES"})",
+   R"({"method":"FROZEN_UNIT_QUANTITY"})",
+   R"({"method":"ADD","params":{"augend":1,"addend":2}})",
+   R"({"method":"SUBTRACT","params":{"minuend":1,"subtrahend":2}})",
+   R"({"method":"MULTIPLY","params":{"multiplicand":1,"multiplier":2}})",
+   R"({"method":"DIVIDE","params":{"dividend":1,"divisor":2}})",
+   R"({"method":"ABS_DIFF","params":{"left":1,"right":2}})",
+   R"({"method":"MAX","params":{"left":1,"right":2}})",
+   R"({"method":"MIN","params":{"left":1,"right":2}})",
+   R"({"method":"NEGATE","params":{"operand":1}})",
+   R"({"method":"ABS","params":{"operand":1}})",
+   R"({"method":"SQRT","params":{"operand":4}})",
+   R"({"method":"POSITIVE_PART","params":{"operand":1}})",
+   R"({"method":"NEGATIVE_PART","params":{"operand":-1}})"};
+
+  for(const auto& configuration : configurations) {
+    SCOPED_TRACE(configuration);
+    const auto config = json::parse(configuration);
+    const auto node = parser.parse_node(config);
+    EXPECT_EQ(parser.parse_node(parser.serialize_node(node)), node);
+  }
+
+  for(const auto* model_only : {
+       "EQUITY", "EQUITY_PERCENT", "DRAWDOWN", "CHANGE", "SMA", "EMA",
+       "WMA", "RMA", "HMA", "RSI", "HIGHEST", "LOWEST", "ROC", "RVOL",
+       "ATR", "TR", "KC", "DC", "SERIES", "INPUT", "SELECT_OUTPUT", "BB",
+       "MACD", "STOCH", "STOCH_RSI", "PERCENTAGE", "SL_AMOUNT", "TP_AMOUNT",
+       "SL_PERCENT", "TP_PERCENT", "SL_ATR", "TP_ATR", "R_DISTANCE_AMOUNT",
+       "R_DISTANCE_PERCENTAGE", "R_DISTANCE_ATR", "SL_1R", "SL_R_MULTIPLE",
+       "TP_R_MULTIPLE", "INITIAL_ENTRY_PRICE", "LATEST_ENTRY_PRICE",
+       "AVERAGE_PRICE", "STOP_TARGET_REF_PRICE", "POSITION_DIRECTION",
+       "PYRAMIDING_LAYER", "POSITION_R_MULTIPLE", "GREATER_THAN",
+       "GREATER_EQUAL", "LESS_THAN", "LESS_EQUAL", "EQUAL", "NOT_EQUAL",
+       "CROSSOVER", "CROSSUNDER", "ALWAYS", "NEVER", "AND", "OR", "NOT",
+       "XOR", "ALL_OF", "ANY_OF"}) {
+    SCOPED_TRACE(model_only);
+    EXPECT_THROW(parser.parse_node(json::parse(std::string{"{\"method\":\""} +
+                                               model_only + "\"}")),
+                 std::invalid_argument);
+  }
+}
 
 auto node_context = NodeToErasedMethodContext{};
 
@@ -85,21 +381,21 @@ private:
 
 class ParsedConfigNodeMethod {
 public:
-  ParsedConfigNodeMethod(ErasedNode<ErasedSeriesMethodContext> node)
+  ParsedConfigNodeMethod(ErasedNode<BacktestMethodContext> node)
   : node_{std::move(node)}
   , method_{
-     node_to_erased_method<ErasedSeriesMethodContext>(node_, node_context)}
+     node_to_erased_method<BacktestMethodContext>(node_, node_context)}
   {
   }
 
   auto method(this const ParsedConfigNodeMethod& self) noexcept
-   -> const ErasedSeriesMethod<ErasedSeriesMethodContext>&
+   -> const ErasedSeriesMethod<BacktestMethodContext>&
   {
     return self.method_;
   }
 
   auto node(this const ParsedConfigNodeMethod& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<BacktestMethodContext>&
   {
     return self.node_;
   }
@@ -111,8 +407,8 @@ public:
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> node_;
-  ErasedSeriesMethod<ErasedSeriesMethodContext> method_;
+  ErasedNode<BacktestMethodContext> node_;
+  ErasedSeriesMethod<BacktestMethodContext> method_;
 };
 
 template<typename UMethod>
@@ -124,7 +420,7 @@ auto series_method_cast(
 }
 
 auto value_method_value(
- const ErasedSeriesMethod<ErasedSeriesMethodContext>& method) noexcept -> double
+ const ErasedSeriesMethod<BacktestMethodContext>& method) noexcept -> double
 {
   const auto* value_method = series_method_cast<ValueMethod>(method);
   EXPECT_NE(value_method, nullptr);
@@ -133,7 +429,7 @@ auto value_method_value(
 
 class ConfigParserTest : public ::testing::Test {
 protected:
-  ConfigParser config_parser;
+  ModelConfigParser config_parser;
 
   auto parse_node_method(const jsoncons::ojson& config)
    -> ParsedConfigNodeMethod
@@ -150,7 +446,7 @@ protected:
 
   void SetUp() override
   {
-    config_parser = std::move(make_default_registered_config_parser());
+    config_parser = std::move(make_backtest_model_config_parser());
 
     parse_node_method(json::parse(R"(
       {
@@ -326,7 +622,7 @@ TEST_F(ConfigParserTest, ParseScreenerLookbackMethod)
   const auto method = parse_node_method(config);
 
   const auto lookback_method = series_method_cast<
-   LookbackMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   LookbackMethod<ErasedSeriesMethod<BacktestMethodContext>>>(method);
   ASSERT_NE(lookback_method, nullptr);
 
   EXPECT_EQ(lookback_method->period(), 3);
@@ -391,13 +687,13 @@ TEST_F(ConfigParserTest, ParseScreenerSelectOutputMethod)
   const auto method = parse_node_method(config);
 
   const auto select_output_method = series_method_cast<
-   SelectOutputMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   SelectOutputMethod<ErasedSeriesMethod<BacktestMethodContext>>>(method);
   ASSERT_NE(select_output_method, nullptr);
   EXPECT_EQ(select_output_method->output(), MethodOutput::UpperBand);
 
   const auto macd_method = series_method_cast<
-   MacdMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-              ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   MacdMethod<ErasedSeriesMethod<BacktestMethodContext>,
+              ErasedSeriesMethod<BacktestMethodContext>>>(
    select_output_method->source());
   ASSERT_NE(macd_method, nullptr);
 
@@ -408,6 +704,24 @@ TEST_F(ConfigParserTest, ParseScreenerSelectOutputMethod)
   EXPECT_EQ(value_method_value(macd_method->signal_period()), 9);
 
   const auto serialized_config = serialize_node_method(method);
+  const auto expected_serialized_config = json::parse(R"(
+    {
+      "method": "SELECT_OUTPUT",
+      "params": {
+        "output": "upper-band",
+        "source": {
+          "method": "MACD",
+          "params": {
+            "fastPeriod": {"method": "VALUE", "params": {"value": 12}},
+            "slowPeriod": {"method": "VALUE", "params": {"value": 26}},
+            "signalPeriod": {"method": "VALUE", "params": {"value": 9}},
+            "source": {"method": "CLOSE"}
+          }
+        }
+      }
+    }
+  )");
+  EXPECT_EQ(serialized_config, expected_serialized_config);
   const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
@@ -528,8 +842,8 @@ TEST_F(ConfigParserTest, ParseScreenerSmaMethod)
   const auto method = parse_node_method(config);
 
   const auto sma_method =
-   series_method_cast<SmaMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<SmaMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                                ErasedSeriesMethod<BacktestMethodContext>>>(
     method);
   ASSERT_NE(sma_method, nullptr);
 
@@ -571,8 +885,8 @@ TEST_F(ConfigParserTest, ParseScreenerEmaMethod)
   const auto method = parse_node_method(config);
 
   const auto ema_method =
-   series_method_cast<EmaMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<EmaMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                                ErasedSeriesMethod<BacktestMethodContext>>>(
     method);
   ASSERT_NE(ema_method, nullptr);
 
@@ -614,8 +928,8 @@ TEST_F(ConfigParserTest, ParseScreenerWmaMethod)
   const auto method = parse_node_method(config);
 
   const auto wma_method =
-   series_method_cast<WmaMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<WmaMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                                ErasedSeriesMethod<BacktestMethodContext>>>(
     method);
   ASSERT_NE(wma_method, nullptr);
 
@@ -657,8 +971,8 @@ TEST_F(ConfigParserTest, ParseScreenerRmaMethod)
   const auto method = parse_node_method(config);
 
   const auto rma_method =
-   series_method_cast<RmaMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<RmaMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                                ErasedSeriesMethod<BacktestMethodContext>>>(
     method);
   ASSERT_NE(rma_method, nullptr);
 
@@ -700,8 +1014,8 @@ TEST_F(ConfigParserTest, ParseScreenerHmaMethod)
   const auto method = parse_node_method(config);
 
   const auto hma_method =
-   series_method_cast<HmaMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<HmaMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                                ErasedSeriesMethod<BacktestMethodContext>>>(
     method);
   ASSERT_NE(hma_method, nullptr);
 
@@ -737,8 +1051,8 @@ TEST_F(ConfigParserTest, ParseScreenerRsiMethod)
   const auto method = parse_node_method(config);
 
   const auto rsi_method =
-   series_method_cast<RsiMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<RsiMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                                ErasedSeriesMethod<BacktestMethodContext>>>(
     method);
   ASSERT_NE(rsi_method, nullptr);
 
@@ -774,8 +1088,8 @@ TEST_F(ConfigParserTest, ParseScreenerStddevMethod)
   const auto method = parse_node_method(config);
 
   const auto stddev_method = series_method_cast<
-   StddevMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   StddevMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                ErasedSeriesMethod<BacktestMethodContext>>>(method);
   ASSERT_NE(stddev_method, nullptr);
 
   EXPECT_EQ(value_method_value(stddev_method->period()), 20);
@@ -914,7 +1228,7 @@ TEST_F(ConfigParserTest, ParseScreenerAtrMethod)
   const auto method = parse_node_method(config);
 
   const auto atr_method =
-   series_method_cast<AtrMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<AtrMethod<ErasedSeriesMethod<BacktestMethodContext>>>(
     method);
   ASSERT_NE(atr_method, nullptr);
 
@@ -960,8 +1274,8 @@ TEST_F(ConfigParserTest, ParseScreenerBbMethod)
   const auto method = parse_node_method(config);
 
   const auto bb_method =
-   series_method_cast<BbMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                               ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<BbMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                               ErasedSeriesMethod<BacktestMethodContext>>>(
     method);
   ASSERT_NE(bb_method, nullptr);
 
@@ -1016,8 +1330,8 @@ TEST_F(ConfigParserTest, ParseScreenerMacdMethod)
   const auto method = parse_node_method(config);
 
   const auto macd_method = series_method_cast<
-   MacdMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-              ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   MacdMethod<ErasedSeriesMethod<BacktestMethodContext>,
+              ErasedSeriesMethod<BacktestMethodContext>>>(method);
   ASSERT_NE(macd_method, nullptr);
 
   const auto source = series_method_cast<DataMethod>(macd_method->source());
@@ -1065,7 +1379,7 @@ TEST_F(ConfigParserTest, ParseScreenerStochMethod)
   const auto method = parse_node_method(config);
 
   const auto stoch_method = series_method_cast<
-   StochMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   StochMethod<ErasedSeriesMethod<BacktestMethodContext>>>(method);
   ASSERT_NE(stoch_method, nullptr);
 
   EXPECT_EQ(value_method_value(stoch_method->k_period()), 5);
@@ -1124,8 +1438,8 @@ TEST_F(ConfigParserTest, ParseScreenerStochRsiMethod)
   const auto method = parse_node_method(config);
 
   const auto stoch_rsi_method = series_method_cast<
-   StochRsiMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                  ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   StochRsiMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                  ErasedSeriesMethod<BacktestMethodContext>>>(method);
   ASSERT_NE(stoch_rsi_method, nullptr);
 
   const auto rsi_source =
@@ -1183,8 +1497,8 @@ TEST_F(ConfigParserTest, ParseScreenerKcMethod)
   const auto method = parse_node_method(config);
 
   const auto kc_method =
-   series_method_cast<KcMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                               ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<KcMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                               ErasedSeriesMethod<BacktestMethodContext>>>(
     method);
   ASSERT_NE(kc_method, nullptr);
 
@@ -1222,7 +1536,7 @@ TEST_F(ConfigParserTest, ParseScreenerDonchianChannelMethod)
   const auto method = parse_node_method(config);
 
   const auto dc_method = series_method_cast<
-   DonchianChannelMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   DonchianChannelMethod<ErasedSeriesMethod<BacktestMethodContext>>>(
    method);
   ASSERT_NE(dc_method, nullptr);
 
@@ -1253,8 +1567,8 @@ TEST_F(ConfigParserTest, ParseScreenerAddMethod)
   const auto method = parse_node_method(config);
 
   const auto add_method =
-   series_method_cast<AddMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<AddMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                                ErasedSeriesMethod<BacktestMethodContext>>>(
     method);
   ASSERT_NE(add_method, nullptr);
 
@@ -1295,8 +1609,8 @@ TEST_F(ConfigParserTest, ParseScreenerSubtractMethod)
   const auto method = parse_node_method(config);
 
   const auto subtract_method = series_method_cast<
-   SubtractMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                  ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   SubtractMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                  ErasedSeriesMethod<BacktestMethodContext>>>(method);
   ASSERT_NE(subtract_method, nullptr);
 
   const auto minuend = series_method_cast<ValueMethod>(subtract_method->left());
@@ -1337,8 +1651,8 @@ TEST_F(ConfigParserTest, ParseScreenerMultiplyMethod)
   const auto method = parse_node_method(config);
 
   const auto multiply_method = series_method_cast<
-   MultiplyMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                  ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   MultiplyMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                  ErasedSeriesMethod<BacktestMethodContext>>>(method);
   ASSERT_NE(multiply_method, nullptr);
 
   const auto multiplicand =
@@ -1380,8 +1694,8 @@ TEST_F(ConfigParserTest, ParseScreenerDivideMethod)
   const auto method = parse_node_method(config);
 
   const auto divide_method = series_method_cast<
-   DivideMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   DivideMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                ErasedSeriesMethod<BacktestMethodContext>>>(method);
   ASSERT_NE(divide_method, nullptr);
 
   const auto dividend = series_method_cast<ValueMethod>(divide_method->left());
@@ -1415,7 +1729,7 @@ TEST_F(ConfigParserTest, ParseScreenerNegateMethod)
   const auto method = parse_node_method(config);
 
   const auto negate_method = series_method_cast<
-   NegateMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   NegateMethod<ErasedSeriesMethod<BacktestMethodContext>>>(method);
   ASSERT_NE(negate_method, nullptr);
 
   const auto operand =
@@ -1447,7 +1761,7 @@ TEST_F(ConfigParserTest, ParseScreenerSqrtMethod)
   const auto method = parse_node_method(config);
 
   const auto sqrt_method = series_method_cast<
-   SqrtMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   SqrtMethod<ErasedSeriesMethod<BacktestMethodContext>>>(method);
   ASSERT_NE(sqrt_method, nullptr);
 
   const auto operand = series_method_cast<ValueMethod>(sqrt_method->operand());
@@ -1478,7 +1792,7 @@ TEST_F(ConfigParserTest, ParseScreenerChangeMethod)
   const auto method = parse_node_method(config);
 
   const auto changes_method = series_method_cast<
-   ChangeMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   ChangeMethod<ErasedSeriesMethod<BacktestMethodContext>>>(method);
   ASSERT_NE(changes_method, nullptr);
 
   const auto source = series_method_cast<DataMethod>(changes_method->source());
@@ -1515,8 +1829,8 @@ TEST_F(ConfigParserTest, ParseScreenerAbsDiffMethod)
   const auto method = parse_node_method(config);
 
   const auto abs_diff_method = series_method_cast<
-   AbsDiffMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                 ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   AbsDiffMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                 ErasedSeriesMethod<BacktestMethodContext>>>(method);
   ASSERT_NE(abs_diff_method, nullptr);
 
   const auto minuend = series_method_cast<DataMethod>(abs_diff_method->left());
@@ -1552,7 +1866,7 @@ TEST_F(ConfigParserTest, ParseScreenerPercentageMethod)
   const auto method = parse_node_method(config);
 
   const auto percentage_method = series_method_cast<
-   PercentageMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   PercentageMethod<ErasedSeriesMethod<BacktestMethodContext>>>(method);
   ASSERT_NE(percentage_method, nullptr);
 
   const auto base = series_method_cast<ValueMethod>(percentage_method->base());
@@ -1623,14 +1937,14 @@ TEST_F(ConfigParserTest, ParsePositionRMultipleMethod)
 
   const auto* default_r_multiple =
    series_method_cast<pludux::backtest::PositionRMultipleMethod<
-    ErasedSeriesMethod<ErasedSeriesMethodContext>>>(default_method);
+    ErasedSeriesMethod<BacktestMethodContext>>>(default_method);
   ASSERT_NE(default_r_multiple, nullptr);
   EXPECT_NE(series_method_cast<CloseMethod>(default_r_multiple->source()),
             nullptr);
 
   const auto* custom_r_multiple =
    series_method_cast<pludux::backtest::PositionRMultipleMethod<
-    ErasedSeriesMethod<ErasedSeriesMethodContext>>>(custom_method);
+    ErasedSeriesMethod<BacktestMethodContext>>>(custom_method);
   ASSERT_NE(custom_r_multiple, nullptr);
   EXPECT_NE(series_method_cast<OpenMethod>(custom_r_multiple->source()),
             nullptr);
@@ -2279,8 +2593,8 @@ TEST_F(ConfigParserTest, ParseHighestMethod)
 
   const auto method = parse_node_method(config);
   const auto highest_method = series_method_cast<
-   HighestMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                 ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   HighestMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                 ErasedSeriesMethod<BacktestMethodContext>>>(method);
   ASSERT_NE(highest_method, nullptr);
 
   const auto serialized_config = serialize_node_method(method);
@@ -2309,8 +2623,8 @@ TEST_F(ConfigParserTest, ParseLowestMethod)
 
   const auto method = parse_node_method(config);
   const auto lowest_method = series_method_cast<
-   LowestMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   LowestMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                ErasedSeriesMethod<BacktestMethodContext>>>(method);
   ASSERT_NE(lowest_method, nullptr);
 
   const auto serialized_config = serialize_node_method(method);
@@ -2416,12 +2730,12 @@ TEST_F(ConfigParserTest, SeriesNodeRegistrySerializationDeserialization)
   )");
 
   auto series_nodes =
-   OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>{};
+   OrderedNamedRegistry<ErasedNode<BacktestMethodContext>>{};
   series_nodes.set("name1", DataNode{"close"});
   series_nodes.set("name2", ValueNode{100});
 
   auto serialize_series_nodes =
-   [this](const OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>&
+   [this](const OrderedNamedRegistry<ErasedNode<BacktestMethodContext>>&
            series_nodes) {
      auto series_nodes_config = jsoncons::ojson{};
      for(const auto& [series_name, series_node] : series_nodes) {
@@ -2432,7 +2746,7 @@ TEST_F(ConfigParserTest, SeriesNodeRegistrySerializationDeserialization)
    };
   auto parse_series_nodes = [this](const jsoncons::ojson& series_nodes_config) {
     auto parsed_series_nodes =
-     OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>{};
+     OrderedNamedRegistry<ErasedNode<BacktestMethodContext>>{};
     for(const auto& [series_name, series_config] :
         series_nodes_config.object_range()) {
       parsed_series_nodes.set(series_name,
@@ -2457,8 +2771,10 @@ TEST_F(ConfigParserTest, EntryFilterRoundTripsResultAndAccountNodes)
       "firstCondition": {
         "method": "GREATER_EQUAL",
         "target": {
-          "method": "STRATEGY_PERFORMANCE",
-          "metric": 0
+          "method": "MODEL_PERFORMANCE",
+          "params": {
+            "metric": "LIFETIME_COUNT"
+          }
         },
         "threshold": {
           "method": "VALUE",
@@ -2479,6 +2795,11 @@ TEST_F(ConfigParserTest, EntryFilterRoundTripsResultAndAccountNodes)
 
   const auto node = backtest::parse_entry_filter_node(config);
   const auto serialized = backtest::serialize_entry_filter_node(node);
+  EXPECT_EQ(serialized.at("firstCondition").at("target").at("method"),
+            "MODEL_PERFORMANCE");
+  EXPECT_EQ(serialized.at("firstCondition").at("target").at("params").at(
+              "metric").as<std::string>(),
+            "LIFETIME_COUNT");
   EXPECT_EQ(node, backtest::parse_entry_filter_node(serialized));
 }
 
@@ -2504,7 +2825,107 @@ TEST_F(ConfigParserTest, EntryFilterRejectsMarketDataNodes)
 TEST_F(ConfigParserTest, EntryFilterRejectsNonBooleanRoot)
 {
   const auto config =
-   json::parse(R"({"method":"STRATEGY_PERFORMANCE","metric":2})");
+   json::parse(
+    R"({"method":"MODEL_PERFORMANCE","params":{"metric":"WIN_RATE"}})");
+
+  EXPECT_THROW(backtest::parse_entry_filter_node(config),
+               std::invalid_argument);
+}
+
+TEST_F(ConfigParserTest, EntryFilterRejectsLegacyStrategyPerformanceMethod)
+{
+  const auto config = json::parse(R"(
+    {"method":"GREATER_THAN","target":{"method":"STRATEGY_PERFORMANCE","params":{"metric":"WIN_RATE"}},"threshold":0}
+  )");
+
+  EXPECT_THROW(backtest::parse_entry_filter_node(config), std::invalid_argument);
+}
+
+TEST_F(ConfigParserTest, EntryFilterRejectsIntegerPerformanceMetric)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "GREATER_THAN",
+      "target": {
+        "method": "MODEL_PERFORMANCE",
+        "params": {
+          "metric": 0
+        }
+      },
+      "threshold": 0
+    }
+  )");
+
+  EXPECT_THROW(backtest::parse_entry_filter_node(config),
+               std::invalid_argument);
+}
+
+TEST_F(ConfigParserTest, EntryFilterRejectsPerformanceMetricWithoutParams)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "GREATER_THAN",
+      "target": {
+        "method": "MODEL_PERFORMANCE"
+      },
+      "threshold": 0
+    }
+  )");
+
+  EXPECT_THROW(backtest::parse_entry_filter_node(config),
+               std::invalid_argument);
+}
+
+TEST_F(ConfigParserTest, EntryFilterRejectsPerformanceMetricWithoutMetric)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "GREATER_THAN",
+      "target": {
+        "method": "MODEL_PERFORMANCE",
+        "params": {}
+      },
+      "threshold": 0
+    }
+  )");
+
+  EXPECT_THROW(backtest::parse_entry_filter_node(config),
+               std::invalid_argument);
+}
+
+TEST_F(ConfigParserTest, EntryFilterRejectsUnknownPerformanceMetric)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "GREATER_THAN",
+      "target": {
+        "method": "MODEL_PERFORMANCE",
+        "params": {
+          "metric": "UNKNOWN"
+        }
+      },
+      "threshold": 0
+    }
+  )");
+
+  EXPECT_THROW(backtest::parse_entry_filter_node(config),
+               std::invalid_argument);
+}
+
+TEST_F(ConfigParserTest, EntryFilterRejectsLowercasePerformanceMetric)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "GREATER_THAN",
+      "target": {
+        "method": "MODEL_PERFORMANCE",
+        "params": {
+          "metric": "win_rate"
+        }
+      },
+      "threshold": 0
+    }
+  )");
 
   EXPECT_THROW(backtest::parse_entry_filter_node(config),
                std::invalid_argument);

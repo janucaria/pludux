@@ -13,7 +13,7 @@ public:
   auto operator==(const DrawdownNode& other) const noexcept -> bool = default;
 };
 
-template<MethodContextable TContext>
+template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const DrawdownNode& node,
                        NodeToErasedMethodContext& context) noexcept
