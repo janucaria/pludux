@@ -25,7 +25,12 @@ chronological order, Pludux reverses it. It does not repair arbitrary
 out-of-order timestamps, and portfolio timelines require finite, strictly
 increasing timestamps.
 
-### 2) Create a Model
+### 2) Create a Watchlist
+
+Open **Watchlists** and create a Watchlist that contains the Assets you want to
+test together. The exact item labels follow the current GUI prompt.
+
+### 3) Create a Model
 
 Open **Strategies** and create a new Model, or import one from JSON. Model JSON
 import/export is the documented exchange format for models.
@@ -33,7 +38,7 @@ import/export is the documented exchange format for models.
 For a first test, keep the logic simple. A Model can be built from the node
 editor and can use named series, conditions, and plots.
 
-### 3) Create a Profile
+### 4) Create a Profile
 
 Open **Profiles** and create a Profile. A Profile is a reusable risk and
 capital-management policy. The editor defaults to a risk-based position sizing
@@ -46,7 +51,7 @@ signals on their own. Configure an **Entry Filter** in the Strategy setup when
 you need to decide whether a fresh initial Requested Order may enter Portfolio
 ranking.
 
-### 4) Create a Strategy
+### 5) Create a Strategy
 
 Open **Strategies** and create a reusable Strategy. The editor uses these
 fields:
@@ -60,7 +65,7 @@ fields:
 Duplicate the Strategy if you want a variant without changing Systems that
 already reference it.
 
-### 5) Create a System
+### 6) Create a System
 
 Open **Strategies** and create a System. The System editor uses these fields:
 
@@ -74,7 +79,12 @@ For the first run, use one Asset in the Watchlist, one Model, one Profile, and
 one Strategy.
 Leave Failsafes out unless you need them.
 
-### 6) Add the System to a Portfolio
+### 7) Set Market and Broker
+
+Open **Markets** and **Brokers** if you need venue-specific rules or execution
+provider fees for the Portfolio.
+
+### 8) Add the System to a Portfolio
 
 Open **Portfolios** and create a Portfolio. The Portfolio editor includes:
 
@@ -89,7 +99,7 @@ Open **Portfolios** and create a Portfolio. The Portfolio editor includes:
 
 Add your System to the Portfolio and keep the order stable.
 
-### 7) Run and inspect
+### 9) Run and inspect
 
 Run the Portfolio, then inspect:
 

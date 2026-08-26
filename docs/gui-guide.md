@@ -6,14 +6,16 @@ Pludux uses a docked desktop layout.
 
 The dockspace opens these windows:
 
-- Portfolios
-- Backtests
 - Assets
 - Watchlists
+- Models
+- Profiles
 - Strategies
+- Systems
 - Markets
 - Brokers
-- Profiles
+- Portfolios
+- Backtests
 - Chart
 - Trades
 - Overview

@@ -228,30 +228,30 @@ public:
     try {
       self.dockspace_window_.render(window_context);
       if(self.discard_all_drafts_requested_) {
-         self.systems_window_.discard_draft();
-        self.portfolios_window_.discard_draft();
-        self.assets_window_.discard_draft();
-        self.watchlists_window_.discard_draft();
-         self.models_window_.discard_draft();
-        self.markets_window_.discard_draft();
-        self.brokers_window_.discard_draft();
-         self.profiles_window_.discard_draft();
-         self.strategies_window_.discard_draft();
-        self.discard_all_drafts_requested_ = false;
+         self.assets_window_.discard_draft();
+         self.watchlists_window_.discard_draft();
+          self.models_window_.discard_draft();
+          self.profiles_window_.discard_draft();
+          self.strategies_window_.discard_draft();
+          self.systems_window_.discard_draft();
+         self.markets_window_.discard_draft();
+         self.brokers_window_.discard_draft();
+         self.portfolios_window_.discard_draft();
+         self.discard_all_drafts_requested_ = false;
       }
       self.backtest_chart_window_.render(window_context);
       auto backtest_overview = BacktestOverviewWindow{};
       backtest_overview.render(window_context);
       self.trade_list_window_.render(window_context);
-      self.portfolios_window_.render(window_context);
-       self.systems_window_.render(window_context);
       self.assets_window_.render(window_context);
       self.watchlists_window_.render(window_context);
        self.models_window_.render(window_context);
-      self.markets_window_.render(window_context);
-      self.brokers_window_.render(window_context);
        self.profiles_window_.render(window_context);
        self.strategies_window_.render(window_context);
+       self.systems_window_.render(window_context);
+      self.markets_window_.render(window_context);
+      self.brokers_window_.render(window_context);
+      self.portfolios_window_.render(window_context);
     } catch(const std::exception& e) {
       const auto error_message = std::format("Error: {}", e.what());
       alert_messages.push_back(error_message);
@@ -514,15 +514,15 @@ private:
 
   DockspaceWindow dockspace_window_;
   BacktestChartWindow backtest_chart_window_;
-  PortfoliosWindow portfolios_window_;
-  SystemsWindow systems_window_;
   AssetsWindow assets_window_;
   WatchlistsWindow watchlists_window_;
    ModelsWindow models_window_;
-  MarketsWindow markets_window_;
-  BrokersWindow brokers_window_;
    ProfilesWindow profiles_window_;
    StrategiesWindow strategies_window_;
+  SystemsWindow systems_window_;
+  MarketsWindow markets_window_;
+  BrokersWindow brokers_window_;
+  PortfoliosWindow portfolios_window_;
   TradeListWindow trade_list_window_;
 
   ApplicationState app_state_;

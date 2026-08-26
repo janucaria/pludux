@@ -14,28 +14,30 @@ Start here:
 
 Pludux separates simulation into these repository terms:
 
-- **Asset**: market data and field mapping
-- **Model**: deterministic trading rules, including indicators, conditions,
-  entries/exits, plots, and inputs
-- **Profile**: sizing and capital policy for position sizing, drawdown
-  adjustment, and insufficient-cash handling
-- **Strategy**: a named, reusable stored configuration of one Model, one
-  Profile, model input overrides, and an Entry Filter
-- **System**: a reusable Watchlist plus one Main Strategy, ordered Failsafe
-  Strategy bindings and activation rules, and one shared Model Performance
-  configuration
-- **Portfolio**: shared-capital account that runs ordered Systems
+
 - **Backtest**: an actual System × Asset simulation run and its result
+- **Portfolio**: shared-capital account that runs ordered Systems
 - **Market**: a trading venue or market context (for example, IDX, NASDAQ,
   forex, or crypto) that holds venue-specific rules such as minimum order
   quantity and quantity step
 - **Broker**: the broker or execution provider used for the Market, including
   its fee and execution-cost rules
+- **System**: a reusable Watchlist plus one Main Strategy, ordered Failsafe
+  Strategy bindings and activation rules, and one shared Model Performance
+  configuration
+- **Strategy**: a named, reusable stored configuration of one Model, one
+  Profile, model input overrides, and an Entry Filter
+- **Profile**: sizing and capital policy for position sizing, drawdown
+  adjustment, and insufficient-cash handling
+- **Model**: deterministic trading rules, including indicators, conditions,
+  entries/exits, plots, and inputs
+- **Watchlist**: an ordered set of Assets used by a System
+- **Asset**: market data and field mapping
 
 ## Verified capabilities
 
-- GUI-based Asset, Model, Strategy, Profile, Portfolio, Market, Broker, and
-  Watchlist management
+- GUI-based Portfolio, Market, Broker, System, Strategy, Profile, Model, Watchlist, 
+  and Asset management
 - Model creation/editing in the GUI, including node-based editing,
   duplicate, and JSON import/export
 - Strategy creation/editing in the GUI, including duplicate-and-reuse

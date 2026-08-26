@@ -20,10 +20,11 @@ use the reference pages when you need exact semantics.
 ## Recommended first flow
 
 1. Import one CSV file as an Asset.
-2. Create a Model.
-3. Create a Profile.
-4. Create a reusable Strategy from that Model + Profile.
-5. Create a System that references the Strategy.
-6. Add the System to a Portfolio.
+2. Create a Watchlist.
+3. Create a Model.
+4. Create a Profile.
+5. Create a reusable Strategy from that Model + Profile.
+6. Create a System that references the Strategy.
 7. Set Market and Broker if needed.
-8. Run the Portfolio and inspect Chart, Trades, and Overview.
+8. Add the System to a Portfolio.
+9. Run the Portfolio and inspect Chart, Trades, and Overview.

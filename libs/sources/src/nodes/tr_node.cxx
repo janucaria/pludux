@@ -26,7 +26,7 @@ public:
 
 template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
-                         const TrNode<TContext>&,
+                       const TrNode<TContext>&,
                        NodeToErasedMethodContext&)
  -> ErasedSeriesMethod<TContext>
 {

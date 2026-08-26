@@ -164,14 +164,14 @@ private:
     ImGui::DockBuilderDockWindow("Trades", dock_left_down_id);
     ImGui::DockBuilderDockWindow("Overview", dock_right_id);
     for(const auto* window : {"Portfolios",
-                                "Systems",
-                              "Assets",
-                              "Watchlists",
-                               "Models",
                               "Markets",
-                               "Brokers",
-                               "Profiles",
-                               "Strategies"}) {
+                              "Brokers",
+                              "Systems",
+                              "Strategies",
+                              "Profiles",
+                              "Models",
+                              "Watchlists",
+                              "Assets"}) {
       ImGui::DockBuilderDockWindow(window, dock_right_down_id);
     }
     ImGui::DockBuilderFinish(dockspace_id);

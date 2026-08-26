@@ -2,20 +2,21 @@
 
 ## Repository terms
 
-- **Asset**: market data and its field mapping.
+- **Portfolio**: a shared-capital account that owns ordered Systems and runs
+  the simulation.
+- **Backtest**: an actual System × Asset simulation run and its result.
+- **System**: a reusable Watchlist plus one Main Strategy, ordered Failsafe
+  Strategy bindings and activation rules, and one shared Model Performance
+  configuration.
+- **Strategy**: a named, reusable stored resource made of one Model, one
+  Profile, model input overrides, and an Entry Filter.
 - **Model**: deterministic trading rules that produce indicators, conditions,
   entries, exits, plots, and inputs. It is not necessarily forecasting or
   machine learning.
 - **Profile**: a reusable sizing and capital policy. It defines position sizing,
   drawdown adjustment, and insufficient-cash handling.
-- **Strategy**: a named, reusable stored resource made of one Model, one
-  Profile, model input overrides, and an Entry Filter.
-- **System**: a reusable Watchlist plus one Main Strategy, ordered Failsafe
-  Strategy bindings and activation rules, and one shared Model Performance
-  configuration.
-- **Portfolio**: a shared-capital account that owns ordered Systems and runs
-  the simulation.
-- **Backtest**: an actual System × Asset simulation run and its result.
+- **Watchlist**: an ordered set of Assets used by a System.
+- **Asset**: market data and its field mapping.
 - **Market**: a trading venue or market context (for example, IDX, NASDAQ,
   forex, or crypto) that holds venue-specific rules such as minimum order
   quantity and quantity step.
@@ -32,12 +33,15 @@ the reference is fixed.
 The GUI separates setup from simulation:
 
 1. Asset data is loaded first.
-2. Models define trading rules.
-3. Profiles define reusable sizing and capital policies through position sizing,
+2. Watchlists group Assets.
+3. Models define trading rules.
+4. Profiles define reusable sizing and capital policies through position sizing,
    drawdown adjustment, and insufficient-cash handling.
-4. Systems bind Watchlists with one Main Strategy, ordered Failsafe Strategy
+5. Strategies combine a Model and a Profile.
+6. Systems bind Watchlists with one Main Strategy, ordered Failsafe Strategy
    bindings, activation rules, and shared Model Performance settings.
-5. Portfolios run one or more Systems under shared capital.
+7. Markets and Brokers define venue and execution rules.
+8. Portfolios run one or more Systems under shared capital.
 
 The Portfolio decides whether the shared account can execute a request. The
 Strategy decides what it wants to request.
@@ -49,8 +53,9 @@ Broker fees.
 
 ## Verified GUI structure
 
-The main dockspace opens these windows: Portfolios, Backtests, Assets,
-Watchlists, Strategies, Markets, Brokers, Profiles, Chart, Trades, and Overview.
+The main dockspace opens these windows: Assets, Watchlists, Models, Profiles,
+Strategies, Systems, Markets, Brokers, Portfolios, Backtests, Chart, Trades,
+and Overview.
 
 ## Data and execution rules
 
