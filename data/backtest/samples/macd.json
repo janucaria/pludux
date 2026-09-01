@@ -2,14 +2,14 @@
   "version": 1,
   "series": {
     "macd_histogram": {
-      "method": "SELECT_OUTPUT",
+      "method": "OPERATOR.SELECT_OUTPUT",
       "params": {
         "output": "histogram",
         "source": {
-          "method": "MACD",
+          "method": "INDICATOR.MACD",
           "params": {
             "fastPeriod": {
-              "method": "INPUT",
+              "method": "INPUT.NUMERIC",
               "params": {
                 "label": "Fast Period",
                 "representation": "UnsignedInteger",
@@ -17,7 +17,7 @@
               }
             },
             "slowPeriod": {
-              "method": "INPUT",
+              "method": "INPUT.NUMERIC",
               "params": {
                 "label": "Slow Period",
                 "representation": "UnsignedInteger",
@@ -25,7 +25,7 @@
               }
             },
             "signalPeriod": {
-              "method": "INPUT",
+              "method": "INPUT.NUMERIC",
               "params": {
                 "label": "Signal Period",
                 "representation": "UnsignedInteger",
@@ -37,11 +37,11 @@
       }
     },
     "macd_signal": {
-      "method": "SELECT_OUTPUT",
+      "method": "OPERATOR.SELECT_OUTPUT",
       "params": {
         "output": "signal-line",
         "source": {
-          "method": "SERIES",
+          "method": "SERIES.REFERENCE",
           "params": {
             "name": "macd_histogram"
           }
@@ -49,11 +49,11 @@
       }
     },
     "macd_line": {
-      "method": "SELECT_OUTPUT",
+      "method": "OPERATOR.SELECT_OUTPUT",
       "params": {
         "output": "macd-line",
         "source": {
-          "method": "SERIES",
+          "method": "SERIES.REFERENCE",
           "params": {
             "name": "macd_histogram"
           }
@@ -65,10 +65,10 @@
     "long": {
       "entry": {
         "signal": {
-          "method": "CROSSOVER",
+          "method": "COMPARISON.CROSSOVER",
           "params": {
             "value": {
-              "method": "SERIES",
+              "method": "SERIES.REFERENCE",
               "params": {
                 "name": "macd_histogram"
               }
@@ -84,10 +84,10 @@
           {
             "enabled": true,
             "signal": {
-              "method": "CROSSUNDER",
+              "method": "COMPARISON.CROSSUNDER",
               "params": {
                 "value": {
-                  "method": "SERIES",
+                  "method": "SERIES.REFERENCE",
                   "params": {
                     "name": "macd_histogram"
                   }
@@ -100,16 +100,16 @@
         ]
       },
       "riskDistance": {
-        "method": "R_DISTANCE_ATR",
+        "method": "RISK_DISTANCE.ATR",
         "params": {
           "period": {
-            "method": "VALUE",
+            "method": "VALUE.CONSTANT",
             "params": {
               "value": 14
             }
           },
           "multiplier": {
-            "method": "VALUE",
+            "method": "VALUE.CONSTANT",
             "params": {
               "value": 2
             }
@@ -124,7 +124,7 @@
             "enabled": false,
             "trailing": false,
             "stopPrice": {
-              "method": "SL_1R"
+              "method": "STOP_LOSS.ONE_R"
             }
           }
         ]
@@ -133,21 +133,21 @@
   },
   "plots": [
     {
-      "label": "MACD",
+      "label": "INDICATOR.MACD",
       "overlay": false,
       "items": [
         {
-          "method": "HLINE",
+          "method": "PLOT.HLINE",
           "params": {
             "level": 0,
             "color": "#FFFFFF"
           }
         },
         {
-          "method": "MOMENTUM_HISTOGRAM",
+          "method": "PLOT.MOMENTUM_HISTOGRAM",
           "params": {
             "source": {
-              "method": "SERIES",
+              "method": "PLOT_SOURCE.SERIES",
               "params": {
                 "name": "macd_histogram"
               }
@@ -159,10 +159,10 @@
           }
         },
         {
-          "method": "LINE",
+          "method": "PLOT.LINE",
           "params": {
             "source": {
-              "method": "SERIES",
+              "method": "PLOT_SOURCE.SERIES",
               "params": {
                 "name": "macd_signal"
               }
@@ -171,10 +171,10 @@
           }
         },
         {
-          "method": "LINE",
+          "method": "PLOT.LINE",
           "params": {
             "source": {
-              "method": "SERIES",
+              "method": "PLOT_SOURCE.SERIES",
               "params": {
                 "name": "macd_line"
               }

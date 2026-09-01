@@ -2,10 +2,10 @@
   "version": 1,
   "series": {
     "kchannel": {
-      "method": "KC",
+      "method": "INDICATOR.KC",
       "params": {
         "period": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "label": "MA Period",
             "representation": "UnsignedInteger",
@@ -15,7 +15,7 @@
         "maMethodType": "EMA",
         "bandMethodType": "ATR",
         "bandAtrPeriod": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "label": "Band ATR Period",
             "representation": "UnsignedInteger",
@@ -23,7 +23,7 @@
           }
         },
         "multiplier": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "label": "ATR Multiplier",
             "representation": "Decimal",
@@ -33,11 +33,11 @@
       }
     },
     "kc_upper": {
-      "method": "SELECT_OUTPUT",
+      "method": "OPERATOR.SELECT_OUTPUT",
       "params": {
         "output": "upper-band",
         "source": {
-          "method": "SERIES",
+          "method": "SERIES.REFERENCE",
           "params": {
             "name": "kchannel"
           }
@@ -45,11 +45,11 @@
       }
     },
     "kc_lower": {
-      "method": "SELECT_OUTPUT",
+      "method": "OPERATOR.SELECT_OUTPUT",
       "params": {
         "output": "lower-band",
         "source": {
-          "method": "SERIES",
+          "method": "SERIES.REFERENCE",
           "params": {
             "name": "kchannel"
           }
@@ -61,11 +61,11 @@
     "long": {
       "entry": {
         "signal": {
-          "method": "CROSSOVER",
+          "method": "COMPARISON.CROSSOVER",
           "params": {
-            "value": "CLOSE",
+            "value": "MARKET_DATA.CLOSE",
             "baseline": {
-              "method": "SERIES",
+              "method": "SERIES.REFERENCE",
               "params": {
                 "name": "kc_lower"
               }
@@ -80,11 +80,11 @@
           {
             "enabled": true,
             "signal": {
-              "method": "CROSSUNDER",
+              "method": "COMPARISON.CROSSUNDER",
               "params": {
-                "value": "CLOSE",
+                "value": "MARKET_DATA.CLOSE",
                 "baseline": {
-                  "method": "SERIES",
+                  "method": "SERIES.REFERENCE",
                   "params": {
                     "name": "kc_upper"
                   }
@@ -96,16 +96,16 @@
         ]
       },
       "riskDistance": {
-        "method": "R_DISTANCE_ATR",
+        "method": "RISK_DISTANCE.ATR",
         "params": {
           "period": {
-            "method": "VALUE",
+            "method": "VALUE.CONSTANT",
             "params": {
               "value": 14
             }
           },
           "multiplier": {
-            "method": "VALUE",
+            "method": "VALUE.CONSTANT",
             "params": {
               "value": 2
             }
@@ -119,10 +119,10 @@
           {
             "enabled": true,
             "targetPrice": {
-              "method": "TP_R_MULTIPLE",
+              "method": "TAKE_PROFIT.R_MULTIPLE",
               "params": {
                 "multiple": {
-                  "method": "VALUE",
+                  "method": "VALUE.CONSTANT",
                   "params": {
                     "value": 2
                   }
@@ -139,7 +139,7 @@
             "enabled": true,
             "trailing": false,
             "stopPrice": {
-              "method": "SL_1R"
+              "method": "STOP_LOSS.ONE_R"
             }
           }
         ]
@@ -148,14 +148,14 @@
   },
   "plots": [
     {
-      "label": "KC",
+      "label": "INDICATOR.KC",
       "overlay": true,
       "items": [
         {
-          "method": "LINE",
+          "method": "PLOT.LINE",
           "params": {
             "source": {
-              "method": "SERIES",
+              "method": "PLOT_SOURCE.SERIES",
               "params": {
                 "name": "kc_upper"
               }
@@ -164,10 +164,10 @@
           }
         },
         {
-          "method": "LINE",
+          "method": "PLOT.LINE",
           "params": {
             "source": {
-              "method": "SERIES",
+              "method": "PLOT_SOURCE.SERIES",
               "params": {
                 "name": "kc_lower"
               }

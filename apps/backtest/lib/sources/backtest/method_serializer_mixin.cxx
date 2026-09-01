@@ -1,6 +1,8 @@
 module;
 
+#include <format>
 #include <functional>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -48,8 +50,12 @@ public:
                               const MethodSerialize& method_serialize,
                               const MethodDeserialize& method_deserialize)
   {
-    self.method_parsers_.emplace(
+    const auto [_, inserted] = self.method_parsers_.emplace(
      method_name, std::make_pair(method_serialize, method_deserialize));
+    if(!inserted) {
+      throw std::invalid_argument{
+       std::format("Method parser '{}' is already registered", method_name)};
+    }
   }
 
   auto deserialize_method(this const MethodSerializerMixin& self,
@@ -98,21 +104,28 @@ public:
   {
     const auto& derived = static_cast<const TDerived&>(self);
 
+    auto serialized_method = jsoncons::ojson::null();
+    auto matched_name = std::optional<std::string>{};
     for(const auto& [method_name, method_parser] : self.method_parsers_) {
       const auto& [method_params_serialize, _] = method_parser;
       auto serialized_params_method = method_params_serialize(derived, method);
       if(!serialized_params_method.is_null()) {
-        auto serialized_method = jsoncons::ojson{};
+        if(matched_name) {
+          throw std::invalid_argument{std::format(
+           "Multiple method parsers match serialization: '{}' and '{}'",
+           *matched_name,
+           method_name)};
+        }
+        matched_name = method_name;
+        serialized_method = jsoncons::ojson{};
         serialized_method["method"] = method_name;
         if(!serialized_params_method.empty()) {
           serialized_method["params"] = std::move(serialized_params_method);
         }
-
-        return serialized_method;
       }
     }
 
-    return jsoncons::ojson::null();
+    return serialized_method;
   }
 
 private:

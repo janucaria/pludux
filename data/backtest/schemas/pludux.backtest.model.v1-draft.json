@@ -38,24 +38,24 @@
       "examples": [
         {
           "fast_ema": {
-            "method": "EMA",
+            "method": "INDICATOR.EMA",
             "params": {
               "period": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "Period",
                   "representation": "UnsignedInteger",
                   "value": 20
                 }
               },
-              "source": "CLOSE"
+              "source": "MARKET_DATA.CLOSE"
             }
           },
           "bbands": {
-            "method": "BB",
+            "method": "INDICATOR.BB",
             "params": {
               "period": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "Period",
                   "representation": "UnsignedInteger",
@@ -63,14 +63,14 @@
                 }
               },
               "stddev": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "StdDev",
                   "representation": "Decimal",
                   "value": 2
                 }
               },
-              "maSource": "CLOSE"
+              "maSource": "MARKET_DATA.CLOSE"
             }
           }
         }
@@ -470,22 +470,22 @@
         {
           "type": "string",
           "enum": [
-            "OPEN",
-            "HIGH",
-            "LOW",
-            "CLOSE",
-            "VOLUME"
+            "MARKET_DATA.OPEN",
+            "MARKET_DATA.HIGH",
+            "MARKET_DATA.LOW",
+            "MARKET_DATA.CLOSE",
+            "MARKET_DATA.VOLUME"
           ],
           "description": "Quote shorthand representing raw market data. Preferred only for direct price/volume inputs."
         },
         {
           "type": "string",
           "enum": [
-            "EQUITY",
-            "EQUITY_PERCENT",
-            "DRAWDOWN",
-            "PYRAMIDING_LAYER",
-            "POSITION_R_MULTIPLE"
+            "PORTFOLIO.EQUITY",
+            "PORTFOLIO.EQUITY_PERCENT",
+            "PORTFOLIO.DRAWDOWN",
+            "POSITION.PYRAMIDING_LAYER",
+            "POSITION.R_MULTIPLE"
           ],
           "description": "Backtest-state shorthand. EQUITY reads the account equity available at the current evaluation moment. EQUITY_PERCENT reads that equity as a percentage of initial capital. DRAWDOWN reads the account drawdown available at the current evaluation moment. PYRAMIDING_LAYER reads the accepted position layer count, using 0 while flat."
         },
@@ -496,31 +496,31 @@
         {
           "type": "string",
           "enum": [
-            "SMA",
-            "EMA",
-            "RMA",
-            "WMA",
-            "HMA",
-            "ATR",
-            "STDDEV",
-            "BB",
-            "KC",
-            "DC",
-            "MACD",
-            "STOCH",
-            "STOCH_RSI"
+            "INDICATOR.SMA",
+            "INDICATOR.EMA",
+            "INDICATOR.RMA",
+            "INDICATOR.WMA",
+            "INDICATOR.HMA",
+            "INDICATOR.ATR",
+            "INDICATOR.STDDEV",
+            "INDICATOR.BB",
+            "INDICATOR.KC",
+            "INDICATOR.DC",
+            "INDICATOR.MACD",
+            "INDICATOR.STOCH",
+            "INDICATOR.STOCH_RSI"
           ],
           "description": "Indicator shorthand with default parameters. Convenience syntax only. Avoid using this if any parameter customization is required."
         }
       ],
       "examples": [
         {
-          "value": "CLOSE",
+          "value": "MARKET_DATA.CLOSE",
           "description": "Preferred: raw price input using quote shorthand"
         },
         {
           "value": {
-            "method": "SERIES",
+            "method": "SERIES.REFERENCE",
             "params": {
               "name": "fast_ema"
             }
@@ -529,16 +529,16 @@
         },
         {
           "value": {
-            "method": "EMA",
+            "method": "INDICATOR.EMA",
             "params": {
               "period": 20,
-              "source": "CLOSE"
+              "source": "MARKET_DATA.CLOSE"
             }
           },
           "description": "Preferred: explicit indicator with custom parameters"
         },
         {
-          "value": "EMA",
+          "value": "INDICATOR.EMA",
           "description": "Allowed but discouraged unless default parameters are intended exactly"
         }
       ]
@@ -549,9 +549,9 @@
       "properties": {
         "method": {
           "type": "string",
-          "pattern": "^[A-Z][A-Z0-9_]*$",
+          "pattern": "^[A-Z][A-Z0-9_]*(\\.[A-Z][A-Z0-9_]*)+$",
           "title": "Method",
-          "description": "Uppercase method name that identifies what this object does, such as SMA, RSI, CROSSOVER, or LINE."
+          "description": "Uppercase dot-qualified method identifier. Dots separate semantic namespaces and underscores separate words."
         },
         "params": {
           "type": "object",
@@ -574,11 +574,11 @@
           "properties": {
             "method": {
               "enum": [
-                "OPEN",
-                "HIGH",
-                "LOW",
-                "CLOSE",
-                "VOLUME"
+                "MARKET_DATA.OPEN",
+                "MARKET_DATA.HIGH",
+                "MARKET_DATA.LOW",
+                "MARKET_DATA.CLOSE",
+                "MARKET_DATA.VOLUME"
               ]
             }
           }
@@ -595,7 +595,7 @@
         {
           "properties": {
             "method": {
-              "const": "SERIES",
+              "const": "SERIES.REFERENCE",
               "title": "Method",
               "description": "Always use SERIES to reference a named series."
             },
@@ -631,7 +631,7 @@
       "description": "References a previously defined named series. At the current bar it evaluates the named series; for historical bars it reads the cached completed result.",
       "examples": [
         {
-          "method": "SERIES",
+          "method": "SERIES.REFERENCE",
           "params": {
             "name": "bbands"
           }
@@ -646,7 +646,7 @@
         {
           "properties": {
             "method": {
-              "const": "SELECT_OUTPUT"
+              "const": "OPERATOR.SELECT_OUTPUT"
             },
             "params": {
               "type": "object",
@@ -688,11 +688,11 @@
       "description": "Selects one named output from a multi-output series, such as Bollinger Bands, MACD, STOCH, or STOCH_RSI. The source should usually be a multi-output indicator definition directly, or a SERIES reference to a named multi-output series.",
       "examples": [
         {
-          "method": "SELECT_OUTPUT",
+          "method": "OPERATOR.SELECT_OUTPUT",
           "params": {
             "output": "upper-band",
             "source": {
-              "method": "SERIES",
+              "method": "SERIES.REFERENCE",
               "params": {
                 "name": "bbands"
               }
@@ -709,7 +709,7 @@
         {
           "properties": {
             "method": {
-              "const": "LOOKBACK"
+              "const": "OPERATOR.LOOKBACK"
             },
             "params": {
               "type": "object",
@@ -749,7 +749,7 @@
         {
           "properties": {
             "method": {
-              "const": "INPUT"
+              "const": "INPUT.NUMERIC"
             },
             "params": {
               "type": "object",
@@ -793,7 +793,7 @@
         {
           "properties": {
             "method": {
-              "const": "VALUE"
+              "const": "VALUE.CONSTANT"
             },
             "params": {
               "type": "object",
@@ -826,7 +826,7 @@
         {
           "properties": {
             "method": {
-              "const": "DATA"
+              "const": "MARKET_DATA.FIELD"
             },
             "params": {
               "type": "object",
@@ -859,7 +859,7 @@
         {
           "properties": {
             "method": {
-              "const": "EQUITY"
+              "const": "PORTFOLIO.EQUITY"
             },
             "params": {
               "type": "object",
@@ -872,7 +872,7 @@
       "description": "Reads the account equity available at the current evaluation moment.",
       "examples": [
         {
-          "method": "EQUITY"
+          "method": "PORTFOLIO.EQUITY"
         }
       ]
     },
@@ -884,7 +884,7 @@
         {
           "properties": {
             "method": {
-              "const": "EQUITY_PERCENT"
+              "const": "PORTFOLIO.EQUITY_PERCENT"
             },
             "params": {
               "type": "object",
@@ -897,7 +897,7 @@
       "description": "Reads account equity available at the current evaluation moment as a percentage of initial capital.",
       "examples": [
         {
-          "method": "EQUITY_PERCENT"
+          "method": "PORTFOLIO.EQUITY_PERCENT"
         }
       ]
     },
@@ -909,7 +909,7 @@
         {
           "properties": {
             "method": {
-              "const": "DRAWDOWN"
+              "const": "PORTFOLIO.DRAWDOWN"
             },
             "params": {
               "type": "object",
@@ -922,7 +922,7 @@
       "description": "Reads the account drawdown available at the current evaluation moment.",
       "examples": [
         {
-          "method": "DRAWDOWN"
+          "method": "PORTFOLIO.DRAWDOWN"
         }
       ]
     },
@@ -934,7 +934,7 @@
         {
           "properties": {
             "method": {
-              "const": "SMA"
+              "const": "INDICATOR.SMA"
             },
             "params": {
               "type": "object",
@@ -954,17 +954,17 @@
             }
           },
           "default": {
-            "method": "SMA",
+            "method": "INDICATOR.SMA",
             "params": {
               "period": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "Period",
                   "representation": "UnsignedInteger",
                   "value": 14
                 }
               },
-              "source": "CLOSE"
+              "source": "MARKET_DATA.CLOSE"
             }
           }
         }
@@ -980,7 +980,7 @@
         {
           "properties": {
             "method": {
-              "const": "EMA"
+              "const": "INDICATOR.EMA"
             },
             "params": {
               "type": "object",
@@ -1000,17 +1000,17 @@
             }
           },
           "default": {
-            "method": "EMA",
+            "method": "INDICATOR.EMA",
             "params": {
               "period": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "Period",
                   "representation": "UnsignedInteger",
                   "value": 14
                 }
               },
-              "source": "CLOSE"
+              "source": "MARKET_DATA.CLOSE"
             }
           }
         }
@@ -1026,7 +1026,7 @@
         {
           "properties": {
             "method": {
-              "const": "RMA"
+              "const": "INDICATOR.RMA"
             },
             "params": {
               "type": "object",
@@ -1046,17 +1046,17 @@
             }
           },
           "default": {
-            "method": "RMA",
+            "method": "INDICATOR.RMA",
             "params": {
               "period": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "Period",
                   "representation": "UnsignedInteger",
                   "value": 14
                 }
               },
-              "source": "CLOSE"
+              "source": "MARKET_DATA.CLOSE"
             }
           }
         }
@@ -1072,7 +1072,7 @@
         {
           "properties": {
             "method": {
-              "const": "WMA"
+              "const": "INDICATOR.WMA"
             },
             "params": {
               "type": "object",
@@ -1092,17 +1092,17 @@
             }
           },
           "default": {
-            "method": "WMA",
+            "method": "INDICATOR.WMA",
             "params": {
               "period": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "Period",
                   "representation": "UnsignedInteger",
                   "value": 14
                 }
               },
-              "source": "CLOSE"
+              "source": "MARKET_DATA.CLOSE"
             }
           }
         }
@@ -1118,7 +1118,7 @@
         {
           "properties": {
             "method": {
-              "const": "HMA"
+              "const": "INDICATOR.HMA"
             },
             "params": {
               "type": "object",
@@ -1138,17 +1138,17 @@
             }
           },
           "default": {
-            "method": "HMA",
+            "method": "INDICATOR.HMA",
             "params": {
               "period": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "Period",
                   "representation": "UnsignedInteger",
                   "value": 14
                 }
               },
-              "source": "CLOSE"
+              "source": "MARKET_DATA.CLOSE"
             }
           }
         }
@@ -1185,7 +1185,7 @@
         {
           "properties": {
             "method": {
-              "const": "RSI"
+              "const": "INDICATOR.RSI"
             },
             "params": {
               "type": "object",
@@ -1205,17 +1205,17 @@
             }
           },
           "default": {
-            "method": "RSI",
+            "method": "INDICATOR.RSI",
             "params": {
               "period": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "Period",
                   "representation": "UnsignedInteger",
                   "value": 14
                 }
               },
-              "source": "CLOSE"
+              "source": "MARKET_DATA.CLOSE"
             }
           }
         }
@@ -1231,7 +1231,7 @@
         {
           "properties": {
             "method": {
-              "const": "ATR"
+              "const": "INDICATOR.ATR"
             },
             "params": {
               "type": "object",
@@ -1257,10 +1257,10 @@
             }
           },
           "default": {
-            "method": "ATR",
+            "method": "INDICATOR.ATR",
             "params": {
               "period": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "Period",
                   "representation": "UnsignedInteger",
@@ -1283,7 +1283,7 @@
         {
           "properties": {
             "method": {
-              "const": "STDDEV"
+              "const": "INDICATOR.STDDEV"
             },
             "params": {
               "type": "object",
@@ -1300,7 +1300,7 @@
                       "$ref": "#/$defs/seriesAsParameter"
                     },
                     {
-                      "default": "CLOSE"
+                      "default": "MARKET_DATA.CLOSE"
                     }
                   ],
                   "title": "Source",
@@ -1310,17 +1310,17 @@
             }
           },
           "default": {
-            "method": "STDDEV",
+            "method": "INDICATOR.STDDEV",
             "params": {
               "period": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "Period",
                   "representation": "UnsignedInteger",
                   "value": 20
                 }
               },
-              "source": "CLOSE"
+              "source": "MARKET_DATA.CLOSE"
             }
           }
         }
@@ -1336,7 +1336,7 @@
         {
           "properties": {
             "method": {
-              "const": "HIGHEST"
+              "const": "INDICATOR.HIGHEST"
             },
             "params": {
               "type": "object",
@@ -1356,17 +1356,17 @@
             }
           },
           "default": {
-            "method": "HIGHEST",
+            "method": "INDICATOR.HIGHEST",
             "params": {
               "period": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "Period",
                   "representation": "UnsignedInteger",
                   "value": 14
                 }
               },
-              "source": "CLOSE"
+              "source": "MARKET_DATA.CLOSE"
             }
           }
         }
@@ -1382,7 +1382,7 @@
         {
           "properties": {
             "method": {
-              "const": "LOWEST"
+              "const": "INDICATOR.LOWEST"
             },
             "params": {
               "type": "object",
@@ -1402,17 +1402,17 @@
             }
           },
           "default": {
-            "method": "LOWEST",
+            "method": "INDICATOR.LOWEST",
             "params": {
               "period": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "Period",
                   "representation": "UnsignedInteger",
                   "value": 14
                 }
               },
-              "source": "CLOSE"
+              "source": "MARKET_DATA.CLOSE"
             }
           }
         }
@@ -1428,7 +1428,7 @@
         {
           "properties": {
             "method": {
-              "const": "ROC"
+              "const": "INDICATOR.ROC"
             },
             "params": {
               "type": "object",
@@ -1448,17 +1448,17 @@
             }
           },
           "default": {
-            "method": "ROC",
+            "method": "INDICATOR.ROC",
             "params": {
               "period": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "Period",
                   "representation": "UnsignedInteger",
                   "value": 14
                 }
               },
-              "source": "CLOSE"
+              "source": "MARKET_DATA.CLOSE"
             }
           }
         }
@@ -1474,7 +1474,7 @@
         {
           "properties": {
             "method": {
-              "const": "RVOL"
+              "const": "INDICATOR.RVOL"
             },
             "params": {
               "type": "object",
@@ -1489,10 +1489,10 @@
             }
           },
           "default": {
-            "method": "RVOL",
+            "method": "INDICATOR.RVOL",
             "params": {
               "period": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "Period",
                   "representation": "UnsignedInteger",
@@ -1514,7 +1514,7 @@
         {
           "properties": {
             "method": {
-              "const": "TR"
+              "const": "INDICATOR.TR"
             }
           }
         }
@@ -1530,7 +1530,7 @@
         {
           "properties": {
             "method": {
-              "const": "BB"
+              "const": "INDICATOR.BB"
             },
             "params": {
               "type": "object",
@@ -1566,10 +1566,10 @@
             }
           },
           "default": {
-            "method": "BB",
+            "method": "INDICATOR.BB",
             "params": {
               "period": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "Period",
                   "representation": "UnsignedInteger",
@@ -1577,7 +1577,7 @@
                 }
               },
               "stddev": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "StdDev",
                   "representation": "Decimal",
@@ -1585,7 +1585,7 @@
                 }
               },
               "maType": "SMA",
-              "maSource": "CLOSE"
+              "maSource": "MARKET_DATA.CLOSE"
             }
           }
         }
@@ -1601,7 +1601,7 @@
         {
           "properties": {
             "method": {
-              "const": "KC"
+              "const": "INDICATOR.KC"
             },
             "params": {
               "type": "object",
@@ -1651,11 +1651,11 @@
             }
           },
           "default": {
-            "method": "KC",
+            "method": "INDICATOR.KC",
             "params": {
-              "maSource": "CLOSE",
+              "maSource": "MARKET_DATA.CLOSE",
               "period": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "Period",
                   "representation": "UnsignedInteger",
@@ -1665,7 +1665,7 @@
               "maMethodType": "SMA",
               "bandMethodType": "ATR",
               "bandAtrPeriod": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "Band ATR Period",
                   "representation": "UnsignedInteger",
@@ -1673,7 +1673,7 @@
                 }
               },
               "multiplier": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "Multiplier",
                   "representation": "Decimal",
@@ -1695,7 +1695,7 @@
         {
           "properties": {
             "method": {
-              "const": "DC"
+              "const": "INDICATOR.DC"
             },
             "params": {
               "type": "object",
@@ -1710,10 +1710,10 @@
             }
           },
           "default": {
-            "method": "DC",
+            "method": "INDICATOR.DC",
             "params": {
               "period": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "Period",
                   "representation": "UnsignedInteger",
@@ -1735,7 +1735,7 @@
         {
           "properties": {
             "method": {
-              "const": "MACD"
+              "const": "INDICATOR.MACD"
             },
             "params": {
               "type": "object",
@@ -1765,10 +1765,10 @@
             }
           },
           "default": {
-            "method": "MACD",
+            "method": "INDICATOR.MACD",
             "params": {
               "fastPeriod": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "Fast Period",
                   "representation": "UnsignedInteger",
@@ -1776,7 +1776,7 @@
                 }
               },
               "slowPeriod": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "Slow Period",
                   "representation": "UnsignedInteger",
@@ -1784,19 +1784,19 @@
                 }
               },
               "signalPeriod": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "Signal Period",
                   "representation": "UnsignedInteger",
                   "value": 9
                 }
               },
-              "source": "CLOSE"
+              "source": "MARKET_DATA.CLOSE"
             }
           }
         }
       ],
-      "title": "MACD",
+      "title": "INDICATOR.MACD",
       "description": "Calculates a multi-output MACD series with MACD line, signal line, and histogram."
     },
     "stochMethod": {
@@ -1807,7 +1807,7 @@
         {
           "properties": {
             "method": {
-              "const": "STOCH"
+              "const": "INDICATOR.STOCH"
             },
             "params": {
               "type": "object",
@@ -1847,10 +1847,10 @@
             }
           },
           "default": {
-            "method": "STOCH",
+            "method": "INDICATOR.STOCH",
             "params": {
               "kPeriod": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "K Period",
                   "representation": "UnsignedInteger",
@@ -1858,7 +1858,7 @@
                 }
               },
               "kSmooth": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "K Smooth",
                   "representation": "UnsignedInteger",
@@ -1866,16 +1866,16 @@
                 }
               },
               "dPeriod": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "D Period",
                   "representation": "UnsignedInteger",
                   "value": 3
                 }
               },
-              "high": "HIGH",
-              "low": "LOW",
-              "close": "CLOSE"
+              "high": "MARKET_DATA.HIGH",
+              "low": "MARKET_DATA.LOW",
+              "close": "MARKET_DATA.CLOSE"
             }
           }
         }
@@ -1891,7 +1891,7 @@
         {
           "properties": {
             "method": {
-              "const": "STOCH_RSI"
+              "const": "INDICATOR.STOCH_RSI"
             },
             "params": {
               "type": "object",
@@ -1926,10 +1926,10 @@
             }
           },
           "default": {
-            "method": "STOCH_RSI",
+            "method": "INDICATOR.STOCH_RSI",
             "params": {
               "kPeriod": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "K Period",
                   "representation": "UnsignedInteger",
@@ -1937,7 +1937,7 @@
                 }
               },
               "kSmooth": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "K Smooth",
                   "representation": "UnsignedInteger",
@@ -1945,16 +1945,16 @@
                 }
               },
               "dPeriod": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "D Period",
                   "representation": "UnsignedInteger",
                   "value": 3
                 }
               },
-              "rsiSource": "CLOSE",
+              "rsiSource": "MARKET_DATA.CLOSE",
               "rsiPeriod": {
-                "method": "INPUT",
+                "method": "INPUT.NUMERIC",
                 "params": {
                   "label": "RSI Period",
                   "representation": "UnsignedInteger",
@@ -1976,7 +1976,7 @@
         {
           "properties": {
             "method": {
-              "const": "ADD"
+              "const": "OPERATOR.ADD"
             },
             "params": {
               "type": "object",
@@ -2010,10 +2010,10 @@
       "description": "Returns the sum of two numeric inputs.",
       "examples": [
         {
-          "method": "ADD",
+          "method": "OPERATOR.ADD",
           "params": {
             "augend": {
-              "method": "SERIES",
+              "method": "SERIES.REFERENCE",
               "params": {
                 "name": "fast_ema"
               }
@@ -2031,7 +2031,7 @@
         {
           "properties": {
             "method": {
-              "const": "SUBTRACT"
+              "const": "OPERATOR.SUBTRACT"
             },
             "params": {
               "type": "object",
@@ -2065,11 +2065,11 @@
       "description": "Returns the result of subtracting one numeric input from another.",
       "examples": [
         {
-          "method": "SUBTRACT",
+          "method": "OPERATOR.SUBTRACT",
           "params": {
-            "minuend": "CLOSE",
+            "minuend": "MARKET_DATA.CLOSE",
             "subtrahend": {
-              "method": "SERIES",
+              "method": "SERIES.REFERENCE",
               "params": {
                 "name": "slow_ema"
               }
@@ -2086,7 +2086,7 @@
         {
           "properties": {
             "method": {
-              "const": "MULTIPLY"
+              "const": "OPERATOR.MULTIPLY"
             },
             "params": {
               "type": "object",
@@ -2120,10 +2120,10 @@
       "description": "Returns the product of two numeric inputs.",
       "examples": [
         {
-          "method": "MULTIPLY",
+          "method": "OPERATOR.MULTIPLY",
           "params": {
             "multiplicand": {
-              "method": "SERIES",
+              "method": "SERIES.REFERENCE",
               "params": {
                 "name": "atr_14"
               }
@@ -2141,7 +2141,7 @@
         {
           "properties": {
             "method": {
-              "const": "DIVIDE"
+              "const": "OPERATOR.DIVIDE"
             },
             "params": {
               "type": "object",
@@ -2175,10 +2175,10 @@
       "description": "Returns one numeric input divided by another.",
       "examples": [
         {
-          "method": "DIVIDE",
+          "method": "OPERATOR.DIVIDE",
           "params": {
             "dividend": {
-              "method": "SERIES",
+              "method": "SERIES.REFERENCE",
               "params": {
                 "name": "price_spread"
               }
@@ -2196,7 +2196,7 @@
         {
           "properties": {
             "method": {
-              "const": "NEGATE"
+              "const": "OPERATOR.NEGATE"
             },
             "params": {
               "type": "object",
@@ -2224,10 +2224,10 @@
       "description": "Returns the negative of a numeric input.",
       "examples": [
         {
-          "method": "NEGATE",
+          "method": "OPERATOR.NEGATE",
           "params": {
             "operand": {
-              "method": "SERIES",
+              "method": "SERIES.REFERENCE",
               "params": {
                 "name": "momentum"
               }
@@ -2244,7 +2244,7 @@
         {
           "properties": {
             "method": {
-              "const": "SQRT"
+              "const": "OPERATOR.SQRT"
             },
             "params": {
               "type": "object",
@@ -2272,10 +2272,10 @@
       "description": "Returns the square root of a numeric input.",
       "examples": [
         {
-          "method": "SQRT",
+          "method": "OPERATOR.SQRT",
           "params": {
             "operand": {
-              "method": "SERIES",
+              "method": "SERIES.REFERENCE",
               "params": {
                 "name": "variance_like_series"
               }
@@ -2283,6 +2283,79 @@
           }
         }
       ]
+    },
+    "unaryScalarMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "OPERATOR.ABS",
+                "OPERATOR.POSITIVE_PART",
+                "OPERATOR.NEGATIVE_PART"
+              ]
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "operand": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                }
+              },
+              "required": [
+                "operand"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Unary Scalar Operator",
+      "description": "Applies absolute-value or positive/negative-part extraction to one numeric operand."
+    },
+    "extremaMethod": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/baseMethod"
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": [
+                "OPERATOR.MAX",
+                "OPERATOR.MIN"
+              ]
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "left": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                },
+                "right": {
+                  "$ref": "#/$defs/seriesAsParameter"
+                }
+              },
+              "required": [
+                "left",
+                "right"
+              ]
+            }
+          },
+          "required": [
+            "params"
+          ]
+        }
+      ],
+      "title": "Extrema Operator",
+      "description": "Returns the maximum or minimum of two numeric operands."
     },
     "changeMethod": {
       "allOf": [
@@ -2292,7 +2365,7 @@
         {
           "properties": {
             "method": {
-              "const": "CHANGE"
+              "const": "OPERATOR.CHANGE"
             },
             "params": {
               "type": "object",
@@ -2313,17 +2386,17 @@
       "title": "Change",
       "description": "Returns the bar-to-bar difference of a numeric source.",
       "default": {
-        "method": "CHANGE",
+        "method": "OPERATOR.CHANGE",
         "params": {
-          "source": "CLOSE"
+          "source": "MARKET_DATA.CLOSE"
         }
       },
       "examples": [
         {
-          "method": "CHANGE",
+          "method": "OPERATOR.CHANGE",
           "params": {
             "source": {
-              "method": "SERIES",
+              "method": "SERIES.REFERENCE",
               "params": {
                 "name": "fast_ema"
               }
@@ -2340,7 +2413,7 @@
         {
           "properties": {
             "method": {
-              "const": "ABS_DIFF"
+              "const": "OPERATOR.ABS_DIFF"
             },
             "params": {
               "type": "object",
@@ -2374,11 +2447,11 @@
       "description": "Returns the absolute value of the difference between two numeric inputs.",
       "examples": [
         {
-          "method": "ABS_DIFF",
+          "method": "OPERATOR.ABS_DIFF",
           "params": {
-            "minuend": "CLOSE",
+            "minuend": "MARKET_DATA.CLOSE",
             "subtrahend": {
-              "method": "SERIES",
+              "method": "SERIES.REFERENCE",
               "params": {
                 "name": "slow_ema"
               }
@@ -2395,7 +2468,7 @@
         {
           "properties": {
             "method": {
-              "const": "PERCENTAGE"
+              "const": "OPERATOR.PERCENTAGE"
             },
             "params": {
               "type": "object",
@@ -2407,7 +2480,7 @@
                       "$ref": "#/$defs/seriesAsParameter"
                     },
                     {
-                      "default": "CLOSE"
+                      "default": "MARKET_DATA.CLOSE"
                     }
                   ],
                   "title": "Base",
@@ -2435,17 +2508,17 @@
       "description": "Returns a percentage of a base numeric input.",
       "examples": [
         {
-          "method": "PERCENTAGE",
+          "method": "OPERATOR.PERCENTAGE",
           "params": {
-            "base": "CLOSE",
+            "base": "MARKET_DATA.CLOSE",
             "percent": 2
           }
         },
         {
-          "method": "PERCENTAGE",
+          "method": "OPERATOR.PERCENTAGE",
           "params": {
             "base": {
-              "method": "SERIES",
+              "method": "SERIES.REFERENCE",
               "params": {
                 "name": "atr_14"
               }
@@ -2464,8 +2537,8 @@
           "properties": {
             "method": {
               "enum": [
-                "SL_AMOUNT",
-                "TP_AMOUNT"
+                "STOP_LOSS.AMOUNT",
+                "TAKE_PROFIT.AMOUNT"
               ]
             },
             "params": {
@@ -2500,8 +2573,8 @@
           "properties": {
             "method": {
               "enum": [
-                "SL_PERCENT",
-                "TP_PERCENT"
+                "STOP_LOSS.PERCENT",
+                "TAKE_PROFIT.PERCENT"
               ]
             },
             "params": {
@@ -2536,8 +2609,8 @@
           "properties": {
             "method": {
               "enum": [
-                "SL_ATR",
-                "TP_ATR"
+                "STOP_LOSS.ATR",
+                "TAKE_PROFIT.ATR"
               ]
             },
             "params": {
@@ -2588,7 +2661,7 @@
         {
           "properties": {
             "method": {
-              "const": "R_DISTANCE_AMOUNT"
+              "const": "RISK_DISTANCE.AMOUNT"
             },
             "params": {
               "type": "object",
@@ -2620,7 +2693,7 @@
         {
           "properties": {
             "method": {
-              "const": "R_DISTANCE_PERCENTAGE"
+              "const": "RISK_DISTANCE.PERCENT"
             },
             "params": {
               "type": "object",
@@ -2652,7 +2725,7 @@
         {
           "properties": {
             "method": {
-              "const": "R_DISTANCE_ATR"
+              "const": "RISK_DISTANCE.ATR"
             },
             "params": {
               "type": "object",
@@ -2695,7 +2768,7 @@
         {
           "properties": {
             "method": {
-              "const": "SL_1R"
+              "const": "STOP_LOSS.ONE_R"
             },
             "params": false
           }
@@ -2712,7 +2785,7 @@
         {
           "properties": {
             "method": {
-              "const": "SL_R_MULTIPLE"
+              "const": "STOP_LOSS.R_MULTIPLE"
             },
             "params": {
               "type": "object",
@@ -2745,7 +2818,7 @@
         {
           "properties": {
             "method": {
-              "const": "TP_R_MULTIPLE"
+              "const": "TAKE_PROFIT.R_MULTIPLE"
             },
             "params": {
               "type": "object",
@@ -2779,12 +2852,12 @@
           "properties": {
             "method": {
               "enum": [
-                "INITIAL_ENTRY_PRICE",
-                "LATEST_ENTRY_PRICE",
-                "AVERAGE_PRICE",
-                "STOP_TARGET_REF_PRICE",
-                "POSITION_DIRECTION",
-                "PYRAMIDING_LAYER"
+                "POSITION.INITIAL_ENTRY_PRICE",
+                "POSITION.LATEST_ENTRY_PRICE",
+                "POSITION.AVERAGE_PRICE",
+                "POSITION.STOP_TARGET_REF_PRICE",
+                "POSITION.DIRECTION",
+                "POSITION.PYRAMIDING_LAYER"
               ]
             },
             "params": {
@@ -2805,7 +2878,7 @@
         {
           "properties": {
             "method": {
-              "const": "POSITION_R_MULTIPLE"
+              "const": "POSITION.R_MULTIPLE"
             },
             "params": {
               "type": "object",
@@ -2929,6 +3002,12 @@
           "$ref": "#/$defs/sqrtMethod"
         },
         {
+          "$ref": "#/$defs/unaryScalarMethod"
+        },
+        {
+          "$ref": "#/$defs/extremaMethod"
+        },
+        {
           "$ref": "#/$defs/changeMethod"
         },
         {
@@ -3004,8 +3083,8 @@
           "properties": {
             "method": {
               "enum": [
-                "ALL_OF",
-                "ANY_OF"
+                "LOGIC.ALL_OF",
+                "LOGIC.ANY_OF"
               ]
             },
             "params": {
@@ -3044,12 +3123,12 @@
           "properties": {
             "method": {
               "enum": [
-                "LESS_THAN",
-                "LESS_EQUAL",
-                "GREATER_THAN",
-                "GREATER_EQUAL",
-                "EQUAL",
-                "NOT_EQUAL"
+                "COMPARISON.LESS_THAN",
+                "COMPARISON.LESS_EQUAL",
+                "COMPARISON.GREATER_THAN",
+                "COMPARISON.GREATER_EQUAL",
+                "COMPARISON.EQUAL",
+                "COMPARISON.NOT_EQUAL"
               ],
               "title": "Comparison Method",
               "description": "Comparison operator applied to two numeric inputs."
@@ -3086,10 +3165,10 @@
       "description": "Boolean signal that compares two numeric values or series over time. Use this for threshold logic such as RSI \u003c 30, CLOSE \u003e EMA, or one named series compared to another.",
       "examples": [
         {
-          "method": "LESS_EQUAL",
+          "method": "COMPARISON.LESS_EQUAL",
           "params": {
             "target": {
-              "method": "SERIES",
+              "method": "SERIES.REFERENCE",
               "params": {
                 "name": "rsi_14"
               }
@@ -3098,11 +3177,11 @@
           }
         },
         {
-          "method": "GREATER_THAN",
+          "method": "COMPARISON.GREATER_THAN",
           "params": {
-            "target": "CLOSE",
+            "target": "MARKET_DATA.CLOSE",
             "threshold": {
-              "method": "SERIES",
+              "method": "SERIES.REFERENCE",
               "params": {
                 "name": "fast_ema"
               }
@@ -3120,8 +3199,8 @@
           "properties": {
             "method": {
               "enum": [
-                "CROSSOVER",
-                "CROSSUNDER"
+                "COMPARISON.CROSSOVER",
+                "COMPARISON.CROSSUNDER"
               ],
               "title": "Cross Method",
               "description": "Detects when one numeric series crosses above or below another."
@@ -3158,16 +3237,16 @@
       "description": "Boolean signal that detects when one numeric series crosses above or below another numeric series or level.",
       "examples": [
         {
-          "method": "CROSSOVER",
+          "method": "COMPARISON.CROSSOVER",
           "params": {
             "value": {
-              "method": "SERIES",
+              "method": "SERIES.REFERENCE",
               "params": {
                 "name": "fast_ema"
               }
             },
             "baseline": {
-              "method": "SERIES",
+              "method": "SERIES.REFERENCE",
               "params": {
                 "name": "slow_ema"
               }
@@ -3175,11 +3254,11 @@
           }
         },
         {
-          "method": "CROSSUNDER",
+          "method": "COMPARISON.CROSSUNDER",
           "params": {
-            "value": "CLOSE",
+            "value": "MARKET_DATA.CLOSE",
             "baseline": {
-              "method": "SERIES",
+              "method": "SERIES.REFERENCE",
               "params": {
                 "name": "bb_upper"
               }
@@ -3197,8 +3276,8 @@
           "properties": {
             "method": {
               "enum": [
-                "ALWAYS",
-                "NEVER"
+                "LOGIC.ALWAYS",
+                "LOGIC.NEVER"
               ]
             }
           }
@@ -3216,9 +3295,9 @@
           "properties": {
             "method": {
               "enum": [
-                "AND",
-                "OR",
-                "XOR"
+                "LOGIC.AND",
+                "LOGIC.OR",
+                "LOGIC.XOR"
               ]
             },
             "params": {
@@ -3259,7 +3338,7 @@
           "properties": {
             "method": {
               "enum": [
-                "NOT"
+                "LOGIC.NOT"
               ]
             },
             "params": {
@@ -3524,7 +3603,7 @@
         {
           "properties": {
             "method": {
-              "const": "SERIES"
+              "const": "PLOT_SOURCE.SERIES"
             },
             "params": {
               "type": "object",
@@ -3558,7 +3637,7 @@
         {
           "properties": {
             "method": {
-              "const": "CONSTANT"
+              "const": "PLOT_SOURCE.CONSTANT"
             },
             "params": {
               "type": "object",
@@ -3591,7 +3670,7 @@
         {
           "properties": {
             "method": {
-              "const": "LINE"
+              "const": "PLOT.LINE"
             },
             "params": {
               "type": "object",
@@ -3629,7 +3708,7 @@
         {
           "properties": {
             "method": {
-              "const": "HLINE"
+              "const": "PLOT.HLINE"
             },
             "params": {
               "type": "object",
@@ -3667,7 +3746,7 @@
         {
           "properties": {
             "method": {
-              "const": "HISTOGRAM"
+              "const": "PLOT.HISTOGRAM"
             },
             "params": {
               "type": "object",
@@ -3705,7 +3784,7 @@
         {
           "properties": {
             "method": {
-              "const": "MOMENTUM_HISTOGRAM"
+              "const": "PLOT.MOMENTUM_HISTOGRAM"
             },
             "params": {
               "type": "object",
@@ -3813,38 +3892,38 @@
       },
       "series": {
         "fast_ema": {
-          "method": "EMA",
+          "method": "INDICATOR.EMA",
           "params": {
             "period": {
-              "method": "INPUT",
+              "method": "INPUT.NUMERIC",
               "params": {
                 "label": "Period",
                 "representation": "UnsignedInteger",
                 "value": 20
               }
             },
-            "source": "CLOSE"
+            "source": "MARKET_DATA.CLOSE"
           }
         },
         "slow_ema": {
-          "method": "EMA",
+          "method": "INDICATOR.EMA",
           "params": {
             "period": {
-              "method": "INPUT",
+              "method": "INPUT.NUMERIC",
               "params": {
                 "label": "Period",
                 "representation": "UnsignedInteger",
                 "value": 50
               }
             },
-            "source": "CLOSE"
+            "source": "MARKET_DATA.CLOSE"
           }
         },
         "bbands": {
-          "method": "BB",
+          "method": "INDICATOR.BB",
           "params": {
             "period": {
-              "method": "INPUT",
+              "method": "INPUT.NUMERIC",
               "params": {
                 "label": "Period",
                 "representation": "UnsignedInteger",
@@ -3852,22 +3931,22 @@
               }
             },
             "stddev": {
-              "method": "INPUT",
+              "method": "INPUT.NUMERIC",
               "params": {
                 "label": "StdDev",
                 "representation": "Decimal",
                 "value": 2
               }
             },
-            "maSource": "CLOSE"
+            "maSource": "MARKET_DATA.CLOSE"
           }
         },
         "bb_upper": {
-          "method": "SELECT_OUTPUT",
+          "method": "OPERATOR.SELECT_OUTPUT",
           "params": {
             "output": "upper-band",
             "source": {
-              "method": "SERIES",
+              "method": "SERIES.REFERENCE",
               "params": {
                 "name": "bbands"
               }
@@ -3879,16 +3958,16 @@
         "long": {
           "entry": {
             "signal": {
-              "method": "CROSSOVER",
+              "method": "COMPARISON.CROSSOVER",
               "params": {
                 "value": {
-                  "method": "SERIES",
+                  "method": "SERIES.REFERENCE",
                   "params": {
                     "name": "fast_ema"
                   }
                 },
                 "baseline": {
-                  "method": "SERIES",
+                  "method": "SERIES.REFERENCE",
                   "params": {
                     "name": "slow_ema"
                   }
@@ -3903,16 +3982,16 @@
               {
                 "enabled": true,
                 "signal": {
-                  "method": "CROSSUNDER",
+                  "method": "COMPARISON.CROSSUNDER",
                   "params": {
                     "value": {
-                      "method": "SERIES",
+                      "method": "SERIES.REFERENCE",
                       "params": {
                         "name": "fast_ema"
                       }
                     },
                     "baseline": {
-                      "method": "SERIES",
+                      "method": "SERIES.REFERENCE",
                       "params": {
                         "name": "slow_ema"
                       }
@@ -3924,16 +4003,16 @@
             ]
           },
           "riskDistance": {
-            "method": "R_DISTANCE_ATR",
+            "method": "RISK_DISTANCE.ATR",
             "params": {
               "period": {
-                "method": "VALUE",
+                "method": "VALUE.CONSTANT",
                 "params": {
                   "value": 14
                 }
               },
               "multiplier": {
-                "method": "VALUE",
+                "method": "VALUE.CONSTANT",
                 "params": {
                   "value": 2
                 }
@@ -3948,7 +4027,7 @@
                 "enabled": true,
                 "trailing": false,
                 "stopPrice": {
-                  "method": "SL_1R"
+                  "method": "STOP_LOSS.ONE_R"
                 },
                 "reduce": 1
               }
@@ -3960,10 +4039,10 @@
               {
                 "enabled": true,
                 "targetPrice": {
-                  "method": "TP_R_MULTIPLE",
+                  "method": "TAKE_PROFIT.R_MULTIPLE",
                   "params": {
                     "multiple": {
-                      "method": "VALUE",
+                      "method": "VALUE.CONSTANT",
                       "params": {
                         "value": 2
                       }

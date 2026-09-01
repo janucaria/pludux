@@ -2,10 +2,10 @@
   "version": 1,
   "series": {
     "stoch": {
-      "method": "STOCH",
+      "method": "INDICATOR.STOCH",
       "params": {
         "kPeriod": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "label": "K Period",
             "representation": "UnsignedInteger",
@@ -13,7 +13,7 @@
           }
         },
         "kSmooth": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "label": "K Smooth",
             "representation": "UnsignedInteger",
@@ -21,7 +21,7 @@
           }
         },
         "dPeriod": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "label": "D Period",
             "representation": "UnsignedInteger",
@@ -31,11 +31,11 @@
       }
     },
     "stoch_k": {
-      "method": "SELECT_OUTPUT",
+      "method": "OPERATOR.SELECT_OUTPUT",
       "params": {
         "output": "k-percent",
         "source": {
-          "method": "SERIES",
+          "method": "SERIES.REFERENCE",
           "params": {
             "name": "stoch"
           }
@@ -43,11 +43,11 @@
       }
     },
     "stoch_d": {
-      "method": "SELECT_OUTPUT",
+      "method": "OPERATOR.SELECT_OUTPUT",
       "params": {
         "output": "d-percent",
         "source": {
-          "method": "SERIES",
+          "method": "SERIES.REFERENCE",
           "params": {
             "name": "stoch"
           }
@@ -55,7 +55,7 @@
       }
     },
     "overbought": {
-      "method": "INPUT",
+      "method": "INPUT.NUMERIC",
       "params": {
         "label": "Overbought",
         "representation": "Decimal",
@@ -63,7 +63,7 @@
       }
     },
     "oversold": {
-      "method": "INPUT",
+      "method": "INPUT.NUMERIC",
       "params": {
         "label": "Oversold",
         "representation": "Decimal",
@@ -75,20 +75,20 @@
     "long": {
       "entry": {
         "signal": {
-          "method": "ALL_OF",
+          "method": "LOGIC.ALL_OF",
           "params": {
             "items": [
               {
-                "method": "CROSSOVER",
+                "method": "COMPARISON.CROSSOVER",
                 "params": {
                   "value": {
-                    "method": "SERIES",
+                    "method": "SERIES.REFERENCE",
                     "params": {
                       "name": "stoch_k"
                     }
                   },
                   "baseline": {
-                    "method": "SERIES",
+                    "method": "SERIES.REFERENCE",
                     "params": {
                       "name": "stoch_d"
                     }
@@ -96,16 +96,16 @@
                 }
               },
               {
-                "method": "LESS_THAN",
+                "method": "COMPARISON.LESS_THAN",
                 "params": {
                   "target": {
-                    "method": "SERIES",
+                    "method": "SERIES.REFERENCE",
                     "params": {
                       "name": "stoch_k"
                     }
                   },
                   "threshold": {
-                    "method": "SERIES",
+                    "method": "SERIES.REFERENCE",
                     "params": {
                       "name": "oversold"
                     }
@@ -123,20 +123,20 @@
           {
             "enabled": true,
             "signal": {
-              "method": "ALL_OF",
+              "method": "LOGIC.ALL_OF",
               "params": {
                 "items": [
                   {
-                    "method": "CROSSUNDER",
+                    "method": "COMPARISON.CROSSUNDER",
                     "params": {
                       "value": {
-                        "method": "SERIES",
+                        "method": "SERIES.REFERENCE",
                         "params": {
                           "name": "stoch_k"
                         }
                       },
                       "baseline": {
-                        "method": "SERIES",
+                        "method": "SERIES.REFERENCE",
                         "params": {
                           "name": "stoch_d"
                         }
@@ -144,16 +144,16 @@
                     }
                   },
                   {
-                    "method": "GREATER_THAN",
+                    "method": "COMPARISON.GREATER_THAN",
                     "params": {
                       "target": {
-                        "method": "SERIES",
+                        "method": "SERIES.REFERENCE",
                         "params": {
                           "name": "stoch_k"
                         }
                       },
                       "threshold": {
-                        "method": "SERIES",
+                        "method": "SERIES.REFERENCE",
                         "params": {
                           "name": "overbought"
                         }
@@ -168,16 +168,16 @@
         ]
       },
       "riskDistance": {
-        "method": "R_DISTANCE_ATR",
+        "method": "RISK_DISTANCE.ATR",
         "params": {
           "period": {
-            "method": "VALUE",
+            "method": "VALUE.CONSTANT",
             "params": {
               "value": 14
             }
           },
           "multiplier": {
-            "method": "VALUE",
+            "method": "VALUE.CONSTANT",
             "params": {
               "value": 2
             }
@@ -191,10 +191,10 @@
           {
             "enabled": true,
             "targetPrice": {
-              "method": "TP_R_MULTIPLE",
+              "method": "TAKE_PROFIT.R_MULTIPLE",
               "params": {
                 "multiple": {
-                  "method": "VALUE",
+                  "method": "VALUE.CONSTANT",
                   "params": {
                     "value": 2
                   }
@@ -211,7 +211,7 @@
             "enabled": true,
             "trailing": false,
             "stopPrice": {
-              "method": "SL_1R"
+              "method": "STOP_LOSS.ONE_R"
             }
           }
         ]
@@ -224,10 +224,10 @@
       "overlay": false,
       "items": [
         {
-          "method": "LINE",
+          "method": "PLOT.LINE",
           "params": {
             "source": {
-              "method": "SERIES",
+              "method": "PLOT_SOURCE.SERIES",
               "params": {
                 "name": "stoch_k"
               }
@@ -236,10 +236,10 @@
           }
         },
         {
-          "method": "LINE",
+          "method": "PLOT.LINE",
           "params": {
             "source": {
-              "method": "SERIES",
+              "method": "PLOT_SOURCE.SERIES",
               "params": {
                 "name": "stoch_d"
               }
@@ -248,10 +248,10 @@
           }
         },
         {
-          "method": "LINE",
+          "method": "PLOT.LINE",
           "params": {
             "source": {
-              "method": "SERIES",
+              "method": "PLOT_SOURCE.SERIES",
               "params": {
                 "name": "overbought"
               }
@@ -260,10 +260,10 @@
           }
         },
         {
-          "method": "LINE",
+          "method": "PLOT.LINE",
           "params": {
             "source": {
-              "method": "SERIES",
+              "method": "PLOT_SOURCE.SERIES",
               "params": {
                 "name": "oversold"
               }

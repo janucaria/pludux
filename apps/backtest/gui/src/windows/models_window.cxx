@@ -61,6 +61,7 @@ using pludux::backtest::InitialEntryPriceNode;
 using pludux::backtest::IsPyramidingOrderNode;
 using pludux::backtest::LatestEntryPriceNode;
 using pludux::backtest::PositionDirectionNode;
+using pludux::backtest::PositionRMultipleNode;
 using pludux::backtest::PyramidingLayerNode;
 using pludux::backtest::RawRequestedQuantityLimitNode;
 using pludux::backtest::RawRequestedQuantityNode;
@@ -72,16 +73,15 @@ using pludux::backtest::RequestedOrderRiskDistanceNode;
 using pludux::backtest::RequestedPriceRiskNode;
 using pludux::backtest::RequestedQuantityNode;
 using pludux::backtest::RequestedRiskWithFeesNode;
-using pludux::backtest::Sl1RNode;
-using pludux::backtest::StopTargetRefPriceNode;
-using pludux::backtest::PositionRMultipleNode;
 using pludux::backtest::RiskDistanceAmountNode;
 using pludux::backtest::RiskDistanceAtrNode;
 using pludux::backtest::RiskDistancePercentNode;
+using pludux::backtest::Sl1RNode;
 using pludux::backtest::SlAmountNode;
 using pludux::backtest::SlAtrNode;
 using pludux::backtest::SlPercentNode;
 using pludux::backtest::SlRMultipleNode;
+using pludux::backtest::StopTargetRefPriceNode;
 using pludux::backtest::TpAmountNode;
 using pludux::backtest::TpAtrNode;
 using pludux::backtest::TpPercentNode;
@@ -99,163 +99,176 @@ using pludux::backtest::SeriesPlotSourceMethod;
 auto get_default_series_node(const std::string& series_id)
  -> ErasedNode<backtest::BacktestMethodContext>
 {
-  if(series_id == "OPEN") {
+  if(series_id == "MARKET_DATA.OPEN") {
     return OpenNode{};
-  } else if(series_id == "CLOSE") {
+  } else if(series_id == "MARKET_DATA.CLOSE") {
     return CloseNode{};
-  } else if(series_id == "HIGH") {
+  } else if(series_id == "MARKET_DATA.HIGH") {
     return HighNode{};
-  } else if(series_id == "LOW") {
+  } else if(series_id == "MARKET_DATA.LOW") {
     return LowNode{};
-  } else if(series_id == "VOLUME") {
+  } else if(series_id == "MARKET_DATA.VOLUME") {
     return VolumeNode{};
-  } else if(series_id == "CHANGE") {
+  } else if(series_id == "OPERATOR.CHANGE") {
     return ChangeNode<backtest::BacktestMethodContext>{CloseNode{}};
-  } else if(series_id == "DATA") {
+  } else if(series_id == "MARKET_DATA.FIELD") {
     return DataNode{};
-  } else if(series_id == "EQUITY") {
+  } else if(series_id == "PORTFOLIO.EQUITY") {
     return EquityNode{};
-  } else if(series_id == "EQUITY_PERCENT") {
+  } else if(series_id == "PORTFOLIO.EQUITY_PERCENT") {
     return EquityPercentNode{};
-  } else if(series_id == "DRAWDOWN") {
+  } else if(series_id == "PORTFOLIO.DRAWDOWN") {
     return DrawdownNode{};
-  } else if(series_id == "SMA") {
+  } else if(series_id == "INDICATOR.SMA") {
     return SmaNode<backtest::BacktestMethodContext>{CloseNode{}, 14};
-  } else if(series_id == "EMA") {
+  } else if(series_id == "INDICATOR.EMA") {
     return EmaNode<backtest::BacktestMethodContext>{CloseNode{}, 14};
-  } else if(series_id == "WMA") {
+  } else if(series_id == "INDICATOR.WMA") {
     return WmaNode<backtest::BacktestMethodContext>{CloseNode{}, 14};
-  } else if(series_id == "HMA") {
+  } else if(series_id == "INDICATOR.HMA") {
     return HmaNode<backtest::BacktestMethodContext>{CloseNode{}, 14};
-  } else if(series_id == "RMA") {
+  } else if(series_id == "INDICATOR.RMA") {
     return RmaNode<backtest::BacktestMethodContext>{CloseNode{}, 14};
-  } else if(series_id == "RSI") {
+  } else if(series_id == "INDICATOR.RSI") {
     return RsiNode<backtest::BacktestMethodContext>{CloseNode{}, 14};
-  } else if(series_id == "ROC") {
+  } else if(series_id == "INDICATOR.ROC") {
     return RocNode<backtest::BacktestMethodContext>{CloseNode{}, 14};
-  } else if(series_id == "RVOL") {
+  } else if(series_id == "INDICATOR.RVOL") {
     return RvolNode<backtest::BacktestMethodContext>{14};
-  } else if(series_id == "HIGHEST") {
+  } else if(series_id == "INDICATOR.HIGHEST") {
     return HighestNode<backtest::BacktestMethodContext>{CloseNode{}, 14};
-  } else if(series_id == "LOWEST") {
+  } else if(series_id == "INDICATOR.LOWEST") {
     return LowestNode<backtest::BacktestMethodContext>{CloseNode{}, 14};
-  } else if(series_id == "TR") {
+  } else if(series_id == "INDICATOR.TR") {
     return TrNode<backtest::BacktestMethodContext>{};
-  } else if(series_id == "MACD") {
+  } else if(series_id == "INDICATOR.MACD") {
     return MacdNode<backtest::BacktestMethodContext>{CloseNode{}, 12, 26, 9};
-  } else if(series_id == "ATR") {
+  } else if(series_id == "INDICATOR.ATR") {
     return AtrNode<backtest::BacktestMethodContext>{14};
-  } else if(series_id == "STDDEV") {
+  } else if(series_id == "INDICATOR.STDDEV") {
     return StddevNode<backtest::BacktestMethodContext>{CloseNode{}, 14};
-  } else if(series_id == "BB") {
-    return BbNode<backtest::BacktestMethodContext>{CloseNode{}, 20, 2.0, MaNodeType::Sma};
-  } else if(series_id == "KC") {
+  } else if(series_id == "INDICATOR.BB") {
+    return BbNode<backtest::BacktestMethodContext>{
+     CloseNode{}, 20, 2.0, MaNodeType::Sma};
+  } else if(series_id == "INDICATOR.KC") {
     return KcNode<backtest::BacktestMethodContext>{
      CloseNode{}, 20, 1.5, 14, KcBandNodeType::Atr, MaNodeType::Ema};
-  } else if(series_id == "DC") {
+  } else if(series_id == "INDICATOR.DC") {
     return DonchianChannelNode<backtest::BacktestMethodContext>{};
-  } else if(series_id == "STOCH") {
+  } else if(series_id == "INDICATOR.STOCH") {
     return StochNode<backtest::BacktestMethodContext>{14, 3, 3};
-  } else if(series_id == "STOCH_RSI") {
-    return StochRsiNode<backtest::BacktestMethodContext>{CloseNode{}, 14, 14, 3, 3};
-  } else if(series_id == "SERIES") {
+  } else if(series_id == "INDICATOR.STOCH_RSI") {
+    return StochRsiNode<backtest::BacktestMethodContext>{
+     CloseNode{}, 14, 14, 3, 3};
+  } else if(series_id == "SERIES.REFERENCE") {
     return SeriesNode{""};
-  } else if(series_id == "VALUE") {
+  } else if(series_id == "VALUE.CONSTANT") {
     return ValueNode{0.0};
-  } else if(series_id == "LOOKBACK") {
+  } else if(series_id == "OPERATOR.LOOKBACK") {
     return LookbackNode<backtest::BacktestMethodContext>{CloseNode{}, 1};
-  } else if(series_id == "ALL_OF") {
+  } else if(series_id == "LOGIC.ALL_OF") {
     return AllOfNode<backtest::BacktestMethodContext>{};
-  } else if(series_id == "ANY_OF") {
+  } else if(series_id == "LOGIC.ANY_OF") {
     return AnyOfNode<backtest::BacktestMethodContext>{};
-  } else if(series_id == "ALWAYS") {
+  } else if(series_id == "LOGIC.ALWAYS") {
     return TrueNode{};
-  } else if(series_id == "NEVER") {
+  } else if(series_id == "LOGIC.NEVER") {
     return FalseNode{};
-  } else if(series_id == "LESS_THAN") {
-    return LessThanNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
-  } else if(series_id == "GREATER_THAN") {
-    return GreaterThanNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
-  } else if(series_id == "LESS_EQUAL") {
-    return LessEqualNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
-  } else if(series_id == "GREATER_EQUAL") {
-   return GreaterEqualNode<backtest::BacktestMethodContext>{CloseNode{},
-                                                       CloseNode{}};
-  } else if(series_id == "EQUAL") {
-    return EqualNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
-  } else if(series_id == "NOT_EQUAL") {
-    return NotEqualNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
-  } else if(series_id == "CROSSOVER") {
-    return CrossoverNode<backtest::BacktestMethodContext>{CloseNode{},
+  } else if(series_id == "COMPARISON.LESS_THAN") {
+    return LessThanNode<backtest::BacktestMethodContext>{CloseNode{},
                                                          CloseNode{}};
-  } else if(series_id == "CROSSUNDER") {
-    return CrossunderNode<backtest::BacktestMethodContext>{CloseNode{},
+  } else if(series_id == "COMPARISON.GREATER_THAN") {
+    return GreaterThanNode<backtest::BacktestMethodContext>{CloseNode{},
+                                                            CloseNode{}};
+  } else if(series_id == "COMPARISON.LESS_EQUAL") {
+    return LessEqualNode<backtest::BacktestMethodContext>{CloseNode{},
                                                           CloseNode{}};
-  } else if(series_id == "NOT") {
+  } else if(series_id == "COMPARISON.GREATER_EQUAL") {
+    return GreaterEqualNode<backtest::BacktestMethodContext>{CloseNode{},
+                                                             CloseNode{}};
+  } else if(series_id == "COMPARISON.EQUAL") {
+    return EqualNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
+  } else if(series_id == "COMPARISON.NOT_EQUAL") {
+    return NotEqualNode<backtest::BacktestMethodContext>{CloseNode{},
+                                                         CloseNode{}};
+  } else if(series_id == "COMPARISON.CROSSOVER") {
+    return CrossoverNode<backtest::BacktestMethodContext>{CloseNode{},
+                                                          CloseNode{}};
+  } else if(series_id == "COMPARISON.CROSSUNDER") {
+    return CrossunderNode<backtest::BacktestMethodContext>{CloseNode{},
+                                                           CloseNode{}};
+  } else if(series_id == "LOGIC.NOT") {
     return LogicalNotNode<backtest::BacktestMethodContext>{FalseNode{}};
-  } else if(series_id == "AND") {
-    return LogicalAndNode<backtest::BacktestMethodContext>{FalseNode{}, FalseNode{}};
-  } else if(series_id == "OR") {
-    return LogicalOrNode<backtest::BacktestMethodContext>{FalseNode{}, FalseNode{}};
-  } else if(series_id == "XOR") {
-    return LogicalXorNode<backtest::BacktestMethodContext>{FalseNode{}, FalseNode{}};
-  } else if(series_id == "INPUT") {
+  } else if(series_id == "LOGIC.AND") {
+    return LogicalAndNode<backtest::BacktestMethodContext>{FalseNode{},
+                                                           FalseNode{}};
+  } else if(series_id == "LOGIC.OR") {
+    return LogicalOrNode<backtest::BacktestMethodContext>{FalseNode{},
+                                                          FalseNode{}};
+  } else if(series_id == "LOGIC.XOR") {
+    return LogicalXorNode<backtest::BacktestMethodContext>{FalseNode{},
+                                                           FalseNode{}};
+  } else if(series_id == "INPUT.NUMERIC") {
     return NumericInputNode{"Input"};
-  } else if(series_id == "ADD") {
-     return AddNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
-  } else if(series_id == "SUBTRACT") {
-     return SubtractNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
-  } else if(series_id == "MULTIPLY") {
-     return MultiplyNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
-  } else if(series_id == "DIVIDE") {
-     return DivideNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
-  } else if(series_id == "NEGATE") {
-     return NegateNode<backtest::BacktestMethodContext>{CloseNode{}};
-  } else if(series_id == "SQRT") {
-     return SqrtNode<backtest::BacktestMethodContext>{CloseNode{}};
-  } else if(series_id == "PERCENTAGE") {
-     return PercentageNode<backtest::BacktestMethodContext>{CloseNode{}, 100.0};
-  } else if(series_id == "R_DISTANCE_AMOUNT") {
+  } else if(series_id == "OPERATOR.ADD") {
+    return AddNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
+  } else if(series_id == "OPERATOR.SUBTRACT") {
+    return SubtractNode<backtest::BacktestMethodContext>{CloseNode{},
+                                                         CloseNode{}};
+  } else if(series_id == "OPERATOR.MULTIPLY") {
+    return MultiplyNode<backtest::BacktestMethodContext>{CloseNode{},
+                                                         CloseNode{}};
+  } else if(series_id == "OPERATOR.DIVIDE") {
+    return DivideNode<backtest::BacktestMethodContext>{CloseNode{},
+                                                       CloseNode{}};
+  } else if(series_id == "OPERATOR.NEGATE") {
+    return NegateNode<backtest::BacktestMethodContext>{CloseNode{}};
+  } else if(series_id == "OPERATOR.SQRT") {
+    return SqrtNode<backtest::BacktestMethodContext>{CloseNode{}};
+  } else if(series_id == "OPERATOR.PERCENTAGE") {
+    return PercentageNode<backtest::BacktestMethodContext>{CloseNode{}, 100.0};
+  } else if(series_id == "RISK_DISTANCE.AMOUNT") {
     return RiskDistanceAmountNode<backtest::BacktestMethodContext>{1000.0};
-  } else if(series_id == "R_DISTANCE_PERCENTAGE") {
+  } else if(series_id == "RISK_DISTANCE.PERCENT") {
     return RiskDistancePercentNode<backtest::BacktestMethodContext>{1.0};
-  } else if(series_id == "R_DISTANCE_ATR") {
+  } else if(series_id == "RISK_DISTANCE.ATR") {
     return RiskDistanceAtrNode<backtest::BacktestMethodContext>{14.0, 2.0};
-  } else if(series_id == "SL_AMOUNT") {
+  } else if(series_id == "STOP_LOSS.AMOUNT") {
     return SlAmountNode<backtest::BacktestMethodContext>{1000.0};
-  } else if(series_id == "TP_AMOUNT") {
+  } else if(series_id == "TAKE_PROFIT.AMOUNT") {
     return TpAmountNode<backtest::BacktestMethodContext>{2000.0};
-  } else if(series_id == "SL_PERCENT") {
+  } else if(series_id == "STOP_LOSS.PERCENT") {
     return SlPercentNode<backtest::BacktestMethodContext>{10.0};
-  } else if(series_id == "TP_PERCENT") {
+  } else if(series_id == "TAKE_PROFIT.PERCENT") {
     return TpPercentNode<backtest::BacktestMethodContext>{20.0};
-  } else if(series_id == "SL_ATR") {
+  } else if(series_id == "STOP_LOSS.ATR") {
     return SlAtrNode<backtest::BacktestMethodContext>{14.0, 2.0};
-  } else if(series_id == "TP_ATR") {
+  } else if(series_id == "TAKE_PROFIT.ATR") {
     return TpAtrNode<backtest::BacktestMethodContext>{14.0, 4.0};
-  } else if(series_id == "SL_1R") {
+  } else if(series_id == "STOP_LOSS.ONE_R") {
     return Sl1RNode{};
-  } else if(series_id == "SL_R_MULTIPLE") {
+  } else if(series_id == "STOP_LOSS.R_MULTIPLE") {
     return SlRMultipleNode<backtest::BacktestMethodContext>{1.0};
-  } else if(series_id == "TP_R_MULTIPLE") {
+  } else if(series_id == "TAKE_PROFIT.R_MULTIPLE") {
     return TpRMultipleNode<backtest::BacktestMethodContext>{2.0};
-  } else if(series_id == "INITIAL_ENTRY_PRICE") {
+  } else if(series_id == "POSITION.INITIAL_ENTRY_PRICE") {
     return InitialEntryPriceNode{};
-  } else if(series_id == "LATEST_ENTRY_PRICE") {
+  } else if(series_id == "POSITION.LATEST_ENTRY_PRICE") {
     return LatestEntryPriceNode{};
-  } else if(series_id == "AVERAGE_PRICE") {
+  } else if(series_id == "POSITION.AVERAGE_PRICE") {
     return AveragePriceNode{};
-  } else if(series_id == "STOP_TARGET_REF_PRICE") {
+  } else if(series_id == "POSITION.STOP_TARGET_REF_PRICE") {
     return StopTargetRefPriceNode{};
-  } else if(series_id == "POSITION_DIRECTION") {
+  } else if(series_id == "POSITION.DIRECTION") {
     return PositionDirectionNode{};
-  } else if(series_id == "PYRAMIDING_LAYER") {
+  } else if(series_id == "POSITION.PYRAMIDING_LAYER") {
     return PyramidingLayerNode{};
-  } else if(series_id == "POSITION_R_MULTIPLE") {
+  } else if(series_id == "POSITION.R_MULTIPLE") {
     return PositionRMultipleNode<backtest::BacktestMethodContext>{};
-  } else if(series_id == "ABS_DIFF") {
-     return AbsDiffNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
-  } else if(series_id == "SELECT_OUTPUT") {
+  } else if(series_id == "OPERATOR.ABS_DIFF") {
+    return AbsDiffNode<backtest::BacktestMethodContext>{CloseNode{},
+                                                        CloseNode{}};
+  } else if(series_id == "OPERATOR.SELECT_OUTPUT") {
     return SelectOutputNode<backtest::BacktestMethodContext>{
      CloseNode{}, NodeOutput::MiddleBand};
   }
@@ -267,83 +280,87 @@ auto get_default_series_node(const std::string& series_id)
 auto get_default_portfolio_comparator_node(const std::string& id)
  -> ErasedNode<backtest::RequestedOrderMethodContext>
 {
-  if(id == "VALUE") {
+  if(id == "VALUE.CONSTANT") {
     return ValueNode{0.0};
-  } else if(id == "OPEN") {
+  } else if(id == "MARKET_DATA.OPEN") {
     return OpenNode{};
-  } else if(id == "HIGH") {
+  } else if(id == "MARKET_DATA.HIGH") {
     return HighNode{};
-  } else if(id == "LOW") {
+  } else if(id == "MARKET_DATA.LOW") {
     return LowNode{};
-  } else if(id == "CLOSE") {
+  } else if(id == "MARKET_DATA.CLOSE") {
     return CloseNode{};
-  } else if(id == "VOLUME") {
+  } else if(id == "MARKET_DATA.VOLUME") {
     return VolumeNode{};
-  } else if(id == "DATA") {
+  } else if(id == "MARKET_DATA.FIELD") {
     return DataNode{};
-  } else if(id == "LOOKBACK") {
+  } else if(id == "OPERATOR.LOOKBACK") {
     return LookbackNode<backtest::RequestedOrderMethodContext>{CloseNode{}, 1};
-  } else if(id == "REQUESTED_ORDER_PRICE") {
+  } else if(id == "REQUESTED_ORDER.PRICE") {
     return RequestedOrderPriceNode{};
-  } else if(id == "REQUESTED_ORDER_DIRECTION") {
+  } else if(id == "REQUESTED_ORDER.DIRECTION") {
     return RequestedOrderDirectionNode{};
-  } else if(id == "IS_PYRAMIDING_ORDER") {
+  } else if(id == "REQUESTED_ORDER.IS_PYRAMIDING") {
     return IsPyramidingOrderNode{};
-  } else if(id == "RAW_REQUESTED_QUANTITY") {
+  } else if(id == "REQUESTED_ORDER.RAW_QUANTITY") {
     return RawRequestedQuantityNode{};
-  } else if(id == "RAW_REQUESTED_QUANTITY_LIMIT") {
+  } else if(id == "REQUESTED_ORDER.RAW_QUANTITY_LIMIT") {
     return RawRequestedQuantityLimitNode{};
-  } else if(id == "DRAWDOWN_ADJUSTED_QUANTITY") {
+  } else if(id == "REQUESTED_ORDER.DRAWDOWN_ADJUSTED_QUANTITY") {
     return DrawdownAdjustedQuantityNode{};
-  } else if(id == "DRAWDOWN_ADJUSTED_QUANTITY_LIMIT") {
+  } else if(id == "REQUESTED_ORDER.DRAWDOWN_ADJUSTED_QUANTITY_LIMIT") {
     return DrawdownAdjustedQuantityLimitNode{};
-  } else if(id == "REQUESTED_QUANTITY") {
+  } else if(id == "REQUESTED_ORDER.QUANTITY") {
     return RequestedQuantityNode{};
-  } else if(id == "REQUESTED_NOTIONAL") {
+  } else if(id == "REQUESTED_ORDER.NOTIONAL") {
     return RequestedNotionalNode{};
-  } else if(id == "REQUESTED_COST") {
+  } else if(id == "REQUESTED_ORDER.COST") {
     return RequestedCostNode{};
-  } else if(id == "ESTIMATED_ENTRY_FEE") {
+  } else if(id == "REQUESTED_ORDER.ESTIMATED_ENTRY_FEE") {
     return EstimatedEntryFeeNode{};
-  } else if(id == "ESTIMATED_1R_EXIT_FEE") {
+  } else if(id == "REQUESTED_ORDER.ESTIMATED_1R_EXIT_FEE") {
     return EstimatedOneRExitFeeNode{};
-  } else if(id == "REQUESTED_ORDER_RISK_DISTANCE") {
+  } else if(id == "REQUESTED_ORDER.RISK_DISTANCE") {
     return RequestedOrderRiskDistanceNode{};
-  } else if(id == "REQUESTED_PRICE_RISK") {
+  } else if(id == "REQUESTED_ORDER.PRICE_RISK") {
     return RequestedPriceRiskNode{};
-  } else if(id == "REQUESTED_RISK_WITH_FEES") {
+  } else if(id == "REQUESTED_ORDER.RISK_WITH_FEES") {
     return RequestedRiskWithFeesNode{};
-  } else if(id == "FROZEN_UNIT_QUANTITY") {
+  } else if(id == "REQUESTED_ORDER.FROZEN_UNIT_QUANTITY") {
     return FrozenUnitQuantityNode{};
   }
 
-  const auto value = ErasedNode<backtest::RequestedOrderMethodContext>{ValueNode{0.0}};
+  const auto value =
+   ErasedNode<backtest::RequestedOrderMethodContext>{ValueNode{0.0}};
   const auto requested =
    ErasedNode<backtest::RequestedOrderMethodContext>{RequestedQuantityNode{}};
-  if(id == "ADD") {
-      return AddNode<backtest::RequestedOrderMethodContext>{requested, value};
-  } else if(id == "SUBTRACT") {
-      return SubtractNode<backtest::RequestedOrderMethodContext>{requested, value};
-  } else if(id == "MULTIPLY") {
-      return MultiplyNode<backtest::RequestedOrderMethodContext>{requested, ValueNode{1.0}};
-  } else if(id == "DIVIDE") {
-      return DivideNode<backtest::RequestedOrderMethodContext>{requested, ValueNode{1.0}};
-  } else if(id == "ABS_DIFF") {
-      return AbsDiffNode<backtest::RequestedOrderMethodContext>{requested, value};
-  } else if(id == "MAX") {
-      return MaxNode<backtest::RequestedOrderMethodContext>{requested, value};
-  } else if(id == "MIN") {
-      return MinNode<backtest::RequestedOrderMethodContext>{requested, value};
-  } else if(id == "NEGATE") {
-      return NegateNode<backtest::RequestedOrderMethodContext>{requested};
-  } else if(id == "ABS") {
-      return AbsNode<backtest::RequestedOrderMethodContext>{requested};
-  } else if(id == "SQRT") {
-      return SqrtNode<backtest::RequestedOrderMethodContext>{requested};
-  } else if(id == "POSITIVE_PART") {
-      return PositivePartNode<backtest::RequestedOrderMethodContext>{requested};
-  } else if(id == "NEGATIVE_PART") {
-      return NegativePartNode<backtest::RequestedOrderMethodContext>{requested};
+  if(id == "OPERATOR.ADD") {
+    return AddNode<backtest::RequestedOrderMethodContext>{requested, value};
+  } else if(id == "OPERATOR.SUBTRACT") {
+    return SubtractNode<backtest::RequestedOrderMethodContext>{requested,
+                                                               value};
+  } else if(id == "OPERATOR.MULTIPLY") {
+    return MultiplyNode<backtest::RequestedOrderMethodContext>{requested,
+                                                               ValueNode{1.0}};
+  } else if(id == "OPERATOR.DIVIDE") {
+    return DivideNode<backtest::RequestedOrderMethodContext>{requested,
+                                                             ValueNode{1.0}};
+  } else if(id == "OPERATOR.ABS_DIFF") {
+    return AbsDiffNode<backtest::RequestedOrderMethodContext>{requested, value};
+  } else if(id == "OPERATOR.MAX") {
+    return MaxNode<backtest::RequestedOrderMethodContext>{requested, value};
+  } else if(id == "OPERATOR.MIN") {
+    return MinNode<backtest::RequestedOrderMethodContext>{requested, value};
+  } else if(id == "OPERATOR.NEGATE") {
+    return NegateNode<backtest::RequestedOrderMethodContext>{requested};
+  } else if(id == "OPERATOR.ABS") {
+    return AbsNode<backtest::RequestedOrderMethodContext>{requested};
+  } else if(id == "OPERATOR.SQRT") {
+    return SqrtNode<backtest::RequestedOrderMethodContext>{requested};
+  } else if(id == "OPERATOR.POSITIVE_PART") {
+    return PositivePartNode<backtest::RequestedOrderMethodContext>{requested};
+  } else if(id == "OPERATOR.NEGATIVE_PART") {
+    return NegativePartNode<backtest::RequestedOrderMethodContext>{requested};
   }
   throw std::invalid_argument{
    std::format("Unknown requested order node id: {}", id)};
@@ -360,205 +377,209 @@ auto get_series_node_id(const ErasedNode<backtest::BacktestMethodContext>& node)
  -> std::string
 {
   if(node_cast<SelectOutputNode<backtest::BacktestMethodContext>>(node)) {
-    return "SELECT_OUTPUT";
+    return "OPERATOR.SELECT_OUTPUT";
   } else if(node_cast<SeriesNode>(node)) {
-    return "SERIES";
+    return "SERIES.REFERENCE";
   } else if(node_cast<CloseNode>(node)) {
-    return "CLOSE";
+    return "MARKET_DATA.CLOSE";
   } else if(node_cast<OpenNode>(node)) {
-    return "OPEN";
+    return "MARKET_DATA.OPEN";
   } else if(node_cast<HighNode>(node)) {
-    return "HIGH";
+    return "MARKET_DATA.HIGH";
   } else if(node_cast<LowNode>(node)) {
-    return "LOW";
+    return "MARKET_DATA.LOW";
   } else if(node_cast<VolumeNode>(node)) {
-    return "VOLUME";
+    return "MARKET_DATA.VOLUME";
   } else if(node_cast<ChangeNode<backtest::BacktestMethodContext>>(node)) {
-    return "CHANGE";
+    return "OPERATOR.CHANGE";
   } else if(node_cast<RequestedOrderPriceNode>(node)) {
-    return "REQUESTED_ORDER_PRICE";
+    return "REQUESTED_ORDER.PRICE";
   } else if(node_cast<RequestedOrderDirectionNode>(node)) {
-    return "REQUESTED_ORDER_DIRECTION";
+    return "REQUESTED_ORDER.DIRECTION";
   } else if(node_cast<IsPyramidingOrderNode>(node)) {
-    return "IS_PYRAMIDING_ORDER";
+    return "REQUESTED_ORDER.IS_PYRAMIDING";
   } else if(node_cast<RawRequestedQuantityNode>(node)) {
-    return "RAW_REQUESTED_QUANTITY";
+    return "REQUESTED_ORDER.RAW_QUANTITY";
   } else if(node_cast<RawRequestedQuantityLimitNode>(node)) {
-    return "RAW_REQUESTED_QUANTITY_LIMIT";
+    return "REQUESTED_ORDER.RAW_QUANTITY_LIMIT";
   } else if(node_cast<DrawdownAdjustedQuantityNode>(node)) {
-    return "DRAWDOWN_ADJUSTED_QUANTITY";
+    return "REQUESTED_ORDER.DRAWDOWN_ADJUSTED_QUANTITY";
   } else if(node_cast<DrawdownAdjustedQuantityLimitNode>(node)) {
-    return "DRAWDOWN_ADJUSTED_QUANTITY_LIMIT";
+    return "REQUESTED_ORDER.DRAWDOWN_ADJUSTED_QUANTITY_LIMIT";
   } else if(node_cast<RequestedQuantityNode>(node)) {
-    return "REQUESTED_QUANTITY";
+    return "REQUESTED_ORDER.QUANTITY";
   } else if(node_cast<RequestedNotionalNode>(node)) {
-    return "REQUESTED_NOTIONAL";
+    return "REQUESTED_ORDER.NOTIONAL";
   } else if(node_cast<RequestedCostNode>(node)) {
-    return "REQUESTED_COST";
+    return "REQUESTED_ORDER.COST";
   } else if(node_cast<EstimatedEntryFeeNode>(node)) {
-    return "ESTIMATED_ENTRY_FEE";
+    return "REQUESTED_ORDER.ESTIMATED_ENTRY_FEE";
   } else if(node_cast<EstimatedOneRExitFeeNode>(node)) {
-    return "ESTIMATED_1R_EXIT_FEE";
+    return "REQUESTED_ORDER.ESTIMATED_1R_EXIT_FEE";
   } else if(node_cast<RequestedOrderRiskDistanceNode>(node)) {
-    return "REQUESTED_ORDER_RISK_DISTANCE";
+    return "REQUESTED_ORDER.RISK_DISTANCE";
   } else if(node_cast<RequestedPriceRiskNode>(node)) {
-    return "REQUESTED_PRICE_RISK";
+    return "REQUESTED_ORDER.PRICE_RISK";
   } else if(node_cast<RequestedRiskWithFeesNode>(node)) {
-    return "REQUESTED_RISK_WITH_FEES";
+    return "REQUESTED_ORDER.RISK_WITH_FEES";
   } else if(node_cast<FrozenUnitQuantityNode>(node)) {
-    return "FROZEN_UNIT_QUANTITY";
+    return "REQUESTED_ORDER.FROZEN_UNIT_QUANTITY";
   } else if(node_cast<DataNode>(node)) {
-    return "DATA";
+    return "MARKET_DATA.FIELD";
   } else if(node_cast<EquityNode>(node)) {
-    return "EQUITY";
+    return "PORTFOLIO.EQUITY";
   } else if(node_cast<EquityPercentNode>(node)) {
-    return "EQUITY_PERCENT";
+    return "PORTFOLIO.EQUITY_PERCENT";
   } else if(node_cast<DrawdownNode>(node)) {
-    return "DRAWDOWN";
+    return "PORTFOLIO.DRAWDOWN";
   } else if(node_cast<ValueNode>(node)) {
-    return "VALUE";
+    return "VALUE.CONSTANT";
   } else if(node_cast<StddevNode<backtest::BacktestMethodContext>>(node)) {
-    return "STDDEV";
+    return "INDICATOR.STDDEV";
   } else if(node_cast<BbNode<backtest::BacktestMethodContext>>(node)) {
-    return "BB";
+    return "INDICATOR.BB";
   } else if(node_cast<KcNode<backtest::BacktestMethodContext>>(node)) {
-    return "KC";
-  } else if(node_cast<DonchianChannelNode<backtest::BacktestMethodContext>>(node)) {
-    return "DC";
+    return "INDICATOR.KC";
+  } else if(node_cast<DonchianChannelNode<backtest::BacktestMethodContext>>(
+             node)) {
+    return "INDICATOR.DC";
   } else if(node_cast<SmaNode<backtest::BacktestMethodContext>>(node)) {
-    return "SMA";
+    return "INDICATOR.SMA";
   } else if(node_cast<EmaNode<backtest::BacktestMethodContext>>(node)) {
-    return "EMA";
+    return "INDICATOR.EMA";
   } else if(node_cast<WmaNode<backtest::BacktestMethodContext>>(node)) {
-    return "WMA";
+    return "INDICATOR.WMA";
   } else if(node_cast<HmaNode<backtest::BacktestMethodContext>>(node)) {
-    return "HMA";
+    return "INDICATOR.HMA";
   } else if(node_cast<RmaNode<backtest::BacktestMethodContext>>(node)) {
-    return "RMA";
+    return "INDICATOR.RMA";
   } else if(node_cast<RsiNode<backtest::BacktestMethodContext>>(node)) {
-    return "RSI";
+    return "INDICATOR.RSI";
   } else if(node_cast<RocNode<backtest::BacktestMethodContext>>(node)) {
-    return "ROC";
+    return "INDICATOR.ROC";
   } else if(node_cast<RvolNode<backtest::BacktestMethodContext>>(node)) {
-    return "RVOL";
+    return "INDICATOR.RVOL";
   } else if(node_cast<HighestNode<backtest::BacktestMethodContext>>(node)) {
-    return "HIGHEST";
+    return "INDICATOR.HIGHEST";
   } else if(node_cast<LowestNode<backtest::BacktestMethodContext>>(node)) {
-    return "LOWEST";
+    return "INDICATOR.LOWEST";
   } else if(node_cast<TrNode<backtest::BacktestMethodContext>>(node)) {
-    return "TR";
+    return "INDICATOR.TR";
   } else if(node_cast<MacdNode<backtest::BacktestMethodContext>>(node)) {
-    return "MACD";
+    return "INDICATOR.MACD";
   } else if(node_cast<AtrNode<backtest::BacktestMethodContext>>(node)) {
-    return "ATR";
+    return "INDICATOR.ATR";
   } else if(node_cast<StochNode<backtest::BacktestMethodContext>>(node)) {
-    return "STOCH";
+    return "INDICATOR.STOCH";
   } else if(node_cast<StochRsiNode<backtest::BacktestMethodContext>>(node)) {
-    return "STOCH_RSI";
-   } else if(node_cast<AddNode<backtest::BacktestMethodContext>>(node)) {
-    return "ADD";
-   } else if(node_cast<SubtractNode<backtest::BacktestMethodContext>>(node)) {
-    return "SUBTRACT";
-   } else if(node_cast<MultiplyNode<backtest::BacktestMethodContext>>(node)) {
-    return "MULTIPLY";
-   } else if(node_cast<DivideNode<backtest::BacktestMethodContext>>(node)) {
-    return "DIVIDE";
-   } else if(node_cast<NegateNode<backtest::BacktestMethodContext>>(node)) {
-    return "NEGATE";
-   } else if(node_cast<SqrtNode<backtest::BacktestMethodContext>>(node)) {
-    return "SQRT";
+    return "INDICATOR.STOCH_RSI";
+  } else if(node_cast<AddNode<backtest::BacktestMethodContext>>(node)) {
+    return "OPERATOR.ADD";
+  } else if(node_cast<SubtractNode<backtest::BacktestMethodContext>>(node)) {
+    return "OPERATOR.SUBTRACT";
+  } else if(node_cast<MultiplyNode<backtest::BacktestMethodContext>>(node)) {
+    return "OPERATOR.MULTIPLY";
+  } else if(node_cast<DivideNode<backtest::BacktestMethodContext>>(node)) {
+    return "OPERATOR.DIVIDE";
+  } else if(node_cast<NegateNode<backtest::BacktestMethodContext>>(node)) {
+    return "OPERATOR.NEGATE";
+  } else if(node_cast<SqrtNode<backtest::BacktestMethodContext>>(node)) {
+    return "OPERATOR.SQRT";
   } else if(node_cast<PercentageNode<backtest::BacktestMethodContext>>(node)) {
-    return "PERCENTAGE";
-  } else if(node_cast<RiskDistanceAmountNode<
-              backtest::BacktestMethodContext>>(node)) {
-    return "R_DISTANCE_AMOUNT";
-  } else if(node_cast<RiskDistancePercentNode<
-              backtest::BacktestMethodContext>>(node)) {
-    return "R_DISTANCE_PERCENTAGE";
+    return "OPERATOR.PERCENTAGE";
+  } else if(node_cast<RiskDistanceAmountNode<backtest::BacktestMethodContext>>(
+             node)) {
+    return "RISK_DISTANCE.AMOUNT";
+  } else if(node_cast<RiskDistancePercentNode<backtest::BacktestMethodContext>>(
+             node)) {
+    return "RISK_DISTANCE.PERCENT";
   } else if(node_cast<RiskDistanceAtrNode<backtest::BacktestMethodContext>>(
-              node)) {
-    return "R_DISTANCE_ATR";
+             node)) {
+    return "RISK_DISTANCE.ATR";
   } else if(node_cast<SlAmountNode<backtest::BacktestMethodContext>>(node)) {
-    return "SL_AMOUNT";
+    return "STOP_LOSS.AMOUNT";
   } else if(node_cast<TpAmountNode<backtest::BacktestMethodContext>>(node)) {
-    return "TP_AMOUNT";
+    return "TAKE_PROFIT.AMOUNT";
   } else if(node_cast<SlPercentNode<backtest::BacktestMethodContext>>(node)) {
-    return "SL_PERCENT";
+    return "STOP_LOSS.PERCENT";
   } else if(node_cast<TpPercentNode<backtest::BacktestMethodContext>>(node)) {
-    return "TP_PERCENT";
+    return "TAKE_PROFIT.PERCENT";
   } else if(node_cast<SlAtrNode<backtest::BacktestMethodContext>>(node)) {
-    return "SL_ATR";
+    return "STOP_LOSS.ATR";
   } else if(node_cast<TpAtrNode<backtest::BacktestMethodContext>>(node)) {
-    return "TP_ATR";
+    return "TAKE_PROFIT.ATR";
   } else if(node_cast<Sl1RNode>(node)) {
-    return "SL_1R";
+    return "STOP_LOSS.ONE_R";
   } else if(node_cast<SlRMultipleNode<backtest::BacktestMethodContext>>(node)) {
-    return "SL_R_MULTIPLE";
+    return "STOP_LOSS.R_MULTIPLE";
   } else if(node_cast<TpRMultipleNode<backtest::BacktestMethodContext>>(node)) {
-    return "TP_R_MULTIPLE";
+    return "TAKE_PROFIT.R_MULTIPLE";
   } else if(node_cast<InitialEntryPriceNode>(node)) {
-    return "INITIAL_ENTRY_PRICE";
+    return "POSITION.INITIAL_ENTRY_PRICE";
   } else if(node_cast<LatestEntryPriceNode>(node)) {
-    return "LATEST_ENTRY_PRICE";
+    return "POSITION.LATEST_ENTRY_PRICE";
   } else if(node_cast<AveragePriceNode>(node)) {
-    return "AVERAGE_PRICE";
+    return "POSITION.AVERAGE_PRICE";
   } else if(node_cast<StopTargetRefPriceNode>(node)) {
-    return "STOP_TARGET_REF_PRICE";
+    return "POSITION.STOP_TARGET_REF_PRICE";
   } else if(node_cast<PositionDirectionNode>(node)) {
-    return "POSITION_DIRECTION";
+    return "POSITION.DIRECTION";
   } else if(node_cast<PyramidingLayerNode>(node)) {
-    return "PYRAMIDING_LAYER";
-  } else if(node_cast<PositionRMultipleNode<
-              backtest::BacktestMethodContext>>(node)) {
-    return "POSITION_R_MULTIPLE";
-   } else if(node_cast<AbsDiffNode<backtest::BacktestMethodContext>>(node)) {
-    return "ABS_DIFF";
-   } else if(node_cast<AbsNode<backtest::BacktestMethodContext>>(node)) {
-    return "ABS";
-   } else if(node_cast<MaxNode<backtest::BacktestMethodContext>>(node)) {
-    return "MAX";
-   } else if(node_cast<MinNode<backtest::BacktestMethodContext>>(node)) {
-    return "MIN";
-   } else if(node_cast<PositivePartNode<backtest::BacktestMethodContext>>(node)) {
-    return "POSITIVE_PART";
-   } else if(node_cast<NegativePartNode<backtest::BacktestMethodContext>>(node)) {
-    return "NEGATIVE_PART";
+    return "POSITION.PYRAMIDING_LAYER";
+  } else if(node_cast<PositionRMultipleNode<backtest::BacktestMethodContext>>(
+             node)) {
+    return "POSITION.R_MULTIPLE";
+  } else if(node_cast<AbsDiffNode<backtest::BacktestMethodContext>>(node)) {
+    return "OPERATOR.ABS_DIFF";
+  } else if(node_cast<AbsNode<backtest::BacktestMethodContext>>(node)) {
+    return "OPERATOR.ABS";
+  } else if(node_cast<MaxNode<backtest::BacktestMethodContext>>(node)) {
+    return "OPERATOR.MAX";
+  } else if(node_cast<MinNode<backtest::BacktestMethodContext>>(node)) {
+    return "OPERATOR.MIN";
+  } else if(node_cast<PositivePartNode<backtest::BacktestMethodContext>>(
+             node)) {
+    return "OPERATOR.POSITIVE_PART";
+  } else if(node_cast<NegativePartNode<backtest::BacktestMethodContext>>(
+             node)) {
+    return "OPERATOR.NEGATIVE_PART";
   } else if(node_cast<LookbackNode<backtest::BacktestMethodContext>>(node)) {
-    return "LOOKBACK";
+    return "OPERATOR.LOOKBACK";
   } else if(node_cast<NumericInputNode>(node)) {
-    return "INPUT";
+    return "INPUT.NUMERIC";
   } else if(node_cast<AllOfNode<backtest::BacktestMethodContext>>(node)) {
-    return "ALL_OF";
+    return "LOGIC.ALL_OF";
   } else if(node_cast<AnyOfNode<backtest::BacktestMethodContext>>(node)) {
-    return "ANY_OF";
+    return "LOGIC.ANY_OF";
   } else if(node_cast<TrueNode>(node)) {
-    return "ALWAYS";
+    return "LOGIC.ALWAYS";
   } else if(node_cast<FalseNode>(node)) {
-    return "NEVER";
+    return "LOGIC.NEVER";
   } else if(node_cast<LessThanNode<backtest::BacktestMethodContext>>(node)) {
-    return "LESS_THAN";
+    return "COMPARISON.LESS_THAN";
   } else if(node_cast<GreaterThanNode<backtest::BacktestMethodContext>>(node)) {
-    return "GREATER_THAN";
+    return "COMPARISON.GREATER_THAN";
   } else if(node_cast<LessEqualNode<backtest::BacktestMethodContext>>(node)) {
-    return "LESS_EQUAL";
-  } else if(node_cast<GreaterEqualNode<backtest::BacktestMethodContext>>(node)) {
-    return "GREATER_EQUAL";
+    return "COMPARISON.LESS_EQUAL";
+  } else if(node_cast<GreaterEqualNode<backtest::BacktestMethodContext>>(
+             node)) {
+    return "COMPARISON.GREATER_EQUAL";
   } else if(node_cast<EqualNode<backtest::BacktestMethodContext>>(node)) {
-    return "EQUAL";
+    return "COMPARISON.EQUAL";
   } else if(node_cast<NotEqualNode<backtest::BacktestMethodContext>>(node)) {
-    return "NOT_EQUAL";
+    return "COMPARISON.NOT_EQUAL";
   } else if(node_cast<CrossoverNode<backtest::BacktestMethodContext>>(node)) {
-    return "CROSSOVER";
+    return "COMPARISON.CROSSOVER";
   } else if(node_cast<CrossunderNode<backtest::BacktestMethodContext>>(node)) {
-    return "CROSSUNDER";
+    return "COMPARISON.CROSSUNDER";
   } else if(node_cast<LogicalNotNode<backtest::BacktestMethodContext>>(node)) {
-    return "NOT";
+    return "LOGIC.NOT";
   } else if(node_cast<LogicalAndNode<backtest::BacktestMethodContext>>(node)) {
-    return "AND";
+    return "LOGIC.AND";
   } else if(node_cast<LogicalOrNode<backtest::BacktestMethodContext>>(node)) {
-    return "OR";
+    return "LOGIC.OR";
   } else if(node_cast<LogicalXorNode<backtest::BacktestMethodContext>>(node)) {
-    return "XOR";
+    return "LOGIC.XOR";
   }
 
   return "UNKNOWN";
@@ -566,201 +587,201 @@ auto get_series_node_id(const ErasedNode<backtest::BacktestMethodContext>& node)
 
 auto get_series_node_title(const std::string& series_id) -> std::string
 {
-  if(series_id == "REQUESTED_ORDER_PRICE") {
+  if(series_id == "REQUESTED_ORDER.PRICE") {
     return "Requested Order Price";
-  } else if(series_id == "REQUESTED_ORDER_DIRECTION") {
+  } else if(series_id == "REQUESTED_ORDER.DIRECTION") {
     return "Requested Order Direction";
-  } else if(series_id == "IS_PYRAMIDING_ORDER") {
+  } else if(series_id == "REQUESTED_ORDER.IS_PYRAMIDING") {
     return "Is Pyramiding Order";
-  } else if(series_id == "RAW_REQUESTED_QUANTITY") {
+  } else if(series_id == "REQUESTED_ORDER.RAW_QUANTITY") {
     return "Raw Requested Quantity";
-  } else if(series_id == "RAW_REQUESTED_QUANTITY_LIMIT") {
+  } else if(series_id == "REQUESTED_ORDER.RAW_QUANTITY_LIMIT") {
     return "Raw Requested Quantity Limit";
-  } else if(series_id == "DRAWDOWN_ADJUSTED_QUANTITY") {
+  } else if(series_id == "REQUESTED_ORDER.DRAWDOWN_ADJUSTED_QUANTITY") {
     return "Drawdown-Adjusted Quantity";
-  } else if(series_id == "DRAWDOWN_ADJUSTED_QUANTITY_LIMIT") {
+  } else if(series_id == "REQUESTED_ORDER.DRAWDOWN_ADJUSTED_QUANTITY_LIMIT") {
     return "Drawdown-Adjusted Quantity Limit";
-  } else if(series_id == "REQUESTED_QUANTITY") {
+  } else if(series_id == "REQUESTED_ORDER.QUANTITY") {
     return "Requested Quantity";
-  } else if(series_id == "REQUESTED_NOTIONAL") {
+  } else if(series_id == "REQUESTED_ORDER.NOTIONAL") {
     return "Requested Notional";
-  } else if(series_id == "REQUESTED_COST") {
+  } else if(series_id == "REQUESTED_ORDER.COST") {
     return "Requested Cost";
-  } else if(series_id == "ESTIMATED_ENTRY_FEE") {
+  } else if(series_id == "REQUESTED_ORDER.ESTIMATED_ENTRY_FEE") {
     return "Estimated Entry Fee";
-  } else if(series_id == "ESTIMATED_1R_EXIT_FEE") {
+  } else if(series_id == "REQUESTED_ORDER.ESTIMATED_1R_EXIT_FEE") {
     return "Estimated 1R Exit Fee";
-  } else if(series_id == "REQUESTED_ORDER_RISK_DISTANCE") {
+  } else if(series_id == "REQUESTED_ORDER.RISK_DISTANCE") {
     return "Risk Distance";
-  } else if(series_id == "REQUESTED_PRICE_RISK") {
+  } else if(series_id == "REQUESTED_ORDER.PRICE_RISK") {
     return "Requested Price Risk";
-  } else if(series_id == "REQUESTED_RISK_WITH_FEES") {
+  } else if(series_id == "REQUESTED_ORDER.RISK_WITH_FEES") {
     return "Requested Risk With Fees";
-  } else if(series_id == "FROZEN_UNIT_QUANTITY") {
+  } else if(series_id == "REQUESTED_ORDER.FROZEN_UNIT_QUANTITY") {
     return "Frozen Unit Quantity";
-  } else if(series_id == "ABS") {
+  } else if(series_id == "OPERATOR.ABS") {
     return "Absolute Value";
-  } else if(series_id == "MAX") {
+  } else if(series_id == "OPERATOR.MAX") {
     return "Maximum";
-  } else if(series_id == "MIN") {
+  } else if(series_id == "OPERATOR.MIN") {
     return "Minimum";
-  } else if(series_id == "POSITIVE_PART") {
+  } else if(series_id == "OPERATOR.POSITIVE_PART") {
     return "Positive Part";
-  } else if(series_id == "NEGATIVE_PART") {
+  } else if(series_id == "OPERATOR.NEGATIVE_PART") {
     return "Negative Part";
-  } else if(series_id == "OPEN") {
+  } else if(series_id == "MARKET_DATA.OPEN") {
     return "Open Price";
-  } else if(series_id == "CLOSE") {
+  } else if(series_id == "MARKET_DATA.CLOSE") {
     return "Close Price";
-  } else if(series_id == "HIGH") {
+  } else if(series_id == "MARKET_DATA.HIGH") {
     return "High Price";
-  } else if(series_id == "LOW") {
+  } else if(series_id == "MARKET_DATA.LOW") {
     return "Low Price";
-  } else if(series_id == "VOLUME") {
+  } else if(series_id == "MARKET_DATA.VOLUME") {
     return "Volume";
-  } else if(series_id == "CHANGE") {
+  } else if(series_id == "OPERATOR.CHANGE") {
     return "Change";
-  } else if(series_id == "DATA") {
+  } else if(series_id == "MARKET_DATA.FIELD") {
     return "Data";
-  } else if(series_id == "EQUITY") {
+  } else if(series_id == "PORTFOLIO.EQUITY") {
     return "Equity";
-  } else if(series_id == "EQUITY_PERCENT") {
+  } else if(series_id == "PORTFOLIO.EQUITY_PERCENT") {
     return "Equity (%)";
-  } else if(series_id == "DRAWDOWN") {
+  } else if(series_id == "PORTFOLIO.DRAWDOWN") {
     return "Drawdown";
-  } else if(series_id == "SMA") {
+  } else if(series_id == "INDICATOR.SMA") {
     return "Simple Moving Average (SMA)";
-  } else if(series_id == "EMA") {
+  } else if(series_id == "INDICATOR.EMA") {
     return "Exponential Moving Average (EMA)";
-  } else if(series_id == "WMA") {
+  } else if(series_id == "INDICATOR.WMA") {
     return "Weighted Moving Average (WMA)";
-  } else if(series_id == "HMA") {
+  } else if(series_id == "INDICATOR.HMA") {
     return "Hull Moving Average (HMA)";
-  } else if(series_id == "RMA") {
+  } else if(series_id == "INDICATOR.RMA") {
     return "Running Moving Average (RMA)";
-  } else if(series_id == "RSI") {
+  } else if(series_id == "INDICATOR.RSI") {
     return "Relative Strength Index (RSI)";
-  } else if(series_id == "ROC") {
+  } else if(series_id == "INDICATOR.ROC") {
     return "Rate of Change (ROC)";
-  } else if(series_id == "RVOL") {
+  } else if(series_id == "INDICATOR.RVOL") {
     return "Relative Volume (RVOL)";
-  } else if(series_id == "HIGHEST") {
+  } else if(series_id == "INDICATOR.HIGHEST") {
     return "Highest";
-  } else if(series_id == "LOWEST") {
+  } else if(series_id == "INDICATOR.LOWEST") {
     return "Lowest";
-  } else if(series_id == "TR") {
+  } else if(series_id == "INDICATOR.TR") {
     return "True Range (TR)";
-  } else if(series_id == "MACD") {
+  } else if(series_id == "INDICATOR.MACD") {
     return "Moving Average Convergence Divergence (MACD)";
-  } else if(series_id == "ATR") {
+  } else if(series_id == "INDICATOR.ATR") {
     return "Average True Range (ATR)";
-  } else if(series_id == "STDDEV") {
+  } else if(series_id == "INDICATOR.STDDEV") {
     return "Standard Deviation (STDDEV)";
-  } else if(series_id == "BB") {
+  } else if(series_id == "INDICATOR.BB") {
     return "Bollinger Bands";
-  } else if(series_id == "KC") {
+  } else if(series_id == "INDICATOR.KC") {
     return "Keltner Channel (KC)";
-  } else if(series_id == "DC") {
+  } else if(series_id == "INDICATOR.DC") {
     return "Donchian Channels (DC)";
-  } else if(series_id == "STOCH") {
+  } else if(series_id == "INDICATOR.STOCH") {
     return "Stochastic Oscillator";
-  } else if(series_id == "STOCH_RSI") {
+  } else if(series_id == "INDICATOR.STOCH_RSI") {
     return "Stochastic RSI";
-  } else if(series_id == "SERIES") {
+  } else if(series_id == "SERIES.REFERENCE") {
     return "Series";
-  } else if(series_id == "VALUE") {
+  } else if(series_id == "VALUE.CONSTANT") {
     return "Value";
-  } else if(series_id == "LOOKBACK") {
+  } else if(series_id == "OPERATOR.LOOKBACK") {
     return "Lookback";
-  } else if(series_id == "ALL_OF") {
+  } else if(series_id == "LOGIC.ALL_OF") {
     return "All Of";
-  } else if(series_id == "ANY_OF") {
+  } else if(series_id == "LOGIC.ANY_OF") {
     return "Any Of";
-  } else if(series_id == "ALWAYS") {
+  } else if(series_id == "LOGIC.ALWAYS") {
     return "Always";
-  } else if(series_id == "NEVER") {
+  } else if(series_id == "LOGIC.NEVER") {
     return "Never";
-  } else if(series_id == "LESS_THAN") {
+  } else if(series_id == "COMPARISON.LESS_THAN") {
     return "Less Than";
-  } else if(series_id == "GREATER_THAN") {
+  } else if(series_id == "COMPARISON.GREATER_THAN") {
     return "Greater Than";
-  } else if(series_id == "LESS_EQUAL") {
+  } else if(series_id == "COMPARISON.LESS_EQUAL") {
     return "Less Equal";
-  } else if(series_id == "GREATER_EQUAL") {
+  } else if(series_id == "COMPARISON.GREATER_EQUAL") {
     return "Greater Equal";
-  } else if(series_id == "EQUAL") {
+  } else if(series_id == "COMPARISON.EQUAL") {
     return "Equal";
-  } else if(series_id == "NOT_EQUAL") {
+  } else if(series_id == "COMPARISON.NOT_EQUAL") {
     return "Not Equal";
-  } else if(series_id == "CROSSOVER") {
+  } else if(series_id == "COMPARISON.CROSSOVER") {
     return "Crossover";
-  } else if(series_id == "CROSSUNDER") {
+  } else if(series_id == "COMPARISON.CROSSUNDER") {
     return "Crossunder";
-  } else if(series_id == "NOT") {
+  } else if(series_id == "LOGIC.NOT") {
     return "Not";
-  } else if(series_id == "AND") {
+  } else if(series_id == "LOGIC.AND") {
     return "And";
-  } else if(series_id == "OR") {
+  } else if(series_id == "LOGIC.OR") {
     return "Or";
-  } else if(series_id == "XOR") {
+  } else if(series_id == "LOGIC.XOR") {
     return "Xor";
-  } else if(series_id == "INPUT") {
+  } else if(series_id == "INPUT.NUMERIC") {
     return "From Input";
-  } else if(series_id == "ADD") {
+  } else if(series_id == "OPERATOR.ADD") {
     return "Addition";
-  } else if(series_id == "SUBTRACT") {
+  } else if(series_id == "OPERATOR.SUBTRACT") {
     return "Subtraction";
-  } else if(series_id == "MULTIPLY") {
+  } else if(series_id == "OPERATOR.MULTIPLY") {
     return "Multiplication";
-  } else if(series_id == "DIVIDE") {
+  } else if(series_id == "OPERATOR.DIVIDE") {
     return "Division";
-  } else if(series_id == "NEGATE") {
+  } else if(series_id == "OPERATOR.NEGATE") {
     return "Negation";
-  } else if(series_id == "SQRT") {
+  } else if(series_id == "OPERATOR.SQRT") {
     return "Square Root";
-  } else if(series_id == "PERCENTAGE") {
+  } else if(series_id == "OPERATOR.PERCENTAGE") {
     return "Percentage";
-  } else if(series_id == "R_DISTANCE_AMOUNT") {
+  } else if(series_id == "RISK_DISTANCE.AMOUNT") {
     return "1R Amount Distance";
-  } else if(series_id == "R_DISTANCE_PERCENTAGE") {
+  } else if(series_id == "RISK_DISTANCE.PERCENT") {
     return "1R Percentage Distance";
-  } else if(series_id == "R_DISTANCE_ATR") {
+  } else if(series_id == "RISK_DISTANCE.ATR") {
     return "1R ATR Distance";
-  } else if(series_id == "SL_AMOUNT") {
+  } else if(series_id == "STOP_LOSS.AMOUNT") {
     return "Stop Loss Amount";
-  } else if(series_id == "TP_AMOUNT") {
+  } else if(series_id == "TAKE_PROFIT.AMOUNT") {
     return "Take Profit Amount";
-  } else if(series_id == "SL_PERCENT") {
+  } else if(series_id == "STOP_LOSS.PERCENT") {
     return "Stop Loss Percent";
-  } else if(series_id == "TP_PERCENT") {
+  } else if(series_id == "TAKE_PROFIT.PERCENT") {
     return "Take Profit Percent";
-  } else if(series_id == "SL_ATR") {
+  } else if(series_id == "STOP_LOSS.ATR") {
     return "Stop Loss ATR";
-  } else if(series_id == "TP_ATR") {
+  } else if(series_id == "TAKE_PROFIT.ATR") {
     return "Take Profit ATR";
-  } else if(series_id == "SL_1R") {
+  } else if(series_id == "STOP_LOSS.ONE_R") {
     return "Stop Loss 1R";
-  } else if(series_id == "SL_R_MULTIPLE") {
+  } else if(series_id == "STOP_LOSS.R_MULTIPLE") {
     return "Stop Loss R-Multiple";
-  } else if(series_id == "TP_R_MULTIPLE") {
+  } else if(series_id == "TAKE_PROFIT.R_MULTIPLE") {
     return "Take Profit R-Multiple";
-  } else if(series_id == "INITIAL_ENTRY_PRICE") {
+  } else if(series_id == "POSITION.INITIAL_ENTRY_PRICE") {
     return "Initial Entry Price";
-  } else if(series_id == "LATEST_ENTRY_PRICE") {
+  } else if(series_id == "POSITION.LATEST_ENTRY_PRICE") {
     return "Latest Entry Price";
-  } else if(series_id == "AVERAGE_PRICE") {
+  } else if(series_id == "POSITION.AVERAGE_PRICE") {
     return "Average Price";
-  } else if(series_id == "STOP_TARGET_REF_PRICE") {
+  } else if(series_id == "POSITION.STOP_TARGET_REF_PRICE") {
     return "Stop/Target Reference Price";
-  } else if(series_id == "POSITION_DIRECTION") {
+  } else if(series_id == "POSITION.DIRECTION") {
     return "Position Direction";
-  } else if(series_id == "PYRAMIDING_LAYER") {
+  } else if(series_id == "POSITION.PYRAMIDING_LAYER") {
     return "Pyramiding Layer";
-  } else if(series_id == "POSITION_R_MULTIPLE") {
+  } else if(series_id == "POSITION.R_MULTIPLE") {
     return "Position R-Multiple";
-  } else if(series_id == "ABS_DIFF") {
+  } else if(series_id == "OPERATOR.ABS_DIFF") {
     return "Absolute Difference";
-  } else if(series_id == "SELECT_OUTPUT") {
+  } else if(series_id == "OPERATOR.SELECT_OUTPUT") {
     return "Select Output";
   }
 
@@ -771,54 +792,59 @@ auto get_portfolio_comparator_node_combo_entries()
  -> const std::vector<ui::ComboEntry>&
 {
   static const auto entries = [] {
-    const auto ids =
-     std::vector<std::string>{"REQUESTED_ORDER_PRICE",
-                              "REQUESTED_ORDER_DIRECTION",
-                              "IS_PYRAMIDING_ORDER",
-                              "RAW_REQUESTED_QUANTITY",
-                              "RAW_REQUESTED_QUANTITY_LIMIT",
-                              "DRAWDOWN_ADJUSTED_QUANTITY",
-                              "DRAWDOWN_ADJUSTED_QUANTITY_LIMIT",
-                              "REQUESTED_QUANTITY",
-                              "REQUESTED_NOTIONAL",
-                              "REQUESTED_COST",
-                              "ESTIMATED_ENTRY_FEE",
-                              "ESTIMATED_1R_EXIT_FEE",
-                              "REQUESTED_ORDER_RISK_DISTANCE",
-                              "REQUESTED_PRICE_RISK",
-                              "REQUESTED_RISK_WITH_FEES",
-                              "FROZEN_UNIT_QUANTITY",
-                              "OPEN",
-                              "HIGH",
-                              "LOW",
-                              "CLOSE",
-                              "VOLUME",
-                              "DATA",
-                              "LOOKBACK",
-                              "VALUE",
-                              "ADD",
-                              "SUBTRACT",
-                              "MULTIPLY",
-                              "DIVIDE",
-                              "NEGATE",
-                              "ABS",
-                              "ABS_DIFF",
-                              "SQRT",
-                              "MAX",
-                              "MIN",
-                              "POSITIVE_PART",
-                              "NEGATIVE_PART"};
+    const auto ids = std::vector<std::string>{
+     "REQUESTED_ORDER.PRICE",
+     "REQUESTED_ORDER.DIRECTION",
+     "REQUESTED_ORDER.IS_PYRAMIDING",
+     "REQUESTED_ORDER.RAW_QUANTITY",
+     "REQUESTED_ORDER.RAW_QUANTITY_LIMIT",
+     "REQUESTED_ORDER.DRAWDOWN_ADJUSTED_QUANTITY",
+     "REQUESTED_ORDER.DRAWDOWN_ADJUSTED_QUANTITY_LIMIT",
+     "REQUESTED_ORDER.QUANTITY",
+     "REQUESTED_ORDER.NOTIONAL",
+     "REQUESTED_ORDER.COST",
+     "REQUESTED_ORDER.ESTIMATED_ENTRY_FEE",
+     "REQUESTED_ORDER.ESTIMATED_1R_EXIT_FEE",
+     "REQUESTED_ORDER.RISK_DISTANCE",
+     "REQUESTED_ORDER.PRICE_RISK",
+     "REQUESTED_ORDER.RISK_WITH_FEES",
+     "REQUESTED_ORDER.FROZEN_UNIT_QUANTITY",
+     "MARKET_DATA.OPEN",
+     "MARKET_DATA.HIGH",
+     "MARKET_DATA.LOW",
+     "MARKET_DATA.CLOSE",
+     "MARKET_DATA.VOLUME",
+     "MARKET_DATA.FIELD",
+     "OPERATOR.LOOKBACK",
+     "VALUE.CONSTANT",
+     "OPERATOR.ADD",
+     "OPERATOR.SUBTRACT",
+     "OPERATOR.MULTIPLY",
+     "OPERATOR.DIVIDE",
+     "OPERATOR.NEGATE",
+     "OPERATOR.ABS",
+     "OPERATOR.ABS_DIFF",
+     "OPERATOR.SQRT",
+     "OPERATOR.MAX",
+     "OPERATOR.MIN",
+     "OPERATOR.POSITIVE_PART",
+     "OPERATOR.NEGATIVE_PART"};
     auto result = std::vector<ui::ComboEntry>{};
     result.reserve(ids.size());
     for(const auto& id : ids) {
       const auto category =
-       id == "OPEN" || id == "HIGH" || id == "LOW" || id == "CLOSE" ||
-         id == "VOLUME" || id == "DATA" || id == "LOOKBACK"
+       id == "MARKET_DATA.OPEN" || id == "MARKET_DATA.HIGH" ||
+         id == "MARKET_DATA.LOW" || id == "MARKET_DATA.CLOSE" ||
+         id == "MARKET_DATA.VOLUME" || id == "MARKET_DATA.FIELD" ||
+         id == "OPERATOR.LOOKBACK"
         ? "Asset Data"
-       : id == "VALUE" || id == "ADD" || id == "SUBTRACT" || id == "MULTIPLY" ||
-          id == "DIVIDE" || id == "NEGATE" || id == "ABS" || id == "ABS_DIFF" ||
-          id == "SQRT" || id == "MAX" || id == "MIN" || id == "POSITIVE_PART" ||
-          id == "NEGATIVE_PART"
+       : id == "VALUE.CONSTANT" || id == "OPERATOR.ADD" ||
+          id == "OPERATOR.SUBTRACT" || id == "OPERATOR.MULTIPLY" ||
+          id == "OPERATOR.DIVIDE" || id == "OPERATOR.NEGATE" ||
+          id == "OPERATOR.ABS" || id == "OPERATOR.ABS_DIFF" ||
+          id == "OPERATOR.SQRT" || id == "OPERATOR.MAX" ||
+          id == "OPERATOR.MIN" || id == "OPERATOR.POSITIVE_PART" ||
+          id == "OPERATOR.NEGATIVE_PART"
          ? "Math"
          : "Requested Order";
       result.push_back(ui::ComboEntry{
@@ -835,80 +861,80 @@ auto get_series_node_category(const std::string& series_id) -> std::string
 {
   static const auto category_by_id =
    std::unordered_map<std::string, std::string>{
-    {"OPEN", "Price & Volume"},
-    {"CLOSE", "Price & Volume"},
-    {"HIGH", "Price & Volume"},
-    {"LOW", "Price & Volume"},
-    {"VOLUME", "Price & Volume"},
-    {"CHANGE", "Price & Volume"},
-    {"HIGHEST", "Price & Volume"},
-    {"LOWEST", "Price & Volume"},
-    {"DATA", "Account & Equity"},
-    {"EQUITY", "Account & Equity"},
-    {"EQUITY_PERCENT", "Account & Equity"},
-    {"DRAWDOWN", "Account & Equity"},
-    {"SMA", "Trend & Moving Averages"},
-    {"EMA", "Trend & Moving Averages"},
-    {"WMA", "Trend & Moving Averages"},
-    {"HMA", "Trend & Moving Averages"},
-    {"RMA", "Trend & Moving Averages"},
-    {"RSI", "Momentum & Oscillators"},
-    {"ROC", "Momentum & Oscillators"},
-    {"RVOL", "Momentum & Oscillators"},
-    {"STOCH", "Momentum & Oscillators"},
-    {"STOCH_RSI", "Momentum & Oscillators"},
-    {"MACD", "Momentum & Oscillators"},
-    {"TR", "Volatility & Bands"},
-    {"ATR", "Volatility & Bands"},
-    {"STDDEV", "Volatility & Bands"},
-    {"BB", "Volatility & Bands"},
-    {"KC", "Volatility & Bands"},
-    {"DC", "Volatility & Bands"},
-    {"ADD", "Math & Arithmetic"},
-    {"SUBTRACT", "Math & Arithmetic"},
-    {"MULTIPLY", "Math & Arithmetic"},
-    {"DIVIDE", "Math & Arithmetic"},
-    {"NEGATE", "Math & Arithmetic"},
-    {"SQRT", "Math & Arithmetic"},
-    {"PERCENTAGE", "Math & Arithmetic"},
-    {"ABS_DIFF", "Math & Arithmetic"},
-    {"SL_AMOUNT", "Position & Risk"},
-    {"TP_AMOUNT", "Position & Risk"},
-    {"SL_PERCENT", "Position & Risk"},
-    {"TP_PERCENT", "Position & Risk"},
-    {"SL_ATR", "Position & Risk"},
-    {"TP_ATR", "Position & Risk"},
-    {"SL_1R", "Position & Risk"},
-    {"SL_R_MULTIPLE", "Position & Risk"},
-    {"TP_R_MULTIPLE", "Position & Risk"},
-    {"INITIAL_ENTRY_PRICE", "Position & Risk"},
-    {"LATEST_ENTRY_PRICE", "Position & Risk"},
-    {"AVERAGE_PRICE", "Position & Risk"},
-    {"STOP_TARGET_REF_PRICE", "Position & Risk"},
-    {"POSITION_DIRECTION", "Position & Risk"},
-    {"PYRAMIDING_LAYER", "Position & Risk"},
-    {"POSITION_R_MULTIPLE", "Position & Risk"},
-    {"ALL_OF", "Logic & Comparison"},
-    {"ANY_OF", "Logic & Comparison"},
-    {"ALWAYS", "Logic & Comparison"},
-    {"NEVER", "Logic & Comparison"},
-    {"LESS_THAN", "Logic & Comparison"},
-    {"GREATER_THAN", "Logic & Comparison"},
-    {"LESS_EQUAL", "Logic & Comparison"},
-    {"GREATER_EQUAL", "Logic & Comparison"},
-    {"EQUAL", "Logic & Comparison"},
-    {"NOT_EQUAL", "Logic & Comparison"},
-    {"CROSSOVER", "Logic & Comparison"},
-    {"CROSSUNDER", "Logic & Comparison"},
-    {"NOT", "Logic & Comparison"},
-    {"AND", "Logic & Comparison"},
-    {"OR", "Logic & Comparison"},
-    {"XOR", "Logic & Comparison"},
-    {"SELECT_OUTPUT", "Custom & Input"},
-    {"SERIES", "Custom & Input"},
-    {"VALUE", "Custom & Input"},
-    {"LOOKBACK", "Custom & Input"},
-    {"INPUT", "Custom & Input"},
+    {"MARKET_DATA.OPEN", "Price & Volume"},
+    {"MARKET_DATA.CLOSE", "Price & Volume"},
+    {"MARKET_DATA.HIGH", "Price & Volume"},
+    {"MARKET_DATA.LOW", "Price & Volume"},
+    {"MARKET_DATA.VOLUME", "Price & Volume"},
+    {"OPERATOR.CHANGE", "Price & Volume"},
+    {"INDICATOR.HIGHEST", "Price & Volume"},
+    {"INDICATOR.LOWEST", "Price & Volume"},
+    {"MARKET_DATA.FIELD", "Account & Equity"},
+    {"PORTFOLIO.EQUITY", "Account & Equity"},
+    {"PORTFOLIO.EQUITY_PERCENT", "Account & Equity"},
+    {"PORTFOLIO.DRAWDOWN", "Account & Equity"},
+    {"INDICATOR.SMA", "Trend & Moving Averages"},
+    {"INDICATOR.EMA", "Trend & Moving Averages"},
+    {"INDICATOR.WMA", "Trend & Moving Averages"},
+    {"INDICATOR.HMA", "Trend & Moving Averages"},
+    {"INDICATOR.RMA", "Trend & Moving Averages"},
+    {"INDICATOR.RSI", "Momentum & Oscillators"},
+    {"INDICATOR.ROC", "Momentum & Oscillators"},
+    {"INDICATOR.RVOL", "Momentum & Oscillators"},
+    {"INDICATOR.STOCH", "Momentum & Oscillators"},
+    {"INDICATOR.STOCH_RSI", "Momentum & Oscillators"},
+    {"INDICATOR.MACD", "Momentum & Oscillators"},
+    {"INDICATOR.TR", "Volatility & Bands"},
+    {"INDICATOR.ATR", "Volatility & Bands"},
+    {"INDICATOR.STDDEV", "Volatility & Bands"},
+    {"INDICATOR.BB", "Volatility & Bands"},
+    {"INDICATOR.KC", "Volatility & Bands"},
+    {"INDICATOR.DC", "Volatility & Bands"},
+    {"OPERATOR.ADD", "Math & Arithmetic"},
+    {"OPERATOR.SUBTRACT", "Math & Arithmetic"},
+    {"OPERATOR.MULTIPLY", "Math & Arithmetic"},
+    {"OPERATOR.DIVIDE", "Math & Arithmetic"},
+    {"OPERATOR.NEGATE", "Math & Arithmetic"},
+    {"OPERATOR.SQRT", "Math & Arithmetic"},
+    {"OPERATOR.PERCENTAGE", "Math & Arithmetic"},
+    {"OPERATOR.ABS_DIFF", "Math & Arithmetic"},
+    {"STOP_LOSS.AMOUNT", "Position & Risk"},
+    {"TAKE_PROFIT.AMOUNT", "Position & Risk"},
+    {"STOP_LOSS.PERCENT", "Position & Risk"},
+    {"TAKE_PROFIT.PERCENT", "Position & Risk"},
+    {"STOP_LOSS.ATR", "Position & Risk"},
+    {"TAKE_PROFIT.ATR", "Position & Risk"},
+    {"STOP_LOSS.ONE_R", "Position & Risk"},
+    {"STOP_LOSS.R_MULTIPLE", "Position & Risk"},
+    {"TAKE_PROFIT.R_MULTIPLE", "Position & Risk"},
+    {"POSITION.INITIAL_ENTRY_PRICE", "Position & Risk"},
+    {"POSITION.LATEST_ENTRY_PRICE", "Position & Risk"},
+    {"POSITION.AVERAGE_PRICE", "Position & Risk"},
+    {"POSITION.STOP_TARGET_REF_PRICE", "Position & Risk"},
+    {"POSITION.DIRECTION", "Position & Risk"},
+    {"POSITION.PYRAMIDING_LAYER", "Position & Risk"},
+    {"POSITION.R_MULTIPLE", "Position & Risk"},
+    {"LOGIC.ALL_OF", "Logic & Comparison"},
+    {"LOGIC.ANY_OF", "Logic & Comparison"},
+    {"LOGIC.ALWAYS", "Logic & Comparison"},
+    {"LOGIC.NEVER", "Logic & Comparison"},
+    {"COMPARISON.LESS_THAN", "Logic & Comparison"},
+    {"COMPARISON.GREATER_THAN", "Logic & Comparison"},
+    {"COMPARISON.LESS_EQUAL", "Logic & Comparison"},
+    {"COMPARISON.GREATER_EQUAL", "Logic & Comparison"},
+    {"COMPARISON.EQUAL", "Logic & Comparison"},
+    {"COMPARISON.NOT_EQUAL", "Logic & Comparison"},
+    {"COMPARISON.CROSSOVER", "Logic & Comparison"},
+    {"COMPARISON.CROSSUNDER", "Logic & Comparison"},
+    {"LOGIC.NOT", "Logic & Comparison"},
+    {"LOGIC.AND", "Logic & Comparison"},
+    {"LOGIC.OR", "Logic & Comparison"},
+    {"LOGIC.XOR", "Logic & Comparison"},
+    {"OPERATOR.SELECT_OUTPUT", "Custom & Input"},
+    {"SERIES.REFERENCE", "Custom & Input"},
+    {"VALUE.CONSTANT", "Custom & Input"},
+    {"OPERATOR.LOOKBACK", "Custom & Input"},
+    {"INPUT.NUMERIC", "Custom & Input"},
    };
 
   const auto it = category_by_id.find(series_id);
@@ -921,80 +947,80 @@ auto get_series_node_combo_entries() -> const std::vector<ui::ComboEntry>&
 {
   static const auto entries = [] {
     static const auto ordered_ids = std::vector<std::string>{
-     "OPEN",
-     "CLOSE",
-     "HIGH",
-     "LOW",
-     "VOLUME",
-     "CHANGE",
-     "HIGHEST",
-     "LOWEST",
-     "DATA",
-     "EQUITY",
-     "EQUITY_PERCENT",
-     "DRAWDOWN",
-     "SMA",
-     "EMA",
-     "WMA",
-     "HMA",
-     "RMA",
-     "RSI",
-     "ROC",
-     "RVOL",
-     "STOCH",
-     "STOCH_RSI",
-     "MACD",
-     "TR",
-     "ATR",
-     "STDDEV",
-     "BB",
-     "KC",
-     "DC",
-     "ADD",
-     "SUBTRACT",
-     "MULTIPLY",
-     "DIVIDE",
-     "NEGATE",
-     "SQRT",
-     "PERCENTAGE",
-     "ABS_DIFF",
-     "SL_AMOUNT",
-     "TP_AMOUNT",
-     "SL_PERCENT",
-     "TP_PERCENT",
-     "SL_ATR",
-     "TP_ATR",
-     "SL_1R",
-     "SL_R_MULTIPLE",
-     "TP_R_MULTIPLE",
-     "INITIAL_ENTRY_PRICE",
-     "LATEST_ENTRY_PRICE",
-     "AVERAGE_PRICE",
-     "STOP_TARGET_REF_PRICE",
-     "POSITION_DIRECTION",
-     "PYRAMIDING_LAYER",
-     "POSITION_R_MULTIPLE",
-     "ALL_OF",
-     "ANY_OF",
-     "ALWAYS",
-     "NEVER",
-     "LESS_THAN",
-     "GREATER_THAN",
-     "LESS_EQUAL",
-     "GREATER_EQUAL",
-     "EQUAL",
-     "NOT_EQUAL",
-     "CROSSOVER",
-     "CROSSUNDER",
-     "NOT",
-     "AND",
-     "OR",
-     "XOR",
-     "SELECT_OUTPUT",
-     "SERIES",
-     "VALUE",
-     "LOOKBACK",
-     "INPUT",
+     "MARKET_DATA.OPEN",
+     "MARKET_DATA.CLOSE",
+     "MARKET_DATA.HIGH",
+     "MARKET_DATA.LOW",
+     "MARKET_DATA.VOLUME",
+     "OPERATOR.CHANGE",
+     "INDICATOR.HIGHEST",
+     "INDICATOR.LOWEST",
+     "MARKET_DATA.FIELD",
+     "PORTFOLIO.EQUITY",
+     "PORTFOLIO.EQUITY_PERCENT",
+     "PORTFOLIO.DRAWDOWN",
+     "INDICATOR.SMA",
+     "INDICATOR.EMA",
+     "INDICATOR.WMA",
+     "INDICATOR.HMA",
+     "INDICATOR.RMA",
+     "INDICATOR.RSI",
+     "INDICATOR.ROC",
+     "INDICATOR.RVOL",
+     "INDICATOR.STOCH",
+     "INDICATOR.STOCH_RSI",
+     "INDICATOR.MACD",
+     "INDICATOR.TR",
+     "INDICATOR.ATR",
+     "INDICATOR.STDDEV",
+     "INDICATOR.BB",
+     "INDICATOR.KC",
+     "INDICATOR.DC",
+     "OPERATOR.ADD",
+     "OPERATOR.SUBTRACT",
+     "OPERATOR.MULTIPLY",
+     "OPERATOR.DIVIDE",
+     "OPERATOR.NEGATE",
+     "OPERATOR.SQRT",
+     "OPERATOR.PERCENTAGE",
+     "OPERATOR.ABS_DIFF",
+     "STOP_LOSS.AMOUNT",
+     "TAKE_PROFIT.AMOUNT",
+     "STOP_LOSS.PERCENT",
+     "TAKE_PROFIT.PERCENT",
+     "STOP_LOSS.ATR",
+     "TAKE_PROFIT.ATR",
+     "STOP_LOSS.ONE_R",
+     "STOP_LOSS.R_MULTIPLE",
+     "TAKE_PROFIT.R_MULTIPLE",
+     "POSITION.INITIAL_ENTRY_PRICE",
+     "POSITION.LATEST_ENTRY_PRICE",
+     "POSITION.AVERAGE_PRICE",
+     "POSITION.STOP_TARGET_REF_PRICE",
+     "POSITION.DIRECTION",
+     "POSITION.PYRAMIDING_LAYER",
+     "POSITION.R_MULTIPLE",
+     "LOGIC.ALL_OF",
+     "LOGIC.ANY_OF",
+     "LOGIC.ALWAYS",
+     "LOGIC.NEVER",
+     "COMPARISON.LESS_THAN",
+     "COMPARISON.GREATER_THAN",
+     "COMPARISON.LESS_EQUAL",
+     "COMPARISON.GREATER_EQUAL",
+     "COMPARISON.EQUAL",
+     "COMPARISON.NOT_EQUAL",
+     "COMPARISON.CROSSOVER",
+     "COMPARISON.CROSSUNDER",
+     "LOGIC.NOT",
+     "LOGIC.AND",
+     "LOGIC.OR",
+     "LOGIC.XOR",
+     "OPERATOR.SELECT_OUTPUT",
+     "SERIES.REFERENCE",
+     "VALUE.CONSTANT",
+     "OPERATOR.LOOKBACK",
+     "INPUT.NUMERIC",
     };
 
     auto result = std::vector<ui::ComboEntry>{};
@@ -1011,41 +1037,42 @@ auto get_series_node_combo_entries() -> const std::vector<ui::ComboEntry>&
   return entries;
 }
 
-auto get_condition_node_id(const ErasedNode<backtest::BacktestMethodContext>& node)
- -> std::string
+auto get_condition_node_id(
+ const ErasedNode<backtest::BacktestMethodContext>& node) -> std::string
 {
   if(node_cast<AllOfNode<backtest::BacktestMethodContext>>(node)) {
-    return "ALL_OF";
+    return "LOGIC.ALL_OF";
   } else if(node_cast<AnyOfNode<backtest::BacktestMethodContext>>(node)) {
-    return "ANY_OF";
+    return "LOGIC.ANY_OF";
   } else if(node_cast<TrueNode>(node)) {
-    return "ALWAYS";
+    return "LOGIC.ALWAYS";
   } else if(node_cast<FalseNode>(node)) {
-    return "NEVER";
+    return "LOGIC.NEVER";
   } else if(node_cast<LessThanNode<backtest::BacktestMethodContext>>(node)) {
-    return "LESS_THAN";
+    return "COMPARISON.LESS_THAN";
   } else if(node_cast<GreaterThanNode<backtest::BacktestMethodContext>>(node)) {
-    return "GREATER_THAN";
+    return "COMPARISON.GREATER_THAN";
   } else if(node_cast<LessEqualNode<backtest::BacktestMethodContext>>(node)) {
-    return "LESS_EQUAL";
-  } else if(node_cast<GreaterEqualNode<backtest::BacktestMethodContext>>(node)) {
-    return "GREATER_EQUAL";
+    return "COMPARISON.LESS_EQUAL";
+  } else if(node_cast<GreaterEqualNode<backtest::BacktestMethodContext>>(
+             node)) {
+    return "COMPARISON.GREATER_EQUAL";
   } else if(node_cast<EqualNode<backtest::BacktestMethodContext>>(node)) {
-    return "EQUAL";
+    return "COMPARISON.EQUAL";
   } else if(node_cast<NotEqualNode<backtest::BacktestMethodContext>>(node)) {
-    return "NOT_EQUAL";
+    return "COMPARISON.NOT_EQUAL";
   } else if(node_cast<CrossoverNode<backtest::BacktestMethodContext>>(node)) {
-    return "CROSSOVER";
+    return "COMPARISON.CROSSOVER";
   } else if(node_cast<CrossunderNode<backtest::BacktestMethodContext>>(node)) {
-    return "CROSSUNDER";
+    return "COMPARISON.CROSSUNDER";
   } else if(node_cast<LogicalNotNode<backtest::BacktestMethodContext>>(node)) {
-    return "NOT";
+    return "LOGIC.NOT";
   } else if(node_cast<LogicalAndNode<backtest::BacktestMethodContext>>(node)) {
-    return "AND";
+    return "LOGIC.AND";
   } else if(node_cast<LogicalOrNode<backtest::BacktestMethodContext>>(node)) {
-    return "OR";
+    return "LOGIC.OR";
   } else if(node_cast<LogicalXorNode<backtest::BacktestMethodContext>>(node)) {
-    return "XOR";
+    return "LOGIC.XOR";
   }
 
   return "UNKNOWN";
@@ -1053,37 +1080,37 @@ auto get_condition_node_id(const ErasedNode<backtest::BacktestMethodContext>& no
 
 auto get_condition_node_title(const std::string& condition_id) -> std::string
 {
-  if(condition_id == "ALL_OF") {
+  if(condition_id == "LOGIC.ALL_OF") {
     return "All Of";
-  } else if(condition_id == "ANY_OF") {
+  } else if(condition_id == "LOGIC.ANY_OF") {
     return "Any Of";
-  } else if(condition_id == "ALWAYS") {
+  } else if(condition_id == "LOGIC.ALWAYS") {
     return "Always";
-  } else if(condition_id == "NEVER") {
+  } else if(condition_id == "LOGIC.NEVER") {
     return "Never";
-  } else if(condition_id == "LESS_THAN") {
+  } else if(condition_id == "COMPARISON.LESS_THAN") {
     return "Less Than";
-  } else if(condition_id == "GREATER_THAN") {
+  } else if(condition_id == "COMPARISON.GREATER_THAN") {
     return "Greater Than";
-  } else if(condition_id == "LESS_EQUAL") {
+  } else if(condition_id == "COMPARISON.LESS_EQUAL") {
     return "Less Equal";
-  } else if(condition_id == "GREATER_EQUAL") {
+  } else if(condition_id == "COMPARISON.GREATER_EQUAL") {
     return "Greater Equal";
-  } else if(condition_id == "EQUAL") {
+  } else if(condition_id == "COMPARISON.EQUAL") {
     return "Equal";
-  } else if(condition_id == "NOT_EQUAL") {
+  } else if(condition_id == "COMPARISON.NOT_EQUAL") {
     return "Not Equal";
-  } else if(condition_id == "CROSSOVER") {
+  } else if(condition_id == "COMPARISON.CROSSOVER") {
     return "Crossover";
-  } else if(condition_id == "CROSSUNDER") {
+  } else if(condition_id == "COMPARISON.CROSSUNDER") {
     return "Crossunder";
-  } else if(condition_id == "NOT") {
+  } else if(condition_id == "LOGIC.NOT") {
     return "Not";
-  } else if(condition_id == "AND") {
+  } else if(condition_id == "LOGIC.AND") {
     return "And";
-  } else if(condition_id == "OR") {
+  } else if(condition_id == "LOGIC.OR") {
     return "Or";
-  } else if(condition_id == "XOR") {
+  } else if(condition_id == "LOGIC.XOR") {
     return "Xor";
   }
 
@@ -1094,22 +1121,22 @@ auto get_condition_node_category(const std::string& condition_id) -> std::string
 {
   static const auto category_by_id =
    std::unordered_map<std::string, std::string>{
-    {"EQUAL", "Comparison"},
-    {"NOT_EQUAL", "Comparison"},
-    {"GREATER_THAN", "Comparison"},
-    {"LESS_THAN", "Comparison"},
-    {"GREATER_EQUAL", "Comparison"},
-    {"LESS_EQUAL", "Comparison"},
-    {"CROSSOVER", "Crossover"},
-    {"CROSSUNDER", "Crossover"},
-    {"ALL_OF", "Logic"},
-    {"ANY_OF", "Logic"},
-    {"NOT", "Logic"},
-    {"AND", "Logic"},
-    {"OR", "Logic"},
-    {"XOR", "Logic"},
-    {"ALWAYS", "Fixed"},
-    {"NEVER", "Fixed"},
+    {"COMPARISON.EQUAL", "Comparison"},
+    {"COMPARISON.NOT_EQUAL", "Comparison"},
+    {"COMPARISON.GREATER_THAN", "Comparison"},
+    {"COMPARISON.LESS_THAN", "Comparison"},
+    {"COMPARISON.GREATER_EQUAL", "Comparison"},
+    {"COMPARISON.LESS_EQUAL", "Comparison"},
+    {"COMPARISON.CROSSOVER", "Crossover"},
+    {"COMPARISON.CROSSUNDER", "Crossover"},
+    {"LOGIC.ALL_OF", "Logic"},
+    {"LOGIC.ANY_OF", "Logic"},
+    {"LOGIC.NOT", "Logic"},
+    {"LOGIC.AND", "Logic"},
+    {"LOGIC.OR", "Logic"},
+    {"LOGIC.XOR", "Logic"},
+    {"LOGIC.ALWAYS", "Fixed"},
+    {"LOGIC.NEVER", "Fixed"},
    };
 
   const auto it = category_by_id.find(condition_id);
@@ -1120,22 +1147,22 @@ auto get_condition_node_combo_entries() -> const std::vector<ui::ComboEntry>&
 {
   static const auto entries = [] {
     static const auto ordered_ids = std::vector<std::string>{
-     "EQUAL",
-     "NOT_EQUAL",
-     "GREATER_THAN",
-     "LESS_THAN",
-     "GREATER_EQUAL",
-     "LESS_EQUAL",
-     "CROSSOVER",
-     "CROSSUNDER",
-     "ALL_OF",
-     "ANY_OF",
-     "NOT",
-     "AND",
-     "OR",
-     "XOR",
-     "ALWAYS",
-     "NEVER",
+     "COMPARISON.EQUAL",
+     "COMPARISON.NOT_EQUAL",
+     "COMPARISON.GREATER_THAN",
+     "COMPARISON.LESS_THAN",
+     "COMPARISON.GREATER_EQUAL",
+     "COMPARISON.LESS_EQUAL",
+     "COMPARISON.CROSSOVER",
+     "COMPARISON.CROSSUNDER",
+     "LOGIC.ALL_OF",
+     "LOGIC.ANY_OF",
+     "LOGIC.NOT",
+     "LOGIC.AND",
+     "LOGIC.OR",
+     "LOGIC.XOR",
+     "LOGIC.ALWAYS",
+     "LOGIC.NEVER",
     };
 
     auto result = std::vector<ui::ComboEntry>{};
@@ -1155,41 +1182,48 @@ auto get_condition_node_combo_entries() -> const std::vector<ui::ComboEntry>&
 auto get_default_condition_node(const std::string& condition_id)
  -> ErasedNode<backtest::BacktestMethodContext>
 {
-  if(condition_id == "ALL_OF") {
+  if(condition_id == "LOGIC.ALL_OF") {
     return AllOfNode<backtest::BacktestMethodContext>{};
-  } else if(condition_id == "ANY_OF") {
+  } else if(condition_id == "LOGIC.ANY_OF") {
     return AnyOfNode<backtest::BacktestMethodContext>{};
-  } else if(condition_id == "ALWAYS") {
+  } else if(condition_id == "LOGIC.ALWAYS") {
     return TrueNode{};
-  } else if(condition_id == "NEVER") {
+  } else if(condition_id == "LOGIC.NEVER") {
     return FalseNode{};
-  } else if(condition_id == "LESS_THAN") {
-    return LessThanNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
-  } else if(condition_id == "GREATER_THAN") {
-    return GreaterThanNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
-  } else if(condition_id == "LESS_EQUAL") {
-    return LessEqualNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
-  } else if(condition_id == "GREATER_EQUAL") {
-    return GreaterEqualNode<backtest::BacktestMethodContext>{CloseNode{},
-                                                       CloseNode{}};
-  } else if(condition_id == "EQUAL") {
-    return EqualNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
-  } else if(condition_id == "NOT_EQUAL") {
-    return NotEqualNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
-  } else if(condition_id == "CROSSOVER") {
-    return CrossoverNode<backtest::BacktestMethodContext>{CloseNode{},
+  } else if(condition_id == "COMPARISON.LESS_THAN") {
+    return LessThanNode<backtest::BacktestMethodContext>{CloseNode{},
                                                          CloseNode{}};
-  } else if(condition_id == "CROSSUNDER") {
-    return CrossunderNode<backtest::BacktestMethodContext>{CloseNode{},
+  } else if(condition_id == "COMPARISON.GREATER_THAN") {
+    return GreaterThanNode<backtest::BacktestMethodContext>{CloseNode{},
+                                                            CloseNode{}};
+  } else if(condition_id == "COMPARISON.LESS_EQUAL") {
+    return LessEqualNode<backtest::BacktestMethodContext>{CloseNode{},
                                                           CloseNode{}};
-  } else if(condition_id == "NOT") {
+  } else if(condition_id == "COMPARISON.GREATER_EQUAL") {
+    return GreaterEqualNode<backtest::BacktestMethodContext>{CloseNode{},
+                                                             CloseNode{}};
+  } else if(condition_id == "COMPARISON.EQUAL") {
+    return EqualNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
+  } else if(condition_id == "COMPARISON.NOT_EQUAL") {
+    return NotEqualNode<backtest::BacktestMethodContext>{CloseNode{},
+                                                         CloseNode{}};
+  } else if(condition_id == "COMPARISON.CROSSOVER") {
+    return CrossoverNode<backtest::BacktestMethodContext>{CloseNode{},
+                                                          CloseNode{}};
+  } else if(condition_id == "COMPARISON.CROSSUNDER") {
+    return CrossunderNode<backtest::BacktestMethodContext>{CloseNode{},
+                                                           CloseNode{}};
+  } else if(condition_id == "LOGIC.NOT") {
     return LogicalNotNode<backtest::BacktestMethodContext>{FalseNode{}};
-  } else if(condition_id == "AND") {
-    return LogicalAndNode<backtest::BacktestMethodContext>{FalseNode{}, FalseNode{}};
-  } else if(condition_id == "OR") {
-    return LogicalOrNode<backtest::BacktestMethodContext>{FalseNode{}, FalseNode{}};
-  } else if(condition_id == "XOR") {
-    return LogicalXorNode<backtest::BacktestMethodContext>{FalseNode{}, FalseNode{}};
+  } else if(condition_id == "LOGIC.AND") {
+    return LogicalAndNode<backtest::BacktestMethodContext>{FalseNode{},
+                                                           FalseNode{}};
+  } else if(condition_id == "LOGIC.OR") {
+    return LogicalOrNode<backtest::BacktestMethodContext>{FalseNode{},
+                                                          FalseNode{}};
+  } else if(condition_id == "LOGIC.XOR") {
+    return LogicalXorNode<backtest::BacktestMethodContext>{FalseNode{},
+                                                           FalseNode{}};
   }
 
   throw std::invalid_argument{
@@ -1200,19 +1234,19 @@ auto get_plot_method_id(const ErasedPlotMethod<ErasedPlotMethodContext>& method)
  -> std::string
 {
   if(plot_method_cast<HLinePlotMethod>(method)) {
-    return "HLINE";
+    return "PLOT.HLINE";
   }
 
   if(plot_method_cast<LinePlotMethod>(method)) {
-    return "LINE";
+    return "PLOT.LINE";
   }
 
   if(plot_method_cast<HistogramPlotMethod>(method)) {
-    return "HISTOGRAM";
+    return "PLOT.HISTOGRAM";
   }
 
   if(plot_method_cast<MomentumHistogramPlotMethod>(method)) {
-    return "MOMENTUM_HISTOGRAM";
+    return "PLOT.MOMENTUM_HISTOGRAM";
   }
 
   return "UNKNOWN";
@@ -1220,13 +1254,13 @@ auto get_plot_method_id(const ErasedPlotMethod<ErasedPlotMethodContext>& method)
 
 auto get_plot_method_title(const std::string& plot_id) -> std::string
 {
-  if(plot_id == "LINE") {
+  if(plot_id == "PLOT.LINE") {
     return "Line";
-  } else if(plot_id == "HLINE") {
+  } else if(plot_id == "PLOT.HLINE") {
     return "Horizontal Line";
-  } else if(plot_id == "HISTOGRAM") {
+  } else if(plot_id == "PLOT.HISTOGRAM") {
     return "Histogram";
-  } else if(plot_id == "MOMENTUM_HISTOGRAM") {
+  } else if(plot_id == "PLOT.MOMENTUM_HISTOGRAM") {
     return "Momentum Histogram";
   }
 
@@ -1236,19 +1270,19 @@ auto get_plot_method_title(const std::string& plot_id) -> std::string
 auto get_default_plot_method(const std::string& plot_id)
  -> ErasedPlotMethod<ErasedPlotMethodContext>
 {
-  if(plot_id == "LINE") {
+  if(plot_id == "PLOT.LINE") {
     return LinePlotMethod{ConstantPlotSourceMethod{0.0}, 0xFFFFFFFF};
   }
 
-  if(plot_id == "HLINE") {
+  if(plot_id == "PLOT.HLINE") {
     return HLinePlotMethod{0.0, 0xFFFFFFFF};
   }
 
-  if(plot_id == "HISTOGRAM") {
+  if(plot_id == "PLOT.HISTOGRAM") {
     return HistogramPlotMethod{ConstantPlotSourceMethod{0.0}};
   }
 
-  if(plot_id == "MOMENTUM_HISTOGRAM") {
+  if(plot_id == "PLOT.MOMENTUM_HISTOGRAM") {
     return MomentumHistogramPlotMethod{ConstantPlotSourceMethod{0.0}};
   }
 
@@ -1260,9 +1294,9 @@ auto get_plot_source_method_id(
  const ErasedPlotSourceMethod<ErasedPlotMethodContext>& method) -> std::string
 {
   if(plot_source_method_cast<ConstantPlotSourceMethod>(method)) {
-    return "CONSTANT";
+    return "PLOT_SOURCE.CONSTANT";
   } else if(plot_source_method_cast<SeriesPlotSourceMethod>(method)) {
-    return "SERIES";
+    return "PLOT_SOURCE.SERIES";
   }
 
   return "UNKNOWN";
@@ -1271,11 +1305,11 @@ auto get_plot_source_method_id(
 auto get_plot_source_method_title(const std::string& plot_source_id)
  -> std::string
 {
-  if(plot_source_id == "CONSTANT") {
+  if(plot_source_id == "PLOT_SOURCE.CONSTANT") {
     return "Constant Value";
   }
 
-  if(plot_source_id == "SERIES") {
+  if(plot_source_id == "PLOT_SOURCE.SERIES") {
     return "Series";
   }
 
@@ -1285,11 +1319,11 @@ auto get_plot_source_method_title(const std::string& plot_source_id)
 auto get_default_plot_source_method(const std::string& plot_source_id)
  -> ErasedPlotSourceMethod<ErasedPlotMethodContext>
 {
-  if(plot_source_id == "CONSTANT") {
+  if(plot_source_id == "PLOT_SOURCE.CONSTANT") {
     return ConstantPlotSourceMethod{0.0};
   }
 
-  if(plot_source_id == "SERIES") {
+  if(plot_source_id == "PLOT_SOURCE.SERIES") {
     return SeriesPlotSourceMethod{""};
   }
 
@@ -1332,7 +1366,7 @@ public:
   }
 
   void render_numeric_expression(
-    this ModelsWindow& self,
+   this ModelsWindow& self,
    ErasedNode<backtest::BacktestMethodContext>& expression,
    WindowContext& context,
    std::vector<std::string> available_series_names = {},
@@ -1347,10 +1381,10 @@ public:
     self.allow_unlisted_series_names_ = previous_allow_unlisted;
   }
 
-  void render_portfolio_comparator_expression(
-    this ModelsWindow& self,
-   backtest::ComparatorNode& expression,
-   WindowContext& context)
+  void
+  render_portfolio_comparator_expression(this ModelsWindow& self,
+                                         backtest::ComparatorNode& expression,
+                                         WindowContext& context)
   {
     self.render_comparator_node(expression, context);
   }
@@ -1361,11 +1395,11 @@ private:
                               WindowContext& context)
   {
     auto node_id = get_portfolio_comparator_node_id(node);
-    const auto selected = ui::searchable_combo(
-     "##Series",
-     node_id,
-     get_series_node_title(node_id),
-     get_portfolio_comparator_node_combo_entries());
+    const auto selected =
+     ui::searchable_combo("##Series",
+                          node_id,
+                          get_series_node_title(node_id),
+                          get_portfolio_comparator_node_combo_entries());
     if(selected) {
       node = get_default_portfolio_comparator_node(*selected);
     }
@@ -1419,40 +1453,40 @@ private:
         binary->right(std::move(right));
         return true;
       }() || ...);
-    }.template operator()<
-     AddNode<backtest::RequestedOrderMethodContext>,
-     SubtractNode<backtest::RequestedOrderMethodContext>,
-     MultiplyNode<backtest::RequestedOrderMethodContext>,
-     DivideNode<backtest::RequestedOrderMethodContext>,
-     AbsDiffNode<backtest::RequestedOrderMethodContext>,
-     MaxNode<backtest::RequestedOrderMethodContext>,
-     MinNode<backtest::RequestedOrderMethodContext>>();
+    }.template operator()<AddNode<backtest::RequestedOrderMethodContext>,
+                          SubtractNode<backtest::RequestedOrderMethodContext>,
+                          MultiplyNode<backtest::RequestedOrderMethodContext>,
+                          DivideNode<backtest::RequestedOrderMethodContext>,
+                          AbsDiffNode<backtest::RequestedOrderMethodContext>,
+                          MaxNode<backtest::RequestedOrderMethodContext>,
+                          MinNode<backtest::RequestedOrderMethodContext>>();
   }
 
   auto render_comparator_unary(this ModelsWindow& self,
                                backtest::ComparatorNode& node,
                                WindowContext& context) -> bool
   {
-    return [&]<typename... TNodes>() {
-      return ([&] {
-        auto* unary = node_cast<TNodes>(node);
-        if(!unary) {
-          return false;
-        }
-        ui::field_label("Value");
-        auto value = unary->operand();
-        ImGui::PushID("value");
-        self.render_comparator_node(value, context);
-        ImGui::PopID();
-        unary->operand(std::move(value));
-        return true;
-      }() || ...);
-    }.template operator()<
-     NegateNode<backtest::RequestedOrderMethodContext>,
-     AbsNode<backtest::RequestedOrderMethodContext>,
-     SqrtNode<backtest::RequestedOrderMethodContext>,
-     PositivePartNode<backtest::RequestedOrderMethodContext>,
-     NegativePartNode<backtest::RequestedOrderMethodContext>>();
+    return
+     [&]<typename... TNodes>() {
+       return ([&] {
+         auto* unary = node_cast<TNodes>(node);
+         if(!unary) {
+           return false;
+         }
+         ui::field_label("Value");
+         auto value = unary->operand();
+         ImGui::PushID("value");
+         self.render_comparator_node(value, context);
+         ImGui::PopID();
+         unary->operand(std::move(value));
+         return true;
+       }() || ...);
+     }.template
+     operator()<NegateNode<backtest::RequestedOrderMethodContext>,
+                AbsNode<backtest::RequestedOrderMethodContext>,
+                SqrtNode<backtest::RequestedOrderMethodContext>,
+                PositivePartNode<backtest::RequestedOrderMethodContext>,
+                NegativePartNode<backtest::RequestedOrderMethodContext>>();
   }
 
   enum class Page { List, BuiltIn, AddNew, Edit } current_page_{Page::List};
@@ -1480,7 +1514,7 @@ private:
     self.selected_model_handle_opt_ = std::nullopt;
     self.editing_strategy_ptr_ = std::make_shared<backtest::Model>();
     self.editor_baseline_ptr_ =
-      std::make_shared<backtest::Model>(*self.editing_strategy_ptr_);
+     std::make_shared<backtest::Model>(*self.editing_strategy_ptr_);
   }
 
   void begin_add_model(this auto& self, backtest::Model model)
@@ -1488,9 +1522,9 @@ private:
     self.current_page_ = Page::AddNew;
     self.selected_model_handle_opt_ = std::nullopt;
     self.editing_strategy_ptr_ =
-       std::make_shared<backtest::Model>(std::move(model));
+     std::make_shared<backtest::Model>(std::move(model));
     self.editor_baseline_ptr_ =
-      std::make_shared<backtest::Model>(*self.editing_strategy_ptr_);
+     std::make_shared<backtest::Model>(*self.editing_strategy_ptr_);
   }
 
   void begin_edit_model(this auto& self,
@@ -1501,10 +1535,8 @@ private:
     if(self.selected_model_handle_opt_ != model_handle ||
        !self.editing_strategy_ptr_ || !self.editor_baseline_ptr_) {
       self.selected_model_handle_opt_ = model_handle;
-      self.editing_strategy_ptr_ =
-        std::make_shared<backtest::Model>(model);
-      self.editor_baseline_ptr_ =
-        std::make_shared<backtest::Model>(model);
+      self.editing_strategy_ptr_ = std::make_shared<backtest::Model>(model);
+      self.editor_baseline_ptr_ = std::make_shared<backtest::Model>(model);
     }
   }
 
@@ -1514,8 +1546,8 @@ private:
   }
 
   void export_model(this const auto&,
-                        const backtest::Model& strategy,
-                       WindowContext& context)
+                    const backtest::Model& strategy,
+                    WindowContext& context)
   {
     const auto serialized_strategy = stringify_model(strategy);
 #ifdef __EMSCRIPTEN__
@@ -1556,8 +1588,8 @@ private:
                                    const std::string& file_data,
                                    void* user_data) {
        auto& callback_context = *reinterpret_cast<WindowContext*>(user_data);
-        callback_context.push_edit("Import Model",
-                                   LoadModelJsonAction{file_name, file_data});
+       callback_context.push_edit("Import Model",
+                                  LoadModelJsonAction{file_name, file_data});
      }};
     pludux_js_open_multiple_text_files(".json", &callback, &context);
 #else
@@ -1585,7 +1617,7 @@ private:
              std::format("Error '{}': {}", "Import", NFD::GetError()));
           }
           context.push_edit("Import Model",
-                             LoadModelJsonAction{std::string{in_path.get()}});
+                            LoadModelJsonAction{std::string{in_path.get()}});
         }
       } else if(result == NFD_ERROR) {
         throw std::runtime_error(
@@ -1623,9 +1655,9 @@ private:
     ImGui::Separator();
 
     const auto visible_strategy_count =
-      std::ranges::count_if(model_handles, [&](const auto model_handle) {
-        return self.strategy_filter_.PassFilter(
-         app_state.get_model(model_handle).name().c_str());
+     std::ranges::count_if(model_handles, [&](const auto model_handle) {
+       return self.strategy_filter_.PassFilter(
+        app_state.get_model(model_handle).name().c_str());
      });
 
     ImGui::BeginChild("strategy_list", ImVec2(0, 0));
@@ -1651,22 +1683,22 @@ private:
       ImGui::PushID(i);
 
       ImGui::SetNextItemAllowOverlap();
-       const auto is_selected = system_ptr && [&] {
-         for(auto strategy_index = std::size_t{};
-             strategy_index < system_ptr->strategy_count(); ++strategy_index) {
-           const auto* strategy = app_state.get_strategy_if_present(
-            system_ptr->strategy_handle(strategy_index));
-           if(strategy && strategy->references_model(model_handle)) {
-             return true;
-           }
-         }
-         return false;
-       }();
-      const auto has_draft =
-        self.selected_model_handle_opt_ == model_handle &&
-       self.has_unsaved_changes();
+      const auto is_selected = system_ptr && [&] {
+        for(auto strategy_index = std::size_t{};
+            strategy_index < system_ptr->strategy_count();
+            ++strategy_index) {
+          const auto* strategy = app_state.get_strategy_if_present(
+           system_ptr->strategy_handle(strategy_index));
+          if(strategy && strategy->references_model(model_handle)) {
+            return true;
+          }
+        }
+        return false;
+      }();
+      const auto has_draft = self.selected_model_handle_opt_ == model_handle &&
+                             self.has_unsaved_changes();
       const auto display_name =
-        has_draft ? model_name + " (Unsaved)" : model_name;
+       has_draft ? model_name + " (Unsaved)" : model_name;
       const auto row_start = ImGui::GetCursorScreenPos();
       const auto row_width = ImGui::GetContentRegionAvail().x;
       const auto row_height = ImGui::GetFrameHeight();
@@ -1707,20 +1739,19 @@ private:
 
       if(ImGui::BeginPopup("strategy_menu_more")) {
         if(ImGui::MenuItem(PLUDUX_ICON_EDIT " Edit")) {
-        self.begin_edit_model(model_handle, model);
+          self.begin_edit_model(model_handle, model);
         }
         if(ImGui::MenuItem(PLUDUX_ICON_COPY " Duplicate")) {
           context.push_edit(
-            "Duplicate Model",
-            [model_handle](ApplicationState& app_state) {
-              const auto& model = app_state.get_model(model_handle);
-              auto duplicate_model = model;
-              duplicate_model.name(model.name() + " Copy");
-              app_state.add_model(std::move(duplicate_model));
+           "Duplicate Model", [model_handle](ApplicationState& app_state) {
+             const auto& model = app_state.get_model(model_handle);
+             auto duplicate_model = model;
+             duplicate_model.name(model.name() + " Copy");
+             app_state.add_model(std::move(duplicate_model));
            });
         }
         if(ImGui::MenuItem(PLUDUX_ICON_EXPORT " Export")) {
-           self.export_model(model, context);
+          self.export_model(model, context);
         }
         ImGui::Separator();
 
@@ -1730,9 +1761,9 @@ private:
                            false,
                            !move_up_disabled)) {
           context.push_edit(
-            "Move Model Up",
+           "Move Model Up",
            [from_index = i, to_index = i - 1](ApplicationState& app_state) {
-              app_state.reorder_list_model(from_index, to_index);
+             app_state.reorder_list_model(from_index, to_index);
            });
         }
 
@@ -1742,16 +1773,16 @@ private:
                            false,
                            !move_down_disabled)) {
           context.push_edit(
-            "Move Model Down",
+           "Move Model Down",
            [from_index = i, to_index = i + 1](ApplicationState& app_state) {
-              app_state.reorder_list_model(from_index, to_index);
+             app_state.reorder_list_model(from_index, to_index);
            });
         }
         ImGui::Separator();
         if(ImGui::MenuItem(PLUDUX_ICON_DELETE " Delete")) {
           context.push_edit("Delete Model",
-                             [model_handle](ApplicationState& app_state) {
-                               app_state.remove_model(model_handle);
+                            [model_handle](ApplicationState& app_state) {
+                              app_state.remove_model(model_handle);
                             });
         }
 
@@ -1770,7 +1801,7 @@ private:
   {
     ImGui::BeginGroup();
     if(ui::icon_button(PLUDUX_ICON_BACK "##back_to_strategies",
-                        "Back to models")) {
+                       "Back to models")) {
       self.current_page_ = Page::List;
     }
     ImGui::SameLine();
@@ -1815,13 +1846,12 @@ private:
                           strategy.description.data());
       if(ImGui::Button("Use Model")) {
         try {
-            self.begin_add_model(backtest::parse_model(
-           strategy.name, std::string{strategy.json}));
+          self.begin_add_model(
+           backtest::parse_model(strategy.name, std::string{strategy.json}));
         } catch(const std::exception& ex) {
-          context.alert(
-            std::format("Failed to load built-in model '{}':\n{}",
-                       strategy.name,
-                       ex.what()));
+          context.alert(std::format("Failed to load built-in model '{}':\n{}",
+                                    strategy.name,
+                                    ex.what()));
         }
       }
       ImGui::Separator();
@@ -1836,7 +1866,7 @@ private:
   {
     ImGui::BeginGroup();
     if(ui::icon_button(PLUDUX_ICON_BACK "##back_to_strategies",
-                        "Back to models")) {
+                       "Back to models")) {
       self.reset();
     }
     ImGui::SameLine();
@@ -1870,7 +1900,7 @@ private:
   {
     ImGui::BeginGroup();
     if(ui::icon_button(PLUDUX_ICON_BACK "##back_to_strategies",
-                        "Back to models")) {
+                       "Back to models")) {
       self.request_leave_editor();
     }
     ImGui::SameLine();
@@ -1905,14 +1935,12 @@ private:
     if(draft_action == ui::DraftAction::Apply) {
       self.submit_strategy_changes(context);
       self.editor_baseline_ptr_ =
-        std::make_shared<backtest::Model>(*self.editing_strategy_ptr_);
+       std::make_shared<backtest::Model>(*self.editing_strategy_ptr_);
     } else if(draft_action == ui::DraftAction::Reset) {
-       const auto model_handle = self.selected_model_handle_opt_.value();
-       const auto& model = context.app_state().get_model(model_handle);
-       self.editing_strategy_ptr_ =
-         std::make_shared<backtest::Model>(model);
-       self.editor_baseline_ptr_ =
-         std::make_shared<backtest::Model>(model);
+      const auto model_handle = self.selected_model_handle_opt_.value();
+      const auto& model = context.app_state().get_model(model_handle);
+      self.editing_strategy_ptr_ = std::make_shared<backtest::Model>(model);
+      self.editor_baseline_ptr_ = std::make_shared<backtest::Model>(model);
     }
 
     ImGui::EndGroup();
@@ -1959,7 +1987,7 @@ private:
       } else {
         ui::section_description(
          "Create named calculations that can be reused by position rules and "
-          "plots. Names must be unique within this model.");
+         "plots. Names must be unique within this model.");
         auto updated_series_nodes = series_nodes;
         for(auto id_counter = 0;
             auto& [series_name, series_node] : series_nodes) {
@@ -2010,7 +2038,7 @@ private:
         if(ImGui::Button(PLUDUX_ICON_ADD " Add Series")) {
           auto new_series_name =
            std::format("new_var_{}", series_nodes.size() + 1);
-          auto new_series_node = get_default_series_node("CLOSE");
+          auto new_series_node = get_default_series_node("MARKET_DATA.CLOSE");
           series_nodes.set(new_series_name, new_series_node);
         }
       }
@@ -2096,7 +2124,7 @@ private:
             }
 
             if(ImGui::Button(PLUDUX_ICON_ADD " Add Item")) {
-              plot_items.emplace_back(get_default_plot_method("HLINE"));
+              plot_items.emplace_back(get_default_plot_method("PLOT.HLINE"));
             }
 
             plot_group.items(plot_items);
@@ -2245,7 +2273,7 @@ private:
   }
 
   void render_position_form(this auto& self,
-                             backtest::Model::Position& position,
+                            backtest::Model::Position& position,
                             WindowContext& context)
   {
     if(ui::collapsible_section("Entry")) {
@@ -2421,7 +2449,7 @@ private:
       auto risk_distance = position.risk_distance();
       auto risk_distance_id = get_series_node_id(risk_distance);
       const auto risk_distance_ids = std::array{
-       "R_DISTANCE_AMOUNT", "R_DISTANCE_PERCENTAGE", "R_DISTANCE_ATR"};
+       "RISK_DISTANCE.AMOUNT", "RISK_DISTANCE.PERCENT", "RISK_DISTANCE.ATR"};
       ui::field_label("Method");
       if(ImGui::BeginCombo("##risk_distance_method",
                            get_series_node_title(risk_distance_id).c_str())) {
@@ -2601,9 +2629,10 @@ private:
     return reduce_percent / 100.0;
   }
 
-  void render_series_node(this auto& self,
-                          ErasedNode<backtest::BacktestMethodContext>& series_node,
-                          WindowContext& context)
+  void
+  render_series_node(this auto& self,
+                     ErasedNode<backtest::BacktestMethodContext>& series_node,
+                     WindowContext& context)
   {
     auto series_node_id = get_series_node_id(series_node);
     {
@@ -2614,7 +2643,8 @@ private:
                             combo_preview_value,
                             get_series_node_combo_entries());
       if(selected) {
-        if(*selected == "SERIES" && self.available_series_names_.empty() &&
+        if(*selected == "SERIES.REFERENCE" &&
+           self.available_series_names_.empty() &&
            !self.allow_unlisted_series_names_) {
           const auto error_message = std::format(
            "Cannot select '{}' when there are no available series other "
@@ -2633,9 +2663,10 @@ private:
     }
   }
 
-  void render_series_node_params(this auto& self,
-                                 ErasedNode<backtest::BacktestMethodContext>& node,
-                                 WindowContext& context)
+  void
+  render_series_node_params(this auto& self,
+                            ErasedNode<backtest::BacktestMethodContext>& node,
+                            WindowContext& context)
   {
     ([&]<typename... Ts>() mutable {
       ([&]() mutable -> bool {
@@ -2646,105 +2677,105 @@ private:
 
         return false;
       }() || ...);
-    }.template operator()<SelectOutputNode<backtest::BacktestMethodContext>,
-                          SeriesNode,
-                          DataNode,
-                          LookbackNode<backtest::BacktestMethodContext>,
-                          NumericInputNode,
+    }.template
+     operator()<SelectOutputNode<backtest::BacktestMethodContext>,
+                SeriesNode,
+                DataNode,
+                LookbackNode<backtest::BacktestMethodContext>,
+                NumericInputNode,
 
-                          AllOfNode<backtest::BacktestMethodContext>,
-                          AnyOfNode<backtest::BacktestMethodContext>,
-                          TrueNode,
-                          FalseNode,
-                          LessThanNode<backtest::BacktestMethodContext>,
-                          GreaterThanNode<backtest::BacktestMethodContext>,
-                          LessEqualNode<backtest::BacktestMethodContext>,
-                          GreaterEqualNode<backtest::BacktestMethodContext>,
-                          EqualNode<backtest::BacktestMethodContext>,
-                          NotEqualNode<backtest::BacktestMethodContext>,
-                          CrossoverNode<backtest::BacktestMethodContext>,
-                          CrossunderNode<backtest::BacktestMethodContext>,
-                          LogicalNotNode<backtest::BacktestMethodContext>,
-                          LogicalAndNode<backtest::BacktestMethodContext>,
-                          LogicalOrNode<backtest::BacktestMethodContext>,
-                          LogicalXorNode<backtest::BacktestMethodContext>,
+                AllOfNode<backtest::BacktestMethodContext>,
+                AnyOfNode<backtest::BacktestMethodContext>,
+                TrueNode,
+                FalseNode,
+                LessThanNode<backtest::BacktestMethodContext>,
+                GreaterThanNode<backtest::BacktestMethodContext>,
+                LessEqualNode<backtest::BacktestMethodContext>,
+                GreaterEqualNode<backtest::BacktestMethodContext>,
+                EqualNode<backtest::BacktestMethodContext>,
+                NotEqualNode<backtest::BacktestMethodContext>,
+                CrossoverNode<backtest::BacktestMethodContext>,
+                CrossunderNode<backtest::BacktestMethodContext>,
+                LogicalNotNode<backtest::BacktestMethodContext>,
+                LogicalAndNode<backtest::BacktestMethodContext>,
+                LogicalOrNode<backtest::BacktestMethodContext>,
+                LogicalXorNode<backtest::BacktestMethodContext>,
 
-                           BbNode<backtest::BacktestMethodContext>,
-                           KcNode<backtest::BacktestMethodContext>,
-                           DonchianChannelNode<backtest::BacktestMethodContext>,
-                           StochNode<backtest::BacktestMethodContext>,
-                           StochRsiNode<backtest::BacktestMethodContext>,
-                          HighestNode<backtest::BacktestMethodContext>,
-                          LowestNode<backtest::BacktestMethodContext>,
-                           TrNode<backtest::BacktestMethodContext>,
-                          SmaNode<backtest::BacktestMethodContext>,
-                          EmaNode<backtest::BacktestMethodContext>,
-                          RmaNode<backtest::BacktestMethodContext>,
-                          WmaNode<backtest::BacktestMethodContext>,
-                          HmaNode<backtest::BacktestMethodContext>,
-                          RsiNode<backtest::BacktestMethodContext>,
-                          RocNode<backtest::BacktestMethodContext>,
-                           RvolNode<backtest::BacktestMethodContext>,
+                BbNode<backtest::BacktestMethodContext>,
+                KcNode<backtest::BacktestMethodContext>,
+                DonchianChannelNode<backtest::BacktestMethodContext>,
+                StochNode<backtest::BacktestMethodContext>,
+                StochRsiNode<backtest::BacktestMethodContext>,
+                HighestNode<backtest::BacktestMethodContext>,
+                LowestNode<backtest::BacktestMethodContext>,
+                TrNode<backtest::BacktestMethodContext>,
+                SmaNode<backtest::BacktestMethodContext>,
+                EmaNode<backtest::BacktestMethodContext>,
+                RmaNode<backtest::BacktestMethodContext>,
+                WmaNode<backtest::BacktestMethodContext>,
+                HmaNode<backtest::BacktestMethodContext>,
+                RsiNode<backtest::BacktestMethodContext>,
+                RocNode<backtest::BacktestMethodContext>,
+                RvolNode<backtest::BacktestMethodContext>,
 
-                           MacdNode<backtest::BacktestMethodContext>,
-                           AtrNode<backtest::BacktestMethodContext>,
-                          ValueNode,
-                          ChangeNode<backtest::BacktestMethodContext>,
-                          AddNode<backtest::BacktestMethodContext>,
-                          SubtractNode<backtest::BacktestMethodContext>,
-                          MultiplyNode<backtest::BacktestMethodContext>,
-                          DivideNode<backtest::BacktestMethodContext>,
-                           PercentageNode<backtest::BacktestMethodContext>,
-                          RiskDistanceAmountNode<
-                           backtest::BacktestMethodContext>,
-                          RiskDistancePercentNode<
-                           backtest::BacktestMethodContext>,
-                          RiskDistanceAtrNode<backtest::BacktestMethodContext>,
-                          SlAmountNode<backtest::BacktestMethodContext>,
-                          TpAmountNode<backtest::BacktestMethodContext>,
-                          SlPercentNode<backtest::BacktestMethodContext>,
-                          TpPercentNode<backtest::BacktestMethodContext>,
-                          SlAtrNode<backtest::BacktestMethodContext>,
-                          TpAtrNode<backtest::BacktestMethodContext>,
-                          Sl1RNode,
-                          SlRMultipleNode<backtest::BacktestMethodContext>,
-                          TpRMultipleNode<backtest::BacktestMethodContext>,
-                          InitialEntryPriceNode,
-                          LatestEntryPriceNode,
-                          AveragePriceNode,
-                          StopTargetRefPriceNode,
-                          PositionDirectionNode,
-                          PyramidingLayerNode,
-                          RequestedOrderPriceNode,
-                          RequestedOrderDirectionNode,
-                          IsPyramidingOrderNode,
-                          RawRequestedQuantityNode,
-                          RawRequestedQuantityLimitNode,
-                          DrawdownAdjustedQuantityNode,
-                          DrawdownAdjustedQuantityLimitNode,
-                          RequestedQuantityNode,
-                          RequestedNotionalNode,
-                          RequestedCostNode,
-                          EstimatedEntryFeeNode,
-                          EstimatedOneRExitFeeNode,
-                          RequestedOrderRiskDistanceNode,
-                          RequestedPriceRiskNode,
-                          RequestedRiskWithFeesNode,
-                          FrozenUnitQuantityNode,
-                          AbsDiffNode<backtest::BacktestMethodContext>,
-                          AbsNode<backtest::BacktestMethodContext>,
-                          MaxNode<backtest::BacktestMethodContext>,
-                          MinNode<backtest::BacktestMethodContext>,
-                          PositivePartNode<backtest::BacktestMethodContext>,
-                          NegativePartNode<backtest::BacktestMethodContext>,
-                          NegateNode<backtest::BacktestMethodContext>,
-                          SqrtNode<backtest::BacktestMethodContext>,
-                          StddevNode<backtest::BacktestMethodContext>>());
+                MacdNode<backtest::BacktestMethodContext>,
+                AtrNode<backtest::BacktestMethodContext>,
+                ValueNode,
+                ChangeNode<backtest::BacktestMethodContext>,
+                AddNode<backtest::BacktestMethodContext>,
+                SubtractNode<backtest::BacktestMethodContext>,
+                MultiplyNode<backtest::BacktestMethodContext>,
+                DivideNode<backtest::BacktestMethodContext>,
+                PercentageNode<backtest::BacktestMethodContext>,
+                RiskDistanceAmountNode<backtest::BacktestMethodContext>,
+                RiskDistancePercentNode<backtest::BacktestMethodContext>,
+                RiskDistanceAtrNode<backtest::BacktestMethodContext>,
+                SlAmountNode<backtest::BacktestMethodContext>,
+                TpAmountNode<backtest::BacktestMethodContext>,
+                SlPercentNode<backtest::BacktestMethodContext>,
+                TpPercentNode<backtest::BacktestMethodContext>,
+                SlAtrNode<backtest::BacktestMethodContext>,
+                TpAtrNode<backtest::BacktestMethodContext>,
+                Sl1RNode,
+                SlRMultipleNode<backtest::BacktestMethodContext>,
+                TpRMultipleNode<backtest::BacktestMethodContext>,
+                InitialEntryPriceNode,
+                LatestEntryPriceNode,
+                AveragePriceNode,
+                StopTargetRefPriceNode,
+                PositionDirectionNode,
+                PyramidingLayerNode,
+                RequestedOrderPriceNode,
+                RequestedOrderDirectionNode,
+                IsPyramidingOrderNode,
+                RawRequestedQuantityNode,
+                RawRequestedQuantityLimitNode,
+                DrawdownAdjustedQuantityNode,
+                DrawdownAdjustedQuantityLimitNode,
+                RequestedQuantityNode,
+                RequestedNotionalNode,
+                RequestedCostNode,
+                EstimatedEntryFeeNode,
+                EstimatedOneRExitFeeNode,
+                RequestedOrderRiskDistanceNode,
+                RequestedPriceRiskNode,
+                RequestedRiskWithFeesNode,
+                FrozenUnitQuantityNode,
+                AbsDiffNode<backtest::BacktestMethodContext>,
+                AbsNode<backtest::BacktestMethodContext>,
+                MaxNode<backtest::BacktestMethodContext>,
+                MinNode<backtest::BacktestMethodContext>,
+                PositivePartNode<backtest::BacktestMethodContext>,
+                NegativePartNode<backtest::BacktestMethodContext>,
+                NegateNode<backtest::BacktestMethodContext>,
+                SqrtNode<backtest::BacktestMethodContext>,
+                StddevNode<backtest::BacktestMethodContext>>());
   }
 
-  void render_series_node_params(this auto& self,
-                                  SelectOutputNode<backtest::BacktestMethodContext>& node,
-                                 WindowContext& context)
+  void render_series_node_params(
+   this auto& self,
+   SelectOutputNode<backtest::BacktestMethodContext>& node,
+   WindowContext& context)
   {
     {
       const auto output_options =
@@ -2833,7 +2864,7 @@ private:
   }
 
   void render_series_node_params(this auto& self,
-                                  BbNode<backtest::BacktestMethodContext>& node,
+                                 BbNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     ui::field_label("MA Type");
@@ -2898,7 +2929,7 @@ private:
   }
 
   void render_series_node_params(this auto& self,
-                                  KcNode<backtest::BacktestMethodContext>& node,
+                                 KcNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     {
@@ -2980,9 +3011,10 @@ private:
     }
   }
 
-  void render_series_node_params(this auto& self,
-                                  DonchianChannelNode<backtest::BacktestMethodContext>& node,
-                                 WindowContext& context)
+  void render_series_node_params(
+   this auto& self,
+   DonchianChannelNode<backtest::BacktestMethodContext>& node,
+   WindowContext& context)
   {
     {
       ui::field_label("Length");
@@ -2994,9 +3026,10 @@ private:
     }
   }
 
-  void render_series_node_params(this auto& self,
-                                  StochNode<backtest::BacktestMethodContext>& node,
-                                 WindowContext& context)
+  void
+  render_series_node_params(this auto& self,
+                            StochNode<backtest::BacktestMethodContext>& node,
+                            WindowContext& context)
   {
     {
       ui::field_label("D Period");
@@ -3024,9 +3057,10 @@ private:
     }
   }
 
-  void render_series_node_params(this auto& self,
-                                  StochRsiNode<backtest::BacktestMethodContext>& node,
-                                 WindowContext& context)
+  void
+  render_series_node_params(this auto& self,
+                            StochRsiNode<backtest::BacktestMethodContext>& node,
+                            WindowContext& context)
   {
     {
       ui::field_label("D Period");
@@ -3070,9 +3104,10 @@ private:
     }
   }
 
-  void render_series_node_params(this auto& self,
-                                  RvolNode<backtest::BacktestMethodContext>& node,
-                                 WindowContext& context)
+  void
+  render_series_node_params(this auto& self,
+                            RvolNode<backtest::BacktestMethodContext>& node,
+                            WindowContext& context)
   {
     ui::field_label("Period");
     auto period = node.period();
@@ -3101,10 +3136,10 @@ private:
                           EqualNode<backtest::BacktestMethodContext>> ||
              std::same_as<TConditionNode,
                           NotEqualNode<backtest::BacktestMethodContext>> ||
-              std::same_as<TConditionNode,
-                           CrossoverNode<backtest::BacktestMethodContext>> ||
-              std::same_as<TConditionNode,
-                           CrossunderNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TConditionNode,
+                          CrossoverNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TConditionNode,
+                          CrossunderNode<backtest::BacktestMethodContext>> ||
              std::same_as<TConditionNode,
                           LogicalNotNode<backtest::BacktestMethodContext>> ||
              std::same_as<TConditionNode,
@@ -3125,7 +3160,7 @@ private:
   }
 
   void render_series_node_params(this auto& self,
-                                  TrNode<backtest::BacktestMethodContext>& node,
+                                 TrNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     ImGui::TextUnformatted("No parameters.");
@@ -3172,13 +3207,20 @@ private:
   }
 
   template<typename TBinaryOpNode>
-    requires std::same_as<TBinaryOpNode, AddNode<backtest::BacktestMethodContext>> ||
-             std::same_as<TBinaryOpNode, SubtractNode<backtest::BacktestMethodContext>> ||
-             std::same_as<TBinaryOpNode, MultiplyNode<backtest::BacktestMethodContext>> ||
-             std::same_as<TBinaryOpNode, DivideNode<backtest::BacktestMethodContext>> ||
-             std::same_as<TBinaryOpNode, AbsDiffNode<backtest::BacktestMethodContext>> ||
-             std::same_as<TBinaryOpNode, MaxNode<backtest::BacktestMethodContext>> ||
-             std::same_as<TBinaryOpNode, MinNode<backtest::BacktestMethodContext>>
+    requires std::same_as<TBinaryOpNode,
+                          AddNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TBinaryOpNode,
+                          SubtractNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TBinaryOpNode,
+                          MultiplyNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TBinaryOpNode,
+                          DivideNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TBinaryOpNode,
+                          AbsDiffNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TBinaryOpNode,
+                          MaxNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TBinaryOpNode,
+                          MinNode<backtest::BacktestMethodContext>>
   void render_series_node_params(this auto& self,
                                  TBinaryOpNode& node,
                                  WindowContext& context)
@@ -3203,11 +3245,16 @@ private:
   }
 
   template<typename TUnaryOpNode>
-    requires std::same_as<TUnaryOpNode, NegateNode<backtest::BacktestMethodContext>> ||
-             std::same_as<TUnaryOpNode, AbsNode<backtest::BacktestMethodContext>> ||
-             std::same_as<TUnaryOpNode, SqrtNode<backtest::BacktestMethodContext>> ||
-             std::same_as<TUnaryOpNode, PositivePartNode<backtest::BacktestMethodContext>> ||
-             std::same_as<TUnaryOpNode, NegativePartNode<backtest::BacktestMethodContext>>
+    requires std::same_as<TUnaryOpNode,
+                          NegateNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TUnaryOpNode,
+                          AbsNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TUnaryOpNode,
+                          SqrtNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TUnaryOpNode,
+                          PositivePartNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TUnaryOpNode,
+                          NegativePartNode<backtest::BacktestMethodContext>>
   void render_series_node_params(this auto& self,
                                  TUnaryOpNode& node,
                                  WindowContext& context)
@@ -3220,9 +3267,10 @@ private:
     node.operand(std::move(value));
   }
 
-  void render_series_node_params(this auto& self,
-                                  PercentageNode<backtest::BacktestMethodContext>& node,
-                                 WindowContext& context)
+  void render_series_node_params(
+   this auto& self,
+   PercentageNode<backtest::BacktestMethodContext>& node,
+   WindowContext& context)
   {
     {
       ui::field_label("Percent");
@@ -3257,46 +3305,50 @@ private:
     node.value(std::move(value));
   }
 
-  void render_series_node_params(this auto& self,
-                                 RiskDistanceAmountNode<
-                                  backtest::BacktestMethodContext>& node,
-                                 WindowContext& context)
+  void render_series_node_params(
+   this auto& self,
+   RiskDistanceAmountNode<backtest::BacktestMethodContext>& node,
+   WindowContext& context)
   {
     self.render_stop_target_value_node_params(node, context, "Amount");
   }
 
-  void render_series_node_params(this auto& self,
-                                 RiskDistancePercentNode<
-                                  backtest::BacktestMethodContext>& node,
-                                 WindowContext& context)
+  void render_series_node_params(
+   this auto& self,
+   RiskDistancePercentNode<backtest::BacktestMethodContext>& node,
+   WindowContext& context)
   {
     self.render_stop_target_value_node_params(node, context, "Percentage");
   }
 
-  void render_series_node_params(this auto& self,
-                                 SlAmountNode<backtest::BacktestMethodContext>& node,
-                                 WindowContext& context)
+  void
+  render_series_node_params(this auto& self,
+                            SlAmountNode<backtest::BacktestMethodContext>& node,
+                            WindowContext& context)
   {
     self.render_stop_target_value_node_params(node, context, "Amount");
   }
 
-  void render_series_node_params(this auto& self,
-                                 TpAmountNode<backtest::BacktestMethodContext>& node,
-                                 WindowContext& context)
+  void
+  render_series_node_params(this auto& self,
+                            TpAmountNode<backtest::BacktestMethodContext>& node,
+                            WindowContext& context)
   {
     self.render_stop_target_value_node_params(node, context, "Amount");
   }
 
-  void render_series_node_params(this auto& self,
-                                 SlPercentNode<backtest::BacktestMethodContext>& node,
-                                 WindowContext& context)
+  void render_series_node_params(
+   this auto& self,
+   SlPercentNode<backtest::BacktestMethodContext>& node,
+   WindowContext& context)
   {
     self.render_stop_target_value_node_params(node, context, "Percent");
   }
 
-  void render_series_node_params(this auto& self,
-                                 TpPercentNode<backtest::BacktestMethodContext>& node,
-                                 WindowContext& context)
+  void render_series_node_params(
+   this auto& self,
+   TpPercentNode<backtest::BacktestMethodContext>& node,
+   WindowContext& context)
   {
     self.render_stop_target_value_node_params(node, context, "Percent");
   }
@@ -3305,18 +3357,18 @@ private:
   {
   }
 
-  void render_series_node_params(this auto& self,
-                                 SlRMultipleNode<
-                                  backtest::BacktestMethodContext>& node,
-                                 WindowContext& context)
+  void render_series_node_params(
+   this auto& self,
+   SlRMultipleNode<backtest::BacktestMethodContext>& node,
+   WindowContext& context)
   {
     self.render_stop_target_value_node_params(node, context, "Multiple");
   }
 
-  void render_series_node_params(this auto& self,
-                                 TpRMultipleNode<
-                                  backtest::BacktestMethodContext>& node,
-                                 WindowContext& context)
+  void render_series_node_params(
+   this auto& self,
+   TpRMultipleNode<backtest::BacktestMethodContext>& node,
+   WindowContext& context)
   {
     self.render_stop_target_value_node_params(node, context, "Multiple");
   }
@@ -3371,10 +3423,10 @@ private:
   {
   }
 
-  void render_series_node_params(this auto& self,
-                                 PositionRMultipleNode<
-                                  backtest::BacktestMethodContext>& node,
-                                 WindowContext& context)
+  void render_series_node_params(
+   this auto& self,
+   PositionRMultipleNode<backtest::BacktestMethodContext>& node,
+   WindowContext& context)
   {
     ui::field_label("Source");
     auto source = node.source();
@@ -3384,9 +3436,10 @@ private:
     node.source(std::move(source));
   }
 
-  void render_series_node_params(this auto& self,
-                                 ChangeNode<backtest::BacktestMethodContext>& node,
-                                 WindowContext& context)
+  void
+  render_series_node_params(this auto& self,
+                            ChangeNode<backtest::BacktestMethodContext>& node,
+                            WindowContext& context)
   {
     ui::field_label("Source");
     auto source = node.source();
@@ -3407,9 +3460,10 @@ private:
     }
   }
 
-  void render_series_node_params(this auto& self,
-                                  MacdNode<backtest::BacktestMethodContext>& node,
-                                 WindowContext& context)
+  void
+  render_series_node_params(this auto& self,
+                            MacdNode<backtest::BacktestMethodContext>& node,
+                            WindowContext& context)
   {
     {
       ui::field_label("Fast Period");
@@ -3446,7 +3500,7 @@ private:
   }
 
   void render_series_node_params(this auto& self,
-                                  AtrNode<backtest::BacktestMethodContext>& node,
+                                 AtrNode<backtest::BacktestMethodContext>& node,
                                  WindowContext& context)
   {
     ui::field_label("Period");
@@ -3518,24 +3572,26 @@ private:
     }
   }
 
-  void render_series_node_params(this auto& self,
-                                 RiskDistanceAtrNode<
-                                  backtest::BacktestMethodContext>& node,
-                                 WindowContext& context)
+  void render_series_node_params(
+   this auto& self,
+   RiskDistanceAtrNode<backtest::BacktestMethodContext>& node,
+   WindowContext& context)
   {
     self.render_stop_target_atr_node_params(node, context);
   }
 
-  void render_series_node_params(this auto& self,
-                                 SlAtrNode<backtest::BacktestMethodContext>& node,
-                                 WindowContext& context)
+  void
+  render_series_node_params(this auto& self,
+                            SlAtrNode<backtest::BacktestMethodContext>& node,
+                            WindowContext& context)
   {
     self.render_stop_target_atr_node_params(node, context);
   }
 
-  void render_series_node_params(this auto& self,
-                                 TpAtrNode<backtest::BacktestMethodContext>& node,
-                                 WindowContext& context)
+  void
+  render_series_node_params(this auto& self,
+                            TpAtrNode<backtest::BacktestMethodContext>& node,
+                            WindowContext& context)
   {
     self.render_stop_target_atr_node_params(node, context);
   }
@@ -3551,9 +3607,10 @@ private:
     }
   }
 
-  void render_series_node_params(this auto& self,
-                                 LookbackNode<backtest::BacktestMethodContext>& node,
-                                 WindowContext& context)
+  void
+  render_series_node_params(this auto& self,
+                            LookbackNode<backtest::BacktestMethodContext>& node,
+                            WindowContext& context)
   {
     ui::field_label("Periods");
     auto periods = static_cast<int>(node.period());
@@ -3579,8 +3636,8 @@ private:
   {
     ui::field_label(
      "Input label",
-      "This label identifies the adjustable value in each strategy that uses "
-      "the model.");
+     "This label identifies the adjustable value in each strategy that uses "
+     "the model.");
 
     auto input_label = node.label();
     if(ImGui::InputTextWithHint(
@@ -3640,8 +3697,8 @@ private:
   }
 
   auto draw_condition_node_combo(
-   this auto& self, const ErasedNode<backtest::BacktestMethodContext>& condition)
-   -> std::string
+   this auto& self,
+   const ErasedNode<backtest::BacktestMethodContext>& condition) -> std::string
   {
     auto result_condition_id = get_condition_node_id(condition);
 
@@ -3666,12 +3723,12 @@ private:
   auto make_condition_node_from_other(this auto& self,
                                       const std::string& condition_id,
                                       auto other_condition)
- -> ErasedNode<backtest::BacktestMethodContext>
+   -> ErasedNode<backtest::BacktestMethodContext>
   {
     const auto get_condition_series_params =
-     []<typename TNode>(
-      const TNode& node) -> std::pair<ErasedNode<backtest::BacktestMethodContext>,
-                                      ErasedNode<backtest::BacktestMethodContext>> {
+     []<typename TNode>(const TNode& node)
+     -> std::pair<ErasedNode<backtest::BacktestMethodContext>,
+                  ErasedNode<backtest::BacktestMethodContext>> {
       if constexpr(requires {
                      {
                        node.source()
@@ -3699,65 +3756,64 @@ private:
       }
     };
 
-    if(condition_id == "EQUAL") {
+    if(condition_id == "COMPARISON.EQUAL") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
-      return EqualNode<backtest::BacktestMethodContext>{std::move(lhs_series_param),
-                                                  std::move(rhs_series_param)};
+      return EqualNode<backtest::BacktestMethodContext>{
+       std::move(lhs_series_param), std::move(rhs_series_param)};
     }
 
-    if(condition_id == "NOT_EQUAL") {
+    if(condition_id == "COMPARISON.NOT_EQUAL") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
       return NotEqualNode<backtest::BacktestMethodContext>{
        std::move(lhs_series_param), std::move(rhs_series_param)};
     }
 
-    if(condition_id == "GREATER_THAN") {
+    if(condition_id == "COMPARISON.GREATER_THAN") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
       return GreaterThanNode<backtest::BacktestMethodContext>{
        std::move(lhs_series_param), std::move(rhs_series_param)};
     }
 
-    if(condition_id == "LESS_THAN") {
+    if(condition_id == "COMPARISON.LESS_THAN") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
       return LessThanNode<backtest::BacktestMethodContext>{
        std::move(lhs_series_param), std::move(rhs_series_param)};
     }
 
-    if(condition_id == "GREATER_EQUAL") {
+    if(condition_id == "COMPARISON.GREATER_EQUAL") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
       return GreaterEqualNode<backtest::BacktestMethodContext>{
        std::move(lhs_series_param), std::move(rhs_series_param)};
     }
 
-    if(condition_id == "LESS_EQUAL") {
+    if(condition_id == "COMPARISON.LESS_EQUAL") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
       return LessEqualNode<backtest::BacktestMethodContext>{
        std::move(lhs_series_param), std::move(rhs_series_param)};
     }
 
-    if(condition_id == "CROSSOVER") {
+    if(condition_id == "COMPARISON.CROSSOVER") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
       return CrossoverNode<backtest::BacktestMethodContext>{
        std::move(lhs_series_param), std::move(rhs_series_param)};
     }
 
-    if(condition_id == "CROSSUNDER") {
+    if(condition_id == "COMPARISON.CROSSUNDER") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
       return CrossunderNode<backtest::BacktestMethodContext>{
        std::move(lhs_series_param), std::move(rhs_series_param)};
     }
 
-    const auto get_conditions_param =
-     []<typename TNode>(
-      const TNode& node) -> std::vector<ErasedNode<backtest::BacktestMethodContext>> {
+    const auto get_conditions_param = []<typename TNode>(const TNode& node)
+     -> std::vector<ErasedNode<backtest::BacktestMethodContext>> {
       if constexpr(requires {
                      {
                        node.conditions()
@@ -3788,12 +3844,12 @@ private:
       }
     };
 
-    if(condition_id == "ALL_OF") {
+    if(condition_id == "LOGIC.ALL_OF") {
       const auto conditions = get_conditions_param(other_condition);
       return AllOfNode<backtest::BacktestMethodContext>{conditions};
     }
 
-    if(condition_id == "ANY_OF") {
+    if(condition_id == "LOGIC.ANY_OF") {
       const auto conditions = get_conditions_param(other_condition);
       return AnyOfNode<backtest::BacktestMethodContext>{conditions};
     }
@@ -3861,34 +3917,34 @@ private:
       }
     };
 
-    if(condition_id == "NOT") {
+    if(condition_id == "LOGIC.NOT") {
       return LogicalNotNode<backtest::BacktestMethodContext>{
        get_first_condition_param(other_condition)};
     }
 
-    if(condition_id == "AND") {
+    if(condition_id == "LOGIC.AND") {
       return LogicalAndNode<backtest::BacktestMethodContext>{
        get_first_condition_param(other_condition),
        get_second_condition_param(other_condition)};
     }
 
-    if(condition_id == "OR") {
+    if(condition_id == "LOGIC.OR") {
       return LogicalOrNode<backtest::BacktestMethodContext>{
        get_first_condition_param(other_condition),
        get_second_condition_param(other_condition)};
     }
 
-    if(condition_id == "XOR") {
+    if(condition_id == "LOGIC.XOR") {
       return LogicalXorNode<backtest::BacktestMethodContext>{
        get_first_condition_param(other_condition),
        get_second_condition_param(other_condition)};
     }
 
-    if(condition_id == "ALWAYS") {
+    if(condition_id == "LOGIC.ALWAYS") {
       return TrueNode{};
     }
 
-    if(condition_id == "NEVER") {
+    if(condition_id == "LOGIC.NEVER") {
       return FalseNode{};
     }
 
@@ -3901,10 +3957,11 @@ private:
    WindowContext& context) -> ErasedNode<backtest::BacktestMethodContext>
   {
     if(auto* condition_ptr =
-         node_cast<AllOfNode<backtest::BacktestMethodContext>>(any_condition)) {
+        node_cast<AllOfNode<backtest::BacktestMethodContext>>(any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
     } else if(auto* condition_ptr =
-      node_cast<AnyOfNode<backtest::BacktestMethodContext>>(any_condition)) {
+               node_cast<AnyOfNode<backtest::BacktestMethodContext>>(
+                any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
     } else if(auto* condition_ptr = node_cast<TrueNode>(any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
@@ -3927,7 +3984,8 @@ private:
                 any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
     } else if(auto* condition_ptr =
-               node_cast<EqualNode<backtest::BacktestMethodContext>>(any_condition)) {
+               node_cast<EqualNode<backtest::BacktestMethodContext>>(
+                any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
     } else if(auto* condition_ptr =
                node_cast<NotEqualNode<backtest::BacktestMethodContext>>(
@@ -3963,7 +4021,8 @@ private:
   }
 
   template<typename TCondition>
-    requires std::same_as<TCondition, EqualNode<backtest::BacktestMethodContext>> ||
+    requires std::same_as<TCondition,
+                          EqualNode<backtest::BacktestMethodContext>> ||
              std::same_as<TCondition,
                           NotEqualNode<backtest::BacktestMethodContext>> ||
              std::same_as<TCondition,
@@ -3972,11 +4031,12 @@ private:
                           LessThanNode<backtest::BacktestMethodContext>> ||
              std::same_as<TCondition,
                           GreaterEqualNode<backtest::BacktestMethodContext>> ||
-             std::same_as<TCondition, LessEqualNode<backtest::BacktestMethodContext>>
+             std::same_as<TCondition,
+                          LessEqualNode<backtest::BacktestMethodContext>>
   auto render_condition_node(this auto& self,
                              const TCondition& condition,
                              WindowContext& context)
- -> ErasedNode<backtest::BacktestMethodContext>
+   -> ErasedNode<backtest::BacktestMethodContext>
   {
     auto new_condition = condition;
 
@@ -4013,7 +4073,7 @@ private:
   auto render_condition_node(this auto& self,
                              const TCondition& condition,
                              WindowContext& context)
- -> ErasedNode<backtest::BacktestMethodContext>
+   -> ErasedNode<backtest::BacktestMethodContext>
   {
     auto new_condition = condition;
 
@@ -4048,7 +4108,7 @@ private:
   auto render_condition_node(this auto& self,
                              const TCondition& condition,
                              WindowContext& context)
- -> ErasedNode<backtest::BacktestMethodContext>
+   -> ErasedNode<backtest::BacktestMethodContext>
   {
     auto new_condition = condition;
     ui::field_label("Condition");
@@ -4062,12 +4122,14 @@ private:
   }
 
   template<typename TCondition>
-    requires std::same_as<TCondition, AllOfNode<backtest::BacktestMethodContext>> ||
-             std::same_as<TCondition, AnyOfNode<backtest::BacktestMethodContext>>
+    requires std::same_as<TCondition,
+                          AllOfNode<backtest::BacktestMethodContext>> ||
+             std::same_as<TCondition,
+                          AnyOfNode<backtest::BacktestMethodContext>>
   auto render_condition_node(this auto& self,
                              const TCondition& condition,
                              WindowContext& context)
- -> ErasedNode<backtest::BacktestMethodContext>
+   -> ErasedNode<backtest::BacktestMethodContext>
   {
     auto new_condition = condition;
     ui::field_label("Condition group");
@@ -4107,11 +4169,12 @@ private:
   }
 
   template<typename TCondition>
-    requires std::same_as<TCondition, LogicalNotNode<backtest::BacktestMethodContext>>
+    requires std::same_as<TCondition,
+                          LogicalNotNode<backtest::BacktestMethodContext>>
   auto render_condition_node(this auto& self,
                              const TCondition& condition,
                              WindowContext& context)
-  -> ErasedNode<backtest::BacktestMethodContext>
+   -> ErasedNode<backtest::BacktestMethodContext>
   {
     auto new_condition = condition;
     ui::field_label("Condition");
@@ -4133,11 +4196,12 @@ private:
                           LogicalAndNode<backtest::BacktestMethodContext>> ||
              std::same_as<TCondition,
                           LogicalOrNode<backtest::BacktestMethodContext>> ||
-             std::same_as<TCondition, LogicalXorNode<backtest::BacktestMethodContext>>
+             std::same_as<TCondition,
+                          LogicalXorNode<backtest::BacktestMethodContext>>
   auto render_condition_node(this auto& self,
                              const TCondition& condition,
                              WindowContext& context)
-  -> ErasedNode<backtest::BacktestMethodContext>
+   -> ErasedNode<backtest::BacktestMethodContext>
   {
     auto new_condition = condition;
     auto first_condition = new_condition.first_condition();
@@ -4176,8 +4240,10 @@ private:
   {
     static const auto entries = [] {
       auto result = std::vector<ui::ComboEntry>{};
-      for(const auto& id :
-          {"LINE", "HLINE", "HISTOGRAM", "MOMENTUM_HISTOGRAM"}) {
+      for(const auto& id : {"PLOT.LINE",
+                            "PLOT.HLINE",
+                            "PLOT.HISTOGRAM",
+                            "PLOT.MOMENTUM_HISTOGRAM"}) {
         result.push_back(ui::ComboEntry{
          .id = id, .title = get_plot_method_title(id), .category = ""});
       }
@@ -4238,7 +4304,7 @@ private:
   {
     static const auto source_entries = [] {
       auto result = std::vector<ui::ComboEntry>{};
-      for(const auto& id : {"SERIES", "CONSTANT"}) {
+      for(const auto& id : {"PLOT_SOURCE.SERIES", "PLOT_SOURCE.CONSTANT"}) {
         result.push_back(ui::ComboEntry{
          .id = id, .title = get_plot_source_method_title(id), .category = ""});
       }
@@ -4253,7 +4319,8 @@ private:
        get_plot_source_method_title(plot_source_id);
       if(const auto selected = ui::searchable_combo(
           "##Sources", plot_source_id, combo_preview_value, source_entries)) {
-        if(*selected == "SERIES" && self.available_series_names_.empty()) {
+        if(*selected == "PLOT_SOURCE.SERIES" &&
+           self.available_series_names_.empty()) {
           const auto error_message = std::format(
            "Cannot select '{}' when there are no available series other "
            "than the current one.",
@@ -4262,7 +4329,7 @@ private:
         } else {
           auto source = get_default_plot_source_method(*selected);
 
-          if(*selected == "SERIES") {
+          if(*selected == "PLOT_SOURCE.SERIES") {
             if(auto* series_source_ptr =
                 plot_source_method_cast<SeriesPlotSourceMethod>(source)) {
               const auto first_available_series_name =
@@ -4398,19 +4465,18 @@ private:
        }
 
        if(!model_handle_opt) {
-          app_state.add_model(std::move(*edit_strategy_ptr));
+         app_state.add_model(std::move(*edit_strategy_ptr));
          return;
        }
 
-         app_state.update_model(model_handle_opt.value(),
-                                 *edit_strategy_ptr);
+       app_state.update_model(model_handle_opt.value(), *edit_strategy_ptr);
      });
   }
 
   void reset(this auto& self)
   {
     self.current_page_ = Page::List;
-     self.selected_model_handle_opt_ = std::nullopt;
+    self.selected_model_handle_opt_ = std::nullopt;
     self.editing_strategy_ptr_ = nullptr;
     self.editor_baseline_ptr_ = nullptr;
     self.available_series_names_.clear();

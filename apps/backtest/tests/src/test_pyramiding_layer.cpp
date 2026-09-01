@@ -45,7 +45,6 @@ TEST(PyramidingLayerMethodTest, ReadsLayerFromBacktestContext)
   EXPECT_DOUBLE_EQ(
    evaluate_series_method(PyramidingLayerMethod{}, snapshot, layered_context),
    3.0);
-
 }
 
 TEST(PyramidingLayerMethodTest, HasStableIdentity)
@@ -58,8 +57,8 @@ TEST(PyramidingLayerMethodTest, HasStableIdentity)
 TEST(PyramidingLayerNodeTest, ConvertsToPyramidingLayerMethod)
 {
   auto context = NodeToErasedMethodContext{};
-  const auto method = node_to_erased_method<BacktestMethodContext>(
-   PyramidingLayerNode{}, context);
+  const auto method =
+   node_to_erased_method<BacktestMethodContext>(PyramidingLayerNode{}, context);
 
   EXPECT_NE(series_method_cast<PyramidingLayerMethod>(method), nullptr);
 }
@@ -67,10 +66,11 @@ TEST(PyramidingLayerNodeTest, ConvertsToPyramidingLayerMethod)
 TEST(PyramidingLayerNodeTest, ParsesAndSerializesShorthandAndObjectForms)
 {
   auto parser = make_backtest_model_config_parser();
-  const auto shorthand = json::parse(R"("PYRAMIDING_LAYER")");
+  const auto shorthand = json::parse(R"("POSITION.PYRAMIDING_LAYER")");
   const auto object =
-   json::parse(R"({"method":"PYRAMIDING_LAYER","params":{}})");
-  const auto canonical = json::parse(R"({"method":"PYRAMIDING_LAYER"})");
+   json::parse(R"({"method":"POSITION.PYRAMIDING_LAYER","params":{}})");
+  const auto canonical =
+   json::parse(R"({"method":"POSITION.PYRAMIDING_LAYER"})");
 
   const auto shorthand_node = parser.parse_node(shorthand);
   const auto object_node = parser.parse_node(object);

@@ -9,6 +9,7 @@ use the reference pages when you need exact semantics.
 - [Core Concepts](concepts.md) — canonical object semantics
 - [CSV Data](data-csv.md) — importing an Asset from CSV
 - [GUI Guide](gui-guide.md) — where common tasks live in the desktop UI
+- [Model JSON](model-json.md) — import/export format and method identifiers
 - [Limitations](limitations.md) — current scope and known boundaries
 
 ## Reference pages

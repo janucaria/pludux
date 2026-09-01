@@ -33,7 +33,8 @@ test together. The exact item labels follow the current GUI prompt.
 ### 3) Create a Model
 
 Open **Strategies** and create a new Model, or import one from JSON. Model JSON
-import/export is the documented exchange format for models.
+import/export is the documented exchange format for models. See
+[Model JSON](model-json.md) for the identifier convention and schema reference.
 
 For a first test, keep the logic simple. A Model can be built from the node
 editor and can use named series, conditions, and plots.

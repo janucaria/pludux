@@ -2,31 +2,31 @@
   "version": 1,
   "series": {
     "ma_fast": {
-      "method": "SMA",
+      "method": "INDICATOR.SMA",
       "params": {
         "period": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "label": "MA Fast Period",
             "representation": "UnsignedInteger",
             "value": 9
           }
         },
-        "source": "CLOSE"
+        "source": "MARKET_DATA.CLOSE"
       }
     },
     "ma_slow": {
-      "method": "SMA",
+      "method": "INDICATOR.SMA",
       "params": {
         "period": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "label": "MA Slow Period",
             "representation": "UnsignedInteger",
             "value": 18
           }
         },
-        "source": "CLOSE"
+        "source": "MARKET_DATA.CLOSE"
       }
     }
   },
@@ -34,16 +34,16 @@
     "long": {
       "entry": {
         "signal": {
-          "method": "CROSSOVER",
+          "method": "COMPARISON.CROSSOVER",
           "params": {
             "value": {
-              "method": "SERIES",
+              "method": "SERIES.REFERENCE",
               "params": {
                 "name": "ma_fast"
               }
             },
             "baseline": {
-              "method": "SERIES",
+              "method": "SERIES.REFERENCE",
               "params": {
                 "name": "ma_slow"
               }
@@ -58,16 +58,16 @@
           {
             "enabled": true,
             "signal": {
-              "method": "CROSSUNDER",
+              "method": "COMPARISON.CROSSUNDER",
               "params": {
                 "value": {
-                  "method": "SERIES",
+                  "method": "SERIES.REFERENCE",
                   "params": {
                     "name": "ma_fast"
                   }
                 },
                 "baseline": {
-                  "method": "SERIES",
+                  "method": "SERIES.REFERENCE",
                   "params": {
                     "name": "ma_slow"
                   }
@@ -79,16 +79,16 @@
         ]
       },
       "riskDistance": {
-        "method": "R_DISTANCE_ATR",
+        "method": "RISK_DISTANCE.ATR",
         "params": {
           "period": {
-            "method": "VALUE",
+            "method": "VALUE.CONSTANT",
             "params": {
               "value": 14
             }
           },
           "multiplier": {
-            "method": "VALUE",
+            "method": "VALUE.CONSTANT",
             "params": {
               "value": 2
             }
@@ -102,10 +102,10 @@
           {
             "enabled": true,
             "targetPrice": {
-              "method": "TP_R_MULTIPLE",
+              "method": "TAKE_PROFIT.R_MULTIPLE",
               "params": {
                 "multiple": {
-                  "method": "VALUE",
+                  "method": "VALUE.CONSTANT",
                   "params": {
                     "value": 2
                   }
@@ -122,7 +122,7 @@
             "enabled": true,
             "trailing": false,
             "stopPrice": {
-              "method": "SL_1R"
+              "method": "STOP_LOSS.ONE_R"
             }
           }
         ]
@@ -135,10 +135,10 @@
       "overlay": true,
       "items": [
         {
-          "method": "LINE",
+          "method": "PLOT.LINE",
           "params": {
             "source": {
-              "method": "SERIES",
+              "method": "PLOT_SOURCE.SERIES",
               "params": {
                 "name": "ma_fast"
               }
@@ -147,10 +147,10 @@
           }
         },
         {
-          "method": "LINE",
+          "method": "PLOT.LINE",
           "params": {
             "source": {
-              "method": "SERIES",
+              "method": "PLOT_SOURCE.SERIES",
               "params": {
                 "name": "ma_slow"
               }

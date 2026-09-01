@@ -361,7 +361,7 @@ auto make_default_registered_plot_method_parser() -> PlotMethodParser
    PlotMethodParser{make_default_registered_plot_source_method_parser()};
 
   method_parser.register_method_parser(
-   "HLINE",
+   "PLOT.HLINE",
    [](const PlotMethodParser& method_parser,
       const ErasedPlotMethod<ErasedPlotMethodContext> any_plot_method)
     -> jsoncons::ojson {
@@ -395,7 +395,7 @@ auto make_default_registered_plot_method_parser() -> PlotMethodParser
    });
 
   method_parser.register_method_parser(
-   "LINE",
+   "PLOT.LINE",
    [](const PlotMethodParser& method_parser,
       const ErasedPlotMethod<ErasedPlotMethodContext> any_plot_method)
     -> jsoncons::ojson {
@@ -437,7 +437,7 @@ auto make_default_registered_plot_method_parser() -> PlotMethodParser
    });
 
   method_parser.register_method_parser(
-   "HISTOGRAM",
+   "PLOT.HISTOGRAM",
    [](const PlotMethodParser& method_parser,
       const ErasedPlotMethod<ErasedPlotMethodContext> any_plot_method)
     -> jsoncons::ojson {
@@ -479,7 +479,7 @@ auto make_default_registered_plot_method_parser() -> PlotMethodParser
    });
 
   method_parser.register_method_parser(
-   "MOMENTUM_HISTOGRAM",
+   "PLOT.MOMENTUM_HISTOGRAM",
    [](const PlotMethodParser& method_parser,
       const ErasedPlotMethod<ErasedPlotMethodContext> any_plot_method)
     -> jsoncons::ojson {

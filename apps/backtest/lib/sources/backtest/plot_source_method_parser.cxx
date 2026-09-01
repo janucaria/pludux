@@ -37,7 +37,7 @@ auto make_default_registered_plot_source_method_parser()
   auto method_parser = PlotSourceMethodParser{};
 
   method_parser.register_method_parser(
-   "SERIES",
+   "PLOT_SOURCE.SERIES",
    [](const PlotSourceMethodParser& method_parser,
       const ErasedPlotSourceMethod<ErasedPlotMethodContext>
        any_plot_source_method) -> jsoncons::ojson {
@@ -61,7 +61,7 @@ auto make_default_registered_plot_source_method_parser()
    });
 
   method_parser.register_method_parser(
-   "CONSTANT",
+   "PLOT_SOURCE.CONSTANT",
    [](const PlotSourceMethodParser& method_parser,
       const ErasedPlotSourceMethod<ErasedPlotMethodContext>
        any_plot_source_method) -> jsoncons::ojson {

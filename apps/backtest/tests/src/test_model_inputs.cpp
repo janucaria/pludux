@@ -26,7 +26,7 @@ TEST(PyramidingRetriggerTest, ParsesSerializesAndRejectsInvalidValues)
    "EVERY_EVALUATION");
   EXPECT_EQ(serialize_pyramiding_retrigger(PyramidingRetrigger::AfterFalse),
             "AFTER_FALSE");
-  EXPECT_THROW(parse_pyramiding_retrigger("ALWAYS"), std::runtime_error);
+  EXPECT_THROW(parse_pyramiding_retrigger("LOGIC.ALWAYS"), std::runtime_error);
   EXPECT_EQ(Model::Pyramiding{}.retrigger(),
             PyramidingRetrigger::EveryEvaluation);
   EXPECT_EQ(Model::Pyramiding{}.cooldown(), 0);
@@ -42,8 +42,7 @@ TEST(PyramidingCooldownTest, IsRequiredWhenPyramidingIsPresent)
 
 TEST(ModelInputsTest, CollectsNumericInputsInModelTraversalOrder)
 {
-  auto series_nodes =
-   OrderedNamedRegistry<ErasedNode<BacktestMethodContext>>{};
+  auto series_nodes = OrderedNamedRegistry<ErasedNode<BacktestMethodContext>>{};
   series_nodes.set(
    "spread",
    AddNode<BacktestMethodContext>{
@@ -53,7 +52,7 @@ TEST(ModelInputsTest, CollectsNumericInputsInModelTraversalOrder)
      "Duplicate", NumericInputNode::ValueRepresentation::SignedInteger, 2.8}});
   series_nodes.set(
    "channel",
-    KcNode<BacktestMethodContext>{
+   KcNode<BacktestMethodContext>{
     CloseNode{},
     NumericInputNode{
      "KC Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 20.0},
@@ -80,7 +79,7 @@ TEST(ModelInputsTest, CollectsNumericInputsInModelTraversalOrder)
   long_position.pyramiding(std::move(long_pyramiding));
   long_position.risk_distance(
    RiskDistanceAmountNode<BacktestMethodContext>{NumericInputNode{
-   "Risk Distance", NumericInputNode::ValueRepresentation::Decimal, 10.0}});
+    "Risk Distance", NumericInputNode::ValueRepresentation::Decimal, 10.0}});
   long_position.stop_losses({Model::StopLoss{
    true,
    NumericInputNode{
@@ -126,8 +125,7 @@ TEST(ModelInputsTest, CollectsNumericInputsInModelTraversalOrder)
 
 TEST(ModelInputsTest, CollectsInputFromPositionRMultipleSource)
 {
-  auto series_nodes =
-   OrderedNamedRegistry<ErasedNode<BacktestMethodContext>>{};
+  auto series_nodes = OrderedNamedRegistry<ErasedNode<BacktestMethodContext>>{};
   series_nodes.set(
    "current_r",
    PositionRMultipleNode<BacktestMethodContext>{NumericInputNode{
@@ -144,8 +142,7 @@ TEST(ModelInputsTest, CollectsInputFromPositionRMultipleSource)
 
 TEST(ModelInputsTest, AssigningModelReplacesStrategyInputsWithDefaults)
 {
-  auto series_nodes =
-   OrderedNamedRegistry<ErasedNode<BacktestMethodContext>>{};
+  auto series_nodes = OrderedNamedRegistry<ErasedNode<BacktestMethodContext>>{};
   series_nodes.set(
    "replacement",
    AddNode<BacktestMethodContext>{
@@ -200,9 +197,8 @@ TEST(ModelInputsTest,
   auto series_nodes = OrderedNamedRegistry<ModelNode>{};
   series_nodes.set(
    "configured",
-   NumericInputNode{"Configured",
-                    NumericInputNode::ValueRepresentation::Decimal,
-                    1.0});
+   NumericInputNode{
+    "Configured", NumericInputNode::ValueRepresentation::Decimal, 1.0});
   const auto shared_model =
    Model{"Shared", std::move(series_nodes), {}, {}, {}};
 
@@ -211,9 +207,9 @@ TEST(ModelInputsTest,
     auto conversion_context = NodeToErasedMethodContext{inputs};
     auto methods = ModelMethodRegistry{};
     for(const auto& [name, node] : shared_model.series_nodes()) {
-      methods.set(name,
-                  node_to_erased_method<BacktestMethodContext>(
-                   node, conversion_context));
+      methods.set(
+       name,
+       node_to_erased_method<BacktestMethodContext>(node, conversion_context));
     }
     return methods;
   };
@@ -223,17 +219,16 @@ TEST(ModelInputsTest,
   auto first_results = SeriesEvaluationResults{};
   auto second_results = SeriesEvaluationResults{};
   const auto account = BacktestAccountState{1'000.0, 0.0, 1'000.0, 1'000.0};
-  const auto first_context = BacktestMethodContext{
-   first_methods, first_results, 0, account, 0};
-  const auto second_context = BacktestMethodContext{
-   second_methods, second_results, 0, account, 0};
-  const auto snapshot =
-   AssetSnapshot{AssetHistory{{"Close", {100.0}}}};
+  const auto first_context =
+   BacktestMethodContext{first_methods, first_results, 0, account, 0};
+  const auto second_context =
+   BacktestMethodContext{second_methods, second_results, 0, account, 0};
+  const auto snapshot = AssetSnapshot{AssetHistory{{"Close", {100.0}}}};
 
-  EXPECT_DOUBLE_EQ(
-   first_context.call_series_method("configured", snapshot), 2.0);
-  EXPECT_DOUBLE_EQ(
-   second_context.call_series_method("configured", snapshot), 7.0);
+  EXPECT_DOUBLE_EQ(first_context.call_series_method("configured", snapshot),
+                   2.0);
+  EXPECT_DOUBLE_EQ(second_context.call_series_method("configured", snapshot),
+                   7.0);
 
   first_results.alias("configured", first_methods.get("configured").value());
   second_results.alias("configured", second_methods.get("configured").value());
@@ -274,7 +269,7 @@ TEST(ModelParserTest, ParsesPerSideStopLossAndTakeProfit)
           ]
         },
         "riskDistance": {
-          "method": "R_DISTANCE_PERCENTAGE",
+          "method": "RISK_DISTANCE.PERCENT",
           "params": { "percentage": 5 }
         },
         "stopLosses": {
@@ -283,7 +278,7 @@ TEST(ModelParserTest, ParsesPerSideStopLossAndTakeProfit)
             {
               "enabled": true,
               "trailing": true,
-              "stopPrice": "OPEN",
+              "stopPrice": "MARKET_DATA.OPEN",
               "reduce": 0.5
             },
             {
@@ -419,7 +414,7 @@ TEST(ModelParserTest, StringifiesPositionObjectsWithPerSideLevels)
                .at("long")
                .at("riskDistance")
                .at("method")
-               .as<std::string>() == "R_DISTANCE_AMOUNT");
+               .as<std::string>() == "RISK_DISTANCE.AMOUNT");
   EXPECT_TRUE(strategy_json.at("positions")
                .at("long")
                .at("stopLosses")
@@ -578,7 +573,7 @@ TEST(ModelParserTest, DefaultStopLossAndEmptyExitCollections)
 TEST(ModelParserTest, MissingAndEmptyStopLossesDisableExecutableStops)
 {
   const auto risk_distance =
-   R"("riskDistance":{"method":"R_DISTANCE_AMOUNT","params":{"amount":10}})";
+   R"("riskDistance":{"method":"RISK_DISTANCE.AMOUNT","params":{"amount":10}})";
   const auto missing = parse_model(
    "Missing",
    std::string{
@@ -598,7 +593,7 @@ TEST(ModelParserTest, MissingAndEmptyStopLossesDisableExecutableStops)
 TEST(ModelParserTest, RejectsInvalidStopLosses)
 {
   const auto risk_distance =
-   R"("riskDistance":{"method":"R_DISTANCE_AMOUNT","params":{"amount":10}})";
+   R"("riskDistance":{"method":"RISK_DISTANCE.AMOUNT","params":{"amount":10}})";
   EXPECT_THROW(
    parse_model(
     "Not Array",
@@ -631,7 +626,7 @@ TEST(ModelParserTest, RejectsMissingOrImplicitRiskDistance)
   EXPECT_THROW(
    parse_model(
     "WrongMethod",
-    R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{"riskDistance":{"method":"VALUE","params":{"value":10}}},"short":false}})"),
+    R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{"riskDistance":{"method":"VALUE.CONSTANT","params":{"value":10}}},"short":false}})"),
    std::runtime_error);
 }
 
@@ -639,11 +634,11 @@ TEST(ConfigParserTest, RoundTripsExplicitRiskDistanceAndRStopMethods)
 {
   auto parser = make_backtest_model_config_parser();
   const auto configurations = std::vector<std::string>{
-   R"({"method":"R_DISTANCE_AMOUNT","params":{"amount":{"method":"VALUE","params":{"value":10.0}}}})",
-   R"({"method":"R_DISTANCE_PERCENTAGE","params":{"percentage":{"method":"VALUE","params":{"value":5.0}}}})",
-   R"({"method":"R_DISTANCE_ATR","params":{"period":{"method":"VALUE","params":{"value":14.0}},"multiplier":{"method":"VALUE","params":{"value":2.0}},"maSmoothingType":"RMA"}})",
-   R"({"method":"SL_1R"})",
-   R"({"method":"SL_R_MULTIPLE","params":{"multiple":{"method":"VALUE","params":{"value":2.0}}}})"};
+   R"({"method":"RISK_DISTANCE.AMOUNT","params":{"amount":{"method":"VALUE.CONSTANT","params":{"value":10.0}}}})",
+   R"({"method":"RISK_DISTANCE.PERCENT","params":{"percentage":{"method":"VALUE.CONSTANT","params":{"value":5.0}}}})",
+   R"({"method":"RISK_DISTANCE.ATR","params":{"period":{"method":"VALUE.CONSTANT","params":{"value":14.0}},"multiplier":{"method":"VALUE.CONSTANT","params":{"value":2.0}},"maSmoothingType":"RMA"}})",
+   R"({"method":"STOP_LOSS.ONE_R"})",
+   R"({"method":"STOP_LOSS.R_MULTIPLE","params":{"multiple":{"method":"VALUE.CONSTANT","params":{"value":2.0}}}})"};
 
   for(const auto& configuration : configurations) {
     const auto expected = jsoncons::ojson::parse(configuration);
@@ -674,6 +669,21 @@ TEST(ModelParserTest, LoadsEveryBundledModelSample)
    jsoncons::jsonschema::make_json_schema(std::move(schema));
   EXPECT_NO_THROW(
    compiled_schema.validate(jsoncons::ojson::parse(stringify_model(Model{}))));
+  auto operator_document = jsoncons::ojson::parse(stringify_model(Model{}));
+  operator_document["series"]["scalar_operators"] = jsoncons::ojson::parse(R"({
+     "method":"OPERATOR.MAX",
+     "params":{
+       "left":{"method":"OPERATOR.ABS","params":{"operand":-1}},
+       "right":{
+         "method":"OPERATOR.MIN",
+         "params":{
+           "left":{"method":"OPERATOR.POSITIVE_PART","params":{"operand":1}},
+           "right":{"method":"OPERATOR.NEGATIVE_PART","params":{"operand":-1}}
+         }
+       }
+     }
+   })");
+  EXPECT_NO_THROW(compiled_schema.validate(operator_document));
   auto sample_count = std::size_t{0};
   for(const auto& entry :
       std::filesystem::directory_iterator{sample_directory}) {
@@ -702,11 +712,11 @@ TEST(ModelParserTest, LoadsEveryBundledModelSample)
           "rules": [{
             "enabled": true,
             "signal": {
-              "method": "GREATER_EQUAL",
+              "method": "COMPARISON.GREATER_EQUAL",
               "params": {
                 "target": {
-                  "method": "POSITION_R_MULTIPLE",
-                  "params": { "source": "CLOSE" }
+                  "method": "POSITION.R_MULTIPLE",
+                  "params": { "source": "MARKET_DATA.CLOSE" }
                 },
                 "threshold": 2
               }
@@ -716,7 +726,7 @@ TEST(ModelParserTest, LoadsEveryBundledModelSample)
           }]
         },
         "riskDistance": {
-          "method": "R_DISTANCE_AMOUNT",
+          "method": "RISK_DISTANCE.AMOUNT",
           "params": { "amount": 10 }
         },
         "stopLosses": {
@@ -725,7 +735,7 @@ TEST(ModelParserTest, LoadsEveryBundledModelSample)
             "enabled": true,
             "trailing": false,
             "stopPrice": {
-              "method": "SL_R_MULTIPLE",
+              "method": "STOP_LOSS.R_MULTIPLE",
               "params": { "multiple": 2 }
             },
             "reduce": 1
@@ -748,10 +758,10 @@ TEST(ModelParserTest, LoadsEveryBundledModelSample)
           "signal": true,
           "timing": "NEXT_OPEN",
           "signalDelay": 1,
-          "price": "OPEN"
+          "price": "MARKET_DATA.OPEN"
         },
         "riskDistance": {
-          "method": "R_DISTANCE_AMOUNT",
+          "method": "RISK_DISTANCE.AMOUNT",
           "params": { "amount": 10 }
         }
       },
@@ -766,7 +776,7 @@ TEST(ModelParserTest, LoadsEveryBundledModelSample)
         "entry": { "signal": true, "timing": "CURRENT_CLOSE" },
         "exits": [],
         "riskDistance": {
-          "method": "R_DISTANCE_AMOUNT",
+          "method": "RISK_DISTANCE.AMOUNT",
           "params": { "amount": 10 }
         }
       },
