@@ -82,8 +82,9 @@ Sizing methods express different limits:
 
 At a market timestamp, risk-reducing work is processed before risk-increasing
 work. Entry and pyramiding Requested Orders that occur in the same phase are
-ranked by the Portfolio's ordered comparators. Portfolio, System, and
-Watchlist expansion order resolves complete ties.
+ranked by the Portfolio's ordered comparators. Complete ties resolve by the
+Portfolio's ordered System list, then that System's Watchlist Asset order.
+Separate Portfolios do not arbitrate with one another.
 
 For each risk-increasing request, Pludux performs these steps:
 
@@ -194,8 +195,8 @@ Setup × Asset row onto a compact axis:
 - Portfolio-only timestamps are omitted from this chart view. They remain in
   the stored `PortfolioTimeline` and reappear when a backtest containing those
   timestamps is selected.
-- Axis labels and inspection still report each backtest bar's real UTC
-  timestamp.
+- Axis labels and inspection report each backtest bar in the application's
+  local/display timezone; labels are not guaranteed to be UTC.
 - No candles or portfolio values are synthesized to fill missing data.
 - Strategy plots, named series, shadow returns, streaks, and strategy
   performance come from the selected setup.

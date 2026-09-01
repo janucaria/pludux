@@ -32,7 +32,7 @@ test together. The exact item labels follow the current GUI prompt.
 
 ### 3) Create a Model
 
-Open **Strategies** and create a new Model, or import one from JSON. Model JSON
+Open **Models** and create a new Model, or import one from JSON. Model JSON
 import/export is the documented exchange format for models. See
 [Model JSON](model-json.md) for the identifier convention and schema reference.
 
@@ -68,7 +68,7 @@ already reference it.
 
 ### 6) Create a System
 
-Open **Strategies** and create a System. The System editor uses these fields:
+Open **Systems** and create a System. The System editor uses these fields:
 
 - Name
 - Watchlist
@@ -96,7 +96,7 @@ Open **Portfolios** and create a Portfolio. The Portfolio editor includes:
 - Maximum open trades
 - Maximum combined layers
 - Entry comparators
-- Ordered Backtests
+- Ordered Systems
 
 Add your System to the Portfolio and keep the order stable.
 
@@ -121,3 +121,5 @@ Run the Portfolio, then inspect:
 - [CSV Data](data-csv.md)
 - [GUI Guide](gui-guide.md)
 - [Portfolio Backtesting](portfolio-backtesting.md)
+- [Resources and Workflows](resources-and-workflows.md)
+- [Node and Method Reference](nodes.md)

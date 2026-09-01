@@ -34,7 +34,7 @@
         }
       },
       "title": "Named Series",
-      "description": "A dictionary of reusable named series. Each key must be lower_snake_case. Define indicators, transformed price series, and intermediate calculations here so positions, signals, and plots can reference them consistently. When one named series needs the numeric output of another named series, use SERIES. When a method needs the named series definition itself, use SERIES.",
+      "description": "A dictionary of reusable named series. Each key must be lower_snake_case. Define indicators, transformed price series, and intermediate calculations here so positions, signals, and plots can reference them consistently. Reference another named series with a SERIES.REFERENCE object.",
       "examples": [
         {
           "fast_ema": {
@@ -461,7 +461,7 @@
     },
     "seriesAsParameter": {
       "title": "Series Input (Flexible Expression)",
-      "description": "Represents an input that can be a constant, a raw price series, a previously defined named series, or an inline series expression.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer using SERIES to reference a named series defined in top-level \u0027series\u0027.\n2. Prefer full method objects (e.g., EMA, RSI) when parameters are customized.\n3. Use quote shorthand (e.g., \"CLOSE\") only for raw OHLCV inputs.\n4. Use indicator shorthand (e.g., \"EMA\") ONLY when the default parameters are intended exactly.\n5. Use plain numbers only for constant values.\n\nConsistency rule:\n- Prefer defining reusable logic in top-level \u0027series\u0027 and referencing it via SERIES instead of repeating inline expressions.\n\nDiscouraged but valid:\n- Mixing multiple styles in the same model (e.g., sometimes using shorthand, sometimes full objects).\n- Using indicator shorthand when custom parameters are needed.\n\nThis flexibility exists for convenience, but AI-generated models should follow a consistent style using named series and explicit method definitions.",
+      "description": "Represents an input that can be a constant, raw market data, a named series reference, or an inline series expression.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Use a SERIES.REFERENCE object for a name defined in top-level \u0027series\u0027.\n2. Prefer full method objects such as INDICATOR.EMA or INDICATOR.RSI when parameters are customized.\n3. Use exact shorthand such as \"MARKET_DATA.CLOSE\" only for parameterless registered methods.\n4. Use indicator shorthand such as \"INDICATOR.EMA\" only when parser defaults are intended exactly.\n5. Use plain numbers for constants.\n\nDefine reusable logic once and reference it with SERIES.REFERENCE rather than repeating inline expressions.",
       "oneOf": [
         {
           "type": "number",
@@ -501,6 +501,12 @@
             "INDICATOR.RMA",
             "INDICATOR.WMA",
             "INDICATOR.HMA",
+            "INDICATOR.HIGHEST",
+            "INDICATOR.LOWEST",
+            "INDICATOR.ROC",
+            "INDICATOR.RSI",
+            "INDICATOR.RVOL",
+            "INDICATOR.TR",
             "INDICATOR.ATR",
             "INDICATOR.STDDEV",
             "INDICATOR.BB",
@@ -585,7 +591,7 @@
         }
       ],
       "title": "Quote Series",
-      "description": "Built-in market data series from the current bar, such as OPEN, HIGH, LOW, CLOSE, or VOLUME."
+      "description": "Built-in market data series from the visible bar: MARKET_DATA.OPEN, MARKET_DATA.HIGH, MARKET_DATA.LOW, MARKET_DATA.CLOSE, or MARKET_DATA.VOLUME."
     },
     "seriesMethod": {
       "allOf": [
@@ -597,7 +603,7 @@
             "method": {
               "const": "SERIES.REFERENCE",
               "title": "Method",
-              "description": "Always use SERIES to reference a named series."
+              "description": "Use SERIES.REFERENCE to reference a named top-level series."
             },
             "params": {
               "type": "object",
@@ -614,7 +620,7 @@
                 "name"
               ],
               "title": "Parameters",
-              "description": "Parameters for the SERIES method.",
+              "description": "Parameters for the SERIES.REFERENCE method.",
               "examples": [
                 {
                   "name": "bbands"
@@ -670,7 +676,7 @@
                 "source": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Source Series",
-                  "description": "Source multi-output series. Use a multi-output indicator directly, or use SERIES to refer to a named multi-output series."
+                  "description": "Source multi-output series. Use a multi-output indicator directly, or SERIES.REFERENCE for a named multi-output series."
                 }
               },
               "required": [
@@ -685,7 +691,7 @@
         }
       ],
       "title": "Select Output",
-      "description": "Selects one named output from a multi-output series, such as Bollinger Bands, MACD, STOCH, or STOCH_RSI. The source should usually be a multi-output indicator definition directly, or a SERIES reference to a named multi-output series.",
+      "description": "Selects one named output from a multi-output series such as INDICATOR.BB, INDICATOR.MACD, INDICATOR.STOCH, or INDICATOR.STOCH_RSI. The source should be the indicator directly or a SERIES.REFERENCE object.",
       "examples": [
         {
           "method": "OPERATOR.SELECT_OUTPUT",
@@ -1985,12 +1991,12 @@
                 "augend": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Augend",
-                  "description": "First numeric input to add. Prefer SERIES for named series and plain numbers for constants."
+                  "description": "First numeric input to add. Prefer SERIES.REFERENCE for named series and plain numbers for constants."
                 },
                 "addend": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Addend",
-                  "description": "Second numeric input to add. Prefer SERIES for named series and plain numbers for constants."
+                  "description": "Second numeric input to add. Prefer SERIES.REFERENCE for named series and plain numbers for constants."
                 }
               },
               "required": [
@@ -1998,7 +2004,7 @@
                 "addend"
               ],
               "title": "Parameters",
-              "description": "Parameters for addition.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer SERIES for named series inputs.\n2. Prefer plain numbers for constants.\n3. Prefer naming reusable arithmetic expressions in top-level \u0027series\u0027 instead of repeating them inline."
+              "description": "Parameters for addition.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer SERIES.REFERENCE for named series inputs.\n2. Prefer plain numbers for constants.\n3. Prefer naming reusable arithmetic expressions in top-level \u0027series\u0027 instead of repeating them inline."
             }
           },
           "required": [
@@ -2040,12 +2046,12 @@
                 "minuend": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Minuend",
-                  "description": "Value to subtract from. Prefer SERIES for named series."
+                  "description": "Value to subtract from. Prefer SERIES.REFERENCE for named series."
                 },
                 "subtrahend": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Subtrahend",
-                  "description": "Value to subtract. Prefer SERIES for named series and numbers for constants."
+                  "description": "Value to subtract. Prefer SERIES.REFERENCE for named series and numbers for constants."
                 }
               },
               "required": [
@@ -2108,7 +2114,7 @@
                 "multiplier"
               ],
               "title": "Parameters",
-              "description": "Parameters for multiplication. Prefer SERIES for named series and plain numbers for constants such as 2, 0.5, or 100."
+              "description": "Parameters for multiplication. Prefer SERIES.REFERENCE for named series and plain numbers for constants such as 2, 0.5, or 100."
             }
           },
           "required": [
@@ -2163,7 +2169,7 @@
                 "divisor"
               ],
               "title": "Parameters",
-              "description": "Parameters for division. Prefer SERIES for named series and plain numbers for constants."
+              "description": "Parameters for division. Prefer SERIES.REFERENCE for named series and plain numbers for constants."
             }
           },
           "required": [
@@ -2205,7 +2211,7 @@
                 "operand": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Operand",
-                  "description": "Numeric value to multiply by -1. Prefer SERIES for named series."
+                  "description": "Numeric value to multiply by -1. Prefer SERIES.REFERENCE for named series."
                 }
               },
               "required": [
@@ -2374,7 +2380,7 @@
                 "source": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Source",
-                  "description": "Numeric source whose bar-to-bar change is calculated. Prefer SERIES for named series and quote shorthand for raw OHLCV inputs."
+                  "description": "Numeric source whose bar-to-bar change is calculated. Prefer SERIES.REFERENCE for named series and exact method-ID shorthand for raw OHLCV inputs."
                 }
               },
               "title": "Parameters",
@@ -2435,7 +2441,7 @@
                 "subtrahend"
               ],
               "title": "Parameters",
-              "description": "Parameters for absolute difference. Prefer SERIES for named series and numbers for constants."
+              "description": "Parameters for absolute difference. Prefer SERIES.REFERENCE for named series and numbers for constants."
             }
           },
           "required": [
@@ -2484,7 +2490,7 @@
                     }
                   ],
                   "title": "Base",
-                  "description": "Base numeric input that the percentage is applied to. Prefer quote shorthand for direct OHLCV input and SERIES for named series."
+                  "description": "Base numeric input that the percentage is applied to. Prefer exact market-data shorthand for direct OHLCV input and SERIES.REFERENCE for named series."
                 },
                 "percent": {
                   "type": "number",
@@ -3060,7 +3066,7 @@
         }
       ],
       "title": "Series Definition",
-      "description": "Any valid Pludux series definition. This can be a raw market series, indicator, transformation, arithmetic series, SELECT_OUTPUT chain, SERIES reference, or a signal method used as a numeric series. When a signal method is used in series context, true is coerced to 1 and false is coerced to 0."
+      "description": "Any valid Pludux series definition. This can be raw market data, an indicator, transformation, arithmetic expression, OPERATOR.SELECT_OUTPUT chain, SERIES.REFERENCE object, or a condition method used numerically. In numeric series context, true is 1 and false is 0."
     },
     "signalAsParameter": {
       "oneOf": [
@@ -3140,12 +3146,12 @@
                 "target": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Target",
-                  "description": "Left-hand numeric input being compared. For AI-generated strategies, prefer SERIES when referring to a previously defined named series. Raw quote shorthand like \"CLOSE\" is fine for direct market inputs. Avoid repeating complex inline indicator expressions here if they can be defined once in top-level \u0027series\u0027 and reused."
+                  "description": "Left-hand numeric input being compared. Prefer a SERIES.REFERENCE object for a named top-level series. Exact shorthand such as \"MARKET_DATA.CLOSE\" is valid for direct market inputs. Avoid repeating complex inline indicator expressions when they can be defined once and reused."
                 },
                 "threshold": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Threshold",
-                  "description": "Right-hand numeric input used as the comparison reference. This can be a constant number, raw quote shorthand, another indicator output, or SERIES. Prefer constants for fixed thresholds such as 30, 50, or 70. Prefer SERIES when the threshold comes from another named series."
+                  "description": "Right-hand numeric input used as the comparison reference. It can be a constant, exact market-data shorthand, another indicator output, or SERIES.REFERENCE. Prefer constants for fixed thresholds and SERIES.REFERENCE for named series."
                 }
               },
               "required": [
@@ -3153,7 +3159,7 @@
                 "threshold"
               ],
               "title": "Parameters",
-              "description": "Parameters for a numeric comparison signal.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer SERIES when either side refers to a named series.\n2. Prefer plain numbers for fixed thresholds.\n3. Prefer quote shorthand only for direct OHLCV inputs.\n4. Prefer reusing named series instead of repeating inline indicator expressions.\n\nDiscouraged but valid:\n- Comparing a complex inline indicator on one side when the same logic is reused elsewhere.\n- Mixing shorthand and nested styles inconsistently across the same model."
+              "description": "Parameters for a numeric comparison signal.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer SERIES.REFERENCE when either side refers to a named series.\n2. Prefer plain numbers for fixed thresholds.\n3. Prefer exact method-ID shorthand only for direct OHLCV inputs.\n4. Reuse named series instead of repeating inline indicator expressions."
             }
           },
           "required": [
@@ -3162,7 +3168,7 @@
         }
       ],
       "title": "Comparison Signal",
-      "description": "Boolean signal that compares two numeric values or series over time. Use this for threshold logic such as RSI \u003c 30, CLOSE \u003e EMA, or one named series compared to another.",
+      "description": "Boolean signal that compares two numeric values or series over time. Use this for threshold logic such as INDICATOR.RSI \u003c 30, MARKET_DATA.CLOSE \u003e INDICATOR.EMA, or one named series compared to another.",
       "examples": [
         {
           "method": "COMPARISON.LESS_EQUAL",
@@ -3212,12 +3218,12 @@
                 "value": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Value",
-                  "description": "The changing numeric series being tested for a cross. For AI-generated strategies, this should usually be a price source, an indicator output, or SERIES referring to a named series."
+                  "description": "The changing numeric series being tested for a cross. This is usually market data, an indicator output, or SERIES.REFERENCE for a named series."
                 },
                 "baseline": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Baseline",
-                  "description": "The numeric reference that \u0027value\u0027 is checked against. This is commonly another named indicator output via SERIES, a raw quote series, or a constant threshold."
+                  "description": "The numeric reference that \u0027value\u0027 is checked against. This is commonly another named indicator output via SERIES.REFERENCE, exact market-data shorthand, or a constant threshold."
                 }
               },
               "required": [
@@ -3225,7 +3231,7 @@
                 "baseline"
               ],
               "title": "Parameters",
-              "description": "Parameters for a cross signal.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer SERIES when crossing one named series against another named series.\n2. Prefer quote shorthand only for direct OHLCV inputs.\n3. Prefer defining reusable indicators in top-level \u0027series\u0027 and then crossing their SERIES outputs.\n4. Use constants only when intentionally crossing against a fixed level.\n\nDiscouraged but valid:\n- Repeating inline indicator expressions inside CROSSOVER or CROSSUNDER when they could be named once and reused."
+              "description": "Parameters for a cross signal.\n\nAuthoring preference (IMPORTANT for AI generation):\n1. Prefer SERIES.REFERENCE when crossing named series.\n2. Prefer exact method-ID shorthand only for direct OHLCV inputs.\n3. Define reusable indicators in top-level \u0027series\u0027 and cross their SERIES.REFERENCE outputs.\n4. Use constants only for an intentional fixed level."
             }
           },
           "required": [

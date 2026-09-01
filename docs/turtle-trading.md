@@ -92,9 +92,9 @@ For a stock adaptation, configure the Market with:
 - Quantity step: `1`
 
 This makes the Risk Distance constraint round down to whole shares while
-staying inside the risk budget. Configure Broker fees and slippage assumptions
-to reflect the intended venue. Broker fees can make the final Unit slightly
-smaller than the textbook formula.
+staying inside the risk budget. Configure Broker fees to reflect the intended
+venue. Pludux does not model slippage. Broker fees can make the final Unit
+slightly smaller than the textbook formula.
 
 ## 2. Turtle Profile
 
@@ -130,7 +130,7 @@ fees, the result can be lower than simply truncating `Q_raw`.
 
 The original 2N protective stop is configured separately. Consequently, one
 full initial Unit stopped at 2R has approximately 2% price risk, plus any
-difference between estimated and realized fees, slippage, or gaps. The
+difference between estimated and realized fees or opening gaps. The
 Requested Order's `Requested Risk With Fees` diagnostic is a 1R diagnostic; it
 does not describe the configured 2R protective stop.
 
@@ -349,8 +349,8 @@ full closure resets the layer count, Unit, and `N` for the next position.
 Position R-Multiple is measured directionally from the position's current risk
 reference using frozen `N`. With Latest Entry Price selected, each successful
 addition resets that reference to its actual fill. The next layer therefore
-requires another favorable 0.5N move from the preceding fill, which also
-incorporates slippage and opening gaps into later thresholds.
+requires another favorable 0.5N move from the preceding fill, so an opening
+gap and its actual fill affect later thresholds.
 
 Pludux executes no more than one pyramiding layer for an expanded
 Pludux System-asset run in one bar. The original Turtles could add all remaining
@@ -399,7 +399,7 @@ Unit advances the full-position stop by 0.5N. For example, with a long entry at
 | 4 | 103.75 | 98.75 |
 
 The original rules allowed different stops for individual Units after a large
-gap or unusual slippage. Earlier Unit stops could remain at the prior common
+gap. Earlier Unit stops could remain at the prior common
 level while the newly gapped Unit received its own 2N stop. Pludux maintains a
 shared execution position and shared stop level, so Latest Entry Price applies
 the new stop to the entire position. That can be more aggressive than the

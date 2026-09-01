@@ -68,12 +68,17 @@ See [Core Concepts](docs/concepts.md), [Limitations](docs/limitations.md), and
 
 1. Read [Documentation home](docs/index.md).
 2. Follow [Quick start](docs/getting-started.md).
-3. For portfolio behavior, read [Portfolio Backtesting](docs/portfolio-backtesting.md).
+3. Use the complete [Node and Method Reference](docs/nodes.md) while building a
+   Model or comparator.
+4. For simulation behavior, read [Execution and Position Lifecycle](docs/execution.md)
+   and [Portfolio Backtesting](docs/portfolio-backtesting.md).
 
 ## Contributing
 
 Feedback, ideas, and contributions are welcome. Contributions should align with
 the project style and include appropriate tests or examples.
+See [Building and Contributing](docs/development.md) for presets, architecture,
+tests, and the domain-change checklist.
 
 ---
 

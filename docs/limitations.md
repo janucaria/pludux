@@ -3,7 +3,6 @@
 ## Product scope
 
 - Pludux is focused on portfolio backtesting, not live trading.
-- The current documentation revamp is centered on the desktop GUI workflow.
 - Model JSON import/export is the primary documented interchange format.
 
 ## Simulation boundaries
@@ -18,14 +17,14 @@
 
 ## Data and import boundaries
 
-- CSV guidance is intentionally limited to verified importer behavior.
+- CSV import accepts the timestamp grammar documented in [CSV Data](data-csv.md).
 - Exact column names should be taken from the Asset editor.
 - If a label or optional field is not verified in the docs, use the GUI prompt.
 
 ## Workflow boundaries
 
-- The first recommended flow is Asset -> Model -> Profile -> System ->
-  Portfolio -> Backtest.
+- The first recommended flow is Asset -> Watchlist; Model + Profile ->
+  Strategy; Watchlist + Strategy -> System; System -> Portfolio -> Backtest.
 - Failsafe Strategy bindings exist, but they are part of more advanced System
   design.
 - Strategies are reusable stored resources; editing one affects every System
