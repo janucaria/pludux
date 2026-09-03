@@ -33,7 +33,7 @@ private:
   std::string name_{};
 };
 
-template<MethodContextable TContext>
+template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const SeriesNode& node,
                        NodeToErasedMethodContext&)

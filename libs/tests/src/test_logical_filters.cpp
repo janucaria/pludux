@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include "test_method_context.hpp"
+
 import pludux;
 
 using namespace pludux;
@@ -7,18 +9,18 @@ using namespace pludux;
 using SignalAlwaysMethod = pludux::TrueMethod;
 using SignalNeverMethod = pludux::FalseMethod;
 using SignalAndMethod =
- pludux::LogicalAndMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                          ErasedSeriesMethod<ErasedSeriesMethodContext>>;
+ pludux::LogicalAndMethod<ErasedSeriesMethod<StatelessMethodContext>,
+                          ErasedSeriesMethod<StatelessMethodContext>>;
 using SignalOrMethod =
- pludux::LogicalOrMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                         ErasedSeriesMethod<ErasedSeriesMethodContext>>;
+ pludux::LogicalOrMethod<ErasedSeriesMethod<StatelessMethodContext>,
+                         ErasedSeriesMethod<StatelessMethodContext>>;
 using SignalNotMethod =
- pludux::LogicalNotMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>;
+ pludux::LogicalNotMethod<ErasedSeriesMethod<StatelessMethodContext>>;
 using SignalXorMethod =
- pludux::LogicalXorMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                          ErasedSeriesMethod<ErasedSeriesMethodContext>>;
+ pludux::LogicalXorMethod<ErasedSeriesMethod<StatelessMethodContext>,
+                          ErasedSeriesMethod<StatelessMethodContext>>;
 
-const auto context = ErasedSeriesMethodContext{};
+const auto context = StatelessMethodContext{};
 
 static auto make_asset_snapshot() -> AssetSnapshot
 {

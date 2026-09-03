@@ -16,7 +16,6 @@ module;
 export module pludux:hash_series_method;
 
 import :asset_snapshot;
-import :method_contextable;
 
 // Import all method modules for type/template visibility
 import :methods.atr_method;

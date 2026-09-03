@@ -15,15 +15,21 @@ import :node_to_erased_method;
 
 export namespace pludux {
 
-template<MethodContextable TContext>
+template<typename TContext>
 class ErasedNode {
 public:
   template<typename UNode>
     requires(!std::same_as<std::remove_cvref_t<UNode>, ErasedNode>) &&
-             (!std::same_as<std::remove_cvref_t<UNode>,
-                            std::vector<ErasedNode>>) &&
-             (!std::convertible_to<UNode, double>) &&
-             std::equality_comparable<UNode>
+              (!std::same_as<std::remove_cvref_t<UNode>,
+                             std::vector<ErasedNode>>) &&
+              (!std::convertible_to<UNode, double>) &&
+              std::equality_comparable<UNode> &&
+              (node_context_admissible<TContext, UNode>()) &&
+              requires(const UNode& node, NodeToErasedMethodContext& context) {
+                {
+                  node_to_erased_method<TContext>(node, context)
+                } -> std::same_as<ErasedSeriesMethod<TContext>>;
+              }
   ErasedNode(UNode impl)
   : impl_{std::make_any<UNode>(std::move(impl))}
   , convert_to_erased_method_{[](const std::any& impl,

@@ -1,10 +1,12 @@
 #include <gtest/gtest.h>
 
+#include "test_method_context.hpp"
+
 import pludux;
 
 using namespace pludux;
 
-const auto context = ErasedSeriesMethodContext{};
+const auto context = StatelessMethodContext{};
 
 TEST(CrossunderMethodTest, ReferenceMethod)
 {

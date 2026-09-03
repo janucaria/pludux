@@ -7,13 +7,16 @@ export module pludux.backtest:store_arena;
 
 import pludux;
 
-import :backtest;
+import :system;
+import :portfolio;
+import :portfolio_results;
 import :asset;
-import :strategy;
+import :watchlist;
+import :model;
 import :market;
 import :broker;
 import :profile;
-import :backtest_timeline;
+import :strategy;
 
 export namespace pludux::backtest {
 
@@ -21,34 +24,49 @@ class StoreArena {
 public:
   StoreArena() = default;
 
-  StoreArena(std::vector<Backtest> backtests,
+   StoreArena(std::vector<System> systems,
+             std::vector<Portfolio> portfolios,
              std::vector<Asset> assets,
-             std::vector<Strategy> strategies,
+             std::vector<Watchlist> watchlists,
+              std::vector<Model> models,
              std::vector<Market> markets,
              std::vector<Broker> brokers,
              std::vector<Profile> profiles,
-             std::vector<BacktestTimeline> backtest_timelines,
-             std::vector<SeriesEvaluationResults> series_results)
-  : backtests_{std::move(backtests)}
+             std::vector<Strategy> strategies,
+             std::vector<PortfolioResults> portfolio_results)
+   : systems_{std::move(systems)}
+  , portfolios_{std::move(portfolios)}
   , assets_{std::move(assets)}
-  , strategies_{std::move(strategies)}
+  , watchlists_{std::move(watchlists)}
+  , models_{std::move(models)}
   , markets_{std::move(markets)}
   , brokers_{std::move(brokers)}
   , profiles_{std::move(profiles)}
-  , backtest_timelines_{std::move(backtest_timelines)}
-  , series_results_{std::move(series_results)}
+   , strategies_{std::move(strategies)}
+  , portfolio_results_{std::move(portfolio_results)}
   {
   }
 
-  auto backtests(this const StoreArena& self) noexcept
-   -> const std::vector<Backtest>&
+  auto systems(this const StoreArena& self) noexcept
+     -> const std::vector<System>&
   {
-    return self.backtests_;
+    return self.systems_;
   }
 
-  auto backtests(this StoreArena& self) noexcept -> std::vector<Backtest>&
+  auto systems(this StoreArena& self) noexcept -> std::vector<System>&
   {
-    return self.backtests_;
+    return self.systems_;
+  }
+
+  auto portfolios(this const StoreArena& self) noexcept
+   -> const std::vector<Portfolio>&
+  {
+    return self.portfolios_;
+  }
+
+  auto portfolios(this StoreArena& self) noexcept -> std::vector<Portfolio>&
+  {
+    return self.portfolios_;
   }
 
   auto assets(this const StoreArena& self) noexcept -> const std::vector<Asset>&
@@ -61,15 +79,26 @@ public:
     return self.assets_;
   }
 
-  auto strategies(this const StoreArena& self) noexcept
-   -> const std::vector<Strategy>&
+  auto watchlists(this const StoreArena& self) noexcept
+   -> const std::vector<Watchlist>&
   {
-    return self.strategies_;
+    return self.watchlists_;
   }
 
-  auto strategies(this StoreArena& self) noexcept -> std::vector<Strategy>&
+  auto watchlists(this StoreArena& self) noexcept -> std::vector<Watchlist>&
   {
-    return self.strategies_;
+    return self.watchlists_;
+  }
+
+  auto models(this const StoreArena& self) noexcept
+    -> const std::vector<Model>&
+  {
+    return self.models_;
+  }
+
+   auto models(this StoreArena& self) noexcept -> std::vector<Model>&
+  {
+    return self.models_;
   }
 
   auto markets(this const StoreArena& self) noexcept
@@ -105,39 +134,40 @@ public:
     return self.profiles_;
   }
 
-  auto backtest_timelines(this const StoreArena& self) noexcept
-   -> const std::vector<BacktestTimeline>&
+  auto strategies(this const StoreArena& self) noexcept
+   -> const std::vector<Strategy>&
   {
-    return self.backtest_timelines_;
+    return self.strategies_;
   }
 
-  auto backtest_timelines(this StoreArena& self) noexcept
-   -> std::vector<BacktestTimeline>&
+  auto strategies(this StoreArena& self) noexcept -> std::vector<Strategy>&
   {
-    return self.backtest_timelines_;
+    return self.strategies_;
   }
 
-  auto series_results(this const StoreArena& self) noexcept
-   -> const std::vector<SeriesEvaluationResults>&
+  auto portfolio_results(this const StoreArena& self) noexcept
+   -> const std::vector<PortfolioResults>&
   {
-    return self.series_results_;
+    return self.portfolio_results_;
   }
 
-  auto series_results(this StoreArena& self) noexcept
-   -> std::vector<SeriesEvaluationResults>&
+  auto portfolio_results(this StoreArena& self) noexcept
+   -> std::vector<PortfolioResults>&
   {
-    return self.series_results_;
+    return self.portfolio_results_;
   }
 
 private:
-  std::vector<Backtest> backtests_;
+  std::vector<System> systems_;
+  std::vector<Portfolio> portfolios_;
   std::vector<Asset> assets_;
-  std::vector<Strategy> strategies_;
+  std::vector<Watchlist> watchlists_;
+  std::vector<Model> models_;
   std::vector<Market> markets_;
   std::vector<Broker> brokers_;
   std::vector<Profile> profiles_;
-  std::vector<BacktestTimeline> backtest_timelines_;
-  std::vector<SeriesEvaluationResults> series_results_;
+  std::vector<Strategy> strategies_;
+  std::vector<PortfolioResults> portfolio_results_;
 };
 
 } // namespace pludux::backtest

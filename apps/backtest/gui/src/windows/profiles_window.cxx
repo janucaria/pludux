@@ -18,7 +18,6 @@ module;
 export module pludux.apps.backtest:windows.profiles_window;
 
 import pludux.backtest;
-import :condition_node_editor;
 import :window_context;
 import :ui.widgets;
 
@@ -68,7 +67,7 @@ private:
   {
     const auto& app_state = context.app_state();
     const auto& profile_handles = app_state.get_profile_handles();
-    const auto backtest_ptr = app_state.selected_backtest_if_present();
+    const auto system_ptr = app_state.selected_system_if_present();
 
     ImGui::BeginGroup();
     if(ImGui::Button(PLUDUX_ICON_ADD " New Profile")) {
@@ -94,8 +93,17 @@ private:
       ImGui::PushID(i);
 
       {
-        const auto selected =
-         backtest_ptr && backtest_ptr->profile_handle() == profile_handle;
+        const auto selected = system_ptr && [&] {
+          for(auto strategy_index = std::size_t{};
+              strategy_index < system_ptr->strategy_count(); ++strategy_index) {
+            const auto* strategy = app_state.get_strategy_if_present(
+             system_ptr->strategy_handle(strategy_index));
+            if(strategy && strategy->references_profile(profile_handle)) {
+              return true;
+            }
+          }
+          return false;
+        }();
         const auto has_draft =
          self.selected_profile_handle_opt_ == profile_handle &&
          self.editing_profile_ptr_ && *self.editing_profile_ptr_ != profile;
@@ -112,24 +120,28 @@ private:
              std::make_shared<backtest::Profile>(profile);
           }
         } else if(action == ui::ResourceRowAction::Duplicate) {
-          context.push_action([profile_handle](ApplicationState& app_state) {
-            const auto& value = app_state.get_profile(profile_handle);
-            auto copy = value;
-            copy.name(value.name() + " Copy");
-            app_state.add_profile(std::move(copy));
-          });
+          context.push_edit(
+           "Duplicate Profile", [profile_handle](ApplicationState& app_state) {
+             const auto& value = app_state.get_profile(profile_handle);
+             auto copy = value;
+             copy.name(value.name() + " Copy");
+             app_state.add_profile(std::move(copy));
+           });
         } else if(action == ui::ResourceRowAction::MoveUp) {
-          context.push_action([from = i](ApplicationState& app_state) {
-            app_state.reorder_list_profile(from, from - 1);
-          });
+          context.push_edit("Move Profile Up",
+                            [from = i](ApplicationState& app_state) {
+                              app_state.reorder_list_profile(from, from - 1);
+                            });
         } else if(action == ui::ResourceRowAction::MoveDown) {
-          context.push_action([from = i](ApplicationState& app_state) {
-            app_state.reorder_list_profile(from, from + 1);
-          });
+          context.push_edit("Move Profile Down",
+                            [from = i](ApplicationState& app_state) {
+                              app_state.reorder_list_profile(from, from + 1);
+                            });
         } else if(action == ui::ResourceRowAction::Delete) {
-          context.push_action([profile_handle](ApplicationState& app_state) {
-            app_state.remove_profile(profile_handle);
-          });
+          context.push_edit("Delete Profile",
+                            [profile_handle](ApplicationState& app_state) {
+                              app_state.remove_profile(profile_handle);
+                            });
         }
         ImGui::PopID();
         continue;
@@ -191,7 +203,9 @@ private:
     const auto same_profile = selected_profile == *(self.editing_profile_ptr_);
 
     if(ImGui::Button("OK")) {
-      self.submit_profile_changes(context);
+      if(!same_profile) {
+        self.submit_profile_changes(context);
+      }
       self.reset();
     }
 
@@ -233,13 +247,13 @@ private:
       enum class SizingKind {
         RiskDistance,
         FixedQuantity,
-        FixedNotional,
+        FixedBudget,
         EquityFraction,
         BayesianKelly
       };
       constexpr auto kinds = std::array{SizingKind::RiskDistance,
                                         SizingKind::FixedQuantity,
-                                        SizingKind::FixedNotional,
+                                        SizingKind::FixedBudget,
                                         SizingKind::EquityFraction,
                                         SizingKind::BayesianKelly};
       const auto kind_label = [](SizingKind kind) {
@@ -248,12 +262,12 @@ private:
           return "Risk Distance";
         case SizingKind::FixedQuantity:
           return "Fixed Quantity";
-        case SizingKind::FixedNotional:
-          return "Fixed Notional";
+        case SizingKind::FixedBudget:
+          return "Fixed Budget";
         case SizingKind::EquityFraction:
           return "Equity Fraction";
         case SizingKind::BayesianKelly:
-          return "Bayesian Kelly (Strategy Performance)";
+          return "Bayesian Kelly (Model Performance)";
         }
         return "Risk Distance";
       };
@@ -264,24 +278,24 @@ private:
       if(position_sizing_node_cast<backtest::FixedQuantityPositionSizing>(
           position_sizing)) {
         kind = SizingKind::FixedQuantity;
-      } else if(position_sizing_node_cast<
-                 backtest::FixedNotionalPositionSizing>(position_sizing)) {
-        kind = SizingKind::FixedNotional;
+      } else if(position_sizing_node_cast<backtest::FixedBudgetPositionSizing>(
+                 position_sizing)) {
+        kind = SizingKind::FixedBudget;
       } else if(position_sizing_node_cast<
                  backtest::EquityFractionPositionSizing>(position_sizing)) {
         kind = SizingKind::EquityFraction;
       } else if(position_sizing_node_cast<
-                 backtest::StrategyPerformanceBayesianKellySizing>(
+                  backtest::ModelPerformanceBayesianKellySizing>(
                  position_sizing)) {
         kind = SizingKind::BayesianKelly;
       }
 
       ui::field_label(
        "Position Sizing",
-       "Risk Distance limits capital at risk for a 1R move. Fixed Quantity "
-       "uses asset units, Fixed Notional uses a currency amount, Equity "
-       "Fraction allocates current equity, and Bayesian Kelly uses the "
-       "Bayesian Strategy Performance model.");
+       "Risk Distance limits loss including estimated round-trip fees for a "
+       "1R move. Fixed Quantity uses asset units, Fixed Budget limits entry "
+       "notional plus fees, Equity Fraction allocates current equity, and "
+        "Bayesian Kelly uses the Bayesian Model Performance model.");
       if(ImGui::BeginCombo("##position_sizing", kind_label(kind))) {
         for(const auto candidate : kinds) {
           const auto selected = kind == candidate;
@@ -298,10 +312,10 @@ private:
                backtest::PositionSizingNode{
                 backtest::FixedQuantityPositionSizing{}});
               break;
-            case SizingKind::FixedNotional:
+            case SizingKind::FixedBudget:
               self.editing_profile_ptr_->position_sizing(
                backtest::PositionSizingNode{
-                backtest::FixedNotionalPositionSizing{}});
+                backtest::FixedBudgetPositionSizing{}});
               break;
             case SizingKind::EquityFraction:
               self.editing_profile_ptr_->position_sizing(
@@ -311,7 +325,7 @@ private:
             case SizingKind::BayesianKelly:
               self.editing_profile_ptr_->position_sizing(
                backtest::PositionSizingNode{
-                backtest::StrategyPerformanceBayesianKellySizing{}});
+                 backtest::ModelPerformanceBayesianKellySizing{}});
               break;
             }
           }
@@ -340,8 +354,10 @@ private:
           current)
           ->risk_fraction();
         auto percentage = value * 100.0;
-        ui::field_label("Capital Risk (%)",
-                        "Percent of current capital at risk for a 1R loss.");
+        ui::field_label(
+         "Equity Risk (%)",
+         "Maximum percent of current equity lost at the risk boundary, "
+         "including estimated entry and exit fees.");
         if(ImGui::InputDouble(
             "##capital_risk", &percentage, 1.0, 10.0, "%.2f")) {
           value = percentage / 100.0;
@@ -364,15 +380,15 @@ private:
         }
         break;
       }
-      case SizingKind::FixedNotional: {
+      case SizingKind::FixedBudget: {
         auto value =
-         position_sizing_node_cast<backtest::FixedNotionalPositionSizing>(
-          current)
-          ->notional();
-        ui::field_label("Notional", "Currency value allocated to each entry.");
-        if(ImGui::InputDouble("##notional", &value, 100.0, 1000.0, "%.2f")) {
+         position_sizing_node_cast<backtest::FixedBudgetPositionSizing>(current)
+          ->budget();
+        ui::field_label("Budget",
+                        "Maximum entry notional plus applicable broker fees.");
+        if(ImGui::InputDouble("##budget", &value, 100.0, 1000.0, "%.2f")) {
           assign_if(std::isfinite(value) && value > 0.0,
-                    backtest::FixedNotionalPositionSizing{
+                    backtest::FixedBudgetPositionSizing{
                      std::isfinite(value) && value > 0.0 ? value : 1000.0});
         }
         break;
@@ -383,8 +399,9 @@ private:
           current)
           ->equity_fraction();
         auto percentage = value * 100.0;
-        ui::field_label("Equity (%)",
-                        "Percent of current equity allocated to each entry.");
+        ui::field_label(
+         "Equity (%)",
+         "Maximum percent of current equity used by entry notional and fees.");
         if(ImGui::InputDouble(
             "##equity_fraction", &percentage, 1.0, 10.0, "%.2f")) {
           value = percentage / 100.0;
@@ -396,7 +413,7 @@ private:
       }
       case SizingKind::BayesianKelly: {
         const auto& value = *position_sizing_node_cast<
-         backtest::StrategyPerformanceBayesianKellySizing>(current);
+          backtest::ModelPerformanceBayesianKellySizing>(current);
         auto estimate = value.estimate();
         ui::field_label(
          "Posterior Estimate",
@@ -405,23 +422,23 @@ private:
          "Mean uses each model's posterior mean.");
         const auto estimate_label =
          estimate ==
-           backtest::StrategyPerformanceBayesianKellyEstimate::PosteriorMean
+            backtest::ModelPerformanceBayesianKellyEstimate::PosteriorMean
           ? "Posterior Mean"
           : "Adverse Quantiles";
         if(ImGui::BeginCombo("##kelly_estimate", estimate_label)) {
           if(ImGui::Selectable(
               "Adverse Quantiles",
-              estimate == backtest::StrategyPerformanceBayesianKellyEstimate::
+               estimate == backtest::ModelPerformanceBayesianKellyEstimate::
                            AdverseQuantiles)) {
-            estimate = backtest::StrategyPerformanceBayesianKellyEstimate::
+             estimate = backtest::ModelPerformanceBayesianKellyEstimate::
              AdverseQuantiles;
           }
           if(ImGui::Selectable(
               "Posterior Mean",
-              estimate == backtest::StrategyPerformanceBayesianKellyEstimate::
+               estimate == backtest::ModelPerformanceBayesianKellyEstimate::
                            PosteriorMean)) {
             estimate =
-             backtest::StrategyPerformanceBayesianKellyEstimate::PosteriorMean;
+              backtest::ModelPerformanceBayesianKellyEstimate::PosteriorMean;
           }
           ImGui::EndCombo();
         }
@@ -439,8 +456,10 @@ private:
         ui::field_label("Kelly Multiplier", "0 disables execution sizing.");
         ImGui::InputDouble(
          "##kelly_multiplier", &multiplier, 0.05, 0.10, "%.3f");
-        ui::field_label("Maximum Equity Per Entry (%)",
-                        "May exceed 100%; cash policy still applies.");
+        ui::field_label(
+         "Maximum Equity Per Entry (%)",
+         "Caps entry notional plus fees. May exceed 100%; cash policy still "
+         "applies.");
         ImGui::InputDouble(
          "##kelly_maximum", &maximum_percent, 5.0, 25.0, "%.2f");
         const auto credible = credible_percent / 100.0;
@@ -450,13 +469,13 @@ private:
                            multiplier >= 0.0 && multiplier <= 1.0 &&
                            std::isfinite(maximum) && maximum > 0.0;
         assign_if(valid,
-                  backtest::StrategyPerformanceBayesianKellySizing{
+                   backtest::ModelPerformanceBayesianKellySizing{
                    estimate,
                    valid ? credible : 0.80,
                    valid ? multiplier : 0.50,
                    valid ? maximum : 1.0});
         ImGui::TextWrapped(
-         "Uses theoretical Strategy Performance: Bayesian win probability, "
+          "Uses theoretical Model Performance: Bayesian win probability, "
          "winning payoff magnitude, and losing payoff magnitude.");
         break;
       }
@@ -464,116 +483,89 @@ private:
     }
 
     ui::form_section(
-     "Cash Handling",
-     "Choose what happens when the requested position costs more than the "
-     "available cash.");
+     "Capital Protection",
+     "Control how this Profile responds to portfolio drawdown and orders "
+     "that exceed currently available cash.");
     {
-      auto insufficient_cash_policy =
-       self.editing_profile_ptr_->insufficient_cash_policy();
-      const auto policy_label = [](backtest::InsufficientCashPolicy policy) {
-        switch(policy) {
-        case backtest::InsufficientCashPolicy::Reject:
-          return "Reject Order";
-        case backtest::InsufficientCashPolicy::CapToAvailableCash:
-          return "Cap To Available Cash";
-        }
+      auto adjustment = self.editing_profile_ptr_->drawdown_adjustment();
+      auto adjustment_enabled = adjustment.enabled();
+      ui::field_label("Drawdown adjustment");
+      ImGui::Checkbox("##profile_drawdown_enabled", &adjustment_enabled);
+      adjustment.enabled(adjustment_enabled);
+      ImGui::BeginDisabled(!adjustment_enabled);
+      auto step_percent = adjustment.drawdown_step() * 100.0;
+      auto reduction_percent = adjustment.size_reduction() * 100.0;
+      auto notional_equity_reduction_percent =
+       adjustment.notional_equity_reduction() * 100.0;
+      ui::field_label("Drawdown step (%)");
+      ImGui::InputDouble("##profile_drawdown_step", &step_percent);
+      ui::field_label("Size reduction (%)");
+      ImGui::InputDouble("##profile_size_reduction", &reduction_percent);
+      ui::field_label("Notional equity reduction (%)");
+      ImGui::InputDouble("##profile_notional_equity_reduction",
+                         &notional_equity_reduction_percent);
+      ImGui::TextWrapped(
+       "Reduces peak equity by this percentage per completed drawdown step "
+       "before equity-dependent position sizing is evaluated.");
+      ImGui::EndDisabled();
+      if(std::isfinite(step_percent) && step_percent > 0.0) {
+        adjustment.drawdown_step(step_percent / 100.0);
+      }
+      if(std::isfinite(reduction_percent) && reduction_percent >= 0.0) {
+        adjustment.size_reduction(reduction_percent / 100.0);
+      }
+      if(std::isfinite(notional_equity_reduction_percent) &&
+         notional_equity_reduction_percent >= 0.0) {
+        adjustment.notional_equity_reduction(notional_equity_reduction_percent /
+                                             100.0);
+      }
+      self.editing_profile_ptr_->drawdown_adjustment(adjustment);
 
-        return "Reject Order";
-      };
-
-      constexpr auto insufficient_cash_policies =
-       std::array{backtest::InsufficientCashPolicy::Reject,
-                  backtest::InsufficientCashPolicy::CapToAvailableCash};
-
+      auto cash_policy = self.editing_profile_ptr_->insufficient_cash_policy();
       ui::field_label(
-       "Insufficient Cash",
-       "Reject Order skips an unaffordable entry. Cap To Available Cash "
-       "reduces its size to the largest affordable order.");
-      if(ImGui::BeginCombo("##insufficient_cash",
-                           policy_label(insufficient_cash_policy))) {
-        for(const auto& policy : insufficient_cash_policies) {
-          const auto selected = insufficient_cash_policy == policy;
-          if(ImGui::Selectable(policy_label(policy), selected)) {
-            insufficient_cash_policy = policy;
-          }
-          if(selected) {
-            ImGui::SetItemDefaultFocus();
-          }
+       "Insufficient cash",
+       "Reject preserves the requested quantity. Cap submits the largest "
+       "Market-valid quantity affordable with available portfolio cash.");
+      const auto* cash_label =
+       cash_policy == backtest::InsufficientCashPolicy::Reject
+        ? "Reject Order"
+        : "Cap To Available Cash";
+      if(ImGui::BeginCombo("##profile_cash", cash_label)) {
+        if(ImGui::Selectable("Reject Order",
+                             cash_policy ==
+                              backtest::InsufficientCashPolicy::Reject)) {
+          cash_policy = backtest::InsufficientCashPolicy::Reject;
         }
-
+        if(ImGui::Selectable(
+            "Cap To Available Cash",
+            cash_policy ==
+             backtest::InsufficientCashPolicy::CapToAvailableCash)) {
+          cash_policy = backtest::InsufficientCashPolicy::CapToAvailableCash;
+        }
         ImGui::EndCombo();
       }
-
-      self.editing_profile_ptr_->insufficient_cash_policy(
-       insufficient_cash_policy);
-    }
-
-    ui::form_section(
-     "Execution Filter",
-     "Decide whether each initial strategy entry should become a real "
-     "position. Accepted positions automatically mirror later pyramiding and "
-     "exit intents.");
-    {
-      auto filter = self.editing_profile_ptr_->execution_filter();
-      ui::field_label("Decision rule");
-      if(backtest::gui::execution_filter_node_editor(filter)) {
-        self.editing_profile_ptr_->execution_filter(std::move(filter));
-      }
-    }
-
-    ui::form_section(
-     "Drawdown Adjustment",
-     "Optionally reduce new position sizes as account drawdown deepens. The "
-     "reduction is applied once for each completed drawdown step.");
-    {
-      auto drawdown_adjustment =
-       self.editing_profile_ptr_->drawdown_adjustment();
-      auto enabled = drawdown_adjustment.enabled();
-      ui::field_label(
-       "Drawdown Adjustment",
-       "When enabled, new positions become smaller as drawdown passes each "
-       "configured step.");
-      ImGui::Checkbox("##drawdown_adjustment", &enabled);
-      drawdown_adjustment.enabled(enabled);
-
-      ImGui::BeginDisabled(!enabled);
-      auto drawdown_step = drawdown_adjustment.drawdown_step() * 100.0;
-      ui::field_label(
-       "Drawdown step (%)",
-       "Drawdown interval that triggers another size reduction.");
-      ImGui::InputDouble("##drawdown_step", &drawdown_step, 1.0, 10.0, "%.2f");
-      drawdown_adjustment.drawdown_step(drawdown_step / 100.0);
-
-      auto size_reduction = drawdown_adjustment.size_reduction() * 100.0;
-      ui::field_label(
-       "Size reduction (%)",
-       "Amount removed from the base position size per completed drawdown "
-       "step.");
-      ImGui::InputDouble(
-       "##size_reduction", &size_reduction, 1.0, 10.0, "%.2f");
-      drawdown_adjustment.size_reduction(size_reduction / 100.0);
-      ImGui::EndDisabled();
-
-      self.editing_profile_ptr_->drawdown_adjustment(drawdown_adjustment);
+      self.editing_profile_ptr_->insufficient_cash_policy(cash_policy);
     }
   }
 
   void submit_profile_changes(this auto& self, WindowContext& context)
   {
-    context.push_action([profile_handle_opt = self.selected_profile_handle_opt_,
-                         edit_profile_ptr = self.editing_profile_ptr_](
-                         ApplicationState& app_state) {
-      if(edit_profile_ptr->name().empty()) {
-        edit_profile_ptr->name("Unnamed");
-      }
+    context.push_edit(
+     self.selected_profile_handle_opt_ ? "Edit Profile" : "Add Profile",
+     [profile_handle_opt = self.selected_profile_handle_opt_,
+      edit_profile_ptr =
+       self.editing_profile_ptr_](ApplicationState& app_state) {
+       if(edit_profile_ptr->name().empty()) {
+         edit_profile_ptr->name("Unnamed");
+       }
 
-      if(!profile_handle_opt.has_value()) {
-        app_state.add_profile(*edit_profile_ptr);
-        return;
-      }
+       if(!profile_handle_opt.has_value()) {
+         app_state.add_profile(*edit_profile_ptr);
+         return;
+       }
 
-      app_state.update_profile(profile_handle_opt.value(), *edit_profile_ptr);
-    });
+       app_state.update_profile(profile_handle_opt.value(), *edit_profile_ptr);
+     });
   }
 
   void reset(this ProfilesWindow& self) noexcept

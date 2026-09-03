@@ -24,8 +24,28 @@ public:
   {
   }
 
-  auto operator==(const SeriesEvaluationResults&) const noexcept
-   -> bool = default;
+  auto operator==(this const SeriesEvaluationResults& self,
+                  const SeriesEvaluationResults& other) noexcept -> bool
+  {
+    if(self.results_.size() != other.results_.size() ||
+       self.aliases_.size() != other.aliases_.size()) {
+      return false;
+    }
+
+    for(const auto& [key, values] : self.results_) {
+      const auto it = other.results_.find(key);
+      if(it == other.results_.end() || it->second != values) {
+        return false;
+      }
+    }
+    for(const auto& [name, key] : self.aliases_) {
+      const auto it = other.aliases_.find(name);
+      if(it == other.aliases_.end() || it->second != key) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   auto results(this const SeriesEvaluationResults& self) noexcept
    -> const std::unordered_map<MethodKey, std::vector<double>>&

@@ -19,7 +19,8 @@ export enum class ConditionNodeCapability {
   Comparison,
   Logical,
   Account,
-  StrategyPerformance
+   ModelPerformance,
+  RequestedOrder
 };
 
 export class ConditionNodeCatalog {
@@ -51,20 +52,21 @@ private:
   std::span<const ConditionNodeCapability> capabilities_;
 };
 
-export inline constexpr auto execution_filter_capabilities =
+export inline constexpr auto entry_filter_capabilities =
  std::array{ConditionNodeCapability::Constant,
             ConditionNodeCapability::Comparison,
             ConditionNodeCapability::Logical,
             ConditionNodeCapability::Account,
-            ConditionNodeCapability::StrategyPerformance};
+             ConditionNodeCapability::ModelPerformance,
+            ConditionNodeCapability::RequestedOrder};
 
-export inline constexpr auto execution_filter_node_catalog =
- ConditionNodeCatalog{execution_filter_capabilities};
+export inline constexpr auto entry_filter_node_catalog =
+ ConditionNodeCatalog{entry_filter_capabilities};
 
 namespace {
 
-using ExecutionContext = ExecutionFilterMethodContext;
-using ExecutionNode = ErasedNode<ExecutionContext>;
+using EntryContext = EntryFilterMethodContext;
+using EntryNode = ErasedNode<EntryContext>;
 
 enum class BooleanNodeType {
   Always,
@@ -86,7 +88,23 @@ enum class ScalarNodeType {
   Equity,
   EquityPercent,
   Drawdown,
-  StrategyPerformance
+   ModelPerformance,
+  RequestedOrderPrice,
+  RequestedOrderDirection,
+  IsPyramidingOrder,
+  RawRequestedQuantity,
+  RawRequestedQuantityLimit,
+  DrawdownAdjustedQuantity,
+  DrawdownAdjustedQuantityLimit,
+  RequestedQuantity,
+  RequestedNotional,
+  RequestedCost,
+  EstimatedEntryFee,
+  EstimatedOneRExitFee,
+  RequestedOrderRiskDistance,
+  RequestedPriceRisk,
+  RequestedRiskWithFees,
+  FrozenUnitQuantity
 };
 
 inline constexpr auto boolean_node_labels =
@@ -108,7 +126,23 @@ inline constexpr auto scalar_node_labels =
             "Account equity",
             "Account equity percentage",
             "Account drawdown",
-            "Strategy performance"};
+             "Model performance",
+            "Requested order price",
+            "Requested order direction",
+            "Is pyramiding order",
+            "Raw requested quantity",
+            "Raw requested quantity limit",
+            "Drawdown-adjusted quantity",
+            "Drawdown-adjusted quantity limit",
+            "Requested quantity",
+            "Requested notional",
+            "Requested cost",
+            "Estimated entry fee",
+            "Estimated 1R exit fee",
+            "Requested order risk distance",
+            "Requested price risk",
+            "Requested risk with fees",
+            "Frozen Unit quantity"};
 
 inline constexpr auto performance_metric_labels =
  std::array{"Lifetime completed positions",
@@ -132,45 +166,45 @@ inline constexpr auto performance_metric_labels =
             "Bayesian losing payoff lower 95%",
             "Bayesian losing payoff upper 95%"};
 
-auto boolean_node_type(const ExecutionNode& node) noexcept -> BooleanNodeType
+auto boolean_node_type(const EntryNode& node) noexcept -> BooleanNodeType
 {
   if(node_cast<FalseNode>(node)) {
     return BooleanNodeType::Never;
   }
-  if(node_cast<GreaterThanNode<ExecutionContext>>(node)) {
+  if(node_cast<GreaterThanNode<EntryContext>>(node)) {
     return BooleanNodeType::GreaterThan;
   }
-  if(node_cast<GreaterEqualNode<ExecutionContext>>(node)) {
+  if(node_cast<GreaterEqualNode<EntryContext>>(node)) {
     return BooleanNodeType::GreaterEqual;
   }
-  if(node_cast<LessThanNode<ExecutionContext>>(node)) {
+  if(node_cast<LessThanNode<EntryContext>>(node)) {
     return BooleanNodeType::LessThan;
   }
-  if(node_cast<LessEqualNode<ExecutionContext>>(node)) {
+  if(node_cast<LessEqualNode<EntryContext>>(node)) {
     return BooleanNodeType::LessEqual;
   }
-  if(node_cast<EqualNode<ExecutionContext>>(node)) {
+  if(node_cast<EqualNode<EntryContext>>(node)) {
     return BooleanNodeType::Equal;
   }
-  if(node_cast<NotEqualNode<ExecutionContext>>(node)) {
+  if(node_cast<NotEqualNode<EntryContext>>(node)) {
     return BooleanNodeType::NotEqual;
   }
-  if(node_cast<LogicalAndNode<ExecutionContext>>(node)) {
+  if(node_cast<LogicalAndNode<EntryContext>>(node)) {
     return BooleanNodeType::And;
   }
-  if(node_cast<LogicalOrNode<ExecutionContext>>(node)) {
+  if(node_cast<LogicalOrNode<EntryContext>>(node)) {
     return BooleanNodeType::Or;
   }
-  if(node_cast<LogicalXorNode<ExecutionContext>>(node)) {
+  if(node_cast<LogicalXorNode<EntryContext>>(node)) {
     return BooleanNodeType::Xor;
   }
-  if(node_cast<LogicalNotNode<ExecutionContext>>(node)) {
+  if(node_cast<LogicalNotNode<EntryContext>>(node)) {
     return BooleanNodeType::Not;
   }
   return BooleanNodeType::Always;
 }
 
-auto scalar_node_type(const ExecutionNode& node) noexcept -> ScalarNodeType
+auto scalar_node_type(const EntryNode& node) noexcept -> ScalarNodeType
 {
   if(node_cast<EquityNode>(node)) {
     return ScalarNodeType::Equity;
@@ -181,72 +215,129 @@ auto scalar_node_type(const ExecutionNode& node) noexcept -> ScalarNodeType
   if(node_cast<DrawdownNode>(node)) {
     return ScalarNodeType::Drawdown;
   }
-  if(node_cast<StrategyPerformanceNode>(node)) {
-    return ScalarNodeType::StrategyPerformance;
+   if(node_cast<ModelPerformanceNode>(node)) {
+     return ScalarNodeType::ModelPerformance;
   }
+#define PLUDUX_ENTRY_FILTER_SCALAR_TYPE(Node, Type) \
+  if(node_cast<Node>(node)) {                       \
+    return ScalarNodeType::Type;                    \
+  }
+  PLUDUX_ENTRY_FILTER_SCALAR_TYPE(RequestedOrderPriceNode, RequestedOrderPrice)
+  PLUDUX_ENTRY_FILTER_SCALAR_TYPE(RequestedOrderDirectionNode,
+                                  RequestedOrderDirection)
+  PLUDUX_ENTRY_FILTER_SCALAR_TYPE(IsPyramidingOrderNode, IsPyramidingOrder)
+  PLUDUX_ENTRY_FILTER_SCALAR_TYPE(RawRequestedQuantityNode,
+                                  RawRequestedQuantity)
+  PLUDUX_ENTRY_FILTER_SCALAR_TYPE(RawRequestedQuantityLimitNode,
+                                  RawRequestedQuantityLimit)
+  PLUDUX_ENTRY_FILTER_SCALAR_TYPE(DrawdownAdjustedQuantityNode,
+                                  DrawdownAdjustedQuantity)
+  PLUDUX_ENTRY_FILTER_SCALAR_TYPE(DrawdownAdjustedQuantityLimitNode,
+                                  DrawdownAdjustedQuantityLimit)
+  PLUDUX_ENTRY_FILTER_SCALAR_TYPE(RequestedQuantityNode, RequestedQuantity)
+  PLUDUX_ENTRY_FILTER_SCALAR_TYPE(RequestedNotionalNode, RequestedNotional)
+  PLUDUX_ENTRY_FILTER_SCALAR_TYPE(RequestedCostNode, RequestedCost)
+  PLUDUX_ENTRY_FILTER_SCALAR_TYPE(EstimatedEntryFeeNode, EstimatedEntryFee)
+  PLUDUX_ENTRY_FILTER_SCALAR_TYPE(EstimatedOneRExitFeeNode,
+                                  EstimatedOneRExitFee)
+  PLUDUX_ENTRY_FILTER_SCALAR_TYPE(RequestedOrderRiskDistanceNode,
+                                  RequestedOrderRiskDistance)
+  PLUDUX_ENTRY_FILTER_SCALAR_TYPE(RequestedPriceRiskNode, RequestedPriceRisk)
+  PLUDUX_ENTRY_FILTER_SCALAR_TYPE(RequestedRiskWithFeesNode,
+                                  RequestedRiskWithFees)
+  PLUDUX_ENTRY_FILTER_SCALAR_TYPE(FrozenUnitQuantityNode, FrozenUnitQuantity)
+#undef PLUDUX_ENTRY_FILTER_SCALAR_TYPE
   return ScalarNodeType::Value;
 }
 
-auto make_boolean_node(BooleanNodeType type) -> ExecutionNode
+auto make_boolean_node(BooleanNodeType type) -> EntryNode
 {
-  const auto scalar = [] { return ExecutionNode{ValueNode{0.0}}; };
-  const auto condition = [] { return ExecutionNode{TrueNode{}}; };
+  const auto scalar = [] { return EntryNode{ValueNode{0.0}}; };
+  const auto condition = [] { return EntryNode{TrueNode{}}; };
   switch(type) {
   case BooleanNodeType::Always:
-    return ExecutionNode{TrueNode{}};
+    return EntryNode{TrueNode{}};
   case BooleanNodeType::Never:
-    return ExecutionNode{FalseNode{}};
+    return EntryNode{FalseNode{}};
   case BooleanNodeType::GreaterThan:
-    return ExecutionNode{GreaterThanNode<ExecutionContext>{scalar(), scalar()}};
+    return EntryNode{GreaterThanNode<EntryContext>{scalar(), scalar()}};
   case BooleanNodeType::GreaterEqual:
-    return ExecutionNode{
-     GreaterEqualNode<ExecutionContext>{scalar(), scalar()}};
+    return EntryNode{GreaterEqualNode<EntryContext>{scalar(), scalar()}};
   case BooleanNodeType::LessThan:
-    return ExecutionNode{LessThanNode<ExecutionContext>{scalar(), scalar()}};
+    return EntryNode{LessThanNode<EntryContext>{scalar(), scalar()}};
   case BooleanNodeType::LessEqual:
-    return ExecutionNode{LessEqualNode<ExecutionContext>{scalar(), scalar()}};
+    return EntryNode{LessEqualNode<EntryContext>{scalar(), scalar()}};
   case BooleanNodeType::Equal:
-    return ExecutionNode{EqualNode<ExecutionContext>{scalar(), scalar()}};
+    return EntryNode{EqualNode<EntryContext>{scalar(), scalar()}};
   case BooleanNodeType::NotEqual:
-    return ExecutionNode{NotEqualNode<ExecutionContext>{scalar(), scalar()}};
+    return EntryNode{NotEqualNode<EntryContext>{scalar(), scalar()}};
   case BooleanNodeType::And:
-    return ExecutionNode{
-     LogicalAndNode<ExecutionContext>{condition(), condition()}};
+    return EntryNode{LogicalAndNode<EntryContext>{condition(), condition()}};
   case BooleanNodeType::Or:
-    return ExecutionNode{
-     LogicalOrNode<ExecutionContext>{condition(), condition()}};
+    return EntryNode{LogicalOrNode<EntryContext>{condition(), condition()}};
   case BooleanNodeType::Xor:
-    return ExecutionNode{
-     LogicalXorNode<ExecutionContext>{condition(), condition()}};
+    return EntryNode{LogicalXorNode<EntryContext>{condition(), condition()}};
   case BooleanNodeType::Not:
-    return ExecutionNode{LogicalNotNode<ExecutionContext>{condition()}};
+    return EntryNode{LogicalNotNode<EntryContext>{condition()}};
   }
-  return ExecutionNode{TrueNode{}};
+  return EntryNode{TrueNode{}};
 }
 
-auto make_scalar_node(ScalarNodeType type) -> ExecutionNode
+auto make_scalar_node(ScalarNodeType type) -> EntryNode
 {
   switch(type) {
   case ScalarNodeType::Value:
-    return ExecutionNode{ValueNode{0.0}};
+    return EntryNode{ValueNode{0.0}};
   case ScalarNodeType::Equity:
-    return ExecutionNode{EquityNode{}};
+    return EntryNode{EquityNode{}};
   case ScalarNodeType::EquityPercent:
-    return ExecutionNode{EquityPercentNode{}};
+    return EntryNode{EquityPercentNode{}};
   case ScalarNodeType::Drawdown:
-    return ExecutionNode{DrawdownNode{}};
-  case ScalarNodeType::StrategyPerformance:
-    return ExecutionNode{
-     StrategyPerformanceNode{StrategyPerformanceMetric::LifetimeCount}};
+    return EntryNode{DrawdownNode{}};
+   case ScalarNodeType::ModelPerformance:
+    return EntryNode{
+      ModelPerformanceNode{ModelPerformanceMetric::LifetimeCount}};
+  case ScalarNodeType::RequestedOrderPrice:
+    return EntryNode{RequestedOrderPriceNode{}};
+  case ScalarNodeType::RequestedOrderDirection:
+    return EntryNode{RequestedOrderDirectionNode{}};
+  case ScalarNodeType::IsPyramidingOrder:
+    return EntryNode{IsPyramidingOrderNode{}};
+  case ScalarNodeType::RawRequestedQuantity:
+    return EntryNode{RawRequestedQuantityNode{}};
+  case ScalarNodeType::RawRequestedQuantityLimit:
+    return EntryNode{RawRequestedQuantityLimitNode{}};
+  case ScalarNodeType::DrawdownAdjustedQuantity:
+    return EntryNode{DrawdownAdjustedQuantityNode{}};
+  case ScalarNodeType::DrawdownAdjustedQuantityLimit:
+    return EntryNode{DrawdownAdjustedQuantityLimitNode{}};
+  case ScalarNodeType::RequestedQuantity:
+    return EntryNode{RequestedQuantityNode{}};
+  case ScalarNodeType::RequestedNotional:
+    return EntryNode{RequestedNotionalNode{}};
+  case ScalarNodeType::RequestedCost:
+    return EntryNode{RequestedCostNode{}};
+  case ScalarNodeType::EstimatedEntryFee:
+    return EntryNode{EstimatedEntryFeeNode{}};
+  case ScalarNodeType::EstimatedOneRExitFee:
+    return EntryNode{EstimatedOneRExitFeeNode{}};
+  case ScalarNodeType::RequestedOrderRiskDistance:
+    return EntryNode{RequestedOrderRiskDistanceNode{}};
+  case ScalarNodeType::RequestedPriceRisk:
+    return EntryNode{RequestedPriceRiskNode{}};
+  case ScalarNodeType::RequestedRiskWithFees:
+    return EntryNode{RequestedRiskWithFeesNode{}};
+  case ScalarNodeType::FrozenUnitQuantity:
+    return EntryNode{FrozenUnitQuantityNode{}};
   }
-  return ExecutionNode{ValueNode{0.0}};
+  return EntryNode{ValueNode{0.0}};
 }
 
-auto render_scalar_node(ExecutionNode& node, int& next_id) -> bool;
-auto render_boolean_node(ExecutionNode& node, int& next_id) -> bool;
+auto render_scalar_node(EntryNode& node, int& next_id) -> bool;
+auto render_boolean_node(EntryNode& node, int& next_id) -> bool;
 
 template<typename TComparison>
-auto render_comparison(ExecutionNode& node, int& next_id) -> bool
+auto render_comparison(EntryNode& node, int& next_id) -> bool
 {
   const auto* comparison = node_cast<TComparison>(node);
   if(!comparison) {
@@ -265,13 +356,13 @@ auto render_comparison(ExecutionNode& node, int& next_id) -> bool
   ImGui::Unindent();
 
   if(changed) {
-    node = ExecutionNode{TComparison{std::move(target), std::move(threshold)}};
+    node = EntryNode{TComparison{std::move(target), std::move(threshold)}};
   }
   return changed;
 }
 
 template<typename TLogical>
-auto render_binary_logical(ExecutionNode& node, int& next_id) -> bool
+auto render_binary_logical(EntryNode& node, int& next_id) -> bool
 {
   const auto* logical = node_cast<TLogical>(node);
   if(!logical) {
@@ -290,12 +381,12 @@ auto render_binary_logical(ExecutionNode& node, int& next_id) -> bool
   ImGui::Unindent();
 
   if(changed) {
-    node = ExecutionNode{TLogical{std::move(first), std::move(second)}};
+    node = EntryNode{TLogical{std::move(first), std::move(second)}};
   }
   return changed;
 }
 
-auto render_scalar_node(ExecutionNode& node, int& next_id) -> bool
+auto render_scalar_node(EntryNode& node, int& next_id) -> bool
 {
   const auto node_id = next_id++;
   ImGui::PushID(node_id);
@@ -315,13 +406,13 @@ auto render_scalar_node(ExecutionNode& node, int& next_id) -> bool
   case ScalarNodeType::Value: {
     auto value = node_cast<ValueNode>(node)->value();
     if(ImGui::InputDouble("Value", &value, 0.01, 0.1, "%.6f")) {
-      node = ExecutionNode{ValueNode{value}};
+      node = EntryNode{ValueNode{value}};
       changed = true;
     }
     break;
   }
-  case ScalarNodeType::StrategyPerformance: {
-    const auto* performance = node_cast<StrategyPerformanceNode>(node);
+   case ScalarNodeType::ModelPerformance: {
+     const auto* performance = node_cast<ModelPerformanceNode>(node);
     auto metric_index = static_cast<int>(performance->metric());
     const auto metric_changed =
      ImGui::Combo("Metric",
@@ -329,8 +420,8 @@ auto render_scalar_node(ExecutionNode& node, int& next_id) -> bool
                   performance_metric_labels.data(),
                   static_cast<int>(performance_metric_labels.size()));
     if(metric_changed) {
-      node = ExecutionNode{StrategyPerformanceNode{
-       static_cast<StrategyPerformanceMetric>(metric_index)}};
+       node = EntryNode{ModelPerformanceNode{
+        static_cast<ModelPerformanceMetric>(metric_index)}};
       changed = true;
     }
     break;
@@ -338,6 +429,22 @@ auto render_scalar_node(ExecutionNode& node, int& next_id) -> bool
   case ScalarNodeType::Equity:
   case ScalarNodeType::EquityPercent:
   case ScalarNodeType::Drawdown:
+  case ScalarNodeType::RequestedOrderPrice:
+  case ScalarNodeType::RequestedOrderDirection:
+  case ScalarNodeType::IsPyramidingOrder:
+  case ScalarNodeType::RawRequestedQuantity:
+  case ScalarNodeType::RawRequestedQuantityLimit:
+  case ScalarNodeType::DrawdownAdjustedQuantity:
+  case ScalarNodeType::DrawdownAdjustedQuantityLimit:
+  case ScalarNodeType::RequestedQuantity:
+  case ScalarNodeType::RequestedNotional:
+  case ScalarNodeType::RequestedCost:
+  case ScalarNodeType::EstimatedEntryFee:
+  case ScalarNodeType::EstimatedOneRExitFee:
+  case ScalarNodeType::RequestedOrderRiskDistance:
+  case ScalarNodeType::RequestedPriceRisk:
+  case ScalarNodeType::RequestedRiskWithFees:
+  case ScalarNodeType::FrozenUnitQuantity:
     break;
   }
 
@@ -345,7 +452,7 @@ auto render_scalar_node(ExecutionNode& node, int& next_id) -> bool
   return changed;
 }
 
-auto render_boolean_node(ExecutionNode& node, int& next_id) -> bool
+auto render_boolean_node(EntryNode& node, int& next_id) -> bool
 {
   const auto node_id = next_id++;
   ImGui::PushID(node_id);
@@ -363,46 +470,42 @@ auto render_boolean_node(ExecutionNode& node, int& next_id) -> bool
 
   switch(type) {
   case BooleanNodeType::GreaterThan:
-    changed |=
-     render_comparison<GreaterThanNode<ExecutionContext>>(node, next_id);
+    changed |= render_comparison<GreaterThanNode<EntryContext>>(node, next_id);
     break;
   case BooleanNodeType::GreaterEqual:
-    changed |=
-     render_comparison<GreaterEqualNode<ExecutionContext>>(node, next_id);
+    changed |= render_comparison<GreaterEqualNode<EntryContext>>(node, next_id);
     break;
   case BooleanNodeType::LessThan:
-    changed |= render_comparison<LessThanNode<ExecutionContext>>(node, next_id);
+    changed |= render_comparison<LessThanNode<EntryContext>>(node, next_id);
     break;
   case BooleanNodeType::LessEqual:
-    changed |=
-     render_comparison<LessEqualNode<ExecutionContext>>(node, next_id);
+    changed |= render_comparison<LessEqualNode<EntryContext>>(node, next_id);
     break;
   case BooleanNodeType::Equal:
-    changed |= render_comparison<EqualNode<ExecutionContext>>(node, next_id);
+    changed |= render_comparison<EqualNode<EntryContext>>(node, next_id);
     break;
   case BooleanNodeType::NotEqual:
-    changed |= render_comparison<NotEqualNode<ExecutionContext>>(node, next_id);
+    changed |= render_comparison<NotEqualNode<EntryContext>>(node, next_id);
     break;
   case BooleanNodeType::And:
     changed |=
-     render_binary_logical<LogicalAndNode<ExecutionContext>>(node, next_id);
+     render_binary_logical<LogicalAndNode<EntryContext>>(node, next_id);
     break;
   case BooleanNodeType::Or:
     changed |=
-     render_binary_logical<LogicalOrNode<ExecutionContext>>(node, next_id);
+     render_binary_logical<LogicalOrNode<EntryContext>>(node, next_id);
     break;
   case BooleanNodeType::Xor:
     changed |=
-     render_binary_logical<LogicalXorNode<ExecutionContext>>(node, next_id);
+     render_binary_logical<LogicalXorNode<EntryContext>>(node, next_id);
     break;
   case BooleanNodeType::Not: {
-    const auto* logical = node_cast<LogicalNotNode<ExecutionContext>>(node);
+    const auto* logical = node_cast<LogicalNotNode<EntryContext>>(node);
     auto condition = logical->other_condition();
     ImGui::Indent();
     ImGui::TextUnformatted("Condition");
     if(render_boolean_node(condition, next_id)) {
-      node =
-       ExecutionNode{LogicalNotNode<ExecutionContext>{std::move(condition)}};
+      node = EntryNode{LogicalNotNode<EntryContext>{std::move(condition)}};
       changed = true;
     }
     ImGui::Unindent();
@@ -419,8 +522,7 @@ auto render_boolean_node(ExecutionNode& node, int& next_id) -> bool
 
 } // namespace
 
-export auto
-execution_filter_node_editor(ErasedNode<ExecutionFilterMethodContext>& root)
+export auto entry_filter_node_editor(ErasedNode<EntryFilterMethodContext>& root)
  -> bool
 {
   auto next_id = 0;

@@ -3,6 +3,7 @@ module;
 #include <cstddef>
 #include <limits>
 #include <utility>
+#include <variant>
 
 export module pludux:nodes.ema_node;
 
@@ -14,69 +15,67 @@ import :nodes.value_node;
 
 export namespace pludux {
 
+template<typename TContext = std::monostate>
 class EmaNode {
 public:
-  EmaNode()
-  : EmaNode{CloseNode{}, 20}
+   EmaNode()
+   : EmaNode{CloseNode{}, 20}
   {
   }
 
-  explicit EmaNode(ErasedNode<ErasedSeriesMethodContext> source)
-  : EmaNode{std::move(source), 20}
+   explicit EmaNode(ErasedNode<TContext> source)
+   : EmaNode{std::move(source), 20}
   {
   }
 
-  EmaNode(ErasedNode<ErasedSeriesMethodContext> source, std::size_t period)
-  : EmaNode{std::move(source), ValueNode{static_cast<double>(period)}}
+   EmaNode(ErasedNode<TContext> source, std::size_t period)
+   : EmaNode{std::move(source), ValueNode{static_cast<double>(period)}}
   {
   }
 
-  EmaNode(ErasedNode<ErasedSeriesMethodContext> source,
-          ErasedNode<ErasedSeriesMethodContext> period)
+   EmaNode(ErasedNode<TContext> source, ErasedNode<TContext> period)
   : source_{std::move(source)}
   , period_{std::move(period)}
   {
   }
 
-  auto operator==(const EmaNode& other) const noexcept -> bool = default;
+   auto operator==(const EmaNode& other) const noexcept -> bool = default;
 
-  auto source(this const EmaNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   auto source(this const EmaNode& self) noexcept
+    -> const ErasedNode<TContext>&
   {
     return self.source_;
   }
 
-  void source(this EmaNode& self,
-              ErasedNode<ErasedSeriesMethodContext> source) noexcept
+   void source(this EmaNode& self, ErasedNode<TContext> source) noexcept
   {
     self.source_ = std::move(source);
   }
 
-  auto period(this const EmaNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   auto period(this const EmaNode& self) noexcept
+    -> const ErasedNode<TContext>&
   {
     return self.period_;
   }
 
-  void period(this EmaNode& self,
-              ErasedNode<ErasedSeriesMethodContext> period) noexcept
+   void period(this EmaNode& self, ErasedNode<TContext> period) noexcept
   {
     self.period_ = std::move(period);
   }
 
-  void period(this EmaNode& self, std::size_t period) noexcept
+   void period(this EmaNode& self, std::size_t period) noexcept
   {
     self.period_ = ValueNode{static_cast<double>(period)};
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> source_;
-  ErasedNode<ErasedSeriesMethodContext> period_;
+   ErasedNode<TContext> source_;
+   ErasedNode<TContext> period_;
 };
 
-template<MethodContextable TContext>
+template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
-                       const EmaNode& node,
+                       const EmaNode<TContext>& node,
                        NodeToErasedMethodContext& context)
  -> ErasedSeriesMethod<TContext>
 {

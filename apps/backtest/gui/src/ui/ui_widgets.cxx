@@ -47,8 +47,8 @@ export auto icon_button(const char* label, const char* description) -> bool
 
 export enum class DraftAction { None, Apply, Reset };
 
-export auto apply_reset_button(bool changed,
-                               bool can_apply = true) -> DraftAction
+export auto apply_reset_button(bool changed, bool can_apply = true)
+ -> DraftAction
 {
   auto action = DraftAction::None;
   const auto* primary_label = PLUDUX_ICON_SAVE " Apply";
@@ -109,8 +109,7 @@ export auto apply_reset_button(bool changed,
   }
 
   if(ImGui::BeginPopup("apply_or_reset_draft")) {
-    if(ImGui::MenuItem(
-        PLUDUX_ICON_RESET " Reset", nullptr, false, changed)) {
+    if(ImGui::MenuItem(PLUDUX_ICON_RESET " Reset", nullptr, false, changed)) {
       action = DraftAction::Reset;
     }
     ImGui::EndPopup();
@@ -215,10 +214,71 @@ export enum class ResourceRowAction {
   Select,
   Edit,
   Duplicate,
+  Rerun,
   MoveUp,
   MoveDown,
   Delete,
 };
+
+export auto resource_row_actions(ImVec2 row_start,
+                                 float row_width,
+                                 std::size_t index,
+                                 std::size_t count,
+                                 bool show_rerun = false,
+                                 bool can_rerun = false) -> ResourceRowAction
+{
+  auto action = ResourceRowAction::None;
+  const auto& style = ImGui::GetStyle();
+  const auto spacing = style.ItemSpacing.x;
+  const auto edit_width =
+   ImGui::CalcTextSize(PLUDUX_ICON_EDIT).x + (2.0f * style.FramePadding.x);
+  const auto more_width =
+   ImGui::CalcTextSize(PLUDUX_ICON_MORE).x + (2.0f * style.FramePadding.x);
+  const auto buttons_width = edit_width + spacing + more_width;
+  const auto buttons_start_x =
+   std::max(row_start.x, row_start.x + row_width - buttons_width);
+  ImGui::SetCursorScreenPos(ImVec2{buttons_start_x, row_start.y});
+
+  if(icon_button(PLUDUX_ICON_EDIT "##edit", "Edit")) {
+    action = ResourceRowAction::Edit;
+  }
+  ImGui::SameLine();
+  if(icon_button(PLUDUX_ICON_MORE "##more", "More actions")) {
+    ImGui::OpenPopup("resource_actions");
+  }
+  if(ImGui::BeginPopup("resource_actions")) {
+    if(show_rerun) {
+      if(ImGui::MenuItem(
+          PLUDUX_ICON_RESET " Rerun Backtests", nullptr, false, can_rerun)) {
+        action = ResourceRowAction::Rerun;
+      }
+      ImGui::Separator();
+    }
+    if(ImGui::MenuItem(PLUDUX_ICON_EDIT " Edit")) {
+      action = ResourceRowAction::Edit;
+    }
+    if(ImGui::MenuItem(PLUDUX_ICON_COPY " Duplicate")) {
+      action = ResourceRowAction::Duplicate;
+    }
+    ImGui::Separator();
+    if(ImGui::MenuItem(
+        PLUDUX_ICON_MOVE_UP " Move Up", nullptr, false, index > 0)) {
+      action = ResourceRowAction::MoveUp;
+    }
+    if(ImGui::MenuItem(PLUDUX_ICON_MOVE_DOWN " Move Down",
+                       nullptr,
+                       false,
+                       index + 1 < count)) {
+      action = ResourceRowAction::MoveDown;
+    }
+    ImGui::Separator();
+    if(ImGui::MenuItem(PLUDUX_ICON_DELETE " Delete")) {
+      action = ResourceRowAction::Delete;
+    }
+    ImGui::EndPopup();
+  }
+  return action;
+}
 
 // A responsive resource row shared by the library windows. It keeps the
 // primary edit action visible and moves secondary actions into a labeled menu.
@@ -248,47 +308,10 @@ export auto resource_row(const char* name,
   ImGui::AlignTextToFramePadding();
   ImGui::TextUnformatted(name);
 
-  const auto& style = ImGui::GetStyle();
-  const auto spacing = style.ItemSpacing.x;
-  const auto edit_width =
-   ImGui::CalcTextSize(PLUDUX_ICON_EDIT).x + (2.0f * style.FramePadding.x);
-  const auto more_width =
-   ImGui::CalcTextSize(PLUDUX_ICON_MORE).x + (2.0f * style.FramePadding.x);
-  const auto buttons_width = edit_width + spacing + more_width;
-  const auto buttons_start_x =
-   std::max(row_start.x, row_start.x + row_width - buttons_width);
-  ImGui::SetCursorScreenPos(ImVec2{buttons_start_x, row_start.y});
-
-  if(icon_button(PLUDUX_ICON_EDIT "##edit", "Edit")) {
-    action = ResourceRowAction::Edit;
-  }
-  ImGui::SameLine();
-  if(icon_button(PLUDUX_ICON_MORE "##more", "More actions")) {
-    ImGui::OpenPopup("resource_actions");
-  }
-  if(ImGui::BeginPopup("resource_actions")) {
-    if(ImGui::MenuItem(PLUDUX_ICON_EDIT " Edit")) {
-      action = ResourceRowAction::Edit;
-    }
-    if(ImGui::MenuItem(PLUDUX_ICON_COPY " Duplicate")) {
-      action = ResourceRowAction::Duplicate;
-    }
-    ImGui::Separator();
-    if(ImGui::MenuItem(
-        PLUDUX_ICON_MOVE_UP " Move Up", nullptr, false, index > 0)) {
-      action = ResourceRowAction::MoveUp;
-    }
-    if(ImGui::MenuItem(PLUDUX_ICON_MOVE_DOWN " Move Down",
-                       nullptr,
-                       false,
-                       index + 1 < count)) {
-      action = ResourceRowAction::MoveDown;
-    }
-    ImGui::Separator();
-    if(ImGui::MenuItem(PLUDUX_ICON_DELETE " Delete")) {
-      action = ResourceRowAction::Delete;
-    }
-    ImGui::EndPopup();
+  const auto control_action =
+   resource_row_actions(row_start, row_width, index, count);
+  if(control_action != ResourceRowAction::None) {
+    action = control_action;
   }
 
   ImGui::Separator();

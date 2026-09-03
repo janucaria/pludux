@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include "test_method_context.hpp"
+
 #include <cmath>
 #include <string>
 #include <vector>
@@ -17,7 +19,7 @@ TEST(SeriesMethodTest, RunAllMethodClose)
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
   auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   NamedSeriesTestContext::Registry{};
   series_methods.set("open", open_method);
   series_methods.set("close", close_method);
 
@@ -29,7 +31,7 @@ TEST(SeriesMethodTest, RunAllMethodClose)
   results_collector.put(close_method, 1.2);
   results_collector.put(close_method, 1.1);
 
-  auto context = DefaultMethodContext{
+  auto context = NamedSeriesTestContext{
    series_methods, results_collector, asset_snapshot.index()};
 
   const auto open_series_method = SeriesMethod{"open"};
@@ -59,11 +61,11 @@ TEST(SeriesMethodTest, InvalidField)
   const auto asset_snapshot = AssetSnapshot{asset_data};
 
   auto series_methods =
-   OrderedNamedRegistry<ErasedSeriesMethod<ErasedSeriesMethodContext>>{};
+   NamedSeriesTestContext::Registry{};
   series_methods.set("close", close_method);
 
   auto results_collector = SeriesEvaluationResults{};
-  auto context = DefaultMethodContext{
+  auto context = NamedSeriesTestContext{
    series_methods, results_collector, asset_snapshot.index()};
 
   const auto not_found_series_method = SeriesMethod{"invalid"};

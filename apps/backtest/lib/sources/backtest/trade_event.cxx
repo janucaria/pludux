@@ -23,6 +23,8 @@ public:
     exit_signal,
     stop_loss,
     take_profit,
+    rejected_maximum_open_trades,
+    rejected_maximum_combined_layers,
     rejected_insufficient_cash
   };
 
@@ -47,7 +49,9 @@ public:
              std::vector<SignalExitState> signal_exit_states = {},
              double risk_distance = NAN,
              double risk_reference_price = NAN,
-             double risk_boundary_price = NAN)
+             double risk_boundary_price = NAN,
+             double rejection_available_cash = NAN,
+             double rejection_required_cash = NAN)
   : trade_id_{trade_id}
   , event_id_{event_id}
   , trade_event_index_{trade_event_index}
@@ -68,6 +72,8 @@ public:
   , risk_distance_{risk_distance}
   , risk_reference_price_{risk_reference_price}
   , risk_boundary_price_{risk_boundary_price}
+  , rejection_available_cash_{rejection_available_cash}
+  , rejection_required_cash_{rejection_required_cash}
   {
   }
 
@@ -176,6 +182,26 @@ public:
     return self.risk_boundary_price_;
   }
 
+  auto rejection_available_cash(this const TradeEvent& self) noexcept -> double
+  {
+    return self.rejection_available_cash_;
+  }
+
+  auto rejection_required_cash(this const TradeEvent& self) noexcept -> double
+  {
+    return self.rejection_required_cash_;
+  }
+
+  auto strategy_index(this const TradeEvent& self) noexcept -> std::size_t
+  {
+    return self.strategy_index_;
+  }
+
+  void strategy_index(this TradeEvent& self, std::size_t value) noexcept
+  {
+    self.strategy_index_ = value;
+  }
+
   void after_state(this TradeEvent& self,
                    double position_size,
                    double investment,
@@ -226,7 +252,9 @@ public:
 
   auto is_rejected(this const TradeEvent& self) noexcept -> bool
   {
-    return self.type_ == Type::rejected_insufficient_cash;
+    return self.type_ == Type::rejected_maximum_open_trades ||
+           self.type_ == Type::rejected_maximum_combined_layers ||
+           self.type_ == Type::rejected_insufficient_cash;
   }
 
 private:
@@ -254,6 +282,9 @@ private:
   double risk_distance_{NAN};
   double risk_reference_price_{NAN};
   double risk_boundary_price_{NAN};
+  double rejection_available_cash_{NAN};
+  double rejection_required_cash_{NAN};
+  std::size_t strategy_index_{};
 };
 
 } // namespace pludux::backtest

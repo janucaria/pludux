@@ -1,13 +1,40 @@
 #include <gtest/gtest.h>
 
+#include "test_method_context.hpp"
+
+#include <type_traits>
 #include <vector>
 
 import pludux;
 
 using namespace pludux;
 
+namespace {
+
+struct UnsupportedNode {
+  auto operator==(const UnsupportedNode&) const -> bool = default;
+};
+
+using TestErasedNode = ErasedNode<StatelessMethodContext>;
+using TestNodeToErasedMethod =
+ decltype(node_to_erased_method<StatelessMethodContext>);
+
+static_assert(std::is_constructible_v<TestErasedNode, TrueNode>);
+static_assert(std::is_convertible_v<TrueNode, TestErasedNode>);
+static_assert(!std::is_constructible_v<TestErasedNode, UnsupportedNode>);
+static_assert(std::is_invocable_r_v<
+              ErasedSeriesMethod<StatelessMethodContext>,
+              TestNodeToErasedMethod,
+              const TrueNode&,
+              NodeToErasedMethodContext&>);
+static_assert(!std::is_invocable_v<TestNodeToErasedMethod,
+                                   const UnsupportedNode&,
+                                   NodeToErasedMethodContext&>);
+
+} // namespace
+
 auto value_method_value(
- const ErasedSeriesMethod<ErasedSeriesMethodContext>& method) noexcept -> double
+ const ErasedSeriesMethod<StatelessMethodContext>& method) noexcept -> double
 {
   const auto* value_method = series_method_cast<ValueMethod>(method);
   EXPECT_NE(value_method, nullptr);
@@ -16,12 +43,12 @@ auto value_method_value(
 
 TEST(NodeToErasedMethodTest, NumericInputNodeConvertsToValueMethod)
 {
-  const auto node = ErasedNode<ErasedSeriesMethodContext>{NumericInputNode{
+  const auto node = ErasedNode<StatelessMethodContext>{NumericInputNode{
    "Length", NumericInputNode::ValueRepresentation::SignedInteger, 14.9}};
 
   auto input_context = NodeToErasedMethodContext{};
   const auto method =
-   node_to_erased_method<ErasedSeriesMethodContext>(node, input_context);
+   node_to_erased_method<StatelessMethodContext>(node, input_context);
   const auto* value_method = series_method_cast<ValueMethod>(method);
 
   ASSERT_NE(value_method, nullptr);
@@ -30,20 +57,21 @@ TEST(NodeToErasedMethodTest, NumericInputNodeConvertsToValueMethod)
 
 TEST(NodeToErasedMethodTest, NumericInputNodeConsumesContextByTraversalOrder)
 {
-  const auto node = ErasedNode<ErasedSeriesMethodContext>{AddNode{
+  const auto node = ErasedNode<StatelessMethodContext>{
+   AddNode<StatelessMethodContext>{
    NumericInputNode{
     "Duplicate", NumericInputNode::ValueRepresentation::Decimal, 1.0},
    NumericInputNode{
-    "Duplicate", NumericInputNode::ValueRepresentation::UnsignedInteger, 2.0}}};
+     "Duplicate", NumericInputNode::ValueRepresentation::UnsignedInteger, 2.0}}};
 
   const auto inputs = std::vector<double>{10.5, -4.8};
   auto input_context = NodeToErasedMethodContext{inputs};
 
   const auto method =
-   node_to_erased_method<ErasedSeriesMethodContext>(node, input_context);
+   node_to_erased_method<StatelessMethodContext>(node, input_context);
   const auto* add_method =
-   series_method_cast<AddMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<AddMethod<ErasedSeriesMethod<StatelessMethodContext>,
+                                ErasedSeriesMethod<StatelessMethodContext>>>(
     method);
 
   ASSERT_NE(add_method, nullptr);
@@ -62,7 +90,8 @@ TEST(NodeToErasedMethodTest, NumericInputNodeConsumesContextByTraversalOrder)
 
 TEST(NodeToErasedMethodTest, MovingAveragePeriodConsumesContextInput)
 {
-  const auto node = ErasedNode<ErasedSeriesMethodContext>{SmaNode{
+  const auto node = ErasedNode<StatelessMethodContext>{
+   SmaNode<StatelessMethodContext>{
    CloseNode{},
    NumericInputNode{
     "Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 20.0}}};
@@ -71,10 +100,10 @@ TEST(NodeToErasedMethodTest, MovingAveragePeriodConsumesContextInput)
   auto input_context = NodeToErasedMethodContext{inputs};
 
   const auto method =
-   node_to_erased_method<ErasedSeriesMethodContext>(node, input_context);
+   node_to_erased_method<StatelessMethodContext>(node, input_context);
   const auto* sma_method =
-   series_method_cast<SmaMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<SmaMethod<ErasedSeriesMethod<StatelessMethodContext>,
+                                ErasedSeriesMethod<StatelessMethodContext>>>(
     method);
 
   ASSERT_NE(sma_method, nullptr);
@@ -85,15 +114,16 @@ TEST(NodeToErasedMethodTest, MovingAveragePeriodConsumesContextInput)
 TEST(NodeToErasedMethodTest, PrimitiveMovingAveragePeriodBecomesValueMethod)
 {
   const auto node =
-   ErasedNode<ErasedSeriesMethodContext>{SmaNode{CloseNode{}, 20}};
+   ErasedNode<StatelessMethodContext>{
+    SmaNode<StatelessMethodContext>{CloseNode{}, 20}};
 
   auto input_context = NodeToErasedMethodContext{};
 
   const auto method =
-   node_to_erased_method<ErasedSeriesMethodContext>(node, input_context);
+   node_to_erased_method<StatelessMethodContext>(node, input_context);
   const auto* sma_method =
-   series_method_cast<SmaMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<SmaMethod<ErasedSeriesMethod<StatelessMethodContext>,
+                                ErasedSeriesMethod<StatelessMethodContext>>>(
     method);
 
   ASSERT_NE(sma_method, nullptr);
@@ -103,7 +133,7 @@ TEST(NodeToErasedMethodTest, PrimitiveMovingAveragePeriodBecomesValueMethod)
 
 TEST(NodeToErasedMethodTest, BollingerBandInputsConsumeContextInOrder)
 {
-  const auto node = ErasedNode<ErasedSeriesMethodContext>{BbNode{
+  const auto node = ErasedNode<StatelessMethodContext>{BbNode<StatelessMethodContext>{
    CloseNode{},
    NumericInputNode{
     "Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 20.0},
@@ -114,10 +144,10 @@ TEST(NodeToErasedMethodTest, BollingerBandInputsConsumeContextInOrder)
   auto input_context = NodeToErasedMethodContext{inputs};
 
   const auto method =
-   node_to_erased_method<ErasedSeriesMethodContext>(node, input_context);
+   node_to_erased_method<StatelessMethodContext>(node, input_context);
   const auto* bb_method =
-   series_method_cast<BbMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                               ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<BbMethod<ErasedSeriesMethod<StatelessMethodContext>,
+                               ErasedSeriesMethod<StatelessMethodContext>>>(
     method);
 
   ASSERT_NE(bb_method, nullptr);
@@ -128,7 +158,7 @@ TEST(NodeToErasedMethodTest, BollingerBandInputsConsumeContextInOrder)
 
 TEST(NodeToErasedMethodTest, KeltnerChannelInputsConsumeContextInOrder)
 {
-  const auto node = ErasedNode<ErasedSeriesMethodContext>{KcNode{
+  const auto node = ErasedNode<StatelessMethodContext>{KcNode<StatelessMethodContext>{
    CloseNode{},
    NumericInputNode{
     "Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 20.0},
@@ -142,10 +172,10 @@ TEST(NodeToErasedMethodTest, KeltnerChannelInputsConsumeContextInOrder)
   auto input_context = NodeToErasedMethodContext{inputs};
 
   const auto method =
-   node_to_erased_method<ErasedSeriesMethodContext>(node, input_context);
+   node_to_erased_method<StatelessMethodContext>(node, input_context);
   const auto* kc_method =
-   series_method_cast<KcMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                               ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<KcMethod<ErasedSeriesMethod<StatelessMethodContext>,
+                               ErasedSeriesMethod<StatelessMethodContext>>>(
     method);
 
   ASSERT_NE(kc_method, nullptr);
@@ -157,7 +187,7 @@ TEST(NodeToErasedMethodTest, KeltnerChannelInputsConsumeContextInOrder)
 
 TEST(NodeToErasedMethodTest, MacdInputsConsumeContextInOrder)
 {
-  const auto node = ErasedNode<ErasedSeriesMethodContext>{MacdNode{
+  const auto node = ErasedNode<StatelessMethodContext>{MacdNode<StatelessMethodContext>{
    CloseNode{},
    NumericInputNode{"Fast Period",
                     NumericInputNode::ValueRepresentation::UnsignedInteger,
@@ -173,10 +203,10 @@ TEST(NodeToErasedMethodTest, MacdInputsConsumeContextInOrder)
   auto input_context = NodeToErasedMethodContext{inputs};
 
   const auto method =
-   node_to_erased_method<ErasedSeriesMethodContext>(node, input_context);
+   node_to_erased_method<StatelessMethodContext>(node, input_context);
   const auto* macd_method = series_method_cast<
-   MacdMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-              ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   MacdMethod<ErasedSeriesMethod<StatelessMethodContext>,
+              ErasedSeriesMethod<StatelessMethodContext>>>(method);
 
   ASSERT_NE(macd_method, nullptr);
   EXPECT_EQ(value_method_value(macd_method->fast_period()), 5);
@@ -187,7 +217,7 @@ TEST(NodeToErasedMethodTest, MacdInputsConsumeContextInOrder)
 
 TEST(NodeToErasedMethodTest, StochRsiInputsConsumeContextInOrder)
 {
-  const auto node = ErasedNode<ErasedSeriesMethodContext>{StochRsiNode{
+  const auto node = ErasedNode<StatelessMethodContext>{StochRsiNode<StatelessMethodContext>{
    CloseNode{},
    NumericInputNode{
     "RSI Period", NumericInputNode::ValueRepresentation::UnsignedInteger, 14.0},
@@ -202,10 +232,10 @@ TEST(NodeToErasedMethodTest, StochRsiInputsConsumeContextInOrder)
   auto input_context = NodeToErasedMethodContext{inputs};
 
   const auto method =
-   node_to_erased_method<ErasedSeriesMethodContext>(node, input_context);
+   node_to_erased_method<StatelessMethodContext>(node, input_context);
   const auto* stoch_rsi_method = series_method_cast<
-   StochRsiMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                  ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   StochRsiMethod<ErasedSeriesMethod<StatelessMethodContext>,
+                  ErasedSeriesMethod<StatelessMethodContext>>>(method);
 
   ASSERT_NE(stoch_rsi_method, nullptr);
   EXPECT_EQ(value_method_value(stoch_rsi_method->rsi_period()), 21);

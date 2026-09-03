@@ -1,6 +1,7 @@
 module;
 
 #include <utility>
+#include <variant>
 
 export module pludux:nodes.crossunder_node;
 
@@ -10,49 +11,47 @@ import :nodes.erased_node;
 
 export namespace pludux {
 
+template<typename TContext = std::monostate>
 class CrossunderNode {
 public:
-  CrossunderNode(ErasedNode<ErasedSeriesMethodContext> source,
-                 ErasedNode<ErasedSeriesMethodContext> reference)
+   CrossunderNode(ErasedNode<TContext> source, ErasedNode<TContext> reference)
   : source_{std::move(source)}
   , reference_{std::move(reference)}
   {
   }
 
-  auto operator==(const CrossunderNode& other) const noexcept -> bool = default;
+   auto operator==(const CrossunderNode& other) const noexcept -> bool = default;
 
-  auto source(this const CrossunderNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   auto source(this const CrossunderNode& self) noexcept
+    -> const ErasedNode<TContext>&
   {
     return self.source_;
   }
 
-  void source(this CrossunderNode& self,
-              ErasedNode<ErasedSeriesMethodContext> source) noexcept
+   void source(this CrossunderNode& self, ErasedNode<TContext> source) noexcept
   {
     self.source_ = std::move(source);
   }
 
-  auto reference(this const CrossunderNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   auto reference(this const CrossunderNode& self) noexcept
+    -> const ErasedNode<TContext>&
   {
     return self.reference_;
   }
 
-  void reference(this CrossunderNode& self,
-                 ErasedNode<ErasedSeriesMethodContext> reference) noexcept
+   void reference(this CrossunderNode& self, ErasedNode<TContext> reference) noexcept
   {
     self.reference_ = std::move(reference);
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> source_;
-  ErasedNode<ErasedSeriesMethodContext> reference_;
+   ErasedNode<TContext> source_;
+   ErasedNode<TContext> reference_;
 };
 
-template<MethodContextable TContext>
+template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
-                       const CrossunderNode& node,
+                       const CrossunderNode<TContext>& node,
                        NodeToErasedMethodContext& context)
  -> ErasedSeriesMethod<TContext>
 {

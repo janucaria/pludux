@@ -1,6 +1,7 @@
 #include <cmath>
 #include <limits>
 #include <stdexcept>
+#include <variant>
 
 #include <gtest/gtest.h>
 
@@ -13,17 +14,19 @@ auto context(double equity = 10'000.0,
              double entry_price = 100.0,
              double risk_distance = 5.0) -> PositionSizingContext
 {
-  static const auto performance = StrategyPerformance{}.snapshot();
+  static const auto performance = ModelPerformance{}.snapshot();
   return PositionSizingContext{
-   equity, entry_price, performance, [risk_distance] { return risk_distance; }};
+   equity, entry_price, 1.0, performance, [risk_distance] {
+     return risk_distance;
+   }};
 }
 
-auto context_with(const StrategyPerformanceSnapshot& performance,
+auto context_with(const ModelPerformanceSnapshot& performance,
                   double equity = 10'000.0,
                   double entry_price = 100.0) -> PositionSizingContext
 {
   return PositionSizingContext{
-   equity, entry_price, performance, [] { return 5.0; }};
+   equity, entry_price, 1.0, performance, [] { return 5.0; }};
 }
 
 auto performance_snapshot(double probability,
@@ -33,9 +36,9 @@ auto performance_snapshot(double probability,
                           double win_beta = 4.0,
                           double payoff_shape = 3.0,
                           double payoff_scale = 1.0)
- -> StrategyPerformanceSnapshot
+ -> ModelPerformanceSnapshot
 {
-  return StrategyPerformanceSnapshot{
+  return ModelPerformanceSnapshot{
    0,
    0,
    0,
@@ -70,7 +73,7 @@ TEST(PositionSizing, EvaluatesExistingMethods)
                     .evaluate(context())
                     .requested_quantity,
                    3.0);
-  EXPECT_DOUBLE_EQ(PositionSizingNode{FixedNotionalPositionSizing{1'000.0}}
+  EXPECT_DOUBLE_EQ(PositionSizingNode{FixedBudgetPositionSizing{1'000.0}}
                     .make_method()
                     .evaluate(context())
                     .requested_quantity,
@@ -88,7 +91,7 @@ TEST(PositionSizing, IsValueSemanticAndTypeAware)
   const auto copy = first;
   const auto different = PositionSizingNode{FixedQuantityPositionSizing{4.0}};
   const auto different_type =
-   PositionSizingNode{FixedNotionalPositionSizing{3.0}};
+   PositionSizingNode{FixedBudgetPositionSizing{3.0}};
 
   EXPECT_EQ(first, copy);
   EXPECT_NE(first, different);
@@ -97,20 +100,51 @@ TEST(PositionSizing, IsValueSemanticAndTypeAware)
             nullptr);
 }
 
+TEST(PositionSizing, ProducesMethodSpecificConstraints)
+{
+  const auto risk =
+   PositionSizingNode{RiskDistancePositionSizing{0.01}}.make_method().evaluate(
+    context());
+  const auto fixed_quantity =
+   PositionSizingNode{FixedQuantityPositionSizing{3.0}}.make_method().evaluate(
+    context());
+  const auto fixed_budget =
+   PositionSizingNode{FixedBudgetPositionSizing{750.0}}.make_method().evaluate(
+    context());
+  const auto equity = PositionSizingNode{EquityFractionPositionSizing{0.10}}
+                       .make_method()
+                       .evaluate(context());
+
+  const auto* risk_limit = std::get_if<RiskBudgetConstraint>(&risk.constraint);
+  ASSERT_NE(risk_limit, nullptr);
+  EXPECT_DOUBLE_EQ(risk_limit->budget, 100.0);
+  EXPECT_DOUBLE_EQ(risk_limit->boundary_price, 95.0);
+  EXPECT_TRUE(std::holds_alternative<NearestQuantityConstraint>(
+   fixed_quantity.constraint));
+  const auto* fixed_limit =
+   std::get_if<EntryCostBudgetConstraint>(&fixed_budget.constraint);
+  ASSERT_NE(fixed_limit, nullptr);
+  EXPECT_DOUBLE_EQ(fixed_limit->budget, 750.0);
+  const auto* equity_limit =
+   std::get_if<EntryCostBudgetConstraint>(&equity.constraint);
+  ASSERT_NE(equity_limit, nullptr);
+  EXPECT_DOUBLE_EQ(equity_limit->budget, 1'000.0);
+}
+
 TEST(PositionSizing, RejectsInvalidConfiguration)
 {
   EXPECT_THROW(RiskDistancePositionSizing{0.0}, std::invalid_argument);
   EXPECT_THROW(FixedQuantityPositionSizing{-1.0}, std::invalid_argument);
   EXPECT_THROW(
-   FixedNotionalPositionSizing{std::numeric_limits<double>::infinity()},
+   FixedBudgetPositionSizing{std::numeric_limits<double>::infinity()},
    std::invalid_argument);
   EXPECT_THROW(EquityFractionPositionSizing{0.0}, std::invalid_argument);
   EXPECT_THROW(
-   (StrategyPerformanceBayesianKellySizing{
-    StrategyPerformanceBayesianKellyEstimate::AdverseQuantiles, 1.0, 0.5, 1.0}),
+    (ModelPerformanceBayesianKellySizing{
+     ModelPerformanceBayesianKellyEstimate::AdverseQuantiles, 1.0, 0.5, 1.0}),
    std::invalid_argument);
-  EXPECT_THROW((StrategyPerformanceBayesianKellySizing{
-                StrategyPerformanceBayesianKellyEstimate::AdverseQuantiles,
+  EXPECT_THROW((ModelPerformanceBayesianKellySizing{
+                ModelPerformanceBayesianKellyEstimate::AdverseQuantiles,
                 0.8,
                 1.01,
                 1.0}),
@@ -120,8 +154,8 @@ TEST(PositionSizing, RejectsInvalidConfiguration)
 TEST(PositionSizing, UntouchedPriorsProduceNoKellyPosition)
 {
   const auto result =
-   PositionSizingNode{StrategyPerformanceBayesianKellySizing{
-                       StrategyPerformanceBayesianKellyEstimate::PosteriorMean}}
+    PositionSizingNode{ModelPerformanceBayesianKellySizing{
+                        ModelPerformanceBayesianKellyEstimate::PosteriorMean}}
     .make_method()
     .evaluate(context());
 
@@ -138,8 +172,8 @@ TEST(PositionSizing, PosteriorMeanAppliesMultiplierAndAllocationCap)
   const auto performance = performance_snapshot(0.6, 0.02, 0.01);
   const auto result =
    PositionSizingNode{
-    StrategyPerformanceBayesianKellySizing{
-     StrategyPerformanceBayesianKellyEstimate::PosteriorMean, 0.80, 0.50, 2.0}}
+     ModelPerformanceBayesianKellySizing{
+      ModelPerformanceBayesianKellyEstimate::PosteriorMean, 0.80, 0.50, 2.0}}
     .make_method()
     .evaluate(context_with(performance));
 
@@ -148,14 +182,18 @@ TEST(PositionSizing, PosteriorMeanAppliesMultiplierAndAllocationCap)
   EXPECT_NEAR(result.bayesian_kelly->scaled_kelly_fraction, 20.0, 1e-12);
   EXPECT_NEAR(result.bayesian_kelly->allocation_fraction, 2.0, 1e-12);
   EXPECT_NEAR(result.requested_quantity, 200.0, 1e-12);
+  const auto* budget =
+   std::get_if<EntryCostBudgetConstraint>(&result.constraint);
+  ASSERT_NE(budget, nullptr);
+  EXPECT_NEAR(budget->budget, 20'000.0, 1e-12);
 }
 
 TEST(PositionSizing, NegativeEdgeAndZeroMultiplierProduceNoPosition)
 {
   const auto negative_performance = performance_snapshot(0.2, 0.02, 0.01);
   const auto negative =
-   PositionSizingNode{StrategyPerformanceBayesianKellySizing{
-                       StrategyPerformanceBayesianKellyEstimate::PosteriorMean}}
+    PositionSizingNode{ModelPerformanceBayesianKellySizing{
+                        ModelPerformanceBayesianKellyEstimate::PosteriorMean}}
     .make_method()
     .evaluate(context_with(negative_performance));
   EXPECT_LT(negative.bayesian_kelly->raw_kelly_fraction, 0.0);
@@ -164,8 +202,8 @@ TEST(PositionSizing, NegativeEdgeAndZeroMultiplierProduceNoPosition)
   const auto positive_performance = performance_snapshot(0.6, 0.02, 0.01);
   const auto disabled =
    PositionSizingNode{
-    StrategyPerformanceBayesianKellySizing{
-     StrategyPerformanceBayesianKellyEstimate::PosteriorMean, 0.80, 0.0, 1.0}}
+     ModelPerformanceBayesianKellySizing{
+      ModelPerformanceBayesianKellyEstimate::PosteriorMean, 0.80, 0.0, 1.0}}
     .make_method()
     .evaluate(context_with(positive_performance));
   EXPECT_GT(disabled.bayesian_kelly->raw_kelly_fraction, 0.0);
@@ -177,7 +215,7 @@ TEST(PositionSizing, AdverseQuantilesUsesAdverseMarginalQuantiles)
   const auto performance =
    performance_snapshot(0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
   const auto result =
-   PositionSizingNode{StrategyPerformanceBayesianKellySizing{}}
+    PositionSizingNode{ModelPerformanceBayesianKellySizing{}}
     .make_method()
     .evaluate(context_with(performance));
 

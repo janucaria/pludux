@@ -57,6 +57,9 @@ public:
   auto is_alive(this const StoreDataResolver& self, HandleType handle) noexcept
    -> bool
   {
+    if(!handle.valid()) {
+      return false;
+    }
     const auto slot_index = handle.slot_index();
     if(slot_index >= self.slots_.size()) {
       return false;
@@ -101,6 +104,9 @@ public:
            HandleType handle,
            ValueType value) -> bool
   {
+    if(!handle.valid()) {
+      return false;
+    }
     const auto slot_index = handle.slot_index();
     if(slot_index >= self.slots_.size()) {
       for(std::size_t i = self.slots_.size(); i <= slot_index; ++i) {
@@ -132,6 +138,9 @@ public:
               std::vector<ValueType>& values,
               HandleType handle) -> bool
   {
+    if(!handle.valid()) {
+      return false;
+    }
     const auto slot_index = handle.slot_index();
     if(slot_index >= self.slots_.size()) {
       return false;
@@ -177,6 +186,9 @@ public:
               HandleType handle,
               ValueType new_value) -> bool
   {
+    if(!handle.valid()) {
+      return false;
+    }
     const auto slot_index = handle.slot_index();
     if(slot_index >= self.slots_.size()) {
       return false;
@@ -199,6 +211,9 @@ public:
                       const std::vector<ValueType>& values,
                       HandleType handle) -> const ValueType*
   {
+    if(!handle.valid()) {
+      return nullptr;
+    }
     const auto slot_index = handle.slot_index();
     if(slot_index >= self.slots_.size()) {
       return nullptr;
@@ -216,6 +231,9 @@ public:
                       std::vector<ValueType>& values,
                       HandleType handle) -> ValueType*
   {
+    if(!handle.valid()) {
+      return nullptr;
+    }
     const auto slot_index = handle.slot_index();
     if(slot_index >= self.slots_.size()) {
       return nullptr;

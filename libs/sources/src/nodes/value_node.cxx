@@ -28,7 +28,7 @@ private:
   double value_;
 };
 
-template<MethodContextable TContext>
+template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const ValueNode& node,
                        NodeToErasedMethodContext&)

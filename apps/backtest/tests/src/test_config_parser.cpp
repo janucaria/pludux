@@ -15,28 +15,487 @@
 import pludux.backtest;
 
 using namespace pludux;
-using pludux::backtest::ConfigParser;
-using pludux::backtest::make_default_registered_config_parser;
+using namespace pludux::backtest;
+using ModelConfigParser = ConfigParser<BacktestMethodContext>;
+using pludux::backtest::make_backtest_model_config_parser;
+using pludux::backtest::make_requested_order_comparator_config_parser;
 using json = jsoncons::ojson;
 
-using SignalAllOfNode = pludux::AllOfNode;
-using SignalAnyOfNode = pludux::AnyOfNode;
+using SignalAllOfNode = pludux::AllOfNode<BacktestMethodContext>;
+using SignalAnyOfNode = pludux::AnyOfNode<BacktestMethodContext>;
 using SignalAlwaysNode = pludux::TrueNode;
 using SignalNeverNode = pludux::FalseNode;
-using SignalEqualNode = pludux::EqualNode<ErasedSeriesMethodContext>;
-using SignalNotEqualNode = pludux::NotEqualNode<ErasedSeriesMethodContext>;
-using SignalGreaterThanNode =
- pludux::GreaterThanNode<ErasedSeriesMethodContext>;
-using SignalGreaterEqualNode =
- pludux::GreaterEqualNode<ErasedSeriesMethodContext>;
-using SignalLessThanNode = pludux::LessThanNode<ErasedSeriesMethodContext>;
-using SignalLessEqualNode = pludux::LessEqualNode<ErasedSeriesMethodContext>;
-using SignalCrossoverNode = pludux::CrossoverNode;
-using SignalCrossunderNode = pludux::CrossunderNode;
-using SignalNotNode = pludux::LogicalNotNode<ErasedSeriesMethodContext>;
-using SignalAndNode = pludux::LogicalAndNode<ErasedSeriesMethodContext>;
-using SignalOrNode = pludux::LogicalOrNode<ErasedSeriesMethodContext>;
-using SignalXorNode = pludux::LogicalXorNode<ErasedSeriesMethodContext>;
+using SignalEqualNode = pludux::EqualNode<BacktestMethodContext>;
+using SignalNotEqualNode = pludux::NotEqualNode<BacktestMethodContext>;
+using SignalGreaterThanNode = pludux::GreaterThanNode<BacktestMethodContext>;
+using SignalGreaterEqualNode = pludux::GreaterEqualNode<BacktestMethodContext>;
+using SignalLessThanNode = pludux::LessThanNode<BacktestMethodContext>;
+using SignalLessEqualNode = pludux::LessEqualNode<BacktestMethodContext>;
+using SignalCrossoverNode = pludux::CrossoverNode<BacktestMethodContext>;
+using SignalCrossunderNode = pludux::CrossunderNode<BacktestMethodContext>;
+using SignalNotNode = pludux::LogicalNotNode<BacktestMethodContext>;
+using SignalAndNode = pludux::LogicalAndNode<BacktestMethodContext>;
+using SignalOrNode = pludux::LogicalOrNode<BacktestMethodContext>;
+using SignalXorNode = pludux::LogicalXorNode<BacktestMethodContext>;
+
+TEST(ConfigParserInfrastructureTest,
+     TypedParserRegistersParsesAndSerializesValueAndBinaryOperator)
+{
+  using Context = pludux::backtest::BacktestMethodContext;
+  using Parser = pludux::backtest::ConfigParser<Context>;
+  using Node = ErasedNode<Context>;
+  using AddNode = BinaryOperatorNode<std::plus<>, Context>;
+
+  auto parser = Parser{};
+  parser.register_node_parser(
+   "VALUE.CONSTANT",
+   [](const Parser&, const Node& node) -> json {
+     const auto* value = node_cast<ValueNode>(node);
+     return value ? json::object{{"value", value->value()}} : json::null();
+   },
+   [](Parser::Parser, const json& params) -> Node {
+     return ValueNode{params.at("value").as_double()};
+   });
+  parser.register_node_parser(
+   "OPERATOR.ADD",
+   [](const Parser& parser, const Node& node) -> json {
+     const auto* add = node_cast<AddNode>(node);
+     return add ? json::object{{"augend", parser.serialize_node(add->left())},
+                               {"addend", parser.serialize_node(add->right())}}
+                : json::null();
+   },
+   [](Parser::Parser parser, const json& params) -> Node {
+     return AddNode{parser.parse_node(params.at("augend")),
+                    parser.parse_node(params.at("addend"))};
+   });
+
+  const auto config = json::parse(R"(
+    {"method":"OPERATOR.ADD","params":{"augend":{"method":"VALUE.CONSTANT","params":{"value":2}},"addend":{"method":"VALUE.CONSTANT","params":{"value":3}}}}
+  )");
+  const auto node = parser.parse_node(config);
+  const auto* add = node_cast<AddNode>(node);
+  ASSERT_NE(add, nullptr);
+  const auto* augend = node_cast<ValueNode>(add->left());
+  const auto* addend = node_cast<ValueNode>(add->right());
+  ASSERT_NE(augend, nullptr);
+  ASSERT_NE(addend, nullptr);
+  EXPECT_EQ(augend->value(), 2.0);
+  EXPECT_EQ(addend->value(), 3.0);
+  EXPECT_EQ(parser.serialize_node(node), config);
+}
+
+TEST(ConfigParserInfrastructureTest, RejectsDuplicateNodeParserRegistration)
+{
+  using Parser = ConfigParser<BacktestMethodContext>;
+  using Node = ErasedNode<BacktestMethodContext>;
+  auto parser = Parser{};
+  const auto serialize = [](const Parser&, const Node&) -> json {
+    return json::null();
+  };
+  const auto deserialize = [](Parser::Parser, const json&) -> Node {
+    return ValueNode{0.0};
+  };
+
+  parser.register_node_parser("TEST.VALUE", serialize, deserialize);
+  EXPECT_THROW(
+   parser.register_node_parser("TEST.VALUE", serialize, deserialize),
+   std::invalid_argument);
+}
+
+TEST(ConfigParserInfrastructureTest, RejectsMultipleMatchingNodeSerializers)
+{
+  using Parser = ConfigParser<BacktestMethodContext>;
+  using Node = ErasedNode<BacktestMethodContext>;
+  auto parser = Parser{};
+  const auto serialize = [](const Parser&, const Node& node) -> json {
+    return node_cast<ValueNode>(node) ? json::object() : json::null();
+  };
+  const auto deserialize = [](Parser::Parser, const json&) -> Node {
+    return ValueNode{0.0};
+  };
+
+  parser.register_node_parser("TEST.VALUE_A", serialize, deserialize);
+  parser.register_node_parser("TEST.VALUE_B", serialize, deserialize);
+  EXPECT_THROW(parser.serialize_node(Node{ValueNode{1.0}}),
+               std::invalid_argument);
+}
+
+TEST(ConfigParserInfrastructureTest, RejectsLegacyFlatMethodIdentifiers)
+{
+  auto parser = make_backtest_model_config_parser();
+  for(const auto* legacy : {"SMA", "ADD", "CLOSE", "GREATER_THAN"}) {
+    SCOPED_TRACE(legacy);
+    EXPECT_THROW(parser.parse_node(json::object{{"method", legacy}}),
+                 std::invalid_argument);
+  }
+
+  auto comparator = make_requested_order_comparator_config_parser();
+  EXPECT_THROW(
+   comparator.parse_node(json::object{{"method", "REQUESTED_ORDER_PRICE"}}),
+   std::invalid_argument);
+
+  EXPECT_THROW(
+   backtest::parse_model_config_json(
+    "Legacy plot",
+    json::parse(
+     R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"plots":[{"items":[{"method":"LINE"}]}]})")),
+   std::invalid_argument);
+  EXPECT_THROW(
+   backtest::parse_model_config_json(
+    "Legacy plot source",
+    json::parse(
+     R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"plots":[{"items":[{"method":"PLOT.LINE","params":{"source":{"method":"SERIES"}}}]}]})")),
+   std::invalid_argument);
+}
+
+TEST(ModelConfigParserTest, ParsesShorthandsDefaultsAndTypedNodes)
+{
+  auto parser = make_backtest_model_config_parser();
+  const auto config = json::parse(R"(
+    {"method":"INDICATOR.SMA","params":{"source":{"method":"OPERATOR.ADD","params":{"augend":"MARKET_DATA.CLOSE","addend":2}}}}
+  )");
+
+  const auto node = parser.parse_node(config);
+  const auto* sma = node_cast<SmaNode<backtest::BacktestMethodContext>>(node);
+  ASSERT_NE(sma, nullptr);
+  EXPECT_EQ(sma->period(),
+            SmaNode<backtest::BacktestMethodContext>{}.period());
+  EXPECT_EQ(parser.parse_node(parser.serialize_node(node)), node);
+}
+
+TEST(ModelConfigParserTest, RejectsMethodsOutsideBacktestContext)
+{
+  auto parser = make_backtest_model_config_parser();
+  for(const auto* comparator_only :
+      {"REQUESTED_ORDER.PRICE",
+       "REQUESTED_ORDER.DIRECTION",
+       "REQUESTED_ORDER.IS_PYRAMIDING",
+       "REQUESTED_ORDER.RAW_QUANTITY",
+       "REQUESTED_ORDER.RAW_QUANTITY_LIMIT",
+       "REQUESTED_ORDER.DRAWDOWN_ADJUSTED_QUANTITY",
+       "REQUESTED_ORDER.DRAWDOWN_ADJUSTED_QUANTITY_LIMIT",
+       "REQUESTED_ORDER.QUANTITY",
+       "REQUESTED_ORDER.NOTIONAL",
+       "REQUESTED_ORDER.COST",
+       "REQUESTED_ORDER.ESTIMATED_ENTRY_FEE",
+       "REQUESTED_ORDER.ESTIMATED_1R_EXIT_FEE",
+       "REQUESTED_ORDER.RISK_DISTANCE",
+       "REQUESTED_ORDER.PRICE_RISK",
+       "REQUESTED_ORDER.RISK_WITH_FEES",
+       "REQUESTED_ORDER.FROZEN_UNIT_QUANTITY"}) {
+    SCOPED_TRACE(comparator_only);
+    EXPECT_THROW(parser.parse_node(json::parse(std::string{"{\"method\":\""} +
+                                               comparator_only + "\"}")),
+                 std::invalid_argument);
+  }
+  EXPECT_THROW(
+   parser.parse_node(json::parse(
+    R"({"method":"MODEL_PERFORMANCE.VALUE","params":{"metric":"WIN_RATE"}})")),
+   std::invalid_argument);
+}
+
+TEST(ModelConfigParserTest, PreservesCanonicalCompositeDefaults)
+{
+  auto parser = make_backtest_model_config_parser();
+  const auto config = json::parse(R"({"method":"INDICATOR.MACD"})");
+
+  const auto node = parser.parse_node(config);
+  const auto* macd = node_cast<MacdNode<backtest::BacktestMethodContext>>(node);
+  ASSERT_NE(macd, nullptr);
+  const auto defaults = MacdNode<backtest::BacktestMethodContext>{};
+  EXPECT_EQ(macd->source(), defaults.source());
+  EXPECT_EQ(macd->fast_period(), defaults.fast_period());
+  EXPECT_EQ(macd->slow_period(), defaults.slow_period());
+  EXPECT_EQ(macd->signal_period(), defaults.signal_period());
+  EXPECT_EQ(parser.parse_node(parser.serialize_node(node)), node);
+}
+
+TEST(ModelConfigParserTest, RoundTripsEveryCanonicalModelRegistration)
+{
+  auto parser = make_backtest_model_config_parser();
+  const auto configurations = std::vector<std::string>{
+   "0",
+   "true",
+   "false",
+   "\"MARKET_DATA.OPEN\"",
+   "\"MARKET_DATA.HIGH\"",
+   "\"MARKET_DATA.LOW\"",
+   "\"MARKET_DATA.CLOSE\"",
+   "\"MARKET_DATA.VOLUME\"",
+   "\"PORTFOLIO.EQUITY\"",
+   "\"PORTFOLIO.EQUITY_PERCENT\"",
+   "\"PORTFOLIO.DRAWDOWN\"",
+   "\"POSITION.PYRAMIDING_LAYER\"",
+   "\"POSITION.INITIAL_ENTRY_PRICE\"",
+   "\"POSITION.LATEST_ENTRY_PRICE\"",
+   "\"POSITION.AVERAGE_PRICE\"",
+   "\"POSITION.STOP_TARGET_REF_PRICE\"",
+   "\"POSITION.DIRECTION\"",
+   "\"STOP_LOSS.ONE_R\"",
+   "\"LOGIC.ALWAYS\"",
+   "\"LOGIC.NEVER\"",
+   R"({"method":"VALUE.CONSTANT","params":{"value":1.25}})",
+   R"({"method":"MARKET_DATA.FIELD","params":{"field":"custom"}})",
+   R"({"method":"SERIES.REFERENCE","params":{"name":"basis"}})",
+   R"({"method":"INPUT.NUMERIC","params":{"label":"Period","representation":"SignedInteger","value":-2}})",
+   R"({"method":"OPERATOR.CHANGE"})",
+   R"({"method":"OPERATOR.LOOKBACK","params":{"period":2}})",
+   R"({"method":"INDICATOR.SMA"})",
+   R"({"method":"INDICATOR.EMA"})",
+   R"({"method":"INDICATOR.WMA"})",
+   R"({"method":"INDICATOR.RMA"})",
+   R"({"method":"INDICATOR.HMA"})",
+   R"({"method":"INDICATOR.RSI"})",
+   R"({"method":"INDICATOR.HIGHEST"})",
+   R"({"method":"INDICATOR.LOWEST"})",
+   R"({"method":"INDICATOR.ROC"})",
+   R"({"method":"INDICATOR.STDDEV"})",
+   R"({"method":"INDICATOR.RVOL"})",
+   R"({"method":"INDICATOR.TR"})",
+   R"({"method":"INDICATOR.ATR","params":{"maSmoothingType":"EMA"}})",
+   R"({"method":"INDICATOR.KC"})",
+   R"({"method":"INDICATOR.DC"})",
+   R"({"method":"INDICATOR.BB"})",
+   R"({"method":"INDICATOR.MACD"})",
+   R"({"method":"INDICATOR.STOCH","params":{"kPeriod":5,"kSmooth":3,"dPeriod":3}})",
+   R"({"method":"INDICATOR.STOCH_RSI"})",
+   R"({"method":"OPERATOR.SELECT_OUTPUT","params":{"output":"upper-band","source":"MARKET_DATA.CLOSE"}})",
+   R"({"method":"OPERATOR.PERCENTAGE"})",
+   R"({"method":"POSITION.R_MULTIPLE"})",
+   R"({"method":"STOP_LOSS.AMOUNT"})",
+   R"({"method":"TAKE_PROFIT.AMOUNT"})",
+   R"({"method":"STOP_LOSS.PERCENT"})",
+   R"({"method":"TAKE_PROFIT.PERCENT"})",
+   R"({"method":"STOP_LOSS.ATR"})",
+   R"({"method":"TAKE_PROFIT.ATR"})",
+   R"({"method":"RISK_DISTANCE.AMOUNT"})",
+   R"({"method":"RISK_DISTANCE.PERCENT"})",
+   R"({"method":"RISK_DISTANCE.ATR"})",
+   R"({"method":"STOP_LOSS.R_MULTIPLE"})",
+   R"({"method":"TAKE_PROFIT.R_MULTIPLE"})",
+   R"({"method":"OPERATOR.ADD","params":{"augend":1,"addend":2}})",
+   R"({"method":"OPERATOR.SUBTRACT","params":{"minuend":1,"subtrahend":2}})",
+   R"({"method":"OPERATOR.MULTIPLY","params":{"multiplicand":1,"multiplier":2}})",
+   R"({"method":"OPERATOR.DIVIDE","params":{"dividend":1,"divisor":2}})",
+   R"({"method":"OPERATOR.ABS_DIFF","params":{"minuend":1,"subtrahend":2}})",
+   R"({"method":"OPERATOR.MAX","params":{"left":1,"right":2}})",
+   R"({"method":"OPERATOR.MIN","params":{"left":1,"right":2}})",
+   R"({"method":"OPERATOR.NEGATE","params":{"operand":1}})",
+   R"({"method":"OPERATOR.ABS","params":{"operand":-1}})",
+   R"({"method":"OPERATOR.SQRT","params":{"operand":4}})",
+   R"({"method":"OPERATOR.POSITIVE_PART","params":{"operand":1}})",
+   R"({"method":"OPERATOR.NEGATIVE_PART","params":{"operand":-1}})",
+   R"({"method":"COMPARISON.GREATER_THAN","params":{"target":2,"threshold":1}})",
+   R"({"method":"COMPARISON.GREATER_EQUAL","params":{"target":2,"threshold":1}})",
+   R"({"method":"COMPARISON.LESS_THAN","params":{"target":1,"threshold":2}})",
+   R"({"method":"COMPARISON.LESS_EQUAL","params":{"target":1,"threshold":2}})",
+   R"({"method":"COMPARISON.EQUAL","params":{"target":1,"threshold":1}})",
+   R"({"method":"COMPARISON.NOT_EQUAL","params":{"target":1,"threshold":2}})",
+   R"({"method":"COMPARISON.CROSSOVER","params":{"value":"MARKET_DATA.CLOSE","baseline":"MARKET_DATA.OPEN"}})",
+   R"({"method":"COMPARISON.CROSSUNDER","params":{"value":"MARKET_DATA.CLOSE","baseline":"MARKET_DATA.OPEN"}})",
+   R"({"method":"LOGIC.AND","params":{"firstCondition":true,"secondCondition":false}})",
+   R"({"method":"LOGIC.OR","params":{"firstCondition":true,"secondCondition":false}})",
+   R"({"method":"LOGIC.XOR","params":{"firstCondition":true,"secondCondition":false}})",
+   R"({"method":"LOGIC.NOT","params":{"condition":true}})",
+   R"({"method":"LOGIC.ALL_OF","params":{"items":[true,false]}})",
+   R"({"method":"LOGIC.ANY_OF","params":{"items":[true,false]}})"};
+
+  for(const auto& configuration : configurations) {
+    SCOPED_TRACE(configuration);
+    const auto config = json::parse(configuration);
+    const auto node = parser.parse_node(config);
+    EXPECT_EQ(parser.parse_node(parser.serialize_node(node)), node);
+  }
+}
+
+TEST(ModelConfigParserTest,
+     RoundTripsScalarOperationsUsingBacktestMethodContextNodes)
+{
+  auto parser = make_backtest_model_config_parser();
+
+  const auto absolute = parser.parse_node(
+   json::parse(R"({"method":"OPERATOR.ABS","params":{"operand":-1}})"));
+  EXPECT_NE(
+   (node_cast<UnaryOperatorNode<Absolute<>, BacktestMethodContext>>(absolute)),
+   nullptr);
+  EXPECT_EQ(parser.parse_node(parser.serialize_node(absolute)), absolute);
+
+  const auto maximum = parser.parse_node(
+   json::parse(R"({"method":"OPERATOR.MAX","params":{"left":1,"right":2}})"));
+  EXPECT_NE(
+   (node_cast<BinaryOperatorNode<Maximum<>, BacktestMethodContext>>(maximum)),
+   nullptr);
+  EXPECT_EQ(parser.parse_node(parser.serialize_node(maximum)), maximum);
+
+  const auto minimum = parser.parse_node(
+   json::parse(R"({"method":"OPERATOR.MIN","params":{"left":1,"right":2}})"));
+  EXPECT_NE(
+   (node_cast<BinaryOperatorNode<Minimum<>, BacktestMethodContext>>(minimum)),
+   nullptr);
+  EXPECT_EQ(parser.parse_node(parser.serialize_node(minimum)), minimum);
+
+  const auto positive_part = parser.parse_node(json::parse(
+   R"({"method":"OPERATOR.POSITIVE_PART","params":{"operand":1}})"));
+  EXPECT_NE(
+   (node_cast<UnaryOperatorNode<PositivePart<>, BacktestMethodContext>>(
+    positive_part)),
+   nullptr);
+  EXPECT_EQ(parser.parse_node(parser.serialize_node(positive_part)),
+            positive_part);
+
+  const auto negative_part = parser.parse_node(json::parse(
+   R"({"method":"OPERATOR.NEGATIVE_PART","params":{"operand":-1}})"));
+  EXPECT_NE(
+   (node_cast<UnaryOperatorNode<NegativePart<>, BacktestMethodContext>>(
+    negative_part)),
+   nullptr);
+  EXPECT_EQ(parser.parse_node(parser.serialize_node(negative_part)),
+            negative_part);
+}
+
+TEST(RequestedOrderComparatorConfigParserTest,
+     SupportsOnlyComparatorGrammarAndProducesTypedNodes)
+{
+  auto parser = make_requested_order_comparator_config_parser();
+  const auto config = json::parse(R"(
+    {"method":"OPERATOR.DIVIDE","params":{"dividend":{"method":"REQUESTED_ORDER.NOTIONAL"},"divisor":{"method":"OPERATOR.LOOKBACK","params":{"period":2,"source":"MARKET_DATA.CLOSE"}}}}
+  )");
+  const auto node = parser.parse_node(config);
+  const auto* divide = node_cast<
+   BinaryOperatorNode<std::divides<>, backtest::RequestedOrderMethodContext>>(
+   node);
+  EXPECT_NE(divide, nullptr);
+  const auto serialized = parser.serialize_node(node);
+  EXPECT_EQ(parser.parse_node(serialized), node);
+  EXPECT_THROW(parser.parse_node(json::parse(
+                R"({"method":"SERIES.REFERENCE","params":{"name":"x"}})")),
+               std::invalid_argument);
+  EXPECT_THROW(parser.parse_node(json::parse(R"({"method":"INDICATOR.ATR"})")),
+               std::invalid_argument);
+  EXPECT_THROW(
+   parser.parse_node(json::parse(R"({"method":"PORTFOLIO.EQUITY"})")),
+   std::invalid_argument);
+  EXPECT_THROW(parser.parse_node(json::parse("true")), std::invalid_argument);
+  EXPECT_THROW(parser.parse_node(json::parse("false")), std::invalid_argument);
+}
+
+TEST(RequestedOrderComparatorConfigParserTest,
+     RoundTripsEveryCanonicalComparatorRegistrationAndRejectsModelOnlyNodes)
+{
+  auto parser = make_requested_order_comparator_config_parser();
+  const auto configurations = std::vector<std::string>{
+   "1",
+   "\"MARKET_DATA.OPEN\"",
+   "\"MARKET_DATA.HIGH\"",
+   "\"MARKET_DATA.LOW\"",
+   "\"MARKET_DATA.CLOSE\"",
+   "\"MARKET_DATA.VOLUME\"",
+   R"({"method":"VALUE.CONSTANT","params":{"value":1.25}})",
+   R"({"method":"MARKET_DATA.FIELD","params":{"field":"custom"}})",
+   R"({"method":"OPERATOR.LOOKBACK","params":{"period":2}})",
+   R"({"method":"REQUESTED_ORDER.PRICE"})",
+   R"({"method":"REQUESTED_ORDER.DIRECTION"})",
+   R"({"method":"REQUESTED_ORDER.IS_PYRAMIDING"})",
+   R"({"method":"REQUESTED_ORDER.RAW_QUANTITY"})",
+   R"({"method":"REQUESTED_ORDER.RAW_QUANTITY_LIMIT"})",
+   R"({"method":"REQUESTED_ORDER.DRAWDOWN_ADJUSTED_QUANTITY"})",
+   R"({"method":"REQUESTED_ORDER.DRAWDOWN_ADJUSTED_QUANTITY_LIMIT"})",
+   R"({"method":"REQUESTED_ORDER.QUANTITY"})",
+   R"({"method":"REQUESTED_ORDER.NOTIONAL"})",
+   R"({"method":"REQUESTED_ORDER.COST"})",
+   R"({"method":"REQUESTED_ORDER.ESTIMATED_ENTRY_FEE"})",
+   R"({"method":"REQUESTED_ORDER.ESTIMATED_1R_EXIT_FEE"})",
+   R"({"method":"REQUESTED_ORDER.RISK_DISTANCE"})",
+   R"({"method":"REQUESTED_ORDER.PRICE_RISK"})",
+   R"({"method":"REQUESTED_ORDER.RISK_WITH_FEES"})",
+   R"({"method":"REQUESTED_ORDER.FROZEN_UNIT_QUANTITY"})",
+   R"({"method":"OPERATOR.ADD","params":{"augend":1,"addend":2}})",
+   R"({"method":"OPERATOR.SUBTRACT","params":{"minuend":1,"subtrahend":2}})",
+   R"({"method":"OPERATOR.MULTIPLY","params":{"multiplicand":1,"multiplier":2}})",
+   R"({"method":"OPERATOR.DIVIDE","params":{"dividend":1,"divisor":2}})",
+   R"({"method":"OPERATOR.ABS_DIFF","params":{"left":1,"right":2}})",
+   R"({"method":"OPERATOR.MAX","params":{"left":1,"right":2}})",
+   R"({"method":"OPERATOR.MIN","params":{"left":1,"right":2}})",
+   R"({"method":"OPERATOR.NEGATE","params":{"operand":1}})",
+   R"({"method":"OPERATOR.ABS","params":{"operand":1}})",
+   R"({"method":"OPERATOR.SQRT","params":{"operand":4}})",
+   R"({"method":"OPERATOR.POSITIVE_PART","params":{"operand":1}})",
+   R"({"method":"OPERATOR.NEGATIVE_PART","params":{"operand":-1}})"};
+
+  for(const auto& configuration : configurations) {
+    SCOPED_TRACE(configuration);
+    const auto config = json::parse(configuration);
+    const auto node = parser.parse_node(config);
+    EXPECT_EQ(parser.parse_node(parser.serialize_node(node)), node);
+  }
+
+  for(const auto* model_only : {"PORTFOLIO.EQUITY",
+                                "PORTFOLIO.EQUITY_PERCENT",
+                                "PORTFOLIO.DRAWDOWN",
+                                "OPERATOR.CHANGE",
+                                "INDICATOR.SMA",
+                                "INDICATOR.EMA",
+                                "INDICATOR.WMA",
+                                "INDICATOR.RMA",
+                                "INDICATOR.HMA",
+                                "INDICATOR.RSI",
+                                "INDICATOR.HIGHEST",
+                                "INDICATOR.LOWEST",
+                                "INDICATOR.ROC",
+                                "INDICATOR.RVOL",
+                                "INDICATOR.ATR",
+                                "INDICATOR.TR",
+                                "INDICATOR.KC",
+                                "INDICATOR.DC",
+                                "SERIES.REFERENCE",
+                                "INPUT.NUMERIC",
+                                "OPERATOR.SELECT_OUTPUT",
+                                "INDICATOR.BB",
+                                "INDICATOR.MACD",
+                                "INDICATOR.STOCH",
+                                "INDICATOR.STOCH_RSI",
+                                "OPERATOR.PERCENTAGE",
+                                "STOP_LOSS.AMOUNT",
+                                "TAKE_PROFIT.AMOUNT",
+                                "STOP_LOSS.PERCENT",
+                                "TAKE_PROFIT.PERCENT",
+                                "STOP_LOSS.ATR",
+                                "TAKE_PROFIT.ATR",
+                                "RISK_DISTANCE.AMOUNT",
+                                "RISK_DISTANCE.PERCENT",
+                                "RISK_DISTANCE.ATR",
+                                "STOP_LOSS.ONE_R",
+                                "STOP_LOSS.R_MULTIPLE",
+                                "TAKE_PROFIT.R_MULTIPLE",
+                                "POSITION.INITIAL_ENTRY_PRICE",
+                                "POSITION.LATEST_ENTRY_PRICE",
+                                "POSITION.AVERAGE_PRICE",
+                                "POSITION.STOP_TARGET_REF_PRICE",
+                                "POSITION.DIRECTION",
+                                "POSITION.PYRAMIDING_LAYER",
+                                "POSITION.R_MULTIPLE",
+                                "COMPARISON.GREATER_THAN",
+                                "COMPARISON.GREATER_EQUAL",
+                                "COMPARISON.LESS_THAN",
+                                "COMPARISON.LESS_EQUAL",
+                                "COMPARISON.EQUAL",
+                                "COMPARISON.NOT_EQUAL",
+                                "COMPARISON.CROSSOVER",
+                                "COMPARISON.CROSSUNDER",
+                                "LOGIC.ALWAYS",
+                                "LOGIC.NEVER",
+                                "LOGIC.AND",
+                                "LOGIC.OR",
+                                "LOGIC.NOT",
+                                "LOGIC.XOR",
+                                "LOGIC.ALL_OF",
+                                "LOGIC.ANY_OF"}) {
+    SCOPED_TRACE(model_only);
+    EXPECT_THROW(parser.parse_node(json::parse(std::string{"{\"method\":\""} +
+                                               model_only + "\"}")),
+                 std::invalid_argument);
+  }
+}
 
 auto node_context = NodeToErasedMethodContext{};
 
@@ -85,21 +544,20 @@ private:
 
 class ParsedConfigNodeMethod {
 public:
-  ParsedConfigNodeMethod(ErasedNode<ErasedSeriesMethodContext> node)
+  ParsedConfigNodeMethod(ErasedNode<BacktestMethodContext> node)
   : node_{std::move(node)}
-  , method_{
-     node_to_erased_method<ErasedSeriesMethodContext>(node_, node_context)}
+  , method_{node_to_erased_method<BacktestMethodContext>(node_, node_context)}
   {
   }
 
   auto method(this const ParsedConfigNodeMethod& self) noexcept
-   -> const ErasedSeriesMethod<ErasedSeriesMethodContext>&
+   -> const ErasedSeriesMethod<BacktestMethodContext>&
   {
     return self.method_;
   }
 
   auto node(this const ParsedConfigNodeMethod& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<BacktestMethodContext>&
   {
     return self.node_;
   }
@@ -111,8 +569,8 @@ public:
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> node_;
-  ErasedSeriesMethod<ErasedSeriesMethodContext> method_;
+  ErasedNode<BacktestMethodContext> node_;
+  ErasedSeriesMethod<BacktestMethodContext> method_;
 };
 
 template<typename UMethod>
@@ -124,7 +582,7 @@ auto series_method_cast(
 }
 
 auto value_method_value(
- const ErasedSeriesMethod<ErasedSeriesMethodContext>& method) noexcept -> double
+ const ErasedSeriesMethod<BacktestMethodContext>& method) noexcept -> double
 {
   const auto* value_method = series_method_cast<ValueMethod>(method);
   EXPECT_NE(value_method, nullptr);
@@ -133,7 +591,7 @@ auto value_method_value(
 
 class ConfigParserTest : public ::testing::Test {
 protected:
-  ConfigParser config_parser;
+  ModelConfigParser config_parser;
 
   auto parse_node_method(const jsoncons::ojson& config)
    -> ParsedConfigNodeMethod
@@ -150,11 +608,11 @@ protected:
 
   void SetUp() override
   {
-    config_parser = std::move(make_default_registered_config_parser());
+    config_parser = std::move(make_backtest_model_config_parser());
 
     parse_node_method(json::parse(R"(
       {
-        "method": "DATA",
+        "method": "MARKET_DATA.FIELD",
         "params": {
           "name": "high",
           "field": "high"
@@ -164,7 +622,7 @@ protected:
 
     parse_node_method(json::parse(R"(
       {
-        "method": "DATA",
+        "method": "MARKET_DATA.FIELD",
         "params": {
           "name": "low",
           "field": "low"
@@ -174,7 +632,7 @@ protected:
 
     parse_node_method(json::parse(R"(
       {
-        "method": "DATA",
+        "method": "MARKET_DATA.FIELD",
         "params": {
           "name": "close",
           "field": "close"
@@ -184,7 +642,7 @@ protected:
 
     parse_node_method(json::parse(R"(
       {
-        "method": "DATA",
+        "method": "MARKET_DATA.FIELD",
         "params": {
           "name": "volume",
           "field": "volume"
@@ -198,13 +656,13 @@ TEST(PlotMethodParserTest, ParseAndSerializeMomentumHistogram)
 {
   const auto config = json::parse(R"(
     {
-      "version": 2,
+      "version": 1,
       "plots": [{
         "items": [{
-          "method": "MOMENTUM_HISTOGRAM",
+          "method": "PLOT.MOMENTUM_HISTOGRAM",
           "params": {
             "source": {
-              "method": "SERIES",
+              "method": "PLOT_SOURCE.SERIES",
               "params": {
                 "name": "histogram"
               }
@@ -222,8 +680,7 @@ TEST(PlotMethodParserTest, ParseAndSerializeMomentumHistogram)
     }
   )");
 
-  const auto strategy =
-   backtest::parse_backtest_strategy_config_json("Test", config);
+  const auto strategy = backtest::parse_model_config_json("Test", config);
   const auto& method = strategy.plots().at(0).items().at(0);
   using MomentumHistogram = backtest::MomentumHistogramPlotMethod<
    backtest::ErasedPlotSourceMethod<backtest::ErasedPlotMethodContext>>;
@@ -241,8 +698,7 @@ TEST(PlotMethodParserTest, ParseAndSerializeMomentumHistogram)
    (std::vector<std::uint32_t>{
     0xFF9AA626, 0xFF9AA626, 0xFFDBDFB2, 0xFF5053EF, 0xFF5053EF, 0xFFD2CDFF}));
 
-  const auto serialized =
-   backtest::serialize_backtest_strategy_config_json(strategy);
+  const auto serialized = backtest::serialize_model_config_json(strategy);
   const auto& serialized_params =
    serialized.at("plots").at(0).at("items").at(0).at("params");
   EXPECT_TRUE(serialized_params.contains("positiveRisingColor"));
@@ -250,22 +706,21 @@ TEST(PlotMethodParserTest, ParseAndSerializeMomentumHistogram)
   EXPECT_TRUE(serialized_params.contains("negativeFallingColor"));
   EXPECT_TRUE(serialized_params.contains("negativeRisingColor"));
 
-  const auto round_trip =
-   backtest::parse_backtest_strategy_config_json("Test", serialized);
+  const auto round_trip = backtest::parse_model_config_json("Test", serialized);
   EXPECT_EQ(method, round_trip.plots().at(0).items().at(0));
 }
 
-TEST(PlotMethodParserTest, RejectMomentumHistogramWithMissingColor)
+TEST(PlotMethodParserTest, DefaultsMomentumHistogramMissingColor)
 {
   const auto config = json::parse(R"(
     {
-      "version": 2,
+      "version": 1,
       "plots": [{
         "items": [{
-          "method": "MOMENTUM_HISTOGRAM",
+          "method": "PLOT.MOMENTUM_HISTOGRAM",
           "params": {
             "source": {
-              "method": "CONSTANT",
+              "method": "PLOT_SOURCE.CONSTANT",
               "params": {
                 "value": 1
               }
@@ -282,15 +737,23 @@ TEST(PlotMethodParserTest, RejectMomentumHistogramWithMissingColor)
     }
   )");
 
-  EXPECT_THROW(backtest::parse_backtest_strategy_config_json("Test", config),
-               std::invalid_argument);
+  const auto model = backtest::parse_model_config_json("Test", config);
+  using MomentumHistogram = backtest::MomentumHistogramPlotMethod<
+   backtest::ErasedPlotSourceMethod<backtest::ErasedPlotMethodContext>>;
+  const auto* histogram =
+   plot_method_cast<MomentumHistogram>(model.plots().at(0).items().at(0));
+  ASSERT_NE(histogram, nullptr);
+  const auto defaults =
+   MomentumHistogram{backtest::SeriesPlotSourceMethod{}};
+  EXPECT_EQ(histogram->negative_rising_color(),
+            defaults.negative_rising_color());
 }
 
 TEST_F(ConfigParserTest, ParseScreenerSeriesMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "SERIES",
+      "method": "SERIES.REFERENCE",
       "params": {
         "name": "close"
       }
@@ -313,11 +776,11 @@ TEST_F(ConfigParserTest, ParseScreenerLookbackMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "LOOKBACK",
+      "method": "OPERATOR.LOOKBACK",
       "params": {
         "period": 3,
         "source": {
-          "method": "CLOSE"
+          "method": "MARKET_DATA.CLOSE"
         }
       }
     }
@@ -326,7 +789,7 @@ TEST_F(ConfigParserTest, ParseScreenerLookbackMethod)
   const auto method = parse_node_method(config);
 
   const auto lookback_method = series_method_cast<
-   LookbackMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   LookbackMethod<ErasedSeriesMethod<BacktestMethodContext>>>(method);
   ASSERT_NE(lookback_method, nullptr);
 
   EXPECT_EQ(lookback_method->period(), 3);
@@ -343,7 +806,7 @@ TEST_F(ConfigParserTest, ParseNumericInputNode)
 {
   const auto config = json::parse(R"(
     {
-      "method": "INPUT",
+      "method": "INPUT.NUMERIC",
       "params": {
         "label": "Length",
         "representation": "UnsignedInteger",
@@ -370,17 +833,17 @@ TEST_F(ConfigParserTest, ParseScreenerSelectOutputMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "SELECT_OUTPUT",
+      "method": "OPERATOR.SELECT_OUTPUT",
       "params": {
         "output": "upper-band",
         "source": {
-          "method": "MACD",
+          "method": "INDICATOR.MACD",
           "params": {
             "fastPeriod": 12,
             "slowPeriod": 26,
             "signalPeriod": 9,
             "input": {
-              "method": "CLOSE"
+              "method": "MARKET_DATA.CLOSE"
             }
           }
         }
@@ -391,14 +854,14 @@ TEST_F(ConfigParserTest, ParseScreenerSelectOutputMethod)
   const auto method = parse_node_method(config);
 
   const auto select_output_method = series_method_cast<
-   SelectOutputMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   SelectOutputMethod<ErasedSeriesMethod<BacktestMethodContext>>>(method);
   ASSERT_NE(select_output_method, nullptr);
   EXPECT_EQ(select_output_method->output(), MethodOutput::UpperBand);
 
-  const auto macd_method = series_method_cast<
-   MacdMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-              ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
-   select_output_method->source());
+  const auto macd_method =
+   series_method_cast<MacdMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                                 ErasedSeriesMethod<BacktestMethodContext>>>(
+    select_output_method->source());
   ASSERT_NE(macd_method, nullptr);
 
   const auto source = series_method_cast<CloseMethod>(macd_method->source());
@@ -408,6 +871,24 @@ TEST_F(ConfigParserTest, ParseScreenerSelectOutputMethod)
   EXPECT_EQ(value_method_value(macd_method->signal_period()), 9);
 
   const auto serialized_config = serialize_node_method(method);
+  const auto expected_serialized_config = json::parse(R"(
+    {
+      "method": "OPERATOR.SELECT_OUTPUT",
+      "params": {
+        "output": "upper-band",
+        "source": {
+          "method": "INDICATOR.MACD",
+          "params": {
+            "fastPeriod": {"method": "VALUE.CONSTANT", "params": {"value": 12}},
+            "slowPeriod": {"method": "VALUE.CONSTANT", "params": {"value": 26}},
+            "signalPeriod": {"method": "VALUE.CONSTANT", "params": {"value": 9}},
+            "source": {"method": "MARKET_DATA.CLOSE"}
+          }
+        }
+      }
+    }
+  )");
+  EXPECT_EQ(serialized_config, expected_serialized_config);
   const auto deserialized_config = parse_node_method(serialized_config);
   EXPECT_EQ(method, deserialized_config);
 }
@@ -416,7 +897,7 @@ TEST_F(ConfigParserTest, ParseScreenerOpenMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "OPEN"
+      "method": "MARKET_DATA.OPEN"
     }
   )");
 
@@ -434,7 +915,7 @@ TEST_F(ConfigParserTest, ParseScreenerHighMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "HIGH"
+      "method": "MARKET_DATA.HIGH"
     }
   )");
 
@@ -452,7 +933,7 @@ TEST_F(ConfigParserTest, ParseScreenerLowMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "LOW"
+      "method": "MARKET_DATA.LOW"
     }
   )");
 
@@ -470,7 +951,7 @@ TEST_F(ConfigParserTest, ParseScreenerCloseMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "CLOSE"
+      "method": "MARKET_DATA.CLOSE"
     }
   )");
 
@@ -488,7 +969,7 @@ TEST_F(ConfigParserTest, ParseScreenerVolumeMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "VOLUME"
+      "method": "MARKET_DATA.VOLUME"
     }
   )");
 
@@ -506,17 +987,17 @@ TEST_F(ConfigParserTest, ParseScreenerSmaMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "SMA",
+      "method": "INDICATOR.SMA",
       "params": {
         "period": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "representation": "UnsignedInteger",
             "value": 14
           }
         },
         "source": {
-          "method": "DATA",
+          "method": "MARKET_DATA.FIELD",
           "params": {
             "field": "close"
           }
@@ -528,8 +1009,8 @@ TEST_F(ConfigParserTest, ParseScreenerSmaMethod)
   const auto method = parse_node_method(config);
 
   const auto sma_method =
-   series_method_cast<SmaMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<SmaMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                                ErasedSeriesMethod<BacktestMethodContext>>>(
     method);
   ASSERT_NE(sma_method, nullptr);
 
@@ -549,17 +1030,17 @@ TEST_F(ConfigParserTest, ParseScreenerEmaMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "EMA",
+      "method": "INDICATOR.EMA",
       "params": {
         "period": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "representation": "UnsignedInteger",
             "value": 10
           }
         },
         "source": {
-          "method": "DATA",
+          "method": "MARKET_DATA.FIELD",
           "params": {
             "field": "open"
           }
@@ -571,8 +1052,8 @@ TEST_F(ConfigParserTest, ParseScreenerEmaMethod)
   const auto method = parse_node_method(config);
 
   const auto ema_method =
-   series_method_cast<EmaMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<EmaMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                                ErasedSeriesMethod<BacktestMethodContext>>>(
     method);
   ASSERT_NE(ema_method, nullptr);
 
@@ -592,17 +1073,17 @@ TEST_F(ConfigParserTest, ParseScreenerWmaMethod)
 {
   const auto config = json::parse(R"(
       {
-        "method": "WMA",
+        "method": "INDICATOR.WMA",
         "params": {
           "period": {
-            "method": "INPUT",
+            "method": "INPUT.NUMERIC",
             "params": {
               "representation": "UnsignedInteger",
               "value": 20
             }
           },
           "source": {
-            "method": "DATA",
+            "method": "MARKET_DATA.FIELD",
             "params": {
               "field": "high"
             }
@@ -614,8 +1095,8 @@ TEST_F(ConfigParserTest, ParseScreenerWmaMethod)
   const auto method = parse_node_method(config);
 
   const auto wma_method =
-   series_method_cast<WmaMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<WmaMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                                ErasedSeriesMethod<BacktestMethodContext>>>(
     method);
   ASSERT_NE(wma_method, nullptr);
 
@@ -635,17 +1116,17 @@ TEST_F(ConfigParserTest, ParseScreenerRmaMethod)
 {
   const auto config = json::parse(R"(
       {
-        "method": "RMA",
+        "method": "INDICATOR.RMA",
         "params": {
           "period": {
-            "method": "INPUT",
+            "method": "INPUT.NUMERIC",
             "params": {
               "representation": "UnsignedInteger",
               "value": 15
             }
           },
           "source": {
-            "method": "DATA",
+            "method": "MARKET_DATA.FIELD",
             "params": {
               "field": "low"
             }
@@ -657,8 +1138,8 @@ TEST_F(ConfigParserTest, ParseScreenerRmaMethod)
   const auto method = parse_node_method(config);
 
   const auto rma_method =
-   series_method_cast<RmaMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<RmaMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                                ErasedSeriesMethod<BacktestMethodContext>>>(
     method);
   ASSERT_NE(rma_method, nullptr);
 
@@ -678,17 +1159,17 @@ TEST_F(ConfigParserTest, ParseScreenerHmaMethod)
 {
   const auto config = json::parse(R"(
       {
-        "method": "HMA",
+        "method": "INDICATOR.HMA",
         "params": {
           "period": {
-            "method": "INPUT",
+            "method": "INPUT.NUMERIC",
             "params": {
               "representation": "UnsignedInteger",
               "value": 25
             }
           },
           "source": {
-            "method": "DATA",
+            "method": "MARKET_DATA.FIELD",
             "params": {
               "field": "volume"
             }
@@ -700,8 +1181,8 @@ TEST_F(ConfigParserTest, ParseScreenerHmaMethod)
   const auto method = parse_node_method(config);
 
   const auto hma_method =
-   series_method_cast<HmaMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<HmaMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                                ErasedSeriesMethod<BacktestMethodContext>>>(
     method);
   ASSERT_NE(hma_method, nullptr);
 
@@ -721,11 +1202,11 @@ TEST_F(ConfigParserTest, ParseScreenerRsiMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "RSI",
+      "method": "INDICATOR.RSI",
       "params": {
         "period": 14,
         "source": {
-          "method": "DATA",
+          "method": "MARKET_DATA.FIELD",
           "params": {
             "field": "close"
           }
@@ -737,8 +1218,8 @@ TEST_F(ConfigParserTest, ParseScreenerRsiMethod)
   const auto method = parse_node_method(config);
 
   const auto rsi_method =
-   series_method_cast<RsiMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<RsiMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                                ErasedSeriesMethod<BacktestMethodContext>>>(
     method);
   ASSERT_NE(rsi_method, nullptr);
 
@@ -758,11 +1239,11 @@ TEST_F(ConfigParserTest, ParseScreenerStddevMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "STDDEV",
+      "method": "INDICATOR.STDDEV",
       "params": {
         "period": 20,
         "source": {
-          "method": "DATA",
+          "method": "MARKET_DATA.FIELD",
           "params": {
             "field": "close"
           }
@@ -773,9 +1254,10 @@ TEST_F(ConfigParserTest, ParseScreenerStddevMethod)
 
   const auto method = parse_node_method(config);
 
-  const auto stddev_method = series_method_cast<
-   StddevMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+  const auto stddev_method =
+   series_method_cast<StddevMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                                   ErasedSeriesMethod<BacktestMethodContext>>>(
+    method);
   ASSERT_NE(stddev_method, nullptr);
 
   EXPECT_EQ(value_method_value(stddev_method->period()), 20);
@@ -794,7 +1276,7 @@ TEST_F(ConfigParserTest, ParseScreenerValueMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "VALUE",
+      "method": "VALUE.CONSTANT",
       "params": {
         "value": 100
       }
@@ -817,7 +1299,7 @@ TEST_F(ConfigParserTest, ParseScreenerDataMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "DATA",
+      "method": "MARKET_DATA.FIELD",
       "params": {
         "field": "open"
       }
@@ -840,7 +1322,7 @@ TEST_F(ConfigParserTest, ParseEquityMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "EQUITY"
+      "method": "PORTFOLIO.EQUITY"
     }
   )");
 
@@ -859,7 +1341,7 @@ TEST_F(ConfigParserTest, ParseEquityPercentMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "EQUITY_PERCENT"
+      "method": "PORTFOLIO.EQUITY_PERCENT"
     }
   )");
 
@@ -878,7 +1360,7 @@ TEST_F(ConfigParserTest, ParseDrawdownMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "DRAWDOWN"
+      "method": "PORTFOLIO.DRAWDOWN"
     }
   )");
 
@@ -897,10 +1379,10 @@ TEST_F(ConfigParserTest, ParseScreenerAtrMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "ATR",
+      "method": "INDICATOR.ATR",
       "params": {
         "period": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "representation": "UnsignedInteger",
             "value": 14
@@ -914,7 +1396,7 @@ TEST_F(ConfigParserTest, ParseScreenerAtrMethod)
   const auto method = parse_node_method(config);
 
   const auto atr_method =
-   series_method_cast<AtrMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<AtrMethod<ErasedSeriesMethod<BacktestMethodContext>>>(
     method);
   ASSERT_NE(atr_method, nullptr);
 
@@ -930,25 +1412,25 @@ TEST_F(ConfigParserTest, ParseScreenerBbMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "BB",
+      "method": "INDICATOR.BB",
       "params": {
         "maType": "SMA",
         "period": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "representation": "UnsignedInteger",
             "value": 20
           }
         },
         "stddev": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "representation": "Decimal",
             "value": 2.0
           }
         },
         "maSource": {
-          "method": "DATA",
+          "method": "MARKET_DATA.FIELD",
           "params": {
             "field": "close"
           }
@@ -960,8 +1442,8 @@ TEST_F(ConfigParserTest, ParseScreenerBbMethod)
   const auto method = parse_node_method(config);
 
   const auto bb_method =
-   series_method_cast<BbMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                               ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<BbMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                               ErasedSeriesMethod<BacktestMethodContext>>>(
     method);
   ASSERT_NE(bb_method, nullptr);
 
@@ -980,31 +1462,31 @@ TEST_F(ConfigParserTest, ParseScreenerMacdMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "MACD",
+      "method": "INDICATOR.MACD",
       "params": {
         "fastPeriod": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "representation": "UnsignedInteger",
             "value": 12
           }
         },
         "slowPeriod": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "representation": "UnsignedInteger",
             "value": 26
           }
         },
         "signalPeriod": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "representation": "UnsignedInteger",
             "value": 9
           }
         },
         "source": {
-          "method": "DATA",
+          "method": "MARKET_DATA.FIELD",
           "params": {
             "field": "close"
           }
@@ -1015,9 +1497,10 @@ TEST_F(ConfigParserTest, ParseScreenerMacdMethod)
 
   const auto method = parse_node_method(config);
 
-  const auto macd_method = series_method_cast<
-   MacdMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-              ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+  const auto macd_method =
+   series_method_cast<MacdMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                                 ErasedSeriesMethod<BacktestMethodContext>>>(
+    method);
   ASSERT_NE(macd_method, nullptr);
 
   const auto source = series_method_cast<DataMethod>(macd_method->source());
@@ -1035,24 +1518,24 @@ TEST_F(ConfigParserTest, ParseScreenerStochMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "STOCH",
+      "method": "INDICATOR.STOCH",
       "params": {
         "kPeriod": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "representation": "UnsignedInteger",
             "value": 5
           }
         },
         "kSmooth": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "representation": "UnsignedInteger",
             "value": 3
           }
         },
         "dPeriod": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "representation": "UnsignedInteger",
             "value": 3
@@ -1064,8 +1547,9 @@ TEST_F(ConfigParserTest, ParseScreenerStochMethod)
 
   const auto method = parse_node_method(config);
 
-  const auto stoch_method = series_method_cast<
-   StochMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+  const auto stoch_method =
+   series_method_cast<StochMethod<ErasedSeriesMethod<BacktestMethodContext>>>(
+    method);
   ASSERT_NE(stoch_method, nullptr);
 
   EXPECT_EQ(value_method_value(stoch_method->k_period()), 5);
@@ -1081,38 +1565,38 @@ TEST_F(ConfigParserTest, ParseScreenerStochRsiMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "STOCH_RSI",
+      "method": "INDICATOR.STOCH_RSI",
       "params": {
         "rsiPeriod": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "representation": "UnsignedInteger",
             "value": 14
           }
         },
         "kPeriod": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "representation": "UnsignedInteger",
             "value": 5
           }
         },
         "kSmooth": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "representation": "UnsignedInteger",
             "value": 3
           }
         },
         "dPeriod": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "representation": "UnsignedInteger",
             "value": 3
           }
         },
         "rsiSource": {
-          "method": "DATA",
+          "method": "MARKET_DATA.FIELD",
           "params": {
             "field": "close"
           }
@@ -1124,8 +1608,8 @@ TEST_F(ConfigParserTest, ParseScreenerStochRsiMethod)
   const auto method = parse_node_method(config);
 
   const auto stoch_rsi_method = series_method_cast<
-   StochRsiMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                  ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   StochRsiMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                  ErasedSeriesMethod<BacktestMethodContext>>>(method);
   ASSERT_NE(stoch_rsi_method, nullptr);
 
   const auto rsi_source =
@@ -1145,32 +1629,32 @@ TEST_F(ConfigParserTest, ParseScreenerKcMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "KC",
+      "method": "INDICATOR.KC",
       "params": {
         "maMethodType": "SMA",
         "period": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "representation": "UnsignedInteger",
             "value": 5
           }
         },
         "maSource": {
-          "method": "DATA",
+          "method": "MARKET_DATA.FIELD",
           "params": {
             "field": "close"
           }
         },
         "bandMethodType": "ATR",
         "bandAtrPeriod": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "representation": "UnsignedInteger",
             "value": 14
           }
         },
         "multiplier": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "representation": "Decimal",
             "value": 1.0
@@ -1183,8 +1667,8 @@ TEST_F(ConfigParserTest, ParseScreenerKcMethod)
   const auto method = parse_node_method(config);
 
   const auto kc_method =
-   series_method_cast<KcMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                               ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<KcMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                               ErasedSeriesMethod<BacktestMethodContext>>>(
     method);
   ASSERT_NE(kc_method, nullptr);
 
@@ -1206,10 +1690,10 @@ TEST_F(ConfigParserTest, ParseScreenerDonchianChannelMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "DC",
+      "method": "INDICATOR.DC",
       "params": {
         "period": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "representation": "UnsignedInteger",
             "value": 5
@@ -1222,8 +1706,7 @@ TEST_F(ConfigParserTest, ParseScreenerDonchianChannelMethod)
   const auto method = parse_node_method(config);
 
   const auto dc_method = series_method_cast<
-   DonchianChannelMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
-   method);
+   DonchianChannelMethod<ErasedSeriesMethod<BacktestMethodContext>>>(method);
   ASSERT_NE(dc_method, nullptr);
 
   EXPECT_EQ(value_method_value(dc_method->period()), 5);
@@ -1237,11 +1720,11 @@ TEST_F(ConfigParserTest, ParseScreenerAddMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "ADD",
+      "method": "OPERATOR.ADD",
       "params": {
         "augend": 50,
         "addend": {
-          "method": "VALUE",
+          "method": "VALUE.CONSTANT",
           "params": {
             "value": 25
           }
@@ -1253,8 +1736,8 @@ TEST_F(ConfigParserTest, ParseScreenerAddMethod)
   const auto method = parse_node_method(config);
 
   const auto add_method =
-   series_method_cast<AddMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(
+   series_method_cast<AddMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                                ErasedSeriesMethod<BacktestMethodContext>>>(
     method);
   ASSERT_NE(add_method, nullptr);
 
@@ -1274,16 +1757,16 @@ TEST_F(ConfigParserTest, ParseScreenerSubtractMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "SUBTRACT",
+      "method": "OPERATOR.SUBTRACT",
       "params": {
         "minuend": {
-          "method": "VALUE",
+          "method": "VALUE.CONSTANT",
           "params": {
             "value": 100
           }
         },
         "subtrahend": {
-          "method": "VALUE",
+          "method": "VALUE.CONSTANT",
           "params": {
             "value": 30
           }
@@ -1295,8 +1778,8 @@ TEST_F(ConfigParserTest, ParseScreenerSubtractMethod)
   const auto method = parse_node_method(config);
 
   const auto subtract_method = series_method_cast<
-   SubtractMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                  ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   SubtractMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                  ErasedSeriesMethod<BacktestMethodContext>>>(method);
   ASSERT_NE(subtract_method, nullptr);
 
   const auto minuend = series_method_cast<ValueMethod>(subtract_method->left());
@@ -1316,16 +1799,16 @@ TEST_F(ConfigParserTest, ParseScreenerMultiplyMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "MULTIPLY",
+      "method": "OPERATOR.MULTIPLY",
       "params": {
         "multiplicand": {
-          "method": "VALUE",
+          "method": "VALUE.CONSTANT",
           "params": {
             "value": 10
           }
         },
         "multiplier": {
-          "method": "VALUE",
+          "method": "VALUE.CONSTANT",
           "params": {
             "value": 5
           }
@@ -1337,8 +1820,8 @@ TEST_F(ConfigParserTest, ParseScreenerMultiplyMethod)
   const auto method = parse_node_method(config);
 
   const auto multiply_method = series_method_cast<
-   MultiplyMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                  ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   MultiplyMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                  ErasedSeriesMethod<BacktestMethodContext>>>(method);
   ASSERT_NE(multiply_method, nullptr);
 
   const auto multiplicand =
@@ -1359,16 +1842,16 @@ TEST_F(ConfigParserTest, ParseScreenerDivideMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "DIVIDE",
+      "method": "OPERATOR.DIVIDE",
       "params": {
         "dividend": {
-          "method": "VALUE",
+          "method": "VALUE.CONSTANT",
           "params": {
             "value": 100
           }
         },
         "divisor": {
-          "method": "VALUE",
+          "method": "VALUE.CONSTANT",
           "params": {
             "value": 2
           }
@@ -1379,9 +1862,10 @@ TEST_F(ConfigParserTest, ParseScreenerDivideMethod)
 
   const auto method = parse_node_method(config);
 
-  const auto divide_method = series_method_cast<
-   DivideMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+  const auto divide_method =
+   series_method_cast<DivideMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                                   ErasedSeriesMethod<BacktestMethodContext>>>(
+    method);
   ASSERT_NE(divide_method, nullptr);
 
   const auto dividend = series_method_cast<ValueMethod>(divide_method->left());
@@ -1400,10 +1884,10 @@ TEST_F(ConfigParserTest, ParseScreenerNegateMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "NEGATE",
+      "method": "OPERATOR.NEGATE",
       "params": {
         "operand": {
-          "method": "VALUE",
+          "method": "VALUE.CONSTANT",
           "params": {
             "value": 42
           }
@@ -1414,8 +1898,9 @@ TEST_F(ConfigParserTest, ParseScreenerNegateMethod)
 
   const auto method = parse_node_method(config);
 
-  const auto negate_method = series_method_cast<
-   NegateMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+  const auto negate_method =
+   series_method_cast<NegateMethod<ErasedSeriesMethod<BacktestMethodContext>>>(
+    method);
   ASSERT_NE(negate_method, nullptr);
 
   const auto operand =
@@ -1432,10 +1917,10 @@ TEST_F(ConfigParserTest, ParseScreenerSqrtMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "SQRT",
+      "method": "OPERATOR.SQRT",
       "params": {
         "operand": {
-          "method": "VALUE",
+          "method": "VALUE.CONSTANT",
           "params": {
             "value": 16
           }
@@ -1446,8 +1931,9 @@ TEST_F(ConfigParserTest, ParseScreenerSqrtMethod)
 
   const auto method = parse_node_method(config);
 
-  const auto sqrt_method = series_method_cast<
-   SqrtMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+  const auto sqrt_method =
+   series_method_cast<SqrtMethod<ErasedSeriesMethod<BacktestMethodContext>>>(
+    method);
   ASSERT_NE(sqrt_method, nullptr);
 
   const auto operand = series_method_cast<ValueMethod>(sqrt_method->operand());
@@ -1463,10 +1949,10 @@ TEST_F(ConfigParserTest, ParseScreenerChangeMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "CHANGE",
+      "method": "OPERATOR.CHANGE",
       "params": {
         "source": {
-          "method": "DATA",
+          "method": "MARKET_DATA.FIELD",
           "params": {
             "field": "close"
           }
@@ -1477,8 +1963,9 @@ TEST_F(ConfigParserTest, ParseScreenerChangeMethod)
 
   const auto method = parse_node_method(config);
 
-  const auto changes_method = series_method_cast<
-   ChangeMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+  const auto changes_method =
+   series_method_cast<ChangeMethod<ErasedSeriesMethod<BacktestMethodContext>>>(
+    method);
   ASSERT_NE(changes_method, nullptr);
 
   const auto source = series_method_cast<DataMethod>(changes_method->source());
@@ -1494,16 +1981,16 @@ TEST_F(ConfigParserTest, ParseScreenerAbsDiffMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "ABS_DIFF",
+      "method": "OPERATOR.ABS_DIFF",
       "params": {
         "minuend": {
-          "method": "DATA",
+          "method": "MARKET_DATA.FIELD",
           "params": {
             "field": "high"
           }
         },
         "subtrahend": {
-          "method": "DATA",
+          "method": "MARKET_DATA.FIELD",
           "params": {
             "field": "low"
           }
@@ -1514,9 +2001,10 @@ TEST_F(ConfigParserTest, ParseScreenerAbsDiffMethod)
 
   const auto method = parse_node_method(config);
 
-  const auto abs_diff_method = series_method_cast<
-   AbsDiffMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                 ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+  const auto abs_diff_method =
+   series_method_cast<AbsDiffMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                                    ErasedSeriesMethod<BacktestMethodContext>>>(
+    method);
   ASSERT_NE(abs_diff_method, nullptr);
 
   const auto minuend = series_method_cast<DataMethod>(abs_diff_method->left());
@@ -1536,10 +2024,10 @@ TEST_F(ConfigParserTest, ParseScreenerPercentageMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "PERCENTAGE",
+      "method": "OPERATOR.PERCENTAGE",
       "params": {
         "base": {
-          "method": "VALUE",
+          "method": "VALUE.CONSTANT",
           "params": {
             "value": 100
           }
@@ -1552,7 +2040,7 @@ TEST_F(ConfigParserTest, ParseScreenerPercentageMethod)
   const auto method = parse_node_method(config);
 
   const auto percentage_method = series_method_cast<
-   PercentageMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+   PercentageMethod<ErasedSeriesMethod<BacktestMethodContext>>>(method);
   ASSERT_NE(percentage_method, nullptr);
 
   const auto base = series_method_cast<ValueMethod>(percentage_method->base());
@@ -1572,19 +2060,21 @@ TEST_F(ConfigParserTest, ParseStopTargetPriceMethods)
 {
   const auto configs = std::vector<json>{
    json::parse(
-    R"({"method":"SL_AMOUNT","params":{"amount":{"method":"VALUE","params":{"value":10}}}})"),
+    R"({"method":"STOP_LOSS.AMOUNT","params":{"amount":{"method":"VALUE.CONSTANT","params":{"value":10}}}})"),
    json::parse(
-    R"({"method":"TP_AMOUNT","params":{"amount":{"method":"VALUE","params":{"value":20}}}})"),
+    R"({"method":"TAKE_PROFIT.AMOUNT","params":{"amount":{"method":"VALUE.CONSTANT","params":{"value":20}}}})"),
    json::parse(
-    R"({"method":"SL_PERCENT","params":{"percent":{"method":"VALUE","params":{"value":10}}}})"),
+    R"({"method":"STOP_LOSS.PERCENT","params":{"percent":{"method":"VALUE.CONSTANT","params":{"value":10}}}})"),
    json::parse(
-    R"({"method":"TP_PERCENT","params":{"percent":{"method":"VALUE","params":{"value":20}}}})"),
+    R"({"method":"TAKE_PROFIT.PERCENT","params":{"percent":{"method":"VALUE.CONSTANT","params":{"value":20}}}})"),
    json::parse(
-    R"({"method":"SL_ATR","params":{"period":{"method":"VALUE","params":{"value":14}},"multiplier":{"method":"VALUE","params":{"value":2}},"maSmoothingType":"RMA"}})"),
+    R"({"method":"STOP_LOSS.ATR","params":{"period":{"method":"VALUE.CONSTANT","params":{"value":14}},"multiplier":{"method":"VALUE.CONSTANT","params":{"value":2}},"maSmoothingType":"RMA"}})"),
    json::parse(
-    R"({"method":"TP_ATR","params":{"period":{"method":"VALUE","params":{"value":14}},"multiplier":{"method":"VALUE","params":{"value":2}},"maSmoothingType":"RMA"}})"),
+    R"({"method":"TAKE_PROFIT.ATR","params":{"period":{"method":"VALUE.CONSTANT","params":{"value":14}},"multiplier":{"method":"VALUE.CONSTANT","params":{"value":2}},"maSmoothingType":"RMA"}})"),
    json::parse(
-    R"({"method":"TP_R_MULTIPLE","params":{"multiple":{"method":"VALUE","params":{"value":2}}}})")};
+    R"({"method":"STOP_LOSS.R_MULTIPLE","params":{"multiple":{"method":"VALUE.CONSTANT","params":{"value":1}}}})"),
+   json::parse(
+    R"({"method":"TAKE_PROFIT.R_MULTIPLE","params":{"multiple":{"method":"VALUE.CONSTANT","params":{"value":2}}}})")};
 
   for(const auto& config : configs) {
     const auto method = parse_node_method(config);
@@ -1594,14 +2084,15 @@ TEST_F(ConfigParserTest, ParseStopTargetPriceMethods)
   }
 }
 
-TEST_F(ConfigParserTest, ParsePositionContextPriceMethods)
+TEST_F(ConfigParserTest, ParsePositionContextValueMethods)
 {
-  const auto configs =
-   std::vector<json>{json::parse(R"({"method":"INITIAL_ENTRY_PRICE"})"),
-                     json::parse(R"({"method":"LATEST_ENTRY_PRICE"})"),
-                     json::parse(R"({"method":"AVERAGE_PRICE"})"),
-                     json::parse(R"({"method":"STOP_TARGET_REF_PRICE"})"),
-                     json::parse(R"({"method":"POSITION_DIRECTION"})")};
+  const auto configs = std::vector<json>{
+   json::parse(R"({"method":"POSITION.INITIAL_ENTRY_PRICE"})"),
+   json::parse(R"({"method":"POSITION.LATEST_ENTRY_PRICE"})"),
+   json::parse(R"({"method":"POSITION.AVERAGE_PRICE"})"),
+   json::parse(R"({"method":"POSITION.STOP_TARGET_REF_PRICE"})"),
+   json::parse(R"({"method":"POSITION.DIRECTION"})"),
+   json::parse(R"({"method":"POSITION.PYRAMIDING_LAYER"})")};
 
   for(const auto& config : configs) {
     const auto method = parse_node_method(config);
@@ -1614,27 +2105,27 @@ TEST_F(ConfigParserTest, ParsePositionContextPriceMethods)
 TEST_F(ConfigParserTest, ParsePositionRMultipleMethod)
 {
   const auto default_method =
-   parse_node_method(json::parse(R"("POSITION_R_MULTIPLE")"));
+   parse_node_method(json::parse(R"("POSITION.R_MULTIPLE")"));
   const auto custom_method = parse_node_method(json::parse(
-   R"({"method":"POSITION_R_MULTIPLE","params":{"source":"OPEN"}})"));
+   R"({"method":"POSITION.R_MULTIPLE","params":{"source":"MARKET_DATA.OPEN"}})"));
 
   const auto* default_r_multiple =
    series_method_cast<pludux::backtest::PositionRMultipleMethod<
-    ErasedSeriesMethod<ErasedSeriesMethodContext>>>(default_method);
+    ErasedSeriesMethod<BacktestMethodContext>>>(default_method);
   ASSERT_NE(default_r_multiple, nullptr);
   EXPECT_NE(series_method_cast<CloseMethod>(default_r_multiple->source()),
             nullptr);
 
   const auto* custom_r_multiple =
    series_method_cast<pludux::backtest::PositionRMultipleMethod<
-    ErasedSeriesMethod<ErasedSeriesMethodContext>>>(custom_method);
+    ErasedSeriesMethod<BacktestMethodContext>>>(custom_method);
   ASSERT_NE(custom_r_multiple, nullptr);
   EXPECT_NE(series_method_cast<OpenMethod>(custom_r_multiple->source()),
             nullptr);
 
   for(const auto& method : {default_method, custom_method}) {
     const auto serialized_config = serialize_node_method(method);
-    EXPECT_EQ(serialized_config.at("method"), "POSITION_R_MULTIPLE");
+    EXPECT_EQ(serialized_config.at("method"), "POSITION.R_MULTIPLE");
     EXPECT_TRUE(serialized_config.at("params").contains("source"));
     EXPECT_EQ(method, parse_node_method(serialized_config));
   }
@@ -1655,20 +2146,20 @@ TEST_F(ConfigParserTest, ParseScreenerAllOfMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "ALL_OF",
+      "method": "LOGIC.ALL_OF",
       "params": {
         "items": [
           {
-            "method": "GREATER_THAN",
+            "method": "COMPARISON.GREATER_THAN",
             "params": {
               "threshold": {
-                "method": "VALUE",
+                "method": "VALUE.CONSTANT",
                 "params": {
                   "value": 100
                 }
               },
               "target": {
-                "method": "DATA",
+                "method": "MARKET_DATA.FIELD",
                 "params": {
                   "field": "close"
                 }
@@ -1676,16 +2167,16 @@ TEST_F(ConfigParserTest, ParseScreenerAllOfMethod)
             }
           },
           {
-            "method": "LESS_THAN",
+            "method": "COMPARISON.LESS_THAN",
             "params": {
               "threshold": {
-                "method": "VALUE",
+                "method": "VALUE.CONSTANT",
                 "params": {
                   "value": 200
                 }
               },
               "target": {
-                "method": "DATA",
+                "method": "MARKET_DATA.FIELD",
                 "params": {
                   "field": "close"
                 }
@@ -1713,20 +2204,20 @@ TEST_F(ConfigParserTest, ParseScreenerAnyOfMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "ANY_OF",
+      "method": "LOGIC.ANY_OF",
       "params": {
         "items": [
           {
-            "method": "GREATER_THAN",
+            "method": "COMPARISON.GREATER_THAN",
             "params": {
               "threshold": {
-                "method": "VALUE",
+                "method": "VALUE.CONSTANT",
                 "params": {
                   "value": 100
                 }
               },
               "target": {
-                "method": "DATA",
+                "method": "MARKET_DATA.FIELD",
                 "params": {
                   "field": "close"
                 }
@@ -1734,16 +2225,16 @@ TEST_F(ConfigParserTest, ParseScreenerAnyOfMethod)
             }
           },
           {
-            "method": "LESS_THAN",
+            "method": "COMPARISON.LESS_THAN",
             "params": {
               "threshold": {
-                "method": "VALUE",
+                "method": "VALUE.CONSTANT",
                 "params": {
                   "value": 200
                 }
               },
               "target": {
-                "method": "DATA",
+                "method": "MARKET_DATA.FIELD",
                 "params": {
                   "field": "close"
                 }
@@ -1771,16 +2262,16 @@ TEST_F(ConfigParserTest, ParseScreenerGreaterThanMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "GREATER_THAN",
+      "method": "COMPARISON.GREATER_THAN",
       "params": {
         "threshold": {
-          "method": "VALUE",
+          "method": "VALUE.CONSTANT",
           "params": {
             "value": 100
           }
         },
         "target": {
-          "method": "DATA",
+          "method": "MARKET_DATA.FIELD",
           "params": {
             "field": "close"
           }
@@ -1813,16 +2304,16 @@ TEST_F(ConfigParserTest, ParseScreenerGreaterEqualMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "GREATER_EQUAL",
+      "method": "COMPARISON.GREATER_EQUAL",
       "params": {
         "threshold": {
-          "method": "VALUE",
+          "method": "VALUE.CONSTANT",
           "params": {
             "value": 100
           }
         },
         "target": {
-          "method": "DATA",
+          "method": "MARKET_DATA.FIELD",
           "params": {
             "field": "close"
           }
@@ -1850,16 +2341,16 @@ TEST_F(ConfigParserTest, ParseScreenerLessThanMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "LESS_THAN",
+      "method": "COMPARISON.LESS_THAN",
       "params": {
         "threshold": {
-          "method": "VALUE",
+          "method": "VALUE.CONSTANT",
           "params": {
             "value": 100
           }
         },
         "target": {
-          "method": "DATA",
+          "method": "MARKET_DATA.FIELD",
           "params": {
             "field": "close"
           }
@@ -1887,16 +2378,16 @@ TEST_F(ConfigParserTest, ParseScreenerLessEqualMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "LESS_EQUAL",
+      "method": "COMPARISON.LESS_EQUAL",
       "params": {
         "threshold": {
-          "method": "VALUE",
+          "method": "VALUE.CONSTANT",
           "params": {
             "value": 100
           }
         },
         "target": {
-          "method": "DATA",
+          "method": "MARKET_DATA.FIELD",
           "params": {
             "field": "close"
           }
@@ -1924,16 +2415,16 @@ TEST_F(ConfigParserTest, ParseScreenerEqualMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "EQUAL",
+      "method": "COMPARISON.EQUAL",
       "params": {
         "threshold": {
-          "method": "VALUE",
+          "method": "VALUE.CONSTANT",
           "params": {
             "value": 100
           }
         },
         "target": {
-          "method": "DATA",
+          "method": "MARKET_DATA.FIELD",
           "params": {
             "field": "close"
           }
@@ -1966,16 +2457,16 @@ TEST_F(ConfigParserTest, ParseScreenerNotEqualMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "NOT_EQUAL",
+      "method": "COMPARISON.NOT_EQUAL",
       "params": {
         "threshold": {
-          "method": "VALUE",
+          "method": "VALUE.CONSTANT",
           "params": {
             "value": 100
           }
         },
         "target": {
-          "method": "DATA",
+          "method": "MARKET_DATA.FIELD",
           "params": {
             "field": "close"
           }
@@ -2008,16 +2499,16 @@ TEST_F(ConfigParserTest, ParseScreenerCrossunderMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "CROSSUNDER",
+      "method": "COMPARISON.CROSSUNDER",
       "params": {
         "value": {
-          "method": "DATA",
+          "method": "MARKET_DATA.FIELD",
           "params": {
             "field": "close"
           }
         },
         "baseline": {
-          "method": "VALUE",
+          "method": "VALUE.CONSTANT",
           "params": {
             "value": 100
           }
@@ -2050,16 +2541,16 @@ TEST_F(ConfigParserTest, ParseScreenerCrossoverMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "CROSSOVER",
+      "method": "COMPARISON.CROSSOVER",
       "params": {
         "value": {
-          "method": "DATA",
+          "method": "MARKET_DATA.FIELD",
           "params": {
             "field": "close"
           }
         },
         "baseline": {
-          "method": "VALUE",
+          "method": "VALUE.CONSTANT",
           "params": {
             "value": 100
           }
@@ -2092,7 +2583,7 @@ TEST_F(ConfigParserTest, ParseScreenerAlwaysMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "ALWAYS"
+      "method": "LOGIC.ALWAYS"
     }
   )");
 
@@ -2110,7 +2601,7 @@ TEST_F(ConfigParserTest, ParseScreenerNeverMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "NEVER"
+      "method": "LOGIC.NEVER"
     }
   )");
 
@@ -2128,13 +2619,13 @@ TEST_F(ConfigParserTest, ParseScreenerAndMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "AND",
+      "method": "LOGIC.AND",
       "params": {
         "firstCondition": {
-          "method": "ALWAYS"
+          "method": "LOGIC.ALWAYS"
         },
         "secondCondition": {
-          "method": "NEVER"
+          "method": "LOGIC.NEVER"
         }
       }
     }
@@ -2163,13 +2654,13 @@ TEST_F(ConfigParserTest, ParseScreenerOrMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "OR",
+      "method": "LOGIC.OR",
       "params": {
         "firstCondition": {
-          "method": "ALWAYS"
+          "method": "LOGIC.ALWAYS"
         },
         "secondCondition": {
-          "method": "NEVER"
+          "method": "LOGIC.NEVER"
         }
       }
     }
@@ -2198,7 +2689,7 @@ TEST_F(ConfigParserTest, ParseScreenerNotMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "NOT",
+      "method": "LOGIC.NOT",
       "params": {
         "condition": true
       }
@@ -2224,13 +2715,13 @@ TEST_F(ConfigParserTest, ParseScreenerXorMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "XOR",
+      "method": "LOGIC.XOR",
       "params": {
         "firstCondition": {
-          "method": "ALWAYS"
+          "method": "LOGIC.ALWAYS"
         },
         "secondCondition": {
-          "method": "NEVER"
+          "method": "LOGIC.NEVER"
         }
       }
     }
@@ -2259,25 +2750,26 @@ TEST_F(ConfigParserTest, ParseHighestMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "HIGHEST",
+      "method": "INDICATOR.HIGHEST",
       "params": {
         "period": {
-          "method": "VALUE",
+          "method": "VALUE.CONSTANT",
           "params": {
             "value": 14
           }
         },
         "source": {
-          "method": "CLOSE"
+          "method": "MARKET_DATA.CLOSE"
         }
       }
     }
   )");
 
   const auto method = parse_node_method(config);
-  const auto highest_method = series_method_cast<
-   HighestMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                 ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+  const auto highest_method =
+   series_method_cast<HighestMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                                    ErasedSeriesMethod<BacktestMethodContext>>>(
+    method);
   ASSERT_NE(highest_method, nullptr);
 
   const auto serialized_config = serialize_node_method(method);
@@ -2289,25 +2781,26 @@ TEST_F(ConfigParserTest, ParseLowestMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "LOWEST",
+      "method": "INDICATOR.LOWEST",
       "params": {
         "period": {
-          "method": "VALUE",
+          "method": "VALUE.CONSTANT",
           "params": {
             "value": 14
           }
         },
         "source": {
-          "method": "CLOSE"
+          "method": "MARKET_DATA.CLOSE"
         }
       }
     }
   )");
 
   const auto method = parse_node_method(config);
-  const auto lowest_method = series_method_cast<
-   LowestMethod<ErasedSeriesMethod<ErasedSeriesMethodContext>,
-                ErasedSeriesMethod<ErasedSeriesMethodContext>>>(method);
+  const auto lowest_method =
+   series_method_cast<LowestMethod<ErasedSeriesMethod<BacktestMethodContext>,
+                                   ErasedSeriesMethod<BacktestMethodContext>>>(
+    method);
   ASSERT_NE(lowest_method, nullptr);
 
   const auto serialized_config = serialize_node_method(method);
@@ -2319,7 +2812,7 @@ TEST_F(ConfigParserTest, ParseTrMethod)
 {
   const auto config = json::parse(R"(
     {
-      "method": "TR"
+      "method": "INDICATOR.TR"
     }
   )");
 
@@ -2335,33 +2828,35 @@ TEST_F(ConfigParserTest, ParseTrMethod)
 TEST_F(ConfigParserTest, ParseSignalMethodsAsSeriesRoundTrip)
 {
   const auto configs = std::vector<json>{
-   json::parse(R"({"method":"ALWAYS"})"),
-   json::parse(R"({"method":"NEVER"})"),
-   json::parse(R"({"method":"NOT","params":{"condition":true}})"),
+   json::parse(R"({"method":"LOGIC.ALWAYS"})"),
+   json::parse(R"({"method":"LOGIC.NEVER"})"),
+   json::parse(R"({"method":"LOGIC.NOT","params":{"condition":true}})"),
    json::parse(
-    R"({"method":"AND","params":{"firstCondition":true,"secondCondition":false}})"),
+    R"({"method":"LOGIC.AND","params":{"firstCondition":true,"secondCondition":false}})"),
    json::parse(
-    R"({"method":"OR","params":{"firstCondition":false,"secondCondition":true}})"),
+    R"({"method":"LOGIC.OR","params":{"firstCondition":false,"secondCondition":true}})"),
    json::parse(
-    R"({"method":"XOR","params":{"firstCondition":true,"secondCondition":false}})"),
-   json::parse(R"({"method":"ALL_OF","params":{"items":[true,false,true]}})"),
-   json::parse(R"({"method":"ANY_OF","params":{"items":[false,false,true]}})"),
+    R"({"method":"LOGIC.XOR","params":{"firstCondition":true,"secondCondition":false}})"),
    json::parse(
-    R"({"method":"CROSSOVER","params":{"value":{"method":"VALUE","params":{"value":2}},"baseline":{"method":"VALUE","params":{"value":1}}}})"),
+    R"({"method":"LOGIC.ALL_OF","params":{"items":[true,false,true]}})"),
    json::parse(
-    R"({"method":"CROSSUNDER","params":{"value":{"method":"VALUE","params":{"value":1}},"baseline":{"method":"VALUE","params":{"value":2}}}})"),
+    R"({"method":"LOGIC.ANY_OF","params":{"items":[false,false,true]}})"),
    json::parse(
-    R"({"method":"GREATER_THAN","params":{"target":{"method":"VALUE","params":{"value":2}},"threshold":{"method":"VALUE","params":{"value":1}}}})"),
+    R"({"method":"COMPARISON.CROSSOVER","params":{"value":{"method":"VALUE.CONSTANT","params":{"value":2}},"baseline":{"method":"VALUE.CONSTANT","params":{"value":1}}}})"),
    json::parse(
-    R"({"method":"GREATER_EQUAL","params":{"target":{"method":"VALUE","params":{"value":2}},"threshold":{"method":"VALUE","params":{"value":2}}}})"),
+    R"({"method":"COMPARISON.CROSSUNDER","params":{"value":{"method":"VALUE.CONSTANT","params":{"value":1}},"baseline":{"method":"VALUE.CONSTANT","params":{"value":2}}}})"),
    json::parse(
-    R"({"method":"LESS_THAN","params":{"target":{"method":"VALUE","params":{"value":1}},"threshold":{"method":"VALUE","params":{"value":2}}}})"),
+    R"({"method":"COMPARISON.GREATER_THAN","params":{"target":{"method":"VALUE.CONSTANT","params":{"value":2}},"threshold":{"method":"VALUE.CONSTANT","params":{"value":1}}}})"),
    json::parse(
-    R"({"method":"LESS_EQUAL","params":{"target":{"method":"VALUE","params":{"value":1}},"threshold":{"method":"VALUE","params":{"value":1}}}})"),
+    R"({"method":"COMPARISON.GREATER_EQUAL","params":{"target":{"method":"VALUE.CONSTANT","params":{"value":2}},"threshold":{"method":"VALUE.CONSTANT","params":{"value":2}}}})"),
    json::parse(
-    R"({"method":"EQUAL","params":{"target":{"method":"VALUE","params":{"value":1}},"threshold":{"method":"VALUE","params":{"value":1}}}})"),
+    R"({"method":"COMPARISON.LESS_THAN","params":{"target":{"method":"VALUE.CONSTANT","params":{"value":1}},"threshold":{"method":"VALUE.CONSTANT","params":{"value":2}}}})"),
    json::parse(
-    R"({"method":"NOT_EQUAL","params":{"target":{"method":"VALUE","params":{"value":1}},"threshold":{"method":"VALUE","params":{"value":2}}}})")};
+    R"({"method":"COMPARISON.LESS_EQUAL","params":{"target":{"method":"VALUE.CONSTANT","params":{"value":1}},"threshold":{"method":"VALUE.CONSTANT","params":{"value":1}}}})"),
+   json::parse(
+    R"({"method":"COMPARISON.EQUAL","params":{"target":{"method":"VALUE.CONSTANT","params":{"value":1}},"threshold":{"method":"VALUE.CONSTANT","params":{"value":1}}}})"),
+   json::parse(
+    R"({"method":"COMPARISON.NOT_EQUAL","params":{"target":{"method":"VALUE.CONSTANT","params":{"value":1}},"threshold":{"method":"VALUE.CONSTANT","params":{"value":2}}}})")};
 
   for(const auto& config : configs) {
     const auto method = parse_node_method(config);
@@ -2386,7 +2881,7 @@ TEST_F(ConfigParserTest, ParseAnyConditionMethodWithInvalidRequiredFields)
 {
   const auto config = json::parse(R"(
     {
-      "method": "AND"
+      "method": "LOGIC.AND"
     }
   )");
 
@@ -2398,13 +2893,13 @@ TEST_F(ConfigParserTest, SeriesNodeRegistrySerializationDeserialization)
   const auto config = json::parse(R"(
     {
       "name1": {
-        "method": "DATA",
+        "method": "MARKET_DATA.FIELD",
         "params": {
           "field": "close"
         }
       },
       "name2": {
-        "method": "VALUE",
+        "method": "VALUE.CONSTANT",
         "params": {
           "value": 100
         }
@@ -2412,13 +2907,12 @@ TEST_F(ConfigParserTest, SeriesNodeRegistrySerializationDeserialization)
     }
   )");
 
-  auto series_nodes =
-   OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>{};
+  auto series_nodes = OrderedNamedRegistry<ErasedNode<BacktestMethodContext>>{};
   series_nodes.set("name1", DataNode{"close"});
   series_nodes.set("name2", ValueNode{100});
 
   auto serialize_series_nodes =
-   [this](const OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>&
+   [this](const OrderedNamedRegistry<ErasedNode<BacktestMethodContext>>&
            series_nodes) {
      auto series_nodes_config = jsoncons::ojson{};
      for(const auto& [series_name, series_node] : series_nodes) {
@@ -2429,7 +2923,7 @@ TEST_F(ConfigParserTest, SeriesNodeRegistrySerializationDeserialization)
    };
   auto parse_series_nodes = [this](const jsoncons::ojson& series_nodes_config) {
     auto parsed_series_nodes =
-     OrderedNamedRegistry<ErasedNode<ErasedSeriesMethodContext>>{};
+     OrderedNamedRegistry<ErasedNode<BacktestMethodContext>>{};
     for(const auto& [series_name, series_config] :
         series_nodes_config.object_range()) {
       parsed_series_nodes.set(series_name,
@@ -2446,64 +2940,173 @@ TEST_F(ConfigParserTest, SeriesNodeRegistrySerializationDeserialization)
   EXPECT_EQ(series_nodes, deserialized_series_nodes);
 }
 
-TEST_F(ConfigParserTest, ExecutionFilterRoundTripsLimitedNodeCatalog)
+TEST_F(ConfigParserTest, EntryFilterRoundTripsResultAndAccountNodes)
 {
   const auto config = json::parse(R"(
     {
-      "method": "AND",
+      "method": "LOGIC.AND",
       "firstCondition": {
-        "method": "GREATER_EQUAL",
+        "method": "COMPARISON.GREATER_EQUAL",
         "target": {
-          "method": "STRATEGY_PERFORMANCE",
-          "metric": 0
+          "method": "MODEL_PERFORMANCE.VALUE",
+          "params": {
+            "metric": "LIFETIME_COUNT"
+          }
         },
         "threshold": {
-          "method": "VALUE",
+          "method": "VALUE.CONSTANT",
           "value": 25
         }
       },
       "secondCondition": {
-        "method": "LESS_EQUAL",
+        "method": "COMPARISON.LESS_EQUAL",
         "target": {
-          "method": "DRAWDOWN"
+          "method": "REQUESTED_ORDER.RISK_WITH_FEES"
         },
         "threshold": {
-          "method": "VALUE",
-          "value": 10
+          "method": "PORTFOLIO.EQUITY"
         }
       }
     }
   )");
 
-  const auto node = backtest::parse_execution_filter_node(config);
-  const auto serialized = backtest::serialize_execution_filter_node(node);
-  EXPECT_EQ(node, backtest::parse_execution_filter_node(serialized));
+  const auto node = backtest::parse_entry_filter_node(config);
+  const auto serialized = backtest::serialize_entry_filter_node(node);
+  EXPECT_EQ(serialized.at("firstCondition").at("target").at("method"),
+            "MODEL_PERFORMANCE.VALUE");
+  EXPECT_EQ(serialized.at("firstCondition")
+             .at("target")
+             .at("params")
+             .at("metric")
+             .as<std::string>(),
+            "LIFETIME_COUNT");
+  EXPECT_EQ(node, backtest::parse_entry_filter_node(serialized));
 }
 
-TEST_F(ConfigParserTest, ExecutionFilterRejectsMarketDataNodes)
+TEST_F(ConfigParserTest, EntryFilterRejectsMarketDataNodes)
 {
   const auto config = json::parse(R"(
     {
-      "method": "GREATER_THAN",
+      "method": "COMPARISON.GREATER_THAN",
       "target": {
-        "method": "CLOSE"
+        "method": "MARKET_DATA.CLOSE"
       },
       "threshold": {
-        "method": "VALUE",
+        "method": "VALUE.CONSTANT",
         "value": 100
       }
     }
   )");
 
-  EXPECT_THROW(backtest::parse_execution_filter_node(config),
+  EXPECT_THROW(backtest::parse_entry_filter_node(config),
                std::invalid_argument);
 }
 
-TEST_F(ConfigParserTest, ExecutionFilterRejectsNonBooleanRoot)
+TEST_F(ConfigParserTest, EntryFilterRejectsNonBooleanRoot)
 {
-  const auto config =
-   json::parse(R"({"method":"STRATEGY_PERFORMANCE","metric":2})");
+  const auto config = json::parse(
+   R"({"method":"MODEL_PERFORMANCE.VALUE","params":{"metric":"WIN_RATE"}})");
 
-  EXPECT_THROW(backtest::parse_execution_filter_node(config),
+  EXPECT_THROW(backtest::parse_entry_filter_node(config),
+               std::invalid_argument);
+}
+
+TEST_F(ConfigParserTest, EntryFilterRejectsLegacyStrategyPerformanceMethod)
+{
+  const auto config = json::parse(R"(
+    {"method":"COMPARISON.GREATER_THAN","target":{"method":"MODEL_PERFORMANCE","params":{"metric":"WIN_RATE"}},"threshold":0}
+  )");
+
+  EXPECT_THROW(backtest::parse_entry_filter_node(config),
+               std::invalid_argument);
+}
+
+TEST_F(ConfigParserTest, EntryFilterRejectsIntegerPerformanceMetric)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "COMPARISON.GREATER_THAN",
+      "target": {
+        "method": "MODEL_PERFORMANCE.VALUE",
+        "params": {
+          "metric": 0
+        }
+      },
+      "threshold": 0
+    }
+  )");
+
+  EXPECT_THROW(backtest::parse_entry_filter_node(config),
+               std::invalid_argument);
+}
+
+TEST_F(ConfigParserTest, EntryFilterRejectsPerformanceMetricWithoutParams)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "COMPARISON.GREATER_THAN",
+      "target": {
+        "method": "MODEL_PERFORMANCE.VALUE"
+      },
+      "threshold": 0
+    }
+  )");
+
+  EXPECT_THROW(backtest::parse_entry_filter_node(config),
+               std::invalid_argument);
+}
+
+TEST_F(ConfigParserTest, EntryFilterRejectsPerformanceMetricWithoutMetric)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "COMPARISON.GREATER_THAN",
+      "target": {
+        "method": "MODEL_PERFORMANCE.VALUE",
+        "params": {}
+      },
+      "threshold": 0
+    }
+  )");
+
+  EXPECT_THROW(backtest::parse_entry_filter_node(config),
+               std::invalid_argument);
+}
+
+TEST_F(ConfigParserTest, EntryFilterRejectsUnknownPerformanceMetric)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "COMPARISON.GREATER_THAN",
+      "target": {
+        "method": "MODEL_PERFORMANCE.VALUE",
+        "params": {
+          "metric": "UNKNOWN"
+        }
+      },
+      "threshold": 0
+    }
+  )");
+
+  EXPECT_THROW(backtest::parse_entry_filter_node(config),
+               std::invalid_argument);
+}
+
+TEST_F(ConfigParserTest, EntryFilterRejectsLowercasePerformanceMetric)
+{
+  const auto config = json::parse(R"(
+    {
+      "method": "COMPARISON.GREATER_THAN",
+      "target": {
+        "method": "MODEL_PERFORMANCE.VALUE",
+        "params": {
+          "metric": "win_rate"
+        }
+      },
+      "threshold": 0
+    }
+  )");
+
+  EXPECT_THROW(backtest::parse_entry_filter_node(config),
                std::invalid_argument);
 }

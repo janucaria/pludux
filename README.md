@@ -1,108 +1,90 @@
 # Pludux
 
-[![License](https://img.shields.io/badge/license-AGPL-blue.svg)](LICENSE.txt)  
-**Pludux** is a free and open-source backtesting application built around a clean, modular architecture.
+[![License](https://img.shields.io/badge/license-AGPL-blue.svg)](LICENSE.txt)
 
-It allows traders to simulate single-asset strategies using historical data, configurable risk rules, exchange constraints, and broker fees — all through a structured GUI workflow.
+**Pludux** is a free and open-source desktop GUI application for deterministic
+portfolio simulation.
 
-Pludux is currently in its early public phase, focused on providing a stable and extensible foundation. The core architecture is solid, while more advanced features will evolve over time.
+Start here:
 
----
+- [Documentation home](docs/index.md)
+- [Quick start](docs/getting-started.md)
 
-## ✨ Design Philosophy
+## Overview
 
-Pludux separates a backtest into independent rulesets:
+Pludux separates simulation into these repository terms:
 
-- **Asset** — historical data source  
-- **Strategy** — trading logic (GUI-based, JSON import/export)  
-- **Profile** — capital and risk configuration  
-- **Market** — exchange constraints (minimum quantity, quantity step)  
-- **Broker** — execution costs (fees)
 
-This modular structure keeps the engine predictable, transparent, and extensible.
+- **Backtest**: an actual System × Asset simulation run and its result
+- **Portfolio**: shared-capital account that runs ordered Systems
+- **Market**: a trading venue or market context (for example, IDX, NASDAQ,
+  forex, or crypto) that holds venue-specific rules such as minimum order
+  quantity and quantity step
+- **Broker**: the broker or execution provider used for the Market, including
+  its fee and execution-cost rules
+- **System**: a reusable Watchlist plus one Main Strategy, ordered Failsafe
+  Strategy bindings and activation rules, and one shared Model Performance
+  configuration
+- **Strategy**: a named, reusable stored configuration of one Model, one
+  Profile, model input overrides, and an Entry Filter
+- **Profile**: sizing and capital policy for position sizing, drawdown
+  adjustment, and insufficient-cash handling
+- **Model**: deterministic trading rules, including indicators, conditions,
+  entries/exits, plots, and inputs
+- **Watchlist**: an ordered set of Assets used by a System
+- **Asset**: market data and field mapping
 
-Instead of hardcoding everything inside a single engine layer, each component can evolve independently.
+## Verified capabilities
 
----
+- GUI-based Portfolio, Market, Broker, System, Strategy, Profile, Model, Watchlist, 
+  and Asset management
+- Model creation/editing in the GUI, including node-based editing,
+  duplicate, and JSON import/export
+- Strategy creation/editing in the GUI, including duplicate-and-reuse
+  workflows
+- System creation/editing in the GUI, including Watchlist binding, a Main
+  Strategy, ordered Failsafe Strategy bindings, activation rules, and shared
+  Model Performance settings
+- Portfolio simulations with shared capital across ordered Systems
+- Deterministic execution for identical inputs
+- Union processing of asset timelines in Portfolio backtests
+- Missing candles are not synthesized
+- Last-known prices are used only for valuation where the design permits it
+- Market venue-rule handling and Broker fee simulation
+- Summary metrics, charting, and Trades view in the desktop UI
 
-## 🚀 Current Capabilities
+## Scope and non-goals
 
-### Strategy
-- GUI-based strategy creation and editing
-- Import/export strategies as JSON
-- Long/short configuration
-- Entry and exit conditions
-- Stop Loss (SL)
-- Take Profit (TP)
-- Trailing Stop Loss (TSL)
-- Risk distance modes:
-  - ATR-based
-  - Percentage-based
-  - Fixed value
+- Focus: portfolio simulation with shared capital, ordered Systems, and
+  deterministic execution.
+- Profile does not define execution filtering or built-in risk presets.
+- Not included: live trading, margin, leverage models, currency conversion,
+  correlation limits, risk parity, slippage, or deeper intrabar simulation.
 
-### Market Rules
-- Minimum quantity size
-- Quantity step size
+See [Core Concepts](docs/concepts.md), [Limitations](docs/limitations.md), and
+[Portfolio Backtesting](docs/portfolio-backtesting.md) for current semantics.
 
-### Broker Rules
-- Fee simulation
+## How to start
 
-### Data
-- Load historical OHLCV data from CSV
-- Use additional CSV fields within strategy logic
+1. Read [Documentation home](docs/index.md).
+2. Follow [Quick start](docs/getting-started.md).
+3. Use the complete [Node and Method Reference](docs/nodes.md) while building a
+   Model or comparator.
+4. For simulation behavior, read [Execution and Position Lifecycle](docs/execution.md)
+   and [Portfolio Backtesting](docs/portfolio-backtesting.md).
 
-### Reporting & Visualization
-- Trade journal
-- Summary metrics
-- Candlestick chart with entry/exit markers
-- Equity curve visualization
+## Contributing
 
----
-
-## 📌 Scope
-
-Pludux currently focuses on:
-
-- Single-asset backtesting  
-- Deterministic bar-based execution  
-- Clear trade lifecycle management  
-
-More advanced simulation features — such as portfolio-level backtesting, pyramiding, intrabar modeling, and slippage simulation — are part of the long-term roadmap.
-
-The current direction prioritizes stability and clean architecture.
-
----
-
-## 🛣 Roadmap Direction
-
-Pludux is designed as a foundation-first project. Future iterations aim to expand:
-
-- Advanced exit management
-- Position scaling and pyramiding
-- Enhanced broker models
-- Portfolio engine
-- Strategy editor improvements
-- Data integrations
-
-The architecture is intentionally modular to support these extensions cleanly.
+Feedback, ideas, and contributions are welcome. Contributions should align with
+the project style and include appropriate tests or examples.
+See [Building and Contributing](docs/development.md) for presets, architecture,
+tests, and the domain-change checklist.
 
 ---
 
-## 🤝 Contributing
+## License
 
-Feedback, ideas, and contributions are welcome.
+Pludux is released under the **AGPL license**. See [LICENSE.txt](LICENSE.txt) for
+more information.
 
-Please ensure your contributions align with the project’s coding style and include appropriate tests or examples.
-
-Pludux is evolving — and the architecture is designed to grow thoughtfully rather than quickly.
-
----
-
-## 📜 License
-
-Pludux is released under the **AGPL license**. See [LICENSE.txt](LICENSE.txt) for more information.
-
----
-
-**Happy Backtesting!** Enjoy exploring and testing your trading strategies with Pludux!
-
+Happy backtesting!

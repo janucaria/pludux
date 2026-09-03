@@ -7,6 +7,7 @@ module;
 #include <limits>
 #include <type_traits>
 #include <utility>
+#include <variant>
 
 export module pludux:nodes.operators_node;
 
@@ -15,11 +16,11 @@ import :methods.operators_method;
 import :nodes.erased_node;
 
 export namespace pludux {
-template<typename TBinaryFn>
+template<typename TBinaryFn, typename TContext = std::monostate>
 class BinaryOperatorNode {
 public:
-  BinaryOperatorNode(ErasedNode<ErasedSeriesMethodContext> operand1,
-                     ErasedNode<ErasedSeriesMethodContext> operand2)
+  BinaryOperatorNode(ErasedNode<TContext> operand1,
+                     ErasedNode<TContext> operand2)
   : operand1_{std::move(operand1)}
   , operand2_{std::move(operand2)}
   {
@@ -29,62 +30,62 @@ public:
    -> bool = default;
 
   auto operand1(this const BinaryOperatorNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<TContext>&
   {
     return self.operand1_;
   }
 
   void operand1(this BinaryOperatorNode& self,
-                ErasedNode<ErasedSeriesMethodContext> operand1) noexcept
+                 ErasedNode<TContext> operand1) noexcept
   {
     self.operand1_ = std::move(operand1);
   }
 
   auto left(this const BinaryOperatorNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<TContext>&
   {
     return self.operand1();
   }
 
   void left(this BinaryOperatorNode& self,
-            ErasedNode<ErasedSeriesMethodContext> left) noexcept
+             ErasedNode<TContext> left) noexcept
   {
     self.operand1(std::move(left));
   }
 
   auto operand2(this const BinaryOperatorNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<TContext>&
   {
     return self.operand2_;
   }
 
   void operand2(this BinaryOperatorNode& self,
-                ErasedNode<ErasedSeriesMethodContext> operand2) noexcept
+                 ErasedNode<TContext> operand2) noexcept
   {
     self.operand2_ = std::move(operand2);
   }
 
   auto right(this const BinaryOperatorNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<TContext>&
   {
     return self.operand2();
   }
 
   void right(this BinaryOperatorNode& self,
-             ErasedNode<ErasedSeriesMethodContext> right) noexcept
+              ErasedNode<TContext> right) noexcept
   {
     self.operand2(std::move(right));
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> operand1_;
-  ErasedNode<ErasedSeriesMethodContext> operand2_;
+  ErasedNode<TContext> operand1_;
+  ErasedNode<TContext> operand2_;
 };
 
-template<typename TUnaryFn>
+template<typename TUnaryFn, typename TContext = std::monostate>
 class UnaryOperatorNode {
 public:
-  explicit UnaryOperatorNode(ErasedNode<ErasedSeriesMethodContext> operand)
+  explicit UnaryOperatorNode(ErasedNode<TContext> operand)
   : operand_{std::move(operand)}
   {
   }
@@ -93,48 +94,60 @@ public:
    -> bool = default;
 
   auto operand(this const UnaryOperatorNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<TContext>&
   {
     return self.operand_;
   }
 
   void operand(this UnaryOperatorNode& self,
-               ErasedNode<ErasedSeriesMethodContext> operand) noexcept
+                ErasedNode<TContext> operand) noexcept
   {
     self.operand_ = std::move(operand);
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> operand_;
+  ErasedNode<TContext> operand_;
 };
 
-using MultiplyNode = BinaryOperatorNode<std::multiplies<>>;
+template<typename TContext = std::monostate>
+using MultiplyNode = BinaryOperatorNode<std::multiplies<>, TContext>;
 
-using DivideNode = BinaryOperatorNode<std::divides<>>;
+template<typename TContext = std::monostate>
+using DivideNode = BinaryOperatorNode<std::divides<>, TContext>;
 
-using AddNode = BinaryOperatorNode<std::plus<>>;
+template<typename TContext = std::monostate>
+using AddNode = BinaryOperatorNode<std::plus<>, TContext>;
 
-using SubtractNode = BinaryOperatorNode<std::minus<>>;
+template<typename TContext = std::monostate>
+using SubtractNode = BinaryOperatorNode<std::minus<>, TContext>;
 
-using NegateNode = UnaryOperatorNode<std::negate<>>;
+template<typename TContext = std::monostate>
+using NegateNode = UnaryOperatorNode<std::negate<>, TContext>;
 
-using AbsNode = UnaryOperatorNode<Absolute<>>;
+template<typename TContext = std::monostate>
+using AbsNode = UnaryOperatorNode<Absolute<>, TContext>;
 
-using AbsDiffNode = BinaryOperatorNode<AbsoluteDifference<>>;
+template<typename TContext = std::monostate>
+using AbsDiffNode = BinaryOperatorNode<AbsoluteDifference<>, TContext>;
 
-using SqrtNode = UnaryOperatorNode<SquareRoot<>>;
+template<typename TContext = std::monostate>
+using SqrtNode = UnaryOperatorNode<SquareRoot<>, TContext>;
 
-using MaxNode = BinaryOperatorNode<Maximum<>>;
+template<typename TContext = std::monostate>
+using MaxNode = BinaryOperatorNode<Maximum<>, TContext>;
 
-using MinNode = BinaryOperatorNode<Minimum<>>;
+template<typename TContext = std::monostate>
+using MinNode = BinaryOperatorNode<Minimum<>, TContext>;
 
-using PositivePartNode = UnaryOperatorNode<PositivePart<>>;
+template<typename TContext = std::monostate>
+using PositivePartNode = UnaryOperatorNode<PositivePart<>, TContext>;
 
-using NegativePartNode = UnaryOperatorNode<NegativePart<>>;
+template<typename TContext = std::monostate>
+using NegativePartNode = UnaryOperatorNode<NegativePart<>, TContext>;
 
-template<typename TBinaryFn, MethodContextable TContext>
+template<typename TBinaryFn, typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
-                       const BinaryOperatorNode<TBinaryFn>& node,
+                       const BinaryOperatorNode<TBinaryFn, TContext>& node,
                        NodeToErasedMethodContext& context)
  -> ErasedSeriesMethod<TContext>
 {
@@ -147,9 +160,9 @@ auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                                                       std::move(operand2)}};
 }
 
-template<typename TUnaryFn, MethodContextable TContext>
+template<typename TUnaryFn, typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
-                       const UnaryOperatorNode<TUnaryFn>& node,
+                       const UnaryOperatorNode<TUnaryFn, TContext>& node,
                        NodeToErasedMethodContext& context)
  -> ErasedSeriesMethod<TContext>
 {

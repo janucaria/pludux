@@ -10,7 +10,7 @@ import :risk_distance_method;
 
 export namespace pludux::backtest {
 
-template<typename TNode>
+template<typename TContext>
 class RiskDistanceValueNode {
 public:
   RiskDistanceValueNode()
@@ -23,7 +23,7 @@ public:
   {
   }
 
-  explicit RiskDistanceValueNode(ErasedNode<ErasedSeriesMethodContext> value)
+  explicit RiskDistanceValueNode(ErasedNode<TContext> value)
   : value_{std::move(value)}
   {
   }
@@ -32,39 +32,42 @@ public:
    -> bool = default;
 
   auto value(this const RiskDistanceValueNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<TContext>&
   {
     return self.value_;
   }
 
   void value(this RiskDistanceValueNode& self,
-             ErasedNode<ErasedSeriesMethodContext> value) noexcept
+             ErasedNode<TContext> value) noexcept
   {
     self.value_ = std::move(value);
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> value_;
+  ErasedNode<TContext> value_;
 };
 
+template<typename TContext>
 class RiskDistanceAmountNode
-: public RiskDistanceValueNode<RiskDistanceAmountNode> {
+: public RiskDistanceValueNode<TContext> {
 public:
-  using RiskDistanceValueNode::RiskDistanceValueNode;
+  using RiskDistanceValueNode<TContext>::RiskDistanceValueNode;
 
   auto operator==(const RiskDistanceAmountNode&) const noexcept
    -> bool = default;
 };
 
+template<typename TContext>
 class RiskDistancePercentNode
-: public RiskDistanceValueNode<RiskDistancePercentNode> {
+: public RiskDistanceValueNode<TContext> {
 public:
-  using RiskDistanceValueNode::RiskDistanceValueNode;
+  using RiskDistanceValueNode<TContext>::RiskDistanceValueNode;
 
   auto operator==(const RiskDistancePercentNode&) const noexcept
    -> bool = default;
 };
 
+template<typename TContext>
 class RiskDistanceAtrNode {
 public:
   RiskDistanceAtrNode()
@@ -73,44 +76,45 @@ public:
   }
 
   RiskDistanceAtrNode(double period,
-                      double multiplier,
-                      MaNodeType ma_smoothing_type = MaNodeType::Rma)
+                            double multiplier,
+                            MaNodeType ma_smoothing_type = MaNodeType::Rma)
   : RiskDistanceAtrNode{
      ValueNode{period}, ValueNode{multiplier}, ma_smoothing_type}
   {
   }
 
-  RiskDistanceAtrNode(ErasedNode<ErasedSeriesMethodContext> period,
-                      ErasedNode<ErasedSeriesMethodContext> multiplier,
-                      MaNodeType ma_smoothing_type = MaNodeType::Rma)
+  RiskDistanceAtrNode(ErasedNode<TContext> period,
+                            ErasedNode<TContext> multiplier,
+                            MaNodeType ma_smoothing_type = MaNodeType::Rma)
   : period_{std::move(period)}
   , multiplier_{std::move(multiplier)}
   , ma_smoothing_type_{ma_smoothing_type}
   {
   }
 
-  auto operator==(const RiskDistanceAtrNode&) const noexcept -> bool = default;
+  auto operator==(const RiskDistanceAtrNode&) const noexcept -> bool =
+   default;
 
   auto period(this const RiskDistanceAtrNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<TContext>&
   {
     return self.period_;
   }
 
   void period(this RiskDistanceAtrNode& self,
-              ErasedNode<ErasedSeriesMethodContext> period) noexcept
+              ErasedNode<TContext> period) noexcept
   {
     self.period_ = std::move(period);
   }
 
   auto multiplier(this const RiskDistanceAtrNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<TContext>&
   {
     return self.multiplier_;
   }
 
   void multiplier(this RiskDistanceAtrNode& self,
-                  ErasedNode<ErasedSeriesMethodContext> multiplier) noexcept
+                  ErasedNode<TContext> multiplier) noexcept
   {
     self.multiplier_ = std::move(multiplier);
   }
@@ -128,38 +132,41 @@ public:
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> period_;
-  ErasedNode<ErasedSeriesMethodContext> multiplier_;
+  ErasedNode<TContext> period_;
+  ErasedNode<TContext> multiplier_;
   MaNodeType ma_smoothing_type_;
 };
 
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const RiskDistanceAmountNode& node,
-                       NodeToErasedMethodContext& context)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+template<typename TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                        const RiskDistanceAmountNode<TContext>& node,
+                        NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{RiskDistanceAmountMethod{
-   node_to_erased_method<ErasedSeriesMethodContext>(node.value(), context)}};
+  return ErasedSeriesMethod<TContext>{RiskDistanceAmountMethod{
+   node_to_erased_method<TContext>(node.value(), context)}};
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const RiskDistancePercentNode& node,
-                       NodeToErasedMethodContext& context)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+template<typename TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                        const RiskDistancePercentNode<TContext>& node,
+                        NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{
-   RiskDistancePercentMethod{
-    node_to_erased_method<ErasedSeriesMethodContext>(node.value(), context)}};
+  return ErasedSeriesMethod<TContext>{
+    RiskDistancePercentMethod{
+     node_to_erased_method<TContext>(node.value(), context)}};
 }
 
-auto pludux_tag_invoke(NodeToErasedMethod<ErasedSeriesMethodContext>,
-                       const RiskDistanceAtrNode& node,
-                       NodeToErasedMethodContext& context)
- -> ErasedSeriesMethod<ErasedSeriesMethodContext>
+template<typename TContext>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                        const RiskDistanceAtrNode<TContext>& node,
+                        NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<TContext>
 {
-  return ErasedSeriesMethod<ErasedSeriesMethodContext>{RiskDistanceAtrMethod{
-   node_to_erased_method<ErasedSeriesMethodContext>(node.period(), context),
-   node_to_erased_method<ErasedSeriesMethodContext>(node.multiplier(), context),
+  return ErasedSeriesMethod<TContext>{RiskDistanceAtrMethod{
+    node_to_erased_method<TContext>(node.period(), context),
+    node_to_erased_method<TContext>(node.multiplier(), context),
    static_cast<MaMethodType>(node.ma_smoothing_type())}};
 }
 

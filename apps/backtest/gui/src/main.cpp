@@ -2,8 +2,8 @@
 #include <atomic>
 #include <cmath>
 #include <cstddef>
-#include <cstdlib>
 #include <cstdio>
+#include <cstdlib>
 #include <exception>
 #include <functional>
 #include <iostream>
@@ -80,22 +80,18 @@ EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_js_opened_file_content_ready(
 EMSCRIPTEN_KEEPALIVE void pludux_apps_backtest_js_opened_file_text_ready(
  char* data, void* user_callback, void* user_data)
 {
-  using pludux::apps::ApplicationState;
-  using JsOnPushOpenedFileAction =
-   std::function<void(const std::string&, ApplicationState&)>;
+  using pludux::apps::WindowContext;
+  using JsOnOpenFile = std::function<void(const std::string&, WindowContext&)>;
 
   auto unique_data = std::unique_ptr<char, StdFreeDeleter>{data};
 
   auto data_str = std::string(reinterpret_cast<const char*>(unique_data.get()));
 
-  auto callback_ptr =
-   reinterpret_cast<JsOnPushOpenedFileAction*>(user_callback);
+  auto callback_ptr = reinterpret_cast<JsOnOpenFile*>(user_callback);
 
   auto& window_context =
    *reinterpret_cast<pludux::apps::WindowContext*>(user_data);
-  window_context.push_action(
-   [data_str = std::move(data_str), callback_ptr = callback_ptr](
-    ApplicationState& app_state) { (*callback_ptr)(data_str, app_state); });
+  (*callback_ptr)(data_str, window_context);
 }
 }
 
@@ -505,23 +501,21 @@ private:
     const auto center = ImVec2{viewport->Pos.x + viewport->Size.x * 0.5f,
                                viewport->Pos.y + viewport->Size.y * 0.5f};
     auto* draw_list = ImGui::GetBackgroundDrawList(viewport);
-    draw_list->AddRectFilled(
-     viewport->Pos,
-     ImVec2{viewport->Pos.x + viewport->Size.x,
-            viewport->Pos.y + viewport->Size.y},
-     background_color);
+    draw_list->AddRectFilled(viewport->Pos,
+                             ImVec2{viewport->Pos.x + viewport->Size.x,
+                                    viewport->Pos.y + viewport->Size.y},
+                             background_color);
 
     constexpr auto title = "PLUDUX";
     constexpr auto title_font_size = 28.0f;
     auto* font = ImGui::GetFont();
     const auto title_size =
      font->CalcTextSizeA(title_font_size, 1000.0f, 0.0f, title);
-    draw_list->AddText(
-     font,
-     title_font_size,
-     ImVec2{center.x - title_size.x * 0.5f, center.y - 58.0f},
-     title_color,
-     title);
+    draw_list->AddText(font,
+                       title_font_size,
+                       ImVec2{center.x - title_size.x * 0.5f, center.y - 58.0f},
+                       title_color,
+                       title);
 
     constexpr auto detail = "Preparing your workspace...";
     const auto detail_size = ImGui::CalcTextSize(detail);
@@ -538,11 +532,7 @@ private:
     const auto start_angle =
      std::fmod(static_cast<float>(ImGui::GetTime()) * 4.0f, 2.0f * pi);
     draw_list->PathArcTo(
-     spinner_center,
-     spinner_radius,
-     start_angle,
-     start_angle + pi * 1.35f,
-     24);
+     spinner_center, spinner_radius, start_angle, start_angle + pi * 1.35f, 24);
     draw_list->PathStroke(spinner_color, 0, 3.0f);
   }
 
@@ -580,9 +570,8 @@ private:
      SurfaceTextureReleaser{surface_texture.texture};
 
     if(ImGui_ImplWGPU_IsSurfaceStatusError(surface_texture.status)) {
-      throw std::runtime_error(
-       "unrecoverable WebGPU surface error (status " +
-       std::to_string(surface_texture.status) + ")");
+      throw std::runtime_error("unrecoverable WebGPU surface error (status " +
+                               std::to_string(surface_texture.status) + ")");
     }
     if(ImGui_ImplWGPU_IsSurfaceStatusSubOptimal(surface_texture.status)) {
       configure_webgpu_surface(width, height);
@@ -654,8 +643,7 @@ private:
 
   auto configure_webgpu_surface() -> bool
   {
-    return configure_webgpu_surface(
-     wgpu_surface_width_, wgpu_surface_height_);
+    return configure_webgpu_surface(wgpu_surface_width_, wgpu_surface_height_);
   }
 
   auto configure_webgpu_surface(int width, int height) -> bool
@@ -796,8 +784,8 @@ private:
                               void*)
   {
     std::cerr << "WebGPU " << ImGui_ImplWGPU_GetErrorTypeName(error_type)
-              << " error: "
-              << std::string(message.data, message.length) << '\n';
+              << " error: " << std::string(message.data, message.length)
+              << '\n';
   }
 
   static void on_webgpu_device_lost(WGPUDevice const*,
@@ -807,8 +795,8 @@ private:
                                     void*)
   {
     std::cerr << "WebGPU device lost ("
-              << ImGui_ImplWGPU_GetDeviceLostReasonName(reason) << "): "
-              << std::string(message.data, message.length) << '\n';
+              << ImGui_ImplWGPU_GetDeviceLostReasonName(reason)
+              << "): " << std::string(message.data, message.length) << '\n';
   }
 #endif
 

@@ -4,7 +4,6 @@ FetchContent_Declare(
   GIT_TAG        boost-1.91.0
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
-  OVERRIDE_FIND_PACKAGE
   EXCLUDE_FROM_ALL
   PATCH_COMMAND
     ${CMAKE_COMMAND} -E copy_directory
@@ -12,7 +11,7 @@ FetchContent_Declare(
       <SOURCE_DIR>/
 )
 
-find_package(boost_mp11 REQUIRED)
+FetchContent_MakeAvailable(boost_mp11)
 
 add_library(${PROJECT_NAME})
 add_library(${CMAKE_PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
@@ -81,10 +80,8 @@ target_sources(${PROJECT_NAME}
         
         src/method_key.cxx
         src/ordered_named_registry.cxx
-        src/method_contextable.cxx
         src/evaluate_series_method.cxx
         src/hash_series_method.cxx
-        src/erased_series_method_context.cxx
 
         src/methods/erased_series_method.cxx
 
@@ -141,8 +138,6 @@ target_sources(${PROJECT_NAME}
         src/nodes.cxx
 
         src/series_evaluation_results.cxx
-        src/default_method_context.cxx
-
         src/pludux.cxx
 )
 

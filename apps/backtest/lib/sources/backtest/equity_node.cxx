@@ -21,7 +21,7 @@ public:
    -> bool = default;
 };
 
-template<MethodContextable TContext>
+template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const EquityNode& node,
                        NodeToErasedMethodContext& context) noexcept
@@ -32,7 +32,7 @@ auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
   return ErasedSeriesMethod<TContext>{EquityMethod{}};
 }
 
-template<MethodContextable TContext>
+template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const EquityPercentNode& node,
                        NodeToErasedMethodContext& context) noexcept

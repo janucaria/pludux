@@ -6,6 +6,7 @@ module;
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
+#include <variant>
 
 export module pludux:nodes.rsi_node;
 
@@ -17,6 +18,7 @@ import :nodes.value_node;
 
 export namespace pludux {
 
+template<typename TContext = std::monostate>
 class RsiNode {
 public:
   RsiNode()
@@ -29,18 +31,17 @@ public:
   {
   }
 
-  explicit RsiNode(ErasedNode<ErasedSeriesMethodContext> source)
+  explicit RsiNode(ErasedNode<TContext> source)
   : RsiNode{std::move(source), 14}
   {
   }
 
-  RsiNode(ErasedNode<ErasedSeriesMethodContext> source, std::size_t period)
+  RsiNode(ErasedNode<TContext> source, std::size_t period)
   : RsiNode{std::move(source), ValueNode{static_cast<double>(period)}}
   {
   }
 
-  RsiNode(ErasedNode<ErasedSeriesMethodContext> source,
-          ErasedNode<ErasedSeriesMethodContext> period)
+  RsiNode(ErasedNode<TContext> source, ErasedNode<TContext> period)
   : source_{std::move(source)}
   , period_{std::move(period)}
   {
@@ -49,25 +50,25 @@ public:
   auto operator==(const RsiNode& other) const noexcept -> bool = default;
 
   auto source(this const RsiNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<TContext>&
   {
     return self.source_;
   }
 
   void source(this RsiNode& self,
-              ErasedNode<ErasedSeriesMethodContext> source) noexcept
+               ErasedNode<TContext> source) noexcept
   {
     self.source_ = std::move(source);
   }
 
   auto period(this const RsiNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<TContext>&
   {
     return self.period_;
   }
 
   void period(this RsiNode& self,
-              ErasedNode<ErasedSeriesMethodContext> period) noexcept
+               ErasedNode<TContext> period) noexcept
   {
     self.period_ = std::move(period);
   }
@@ -78,13 +79,13 @@ public:
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> source_;
-  ErasedNode<ErasedSeriesMethodContext> period_;
+  ErasedNode<TContext> source_;
+  ErasedNode<TContext> period_;
 };
 
-template<MethodContextable TContext>
+template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
-                       const RsiNode& node,
+                        const RsiNode<TContext>& node,
                        NodeToErasedMethodContext& context)
  -> ErasedSeriesMethod<TContext>
 {

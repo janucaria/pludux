@@ -1,6 +1,7 @@
 module;
 
 #include <utility>
+#include <variant>
 
 export module pludux:nodes.percentage_node;
 
@@ -11,6 +12,7 @@ import :nodes.ohlcv_node;
 
 export namespace pludux {
 
+template<typename TContext = std::monostate>
 class PercentageNode {
 public:
   PercentageNode()
@@ -23,7 +25,7 @@ public:
   {
   }
 
-  PercentageNode(ErasedNode<ErasedSeriesMethodContext> base, double percent)
+  PercentageNode(ErasedNode<TContext> base, double percent)
   : base_{std::move(base)}
   , percent_{percent}
   {
@@ -32,13 +34,13 @@ public:
   auto operator==(const PercentageNode& other) const noexcept -> bool = default;
 
   auto base(this const PercentageNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<TContext>&
   {
     return self.base_;
   }
 
   void base(this PercentageNode& self,
-            ErasedNode<ErasedSeriesMethodContext> new_base) noexcept
+             ErasedNode<TContext> new_base) noexcept
   {
     self.base_ = std::move(new_base);
   }
@@ -54,13 +56,13 @@ public:
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> base_;
+  ErasedNode<TContext> base_;
   double percent_;
 };
 
-template<MethodContextable TContext>
+template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
-                       const PercentageNode& node,
+                       const PercentageNode<TContext>& node,
                        NodeToErasedMethodContext& context)
  -> ErasedSeriesMethod<TContext>
 {

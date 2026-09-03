@@ -2,6 +2,7 @@ module;
 
 #include <cstddef>
 #include <utility>
+#include <variant>
 
 export module pludux:nodes.donchian_channel_node;
 
@@ -12,6 +13,7 @@ import :nodes.value_node;
 
 export namespace pludux {
 
+template<typename TContext = std::monostate>
 class DonchianChannelNode {
 public:
   DonchianChannelNode()
@@ -24,7 +26,7 @@ public:
   {
   }
 
-  explicit DonchianChannelNode(ErasedNode<ErasedSeriesMethodContext> period)
+   explicit DonchianChannelNode(ErasedNode<TContext> period)
   : period_{std::move(period)}
   {
   }
@@ -32,7 +34,7 @@ public:
   auto operator==(const DonchianChannelNode&) const noexcept -> bool = default;
 
   auto period(this const DonchianChannelNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+    -> const ErasedNode<TContext>&
   {
     return self.period_;
   }
@@ -43,18 +45,18 @@ public:
   }
 
   void period(this DonchianChannelNode& self,
-              ErasedNode<ErasedSeriesMethodContext> period) noexcept
+               ErasedNode<TContext> period) noexcept
   {
     self.period_ = std::move(period);
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> period_;
+   ErasedNode<TContext> period_;
 };
 
-template<MethodContextable TContext>
+template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
-                       const DonchianChannelNode& node,
+                        const DonchianChannelNode<TContext>& node,
                        NodeToErasedMethodContext& context)
  -> ErasedSeriesMethod<TContext>
 {

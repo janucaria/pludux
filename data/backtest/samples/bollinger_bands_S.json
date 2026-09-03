@@ -1,11 +1,11 @@
 {
-  "version": 2,
+  "version": 1,
   "series": {
     "bbands": {
-      "method": "BB",
+      "method": "INDICATOR.BB",
       "params": {
         "period": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "label": "Period",
             "representation": "UnsignedInteger",
@@ -13,7 +13,7 @@
           }
         },
         "stddev": {
-          "method": "INPUT",
+          "method": "INPUT.NUMERIC",
           "params": {
             "label": "StdDev",
             "representation": "Decimal",
@@ -23,11 +23,11 @@
       }
     },
     "bb_upper": {
-      "method": "SELECT_OUTPUT",
+      "method": "OPERATOR.SELECT_OUTPUT",
       "params": {
         "output": "upper-band",
         "source": {
-          "method": "SERIES",
+          "method": "SERIES.REFERENCE",
           "params": {
             "name": "bbands"
           }
@@ -35,11 +35,11 @@
       }
     },
     "bb_lower": {
-      "method": "SELECT_OUTPUT",
+      "method": "OPERATOR.SELECT_OUTPUT",
       "params": {
         "output": "lower-band",
         "source": {
-          "method": "SERIES",
+          "method": "SERIES.REFERENCE",
           "params": {
             "name": "bbands"
           }
@@ -51,11 +51,11 @@
     "short": {
       "entry": {
         "signal": {
-          "method": "CROSSOVER",
+          "method": "COMPARISON.CROSSOVER",
           "params": {
-            "value": "CLOSE",
+            "value": "MARKET_DATA.CLOSE",
             "baseline": {
-              "method": "SERIES",
+              "method": "SERIES.REFERENCE",
               "params": {
                 "name": "bb_lower"
               }
@@ -70,11 +70,11 @@
           {
             "enabled": true,
             "signal": {
-              "method": "CROSSUNDER",
+              "method": "COMPARISON.CROSSUNDER",
               "params": {
-                "value": "CLOSE",
+                "value": "MARKET_DATA.CLOSE",
                 "baseline": {
-                  "method": "SERIES",
+                  "method": "SERIES.REFERENCE",
                   "params": {
                     "name": "bb_upper"
                   }
@@ -86,16 +86,16 @@
         ]
       },
       "riskDistance": {
-        "method": "R_DISTANCE_ATR",
+        "method": "RISK_DISTANCE.ATR",
         "params": {
           "period": {
-            "method": "VALUE",
+            "method": "VALUE.CONSTANT",
             "params": {
               "value": 14
             }
           },
           "multiplier": {
-            "method": "VALUE",
+            "method": "VALUE.CONSTANT",
             "params": {
               "value": 2
             }
@@ -109,10 +109,10 @@
           {
             "enabled": true,
             "targetPrice": {
-              "method": "TP_R_MULTIPLE",
+              "method": "TAKE_PROFIT.R_MULTIPLE",
               "params": {
                 "multiple": {
-                  "method": "VALUE",
+                  "method": "VALUE.CONSTANT",
                   "params": {
                     "value": 2
                   }
@@ -129,7 +129,7 @@
             "enabled": true,
             "trailing": true,
             "stopPrice": {
-              "method": "SL_1R"
+              "method": "STOP_LOSS.ONE_R"
             }
           }
         ]
@@ -138,14 +138,14 @@
   },
   "plots": [
     {
-      "label": "BB",
+      "label": "INDICATOR.BB",
       "overlay": true,
       "items": [
         {
-          "method": "LINE",
+          "method": "PLOT.LINE",
           "params": {
             "source": {
-              "method": "SERIES",
+              "method": "PLOT_SOURCE.SERIES",
               "params": {
                 "name": "bb_upper"
               }
@@ -154,10 +154,10 @@
           }
         },
         {
-          "method": "LINE",
+          "method": "PLOT.LINE",
           "params": {
             "source": {
-              "method": "SERIES",
+              "method": "PLOT_SOURCE.SERIES",
               "params": {
                 "name": "bb_lower"
               }

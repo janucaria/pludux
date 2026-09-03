@@ -65,7 +65,7 @@ private:
   {
     const auto& app_state = context.app_state();
     const auto& market_handles = app_state.get_market_handles();
-    const auto backtest_ptr = app_state.selected_backtest_if_present();
+    const auto portfolio_ptr = app_state.selected_portfolio_if_present();
 
     ImGui::BeginGroup();
     if(ImGui::Button(PLUDUX_ICON_ADD " New Market")) {
@@ -90,7 +90,7 @@ private:
 
       {
         const auto selected =
-         backtest_ptr && backtest_ptr->market_handle() == market_handle;
+         portfolio_ptr && portfolio_ptr->market_handle() == market_handle;
         const auto has_draft =
          self.selected_market_handle_opt_ == market_handle &&
          self.editing_market_ptr_ && *self.editing_market_ptr_ != market;
@@ -107,24 +107,28 @@ private:
              std::make_shared<backtest::Market>(market);
           }
         } else if(action == ui::ResourceRowAction::Duplicate) {
-          context.push_action([market_handle](ApplicationState& app_state) {
-            const auto& value = app_state.get_market(market_handle);
-            auto copy = value;
-            copy.name(value.name() + " Copy");
-            app_state.add_market(std::move(copy));
-          });
+          context.push_edit(
+           "Duplicate Market", [market_handle](ApplicationState& app_state) {
+             const auto& value = app_state.get_market(market_handle);
+             auto copy = value;
+             copy.name(value.name() + " Copy");
+             app_state.add_market(std::move(copy));
+           });
         } else if(action == ui::ResourceRowAction::MoveUp) {
-          context.push_action([from = i](ApplicationState& app_state) {
-            app_state.reorder_list_market(from, from - 1);
-          });
+          context.push_edit("Move Market Up",
+                            [from = i](ApplicationState& app_state) {
+                              app_state.reorder_list_market(from, from - 1);
+                            });
         } else if(action == ui::ResourceRowAction::MoveDown) {
-          context.push_action([from = i](ApplicationState& app_state) {
-            app_state.reorder_list_market(from, from + 1);
-          });
+          context.push_edit("Move Market Down",
+                            [from = i](ApplicationState& app_state) {
+                              app_state.reorder_list_market(from, from + 1);
+                            });
         } else if(action == ui::ResourceRowAction::Delete) {
-          context.push_action([market_handle](ApplicationState& app_state) {
-            app_state.remove_market(market_handle);
-          });
+          context.push_edit("Delete Market",
+                            [market_handle](ApplicationState& app_state) {
+                              app_state.remove_market(market_handle);
+                            });
         }
         ImGui::PopID();
         continue;
@@ -187,7 +191,9 @@ private:
     const auto same_market = selected_market == *(self.editing_market_ptr_);
 
     if(ImGui::Button("OK")) {
-      self.submit_market_changes(context);
+      if(!same_market) {
+        self.submit_market_changes(context);
+      }
       self.reset();
     }
 
@@ -242,7 +248,8 @@ private:
 
   void submit_market_changes(this auto& self, WindowContext& context)
   {
-    context.push_action(
+    context.push_edit(
+     self.selected_market_handle_opt_ ? "Edit Market" : "Add Market",
      [market_handle_opt = self.selected_market_handle_opt_,
       edit_market_ptr = self.editing_market_ptr_](ApplicationState& app_state) {
        if(edit_market_ptr->name().empty()) {

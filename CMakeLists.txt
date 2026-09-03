@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.30)
 project(pludux
-  VERSION 0.7.0
+  VERSION 0.8.0
   HOMEPAGE_URL "https://github.com/janucaria/pludux"
   LANGUAGES CXX
 )
@@ -17,10 +17,9 @@ if(NOT EMSCRIPTEN)
     GIT_TAG        v1.17.0
     GIT_SHALLOW    TRUE
     GIT_PROGRESS   TRUE
-    OVERRIDE_FIND_PACKAGE
   )
 
-  find_package(googletest REQUIRED)
+  FetchContent_MakeAvailable(googletest)
 endif()
 
 add_subdirectory(libs)

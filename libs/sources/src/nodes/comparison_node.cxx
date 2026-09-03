@@ -11,7 +11,7 @@ import :nodes.erased_node;
 
 export namespace pludux {
 
-template<typename TComparator, MethodContextable TContext>
+template<typename TComparator, typename TContext>
 class ComparisonNode {
 public:
   ComparisonNode(ErasedNode<TContext> target, ErasedNode<TContext> threshold)
@@ -50,25 +50,25 @@ private:
   ErasedNode<TContext> threshold_;
 };
 
-template<MethodContextable TContext>
+template<typename TContext>
 using GreaterEqualNode = ComparisonNode<std::greater_equal<>, TContext>;
 
-template<MethodContextable TContext>
+template<typename TContext>
 using GreaterThanNode = ComparisonNode<std::greater<>, TContext>;
 
-template<MethodContextable TContext>
+template<typename TContext>
 using LessThanNode = ComparisonNode<std::less<>, TContext>;
 
-template<MethodContextable TContext>
+template<typename TContext>
 using LessEqualNode = ComparisonNode<std::less_equal<>, TContext>;
 
-template<MethodContextable TContext>
+template<typename TContext>
 using EqualNode = ComparisonNode<std::equal_to<>, TContext>;
 
-template<MethodContextable TContext>
+template<typename TContext>
 using NotEqualNode = ComparisonNode<std::not_equal_to<>, TContext>;
 
-template<typename TComparator, MethodContextable TContext>
+template<typename TComparator, typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const ComparisonNode<TComparator, TContext>& node,
                        NodeToErasedMethodContext& context)

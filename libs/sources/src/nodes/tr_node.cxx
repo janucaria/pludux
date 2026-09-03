@@ -7,6 +7,7 @@ module;
 #include <limits>
 #include <type_traits>
 #include <utility>
+#include <variant>
 
 export module pludux:nodes.tr_node;
 
@@ -15,6 +16,7 @@ import :node_to_erased_method;
 
 export namespace pludux {
 
+template<typename TContext = std::monostate>
 class TrNode {
 public:
   TrNode() = default;
@@ -22,9 +24,9 @@ public:
   auto operator==(const TrNode& other) const noexcept -> bool = default;
 };
 
-template<MethodContextable TContext>
+template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
-                       const TrNode&,
+                       const TrNode<TContext>&,
                        NodeToErasedMethodContext&)
  -> ErasedSeriesMethod<TContext>
 {

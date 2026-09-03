@@ -7,6 +7,7 @@ module;
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <ranges>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -81,7 +82,7 @@ private:
   {
     const auto& app_state = context.app_state();
     const auto& asset_handles = app_state.get_asset_handles();
-    const auto backtest_ptr = app_state.selected_backtest_if_present();
+    const auto system_ptr = app_state.selected_system_if_present();
 
     ImGui::BeginGroup();
     const auto add_asset_requested =
@@ -105,8 +106,14 @@ private:
       ImGui::PushID(i);
 
       {
+        const auto* selected_watchlist =
+          system_ptr
+           ? app_state.get_watchlist_if_present(system_ptr->watchlist_handle())
+          : nullptr;
         const auto selected =
-         backtest_ptr && backtest_ptr->asset_handle() == asset_handle;
+         selected_watchlist &&
+         std::ranges::find(selected_watchlist->asset_handles(), asset_handle) !=
+          selected_watchlist->asset_handles().end();
         const auto has_draft =
          self.selected_asset_handle_opt_ == asset_handle &&
          self.editing_asset_ptr_ && *self.editing_asset_ptr_ != asset;
@@ -122,24 +129,28 @@ private:
             self.editing_asset_ptr_ = std::make_shared<backtest::Asset>(asset);
           }
         } else if(action == ui::ResourceRowAction::Duplicate) {
-          context.push_action([asset_handle](ApplicationState& app_state) {
-            const auto& value = app_state.get_asset(asset_handle);
-            auto copy = value;
-            copy.name(value.name() + " Copy");
-            app_state.add_asset(std::move(copy));
-          });
+          context.push_edit(
+           "Duplicate Asset", [asset_handle](ApplicationState& app_state) {
+             const auto& value = app_state.get_asset(asset_handle);
+             auto copy = value;
+             copy.name(value.name() + " Copy");
+             app_state.add_asset(std::move(copy));
+           });
         } else if(action == ui::ResourceRowAction::MoveUp) {
-          context.push_action([from = i](ApplicationState& app_state) {
-            app_state.reorder_list_asset(from, from - 1);
-          });
+          context.push_edit("Move Asset Up",
+                            [from = i](ApplicationState& app_state) {
+                              app_state.reorder_list_asset(from, from - 1);
+                            });
         } else if(action == ui::ResourceRowAction::MoveDown) {
-          context.push_action([from = i](ApplicationState& app_state) {
-            app_state.reorder_list_asset(from, from + 1);
-          });
+          context.push_edit("Move Asset Down",
+                            [from = i](ApplicationState& app_state) {
+                              app_state.reorder_list_asset(from, from + 1);
+                            });
         } else if(action == ui::ResourceRowAction::Delete) {
-          context.push_action([asset_handle](ApplicationState& app_state) {
-            app_state.remove_asset(asset_handle);
-          });
+          context.push_edit("Delete Asset",
+                            [asset_handle](ApplicationState& app_state) {
+                              app_state.remove_asset(asset_handle);
+                            });
         }
         ImGui::PopID();
         continue;
@@ -172,7 +183,7 @@ private:
          auto& context = *reinterpret_cast<WindowContext*>(user_data);
 
          auto action = LoadAssetCsvAction{file_name, file_data};
-         context.push_action(std::move(action));
+         context.push_edit("Import Asset", std::move(action));
        }};
 
       pludux_js_open_multiple_text_files(".csv", &callback, &context);
@@ -208,7 +219,7 @@ private:
           }
 
           const auto selected_path = std::string(out_path.get());
-          context.push_action(LoadAssetCsvAction{selected_path});
+          context.push_edit("Import Asset", LoadAssetCsvAction{selected_path});
         }
 
       } else if(result == NFD_CANCEL) {
@@ -269,7 +280,9 @@ private:
     const auto same_asset = selected_asset == *self.editing_asset_ptr_;
 
     if(ImGui::Button("OK")) {
-      self.submit_asset_changes(context);
+      if(!same_asset) {
+        self.submit_asset_changes(context);
+      }
       self.reset();
     }
 
@@ -404,7 +417,8 @@ private:
 
   void submit_asset_changes(this auto& self, WindowContext& context)
   {
-    context.push_action(
+    context.push_edit(
+     self.selected_asset_handle_opt_ ? "Edit Asset" : "Add Asset",
      [asset_handle_opt = self.selected_asset_handle_opt_,
       edit_asset_ptr = self.editing_asset_ptr_](ApplicationState& app_state) {
        if(edit_asset_ptr->name().empty()) {

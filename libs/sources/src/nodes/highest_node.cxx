@@ -3,6 +3,7 @@ module;
 #include <cstddef>
 #include <limits>
 #include <utility>
+#include <variant>
 
 export module pludux:nodes.highest_node;
 
@@ -14,6 +15,7 @@ import :nodes.value_node;
 
 export namespace pludux {
 
+template<typename TContext = std::monostate>
 class HighestNode {
 public:
   HighestNode()
@@ -26,18 +28,17 @@ public:
   {
   }
 
-  explicit HighestNode(ErasedNode<ErasedSeriesMethodContext> source)
+  explicit HighestNode(ErasedNode<TContext> source)
   : HighestNode{std::move(source), 14}
   {
   }
 
-  HighestNode(ErasedNode<ErasedSeriesMethodContext> source, std::size_t period)
+  HighestNode(ErasedNode<TContext> source, std::size_t period)
   : HighestNode{std::move(source), ValueNode{static_cast<double>(period)}}
   {
   }
 
-  HighestNode(ErasedNode<ErasedSeriesMethodContext> source,
-              ErasedNode<ErasedSeriesMethodContext> period)
+  HighestNode(ErasedNode<TContext> source, ErasedNode<TContext> period)
   : source_{std::move(source)}
   , period_{std::move(period)}
   {
@@ -46,25 +47,25 @@ public:
   auto operator==(const HighestNode& other) const noexcept -> bool = default;
 
   auto source(this const HighestNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<TContext>&
   {
     return self.source_;
   }
 
   void source(this HighestNode& self,
-              ErasedNode<ErasedSeriesMethodContext> source) noexcept
+               ErasedNode<TContext> source) noexcept
   {
     self.source_ = std::move(source);
   }
 
   auto period(this const HighestNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<TContext>&
   {
     return self.period_;
   }
 
   void period(this HighestNode& self,
-              ErasedNode<ErasedSeriesMethodContext> period) noexcept
+               ErasedNode<TContext> period) noexcept
   {
     self.period_ = std::move(period);
   }
@@ -75,13 +76,13 @@ public:
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> source_;
-  ErasedNode<ErasedSeriesMethodContext> period_;
+  ErasedNode<TContext> source_;
+  ErasedNode<TContext> period_;
 };
 
-template<MethodContextable TContext>
+template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
-                       const HighestNode& node,
+                        const HighestNode<TContext>& node,
                        NodeToErasedMethodContext& context)
  -> ErasedSeriesMethod<TContext>
 {

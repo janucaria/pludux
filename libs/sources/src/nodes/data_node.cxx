@@ -35,7 +35,7 @@ private:
   std::string field_{};
 };
 
-template<MethodContextable TContext>
+template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const DataNode& node,
                        NodeToErasedMethodContext&)

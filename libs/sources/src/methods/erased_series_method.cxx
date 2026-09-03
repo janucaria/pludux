@@ -12,29 +12,44 @@ module;
 export module pludux:methods.erased_series_method;
 
 import :asset_snapshot;
-import :method_contextable;
 
 import :methods.ohlcv_method;
 import :methods.select_output_method;
+import :methods.value_method;
 
 import :evaluate_series_method;
 import :hash_series_method;
 
 export namespace pludux {
 
-template<MethodContextable TContext>
+template<typename TContext>
 class ErasedSeriesMethod {
 public:
   ErasedSeriesMethod()
-  : ErasedSeriesMethod{CloseMethod{}}
   {
+    if constexpr(requires(AssetSnapshot asset_snapshot, TContext context) {
+      {
+        evaluate_series_method(CloseMethod{}, asset_snapshot, context)
+      } -> std::convertible_to<double>;
+    }) {
+      *this = ErasedSeriesMethod{CloseMethod{}};
+    } else {
+      *this = ErasedSeriesMethod{ValueMethod{0.0}};
+    }
   }
 
   template<typename UMethod>
     requires(!std::same_as<std::remove_cvref_t<UMethod>, ErasedSeriesMethod>) &&
-             (!std::same_as<std::remove_cvref_t<UMethod>,
-                            std::vector<ErasedSeriesMethod>>) &&
-             std::equality_comparable<UMethod>
+              (!std::same_as<std::remove_cvref_t<UMethod>,
+                             std::vector<ErasedSeriesMethod>>) &&
+              std::equality_comparable<UMethod> &&
+              requires(const UMethod& method,
+                       AssetSnapshot asset_snapshot,
+                       TContext context) {
+                {
+                  evaluate_series_method(method, asset_snapshot, context)
+                } -> std::convertible_to<double>;
+              }
   ErasedSeriesMethod(UMethod impl)
   : impl_{std::make_any<UMethod>(std::move(impl))}
   , evaluate_{[](const std::any& impl,
@@ -73,17 +88,25 @@ public:
   {
   }
 
+  template<typename UMethod>
+    requires std::same_as<std::remove_cvref_t<UMethod>,
+                          ErasedSeriesMethod> &&
+             (!std::is_volatile_v<std::remove_reference_t<UMethod>>)
   friend auto pludux_tag_invoke(EvaluateSeriesMethod,
-                                const ErasedSeriesMethod& method,
+                                UMethod&& method,
                                 AssetSnapshot asset_snapshot,
                                 TContext context) -> double
   {
     return method.evaluate_(method.impl_, asset_snapshot, context);
   }
 
+  template<typename UMethod>
+    requires std::same_as<std::remove_cvref_t<UMethod>,
+                          ErasedSeriesMethod> &&
+             (!std::is_volatile_v<std::remove_reference_t<UMethod>>)
   friend auto pludux_tag_invoke(EvaluateSeriesMethod,
                                 MethodOutput output,
-                                const ErasedSeriesMethod& method,
+                                UMethod&& method,
                                 AssetSnapshot asset_snapshot,
                                 TContext context) -> double
   {

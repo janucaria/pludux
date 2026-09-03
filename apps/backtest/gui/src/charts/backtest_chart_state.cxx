@@ -9,6 +9,7 @@ module;
 export module pludux.apps.backtest:charts.backtest_chart_state;
 
 import pludux.backtest;
+import pludux.apps.backtest.portfolio_strategy_selections;
 
 export namespace pludux::apps {
 
@@ -19,6 +20,7 @@ enum class BacktestChartViewportMode {
 
 enum class BacktestTopPlot {
   Equity,
+  Drawdown,
   ShadowReturn,
   FrequentistPerformance,
   CurrentStreaks,
@@ -28,25 +30,27 @@ enum class BacktestTopPlot {
 
 class BacktestChartState {
 public:
-  void select_backtest(
-   this BacktestChartState& self,
-   const backtest::BacktestStoreHandle& selected_backtest) noexcept
+  void display_backtest_strategy(this BacktestChartState& self,
+                                 backtest::PortfolioStoreHandle portfolio_handle,
+                                 PortfolioStrategyKey strategy) noexcept
   {
-    if(self.selected_backtest_ &&
-       *self.selected_backtest_ == selected_backtest) {
+    if(self.displayed_portfolio_ == portfolio_handle &&
+        self.displayed_strategy_ == strategy) {
       return;
     }
 
-    self.selected_backtest_ = selected_backtest;
+    self.displayed_portfolio_ = portfolio_handle;
+    self.displayed_strategy_ = strategy;
     self.pinned_bar_.reset();
     self.viewport_mode_ = BacktestChartViewportMode::FitAll;
     self.follow_bar_count_ = 150;
     self.fit_requested_ = true;
   }
 
-  void clear_selection(this BacktestChartState& self) noexcept
+  void clear_display_backtest_strategy(this BacktestChartState& self) noexcept
   {
-    self.selected_backtest_.reset();
+    self.displayed_portfolio_.reset();
+    self.displayed_strategy_.reset();
     self.pinned_bar_.reset();
     self.viewport_mode_ = BacktestChartViewportMode::FitAll;
     self.follow_bar_count_ = 150;
@@ -99,8 +103,7 @@ public:
     return std::exchange(self.fit_requested_, false);
   }
 
-  auto top_plot(this const BacktestChartState& self) noexcept
-   -> BacktestTopPlot
+  auto top_plot(this const BacktestChartState& self) noexcept -> BacktestTopPlot
   {
     return self.top_plot_;
   }
@@ -176,7 +179,8 @@ public:
   }
 
 private:
-  std::optional<backtest::BacktestStoreHandle> selected_backtest_{};
+  std::optional<backtest::PortfolioStoreHandle> displayed_portfolio_{};
+  std::optional<PortfolioStrategyKey> displayed_strategy_{};
   std::optional<std::size_t> pinned_bar_{};
   std::vector<float> row_ratios_{};
   BacktestChartViewportMode viewport_mode_{BacktestChartViewportMode::FitAll};

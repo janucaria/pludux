@@ -1,6 +1,7 @@
 module;
 
 #include <cstddef>
+#include <limits>
 
 export module pludux.backtest:store_handle;
 
@@ -11,6 +12,9 @@ export namespace pludux::backtest {
 template<typename TValue>
 class StoreHandle {
 public:
+  static constexpr auto invalid_slot_index =
+   std::numeric_limits<std::size_t>::max();
+
   constexpr StoreHandle() noexcept = default;
 
   constexpr StoreHandle(std::size_t slot_index, std::size_t generation) noexcept
@@ -29,24 +33,37 @@ public:
     return self.generation_;
   }
 
+  auto valid(this const StoreHandle& self) noexcept -> bool
+  {
+    return self.slot_index_ != invalid_slot_index;
+  }
+
   friend auto operator==(StoreHandle const&, StoreHandle const&)
    -> bool = default;
 
 private:
-  std::size_t slot_index_{};
+  std::size_t slot_index_{invalid_slot_index};
   std::size_t generation_{};
 };
 
-struct BacktestStoreHandle : StoreHandle<BacktestStoreHandle> {
-  using StoreHandle<BacktestStoreHandle>::StoreHandle;
+struct SystemStoreHandle : StoreHandle<SystemStoreHandle> {
+  using StoreHandle<SystemStoreHandle>::StoreHandle;
+};
+
+struct PortfolioStoreHandle : StoreHandle<PortfolioStoreHandle> {
+  using StoreHandle<PortfolioStoreHandle>::StoreHandle;
 };
 
 struct AssetStoreHandle : StoreHandle<AssetStoreHandle> {
   using StoreHandle<AssetStoreHandle>::StoreHandle;
 };
 
-struct StrategyStoreHandle : StoreHandle<StrategyStoreHandle> {
-  using StoreHandle<StrategyStoreHandle>::StoreHandle;
+struct WatchlistStoreHandle : StoreHandle<WatchlistStoreHandle> {
+  using StoreHandle<WatchlistStoreHandle>::StoreHandle;
+};
+
+struct ModelStoreHandle : StoreHandle<ModelStoreHandle> {
+  using StoreHandle<ModelStoreHandle>::StoreHandle;
 };
 
 struct MarketStoreHandle : StoreHandle<MarketStoreHandle> {
@@ -59,6 +76,10 @@ struct BrokerStoreHandle : StoreHandle<BrokerStoreHandle> {
 
 struct ProfileStoreHandle : StoreHandle<ProfileStoreHandle> {
   using StoreHandle<ProfileStoreHandle>::StoreHandle;
+};
+
+struct StrategyStoreHandle : StoreHandle<StrategyStoreHandle> {
+  using StoreHandle<StrategyStoreHandle>::StoreHandle;
 };
 
 } // namespace pludux::backtest

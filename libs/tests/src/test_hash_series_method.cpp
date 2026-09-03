@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include "test_method_context.hpp"
+
 import pludux;
 
 using namespace pludux;
@@ -700,9 +702,9 @@ TEST_F(HashErasedSeriesMethodTest, ProducesValidHash)
    MultiplyMethod{SmaMethod<CloseMethod>{20}, EmaMethod<CloseMethod>{12}};
 
   const auto erased_method =
-   ErasedSeriesMethod<ErasedSeriesMethodContext>{MultiplyMethod{
-    ErasedSeriesMethod<ErasedSeriesMethodContext>{SmaMethod<CloseMethod>{20}},
-    ErasedSeriesMethod<ErasedSeriesMethodContext>{EmaMethod<CloseMethod>{12}}}};
+   ErasedSeriesMethod<StatelessMethodContext>{MultiplyMethod{
+    ErasedSeriesMethod<StatelessMethodContext>{SmaMethod<CloseMethod>{20}},
+    ErasedSeriesMethod<StatelessMethodContext>{EmaMethod<CloseMethod>{12}}}};
 
   const auto hash1 = hash_series_method(method);
   const auto hash2 = hash_series_method(erased_method);

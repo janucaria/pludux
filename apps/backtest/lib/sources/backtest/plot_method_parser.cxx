@@ -361,7 +361,7 @@ auto make_default_registered_plot_method_parser() -> PlotMethodParser
    PlotMethodParser{make_default_registered_plot_source_method_parser()};
 
   method_parser.register_method_parser(
-   "HLINE",
+   "PLOT.HLINE",
    [](const PlotMethodParser& method_parser,
       const ErasedPlotMethod<ErasedPlotMethodContext> any_plot_method)
     -> jsoncons::ojson {
@@ -387,7 +387,11 @@ auto make_default_registered_plot_method_parser() -> PlotMethodParser
        if(color_param.is_string()) {
          color = string_color_to_u32(color_param.as_string());
        } else if(color_param.is_number()) {
-         color = color_param.as<std::uint32_t>();
+         color = method_parser.get_param_or<std::uint32_t>(
+          parameters, "color", color);
+       } else {
+         throw std::invalid_argument{
+          "Plot color must be a string or unsigned integer"};
        }
      }
 
@@ -395,7 +399,7 @@ auto make_default_registered_plot_method_parser() -> PlotMethodParser
    });
 
   method_parser.register_method_parser(
-   "LINE",
+   "PLOT.LINE",
    [](const PlotMethodParser& method_parser,
       const ErasedPlotMethod<ErasedPlotMethodContext> any_plot_method)
     -> jsoncons::ojson {
@@ -428,7 +432,11 @@ auto make_default_registered_plot_method_parser() -> PlotMethodParser
        if(color_param.is_string()) {
          color = string_color_to_u32(color_param.as_string());
        } else if(color_param.is_number()) {
-         color = color_param.as<std::uint32_t>();
+         color = method_parser.get_param_or<std::uint32_t>(
+          parameters, "color", color);
+       } else {
+         throw std::invalid_argument{
+          "Plot color must be a string or unsigned integer"};
        }
      }
 
@@ -437,7 +445,7 @@ auto make_default_registered_plot_method_parser() -> PlotMethodParser
    });
 
   method_parser.register_method_parser(
-   "HISTOGRAM",
+   "PLOT.HISTOGRAM",
    [](const PlotMethodParser& method_parser,
       const ErasedPlotMethod<ErasedPlotMethodContext> any_plot_method)
     -> jsoncons::ojson {
@@ -470,7 +478,11 @@ auto make_default_registered_plot_method_parser() -> PlotMethodParser
        if(color_param.is_string()) {
          color = string_color_to_u32(color_param.as_string());
        } else if(color_param.is_number()) {
-         color = color_param.as<std::uint32_t>();
+         color = method_parser.get_param_or<std::uint32_t>(
+          parameters, "color", color);
+       } else {
+         throw std::invalid_argument{
+          "Plot color must be a string or unsigned integer"};
        }
      }
 
@@ -479,7 +491,7 @@ auto make_default_registered_plot_method_parser() -> PlotMethodParser
    });
 
   method_parser.register_method_parser(
-   "MOMENTUM_HISTOGRAM",
+   "PLOT.MOMENTUM_HISTOGRAM",
    [](const PlotMethodParser& method_parser,
       const ErasedPlotMethod<ErasedPlotMethodContext> any_plot_method)
     -> jsoncons::ojson {
@@ -512,13 +524,20 @@ auto make_default_registered_plot_method_parser() -> PlotMethodParser
        "source",
        SeriesPlotSourceMethod{});
 
-     const auto parse_color = [&](std::string_view name) {
+     const auto defaults = MomentumHistogramPlotMethod<
+      ErasedPlotSourceMethod<ErasedPlotMethodContext>>{SeriesPlotSourceMethod{}};
+     const auto parse_color = [&](std::string_view name,
+                                  std::uint32_t default_value) {
+       if(!parameters.contains(name)) {
+         return default_value;
+       }
        const auto& color_param = parameters.at(name);
        if(color_param.is_string()) {
          return string_color_to_u32(color_param.as_string());
        }
        if(color_param.is_number()) {
-         return color_param.as<std::uint32_t>();
+         return method_parser.get_param_or<std::uint32_t>(
+          parameters, std::string{name}, default_value);
        }
        throw std::invalid_argument{
         "Momentum histogram colors must be strings or unsigned integers"};
@@ -527,10 +546,10 @@ auto make_default_registered_plot_method_parser() -> PlotMethodParser
      return MomentumHistogramPlotMethod<
       ErasedPlotSourceMethod<ErasedPlotMethodContext>>{
       source,
-      parse_color("positiveRisingColor"),
-      parse_color("positiveFallingColor"),
-      parse_color("negativeFallingColor"),
-      parse_color("negativeRisingColor")};
+      parse_color("positiveRisingColor", defaults.positive_rising_color()),
+      parse_color("positiveFallingColor", defaults.positive_falling_color()),
+      parse_color("negativeFallingColor", defaults.negative_falling_color()),
+      parse_color("negativeRisingColor", defaults.negative_rising_color())};
    });
 
   return method_parser;

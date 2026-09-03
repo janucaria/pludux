@@ -6,6 +6,7 @@ module;
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <variant>
 
 export module pludux:nodes.kc_node;
 
@@ -20,6 +21,7 @@ export namespace pludux {
 
 enum class KcBandNodeType { Atr, Tr, RangeHighLow };
 
+template<typename TContext = std::monostate>
 class KcNode {
 public:
   KcNode()
@@ -46,7 +48,7 @@ public:
   {
   }
 
-  KcNode(ErasedNode<ErasedSeriesMethodContext> source,
+   KcNode(ErasedNode<TContext> source,
          std::size_t period,
          double multiplier,
          std::size_t band_atr_period,
@@ -61,10 +63,10 @@ public:
   {
   }
 
-  KcNode(ErasedNode<ErasedSeriesMethodContext> source,
-         ErasedNode<ErasedSeriesMethodContext> period,
-         ErasedNode<ErasedSeriesMethodContext> multiplier,
-         ErasedNode<ErasedSeriesMethodContext> band_atr_period,
+   KcNode(ErasedNode<TContext> source,
+          ErasedNode<TContext> period,
+          ErasedNode<TContext> multiplier,
+          ErasedNode<TContext> band_atr_period,
          KcBandNodeType band_node_type = KcBandNodeType::Atr,
          MaNodeType ma_node_type = MaNodeType::Ema)
   : source_{std::move(source)}
@@ -78,14 +80,13 @@ public:
 
   auto operator==(const KcNode& other) const noexcept -> bool = default;
 
-  auto source(this const KcNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   auto source(this const KcNode& self) noexcept
+    -> const ErasedNode<TContext>&
   {
     return self.source_;
   }
 
-  void source(this KcNode& self,
-              ErasedNode<ErasedSeriesMethodContext> source) noexcept
+   void source(this KcNode& self, ErasedNode<TContext> source) noexcept
   {
     self.source_ = std::move(source);
   }
@@ -100,8 +101,8 @@ public:
     self.ma_node_type_ = ma_node_type;
   }
 
-  auto period(this const KcNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   auto period(this const KcNode& self) noexcept
+    -> const ErasedNode<TContext>&
   {
     return self.period_;
   }
@@ -111,8 +112,7 @@ public:
     self.period_ = ValueNode{static_cast<double>(period)};
   }
 
-  void period(this KcNode& self,
-              ErasedNode<ErasedSeriesMethodContext> period) noexcept
+   void period(this KcNode& self, ErasedNode<TContext> period) noexcept
   {
     self.period_ = std::move(period);
   }
@@ -127,8 +127,8 @@ public:
     self.band_node_type_ = band_node_type;
   }
 
-  auto band_atr_period(this const KcNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   auto band_atr_period(this const KcNode& self) noexcept
+    -> const ErasedNode<TContext>&
   {
     return self.band_atr_period_;
   }
@@ -140,13 +140,13 @@ public:
 
   void band_atr_period(
    this KcNode& self,
-   ErasedNode<ErasedSeriesMethodContext> band_atr_period) noexcept
+    ErasedNode<TContext> band_atr_period) noexcept
   {
     self.band_atr_period_ = std::move(band_atr_period);
   }
 
-  auto multiplier(this const KcNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   auto multiplier(this const KcNode& self) noexcept
+    -> const ErasedNode<TContext>&
   {
     return self.multiplier_;
   }
@@ -156,24 +156,23 @@ public:
     self.multiplier_ = ValueNode{multiplier};
   }
 
-  void multiplier(this KcNode& self,
-                  ErasedNode<ErasedSeriesMethodContext> multiplier) noexcept
+   void multiplier(this KcNode& self, ErasedNode<TContext> multiplier) noexcept
   {
     self.multiplier_ = std::move(multiplier);
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> source_;
-  ErasedNode<ErasedSeriesMethodContext> period_;
-  ErasedNode<ErasedSeriesMethodContext> multiplier_;
-  ErasedNode<ErasedSeriesMethodContext> band_atr_period_;
+   ErasedNode<TContext> source_;
+   ErasedNode<TContext> period_;
+   ErasedNode<TContext> multiplier_;
+   ErasedNode<TContext> band_atr_period_;
   KcBandNodeType band_node_type_;
   MaNodeType ma_node_type_;
 };
 
-template<MethodContextable TContext>
+template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
-                       const KcNode& node,
+                        const KcNode<TContext>& node,
                        NodeToErasedMethodContext& context)
  -> ErasedSeriesMethod<TContext>
 {

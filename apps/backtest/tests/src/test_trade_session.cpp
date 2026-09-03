@@ -123,7 +123,7 @@ TEST(TradeSessionTest, RejectInsufficientCashEmitsRejectedEventOnly)
 {
   auto session = TradeSession{static_cast<std::time_t>(20), 100.0, 1};
 
-  session.reject_insufficient_cash(TradeEntry{2.0, 100.0});
+  session.reject_insufficient_cash(TradeEntry{2.0, 100.0}, 125.0, 200.0);
 
   ASSERT_FALSE(session.open_position().has_value());
   ASSERT_EQ(session.trade_events().size(), 1);
@@ -142,6 +142,8 @@ TEST(TradeSessionTest, RejectInsufficientCashEmitsRejectedEventOnly)
   EXPECT_DOUBLE_EQ(rejected_event.fees(), 0.0);
   EXPECT_DOUBLE_EQ(rejected_event.position_size_before(), 0.0);
   EXPECT_DOUBLE_EQ(rejected_event.position_size_after(), 0.0);
+  EXPECT_DOUBLE_EQ(rejected_event.rejection_available_cash(), 125.0);
+  EXPECT_DOUBLE_EQ(rejected_event.rejection_required_cash(), 200.0);
   EXPECT_TRUE(rejected_event.stop_loss_levels().empty());
 
   session.entry_position(TradeEntry{1.0, 100.0});
@@ -177,6 +179,45 @@ TEST(TradeSessionTest, PartialScaleOutEmitsRecordAndKeepsPositionOpen)
 
   EXPECT_DOUBLE_EQ(session.unrealized_pnl(), 40.0);
   EXPECT_DOUBLE_EQ(session.unrealized_investment(), 200.0);
+}
+
+TEST(TradeSessionTest, StrategyOwnershipSurvivesTheFullPositionLifecycle)
+{
+  auto session = TradeSession{static_cast<std::time_t>(20), 100.0, 1};
+
+   session.strategy_index(7);
+  session.reject_insufficient_cash(TradeEntry{1.0, 100.0}, 50.0, 100.0);
+  ASSERT_EQ(session.trade_events().size(), 1);
+   EXPECT_EQ(session.trade_events().back().strategy_index(), 7U);
+
+  session.begin_market_bar(static_cast<std::time_t>(21), 100.0, 2);
+   session.strategy_index(2);
+  session.entry_position(TradeEntry{3.0, 100.0});
+  ASSERT_TRUE(session.open_position());
+   EXPECT_EQ(session.open_position()->strategy_index(), 2U);
+   EXPECT_EQ(session.trade_events().back().strategy_index(), 2U);
+
+  session.begin_market_bar(static_cast<std::time_t>(25), 110.0, 3);
+   session.strategy_index(5);
+  session.entry_position(TradeEntry{1.0, 110.0});
+   EXPECT_EQ(session.trade_events().back().strategy_index(), 2U);
+   EXPECT_EQ(session.open_position()->strategy_index(), 2U);
+
+  session.begin_market_bar(static_cast<std::time_t>(30), 120.0, 4);
+  session.exit_position(TradeExit{1.0, 120.0, TradeExit::Reason::signal});
+  ASSERT_TRUE(session.open_position());
+  ASSERT_EQ(session.realized_exits().size(), 1);
+   EXPECT_EQ(session.trade_events().back().strategy_index(), 2U);
+   EXPECT_EQ(session.realized_exits().back().strategy_index(), 2U);
+  const auto snapshot = session.open_position_snapshot();
+  ASSERT_TRUE(snapshot);
+   EXPECT_EQ(snapshot->strategy_index(), 2U);
+
+  session.begin_market_bar(static_cast<std::time_t>(35), 125.0, 5);
+  session.exit_position(TradeExit{3.0, 125.0, TradeExit::Reason::signal});
+  ASSERT_EQ(session.closed_trades().size(), 1);
+   EXPECT_EQ(session.trade_events().back().strategy_index(), 2U);
+   EXPECT_EQ(session.closed_trades().back().strategy_index(), 2U);
 }
 
 TEST(TradeSessionTest, FullExitEmitsRecordAndClearsOpenPosition)
@@ -255,6 +296,7 @@ TEST(TradePositionTest, UpdatesTrailingStopAndChecksTriggers)
 {
   auto position =
    TradePosition{1,
+                 0,
                  2.0,
                  static_cast<std::time_t>(20),
                  100.0,

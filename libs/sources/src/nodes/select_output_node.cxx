@@ -1,6 +1,7 @@
 module;
 
 #include <utility>
+#include <variant>
 
 export module pludux:nodes.select_output_node;
 
@@ -21,10 +22,10 @@ enum class NodeOutput {
   DPercent
 };
 
-class SelectOutputNode {
+template<typename TContext = std::monostate>
+class SelectOutputNode final {
 public:
-  SelectOutputNode(ErasedNode<ErasedSeriesMethodContext> source,
-                   NodeOutput output)
+  SelectOutputNode(ErasedNode<TContext> source, NodeOutput output)
   : source_{std::move(source)}
   , output_{output}
   {
@@ -39,13 +40,12 @@ public:
    -> bool = default;
 
   auto source(this const SelectOutputNode& self) noexcept
-   -> const ErasedNode<ErasedSeriesMethodContext>&
+   -> const ErasedNode<TContext>&
   {
     return self.source_;
   }
 
-  void source(this SelectOutputNode& self,
-              ErasedNode<ErasedSeriesMethodContext> source) noexcept
+  void source(this SelectOutputNode& self, ErasedNode<TContext> source) noexcept
   {
     self.source_ = std::move(source);
   }
@@ -61,13 +61,13 @@ public:
   }
 
 private:
-  ErasedNode<ErasedSeriesMethodContext> source_;
+  ErasedNode<TContext> source_;
   NodeOutput output_;
 };
 
-template<MethodContextable TContext>
+template<typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
-                       const SelectOutputNode& node,
+                        const SelectOutputNode<TContext>& node,
                        NodeToErasedMethodContext& context)
  -> ErasedSeriesMethod<TContext>
 {

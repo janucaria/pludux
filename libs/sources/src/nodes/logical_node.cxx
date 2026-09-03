@@ -11,7 +11,7 @@ import :nodes.erased_node;
 
 export namespace pludux {
 
-template<typename TOperator, MethodContextable TContext>
+template<typename TOperator, typename TContext>
 class BinaryLogicalNode {
 public:
   BinaryLogicalNode(ErasedNode<TContext> first_condition,
@@ -53,7 +53,7 @@ private:
   ErasedNode<TContext> second_condition_;
 };
 
-template<typename TOperator, MethodContextable TContext>
+template<typename TOperator, typename TContext>
 class UnaryLogicalNode {
 public:
   explicit UnaryLogicalNode(ErasedNode<TContext> condition)
@@ -80,19 +80,19 @@ private:
   ErasedNode<TContext> other_condition_;
 };
 
-template<MethodContextable TContext>
+template<typename TContext>
 using LogicalAndNode = BinaryLogicalNode<std::logical_and<>, TContext>;
 
-template<MethodContextable TContext>
+template<typename TContext>
 using LogicalOrNode = BinaryLogicalNode<std::logical_or<>, TContext>;
 
-template<MethodContextable TContext>
+template<typename TContext>
 using LogicalNotNode = UnaryLogicalNode<std::logical_not<>, TContext>;
 
-template<MethodContextable TContext>
+template<typename TContext>
 using LogicalXorNode = BinaryLogicalNode<LogicalXor<>, TContext>;
 
-template<typename TOperator, MethodContextable TContext>
+template<typename TOperator, typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const BinaryLogicalNode<TOperator, TContext>& node,
                        NodeToErasedMethodContext& context)
@@ -109,7 +109,7 @@ auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
     std::move(first_condition), std::move(second_condition)}};
 }
 
-template<typename TOperator, MethodContextable TContext>
+template<typename TOperator, typename TContext>
 auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                        const UnaryLogicalNode<TOperator, TContext>& node,
                        NodeToErasedMethodContext& context)
