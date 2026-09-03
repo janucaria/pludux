@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <jsoncons/json.hpp>
+
 #include <exception>
 #include <optional>
 #include <sstream>
@@ -10,6 +12,7 @@ import pludux.apps.backtest.application_state;
 import pludux.apps.backtest.command_executor;
 import pludux.apps.backtest.serialization;
 import pludux.apps.backtest.portfolio_strategy_selections;
+import pludux.apps.backtest.view_state;
 import pludux.backtest;
 
 namespace {
@@ -412,6 +415,168 @@ TEST(ApplicationStateSerialization, RoundTripsDocumentAndViewSeparately)
   EXPECT_EQ(loaded.imgui_ini_settings(), "layout-data");
 }
 
+TEST(ApplicationStateSerialization, DefaultsAbsentViewStateAndIgnoresUnknownKeys)
+{
+  auto stream = std::stringstream{};
+  pludux::apps::save_application_state_json(stream, ApplicationState{});
+  auto json = jsoncons::ojson::parse(stream.str());
+  json.at("pludux").erase("viewState");
+  json.at("pludux")["unknown"] = 42;
+  auto input = std::stringstream{json.to_string()};
+
+  const auto loaded = pludux::apps::load_application_state_json(input);
+  EXPECT_TRUE(loaded.imgui_ini_settings().empty());
+  EXPECT_FALSE(loaded.selected_portfolio_handle().valid());
+}
+
+TEST(ApplicationStateSerialization, DefaultsIndividualViewStateFields)
+{
+  auto stream = std::stringstream{};
+  pludux::apps::save_application_state_json(stream, ApplicationState{});
+  const auto saved = jsoncons::ojson::parse(stream.str());
+  for(const auto* field : {"imguiIniSettings",
+                           "selectedPortfolioHandle",
+                           "portfolioStrategySelections",
+                           "selectedSystemHandle",
+                           "selectedStrategyHandle"}) {
+    SCOPED_TRACE(field);
+    auto json = saved;
+    json.at("pludux").at("viewState").erase(field);
+    auto input = std::stringstream{json.to_string()};
+    const auto loaded = pludux::apps::load_application_state_json(input);
+    EXPECT_EQ(loaded.view_state(), pludux::apps::ViewState{});
+  }
+}
+
+TEST(ApplicationStateSerialization, RequiresWorkspaceBookkeeping)
+{
+  auto stream = std::stringstream{};
+  pludux::apps::save_application_state_json(stream, ApplicationState{});
+  const auto saved = jsoncons::ojson::parse(stream.str());
+  const auto expect_rejected = [](jsoncons::ojson json) {
+    auto input = std::stringstream{json.to_string()};
+    EXPECT_THROW(pludux::apps::load_application_state_json(input),
+                 std::exception);
+  };
+
+  for(const auto* field : {"$version", "store", "documentState"}) {
+    SCOPED_TRACE(field);
+    auto json = saved;
+    json.at("pludux").erase(field);
+    expect_rejected(std::move(json));
+  }
+  for(const auto* field : {"descriptor", "arena"}) {
+    SCOPED_TRACE(field);
+    auto json = saved;
+    json.at("pludux").at("store").erase(field);
+    expect_rejected(std::move(json));
+  }
+  for(const auto* field : {"systems",
+                           "portfolios",
+                           "assets",
+                           "watchlists",
+                           "models",
+                           "markets",
+                           "brokers",
+                           "profiles",
+                           "strategies"}) {
+    SCOPED_TRACE(field);
+    auto json = saved;
+    json.at("pludux").at("store").at("arena").erase(field);
+    expect_rejected(std::move(json));
+  }
+  for(const auto* field : {"portfolioHandles",
+                           "systemHandles",
+                           "assetHandles",
+                           "watchlistHandles",
+                           "modelHandles",
+                           "marketHandles",
+                           "brokerHandles",
+                           "profileHandles",
+                           "strategyHandles"}) {
+    SCOPED_TRACE(field);
+    auto json = saved;
+    json.at("pludux").at("documentState").erase(field);
+    expect_rejected(std::move(json));
+  }
+}
+
+TEST(ApplicationStateSerialization, RejectsMalformedSuppliedDefaults)
+{
+  auto state = ApplicationState{};
+  ASSERT_TRUE(state.add_portfolio(Portfolio{}));
+  auto stream = std::stringstream{};
+  pludux::apps::save_application_state_json(stream, state);
+  const auto saved = jsoncons::ojson::parse(stream.str());
+  for(const auto* invalid :
+      {"null", "\"10\"", "2.5", "-1", "9007199254740993.0"}) {
+    SCOPED_TRACE(invalid);
+    auto json = saved;
+    json.at("pludux")
+     .at("store")
+     .at("arena")
+     .at("portfolios")[0]["maximumOpenTrades"] =
+     jsoncons::ojson::parse(invalid);
+    auto input = std::stringstream{json.to_string()};
+    EXPECT_THROW(pludux::apps::load_application_state_json(input),
+                 std::exception);
+  }
+}
+
+TEST(ApplicationStateSerialization, LoadsCurrentShapeWithDifferentVersion)
+{
+  auto state = ApplicationState{};
+  const auto portfolio = *state.add_portfolio(Portfolio{});
+  auto timeline = PortfolioTimeline{};
+  timeline.append({.timestamp = 1, .capital = 42.0});
+  ASSERT_TRUE(state.update_portfolio_results(
+   portfolio, PortfolioResults{std::move(timeline), {}}));
+  auto stream = std::stringstream{};
+  pludux::apps::save_application_state_json(stream, state);
+  auto json = jsoncons::ojson::parse(stream.str());
+  json.at("pludux")["$version"] = "different-version";
+  auto input = std::stringstream{json.to_string()};
+
+  const auto loaded = pludux::apps::load_application_state_json(input);
+  ASSERT_EQ(loaded.get_portfolio_handles().size(), 1U);
+  EXPECT_EQ(loaded.get_portfolio_results(loaded.get_portfolio_handles().front()),
+            PortfolioResults{});
+}
+
+TEST(ApplicationStateSerialization, ResourceFieldsDefaultFromFreshObjects)
+{
+  auto state = ApplicationState{};
+  state.add_market(pludux::backtest::Market{"Nondefault", 25.0, 5.0});
+  auto stream = std::stringstream{};
+  pludux::apps::save_application_state_json(stream, state);
+  auto json = jsoncons::ojson::parse(stream.str());
+  auto& market = json.at("pludux").at("store").at("arena").at("markets")[0];
+  market.erase("name");
+  market.erase("minOrderQuantity");
+  market.erase("quantityStep");
+  market["minimumQuantity"] = 99.0;
+  auto input = std::stringstream{json.to_string()};
+
+  const auto loaded = pludux::apps::load_application_state_json(input);
+  EXPECT_EQ(loaded.get_market(loaded.get_market_handles().front()),
+            pludux::backtest::Market{});
+}
+
+TEST(ApplicationStateSerialization, UsesStrictJsonSyntax)
+{
+  auto stream = std::stringstream{};
+  pludux::apps::save_application_state_json(stream, ApplicationState{});
+  auto commented = std::stringstream{"/* comment */" + stream.str()};
+  EXPECT_THROW(pludux::apps::load_application_state_json(commented),
+               std::exception);
+
+  auto json = stream.str();
+  json.insert(json.size() - 1, ",");
+  auto trailing = std::stringstream{json};
+  EXPECT_THROW(pludux::apps::load_application_state_json(trailing),
+               std::exception);
+}
+
 TEST(ApplicationStateSerialization, RoundTripsPortfolioStrategySelection)
 {
   auto state = ApplicationState{};
@@ -444,7 +609,7 @@ TEST(ApplicationStateSerialization, RoundTripsPortfolioStrategySelection)
   EXPECT_EQ(loaded.selected_portfolio_strategy(), selected);
 }
 
-TEST(ApplicationStateSerialization, RejectsLegacyPortfolioStrategySelections)
+TEST(ApplicationStateSerialization, IgnoresLegacyPortfolioStrategySelections)
 {
   auto stream = std::stringstream{};
   pludux::apps::save_application_state_json(stream, ApplicationState{});
@@ -455,8 +620,7 @@ TEST(ApplicationStateSerialization, RejectsLegacyPortfolioStrategySelections)
                std::string{"portfolioStrategySelections"}.size(),
                "portfolioStrategySetupSelections");
   auto input = std::stringstream{json};
-  EXPECT_THROW(pludux::apps::load_application_state_json(input),
-               std::exception);
+  EXPECT_NO_THROW(pludux::apps::load_application_state_json(input));
 }
 
 TEST(ApplicationStateSerialization, RoundTripsOrderedSystemStrategies)
@@ -506,7 +670,7 @@ TEST(ApplicationStateSerialization, RoundTripsOrderedSystemStrategies)
   }
 }
 
-TEST(ApplicationStateSerialization, RejectsMissingRequiredSystemFields)
+TEST(ApplicationStateSerialization, DefaultsMissingSystemFields)
 {
   auto state = ApplicationState{};
   ASSERT_TRUE(state.add_system(pludux::backtest::System{}));
@@ -518,11 +682,12 @@ TEST(ApplicationStateSerialization, RejectsMissingRequiredSystemFields)
   json.replace(
    key, std::string{"\"mainStrategy\""}.size(), "\"removedMainStrategy\"");
   auto input = std::stringstream{json};
-  EXPECT_THROW(pludux::apps::load_application_state_json(input),
-               std::exception);
+  const auto loaded = pludux::apps::load_application_state_json(input);
+  EXPECT_EQ(loaded.get_system(loaded.get_system_handles().front()),
+            pludux::backtest::System{});
 }
 
-TEST(ApplicationStateSerialization, RejectsFailsafeWithoutActivation)
+TEST(ApplicationStateSerialization, DefaultsFailsafeWithoutActivation)
 {
   auto state = ApplicationState{};
   ASSERT_TRUE(state.add_system(pludux::backtest::System{"", {}, {}, {}, {{}}}));
@@ -534,8 +699,11 @@ TEST(ApplicationStateSerialization, RejectsFailsafeWithoutActivation)
   json.replace(
    key, std::string{"\"activation\""}.size(), "\"removedActivation\"");
   auto input = std::stringstream{json};
-  EXPECT_THROW(pludux::apps::load_application_state_json(input),
-               std::exception);
+  const auto loaded = pludux::apps::load_application_state_json(input);
+  EXPECT_EQ(loaded.get_system(loaded.get_system_handles().front())
+             .failsafe_strategies()
+             .front(),
+            pludux::backtest::SystemFailsafeStrategy{});
 }
 
 TEST(CommandHistory, StandaloneStrategyCrudAndReorderAreUndoable)
@@ -587,7 +755,7 @@ TEST(ApplicationStateSerialization, RoundTripsPortfolioLimitsIncludingZero)
   EXPECT_EQ(value.maximum_combined_layers(), 0);
 }
 
-TEST(ApplicationStateSerialization, RejectsMissingPortfolioLimits)
+TEST(ApplicationStateSerialization, DefaultsMissingPortfolioLimits)
 {
   auto state = ApplicationState{};
   ASSERT_TRUE(state.add_portfolio(Portfolio{}));
@@ -599,8 +767,13 @@ TEST(ApplicationStateSerialization, RejectsMissingPortfolioLimits)
     ASSERT_NE(key, std::string::npos);
     json.replace(key, std::string{field}.size(), "removed");
     auto input = std::stringstream{json};
-    EXPECT_THROW(pludux::apps::load_application_state_json(input),
-                 std::exception);
+    const auto loaded = pludux::apps::load_application_state_json(input);
+    const auto& portfolio =
+     loaded.get_portfolio(loaded.get_portfolio_handles().front());
+    EXPECT_EQ(portfolio.maximum_open_trades(),
+              Portfolio{}.maximum_open_trades());
+    EXPECT_EQ(portfolio.maximum_combined_layers(),
+              Portfolio{}.maximum_combined_layers());
   }
 }
 
@@ -628,7 +801,7 @@ TEST(ApplicationStateSerialization, RoundTripsProfileCapitalPolicy)
 }
 
 TEST(ApplicationStateSerialization,
-     RejectsMissingProfileCapitalFieldsAndLegacyFilter)
+     DefaultsMissingProfileCapitalFieldsAndIgnoresLegacyFilter)
 {
   auto state = ApplicationState{};
   state.add_profile(pludux::backtest::Profile{});
@@ -641,16 +814,16 @@ TEST(ApplicationStateSerialization,
     ASSERT_NE(key, std::string::npos);
     json.replace(key, std::string{field}.size(), "removed");
     auto input = std::stringstream{json};
-    EXPECT_THROW(pludux::apps::load_application_state_json(input),
-                 std::exception);
+    const auto loaded = pludux::apps::load_application_state_json(input);
+    EXPECT_EQ(loaded.get_profile(loaded.get_profile_handles().front()),
+              pludux::backtest::Profile{});
   }
   auto json = stream.str();
   const auto key = json.find("\"positionSizing\"");
   ASSERT_NE(key, std::string::npos);
   json.insert(key, "\"executionFilter\":{\"method\":\"ALWAYS\"},");
   auto input = std::stringstream{json};
-  EXPECT_THROW(pludux::apps::load_application_state_json(input),
-               std::exception);
+  EXPECT_NO_THROW(pludux::apps::load_application_state_json(input));
 }
 
 TEST(ApplicationStateSerialization, OmitsProfileCapitalProtectionFromPortfolio)
@@ -723,7 +896,7 @@ TEST(ApplicationStateSerialization, RejectsMalformedPortfolioEntryComparator)
                std::exception);
 }
 
-TEST(ApplicationStateSerialization, RejectsMissingPortfolioEntryComparators)
+TEST(ApplicationStateSerialization, DefaultsMissingPortfolioEntryComparators)
 {
   auto state = ApplicationState{};
   ASSERT_TRUE(state.add_portfolio(Portfolio{}));
@@ -737,8 +910,10 @@ TEST(ApplicationStateSerialization, RejectsMissingPortfolioEntryComparators)
                "\"removedEntryComparators\"");
 
   auto input = std::stringstream{json};
-  EXPECT_THROW(pludux::apps::load_application_state_json(input),
-               std::exception);
+  const auto loaded = pludux::apps::load_application_state_json(input);
+  EXPECT_EQ(loaded.get_portfolio(loaded.get_portfolio_handles().front())
+             .entry_comparators(),
+            Portfolio{}.entry_comparators());
 }
 
 TEST(ApplicationStateSerialization, RejectsRemovedUiStateSchema)

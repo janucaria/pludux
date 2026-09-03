@@ -1,10 +1,14 @@
 module;
 
+#include <cmath>
+#include <cstdint>
 #include <format>
 #include <functional>
+#include <limits>
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -140,6 +144,9 @@ public:
         json_params = config_node.contains("params")
                        ? config_node.at("params")
                        : jsoncons::ojson::object();
+        if(!json_params.is_object()) {
+          throw std::invalid_argument{"Expected node params to be an object"};
+        }
       } else {
         json_params = config_node;
       }
@@ -217,17 +224,104 @@ auto parse_config_json(const std::string& config) -> jsoncons::ojson
 
 auto config_number(const jsoncons::ojson& config) -> double
 {
-  return config.as_double();
+  if(!config.is_number()) {
+    throw std::invalid_argument{"Expected a JSON number"};
+  }
+  const auto value = config.as_double();
+  if(!std::isfinite(value)) {
+    throw std::invalid_argument{"Expected a finite JSON number"};
+  }
+  return value;
 }
 
 auto config_boolean(const jsoncons::ojson& config) -> bool
 {
+  if(!config.is_bool()) {
+    throw std::invalid_argument{"Expected a JSON boolean"};
+  }
   return config.as_bool();
 }
 
 auto config_string(const jsoncons::ojson& config) -> std::string
 {
+  if(!config.is_string()) {
+    throw std::invalid_argument{"Expected a JSON string"};
+  }
   return config.as_string();
+}
+
+template<typename T>
+static auto strict_param_as(const jsoncons::ojson& value) -> T
+{
+  if constexpr(std::is_same_v<T, bool>) {
+    if(!value.is_bool()) {
+      throw std::invalid_argument{"Expected a JSON boolean"};
+    }
+    return value.as_bool();
+  } else if constexpr(std::is_same_v<T, std::string>) {
+    if(!value.is_string()) {
+      throw std::invalid_argument{"Expected a JSON string"};
+    }
+    return value.as_string();
+  } else if constexpr(std::is_floating_point_v<T>) {
+    if(!value.is_number()) {
+      throw std::invalid_argument{"Expected a JSON number"};
+    }
+    const auto result = value.as<T>();
+    if(!std::isfinite(result)) {
+      throw std::invalid_argument{"Expected a finite JSON number"};
+    }
+    return result;
+  } else if constexpr(std::is_integral_v<T>) {
+    if(!value.is_number()) {
+      throw std::invalid_argument{"Expected a JSON number"};
+    }
+    if(value.is_uint64()) {
+      const auto result = value.as<std::uint64_t>();
+      if(result > static_cast<std::uint64_t>(std::numeric_limits<T>::max())) {
+        throw std::out_of_range{"JSON integer is out of range"};
+      }
+      return static_cast<T>(result);
+    }
+    if(value.is_int64()) {
+      const auto result = value.as<std::int64_t>();
+      if constexpr(std::is_unsigned_v<T>) {
+        if(result < 0 || static_cast<std::uint64_t>(result) >
+                          std::numeric_limits<T>::max()) {
+          throw std::out_of_range{"JSON integer is out of range"};
+        }
+      } else if(result <
+                 static_cast<std::int64_t>(std::numeric_limits<T>::min()) ||
+                result >
+                 static_cast<std::int64_t>(std::numeric_limits<T>::max())) {
+        throw std::out_of_range{"JSON integer is out of range"};
+      }
+      return static_cast<T>(result);
+    }
+    const auto result = value.as_double();
+    if(!std::isfinite(result) || std::trunc(result) != result) {
+      throw std::invalid_argument{"Expected an in-range integral JSON number"};
+    }
+    constexpr auto max_exact_integer = 9'007'199'254'740'991.0;
+    if(std::abs(result) > max_exact_integer) {
+      throw std::out_of_range{"Floating JSON integer is not lossless"};
+    }
+    if constexpr(std::is_unsigned_v<T>) {
+      if(result < 0.0 || static_cast<long double>(result) >
+                          static_cast<long double>(
+                           std::numeric_limits<T>::max())) {
+        throw std::out_of_range{"JSON integer is out of range"};
+      }
+    } else if(static_cast<long double>(result) <
+               static_cast<long double>(std::numeric_limits<T>::min()) ||
+              static_cast<long double>(result) >
+               static_cast<long double>(std::numeric_limits<T>::max())) {
+      throw std::out_of_range{"JSON integer is out of range"};
+    }
+    return static_cast<T>(result);
+  } else {
+    return value.as<T>();
+  }
 }
 
 template<typename T>
@@ -235,7 +329,8 @@ static auto get_param_or(const jsoncons::ojson& parameters,
                          const std::string& key,
                          const T& default_value) -> T
 {
-  return parameters.contains(key) ? parameters.at(key).as<T>() : default_value;
+  return parameters.contains(key) ? strict_param_as<T>(parameters.at(key))
+                                  : default_value;
 }
 
 static auto parse_ma_node_type(const std::string& value,
@@ -252,7 +347,7 @@ static auto parse_ma_node_type(const std::string& value,
     return MaNodeType::Hma;
   if(value == "RMA")
     return MaNodeType::Rma;
-  return fallback;
+  throw std::invalid_argument{"Invalid moving-average type"};
 }
 
 static auto parse_kc_band_node_type(const std::string& value) -> KcBandNodeType
@@ -261,7 +356,9 @@ static auto parse_kc_band_node_type(const std::string& value) -> KcBandNodeType
     return KcBandNodeType::Tr;
   if(value == "Range")
     return KcBandNodeType::RangeHighLow;
-  return KcBandNodeType::Atr;
+  if(value == "ATR")
+    return KcBandNodeType::Atr;
+  throw std::invalid_argument{"Invalid Keltner Channel band type"};
 }
 
 static auto serialize_ma_node_type(MaNodeType value,
@@ -727,7 +824,7 @@ auto make_model_config_parser_for() -> ConfigParser<TContext>
                   : jsoncons::ojson::null();
    },
    [](typename Parser::Parser, const jsoncons::ojson& params) -> Node {
-     return ValueNode{params.at("value").as_double()};
+     return ValueNode{strict_param_as<double>(params.at("value"))};
    });
   parser.register_node_parser(
    "MARKET_DATA.FIELD",
@@ -737,7 +834,7 @@ auto make_model_config_parser_for() -> ConfigParser<TContext>
                  : jsoncons::ojson::null();
    },
    [](typename Parser::Parser, const jsoncons::ojson& params) -> Node {
-     return DataNode{params.at("field").as_string()};
+     return DataNode{strict_param_as<std::string>(params.at("field"))};
    });
 
   const auto register_parameterless = [&]<typename TNode>(const char* name) {
@@ -780,7 +877,7 @@ auto make_model_config_parser_for() -> ConfigParser<TContext>
                    : jsoncons::ojson::null();
    },
    [](typename Parser::Parser, const jsoncons::ojson& params) -> Node {
-     return SeriesNode{get_param_or<std::string>(params, "name", "")};
+     return SeriesNode{strict_param_as<std::string>(params.at("name"))};
    });
 
   const auto register_binary = [&]<typename TNode>(const char* name,
@@ -883,14 +980,14 @@ auto make_model_config_parser_for() -> ConfigParser<TContext>
                    : jsoncons::ojson::null();
    },
    [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
-     return ChangeNode<TContext>{params.contains("source")
-                                  ? parser.parse_node(params.at("source"))
-                                  : Node{CloseNode{}}};
+     const auto defaults = ChangeNode<TContext>{};
+     return ChangeNode<TContext>{
+      params.contains("source") ? parser.parse_node(params.at("source"))
+                                : defaults.source()};
    });
 
   const auto register_distance = [&]<typename TNode>(const char* name,
-                                                     const char* value_key,
-                                                     double fallback) {
+                                                     const char* value_key) {
     parser.register_node_parser(
      name,
      [value_key](const Parser& parser, const Node& node) -> jsoncons::ojson {
@@ -901,29 +998,30 @@ auto make_model_config_parser_for() -> ConfigParser<TContext>
        return jsoncons::ojson::object{
         {value_key, parser.serialize_node(distance->value())}};
      },
-     [value_key, fallback](typename Parser::Parser parser,
-                           const jsoncons::ojson& params) -> Node {
+     [value_key](typename Parser::Parser parser,
+                 const jsoncons::ojson& params) -> Node {
+       const auto defaults = TNode{};
        return TNode{params.contains(value_key)
                      ? parser.parse_node(params.at(value_key))
-                     : Node{ValueNode{fallback}}};
+                     : defaults.value()};
      });
   };
   register_distance.template operator()<RiskDistanceAmountNode<TContext>>(
-   "RISK_DISTANCE.AMOUNT", "amount", 1.0);
+   "RISK_DISTANCE.AMOUNT", "amount");
   register_distance.template operator()<RiskDistancePercentNode<TContext>>(
-   "RISK_DISTANCE.PERCENT", "percentage", 1.0);
+   "RISK_DISTANCE.PERCENT", "percentage");
   register_distance.template operator()<SlAmountNode<TContext>>(
-   "STOP_LOSS.AMOUNT", "amount", 0.0);
+   "STOP_LOSS.AMOUNT", "amount");
   register_distance.template operator()<TpAmountNode<TContext>>(
-   "TAKE_PROFIT.AMOUNT", "amount", 0.0);
+   "TAKE_PROFIT.AMOUNT", "amount");
   register_distance.template operator()<SlPercentNode<TContext>>(
-   "STOP_LOSS.PERCENT", "percent", 0.0);
+   "STOP_LOSS.PERCENT", "percent");
   register_distance.template operator()<TpPercentNode<TContext>>(
-   "TAKE_PROFIT.PERCENT", "percent", 0.0);
+   "TAKE_PROFIT.PERCENT", "percent");
   register_distance.template operator()<SlRMultipleNode<TContext>>(
-   "STOP_LOSS.R_MULTIPLE", "multiple", 1.0);
+   "STOP_LOSS.R_MULTIPLE", "multiple");
   register_distance.template operator()<TpRMultipleNode<TContext>>(
-   "TAKE_PROFIT.R_MULTIPLE", "multiple", 2.0);
+   "TAKE_PROFIT.R_MULTIPLE", "multiple");
 
   const auto register_atr_distance = [&]<typename TNode>(const char* name) {
     parser.register_node_parser(
@@ -944,21 +1042,17 @@ auto make_model_config_parser_for() -> ConfigParser<TContext>
                                                               : "RMA"}};
      },
      [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+       const auto defaults = TNode{};
        return TNode{
         params.contains("period") ? parser.parse_node(params.at("period"))
-                                  : Node{ValueNode{14.0}},
+                                  : defaults.period(),
         params.contains("multiplier")
          ? parser.parse_node(params.at("multiplier"))
-         : Node{ValueNode{2.0}},
-        [&] {
-          const auto type =
-           get_param_or<std::string>(params, "maSmoothingType", "RMA");
-          return type == "SMA"     ? MaNodeType::Sma
-                 : type == "EMA"   ? MaNodeType::Ema
-                  : type == "WMA"  ? MaNodeType::Wma
-                   : type == "HMA" ? MaNodeType::Hma
-                                   : MaNodeType::Rma;
-        }()};
+         : defaults.multiplier(),
+        parse_ma_node_type(get_param_or<std::string>(
+         params,
+         "maSmoothingType",
+         serialize_ma_node_type(defaults.ma_smoothing_type())))};
      });
   };
   register_atr_distance.template operator()<RiskDistanceAtrNode<TContext>>(
@@ -988,16 +1082,30 @@ auto make_model_config_parser_for() -> ConfigParser<TContext>
                                     {"value", input->value()}};
    },
    [](typename Parser::Parser, const jsoncons::ojson& params) -> Node {
+     const auto defaults = NumericInputNode{};
      const auto representation =
-      get_param_or<std::string>(params, "representation", "Decimal");
+      get_param_or<std::string>(
+       params,
+       "representation",
+       defaults.representation() ==
+           NumericInputNode::ValueRepresentation::SignedInteger
+        ? "SignedInteger"
+       : defaults.representation() ==
+          NumericInputNode::ValueRepresentation::UnsignedInteger
+        ? "UnsignedInteger"
+        : "Decimal");
+     if(representation != "Decimal" && representation != "SignedInteger" &&
+        representation != "UnsignedInteger") {
+       throw std::invalid_argument{"Invalid numeric input representation"};
+     }
      return NumericInputNode{
-      get_param_or<std::string>(params, "label", ""),
+      get_param_or<std::string>(params, "label", defaults.label()),
       representation == "SignedInteger"
        ? NumericInputNode::ValueRepresentation::SignedInteger
       : representation == "UnsignedInteger"
         ? NumericInputNode::ValueRepresentation::UnsignedInteger
         : NumericInputNode::ValueRepresentation::Decimal,
-      get_param_or<double>(params, "value", 0.0)};
+      get_param_or<double>(params, "value", defaults.value())};
    });
 
   parser.register_node_parser(
@@ -1011,14 +1119,14 @@ auto make_model_config_parser_for() -> ConfigParser<TContext>
              : jsoncons::ojson::null();
    },
    [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
-     return LookbackNode<TContext>{params.contains("source")
-                                    ? parser.parse_node(params.at("source"))
-                                    : Node{CloseNode{}},
-                                   params.at("period").as<std::size_t>()};
+     const auto defaults = LookbackNode<TContext>{};
+     return LookbackNode<TContext>{
+      params.contains("source") ? parser.parse_node(params.at("source"))
+                                : defaults.source(),
+      get_param_or<std::size_t>(params, "period", defaults.period())};
    });
 
-  const auto register_ta = [&]<typename TNode>(const char* name,
-                                               std::size_t default_period) {
+  const auto register_ta = [&]<typename TNode>(const char* name) {
     parser.register_node_parser(
      name,
      [](const Parser& parser, const Node& node) -> jsoncons::ojson {
@@ -1031,30 +1139,27 @@ auto make_model_config_parser_for() -> ConfigParser<TContext>
                                                 value->source())}}
                     : jsoncons::ojson::null();
      },
-     [default_period](typename Parser::Parser parser,
-                      const jsoncons::ojson& params) -> Node {
+     [](typename Parser::Parser parser,
+        const jsoncons::ojson& params) -> Node {
+       const auto defaults = TNode{};
        return TNode{params.contains("source")
                      ? parser.parse_node(params.at("source"))
-                     : Node{CloseNode{}},
+                     : defaults.source(),
                     params.contains("period")
                      ? parser.parse_node(params.at("period"))
-                     : Node{NumericInputNode{
-                        "Period",
-                        NumericInputNode::ValueRepresentation::UnsignedInteger,
-                        static_cast<double>(default_period)}}};
+                     : defaults.period()};
      });
   };
-  register_ta.template operator()<SmaNode<TContext>>("INDICATOR.SMA", 20);
-  register_ta.template operator()<EmaNode<TContext>>("INDICATOR.EMA", 20);
-  register_ta.template operator()<RmaNode<TContext>>("INDICATOR.RMA", 20);
-  register_ta.template operator()<WmaNode<TContext>>("INDICATOR.WMA", 20);
-  register_ta.template operator()<HmaNode<TContext>>("INDICATOR.HMA", 20);
-  register_ta.template operator()<HighestNode<TContext>>("INDICATOR.HIGHEST",
-                                                         14);
-  register_ta.template operator()<LowestNode<TContext>>("INDICATOR.LOWEST", 14);
-  register_ta.template operator()<RocNode<TContext>>("INDICATOR.ROC", 14);
-  register_ta.template operator()<RsiNode<TContext>>("INDICATOR.RSI", 14);
-  register_ta.template operator()<StddevNode<TContext>>("INDICATOR.STDDEV", 20);
+  register_ta.template operator()<SmaNode<TContext>>("INDICATOR.SMA");
+  register_ta.template operator()<EmaNode<TContext>>("INDICATOR.EMA");
+  register_ta.template operator()<RmaNode<TContext>>("INDICATOR.RMA");
+  register_ta.template operator()<WmaNode<TContext>>("INDICATOR.WMA");
+  register_ta.template operator()<HmaNode<TContext>>("INDICATOR.HMA");
+  register_ta.template operator()<HighestNode<TContext>>("INDICATOR.HIGHEST");
+  register_ta.template operator()<LowestNode<TContext>>("INDICATOR.LOWEST");
+  register_ta.template operator()<RocNode<TContext>>("INDICATOR.ROC");
+  register_ta.template operator()<RsiNode<TContext>>("INDICATOR.RSI");
+  register_ta.template operator()<StddevNode<TContext>>("INDICATOR.STDDEV");
 
   parser.register_node_parser(
    "INDICATOR.RVOL",
@@ -1066,13 +1171,10 @@ auto make_model_config_parser_for() -> ConfigParser<TContext>
              : jsoncons::ojson::null();
    },
    [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
-     return RvolNode<TContext>{
-      params.contains("period")
-       ? parser.parse_node(params.at("period"))
-       : Node{NumericInputNode{
-          "Period",
-          NumericInputNode::ValueRepresentation::UnsignedInteger,
-          14.0}}};
+     const auto defaults = RvolNode<TContext>{};
+     return RvolNode<TContext>{params.contains("period")
+                                ? parser.parse_node(params.at("period"))
+                                : defaults.period()};
    });
   parser.register_node_parser(
    "INDICATOR.TR",
@@ -1096,15 +1198,15 @@ auto make_model_config_parser_for() -> ConfigParser<TContext>
              : jsoncons::ojson::null();
    },
    [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
-     auto value = AtrNode<TContext>{
-      params.contains("period")
-       ? parser.parse_node(params.at("period"))
-       : Node{NumericInputNode{
-          "Period",
-          NumericInputNode::ValueRepresentation::UnsignedInteger,
-          14.0}}};
+     const auto defaults = AtrNode<TContext>{};
+     auto value = AtrNode<TContext>{params.contains("period")
+                                     ? parser.parse_node(params.at("period"))
+                                     : defaults.period()};
      value.ma_smoothing_type(parse_ma_node_type(
-      get_param_or<std::string>(params, "maSmoothingType", "RMA")));
+      get_param_or<std::string>(params,
+                                "maSmoothingType",
+                                serialize_ma_node_type(
+                                 defaults.ma_smoothing_type()))));
      return value;
    });
 
@@ -1187,7 +1289,9 @@ auto make_model_config_parser_for() -> ConfigParser<TContext>
        return jsoncons::ojson::object{{"items", std::move(items)}};
      },
      [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
-       const auto& items = params.at("items");
+       const auto items = params.contains("items")
+                           ? params.at("items")
+                           : jsoncons::ojson::array();
        if(!items.is_array()) {
          throw std::invalid_argument{"'items' must be an array"};
        }
@@ -1212,9 +1316,10 @@ auto make_model_config_parser_for() -> ConfigParser<TContext>
              : jsoncons::ojson::null();
    },
    [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+     const auto defaults = PositionRMultipleNode<TContext>{};
      return PositionRMultipleNode<TContext>{
       params.contains("source") ? parser.parse_node(params.at("source"))
-                                : Node{CloseNode{}}};
+                                : defaults.source()};
    });
 
   const auto register_context_value = [&]<typename TNode>(const char* name) {
@@ -1250,21 +1355,22 @@ auto make_model_config_parser_for() -> ConfigParser<TContext>
                : jsoncons::ojson::null();
    },
    [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+     const auto defaults = BbNode<TContext>{};
      return BbNode<TContext>{
       params.contains("maSource") ? parser.parse_node(params.at("maSource"))
-                                  : Node{CloseNode{}},
+                                  : defaults.source(),
       params.contains("period")
        ? parser.parse_node(params.at("period"))
-       : Node{NumericInputNode{
-          "Period",
-          NumericInputNode::ValueRepresentation::UnsignedInteger,
-          20.0}},
+       : defaults.period(),
       params.contains("stddev")
        ? parser.parse_node(params.at("stddev"))
-       : Node{NumericInputNode{
-          "StdDev", NumericInputNode::ValueRepresentation::Decimal, 2.0}},
-      parse_ma_node_type(get_param_or<std::string>(params, "maType", "SMA"),
-                         MaNodeType::Sma)};
+       : defaults.stddev(),
+      parse_ma_node_type(
+       get_param_or<std::string>(params,
+                                 "maType",
+                                 serialize_ma_node_type(
+                                  defaults.ma_node_type(), "SMA")),
+       defaults.ma_node_type())};
    });
 
   parser.register_node_parser(
@@ -1286,21 +1392,20 @@ auto make_model_config_parser_for() -> ConfigParser<TContext>
              : jsoncons::ojson::null();
    },
    [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+     const auto defaults = MacdNode<TContext>{};
      const auto input =
-      [&parser, &params](const char* key, const char* label, double value) {
+      [&parser, &params](const char* key, const Node& default_value) {
         return params.contains(key)
                 ? parser.parse_node(params.at(key))
-                : Node{NumericInputNode{
-                   label,
-                   NumericInputNode::ValueRepresentation::UnsignedInteger,
-                   value}};
+                : default_value;
       };
      return MacdNode<TContext>{params.contains("source")
                                 ? parser.parse_node(params.at("source"))
-                                : Node{CloseNode{}},
-                               input("fastPeriod", "Fast Period", 12.0),
-                               input("slowPeriod", "Slow Period", 26.0),
-                               input("signalPeriod", "Signal Period", 9.0)};
+                                : defaults.source(),
+                               input("fastPeriod", defaults.fast_period()),
+                               input("slowPeriod", defaults.slow_period()),
+                               input("signalPeriod",
+                                     defaults.signal_period())};
    });
 
   parser.register_node_parser(
@@ -1315,18 +1420,9 @@ auto make_model_config_parser_for() -> ConfigParser<TContext>
              : jsoncons::ojson::null();
    },
    [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
-     const auto input =
-      [&parser, &params](const char* key, const char* label, double value) {
-        return params.contains(key)
-                ? parser.parse_node(params.at(key))
-                : Node{NumericInputNode{
-                   label,
-                   NumericInputNode::ValueRepresentation::UnsignedInteger,
-                   value}};
-      };
-     return StochNode<TContext>{input("kPeriod", "K Period", 5.0),
-                                input("kSmooth", "K Smooth", 3.0),
-                                input("dPeriod", "D Period", 3.0)};
+     return StochNode<TContext>{parser.parse_node(params.at("kPeriod")),
+                                parser.parse_node(params.at("kSmooth")),
+                                parser.parse_node(params.at("dPeriod"))};
    });
 
   parser.register_node_parser(
@@ -1345,22 +1441,20 @@ auto make_model_config_parser_for() -> ConfigParser<TContext>
              : jsoncons::ojson::null();
    },
    [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+     const auto defaults = StochRsiNode<TContext>{};
      const auto input =
-      [&parser, &params](const char* key, const char* label, double value) {
+      [&parser, &params](const char* key, const Node& default_value) {
         return params.contains(key)
                 ? parser.parse_node(params.at(key))
-                : Node{NumericInputNode{
-                   label,
-                   NumericInputNode::ValueRepresentation::UnsignedInteger,
-                   value}};
+                : default_value;
       };
      return StochRsiNode<TContext>{params.contains("rsiSource")
                                     ? parser.parse_node(params.at("rsiSource"))
-                                    : Node{CloseNode{}},
-                                   input("rsiPeriod", "RSI Period", 14.0),
-                                   input("kPeriod", "K Period", 5.0),
-                                   input("kSmooth", "K Smooth", 3.0),
-                                   input("dPeriod", "D Period", 3.0)};
+                                    : defaults.rsi_source(),
+                                   input("rsiPeriod", defaults.rsi_period()),
+                                   input("kPeriod", defaults.k_period()),
+                                   input("kSmooth", defaults.k_smooth()),
+                                   input("dPeriod", defaults.d_period())};
    });
 
   parser.register_node_parser(
@@ -1372,13 +1466,11 @@ auto make_model_config_parser_for() -> ConfigParser<TContext>
                : jsoncons::ojson::null();
    },
    [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
-     return DonchianChannelNode<TContext>{
-      params.contains("period")
-       ? parser.parse_node(params.at("period"))
-       : Node{NumericInputNode{
-          "Period",
-          NumericInputNode::ValueRepresentation::UnsignedInteger,
-          20.0}}};
+     const auto defaults = DonchianChannelNode<TContext>{};
+     return DonchianChannelNode<TContext>{params.contains("period")
+                                           ? parser.parse_node(
+                                              params.at("period"))
+                                           : defaults.period()};
    });
 
   parser.register_node_parser(
@@ -1399,30 +1491,29 @@ auto make_model_config_parser_for() -> ConfigParser<TContext>
              : jsoncons::ojson::null();
    },
    [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+     const auto defaults = KcNode<TContext>{};
      return KcNode<TContext>{
       params.contains("maSource") ? parser.parse_node(params.at("maSource"))
-                                  : Node{CloseNode{}},
+                                  : defaults.source(),
       params.contains("period")
        ? parser.parse_node(params.at("period"))
-       : Node{NumericInputNode{
-          "Period",
-          NumericInputNode::ValueRepresentation::UnsignedInteger,
-          20.0}},
+       : defaults.period(),
       params.contains("multiplier")
        ? parser.parse_node(params.at("multiplier"))
-       : Node{NumericInputNode{
-          "Multiplier", NumericInputNode::ValueRepresentation::Decimal, 1.5}},
+       : defaults.multiplier(),
       params.contains("bandAtrPeriod")
        ? parser.parse_node(params.at("bandAtrPeriod"))
-       : Node{NumericInputNode{
-          "Band ATR Period",
-          NumericInputNode::ValueRepresentation::UnsignedInteger,
-          14.0}},
-      parse_kc_band_node_type(
-       get_param_or<std::string>(params, "bandMethodType", "ATR")),
-      parse_ma_node_type(
-       get_param_or<std::string>(params, "maMethodType", "EMA"),
-       MaNodeType::Ema)};
+       : defaults.band_atr_period(),
+      parse_kc_band_node_type(get_param_or<std::string>(
+       params,
+       "bandMethodType",
+       serialize_kc_band_node_type(defaults.band_node_type()))),
+      parse_ma_node_type(get_param_or<std::string>(
+                          params,
+                          "maMethodType",
+                          serialize_ma_node_type(defaults.ma_node_type(),
+                                                 "EMA")),
+                         defaults.ma_node_type())};
    });
 
   parser.register_node_parser(
@@ -1459,7 +1550,7 @@ auto make_model_config_parser_for() -> ConfigParser<TContext>
    },
    [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
      const auto output_name =
-      get_param_or<std::string>(params, "output", "default");
+      strict_param_as<std::string>(params.at("output"));
      const auto output =
       output_name == "macd-line"          ? NodeOutput::MacdLine
       : output_name == "signal-line"      ? NodeOutput::SignalLine
@@ -1469,10 +1560,9 @@ auto make_model_config_parser_for() -> ConfigParser<TContext>
           : output_name == "middle-band"  ? NodeOutput::MiddleBand
            : output_name == "upper-band"  ? NodeOutput::UpperBand
             : output_name == "lower-band" ? NodeOutput::LowerBand
-                                          : static_cast<NodeOutput>(-1);
-     return SelectOutputNode<TContext>{params.contains("source")
-                                        ? parser.parse_node(params.at("source"))
-                                        : Node{CloseNode{}},
+                                          : throw std::invalid_argument{
+                                             "Invalid selected output"};
+     return SelectOutputNode<TContext>{parser.parse_node(params.at("source")),
                                        output};
    });
 
@@ -1488,10 +1578,11 @@ auto make_model_config_parser_for() -> ConfigParser<TContext>
              : jsoncons::ojson::null();
    },
    [](typename Parser::Parser parser, const jsoncons::ojson& params) -> Node {
+     const auto defaults = PercentageNode<TContext>{};
      return PercentageNode<TContext>{
       params.contains("base") ? parser.parse_node(params.at("base"))
-                              : Node{CloseNode{}},
-      get_param_or<double>(params, "percent", 100.0)};
+                              : defaults.base(),
+      get_param_or<double>(params, "percent", defaults.percent())};
    });
 
   return parser;
@@ -1518,7 +1609,7 @@ auto make_requested_order_comparator_config_parser()
                   : jsoncons::ojson::null();
    },
    [](Parser::Parser, const jsoncons::ojson& params) -> Node {
-     return ValueNode{params.at("value").as_double()};
+     return ValueNode{strict_param_as<double>(params.at("value"))};
    });
   parser.register_node_parser(
    "MARKET_DATA.FIELD",
@@ -1528,7 +1619,7 @@ auto make_requested_order_comparator_config_parser()
                  : jsoncons::ojson::null();
    },
    [](Parser::Parser, const jsoncons::ojson& params) -> Node {
-     return DataNode{params.at("field").as_string()};
+     return DataNode{strict_param_as<std::string>(params.at("field"))};
    });
 
   const auto register_parameterless = [&]<typename TNode>(const char* name) {
@@ -1589,10 +1680,11 @@ auto make_requested_order_comparator_config_parser()
                      : jsoncons::ojson::null();
    },
    [](Parser::Parser parser, const jsoncons::ojson& params) -> Node {
-     return LookbackNode<Context>{params.contains("source")
-                                   ? parser.parse_node(params.at("source"))
-                                   : Node{CloseNode{}},
-                                  params.at("period").as<std::size_t>()};
+     const auto defaults = LookbackNode<Context>{};
+     return LookbackNode<Context>{
+      params.contains("source") ? parser.parse_node(params.at("source"))
+                                : defaults.source(),
+      get_param_or<std::size_t>(params, "period", defaults.period())};
    });
 
   const auto register_binary = [&]<typename TNode>(const char* name,

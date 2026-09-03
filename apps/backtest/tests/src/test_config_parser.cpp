@@ -158,7 +158,8 @@ TEST(ModelConfigParserTest, ParsesShorthandsDefaultsAndTypedNodes)
   const auto node = parser.parse_node(config);
   const auto* sma = node_cast<SmaNode<backtest::BacktestMethodContext>>(node);
   ASSERT_NE(sma, nullptr);
-  EXPECT_NE(node_cast<NumericInputNode>(sma->period()), nullptr);
+  EXPECT_EQ(sma->period(),
+            SmaNode<backtest::BacktestMethodContext>{}.period());
   EXPECT_EQ(parser.parse_node(parser.serialize_node(node)), node);
 }
 
@@ -201,10 +202,11 @@ TEST(ModelConfigParserTest, PreservesCanonicalCompositeDefaults)
   const auto node = parser.parse_node(config);
   const auto* macd = node_cast<MacdNode<backtest::BacktestMethodContext>>(node);
   ASSERT_NE(macd, nullptr);
-  EXPECT_NE(node_cast<CloseNode>(macd->source()), nullptr);
-  EXPECT_NE(node_cast<NumericInputNode>(macd->fast_period()), nullptr);
-  EXPECT_NE(node_cast<NumericInputNode>(macd->slow_period()), nullptr);
-  EXPECT_NE(node_cast<NumericInputNode>(macd->signal_period()), nullptr);
+  const auto defaults = MacdNode<backtest::BacktestMethodContext>{};
+  EXPECT_EQ(macd->source(), defaults.source());
+  EXPECT_EQ(macd->fast_period(), defaults.fast_period());
+  EXPECT_EQ(macd->slow_period(), defaults.slow_period());
+  EXPECT_EQ(macd->signal_period(), defaults.signal_period());
   EXPECT_EQ(parser.parse_node(parser.serialize_node(node)), node);
 }
 
@@ -255,7 +257,7 @@ TEST(ModelConfigParserTest, RoundTripsEveryCanonicalModelRegistration)
    R"({"method":"INDICATOR.DC"})",
    R"({"method":"INDICATOR.BB"})",
    R"({"method":"INDICATOR.MACD"})",
-   R"({"method":"INDICATOR.STOCH"})",
+   R"({"method":"INDICATOR.STOCH","params":{"kPeriod":5,"kSmooth":3,"dPeriod":3}})",
    R"({"method":"INDICATOR.STOCH_RSI"})",
    R"({"method":"OPERATOR.SELECT_OUTPUT","params":{"output":"upper-band","source":"MARKET_DATA.CLOSE"}})",
    R"({"method":"OPERATOR.PERCENTAGE"})",
@@ -708,7 +710,7 @@ TEST(PlotMethodParserTest, ParseAndSerializeMomentumHistogram)
   EXPECT_EQ(method, round_trip.plots().at(0).items().at(0));
 }
 
-TEST(PlotMethodParserTest, RejectMomentumHistogramWithMissingColor)
+TEST(PlotMethodParserTest, DefaultsMomentumHistogramMissingColor)
 {
   const auto config = json::parse(R"(
     {
@@ -735,8 +737,16 @@ TEST(PlotMethodParserTest, RejectMomentumHistogramWithMissingColor)
     }
   )");
 
-  EXPECT_THROW(backtest::parse_model_config_json("Test", config),
-               std::invalid_argument);
+  const auto model = backtest::parse_model_config_json("Test", config);
+  using MomentumHistogram = backtest::MomentumHistogramPlotMethod<
+   backtest::ErasedPlotSourceMethod<backtest::ErasedPlotMethodContext>>;
+  const auto* histogram =
+   plot_method_cast<MomentumHistogram>(model.plots().at(0).items().at(0));
+  ASSERT_NE(histogram, nullptr);
+  const auto defaults =
+   MomentumHistogram{backtest::SeriesPlotSourceMethod{}};
+  EXPECT_EQ(histogram->negative_rising_color(),
+            defaults.negative_rising_color());
 }
 
 TEST_F(ConfigParserTest, ParseScreenerSeriesMethod)

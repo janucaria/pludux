@@ -4,12 +4,14 @@ module;
 #include <cmath>
 #include <cstdint>
 #include <istream>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 
 #include <jsoncons/json.hpp>
@@ -24,6 +26,87 @@ import :execution_model;
 import :model;
 import :plot_method_parser;
 import :config_parser;
+
+namespace {
+
+template<typename T>
+auto strict_as(const jsoncons::ojson& json) -> T
+{
+  if constexpr(std::is_same_v<T, bool>) {
+    if(!json.is_bool()) {
+      throw std::invalid_argument{"Expected a JSON boolean"};
+    }
+    return json.as_bool();
+  } else if constexpr(std::is_same_v<T, std::string>) {
+    if(!json.is_string()) {
+      throw std::invalid_argument{"Expected a JSON string"};
+    }
+    return json.as_string();
+  } else if constexpr(std::is_floating_point_v<T>) {
+    if(!json.is_number()) {
+      throw std::invalid_argument{"Expected a JSON number"};
+    }
+    const auto value = json.as<T>();
+    if(!std::isfinite(value)) {
+      throw std::invalid_argument{"Expected a finite JSON number"};
+    }
+    return value;
+  } else if constexpr(std::is_integral_v<T>) {
+    if(!json.is_number()) {
+      throw std::invalid_argument{"Expected a JSON number"};
+    }
+    if(json.is_uint64()) {
+      const auto value = json.as<std::uint64_t>();
+      if(value > static_cast<std::uint64_t>(std::numeric_limits<T>::max())) {
+        throw std::out_of_range{"JSON integer is out of range"};
+      }
+      return static_cast<T>(value);
+    }
+    if(json.is_int64()) {
+      const auto value = json.as<std::int64_t>();
+      if constexpr(std::is_unsigned_v<T>) {
+        if(value < 0 || static_cast<std::uint64_t>(value) >
+                         std::numeric_limits<T>::max()) {
+          throw std::out_of_range{"JSON integer is out of range"};
+        }
+      } else if(value < static_cast<std::int64_t>(std::numeric_limits<T>::min()) ||
+                value > static_cast<std::int64_t>(std::numeric_limits<T>::max())) {
+        throw std::out_of_range{"JSON integer is out of range"};
+      }
+      return static_cast<T>(value);
+    }
+    const auto value = json.as_double();
+    if(!std::isfinite(value) || std::trunc(value) != value ||
+       std::abs(value) > 9'007'199'254'740'991.0) {
+      throw std::invalid_argument{"Expected an in-range integral JSON number"};
+    }
+    if constexpr(std::is_unsigned_v<T>) {
+      if(value < 0.0 || static_cast<long double>(value) >
+                         static_cast<long double>(
+                          std::numeric_limits<T>::max())) {
+        throw std::out_of_range{"JSON integer is out of range"};
+      }
+    } else if(static_cast<long double>(value) <
+               static_cast<long double>(std::numeric_limits<T>::min()) ||
+              static_cast<long double>(value) >
+               static_cast<long double>(std::numeric_limits<T>::max())) {
+      throw std::out_of_range{"JSON integer is out of range"};
+    }
+    return static_cast<T>(value);
+  } else {
+    return json.as<T>();
+  }
+}
+
+template<typename T>
+auto value_or(const jsoncons::ojson& json,
+              std::string_view key,
+              const T& default_value) -> T
+{
+  return json.contains(key) ? strict_as<T>(json.at(key)) : default_value;
+}
+
+} // namespace
 
 export namespace pludux::backtest {
 
@@ -134,9 +217,9 @@ auto serialize_stop_target_reference_price(StopTargetReferencePrice reference)
   return "AVERAGE_PRICE";
 }
 
-auto parse_reduce(const jsoncons::ojson& config) -> double
+auto parse_reduce(const jsoncons::ojson& config, double default_value) -> double
 {
-  const auto reduce = config.get_value_or<double>("reduce", 1.0);
+  const auto reduce = value_or<double>(config, "reduce", default_value);
   if(!std::isfinite(reduce) || reduce <= 0.0 || reduce > 1.0) {
     throw std::runtime_error{"Invalid exit reduce value: expected (0, 1]"};
   }
@@ -166,140 +249,184 @@ auto parse_model_position(const jsoncons::ojson& position_json,
 
   if(position_json.contains("entry")) {
     const auto& entry_json = position_json.at("entry");
+    if(!entry_json.is_object()) {
+      throw std::runtime_error{"Invalid entry configuration in model JSON"};
+    }
+    const auto defaults = Model::Entry{};
     position.entry(Model::Entry{
-     config_parser.parse_node(entry_json.at("signal")),
-     parse_signal_timing(entry_json.at("timing").as<std::string>())});
+     entry_json.contains("signal")
+      ? config_parser.parse_node(entry_json.at("signal"))
+      : defaults.signal(),
+     entry_json.contains("timing")
+      ? parse_signal_timing(strict_as<std::string>(entry_json.at("timing")))
+      : defaults.timing()});
   }
 
   if(position_json.contains("exits")) {
     const auto& exits_json = position_json.at("exits");
-    if(!exits_json.is_object() || !exits_json.contains("activation") ||
-       !exits_json.contains("rules") || !exits_json.at("rules").is_array()) {
+    if(!exits_json.is_object()) {
       throw std::runtime_error{"Invalid exits configuration in strategy JSON"};
     }
 
-    position.exits_activation(
-     parse_exit_activation(exits_json.at("activation").as<std::string>()));
+    if(exits_json.contains("activation")) {
+      position.exits_activation(parse_exit_activation(
+       strict_as<std::string>(exits_json.at("activation"))));
+    }
     auto exits = std::vector<Model::Exit>{};
-    const auto& exit_rules_json = exits_json.at("rules");
+    const auto exit_rules_json = exits_json.contains("rules")
+                                  ? exits_json.at("rules")
+                                  : jsoncons::ojson::array();
+    if(!exit_rules_json.is_array()) {
+      throw std::runtime_error{"Invalid exits rules in strategy JSON"};
+    }
     exits.reserve(exit_rules_json.size());
     for(const auto& exit_json : exit_rules_json.array_range()) {
-      if(!exit_json.is_object() || !exit_json.contains("signal") ||
-         !exit_json.contains("timing")) {
+      if(!exit_json.is_object()) {
         throw std::runtime_error{"Invalid exits item in strategy JSON"};
       }
+      const auto defaults = Model::Exit{};
       exits.emplace_back(
-       exit_json.get_value_or<bool>("enabled", false),
-       config_parser.parse_node(exit_json.at("signal")),
-       parse_signal_timing(exit_json.at("timing").as<std::string>()),
-       parse_reduce(exit_json));
+       value_or<bool>(exit_json, "enabled", defaults.enabled()),
+       exit_json.contains("signal")
+        ? config_parser.parse_node(exit_json.at("signal"))
+        : defaults.signal(),
+       exit_json.contains("timing")
+        ? parse_signal_timing(strict_as<std::string>(exit_json.at("timing")))
+        : defaults.timing(),
+       parse_reduce(exit_json, defaults.reduce()));
     }
     position.exits(std::move(exits));
   }
 
   if(position_json.contains("pyramiding")) {
     const auto& pyramiding_json = position_json.at("pyramiding");
+    if(!pyramiding_json.is_object()) {
+      throw std::runtime_error{"Invalid pyramiding configuration in model JSON"};
+    }
     auto pyramiding = Model::Pyramiding{};
     if(pyramiding_json.contains("signal")) {
       pyramiding.signal(config_parser.parse_node(pyramiding_json.at("signal")));
     }
-    pyramiding.timing(
-     parse_signal_timing(pyramiding_json.at("timing").as<std::string>()));
-    pyramiding.retrigger(parse_pyramiding_retrigger(
-     pyramiding_json.at("retrigger").as<std::string>()));
-    pyramiding.cooldown(pyramiding_json.at("cooldown").as<std::size_t>());
+    if(pyramiding_json.contains("timing")) {
+      pyramiding.timing(parse_signal_timing(
+       strict_as<std::string>(pyramiding_json.at("timing"))));
+    }
+    if(pyramiding_json.contains("retrigger")) {
+      pyramiding.retrigger(parse_pyramiding_retrigger(
+       strict_as<std::string>(pyramiding_json.at("retrigger"))));
+    }
+    if(pyramiding_json.contains("cooldown")) {
+      pyramiding.cooldown(
+       strict_as<std::size_t>(pyramiding_json.at("cooldown")));
+    }
     if(pyramiding_json.contains("maxLayers")) {
-      pyramiding.max_layers(pyramiding_json.at("maxLayers").as<std::size_t>());
+      pyramiding.max_layers(
+       strict_as<std::size_t>(pyramiding_json.at("maxLayers")));
     }
     if(pyramiding_json.contains("stopTargetReference")) {
       const auto& stop_target_reference_json =
        pyramiding_json.at("stopTargetReference");
-      pyramiding.favorable_stop_target_reference(
-       parse_stop_target_reference_price(
-        stop_target_reference_json.get_value_or<std::string>("favorable",
-                                                             "AVERAGE_PRICE")));
-      pyramiding.unfavorable_stop_target_reference(
-       parse_stop_target_reference_price(
-        stop_target_reference_json.get_value_or<std::string>("unfavorable",
-                                                             "AVERAGE_PRICE")));
+      if(!stop_target_reference_json.is_object()) {
+        throw std::runtime_error{"Invalid stop/target reference configuration"};
+      }
+      if(stop_target_reference_json.contains("favorable")) {
+        pyramiding.favorable_stop_target_reference(
+         parse_stop_target_reference_price(strict_as<std::string>(
+          stop_target_reference_json.at("favorable"))));
+      }
+      if(stop_target_reference_json.contains("unfavorable")) {
+        pyramiding.unfavorable_stop_target_reference(
+         parse_stop_target_reference_price(strict_as<std::string>(
+          stop_target_reference_json.at("unfavorable"))));
+      }
     }
     position.pyramiding(std::move(pyramiding));
   }
 
-  if(!position_json.contains("riskDistance")) {
-    throw std::runtime_error{
-     "Invalid position configuration in strategy JSON: missing "
-     "riskDistance"};
+  if(position_json.contains("riskDistance")) {
+    const auto& risk_distance_json = position_json.at("riskDistance");
+    if(!risk_distance_json.is_object()) {
+      throw std::runtime_error{
+       "Invalid riskDistance configuration in strategy JSON: expected an "
+       "explicit method object"};
+    }
+    auto risk_distance = config_parser.parse_node(risk_distance_json);
+    if(!node_cast<RiskDistanceAmountNode<BacktestMethodContext>>(
+         risk_distance) &&
+       !node_cast<RiskDistancePercentNode<BacktestMethodContext>>(
+        risk_distance) &&
+       !node_cast<RiskDistanceAtrNode<BacktestMethodContext>>(risk_distance)) {
+      throw std::runtime_error{
+       "Invalid riskDistance configuration in strategy JSON: expected an "
+       "R_DISTANCE_* method"};
+    }
+    position.risk_distance(std::move(risk_distance));
   }
-  const auto& risk_distance_json = position_json.at("riskDistance");
-  if(!risk_distance_json.is_object()) {
-    throw std::runtime_error{
-     "Invalid riskDistance configuration in strategy JSON: expected an "
-     "explicit method object"};
-  }
-  auto risk_distance = config_parser.parse_node(risk_distance_json);
-  if(!node_cast<RiskDistanceAmountNode<BacktestMethodContext>>(
-       risk_distance) &&
-     !node_cast<RiskDistancePercentNode<BacktestMethodContext>>(
-      risk_distance) &&
-     !node_cast<RiskDistanceAtrNode<BacktestMethodContext>>(risk_distance)) {
-    throw std::runtime_error{
-     "Invalid riskDistance configuration in strategy JSON: expected an "
-     "R_DISTANCE_* method"};
-  }
-  position.risk_distance(std::move(risk_distance));
 
-  auto stop_losses = std::vector<Model::StopLoss>{};
   if(position_json.contains("stopLosses")) {
     const auto& stop_losses_json = position_json.at("stopLosses");
-    if(!stop_losses_json.is_object() ||
-       !stop_losses_json.contains("activation") ||
-       !stop_losses_json.contains("rules") ||
-       !stop_losses_json.at("rules").is_array()) {
+    if(!stop_losses_json.is_object()) {
       throw std::runtime_error{
        "Invalid stopLosses configuration in strategy JSON"};
     }
-    position.stop_losses_activation(parse_exit_activation(
-     stop_losses_json.at("activation").as<std::string>()));
-    const auto& stop_loss_rules_json = stop_losses_json.at("rules");
-    stop_losses.reserve(stop_loss_rules_json.size());
-    for(const auto& stop_loss_json : stop_loss_rules_json.array_range()) {
-      if(!stop_loss_json.is_object() || !stop_loss_json.contains("stopPrice")) {
-        throw std::runtime_error{"Invalid stopLosses item in strategy JSON"};
+    if(stop_losses_json.contains("activation")) {
+      position.stop_losses_activation(parse_exit_activation(
+       strict_as<std::string>(stop_losses_json.at("activation"))));
+    }
+    if(stop_losses_json.contains("rules")) {
+      const auto& stop_loss_rules_json = stop_losses_json.at("rules");
+      if(!stop_loss_rules_json.is_array()) {
+        throw std::runtime_error{"Invalid stopLosses rules in strategy JSON"};
       }
-      stop_losses.emplace_back(
-       stop_loss_json.get_value_or<bool>("enabled", false),
-       config_parser.parse_node(stop_loss_json.at("stopPrice")),
-       stop_loss_json.get_value_or<bool>("trailing", false),
-       parse_reduce(stop_loss_json));
+      auto stop_losses = std::vector<Model::StopLoss>{};
+      stop_losses.reserve(stop_loss_rules_json.size());
+      for(const auto& stop_loss_json : stop_loss_rules_json.array_range()) {
+        if(!stop_loss_json.is_object()) {
+          throw std::runtime_error{"Invalid stopLosses item in strategy JSON"};
+        }
+        const auto defaults = Model::StopLoss{};
+        stop_losses.emplace_back(
+         value_or<bool>(stop_loss_json, "enabled", defaults.enabled()),
+         stop_loss_json.contains("stopPrice")
+          ? config_parser.parse_node(stop_loss_json.at("stopPrice"))
+          : defaults.stop_price(),
+         value_or<bool>(stop_loss_json, "trailing", defaults.trailing()),
+         parse_reduce(stop_loss_json, defaults.reduce()));
+      }
+      position.stop_losses(std::move(stop_losses));
     }
   }
-  position.stop_losses(std::move(stop_losses));
 
   if(position_json.contains("takeProfits")) {
     const auto& take_profits_json = position_json.at("takeProfits");
-    if(!take_profits_json.is_object() ||
-       !take_profits_json.contains("activation") ||
-       !take_profits_json.contains("rules") ||
-       !take_profits_json.at("rules").is_array()) {
+    if(!take_profits_json.is_object()) {
       throw std::runtime_error{
        "Invalid takeProfits configuration in strategy JSON"};
     }
 
-    position.take_profits_activation(parse_exit_activation(
-     take_profits_json.at("activation").as<std::string>()));
+    if(take_profits_json.contains("activation")) {
+      position.take_profits_activation(parse_exit_activation(
+       strict_as<std::string>(take_profits_json.at("activation"))));
+    }
     auto take_profits = std::vector<Model::TakeProfit>{};
-    const auto& take_profit_rules_json = take_profits_json.at("rules");
+    const auto take_profit_rules_json = take_profits_json.contains("rules")
+                                        ? take_profits_json.at("rules")
+                                        : jsoncons::ojson::array();
+    if(!take_profit_rules_json.is_array()) {
+      throw std::runtime_error{"Invalid takeProfits rules in strategy JSON"};
+    }
     take_profits.reserve(take_profit_rules_json.size());
     for(const auto& take_profit_json : take_profit_rules_json.array_range()) {
-      if(!take_profit_json.is_object() ||
-         !take_profit_json.contains("targetPrice")) {
+      if(!take_profit_json.is_object()) {
         throw std::runtime_error{"Invalid takeProfits item in strategy JSON"};
       }
+      const auto defaults = Model::TakeProfit{};
       take_profits.emplace_back(
-       take_profit_json.get_value_or<bool>("enabled", false),
-       config_parser.parse_node(take_profit_json.at("targetPrice")),
-       parse_reduce(take_profit_json));
+       value_or<bool>(take_profit_json, "enabled", defaults.enabled()),
+       take_profit_json.contains("targetPrice")
+        ? config_parser.parse_node(take_profit_json.at("targetPrice"))
+        : defaults.target_price(),
+       parse_reduce(take_profit_json, defaults.reduce()));
     }
     position.take_profits(std::move(take_profits));
   }
@@ -396,24 +523,32 @@ auto parse_model_config_json(std::string_view model_name,
   if(!model_json.contains("version")) {
     throw std::runtime_error{"Invalid model JSON: missing version"};
   }
-  const auto version = model_json.at("version").as<int>();
+  const auto version = strict_as<int>(model_json.at("version"));
   if(version != 1) {
     throw std::runtime_error("Unsupported model JSON version: " +
                              std::to_string(version));
   }
 
-  if(!model_json.contains("execution") ||
-     !model_json.at("execution").is_object() ||
-     !model_json.at("execution").contains("intrabarPath")) {
-    throw std::runtime_error{
-     "Invalid strategy JSON: missing execution.intrabarPath"};
+  auto model = Model{};
+  model.name(std::string{model_name});
+
+  if(model_json.contains("execution")) {
+    const auto& execution_json = model_json.at("execution");
+    if(!execution_json.is_object()) {
+      throw std::runtime_error{"Invalid model JSON: execution must be an object"};
+    }
+    if(execution_json.contains("intrabarPath")) {
+      model.intrabar_path(parse_intrabar_path(
+       strict_as<std::string>(execution_json.at("intrabarPath"))));
+    }
   }
-  const auto intrabar_path = parse_intrabar_path(
-    model_json.at("execution").at("intrabarPath").as<std::string>());
 
   auto series_nodes = OrderedNamedRegistry<ModelNode>{};
   if(model_json.contains("series")) {
     const auto& series_json = model_json.at("series");
+    if(!series_json.is_object()) {
+      throw std::runtime_error{"Invalid model JSON: series must be an object"};
+    }
     for(const auto& [series_name, series_config] : series_json.object_range()) {
       series_nodes.set(series_name, config_parser.parse_node(series_config));
     }
@@ -423,7 +558,10 @@ auto parse_model_config_json(std::string_view model_name,
   auto short_position = Model::Position{};
 
   if(model_json.contains("positions")) {
-    const auto positions_json = model_json.at("positions");
+    const auto& positions_json = model_json.at("positions");
+    if(!positions_json.is_object()) {
+      throw std::runtime_error{"Invalid model JSON: positions must be an object"};
+    }
 
     if(positions_json.contains("long")) {
       long_position =
@@ -439,17 +577,28 @@ auto parse_model_config_json(std::string_view model_name,
   auto plots = std::vector<PlotGroup>{};
   if(model_json.contains("plots")) {
     const auto& plots_json = model_json.at("plots");
+    if(!plots_json.is_array()) {
+      throw std::runtime_error{"Invalid model JSON: plots must be an array"};
+    }
     auto plot_method_parser = make_default_registered_plot_method_parser();
 
     for(const auto& plot_group_json : plots_json.array_range()) {
+      if(!plot_group_json.is_object()) {
+        throw std::runtime_error{"Invalid model JSON: plot group must be an object"};
+      }
+      const auto defaults = PlotGroup{};
       const auto label =
-       plot_group_json.get_value_or<std::string>("label", "Unnamed");
-      const auto overlay = plot_group_json.get_value_or<bool>("overlay", true);
+       value_or<std::string>(plot_group_json, "label", defaults.name());
+      const auto overlay =
+       value_or<bool>(plot_group_json, "overlay", defaults.is_overlay());
       auto plot_items =
        std::vector<ErasedPlotMethod<ErasedPlotMethodContext>>{};
 
       if(plot_group_json.contains("items")) {
         const auto& items_json = plot_group_json.at("items");
+        if(!items_json.is_array()) {
+          throw std::runtime_error{"Invalid model JSON: plot items must be an array"};
+        }
         for(const auto& item_json : items_json.array_range()) {
           auto plot_method = plot_method_parser.deserialize_method(item_json);
           plot_items.push_back(std::move(plot_method));
@@ -460,12 +609,11 @@ auto parse_model_config_json(std::string_view model_name,
     }
   }
 
-  return Model{std::string{model_name},
-                  std::move(series_nodes),
-                  std::move(long_position),
-                  std::move(short_position),
-                  plots,
-                  intrabar_path};
+  model.series_nodes(std::move(series_nodes));
+  model.long_position(std::move(long_position));
+  model.short_position(std::move(short_position));
+  model.plots(std::move(plots));
+  return model;
 }
 
 auto parse_model(std::string_view model_name, std::istream& json_model_stream)

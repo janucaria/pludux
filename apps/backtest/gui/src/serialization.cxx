@@ -1,7 +1,10 @@
 module;
 
+#include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <istream>
+#include <limits>
 #include <ostream>
 #include <stdexcept>
 #include <string>
@@ -31,9 +34,107 @@ auto conversion_failed() -> jsoncons::conversion_result<T>
 }
 
 template<typename T, typename Json>
+auto strict_as(const Json& json) -> T
+{
+  if constexpr(std::is_same_v<T, bool>) {
+    if(!json.is_bool()) {
+      throw std::invalid_argument{"Expected a JSON boolean"};
+    }
+    return json.template as<bool>();
+  } else if constexpr(std::is_same_v<T, std::string>) {
+    if(!json.is_string()) {
+      throw std::invalid_argument{"Expected a JSON string"};
+    }
+    return json.template as<std::string>();
+  } else if constexpr(std::is_floating_point_v<T>) {
+    if(!json.is_number()) {
+      throw std::invalid_argument{"Expected a JSON number"};
+    }
+    const auto value = json.template as<T>();
+    if(!std::isfinite(value)) {
+      throw std::invalid_argument{"Expected a finite JSON number"};
+    }
+    return value;
+  } else if constexpr(std::is_integral_v<T> && !std::is_same_v<T, bool>) {
+    if(!json.is_number()) {
+      throw std::invalid_argument{"Expected a JSON number"};
+    }
+
+    if(json.is_uint64()) {
+      const auto value = json.template as<std::uint64_t>();
+      if constexpr(std::is_signed_v<T>) {
+        if(value > static_cast<std::uint64_t>(std::numeric_limits<T>::max())) {
+          throw std::out_of_range{"JSON integer is out of range"};
+        }
+      } else if(value > std::numeric_limits<T>::max()) {
+        throw std::out_of_range{"JSON integer is out of range"};
+      }
+      return static_cast<T>(value);
+    }
+
+    if(json.is_int64()) {
+      const auto value = json.template as<std::int64_t>();
+      if constexpr(std::is_unsigned_v<T>) {
+        if(value < 0 || static_cast<std::uint64_t>(value) >
+                         std::numeric_limits<T>::max()) {
+          throw std::out_of_range{"JSON integer is out of range"};
+        }
+      } else if(value < static_cast<std::int64_t>(std::numeric_limits<T>::min()) ||
+                value > static_cast<std::int64_t>(std::numeric_limits<T>::max())) {
+        throw std::out_of_range{"JSON integer is out of range"};
+      }
+      return static_cast<T>(value);
+    }
+
+    const auto value = json.template as<double>();
+    if(!std::isfinite(value) || std::trunc(value) != value) {
+      throw std::invalid_argument{"Expected an integral JSON number"};
+    }
+    constexpr auto max_exact_integer = 9'007'199'254'740'991.0;
+    if(std::abs(value) > max_exact_integer) {
+      throw std::out_of_range{"Floating JSON integer is not lossless"};
+    }
+    if constexpr(std::is_unsigned_v<T>) {
+      if(value < 0.0 || static_cast<long double>(value) >
+                         static_cast<long double>(std::numeric_limits<T>::max())) {
+        throw std::out_of_range{"JSON integer is out of range"};
+      }
+    } else if(static_cast<long double>(value) <
+               static_cast<long double>(std::numeric_limits<T>::min()) ||
+              static_cast<long double>(value) >
+               static_cast<long double>(std::numeric_limits<T>::max())) {
+      throw std::out_of_range{"JSON integer is out of range"};
+    }
+    return static_cast<T>(value);
+  } else {
+    return json.template as<T>();
+  }
+}
+
+template<typename T, typename Json>
 auto required_as(const Json& json, const std::string& key) -> T
 {
-  return json.at(key).template as<T>();
+  return strict_as<T>(json.at(key));
+}
+
+template<typename T, typename Json>
+auto value_or(const Json& json, const std::string& key, const T& default_value)
+ -> T
+{
+  return json.contains(key) ? strict_as<T>(json.at(key)) : default_value;
+}
+
+template<typename Json>
+auto object_or_empty(const Json& json, const std::string& key) -> Json
+{
+  if(!json.contains(key)) {
+    return Json{};
+  }
+  auto value = json.at(key);
+  if(!value.is_object()) {
+    throw std::invalid_argument{"Expected a JSON object"};
+  }
+  return value;
 }
 
 template<typename Json, typename TValue>
@@ -83,8 +184,8 @@ auto model_entry_to_json(const auto& aset, const pludux::backtest::Model& model)
 template<typename TModel, typename Json>
 auto model_entry_from_json(const Json& json) -> TModel
 {
-  auto model = json.at("config").template as<TModel>();
-  model.name(required_as<std::string>(json, "name"));
+  auto model = value_or<TModel>(json, "config", TModel{});
+  model.name(value_or<std::string>(json, "name", TModel{}.name()));
   return model;
 }
 
@@ -115,8 +216,20 @@ auto model_performance_from_json(const Json& json)
  -> pludux::backtest::ModelPerformanceConfig
 {
   using namespace pludux::backtest;
-  const auto break_even_value =
-   required_as<std::string>(json, "breakEvenTreatment");
+  const auto defaults = ModelPerformanceConfig{};
+  const auto serialize_break_even = [](auto value) -> std::string {
+    if(value == ModelPerformanceBreakEvenTreatment::Skip) {
+      return "SKIP";
+    }
+    if(value == ModelPerformanceBreakEvenTreatment::CountAsWin) {
+      return "COUNT_AS_WIN";
+    }
+    return "COUNT_AS_LOSS";
+  };
+  const auto break_even_value = value_or<std::string>(
+   json,
+   "breakEvenTreatment",
+   serialize_break_even(defaults.break_even_treatment()));
   const auto break_even_treatment = [&] {
     if(break_even_value == "SKIP") {
       return ModelPerformanceBreakEvenTreatment::Skip;
@@ -129,41 +242,67 @@ auto model_performance_from_json(const Json& json)
     }
     throw std::invalid_argument{"Invalid break-even treatment"};
   }();
-  const auto& history = json.at("history");
-  const auto mode_value = required_as<int>(history, "mode");
+  const auto history = object_or_empty(json, "history");
+  const auto mode_value = value_or<int>(
+   history, "mode", static_cast<int>(defaults.history().mode()));
   if(mode_value < static_cast<int>(ModelPerformanceHistoryMode::All) ||
      mode_value >
       static_cast<int>(ModelPerformanceHistoryMode::ExponentialDecay)) {
     throw std::invalid_argument{"Invalid model-performance history mode"};
   }
-  const auto& bayesian = json.at("bayesian");
-  const auto& win = bayesian.at("winProbability");
+  const auto bayesian = object_or_empty(json, "bayesian");
+  const auto default_win = BetaBernoulliModelNode{};
+  auto default_win_json = Json{};
+  default_win_json["method"] = "DISTRIBUTION.BETA_BERNOULLI";
+  const auto win = bayesian.contains("winProbability")
+                    ? bayesian.at("winProbability")
+                    : std::move(default_win_json);
   if(required_as<std::string>(win, "method") != "DISTRIBUTION.BETA_BERNOULLI") {
     throw std::invalid_argument{"Unsupported Bayesian win model"};
   }
-  const auto& win_params = win.at("params");
+  const auto win_params = object_or_empty(win, "params");
   const auto parse_payoff = [](const auto& payoff) {
     if(required_as<std::string>(payoff, "method") !=
        "DISTRIBUTION.GAMMA_INVERSE_GAMMA") {
       throw std::invalid_argument{"Unsupported Bayesian payoff model"};
     }
-    const auto& params = payoff.at("params");
+    const auto params = object_or_empty(payoff, "params");
+    const auto defaults = GammaPayoffModelNode{};
     return BayesianPayoffModelNode{GammaPayoffModelNode{
-     required_as<double>(params, "priorMeanMagnitude"),
-     required_as<double>(params, "priorStrength"),
-     required_as<double>(params, "coefficientOfVariation")}};
+     value_or<double>(params,
+                      "priorMeanMagnitude",
+                      defaults.prior_mean_magnitude()),
+     value_or<double>(params, "priorStrength", defaults.prior_strength()),
+     value_or<double>(params,
+                      "coefficientOfVariation",
+                      defaults.coefficient_of_variation())}};
+  };
+  const auto default_payoff = [] {
+    auto payoff = Json{};
+    payoff["method"] = "DISTRIBUTION.GAMMA_INVERSE_GAMMA";
+    return payoff;
   };
   return ModelPerformanceConfig{
    ModelPerformanceHistoryPolicy{
     static_cast<ModelPerformanceHistoryMode>(mode_value),
-    required_as<std::size_t>(history, "rollingWindow"),
-    required_as<double>(history, "exponentialDecay")},
+    value_or<std::size_t>(history,
+                          "rollingWindow",
+                          defaults.history().rolling_window()),
+    value_or<double>(history,
+                     "exponentialDecay",
+                     defaults.history().exponential_decay())},
    ModelPerformanceBayesianConfig{
     BayesianWinModelNode{BetaBernoulliModelNode{
-     required_as<double>(win_params, "priorWinProbability"),
-     required_as<double>(win_params, "priorStrength")}},
-    parse_payoff(bayesian.at("winningPayoff")),
-    parse_payoff(bayesian.at("losingPayoff"))},
+     value_or<double>(win_params,
+                      "priorWinProbability",
+                      default_win.prior_probability()),
+     value_or<double>(win_params, "priorStrength", default_win.prior_strength())}},
+    parse_payoff(bayesian.contains("winningPayoff")
+                  ? bayesian.at("winningPayoff")
+                  : default_payoff()),
+    parse_payoff(bayesian.contains("losingPayoff")
+                  ? bayesian.at("losingPayoff")
+                  : default_payoff())},
    break_even_treatment};
 }
 
@@ -239,11 +378,19 @@ struct json_conv_traits<Json, pludux::NumericInputNode> {
                             const Json& json)
   {
     try {
-      return result_type{
-       value_type{required_as<std::string>(json, "label"),
-                  static_cast<value_type::ValueRepresentation>(
-                   required_as<int>(json, "representation")),
-                  required_as<double>(json, "value")}};
+      const auto defaults = value_type{};
+      const auto representation = value_or<int>(
+       json, "representation", static_cast<int>(defaults.representation()));
+      if(representation <
+          static_cast<int>(value_type::ValueRepresentation::Decimal) ||
+         representation >
+          static_cast<int>(value_type::ValueRepresentation::UnsignedInteger)) {
+        throw std::invalid_argument{"Invalid numeric input representation"};
+      }
+      return result_type{value_type{
+       value_or<std::string>(json, "label", defaults.label()),
+       static_cast<value_type::ValueRepresentation>(representation),
+       value_or<double>(json, "value", defaults.value())}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -280,25 +427,40 @@ struct json_conv_traits<Json, pludux::backtest::PositionSizingNode> {
     try {
       using namespace pludux::backtest;
       const auto method = required_as<std::string>(json, "method");
-      const auto& params = json.at("params");
+      const auto params = object_or_empty(json, "params");
       if(method == "POSITION_SIZING.RISK_DISTANCE") {
+        const auto defaults = RiskDistancePositionSizing{};
         return result_type{value_type{RiskDistancePositionSizing{
-         required_as<double>(params, "riskFraction")}}};
+         value_or<double>(params, "riskFraction", defaults.risk_fraction())}}};
       }
       if(method == "POSITION_SIZING.FIXED_QUANTITY") {
+        const auto defaults = FixedQuantityPositionSizing{};
         return result_type{value_type{
-         FixedQuantityPositionSizing{required_as<double>(params, "quantity")}}};
+         FixedQuantityPositionSizing{
+          value_or<double>(params, "quantity", defaults.quantity())}}};
       }
       if(method == "POSITION_SIZING.FIXED_BUDGET") {
+        const auto defaults = FixedBudgetPositionSizing{};
         return result_type{value_type{
-         FixedBudgetPositionSizing{required_as<double>(params, "budget")}}};
+         FixedBudgetPositionSizing{
+          value_or<double>(params, "budget", defaults.budget())}}};
       }
       if(method == "POSITION_SIZING.EQUITY_FRACTION") {
+        const auto defaults = EquityFractionPositionSizing{};
         return result_type{value_type{EquityFractionPositionSizing{
-         required_as<double>(params, "equityFraction")}}};
+         value_or<double>(params,
+                          "equityFraction",
+                          defaults.equity_fraction())}}};
       }
       if(method == "POSITION_SIZING.MODEL_PERFORMANCE_BAYESIAN_KELLY") {
-        const auto estimate_name = required_as<std::string>(params, "estimate");
+        const auto defaults = ModelPerformanceBayesianKellySizing{};
+        const auto estimate_name = value_or<std::string>(
+         params,
+         "estimate",
+         defaults.estimate() ==
+             ModelPerformanceBayesianKellyEstimate::PosteriorMean
+          ? "POSTERIOR_MEAN"
+          : "ADVERSE_QUANTILES");
         const auto estimate =
          estimate_name == "POSTERIOR_MEAN"
           ? ModelPerformanceBayesianKellyEstimate::PosteriorMean
@@ -307,9 +469,15 @@ struct json_conv_traits<Json, pludux::backtest::PositionSizingNode> {
            : throw std::invalid_argument{"Invalid Bayesian Kelly estimate"};
         return result_type{value_type{ModelPerformanceBayesianKellySizing{
          estimate,
-         required_as<double>(params, "centralCredibleMass"),
-         required_as<double>(params, "kellyMultiplier"),
-         required_as<double>(params, "maxEquityFraction")}}};
+         value_or<double>(params,
+                          "centralCredibleMass",
+                          defaults.central_credible_mass()),
+         value_or<double>(params,
+                          "kellyMultiplier",
+                          defaults.kelly_multiplier()),
+         value_or<double>(params,
+                          "maxEquityFraction",
+                          defaults.maximum_equity_fraction())}}};
       }
       throw std::invalid_argument{"Unsupported position sizing method"};
     } catch(...) {
@@ -374,11 +542,14 @@ struct json_conv_traits<Json, pludux::backtest::DrawdownAdjustment> {
                             const Json& json)
   {
     try {
-      return result_type{
-       value_type{required_as<bool>(json, "enabled"),
-                  required_as<double>(json, "drawdownStep"),
-                  required_as<double>(json, "sizeReduction"),
-                  required_as<double>(json, "notionalEquityReduction")}};
+      const auto defaults = value_type{};
+      return result_type{value_type{
+       value_or<bool>(json, "enabled", defaults.enabled()),
+       value_or<double>(json, "drawdownStep", defaults.drawdown_step()),
+       value_or<double>(json, "sizeReduction", defaults.size_reduction()),
+       value_or<double>(json,
+                        "notionalEquityReduction",
+                        defaults.notional_equity_reduction())}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -459,17 +630,15 @@ struct json_conv_traits<Json, pludux::backtest::Profile> {
                             const Json& json)
   {
     try {
-      if(json.contains("executionFilter")) {
-        throw std::invalid_argument{"Profile contains a legacy filter field"};
-      }
+      const auto defaults = value_type{};
       return result_type{value_type{
-       required_as<std::string>(json, "name"),
-       required_as<pludux::backtest::PositionSizingNode>(json,
-                                                         "positionSizing"),
-       required_as<pludux::backtest::DrawdownAdjustment>(json,
-                                                         "drawdownAdjustment"),
-       required_as<pludux::backtest::InsufficientCashPolicy>(
-        json, "insufficientCashPolicy")}};
+       value_or<std::string>(json, "name", defaults.name()),
+       value_or<pludux::backtest::PositionSizingNode>(
+        json, "positionSizing", defaults.position_sizing()),
+       value_or<pludux::backtest::DrawdownAdjustment>(
+        json, "drawdownAdjustment", defaults.drawdown_adjustment()),
+       value_or<pludux::backtest::InsufficientCashPolicy>(
+        json, "insufficientCashPolicy", defaults.insufficient_cash_policy())}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -506,15 +675,25 @@ struct json_conv_traits<Json, pludux::backtest::BrokerFee> {
                             const Json& json)
   {
     try {
-      return result_type{
-       value_type{required_as<std::string>(json, "name"),
-                  static_cast<value_type::FeeType>(
-                   required_as<std::size_t>(json, "feeType")),
-                  static_cast<value_type::FeePosition>(
-                   required_as<std::size_t>(json, "feePosition")),
-                  static_cast<value_type::FeeTrigger>(
-                   required_as<std::size_t>(json, "feeTrigger")),
-                  required_as<double>(json, "feeValue")}};
+      const auto defaults = value_type{};
+      const auto fee_type = value_or<std::size_t>(
+       json, "feeType", static_cast<std::size_t>(defaults.fee_type()));
+      const auto fee_position = value_or<std::size_t>(
+       json, "feePosition", static_cast<std::size_t>(defaults.fee_position()));
+      const auto fee_trigger = value_or<std::size_t>(
+       json, "feeTrigger", static_cast<std::size_t>(defaults.fee_trigger()));
+      if(fee_type > static_cast<std::size_t>(value_type::FeeType::Fixed) ||
+         fee_position >
+          static_cast<std::size_t>(value_type::FeePosition::LongAndShort) ||
+         fee_trigger > static_cast<std::size_t>(value_type::FeeTrigger::All)) {
+        throw std::invalid_argument{"Invalid broker fee enum value"};
+      }
+      return result_type{value_type{
+       value_or<std::string>(json, "name", defaults.name()),
+       static_cast<value_type::FeeType>(fee_type),
+       static_cast<value_type::FeePosition>(fee_position),
+       static_cast<value_type::FeeTrigger>(fee_trigger),
+       value_or<double>(json, "feeValue", defaults.value())}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -551,9 +730,12 @@ struct json_conv_traits<Json, pludux::backtest::Broker> {
                             const Json& json)
   {
     try {
+      const auto defaults = value_type{};
       return result_type{value_type{
-       required_as<std::string>(json, "name"),
-       vector_from_json<pludux::backtest::BrokerFee>(json.at("fees"))}};
+       value_or<std::string>(json, "name", defaults.name()),
+       json.contains("fees")
+        ? vector_from_json<pludux::backtest::BrokerFee>(json.at("fees"))
+        : defaults.fees()}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -587,10 +769,13 @@ struct json_conv_traits<Json, pludux::backtest::Market> {
                             const Json& json)
   {
     try {
-      return result_type{
-       value_type{required_as<std::string>(json, "name"),
-                  required_as<double>(json, "minOrderQuantity"),
-                  required_as<double>(json, "quantityStep")}};
+      const auto defaults = value_type{};
+      return result_type{value_type{
+       value_or<std::string>(json, "name", defaults.name()),
+       value_or<double>(json,
+                        "minOrderQuantity",
+                        defaults.min_order_quantity()),
+       value_or<double>(json, "quantityStep", defaults.quantity_step())}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -625,13 +810,14 @@ struct json_conv_traits<Json, pludux::AssetQuoteFieldResolver> {
                             const Json& json)
   {
     try {
-      return result_type{
-       value_type{required_as<std::string>(json, "datetimeField"),
-                  required_as<std::string>(json, "openField"),
-                  required_as<std::string>(json, "highField"),
-                  required_as<std::string>(json, "lowField"),
-                  required_as<std::string>(json, "closeField"),
-                  required_as<std::string>(json, "volumeField")}};
+      const auto defaults = value_type{};
+      return result_type{value_type{
+       value_or<std::string>(json, "datetimeField", defaults.datetime_field()),
+       value_or<std::string>(json, "openField", defaults.open_field()),
+       value_or<std::string>(json, "highField", defaults.high_field()),
+       value_or<std::string>(json, "lowField", defaults.low_field()),
+       value_or<std::string>(json, "closeField", defaults.close_field()),
+       value_or<std::string>(json, "volumeField", defaults.volume_field())}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -670,8 +856,10 @@ struct json_conv_traits<Json, pludux::AssetData> {
   {
     try {
       auto data = std::vector<double>{};
-      for(const auto& item : json.at("data").array_range()) {
-        data.push_back(item.template as<double>());
+      if(json.contains("data")) {
+        for(const auto& item : json.at("data").array_range()) {
+          data.push_back(strict_as<double>(item));
+        }
       }
 
       auto asset_data = value_type{};
@@ -710,9 +898,11 @@ struct json_conv_traits<Json, pludux::AssetHistory> {
   {
     try {
       auto history = value_type{};
-      for(const auto& [field, data_json] :
-          json.at("fieldData").object_range()) {
-        history.insert(field, data_json.template as<pludux::AssetData>());
+      if(json.contains("fieldData")) {
+        for(const auto& [field, data_json] :
+            json.at("fieldData").object_range()) {
+          history.insert(field, data_json.template as<pludux::AssetData>());
+        }
       }
       return result_type{std::move(history)};
     } catch(...) {
@@ -751,10 +941,12 @@ struct json_conv_traits<Json, pludux::backtest::Asset> {
                             const Json& json)
   {
     try {
+      const auto defaults = value_type{};
       return result_type{value_type{
-       required_as<std::string>(json, "name"),
-       required_as<pludux::AssetHistory>(json, "history"),
-       required_as<pludux::AssetQuoteFieldResolver>(json, "fieldResolver")}};
+       value_or<std::string>(json, "name", defaults.name()),
+       value_or<pludux::AssetHistory>(json, "history", defaults.history()),
+       value_or<pludux::AssetQuoteFieldResolver>(
+        json, "fieldResolver", defaults.field_resolver())}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -788,10 +980,12 @@ struct json_conv_traits<Json, pludux::backtest::Watchlist> {
                             const Json& json)
   {
     try {
-      return result_type{
-       value_type{required_as<std::string>(json, "name"),
-                  vector_from_json<pludux::backtest::AssetStoreHandle>(
-                   json.at("assets"))}};
+      const auto defaults = value_type{};
+      return result_type{value_type{
+       value_or<std::string>(json, "name", defaults.name()),
+       json.contains("assets")
+        ? vector_from_json<pludux::backtest::AssetStoreHandle>(json.at("assets"))
+        : defaults.asset_handles()}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -947,12 +1141,19 @@ struct json_conv_traits<Json, pludux::backtest::Strategy> {
                             const Json& json)
   {
     try {
+      const auto defaults = value_type{};
       return result_type{value_type{
-       required_as<std::string>(json, "name"),
-       required_as<pludux::backtest::ModelStoreHandle>(json, "model"),
-       required_as<pludux::backtest::ProfileStoreHandle>(json, "profile"),
-       vector_from_json<pludux::NumericInputNode>(json.at("inputs")),
-       pludux::backtest::parse_entry_filter_node(json.at("entryFilter"))}};
+       value_or<std::string>(json, "name", defaults.name()),
+       value_or<pludux::backtest::ModelStoreHandle>(
+        json, "model", defaults.model_handle()),
+       value_or<pludux::backtest::ProfileStoreHandle>(
+        json, "profile", defaults.profile_handle()),
+       json.contains("inputs")
+        ? vector_from_json<pludux::NumericInputNode>(json.at("inputs"))
+        : defaults.inputs(),
+       json.contains("entryFilter")
+        ? pludux::backtest::parse_entry_filter_node(json.at("entryFilter"))
+        : defaults.entry_filter()}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -990,7 +1191,13 @@ struct json_conv_traits<Json, pludux::backtest::SystemFailsafeStrategy> {
                             const Json& json)
   {
     try {
-      const auto activation = json.at("activation").template as<std::string>();
+      const auto defaults = value_type{};
+      const auto activation = value_or<std::string>(
+       json,
+       "activation",
+       defaults.activation() == pludux::backtest::FailsafeStrategyActivation::Always
+        ? "ALWAYS"
+        : "PREVIOUS_STRATEGY_ENTRY_FILTERED_POSITION");
       auto activation_value =
        pludux::backtest::FailsafeStrategyActivation::Always;
       if(activation == "PREVIOUS_STRATEGY_ENTRY_FILTERED_POSITION") {
@@ -1000,7 +1207,8 @@ struct json_conv_traits<Json, pludux::backtest::SystemFailsafeStrategy> {
         throw std::invalid_argument{"Invalid failsafe activation"};
       }
       return result_type{value_type{
-       required_as<pludux::backtest::StrategyStoreHandle>(json, "strategy"),
+       value_or<pludux::backtest::StrategyStoreHandle>(
+        json, "strategy", defaults.strategy_handle()),
        activation_value}};
     } catch(...) {
       return conversion_failed<value_type>();
@@ -1039,13 +1247,20 @@ struct json_conv_traits<Json, pludux::backtest::System> {
                             const Json& json)
   {
     try {
+      const auto defaults = value_type{};
       return result_type{value_type{
-       required_as<std::string>(json, "name"),
-       required_as<pludux::backtest::WatchlistStoreHandle>(json, "watchlist"),
-       model_performance_from_json(json.at("modelPerformance")),
-       required_as<pludux::backtest::StrategyStoreHandle>(json, "mainStrategy"),
-       vector_from_json<pludux::backtest::SystemFailsafeStrategy>(
-        json.at("failsafeStrategies"))}};
+       value_or<std::string>(json, "name", defaults.name()),
+       value_or<pludux::backtest::WatchlistStoreHandle>(
+        json, "watchlist", defaults.watchlist_handle()),
+       json.contains("modelPerformance")
+        ? model_performance_from_json(json.at("modelPerformance"))
+        : defaults.model_performance(),
+       value_or<pludux::backtest::StrategyStoreHandle>(
+        json, "mainStrategy", defaults.main_strategy_handle()),
+       json.contains("failsafeStrategies")
+        ? vector_from_json<pludux::backtest::SystemFailsafeStrategy>(
+           json.at("failsafeStrategies"))
+        : defaults.failsafe_strategies()}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -1125,10 +1340,13 @@ struct json_conv_traits<Json, pludux::backtest::PortfolioEntryComparator> {
     try {
       auto parser =
        pludux::backtest::make_requested_order_comparator_config_parser();
-      return result_type{
-       value_type{parser.parse_node(jsoncons::ojson{json.at("expression")}),
-                  required_as<pludux::backtest::PortfolioEntryComparatorOrder>(
-                   json, "order")}};
+      const auto defaults = value_type{};
+      return result_type{value_type{
+       json.contains("expression")
+        ? parser.parse_node(jsoncons::ojson{json.at("expression")})
+        : defaults.expression(),
+       value_or<pludux::backtest::PortfolioEntryComparatorOrder>(
+        json, "order", defaults.order())}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -1164,17 +1382,27 @@ struct json_conv_traits<Json, pludux::backtest::Portfolio> {
                             const Json& json)
   {
     try {
+      const auto defaults = value_type{};
       return result_type{value_type{
-       required_as<std::string>(json, "name"),
-       required_as<double>(json, "initialCapital"),
-       required_as<pludux::backtest::MarketStoreHandle>(json, "market"),
-       required_as<pludux::backtest::BrokerStoreHandle>(json, "broker"),
-       required_as<std::size_t>(json, "maximumOpenTrades"),
-       required_as<std::size_t>(json, "maximumCombinedLayers"),
-       vector_from_json<pludux::backtest::PortfolioEntryComparator>(
-        json.at("entryComparators")),
-       vector_from_json<pludux::backtest::SystemStoreHandle>(
-        json.at("systems"))}};
+       value_or<std::string>(json, "name", defaults.name()),
+       value_or<double>(json, "initialCapital", defaults.initial_capital()),
+       value_or<pludux::backtest::MarketStoreHandle>(
+        json, "market", defaults.market_handle()),
+       value_or<pludux::backtest::BrokerStoreHandle>(
+        json, "broker", defaults.broker_handle()),
+       value_or<std::size_t>(
+        json, "maximumOpenTrades", defaults.maximum_open_trades()),
+       value_or<std::size_t>(json,
+                             "maximumCombinedLayers",
+                             defaults.maximum_combined_layers()),
+       json.contains("entryComparators")
+        ? vector_from_json<pludux::backtest::PortfolioEntryComparator>(
+           json.at("entryComparators"))
+        : defaults.entry_comparators(),
+       json.contains("systems")
+        ? vector_from_json<pludux::backtest::SystemStoreHandle>(
+           json.at("systems"))
+        : defaults.system_handles()}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -1546,16 +1774,20 @@ struct json_conv_traits<Json, pludux::apps::ViewState> {
                             const Json& json)
   {
     try {
-      return result_type{
-       value_type{required_as<std::string>(json, "imguiIniSettings"),
-                  required_as<pludux::backtest::PortfolioStoreHandle>(
-                   json, "selectedPortfolioHandle"),
-                  required_as<pludux::apps::PortfolioStrategySelections>(
-                   json, "portfolioStrategySelections"),
-                  required_as<pludux::backtest::SystemStoreHandle>(
-                   json, "selectedSystemHandle"),
-                  required_as<pludux::backtest::StrategyStoreHandle>(
-                   json, "selectedStrategyHandle")}};
+      const auto defaults = value_type{};
+      return result_type{value_type{
+       value_or<std::string>(
+        json, "imguiIniSettings", defaults.imgui_ini_settings()),
+       value_or<pludux::backtest::PortfolioStoreHandle>(
+        json, "selectedPortfolioHandle", defaults.selected_portfolio_handle()),
+       value_or<pludux::apps::PortfolioStrategySelections>(
+        json,
+        "portfolioStrategySelections",
+        defaults.portfolio_strategy_selections()),
+       value_or<pludux::backtest::SystemStoreHandle>(
+        json, "selectedSystemHandle", defaults.selected_system_handle()),
+       value_or<pludux::backtest::StrategyStoreHandle>(
+        json, "selectedStrategyHandle", defaults.selected_strategy_handle())}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -1605,9 +1837,12 @@ struct json_conv_traits<Json, pludux::apps::ApplicationState> {
       auto app_state = value_type{
        required_as<pludux::backtest::Store>(json, "store"),
        required_as<pludux::apps::DocumentState>(json, "documentState"),
-       required_as<pludux::apps::ViewState>(json, "viewState")};
+       value_or<pludux::apps::ViewState>(json, "viewState", {})};
 
       if(required_as<std::string>(json, "$version") != PLUDUX_VERSION) {
+        for(const auto handle : app_state.get_portfolio_handles()) {
+          app_state.store().get_or_create_portfolio_results(handle);
+        }
         app_state.reset_all_portfolios();
       }
 
@@ -1647,7 +1882,8 @@ void save_application_state_json(std::ostream& out_stream,
 
 auto load_application_state_json(std::istream& in_stream) -> ApplicationState
 {
-  const auto root_json = jsoncons::ojson::parse(in_stream);
+  const auto root_json = jsoncons::ojson::parse(
+   in_stream, jsoncons::json_options{}.allow_comments(false));
   return root_json.at("pludux").as<ApplicationState>();
 }
 

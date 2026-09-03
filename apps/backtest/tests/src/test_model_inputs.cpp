@@ -32,12 +32,14 @@ TEST(PyramidingRetriggerTest, ParsesSerializesAndRejectsInvalidValues)
   EXPECT_EQ(Model::Pyramiding{}.cooldown(), 0);
 }
 
-TEST(PyramidingCooldownTest, IsRequiredWhenPyramidingIsPresent)
+TEST(PyramidingCooldownTest, DefaultsWhenOmitted)
 {
   auto strategy_json = jsoncons::ojson::parse(stringify_model(Model{}));
   strategy_json.at("positions").at("long").at("pyramiding").erase("cooldown");
 
-  EXPECT_THROW(parse_model("Test", strategy_json.to_string()), std::exception);
+  const auto parsed = parse_model("Test", strategy_json.to_string());
+  EXPECT_EQ(parsed.long_position().pyramiding().cooldown(),
+            Model::Pyramiding{}.cooldown());
 }
 
 TEST(ModelInputsTest, CollectsNumericInputsInModelTraversalOrder)
@@ -570,7 +572,51 @@ TEST(ModelParserTest, DefaultStopLossAndEmptyExitCollections)
   EXPECT_TRUE(strategy.long_position().exits().empty());
 }
 
-TEST(ModelParserTest, MissingAndEmptyStopLossesDisableExecutableStops)
+TEST(ModelParserTest, MinimalDocumentUsesFreshModelDefaultsAndIgnoresUnknownKeys)
+{
+  const auto parsed = parse_model(
+   "Minimal", R"({"version":1,"executionPath":"legacy","unknown":42})");
+  auto expected = Model{};
+  expected.name("Minimal");
+  EXPECT_EQ(parsed, expected);
+}
+
+TEST(ModelParserTest, CommentsRemainSupportedAndTrailingCommasAreRejected)
+{
+  EXPECT_EQ(parse_model("Commented", "{/* comment */\"version\":1}")
+             .intrabar_path(),
+            Model{}.intrabar_path());
+  EXPECT_THROW(parse_model("Trailing", R"({"version":1,})"),
+               std::exception);
+}
+
+TEST(ModelParserTest, RequiresCanonicalMethodAndLosslessIntegralValues)
+{
+  EXPECT_THROW(parse_model("No Method",
+                           R"({"version":1,"series":{"value":{}}})"),
+               std::exception);
+  EXPECT_THROW(
+   parse_model(
+    "Null Params",
+    R"({"version":1,"series":{"value":{"method":"INDICATOR.SMA","params":null}}})"),
+   std::exception);
+
+  const auto integral = parse_model(
+   "Integral",
+   R"({"version":1,"positions":{"long":{"pyramiding":{"cooldown":2.0}}}})");
+  EXPECT_EQ(integral.long_position().pyramiding().cooldown(), 2U);
+  for(const auto* cooldown :
+      {"2.5", "-1", "1e100", "9007199254740993.0", "\"2\""}) {
+    EXPECT_THROW(
+     parse_model(
+      "Invalid",
+      std::string{R"({"version":1,"positions":{"long":{"pyramiding":{"cooldown":)"} +
+       cooldown + R"(}}}})"),
+     std::exception);
+  }
+}
+
+TEST(ModelParserTest, MissingStopLossesPreserveDefaultsAndEmptyDisablesStops)
 {
   const auto risk_distance =
    R"("riskDistance":{"method":"RISK_DISTANCE.AMOUNT","params":{"amount":10}})";
@@ -585,9 +631,20 @@ TEST(ModelParserTest, MissingAndEmptyStopLossesDisableExecutableStops)
     R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{)"} +
     risk_distance +
     R"(,"stopLosses":{"activation":"SIMULTANEOUS","rules":[]}},"short":false}})");
+  const auto partial = parse_model(
+   "Partial",
+   std::string{
+    R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{)"} +
+    risk_distance +
+    R"(,"stopLosses":{"activation":"AFTER_PREVIOUS"}},"short":false}})");
 
-  EXPECT_TRUE(missing.long_position().stop_losses().empty());
+  EXPECT_EQ(missing.long_position().stop_losses(),
+            Model::Position{}.stop_losses());
   EXPECT_TRUE(empty.long_position().stop_losses().empty());
+  EXPECT_EQ(partial.long_position().stop_losses(),
+            Model::Position{}.stop_losses());
+  EXPECT_EQ(partial.long_position().stop_losses_activation(),
+            ExitActivation::AfterPrevious);
 }
 
 TEST(ModelParserTest, RejectsInvalidStopLosses)
@@ -599,7 +656,7 @@ TEST(ModelParserTest, RejectsInvalidStopLosses)
     "Not Array",
     std::string{
      R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{)"} +
-     risk_distance + R"(,"stopLosses":{}},"short":false}})"),
+     risk_distance + R"(,"stopLosses":{"rules":{}}},"short":false}})"),
    std::runtime_error);
   EXPECT_THROW(
    parse_model(
@@ -607,17 +664,16 @@ TEST(ModelParserTest, RejectsInvalidStopLosses)
     std::string{
      R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{)"} +
      risk_distance +
-     R"(,"stopLosses":{"activation":"SIMULTANEOUS","rules":[{}]}},"short":false}})"),
+     R"(,"stopLosses":{"activation":"SIMULTANEOUS","rules":[null]}},"short":false}})"),
    std::runtime_error);
 }
 
-TEST(ModelParserTest, RejectsMissingOrImplicitRiskDistance)
+TEST(ModelParserTest, DefaultsMissingAndRejectsInvalidRiskDistance)
 {
-  EXPECT_THROW(
-   parse_model(
-    "Missing",
-    R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{},"short":false}})"),
-   std::runtime_error);
+  const auto missing = parse_model(
+   "Missing", R"({"version":1,"positions":{"long":{},"short":false}})");
+  EXPECT_EQ(missing.long_position().risk_distance(),
+            Model::Position{}.risk_distance());
   EXPECT_THROW(
    parse_model(
     "Numeric",
@@ -667,6 +723,15 @@ TEST(ModelParserTest, LoadsEveryBundledModelSample)
   EXPECT_EQ(schema.at("properties").at("version").at("const").as<int>(), 1);
   const auto compiled_schema =
    jsoncons::jsonschema::make_json_schema(std::move(schema));
+  EXPECT_NO_THROW(
+   compiled_schema.validate(jsoncons::ojson::parse(R"({"version":1})")));
+  EXPECT_NO_THROW(compiled_schema.validate(
+   jsoncons::ojson::parse(R"({"version":1,"unknown":true,"plots":[{}, {"items":[]}]})")));
+  EXPECT_THROW(compiled_schema.validate(jsoncons::ojson::parse(R"({})")),
+               std::exception);
+  EXPECT_THROW(compiled_schema.validate(jsoncons::ojson::parse(
+                R"({"version":1,"series":{"value":{}}})")),
+               std::exception);
   EXPECT_NO_THROW(
    compiled_schema.validate(jsoncons::ojson::parse(stringify_model(Model{}))));
   auto operator_document = jsoncons::ojson::parse(stringify_model(Model{}));
@@ -783,7 +848,11 @@ TEST(ModelParserTest, LoadsEveryBundledModelSample)
       "short": false
     }
   })");
-  EXPECT_ANY_THROW(compiled_schema.validate(legacy_signal_fields));
+  EXPECT_NO_THROW(compiled_schema.validate(legacy_signal_fields));
+  const auto legacy_fields_model =
+   parse_model("Legacy fields", legacy_signal_fields.to_string());
+  EXPECT_EQ(legacy_fields_model.long_position().entry().timing(),
+            SignalTiming::NextOpen);
   EXPECT_ANY_THROW(compiled_schema.validate(legacy_exit_array));
   EXPECT_GT(sample_count, 0);
 }

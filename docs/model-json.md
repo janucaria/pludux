@@ -1,12 +1,13 @@
 # Model JSON
 
 Model JSON is the versioned exchange format for one Model. The GUI imports and
-verifies **Models**, not Strategies. The parser accepts JSON comments.
+verifies **Models**, not Strategies. The parser accepts JSON comments but not
+trailing commas.
 
 ## Root structure
 
-Version 1 requires `version` and `execution`; `series`, `positions`, and `plots`
-are optional:
+Version 1 requires only `version`. `execution`, `series`, `positions`, and
+`plots` are optional:
 
 ```json
 {
@@ -19,6 +20,14 @@ are optional:
 ```
 
 `intrabarPath` is `LOW_FIRST`, `HIGH_FIRST`, or `CANDLE_DIRECTION`.
+
+An omitted field uses the value from a freshly constructed `Model` or nested
+model type. This applies to execution, position sections and rule properties,
+collections, plots, and method parameters that have domain defaults. Explicit
+values are still validated: `null`, wrong types, invalid enums or methods,
+invalid ranges, lossy integral conversions, numeric strings, and overflow are
+rejected. Unknown properties are ignored. Former names are not aliases, so an
+unknown legacy property never overrides a canonical default.
 
 `series` is a lower-snake-case dictionary of reusable named expressions.
 `positions` is an object whose `long` and `short` values are `false` or a side
@@ -55,6 +64,11 @@ parameters. Other values retain their documented casing; for example an input
 `representation` may be `UnsignedInteger`. The complete current inventory and
 contexts are in [Node and Method Reference](nodes.md).
 
+Every method object that is present must include its canonical `method`
+discriminator. Operands and payloads remain required when the concrete node has
+no valid default. Export always writes the full canonical representation and
+never emits legacy aliases.
+
 ## Multi-output series and plots
 
 `INDICATOR.BB`, `INDICATOR.KC`, `INDICATOR.DC`, `INDICATOR.MACD`,
@@ -71,7 +85,9 @@ rising/falling colors.
 ## Schema and samples
 
 The [draft schema](../data/backtest/schemas/pludux.backtest.model.v1-draft.json)
-and [samples](../data/backtest/samples) are authoring aids. The running parser
+and [samples](../data/backtest/samples) are authoring aids. The schema permits
+unknown properties and mirrors runtime defaults while retaining required
+method discriminators and non-defaultable operands. The running parser
 and [Node Reference](nodes.md) are the current behavior source if a registered
 method is not yet represented there. Import errors are reported in **Models**;
 export names the JSON from the Model name.

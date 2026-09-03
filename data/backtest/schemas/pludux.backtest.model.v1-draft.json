@@ -3,7 +3,7 @@
   "$id": "https://pludux.com/schemas/pludux.backtest.model.v1-draft.json",
   "title": "Pludux Backtest Model Schema",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "properties": {
     "version": {
       "type": "integer",
@@ -13,21 +13,18 @@
     },
     "execution": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "intrabarPath": {
           "$ref": "#/$defs/intrabarPath"
         }
       },
-      "required": [
-        "intrabarPath"
-      ],
       "title": "Execution",
       "description": "Backtest execution assumptions shared by both position sides."
     },
     "series": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "patternProperties": {
         "^[a-z][a-z0-9_]*$": {
           "$ref": "#/$defs/series"
@@ -78,7 +75,7 @@
     },
     "positions": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "long": {
           "$ref": "#/$defs/positionSide",
@@ -107,8 +104,7 @@
     }
   },
   "required": [
-    "version",
-    "execution"
+    "version"
   ],
   "$defs": {
     "intrabarPath": {
@@ -164,11 +160,11 @@
       "oneOf": [
         {
           "type": "object",
-          "additionalProperties": false,
+          "additionalProperties": true,
           "properties": {
             "entry": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "signal": {
                   "$ref": "#/$defs/signalAsParameter",
@@ -179,10 +175,6 @@
                   "$ref": "#/$defs/signalTiming"
                 }
               },
-              "required": [
-                "signal",
-                "timing"
-              ],
               "title": "Entry",
               "description": "Entry rule for this side. The entry signal decides when to open a position."
             },
@@ -193,7 +185,7 @@
             },
             "pyramiding": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "signal": {
                   "$ref": "#/$defs/signalAsParameter",
@@ -220,7 +212,7 @@
                 },
                 "stopTargetReference": {
                   "type": "object",
-                  "additionalProperties": false,
+                  "additionalProperties": true,
                   "properties": {
                     "favorable": {
                       "$ref": "#/$defs/stopTargetReferencePrice",
@@ -235,23 +227,12 @@
                       "description": "Reference price used by stop/target methods when the pyramiding entry is unfavorable relative to the current average and position direction."
                     }
                   },
-                  "required": [
-                    "favorable",
-                    "unfavorable"
-                  ],
                   "default": {
                     "favorable": "AVERAGE_PRICE",
                     "unfavorable": "AVERAGE_PRICE"
                   }
                 }
               },
-              "required": [
-                "signal",
-                "timing",
-                "retrigger",
-                "cooldown",
-                "maxLayers"
-              ],
               "default": {
                 "signal": false,
                 "timing": "NEXT_OPEN",
@@ -279,11 +260,7 @@
               "title": "Take Profits",
               "description": "Take-profit rules with configurable activation semantics."
             }
-          },
-          "required": [
-            "entry",
-            "riskDistance"
-          ]
+          }
         },
         {
           "type": "boolean",
@@ -311,7 +288,7 @@
     },
     "signalExitCollection": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "activation": {
           "$ref": "#/$defs/exitActivation"
@@ -322,15 +299,11 @@
             "$ref": "#/$defs/signalExit"
           }
         }
-      },
-      "required": [
-        "activation",
-        "rules"
-      ]
+      }
     },
     "stopLossCollection": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "activation": {
           "$ref": "#/$defs/exitActivation"
@@ -341,15 +314,11 @@
             "$ref": "#/$defs/stopLoss"
           }
         }
-      },
-      "required": [
-        "activation",
-        "rules"
-      ]
+      }
     },
     "takeProfitCollection": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "activation": {
           "$ref": "#/$defs/exitActivation"
@@ -360,15 +329,11 @@
             "$ref": "#/$defs/takeProfit"
           }
         }
-      },
-      "required": [
-        "activation",
-        "rules"
-      ]
+      }
     },
     "stopLoss": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "enabled": {
           "type": "boolean",
@@ -391,15 +356,12 @@
           "$ref": "#/$defs/exitReduce"
         }
       },
-      "required": [
-        "stopPrice"
-      ],
       "title": "Stop Loss",
       "description": "One executable stop-loss rule in the ordered stopLosses collection. Position sizing and R-multiple prices use riskDistance instead."
     },
     "signalExit": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "enabled": {
           "type": "boolean",
@@ -419,16 +381,12 @@
           "$ref": "#/$defs/exitReduce"
         }
       },
-      "required": [
-        "signal",
-        "timing"
-      ],
       "title": "Signal Exit",
       "description": "A signal-driven partial or full exit that may execute once per open position."
     },
     "takeProfit": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "enabled": {
           "type": "boolean",
@@ -445,9 +403,6 @@
           "$ref": "#/$defs/exitReduce"
         }
       },
-      "required": [
-        "targetPrice"
-      ],
       "title": "Take Profit",
       "description": "Profit-side configuration for a position. When enabled is true, the evaluated target price is used as the take-profit exit level."
     },
@@ -551,7 +506,7 @@
     },
     "baseMethod": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "method": {
           "type": "string",
@@ -607,7 +562,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "name": {
                   "type": "string",
@@ -656,7 +611,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "output": {
                   "type": "string",
@@ -719,7 +674,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "source": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -732,17 +687,10 @@
                   "title": "Lookback Period",
                   "description": "Number of bars to look back. 0 means the current bar, 1 means one bar ago, and so on."
                 }
-              },
-              "required": [
-                "source",
-                "period"
-              ]
+              }
+              }
             }
-          },
-          "required": [
-            "params"
-          ]
-        }
+          }
       ],
       "title": "Lookback",
       "description": "Returns the value of a source series from a previous bar. For example, period 1 means one bar ago."
@@ -759,7 +707,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "label": {
                   "type": "string",
@@ -777,16 +725,10 @@
                   "title": "Value",
                   "description": "The numeric value of the input. When representation is SignedInteger or UnsignedInteger, this value is normalized by the system (truncated toward zero, or clamped to zero for unsigned)."
                 }
-              },
-              "required": [
-                "value"
-              ]
+              }
+              }
             }
-          },
-          "required": [
-            "params"
-          ]
-        }
+          }
       ],
       "title": "Model Input",
       "description": "Defines an inline numeric input parameter. Backtests collect INPUT nodes from series and signals in traversal order and may override their values."
@@ -803,7 +745,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "value": {
                   "type": "number",
@@ -836,7 +778,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "field": {
                   "type": "string",
@@ -869,7 +811,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false
+              "additionalProperties": true
             }
           }
         }
@@ -894,7 +836,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false
+              "additionalProperties": true
             }
           }
         }
@@ -919,7 +861,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false
+              "additionalProperties": true
             }
           }
         }
@@ -944,7 +886,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "period": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -990,7 +932,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "period": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -1036,7 +978,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "period": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -1082,7 +1024,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "period": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -1128,7 +1070,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "period": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -1195,7 +1137,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "period": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -1241,7 +1183,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "period": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -1293,7 +1235,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "period": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -1346,7 +1288,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "period": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -1392,7 +1334,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "period": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -1438,7 +1380,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "period": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -1484,7 +1426,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "period": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -1540,7 +1482,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "maType": {
                   "enum": [
@@ -1611,7 +1553,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "maSource": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -1705,7 +1647,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "period": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -1745,7 +1687,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "fastPeriod": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -1817,7 +1759,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "kPeriod": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -1849,41 +1791,17 @@
                   "title": "close",
                   "description": "Series used as the close input."
                 }
-              }
+              },
+              "required": [
+                "kPeriod",
+                "kSmooth",
+                "dPeriod"
+              ]
             }
           },
-          "default": {
-            "method": "INDICATOR.STOCH",
-            "params": {
-              "kPeriod": {
-                "method": "INPUT.NUMERIC",
-                "params": {
-                  "label": "K Period",
-                  "representation": "UnsignedInteger",
-                  "value": 14
-                }
-              },
-              "kSmooth": {
-                "method": "INPUT.NUMERIC",
-                "params": {
-                  "label": "K Smooth",
-                  "representation": "UnsignedInteger",
-                  "value": 3
-                }
-              },
-              "dPeriod": {
-                "method": "INPUT.NUMERIC",
-                "params": {
-                  "label": "D Period",
-                  "representation": "UnsignedInteger",
-                  "value": 3
-                }
-              },
-              "high": "MARKET_DATA.HIGH",
-              "low": "MARKET_DATA.LOW",
-              "close": "MARKET_DATA.CLOSE"
-            }
-          }
+          "required": [
+            "params"
+          ]
         }
       ],
       "title": "Stochastic Oscillator",
@@ -1901,7 +1819,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "kPeriod": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -1986,7 +1904,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "augend": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -2041,7 +1959,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "minuend": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -2096,7 +2014,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "multiplicand": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -2151,7 +2069,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "dividend": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -2206,7 +2124,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "operand": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -2254,7 +2172,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "operand": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -2306,7 +2224,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "operand": {
                   "$ref": "#/$defs/seriesAsParameter"
@@ -2340,7 +2258,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "left": {
                   "$ref": "#/$defs/seriesAsParameter"
@@ -2375,7 +2293,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "source": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -2423,7 +2341,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "minuend": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -2478,7 +2396,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "base": {
                   "allOf": [
@@ -2498,16 +2416,10 @@
                   "description": "Percentage amount to apply, such as 2 for 2%."
                 }
               },
-              "required": [
-                "percent"
-              ],
               "title": "Parameters",
               "description": "Parameters for percentage-of-base calculation. This is commonly used for offsets, thresholds, and derived levels."
             }
-          },
-          "required": [
-            "params"
-          ]
+          }
         }
       ],
       "title": "Percentage of Base",
@@ -2549,22 +2461,16 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "amount": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Amount",
                   "description": "Absolute price distance from the entry price."
                 }
-              },
-              "required": [
-                "amount"
-              ]
+              }
             }
-          },
-          "required": [
-            "params"
-          ]
+          }
         }
       ],
       "title": "Stop/Target Amount",
@@ -2585,22 +2491,16 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "percent": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Percent",
                   "description": "Percentage distance from the entry price, such as 10 for 10%."
                 }
-              },
-              "required": [
-                "percent"
-              ]
+              }
             }
-          },
-          "required": [
-            "params"
-          ]
+          }
         }
       ],
       "title": "Stop/Target Percentage",
@@ -2621,7 +2521,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "period": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -2644,16 +2544,9 @@
                   "title": "Smoothing Type",
                   "description": "Moving-average smoothing method used to smooth true range into ATR."
                 }
-              },
-              "required": [
-                "period",
-                "multiplier"
-              ]
+              }
             }
-          },
-          "required": [
-            "params"
-          ]
+          }
         }
       ],
       "title": "Stop/Target ATR",
@@ -2671,22 +2564,16 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "amount": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Amount",
                   "description": "Positive absolute 1R price distance."
                 }
-              },
-              "required": [
-                "amount"
-              ]
+              }
             }
-          },
-          "required": [
-            "params"
-          ]
+          }
         }
       ],
       "title": "Risk Distance Amount"
@@ -2703,22 +2590,16 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "percentage": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Percentage",
                   "description": "Positive percentage of the active position reference price."
                 }
-              },
-              "required": [
-                "percentage"
-              ]
+              }
             }
-          },
-          "required": [
-            "params"
-          ]
+          }
         }
       ],
       "title": "Risk Distance Percentage"
@@ -2735,7 +2616,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "period": {
                   "$ref": "#/$defs/seriesAsParameter"
@@ -2752,16 +2633,9 @@
                     "HMA"
                   ]
                 }
-              },
-              "required": [
-                "period",
-                "multiplier"
-              ]
+              }
             }
-          },
-          "required": [
-            "params"
-          ]
+          }
         }
       ],
       "title": "Risk Distance ATR"
@@ -2795,22 +2669,16 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "multiple": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Multiple",
                   "description": "Positive risk multiple of the explicit riskDistance."
                 }
-              },
-              "required": [
-                "multiple"
-              ]
+              }
             }
-          },
-          "required": [
-            "params"
-          ]
+          }
         }
       ],
       "title": "Stop Loss R Multiple",
@@ -2828,22 +2696,16 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "multiple": {
                   "$ref": "#/$defs/seriesAsParameter",
                   "title": "Multiple",
                   "description": "Positive reward multiple of the explicit riskDistance."
                 }
-              },
-              "required": [
-                "multiple"
-              ]
+              }
             }
-          },
-          "required": [
-            "params"
-          ]
+          }
         }
       ],
       "title": "Take Profit R Multiple",
@@ -2868,7 +2730,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false
+              "additionalProperties": true
             }
           }
         }
@@ -2888,7 +2750,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "source": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -3095,26 +2957,19 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "items": {
                   "type": "array",
-                  "minItems": 1,
                   "items": {
                     "$ref": "#/$defs/signalAsParameter"
                   },
                   "title": "Items",
                   "description": "Signal list to combine. ALL_OF requires every item to be true. ANY_OF requires at least one item to be true."
                 }
-              },
-              "required": [
-                "items"
-              ]
+              }
             }
-          },
-          "required": [
-            "params"
-          ]
+          }
         }
       ],
       "title": "Composite Signal",
@@ -3141,7 +2996,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "target": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -3213,7 +3068,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "value": {
                   "$ref": "#/$defs/seriesAsParameter",
@@ -3308,7 +3163,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "firstCondition": {
                   "$ref": "#/$defs/signalAsParameter",
@@ -3349,7 +3204,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "condition": {
                   "$ref": "#/$defs/signalAsParameter",
@@ -3613,7 +3468,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "name": {
                   "type": "string",
@@ -3621,15 +3476,9 @@
                   "title": "Series Name",
                   "description": "Name of the top-level series to plot."
                 }
-              },
-              "required": [
-                "name"
-              ]
+              }
             }
-          },
-          "required": [
-            "params"
-          ]
+          }
         }
       ],
       "title": "Series Plot Source",
@@ -3647,22 +3496,16 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "value": {
                   "type": "number",
                   "title": "Value",
                   "description": "Constant value to plot."
                 }
-              },
-              "required": [
-                "value"
-              ]
+              }
             }
-          },
-          "required": [
-            "params"
-          ]
+          }
         }
       ],
       "title": "Constant Plot Source",
@@ -3680,7 +3523,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "source": {
                   "$ref": "#/$defs/plotSource",
@@ -3692,15 +3535,9 @@
                   "title": "Color",
                   "description": "Optional color override for this plot item."
                 }
-              },
-              "required": [
-                "source"
-              ]
+              }
             }
-          },
-          "required": [
-            "params"
-          ]
+          }
         }
       ],
       "title": "Line Plot",
@@ -3718,7 +3555,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "level": {
                   "type": "number",
@@ -3730,15 +3567,9 @@
                   "title": "Color",
                   "description": "Optional color override for this plot item."
                 }
-              },
-              "required": [
-                "level"
-              ]
+              }
             }
-          },
-          "required": [
-            "params"
-          ]
+          }
         }
       ],
       "title": "Horizontal Line Plot",
@@ -3756,7 +3587,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "source": {
                   "$ref": "#/$defs/plotSource",
@@ -3768,15 +3599,9 @@
                   "title": "Color",
                   "description": "Optional color override for this plot item."
                 }
-              },
-              "required": [
-                "source"
-              ]
+              }
             }
-          },
-          "required": [
-            "params"
-          ]
+          }
         }
       ],
       "title": "Histogram Plot",
@@ -3794,7 +3619,7 @@
             },
             "params": {
               "type": "object",
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "source": {
                   "$ref": "#/$defs/plotSource",
@@ -3821,19 +3646,9 @@
                   "title": "Negative Rising Color",
                   "description": "Color for negative bars whose value is rising."
                 }
-              },
-              "required": [
-                "source",
-                "positiveRisingColor",
-                "positiveFallingColor",
-                "negativeFallingColor",
-                "negativeRisingColor"
-              ]
+              }
             }
-          },
-          "required": [
-            "params"
-          ]
+          }
         }
       ],
       "title": "Momentum Histogram Plot",
@@ -3859,7 +3674,7 @@
     },
     "plotGroup": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "label": {
           "type": "string",
@@ -3874,7 +3689,6 @@
         },
         "items": {
           "type": "array",
-          "minItems": 1,
           "items": {
             "$ref": "#/$defs/plotItem"
           },
@@ -3882,9 +3696,6 @@
           "description": "Plot items included in this group."
         }
       },
-      "required": [
-        "items"
-      ],
       "title": "Plot Group",
       "description": "A group of one or more plot items, optionally overlaid on price."
     }
