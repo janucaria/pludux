@@ -350,14 +350,72 @@ private:
      "values and asset OHLCV or custom DATA. Current Close sees the completed "
      "current bar. Next Open sees the previous completed bar; use Requested "
      "Order Price for the executable open. The first unequal value determines "
-      "priority; complete ties use ordered Strategy and Watchlist order.");
+     "priority; complete ties use ordered System and Watchlist Asset "
+     "order.");
     auto& comparators = portfolio.entry_comparators();
+    if(comparators.empty()) {
+      ImGui::TextDisabled(
+       "No comparators configured. Entry requests use ordered System and "
+       "Watchlist Asset order.");
+      ImGui::Spacing();
+    }
     auto comparator_index = std::size_t{};
     while(comparator_index < comparators.size()) {
       ImGui::PushID(static_cast<int>(comparator_index));
-      ImGui::Text("Comparator %zu", comparator_index + 1);
+      ImGui::BeginChild("comparator",
+                        ImVec2{0.0f, 0.0f},
+                        ImGuiChildFlags_Borders |
+                         ImGuiChildFlags_AutoResizeY);
+      ImGui::Text("Priority %zu", comparator_index + 1);
+      ImGui::SameLine();
+      ImGui::TextDisabled(
+       comparator_index == 0 ? "(evaluated first)" : "(tie-breaker)");
+
+      const auto actions_start = ImGui::GetCursorScreenPos();
+      const auto available_width = ImGui::GetContentRegionAvail().x;
+      const auto& style = ImGui::GetStyle();
+      const auto button_width = [&](const char* label) {
+        return ImGui::CalcTextSize(label).x + (2.0f * style.FramePadding.x);
+      };
+      const auto actions_width =
+       button_width(PLUDUX_ICON_MOVE_UP "##move_up") +
+       button_width(PLUDUX_ICON_MOVE_DOWN "##move_down") +
+       button_width(PLUDUX_ICON_COPY "##duplicate") +
+       button_width(PLUDUX_ICON_DELETE "##remove") +
+       (3.0f * style.ItemSpacing.x);
+      ImGui::SetCursorScreenPos(
+       ImVec2{std::max(actions_start.x,
+                       actions_start.x + available_width - actions_width),
+              actions_start.y});
+
+      enum class ComparatorAction { None, MoveUp, MoveDown, Duplicate, Remove };
+      auto action = ComparatorAction::None;
+      ImGui::BeginDisabled(comparator_index == 0);
+      if(ui::icon_button(PLUDUX_ICON_MOVE_UP "##move_up", "Move up")) {
+        action = ComparatorAction::MoveUp;
+      }
+      ImGui::EndDisabled();
+      ImGui::SameLine();
+      ImGui::BeginDisabled(comparator_index + 1 == comparators.size());
+      if(ui::icon_button(PLUDUX_ICON_MOVE_DOWN "##move_down", "Move down")) {
+        action = ComparatorAction::MoveDown;
+      }
+      ImGui::EndDisabled();
+      ImGui::SameLine();
+      if(ui::icon_button(PLUDUX_ICON_COPY "##duplicate", "Duplicate")) {
+        action = ComparatorAction::Duplicate;
+      }
+      ImGui::SameLine();
+      if(ui::icon_button(PLUDUX_ICON_DELETE "##remove", "Remove")) {
+        action = ComparatorAction::Remove;
+      }
+
+      ImGui::Separator();
       auto order = comparators[comparator_index].order();
-      ui::field_label("Order");
+      ui::field_label(
+       "Order",
+       "Higher first prioritizes larger finite scores; Lower first "
+       "prioritizes smaller finite scores. Non-finite scores rank last.");
       const auto* order_label =
        order == backtest::PortfolioEntryComparatorOrder::HigherFirst
         ? "Higher first"
@@ -382,31 +440,33 @@ private:
       self.series_node_editor_.render(expression, context);
       comparators[comparator_index].expression(std::move(expression));
 
-      auto erased = false;
-      if(comparator_index > 0 && ImGui::Button("Move up")) {
+      ImGui::EndChild();
+      ImGui::Spacing();
+
+      auto advance = true;
+      if(action == ComparatorAction::MoveUp) {
         std::swap(comparators[comparator_index],
                   comparators[comparator_index - 1]);
-      }
-      if(comparator_index + 1 < comparators.size()) {
-        ImGui::SameLine();
-        if(ImGui::Button("Move down")) {
-          std::swap(comparators[comparator_index],
-                    comparators[comparator_index + 1]);
-        }
-      }
-      ImGui::SameLine();
-      if(ImGui::Button(PLUDUX_ICON_DELETE " Remove")) {
+      } else if(action == ComparatorAction::MoveDown) {
+        std::swap(comparators[comparator_index],
+                  comparators[comparator_index + 1]);
+      } else if(action == ComparatorAction::Duplicate) {
+        comparators.insert(
+         comparators.begin() +
+          static_cast<std::ptrdiff_t>(comparator_index + 1),
+         comparators[comparator_index]);
+      } else if(action == ComparatorAction::Remove) {
         comparators.erase(comparators.begin() +
                           static_cast<std::ptrdiff_t>(comparator_index));
-        erased = true;
+        advance = false;
       }
-      ImGui::Separator();
       ImGui::PopID();
-      if(!erased) {
+      if(advance) {
         ++comparator_index;
       }
     }
-    if(ImGui::Button(PLUDUX_ICON_ADD " Add comparator")) {
+    if(ImGui::Button(PLUDUX_ICON_ADD " Add comparator",
+                     ImVec2{ImGui::GetContentRegionAvail().x, 0.0f})) {
       comparators.emplace_back();
     }
 
