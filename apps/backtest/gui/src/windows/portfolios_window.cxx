@@ -347,11 +347,11 @@ private:
     ui::form_section(
      "Entry Comparators",
      "Compare prepared requested orders in sequence using Requested Order "
-     "values and asset OHLCV or custom DATA. Current Close sees the completed "
-     "current bar. Next Open sees the previous completed bar; use Requested "
-     "Order Price for the executable open. The first unequal value determines "
-     "priority; complete ties use ordered System and Watchlist Asset "
-     "order.");
+     "values, the requesting Strategy's Model Performance snapshot, and asset "
+     "OHLCV or custom DATA. Current Close sees the completed current bar. Next "
+     "Open sees the previous completed bar; use Requested Order Price for the "
+     "executable open. The first unequal value determines priority; complete "
+     "ties use ordered System and Watchlist Asset order.");
     auto& comparators = portfolio.entry_comparators();
     if(comparators.empty()) {
       ImGui::TextDisabled(

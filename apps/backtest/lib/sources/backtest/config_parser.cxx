@@ -431,8 +431,7 @@ static auto parse_model_performance_metric(const std::string& value)
   if(const auto metric = metrics.find(value); metric != metrics.end()) {
     return metric->second;
   }
-  throw std::invalid_argument{
-   "EntryFilter strategy-performance metric is invalid"};
+  throw std::invalid_argument{"Model Performance metric is invalid"};
 }
 
 static auto serialize_model_performance_metric(ModelPerformanceMetric metric)
@@ -480,8 +479,7 @@ static auto serialize_model_performance_metric(ModelPerformanceMetric metric)
   case ModelPerformanceMetric::BayesianLosingPayoffUpper95:
     return "BAYESIAN_LOSING_PAYOFF_UPPER_95";
   }
-  throw std::invalid_argument{
-   "EntryFilter strategy-performance metric is invalid"};
+  throw std::invalid_argument{"Model Performance metric is invalid"};
 }
 
 struct ParsedEntryFilterNode {
@@ -1620,6 +1618,20 @@ auto make_requested_order_comparator_config_parser()
    },
    [](Parser::Parser, const jsoncons::ojson& params) -> Node {
      return DataNode{strict_param_as<std::string>(params.at("field"))};
+   });
+  parser.register_node_parser(
+   "MODEL_PERFORMANCE.VALUE",
+   [](const Parser&, const Node& node) -> jsoncons::ojson {
+     const auto* performance = node_cast<ModelPerformanceNode>(node);
+     return performance
+             ? jsoncons::ojson::object{{
+                "metric",
+                serialize_model_performance_metric(performance->metric())}}
+             : jsoncons::ojson::null();
+   },
+   [](Parser::Parser, const jsoncons::ojson& params) -> Node {
+     return ModelPerformanceNode{parse_model_performance_metric(
+      strict_param_as<std::string>(params.at("metric")))};
    });
 
   const auto register_parameterless = [&]<typename TNode>(const char* name) {

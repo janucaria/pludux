@@ -90,9 +90,14 @@ Use this window to configure shared capital, Market (the trading venue or
 market context), Broker (the Market's broker or execution provider), capacity
 limits, entry comparators, and ordered Systems.
 
-Entry comparator caveat: Current Close sees completed current-bar OHLCV and
-custom DATA. Next Open sees the previous completed bar; use Requested Order
-Price when you need the executable current open price. See
+Entry comparators may use Requested Order values, phase-visible market data,
+and Model Performance from each requesting Strategy binding's immutable
+request-discovery snapshot. This applies to initial and pyramiding requests;
+named series and indicators are not available. Current Close sees completed
+current-bar OHLCV and custom DATA. Next Open sees the previous completed bar;
+use Requested Order Price when you need the executable current open price.
+Performance may already influence Bayesian or Kelly sizing, so using it for
+ranking can give the same evidence additional weight. See
 [Portfolio Backtesting](portfolio-backtesting.md) for authoritative comparator
 behavior.
 

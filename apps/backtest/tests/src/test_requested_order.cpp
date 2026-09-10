@@ -43,6 +43,26 @@ auto make_initial_order() -> RequestedOrder
    TradeEntry{8.0, 100.0}, false, 10.0, 1'000.0, 8.4, 800.0, 5.0, 2.0, 3.0};
 }
 
+auto make_performance_snapshot() -> ModelPerformanceSnapshot
+{
+  return ModelPerformanceSnapshot{7,
+                                  2,
+                                  0,
+                                  3,
+                                  1,
+                                  6.5,
+                                  0.75,
+                                  0.0,
+                                  0.25,
+                                  0.12,
+                                  0.03,
+                                  BayesianWinSnapshot{.probability = 0.8,
+                                                      .lower_95 = 0.6,
+                                                      .upper_95 = 0.9},
+                                  BayesianPayoffSnapshot{.mean = 0.2},
+                                  BayesianPayoffSnapshot{.mean = 0.1}};
+}
+
 } // namespace
 
 TEST(RequestedOrder, DerivesImmutableOrderValues)
@@ -114,7 +134,8 @@ TEST(RequestedOrder, RejectsInvalidConstruction)
 TEST(RequestedOrderMethod, ReadsOnlyRequestedOrderValues)
 {
   const auto order = make_initial_order();
-  const auto context = RequestedOrderMethodContext{order};
+  const auto performance = make_performance_snapshot();
+  const auto context = RequestedOrderMethodContext{order, performance};
   const auto snapshot = make_snapshot();
 
   EXPECT_DOUBLE_EQ(
@@ -141,11 +162,41 @@ TEST(RequestedOrderNode, ConvertsForRequestedOrderContext)
   const auto method = node_to_erased_method<RequestedOrderMethodContext>(
    RequestedNotionalNode{}, conversion_context);
   const auto order = make_initial_order();
+  const auto performance = make_performance_snapshot();
 
   EXPECT_DOUBLE_EQ(evaluate_series_method(method,
                                           make_snapshot(),
-                                          RequestedOrderMethodContext{order}),
+                                          RequestedOrderMethodContext{
+                                           order, performance}),
                    800.0);
+}
+
+TEST(RequestedOrderNode, ReadsFrozenModelPerformanceSnapshot)
+{
+  auto conversion_context = NodeToErasedMethodContext{};
+  const auto method = node_to_erased_method<RequestedOrderMethodContext>(
+   ModelPerformanceNode{ModelPerformanceMetric::BayesianWinProbability},
+   conversion_context);
+  const auto order = make_initial_order();
+  const auto performance = make_performance_snapshot();
+
+  EXPECT_DOUBLE_EQ(
+   evaluate_series_method(method,
+                          make_snapshot(),
+                          RequestedOrderMethodContext{order, performance}),
+   0.8);
+}
+
+TEST(RequestedOrderAction, OwnsModelPerformanceSnapshot)
+{
+  auto performance = make_performance_snapshot();
+  const auto action = BacktestRunner::RequestedOrderAction{
+   0, make_initial_order(), performance, 0, PositionSizingDecision{}, 0, 0};
+  performance = ModelPerformanceSnapshot{};
+
+  EXPECT_EQ(action.model_performance().lifetime_count(), 7U);
+  EXPECT_DOUBLE_EQ(
+   action.model_performance().win_probability_posterior().probability, 0.8);
 }
 
 TEST(RequestedOrderNode, CombinesOrderValuesWithBasicMath)
@@ -158,11 +209,12 @@ TEST(RequestedOrderNode, CombinesOrderValuesWithBasicMath)
     ValueNode{2.0}},
    conversion_context);
   const auto order = make_initial_order();
+  const auto performance = make_performance_snapshot();
 
   EXPECT_DOUBLE_EQ(evaluate_series_method(method,
                                           make_snapshot(),
                                           RequestedOrderMethodContext{
-                                           RequestedOrderMethodContext{order}}),
+                                           order, performance}),
                    420.0);
 }
 
@@ -191,7 +243,8 @@ TEST(RequestedOrderNode, ComparatorParserRoundTripsAllowedNodes)
    RequestedOrderRiskDistanceNode{},
    RequestedPriceRiskNode{},
    RequestedRiskWithFeesNode{},
-   FrozenUnitQuantityNode{}};
+   FrozenUnitQuantityNode{},
+   ModelPerformanceNode{ModelPerformanceMetric::MeanReturn}};
   auto parser = make_requested_order_comparator_config_parser();
 
   for(const auto& node : nodes) {
@@ -217,11 +270,12 @@ TEST(RequestedOrderNode, CombinesRequestedOrderAndAssetHistory)
   const auto method = node_to_erased_method<RequestedOrderMethodContext>(
    comparator.expression(), conversion_context);
   const auto order = make_initial_order();
+  const auto performance = make_performance_snapshot();
 
   EXPECT_DOUBLE_EQ(evaluate_series_method(method,
                                           make_history_snapshot(),
                                           RequestedOrderMethodContext{
-                                           RequestedOrderMethodContext{order}}),
+                                           order, performance}),
                    6.0);
 }
 
@@ -232,11 +286,12 @@ TEST(RequestedOrderNode, MissingLookbackHistoryProducesNonFiniteScore)
     LookbackNode<RequestedOrderMethodContext>{CloseNode{}, 1},
     conversion_context);
   const auto order = make_initial_order();
+  const auto performance = make_performance_snapshot();
 
   EXPECT_TRUE(std::isnan(evaluate_series_method(
    method,
    make_snapshot(),
-   RequestedOrderMethodContext{RequestedOrderMethodContext{order}})));
+   RequestedOrderMethodContext{order, performance})));
 }
 
 TEST(RequestedOrderNode, RejectsNamedSeriesAndIndicatorExpressions)

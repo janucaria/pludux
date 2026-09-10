@@ -118,6 +118,38 @@ auto make_short_entry_runner(const Asset& asset,
                         1'000.0};
 }
 
+auto make_performance_history_runner(
+ const Asset& asset,
+ const Market& market,
+ const Broker& broker,
+ const Profile& profile,
+ ErasedSeriesMethod<BacktestMethodContext> entry,
+ ErasedSeriesMethod<BacktestMethodContext> exit,
+ ErasedSeriesMethod<BacktestMethodContext> pyramid = BooleanMethod<false>{},
+ std::size_t maximum_layers = 1) -> BacktestRunner
+{
+  auto signal_exits = std::vector<BacktestRunner::PositionRule::SignalExitRule>{
+   {true, std::move(exit), SignalTiming::CurrentClose}};
+  auto long_position = BacktestRunner::PositionRule{
+   std::move(entry),
+   std::move(signal_exits),
+   std::move(pyramid),
+   maximum_layers,
+   0,
+   ValueMethod{10.0},
+   {},
+   SignalTiming::CurrentClose,
+   SignalTiming::CurrentClose};
+  return BacktestRunner{asset,
+                        market,
+                        broker,
+                        profile,
+                        {},
+                        std::move(long_position),
+                        BacktestRunner::PositionRule{},
+                        1'000.0};
+}
+
 TEST(PortfolioRunnerTest, UsesUnionTimelineAndMarksMissingBarsStale)
 {
   const auto first = make_asset("First", {1.0, 2.0, 4.0});
@@ -357,6 +389,144 @@ TEST(PortfolioRunnerTest, CurrentCloseAssetComparatorOverridesBacktestOrder)
 
   EXPECT_FALSE(results.backtests()[0].timeline().open_position(0));
   EXPECT_TRUE(results.backtests()[1].timeline().open_position(0));
+}
+
+TEST(PortfolioRunnerTest,
+     ModelPerformanceComparatorUsesEachRequestingStrategySnapshot)
+{
+  const auto without_history = Asset{
+   "Without history",
+   AssetHistory{{"Datetime", {1.0, 2.0, 3.0}},
+                {"Open", {90.0, 90.0, 120.0}},
+                {"High", {90.0, 90.0, 120.0}},
+                {"Low", {90.0, 90.0, 120.0}},
+                {"Close", {90.0, 90.0, 120.0}},
+                {"Volume", {0.0, 0.0, 0.0}}}};
+  const auto with_history = Asset{
+   "With history",
+   AssetHistory{{"Datetime", {1.0, 2.0, 3.0}},
+                {"Open", {100.0, 110.0, 120.0}},
+                {"High", {100.0, 110.0, 120.0}},
+                {"Low", {100.0, 110.0, 120.0}},
+                {"Close", {100.0, 110.0, 120.0}},
+                {"Volume", {0.0, 0.0, 0.0}}}};
+  const auto market = Market{"Market", 0.0, 0.0};
+  const auto broker = Broker{"Broker"};
+  const auto profile =
+   Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  const auto entry_at_120 =
+   EqualMethod{CloseMethod{}, ValueMethod{120.0}};
+  auto runner = PortfolioRunner{
+   1'000.0,
+   1,
+   10,
+   {PortfolioRunner::BacktestRun{
+     SystemStoreHandle{1, 1},
+     AssetStoreHandle{1, 1},
+     make_performance_history_runner(without_history,
+                                     market,
+                                     broker,
+                                     profile,
+                                     entry_at_120,
+                                     BooleanMethod<false>{})},
+    PortfolioRunner::BacktestRun{
+     SystemStoreHandle{2, 1},
+     AssetStoreHandle{2, 1},
+     make_performance_history_runner(
+      with_history,
+      market,
+      broker,
+      profile,
+      LogicalOrMethod{EqualMethod{CloseMethod{}, ValueMethod{100.0}},
+                      entry_at_120},
+      EqualMethod{CloseMethod{}, ValueMethod{110.0}})}},
+   {PortfolioEntryComparator{
+    ModelPerformanceNode{ModelPerformanceMetric::LifetimeCount},
+    PortfolioEntryComparatorOrder::HigherFirst}}};
+  auto results = PortfolioResults{};
+
+  runner.run(results);
+  runner.run(results);
+  runner.run(results);
+
+  EXPECT_FALSE(results.backtests()[0].timeline().open_position(2));
+  EXPECT_TRUE(results.backtests()[1].timeline().open_position(2));
+  ASSERT_EQ(results.backtests()[0].timeline().trade_events(2).size(), 1U);
+  EXPECT_TRUE(
+   results.backtests()[0].timeline().trade_events(2).front().is_rejected());
+}
+
+TEST(PortfolioRunnerTest,
+     ModelPerformanceComparatorRanksPyramidsByOwnerSnapshot)
+{
+  const auto without_history = Asset{
+   "Without history",
+   AssetHistory{{"Datetime", {1.0, 2.0, 3.0, 4.0}},
+                {"Open", {90.0, 90.0, 120.0, 130.0}},
+                {"High", {90.0, 90.0, 120.0, 130.0}},
+                {"Low", {90.0, 90.0, 120.0, 130.0}},
+                {"Close", {90.0, 90.0, 120.0, 130.0}},
+                {"Volume", {0.0, 0.0, 0.0, 0.0}}}};
+  const auto with_history = Asset{
+   "With history",
+   AssetHistory{{"Datetime", {1.0, 2.0, 3.0, 4.0}},
+                {"Open", {100.0, 110.0, 120.0, 130.0}},
+                {"High", {100.0, 110.0, 120.0, 130.0}},
+                {"Low", {100.0, 110.0, 120.0, 130.0}},
+                {"Close", {100.0, 110.0, 120.0, 130.0}},
+                {"Volume", {0.0, 0.0, 0.0, 0.0}}}};
+  const auto market = Market{"Market", 0.0, 0.0};
+  const auto broker = Broker{"Broker"};
+  const auto profile =
+   Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  const auto entry_at_120 =
+   EqualMethod{CloseMethod{}, ValueMethod{120.0}};
+  const auto pyramid_at_130 =
+   EqualMethod{CloseMethod{}, ValueMethod{130.0}};
+  auto runner = PortfolioRunner{
+   1'000.0,
+   2,
+   3,
+   {PortfolioRunner::BacktestRun{
+     SystemStoreHandle{1, 1},
+     AssetStoreHandle{1, 1},
+     make_performance_history_runner(without_history,
+                                     market,
+                                     broker,
+                                     profile,
+                                     entry_at_120,
+                                     BooleanMethod<false>{},
+                                     pyramid_at_130,
+                                     2)},
+    PortfolioRunner::BacktestRun{
+     SystemStoreHandle{2, 1},
+     AssetStoreHandle{2, 1},
+     make_performance_history_runner(
+      with_history,
+      market,
+      broker,
+      profile,
+      LogicalOrMethod{EqualMethod{CloseMethod{}, ValueMethod{100.0}},
+                      entry_at_120},
+      EqualMethod{CloseMethod{}, ValueMethod{110.0}},
+      pyramid_at_130,
+      2)}},
+   {PortfolioEntryComparator{
+    ModelPerformanceNode{ModelPerformanceMetric::LifetimeCount},
+    PortfolioEntryComparatorOrder::HigherFirst}}};
+  auto results = PortfolioResults{};
+
+  runner.run(results);
+  runner.run(results);
+  runner.run(results);
+  runner.run(results);
+
+  ASSERT_TRUE(results.backtests()[0].timeline().open_position(3));
+  ASSERT_TRUE(results.backtests()[1].timeline().open_position(3));
+  EXPECT_DOUBLE_EQ(
+   results.backtests()[0].timeline().open_position(3)->position_size(), 1.0);
+  EXPECT_DOUBLE_EQ(
+   results.backtests()[1].timeline().open_position(3)->position_size(), 2.0);
 }
 
 TEST(PortfolioRunnerTest, LowerRequestedNotionalExecutesFirst)

@@ -29,6 +29,7 @@ static_assert(std::constructible_from<ComparatorNode, ValueNode>);
 static_assert(!std::constructible_from<ComparatorNode, TrueNode>);
 static_assert(!std::constructible_from<ComparatorNode, FalseNode>);
 static_assert(std::constructible_from<ComparatorNode, DataNode>);
+static_assert(std::constructible_from<ComparatorNode, ModelPerformanceNode>);
 static_assert(std::constructible_from<ComparatorNode,
                                       LookbackNode<RequestedOrderMethodContext>>);
 static_assert(std::constructible_from<
@@ -54,6 +55,8 @@ static_assert(
 static_assert(
  !ConvertsForContext<RequestedOrderMethodContext,
                      AtrNode<RequestedOrderMethodContext>>);
+static_assert(ConvertsForContext<RequestedOrderMethodContext,
+                                 ModelPerformanceNode>);
 static_assert(
  !ConvertsForContext<BacktestMethodContext, RequestedOrderPriceNode>);
 

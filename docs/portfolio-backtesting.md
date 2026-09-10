@@ -104,10 +104,22 @@ For each risk-increasing request, Pludux performs these steps:
 ### Entry comparator data
 
 Portfolio Entry Comparators can combine immutable Requested Order values with
-the order's asset OHLCV fields and custom `DATA` fields. They support numeric
-constants, basic scalar math, and lookback. They intentionally do not expose
-Strategy named series or technical-indicator nodes: Model and Profile logic
-has already produced the Requested Order before Portfolio ranking begins.
+the order's asset OHLCV fields, custom `DATA` fields, and
+`MODEL_PERFORMANCE.VALUE`. They support numeric constants, basic scalar math,
+and lookback. They intentionally do not expose Strategy named series or
+technical-indicator nodes: Model and Profile logic has already produced the
+Requested Order before Portfolio ranking begins.
+
+For each initial or pyramiding request, `MODEL_PERFORMANCE.VALUE` reads the
+immutable Model Performance snapshot captured from the requesting Strategy
+binding during request discovery. The snapshot contains only evidence visible
+in that execution phase and cannot change while accepted requests are ranked.
+Each candidate therefore uses its own Strategy binding's current theoretical
+history without introducing look-ahead or ranking-order effects.
+
+Model Performance may already affect Bayesian or Kelly position sizing. Using
+it again in a comparator is valid, but can intentionally or accidentally give
+the same performance evidence additional influence over capital allocation.
 
 Asset data is phase-safe. A Current Close order sees the completed current bar.
 A Next Open order sees the previous completed bar, because the current bar's
