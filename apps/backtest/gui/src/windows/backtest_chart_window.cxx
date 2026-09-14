@@ -1412,7 +1412,6 @@ private:
         }
 
         const auto avg_price = open_position->average_price();
-        const auto risk_reference_price = open_position->risk_reference_price();
         const auto risk_boundary_price = open_position->risk_boundary_price();
         const auto& stop_loss_levels = open_position->stop_loss_levels();
         for(auto index = stop_loss_levels.size();
@@ -1481,7 +1480,7 @@ private:
          };
 
         draw_price_band(
-         risk_reference_price, risk_boundary_price, self.risk_color_);
+         avg_price, risk_boundary_price, self.risk_color_);
         for(const auto& level : take_profit_levels) {
           if(level.active()) {
             draw_price_band(avg_price, level.price(), self.reward_color_);
