@@ -190,7 +190,8 @@ public:
     ImGui::PopStyleVar();
 
     if(!portfolio_ptr) {
-       self.chart_state_.clear_display_backtest_strategy();
+      self.portfolio_chart_handle_.reset();
+      self.chart_state_.clear_display_backtest_strategy();
       self.render_status_panel(
        PLUDUX_ICON_CHART,
        "No portfolio selected",
@@ -204,13 +205,11 @@ public:
     const auto selected_strategy = app_state.selected_portfolio_strategy();
     if(!selected_strategy) {
        self.chart_state_.clear_display_backtest_strategy();
-      self.render_status_panel(
-       PLUDUX_ICON_WARNING,
-        "No portfolio backtest strategies",
-        "Add or select a valid strategy in this portfolio.");
-      ImGui::End();
-      return;
+       self.render_portfolio_chart(context, portfolio);
+       ImGui::End();
+       return;
     }
+    self.portfolio_chart_handle_.reset();
     const auto run = selected_strategy->run;
     const auto strategy_index = selected_strategy->strategy_index;
      const auto system_handle = run.system_handle;
@@ -713,6 +712,8 @@ private:
   }
 
   BacktestChartState chart_state_{};
+  std::optional<backtest::PortfolioStoreHandle> portfolio_chart_handle_{};
+  std::size_t portfolio_chart_size_{};
   std::optional<std::size_t> hovered_bar_{};
   std::optional<std::size_t> pending_pin_bar_{};
   bool pending_unpin_{};
@@ -1858,6 +1859,99 @@ private:
                        losing_upper.data(),
                        xs.size());
     ImPlot::PlotLine("Losing payoff", xs.data(), losing_mean.data(), xs.size());
+  }
+
+  void render_portfolio_chart(this BacktestChartWindow& self,
+                              WindowContext& context,
+                              const backtest::Portfolio& portfolio)
+  {
+    if(!context.app_state().is_portfolio_ready(portfolio)) {
+      self.render_incomplete_status(context.app_state(), portfolio);
+      return;
+    }
+    const auto& results = context.app_state().get_portfolio_results(
+     context.app_state().selected_portfolio_handle());
+    const auto& timeline = results.timeline();
+    if(timeline.empty()) {
+      const auto status = context.backtest_execution_status(
+       context.app_state().selected_portfolio_handle());
+      const auto failed =
+       status && status->phase() == BacktestExecutionPhase::Failed;
+      self.render_status_panel(
+       failed ? PLUDUX_ICON_WARNING : PLUDUX_ICON_WAITING,
+       failed ? "Backtest failed" : "Waiting for results",
+       failed ? status->error_message()
+              : "The chart will populate when results are available.");
+      return;
+    }
+    auto timestamps = std::vector<double>{};
+    timestamps.reserve(timeline.size());
+    for(auto index = std::size_t{}; index < timeline.size(); ++index) {
+      timestamps.push_back(static_cast<double>(timeline.row(index).timestamp));
+    }
+    const auto handle = context.app_state().selected_portfolio_handle();
+    const auto fit = self.portfolio_chart_handle_ != handle ||
+                     self.portfolio_chart_size_ != timeline.size();
+    self.portfolio_chart_handle_ = handle;
+    self.portfolio_chart_size_ = timeline.size();
+    const auto setup_time_axis = [&](bool last_row) {
+      ImPlot::SetupAxis(ImAxis_X1,
+                        nullptr,
+                        last_row ? ImPlotAxisFlags_None
+                                 : ImPlotAxisFlags_NoTickLabels |
+                                    ImPlotAxisFlags_NoHighlight);
+      ImPlot::SetupAxisFormat(ImAxis_X1, date_formatter, &timestamps);
+      if(fit) {
+        const auto right_padding_bars =
+         std::clamp(static_cast<double>(timeline.size()) * 0.05, 3.0, 20.0);
+        ImPlot::SetupAxisLimits(ImAxis_X1,
+                                -0.5,
+                                static_cast<double>(timeline.size() - 1) +
+                                 right_padding_bars,
+                                ImPlotCond_Always);
+      }
+    };
+    auto axis_y_flags = ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_Opposite |
+                        ImPlotAxisFlags_Foreground |
+                        ImPlotAxisFlags_NoHighlight;
+    if(fit) {
+      axis_y_flags |= ImPlotAxisFlags_AutoFit;
+    }
+    constexpr auto plot_flags =
+     ImPlotFlags_NoLegend | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus;
+    constexpr auto chart_fit_padding = ImVec2{0.0f, 0.15f};
+    ImPlot::PushStyleVar(ImPlotStyleVar_FitPadding, chart_fit_padding);
+    if(ImPlot::BeginSubplots("##PortfolioChart",
+                             2,
+                             1,
+                             ImVec2{-1, -1},
+                             ImPlotSubplotFlags_LinkAllX |
+                              ImPlotSubplotFlags_NoMenus)) {
+      if(ImPlot::BeginPlot("##PortfolioEquity", ImVec2{-1, 0}, plot_flags)) {
+        setup_time_axis(false);
+        ImPlot::SetupAxis(ImAxis_Y1, "% Equity", axis_y_flags);
+        ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
+        self.plot_equity(timeline, timestamps, portfolio.initial_capital());
+        const auto& row = timeline.row(timeline.size() - 1);
+        self.draw_plot_legend(
+         {{{"Equity", IM_COL32_WHITE},
+           {format_currency(row.equity), plot_item_color("Equity")}}});
+        ImPlot::EndPlot();
+      }
+      if(ImPlot::BeginPlot("##PortfolioDrawdown", ImVec2{-1, 0}, plot_flags)) {
+        setup_time_axis(true);
+        ImPlot::SetupAxis(ImAxis_Y1, "% Drawdown", axis_y_flags);
+        ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
+        self.plot_drawdown(timeline, timestamps);
+        self.draw_plot_legend(
+         {{{"Drawdown", IM_COL32_WHITE},
+           {std::format("{:.2f}%", timeline.row(timeline.size() - 1).drawdown),
+            plot_item_color("Drawdown")}}});
+        ImPlot::EndPlot();
+      }
+      ImPlot::EndSubplots();
+    }
+    ImPlot::PopStyleVar();
   }
 
   void plot_equity(this const BacktestChartWindow& self,

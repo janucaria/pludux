@@ -102,11 +102,39 @@ Add your System to the Portfolio and keep the order stable.
 
 ### 9) Run and inspect
 
-Run the Portfolio, then inspect:
+Run the Portfolio, then choose the scope in **Portfolios**. Select a
+Single-Asset child to inspect one Strategy binding within a System–Asset run.
+Its parent Portfolio is selected automatically. Expanding a Portfolio row
+activates Single-Asset scope, restoring its last selected child or choosing the
+first valid child when no valid selection is remembered. Collapsing the row
+activates Portfolio scope and remembers the child for reopening. Clicking a
+Portfolio row uses its expanded or collapsed state to choose the context.
+Selecting a child keeps Single-Asset scope active. A Portfolio without a valid
+child uses Portfolio scope even while expanded.
 
-- **Chart** for candles, positions, and markers
-- **Trades** for actual and hypothetical trade lists
-- **Overview** for summary metrics
+- **Chart** shows Portfolio equity and drawdown in Portfolio scope. Selecting a
+  Single-Asset opens its existing candles, indicators, and trade signals.
+- **Trades** shows every child's trades in Portfolio scope, with open trades
+  first and closed trades ordered by close time, newest first. Single-Asset
+  scope shows the selected child's trades with their existing ordering.
+- **Events** shows all Portfolio execution events or the selected child's
+  events, newest first. Events sharing a timestamp retain their recorded
+  execution order.
+- **Overview** shows the Portfolio summary or performance attributed to the
+  selected Single-Asset.
+
+Single-Asset Overview includes realized net P&L, open unrealized P&L, and trade
+statistics. Realized net P&L includes partial exits from positions that remain
+open. Its two return measures use completed trades, including their partial
+exits and Broker fees.
+
+- **Return on deployed capital** divides completed-trade net P&L by those
+  trades' cumulative entry investment, including pyramid entries and entry fees.
+- **Contribution to Portfolio return** divides completed-trade net P&L by
+  Portfolio initial capital.
+
+Ratios with zero denominators display “—”. Account equity and drawdown appear
+in Portfolio Overview.
 
 ## Practical notes
 

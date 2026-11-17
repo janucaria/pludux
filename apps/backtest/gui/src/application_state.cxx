@@ -88,10 +88,41 @@ public:
     self.normalize_portfolio_strategy_selection(handle);
   }
 
-  auto select_portfolio_strategy(
-   this ApplicationState& self,
-   backtest::PortfolioStoreHandle portfolio_handle,
-    PortfolioStrategyKey strategy) -> bool
+  void deselect_portfolio_strategy(this ApplicationState& self,
+                                   backtest::PortfolioStoreHandle handle)
+  {
+    self.view_state_.portfolio_strategy_selections().deactivate(handle);
+  }
+
+  void select_portfolio_context(this ApplicationState& self,
+                                backtest::PortfolioStoreHandle handle,
+                                bool expanded)
+  {
+    self.select_portfolio(handle);
+    if(!expanded) {
+      self.deselect_portfolio_strategy(handle);
+      return;
+    }
+    const auto remembered =
+     self.view_state_.portfolio_strategy_selections().remembered(handle);
+    if(remembered && self.select_portfolio_strategy(handle, *remembered)) {
+      return;
+    }
+    const auto* portfolio = self.get_portfolio_if_present(handle);
+    if(!portfolio) {
+      return;
+    }
+    for(const auto strategy : self.expanded_system_strategies(*portfolio)) {
+      if(self.select_portfolio_strategy(handle, strategy)) {
+        return;
+      }
+    }
+  }
+
+  auto
+  select_portfolio_strategy(this ApplicationState& self,
+                            backtest::PortfolioStoreHandle portfolio_handle,
+                            PortfolioStrategyKey strategy) -> bool
   {
     const auto* portfolio =
      self.store_.get_portfolio_if_present(portfolio_handle);

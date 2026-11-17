@@ -11,6 +11,8 @@ module;
 
 #include <imgui.h>
 
+#include "../scope_results.hpp"
+
 export module pludux.apps.backtest:windows.events_window;
 
 import pludux.backtest;
@@ -64,11 +66,6 @@ private:
       return;
     }
     const auto selected = state.selected_portfolio_strategy();
-    if(!selected) {
-      ImGui::TextDisabled(
-       "Select a strategy from the active Portfolio to inspect its events.");
-      return;
-    }
     if(!state.is_portfolio_ready(*portfolio)) {
       ImGui::TextDisabled("Portfolio setup is incomplete.");
       return;
@@ -80,30 +77,7 @@ private:
     }
     const auto& results = *current;
     render_filter();
-    std::vector<std::size_t> matches;
-    for(std::size_t i = 0; i < results.events().size(); ++i) {
-      const auto ref = results.events()[i];
-      const auto& run = results.backtests()[ref.backtest_index];
-      const auto& event =
-       run.timeline().trade_events(ref.bar_index)[ref.event_index];
-      if(run.key() == selected->run &&
-         event.strategy_index() == selected->strategy_index &&
-         (!type_ || event.type() == *type_ ||
-          (*type_ == Type::scale_out && event.is_scale_out()))) {
-        matches.push_back(i);
-      }
-    }
-    // Stable sorting keeps the recorded execution order within each timestamp.
-    std::stable_sort(matches.begin(), matches.end(), [&](auto lhs, auto rhs) {
-      const auto timestamp = [&](std::size_t index) {
-        const auto ref = results.events()[index];
-        return results.backtests()[ref.backtest_index]
-         .timeline()
-         .trade_events(ref.bar_index)[ref.event_index]
-         .timestamp();
-      };
-      return timestamp(lhs) > timestamp(rhs);
-    });
+    const auto matches = scope_event_indices(results, selected, type_);
     const auto count = matches.size();
     if(count == 0) {
       ImGui::TextDisabled("No matching events.");

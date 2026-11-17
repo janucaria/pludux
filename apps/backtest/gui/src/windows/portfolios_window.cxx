@@ -49,7 +49,6 @@ public:
 
 private:
   std::optional<backtest::PortfolioStoreHandle> editing_handle_;
-  std::optional<backtest::PortfolioStoreHandle> open_requested_;
   std::shared_ptr<backtest::Portfolio> editing_;
   ImGuiTextFilter filter_;
   ImGuiTextFilter strategy_picker_filter_;
@@ -159,16 +158,13 @@ private:
       ImGui::PushID(static_cast<int>(handle.slot_index()));
       ImGui::PushID(static_cast<int>(handle.generation()));
       const auto selected = app_state.selected_portfolio_handle() == handle;
-      const auto selected_setup =
-         selected ? app_state.selected_portfolio_strategy()
-                  : std::optional<PortfolioStrategyKey>{};
+      const auto selected_setup = selected
+                                   ? app_state.selected_portfolio_strategy()
+                                   : std::optional<PortfolioStrategyKey>{};
       const auto force_open_for_filter =
        self.filter_.IsActive() && child_matches;
-      if(force_open_for_filter || self.open_requested_ == handle) {
+      if(force_open_for_filter) {
         ImGui::SetNextItemOpen(true, ImGuiCond_Always);
-        if(self.open_requested_ == handle) {
-          self.open_requested_.reset();
-        }
       }
       const auto row_start = ImGui::GetCursorScreenPos();
       const auto row_width = ImGui::GetContentRegionAvail().x;
@@ -180,21 +176,28 @@ private:
       if(selected) {
         tree_flags |= ImGuiTreeNodeFlags_Selected;
       }
-      const auto open = ImGui::TreeNodeEx(
-       [&] {
-         const auto has_draft =
-          self.editing_handle_ == handle && self.editing_ &&
-          !self.same_portfolio(*self.editing_, *portfolio);
-         if(has_draft) {
-           return portfolio->name() + " (Unsaved)";
-         }
-         return portfolio->name().empty() ? std::string{"Unnamed"}
-                                          : portfolio->name();
-       }()
-        .c_str(),
-       tree_flags);
+      const auto open =
+       ImGui::TreeNodeEx("##portfolio",
+                         tree_flags,
+                         "%s",
+                         [&] {
+                           const auto has_draft =
+                            self.editing_handle_ == handle && self.editing_ &&
+                            !self.same_portfolio(*self.editing_, *portfolio);
+                           if(has_draft) {
+                             return portfolio->name() + " (Unsaved)";
+                           }
+                           return portfolio->name().empty()
+                                   ? std::string{"Unnamed"}
+                                   : portfolio->name();
+                         }()
+                          .c_str());
       const auto row_clicked = ImGui::IsItemClicked(ImGuiMouseButton_Left);
       const auto arrow_toggled = ImGui::IsItemToggledOpen();
+      const auto has_valid_child =
+       std::ranges::any_of(rows, &StrategyRow::valid);
+      const auto scope_needs_update =
+       selected && selected_setup.has_value() != (open && has_valid_child);
       const auto action =
        ui::resource_row_actions(row_start,
                                 row_width,
@@ -233,10 +236,15 @@ private:
         context.push_edit(
          "Delete Portfolio",
          [handle](ApplicationState& state) { state.remove_portfolio(handle); });
-      } else if(row_clicked && !arrow_toggled) {
-        self.open_requested_ = handle;
+      } else if(row_clicked || arrow_toggled || scope_needs_update) {
+        const auto explicit_selection = row_clicked || arrow_toggled;
         context.push_view_action(
-         [handle](ApplicationState& state) { state.select_portfolio(handle); });
+         [handle, open, explicit_selection](ApplicationState& state) {
+           if(explicit_selection ||
+              state.selected_portfolio_handle() == handle) {
+             state.select_portfolio_context(handle, open);
+           }
+         });
       }
       if(open) {
         for(const auto& row : rows) {
@@ -246,21 +254,21 @@ private:
           }
 
           ImGui::PushID(
-             static_cast<int>(row.key.run.system_handle.slot_index()));
+           static_cast<int>(row.key.run.system_handle.slot_index()));
           ImGui::PushID(
-             static_cast<int>(row.key.run.system_handle.generation()));
+           static_cast<int>(row.key.run.system_handle.generation()));
           ImGui::PushID(
            static_cast<int>(row.key.run.asset_handle.slot_index()));
           ImGui::PushID(
            static_cast<int>(row.key.run.asset_handle.generation()));
-           ImGui::PushID(static_cast<int>(row.key.strategy_index));
+          ImGui::PushID(static_cast<int>(row.key.strategy_index));
           const auto child_selected =
            selected_setup && *selected_setup == row.key;
           if(row.valid) {
             if(ImGui::Selectable(row.label.c_str(), child_selected)) {
               context.push_view_action(
                [handle, key = row.key](ApplicationState& state) {
-                   state.select_portfolio_strategy(handle, key);
+                 state.select_portfolio_strategy(handle, key);
                });
             }
           } else {

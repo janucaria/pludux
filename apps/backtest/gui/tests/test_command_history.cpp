@@ -607,6 +607,16 @@ TEST(ApplicationStateSerialization, RoundTripsPortfolioStrategySelection)
             std::string::npos);
   const auto loaded = pludux::apps::load_application_state_json(stream);
   EXPECT_EQ(loaded.selected_portfolio_strategy(), selected);
+
+  auto legacy = serialized;
+  const auto active_field = std::string{",\"active\":true"};
+  const auto active_position = legacy.find(active_field);
+  ASSERT_NE(active_position, std::string::npos);
+  legacy.erase(active_position, active_field.size());
+  auto legacy_stream = std::stringstream{legacy};
+  const auto legacy_loaded =
+   pludux::apps::load_application_state_json(legacy_stream);
+  EXPECT_EQ(legacy_loaded.selected_portfolio_strategy(), selected);
 }
 
 TEST(ApplicationStateSerialization, IgnoresLegacyPortfolioStrategySelections)

@@ -1638,7 +1638,8 @@ struct json_conv_traits<Json, pludux::apps::PortfolioStrategySelection> {
        required_as<pludux::backtest::PortfolioStoreHandle>(json, "portfolio"),
        {{required_as<pludux::backtest::SystemStoreHandle>(json, "system"),
          required_as<pludux::backtest::AssetStoreHandle>(json, "asset")},
-        required_as<std::size_t>(json, "strategy")}}};
+        required_as<std::size_t>(json, "strategy")},
+       value_or<bool>(json, "active", true)}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -1653,6 +1654,7 @@ struct json_conv_traits<Json, pludux::apps::PortfolioStrategySelection> {
     set_json(json, aset, "system", selection.strategy.run.system_handle);
     set_json(json, aset, "asset", selection.strategy.run.asset_handle);
     json["strategy"] = selection.strategy.strategy_index;
+    json["active"] = selection.active;
     return json;
   }
 };
