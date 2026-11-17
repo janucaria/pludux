@@ -35,6 +35,10 @@ fields are also optional and use fresh-state defaults. Unknown properties are
 ignored, but former property names are not aliases and therefore do not supply
 the missing canonical value.
 
+Portfolio Strategy selections retain their last child while Portfolio scope is
+active. Saving and reopening preserves that remembered child. Older workspaces
+that omit a selection's `active` field treat that child as active by default.
+
 The persistence envelope remains structural: `pludux`, `$version`, `store`,
 `documentState`, the store descriptor and arena bookkeeping, every resource
 collection, and every document handle list must be present and correctly

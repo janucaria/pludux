@@ -607,6 +607,16 @@ TEST(ApplicationStateSerialization, RoundTripsPortfolioStrategySelection)
             std::string::npos);
   const auto loaded = pludux::apps::load_application_state_json(stream);
   EXPECT_EQ(loaded.selected_portfolio_strategy(), selected);
+
+  auto legacy = serialized;
+  const auto active_field = std::string{",\"active\":true"};
+  const auto active_position = legacy.find(active_field);
+  ASSERT_NE(active_position, std::string::npos);
+  legacy.erase(active_position, active_field.size());
+  auto legacy_stream = std::stringstream{legacy};
+  const auto legacy_loaded =
+   pludux::apps::load_application_state_json(legacy_stream);
+  EXPECT_EQ(legacy_loaded.selected_portfolio_strategy(), selected);
 }
 
 TEST(ApplicationStateSerialization, IgnoresLegacyPortfolioStrategySelections)
@@ -854,7 +864,10 @@ TEST(ApplicationStateSerialization, RoundTripsOrderedPortfolioEntryComparators)
      pludux::backtest::PortfolioEntryComparatorOrder::HigherFirst},
     {pludux::DivideNode<pludux::backtest::RequestedOrderMethodContext>{
       pludux::backtest::RequestedRiskWithFeesNode{}, pludux::ValueNode{2.0}},
-     pludux::backtest::PortfolioEntryComparatorOrder::LowerFirst}};
+     pludux::backtest::PortfolioEntryComparatorOrder::LowerFirst},
+    {pludux::backtest::ModelPerformanceNode{
+      pludux::backtest::ModelPerformanceMetric::BayesianWinProbabilityLower95},
+     pludux::backtest::PortfolioEntryComparatorOrder::HigherFirst}};
   auto portfolio = Portfolio{};
   portfolio.entry_comparators(comparators);
   ASSERT_TRUE(state.add_portfolio(std::move(portfolio)));
@@ -868,6 +881,9 @@ TEST(ApplicationStateSerialization, RoundTripsOrderedPortfolioEntryComparators)
   EXPECT_NE(json.find("\"OPERATOR.LOOKBACK\""), std::string::npos);
   EXPECT_NE(json.find("\"MARKET_DATA.CLOSE\""), std::string::npos);
   EXPECT_NE(json.find("\"REQUESTED_ORDER.RISK_WITH_FEES\""), std::string::npos);
+  EXPECT_NE(json.find("\"MODEL_PERFORMANCE.VALUE\""), std::string::npos);
+  EXPECT_NE(json.find("\"BAYESIAN_WIN_PROBABILITY_LOWER_95\""),
+            std::string::npos);
 
   const auto loaded = pludux::apps::load_application_state_json(stream);
   const auto& loaded_portfolio =

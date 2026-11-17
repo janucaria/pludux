@@ -12,6 +12,7 @@ module;
 #include <utility>
 #include <vector>
 
+#include "../scope_results.hpp"
 #include "../ui/pludux_icons.hpp"
 
 #include <imgui.h>
@@ -49,7 +50,6 @@ public:
 
 private:
   std::optional<backtest::PortfolioStoreHandle> editing_handle_;
-  std::optional<backtest::PortfolioStoreHandle> open_requested_;
   std::shared_ptr<backtest::Portfolio> editing_;
   ImGuiTextFilter filter_;
   ImGuiTextFilter strategy_picker_filter_;
@@ -159,16 +159,13 @@ private:
       ImGui::PushID(static_cast<int>(handle.slot_index()));
       ImGui::PushID(static_cast<int>(handle.generation()));
       const auto selected = app_state.selected_portfolio_handle() == handle;
-      const auto selected_setup =
-         selected ? app_state.selected_portfolio_strategy()
-                  : std::optional<PortfolioStrategyKey>{};
+      const auto selected_setup = selected
+                                   ? app_state.selected_portfolio_strategy()
+                                   : std::optional<PortfolioStrategyKey>{};
       const auto force_open_for_filter =
        self.filter_.IsActive() && child_matches;
-      if(force_open_for_filter || self.open_requested_ == handle) {
+      if(force_open_for_filter) {
         ImGui::SetNextItemOpen(true, ImGuiCond_Always);
-        if(self.open_requested_ == handle) {
-          self.open_requested_.reset();
-        }
       }
       const auto row_start = ImGui::GetCursorScreenPos();
       const auto row_width = ImGui::GetContentRegionAvail().x;
@@ -180,21 +177,28 @@ private:
       if(selected) {
         tree_flags |= ImGuiTreeNodeFlags_Selected;
       }
-      const auto open = ImGui::TreeNodeEx(
-       [&] {
-         const auto has_draft =
-          self.editing_handle_ == handle && self.editing_ &&
-          !self.same_portfolio(*self.editing_, *portfolio);
-         if(has_draft) {
-           return portfolio->name() + " (Unsaved)";
-         }
-         return portfolio->name().empty() ? std::string{"Unnamed"}
-                                          : portfolio->name();
-       }()
-        .c_str(),
-       tree_flags);
+      const auto open =
+       ImGui::TreeNodeEx("##portfolio",
+                         tree_flags,
+                         "%s",
+                         [&] {
+                           const auto has_draft =
+                            self.editing_handle_ == handle && self.editing_ &&
+                            !self.same_portfolio(*self.editing_, *portfolio);
+                           if(has_draft) {
+                             return portfolio->name() + " (Unsaved)";
+                           }
+                           return portfolio->name().empty()
+                                   ? std::string{"Unnamed"}
+                                   : portfolio->name();
+                         }()
+                          .c_str());
       const auto row_clicked = ImGui::IsItemClicked(ImGuiMouseButton_Left);
       const auto arrow_toggled = ImGui::IsItemToggledOpen();
+      const auto has_valid_child =
+       std::ranges::any_of(rows, &StrategyRow::valid);
+      const auto scope_needs_update =
+       selected && selected_setup.has_value() != (open && has_valid_child);
       const auto action =
        ui::resource_row_actions(row_start,
                                 row_width,
@@ -233,12 +237,18 @@ private:
         context.push_edit(
          "Delete Portfolio",
          [handle](ApplicationState& state) { state.remove_portfolio(handle); });
-      } else if(row_clicked && !arrow_toggled) {
-        self.open_requested_ = handle;
+      } else if(row_clicked || arrow_toggled || scope_needs_update) {
+        const auto explicit_selection = row_clicked || arrow_toggled;
         context.push_view_action(
-         [handle](ApplicationState& state) { state.select_portfolio(handle); });
+         [handle, open, explicit_selection](ApplicationState& state) {
+           if(explicit_selection ||
+              state.selected_portfolio_handle() == handle) {
+             state.select_portfolio_context(handle, open);
+           }
+         });
       }
       if(open) {
+        const auto* results = app_state.get_portfolio_results_if_present(handle);
         for(const auto& row : rows) {
           if(!portfolio_matches &&
              !self.filter_.PassFilter(row.label.c_str())) {
@@ -246,21 +256,34 @@ private:
           }
 
           ImGui::PushID(
-             static_cast<int>(row.key.run.system_handle.slot_index()));
+           static_cast<int>(row.key.run.system_handle.slot_index()));
           ImGui::PushID(
-             static_cast<int>(row.key.run.system_handle.generation()));
+           static_cast<int>(row.key.run.system_handle.generation()));
           ImGui::PushID(
            static_cast<int>(row.key.run.asset_handle.slot_index()));
           ImGui::PushID(
            static_cast<int>(row.key.run.asset_handle.generation()));
-           ImGui::PushID(static_cast<int>(row.key.strategy_index));
+          ImGui::PushID(static_cast<int>(row.key.strategy_index));
           const auto child_selected =
            selected_setup && *selected_setup == row.key;
           if(row.valid) {
-            if(ImGui::Selectable(row.label.c_str(), child_selected)) {
+            const auto* run = results ? results->backtest(row.key.run) : nullptr;
+            bool icon_clicked = false;
+            if(run && !run->timeline().empty()) {
+              const auto is_open =
+               has_open_position(run->timeline(), row.key.strategy_index);
+              ImGui::TextUnformatted(is_open ? PLUDUX_ICON_OPEN_POSITION
+                                            : PLUDUX_ICON_FLAT_POSITION);
+              icon_clicked = ImGui::IsItemClicked();
+              ImGui::SetItemTooltip("%s", is_open ? "Open position"
+                                                  : "Flat position");
+              ImGui::SameLine();
+            }
+            if(ImGui::Selectable(row.label.c_str(), child_selected) ||
+               icon_clicked) {
               context.push_view_action(
                [handle, key = row.key](ApplicationState& state) {
-                   state.select_portfolio_strategy(handle, key);
+                 state.select_portfolio_strategy(handle, key);
                });
             }
           } else {
@@ -347,17 +370,75 @@ private:
     ui::form_section(
      "Entry Comparators",
      "Compare prepared requested orders in sequence using Requested Order "
-     "values and asset OHLCV or custom DATA. Current Close sees the completed "
-     "current bar. Next Open sees the previous completed bar; use Requested "
-     "Order Price for the executable open. The first unequal value determines "
-      "priority; complete ties use ordered Strategy and Watchlist order.");
+     "values, the requesting Strategy's Model Performance snapshot, and asset "
+     "OHLCV or custom DATA. Current Close sees the completed current bar. Next "
+     "Open sees the previous completed bar; use Requested Order Price for the "
+     "executable open. The first unequal value determines priority; complete "
+     "ties use ordered System and Watchlist Asset order.");
     auto& comparators = portfolio.entry_comparators();
+    if(comparators.empty()) {
+      ImGui::TextDisabled(
+       "No comparators configured. Entry requests use ordered System and "
+       "Watchlist Asset order.");
+      ImGui::Spacing();
+    }
     auto comparator_index = std::size_t{};
     while(comparator_index < comparators.size()) {
       ImGui::PushID(static_cast<int>(comparator_index));
-      ImGui::Text("Comparator %zu", comparator_index + 1);
+      ImGui::BeginChild("comparator",
+                        ImVec2{0.0f, 0.0f},
+                        ImGuiChildFlags_Borders |
+                         ImGuiChildFlags_AutoResizeY);
+      ImGui::Text("Priority %zu", comparator_index + 1);
+      ImGui::SameLine();
+      ImGui::TextDisabled(
+       comparator_index == 0 ? "(evaluated first)" : "(tie-breaker)");
+
+      const auto actions_start = ImGui::GetCursorScreenPos();
+      const auto available_width = ImGui::GetContentRegionAvail().x;
+      const auto& style = ImGui::GetStyle();
+      const auto button_width = [&](const char* label) {
+        return ImGui::CalcTextSize(label).x + (2.0f * style.FramePadding.x);
+      };
+      const auto actions_width =
+       button_width(PLUDUX_ICON_MOVE_UP "##move_up") +
+       button_width(PLUDUX_ICON_MOVE_DOWN "##move_down") +
+       button_width(PLUDUX_ICON_COPY "##duplicate") +
+       button_width(PLUDUX_ICON_DELETE "##remove") +
+       (3.0f * style.ItemSpacing.x);
+      ImGui::SetCursorScreenPos(
+       ImVec2{std::max(actions_start.x,
+                       actions_start.x + available_width - actions_width),
+              actions_start.y});
+
+      enum class ComparatorAction { None, MoveUp, MoveDown, Duplicate, Remove };
+      auto action = ComparatorAction::None;
+      ImGui::BeginDisabled(comparator_index == 0);
+      if(ui::icon_button(PLUDUX_ICON_MOVE_UP "##move_up", "Move up")) {
+        action = ComparatorAction::MoveUp;
+      }
+      ImGui::EndDisabled();
+      ImGui::SameLine();
+      ImGui::BeginDisabled(comparator_index + 1 == comparators.size());
+      if(ui::icon_button(PLUDUX_ICON_MOVE_DOWN "##move_down", "Move down")) {
+        action = ComparatorAction::MoveDown;
+      }
+      ImGui::EndDisabled();
+      ImGui::SameLine();
+      if(ui::icon_button(PLUDUX_ICON_COPY "##duplicate", "Duplicate")) {
+        action = ComparatorAction::Duplicate;
+      }
+      ImGui::SameLine();
+      if(ui::icon_button(PLUDUX_ICON_DELETE "##remove", "Remove")) {
+        action = ComparatorAction::Remove;
+      }
+
+      ImGui::Separator();
       auto order = comparators[comparator_index].order();
-      ui::field_label("Order");
+      ui::field_label(
+       "Order",
+       "Higher first prioritizes larger finite scores; Lower first "
+       "prioritizes smaller finite scores. Non-finite scores rank last.");
       const auto* order_label =
        order == backtest::PortfolioEntryComparatorOrder::HigherFirst
         ? "Higher first"
@@ -382,31 +463,33 @@ private:
       self.series_node_editor_.render(expression, context);
       comparators[comparator_index].expression(std::move(expression));
 
-      auto erased = false;
-      if(comparator_index > 0 && ImGui::Button("Move up")) {
+      ImGui::EndChild();
+      ImGui::Spacing();
+
+      auto advance = true;
+      if(action == ComparatorAction::MoveUp) {
         std::swap(comparators[comparator_index],
                   comparators[comparator_index - 1]);
-      }
-      if(comparator_index + 1 < comparators.size()) {
-        ImGui::SameLine();
-        if(ImGui::Button("Move down")) {
-          std::swap(comparators[comparator_index],
-                    comparators[comparator_index + 1]);
-        }
-      }
-      ImGui::SameLine();
-      if(ImGui::Button(PLUDUX_ICON_DELETE " Remove")) {
+      } else if(action == ComparatorAction::MoveDown) {
+        std::swap(comparators[comparator_index],
+                  comparators[comparator_index + 1]);
+      } else if(action == ComparatorAction::Duplicate) {
+        comparators.insert(
+         comparators.begin() +
+          static_cast<std::ptrdiff_t>(comparator_index + 1),
+         comparators[comparator_index]);
+      } else if(action == ComparatorAction::Remove) {
         comparators.erase(comparators.begin() +
                           static_cast<std::ptrdiff_t>(comparator_index));
-        erased = true;
+        advance = false;
       }
-      ImGui::Separator();
       ImGui::PopID();
-      if(!erased) {
+      if(advance) {
         ++comparator_index;
       }
     }
-    if(ImGui::Button(PLUDUX_ICON_ADD " Add comparator")) {
+    if(ImGui::Button(PLUDUX_ICON_ADD " Add comparator",
+                     ImVec2{ImGui::GetContentRegionAvail().x, 0.0f})) {
       comparators.emplace_back();
     }
 

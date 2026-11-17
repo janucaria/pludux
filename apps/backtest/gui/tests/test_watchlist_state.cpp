@@ -1,10 +1,13 @@
 #include <gtest/gtest.h>
 
+#include <filesystem>
+#include <fstream>
 #include <sstream>
 #include <utility>
 #include <vector>
 
 import pludux.apps.backtest.application_state;
+import pludux.apps.backtest.load_asset_csv_action;
 import pludux.apps.backtest.portfolio_strategy_selections;
 import pludux.apps.backtest.serialization;
 import pludux.backtest;
@@ -58,6 +61,52 @@ TEST(WatchlistState, DeletingAssetRetainsMissingWatchlistReference)
   ASSERT_TRUE(state.remove_asset(first));
   EXPECT_EQ(state.get_watchlist(watchlist).asset_handles(),
             (std::vector<pludux::backtest::AssetStoreHandle>{first, second}));
+}
+
+TEST(AssetImport, DesktopAndBrowserImportsMatchOnTheCompleteFilename)
+{
+  auto state = ApplicationState{};
+  const auto path =
+   std::filesystem::path{PLUDUX_BACKTEST_SAMPLE_DIR} / "random_sample.csv";
+  pludux::apps::LoadAssetCsvAction{path}(state);
+  const auto handles = state.get_asset_handles();
+  ASSERT_EQ(handles.size(), 1u);
+  EXPECT_EQ(state.get_asset(handles.front()).name(), "random_sample.csv");
+
+  pludux::apps::LoadAssetCsvAction{"random_sample.csv", "Date,Close\n1,42\n"}(
+   state);
+  EXPECT_EQ(state.get_asset_handles(), handles);
+  EXPECT_EQ(state.get_asset(handles.front()).size(), 1u);
+}
+
+TEST(WatchlistState, ReimportReplacesHistoryAndPreservesAssetBinding)
+{
+  auto state = ApplicationState{};
+  auto first = Asset{"BTC"};
+  auto original_csv = std::istringstream{"Date,Last\n1,10\n2,20\n"};
+  pludux::update_asset_from_csv(first, original_csv);
+  auto fields = first.field_resolver();
+  fields.close_field("Last");
+  first.field_resolver(std::move(fields));
+  state.import_asset(std::move(first));
+  state.import_asset(Asset{"ETH"});
+  const auto handles = state.get_asset_handles();
+  ASSERT_EQ(handles.size(), 2u);
+  const auto watchlist = *state.add_watchlist(Watchlist{"Crypto", handles});
+
+  auto replacement = Asset{"BTC"};
+  auto updated_csv = std::istringstream{"Time,Last\n3,42\n"};
+  pludux::update_asset_from_csv(replacement, updated_csv);
+  state.import_asset(std::move(replacement));
+
+  EXPECT_EQ(state.get_asset_handles(), handles);
+  EXPECT_EQ(state.get_watchlist(watchlist).asset_handles(), handles);
+  const auto& asset = state.get_asset(handles.front());
+  ASSERT_EQ(asset.size(), 1u);
+  EXPECT_EQ(asset.history().field_data().at("Last")[0], 42);
+  EXPECT_EQ(asset.field_resolver().datetime_field(), "Time");
+  EXPECT_EQ(asset.field_resolver().close_field(), "Last");
+  EXPECT_EQ(state.get_asset(handles.back()).name(), "ETH");
 }
 
 TEST(WatchlistState, ExpandsSystemsThenAssetsThenStrategies)
@@ -167,7 +216,7 @@ TEST(StrategyEditor, ChangingModelResetsInputsToNewModelDefaults)
   EXPECT_EQ(strategy.model_handle(), (pludux::backtest::ModelStoreHandle{2, 1}));
 }
 
-TEST(WatchlistState, SetupSelectionSurvivesReorderAndFallsBackAfterRemoval)
+TEST(WatchlistState, SetupSelectionSurvivesReorderAndClearsAfterRemoval)
 {
   auto state = ApplicationState{};
   state.add_asset(Asset{"Asset"});
@@ -186,8 +235,88 @@ TEST(WatchlistState, SetupSelectionSurvivesReorderAndFallsBackAfterRemoval)
   EXPECT_EQ(state.selected_portfolio_strategy(), selected);
   edited.failsafe_strategies().pop_back();
   ASSERT_TRUE(state.update_system(system, std::move(edited)));
+  EXPECT_FALSE(state.selected_portfolio_strategy());
+}
+
+TEST(WatchlistState, PortfolioScopeAndChildSelectionAreRememberedIndependently)
+{
+  auto state = ApplicationState{};
+  state.add_asset(Asset{"Asset"});
+  const auto asset = state.get_asset_handles().front();
+  const auto watchlist = *state.add_watchlist(Watchlist{"List", {asset}});
+  const auto strategy = add_ready_strategy(state);
+  const auto system =
+   *state.add_system(System{"System", watchlist, {}, strategy});
+  const auto first =
+   *state.add_portfolio(Portfolio{"First", 1000, {}, {}, 10, 10, {}, {system}});
+  const auto second = *state.add_portfolio(
+   Portfolio{"Second", 1000, {}, {}, 10, 10, {}, {system}});
+  const auto child = pludux::apps::PortfolioStrategyKey{{system, asset}, 0};
+  state.select_portfolio(first);
+  EXPECT_FALSE(state.selected_portfolio_strategy());
+  ASSERT_TRUE(state.select_portfolio_strategy(second, child));
+  EXPECT_EQ(state.selected_portfolio_handle(), second);
+  state.select_portfolio(first);
+  EXPECT_FALSE(state.selected_portfolio_strategy());
+  state.select_portfolio(second);
+  EXPECT_EQ(state.selected_portfolio_strategy(), child);
+  state.deselect_portfolio_strategy(second);
+  state.select_portfolio(first);
+  state.select_portfolio(second);
+  EXPECT_FALSE(state.selected_portfolio_strategy());
+  auto edited = state.get_system(system);
+  edited.name("Renamed");
+  ASSERT_TRUE(state.update_system(system, std::move(edited)));
+  EXPECT_FALSE(state.selected_portfolio_strategy());
+  auto stream = std::stringstream{};
+  pludux::apps::save_application_state_json(stream, state);
+  const auto restored = pludux::apps::load_application_state_json(stream);
+  EXPECT_FALSE(restored.selected_portfolio_strategy());
+}
+
+TEST(WatchlistState,
+     PortfolioExpansionSelectsSingleAssetAndCollapseSelectsPortfolio)
+{
+  auto state = ApplicationState{};
+  state.add_asset(Asset{"Asset"});
+  const auto asset = state.get_asset_handles().front();
+  const auto watchlist = *state.add_watchlist(Watchlist{"List", {asset}});
+  const auto main = add_ready_strategy(state, "Main");
+  const auto failsafe = add_ready_strategy(state, "Failsafe");
+  const auto system =
+   *state.add_system(System{"System", watchlist, {}, main, {{failsafe}}});
+  const auto portfolio = *state.add_portfolio(
+   Portfolio{"Portfolio", 1000, {}, {}, 10, 10, {}, {system}});
+  state.select_portfolio_context(portfolio, false);
+  EXPECT_FALSE(state.selected_portfolio_strategy());
+  state.select_portfolio_context(portfolio, true);
   EXPECT_EQ(state.selected_portfolio_strategy(),
             (pludux::apps::PortfolioStrategyKey{{system, asset}, 0}));
+  const auto other = pludux::apps::PortfolioStrategyKey{{system, asset}, 1};
+  ASSERT_TRUE(state.select_portfolio_strategy(portfolio, other));
+  state.select_portfolio_context(portfolio, true);
+  EXPECT_EQ(state.selected_portfolio_strategy(), other);
+  state.select_portfolio_context(portfolio, false);
+  EXPECT_EQ(state.selected_portfolio_handle(), portfolio);
+  EXPECT_FALSE(state.selected_portfolio_strategy());
+  state.select_portfolio_context(portfolio, true);
+  EXPECT_EQ(state.selected_portfolio_strategy(), other);
+  state.select_portfolio_context(portfolio, false);
+  auto stream = std::stringstream{};
+  pludux::apps::save_application_state_json(stream, state);
+  auto restored = pludux::apps::load_application_state_json(stream);
+  EXPECT_FALSE(restored.selected_portfolio_strategy());
+  restored.select_portfolio_context(portfolio, true);
+  EXPECT_EQ(restored.selected_portfolio_strategy(), other);
+  // A removed remembered child falls back to the first valid child.
+  state.select_portfolio_context(portfolio, false);
+  ASSERT_TRUE(state.remove_strategy(failsafe));
+  state.select_portfolio_context(portfolio, true);
+  EXPECT_EQ(state.selected_portfolio_strategy(),
+            (pludux::apps::PortfolioStrategyKey{{system, asset}, 0}));
+  ASSERT_TRUE(state.remove_asset(asset));
+  state.select_portfolio_context(portfolio, true);
+  EXPECT_FALSE(state.selected_portfolio_strategy());
 }
 
 TEST(WatchlistState, MissingReferencesRemainAsDisabledStrategyRows)
@@ -197,12 +326,15 @@ TEST(WatchlistState, MissingReferencesRemainAsDisabledStrategyRows)
   const auto asset = state.get_asset_handles().front();
   const auto watchlist = *state.add_watchlist(Watchlist{"List", {asset}});
   const auto strategy = add_ready_strategy(state);
-  const auto system = *state.add_system(System{"System", watchlist, {}, strategy});
-  const auto portfolio = *state.add_portfolio(Portfolio{"Portfolio", 1'000.0, {}, {}, 10, 10, {}, {system}});
+  const auto system =
+   *state.add_system(System{"System", watchlist, {}, strategy});
+  const auto portfolio = *state.add_portfolio(
+   Portfolio{"Portfolio", 1'000.0, {}, {}, 10, 10, {}, {system}});
   const auto selected = pludux::apps::PortfolioStrategyKey{{system, asset}, 0};
   ASSERT_TRUE(state.select_portfolio_strategy(portfolio, selected));
   ASSERT_TRUE(state.remove_asset(asset));
-  EXPECT_EQ(state.expanded_system_strategies(state.get_portfolio(portfolio)), (std::vector{selected}));
+  EXPECT_EQ(state.expanded_system_strategies(state.get_portfolio(portfolio)),
+            (std::vector{selected}));
   EXPECT_FALSE(state.selected_portfolio_strategy());
   ASSERT_TRUE(state.remove_system(system));
   EXPECT_EQ(state.expanded_system_strategies(state.get_portfolio(portfolio)),
@@ -210,7 +342,7 @@ TEST(WatchlistState, MissingReferencesRemainAsDisabledStrategyRows)
   EXPECT_FALSE(state.selected_portfolio_strategy());
 }
 
-TEST(WatchlistState, MissingStrategyDependencyFallsBackToFirstValidRow)
+TEST(WatchlistState, MissingStrategyDependencyReturnsToPortfolioScope)
 {
   auto state = ApplicationState{};
   state.add_asset(Asset{"Asset"});
@@ -223,8 +355,7 @@ TEST(WatchlistState, MissingStrategyDependencyFallsBackToFirstValidRow)
   const auto selected = pludux::apps::PortfolioStrategyKey{{system, asset}, 1};
   ASSERT_TRUE(state.select_portfolio_strategy(portfolio, selected));
   ASSERT_TRUE(state.remove_strategy(failsafe));
-  EXPECT_EQ(state.selected_portfolio_strategy(),
-            (pludux::apps::PortfolioStrategyKey{{system, asset}, 0}));
+  EXPECT_FALSE(state.selected_portfolio_strategy());
   EXPECT_FALSE(state.select_portfolio_strategy(portfolio, selected));
 }
 

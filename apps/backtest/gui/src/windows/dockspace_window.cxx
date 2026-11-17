@@ -162,6 +162,7 @@ private:
 
     ImGui::DockBuilderDockWindow("Chart", dock_left_id);
     ImGui::DockBuilderDockWindow("Trades", dock_left_down_id);
+    ImGui::DockBuilderDockWindow("Events", dock_left_down_id);
     ImGui::DockBuilderDockWindow("Overview", dock_right_id);
     for(const auto* window : {"Portfolios",
                               "Markets",

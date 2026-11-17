@@ -25,6 +25,7 @@ struct PortfolioStrategyKey {
 struct PortfolioStrategySelection {
   backtest::PortfolioStoreHandle portfolio_handle;
   PortfolioStrategyKey strategy;
+  bool active{true};
 
   auto operator==(const PortfolioStrategySelection&) const noexcept
    -> bool = default;
@@ -38,7 +39,8 @@ public:
    std::vector<PortfolioStrategySelection> selections)
   {
     for(const auto& selection : selections) {
-      remember(selection.portfolio_handle, selection.strategy);
+      remember(
+       selection.portfolio_handle, selection.strategy, selection.active);
     }
   }
 
@@ -55,6 +57,19 @@ public:
     const auto found =
      std::ranges::find(self.selections_,
                        portfolio_handle,
+                       &PortfolioStrategySelection::portfolio_handle);
+    return found != self.selections_.end() && found->active
+            ? std::optional{found->strategy}
+            : std::nullopt;
+  }
+
+  auto remembered(this const PortfolioStrategySelections& self,
+                  backtest::PortfolioStoreHandle portfolio_handle) noexcept
+   -> std::optional<PortfolioStrategyKey>
+  {
+    const auto found =
+     std::ranges::find(self.selections_,
+                       portfolio_handle,
                          &PortfolioStrategySelection::portfolio_handle);
     if(found == self.selections_.end()) {
       return std::nullopt;
@@ -64,17 +79,31 @@ public:
 
   void remember(this PortfolioStrategySelections& self,
                 backtest::PortfolioStoreHandle portfolio_handle,
-                PortfolioStrategyKey strategy)
+                PortfolioStrategyKey strategy,
+                bool active = true)
   {
     const auto found =
      std::ranges::find(self.selections_,
                        portfolio_handle,
                          &PortfolioStrategySelection::portfolio_handle);
     if(found == self.selections_.end()) {
-      self.selections_.push_back({portfolio_handle, strategy});
+      self.selections_.push_back({portfolio_handle, strategy, active});
       return;
     }
     found->strategy = strategy;
+    found->active = active;
+  }
+
+  void deactivate(this PortfolioStrategySelections& self,
+                  backtest::PortfolioStoreHandle portfolio_handle)
+  {
+    const auto found =
+     std::ranges::find(self.selections_,
+                       portfolio_handle,
+                       &PortfolioStrategySelection::portfolio_handle);
+    if(found != self.selections_.end()) {
+      found->active = false;
+    }
   }
 
   void remove_portfolio(this PortfolioStrategySelections& self,
@@ -107,19 +136,12 @@ public:
                   std::span<const PortfolioStrategyKey> ordered_strategies,
                   IsValid&& is_valid) -> std::optional<PortfolioStrategyKey>
   {
-    const auto remembered = self.lookup(portfolio_handle);
+    const auto remembered = self.remembered(portfolio_handle);
     if(remembered &&
         std::ranges::find(ordered_strategies, *remembered) !=
          ordered_strategies.end() &&
        is_valid(*remembered)) {
-      return remembered;
-    }
-
-    for(const auto strategy : ordered_strategies) {
-      if(is_valid(strategy)) {
-        self.remember(portfolio_handle, strategy);
-        return strategy;
-      }
+      return self.lookup(portfolio_handle);
     }
 
     self.remove_portfolio(portfolio_handle);

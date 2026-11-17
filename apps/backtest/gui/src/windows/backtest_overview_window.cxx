@@ -11,6 +11,7 @@ module;
 #include <string>
 #include <string_view>
 
+#include "../scope_results.hpp"
 #include "../ui/pludux_icons.hpp"
 
 #include <imgui.h>
@@ -60,6 +61,33 @@ public:
                          "Results are not available yet",
                          "The summary will populate when this portfolio has "
                          "produced its first timeline result.");
+      ImGui::End();
+      return;
+    }
+
+    if(const auto selected = app_state.selected_portfolio_strategy()) {
+      const auto* backtest = results.backtest(selected->run);
+      if(backtest) {
+        const auto* system =
+         app_state.get_system_if_present(selected->run.system_handle);
+        const auto* asset =
+         app_state.get_asset_if_present(selected->run.asset_handle);
+        const auto* strategy =
+         system && selected->strategy_index < system->strategy_count()
+          ? app_state.get_strategy_if_present(
+             system->strategy_handle(selected->strategy_index))
+          : nullptr;
+        ImGui::TextWrapped("%s — %s — %s",
+                           system ? system->name().c_str() : "Missing System",
+                           asset ? asset->name().c_str() : "Missing Asset",
+                           strategy ? strategy->name().c_str()
+                                    : "Missing Strategy");
+        render_single_asset_summary(
+         summarize_single_asset(backtest->timeline(), selected->strategy_index),
+         portfolio.initial_capital());
+      } else {
+        ImGui::TextDisabled("Single-Asset results are not available yet.");
+      }
       ImGui::End();
       return;
     }
@@ -450,6 +478,88 @@ public:
   }
 
 private:
+  static void render_single_asset_summary(const SingleAssetSummary& summary,
+                                          double initial_capital)
+  {
+    const auto metrics = std::array{
+     ui::SummaryMetric{
+      "Realized net P&L",
+      format_currency(summary.realized_pnl),
+      {},
+      "Includes realized partial exits of positions still open.",
+      {}},
+     ui::SummaryMetric{"Open unrealized P&L",
+                       format_currency(summary.unrealized_pnl),
+                       {},
+                       {},
+                       {}},
+     ui::SummaryMetric{"Return on deployed capital",
+                       format_optional_percent(percentage_of(
+                        summary.completed_pnl, summary.deployed_capital)),
+                       {},
+                       "Completed-trade net P&L divided by their cumulative "
+                       "fee-inclusive entry investment.",
+                       {}},
+     ui::SummaryMetric{
+      "Contribution to Portfolio return",
+      format_optional_percent(
+       percentage_of(summary.completed_pnl, initial_capital)),
+      {},
+      "Completed-trade net P&L divided by Portfolio initial capital.",
+      {}},
+     ui::SummaryMetric{
+      "Closed trades", std::to_string(summary.closed_count), {}, {}, {}},
+     ui::SummaryMetric{
+      "Open trades", std::to_string(summary.open_count), {}, {}, {}},
+     ui::SummaryMetric{
+      "Winning trades", std::to_string(summary.wins), {}, {}, {}},
+     ui::SummaryMetric{
+      "Losing trades", std::to_string(summary.losses_count), {}, {}, {}},
+     ui::SummaryMetric{"Break-even trades",
+                       std::to_string(summary.break_even_count),
+                       {},
+                       {},
+                       {}},
+     ui::SummaryMetric{"Win rate",
+                       format_optional_percent(percentage_of(
+                        static_cast<double>(summary.wins),
+                        static_cast<double>(summary.closed_count))),
+                       {},
+                       {},
+                       {}},
+     ui::SummaryMetric{
+      "Profit factor",
+      format_optional_ratio(division_of(summary.profits, summary.losses)),
+      {},
+      {},
+      {}},
+     ui::SummaryMetric{
+      "Average closed duration",
+      summary.closed_count
+       ? std::format("{:.1f} days",
+                     static_cast<double>(summary.closed_duration) /
+                      summary.closed_count / 86400.0)
+       : std::string{"—"},
+      {},
+      {},
+      {}},
+     ui::SummaryMetric{
+      "Open duration",
+      summary.open_count
+       ? std::format("{:.1f} days",
+                     static_cast<double>(summary.open_duration) / 86400.0)
+       : std::string{"—"},
+      {},
+      {},
+      {}}};
+    ui::summary_metric_section(
+     "##single_asset_summary",
+     PLUDUX_ICON_SUMMARY,
+     "Single-Asset performance",
+     "Actual trades in the shared-capital Portfolio simulation.",
+     metrics);
+  }
+
   static auto percentage_of(double value, double total) -> std::optional<double>
   {
     if(total == 0.0 || !std::isfinite(value) || !std::isfinite(total)) {

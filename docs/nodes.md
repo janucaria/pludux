@@ -3,8 +3,8 @@
 This is the complete method inventory exposed by the current editors and
 serializers. Method identifiers are uppercase and dot-qualified. **Model**
 means named series, signals, prices, risk, and plots. **Comparator** means
-Portfolio entry ranking. **Entry Filter** uses its own scalar/condition parser
-and adds `MODEL_PERFORMANCE.VALUE`.
+Portfolio entry ranking. **Entry Filter** uses its own scalar/condition parser.
+Both Comparator and Entry Filter expose `MODEL_PERFORMANCE.VALUE`.
 
 Unless stated otherwise, numeric sources accept another series node and
 condition inputs accept another condition node. Defaults shown by imported JSON
@@ -37,12 +37,13 @@ are defined by the parser; the GUI may seed a more useful initial expression.
 | Portfolio equity/drawdown state | Yes | No | Yes |
 | Conditions | All below | No | Comparisons except crosses; AND/OR/XOR/NOT/ALWAYS/NEVER |
 | Requested Order values | No | Yes | Yes, for the candidate order |
-| Model Performance | No | No | Yes |
+| Model Performance | No | Yes | Yes |
 | Risk, stop, target, and plot methods | Owning Model fields only | No | No |
 
 The comparator deliberately does not resolve named Model series or indicators.
-It has OHLCV/custom data, constants, lookback, scalar arithmetic, and Requested
-Order values. These restrictions are part of the execution contract.
+It has OHLCV/custom data, constants, lookback, scalar arithmetic, Requested
+Order values, and Model Performance snapshots. These restrictions are part of
+the execution contract.
 
 ## Market, account, and reusable values
 
@@ -212,12 +213,16 @@ ESTIMATED_1R_EXIT_FEE`. Values that do not apply to a candidate request are
 non-finite; expressions must not assume every optional limit or frozen quantity
 exists.
 
-## Entry Filter Model Performance
+## Entry Filter and Comparator Model Performance
 
 `MODEL_PERFORMANCE.VALUE` accepts a `metric` and returns the current value from
 the Strategy binding's theoretical Model Performance tracker. A System shares
-the calculation/prior configuration, not one mutable result history. The node
-is available only inside a Strategy Entry Filter. The 20 metric values are:
+the calculation/prior configuration, not one mutable result history. Entry
+Filters evaluate it for candidate initial orders. Comparators evaluate it for
+initial and pyramiding requests from the immutable snapshot captured for each
+requesting Strategy binding during request discovery, before ranking. That
+snapshot contains only evidence visible in the current execution phase; it
+cannot observe later ranking or execution outcomes. The 20 metric values are:
 
 | Counts and rates | Streaks | Returns and Bayesian estimates |
 | --- | --- | --- |

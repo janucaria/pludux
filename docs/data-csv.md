@@ -2,6 +2,12 @@
 
 Pludux loads an Asset from CSV market data.
 
+Reimporting a CSV replaces the history of the first Asset with the same
+case-sensitive name in the Assets list. Its watchlist references and OHLCV
+mappings are preserved. Desktop and browser imports use the full filename,
+including its extension. To refresh an older Asset named `BTC` in place,
+rename it to `BTC.csv` before importing that file.
+
 ## Verified behavior
 
 - The first column is read as the date/time field.

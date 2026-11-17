@@ -377,12 +377,14 @@ public:
   public:
      RequestedOrderAction(std::size_t strategy_index,
                          RequestedOrder requested_order,
+                         ModelPerformanceSnapshot model_performance,
                          std::size_t evaluation_lookback,
                          PositionSizingDecision sizing_decision,
                          std::size_t sizing_decision_index,
                          std::size_t entry_filter_decision_index) noexcept
      : strategy_index_{strategy_index}
     , requested_order_{std::move(requested_order)}
+    , model_performance_{std::move(model_performance)}
     , evaluation_lookback_{evaluation_lookback}
     , sizing_decision_{std::move(sizing_decision)}
     , sizing_decision_index_{sizing_decision_index}
@@ -400,6 +402,12 @@ public:
      -> const RequestedOrder&
     {
       return self.requested_order_;
+    }
+
+    auto model_performance(this const RequestedOrderAction& self) noexcept
+     -> const ModelPerformanceSnapshot&
+    {
+      return self.model_performance_;
     }
 
     auto is_long(this const RequestedOrderAction& self) noexcept -> bool
@@ -445,6 +453,7 @@ public:
   private:
     std::size_t strategy_index_;
     RequestedOrder requested_order_;
+    ModelPerformanceSnapshot model_performance_;
     std::size_t evaluation_lookback_;
     PositionSizingDecision sizing_decision_;
     std::size_t sizing_decision_index_;
@@ -573,6 +582,12 @@ public:
    -> const BacktestAccountState&
   {
     return self.current_account_state_;
+  }
+
+  auto current_bar_event_count(this const BacktestRunner& self) noexcept
+   -> std::size_t
+  {
+    return self.execution_session_.trade_events().size();
   }
 
   auto unrealized_pnl(this const BacktestRunner& self) noexcept -> double
@@ -907,7 +922,8 @@ public:
     return evaluate_series_method(
      method,
      self.requested_order_evaluation_snapshot(action),
-     RequestedOrderMethodContext{action.requested_order()});
+     RequestedOrderMethodContext{action.requested_order(),
+                                 action.model_performance()});
   }
 
   void settle_portfolio_account(this BacktestRunner& self) noexcept
@@ -2458,6 +2474,7 @@ private:
       self.discovered_requested_order_.emplace(
         self.active_strategy_index_.value_or(0),
        std::move(*requested_order),
+       performance_snapshot,
        self.active_timeline_index_ > 0 &&
          evaluation_snapshot.datetime() != self.active_snapshot_->datetime()
         ? 1U
@@ -2515,6 +2532,7 @@ private:
     }
     const auto direction =
      is_long ? ModelDirection::Long : ModelDirection::Short;
+    const auto performance_snapshot = self.model_performance_.snapshot();
     const auto model_position = self.model_session_.position();
     auto sizing_decision =
      self.requested_order_decision_preapproved_
@@ -2552,6 +2570,7 @@ private:
         self.discovered_requested_order_.emplace(
           self.active_strategy_index_.value_or(0),
          std::move(*requested_order),
+         performance_snapshot,
          self.active_timeline_index_ > 0 &&
            evaluation_snapshot.datetime() != self.active_snapshot_->datetime()
           ? 1U

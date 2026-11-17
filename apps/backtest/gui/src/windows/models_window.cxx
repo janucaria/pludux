@@ -60,6 +60,8 @@ using pludux::backtest::HLinePlotMethod;
 using pludux::backtest::InitialEntryPriceNode;
 using pludux::backtest::IsPyramidingOrderNode;
 using pludux::backtest::LatestEntryPriceNode;
+using pludux::backtest::ModelPerformanceMetric;
+using pludux::backtest::ModelPerformanceNode;
 using pludux::backtest::PositionDirectionNode;
 using pludux::backtest::PositionRMultipleNode;
 using pludux::backtest::PyramidingLayerNode;
@@ -294,6 +296,8 @@ auto get_default_portfolio_comparator_node(const std::string& id)
     return VolumeNode{};
   } else if(id == "MARKET_DATA.FIELD") {
     return DataNode{};
+  } else if(id == "MODEL_PERFORMANCE.VALUE") {
+    return ModelPerformanceNode{ModelPerformanceMetric::LifetimeCount};
   } else if(id == "OPERATOR.LOOKBACK") {
     return LookbackNode<backtest::RequestedOrderMethodContext>{CloseNode{}, 1};
   } else if(id == "REQUESTED_ORDER.PRICE") {
@@ -619,6 +623,8 @@ auto get_series_node_title(const std::string& series_id) -> std::string
     return "Requested Risk With Fees";
   } else if(series_id == "REQUESTED_ORDER.FROZEN_UNIT_QUANTITY") {
     return "Frozen Unit Quantity";
+  } else if(series_id == "MODEL_PERFORMANCE.VALUE") {
+    return "Model Performance";
   } else if(series_id == "OPERATOR.ABS") {
     return "Absolute Value";
   } else if(series_id == "OPERATOR.MAX") {
@@ -809,6 +815,7 @@ auto get_portfolio_comparator_node_combo_entries()
      "REQUESTED_ORDER.PRICE_RISK",
      "REQUESTED_ORDER.RISK_WITH_FEES",
      "REQUESTED_ORDER.FROZEN_UNIT_QUANTITY",
+     "MODEL_PERFORMANCE.VALUE",
      "MARKET_DATA.OPEN",
      "MARKET_DATA.HIGH",
      "MARKET_DATA.LOW",
@@ -833,7 +840,9 @@ auto get_portfolio_comparator_node_combo_entries()
     result.reserve(ids.size());
     for(const auto& id : ids) {
       const auto category =
-       id == "MARKET_DATA.OPEN" || id == "MARKET_DATA.HIGH" ||
+       id == "MODEL_PERFORMANCE.VALUE"
+        ? "Model Performance"
+       : id == "MARKET_DATA.OPEN" || id == "MARKET_DATA.HIGH" ||
          id == "MARKET_DATA.LOW" || id == "MARKET_DATA.CLOSE" ||
          id == "MARKET_DATA.VOLUME" || id == "MARKET_DATA.FIELD" ||
          id == "OPERATOR.LOOKBACK"
@@ -1409,6 +1418,8 @@ private:
       self.render_series_node_params(*value, context);
     } else if(auto* data = node_cast<DataNode>(node)) {
       self.render_series_node_params(*data, context);
+    } else if(auto* performance = node_cast<ModelPerformanceNode>(node)) {
+      self.render_series_node_params(*performance, context);
     } else if(auto* lookback =
                node_cast<LookbackNode<backtest::RequestedOrderMethodContext>>(
                 node)) {
@@ -3457,6 +3468,41 @@ private:
     auto field = node.field();
     if(ImGui::InputText("##field", &field)) {
       node.field(field);
+    }
+  }
+
+  void render_series_node_params(this auto&,
+                                 ModelPerformanceNode& node,
+                                 WindowContext&)
+  {
+    static constexpr auto labels = std::array{
+     "Lifetime completed positions",
+     "Effective completed positions",
+     "Frequentist win rate",
+     "Frequentist break-even rate",
+     "Frequentist loss rate",
+     "Current winning streak",
+     "Current losing streak",
+     "Maximum winning streak",
+     "Maximum losing streak",
+     "Mean return",
+     "Return standard deviation",
+     "Bayesian win probability",
+     "Bayesian win probability lower 95%",
+     "Bayesian win probability upper 95%",
+     "Bayesian winning payoff",
+     "Bayesian winning payoff lower 95%",
+     "Bayesian winning payoff upper 95%",
+     "Bayesian losing payoff",
+     "Bayesian losing payoff lower 95%",
+     "Bayesian losing payoff upper 95%"};
+    auto metric = static_cast<int>(node.metric());
+    ui::field_label("Metric");
+    if(ImGui::Combo("##model_performance_metric",
+                    &metric,
+                    labels.data(),
+                    static_cast<int>(labels.size()))) {
+      node = ModelPerformanceNode{static_cast<ModelPerformanceMetric>(metric)};
     }
   }
 

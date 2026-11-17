@@ -409,6 +409,7 @@ TEST(RequestedOrderComparatorConfigParserTest,
    R"({"method":"REQUESTED_ORDER.PRICE_RISK"})",
    R"({"method":"REQUESTED_ORDER.RISK_WITH_FEES"})",
    R"({"method":"REQUESTED_ORDER.FROZEN_UNIT_QUANTITY"})",
+   R"({"method":"MODEL_PERFORMANCE.VALUE","params":{"metric":"MEAN_RETURN"}})",
    R"({"method":"OPERATOR.ADD","params":{"augend":1,"addend":2}})",
    R"({"method":"OPERATOR.SUBTRACT","params":{"minuend":1,"subtrahend":2}})",
    R"({"method":"OPERATOR.MULTIPLY","params":{"multiplicand":1,"multiplier":2}})",
@@ -495,6 +496,47 @@ TEST(RequestedOrderComparatorConfigParserTest,
                                                model_only + "\"}")),
                  std::invalid_argument);
   }
+}
+
+TEST(RequestedOrderComparatorConfigParserTest,
+     RoundTripsEveryModelPerformanceMetric)
+{
+  const auto metrics = std::vector<std::string>{
+   "LIFETIME_COUNT",
+   "EFFECTIVE_COUNT",
+   "WIN_RATE",
+   "BREAK_EVEN_RATE",
+   "LOSS_RATE",
+   "CURRENT_WINNING_STREAK",
+   "CURRENT_LOSING_STREAK",
+   "MAXIMUM_WINNING_STREAK",
+   "MAXIMUM_LOSING_STREAK",
+   "MEAN_RETURN",
+   "RETURN_STANDARD_DEVIATION",
+   "BAYESIAN_WIN_PROBABILITY",
+   "BAYESIAN_WIN_PROBABILITY_LOWER_95",
+   "BAYESIAN_WIN_PROBABILITY_UPPER_95",
+   "BAYESIAN_WINNING_PAYOFF",
+   "BAYESIAN_WINNING_PAYOFF_LOWER_95",
+   "BAYESIAN_WINNING_PAYOFF_UPPER_95",
+   "BAYESIAN_LOSING_PAYOFF",
+   "BAYESIAN_LOSING_PAYOFF_LOWER_95",
+   "BAYESIAN_LOSING_PAYOFF_UPPER_95"};
+  auto parser = make_requested_order_comparator_config_parser();
+
+  for(const auto& metric : metrics) {
+    SCOPED_TRACE(metric);
+    const auto config = json::object{
+     {"method", "MODEL_PERFORMANCE.VALUE"},
+     {"params", json::object{{"metric", metric}}}};
+    const auto node = parser.parse_node(config);
+    EXPECT_NE(node_cast<ModelPerformanceNode>(node), nullptr);
+    EXPECT_EQ(parser.parse_node(parser.serialize_node(node)), node);
+  }
+
+  EXPECT_THROW(parser.parse_node(json::parse(
+                R"({"method":"MODEL_PERFORMANCE.VALUE","params":{"metric":"UNKNOWN"}})")),
+               std::invalid_argument);
 }
 
 auto node_context = NodeToErasedMethodContext{};

@@ -17,6 +17,7 @@ The dockspace opens these windows:
 - Portfolios
 - Chart
 - Trades
+- Events
 - Overview
 
 ## Assets window
@@ -90,18 +91,40 @@ Use this window to configure shared capital, Market (the trading venue or
 market context), Broker (the Market's broker or execution provider), capacity
 limits, entry comparators, and ordered Systems.
 
-Entry comparator caveat: Current Close sees completed current-bar OHLCV and
-custom DATA. Next Open sees the previous completed bar; use Requested Order
-Price when you need the executable current open price. See
+Entry comparators may use Requested Order values, phase-visible market data,
+and Model Performance from each requesting Strategy binding's immutable
+request-discovery snapshot. This applies to initial and pyramiding requests;
+named series and indicators are not available. Current Close sees completed
+current-bar OHLCV and custom DATA. Next Open sees the previous completed bar;
+use Requested Order Price when you need the executable current open price.
+Performance may already influence Bayesian or Kelly sizing, so using it for
+ranking can give the same evidence additional weight. See
 [Portfolio Backtesting](portfolio-backtesting.md) for authoritative comparator
 behavior.
 
-## Chart, Trades, and Overview
+## Chart, Trades, Events, and Overview
 
-These windows display the selected completed Portfolio run. Chart shows one
-expanded System × Asset backtest plus Portfolio overlays. Trades can switch
-between actual shared-capital executions and hypothetical Model activity.
-Overview summarizes Portfolio results. See [Results and Accounting](results.md).
+These windows share the scope selected in **Portfolios**. Selecting a
+Single-Asset child selects its parent Portfolio and that Strategy binding within
+a System–Asset run. Expanded Portfolio rows use Single-Asset scope, restoring
+the last selected child or choosing the first valid child when necessary.
+Collapsed rows use Portfolio scope and retain their child selection for
+reopening. Clicking a row selects that Portfolio with
+the context determined by its expansion state. If no valid child exists, the
+Portfolio uses Portfolio scope.
+
+Portfolio scope shows equity and drawdown in Chart, aggregate Trades and Events,
+and the Portfolio Overview. Portfolio Trades places open trades first, followed
+by closed trades in descending close-time order. Events uses newest-first time
+order and retains execution order within equal timestamps.
+
+Single-Asset scope retains its existing Chart, Trades, and Events views.
+Overview shows that child's actual trade performance, including net P&L,
+trade statistics, return on deployed capital, and contribution to Portfolio
+return. Trades can switch between actual shared-capital executions and
+hypothetical Model activity in both scopes. See
+[Getting Started](getting-started.md#9-run-and-inspect) for return definitions
+and [Results and Accounting](results.md) for accounting details.
 
 ## Notes
 

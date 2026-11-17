@@ -188,6 +188,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/windows/dockspace_window.cxx
     src/windows/backtest_chart_window.cxx
     src/windows/trade_list_window.cxx
+    src/windows/events_window.cxx
     src/windows.cxx
 
     src/application.cxx
@@ -305,9 +306,11 @@ if(NOT EMSCRIPTEN AND BUILD_TESTING)
         src/application_state.cxx
         src/state_diff.cxx
         src/command_executor.cxx
+        src/actions/load_asset_csv_action.cxx
         src/serialization.cxx
   )
   target_compile_definitions(pludux-backtest-test_command_history PRIVATE
+    PLUDUX_BACKTEST_SAMPLE_DIR="${CMAKE_SOURCE_DIR}/data/backtest/samples"
     PLUDUX_VERSION="${CMAKE_PROJECT_VERSION}"
   )
   target_link_libraries(pludux-backtest-test_command_history
@@ -366,6 +369,13 @@ if(NOT EMSCRIPTEN)
 
   endif()
 else()
+  # emscan-deps requests the unoptimized port even for release builds.
+  # Populate the SDK cache before any C++ module dependency scans start.
+  execute_process(
+    COMMAND "${EMSCRIPTEN_ROOT_PATH}/embuilder${EMCC_SUFFIX}" build emdawnwebgpu
+    COMMAND_ERROR_IS_FATAL ANY
+  )
+
   target_compile_definitions(${PROJECT_NAME} PUBLIC
     IMGUI_DISABLE_FILE_FUNCTIONS=1
     IMGUI_IMPL_WEBGPU_BACKEND_DAWN

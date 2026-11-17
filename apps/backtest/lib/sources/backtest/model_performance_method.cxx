@@ -10,6 +10,7 @@ import pludux;
 
 import :entry_filter_method_context;
 import :model_performance;
+import :requested_order_method_context;
 
 export namespace pludux::backtest {
 
@@ -66,12 +67,10 @@ auto hash_series_method(const ModelPerformanceMethod& method) noexcept
   return result;
 }
 
-auto pludux_tag_invoke(EvaluateSeriesMethod,
-                        const ModelPerformanceMethod& method,
-                       AssetSnapshot,
-                       EntryFilterMethodContext context) noexcept -> double
+auto evaluate_model_performance(
+ const ModelPerformanceMethod& method,
+ const ModelPerformanceSnapshot& performance) noexcept -> double
 {
-  const auto& performance = context.performance();
   switch(method.metric()) {
   case ModelPerformanceMetric::LifetimeCount:
     return static_cast<double>(performance.lifetime_count());
@@ -115,6 +114,22 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
     return performance.losing_payoff_posterior().upper_95;
   }
   return 0.0;
+}
+
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const ModelPerformanceMethod& method,
+                       AssetSnapshot,
+                       EntryFilterMethodContext context) noexcept -> double
+{
+  return evaluate_model_performance(method, context.performance());
+}
+
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const ModelPerformanceMethod& method,
+                       AssetSnapshot,
+                       RequestedOrderMethodContext context) noexcept -> double
+{
+  return evaluate_model_performance(method, context.model_performance());
 }
 
 } // namespace pludux::backtest

@@ -1,5 +1,6 @@
 module;
 
+#include "../scope_results.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -43,17 +44,6 @@ public:
     }
 
     const auto selected_strategy = app_state.selected_portfolio_strategy();
-    if(!selected_strategy) {
-      ui::summary_status(PLUDUX_ICON_TRADES,
-                          "No Backtest strategy selected",
-                          "Select a strategy from the active Portfolio to "
-                          "inspect its trades.");
-      ImGui::End();
-      return;
-    }
-    const auto run = selected_strategy->run;
-    const auto strategy_index = selected_strategy->strategy_index;
-
     if(!app_state.is_portfolio_ready(*portfolio)) {
       ui::summary_status(PLUDUX_ICON_WARNING,
                          "Portfolio setup is incomplete",
@@ -64,37 +54,68 @@ public:
     }
 
     const auto& results = app_state.get_portfolio_results(portfolio_handle);
-    const auto* backtest_results = results.backtest(run);
-    if(!backtest_results || backtest_results->timeline().empty()) {
+    const auto* selected_results =
+     selected_strategy ? results.backtest(selected_strategy->run) : nullptr;
+    if((selected_strategy &&
+        (!selected_results || selected_results->timeline().empty())) ||
+       (!selected_strategy && results.timeline().empty())) {
       ui::summary_status(PLUDUX_ICON_TRADES,
                          "No trade results yet",
                          "Trades will appear here as soon as the selected "
-                         "Backtest produces timeline results.");
+                         "scope produces timeline results.");
       ImGui::End();
       return;
     }
-
-    const auto backtest_iterator = std::ranges::find(
-     results.backtests(), run, &backtest::BacktestResults::key);
-    const auto backtest_index = static_cast<std::size_t>(
-     std::ranges::distance(results.backtests().begin(), backtest_iterator));
-    const auto* system = app_state.get_system_if_present(run.system_handle);
-    const auto* asset = app_state.get_asset_if_present(run.asset_handle);
-    const auto strategy_label = strategy_index == 0
-                                 ? std::string{"Main strategy"}
-                                 : std::format("Failsafe strategy {}", strategy_index);
-    const auto label =
-       system && asset
-        ? std::format(
-           "{} — {} — {}", system->name(), asset->name(), strategy_label)
-       : std::format("Missing Backtest Asset — {}", strategy_label);
-    auto trades = collect_trades(backtest_results->timeline(),
-                                 self.trade_source_,
-                                 backtest_index,
-                                  strategy_index,
-                                 label);
-    std::ranges::sort(trades, {}, &TradeView::entry_timestamp);
-    std::ranges::reverse(trades);
+    auto trades = std::vector<TradeView>{};
+    for(auto backtest_index = std::size_t{};
+        backtest_index < results.backtests().size();
+        ++backtest_index) {
+      const auto& backtest_results = results.backtests()[backtest_index];
+      const auto run = backtest_results.key();
+      if(selected_strategy && run != selected_strategy->run)
+        continue;
+      const auto* system = app_state.get_system_if_present(run.system_handle);
+      const auto* asset = app_state.get_asset_if_present(run.asset_handle);
+      if(!system || !asset)
+        continue;
+      for(auto strategy_index = std::size_t{};
+          strategy_index < system->strategy_count();
+          ++strategy_index) {
+        if(selected_strategy &&
+           strategy_index != selected_strategy->strategy_index)
+          continue;
+        const auto strategy_label =
+         strategy_index == 0
+          ? std::string{"Main strategy"}
+          : std::format("Failsafe strategy {}", strategy_index);
+        const auto label = std::format(
+         "{} — {} — {}", system->name(), asset->name(), strategy_label);
+        auto child_trades = collect_trades(backtest_results.timeline(),
+                                           self.trade_source_,
+                                           backtest_index,
+                                           strategy_index,
+                                           label);
+        trades.insert(trades.end(), child_trades.begin(), child_trades.end());
+      }
+    }
+    if(selected_strategy) {
+      std::ranges::sort(trades, {}, &TradeView::entry_timestamp);
+      std::ranges::reverse(trades);
+    } else {
+      std::ranges::sort(trades, [](const TradeView& lhs, const TradeView& rhs) {
+        return portfolio_trade_before(
+         {lhs.key.open,
+          lhs.exit_timestamp.value_or(lhs.entry_timestamp),
+          lhs.key.backtest_index,
+          lhs.key.strategy_index,
+          lhs.key.id},
+         {rhs.key.open,
+          rhs.exit_timestamp.value_or(rhs.entry_timestamp),
+          rhs.key.backtest_index,
+          rhs.key.strategy_index,
+          rhs.key.id});
+      });
+    }
     self.synchronize_selection(trades);
 
     const auto visible_trades = self.filter_trades(trades);
@@ -104,7 +125,7 @@ public:
     if(trades.empty()) {
       ui::summary_status(PLUDUX_ICON_TRADES,
                          "No trades were generated",
-                          "The selected strategy has no matching trade activity. "
+                         "The current scope has no matching trade activity. "
                          "Review its strategy signals or tested date range.");
       ImGui::End();
       return;
