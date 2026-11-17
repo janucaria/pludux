@@ -107,6 +107,14 @@ private:
   std::vector<SeriesEvaluationResults> strategy_series_results_;
 };
 
+struct PortfolioEventRef {
+  std::size_t backtest_index;
+  std::size_t bar_index;
+  std::size_t event_index;
+
+  auto operator==(const PortfolioEventRef&) const noexcept -> bool = default;
+};
+
 class PortfolioResults {
 public:
   PortfolioResults() = default;
@@ -119,6 +127,18 @@ public:
   }
 
   auto operator==(const PortfolioResults&) const noexcept -> bool = default;
+
+  auto events(this const PortfolioResults& self) noexcept
+   -> const std::vector<PortfolioEventRef>&
+  {
+    return self.events_;
+  }
+
+  void append_events(this PortfolioResults& self,
+                     const std::vector<PortfolioEventRef>& events)
+  {
+    self.events_.insert(self.events_.end(), events.begin(), events.end());
+  }
 
   auto timeline(this const PortfolioResults& self) noexcept
    -> const PortfolioTimeline&
@@ -168,6 +188,7 @@ public:
 private:
   PortfolioTimeline timeline_;
   std::vector<BacktestResults> backtests_;
+  std::vector<PortfolioEventRef> events_;
 };
 
 } // namespace pludux::backtest

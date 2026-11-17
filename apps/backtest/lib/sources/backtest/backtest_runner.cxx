@@ -584,6 +584,12 @@ public:
     return self.current_account_state_;
   }
 
+  auto current_bar_event_count(this const BacktestRunner& self) noexcept
+   -> std::size_t
+  {
+    return self.execution_session_.trade_events().size();
+  }
+
   auto unrealized_pnl(this const BacktestRunner& self) noexcept -> double
   {
     return self.execution_session_.unrealized_pnl();

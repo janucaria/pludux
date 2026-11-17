@@ -243,6 +243,7 @@ public:
       auto backtest_overview = BacktestOverviewWindow{};
       backtest_overview.render(window_context);
       self.trade_list_window_.render(window_context);
+      self.events_window_.render(window_context);
       self.assets_window_.render(window_context);
       self.watchlists_window_.render(window_context);
        self.models_window_.render(window_context);
@@ -524,6 +525,7 @@ private:
   BrokersWindow brokers_window_;
   PortfoliosWindow portfolios_window_;
   TradeListWindow trade_list_window_;
+  EventsWindow events_window_;
 
   ApplicationState app_state_;
   std::unordered_map<backtest::PortfolioStoreHandle, backtest::PortfolioRunner>

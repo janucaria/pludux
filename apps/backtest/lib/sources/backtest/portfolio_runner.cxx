@@ -155,12 +155,22 @@ public:
       }
     }
 
+    std::vector<PortfolioEventRef> events;
+    const auto record_events = [&](std::size_t index, std::size_t first) {
+      const auto count = self.backtests_[index].runner().current_bar_event_count();
+      const auto bar = results.backtests()[index].timeline().size();
+      for(auto event = first; event < count; ++event) {
+        events.push_back({index, bar, event});
+      }
+    };
     const auto run_exit_phase = [&](auto action) {
       for(const auto index : active) {
         auto& runner = self.backtests_[index].runner();
         self.sync_backtest(runner);
         const auto capital_before = self.account_.capital();
+        const auto first = runner.current_bar_event_count();
         action(runner, results.backtests()[index]);
+        record_events(index, first);
         runner.settle_portfolio_account();
         self.account_.capital(
          self.account_.capital() +
@@ -175,7 +185,10 @@ public:
         auto& runner = self.backtests_[index].runner();
         self.sync_backtest(runner);
         auto& result = results.backtests()[index];
-        if(auto requested_order = discover(runner, result)) {
+        const auto first = runner.current_bar_event_count();
+        auto requested_order = discover(runner, result);
+        record_events(index, first);
+        if(requested_order) {
           auto scores = std::vector<double>{};
           scores.reserve(self.entry_comparators_.size());
           for(const auto& comparator : self.entry_comparators_) {
@@ -195,8 +208,10 @@ public:
         auto& runner = self.backtests_[requested_order.backtest_index].runner();
         auto& result = results.backtests()[requested_order.backtest_index];
         self.sync_backtest(runner);
+        const auto first = runner.current_bar_event_count();
         runner.execute_requested_order(requested_order.action,
                                         result.strategy_series_results());
+        record_events(requested_order.backtest_index, first);
         self.refresh_unrealized();
       }
     };
@@ -260,6 +275,7 @@ public:
      .fresh_backtest_count = fresh_count,
      .stale_backtest_count = stale_count,
      .unavailable_backtest_count = unavailable_count});
+    results.append_events(events);
   }
 
   auto run_batch(this PortfolioRunner& self,

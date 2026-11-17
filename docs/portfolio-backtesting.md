@@ -222,6 +222,25 @@ Setup × Asset row onto a compact axis:
   remain aggregate because main and failsafe setups still execute together with
   shared Portfolio capital.
 
+### Events
+
+The **Events** window beside **Trades** lists actual fills and order
+rejections for the selected System, Asset, and Strategy in the active Portfolio,
+including rejected initial orders that never opened a trade. It follows the same
+Portfolios tree selection as Trades. Events appear newest first.
+Rows with the same timestamp follow execution order, so you can see which
+order used shared cash before another order was rejected.
+
+Each row shows the time, System, Strategy, Asset, event, quantity, and price.
+Fills show the buy or sell side and the cause (entry, scale in, scale out,
+signal exit, stop loss, or take profit). Rejections show the requested quantity
+and price and identify the limit reached (cash, open trades, or combined
+layers). A cash rejection also shows the required and available amounts.
+
+The event-type filter defaults to all events within the selected setup. Use it
+to inspect, for example, stop-loss fills. A partial exit with a recorded cause
+matches both Scale out and its exit cause, with one row in the timeline. Hypothetical Model activity is available in the Trades window.
+
 ## Portfolio Hierarchy and Chart Selection
 
 The Portfolios window is an expandable tree. Each top-level Portfolio contains
