@@ -401,7 +401,7 @@ private:
 
           if(self.editing_asset_ptr_->name().empty()) {
             self.editing_asset_ptr_->name(
-             std::filesystem::path{selected_path}.stem().string());
+             std::filesystem::path{selected_path}.filename().string());
           }
         } else if(result == NFD_CANCEL) {
           // User cancelled the open dialog

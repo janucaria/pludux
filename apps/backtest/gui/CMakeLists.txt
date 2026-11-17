@@ -306,9 +306,11 @@ if(NOT EMSCRIPTEN AND BUILD_TESTING)
         src/application_state.cxx
         src/state_diff.cxx
         src/command_executor.cxx
+        src/actions/load_asset_csv_action.cxx
         src/serialization.cxx
   )
   target_compile_definitions(pludux-backtest-test_command_history PRIVATE
+    PLUDUX_BACKTEST_SAMPLE_DIR="${CMAKE_SOURCE_DIR}/data/backtest/samples"
     PLUDUX_VERSION="${CMAKE_PROJECT_VERSION}"
   )
   target_link_libraries(pludux-backtest-test_command_history

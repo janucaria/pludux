@@ -10,7 +10,7 @@ module;
 #include <utility>
 #include <vector>
 
-export module pludux.apps.backtest:actions.load_asset_csv_action;
+export module pludux.apps.backtest.load_asset_csv_action;
 
 import pludux.backtest;
 import pludux.apps.backtest.application_state;
@@ -29,7 +29,7 @@ public:
   }
 
   LoadAssetCsvAction(std::filesystem::path source)
-  : asset_name_{source.stem().string()}
+  : asset_name_{source.filename().string()}
   , source_{std::move(source)}
   {
   }
@@ -63,10 +63,10 @@ private:
                              std::istream& csv_stream,
                              ApplicationState& app_state)
   {
-    auto asset_ptr = backtest::Asset{asset_name};
-    pludux::update_asset_from_csv(asset_ptr, csv_stream);
+    auto asset = backtest::Asset{asset_name};
+    pludux::update_asset_from_csv(asset, csv_stream);
 
-    app_state.add_asset(std::move(asset_ptr));
+    app_state.import_asset(std::move(asset));
   }
 };
 

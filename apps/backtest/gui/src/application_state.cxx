@@ -482,6 +482,21 @@ public:
     }
   }
 
+  void import_asset(this ApplicationState& self, backtest::Asset asset)
+  {
+    for(const auto handle : self.get_asset_handles()) {
+      const auto& existing = self.get_asset(handle);
+      if(existing.name() == asset.name()) {
+        auto fields = existing.field_resolver();
+        fields.datetime_field(asset.field_resolver().datetime_field());
+        asset.field_resolver(std::move(fields));
+        self.update_asset(handle, std::move(asset));
+        return;
+      }
+    }
+    self.add_asset(std::move(asset));
+  }
+
   auto get_asset(this const ApplicationState& self,
                  backtest::AssetStoreHandle handle) noexcept
    -> const backtest::Asset&
