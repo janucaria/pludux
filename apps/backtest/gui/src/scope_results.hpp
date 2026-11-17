@@ -80,6 +80,17 @@ struct SingleAssetSummary {
 };
 
 template<typename Timeline>
+auto has_open_position(const Timeline& timeline, std::size_t strategy_index)
+ -> bool
+{
+  if(timeline.empty()) {
+    return false;
+  }
+  const auto& position = timeline.open_position(timeline.size() - 1);
+  return position && position->strategy_index() == strategy_index;
+}
+
+template<typename Timeline>
 auto summarize_single_asset(const Timeline& timeline,
                             std::size_t strategy_index) -> SingleAssetSummary
 {

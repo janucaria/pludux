@@ -203,6 +203,19 @@ TEST(ScopeResults, OpenPositionKeepsOwnerAndRemainingFeeAdjustedPnl)
   EXPECT_EQ(pludux::apps::summarize_single_asset(timeline, 0).open_count, 0);
 }
 
+TEST(ScopeResults, OpenPositionMarkerFollowsLatestPositionOwner)
+{
+  using pludux::apps::has_open_position;
+  auto timeline = BacktestTimeline{};
+  EXPECT_FALSE(has_open_position(timeline, 0));
+  timeline.append(
+   {.open_position = OpenPositionSnapshot{1, 1, 10, 30, 12, 5, 50.5, 10, 0.5}});
+  EXPECT_TRUE(has_open_position(timeline, 1));
+  EXPECT_FALSE(has_open_position(timeline, 0));
+  timeline.append({});
+  EXPECT_FALSE(has_open_position(timeline, 1));
+}
+
 TEST(ScopeResults, AggregateEventsKeepExecutionOrderAndScopeFilters)
 {
   using Type = TradeEvent::Type;

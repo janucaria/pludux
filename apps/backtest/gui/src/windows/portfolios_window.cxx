@@ -12,6 +12,7 @@ module;
 #include <utility>
 #include <vector>
 
+#include "../scope_results.hpp"
 #include "../ui/pludux_icons.hpp"
 
 #include <imgui.h>
@@ -247,6 +248,7 @@ private:
          });
       }
       if(open) {
+        const auto* results = app_state.get_portfolio_results_if_present(handle);
         for(const auto& row : rows) {
           if(!portfolio_matches &&
              !self.filter_.PassFilter(row.label.c_str())) {
@@ -265,7 +267,20 @@ private:
           const auto child_selected =
            selected_setup && *selected_setup == row.key;
           if(row.valid) {
-            if(ImGui::Selectable(row.label.c_str(), child_selected)) {
+            const auto* run = results ? results->backtest(row.key.run) : nullptr;
+            bool icon_clicked = false;
+            if(run && !run->timeline().empty()) {
+              const auto is_open =
+               has_open_position(run->timeline(), row.key.strategy_index);
+              ImGui::TextUnformatted(is_open ? PLUDUX_ICON_OPEN_POSITION
+                                            : PLUDUX_ICON_FLAT_POSITION);
+              icon_clicked = ImGui::IsItemClicked();
+              ImGui::SetItemTooltip("%s", is_open ? "Open position"
+                                                  : "Flat position");
+              ImGui::SameLine();
+            }
+            if(ImGui::Selectable(row.label.c_str(), child_selected) ||
+               icon_clicked) {
               context.push_view_action(
                [handle, key = row.key](ApplicationState& state) {
                  state.select_portfolio_strategy(handle, key);
