@@ -1,5 +1,7 @@
 module;
 
+#include <compare>
+
 export module pludux.backtest:entry_filter_method_context;
 
 import pludux;

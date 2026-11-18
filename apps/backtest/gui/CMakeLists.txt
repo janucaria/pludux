@@ -49,7 +49,7 @@ if(NOT EMSCRIPTEN)
   FetchContent_Declare(
     glfw
     GIT_REPOSITORY "https://github.com/glfw/glfw.git"
-    GIT_TAG        "3.4"
+    GIT_TAG        "3.5.1"
     GIT_SHALLOW    TRUE
     GIT_PROGRESS   TRUE
   )
@@ -78,7 +78,7 @@ if(NOT EMSCRIPTEN)
   FetchContent_Declare(
     nativefiledialog-extended
     GIT_REPOSITORY "https://github.com/btzy/nativefiledialog-extended.git"
-    GIT_TAG        "v1.3.0"
+    GIT_TAG        "v1.4.1"
     GIT_SHALLOW    TRUE
     GIT_PROGRESS   TRUE
   )
@@ -90,7 +90,7 @@ endif()
 FetchContent_Declare(
   imgui
   GIT_REPOSITORY "https://github.com/ocornut/imgui.git"
-  GIT_TAG        "v1.92.9-docking"
+  GIT_TAG        "v1.93.0-docking"
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
 )
@@ -98,7 +98,7 @@ FetchContent_Declare(
 FetchContent_Declare(
   implot
   GIT_REPOSITORY "https://github.com/epezent/implot.git"
-  GIT_TAG        "v1.0"
+  GIT_TAG        "v1.1"
   GIT_SHALLOW    TRUE
   GIT_PROGRESS   TRUE
 )

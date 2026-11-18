@@ -13,7 +13,7 @@ module;
 #include <vector>
 
 #include <jsoncons/json.hpp>
-#include <jsoncons/reflect/json_conv_traits.hpp>
+#include <jsoncons/reflect/json_traits.hpp>
 
 export module pludux.apps.backtest.serialization;
 
@@ -144,7 +144,7 @@ void set_json(Json& json,
               const TValue& value)
 {
   json[key] =
-   jsoncons::reflect::json_conv_traits<Json, TValue>::to_json(aset, value);
+   jsoncons::reflect::json_traits<Json, TValue>::to_json(aset, value);
 }
 
 template<typename Json, typename TValue>
@@ -153,7 +153,7 @@ auto vector_to_json(const auto& aset, const std::vector<TValue>& values) -> Json
   auto json = typename Json::array();
   for(const auto& value : values) {
     json.push_back(
-     jsoncons::reflect::json_conv_traits<Json, TValue>::to_json(aset, value));
+     jsoncons::reflect::json_traits<Json, TValue>::to_json(aset, value));
   }
   return json;
 }
@@ -176,7 +176,7 @@ auto model_entry_to_json(const auto& aset, const pludux::backtest::Model& model)
   auto json = Json{};
   json["name"] = model.name();
   json["config"] =
-   jsoncons::reflect::json_conv_traits<Json, pludux::backtest::Model>::to_json(
+   jsoncons::reflect::json_traits<Json, pludux::backtest::Model>::to_json(
     aset, model);
   return json;
 }
@@ -362,7 +362,7 @@ auto model_performance_to_json(
 export namespace jsoncons::reflect {
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::NumericInputNode> {
+struct json_traits<Json, pludux::NumericInputNode> {
   using value_type = pludux::NumericInputNode;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -409,7 +409,7 @@ struct json_conv_traits<Json, pludux::NumericInputNode> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::PositionSizingNode> {
+struct json_traits<Json, pludux::backtest::PositionSizingNode> {
   using value_type = pludux::backtest::PositionSizingNode;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -526,7 +526,7 @@ struct json_conv_traits<Json, pludux::backtest::PositionSizingNode> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::DrawdownAdjustment> {
+struct json_traits<Json, pludux::backtest::DrawdownAdjustment> {
   using value_type = pludux::backtest::DrawdownAdjustment;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -569,7 +569,7 @@ struct json_conv_traits<Json, pludux::backtest::DrawdownAdjustment> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::InsufficientCashPolicy> {
+struct json_traits<Json, pludux::backtest::InsufficientCashPolicy> {
   using value_type = pludux::backtest::InsufficientCashPolicy;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -614,7 +614,7 @@ struct json_conv_traits<Json, pludux::backtest::InsufficientCashPolicy> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::Profile> {
+struct json_traits<Json, pludux::backtest::Profile> {
   using value_type = pludux::backtest::Profile;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -659,7 +659,7 @@ struct json_conv_traits<Json, pludux::backtest::Profile> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::BrokerFee> {
+struct json_traits<Json, pludux::backtest::BrokerFee> {
   using value_type = pludux::backtest::BrokerFee;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -714,7 +714,7 @@ struct json_conv_traits<Json, pludux::backtest::BrokerFee> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::Broker> {
+struct json_traits<Json, pludux::backtest::Broker> {
   using value_type = pludux::backtest::Broker;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -753,7 +753,7 @@ struct json_conv_traits<Json, pludux::backtest::Broker> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::Market> {
+struct json_traits<Json, pludux::backtest::Market> {
   using value_type = pludux::backtest::Market;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -794,7 +794,7 @@ struct json_conv_traits<Json, pludux::backtest::Market> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::AssetQuoteFieldResolver> {
+struct json_traits<Json, pludux::AssetQuoteFieldResolver> {
   using value_type = pludux::AssetQuoteFieldResolver;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -839,7 +839,7 @@ struct json_conv_traits<Json, pludux::AssetQuoteFieldResolver> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::AssetData> {
+struct json_traits<Json, pludux::AssetData> {
   using value_type = pludux::AssetData;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -881,7 +881,7 @@ struct json_conv_traits<Json, pludux::AssetData> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::AssetHistory> {
+struct json_traits<Json, pludux::AssetHistory> {
   using value_type = pludux::AssetHistory;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -925,7 +925,7 @@ struct json_conv_traits<Json, pludux::AssetHistory> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::Asset> {
+struct json_traits<Json, pludux::backtest::Asset> {
   using value_type = pludux::backtest::Asset;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -965,7 +965,7 @@ struct json_conv_traits<Json, pludux::backtest::Asset> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::Watchlist> {
+struct json_traits<Json, pludux::backtest::Watchlist> {
   using value_type = pludux::backtest::Watchlist;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -1012,7 +1012,7 @@ template<typename Json, typename THandle>
            std::same_as<THandle, pludux::backtest::StrategyStoreHandle> ||
            std::same_as<THandle, pludux::backtest::SystemStoreHandle> ||
            std::same_as<THandle, pludux::backtest::PortfolioStoreHandle>
-struct json_conv_traits<Json, THandle> {
+struct json_traits<Json, THandle> {
   using value_type = THandle;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -1048,7 +1048,7 @@ struct json_conv_traits<Json, THandle> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::StoreSlot> {
+struct json_traits<Json, pludux::backtest::StoreSlot> {
   using value_type = pludux::backtest::StoreSlot;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -1086,7 +1086,7 @@ struct json_conv_traits<Json, pludux::backtest::StoreSlot> {
 };
 
 template<typename Json, typename TValue, typename THandle>
-struct json_conv_traits<Json,
+struct json_traits<Json,
                         pludux::backtest::StoreDataResolver<TValue, THandle>> {
   using value_type = pludux::backtest::StoreDataResolver<TValue, THandle>;
   using result_type = jsoncons::conversion_result<value_type>;
@@ -1125,7 +1125,7 @@ struct json_conv_traits<Json,
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::Strategy> {
+struct json_traits<Json, pludux::backtest::Strategy> {
   using value_type = pludux::backtest::Strategy;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -1175,7 +1175,7 @@ struct json_conv_traits<Json, pludux::backtest::Strategy> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::SystemFailsafeStrategy> {
+struct json_traits<Json, pludux::backtest::SystemFailsafeStrategy> {
   using value_type = pludux::backtest::SystemFailsafeStrategy;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -1231,7 +1231,7 @@ struct json_conv_traits<Json, pludux::backtest::SystemFailsafeStrategy> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::System> {
+struct json_traits<Json, pludux::backtest::System> {
   using value_type = pludux::backtest::System;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -1283,7 +1283,7 @@ struct json_conv_traits<Json, pludux::backtest::System> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::PortfolioEntryComparatorOrder> {
+struct json_traits<Json, pludux::backtest::PortfolioEntryComparatorOrder> {
   using value_type = pludux::backtest::PortfolioEntryComparatorOrder;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -1322,7 +1322,7 @@ struct json_conv_traits<Json, pludux::backtest::PortfolioEntryComparatorOrder> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::PortfolioEntryComparator> {
+struct json_traits<Json, pludux::backtest::PortfolioEntryComparator> {
   using value_type = pludux::backtest::PortfolioEntryComparator;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -1366,7 +1366,7 @@ struct json_conv_traits<Json, pludux::backtest::PortfolioEntryComparator> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::Portfolio> {
+struct json_traits<Json, pludux::backtest::Portfolio> {
   using value_type = pludux::backtest::Portfolio;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -1427,7 +1427,7 @@ struct json_conv_traits<Json, pludux::backtest::Portfolio> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::StoreDescriptor> {
+struct json_traits<Json, pludux::backtest::StoreDescriptor> {
   using value_type = pludux::backtest::StoreDescriptor;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -1531,7 +1531,7 @@ struct json_conv_traits<Json, pludux::backtest::StoreDescriptor> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::StoreArena> {
+struct json_traits<Json, pludux::backtest::StoreArena> {
   using value_type = pludux::backtest::StoreArena;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -1582,7 +1582,7 @@ struct json_conv_traits<Json, pludux::backtest::StoreArena> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::Store> {
+struct json_traits<Json, pludux::backtest::Store> {
   using value_type = pludux::backtest::Store;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -1618,7 +1618,7 @@ struct json_conv_traits<Json, pludux::backtest::Store> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::apps::PortfolioStrategySelection> {
+struct json_traits<Json, pludux::apps::PortfolioStrategySelection> {
   using value_type = pludux::apps::PortfolioStrategySelection;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -1660,7 +1660,7 @@ struct json_conv_traits<Json, pludux::apps::PortfolioStrategySelection> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::apps::PortfolioStrategySelections> {
+struct json_traits<Json, pludux::apps::PortfolioStrategySelections> {
   using value_type = pludux::apps::PortfolioStrategySelections;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -1692,7 +1692,7 @@ struct json_conv_traits<Json, pludux::apps::PortfolioStrategySelections> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::apps::DocumentState> {
+struct json_traits<Json, pludux::apps::DocumentState> {
   using value_type = pludux::apps::DocumentState;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -1760,7 +1760,7 @@ struct json_conv_traits<Json, pludux::apps::DocumentState> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::apps::ViewState> {
+struct json_traits<Json, pludux::apps::ViewState> {
   using value_type = pludux::apps::ViewState;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -1820,7 +1820,7 @@ struct json_conv_traits<Json, pludux::apps::ViewState> {
 };
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::apps::ApplicationState> {
+struct json_traits<Json, pludux::apps::ApplicationState> {
   using value_type = pludux::apps::ApplicationState;
   using result_type = jsoncons::conversion_result<value_type>;
 
@@ -1876,7 +1876,7 @@ void save_application_state_json(std::ostream& out_stream,
 {
   auto root = jsoncons::ojson{};
   root["pludux"] =
-   jsoncons::reflect::json_conv_traits<jsoncons::ojson, ApplicationState>::
+   jsoncons::reflect::json_traits<jsoncons::ojson, ApplicationState>::
     to_json(jsoncons::make_alloc_set(), app_state);
 
   out_stream << root.to_string();

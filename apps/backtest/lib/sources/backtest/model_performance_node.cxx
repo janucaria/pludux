@@ -1,5 +1,7 @@
 module;
 
+#include <compare>
+
 export module pludux.backtest:model_performance_node;
 
 import :model_performance;

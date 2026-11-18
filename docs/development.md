@@ -7,13 +7,17 @@ in `apps/backtest/gui/`.
 
 ## Configure and build
 
-On Windows with Visual Studio 2022 and the MSVC toolchain configured, use the
-checked-in preset:
+On Windows, use Visual Studio 2026 with the MSVC x64 toolchain and CMake 4.2
+or later.
 
 ```powershell
 cmake --preset msvc-debug
 cmake --build --preset msvc-build-debug -j 1
 ```
+
+After a Visual Studio update replaces the MSVC toolset, run
+`cmake --fresh --preset msvc-debug` (or `cmake --fresh --preset msvc-release`)
+once to clear the cached compiler path. CMake may download dependencies again.
 
 Other configure presets in `CMakePresets.json` are `msvc-release`,
 `clang-debug`, and the Emscripten debug/release presets. Matching build presets

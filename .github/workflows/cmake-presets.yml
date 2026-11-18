@@ -32,7 +32,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Install build dependencies
         run: |
@@ -49,12 +49,13 @@ jobs:
             libgl1-mesa-dev
 
       - name: Setup Emscripten SDK
-        uses: mymindstorm/setup-emsdk@v14
+        uses: emscripten-core/setup-emsdk@v16
         with:
-          version: 6.0.5
+          # Newer SDKs trigger libc++ std::any deduction errors in C++ modules.
+          version: '6.0.5'
 
       - name: Cache FetchContent sources
-        uses: actions/cache@v4
+        uses: actions/cache@v6.1.0
         with:
           path: .out/deps/${{ runner.os }}
           key: ${{ runner.os }}-fetchcontent-${{ hashFiles('CMakePresets.json', 'CMakeLists.txt', 'libs/**/CMakeLists.txt', 'apps/**/CMakeLists.txt') }}
@@ -76,7 +77,7 @@ jobs:
 
       - name: Upload Emscripten release
         if: matrix.configure_preset == 'emscripten-release'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: pludux-web-${{ github.sha }}
           path: .out/webroot/

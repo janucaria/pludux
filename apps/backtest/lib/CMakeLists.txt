@@ -1,10 +1,10 @@
 project(pludux-backtest-lib)
 
 SET(JSONCONS_BUILD_TESTS OFF)
-FetchContent_Declare(jsoncons GIT_REPOSITORY https://github.com/danielaparker/jsoncons.git GIT_TAG v1.8.1 GIT_SHALLOW TRUE GIT_PROGRESS TRUE EXCLUDE_FROM_ALL)
-FetchContent_Declare(rapidcsv GIT_REPOSITORY https://github.com/d99kris/rapidcsv.git GIT_TAG v8.99 GIT_SHALLOW TRUE GIT_PROGRESS TRUE)
+FetchContent_Declare(jsoncons GIT_REPOSITORY https://github.com/danielaparker/jsoncons.git GIT_TAG v1.10.0 GIT_SHALLOW TRUE GIT_PROGRESS TRUE EXCLUDE_FROM_ALL)
+FetchContent_Declare(rapidcsv GIT_REPOSITORY https://github.com/d99kris/rapidcsv.git GIT_TAG v9.07 GIT_SHALLOW TRUE GIT_PROGRESS TRUE)
 FetchContent_Declare(ctre GIT_REPOSITORY https://github.com/hanickadot/compile-time-regular-expressions.git GIT_TAG v3.11.0 GIT_SHALLOW TRUE GIT_PROGRESS TRUE PATCH_COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/patch/ctre/ <SOURCE_DIR>/)
-FetchContent_Declare(boost_math GIT_REPOSITORY https://github.com/boostorg/math.git GIT_TAG boost-1.91.0 GIT_SHALLOW TRUE GIT_PROGRESS TRUE EXCLUDE_FROM_ALL SOURCE_SUBDIR _pludux_header_only)
+FetchContent_Declare(boost_math GIT_REPOSITORY https://github.com/boostorg/math.git GIT_TAG boost-1.92.0 GIT_SHALLOW TRUE GIT_PROGRESS TRUE EXCLUDE_FROM_ALL SOURCE_SUBDIR _pludux_header_only)
 FetchContent_MakeAvailable(jsoncons rapidcsv ctre boost_math)
 
 add_library(${PROJECT_NAME})

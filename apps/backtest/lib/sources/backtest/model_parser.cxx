@@ -15,7 +15,7 @@ module;
 #include <utility>
 
 #include <jsoncons/json.hpp>
-#include <jsoncons/reflect/json_conv_traits.hpp>
+#include <jsoncons/reflect/json_traits.hpp>
 
 export module pludux.backtest:model_parser;
 
@@ -691,7 +691,7 @@ auto stringify_model(const backtest::Model& model)
 export namespace jsoncons::reflect {
 
 template<typename Json>
-struct json_conv_traits<Json, pludux::backtest::Model> {
+struct json_traits<Json, pludux::backtest::Model> {
   using value_type = pludux::backtest::Model;
   using result_type = jsoncons::conversion_result<value_type>;
 

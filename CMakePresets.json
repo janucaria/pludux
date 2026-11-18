@@ -24,7 +24,7 @@
       },
       "architecture": {
         "value": "x64",
-        "strategy": "external"
+        "strategy": "set"
       },
       "condition": {
         "type": "equals",
