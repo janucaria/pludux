@@ -398,13 +398,36 @@ else()
   )
   
   set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "index")
+  set_property(TARGET ${PROJECT_NAME} APPEND PROPERTY LINK_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/web/pludux_library.js")
+
+  set(PLUDUX_WEB_OFFLINE_ENABLED OFF)
+  if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(PLUDUX_WEB_OFFLINE_ENABLED ON)
+  endif()
+  configure_file(web/index.html index.html @ONLY)
+
+  if(PLUDUX_WEB_OFFLINE_ENABLED)
+    set(web_worker "${CMAKE_CURRENT_BINARY_DIR}/service-worker.js")
+    add_custom_command(
+      OUTPUT "${web_worker}"
+      COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR}
+        "${CMAKE_CURRENT_SOURCE_DIR}/web/generate-service-worker.cjs"
+        "${CMAKE_CURRENT_BINARY_DIR}"
+      DEPENDS
+        ${PROJECT_NAME}
+        "${CMAKE_CURRENT_BINARY_DIR}/index.html"
+        "${CMAKE_CURRENT_BINARY_DIR}/index.wasm"
+        web/generate-service-worker.cjs
+        web/service-worker.js.in
+      VERBATIM
+    )
+    add_custom_target(pludux-web-offline ALL DEPENDS "${web_worker}")
+    install(FILES "${web_worker}" DESTINATION ".")
+  endif()
 
   add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_LIST_DIR}/web/index.html" $<TARGET_FILE_DIR:${PROJECT_NAME}>
-    COMMAND_EXPAND_LISTS
-  )
-
-  add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    BYPRODUCTS "${CMAKE_CURRENT_BINARY_DIR}/index.wasm"
     COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${CMAKE_CURRENT_LIST_DIR}/../../../data/backtest/schemas" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/schemas"
     COMMAND_EXPAND_LISTS
   )

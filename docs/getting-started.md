@@ -2,6 +2,18 @@
 
 This page gives you a practical first backtest path in the Pludux GUI.
 
+## Use Pludux Web offline
+
+Open the hosted release online in a browser with WebGPU support. Wait for
+**Offline ready**, then reopen the same URL in the same browser profile when
+you are offline. You can open local `.pludux` workspaces, import local CSVs,
+run backtests, and save workspaces while offline. Use **Save** before closing
+and **Open** to resume from the saved file.
+
+If browser site data is cleared, revisit the hosted app online and wait for
+**Offline ready** again. When a new release is available, close all open Pludux
+tabs to let the update activate.
+
 ## First backtest workflow
 
 ### 1) Import an Asset

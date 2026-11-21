@@ -29,6 +29,12 @@ The desktop executable target is `pludux-backtest-gui`. Native builds use
 platform file dialogs. Emscripten builds replace native open/save with browser
 upload/download and embed the Model schema and samples needed by the app.
 
+Serve the staged Emscripten release over HTTPS, or use a localhost server for
+testing. Deploy the entire staged directory together, including
+`service-worker.js`, and serve `index.wasm` as `application/wasm`. The release
+works at the site root or under a subdirectory with a trailing slash.
+Emscripten debug builds skip offline registration.
+
 ## Tests
 
 During iteration, build the narrowest relevant test target. Before delivery,

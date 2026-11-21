@@ -75,6 +75,11 @@ jobs:
             ".out/build/${{ runner.os }}/${{ matrix.configure_preset }}" \
             --prefix .out/webroot
 
+      - name: Test Emscripten offline bundle
+        if: matrix.configure_preset == 'emscripten-release'
+        run: |
+          PLUDUX_WEBROOT=.out/webroot node --test apps/backtest/gui/web/offline.test.cjs
+
       - name: Upload Emscripten release
         if: matrix.configure_preset == 'emscripten-release'
         uses: actions/upload-artifact@v7.0.2

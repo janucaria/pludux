@@ -203,6 +203,7 @@ mergeInto(LibraryManager.library, {
       overlay.addEventListener('transitionend', function () {
         overlay.remove();
       }, { once: true });
+      Module.onPluduxReady?.();
     });
   },
 

@@ -84,6 +84,30 @@
       font-size: 13px;
     }
 
+    #offline-status {
+      background: #202631;
+      border: 1px solid #454e60;
+      border-radius: 6px;
+      bottom: 20px;
+      color: #eef1f7;
+      font-size: 14px;
+      left: 50%;
+      max-width: calc(100% - 48px);
+      padding: 10px 14px;
+      pointer-events: none;
+      position: fixed;
+      text-align: center;
+      transform: translateX(-50%);
+      width: max-content;
+      z-index: 2;
+    }
+
+    #offline-status:empty {
+      background: transparent;
+      border: 0;
+      padding: 0;
+    }
+
     @keyframes loading-spin {
       to {
         transform: rotate(360deg);
@@ -101,8 +125,81 @@
       <div class="loading-detail">Preparing your workspace...</div>
     </div>
   </div>
+  <div id="offline-status" role="status"></div>
   <script type='text/javascript'>
     var Module;
+
+    function waitForActivation(worker) {
+      return new Promise((resolve, reject) => {
+        function onStateChange() {
+          if (worker.state === 'activated' || worker.state === 'redundant') {
+            worker.removeEventListener('statechange', onStateChange);
+            if (worker.state === 'activated') {
+              resolve();
+            } else {
+              reject(new Error('Offline worker installation failed.'));
+            }
+          }
+        }
+        worker.addEventListener('statechange', onStateChange);
+        onStateChange();
+      });
+    }
+
+    function checkOfflineCache(worker) {
+      return new Promise((resolve, reject) => {
+        const channel = new MessageChannel();
+        const timeout = setTimeout(() => {
+          channel.port1.close();
+          reject(new Error('Offline worker did not confirm the cache.'));
+        }, 5000);
+        channel.port1.onmessage = event => {
+          clearTimeout(timeout);
+          channel.port1.close();
+          resolve(event.data === true);
+        };
+        worker.postMessage('pludux:offline-status', [channel.port2]);
+      });
+    }
+
+    async function prepareOfflineAccess() {
+      if ('@PLUDUX_WEB_OFFLINE_ENABLED@' !== 'ON') {
+        return;
+      }
+
+      const status = document.getElementById('offline-status');
+      try {
+        const serviceWorkers = navigator.serviceWorker;
+        if (!serviceWorkers) {
+          throw new Error('Service workers are unavailable.');
+        }
+        const script = new URL('service-worker.js', document.baseURI);
+        const controller = serviceWorkers.controller;
+        let worker;
+        if (controller && controller.scriptURL === script.href) {
+          // Navigation checks for updates. An offline launch can use the
+          // existing controller without attempting a new registration.
+          worker = controller;
+        } else {
+          const registration = await serviceWorkers.register(script, { updateViaCache: 'none' });
+          worker = registration.active ?? registration.installing ?? registration.waiting;
+          if (!worker) {
+            throw new Error('Offline worker installation failed.');
+          }
+          status.textContent = 'Preparing offline access…';
+        }
+        await waitForActivation(worker);
+        if (!await checkOfflineCache(worker)) {
+          throw new Error('Offline cache is incomplete.');
+        }
+        status.textContent = 'Offline ready';
+      } catch (error) {
+        console.warn('Could not prepare Pludux for offline use', error);
+        status.textContent = 'Offline access unavailable. Reload while online to retry.';
+      }
+      setTimeout(() => { status.textContent = ''; }, 7000);
+    }
+
     (async () => {
       Module = {
         preRun: [],
@@ -127,7 +224,8 @@
         },
         monitorRunDependencies: function (left) {
           // no run dependencies to log
-        }
+        },
+        onPluduxReady: prepareOfflineAccess
       };
 
       window.onerror = function () {

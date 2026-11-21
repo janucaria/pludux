@@ -1,0 +1,93 @@
+const scope = new URL(self.registration.scope);
+const cachePrefix = 'pludux:' + encodeURIComponent(scope.href) + ':';
+const cacheName = cachePrefix + '@VERSION@';
+const shell = scope.href;
+const assets = new Map(Object.entries(@ASSETS@).map(([path, integrity]) => [
+  path === 'index.html' ? shell : new URL(path, scope).href, integrity
+]));
+const indexPage = new URL('index.html', scope).href;
+
+function releaseRequest(url) {
+  return new Request(url, {
+    cache: 'reload',
+    mode: 'same-origin',
+    redirect: 'error',
+    integrity: assets.get(url)
+  });
+}
+
+self.addEventListener('install', event => {
+  event.waitUntil((async () => {
+    const cache = await caches.open(cacheName);
+    try {
+      // addAll commits the verified responses together.
+      await cache.addAll(Array.from(assets.keys(), releaseRequest));
+    } catch (error) {
+      await caches.delete(cacheName);
+      throw error;
+    }
+  })());
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil((async () => {
+    // The browser waits for the previous worker's clients to close.
+    const names = await caches.keys();
+    await Promise.all(names
+      .filter(name => name.startsWith(cachePrefix) && name !== cacheName)
+      .map(name => caches.delete(name)));
+  })());
+});
+
+async function serveReleaseAsset(url) {
+  const cached = await caches.match(url, { cacheName });
+  if (cached) {
+    return cached;
+  }
+
+  // Recover an evicted asset only if the server still delivers this release.
+  const response = await fetch(releaseRequest(url));
+  if (response.ok) {
+    try {
+      const cache = await caches.open(cacheName);
+      await cache.put(url, response.clone());
+    } catch (error) {
+      console.warn('Could not restore Pludux offline cache', error);
+    }
+  }
+  return response;
+}
+
+self.addEventListener('fetch', event => {
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
+  const url = new URL(event.request.url);
+  if (event.request.mode === 'navigate') {
+    url.search = '';
+    if (url.href === shell || url.href === indexPage) {
+      event.respondWith(serveReleaseAsset(shell).catch(() => new Response(
+        'Pludux could not load this release. Reconnect, then close and reopen the app tabs.',
+        { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }
+      )));
+      return;
+    }
+  }
+
+  if (assets.has(url.href)) {
+    event.respondWith(serveReleaseAsset(url.href));
+  }
+});
+
+self.addEventListener('message', event => {
+  if (event.data !== 'pludux:offline-status' || !event.ports[0]) {
+    return;
+  }
+  event.waitUntil((async () => {
+    const responses = await Promise.all(Array.from(assets.keys(), url =>
+      caches.match(url, { cacheName })
+    ));
+    event.ports[0].postMessage(responses.every(Boolean));
+  })());
+});
