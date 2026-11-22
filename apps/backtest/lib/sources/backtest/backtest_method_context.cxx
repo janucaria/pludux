@@ -131,9 +131,9 @@ private:
 };
 
 class BacktestMethodContext;
-using ModelNode = ErasedNode<BacktestMethodContext>;
-using ModelMethod = ErasedSeriesMethod<BacktestMethodContext>;
-using ModelMethodRegistry = OrderedNamedRegistry<ModelMethod>;
+using StrategyNode = ErasedNode<BacktestMethodContext>;
+using StrategyMethod = ErasedSeriesMethod<BacktestMethodContext>;
+using StrategyMethodRegistry = OrderedNamedRegistry<StrategyMethod>;
 
 class BacktestMethodContext {
 public:
@@ -159,7 +159,7 @@ public:
              std::same_as<Node, FrozenUnitQuantityNode>);
   }
 
-  BacktestMethodContext(const ModelMethodRegistry& series_methods,
+  BacktestMethodContext(const StrategyMethodRegistry& series_methods,
    SeriesEvaluationResults& series_evaluation_results,
    std::size_t current_index,
    const BacktestAccountState& account_state,
@@ -337,7 +337,7 @@ public:
   }
 
 private:
-  const ModelMethodRegistry& series_methods_;
+  const StrategyMethodRegistry& series_methods_;
   SeriesEvaluationResults& series_evaluation_results_;
   std::size_t current_index_;
   const BacktestAccountState& account_state_;

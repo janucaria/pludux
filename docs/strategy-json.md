@@ -1,8 +1,9 @@
-# Model JSON
+# Strategy JSON
 
-Model JSON is the versioned exchange format for one Model. The GUI imports and
-verifies **Models**, not Strategies. The parser accepts JSON comments but not
-trailing commas.
+Strategy JSON exchanges the rules and input defaults of a single Strategy.
+The **Strategies** editor imports and exports this file. To share a System's
+Profile selection, input overrides, and Entry Filters, save the workspace.
+The Strategy parser accepts JSON comments and rejects trailing commas.
 
 ## Root structure
 
@@ -21,8 +22,8 @@ Version 1 requires only `version`. `execution`, `series`, `positions`, and
 
 `intrabarPath` is `LOW_FIRST`, `HIGH_FIRST`, or `CANDLE_DIRECTION`.
 
-An omitted field uses the value from a freshly constructed `Model` or nested
-model type. This applies to execution, position sections and rule properties,
+An omitted field uses the value from a freshly constructed `Strategy` or nested
+rule type. This applies to execution, position sections and rule properties,
 collections, plots, and method parameters that have domain defaults. Explicit
 values are still validated: `null`, wrong types, invalid enums or methods,
 invalid ranges, lossy integral conversions, numeric strings, and overflow are
@@ -84,10 +85,10 @@ rising/falling colors.
 
 ## Schema and samples
 
-The [draft schema](../data/backtest/schemas/pludux.backtest.model.v1-draft.json)
+The [draft schema](../data/backtest/schemas/pludux.backtest.strategy.v1-draft.json)
 and [samples](../data/backtest/samples) are authoring aids. The schema permits
 unknown properties and mirrors runtime defaults while retaining required
 method discriminators and non-defaultable operands. The running parser
 and [Node Reference](nodes.md) are the current behavior source if a registered
-method is not yet represented there. Import errors are reported in **Models**;
-export names the JSON from the Model name.
+method is not yet represented there. Import errors are reported in **Strategies**;
+export names the JSON from the Strategy name.

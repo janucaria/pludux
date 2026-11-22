@@ -1,75 +1,61 @@
 # Resources and Workflows
 
-Pludux stores nine reusable setup resources. A Backtest is the result of running
-one System against one Asset; it is not an editable stored resource or GUI
-window.
-
-```text
-Asset <- Watchlist <- System <- Portfolio
-                    /       \
-Model + Profile <- Strategy  Market + Broker
-```
+Pludux stores eight reusable resources. A Backtest records a System × Asset run.
 
 | Resource | Owns | Used by |
 | --- | --- | --- |
 | Asset | Name, OHLCV mapping, timestamped numeric history | Watchlist |
 | Watchlist | Ordered, duplicate-free Assets | System |
-| Model | Inputs, series, long/short rules, execution path, plots | Strategy |
-| Profile | Sizing, drawdown adjustment, insufficient-cash policy | Strategy |
-| Strategy | Model, Profile, input overrides, Entry Filter | System |
-| System | Watchlist, Main Strategy, ordered Failsafes, shared performance config | Portfolio |
+| Strategy | Inputs and defaults, series, long/short rules, execution path, plots | Main and Failsafe setups |
+| Profile | Sizing, drawdown adjustment, insufficient-cash policy | System |
+| System | Watchlist, Profile, Main setup, ordered Failsafes, performance calculation settings | Portfolio |
 | Market | Minimum quantity and quantity step | Portfolio |
 | Broker | Fixed/percentage fee rules | Portfolio |
 | Portfolio | Capital, constraints, comparators, ordered Systems | Runner/results |
 
-References are shared. Editing a Strategy affects every System that references
-it; duplicate first when making a variant. Deleting a referenced resource makes
-its owner incomplete until the reference is repaired.
+Editing a Strategy changes its rules across all uses. Changing its inputs or
+Entry Filter in a System affects only that setup. Deleting a referenced
+resource leaves its owner incomplete until the reference is repaired.
 
 ## Recommended workflow
 
 1. Import Assets from CSV and verify OHLCV mapping.
 2. Put Assets into a Watchlist in deterministic order.
-3. Create a Model in **Models**, or import Model JSON.
+3. Create a Strategy in **Strategies**, or import Strategy JSON.
 4. Create a Profile and select one of its five sizing methods.
-5. Create a Strategy that combines Model + Profile, overrides Model inputs, and
-   optionally filters fresh entries.
-6. Create a System with the Watchlist, Main Strategy, and optional ordered
-   Failsafes.
-7. Define Market quantity rules and Broker fees.
-8. Create a Portfolio, add ordered Systems, configure capacity and comparators,
+5. Create a System and select its Watchlist and Profile. Choose a Main Strategy,
+   set its input overrides and Entry Filter, and add ordered Failsafes as needed.
+6. Define Market quantity rules and Broker fees.
+7. Create a Portfolio, add ordered Systems, configure capacity and comparators,
    then run it.
-9. Inspect Chart, Trades, and Overview.
+8. Inspect Chart, Trades, and Overview.
 
-## Model and Strategy
+## Strategies and their setups
 
-A Model defines deterministic trading rules, not necessarily machine learning.
-Its named series can be reused by long/short entry, exit, risk, pyramid, and
-plot expressions. Each Strategy may override the Model's declared numeric
-inputs without modifying the Model.
+The Strategy defines named series for its long/short entry, exit, risk,
+pyramid, and plot expressions. Each Main or Failsafe setup references a
+Strategy and can override its declared numeric inputs. For example, a System
+can reference a breakout Strategy twice with different channel lengths.
 
-The Strategy Entry Filter evaluates a theoretical fresh initial Requested
-Order. It decides whether that request enters Portfolio ranking; it does not
-create signals or reevaluate pyramid layers. It can combine standard conditions
-with `MODEL_PERFORMANCE.VALUE`. See [Node Reference](nodes.md).
+The setup's Entry Filter evaluates the theoretical fresh initial Requested
+Order and decides whether it enters Portfolio ranking. The filter can combine
+standard conditions with `STRATEGY_PERFORMANCE.VALUE`. [Node Reference](nodes.md)
 
-## System and Failsafes
-
-A System expands its Watchlist into per-Asset simulations. It owns one Main
-Strategy, optional ordered Failsafe Strategy bindings, and one Model Performance
-configuration shared across those Strategies. Failsafes are described in
-[Execution and Position Lifecycle](execution.md).
+A System expands its Watchlist into per-Asset simulations. All its setups use
+the same Profile and Strategy Performance calculation settings. Each setup
+maintains its own theoretical trades and performance history for each Asset.
+[Execution and Position Lifecycle](execution.md)
 
 ## Profiles and sizing
 
 Profiles offer five sizing policies:
 
 - **Risk Distance** fits quantity to an equity-risk allowance divided by the
-  Model's one-R price distance, accounting for estimated entry and 1R exit fees.
+  Strategy's one-R price distance, accounting for estimated entry and 1R exit fees.
 - **Fixed Quantity** starts from a configured unit count.
 - **Fixed Budget** converts a configured cash budget to quantity.
 - **Equity Fraction** uses a configured fraction of sizing equity.
-- **Bayesian Kelly** derives a fraction from shared Model Performance; see
+- **Bayesian Kelly** derives a fraction from the requesting setup’s Strategy Performance; see
   [Bayesian Kelly](strategy-performance-bayesian-kelly.md).
 
 Drawdown adjustment can reduce quantity and/or notional sizing equity in steps.
@@ -95,7 +81,7 @@ rules are in [Portfolio Backtesting](portfolio-backtesting.md).
 
 ## Reproducibility
 
-Keep input CSV and exported Model JSON alongside experiment notes. Preserve
+Keep input CSV and exported Strategy JSON alongside experiment notes. Preserve
 Watchlist and System ordering because both are deterministic tie-break inputs.
 Save the `.pludux` workspace for convenient restoration, but do not treat result
 views as persisted experiment output; see [Persistence](persistence.md).

@@ -215,13 +215,13 @@ private:
     if(source == TradeSource::Hypothetical) {
       const auto& last_strategy_state =
         timeline.strategy_state(last_index, strategy_index);
-        if(const auto& open_position = last_strategy_state.model_open_position) {
+        if(const auto& open_position = last_strategy_state.strategy_open_position) {
         trades.push_back(make_trade_view(
          *open_position, timeline.market_timestamp(last_index)));
       }
       for(auto index = timeline.size(); index-- > 0;) {
         const auto& closed =
-           timeline.strategy_state(index, strategy_index).model_closed_positions;
+           timeline.strategy_state(index, strategy_index).strategy_closed_positions;
         for(auto position = closed.rbegin(); position != closed.rend();
             ++position) {
           trades.push_back(make_trade_view(*position));
@@ -258,7 +258,7 @@ private:
     return trades;
   }
 
-   static auto make_trade_view(const backtest::ModelClosedPosition& position)
+   static auto make_trade_view(const backtest::StrategyClosedPosition& position)
    -> TradeView
   {
     const auto average_entry = position.normalized_entry_quantity() > 0.0
@@ -269,8 +269,8 @@ private:
                              ? average_entry
                              : position.intents().back().price();
     return TradeView{
-      .key = TradeKey{.id = position.model_trade_id(), .open = false},
-      .long_position = position.direction() == backtest::ModelDirection::Long,
+      .key = TradeKey{.id = position.strategy_trade_id(), .open = false},
+      .long_position = position.direction() == backtest::StrategyDirection::Long,
      .status = "Hypothetical",
      .entry_timestamp = position.entry_timestamp(),
      .exit_timestamp = position.exit_timestamp(),
@@ -291,12 +291,12 @@ private:
   }
 
   static auto
-   make_trade_view(const backtest::ModelOpenPositionSnapshot& position,
+   make_trade_view(const backtest::StrategyOpenPositionSnapshot& position,
                   std::time_t market_timestamp) -> TradeView
   {
     return TradeView{
-      .key = TradeKey{.id = position.model_trade_id(), .open = true},
-      .long_position = position.direction() == backtest::ModelDirection::Long,
+      .key = TradeKey{.id = position.strategy_trade_id(), .open = true},
+      .long_position = position.direction() == backtest::StrategyDirection::Long,
      .status = "Hypothetical open",
      .entry_timestamp = position.entry_timestamp(),
      .exit_timestamp = std::nullopt,

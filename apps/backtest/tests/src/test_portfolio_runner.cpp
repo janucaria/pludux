@@ -413,14 +413,14 @@ TEST(PortfolioRunnerTest, EventsRecordRankedFillBeforeRejectedFailsafeRequest)
                                                   ValueMethod{10.0},
                                                   {}};
   auto strategies = std::vector<BacktestRunner::CompiledStrategy>{
-   {profile, {}, {}, {}}, {profile, {}, entry, {}}};
+   {{}, {}, {}}, {{}, entry, {}}};
   auto runner = PortfolioRunner{
    1'000.0,
    10,
    10,
    {{SystemStoreHandle{1, 1},
      AssetStoreHandle{1, 1},
-     BacktestRunner{first, market, broker, std::move(strategies), 1'000.0}},
+     BacktestRunner{first, market, broker, profile, std::move(strategies), 1'000.0}},
     {SystemStoreHandle{2, 1},
      AssetStoreHandle{2, 1},
      make_entry_runner(
@@ -505,7 +505,7 @@ TEST(PortfolioRunnerTest, EventsIncludeEachIntrabarStopInExecutionOrder)
 }
 
 TEST(PortfolioRunnerTest,
-     ModelPerformanceComparatorUsesEachRequestingStrategySnapshot)
+     StrategyPerformanceComparatorUsesEachRequestingStrategySnapshot)
 {
   const auto without_history = Asset{
    "Without history",
@@ -554,7 +554,7 @@ TEST(PortfolioRunnerTest,
                       entry_at_120},
       EqualMethod{CloseMethod{}, ValueMethod{110.0}})}},
    {PortfolioEntryComparator{
-    ModelPerformanceNode{ModelPerformanceMetric::LifetimeCount},
+    StrategyPerformanceNode{StrategyPerformanceMetric::LifetimeCount},
     PortfolioEntryComparatorOrder::HigherFirst}}};
   auto results = PortfolioResults{};
 
@@ -570,7 +570,7 @@ TEST(PortfolioRunnerTest,
 }
 
 TEST(PortfolioRunnerTest,
-     ModelPerformanceComparatorRanksPyramidsByOwnerSnapshot)
+     StrategyPerformanceComparatorRanksPyramidsByOwnerSnapshot)
 {
   const auto without_history = Asset{
    "Without history",
@@ -625,7 +625,7 @@ TEST(PortfolioRunnerTest,
       pyramid_at_130,
       2)}},
    {PortfolioEntryComparator{
-    ModelPerformanceNode{ModelPerformanceMetric::LifetimeCount},
+    StrategyPerformanceNode{StrategyPerformanceMetric::LifetimeCount},
     PortfolioEntryComparatorOrder::HigherFirst}}};
   auto results = PortfolioResults{};
 
@@ -1229,7 +1229,7 @@ TEST(PortfolioRunnerTest, CombinedLayerLimitUsesDeterministicBacktestPriority)
   EXPECT_TRUE(results.backtests()[1]
                .timeline()
                 .strategy_state(0, 0)
-                .model_intents.empty());
+                .strategy_intents.empty());
   ASSERT_EQ(results.backtests()[1].timeline().trade_events(0).size(), 1U);
   EXPECT_EQ(results.backtests()[1].timeline().trade_events(0).front().type(),
             TradeEvent::Type::rejected_maximum_combined_layers);
@@ -1240,7 +1240,7 @@ TEST(PortfolioRunnerTest, CombinedLayerLimitUsesDeterministicBacktestPriority)
   EXPECT_EQ(decision.outcome,
             PositionSizingDecisionOutcome::MaximumCombinedLayers);
   EXPECT_EQ(decision.intent_id, 0U);
-   EXPECT_EQ(decision.model_trade_id, 0U);
+   EXPECT_EQ(decision.strategy_trade_id, 0U);
 }
 
 TEST(PortfolioRunnerTest, CombinedLayerLimitBlocksPyramidWithoutAdvancingState)
@@ -1301,7 +1301,7 @@ TEST(PortfolioRunnerTest, CombinedLayerLimitBlocksPyramidWithoutAdvancingState)
   EXPECT_DOUBLE_EQ(
    timeline.open_position(1)->stop_loss_levels().front().effective_price(),
    50.0);
-   EXPECT_TRUE(timeline.strategy_state(1, 0).model_intents.empty());
+   EXPECT_TRUE(timeline.strategy_state(1, 0).strategy_intents.empty());
   ASSERT_EQ(timeline.trade_events(1).size(), 1U);
   EXPECT_EQ(timeline.trade_events(1).front().type(),
             TradeEvent::Type::rejected_maximum_combined_layers);
@@ -1332,7 +1332,7 @@ TEST(PortfolioRunnerTest, ZeroCombinedLayerLimitRejectsInitialEntry)
 
   const auto& timeline = results.backtests()[0].timeline();
   EXPECT_FALSE(timeline.open_position(0));
-   EXPECT_TRUE(timeline.strategy_state(0, 0).model_intents.empty());
+   EXPECT_TRUE(timeline.strategy_state(0, 0).strategy_intents.empty());
   ASSERT_EQ(timeline.trade_events(0).size(), 1U);
   EXPECT_EQ(timeline.trade_events(0).front().type(),
             TradeEvent::Type::rejected_maximum_combined_layers);

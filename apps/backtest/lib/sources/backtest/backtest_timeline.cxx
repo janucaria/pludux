@@ -13,19 +13,19 @@ export module pludux.backtest:backtest_timeline;
 import :closed_trade;
 import :open_position_snapshot;
 import :position_sizing;
-import :model_closed_position;
-import :model_intent;
-import :model_performance;
-import :model_session;
+import :strategy_closed_position;
+import :strategy_intent;
+import :strategy_performance;
+import :strategy_session;
 import :trade_event;
 
 export namespace pludux::backtest {
 
 struct StrategyTimelineState {
-  std::vector<ModelIntent> model_intents{};
-  std::vector<ModelClosedPosition> model_closed_positions{};
-  std::optional<ModelOpenPositionSnapshot> model_open_position{};
-  ModelPerformanceSnapshot model_performance{};
+  std::vector<StrategyIntent> strategy_intents{};
+  std::vector<StrategyClosedPosition> strategy_closed_positions{};
+  std::optional<StrategyOpenPositionSnapshot> strategy_open_position{};
+  StrategyPerformanceSnapshot strategy_performance{};
   bool entry_filtered_position{};
 
   auto operator==(const StrategyTimelineState&) const noexcept

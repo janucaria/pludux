@@ -10,25 +10,25 @@ module;
 #include <utility>
 #include <vector>
 
-export module pludux.backtest:model_session;
+export module pludux.backtest:strategy_session;
 
-import :model_closed_position;
-import :model_intent;
+import :strategy_closed_position;
+import :strategy_intent;
 
 export namespace pludux::backtest {
 
-class ModelOpenPositionSnapshot {
+class StrategyOpenPositionSnapshot {
 public:
-  ModelOpenPositionSnapshot() = default;
+  StrategyOpenPositionSnapshot() = default;
 
-  ModelOpenPositionSnapshot(std::size_t model_trade_id,
-                                ModelDirection direction,
+  StrategyOpenPositionSnapshot(std::size_t strategy_trade_id,
+                                StrategyDirection direction,
                                std::time_t entry_timestamp,
                                double normalized_quantity,
                                double normalized_investment,
                                double realized_price_pnl,
                                double market_price) noexcept
-  : model_trade_id_{model_trade_id}
+  : strategy_trade_id_{strategy_trade_id}
   , direction_{direction}
   , entry_timestamp_{entry_timestamp}
   , normalized_quantity_{normalized_quantity}
@@ -38,54 +38,54 @@ public:
   {
   }
 
-  auto operator==(const ModelOpenPositionSnapshot&) const noexcept
+  auto operator==(const StrategyOpenPositionSnapshot&) const noexcept
    -> bool = default;
 
-  auto model_trade_id(this const ModelOpenPositionSnapshot& self) noexcept
+  auto strategy_trade_id(this const StrategyOpenPositionSnapshot& self) noexcept
    -> std::size_t
   {
-    return self.model_trade_id_;
+    return self.strategy_trade_id_;
   }
 
-  auto direction(this const ModelOpenPositionSnapshot& self) noexcept
-   -> ModelDirection
+  auto direction(this const StrategyOpenPositionSnapshot& self) noexcept
+   -> StrategyDirection
   {
     return self.direction_;
   }
 
-  auto entry_timestamp(this const ModelOpenPositionSnapshot& self) noexcept
+  auto entry_timestamp(this const StrategyOpenPositionSnapshot& self) noexcept
    -> std::time_t
   {
     return self.entry_timestamp_;
   }
 
   auto
-   normalized_quantity(this const ModelOpenPositionSnapshot& self) noexcept
+   normalized_quantity(this const StrategyOpenPositionSnapshot& self) noexcept
    -> double
   {
     return self.normalized_quantity_;
   }
 
   auto
-   normalized_investment(this const ModelOpenPositionSnapshot& self) noexcept
+   normalized_investment(this const StrategyOpenPositionSnapshot& self) noexcept
    -> double
   {
     return self.normalized_investment_;
   }
 
-  auto market_price(this const ModelOpenPositionSnapshot& self) noexcept
+  auto market_price(this const StrategyOpenPositionSnapshot& self) noexcept
    -> double
   {
     return self.market_price_;
   }
 
-  auto duration(this const ModelOpenPositionSnapshot& self,
+  auto duration(this const StrategyOpenPositionSnapshot& self,
                 std::time_t market_timestamp) noexcept -> std::time_t
   {
     return market_timestamp - self.entry_timestamp_;
   }
 
-  auto average_price(this const ModelOpenPositionSnapshot& self) noexcept
+  auto average_price(this const StrategyOpenPositionSnapshot& self) noexcept
    -> double
   {
     return self.normalized_quantity_ > 0.0
@@ -94,18 +94,18 @@ public:
   }
 
   auto
-   unrealized_price_pnl(this const ModelOpenPositionSnapshot& self) noexcept
+   unrealized_price_pnl(this const StrategyOpenPositionSnapshot& self) noexcept
    -> double
   {
     const auto direction =
-     self.direction_ == ModelDirection::Long ? 1.0 : -1.0;
+     self.direction_ == StrategyDirection::Long ? 1.0 : -1.0;
     return self.realized_price_pnl_ +
            direction * (self.normalized_quantity_ * self.market_price_ -
                         self.normalized_investment_);
   }
 
   auto unrealized_return_ratio(
-    this const ModelOpenPositionSnapshot& self) noexcept -> double
+    this const StrategyOpenPositionSnapshot& self) noexcept -> double
   {
     return self.normalized_investment_ > 0.0
             ? self.unrealized_price_pnl() / self.normalized_investment_
@@ -113,8 +113,8 @@ public:
   }
 
 private:
-  std::size_t model_trade_id_{};
-  ModelDirection direction_{ModelDirection::Long};
+  std::size_t strategy_trade_id_{};
+  StrategyDirection direction_{StrategyDirection::Long};
   std::time_t entry_timestamp_{};
   double normalized_quantity_{};
   double normalized_investment_{};
@@ -122,16 +122,16 @@ private:
   double market_price_{};
 };
 
-class ModelSession {
+class StrategySession {
 public:
-  ModelSession() = default;
+  StrategySession() = default;
 
-  void strategy_index(this ModelSession& self, std::size_t value) noexcept
+  void strategy_index(this StrategySession& self, std::size_t value) noexcept
   {
     self.strategy_index_ = value;
   }
 
-  void begin_market_bar(this ModelSession& self,
+  void begin_market_bar(this StrategySession& self,
                         std::time_t timestamp,
                         double market_price) noexcept
   {
@@ -141,24 +141,24 @@ public:
     self.closed_positions_.clear();
   }
 
-  auto is_open(this const ModelSession& self) noexcept -> bool
+  auto is_open(this const StrategySession& self) noexcept -> bool
   {
     return self.position_.has_value();
   }
 
-  auto is_flat(this const ModelSession& self) noexcept -> bool
+  auto is_flat(this const StrategySession& self) noexcept -> bool
   {
     return !self.is_open();
   }
 
-  auto position(this const ModelSession& self) noexcept
-   -> const std::optional<ModelOpenPositionSnapshot>
+  auto position(this const StrategySession& self) noexcept
+   -> const std::optional<StrategyOpenPositionSnapshot>
   {
     if(!self.position_) {
       return std::nullopt;
     }
     const auto& position = *self.position_;
-    return ModelOpenPositionSnapshot{position.model_trade_id,
+    return StrategyOpenPositionSnapshot{position.strategy_trade_id,
                                         position.direction,
                                         position.entry_timestamp,
                                         position.normalized_quantity,
@@ -167,22 +167,22 @@ public:
                                         self.market_price_};
   }
 
-  auto intents(this const ModelSession& self) noexcept
-   -> const std::vector<ModelIntent>&
+  auto intents(this const StrategySession& self) noexcept
+   -> const std::vector<StrategyIntent>&
   {
     return self.intents_;
   }
 
-  auto closed_positions(this const ModelSession& self) noexcept
-   -> const std::vector<ModelClosedPosition>&
+  auto closed_positions(this const StrategySession& self) noexcept
+   -> const std::vector<StrategyClosedPosition>&
   {
     return self.closed_positions_;
   }
 
-  auto enter(this ModelSession& self,
-              ModelDirection direction,
+  auto enter(this StrategySession& self,
+              StrategyDirection direction,
              double price,
-              bool pyramiding = false) -> const ModelIntent&
+              bool pyramiding = false) -> const StrategyIntent&
   {
     if(!std::isfinite(price) || price <= 0.0) {
       throw std::invalid_argument{
@@ -193,8 +193,8 @@ public:
       if(pyramiding) {
         throw std::runtime_error{"Cannot pyramid a flat strategy position"};
       }
-      const auto model_trade_id = self.next_model_trade_id_++;
-      self.position_ = Position{.model_trade_id = model_trade_id,
+      const auto strategy_trade_id = self.next_strategy_trade_id_++;
+      self.position_ = Position{.strategy_trade_id = strategy_trade_id,
                                 .direction = direction,
                                 .entry_timestamp = self.market_timestamp_};
     } else if(!pyramiding || self.position_->direction != direction) {
@@ -207,10 +207,10 @@ public:
     position.normalized_entry_quantity += 1.0;
     position.normalized_investment += price;
     position.normalized_entry_notional += price;
-    const auto type = pyramiding ? ModelIntentType::PyramidingEntry
-                                 : ModelIntentType::InitialEntry;
+    const auto type = pyramiding ? StrategyIntentType::PyramidingEntry
+                                 : StrategyIntentType::InitialEntry;
     self.intents_.emplace_back(self.next_intent_id_++,
-                                position.model_trade_id,
+                                position.strategy_trade_id,
                                type,
                                direction,
                                self.market_timestamp_,
@@ -222,18 +222,18 @@ public:
     return self.intents_.back();
   }
 
-  auto exit(this ModelSession& self,
-             ModelIntentType type,
+  auto exit(this StrategySession& self,
+             StrategyIntentType type,
             double price,
             double reduce = 1.0,
             std::optional<std::size_t> rule_index = std::nullopt)
-   -> const ModelIntent&
+   -> const StrategyIntent&
   {
     if(!self.position_) {
       throw std::runtime_error{"Cannot exit a flat strategy position"};
     }
-    if(type == ModelIntentType::InitialEntry ||
-        type == ModelIntentType::PyramidingEntry) {
+    if(type == StrategyIntentType::InitialEntry ||
+        type == StrategyIntentType::PyramidingEntry) {
       throw std::invalid_argument{"Strategy exit requires an exit type"};
     }
     if(!std::isfinite(price) || price <= 0.0 || !std::isfinite(reduce) ||
@@ -247,14 +247,14 @@ public:
     const auto average_price =
      position.normalized_investment / position.normalized_quantity;
     const auto direction =
-      position.direction == ModelDirection::Long ? 1.0 : -1.0;
+      position.direction == StrategyDirection::Long ? 1.0 : -1.0;
     position.realized_price_pnl +=
      direction * exit_quantity * (price - average_price);
     position.normalized_quantity -= exit_quantity;
     position.normalized_investment -= exit_quantity * average_price;
 
     self.intents_.emplace_back(self.next_intent_id_++,
-                                position.model_trade_id,
+                                position.strategy_trade_id,
                                type,
                                position.direction,
                                self.market_timestamp_,
@@ -265,7 +265,7 @@ public:
     position.intents.push_back(self.intents_.back());
 
     if(position.normalized_quantity <= std::numeric_limits<double>::epsilon()) {
-       self.closed_positions_.emplace_back(position.model_trade_id,
+       self.closed_positions_.emplace_back(position.strategy_trade_id,
                                           position.direction,
                                           position.entry_timestamp,
                                           self.market_timestamp_,
@@ -281,23 +281,23 @@ public:
 
 private:
   struct Position {
-    std::size_t model_trade_id{};
-    ModelDirection direction{ModelDirection::Long};
+    std::size_t strategy_trade_id{};
+    StrategyDirection direction{StrategyDirection::Long};
     std::time_t entry_timestamp{};
     double normalized_quantity{};
     double normalized_entry_quantity{};
     double normalized_investment{};
     double normalized_entry_notional{};
     double realized_price_pnl{};
-    std::vector<ModelIntent> intents{};
+    std::vector<StrategyIntent> intents{};
   };
 
   std::time_t market_timestamp_{};
   double market_price_{};
   std::optional<Position> position_{};
-  std::vector<ModelIntent> intents_{};
-  std::vector<ModelClosedPosition> closed_positions_{};
-  std::size_t next_model_trade_id_{1};
+  std::vector<StrategyIntent> intents_{};
+  std::vector<StrategyClosedPosition> closed_positions_{};
+  std::size_t next_strategy_trade_id_{1};
   std::size_t next_intent_id_{1};
   std::size_t strategy_index_{};
 };

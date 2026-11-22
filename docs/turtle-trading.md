@@ -30,10 +30,10 @@ currency conversion, expiry, or rollover model.
 | `N`: 20-day Wilder average of True Range | 1R ATR Distance, period 20, multiplier 1, RMA | Close |
 | One Unit has 1N dollar volatility equal to 1% of equity | Profile Risk Distance sizing at 1% equity risk | Close |
 | Turtle System 1: 20-day breakout | Main Strategy using Donchian 20 | Close on daily bars |
-| Skip Turtle System 1 after a winning theoretical breakout | Main Strategy Entry Filter using theoretical Model Performance | Close |
-| Turtle System 2 failsafe: 55-day breakout | Failsafe Strategy binding with persistent filtered-position activation | Close |
+| Skip Turtle System 1 after a winning theoretical breakout | Main Strategy Entry Filter using theoretical Strategy Performance | Close |
+| Turtle System 2 failsafe: 55-day breakout | Failsafe Strategy setup with persistent filtered-position activation | Close |
 | Add one Unit every 0.5N | Position R-Multiple threshold of 0.5 | Close, one layer per bar |
-| Maximum four Units in one market | Model maximum pyramiding layers of 4 | Direct |
+| Maximum four Units in one market | Strategy maximum pyramiding layers of 4 | Direct |
 | Freeze Unit and N while building a position | Frozen initial executed quantity and risk distance | Direct |
 | Normal stop: 2N from the latest Unit | Stop Loss R-Multiple 2 using Latest Entry Price | Close |
 | System 1 exit: adverse 10-day breakout | Donchian 10 full exit | Close on daily bars |
@@ -49,31 +49,28 @@ quantity and frozen `R` for that open position.
 
 ## Configuration Overview in One Pludux System
 
-Use four configuration levels:
+Choose one Profile for the System. Both breakout setups then use its sizing,
+drawdown, and cash policy.
 
 ```text
 Portfolio
-|- Shared capital, Market, and Broker
-|- Portfolio capacity and entry ordering
-   `- Pludux System
-    |- Watchlist
-    |- Shared Model Performance calculation
-   |- Main Strategy: Turtle System 1
-   |  |- Turtle System 1 Model
-    |  |- Turtle Profile
-    |  `- Previous-breakout Entry Filter
-   `- Failsafe Strategy binding: Turtle System 2
-        |- Previous setup has an entry-filtered theoretical position
-       |- Turtle System 2 Model
-       |- Turtle Profile
-       `- Always-allow Entry Filter
+|- Shared capital, Market, Broker, capacity and entry ordering
+`- Pludux System
+   |- Watchlist
+   |- Turtle Profile
+   |- Strategy Performance calculation settings
+   |- Main setup
+   |  |- Turtle breakout Strategy with 20-bar entry and 10-bar exit
+   |  `- Previous-breakout Entry Filter
+   `- Failsafe setup
+      |- Turtle breakout Strategy with 55-bar entry and 20-bar exit
+      |- Activate while the preceding setup has an entry-filtered theoretical position
+      `- Always-allow Entry Filter
 ```
 
-The Main and Failsafe Strategy bindings keep independent theoretical positions
-and Model Performance histories. They share the System's calculation policy,
-but not accumulated runtime state. The Portfolio executes at most one real
-position for each expanded Pludux System and Watchlist asset, and records which
-Strategy owns it.
+Each setup maintains its own theoretical positions and performance history for
+each Asset. The Portfolio executes at most one real position for each System
+and Asset. That position belongs to the setup that opened it.
 
 ## 1. Market Data and Watchlist
 
@@ -184,7 +181,8 @@ layer in Pludux and does not redefine the frozen Unit for later additions.
 
 ## 3. Shared Strategy Building Blocks
 
-Create these named series or their equivalent node trees in both Strategies:
+Create a reusable Turtle breakout Strategy with numeric inputs for the entry
+and exit periods. Use those inputs in the channel calculations:
 
 ```text
 N             = ATR(period: 20, smoothing: RMA)
@@ -240,9 +238,9 @@ The System 1 setup must continue tracking every theoretical breakout even when
 real execution is filtered. Configure its Entry Filter as the equivalent of:
 
 ```text
-Model Performance Lifetime Count == 0
+Strategy Performance Lifetime Count == 0
 OR
-Model Performance Current Losing Streak >= 1
+Strategy Performance Current Losing Streak >= 1
 ```
 
 This allows the first theoretical breakout and allows later breakouts only when
@@ -250,7 +248,7 @@ the most recently completed theoretical System 1 position lost. A winning most
 recent position resets Current Losing Streak to zero, so the next System 1
 Requested Order is entry-filtered.
 
-Use `All History` for the Pludux System Model Performance history policy. Current
+Use `All History` for the Pludux System Strategy Performance history policy. Current
 winning and losing streaks are lifetime chronological state in Pludux, so they
 do not decay or roll out under other history modes; `All History` nevertheless
 makes the intent of this configuration clearest.
@@ -278,8 +276,8 @@ open profit to be given back in exchange for remaining in large trends.
 
 ## 5. Turtle System 2 Strategy and Failsafe
 
-Create Turtle System 2 with the same risk, stop, and pyramiding rules as Turtle System 1, but
-use:
+In the Failsafe setup, select the same Turtle breakout Strategy. Override the
+channel inputs and configure the Entry Filter as follows:
 
 ```text
 Entry channel: 55 bars
@@ -304,12 +302,11 @@ This is the closest Pludux representation of the Turtle System 1 failsafe rule. 
 Failsafe is internal to the Pludux System; it does not create another Portfolio row
 or another simultaneous real position for that Pludux System and asset.
 
-The original Turtles could also allocate capital to Turtle System 2 as an independent
-model rather than only as a Turtle System 1 failsafe. To study that behavior, add a
-separate Pludux System whose Main Strategy uses the Turtle System 2 Model. If Turtle System 1 and
-Turtle System 2 are intended to split one risk allocation, reduce their Profile risk
-fractions accordingly; otherwise each setup can independently request a full
-1% Unit from the same Portfolio equity.
+To study Turtle System 2 as an independent allocation, create a separate
+Pludux System and use the 55/20-bar setup as its Main. Both Systems can then
+request positions against the same Portfolio equity. If the experiment splits a
+single risk allocation, choose the appropriate risk fraction in each System's
+Profile.
 
 ## 6. Pyramiding
 
@@ -454,7 +451,7 @@ Pludux ranks immutable Requested Orders at each Next Open or Current Close
 phase. Portfolio comparators can combine Requested Order values with the
 order's asset OHLCV fields, custom `DATA` fields, lookbacks, constants, and
 basic scalar math. They cannot inspect technical-indicator nodes or named
-Model series.
+Strategy series.
 
 For a practical three-month strength ranking, add this Portfolio Entry
 Comparator and select **Higher First**:
@@ -532,7 +529,7 @@ frozen Unit requested by all later layers.
 ### Intraday breakout fills
 
 The Turtles entered and exited when the market traded through a channel level,
-including gap-open handling. Pludux Model signals are evaluated at Current
+including gap-open handling. Pludux Strategy signals are evaluated at Current
 Close or scheduled for Next Open. OHLC price stops can be processed inside a
 bar using the configured intrabar path, but Donchian entry and exit signals are
 not continuously evaluated and filled at their exact intraday threshold.

@@ -1,7 +1,7 @@
 # Workspace Persistence
 
-Pludux uses three file forms: CSV imports one Asset's history; Model JSON
-exchanges one Model; `.pludux` saves the complete GUI workspace.
+Pludux uses three file forms: CSV imports one Asset's history; Strategy JSON
+exchanges one Strategy; `.pludux` saves the complete GUI workspace.
 
 ## Workspace content
 
@@ -18,9 +18,11 @@ A workspace currently has this conceptual root:
 }
 ```
 
-`store` contains arenas for Assets, Watchlists, Models, Profiles, Strategies,
+`store` contains arenas for Assets, Watchlists, Strategies, Profiles,
 Systems, Markets, Brokers, and Portfolios. References use slot and generation
-metadata so a deleted slot cannot silently become another object. Imported CSV
+metadata so a deleted slot cannot silently become another object. Systems store
+their Profile reference, Main and Failsafe Strategy setups, and performance
+settings. Each setup stores its Strategy reference, input overrides, and Entry Filter. Imported CSV
 history is embedded; reopening does not require the original CSV.
 
 `documentState` stores document-related editing/selection state and `viewState`
@@ -62,8 +64,8 @@ Opening another workspace prompts before discarding an active draft. A new
 workspace receives a timestamped `.pludux` name on first save. Native builds use
 the platform file dialog; browser builds use upload/download.
 
-Keep source CSV and exported Model JSON under version control for reproducible
+Keep source CSV and exported Strategy JSON under version control for reproducible
 inputs. Preserve an unreadable workspace unchanged and retry with the Pludux
 version that created it before attempting manual recovery.
 
-See [Model JSON](model-json.md) and [CSV Data](data-csv.md) for exchange formats.
+See [Strategy JSON](strategy-json.md) and [CSV Data](data-csv.md) for exchange formats.

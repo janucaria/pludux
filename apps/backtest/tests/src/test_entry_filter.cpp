@@ -62,7 +62,7 @@ auto run_with_filter(ErasedSeriesMethod<EntryFilterMethodContext> entry_filter,
                                false,
                                1'000.0,
                                IntrabarPath::CandleDirection,
-                                ModelPerformanceConfig{},
+                                StrategyPerformanceConfig{},
                                std::move(entry_filter)};
 
   while(timeline.size() < asset.size()) {
@@ -80,25 +80,25 @@ TEST(EntryFilterTest, RecordsOnlyIntentAndBooleanDecision)
   EXPECT_FALSE(decision.allowed());
 }
 
-TEST(EntryFilterTest, StrategyOwnsEntryFilter)
+TEST(EntryFilterTest, SetupOwnsEntryFilter)
 {
-  auto permissive = Strategy{};
-  auto restrictive = Strategy{};
+  auto permissive = StrategySetup{};
+  auto restrictive = StrategySetup{};
   restrictive.entry_filter(ErasedNode<EntryFilterMethodContext>{FalseNode{}});
 
   EXPECT_NE(node_cast<TrueNode>(permissive.entry_filter()), nullptr);
   EXPECT_NE(node_cast<FalseNode>(restrictive.entry_filter()), nullptr);
-  EXPECT_FALSE(permissive.equivalent_rules(restrictive));
+  EXPECT_NE(permissive, restrictive);
 
   permissive.entry_filter(restrictive.entry_filter());
-  EXPECT_TRUE(permissive.equivalent_rules(restrictive));
+  EXPECT_EQ(permissive, restrictive);
 }
 
-TEST(EntryFilterTest, CombinesStrategyProfileAndAccountResults)
+TEST(EntryFilterTest, CombinesSetupPerformanceOrderAndAccountResults)
 {
   const auto filter = LogicalAndMethod{
    GreaterEqualMethod{
-    ModelPerformanceMethod{ModelPerformanceMetric::LifetimeCount},
+    StrategyPerformanceMethod{StrategyPerformanceMetric::LifetimeCount},
     ValueMethod{0.0}},
    LogicalAndMethod{GreaterEqualMethod{EquityMethod{}, ValueMethod{1'000.0}},
                     LessEqualMethod{RequestedOrderValueMethod{
@@ -141,34 +141,34 @@ TEST(EntryFilterTest,
   const auto timeline = run_with_filter(BooleanMethod<false>{});
 
   ASSERT_EQ(timeline.size(), 4);
-    ASSERT_EQ(timeline.strategy_state(0, 0).model_intents.size(), 1);
-    EXPECT_EQ(timeline.strategy_state(0, 0).model_intents.front().type(),
-             ModelIntentType::InitialEntry);
+    ASSERT_EQ(timeline.strategy_state(0, 0).strategy_intents.size(), 1);
+    EXPECT_EQ(timeline.strategy_state(0, 0).strategy_intents.front().type(),
+             StrategyIntentType::InitialEntry);
   ASSERT_EQ(timeline.entry_filter_decisions(0).size(), 1);
   EXPECT_FALSE(timeline.entry_filter_decisions(0).front().allowed());
   ASSERT_EQ(timeline.position_sizing_decisions(0).size(), 1);
   EXPECT_EQ(timeline.position_sizing_decisions(0).front().outcome,
             PositionSizingDecisionOutcome::EntryFiltered);
 
-    ASSERT_EQ(timeline.strategy_state(1, 0).model_intents.size(), 1);
-    EXPECT_EQ(timeline.strategy_state(1, 0).model_intents.front().type(),
-             ModelIntentType::PyramidingEntry);
+    ASSERT_EQ(timeline.strategy_state(1, 0).strategy_intents.size(), 1);
+    EXPECT_EQ(timeline.strategy_state(1, 0).strategy_intents.front().type(),
+             StrategyIntentType::PyramidingEntry);
   EXPECT_TRUE(timeline.entry_filter_decisions(1).empty());
   ASSERT_EQ(timeline.position_sizing_decisions(1).size(), 1);
   EXPECT_EQ(timeline.position_sizing_decisions(1).front().outcome,
             PositionSizingDecisionOutcome::ShadowOnly);
 
-    ASSERT_EQ(timeline.strategy_state(2, 0).model_intents.size(), 1);
-    EXPECT_EQ(timeline.strategy_state(2, 0).model_intents.front().type(),
-             ModelIntentType::SignalExit);
+    ASSERT_EQ(timeline.strategy_state(2, 0).strategy_intents.size(), 1);
+    EXPECT_EQ(timeline.strategy_state(2, 0).strategy_intents.front().type(),
+             StrategyIntentType::SignalExit);
   EXPECT_TRUE(timeline.entry_filter_decisions(2).empty());
   EXPECT_TRUE(timeline.position_sizing_decisions(2).empty());
-    ASSERT_EQ(timeline.strategy_state(2, 0).model_closed_positions.size(), 1);
+    ASSERT_EQ(timeline.strategy_state(2, 0).strategy_closed_positions.size(), 1);
   EXPECT_NEAR(
-     timeline.strategy_state(2, 0).model_closed_positions.front().return_ratio(),
+     timeline.strategy_state(2, 0).strategy_closed_positions.front().return_ratio(),
    30.0 / 210.0,
    1e-12);
-    EXPECT_EQ(timeline.strategy_state(2, 0).model_performance.lifetime_count(),
+    EXPECT_EQ(timeline.strategy_state(2, 0).strategy_performance.lifetime_count(),
             1);
 
   for(auto index = std::size_t{0}; index < timeline.size(); ++index) {
@@ -203,7 +203,7 @@ TEST(EntryFilterTest,
 TEST(EntryFilterTest, LaterInitialEntryCanUseCompletedShadowPerformance)
 {
   const auto filter = GreaterEqualMethod{
-   ModelPerformanceMethod{ModelPerformanceMetric::LifetimeCount},
+   StrategyPerformanceMethod{StrategyPerformanceMetric::LifetimeCount},
    ValueMethod{1.0}};
   const auto timeline = run_with_filter(filter);
 
@@ -215,10 +215,10 @@ TEST(EntryFilterTest, LaterInitialEntryCanUseCompletedShadowPerformance)
   EXPECT_DOUBLE_EQ(timeline.open_position(3)->entry_price(), 130.0);
 }
 
-TEST(EntryFilterTest, ModelPerformanceMethodsExposeAllStreaks)
+TEST(EntryFilterTest, StrategyPerformanceMethodsExposeAllStreaks)
 {
   const auto performance =
-   ModelPerformanceSnapshot{0,
+   StrategyPerformanceSnapshot{0,
                                1,
                                2,
                                3,
@@ -242,25 +242,25 @@ TEST(EntryFilterTest, ModelPerformanceMethodsExposeAllStreaks)
 
   EXPECT_DOUBLE_EQ(
    evaluate_series_method(
-     ModelPerformanceMethod{ModelPerformanceMetric::CurrentWinningStreak},
+     StrategyPerformanceMethod{StrategyPerformanceMetric::CurrentWinningStreak},
     snapshot,
     context),
    1.0);
   EXPECT_DOUBLE_EQ(
    evaluate_series_method(
-     ModelPerformanceMethod{ModelPerformanceMetric::CurrentLosingStreak},
+     StrategyPerformanceMethod{StrategyPerformanceMetric::CurrentLosingStreak},
     snapshot,
     context),
    2.0);
   EXPECT_DOUBLE_EQ(
    evaluate_series_method(
-     ModelPerformanceMethod{ModelPerformanceMetric::MaximumWinningStreak},
+     StrategyPerformanceMethod{StrategyPerformanceMetric::MaximumWinningStreak},
     snapshot,
     context),
    3.0);
   EXPECT_DOUBLE_EQ(
    evaluate_series_method(
-     ModelPerformanceMethod{ModelPerformanceMetric::MaximumLosingStreak},
+     StrategyPerformanceMethod{StrategyPerformanceMetric::MaximumLosingStreak},
     snapshot,
     context),
    4.0);
@@ -268,7 +268,7 @@ TEST(EntryFilterTest, ModelPerformanceMethodsExposeAllStreaks)
 
 TEST(EntryFilterTest, ErasedMethodsAndNodesUseConcreteEntryFilterContext)
 {
-  const auto performance = ModelPerformanceSnapshot{};
+  const auto performance = StrategyPerformanceSnapshot{};
   const auto account_state = BacktestAccountState{};
   const auto requested_order = RequestedOrder{
    TradeEntry{1.0, 100.0}, false, 1.0, {}, 1.0, {}, 10.0, 0.0, 0.0};
@@ -278,7 +278,7 @@ TEST(EntryFilterTest, ErasedMethodsAndNodesUseConcreteEntryFilterContext)
   const auto method = ErasedSeriesMethod<EntryFilterMethodContext>{
    BooleanMethod<true>{}};
   const auto node = ErasedNode<EntryFilterMethodContext>{
-   ModelPerformanceNode{ModelPerformanceMetric::LifetimeCount}};
+   StrategyPerformanceNode{StrategyPerformanceMetric::LifetimeCount}};
   auto conversion_context = NodeToErasedMethodContext{};
 
   EXPECT_DOUBLE_EQ(evaluate_series_method(method, snapshot, context), 1.0);
@@ -295,8 +295,8 @@ TEST(EntryFilterTest,
 {
   const auto timeline =
    run_with_filter(BooleanMethod<true>{},
-                    PositionSizingNode{ModelPerformanceBayesianKellySizing{
-                     ModelPerformanceBayesianKellyEstimate::PosteriorMean}});
+                    PositionSizingNode{StrategyPerformanceBayesianKellySizing{
+                     StrategyPerformanceBayesianKellyEstimate::PosteriorMean}});
 
   ASSERT_EQ(timeline.position_sizing_decisions(0).size(), 1U);
   EXPECT_EQ(timeline.position_sizing_decisions(0).front().outcome,
@@ -305,7 +305,7 @@ TEST(EntryFilterTest,
   ASSERT_EQ(timeline.position_sizing_decisions(1).size(), 1U);
   EXPECT_EQ(timeline.position_sizing_decisions(1).front().outcome,
             PositionSizingDecisionOutcome::ShadowOnly);
-    ASSERT_EQ(timeline.strategy_state(2, 0).model_performance.lifetime_count(),
+    ASSERT_EQ(timeline.strategy_state(2, 0).strategy_performance.lifetime_count(),
             1U);
   ASSERT_EQ(timeline.position_sizing_decisions(3).size(), 1U);
   const auto& decision = timeline.position_sizing_decisions(3).front();

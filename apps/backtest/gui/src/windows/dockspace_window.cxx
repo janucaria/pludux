@@ -168,9 +168,8 @@ private:
                               "Markets",
                               "Brokers",
                               "Systems",
-                              "Strategies",
                               "Profiles",
-                              "Models",
+                              "Strategies",
                               "Watchlists",
                               "Assets"}) {
       ImGui::DockBuilderDockWindow(window, dock_right_down_id);

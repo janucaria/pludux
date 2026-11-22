@@ -26,7 +26,7 @@ import :pyramiding_layer_node;
 import :requested_order_node;
 import :risk_distance_node;
 import :stop_target_price_node;
-import :model_performance_node;
+import :strategy_performance_node;
 
 export namespace pludux::backtest {
 
@@ -202,7 +202,7 @@ private:
   bool use_series_params_{true};
 };
 
-auto make_backtest_model_config_parser() -> ConfigParser<BacktestMethodContext>;
+auto make_backtest_strategy_config_parser() -> ConfigParser<BacktestMethodContext>;
 
 auto make_requested_order_comparator_config_parser()
  -> ConfigParser<RequestedOrderMethodContext>;
@@ -394,92 +394,92 @@ static auto serialize_kc_band_node_type(KcBandNodeType value) -> std::string
 
 enum class EntryFilterNodeKind { Scalar, Boolean };
 
-static auto parse_model_performance_metric(const std::string& value)
- -> ModelPerformanceMetric
+static auto parse_strategy_performance_metric(const std::string& value)
+ -> StrategyPerformanceMetric
 {
   static const auto metrics =
-   std::unordered_map<std::string, ModelPerformanceMetric>{
-    {"LIFETIME_COUNT", ModelPerformanceMetric::LifetimeCount},
-    {"EFFECTIVE_COUNT", ModelPerformanceMetric::EffectiveCount},
-    {"WIN_RATE", ModelPerformanceMetric::WinRate},
-    {"BREAK_EVEN_RATE", ModelPerformanceMetric::BreakEvenRate},
-    {"LOSS_RATE", ModelPerformanceMetric::LossRate},
-    {"CURRENT_WINNING_STREAK", ModelPerformanceMetric::CurrentWinningStreak},
-    {"CURRENT_LOSING_STREAK", ModelPerformanceMetric::CurrentLosingStreak},
-    {"MAXIMUM_WINNING_STREAK", ModelPerformanceMetric::MaximumWinningStreak},
-    {"MAXIMUM_LOSING_STREAK", ModelPerformanceMetric::MaximumLosingStreak},
-    {"MEAN_RETURN", ModelPerformanceMetric::MeanReturn},
+   std::unordered_map<std::string, StrategyPerformanceMetric>{
+    {"LIFETIME_COUNT", StrategyPerformanceMetric::LifetimeCount},
+    {"EFFECTIVE_COUNT", StrategyPerformanceMetric::EffectiveCount},
+    {"WIN_RATE", StrategyPerformanceMetric::WinRate},
+    {"BREAK_EVEN_RATE", StrategyPerformanceMetric::BreakEvenRate},
+    {"LOSS_RATE", StrategyPerformanceMetric::LossRate},
+    {"CURRENT_WINNING_STREAK", StrategyPerformanceMetric::CurrentWinningStreak},
+    {"CURRENT_LOSING_STREAK", StrategyPerformanceMetric::CurrentLosingStreak},
+    {"MAXIMUM_WINNING_STREAK", StrategyPerformanceMetric::MaximumWinningStreak},
+    {"MAXIMUM_LOSING_STREAK", StrategyPerformanceMetric::MaximumLosingStreak},
+    {"MEAN_RETURN", StrategyPerformanceMetric::MeanReturn},
     {"RETURN_STANDARD_DEVIATION",
-     ModelPerformanceMetric::ReturnStandardDeviation},
+     StrategyPerformanceMetric::ReturnStandardDeviation},
     {"BAYESIAN_WIN_PROBABILITY",
-     ModelPerformanceMetric::BayesianWinProbability},
+     StrategyPerformanceMetric::BayesianWinProbability},
     {"BAYESIAN_WIN_PROBABILITY_LOWER_95",
-     ModelPerformanceMetric::BayesianWinProbabilityLower95},
+     StrategyPerformanceMetric::BayesianWinProbabilityLower95},
     {"BAYESIAN_WIN_PROBABILITY_UPPER_95",
-     ModelPerformanceMetric::BayesianWinProbabilityUpper95},
-    {"BAYESIAN_WINNING_PAYOFF", ModelPerformanceMetric::BayesianWinningPayoff},
+     StrategyPerformanceMetric::BayesianWinProbabilityUpper95},
+    {"BAYESIAN_WINNING_PAYOFF", StrategyPerformanceMetric::BayesianWinningPayoff},
     {"BAYESIAN_WINNING_PAYOFF_LOWER_95",
-     ModelPerformanceMetric::BayesianWinningPayoffLower95},
+     StrategyPerformanceMetric::BayesianWinningPayoffLower95},
     {"BAYESIAN_WINNING_PAYOFF_UPPER_95",
-     ModelPerformanceMetric::BayesianWinningPayoffUpper95},
-    {"BAYESIAN_LOSING_PAYOFF", ModelPerformanceMetric::BayesianLosingPayoff},
+     StrategyPerformanceMetric::BayesianWinningPayoffUpper95},
+    {"BAYESIAN_LOSING_PAYOFF", StrategyPerformanceMetric::BayesianLosingPayoff},
     {"BAYESIAN_LOSING_PAYOFF_LOWER_95",
-     ModelPerformanceMetric::BayesianLosingPayoffLower95},
+     StrategyPerformanceMetric::BayesianLosingPayoffLower95},
     {"BAYESIAN_LOSING_PAYOFF_UPPER_95",
-     ModelPerformanceMetric::BayesianLosingPayoffUpper95}};
+     StrategyPerformanceMetric::BayesianLosingPayoffUpper95}};
 
   if(const auto metric = metrics.find(value); metric != metrics.end()) {
     return metric->second;
   }
-  throw std::invalid_argument{"Model Performance metric is invalid"};
+  throw std::invalid_argument{"Strategy Performance metric is invalid"};
 }
 
-static auto serialize_model_performance_metric(ModelPerformanceMetric metric)
+static auto serialize_strategy_performance_metric(StrategyPerformanceMetric metric)
  -> std::string
 {
   switch(metric) {
-  case ModelPerformanceMetric::LifetimeCount:
+  case StrategyPerformanceMetric::LifetimeCount:
     return "LIFETIME_COUNT";
-  case ModelPerformanceMetric::EffectiveCount:
+  case StrategyPerformanceMetric::EffectiveCount:
     return "EFFECTIVE_COUNT";
-  case ModelPerformanceMetric::WinRate:
+  case StrategyPerformanceMetric::WinRate:
     return "WIN_RATE";
-  case ModelPerformanceMetric::BreakEvenRate:
+  case StrategyPerformanceMetric::BreakEvenRate:
     return "BREAK_EVEN_RATE";
-  case ModelPerformanceMetric::LossRate:
+  case StrategyPerformanceMetric::LossRate:
     return "LOSS_RATE";
-  case ModelPerformanceMetric::CurrentWinningStreak:
+  case StrategyPerformanceMetric::CurrentWinningStreak:
     return "CURRENT_WINNING_STREAK";
-  case ModelPerformanceMetric::CurrentLosingStreak:
+  case StrategyPerformanceMetric::CurrentLosingStreak:
     return "CURRENT_LOSING_STREAK";
-  case ModelPerformanceMetric::MaximumWinningStreak:
+  case StrategyPerformanceMetric::MaximumWinningStreak:
     return "MAXIMUM_WINNING_STREAK";
-  case ModelPerformanceMetric::MaximumLosingStreak:
+  case StrategyPerformanceMetric::MaximumLosingStreak:
     return "MAXIMUM_LOSING_STREAK";
-  case ModelPerformanceMetric::MeanReturn:
+  case StrategyPerformanceMetric::MeanReturn:
     return "MEAN_RETURN";
-  case ModelPerformanceMetric::ReturnStandardDeviation:
+  case StrategyPerformanceMetric::ReturnStandardDeviation:
     return "RETURN_STANDARD_DEVIATION";
-  case ModelPerformanceMetric::BayesianWinProbability:
+  case StrategyPerformanceMetric::BayesianWinProbability:
     return "BAYESIAN_WIN_PROBABILITY";
-  case ModelPerformanceMetric::BayesianWinProbabilityLower95:
+  case StrategyPerformanceMetric::BayesianWinProbabilityLower95:
     return "BAYESIAN_WIN_PROBABILITY_LOWER_95";
-  case ModelPerformanceMetric::BayesianWinProbabilityUpper95:
+  case StrategyPerformanceMetric::BayesianWinProbabilityUpper95:
     return "BAYESIAN_WIN_PROBABILITY_UPPER_95";
-  case ModelPerformanceMetric::BayesianWinningPayoff:
+  case StrategyPerformanceMetric::BayesianWinningPayoff:
     return "BAYESIAN_WINNING_PAYOFF";
-  case ModelPerformanceMetric::BayesianWinningPayoffLower95:
+  case StrategyPerformanceMetric::BayesianWinningPayoffLower95:
     return "BAYESIAN_WINNING_PAYOFF_LOWER_95";
-  case ModelPerformanceMetric::BayesianWinningPayoffUpper95:
+  case StrategyPerformanceMetric::BayesianWinningPayoffUpper95:
     return "BAYESIAN_WINNING_PAYOFF_UPPER_95";
-  case ModelPerformanceMetric::BayesianLosingPayoff:
+  case StrategyPerformanceMetric::BayesianLosingPayoff:
     return "BAYESIAN_LOSING_PAYOFF";
-  case ModelPerformanceMetric::BayesianLosingPayoffLower95:
+  case StrategyPerformanceMetric::BayesianLosingPayoffLower95:
     return "BAYESIAN_LOSING_PAYOFF_LOWER_95";
-  case ModelPerformanceMetric::BayesianLosingPayoffUpper95:
+  case StrategyPerformanceMetric::BayesianLosingPayoffUpper95:
     return "BAYESIAN_LOSING_PAYOFF_UPPER_95";
   }
-  throw std::invalid_argument{"Model Performance metric is invalid"};
+  throw std::invalid_argument{"Strategy Performance metric is invalid"};
 }
 
 struct ParsedEntryFilterNode {
@@ -527,7 +527,7 @@ static auto parse_entry_filter_child(const jsoncons::ojson& config)
   if(method == "PORTFOLIO.DRAWDOWN") {
     return {ErasedNode<Context>{DrawdownNode{}}, EntryFilterNodeKind::Scalar};
   }
-  if(method == "MODEL_PERFORMANCE.VALUE") {
+  if(method == "STRATEGY_PERFORMANCE.VALUE") {
     if(!config.contains("params") || !config.at("params").is_object() ||
        !config.at("params").contains("metric") ||
        !config.at("params").at("metric").is_string()) {
@@ -535,7 +535,7 @@ static auto parse_entry_filter_child(const jsoncons::ojson& config)
        "EntryFilter strategy-performance metric is invalid"};
     }
     return {
-     ErasedNode<Context>{ModelPerformanceNode{parse_model_performance_metric(
+     ErasedNode<Context>{StrategyPerformanceNode{parse_strategy_performance_metric(
       config.at("params").at("metric").as<std::string>())}},
      EntryFilterNodeKind::Scalar};
   }
@@ -684,10 +684,10 @@ serialize_entry_filter_child(const ErasedNode<EntryFilterMethodContext>& node)
   if(node_cast<DrawdownNode>(node)) {
     return {object("PORTFOLIO.DRAWDOWN"), EntryFilterNodeKind::Scalar};
   }
-  if(const auto* performance = node_cast<ModelPerformanceNode>(node)) {
-    auto config = object("MODEL_PERFORMANCE.VALUE");
+  if(const auto* performance = node_cast<StrategyPerformanceNode>(node)) {
+    auto config = object("STRATEGY_PERFORMANCE.VALUE");
     config["params"]["metric"] =
-     serialize_model_performance_metric(performance->metric());
+     serialize_strategy_performance_metric(performance->metric());
     return {std::move(config), EntryFilterNodeKind::Scalar};
   }
 
@@ -808,7 +808,7 @@ auto serialize_entry_filter_node(
 }
 
 template<typename TContext>
-auto make_model_config_parser_for() -> ConfigParser<TContext>
+auto make_strategy_config_parser_for() -> ConfigParser<TContext>
 {
   using Parser = ConfigParser<TContext>;
   using Node = ErasedNode<TContext>;
@@ -1586,9 +1586,9 @@ auto make_model_config_parser_for() -> ConfigParser<TContext>
   return parser;
 }
 
-auto make_backtest_model_config_parser() -> ConfigParser<BacktestMethodContext>
+auto make_backtest_strategy_config_parser() -> ConfigParser<BacktestMethodContext>
 {
-  return make_model_config_parser_for<BacktestMethodContext>();
+  return make_strategy_config_parser_for<BacktestMethodContext>();
 }
 
 auto make_requested_order_comparator_config_parser()
@@ -1620,17 +1620,17 @@ auto make_requested_order_comparator_config_parser()
      return DataNode{strict_param_as<std::string>(params.at("field"))};
    });
   parser.register_node_parser(
-   "MODEL_PERFORMANCE.VALUE",
+   "STRATEGY_PERFORMANCE.VALUE",
    [](const Parser&, const Node& node) -> jsoncons::ojson {
-     const auto* performance = node_cast<ModelPerformanceNode>(node);
+     const auto* performance = node_cast<StrategyPerformanceNode>(node);
      return performance
              ? jsoncons::ojson::object{{
                 "metric",
-                serialize_model_performance_metric(performance->metric())}}
+                serialize_strategy_performance_metric(performance->metric())}}
              : jsoncons::ojson::null();
    },
    [](Parser::Parser, const jsoncons::ojson& params) -> Node {
-     return ModelPerformanceNode{parse_model_performance_metric(
+     return StrategyPerformanceNode{parse_strategy_performance_metric(
       strict_param_as<std::string>(params.at("metric")))};
    });
 

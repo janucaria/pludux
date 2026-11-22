@@ -5,69 +5,56 @@ For a complete multi-market configuration example, see
 
 ## Terminology
 
-Pludux treats a **Model** as deterministic entry/exit/indicator logic; a
-**Strategy** as a named, reusable stored resource of Model, Profile, model input
-overrides, and Entry Filter; a **System** as a reusable Watchlist, Main
-Strategy, ordered Failsafe Strategy bindings with activation, and one shared
-Model Performance config; and a **Portfolio** as the account that executes
-ordered Systems with shared capital.
-
-- A Strategy contains one Model, one Profile, model input overrides, and an
-  Entry Filter. It is reusable across Systems.
-- A System selects a Watchlist and contains one Main Strategy plus ordered
-  Failsafe Strategy bindings and activation rules. It also shares one Model
-  Performance calculation policy across those Strategy references.
+- A Strategy defines deterministic entry and exit rules, indicators, and
+  input defaults. Systems may reference the same Strategy more than once.
+- A System selects one Watchlist and one Profile. Its Main setup and ordered
+  Failsafes each reference a Strategy and own their input overrides and Entry
+  Filter. Each Failsafe also has an activation rule. The System shares one
+  Strategy Performance calculation policy across its setups.
 - A Portfolio owns initial capital, one Market, one Broker, aggregate capacity
   limits, and an ordered collection of Systems. The Market is the trading venue
   or market context and provides venue-specific rules such as minimum order
   quantity and quantity step. The Broker represents the Market's broker or
   execution provider and provides its fee and execution-cost rules. Each
-  Strategy Profile owns its drawdown adjustment and insufficient-cash response.
+  System's Profile defines drawdown adjustment and the insufficient-cash response.
 - Running a Portfolio simulates all of its Systems. A single-asset simulation
   is a Portfolio containing one System × Asset Backtest.
 
 The same System configuration may be referenced by different Portfolios.
-Runtime positions, indicator results, and Model Performance evidence are
+Runtime positions, indicator results, and Strategy Performance evidence are
 isolated within each Portfolio run.
 
 ## Ownership
 
-A Strategy decides when it wants to trade and how large its Profile wants the
-position to be. The Portfolio decides whether the shared account can execute
-that request.
+The Strategy defines when to request an entry. The System's Profile sizes it,
+the setup's Entry Filter screens it, and the Portfolio arbitrates eligible
+requests against shared cash and capacity.
 
 ```text
 Portfolio
 |- Initial capital and account equity
-|- Market rules
-|- Broker fees
-|- Maximum open trades
-|- Maximum combined layers
+|- Market rules and Broker fees
+|- Maximum open trades and maximum combined layers
 |- Entry comparators
 `- Ordered Systems
-    |- Watchlist
-    `- Strategy references
-       |- Main Strategy
-       |- Failsafe Strategy bindings
-       |- Model and inputs
-       |- Entry filter
-       `- Profile
-           |- Position sizing
-           |- Drawdown adjustment
-           `- Insufficient-cash policy
+   |- Watchlist
+   |- Profile (position sizing, drawdown adjustment, insufficient-cash policy)
+   |- Strategy Performance calculation settings
+   |- Main setup (Strategy, input overrides, Entry Filter)
+   `- Ordered Failsafes (Strategy, input overrides, Entry Filter, activation)
 ```
 
 Position sizing and Entry Filters read the current Portfolio equity and
-drawdown. Each Strategy maintains independent theoretical Model Performance,
-so Bayesian or Kelly sizing uses only that Strategy's history within the current
+drawdown. Each setup maintains its own theoretical Strategy Performance per Asset.
+Bayesian or Kelly sizing reads that setup’s history for that Asset in the current
 Portfolio run. Shared reservations do not change a Profile's sizing intent;
 they constrain the later cash decision.
 
 When an accepted initial order opens a real position, that position permanently
-belongs to the requesting Strategy. Pyramids, partial exits, snapshots, the
+belongs to the requesting setup. Pyramids, partial exits, snapshots, the
 final closed trade, and position-related execution events retain that owner even
 if a different Strategy is active later. A rejected initial order is
-attributed to the Strategy that requested it.
+attributed to the setup that requested it.
 
 Sizing methods express different limits:
 
@@ -86,38 +73,41 @@ ranked by the Portfolio's ordered comparators. Complete ties resolve by the
 Portfolio's ordered System list, then that System's Watchlist Asset order.
 Separate Portfolios do not arbitrate with one another.
 
-For each risk-increasing request, Pludux performs these steps:
+For a fresh initial entry, Pludux processes the request in this order.
 
-1. Capture the setup's theoretical Model Performance snapshot.
-2. Evaluate its Profile sizing constraint and drawdown adjustment.
+1. Capture the setup's theoretical Strategy Performance snapshot.
+2. Evaluate the System Profile’s sizing constraint and drawdown adjustment.
 3. Use the shared Market and Broker to create an immutable Requested Order with
    normalized quantity, notional, fees, and risk values.
-4. Evaluate the setup's Entry Filter against Model Performance, Requested
+4. Evaluate the setup's Entry Filter against Strategy Performance, Requested
    Order values, and current account metrics. An entry-filtered Main Strategy
    may allow the next eligible Failsafe binding to produce its own fresh entry.
 5. Rank every accepted Requested Order using the Portfolio comparators.
 6. Enforce maximum-open-trade and maximum-combined-layer capacity.
 7. Compare the fee-inclusive requested cost with available shared cash.
 8. Reject the request or cap it to the largest affordable valid quantity using
-   the owning Profile's insufficient-cash policy.
+   the System Profile's insufficient-cash policy.
+
+Pyramids use the frozen unit size of the actual position. They join the same
+Portfolio ranking, capacity, and cash checks as initial orders.
 
 ### Entry comparator data
 
 Portfolio Entry Comparators can combine immutable Requested Order values with
 the order's asset OHLCV fields, custom `DATA` fields, and
-`MODEL_PERFORMANCE.VALUE`. They support numeric constants, basic scalar math,
+`STRATEGY_PERFORMANCE.VALUE`. They support numeric constants, basic scalar math,
 and lookback. They intentionally do not expose Strategy named series or
-technical-indicator nodes: Model and Profile logic has already produced the
+technical-indicator nodes: Strategy and Profile logic has already produced the
 Requested Order before Portfolio ranking begins.
 
-For each initial or pyramiding request, `MODEL_PERFORMANCE.VALUE` reads the
-immutable Model Performance snapshot captured from the requesting Strategy
+For each initial or pyramiding request, `STRATEGY_PERFORMANCE.VALUE` reads the
+immutable Strategy Performance snapshot captured from the requesting Strategy
 binding during request discovery. The snapshot contains only evidence visible
 in that execution phase and cannot change while accepted requests are ranked.
-Each candidate therefore uses its own Strategy binding's current theoretical
+Each candidate therefore uses its own Strategy setup's current theoretical
 history without introducing look-ahead or ranking-order effects.
 
-Model Performance may already affect Bayesian or Kelly position sizing. Using
+Strategy Performance may already affect Bayesian or Kelly position sizing. Using
 it again in a comparator is valid, but can intentionally or accidentally give
 the same performance evidence additional influence over capital allocation.
 
@@ -239,14 +229,14 @@ layers). A cash rejection also shows the required and available amounts.
 
 The event-type filter defaults to all events within the selected setup. Use it
 to inspect, for example, stop-loss fills. A partial exit with a recorded cause
-matches both Scale out and its exit cause, with one row in the timeline. Hypothetical Model activity is available in the Trades window.
+matches both Scale out and its exit cause, with one row in the timeline. Hypothetical Strategy activity is available in the Trades window.
 
 ## Portfolio Hierarchy and Chart Selection
 
 The Portfolios window is an expandable tree. Each top-level Portfolio contains
 a flat Setup × Asset list. Rows are ordered by Portfolio System order, then
 Watchlist asset order, then Main setup followed by its ordered Failsafes. Each
-row identifies the Strategy, Asset, setup role, Model, and Profile.
+row identifies the Strategy, Asset, setup role, and System Profile.
 
 Selecting a Portfolio opens it and restores that Portfolio's last valid setup
 selection. If the remembered setup was removed or is no longer valid, Pludux
@@ -257,12 +247,12 @@ including when two Portfolios reuse the same System.
 Selecting a Setup × Asset child selects its parent Portfolio and filters the
 Chart and Trades inspection to that setup. Candles provide the shared market
 context, while Portfolio accounting, execution status, and Overview remain
-aggregate across the System × Asset run. Missing Strategy, Asset, Model, or
+aggregate across the System × Asset run. Missing Strategy, Asset, or
 Profile references remain visible as disabled rows so broken configurations can
 be identified without silently changing their order.
 
 Portfolio search covers both levels. A Portfolio-name match shows all of its
-children. Child matching includes Strategy, Asset, setup role, Model, and
+children. Child matching includes Strategy, Asset, setup role, and
 Profile names while preserving the original display order.
 
 The Systems editor selection is separate: it chooses which reusable System

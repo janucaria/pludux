@@ -12,11 +12,10 @@ import :portfolio;
 import :portfolio_results;
 import :asset;
 import :watchlist;
-import :model;
+import :strategy;
 import :market;
 import :broker;
 import :profile;
-import :strategy;
 
 export namespace pludux::backtest {
 
@@ -28,21 +27,19 @@ public:
              std::vector<Portfolio> portfolios,
              std::vector<Asset> assets,
              std::vector<Watchlist> watchlists,
-              std::vector<Model> models,
+              std::vector<Strategy> strategies,
              std::vector<Market> markets,
              std::vector<Broker> brokers,
              std::vector<Profile> profiles,
-             std::vector<Strategy> strategies,
              std::vector<PortfolioResults> portfolio_results)
    : systems_{std::move(systems)}
   , portfolios_{std::move(portfolios)}
   , assets_{std::move(assets)}
   , watchlists_{std::move(watchlists)}
-  , models_{std::move(models)}
+  , strategies_{std::move(strategies)}
   , markets_{std::move(markets)}
   , brokers_{std::move(brokers)}
   , profiles_{std::move(profiles)}
-   , strategies_{std::move(strategies)}
   , portfolio_results_{std::move(portfolio_results)}
   {
   }
@@ -90,15 +87,15 @@ public:
     return self.watchlists_;
   }
 
-  auto models(this const StoreArena& self) noexcept
-    -> const std::vector<Model>&
+  auto strategies(this const StoreArena& self) noexcept
+    -> const std::vector<Strategy>&
   {
-    return self.models_;
+    return self.strategies_;
   }
 
-   auto models(this StoreArena& self) noexcept -> std::vector<Model>&
+   auto strategies(this StoreArena& self) noexcept -> std::vector<Strategy>&
   {
-    return self.models_;
+    return self.strategies_;
   }
 
   auto markets(this const StoreArena& self) noexcept
@@ -134,17 +131,6 @@ public:
     return self.profiles_;
   }
 
-  auto strategies(this const StoreArena& self) noexcept
-   -> const std::vector<Strategy>&
-  {
-    return self.strategies_;
-  }
-
-  auto strategies(this StoreArena& self) noexcept -> std::vector<Strategy>&
-  {
-    return self.strategies_;
-  }
-
   auto portfolio_results(this const StoreArena& self) noexcept
    -> const std::vector<PortfolioResults>&
   {
@@ -162,11 +148,10 @@ private:
   std::vector<Portfolio> portfolios_;
   std::vector<Asset> assets_;
   std::vector<Watchlist> watchlists_;
-  std::vector<Model> models_;
+  std::vector<Strategy> strategies_;
   std::vector<Market> markets_;
   std::vector<Broker> brokers_;
   std::vector<Profile> profiles_;
-  std::vector<Strategy> strategies_;
   std::vector<PortfolioResults> portfolio_results_;
 };
 

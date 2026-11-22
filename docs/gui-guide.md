@@ -8,9 +8,8 @@ The dockspace opens these windows:
 
 - Assets
 - Watchlists
-- Models
-- Profiles
 - Strategies
+- Profiles
 - Systems
 - Markets
 - Brokers
@@ -31,10 +30,10 @@ from file paths and text input. The editor includes:
 
 The importer expects exact OHLCV column headers.
 
-## Models window
+## Strategies window
 
-Use this window to create Models, edit them, duplicate them, and import or
-export JSON. The UI also exposes built-in models and a node editor for
+Use this window to create Strategies, edit them, duplicate them, and import or
+export JSON. The UI also exposes built-in Strategies and a node editor for
 numeric expressions, conditions, named series, and portfolio comparators.
 
 ## Watchlists window
@@ -49,34 +48,18 @@ Use this window to create reusable risk and capital-management policies. A
 Profile can be named for a user-defined policy, such as **Conservative**,
 **Moderate**, or **Aggressive**; these are not built-in presets. The editor
 starts with risk-distance sizing and is where drawdown adjustment and
-insufficient-cash settings are configured. Entry Filters are configured in the
-Strategies window, not in Profiles.
-
-## Strategies window
-
-Combine one Model and one Profile, override declared Model inputs, and build an
-optional Entry Filter for fresh initial Requested Orders. Duplicate a Strategy
-before making a variant used by only some Systems.
+insufficient-cash settings are configured. Select one Profile for each System.
 
 ## Systems window
 
-Use this window to bind a Watchlist, a Main Strategy, optional Failsafe Strategy
-bindings, and shared Model Performance settings.
+Select the Watchlist and Profile once for the entire System. In the Main setup,
+select a Strategy and configure its Strategy Inputs and Entry Filter. Add any
+Failsafes in evaluation order, each with its own Strategy, input overrides,
+Entry Filter, and activation rule.
 
-The System editor shows:
-
-- Watchlist
-- Main Strategy
-- Failsafe Strategy bindings
-- Model
-- Model Inputs
-- Profile
-- Entry Filter
-- Shared Model Performance Calculation
-
-Use the Strategies window to create, edit, duplicate, and inspect reusable
-Strategy resources. Editing a Strategy updates every System that references it.
-If you need a variant, duplicate the Strategy first.
+The System's Strategy Performance calculation settings apply to all its setups.
+Each setup tracks its own theoretical history for each Asset. To edit the
+underlying rules shared by its users, open the selected Strategy in **Strategies**.
 
 ## Markets and Brokers windows
 
@@ -92,7 +75,7 @@ market context), Broker (the Market's broker or execution provider), capacity
 limits, entry comparators, and ordered Systems.
 
 Entry comparators may use Requested Order values, phase-visible market data,
-and Model Performance from each requesting Strategy binding's immutable
+and Strategy Performance from each requesting Strategy setup's immutable
 request-discovery snapshot. This applies to initial and pyramiding requests;
 named series and indicators are not available. Current Close sees completed
 current-bar OHLCV and custom DATA. Next Open sees the previous completed bar;
@@ -105,7 +88,7 @@ behavior.
 ## Chart, Trades, Events, and Overview
 
 These windows share the scope selected in **Portfolios**. Selecting a
-Single-Asset child selects its parent Portfolio and that Strategy binding within
+Single-Asset child selects its parent Portfolio and that Strategy setup within
 a System–Asset run. Expanded Portfolio rows use Single-Asset scope, restoring
 the last selected child or choosing the first valid child when necessary.
 Collapsed rows use Portfolio scope and retain their child selection for
@@ -122,13 +105,13 @@ Single-Asset scope retains its existing Chart, Trades, and Events views.
 Overview shows that child's actual trade performance, including net P&L,
 trade statistics, return on deployed capital, and contribution to Portfolio
 return. Trades can switch between actual shared-capital executions and
-hypothetical Model activity in both scopes. See
-[Getting Started](getting-started.md#9-run-and-inspect) for return definitions
+hypothetical Strategy activity in both scopes. See
+[Getting Started](getting-started.md#8-run-and-inspect) for return definitions
 and [Results and Accounting](results.md) for accounting details.
 
 ## Notes
 
-- Model JSON import/export is available in Models; `.pludux` opens and saves
+- Strategy JSON import/export is available in Strategies; `.pludux` opens and saves
   the complete workspace. Other interchange formats are not claimed here.
 - When a label is not explicitly verified above, follow the current GUI prompt.
 

@@ -18,19 +18,19 @@ module;
 
 export module pludux.backtest:position_sizing;
 
-import :model_performance;
+import :strategy_performance;
 import :entry_order_sizing;
 
 export namespace pludux::backtest {
 
-enum class ModelPerformanceBayesianKellyEstimate {
+enum class StrategyPerformanceBayesianKellyEstimate {
   PosteriorMean,
   AdverseQuantiles
 };
 
-struct ModelPerformanceBayesianKellyEvaluation {
-  ModelPerformanceBayesianKellyEstimate estimate{
-   ModelPerformanceBayesianKellyEstimate::AdverseQuantiles};
+struct StrategyPerformanceBayesianKellyEvaluation {
+  StrategyPerformanceBayesianKellyEstimate estimate{
+   StrategyPerformanceBayesianKellyEstimate::AdverseQuantiles};
   double central_credible_mass{0.80};
   double win_probability{};
   double winning_payoff{};
@@ -42,14 +42,14 @@ struct ModelPerformanceBayesianKellyEvaluation {
   double allocation_fraction{};
 
   auto
-  operator==(const ModelPerformanceBayesianKellyEvaluation&) const noexcept
+  operator==(const StrategyPerformanceBayesianKellyEvaluation&) const noexcept
    -> bool = default;
 };
 
 struct PositionSizingEvaluation {
   double requested_quantity{};
   EntryOrderSizingConstraint constraint{NearestQuantityConstraint{}};
-  std::optional<ModelPerformanceBayesianKellyEvaluation> bayesian_kelly{};
+  std::optional<StrategyPerformanceBayesianKellyEvaluation> bayesian_kelly{};
 
   auto operator==(const PositionSizingEvaluation&) const noexcept
    -> bool = default;
@@ -60,12 +60,12 @@ public:
   PositionSizingContext(double equity,
                         double entry_price,
                         double direction,
-                         const ModelPerformanceSnapshot& model_performance,
+                         const StrategyPerformanceSnapshot& strategy_performance,
                         std::function<double()> risk_distance_resolver)
   : equity_{equity}
   , entry_price_{entry_price}
   , direction_{direction}
-  , model_performance_{&model_performance}
+  , strategy_performance_{&strategy_performance}
   , risk_distance_resolver_{std::move(risk_distance_resolver)}
   {
     if(direction_ != 1.0 && direction_ != -1.0) {
@@ -88,10 +88,10 @@ public:
     return self.direction_;
   }
 
-  auto model_performance(this const PositionSizingContext& self) noexcept
-   -> const ModelPerformanceSnapshot&
+  auto strategy_performance(this const PositionSizingContext& self) noexcept
+   -> const StrategyPerformanceSnapshot&
   {
-    return *self.model_performance_;
+    return *self.strategy_performance_;
   }
 
   auto risk_distance(this const PositionSizingContext& self) -> double
@@ -106,7 +106,7 @@ private:
   double equity_{};
   double entry_price_{};
   double direction_{};
-  const ModelPerformanceSnapshot* model_performance_{};
+  const StrategyPerformanceSnapshot* strategy_performance_{};
   std::function<double()> risk_distance_resolver_{};
 };
 
@@ -259,11 +259,11 @@ private:
   double equity_fraction_{0.01};
 };
 
-class ModelPerformanceBayesianKellySizing {
+class StrategyPerformanceBayesianKellySizing {
 public:
-  ModelPerformanceBayesianKellySizing(
-   ModelPerformanceBayesianKellyEstimate estimate =
-     ModelPerformanceBayesianKellyEstimate::AdverseQuantiles,
+  StrategyPerformanceBayesianKellySizing(
+   StrategyPerformanceBayesianKellyEstimate estimate =
+     StrategyPerformanceBayesianKellyEstimate::AdverseQuantiles,
    double central_credible_mass = 0.80,
    double kelly_multiplier = 0.50,
    double maximum_equity_fraction = 1.0)
@@ -275,42 +275,42 @@ public:
     validate();
   }
 
-  auto operator==(const ModelPerformanceBayesianKellySizing&) const noexcept
+  auto operator==(const StrategyPerformanceBayesianKellySizing&) const noexcept
    -> bool = default;
 
   auto
-   estimate(this const ModelPerformanceBayesianKellySizing& self) noexcept
-    -> ModelPerformanceBayesianKellyEstimate
+   estimate(this const StrategyPerformanceBayesianKellySizing& self) noexcept
+    -> StrategyPerformanceBayesianKellyEstimate
   {
     return self.estimate_;
   }
 
   auto central_credible_mass(
-    this const ModelPerformanceBayesianKellySizing& self) noexcept -> double
+    this const StrategyPerformanceBayesianKellySizing& self) noexcept -> double
   {
     return self.central_credible_mass_;
   }
 
   auto kelly_multiplier(
-    this const ModelPerformanceBayesianKellySizing& self) noexcept -> double
+    this const StrategyPerformanceBayesianKellySizing& self) noexcept -> double
   {
     return self.kelly_multiplier_;
   }
 
   auto maximum_equity_fraction(
-    this const ModelPerformanceBayesianKellySizing& self) noexcept -> double
+    this const StrategyPerformanceBayesianKellySizing& self) noexcept -> double
   {
     return self.maximum_equity_fraction_;
   }
 
 private:
-  ModelPerformanceBayesianKellyEstimate estimate_{
-   ModelPerformanceBayesianKellyEstimate::AdverseQuantiles};
+  StrategyPerformanceBayesianKellyEstimate estimate_{
+   StrategyPerformanceBayesianKellyEstimate::AdverseQuantiles};
   double central_credible_mass_{0.80};
   double kelly_multiplier_{0.50};
   double maximum_equity_fraction_{1.0};
 
-  void validate(this const ModelPerformanceBayesianKellySizing& self)
+  void validate(this const StrategyPerformanceBayesianKellySizing& self)
   {
     if(!std::isfinite(self.central_credible_mass_) ||
        self.central_credible_mass_ <= 0.0 ||
@@ -453,16 +453,16 @@ private:
   EquityFractionPositionSizing node_;
 };
 
-class ModelPerformanceBayesianKellySizingMethod {
+class StrategyPerformanceBayesianKellySizingMethod {
 public:
-  explicit ModelPerformanceBayesianKellySizingMethod(
-   ModelPerformanceBayesianKellySizing node)
+  explicit StrategyPerformanceBayesianKellySizingMethod(
+   StrategyPerformanceBayesianKellySizing node)
   : node_{std::move(node)}
   {
   }
 
   auto
-  operator==(const ModelPerformanceBayesianKellySizingMethod&) const noexcept
+  operator==(const StrategyPerformanceBayesianKellySizingMethod&) const noexcept
    -> bool = default;
   auto name() const noexcept -> std::string_view
   {
@@ -475,7 +475,7 @@ public:
     validate_non_negative_context_value(context.equity(), "equity");
     validate_context_value(context.entry_price(), "entry price");
 
-     const auto& performance = context.model_performance();
+     const auto& performance = context.strategy_performance();
     const auto& win = performance.win_probability_posterior();
     const auto& winning = performance.winning_payoff_posterior();
     const auto& losing = performance.losing_payoff_posterior();
@@ -484,7 +484,7 @@ public:
     auto winning_payoff = winning.mean;
     auto losing_payoff = losing.mean;
     if(node_.estimate() ==
-        ModelPerformanceBayesianKellyEstimate::AdverseQuantiles) {
+        StrategyPerformanceBayesianKellyEstimate::AdverseQuantiles) {
       const auto tail = (1.0 - node_.central_credible_mass()) / 2.0;
       probability = boost::math::quantile(
        boost::math::beta_distribution<double>{win.posterior_alpha,
@@ -517,7 +517,7 @@ public:
     const auto allocation_fraction =
      std::min(scaled_fraction, node_.maximum_equity_fraction());
 
-    const auto diagnostic = ModelPerformanceBayesianKellyEvaluation{
+    const auto diagnostic = StrategyPerformanceBayesianKellyEvaluation{
      .estimate = node_.estimate(),
      .central_credible_mass = node_.central_credible_mass(),
      .win_probability = probability,
@@ -535,7 +535,7 @@ public:
   }
 
 private:
-  ModelPerformanceBayesianKellySizing node_;
+  StrategyPerformanceBayesianKellySizing node_;
 };
 
 } // namespace detail
@@ -566,11 +566,11 @@ make_position_sizing_method(const EquityFractionPositionSizing& node)
 }
 
 inline auto
-make_position_sizing_method(const ModelPerformanceBayesianKellySizing& node)
+make_position_sizing_method(const StrategyPerformanceBayesianKellySizing& node)
  -> PositionSizingMethod
 {
   return PositionSizingMethod{
-    detail::ModelPerformanceBayesianKellySizingMethod{node}};
+    detail::StrategyPerformanceBayesianKellySizingMethod{node}};
 }
 
 template<typename T>
@@ -639,9 +639,9 @@ enum class PositionSizingDecisionOutcome {
 
 struct PositionSizingDecision {
   std::size_t intent_id{};
-   std::size_t model_trade_id{};
+   std::size_t strategy_trade_id{};
   std::size_t strategy_index{};
-   ModelDirection direction{ModelDirection::Long};
+   StrategyDirection direction{StrategyDirection::Long};
   bool pyramiding{};
   std::string method{};
   double entry_price{};
@@ -659,7 +659,7 @@ struct PositionSizingDecision {
   std::optional<double> final_quantity{};
   std::optional<double> final_entry_cost{};
   bool cash_adjusted{};
-  std::optional<ModelPerformanceBayesianKellyEvaluation> bayesian_kelly{};
+  std::optional<StrategyPerformanceBayesianKellyEvaluation> bayesian_kelly{};
 
   auto operator==(const PositionSizingDecision&) const noexcept
    -> bool = default;

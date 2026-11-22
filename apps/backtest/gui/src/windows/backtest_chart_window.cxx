@@ -246,14 +246,14 @@ public:
 
     const auto asset_handle = run.asset_handle;
     const auto& asset = app_state.get_asset(asset_handle);
-    const auto* strategy = app_state.get_strategy_if_present(
+    const auto* strategy_ptr = app_state.get_strategy_if_present(
      system.strategy_handle(strategy_index));
-    if(!strategy) {
+    if(!strategy_ptr) {
       self.render_incomplete_status(app_state, portfolio);
       ImGui::End();
       return;
     }
-    const auto& model = app_state.get_model(strategy->model_handle());
+    const auto& strategy = *strategy_ptr;
 
     if(asset.size() == 0) {
       self.render_status_panel(
@@ -313,7 +313,7 @@ public:
     const auto chart_position = ImGui::GetCursorScreenPos();
     const auto chart_size = ImGui::GetContentRegionAvail();
 
-    const auto& plots = model.plots();
+    const auto& plots = strategy.plots();
     const auto no_overlays_view = std::views::filter(
      [](const auto& plot_group) { return !plot_group.is_overlay(); });
     const auto additional_plots_count =
@@ -937,7 +937,7 @@ private:
       return {std::format("{} {}", label, format_plot_value(value)), color};
     };
     const auto& strategy_state = backtest_timeline.strategy_state(index, strategy_index);
-     const auto& performance = strategy_state.model_performance;
+     const auto& performance = strategy_state.strategy_performance;
     auto line = LegendLine{};
 
     switch(self.chart_state_.top_plot()) {
@@ -959,10 +959,10 @@ private:
     }
     case BacktestTopPlot::ShadowReturn: {
       auto value = std::numeric_limits<double>::quiet_NaN();
-        const auto& closed = strategy_state.model_closed_positions;
+        const auto& closed = strategy_state.strategy_closed_positions;
       if(!closed.empty()) {
         value = closed.back().return_ratio();
-       } else if(const auto& open = strategy_state.model_open_position) {
+       } else if(const auto& open = strategy_state.strategy_open_position) {
         value = open->unrealized_return_ratio();
       }
       line.emplace_back("Shadow return", IM_COL32_WHITE);
@@ -1742,12 +1742,12 @@ private:
       xs[index] = static_cast<double>(index);
       const auto& strategy_state =
        timeline.strategy_state(index, strategy_index);
-       const auto& closed = strategy_state.model_closed_positions;
+       const auto& closed = strategy_state.strategy_closed_positions;
       if(!closed.empty()) {
         returns[index] = closed.back().return_ratio();
       }
       if(std::isnan(returns[index])) {
-         const auto& open = strategy_state.model_open_position;
+         const auto& open = strategy_state.strategy_open_position;
         if(open) {
           returns[index] = open->unrealized_return_ratio();
         }
@@ -1768,7 +1768,7 @@ private:
     for(auto index = std::size_t{0}; index < timeline.size(); ++index) {
       xs[index] = static_cast<double>(index);
       const auto& performance =
-        timeline.strategy_state(index, strategy_index).model_performance;
+        timeline.strategy_state(index, strategy_index).strategy_performance;
       win_rate[index] = performance.win_rate();
       break_even_rate[index] = performance.break_even_rate();
       loss_rate[index] = performance.loss_rate();
@@ -1791,7 +1791,7 @@ private:
     for(auto index = std::size_t{0}; index < timeline.size(); ++index) {
       xs[index] = static_cast<double>(index);
       const auto& performance =
-        timeline.strategy_state(index, strategy_index).model_performance;
+        timeline.strategy_state(index, strategy_index).strategy_performance;
       winning[index] =
        static_cast<double>(performance.current_winning_streak());
       losing[index] = static_cast<double>(performance.current_losing_streak());
@@ -1812,7 +1812,7 @@ private:
       xs[index] = static_cast<double>(index);
       const auto& posterior =
        timeline.strategy_state(index, strategy_index)
-         .model_performance.win_probability_posterior();
+         .strategy_performance.win_probability_posterior();
       mean[index] = posterior.probability;
       lower[index] = posterior.lower_95;
       upper[index] = posterior.upper_95;
@@ -1836,7 +1836,7 @@ private:
     for(auto index = std::size_t{0}; index < timeline.size(); ++index) {
       xs[index] = static_cast<double>(index);
       const auto& performance =
-        timeline.strategy_state(index, strategy_index).model_performance;
+        timeline.strategy_state(index, strategy_index).strategy_performance;
       const auto& winning = performance.winning_payoff_posterior();
       const auto& losing = performance.losing_payoff_posterior();
       winning_mean[index] = winning.mean;
@@ -2030,16 +2030,16 @@ private:
     const auto portfolio_handle = app_state.selected_portfolio_handle();
     const auto run = selected_strategy.run;
     const auto& system = app_state.get_system(run.system_handle);
-    const auto* strategy = app_state.get_strategy_if_present(
+    const auto* strategy_ptr = app_state.get_strategy_if_present(
      system.strategy_handle(selected_strategy.strategy_index));
-    if(!strategy) return;
-    const auto& model = app_state.get_model(strategy->model_handle());
+    if(!strategy_ptr) return;
+    const auto& strategy = *strategy_ptr;
     const auto& results = app_state.get_portfolio_results(portfolio_handle);
     const auto& backtest_results = *results.backtest(run);
     const auto& backtest_timeline = backtest_results.timeline();
     const auto& series_results =
       backtest_results.series_results(selected_strategy.strategy_index);
-    const auto& plots = model.plots();
+    const auto& plots = strategy.plots();
 
     auto group_index = std::size_t{0};
     for(const auto& plot_group :

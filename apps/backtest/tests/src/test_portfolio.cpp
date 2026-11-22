@@ -146,16 +146,17 @@ TEST(PortfolioTest, EntryComparatorsParticipateInRuleEquivalence)
   EXPECT_FALSE(lhs.equivalent_rules(rhs));
 }
 
-TEST(SystemTest, ContainsOnlyReusableStrategyConfiguration)
+TEST(SystemTest, StoresReusableStrategyAndProfileReferences)
 {
   const auto system =
    System{"BTC trend",
           WatchlistStoreHandle{1, 1},
-          ModelPerformanceConfig{},
-          StrategyStoreHandle{2, 1}};
+          ProfileStoreHandle{4, 1},
+          StrategyPerformanceConfig{},
+          StrategySetup{StrategyStoreHandle{2, 1}}};
   EXPECT_EQ(system.name(), "BTC trend");
   EXPECT_EQ(system.watchlist_handle(), (WatchlistStoreHandle{1, 1}));
-  EXPECT_EQ(system.main_strategy_handle(), (StrategyStoreHandle{2, 1}));
+  EXPECT_EQ(system.main_setup().strategy_handle(), (StrategyStoreHandle{2, 1}));
 }
 
 TEST(PortfolioTest, ResultsAreIdentifiedByBacktestAndAsset)

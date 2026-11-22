@@ -4,14 +4,14 @@ module;
 #include <utility>
 #include <vector>
 
-export module pludux.backtest:model_inputs;
+export module pludux.backtest:strategy_inputs;
 
 import pludux;
 
-import :strategy;
+import :strategy_setup;
 import :risk_distance_node;
 import :position_node;
-import :model;
+import :strategy;
 import :stop_target_price_node;
 
 export namespace pludux::backtest {
@@ -453,17 +453,17 @@ void collect_numeric_inputs_from_node(
 #undef PLUDUX_COLLECT_IF_NODE
 }
 
-auto collect_model_inputs(const Model& model)
+auto collect_strategy_inputs(const Strategy& strategy)
  -> std::vector<NumericInputNode>
 {
   auto inputs = std::vector<NumericInputNode>{};
 
-  for(const auto& [_, series_node] : model.series_nodes()) {
+  for(const auto& [_, series_node] : strategy.series_nodes()) {
     collect_numeric_inputs_from_node(series_node, inputs);
   }
 
   const auto collect_from_position =
-    [&inputs](const Model::Position& position) {
+    [&inputs](const Strategy::Position& position) {
      collect_numeric_inputs_from_node(position.entry().signal(), inputs);
      for(const auto& exit : position.exits()) {
        if(exit.enabled()) {
@@ -484,19 +484,29 @@ auto collect_model_inputs(const Model& model)
      }
    };
 
-  collect_from_position(model.long_position());
-  collect_from_position(model.short_position());
+  collect_from_position(strategy.long_position());
+  collect_from_position(strategy.short_position());
 
   return inputs;
 }
 
-void assign_strategy_model(Strategy& strategy,
-                           ModelStoreHandle model_handle,
-                           const Model& model)
+void sync_strategy_inputs(StrategySetup& setup, const Strategy& strategy)
 {
-  auto inputs = collect_model_inputs(model);
-  strategy.model_handle(std::move(model_handle));
-  strategy.inputs(std::move(inputs));
+  auto inputs = collect_strategy_inputs(strategy);
+  const auto& previous = setup.inputs();
+  for(std::size_t index = 0; index < inputs.size() && index < previous.size(); ++index) {
+    inputs[index].value(previous[index].value());
+  }
+  setup.inputs(std::move(inputs));
+}
+
+void assign_setup_strategy(StrategySetup& setup,
+                           StrategyStoreHandle strategy_handle,
+                           const Strategy& strategy)
+{
+  auto inputs = collect_strategy_inputs(strategy);
+  setup.strategy_handle(std::move(strategy_handle));
+  setup.inputs(std::move(inputs));
 }
 
 } // namespace pludux::backtest

@@ -1,6 +1,6 @@
 # Execution and Position Lifecycle
 
-This page describes the lifecycle configured by a Model, Strategy, System, and
+This page describes the lifecycle configured by a Strategy, System, and
 Portfolio. [Portfolio Backtesting](portfolio-backtesting.md) remains
 authoritative for portfolio clock and valuation behavior.
 
@@ -10,7 +10,7 @@ authoritative for portfolio clock and valuation behavior.
 close. **Next Open** evaluates from the previous completed candle and fills at
 the next available open. No future candle value is exposed to the signal.
 
-The Model chooses **Low First**, **High First**, or **Candle Direction** as its
+The Strategy chooses **Low First**, **High First**, or **Candle Direction** as its
 deterministic intrabar path. Candle Direction uses open→low→high→close for an up
 candle and open→high→low→close for a down candle. A doji visits the extreme
 nearest the open first; equal distances choose low first. It resolves bar-level
@@ -22,9 +22,9 @@ separate slippage model.
 
 ## Initial entries
 
-The active Strategy evaluates its signal and entry price, computes risk distance
-and Profile sizing, applies Entry Filter, and produces a Requested Order. The
-Portfolio gathers fresh requests at a union timestamp, ranks them with its
+The active setup evaluates its Strategy signal, entry price, and risk distance.
+The System's Profile sizes the Requested Order and the setup's Entry Filter
+decides whether to submit it. The Portfolio gathers fresh requests at a union timestamp, ranks them with its
 comparators, and admits requests while capital and capacity permit. Complete
 ties use System order and then Watchlist Asset order.
 
@@ -48,14 +48,14 @@ stop moves only in the favorable direction and never loosens once established.
 
 ## Pyramiding
 
-Pyramiding adds to an existing position up to the Model's maximum layers. It
+Pyramiding adds to an existing position up to the Strategy's maximum layers. It
 has its own signal, delay, price, cooldown, and retrigger rule. **Every
 Evaluation** may trigger again after cooldown. **After False** additionally
 requires the signal to become false before rearming. At most one layer is
 processed per bar; Portfolio layer capacity still applies.
 
 The frozen unit quantity is established by the initial executed entry for
-Model-driven layer sizing. Fresh-entry Profile sizing and Entry Filter are not
+Strategy-driven layer sizing. Fresh-entry Profile sizing and Entry Filter are not
 rerun for pyramid additions, although the resulting pyramid request still joins
 the applicable Portfolio ranking phase and faces cash/capacity checks.
 
@@ -74,10 +74,10 @@ simulation; toggling activation does not materialize a theoretical position as
 an actual trade. Ordered Failsafes can therefore express fall-through setups
 without looking ahead.
 
-Each Strategy binding keeps its own hypothetical session and Model Performance
+Each Strategy setup keeps its own hypothetical session and Strategy Performance
 history, but an expanded System × Asset backtest has only one real execution
 position. An active owner blocks another Strategy from opening a competing real
-position. Once admitted, the actual trade remains attributed to the Strategy
+position. Once admitted, the actual trade remains attributed to the setup
 that opened it until closure, even if Failsafe activation later changes.
 
 ## Portfolio event order
@@ -88,6 +88,6 @@ fresh entries at the same union timestamp; eligible entries are then ranked and
 admitted. Last-known prices are used only for valuation where the authoritative
 portfolio document permits them.
 
-Model Performance is theoretical Model state and is distinct from actual
+Strategy Performance is theoretical Strategy state and is distinct from actual
 Portfolio trade results. That distinction is important for Entry Filters,
 Failsafes, and Bayesian Kelly sizing.

@@ -6,7 +6,7 @@ as reusable resources.
 
 ## Chart
 
-Select a Portfolio setup and Asset to inspect candles, Model plots, position
+Select a Portfolio setup and Asset to inspect candles, Strategy plots, position
 state, and execution markers for that expanded Backtest. Chart timestamp labels
 use the application's local/display timezone; they are not guaranteed to be UTC
 labels. Hover details show the values visible at that bar.
@@ -15,7 +15,7 @@ labels. Hover details show the values visible at that bar.
 
 **Actual** trades are executions admitted by shared Portfolio capital and
 capacity. **Hypothetical** trades are the per-Backtest theoretical executions
-used to understand Model behavior even when the Portfolio rejected or ranked
+used to understand Strategy behavior even when the Portfolio rejected or ranked
 away a request. Filters narrow the displayed Portfolio/System/Asset or side.
 Do not combine actual and hypothetical rows as one accounting ledger.
 
@@ -36,7 +36,7 @@ reductions accumulate into the eventual closed-trade record.
   fees; unrealized movement enters equity through valuation.
 
 Summary counts, win/loss rates, returns, streaks, and fee totals are computed
-from actual closed Portfolio trades. Model Performance metrics are a separate
+from actual closed Portfolio trades. Strategy Performance metrics are a separate
 theoretical stream and can differ when entry filtering, ranking, cash, or
 capacity prevents execution.
 

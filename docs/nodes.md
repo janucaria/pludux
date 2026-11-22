@@ -1,10 +1,10 @@
 # Node and Method Reference
 
 This is the complete method inventory exposed by the current editors and
-serializers. Method identifiers are uppercase and dot-qualified. **Model**
+serializers. Method identifiers are uppercase and dot-qualified. **Strategy**
 means named series, signals, prices, risk, and plots. **Comparator** means
 Portfolio entry ranking. **Entry Filter** uses its own scalar/condition parser.
-Both Comparator and Entry Filter expose `MODEL_PERFORMANCE.VALUE`.
+Both Comparator and Entry Filter expose `STRATEGY_PERFORMANCE.VALUE`.
 
 Unless stated otherwise, numeric sources accept another series node and
 condition inputs accept another condition node. Defaults shown by imported JSON
@@ -24,12 +24,12 @@ are defined by the parser; the GUI may seed a more useful initial expression.
   inputs; division by zero and square root of a negative value must not be used
   as trading signals.
 - `SERIES.REFERENCE` must name a top-level series. Recursive or missing
-  references are invalid. `INPUT.NUMERIC` values are declared by a Model and
-  may be overridden by each Strategy.
+  references are invalid. `INPUT.NUMERIC` values are declared by a Strategy and
+  may be overridden by each Main or Failsafe setup in a System.
 
 ## Context matrix
 
-| Family | Model | Comparator | Entry Filter |
+| Family | Strategy | Comparator | Entry Filter |
 | --- | --- | --- | --- |
 | Market data, lookback, scalar arithmetic | Yes | Yes | No |
 | Constant | Yes | Yes | Yes |
@@ -37,30 +37,30 @@ are defined by the parser; the GUI may seed a more useful initial expression.
 | Portfolio equity/drawdown state | Yes | No | Yes |
 | Conditions | All below | No | Comparisons except crosses; AND/OR/XOR/NOT/ALWAYS/NEVER |
 | Requested Order values | No | Yes | Yes, for the candidate order |
-| Model Performance | No | Yes | Yes |
-| Risk, stop, target, and plot methods | Owning Model fields only | No | No |
+| Strategy Performance | No | Yes | Yes |
+| Risk, stop, target, and plot methods | Owning Strategy fields only | No | No |
 
-The comparator deliberately does not resolve named Model series or indicators.
+The comparator deliberately does not resolve named Strategy series or indicators.
 It has OHLCV/custom data, constants, lookback, scalar arithmetic, Requested
-Order values, and Model Performance snapshots. These restrictions are part of
+Order values, and Strategy Performance snapshots. These restrictions are part of
 the execution contract.
 
 ## Market, account, and reusable values
 
 | ID | Output and parameters | Context |
 | --- | --- | --- |
-| `MARKET_DATA.OPEN` | Current visible open | Model, comparator |
-| `MARKET_DATA.HIGH` | Current visible high | Model, comparator |
-| `MARKET_DATA.LOW` | Current visible low | Model, comparator |
-| `MARKET_DATA.CLOSE` | Current visible close | Model, comparator |
-| `MARKET_DATA.VOLUME` | Current visible volume | Model, comparator |
-| `MARKET_DATA.FIELD` | Named imported numeric field; required `field` string | Model, comparator |
-| `PORTFOLIO.EQUITY` | Current Portfolio equity | Model, Entry Filter |
-| `PORTFOLIO.EQUITY_PERCENT` | Equity relative to initial capital, percent | Model, Entry Filter |
-| `PORTFOLIO.DRAWDOWN` | Current drawdown | Model, Entry Filter |
-| `VALUE.CONSTANT` | Constant; required `value` | Model, comparator, Entry Filter |
-| `SERIES.REFERENCE` | Named top-level series; `name` | Model |
-| `INPUT.NUMERIC` | Declared input; `label`, `representation`, `value` | Model |
+| `MARKET_DATA.OPEN` | Current visible open | Strategy, comparator |
+| `MARKET_DATA.HIGH` | Current visible high | Strategy, comparator |
+| `MARKET_DATA.LOW` | Current visible low | Strategy, comparator |
+| `MARKET_DATA.CLOSE` | Current visible close | Strategy, comparator |
+| `MARKET_DATA.VOLUME` | Current visible volume | Strategy, comparator |
+| `MARKET_DATA.FIELD` | Named imported numeric field; required `field` string | Strategy, comparator |
+| `PORTFOLIO.EQUITY` | Current Portfolio equity | Strategy, Entry Filter |
+| `PORTFOLIO.EQUITY_PERCENT` | Equity relative to initial capital, percent | Strategy, Entry Filter |
+| `PORTFOLIO.DRAWDOWN` | Current drawdown | Strategy, Entry Filter |
+| `VALUE.CONSTANT` | Constant; required `value` | Strategy, comparator, Entry Filter |
+| `SERIES.REFERENCE` | Named top-level series; `name` | Strategy |
+| `INPUT.NUMERIC` | Declared input; `label`, `representation`, `value` | Strategy |
 
 Comparator market fields obey Portfolio comparator visibility rules. In
 particular, Next Open ranking sees the previous completed bar; use
@@ -105,22 +105,22 @@ Period-like parameters are numeric expressions, commonly unsigned
 
 | ID | Output and parameters | Context |
 | --- | --- | --- |
-| `OPERATOR.CHANGE` | Current minus previous source; `source` defaults to close | Model |
-| `OPERATOR.LOOKBACK` | Source at integer `period` bars back; source defaults to close | Model, comparator |
-| `OPERATOR.ADD` | `augend + addend` | Model, comparator |
-| `OPERATOR.SUBTRACT` | `minuend - subtrahend` | Model, comparator |
-| `OPERATOR.MULTIPLY` | `multiplicand * multiplier` | Model, comparator |
-| `OPERATOR.DIVIDE` | `dividend / divisor` | Model, comparator |
-| `OPERATOR.NEGATE` | `-operand` | Model, comparator |
-| `OPERATOR.ABS` | `abs(operand)` | Model, comparator |
-| `OPERATOR.ABS_DIFF` | Absolute difference; Model keys `minuend`/`subtrahend`, comparator keys `left`/`right` | Model, comparator |
-| `OPERATOR.SQRT` | `sqrt(operand)` | Model, comparator |
-| `OPERATOR.MAX` | Maximum of `left` and `right` | Model, comparator |
-| `OPERATOR.MIN` | Minimum of `left` and `right` | Model, comparator |
-| `OPERATOR.POSITIVE_PART` | `max(operand, 0)` | Model, comparator |
-| `OPERATOR.NEGATIVE_PART` | `max(-operand, 0)` | Model, comparator |
-| `OPERATOR.PERCENTAGE` | `base * percent / 100`; defaults close and 100 | Model |
-| `OPERATOR.SELECT_OUTPUT` | Select named `output` from `source`; source defaults to close | Model |
+| `OPERATOR.CHANGE` | Current minus previous source; `source` defaults to close | Strategy |
+| `OPERATOR.LOOKBACK` | Source at integer `period` bars back; source defaults to close | Strategy, comparator |
+| `OPERATOR.ADD` | `augend + addend` | Strategy, comparator |
+| `OPERATOR.SUBTRACT` | `minuend - subtrahend` | Strategy, comparator |
+| `OPERATOR.MULTIPLY` | `multiplicand * multiplier` | Strategy, comparator |
+| `OPERATOR.DIVIDE` | `dividend / divisor` | Strategy, comparator |
+| `OPERATOR.NEGATE` | `-operand` | Strategy, comparator |
+| `OPERATOR.ABS` | `abs(operand)` | Strategy, comparator |
+| `OPERATOR.ABS_DIFF` | Absolute difference; Strategy keys `minuend`/`subtrahend`, comparator keys `left`/`right` | Strategy, comparator |
+| `OPERATOR.SQRT` | `sqrt(operand)` | Strategy, comparator |
+| `OPERATOR.MAX` | Maximum of `left` and `right` | Strategy, comparator |
+| `OPERATOR.MIN` | Minimum of `left` and `right` | Strategy, comparator |
+| `OPERATOR.POSITIVE_PART` | `max(operand, 0)` | Strategy, comparator |
+| `OPERATOR.NEGATIVE_PART` | `max(-operand, 0)` | Strategy, comparator |
+| `OPERATOR.PERCENTAGE` | `base * percent / 100`; defaults close and 100 | Strategy |
+| `OPERATOR.SELECT_OUTPUT` | Select named `output` from `source`; source defaults to close | Strategy |
 
 `OPERATOR.SELECT_OUTPUT.output` accepts `default`, `macd-line`, `signal-line`,
 `histogram`, `k-percent`, `d-percent`, `middle-band`, `upper-band`, and
@@ -147,11 +147,11 @@ Period-like parameters are numeric expressions, commonly unsigned
 | `LOGIC.ALWAYS` | Always true | No parameters |
 | `LOGIC.NEVER` | Always false | No parameters |
 
-All conditions are available to Model signals. Entry Filters accept the six
+All conditions are available to Strategy signals. Entry Filters accept the six
 non-cross comparisons and `LOGIC.AND`, `LOGIC.OR`, `LOGIC.XOR`, `LOGIC.NOT`,
 `LOGIC.ALWAYS`, and `LOGIC.NEVER`; they do not accept crossovers,
 `LOGIC.ALL_OF`, or `LOGIC.ANY_OF`. Entry Filter scalar leaves are constants,
-Portfolio state, Requested Order values, or `MODEL_PERFORMANCE.VALUE`—not
+Portfolio state, Requested Order values, or `STRATEGY_PERFORMANCE.VALUE`—not
 market data, indicators, named series, lookbacks, or arithmetic operators.
 
 ## Risk, stops, targets, and position state
@@ -178,7 +178,7 @@ market data, indicators, named series, lookbacks, or arithmetic operators.
 | `POSITION.PYRAMIDING_LAYER` | Accepted layer count; `0` while flat |
 | `POSITION.R_MULTIPLE` | Directional movement of `source` (default close) from the risk reference, divided by frozen one-R distance |
 
-These are Model-context nodes. Values requiring a live position are meaningful
+These are Strategy-context nodes. Values requiring a live position are meaningful
 only while the relevant theoretical/actual position state exists.
 
 ## Portfolio Requested Order values
@@ -202,10 +202,10 @@ yet available.
 | `REQUESTED_ORDER.COST` | Cash cost including estimated entry fee |
 | `REQUESTED_ORDER.ESTIMATED_ENTRY_FEE` | Estimated fee to enter |
 | `REQUESTED_ORDER.ESTIMATED_1R_EXIT_FEE` | Estimated fee at the 1R risk exit |
-| `REQUESTED_ORDER.RISK_DISTANCE` | Model-defined one-R price distance |
+| `REQUESTED_ORDER.RISK_DISTANCE` | Strategy-defined one-R price distance |
 | `REQUESTED_ORDER.PRICE_RISK` | Quantity × risk distance |
 | `REQUESTED_ORDER.RISK_WITH_FEES` | Price risk plus relevant fee estimates |
-| `REQUESTED_ORDER.FROZEN_UNIT_QUANTITY` | Unit quantity frozen for Model pyramiding |
+| `REQUESTED_ORDER.FROZEN_UNIT_QUANTITY` | Unit quantity frozen for Strategy pyramiding |
 
 `COST = NOTIONAL + ESTIMATED_ENTRY_FEE`. `PRICE_RISK = QUANTITY ×
 RISK_DISTANCE`. `RISK_WITH_FEES = PRICE_RISK + ESTIMATED_ENTRY_FEE +
@@ -213,14 +213,14 @@ ESTIMATED_1R_EXIT_FEE`. Values that do not apply to a candidate request are
 non-finite; expressions must not assume every optional limit or frozen quantity
 exists.
 
-## Entry Filter and Comparator Model Performance
+## Entry Filter and Comparator Strategy Performance
 
-`MODEL_PERFORMANCE.VALUE` accepts a `metric` and returns the current value from
-the Strategy binding's theoretical Model Performance tracker. A System shares
+`STRATEGY_PERFORMANCE.VALUE` accepts a `metric` and returns the current value from
+the Strategy setup's theoretical Strategy Performance tracker. A System shares
 the calculation/prior configuration, not one mutable result history. Entry
 Filters evaluate it for candidate initial orders. Comparators evaluate it for
 initial and pyramiding requests from the immutable snapshot captured for each
-requesting Strategy binding during request discovery, before ranking. That
+requesting Strategy setup during request discovery, before ranking. That
 snapshot contains only evidence visible in the current execution phase; it
 cannot observe later ranking or execution outcomes. The 20 metric values are:
 
@@ -253,12 +253,12 @@ Plots are methods but are not numeric editor nodes:
 
 Colors accept a supported color string or an unsigned packed color value.
 
-See [Model JSON](model-json.md) for document structure and exact serialized
+See [Strategy JSON](strategy-json.md) for document structure and exact serialized
 spelling.
 
 ## Completeness and stability
 
 This page inventories every dot-qualified method currently registered by the
-Model, comparator, Entry Filter, and plot serializers. Validate hand-authored
-documents with the bundled schema and the Models import preview before relying
+Strategy, comparator, Entry Filter, and plot serializers. Validate hand-authored
+documents with the bundled schema and the Strategies import preview before relying
 on them in an experiment.

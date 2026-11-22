@@ -4,17 +4,17 @@ module;
 #include <functional>
 #include <string_view>
 
-export module pludux.backtest:model_performance_method;
+export module pludux.backtest:strategy_performance_method;
 
 import pludux;
 
 import :entry_filter_method_context;
-import :model_performance;
+import :strategy_performance;
 import :requested_order_method_context;
 
 export namespace pludux::backtest {
 
-enum class ModelPerformanceMetric {
+enum class StrategyPerformanceMetric {
   LifetimeCount,
   EffectiveCount,
   WinRate,
@@ -37,99 +37,99 @@ enum class ModelPerformanceMetric {
   BayesianLosingPayoffUpper95
 };
 
-class ModelPerformanceMethod {
+class StrategyPerformanceMethod {
 public:
-  explicit ModelPerformanceMethod(ModelPerformanceMetric metric) noexcept
+  explicit StrategyPerformanceMethod(StrategyPerformanceMetric metric) noexcept
   : metric_{metric}
   {
   }
 
-  auto operator==(const ModelPerformanceMethod&) const noexcept
+  auto operator==(const StrategyPerformanceMethod&) const noexcept
    -> bool = default;
 
-  auto metric(this const ModelPerformanceMethod& self) noexcept
-   -> ModelPerformanceMetric
+  auto metric(this const StrategyPerformanceMethod& self) noexcept
+   -> StrategyPerformanceMetric
   {
     return self.metric_;
   }
 
 private:
-  ModelPerformanceMetric metric_{ModelPerformanceMetric::LifetimeCount};
+  StrategyPerformanceMetric metric_{StrategyPerformanceMetric::LifetimeCount};
 };
 
-auto hash_series_method(const ModelPerformanceMethod& method) noexcept
+auto hash_series_method(const StrategyPerformanceMethod& method) noexcept
  -> std::size_t
 {
   auto result =
-   std::hash<std::string_view>{}("pludux.backtest.ModelPerformanceMethod");
+   std::hash<std::string_view>{}("pludux.backtest.StrategyPerformanceMethod");
   result ^= static_cast<std::size_t>(method.metric()) + 0x9e3779b9U +
             (result << 6U) + (result >> 2U);
   return result;
 }
 
-auto evaluate_model_performance(
- const ModelPerformanceMethod& method,
- const ModelPerformanceSnapshot& performance) noexcept -> double
+auto evaluate_strategy_performance(
+ const StrategyPerformanceMethod& method,
+ const StrategyPerformanceSnapshot& performance) noexcept -> double
 {
   switch(method.metric()) {
-  case ModelPerformanceMetric::LifetimeCount:
+  case StrategyPerformanceMetric::LifetimeCount:
     return static_cast<double>(performance.lifetime_count());
-  case ModelPerformanceMetric::EffectiveCount:
+  case StrategyPerformanceMetric::EffectiveCount:
     return performance.effective_count();
-  case ModelPerformanceMetric::WinRate:
+  case StrategyPerformanceMetric::WinRate:
     return performance.win_rate();
-  case ModelPerformanceMetric::BreakEvenRate:
+  case StrategyPerformanceMetric::BreakEvenRate:
     return performance.break_even_rate();
-  case ModelPerformanceMetric::LossRate:
+  case StrategyPerformanceMetric::LossRate:
     return performance.loss_rate();
-  case ModelPerformanceMetric::CurrentWinningStreak:
+  case StrategyPerformanceMetric::CurrentWinningStreak:
     return static_cast<double>(performance.current_winning_streak());
-  case ModelPerformanceMetric::CurrentLosingStreak:
+  case StrategyPerformanceMetric::CurrentLosingStreak:
     return static_cast<double>(performance.current_losing_streak());
-  case ModelPerformanceMetric::MaximumWinningStreak:
+  case StrategyPerformanceMetric::MaximumWinningStreak:
     return static_cast<double>(performance.maximum_winning_streak());
-  case ModelPerformanceMetric::MaximumLosingStreak:
+  case StrategyPerformanceMetric::MaximumLosingStreak:
     return static_cast<double>(performance.maximum_losing_streak());
-  case ModelPerformanceMetric::MeanReturn:
+  case StrategyPerformanceMetric::MeanReturn:
     return performance.mean_return();
-  case ModelPerformanceMetric::ReturnStandardDeviation:
+  case StrategyPerformanceMetric::ReturnStandardDeviation:
     return performance.return_standard_deviation();
-  case ModelPerformanceMetric::BayesianWinProbability:
+  case StrategyPerformanceMetric::BayesianWinProbability:
     return performance.win_probability_posterior().probability;
-  case ModelPerformanceMetric::BayesianWinProbabilityLower95:
+  case StrategyPerformanceMetric::BayesianWinProbabilityLower95:
     return performance.win_probability_posterior().lower_95;
-  case ModelPerformanceMetric::BayesianWinProbabilityUpper95:
+  case StrategyPerformanceMetric::BayesianWinProbabilityUpper95:
     return performance.win_probability_posterior().upper_95;
-  case ModelPerformanceMetric::BayesianWinningPayoff:
+  case StrategyPerformanceMetric::BayesianWinningPayoff:
     return performance.winning_payoff_posterior().mean;
-  case ModelPerformanceMetric::BayesianWinningPayoffLower95:
+  case StrategyPerformanceMetric::BayesianWinningPayoffLower95:
     return performance.winning_payoff_posterior().lower_95;
-  case ModelPerformanceMetric::BayesianWinningPayoffUpper95:
+  case StrategyPerformanceMetric::BayesianWinningPayoffUpper95:
     return performance.winning_payoff_posterior().upper_95;
-  case ModelPerformanceMetric::BayesianLosingPayoff:
+  case StrategyPerformanceMetric::BayesianLosingPayoff:
     return performance.losing_payoff_posterior().mean;
-  case ModelPerformanceMetric::BayesianLosingPayoffLower95:
+  case StrategyPerformanceMetric::BayesianLosingPayoffLower95:
     return performance.losing_payoff_posterior().lower_95;
-  case ModelPerformanceMetric::BayesianLosingPayoffUpper95:
+  case StrategyPerformanceMetric::BayesianLosingPayoffUpper95:
     return performance.losing_payoff_posterior().upper_95;
   }
   return 0.0;
 }
 
 auto pludux_tag_invoke(EvaluateSeriesMethod,
-                       const ModelPerformanceMethod& method,
+                       const StrategyPerformanceMethod& method,
                        AssetSnapshot,
                        EntryFilterMethodContext context) noexcept -> double
 {
-  return evaluate_model_performance(method, context.performance());
+  return evaluate_strategy_performance(method, context.performance());
 }
 
 auto pludux_tag_invoke(EvaluateSeriesMethod,
-                       const ModelPerformanceMethod& method,
+                       const StrategyPerformanceMethod& method,
                        AssetSnapshot,
                        RequestedOrderMethodContext context) noexcept -> double
 {
-  return evaluate_model_performance(method, context.model_performance());
+  return evaluate_strategy_performance(method, context.strategy_performance());
 }
 
 } // namespace pludux::backtest

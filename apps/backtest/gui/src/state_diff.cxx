@@ -27,11 +27,10 @@ public:
             Patch<backtest::Portfolio> portfolio_patch,
             Patch<backtest::Asset> asset_patch,
             Patch<backtest::Watchlist> watchlist_patch,
-             Patch<backtest::Model> model_patch,
+             Patch<backtest::Strategy> strategy_patch,
             Patch<backtest::Market> market_patch,
             Patch<backtest::Broker> broker_patch,
              Patch<backtest::Profile> profile_patch,
-             Patch<backtest::Strategy> strategy_patch,
             Patch<backtest::PortfolioResults> portfolio_results_patch)
   : document_state_{std::move(document_state)}
   , store_descriptor_{std::move(store_descriptor)}
@@ -39,11 +38,10 @@ public:
   , portfolio_patch_{std::move(portfolio_patch)}
   , asset_patch_{std::move(asset_patch)}
   , watchlist_patch_{std::move(watchlist_patch)}
-   , model_patch_{std::move(model_patch)}
+   , strategy_patch_{std::move(strategy_patch)}
   , market_patch_{std::move(market_patch)}
   , broker_patch_{std::move(broker_patch)}
    , profile_patch_{std::move(profile_patch)}
-   , strategy_patch_{std::move(strategy_patch)}
   , portfolio_results_patch_{std::move(portfolio_results_patch)}
   {
   }
@@ -56,10 +54,9 @@ public:
     };
     return self.document_state_ == source_state.document_state() &&
              !changed(self.system_patch_) && !changed(self.portfolio_patch_) &&
-            !changed(self.asset_patch_) && !changed(self.model_patch_) &&
+            !changed(self.asset_patch_) && !changed(self.strategy_patch_) &&
            !changed(self.watchlist_patch_) && !changed(self.market_patch_) &&
             !changed(self.broker_patch_) && !changed(self.profile_patch_) &&
-            !changed(self.strategy_patch_) &&
            !changed(self.portfolio_results_patch_);
   }
 
@@ -73,11 +70,10 @@ public:
     auto portfolios = self.portfolio_patch_.apply(store_arena.portfolios());
     auto assets = self.asset_patch_.apply(store_arena.assets());
     auto watchlists = self.watchlist_patch_.apply(store_arena.watchlists());
-    auto models = self.model_patch_.apply(store_arena.models());
+    auto strategies = self.strategy_patch_.apply(store_arena.strategies());
     auto markets = self.market_patch_.apply(store_arena.markets());
     auto brokers = self.broker_patch_.apply(store_arena.brokers());
     auto profiles = self.profile_patch_.apply(store_arena.profiles());
-    auto strategies = self.strategy_patch_.apply(store_arena.strategies());
     auto portfolio_results =
      self.portfolio_results_patch_.apply(store_arena.portfolio_results());
 
@@ -87,11 +83,10 @@ public:
                                           std::move(portfolios),
                                           std::move(assets),
                                           std::move(watchlists),
-                                           std::move(models),
+                                           std::move(strategies),
                                           std::move(markets),
                                           std::move(brokers),
                                            std::move(profiles),
-                                           std::move(strategies),
                                            std::move(portfolio_results)}},
      self.document_state_,
      old_state.view_state()};
@@ -105,11 +100,10 @@ private:
   Patch<backtest::Portfolio> portfolio_patch_;
   Patch<backtest::Asset> asset_patch_;
   Patch<backtest::Watchlist> watchlist_patch_;
-  Patch<backtest::Model> model_patch_;
+  Patch<backtest::Strategy> strategy_patch_;
   Patch<backtest::Market> market_patch_;
   Patch<backtest::Broker> broker_patch_;
   Patch<backtest::Profile> profile_patch_;
-  Patch<backtest::Strategy> strategy_patch_;
   Patch<backtest::PortfolioResults> portfolio_results_patch_;
 };
 
@@ -128,15 +122,13 @@ auto create_state_diff(const ApplicationState& old_state,
   auto asset_patch = diff(old_store_arena.assets(), new_store_arena.assets());
   auto watchlist_patch =
    diff(old_store_arena.watchlists(), new_store_arena.watchlists());
-  auto model_patch = diff(old_store_arena.models(), new_store_arena.models());
+  auto strategy_patch = diff(old_store_arena.strategies(), new_store_arena.strategies());
   auto market_patch =
    diff(old_store_arena.markets(), new_store_arena.markets());
   auto broker_patch =
    diff(old_store_arena.brokers(), new_store_arena.brokers());
   auto profile_patch =
    diff(old_store_arena.profiles(), new_store_arena.profiles());
-  auto strategy_patch =
-   diff(old_store_arena.strategies(), new_store_arena.strategies());
   auto portfolio_results_patch = diff(old_store_arena.portfolio_results(),
                                       new_store_arena.portfolio_results());
 
@@ -146,11 +138,10 @@ auto create_state_diff(const ApplicationState& old_state,
                    std::move(portfolio_patch),
                    std::move(asset_patch),
                    std::move(watchlist_patch),
-                    std::move(model_patch),
+                    std::move(strategy_patch),
                    std::move(market_patch),
                    std::move(broker_patch),
                     std::move(profile_patch),
-                    std::move(strategy_patch),
                    std::move(portfolio_results_patch)};
 }
 

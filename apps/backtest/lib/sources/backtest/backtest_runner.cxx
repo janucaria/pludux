@@ -45,9 +45,9 @@ import :entry_filter_method_context;
 import :broker;
 import :market;
 import :system;
-import :model_intent;
-import :model_performance;
-import :model_session;
+import :strategy_intent;
+import :strategy_performance;
+import :strategy_session;
 
 export namespace pludux::backtest {
 
@@ -337,21 +337,17 @@ public:
 
   class CompiledStrategy {
   public:
-    CompiledStrategy(const Profile& profile,
-          OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>
+    CompiledStrategy(OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>
            series_methods,
           PositionRule long_position,
           PositionRule short_position,
           IntrabarPath intrabar_path = IntrabarPath::CandleDirection,
-           ModelPerformanceConfig model_performance_config = {},
+           StrategyPerformanceConfig strategy_performance_config = {},
           ErasedSeriesMethod<EntryFilterMethodContext> entry_filter =
            BooleanMethod<true>{},
            FailsafeStrategyActivation failsafe_activation = FailsafeStrategyActivation::Always)
-    : model_performance{std::move(model_performance_config)}
+    : strategy_performance{std::move(strategy_performance_config)}
     , entry_filter{std::move(entry_filter)}
-    , position_sizing{profile.position_sizing().make_method()}
-    , drawdown_adjustment{profile.drawdown_adjustment()}
-    , insufficient_cash_policy{profile.insufficient_cash_policy()}
     , series_methods{std::move(series_methods)}
     , long_position{std::move(long_position)}
     , short_position{std::move(short_position)}
@@ -360,11 +356,8 @@ public:
     {
     }
 
-    ModelPerformance model_performance;
+    StrategyPerformance strategy_performance;
     ErasedSeriesMethod<EntryFilterMethodContext> entry_filter;
-    PositionSizingMethod position_sizing;
-    DrawdownAdjustment drawdown_adjustment;
-    InsufficientCashPolicy insufficient_cash_policy;
     OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>
      series_methods;
     PositionRule long_position;
@@ -377,14 +370,14 @@ public:
   public:
      RequestedOrderAction(std::size_t strategy_index,
                          RequestedOrder requested_order,
-                         ModelPerformanceSnapshot model_performance,
+                         StrategyPerformanceSnapshot strategy_performance,
                          std::size_t evaluation_lookback,
                          PositionSizingDecision sizing_decision,
                          std::size_t sizing_decision_index,
                          std::size_t entry_filter_decision_index) noexcept
      : strategy_index_{strategy_index}
     , requested_order_{std::move(requested_order)}
-    , model_performance_{std::move(model_performance)}
+    , strategy_performance_{std::move(strategy_performance)}
     , evaluation_lookback_{evaluation_lookback}
     , sizing_decision_{std::move(sizing_decision)}
     , sizing_decision_index_{sizing_decision_index}
@@ -404,10 +397,10 @@ public:
       return self.requested_order_;
     }
 
-    auto model_performance(this const RequestedOrderAction& self) noexcept
-     -> const ModelPerformanceSnapshot&
+    auto strategy_performance(this const RequestedOrderAction& self) noexcept
+     -> const StrategyPerformanceSnapshot&
     {
-      return self.model_performance_;
+      return self.strategy_performance_;
     }
 
     auto is_long(this const RequestedOrderAction& self) noexcept -> bool
@@ -453,7 +446,7 @@ public:
   private:
     std::size_t strategy_index_;
     RequestedOrder requested_order_;
-    ModelPerformanceSnapshot model_performance_;
+    StrategyPerformanceSnapshot strategy_performance_;
     std::size_t evaluation_lookback_;
     PositionSizingDecision sizing_decision_;
     std::size_t sizing_decision_index_;
@@ -474,7 +467,7 @@ public:
    bool is_failed = false,
    double peak_equity = NAN,
    IntrabarPath intrabar_path = IntrabarPath::CandleDirection,
-    ModelPerformanceConfig model_performance_config = {},
+    StrategyPerformanceConfig strategy_performance_config = {},
    ErasedSeriesMethod<EntryFilterMethodContext> entry_filter =
     BooleanMethod<true>{})
   : asset_{asset}
@@ -496,8 +489,8 @@ public:
   , break_even_count_{0}
   , strategy_trade_session_{}
   , execution_session_{}
-  , model_session_{}
-  , model_performance_{std::move(model_performance_config)}
+  , strategy_session_{}
+  , strategy_performance_{std::move(strategy_performance_config)}
   , entry_filter_{std::move(entry_filter)}
   , position_sizing_{profile.position_sizing().make_method()}
   , series_methods_{std::move(series_methods)}
@@ -512,13 +505,16 @@ public:
   BacktestRunner(const Asset& asset,
                  const Market& market,
                  const Broker& broker,
-                  std::vector<CompiledStrategy> strategies,
+                 const Profile& profile,
+                 std::vector<CompiledStrategy> strategies,
                  double total_equity = 0.0,
                  bool is_failed = false,
                  double peak_equity = NAN)
   : asset_{asset}
   , market_{market}
   , broker_{broker}
+  , drawdown_adjustment_{profile.drawdown_adjustment()}
+  , insufficient_cash_policy_{profile.insufficient_cash_policy()}
   , current_account_state_{total_equity,
                            0.0,
                            std::isnan(peak_equity) ? total_equity : peak_equity,
@@ -531,6 +527,7 @@ public:
   , loss_count_{0}
   , cumulative_losses_{0.0}
   , break_even_count_{0}
+  , position_sizing_{profile.position_sizing().make_method()}
   , is_failed_{is_failed}
   {
     if(strategies.empty()) {
@@ -681,7 +678,7 @@ public:
       self.activate_strategy(index);
       self.strategy_trade_session_.begin_market_bar(
        market_timestamp, asset_snapshot.close(), asset_snapshot.lookback());
-       self.model_session_.begin_market_bar(market_timestamp,
+       self.strategy_session_.begin_market_bar(market_timestamp,
                                               asset_snapshot.close());
       self.closed_position_is_long_.reset();
     }
@@ -923,7 +920,7 @@ public:
      method,
      self.requested_order_evaluation_snapshot(action),
      RequestedOrderMethodContext{action.requested_order(),
-                                 action.model_performance()});
+                                 action.strategy_performance()});
   }
 
   void settle_portfolio_account(this BacktestRunner& self) noexcept
@@ -948,10 +945,10 @@ public:
     }
 
     self.current_strategy_timeline_states_[0] =
-       StrategyTimelineState{self.model_session_.intents(),
-                                 self.model_session_.closed_positions(),
-                                 self.model_session_.position(),
-                                 self.model_performance_.snapshot(),
+       StrategyTimelineState{self.strategy_session_.intents(),
+                                 self.strategy_session_.closed_positions(),
+                                 self.strategy_session_.position(),
+                                 self.strategy_performance_.snapshot(),
                                 self.active_entry_filtered_position()};
 
     self.update_accounting();
@@ -1022,10 +1019,10 @@ public:
         setup_series_results[index].alias(series_name, series_method);
       }
       self.current_strategy_timeline_states_[index] =
-         StrategyTimelineState{self.model_session_.intents(),
-                                   self.model_session_.closed_positions(),
-                                   self.model_session_.position(),
-                                   self.model_performance_.snapshot(),
+         StrategyTimelineState{self.strategy_session_.intents(),
+                                   self.strategy_session_.closed_positions(),
+                                   self.strategy_session_.position(),
+                                   self.strategy_performance_.snapshot(),
                                   self.active_entry_filtered_position()};
     }
     self.activate_strategy(0);
@@ -1035,11 +1032,8 @@ public:
 private:
   struct StrategyState {
     explicit StrategyState(CompiledStrategy strategy)
-    : model_performance{std::move(strategy.model_performance)}
+    : strategy_performance{std::move(strategy.strategy_performance)}
     , entry_filter{std::move(strategy.entry_filter)}
-    , position_sizing{std::move(strategy.position_sizing)}
-    , drawdown_adjustment{strategy.drawdown_adjustment}
-    , insufficient_cash_policy{strategy.insufficient_cash_policy}
     , series_methods{std::move(strategy.series_methods)}
     , long_position{std::move(strategy.long_position)}
     , short_position{std::move(strategy.short_position)}
@@ -1049,12 +1043,9 @@ private:
     }
 
     TradeSession strategy_trade_session;
-    ModelSession model_session;
-    ModelPerformance model_performance;
+    StrategySession strategy_session;
+    StrategyPerformance strategy_performance;
     ErasedSeriesMethod<EntryFilterMethodContext> entry_filter;
-    PositionSizingMethod position_sizing;
-    DrawdownAdjustment drawdown_adjustment;
-    InsufficientCashPolicy insufficient_cash_policy;
     OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>
      series_methods;
     PositionRule long_position;
@@ -1068,8 +1059,8 @@ private:
     std::optional<std::size_t> pyramiding_resume_index;
     std::vector<std::size_t> pending_signal_exit_indices;
     std::optional<std::size_t> pending_signal_exit_trade_id;
-    std::optional<std::size_t> execution_model_trade_id;
-    std::optional<std::size_t> entry_filtered_model_trade_id;
+    std::optional<std::size_t> execution_strategy_trade_id;
+    std::optional<std::size_t> entry_filtered_strategy_trade_id;
     std::optional<bool> closed_position_is_long;
   };
 
@@ -1078,12 +1069,9 @@ private:
   {
     using std::swap;
     swap(self.strategy_trade_session_, state.strategy_trade_session);
-    swap(self.model_session_, state.model_session);
-    swap(self.model_performance_, state.model_performance);
+    swap(self.strategy_session_, state.strategy_session);
+    swap(self.strategy_performance_, state.strategy_performance);
     swap(self.entry_filter_, state.entry_filter);
-    swap(self.position_sizing_, state.position_sizing);
-    swap(self.drawdown_adjustment_, state.drawdown_adjustment);
-    swap(self.insufficient_cash_policy_, state.insufficient_cash_policy);
     swap(self.series_methods_, state.series_methods);
     swap(self.long_position_, state.long_position);
     swap(self.short_position_, state.short_position);
@@ -1096,16 +1084,16 @@ private:
     swap(self.pending_signal_exit_indices_, state.pending_signal_exit_indices);
     swap(self.pending_signal_exit_trade_id_,
          state.pending_signal_exit_trade_id);
-    swap(self.execution_model_trade_id_, state.execution_model_trade_id);
-    swap(self.entry_filtered_model_trade_id_,
-         state.entry_filtered_model_trade_id);
+    swap(self.execution_strategy_trade_id_, state.execution_strategy_trade_id);
+    swap(self.entry_filtered_strategy_trade_id_,
+         state.entry_filtered_strategy_trade_id);
     swap(self.closed_position_is_long_, state.closed_position_is_long);
   }
 
   void activate_strategy(this BacktestRunner& self, std::size_t index)
   {
     if(self.strategy_states_.empty()) {
-      self.model_session_.strategy_index(0);
+      self.strategy_session_.strategy_index(0);
       self.execution_session_.strategy_index(0);
       return;
     }
@@ -1121,7 +1109,7 @@ private:
     }
     self.swap_active_strategy(self.strategy_states_[index]);
     self.active_strategy_index_ = index;
-    self.model_session_.strategy_index(index);
+    self.strategy_session_.strategy_index(index);
     self.execution_session_.strategy_index(index);
   }
 
@@ -1157,14 +1145,14 @@ private:
 
   TradeSession strategy_trade_session_;
   TradeSession execution_session_;
-   ModelSession model_session_;
-   ModelPerformance model_performance_;
+   StrategySession strategy_session_;
+   StrategyPerformance strategy_performance_;
   ErasedSeriesMethod<EntryFilterMethodContext> entry_filter_;
   std::vector<EntryFilterDecision> entry_filter_decisions_;
   PositionSizingMethod position_sizing_{PositionSizingNode{}.make_method()};
   std::vector<PositionSizingDecision> position_sizing_decisions_;
-   std::optional<std::size_t> execution_model_trade_id_;
-   std::optional<std::size_t> entry_filtered_model_trade_id_;
+   std::optional<std::size_t> execution_strategy_trade_id_;
+   std::optional<std::size_t> entry_filtered_strategy_trade_id_;
   std::optional<double> campaign_unit_quantity_;
   std::optional<std::size_t> execution_owner_strategy_index_;
   std::optional<std::size_t> active_strategy_index_;
@@ -1443,7 +1431,7 @@ private:
    const AssetSnapshot& evaluation_snapshot,
    BacktestMethodContext context,
    double current_drawdown_ratio,
-    const ModelPerformanceSnapshot& performance_snapshot,
+    const StrategyPerformanceSnapshot& performance_snapshot,
    PositionSizingDecision& decision) -> std::optional<EntryOrderSizingRequest>
   {
     const auto direction = is_long ? 1.0 : -1.0;
@@ -1863,7 +1851,7 @@ private:
 
   void sync_execution_position_state(this BacktestRunner& self)
   {
-    if(!self.execution_model_trade_id_ ||
+    if(!self.execution_strategy_trade_id_ ||
        !self.strategy_trade_session_.open_position() ||
        !self.execution_session_.open_position()) {
       return;
@@ -1881,9 +1869,9 @@ private:
 
   void observe_strategy_closure(this BacktestRunner& self)
   {
-    if(!self.model_session_.closed_positions().empty()) {
-      self.model_performance_.observe(
-       self.model_session_.closed_positions().back());
+    if(!self.strategy_session_.closed_positions().empty()) {
+      self.strategy_performance_.observe(
+       self.strategy_session_.closed_positions().back());
     }
   }
 
@@ -1892,8 +1880,8 @@ private:
     self.pyramiding_layers_ = 0;
     self.pyramiding_signal_ready_ = true;
     self.pyramiding_resume_index_.reset();
-    self.execution_model_trade_id_.reset();
-    self.entry_filtered_model_trade_id_.reset();
+    self.execution_strategy_trade_id_.reset();
+    self.entry_filtered_strategy_trade_id_.reset();
     const auto active_index = self.active_strategy_index_.value_or(0);
     if(!self.execution_owner_strategy_index_ ||
        *self.execution_owner_strategy_index_ == active_index) {
@@ -1912,15 +1900,15 @@ private:
     const auto type = [&] {
       switch(reason) {
       case TradeExit::Reason::stop_loss:
-        return ModelIntentType::StopLoss;
+        return StrategyIntentType::StopLoss;
       case TradeExit::Reason::take_profit:
-        return ModelIntentType::TakeProfit;
+        return StrategyIntentType::TakeProfit;
       case TradeExit::Reason::signal:
       default:
-        return ModelIntentType::SignalExit;
+        return StrategyIntentType::SignalExit;
       }
     }();
-    self.model_session_.exit(type, price, reduce, rule_index);
+    self.strategy_session_.exit(type, price, reduce, rule_index);
     self.observe_strategy_closure();
   }
 
@@ -1933,7 +1921,7 @@ private:
    std::optional<std::size_t> take_profit_index = std::nullopt,
    std::optional<std::size_t> signal_exit_index = std::nullopt)
   {
-    if(!self.execution_model_trade_id_ ||
+    if(!self.execution_strategy_trade_id_ ||
        !self.execution_session_.open_position()) {
       return;
     }
@@ -2325,7 +2313,7 @@ private:
                              bool is_pyramiding,
                              const AssetSnapshot& evaluation_snapshot,
                              BacktestMethodContext context)
-   -> const ModelIntent&
+   -> const StrategyIntent&
   {
     if(!is_pyramiding) {
       self.pyramiding_signal_ready_ = true;
@@ -2347,17 +2335,17 @@ private:
     }
     self.restart_pyramiding_cooldown(rule);
     const auto direction =
-     is_long ? ModelDirection::Long : ModelDirection::Short;
-    return self.model_session_.enter(direction, price, is_pyramiding);
+     is_long ? StrategyDirection::Long : StrategyDirection::Short;
+    return self.strategy_session_.enter(direction, price, is_pyramiding);
   }
 
   auto active_entry_filtered_position(this const BacktestRunner& self) noexcept
    -> bool
   {
-    const auto position = self.model_session_.position();
-    return position && self.entry_filtered_model_trade_id_ &&
-           position->model_trade_id() ==
-            *self.entry_filtered_model_trade_id_;
+    const auto position = self.strategy_session_.position();
+    return position && self.entry_filtered_strategy_trade_id_ &&
+           position->strategy_trade_id() ==
+            *self.entry_filtered_strategy_trade_id_;
   }
 
   auto active_setup_execution_eligible(this const BacktestRunner& self) noexcept
@@ -2373,10 +2361,10 @@ private:
       return true;
     }
     const auto& previous = self.strategy_states_[index - 1];
-    const auto previous_position = previous.model_session.position();
-    return previous_position && previous.entry_filtered_model_trade_id &&
-           previous_position->model_trade_id() ==
-            *previous.entry_filtered_model_trade_id;
+    const auto previous_position = previous.strategy_session.position();
+    return previous_position && previous.entry_filtered_strategy_trade_id &&
+           previous_position->strategy_trade_id() ==
+            *previous.entry_filtered_strategy_trade_id;
   }
 
   auto execute_entry_action(this BacktestRunner& self,
@@ -2388,8 +2376,8 @@ private:
   {
     const auto& rule = is_long ? self.long_position_ : self.short_position_;
     const auto direction =
-     is_long ? ModelDirection::Long : ModelDirection::Short;
-    const auto performance_snapshot = self.model_performance_.snapshot();
+     is_long ? StrategyDirection::Long : StrategyDirection::Short;
+    const auto performance_snapshot = self.strategy_performance_.snapshot();
     auto sizing_decision =
      self.requested_order_decision_preapproved_
       ? *self.requested_order_decision_preapproved_
@@ -2414,7 +2402,7 @@ private:
       const auto& intent = self.commit_strategy_entry(
        is_long, price, rule, false, evaluation_snapshot, context);
       sizing_decision.intent_id = intent.intent_id();
-      sizing_decision.model_trade_id = intent.model_trade_id();
+      sizing_decision.strategy_trade_id = intent.strategy_trade_id();
       self.position_sizing_decisions_.push_back(std::move(sizing_decision));
       return true;
     }
@@ -2441,8 +2429,8 @@ private:
       const auto& intent = self.commit_strategy_entry(
        is_long, price, rule, false, evaluation_snapshot, context);
       sizing_decision.intent_id = intent.intent_id();
-      sizing_decision.model_trade_id = intent.model_trade_id();
-      self.execution_model_trade_id_.reset();
+      sizing_decision.strategy_trade_id = intent.strategy_trade_id();
+      self.execution_strategy_trade_id_.reset();
       self.position_sizing_decisions_.push_back(std::move(sizing_decision));
       return true;
     }
@@ -2461,11 +2449,11 @@ private:
       const auto& intent = self.commit_strategy_entry(
        is_long, price, rule, false, evaluation_snapshot, context);
       sizing_decision.intent_id = intent.intent_id();
-      sizing_decision.model_trade_id = intent.model_trade_id();
+      sizing_decision.strategy_trade_id = intent.strategy_trade_id();
       self.entry_filter_decisions_.emplace_back(
         intent.intent_id(), false, self.active_strategy_index_.value_or(0));
-      self.entry_filtered_model_trade_id_ = intent.model_trade_id();
-      self.execution_model_trade_id_.reset();
+      self.entry_filtered_strategy_trade_id_ = intent.strategy_trade_id();
+      self.execution_strategy_trade_id_.reset();
       self.position_sizing_decisions_.push_back(std::move(sizing_decision));
       return true;
     }
@@ -2496,11 +2484,11 @@ private:
     const auto& intent = self.commit_strategy_entry(
      is_long, price, rule, false, evaluation_snapshot, context);
     sizing_decision.intent_id = intent.intent_id();
-    sizing_decision.model_trade_id = intent.model_trade_id();
+    sizing_decision.strategy_trade_id = intent.strategy_trade_id();
     self.entry_filter_decisions_.emplace_back(
       intent.intent_id(), true, self.active_strategy_index_.value_or(0));
     if(!entry) {
-      self.execution_model_trade_id_.reset();
+      self.execution_strategy_trade_id_.reset();
       self.position_sizing_decisions_.push_back(std::move(sizing_decision));
       return true;
     }
@@ -2508,7 +2496,7 @@ private:
     self.execution_session_.entry_position(*entry, fee);
     self.campaign_unit_quantity_ = std::abs(entry->position_size());
     self.executed_layer_count_ = 1;
-    self.execution_model_trade_id_ = intent.model_trade_id();
+    self.execution_strategy_trade_id_ = intent.strategy_trade_id();
     self.execution_owner_strategy_index_ =
      self.active_strategy_index_.value_or(0);
     self.sync_execution_position_state();
@@ -2531,15 +2519,15 @@ private:
       return false;
     }
     const auto direction =
-     is_long ? ModelDirection::Long : ModelDirection::Short;
-    const auto performance_snapshot = self.model_performance_.snapshot();
-    const auto model_position = self.model_session_.position();
+     is_long ? StrategyDirection::Long : StrategyDirection::Short;
+    const auto performance_snapshot = self.strategy_performance_.snapshot();
+    const auto strategy_position = self.strategy_session_.position();
     auto sizing_decision =
      self.requested_order_decision_preapproved_
       ? *self.requested_order_decision_preapproved_
       : PositionSizingDecision{
-         .model_trade_id =
-          model_position ? model_position->model_trade_id() : 0,
+         .strategy_trade_id =
+          strategy_position ? strategy_position->strategy_trade_id() : 0,
           .strategy_index = self.active_strategy_index_.value_or(0),
          .direction = direction,
          .pyramiding = true,
@@ -2547,12 +2535,12 @@ private:
          .entry_price = price,
          .outcome = PositionSizingDecisionOutcome::ShadowOnly};
 
-    if(!self.execution_model_trade_id_ ||
+    if(!self.execution_strategy_trade_id_ ||
        !self.execution_session_.open_position()) {
       const auto& intent = self.commit_strategy_entry(
        is_long, price, rule, true, evaluation_snapshot, context);
       sizing_decision.intent_id = intent.intent_id();
-      sizing_decision.model_trade_id = intent.model_trade_id();
+      sizing_decision.strategy_trade_id = intent.strategy_trade_id();
       self.position_sizing_decisions_.push_back(std::move(sizing_decision));
       return true;
     }
@@ -2593,7 +2581,7 @@ private:
     const auto& intent = self.commit_strategy_entry(
      is_long, price, rule, true, evaluation_snapshot, context);
     sizing_decision.intent_id = intent.intent_id();
-    sizing_decision.model_trade_id = intent.model_trade_id();
+    sizing_decision.strategy_trade_id = intent.strategy_trade_id();
     if(!entry) {
       self.position_sizing_decisions_.push_back(std::move(sizing_decision));
       return true;

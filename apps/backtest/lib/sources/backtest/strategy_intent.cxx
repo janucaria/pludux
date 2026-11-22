@@ -4,13 +4,13 @@ module;
 #include <ctime>
 #include <optional>
 
-export module pludux.backtest:model_intent;
+export module pludux.backtest:strategy_intent;
 
 export namespace pludux::backtest {
 
-enum class ModelDirection { Long, Short };
+enum class StrategyDirection { Long, Short };
 
-enum class ModelIntentType {
+enum class StrategyIntentType {
   InitialEntry,
   PyramidingEntry,
   SignalExit,
@@ -18,21 +18,21 @@ enum class ModelIntentType {
   TakeProfit
 };
 
-class ModelIntent {
+class StrategyIntent {
 public:
-  ModelIntent() = default;
+  StrategyIntent() = default;
 
-  ModelIntent(std::size_t intent_id,
-                  std::size_t model_trade_id,
-                  ModelIntentType type,
-                  ModelDirection direction,
+  StrategyIntent(std::size_t intent_id,
+                  std::size_t strategy_trade_id,
+                  StrategyIntentType type,
+                  StrategyDirection direction,
                  std::time_t timestamp,
                  double price,
                  double reduce = 1.0,
                  std::optional<std::size_t> rule_index = std::nullopt,
                   std::size_t strategy_index = 0) noexcept
   : intent_id_{intent_id}
-  , model_trade_id_{model_trade_id}
+  , strategy_trade_id_{strategy_trade_id}
   , type_{type}
   , direction_{direction}
   , timestamp_{timestamp}
@@ -43,71 +43,71 @@ public:
   {
   }
 
-  auto operator==(const ModelIntent&) const noexcept -> bool = default;
+  auto operator==(const StrategyIntent&) const noexcept -> bool = default;
 
-  auto intent_id(this const ModelIntent& self) noexcept -> std::size_t
+  auto intent_id(this const StrategyIntent& self) noexcept -> std::size_t
   {
     return self.intent_id_;
   }
 
-  auto model_trade_id(this const ModelIntent& self) noexcept
+  auto strategy_trade_id(this const StrategyIntent& self) noexcept
    -> std::size_t
   {
-    return self.model_trade_id_;
+    return self.strategy_trade_id_;
   }
 
-  auto type(this const ModelIntent& self) noexcept -> ModelIntentType
+  auto type(this const StrategyIntent& self) noexcept -> StrategyIntentType
   {
     return self.type_;
   }
 
-  auto direction(this const ModelIntent& self) noexcept -> ModelDirection
+  auto direction(this const StrategyIntent& self) noexcept -> StrategyDirection
   {
     return self.direction_;
   }
 
-  auto timestamp(this const ModelIntent& self) noexcept -> std::time_t
+  auto timestamp(this const StrategyIntent& self) noexcept -> std::time_t
   {
     return self.timestamp_;
   }
 
-  auto price(this const ModelIntent& self) noexcept -> double
+  auto price(this const StrategyIntent& self) noexcept -> double
   {
     return self.price_;
   }
 
-  auto reduce(this const ModelIntent& self) noexcept -> double
+  auto reduce(this const StrategyIntent& self) noexcept -> double
   {
     return self.reduce_;
   }
 
-  auto rule_index(this const ModelIntent& self) noexcept
+  auto rule_index(this const StrategyIntent& self) noexcept
    -> std::optional<std::size_t>
   {
     return self.rule_index_;
   }
 
-  auto is_initial_entry(this const ModelIntent& self) noexcept -> bool
+  auto is_initial_entry(this const StrategyIntent& self) noexcept -> bool
   {
-    return self.type_ == ModelIntentType::InitialEntry;
+    return self.type_ == StrategyIntentType::InitialEntry;
   }
 
-  auto strategy_index(this const ModelIntent& self) noexcept -> std::size_t
+  auto strategy_index(this const StrategyIntent& self) noexcept -> std::size_t
   {
     return self.strategy_index_;
   }
 
-  auto is_entry(this const ModelIntent& self) noexcept -> bool
+  auto is_entry(this const StrategyIntent& self) noexcept -> bool
   {
-    return self.type_ == ModelIntentType::InitialEntry ||
-            self.type_ == ModelIntentType::PyramidingEntry;
+    return self.type_ == StrategyIntentType::InitialEntry ||
+            self.type_ == StrategyIntentType::PyramidingEntry;
   }
 
 private:
   std::size_t intent_id_{};
-  std::size_t model_trade_id_{};
-  ModelIntentType type_{ModelIntentType::InitialEntry};
-  ModelDirection direction_{ModelDirection::Long};
+  std::size_t strategy_trade_id_{};
+  StrategyIntentType type_{StrategyIntentType::InitialEntry};
+  StrategyDirection direction_{StrategyDirection::Long};
   std::time_t timestamp_{};
   double price_{};
   double reduce_{1.0};

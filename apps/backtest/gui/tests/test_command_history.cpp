@@ -28,10 +28,13 @@ using pludux::apps::ViewCommand;
 using pludux::backtest::Portfolio;
 using pludux::backtest::PortfolioResults;
 using pludux::backtest::PortfolioTimeline;
+using pludux::backtest::StrategySetup;
 
 auto add_strategy(ApplicationState& state, std::string name)
 {
-  state.add_strategy(pludux::backtest::Strategy{std::move(name)});
+  auto strategy = pludux::backtest::Strategy{};
+  strategy.name(std::move(name));
+  state.add_strategy(std::move(strategy));
   return state.get_strategy_handles().back();
 }
 
@@ -253,18 +256,18 @@ TEST(CommandHistory, ApplicationReplacementIsUndoableAndRedoable)
 TEST(CommandHistory, StrategyEditsInvalidateDependentPortfolioResults)
 {
   auto state = pludux::apps::ApplicationState{};
-  state.add_model(pludux::backtest::Model{});
+  state.add_strategy(pludux::backtest::Strategy{});
   state.add_profile(pludux::backtest::Profile{});
   state.add_asset(pludux::backtest::Asset{"Asset"});
   const auto watchlist = *state.add_watchlist(
    pludux::backtest::Watchlist{"List", {state.get_asset_handles().front()}});
-  state.add_strategy(
-   pludux::backtest::Strategy{"Original",
-                              state.get_model_handles().front(),
-                              state.get_profile_handles().front()});
   const auto strategy = state.get_strategy_handles().front();
   const auto system = *state.add_system(
-   pludux::backtest::System{"System", watchlist, {}, strategy});
+   pludux::backtest::System{"System",
+                            watchlist,
+                            state.get_profile_handles().front(),
+                            {},
+                            StrategySetup{strategy}});
   const auto portfolio = *state.add_portfolio(pludux::backtest::Portfolio{
    "Portfolio", 1'000.0, {}, {}, 10, 10, {}, {system}});
   auto timeline = pludux::backtest::PortfolioTimeline{};
@@ -311,7 +314,7 @@ TEST(CommandHistory, UnrelatedEditClearsPartialResultsBeforeRunnerReplacement)
             pludux::backtest::PortfolioResults{});
 }
 
-TEST(CommandHistory, ModelInputSynchronizationIsUndoable)
+TEST(CommandHistory, StrategyInputSynchronizationIsUndoable)
 {
   auto original_series = pludux::OrderedNamedRegistry<
    pludux::ErasedNode<pludux::backtest::BacktestMethodContext>>{};
@@ -320,55 +323,71 @@ TEST(CommandHistory, ModelInputSynchronizationIsUndoable)
    pludux::NumericInputNode{
     "Original", pludux::NumericInputNode::ValueRepresentation::Decimal, 2.5});
   auto state = pludux::apps::ApplicationState{};
-  state.add_model(
-   pludux::backtest::Model{"Model", std::move(original_series), {}, {}, {}});
-  const auto model = state.get_model_handles().front();
+  state.add_strategy(pludux::backtest::Strategy{
+   "Strategy", std::move(original_series), {}, {}, {}});
+  const auto strategy = state.get_strategy_handles().front();
   state.add_profile(pludux::backtest::Profile{});
-  auto strategy = pludux::backtest::Strategy{};
-  pludux::backtest::assign_strategy_model(
-   strategy, model, state.get_model(model));
-  auto inputs = strategy.inputs();
+  auto setup = StrategySetup{};
+  pludux::backtest::assign_setup_strategy(
+   setup, strategy, state.get_strategy(strategy));
+  auto inputs = setup.inputs();
   inputs.front().value(99.0);
-  strategy.inputs(std::move(inputs));
-  state.add_strategy(std::move(strategy));
-  const auto strategy_handle = state.get_strategy_handles().front();
+  setup.inputs(std::move(inputs));
+  auto failsafe = setup;
+  inputs = failsafe.inputs();
+  inputs.front().value(55.0);
+  failsafe.inputs(std::move(inputs));
+  const auto system = *state.add_system(pludux::backtest::System{
+   "Turtle", {}, state.get_profile_handles().front(), {}, setup, {{failsafe}}});
 
   auto executor = pludux::apps::CommandExecutor{};
   executor.push(pludux::apps::EditCommand{
-   "Remove Model Input",
-   [model](auto& candidate) {
-     ASSERT_TRUE(candidate.update_model(
-      model, pludux::backtest::Model{"Model", {}, {}, {}, {}}));
+   "Remove Strategy Input",
+   [strategy](auto& candidate) {
+     ASSERT_TRUE(candidate.update_strategy(
+      strategy, pludux::backtest::Strategy{"Strategy", {}, {}, {}, {}}));
    },
    std::nullopt});
   EXPECT_EQ(executor.execute(state),
             pludux::apps::ExecutionEffect::DocumentChanged);
-  EXPECT_TRUE(state.get_strategy(strategy_handle).inputs().empty());
+  EXPECT_TRUE(state.get_system(system).main_setup().inputs().empty());
+  EXPECT_TRUE(state.get_system(system).strategy_setup(1).inputs().empty());
 
   executor.push(pludux::apps::UndoCommand{});
   EXPECT_EQ(executor.execute(state),
             pludux::apps::ExecutionEffect::DocumentChanged);
-  ASSERT_EQ(state.get_strategy(strategy_handle).inputs().size(), 1U);
-  EXPECT_EQ(state.get_strategy(strategy_handle).inputs().front().label(),
+  ASSERT_EQ(state.get_system(system).main_setup().inputs().size(), 1U);
+  EXPECT_EQ(state.get_system(system).main_setup().inputs().front().label(),
             "Original");
-  EXPECT_DOUBLE_EQ(state.get_strategy(strategy_handle).inputs().front().value(),
-                   99.0);
+  EXPECT_DOUBLE_EQ(
+   state.get_system(system).main_setup().inputs().front().value(), 99.0);
+  ASSERT_EQ(state.get_system(system).strategy_setup(1).inputs().size(), 1U);
+  EXPECT_DOUBLE_EQ(
+   state.get_system(system).strategy_setup(1).inputs().front().value(), 55.0);
   EXPECT_EQ(
-   pludux::backtest::collect_model_inputs(state.get_model(model)).size(), 1U);
+   pludux::backtest::collect_strategy_inputs(state.get_strategy(strategy))
+    .size(),
+   1U);
 
   executor.push(pludux::apps::RedoCommand{});
   EXPECT_EQ(executor.execute(state),
             pludux::apps::ExecutionEffect::DocumentChanged);
-  EXPECT_TRUE(state.get_strategy(strategy_handle).inputs().empty());
+  EXPECT_TRUE(state.get_system(system).main_setup().inputs().empty());
+  EXPECT_TRUE(state.get_system(system).strategy_setup(1).inputs().empty());
 }
 
 TEST(ApplicationStateSerialization, RoundTripsStoredStrategyReferences)
 {
   auto state = pludux::apps::ApplicationState{};
-  state.add_strategy(pludux::backtest::Strategy{"Stored"});
+  add_strategy(state, "Stored");
   const auto strategy = state.get_strategy_handles().front();
-  ASSERT_TRUE(state.add_system(
-   pludux::backtest::System{"System", {}, {}, strategy, {{strategy}}}));
+  ASSERT_TRUE(
+   state.add_system(pludux::backtest::System{"System",
+                                             {},
+                                             {},
+                                             {},
+                                             StrategySetup{strategy},
+                                             {{StrategySetup{strategy}}}}));
   auto json = std::stringstream{};
   pludux::apps::save_application_state_json(json, state);
   EXPECT_NE(json.str().find("\"strategies\""), std::string::npos);
@@ -377,14 +396,15 @@ TEST(ApplicationStateSerialization, RoundTripsStoredStrategyReferences)
   const auto loaded = pludux::apps::load_application_state_json(json);
   ASSERT_EQ(loaded.get_strategy_handles().size(), 1U);
   const auto& system = loaded.get_system(loaded.get_system_handles().front());
-  EXPECT_EQ(system.main_strategy_handle(), strategy);
-  EXPECT_EQ(system.failsafe_strategies().front().strategy_handle(), strategy);
+  EXPECT_EQ(system.main_setup().strategy_handle(), strategy);
+  EXPECT_EQ(system.failsafe_strategies().front().setup().strategy_handle(),
+            strategy);
 }
 
 TEST(ApplicationStateSerialization, RoundTripsStandaloneStrategySelection)
 {
   auto state = pludux::apps::ApplicationState{};
-  state.add_strategy(pludux::backtest::Strategy{"Selected"});
+  add_strategy(state, "Selected");
   const auto strategy = state.get_strategy_handles().front();
   state.select_strategy(strategy);
 
@@ -475,7 +495,6 @@ TEST(ApplicationStateSerialization, RequiresWorkspaceBookkeeping)
                            "portfolios",
                            "assets",
                            "watchlists",
-                           "models",
                            "markets",
                            "brokers",
                            "profiles",
@@ -489,7 +508,6 @@ TEST(ApplicationStateSerialization, RequiresWorkspaceBookkeeping)
                            "systemHandles",
                            "assetHandles",
                            "watchlistHandles",
-                           "modelHandles",
                            "marketHandles",
                            "brokerHandles",
                            "profileHandles",
@@ -584,15 +602,14 @@ TEST(ApplicationStateSerialization, RoundTripsPortfolioStrategySelection)
   const auto asset = state.get_asset_handles().front();
   const auto watchlist =
    *state.add_watchlist(pludux::backtest::Watchlist{"List", {asset}});
-  state.add_model(pludux::backtest::Model{});
   state.add_profile(pludux::backtest::Profile{});
   const auto strategy = add_strategy(state, "Strategy");
-  auto value = state.get_strategy(strategy);
-  value.model_handle(state.get_model_handles().front());
-  value.profile_handle(state.get_profile_handles().front());
-  ASSERT_TRUE(state.update_strategy(strategy, std::move(value)));
   const auto system = *state.add_system(
-   pludux::backtest::System{"System", watchlist, {}, strategy});
+   pludux::backtest::System{"System",
+                            watchlist,
+                            state.get_profile_handles().front(),
+                            {},
+                            StrategySetup{strategy}});
   const auto portfolio = *state.add_portfolio(
    Portfolio{"Portfolio", 1'000.0, {}, {}, 10, 10, {}, {system}});
   const auto selected = pludux::apps::PortfolioStrategyKey{{system, asset}, 0};
@@ -636,25 +653,26 @@ TEST(ApplicationStateSerialization, IgnoresLegacyPortfolioStrategySelections)
 TEST(ApplicationStateSerialization, RoundTripsOrderedSystemStrategies)
 {
   auto state = ApplicationState{};
-  state.add_strategy(pludux::backtest::Strategy{"Main"});
-  state.add_strategy(pludux::backtest::Strategy{"Failsafe"});
+  add_strategy(state, "Main");
+  add_strategy(state, "Failsafe");
   const auto main = state.get_strategy_handles()[0];
   const auto failsafe = state.get_strategy_handles()[1];
-  const auto performance = pludux::backtest::ModelPerformanceConfig{
-   pludux::backtest::ModelPerformanceHistoryPolicy{
-    pludux::backtest::ModelPerformanceHistoryMode::RollingWindow, 25, 0.99}};
+  const auto performance = pludux::backtest::StrategyPerformanceConfig{
+   pludux::backtest::StrategyPerformanceHistoryPolicy{
+    pludux::backtest::StrategyPerformanceHistoryMode::RollingWindow, 25, 0.99}};
   ASSERT_TRUE(state.add_system(
    pludux::backtest::System{"Ordered",
                             {},
+                            {},
                             performance,
-                            main,
-                            {{failsafe,
+                            StrategySetup{main},
+                            {{StrategySetup{failsafe},
                               pludux::backtest::FailsafeStrategyActivation::
                                PreviousStrategyEntryFilteredPosition}}}));
   auto stream = std::stringstream{};
   pludux::apps::save_application_state_json(stream, state);
   const auto json = stream.str();
-  EXPECT_NE(json.find("\"mainStrategy\""), std::string::npos);
+  EXPECT_NE(json.find("\"mainSetup\""), std::string::npos);
   EXPECT_NE(json.find("\"failsafeStrategies\""), std::string::npos);
   EXPECT_NE(json.find("PREVIOUS_STRATEGY_ENTRY_FILTERED_POSITION"),
             std::string::npos);
@@ -663,9 +681,9 @@ TEST(ApplicationStateSerialization, RoundTripsOrderedSystemStrategies)
             std::string::npos);
   const auto loaded = pludux::apps::load_application_state_json(stream);
   const auto& system = loaded.get_system(loaded.get_system_handles().front());
-  EXPECT_EQ(system.main_strategy_handle(), main);
-  EXPECT_EQ(system.failsafe_strategies().front().strategy_handle(), failsafe);
-  EXPECT_EQ(system.model_performance(), performance);
+  EXPECT_EQ(system.main_setup().strategy_handle(), main);
+  EXPECT_EQ(system.failsafe_strategies().front().setup().strategy_handle(), failsafe);
+  EXPECT_EQ(system.strategy_performance(), performance);
 
   for(const auto& [canonical, legacy] :
       {std::pair{"DISTRIBUTION.BETA_BERNOULLI", "BETA_BERNOULLI"},
@@ -687,10 +705,10 @@ TEST(ApplicationStateSerialization, DefaultsMissingSystemFields)
   auto stream = std::stringstream{};
   pludux::apps::save_application_state_json(stream, state);
   auto json = stream.str();
-  const auto key = json.find("\"mainStrategy\"");
+  const auto key = json.find("\"mainSetup\"");
   ASSERT_NE(key, std::string::npos);
   json.replace(
-   key, std::string{"\"mainStrategy\""}.size(), "\"removedMainStrategy\"");
+   key, std::string{"\"mainSetup\""}.size(), "\"removedMainSetup\"");
   auto input = std::stringstream{json};
   const auto loaded = pludux::apps::load_application_state_json(input);
   EXPECT_EQ(loaded.get_system(loaded.get_system_handles().front()),
@@ -700,7 +718,7 @@ TEST(ApplicationStateSerialization, DefaultsMissingSystemFields)
 TEST(ApplicationStateSerialization, DefaultsFailsafeWithoutActivation)
 {
   auto state = ApplicationState{};
-  ASSERT_TRUE(state.add_system(pludux::backtest::System{"", {}, {}, {}, {{}}}));
+  ASSERT_TRUE(state.add_system(pludux::backtest::System{"", {}, {}, {}, StrategySetup{}, {{}}}));
   auto stream = std::stringstream{};
   pludux::apps::save_application_state_json(stream, state);
   auto json = stream.str();
@@ -723,8 +741,8 @@ TEST(CommandHistory, StandaloneStrategyCrudAndReorderAreUndoable)
   executor.push(pludux::apps::EditCommand{
    "Add Strategy",
    [](auto& candidate) {
-     candidate.add_strategy(pludux::backtest::Strategy{"First"});
-     candidate.add_strategy(pludux::backtest::Strategy{"Second"});
+     add_strategy(candidate, "First");
+     add_strategy(candidate, "Second");
    },
    std::nullopt});
   EXPECT_EQ(executor.execute(state),
@@ -865,8 +883,8 @@ TEST(ApplicationStateSerialization, RoundTripsOrderedPortfolioEntryComparators)
     {pludux::DivideNode<pludux::backtest::RequestedOrderMethodContext>{
       pludux::backtest::RequestedRiskWithFeesNode{}, pludux::ValueNode{2.0}},
      pludux::backtest::PortfolioEntryComparatorOrder::LowerFirst},
-    {pludux::backtest::ModelPerformanceNode{
-      pludux::backtest::ModelPerformanceMetric::BayesianWinProbabilityLower95},
+    {pludux::backtest::StrategyPerformanceNode{
+      pludux::backtest::StrategyPerformanceMetric::BayesianWinProbabilityLower95},
      pludux::backtest::PortfolioEntryComparatorOrder::HigherFirst}};
   auto portfolio = Portfolio{};
   portfolio.entry_comparators(comparators);
@@ -881,7 +899,7 @@ TEST(ApplicationStateSerialization, RoundTripsOrderedPortfolioEntryComparators)
   EXPECT_NE(json.find("\"OPERATOR.LOOKBACK\""), std::string::npos);
   EXPECT_NE(json.find("\"MARKET_DATA.CLOSE\""), std::string::npos);
   EXPECT_NE(json.find("\"REQUESTED_ORDER.RISK_WITH_FEES\""), std::string::npos);
-  EXPECT_NE(json.find("\"MODEL_PERFORMANCE.VALUE\""), std::string::npos);
+  EXPECT_NE(json.find("\"STRATEGY_PERFORMANCE.VALUE\""), std::string::npos);
   EXPECT_NE(json.find("\"BAYESIAN_WIN_PROBABILITY_LOWER_95\""),
             std::string::npos);
 
@@ -967,7 +985,7 @@ TEST(ApplicationStateSerialization, UsesFixedBudgetWithoutLegacyAlias)
   state.add_profile(pludux::backtest::Profile{
    "Kelly",
    pludux::backtest::PositionSizingNode{
-    pludux::backtest::ModelPerformanceBayesianKellySizing{}}});
+    pludux::backtest::StrategyPerformanceBayesianKellySizing{}}});
   auto stream = std::stringstream{};
   pludux::apps::save_application_state_json(stream, state);
   const auto json = stream.str();
@@ -976,7 +994,7 @@ TEST(ApplicationStateSerialization, UsesFixedBudgetWithoutLegacyAlias)
   EXPECT_NE(json.find("\"POSITION_SIZING.FIXED_QUANTITY\""), std::string::npos);
   EXPECT_NE(json.find("\"POSITION_SIZING.EQUITY_FRACTION\""),
             std::string::npos);
-  EXPECT_NE(json.find("\"POSITION_SIZING.MODEL_PERFORMANCE_BAYESIAN_KELLY\""),
+  EXPECT_NE(json.find("\"POSITION_SIZING.STRATEGY_PERFORMANCE_BAYESIAN_KELLY\""),
             std::string::npos);
   EXPECT_NE(json.find("\"budget\":750.0"), std::string::npos);
   EXPECT_EQ(json.find("FIXED_NOTIONAL"), std::string::npos);

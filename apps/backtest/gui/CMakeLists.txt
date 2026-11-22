@@ -159,7 +159,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/state_diff.cxx
     src/built_in_strategies.cxx
 
-    src/actions/load_model_json_action.cxx
+    src/actions/load_strategy_json_action.cxx
     src/actions/load_asset_csv_action.cxx
     src/actions.cxx
 
@@ -177,11 +177,10 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/window_context.cxx
     src/windows/assets_window.cxx
     src/windows/watchlists_window.cxx
-    src/windows/models_window.cxx
+    src/windows/strategies_window.cxx
     src/windows/markets_window.cxx
     src/windows/brokers_window.cxx
     src/windows/profiles_window.cxx
-    src/windows/strategies_window.cxx
     src/windows/systems_window.cxx
     src/windows/portfolios_window.cxx
     src/windows/backtest_overview_window.cxx

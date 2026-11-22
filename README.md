@@ -12,8 +12,7 @@ Start here:
 
 ## Overview
 
-Pludux separates simulation into these repository terms:
-
+Pludux uses the following resources and results.
 
 - **Backtest**: an actual System × Asset simulation run and its result
 - **Portfolio**: shared-capital account that runs ordered Systems
@@ -22,29 +21,23 @@ Pludux separates simulation into these repository terms:
   quantity and quantity step
 - **Broker**: the broker or execution provider used for the Market, including
   its fee and execution-cost rules
-- **System**: a reusable Watchlist plus one Main Strategy, ordered Failsafe
-  Strategy bindings and activation rules, and one shared Model Performance
-  configuration
-- **Strategy**: a named, reusable stored configuration of one Model, one
-  Profile, model input overrides, and an Entry Filter
-- **Profile**: sizing and capital policy for position sizing, drawdown
-  adjustment, and insufficient-cash handling
-- **Model**: deterministic trading rules, including indicators, conditions,
-  entries/exits, plots, and inputs
+- A **Strategy** defines indicators, entry and exit rules, plots, and inputs
+  with default values.
+- A **Profile** defines position sizing, drawdown adjustment, and
+  insufficient-cash handling.
+- A **System** selects a Watchlist and one Profile for its Main setup and
+  ordered Failsafes. Each setup selects a Strategy, supplies input overrides,
+  and has its own Entry Filter. Each Failsafe also has an activation rule.
 - **Watchlist**: an ordered set of Assets used by a System
 - **Asset**: market data and field mapping
 
 ## Verified capabilities
 
-- GUI-based Portfolio, Market, Broker, System, Strategy, Profile, Model, Watchlist, 
-  and Asset management
-- Model creation/editing in the GUI, including node-based editing,
-  duplicate, and JSON import/export
-- Strategy creation/editing in the GUI, including duplicate-and-reuse
-  workflows
-- System creation/editing in the GUI, including Watchlist binding, a Main
-  Strategy, ordered Failsafe Strategy bindings, activation rules, and shared
-  Model Performance settings
+- Management of Portfolios, Markets, Brokers, Systems, Profiles, Strategies,
+  Watchlists, and Assets in the GUI
+- Strategy creation and editing in a node editor, duplication, and JSON import/export
+- System editing with Watchlist and Profile selection, Main and Failsafe setups,
+  Strategy Inputs, Entry Filters, and shared Strategy Performance settings
 - Portfolio simulations with shared capital across ordered Systems
 - Deterministic execution for identical inputs
 - Union processing of asset timelines in Portfolio backtests
@@ -69,7 +62,7 @@ See [Core Concepts](docs/concepts.md), [Limitations](docs/limitations.md), and
 1. Read [Documentation home](docs/index.md).
 2. Follow [Quick start](docs/getting-started.md).
 3. Use the complete [Node and Method Reference](docs/nodes.md) while building a
-   Model or comparator.
+   Strategy or comparator.
 4. For simulation behavior, read [Execution and Position Lifecycle](docs/execution.md)
    and [Portfolio Backtesting](docs/portfolio-backtesting.md).
 

@@ -42,13 +42,13 @@ increasing timestamps.
 Open **Watchlists** and create a Watchlist that contains the Assets you want to
 test together. The exact item labels follow the current GUI prompt.
 
-### 3) Create a Model
+### 3) Create a Strategy
 
-Open **Models** and create a new Model, or import one from JSON. Model JSON
-import/export is the documented exchange format for models. See
-[Model JSON](model-json.md) for the identifier convention and schema reference.
+Open **Strategies** and create a new Strategy, or import one from JSON. Strategy JSON
+import/export is the documented exchange format for Strategies. See
+[Strategy JSON](strategy-json.md) for the identifier convention and schema reference.
 
-For a first test, keep the logic simple. A Model can be built from the node
+For a first test, keep the logic simple. A Strategy can be built from the node
 editor and can use named series, conditions, and plots.
 
 ### 4) Create a Profile
@@ -64,40 +64,23 @@ signals on their own. Configure an **Entry Filter** in the Strategy setup when
 you need to decide whether a fresh initial Requested Order may enter Portfolio
 ranking.
 
-### 5) Create a Strategy
+### 5) Create a System
 
-Open **Strategies** and create a reusable Strategy. The editor uses these
-fields:
+Open **Systems**, create a System, and select its Watchlist and Profile.
+In the Main setup, choose the Strategy you created. The setup uses its
+declared input defaults unless you override them here. Configure the Entry
+Filter if you want to screen fresh initial orders.
 
-- Name
-- Model
-- Profile
-- Model Inputs
-- Entry Filter
+For a first run, the Main setup is sufficient. To add a Failsafe, select its
+Strategy, input overrides, Entry Filter, and activation rule. Every setup in the
+System uses the same Profile and Strategy Performance calculation settings.
 
-Duplicate the Strategy if you want a variant without changing Systems that
-already reference it.
-
-### 6) Create a System
-
-Open **Systems** and create a System. The System editor uses these fields:
-
-- Name
-- Watchlist
-- Main Strategy
-- Failsafe Strategies with activation rules
-- Shared Model Performance calculation
-
-For the first run, use one Asset in the Watchlist, one Model, one Profile, and
-one Strategy.
-Leave Failsafes out unless you need them.
-
-### 7) Set Market and Broker
+### 6) Set Market and Broker
 
 Open **Markets** and **Brokers** if you need venue-specific rules or execution
 provider fees for the Portfolio.
 
-### 8) Add the System to a Portfolio
+### 7) Add the System to a Portfolio
 
 Open **Portfolios** and create a Portfolio. The Portfolio editor includes:
 
@@ -112,10 +95,10 @@ Open **Portfolios** and create a Portfolio. The Portfolio editor includes:
 
 Add your System to the Portfolio and keep the order stable.
 
-### 9) Run and inspect
+### 8) Run and inspect
 
 Run the Portfolio, then choose the scope in **Portfolios**. Select a
-Single-Asset child to inspect one Strategy binding within a System–Asset run.
+Single-Asset child to inspect one Strategy setup within a System–Asset run.
 Its parent Portfolio is selected automatically. Expanding a Portfolio row
 activates Single-Asset scope, restoring its last selected child or choosing the
 first valid child when no valid selection is remembered. Collapsing the row
@@ -151,8 +134,8 @@ in Portfolio Overview.
 ## Practical notes
 
 - If a label or field is not listed here, use the current GUI prompt.
-- Model inputs come from the selected Model and can be overridden in the
-  Strategy.
+- Strategy inputs come from the selected Strategy and can be overridden in each
+  System setup.
 - Portfolio backtests share capital and process the union of asset timelines.
 
 ## See also

@@ -8,7 +8,7 @@ export module pludux.backtest:requested_order_method_context;
 
 import pludux;
 
-import :model_performance;
+import :strategy_performance;
 import :requested_order;
 
 export namespace pludux::backtest {
@@ -29,15 +29,15 @@ class RequestedOrderRiskDistanceNode;
 class RequestedPriceRiskNode;
 class RequestedRiskWithFeesNode;
 class FrozenUnitQuantityNode;
-class ModelPerformanceNode;
+class StrategyPerformanceNode;
 
 class RequestedOrderMethodContext {
 public:
   RequestedOrderMethodContext(
    const RequestedOrder& requested_order,
-   const ModelPerformanceSnapshot& model_performance) noexcept
+   const StrategyPerformanceSnapshot& strategy_performance) noexcept
   : requested_order_{requested_order}
-  , model_performance_{model_performance}
+  , strategy_performance_{strategy_performance}
   {
   }
 
@@ -47,11 +47,11 @@ public:
     return self.requested_order_;
   }
 
-  auto model_performance(
+  auto strategy_performance(
    this const RequestedOrderMethodContext& self) noexcept
-   -> const ModelPerformanceSnapshot&
+   -> const StrategyPerformanceSnapshot&
   {
-    return self.model_performance_;
+    return self.strategy_performance_;
   }
 
   template<typename TNode>
@@ -94,12 +94,12 @@ public:
            std::same_as<Node, RequestedPriceRiskNode> ||
            std::same_as<Node, RequestedRiskWithFeesNode> ||
            std::same_as<Node, FrozenUnitQuantityNode> ||
-           std::same_as<Node, ModelPerformanceNode>;
+           std::same_as<Node, StrategyPerformanceNode>;
   }
 
 private:
   const RequestedOrder& requested_order_;
-  const ModelPerformanceSnapshot& model_performance_;
+  const StrategyPerformanceSnapshot& strategy_performance_;
 };
 
 using ComparatorNode = ErasedNode<RequestedOrderMethodContext>;

@@ -62,8 +62,8 @@ struct WatchlistStoreHandle : StoreHandle<WatchlistStoreHandle> {
   using StoreHandle<WatchlistStoreHandle>::StoreHandle;
 };
 
-struct ModelStoreHandle : StoreHandle<ModelStoreHandle> {
-  using StoreHandle<ModelStoreHandle>::StoreHandle;
+struct StrategyStoreHandle : StoreHandle<StrategyStoreHandle> {
+  using StoreHandle<StrategyStoreHandle>::StoreHandle;
 };
 
 struct MarketStoreHandle : StoreHandle<MarketStoreHandle> {
@@ -78,8 +78,5 @@ struct ProfileStoreHandle : StoreHandle<ProfileStoreHandle> {
   using StoreHandle<ProfileStoreHandle>::StoreHandle;
 };
 
-struct StrategyStoreHandle : StoreHandle<StrategyStoreHandle> {
-  using StoreHandle<StrategyStoreHandle>::StoreHandle;
-};
 
 } // namespace pludux::backtest

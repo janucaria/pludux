@@ -49,18 +49,18 @@ target_sources(${PROJECT_NAME}
     sources/backtest/closed_trade.cxx
     sources/backtest/trade_position.cxx
     sources/backtest/trade_session.cxx
-    sources/backtest/model_intent.cxx
-    sources/backtest/model_closed_position.cxx
-    sources/backtest/model_session.cxx
-    sources/backtest/model_performance_model.cxx
-    sources/backtest/model_performance.cxx
+    sources/backtest/strategy_intent.cxx
+    sources/backtest/strategy_closed_position.cxx
+    sources/backtest/strategy_session.cxx
+    sources/backtest/strategy_performance_model.cxx
+    sources/backtest/strategy_performance.cxx
     sources/backtest/entry_filter_method_context.cxx
-    sources/backtest/model_performance_method.cxx
-    sources/backtest/model_performance_node.cxx
+    sources/backtest/strategy_performance_method.cxx
+    sources/backtest/strategy_performance_node.cxx
     sources/backtest/asset.cxx
     sources/backtest/watchlist.cxx
-    sources/backtest/model.cxx
-    sources/backtest/model_inputs.cxx
+    sources/backtest/strategy.cxx
+    sources/backtest/strategy_inputs.cxx
     sources/backtest/market.cxx
     sources/backtest/broker.cxx
     sources/backtest/position_sizing.cxx
@@ -84,7 +84,7 @@ target_sources(${PROJECT_NAME}
     sources/backtest/position_node.cxx
     sources/backtest/stop_target_price_method.cxx
     sources/backtest/stop_target_price_node.cxx
-    sources/backtest/strategy.cxx
+    sources/backtest/strategy_setup.cxx
     sources/backtest/system.cxx
     sources/backtest/portfolio.cxx
     sources/backtest/portfolio_timeline.cxx
@@ -95,7 +95,7 @@ target_sources(${PROJECT_NAME}
     sources/backtest/backtest_runner.cxx
     sources/backtest/portfolio_runner.cxx
     sources/backtest/config_parser.cxx
-    sources/backtest/model_parser.cxx
+    sources/backtest/strategy_parser.cxx
     sources/backtest.cxx
 )
 target_link_libraries(${PROJECT_NAME} PUBLIC pludux::pludux-lib jsoncons rapidcsv ctre::ctre)

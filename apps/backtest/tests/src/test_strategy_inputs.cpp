@@ -27,22 +27,22 @@ TEST(PyramidingRetriggerTest, ParsesSerializesAndRejectsInvalidValues)
   EXPECT_EQ(serialize_pyramiding_retrigger(PyramidingRetrigger::AfterFalse),
             "AFTER_FALSE");
   EXPECT_THROW(parse_pyramiding_retrigger("LOGIC.ALWAYS"), std::runtime_error);
-  EXPECT_EQ(Model::Pyramiding{}.retrigger(),
+  EXPECT_EQ(Strategy::Pyramiding{}.retrigger(),
             PyramidingRetrigger::EveryEvaluation);
-  EXPECT_EQ(Model::Pyramiding{}.cooldown(), 0);
+  EXPECT_EQ(Strategy::Pyramiding{}.cooldown(), 0);
 }
 
 TEST(PyramidingCooldownTest, DefaultsWhenOmitted)
 {
-  auto strategy_json = jsoncons::ojson::parse(stringify_model(Model{}));
+  auto strategy_json = jsoncons::ojson::parse(stringify_strategy(Strategy{}));
   strategy_json.at("positions").at("long").at("pyramiding").erase("cooldown");
 
-  const auto parsed = parse_model("Test", strategy_json.to_string());
+  const auto parsed = parse_strategy("Test", strategy_json.to_string());
   EXPECT_EQ(parsed.long_position().pyramiding().cooldown(),
-            Model::Pyramiding{}.cooldown());
+            Strategy::Pyramiding{}.cooldown());
 }
 
-TEST(ModelInputsTest, CollectsNumericInputsInModelTraversalOrder)
+TEST(StrategyInputsTest, CollectsNumericInputsInStrategyTraversalOrder)
 {
   auto series_nodes = OrderedNamedRegistry<ErasedNode<BacktestMethodContext>>{};
   series_nodes.set(
@@ -64,16 +64,16 @@ TEST(ModelInputsTest, CollectsNumericInputsInModelTraversalOrder)
                      NumericInputNode::ValueRepresentation::UnsignedInteger,
                      14.0}});
 
-  auto long_pyramiding = Model::Pyramiding{};
+  auto long_pyramiding = Strategy::Pyramiding{};
   long_pyramiding.signal(NumericInputNode{
    "Long Pyramid", NumericInputNode::ValueRepresentation::Decimal, 3.5});
 
-  auto long_position = Model::Position{};
-  long_position.entry(Model::Entry{
+  auto long_position = Strategy::Position{};
+  long_position.entry(Strategy::Entry{
    NumericInputNode{
     "Long Entry", NumericInputNode::ValueRepresentation::UnsignedInteger, 4.8},
    SignalTiming::NextOpen});
-  long_position.exits({Model::Exit{
+  long_position.exits({Strategy::Exit{
    true,
    NumericInputNode{
     "Exit Signal", NumericInputNode::ValueRepresentation::Decimal, 6.0},
@@ -82,23 +82,23 @@ TEST(ModelInputsTest, CollectsNumericInputsInModelTraversalOrder)
   long_position.risk_distance(
    RiskDistanceAmountNode<BacktestMethodContext>{NumericInputNode{
     "Risk Distance", NumericInputNode::ValueRepresentation::Decimal, 10.0}});
-  long_position.stop_losses({Model::StopLoss{
+  long_position.stop_losses({Strategy::StopLoss{
    true,
    NumericInputNode{
     "Stop Price", NumericInputNode::ValueRepresentation::Decimal, 95.0},
    false}});
-  long_position.take_profits({Model::TakeProfit{
+  long_position.take_profits({Strategy::TakeProfit{
    true,
    NumericInputNode{
     "Target Price", NumericInputNode::ValueRepresentation::Decimal, 120.0}}});
 
-  const auto strategy = Model{"Test",
+  const auto strategy = Strategy{"Test",
                               std::move(series_nodes),
                               std::move(long_position),
-                              Model::Position{},
+                              Strategy::Position{},
                               {}};
 
-  const auto inputs = collect_model_inputs(strategy);
+  const auto inputs = collect_strategy_inputs(strategy);
 
   ASSERT_EQ(inputs.size(), 11);
   EXPECT_EQ(inputs[0].label(), "Duplicate");
@@ -125,24 +125,24 @@ TEST(ModelInputsTest, CollectsNumericInputsInModelTraversalOrder)
   EXPECT_DOUBLE_EQ(inputs[10].value(), 120.0);
 }
 
-TEST(ModelInputsTest, CollectsInputFromPositionRMultipleSource)
+TEST(StrategyInputsTest, CollectsInputFromPositionRMultipleSource)
 {
   auto series_nodes = OrderedNamedRegistry<ErasedNode<BacktestMethodContext>>{};
   series_nodes.set(
    "current_r",
    PositionRMultipleNode<BacktestMethodContext>{NumericInputNode{
     "R Source", NumericInputNode::ValueRepresentation::Decimal, 125.0}});
-  const auto strategy = Model{
-   "Test", std::move(series_nodes), Model::Position{}, Model::Position{}, {}};
+  const auto strategy = Strategy{
+   "Test", std::move(series_nodes), Strategy::Position{}, Strategy::Position{}, {}};
 
-  const auto inputs = collect_model_inputs(strategy);
+  const auto inputs = collect_strategy_inputs(strategy);
 
   ASSERT_EQ(inputs.size(), 1U);
   EXPECT_EQ(inputs.front().label(), "R Source");
   EXPECT_DOUBLE_EQ(inputs.front().value(), 125.0);
 }
 
-TEST(ModelInputsTest, AssigningModelReplacesStrategyInputsWithDefaults)
+TEST(StrategyInputsTest, AssigningStrategyReplacesSetupInputsWithDefaults)
 {
   auto series_nodes = OrderedNamedRegistry<ErasedNode<BacktestMethodContext>>{};
   series_nodes.set(
@@ -154,61 +154,61 @@ TEST(ModelInputsTest, AssigningModelReplacesStrategyInputsWithDefaults)
     NumericInputNode{"Replacement Integer",
                      NumericInputNode::ValueRepresentation::SignedInteger,
                      -3.0}});
-  const auto model = Model{"Replacement",
+  const auto strategy = Strategy{"Replacement",
                            std::move(series_nodes),
-                           Model::Position{},
-                           Model::Position{},
+                           Strategy::Position{},
+                           Strategy::Position{},
                            {}};
-  const auto model_handle = ModelStoreHandle{4, 2};
+  const auto strategy_handle = StrategyStoreHandle{4, 2};
 
-  auto strategy = Strategy{};
-  strategy.model_handle(ModelStoreHandle{1, 1});
-  strategy.inputs({NumericInputNode{
+  auto setup = StrategySetup{};
+  setup.strategy_handle(StrategyStoreHandle{1, 1});
+  setup.inputs({NumericInputNode{
    "Old Input", NumericInputNode::ValueRepresentation::UnsignedInteger, 99.0}});
 
-  assign_strategy_model(strategy, model_handle, model);
+  assign_setup_strategy(setup, strategy_handle, strategy);
 
-  EXPECT_EQ(strategy.model_handle(), model_handle);
-  ASSERT_EQ(strategy.inputs().size(), 2);
-  EXPECT_EQ(strategy.inputs()[0].label(), "Replacement Decimal");
-  EXPECT_EQ(strategy.inputs()[0].representation(),
+  EXPECT_EQ(setup.strategy_handle(), strategy_handle);
+  ASSERT_EQ(setup.inputs().size(), 2);
+  EXPECT_EQ(setup.inputs()[0].label(), "Replacement Decimal");
+  EXPECT_EQ(setup.inputs()[0].representation(),
             NumericInputNode::ValueRepresentation::Decimal);
-  EXPECT_DOUBLE_EQ(strategy.inputs()[0].value(), 1.25);
-  EXPECT_EQ(strategy.inputs()[1].label(), "Replacement Integer");
-  EXPECT_EQ(strategy.inputs()[1].representation(),
+  EXPECT_DOUBLE_EQ(setup.inputs()[0].value(), 1.25);
+  EXPECT_EQ(setup.inputs()[1].label(), "Replacement Integer");
+  EXPECT_EQ(setup.inputs()[1].representation(),
             NumericInputNode::ValueRepresentation::SignedInteger);
-  EXPECT_DOUBLE_EQ(strategy.inputs()[1].value(), -3.0);
+  EXPECT_DOUBLE_EQ(setup.inputs()[1].value(), -3.0);
 }
 
-TEST(ModelInputsTest, AssigningModelWithoutInputsClearsStrategyInputs)
+TEST(StrategyInputsTest, AssigningStrategyWithoutInputsClearsSetupInputs)
 {
-  auto strategy = Strategy{};
-  strategy.inputs({NumericInputNode{
+  auto setup = StrategySetup{};
+  setup.inputs({NumericInputNode{
    "Old Input", NumericInputNode::ValueRepresentation::Decimal, 99.0}});
-  const auto model_handle = ModelStoreHandle{5, 3};
+  const auto strategy_handle = StrategyStoreHandle{5, 3};
 
-  assign_strategy_model(strategy, model_handle, Model{});
+  assign_setup_strategy(setup, strategy_handle, Strategy{});
 
-  EXPECT_EQ(strategy.model_handle(), model_handle);
-  EXPECT_TRUE(strategy.inputs().empty());
+  EXPECT_EQ(setup.strategy_handle(), strategy_handle);
+  EXPECT_TRUE(setup.inputs().empty());
 }
 
-TEST(ModelInputsTest,
-     SharedModelCompilesIndependentlyForStrategyInputsAndNamedSeriesResults)
+TEST(StrategyInputsTest,
+     SharedStrategyCompilesIndependentlyForStrategyInputsAndNamedSeriesResults)
 {
-  auto series_nodes = OrderedNamedRegistry<ModelNode>{};
+  auto series_nodes = OrderedNamedRegistry<StrategyNode>{};
   series_nodes.set(
    "configured",
    NumericInputNode{
     "Configured", NumericInputNode::ValueRepresentation::Decimal, 1.0});
-  const auto shared_model =
-   Model{"Shared", std::move(series_nodes), {}, {}, {}};
+  const auto shared_strategy =
+   Strategy{"Shared", std::move(series_nodes), {}, {}, {}};
 
-  const auto compile_for_input = [&shared_model](double input) {
+  const auto compile_for_input = [&shared_strategy](double input) {
     const auto inputs = std::vector{input};
     auto conversion_context = NodeToErasedMethodContext{inputs};
-    auto methods = ModelMethodRegistry{};
-    for(const auto& [name, node] : shared_model.series_nodes()) {
+    auto methods = StrategyMethodRegistry{};
+    for(const auto& [name, node] : shared_strategy.series_nodes()) {
       methods.set(
        name,
        node_to_erased_method<BacktestMethodContext>(node, conversion_context));
@@ -242,7 +242,7 @@ TEST(ModelInputsTest,
    second_results.results(std::string{"configured"})->get().front(), 7.0);
 }
 
-TEST(ModelParserTest, ParsesPerSideStopLossAndTakeProfit)
+TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
 {
   const auto strategy_json = std::string{R"({
     "version": 1,
@@ -322,7 +322,7 @@ TEST(ModelParserTest, ParsesPerSideStopLossAndTakeProfit)
     }
   })"};
 
-  const auto strategy = parse_model("Test", strategy_json);
+  const auto strategy = parse_strategy("Test", strategy_json);
 
   ASSERT_EQ(strategy.long_position().stop_losses().size(), 2);
   EXPECT_TRUE(strategy.long_position().stop_losses()[0].enabled());
@@ -366,31 +366,31 @@ TEST(ModelParserTest, ParsesPerSideStopLossAndTakeProfit)
                strategy.long_position().entry().signal());
 
   const auto round_tripped =
-   parse_model("Round Trip", stringify_model(strategy));
+   parse_strategy("Round Trip", stringify_strategy(strategy));
   EXPECT_TRUE(round_tripped.equivalent_rules(strategy));
 }
 
-TEST(ModelParserTest, RejectsMissingAndVersionTwoModelJson)
+TEST(StrategyParserTest, RejectsMissingAndVersionTwoStrategyJson)
 {
-  auto model_json = serialize_model_config_json(Model{});
-  model_json.erase("version");
-  EXPECT_THROW(parse_model_config_json("Missing Version", model_json),
+  auto strategy_json = serialize_strategy_config_json(Strategy{});
+  strategy_json.erase("version");
+  EXPECT_THROW(parse_strategy_config_json("Missing Version", strategy_json),
                std::runtime_error);
 
-  model_json = serialize_model_config_json(Model{});
-  model_json["version"] = 2;
-  EXPECT_THROW(parse_model_config_json("Version Two", model_json),
+  strategy_json = serialize_strategy_config_json(Strategy{});
+  strategy_json["version"] = 2;
+  EXPECT_THROW(parse_strategy_config_json("Version Two", strategy_json),
                std::runtime_error);
 }
 
-TEST(ModelParserTest, StringifiesPositionObjectsWithPerSideLevels)
+TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
 {
-  auto long_position = Model::Position{};
-  long_position.entry(Model::Entry{TrueNode{}, SignalTiming::CurrentClose});
+  auto long_position = Strategy::Position{};
+  long_position.entry(Strategy::Entry{TrueNode{}, SignalTiming::CurrentClose});
   long_position.exits(
-   {Model::Exit{true, FalseNode{}, SignalTiming::CurrentClose, 0.25}});
+   {Strategy::Exit{true, FalseNode{}, SignalTiming::CurrentClose, 0.25}});
   long_position.exits_activation(ExitActivation::AfterPrevious);
-  auto pyramiding = Model::Pyramiding{};
+  auto pyramiding = Strategy::Pyramiding{};
   pyramiding.timing(SignalTiming::CurrentClose);
   pyramiding.retrigger(PyramidingRetrigger::AfterFalse);
   pyramiding.cooldown(4);
@@ -401,14 +401,14 @@ TEST(ModelParserTest, StringifiesPositionObjectsWithPerSideLevels)
   long_position.pyramiding(pyramiding);
   long_position.risk_distance(
    RiskDistanceAmountNode<BacktestMethodContext>{10.0});
-  long_position.stop_losses({Model::StopLoss{true, OpenNode{}, false, 0.5}});
+  long_position.stop_losses({Strategy::StopLoss{true, OpenNode{}, false, 0.5}});
   long_position.stop_losses_activation(ExitActivation::AfterPrevious);
-  long_position.take_profits({Model::TakeProfit{true, ValueNode{120.0}, 0.75}});
+  long_position.take_profits({Strategy::TakeProfit{true, ValueNode{120.0}, 0.75}});
 
   const auto strategy =
-   Model{"Test", {}, std::move(long_position), Model::Position{}, {}};
+   Strategy{"Test", {}, std::move(long_position), Strategy::Position{}, {}};
 
-  const auto strategy_json = jsoncons::ojson::parse(stringify_model(strategy));
+  const auto strategy_json = jsoncons::ojson::parse(stringify_strategy(strategy));
 
   EXPECT_TRUE(strategy_json.at("positions").at("long").is_object());
   EXPECT_TRUE(strategy_json.at("positions").at("short").is_object());
@@ -527,14 +527,14 @@ TEST(ModelParserTest, StringifiesPositionObjectsWithPerSideLevels)
             "AFTER_PREVIOUS");
 }
 
-TEST(ModelParserTest, JsonconsConvTraitsRoundTripSchemaConfig)
+TEST(StrategyParserTest, JsonconsConvTraitsRoundTripSchemaConfig)
 {
-  auto long_position = Model::Position{};
-  long_position.entry(Model::Entry{TrueNode{}, SignalTiming::CurrentClose});
-  long_position.stop_losses({Model::StopLoss{true, OpenNode{}, false}});
+  auto long_position = Strategy::Position{};
+  long_position.entry(Strategy::Entry{TrueNode{}, SignalTiming::CurrentClose});
+  long_position.stop_losses({Strategy::StopLoss{true, OpenNode{}, false}});
 
   const auto strategy =
-   Model{"Config Name", {}, std::move(long_position), Model::Position{}, {}};
+   Strategy{"Config Name", {}, std::move(long_position), Strategy::Position{}, {}};
 
   auto strategy_json_str = std::string{};
   jsoncons::encode_json(strategy, strategy_json_str);
@@ -543,15 +543,15 @@ TEST(ModelParserTest, JsonconsConvTraitsRoundTripSchemaConfig)
   EXPECT_EQ(strategy_json.at("version").as<int>(), 1);
   EXPECT_FALSE(strategy_json.contains("name"));
 
-  const auto decoded_strategy = jsoncons::decode_json<Model>(strategy_json_str);
+  const auto decoded_strategy = jsoncons::decode_json<Strategy>(strategy_json_str);
 
   EXPECT_TRUE(decoded_strategy.name().empty());
   EXPECT_TRUE(decoded_strategy.equivalent_rules(strategy));
 }
 
-TEST(ModelParserTest, DefaultStopLossAndEmptyExitCollections)
+TEST(StrategyParserTest, DefaultStopLossAndEmptyExitCollections)
 {
-  const auto strategy = Model{};
+  const auto strategy = Strategy{};
 
   ASSERT_EQ(strategy.long_position().stop_losses().size(), 1);
   EXPECT_TRUE(strategy.long_position().stop_losses()[0].enabled());
@@ -572,43 +572,43 @@ TEST(ModelParserTest, DefaultStopLossAndEmptyExitCollections)
   EXPECT_TRUE(strategy.long_position().exits().empty());
 }
 
-TEST(ModelParserTest, MinimalDocumentUsesFreshModelDefaultsAndIgnoresUnknownKeys)
+TEST(StrategyParserTest, MinimalDocumentUsesFreshStrategyDefaultsAndIgnoresUnknownKeys)
 {
-  const auto parsed = parse_model(
+  const auto parsed = parse_strategy(
    "Minimal", R"({"version":1,"executionPath":"legacy","unknown":42})");
-  auto expected = Model{};
+  auto expected = Strategy{};
   expected.name("Minimal");
   EXPECT_EQ(parsed, expected);
 }
 
-TEST(ModelParserTest, CommentsRemainSupportedAndTrailingCommasAreRejected)
+TEST(StrategyParserTest, CommentsRemainSupportedAndTrailingCommasAreRejected)
 {
-  EXPECT_EQ(parse_model("Commented", "{/* comment */\"version\":1}")
+  EXPECT_EQ(parse_strategy("Commented", "{/* comment */\"version\":1}")
              .intrabar_path(),
-            Model{}.intrabar_path());
-  EXPECT_THROW(parse_model("Trailing", R"({"version":1,})"),
+            Strategy{}.intrabar_path());
+  EXPECT_THROW(parse_strategy("Trailing", R"({"version":1,})"),
                std::exception);
 }
 
-TEST(ModelParserTest, RequiresCanonicalMethodAndLosslessIntegralValues)
+TEST(StrategyParserTest, RequiresCanonicalMethodAndLosslessIntegralValues)
 {
-  EXPECT_THROW(parse_model("No Method",
+  EXPECT_THROW(parse_strategy("No Method",
                            R"({"version":1,"series":{"value":{}}})"),
                std::exception);
   EXPECT_THROW(
-   parse_model(
+   parse_strategy(
     "Null Params",
     R"({"version":1,"series":{"value":{"method":"INDICATOR.SMA","params":null}}})"),
    std::exception);
 
-  const auto integral = parse_model(
+  const auto integral = parse_strategy(
    "Integral",
    R"({"version":1,"positions":{"long":{"pyramiding":{"cooldown":2.0}}}})");
   EXPECT_EQ(integral.long_position().pyramiding().cooldown(), 2U);
   for(const auto* cooldown :
       {"2.5", "-1", "1e100", "9007199254740993.0", "\"2\""}) {
     EXPECT_THROW(
-     parse_model(
+     parse_strategy(
       "Invalid",
       std::string{R"({"version":1,"positions":{"long":{"pyramiding":{"cooldown":)"} +
        cooldown + R"(}}}})"),
@@ -616,22 +616,22 @@ TEST(ModelParserTest, RequiresCanonicalMethodAndLosslessIntegralValues)
   }
 }
 
-TEST(ModelParserTest, MissingStopLossesPreserveDefaultsAndEmptyDisablesStops)
+TEST(StrategyParserTest, MissingStopLossesPreserveDefaultsAndEmptyDisablesStops)
 {
   const auto risk_distance =
    R"("riskDistance":{"method":"RISK_DISTANCE.AMOUNT","params":{"amount":10}})";
-  const auto missing = parse_model(
+  const auto missing = parse_strategy(
    "Missing",
    std::string{
     R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{)"} +
     risk_distance + R"(},"short":false}})");
-  const auto empty = parse_model(
+  const auto empty = parse_strategy(
    "Empty",
    std::string{
     R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{)"} +
     risk_distance +
     R"(,"stopLosses":{"activation":"SIMULTANEOUS","rules":[]}},"short":false}})");
-  const auto partial = parse_model(
+  const auto partial = parse_strategy(
    "Partial",
    std::string{
     R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{)"} +
@@ -639,27 +639,27 @@ TEST(ModelParserTest, MissingStopLossesPreserveDefaultsAndEmptyDisablesStops)
     R"(,"stopLosses":{"activation":"AFTER_PREVIOUS"}},"short":false}})");
 
   EXPECT_EQ(missing.long_position().stop_losses(),
-            Model::Position{}.stop_losses());
+            Strategy::Position{}.stop_losses());
   EXPECT_TRUE(empty.long_position().stop_losses().empty());
   EXPECT_EQ(partial.long_position().stop_losses(),
-            Model::Position{}.stop_losses());
+            Strategy::Position{}.stop_losses());
   EXPECT_EQ(partial.long_position().stop_losses_activation(),
             ExitActivation::AfterPrevious);
 }
 
-TEST(ModelParserTest, RejectsInvalidStopLosses)
+TEST(StrategyParserTest, RejectsInvalidStopLosses)
 {
   const auto risk_distance =
    R"("riskDistance":{"method":"RISK_DISTANCE.AMOUNT","params":{"amount":10}})";
   EXPECT_THROW(
-   parse_model(
+   parse_strategy(
     "Not Array",
     std::string{
      R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{)"} +
      risk_distance + R"(,"stopLosses":{"rules":{}}},"short":false}})"),
    std::runtime_error);
   EXPECT_THROW(
-   parse_model(
+   parse_strategy(
     "Bad Item",
     std::string{
      R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{)"} +
@@ -668,19 +668,19 @@ TEST(ModelParserTest, RejectsInvalidStopLosses)
    std::runtime_error);
 }
 
-TEST(ModelParserTest, DefaultsMissingAndRejectsInvalidRiskDistance)
+TEST(StrategyParserTest, DefaultsMissingAndRejectsInvalidRiskDistance)
 {
-  const auto missing = parse_model(
+  const auto missing = parse_strategy(
    "Missing", R"({"version":1,"positions":{"long":{},"short":false}})");
   EXPECT_EQ(missing.long_position().risk_distance(),
-            Model::Position{}.risk_distance());
+            Strategy::Position{}.risk_distance());
   EXPECT_THROW(
-   parse_model(
+   parse_strategy(
     "Numeric",
     R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{"riskDistance":10},"short":false}})"),
    std::runtime_error);
   EXPECT_THROW(
-   parse_model(
+   parse_strategy(
     "WrongMethod",
     R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"positions":{"long":{"riskDistance":{"method":"VALUE.CONSTANT","params":{"value":10}}},"short":false}})"),
    std::runtime_error);
@@ -688,7 +688,7 @@ TEST(ModelParserTest, DefaultsMissingAndRejectsInvalidRiskDistance)
 
 TEST(ConfigParserTest, RoundTripsExplicitRiskDistanceAndRStopMethods)
 {
-  auto parser = make_backtest_model_config_parser();
+  auto parser = make_backtest_strategy_config_parser();
   const auto configurations = std::vector<std::string>{
    R"({"method":"RISK_DISTANCE.AMOUNT","params":{"amount":{"method":"VALUE.CONSTANT","params":{"value":10.0}}}})",
    R"({"method":"RISK_DISTANCE.PERCENT","params":{"percentage":{"method":"VALUE.CONSTANT","params":{"value":5.0}}}})",
@@ -703,23 +703,23 @@ TEST(ConfigParserTest, RoundTripsExplicitRiskDistanceAndRStopMethods)
   }
 }
 
-TEST(ModelParserTest, LoadsEveryBundledModelSample)
+TEST(StrategyParserTest, LoadsEveryBundledStrategySample)
 {
   const auto sample_directory =
    std::filesystem::path{PLUDUX_BACKTEST_SAMPLE_DIR};
   auto schema_stream =
    std::ifstream{sample_directory.parent_path() / "schemas" /
-                 "pludux.backtest.model.v1-draft.json"};
+                 "pludux.backtest.strategy.v1-draft.json"};
   auto schema = jsoncons::ojson::parse(schema_stream);
   EXPECT_EQ(schema.at("$id").as<std::string>(),
-            "https://pludux.com/schemas/pludux.backtest.model.v1-draft.json");
+            "https://pludux.com/schemas/pludux.backtest.strategy.v1-draft.json");
   EXPECT_EQ(schema.at("title").as<std::string>(),
-            "Pludux Backtest Model Schema");
+            "Pludux Backtest Strategy Schema");
   EXPECT_EQ(schema.at("properties").at("version").at("title").as<std::string>(),
-            "Model JSON format version 1");
+            "Strategy JSON format version 1");
   EXPECT_EQ(
    schema.at("properties").at("version").at("description").as<std::string>(),
-   "Version of the Pludux Model JSON format. Must be 1.");
+   "Version of the Pludux Strategy JSON format. Must be 1.");
   EXPECT_EQ(schema.at("properties").at("version").at("const").as<int>(), 1);
   const auto compiled_schema =
    jsoncons::jsonschema::make_json_schema(std::move(schema));
@@ -733,8 +733,8 @@ TEST(ModelParserTest, LoadsEveryBundledModelSample)
                 R"({"version":1,"series":{"value":{}}})")),
                std::exception);
   EXPECT_NO_THROW(
-   compiled_schema.validate(jsoncons::ojson::parse(stringify_model(Model{}))));
-  auto operator_document = jsoncons::ojson::parse(stringify_model(Model{}));
+   compiled_schema.validate(jsoncons::ojson::parse(stringify_strategy(Strategy{}))));
+  auto operator_document = jsoncons::ojson::parse(stringify_strategy(Strategy{}));
   operator_document["series"]["scalar_operators"] = jsoncons::ojson::parse(R"({
      "method":"OPERATOR.MAX",
      "params":{
@@ -761,7 +761,7 @@ TEST(ModelParserTest, LoadsEveryBundledModelSample)
     const auto document = jsoncons::ojson::parse(json.str());
     EXPECT_NO_THROW(compiled_schema.validate(document))
      << entry.path().string();
-    EXPECT_NO_THROW(parse_model(entry.path().stem().string(), json.str()))
+    EXPECT_NO_THROW(parse_strategy(entry.path().stem().string(), json.str()))
      << entry.path().string();
     ++sample_count;
   }
@@ -812,7 +812,7 @@ TEST(ModelParserTest, LoadsEveryBundledModelSample)
   })");
   EXPECT_NO_THROW(compiled_schema.validate(r_multiple_strategy));
   EXPECT_NO_THROW(
-   parse_model("Position R-Multiple", r_multiple_strategy.to_string()));
+   parse_strategy("Position R-Multiple", r_multiple_strategy.to_string()));
 
   const auto legacy_signal_fields = jsoncons::ojson::parse(R"({
     "version": 1,
@@ -849,9 +849,9 @@ TEST(ModelParserTest, LoadsEveryBundledModelSample)
     }
   })");
   EXPECT_NO_THROW(compiled_schema.validate(legacy_signal_fields));
-  const auto legacy_fields_model =
-   parse_model("Legacy fields", legacy_signal_fields.to_string());
-  EXPECT_EQ(legacy_fields_model.long_position().entry().timing(),
+  const auto legacy_fields_strategy =
+   parse_strategy("Legacy fields", legacy_signal_fields.to_string());
+  EXPECT_EQ(legacy_fields_strategy.long_position().entry().timing(),
             SignalTiming::NextOpen);
   EXPECT_ANY_THROW(compiled_schema.validate(legacy_exit_array));
   EXPECT_GT(sample_count, 0);

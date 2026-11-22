@@ -14,14 +14,14 @@ auto context(double equity = 10'000.0,
              double entry_price = 100.0,
              double risk_distance = 5.0) -> PositionSizingContext
 {
-  static const auto performance = ModelPerformance{}.snapshot();
+  static const auto performance = StrategyPerformance{}.snapshot();
   return PositionSizingContext{
    equity, entry_price, 1.0, performance, [risk_distance] {
      return risk_distance;
    }};
 }
 
-auto context_with(const ModelPerformanceSnapshot& performance,
+auto context_with(const StrategyPerformanceSnapshot& performance,
                   double equity = 10'000.0,
                   double entry_price = 100.0) -> PositionSizingContext
 {
@@ -36,9 +36,9 @@ auto performance_snapshot(double probability,
                           double win_beta = 4.0,
                           double payoff_shape = 3.0,
                           double payoff_scale = 1.0)
- -> ModelPerformanceSnapshot
+ -> StrategyPerformanceSnapshot
 {
-  return ModelPerformanceSnapshot{
+  return StrategyPerformanceSnapshot{
    0,
    0,
    0,
@@ -140,11 +140,11 @@ TEST(PositionSizing, RejectsInvalidConfiguration)
    std::invalid_argument);
   EXPECT_THROW(EquityFractionPositionSizing{0.0}, std::invalid_argument);
   EXPECT_THROW(
-    (ModelPerformanceBayesianKellySizing{
-     ModelPerformanceBayesianKellyEstimate::AdverseQuantiles, 1.0, 0.5, 1.0}),
+    (StrategyPerformanceBayesianKellySizing{
+     StrategyPerformanceBayesianKellyEstimate::AdverseQuantiles, 1.0, 0.5, 1.0}),
    std::invalid_argument);
-  EXPECT_THROW((ModelPerformanceBayesianKellySizing{
-                ModelPerformanceBayesianKellyEstimate::AdverseQuantiles,
+  EXPECT_THROW((StrategyPerformanceBayesianKellySizing{
+                StrategyPerformanceBayesianKellyEstimate::AdverseQuantiles,
                 0.8,
                 1.01,
                 1.0}),
@@ -154,8 +154,8 @@ TEST(PositionSizing, RejectsInvalidConfiguration)
 TEST(PositionSizing, UntouchedPriorsProduceNoKellyPosition)
 {
   const auto result =
-    PositionSizingNode{ModelPerformanceBayesianKellySizing{
-                        ModelPerformanceBayesianKellyEstimate::PosteriorMean}}
+    PositionSizingNode{StrategyPerformanceBayesianKellySizing{
+                        StrategyPerformanceBayesianKellyEstimate::PosteriorMean}}
     .make_method()
     .evaluate(context());
 
@@ -172,8 +172,8 @@ TEST(PositionSizing, PosteriorMeanAppliesMultiplierAndAllocationCap)
   const auto performance = performance_snapshot(0.6, 0.02, 0.01);
   const auto result =
    PositionSizingNode{
-     ModelPerformanceBayesianKellySizing{
-      ModelPerformanceBayesianKellyEstimate::PosteriorMean, 0.80, 0.50, 2.0}}
+     StrategyPerformanceBayesianKellySizing{
+      StrategyPerformanceBayesianKellyEstimate::PosteriorMean, 0.80, 0.50, 2.0}}
     .make_method()
     .evaluate(context_with(performance));
 
@@ -192,8 +192,8 @@ TEST(PositionSizing, NegativeEdgeAndZeroMultiplierProduceNoPosition)
 {
   const auto negative_performance = performance_snapshot(0.2, 0.02, 0.01);
   const auto negative =
-    PositionSizingNode{ModelPerformanceBayesianKellySizing{
-                        ModelPerformanceBayesianKellyEstimate::PosteriorMean}}
+    PositionSizingNode{StrategyPerformanceBayesianKellySizing{
+                        StrategyPerformanceBayesianKellyEstimate::PosteriorMean}}
     .make_method()
     .evaluate(context_with(negative_performance));
   EXPECT_LT(negative.bayesian_kelly->raw_kelly_fraction, 0.0);
@@ -202,8 +202,8 @@ TEST(PositionSizing, NegativeEdgeAndZeroMultiplierProduceNoPosition)
   const auto positive_performance = performance_snapshot(0.6, 0.02, 0.01);
   const auto disabled =
    PositionSizingNode{
-     ModelPerformanceBayesianKellySizing{
-      ModelPerformanceBayesianKellyEstimate::PosteriorMean, 0.80, 0.0, 1.0}}
+     StrategyPerformanceBayesianKellySizing{
+      StrategyPerformanceBayesianKellyEstimate::PosteriorMean, 0.80, 0.0, 1.0}}
     .make_method()
     .evaluate(context_with(positive_performance));
   EXPECT_GT(disabled.bayesian_kelly->raw_kelly_fraction, 0.0);
@@ -215,7 +215,7 @@ TEST(PositionSizing, AdverseQuantilesUsesAdverseMarginalQuantiles)
   const auto performance =
    performance_snapshot(0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
   const auto result =
-    PositionSizingNode{ModelPerformanceBayesianKellySizing{}}
+    PositionSizingNode{StrategyPerformanceBayesianKellySizing{}}
     .make_method()
     .evaluate(context_with(performance));
 

@@ -65,7 +65,7 @@ TEST(PyramidingLayerNodeTest, ConvertsToPyramidingLayerMethod)
 
 TEST(PyramidingLayerNodeTest, ParsesAndSerializesShorthandAndObjectForms)
 {
-  auto parser = make_backtest_model_config_parser();
+  auto parser = make_backtest_strategy_config_parser();
   const auto shorthand = json::parse(R"("POSITION.PYRAMIDING_LAYER")");
   const auto object =
    json::parse(R"({"method":"POSITION.PYRAMIDING_LAYER","params":{}})");

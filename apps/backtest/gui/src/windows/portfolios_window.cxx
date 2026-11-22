@@ -93,22 +93,16 @@ private:
         ? app_state.get_strategy_if_present(
          system->strategy_handle(key.strategy_index))
         : nullptr;
-      const auto* model =
-        strategy ? app_state.get_model_if_present(strategy->model_handle())
-             : nullptr;
-      const auto* profile =
-       strategy ? app_state.get_profile_if_present(strategy->profile_handle())
-             : nullptr;
+      const auto* profile = app_state.get_profile_if_present(system->profile_handle());
       rows.push_back(
        {key,
-        std::format("{} — {} — {}: {} — {} / {}",
+        std::format("{} — {} — {}: {} / {}",
                      system->name().empty() ? "Unnamed" : system->name(),
                     asset ? asset->name() : "Missing Asset",
                      strategy_label,
                      strategy ? strategy->name() : "Missing Strategy",
-                     model ? model->name() : "Missing Model",
                     profile ? profile->name() : "Missing Profile"),
-         asset && strategy && model && profile});
+         asset && strategy && profile});
     }
     return rows;
   }
@@ -370,7 +364,7 @@ private:
     ui::form_section(
      "Entry Comparators",
      "Compare prepared requested orders in sequence using Requested Order "
-     "values, the requesting Strategy's Model Performance snapshot, and asset "
+     "values, the requesting Strategy's Strategy Performance snapshot, and asset "
      "OHLCV or custom DATA. Current Close sees the completed current bar. Next "
      "Open sees the previous completed bar; use Requested Order Price for the "
      "executable open. The first unequal value determines priority; complete "

@@ -102,7 +102,7 @@ public:
 
 #endif
 
-    self.sync_stored_strategy_inputs(app_state);
+    app_state.sync_setup_inputs();
     for(const auto portfolio_handle : app_state.get_portfolio_handles()) {
       self.recreate_portfolio_runner(app_state, portfolio_handle);
     }
@@ -230,9 +230,8 @@ public:
       if(self.discard_all_drafts_requested_) {
          self.assets_window_.discard_draft();
          self.watchlists_window_.discard_draft();
-          self.models_window_.discard_draft();
-          self.profiles_window_.discard_draft();
           self.strategies_window_.discard_draft();
+          self.profiles_window_.discard_draft();
           self.systems_window_.discard_draft();
          self.markets_window_.discard_draft();
          self.brokers_window_.discard_draft();
@@ -246,9 +245,8 @@ public:
       self.events_window_.render(window_context);
       self.assets_window_.render(window_context);
       self.watchlists_window_.render(window_context);
-       self.models_window_.render(window_context);
-       self.profiles_window_.render(window_context);
        self.strategies_window_.render(window_context);
+       self.profiles_window_.render(window_context);
        self.systems_window_.render(window_context);
       self.markets_window_.render(window_context);
       self.brokers_window_.render(window_context);
@@ -301,38 +299,6 @@ public:
   }
 
 private:
-  void
-   resolve_and_sync_strategy_inputs(this Application& self,
-                                  backtest::Strategy& strategy,
-                                 const backtest::Model& model) noexcept
-  {
-      auto synced_inputs = backtest::collect_model_inputs(model);
-    const auto& previous_inputs = strategy.inputs();
-
-    for(auto index = std::size_t{0}; index < synced_inputs.size(); ++index) {
-      if(index >= previous_inputs.size()) {
-        continue;
-      }
-
-      synced_inputs[index].value(previous_inputs[index].value());
-    }
-
-    strategy.inputs(std::move(synced_inputs));
-  }
-
-  void sync_stored_strategy_inputs(this Application& self,
-                                   ApplicationState& app_state) noexcept
-  {
-    for(const auto strategy_handle : app_state.get_strategy_handles()) {
-      auto* strategy =
-       app_state.store().get_strategy_if_present(strategy_handle);
-      if(!strategy) continue;
-      const auto* model =
-       app_state.get_model_if_present(strategy->model_handle());
-      if(model) self.resolve_and_sync_strategy_inputs(*strategy, *model);
-    }
-  }
-
   auto make_backtest_runner(this Application& self,
                             ApplicationState& app_state,
                               const backtest::System& system,
@@ -346,7 +312,8 @@ private:
     const auto* broker_ptr =
      app_state.get_broker_if_present(portfolio.broker_handle());
 
-    if(!asset_ptr || !market_ptr || !broker_ptr) {
+    const auto* profile = app_state.get_profile_if_present(system.profile_handle());
+    if(!asset_ptr || !market_ptr || !broker_ptr || !profile) {
       throw std::invalid_argument{"Incomplete Strategy in Portfolio"};
     }
 
@@ -354,22 +321,15 @@ private:
     runner_setups.reserve(system.strategy_count());
     for(auto strategy_index = std::size_t{};
         strategy_index < system.strategy_count(); ++strategy_index) {
-      const auto* configured_strategy = app_state.get_strategy_if_present(
-       system.strategy_handle(strategy_index));
-      if(!configured_strategy) {
-        throw std::invalid_argument{"Missing Strategy setup in Portfolio"};
-      }
-      const auto* model_ptr =
-       app_state.get_model_if_present(configured_strategy->model_handle());
-      const auto* profile_ptr =
-        app_state.get_profile_if_present(configured_strategy->profile_handle());
-      if(!model_ptr || !profile_ptr) {
+      const auto& setup = system.strategy_setup(strategy_index);
+      const auto* strategy_ptr = app_state.get_strategy_if_present(setup.strategy_handle());
+      if(!strategy_ptr) {
         throw std::invalid_argument{"Incomplete Strategy setup in Portfolio"};
       }
 
       auto input_values = std::vector<double>{};
-      input_values.reserve(configured_strategy->inputs().size());
-      for(const auto& input : configured_strategy->inputs()) {
+      input_values.reserve(setup.inputs().size());
+      for(const auto& input : setup.inputs()) {
         input_values.emplace_back(input.value());
       }
 
@@ -377,14 +337,14 @@ private:
       auto series_methods =
        OrderedNamedRegistry<ErasedSeriesMethod<backtest::BacktestMethodContext>>{};
       for(const auto& [series_name, series_node] :
-           model_ptr->series_nodes()) {
+           strategy_ptr->series_nodes()) {
         series_methods.set(series_name,
                            node_to_erased_method<backtest::BacktestMethodContext>(
                             series_node, input_context));
       }
 
       const auto make_position_rule =
-        [&input_context](const backtest::Model::Position& position) {
+        [&input_context](const backtest::Strategy::Position& position) {
          auto signal_exits =
           std::vector<backtest::BacktestRunner::PositionRule::SignalExitRule>{};
          signal_exits.reserve(position.exits().size());
@@ -442,18 +402,17 @@ private:
       auto entry_filter_conversion_context = NodeToErasedMethodContext{};
       auto entry_filter =
        node_to_erased_method<backtest::EntryFilterMethodContext>(
-         configured_strategy->entry_filter(), entry_filter_conversion_context);
+         setup.entry_filter(), entry_filter_conversion_context);
       const auto failsafe_activation =
         strategy_index == 0
          ? backtest::FailsafeStrategyActivation::Always
          : system.failsafe_strategies()[strategy_index - 1].activation();
       runner_setups.emplace_back(
-       *profile_ptr,
        std::move(series_methods),
-        make_position_rule(model_ptr->long_position()),
-        make_position_rule(model_ptr->short_position()),
-        model_ptr->intrabar_path(),
-         system.model_performance(),
+        make_position_rule(strategy_ptr->long_position()),
+        make_position_rule(strategy_ptr->short_position()),
+        strategy_ptr->intrabar_path(),
+         system.strategy_performance(),
        std::move(entry_filter),
        failsafe_activation);
     }
@@ -461,6 +420,7 @@ private:
     return backtest::BacktestRunner{*asset_ptr,
                                     *market_ptr,
                                     *broker_ptr,
+                                    *profile,
                                     std::move(runner_setups),
                                     portfolio.initial_capital(),
                                     false,
@@ -517,9 +477,8 @@ private:
   BacktestChartWindow backtest_chart_window_;
   AssetsWindow assets_window_;
   WatchlistsWindow watchlists_window_;
-   ModelsWindow models_window_;
-   ProfilesWindow profiles_window_;
    StrategiesWindow strategies_window_;
+   ProfilesWindow profiles_window_;
   SystemsWindow systems_window_;
   MarketsWindow markets_window_;
   BrokersWindow brokers_window_;

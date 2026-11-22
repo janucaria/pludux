@@ -43,9 +43,9 @@ auto make_initial_order() -> RequestedOrder
    TradeEntry{8.0, 100.0}, false, 10.0, 1'000.0, 8.4, 800.0, 5.0, 2.0, 3.0};
 }
 
-auto make_performance_snapshot() -> ModelPerformanceSnapshot
+auto make_performance_snapshot() -> StrategyPerformanceSnapshot
 {
-  return ModelPerformanceSnapshot{7,
+  return StrategyPerformanceSnapshot{7,
                                   2,
                                   0,
                                   3,
@@ -171,11 +171,11 @@ TEST(RequestedOrderNode, ConvertsForRequestedOrderContext)
                    800.0);
 }
 
-TEST(RequestedOrderNode, ReadsFrozenModelPerformanceSnapshot)
+TEST(RequestedOrderNode, ReadsFrozenStrategyPerformanceSnapshot)
 {
   auto conversion_context = NodeToErasedMethodContext{};
   const auto method = node_to_erased_method<RequestedOrderMethodContext>(
-   ModelPerformanceNode{ModelPerformanceMetric::BayesianWinProbability},
+   StrategyPerformanceNode{StrategyPerformanceMetric::BayesianWinProbability},
    conversion_context);
   const auto order = make_initial_order();
   const auto performance = make_performance_snapshot();
@@ -187,16 +187,16 @@ TEST(RequestedOrderNode, ReadsFrozenModelPerformanceSnapshot)
    0.8);
 }
 
-TEST(RequestedOrderAction, OwnsModelPerformanceSnapshot)
+TEST(RequestedOrderAction, OwnsStrategyPerformanceSnapshot)
 {
   auto performance = make_performance_snapshot();
   const auto action = BacktestRunner::RequestedOrderAction{
    0, make_initial_order(), performance, 0, PositionSizingDecision{}, 0, 0};
-  performance = ModelPerformanceSnapshot{};
+  performance = StrategyPerformanceSnapshot{};
 
-  EXPECT_EQ(action.model_performance().lifetime_count(), 7U);
+  EXPECT_EQ(action.strategy_performance().lifetime_count(), 7U);
   EXPECT_DOUBLE_EQ(
-   action.model_performance().win_probability_posterior().probability, 0.8);
+   action.strategy_performance().win_probability_posterior().probability, 0.8);
 }
 
 TEST(RequestedOrderNode, CombinesOrderValuesWithBasicMath)
@@ -244,7 +244,7 @@ TEST(RequestedOrderNode, ComparatorParserRoundTripsAllowedNodes)
    RequestedPriceRiskNode{},
    RequestedRiskWithFeesNode{},
    FrozenUnitQuantityNode{},
-   ModelPerformanceNode{ModelPerformanceMetric::MeanReturn}};
+   StrategyPerformanceNode{StrategyPerformanceMetric::MeanReturn}};
   auto parser = make_requested_order_comparator_config_parser();
 
   for(const auto& node : nodes) {

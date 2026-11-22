@@ -7,9 +7,9 @@ module;
 
 export module pludux.backtest:system;
 
-import :strategy;
+import :strategy_setup;
 import :store_handle;
-import :model_performance;
+import :strategy_performance;
 
 export namespace pludux::backtest {
 
@@ -19,16 +19,18 @@ public:
 
   System(std::string name,
          WatchlistStoreHandle watchlist_handle,
-         ModelPerformanceConfig model_performance,
-         StrategyStoreHandle main_strategy_handle,
+         ProfileStoreHandle profile_handle,
+         StrategyPerformanceConfig strategy_performance,
+         StrategySetup main_setup,
          std::vector<SystemFailsafeStrategy> failsafe_strategies = {})
   : name_{std::move(name)}
   , watchlist_handle_{std::move(watchlist_handle)}
-  , model_performance_{std::move(model_performance)}
-  , main_strategy_handle_{std::move(main_strategy_handle)}
+  , profile_handle_{profile_handle}
+  , strategy_performance_{std::move(strategy_performance)}
+  , main_setup_{std::move(main_setup)}
   , failsafe_strategies_{std::move(failsafe_strategies)}
   {
-    model_performance_.validate();
+    strategy_performance_.validate();
   }
 
   auto operator==(const System&) const noexcept -> bool = default;
@@ -55,38 +57,41 @@ public:
     self.watchlist_handle_ = std::move(new_watchlist_handle);
   }
 
-  auto model_performance(this const System& self) noexcept
-   -> const ModelPerformanceConfig&
+  auto strategy_performance(this const System& self) noexcept
+   -> const StrategyPerformanceConfig&
   {
-    return self.model_performance_;
+    return self.strategy_performance_;
   }
 
-  void model_performance(this System& self,
-                             ModelPerformanceConfig value)
+  void strategy_performance(this System& self, StrategyPerformanceConfig value)
   {
     value.validate();
-    self.model_performance_ = std::move(value);
+    self.strategy_performance_ = std::move(value);
   }
 
-  auto main_strategy_handle(this const System& self) noexcept
-   -> StrategyStoreHandle
+  auto main_setup(this auto& self) noexcept -> auto&
   {
-    return self.main_strategy_handle_;
+    return self.main_setup_;
   }
 
-  void main_strategy_handle(this System& self, StrategyStoreHandle value) noexcept
+  auto profile_handle(this const System& self) noexcept -> ProfileStoreHandle
   {
-    self.main_strategy_handle_ = std::move(value);
+    return self.profile_handle_;
+  }
+
+  void profile_handle(this System& self, ProfileStoreHandle handle) noexcept
+  {
+    self.profile_handle_ = handle;
   }
 
   auto failsafe_strategies(this const System& self) noexcept
-    -> const std::vector<SystemFailsafeStrategy>&
+   -> const std::vector<SystemFailsafeStrategy>&
   {
     return self.failsafe_strategies_;
   }
 
   auto failsafe_strategies(this System& self) noexcept
-    -> std::vector<SystemFailsafeStrategy>&
+   -> std::vector<SystemFailsafeStrategy>&
   {
     return self.failsafe_strategies_;
   }
@@ -102,28 +107,35 @@ public:
     return 1 + self.failsafe_strategies_.size();
   }
 
-  auto strategy_handle(this const System& self, std::size_t index)
-    -> StrategyStoreHandle
+  auto strategy_setup(this auto& self, std::size_t index) -> auto&
   {
-    return index == 0 ? self.main_strategy_handle_
-                      : self.failsafe_strategies_.at(index - 1).strategy_handle();
+    return index == 0 ? self.main_setup_
+                      : self.failsafe_strategies_.at(index - 1).setup();
   }
 
-  auto equivalent_rules(this const System& self,
-                        const System& other) noexcept -> bool
+  auto strategy_handle(this const System& self, std::size_t index)
+   -> StrategyStoreHandle
+  {
+    return self.strategy_setup(index).strategy_handle();
+  }
+
+  auto equivalent_rules(this const System& self, const System& other) noexcept
+   -> bool
   {
     return self.watchlist_handle() == other.watchlist_handle() &&
-           self.model_performance_ == other.model_performance_ &&
-            self.main_strategy_handle_ == other.main_strategy_handle_ &&
-            self.failsafe_strategies_ == other.failsafe_strategies_;
+           self.profile_handle_ == other.profile_handle_ &&
+           self.strategy_performance_ == other.strategy_performance_ &&
+           self.main_setup_ == other.main_setup_ &&
+           self.failsafe_strategies_ == other.failsafe_strategies_;
   }
 
 private:
   std::string name_;
 
   WatchlistStoreHandle watchlist_handle_;
-  ModelPerformanceConfig model_performance_;
-  StrategyStoreHandle main_strategy_handle_;
+  ProfileStoreHandle profile_handle_;
+  StrategyPerformanceConfig strategy_performance_;
+  StrategySetup main_setup_;
   std::vector<SystemFailsafeStrategy> failsafe_strategies_;
 };
 

@@ -27,7 +27,7 @@ unlisted libraries ad hoc.
 
 The desktop executable target is `pludux-backtest-gui`. Native builds use
 platform file dialogs. Emscripten builds replace native open/save with browser
-upload/download and embed the Model schema and samples needed by the app.
+upload/download and embed the Strategy schema and samples needed by the app.
 
 Serve the staged Emscripten release over HTTPS, or use a localhost server for
 testing. Deploy the entire staged directory together, including
@@ -51,15 +51,15 @@ test for every bug fix or changed simulation rule.
 ## Architecture boundaries
 
 - Generic time-series containers and reusable primitives belong in `libs`.
-- Assets, Models, Strategies, Profiles, Systems, Markets, Brokers, Portfolios,
+- Assets, Strategies, Profiles, Systems, Markets, Brokers, Portfolios,
   runner state, accounting, and execution semantics belong in the backtest
   domain library.
 - GUI windows, application state, workspace serialization, file interaction,
   and rendering belong in the GUI application.
-- Model JSON parsing/serialization is a versioned interchange boundary. The
+- Strategy JSON parsing/serialization is a versioned interchange boundary. The
   schema is in `data/backtest/schemas` and examples are in
   `data/backtest/samples`.
-- `.pludux` serialization is full application persistence, not the Model JSON
+- `.pludux` serialization is full application persistence, not the Strategy JSON
   API. See [Workspace Persistence](persistence.md).
 
 ## Domain-change checklist

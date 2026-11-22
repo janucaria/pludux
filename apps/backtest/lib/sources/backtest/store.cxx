@@ -259,62 +259,62 @@ public:
      self.arena_.watchlists(), handle);
   }
 
-  auto add_model(this Store& self, Model model)
-   -> std::optional<ModelStoreHandle>
+  auto add_strategy(this Store& self, Strategy strategy)
+   -> std::optional<StrategyStoreHandle>
   {
-    auto& models = self.arena_.models();
-    auto& model_resolver = self.descriptor_.model_store_data_resolver();
+    auto& strategies = self.arena_.strategies();
+    auto& strategy_resolver = self.descriptor_.strategy_store_data_resolver();
 
-    return model_resolver.add(models, std::move(model));
+    return strategy_resolver.add(strategies, std::move(strategy));
   }
 
-  auto get_model(this const Store& self, ModelStoreHandle handle) noexcept
-   -> const Model&
+  auto get_strategy(this const Store& self, StrategyStoreHandle handle) noexcept
+   -> const Strategy&
   {
-    const auto& models = self.arena_.models();
-    const auto& model_resolver = self.descriptor_.model_store_data_resolver();
-    return model_resolver.get(models, handle);
+    const auto& strategies = self.arena_.strategies();
+    const auto& strategy_resolver = self.descriptor_.strategy_store_data_resolver();
+    return strategy_resolver.get(strategies, handle);
   }
 
-  auto get_model(this Store& self, ModelStoreHandle handle) noexcept
-   -> Model&
+  auto get_strategy(this Store& self, StrategyStoreHandle handle) noexcept
+   -> Strategy&
   {
-    auto& models = self.arena_.models();
-    auto& model_resolver = self.descriptor_.model_store_data_resolver();
-    return model_resolver.get(models, handle);
+    auto& strategies = self.arena_.strategies();
+    auto& strategy_resolver = self.descriptor_.strategy_store_data_resolver();
+    return strategy_resolver.get(strategies, handle);
   }
 
-  auto get_model_if_present(this const Store& self,
-                                ModelStoreHandle handle) noexcept
-   -> const Model*
+  auto get_strategy_if_present(this const Store& self,
+                                StrategyStoreHandle handle) noexcept
+   -> const Strategy*
   {
-    const auto& models = self.arena_.models();
-    const auto& model_resolver = self.descriptor_.model_store_data_resolver();
-    return model_resolver.get_if_present(models, handle);
+    const auto& strategies = self.arena_.strategies();
+    const auto& strategy_resolver = self.descriptor_.strategy_store_data_resolver();
+    return strategy_resolver.get_if_present(strategies, handle);
   }
 
-  auto get_model_if_present(this Store& self,
-                                ModelStoreHandle handle) noexcept -> Model*
+  auto get_strategy_if_present(this Store& self,
+                                StrategyStoreHandle handle) noexcept -> Strategy*
   {
-    auto& models = self.arena_.models();
-    auto& model_resolver = self.descriptor_.model_store_data_resolver();
-    return model_resolver.get_if_present(models, handle);
+    auto& strategies = self.arena_.strategies();
+    auto& strategy_resolver = self.descriptor_.strategy_store_data_resolver();
+    return strategy_resolver.get_if_present(strategies, handle);
   }
 
-  auto update_model(this Store& self,
-                        ModelStoreHandle handle,
-                        Model model) -> bool
+  auto update_strategy(this Store& self,
+                        StrategyStoreHandle handle,
+                        Strategy strategy) -> bool
   {
-    auto& models = self.arena_.models();
-    auto& model_resolver = self.descriptor_.model_store_data_resolver();
-    return model_resolver.update(models, handle, std::move(model));
+    auto& strategies = self.arena_.strategies();
+    auto& strategy_resolver = self.descriptor_.strategy_store_data_resolver();
+    return strategy_resolver.update(strategies, handle, std::move(strategy));
   }
 
-  auto remove_model(this Store& self, ModelStoreHandle handle) -> bool
+  auto remove_strategy(this Store& self, StrategyStoreHandle handle) -> bool
   {
-    auto& models = self.arena_.models();
-    auto& model_resolver = self.descriptor_.model_store_data_resolver();
-    return model_resolver.remove(models, handle);
+    auto& strategies = self.arena_.strategies();
+    auto& strategy_resolver = self.descriptor_.strategy_store_data_resolver();
+    return strategy_resolver.remove(strategies, handle);
   }
 
   auto add_market(this Store& self, Market market)
@@ -487,55 +487,6 @@ public:
     auto& profiles = self.arena_.profiles();
     auto& profile_resolver = self.descriptor_.profile_store_data_resolver();
     return profile_resolver.remove(profiles, handle);
-  }
-
-  auto add_strategy(this Store& self, Strategy strategy)
-   -> std::optional<StrategyStoreHandle>
-  {
-    return self.descriptor_.strategy_store_data_resolver().add(
-     self.arena_.strategies(), std::move(strategy));
-  }
-
-  auto get_strategy(this const Store& self, StrategyStoreHandle handle) noexcept
-   -> const Strategy&
-  {
-    return self.descriptor_.strategy_store_data_resolver().get(
-     self.arena_.strategies(), handle);
-  }
-
-  auto get_strategy(this Store& self, StrategyStoreHandle handle) noexcept
-   -> Strategy&
-  {
-    return self.descriptor_.strategy_store_data_resolver().get(
-     self.arena_.strategies(), handle);
-  }
-
-  auto get_strategy_if_present(this const Store& self,
-                               StrategyStoreHandle handle) noexcept -> const Strategy*
-  {
-    return self.descriptor_.strategy_store_data_resolver().get_if_present(
-     self.arena_.strategies(), handle);
-  }
-
-  auto get_strategy_if_present(this Store& self,
-                               StrategyStoreHandle handle) noexcept -> Strategy*
-  {
-    return self.descriptor_.strategy_store_data_resolver().get_if_present(
-     self.arena_.strategies(), handle);
-  }
-
-  auto update_strategy(this Store& self,
-                       StrategyStoreHandle handle,
-                       Strategy strategy) -> bool
-  {
-    return self.descriptor_.strategy_store_data_resolver().update(
-     self.arena_.strategies(), handle, std::move(strategy));
-  }
-
-  auto remove_strategy(this Store& self, StrategyStoreHandle handle) -> bool
-  {
-    return self.descriptor_.strategy_store_data_resolver().remove(
-     self.arena_.strategies(), handle);
   }
 
   auto add_portfolio_results(this Store& self,

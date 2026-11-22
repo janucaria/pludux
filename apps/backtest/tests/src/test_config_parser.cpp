@@ -16,8 +16,8 @@ import pludux.backtest;
 
 using namespace pludux;
 using namespace pludux::backtest;
-using ModelConfigParser = ConfigParser<BacktestMethodContext>;
-using pludux::backtest::make_backtest_model_config_parser;
+using StrategyConfigParser = ConfigParser<BacktestMethodContext>;
+using pludux::backtest::make_backtest_strategy_config_parser;
 using pludux::backtest::make_requested_order_comparator_config_parser;
 using json = jsoncons::ojson;
 
@@ -122,7 +122,7 @@ TEST(ConfigParserInfrastructureTest, RejectsMultipleMatchingNodeSerializers)
 
 TEST(ConfigParserInfrastructureTest, RejectsLegacyFlatMethodIdentifiers)
 {
-  auto parser = make_backtest_model_config_parser();
+  auto parser = make_backtest_strategy_config_parser();
   for(const auto* legacy : {"SMA", "ADD", "CLOSE", "GREATER_THAN"}) {
     SCOPED_TRACE(legacy);
     EXPECT_THROW(parser.parse_node(json::object{{"method", legacy}}),
@@ -135,22 +135,22 @@ TEST(ConfigParserInfrastructureTest, RejectsLegacyFlatMethodIdentifiers)
    std::invalid_argument);
 
   EXPECT_THROW(
-   backtest::parse_model_config_json(
+   backtest::parse_strategy_config_json(
     "Legacy plot",
     json::parse(
      R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"plots":[{"items":[{"method":"LINE"}]}]})")),
    std::invalid_argument);
   EXPECT_THROW(
-   backtest::parse_model_config_json(
+   backtest::parse_strategy_config_json(
     "Legacy plot source",
     json::parse(
      R"({"version":1,"execution":{"intrabarPath":"CANDLE_DIRECTION"},"plots":[{"items":[{"method":"PLOT.LINE","params":{"source":{"method":"SERIES"}}}]}]})")),
    std::invalid_argument);
 }
 
-TEST(ModelConfigParserTest, ParsesShorthandsDefaultsAndTypedNodes)
+TEST(StrategyConfigParserTest, ParsesShorthandsDefaultsAndTypedNodes)
 {
-  auto parser = make_backtest_model_config_parser();
+  auto parser = make_backtest_strategy_config_parser();
   const auto config = json::parse(R"(
     {"method":"INDICATOR.SMA","params":{"source":{"method":"OPERATOR.ADD","params":{"augend":"MARKET_DATA.CLOSE","addend":2}}}}
   )");
@@ -163,9 +163,9 @@ TEST(ModelConfigParserTest, ParsesShorthandsDefaultsAndTypedNodes)
   EXPECT_EQ(parser.parse_node(parser.serialize_node(node)), node);
 }
 
-TEST(ModelConfigParserTest, RejectsMethodsOutsideBacktestContext)
+TEST(StrategyConfigParserTest, RejectsMethodsOutsideBacktestContext)
 {
-  auto parser = make_backtest_model_config_parser();
+  auto parser = make_backtest_strategy_config_parser();
   for(const auto* comparator_only :
       {"REQUESTED_ORDER.PRICE",
        "REQUESTED_ORDER.DIRECTION",
@@ -190,13 +190,13 @@ TEST(ModelConfigParserTest, RejectsMethodsOutsideBacktestContext)
   }
   EXPECT_THROW(
    parser.parse_node(json::parse(
-    R"({"method":"MODEL_PERFORMANCE.VALUE","params":{"metric":"WIN_RATE"}})")),
+    R"({"method":"STRATEGY_PERFORMANCE.VALUE","params":{"metric":"WIN_RATE"}})")),
    std::invalid_argument);
 }
 
-TEST(ModelConfigParserTest, PreservesCanonicalCompositeDefaults)
+TEST(StrategyConfigParserTest, PreservesCanonicalCompositeDefaults)
 {
-  auto parser = make_backtest_model_config_parser();
+  auto parser = make_backtest_strategy_config_parser();
   const auto config = json::parse(R"({"method":"INDICATOR.MACD"})");
 
   const auto node = parser.parse_node(config);
@@ -210,9 +210,9 @@ TEST(ModelConfigParserTest, PreservesCanonicalCompositeDefaults)
   EXPECT_EQ(parser.parse_node(parser.serialize_node(node)), node);
 }
 
-TEST(ModelConfigParserTest, RoundTripsEveryCanonicalModelRegistration)
+TEST(StrategyConfigParserTest, RoundTripsEveryCanonicalStrategyRegistration)
 {
-  auto parser = make_backtest_model_config_parser();
+  auto parser = make_backtest_strategy_config_parser();
   const auto configurations = std::vector<std::string>{
    "0",
    "true",
@@ -308,10 +308,10 @@ TEST(ModelConfigParserTest, RoundTripsEveryCanonicalModelRegistration)
   }
 }
 
-TEST(ModelConfigParserTest,
+TEST(StrategyConfigParserTest,
      RoundTripsScalarOperationsUsingBacktestMethodContextNodes)
 {
-  auto parser = make_backtest_model_config_parser();
+  auto parser = make_backtest_strategy_config_parser();
 
   const auto absolute = parser.parse_node(
    json::parse(R"({"method":"OPERATOR.ABS","params":{"operand":-1}})"));
@@ -380,7 +380,7 @@ TEST(RequestedOrderComparatorConfigParserTest,
 }
 
 TEST(RequestedOrderComparatorConfigParserTest,
-     RoundTripsEveryCanonicalComparatorRegistrationAndRejectsModelOnlyNodes)
+     RoundTripsEveryCanonicalComparatorRegistrationAndRejectsStrategyOnlyNodes)
 {
   auto parser = make_requested_order_comparator_config_parser();
   const auto configurations = std::vector<std::string>{
@@ -409,7 +409,7 @@ TEST(RequestedOrderComparatorConfigParserTest,
    R"({"method":"REQUESTED_ORDER.PRICE_RISK"})",
    R"({"method":"REQUESTED_ORDER.RISK_WITH_FEES"})",
    R"({"method":"REQUESTED_ORDER.FROZEN_UNIT_QUANTITY"})",
-   R"({"method":"MODEL_PERFORMANCE.VALUE","params":{"metric":"MEAN_RETURN"}})",
+   R"({"method":"STRATEGY_PERFORMANCE.VALUE","params":{"metric":"MEAN_RETURN"}})",
    R"({"method":"OPERATOR.ADD","params":{"augend":1,"addend":2}})",
    R"({"method":"OPERATOR.SUBTRACT","params":{"minuend":1,"subtrahend":2}})",
    R"({"method":"OPERATOR.MULTIPLY","params":{"multiplicand":1,"multiplier":2}})",
@@ -430,7 +430,7 @@ TEST(RequestedOrderComparatorConfigParserTest,
     EXPECT_EQ(parser.parse_node(parser.serialize_node(node)), node);
   }
 
-  for(const auto* model_only : {"PORTFOLIO.EQUITY",
+  for(const auto* strategy_only : {"PORTFOLIO.EQUITY",
                                 "PORTFOLIO.EQUITY_PERCENT",
                                 "PORTFOLIO.DRAWDOWN",
                                 "OPERATOR.CHANGE",
@@ -491,15 +491,15 @@ TEST(RequestedOrderComparatorConfigParserTest,
                                 "LOGIC.XOR",
                                 "LOGIC.ALL_OF",
                                 "LOGIC.ANY_OF"}) {
-    SCOPED_TRACE(model_only);
+    SCOPED_TRACE(strategy_only);
     EXPECT_THROW(parser.parse_node(json::parse(std::string{"{\"method\":\""} +
-                                               model_only + "\"}")),
+                                               strategy_only + "\"}")),
                  std::invalid_argument);
   }
 }
 
 TEST(RequestedOrderComparatorConfigParserTest,
-     RoundTripsEveryModelPerformanceMetric)
+     RoundTripsEveryStrategyPerformanceMetric)
 {
   const auto metrics = std::vector<std::string>{
    "LIFETIME_COUNT",
@@ -527,15 +527,15 @@ TEST(RequestedOrderComparatorConfigParserTest,
   for(const auto& metric : metrics) {
     SCOPED_TRACE(metric);
     const auto config = json::object{
-     {"method", "MODEL_PERFORMANCE.VALUE"},
+     {"method", "STRATEGY_PERFORMANCE.VALUE"},
      {"params", json::object{{"metric", metric}}}};
     const auto node = parser.parse_node(config);
-    EXPECT_NE(node_cast<ModelPerformanceNode>(node), nullptr);
+    EXPECT_NE(node_cast<StrategyPerformanceNode>(node), nullptr);
     EXPECT_EQ(parser.parse_node(parser.serialize_node(node)), node);
   }
 
   EXPECT_THROW(parser.parse_node(json::parse(
-                R"({"method":"MODEL_PERFORMANCE.VALUE","params":{"metric":"UNKNOWN"}})")),
+                R"({"method":"STRATEGY_PERFORMANCE.VALUE","params":{"metric":"UNKNOWN"}})")),
                std::invalid_argument);
 }
 
@@ -633,7 +633,7 @@ auto value_method_value(
 
 class ConfigParserTest : public ::testing::Test {
 protected:
-  ModelConfigParser config_parser;
+  StrategyConfigParser config_parser;
 
   auto parse_node_method(const jsoncons::ojson& config)
    -> ParsedConfigNodeMethod
@@ -650,7 +650,7 @@ protected:
 
   void SetUp() override
   {
-    config_parser = std::move(make_backtest_model_config_parser());
+    config_parser = std::move(make_backtest_strategy_config_parser());
 
     parse_node_method(json::parse(R"(
       {
@@ -722,7 +722,7 @@ TEST(PlotMethodParserTest, ParseAndSerializeMomentumHistogram)
     }
   )");
 
-  const auto strategy = backtest::parse_model_config_json("Test", config);
+  const auto strategy = backtest::parse_strategy_config_json("Test", config);
   const auto& method = strategy.plots().at(0).items().at(0);
   using MomentumHistogram = backtest::MomentumHistogramPlotMethod<
    backtest::ErasedPlotSourceMethod<backtest::ErasedPlotMethodContext>>;
@@ -740,7 +740,7 @@ TEST(PlotMethodParserTest, ParseAndSerializeMomentumHistogram)
    (std::vector<std::uint32_t>{
     0xFF9AA626, 0xFF9AA626, 0xFFDBDFB2, 0xFF5053EF, 0xFF5053EF, 0xFFD2CDFF}));
 
-  const auto serialized = backtest::serialize_model_config_json(strategy);
+  const auto serialized = backtest::serialize_strategy_config_json(strategy);
   const auto& serialized_params =
    serialized.at("plots").at(0).at("items").at(0).at("params");
   EXPECT_TRUE(serialized_params.contains("positiveRisingColor"));
@@ -748,7 +748,7 @@ TEST(PlotMethodParserTest, ParseAndSerializeMomentumHistogram)
   EXPECT_TRUE(serialized_params.contains("negativeFallingColor"));
   EXPECT_TRUE(serialized_params.contains("negativeRisingColor"));
 
-  const auto round_trip = backtest::parse_model_config_json("Test", serialized);
+  const auto round_trip = backtest::parse_strategy_config_json("Test", serialized);
   EXPECT_EQ(method, round_trip.plots().at(0).items().at(0));
 }
 
@@ -779,11 +779,11 @@ TEST(PlotMethodParserTest, DefaultsMomentumHistogramMissingColor)
     }
   )");
 
-  const auto model = backtest::parse_model_config_json("Test", config);
+  const auto strategy = backtest::parse_strategy_config_json("Test", config);
   using MomentumHistogram = backtest::MomentumHistogramPlotMethod<
    backtest::ErasedPlotSourceMethod<backtest::ErasedPlotMethodContext>>;
   const auto* histogram =
-   plot_method_cast<MomentumHistogram>(model.plots().at(0).items().at(0));
+   plot_method_cast<MomentumHistogram>(strategy.plots().at(0).items().at(0));
   ASSERT_NE(histogram, nullptr);
   const auto defaults =
    MomentumHistogram{backtest::SeriesPlotSourceMethod{}};
@@ -2990,7 +2990,7 @@ TEST_F(ConfigParserTest, EntryFilterRoundTripsResultAndAccountNodes)
       "firstCondition": {
         "method": "COMPARISON.GREATER_EQUAL",
         "target": {
-          "method": "MODEL_PERFORMANCE.VALUE",
+          "method": "STRATEGY_PERFORMANCE.VALUE",
           "params": {
             "metric": "LIFETIME_COUNT"
           }
@@ -3015,7 +3015,7 @@ TEST_F(ConfigParserTest, EntryFilterRoundTripsResultAndAccountNodes)
   const auto node = backtest::parse_entry_filter_node(config);
   const auto serialized = backtest::serialize_entry_filter_node(node);
   EXPECT_EQ(serialized.at("firstCondition").at("target").at("method"),
-            "MODEL_PERFORMANCE.VALUE");
+            "STRATEGY_PERFORMANCE.VALUE");
   EXPECT_EQ(serialized.at("firstCondition")
              .at("target")
              .at("params")
@@ -3047,7 +3047,7 @@ TEST_F(ConfigParserTest, EntryFilterRejectsMarketDataNodes)
 TEST_F(ConfigParserTest, EntryFilterRejectsNonBooleanRoot)
 {
   const auto config = json::parse(
-   R"({"method":"MODEL_PERFORMANCE.VALUE","params":{"metric":"WIN_RATE"}})");
+   R"({"method":"STRATEGY_PERFORMANCE.VALUE","params":{"metric":"WIN_RATE"}})");
 
   EXPECT_THROW(backtest::parse_entry_filter_node(config),
                std::invalid_argument);
@@ -3056,7 +3056,7 @@ TEST_F(ConfigParserTest, EntryFilterRejectsNonBooleanRoot)
 TEST_F(ConfigParserTest, EntryFilterRejectsLegacyStrategyPerformanceMethod)
 {
   const auto config = json::parse(R"(
-    {"method":"COMPARISON.GREATER_THAN","target":{"method":"MODEL_PERFORMANCE","params":{"metric":"WIN_RATE"}},"threshold":0}
+    {"method":"COMPARISON.GREATER_THAN","target":{"method":"STRATEGY_PERFORMANCE","params":{"metric":"WIN_RATE"}},"threshold":0}
   )");
 
   EXPECT_THROW(backtest::parse_entry_filter_node(config),
@@ -3069,7 +3069,7 @@ TEST_F(ConfigParserTest, EntryFilterRejectsIntegerPerformanceMetric)
     {
       "method": "COMPARISON.GREATER_THAN",
       "target": {
-        "method": "MODEL_PERFORMANCE.VALUE",
+        "method": "STRATEGY_PERFORMANCE.VALUE",
         "params": {
           "metric": 0
         }
@@ -3088,7 +3088,7 @@ TEST_F(ConfigParserTest, EntryFilterRejectsPerformanceMetricWithoutParams)
     {
       "method": "COMPARISON.GREATER_THAN",
       "target": {
-        "method": "MODEL_PERFORMANCE.VALUE"
+        "method": "STRATEGY_PERFORMANCE.VALUE"
       },
       "threshold": 0
     }
@@ -3104,7 +3104,7 @@ TEST_F(ConfigParserTest, EntryFilterRejectsPerformanceMetricWithoutMetric)
     {
       "method": "COMPARISON.GREATER_THAN",
       "target": {
-        "method": "MODEL_PERFORMANCE.VALUE",
+        "method": "STRATEGY_PERFORMANCE.VALUE",
         "params": {}
       },
       "threshold": 0
@@ -3121,7 +3121,7 @@ TEST_F(ConfigParserTest, EntryFilterRejectsUnknownPerformanceMetric)
     {
       "method": "COMPARISON.GREATER_THAN",
       "target": {
-        "method": "MODEL_PERFORMANCE.VALUE",
+        "method": "STRATEGY_PERFORMANCE.VALUE",
         "params": {
           "metric": "UNKNOWN"
         }
@@ -3140,7 +3140,7 @@ TEST_F(ConfigParserTest, EntryFilterRejectsLowercasePerformanceMetric)
     {
       "method": "COMPARISON.GREATER_THAN",
       "target": {
-        "method": "MODEL_PERFORMANCE.VALUE",
+        "method": "STRATEGY_PERFORMANCE.VALUE",
         "params": {
           "metric": "win_rate"
         }

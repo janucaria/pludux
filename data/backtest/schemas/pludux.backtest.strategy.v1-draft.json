@@ -1,15 +1,15 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://pludux.com/schemas/pludux.backtest.model.v1-draft.json",
-  "title": "Pludux Backtest Model Schema",
+  "$id": "https://pludux.com/schemas/pludux.backtest.strategy.v1-draft.json",
+  "title": "Pludux Backtest Strategy Schema",
   "type": "object",
   "additionalProperties": true,
   "properties": {
     "version": {
       "type": "integer",
       "const": 1,
-      "title": "Model JSON format version 1",
-      "description": "Version of the Pludux Model JSON format. Must be 1."
+      "title": "Strategy JSON format version 1",
+      "description": "Version of the Pludux Strategy JSON format. Must be 1."
     },
     "execution": {
       "type": "object",
@@ -339,7 +339,7 @@
           "type": "boolean",
           "default": true,
           "title": "Enabled",
-          "description": "Whether the model exits the position when price reaches the stop price."
+          "description": "Whether the strategy exits the position when price reaches the stop price."
         },
         "trailing": {
           "type": "boolean",
@@ -392,7 +392,7 @@
           "type": "boolean",
           "default": false,
           "title": "Enabled",
-          "description": "Whether the model exits the position when price reaches the target price."
+          "description": "Whether the strategy exits the position when price reaches the target price."
         },
         "targetPrice": {
           "$ref": "#/$defs/seriesAsParameter",
@@ -730,7 +730,7 @@
             }
           }
       ],
-      "title": "Model Input",
+      "title": "Strategy Input",
       "description": "Defines an inline numeric input parameter. Backtests collect INPUT nodes from series and signals in traversal order and may override their values."
     },
     "valueMethod": {
@@ -3700,7 +3700,7 @@
       "description": "A group of one or more plot items, optionally overlaid on price."
     }
   },
-  "description": "Schema for a Pludux backtest model file. This schema is designed to be machine-validatable and AI-friendly so an AI can generate complete model JSON files with named series, inline numeric inputs, signals, trading rules, and optional chart plots. Use SERIES to reference a named series. For numeric inputs, specify representation (Decimal, SignedInteger, or UnsignedInteger) to constrain how values are formatted and displayed.",
+  "description": "Schema for a Pludux backtest strategy file. This schema is designed to be machine-validatable and AI-friendly so an AI can generate complete strategy JSON files with named series, inline numeric inputs, signals, trading rules, and optional chart plots. Use SERIES to reference a named series. For numeric inputs, specify representation (Decimal, SignedInteger, or UnsignedInteger) to constrain how values are formatted and displayed.",
   "examples": [
     {
       "version": 1,

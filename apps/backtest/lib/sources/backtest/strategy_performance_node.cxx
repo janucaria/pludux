@@ -2,50 +2,50 @@ module;
 
 #include <compare>
 
-export module pludux.backtest:model_performance_node;
+export module pludux.backtest:strategy_performance_node;
 
-import :model_performance;
-import :model_performance_method;
+import :strategy_performance;
+import :strategy_performance_method;
 import :requested_order_method_context;
 
 export namespace pludux::backtest {
 
-class ModelPerformanceNode {
+class StrategyPerformanceNode {
 public:
-  explicit ModelPerformanceNode(ModelPerformanceMetric metric) noexcept
+  explicit StrategyPerformanceNode(StrategyPerformanceMetric metric) noexcept
   : metric_{metric}
   {
   }
 
-  auto operator==(const ModelPerformanceNode&) const noexcept
+  auto operator==(const StrategyPerformanceNode&) const noexcept
    -> bool = default;
 
-  auto metric(this const ModelPerformanceNode& self) noexcept
-   -> ModelPerformanceMetric
+  auto metric(this const StrategyPerformanceNode& self) noexcept
+   -> StrategyPerformanceMetric
   {
     return self.metric_;
   }
 
 private:
-  ModelPerformanceMetric metric_{ModelPerformanceMetric::LifetimeCount};
+  StrategyPerformanceMetric metric_{StrategyPerformanceMetric::LifetimeCount};
 };
 
 auto pludux_tag_invoke(NodeToErasedMethod<EntryFilterMethodContext>,
-                       const ModelPerformanceNode& node,
+                       const StrategyPerformanceNode& node,
                        NodeToErasedMethodContext&) noexcept
  -> ErasedSeriesMethod<EntryFilterMethodContext>
 {
   return ErasedSeriesMethod<EntryFilterMethodContext>{
-    ModelPerformanceMethod{node.metric()}};
+    StrategyPerformanceMethod{node.metric()}};
 }
 
 auto pludux_tag_invoke(NodeToErasedMethod<RequestedOrderMethodContext>,
-                       const ModelPerformanceNode& node,
+                       const StrategyPerformanceNode& node,
                        NodeToErasedMethodContext&) noexcept
  -> ErasedSeriesMethod<RequestedOrderMethodContext>
 {
   return ErasedSeriesMethod<RequestedOrderMethodContext>{
-   ModelPerformanceMethod{node.metric()}};
+   StrategyPerformanceMethod{node.metric()}};
 }
 
 } // namespace pludux::backtest

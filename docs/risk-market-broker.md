@@ -1,8 +1,8 @@
 # Profiles, Markets, and Brokers
 
-These three resources turn a Model's candidate entry and one-R distance into a
-quantity and cost. They remain explicit so the same Strategy can be tested
-under different portfolio constraints.
+These three resources turn a Strategy's candidate entry and one-R distance into a
+quantity and cost. The System selects the Profile used by every setup. The
+Portfolio selects its Market and Broker.
 
 ## Position sizing
 
@@ -17,10 +17,10 @@ otherwise. Fractions are ratios: `0.01` means one percent.
 | Equity Fraction | fraction `0.01` | `equity × fraction / entryPrice` | Entry notional plus entry fees must fit the equity allocation |
 | Bayesian Kelly | adverse quantiles, credible mass `0.80`, multiplier `0.50`, maximum fraction `1.0` | Posterior Kelly allocation × equity / entry price | Entry cost must fit the resulting allocation |
 
-Bayesian Kelly uses the Strategy binding's theoretical Model Performance under
+Bayesian Kelly uses the Strategy setup's theoretical Strategy Performance under
 the System's shared calculation configuration, not actual Portfolio trade
 results. Its full priors, posterior estimates, and
-failure cases are in [Model Performance Bayesian Kelly](strategy-performance-bayesian-kelly.md).
+failure cases are in [Strategy Performance Bayesian Kelly](strategy-performance-bayesian-kelly.md).
 
 ## Drawdown adjustment
 
@@ -42,7 +42,7 @@ effective peak equity × max(1 - steps × notionalEquityReduction, 0)
 ```
 
 A multiplier of zero suppresses the request. This mechanism is distinct from
-Portfolio drawdown reporting and from the `PORTFOLIO.DRAWDOWN` Model node.
+Portfolio drawdown reporting and from the `PORTFOLIO.DRAWDOWN` Strategy node.
 
 ## Market normalization
 
