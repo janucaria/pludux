@@ -36,7 +36,7 @@ are defined by the parser; the GUI may seed a more useful initial expression.
 | Constant | Yes | Yes | Yes |
 | Indicators, named series, position state | Yes | No | No |
 | Portfolio equity/drawdown state | Yes | No | Yes |
-| Conditions | All below | No | Comparisons except crosses; AND/OR/XOR/NOT/ALWAYS/NEVER |
+| Conditions | All below | No | Six basic numeric comparisons and AND/OR/XOR/NOT/ALWAYS/NEVER |
 | Requested Order values | No | Yes | Yes, for the candidate order |
 | Strategy Performance | No | Yes | Yes |
 | Risk, stop, target, and plot methods | Owning Strategy fields only | No | No |
@@ -155,6 +155,8 @@ Period-like parameters are numeric expressions, commonly unsigned
 | `COMPARISON.GREATER_EQUAL` | `target >= threshold` | Numeric pair |
 | `COMPARISON.EQUAL` | `target == threshold` | Numeric pair |
 | `COMPARISON.NOT_EQUAL` | `target != threshold` | Numeric pair |
+| `COMPARISON.ABOVE_BY` | `target >= reference + gap` | `gap` uses the same units as `target` and `reference` |
+| `COMPARISON.ABOVE_BY_PERCENT` | `target >= reference + reference * percent / 100` | `percent` uses percentage points |
 | `COMPARISON.CROSSOVER` | Value crosses from at/below to above reference | Requires previous values |
 | `COMPARISON.CROSSUNDER` | Value crosses from at/above to below reference | Requires previous values |
 | `LOGIC.ALL_OF` | All child conditions | Variable-length list |
@@ -166,12 +168,16 @@ Period-like parameters are numeric expressions, commonly unsigned
 | `LOGIC.ALWAYS` | Always true | No parameters |
 | `LOGIC.NEVER` | Always false | No parameters |
 
+Both Above By comparisons accept numeric expressions for each operand and
+include equality at the threshold. A positive gap requires the target to exceed
+the reference. Each returns `false` if an operand or the threshold is non-finite,
+including during indicator warm-up.
+
 All conditions are available to Strategy signals. Entry Filters accept the six
-non-cross comparisons and `LOGIC.AND`, `LOGIC.OR`, `LOGIC.XOR`, `LOGIC.NOT`,
-`LOGIC.ALWAYS`, and `LOGIC.NEVER`; they do not accept crossovers,
-`LOGIC.ALL_OF`, or `LOGIC.ANY_OF`. Entry Filter scalar leaves are constants,
-Portfolio state, Requested Order values, or `STRATEGY_PERFORMANCE.VALUE`—not
-market data, indicators, named series, lookbacks, or arithmetic operators.
+basic numeric comparisons listed first and `LOGIC.AND`, `LOGIC.OR`, `LOGIC.XOR`,
+`LOGIC.NOT`, `LOGIC.ALWAYS`, and `LOGIC.NEVER`. Entry Filter scalar leaves are
+constants, Portfolio state, Requested Order values, or
+`STRATEGY_PERFORMANCE.VALUE`.
 
 ## Risk, stops, targets, and position state
 

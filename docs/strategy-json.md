@@ -79,6 +79,18 @@ discriminator. Operands and payloads remain required when the concrete node has
 no valid default. Export always writes the full canonical representation and
 never emits legacy aliases.
 
+## Above By comparisons
+
+Use `COMPARISON.ABOVE_BY_PERCENT` with `target`, `reference`, and `percent`.
+For example, `percent` of `15` sets the minimum gap to 15% of the reference.
+Use `COMPARISON.ABOVE_BY` with `target`, `reference`, and `gap` to supply the
+minimum gap directly. Each parameter accepts a numeric literal or expression.
+
+The sample uses `LOGIC.OR` to enter long when the close is at least 15% above
+the 20-period SMA or when the 20-period SMA is at least 1.5 times the 14-period
+ATR above the 50-period SMA. `OPERATOR.MULTIPLY` calculates the ATR-based gap.
+[Above By Strategy JSON](../data/backtest/samples/above_by.json)
+
 ## Multi-output series and plots
 
 `INDICATOR.BB`, `INDICATOR.KC`, `INDICATOR.DC`, `INDICATOR.MACD`,

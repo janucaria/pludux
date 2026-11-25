@@ -120,7 +120,8 @@ using MethodRegistry = mp11::mp_list<mp11::mp_quote<AbsDiffMethod>,
                                      mp11::mp_quote<GreaterEqualMethod>,
                                      mp11::mp_quote<LessThanMethod>,
                                      mp11::mp_quote<LessEqualMethod>,
-                                     mp11::mp_quote<DonchianChannelMethod>>;
+                                     mp11::mp_quote<DonchianChannelMethod>,
+                                     mp11::mp_quote<AboveByMethod>>;
 
 template<typename TMethod>
 consteval auto series_type_hash_id_of(const TMethod&) -> std::size_t
@@ -654,6 +655,17 @@ auto hash_series_method(
   const auto threshold_result = hash_series_method(method.threshold());
 
   return merge_hashes(type_hash, target_result, threshold_result);
+}
+
+template<typename TMethod>
+auto hash_series_method(const AboveByMethod<TMethod>& method) noexcept
+ -> std::size_t
+{
+  return merge_hashes(series_type_hash_id_of(method),
+                      hash_series_method(method.target()),
+                      hash_series_method(method.reference()),
+                      hash_series_method(method.amount()),
+                      static_cast<std::size_t>(method.by_percent()));
 }
 
 } // namespace pludux

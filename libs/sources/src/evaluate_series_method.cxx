@@ -1222,4 +1222,29 @@ auto pludux_tag_invoke(
   return TComparator{}(target_result, threshold_result);
 }
 
+template<typename TMethod>
+auto pludux_tag_invoke(EvaluateSeriesMethod,
+                       const AboveByMethod<TMethod>& method,
+                       AssetSnapshot asset_snapshot,
+                       auto context) noexcept -> double
+{
+  const auto target =
+   evaluate_series_method(method.target(), asset_snapshot, context);
+  const auto reference =
+   evaluate_series_method(method.reference(), asset_snapshot, context);
+  const auto amount =
+   evaluate_series_method(method.amount(), asset_snapshot, context);
+  if(!std::isfinite(target) || !std::isfinite(reference) ||
+     !std::isfinite(amount)) {
+    return false;
+  }
+
+  const auto gap = method.by_percent() ? reference * (amount / 100.0) : amount;
+  const auto threshold = reference + gap;
+  // Compare in price units so a decimal target such as 10.1 can meet the
+  // threshold at reference 10.0 and gap 0.1.
+  return std::isfinite(threshold) && target >= threshold &&
+         (gap <= 0.0 || target > reference);
+}
+
 } // namespace pludux

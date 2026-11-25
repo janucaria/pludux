@@ -83,4 +83,53 @@ auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
                                                   std::move(threshold)}};
 }
 
+template<typename TContext, bool ByPercent = false>
+class AboveByNode {
+public:
+  AboveByNode(ErasedNode<TContext> target,
+              ErasedNode<TContext> reference,
+              ErasedNode<TContext> amount)
+  : target_{std::move(target)}
+  , reference_{std::move(reference)}
+  , amount_{std::move(amount)}
+  {
+  }
+
+  auto operator==(const AboveByNode&) const -> bool = default;
+
+  auto target() const noexcept -> const ErasedNode<TContext>&
+  {
+    return target_;
+  }
+  auto reference() const noexcept -> const ErasedNode<TContext>&
+  {
+    return reference_;
+  }
+  auto amount() const noexcept -> const ErasedNode<TContext>&
+  {
+    return amount_;
+  }
+
+private:
+  ErasedNode<TContext> target_;
+  ErasedNode<TContext> reference_;
+  ErasedNode<TContext> amount_;
+};
+
+template<typename TContext>
+using AboveByPercentNode = AboveByNode<TContext, true>;
+
+template<typename TContext, bool ByPercent>
+auto pludux_tag_invoke(NodeToErasedMethod<TContext>,
+                       const AboveByNode<TContext, ByPercent>& node,
+                       NodeToErasedMethodContext& context)
+ -> ErasedSeriesMethod<TContext>
+{
+  auto target = node_to_erased_method<TContext>(node.target(), context);
+  auto reference = node_to_erased_method<TContext>(node.reference(), context);
+  auto amount = node_to_erased_method<TContext>(node.amount(), context);
+  return AboveByMethod{
+   std::move(target), std::move(reference), std::move(amount), ByPercent};
+}
+
 } // namespace pludux

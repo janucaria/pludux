@@ -2942,6 +2942,9 @@
           "$ref": "#/$defs/comparisonMethod"
         },
         {
+          "$ref": "#/$defs/aboveByMethod"
+        },
+        {
           "$ref": "#/$defs/fixedMethod"
         },
         {
@@ -3075,6 +3078,44 @@
           }
         }
       ]
+    },
+    "aboveByMethod": {
+      "allOf": [
+        { "$ref": "#/$defs/baseMethod" },
+        {
+          "if": {
+            "required": ["method"],
+            "properties": {
+              "method": {
+                "enum": ["COMPARISON.ABOVE_BY", "COMPARISON.ABOVE_BY_PERCENT"]
+              }
+            }
+          },
+          "then": {
+            "required": ["params"],
+            "properties": {
+              "params": {
+                "type": "object",
+                "properties": {
+                  "target": { "$ref": "#/$defs/seriesAsParameter" },
+                  "reference": { "$ref": "#/$defs/seriesAsParameter" },
+                  "gap": { "$ref": "#/$defs/seriesAsParameter" },
+                  "percent": { "$ref": "#/$defs/seriesAsParameter" }
+                },
+                "required": ["target", "reference"]
+              }
+            },
+            "if": {
+              "properties": { "method": { "const": "COMPARISON.ABOVE_BY" } }
+            },
+            "then": { "properties": { "params": { "required": ["gap"] } } },
+            "else": { "properties": { "params": { "required": ["percent"] } } }
+          },
+          "else": false
+        }
+      ],
+      "title": "Above By Signal",
+      "description": "True when target minus reference is at least the gap or the given percentage of the reference."
     },
     "crossMethod": {
       "allOf": [
@@ -3260,6 +3301,9 @@
         },
         {
           "$ref": "#/$defs/comparisonMethod"
+        },
+        {
+          "$ref": "#/$defs/aboveByMethod"
         },
         {
           "$ref": "#/$defs/fixedMethod"

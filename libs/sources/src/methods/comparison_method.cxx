@@ -73,4 +73,44 @@ template<typename TTargetMethod, typename TThresholdMethod>
 using NotEqualMethod =
  ComparisonMethod<std::not_equal_to<>, TTargetMethod, TThresholdMethod>;
 
+template<typename TMethod>
+class AboveByMethod {
+public:
+  AboveByMethod(TMethod target,
+                TMethod reference,
+                TMethod amount,
+                bool by_percent)
+  : target_{std::move(target)}
+  , reference_{std::move(reference)}
+  , amount_{std::move(amount)}
+  , by_percent_{by_percent}
+  {
+  }
+
+  auto operator==(const AboveByMethod&) const -> bool = default;
+
+  auto target() const noexcept -> const TMethod&
+  {
+    return target_;
+  }
+  auto reference() const noexcept -> const TMethod&
+  {
+    return reference_;
+  }
+  auto amount() const noexcept -> const TMethod&
+  {
+    return amount_;
+  }
+  auto by_percent() const noexcept -> bool
+  {
+    return by_percent_;
+  }
+
+private:
+  TMethod target_;
+  TMethod reference_;
+  TMethod amount_;
+  bool by_percent_;
+};
+
 } // namespace pludux
