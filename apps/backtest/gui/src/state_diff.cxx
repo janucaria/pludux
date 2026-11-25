@@ -23,26 +23,28 @@ class StateDiff {
 public:
   StateDiff(DocumentState document_state,
             backtest::StoreDescriptor store_descriptor,
-             Patch<backtest::System> system_patch,
+            Patch<backtest::System> system_patch,
             Patch<backtest::Portfolio> portfolio_patch,
             Patch<backtest::Asset> asset_patch,
             Patch<backtest::Watchlist> watchlist_patch,
-             Patch<backtest::Strategy> strategy_patch,
+            Patch<backtest::Strategy> strategy_patch,
             Patch<backtest::Market> market_patch,
             Patch<backtest::Broker> broker_patch,
-             Patch<backtest::Profile> profile_patch,
-            Patch<backtest::PortfolioResults> portfolio_results_patch)
+            Patch<backtest::Profile> profile_patch,
+            Patch<backtest::PortfolioResults> portfolio_results_patch,
+            Patch<backtest::CallTable> call_patch)
   : document_state_{std::move(document_state)}
   , store_descriptor_{std::move(store_descriptor)}
-    , system_patch_{std::move(system_patch)}
+  , system_patch_{std::move(system_patch)}
   , portfolio_patch_{std::move(portfolio_patch)}
   , asset_patch_{std::move(asset_patch)}
   , watchlist_patch_{std::move(watchlist_patch)}
-   , strategy_patch_{std::move(strategy_patch)}
+  , strategy_patch_{std::move(strategy_patch)}
   , market_patch_{std::move(market_patch)}
   , broker_patch_{std::move(broker_patch)}
-   , profile_patch_{std::move(profile_patch)}
+  , profile_patch_{std::move(profile_patch)}
   , portfolio_results_patch_{std::move(portfolio_results_patch)}
+  , call_patch_{std::move(call_patch)}
   {
   }
 
@@ -53,11 +55,12 @@ public:
       return patch.inserted_count() != 0 || patch.deleted_count() != 0;
     };
     return self.document_state_ == source_state.document_state() &&
-             !changed(self.system_patch_) && !changed(self.portfolio_patch_) &&
-            !changed(self.asset_patch_) && !changed(self.strategy_patch_) &&
+           !changed(self.system_patch_) && !changed(self.portfolio_patch_) &&
+           !changed(self.asset_patch_) && !changed(self.strategy_patch_) &&
            !changed(self.watchlist_patch_) && !changed(self.market_patch_) &&
-            !changed(self.broker_patch_) && !changed(self.profile_patch_) &&
-           !changed(self.portfolio_results_patch_);
+           !changed(self.broker_patch_) && !changed(self.profile_patch_) &&
+           !changed(self.portfolio_results_patch_) &&
+           !changed(self.call_patch_);
   }
 
   auto apply(this const StateDiff& self, const ApplicationState& old_state)
@@ -78,16 +81,18 @@ public:
      self.portfolio_results_patch_.apply(store_arena.portfolio_results());
 
     return ApplicationState{
-     backtest::Store{self.store_descriptor_,
+     backtest::Store{
+      self.store_descriptor_,
       backtest::StoreArena{std::move(systems),
-                                          std::move(portfolios),
-                                          std::move(assets),
-                                          std::move(watchlists),
-                                           std::move(strategies),
-                                          std::move(markets),
-                                          std::move(brokers),
-                                           std::move(profiles),
-                                           std::move(portfolio_results)}},
+                           std::move(portfolios),
+                           std::move(assets),
+                           std::move(watchlists),
+                           std::move(strategies),
+                           std::move(markets),
+                           std::move(brokers),
+                           std::move(profiles),
+                           std::move(portfolio_results),
+                           self.call_patch_.apply(store_arena.calls())}},
      self.document_state_,
      old_state.view_state()};
   }
@@ -105,6 +110,7 @@ private:
   Patch<backtest::Broker> broker_patch_;
   Patch<backtest::Profile> profile_patch_;
   Patch<backtest::PortfolioResults> portfolio_results_patch_;
+  Patch<backtest::CallTable> call_patch_;
 };
 
 auto create_state_diff(const ApplicationState& old_state,
@@ -134,15 +140,16 @@ auto create_state_diff(const ApplicationState& old_state,
 
   return StateDiff{new_state.document_state(),
                    new_store.descriptor(),
-                    std::move(system_patch),
+                   std::move(system_patch),
                    std::move(portfolio_patch),
                    std::move(asset_patch),
                    std::move(watchlist_patch),
-                    std::move(strategy_patch),
+                   std::move(strategy_patch),
                    std::move(market_patch),
                    std::move(broker_patch),
-                    std::move(profile_patch),
-                   std::move(portfolio_results_patch)};
+                   std::move(profile_patch),
+                   std::move(portfolio_results_patch),
+                   diff(old_store_arena.calls(), new_store_arena.calls())};
 }
 
 } // namespace pludux::apps

@@ -1,6 +1,7 @@
 # CSV Data
 
-Pludux loads an Asset from CSV market data.
+Pludux imports market data into **Assets** and dated trade instructions into
+**Calls** from separate CSV files.
 
 Reimporting a CSV replaces the history of the first Asset with the same
 case-sensitive name in the Assets list. Its watchlist references and OHLCV
@@ -48,6 +49,72 @@ verify an imported candle's displayed time, and do not infer that a `Z` suffix
 makes every GUI label display in UTC. The importer reverses the whole dataset
 only when the final timestamp is earlier than the first; it does not sort or
 deduplicate mixed-order rows.
+
+## Calls CSV
+
+In **Calls**, select **Import CSV** to create a trade-call table from a CSV
+file with a header row. Use the same timestamp convention as the Asset data
+when preparing the CSV. Map the imported table in **Systems**. [Calls resource and mapping rules](resources-and-workflows.md#calls)
+
+### Backtest calls with two stop alternatives
+
+Suppose the Watchlist contains daily OHLCV data for `ABC.csv` and `XYZ.csv`.
+The `SL1 Distance`, `SL2 Distance`, and `TP Distance` columns in this example
+are distances from the fill price, in Asset price units.
+
+```csv
+Date,Symbol,Side,Entry Low,Entry High,SL1 Distance,SL2 Distance,TP Distance
+2025-01-06,ABC,Long,100,103,4,6,8
+2025-01-07,XYZ,Long,170,172,5,7,10
+```
+
+1. Import the CSV in **Calls**. In **Systems**, select the table and map `Date` to
+   Datetime, `Symbol` to Asset, and `Side` to Direction. Map both entry bounds.
+2. Create a long Strategy with **Call** as its entry source. Set a one-R
+   stop. Use Call nodes with field `risk_distance` for the risk amount and
+   field `target_distance` for the take-profit amount. The JSON below defines
+   these rules.
+3. Select the Strategy in the System's Main setup. Map `risk_distance` to
+   `SL1 Distance` and `target_distance` to `TP Distance`. Run the Portfolio.
+   To compare the alternative stop, map `risk_distance` to `SL2 Distance`
+   and rerun with the same Portfolio settings.
+
+```json
+{
+  "version": 1,
+  "positions": {
+    "long": {
+      "entry": { "source": "CALL" },
+      "riskDistance": {
+        "method": "RISK_DISTANCE.AMOUNT",
+        "params": {
+          "amount": { "method": "OTHER.CALL", "params": { "field": "risk_distance" } }
+        }
+      },
+      "stopLosses": {
+        "rules": [{ "enabled": true, "stopPrice": { "method": "STOP_LOSS.ONE_R" } }]
+      },
+      "takeProfits": {
+        "rules": [{
+          "enabled": true,
+          "targetPrice": {
+            "method": "TAKE_PROFIT.AMOUNT",
+            "params": {
+              "amount": { "method": "OTHER.CALL", "params": { "field": "target_distance" } }
+            }
+          }
+        }]
+      }
+    },
+    "short": false
+  }
+}
+```
+
+If `ABC.csv` opens at 101 on January 6 and the Portfolio admits the order,
+entry is at 101, with a stop at 97 and a target at 109. If `XYZ.csv` opens at
+174 on January 7, its Call is skipped. Trading through the range later in the
+same candle does not create an entry. [Call entries](execution.md#call-entries)
 
 ## Related docs
 

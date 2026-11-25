@@ -12,7 +12,6 @@ module;
 #include <optional>
 #include <vector>
 
-#include <ctre.hpp>
 #include <jsoncons/json.hpp>
 #include <rapidcsv.h>
 
@@ -26,6 +25,9 @@ export import :store_data_resolver;
 export import :store_descriptor;
 export import :store_arena;
 export import :store;
+export import :calls;
+export import :call_csv_import;
+import :table_field_parsing;
 export import :execution_model;
 export import :intrabar_path;
 export import :asset;
@@ -74,6 +76,7 @@ export import :risk_distance_method;
 export import :risk_distance_node;
 export import :position_method;
 export import :position_node;
+export import :call_node;
 export import :pyramiding_layer_method;
 export import :pyramiding_layer_node;
 export import :stop_target_price_method;
@@ -109,49 +112,12 @@ void update_asset_from_csv(backtest::Asset& asset, std::istream& csv_stream)
   const auto first_records = csv_doc.GetColumn<std::string>(date_record_index);
   auto date_records = std::vector<double>{};
 
-  constexpr auto date_regex_match =
-   ctre::match<"^"
-               "(\\d{4})-(\\d{2})-(\\d{2})" // YYYY-MM-DD
-               "(?:[T ](\\d{2}):(\\d{2})"   // hh:mm
-               "(?::(\\d{2}(?:\\.\\d+)?))?" // :ss.s
-               "(Z|[+\\-]\\d{2}:\\d{2})?"   // Z or +hh:mm or -hh:mm
-               ")?"
-               "$">;
+  std::ranges::transform(first_records,
+                         std::back_inserter(date_records),
+                         backtest::parse_candle_datetime);
 
-  std::transform(
-   first_records.cbegin(),
-   first_records.cend(),
-   std::back_inserter(date_records),
-   [&date_regex_match](const std::string& date) -> double {
-     const auto date_match = date_regex_match(date);
-
-     if(!date_match) {
-       auto timestamp = std::stod(date);
-       return timestamp;
-     }
-
-     const auto year = date_match.template get<1>().str();
-     const auto month = date_match.template get<2>().str();
-     const auto day = date_match.template get<3>().str();
-     const auto hour =
-      date_match.template get<4>().to_optional_string().value_or("00");
-     const auto minute =
-      date_match.template get<5>().to_optional_string().value_or("00");
-     const auto second =
-      date_match.template get<6>().to_optional_string().value_or("00");
-     const auto timezone =
-      date_match.template get<7>().to_optional_string().value_or("Z");
-
-     const auto date_str = std::format(
-      "{}-{}-{}T{}:{}:{}{}", year, month, day, hour, minute, second, timezone);
-     auto datetime_tm = std::tm{};
-     auto date_stream = std::istringstream{date_str};
-     date_stream >> std::get_time(&datetime_tm, "%Y-%m-%dT%H:%M:%S%z");
-     const auto timestamp = std::mktime(&datetime_tm);
-     return static_cast<double>(timestamp);
-   });
-
-  const auto should_reverse = date_records.back() < date_records.front();
+  const auto should_reverse =
+   !date_records.empty() && date_records.back() < date_records.front();
   if(should_reverse) {
     std::reverse(date_records.begin(), date_records.end());
   }

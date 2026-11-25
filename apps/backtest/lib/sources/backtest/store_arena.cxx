@@ -11,6 +11,7 @@ import :system;
 import :portfolio;
 import :portfolio_results;
 import :asset;
+import :calls;
 import :watchlist;
 import :strategy;
 import :market;
@@ -23,16 +24,17 @@ class StoreArena {
 public:
   StoreArena() = default;
 
-   StoreArena(std::vector<System> systems,
+  StoreArena(std::vector<System> systems,
              std::vector<Portfolio> portfolios,
              std::vector<Asset> assets,
              std::vector<Watchlist> watchlists,
-              std::vector<Strategy> strategies,
+             std::vector<Strategy> strategies,
              std::vector<Market> markets,
              std::vector<Broker> brokers,
              std::vector<Profile> profiles,
-             std::vector<PortfolioResults> portfolio_results)
-   : systems_{std::move(systems)}
+             std::vector<PortfolioResults> portfolio_results,
+             std::vector<CallTable> calls = {})
+  : systems_{std::move(systems)}
   , portfolios_{std::move(portfolios)}
   , assets_{std::move(assets)}
   , watchlists_{std::move(watchlists)}
@@ -41,6 +43,7 @@ public:
   , brokers_{std::move(brokers)}
   , profiles_{std::move(profiles)}
   , portfolio_results_{std::move(portfolio_results)}
+  , calls_{std::move(calls)}
   {
   }
 
@@ -143,6 +146,11 @@ public:
     return self.portfolio_results_;
   }
 
+  auto calls(this auto& self) noexcept -> auto&
+  {
+    return self.calls_;
+  }
+
 private:
   std::vector<System> systems_;
   std::vector<Portfolio> portfolios_;
@@ -153,6 +161,7 @@ private:
   std::vector<Broker> brokers_;
   std::vector<Profile> profiles_;
   std::vector<PortfolioResults> portfolio_results_;
+  std::vector<CallTable> calls_;
 };
 
 } // namespace pludux::backtest

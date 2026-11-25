@@ -141,14 +141,29 @@ inline constexpr struct EvaluateSeriesMethod {
                   const EvaluateSeriesMethod&) noexcept -> double = delete;
 } evaluate_series_method;
 
+auto evaluate_signal_method(const auto& method,
+                            AssetSnapshot snapshot,
+                            auto context) -> bool
+{
+  if constexpr(requires { context.evaluate_signal(method, snapshot); }) {
+    return context.evaluate_signal(method, snapshot);
+  } else {
+    return static_cast<bool>(evaluate_series_method(method, snapshot, context));
+  }
+}
+
 template<typename TParameterMethod>
 auto evaluated_method_to_size(const TParameterMethod& parameter,
                               AssetSnapshot asset_snapshot,
                               auto context) noexcept
  -> std::size_t
 {
-  return static_cast<std::size_t>(
-   evaluate_series_method(parameter, std::move(asset_snapshot), context));
+  const auto value =
+   evaluate_series_method(parameter, std::move(asset_snapshot), context);
+  if(!std::isfinite(value) || value < 0.0 ||
+     value >= static_cast<double>(std::numeric_limits<std::size_t>::max()))
+    return std::numeric_limits<std::size_t>::max();
+  return static_cast<std::size_t>(value);
 }
 
 template<typename TMethod>
@@ -170,6 +185,8 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
 {
   const auto period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
+  if(period == std::numeric_limits<std::size_t>::max())
+    return std::numeric_limits<double>::quiet_NaN();
   const auto ma_method =
    AdaptiveMaMethod{TrMethod{}, method.ma_smoothing_type(), period};
 
@@ -222,6 +239,8 @@ auto pludux_tag_invoke(
   const auto ma_source = method.source();
   const auto ma_period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
+  if(ma_period == std::numeric_limits<std::size_t>::max())
+    return std::numeric_limits<double>::quiet_NaN();
   const auto stddev =
    evaluate_series_method(method.stddev(), asset_snapshot, context);
   const auto ma_method =
@@ -291,6 +310,8 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
 {
   const auto period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
+  if(period == std::numeric_limits<std::size_t>::max())
+    return std::numeric_limits<double>::quiet_NaN();
   const auto asset_size = asset_snapshot.size();
   if(asset_size < period) {
     return std::numeric_limits<double>::quiet_NaN();
@@ -322,6 +343,8 @@ auto evaluate_ema_or_rma_with_cached_results(
   const auto& source_method = method.source();
   const auto period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
+  if(period == std::numeric_limits<std::size_t>::max())
+    return std::numeric_limits<double>::quiet_NaN();
 
   const auto prev_result = cached_results.empty()
                             ? std::numeric_limits<double>::quiet_NaN()
@@ -398,6 +421,8 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
 {
   const auto period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
+  if(period == std::numeric_limits<std::size_t>::max())
+    return std::numeric_limits<double>::quiet_NaN();
   const auto asset_size = asset_snapshot.size();
   if(asset_size < period) {
     return std::numeric_limits<double>::quiet_NaN();
@@ -424,6 +449,8 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
 {
   const auto period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
+  if(period == std::numeric_limits<std::size_t>::max())
+    return std::numeric_limits<double>::quiet_NaN();
   const auto wam1 = WmaMethod{method.source(), period / 2};
   const auto scalar_2_method = ValueMethod{2.0};
   const auto times_2_wam1 = MultiplyMethod{scalar_2_method, wam1};
@@ -445,6 +472,8 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
 {
   const auto period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
+  if(period == std::numeric_limits<std::size_t>::max())
+    return std::numeric_limits<double>::quiet_NaN();
   const auto rs_method = DivideMethod{
    RmaMethod{PositivePartMethod{ChangeMethod{method.source()}}, period},
    RmaMethod{NegativePartMethod{ChangeMethod{method.source()}}, period}};
@@ -464,6 +493,8 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
 {
   const auto period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
+  if(period == std::numeric_limits<std::size_t>::max())
+    return std::numeric_limits<double>::quiet_NaN();
   const auto source_size = asset_snapshot.size();
   if(source_size < period) {
     return std::numeric_limits<double>::quiet_NaN();
@@ -486,6 +517,8 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
 {
   const auto period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
+  if(period == std::numeric_limits<std::size_t>::max())
+    return std::numeric_limits<double>::quiet_NaN();
   const auto volume = VolumeMethod{};
   const auto sma_volume = SmaMethod{VolumeMethod{}, period};
   const auto rvol = DivideMethod{volume, sma_volume};
@@ -504,6 +537,8 @@ auto pludux_tag_invoke(
 {
   const auto period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
+  if(period == std::numeric_limits<std::size_t>::max())
+    return std::numeric_limits<double>::quiet_NaN();
 
   if(asset_snapshot.size() < period) {
     return std::numeric_limits<double>::quiet_NaN();
@@ -540,10 +575,14 @@ auto pludux_tag_invoke(
 {
   const auto period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
+  if(period == std::numeric_limits<std::size_t>::max())
+    return std::numeric_limits<double>::quiet_NaN();
   const auto multiplier =
    evaluate_series_method(method.multiplier(), asset_snapshot, context);
   const auto band_atr_period =
    evaluated_method_to_size(method.band_atr_period(), asset_snapshot, context);
+  if(band_atr_period == std::numeric_limits<std::size_t>::max())
+    return std::numeric_limits<double>::quiet_NaN();
   const auto band_range = [&]() -> double {
     switch(method.band_method_type()) {
     case KcBandMethodType::Atr: {
@@ -600,6 +639,8 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
 {
   const auto period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
+  if(period == std::numeric_limits<std::size_t>::max())
+    return std::numeric_limits<double>::quiet_NaN();
   if(asset_snapshot.size() < period) {
     return std::numeric_limits<double>::quiet_NaN();
   }
@@ -673,6 +714,8 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
 {
   const auto period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
+  if(period == std::numeric_limits<std::size_t>::max())
+    return std::numeric_limits<double>::quiet_NaN();
 
   if(asset_snapshot.size() < period) {
     return std::numeric_limits<double>::quiet_NaN();
@@ -714,6 +757,10 @@ auto pludux_tag_invoke(
    evaluated_method_to_size(method.long_period(), asset_snapshot, context);
   const auto signal_period =
    evaluated_method_to_size(method.signal_period(), asset_snapshot, context);
+  if(short_period == std::numeric_limits<std::size_t>::max() ||
+     long_period == std::numeric_limits<std::size_t>::max() ||
+     signal_period == std::numeric_limits<std::size_t>::max())
+    return std::numeric_limits<double>::quiet_NaN();
   const auto macd_method =
    SubtractMethod{EmaMethod{method.source(), short_period},
                   EmaMethod{method.source(), long_period}};
@@ -857,6 +904,10 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
   if constexpr(std::is_same_v<std::monostate, decltype(context)>) {
     return std::numeric_limits<double>::quiet_NaN();
   } else {
+    if constexpr(requires { context.has_bound_call(); }) {
+      if(context.has_bound_call())
+        return context.call_series_method(method.name(), asset_snapshot);
+    }
     const auto result_index = asset_snapshot.index();
     if(result_index == context.index()) {
       return context.call_series_method(method.name(), asset_snapshot);
@@ -889,6 +940,8 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
 {
   const auto period =
    evaluated_method_to_size(method.period(), asset_snapshot, context);
+  if(period == std::numeric_limits<std::size_t>::max())
+    return std::numeric_limits<double>::quiet_NaN();
   const auto asset_size = asset_snapshot.size();
   if(asset_size < period) {
     return std::numeric_limits<double>::quiet_NaN();
@@ -936,6 +989,10 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
    evaluated_method_to_size(method.k_smooth(), asset_snapshot, context);
   const auto d_period =
    evaluated_method_to_size(method.d_period(), asset_snapshot, context);
+  if(k_period == std::numeric_limits<std::size_t>::max() ||
+     k_smooth == std::numeric_limits<std::size_t>::max() ||
+     d_period == std::numeric_limits<std::size_t>::max())
+    return std::numeric_limits<double>::quiet_NaN();
   const auto close = CloseMethod{};
   const auto highest_high = HighestMethod{HighMethod{}, k_period};
   const auto lowest_low = LowestMethod{LowMethod{}, k_period};
@@ -990,6 +1047,11 @@ auto pludux_tag_invoke(
    evaluated_method_to_size(method.k_smooth(), asset_snapshot, context);
   const auto d_period =
    evaluated_method_to_size(method.d_period(), asset_snapshot, context);
+  if(rsi_period == std::numeric_limits<std::size_t>::max() ||
+     k_period == std::numeric_limits<std::size_t>::max() ||
+     k_smooth == std::numeric_limits<std::size_t>::max() ||
+     d_period == std::numeric_limits<std::size_t>::max())
+    return std::numeric_limits<double>::quiet_NaN();
   const auto rsi = RsiMethod{method.rsi_source(), rsi_period};
   const auto highest_rsi = HighestMethod{rsi, k_period};
   const auto lowest_rsi = LowestMethod{rsi, k_period};
@@ -1034,8 +1096,7 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
 {
   return std::ranges::all_of(
    method.conditions(), [&asset_snapshot, &context](const auto& method) {
-     return static_cast<bool>(
-      evaluate_series_method(method, asset_snapshot, context));
+     return evaluate_signal_method(method, asset_snapshot, context);
    });
 }
 
@@ -1048,8 +1109,7 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
 {
   return std::ranges::any_of(
    method.conditions(), [&asset_snapshot, &context](const auto& method) {
-     return static_cast<bool>(
-      evaluate_series_method(method, asset_snapshot, context));
+     return evaluate_signal_method(method, asset_snapshot, context);
    });
 }
 
@@ -1123,9 +1183,9 @@ auto pludux_tag_invoke(
  auto context) noexcept -> double
 {
   const auto first_result =
-   evaluate_series_method(method.first_condition(), asset_snapshot, context);
+   evaluate_signal_method(method.first_condition(), asset_snapshot, context);
   const auto second_result =
-   evaluate_series_method(method.second_condition(), asset_snapshot, context);
+   evaluate_signal_method(method.second_condition(), asset_snapshot, context);
 
   return TOperation{}(first_result, second_result);
 }
@@ -1139,7 +1199,7 @@ auto pludux_tag_invoke(
  auto context) noexcept -> double
 {
   const auto other_result =
-   evaluate_series_method(method.other_condition(), asset_snapshot, context);
+   evaluate_signal_method(method.other_condition(), asset_snapshot, context);
 
   return TOperation{}(other_result);
 }

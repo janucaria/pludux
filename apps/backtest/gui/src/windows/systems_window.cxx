@@ -4,6 +4,7 @@ module;
 #include <cstddef>
 #include <cstdint>
 #include <format>
+#include <map>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -144,7 +145,9 @@ private:
     self.render_profile(state, system);
     self.render_strategy_performance(system);
 
-    self.render_setup(state, system.main_setup(), "Main Strategy");
+    self.render_call_table(state, system);
+    const auto* call_table = state.get_call_if_present(system.call_handle());
+    self.render_setup(state, system.main_setup(), "Main Strategy", call_table);
     std::optional<std::size_t> remove_failsafe;
     std::optional<std::pair<std::size_t, std::size_t>> reorder_failsafe;
     for(auto index = std::size_t{}; index < system.failsafe_strategies().size();
@@ -168,7 +171,7 @@ private:
         failsafe.activation(
          static_cast<backtest::FailsafeStrategyActivation>(activation));
       }
-      self.render_setup(state, failsafe.setup(), "Strategy");
+      self.render_setup(state, failsafe.setup(), "Strategy", call_table);
       if(index > 0 && ImGui::Button("Move up"))
         reorder_failsafe = std::pair{index, index - 1};
       if(index > 0)
@@ -203,6 +206,23 @@ private:
     if(!self.configuration_error_.empty())
       ui::validation_message(self.configuration_error_.c_str());
 
+    try {
+      const auto calls = state.compiled_calls(system);
+      if(calls && !calls->outside_watchlist.empty() &&
+         ImGui::TreeNode("Outside Watchlist",
+                         "Outside Watchlist (%zu)",
+                         calls->outside_watchlist.size())) {
+        ImGuiListClipper rows;
+        rows.Begin(static_cast<int>(calls->outside_watchlist.size()));
+        while(rows.Step()) {
+          for(int i = rows.DisplayStart; i < rows.DisplayEnd; ++i)
+            ImGui::Text("Call table row %zu", calls->outside_watchlist[i]);
+        }
+        ImGui::TreePop();
+      }
+    } catch(const std::invalid_argument& error) {
+      ui::validation_message(error.what());
+    }
     const auto valid = state.is_system_ready(system);
     ImGui::BeginDisabled(!valid);
     if(ImGui::Button(self.editing_handle_ ? "OK" : "Create System"))
@@ -225,6 +245,76 @@ private:
     if(!valid)
       ui::validation_message("Select a non-empty Watchlist, a shared Profile, "
                              "and a Strategy for each setup.");
+  }
+
+  static void call_column(const char* label,
+                          const backtest::CallTable& table,
+                          std::string& column,
+                          const char* empty_label)
+  {
+    if(!ImGui::BeginCombo(label, column.empty() ? empty_label : column.c_str()))
+      return;
+    if(ImGui::Selectable(empty_label, column.empty()))
+      column.clear();
+    for(std::size_t i = 0; i < table.headers.size(); ++i) {
+      const auto& header = table.headers[i];
+      ImGui::PushID(static_cast<int>(i));
+      if(!header.empty() && ImGui::Selectable(header.c_str(), column == header))
+        column = header;
+      ImGui::PopID();
+    }
+    ImGui::EndCombo();
+  }
+
+  static void render_call_table(const ApplicationState& state,
+                                backtest::System& system)
+  {
+    ImGui::SeparatorText("Calls");
+    auto handle = system.call_handle();
+    const auto* selected = state.get_call_if_present(handle);
+    if(ImGui::BeginCombo("Calls table",
+                         selected         ? selected->name.c_str()
+                         : handle.valid() ? "Missing table"
+                                          : "None")) {
+      if(ImGui::Selectable("None", !handle.valid()))
+        handle = {};
+      for(const auto candidate : state.get_call_handles()) {
+        ImGui::PushID(static_cast<int>(candidate.slot_index()));
+        if(ImGui::Selectable(state.get_call(candidate).name.c_str(),
+                             candidate == handle))
+          handle = candidate;
+        ImGui::PopID();
+      }
+      ImGui::EndCombo();
+    }
+    if(handle != system.call_handle()) {
+      system.call_handle(handle);
+      system.call_columns({});
+      for(std::size_t i = 0; i < system.strategy_count(); ++i)
+        system.strategy_setup(i).call_mappings().clear();
+      selected = state.get_call_if_present(handle);
+    }
+    if(selected) {
+      call_column(
+       "Datetime", *selected, system.call_columns().datetime, "First column");
+      call_column(
+       "Asset", *selected, system.call_columns().asset, "Select a column");
+      call_column("Direction",
+                  *selected,
+                  system.call_columns().direction,
+                  "Default to Long");
+      call_column(
+       "Entry Low", *selected, system.call_columns().entry_low, "None");
+      call_column(
+       "Entry High", *selected, system.call_columns().entry_high, "None");
+      int priority =
+       system.entry_priority() == backtest::EntryPriority::CallFirst ? 0 : 1;
+      if(ImGui::Combo(
+          "Entry Priority", &priority, "Call first\0Signal first\0"))
+        system.entry_priority(priority == 0
+                               ? backtest::EntryPriority::CallFirst
+                               : backtest::EntryPriority::SignalFirst);
+    }
   }
 
   void render_watchlist(this SystemsWindow&,
@@ -250,7 +340,8 @@ private:
   void render_setup(this SystemsWindow& self,
                     const ApplicationState& state,
                     backtest::StrategySetup& setup,
-                    const char* title)
+                    const char* title,
+                    const backtest::CallTable* call_table)
   {
     ImGui::SeparatorText(title);
     const auto handle = setup.strategy_handle();
@@ -266,6 +357,28 @@ private:
           backtest::assign_setup_strategy(setup, candidate, item);
       }
       ImGui::EndCombo();
+    }
+    if(state.get_strategy_if_present(setup.strategy_handle())) {
+      const auto& fields = state.call_fields(setup.strategy_handle());
+      if(!fields.empty())
+        ImGui::SeparatorText("Call fields");
+      for(const auto& field : fields) {
+        if(!call_table) {
+          ImGui::TextDisabled("%s (select a Calls table)", field.c_str());
+          continue;
+        }
+        const auto it = setup.call_mappings().find(field);
+        auto column =
+         it == setup.call_mappings().end() ? std::string{} : it->second;
+        ImGui::PushID(field.c_str());
+        ui::field_label(field.c_str());
+        call_column("##call_mapping", *call_table, column, "Select a column");
+        ImGui::PopID();
+        if(column.empty())
+          setup.call_mappings().erase(field);
+        else
+          setup.call_mappings()[field] = std::move(column);
+      }
     }
     self.render_inputs(setup);
     self.render_entry_filter(setup);

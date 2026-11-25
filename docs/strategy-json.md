@@ -2,7 +2,8 @@
 
 Strategy JSON exchanges the rules and input defaults of a single Strategy.
 The **Strategies** editor imports and exports this file. To share a System's
-Profile selection, input overrides, and Entry Filters, save the workspace.
+Profile selection, input overrides, Calls mappings, and Entry Filters, save the
+workspace.
 The Strategy parser accepts JSON comments and rejects trailing commas.
 
 ## Root structure
@@ -38,6 +39,7 @@ each group carries a label, overlay choice, and ordered plot methods. Current
 enum spellings include:
 
 - entry timing: `CURRENT_CLOSE`, `NEXT_OPEN`
+- entry source: `SIGNAL` (default), `CALL`
 - exit activation: `SIMULTANEOUS`, `AFTER_PREVIOUS`
 - pyramid retrigger: `EVERY_EVALUATION`, `AFTER_FALSE`
 - stop/target reference: `LATEST_ENTRY_PRICE`, `AVERAGE_PRICE`,
@@ -46,9 +48,13 @@ enum spellings include:
 Reduction fractions must be greater than zero and no greater than one. Refer to
 [Execution and Position Lifecycle](execution.md) before changing these fields.
 
+Set `positions.long.entry.source` or `positions.short.entry.source` to `CALL`
+to use the matching Calls table row at the candle open. Signal and timing
+apply to entries whose source is `SIGNAL`. [Call entries](execution.md#call-entries)
+
 ## Method objects
 
-Every serialized `method` is uppercase and dot-qualified:
+Serialized `method` identifiers use uppercase, dot-qualified names.
 
 ```json
 {
@@ -64,6 +70,9 @@ String shorthand is accepted where the method has no required explicit
 parameters. Other values retain their documented casing; for example an input
 `representation` may be `UnsignedInteger`. The complete current inventory and
 contexts are in [Node and Method Reference](nodes.md).
+
+`OTHER.CALL` uses a logical `field` and an optional `representation` in `params`.
+Map the field to a column in the System's selected table. [Worked example](data-csv.md#backtest-calls-with-two-stop-alternatives)
 
 Every method object that is present must include its canonical `method`
 discriminator. Operands and payloads remain required when the concrete node has

@@ -1,14 +1,15 @@
 # Resources and Workflows
 
-Pludux stores eight reusable resources. A Backtest records a System × Asset run.
+Pludux stores nine reusable resources. A Backtest records a System × Asset run.
 
 | Resource | Owns | Used by |
 | --- | --- | --- |
 | Asset | Name, OHLCV mapping, timestamped numeric history | Watchlist |
+| Calls table | Name, column headers, and data rows | System |
 | Watchlist | Ordered, duplicate-free Assets | System |
 | Strategy | Inputs and defaults, series, long/short rules, execution path, plots | Main and Failsafe setups |
 | Profile | Sizing, drawdown adjustment, insufficient-cash policy | System |
-| System | Watchlist, Profile, Main setup, ordered Failsafes, performance calculation settings | Portfolio |
+| System | Watchlist, Profile, Main setup, ordered Failsafes, performance settings, optional Calls table and mappings | Portfolio |
 | Market | Minimum quantity and quantity step | Portfolio |
 | Broker | Fixed/percentage fee rules | Portfolio |
 | Portfolio | Capital, constraints, comparators, ordered Systems | Runner/results |
@@ -45,6 +46,37 @@ A System expands its Watchlist into per-Asset simulations. All its setups use
 the same Profile and Strategy Performance calculation settings. Each setup
 maintains its own theoretical trades and performance history for each Asset.
 [Execution and Position Lifecycle](execution.md)
+
+## Calls
+
+The Calls library holds named trade-call tables with headers and data rows.
+A System can select one table for its Strategy setups. The Strategy side's
+entry source determines whether matching rows can request an entry.
+
+Map **Asset** and **Datetime** in the System. Datetime defaults to the first
+column. Pludux matches the Asset by exact Watchlist name, then by a unique
+`.csv` filename match, such as `ABC` to `ABC.csv`. Rows outside the Watchlist
+remain unmatched. A Call can request entry at a real candle with the exact
+timestamp. Duplicate Asset and datetime keys report both conflicting rows.
+
+The optional **Direction** column accepts the values below. An unmapped
+column or blank cell defaults to Long. Pludux ignores case and surrounding
+whitespace and reports the row and column of any unrecognized value.
+
+| Direction | Accepted values |
+| --- | --- |
+| Long | `long`, `true`, `yes`, `1` |
+| Short | `short`, `false`, `no`, `0` |
+
+**Entry Low** and **Entry High** are optional inclusive bounds on the open
+price. Equal bounds specify an exact price. Map any extra numeric columns to
+logical `OTHER.CALL` fields separately for each Main or Failsafe setup. A
+required field with no mapping leaves the setup incomplete. Blank extra cells
+give missing values. Text and non-finite numbers in mapped numeric cells are
+invalid.
+
+The table preview, diagnostics, and results count the header as row 1, so
+the first data row is row 2. [Worked CSV import example](data-csv.md#backtest-calls-with-two-stop-alternatives)
 
 ## Profiles and sizing
 

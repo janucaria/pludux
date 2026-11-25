@@ -11,7 +11,7 @@ export namespace pludux::backtest {
 class PortfolioTimeline {
 public:
   struct Row {
-    std::time_t timestamp{};
+    double timestamp{};
     double capital{};
     double available_capital{};
     double equity{};

@@ -1,7 +1,7 @@
 # Workspace Persistence
 
-Pludux uses three file forms: CSV imports one Asset's history; Strategy JSON
-exchanges one Strategy; `.pludux` saves the complete GUI workspace.
+Pludux can import Asset history and trade-call tables from CSV. Strategy JSON
+exchanges one Strategy. A `.pludux` file saves the complete GUI workspace.
 
 ## Workspace content
 
@@ -18,12 +18,14 @@ A workspace currently has this conceptual root:
 }
 ```
 
-`store` contains arenas for Assets, Watchlists, Strategies, Profiles,
+`store` contains arenas for Assets, Calls, Watchlists, Strategies, Profiles,
 Systems, Markets, Brokers, and Portfolios. References use slot and generation
 metadata so a deleted slot cannot silently become another object. Systems store
-their Profile reference, Main and Failsafe Strategy setups, and performance
-settings. Each setup stores its Strategy reference, input overrides, and Entry Filter. Imported CSV
-history is embedded; reopening does not require the original CSV.
+their Profile reference, Main and Failsafe Strategy setups, performance
+settings, and optional Calls table with its column mappings and Entry Priority.
+Each setup stores its Strategy reference, input overrides, Entry Filter, and
+logical `OTHER.CALL` field mappings. The workspace embeds Asset history and
+the Calls library, including each table's name, headers, and rows.
 
 `documentState` stores document-related editing/selection state and `viewState`
 stores presentation state. This is application persistence, not a stable public
@@ -48,6 +50,9 @@ shaped. Explicit `null`, wrong JSON types, invalid enum or method names, invalid
 ranges, fractional integral values, negative unsigned values, and numeric
 overflow are rejected. Workspace files use strict JSON: comments and trailing
 commas are not accepted.
+
+Workspaces saved before Calls may omit the Calls collections and settings.
+Pludux opens them with an empty Calls library and Signal entry sources.
 
 Portfolio result timelines are not durable stored resources. Any document edit
 invalidates results and recreates runners. A workspace version mismatch also

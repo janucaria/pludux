@@ -176,6 +176,7 @@ target_sources(${PROJECT_NAME} PRIVATE
 
     src/window_context.cxx
     src/windows/assets_window.cxx
+    src/windows/calls_window.cxx
     src/windows/watchlists_window.cxx
     src/windows/strategies_window.cxx
     src/windows/markets_window.cxx

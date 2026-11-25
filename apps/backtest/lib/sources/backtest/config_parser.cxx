@@ -19,6 +19,7 @@ export module pludux.backtest:config_parser;
 
 import pludux;
 
+import :call_node;
 import :drawdown_node;
 import :equity_node;
 import :position_node;
@@ -1060,50 +1061,66 @@ auto make_strategy_config_parser_for() -> ConfigParser<TContext>
   register_atr_distance.template operator()<TpAtrNode<TContext>>(
    "TAKE_PROFIT.ATR");
 
+  using Representation = NumericInputNode::ValueRepresentation;
+  const auto representation_name = [](Representation value) -> const char* {
+    switch(value) {
+    case Representation::SignedInteger:
+      return "SignedInteger";
+    case Representation::UnsignedInteger:
+      return "UnsignedInteger";
+    default:
+      return "Decimal";
+    }
+  };
+  const auto parse_representation = [](const jsoncons::ojson& params) {
+    const auto name =
+     get_param_or<std::string>(params, "representation", "Decimal");
+    if(name == "Decimal")
+      return Representation::Decimal;
+    if(name == "SignedInteger")
+      return Representation::SignedInteger;
+    if(name == "UnsignedInteger")
+      return Representation::UnsignedInteger;
+    throw std::invalid_argument{"Invalid numeric input representation"};
+  };
   parser.register_node_parser(
    "INPUT.NUMERIC",
-   [](const Parser&, const Node& node) -> jsoncons::ojson {
+   [representation_name](const Parser&, const Node& node) -> jsoncons::ojson {
      const auto* input = node_cast<NumericInputNode>(node);
      if(!input) {
        return jsoncons::ojson::null();
      }
-     const auto representation =
-      input->representation() ==
-        NumericInputNode::ValueRepresentation::SignedInteger
-       ? "SignedInteger"
-      : input->representation() ==
-         NumericInputNode::ValueRepresentation::UnsignedInteger
-        ? "UnsignedInteger"
-        : "Decimal";
-     return jsoncons::ojson::object{{"label", input->label()},
-                                    {"representation", representation},
-                                    {"value", input->value()}};
+     return jsoncons::ojson::object{
+      {"label", input->label()},
+      {"representation", representation_name(input->representation())},
+      {"value", input->value()}};
    },
-   [](typename Parser::Parser, const jsoncons::ojson& params) -> Node {
+   [parse_representation](typename Parser::Parser,
+                          const jsoncons::ojson& params) -> Node {
      const auto defaults = NumericInputNode{};
-     const auto representation =
-      get_param_or<std::string>(
-       params,
-       "representation",
-       defaults.representation() ==
-           NumericInputNode::ValueRepresentation::SignedInteger
-        ? "SignedInteger"
-       : defaults.representation() ==
-          NumericInputNode::ValueRepresentation::UnsignedInteger
-        ? "UnsignedInteger"
-        : "Decimal");
-     if(representation != "Decimal" && representation != "SignedInteger" &&
-        representation != "UnsignedInteger") {
-       throw std::invalid_argument{"Invalid numeric input representation"};
-     }
      return NumericInputNode{
       get_param_or<std::string>(params, "label", defaults.label()),
-      representation == "SignedInteger"
-       ? NumericInputNode::ValueRepresentation::SignedInteger
-      : representation == "UnsignedInteger"
-        ? NumericInputNode::ValueRepresentation::UnsignedInteger
-        : NumericInputNode::ValueRepresentation::Decimal,
+      parse_representation(params),
       get_param_or<double>(params, "value", defaults.value())};
+   });
+
+  parser.register_node_parser(
+   "OTHER.CALL",
+   [representation_name](const Parser&, const Node& node) -> jsoncons::ojson {
+     const auto* call = node_cast<CallNode>(node);
+     if(!call) {
+       return jsoncons::ojson::null();
+     }
+     return jsoncons::ojson::object{
+      {"field", call->field()},
+      {"representation", representation_name(call->representation())}};
+   },
+   [parse_representation](typename Parser::Parser,
+                          const jsoncons::ojson& params) -> Node {
+     auto field = strict_param_as<std::string>(params.at("field"));
+     if(field.empty())
+       throw std::invalid_argument{"OTHER.CALL requires a field name"};
+     return CallNode{std::move(field), parse_representation(params)};
    });
 
   parser.register_node_parser(

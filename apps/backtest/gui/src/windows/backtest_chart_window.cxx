@@ -1965,8 +1965,7 @@ private:
     for(auto backtest_index = std::size_t{};
         backtest_index < backtest_timestamps.size();
         ++backtest_index) {
-      const auto timestamp =
-       static_cast<std::time_t>(backtest_timestamps[backtest_index]);
+      const auto timestamp = backtest_timestamps[backtest_index];
       while(portfolio_index < timeline.size() &&
             timeline.row(portfolio_index).timestamp < timestamp) {
         ++portfolio_index;
@@ -2002,8 +2001,7 @@ private:
     for(auto backtest_index = std::size_t{};
         backtest_index < backtest_timestamps.size();
         ++backtest_index) {
-      const auto timestamp =
-       static_cast<std::time_t>(backtest_timestamps[backtest_index]);
+      const auto timestamp = backtest_timestamps[backtest_index];
       while(portfolio_index < timeline.size() &&
             timeline.row(portfolio_index).timestamp < timestamp) {
         ++portfolio_index;

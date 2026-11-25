@@ -78,6 +78,8 @@ public:
                        node_to_erased_method<RequestedOrderMethodContext>(
                         comparator.expression(), conversion_context)});
     }
+    uses_calls_ = std::ranges::any_of(
+     backtests_, [](const auto& run) { return run.runner().uses_calls(); });
     self_validate_assets();
     total_timestamps_ = collect_timestamps().size();
   }
@@ -121,7 +123,7 @@ public:
     }
     self.initialize_results(results);
 
-    auto next_timestamp = std::numeric_limits<std::time_t>::max();
+    auto next_timestamp = std::numeric_limits<double>::infinity();
     for(auto index = std::size_t{}; index < self.backtests_.size(); ++index) {
       const auto& asset = self.backtests_[index].runner().asset();
       const auto& backtest_result = results.backtests()[index];
@@ -130,10 +132,9 @@ public:
       }
       const auto snapshot =
        asset.get_snapshot(backtest_result.timeline().size());
-      next_timestamp =
-       std::min(next_timestamp, static_cast<std::time_t>(snapshot.datetime()));
+      next_timestamp = std::min(next_timestamp, snapshot.datetime());
     }
-    if(next_timestamp == std::numeric_limits<std::time_t>::max()) {
+    if(next_timestamp == std::numeric_limits<double>::infinity()) {
       return;
     }
 
@@ -146,11 +147,12 @@ public:
         continue;
       }
       const auto snapshot = asset.get_snapshot(result.timeline().size());
-      if(static_cast<std::time_t>(snapshot.datetime()) != next_timestamp) {
+      if(snapshot.datetime() != next_timestamp) {
         continue;
       }
-      self.sync_backtest(backtest.runner());
-      if(backtest.runner().begin_bar(result.timeline())) {
+      if(!self.uses_calls_)
+        self.sync_backtest(backtest.runner());
+      if(backtest.runner().begin_bar(result.timeline(), self.uses_calls_)) {
         active.push_back(index);
       }
     }
@@ -224,6 +226,10 @@ public:
     });
     run_exit_phase(
      [](BacktestRunner& runner, BacktestResults&) { runner.run_intrabar(); });
+    if(self.uses_calls_) {
+      for(const auto index : active)
+        self.backtests_[index].runner().mark_bar_close();
+    }
     run_exit_phase([](BacktestRunner& runner, BacktestResults& result) {
        runner.run_close_exits(result.strategy_series_results());
     });
@@ -315,6 +321,7 @@ private:
   double max_drawdown_{};
   std::size_t total_timestamps_{};
   bool is_failed_{};
+  bool uses_calls_{};
 
   auto requested_order_precedes(this const PortfolioRunner& self,
                                 const RankedRequestedOrder& lhs,
@@ -357,14 +364,13 @@ private:
   }
 
   auto collect_timestamps(this const PortfolioRunner& self)
-   -> std::vector<std::time_t>
+   -> std::vector<double>
   {
-    auto timestamps = std::vector<std::time_t>{};
+    auto timestamps = std::vector<double>{};
     for(const auto& backtest : self.backtests_) {
       const auto& asset = backtest.runner().asset();
       for(auto index = std::size_t{}; index < asset.size(); ++index) {
-        timestamps.push_back(
-         static_cast<std::time_t>(asset.get_snapshot(index).datetime()));
+        timestamps.push_back(asset.get_snapshot(index).datetime());
       }
     }
     std::ranges::sort(timestamps);

@@ -37,7 +37,7 @@ public:
   BacktestTimeline() = default;
 
   struct Row {
-    std::time_t market_timestamp{};
+    double market_timestamp{};
     double market_price{};
     std::size_t market_lookback{};
     std::vector<TradeEvent> trade_events{};
@@ -177,7 +177,7 @@ public:
   }
 
   auto market_timestamp(this const BacktestTimeline& self,
-                        std::size_t index) noexcept -> std::time_t
+                        std::size_t index) noexcept -> double
   {
     return self.market_timestamps_[index];
   }
@@ -513,7 +513,7 @@ private:
     }
   }
 
-  std::vector<std::time_t> market_timestamps_;
+  std::vector<double> market_timestamps_;
   std::vector<double> market_prices_;
   std::vector<std::size_t> market_lookbacks_;
   std::vector<std::vector<TradeEvent>> trade_events_;

@@ -1,5 +1,7 @@
 module;
 
+#include <map>
+
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -45,6 +47,7 @@ import :entry_filter_method_context;
 import :broker;
 import :market;
 import :system;
+import :calls;
 import :strategy_intent;
 import :strategy_performance;
 import :strategy_session;
@@ -194,7 +197,8 @@ public:
      ExitActivation stop_losses_activation = ExitActivation::Simultaneous,
      ExitActivation take_profits_activation = ExitActivation::Simultaneous,
      PyramidingRetrigger pyramiding_retrigger =
-      PyramidingRetrigger::EveryEvaluation)
+      PyramidingRetrigger::EveryEvaluation,
+     EntrySource source = EntrySource::Signal)
     : entry_method_{std::move(entry_method)}
     , signal_exits_{std::move(signal_exits)}
     , pyramiding_signal_{std::move(pyramiding_signal)}
@@ -211,7 +215,17 @@ public:
     , stop_losses_activation_{stop_losses_activation}
     , take_profits_activation_{take_profits_activation}
     , pyramiding_retrigger_{pyramiding_retrigger}
+    , source_{source}
     {
+    }
+
+    auto entry_source() const noexcept -> EntrySource
+    {
+      return source_;
+    }
+    void entry_source(EntrySource value) noexcept
+    {
+      source_ = value;
     }
 
     auto entry_method(this const PositionRule& self) noexcept
@@ -333,6 +347,7 @@ public:
     ExitActivation take_profits_activation_{ExitActivation::Simultaneous};
     PyramidingRetrigger pyramiding_retrigger_{
      PyramidingRetrigger::EveryEvaluation};
+    EntrySource source_{EntrySource::Signal};
   };
 
   class CompiledStrategy {
@@ -357,6 +372,9 @@ public:
     }
 
     StrategyPerformance strategy_performance;
+    CallValues calls;
+    std::string call_table_name;
+    EntryPriority entry_priority{EntryPriority::CallFirst};
     ErasedSeriesMethod<EntryFilterMethodContext> entry_filter;
     OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>
      series_methods;
@@ -535,6 +553,10 @@ public:
     }
     strategy_states_.reserve(strategies.size());
     for(auto& strategy : strategies) {
+      uses_calls_ =
+       uses_calls_ ||
+       strategy.long_position.entry_source() == EntrySource::Call ||
+       strategy.short_position.entry_source() == EntrySource::Call;
       strategy_states_.emplace_back(std::move(strategy));
     }
     if(strategy_states_.front().failsafe_activation !=
@@ -542,6 +564,11 @@ public:
       throw std::invalid_argument{"Main strategy must always be active"};
     }
     activate_strategy(0);
+  }
+
+  bool uses_calls() const noexcept
+  {
+    return uses_calls_;
   }
 
   auto strategy_count(this const BacktestRunner& self) noexcept -> std::size_t
@@ -633,12 +660,18 @@ public:
            SeriesEvaluationResults& series_evaluation_results,
            BacktestTimeline& timeline)
   {
-    if(!self.begin_bar(timeline)) {
+    if(!self.begin_bar(timeline, self.uses_calls_)) {
       return;
     }
     self.run_open_exits();
+    if(self.uses_calls_)
+      self.update_accounting();
     self.run_open_entries(series_evaluation_results);
     self.run_intrabar();
+    if(self.uses_calls_) {
+      self.mark_bar_close();
+      self.update_accounting();
+    }
     self.run_close_exits(series_evaluation_results);
     self.run_close_entries(series_evaluation_results);
     self.finish_bar(series_evaluation_results, timeline);
@@ -648,19 +681,26 @@ public:
            std::vector<SeriesEvaluationResults>& setup_series_results,
            BacktestTimeline& timeline)
   {
-    if(!self.begin_bar(timeline)) {
+    if(!self.begin_bar(timeline, self.uses_calls_)) {
       return;
     }
     self.run_open_exits();
+    if(self.uses_calls_)
+      self.update_accounting();
     self.run_open_entries(setup_series_results);
     self.run_intrabar();
+    if(self.uses_calls_) {
+      self.mark_bar_close();
+      self.update_accounting();
+    }
     self.run_close_exits(setup_series_results);
     self.run_close_entries(setup_series_results);
     self.finish_bar(setup_series_results, timeline);
   }
 
-  auto begin_bar(this BacktestRunner& self, const BacktestTimeline& timeline)
-   -> bool
+  auto begin_bar(this BacktestRunner& self,
+                 const BacktestTimeline& timeline,
+                 bool mark_at_open = false) -> bool
   {
     if(self.is_failed() || self.active_snapshot_ ||
        timeline.size() >= self.asset_.size()) {
@@ -672,14 +712,15 @@ public:
     const auto& asset_snapshot = *self.active_snapshot_;
     const auto market_timestamp =
      static_cast<std::time_t>(asset_snapshot.datetime());
+    const auto mark_price =
+     mark_at_open ? asset_snapshot.open() : asset_snapshot.close();
     self.execution_session_.begin_market_bar(
-     market_timestamp, asset_snapshot.close(), asset_snapshot.lookback());
+     market_timestamp, mark_price, asset_snapshot.lookback());
     for(auto index = std::size_t{}; index < self.strategy_count(); ++index) {
       self.activate_strategy(index);
       self.strategy_trade_session_.begin_market_bar(
-       market_timestamp, asset_snapshot.close(), asset_snapshot.lookback());
-       self.strategy_session_.begin_market_bar(market_timestamp,
-                                              asset_snapshot.close());
+       market_timestamp, mark_price, asset_snapshot.lookback());
+      self.strategy_session_.begin_market_bar(market_timestamp, mark_price);
       self.closed_position_is_long_.reset();
     }
     self.entry_filter_decisions_.clear();
@@ -691,6 +732,17 @@ public:
      self.other_backtests_unrealized_pnl_ +
      self.execution_session_.unrealized_pnl());
     return true;
+  }
+
+  void mark_bar_close(this BacktestRunner& self)
+  {
+    const auto close = self.active_snapshot_->close();
+    self.execution_session_.market_price(close);
+    for(std::size_t index = 0; index < self.strategy_count(); ++index) {
+      self.activate_strategy(index);
+      self.strategy_trade_session_.market_price(close);
+      self.strategy_session_.market_price(close);
+    }
   }
 
   void run_open_exits(this BacktestRunner& self)
@@ -725,6 +777,46 @@ public:
     }
     self.pending_pyramiding_ = false;
 
+    const auto* row = self.current_call();
+    if(row) {
+      const auto& rule =
+       row->is_long ? self.long_position_ : self.short_position_;
+      if(rule.entry_source() != EntrySource::Call)
+        row = nullptr;
+    }
+    if(row) {
+      const auto& state = self.strategy_states_[*self.active_strategy_index_];
+      const auto open = asset_snapshot.open();
+      std::string reason;
+      if((row->entry_low && open < *row->entry_low) ||
+         (row->entry_high && open > *row->entry_high))
+        reason = "Outside entry bounds";
+      else if(self.strategy_trade_session_.is_open() ||
+              self.closed_position_is_long_ == row->is_long)
+        reason = "Position conflict";
+      else if(state.entry_priority == EntryPriority::SignalFirst &&
+              self.pending_entries_[row->is_long ? 1 : 0] &&
+              self.closed_position_is_long_ != !row->is_long)
+        reason = "Signal has priority";
+      if(reason.empty()) {
+        if(self.execute_entry_action(row->is_long,
+                                     open,
+                                     asset_snapshot[1],
+                                     context,
+                                     current_drawdown_ratio)) {
+          self.pending_entries_.fill(false);
+          return;
+        }
+      } else
+        self.position_sizing_decisions_.push_back(PositionSizingDecision{
+         .strategy_index = *self.active_strategy_index_,
+         .direction =
+          row->is_long ? StrategyDirection::Long : StrategyDirection::Short,
+         .entry_price = open,
+         .call_table = state.call_table_name,
+         .call_row = row->row,
+         .call_skip = std::move(reason)});
+    }
     if(self.strategy_trade_session_.is_flat()) {
       self.execute_pending_entry(asset_snapshot.open(),
                                  decision_snapshot,
@@ -954,7 +1046,7 @@ public:
     self.update_accounting();
 
     timeline.append(BacktestTimeline::Row{
-     .market_timestamp = self.execution_session_.market_timestamp(),
+     .market_timestamp = self.active_snapshot_->datetime(),
      .market_price = self.execution_session_.market_price(),
      .market_lookback = self.execution_session_.market_lookback(),
      .trade_events = self.execution_session_.trade_events(),
@@ -962,7 +1054,7 @@ public:
      .open_position = self.execution_session_.open_position_snapshot(),
      .entry_filter_decisions = self.entry_filter_decisions_,
      .position_sizing_decisions = self.position_sizing_decisions_,
-      .strategy_states = self.current_strategy_timeline_states_,
+     .strategy_states = self.current_strategy_timeline_states_,
      .capital = self.current_account_state_.capital(),
      .equity = self.current_account_state_.equity(),
      .peak_equity = self.current_account_state_.peak_equity(),
@@ -1033,6 +1125,9 @@ private:
   struct StrategyState {
     explicit StrategyState(CompiledStrategy strategy)
     : strategy_performance{std::move(strategy.strategy_performance)}
+    , calls{std::move(strategy.calls)}
+    , call_table_name{std::move(strategy.call_table_name)}
+    , entry_priority{strategy.entry_priority}
     , entry_filter{std::move(strategy.entry_filter)}
     , series_methods{std::move(strategy.series_methods)}
     , long_position{std::move(strategy.long_position)}
@@ -1042,9 +1137,14 @@ private:
     {
     }
 
+    std::optional<double> opening_call_time;
+    SeriesEvaluationResults call_cache;
     TradeSession strategy_trade_session;
     StrategySession strategy_session;
     StrategyPerformance strategy_performance;
+    CallValues calls;
+    std::string call_table_name;
+    EntryPriority entry_priority{EntryPriority::CallFirst};
     ErasedSeriesMethod<EntryFilterMethodContext> entry_filter;
     OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>
      series_methods;
@@ -1158,6 +1258,7 @@ private:
   std::optional<std::size_t> active_strategy_index_;
   std::vector<StrategyState> strategy_states_;
   bool entry_admission_open_{};
+  bool uses_calls_{};
   bool entry_discovery_mode_{};
   const RequestedOrder* requested_order_preapproved_{};
   const PositionSizingDecision* requested_order_decision_preapproved_{};
@@ -1208,15 +1309,39 @@ private:
     }
   }
 
+  auto position_call(this const BacktestRunner& self) noexcept -> const CallRow*
+  {
+    if(!self.active_strategy_index_ || self.strategy_trade_session_.is_flat())
+      return nullptr;
+    const auto& state = self.strategy_states_[*self.active_strategy_index_];
+    return state.opening_call_time ? &state.calls.at(*state.opening_call_time)
+                                   : nullptr;
+  }
+
+  auto current_call(this const BacktestRunner& self) noexcept -> const CallRow*
+  {
+    if(!self.active_strategy_index_)
+      return nullptr;
+    const auto& calls =
+     self.strategy_states_[*self.active_strategy_index_].calls;
+    const auto it = calls.find(self.active_snapshot_->datetime());
+    return it == calls.end() ? nullptr : &it->second;
+  }
+
   auto make_context(this BacktestRunner& self,
                     SeriesEvaluationResults& series_evaluation_results)
    -> BacktestMethodContext
   {
-    return BacktestMethodContext{self.series_methods_,
-                                 series_evaluation_results,
-                                 self.active_timeline_index_,
-                                 self.current_account_state_,
-                                 self.pyramiding_layers_};
+    return BacktestMethodContext{
+     self.series_methods_,
+     series_evaluation_results,
+     self.active_timeline_index_,
+     self.current_account_state_,
+     self.pyramiding_layers_,
+     self.position_call(),
+     self.active_strategy_index_
+      ? &self.strategy_states_[*self.active_strategy_index_].call_cache
+      : nullptr};
   }
 
   auto with_open_position_context(this const BacktestRunner& self,
@@ -1250,8 +1375,8 @@ private:
                                    const AssetSnapshot& snapshot,
                                    BacktestMethodContext context) -> bool
   {
-    const auto signal = static_cast<bool>(
-     evaluate_series_method(rule.pyramiding_signal(), snapshot, context));
+    const auto signal =
+     evaluate_signal_method(rule.pyramiding_signal(), snapshot, context);
     if(rule.pyramiding_retrigger() == PyramidingRetrigger::EveryEvaluation) {
       return signal;
     }
@@ -2297,8 +2422,8 @@ private:
          index < position.signal_exit_states().size() &&
          position.signal_exit_states()[index].enabled() &&
          !position.signal_exit_states()[index].consumed() &&
-         static_cast<bool>(evaluate_series_method(
-          signal_exit.signal_method(), snapshot, position_context))) {
+         evaluate_signal_method(
+          signal_exit.signal_method(), snapshot, position_context)) {
         indices.push_back(index);
       }
     }
@@ -2388,6 +2513,48 @@ private:
          .method = std::string{self.position_sizing_.name()},
          .entry_price = price,
          .outcome = PositionSizingDecisionOutcome::EntryFiltered};
+    if(self.active_strategy_index_) {
+      auto& state = self.strategy_states_[*self.active_strategy_index_];
+      const auto* row =
+       rule.entry_source() == EntrySource::Call ? self.current_call() : nullptr;
+      if(row && state.opening_call_time != self.active_snapshot_->datetime())
+        state.call_cache.clear();
+      state.opening_call_time =
+       row ? std::optional{self.active_snapshot_->datetime()} : std::nullopt;
+      context.bind_call(row, evaluation_snapshot.index());
+      if(row) {
+        sizing_decision.call_table = state.call_table_name;
+        sizing_decision.call_row = row->row;
+        if(!self.requested_order_preapproved_) {
+          // Validate the opening levels before either session acquires a
+          // position.
+          const auto quantity = is_long ? 1.0 : -1.0;
+          auto preview = TradePosition{0,
+                                       *self.active_strategy_index_,
+                                       quantity,
+                                       std::time_t{},
+                                       price,
+                                       0.0};
+          try {
+            self.update_stop_target_prices(preview,
+                                           TradeEntry{quantity, price},
+                                           rule,
+                                           false,
+                                           evaluation_snapshot,
+                                           context);
+            const auto adverse_price =
+             price - quantity * preview.risk_distance();
+            if(!std::isfinite(adverse_price) || adverse_price <= 0.0)
+              throw std::runtime_error{"Invalid adverse 1R exit price"};
+          } catch(const std::runtime_error& error) {
+            sizing_decision.call_skip = error.what();
+            self.position_sizing_decisions_.push_back(
+             std::move(sizing_decision));
+            return false;
+          }
+        }
+      }
+    }
     const auto preapproved = self.requested_order_preapproved_ != nullptr;
     const auto execution_blocked =
      !preapproved &&
@@ -2460,13 +2627,10 @@ private:
 
     if(self.entry_discovery_mode_ && requested_order) {
       self.discovered_requested_order_.emplace(
-        self.active_strategy_index_.value_or(0),
+       self.active_strategy_index_.value_or(0),
        std::move(*requested_order),
        performance_snapshot,
-       self.active_timeline_index_ > 0 &&
-         evaluation_snapshot.datetime() != self.active_snapshot_->datetime()
-        ? 1U
-        : 0U,
+       evaluation_snapshot.lookback() - self.active_snapshot_->lookback(),
        std::move(sizing_decision),
        self.position_sizing_decisions_.size(),
        self.entry_filter_decisions_.size());
@@ -2477,7 +2641,8 @@ private:
       ? self.admit_requested_order(*requested_order, sizing_decision)
       : std::nullopt;
     if(sizing_decision.outcome ==
-       PositionSizingDecisionOutcome::MaximumCombinedLayers) {
+        PositionSizingDecisionOutcome::MaximumCombinedLayers &&
+       rule.entry_source() != EntrySource::Call) {
       self.position_sizing_decisions_.push_back(std::move(sizing_decision));
       return true;
     }
@@ -2556,13 +2721,10 @@ private:
     if(self.entry_discovery_mode_ && requested_order) {
       if(!self.discovered_requested_order_) {
         self.discovered_requested_order_.emplace(
-          self.active_strategy_index_.value_or(0),
+         self.active_strategy_index_.value_or(0),
          std::move(*requested_order),
          performance_snapshot,
-         self.active_timeline_index_ > 0 &&
-           evaluation_snapshot.datetime() != self.active_snapshot_->datetime()
-          ? 1U
-          : 0U,
+         evaluation_snapshot.lookback() - self.active_snapshot_->lookback(),
          std::move(sizing_decision),
          self.position_sizing_decisions_.size(),
          self.entry_filter_decisions_.size());
@@ -2622,9 +2784,9 @@ private:
                                    std::optional<bool> closed_position_is_long)
   {
     const auto can_enter = [&](const PositionRule& rule) {
-      return rule.entry_timing() == SignalTiming::CurrentClose &&
-             static_cast<bool>(
-              evaluate_series_method(rule.entry_method(), snapshot, context));
+      return rule.entry_source() == EntrySource::Signal &&
+             rule.entry_timing() == SignalTiming::CurrentClose &&
+             evaluate_signal_method(rule.entry_method(), snapshot, context);
     };
     if((!closed_position_is_long || !*closed_position_is_long) &&
        can_enter(self.long_position_) &&
@@ -2644,13 +2806,15 @@ private:
                                   BacktestMethodContext context)
   {
     self.pending_entries_[0] =
+     self.long_position_.entry_source() == EntrySource::Signal &&
      self.long_position_.entry_timing() == SignalTiming::NextOpen &&
-     static_cast<bool>(evaluate_series_method(
-      self.long_position_.entry_method(), snapshot, context));
+     evaluate_signal_method(
+      self.long_position_.entry_method(), snapshot, context);
     self.pending_entries_[1] =
+     self.short_position_.entry_source() == EntrySource::Signal &&
      self.short_position_.entry_timing() == SignalTiming::NextOpen &&
-     static_cast<bool>(evaluate_series_method(
-      self.short_position_.entry_method(), snapshot, context));
+     evaluate_signal_method(
+      self.short_position_.entry_method(), snapshot, context);
 
     self.pending_pyramiding_ = false;
     self.pending_signal_exit_indices_.clear();
@@ -2676,8 +2840,8 @@ private:
          index < position.signal_exit_states().size() &&
          position.signal_exit_states()[index].enabled() &&
          !position.signal_exit_states()[index].consumed() &&
-         static_cast<bool>(evaluate_series_method(
-          signal_exit.signal_method(), snapshot, position_context))) {
+         evaluate_signal_method(
+          signal_exit.signal_method(), snapshot, position_context)) {
         self.pending_signal_exit_indices_.push_back(index);
       }
     }

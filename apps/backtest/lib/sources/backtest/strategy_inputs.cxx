@@ -1,5 +1,6 @@
 module;
 
+#include <algorithm>
 #include <string>
 #include <utility>
 #include <vector>
@@ -9,375 +10,363 @@ export module pludux.backtest:strategy_inputs;
 import pludux;
 
 import :strategy_setup;
+import :execution_model;
+import :call_node;
 import :risk_distance_node;
 import :position_node;
 import :strategy;
 import :stop_target_price_node;
 
-export namespace pludux::backtest {
+namespace pludux::backtest {
+namespace {
 
-void collect_numeric_inputs_from_node(
- const ErasedNode<BacktestMethodContext>& node,
- std::vector<NumericInputNode>& inputs);
+struct StrategyDeclarations {
+  std::vector<NumericInputNode> inputs;
+  std::vector<std::string> call_fields;
+};
 
-void collect_numeric_inputs_from_node(const NumericInputNode& node,
-                                      std::vector<NumericInputNode>& inputs)
+void collect_declarations(const ErasedNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations);
+
+void collect_declarations(const NumericInputNode& node,
+                          StrategyDeclarations& declarations)
 {
-  inputs.push_back(node);
+  declarations.inputs.push_back(node);
 }
 
-void collect_numeric_inputs_from_node(const auto&,
-                                      std::vector<NumericInputNode>&)
+void collect_declarations(const CallNode& node,
+                          StrategyDeclarations& declarations)
 {
-}
-
-void collect_numeric_inputs_from_node(
- const ChangeNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.source(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const LookbackNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.source(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const SelectOutputNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.source(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const HighestNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.source(), inputs);
-  collect_numeric_inputs_from_node(node.period(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const LowestNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.source(), inputs);
-  collect_numeric_inputs_from_node(node.period(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const PercentageNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.base(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const SlAmountNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.value(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const RiskDistanceAmountNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.value(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const RiskDistancePercentNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.value(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const RiskDistanceAtrNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.period(), inputs);
-  collect_numeric_inputs_from_node(node.multiplier(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const TpAmountNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.value(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const SlPercentNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.value(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const TpPercentNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.value(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const SlAtrNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.period(), inputs);
-  collect_numeric_inputs_from_node(node.multiplier(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const TpAtrNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.period(), inputs);
-  collect_numeric_inputs_from_node(node.multiplier(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const TpRMultipleNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.value(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const PositionRMultipleNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.source(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const StddevNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.source(), inputs);
-  collect_numeric_inputs_from_node(node.period(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const SmaNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.source(), inputs);
-  collect_numeric_inputs_from_node(node.period(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const EmaNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.source(), inputs);
-  collect_numeric_inputs_from_node(node.period(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const RmaNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.source(), inputs);
-  collect_numeric_inputs_from_node(node.period(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const WmaNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.source(), inputs);
-  collect_numeric_inputs_from_node(node.period(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const HmaNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.source(), inputs);
-  collect_numeric_inputs_from_node(node.period(), inputs);
-}
-
-void collect_numeric_inputs_from_node(const MacdNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.source(), inputs);
-  collect_numeric_inputs_from_node(node.fast_period(), inputs);
-  collect_numeric_inputs_from_node(node.slow_period(), inputs);
-  collect_numeric_inputs_from_node(node.signal_period(), inputs);
-}
-
-void collect_numeric_inputs_from_node(const AtrNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.period(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const RocNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.source(), inputs);
-  collect_numeric_inputs_from_node(node.period(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const RsiNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.source(), inputs);
-  collect_numeric_inputs_from_node(node.period(), inputs);
-}
-
-void collect_numeric_inputs_from_node(const BbNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.source(), inputs);
-  collect_numeric_inputs_from_node(node.period(), inputs);
-  collect_numeric_inputs_from_node(node.stddev(), inputs);
-}
-
-void collect_numeric_inputs_from_node(const KcNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.source(), inputs);
-  collect_numeric_inputs_from_node(node.period(), inputs);
-  collect_numeric_inputs_from_node(node.multiplier(), inputs);
-  collect_numeric_inputs_from_node(node.band_atr_period(), inputs);
-}
-
-void collect_numeric_inputs_from_node(const RvolNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.period(), inputs);
-}
-
-void collect_numeric_inputs_from_node(const DonchianChannelNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.period(), inputs);
-}
-
-void collect_numeric_inputs_from_node(const StochNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.k_period(), inputs);
-  collect_numeric_inputs_from_node(node.k_smooth(), inputs);
-  collect_numeric_inputs_from_node(node.d_period(), inputs);
-}
-
-void collect_numeric_inputs_from_node(const StochRsiNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
-{
-  collect_numeric_inputs_from_node(node.rsi_source(), inputs);
-  collect_numeric_inputs_from_node(node.rsi_period(), inputs);
-  collect_numeric_inputs_from_node(node.k_period(), inputs);
-  collect_numeric_inputs_from_node(node.k_smooth(), inputs);
-  collect_numeric_inputs_from_node(node.d_period(), inputs);
-}
-
-void collect_numeric_inputs_from_node(
- const AllOfNode<BacktestMethodContext>& node,
- std::vector<NumericInputNode>& inputs)
-{
-  for(const auto& condition : node.conditions()) {
-    collect_numeric_inputs_from_node(condition, inputs);
+  auto& fields = declarations.call_fields;
+  if(std::ranges::find(fields, node.field()) == fields.end()) {
+    fields.push_back(node.field());
   }
 }
 
-void collect_numeric_inputs_from_node(
- const AnyOfNode<BacktestMethodContext>& node,
- std::vector<NumericInputNode>& inputs)
+void collect_declarations(const auto&, StrategyDeclarations&)
+{
+}
+
+void collect_declarations(const ChangeNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.source(), declarations);
+}
+
+void collect_declarations(const LookbackNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.source(), declarations);
+}
+
+void collect_declarations(const SelectOutputNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.source(), declarations);
+}
+
+void collect_declarations(const HighestNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.source(), declarations);
+  collect_declarations(node.period(), declarations);
+}
+
+void collect_declarations(const LowestNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.source(), declarations);
+  collect_declarations(node.period(), declarations);
+}
+
+void collect_declarations(const PercentageNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.base(), declarations);
+}
+
+void collect_declarations(const SlAmountNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.value(), declarations);
+}
+
+void collect_declarations(
+ const RiskDistanceAmountNode<BacktestMethodContext>& node,
+ StrategyDeclarations& declarations)
+{
+  collect_declarations(node.value(), declarations);
+}
+
+void collect_declarations(
+ const RiskDistancePercentNode<BacktestMethodContext>& node,
+ StrategyDeclarations& declarations)
+{
+  collect_declarations(node.value(), declarations);
+}
+
+void collect_declarations(
+ const RiskDistanceAtrNode<BacktestMethodContext>& node,
+ StrategyDeclarations& declarations)
+{
+  collect_declarations(node.period(), declarations);
+  collect_declarations(node.multiplier(), declarations);
+}
+
+void collect_declarations(const TpAmountNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.value(), declarations);
+}
+
+void collect_declarations(const SlPercentNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.value(), declarations);
+}
+
+void collect_declarations(const TpPercentNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.value(), declarations);
+}
+
+void collect_declarations(const SlAtrNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.period(), declarations);
+  collect_declarations(node.multiplier(), declarations);
+}
+
+void collect_declarations(const TpAtrNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.period(), declarations);
+  collect_declarations(node.multiplier(), declarations);
+}
+
+void collect_declarations(const TpRMultipleNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.value(), declarations);
+}
+
+void collect_declarations(
+ const PositionRMultipleNode<BacktestMethodContext>& node,
+ StrategyDeclarations& declarations)
+{
+  collect_declarations(node.source(), declarations);
+}
+
+void collect_declarations(const StddevNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.source(), declarations);
+  collect_declarations(node.period(), declarations);
+}
+
+void collect_declarations(const SmaNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.source(), declarations);
+  collect_declarations(node.period(), declarations);
+}
+
+void collect_declarations(const EmaNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.source(), declarations);
+  collect_declarations(node.period(), declarations);
+}
+
+void collect_declarations(const RmaNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.source(), declarations);
+  collect_declarations(node.period(), declarations);
+}
+
+void collect_declarations(const WmaNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.source(), declarations);
+  collect_declarations(node.period(), declarations);
+}
+
+void collect_declarations(const HmaNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.source(), declarations);
+  collect_declarations(node.period(), declarations);
+}
+
+void collect_declarations(const MacdNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.source(), declarations);
+  collect_declarations(node.fast_period(), declarations);
+  collect_declarations(node.slow_period(), declarations);
+  collect_declarations(node.signal_period(), declarations);
+}
+
+void collect_declarations(const AtrNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.period(), declarations);
+}
+
+void collect_declarations(const RocNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.source(), declarations);
+  collect_declarations(node.period(), declarations);
+}
+
+void collect_declarations(const RsiNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.source(), declarations);
+  collect_declarations(node.period(), declarations);
+}
+
+void collect_declarations(const BbNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.source(), declarations);
+  collect_declarations(node.period(), declarations);
+  collect_declarations(node.stddev(), declarations);
+}
+
+void collect_declarations(const KcNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.source(), declarations);
+  collect_declarations(node.period(), declarations);
+  collect_declarations(node.multiplier(), declarations);
+  collect_declarations(node.band_atr_period(), declarations);
+}
+
+void collect_declarations(const RvolNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.period(), declarations);
+}
+
+void collect_declarations(
+ const DonchianChannelNode<BacktestMethodContext>& node,
+ StrategyDeclarations& declarations)
+{
+  collect_declarations(node.period(), declarations);
+}
+
+void collect_declarations(const StochNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.k_period(), declarations);
+  collect_declarations(node.k_smooth(), declarations);
+  collect_declarations(node.d_period(), declarations);
+}
+
+void collect_declarations(const StochRsiNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  collect_declarations(node.rsi_source(), declarations);
+  collect_declarations(node.rsi_period(), declarations);
+  collect_declarations(node.k_period(), declarations);
+  collect_declarations(node.k_smooth(), declarations);
+  collect_declarations(node.d_period(), declarations);
+}
+
+void collect_declarations(const AllOfNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
 {
   for(const auto& condition : node.conditions()) {
-    collect_numeric_inputs_from_node(condition, inputs);
+    collect_declarations(condition, declarations);
+  }
+}
+
+void collect_declarations(const AnyOfNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
+{
+  for(const auto& condition : node.conditions()) {
+    collect_declarations(condition, declarations);
   }
 }
 
 template<typename TComparator, typename TContext>
-void collect_numeric_inputs_from_node(
- const ComparisonNode<TComparator, TContext>& node,
- std::vector<NumericInputNode>& inputs)
+void collect_declarations(const ComparisonNode<TComparator, TContext>& node,
+                          StrategyDeclarations& declarations)
 {
-  collect_numeric_inputs_from_node(node.target(), inputs);
-  collect_numeric_inputs_from_node(node.threshold(), inputs);
+  collect_declarations(node.target(), declarations);
+  collect_declarations(node.threshold(), declarations);
 }
 
 template<typename TOperator, typename TContext>
-void collect_numeric_inputs_from_node(
- const BinaryLogicalNode<TOperator, TContext>& node,
- std::vector<NumericInputNode>& inputs)
+void collect_declarations(const BinaryLogicalNode<TOperator, TContext>& node,
+                          StrategyDeclarations& declarations)
 {
-  collect_numeric_inputs_from_node(node.first_condition(), inputs);
-  collect_numeric_inputs_from_node(node.second_condition(), inputs);
+  collect_declarations(node.first_condition(), declarations);
+  collect_declarations(node.second_condition(), declarations);
 }
 
 template<typename TOperator, typename TContext>
-void collect_numeric_inputs_from_node(
- const UnaryLogicalNode<TOperator, TContext>& node,
- std::vector<NumericInputNode>& inputs)
+void collect_declarations(const UnaryLogicalNode<TOperator, TContext>& node,
+                          StrategyDeclarations& declarations)
 {
-  collect_numeric_inputs_from_node(node.other_condition(), inputs);
+  collect_declarations(node.other_condition(), declarations);
 }
 
-void collect_numeric_inputs_from_node(
- const CrossoverNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
+void collect_declarations(const CrossoverNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
 {
-  collect_numeric_inputs_from_node(node.source(), inputs);
-  collect_numeric_inputs_from_node(node.reference(), inputs);
+  collect_declarations(node.source(), declarations);
+  collect_declarations(node.reference(), declarations);
 }
 
-void collect_numeric_inputs_from_node(
- const CrossunderNode<BacktestMethodContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
+void collect_declarations(const CrossunderNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
 {
-  collect_numeric_inputs_from_node(node.source(), inputs);
-  collect_numeric_inputs_from_node(node.reference(), inputs);
+  collect_declarations(node.source(), declarations);
+  collect_declarations(node.reference(), declarations);
 }
 
 template<typename TBinaryFn, typename TContext>
-void collect_numeric_inputs_from_node(const BinaryOperatorNode<TBinaryFn, TContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
+void collect_declarations(const BinaryOperatorNode<TBinaryFn, TContext>& node,
+                          StrategyDeclarations& declarations)
 {
-  collect_numeric_inputs_from_node(node.operand1(), inputs);
-  collect_numeric_inputs_from_node(node.operand2(), inputs);
+  collect_declarations(node.operand1(), declarations);
+  collect_declarations(node.operand2(), declarations);
 }
 
 template<typename TUnaryFn, typename TContext>
-void collect_numeric_inputs_from_node(const UnaryOperatorNode<TUnaryFn, TContext>& node,
-                                      std::vector<NumericInputNode>& inputs)
+void collect_declarations(const UnaryOperatorNode<TUnaryFn, TContext>& node,
+                          StrategyDeclarations& declarations)
 {
-  collect_numeric_inputs_from_node(node.operand(), inputs);
+  collect_declarations(node.operand(), declarations);
 }
 
 template<typename TNode>
 auto collect_if_node(const ErasedNode<BacktestMethodContext>& node,
-                     std::vector<NumericInputNode>& inputs) -> bool
+                     StrategyDeclarations& declarations) -> bool
 {
   const auto* typed_node = node_cast<TNode>(node);
   if(!typed_node) {
     return false;
   }
 
-  collect_numeric_inputs_from_node(*typed_node, inputs);
+  collect_declarations(*typed_node, declarations);
   return true;
 }
 
-void collect_numeric_inputs_from_node(
- const ErasedNode<BacktestMethodContext>& node,
- std::vector<NumericInputNode>& inputs)
+void collect_declarations(const ErasedNode<BacktestMethodContext>& node,
+                          StrategyDeclarations& declarations)
 {
-#define PLUDUX_COLLECT_IF_NODE(TNode)        \
-  if(collect_if_node<TNode>(node, inputs)) { \
-    return;                                  \
+#define PLUDUX_COLLECT_IF_NODE(TNode)              \
+  if(collect_if_node<TNode>(node, declarations)) { \
+    return;                                        \
   }
 
+  PLUDUX_COLLECT_IF_NODE(CallNode)
   PLUDUX_COLLECT_IF_NODE(NumericInputNode)
   PLUDUX_COLLECT_IF_NODE(ValueNode)
   PLUDUX_COLLECT_IF_NODE(DataNode)
@@ -453,33 +442,33 @@ void collect_numeric_inputs_from_node(
 #undef PLUDUX_COLLECT_IF_NODE
 }
 
-auto collect_strategy_inputs(const Strategy& strategy)
- -> std::vector<NumericInputNode>
+auto collect_declarations(const Strategy& strategy) -> StrategyDeclarations
 {
-  auto inputs = std::vector<NumericInputNode>{};
+  auto declarations = StrategyDeclarations{};
 
   for(const auto& [_, series_node] : strategy.series_nodes()) {
-    collect_numeric_inputs_from_node(series_node, inputs);
+    collect_declarations(series_node, declarations);
   }
 
   const auto collect_from_position =
-    [&inputs](const Strategy::Position& position) {
-     collect_numeric_inputs_from_node(position.entry().signal(), inputs);
+   [&declarations](const Strategy::Position& position) {
+     if(position.entry().entry_source() == EntrySource::Signal)
+       collect_declarations(position.entry().signal(), declarations);
      for(const auto& exit : position.exits()) {
        if(exit.enabled()) {
-         collect_numeric_inputs_from_node(exit.signal(), inputs);
+         collect_declarations(exit.signal(), declarations);
        }
      }
-     collect_numeric_inputs_from_node(position.pyramiding().signal(), inputs);
-     collect_numeric_inputs_from_node(position.risk_distance(), inputs);
+     collect_declarations(position.pyramiding().signal(), declarations);
+     collect_declarations(position.risk_distance(), declarations);
      for(const auto& stop_loss : position.stop_losses()) {
        if(stop_loss.enabled()) {
-         collect_numeric_inputs_from_node(stop_loss.stop_price(), inputs);
+         collect_declarations(stop_loss.stop_price(), declarations);
        }
      }
      for(const auto& take_profit : position.take_profits()) {
        if(take_profit.enabled()) {
-         collect_numeric_inputs_from_node(take_profit.target_price(), inputs);
+         collect_declarations(take_profit.target_price(), declarations);
        }
      }
    };
@@ -487,7 +476,24 @@ auto collect_strategy_inputs(const Strategy& strategy)
   collect_from_position(strategy.long_position());
   collect_from_position(strategy.short_position());
 
-  return inputs;
+  return declarations;
+}
+
+} // namespace
+} // namespace pludux::backtest
+
+export namespace pludux::backtest {
+
+auto collect_strategy_inputs(const Strategy& strategy)
+ -> std::vector<NumericInputNode>
+{
+  return collect_declarations(strategy).inputs;
+}
+
+auto collect_strategy_call_fields(const Strategy& strategy)
+ -> std::vector<std::string>
+{
+  return collect_declarations(strategy).call_fields;
 }
 
 void sync_strategy_inputs(StrategySetup& setup, const Strategy& strategy)

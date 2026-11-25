@@ -7,6 +7,7 @@ Pludux uses a docked desktop layout.
 The dockspace opens these windows:
 
 - Assets
+- Calls
 - Watchlists
 - Strategies
 - Profiles
@@ -30,11 +31,23 @@ from file paths and text input. The editor includes:
 
 The importer expects exact OHLCV column headers.
 
+## Calls window
+
+Use **Calls** to preview, rename, or delete tables in the trade-call library.
+CSV import can add a table or replace a table's contents. The workspace embeds
+each table. Select a table in **Systems** to map its columns and use it in a
+Portfolio. [Calls resource and mapping rules](resources-and-workflows.md#calls)
+
 ## Strategies window
 
 Use this window to create Strategies, edit them, duplicate them, and import or
 export JSON. The UI also exposes built-in Strategies and a node editor for
 numeric expressions, conditions, named series, and portfolio comparators.
+
+For each enabled side, set **Entry Source** to **Signal** or **Call**.
+Use the **Call** node in Strategy expressions to read a logical field from the active
+call row. For example, the same Strategy can use different columns for risk
+distance in different System setups. [Call row values](nodes.md#call-row-values)
 
 ## Watchlists window
 
@@ -60,6 +73,13 @@ Entry Filter, and activation rule.
 The System's Strategy Performance calculation settings apply to all its setups.
 Each setup tracks its own theoretical history for each Asset. To edit the
 underlying rules shared by its users, open the selected Strategy in **Strategies**.
+
+To use Calls, select a table and map its **Datetime** and **Asset** columns.
+Map **Direction** to specify Long or Short per row. Unmapped or blank
+directions default to Long. **Entry Low** and **Entry High** are optional bounds.
+Map any logical fields used by Call nodes separately for each Main or Failsafe
+setup. **Entry Priority** selects **Call first** or **Signal first** when one
+setup offers opposing entries at the same open. [Worked example](data-csv.md#backtest-calls-with-two-stop-alternatives)
 
 ## Markets and Brokers windows
 

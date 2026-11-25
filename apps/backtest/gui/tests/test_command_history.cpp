@@ -25,10 +25,20 @@ using pludux::apps::RedoCommand;
 using pludux::apps::ReplaceApplicationCommand;
 using pludux::apps::UndoCommand;
 using pludux::apps::ViewCommand;
+using pludux::backtest::CallTable;
 using pludux::backtest::Portfolio;
 using pludux::backtest::PortfolioResults;
 using pludux::backtest::PortfolioTimeline;
 using pludux::backtest::StrategySetup;
+
+auto example_calls() -> CallTable
+{
+  return CallTable{
+   "Desk calls",
+   {"Timing", "Symbol", "Bullish", "Entry Low", "Entry High", "SL1", "SL2"},
+   {{"2025-01-06", "ABC", "true", "98", "102", "90", "85"},
+    {"2025-01-07", "XYZ", "false", "", "200", "210", "220"}}};
+}
 
 auto add_strategy(ApplicationState& state, std::string name)
 {
@@ -314,6 +324,99 @@ TEST(CommandHistory, UnrelatedEditClearsPartialResultsBeforeRunnerReplacement)
             pludux::backtest::PortfolioResults{});
 }
 
+TEST(CommandHistory, ReimportingCallsInvalidatesAndUndoRestoresPortfolioResults)
+{
+  auto state = ApplicationState{};
+  const auto original = example_calls();
+  const auto call = state.add_call(original);
+  ASSERT_TRUE(call);
+  auto system = pludux::backtest::System{};
+  system.call_handle(*call);
+  const auto system_handle = state.add_system(std::move(system));
+  ASSERT_TRUE(system_handle);
+  const auto portfolio = state.add_portfolio(
+   Portfolio{"Portfolio", 1'000.0, {}, {}, 10, 10, {}, {*system_handle}});
+  ASSERT_TRUE(portfolio);
+  auto timeline = PortfolioTimeline{};
+  timeline.append({.timestamp = 1, .capital = 42.0});
+  ASSERT_TRUE(state.update_portfolio_results(
+   *portfolio, PortfolioResults{std::move(timeline), {}}));
+  auto replacement = original;
+  replacement.rows[0][5] = "93";
+  auto executor = CommandExecutor{};
+  executor.push(EditCommand{"Reimport Calls",
+                            [call = *call, replacement](auto& candidate) {
+                              ASSERT_TRUE(
+                               candidate.update_call(call, replacement));
+                            },
+                            std::nullopt});
+
+  ASSERT_EQ(executor.execute(state), ExecutionEffect::DocumentChanged);
+  EXPECT_EQ(state.get_call(*call), replacement);
+  EXPECT_TRUE(state.get_portfolio_results(*portfolio).timeline().empty());
+  executor.push(UndoCommand{});
+  ASSERT_EQ(executor.execute(state), ExecutionEffect::DocumentChanged);
+  EXPECT_EQ(state.get_call(*call), original);
+  ASSERT_EQ(state.get_portfolio_results(*portfolio).timeline().size(), 1U);
+  EXPECT_DOUBLE_EQ(
+   state.get_portfolio_results(*portfolio).timeline().row(0).capital, 42.0);
+  executor.push(RedoCommand{});
+  ASSERT_EQ(executor.execute(state), ExecutionEffect::DocumentChanged);
+  EXPECT_EQ(state.get_call(*call), replacement);
+  EXPECT_TRUE(state.get_portfolio_results(*portfolio).timeline().empty());
+  EXPECT_EQ(state.get_system(*system_handle).call_handle(), *call);
+}
+
+TEST(ApplicationStateCalls, RevalidatesTableStrategySetupAndWatchlist)
+{
+  using namespace pludux::backtest;
+  auto state = ApplicationState{};
+  state.add_profile(Profile{});
+  state.add_asset(Asset{"ABC.csv"});
+  const auto watchlist =
+   *state.add_watchlist(Watchlist{"Desk", {state.get_asset_handles().front()}});
+  auto series = pludux::OrderedNamedRegistry<StrategyNode>{};
+  series.set("stop", CallNode{"stop"});
+  auto position = Strategy::Position{};
+  position.entry(Strategy::Entry{
+   pludux::FalseNode{}, SignalTiming::NextOpen, EntrySource::Call});
+  state.add_strategy(Strategy{"Strat", series, position, {}, {}});
+  const auto strategy = state.get_strategy_handles().front();
+  auto setup = StrategySetup{strategy};
+  setup.call_mappings()["stop"] = "SL1";
+  const auto table = *state.add_call(example_calls());
+  auto system =
+   System{"Desk", watchlist, state.get_profile_handles().front(), {}, setup};
+  system.call_handle(table);
+  system.call_columns(
+   {"Timing", "Symbol", "Bullish", "Entry Low", "Entry High"});
+  EXPECT_TRUE(state.is_system_ready(system));
+  EXPECT_EQ(state.compiled_calls(system)->outside_watchlist,
+            (std::vector<std::size_t>{3}));
+  auto changed = example_calls();
+  changed.name = "Renamed";
+  EXPECT_TRUE(state.update_call(table, changed));
+  EXPECT_TRUE(state.is_system_ready(system));
+  changed.headers[5] = "New stop";
+  EXPECT_TRUE(state.update_call(table, changed));
+  EXPECT_FALSE(state.is_system_ready(system));
+  system.main_setup().call_mappings()["stop"] = "New stop";
+  EXPECT_TRUE(state.is_system_ready(system));
+  state.add_asset(Asset{"XYZ.csv"});
+  ASSERT_TRUE(state.update_watchlist(
+   watchlist, Watchlist{"Desk", {state.get_asset_handles().back()}}));
+  EXPECT_EQ(state.compiled_calls(system)->outside_watchlist,
+            (std::vector<std::size_t>{2}));
+  series.set("target", CallNode{"target"});
+  ASSERT_TRUE(state.update_strategy(
+   strategy, Strategy{"Strat", series, position, {}, {}}));
+  EXPECT_FALSE(state.is_system_ready(system));
+  system.main_setup().call_mappings()["target"] = "SL2";
+  EXPECT_TRUE(state.is_system_ready(system));
+  EXPECT_TRUE(state.remove_call(table));
+  EXPECT_FALSE(state.is_system_ready(system));
+}
+
 TEST(CommandHistory, StrategyInputSynchronizationIsUndoable)
 {
   auto original_series = pludux::OrderedNamedRegistry<
@@ -414,6 +517,49 @@ TEST(ApplicationStateSerialization, RoundTripsStandaloneStrategySelection)
   EXPECT_NE(json.str().find("\"selectedStrategyHandle\""), std::string::npos);
   const auto loaded = pludux::apps::load_application_state_json(json);
   EXPECT_EQ(loaded.selected_strategy_handle(), strategy);
+}
+
+TEST(ApplicationStateSerialization, RoundTripsCallTableAndSetupMappings)
+{
+  auto state = ApplicationState{};
+  const auto table = example_calls();
+  const auto call = state.add_call(table);
+  ASSERT_TRUE(call);
+  auto series = pludux::OrderedNamedRegistry<pludux::backtest::StrategyNode>{};
+  series.set("call stop", pludux::backtest::CallNode{"stop"});
+  state.add_strategy(
+   pludux::backtest::Strategy{"Calls", std::move(series), {}, {}, {}});
+  const auto strategy = state.get_strategy_handles().front();
+  auto main_setup = StrategySetup{strategy};
+  auto failsafe_setup = StrategySetup{strategy};
+  main_setup.call_mappings() = {{"stop", "SL1"}};
+  failsafe_setup.call_mappings() = {{"stop", "SL2"}};
+  const auto columns = pludux::backtest::CallColumns{
+   "Timing", "Symbol", "Bullish", "Entry Low", "Entry High"};
+  auto system = pludux::backtest::System{
+   "System", {}, {}, {}, main_setup, {{failsafe_setup}}};
+  system.call_handle(*call);
+  system.call_columns(columns);
+  system.entry_priority(pludux::backtest::EntryPriority::SignalFirst);
+  ASSERT_TRUE(state.add_system(std::move(system)));
+  auto json = std::stringstream{};
+
+  pludux::apps::save_application_state_json(json, state);
+  const auto loaded = pludux::apps::load_application_state_json(json);
+
+  ASSERT_EQ(loaded.get_call_handles().size(), 1U);
+  EXPECT_EQ(loaded.get_call_handles().front(), *call);
+  EXPECT_EQ(loaded.get_call(*call), table);
+  ASSERT_EQ(loaded.get_system_handles().size(), 1U);
+  const auto& restored = loaded.get_system(loaded.get_system_handles().front());
+  EXPECT_EQ(restored.call_handle(), *call);
+  EXPECT_EQ(restored.call_columns(), columns);
+  EXPECT_EQ(restored.entry_priority(),
+            pludux::backtest::EntryPriority::SignalFirst);
+  EXPECT_EQ(restored.main_setup().call_mappings(), main_setup.call_mappings());
+  ASSERT_EQ(restored.failsafe_strategies().size(), 1U);
+  EXPECT_EQ(restored.failsafe_strategies().front().setup().call_mappings(),
+            failsafe_setup.call_mappings());
 }
 
 TEST(ApplicationStateSerialization, RoundTripsDocumentAndViewSeparately)

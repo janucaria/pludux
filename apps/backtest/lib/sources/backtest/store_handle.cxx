@@ -58,6 +58,10 @@ struct AssetStoreHandle : StoreHandle<AssetStoreHandle> {
   using StoreHandle<AssetStoreHandle>::StoreHandle;
 };
 
+struct CallStoreHandle : StoreHandle<CallStoreHandle> {
+  using StoreHandle<CallStoreHandle>::StoreHandle;
+};
+
 struct WatchlistStoreHandle : StoreHandle<WatchlistStoreHandle> {
   using StoreHandle<WatchlistStoreHandle>::StoreHandle;
 };

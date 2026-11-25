@@ -4,6 +4,7 @@ module;
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <ctime>
 #include <format>
 #include <optional>
 #include <string>
@@ -71,6 +72,9 @@ private:
       return;
     }
     const auto* current = state.get_portfolio_results_if_present(handle);
+    if(current && ImGui::CollapsingHeader("Call attempts")) {
+      render_call_attempts(state, *current, selected);
+    }
     if(!current || current->events().empty()) {
       ImGui::TextDisabled("No execution events recorded.");
       return;
@@ -111,6 +115,103 @@ private:
         render_row(state,
                    run,
                    run.timeline().trade_events(ref.bar_index)[ref.event_index]);
+      }
+    }
+    ImGui::EndTable();
+  }
+
+  static auto call_outcome(const backtest::PositionSizingDecision& decision)
+   -> const char*
+  {
+    if(!decision.call_skip.empty())
+      return decision.call_skip.c_str();
+    using Outcome = backtest::PositionSizingDecisionOutcome;
+    switch(decision.outcome) {
+    case Outcome::Executed:
+      return "Filled";
+    case Outcome::ShadowOnly:
+      return "Hypothetical only";
+    case Outcome::EntryFiltered:
+      return "Entry Filter";
+    case Outcome::FailsafeInactive:
+      return "Inactive Failsafe";
+    case Outcome::NoPositiveSize:
+      return "No positive size";
+    case Outcome::DrawdownSuppressed:
+      return "Drawdown limit";
+    case Outcome::SizingLimitTooSmall:
+      return "Sizing limit";
+    case Outcome::MaximumOpenTrades:
+      return "Maximum open trades";
+    case Outcome::MaximumCombinedLayers:
+      return "Maximum combined layers";
+    case Outcome::InsufficientCash:
+      return "Insufficient cash";
+    }
+    return "Unknown";
+  }
+
+  static void render_call_attempts(const ApplicationState& state,
+                                   const auto& results,
+                                   const auto& selected)
+  {
+    if(!ImGui::BeginTable("call-attempts",
+                          8,
+                          ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollX |
+                           ImGuiTableFlags_ScrollY |
+                           ImGuiTableFlags_SizingFixedFit,
+                          ImVec2{0, ImGui::GetTextLineHeightWithSpacing() * 8}))
+      return;
+    for(const auto* label : {"Time",
+                             "System",
+                             "Strategy",
+                             "Asset",
+                             "Call table / row",
+                             "Direction",
+                             "Open",
+                             "Outcome"})
+      ImGui::TableSetupColumn(label);
+    ImGui::TableHeadersRow();
+    for(const auto& run : results.backtests()) {
+      if(selected && run.key() != selected->run)
+        continue;
+      const auto& timeline = run.timeline();
+      for(auto bar = timeline.size(); bar > 0; --bar) {
+        for(const auto& decision :
+            timeline.position_sizing_decisions(bar - 1)) {
+          if(!decision.call_row ||
+             (selected && selected->strategy_index != decision.strategy_index))
+            continue;
+          const auto& system = state.get_system(run.system_handle());
+          ImGui::TableNextRow();
+          ImGui::TableNextColumn();
+          ImGui::TextUnformatted(
+           format_datetime(
+            static_cast<std::time_t>(timeline.market_timestamp(bar - 1)))
+            .c_str());
+          ImGui::TableNextColumn();
+          ImGui::TextUnformatted(system.name().c_str());
+          ImGui::TableNextColumn();
+          ImGui::TextUnformatted(
+           state.get_strategy(system.strategy_handle(decision.strategy_index))
+            .name()
+            .c_str());
+          ImGui::TableNextColumn();
+          ImGui::TextUnformatted(
+           state.get_asset(run.asset_handle()).name().c_str());
+          ImGui::TableNextColumn();
+          ImGui::Text(
+           "%s / %zu", decision.call_table.c_str(), decision.call_row);
+          ImGui::TableNextColumn();
+          ImGui::TextUnformatted(
+           decision.direction == backtest::StrategyDirection::Long ? "Long"
+                                                                   : "Short");
+          ImGui::TableNextColumn();
+          ImGui::TextUnformatted(
+           std::format("{}", decision.entry_price).c_str());
+          ImGui::TableNextColumn();
+          ImGui::TextUnformatted(call_outcome(decision));
+        }
       }
     }
     ImGui::EndTable();

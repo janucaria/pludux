@@ -64,6 +64,11 @@ public:
     return self.market_price_;
   }
 
+  void market_price(this TradeSession& self, double price) noexcept
+  {
+    self.market_price_ = price;
+  }
+
   auto market_lookback(this const TradeSession& self) noexcept -> std::size_t
   {
     return self.market_lookback_;

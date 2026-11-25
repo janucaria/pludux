@@ -141,6 +141,11 @@ public:
     self.closed_positions_.clear();
   }
 
+  void market_price(this StrategySession& self, double price) noexcept
+  {
+    self.market_price_ = price;
+  }
+
   auto is_open(this const StrategySession& self) noexcept -> bool
   {
     return self.position_.has_value();

@@ -14,6 +14,9 @@
   drawdown adjustment, and insufficient-cash handling.
 - **Watchlist**: an ordered set of Assets used by a System.
 - **Asset**: market data and its field mapping.
+- **Calls**: a library of named trade-call tables. A System can use a table to
+  request entries at matching Watchlist candle opens and supply values to
+  Strategy rules.
 - **Market**: a trading venue or market context (for example, IDX, NASDAQ,
   forex, or crypto) that holds venue-specific rules such as minimum order
   quantity and quantity step.
@@ -49,7 +52,7 @@ Broker fees.
 
 ## Verified GUI structure
 
-The main dockspace opens these windows: Assets, Watchlists, Strategies, Profiles,
+The main dockspace opens Assets, Calls, Watchlists, Strategies, Profiles,
 Systems, Markets, Brokers, Portfolios, Chart, Trades, Events, and Overview.
 
 ## Data and execution rules

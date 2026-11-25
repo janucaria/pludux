@@ -11,6 +11,7 @@ import :system;
 import :portfolio;
 import :portfolio_results;
 import :asset;
+import :calls;
 import :watchlist;
 import :strategy;
 import :market;
@@ -27,21 +28,21 @@ public:
   StoreDescriptor() = default;
 
   StoreDescriptor(
-    StoreDataResolver<System, SystemStoreHandle>
-     system_store_data_resolver,
+   StoreDataResolver<System, SystemStoreHandle> system_store_data_resolver,
    StoreDataResolver<Portfolio, PortfolioStoreHandle>
     portfolio_store_data_resolver,
    StoreDataResolver<Asset, AssetStoreHandle> asset_store_data_resolver,
    StoreDataResolver<Watchlist, WatchlistStoreHandle>
     watchlist_store_data_resolver,
-    StoreDataResolver<Strategy, StrategyStoreHandle>
-     strategy_store_data_resolver,
+   StoreDataResolver<Strategy, StrategyStoreHandle>
+    strategy_store_data_resolver,
    StoreDataResolver<Market, MarketStoreHandle> market_store_data_resolver,
    StoreDataResolver<Broker, BrokerStoreHandle> broker_store_data_resolver,
    StoreDataResolver<Profile, ProfileStoreHandle> profile_store_data_resolver,
    StoreDataResolver<PortfolioResults, PortfolioStoreHandle>
-    portfolio_results_store_data_resolver)
-   : system_store_data_resolver_{std::move(system_store_data_resolver)}
+    portfolio_results_store_data_resolver,
+   StoreDataResolver<CallTable, CallStoreHandle> call_resolver = {})
+  : system_store_data_resolver_{std::move(system_store_data_resolver)}
   , portfolio_store_data_resolver_{std::move(portfolio_store_data_resolver)}
   , asset_store_data_resolver_{std::move(asset_store_data_resolver)}
   , watchlist_store_data_resolver_{std::move(watchlist_store_data_resolver)}
@@ -49,8 +50,9 @@ public:
   , market_store_data_resolver_{std::move(market_store_data_resolver)}
   , broker_store_data_resolver_{std::move(broker_store_data_resolver)}
   , profile_store_data_resolver_{std::move(profile_store_data_resolver)}
-  , portfolio_results_store_data_resolver_{
-     std::move(portfolio_results_store_data_resolver)}
+  , portfolio_results_store_data_resolver_{std::move(
+     portfolio_results_store_data_resolver)}
+  , call_resolver_{std::move(call_resolver)}
   {
   }
 
@@ -165,6 +167,11 @@ public:
     return self.portfolio_results_store_data_resolver_;
   }
 
+  auto call_resolver(this auto& self) noexcept -> auto&
+  {
+    return self.call_resolver_;
+  }
+
 private:
   StoreDataResolver<System, SystemStoreHandle>
    system_store_data_resolver_;
@@ -181,6 +188,7 @@ private:
 
   StoreDataResolver<PortfolioResults, PortfolioStoreHandle>
    portfolio_results_store_data_resolver_;
+  StoreDataResolver<CallTable, CallStoreHandle> call_resolver_;
 };
 
 } // namespace pludux::backtest

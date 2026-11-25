@@ -8,7 +8,7 @@ use the reference pages when you need exact semantics.
 - [Getting Started](getting-started.md) — first usable workflow
 - [Core Concepts](concepts.md) — canonical object semantics
 - [Resources and Workflows](resources-and-workflows.md) — ownership and end-to-end setup
-- [CSV Data](data-csv.md) — importing an Asset from CSV
+- [CSV Data](data-csv.md) — CSV import for Asset candles and trade-call tables
 - [GUI Guide](gui-guide.md) — where common tasks live in the desktop UI
 - [Strategy JSON](strategy-json.md) — import/export format and method identifiers
 - [Workspace Persistence](persistence.md) — `.pludux` save/open behavior

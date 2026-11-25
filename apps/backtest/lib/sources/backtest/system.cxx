@@ -1,5 +1,7 @@
 module;
 
+#include <map>
+
 #include <cstddef>
 #include <string>
 #include <utility>
@@ -9,6 +11,7 @@ export module pludux.backtest:system;
 
 import :strategy_setup;
 import :store_handle;
+import :calls;
 import :strategy_performance;
 
 export namespace pludux::backtest {
@@ -22,18 +25,27 @@ public:
          ProfileStoreHandle profile_handle,
          StrategyPerformanceConfig strategy_performance,
          StrategySetup main_setup,
-         std::vector<SystemFailsafeStrategy> failsafe_strategies = {})
+         std::vector<SystemFailsafeStrategy> failsafe_strategies = {},
+         CallStoreHandle call_handle = {},
+         CallColumns call_columns = {},
+         EntryPriority entry_priority = EntryPriority::CallFirst)
   : name_{std::move(name)}
   , watchlist_handle_{std::move(watchlist_handle)}
   , profile_handle_{profile_handle}
   , strategy_performance_{std::move(strategy_performance)}
   , main_setup_{std::move(main_setup)}
   , failsafe_strategies_{std::move(failsafe_strategies)}
+  , call_handle_{call_handle}
+  , call_columns_{std::move(call_columns)}
+  , entry_priority_{entry_priority}
   {
     strategy_performance_.validate();
   }
 
-  auto operator==(const System&) const noexcept -> bool = default;
+  auto operator==(const System& other) const noexcept -> bool
+  {
+    return name_ == other.name_ && equivalent_rules(other);
+  }
 
   auto name(this const System& self) noexcept -> const std::string&
   {
@@ -119,12 +131,41 @@ public:
     return self.strategy_setup(index).strategy_handle();
   }
 
+  auto call_handle(this const System& self) noexcept -> CallStoreHandle
+  {
+    return self.call_handle_;
+  }
+  void call_handle(this System& self, CallStoreHandle handle) noexcept
+  {
+    self.call_handle_ = handle;
+  }
+  auto call_columns(this auto& self) noexcept -> auto&
+  {
+    return self.call_columns_;
+  }
+  void call_columns(this System& self, CallColumns columns) noexcept
+  {
+    self.call_columns_ = std::move(columns);
+  }
+
+  auto entry_priority() const noexcept -> EntryPriority
+  {
+    return entry_priority_;
+  }
+  void entry_priority(EntryPriority value) noexcept
+  {
+    entry_priority_ = value;
+  }
+
   auto equivalent_rules(this const System& self, const System& other) noexcept
    -> bool
   {
     return self.watchlist_handle() == other.watchlist_handle() &&
            self.profile_handle_ == other.profile_handle_ &&
            self.strategy_performance_ == other.strategy_performance_ &&
+           self.call_handle_ == other.call_handle_ &&
+           self.call_columns_ == other.call_columns_ &&
+           self.entry_priority_ == other.entry_priority_ &&
            self.main_setup_ == other.main_setup_ &&
            self.failsafe_strategies_ == other.failsafe_strategies_;
   }
@@ -137,6 +178,9 @@ private:
   StrategyPerformanceConfig strategy_performance_;
   StrategySetup main_setup_;
   std::vector<SystemFailsafeStrategy> failsafe_strategies_;
+  CallStoreHandle call_handle_;
+  CallColumns call_columns_;
+  EntryPriority entry_priority_{EntryPriority::CallFirst};
 };
 
 } // namespace pludux::backtest

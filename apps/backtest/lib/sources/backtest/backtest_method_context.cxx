@@ -1,6 +1,9 @@
 module;
 
+#include <map>
+
 #include <algorithm>
+#include <cmath>
 #include <concepts>
 #include <cstddef>
 #include <limits>
@@ -12,6 +15,7 @@ module;
 export module pludux.backtest:backtest_method_context;
 
 import pludux;
+import :calls;
 
 export namespace pludux::backtest {
 
@@ -160,15 +164,19 @@ public:
   }
 
   BacktestMethodContext(const StrategyMethodRegistry& series_methods,
-   SeriesEvaluationResults& series_evaluation_results,
-   std::size_t current_index,
-   const BacktestAccountState& account_state,
-   std::size_t pyramiding_layer) noexcept
+                        SeriesEvaluationResults& series_evaluation_results,
+                        std::size_t current_index,
+                        const BacktestAccountState& account_state,
+                        std::size_t pyramiding_layer,
+                        const CallRow* calls = nullptr,
+                        SeriesEvaluationResults* call_cache = nullptr) noexcept
   : series_methods_{series_methods}
   , series_evaluation_results_{series_evaluation_results}
   , current_index_{current_index}
   , account_state_{account_state}
   , pyramiding_layer_{pyramiding_layer}
+  , calls_{calls}
+  , call_cache_{call_cache}
   {
   }
 
@@ -226,12 +234,49 @@ public:
                           const auto& method_key) noexcept
    -> std::vector<double>&
   {
-    const auto results_opt =
-     self.series_evaluation_results_.results(method_key);
+    auto& cache = self.calls_ && self.call_cache_
+                   ? *self.call_cache_
+                   : self.series_evaluation_results_;
+    const auto results_opt = cache.results(method_key);
     if(!results_opt.has_value()) {
-      self.series_evaluation_results_.results(method_key, {});
+      cache.results(method_key, {});
     }
-    return self.series_evaluation_results_.results(method_key).value();
+    return cache.results(method_key).value();
+  }
+
+  bool has_bound_call() const noexcept
+  {
+    return calls_ != nullptr;
+  }
+
+  void bind_call(const CallRow* row, std::size_t decision_index) noexcept
+  {
+    calls_ = row;
+    if(row)
+      current_index_ = decision_index;
+  }
+
+  auto call_value(const std::string& field) const noexcept -> double
+  {
+    if(calls_) {
+      if(const auto value = calls_->fields.find(field);
+         value != calls_->fields.end())
+        return value->second;
+    }
+    if(missing_call_) {
+      *missing_call_ = true;
+    }
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+
+  auto evaluate_signal(const auto& method, AssetSnapshot snapshot) const -> bool
+  {
+    bool missing_call = false;
+    auto context = *this;
+    context.missing_call_ = &missing_call;
+    const auto value = evaluate_series_method(method, snapshot, context);
+    const auto uses_calls = missing_call || calls_ != nullptr;
+    return value != 0.0 && !(uses_calls && std::isnan(value));
   }
 
   auto index(this const BacktestMethodContext& self) noexcept -> std::size_t
@@ -342,6 +387,9 @@ private:
   std::size_t current_index_;
   const BacktestAccountState& account_state_;
   std::size_t pyramiding_layer_;
+  const CallRow* calls_;
+  SeriesEvaluationResults* call_cache_;
+  bool* missing_call_ = nullptr;
   double position_initial_entry_price_{
    std::numeric_limits<double>::quiet_NaN()};
   double position_latest_entry_price_{std::numeric_limits<double>::quiet_NaN()};

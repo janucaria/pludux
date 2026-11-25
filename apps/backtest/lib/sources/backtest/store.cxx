@@ -43,6 +43,32 @@ public:
     return self.arena_;
   }
 
+  auto add_call(this Store& self, CallTable table)
+   -> std::optional<CallStoreHandle>
+  {
+    return self.descriptor_.call_resolver().add(self.arena_.calls(),
+                                                std::move(table));
+  }
+
+  auto get_call_if_present(this const Store& self,
+                           CallStoreHandle handle) noexcept -> const CallTable*
+  {
+    return self.descriptor_.call_resolver().get_if_present(self.arena_.calls(),
+                                                           handle);
+  }
+
+  auto update_call(this Store& self, CallStoreHandle handle, CallTable table)
+   -> bool
+  {
+    return self.descriptor_.call_resolver().update(
+     self.arena_.calls(), handle, std::move(table));
+  }
+
+  auto remove_call(this Store& self, CallStoreHandle handle) -> bool
+  {
+    return self.descriptor_.call_resolver().remove(self.arena_.calls(), handle);
+  }
+
   auto add_system(this Store& self, System system)
     -> std::optional<SystemStoreHandle>
   {

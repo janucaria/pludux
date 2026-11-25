@@ -34,9 +34,11 @@ public:
     }
 
     Entry(ErasedNode<BacktestMethodContext> signal,
-          SignalTiming timing = SignalTiming::NextOpen)
+          SignalTiming timing = SignalTiming::NextOpen,
+          EntrySource source = EntrySource::Signal)
     : signal_{std::move(signal)}
     , timing_{timing}
+    , source_{source}
     {
     }
 
@@ -64,9 +66,19 @@ public:
       self.timing_ = timing;
     }
 
+    auto entry_source() const noexcept -> EntrySource
+    {
+      return source_;
+    }
+    void entry_source(EntrySource source) noexcept
+    {
+      source_ = source;
+    }
+
   private:
     ErasedNode<BacktestMethodContext> signal_;
     SignalTiming timing_;
+    EntrySource source_;
   };
 
   class Exit {

@@ -30,6 +30,8 @@ Pludux uses the following resources and results.
   and has its own Entry Filter. Each Failsafe also has an activation rule.
 - **Watchlist**: an ordered set of Assets used by a System
 - **Asset**: market data and field mapping
+- **Calls**: a library of trade-call tables. Systems match their rows to
+  Watchlist candles for Strategy entry and position rules.
 
 ## Verified capabilities
 
@@ -38,6 +40,8 @@ Pludux uses the following resources and results.
 - Strategy creation and editing in a node editor, duplication, and JSON import/export
 - System editing with Watchlist and Profile selection, Main and Failsafe setups,
   Strategy Inputs, Entry Filters, and shared Strategy Performance settings
+- Backtesting trade-call tables with Strategy sizing and exits under shared
+  Portfolio capital, with CSV import available in Calls
 - Portfolio simulations with shared capital across ordered Systems
 - Deterministic execution for identical inputs
 - Union processing of asset timelines in Portfolio backtests
@@ -65,6 +69,7 @@ See [Core Concepts](docs/concepts.md), [Limitations](docs/limitations.md), and
    Strategy or comparator.
 4. For simulation behavior, read [Execution and Position Lifecycle](docs/execution.md)
    and [Portfolio Backtesting](docs/portfolio-backtesting.md).
+5. To backtest trade calls, follow the [worked Calls example](docs/data-csv.md#backtest-calls-with-two-stop-alternatives).
 
 ## Contributing
 

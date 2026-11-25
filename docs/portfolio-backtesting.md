@@ -91,6 +91,13 @@ For a fresh initial entry, Pludux processes the request in this order.
 Pyramids use the frozen unit size of the actual position. They join the same
 Portfolio ranking, capacity, and cash checks as initial orders.
 
+Call entries use the open-price phase and join the same ranking and admission
+as other open-price requests. **Entry Priority** applies to opposing entries
+from the same setup at the same open. The Portfolio comparators then rank
+requests using their regular rules. A Call's sizing and fill use the open
+price, with Market quantity rules and Broker fees applied as usual.
+[Call entries](execution.md#call-entries)
+
 ### Entry comparator data
 
 Portfolio Entry Comparators can combine immutable Requested Order values with
@@ -112,9 +119,9 @@ it again in a comparator is valid, but can intentionally or accidentally give
 the same performance evidence additional influence over capital allocation.
 
 Asset data is phase-safe. A Current Close order sees the completed current bar.
-A Next Open order sees the previous completed bar, because the current bar's
-high, low, close, and volume do not yet exist. Use Requested Order Price when a
-Next Open comparison needs the executable open price.
+A Next Open or Call order sees the previous completed bar, because the current
+bar's high, low, close, and volume do not yet exist. Use Requested Order Price
+when a comparison needs the executable open price.
 
 A direction-adjusted strength comparator can rank historical price movement in
 units of the order's risk distance:
@@ -179,6 +186,10 @@ position, the Portfolio values it using its last known close and marks that
 backtest stale. Before its first price, a backtest is unavailable.
 
 Pludux never manufactures candles to fill missing timestamps.
+
+A Call is evaluated at its Asset's matching candle open. The Calls table adds
+no timestamps to the Portfolio clock. A row without a matching candle leaves
+the union timeline unchanged. [Calls resource and mapping rules](resources-and-workflows.md#calls)
 
 ## Results and Charts
 

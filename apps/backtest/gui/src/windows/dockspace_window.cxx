@@ -171,6 +171,7 @@ private:
                               "Profiles",
                               "Strategies",
                               "Watchlists",
+                              "Calls",
                               "Assets"}) {
       ImGui::DockBuilderDockWindow(window, dock_right_down_id);
     }

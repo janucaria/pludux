@@ -1,11 +1,15 @@
 module;
 
+#include <map>
+
 #include <algorithm>
+#include <format>
 #include <iterator>
 #include <memory>
 #include <optional>
 #include <queue>
 #include <ranges>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -517,7 +521,8 @@ public:
       return false;
     }
 
-    const auto reset_backtests = !asset->equivalent_rules(edit_asset);
+    const auto reset_backtests =
+     asset->name() != edit_asset.name() || !asset->equivalent_rules(edit_asset);
 
     if(self.store_.update_asset(handle, std::move(edit_asset))) {
       if(reset_backtests) {
@@ -682,6 +687,7 @@ public:
       // This happens while an EditCommand is still working on its candidate
       // state, so both the Strategy and dependent stored input values participate
       // in the same StateDiff used by undo and redo.
+      self.strategy_call_fields_.erase(handle.slot_index());
       self.sync_setup_inputs(handle);
       if(rules_changed) {
         self.reset_systems_referencing_strategy(handle);
@@ -698,6 +704,7 @@ public:
   {
     if(self.store_.remove_strategy(handle)) {
       self.document_state_.remove_strategy_handle(handle);
+      self.strategy_call_fields_.erase(handle.slot_index());
 
       self.reset_systems_referencing_strategy(handle);
       self.normalize_portfolio_strategy_selections();
@@ -1032,6 +1039,131 @@ public:
     }
   }
 
+  auto get_call_handles(this const ApplicationState& self) noexcept -> const
+   auto&
+  {
+    return self.document_state_.call_handles();
+  }
+
+  auto get_call_if_present(this const ApplicationState& self,
+                           backtest::CallStoreHandle handle) noexcept
+   -> const backtest::CallTable*
+  {
+    return self.store_.get_call_if_present(handle);
+  }
+
+  auto get_call(this const ApplicationState& self,
+                backtest::CallStoreHandle handle) -> const backtest::CallTable&
+  {
+    return self.store_.descriptor().call_resolver().get(
+     self.store_.arena().calls(), handle);
+  }
+
+  auto add_call(this ApplicationState& self, backtest::CallTable table)
+   -> std::optional<backtest::CallStoreHandle>
+  {
+    const auto handle = self.store_.add_call(std::move(table));
+    if(handle)
+      self.document_state_.add_call_handle(*handle);
+    return handle;
+  }
+
+  auto update_call(this ApplicationState& self,
+                   backtest::CallStoreHandle handle,
+                   backtest::CallTable table) -> bool
+  {
+    if(!self.store_.update_call(handle, std::move(table)))
+      return false;
+    self.invalidate_call(handle);
+    return true;
+  }
+
+  auto remove_call(this ApplicationState& self,
+                   backtest::CallStoreHandle handle) -> bool
+  {
+    if(!self.store_.remove_call(handle))
+      return false;
+    self.document_state_.remove_call_handle(handle);
+    self.invalidate_call(handle);
+    return true;
+  }
+
+  auto call_fields(this const ApplicationState& self,
+                   backtest::StrategyStoreHandle handle)
+   -> const std::vector<std::string>&
+  {
+    const auto found = self.strategy_call_fields_.find(handle.slot_index());
+    if(found != self.strategy_call_fields_.end())
+      return found->second;
+    auto fields =
+     backtest::collect_strategy_call_fields(self.get_strategy(handle));
+    return self.strategy_call_fields_
+     .emplace(handle.slot_index(), std::move(fields))
+     .first->second;
+  }
+
+  auto compiled_calls(this const ApplicationState& self,
+                      const backtest::System& system)
+   -> std::shared_ptr<const backtest::CompiledCalls>
+  {
+    CallBindingKey key{system.call_handle(), system.call_columns()};
+    bool required = false;
+    for(std::size_t i = 0; i < system.strategy_count(); ++i) {
+      auto& mapped = key.setups.emplace_back();
+      if(const auto* strategy = self.strategy_if_present(system, i)) {
+        required = required ||
+                   strategy->long_position().entry().entry_source() ==
+                    backtest::EntrySource::Call ||
+                   strategy->short_position().entry().entry_source() ==
+                    backtest::EntrySource::Call;
+        const auto& mappings = system.strategy_setup(i).call_mappings();
+        for(const auto& field : self.call_fields(system.strategy_handle(i))) {
+          if(field.empty())
+            throw std::invalid_argument{
+             "Name each CALL field in the Strategy editor"};
+          required = true;
+          const auto it = mappings.find(field);
+          mapped[field] = it == mappings.end() ? std::string{} : it->second;
+        }
+      }
+    }
+    if(!required && !key.table.valid())
+      return {};
+    const auto* table = self.get_call_if_present(key.table);
+    if(!table)
+      throw std::invalid_argument{"Select a Calls table for this System"};
+    const auto* watchlist =
+     self.get_watchlist_if_present(system.watchlist_handle());
+    if(!watchlist)
+      throw std::invalid_argument{"Select a Watchlist for the Calls table"};
+    for(const auto handle : watchlist->asset_handles()) {
+      const auto* asset = self.get_asset_if_present(handle);
+      if(!asset)
+        throw std::invalid_argument{"The Watchlist contains a missing Asset"};
+      key.names.push_back(asset->name());
+    }
+    // Readiness and multiple windows query the same binding on each frame.
+    const auto found =
+     std::ranges::find(self.call_bindings_, key, &CallBinding::key);
+    if(found != self.call_bindings_.end()) {
+      if(!found->error.empty())
+        throw std::invalid_argument{found->error};
+      return found->compiled;
+    }
+    if(self.call_bindings_.size() >= 2 + self.get_system_handles().size())
+      self.call_bindings_.erase(self.call_bindings_.begin());
+    auto& entry = self.call_bindings_.emplace_back(CallBinding{std::move(key)});
+    try {
+      entry.compiled =
+       std::make_shared<const backtest::CompiledCalls>(backtest::compile_calls(
+        *table, entry.key.columns, entry.key.names, entry.key.setups));
+    } catch(const std::invalid_argument& error) {
+      entry.error = error.what();
+      throw;
+    }
+    return entry.compiled;
+  }
+
   auto is_system_ready(this const ApplicationState& self,
                        const backtest::System& ready_system) noexcept -> bool
   {
@@ -1056,6 +1188,11 @@ public:
       }
     }
 
+    try {
+      self.compiled_calls(ready_system);
+    } catch(const std::invalid_argument&) {
+      return false;
+    }
     return true;
   }
 
@@ -1077,6 +1214,33 @@ public:
   }
 
 private:
+  struct CallBindingKey {
+    backtest::CallStoreHandle table;
+    backtest::CallColumns columns;
+    std::vector<backtest::CallMappings> setups;
+    std::vector<std::string> names;
+    auto operator==(const CallBindingKey&) const -> bool = default;
+  };
+  struct CallBinding {
+    CallBindingKey key;
+    std::shared_ptr<const backtest::CompiledCalls> compiled;
+    std::string error;
+  };
+  mutable std::vector<CallBinding> call_bindings_;
+  mutable std::map<std::size_t, std::vector<std::string>> strategy_call_fields_;
+
+  void invalidate_call(this ApplicationState& self,
+                       backtest::CallStoreHandle handle)
+  {
+    std::erase_if(self.call_bindings_, [handle](const auto& item) {
+      return item.key.table == handle;
+    });
+    for(const auto system_handle : self.get_system_handles()) {
+      if(self.get_system(system_handle).call_handle() == handle)
+        self.reset_system(system_handle);
+    }
+  }
+
   backtest::Store store_{};
   DocumentState document_state_{};
   ViewState view_state_{};

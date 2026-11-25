@@ -28,6 +28,26 @@ decides whether to submit it. The Portfolio gathers fresh requests at a union ti
 comparators, and admits requests while capital and capacity permit. Complete
 ties use System order and then Watchlist Asset order.
 
+### Call entries
+
+Each Strategy side can use **Signal** (the default) or **Call** as its entry
+source. **Call** uses the table row's direction and tests the open of the real
+candle with the exact Asset and datetime. The attempt happens once at that
+open. When an entry bound is set, the open must satisfy it inclusively. A row
+whose open is outside a bound is skipped.
+
+At a Call open, Strategy expressions read market data from the previous
+completed candle. The executable open price and the candidate Call row are
+available for entry and sizing, including on the first candle. A Call order
+goes through regular setup activation, sizing, Entry Filter, and Portfolio
+admission. If the same setup offers opposing Call and Signal entries at the
+same open, the System's **Entry Priority** decides which to consider first.
+The default is **Call first**.
+
+The setup that opens a position manages its exits and pyramids. The position's
+`OTHER.CALL` fields come from its entry row through closure, including after
+later calls for the same Asset. [Call row values](nodes.md#call-row-values)
+
 ## Exits and reductions
 
 Signal exits, stop losses, and take profits are evaluated in configured order.

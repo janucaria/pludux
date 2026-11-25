@@ -253,13 +253,19 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
       throw std::runtime_error{"Invalid entry configuration in strategy JSON"};
     }
     const auto defaults = Strategy::Entry{};
+    const auto source = entry_json.contains("source")
+                         ? strict_as<std::string>(entry_json.at("source"))
+                         : "SIGNAL";
+    if(source != "SIGNAL" && source != "CALL")
+      throw std::runtime_error{"Invalid entry source"};
     position.entry(Strategy::Entry{
      entry_json.contains("signal")
       ? config_parser.parse_node(entry_json.at("signal"))
       : defaults.signal(),
      entry_json.contains("timing")
       ? parse_signal_timing(strict_as<std::string>(entry_json.at("timing")))
-      : defaults.timing()});
+      : defaults.timing(),
+     source == "CALL" ? EntrySource::Call : EntrySource::Signal});
   }
 
   if(position_json.contains("exits")) {
@@ -440,6 +446,8 @@ auto serialize_strategy_position(const Strategy::Position& position,
   auto position_json = jsoncons::ojson{};
 
   position_json["entry"] = jsoncons::ojson{};
+  if(position.entry().entry_source() == EntrySource::Call)
+    position_json["entry"]["source"] = "CALL";
   position_json["entry"]["signal"] =
    config_parser.serialize_node(position.entry().signal());
   position_json["entry"]["timing"] =

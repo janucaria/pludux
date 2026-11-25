@@ -32,6 +32,7 @@ are defined by the parser; the GUI may seed a more useful initial expression.
 | Family | Strategy | Comparator | Entry Filter |
 | --- | --- | --- | --- |
 | Market data, lookback, scalar arithmetic | Yes | Yes | No |
+| Call row values | Yes | No | No |
 | Constant | Yes | Yes | Yes |
 | Indicators, named series, position state | Yes | No | No |
 | Portfolio equity/drawdown state | Yes | No | Yes |
@@ -71,6 +72,24 @@ particular, Next Open ranking sees the previous completed bar; use
 `UnsignedInteger`; defaults are an empty label and value `0`. A numeric JSON
 literal is shorthand for `VALUE.CONSTANT`. Parameterless methods may use their
 exact method-ID string as shorthand.
+
+## Call row values
+
+| ID | Output and parameters | Context |
+| --- | --- | --- |
+| `OTHER.CALL` | Value for the required logical `field`. Optional `representation` is `Decimal` (default), `SignedInteger`, or `UnsignedInteger`. | Strategy |
+
+The System setup maps the logical field to a column in the selected Calls
+table. As with `INPUT.NUMERIC`, `Decimal` preserves the numeric value,
+`SignedInteger` truncates toward zero, and `UnsignedInteger` also clamps
+negative values to zero.
+
+During entry sizing, `OTHER.CALL` reads the candidate row. After entry, it reads the
+row of the position being evaluated, whether actual or hypothetical, until
+that position closes. A later Call row leaves the existing position's values
+intact. The node gives a missing value (`NaN`) when the cell is blank or no
+Call row is active, including when the Strategy is flat with no Call candidate
+or is evaluating a Signal-owned position. [Worked example](data-csv.md#backtest-calls-with-two-stop-alternatives)
 
 ## Indicators
 
@@ -258,7 +277,7 @@ spelling.
 
 ## Completeness and stability
 
-This page inventories every dot-qualified method currently registered by the
+This page inventories the methods currently registered by the
 Strategy, comparator, Entry Filter, and plot serializers. Validate hand-authored
 documents with the bundled schema and the Strategies import preview before relying
 on them in an experiment.

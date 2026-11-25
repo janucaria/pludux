@@ -82,6 +82,7 @@ target_sources(${PROJECT_NAME}
     sources/backtest/risk_distance_node.cxx
     sources/backtest/position_method.cxx
     sources/backtest/position_node.cxx
+    sources/backtest/call_node.cxx
     sources/backtest/stop_target_price_method.cxx
     sources/backtest/stop_target_price_node.cxx
     sources/backtest/strategy_setup.cxx
@@ -91,6 +92,9 @@ target_sources(${PROJECT_NAME}
     sources/backtest/portfolio_results.cxx
     sources/backtest/store_descriptor.cxx
     sources/backtest/store_arena.cxx
+    sources/backtest/table_field_parsing.cxx
+    sources/backtest/calls.cxx
+    sources/backtest/call_csv_import.cxx
     sources/backtest/store.cxx
     sources/backtest/backtest_runner.cxx
     sources/backtest/portfolio_runner.cxx

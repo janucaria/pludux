@@ -229,6 +229,7 @@ public:
       self.dockspace_window_.render(window_context);
       if(self.discard_all_drafts_requested_) {
          self.assets_window_.discard_draft();
+         self.calls_window_.discard_draft();
          self.watchlists_window_.discard_draft();
           self.strategies_window_.discard_draft();
           self.profiles_window_.discard_draft();
@@ -244,6 +245,7 @@ public:
       self.trade_list_window_.render(window_context);
       self.events_window_.render(window_context);
       self.assets_window_.render(window_context);
+      self.calls_window_.render(window_context);
       self.watchlists_window_.render(window_context);
        self.strategies_window_.render(window_context);
        self.profiles_window_.render(window_context);
@@ -301,10 +303,11 @@ public:
 private:
   auto make_backtest_runner(this Application& self,
                             ApplicationState& app_state,
-                              const backtest::System& system,
+                            const backtest::System& system,
                             backtest::AssetStoreHandle asset_handle,
-                            const backtest::Portfolio& portfolio)
-   -> backtest::BacktestRunner
+                            const backtest::Portfolio& portfolio,
+                            const backtest::CompiledCalls* calls,
+                            std::size_t asset_index) -> backtest::BacktestRunner
   {
     const auto* asset_ptr = app_state.get_asset_if_present(asset_handle);
     const auto* market_ptr =
@@ -378,8 +381,10 @@ private:
             stop_loss.reduce());
          }
          return backtest::BacktestRunner::PositionRule{
-          node_to_erased_method<backtest::BacktestMethodContext>(
-           position.entry().signal(), input_context),
+          position.entry().entry_source() == backtest::EntrySource::Call
+           ? backtest::StrategyMethod{BooleanMethod<false>{}}
+           : node_to_erased_method<backtest::BacktestMethodContext>(
+              position.entry().signal(), input_context),
           std::move(signal_exits),
           node_to_erased_method<backtest::BacktestMethodContext>(
            position.pyramiding().signal(), input_context),
@@ -396,7 +401,8 @@ private:
           position.exits_activation(),
           position.stop_losses_activation(),
           position.take_profits_activation(),
-          position.pyramiding().retrigger()};
+          position.pyramiding().retrigger(),
+          position.entry().entry_source()};
        };
 
       auto entry_filter_conversion_context = NodeToErasedMethodContext{};
@@ -415,6 +421,13 @@ private:
          system.strategy_performance(),
        std::move(entry_filter),
        failsafe_activation);
+      if(calls) {
+        runner_setups.back().calls =
+         calls->values.at(strategy_index).at(asset_index);
+        runner_setups.back().call_table_name =
+         app_state.get_call(system.call_handle()).name;
+        runner_setups.back().entry_priority = system.entry_priority();
+      }
     }
 
     return backtest::BacktestRunner{*asset_ptr,
@@ -446,12 +459,14 @@ private:
         const backtest::System& system = app_state.get_system(system_handle);
        const auto& watchlist =
         app_state.get_watchlist(system.watchlist_handle());
-       for(const auto asset_handle : watchlist.asset_handles()) {
+       const auto calls = app_state.compiled_calls(system);
+       for(std::size_t i = 0; i < watchlist.asset_handles().size(); ++i) {
+         const auto asset_handle = watchlist.asset_handles()[i];
          backtests.emplace_back(
-           system_handle,
+          system_handle,
           asset_handle,
           self.make_backtest_runner(
-           app_state, system, asset_handle, *portfolio));
+           app_state, system, asset_handle, *portfolio, calls.get(), i));
        }
      }
     auto runner =
@@ -476,6 +491,7 @@ private:
   DockspaceWindow dockspace_window_;
   BacktestChartWindow backtest_chart_window_;
   AssetsWindow assets_window_;
+  CallsWindow calls_window_;
   WatchlistsWindow watchlists_window_;
    StrategiesWindow strategies_window_;
    ProfilesWindow profiles_window_;

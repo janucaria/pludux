@@ -6,6 +6,8 @@ enum class IntrabarPath { LowFirst, HighFirst, CandleDirection };
 
 enum class ExitActivation { Simultaneous, AfterPrevious };
 
+enum class EntrySource { Signal, Call };
+
 enum class SignalTiming { CurrentClose, NextOpen };
 
 enum class PyramidingRetrigger { EveryEvaluation, AfterFalse };

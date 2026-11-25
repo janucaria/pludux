@@ -210,6 +210,8 @@ auto get_default_series_node(const std::string& series_id)
   } else if(series_id == "LOGIC.XOR") {
     return LogicalXorNode<backtest::BacktestMethodContext>{FalseNode{},
                                                            FalseNode{}};
+  } else if(series_id == "OTHER.CALL") {
+    return backtest::CallNode{"field"};
   } else if(series_id == "INPUT.NUMERIC") {
     return NumericInputNode{"Input"};
   } else if(series_id == "OPERATOR.ADD") {
@@ -549,6 +551,8 @@ auto get_series_node_id(const ErasedNode<backtest::BacktestMethodContext>& node)
     return "OPERATOR.NEGATIVE_PART";
   } else if(node_cast<LookbackNode<backtest::BacktestMethodContext>>(node)) {
     return "OPERATOR.LOOKBACK";
+  } else if(node_cast<backtest::CallNode>(node)) {
+    return "OTHER.CALL";
   } else if(node_cast<NumericInputNode>(node)) {
     return "INPUT.NUMERIC";
   } else if(node_cast<AllOfNode<backtest::BacktestMethodContext>>(node)) {
@@ -733,6 +737,8 @@ auto get_series_node_title(const std::string& series_id) -> std::string
     return "Xor";
   } else if(series_id == "INPUT.NUMERIC") {
     return "From Input";
+  } else if(series_id == "OTHER.CALL") {
+    return "Call";
   } else if(series_id == "OPERATOR.ADD") {
     return "Addition";
   } else if(series_id == "OPERATOR.SUBTRACT") {
@@ -944,6 +950,7 @@ auto get_series_node_category(const std::string& series_id) -> std::string
     {"VALUE.CONSTANT", "Custom & Input"},
     {"OPERATOR.LOOKBACK", "Custom & Input"},
     {"INPUT.NUMERIC", "Custom & Input"},
+    {"OTHER.CALL", "Custom & Input"},
    };
 
   const auto it = category_by_id.find(series_id);
@@ -1030,6 +1037,7 @@ auto get_series_node_combo_entries() -> const std::vector<ui::ComboEntry>&
      "VALUE.CONSTANT",
      "OPERATOR.LOOKBACK",
      "INPUT.NUMERIC",
+     "OTHER.CALL",
     };
 
     auto result = std::vector<ui::ComboEntry>{};
@@ -1049,6 +1057,8 @@ auto get_series_node_combo_entries() -> const std::vector<ui::ComboEntry>&
 auto get_condition_node_id(
  const ErasedNode<backtest::BacktestMethodContext>& node) -> std::string
 {
+  if(node_cast<backtest::CallNode>(node))
+    return "OTHER.CALL";
   if(node_cast<AllOfNode<backtest::BacktestMethodContext>>(node)) {
     return "LOGIC.ALL_OF";
   } else if(node_cast<AnyOfNode<backtest::BacktestMethodContext>>(node)) {
@@ -1089,6 +1099,8 @@ auto get_condition_node_id(
 
 auto get_condition_node_title(const std::string& condition_id) -> std::string
 {
+  if(condition_id == "OTHER.CALL")
+    return "Call";
   if(condition_id == "LOGIC.ALL_OF") {
     return "All Of";
   } else if(condition_id == "LOGIC.ANY_OF") {
@@ -1146,6 +1158,7 @@ auto get_condition_node_category(const std::string& condition_id) -> std::string
     {"LOGIC.XOR", "Logic"},
     {"LOGIC.ALWAYS", "Fixed"},
     {"LOGIC.NEVER", "Fixed"},
+    {"OTHER.CALL", "Custom & Input"},
    };
 
   const auto it = category_by_id.find(condition_id);
@@ -1172,6 +1185,7 @@ auto get_condition_node_combo_entries() -> const std::vector<ui::ComboEntry>&
      "LOGIC.XOR",
      "LOGIC.ALWAYS",
      "LOGIC.NEVER",
+     "OTHER.CALL",
     };
 
     auto result = std::vector<ui::ComboEntry>{};
@@ -1191,6 +1205,8 @@ auto get_condition_node_combo_entries() -> const std::vector<ui::ComboEntry>&
 auto get_default_condition_node(const std::string& condition_id)
  -> ErasedNode<backtest::BacktestMethodContext>
 {
+  if(condition_id == "OTHER.CALL")
+    return backtest::CallNode{"field"};
   if(condition_id == "LOGIC.ALL_OF") {
     return AllOfNode<backtest::BacktestMethodContext>{};
   } else if(condition_id == "LOGIC.ANY_OF") {
@@ -2281,14 +2297,21 @@ private:
                             WindowContext& context)
   {
     if(ui::collapsible_section("Entry")) {
-      ui::section_description(
-       "The entry signal must evaluate true before a new position can open.");
       ImGui::PushID("entry");
       auto entry = position.entry();
-      auto changed_node = self.render_condition_node(entry.signal(), context);
-      entry.signal(std::move(changed_node));
-      entry.timing(
-       self.render_signal_timing("Timing", "##timing", entry.timing()));
+      int source = entry.entry_source() == backtest::EntrySource::Call ? 1 : 0;
+      if(ImGui::Combo("Entry Source", &source, "Signal\0Call\0"))
+        entry.entry_source(source == 1 ? backtest::EntrySource::Call
+                                       : backtest::EntrySource::Signal);
+      if(entry.entry_source() == backtest::EntrySource::Signal) {
+        auto changed_node = self.render_condition_node(entry.signal(), context);
+        entry.signal(std::move(changed_node));
+        entry.timing(
+         self.render_signal_timing("Timing", "##timing", entry.timing()));
+      } else {
+        ImGui::TextWrapped(
+         "Enter at the matching Call candle open within the mapped bounds.");
+      }
       position.entry(std::move(entry));
       ImGui::PopID();
     }
@@ -2687,6 +2710,7 @@ private:
                 DataNode,
                 LookbackNode<backtest::BacktestMethodContext>,
                 NumericInputNode,
+                backtest::CallNode,
 
                 AllOfNode<backtest::BacktestMethodContext>,
                 AnyOfNode<backtest::BacktestMethodContext>,
@@ -3669,6 +3693,25 @@ private:
     }
   }
 
+  void render_series_node_params(this StrategiesWindow&,
+                                 backtest::CallNode& node,
+                                 WindowContext&)
+  {
+    auto field = node.field();
+    ui::field_label(
+     "Call field",
+     "The System maps this field to a Calls column for this setup.");
+    if(ImGui::InputText("##call_field", &field))
+      node.field(std::move(field));
+    ui::field_label("Number format");
+    constexpr const char* formats[] = {
+     "Decimal", "Signed Integer", "Unsigned Integer"};
+    auto format = static_cast<int>(node.representation());
+    if(ImGui::Combo("##call_format", &format, formats, IM_ARRAYSIZE(formats)))
+      node.representation(
+       static_cast<backtest::CallNode::Representation>(format));
+  }
+
   void render_series_node_params(this auto& self,
                                  NumericInputNode& node,
                                  WindowContext& context)
@@ -3795,6 +3838,8 @@ private:
       }
     };
 
+    if(condition_id == "OTHER.CALL")
+      return backtest::CallNode{"field"};
     if(condition_id == "COMPARISON.EQUAL") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
@@ -3995,6 +4040,14 @@ private:
    const ErasedNode<backtest::BacktestMethodContext>& any_condition,
    WindowContext& context) -> ErasedNode<backtest::BacktestMethodContext>
   {
+    if(const auto* call = node_cast<backtest::CallNode>(any_condition)) {
+      const auto selection = self.draw_condition_node_combo(any_condition);
+      if(selection != "OTHER.CALL")
+        return get_default_condition_node(selection);
+      auto edited = *call;
+      self.render_series_node_params(edited, context);
+      return edited;
+    }
     if(auto* condition_ptr =
         node_cast<AllOfNode<backtest::BacktestMethodContext>>(any_condition)) {
       return self.render_condition_node(*condition_ptr, context);

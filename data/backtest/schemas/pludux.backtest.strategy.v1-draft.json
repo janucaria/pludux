@@ -166,6 +166,7 @@
               "type": "object",
               "additionalProperties": true,
               "properties": {
+                "source": { "type": "string", "enum": ["SIGNAL", "CALL"], "default": "SIGNAL" },
                 "signal": {
                   "$ref": "#/$defs/signalAsParameter",
                   "title": "Signal",
@@ -694,6 +695,26 @@
       ],
       "title": "Lookback",
       "description": "Returns the value of a source series from a previous bar. For example, period 1 means one bar ago."
+    },
+    "callMethod": {
+      "allOf": [
+        { "$ref": "#/$defs/baseMethod" },
+        {
+          "required": ["params"],
+          "properties": {
+            "method": { "const": "OTHER.CALL" },
+            "params": {
+              "type": "object",
+              "required": ["field"],
+              "properties": {
+                "field": { "type": "string", "minLength": 1 },
+                "representation": { "$ref": "#/$defs/valueRepresentation", "default": "Decimal" }
+              }
+            }
+          }
+        }
+      ],
+      "title": "Call"
     },
     "inputMethod": {
       "allOf": [
@@ -2786,6 +2807,9 @@
           "$ref": "#/$defs/lookbackMethod"
         },
         {
+          "$ref": "#/$defs/callMethod"
+        },
+        {
           "$ref": "#/$defs/inputMethod"
         },
         {
@@ -2932,6 +2956,7 @@
     },
     "signalAsParameter": {
       "oneOf": [
+        { "$ref": "#/$defs/callMethod" },
         {
           "$ref": "#/$defs/signals"
         },

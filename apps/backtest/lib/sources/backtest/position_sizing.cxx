@@ -661,6 +661,10 @@ struct PositionSizingDecision {
   bool cash_adjusted{};
   std::optional<StrategyPerformanceBayesianKellyEvaluation> bayesian_kelly{};
 
+  std::string call_table;
+  std::size_t call_row{};
+  std::string call_skip;
+
   auto operator==(const PositionSizingDecision&) const noexcept
    -> bool = default;
 };
