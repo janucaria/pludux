@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "series": {
+    "ma_20": {
+      "method": "INDICATOR.SMA",
+      "params": { "period": 20, "source": "MARKET_DATA.CLOSE" }
+    },
+    "ma_50": {
+      "method": "INDICATOR.SMA",
+      "params": { "period": 50, "source": "MARKET_DATA.CLOSE" }
+    },
+    "atr_14": {
+      "method": "INDICATOR.ATR",
+      "params": { "period": 14, "maSmoothingType": "RMA" }
+    }
+  },
+  "positions": {
+    "short": {
+      "entry": {
+        "signal": {
+          "method": "LOGIC.OR",
+          "params": {
+            "firstCondition": {
+              "method": "COMPARISON.BELOW_BY_PERCENT",
+              "params": {
+                "target": "MARKET_DATA.CLOSE",
+                "reference": {
+                  "method": "SERIES.REFERENCE",
+                  "params": { "name": "ma_20" }
+                },
+                "percent": 15
+              }
+            },
+            "secondCondition": {
+              "method": "COMPARISON.BELOW_BY",
+              "params": {
+                "target": {
+                  "method": "SERIES.REFERENCE",
+                  "params": { "name": "ma_20" }
+                },
+                "reference": {
+                  "method": "SERIES.REFERENCE",
+                  "params": { "name": "ma_50" }
+                },
+                "gap": {
+                  "method": "OPERATOR.MULTIPLY",
+                  "params": {
+                    "multiplicand": {
+                      "method": "SERIES.REFERENCE",
+                      "params": { "name": "atr_14" }
+                    },
+                    "multiplier": 1.5
+                  }
+                }
+              }
+            }
+          }
+        },
+        "timing": "NEXT_OPEN"
+      }
+    }
+  }
+}

@@ -142,9 +142,9 @@ TEST(StrategyInputsTest, CollectsInputFromPositionRMultipleSource)
   EXPECT_DOUBLE_EQ(inputs.front().value(), 125.0);
 }
 
-TEST(StrategyInputsTest, CollectsAboveByOperandsInEvaluationOrder)
+TEST(StrategyInputsTest, CollectsOffsetComparisonOperandsInEvaluationOrder)
 {
-  const auto strategy = parse_strategy("Above By inputs", R"({
+  auto document = jsoncons::ojson::parse(R"({
     "version": 1,
     "series": {
       "absolute": {
@@ -165,28 +165,41 @@ TEST(StrategyInputsTest, CollectsAboveByOperandsInEvaluationOrder)
       }
     }
   })");
-  const auto inputs = collect_strategy_inputs(strategy);
-  ASSERT_EQ(inputs.size(), 4U);
-  EXPECT_EQ(inputs[0].label(), "Target");
-  EXPECT_EQ(inputs[1].label(), "Reference");
-  EXPECT_EQ(inputs[2].label(), "Gap");
-  EXPECT_EQ(inputs[3].label(), "Percent");
 
-  const auto values = std::vector{234.0, 200.0, 34.0, 16.0};
-  auto conversion = NodeToErasedMethodContext{values};
   const auto methods = StrategyMethodRegistry{};
   auto results = SeriesEvaluationResults{};
   const auto account = BacktestAccountState{1'000.0, 0.0, 1'000.0, 1'000.0};
   const auto context = BacktestMethodContext{methods, results, 0, account, 0};
   const auto history = AssetHistory{{"Close", {100.0}}};
   const auto snapshot = AssetSnapshot{history};
-  const auto absolute = node_to_erased_method<BacktestMethodContext>(
-   strategy.series_nodes().get("absolute").value(), conversion);
-  const auto relative = node_to_erased_method<BacktestMethodContext>(
-   strategy.series_nodes().get("relative").value(), conversion);
 
-  EXPECT_TRUE(evaluate_signal_method(absolute, snapshot, context));
-  EXPECT_FALSE(evaluate_signal_method(relative, snapshot, context));
+  for(const auto direction :
+      {ComparisonDirection::Above, ComparisonDirection::Below}) {
+    const auto below = direction == ComparisonDirection::Below;
+    if(below) {
+      auto& series = document.at("series");
+      series.at("absolute")["method"] = "COMPARISON.BELOW_BY";
+      series.at("relative")["method"] = "COMPARISON.BELOW_BY_PERCENT";
+      series.at("relative").at("params")["target"] = 85;
+    }
+    const auto strategy = parse_strategy("Offset inputs", document.to_string());
+    const auto inputs = collect_strategy_inputs(strategy);
+    ASSERT_EQ(inputs.size(), 4U);
+    EXPECT_EQ(inputs[0].label(), "Target");
+    EXPECT_EQ(inputs[1].label(), "Reference");
+    EXPECT_EQ(inputs[2].label(), "Gap");
+    EXPECT_EQ(inputs[3].label(), "Percent");
+
+    const auto values = std::vector{below ? 166.0 : 234.0, 200.0, 34.0, 16.0};
+    auto conversion = NodeToErasedMethodContext{values};
+    const auto absolute = node_to_erased_method<BacktestMethodContext>(
+     strategy.series_nodes().get("absolute").value(), conversion);
+    const auto relative = node_to_erased_method<BacktestMethodContext>(
+     strategy.series_nodes().get("relative").value(), conversion);
+
+    EXPECT_TRUE(evaluate_signal_method(absolute, snapshot, context));
+    EXPECT_FALSE(evaluate_signal_method(relative, snapshot, context));
+  }
 }
 
 TEST(StrategyParserTest, EvaluatesAboveByAtAndAroundTheSignedThreshold)
@@ -221,7 +234,42 @@ TEST(StrategyParserTest, EvaluatesAboveByAtAndAroundTheSignedThreshold)
   EXPECT_FALSE(evaluate_signal_method(tiny_gap, snapshot, context));
 }
 
-TEST(StrategyParserTest, EvaluatesAboveByWithIndicatorOperandsAfterWarmup)
+TEST(StrategyParserTest, EvaluatesBelowByAtAndAroundTheSignedThreshold)
+{
+  auto parser = make_backtest_strategy_config_parser();
+  const auto history = AssetHistory{{"Close", {9.89, 9.9, 9.91, 10.1}}};
+  const auto snapshot = AssetSnapshot{history};
+  const auto methods = StrategyMethodRegistry{};
+  auto results = SeriesEvaluationResults{};
+  const auto account = BacktestAccountState{1'000.0, 0.0, 1'000.0, 1'000.0};
+  const auto context = BacktestMethodContext{methods, results, 0, account, 0};
+  const auto compile = [&](const char* config) {
+    auto conversion = NodeToErasedMethodContext{};
+    return node_to_erased_method<BacktestMethodContext>(
+     parser.parse_node(jsoncons::ojson::parse(config)), conversion);
+  };
+
+  for(
+   const auto* config :
+   {R"({"method":"COMPARISON.BELOW_BY","params":{"target":"MARKET_DATA.CLOSE","reference":10,"gap":0.1}})",
+    R"({"method":"COMPARISON.BELOW_BY_PERCENT","params":{"target":"MARKET_DATA.CLOSE","reference":10,"percent":1}})"}) {
+    SCOPED_TRACE(config);
+    const auto method = compile(config);
+    EXPECT_TRUE(evaluate_signal_method(method, snapshot[3], context));
+    EXPECT_TRUE(evaluate_signal_method(method, snapshot[2], context));
+    EXPECT_FALSE(evaluate_signal_method(method, snapshot[1], context));
+    EXPECT_FALSE(evaluate_signal_method(method, snapshot[0], context));
+  }
+
+  const auto tiny_gap = compile(
+   R"({"method":"COMPARISON.BELOW_BY","params":{"target":10,"reference":10,"gap":1e-20}})");
+  EXPECT_FALSE(evaluate_signal_method(tiny_gap, snapshot, context));
+  const auto signed_reference = compile(
+   R"({"method":"COMPARISON.BELOW_BY_PERCENT","params":{"target":-9,"reference":-10,"percent":10}})");
+  EXPECT_TRUE(evaluate_signal_method(signed_reference, snapshot, context));
+}
+
+TEST(StrategyParserTest, EvaluatesOffsetComparisonsWithIndicatorsAfterWarmup)
 {
   auto parser = make_backtest_strategy_config_parser();
   const auto configurations = {
@@ -257,11 +305,22 @@ TEST(StrategyParserTest, EvaluatesAboveByWithIndicatorOperandsAfterWarmup)
 
   for(const auto* configuration : configurations) {
     SCOPED_TRACE(configuration);
-    auto conversion = NodeToErasedMethodContext{};
-    const auto method = node_to_erased_method<BacktestMethodContext>(
-     parser.parse_node(jsoncons::ojson::parse(configuration)), conversion);
-    EXPECT_FALSE(evaluate_signal_method(method, snapshot[1], context));
-    EXPECT_TRUE(evaluate_signal_method(method, snapshot[0], context));
+    auto document = jsoncons::ojson::parse(configuration);
+    for(const auto direction :
+        {ComparisonDirection::Above, ComparisonDirection::Below}) {
+      if(direction == ComparisonDirection::Below) {
+        auto& params = document.at("params");
+        const auto has_gap = params.contains("gap");
+        params["target"] = 85;
+        document["method"] =
+         has_gap ? "COMPARISON.BELOW_BY" : "COMPARISON.BELOW_BY_PERCENT";
+      }
+      auto conversion = NodeToErasedMethodContext{};
+      const auto method = node_to_erased_method<BacktestMethodContext>(
+       parser.parse_node(document), conversion);
+      EXPECT_FALSE(evaluate_signal_method(method, snapshot[1], context));
+      EXPECT_TRUE(evaluate_signal_method(method, snapshot[0], context));
+    }
   }
 }
 

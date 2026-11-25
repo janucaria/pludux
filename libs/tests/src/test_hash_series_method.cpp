@@ -696,6 +696,24 @@ TEST_F(HashSeriesMethodStabilityTest, OperatorMethodHashesAreStable)
 
 class HashErasedSeriesMethodTest : public ::testing::Test {};
 
+TEST_F(HashErasedSeriesMethodTest, OffsetComparisonHashIncludesDirectionAndUnit)
+{
+  const auto target = ValueMethod{90.0};
+  const auto reference = ValueMethod{100.0};
+  const auto amount = ValueMethod{10.0};
+  const auto above = OffsetComparisonMethod{
+   target, reference, amount, false, ComparisonDirection::Above};
+  const auto below = OffsetComparisonMethod{
+   target, reference, amount, false, ComparisonDirection::Below};
+  const auto below_percent = OffsetComparisonMethod{
+   target, reference, amount, true, ComparisonDirection::Below};
+
+  EXPECT_NE(above, below);
+  EXPECT_NE(below, below_percent);
+  EXPECT_NE(hash_series_method(above), hash_series_method(below));
+  EXPECT_NE(hash_series_method(below), hash_series_method(below_percent));
+}
+
 TEST_F(HashErasedSeriesMethodTest, ProducesValidHash)
 {
   const auto method =

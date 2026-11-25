@@ -293,6 +293,8 @@ TEST(StrategyConfigParserTest, RoundTripsEveryCanonicalStrategyRegistration)
    R"({"method":"COMPARISON.NOT_EQUAL","params":{"target":1,"threshold":2}})",
    R"({"method":"COMPARISON.ABOVE_BY","params":{"target":115,"reference":100,"gap":{"method":"OPERATOR.MULTIPLY","params":{"multiplicand":10,"multiplier":1.5}}}})",
    R"({"method":"COMPARISON.ABOVE_BY_PERCENT","params":{"target":115,"reference":100,"percent":15}})",
+   R"({"method":"COMPARISON.BELOW_BY","params":{"target":85,"reference":100,"gap":{"method":"OPERATOR.MULTIPLY","params":{"multiplicand":10,"multiplier":1.5}}}})",
+   R"({"method":"COMPARISON.BELOW_BY_PERCENT","params":{"target":85,"reference":100,"percent":15}})",
    R"({"method":"COMPARISON.CROSSOVER","params":{"value":"MARKET_DATA.CLOSE","baseline":"MARKET_DATA.OPEN"}})",
    R"({"method":"COMPARISON.CROSSUNDER","params":{"value":"MARKET_DATA.CLOSE","baseline":"MARKET_DATA.OPEN"}})",
    R"({"method":"LOGIC.AND","params":{"firstCondition":true,"secondCondition":false}})",

@@ -157,6 +157,8 @@ Period-like parameters are numeric expressions, commonly unsigned
 | `COMPARISON.NOT_EQUAL` | `target != threshold` | Numeric pair |
 | `COMPARISON.ABOVE_BY` | `target >= reference + gap` | `gap` uses the same units as `target` and `reference` |
 | `COMPARISON.ABOVE_BY_PERCENT` | `target >= reference + reference * percent / 100` | `percent` uses percentage points |
+| `COMPARISON.BELOW_BY` | `target <= reference - gap` | `gap` uses the same units as `target` and `reference` |
+| `COMPARISON.BELOW_BY_PERCENT` | `target <= reference - reference * percent / 100` | `percent` uses percentage points |
 | `COMPARISON.CROSSOVER` | Value crosses from at/below to above reference | Requires previous values |
 | `COMPARISON.CROSSUNDER` | Value crosses from at/above to below reference | Requires previous values |
 | `LOGIC.ALL_OF` | All child conditions | Variable-length list |
@@ -168,10 +170,11 @@ Period-like parameters are numeric expressions, commonly unsigned
 | `LOGIC.ALWAYS` | Always true | No parameters |
 | `LOGIC.NEVER` | Always false | No parameters |
 
-Both Above By comparisons accept numeric expressions for each operand and
-include equality at the threshold. A positive gap requires the target to exceed
-the reference. Each returns `false` if an operand or the threshold is non-finite,
-including during indicator warm-up.
+Above By and Below By comparisons accept signed numeric expressions for each
+operand and include equality at the threshold. A positive gap requires the
+target to be strictly above or below the reference, respectively. Each comparison
+returns `false` if an operand or the threshold is non-finite, including during
+indicator warm-up.
 
 All conditions are available to Strategy signals. Entry Filters accept the six
 basic numeric comparisons listed first and `LOGIC.AND`, `LOGIC.OR`, `LOGIC.XOR`,

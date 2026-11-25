@@ -947,8 +947,9 @@ auto make_strategy_config_parser_for() -> ConfigParser<TContext>
   register_comparison.template operator()<NotEqualNode<TContext>>(
    "COMPARISON.NOT_EQUAL");
 
-  const auto register_above_by = [&]<typename TNode>(const char* name,
-                                                     const char* amount_key) {
+  const auto register_offset_comparison = [&]<typename TNode>(
+                                           const char* name,
+                                           const char* amount_key) {
     parser.register_node_parser(
      name,
      [amount_key](const Parser& parser, const Node& node) -> jsoncons::ojson {
@@ -968,10 +969,14 @@ auto make_strategy_config_parser_for() -> ConfigParser<TContext>
                     parser.parse_node(params.at(amount_key))};
      });
   };
-  register_above_by.template operator()<AboveByNode<TContext>>(
+  register_offset_comparison.template operator()<AboveByNode<TContext>>(
    "COMPARISON.ABOVE_BY", "gap");
-  register_above_by.template operator()<AboveByPercentNode<TContext>>(
+  register_offset_comparison.template operator()<AboveByPercentNode<TContext>>(
    "COMPARISON.ABOVE_BY_PERCENT", "percent");
+  register_offset_comparison.template operator()<BelowByNode<TContext>>(
+   "COMPARISON.BELOW_BY", "gap");
+  register_offset_comparison.template operator()<BelowByPercentNode<TContext>>(
+   "COMPARISON.BELOW_BY_PERCENT", "percent");
 
   const auto register_cross = [&]<typename TNode>(const char* name) {
     parser.register_node_parser(

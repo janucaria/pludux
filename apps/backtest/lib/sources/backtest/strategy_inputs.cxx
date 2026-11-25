@@ -301,9 +301,10 @@ void collect_declarations(const ComparisonNode<TComparator, TContext>& node,
   collect_declarations(node.threshold(), declarations);
 }
 
-template<typename TContext, bool ByPercent>
-void collect_declarations(const AboveByNode<TContext, ByPercent>& node,
-                          StrategyDeclarations& declarations)
+template<typename TContext, bool ByPercent, ComparisonDirection Direction>
+void collect_declarations(
+ const OffsetComparisonNode<TContext, ByPercent, Direction>& node,
+ StrategyDeclarations& declarations)
 {
   collect_declarations(node.target(), declarations);
   collect_declarations(node.reference(), declarations);
@@ -418,6 +419,8 @@ void collect_declarations(const ErasedNode<BacktestMethodContext>& node,
   PLUDUX_COLLECT_IF_NODE(NotEqualNode<BacktestMethodContext>)
   PLUDUX_COLLECT_IF_NODE(AboveByNode<BacktestMethodContext>)
   PLUDUX_COLLECT_IF_NODE(AboveByPercentNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(BelowByNode<BacktestMethodContext>)
+  PLUDUX_COLLECT_IF_NODE(BelowByPercentNode<BacktestMethodContext>)
   PLUDUX_COLLECT_IF_NODE(TrueNode)
   PLUDUX_COLLECT_IF_NODE(FalseNode)
   PLUDUX_COLLECT_IF_NODE(LogicalAndNode<BacktestMethodContext>)

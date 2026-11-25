@@ -73,21 +73,26 @@ template<typename TTargetMethod, typename TThresholdMethod>
 using NotEqualMethod =
  ComparisonMethod<std::not_equal_to<>, TTargetMethod, TThresholdMethod>;
 
+enum class ComparisonDirection { Above, Below };
+
 template<typename TMethod>
-class AboveByMethod {
+class OffsetComparisonMethod {
 public:
-  AboveByMethod(TMethod target,
-                TMethod reference,
-                TMethod amount,
-                bool by_percent)
+  OffsetComparisonMethod(
+   TMethod target,
+   TMethod reference,
+   TMethod amount,
+   bool by_percent,
+   ComparisonDirection direction = ComparisonDirection::Above)
   : target_{std::move(target)}
   , reference_{std::move(reference)}
   , amount_{std::move(amount)}
   , by_percent_{by_percent}
+  , direction_{direction}
   {
   }
 
-  auto operator==(const AboveByMethod&) const -> bool = default;
+  auto operator==(const OffsetComparisonMethod&) const -> bool = default;
 
   auto target() const noexcept -> const TMethod&
   {
@@ -105,12 +110,20 @@ public:
   {
     return by_percent_;
   }
+  auto direction() const noexcept -> ComparisonDirection
+  {
+    return direction_;
+  }
 
 private:
   TMethod target_;
   TMethod reference_;
   TMethod amount_;
   bool by_percent_;
+  ComparisonDirection direction_;
 };
+
+template<typename TMethod>
+using AboveByMethod = OffsetComparisonMethod<TMethod>;
 
 } // namespace pludux

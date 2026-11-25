@@ -16,6 +16,7 @@ module;
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <type_traits>
 #include <unordered_map>
@@ -97,6 +98,61 @@ using MomentumHistogramPlotMethod =
   ErasedPlotSourceMethod<ErasedPlotMethodContext>>;
 using pludux::backtest::ConstantPlotSourceMethod;
 using pludux::backtest::SeriesPlotSourceMethod;
+
+auto is_offset_comparison(std::string_view id) -> bool
+{
+  return id == "COMPARISON.ABOVE_BY" || id == "COMPARISON.ABOVE_BY_PERCENT" ||
+         id == "COMPARISON.BELOW_BY" || id == "COMPARISON.BELOW_BY_PERCENT";
+}
+
+constexpr auto offset_comparison_id(bool by_percent,
+                                    ComparisonDirection direction)
+ -> std::string_view
+{
+  if(direction == ComparisonDirection::Above) {
+    return by_percent ? "COMPARISON.ABOVE_BY_PERCENT" : "COMPARISON.ABOVE_BY";
+  }
+  return by_percent ? "COMPARISON.BELOW_BY_PERCENT" : "COMPARISON.BELOW_BY";
+}
+
+auto get_offset_comparison_node_id(const backtest::StrategyNode& node)
+ -> std::string_view
+{
+  if(node_cast<AboveByNode<backtest::BacktestMethodContext>>(node)) {
+    return "COMPARISON.ABOVE_BY";
+  }
+  if(node_cast<AboveByPercentNode<backtest::BacktestMethodContext>>(node)) {
+    return "COMPARISON.ABOVE_BY_PERCENT";
+  }
+  if(node_cast<BelowByNode<backtest::BacktestMethodContext>>(node)) {
+    return "COMPARISON.BELOW_BY";
+  }
+  if(node_cast<BelowByPercentNode<backtest::BacktestMethodContext>>(node)) {
+    return "COMPARISON.BELOW_BY_PERCENT";
+  }
+  return {};
+}
+
+auto make_offset_comparison_node(std::string_view id,
+                                 backtest::StrategyNode target,
+                                 backtest::StrategyNode reference)
+ -> backtest::StrategyNode
+{
+  if(id == "COMPARISON.ABOVE_BY") {
+    return AboveByNode<backtest::BacktestMethodContext>{
+     std::move(target), std::move(reference), ValueNode{1.0}};
+  }
+  if(id == "COMPARISON.ABOVE_BY_PERCENT") {
+    return AboveByPercentNode<backtest::BacktestMethodContext>{
+     std::move(target), std::move(reference), ValueNode{1.0}};
+  }
+  if(id == "COMPARISON.BELOW_BY") {
+    return BelowByNode<backtest::BacktestMethodContext>{
+     std::move(target), std::move(reference), ValueNode{1.0}};
+  }
+  return BelowByPercentNode<backtest::BacktestMethodContext>{
+   std::move(target), std::move(reference), ValueNode{1.0}};
+}
 
 auto get_default_series_node(const std::string& series_id)
  -> ErasedNode<backtest::BacktestMethodContext>
@@ -188,12 +244,8 @@ auto get_default_series_node(const std::string& series_id)
   } else if(series_id == "COMPARISON.GREATER_EQUAL") {
     return GreaterEqualNode<backtest::BacktestMethodContext>{CloseNode{},
                                                              CloseNode{}};
-  } else if(series_id == "COMPARISON.ABOVE_BY") {
-    return AboveByNode<backtest::BacktestMethodContext>{
-     CloseNode{}, CloseNode{}, ValueNode{1.0}};
-  } else if(series_id == "COMPARISON.ABOVE_BY_PERCENT") {
-    return AboveByPercentNode<backtest::BacktestMethodContext>{
-     CloseNode{}, CloseNode{}, ValueNode{1.0}};
+  } else if(is_offset_comparison(series_id)) {
+    return make_offset_comparison_node(series_id, CloseNode{}, CloseNode{});
   } else if(series_id == "COMPARISON.EQUAL") {
     return EqualNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
   } else if(series_id == "COMPARISON.NOT_EQUAL") {
@@ -578,11 +630,8 @@ auto get_series_node_id(const ErasedNode<backtest::BacktestMethodContext>& node)
   } else if(node_cast<GreaterEqualNode<backtest::BacktestMethodContext>>(
              node)) {
     return "COMPARISON.GREATER_EQUAL";
-  } else if(node_cast<AboveByNode<backtest::BacktestMethodContext>>(node)) {
-    return "COMPARISON.ABOVE_BY";
-  } else if(node_cast<AboveByPercentNode<backtest::BacktestMethodContext>>(
-             node)) {
-    return "COMPARISON.ABOVE_BY_PERCENT";
+  } else if(const auto id = get_offset_comparison_node_id(node); !id.empty()) {
+    return std::string{id};
   } else if(node_cast<EqualNode<backtest::BacktestMethodContext>>(node)) {
     return "COMPARISON.EQUAL";
   } else if(node_cast<NotEqualNode<backtest::BacktestMethodContext>>(node)) {
@@ -734,6 +783,10 @@ auto get_series_node_title(const std::string& series_id) -> std::string
     return "Above By";
   } else if(series_id == "COMPARISON.ABOVE_BY_PERCENT") {
     return "Above By Percent";
+  } else if(series_id == "COMPARISON.BELOW_BY") {
+    return "Below By";
+  } else if(series_id == "COMPARISON.BELOW_BY_PERCENT") {
+    return "Below By Percent";
   } else if(series_id == "COMPARISON.EQUAL") {
     return "Equal";
   } else if(series_id == "COMPARISON.NOT_EQUAL") {
@@ -954,6 +1007,8 @@ auto get_series_node_category(const std::string& series_id) -> std::string
     {"COMPARISON.GREATER_EQUAL", "Logic & Comparison"},
     {"COMPARISON.ABOVE_BY", "Logic & Comparison"},
     {"COMPARISON.ABOVE_BY_PERCENT", "Logic & Comparison"},
+    {"COMPARISON.BELOW_BY", "Logic & Comparison"},
+    {"COMPARISON.BELOW_BY_PERCENT", "Logic & Comparison"},
     {"COMPARISON.EQUAL", "Logic & Comparison"},
     {"COMPARISON.NOT_EQUAL", "Logic & Comparison"},
     {"COMPARISON.CROSSOVER", "Logic & Comparison"},
@@ -1043,6 +1098,8 @@ auto get_series_node_combo_entries() -> const std::vector<ui::ComboEntry>&
      "COMPARISON.GREATER_EQUAL",
      "COMPARISON.ABOVE_BY",
      "COMPARISON.ABOVE_BY_PERCENT",
+     "COMPARISON.BELOW_BY",
+     "COMPARISON.BELOW_BY_PERCENT",
      "COMPARISON.EQUAL",
      "COMPARISON.NOT_EQUAL",
      "COMPARISON.CROSSOVER",
@@ -1095,11 +1152,8 @@ auto get_condition_node_id(
   } else if(node_cast<GreaterEqualNode<backtest::BacktestMethodContext>>(
              node)) {
     return "COMPARISON.GREATER_EQUAL";
-  } else if(node_cast<AboveByNode<backtest::BacktestMethodContext>>(node)) {
-    return "COMPARISON.ABOVE_BY";
-  } else if(node_cast<AboveByPercentNode<backtest::BacktestMethodContext>>(
-             node)) {
-    return "COMPARISON.ABOVE_BY_PERCENT";
+  } else if(const auto id = get_offset_comparison_node_id(node); !id.empty()) {
+    return std::string{id};
   } else if(node_cast<EqualNode<backtest::BacktestMethodContext>>(node)) {
     return "COMPARISON.EQUAL";
   } else if(node_cast<NotEqualNode<backtest::BacktestMethodContext>>(node)) {
@@ -1141,8 +1195,7 @@ auto get_condition_node_title(const std::string& condition_id) -> std::string
     return "Less Equal";
   } else if(condition_id == "COMPARISON.GREATER_EQUAL") {
     return "Greater Equal";
-  } else if(condition_id == "COMPARISON.ABOVE_BY" ||
-            condition_id == "COMPARISON.ABOVE_BY_PERCENT") {
+  } else if(is_offset_comparison(condition_id)) {
     return get_series_node_title(condition_id);
   } else if(condition_id == "COMPARISON.EQUAL") {
     return "Equal";
@@ -1176,6 +1229,8 @@ auto get_condition_node_category(const std::string& condition_id) -> std::string
     {"COMPARISON.GREATER_EQUAL", "Comparison"},
     {"COMPARISON.ABOVE_BY", "Comparison"},
     {"COMPARISON.ABOVE_BY_PERCENT", "Comparison"},
+    {"COMPARISON.BELOW_BY", "Comparison"},
+    {"COMPARISON.BELOW_BY_PERCENT", "Comparison"},
     {"COMPARISON.LESS_EQUAL", "Comparison"},
     {"COMPARISON.CROSSOVER", "Crossover"},
     {"COMPARISON.CROSSUNDER", "Crossover"},
@@ -1205,6 +1260,8 @@ auto get_condition_node_combo_entries() -> const std::vector<ui::ComboEntry>&
      "COMPARISON.GREATER_EQUAL",
      "COMPARISON.ABOVE_BY",
      "COMPARISON.ABOVE_BY_PERCENT",
+     "COMPARISON.BELOW_BY",
+     "COMPARISON.BELOW_BY_PERCENT",
      "COMPARISON.LESS_EQUAL",
      "COMPARISON.CROSSOVER",
      "COMPARISON.CROSSUNDER",
@@ -1258,8 +1315,7 @@ auto get_default_condition_node(const std::string& condition_id)
   } else if(condition_id == "COMPARISON.GREATER_EQUAL") {
     return GreaterEqualNode<backtest::BacktestMethodContext>{CloseNode{},
                                                              CloseNode{}};
-  } else if(condition_id == "COMPARISON.ABOVE_BY" ||
-            condition_id == "COMPARISON.ABOVE_BY_PERCENT") {
+  } else if(is_offset_comparison(condition_id)) {
     return get_default_series_node(condition_id);
   } else if(condition_id == "COMPARISON.EQUAL") {
     return EqualNode<backtest::BacktestMethodContext>{CloseNode{}, CloseNode{}};
@@ -2729,6 +2785,11 @@ private:
                             ErasedNode<backtest::BacktestMethodContext>& node,
                             WindowContext& context)
   {
+    if(!get_offset_comparison_node_id(node).empty()) {
+      node = self.render_condition_node(node, context);
+      return;
+    }
+
     ([&]<typename... Ts>() mutable {
       ([&]() mutable -> bool {
         if(auto specific_node = node_cast<Ts>(node)) {
@@ -2754,8 +2815,6 @@ private:
                 GreaterThanNode<backtest::BacktestMethodContext>,
                 LessEqualNode<backtest::BacktestMethodContext>,
                 GreaterEqualNode<backtest::BacktestMethodContext>,
-                AboveByNode<backtest::BacktestMethodContext>,
-                AboveByPercentNode<backtest::BacktestMethodContext>,
                 EqualNode<backtest::BacktestMethodContext>,
                 NotEqualNode<backtest::BacktestMethodContext>,
                 CrossoverNode<backtest::BacktestMethodContext>,
@@ -3196,11 +3255,6 @@ private:
                           LessEqualNode<backtest::BacktestMethodContext>> ||
              std::same_as<TConditionNode,
                           GreaterEqualNode<backtest::BacktestMethodContext>> ||
-             std::same_as<TConditionNode,
-                          AboveByNode<backtest::BacktestMethodContext>> ||
-             std::same_as<
-              TConditionNode,
-              AboveByPercentNode<backtest::BacktestMethodContext>> ||
              std::same_as<TConditionNode,
                           EqualNode<backtest::BacktestMethodContext>> ||
              std::same_as<TConditionNode,
@@ -3921,15 +3975,10 @@ private:
        std::move(lhs_series_param), std::move(rhs_series_param)};
     }
 
-    if(condition_id == "COMPARISON.ABOVE_BY" ||
-       condition_id == "COMPARISON.ABOVE_BY_PERCENT") {
+    if(is_offset_comparison(condition_id)) {
       auto [target, reference] = get_condition_series_params(other_condition);
-      if(condition_id == "COMPARISON.ABOVE_BY") {
-        return AboveByNode<backtest::BacktestMethodContext>{
-         std::move(target), std::move(reference), ValueNode{1.0}};
-      }
-      return AboveByPercentNode<backtest::BacktestMethodContext>{
-       std::move(target), std::move(reference), ValueNode{1.0}};
+      return make_offset_comparison_node(
+       condition_id, std::move(target), std::move(reference));
     }
 
     if(condition_id == "COMPARISON.LESS_EQUAL") {
@@ -4141,6 +4190,14 @@ private:
                 any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
     } else if(auto* condition_ptr =
+               node_cast<BelowByNode<backtest::BacktestMethodContext>>(
+                any_condition)) {
+      return self.render_condition_node(*condition_ptr, context);
+    } else if(auto* condition_ptr =
+               node_cast<BelowByPercentNode<backtest::BacktestMethodContext>>(
+                any_condition)) {
+      return self.render_condition_node(*condition_ptr, context);
+    } else if(auto* condition_ptr =
                node_cast<EqualNode<backtest::BacktestMethodContext>>(
                 any_condition)) {
       return self.render_condition_node(*condition_ptr, context);
@@ -4222,10 +4279,12 @@ private:
     return changed_node;
   }
 
-  template<bool ByPercent>
+  template<bool ByPercent, ComparisonDirection Direction>
   auto render_condition_node(
    this auto& self,
-   const AboveByNode<backtest::BacktestMethodContext, ByPercent>& condition,
+   const OffsetComparisonNode<backtest::BacktestMethodContext,
+                              ByPercent,
+                              Direction>& condition,
    WindowContext& context) -> ErasedNode<backtest::BacktestMethodContext>
   {
     auto target = condition.target();
@@ -4249,10 +4308,21 @@ private:
     self.render_series_node(amount, context);
     ImGui::PopID();
 
-    auto updated = AboveByNode<backtest::BacktestMethodContext, ByPercent>{
+    constexpr auto opposite = Direction == ComparisonDirection::Above
+                               ? ComparisonDirection::Below
+                               : ComparisonDirection::Above;
+    if(selection == offset_comparison_id(ByPercent, opposite)) {
+      return OffsetComparisonNode<backtest::BacktestMethodContext,
+                                  ByPercent,
+                                  opposite>{
+       std::move(target), std::move(reference), std::move(amount)};
+    }
+
+    auto updated = OffsetComparisonNode<backtest::BacktestMethodContext,
+                                        ByPercent,
+                                        Direction>{
      std::move(target), std::move(reference), std::move(amount)};
-    if(selection ==
-       (ByPercent ? "COMPARISON.ABOVE_BY_PERCENT" : "COMPARISON.ABOVE_BY")) {
+    if(selection == offset_comparison_id(ByPercent, Direction)) {
       return updated;
     }
     return self.make_condition_node_from_other(selection, std::move(updated));

@@ -1224,7 +1224,7 @@ auto pludux_tag_invoke(
 
 template<typename TMethod>
 auto pludux_tag_invoke(EvaluateSeriesMethod,
-                       const AboveByMethod<TMethod>& method,
+                       const OffsetComparisonMethod<TMethod>& method,
                        AssetSnapshot asset_snapshot,
                        auto context) noexcept -> double
 {
@@ -1240,11 +1240,15 @@ auto pludux_tag_invoke(EvaluateSeriesMethod,
   }
 
   const auto gap = method.by_percent() ? reference * (amount / 100.0) : amount;
-  const auto threshold = reference + gap;
-  // Compare in price units so a decimal target such as 10.1 can meet the
-  // threshold at reference 10.0 and gap 0.1.
-  return std::isfinite(threshold) && target >= threshold &&
-         (gap <= 0.0 || target > reference);
+  // Form the threshold in the target's units to preserve decimal boundaries.
+  if(method.direction() == ComparisonDirection::Above) {
+    const auto threshold = reference + gap;
+    return std::isfinite(threshold) && target >= threshold &&
+           (gap <= 0.0 || target > reference);
+  }
+  const auto threshold = reference - gap;
+  return std::isfinite(threshold) && target <= threshold &&
+         (gap <= 0.0 || target < reference);
 }
 
 } // namespace pludux

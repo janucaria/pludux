@@ -2942,7 +2942,7 @@
           "$ref": "#/$defs/comparisonMethod"
         },
         {
-          "$ref": "#/$defs/aboveByMethod"
+          "$ref": "#/$defs/offsetComparisonMethod"
         },
         {
           "$ref": "#/$defs/fixedMethod"
@@ -3079,7 +3079,7 @@
         }
       ]
     },
-    "aboveByMethod": {
+    "offsetComparisonMethod": {
       "allOf": [
         { "$ref": "#/$defs/baseMethod" },
         {
@@ -3087,7 +3087,12 @@
             "required": ["method"],
             "properties": {
               "method": {
-                "enum": ["COMPARISON.ABOVE_BY", "COMPARISON.ABOVE_BY_PERCENT"]
+                "enum": [
+                  "COMPARISON.ABOVE_BY",
+                  "COMPARISON.ABOVE_BY_PERCENT",
+                  "COMPARISON.BELOW_BY",
+                  "COMPARISON.BELOW_BY_PERCENT"
+                ]
               }
             }
           },
@@ -3106,7 +3111,9 @@
               }
             },
             "if": {
-              "properties": { "method": { "const": "COMPARISON.ABOVE_BY" } }
+              "properties": {
+                "method": { "enum": ["COMPARISON.ABOVE_BY", "COMPARISON.BELOW_BY"] }
+              }
             },
             "then": { "properties": { "params": { "required": ["gap"] } } },
             "else": { "properties": { "params": { "required": ["percent"] } } }
@@ -3114,8 +3121,8 @@
           "else": false
         }
       ],
-      "title": "Above By Signal",
-      "description": "True when target minus reference is at least the gap or the given percentage of the reference."
+      "title": "Offset Comparison Signal",
+      "description": "True when the target is at least the given gap or percentage above or below the reference."
     },
     "crossMethod": {
       "allOf": [
@@ -3303,7 +3310,7 @@
           "$ref": "#/$defs/comparisonMethod"
         },
         {
-          "$ref": "#/$defs/aboveByMethod"
+          "$ref": "#/$defs/offsetComparisonMethod"
         },
         {
           "$ref": "#/$defs/fixedMethod"
