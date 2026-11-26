@@ -128,6 +128,13 @@ if(
   unset(PLUDUX_ICON_FONT_BYTES)
 endif()
 
+set(PLUDUX_IMGUI_CORE_SOURCES
+  ${imgui_SOURCE_DIR}/imgui.cpp
+  ${imgui_SOURCE_DIR}/imgui_draw.cpp
+  ${imgui_SOURCE_DIR}/imgui_tables.cpp
+  ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+)
+
 add_executable(${PROJECT_NAME}
 
   src/main.cpp
@@ -135,10 +142,7 @@ add_executable(${PROJECT_NAME}
   ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
   ${imgui_SOURCE_DIR}/backends/imgui_impl_wgpu.cpp
   # Dear ImGui files
-  ${imgui_SOURCE_DIR}/imgui.cpp
-  ${imgui_SOURCE_DIR}/imgui_draw.cpp
-  ${imgui_SOURCE_DIR}/imgui_tables.cpp
-  ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+  ${PLUDUX_IMGUI_CORE_SOURCES}
   ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
   # ImPlot files
   ${implot_SOURCE_DIR}/implot.cpp
@@ -273,6 +277,11 @@ endif()
 if(NOT EMSCRIPTEN AND BUILD_TESTING)
   add_executable(pludux-backtest-test_portfolio_strategy_selection
     tests/test_portfolio_strategy_selections.cpp
+    tests/test_chart_bar.cpp
+    ${PLUDUX_IMGUI_CORE_SOURCES}
+  )
+  target_include_directories(pludux-backtest-test_portfolio_strategy_selection
+    PRIVATE ${imgui_SOURCE_DIR}
   )
   target_sources(pludux-backtest-test_portfolio_strategy_selection PRIVATE
     FILE_SET

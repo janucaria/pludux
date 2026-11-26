@@ -19,6 +19,7 @@ module;
 #include <implot.h>
 #include <implot_internal.h>
 
+#include "../charts/chart_bar.hpp"
 #include "../scope_results.hpp"
 #include "../ui/pludux_icons.hpp"
 
@@ -1339,7 +1340,7 @@ private:
          high_pos,
          color,
          ImMax(1.0f, ImAbs(open_left_pos.x - close_right_pos.x) / 10.0f));
-        draw_list->AddRectFilled(open_left_pos, close_right_pos, color);
+        fill_chart_bar(*draw_list, open_left_pos, close_right_pos, color);
 
         const auto open_close_points = std::array{
          open_left_pos, close_left_pos, close_right_pos, open_right_pos};
@@ -1403,7 +1404,7 @@ private:
 
         const auto line_points =
          std::array{low_left_pos, high_left_pos, high_right_pos, low_right_pos};
-        draw_list->AddRectFilled(low_left_pos, high_right_pos, color);
+        fill_chart_bar(*draw_list, low_left_pos, high_right_pos, color);
         draw_list->AddPolyline(line_points.data(),
                                line_points.size(),
                                color,
