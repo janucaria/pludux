@@ -121,6 +121,14 @@ and the Portfolio Overview. Portfolio Trades places open trades first, followed
 by closed trades in descending close-time order. Events uses newest-first time
 order and retains execution order within equal timestamps.
 
+In either chart scope, hover over a plot to inspect that timestamp across
+subplots. Click to pin it, then click again or choose **Clear pin** from the
+right-click menu. The menu also offers **Fit all bars**, **Follow latest bars**,
+and **Reset row heights**. Drag the divider between plots to resize them.
+Drawdown and P&L Drawdown keep 0% at the bottom of the Y-axis when you zoom.
+The Equity legend shows the amount and its percentage of Portfolio initial
+capital for the inspected timestamp.
+
 The Single-Asset Chart's top plot selector offers Equity and Drawdown for the
 Portfolio, and Net P&L and P&L Drawdown for the selected setup. The Net P&L legend
 shows the amount and the percentage of Portfolio initial capital. P&L Drawdown

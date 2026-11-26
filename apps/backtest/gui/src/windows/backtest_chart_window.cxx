@@ -179,6 +179,11 @@ public:
   {
   }
 
+  void invalidate_results(this BacktestChartWindow& self) noexcept
+  {
+    self.chart_state_.invalidate_results();
+  }
+
   void render(this BacktestChartWindow& self, WindowContext& context)
   {
     const auto& app_state = context.app_state();
@@ -191,8 +196,7 @@ public:
     ImGui::PopStyleVar();
 
     if(!portfolio_ptr) {
-      self.portfolio_chart_handle_.reset();
-      self.chart_state_.clear_display_backtest_strategy();
+      self.chart_state_.clear_display();
       self.render_status_panel(
        PLUDUX_ICON_CHART,
        "No portfolio selected",
@@ -204,19 +208,18 @@ public:
 
     const auto& portfolio = *portfolio_ptr;
     const auto selected_strategy = app_state.selected_portfolio_strategy();
+    self.chart_state_.display(portfolio_handle, selected_strategy);
     if(!selected_strategy) {
-       self.chart_state_.clear_display_backtest_strategy();
-       self.render_portfolio_chart(context, portfolio);
-       ImGui::End();
-       return;
+      self.render_portfolio_chart(context, portfolio);
+      ImGui::End();
+      return;
     }
-    self.portfolio_chart_handle_.reset();
     const auto run = selected_strategy->run;
     const auto strategy_index = selected_strategy->strategy_index;
      const auto system_handle = run.system_handle;
     const auto* system_ptr = app_state.get_system_if_present(system_handle);
     if(!system_ptr) {
-       self.chart_state_.clear_display_backtest_strategy();
+      self.chart_state_.clear_display();
       self.render_status_panel(
        PLUDUX_ICON_WARNING,
         "Missing portfolio strategy",
@@ -226,7 +229,7 @@ public:
     }
     const auto& system = *system_ptr;
     if(strategy_index >= system.strategy_count()) {
-       self.chart_state_.clear_display_backtest_strategy();
+      self.chart_state_.clear_display();
       self.render_status_panel(PLUDUX_ICON_WARNING,
                                 "Missing backtest strategy",
                                 "Select an available strategy in the portfolio "
@@ -234,8 +237,6 @@ public:
       ImGui::End();
       return;
     }
-    self.chart_state_.display_backtest_strategy(portfolio_handle, *selected_strategy);
-
     const auto execution_status =
      context.backtest_execution_status(portfolio_handle);
 
@@ -269,6 +270,7 @@ public:
      app_state.get_portfolio_results(portfolio_handle);
     const auto* backtest_results = portfolio_results.backtest(run);
     if(!backtest_results) {
+      self.chart_state_.update_result_count(0);
       self.render_status_panel(PLUDUX_ICON_WAITING,
                                "Waiting for results",
                                "The backtest result is not available yet.");
@@ -279,6 +281,7 @@ public:
     const auto& backtest_series_results =
       backtest_results->series_results(strategy_index);
     const auto timeline_size = backtest_timelines.size();
+    self.chart_state_.update_result_count(timeline_size);
     auto backtest_timestamps = std::vector<double>(timeline_size);
     for(auto index = std::size_t{}; index < timeline_size; ++index) {
       backtest_timestamps[index] =
@@ -307,10 +310,7 @@ public:
       ImGui::TextDisabled("Stale price: valued at the backtest's last close");
     }
 
-    const auto inspected_index =
-     self.chart_state_.pinned_bar()
-      .or_else([&self] { return self.hovered_bar_; })
-      .value_or(timeline_size - 1);
+    const auto inspected_index = *self.chart_state_.inspected_bar();
     const auto chart_position = ImGui::GetCursorScreenPos();
     const auto chart_size = ImGui::GetContentRegionAvail();
 
@@ -324,14 +324,9 @@ public:
     const auto backtest_running =
      execution_status &&
      execution_status->phase() == BacktestExecutionPhase::Running;
-    const auto viewport_mode = self.chart_state_.viewport_mode();
-
-    const auto axis_x_flags = ImPlotAxisFlags{ImPlotAxisFlags_None};
     auto axis_y_flags = ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_Opposite |
                         ImPlotAxisFlags_Foreground |
                         ImPlotAxisFlags_NoHighlight;
-    const auto not_last_x_flags =
-     ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_NoHighlight;
 
     auto crosshair_state = CrosshairState{};
     self.legend_hovered_ = false;
@@ -359,39 +354,20 @@ public:
        ImPlotFlags_NoLegend | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus;
       auto current_row = std::size_t{0};
       const auto setup_x_axis = [&](bool last_row) {
-        ImPlot::SetupAxis(
-         ImAxis_X1,
-         nullptr,
-         axis_x_flags | (last_row ? ImPlotAxisFlags_None : not_last_x_flags));
-        ImPlot::SetupAxisFormat(
-         ImAxis_X1, date_formatter, &backtest_timestamps);
-        if(!update_automatic_view) {
-          return;
-        }
-
-        const auto latest_bar = static_cast<double>(timeline_size - 1);
-        if(viewport_mode == BacktestChartViewportMode::FitAll) {
-          const auto right_padding_bars =
-           std::clamp(static_cast<double>(timeline_size) * 0.05, 3.0, 20.0);
-          ImPlot::SetupAxisLimits(
-           ImAxis_X1, -0.5, latest_bar + right_padding_bars, ImPlotCond_Always);
-        } else {
-          constexpr auto right_padding_bars = 20.0;
-          const auto visible_bar_count =
-           static_cast<double>(self.chart_state_.follow_bar_count());
-          const auto maximum = latest_bar + right_padding_bars;
-          const auto minimum =
-           std::max(-0.5, latest_bar - (visible_bar_count - 1.0));
-          ImPlot::SetupAxisLimits(
-           ImAxis_X1, minimum, maximum, ImPlotCond_Always);
-        }
+        self.setup_time_axis(
+         backtest_timestamps, last_row, update_automatic_view);
       };
 
-      if(ImPlot::BeginPlot("##TopPlot", plot_size, plot_flags)) {
+      const auto top_plot = self.chart_state_.top_plot();
+      const auto drawdown_plot = is_drawdown_plot(top_plot);
+      // A separate plot ID keeps the zero-locked range apart from other
+      // metrics.
+      const auto top_plot_id =
+       drawdown_plot ? "##DrawdownTopPlot" : "##TopPlot";
+      if(ImPlot::BeginPlot(top_plot_id, plot_size, plot_flags)) {
         setup_x_axis(++current_row == total_row_count);
 
         auto pnl_points = std::vector<SingleAssetPnlPoint>{};
-        const auto top_plot = self.chart_state_.top_plot();
         switch(top_plot) {
         case BacktestTopPlot::Equity:
           ImPlot::SetupAxis(ImAxis_Y1, "% Equity", axis_y_flags);
@@ -400,16 +376,18 @@ public:
            union_timeline, backtest_timestamps, portfolio.initial_capital());
           break;
         case BacktestTopPlot::Drawdown:
-          ImPlot::SetupAxis(ImAxis_Y1, "% Drawdown", axis_y_flags);
-          ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
+          setup_drawdown_axis("% Drawdown", axis_y_flags);
           self.plot_drawdown(union_timeline, backtest_timestamps);
           break;
         case BacktestTopPlot::NetPnl:
         case BacktestTopPlot::PnlDrawdown: {
-          const auto net_pnl = top_plot == BacktestTopPlot::NetPnl;
-          ImPlot::SetupAxis(
-           ImAxis_Y1, net_pnl ? "% Net P&L" : "% P&L Drawdown", axis_y_flags);
-          ImPlot::SetupAxisFormat(ImAxis_Y1, net_pnl ? "%.0f" : "%.2f");
+          const auto net_pnl = !drawdown_plot;
+          if(net_pnl) {
+            ImPlot::SetupAxis(ImAxis_Y1, "% Net P&L", axis_y_flags);
+            ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
+          } else {
+            setup_drawdown_axis("% P&L Drawdown", axis_y_flags);
+          }
           const auto initial_capital = portfolio.initial_capital();
           pnl_points = single_asset_pnl(
            backtest_timelines, strategy_index, initial_capital);
@@ -548,64 +526,12 @@ public:
         }
       }
 
-      const auto chart_hovered = ImPlot::IsSubplotsHovered();
-      const auto mouse_wheel = ImGui::GetIO().MouseWheel;
-      const auto fit_follow_span =
-       chart_hovered && !self.legend_hovered_ &&
-       viewport_mode == BacktestChartViewportMode::FollowLatest &&
-       ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
-      const auto zoom_follow_span =
-       chart_hovered && !self.legend_hovered_ &&
-       viewport_mode == BacktestChartViewportMode::FollowLatest &&
-       mouse_wheel != 0.0f;
-      ImPlot::EndSubplots();
-
-      self.render_execution_badge(chart_position, chart_size, execution_status);
-      self.render_chart_context_menu(chart_position, chart_size);
-
-      if(fit_follow_span) {
-        self.chart_state_.follow_bar_count(timeline_size);
-      } else if(zoom_follow_span) {
-        auto zoom_rate = static_cast<double>(ImPlot::GetInputMap().ZoomRate);
-        if(mouse_wheel > 0.0f) {
-          zoom_rate = -zoom_rate / (1.0 + 2.0 * zoom_rate);
-        }
-        const auto visible_bar_count =
-         std::round(static_cast<double>(self.chart_state_.follow_bar_count()) *
-                    (1.0 + zoom_rate));
-        self.chart_state_.follow_bar_count(
-         static_cast<std::size_t>(std::max(1.0, visible_bar_count)));
-      }
-
-      if(ImGui::IsMouseClicked(ImGuiMouseButton_Left) && chart_hovered &&
-         self.chart_state_.pinned_bar()) {
-        self.pending_unpin_ = true;
-        self.pending_pin_bar_.reset();
-      } else if(self.legend_hovered_) {
-        self.pending_pin_bar_.reset();
-        self.pending_unpin_ = false;
-      } else if(ImGui::IsMouseClicked(ImGuiMouseButton_Left) && chart_hovered) {
-        if(crosshair_state.hovered_bar) {
-          self.pending_pin_bar_ = crosshair_state.hovered_bar;
-        }
-      }
-
-      self.hovered_bar_ = crosshair_state.hovered_bar;
-      if(ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-        self.pending_pin_bar_.reset();
-        self.pending_unpin_ = false;
-      } else if(ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-        if(self.pending_unpin_) {
-          self.chart_state_.pin_bar(std::nullopt);
-          self.pending_unpin_ = false;
-        } else if(self.pending_pin_bar_) {
-          self.chart_state_.pin_bar(self.pending_pin_bar_);
-          self.pending_pin_bar_.reset();
-        }
-      }
-      if(!self.legend_hovered_ || crosshair_state.pinned) {
-        self.render_crosshair(crosshair_state, !self.legend_hovered_);
-      }
+      self.finish_chart(crosshair_state,
+                        chart_position,
+                        chart_size,
+                        execution_status,
+                        timeline_size,
+                        true);
     }
     ImPlot::PopStyleVar();
     ImGui::End();
@@ -619,6 +545,85 @@ private:
     std::optional<float> cursor_x;
     bool pinned{};
   };
+
+  static void setup_drawdown_axis(const char* label, ImPlotAxisFlags flags)
+  {
+    ImPlot::SetupAxis(ImAxis_Y1, label, flags | ImPlotAxisFlags_LockMin);
+    ImPlot::SetupAxisLimitsConstraints(
+     ImAxis_Y1, 0.0, std::numeric_limits<double>::infinity());
+    ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
+  }
+
+  void setup_time_axis(this const BacktestChartWindow& self,
+                       std::vector<double>& timestamps,
+                       bool last_row,
+                       bool fit)
+  {
+    constexpr auto hidden_labels =
+     ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_NoHighlight;
+    ImPlot::SetupAxis(
+     ImAxis_X1, nullptr, last_row ? ImPlotAxisFlags_None : hidden_labels);
+    ImPlot::SetupAxisFormat(ImAxis_X1, date_formatter, &timestamps);
+    if(!fit) {
+      return;
+    }
+
+    const auto latest_bar = static_cast<double>(timestamps.size() - 1);
+    auto minimum = -0.5;
+    auto right_padding =
+     std::clamp(static_cast<double>(timestamps.size()) * 0.05, 3.0, 20.0);
+    if(self.chart_state_.viewport_mode() ==
+       BacktestChartViewportMode::FollowLatest) {
+      const auto count =
+       static_cast<double>(self.chart_state_.follow_bar_count());
+      minimum = std::max(minimum, latest_bar - (count - 1.0));
+      right_padding = 20.0;
+    }
+    ImPlot::SetupAxisLimits(
+     ImAxis_X1, minimum, latest_bar + right_padding, ImPlotCond_Always);
+  }
+
+  void finish_chart(this BacktestChartWindow& self,
+                    const CrosshairState& crosshair,
+                    ImVec2 position,
+                    ImVec2 size,
+                    const BacktestExecutionStatus* execution_status,
+                    std::size_t timeline_size,
+                    bool single_asset)
+  {
+    const auto subplots_hovered = ImPlot::IsSubplotsHovered();
+    ImPlot::EndSubplots();
+    const auto chart_hovered =
+     subplots_hovered && !ImGui::IsPopupOpen("##backtest_chart_context");
+
+    auto& state = self.chart_state_;
+    constexpr auto button = ImGuiMouseButton_Left;
+    if(chart_hovered && !self.legend_hovered_ &&
+       state.viewport_mode() == BacktestChartViewportMode::FollowLatest) {
+      if(ImGui::IsMouseDoubleClicked(button)) {
+        state.follow_bar_count(timeline_size);
+      } else if(const auto wheel = ImGui::GetIO().MouseWheel; wheel != 0.0f) {
+        auto zoom_rate = static_cast<double>(ImPlot::GetInputMap().ZoomRate);
+        if(wheel > 0.0f) {
+          zoom_rate = -zoom_rate / (1.0 + 2.0 * zoom_rate);
+        }
+        const auto count =
+         std::round(state.follow_bar_count() * (1.0 + zoom_rate));
+        state.follow_bar_count(static_cast<std::size_t>(std::max(1.0, count)));
+      }
+    }
+    state.update_inspection(crosshair.hovered_bar,
+                            chart_hovered && ImGui::IsMouseClicked(button),
+                            ImGui::IsMouseReleased(button),
+                            ImGui::IsMouseDragging(button),
+                            self.legend_hovered_);
+
+    self.render_execution_badge(position, size, execution_status);
+    self.render_chart_context_menu(position, size, single_asset);
+    if(!self.legend_hovered_ || crosshair.pinned) {
+      self.render_crosshair(crosshair, !self.legend_hovered_);
+    }
+  }
 
   void record_crosshair_plot(this const BacktestChartWindow&,
                              CrosshairState& state,
@@ -738,11 +743,6 @@ private:
   }
 
   BacktestChartState chart_state_{};
-  std::optional<backtest::PortfolioStoreHandle> portfolio_chart_handle_{};
-  std::size_t portfolio_chart_size_{};
-  std::optional<std::size_t> hovered_bar_{};
-  std::optional<std::size_t> pending_pin_bar_{};
-  bool pending_unpin_{};
   mutable bool legend_hovered_{false};
 
   ImVec4 bullish_color_;
@@ -798,6 +798,20 @@ private:
   {
     return std::isfinite(value) ? std::format("{:.6g}", value)
                                 : std::string{"â€”"};
+  }
+
+  static auto format_percentage(double value) -> std::string
+  {
+    return std::isfinite(value) ? std::format("{:.2f}%", value)
+                                : std::string{"\u2014"};
+  }
+
+  static auto equity_legend(double amount, double percentage, ImU32 color)
+   -> LegendLine
+  {
+    return {{"Equity", IM_COL32_WHITE},
+            {format_currency(amount), color},
+            {format_percentage(percentage), color}};
   }
 
   void draw_plot_legend(this const BacktestChartWindow& self,
@@ -941,10 +955,6 @@ private:
      [](std::string_view label, double value, ImU32 color) -> LegendSegment {
       return {std::format("{} {}", label, format_plot_value(value)), color};
     };
-    const auto format_percentage = [](double value) {
-      return std::isfinite(value) ? std::format("{:.2f}%", value)
-                                  : std::string{"\u2014"};
-    };
     const auto& strategy_state = backtest_timeline.strategy_state(index, strategy_index);
      const auto& performance = strategy_state.strategy_performance;
     auto line = LegendLine{};
@@ -954,12 +964,10 @@ private:
       const auto equity = backtest_timeline.equity(index);
       const auto initial_capital = backtest_timeline.initial_capital(index);
       const auto percentage =
-       initial_capital != 0.0 ? equity / initial_capital * 100.0 : NAN;
+       percentage_of_initial_capital(equity, initial_capital);
       const auto color = ImGui::GetColorU32(
        percentage >= 100.0 ? self.bullish_color_ : self.bearish_color_);
-      line = {{"Equity", IM_COL32_WHITE},
-              {format_currency(equity), color},
-              {format_percentage(percentage), color}};
+      line = equity_legend(equity, percentage, color);
       break;
     }
     case BacktestTopPlot::Drawdown: {
@@ -1118,7 +1126,8 @@ private:
 
   void render_chart_context_menu(this BacktestChartWindow& self,
                                  ImVec2 chart_position,
-                                 ImVec2 chart_size)
+                                 ImVec2 chart_size,
+                                 bool single_asset)
   {
     const auto chart_maximum =
      ImVec2{chart_position.x + chart_size.x, chart_position.y + chart_size.y};
@@ -1154,6 +1163,11 @@ private:
     ImGui::EndDisabled();
     if(ImGui::MenuItem("Reset row heights")) {
       self.chart_state_.reset_row_ratios();
+    }
+
+    if(!single_asset) {
+      ImGui::EndPopup();
+      return;
     }
 
     ImGui::Separator();
@@ -1906,9 +1920,12 @@ private:
     const auto& results = context.app_state().get_portfolio_results(
      context.app_state().selected_portfolio_handle());
     const auto& timeline = results.timeline();
-    if(timeline.empty()) {
-      const auto status = context.backtest_execution_status(
-       context.app_state().selected_portfolio_handle());
+    const auto timeline_size = timeline.size();
+    const auto size_changed =
+     self.chart_state_.update_result_count(timeline_size);
+    const auto status = context.backtest_execution_status(
+     context.app_state().selected_portfolio_handle());
+    if(timeline_size == 0) {
       const auto failed =
        status && status->phase() == BacktestExecutionPhase::Failed;
       self.render_status_panel(
@@ -1919,32 +1936,17 @@ private:
       return;
     }
     auto timestamps = std::vector<double>{};
-    timestamps.reserve(timeline.size());
-    for(auto index = std::size_t{}; index < timeline.size(); ++index) {
+    timestamps.reserve(timeline_size);
+    for(auto index = std::size_t{}; index < timeline_size; ++index) {
       timestamps.push_back(static_cast<double>(timeline.row(index).timestamp));
     }
-    const auto handle = context.app_state().selected_portfolio_handle();
-    const auto fit = self.portfolio_chart_handle_ != handle ||
-                     self.portfolio_chart_size_ != timeline.size();
-    self.portfolio_chart_handle_ = handle;
-    self.portfolio_chart_size_ = timeline.size();
-    const auto setup_time_axis = [&](bool last_row) {
-      ImPlot::SetupAxis(ImAxis_X1,
-                        nullptr,
-                        last_row ? ImPlotAxisFlags_None
-                                 : ImPlotAxisFlags_NoTickLabels |
-                                    ImPlotAxisFlags_NoHighlight);
-      ImPlot::SetupAxisFormat(ImAxis_X1, date_formatter, &timestamps);
-      if(fit) {
-        const auto right_padding_bars =
-         std::clamp(static_cast<double>(timeline.size()) * 0.05, 3.0, 20.0);
-        ImPlot::SetupAxisLimits(ImAxis_X1,
-                                -0.5,
-                                static_cast<double>(timeline.size() - 1) +
-                                 right_padding_bars,
-                                ImPlotCond_Always);
-      }
-    };
+    const auto& row = timeline.row(*self.chart_state_.inspected_bar());
+    const auto chart_position = ImGui::GetCursorScreenPos();
+    const auto chart_size = ImGui::GetContentRegionAvail();
+    auto crosshair = CrosshairState{};
+    self.legend_hovered_ = false;
+    auto& row_ratios = self.chart_state_.row_ratios(2);
+    const auto fit = self.chart_state_.consume_fit_request() || size_changed;
     auto axis_y_flags = ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_Opposite |
                         ImPlotAxisFlags_Foreground |
                         ImPlotAxisFlags_NoHighlight;
@@ -1960,30 +1962,35 @@ private:
                              1,
                              ImVec2{-1, -1},
                              ImPlotSubplotFlags_LinkAllX |
-                              ImPlotSubplotFlags_NoMenus)) {
+                              ImPlotSubplotFlags_NoMenus,
+                             row_ratios.data())) {
       if(ImPlot::BeginPlot("##PortfolioEquity", ImVec2{-1, 0}, plot_flags)) {
-        setup_time_axis(false);
+        self.setup_time_axis(timestamps, false, fit);
         ImPlot::SetupAxis(ImAxis_Y1, "% Equity", axis_y_flags);
         ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
-        self.plot_equity(timeline, timestamps, portfolio.initial_capital());
-        const auto& row = timeline.row(timeline.size() - 1);
+        const auto initial_capital = portfolio.initial_capital();
+        self.plot_equity(timeline, timestamps, initial_capital);
+        const auto percentage =
+         percentage_of_initial_capital(row.equity, initial_capital);
         self.draw_plot_legend(
-         {{{"Equity", IM_COL32_WHITE},
-           {format_currency(row.equity), plot_item_color("Equity")}}});
+         {equity_legend(row.equity, percentage, plot_item_color("Equity"))});
+        self.record_crosshair_plot(
+         crosshair, timeline_size, self.chart_state_.pinned_bar());
         ImPlot::EndPlot();
       }
       if(ImPlot::BeginPlot("##PortfolioDrawdown", ImVec2{-1, 0}, plot_flags)) {
-        setup_time_axis(true);
-        ImPlot::SetupAxis(ImAxis_Y1, "% Drawdown", axis_y_flags);
-        ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
+        self.setup_time_axis(timestamps, true, fit);
+        setup_drawdown_axis("% Drawdown", axis_y_flags);
         self.plot_drawdown(timeline, timestamps);
-        self.draw_plot_legend(
-         {{{"Drawdown", IM_COL32_WHITE},
-           {std::format("{:.2f}%", timeline.row(timeline.size() - 1).drawdown),
-            plot_item_color("Drawdown")}}});
+        self.draw_plot_legend({{{"Drawdown", IM_COL32_WHITE},
+                                {std::format("{:.2f}%", row.drawdown),
+                                 plot_item_color("Drawdown")}}});
+        self.record_crosshair_plot(
+         crosshair, timeline_size, self.chart_state_.pinned_bar());
         ImPlot::EndPlot();
       }
-      ImPlot::EndSubplots();
+      self.finish_chart(
+       crosshair, chart_position, chart_size, status, timeline_size, false);
     }
     ImPlot::PopStyleVar();
   }
@@ -2009,7 +2016,8 @@ private:
         continue;
       }
       const auto& row = timeline.row(portfolio_index);
-      const auto equity_percentage = row.equity / initial_capital * 100.0;
+      const auto equity_percentage =
+       percentage_of_initial_capital(row.equity, initial_capital);
       xs.push_back(static_cast<double>(backtest_index));
       ys.push_back(equity_percentage);
     }

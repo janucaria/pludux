@@ -95,6 +95,13 @@ struct SingleAssetPnlPoint {
   double drawdown_percentage{};
 };
 
+inline auto percentage_of_initial_capital(double amount, double initial_capital)
+ -> double
+{
+  return initial_capital > 0.0 ? amount / initial_capital * 100.0
+                               : std::numeric_limits<double>::quiet_NaN();
+}
+
 template<typename Timeline>
 auto single_asset_pnl(const Timeline& timeline,
                       std::size_t strategy_index,
@@ -117,9 +124,8 @@ auto single_asset_pnl(const Timeline& timeline,
                                  ? open->unrealized_pnl()
                                  : 0.0;
     const auto amount = realized_pnl + unrealized_pnl;
-    const auto percentage = initial_capital > 0.0
-                             ? amount / initial_capital * 100.0
-                             : std::numeric_limits<double>::quiet_NaN();
+    const auto percentage =
+     percentage_of_initial_capital(amount, initial_capital);
     peak_percentage = std::max(peak_percentage, percentage);
     points.push_back({amount, percentage, peak_percentage - percentage});
   }

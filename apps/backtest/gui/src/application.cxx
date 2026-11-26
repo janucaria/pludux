@@ -271,6 +271,7 @@ public:
         // the replacement can consume it, otherwise a new runner resumes an
         // old, partial timeline.
         app_state.reset_all_portfolios();
+        self.backtest_chart_window_.invalidate_results();
         self.running_portfolios_.clear();
         self.portfolio_execution_statuses_.clear();
         for(const auto portfolio_handle : app_state.get_portfolio_handles()) {

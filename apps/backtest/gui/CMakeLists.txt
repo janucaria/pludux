@@ -277,9 +277,11 @@ if(NOT EMSCRIPTEN AND BUILD_TESTING)
   target_sources(pludux-backtest-test_portfolio_strategy_selection PRIVATE
     FILE_SET
       CXX_MODULES
-      BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src
+      BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/tests
       FILES
+        src/charts/backtest_chart_state.cxx
         src/portfolio_strategy_selections.cxx
+        tests/test_backtest_chart_state.cpp
   )
   target_link_libraries(pludux-backtest-test_portfolio_strategy_selection
     PRIVATE

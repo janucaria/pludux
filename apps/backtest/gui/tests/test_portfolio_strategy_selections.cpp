@@ -252,6 +252,15 @@ TEST(ScopeResults, SingleAssetPnlUsesActualFillsAndMarksForTheSelectedSetup)
   EXPECT_NEAR(other[5].drawdown_percentage, 0.2, 1e-10);
 }
 
+TEST(ScopeResults, EquityPercentageUsesInitialCapitalAsTheBaseline)
+{
+  using pludux::apps::percentage_of_initial_capital;
+  EXPECT_DOUBLE_EQ(percentage_of_initial_capital(10'000.0, 10'000.0), 100.0);
+  EXPECT_DOUBLE_EQ(percentage_of_initial_capital(10'250.0, 10'000.0), 102.5);
+  EXPECT_DOUBLE_EQ(percentage_of_initial_capital(9'750.0, 10'000.0), 97.5);
+  EXPECT_TRUE(std::isnan(percentage_of_initial_capital(100.0, 0.0)));
+}
+
 TEST(ScopeResults, SingleAssetPnlHasNoPercentagesWithoutInitialCapital)
 {
   using pludux::apps::single_asset_pnl;

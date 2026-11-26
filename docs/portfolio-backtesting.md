@@ -227,7 +227,8 @@ Setup × Asset row onto a compact axis:
   owner. Its Hypothetical source reads only the selected setup's theoretical
   positions.
 - The Portfolio Chart shows account Equity and Drawdown on the union timeline.
-  Main and failsafe setups execute together with shared Portfolio capital.
+  Hovering or pinning selects one union timestamp for both legends. Main and
+  failsafe setups execute together with shared Portfolio capital.
 
 ### Events
 
