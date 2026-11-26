@@ -1,10 +1,6 @@
-module;
-
-#include <cstddef>
-
 export module pludux.backtest:store_slot;
 
-import pludux;
+import :store_handle;
 
 export namespace pludux::backtest {
 
@@ -12,8 +8,8 @@ class StoreSlot {
 public:
   constexpr StoreSlot() noexcept = default;
 
-  constexpr StoreSlot(std::size_t value_index,
-                      std::size_t generation,
+  constexpr StoreSlot(StoreIndex value_index,
+                      StoreGeneration generation,
                       bool alive) noexcept
   : value_index_{value_index}
   , generation_{generation}
@@ -21,12 +17,12 @@ public:
   {
   }
 
-  auto value_index(this const StoreSlot& self) noexcept -> std::size_t
+  auto value_index(this const StoreSlot& self) noexcept -> StoreIndex
   {
     return self.value_index_;
   }
 
-  auto generation(this const StoreSlot& self) noexcept -> std::size_t
+  auto generation(this const StoreSlot& self) noexcept -> StoreGeneration
   {
     return self.generation_;
   }
@@ -36,13 +32,13 @@ public:
     return self.alive_;
   }
 
-  auto value_index(this StoreSlot& self, std::size_t value_index) noexcept
+  auto value_index(this StoreSlot& self, StoreIndex value_index) noexcept
    -> void
   {
     self.value_index_ = value_index;
   }
 
-  auto generation(this StoreSlot& self, std::size_t generation) noexcept
+  auto generation(this StoreSlot& self, StoreGeneration generation) noexcept
    -> void
   {
     self.generation_ = generation;
@@ -54,8 +50,8 @@ public:
   }
 
 private:
-  std::size_t value_index_{};
-  std::size_t generation_{};
+  StoreIndex value_index_{};
+  StoreGeneration generation_{};
   bool alive_{};
 };
 

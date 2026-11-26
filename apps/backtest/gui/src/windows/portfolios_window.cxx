@@ -349,26 +349,22 @@ private:
 
     auto maximum_open_trades = portfolio.maximum_open_trades();
     ui::field_label("Maximum open trades");
-    constexpr auto size_type = sizeof(std::size_t) == sizeof(std::uint64_t)
-                                ? ImGuiDataType_U64
-                                : ImGuiDataType_U32;
-    constexpr auto step = std::size_t{1};
+    constexpr auto step = std::uint32_t{1};
     if(ImGui::InputScalar("##portfolio_maximum_open_trades",
-                          size_type,
+                          ImGuiDataType_U32,
                           &maximum_open_trades,
                           &step)) {
-      portfolio.maximum_open_trades(
-       std::max(maximum_open_trades, std::size_t{1}));
+      portfolio.maximum_open_trades(std::max(maximum_open_trades, step));
     }
 
     auto maximum_combined_layers = portfolio.maximum_combined_layers();
     ui::field_label("Maximum combined layers");
     if(ImGui::InputScalar("##portfolio_maximum_combined_layers",
-                          size_type,
+                          ImGuiDataType_U32,
                           &maximum_combined_layers,
                           &step)) {
       portfolio.maximum_combined_layers(
-       std::max(maximum_combined_layers, std::size_t{1}));
+       std::max(maximum_combined_layers, step));
     }
 
     ui::form_section(

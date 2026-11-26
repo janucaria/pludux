@@ -3,6 +3,8 @@ module;
 #include <algorithm>
 #include <cfloat>
 #include <cstddef>
+#include <cstdint>
+#include <limits>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -15,6 +17,23 @@ module;
 export module pludux.apps.backtest:ui.widgets;
 
 namespace pludux::apps::ui {
+
+export auto input_uint32(const char* label,
+                         std::uint32_t& value,
+                         std::uint32_t minimum = 0) -> bool
+{
+  auto input = static_cast<ImS64>(value);
+  constexpr auto step = ImS64{1};
+  constexpr auto fast_step = ImS64{100};
+  if(!ImGui::InputScalar(label, ImGuiDataType_S64, &input, &step, &fast_step)) {
+    return false;
+  }
+  value = static_cast<std::uint32_t>(
+   std::clamp(input,
+              static_cast<ImS64>(minimum),
+              static_cast<ImS64>(std::numeric_limits<std::uint32_t>::max())));
+  return true;
+}
 
 // Renders `label` as a button right-aligned within the remaining width of
 // the current line. Replaces the CalcTextSize/FramePadding/

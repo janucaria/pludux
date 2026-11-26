@@ -455,7 +455,7 @@ TEST(CallPortfolioTest, OverlappingCallsCompeteForPortfolioCash)
   const auto market = Market{"Market"};
   const auto broker = Broker{"Broker"};
   const auto profile = fixed_quantity_profile();
-  const auto run = [&](const Asset& asset, std::size_t slot) {
+  const auto run = [&](const Asset& asset, StoreIndex slot) {
     return PortfolioRunner::BacktestRun{
      SystemStoreHandle{1, 1},
      AssetStoreHandle{slot, 1},
@@ -608,7 +608,7 @@ TEST(CallPortfolioTest, SizingSeesFreshOpeningMarksAndStaleLastClose)
   const auto fraction =
    Profile{"Percent", PositionSizingNode{EquityFractionPositionSizing{0.2}}};
   const auto run = [&](const Asset& asset,
-                       std::size_t slot,
+                       StoreIndex slot,
                        const Profile& profile,
                        double time) {
     return PortfolioRunner::BacktestRun{
@@ -698,7 +698,7 @@ TEST(CallPortfolioTest, ComparatorRanksCallsUsingPreviousCompletedCandle)
   const auto market = Market{"Market"};
   const auto broker = Broker{"Broker"};
   const auto profile = fixed_quantity_profile();
-  const auto run = [&](const Asset& asset, std::size_t slot) {
+  const auto run = [&](const Asset& asset, StoreIndex slot) {
     return PortfolioRunner::BacktestRun{
      {1, 1},
      {slot, 1},

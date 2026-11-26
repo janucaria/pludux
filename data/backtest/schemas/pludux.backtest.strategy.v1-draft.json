@@ -202,12 +202,14 @@
                 "cooldown": {
                   "type": "integer",
                   "minimum": 0,
+                  "maximum": 4294967295,
                   "title": "Cooldown Bars",
                   "description": "Number of complete bars after each accepted entry during which all pyramiding processing is paused. Zero disables the cooldown."
                 },
                 "maxLayers": {
                   "type": "integer",
                   "minimum": 1,
+                  "maximum": 4294967295,
                   "title": "Max Layers",
                   "description": "Maximum number of pyramiding layers allowed. For example, maxLayers 3 means the initial position plus 2 additional layers."
                 },
@@ -685,6 +687,7 @@
                 "period": {
                   "type": "integer",
                   "minimum": 0,
+                  "maximum": 4294967295,
                   "title": "Lookback Period",
                   "description": "Number of bars to look back. 0 means the current bar, 1 means one bar ago, and so on."
                 }

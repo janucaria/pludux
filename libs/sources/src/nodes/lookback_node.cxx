@@ -1,7 +1,8 @@
 module;
 
-#include <cstddef>
+#include <cstdint>
 #include <limits>
+#include <stdexcept>
 #include <utility>
 
 export module pludux:nodes.lookback_node;
@@ -16,21 +17,25 @@ export namespace pludux {
 template<typename TContext>
 class LookbackNode {
 public:
-  explicit LookbackNode(std::size_t period = 1)
+  explicit LookbackNode(std::uint32_t period = 1)
   : LookbackNode{CloseNode{}, period}
   {
   }
 
-  LookbackNode(ErasedNode<TContext> source, std::size_t period)
+  LookbackNode(ErasedNode<TContext> source, std::uint32_t period)
   : source_{std::move(source)}
   , period_{period}
   {
   }
 
-  LookbackNode(const LookbackNode& other,
-                    std::size_t additional_period)
-  : LookbackNode{other.source(), other.period() + additional_period}
+  LookbackNode(const LookbackNode& other, std::uint32_t additional_period)
+  : LookbackNode{other.source(), other.period()}
   {
+    if(additional_period >
+       std::numeric_limits<std::uint32_t>::max() - period_) {
+      throw std::out_of_range{"Lookback period is out of range"};
+    }
+    period_ += additional_period;
   }
 
   auto operator==(const LookbackNode& other) const noexcept -> bool =
@@ -47,19 +52,19 @@ public:
     self.source_ = std::move(source);
   }
 
-  auto period(this const LookbackNode& self) noexcept -> std::size_t
+  auto period(this const LookbackNode& self) noexcept -> std::uint32_t
   {
     return self.period_;
   }
 
-  void period(this LookbackNode& self, std::size_t period) noexcept
+  void period(this LookbackNode& self, std::uint32_t period) noexcept
   {
     self.period_ = period;
   }
 
 private:
   ErasedNode<TContext> source_;
-  std::size_t period_;
+  std::uint32_t period_;
 };
 
 

@@ -81,15 +81,12 @@ auto strict_as(const jsoncons::ojson& json) -> T
       throw std::invalid_argument{"Expected an in-range integral JSON number"};
     }
     if constexpr(std::is_unsigned_v<T>) {
-      if(value < 0.0 || static_cast<long double>(value) >
-                         static_cast<long double>(
-                          std::numeric_limits<T>::max())) {
+      if(value < 0.0 ||
+         value > static_cast<double>(std::numeric_limits<T>::max())) {
         throw std::out_of_range{"JSON integer is out of range"};
       }
-    } else if(static_cast<long double>(value) <
-               static_cast<long double>(std::numeric_limits<T>::min()) ||
-              static_cast<long double>(value) >
-               static_cast<long double>(std::numeric_limits<T>::max())) {
+    } else if(value < static_cast<double>(std::numeric_limits<T>::min()) ||
+              value > static_cast<double>(std::numeric_limits<T>::max())) {
       throw std::out_of_range{"JSON integer is out of range"};
     }
     return static_cast<T>(value);
@@ -323,11 +320,11 @@ auto parse_strategy_position(const jsoncons::ojson& position_json,
     }
     if(pyramiding_json.contains("cooldown")) {
       pyramiding.cooldown(
-       strict_as<std::size_t>(pyramiding_json.at("cooldown")));
+       strict_as<std::uint32_t>(pyramiding_json.at("cooldown")));
     }
     if(pyramiding_json.contains("maxLayers")) {
       pyramiding.max_layers(
-       strict_as<std::size_t>(pyramiding_json.at("maxLayers")));
+       strict_as<std::uint32_t>(pyramiding_json.at("maxLayers")));
     }
     if(pyramiding_json.contains("stopTargetReference")) {
       const auto& stop_target_reference_json =
@@ -531,7 +528,7 @@ auto parse_strategy_config_json(std::string_view strategy_name,
   if(!strategy_json.contains("version")) {
     throw std::runtime_error{"Invalid strategy JSON: missing version"};
   }
-  const auto version = strict_as<int>(strategy_json.at("version"));
+  const auto version = strict_as<std::int32_t>(strategy_json.at("version"));
   if(version != 1) {
     throw std::runtime_error("Unsupported strategy JSON version: " +
                              std::to_string(version));
@@ -647,7 +644,7 @@ auto serialize_strategy_config_json(const backtest::Strategy& strategy)
 
   auto strategy_json = jsoncons::ojson{};
 
-  strategy_json["version"] = 1;
+  strategy_json["version"] = std::int32_t{1};
   strategy_json["execution"] = jsoncons::ojson{};
   strategy_json["execution"]["intrabarPath"] =
    serialize_intrabar_path(strategy.intrabar_path());

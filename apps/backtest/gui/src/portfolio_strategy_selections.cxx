@@ -1,7 +1,7 @@
 module;
 
 #include <algorithm>
-#include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <ranges>
 #include <span>
@@ -16,7 +16,7 @@ export namespace pludux::apps {
 
 struct PortfolioStrategyKey {
   backtest::BacktestRunKey run;
-  std::size_t strategy_index{};
+  std::uint32_t strategy_index{};
 
   auto operator==(const PortfolioStrategyKey&) const noexcept
    -> bool = default;

@@ -3,6 +3,7 @@ module;
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <limits>
 #include <stdexcept>
@@ -31,7 +32,7 @@ class StrategyPerformanceHistoryPolicy {
 public:
   StrategyPerformanceHistoryPolicy(
    StrategyPerformanceHistoryMode mode = StrategyPerformanceHistoryMode::All,
-   std::size_t rolling_window = 100,
+   std::uint32_t rolling_window = 100,
    double exponential_decay = 0.99) noexcept
   : mode_{mode}
   , rolling_window_{rolling_window}
@@ -50,7 +51,7 @@ public:
 
   auto
   rolling_window(this const StrategyPerformanceHistoryPolicy& self) noexcept
-   -> std::size_t
+   -> std::uint32_t
   {
     return self.rolling_window_;
   }
@@ -76,7 +77,7 @@ public:
 
 private:
   StrategyPerformanceHistoryMode mode_{StrategyPerformanceHistoryMode::All};
-  std::size_t rolling_window_{100};
+  std::uint32_t rolling_window_{100};
   double exponential_decay_{0.99};
 };
 

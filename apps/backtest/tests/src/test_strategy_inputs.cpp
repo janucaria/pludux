@@ -788,7 +788,7 @@ TEST(StrategyParserTest, RequiresCanonicalMethodAndLosslessIntegralValues)
    R"({"version":1,"positions":{"long":{"pyramiding":{"cooldown":2.0}}}})");
   EXPECT_EQ(integral.long_position().pyramiding().cooldown(), 2U);
   for(const auto* cooldown :
-      {"2.5", "-1", "1e100", "9007199254740993.0", "\"2\""}) {
+      {"2.5", "-1", "4294967296", "1e100", "9007199254740993.0", "\"2\""}) {
     EXPECT_THROW(
      parse_strategy(
       "Invalid",

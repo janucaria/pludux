@@ -309,15 +309,12 @@ static auto strict_param_as(const jsoncons::ojson& value) -> T
       throw std::out_of_range{"Floating JSON integer is not lossless"};
     }
     if constexpr(std::is_unsigned_v<T>) {
-      if(result < 0.0 || static_cast<long double>(result) >
-                          static_cast<long double>(
-                           std::numeric_limits<T>::max())) {
+      if(result < 0.0 ||
+         result > static_cast<double>(std::numeric_limits<T>::max())) {
         throw std::out_of_range{"JSON integer is out of range"};
       }
-    } else if(static_cast<long double>(result) <
-               static_cast<long double>(std::numeric_limits<T>::min()) ||
-              static_cast<long double>(result) >
-               static_cast<long double>(std::numeric_limits<T>::max())) {
+    } else if(result < static_cast<double>(std::numeric_limits<T>::min()) ||
+              result > static_cast<double>(std::numeric_limits<T>::max())) {
       throw std::out_of_range{"JSON integer is out of range"};
     }
     return static_cast<T>(result);
@@ -1185,7 +1182,7 @@ auto make_strategy_config_parser_for() -> ConfigParser<TContext>
      return LookbackNode<TContext>{
       params.contains("source") ? parser.parse_node(params.at("source"))
                                 : defaults.source(),
-      get_param_or<std::size_t>(params, "period", defaults.period())};
+      get_param_or<std::uint32_t>(params, "period", defaults.period())};
    });
 
   const auto register_ta = [&]<typename TNode>(const char* name) {
@@ -1760,7 +1757,7 @@ auto make_requested_order_comparator_config_parser()
      return LookbackNode<Context>{
       params.contains("source") ? parser.parse_node(params.at("source"))
                                 : defaults.source(),
-      get_param_or<std::size_t>(params, "period", defaults.period())};
+      get_param_or<std::uint32_t>(params, "period", defaults.period())};
    });
 
   const auto register_binary = [&]<typename TNode>(const char* name,

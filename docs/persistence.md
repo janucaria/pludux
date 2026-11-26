@@ -27,6 +27,12 @@ Each setup stores its Strategy reference, input overrides, Entry Filter, and
 logical `OTHER.CALL` field mappings. The workspace embeds Asset history and
 the Calls library, including each table's name, headers, and rows.
 
+Desktop and Web use the same workspace format. Resource slot and value indices,
+stored counts, and Strategy indices are unsigned 32-bit integers. Valid slot
+indices range from 0 to 4,294,967,294. Handle and arena slot generations are
+unsigned 64-bit integers. An unset optional resource reference is saved as JSON
+`null`. This includes unset selections in `viewState`.
+
 `documentState` stores document-related editing/selection state and `viewState`
 stores presentation state. This is application persistence, not a stable public
 JSON API. Prefer editing through the GUI.
@@ -43,16 +49,18 @@ Portfolio Strategy selections retain their last child while Portfolio scope is
 active. Saving and reopening preserves that remembered child. Older workspaces
 that omit a selection's `active` field treat that child as active by default.
 
-The persistence envelope remains structural: `pludux`, `$version`, `store`,
-`documentState`, the store descriptor and arena bookkeeping, every resource
-collection, and every document handle list must be present and correctly
-shaped. Explicit `null`, wrong JSON types, invalid enum or method names, invalid
-ranges, fractional integral values, negative unsigned values, and numeric
-overflow are rejected. Workspace files use strict JSON: comments and trailing
-commas are not accepted.
+The workspace requires `pludux`, `$version`, `store`, `documentState`, the store
+descriptor and arena bookkeeping, and the resource collections and document
+handle lists. Only optional resource references accept `null`. A file with the
+wrong JSON type, an invalid enum or method name, a fractional value in an
+integer field, a negative value in an unsigned field, or a number outside its
+allowed range is rejected. Workspace files use strict JSON and reject comments
+and trailing commas.
 
-Workspaces saved before Calls may omit the Calls collections and settings.
-Pludux opens them with an empty Calls library and Signal entry sources.
+Older files that encoded an unset handle as a platform-dependent integer may
+fail to open in current builds. If a readable workspace predates Calls, omitted
+Calls collections and settings default to an empty Calls library and Signal
+entry sources.
 
 Portfolio result timelines are not durable stored resources. Any document edit
 invalidates results and recreates runners. A workspace version mismatch also

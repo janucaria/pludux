@@ -526,7 +526,7 @@ private:
     }
     auto history_mode = static_cast<int>(config.history().mode());
     auto break_even = static_cast<int>(config.break_even_treatment());
-    auto window = static_cast<int>(config.history().rolling_window());
+    auto window = config.history().rolling_window();
     auto decay = config.history().exponential_decay();
     auto win_probability = win->prior_probability();
     auto win_strength = win->prior_strength();
@@ -550,7 +550,7 @@ private:
        static_cast<int>(
         backtest::StrategyPerformanceHistoryMode::RollingWindow)) {
       ui::field_label("Rolling window");
-      changed |= ImGui::InputInt("##history_window", &window);
+      changed |= ui::input_uint32("##history_window", window);
     } else if(history_mode ==
               static_cast<int>(
                backtest::StrategyPerformanceHistoryMode::ExponentialDecay)) {
@@ -603,7 +603,7 @@ private:
         system.strategy_performance(backtest::StrategyPerformanceConfig{
          backtest::StrategyPerformanceHistoryPolicy{
           static_cast<backtest::StrategyPerformanceHistoryMode>(history_mode),
-          static_cast<std::size_t>(std::max(window, 0)),
+          window,
           decay},
          backtest::StrategyPerformanceBayesianConfig{
           backtest::BayesianWinModelNode{

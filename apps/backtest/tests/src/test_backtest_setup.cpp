@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <limits>
 #include <vector>
 
 import pludux.backtest;
@@ -124,4 +125,19 @@ TEST(StrategyTest, StoresReusableTradingRulesAndRejectsInvalidHandles)
   EXPECT_EQ(store.get_strategy(*handle).name(), "Revised");
   EXPECT_TRUE(store.remove_strategy(*handle));
   EXPECT_EQ(store.get_strategy_if_present(*handle), nullptr);
+}
+
+TEST(StoreDataResolverTest, RetiresSlotsBeforeGenerationWrap)
+{
+  auto resolver = StoreDataResolver<Strategy, StrategyStoreHandle>{};
+  auto strategies = std::vector<Strategy>{};
+  const auto exhausted =
+   StrategyStoreHandle{0, std::numeric_limits<StoreGeneration>::max()};
+  ASSERT_TRUE(resolver.add(strategies, exhausted, Strategy{}));
+  ASSERT_TRUE(resolver.remove(strategies, exhausted));
+
+  const auto next = resolver.add(strategies, Strategy{});
+  EXPECT_EQ(next, (StrategyStoreHandle{1, 0}));
+  EXPECT_FALSE(resolver.is_alive(exhausted));
+  EXPECT_FALSE(resolver.is_alive(StrategyStoreHandle{0, 0}));
 }

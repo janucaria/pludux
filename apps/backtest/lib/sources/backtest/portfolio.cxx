@@ -3,6 +3,7 @@ module;
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -78,10 +79,10 @@ public:
             double initial_capital,
             MarketStoreHandle market_handle,
             BrokerStoreHandle broker_handle,
-            std::size_t maximum_open_trades,
-            std::size_t maximum_combined_layers,
+            std::uint32_t maximum_open_trades,
+            std::uint32_t maximum_combined_layers,
             std::vector<PortfolioEntryComparator> entry_comparators,
-             std::vector<SystemStoreHandle> system_handles)
+            std::vector<SystemStoreHandle> system_handles)
   : name_{std::move(name)}
   , initial_capital_{initial_capital}
   , market_handle_{market_handle}
@@ -89,7 +90,7 @@ public:
   , maximum_open_trades_{maximum_open_trades}
   , maximum_combined_layers_{maximum_combined_layers}
   , entry_comparators_{std::move(entry_comparators)}
-    , system_handles_{std::move(system_handles)}
+  , system_handles_{std::move(system_handles)}
   {
     self_validate();
   }
@@ -140,23 +141,24 @@ public:
     self.broker_handle_ = value;
   }
 
-  auto maximum_open_trades(this const Portfolio& self) noexcept -> std::size_t
+  auto maximum_open_trades(this const Portfolio& self) noexcept -> std::uint32_t
   {
     return self.maximum_open_trades_;
   }
 
-  void maximum_open_trades(this Portfolio& self, std::size_t value) noexcept
+  void maximum_open_trades(this Portfolio& self, std::uint32_t value) noexcept
   {
     self.maximum_open_trades_ = value;
   }
 
   auto maximum_combined_layers(this const Portfolio& self) noexcept
-   -> std::size_t
+   -> std::uint32_t
   {
     return self.maximum_combined_layers_;
   }
 
-  void maximum_combined_layers(this Portfolio& self, std::size_t value) noexcept
+  void maximum_combined_layers(this Portfolio& self,
+                               std::uint32_t value) noexcept
   {
     self.maximum_combined_layers_ = value;
   }
@@ -237,8 +239,8 @@ private:
   double initial_capital_;
   MarketStoreHandle market_handle_;
   BrokerStoreHandle broker_handle_;
-  std::size_t maximum_open_trades_;
-  std::size_t maximum_combined_layers_;
+  std::uint32_t maximum_open_trades_;
+  std::uint32_t maximum_combined_layers_;
   std::vector<PortfolioEntryComparator> entry_comparators_;
   std::vector<SystemStoreHandle> system_handles_;
 };

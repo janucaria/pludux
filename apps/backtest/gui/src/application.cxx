@@ -36,8 +36,10 @@ struct hash<pludux::backtest::PortfolioStoreHandle> {
   auto operator()(const pludux::backtest::PortfolioStoreHandle& handle)
    const noexcept -> size_t
   {
-    const auto slot_hash = std::hash<std::size_t>{}(handle.slot_index());
-    const auto generation_hash = std::hash<std::size_t>{}(handle.generation());
+    const auto slot_hash =
+     std::hash<pludux::backtest::StoreIndex>{}(handle.slot_index());
+    const auto generation_hash =
+     std::hash<pludux::backtest::StoreGeneration>{}(handle.generation());
 
     return slot_hash ^ (generation_hash << 1);
   }

@@ -581,6 +581,117 @@ TEST(ApplicationStateSerialization, RoundTripsDocumentAndViewSeparately)
   EXPECT_EQ(loaded.imgui_ini_settings(), "layout-data");
 }
 
+TEST(ApplicationStateSerialization, WritesNullForUnsetOptionalHandles)
+{
+  auto state = ApplicationState{};
+  const auto system = state.add_system(pludux::backtest::System{});
+  const auto portfolio = state.add_portfolio(Portfolio{});
+  ASSERT_TRUE(system);
+  ASSERT_TRUE(portfolio);
+  auto stream = std::stringstream{};
+  pludux::apps::save_application_state_json(stream, state);
+
+  const auto saved = jsoncons::ojson::parse(stream.str());
+  const auto& workspace = saved.at("pludux");
+  const auto& view = workspace.at("viewState");
+  EXPECT_TRUE(view.at("selectedPortfolioHandle").is_null());
+  EXPECT_TRUE(view.at("selectedSystemHandle").is_null());
+  EXPECT_TRUE(view.at("selectedStrategyHandle").is_null());
+  const auto& arena = workspace.at("store").at("arena");
+  const auto& saved_system = arena.at("systems").at(0);
+  EXPECT_TRUE(saved_system.at("watchlist").is_null());
+  EXPECT_TRUE(saved_system.at("profile").is_null());
+  EXPECT_TRUE(saved_system.at("callTable").is_null());
+  EXPECT_TRUE(saved_system.at("mainSetup").at("strategy").is_null());
+  const auto& saved_portfolio = arena.at("portfolios").at(0);
+  EXPECT_TRUE(saved_portfolio.at("market").is_null());
+  EXPECT_TRUE(saved_portfolio.at("broker").is_null());
+
+  const auto loaded = pludux::apps::load_application_state_json(stream);
+  EXPECT_EQ(loaded.view_state(), pludux::apps::ViewState{});
+  EXPECT_EQ(loaded.get_system(*system), state.get_system(*system));
+  EXPECT_EQ(loaded.get_portfolio(*portfolio), state.get_portfolio(*portfolio));
+}
+
+TEST(ApplicationStateSerialization, PreservesExact64BitHandleGenerations)
+{
+  constexpr auto generation =
+   pludux::backtest::StoreGeneration{9'007'199'254'740'993};
+  auto state = ApplicationState{};
+  state.select_strategy(add_strategy(state, "Selected"));
+  auto stream = std::stringstream{};
+  pludux::apps::save_application_state_json(stream, state);
+  auto saved = jsoncons::ojson::parse(stream.str());
+  auto& workspace = saved.at("pludux");
+  workspace.at("viewState").at("selectedStrategyHandle")["generation"] =
+   generation;
+  workspace.at("documentState").at("strategyHandles").at(0)["generation"] =
+   generation;
+  workspace.at("store")
+   .at("descriptor")
+   .at("strategyStoreDataResolver")
+   .at("slots")
+   .at(0)["generation"] = generation;
+
+  auto input = std::stringstream{saved.to_string()};
+  const auto loaded = pludux::apps::load_application_state_json(input);
+  const auto expected = pludux::backtest::StrategyStoreHandle{0, generation};
+  EXPECT_EQ(loaded.selected_strategy_handle(), expected);
+  ASSERT_EQ(loaded.get_strategy_handles().size(), 1U);
+  EXPECT_EQ(loaded.get_strategy_handles().front(), expected);
+  ASSERT_NE(loaded.get_strategy_if_present(expected), nullptr);
+  EXPECT_EQ(loaded.get_strategy(expected).name(), "Selected");
+
+  auto output = std::stringstream{};
+  pludux::apps::save_application_state_json(output, loaded);
+  EXPECT_NE(output.str().find("\"generation\":9007199254740993"),
+            std::string::npos);
+}
+
+TEST(ApplicationStateSerialization, RejectsInvalidHandleAndArenaIndices)
+{
+  auto state = ApplicationState{};
+  state.select_strategy(add_strategy(state, "Selected"));
+  auto stream = std::stringstream{};
+  pludux::apps::save_application_state_json(stream, state);
+  const auto saved = jsoncons::ojson::parse(stream.str());
+  const auto expect_rejected = [](const jsoncons::ojson& json) {
+    auto input = std::stringstream{json.to_string()};
+    EXPECT_THROW(pludux::apps::load_application_state_json(input),
+                 std::exception);
+  };
+
+  for(const auto* value :
+      {"4294967295", "4294967296", "18446744073709551615"}) {
+    SCOPED_TRACE(value);
+    auto json = saved;
+    json.at("pludux")
+     .at("viewState")
+     .at("selectedStrategyHandle")["slotIndex"] = jsoncons::ojson::parse(value);
+    expect_rejected(json);
+  }
+
+  auto json = saved;
+  json.at("pludux").at("documentState").at("strategyHandles").at(0) =
+   jsoncons::ojson::null();
+  expect_rejected(json);
+
+  for(const auto* field : {"valueToSlotIndices", "freeSlotIndices"}) {
+    SCOPED_TRACE(field);
+    for(const auto* indices :
+        {"[-1]", "[0.5]", "[4294967295]", "[4294967296]"}) {
+      SCOPED_TRACE(indices);
+      json = saved;
+      json.at("pludux")
+       .at("store")
+       .at("descriptor")
+       .at("strategyStoreDataResolver")[field] =
+       jsoncons::ojson::parse(indices);
+      expect_rejected(json);
+    }
+  }
+}
+
 TEST(ApplicationStateSerialization, DefaultsAbsentViewStateAndIgnoresUnknownKeys)
 {
   auto stream = std::stringstream{};
@@ -673,7 +784,7 @@ TEST(ApplicationStateSerialization, RejectsMalformedSuppliedDefaults)
   pludux::apps::save_application_state_json(stream, state);
   const auto saved = jsoncons::ojson::parse(stream.str());
   for(const auto* invalid :
-      {"null", "\"10\"", "2.5", "-1", "9007199254740993.0"}) {
+      {"null", "\"10\"", "2.5", "-1", "4294967296", "9007199254740993.0"}) {
     SCOPED_TRACE(invalid);
     auto json = saved;
     json.at("pludux")

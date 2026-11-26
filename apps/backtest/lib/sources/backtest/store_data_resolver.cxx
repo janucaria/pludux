@@ -5,8 +5,10 @@ module;
 #include <cstddef>
 #include <functional>
 #include <iterator>
+#include <limits>
 #include <optional>
 #include <ranges>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
@@ -28,8 +30,8 @@ public:
   StoreDataResolver() = default;
 
   StoreDataResolver(std::vector<StoreSlot> slots,
-                    std::vector<std::size_t> value_to_slot_indices,
-                    std::vector<std::size_t> free_slot_indices)
+                    std::vector<StoreIndex> value_to_slot_indices,
+                    std::vector<StoreIndex> free_slot_indices)
   : slots_{std::move(slots)}
   , value_to_slot_indices_{std::move(value_to_slot_indices)}
   , free_slot_indices_{std::move(free_slot_indices)}
@@ -43,13 +45,13 @@ public:
   }
 
   auto value_to_slot_indices(this const StoreDataResolver& self) noexcept
-   -> const std::vector<std::size_t>&
+   -> const std::vector<StoreIndex>&
   {
     return self.value_to_slot_indices_;
   }
 
   auto free_slot_indices(this const StoreDataResolver& self) noexcept
-   -> const std::vector<std::size_t>&
+   -> const std::vector<StoreIndex>&
   {
     return self.free_slot_indices_;
   }
@@ -73,7 +75,7 @@ public:
            std::vector<ValueType>& values,
            ValueType value) -> HandleType
   {
-    const auto value_index = values.size();
+    const auto value_index = checked_index(values.size());
 
     if(!self.free_slot_indices_.empty()) {
       const auto slot_index = self.free_slot_indices_.back();
@@ -89,7 +91,7 @@ public:
       return HandleType{slot_index, slot.generation()};
     }
 
-    const auto slot_index = self.slots_.size();
+    const auto slot_index = checked_index(self.slots_.size());
 
     self.slots_.push_back(StoreSlot{value_index, 0, true});
 
@@ -107,9 +109,11 @@ public:
     if(!handle.valid()) {
       return false;
     }
+    const auto value_index = checked_index(values.size());
     const auto slot_index = handle.slot_index();
     if(slot_index >= self.slots_.size()) {
-      for(std::size_t i = self.slots_.size(); i <= slot_index; ++i) {
+      for(auto i = static_cast<StoreIndex>(self.slots_.size()); i <= slot_index;
+          ++i) {
         self.slots_.push_back(StoreSlot{});
         self.free_slot_indices_.push_back(i);
       }
@@ -124,7 +128,7 @@ public:
     self.free_slot_indices_.erase(free_slot_it);
 
     auto& slot = self.slots_[slot_index];
-    slot.value_index(values.size());
+    slot.value_index(value_index);
     slot.generation(handle.generation());
     slot.alive(true);
 
@@ -173,10 +177,12 @@ public:
     values.pop_back();
     self.value_to_slot_indices_.pop_back();
 
-    removed_slot.generation(removed_slot.generation() + 1);
     removed_slot.alive(false);
-
-    self.free_slot_indices_.push_back(slot_index);
+    if(removed_slot.generation() <
+       std::numeric_limits<StoreGeneration>::max()) {
+      removed_slot.generation(removed_slot.generation() + 1);
+      self.free_slot_indices_.push_back(slot_index);
+    }
 
     return true;
   }
@@ -270,9 +276,17 @@ public:
   }
 
 private:
+  static auto checked_index(std::size_t index) -> StoreIndex
+  {
+    if(index >= HandleType::invalid_slot_index) {
+      throw std::length_error{"Workspace resource index is out of range"};
+    }
+    return static_cast<StoreIndex>(index);
+  }
+
   std::vector<StoreSlot> slots_;
-  std::vector<std::size_t> value_to_slot_indices_;
-  std::vector<std::size_t> free_slot_indices_;
+  std::vector<StoreIndex> value_to_slot_indices_;
+  std::vector<StoreIndex> free_slot_indices_;
 };
 
 } // namespace pludux::backtest

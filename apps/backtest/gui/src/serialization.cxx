@@ -28,6 +28,10 @@ import pludux.apps.backtest.application_state;
 
 namespace {
 
+static_assert(std::numeric_limits<double>::is_iec559 &&
+              std::numeric_limits<double>::digits == 53 &&
+              std::numeric_limits<double>::max_exponent == 1024);
+
 template<typename T>
 auto conversion_failed() -> jsoncons::conversion_result<T>
 {
@@ -97,14 +101,12 @@ auto strict_as(const Json& json) -> T
       throw std::out_of_range{"Floating JSON integer is not lossless"};
     }
     if constexpr(std::is_unsigned_v<T>) {
-      if(value < 0.0 || static_cast<long double>(value) >
-                         static_cast<long double>(std::numeric_limits<T>::max())) {
+      if(value < 0.0 ||
+         value > static_cast<double>(std::numeric_limits<T>::max())) {
         throw std::out_of_range{"JSON integer is out of range"};
       }
-    } else if(static_cast<long double>(value) <
-               static_cast<long double>(std::numeric_limits<T>::min()) ||
-              static_cast<long double>(value) >
-               static_cast<long double>(std::numeric_limits<T>::max())) {
+    } else if(value < static_cast<double>(std::numeric_limits<T>::min()) ||
+              value > static_cast<double>(std::numeric_limits<T>::max())) {
       throw std::out_of_range{"JSON integer is out of range"};
     }
     return static_cast<T>(value);
@@ -124,6 +126,54 @@ auto value_or(const Json& json, const std::string& key, const T& default_value)
  -> T
 {
   return json.contains(key) ? strict_as<T>(json.at(key)) : default_value;
+}
+
+template<typename THandle, typename Json>
+auto optional_handle_or(const Json& json,
+                        const std::string& key,
+                        const THandle& default_value) -> THandle
+{
+  if(!json.contains(key)) {
+    return default_value;
+  }
+  const auto& value = json.at(key);
+  return value.is_null() ? THandle{} : strict_as<THandle>(value);
+}
+
+auto checked_store_index(pludux::backtest::StoreIndex index)
+ -> pludux::backtest::StoreIndex
+{
+  if(index == std::numeric_limits<pludux::backtest::StoreIndex>::max()) {
+    throw std::out_of_range{"Workspace resource index is out of range"};
+  }
+  return index;
+}
+
+template<typename Json>
+auto store_indices_from_json(const Json& json)
+ -> std::vector<pludux::backtest::StoreIndex>
+{
+  if(!json.is_array()) {
+    throw std::invalid_argument{"Expected a JSON array of workspace indices"};
+  }
+  auto indices = std::vector<pludux::backtest::StoreIndex>{};
+  indices.reserve(json.size());
+  for(const auto& value : json.array_range()) {
+    indices.push_back(
+     checked_store_index(strict_as<pludux::backtest::StoreIndex>(value)));
+  }
+  return indices;
+}
+
+template<typename Json>
+auto store_indices_to_json(
+ const std::vector<pludux::backtest::StoreIndex>& indices) -> Json
+{
+  auto json = typename Json::array();
+  for(const auto index : indices) {
+    json.push_back(checked_store_index(index));
+  }
+  return json;
 }
 
 template<typename Json>
@@ -147,6 +197,19 @@ void set_json(Json& json,
 {
   json[key] =
    jsoncons::reflect::json_traits<Json, TValue>::to_json(aset, value);
+}
+
+template<typename Json, typename THandle>
+void set_optional_handle(Json& json,
+                         const auto& aset,
+                         const std::string& key,
+                         const THandle& handle)
+{
+  if(handle.valid()) {
+    set_json(json, aset, key, handle);
+  } else {
+    json[key] = Json::null();
+  }
 }
 
 template<typename Json, typename TValue>
@@ -245,11 +308,12 @@ auto strategy_performance_from_json(const Json& json)
     throw std::invalid_argument{"Invalid break-even treatment"};
   }();
   const auto history = object_or_empty(json, "history");
-  const auto mode_value = value_or<int>(
-   history, "mode", static_cast<int>(defaults.history().mode()));
-  if(mode_value < static_cast<int>(StrategyPerformanceHistoryMode::All) ||
-     mode_value >
-      static_cast<int>(StrategyPerformanceHistoryMode::ExponentialDecay)) {
+  const auto mode_value = value_or<std::int32_t>(
+   history, "mode", static_cast<std::int32_t>(defaults.history().mode()));
+  if(mode_value <
+      static_cast<std::int32_t>(StrategyPerformanceHistoryMode::All) ||
+     mode_value > static_cast<std::int32_t>(
+                   StrategyPerformanceHistoryMode::ExponentialDecay)) {
     throw std::invalid_argument{"Invalid strategy-performance history mode"};
   }
   const auto bayesian = object_or_empty(json, "bayesian");
@@ -287,24 +351,21 @@ auto strategy_performance_from_json(const Json& json)
   return StrategyPerformanceConfig{
    StrategyPerformanceHistoryPolicy{
     static_cast<StrategyPerformanceHistoryMode>(mode_value),
-    value_or<std::size_t>(history,
-                          "rollingWindow",
-                          defaults.history().rolling_window()),
-    value_or<double>(history,
-                     "exponentialDecay",
-                     defaults.history().exponential_decay())},
+    value_or<std::uint32_t>(
+     history, "rollingWindow", defaults.history().rolling_window()),
+    value_or<double>(
+     history, "exponentialDecay", defaults.history().exponential_decay())},
    StrategyPerformanceBayesianConfig{
     BayesianWinModelNode{BetaBernoulliModelNode{
-     value_or<double>(win_params,
-                      "priorWinProbability",
-                      default_win.prior_probability()),
-     value_or<double>(win_params, "priorStrength", default_win.prior_strength())}},
+     value_or<double>(
+      win_params, "priorWinProbability", default_win.prior_probability()),
+     value_or<double>(
+      win_params, "priorStrength", default_win.prior_strength())}},
     parse_payoff(bayesian.contains("winningPayoff")
                   ? bayesian.at("winningPayoff")
                   : default_payoff()),
-    parse_payoff(bayesian.contains("losingPayoff")
-                  ? bayesian.at("losingPayoff")
-                  : default_payoff())},
+    parse_payoff(bayesian.contains("losingPayoff") ? bayesian.at("losingPayoff")
+                                                   : default_payoff())},
    break_even_treatment};
 }
 
@@ -324,7 +385,7 @@ auto strategy_performance_to_json(
     json["breakEvenTreatment"] = "COUNT_AS_LOSS";
     break;
   }
-  json["history"]["mode"] = static_cast<int>(config.history().mode());
+  json["history"]["mode"] = static_cast<std::int32_t>(config.history().mode());
   json["history"]["rollingWindow"] = config.history().rolling_window();
   json["history"]["exponentialDecay"] = config.history().exponential_decay();
   const auto* win_model =
@@ -381,12 +442,14 @@ struct json_traits<Json, pludux::NumericInputNode> {
   {
     try {
       const auto defaults = value_type{};
-      const auto representation = value_or<int>(
-       json, "representation", static_cast<int>(defaults.representation()));
+      const auto representation = value_or<std::int32_t>(
+       json,
+       "representation",
+       static_cast<std::int32_t>(defaults.representation()));
       if(representation <
-          static_cast<int>(value_type::ValueRepresentation::Decimal) ||
-         representation >
-          static_cast<int>(value_type::ValueRepresentation::UnsignedInteger)) {
+          static_cast<std::int32_t>(value_type::ValueRepresentation::Decimal) ||
+         representation > static_cast<std::int32_t>(
+                           value_type::ValueRepresentation::UnsignedInteger)) {
         throw std::invalid_argument{"Invalid numeric input representation"};
       }
       return result_type{value_type{
@@ -404,7 +467,7 @@ struct json_traits<Json, pludux::NumericInputNode> {
   {
     auto json = Json{};
     json["label"] = input.label();
-    json["representation"] = static_cast<int>(input.representation());
+    json["representation"] = static_cast<std::int32_t>(input.representation());
     json["value"] = input.value();
     return json;
   }
@@ -678,16 +741,19 @@ struct json_traits<Json, pludux::backtest::BrokerFee> {
   {
     try {
       const auto defaults = value_type{};
-      const auto fee_type = value_or<std::size_t>(
-       json, "feeType", static_cast<std::size_t>(defaults.fee_type()));
-      const auto fee_position = value_or<std::size_t>(
-       json, "feePosition", static_cast<std::size_t>(defaults.fee_position()));
-      const auto fee_trigger = value_or<std::size_t>(
-       json, "feeTrigger", static_cast<std::size_t>(defaults.fee_trigger()));
-      if(fee_type > static_cast<std::size_t>(value_type::FeeType::Fixed) ||
+      const auto fee_type = value_or<std::uint32_t>(
+       json, "feeType", static_cast<std::uint32_t>(defaults.fee_type()));
+      const auto fee_position = value_or<std::uint32_t>(
+       json,
+       "feePosition",
+       static_cast<std::uint32_t>(defaults.fee_position()));
+      const auto fee_trigger = value_or<std::uint32_t>(
+       json, "feeTrigger", static_cast<std::uint32_t>(defaults.fee_trigger()));
+      if(fee_type > static_cast<std::uint32_t>(value_type::FeeType::Fixed) ||
          fee_position >
-          static_cast<std::size_t>(value_type::FeePosition::LongAndShort) ||
-         fee_trigger > static_cast<std::size_t>(value_type::FeeTrigger::All)) {
+          static_cast<std::uint32_t>(value_type::FeePosition::LongAndShort) ||
+         fee_trigger >
+          static_cast<std::uint32_t>(value_type::FeeTrigger::All)) {
         throw std::invalid_argument{"Invalid broker fee enum value"};
       }
       return result_type{value_type{
@@ -707,9 +773,9 @@ struct json_traits<Json, pludux::backtest::BrokerFee> {
   {
     auto json = Json{};
     json["name"] = fee.name();
-    json["feeType"] = static_cast<std::size_t>(fee.fee_type());
-    json["feePosition"] = static_cast<std::size_t>(fee.fee_position());
-    json["feeTrigger"] = static_cast<std::size_t>(fee.fee_trigger());
+    json["feeType"] = static_cast<std::uint32_t>(fee.fee_type());
+    json["feePosition"] = static_cast<std::uint32_t>(fee.fee_position());
+    json["feeTrigger"] = static_cast<std::uint32_t>(fee.fee_trigger());
     json["feeValue"] = fee.value();
     return json;
   }
@@ -1030,9 +1096,10 @@ struct json_traits<Json, THandle> {
                             const Json& json)
   {
     try {
-      return result_type{
-       value_type{required_as<std::size_t>(json, "slotIndex"),
-                  required_as<std::size_t>(json, "generation")}};
+      return result_type{value_type{
+       checked_store_index(
+        required_as<pludux::backtest::StoreIndex>(json, "slotIndex")),
+       required_as<pludux::backtest::StoreGeneration>(json, "generation")}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -1042,6 +1109,9 @@ struct json_traits<Json, THandle> {
   static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>&,
                       const value_type& handle)
   {
+    if(!handle.valid()) {
+      throw std::invalid_argument{"Expected a resource handle"};
+    }
     auto json = Json{};
     json["slotIndex"] = handle.slot_index();
     json["generation"] = handle.generation();
@@ -1066,10 +1136,11 @@ struct json_traits<Json, pludux::backtest::StoreSlot> {
                             const Json& json)
   {
     try {
-      return result_type{
-       value_type{required_as<std::size_t>(json, "valueIndex"),
-                  required_as<std::size_t>(json, "generation"),
-                  required_as<bool>(json, "alive")}};
+      return result_type{value_type{
+       checked_store_index(
+        required_as<pludux::backtest::StoreIndex>(json, "valueIndex")),
+       required_as<pludux::backtest::StoreGeneration>(json, "generation"),
+       required_as<bool>(json, "alive")}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -1080,7 +1151,7 @@ struct json_traits<Json, pludux::backtest::StoreSlot> {
                       const value_type& slot)
   {
     auto json = Json{};
-    json["valueIndex"] = slot.value_index();
+    json["valueIndex"] = checked_store_index(slot.value_index());
     json["generation"] = slot.generation();
     json["alive"] = slot.alive();
     return json;
@@ -1107,8 +1178,8 @@ struct json_traits<Json,
     try {
       return result_type{value_type{
        vector_from_json<pludux::backtest::StoreSlot>(json.at("slots")),
-       required_as<std::vector<std::size_t>>(json, "valueToSlotIndices"),
-       required_as<std::vector<std::size_t>>(json, "freeSlotIndices")}};
+       store_indices_from_json(json.at("valueToSlotIndices")),
+       store_indices_from_json(json.at("freeSlotIndices"))}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -1120,8 +1191,10 @@ struct json_traits<Json,
   {
     auto json = Json{};
     json["slots"] = vector_to_json<Json>(aset, resolver.slots());
-    json["valueToSlotIndices"] = resolver.value_to_slot_indices();
-    json["freeSlotIndices"] = resolver.free_slot_indices();
+    json["valueToSlotIndices"] =
+     store_indices_to_json<Json>(resolver.value_to_slot_indices());
+    json["freeSlotIndices"] =
+     store_indices_to_json<Json>(resolver.free_slot_indices());
     return json;
   }
 };
@@ -1146,7 +1219,7 @@ struct json_traits<Json, pludux::backtest::StrategySetup> {
       if(!json.is_object()) return conversion_failed<value_type>();
       const auto defaults = value_type{};
       return result_type{value_type{
-       value_or<pludux::backtest::StrategyStoreHandle>(
+       optional_handle_or<pludux::backtest::StrategyStoreHandle>(
         json, "strategy", defaults.strategy_handle()),
        json.contains("inputs")
         ? vector_from_json<pludux::NumericInputNode>(json.at("inputs"))
@@ -1165,7 +1238,7 @@ struct json_traits<Json, pludux::backtest::StrategySetup> {
                       const value_type& setup)
   {
     auto json = Json{};
-    set_json(json, aset, "strategy", setup.strategy_handle());
+    set_optional_handle(json, aset, "strategy", setup.strategy_handle());
     json["inputs"] = vector_to_json<Json>(aset, setup.inputs());
     set_json(json, aset, "callMappings", setup.call_mappings());
     json["entryFilter"] =
@@ -1297,9 +1370,9 @@ struct json_traits<Json, pludux::backtest::System> {
       const auto defaults = value_type{};
       auto system = value_type{
        value_or<std::string>(json, "name", defaults.name()),
-       value_or<pludux::backtest::WatchlistStoreHandle>(
+       optional_handle_or<pludux::backtest::WatchlistStoreHandle>(
         json, "watchlist", defaults.watchlist_handle()),
-       value_or<pludux::backtest::ProfileStoreHandle>(
+       optional_handle_or<pludux::backtest::ProfileStoreHandle>(
         json, "profile", defaults.profile_handle()),
        json.contains("strategyPerformance")
         ? strategy_performance_from_json(json.at("strategyPerformance"))
@@ -1310,7 +1383,8 @@ struct json_traits<Json, pludux::backtest::System> {
         ? vector_from_json<pludux::backtest::SystemFailsafeStrategy>(
            json.at("failsafeStrategies"))
         : defaults.failsafe_strategies(),
-       value_or<pludux::backtest::CallStoreHandle>(json, "callTable", {}),
+       optional_handle_or<pludux::backtest::CallStoreHandle>(
+        json, "callTable", {}),
        {value_or<std::string>(json, "callDatetime", {}),
         value_or<std::string>(json, "callAsset", {}),
         value_or<std::string>(json, "callDirection", {}),
@@ -1344,12 +1418,12 @@ struct json_traits<Json, pludux::backtest::System> {
   {
     auto json = Json{};
     json["name"] = system.name();
-    set_json(json, aset, "watchlist", system.watchlist_handle());
-    set_json(json, aset, "profile", system.profile_handle());
+    set_optional_handle(json, aset, "watchlist", system.watchlist_handle());
+    set_optional_handle(json, aset, "profile", system.profile_handle());
     json["strategyPerformance"] =
      strategy_performance_to_json<Json>(system.strategy_performance());
     set_json(json, aset, "mainSetup", system.main_setup());
-    set_json(json, aset, "callTable", system.call_handle());
+    set_optional_handle(json, aset, "callTable", system.call_handle());
     json["entryPriority"] =
      system.entry_priority() == pludux::backtest::EntryPriority::SignalFirst
       ? "SignalFirst"
@@ -1476,15 +1550,14 @@ struct json_traits<Json, pludux::backtest::Portfolio> {
       return result_type{value_type{
        value_or<std::string>(json, "name", defaults.name()),
        value_or<double>(json, "initialCapital", defaults.initial_capital()),
-       value_or<pludux::backtest::MarketStoreHandle>(
+       optional_handle_or<pludux::backtest::MarketStoreHandle>(
         json, "market", defaults.market_handle()),
-       value_or<pludux::backtest::BrokerStoreHandle>(
+       optional_handle_or<pludux::backtest::BrokerStoreHandle>(
         json, "broker", defaults.broker_handle()),
-       value_or<std::size_t>(
+       value_or<std::uint32_t>(
         json, "maximumOpenTrades", defaults.maximum_open_trades()),
-       value_or<std::size_t>(json,
-                             "maximumCombinedLayers",
-                             defaults.maximum_combined_layers()),
+       value_or<std::uint32_t>(
+        json, "maximumCombinedLayers", defaults.maximum_combined_layers()),
        json.contains("entryComparators")
         ? vector_from_json<pludux::backtest::PortfolioEntryComparator>(
            json.at("entryComparators"))
@@ -1505,8 +1578,8 @@ struct json_traits<Json, pludux::backtest::Portfolio> {
     auto json = Json{};
     json["name"] = portfolio.name();
     json["initialCapital"] = portfolio.initial_capital();
-    set_json(json, aset, "market", portfolio.market_handle());
-    set_json(json, aset, "broker", portfolio.broker_handle());
+    set_optional_handle(json, aset, "market", portfolio.market_handle());
+    set_optional_handle(json, aset, "broker", portfolio.broker_handle());
     json["maximumOpenTrades"] = portfolio.maximum_open_trades();
     json["maximumCombinedLayers"] = portfolio.maximum_combined_layers();
     json["entryComparators"] =
@@ -1728,7 +1801,7 @@ struct json_traits<Json, pludux::apps::PortfolioStrategySelection> {
        required_as<pludux::backtest::PortfolioStoreHandle>(json, "portfolio"),
        {{required_as<pludux::backtest::SystemStoreHandle>(json, "system"),
          required_as<pludux::backtest::AssetStoreHandle>(json, "asset")},
-        required_as<std::size_t>(json, "strategy")},
+        required_as<std::uint32_t>(json, "strategy")},
        value_or<bool>(json, "active", true)}};
     } catch(...) {
       return conversion_failed<value_type>();
@@ -1872,15 +1945,15 @@ struct json_traits<Json, pludux::apps::ViewState> {
       return result_type{value_type{
        value_or<std::string>(
         json, "imguiIniSettings", defaults.imgui_ini_settings()),
-       value_or<pludux::backtest::PortfolioStoreHandle>(
+       optional_handle_or<pludux::backtest::PortfolioStoreHandle>(
         json, "selectedPortfolioHandle", defaults.selected_portfolio_handle()),
        value_or<pludux::apps::PortfolioStrategySelections>(
         json,
         "portfolioStrategySelections",
         defaults.portfolio_strategy_selections()),
-       value_or<pludux::backtest::SystemStoreHandle>(
+       optional_handle_or<pludux::backtest::SystemStoreHandle>(
         json, "selectedSystemHandle", defaults.selected_system_handle()),
-       value_or<pludux::backtest::StrategyStoreHandle>(
+       optional_handle_or<pludux::backtest::StrategyStoreHandle>(
         json, "selectedStrategyHandle", defaults.selected_strategy_handle())}};
     } catch(...) {
       return conversion_failed<value_type>();
@@ -1893,20 +1966,20 @@ struct json_traits<Json, pludux::apps::ViewState> {
   {
     auto json = Json{};
     json["imguiIniSettings"] = view_state.imgui_ini_settings();
-    set_json(json,
-             aset,
-             "selectedPortfolioHandle",
-             view_state.selected_portfolio_handle());
+    set_optional_handle(json,
+                        aset,
+                        "selectedPortfolioHandle",
+                        view_state.selected_portfolio_handle());
     set_json(json,
              aset,
              "portfolioStrategySelections",
              view_state.portfolio_strategy_selections());
-    set_json(
+    set_optional_handle(
      json, aset, "selectedSystemHandle", view_state.selected_system_handle());
-    set_json(json,
-             aset,
-             "selectedStrategyHandle",
-             view_state.selected_strategy_handle());
+    set_optional_handle(json,
+                        aset,
+                        "selectedStrategyHandle",
+                        view_state.selected_strategy_handle());
     return json;
   }
 };

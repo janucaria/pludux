@@ -1545,10 +1545,10 @@ private:
     } else if(auto* lookback =
                node_cast<LookbackNode<backtest::RequestedOrderMethodContext>>(
                 node)) {
-      auto periods = static_cast<int>(lookback->period());
+      auto periods = lookback->period();
       ui::field_label("Periods");
-      if(ImGui::InputInt("##lookback_periods", &periods)) {
-        lookback->period(static_cast<std::size_t>(std::max(periods, 1)));
+      if(ui::input_uint32("##lookback_periods", periods, 1)) {
+        lookback->period(periods);
       }
       ui::field_label("Source");
       auto source = lookback->source();
@@ -2502,26 +2502,20 @@ private:
       pyramiding.retrigger(
        self.render_pyramiding_retrigger(pyramiding.retrigger()));
 
-      auto pyramiding_cooldown = static_cast<int>(pyramiding.cooldown());
+      auto pyramiding_cooldown = pyramiding.cooldown();
       ui::field_label(
        "Cooldown Bars",
        "Pause all pyramiding processing for this many complete bars after "
        "each accepted entry.");
-      if(ImGui::InputInt("##cooldown", &pyramiding_cooldown)) {
-        if(pyramiding_cooldown < 0) {
-          pyramiding_cooldown = 0;
-        }
-        pyramiding.cooldown(static_cast<std::size_t>(pyramiding_cooldown));
+      if(ui::input_uint32("##cooldown", pyramiding_cooldown)) {
+        pyramiding.cooldown(pyramiding_cooldown);
       }
 
-      auto pyramiding_max_layers = static_cast<int>(pyramiding.max_layers());
+      auto pyramiding_max_layers = pyramiding.max_layers();
       ui::field_label(
        "Max Layers",
        "Maximum number of concurrently accumulated entry layers.");
-      if(ImGui::InputInt("##max_layers", &pyramiding_max_layers)) {
-        if(pyramiding_max_layers < 1) {
-          pyramiding_max_layers = 1;
-        }
+      if(ui::input_uint32("##max_layers", pyramiding_max_layers, 1)) {
         pyramiding.max_layers(pyramiding_max_layers);
       }
       const auto reference_options =
@@ -3798,12 +3792,9 @@ private:
                             WindowContext& context)
   {
     ui::field_label("Periods");
-    auto periods = static_cast<int>(node.period());
-    if(ImGui::InputInt("##lookback_periods", &periods)) {
-      if(periods < 1) {
-        periods = 1;
-      }
-      node.period(static_cast<std::size_t>(periods));
+    auto periods = node.period();
+    if(ui::input_uint32("##lookback_periods", periods, 1)) {
+      node.period(periods);
     }
     {
       ui::field_label("Source");

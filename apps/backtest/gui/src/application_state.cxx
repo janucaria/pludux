@@ -3,6 +3,7 @@ module;
 #include <map>
 
 #include <algorithm>
+#include <cstdint>
 #include <format>
 #include <iterator>
 #include <memory>
@@ -12,6 +13,7 @@ module;
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 export module pludux.apps.backtest.application_state;
@@ -176,10 +178,14 @@ public:
       }
 
       const auto append_asset_strategies = [&](const auto asset_handle) {
-         for(auto strategy_index = std::size_t{};
-             strategy_index < configured_backtest->strategy_count();
-             ++strategy_index) {
-            strategies.push_back({{system_handle, asset_handle}, strategy_index});
+        const auto strategy_count = configured_backtest->strategy_count();
+        if(!std::in_range<std::uint32_t>(strategy_count)) {
+          throw std::length_error{"Too many strategies in a System"};
+        }
+        for(auto strategy_index = std::uint32_t{};
+            strategy_index < strategy_count;
+            ++strategy_index) {
+          strategies.push_back({{system_handle, asset_handle}, strategy_index});
         }
       };
       const auto* watchlist = self.store_.get_watchlist_if_present(
@@ -1318,10 +1324,11 @@ private:
     std::string error;
   };
   mutable std::vector<CallBinding> call_bindings_;
-  mutable std::map<std::size_t, std::vector<std::string>> strategy_call_fields_;
-  mutable std::map<std::size_t, std::vector<backtest::ExternFieldNode>>
+  mutable std::map<backtest::StoreIndex, std::vector<std::string>>
+   strategy_call_fields_;
+  mutable std::map<backtest::StoreIndex, std::vector<backtest::ExternFieldNode>>
    strategy_external_fields_;
-  mutable std::map<std::size_t, bool> external_asset_timestamps_;
+  mutable std::map<backtest::StoreIndex, bool> external_asset_timestamps_;
 
   void invalidate_call(this ApplicationState& self,
                        backtest::CallStoreHandle handle)

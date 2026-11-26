@@ -1,5 +1,6 @@
 module;
 
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
@@ -189,22 +190,22 @@ public:
       self.retrigger_ = retrigger;
     }
 
-    auto cooldown(this const Pyramiding& self) noexcept -> std::size_t
+    auto cooldown(this const Pyramiding& self) noexcept -> std::uint32_t
     {
       return self.cooldown_;
     }
 
-    void cooldown(this Pyramiding& self, std::size_t cooldown) noexcept
+    void cooldown(this Pyramiding& self, std::uint32_t cooldown) noexcept
     {
       self.cooldown_ = cooldown;
     }
 
-    auto max_layers(this const Pyramiding& self) noexcept -> std::size_t
+    auto max_layers(this const Pyramiding& self) noexcept -> std::uint32_t
     {
       return self.max_layers_;
     }
 
-    void max_layers(this Pyramiding& self, std::size_t max_layers) noexcept
+    void max_layers(this Pyramiding& self, std::uint32_t max_layers) noexcept
     {
       self.max_layers_ = max_layers;
     }
@@ -238,8 +239,8 @@ public:
     ErasedNode<BacktestMethodContext> signal_{FalseNode{}};
     SignalTiming timing_{SignalTiming::NextOpen};
     PyramidingRetrigger retrigger_{PyramidingRetrigger::EveryEvaluation};
-    std::size_t cooldown_{};
-    std::size_t max_layers_{1};
+    std::uint32_t cooldown_{};
+    std::uint32_t max_layers_{1};
     StopTargetReferencePrice favorable_stop_target_reference_{
      StopTargetReferencePrice::AveragePrice};
     StopTargetReferencePrice unfavorable_stop_target_reference_{
