@@ -8,7 +8,10 @@ const test = require('node:test');
 const { runInNewContext } = require('node:vm');
 
 const scope = 'https://example.test/tools/pludux/';
-const files = ['index.html', 'index.js', 'index.wasm'];
+const files = [
+  'index.html', 'index.js', 'index.wasm', 'manifest.webmanifest',
+  'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'
+];
 const cachePrefix = 'pludux:' + encodeURIComponent(scope) + ':';
 const integrity = bytes => 'sha256-' + createHash('sha256').update(bytes).digest('base64');
 const assetUrl = file => file === 'index.html' ? scope : scope + file;
@@ -162,13 +165,40 @@ test('an incomplete deployment preserves the active release until a complete upd
   assert.ok(Array.from(client.entries.keys()).some(name => name.startsWith(cachePrefix)));
 });
 
-test('the staged release contains the exact assets named in the worker', {
+test('the staged release is installable and contains the assets named in the worker', {
   skip: !process.env.PLUDUX_WEBROOT
 }, async () => {
   const directory = process.env.PLUDUX_WEBROOT;
   const script = await readFile(join(directory, 'service-worker.js'), 'utf8');
   const html = await readFile(join(directory, 'index.html'), 'utf8');
   assert.ok(html.includes("if ('ON' !== 'ON')"));
+  assert.match(html, /<link rel="manifest" href="manifest\.webmanifest">/);
+  assert.match(html, /<link rel="apple-touch-icon" href="icon-192\.png">/);
+
+  const manifestUrl = new URL('manifest.webmanifest', scope);
+  const manifest = JSON.parse(await readFile(join(directory, 'manifest.webmanifest'), 'utf8'));
+  assert.equal(manifest.name, 'Pludux');
+  assert.equal(manifest.display, 'standalone');
+  assert.equal(new URL(manifest.start_url, manifestUrl).href, scope);
+  assert.equal(new URL(manifest.scope, manifestUrl).href, scope);
+
+  for (const [filename, size, purpose] of [
+    ['icon-192.png', 192, 'any'],
+    ['icon-512.png', 512, 'any'],
+    ['icon-maskable-512.png', 512, 'maskable']
+  ]) {
+    const icon = manifest.icons.find(icon => icon.src === filename);
+    assert.ok(icon, `Missing ${filename}`);
+    assert.equal(icon.sizes, `${size}x${size}`);
+    assert.equal(icon.type, 'image/png');
+    assert.equal(icon.purpose, purpose);
+    assert.equal(new URL(icon.src, manifestUrl).href, scope + filename);
+    const bytes = await readFile(join(directory, icon.src));
+    assert.equal(bytes.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+    assert.equal(bytes.readUInt32BE(16), size);
+    assert.equal(bytes.readUInt32BE(20), size);
+  }
+
   for (const file of files) {
     const bytes = await readFile(join(directory, file));
     assert.ok(script.includes(JSON.stringify(file) + ':' + JSON.stringify(integrity(bytes))), file);

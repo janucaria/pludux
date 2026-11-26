@@ -404,12 +404,22 @@ else()
     "${CMAKE_CURRENT_SOURCE_DIR}/web/pludux_library.js")
 
   set(PLUDUX_WEB_OFFLINE_ENABLED OFF)
+  set(PLUDUX_WEB_INSTALL_LINKS "")
   if(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(PLUDUX_WEB_OFFLINE_ENABLED ON)
+    set(PLUDUX_WEB_INSTALL_LINKS [=[
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-192.png">]=])
   endif()
   configure_file(web/index.html index.html @ONLY)
 
   if(PLUDUX_WEB_OFFLINE_ENABLED)
+    set(web_install_assets)
+    foreach(asset manifest.webmanifest icon-192.png icon-512.png icon-maskable-512.png)
+      configure_file("web/${asset}" "${asset}" COPYONLY)
+      list(APPEND web_install_assets "${CMAKE_CURRENT_BINARY_DIR}/${asset}")
+    endforeach()
+
     set(web_worker "${CMAKE_CURRENT_BINARY_DIR}/service-worker.js")
     add_custom_command(
       OUTPUT "${web_worker}"
@@ -420,12 +430,13 @@ else()
         ${PROJECT_NAME}
         "${CMAKE_CURRENT_BINARY_DIR}/index.html"
         "${CMAKE_CURRENT_BINARY_DIR}/index.wasm"
+        ${web_install_assets}
         web/generate-service-worker.cjs
         web/service-worker.js.in
       VERBATIM
     )
     add_custom_target(pludux-web-offline ALL DEPENDS "${web_worker}")
-    install(FILES "${web_worker}" DESTINATION ".")
+    install(FILES "${web_worker}" ${web_install_assets} DESTINATION ".")
   endif()
 
   add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

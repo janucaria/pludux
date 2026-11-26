@@ -6,7 +6,10 @@ const { join } = require('node:path');
 async function generate(outputDirectory) {
   const template = await readFile(join(__dirname, 'service-worker.js.in'), 'utf8');
   const assets = {};
-  for (const file of ['index.html', 'index.js', 'index.wasm']) {
+  for (const file of [
+    'index.html', 'index.js', 'index.wasm', 'manifest.webmanifest',
+    'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'
+  ]) {
     const hash = createHash('sha256');
     for await (const chunk of createReadStream(join(outputDirectory, file))) {
       hash.update(chunk);
