@@ -26,6 +26,7 @@ import :store;
 import :execution_model;
 import :intrabar_path;
 import :asset;
+import :external_asset_data;
 import :profile;
 import :position_sizing;
 import :entry_order_sizing;
@@ -471,23 +472,23 @@ public:
     std::size_t entry_filter_decision_index_;
   };
 
-  BacktestRunner(
-   const Asset& asset,
-   const Market& market,
-   const Broker& broker,
-   const Profile& profile,
-   OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>
-    series_methods,
-   PositionRule long_position,
-   PositionRule short_position,
-   double total_equity = 0.0,
-   std::size_t pyramiding_layers = 0,
-   bool is_failed = false,
-   double peak_equity = NAN,
-   IntrabarPath intrabar_path = IntrabarPath::CandleDirection,
-    StrategyPerformanceConfig strategy_performance_config = {},
-   ErasedSeriesMethod<EntryFilterMethodContext> entry_filter =
-    BooleanMethod<true>{})
+  BacktestRunner(const Asset& asset,
+                 const Market& market,
+                 const Broker& broker,
+                 const Profile& profile,
+                 OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>
+                  series_methods,
+                 PositionRule long_position,
+                 PositionRule short_position,
+                 double total_equity = 0.0,
+                 std::size_t pyramiding_layers = 0,
+                 bool is_failed = false,
+                 double peak_equity = NAN,
+                 IntrabarPath intrabar_path = IntrabarPath::CandleDirection,
+                 StrategyPerformanceConfig strategy_performance_config = {},
+                 ErasedSeriesMethod<EntryFilterMethodContext> entry_filter =
+                  BooleanMethod<true>{},
+                 std::shared_ptr<const ExternalAssetData> external_data = {})
   : asset_{asset}
   , market_{market}
   , broker_{broker}
@@ -511,6 +512,7 @@ public:
   , strategy_performance_{std::move(strategy_performance_config)}
   , entry_filter_{std::move(entry_filter)}
   , position_sizing_{profile.position_sizing().make_method()}
+  , external_data_{std::move(external_data)}
   , series_methods_{std::move(series_methods)}
   , long_position_{std::move(long_position)}
   , short_position_{std::move(short_position)}
@@ -527,7 +529,8 @@ public:
                  std::vector<CompiledStrategy> strategies,
                  double total_equity = 0.0,
                  bool is_failed = false,
-                 double peak_equity = NAN)
+                 double peak_equity = NAN,
+                 std::shared_ptr<const ExternalAssetData> external_data = {})
   : asset_{asset}
   , market_{market}
   , broker_{broker}
@@ -546,6 +549,7 @@ public:
   , cumulative_losses_{0.0}
   , break_even_count_{0}
   , position_sizing_{profile.position_sizing().make_method()}
+  , external_data_{std::move(external_data)}
   , is_failed_{is_failed}
   {
     if(strategies.empty()) {
@@ -1072,13 +1076,7 @@ public:
      .unrealized_investment = self.execution_session_.unrealized_investment(),
      .unrealized_duration = self.execution_session_.unrealized_duration()});
 
-    const auto series_context = self.with_open_position_context(context);
-    for(const auto& [series_name, series_method] : self.series_methods_) {
-      const auto series_value =
-       evaluate_series_method(series_method, asset_snapshot, series_context);
-      series_evaluation_results.put(series_method, series_value);
-      series_evaluation_results.alias(series_name, series_method);
-    }
+    self.store_named_series(asset_snapshot, context, series_evaluation_results);
     self.active_snapshot_.reset();
     self.current_strategy_timeline_states_.clear();
   }
@@ -1103,13 +1101,8 @@ public:
         self.pending_signal_exit_indices_.clear();
         self.pending_signal_exit_trade_id_.reset();
       }
-      const auto series_context = self.with_open_position_context(context);
-      for(const auto& [series_name, series_method] : self.series_methods_) {
-        const auto series_value =
-         evaluate_series_method(series_method, asset_snapshot, series_context);
-        setup_series_results[index].put(series_method, series_value);
-        setup_series_results[index].alias(series_name, series_method);
-      }
+      self.store_named_series(
+       asset_snapshot, context, setup_series_results[index]);
       self.current_strategy_timeline_states_[index] =
          StrategyTimelineState{self.strategy_session_.intents(),
                                    self.strategy_session_.closed_positions(),
@@ -1122,6 +1115,23 @@ public:
   }
 
 private:
+  void store_named_series(this const BacktestRunner& self,
+                          AssetSnapshot snapshot,
+                          BacktestMethodContext context,
+                          SeriesEvaluationResults& results)
+  {
+    const auto series_context = self.with_open_position_context(context);
+    for(const auto& [name, method] : self.series_methods_) {
+      const auto values = results.results(method);
+      // Several names can share one method history. Store one value per bar.
+      if(!values || values->get().size() <= self.active_timeline_index_) {
+        results.put(method,
+                    evaluate_series_method(method, snapshot, series_context));
+      }
+      results.alias(name, method);
+    }
+  }
+
   struct StrategyState {
     explicit StrategyState(CompiledStrategy strategy)
     : strategy_performance{std::move(strategy.strategy_performance)}
@@ -1256,6 +1266,7 @@ private:
   std::optional<double> campaign_unit_quantity_;
   std::optional<std::size_t> execution_owner_strategy_index_;
   std::optional<std::size_t> active_strategy_index_;
+  std::shared_ptr<const ExternalAssetData> external_data_;
   std::vector<StrategyState> strategy_states_;
   bool entry_admission_open_{};
   bool uses_calls_{};
@@ -1341,7 +1352,8 @@ private:
      self.position_call(),
      self.active_strategy_index_
       ? &self.strategy_states_[*self.active_strategy_index_].call_cache
-      : nullptr};
+      : nullptr,
+     self.external_data_.get()};
   }
 
   auto with_open_position_context(this const BacktestRunner& self,

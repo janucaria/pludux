@@ -526,6 +526,8 @@ public:
 
     if(self.store_.update_asset(handle, std::move(edit_asset))) {
       if(reset_backtests) {
+        self.external_asset_timestamps_.erase(handle.slot_index());
+        self.reset_systems_referencing_asset(handle);
         for(const auto watchlist_handle :
             self.document_state_.watchlist_handles()) {
           const auto* watchlist =
@@ -549,6 +551,8 @@ public:
   {
     if(self.store_.remove_asset(handle)) {
       self.document_state_.remove_asset_handle(handle);
+      self.external_asset_timestamps_.erase(handle.slot_index());
+      self.reset_systems_referencing_asset(handle);
 
       for(const auto watchlist_handle :
           self.document_state_.watchlist_handles()) {
@@ -688,6 +692,7 @@ public:
       // state, so both the Strategy and dependent stored input values participate
       // in the same StateDiff used by undo and redo.
       self.strategy_call_fields_.erase(handle.slot_index());
+      self.strategy_external_fields_.erase(handle.slot_index());
       self.sync_setup_inputs(handle);
       if(rules_changed) {
         self.reset_systems_referencing_strategy(handle);
@@ -705,6 +710,7 @@ public:
     if(self.store_.remove_strategy(handle)) {
       self.document_state_.remove_strategy_handle(handle);
       self.strategy_call_fields_.erase(handle.slot_index());
+      self.strategy_external_fields_.erase(handle.slot_index());
 
       self.reset_systems_referencing_strategy(handle);
       self.normalize_portfolio_strategy_selections();
@@ -1164,6 +1170,89 @@ public:
     return entry.compiled;
   }
 
+  auto external_fields(this const ApplicationState& self,
+                       const backtest::System& system)
+   -> std::vector<backtest::ExternFieldNode>
+  {
+    auto fields = std::vector<backtest::ExternFieldNode>{};
+    for(std::size_t i = 0; i < system.strategy_count(); ++i) {
+      const auto handle = system.strategy_handle(i);
+      const auto* strategy = self.get_strategy_if_present(handle);
+      if(!strategy)
+        continue;
+      auto found = self.strategy_external_fields_.find(handle.slot_index());
+      if(found == self.strategy_external_fields_.end()) {
+        found = self.strategy_external_fields_
+                 .emplace(handle.slot_index(),
+                          backtest::collect_strategy_external_fields(*strategy))
+                 .first;
+      }
+      fields.insert(fields.end(), found->second.begin(), found->second.end());
+    }
+    return fields;
+  }
+
+  auto external_configuration_error(this const ApplicationState& self,
+                                    const backtest::System& system)
+   -> std::string
+  {
+    for(const auto& node : self.external_fields(system)) {
+      const auto error = [&](const std::string& reason) {
+        return std::format(
+         "System '{}', external reference '{}', field '{}': {}",
+         system.name(),
+         node.reference(),
+         node.field(),
+         reason);
+      };
+      if(node.reference().empty() || node.field().empty())
+        return error("name the reference and field in the Strategy editor");
+      const auto& bindings = system.external_bindings();
+      const auto binding = bindings.find(node.reference());
+      if(binding == bindings.end())
+        return error("select an Asset for this reference");
+      const auto* asset = self.get_asset_if_present(binding->second);
+      if(!asset)
+        return error("the bound Asset is missing. Select an imported Asset.");
+      const auto& field =
+       backtest::ExternalAssetData::mapped_field(*asset, node.field());
+      if(!asset->history().contains(field))
+        return error(
+         std::format("Asset '{}' does not provide this field", asset->name()));
+      const auto asset_slot = binding->second.slot_index();
+      auto valid = self.external_asset_timestamps_.find(asset_slot);
+      if(valid == self.external_asset_timestamps_.end()) {
+        valid = self.external_asset_timestamps_
+                 .emplace(asset_slot,
+                          backtest::ExternalAssetData::valid_timestamps(*asset))
+                 .first;
+      }
+      if(!valid->second)
+        return error(std::format(
+         "Asset '{}' needs finite, strictly increasing candle timestamps",
+         asset->name()));
+    }
+    return {};
+  }
+
+  auto compile_external_data(this const ApplicationState& self,
+                             const backtest::System& system)
+   -> std::shared_ptr<const backtest::ExternalAssetData>
+  {
+    if(auto error = self.external_configuration_error(system); !error.empty())
+      throw std::invalid_argument{std::move(error)};
+    const auto fields = self.external_fields(system);
+    if(fields.empty())
+      return {};
+    auto data = std::make_shared<backtest::ExternalAssetData>();
+    for(const auto& node : fields) {
+      const auto& asset =
+       self.get_asset(system.external_bindings().at(node.reference()));
+      data->add_field(node.reference(), node.field(), asset);
+    }
+    return data;
+  }
+
   auto is_system_ready(this const ApplicationState& self,
                        const backtest::System& ready_system) noexcept -> bool
   {
@@ -1189,6 +1278,8 @@ public:
     }
 
     try {
+      if(!self.external_configuration_error(ready_system).empty())
+        return false;
       self.compiled_calls(ready_system);
     } catch(const std::invalid_argument&) {
       return false;
@@ -1228,6 +1319,9 @@ private:
   };
   mutable std::vector<CallBinding> call_bindings_;
   mutable std::map<std::size_t, std::vector<std::string>> strategy_call_fields_;
+  mutable std::map<std::size_t, std::vector<backtest::ExternFieldNode>>
+   strategy_external_fields_;
+  mutable std::map<std::size_t, bool> external_asset_timestamps_;
 
   void invalidate_call(this ApplicationState& self,
                        backtest::CallStoreHandle handle)
@@ -1357,6 +1451,20 @@ private:
       const auto* system = self.get_system_if_present(system_handle);
       if(system && system->profile_handle() == handle)
         self.reset_system(system_handle);
+    }
+  }
+
+  void reset_systems_referencing_asset(this ApplicationState& self,
+                                       backtest::AssetStoreHandle handle)
+  {
+    for(const auto system_handle : self.get_system_handles()) {
+      const auto* system = self.get_system_if_present(system_handle);
+      if(system && std::ranges::any_of(system->external_bindings(),
+                                       [handle](const auto& binding) {
+                                         return binding.second == handle;
+                                       })) {
+        self.reset_system(system_handle);
+      }
     }
   }
 

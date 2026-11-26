@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -92,6 +93,10 @@ auto fixed_quantity_profile() -> Profile
 static_assert(std::constructible_from<StrategyNode, CallNode>);
 static_assert(!std::constructible_from<ComparatorNode, CallNode>);
 static_assert(!std::constructible_from<EntryFilterNode, CallNode>);
+
+static_assert(std::constructible_from<StrategyNode, ExternFieldNode>);
+static_assert(!std::constructible_from<ComparatorNode, ExternFieldNode>);
+static_assert(!std::constructible_from<EntryFilterNode, ExternFieldNode>);
 
 TEST(CallCompilerTest, MapsSetupFieldsAndOptionalBoundsAtExactTimestamp)
 {
@@ -509,6 +514,40 @@ TEST(CallRunnerTest, UnavailableFirstCandleRiskSkipsOnlyThatCall)
   EXPECT_FALSE(skipped.front().call_skip.empty());
   ASSERT_TRUE(timeline.open_position(1));
   EXPECT_DOUBLE_EQ(timeline.open_position(1)->risk_distance(), 91);
+}
+
+TEST(CallRunnerTest, ExternalFieldReadsOnlyThePrecedingCandleAtCallOpen)
+{
+  const auto asset =
+   make_asset("BBCA", "1,100,100,100,100,1\n2,110,110,110,110,1\n");
+  const auto reference =
+   make_asset("IHSG", "1,10,10,10,10,1\n2,30,30,30,30,1\n");
+  const auto market = Market{"Market"};
+  const auto broker = Broker{"Broker"};
+  const auto profile = fixed_quantity_profile();
+  auto data = std::make_shared<ExternalAssetData>();
+  data->add_field("market", "CLOSE", reference);
+  auto setup =
+   call_setup({{1, CallRow{.row = 2, .is_long = true}},
+               {2, CallRow{.row = 3, .is_long = true}}},
+              call_rule(as_method(ExternFieldNode{"market", "CLOSE"})));
+  auto runner = BacktestRunner{
+   asset, market, broker, profile, {std::move(setup)}, 1000, false, NAN, data};
+  auto results = std::vector<SeriesEvaluationResults>(1);
+  auto timeline = BacktestTimeline{};
+
+  runner.run(results, timeline);
+  runner.run(results, timeline);
+
+  EXPECT_FALSE(timeline.open_position(0));
+  const auto& skipped = timeline.position_sizing_decisions(0);
+  ASSERT_EQ(skipped.size(), 1U);
+  EXPECT_EQ(skipped.front().call_row, 2U);
+  EXPECT_FALSE(skipped.front().call_skip.empty());
+  const auto position = timeline.open_position(1);
+  ASSERT_TRUE(position);
+  EXPECT_DOUBLE_EQ(position->entry_price(), 110);
+  EXPECT_DOUBLE_EQ(position->risk_distance(), 10);
 }
 
 TEST(CallRunnerTest, KeepsOriginalRowAcrossPyramidAndPartialTarget)

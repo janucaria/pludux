@@ -58,6 +58,7 @@ target_sources(${PROJECT_NAME}
     sources/backtest/strategy_performance_method.cxx
     sources/backtest/strategy_performance_node.cxx
     sources/backtest/asset.cxx
+    sources/backtest/external_asset_data.cxx
     sources/backtest/watchlist.cxx
     sources/backtest/strategy.cxx
     sources/backtest/strategy_inputs.cxx
@@ -83,6 +84,7 @@ target_sources(${PROJECT_NAME}
     sources/backtest/position_method.cxx
     sources/backtest/position_node.cxx
     sources/backtest/call_node.cxx
+    sources/backtest/extern_field_node.cxx
     sources/backtest/stop_target_price_method.cxx
     sources/backtest/stop_target_price_node.cxx
     sources/backtest/strategy_setup.cxx

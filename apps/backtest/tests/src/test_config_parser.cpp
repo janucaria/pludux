@@ -2986,6 +2986,30 @@ TEST_F(ConfigParserTest, SeriesNodeRegistrySerializationDeserialization)
   EXPECT_EQ(series_nodes, deserialized_series_nodes);
 }
 
+TEST_F(ConfigParserTest, ExternalFieldRequiresReferenceAndField)
+{
+  const auto config = json::parse(R"({
+    "method": "EXTERN.FIELD",
+    "params": { "reference": "market", "field": "CLOSE" }
+  })");
+  const auto node = config_parser.parse_node(config);
+  const auto* external = node_cast<ExternFieldNode>(node);
+  ASSERT_NE(external, nullptr);
+  EXPECT_EQ(external->reference(), "market");
+  EXPECT_EQ(external->field(), "CLOSE");
+  EXPECT_EQ(config_parser.serialize_node(node), config);
+
+  auto invalid = config;
+  invalid["params"]["reference"] = "";
+  EXPECT_EQ(config_parser.serialize_node(config_parser.parse_node(invalid)),
+            invalid);
+  invalid["params"].erase("reference");
+  EXPECT_ANY_THROW(config_parser.parse_node(invalid));
+  invalid = config;
+  invalid["params"]["field"] = 42;
+  EXPECT_THROW(config_parser.parse_node(invalid), std::invalid_argument);
+}
+
 TEST_F(ConfigParserTest, EntryFilterRoundTripsResultAndAccountNodes)
 {
   const auto config = json::parse(R"(

@@ -2,8 +2,8 @@
 
 Strategy JSON exchanges the rules and input defaults of a single Strategy.
 The **Strategies** editor imports and exports this file. To share a System's
-Profile selection, input overrides, Calls mappings, and Entry Filters, save the
-workspace.
+Profile selection, input overrides, Calls mappings, external Asset bindings,
+and Entry Filters, save the workspace.
 The Strategy parser accepts JSON comments and rejects trailing commas.
 
 ## Root structure
@@ -70,6 +70,11 @@ String shorthand is accepted where the method has no required explicit
 parameters. Other values retain their documented casing; for example an input
 `representation` may be `UnsignedInteger`. The complete current inventory and
 contexts are in [Node and Method Reference](nodes.md).
+
+`EXTERN.FIELD` requires `reference` and `field` strings in `params`. For example,
+`{"method":"EXTERN.FIELD","params":{"reference":"market","field":"CLOSE"}}`
+reads the mapped close from the Asset the System binds to `market`.
+[External Asset lookup rules](nodes.md#external-asset-fields)
 
 `OTHER.CALL` uses a logical `field` and an optional `representation` in `params`.
 Map the field to a column in the System's selected table. [Worked example](data-csv.md#backtest-calls-with-two-stop-alternatives)

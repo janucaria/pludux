@@ -171,6 +171,8 @@ auto get_default_series_node(const std::string& series_id)
     return ChangeNode<backtest::BacktestMethodContext>{CloseNode{}};
   } else if(series_id == "MARKET_DATA.FIELD") {
     return DataNode{};
+  } else if(series_id == "EXTERN.FIELD") {
+    return backtest::ExternFieldNode{"market", "CLOSE"};
   } else if(series_id == "PORTFOLIO.EQUITY") {
     return EquityNode{};
   } else if(series_id == "PORTFOLIO.EQUITY_PERCENT") {
@@ -490,6 +492,8 @@ auto get_series_node_id(const ErasedNode<backtest::BacktestMethodContext>& node)
     return "REQUESTED_ORDER.FROZEN_UNIT_QUANTITY";
   } else if(node_cast<DataNode>(node)) {
     return "MARKET_DATA.FIELD";
+  } else if(node_cast<backtest::ExternFieldNode>(node)) {
+    return "EXTERN.FIELD";
   } else if(node_cast<EquityNode>(node)) {
     return "PORTFOLIO.EQUITY";
   } else if(node_cast<EquityPercentNode>(node)) {
@@ -805,6 +809,8 @@ auto get_series_node_title(const std::string& series_id) -> std::string
     return "Xor";
   } else if(series_id == "INPUT.NUMERIC") {
     return "From Input";
+  } else if(series_id == "EXTERN.FIELD") {
+    return "External Field";
   } else if(series_id == "OTHER.CALL") {
     return "Call";
   } else if(series_id == "OPERATOR.ADD") {
@@ -949,6 +955,7 @@ auto get_series_node_category(const std::string& series_id) -> std::string
     {"MARKET_DATA.HIGH", "Price & Volume"},
     {"MARKET_DATA.LOW", "Price & Volume"},
     {"MARKET_DATA.VOLUME", "Price & Volume"},
+    {"EXTERN.FIELD", "Price & Volume"},
     {"OPERATOR.CHANGE", "Price & Volume"},
     {"INDICATOR.HIGHEST", "Price & Volume"},
     {"INDICATOR.LOWEST", "Price & Volume"},
@@ -1040,6 +1047,7 @@ auto get_series_node_combo_entries() -> const std::vector<ui::ComboEntry>&
      "MARKET_DATA.HIGH",
      "MARKET_DATA.LOW",
      "MARKET_DATA.VOLUME",
+     "EXTERN.FIELD",
      "OPERATOR.CHANGE",
      "INDICATOR.HIGHEST",
      "INDICATOR.LOWEST",
@@ -1135,6 +1143,8 @@ auto get_condition_node_id(
 {
   if(node_cast<backtest::CallNode>(node))
     return "OTHER.CALL";
+  if(node_cast<backtest::ExternFieldNode>(node))
+    return "EXTERN.FIELD";
   if(node_cast<AllOfNode<backtest::BacktestMethodContext>>(node)) {
     return "LOGIC.ALL_OF";
   } else if(node_cast<AnyOfNode<backtest::BacktestMethodContext>>(node)) {
@@ -1179,6 +1189,8 @@ auto get_condition_node_title(const std::string& condition_id) -> std::string
 {
   if(condition_id == "OTHER.CALL")
     return "Call";
+  if(condition_id == "EXTERN.FIELD")
+    return "External Field";
   if(condition_id == "LOGIC.ALL_OF") {
     return "All Of";
   } else if(condition_id == "LOGIC.ANY_OF") {
@@ -1243,6 +1255,7 @@ auto get_condition_node_category(const std::string& condition_id) -> std::string
     {"LOGIC.ALWAYS", "Fixed"},
     {"LOGIC.NEVER", "Fixed"},
     {"OTHER.CALL", "Custom & Input"},
+    {"EXTERN.FIELD", "Custom & Input"},
    };
 
   const auto it = category_by_id.find(condition_id);
@@ -1274,6 +1287,7 @@ auto get_condition_node_combo_entries() -> const std::vector<ui::ComboEntry>&
      "LOGIC.ALWAYS",
      "LOGIC.NEVER",
      "OTHER.CALL",
+     "EXTERN.FIELD",
     };
 
     auto result = std::vector<ui::ComboEntry>{};
@@ -1295,6 +1309,8 @@ auto get_default_condition_node(const std::string& condition_id)
 {
   if(condition_id == "OTHER.CALL")
     return backtest::CallNode{"field"};
+  if(condition_id == "EXTERN.FIELD")
+    return get_default_series_node(condition_id);
   if(condition_id == "LOGIC.ALL_OF") {
     return AllOfNode<backtest::BacktestMethodContext>{};
   } else if(condition_id == "LOGIC.ANY_OF") {
@@ -2803,6 +2819,7 @@ private:
      operator()<SelectOutputNode<backtest::BacktestMethodContext>,
                 SeriesNode,
                 DataNode,
+                backtest::ExternFieldNode,
                 LookbackNode<backtest::BacktestMethodContext>,
                 NumericInputNode,
                 backtest::CallNode,
@@ -3584,6 +3601,16 @@ private:
   }
 
   void render_series_node_params(this auto&,
+                                 backtest::ExternFieldNode& node,
+                                 WindowContext&)
+  {
+    ui::field_label("System reference");
+    ImGui::InputText("##reference", &node.reference());
+    ui::field_label("Field");
+    ImGui::InputText("##field", &node.field());
+  }
+
+  void render_series_node_params(this auto&,
                                  StrategyPerformanceNode& node,
                                  WindowContext&)
   {
@@ -3940,6 +3967,8 @@ private:
 
     if(condition_id == "OTHER.CALL")
       return backtest::CallNode{"field"};
+    if(condition_id == "EXTERN.FIELD")
+      return get_default_series_node(condition_id);
     if(condition_id == "COMPARISON.EQUAL") {
       auto [lhs_series_param, rhs_series_param] =
        get_condition_series_params(other_condition);
@@ -4151,6 +4180,15 @@ private:
       if(selection != "OTHER.CALL")
         return get_default_condition_node(selection);
       auto edited = *call;
+      self.render_series_node_params(edited, context);
+      return edited;
+    }
+    if(const auto* external =
+        node_cast<backtest::ExternFieldNode>(any_condition)) {
+      const auto selection = self.draw_condition_node_combo(any_condition);
+      if(selection != "EXTERN.FIELD")
+        return get_default_condition_node(selection);
+      auto edited = *external;
       self.render_series_node_params(edited, context);
       return edited;
     }

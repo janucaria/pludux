@@ -1295,7 +1295,7 @@ struct json_traits<Json, pludux::backtest::System> {
     try {
       if(!json.is_object()) return conversion_failed<value_type>();
       const auto defaults = value_type{};
-      return result_type{value_type{
+      auto system = value_type{
        value_or<std::string>(json, "name", defaults.name()),
        value_or<pludux::backtest::WatchlistStoreHandle>(
         json, "watchlist", defaults.watchlist_handle()),
@@ -1319,7 +1319,20 @@ struct json_traits<Json, pludux::backtest::System> {
        value_or<std::string>(json, "entryPriority", "CallFirst") ==
          "SignalFirst"
         ? pludux::backtest::EntryPriority::SignalFirst
-        : pludux::backtest::EntryPriority::CallFirst}};
+        : pludux::backtest::EntryPriority::CallFirst};
+      if(json.contains("externalBindings")) {
+        const auto& bindings = json.at("externalBindings");
+        if(!bindings.is_object())
+          return conversion_failed<value_type>();
+        for(const auto& [reference, binding] : bindings.object_range()) {
+          if(reference.empty())
+            return conversion_failed<value_type>();
+          system.external_bindings().emplace(
+           reference,
+           binding.template as<pludux::backtest::AssetStoreHandle>());
+        }
+      }
+      return result_type{std::move(system)};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -1348,6 +1361,13 @@ struct json_traits<Json, pludux::backtest::System> {
     json["callAsset"] = system.call_columns().asset;
     json["failsafeStrategies"] =
      vector_to_json<Json>(aset, system.failsafe_strategies());
+    if(!system.external_bindings().empty()) {
+      auto bindings = Json{jsoncons::json_object_arg};
+      for(const auto& [reference, handle] : system.external_bindings()) {
+        set_json(bindings, aset, reference, handle);
+      }
+      json["externalBindings"] = std::move(bindings);
+    }
     return json;
   }
 };

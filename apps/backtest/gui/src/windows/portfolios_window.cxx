@@ -193,13 +193,13 @@ private:
        std::ranges::any_of(rows, &StrategyRow::valid);
       const auto scope_needs_update =
        selected && selected_setup.has_value() != (open && has_valid_child);
-      const auto action =
-       ui::resource_row_actions(row_start,
-                                row_width,
-                                index,
-                                portfolio_handles.size(),
-                                true,
-                                app_state.is_portfolio_ready(*portfolio));
+      const auto portfolio_ready = app_state.is_portfolio_ready(*portfolio);
+      const auto action = ui::resource_row_actions(row_start,
+                                                   row_width,
+                                                   index,
+                                                   portfolio_handles.size(),
+                                                   true,
+                                                   portfolio_ready);
       if(action == ui::ResourceRowAction::Edit) {
         if(self.editing_handle_ != handle || !self.editing_) {
           self.editing_handle_ = handle;
@@ -240,6 +240,16 @@ private:
              state.select_portfolio_context(handle, open);
            }
          });
+      }
+      if(!portfolio_ready) {
+        for(const auto system_handle : portfolio->system_handles()) {
+          if(const auto* system =
+              app_state.get_system_if_present(system_handle)) {
+            const auto error = app_state.external_configuration_error(*system);
+            if(!error.empty())
+              ui::validation_message(error.c_str());
+          }
+        }
       }
       if(open) {
         const auto* results = app_state.get_portfolio_results_if_present(handle);

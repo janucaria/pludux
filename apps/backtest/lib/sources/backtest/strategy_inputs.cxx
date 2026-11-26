@@ -12,6 +12,7 @@ import pludux;
 import :strategy_setup;
 import :execution_model;
 import :call_node;
+import :extern_field_node;
 import :risk_distance_node;
 import :position_node;
 import :strategy;
@@ -23,6 +24,7 @@ namespace {
 struct StrategyDeclarations {
   std::vector<NumericInputNode> inputs;
   std::vector<std::string> call_fields;
+  std::vector<ExternFieldNode> external_fields;
 };
 
 void collect_declarations(const ErasedNode<BacktestMethodContext>& node,
@@ -45,6 +47,14 @@ void collect_declarations(const CallNode& node,
 
 void collect_declarations(const auto&, StrategyDeclarations&)
 {
+}
+
+void collect_declarations(const ExternFieldNode& node,
+                          StrategyDeclarations& declarations)
+{
+  auto& fields = declarations.external_fields;
+  if(std::ranges::find(fields, node) == fields.end())
+    fields.push_back(node);
 }
 
 void collect_declarations(const ChangeNode<BacktestMethodContext>& node,
@@ -377,6 +387,7 @@ void collect_declarations(const ErasedNode<BacktestMethodContext>& node,
   }
 
   PLUDUX_COLLECT_IF_NODE(CallNode)
+  PLUDUX_COLLECT_IF_NODE(ExternFieldNode)
   PLUDUX_COLLECT_IF_NODE(NumericInputNode)
   PLUDUX_COLLECT_IF_NODE(ValueNode)
   PLUDUX_COLLECT_IF_NODE(DataNode)
@@ -508,6 +519,12 @@ auto collect_strategy_call_fields(const Strategy& strategy)
  -> std::vector<std::string>
 {
   return collect_declarations(strategy).call_fields;
+}
+
+auto collect_strategy_external_fields(const Strategy& strategy)
+ -> std::vector<ExternFieldNode>
+{
+  return collect_declarations(strategy).external_fields;
 }
 
 void sync_strategy_inputs(StrategySetup& setup, const Strategy& strategy)

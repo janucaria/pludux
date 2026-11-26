@@ -22,6 +22,7 @@ import pludux;
 import :call_node;
 import :drawdown_node;
 import :equity_node;
+import :extern_field_node;
 import :position_node;
 import :pyramiding_layer_node;
 import :requested_order_node;
@@ -834,6 +835,21 @@ auto make_strategy_config_parser_for() -> ConfigParser<TContext>
    },
    [](typename Parser::Parser, const jsoncons::ojson& params) -> Node {
      return DataNode{strict_param_as<std::string>(params.at("field"))};
+   });
+
+  parser.register_node_parser(
+   "EXTERN.FIELD",
+   [](const Parser&, const Node& node) -> jsoncons::ojson {
+     const auto* external = node_cast<ExternFieldNode>(node);
+     return external
+             ? jsoncons::ojson::object{{"reference", external->reference()},
+                                       {"field", external->field()}}
+             : jsoncons::ojson::null();
+   },
+   [](typename Parser::Parser, const jsoncons::ojson& params) -> Node {
+     return ExternFieldNode{
+      strict_param_as<std::string>(params.at("reference")),
+      strict_param_as<std::string>(params.at("field"))};
    });
 
   const auto register_parameterless = [&]<typename TNode>(const char* name) {

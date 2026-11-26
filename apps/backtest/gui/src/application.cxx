@@ -6,6 +6,7 @@ module;
 #include <fstream>
 #include <functional>
 #include <list>
+#include <memory>
 #include <ranges>
 #include <stdexcept>
 #include <string>
@@ -301,13 +302,15 @@ public:
   }
 
 private:
-  auto make_backtest_runner(this Application& self,
-                            ApplicationState& app_state,
-                            const backtest::System& system,
-                            backtest::AssetStoreHandle asset_handle,
-                            const backtest::Portfolio& portfolio,
-                            const backtest::CompiledCalls* calls,
-                            std::size_t asset_index) -> backtest::BacktestRunner
+  auto make_backtest_runner(
+   this Application& self,
+   ApplicationState& app_state,
+   const backtest::System& system,
+   backtest::AssetStoreHandle asset_handle,
+   const backtest::Portfolio& portfolio,
+   const backtest::CompiledCalls* calls,
+   std::shared_ptr<const backtest::ExternalAssetData> external_data,
+   std::size_t asset_index) -> backtest::BacktestRunner
   {
     const auto* asset_ptr = app_state.get_asset_if_present(asset_handle);
     const auto* market_ptr =
@@ -437,7 +440,8 @@ private:
                                     std::move(runner_setups),
                                     portfolio.initial_capital(),
                                     false,
-                                    NAN};
+                                    NAN,
+                                    std::move(external_data)};
   }
 
   void
@@ -460,13 +464,18 @@ private:
        const auto& watchlist =
         app_state.get_watchlist(system.watchlist_handle());
        const auto calls = app_state.compiled_calls(system);
+       const auto external_data = app_state.compile_external_data(system);
        for(std::size_t i = 0; i < watchlist.asset_handles().size(); ++i) {
          const auto asset_handle = watchlist.asset_handles()[i];
-         backtests.emplace_back(
-          system_handle,
-          asset_handle,
-          self.make_backtest_runner(
-           app_state, system, asset_handle, *portfolio, calls.get(), i));
+         backtests.emplace_back(system_handle,
+                                asset_handle,
+                                self.make_backtest_runner(app_state,
+                                                          system,
+                                                          asset_handle,
+                                                          *portfolio,
+                                                          calls.get(),
+                                                          external_data,
+                                                          i));
        }
      }
     auto runner =

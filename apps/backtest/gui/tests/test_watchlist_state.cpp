@@ -148,6 +148,114 @@ TEST(WatchlistState, ExpandsSystemsThenAssetsThenStrategies)
              {{second_system, second_asset}, 0}}));
 }
 
+TEST(ExternalReferences, PersistsDifferentBindingsForTheSameStrategy)
+{
+  auto state = ApplicationState{};
+  state.add_asset(Asset{"BBCA"});
+  state.add_asset(Asset{"IHSG", {{"Datetime", {1}}, {"Close", {7100}}}});
+  state.add_asset(Asset{"Other index", {{"Datetime", {1}}, {"Close", {6800}}}});
+  const auto bbca = state.get_asset_handles()[0];
+  const auto ihsg = state.get_asset_handles()[1];
+  const auto other = state.get_asset_handles()[2];
+  const auto watchlist = *state.add_watchlist(Watchlist{"BBCA only", {bbca}});
+  auto sample = std::ifstream{
+   std::filesystem::path{PLUDUX_BACKTEST_SAMPLE_DIR} / "bbca_ihsg_filter.json"};
+  ASSERT_TRUE(sample);
+  state.add_strategy(pludux::backtest::parse_strategy("Market filter", sample));
+  const auto strategy = state.get_strategy_handles().back();
+  const auto profile = add_profile(state);
+  auto first = System{"First", watchlist, profile, {}, StrategySetup{strategy}};
+  first.external_bindings()["market"] = ihsg;
+  auto second = first;
+  second.name("Second");
+  second.external_bindings()["market"] = other;
+  EXPECT_FALSE(first.equivalent_rules(second));
+  const auto first_handle = *state.add_system(std::move(first));
+  const auto second_handle = *state.add_system(std::move(second));
+  auto stream = std::stringstream{};
+  pludux::apps::save_application_state_json(stream, state);
+  const auto restored = pludux::apps::load_application_state_json(stream);
+
+  const auto& first_system = restored.get_system(first_handle);
+  const auto& second_system = restored.get_system(second_handle);
+  EXPECT_EQ(first_system.external_bindings().at("market"), ihsg);
+  EXPECT_EQ(second_system.external_bindings().at("market"), other);
+  EXPECT_TRUE(restored.is_system_ready(first_system));
+  EXPECT_TRUE(restored.is_system_ready(second_system));
+  EXPECT_DOUBLE_EQ(
+   restored.compile_external_data(first_system)->value("market", "CLOSE", 1),
+   7100);
+  EXPECT_DOUBLE_EQ(
+   restored.compile_external_data(second_system)->value("market", "CLOSE", 1),
+   6800);
+  EXPECT_EQ(restored.get_watchlist(watchlist).asset_handles(),
+            (std::vector{bbca}));
+}
+
+TEST(ExternalReferences, ValidatesAndInvalidatesReferencesOutsideWatchlist)
+{
+  auto state = ApplicationState{};
+  state.add_asset(Asset{"BBCA"});
+  state.add_asset(Asset{"IHSG", {{"Datetime", {1}}, {"Close", {7100}}}});
+  state.add_asset(Asset{"Without close", {{"Datetime", {1}}}});
+  const auto bbca = state.get_asset_handles()[0];
+  const auto ihsg = state.get_asset_handles()[1];
+  const auto missing_field = state.get_asset_handles()[2];
+  const auto watchlist = *state.add_watchlist(Watchlist{"BBCA only", {bbca}});
+  const auto main = add_strategy(state, "Main");
+  auto failsafe = Strategy{};
+  failsafe.name("Failsafe");
+  failsafe.series_nodes().set(
+   "external_close", pludux::backtest::ExternFieldNode{"market", "CLOSE"});
+  state.add_strategy(std::move(failsafe));
+  const auto failsafe_handle = state.get_strategy_handles().back();
+  auto system = System{"BBCA System",
+                       watchlist,
+                       add_profile(state),
+                       {},
+                       StrategySetup{main},
+                       {{StrategySetup{failsafe_handle}}}};
+  auto error = state.external_configuration_error(system);
+  EXPECT_NE(error.find("BBCA System"), std::string::npos);
+  EXPECT_NE(error.find("market"), std::string::npos);
+  EXPECT_NE(error.find("CLOSE"), std::string::npos);
+  EXPECT_FALSE(state.is_system_ready(system));
+  system.external_bindings()["market"] = missing_field;
+  EXPECT_NE(state.external_configuration_error(system).find("does not provide"),
+            std::string::npos);
+  EXPECT_FALSE(state.is_system_ready(system));
+  system.external_bindings()["market"] = ihsg;
+  ASSERT_TRUE(state.is_system_ready(system));
+  const auto system_handle = *state.add_system(std::move(system));
+  const auto portfolio = *state.add_portfolio(
+   Portfolio{"Portfolio", 1'000.0, {}, {}, 10, 10, {}, {system_handle}});
+  const auto seed_results = [&] {
+    auto timeline = pludux::backtest::PortfolioTimeline{};
+    timeline.append({.timestamp = 1, .capital = 42.0});
+    return state.update_portfolio_results(
+     portfolio, pludux::backtest::PortfolioResults{std::move(timeline), {}});
+  };
+
+  ASSERT_TRUE(seed_results());
+  state.import_asset(Asset{"IHSG", {{"Datetime", {1}}, {"Close", {7200}}}});
+  EXPECT_TRUE(state.get_portfolio_results(portfolio).timeline().empty());
+  const auto& bound_system = state.get_system(system_handle);
+  EXPECT_DOUBLE_EQ(
+   state.compile_external_data(bound_system)->value("market", "CLOSE", 1),
+   7200);
+
+  ASSERT_TRUE(seed_results());
+  ASSERT_TRUE(state.remove_asset(ihsg));
+  EXPECT_EQ(state.get_system(system_handle).external_bindings().at("market"),
+            ihsg);
+  EXPECT_TRUE(state.get_portfolio_results(portfolio).timeline().empty());
+  state.add_asset(Asset{"IHSG", {{"Datetime", {1}}, {"Close", {7300}}}});
+  EXPECT_FALSE(state.is_system_ready(state.get_system(system_handle)));
+  EXPECT_NE(state.external_configuration_error(state.get_system(system_handle))
+             .find("bound Asset is missing"),
+            std::string::npos);
+}
+
 TEST(ApplicationState, MissingStrategyRemainsReferencedAndInvalidatesPortfolio)
 {
   auto state = pludux::apps::ApplicationState{};

@@ -820,6 +820,27 @@
       "title": "Data Field",
       "description": "Reads a custom data field from the input dataset, such as a user-provided column in the historical data file."
     },
+    "externFieldMethod": {
+      "allOf": [
+        { "$ref": "#/$defs/baseMethod" },
+        {
+          "properties": {
+            "method": { "const": "EXTERN.FIELD" },
+            "params": {
+              "type": "object",
+              "properties": {
+                "reference": { "type": "string" },
+                "field": { "type": "string" }
+              },
+              "required": ["reference", "field"]
+            }
+          },
+          "required": ["params"]
+        }
+      ],
+      "title": "External Field",
+      "description": "Reads a field at the visible Strategy candle's timestamp from an Asset bound to a logical reference in the System."
+    },
     "equityMethod": {
       "allOf": [
         {
@@ -2822,6 +2843,9 @@
           "$ref": "#/$defs/dataMethod"
         },
         {
+          "$ref": "#/$defs/externFieldMethod"
+        },
+        {
           "$ref": "#/$defs/equityMethod"
         },
         {
@@ -2960,6 +2984,7 @@
     "signalAsParameter": {
       "oneOf": [
         { "$ref": "#/$defs/callMethod" },
+        { "$ref": "#/$defs/externFieldMethod" },
         {
           "$ref": "#/$defs/signals"
         },

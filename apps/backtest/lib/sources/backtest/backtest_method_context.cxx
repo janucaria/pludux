@@ -16,6 +16,7 @@ export module pludux.backtest:backtest_method_context;
 
 import pludux;
 import :calls;
+import :external_asset_data;
 
 export namespace pludux::backtest {
 
@@ -163,13 +164,15 @@ public:
              std::same_as<Node, FrozenUnitQuantityNode>);
   }
 
-  BacktestMethodContext(const StrategyMethodRegistry& series_methods,
-                        SeriesEvaluationResults& series_evaluation_results,
-                        std::size_t current_index,
-                        const BacktestAccountState& account_state,
-                        std::size_t pyramiding_layer,
-                        const CallRow* calls = nullptr,
-                        SeriesEvaluationResults* call_cache = nullptr) noexcept
+  BacktestMethodContext(
+   const StrategyMethodRegistry& series_methods,
+   SeriesEvaluationResults& series_evaluation_results,
+   std::size_t current_index,
+   const BacktestAccountState& account_state,
+   std::size_t pyramiding_layer,
+   const CallRow* calls = nullptr,
+   SeriesEvaluationResults* call_cache = nullptr,
+   const ExternalAssetData* external_data = nullptr) noexcept
   : series_methods_{series_methods}
   , series_evaluation_results_{series_evaluation_results}
   , current_index_{current_index}
@@ -177,6 +180,7 @@ public:
   , pyramiding_layer_{pyramiding_layer}
   , calls_{calls}
   , call_cache_{call_cache}
+  , external_data_{external_data}
   {
   }
 
@@ -267,6 +271,15 @@ public:
       *missing_call_ = true;
     }
     return std::numeric_limits<double>::quiet_NaN();
+  }
+
+  auto external_value(const std::string& reference,
+                      const std::string& field,
+                      AssetSnapshot snapshot) const noexcept -> double
+  {
+    return external_data_
+            ? external_data_->value(reference, field, snapshot.datetime())
+            : std::numeric_limits<double>::quiet_NaN();
   }
 
   auto evaluate_signal(const auto& method, AssetSnapshot snapshot) const -> bool
@@ -389,6 +402,7 @@ private:
   std::size_t pyramiding_layer_;
   const CallRow* calls_;
   SeriesEvaluationResults* call_cache_;
+  const ExternalAssetData* external_data_;
   bool* missing_call_ = nullptr;
   double position_initial_entry_price_{
    std::numeric_limits<double>::quiet_NaN()};

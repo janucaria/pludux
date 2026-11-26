@@ -7,6 +7,7 @@ module;
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -203,6 +204,7 @@ private:
         backtest::assign_setup_strategy(setup, handle, *strategy);
       system.failsafe_strategies().emplace_back(std::move(setup));
     }
+    self.render_external_bindings(state, system);
     if(!self.configuration_error_.empty())
       ui::validation_message(self.configuration_error_.c_str());
 
@@ -223,6 +225,9 @@ private:
     } catch(const std::invalid_argument& error) {
       ui::validation_message(error.what());
     }
+    const auto external_error = state.external_configuration_error(system);
+    if(!external_error.empty())
+      ui::validation_message(external_error.c_str());
     const auto valid = state.is_system_ready(system);
     ImGui::BeginDisabled(!valid);
     if(ImGui::Button(self.editing_handle_ ? "OK" : "Create System"))
@@ -242,9 +247,56 @@ private:
       else if(draft_action == ui::DraftAction::Reset)
         self.editing_ = std::make_shared<backtest::System>(original);
     }
-    if(!valid)
+    if(!valid && external_error.empty())
       ui::validation_message("Select a non-empty Watchlist, a shared Profile, "
                              "and a Strategy for each setup.");
+  }
+
+  void render_external_bindings(this SystemsWindow&,
+                                const ApplicationState& state,
+                                backtest::System& system)
+  {
+    auto references = std::set<std::string>{};
+    for(const auto& field : state.external_fields(system)) {
+      if(!field.reference().empty())
+        references.insert(field.reference());
+    }
+    auto& bindings = system.external_bindings();
+    for(const auto& [reference, _] : bindings)
+      references.insert(reference);
+    if(references.empty())
+      return;
+
+    ImGui::SeparatorText("External Asset References");
+    ImGui::PushID("external_bindings");
+    auto index = 0;
+    for(const auto& reference : references) {
+      ImGui::PushID(index++);
+      ImGui::TextUnformatted(reference.c_str());
+      const auto binding = bindings.find(reference);
+      const auto selected = binding == bindings.end()
+                             ? backtest::AssetStoreHandle{}
+                             : binding->second;
+      const auto* asset = state.get_asset_if_present(selected);
+      const auto* preview = asset              ? asset->name().c_str()
+                            : selected.valid() ? "Missing Asset"
+                                               : "Select an Asset";
+      if(ImGui::BeginCombo("##asset", preview)) {
+        if(ImGui::Selectable("Select an Asset", !selected.valid()))
+          bindings.erase(reference);
+        for(const auto handle : state.get_asset_handles()) {
+          if(const auto* candidate = state.get_asset_if_present(handle)) {
+            ImGui::PushID(static_cast<int>(handle.slot_index()));
+            if(ImGui::Selectable(candidate->name().c_str(), selected == handle))
+              bindings.insert_or_assign(reference, handle);
+            ImGui::PopID();
+          }
+        }
+        ImGui::EndCombo();
+      }
+      ImGui::PopID();
+    }
+    ImGui::PopID();
   }
 
   static void call_column(const char* label,

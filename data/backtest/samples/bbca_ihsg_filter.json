@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "series": {
+    "market_close": {
+      "method": "EXTERN.FIELD",
+      "params": { "reference": "market", "field": "CLOSE" }
+    }
+  },
+  "positions": {
+    "long": {
+      "entry": {
+        "timing": "CURRENT_CLOSE",
+        "signal": {
+          "method": "COMPARISON.GREATER_THAN",
+          "params": {
+            "target": {
+              "method": "SERIES.REFERENCE",
+              "params": { "name": "market_close" }
+            },
+            "threshold": 7000
+          }
+        }
+      },
+      "riskDistance": {
+        "method": "RISK_DISTANCE.AMOUNT",
+        "params": { "amount": 100 }
+      }
+    },
+    "short": false
+  }
+}

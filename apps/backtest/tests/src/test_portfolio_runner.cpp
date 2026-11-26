@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cmath>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -182,6 +183,111 @@ TEST(PortfolioRunnerTest, UsesUnionTimelineAndMarksMissingBarsStale)
   EXPECT_EQ(results.timeline().row(3).fresh_backtest_count, 2);
   EXPECT_EQ(results.backtests()[0].timeline().size(), 3);
   EXPECT_EQ(results.backtests()[1].timeline().size(), 3);
+}
+
+TEST(PortfolioRunnerTest, ExternalAssetUsesVisibleCandleWithoutAddingTimestamps)
+{
+  const auto bbca = Asset{"BBCA",
+                          {{"Datetime", {1, 2, 4, 5}},
+                           {"Open", {90, 95, 100, 105}},
+                           {"High", {100, 100, 110, 110}},
+                           {"Low", {90, 95, 100, 105}},
+                           {"Close", {95, 100, 108, 110}}}};
+  const auto ihsg = Asset{
+   "IHSG",
+   {{"Time", {1, 3, 4, 5}},
+    {"Last", {6800, 7600, 7500, 6900}},
+    {"risk_points", {8, 9, 12, 40}},
+    {"short_column", {1}}},
+   AssetQuoteFieldResolver{"Time", "Open", "High", "Low", "Last", "Volume"}};
+  auto external = std::make_shared<ExternalAssetData>();
+  external->add_field("market", "CLOSE", ihsg);
+  external->add_field("market", "risk_points", ihsg);
+  external->add_field("market", "short_column", ihsg);
+  EXPECT_TRUE(std::isnan(external->value("market", "short_column", 4)));
+
+  const auto market = Market{"Market", 0.0, 0.0};
+  const auto broker = Broker{"Broker"};
+  const auto profile =
+   Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  for(const auto timing :
+      {SignalTiming::CurrentClose, SignalTiming::NextOpen}) {
+    SCOPED_TRACE(static_cast<int>(timing));
+    auto conversion = NodeToErasedMethodContext{};
+    const auto entry = node_to_erased_method<BacktestMethodContext>(
+     GreaterThanNode<BacktestMethodContext>{SeriesNode{"market_close"},
+                                            ValueNode{7000}},
+     conversion);
+    auto series = StrategyMethodRegistry{};
+    series.set("market_close",
+               StrategyMethod{ExternFieldNode{"market", "CLOSE"}});
+    series.set("market_close_alias",
+               StrategyMethod{ExternFieldNode{"market", "CLOSE"}});
+    series.set(
+     "previous_market_close",
+     node_to_erased_method<BacktestMethodContext>(
+      LookbackNode<BacktestMethodContext>{SeriesNode{"market_close_alias"}, 1},
+      conversion));
+    auto position = BacktestRunner::PositionRule{
+     entry,
+     {},
+     BooleanMethod<false>{},
+     0,
+     0,
+     StrategyMethod{ExternFieldNode{"market", "risk_points"}},
+     {},
+     timing};
+    auto setups = std::vector<BacktestRunner::CompiledStrategy>{};
+    setups.emplace_back(
+     std::move(series), std::move(position), BacktestRunner::PositionRule{});
+    auto runner = PortfolioRunner{
+     1'000.0,
+     10,
+     10,
+     {PortfolioRunner::BacktestRun{SystemStoreHandle{1, 1},
+                                   AssetStoreHandle{1, 1},
+                                   BacktestRunner{bbca,
+                                                  market,
+                                                  broker,
+                                                  profile,
+                                                  std::move(setups),
+                                                  1'000.0,
+                                                  false,
+                                                  NAN,
+                                                  external}}}};
+    auto results = PortfolioResults{};
+    ASSERT_EQ(runner.total_timestamps(), 4U);
+    while(runner.run_batch(results, 4) != 0) {
+    }
+
+    ASSERT_EQ(results.backtests().size(), 1U);
+    const auto& backtest = results.backtests().front();
+    const auto& timeline = backtest.timeline();
+    const auto fill = timing == SignalTiming::CurrentClose ? 2U : 3U;
+    ASSERT_EQ(results.events().size(), 1U);
+    EXPECT_EQ(results.events().front().bar_index, fill);
+    const auto opened = timeline.open_position(fill);
+    ASSERT_TRUE(opened);
+    EXPECT_DOUBLE_EQ(opened->entry_price(),
+                     timing == SignalTiming::CurrentClose ? 108 : 105);
+    EXPECT_DOUBLE_EQ(opened->risk_distance(), 12);
+    const auto values =
+     backtest.series_results(0).results(std::string{"market_close"});
+    ASSERT_TRUE(values);
+    ASSERT_EQ(values->get().size(), 4U);
+    EXPECT_DOUBLE_EQ(values->get()[0], 6800);
+    EXPECT_TRUE(std::isnan(values->get()[1]));
+    EXPECT_DOUBLE_EQ(values->get()[2], 7500);
+    EXPECT_DOUBLE_EQ(values->get()[3], 6900);
+    const auto previous =
+     backtest.series_results(0).results(std::string{"previous_market_close"});
+    ASSERT_TRUE(previous);
+    ASSERT_EQ(previous->get().size(), 4U);
+    EXPECT_TRUE(std::isnan(previous->get()[0]));
+    EXPECT_DOUBLE_EQ(previous->get()[1], 6800);
+    EXPECT_TRUE(std::isnan(previous->get()[2]));
+    EXPECT_DOUBLE_EQ(previous->get()[3], 7500);
+  }
 }
 
 void expect_same_number(double batch_value, double single_value)

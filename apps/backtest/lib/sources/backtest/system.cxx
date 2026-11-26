@@ -18,6 +18,8 @@ export namespace pludux::backtest {
 
 class System {
 public:
+  using ExternalBindings = std::map<std::string, AssetStoreHandle>;
+
   System() = default;
 
   System(std::string name,
@@ -157,6 +159,11 @@ public:
     entry_priority_ = value;
   }
 
+  auto external_bindings(this auto& self) noexcept -> auto&
+  {
+    return self.external_bindings_;
+  }
+
   auto equivalent_rules(this const System& self, const System& other) noexcept
    -> bool
   {
@@ -166,6 +173,7 @@ public:
            self.call_handle_ == other.call_handle_ &&
            self.call_columns_ == other.call_columns_ &&
            self.entry_priority_ == other.entry_priority_ &&
+           self.external_bindings_ == other.external_bindings_ &&
            self.main_setup_ == other.main_setup_ &&
            self.failsafe_strategies_ == other.failsafe_strategies_;
   }
@@ -181,6 +189,7 @@ private:
   CallStoreHandle call_handle_;
   CallColumns call_columns_;
   EntryPriority entry_priority_{EntryPriority::CallFirst};
+  ExternalBindings external_bindings_;
 };
 
 } // namespace pludux::backtest

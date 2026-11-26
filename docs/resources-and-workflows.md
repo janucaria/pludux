@@ -4,12 +4,12 @@ Pludux stores nine reusable resources. A Backtest records a System × Asset run.
 
 | Resource | Owns | Used by |
 | --- | --- | --- |
-| Asset | Name, OHLCV mapping, timestamped numeric history | Watchlist |
+| Asset | Name, OHLCV mapping, timestamped numeric history | Watchlist and System references |
 | Calls table | Name, column headers, and data rows | System |
 | Watchlist | Ordered, duplicate-free Assets | System |
 | Strategy | Inputs and defaults, series, long/short rules, execution path, plots | Main and Failsafe setups |
 | Profile | Sizing, drawdown adjustment, insufficient-cash policy | System |
-| System | Watchlist, Profile, Main setup, ordered Failsafes, performance settings, optional Calls table and mappings | Portfolio |
+| System | Watchlist, Profile, Main setup, ordered Failsafes, performance settings, Calls mappings, external Asset bindings | Portfolio |
 | Market | Minimum quantity and quantity step | Portfolio |
 | Broker | Fixed/percentage fee rules | Portfolio |
 | Portfolio | Capital, constraints, comparators, ordered Systems | Runner/results |
@@ -46,6 +46,26 @@ A System expands its Watchlist into per-Asset simulations. All its setups use
 the same Profile and Strategy Performance calculation settings. Each setup
 maintains its own theoretical trades and performance history for each Asset.
 [Execution and Position Lifecycle](execution.md)
+
+## External Asset references
+
+Use a reference Asset to add a market filter to a traded Asset's Strategy.
+For example, the BBCA Strategy can use IHSG's close in its long-entry rule.
+
+1. Import BBCA and IHSG as Assets with matching candle schedules and timestamp
+   conventions. Check the Close mapping for IHSG.
+2. Create a Watchlist that contains BBCA and select it in a System.
+3. Import the [BBCA–IHSG Strategy](../data/backtest/samples/bbca_ihsg_filter.json)
+   and select it as the System's Main Strategy.
+4. In **External Asset References**, select IHSG for the `market` reference.
+   Save the workspace to keep the binding.
+5. Run a Portfolio containing this System. When IHSG closes above 7,000 and
+   the entry is eligible, BBCA fills at BBCA's own close.
+
+An unbound reference, a deleted Asset, or an unknown field blocks the backtest
+with a configuration error. A gap in a valid reference returns `NaN` for the
+matching bar. The Portfolio's timeline and trading candidates come from its
+Watchlists. [External Asset fields](nodes.md#external-asset-fields)
 
 ## Calls
 

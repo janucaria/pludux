@@ -32,6 +32,7 @@ are defined by the parser; the GUI may seed a more useful initial expression.
 | Family | Strategy | Comparator | Entry Filter |
 | --- | --- | --- | --- |
 | Market data, lookback, scalar arithmetic | Yes | Yes | No |
+| External Asset fields | Yes | No | No |
 | Call row values | Yes | No | No |
 | Constant | Yes | Yes | Yes |
 | Indicators, named series, position state | Yes | No | No |
@@ -56,6 +57,7 @@ the execution contract.
 | `MARKET_DATA.CLOSE` | Current visible close | Strategy, comparator |
 | `MARKET_DATA.VOLUME` | Current visible volume | Strategy, comparator |
 | `MARKET_DATA.FIELD` | Named imported numeric field; required `field` string | Strategy, comparator |
+| `EXTERN.FIELD` | Field from an Asset bound by the System. Requires `reference` and `field` strings. | Strategy |
 | `PORTFOLIO.EQUITY` | Current Portfolio equity | Strategy, Entry Filter |
 | `PORTFOLIO.EQUITY_PERCENT` | Equity relative to initial capital, percent | Strategy, Entry Filter |
 | `PORTFOLIO.DRAWDOWN` | Current drawdown | Strategy, Entry Filter |
@@ -72,6 +74,22 @@ particular, Next Open ranking sees the previous completed bar; use
 `UnsignedInteger`; defaults are an empty label and value `0`. A numeric JSON
 literal is shorthand for `VALUE.CONSTANT`. Parameterless methods may use their
 exact method-ID string as shorthand.
+
+## External Asset fields
+
+`EXTERN.FIELD` reads a numeric value from an Asset selected in the System's
+**External Asset References** section. Use `OPEN`, `HIGH`, `LOW`, `CLOSE`, and
+`VOLUME` for the Asset's mapped quote fields. Other field names match imported
+column names exactly.
+
+The lookup matches the exact timestamp of the candle visible to the Strategy.
+For Next Open, it uses the timestamp of the preceding completed candle. Use the
+same timestamp convention and candle schedule for the traded and reference
+Assets. An absent candle or field value returns `NaN`, which follows the
+usual expression rules. Compare the external value to a threshold with
+`COMPARISON.GREATER_THAN` if the signal should be false on a missing match.
+
+[BBCA and IHSG worked example](resources-and-workflows.md#external-asset-references)
 
 ## Call row values
 
