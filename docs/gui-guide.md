@@ -121,7 +121,10 @@ and the Portfolio Overview. Portfolio Trades places open trades first, followed
 by closed trades in descending close-time order. Events uses newest-first time
 order and retains execution order within equal timestamps.
 
-Single-Asset scope retains its existing Chart, Trades, and Events views.
+The Single-Asset Chart's top plot selector offers Equity and Drawdown for the
+Portfolio, and Net P&L and P&L Drawdown for the selected setup. The Net P&L legend
+shows the amount and the percentage of Portfolio initial capital. P&L Drawdown
+shows the drop from the running peak of that percentage.
 Overview shows that child's actual trade performance, including net P&L,
 trade statistics, return on deployed capital, and contribution to Portfolio
 return. Trades can switch between actual shared-capital executions and

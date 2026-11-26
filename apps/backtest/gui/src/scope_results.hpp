@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstddef>
 #include <ctime>
+#include <limits>
 #include <map>
 #include <optional>
 #include <tuple>
@@ -79,6 +80,52 @@ struct SingleAssetSummary {
   std::time_t open_duration{};
 };
 
+template<typename Event>
+auto realized_exit_pnl(const Event& event) -> double
+{
+  // The pre-exit average already includes the entry and scale-in fees.
+  return event.position_size() *
+          (event.price() - event.average_price_before()) -
+         event.fees();
+}
+
+struct SingleAssetPnlPoint {
+  double amount{};
+  double percentage{};
+  double drawdown_percentage{};
+};
+
+template<typename Timeline>
+auto single_asset_pnl(const Timeline& timeline,
+                      std::size_t strategy_index,
+                      double initial_capital)
+ -> std::vector<SingleAssetPnlPoint>
+{
+  auto points = std::vector<SingleAssetPnlPoint>{};
+  points.reserve(timeline.size());
+  auto realized_pnl = 0.0;
+  auto peak_percentage = 0.0;
+  for(auto index = std::size_t{}; index < timeline.size(); ++index) {
+    for(const auto& event : timeline.trade_events(index)) {
+      if(event.strategy_index() == strategy_index &&
+         (event.is_exit() || event.is_scale_out())) {
+        realized_pnl += realized_exit_pnl(event);
+      }
+    }
+    const auto& open = timeline.open_position(index);
+    const auto unrealized_pnl = open && open->strategy_index() == strategy_index
+                                 ? open->unrealized_pnl()
+                                 : 0.0;
+    const auto amount = realized_pnl + unrealized_pnl;
+    const auto percentage = initial_capital > 0.0
+                             ? amount / initial_capital * 100.0
+                             : std::numeric_limits<double>::quiet_NaN();
+    peak_percentage = std::max(peak_percentage, percentage);
+    points.push_back({amount, percentage, peak_percentage - percentage});
+  }
+  return points;
+}
+
 template<typename Timeline>
 auto has_open_position(const Timeline& timeline, std::size_t strategy_index)
  -> bool
@@ -119,9 +166,7 @@ auto summarize_single_asset(const Timeline& timeline,
       case Type::stop_loss:
       case Type::take_profit: {
         auto& trade = trades[event.trade_id()];
-        const auto pnl = event.position_size() *
-                          (event.price() - event.average_price_before()) -
-                         event.fees();
+        const auto pnl = realized_exit_pnl(event);
         trade.pnl += pnl;
         summary.realized_pnl += pnl;
         if(event.position_size_after() == 0.0) {

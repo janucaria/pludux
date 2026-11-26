@@ -21,6 +21,8 @@ enum class BacktestChartViewportMode {
 enum class BacktestTopPlot {
   Equity,
   Drawdown,
+  NetPnl,
+  PnlDrawdown,
   ShadowReturn,
   FrequentistPerformance,
   CurrentStreaks,

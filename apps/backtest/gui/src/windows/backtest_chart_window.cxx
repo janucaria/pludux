@@ -19,6 +19,7 @@ module;
 #include <implot.h>
 #include <implot_internal.h>
 
+#include "../scope_results.hpp"
 #include "../ui/pludux_icons.hpp"
 
 export module pludux.apps.backtest:windows.backtest_chart_window;
@@ -389,19 +390,43 @@ public:
       if(ImPlot::BeginPlot("##TopPlot", plot_size, plot_flags)) {
         setup_x_axis(++current_row == total_row_count);
 
-        switch(self.chart_state_.top_plot()) {
+        auto pnl_points = std::vector<SingleAssetPnlPoint>{};
+        const auto top_plot = self.chart_state_.top_plot();
+        switch(top_plot) {
         case BacktestTopPlot::Equity:
           ImPlot::SetupAxis(ImAxis_Y1, "% Equity", axis_y_flags);
           ImPlot::SetupAxisFormat(ImAxis_Y1, "%.0f");
-          self.plot_equity(portfolio_results.timeline(),
-                           backtest_timestamps,
-                           portfolio.initial_capital());
+          self.plot_equity(
+           union_timeline, backtest_timestamps, portfolio.initial_capital());
           break;
         case BacktestTopPlot::Drawdown:
           ImPlot::SetupAxis(ImAxis_Y1, "% Drawdown", axis_y_flags);
           ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
-          self.plot_drawdown(portfolio_results.timeline(), backtest_timestamps);
+          self.plot_drawdown(union_timeline, backtest_timestamps);
           break;
+        case BacktestTopPlot::NetPnl:
+        case BacktestTopPlot::PnlDrawdown: {
+          const auto net_pnl = top_plot == BacktestTopPlot::NetPnl;
+          ImPlot::SetupAxis(
+           ImAxis_Y1, net_pnl ? "% Net P&L" : "% P&L Drawdown", axis_y_flags);
+          ImPlot::SetupAxisFormat(ImAxis_Y1, net_pnl ? "%.0f" : "%.2f");
+          const auto initial_capital = portfolio.initial_capital();
+          pnl_points = single_asset_pnl(
+           backtest_timelines, strategy_index, initial_capital);
+          if(initial_capital > 0.0) {
+            const auto label = net_pnl ? "Net P&L" : "P&L Drawdown";
+            const auto& first = pnl_points.front();
+            const auto* values =
+             net_pnl ? &first.percentage : &first.drawdown_percentage;
+            const auto count = static_cast<int>(pnl_points.size());
+            auto spec =
+             ImPlotSpec{ImPlotProp_Stride, sizeof(SingleAssetPnlPoint)};
+            spec.FillAlpha = net_pnl ? 0.75f : 1.0f;
+            ImPlot::PlotShaded(label, values, count, 0.0, 1.0, 0.0, spec);
+            ImPlot::PlotLine(label, values, count, 1.0, 0.0, spec);
+          }
+          break;
+        }
         case BacktestTopPlot::ShadowReturn:
           ImPlot::SetupAxis(ImAxis_Y1, "Shadow return", axis_y_flags);
           ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2f");
@@ -428,10 +453,11 @@ public:
            self.plot_bayesian_payoff(backtest_timelines, strategy_index);
           break;
         }
-        self.render_top_plot_legend(portfolio_results.timeline(),
+        self.render_top_plot_legend(union_timeline,
                                     backtest_timelines,
+                                    pnl_points,
                                     inspected_index,
-                                     strategy_index);
+                                    strategy_index);
 
         self.record_crosshair_plot(
          crosshair_state, timeline_size, self.chart_state_.pinned_bar());
@@ -893,28 +919,6 @@ private:
     self.draw_plot_legend(std::move(lines));
   }
 
-  void render_equity_legend(this const BacktestChartWindow& self,
-                            const backtest::BacktestTimeline& timeline,
-                            std::size_t index)
-  {
-    if(index >= timeline.size()) {
-      return;
-    }
-
-    const auto equity = timeline.equity(index);
-    const auto initial_capital = timeline.initial_capital(index);
-    const auto percentage =
-     initial_capital != 0.0 ? equity / initial_capital * 100.0 : NAN;
-    const auto color = ImGui::GetColorU32(
-     percentage >= 100.0 ? self.bullish_color_ : self.bearish_color_);
-    self.draw_plot_legend(
-     {{{"Equity", IM_COL32_WHITE},
-       {format_currency(equity), color},
-       {std::isfinite(percentage) ? std::format("{:.2f}%", percentage)
-                                  : std::string{"â€”"},
-        color}}});
-  }
-
   static auto plot_item_color(const char* label) -> ImU32
   {
     const auto* item = ImPlot::GetItem(label);
@@ -925,8 +929,9 @@ private:
   render_top_plot_legend(this const BacktestChartWindow& self,
                          const backtest::PortfolioTimeline& portfolio_timeline,
                          const backtest::BacktestTimeline& backtest_timeline,
+                         const std::vector<SingleAssetPnlPoint>& pnl_points,
                          std::size_t index,
-                      std::size_t strategy_index)
+                         std::size_t strategy_index)
   {
     if(index >= backtest_timeline.size()) {
       return;
@@ -936,14 +941,27 @@ private:
      [](std::string_view label, double value, ImU32 color) -> LegendSegment {
       return {std::format("{} {}", label, format_plot_value(value)), color};
     };
+    const auto format_percentage = [](double value) {
+      return std::isfinite(value) ? std::format("{:.2f}%", value)
+                                  : std::string{"\u2014"};
+    };
     const auto& strategy_state = backtest_timeline.strategy_state(index, strategy_index);
      const auto& performance = strategy_state.strategy_performance;
     auto line = LegendLine{};
 
     switch(self.chart_state_.top_plot()) {
-    case BacktestTopPlot::Equity:
-      self.render_equity_legend(backtest_timeline, index);
-      return;
+    case BacktestTopPlot::Equity: {
+      const auto equity = backtest_timeline.equity(index);
+      const auto initial_capital = backtest_timeline.initial_capital(index);
+      const auto percentage =
+       initial_capital != 0.0 ? equity / initial_capital * 100.0 : NAN;
+      const auto color = ImGui::GetColorU32(
+       percentage >= 100.0 ? self.bullish_color_ : self.bearish_color_);
+      line = {{"Equity", IM_COL32_WHITE},
+              {format_currency(equity), color},
+              {format_percentage(percentage), color}};
+      break;
+    }
     case BacktestTopPlot::Drawdown: {
       line.emplace_back("Drawdown", IM_COL32_WHITE);
       const auto timestamp = backtest_timeline.market_timestamp(index);
@@ -957,6 +975,20 @@ private:
        value_segment("Drawdown", value, plot_item_color("Drawdown")));
       break;
     }
+    case BacktestTopPlot::NetPnl: {
+      const auto& point = pnl_points[index];
+      const auto color = ImGui::GetColorU32(
+       point.amount >= 0.0 ? self.bullish_color_ : self.bearish_color_);
+      line = {{"Net P&L", IM_COL32_WHITE},
+              {format_currency(point.amount), color},
+              {format_percentage(point.percentage), color}};
+      break;
+    }
+    case BacktestTopPlot::PnlDrawdown:
+      line = {{"P&L Drawdown", IM_COL32_WHITE},
+              {format_percentage(pnl_points[index].drawdown_percentage),
+               plot_item_color("P&L Drawdown")}};
+      break;
     case BacktestTopPlot::ShadowReturn: {
       auto value = std::numeric_limits<double>::quiet_NaN();
         const auto& closed = strategy_state.strategy_closed_positions;
@@ -1136,6 +1168,8 @@ private:
       };
       menu_item("Equity", BacktestTopPlot::Equity);
       menu_item("Drawdown", BacktestTopPlot::Drawdown);
+      menu_item("Net P&L", BacktestTopPlot::NetPnl);
+      menu_item("P&L Drawdown", BacktestTopPlot::PnlDrawdown);
       menu_item("Shadow return", BacktestTopPlot::ShadowReturn);
       menu_item("Frequentist performance",
                 BacktestTopPlot::FrequentistPerformance);

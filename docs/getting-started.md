@@ -107,8 +107,9 @@ Portfolio row uses its expanded or collapsed state to choose the context.
 Selecting a child keeps Single-Asset scope active. A Portfolio without a valid
 child uses Portfolio scope even while expanded.
 
-- **Chart** shows Portfolio equity and drawdown in Portfolio scope. Selecting a
-  Single-Asset opens its existing candles, indicators, and trade signals.
+- **Chart** shows Equity and Drawdown in Portfolio scope. In Single-Asset scope,
+  the top plot offers Portfolio Equity and Drawdown alongside Net P&L and P&L
+  Drawdown for the selected setup.
 - **Trades** shows every child's trades in Portfolio scope, with open trades
   first and closed trades ordered by close time, newest first. Single-Asset
   scope shows the selected child's trades with their existing ordering.

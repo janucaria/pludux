@@ -203,8 +203,15 @@ Setup × Asset row onto a compact axis:
 
 - Every X index represents one real bar from the selected System × Asset run,
   so its candles and volume remain consecutive.
-- Portfolio equity and drawdown are sampled from the union timeline only at
-  those backtest timestamps and plotted at the corresponding backtest index.
+- The Equity and Drawdown top plots sample Portfolio account values from the
+  union timeline at the selected backtest's timestamps.
+- Net P&L adds the selected setup's cumulative realized P&L, including partial
+  exits, to the unrealized P&L of its remaining position. Both include applicable
+  Broker fees. The chart divides that total by Portfolio initial capital and
+  shows both the amount and percentage in the legend.
+- P&L Drawdown subtracts the current Net P&L percentage from its running peak,
+  starting with a peak of zero. If initial capital is zero, the percentage
+  legends display “—”.
 - Portfolio-only timestamps are omitted from this chart view. They remain in
   the stored `PortfolioTimeline` and reappear when a backtest containing those
   timestamps is selected.
@@ -219,9 +226,8 @@ Setup × Asset row onto a compact axis:
 - The Trades view filters actual open and closed trades by their permanent setup
   owner. Its Hypothetical source reads only the selected setup's theoretical
   positions.
-- Portfolio equity, drawdown, account metrics, execution status, and Overview
-  remain aggregate because main and failsafe setups still execute together with
-  shared Portfolio capital.
+- The Portfolio Chart shows account Equity and Drawdown on the union timeline.
+  Main and failsafe setups execute together with shared Portfolio capital.
 
 ### Events
 
@@ -256,11 +262,10 @@ may have no active setup. Each Portfolio remembers its choice independently,
 including when two Portfolios reuse the same System.
 
 Selecting a Setup × Asset child selects its parent Portfolio and filters the
-Chart and Trades inspection to that setup. Candles provide the shared market
-context, while Portfolio accounting, execution status, and Overview remain
-aggregate across the System × Asset run. Missing Strategy, Asset, or
-Profile references remain visible as disabled rows so broken configurations can
-be identified without silently changing their order.
+Chart, Trades, Events, and Overview to that setup. Candles provide the shared
+market context. Portfolio accounting and execution status cover the entire run.
+Missing Strategy, Asset, or Profile references appear as disabled rows so you
+can identify broken configurations in their original order.
 
 Portfolio search covers both levels. A Portfolio-name match shows all of its
 children. Child matching includes Strategy, Asset, setup role, and

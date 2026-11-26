@@ -1,7 +1,9 @@
 #include <gtest/gtest.h>
 
-#include "../src/scope_results.hpp"
+#include <cmath>
 #include <vector>
+
+#include "../src/scope_results.hpp"
 
 import pludux.apps.backtest.portfolio_strategy_selections;
 import pludux.backtest;
@@ -187,6 +189,81 @@ TEST(ScopeResults, EmptyTimelineHasNoTradeStatistics)
   EXPECT_EQ(summary.open_count, 0);
   EXPECT_DOUBLE_EQ(summary.completed_pnl, 0.0);
   EXPECT_DOUBLE_EQ(summary.deployed_capital, 0.0);
+}
+
+TEST(ScopeResults, SingleAssetPnlUsesActualFillsAndMarksForTheSelectedSetup)
+{
+  using pludux::apps::single_asset_pnl;
+  using Type = TradeEvent::Type;
+  auto entry =
+   TradeEvent{1, 1, 0, Type::entry, 10, 10, 10, 1, 0, 0, 0, 10, 101, 10.1};
+  auto pyramid = TradeEvent{
+   1, 2, 1, Type::scale_in, 20, 10, 10, 1, 10, 101, 10.1, 20, 202, 10.1};
+  auto partial = TradeEvent{
+   1, 3, 2, Type::scale_out, 30, 12, 5, 1, 20, 202, 10.1, 15, 151.5, 10.1};
+  auto final = TradeEvent{
+   1, 4, 3, Type::exit_signal, 40, 11, 15, 1, 15, 151.5, 10.1, 0, 0, 0};
+  const auto other_entry =
+   TradeEvent{2, 5, 0, Type::entry, 40, 50, -1, 1, 0, 0, 0, -1, -49, 49};
+  const auto other_exit =
+   TradeEvent{2, 6, 1, Type::exit_signal, 50, 46, -1, 1, -1, -49, 49, 0, 0, 0};
+  auto recovery_entry =
+   TradeEvent{3, 7, 0, Type::entry, 50, 10, 10, 1, 0, 0, 0, 10, 101, 10.1};
+  auto recovery_exit = TradeEvent{
+   3, 8, 1, Type::take_profit, 50, 14, 10, 1, 10, 101, 10.1, 0, 0, 0};
+  for(auto* event :
+      {&entry, &pyramid, &partial, &final, &recovery_entry, &recovery_exit}) {
+    event->strategy_index(1);
+  }
+
+  auto timeline = BacktestTimeline{};
+  timeline.append({});
+  timeline.append(
+   {.trade_events = {entry},
+    .open_position = OpenPositionSnapshot{1, 1, 10, 10, 10, 10, 101, 10, 1}});
+  timeline.append(
+   {.trade_events = {pyramid},
+    .open_position = OpenPositionSnapshot{1, 1, 10, 20, 12, 20, 202, 10, 2}});
+  timeline.append({.trade_events = {partial},
+                   .open_position = OpenPositionSnapshot{
+                    1, 1, 10, 30, 11, 15, 151.5, 10, 1.5}});
+  timeline.append(
+   {.trade_events = {final, other_entry},
+    .open_position = OpenPositionSnapshot{2, 0, 40, 40, 45, -1, -49, 1, 1}});
+  timeline.append(
+   {.trade_events = {other_exit, recovery_entry, recovery_exit}});
+
+  const auto points = single_asset_pnl(timeline, 1, 1'000.0);
+  ASSERT_EQ(points.size(), timeline.size());
+  const auto expected_amount = std::vector{0.0, -1.0, 38.0, 22.0, 21.0, 59.0};
+  const auto expected_drawdown = std::vector{0.0, 0.1, 0.0, 1.6, 1.7, 0.0};
+  for(auto index = std::size_t{}; index < points.size(); ++index) {
+    SCOPED_TRACE(index);
+    EXPECT_NEAR(points[index].amount, expected_amount[index], 1e-10);
+    EXPECT_NEAR(points[index].percentage, expected_amount[index] / 10.0, 1e-10);
+    EXPECT_NEAR(
+     points[index].drawdown_percentage, expected_drawdown[index], 1e-10);
+  }
+  const auto other = single_asset_pnl(timeline, 0, 1'000.0);
+  ASSERT_EQ(other.size(), timeline.size());
+  EXPECT_DOUBLE_EQ(other[3].amount, 0.0);
+  EXPECT_DOUBLE_EQ(other[4].amount, 4.0);
+  EXPECT_DOUBLE_EQ(other[5].amount, 2.0);
+  EXPECT_NEAR(other[5].drawdown_percentage, 0.2, 1e-10);
+}
+
+TEST(ScopeResults, SingleAssetPnlHasNoPercentagesWithoutInitialCapital)
+{
+  using pludux::apps::single_asset_pnl;
+  auto timeline = BacktestTimeline{};
+  EXPECT_TRUE(single_asset_pnl(timeline, 1, 0.0).empty());
+  timeline.append(
+   {.open_position = OpenPositionSnapshot{1, 1, 10, 30, 12, 5, 50.5, 10, 0.5}});
+  const auto points = single_asset_pnl(timeline, 1, 0.0);
+  ASSERT_EQ(points.size(), 1);
+  EXPECT_NEAR(points[0].amount, 9.5, 1e-10);
+  EXPECT_TRUE(std::isnan(points[0].percentage));
+  EXPECT_TRUE(std::isnan(points[0].drawdown_percentage));
 }
 
 TEST(ScopeResults, OpenPositionKeepsOwnerAndRemainingFeeAdjustedPnl)
