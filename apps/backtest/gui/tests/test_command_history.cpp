@@ -436,12 +436,12 @@ TEST(CommandHistory, StrategyInputSynchronizationIsUndoable)
   auto inputs = setup.inputs();
   inputs.front().value(99.0);
   setup.inputs(std::move(inputs));
-  auto failsafe = setup;
-  inputs = failsafe.inputs();
+  auto alternate = setup;
+  inputs = alternate.inputs();
   inputs.front().value(55.0);
-  failsafe.inputs(std::move(inputs));
+  alternate.inputs(std::move(inputs));
   const auto system = *state.add_system(pludux::backtest::System{
-   "Turtle", {}, state.get_profile_handles().front(), {}, setup, {{failsafe}}});
+   "Turtle", {}, state.get_profile_handles().front(), {}, setup, {{alternate}}});
 
   auto executor = pludux::apps::CommandExecutor{};
   executor.push(pludux::apps::EditCommand{
@@ -500,7 +500,7 @@ TEST(ApplicationStateSerialization, RoundTripsStoredStrategyReferences)
   ASSERT_EQ(loaded.get_strategy_handles().size(), 1U);
   const auto& system = loaded.get_system(loaded.get_system_handles().front());
   EXPECT_EQ(system.main_setup().strategy_handle(), strategy);
-  EXPECT_EQ(system.failsafe_strategies().front().setup().strategy_handle(),
+  EXPECT_EQ(system.alternate_strategies().front().setup().strategy_handle(),
             strategy);
 }
 
@@ -531,13 +531,13 @@ TEST(ApplicationStateSerialization, RoundTripsCallTableAndSetupMappings)
    pludux::backtest::Strategy{"Calls", std::move(series), {}, {}, {}});
   const auto strategy = state.get_strategy_handles().front();
   auto main_setup = StrategySetup{strategy};
-  auto failsafe_setup = StrategySetup{strategy};
+  auto alternate_setup = StrategySetup{strategy};
   main_setup.call_mappings() = {{"stop", "SL1"}};
-  failsafe_setup.call_mappings() = {{"stop", "SL2"}};
+  alternate_setup.call_mappings() = {{"stop", "SL2"}};
   const auto columns = pludux::backtest::CallColumns{
    "Timing", "Symbol", "Bullish", "Entry Low", "Entry High"};
   auto system = pludux::backtest::System{
-   "System", {}, {}, {}, main_setup, {{failsafe_setup}}};
+   "System", {}, {}, {}, main_setup, {{alternate_setup}}};
   system.call_handle(*call);
   system.call_columns(columns);
   system.entry_priority(pludux::backtest::EntryPriority::SignalFirst);
@@ -557,9 +557,9 @@ TEST(ApplicationStateSerialization, RoundTripsCallTableAndSetupMappings)
   EXPECT_EQ(restored.entry_priority(),
             pludux::backtest::EntryPriority::SignalFirst);
   EXPECT_EQ(restored.main_setup().call_mappings(), main_setup.call_mappings());
-  ASSERT_EQ(restored.failsafe_strategies().size(), 1U);
-  EXPECT_EQ(restored.failsafe_strategies().front().setup().call_mappings(),
-            failsafe_setup.call_mappings());
+  ASSERT_EQ(restored.alternate_strategies().size(), 1U);
+  EXPECT_EQ(restored.alternate_strategies().front().setup().call_mappings(),
+            alternate_setup.call_mappings());
 }
 
 TEST(ApplicationStateSerialization, RoundTripsDocumentAndViewSeparately)
@@ -909,11 +909,13 @@ TEST(ApplicationStateSerialization, IgnoresLegacyPortfolioStrategySelections)
 
 TEST(ApplicationStateSerialization, RoundTripsOrderedSystemStrategies)
 {
+  using pludux::backtest::AlternateStrategyActivation;
+
   auto state = ApplicationState{};
   add_strategy(state, "Main");
-  add_strategy(state, "Failsafe");
+  add_strategy(state, "Alternate");
   const auto main = state.get_strategy_handles()[0];
-  const auto failsafe = state.get_strategy_handles()[1];
+  const auto alternate = state.get_strategy_handles()[1];
   const auto performance = pludux::backtest::StrategyPerformanceConfig{
    pludux::backtest::StrategyPerformanceHistoryPolicy{
     pludux::backtest::StrategyPerformanceHistoryMode::RollingWindow, 25, 0.99}};
@@ -923,9 +925,8 @@ TEST(ApplicationStateSerialization, RoundTripsOrderedSystemStrategies)
                             {},
                             performance,
                             StrategySetup{main},
-                            {{StrategySetup{failsafe},
-                              pludux::backtest::FailsafeStrategyActivation::
-                               PreviousStrategyEntryFilteredPosition}}}));
+                            {{StrategySetup{alternate},
+                              AlternateStrategyActivation::Failsafe}}}));
   auto stream = std::stringstream{};
   pludux::apps::save_application_state_json(stream, state);
   const auto json = stream.str();
@@ -939,7 +940,9 @@ TEST(ApplicationStateSerialization, RoundTripsOrderedSystemStrategies)
   const auto loaded = pludux::apps::load_application_state_json(stream);
   const auto& system = loaded.get_system(loaded.get_system_handles().front());
   EXPECT_EQ(system.main_setup().strategy_handle(), main);
-  EXPECT_EQ(system.failsafe_strategies().front().setup().strategy_handle(), failsafe);
+  EXPECT_EQ(system.alternate_strategies().front().setup().strategy_handle(), alternate);
+  EXPECT_EQ(system.alternate_strategies().front().activation(),
+            AlternateStrategyActivation::Failsafe);
   EXPECT_EQ(system.strategy_performance(), performance);
 
   for(const auto& [canonical, legacy] :
@@ -972,7 +975,7 @@ TEST(ApplicationStateSerialization, DefaultsMissingSystemFields)
             pludux::backtest::System{});
 }
 
-TEST(ApplicationStateSerialization, DefaultsFailsafeWithoutActivation)
+TEST(ApplicationStateSerialization, DefaultsAlternateWithoutActivation)
 {
   auto state = ApplicationState{};
   ASSERT_TRUE(state.add_system(pludux::backtest::System{"", {}, {}, {}, StrategySetup{}, {{}}}));
@@ -986,9 +989,9 @@ TEST(ApplicationStateSerialization, DefaultsFailsafeWithoutActivation)
   auto input = std::stringstream{json};
   const auto loaded = pludux::apps::load_application_state_json(input);
   EXPECT_EQ(loaded.get_system(loaded.get_system_handles().front())
-             .failsafe_strategies()
+             .alternate_strategies()
              .front(),
-            pludux::backtest::SystemFailsafeStrategy{});
+            pludux::backtest::SystemAlternateStrategy{});
 }
 
 TEST(CommandHistory, StandaloneStrategyCrudAndReorderAreUndoable)

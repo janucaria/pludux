@@ -626,7 +626,7 @@ private:
 
 enum class PositionSizingDecisionOutcome {
   EntryFiltered,
-  FailsafeInactive,
+  AlternateInactive,
   ShadowOnly,
   NoPositiveSize,
   DrawdownSuppressed,

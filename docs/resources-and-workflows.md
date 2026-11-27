@@ -7,9 +7,9 @@ Pludux stores nine reusable resources. A Backtest records a System × Asset run.
 | Asset | Name, OHLCV mapping, timestamped numeric history | Watchlist and System references |
 | Calls table | Name, column headers, and data rows | System |
 | Watchlist | Ordered, duplicate-free Assets | System |
-| Strategy | Inputs and defaults, series, long/short rules, execution path, plots | Main and Failsafe setups |
+| Strategy | Inputs and defaults, series, long/short rules, execution path, plots | Main and alternate setups |
 | Profile | Sizing, drawdown adjustment, insufficient-cash policy | System |
-| System | Watchlist, Profile, Main setup, ordered Failsafes, performance settings, Calls mappings, external Asset bindings | Portfolio |
+| System | Watchlist, Profile, Main setup, ordered alternate setups, performance settings, Calls mappings, external Asset bindings | Portfolio |
 | Market | Minimum quantity and quantity step | Portfolio |
 | Broker | Fixed/percentage fee rules | Portfolio |
 | Portfolio | Capital, constraints, comparators, ordered Systems | Runner/results |
@@ -25,7 +25,8 @@ resource leaves its owner incomplete until the reference is repaired.
 3. Create a Strategy in **Strategies**, or import Strategy JSON.
 4. Create a Profile and select one of its five sizing methods.
 5. Create a System and select its Watchlist and Profile. Choose a Main Strategy,
-   set its input overrides and Entry Filter, and add ordered Failsafes as needed.
+   set its input overrides and Entry Filter, and add Alternate Strategies in
+   evaluation order as needed.
 6. Define Market quantity rules and Broker fees.
 7. Create a Portfolio, add ordered Systems, configure capacity and comparators,
    then run it.
@@ -34,7 +35,7 @@ resource leaves its owner incomplete until the reference is repaired.
 ## Strategies and their setups
 
 The Strategy defines named series for its long/short entry, exit, risk,
-pyramid, and plot expressions. Each Main or Failsafe setup references a
+pyramid, and plot expressions. Each Main or alternate setup references a
 Strategy and can override its declared numeric inputs. For example, a System
 can reference a breakout Strategy twice with different channel lengths.
 
@@ -90,7 +91,7 @@ whitespace and reports the row and column of any unrecognized value.
 
 **Entry Low** and **Entry High** are optional inclusive bounds on the open
 price. Equal bounds specify an exact price. Map any extra numeric columns to
-logical `OTHER.CALL` fields separately for each Main or Failsafe setup. A
+logical `OTHER.CALL` fields separately for each Main or alternate setup. A
 required field with no mapping leaves the setup incomplete. Blank extra cells
 give missing values. Text and non-finite numbers in mapped numeric cells are
 invalid.

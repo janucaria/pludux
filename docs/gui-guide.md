@@ -66,9 +66,9 @@ insufficient-cash settings are configured. Select one Profile for each System.
 ## Systems window
 
 Select the Watchlist and Profile once for the entire System. In the Main setup,
-select a Strategy and configure its Strategy Inputs and Entry Filter. Add any
-Failsafes in evaluation order, each with its own Strategy, input overrides,
-Entry Filter, and activation rule.
+select a Strategy and configure its Strategy Inputs and Entry Filter. Add
+Alternate Strategies in evaluation order, each with its own Strategy, input
+overrides, Entry Filter, and activation rule.
 
 The System's Strategy Performance calculation settings apply to all its setups.
 Each setup tracks its own theoretical history for each Asset. To edit the
@@ -77,7 +77,7 @@ underlying rules shared by its users, open the selected Strategy in **Strategies
 To use Calls, select a table and map its **Datetime** and **Asset** columns.
 Map **Direction** to specify Long or Short per row. Unmapped or blank
 directions default to Long. **Entry Low** and **Entry High** are optional bounds.
-Map any logical fields used by Call nodes separately for each Main or Failsafe
+Map any logical fields used by Call nodes separately for each Main or alternate
 setup. **Entry Priority** selects **Call first** or **Signal first** when one
 setup offers opposing entries at the same open. [Worked example](data-csv.md#backtest-calls-with-two-stop-alternatives)
 

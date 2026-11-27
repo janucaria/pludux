@@ -16,12 +16,12 @@ TEST(StrategySetupTest, DefaultsToIncompleteConfiguration)
   EXPECT_TRUE(system.main_setup().inputs().empty());
   EXPECT_NE(node_cast<TrueNode>(system.main_setup().entry_filter()), nullptr);
   EXPECT_EQ(system.strategy_performance(), StrategyPerformanceConfig{});
-  EXPECT_EQ(SystemFailsafeStrategy{}.activation(),
-            FailsafeStrategyActivation::Always);
+  EXPECT_EQ(SystemAlternateStrategy{}.activation(),
+            AlternateStrategyActivation::Always);
 }
 
 TEST(SystemTest,
-     MainAndFailsafeUseSameStrategyWithIndependentOverridesAndOneProfile)
+     MainAndAlternateUseSameStrategyWithIndependentOverridesAndOneProfile)
 {
   const auto strategy = StrategyStoreHandle{1, 2};
   const auto profile = ProfileStoreHandle{3, 4};
@@ -30,25 +30,25 @@ TEST(SystemTest,
      "Period", NumericInputNode::ValueRepresentation::UnsignedInteger, period};
   };
   const auto main = StrategySetup{strategy, {input(20.0)}, FalseNode{}};
-  const auto failsafe = SystemFailsafeStrategy{
+  const auto alternate = SystemAlternateStrategy{
    StrategySetup{strategy, {input(55.0)}},
-   FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition};
+   AlternateStrategyActivation::Failsafe};
   const auto other =
-   SystemFailsafeStrategy{StrategySetup{StrategyStoreHandle{7, 1}}};
+   SystemAlternateStrategy{StrategySetup{StrategyStoreHandle{7, 1}}};
   const auto system = System{"Breakout",
                              WatchlistStoreHandle{8, 1},
                              profile,
                              {},
                              main,
-                             {failsafe, other}};
+                             {alternate, other}};
 
   EXPECT_EQ(system.profile_handle(), profile);
   EXPECT_EQ(system.strategy_count(), 3U);
   EXPECT_EQ(system.main_setup(), main);
-  EXPECT_EQ(system.strategy_setup(1), failsafe.setup());
+  EXPECT_EQ(system.strategy_setup(1), alternate.setup());
   EXPECT_EQ(system.strategy_setup(2), other.setup());
-  EXPECT_EQ(system.failsafe_strategies().front().activation(),
-            FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
+  EXPECT_EQ(system.alternate_strategies().front().activation(),
+            AlternateStrategyActivation::Failsafe);
   EXPECT_EQ(system.strategy_setup(0).strategy_handle(),
             system.strategy_setup(1).strategy_handle());
   EXPECT_DOUBLE_EQ(system.strategy_setup(0).inputs().front().value(), 20.0);
@@ -70,7 +70,7 @@ TEST(SystemTest, RuleEquivalenceIncludesSetupFieldsAndSharedPolicy)
                                profile,
                                performance,
                                StrategySetup{StrategyStoreHandle{2, 1}},
-                               {SystemFailsafeStrategy{}}};
+                               {SystemAlternateStrategy{}}};
   EXPECT_EQ(original.strategy_performance(), performance);
   auto changed = original;
   changed.name("Renamed");
@@ -84,8 +84,8 @@ TEST(SystemTest, RuleEquivalenceIncludesSetupFieldsAndSharedPolicy)
   changed.strategy_performance(StrategyPerformanceConfig{});
   EXPECT_FALSE(original.equivalent_rules(changed));
   changed = original;
-  changed.failsafe_strategies().front().activation(
-   FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
+  changed.alternate_strategies().front().activation(
+   AlternateStrategyActivation::Failsafe);
   EXPECT_FALSE(original.equivalent_rules(changed));
   changed = original;
   auto main = original.main_setup();

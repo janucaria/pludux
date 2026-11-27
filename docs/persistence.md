@@ -21,8 +21,8 @@ A workspace currently has this conceptual root:
 `store` contains arenas for Assets, Calls, Watchlists, Strategies, Profiles,
 Systems, Markets, Brokers, and Portfolios. References use slot and generation
 metadata so a deleted slot cannot silently become another object. Systems store
-their Profile reference, Main and Failsafe Strategy setups, performance
-settings, and optional Calls table with its column mappings and Entry Priority.
+their Profile reference, Main and alternate setups, performance settings, and
+optional Calls table with its column mappings and Entry Priority.
 Each setup stores its Strategy reference, input overrides, Entry Filter, and
 logical `OTHER.CALL` field mappings. The workspace embeds Asset history and
 the Calls library, including each table's name, headers, and rows.

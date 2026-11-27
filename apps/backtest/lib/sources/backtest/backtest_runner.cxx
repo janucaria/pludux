@@ -361,14 +361,15 @@ public:
            StrategyPerformanceConfig strategy_performance_config = {},
           ErasedSeriesMethod<EntryFilterMethodContext> entry_filter =
            BooleanMethod<true>{},
-           FailsafeStrategyActivation failsafe_activation = FailsafeStrategyActivation::Always)
+          AlternateStrategyActivation alternate_activation =
+           AlternateStrategyActivation::Always)
     : strategy_performance{std::move(strategy_performance_config)}
     , entry_filter{std::move(entry_filter)}
     , series_methods{std::move(series_methods)}
     , long_position{std::move(long_position)}
     , short_position{std::move(short_position)}
     , intrabar_path{intrabar_path}
-    , failsafe_activation{failsafe_activation}
+    , alternate_activation{alternate_activation}
     {
     }
 
@@ -382,7 +383,7 @@ public:
     PositionRule long_position;
     PositionRule short_position;
     IntrabarPath intrabar_path;
-    FailsafeStrategyActivation failsafe_activation;
+    AlternateStrategyActivation alternate_activation;
   };
 
   class RequestedOrderAction {
@@ -563,8 +564,8 @@ public:
        strategy.short_position.entry_source() == EntrySource::Call;
       strategy_states_.emplace_back(std::move(strategy));
     }
-    if(strategy_states_.front().failsafe_activation !=
-        FailsafeStrategyActivation::Always) {
+    if(strategy_states_.front().alternate_activation !=
+        AlternateStrategyActivation::Always) {
       throw std::invalid_argument{"Main strategy must always be active"};
     }
     activate_strategy(0);
@@ -1143,7 +1144,7 @@ private:
     , long_position{std::move(strategy.long_position)}
     , short_position{std::move(strategy.short_position)}
     , intrabar_path{strategy.intrabar_path}
-    , failsafe_activation{strategy.failsafe_activation}
+    , alternate_activation{strategy.alternate_activation}
     {
     }
 
@@ -1162,7 +1163,8 @@ private:
     PositionRule short_position;
     std::size_t pyramiding_layers{};
     IntrabarPath intrabar_path{IntrabarPath::CandleDirection};
-     FailsafeStrategyActivation failsafe_activation{FailsafeStrategyActivation::Always};
+    AlternateStrategyActivation alternate_activation{
+     AlternateStrategyActivation::Always};
     std::array<bool, 2> pending_entries{};
     bool pending_pyramiding{};
     bool pyramiding_signal_ready{true};
@@ -2493,8 +2495,8 @@ private:
       return true;
     }
     const auto index = *self.active_strategy_index_;
-    if(self.strategy_states_[index].failsafe_activation ==
-        FailsafeStrategyActivation::Always) {
+    if(self.strategy_states_[index].alternate_activation ==
+        AlternateStrategyActivation::Always) {
       return true;
     }
     const auto& previous = self.strategy_states_[index - 1];
@@ -2571,13 +2573,13 @@ private:
     const auto execution_blocked =
      !preapproved &&
      (!self.entry_admission_open_ || self.execution_session_.is_open());
-    const auto failsafe_inactive =
+    const auto alternate_inactive =
      !preapproved && !self.active_setup_execution_eligible();
     if(!preapproved && !self.strategy_states_.empty() &&
-       (execution_blocked || failsafe_inactive)) {
+       (execution_blocked || alternate_inactive)) {
       sizing_decision.outcome =
        execution_blocked ? PositionSizingDecisionOutcome::ShadowOnly
-                         : PositionSizingDecisionOutcome::FailsafeInactive;
+                         : PositionSizingDecisionOutcome::AlternateInactive;
       const auto& intent = self.commit_strategy_entry(
        is_long, price, rule, false, evaluation_snapshot, context);
       sizing_decision.intent_id = intent.intent_id();

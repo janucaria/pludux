@@ -149,60 +149,60 @@ private:
     self.render_call_table(state, system);
     const auto* call_table = state.get_call_if_present(system.call_handle());
     self.render_setup(state, system.main_setup(), "Main Strategy", call_table);
-    std::optional<std::size_t> remove_failsafe;
-    std::optional<std::pair<std::size_t, std::size_t>> reorder_failsafe;
-    for(auto index = std::size_t{}; index < system.failsafe_strategies().size();
+    std::optional<std::size_t> remove_alternate;
+    std::optional<std::pair<std::size_t, std::size_t>> reorder_alternate;
+    for(auto index = std::size_t{}; index < system.alternate_strategies().size();
         ++index) {
       ImGui::PushID(static_cast<int>(index));
-      auto& failsafe = system.failsafe_strategies()[index];
-      auto activation = static_cast<int>(failsafe.activation());
-      constexpr const char* activation_modes[] = {
-       "Always", "Previous Strategy has entry-filtered theoretical position"};
+      auto& alternate = system.alternate_strategies()[index];
+      auto activation = static_cast<int>(alternate.activation());
+      constexpr const char* activation_modes[] = {"Always", "Failsafe"};
       ImGui::SeparatorText(
-       std::format("Failsafe Strategy {}", index + 1).c_str());
+       std::format("Alternate Strategy {}", index + 1).c_str());
       ui::field_label(
        "Activation",
-       "An entry-filtered theoretical position remains active until the "
-       "previous Strategy fully closes it. The failsafe still requires its "
-       "own fresh initial-entry signal.");
-      if(ImGui::Combo("##failsafe_activation",
+       "With Always, the alternate can act on its own fresh entry signal.\n"
+       "With Failsafe, the previous Strategy's Entry Filter must have blocked "
+       "the initial entry for a theoretical position that is still open. "
+       "The alternate still needs its own fresh entry signal.");
+      if(ImGui::Combo("##alternate_activation",
                       &activation,
                       activation_modes,
                       IM_ARRAYSIZE(activation_modes))) {
-        failsafe.activation(
-         static_cast<backtest::FailsafeStrategyActivation>(activation));
+        alternate.activation(
+         static_cast<backtest::AlternateStrategyActivation>(activation));
       }
-      self.render_setup(state, failsafe.setup(), "Strategy", call_table);
+      self.render_setup(state, alternate.setup(), "Strategy", call_table);
       if(index > 0 && ImGui::Button("Move up"))
-        reorder_failsafe = std::pair{index, index - 1};
+        reorder_alternate = std::pair{index, index - 1};
       if(index > 0)
         ImGui::SameLine();
-      if(index + 1 < system.failsafe_strategies().size() &&
+      if(index + 1 < system.alternate_strategies().size() &&
          ImGui::Button("Move down"))
-        reorder_failsafe = std::pair{index, index + 1};
-      if(index + 1 < system.failsafe_strategies().size())
+        reorder_alternate = std::pair{index, index + 1};
+      if(index + 1 < system.alternate_strategies().size())
         ImGui::SameLine();
-      if(ImGui::Button("Remove failsafe"))
-        remove_failsafe = index;
+      if(ImGui::Button("Remove alternate"))
+        remove_alternate = index;
       ImGui::PopID();
     }
-    if(reorder_failsafe) {
-      auto& failsafes = system.failsafe_strategies();
-      std::swap(failsafes[reorder_failsafe->first],
-                failsafes[reorder_failsafe->second]);
-    } else if(remove_failsafe) {
-      auto& failsafes = system.failsafe_strategies();
-      failsafes.erase(failsafes.begin() +
-                      static_cast<std::ptrdiff_t>(*remove_failsafe));
+    if(reorder_alternate) {
+      auto& alternates = system.alternate_strategies();
+      std::swap(alternates[reorder_alternate->first],
+                alternates[reorder_alternate->second]);
+    } else if(remove_alternate) {
+      auto& alternates = system.alternate_strategies();
+      alternates.erase(alternates.begin() +
+                       static_cast<std::ptrdiff_t>(*remove_alternate));
     }
-    if(ImGui::Button("Add Failsafe Strategy")) {
+    if(ImGui::Button("Add Alternate Strategy")) {
       const auto handle = state.get_strategy_handles().empty()
                            ? backtest::StrategyStoreHandle{}
                            : state.get_strategy_handles().front();
       auto setup = backtest::StrategySetup{};
       if(const auto* strategy = state.get_strategy_if_present(handle))
         backtest::assign_setup_strategy(setup, handle, *strategy);
-      system.failsafe_strategies().emplace_back(std::move(setup));
+      system.alternate_strategies().emplace_back(std::move(setup));
     }
     self.render_external_bindings(state, system);
     if(!self.configuration_error_.empty())

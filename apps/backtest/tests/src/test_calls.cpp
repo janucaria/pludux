@@ -661,7 +661,7 @@ TEST(CallStrategyTest, ConvertsNumberFormatsAndDistinguishesMissingFromZero)
    std::isnan(evaluate_series_method(CallNode{"missing"}, snapshot, ctx)));
 }
 
-TEST(CallRunnerTest, FilteredMainActivatesFailsafeWithItsOwnCallMapping)
+TEST(CallRunnerTest, FilteredMainActivatesAlternateWithItsOwnCallMapping)
 {
   const auto asset = make_asset("ABC", "1,100,100,100,100,1\n");
   const auto market = Market{"Market"};
@@ -674,11 +674,10 @@ TEST(CallRunnerTest, FilteredMainActivatesFailsafeWithItsOwnCallMapping)
   };
   auto main = make_setup(3);
   main.entry_filter = BooleanMethod<false>{};
-  auto failsafe = make_setup(7);
-  failsafe.failsafe_activation =
-   FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition;
+  auto alternate = make_setup(7);
+  alternate.alternate_activation = AlternateStrategyActivation::Failsafe;
   auto runner =
-   BacktestRunner{asset, market, broker, profile, {main, failsafe}, 1000};
+   BacktestRunner{asset, market, broker, profile, {main, alternate}, 1000};
   auto results = std::vector<SeriesEvaluationResults>(2);
   auto timeline = BacktestTimeline{};
   runner.run(results, timeline);

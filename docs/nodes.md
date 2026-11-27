@@ -25,7 +25,7 @@ are defined by the parser; the GUI may seed a more useful initial expression.
   as trading signals.
 - `SERIES.REFERENCE` must name a top-level series. Recursive or missing
   references are invalid. `INPUT.NUMERIC` values are declared by a Strategy and
-  may be overridden by each Main or Failsafe setup in a System.
+  may be overridden by each Main or alternate setup in a System.
 
 ## Context matrix
 

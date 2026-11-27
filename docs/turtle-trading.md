@@ -31,7 +31,7 @@ currency conversion, expiry, or rollover model.
 | One Unit has 1N dollar volatility equal to 1% of equity | Profile Risk Distance sizing at 1% equity risk | Close |
 | Turtle System 1: 20-day breakout | Main Strategy using Donchian 20 | Close on daily bars |
 | Skip Turtle System 1 after a winning theoretical breakout | Main Strategy Entry Filter using theoretical Strategy Performance | Close |
-| Turtle System 2 failsafe: 55-day breakout | Failsafe Strategy setup with persistent filtered-position activation | Close |
+| Turtle System 2 failsafe: 55-day breakout | Alternate Strategy with **Failsafe** activation | Close |
 | Add one Unit every 0.5N | Position R-Multiple threshold of 0.5 | Close, one layer per bar |
 | Maximum four Units in one market | Strategy maximum pyramiding layers of 4 | Direct |
 | Freeze Unit and N while building a position | Frozen initial executed quantity and risk distance | Direct |
@@ -62,9 +62,9 @@ Portfolio
    |- Main setup
    |  |- Turtle breakout Strategy with 20-bar entry and 10-bar exit
    |  `- Previous-breakout Entry Filter
-   `- Failsafe setup
+   `- Alternate Strategy 1
       |- Turtle breakout Strategy with 55-bar entry and 20-bar exit
-      |- Activate while the preceding setup has an entry-filtered theoretical position
+      |- Activation: Failsafe
       `- Always-allow Entry Filter
 ```
 
@@ -274,9 +274,9 @@ Reduce: 100%
 Disable profit targets. Turtle trend exits deliberately allowed substantial
 open profit to be given back in exchange for remaining in large trends.
 
-## 5. Turtle System 2 Strategy and Failsafe
+## 5. Turtle System 2 as an Alternate Strategy
 
-In the Failsafe setup, select the same Turtle breakout Strategy. Override the
+In the alternate setup, select the same Turtle breakout Strategy. Override the
 channel inputs and configure the Entry Filter as follows:
 
 ```text
@@ -285,11 +285,8 @@ Exit channel:  20 bars
 Entry Filter:  Always
 ```
 
-Add it as `Failsafe 1` in the same System and select:
-
-```text
-Activation: Previous setup has an entry-filtered theoretical position
-```
+Add it as **Alternate Strategy 1** in the same System and set **Activation**
+to **Failsafe**.
 
 This activation is persistent. When Turtle System 1 produces a fresh breakout that is
 rejected by its Entry Filter, Turtle System 1 still opens its theoretical position and
@@ -298,9 +295,9 @@ the marker remains active until that theoretical position fully closes. Turtle S
 fresh 55-day entry signal. An old Turtle System 2 shadow position is never converted
 into a real position merely because activation changes.
 
-This is the closest Pludux representation of the Turtle System 1 failsafe rule. A
-Failsafe is internal to the Pludux System; it does not create another Portfolio row
-or another simultaneous real position for that Pludux System and asset.
+This is the closest Pludux representation of the Turtle System 1 failsafe rule.
+Both setups run within the same Pludux System, which can hold one real position
+per Asset.
 
 To study Turtle System 2 as an independent allocation, create a separate
 Pludux System and use the 55/20-bar setup as its Main. Both Systems can then
@@ -597,7 +594,7 @@ Before treating a run as a Turtle-style result, verify:
 - Turtle System 1 uses 20-day entry and 10-day exit channels.
 - Turtle System 1 Entry Filter allows the first trade or a current losing streak.
 - Turtle System 2 uses 55-day entry and 20-day exit channels.
-- Failsafe 1 activation is Previous Setup Entry-Filtered Position.
+- **Alternate Strategy 1** uses **Failsafe** activation.
 - Pyramiding uses 0.5 Position R-Multiple, Every Evaluation, no cooldown, and
   four maximum layers.
 - Stop Loss R-Multiple is 2, full reduction, non-trailing, and references Latest

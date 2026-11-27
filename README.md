@@ -26,8 +26,9 @@ Pludux uses the following resources and results.
 - A **Profile** defines position sizing, drawdown adjustment, and
   insufficient-cash handling.
 - A **System** selects a Watchlist and one Profile for its Main setup and
-  ordered Failsafes. Each setup selects a Strategy, supplies input overrides,
-  and has its own Entry Filter. Each Failsafe also has an activation rule.
+  ordered alternate setups. Each setup selects a Strategy, supplies input
+  overrides, and has its own Entry Filter. Each alternate also has an
+  activation rule.
 - **Watchlist**: an ordered set of Assets used by a System
 - **Asset**: market data and field mapping
 - **Calls**: a library of trade-call tables. Systems match their rows to
@@ -38,7 +39,7 @@ Pludux uses the following resources and results.
 - Management of Portfolios, Markets, Brokers, Systems, Profiles, Strategies,
   Watchlists, and Assets in the GUI
 - Strategy creation and editing in a node editor, duplication, and JSON import/export
-- System editing with Watchlist and Profile selection, Main and Failsafe setups,
+- System editing with Watchlist and Profile selection, Main and alternate setups,
   Strategy Inputs, Entry Filters, and shared Strategy Performance settings
 - Backtesting trade-call tables with Strategy sizing and exits under shared
   Portfolio capital, with CSV import available in Calls

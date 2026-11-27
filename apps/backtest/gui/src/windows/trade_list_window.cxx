@@ -86,8 +86,8 @@ public:
           continue;
         const auto strategy_label =
          strategy_index == 0
-          ? std::string{"Main strategy"}
-          : std::format("Failsafe strategy {}", strategy_index);
+          ? std::string{"Main Strategy"}
+          : std::format("Alternate Strategy {}", strategy_index);
         const auto label = std::format(
          "{} — {} — {}", system->name(), asset->name(), strategy_label);
         auto child_trades = collect_trades(backtest_results.timeline(),

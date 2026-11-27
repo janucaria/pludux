@@ -437,7 +437,7 @@ TEST(BacktestTimelineTest, TracksCurrentAndMaximumOutcomeStreaks)
   EXPECT_EQ(timeline.maximum_losing_streak(), 0);
 }
 
-TEST(BacktestRunnerSetupTest, EntryFilteredMainFallsThroughToFirstFailsafe)
+TEST(BacktestRunnerSetupTest, EntryFilteredMainFallsThroughToFirstAlternate)
 {
   const auto asset = make_single_bar_asset();
   const auto market = Market{"Test", 0.0, 0.0};
@@ -468,7 +468,7 @@ TEST(BacktestRunnerSetupTest, EntryFilteredMainFallsThroughToFirstFailsafe)
    IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<true>{},
-    FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
+    AlternateStrategyActivation::Failsafe);
   auto runner =
    BacktestRunner{asset, market, broker, profile, std::move(setups), 1'000.0};
   auto setup_results = std::vector<SeriesEvaluationResults>(2);
@@ -581,7 +581,7 @@ TEST(BacktestRunnerSetupTest,
   EXPECT_EQ(timeline.trade_events(0).front().strategy_index(), 1U);
 }
 
-TEST(BacktestRunnerSetupTest, FailsafeUsesSharedSystemProfileDrawdownAdjustment)
+TEST(BacktestRunnerSetupTest, AlternateUsesSharedSystemProfileDrawdownAdjustment)
 {
   const auto asset = make_single_bar_asset();
   const auto market = Market{"Test", 0.0, 0.0};
@@ -614,7 +614,7 @@ TEST(BacktestRunnerSetupTest, FailsafeUsesSharedSystemProfileDrawdownAdjustment)
    IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<true>{},
-    FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
+    AlternateStrategyActivation::Failsafe);
   auto runner = BacktestRunner{
    asset, market, broker, profile, std::move(setups), 900.0, false, 1000.0};
   auto setup_results = std::vector<SeriesEvaluationResults>(2);
@@ -634,7 +634,7 @@ TEST(BacktestRunnerSetupTest, FailsafeUsesSharedSystemProfileDrawdownAdjustment)
   EXPECT_DOUBLE_EQ(*sizing.drawdown_adjusted_quantity, 0.8);
 }
 
-TEST(BacktestRunnerSetupTest, FailsafeUsesSharedSystemProfileCashPolicy)
+TEST(BacktestRunnerSetupTest, AlternateUsesSharedSystemProfileCashPolicy)
 {
   const auto asset = make_single_bar_asset();
   const auto market = Market{"Test", 0.0, 0.0};
@@ -667,7 +667,7 @@ TEST(BacktestRunnerSetupTest, FailsafeUsesSharedSystemProfileCashPolicy)
    IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<true>{},
-    FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
+    AlternateStrategyActivation::Failsafe);
   auto runner =
    BacktestRunner{asset, market, broker, profile, std::move(setups), 1000.0};
   auto setup_results = std::vector<SeriesEvaluationResults>(2);
@@ -735,7 +735,7 @@ TEST(BacktestRunnerSetupTest,
    IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<true>{},
-    FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
+    AlternateStrategyActivation::Failsafe);
   auto runner =
    BacktestRunner{asset, market, broker, profile, std::move(setups), 1'000.0};
   auto setup_results = std::vector<SeriesEvaluationResults>(2);
@@ -756,7 +756,7 @@ TEST(BacktestRunnerSetupTest,
 }
 
 TEST(BacktestRunnerSetupTest,
-     ClosingEntryFilteredPositionDeactivatesFailsafeBeforeFreshSignal)
+     ClosingEntryFilteredPositionDeactivatesAlternateBeforeFreshSignal)
 {
   const auto asset = Asset{"Test",
                            AssetHistory{{"Datetime", {1.0, 2.0, 3.0}},
@@ -798,7 +798,7 @@ TEST(BacktestRunnerSetupTest,
    IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<true>{},
-    FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
+    AlternateStrategyActivation::Failsafe);
   auto runner =
    BacktestRunner{asset, market, broker, profile, std::move(setups), 1'000.0};
   auto setup_results = std::vector<SeriesEvaluationResults>(2);
@@ -814,12 +814,12 @@ TEST(BacktestRunnerSetupTest,
   EXPECT_FALSE(timeline.open_position(2));
   ASSERT_EQ(timeline.position_sizing_decisions(2).size(), 1U);
   EXPECT_EQ(timeline.position_sizing_decisions(2).front().outcome,
-            PositionSizingDecisionOutcome::FailsafeInactive);
+            PositionSizingDecisionOutcome::AlternateInactive);
     EXPECT_TRUE(timeline.strategy_state(2, 1).strategy_open_position.has_value());
 }
 
 TEST(BacktestRunnerSetupTest,
-     ActivationNeverExecutesAnExistingFailsafeShadowPosition)
+     ActivationNeverExecutesAnExistingAlternateShadowPosition)
 {
   const auto asset =
    make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 110.0, 110.0, 110.0, 110.0);
@@ -851,7 +851,7 @@ TEST(BacktestRunnerSetupTest,
    IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<true>{},
-    FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
+    AlternateStrategyActivation::Failsafe);
   auto runner =
    BacktestRunner{asset, market, broker, profile, std::move(setups), 1'000.0};
   auto setup_results = std::vector<SeriesEvaluationResults>(2);
@@ -862,7 +862,7 @@ TEST(BacktestRunnerSetupTest,
 
   ASSERT_EQ(timeline.position_sizing_decisions(0).size(), 1U);
   EXPECT_EQ(timeline.position_sizing_decisions(0).front().outcome,
-            PositionSizingDecisionOutcome::FailsafeInactive);
+            PositionSizingDecisionOutcome::AlternateInactive);
    EXPECT_TRUE(timeline.strategy_state(1, 0).entry_filtered_position);
     EXPECT_TRUE(timeline.strategy_state(1, 1).strategy_open_position.has_value());
   EXPECT_FALSE(timeline.open_position(1));
@@ -901,7 +901,7 @@ TEST(BacktestRunnerSetupTest,
    IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<false>{},
-    FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
+    AlternateStrategyActivation::Failsafe);
   setups.emplace_back(
    OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
@@ -909,7 +909,7 @@ TEST(BacktestRunnerSetupTest,
    IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<true>{},
-    FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
+    AlternateStrategyActivation::Failsafe);
   auto runner =
    BacktestRunner{asset, market, broker, profile, std::move(setups), 1'000.0};
   auto setup_results = std::vector<SeriesEvaluationResults>(3);
@@ -924,7 +924,7 @@ TEST(BacktestRunnerSetupTest,
 }
 
 TEST(BacktestRunnerSetupTest,
-     NextOpenRejectionActivatesFollowingPendingFailsafeAtSameOpen)
+     NextOpenRejectionActivatesFollowingPendingAlternateAtSameOpen)
 {
   const auto asset =
    make_two_bar_asset(100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0);
@@ -957,7 +957,7 @@ TEST(BacktestRunnerSetupTest,
    IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<true>{},
-    FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
+    AlternateStrategyActivation::Failsafe);
   auto runner =
    BacktestRunner{asset, market, broker, profile, std::move(setups), 1'000.0};
   auto setup_results = std::vector<SeriesEvaluationResults>(2);
@@ -971,7 +971,7 @@ TEST(BacktestRunnerSetupTest,
    EXPECT_EQ(timeline.trade_events(1).front().strategy_index(), 1U);
 }
 
-TEST(BacktestRunnerSetupTest, MainWithoutSignalAllowsFailsafeEntry)
+TEST(BacktestRunnerSetupTest, MainWithoutSignalAllowsAlternateEntry)
 {
   const auto asset = make_single_bar_asset();
   const auto market = Market{"Test", 0.0, 0.0};
@@ -1088,7 +1088,7 @@ TEST(BacktestRunnerSetupTest, PreFilterSizingFailureStopsFallbackChain)
    LessEqualMethod{
     RequestedOrderValueMethod{RequestedOrderValue::RequestedQuantity},
     ValueMethod{0.8}},
-    FailsafeStrategyActivation::PreviousStrategyEntryFilteredPosition);
+    AlternateStrategyActivation::Failsafe);
   auto runner =
    BacktestRunner{asset, market, broker, profile, std::move(setups), 1'000.0};
   auto setup_results = std::vector<SeriesEvaluationResults>(2);

@@ -18,13 +18,13 @@ TEST(PortfolioStrategySelections, RemembersOneStrategyPerPortfolio)
   const auto portfolio = PortfolioStoreHandle{1, 1};
   const auto run = BacktestRunKey{{2, 1}, {3, 1}};
   const auto main = PortfolioStrategyKey{run, 0};
-  const auto failsafe = PortfolioStrategyKey{run, 1};
+  const auto alternate = PortfolioStrategyKey{run, 1};
   auto selections = PortfolioStrategySelections{};
 
   selections.remember(portfolio, main);
   EXPECT_EQ(selections.lookup(portfolio), main);
-  selections.remember(portfolio, failsafe);
-  EXPECT_EQ(selections.lookup(portfolio), failsafe);
+  selections.remember(portfolio, alternate);
+  EXPECT_EQ(selections.lookup(portfolio), alternate);
   EXPECT_EQ(selections.selections().size(), 1);
 }
 
@@ -33,15 +33,15 @@ TEST(PortfolioStrategySelections, PreservesPortfolioScopeAndValidStrategy)
   const auto portfolio = PortfolioStoreHandle{1, 1};
   const auto run = BacktestRunKey{{2, 1}, {3, 1}};
   const auto main = PortfolioStrategyKey{run, 0};
-  const auto failsafe = PortfolioStrategyKey{run, 1};
+  const auto alternate = PortfolioStrategyKey{run, 1};
   auto selections = PortfolioStrategySelections{};
-  const auto strategies = std::vector{main, failsafe};
+  const auto strategies = std::vector{main, alternate};
 
   EXPECT_FALSE(
    selections.normalize(portfolio, strategies, [](auto) { return true; }));
-  selections.remember(portfolio, failsafe);
+  selections.remember(portfolio, alternate);
   EXPECT_EQ(selections.normalize(portfolio, strategies, [](auto) { return true; }),
-            failsafe);
+            alternate);
 }
 
 TEST(PortfolioStrategySelections, CollapsedContextRetainsItsRememberedChild)
@@ -70,9 +70,9 @@ TEST(PortfolioStrategySelections,
   const auto portfolio = PortfolioStoreHandle{1, 1};
   const auto run = BacktestRunKey{{2, 1}, {3, 1}};
   const auto main = PortfolioStrategyKey{run, 0};
-  const auto removed_failsafe = PortfolioStrategyKey{run, 2};
+  const auto removed_alternate = PortfolioStrategyKey{run, 2};
   auto selections = PortfolioStrategySelections{};
-  selections.remember(portfolio, removed_failsafe);
+  selections.remember(portfolio, removed_alternate);
 
   EXPECT_FALSE(selections.normalize(
    portfolio, std::vector{main}, [](auto) { return true; }));

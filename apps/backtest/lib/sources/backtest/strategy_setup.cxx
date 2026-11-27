@@ -16,9 +16,10 @@ import :calls;
 
 export namespace pludux::backtest {
 
-enum class FailsafeStrategyActivation {
+enum class AlternateStrategyActivation {
   Always,
-  PreviousStrategyEntryFilteredPosition
+  // The preceding setup's entry-filtered theoretical position is still open.
+  Failsafe
 };
 
 class StrategySetup {
@@ -90,19 +91,19 @@ private:
   CallMappings call_mappings_;
 };
 
-class SystemFailsafeStrategy {
+class SystemAlternateStrategy {
 public:
-  SystemFailsafeStrategy() = default;
+  SystemAlternateStrategy() = default;
 
-  SystemFailsafeStrategy(StrategySetup setup,
-                         FailsafeStrategyActivation activation =
-                          FailsafeStrategyActivation::Always) noexcept
+  SystemAlternateStrategy(StrategySetup setup,
+                          AlternateStrategyActivation activation =
+                           AlternateStrategyActivation::Always) noexcept
   : setup_{std::move(setup)}
   , activation_{activation}
   {
   }
 
-  auto operator==(const SystemFailsafeStrategy&) const noexcept
+  auto operator==(const SystemAlternateStrategy&) const noexcept
    -> bool = default;
 
   auto setup(this auto& self) noexcept -> auto&
@@ -110,21 +111,22 @@ public:
     return self.setup_;
   }
 
-  auto activation(this const SystemFailsafeStrategy& self) noexcept
-   -> FailsafeStrategyActivation
+  auto activation(this const SystemAlternateStrategy& self) noexcept
+   -> AlternateStrategyActivation
   {
     return self.activation_;
   }
 
-  void activation(this SystemFailsafeStrategy& self,
-                  FailsafeStrategyActivation value) noexcept
+  void activation(this SystemAlternateStrategy& self,
+                  AlternateStrategyActivation value) noexcept
   {
     self.activation_ = value;
   }
 
 private:
   StrategySetup setup_;
-  FailsafeStrategyActivation activation_{FailsafeStrategyActivation::Always};
+  AlternateStrategyActivation activation_{
+   AlternateStrategyActivation::Always};
 };
 
 } // namespace pludux::backtest

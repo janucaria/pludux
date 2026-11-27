@@ -25,8 +25,7 @@
 
 - To run a Portfolio, group Assets in a Watchlist, then select the Watchlist,
   Profile, and trading Strategy in a System. Add that System to the Portfolio.
-- Failsafe Strategy setups exist, but they are part of more advanced System
-  design.
+- Alternate Strategies are part of advanced System design.
 - Strategies are reusable stored resources; editing one affects every System
   that references it.
 - Advanced Turtle and Bayesian Kelly docs are reference material, not required

@@ -129,15 +129,15 @@ TEST(WatchlistState, ExpandsSystemsThenAssetsThenStrategies)
   const auto first_watchlist = *state.add_watchlist(Watchlist{"First", {first_asset, second_asset}});
   const auto second_watchlist = *state.add_watchlist(Watchlist{"Second", {second_asset}});
   const auto main = add_strategy(state, "Main");
-  const auto first_failsafe = add_strategy(state, "First failsafe");
-  const auto second_failsafe = add_strategy(state, "Second failsafe");
+  const auto first_alternate = add_strategy(state, "First alternate");
+  const auto second_alternate = add_strategy(state, "Second alternate");
   const auto first_system = *state.add_system(
    System{"First",
           first_watchlist,
           add_profile(state),
           {},
           StrategySetup{main},
-          {{StrategySetup{first_failsafe}}, {StrategySetup{second_failsafe}}}});
+          {{StrategySetup{first_alternate}}, {StrategySetup{second_alternate}}}});
   const auto second_system = *state.add_system(System{"Second", second_watchlist, add_profile(state), {}, StrategySetup{main}});
   const auto portfolio = Portfolio{"Portfolio", 1'000.0, {}, {}, 10, 10, {}, {first_system, second_system}};
   EXPECT_EQ(state.expanded_system_strategies(portfolio),
@@ -203,18 +203,18 @@ TEST(ExternalReferences, ValidatesAndInvalidatesReferencesOutsideWatchlist)
   const auto missing_field = state.get_asset_handles()[2];
   const auto watchlist = *state.add_watchlist(Watchlist{"BBCA only", {bbca}});
   const auto main = add_strategy(state, "Main");
-  auto failsafe = Strategy{};
-  failsafe.name("Failsafe");
-  failsafe.series_nodes().set(
+  auto alternate = Strategy{};
+  alternate.name("Alternate");
+  alternate.series_nodes().set(
    "external_close", pludux::backtest::ExternFieldNode{"market", "CLOSE"});
-  state.add_strategy(std::move(failsafe));
-  const auto failsafe_handle = state.get_strategy_handles().back();
+  state.add_strategy(std::move(alternate));
+  const auto alternate_handle = state.get_strategy_handles().back();
   auto system = System{"BBCA System",
                        watchlist,
                        add_profile(state),
                        {},
                        StrategySetup{main},
-                       {{StrategySetup{failsafe_handle}}}};
+                       {{StrategySetup{alternate_handle}}}};
   auto error = state.external_configuration_error(system);
   EXPECT_NE(error.find("BBCA System"), std::string::npos);
   EXPECT_NE(error.find("market"), std::string::npos);
@@ -353,10 +353,10 @@ TEST(WatchlistState, SetupSelectionSurvivesReorderAndClearsAfterRemoval)
   const auto selected = pludux::apps::PortfolioStrategyKey{{system, asset}, 2};
   ASSERT_TRUE(state.select_portfolio_strategy(portfolio, selected));
   auto edited = state.get_system(system);
-  std::swap(edited.failsafe_strategies()[0], edited.failsafe_strategies()[1]);
+  std::swap(edited.alternate_strategies()[0], edited.alternate_strategies()[1]);
   ASSERT_TRUE(state.update_system(system, edited));
   EXPECT_EQ(state.selected_portfolio_strategy(), selected);
-  edited.failsafe_strategies().pop_back();
+  edited.alternate_strategies().pop_back();
   ASSERT_TRUE(state.update_system(system, std::move(edited)));
   EXPECT_FALSE(state.selected_portfolio_strategy());
 }
@@ -405,13 +405,13 @@ TEST(WatchlistState,
   const auto asset = state.get_asset_handles().front();
   const auto watchlist = *state.add_watchlist(Watchlist{"List", {asset}});
   const auto main = add_strategy(state, "Main");
-  const auto failsafe = add_strategy(state, "Failsafe");
+  const auto alternate = add_strategy(state, "Alternate");
   const auto system = *state.add_system(System{"System",
                                                watchlist,
                                                add_profile(state),
                                                {},
                                                StrategySetup{main},
-                                               {{StrategySetup{failsafe}}}});
+                                               {{StrategySetup{alternate}}}});
   const auto portfolio = *state.add_portfolio(
    Portfolio{"Portfolio", 1000, {}, {}, 10, 10, {}, {system}});
   state.select_portfolio_context(portfolio, false);
@@ -437,7 +437,7 @@ TEST(WatchlistState,
   EXPECT_EQ(restored.selected_portfolio_strategy(), other);
   // A removed remembered child falls back to the first valid child.
   state.select_portfolio_context(portfolio, false);
-  ASSERT_TRUE(state.remove_strategy(failsafe));
+  ASSERT_TRUE(state.remove_strategy(alternate));
   state.select_portfolio_context(portfolio, true);
   EXPECT_EQ(state.selected_portfolio_strategy(),
             (pludux::apps::PortfolioStrategyKey{{system, asset}, 0}));
@@ -476,18 +476,18 @@ TEST(WatchlistState, MissingStrategyDependencyReturnsToPortfolioScope)
   const auto asset = state.get_asset_handles().front();
   const auto watchlist = *state.add_watchlist(Watchlist{"List", {asset}});
   const auto main = add_strategy(state, "Main");
-  const auto failsafe = add_strategy(state, "Failsafe");
+  const auto alternate = add_strategy(state, "Alternate");
   const auto system = *state.add_system(System{"System",
                                                watchlist,
                                                add_profile(state),
                                                {},
                                                StrategySetup{main},
-                                               {{StrategySetup{failsafe}}}});
+                                               {{StrategySetup{alternate}}}});
   const auto portfolio = *state.add_portfolio(
    Portfolio{"Portfolio", 1'000.0, {}, {}, 10, 10, {}, {system}});
   const auto selected = pludux::apps::PortfolioStrategyKey{{system, asset}, 1};
   ASSERT_TRUE(state.select_portfolio_strategy(portfolio, selected));
-  ASSERT_TRUE(state.remove_strategy(failsafe));
+  ASSERT_TRUE(state.remove_strategy(alternate));
   EXPECT_FALSE(state.selected_portfolio_strategy());
   EXPECT_FALSE(state.select_portfolio_strategy(portfolio, selected));
 }
@@ -509,23 +509,23 @@ TEST(WatchlistState, DeletingSharedProfileDisablesBothSetupsUntilReassigned)
   const auto portfolio = *state.add_portfolio(
    Portfolio{"Portfolio", 1000, {}, {}, 10, 10, {}, {system}});
   const auto main = pludux::apps::PortfolioStrategyKey{{system, asset}, 0};
-  const auto failsafe = pludux::apps::PortfolioStrategyKey{{system, asset}, 1};
+  const auto alternate = pludux::apps::PortfolioStrategyKey{{system, asset}, 1};
   ASSERT_TRUE(state.is_system_ready(state.get_system(system)));
-  ASSERT_TRUE(state.select_portfolio_strategy(portfolio, failsafe));
+  ASSERT_TRUE(state.select_portfolio_strategy(portfolio, alternate));
 
   ASSERT_TRUE(state.remove_profile(profile));
   EXPECT_EQ(state.get_system(system).profile_handle(), profile);
   EXPECT_FALSE(state.is_system_ready(state.get_system(system)));
   EXPECT_FALSE(state.selected_portfolio_strategy());
   EXPECT_FALSE(state.select_portfolio_strategy(portfolio, main));
-  EXPECT_FALSE(state.select_portfolio_strategy(portfolio, failsafe));
+  EXPECT_FALSE(state.select_portfolio_strategy(portfolio, alternate));
 
   auto edited = state.get_system(system);
   edited.profile_handle(add_profile(state));
   ASSERT_TRUE(state.update_system(system, std::move(edited)));
   EXPECT_TRUE(state.is_system_ready(state.get_system(system)));
   EXPECT_TRUE(state.select_portfolio_strategy(portfolio, main));
-  EXPECT_TRUE(state.select_portfolio_strategy(portfolio, failsafe));
+  EXPECT_TRUE(state.select_portfolio_strategy(portfolio, alternate));
 }
 
 TEST(WatchlistState, PersistsWatchlistStoreAndReusableReferences)

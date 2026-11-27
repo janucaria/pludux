@@ -415,10 +415,10 @@ private:
       auto entry_filter =
        node_to_erased_method<backtest::EntryFilterMethodContext>(
          setup.entry_filter(), entry_filter_conversion_context);
-      const auto failsafe_activation =
+      const auto alternate_activation =
         strategy_index == 0
-         ? backtest::FailsafeStrategyActivation::Always
-         : system.failsafe_strategies()[strategy_index - 1].activation();
+         ? backtest::AlternateStrategyActivation::Always
+         : system.alternate_strategies()[strategy_index - 1].activation();
       runner_setups.emplace_back(
        std::move(series_methods),
         make_position_rule(strategy_ptr->long_position()),
@@ -426,7 +426,7 @@ private:
         strategy_ptr->intrabar_path(),
          system.strategy_performance(),
        std::move(entry_filter),
-       failsafe_activation);
+       alternate_activation);
       if(calls) {
         runner_setups.back().calls =
          calls->values.at(strategy_index).at(asset_index);

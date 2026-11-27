@@ -1641,7 +1641,7 @@ private:
               const auto strategy_label =
                event.strategy_index() == 0
                 ? std::string{"Main"}
-                : std::format("Failsafe {}", event.strategy_index());
+                : std::format("Alternate {}", event.strategy_index());
               ImGui::Text("Strategy: %s", strategy_label.c_str());
               if(event.type() ==
                  backtest::TradeEvent::Type::rejected_maximum_open_trades) {
@@ -1711,7 +1711,7 @@ private:
               const auto strategy_label =
                event.strategy_index() == 0
                 ? std::string{"Main"}
-                : std::format("Failsafe {}", event.strategy_index());
+                : std::format("Alternate {}", event.strategy_index());
               ImGui::BeginTooltip();
               ImGui::TextUnformatted(event.is_scale_in() ? "Scale in"
                                                          : "Entry");

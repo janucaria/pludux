@@ -133,8 +133,8 @@ private:
       return "Hypothetical only";
     case Outcome::EntryFiltered:
       return "Entry Filter";
-    case Outcome::FailsafeInactive:
-      return "Inactive Failsafe";
+    case Outcome::AlternateInactive:
+      return "Inactive Alternate Strategy";
     case Outcome::NoPositiveSize:
       return "No positive size";
     case Outcome::DrawdownSuppressed:

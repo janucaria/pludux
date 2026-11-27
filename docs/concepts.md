@@ -6,8 +6,8 @@
   the simulation.
 - **Backtest**: an actual System × Asset simulation run and its result.
 - A **System** selects a Watchlist and one Profile and configures a Main setup
-  and ordered Failsafes. Each setup selects a Strategy and owns its input
-  overrides and Entry Filter. Each Failsafe also has an activation rule.
+  and ordered alternate setups. Each setup selects a Strategy and owns its
+  input overrides and Entry Filter. Each alternate also has an activation rule.
 - A **Strategy** defines trading rules, named series, indicators, entries,
   exits, plots, and input defaults.
 - **Profile**: a reusable sizing and capital policy. It defines position sizing,
@@ -37,7 +37,7 @@ The GUI separates setup from simulation:
 3. Strategies define trading rules.
 4. Profiles define reusable sizing and capital policies through position sizing,
    drawdown adjustment, and insufficient-cash handling.
-5. Systems select a Watchlist and Profile, configure the Main and Failsafe
+5. Systems select a Watchlist and Profile, configure the Main and alternate
    setups, and select the Strategy Performance calculation settings.
 6. Markets and Brokers define venue and execution rules.
 7. Portfolios run one or more Systems under shared capital.

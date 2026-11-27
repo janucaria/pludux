@@ -84,9 +84,10 @@ private:
         continue;
       }
 
-      const auto strategy_label = key.strategy_index == 0
-                                   ? std::string{"Main Strategy"}
-                                   : std::format("Failsafe Strategy {}", key.strategy_index);
+      const auto strategy_label =
+       key.strategy_index == 0
+        ? std::string{"Main Strategy"}
+        : std::format("Alternate Strategy {}", key.strategy_index);
       const auto* asset = app_state.get_asset_if_present(key.run.asset_handle);
       const auto* strategy =
        key.strategy_index < system->strategy_count()

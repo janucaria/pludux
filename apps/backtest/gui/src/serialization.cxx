@@ -1248,8 +1248,9 @@ struct json_traits<Json, pludux::backtest::StrategySetup> {
 };
 
 template<typename Json>
-struct json_traits<Json, pludux::backtest::SystemFailsafeStrategy> {
-  using value_type = pludux::backtest::SystemFailsafeStrategy;
+struct json_traits<Json, pludux::backtest::SystemAlternateStrategy> {
+  using value_type = pludux::backtest::SystemAlternateStrategy;
+  using Activation = pludux::backtest::AlternateStrategyActivation;
   using result_type = jsoncons::conversion_result<value_type>;
 
   static constexpr bool is_compatible = true;
@@ -1269,16 +1270,14 @@ struct json_traits<Json, pludux::backtest::SystemFailsafeStrategy> {
       const auto activation = value_or<std::string>(
        json,
        "activation",
-       defaults.activation() == pludux::backtest::FailsafeStrategyActivation::Always
+       defaults.activation() == Activation::Always
         ? "ALWAYS"
         : "PREVIOUS_STRATEGY_ENTRY_FILTERED_POSITION");
-      auto activation_value =
-       pludux::backtest::FailsafeStrategyActivation::Always;
+      auto activation_value = Activation::Always;
       if(activation == "PREVIOUS_STRATEGY_ENTRY_FILTERED_POSITION") {
-        activation_value = pludux::backtest::FailsafeStrategyActivation::
-         PreviousStrategyEntryFilteredPosition;
+        activation_value = Activation::Failsafe;
       } else if(activation != "ALWAYS") {
-        throw std::invalid_argument{"Invalid failsafe activation"};
+        throw std::invalid_argument{"Invalid alternate activation"};
       }
       return result_type{value_type{
        value_or<pludux::backtest::StrategySetup>(json, "setup", defaults.setup()),
@@ -1290,15 +1289,13 @@ struct json_traits<Json, pludux::backtest::SystemFailsafeStrategy> {
 
   template<typename Alloc, typename TempAlloc>
   static Json to_json(const jsoncons::allocator_set<Alloc, TempAlloc>& aset,
-                      const value_type& failsafe)
+                      const value_type& alternate)
   {
     auto json = Json{};
-    json["activation"] = failsafe.activation() ==
-                           pludux::backtest::FailsafeStrategyActivation::
-                            PreviousStrategyEntryFilteredPosition
+    json["activation"] = alternate.activation() == Activation::Failsafe
                           ? "PREVIOUS_STRATEGY_ENTRY_FILTERED_POSITION"
                           : "ALWAYS";
-    set_json(json, aset, "setup", failsafe.setup());
+    set_json(json, aset, "setup", alternate.setup());
     return json;
   }
 };
@@ -1380,9 +1377,9 @@ struct json_traits<Json, pludux::backtest::System> {
        value_or<pludux::backtest::StrategySetup>(
         json, "mainSetup", defaults.main_setup()),
        json.contains("failsafeStrategies")
-        ? vector_from_json<pludux::backtest::SystemFailsafeStrategy>(
+        ? vector_from_json<pludux::backtest::SystemAlternateStrategy>(
            json.at("failsafeStrategies"))
-        : defaults.failsafe_strategies(),
+        : defaults.alternate_strategies(),
        optional_handle_or<pludux::backtest::CallStoreHandle>(
         json, "callTable", {}),
        {value_or<std::string>(json, "callDatetime", {}),
@@ -1433,8 +1430,9 @@ struct json_traits<Json, pludux::backtest::System> {
     json["callEntryHigh"] = system.call_columns().entry_high;
     json["callDatetime"] = system.call_columns().datetime;
     json["callAsset"] = system.call_columns().asset;
+    // Preserve the JSON field used by existing saved Systems.
     json["failsafeStrategies"] =
-     vector_to_json<Json>(aset, system.failsafe_strategies());
+     vector_to_json<Json>(aset, system.alternate_strategies());
     if(!system.external_bindings().empty()) {
       auto bindings = Json{jsoncons::json_object_arg};
       for(const auto& [reference, handle] : system.external_bindings()) {

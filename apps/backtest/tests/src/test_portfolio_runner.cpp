@@ -502,7 +502,7 @@ TEST(PortfolioRunnerTest, CurrentCloseAssetComparatorOverridesBacktestOrder)
   EXPECT_TRUE(results.backtests()[1].timeline().open_position(0));
 }
 
-TEST(PortfolioRunnerTest, EventsRecordRankedFillBeforeRejectedFailsafeRequest)
+TEST(PortfolioRunnerTest, EventsRecordRankedFillBeforeRejectedAlternateRequest)
 {
   const auto first = make_priced_asset("First", 90.0);
   const auto second = make_priced_asset("Second", 110.0);

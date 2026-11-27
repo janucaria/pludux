@@ -75,9 +75,10 @@ In the Main setup, choose the Strategy you created. The setup uses its
 declared input defaults unless you override them here. Configure the Entry
 Filter if you want to screen fresh initial orders.
 
-For a first run, the Main setup is sufficient. To add a Failsafe, select its
-Strategy, input overrides, Entry Filter, and activation rule. Every setup in the
-System uses the same Profile and Strategy Performance calculation settings.
+For a first run, the Main setup is sufficient. Use **Add Alternate Strategy**
+to add another setup with its own Strategy, input overrides, Entry Filter, and
+activation rule. All setups in the System share a Profile and Strategy
+Performance calculation settings.
 
 ### 6) Set Market and Broker
 

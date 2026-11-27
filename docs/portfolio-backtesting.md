@@ -8,8 +8,8 @@ For a complete multi-market configuration example, see
 - A Strategy defines deterministic entry and exit rules, indicators, and
   input defaults. Systems may reference the same Strategy more than once.
 - A System selects one Watchlist and one Profile. Its Main setup and ordered
-  Failsafes each reference a Strategy and own their input overrides and Entry
-  Filter. Each Failsafe also has an activation rule. The System shares one
+  alternate setups each reference a Strategy and own their input overrides and
+  Entry Filter. Each alternate also has an activation rule. The System shares one
   Strategy Performance calculation policy across its setups.
 - A Portfolio owns initial capital, one Market, one Broker, aggregate capacity
   limits, and an ordered collection of Systems. The Market is the trading venue
@@ -41,7 +41,7 @@ Portfolio
    |- Profile (position sizing, drawdown adjustment, insufficient-cash policy)
    |- Strategy Performance calculation settings
    |- Main setup (Strategy, input overrides, Entry Filter)
-   `- Ordered Failsafes (Strategy, input overrides, Entry Filter, activation)
+   `- Ordered alternate setups (Strategy, input overrides, Entry Filter, activation)
 ```
 
 Position sizing and Entry Filters read the current Portfolio equity and
@@ -81,7 +81,7 @@ For a fresh initial entry, Pludux processes the request in this order.
    normalized quantity, notional, fees, and risk values.
 4. Evaluate the setup's Entry Filter against Strategy Performance, Requested
    Order values, and current account metrics. An entry-filtered Main Strategy
-   may allow the next eligible Failsafe binding to produce its own fresh entry.
+   may allow the next eligible Alternate Strategy to produce its own fresh entry.
 5. Rank every accepted Requested Order using the Portfolio comparators.
 6. Enforce maximum-open-trade and maximum-combined-layer capacity.
 7. Compare the fee-inclusive requested cost with available shared cash.
@@ -228,7 +228,7 @@ Setup × Asset row onto a compact axis:
   positions.
 - The Portfolio Chart shows account Equity and Drawdown on the union timeline.
   Hovering or pinning selects one union timestamp for both legends. Main and
-  failsafe setups execute together with shared Portfolio capital.
+  alternate setups execute together with shared Portfolio capital.
 
 ### Events
 
@@ -253,8 +253,8 @@ matches both Scale out and its exit cause, with one row in the timeline. Hypothe
 
 The Portfolios window is an expandable tree. Each top-level Portfolio contains
 a flat Setup × Asset list. Rows are ordered by Portfolio System order, then
-Watchlist asset order, then Main setup followed by its ordered Failsafes. Each
-row identifies the Strategy, Asset, setup role, and System Profile.
+Watchlist asset order, then Main setup followed by its ordered alternate
+setups. Each row identifies the Strategy, Asset, setup role, and System Profile.
 
 Selecting a Portfolio opens it and restores that Portfolio's last valid setup
 selection. If the remembered setup was removed or is no longer valid, Pludux

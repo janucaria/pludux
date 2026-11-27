@@ -84,21 +84,25 @@ unfavorable additions have separate reference choices: latest fill,
 quantity-weighted average, or initial entry. Existing trailing stops ratchet in
 the favorable direction and never loosen during this update.
 
-## Failsafe Strategies
+## Alternate Strategies
 
-A System begins with its Main Strategy. A Failsafe is either **Always** active
-or activated by the preceding Strategy's entry-filtered theoretical position.
-That theoretical lifecycle continues independently of whether Portfolio capital
-allowed an actual entry. Activation state is persistent according to that
-simulation; toggling activation does not materialize a theoretical position as
-an actual trade. Ordered Failsafes can therefore express fall-through setups
-without looking ahead.
+At each entry phase, a System considers its Main Strategy first, followed by
+its Alternate Strategies in setup order. Each alternate has two activation
+options.
+
+- **Always** lets the alternate act on its own fresh entry signal, even when
+  the preceding Strategy has no signal.
+- **Failsafe** also requires the preceding Strategy's Entry Filter to have
+  rejected the initial entry for a theoretical position that is still open.
+
+Both options require a fresh signal from the alternate when it is eligible
+to enter. Theoretical positions run independently of Portfolio admission.
 
 Each Strategy setup keeps its own hypothetical session and Strategy Performance
 history, but an expanded System × Asset backtest has only one real execution
 position. An active owner blocks another Strategy from opening a competing real
 position. Once admitted, the actual trade remains attributed to the setup
-that opened it until closure, even if Failsafe activation later changes.
+that opened it until closure, even if the alternate's eligibility later changes.
 
 ## Portfolio event order
 
@@ -110,4 +114,4 @@ portfolio document permits them.
 
 Strategy Performance is theoretical Strategy state and is distinct from actual
 Portfolio trade results. That distinction is important for Entry Filters,
-Failsafes, and Bayesian Kelly sizing.
+Alternate Strategies, and Bayesian Kelly sizing.

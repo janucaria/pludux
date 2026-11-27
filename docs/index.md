@@ -18,7 +18,7 @@ use the reference pages when you need exact semantics.
 
 - [Portfolio Backtesting](portfolio-backtesting.md) — authoritative portfolio timeline and valuation behavior
 - [Node and Method Reference](nodes.md) — every Strategy, comparator, Entry Filter, and plot method
-- [Execution and Position Lifecycle](execution.md) — timing, intrabar paths, exits, pyramiding, and Failsafes
+- [Execution and Position Lifecycle](execution.md) — timing, intrabar paths, exits, pyramiding, and Alternate Strategies
 - [Profiles, Markets, and Brokers](risk-market-broker.md) — sizing, normalization, fees, and cash policy
 - [Results and Accounting](results.md) — Chart, Trades, Overview, and metric meanings
 - [Turtle Trading Guidelines for Pludux](turtle-trading.md) — advanced Turtle-style reference

@@ -27,7 +27,7 @@ public:
          ProfileStoreHandle profile_handle,
          StrategyPerformanceConfig strategy_performance,
          StrategySetup main_setup,
-         std::vector<SystemFailsafeStrategy> failsafe_strategies = {},
+         std::vector<SystemAlternateStrategy> alternate_strategies = {},
          CallStoreHandle call_handle = {},
          CallColumns call_columns = {},
          EntryPriority entry_priority = EntryPriority::CallFirst)
@@ -36,7 +36,7 @@ public:
   , profile_handle_{profile_handle}
   , strategy_performance_{std::move(strategy_performance)}
   , main_setup_{std::move(main_setup)}
-  , failsafe_strategies_{std::move(failsafe_strategies)}
+  , alternate_strategies_{std::move(alternate_strategies)}
   , call_handle_{call_handle}
   , call_columns_{std::move(call_columns)}
   , entry_priority_{entry_priority}
@@ -98,33 +98,33 @@ public:
     self.profile_handle_ = handle;
   }
 
-  auto failsafe_strategies(this const System& self) noexcept
-   -> const std::vector<SystemFailsafeStrategy>&
+  auto alternate_strategies(this const System& self) noexcept
+   -> const std::vector<SystemAlternateStrategy>&
   {
-    return self.failsafe_strategies_;
+    return self.alternate_strategies_;
   }
 
-  auto failsafe_strategies(this System& self) noexcept
-   -> std::vector<SystemFailsafeStrategy>&
+  auto alternate_strategies(this System& self) noexcept
+   -> std::vector<SystemAlternateStrategy>&
   {
-    return self.failsafe_strategies_;
+    return self.alternate_strategies_;
   }
 
-  void failsafe_strategies(this System& self,
-                           std::vector<SystemFailsafeStrategy> value) noexcept
+  void alternate_strategies(this System& self,
+                            std::vector<SystemAlternateStrategy> value) noexcept
   {
-    self.failsafe_strategies_ = std::move(value);
+    self.alternate_strategies_ = std::move(value);
   }
 
   auto strategy_count(this const System& self) noexcept -> std::size_t
   {
-    return 1 + self.failsafe_strategies_.size();
+    return 1 + self.alternate_strategies_.size();
   }
 
   auto strategy_setup(this auto& self, std::size_t index) -> auto&
   {
     return index == 0 ? self.main_setup_
-                      : self.failsafe_strategies_.at(index - 1).setup();
+                      : self.alternate_strategies_.at(index - 1).setup();
   }
 
   auto strategy_handle(this const System& self, std::size_t index)
@@ -175,7 +175,7 @@ public:
            self.entry_priority_ == other.entry_priority_ &&
            self.external_bindings_ == other.external_bindings_ &&
            self.main_setup_ == other.main_setup_ &&
-           self.failsafe_strategies_ == other.failsafe_strategies_;
+           self.alternate_strategies_ == other.alternate_strategies_;
   }
 
 private:
@@ -185,7 +185,7 @@ private:
   ProfileStoreHandle profile_handle_;
   StrategyPerformanceConfig strategy_performance_;
   StrategySetup main_setup_;
-  std::vector<SystemFailsafeStrategy> failsafe_strategies_;
+  std::vector<SystemAlternateStrategy> alternate_strategies_;
   CallStoreHandle call_handle_;
   CallColumns call_columns_;
   EntryPriority entry_priority_{EntryPriority::CallFirst};
