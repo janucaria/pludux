@@ -173,8 +173,5 @@
         }
       ]
     }
-  ],
-  "execution": {
-    "intrabarPath": "CANDLE_DIRECTION"
-  }
+  ]
 }

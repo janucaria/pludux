@@ -501,8 +501,7 @@ public:
              OrderedNamedRegistry<ErasedNode<BacktestMethodContext>>{},
              Position{},
              Position{},
-             std::vector<PlotGroup>{},
-             IntrabarPath::CandleDirection)
+             std::vector<PlotGroup>{})
   {
   }
 
@@ -511,14 +510,12 @@ public:
    OrderedNamedRegistry<ErasedNode<BacktestMethodContext>> series_nodes,
    Position long_position,
    Position short_position,
-   std::vector<PlotGroup> plots,
-   IntrabarPath intrabar_path = IntrabarPath::CandleDirection)
+   std::vector<PlotGroup> plots)
   : name_{std::move(name)}
   , series_nodes_{std::move(series_nodes)}
   , long_position_{std::move(long_position)}
   , short_position_{std::move(short_position)}
   , plots_{std::move(plots)}
-  , intrabar_path_{intrabar_path}
   {
   }
 
@@ -584,23 +581,12 @@ public:
     self.plots_ = std::move(plots);
   }
 
-  auto intrabar_path(this const Strategy& self) noexcept -> IntrabarPath
-  {
-    return self.intrabar_path_;
-  }
-
-  void intrabar_path(this Strategy& self, IntrabarPath path) noexcept
-  {
-    self.intrabar_path_ = path;
-  }
-
   auto equivalent_rules(this const Strategy& self,
                          const Strategy& other) noexcept -> bool
   {
     return self.series_nodes_ == other.series_nodes_ &&
            self.long_position_ == other.long_position_ &&
-           self.short_position_ == other.short_position_ &&
-           self.intrabar_path_ == other.intrabar_path_;
+           self.short_position_ == other.short_position_;
   }
 
 private:
@@ -612,7 +598,6 @@ private:
   Position short_position_;
 
   std::vector<PlotGroup> plots_;
-  IntrabarPath intrabar_path_;
 };
 
 } // namespace pludux::backtest

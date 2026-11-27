@@ -93,6 +93,7 @@ Open **Portfolios** and create a Portfolio. The Portfolio editor includes:
 - Initial capital
 - Market
 - Broker
+- [Intrabar Path](execution.md#intrabar-path)
 - Maximum open trades
 - Maximum combined layers
 - Entry comparators

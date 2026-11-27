@@ -1563,7 +1563,11 @@ struct json_traits<Json, pludux::backtest::Portfolio> {
        json.contains("systems")
         ? vector_from_json<pludux::backtest::SystemStoreHandle>(
            json.at("systems"))
-        : defaults.system_handles()}};
+        : defaults.system_handles(),
+       json.contains("intrabarPath")
+        ? pludux::backtest::parse_intrabar_path(
+           strict_as<std::string>(json.at("intrabarPath")))
+        : defaults.intrabar_path()}};
     } catch(...) {
       return conversion_failed<value_type>();
     }
@@ -1580,6 +1584,8 @@ struct json_traits<Json, pludux::backtest::Portfolio> {
     set_optional_handle(json, aset, "broker", portfolio.broker_handle());
     json["maximumOpenTrades"] = portfolio.maximum_open_trades();
     json["maximumCombinedLayers"] = portfolio.maximum_combined_layers();
+    json["intrabarPath"] =
+     pludux::backtest::serialize_intrabar_path(portfolio.intrabar_path());
     json["entryComparators"] =
      vector_to_json<Json>(aset, portfolio.entry_comparators());
     json["systems"] = vector_to_json<Json>(aset, portfolio.system_handles());

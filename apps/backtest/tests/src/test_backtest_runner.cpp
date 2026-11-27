@@ -458,14 +458,12 @@ TEST(BacktestRunnerSetupTest, EntryFilteredMainFallsThroughToFirstAlternate)
    OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
-   IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<false>{});
   setups.emplace_back(
    OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
-   IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<true>{},
     AlternateStrategyActivation::Failsafe);
@@ -604,14 +602,12 @@ TEST(BacktestRunnerSetupTest, AlternateUsesSharedSystemProfileDrawdownAdjustment
    OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
-   IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<false>{});
   setups.emplace_back(
    OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
-   IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<true>{},
     AlternateStrategyActivation::Failsafe);
@@ -657,14 +653,12 @@ TEST(BacktestRunnerSetupTest, AlternateUsesSharedSystemProfileCashPolicy)
    OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
-   IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<false>{});
   setups.emplace_back(
    OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
-   IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<true>{},
     AlternateStrategyActivation::Failsafe);
@@ -725,14 +719,12 @@ TEST(BacktestRunnerSetupTest,
                                 ValueMethod{10.0},
                                 {}},
    BacktestRunner::PositionRule{},
-   IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<false>{});
   setups.emplace_back(
    OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    make_entry_rule(120.0),
    BacktestRunner::PositionRule{},
-   IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<true>{},
     AlternateStrategyActivation::Failsafe);
@@ -782,7 +774,6 @@ TEST(BacktestRunnerSetupTest,
     false,
     false),
    BacktestRunner::PositionRule{},
-   IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<false>{});
   setups.emplace_back(
@@ -795,7 +786,6 @@ TEST(BacktestRunnerSetupTest,
                       false,
                       false),
    BacktestRunner::PositionRule{},
-   IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<true>{},
     AlternateStrategyActivation::Failsafe);
@@ -841,14 +831,12 @@ TEST(BacktestRunnerSetupTest,
    OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    make_entry_rule(110.0),
    BacktestRunner::PositionRule{},
-   IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<false>{});
   setups.emplace_back(
    OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    make_entry_rule(100.0),
    BacktestRunner::PositionRule{},
-   IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<true>{},
     AlternateStrategyActivation::Failsafe);
@@ -891,14 +879,12 @@ TEST(BacktestRunnerSetupTest,
    OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
-   IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<false>{});
   setups.emplace_back(
    OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
-   IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<false>{},
     AlternateStrategyActivation::Failsafe);
@@ -906,7 +892,6 @@ TEST(BacktestRunnerSetupTest,
    OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
-   IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<true>{},
     AlternateStrategyActivation::Failsafe);
@@ -947,14 +932,12 @@ TEST(BacktestRunnerSetupTest,
    OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
-   IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<false>{});
   setups.emplace_back(
    OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
-   IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<true>{},
     AlternateStrategyActivation::Failsafe);
@@ -1083,7 +1066,6 @@ TEST(BacktestRunnerSetupTest, PreFilterSizingFailureStopsFallbackChain)
    OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    entry_rule(),
    BacktestRunner::PositionRule{},
-   IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    LessEqualMethod{
     RequestedOrderValueMethod{RequestedOrderValue::RequestedQuantity},
@@ -1130,7 +1112,6 @@ TEST(BacktestRunnerSetupTest, OnlyOwningSetupCanExitSharedExecution)
    OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    make_rule(true),
    BacktestRunner::PositionRule{},
-   IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<false>{});
   setups.emplace_back(
@@ -1178,7 +1159,6 @@ TEST(BacktestRunnerSetupTest, OnlyOwningSetupCanPyramidSharedExecution)
    OrderedNamedRegistry<ErasedSeriesMethod<BacktestMethodContext>>{},
    make_rule(),
    BacktestRunner::PositionRule{},
-   IntrabarPath::CandleDirection,
     StrategyPerformanceConfig{},
    BooleanMethod<false>{});
   setups.emplace_back(

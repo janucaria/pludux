@@ -8,28 +8,28 @@ The Strategy parser accepts JSON comments and rejects trailing commas.
 
 ## Root structure
 
-Version 1 requires only `version`. `execution`, `series`, `positions`, and
-`plots` are optional:
+Version 1 requires only `version`. `series`, `positions`, and `plots` are
+optional.
 
 ```json
 {
   "version": 1,
-  "execution": { "intrabarPath": "CANDLE_DIRECTION" },
   "series": {},
   "positions": { "long": false, "short": false },
   "plots": []
 }
 ```
 
-`intrabarPath` is `LOW_FIRST`, `HIGH_FIRST`, or `CANDLE_DIRECTION`.
+Version 1 files with the legacy `execution.intrabarPath` field still import.
+Backtests use the Portfolio's Intrabar Path, and current Strategy exports omit
+the legacy field. [Intrabar Path](execution.md#intrabar-path)
 
 An omitted field uses the value from a freshly constructed `Strategy` or nested
-rule type. This applies to execution, position sections and rule properties,
-collections, plots, and method parameters that have domain defaults. Explicit
-values are still validated: `null`, wrong types, invalid enums or methods,
-invalid ranges, lossy integral conversions, numeric strings, and overflow are
-rejected. Unknown properties are ignored. Former names are not aliases, so an
-unknown legacy property never overrides a canonical default.
+rule type. This applies to position sections and rule properties, collections,
+plots, and method parameters that have domain defaults. For recognized fields,
+the parser rejects `null`, wrong types, invalid enums or methods, invalid
+ranges, lossy integral conversions, numeric strings, and overflow. Unknown
+properties are ignored, including former field names.
 
 `series` is a lower-snake-case dictionary of reusable named expressions.
 `positions` is an object whose `long` and `short` values are `false` or a side

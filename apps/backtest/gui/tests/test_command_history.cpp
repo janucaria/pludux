@@ -26,6 +26,7 @@ using pludux::apps::ReplaceApplicationCommand;
 using pludux::apps::UndoCommand;
 using pludux::apps::ViewCommand;
 using pludux::backtest::CallTable;
+using pludux::backtest::IntrabarPath;
 using pludux::backtest::Portfolio;
 using pludux::backtest::PortfolioResults;
 using pludux::backtest::PortfolioTimeline;
@@ -163,6 +164,41 @@ TEST(CommandHistory, UndoRestoresCachedPortfolioResults)
   ASSERT_EQ(state.get_portfolio_results(portfolio).timeline().size(), 1U);
   EXPECT_DOUBLE_EQ(
    state.get_portfolio_results(portfolio).timeline().row(0).capital, 42.0);
+}
+
+TEST(CommandHistory, IntrabarPathEditsInvalidateResultsAndSupportUndoRedo)
+{
+  auto state = ApplicationState{};
+  const auto handle = state.add_portfolio(Portfolio{});
+  ASSERT_TRUE(handle);
+  auto timeline = PortfolioTimeline{};
+  timeline.append({.timestamp = 1, .capital = 42.0});
+  ASSERT_TRUE(state.update_portfolio_results(
+   *handle, PortfolioResults{std::move(timeline), {}}));
+
+  auto executor = CommandExecutor{};
+  executor.push(EditCommand{"Set Intrabar Path",
+                            [handle = *handle](auto& candidate) {
+                              auto portfolio = candidate.get_portfolio(handle);
+                              portfolio.intrabar_path(IntrabarPath::HighFirst);
+                              ASSERT_TRUE(candidate.update_portfolio(
+                               handle, std::move(portfolio)));
+                            },
+                            std::nullopt});
+  EXPECT_EQ(executor.execute(state), ExecutionEffect::DocumentChanged);
+  EXPECT_EQ(state.get_portfolio(*handle).intrabar_path(),
+            IntrabarPath::HighFirst);
+  EXPECT_TRUE(state.get_portfolio_results(*handle).timeline().empty());
+
+  executor.push(UndoCommand{});
+  EXPECT_EQ(executor.execute(state), ExecutionEffect::DocumentChanged);
+  EXPECT_EQ(state.get_portfolio(*handle).intrabar_path(),
+            IntrabarPath::CandleDirection);
+
+  executor.push(RedoCommand{});
+  EXPECT_EQ(executor.execute(state), ExecutionEffect::DocumentChanged);
+  EXPECT_EQ(state.get_portfolio(*handle).intrabar_path(),
+            IntrabarPath::HighFirst);
 }
 
 TEST(CommandHistory, ExplicitMergeKeyCoalescesAdjacentEdits)
@@ -1062,6 +1098,65 @@ TEST(ApplicationStateSerialization, DefaultsMissingPortfolioLimits)
               Portfolio{}.maximum_open_trades());
     EXPECT_EQ(portfolio.maximum_combined_layers(),
               Portfolio{}.maximum_combined_layers());
+  }
+}
+
+TEST(ApplicationStateSerialization, RoundTripsPortfolioIntrabarPath)
+{
+  auto state = ApplicationState{};
+  auto portfolio = Portfolio{};
+  portfolio.intrabar_path(IntrabarPath::LowFirst);
+  const auto handle = state.add_portfolio(portfolio);
+  ASSERT_TRUE(handle);
+
+  auto stream = std::stringstream{};
+  pludux::apps::save_application_state_json(stream, state);
+  const auto saved = jsoncons::ojson::parse(stream.str());
+  const auto& value =
+   saved.at("pludux").at("store").at("arena").at("portfolios").at(0);
+  EXPECT_EQ(value.at("intrabarPath").as<std::string>(), "LOW_FIRST");
+
+  const auto loaded = pludux::apps::load_application_state_json(stream);
+  EXPECT_EQ(loaded.get_portfolio(*handle), portfolio);
+}
+
+TEST(ApplicationStateSerialization, IgnoresLegacyStrategyIntrabarPath)
+{
+  auto state = ApplicationState{};
+  const auto strategy = add_strategy(state, "Legacy");
+  const auto portfolio = state.add_portfolio(Portfolio{});
+  ASSERT_TRUE(portfolio);
+  auto stream = std::stringstream{};
+  pludux::apps::save_application_state_json(stream, state);
+  auto saved = jsoncons::ojson::parse(stream.str());
+  auto& arena = saved.at("pludux").at("store").at("arena");
+  arena.at("portfolios").at(0).erase("intrabarPath");
+  auto& config = arena.at("strategies").at(0).at("config");
+  config["execution"] = jsoncons::ojson::object();
+  config["execution"]["intrabarPath"] = "HIGH_FIRST";
+
+  auto input = std::stringstream{saved.to_string()};
+  const auto loaded = pludux::apps::load_application_state_json(input);
+  EXPECT_EQ(loaded.get_strategy(strategy), state.get_strategy(strategy));
+  EXPECT_EQ(loaded.get_portfolio(*portfolio).intrabar_path(),
+            IntrabarPath::CandleDirection);
+}
+
+TEST(ApplicationStateSerialization, RejectsInvalidPortfolioIntrabarPath)
+{
+  auto state = ApplicationState{};
+  ASSERT_TRUE(state.add_portfolio(Portfolio{}));
+  auto stream = std::stringstream{};
+  pludux::apps::save_application_state_json(stream, state);
+  auto saved = jsoncons::ojson::parse(stream.str());
+  auto& portfolio =
+   saved.at("pludux").at("store").at("arena").at("portfolios").at(0);
+  for(const auto* value : {"null", R"("INVALID")", "2"}) {
+    SCOPED_TRACE(value);
+    portfolio["intrabarPath"] = jsoncons::ojson::parse(value);
+    auto input = std::stringstream{saved.to_string()};
+    EXPECT_THROW(pludux::apps::load_application_state_json(input),
+                 std::exception);
   }
 }
 

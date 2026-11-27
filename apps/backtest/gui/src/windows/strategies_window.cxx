@@ -2087,16 +2087,6 @@ private:
     }
 
     {
-      if(ui::collapsible_section("Execution")) {
-        ui::section_description(
-         "Choose how ambiguous intrabar price movement is simulated when a "
-         "single candle can touch multiple order levels.");
-        self.editing_strategy_ptr_->intrabar_path(self.render_intrabar_path(
-         self.editing_strategy_ptr_->intrabar_path()));
-      }
-    }
-
-    {
       auto& series_nodes = self.editing_strategy_ptr_->series_nodes();
       const auto header = std::format(
        "Series Nodes ({})###series_nodes_section", series_nodes.size());
@@ -2272,38 +2262,6 @@ private:
 
       self.editing_strategy_ptr_->plots(std::move(plot_groups));
     }
-  }
-
-  auto render_intrabar_path(this const auto&, backtest::IntrabarPath path)
-   -> backtest::IntrabarPath
-  {
-    ui::field_label(
-     "Intrabar Path",
-     "Determines which candle extreme is assumed to occur first when the "
-     "actual tick path is unavailable.");
-    auto preview = "Candle Direction";
-    if(path == backtest::IntrabarPath::LowFirst) {
-      preview = "Low First";
-    } else if(path == backtest::IntrabarPath::HighFirst) {
-      preview = "High First";
-    }
-    if(ImGui::BeginCombo("##intrabar_path", preview)) {
-      for(const auto [value, title] :
-          {std::pair{backtest::IntrabarPath::LowFirst, "Low First"},
-           std::pair{backtest::IntrabarPath::HighFirst, "High First"},
-           std::pair{backtest::IntrabarPath::CandleDirection,
-                     "Candle Direction"}}) {
-        const auto selected = path == value;
-        if(ImGui::Selectable(title, selected)) {
-          path = value;
-        }
-        if(selected) {
-          ImGui::SetItemDefaultFocus();
-        }
-      }
-      ImGui::EndCombo();
-    }
-    return path;
   }
 
   auto render_signal_timing(this const auto&,

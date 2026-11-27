@@ -423,7 +423,6 @@ private:
        std::move(series_methods),
         make_position_rule(strategy_ptr->long_position()),
         make_position_rule(strategy_ptr->short_position()),
-        strategy_ptr->intrabar_path(),
          system.strategy_performance(),
        std::move(entry_filter),
        alternate_activation);
@@ -486,7 +485,8 @@ private:
                                portfolio->maximum_open_trades(),
                                portfolio->maximum_combined_layers(),
                                std::move(backtests),
-                               portfolio->entry_comparators()};
+                               portfolio->entry_comparators(),
+                               portfolio->intrabar_path()};
     const auto total = runner.total_timestamps();
     self.running_portfolios_.insert_or_assign(portfolio_handle,
                                               std::move(runner));

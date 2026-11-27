@@ -16,6 +16,7 @@ export module pludux.backtest:portfolio_runner;
 import pludux;
 
 import :backtest_runner;
+import :execution_model;
 import :portfolio;
 import :portfolio_results;
 import :requested_order_method_context;
@@ -59,12 +60,14 @@ public:
                   std::size_t maximum_open_trades,
                   std::size_t maximum_combined_layers,
                   std::vector<BacktestRun> backtests,
-                  std::vector<PortfolioEntryComparator> entry_comparators = {})
+                  std::vector<PortfolioEntryComparator> entry_comparators = {},
+                  IntrabarPath intrabar_path = IntrabarPath::CandleDirection)
   : initial_capital_{initial_capital}
   , account_{initial_capital, 0.0, initial_capital, initial_capital}
   , maximum_open_trades_{maximum_open_trades}
   , maximum_combined_layers_{maximum_combined_layers}
   , backtests_{std::move(backtests)}
+  , intrabar_path_{intrabar_path}
   {
     if(!std::isfinite(initial_capital) || initial_capital < 0.0) {
       throw std::invalid_argument{
@@ -224,8 +227,9 @@ public:
       return runner.discover_open_requested_order(
         result.strategy_series_results());
     });
-    run_exit_phase(
-     [](BacktestRunner& runner, BacktestResults&) { runner.run_intrabar(); });
+    run_exit_phase([&self](BacktestRunner& runner, BacktestResults&) {
+      runner.run_intrabar(self.intrabar_path_);
+    });
     if(self.uses_calls_) {
       for(const auto index : active)
         self.backtests_[index].runner().mark_bar_close();
@@ -317,6 +321,7 @@ private:
   std::size_t maximum_open_trades_{};
   std::size_t maximum_combined_layers_{};
   std::vector<BacktestRun> backtests_;
+  IntrabarPath intrabar_path_;
   std::vector<EntryComparator> entry_comparators_;
   double max_drawdown_{};
   std::size_t total_timestamps_{};

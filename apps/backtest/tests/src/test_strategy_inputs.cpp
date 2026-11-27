@@ -510,7 +510,6 @@ TEST(StrategyParserTest, ParsesPerSideStopLossAndTakeProfit)
   EXPECT_TRUE(strategy.long_position().stop_losses()[0].enabled());
   EXPECT_TRUE(node_cast<RiskDistancePercentNode<BacktestMethodContext>>(
    strategy.long_position().risk_distance()));
-  EXPECT_EQ(strategy.intrabar_path(), IntrabarPath::HighFirst);
   EXPECT_EQ(strategy.long_position().entry().timing(),
             SignalTiming::CurrentClose);
   ASSERT_EQ(strategy.long_position().exits().size(), 2);
@@ -699,8 +698,6 @@ TEST(StrategyParserTest, StringifiesPositionObjectsWithPerSideLevels)
              .at("unfavorable")
              .as<std::string>(),
             "LATEST_ENTRY_PRICE");
-  EXPECT_EQ(strategy_json.at("execution").at("intrabarPath").as<std::string>(),
-            "CANDLE_DIRECTION");
   EXPECT_EQ(strategy_json.at("positions")
              .at("long")
              .at("exits")
@@ -765,11 +762,27 @@ TEST(StrategyParserTest, MinimalDocumentUsesFreshStrategyDefaultsAndIgnoresUnkno
 
 TEST(StrategyParserTest, CommentsRemainSupportedAndTrailingCommasAreRejected)
 {
-  EXPECT_EQ(parse_strategy("Commented", "{/* comment */\"version\":1}")
-             .intrabar_path(),
-            Strategy{}.intrabar_path());
-  EXPECT_THROW(parse_strategy("Trailing", R"({"version":1,})"),
-               std::exception);
+  auto expected = Strategy{};
+  expected.name("Commented");
+  EXPECT_EQ(parse_strategy("Commented", "{/* comment */\"version\":1}"),
+            expected);
+  EXPECT_THROW(parse_strategy("Trailing", R"({"version":1,})"), std::exception);
+}
+
+TEST(StrategyParserTest, AcceptsLegacyIntrabarPathAndOmitsItFromExports)
+{
+  auto legacy_json = serialize_strategy_config_json(Strategy{});
+  legacy_json["execution"] = jsoncons::ojson::object();
+  legacy_json["execution"]["intrabarPath"] = "HIGH_FIRST";
+
+  const auto strategy = parse_strategy_config_json("Legacy", legacy_json);
+  auto expected = Strategy{};
+  expected.name("Legacy");
+  EXPECT_EQ(strategy, expected);
+
+  const auto saved = jsoncons::ojson::parse(stringify_strategy(strategy));
+  EXPECT_EQ(saved.at("version").as<int>(), 1);
+  EXPECT_FALSE(saved.contains("execution"));
 }
 
 TEST(StrategyParserTest, RequiresCanonicalMethodAndLosslessIntegralValues)

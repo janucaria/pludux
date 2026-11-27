@@ -537,17 +537,6 @@ auto parse_strategy_config_json(std::string_view strategy_name,
   auto strategy = Strategy{};
   strategy.name(std::string{strategy_name});
 
-  if(strategy_json.contains("execution")) {
-    const auto& execution_json = strategy_json.at("execution");
-    if(!execution_json.is_object()) {
-      throw std::runtime_error{"Invalid strategy JSON: execution must be an object"};
-    }
-    if(execution_json.contains("intrabarPath")) {
-      strategy.intrabar_path(parse_intrabar_path(
-       strict_as<std::string>(execution_json.at("intrabarPath"))));
-    }
-  }
-
   auto series_nodes = OrderedNamedRegistry<StrategyNode>{};
   if(strategy_json.contains("series")) {
     const auto& series_json = strategy_json.at("series");
@@ -645,9 +634,6 @@ auto serialize_strategy_config_json(const backtest::Strategy& strategy)
   auto strategy_json = jsoncons::ojson{};
 
   strategy_json["version"] = std::int32_t{1};
-  strategy_json["execution"] = jsoncons::ojson{};
-  strategy_json["execution"]["intrabarPath"] =
-   serialize_intrabar_path(strategy.intrabar_path());
 
   auto series_json = jsoncons::ojson{};
   for(const auto& [series_name, series_node] : strategy.series_nodes()) {

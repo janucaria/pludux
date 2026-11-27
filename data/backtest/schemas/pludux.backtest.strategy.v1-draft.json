@@ -11,17 +11,6 @@
       "title": "Strategy JSON format version 1",
       "description": "Version of the Pludux Strategy JSON format. Must be 1."
     },
-    "execution": {
-      "type": "object",
-      "additionalProperties": true,
-      "properties": {
-        "intrabarPath": {
-          "$ref": "#/$defs/intrabarPath"
-        }
-      },
-      "title": "Execution",
-      "description": "Backtest execution assumptions shared by both position sides."
-    },
     "series": {
       "type": "object",
       "additionalProperties": true,
@@ -107,15 +96,6 @@
     "version"
   ],
   "$defs": {
-    "intrabarPath": {
-      "type": "string",
-      "enum": [
-        "LOW_FIRST",
-        "HIGH_FIRST",
-        "CANDLE_DIRECTION"
-      ],
-      "title": "Intrabar Path"
-    },
     "signalTiming": {
       "type": "string",
       "enum": [
@@ -3808,9 +3788,6 @@
   "examples": [
     {
       "version": 1,
-      "execution": {
-        "intrabarPath": "CANDLE_DIRECTION"
-      },
       "series": {
         "fast_ema": {
           "method": "INDICATOR.EMA",

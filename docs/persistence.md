@@ -45,6 +45,11 @@ fields are also optional and use fresh-state defaults. Unknown properties are
 ignored, but former property names are not aliases and therefore do not supply
 the missing canonical value.
 
+Each Portfolio saves its Intrabar Path with the workspace. A Portfolio that
+lacks the field uses **Candle Direction**. The Portfolio setting controls every
+Strategy in the run, including when older Strategy records carry a path of their
+own. [Intrabar Path](execution.md#intrabar-path)
+
 Portfolio Strategy selections retain their last child while Portfolio scope is
 active. Saving and reopening preserves that remembered child. Older workspaces
 that omit a selection's `active` field treat that child as active by default.

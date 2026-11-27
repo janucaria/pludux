@@ -368,6 +368,11 @@ private:
        std::max(maximum_combined_layers, step));
     }
 
+    ui::form_section("Execution",
+                     "Set how price moves through a candle for all Strategies "
+                     "in this Portfolio.");
+    self.intrabar_path_combo(portfolio);
+
     ui::form_section(
      "Entry Comparators",
      "Compare prepared requested orders in sequence using Requested Order "
@@ -730,6 +735,32 @@ private:
       ImGui::PopID();
     }
     ImGui::EndPopup();
+  }
+
+  static void intrabar_path_combo(backtest::Portfolio& portfolio)
+  {
+    using backtest::IntrabarPath;
+    using Choice = std::pair<IntrabarPath, const char*>;
+    constexpr auto choices =
+     std::array{Choice{IntrabarPath::LowFirst, "Low First"},
+                Choice{IntrabarPath::HighFirst, "High First"},
+                Choice{IntrabarPath::CandleDirection, "Candle Direction"}};
+    const auto path = portfolio.intrabar_path();
+    const auto current = std::ranges::find(choices, path, &Choice::first);
+    ui::field_label("Intrabar Path");
+    if(ImGui::BeginCombo("##portfolio_intrabar_path",
+                         current == choices.end() ? "" : current->second)) {
+      for(const auto& [value, label] : choices) {
+        const auto selected = value == path;
+        if(ImGui::Selectable(label, selected)) {
+          portfolio.intrabar_path(value);
+        }
+        if(selected) {
+          ImGui::SetItemDefaultFocus();
+        }
+      }
+      ImGui::EndCombo();
+    }
   }
 
   static void market_combo(const ApplicationState& app_state,

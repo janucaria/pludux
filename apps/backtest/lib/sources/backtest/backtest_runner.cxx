@@ -357,7 +357,6 @@ public:
            series_methods,
           PositionRule long_position,
           PositionRule short_position,
-          IntrabarPath intrabar_path = IntrabarPath::CandleDirection,
            StrategyPerformanceConfig strategy_performance_config = {},
           ErasedSeriesMethod<EntryFilterMethodContext> entry_filter =
            BooleanMethod<true>{},
@@ -368,7 +367,6 @@ public:
     , series_methods{std::move(series_methods)}
     , long_position{std::move(long_position)}
     , short_position{std::move(short_position)}
-    , intrabar_path{intrabar_path}
     , alternate_activation{alternate_activation}
     {
     }
@@ -382,7 +380,6 @@ public:
      series_methods;
     PositionRule long_position;
     PositionRule short_position;
-    IntrabarPath intrabar_path;
     AlternateStrategyActivation alternate_activation;
   };
 
@@ -861,23 +858,23 @@ public:
 
   void run_intrabar(this BacktestRunner& self)
   {
-    for(auto index = std::size_t{}; index < self.strategy_count(); ++index) {
-      self.activate_strategy(index);
-      self.run_intrabar_active();
-    }
+    self.run_intrabar(self.intrabar_path_);
   }
 
-  void run_intrabar_active(this BacktestRunner& self)
+  void run_intrabar(this BacktestRunner& self, IntrabarPath path)
   {
     const auto& asset_snapshot = *self.active_snapshot_;
-    const auto prices = make_intrabar_prices(self.intrabar_path_,
+    const auto prices = make_intrabar_prices(path,
                                              asset_snapshot.open(),
                                              asset_snapshot.high(),
                                              asset_snapshot.low(),
                                              asset_snapshot.close());
-    for(auto index = std::size_t{1}; index < prices.size(); ++index) {
-      self.process_price_segment(
-       prices[index - 1], prices[index], self.closed_position_is_long_);
+    for(auto setup = std::size_t{}; setup < self.strategy_count(); ++setup) {
+      self.activate_strategy(setup);
+      for(auto index = std::size_t{1}; index < prices.size(); ++index) {
+        self.process_price_segment(
+         prices[index - 1], prices[index], self.closed_position_is_long_);
+      }
     }
   }
 
@@ -1143,7 +1140,6 @@ private:
     , series_methods{std::move(strategy.series_methods)}
     , long_position{std::move(strategy.long_position)}
     , short_position{std::move(strategy.short_position)}
-    , intrabar_path{strategy.intrabar_path}
     , alternate_activation{strategy.alternate_activation}
     {
     }
@@ -1162,7 +1158,6 @@ private:
     PositionRule long_position;
     PositionRule short_position;
     std::size_t pyramiding_layers{};
-    IntrabarPath intrabar_path{IntrabarPath::CandleDirection};
     AlternateStrategyActivation alternate_activation{
      AlternateStrategyActivation::Always};
     std::array<bool, 2> pending_entries{};
@@ -1188,7 +1183,6 @@ private:
     swap(self.long_position_, state.long_position);
     swap(self.short_position_, state.short_position);
     swap(self.pyramiding_layers_, state.pyramiding_layers);
-    swap(self.intrabar_path_, state.intrabar_path);
     swap(self.pending_entries_, state.pending_entries);
     swap(self.pending_pyramiding_, state.pending_pyramiding);
     swap(self.pyramiding_signal_ready_, state.pyramiding_signal_ready);
@@ -1288,7 +1282,7 @@ private:
   std::size_t executed_layer_count_{};
 
   bool is_failed_;
-  IntrabarPath intrabar_path_;
+  IntrabarPath intrabar_path_{IntrabarPath::CandleDirection};
 
   std::array<bool, 2> pending_entries_{};
   bool pending_pyramiding_{};

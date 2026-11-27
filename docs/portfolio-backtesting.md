@@ -11,12 +11,13 @@ For a complete multi-market configuration example, see
   alternate setups each reference a Strategy and own their input overrides and
   Entry Filter. Each alternate also has an activation rule. The System shares one
   Strategy Performance calculation policy across its setups.
-- A Portfolio owns initial capital, one Market, one Broker, aggregate capacity
-  limits, and an ordered collection of Systems. The Market is the trading venue
-  or market context and provides venue-specific rules such as minimum order
-  quantity and quantity step. The Broker represents the Market's broker or
-  execution provider and provides its fee and execution-cost rules. Each
-  System's Profile defines drawdown adjustment and the insufficient-cash response.
+- A Portfolio owns initial capital, one Market, one Broker, the Intrabar Path,
+  aggregate capacity limits, and an ordered collection of Systems. The Market
+  is the trading venue or market context and provides venue-specific rules such
+  as minimum order quantity and quantity step. The Broker represents the
+  Market's broker or execution provider and provides its fee and execution-cost
+  rules. Each System's Profile defines drawdown adjustment and the
+  insufficient-cash response.
 - Running a Portfolio simulates all of its Systems. A single-asset simulation
   is a Portfolio containing one System × Asset Backtest.
 
@@ -34,6 +35,7 @@ requests against shared cash and capacity.
 Portfolio
 |- Initial capital and account equity
 |- Market rules and Broker fees
+|- Intrabar Path
 |- Maximum open trades and maximum combined layers
 |- Entry comparators
 `- Ordered Systems
@@ -159,7 +161,8 @@ For every timestamp, Pludux executes these phases:
 
 1. Apply open-price exits for every backtest with a real bar.
 2. Process open-price entries and pyramids in Portfolio order.
-3. Apply each active backtest's configured intrabar path and price exits.
+3. Apply the Portfolio's [Intrabar Path](execution.md#intrabar-path) and process
+   price exits for each active backtest.
 4. Apply close-price signal exits for every active backtest.
 5. Process close-price entries and pyramids in Portfolio order.
 6. Schedule next-open actions for each backtest's next real bar.

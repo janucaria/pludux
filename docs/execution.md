@@ -10,11 +10,21 @@ authoritative for portfolio clock and valuation behavior.
 close. **Next Open** evaluates from the previous completed candle and fills at
 the next available open. No future candle value is exposed to the signal.
 
-The Strategy chooses **Low First**, **High First**, or **Candle Direction** as its
-deterministic intrabar path. Candle Direction uses open→low→high→close for an up
-candle and open→high→low→close for a down candle. A doji visits the extreme
-nearest the open first; equal distances choose low first. It resolves bar-level
-ambiguity and does not reconstruct ticks.
+## Intrabar Path
+
+Set **Intrabar Path** in the Portfolio editor. The Portfolio applies the same
+rule to each Asset candle across its Systems and Strategy setups, including
+hypothetical trades. The rule supplies a deterministic price sequence for stop
+losses, trailing stops, and take profits from that candle's OHLC prices.
+
+- **Low First** follows open → low → high → close.
+- **High First** follows open → high → low → close.
+- **Candle Direction** follows Low First on an up candle and High First on a
+  down candle. A doji visits the extreme nearest the open first, with ties
+  going to the low.
+
+**Candle Direction** is the default for new Portfolios and older workspaces
+that have no Portfolio Intrabar Path setting.
 
 If the open gaps through a pending stop or target, the first reachable price on
 the path can be the open rather than the configured level. Pludux has no

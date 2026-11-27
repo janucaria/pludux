@@ -79,6 +79,18 @@ TEST(PortfolioTest, DefaultsToPortfolioOrderWithoutEntryComparators)
   EXPECT_TRUE(portfolio.entry_comparators().empty());
 }
 
+TEST(PortfolioTest, IntrabarPathDefaultsToCandleDirectionAndChangesRules)
+{
+  const auto baseline = Portfolio{};
+  EXPECT_EQ(baseline.intrabar_path(), IntrabarPath::CandleDirection);
+
+  auto changed = baseline;
+  changed.intrabar_path(IntrabarPath::HighFirst);
+  EXPECT_EQ(changed.intrabar_path(), IntrabarPath::HighFirst);
+  EXPECT_NE(baseline, changed);
+  EXPECT_FALSE(baseline.equivalent_rules(changed));
+}
+
 TEST(ProfileTest, DefaultsCapitalProtectionPolicies)
 {
   const auto profile = Profile{};

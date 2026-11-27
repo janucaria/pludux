@@ -610,6 +610,161 @@ TEST(PortfolioRunnerTest, EventsIncludeEachIntrabarStopInExecutionOrder)
   EXPECT_DOUBLE_EQ(stops[1].position_size_after(), 0.0);
 }
 
+TEST(PortfolioRunnerTest, IntrabarPathControlsActualAndHypotheticalExits)
+{
+  const auto asset = Asset{"Both levels touched",
+                           AssetHistory{{"Datetime", {1.0, 2.0}},
+                                        {"Open", {100.0, 100.0}},
+                                        {"High", {100.0, 110.0}},
+                                        {"Low", {100.0, 90.0}},
+                                        {"Close", {100.0, 108.0}},
+                                        {"Volume", {0.0, 0.0}}}};
+  const auto market = Market{"Market", 0.0, 0.0};
+  const auto broker = Broker{"Broker"};
+  const auto profile =
+   Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  const auto long_rule =
+   BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                {},
+                                BooleanMethod<false>{},
+                                1,
+                                0,
+                                ValueMethod{5.0},
+                                {{ValueMethod{95.0}, true}},
+                                SignalTiming::CurrentClose,
+                                SignalTiming::NextOpen,
+                                StopTargetReferencePrice::AveragePrice,
+                                StopTargetReferencePrice::AveragePrice,
+                                {{ValueMethod{105.0}, true}}};
+
+  struct Scenario {
+    IntrabarPath path;
+    double price;
+    TradeEvent::Type actual_exit;
+    StrategyIntentType hypothetical_exit;
+  };
+
+  const auto scenarios = std::array{Scenario{IntrabarPath::LowFirst,
+                                             95.0,
+                                             TradeEvent::Type::stop_loss,
+                                             StrategyIntentType::StopLoss},
+                                    Scenario{IntrabarPath::HighFirst,
+                                             105.0,
+                                             TradeEvent::Type::take_profit,
+                                             StrategyIntentType::TakeProfit},
+                                    Scenario{IntrabarPath::CandleDirection,
+                                             95.0,
+                                             TradeEvent::Type::stop_loss,
+                                             StrategyIntentType::StopLoss}};
+
+  for(const auto& scenario : scenarios) {
+    SCOPED_TRACE(static_cast<int>(scenario.path));
+    const auto standalone_path = scenario.path == IntrabarPath::HighFirst
+                                  ? IntrabarPath::LowFirst
+                                  : IntrabarPath::HighFirst;
+    auto main = BacktestRunner{asset,
+                               market,
+                               broker,
+                               profile,
+                               {},
+                               long_rule,
+                               {},
+                               1'000.0,
+                               0,
+                               false,
+                               NAN,
+                               standalone_path};
+    auto setups = std::vector<BacktestRunner::CompiledStrategy>{
+     {{}, long_rule, {}, {}, BooleanMethod<false>{}}, {{}, long_rule, {}}};
+    auto alternate =
+     BacktestRunner{asset, market, broker, profile, std::move(setups), 1'000.0};
+    auto runner = PortfolioRunner{
+     1'000.0,
+     10,
+     10,
+     {{SystemStoreHandle{1, 1}, AssetStoreHandle{1, 1}, std::move(main)},
+      {SystemStoreHandle{2, 1}, AssetStoreHandle{1, 1}, std::move(alternate)}},
+     {},
+     scenario.path};
+    auto results = PortfolioResults{};
+
+    ASSERT_EQ(runner.run_batch(results, 2), 2U);
+
+    ASSERT_EQ(results.backtests().size(), 2U);
+    for(auto index = std::size_t{}; index < results.backtests().size();
+        ++index) {
+      const auto& timeline = results.backtests()[index].timeline();
+      const auto& actual = timeline.closed_trades(1);
+      ASSERT_EQ(actual.size(), 1U);
+      EXPECT_EQ(actual.front().strategy_index(), index);
+      EXPECT_EQ(actual.front().exit_type(), scenario.actual_exit);
+      EXPECT_DOUBLE_EQ(actual.front().exit_price(), scenario.price);
+
+      ASSERT_EQ(timeline.strategy_count(1), index + 1);
+      for(auto setup = std::size_t{}; setup < timeline.strategy_count(1);
+          ++setup) {
+        const auto& hypothetical =
+         timeline.strategy_state(1, setup).strategy_closed_positions;
+        ASSERT_EQ(hypothetical.size(), 1U);
+        const auto& intents = hypothetical.front().intents();
+        ASSERT_EQ(intents.size(), 2U);
+        EXPECT_EQ(intents.back().type(), scenario.hypothetical_exit);
+        EXPECT_DOUBLE_EQ(intents.back().price(), scenario.price);
+      }
+    }
+  }
+}
+
+TEST(PortfolioRunnerTest, IntrabarPathControlsSameCandleTrailingStop)
+{
+  const auto asset = Asset{"Trailing stop",
+                           AssetHistory{{"Datetime", {1.0, 2.0}},
+                                        {"Open", {100.0, 100.0}},
+                                        {"High", {100.0, 110.0}},
+                                        {"Low", {100.0, 97.0}},
+                                        {"Close", {100.0, 108.0}},
+                                        {"Volume", {0.0, 0.0}}}};
+  const auto market = Market{"Market", 0.0, 0.0};
+  const auto broker = Broker{"Broker"};
+  const auto profile =
+   Profile{"Profile", PositionSizingNode{FixedQuantityPositionSizing{1.0}}};
+  const auto long_rule =
+   BacktestRunner::PositionRule{BooleanMethod<true>{},
+                                {},
+                                BooleanMethod<false>{},
+                                1,
+                                0,
+                                ValueMethod{5.0},
+                                {{ValueMethod{95.0}, true, true}}};
+  const auto run = [&](IntrabarPath path) {
+    auto runner = PortfolioRunner{
+     1'000.0,
+     10,
+     10,
+     {{SystemStoreHandle{1, 1},
+       AssetStoreHandle{1, 1},
+       BacktestRunner{
+        asset, market, broker, profile, {}, long_rule, {}, 1'000.0}}},
+     {},
+     path};
+    auto results = PortfolioResults{};
+    EXPECT_EQ(runner.run_batch(results, 2), 2U);
+    return results;
+  };
+
+  const auto low_first = run(IntrabarPath::LowFirst);
+  const auto& low_timeline = low_first.backtests().front().timeline();
+  EXPECT_TRUE(low_timeline.closed_trades(1).empty());
+  EXPECT_TRUE(low_timeline.open_position(1));
+
+  const auto high_first = run(IntrabarPath::HighFirst);
+  const auto& high_timeline = high_first.backtests().front().timeline();
+  const auto& exits = high_timeline.closed_trades(1);
+  ASSERT_EQ(exits.size(), 1U);
+  EXPECT_EQ(exits.front().exit_type(), TradeEvent::Type::stop_loss);
+  EXPECT_DOUBLE_EQ(exits.front().exit_price(), 105.0);
+}
+
 TEST(PortfolioRunnerTest,
      StrategyPerformanceComparatorUsesEachRequestingStrategySnapshot)
 {

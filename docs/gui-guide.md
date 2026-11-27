@@ -92,7 +92,11 @@ are selected by Portfolios, not embedded in Strategies. See
 
 Use this window to configure shared capital, Market (the trading venue or
 market context), Broker (the Market's broker or execution provider), capacity
-limits, entry comparators, and ordered Systems.
+limits, Intrabar Path, entry comparators, and ordered Systems.
+
+The Intrabar Path choices are **Low First**, **High First**, and
+**Candle Direction**. All Systems in the Portfolio use the selected path rule
+for price exits. [Intrabar Path](execution.md#intrabar-path)
 
 Entry comparators may use Requested Order values, phase-visible market data,
 and Strategy Performance from each requesting Strategy setup's immutable

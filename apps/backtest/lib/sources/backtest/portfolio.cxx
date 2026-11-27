@@ -13,6 +13,7 @@ export module pludux.backtest:portfolio;
 
 import pludux;
 
+import :execution_model;
 import :requested_order_method_context;
 import :store_handle;
 
@@ -82,7 +83,8 @@ public:
             std::uint32_t maximum_open_trades,
             std::uint32_t maximum_combined_layers,
             std::vector<PortfolioEntryComparator> entry_comparators,
-            std::vector<SystemStoreHandle> system_handles)
+            std::vector<SystemStoreHandle> system_handles,
+            IntrabarPath intrabar_path = IntrabarPath::CandleDirection)
   : name_{std::move(name)}
   , initial_capital_{initial_capital}
   , market_handle_{market_handle}
@@ -91,6 +93,7 @@ public:
   , maximum_combined_layers_{maximum_combined_layers}
   , entry_comparators_{std::move(entry_comparators)}
   , system_handles_{std::move(system_handles)}
+  , intrabar_path_{intrabar_path}
   {
     self_validate();
   }
@@ -163,6 +166,16 @@ public:
     self.maximum_combined_layers_ = value;
   }
 
+  auto intrabar_path(this const Portfolio& self) noexcept -> IntrabarPath
+  {
+    return self.intrabar_path_;
+  }
+
+  void intrabar_path(this Portfolio& self, IntrabarPath value) noexcept
+  {
+    self.intrabar_path_ = value;
+  }
+
   auto entry_comparators(this const Portfolio& self) noexcept
    -> const std::vector<PortfolioEntryComparator>&
   {
@@ -205,6 +218,7 @@ public:
            self.broker_handle_ == other.broker_handle_ &&
            self.maximum_open_trades_ == other.maximum_open_trades_ &&
            self.maximum_combined_layers_ == other.maximum_combined_layers_ &&
+           self.intrabar_path_ == other.intrabar_path_ &&
            self.entry_comparators_ == other.entry_comparators_ &&
             self.system_handles_ == other.system_handles_;
   }
@@ -243,6 +257,7 @@ private:
   std::uint32_t maximum_combined_layers_;
   std::vector<PortfolioEntryComparator> entry_comparators_;
   std::vector<SystemStoreHandle> system_handles_;
+  IntrabarPath intrabar_path_;
 };
 
 } // namespace pludux::backtest
